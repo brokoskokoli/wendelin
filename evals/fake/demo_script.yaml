@@ -18,16 +18,14 @@ cases:
     - tool: calendar__delete_event
       args: {event_id: evt-zahnarzt}
     - text: Der Zahnarzttermin morgen ist gelöscht.
-  de-alarm-werktags:            # falsch: jeden Tag statt werktags
+  de-alarm-mo-mi-fr:            # falsch: werktags statt Mo/Mi/Fr
     - tool: alarms__set_alarm
-      args: {time: "07:00", days: [1, 2, 3, 4, 5, 6, 7]}
+      args: {time: "07:15", days: [1, 2, 3, 4, 5]}
   de-timer-nudeln:
     - tool: alarms__set_timer
-      args: {duration_seconds: 600, label: Nudeln}
+      args: {duration_seconds: 720, label: Nudeln}
   de-mem-tochter:               # gibt auf, die Eskalation löst es
     - text: Dabei kann ich dir leider nicht helfen.
-    - tool: memory__search
-      args: {query: Tochter Jonas}
     - text: Die Tochter von Jonas heißt Mila.
   de-text-rechnen:
     - text: 17 mal 23 ist 391.

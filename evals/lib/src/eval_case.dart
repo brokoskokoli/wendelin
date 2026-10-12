@@ -10,13 +10,21 @@ import 'predicates.dart';
 @immutable
 final class CallOption {
   /// Creates an option.
-  const CallOption({required this.tools, this.args = const {}});
+  const CallOption({
+    required this.tools,
+    this.args = const {},
+    this.succeeded = true,
+  });
 
   /// Accepted tool names.
   final List<String> tools;
 
   /// Predicates per argument name (dotted paths reach into objects).
   final Map<String, ValuePredicate> args;
+
+  /// Whether only calls the tool executed without error count (default).
+  /// `false` also accepts failed calls (e.g. when the failure is expected).
+  final bool succeeded;
 
   /// Short description for reports.
   String describe() {
@@ -351,7 +359,11 @@ CallExpectation _call(Object? raw) {
 }
 
 CallOption _option(Map<String, Object?> m) {
-  _only(m, const {'tool', 'args'});
+  _only(m, const {'tool', 'args', 'succeeded'});
+  final succeeded = m['succeeded'] ?? true;
+  if (succeeded is! bool) {
+    throw const FormatException('"succeeded" muss bool sein');
+  }
   final tool = m['tool'];
   final tools = tool is List ? _strList(tool, 'tool') : [_str(m, 'tool')];
   if (tools.isEmpty) throw const FormatException('"tool" fehlt');
@@ -360,6 +372,7 @@ CallOption _option(Map<String, Object?> m) {
       : _map(m['args'], 'args');
   return CallOption(
     tools: tools,
+    succeeded: succeeded,
     args: {
       for (final e in args.entries)
         e.key: _wrap('args.${e.key}', () => ValuePredicate.parse(e.value)),

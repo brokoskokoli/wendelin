@@ -13,7 +13,7 @@ EvalCase _case(String yaml) =>
     parseCaseFile('language: de\ncases:\n$yaml').single;
 
 void main() {
-  final time = EvalTime.parse(defaultNow, defaultTimeZone);
+  final time = EvalTime.parse('2026-10-14T09:00', defaultTimeZone);
 
   EvalRunner runner(
     List<ScriptedTurn> Function() turns, {
@@ -264,6 +264,41 @@ void main() {
     });
     final all = await r.runAll([pending], includePending: true);
     expect(all.single.status, CaseStatus.passed);
+  });
+
+  test(
+    'Gedächtnis kommt über den Retriever in den System-Prompt (Review #7)',
+    () async {
+      final c = _case('''
+  - id: mem
+    language: fr
+    prompt: Wie heißt nochmal die Tochter von Jonas?
+    setup:
+      memory: [{text: Die Tochter von Jonas heißt Mila, category: person}]
+    expect: {text: {contains: Mila}}
+''');
+      final provider = FakeLlmProvider([ScriptedTurn.text('Mila.')]);
+      final r = await EvalRunner(
+        target: EvalTarget(
+          profileId: 'fake',
+          modelId: 'm',
+          privacy: PrivacyLevel.local,
+          provider: (_) => provider,
+        ),
+        time: time,
+      ).runCase(c);
+      expect(r.status, CaseStatus.passed);
+      final prompt = provider.requests.single.systemPrompt!;
+      expect(prompt, contains('[person] Die Tochter von Jonas heißt Mila'));
+      expect(prompt, contains('Gerätesprache: fr-FR'));
+    },
+  );
+
+  test('localeFor', () {
+    expect(EvalRunner.localeFor('de'), 'de-DE');
+    expect(EvalRunner.localeFor('fr'), 'fr-FR');
+    expect(EvalRunner.localeFor('en'), 'en-US');
+    expect(EvalRunner.localeFor('it'), 'it-IT');
   });
 
   test('ObservedCall.toJson mit ungültigem JSON', () {

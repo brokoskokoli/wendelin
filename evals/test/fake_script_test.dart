@@ -21,7 +21,7 @@ Future<List<ChatEvent>> _play(LlmProvider p) =>
     p.chat(ChatRequest(messages: [], model: 'm', maxTokens: 10)).toList();
 
 void main() {
-  final time = EvalTime.parse(defaultNow, defaultTimeZone);
+  final time = EvalTime.parse('2026-10-14T09:00', defaultTimeZone);
 
   test(
     'Platzhalter, parallele Aufrufe, Usage und abschließender Text',

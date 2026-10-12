@@ -22,6 +22,7 @@ CaseResult _r(
   status: status,
   observation: RunObservation(
     latency: Duration(milliseconds: ms),
+    completed: true,
     usage: const Usage(
       inputTokens: 100,
       outputTokens: 10,
@@ -95,6 +96,44 @@ void main() {
       (2, 1, 1),
     );
     expect(byLang['fr']!.passRate, 0.5);
+  });
+
+  test('Perzentil mit gebrochenem Rang (Review #3)', () {
+    final seven = [for (var i = 1; i <= 7; i++) Duration(milliseconds: i)];
+    // p90: Rang ceil(6,3) = 7, p50: Rang ceil(3,5) = 4.
+    expect(percentile(seven, 90), const Duration(milliseconds: 7));
+    expect(percentile(seven, 50), const Duration(milliseconds: 4));
+  });
+
+  test('Latenz nur über Fälle, die wirklich liefen (Review #9)', () {
+    final s = Summary.of([
+      _r('a', 'de', CaseStatus.passed, ms: 500),
+      // Aufbau fehlgeschlagen: zählt als Fall, aber nicht für die Latenz.
+      CaseResult(evalCase: _c('b', 'de'), status: CaseStatus.error),
+    ]);
+    expect(s.total, 2);
+    expect(s.latencyP50, const Duration(milliseconds: 500));
+  });
+
+  test('Bestätigungen werden summiert (Review #8)', () {
+    final s = Summary.of([
+      CaseResult(
+        evalCase: _c('a', 'de'),
+        status: CaseStatus.passed,
+        observation: const RunObservation(
+          confirmations: 2,
+          escalationConfirmations: 1,
+        ),
+      ),
+      CaseResult(
+        evalCase: _c('b', 'de'),
+        status: CaseStatus.passed,
+        observation: const RunObservation(confirmations: 1),
+      ),
+    ]);
+    expect((s.confirmations, s.escalationConfirmations), (3, 1));
+    expect(s.toJson()['confirmations'], 3);
+    expect(s.toJson()['escalationConfirmations'], 1);
   });
 
   test('leere Menge', () {

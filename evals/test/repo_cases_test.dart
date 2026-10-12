@@ -63,6 +63,26 @@ void main() {
     },
   );
 
+  test(
+    'keine Werte aus den Beispielen der Tool-Beschreibungen (Review #2)',
+    () {
+      // „morgen“ darf nicht das Beispieldatum 2026-10-15 sein.
+      final time = EvalTime.parse(defaultNow, defaultTimeZone);
+      expect(time.resolve('+1d').toIso(), '2026-11-19');
+      final text = [
+        for (final f in Directory('cases').listSync().whereType<File>())
+          f.readAsStringSync(),
+      ].join('\n');
+      for (final example in [
+        RegExp(r'duration_seconds: (600|90)\b'),
+        RegExp(r'clock: "(06:45|07:30)"'),
+        RegExp(r'days: \[1, 2, 3, 4, 5\]'),
+      ]) {
+        expect(example.hasMatch(text), isFalse, reason: example.pattern);
+      }
+    },
+  );
+
   test('zwei Listen-Fälle (K6) sind pending', () {
     final pending = cases.where((c) => c.pending).toList();
     expect(pending.map((c) => c.id), ['de-lists-add', 'de-lists-get']);

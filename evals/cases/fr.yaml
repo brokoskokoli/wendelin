@@ -1,4 +1,4 @@
-# Cas d'évaluation en français. « Aujourd'hui » = mercredi 14/10/2026,
+# Cas d'évaluation en français. « Aujourd'hui » = mercredi 18/11/2026,
 # 09:00 Europe/Berlin (par défaut). Voir evals/README.md.
 language: fr
 cases:
@@ -14,13 +14,13 @@ cases:
 
   - id: fr-cal-dentiste
     category: calendar
-    prompt: J'ai rendez-vous chez le dentiste jeudi à 16h, note-le s'il te plaît.
+    prompt: J'ai rendez-vous chez le dentiste après-demain à 16h, note-le s'il te plaît.
     expect:
       calls:
         - tool: calendar__create_event
           args:
             title: {contains: dentiste}
-            start: {at: "thu 16:00"}
+            start: {at: "+2d 16:00"}
 
   - id: fr-cal-supprimer
     category: calendar-external
@@ -38,12 +38,12 @@ cases:
 
   - id: fr-alarm-reveil
     category: alarms
-    prompt: Réveille-moi demain à 6h45.
+    prompt: Réveille-moi demain à 5h50.
     expect:
       calls:
         - tool: alarms__set_alarm
           args:
-            time: {clock: "06:45"}
+            time: {clock: "05:50"}
 
   - id: fr-timer-oeufs
     category: alarms
@@ -80,7 +80,7 @@ cases:
       calls:
         - tool: web__search
           args:
-            query: {contains: Louvre}
+            query: {contains: Louvre}  # Eigenname, in jeder Sprache gleich
 
   - id: fr-text-calcul
     category: text

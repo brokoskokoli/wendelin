@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
+import 'case_result.dart';
 import 'eval_case.dart';
 import 'eval_profile.dart';
 import 'eval_runner.dart';
@@ -12,8 +13,10 @@ import 'eval_time.dart';
 import 'fake_script.dart';
 import 'report.dart';
 
-/// Default „now“ of a run: Wednesday, 14 October 2026, 09:00.
-const defaultNow = '2026-10-14T09:00';
+/// Default „now“ of a run: Wednesday, 18 November 2026, 09:00. Chosen so
+/// that relative dates („morgen“ = 2026-11-19) differ from the example dates
+/// in the tool descriptions (2026-10-15), which a model could copy.
+const defaultNow = '2026-11-18T09:00';
 
 /// Default time zone of a run.
 const defaultTimeZone = 'Europe/Berlin';
@@ -39,14 +42,17 @@ ArgParser _parser() => ArgParser()
   ..addFlag('help', abbr: 'h', negatable: false, help: 'Hilfe anzeigen.');
 
 /// Runs the eval CLI; returns the exit code (0 = ran, 64 = usage error,
-/// 1 = setup error). [env] supplies the API key, [client] the HTTP client
-/// for real providers.
+/// 1 = setup error, 130 = interrupted). [env] supplies the API key,
+/// [client] the HTTP client for real providers. An event on [interrupt]
+/// (Ctrl+C) stops after the running case; the partial report is still
+/// printed and written.
 Future<int> runCli(
   List<String> arguments, {
   required Map<String, String> env,
   required StringSink out,
   required StringSink err,
   http.Client? client,
+  Stream<void>? interrupt,
 }) async {
   final parser = _parser();
   final ArgResults args;
@@ -96,6 +102,14 @@ Future<int> runCli(
 
     final provider = _provider(profile, profileFile, time, env, client);
     final p = profile.profile;
+    for (final model in [p.defaultModel, ...profile.escalationModels]) {
+      if (profile.catalog.lookup(model) == null) {
+        err.writeln(
+          'Warnung: kein Preis für Modell $model im Katalog – Kosten '
+          'unvollständig (Preise über "catalog" im Profil ergänzen)',
+        );
+      }
+    }
     final runner = EvalRunner(
       target: EvalTarget(
         profileId: p.id,
@@ -111,11 +125,24 @@ Future<int> runCli(
       'Profil ${p.id} (${p.type.name}), Modell ${p.defaultModel}, '
       '${cases.length} Fälle, heute = ${time.now} ${time.timeZone}',
     );
-    final results = await runner.runAll(
-      cases,
-      includePending: args.flag('include-pending'),
-      onResult: (r) => out.writeln('  ${r.evalCase.id}: ${r.status.name}'),
-    );
+    var interrupted = false;
+    final subscription = interrupt?.listen((_) {
+      if (!interrupted) {
+        err.writeln('Abbruch angefordert – Teilreport nach dem laufenden Fall');
+      }
+      interrupted = true;
+    });
+    final List<CaseResult> results;
+    try {
+      results = await runner.runAll(
+        cases,
+        includePending: args.flag('include-pending'),
+        onResult: (r) => out.writeln('  ${r.evalCase.id}: ${r.status.name}'),
+        shouldStop: () => interrupted,
+      );
+    } finally {
+      await subscription?.cancel();
+    }
     final report = EvalReport(
       meta: {
         'profileId': p.id,
@@ -128,6 +155,7 @@ Future<int> runCli(
         'filter': ?filter,
         'limit': ?limit,
         'cases': cases.length,
+        if (interrupted) 'interrupted': true,
       },
       results: results,
     );
@@ -140,7 +168,7 @@ Future<int> runCli(
       file.writeAsStringSync(report.encode());
       out.writeln('Report: $path');
     }
-    return 0;
+    return interrupted ? 130 : 0;
   } on FormatException catch (e) {
     err.writeln('Fehler: ${e.message}');
     return 1;

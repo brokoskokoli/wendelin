@@ -55,6 +55,8 @@ final class RunObservation {
     this.costMicros,
     this.modelCalls = 0,
     this.confirmations = 0,
+    this.escalationConfirmations = 0,
+    this.completed = false,
     this.escalations = const [],
     this.gaveUp = false,
   });
@@ -80,8 +82,16 @@ final class RunObservation {
   /// Number of model calls (usage reports).
   final int modelCalls;
 
-  /// Confirmations requested (answered „ja“ automatically).
+  /// Tool confirmations requested (answered „ja“ automatically).
   final int confirmations;
+
+  /// Confirmations of an escalation below the privacy floor (answered „ja“
+  /// automatically).
+  final int escalationConfirmations;
+
+  /// Whether the agent run actually took place (`false` if the case could
+  /// not be set up). Only such cases enter the latency percentiles.
+  final bool completed;
 
   /// Escalations, in order.
   final List<ObservedEscalation> escalations;
@@ -163,6 +173,7 @@ final class CaseResult {
         },
         'costMicros': o.costMicros,
         'confirmations': o.confirmations,
+        'escalationConfirmations': o.escalationConfirmations,
         'gaveUp': o.gaveUp,
         'escalations': [
           for (final e in o.escalations) {'to': e.to, 'reason': e.reason.name},

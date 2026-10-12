@@ -117,7 +117,8 @@ final class Equals extends ValuePredicate {
 }
 
 /// Text contains the [needles] (all, or with [any] at least one); for lists
-/// every needle must match an element (substring for texts).
+/// every needle must match an element (substring for texts). Ignores case
+/// and accents („plongee“ finds „Plongée“, „Uber“ finds „Über“).
 final class Contains extends ValuePredicate {
   /// Creates the predicate.
   const Contains(this.needles, {this.any = false});
@@ -132,11 +133,10 @@ final class Contains extends ValuePredicate {
   String? check(Object? value, EvalTime time, {bool present = true}) {
     if (!present) return 'fehlt';
     bool hit(String needle) {
-      final n = _fold(needle);
-      if (value is List) {
-        return value.any((e) => _fold(_text(e)).contains(n));
-      }
-      return value != null && _fold(_text(value)).contains(n);
+      final n = foldAccents(_fold(needle));
+      bool inText(Object? v) => foldAccents(_fold(_text(v))).contains(n);
+      if (value is List) return value.any(inText);
+      return value != null && inText(value);
     }
 
     final ok = any ? needles.any(hit) : needles.every(hit);
@@ -399,6 +399,49 @@ bool looseEquals(Object? a, Object? b) {
   }
   if (a is String && b is String) return _fold(a) == _fold(b);
   return a == b;
+}
+
+const _accents = {
+  'à': 'a',
+  'á': 'a',
+  'â': 'a',
+  'ã': 'a',
+  'ä': 'a',
+  'å': 'a',
+  'æ': 'ae',
+  'ç': 'c',
+  'è': 'e',
+  'é': 'e',
+  'ê': 'e',
+  'ë': 'e',
+  'ì': 'i',
+  'í': 'i',
+  'î': 'i',
+  'ï': 'i',
+  'ñ': 'n',
+  'ò': 'o',
+  'ó': 'o',
+  'ô': 'o',
+  'õ': 'o',
+  'ö': 'o',
+  'ø': 'o',
+  'œ': 'oe',
+  'ù': 'u',
+  'ú': 'u',
+  'û': 'u',
+  'ü': 'u',
+  'ý': 'y',
+  'ÿ': 'y',
+};
+
+/// Lower-case [s] with the common Latin accents removed (`é` → `e`,
+/// `œ` → `oe`, `ü` → `u`); `ß` stays.
+String foldAccents(String s) {
+  final b = StringBuffer();
+  for (final ch in s.toLowerCase().split('')) {
+    b.write(_accents[ch] ?? ch);
+  }
+  return b.toString();
 }
 
 num? _number(Object? v) => switch (v) {

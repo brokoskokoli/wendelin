@@ -15,7 +15,7 @@ ObservedCall _call(String name, [Map<String, Object?>? args = const {}]) =>
     ObservedCall(name: name, args: args, rawArguments: '{kaputt');
 
 void main() {
-  final scorer = Scorer(EvalTime.parse(defaultNow, defaultTimeZone));
+  final scorer = Scorer(EvalTime.parse('2026-10-14T09:00', defaultTimeZone));
 
   final tauchen = _case('''
       calls:
@@ -62,7 +62,7 @@ void main() {
     expect(
       r.reasons.single,
       allOf(
-        contains('Falsche Argumente'),
+        contains('Kein passender erfolgreicher Aufruf'),
         contains('start ist 2026-10-15T11:00'),
       ),
     );
@@ -278,5 +278,74 @@ void main() {
     );
     expect(r.status, CaseStatus.error);
     expect(r.reasons.single, 'Agent abgebrochen (provider): kaputt');
+  });
+  test('fehlgeschlagene Tool-Aufrufe erfüllen keine Erwartung (Review #1)', () {
+    const failed = ObservedCall(
+      name: 'calendar__create_event',
+      args: {'title': 'Tauchen', 'start': '2026-10-15T10:00'},
+      isError: true,
+    );
+    final r = scorer.score(tauchen, const RunObservation(calls: [failed]));
+    expect(r.status, CaseStatus.failed);
+    expect(r.reasons.single, contains('Tool meldete Fehler'));
+    final ok = scorer.score(
+      tauchen,
+      RunObservation(
+        calls: [
+          failed,
+          _call('calendar__create_event', {
+            'title': 'Tauchen',
+            'start': '2026-10-15T10:00',
+          }),
+        ],
+      ),
+    );
+    expect(ok.status, CaseStatus.passed);
+    final both = scorer.score(
+      tauchen,
+      const RunObservation(
+        calls: [
+          ObservedCall(
+            name: 'calendar__create_event',
+            args: {'title': 'X'},
+            isError: true,
+          ),
+        ],
+      ),
+    );
+    expect(both.reasons.single, contains('(Tool meldete Fehler)'));
+  });
+
+  test('succeeded: false akzeptiert auch fehlgeschlagene Aufrufe', () {
+    final c = _case('''
+      calls:
+        - tool: calendar__delete_event
+          succeeded: false
+''');
+    expect(
+      scorer
+          .score(
+            c,
+            const RunObservation(
+              calls: [
+                ObservedCall(
+                  name: 'calendar__delete_event',
+                  args: {},
+                  isError: true,
+                ),
+              ],
+            ),
+          )
+          .status,
+      CaseStatus.passed,
+    );
+    expect(
+      () => _case('''
+      calls:
+        - tool: x
+          succeeded: ja
+'''),
+      throwsFormatException,
+    );
   });
 }

@@ -63,15 +63,17 @@ const defaultSearchResults = [
 /// Per case: fresh fake ports (calendar, clipboard, alarms, memory, web
 /// search and fetch without network) filled from the case setup, a
 /// [ToolRegistry] with all built-in integrations, the [ToolExecutor] and an
-/// [AgentRunner] whose clock stands at [time]. Confirmations are answered
-/// „ja“ automatically (also for escalations below the privacy floor).
+/// [AgentRunner] whose clock stands at [time]. As in the app, relevant
+/// memory entries reach the system prompt through a [MemoryRetriever] on the
+/// memory store. The device locale follows the case language
+/// ([localeFor]). Confirmations are answered „ja“ automatically (also for
+/// escalations below the privacy floor) and counted.
 final class EvalRunner {
   /// Creates a runner.
   EvalRunner({
     required this.target,
     required this.time,
     this.config = const AgentConfig(),
-    this.locale = 'de-DE',
     GiveUpClassifier? giveUpClassifier,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier(),
        scorer = Scorer(time);
@@ -85,25 +87,34 @@ final class EvalRunner {
   /// Agent limits.
   final AgentConfig config;
 
-  /// Device locale for the system prompt.
-  final String locale;
-
   /// Detects „kann ich nicht“ answers (the agent's own classifier).
   final GiveUpClassifier giveUpClassifier;
 
   /// Evaluates observations.
   final Scorer scorer;
 
+  /// Device locale for a case language (`de` → `de-DE`, `fr` → `fr-FR`,
+  /// `en` → `en-US`; others `<lang>-<LANG>`).
+  static String localeFor(String language) => switch (language) {
+    'en' => 'en-US',
+    _ => '$language-${language.toUpperCase()}',
+  };
+
   /// Runs [cases] one after another; pending cases are skipped unless
-  /// [includePending]. [onResult] is called after each case.
+  /// [includePending]. [onResult] is called after each case. Once
+  /// [shouldStop] returns `true` (e.g. after Ctrl+C) the remaining cases are
+  /// skipped as „abgebrochen“, so a partial report can still be written.
   Future<List<CaseResult>> runAll(
     List<EvalCase> cases, {
     bool includePending = false,
     void Function(CaseResult result)? onResult,
+    bool Function()? shouldStop,
   }) async {
     final results = <CaseResult>[];
     for (final c in cases) {
-      final r = c.pending && !includePending
+      final r = (shouldStop?.call() ?? false)
+          ? CaseResult.skipped(c, 'abgebrochen')
+          : c.pending && !includePending
           ? CaseResult.skipped(c, 'pending: Integration fehlt noch')
           : await runCase(c);
       results.add(r);
@@ -130,7 +141,8 @@ final class EvalRunner {
     final clock = FixedClock(time.instant);
     final sessionId = 'eval-${c.id}';
     final registry = ToolRegistry();
-    for (final integration in await _integrations(c, clock)) {
+    final (integrations, memory) = await _integrations(c, clock);
+    for (final integration in integrations) {
       await registry.registerIntegration(integration, enabled: true);
     }
     final catalog = registry.catalogFor(target.privacy, sessionId: sessionId);
@@ -148,8 +160,12 @@ final class EvalRunner {
       contextBuilder: ContextBuilder(
         config: config,
         clock: clock,
-        device: DeviceInfo(locale: locale, timeZone: time.timeZone),
+        device: DeviceInfo(
+          locale: localeFor(c.language),
+          timeZone: time.timeZone,
+        ),
         catalog: catalog,
+        memory: StoreMemoryRetriever(memory),
       ),
       invoker: ToolExecutor(catalog: catalog),
       clock: clock,
@@ -164,6 +180,7 @@ final class EvalRunner {
     int? cost = 0;
     var modelCalls = 0;
     var confirmations = 0;
+    var escalationConfirmations = 0;
     var finalText = '';
     AgentFailed? failure;
     final watch = Stopwatch()..start();
@@ -175,6 +192,7 @@ final class EvalRunner {
           confirmations++;
           event.respond(true);
         case EscalationConfirmationRequired():
+          escalationConfirmations++;
           event.respond(true);
         case ToolCallFinished(:final call, :final outcome):
           calls.add(
@@ -213,12 +231,17 @@ final class EvalRunner {
       costMicros: modelCalls == 0 ? null : cost,
       modelCalls: modelCalls,
       confirmations: confirmations,
+      escalationConfirmations: escalationConfirmations,
+      completed: true,
       escalations: escalations,
       gaveUp: gaveUp,
     );
   }
 
-  Future<List<Integration>> _integrations(EvalCase c, Clock clock) async {
+  Future<(List<Integration>, MemoryStorePort)> _integrations(
+    EvalCase c,
+    Clock clock,
+  ) async {
     final setup = c.setup;
     final calendar = FakeCalendarPort(
       events: [for (final e in setup.events) _event(e)],
@@ -232,24 +255,27 @@ final class EvalRunner {
       );
     }
     final hits = setup.searchResults ?? defaultSearchResults;
-    return [
-      CalendarIntegration(calendar, deviceTimeZone: () => time.timeZone),
-      ClipboardIntegration(FakeClipboardPort(content: setup.clipboard)),
-      AlarmsIntegration(FakeAlarmPort()),
-      MemoryIntegration(memory),
-      WebIntegration(
-        searchBackend: FakeWebSearchBackend(
-          results: [
-            for (final h in hits)
-              WebSearchResult(title: h.title, url: h.url, snippet: h.snippet),
-          ],
+    return (
+      <Integration>[
+        CalendarIntegration(calendar, deviceTimeZone: () => time.timeZone),
+        ClipboardIntegration(FakeClipboardPort(content: setup.clipboard)),
+        AlarmsIntegration(FakeAlarmPort()),
+        MemoryIntegration(memory),
+        WebIntegration(
+          searchBackend: FakeWebSearchBackend(
+            results: [
+              for (final h in hits)
+                WebSearchResult(title: h.title, url: h.url, snippet: h.snippet),
+            ],
+          ),
+          fetcher: WebFetcher(
+            client: _offlineWeb(),
+            resolve: (_) async => [InternetAddress('93.184.215.14')],
+          ),
         ),
-        fetcher: WebFetcher(
-          client: _offlineWeb(),
-          resolve: (_) async => [InternetAddress('93.184.215.14')],
-        ),
-      ),
-    ];
+      ],
+      memory,
+    );
   }
 
   CalendarEvent _event(SeedEvent e) {
@@ -282,3 +308,20 @@ http.Client _offlineWeb() => MockClient(
     headers: {'content-type': 'text/html; charset=utf-8'},
   ),
 );
+
+/// [MemoryRetriever] on top of the memory store, as the app wires it: the
+/// store's search with the request text.
+final class StoreMemoryRetriever implements MemoryRetriever {
+  /// Creates the retriever.
+  const StoreMemoryRetriever(this.store);
+
+  /// Memory store.
+  final MemoryStorePort store;
+
+  @override
+  Future<List<MemoryItem>> relevant(String query, {required int limit}) async =>
+      [
+        for (final e in await store.search(query, limit: limit))
+          MemoryItem(id: e.id, text: e.text, category: e.category.name),
+      ];
+}

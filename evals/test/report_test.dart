@@ -60,6 +60,28 @@ void main() {
     expect((cases[1] as Map)['costMicros'], isNull);
   });
 
+  test('Tabelle zeigt Bestätigungen inkl. Eskalation', () {
+    final r = EvalReport(
+      meta: const {},
+      results: [
+        CaseResult(
+          evalCase: c('de-x', 'de'),
+          status: CaseStatus.passed,
+          observation: const RunObservation(
+            confirmations: 2,
+            escalationConfirmations: 1,
+            completed: true,
+          ),
+        ),
+      ],
+    );
+    expect(r.renderTable(), contains('2+1E'));
+    expect(
+      (r.toJson()['cases']! as List).single,
+      containsPair('escalationConfirmations', 1),
+    );
+  });
+
   test('Tabelle zeigt Fälle, Hinweise und Summen', () {
     final t = report.renderTable();
     expect(t, contains('de-a'));

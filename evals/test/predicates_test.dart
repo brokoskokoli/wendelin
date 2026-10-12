@@ -276,6 +276,27 @@ void main() {
     );
   });
 
+  test('contains ignoriert Akzente (Review #10)', () {
+    final p = ValuePredicate.parse({'contains': 'plongee'});
+    expect(p.check('Plongée', time), isNull);
+    expect(
+      ValuePredicate.parse({'contains': 'Plongée'})
+          .check('PLONGEE demain', time),
+      isNull,
+    );
+    expect(
+      ValuePredicate.parse({'contains': 'uber'}).check('Über', time),
+      isNull,
+    );
+    expect(
+      ValuePredicate.parse({
+        'contains': ['soeur'],
+      }).check(['ma sœur'], time),
+      isNull,
+    );
+    expect(foldAccents('Ça Être Œuf Straße'), 'ca etre oeuf straße');
+  });
+
   test('looseEquals', () {
     expect(looseEquals(null, null), isTrue);
     expect(looseEquals('1', '01'), isFalse);

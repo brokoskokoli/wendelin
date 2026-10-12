@@ -73,12 +73,17 @@ final class Scorer {
     for (final option in e.options) {
       for (final call in calls.where((c) => option.tools.contains(c.name))) {
         final why = argumentProblems(option.args, call);
-        if (why.isEmpty) return null;
-        misses.add('${call.name}: ${why.join('; ')}');
+        if (why.isEmpty && (!call.isError || !option.succeeded)) return null;
+        misses.add(
+          '${call.name}: '
+          '${why.isEmpty ? 'Tool meldete Fehler' : why.join('; ')}'
+          '${why.isNotEmpty && call.isError ? ' (Tool meldete Fehler)' : ''}',
+        );
       }
     }
     if (misses.isNotEmpty) {
-      return 'Falsche Argumente für ${e.describe()} – ${misses.join(' | ')}';
+      return 'Kein passender erfolgreicher Aufruf für ${e.describe()} – '
+          '${misses.join(' | ')}';
     }
     final made = calls.isEmpty ? 'keine' : calls.map((c) => c.name).join(', ');
     return 'Nicht aufgerufen: ${e.describe()} (aufgerufen: $made)';

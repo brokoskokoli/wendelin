@@ -119,6 +119,55 @@ void main() {
     }
   });
 
+  test('strengere Prüfung auf Geheimnisse (Review #6)', () {
+    const key =
+        'sk-'
+        'ant-abcdefghijklmnopqrstuvwx';
+    for (final bad in [
+      _json({
+        'options': {'note': 'Bearer $key'},
+      }),
+      _json({
+        'extraHeaders': {'Authorization': 'Bearer abc'},
+      }),
+      _json({
+        'extraHeaders': {'X-Api-Key': 'abc'},
+      }),
+      _json({
+        'extraHeaders': {'X-Session': 'Bearer abc'},
+      }),
+      _json({
+        'extraHeaders': {'X-Custom': 'a1b2c3d4e5f6g7h8i9j0k1l2m3'},
+      }),
+      _json({
+        'options': {'accessToken': 'abc'},
+      }),
+      _json({
+        'options': {'password': 'abc'},
+      }),
+      _json({
+        'options': {'client_secret': 'abc'},
+      }),
+      _json({
+        'options': {'enableServerWebSearch': true},
+      }),
+    ]) {
+      expect(() => EvalProfile.parse(bad), throwsFormatException, reason: bad);
+    }
+    // Erlaubt: Referenzen, harmlose Header und Optionen mit „tokens“.
+    final ok = EvalProfile.parse(
+      _json({
+        'extraHeaders': {'X-Title': 'Wendelin Evals'},
+        'options': {
+          'maxTokensField': 'max_tokens',
+          'enableServerWebSearch': false,
+        },
+        'authMethod': {'kind': 'apiKey', 'secretRef': 'OPENAI_API_KEY'},
+      }),
+    );
+    expect(ok.profile.extraHeaders, {'X-Title': 'Wendelin Evals'});
+  });
+
   test('Beispielprofile im Repo sind gültig und enthalten keine Keys', () {
     for (final (file, variable) in [
       ('profiles/claude-haiku.json', 'ANTHROPIC_API_KEY'),

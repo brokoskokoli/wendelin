@@ -64,7 +64,7 @@ void main() {
       'Kein Tool erwartet, aufgerufen: memory__save',
     ]);
     expect(byId('de-lists-add')['status'], 'skipped');
-    expect((report['meta']! as Map)['now'], '2026-10-14T09:00');
+    expect((report['meta']! as Map)['now'], '2026-11-18T09:00');
   });
 
   test('Filter, Limit, Modell, eigenes Fall-Verzeichnis und heute', () async {
@@ -160,6 +160,51 @@ void main() {
     final r2 = await run(['-p', noUrl.path]);
     expect(r2.$1, 1);
     expect(r2.$3, contains('Base-URL'));
+  });
+
+  test('unbekannte Zeitzone ist ein Einrichtungsfehler (Review #4)', () async {
+    final (code, _, err) = await run([
+      '-p',
+      'profiles/fake-demo.json',
+      '--time-zone',
+      'Mars/Olympus',
+    ]);
+    expect(code, 1);
+    expect(err, contains('Unbekannte Zeitzone „Mars/Olympus“'));
+  });
+
+  test('Strg+C: Teilreport wird geschrieben (Review #5)', () async {
+    final path = '${tmp.path}/teil.json';
+    final out = StringBuffer();
+    final err = StringBuffer();
+    final code = await runCli(
+      ['-p', 'profiles/fake-demo.json', '-c', 'de', '--out', path],
+      env: const {},
+      out: out,
+      err: err,
+      interrupt: Stream.value(null),
+    );
+    expect(code, 130);
+    expect('$err', contains('Abbruch angefordert'));
+    final report =
+        jsonDecode(File(path).readAsStringSync()) as Map<String, Object?>;
+    expect((report['meta']! as Map)['interrupted'], isTrue);
+    final cases = (report['cases']! as List).cast<Map<String, Object?>>();
+    expect(cases.first['status'], isNot('skipped'));
+    expect(cases.last['reasons'], ['abgebrochen']);
+    expect((report['summary']! as Map)['total'], lessThan(cases.length));
+  });
+
+  test('Warnung bei Modell ohne Katalogpreis (Review #5)', () async {
+    final client = MockClient((_) async => http.Response('{}', 401));
+    final (_, _, err) = await run(
+      ['-p', 'profiles/claude-haiku.json', '-m', 'claude-unbekannt', '-n', '1'],
+      env: {'ANTHROPIC_API_KEY': 'test-key-123'},
+      client: client,
+    );
+    expect(err, contains('Warnung: kein Preis für Modell claude-unbekannt'));
+    final fake = await run(['-p', 'profiles/fake-demo.json', '-n', '1']);
+    expect(fake.$3, isNot(contains('Warnung')));
   });
 
   test('echter Provider: Key fehlt in der Umgebung', () async {

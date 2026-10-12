@@ -19,12 +19,17 @@ final class Summary {
     required this.unpricedCases,
     required this.gaveUp,
     required this.escalated,
+    required this.confirmations,
+    required this.escalationConfirmations,
   });
 
   /// Aggregates [results] (skipped cases only count in [skipped]).
   factory Summary.of(Iterable<CaseResult> results) {
     final ran = results.where((r) => r.ran).toList();
-    final latencies = [for (final r in ran) r.observation.latency];
+    final latencies = [
+      for (final r in ran)
+        if (r.observation.completed) r.observation.latency,
+    ];
     var usage = Usage.zero;
     var cost = 0;
     var unpriced = 0;
@@ -51,6 +56,11 @@ final class Summary {
       unpricedCases: unpriced,
       gaveUp: ran.where((r) => r.observation.gaveUp).length,
       escalated: ran.where((r) => r.observation.escalations.isNotEmpty).length,
+      confirmations: ran.fold(0, (n, r) => n + r.observation.confirmations),
+      escalationConfirmations: ran.fold(
+        0,
+        (n, r) => n + r.observation.escalationConfirmations,
+      ),
     );
   }
 
@@ -69,7 +79,14 @@ final class Summary {
   /// Cases skipped.
   final int skipped;
 
-  /// Median latency (`null` without cases).
+  /// Tool confirmations requested in all cases.
+  final int confirmations;
+
+  /// Escalation confirmations requested in all cases.
+  final int escalationConfirmations;
+
+  /// Median latency over the cases whose agent run took place (`null`
+  /// without such cases).
   final Duration? latencyP50;
 
   /// 90th percentile latency.
@@ -117,6 +134,8 @@ final class Summary {
     'unpricedCases': unpricedCases,
     'gaveUp': gaveUp,
     'escalated': escalated,
+    'confirmations': confirmations,
+    'escalationConfirmations': escalationConfirmations,
   };
 }
 

@@ -67,7 +67,7 @@ final class EvalReport {
       ..writeln()
       ..writeln(
         'Sprache  Treffer        Quote   p50 ms  p90 ms     Tokens    Kosten \$'
-        '  aufgegeben  eskaliert',
+        '  aufgegeben  eskaliert  bestätigt',
       );
     for (final e in [...byLanguage.entries, MapEntry('gesamt', summary)]) {
       final s = e.value;
@@ -84,6 +84,9 @@ final class EvalReport {
               .padLeft(11),
           '${s.gaveUp}'.padLeft(11),
           '${s.escalated}'.padLeft(10),
+          '${s.confirmations}'
+                  '${s.escalationConfirmations > 0 ? '+${s.escalationConfirmations}E' : ''}'
+              .padLeft(10),
         ].join(' '),
       );
     }

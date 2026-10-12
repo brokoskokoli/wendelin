@@ -32,6 +32,15 @@ final class EvalProfile {
       throw const FormatException('Profil: JSON-Objekt erwartet');
     }
     _rejectSecrets(decoded);
+    final options = decoded['options'];
+    if (options is Map<String, Object?> &&
+        options['enableServerWebSearch'] == true) {
+      throw const FormatException(
+        'enableServerWebSearch ist für Evals nicht erlaubt: die Gebühren je '
+        'Suche erfasst der CostCalculator nicht, und die Fälle prüfen '
+        'web__search',
+      );
+    }
     final map = Map.of(decoded);
     final catalogJson = map.remove('catalog');
     final escalation = map.remove('escalationModels');
@@ -102,21 +111,28 @@ final class EvalProfile {
 
   static final _envName = RegExp(r'^[A-Z][A-Z0-9_]*$');
 
-  /// Values that look like API keys are refused, so a key pasted into the
-  /// profile is never used or copied into a report.
+  /// Refuses anything that looks like a secret, so a key pasted into the
+  /// profile is never used or copied into a report: fields named like
+  /// secrets (`key`, `apiKey`, `token`, `secret`, `password` …, except the
+  /// `…Ref(s)` references), values containing a key pattern anywhere,
+  /// and secret-looking `extraHeaders` (auth header names, `Bearer …`,
+  /// long random-looking values).
   static void _rejectSecrets(Object? v, [String path = '']) {
     switch (v) {
       case final Map<String, Object?> m:
         for (final e in m.entries) {
           final key = e.key.toLowerCase();
-          if ((key == 'apikey' || key == 'api_key' || key == 'key') &&
-              e.value is String) {
+          final where = '$path${e.key}';
+          if (e.value is String && _isSecretField(e.key)) {
             throw FormatException(
-              'Profil darf keinen Schlüssel enthalten ($path${e.key}); '
+              'Profil darf keinen Schlüssel enthalten ($where); '
               'der Key kommt aus der Umgebungsvariable',
             );
           }
-          _rejectSecrets(e.value, '$path${e.key}.');
+          if (path == '' && key == 'extraheaders') {
+            _rejectSecretHeaders(e.value);
+          }
+          _rejectSecrets(e.value, '$where.');
         }
       case final List<Object?> l:
         for (final x in l) {
@@ -131,7 +147,64 @@ final class EvalProfile {
     }
   }
 
-  static final _keyLike = RegExp(r'^(sk-|sk_|phala-|rp-)[A-Za-z0-9_-]{16,}');
+  /// Whether a field name is a secret: one of its words (camelCase,
+  /// `_`, `-`) is `key`, `token`, `secret`, `password` …; references
+  /// (`secretRef`, `tokenSecretRef`, `secretRefs`) are fine.
+  static bool _isSecretField(String name) {
+    final words = name
+        .replaceAllMapped(RegExp('[A-Z]'), (m) => ' ${m[0]}')
+        .toLowerCase()
+        .split(RegExp(r'[\s_\-]+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (words.isNotEmpty && (words.last == 'ref' || words.last == 'refs')) {
+      return false;
+    }
+    return words.any(_secretWords.contains);
+  }
+
+  static const _secretWords = {
+    'key',
+    'apikey',
+    'token',
+    'secret',
+    'password',
+    'passwd',
+    'credential',
+    'credentials',
+  };
+
+  static void _rejectSecretHeaders(Object? headers) {
+    if (headers is! Map<String, Object?>) return;
+    for (final e in headers.entries) {
+      final name = e.key.toLowerCase();
+      final value = '${e.value}';
+      final authName =
+          name == 'authorization' ||
+          name.contains('api-key') ||
+          name.contains('apikey') ||
+          name.contains('token') ||
+          name.contains('secret');
+      if (authName ||
+          value.toLowerCase().startsWith('bearer ') ||
+          _randomLooking.hasMatch(value)) {
+        throw FormatException(
+          'extraHeaders.${e.key} sieht nach einem Geheimnis aus; Keys nur '
+          'über die Umgebungsvariable',
+        );
+      }
+    }
+  }
+
+  static final _keyLike = RegExp(
+    r'(sk-|sk_|phala-|rp-|xai-|gsk_)[A-Za-z0-9_-]{16,}',
+  );
+
+  /// 24+ characters of letters/digits (with `_-.`) mixing letters and
+  /// digits: typical for tokens.
+  static final _randomLooking = RegExp(
+    r'^(?=.*[0-9])(?=.*[A-Za-z])[A-Za-z0-9_\-.]{24,}$',
+  );
 }
 
 /// [CostEstimator] backed by a [CostCalculator].

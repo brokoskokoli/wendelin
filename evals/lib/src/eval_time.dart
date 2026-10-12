@@ -1,7 +1,7 @@
 import 'package:meta/meta.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:wendelin_integrations/wendelin_integrations.dart'
-    show timeZoneLocation;
+    show InvalidArgumentsException, timeZoneLocation;
 
 /// A wall-clock date and optional time of day, without zone.
 @immutable
@@ -64,6 +64,15 @@ final class WallTime implements Comparable<WallTime> {
   String toString() => toIso();
 }
 
+/// The IANA zone [name]; throws [FormatException] if unknown.
+tz.Location _zone(String name) {
+  try {
+    return timeZoneLocation(name);
+  } on InvalidArgumentsException {
+    throw FormatException('Unbekannte Zeitzone „$name“');
+  }
+}
+
 String _two(int n) => n.toString().padLeft(2, '0');
 
 final _isoValue = RegExp(
@@ -84,7 +93,8 @@ const _weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 /// and reads date-times written by the model as wall times in that zone.
 final class EvalTime {
   /// Creates the time from a wall time [now] in [timeZone] (IANA name).
-  EvalTime(this.now, this.timeZone) : _location = timeZoneLocation(timeZone);
+  /// Throws [FormatException] for an unknown [timeZone].
+  EvalTime(this.now, this.timeZone) : _location = _zone(timeZone);
 
   /// Parses `2026-10-14T09:00` as wall time in [timeZone].
   /// Throws [FormatException] if malformed.
@@ -190,6 +200,6 @@ WallTime? parseWallTime(String value, {required String timeZone}) {
     offset = o.startsWith('-') ? -total : total;
   }
   final instant = DateTime.utc(y, mo, d, h, mi).subtract(offset);
-  final local = tz.TZDateTime.from(instant, timeZoneLocation(timeZone));
+  final local = tz.TZDateTime.from(instant, _zone(timeZone));
   return WallTime(local.year, local.month, local.day, local.hour, local.minute);
 }
