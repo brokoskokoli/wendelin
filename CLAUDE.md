@@ -1,0 +1,29 @@
+# Wendelin – Hinweise für Claude und Agenten
+
+Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist `Voice Agent App – Gesamtkonzept.md`, das Design steht in `docs/design/DESIGN.md`.
+
+## Verbindliche Dokumente
+- `docs/ENGINEERING.md`: Layout, Abhängigkeitsregeln, Tests, Sicherheit und Git. Lies es vor jeder Codeänderung.
+- `docs/work-packages/`: Arbeitspakete mit Abnahmekriterien. `REVIEW.md` beschreibt das Prüfprotokoll.
+- `docs/adr/`: Architekturentscheidungen. Neue grundlegende Entscheidungen bekommen eine eigene ADR.
+
+## Konzeptänderungen
+- **Wenn sich bei der Umsetzung herausstellt, dass etwas vom Konzept abweicht oder abweichen muss, wird das im Gesamtkonzept nachgetragen. Der Maintainer (Stefan) bekommt dazu eine kurze Liste der Änderungen und bestätigt sie.**
+- Unbestätigte Änderungen stehen im Abschnitt „Änderungsprotokoll“ am Ende des Konzepts mit dem Status `offen`. Nach der Bestätigung wird der Status auf `bestätigt` gesetzt.
+- Agenten ändern das Konzept nicht still. Sie melden Abweichungen in ihrem Abschlussbericht, und der Orchestrator trägt sie ein.
+
+## Arbeiten
+- Toolchain: Flutter 3.47 / Dart 3.13 (`/opt/homebrew/bin`), Android SDK unter `~/Library/Android/sdk`, AVD `Medium_Phone_API_35`.
+- `flutter pub get` im Repo-Root (Pub-Workspace). Das Gate läuft mit `dart run tool/gate.dart [--no-app] [paket…]` und muss vor jedem Commit grün sein.
+- Reine Dart-Pakete unter `packages/` importieren kein Flutter. Gerätezugriff geht nur über Ports.
+- Fakes zum Wiederverwenden stellt `package:<pkg>/fakes.dart` bereit, Contract-Suites `package:<pkg>/testing.dart`.
+- Parallele Arbeit läuft in Git-Worktrees unter `../james-wt/<wp>`, mit einem Branch `wp/<nr>-<slug>` pro Arbeitspaket. Gemergt wird erst nach bestandenem Review.
+
+## Git und Identität (wichtig)
+- Erlaubt sind nur `Stefan Richter <16724498+brokoskokoli@users.noreply.github.com>` und der Trailer `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine anderen Namen oder Mailadressen, insbesondere keine Arbeitgeber-Domains.
+- Die Identität ist repo-lokal gesetzt, Hooks in `tool/hooks/` prüfen sie. Niemals `--no-verify` oder Identitäts-Overrides verwenden.
+- Das Repo ist öffentlich (`github.com/brokoskokoli/wendelin`). Keine Secrets, keine privaten Daten.
+
+## Secrets und Live-Tests
+- API-Keys für Live-Tests liegen außerhalb des Repos in `~/.wendelin-live.env`, jeweils mit kleinem Budget. Laden mit `set -a; . ~/.wendelin-live.env; set +a`. Niemals ausgeben, loggen oder committen.
+- Live-Tests tragen `@Tags(['live'])` und sind standardmäßig übersprungen. Sie sollen sparsam sein: kleinste Modelle, wenige Tokens.

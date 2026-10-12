@@ -109,7 +109,7 @@ Die App spricht intern nur ein eigenes Nachrichtenformat; Adapter übersetzen es
 - `ContentBlock` = `Text` | `Image` | `ToolCall { id, name, argumentsJson }` | `ToolResult { callId, content, isError }` | `Thinking` (optional, nur Anzeige)
 - `ToolSpec { name, description, inputSchema (JSON Schema) }`
 - `ChatRequest { messages, tools, model, maxTokens, temperature, toolChoice, metadata }`
-- `ChatEvent` (Stream) = `TextDelta` | `ToolCallDelta` | `ToolCallComplete` | `Usage { inputTokens, outputTokens, cachedTokens }` | `Done { stopReason }` | `Error`
+- `ChatEvent` (Stream) = `TextDelta` | `ThinkingDelta` | `ThinkingComplete` (K3) | `ToolCallDelta` | `ToolCallComplete` | `Usage { inputTokens, outputTokens, cachedTokens }` | `Done { stopReason }` | `Error`
 
 **Interface**
 
@@ -164,10 +164,10 @@ Implementierungen: `PhalaVerifier` zuerst; `TinfoilVerifier` und `PrivatemodeVer
 **Ablauf am Beispiel Phala**
 
 1. Modelle über `GET /v1/models` laden und nur solche mit `is_tee: true` zur Auswahl anbieten.
-2. Sitzungsstart: zufällige Nonce (32 Byte) → `GET /v1/aci/attestation?nonce=…`.
-3. Prüfen: TDX-Quote gegen DCAP-Kollateral; Report-Daten binden Nonce und Workload-Keyset; Keyset-Signatur unter dem Workload-Identity-Key; `freshness.stale_after` in der Zukunft; optional `source_provenance` gegen eine Liste vertrauenswürdiger Releases.
-4. **Pinning**: `workload_id` und `workload_keyset_digest` speichern. Ändern sie sich, neue Attestierung und Hinweis an den Nutzer ("Anbieter hat ein Update ausgerollt, neu geprüft"). TLS-Verbindung auf den TLS-Key aus dem Keyset pinnen, sofern der Anbieter TLS in der Enklave terminiert (vor Implementierung klären).
-5. Pro Antwort: `x-receipt-id` lesen → `GET /v1/aci/receipts/{id}` → Signatur gegen `receipt_signing_keys`, Hashes gegen die exakt gesendeten bzw. empfangenen Bytes, Status `result: verified` mit `required: true` (sonst wurde die Anfrage an einen nicht verifizierten Upstream weitergeleitet).
+2. Sitzungsstart: zufällige Nonce (32 Byte) → `GET /v1/aci/attestation?nonce=…` (Gateway) bzw. `GET /v1/attestation/report?model=…&nonce=…` (inkl. NVIDIA-GPU-Evidenz), Base-URL `https://api.redpill.ai/v1` (K2).
+3. Prüfen: TDX-Quote gegen DCAP-Kollateral; Report-Daten binden Nonce und Workload-Keyset; Keyset-Signatur unter dem Workload-Identity-Key; Keyset-`not_after` in der Zukunft (ein Feld `freshness.stale_after` gibt es nicht, K2); optional GPU-Evidenz (`nvidia_payload`); optional `source_provenance` (`repo_url`, `repo_commit`) gegen eine Liste vertrauenswürdiger Releases.
+4. **Pinning**: `workload_keyset_digest` und `source_provenance.repo_commit` speichern (ein `workload_id` liefert die API nicht, K2). Ändern sie sich, neue Attestierung und Hinweis an den Nutzer ("Anbieter hat ein Update ausgerollt, neu geprüft"). TLS terminiert in der Enklave (`downstream_tls_binding`, `tls_public_keys`): TLS-Verbindung auf den SPKI-Hash aus dem Keyset pinnen.
+5. Pro Antwort: `x-receipt-id` lesen → `GET /v1/aci/receipts/{id}` → Ed25519-Signatur gegen `receipt_signing_keys` (signiert ist die Quittung ohne `signature` als JSON mit sortierten Schlüsseln, kompakt), `body_hash` von `request.received`/`response.returned` gegen die exakt gesendeten bzw. empfangenen Bytes, Eintrag `upstream.verified` mit `result: verified`. Im Test war `required: false` – wie `required: true` erzwungen wird, ist zu klären (K2).
 
 **Fehlerverhalten**
 
@@ -180,7 +180,7 @@ Implementierungen: `PhalaVerifier` zuerst; `TinfoilVerifier` und `PrivatemodeVer
 
 **Prüfprotokoll (UI)**: Liste pro Anfrage mit Zeit, Provider, Modell, `workload_id`, Commit bzw. Image-Digest, Ergebnis jeder Prüfstufe und Quittungs-ID; Statusanzeige grün / gelb / rot im Gespräch. Exportierbar als JSON.
 
-**Hinweise**: Streaming-Antworten werden erst nach Ende des Streams geprüft. Ob Phala auch GPU-Attestierung (NVIDIA) in den Report aufnimmt, ist in der Doku nicht beschrieben und muss geklärt werden. Anfragen, die nicht verifiziert werden können, dürfen keine sensiblen Folgeaktionen auslösen (z. B. keine SMS).
+**Hinweise**: Streaming-Antworten werden erst nach Ende des Streams geprüft. GPU-Attestierung (NVIDIA Hopper) ist im Report enthalten, wenn das Modell angegeben wird (K2). Anfragen, die nicht verifiziert werden können, dürfen keine sensiblen Folgeaktionen auslösen (z. B. keine SMS).
 
 ## Routing und Eskalation
 
@@ -257,7 +257,8 @@ class AgentRun {
   void cancel();
 }
 // AgentEvent: Routed, TextDelta, ToolCallStarted, ConfirmationRequired,
-//             ToolCallFinished, Escalated, Usage, Verification, Done, Failed
+//             EscalationConfirmationRequired (K3), ToolCallFinished,
+//             Escalated, Usage, Verification, Done, Failed
 ```
 
 **Tool-Auswahl bei vielen Tools**: Ab ca. 30 aktiven Tools sendet die App zuerst nur Kategorien bzw. ein `search_tools`-Meta-Tool; das Modell fordert die passenden Tools an. Spart Tokens und hilft kleinen Modellen bei der richtigen Wahl.
@@ -273,15 +274,15 @@ Tools sind in **Integrationen** gebündelt (z. B. "Kalender", "Spotify", "Bring!
 **Schnittstellen**
 
 ```
-abstract class Integration {
+abstract class Integration {     // ohne Flutter-Typen, siehe K4
   String get id;                    // 'calendar', 'spotify', 'bring'
-  String get displayName; IconData get icon;
+  String get displayName; String get iconId;
   Set<Platform> get platforms;      // android, ios
   Future<Availability> checkAvailability();  // App installiert? OS-Version?
   List<SetupStep> get setup;        // Berechtigung, Login, Ordnerwahl
   Future<SetupState> setupState();
   List<Tool> get tools;
-  Widget? settingsPage();
+  bool get sensitive;               // Einstellungsseite ordnet die App über id zu (K4)
 }
 
 abstract class Tool {
@@ -289,7 +290,7 @@ abstract class Tool {
   String get description;           // fürs Modell, kurz und präzise
   JsonSchema get inputSchema;
   RiskLevel get risk;               // read | write | external
-  Future<ToolResult> execute(Map<String, dynamic> args, ToolContext ctx);
+  Future<ToolOutcome> execute(Map<String, dynamic> args, ToolContext ctx);  // Ergebnis + optional Undo + Kurztext (K4)
   String describeForConfirmation(Map<String, dynamic> args);  // "Termin 'Tauchen' Do 10–11 Uhr"
 }
 ```
@@ -459,28 +460,22 @@ Die App ist in erster Linie ein Sprach-Overlay; der Hauptbildschirm zeigt Verlau
 
 Umgesetzt wird in sechs Meilensteinen, Android zuerst; jeder Meilenstein endet mit einer benutzbaren App.
 
-**Projektstruktur**
+**Projektstruktur** (geändert, siehe Änderungsprotokoll K1)
 
 ```
-voice-agent/
-  app/                         # Flutter-App
-    lib/
-      core/                    # Nachrichtenformat, AgentRun, Events, Fehler
-      routing/                 # Regeln, Bedingungen, Eskalation
-      providers/               # LlmProvider, anthropic/, openai_compat/, catalog/
-        tee/                   # AttestedProvider, PhalaVerifier, Prüfprotokoll
-      voice/                   # TriggerSource, WakeWordEngine, Vad, SpeechToText, TextToSpeech
-      tools/                   # Integration, Tool, ToolRegistry, ToolExecutor, Risiko
-        builtin/               # calendar/, obsidian/, clipboard/, memory/, alarms/, web/, bring/, spotify/, ...
-        http_tool/             # deklarative HTTP-Tools
-        mcp/                   # MCP-Client, Transport, Mapping
-      memory/  storage/        # drift-Datenbank, Secrets, Audit-Log
-      ui/                      # Overlay, Verlauf, Einstellungen, Onboarding
-    android/                   # VoiceInteractionService, Foreground Service, Intents, SAF, Spotify SDK
-    ios/                       # App Intents, AlarmKit, Bookmarks, Spotify SDK
+wendelin/
+  packages/                    # reine Dart-Pakete, einzeln testbar (ADR 0001)
+    wendelin_core/             # Nachrichtenformat, Interfaces (LlmProvider, Tool, Integration, AgentRun), Events, Fakes
+    wendelin_providers/        # anthropic/, openai/, Modellkatalog, Kosten (später tee/)
+    wendelin_tools/            # ToolRegistry, ToolExecutor, Risiko, Undo (später http_tool/, mcp/)
+    wendelin_agent/            # Agent-Schleife, Kontext, Limits, Eskalation (später Routing-Regeln)
+    wendelin_storage/          # drift-Datenbank, Repositories, SecretStore-Interface, Audit-Log
+    wendelin_integrations/     # calendar/, clipboard/, alarms/, memory/, web/ … über Ports
+  app/                         # Flutter-App: UI, Riverpod-Verdrahtung, Plattform-Ports
+    android/  ios/             # native Teile
   native/attest/               # Rust-Crate: DCAP-Quote, Signaturen (flutter_rust_bridge)
   evals/                       # Testsätze und Auswertung pro Provider-Profil
-  docs/                        # dieses Konzept, ADRs
+  docs/                        # Design, ADRs, Arbeitspakete, Notizen
 ```
 
 **Meilensteine**
@@ -504,7 +499,7 @@ voice-agent/
 **Offene Fragen**
 
 - Ist mit "Jiggler" Flutter gemeint? Falls Kotlin Multiplatform, Abschnitt Plattform anpassen.
-- Phala: Wo terminiert TLS, und enthält der Report GPU-Attestierung? Läuft die DCAP-Prüfung performant auf dem Handy?
+- Phala: TLS terminiert in der Enklave, GPU-Attestierung ist enthalten (geklärt, K2). Offen: Ableitung von `report_data` aus der Nonce beim Gateway-Endpunkt, Erzwingen von `required: true`, Performance der DCAP-Prüfung auf dem Handy.
 - Bring!: Inoffizielle API, Nutzungsbedingungen prüfen; Fallback über Share-Intent in die Bring!-App.
 - Spotify: Entwickler-App im Entwicklungsmodus reicht für den Eigengebrauch; für eine Veröffentlichung Freigabe nötig.
 - Verteilung: nur privat (APK, TestFlight) oder Play Store / App Store? Betrifft Wake-Word-Dauerbetrieb und Review.
@@ -518,3 +513,15 @@ voice-agent/
 - Keine Secrets im Repo; Beispielkonfiguration mit Platzhaltern.
 - Architekturentscheidungen als kurze ADRs in `docs/` festhalten.
 - Pro Meilenstein: Tests grün, Definition of Done erfüllt, kurze Demo-Anleitung im README.
+
+
+## Änderungsprotokoll
+
+Abweichungen, die sich bei der Umsetzung ergeben haben. Status `offen` = noch nicht vom Maintainer bestätigt.
+
+| Nr. | Datum | Abschnitt | Änderung | Grund | Status |
+| --- | --- | --- | --- | --- | --- |
+| K1 | 2026-10-12 | Umsetzung → Projektstruktur | Kernlogik in eigenen reinen Dart-Paketen unter `packages/` statt in `app/lib/`; App nur UI, Verdrahtung, Plattform | Einzeln testbare Module, erzwingbare Abhängigkeitsregeln (ADR 0001) | offen |
+| K2 | 2026-10-13 | TEE-Provider → Ablauf Phala, Hinweise, Offene Fragen | Echte Endpunkte und Felder eingetragen; kein `workload_id`/`freshness.stale_after` → Pinning auf Keyset-Digest + Commit, Frische über `not_after`; TLS terminiert in der Enklave (Pinning möglich); GPU-Attestierung vorhanden; `required: false` beobachtet | Live-Probe, siehe `docs/notes/phala-aci-probe-2026-10-13.md` | offen |
+| K3 | 2026-10-13 | LLM-Provider-Schicht → Internes Format; Agent-Schleife → Schnittstelle | `ChatEvent` um `ThinkingDelta`/`ThinkingComplete` (signierte Thinking-Blöcke müssen unverändert zurück an Anthropic), `StopReason.pauseTurn`; `AgentEvent` um `EscalationConfirmationRequired` (Nutzerbestätigung bei Eskalation unter die Datenschutzstufe) | Review WP01 (ADR 0002) | offen |
+| K4 | 2026-10-13 | Tool-System → Schnittstellen | `Integration` ohne Flutter-Typen (`iconId` statt `IconData`, Einstellungsseite über `id` in der App, plus `sensitive`); `Tool.execute` liefert `ToolOutcome` (Inhalt, Fehler, optionales Undo, Kurztext für die Tool-Karte) | Kernpakete ohne Flutter testbar; Undo-Option für `write`-Tools braucht einen Rückweg (ADR 0002) | offen |
