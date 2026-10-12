@@ -417,6 +417,69 @@ void main() {
       );
     });
 
+    test('provider blocks stay in place, never in text', () async {
+      const search = ProviderBlock(
+        provider: 'anthropic',
+        rawJson: '{"type":"server_tool_use","id":"s1"}',
+        summary: 'Websuche: Wetter',
+      );
+      const result = ProviderBlock(
+        provider: 'anthropic',
+        rawJson: '{"type":"web_search_tool_result","tool_use_id":"s1"}',
+      );
+      final c1 = call('c1', 'web__search');
+      final (a, provider) = scripted('a', [
+        ScriptedTurn.events([
+          const TextDelta('Ich suche. '),
+          const ProviderBlockComplete(search),
+          const ProviderBlockComplete(result),
+          const TextDelta('Gefunden.'),
+          ToolCallComplete(c1),
+          const Done(StopReason.toolUse),
+        ]),
+        ScriptedTurn.text('Fertig.'),
+      ]);
+      final h = Harness(
+        primary: a,
+        tools: [FakeTool(name: 'web__search')],
+      );
+      final events = await h.run('x');
+      expect(provider.requests[1].messages[1].content, [
+        const TextBlock('Ich suche. '),
+        search,
+        result,
+        const TextBlock('Gefunden.'),
+        c1,
+      ]);
+      expect(streamedText(events), 'Ich suche. Gefunden.Fertig.');
+      expect(streamedText(events), isNot(contains('server_tool_use')));
+      expect(h.conversation.messages[1].content, contains(search));
+    });
+
+    test('pauseTurn ending with a provider block continues with it', () async {
+      const block = ProviderBlock(
+        provider: 'fake',
+        rawJson: '{"type":"server_tool_use","id":"s1"}',
+      );
+      final (a, provider) = scripted('a', [
+        ScriptedTurn.events([
+          const TextDelta('Ich suche.'),
+          const ProviderBlockComplete(block),
+          const Done(StopReason.pauseTurn),
+        ]),
+        ScriptedTurn.text(' Sonnig.'),
+      ]);
+      final h = Harness(primary: a);
+      final events = await h.run('Wetter?');
+      expect(provider.requests[1].messages.last.content, [
+        const TextBlock('Ich suche.'),
+        block,
+      ]);
+      final done = terminal(events) as AgentDone;
+      expect(done.finalText, 'Ich suche. Sonnig.');
+      expect(h.conversation.messages[1].content.last, block);
+    });
+
     test('incomplete tool call of a failed stream is never executed', () async {
       final tool = FakeTool(name: 'cal__create');
       final (a, _) = scripted('a', [
@@ -1046,6 +1109,39 @@ void main() {
       // The recorded history keeps the original block.
       expect(h.conversation.messages[1].content.first, isA<ThinkingBlock>());
     });
+
+    test(
+      'provider blocks of another family are dropped on escalation',
+      () async {
+        const own = ProviderBlock(provider: 'fake', rawJson: '{"own":1}');
+        const foreign = ProviderBlock(
+          provider: 'anthropic',
+          rawJson: '{"x":1}',
+        );
+        final c1 = call('c1', 'web__search');
+        final (a, _) = scripted('a', [
+          ScriptedTurn.events([
+            const ProviderBlockComplete(foreign),
+            const ProviderBlockComplete(own),
+            ToolCallComplete(c1),
+            const Done(StopReason.toolUse),
+          ]),
+          ScriptedTurn.error(const NetworkException('weg')),
+          ScriptedTurn.error(const NetworkException('weg')),
+        ]);
+        // b is a FakeLlmProvider, i.e. family "fake".
+        final (b, pb) = scripted('b', [ScriptedTurn.text('B.')]);
+        final h = Harness(
+          primary: a,
+          chain: [b],
+          tools: [FakeTool(name: 'web__search')],
+        );
+        await h.run('x');
+        expect(pb.requests.single.messages[1].content, [own, c1]);
+        // Stored history keeps everything.
+        expect(h.conversation.messages[1].content, [foreign, own, c1]);
+      },
+    );
 
     test('privacy boundary: tee → standard needs consent, declined', () async {
       final (tee, pt) = scripted('phala', [

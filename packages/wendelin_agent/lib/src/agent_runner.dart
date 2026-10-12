@@ -412,6 +412,9 @@ final class _Run {
           if (delta.isNotEmpty) emit(AgentThinkingDelta(delta));
         case ThinkingComplete(:final block):
           blocks.add(block);
+        case ProviderBlockComplete(:final block):
+          // Kept in place for the same provider; never text, never spoken.
+          blocks.add(block);
         case ToolCallDelta():
           break; // assembled calls arrive as ToolCallComplete
         case ToolCallComplete(:final call):
@@ -638,13 +641,17 @@ final class _Run {
     _epoch++;
     _roundsOnProvider = 0;
     _invalidOnProvider = 0;
-    // Signed thinking belongs to the provider that produced it.
+    // Signed thinking belongs to the provider that produced it; provider
+    // blocks only make sense for their provider family.
+    final family = _current.provider.type.name;
+    bool foreign(ContentBlock b) =>
+        b is ThinkingBlock || (b is ProviderBlock && b.provider != family);
     for (var i = 0; i < _messages.length; i++) {
       final m = _messages[i];
-      if (m.content.any((b) => b is ThinkingBlock)) {
+      if (m.content.any(foreign)) {
         _messages[i] = Message(m.role, [
           for (final b in m.content)
-            if (b is! ThinkingBlock) b,
+            if (!foreign(b)) b,
         ]);
       }
     }
