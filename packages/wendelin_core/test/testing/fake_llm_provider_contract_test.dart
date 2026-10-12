@@ -5,7 +5,11 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 /// Maps every contract scenario onto a script for [FakeLlmProvider].
 ScriptedTurn turnFor(ContractScenario scenario) => switch (scenario) {
-  ContractScenario.text => ScriptedTurn.text(ContractExpectations.text),
+  ContractScenario.text => ScriptedTurn.text(
+    ContractExpectations.text,
+    thinking: 'Begrüßung formulieren',
+    thinkingSignature: 'sig',
+  ),
   ContractScenario.toolCall => ScriptedTurn.toolCalls([
     ToolCallBlock(
       id: 'call_1',
@@ -30,6 +34,14 @@ ScriptedTurn turnFor(ContractScenario scenario) => switch (scenario) {
   ),
   ContractScenario.rateLimited => ScriptedTurn.error(
     const RateLimitException('zu viele', retryAfter: Duration(seconds: 2)),
+  ),
+  ContractScenario.errorDuringToolCall => ScriptedTurn.errorDuringToolCall(
+    ToolCallBlock(
+      id: 'call_1',
+      name: ContractExpectations.toolName,
+      argumentsJson: jsonEncode(ContractExpectations.singleCallArgs),
+    ),
+    const ServerException('Verbindung abgerissen', statusCode: 500),
   ),
   ContractScenario.hang => ScriptedTurn.hang(partialText: 'Ich denke …'),
 };

@@ -15,15 +15,21 @@ final class ScriptedTurn {
   static const defaultUsage = Usage(inputTokens: 100, outputTokens: 20);
 
   /// A plain text answer, optionally preceded by [thinking].
+  ///
+  /// With [thinking], reasoning deltas and a `ThinkingComplete` (carrying
+  /// [thinkingSignature]) precede the text.
   factory ScriptedTurn.text(
     String text, {
     String? thinking,
+    String? thinkingSignature,
     Usage usage = defaultUsage,
     StopReason stopReason = StopReason.endTurn,
     int chunkSize = 4,
   }) => ScriptedTurn._([
-    if (thinking != null)
+    if (thinking != null) ...[
       for (final c in _chunks(thinking, chunkSize)) ThinkingDelta(c),
+      ThinkingComplete(ThinkingBlock(thinking, signature: thinkingSignature)),
+    ],
     for (final c in _chunks(text, chunkSize)) TextDelta(c),
     UsageEvent(usage),
     Done(stopReason),
@@ -59,6 +65,25 @@ final class ScriptedTurn {
     int chunkSize = 4,
   }) => ScriptedTurn._([
     for (final c in _chunks(partialText, chunkSize)) TextDelta(c),
+    ErrorEvent(error),
+  ]);
+
+  /// A failure in the middle of a tool call: emits the first half of
+  /// [call]'s arguments as deltas (no `ToolCallComplete`), then
+  /// `ErrorEvent(error)`.
+  factory ScriptedTurn.errorDuringToolCall(
+    ToolCallBlock call,
+    ProviderException error,
+  ) => ScriptedTurn._([
+    ToolCallDelta(
+      index: 0,
+      id: call.id,
+      name: call.name,
+      argumentsFragment: call.argumentsJson.substring(
+        0,
+        call.argumentsJson.length ~/ 2,
+      ),
+    ),
     ErrorEvent(error),
   ]);
 

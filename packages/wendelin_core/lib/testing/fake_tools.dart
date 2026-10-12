@@ -177,12 +177,14 @@ final class FakeToolCatalog implements ToolCatalog {
   }
 }
 
-/// Simple sequential [ToolInvoker] for agent tests.
+/// Simple sequential [ToolInvoker] for agent tests. Passes
+/// `toolInvokerContract`.
 ///
 /// Unknown tools and invalid JSON give error outcomes; `external` tools emit
-/// [ConfirmationNeeded] and wait; a declined call yields a non-error outcome
-/// „Nutzer hat abgelehnt“; exceptions become error outcomes. No schema
-/// validation, no timeouts, no parallelism – that is `ToolExecutor`'s job.
+/// [ConfirmationNeeded] and wait; a declined call yields
+/// `ToolOutcome.declined()`; exceptions become error outcomes; cancellation
+/// follows the [ToolInvoker] contract. No schema validation, no timeouts, no
+/// parallelism – that is `ToolExecutor`'s job.
 final class FakeToolInvoker implements ToolInvoker {
   /// Creates an invoker over [catalog].
   FakeToolInvoker(this.catalog);
@@ -202,27 +204,37 @@ final class FakeToolInvoker implements ToolInvoker {
       received.add(call);
       final start = ctx.clock.now();
       yield ToolStarted(call);
-      final ToolOutcome outcome;
       final tool = catalog.lookup(call.name);
       final args = call.tryDecodeArguments();
-      if (tool == null) {
+      ToolOutcome outcome;
+      if (ctx.cancel.isCancelled) {
+        outcome = ToolOutcome.cancelled();
+      } else if (tool == null) {
         outcome = ToolOutcome.error('Unbekanntes Tool ${call.name}');
       } else if (args == null) {
         outcome = ToolOutcome.error('Argumente sind kein gültiges JSON-Objekt');
       } else {
         var approved = true;
         if (tool.risk == RiskLevel.external) {
-          final decision = Completer<bool>();
-          yield ConfirmationNeeded(
+          final confirmation = ConfirmationNeeded(
             call,
             tool.describeForConfirmation(args),
-            decision,
+            Completer<bool>(),
           );
-          approved = await decision.future;
+          yield confirmation;
+          approved = await Future.any([
+            confirmation.decision.future,
+            ctx.cancel.whenCancelled.then((_) => false),
+          ]);
+          confirmation.respond(false); // no-op if already answered
         }
-        outcome = approved
-            ? await _execute(tool, args, ctx)
-            : ToolOutcome.text('Nutzer hat abgelehnt');
+        if (ctx.cancel.isCancelled) {
+          outcome = ToolOutcome.cancelled();
+        } else if (!approved) {
+          outcome = ToolOutcome.declined();
+        } else {
+          outcome = await _execute(tool, args, ctx);
+        }
       }
       yield ToolFinished(call, outcome, ctx.clock.now().difference(start));
     }
@@ -234,7 +246,11 @@ final class FakeToolInvoker implements ToolInvoker {
     ToolContext ctx,
   ) async {
     try {
+      // A tool that completed despite cancellation keeps its real outcome:
+      // its effect has happened and the model must know.
       return await tool.execute(args, ctx);
+    } on CancelledException {
+      return ToolOutcome.cancelled();
     } on Object catch (e) {
       return ToolOutcome.error('Fehler bei ${tool.name}: $e');
     }

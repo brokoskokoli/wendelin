@@ -36,6 +36,28 @@ void main() {
       const ToolCallComplete(call0),
       const Done(StopReason.toolUse),
     ],
+    'incomplete call allowed when stream fails': [
+      const ToolCallDelta(index: 0, id: 'a', argumentsFragment: '{"v"'),
+      const ErrorEvent(NetworkException('weg')),
+    ],
+    'complete call plus incomplete second call on cancel': [
+      const ToolCallDelta(index: 0, argumentsFragment: '{"v":1}'),
+      const ToolCallComplete(call0),
+      const ToolCallDelta(index: 1, id: 'b', argumentsFragment: '{'),
+      const ErrorEvent(CancelledException()),
+    ],
+    'thinking deltas match complete block': [
+      const ThinkingDelta('Ich '),
+      const ThinkingDelta('denke'),
+      const ThinkingComplete(ThinkingBlock('Ich denke', signature: 's')),
+      const ThinkingDelta('zwei'),
+      const ThinkingComplete(ThinkingBlock('zwei')),
+      done,
+    ],
+    'redacted thinking without deltas': [
+      const ThinkingComplete(ThinkingBlock.redacted('opak')),
+      done,
+    ],
     'deltas reassemble to equivalent JSON': [
       const ToolCallDelta(index: 0, argumentsFragment: '{ "v" : 1 }'),
       const ToolCallComplete(call0),
@@ -75,6 +97,20 @@ void main() {
         argumentsFragment: '{"v":1}',
       ),
       const ToolCallComplete(call0),
+      done,
+    ],
+    'incomplete call although stream ends with Done': [
+      const ToolCallDelta(index: 0, id: 'a', argumentsFragment: '{"v"'),
+      done,
+    ],
+    'delta after its complete even when failing': [
+      const ToolCallComplete(call0),
+      const ToolCallDelta(index: 0, argumentsFragment: '{"v":1}'),
+      const ErrorEvent(NetworkException('x')),
+    ],
+    'thinking deltas differ from complete block': [
+      const ThinkingDelta('Ich denke'),
+      const ThinkingComplete(ThinkingBlock('Etwas anderes')),
       done,
     ],
     'fragments do not match arguments': [

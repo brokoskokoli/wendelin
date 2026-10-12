@@ -18,9 +18,15 @@ ToolContext ctx({CancelToken? cancel}) => ToolContext(
 void main() {
   group('ScriptedTurn', () {
     test('text splits into chunks, then usage and Done', () {
-      final t = ScriptedTurn.text('abcdefghij', chunkSize: 4, thinking: 'hm');
+      final t = ScriptedTurn.text(
+        'abcdefghij',
+        chunkSize: 4,
+        thinking: 'hm',
+        thinkingSignature: 'sig',
+      );
       expect(t.events, [
         const ThinkingDelta('hm'),
+        const ThinkingComplete(ThinkingBlock('hm', signature: 'sig')),
         const TextDelta('abcd'),
         const TextDelta('efgh'),
         const TextDelta('ij'),
@@ -49,6 +55,28 @@ void main() {
         const ToolCallComplete(call),
         const UsageEvent(ScriptedTurn.defaultUsage),
         const Done(StopReason.toolUse),
+      ]);
+      expectWellFormedChatStream(t.events);
+    });
+
+    test('errorDuringToolCall: half the arguments, then the error', () {
+      const call = ToolCallBlock(
+        id: 'c',
+        name: 'a__b',
+        argumentsJson: '{"x":12}',
+      );
+      final t = ScriptedTurn.errorDuringToolCall(
+        call,
+        const NetworkException('weg'),
+      );
+      expect(t.events, [
+        const ToolCallDelta(
+          index: 0,
+          id: 'c',
+          name: 'a__b',
+          argumentsFragment: '{"x"',
+        ),
+        const ErrorEvent(NetworkException('weg')),
       ]);
       expectWellFormedChatStream(t.events);
     });
@@ -255,7 +283,7 @@ void main() {
           events.add(e);
           if (e is ConfirmationNeeded) {
             expect(e.description, 'Senden?');
-            e.decision.complete(answers.first);
+            e.respond(answers.first);
             answers = answers.sublist(1);
           }
         }
@@ -268,7 +296,8 @@ void main() {
         expect(finished['3']!.isError, isTrue);
         expect(finished['4']!.isError, isTrue);
         expect(finished['5']!.isError, isFalse);
-        expect(finished['6']!.text, 'Nutzer hat abgelehnt');
+        expect(finished['6']!.text, ToolOutcome.declinedText);
+        expect(finished['6']!.isError, isFalse);
         expect(ext.callCount, 1);
         expect(events.whereType<ToolStarted>(), hasLength(6));
         expect(invoker.received, calls);

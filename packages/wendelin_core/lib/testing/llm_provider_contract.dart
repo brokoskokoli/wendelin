@@ -35,6 +35,10 @@ enum ContractScenario {
   /// Rate limit (HTTP 429): ends with `ErrorEvent(RateLimitException)`.
   rateLimited,
 
+  /// Failure in the middle of a tool call: at least one `ToolCallDelta`, no
+  /// `ToolCallComplete`, then `ErrorEvent` (any `ProviderException`).
+  errorDuringToolCall,
+
   /// Emits at least one `TextDelta` and then keeps the stream open until the
   /// request's `CancelToken` is cancelled (e.g. a never-closing body).
   hang,
@@ -92,6 +96,10 @@ abstract final class ContractExpectations {
 /// - `UsageEvent`s come before `Done` (implied by the previous rule);
 /// - `ToolCallDelta`s of call *k* come before the *k*-th `ToolCallComplete`
 ///   and their fragments reassemble to the same JSON as the complete call;
+///   streams ending with `Done` complete every call, streams ending with
+///   `ErrorEvent` may leave calls incomplete;
+/// - the `ThinkingDelta`s before a non-redacted `ThinkingComplete` add up to
+///   its text;
 /// - cancellation ends the stream with `ErrorEvent(CancelledException)` and
 ///   without `Done`.
 void llmProviderContract(
@@ -174,6 +182,18 @@ void llmProviderContract(
       });
     }
 
+    test(
+      'errorDuringToolCall: unvollständiger Call, ErrorEvent, kein Done',
+      () async {
+        final events = await collect(ContractScenario.errorDuringToolCall);
+        expectWellFormedChatStream(events);
+        expect(events.last, isA<ErrorEvent>());
+        expect(events.whereType<ToolCallDelta>(), isNotEmpty);
+        expect(events.whereType<ToolCallComplete>(), isEmpty);
+        expect(events.whereType<Done>(), isEmpty);
+      },
+    );
+
     test('Abbruch mitten im Stream endet mit CancelledException', () async {
       final provider = await create(ContractScenario.hang);
       final cancel = CancelToken();
@@ -226,6 +246,7 @@ void expectWellFormedChatStream(List<ChatEvent> events) {
   );
   // Usage before Done follows from Done being the single, last event.
 
+  final endsWithDone = events.last is Done;
   final completes = <int>[
     for (final (i, e) in events.indexed)
       if (e is ToolCallComplete) i,
@@ -233,11 +254,15 @@ void expectWellFormedChatStream(List<ChatEvent> events) {
   final fragments = <int, StringBuffer>{};
   for (final (i, e) in events.indexed) {
     if (e is! ToolCallDelta) continue;
-    expect(
-      e.index,
-      lessThan(completes.length),
-      reason: 'ToolCallDelta(index ${e.index}) ohne ToolCallComplete',
-    );
+    if (e.index >= completes.length) {
+      // Incomplete call: only allowed when the stream failed.
+      expect(
+        endsWithDone,
+        isFalse,
+        reason: 'ToolCallDelta(index ${e.index}) ohne ToolCallComplete',
+      );
+      continue;
+    }
     expect(
       i,
       lessThan(completes[e.index]),
@@ -257,6 +282,21 @@ void expectWellFormedChatStream(List<ChatEvent> events) {
       reason: 'Delta-Fragmente ergeben nicht die Argumente von ${call.id}',
     );
   });
+
+  final thinking = StringBuffer();
+  for (final e in events) {
+    if (e is ThinkingDelta) thinking.write(e.text);
+    if (e is ThinkingComplete) {
+      if (!e.block.isRedacted && thinking.isNotEmpty) {
+        expect(
+          e.block.text,
+          thinking.toString(),
+          reason: 'ThinkingDeltas ergeben nicht den ThinkingBlock',
+        );
+      }
+      thinking.clear();
+    }
+  }
 }
 
 Future<List<ChatEvent>> _collect(Stream<ChatEvent> stream) {
