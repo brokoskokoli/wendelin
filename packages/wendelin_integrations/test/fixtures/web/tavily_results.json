@@ -1,0 +1,14 @@
+{
+  "query": "wendelin",
+  "follow_up_questions": null,
+  "answer": null,
+  "images": [],
+  "results": [
+    {"url": "https://de.wikipedia.org/wiki/Wendelin", "title": "Wendelin – Wikipedia", "content": "Wendelin ist ein männlicher Vorname.", "score": 0.91, "raw_content": null},
+    {"url": "https://www.sankt-wendel.de/", "title": "St. Wendel", "content": "Kreisstadt im Saarland.", "score": 0.82, "raw_content": null},
+    {"url": "https://example.org/heiliger", "title": "Heiliger Wendelin", "content": "Schutzpatron der Hirten.", "score": 0.77, "raw_content": null},
+    {"url": "https://example.org/ohne-titel", "title": "", "content": "verworfen", "score": 0.5, "raw_content": null}
+  ],
+  "response_time": 1.23,
+  "request_id": "00000000-0000-0000-0000-000000000000"
+}

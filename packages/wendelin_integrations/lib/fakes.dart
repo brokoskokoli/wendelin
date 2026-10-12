@@ -1,0 +1,21 @@
+/// In-memory fakes of the integration ports: [FakeCalendarPort],
+/// [FakeClipboardPort], [FakeAlarmPort], [FakeMemoryStore],
+/// [FakeWebSearchBackend].
+///
+/// Does **not** depend on `package:test`, so the app may use it in
+/// production code (demo mode). Tests import `testing.dart`, which also
+/// exports the contract suites.
+library;
+
+import 'testing/fake_alarm_port.dart';
+import 'testing/fake_calendar_port.dart';
+import 'testing/fake_clipboard_port.dart';
+import 'testing/fake_memory_store.dart';
+import 'testing/fake_web_search_backend.dart';
+
+export 'testing/fake_alarm_port.dart';
+export 'testing/fake_calendar_port.dart';
+export 'testing/fake_clipboard_port.dart';
+export 'testing/fake_failures.dart';
+export 'testing/fake_memory_store.dart';
+export 'testing/fake_web_search_backend.dart';
