@@ -28,7 +28,7 @@ jobs:
           channel: stable
           flutter-version: 3.47.7
       - run: flutter pub get
-      - run: flutter analyze --fatal-infos
+      - run: flutter analyze --fatal-infos lib $( [ -d test ] && echo test )
         working-directory: app
-      - run: flutter test
+      - run: if [ -d test ]; then flutter test; fi
         working-directory: app

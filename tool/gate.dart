@@ -85,11 +85,21 @@ Future<void> main(List<String> args) async {
   if (!skipApp &&
       File('app/pubspec.yaml').existsSync() &&
       (only.isEmpty || only.contains('app'))) {
+    // Explizite Pfade: Ohne sie analysiert `flutter analyze` im Workspace
+    // nichts, weil die Root-analysis_options `app/**` ausschließt.
+    final appDirs = [
+      'lib',
+      if (Directory('app/test').existsSync()) 'test',
+      if (Directory('app/integration_test').existsSync()) 'integration_test',
+    ];
     await step('analyze app', 'flutter', [
       'analyze',
       '--fatal-infos',
+      ...appDirs,
     ], cwd: 'app');
-    await step('test app', 'flutter', ['test'], cwd: 'app');
+    if (Directory('app/test').existsSync()) {
+      await step('test app', 'flutter', ['test'], cwd: 'app');
+    }
   }
 
   await step('check_deps', 'dart', ['run', 'tool/check_deps.dart']);
