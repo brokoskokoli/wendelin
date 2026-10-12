@@ -19,11 +19,16 @@ abstract interface class ClipboardPort {
 
 /// Clipboard integration: `clipboard__read`, `clipboard__write`.
 final class ClipboardIntegration implements Integration {
-  /// Creates the integration on [port].
-  ClipboardIntegration(this.port);
+  /// Creates the integration on [port]. With [undoReadsPrevious] `false`,
+  /// `clipboard__write` does not read the previous content and offers no
+  /// undo (e.g. to avoid the iOS paste prompt).
+  ClipboardIntegration(this.port, {this.undoReadsPrevious = true});
 
   /// Device clipboard.
   final ClipboardPort port;
+
+  /// Whether `clipboard__write` reads the old text to offer undo.
+  final bool undoReadsPrevious;
 
   @override
   String get id => 'clipboard';
@@ -56,7 +61,7 @@ final class ClipboardIntegration implements Integration {
   @override
   late final List<Tool> tools = List.unmodifiable(<Tool>[
     ClipboardReadTool(port),
-    ClipboardWriteTool(port),
+    ClipboardWriteTool(port, undoReadsPrevious: undoReadsPrevious),
   ]);
 }
 
@@ -113,12 +118,19 @@ final class ClipboardReadTool extends IntegrationTool {
 }
 
 /// `clipboard__write` (write, undo restores the previous text).
+///
+/// For undo the previous text is read before writing and kept in memory
+/// until the undo action is dropped. Reading may show the iOS paste prompt
+/// and fails on Android in the background; then there is no undo.
 final class ClipboardWriteTool extends IntegrationTool {
-  /// Creates the tool.
-  const ClipboardWriteTool(this.port);
+  /// Creates the tool; see [undoReadsPrevious].
+  const ClipboardWriteTool(this.port, {this.undoReadsPrevious = true});
 
   /// Device clipboard.
   final ClipboardPort port;
+
+  /// Whether the previous text is read to offer undo.
+  final bool undoReadsPrevious;
 
   /// Longest text accepted.
   static const maxChars = 100000;
@@ -157,11 +169,13 @@ final class ClipboardWriteTool extends IntegrationTool {
     // Alter Inhalt für Undo; ist Lesen nicht erlaubt (Android im
     // Hintergrund), wird trotzdem geschrieben, nur ohne Undo.
     String? previous;
-    var canUndo = true;
-    try {
-      previous = await port.read();
-    } on PortException {
-      canUndo = false;
+    var canUndo = undoReadsPrevious;
+    if (canUndo) {
+      try {
+        previous = await port.read();
+      } on PortException {
+        canUndo = false;
+      }
     }
     await port.write(text);
     return ToolOutcome.text(

@@ -1,7 +1,9 @@
 // Schutzregel des Gedächtnisses: Zugangsdaten, Karten- und Kontonummern
-// werden nie gespeichert (Konzept „Gedächtnis im Detail“). Dieselbe Regel
-// setzt `MemoryRepository` in wendelin_storage um; der App-Adapter kann
-// diese Funktion zusätzlich nutzen.
+// werden nie gespeichert (Konzept „Gedächtnis im Detail“). Eine eigene,
+// ähnliche (nicht identische) Prüfung hat `MemoryRepository` in
+// wendelin_storage; beide sollen später in eine gemeinsame Quelle in
+// wendelin_core wandern (Folgepaket). Bis dahin prüft das Tool hiermit vor
+// dem Port, und der Port wendet seine eigene Regel an.
 
 final _digitRun = RegExp(r'\d(?:[ -]?\d){12,18}');
 

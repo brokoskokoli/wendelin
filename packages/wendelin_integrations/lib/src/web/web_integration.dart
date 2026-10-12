@@ -231,11 +231,12 @@ final class WebFetchTool extends IntegrationTool {
   String get fallbackDescription => 'Webseite lesen';
 }
 
-/// Neutralizes closing data tags inside fetched content so a page cannot
-/// end the data block early.
+/// Neutralizes opening and closing data tags inside fetched content (also
+/// with whitespace or other case, e.g. `< /WEB_CONTENT >`), so a page can
+/// neither end the data block early nor fake a new one.
 String _escape(String text) => text.replaceAllMapped(
-  RegExp(r'</\s*(web_content|web_search_results)', caseSensitive: false),
-  (m) => '<\u200B/${m[1]}',
+  RegExp(r'<(\s*/?\s*web_(?:content|search_results))', caseSensitive: false),
+  (m) => '&lt;${m[1]}',
 );
 
 String _attr(String value) => value

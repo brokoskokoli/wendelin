@@ -11,7 +11,14 @@ typedef FakeTimer = ({String id, Duration duration, String? label});
 /// [canList] `false` makes [listAlarms] return `null`.
 final class FakeAlarmPort with FakeFailures implements AlarmPort {
   /// Creates the fake.
-  FakeAlarmPort({this.returnsIds = true, this.canList = true});
+  FakeAlarmPort({
+    this.returnsIds = true,
+    this.canList = true,
+    this.available = true,
+  });
+
+  /// Returned by [isAvailable].
+  bool available;
 
   /// Whether [setAlarm]/[setTimer] return ids.
   final bool returnsIds;
@@ -26,6 +33,15 @@ final class FakeAlarmPort with FakeFailures implements AlarmPort {
   final List<FakeTimer> timers = [];
 
   int _next = 1;
+
+  @override
+  Future<bool> isAvailable() async {
+    enter('isAvailable');
+    return available;
+  }
+
+  @override
+  bool get supportsCancel => returnsIds;
 
   @override
   Future<String?> setAlarm({
@@ -67,10 +83,16 @@ final class FakeAlarmPort with FakeFailures implements AlarmPort {
   @override
   Future<void> cancel(String id) async {
     enter('cancel');
+    if (!returnsIds) {
+      throw const PortException(
+        PortErrorKind.unsupported,
+        'Wecker können auf diesem Gerät nicht gelöscht werden',
+      );
+    }
     final before = alarms.length + timers.length;
     alarms.removeWhere((a) => a.id == id);
     timers.removeWhere((t) => t.id == id);
-    if (!returnsIds || alarms.length + timers.length == before) {
+    if (alarms.length + timers.length == before) {
       throw PortException(PortErrorKind.notFound, 'Wecker „$id“ gibt es nicht');
     }
   }

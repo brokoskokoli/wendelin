@@ -35,6 +35,13 @@ void main() {
     );
   });
 
+  test('Verfügbarkeit kommt vom Port', () async {
+    port.available = false;
+    final a = await integration.checkAvailability();
+    expect(a.available, isFalse);
+    expect(a.reason, contains('keine Wecker'));
+  });
+
   test('germanDays und germanDuration', () {
     expect(germanDays({}), 'einmalig');
     expect(germanDays({1, 2, 3, 4, 5}), 'Mo–Fr');

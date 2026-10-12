@@ -32,16 +32,29 @@ final class CalendarToolEnv {
   /// The cached event with [id], if seen recently.
   CalendarEvent? cached(String id) => _cache[id];
 
-  /// Caches [event] (most recent last; oldest dropped beyond [cacheSize]).
+  /// Caches the parts of [event] needed for confirmation texts (title,
+  /// times, all-day, series), most recent last; the oldest is dropped
+  /// beyond [cacheSize]. Location, notes, attendees are not kept.
   void remember(CalendarEvent event) {
     _cache
       ..remove(event.id)
-      ..[event.id] = event;
+      ..[event.id] = CalendarEvent(
+        id: event.id,
+        calendarId: '',
+        title: event.title,
+        start: event.start,
+        end: event.end,
+        allDay: event.allDay,
+        recurring: event.recurring,
+      );
     if (_cache.length > cacheSize) _cache.remove(_cache.keys.first);
   }
 
   /// Drops [id] from the cache.
   void forget(String id) => _cache.remove(id);
+
+  /// Empties the cache; the app calls it when a session ends.
+  void clearCache() => _cache.clear();
 
   /// The zone for an execution: [override] if given, else the device zone
   /// from [ctx].
@@ -682,7 +695,9 @@ final class UpdateEventTool extends IntegrationTool {
   String get description =>
       'Change an existing event by event_id (from calendar__list_events). '
       'Only pass the fields to change. If only start is given, the event '
-      'keeps its length. Example: event_id "42", start "2026-10-15T11:00".';
+      'keeps its length. Example: event_id "42", start "2026-10-15T11:00". '
+      'Recurring events: only title, location and notes of the whole series '
+      'can be changed, not the time.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -722,6 +737,13 @@ final class UpdateEventTool extends IntegrationTool {
     }
     final changesTime =
         args.has('start') || args.has('end') || args.has('all_day');
+    if (old.recurring && changesTime) {
+      throw const PortException(
+        PortErrorKind.rejected,
+        'Serientermin: einzelne Vorkommen bitte in der Kalender-App ändern. '
+        'Titel, Ort und Notizen lassen sich für die ganze Serie ändern.',
+      );
+    }
     final times = changesTime
         ? _readEventTimes(args, loc, old: old)
         : (start: old.start, end: old.end, allDay: old.allDay);
@@ -734,6 +756,7 @@ final class UpdateEventTool extends IntegrationTool {
         start: times.start,
         end: times.end,
         allDay: times.allDay,
+        timeZone: changesTime ? (times.allDay ? 'UTC' : loc.name) : null,
         location: location == null
             ? old.location
             : (location.isEmpty ? null : location),
@@ -744,11 +767,15 @@ final class UpdateEventTool extends IntegrationTool {
     );
     env.remember(updated);
     final names = await _calendarNames(env.port);
+    final series = old.recurring ? ' (ganze Serie)' : '';
     return jsonOutcome(
-      {'updated': _eventJson(updated, loc, names)},
+      {
+        'updated': _eventJson(updated, loc, names),
+        if (old.recurring) 'scope': 'ganze Serie',
+      },
       summary:
           'Termin geändert: ${updated.title}, '
-          '${describeEventSpan(updated, loc)}',
+          '${describeEventSpan(updated, loc)}$series',
       undo: UndoAction(
         label: 'Änderung rückgängig',
         run: () async => env.remember(await env.port.updateEvent(old)),
@@ -763,8 +790,10 @@ final class UpdateEventTool extends IntegrationTool {
     final title = old == null ? '(ID $id)' : '‚${old.title}‘';
     final zone = _optText(args, 'time_zone');
     final loc = zone == null ? env.describeZone : timeZoneLocation(zone);
-    if (!args.has('start')) return 'Termin $title ändern';
-    return 'Termin $title ändern: ${_describeArgsSpan(args, loc, old: old)}';
+    final series = old?.recurring ?? false ? ' (ganze Serie)' : '';
+    if (!args.has('start')) return 'Termin $title ändern$series';
+    return 'Termin $title ändern: '
+        '${_describeArgsSpan(args, loc, old: old)}$series';
   }
 
   @override
@@ -785,7 +814,8 @@ final class DeleteEventTool extends IntegrationTool {
   @override
   String get description =>
       'Delete an event by event_id (from calendar__list_events). The user '
-      'is asked to confirm.';
+      'is asked to confirm. For a recurring event this deletes the WHOLE '
+      'series, not just one occurrence.';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -810,9 +840,14 @@ final class DeleteEventTool extends IntegrationTool {
     await env.port.deleteEvent(id);
     env.forget(id);
     return jsonOutcome(
-      {'deleted': id, 'title': event.title},
+      {
+        'deleted': id,
+        'title': event.title,
+        if (event.recurring) 'scope': 'ganze Serie',
+      },
       summary:
-          'Termin gelöscht: ${event.title}, ${describeEventSpan(event, loc)}',
+          'Termin gelöscht: ${event.title}, ${describeEventSpan(event, loc)}'
+          '${event.recurring ? ' (ganze Serie)' : ''}',
     );
   }
 

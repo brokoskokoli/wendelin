@@ -127,11 +127,22 @@ final class _TrimmingClipboard implements ClipboardPort {
 }
 
 final class _BadAlarms implements AlarmPort {
-  _BadAlarms({this.noValidation = false, this.cancelNoop = false});
+  _BadAlarms({
+    this.noValidation = false,
+    this.cancelNoop = false,
+    this.claimsCancelWithoutIds = false,
+  });
 
   final bool noValidation;
   final bool cancelNoop;
+  final bool claimsCancelWithoutIds;
   final inner = FakeAlarmPort();
+
+  @override
+  Future<bool> isAvailable() => inner.isAvailable();
+
+  @override
+  bool get supportsCancel => true;
 
   @override
   Future<String?> setAlarm({
@@ -139,12 +150,15 @@ final class _BadAlarms implements AlarmPort {
     required int minute,
     String? label,
     Set<int>? days,
-  }) => inner.setAlarm(
-    hour: noValidation ? hour.clamp(0, 23) : hour,
-    minute: noValidation ? minute.clamp(0, 59) : minute,
-    label: label,
-    days: noValidation ? days?.map((d) => d.clamp(1, 7)).toSet() : days,
-  );
+  }) async {
+    final id = await inner.setAlarm(
+      hour: noValidation ? hour.clamp(0, 23) : hour,
+      minute: noValidation ? minute.clamp(0, 59) : minute,
+      label: label,
+      days: noValidation ? days?.map((d) => d.clamp(1, 7)).toSet() : days,
+    );
+    return claimsCancelWithoutIds ? null : id;
+  }
 
   @override
   Future<String?> setTimer({required Duration duration, String? label}) =>
@@ -313,6 +327,24 @@ void main() {
         )[AlarmPortChecks.invalid]!(),
         _fails,
       );
+    });
+
+    test('supportsCancel ohne Ids', () async {
+      await expectLater(
+        alarmPortContractChecks(
+          () => _BadAlarms(claimsCancelWithoutIds: true),
+        )[AlarmPortChecks.alarmLifecycle]!(),
+        _fails,
+      );
+    });
+
+    test('ohne Abbrechbarkeit legt die Suite nichts an', () async {
+      final port = FakeAlarmPort(returnsIds: false);
+      for (final check in alarmPortContractChecks(() => port).values) {
+        await check();
+      }
+      expect(port.alarms, isEmpty);
+      expect(port.timers, isEmpty);
     });
 
     test('wirkungsloses cancel', () async {

@@ -18,7 +18,7 @@
 
 Grenze: Der HTTP-Client löst den Namen nach der Prüfung selbst noch einmal auf (DNS-Rebinding mit sehr kurzer TTL ist nicht vollständig ausgeschlossen).
 
-**Daten statt Anweisungen**: Ergebnisse beginnen mit einem Hinweis und stehen in `<web_content …>`/`<web_search_results>`; schließende Tags im Inhalt werden entschärft.
+**Daten statt Anweisungen**: Ergebnisse beginnen mit einem Hinweis und stehen in `<web_content …>`/`<web_search_results>`; öffnende und schließende Daten-Tags im Inhalt werden in jeder Schreibweise (Groß/klein, Leerraum wie `< /WEB_CONTENT >`) zu `&lt;…` entschärft.
 
 **`serverSideAvailable`**: Bei Anthropic-Profilen mit serverseitiger Websuche braucht es die Integration nicht; die App entscheidet und setzt das Flag.
 

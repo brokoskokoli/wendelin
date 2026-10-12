@@ -5,8 +5,8 @@ import '../src/memory/memory.dart';
 import '../src/memory/sensitive_content.dart';
 import 'fake_failures.dart';
 
-/// In-memory [MemoryStorePort] with simple word-overlap search and the same
-/// sensitivity rule as the real store.
+/// In-memory [MemoryStorePort] with simple word-overlap search; rejects
+/// sensitive content via [sensitiveContentReason].
 final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
   /// Creates the fake; [clock] and [ids] default to a fixed clock and
   /// sequential ids `m1`, `m2`, ….

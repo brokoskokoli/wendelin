@@ -291,6 +291,9 @@ final class MemorySearchTool extends IntegrationTool {
 }
 
 /// `memory__forget` (write, undo saves the entry again).
+///
+/// Undo re-saves text, category and source; the entry gets a new id and new
+/// timestamps (`createdAt` = now, `lastUsedAt` empty).
 final class MemoryForgetTool extends IntegrationTool {
   /// Creates the tool.
   const MemoryForgetTool(this.store);

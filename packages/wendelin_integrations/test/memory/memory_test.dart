@@ -209,6 +209,7 @@ void main() {
         expect(back.text, 'Projekt Garten');
         expect(back.category, MemoryCategory.project);
         expect(back.source, 'session:alt');
+        expect(back.id, isNot(e.id), reason: 'Undo vergibt eine neue Id');
       },
     );
 

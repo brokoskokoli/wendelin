@@ -103,6 +103,20 @@ void main() {
       expect(o.undo, isNull);
     });
 
+    test('undoReadsPrevious: false liest nicht und bietet kein Undo', () async {
+      integration = ClipboardIntegration(port, undoReadsPrevious: false);
+      final o = await tool('clipboard__write').execute({'text': 'neu'}, ctx());
+      expect(o.isError, isFalse);
+      expect(o.undo, isNull);
+      expect(port.methodCalls, ['write']);
+      expect(port.content, 'neu');
+    });
+
+    test('Standard liest den alten Inhalt vor dem Schreiben', () async {
+      await tool('clipboard__write').execute({'text': 'neu'}, ctx());
+      expect(port.methodCalls, ['read', 'write']);
+    });
+
     test('Port-Fehler beim Schreiben', () async {
       port.failNext('write');
       final o = await tool('clipboard__write').execute({'text': 'neu'}, ctx());

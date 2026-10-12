@@ -768,6 +768,14 @@ void main() {
             title: 'Urlaub',
             allDay: true,
           ),
+          event(
+            's',
+            berlin(16, 18),
+            berlin(16, 19),
+            title: 'Training',
+            recurring: true,
+            location: 'Halle',
+          ),
         ],
       );
       integration = CalendarIntegration(port);
@@ -775,6 +783,68 @@ void main() {
 
     CalendarEvent stored(String id) =>
         port.events.singleWhere((e) => e.id == id);
+
+    test(
+      'Serientermin: Zeitänderung wird abgelehnt, nichts geändert',
+      () async {
+        for (final args in [
+          {'start': '2026-10-16T19:00'},
+          {'end': '2026-10-16T20:00'},
+          {'all_day': true},
+        ]) {
+          final o = await run('calendar__update_event', {
+            'event_id': 's',
+            ...args,
+          });
+          expect(o.isError, isTrue, reason: '$args');
+          expect(o.text, contains('Serientermin'));
+          expect(o.text, contains('Kalender-App'));
+        }
+        expect(stored('s').start, berlin(16, 18));
+        expect(port.methodCalls, isNot(contains('updateEvent')));
+      },
+    );
+
+    test('Serientermin: Titel/Ort ändern mit Hinweis „ganze Serie“', () async {
+      final o = await run('calendar__update_event', {
+        'event_id': 's',
+        'title': 'Lauftraining',
+        'location': 'Park',
+      });
+      expect(o.isError, isFalse);
+      expect(stored('s').title, 'Lauftraining');
+      expect(stored('s').location, 'Park');
+      expect(stored('s').start, berlin(16, 18));
+      expect(json(o)['scope'], 'ganze Serie');
+      expect(o.summary, endsWith('(ganze Serie)'));
+      expect(
+        tool('calendar__update_event')
+            .describeForConfirmation({'event_id': 's', 'title': 'X'}),
+        'Termin ‚Lauftraining‘ ändern (ganze Serie)',
+      );
+    });
+
+    test('Zeitzone wird wie beim Anlegen gesetzt', () async {
+      await run('calendar__update_event', {
+        'event_id': 'a',
+        'start': '2026-10-15T10:00',
+        'time_zone': 'Europe/Lisbon',
+      });
+      expect(stored('a').timeZone, 'Europe/Lisbon');
+      expect(stored('a').start, DateTime.utc(2026, 10, 15, 9));
+      await run('calendar__update_event', {
+        'event_id': 'a',
+        'start': '2026-10-15T10:00',
+      });
+      expect(stored('a').timeZone, 'Europe/Berlin');
+      await run('calendar__update_event', {
+        'event_id': 'a',
+        'title': 'Nur Titel',
+      });
+      expect(stored('a').timeZone, 'Europe/Berlin');
+      await run('calendar__update_event', {'event_id': 'a', 'all_day': true});
+      expect(stored('a').timeZone, 'UTC');
+    });
 
     test('nur Titel: Zeiten bleiben; Undo stellt alten Zustand her', () async {
       final before = stored('a');
@@ -947,6 +1017,23 @@ void main() {
       expect(port.events.map((e) => e.id), ['r']);
     });
 
+    test('Serie: Ergebnis und Beschreibung sagen „ganze Serie“', () async {
+      expect(
+        tool('calendar__delete_event').description,
+        contains('WHOLE series'),
+      );
+      final o = await run('calendar__delete_event', {'event_id': 'r'});
+      expect(json(o), {
+        'deleted': 'r',
+        'title': 'Training',
+        'scope': 'ganze Serie',
+      });
+      expect(
+        o.summary,
+        'Termin gelöscht: Training, Fr 16.10. 18:00–19:00 (ganze Serie)',
+      );
+    });
+
     test('unbekannte Id', () async {
       final o = await run('calendar__delete_event', {'event_id': 'nix'});
       expect(o.isError, isTrue);
@@ -993,6 +1080,38 @@ void main() {
           'Termin (ID a) löschen',
         );
       },
+    );
+  });
+
+  test('Cache speichert nur Titel und Zeiten; clearCache leert', () async {
+    port = FakeCalendarPort(
+      events: [
+        event(
+          'a',
+          berlin(15, 10),
+          berlin(15, 11),
+          location: 'Hafen',
+          description: 'geheim',
+          attendees: ['anna@example.org'],
+        ),
+      ],
+    );
+    integration = CalendarIntegration(port);
+    await run('calendar__list_events', {
+      'start': '2026-10-15',
+      'end': '2026-10-15',
+    });
+    final cached = integration.env.cached('a')!;
+    expect(cached.title, 'Tauchen');
+    expect(cached.start, berlin(15, 10));
+    expect(cached.location, isNull);
+    expect(cached.description, isNull);
+    expect(cached.attendees, isEmpty);
+    integration.clearCache();
+    expect(integration.env.cached('a'), isNull);
+    expect(
+      tool('calendar__delete_event').describeForConfirmation({'event_id': 'a'}),
+      'Termin (ID a) löschen',
     );
   });
 

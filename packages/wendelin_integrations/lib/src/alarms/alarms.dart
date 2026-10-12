@@ -13,6 +13,16 @@ import '../common/tool_args.dart';
 /// Android intents give no handle back: [setAlarm]/[setTimer] then return
 /// `null`, and nothing can be undone or listed.
 abstract interface class AlarmPort {
+  /// Whether alarms and timers can be set on this device at all (a clock
+  /// app handles the intent, or the notification fallback is available,
+  /// K7).
+  Future<bool> isAvailable();
+
+  /// Whether alarms and timers set by this port can be cancelled again
+  /// ([setAlarm]/[setTimer] then always return ids). `false` for Android
+  /// `AlarmClock` intents.
+  bool get supportsCancel;
+
   /// Sets an alarm at [hour]:[minute] (device time), repeating on [days]
   /// (ISO weekdays 1 = Monday … 7 = Sunday) or once if `null`/empty.
   /// Returns an id if the alarm can be cancelled later, else `null`.
@@ -30,7 +40,8 @@ abstract interface class AlarmPort {
   Future<String?> setTimer({required Duration duration, String? label});
 
   /// Cancels the alarm or timer [id] returned by [setAlarm]/[setTimer].
-  /// Throws `PortException(notFound)` for unknown ids.
+  /// Throws `PortException(notFound)` for unknown ids and
+  /// `PortException(unsupported)` if [supportsCancel] is `false`.
   Future<void> cancel(String id);
 
   /// The alarms set on the device, or `null` if the platform cannot list
@@ -149,7 +160,12 @@ final class AlarmsIntegration implements Integration {
   bool get sensitive => false;
 
   @override
-  Future<Availability> checkAvailability() async => Availability.yes;
+  Future<Availability> checkAvailability() async => await port.isAvailable()
+      ? Availability.yes
+      : const Availability(
+          available: false,
+          reason: 'Auf diesem Gerät können keine Wecker gestellt werden.',
+        );
 
   @override
   List<SetupStep> get setup => const [];
