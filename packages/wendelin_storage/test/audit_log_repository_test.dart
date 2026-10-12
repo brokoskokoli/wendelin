@@ -112,10 +112,21 @@ void main() {
         'Auth',
         'KEY',
         'passwd',
+        'basicAuth',
+        'proxy_auth',
+        'x-auth',
+        'BASIC_AUTH',
       ]) {
         expect(redactSecrets({key: 'geheim'}), {key: '***'}, reason: key);
       }
-      for (final key in ['keyword', 'author', 'monkey', 'authority']) {
+      for (final key in [
+        'keyword',
+        'author',
+        'monkey',
+        'authority',
+        'authMethod',
+        'oauthProvider',
+      ]) {
         expect(redactSecrets({key: 'x'}), {key: 'x'}, reason: key);
       }
     });

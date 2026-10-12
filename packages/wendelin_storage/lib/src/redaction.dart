@@ -6,9 +6,10 @@ const redactedValue = '***';
 ///
 /// By key (see [shouldRedactField]): a field whose key names a credential
 /// (`apiKey`, `Authorization`, `password`, `client_secret`, `privateKey`,
-/// `auth`, `key`, …) is always replaced, whatever its type; a field whose key
-/// merely contains the word `token`/`tokens` is replaced unless its value is
-/// a number or boolean, so counters like `inputTokens: 12` stay readable.
+/// `auth`, `key`, `basicAuth`, …) is always replaced, whatever its type; a
+/// field whose key merely contains the word `token`/`tokens` is replaced
+/// unless its value is a number or boolean, so counters like
+/// `inputTokens: 12` stay readable.
 ///
 /// Name/value pairs (`{name: 'Authorization', value: '…'}`, also with
 /// `header`/`key` instead of `name`) have their `value` replaced when the
@@ -85,7 +86,13 @@ _KeyClass _classify(String key) {
       _credentialFragments.any(joined.contains)) {
     return _KeyClass.credential;
   }
-  final words = key.split(_wordBoundary).map((w) => w.toLowerCase());
+  final words = key
+      .split(_wordBoundary)
+      .where((w) => w.isNotEmpty)
+      .map((w) => w.toLowerCase())
+      .toList();
+  // `basicAuth`, `proxy_auth`, `x-auth`: "auth" as the last word.
+  if (words.isNotEmpty && words.last == 'auth') return _KeyClass.credential;
   if (words.any((w) => w == 'token' || w == 'tokens')) return _KeyClass.token;
   return _KeyClass.none;
 }

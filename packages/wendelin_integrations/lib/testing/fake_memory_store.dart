@@ -2,11 +2,10 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../src/common/port_exception.dart';
 import '../src/memory/memory.dart';
-import '../src/memory/sensitive_content.dart';
 import 'fake_failures.dart';
 
 /// In-memory [MemoryStorePort] with simple word-overlap search; rejects
-/// sensitive content via [sensitiveContentReason].
+/// sensitive content via core's [detectSensitiveContent].
 final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
   /// Creates the fake; [clock] and [ids] default to a fixed clock and
   /// sequential ids `m1`, `m2`, ….
@@ -35,8 +34,10 @@ final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
     if (text.trim().isEmpty) {
       throw ArgumentError.value(text, 'text', 'darf nicht leer sein');
     }
-    final reason = sensitiveContentReason(text);
-    if (reason != null) throw PortException(PortErrorKind.rejected, reason);
+    final finding = detectSensitiveContent(text);
+    if (finding != null) {
+      throw PortException(PortErrorKind.rejected, finding.reason);
+    }
     final entry = MemoryEntry(
       id: ids.next(),
       text: text.trim(),

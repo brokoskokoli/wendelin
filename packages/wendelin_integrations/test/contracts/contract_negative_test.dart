@@ -193,7 +193,7 @@ final class _BadMemory implements MemoryStorePort {
     required MemoryCategory category,
     required String source,
   }) async {
-    if (storesSensitive && sensitiveContentReason(text) != null) {
+    if (storesSensitive && detectSensitiveContent(text) != null) {
       final e = MemoryEntry(
         id: 'raw${raw.length}',
         text: text,
