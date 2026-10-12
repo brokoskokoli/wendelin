@@ -63,7 +63,7 @@ Future<void> main(List<String> args) async {
     final hasCode =
         src.existsSync() &&
         src.listSync(recursive: true).any((f) => f.path.endsWith('.dart'));
-    if (!hasCode && name != 'evals') {
+    if (!hasCode) {
       stdout.writeln('\n== test $name: noch kein Code, übersprungen');
       continue;
     }
