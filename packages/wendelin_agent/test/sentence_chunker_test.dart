@@ -136,6 +136,18 @@ void main() {
       'Then plan B... Okay.',
       ['Then plan B...', 'Okay.'],
     ),
+    ('en: "no" as a word', 'Say no. Then leave.', ['Say no.', 'Then leave.']),
+    (
+      'en: "No." before a number',
+      'Take No. 5 today. Done.',
+      ['Take No. 5 today.', 'Done.'],
+    ),
+    // Deliberate trade-off: single capital letters count as initials.
+    (
+      'de: Einzelbuchstabe bleibt zusammen',
+      'Plan B. Dann gehen wir.',
+      ['Plan B. Dann gehen wir.'],
+    ),
     ('empty input', '', <String>[]),
     ('only whitespace', '  \n ', <String>[]),
   ];

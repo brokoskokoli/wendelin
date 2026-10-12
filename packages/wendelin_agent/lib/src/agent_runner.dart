@@ -72,17 +72,19 @@ final class AgentRunner implements AgentRun {
     }
     final state = _Run(this, input);
     _active = state;
-    state.controller.onListen = () => unawaited(
-      state.drive().whenComplete(() {
-        if (identical(_active, state)) _active = null;
-      }),
-    );
+    state.controller.onListen = () => unawaited(state.drive());
     state.controller.onCancel = () => state.abort(AgentErrorKind.cancelled);
     return state.controller.stream;
   }
 
   @override
   void cancel() => _active?.abort(AgentErrorKind.cancelled);
+
+  /// Frees the runner before the terminal event goes out, so a listener may
+  /// start the next run right away.
+  void _finished(_Run state) {
+    if (identical(_active, state)) _active = null;
+  }
 }
 
 /// Result of one model call.
@@ -134,12 +136,28 @@ final class _Run {
   bool _consentDeclined = false;
   final Set<String> _budgetWarned = {};
 
-  /// Whether text was streamed that is not yet part of a kept assistant
-  /// message (see [_resetText]).
-  bool _unkeptText = false;
+  /// Assistant messages of a paused turn (`StopReason.pauseTurn`), not yet
+  /// recorded.
+  final List<Message> _paused = [];
+
+  /// Id the model sent for each (possibly renamed) call id.
+  final Map<String, String> _sourceIds = {};
+
+  /// Whether text was streamed in the current segment, i.e. since the last
+  /// tool event or text reset (the scope of `AgentTextReset`).
+  bool _segmentStreamed = false;
 
   void emit(AgentEvent e) {
-    if (!controller.isClosed) controller.add(e);
+    if (controller.isClosed) return;
+    switch (e) {
+      case AgentTextDelta():
+        _segmentStreamed = true;
+      case ToolCallStarted() || ToolCallFinished() || AgentTextReset():
+        _segmentStreamed = false;
+      case _:
+        break;
+    }
+    controller.add(e);
   }
 
   /// Aborts the run with [kind] (first abort wins).
@@ -165,6 +183,7 @@ final class _Run {
     } finally {
       _timer?.cancel();
     }
+    runner._finished(this);
     emit(terminal);
     await controller.close();
   }
@@ -190,7 +209,6 @@ final class _Run {
     }
 
     var retried = false;
-    final finalText = StringBuffer();
     while (true) {
       await _checkBeforeCall();
       final reply = await _callModel();
@@ -199,13 +217,12 @@ final class _Run {
         _throwIfAborted();
         if (error.retryable && !retried) {
           retried = true;
-          _resetText('Neuer Versuch nach Fehler');
+          _retryCurrentCall();
           continue;
         }
         if (error.retryable &&
             await _escalate(EscalationReason.providerError)) {
           retried = false;
-          _resetText('An anderes Modell übergeben');
           continue;
         }
         _throwIfAborted();
@@ -218,23 +235,19 @@ final class _Run {
         );
       }
       retried = false;
-      final assistant = Message.assistant(reply.blocks);
+      final (assistant, calls) = _assignCallIds(reply.blocks);
 
-      if (reply.stopReason == StopReason.pauseTurn) {
-        finalText.write(reply.text);
-        await _append(assistant);
+      if (calls.isEmpty && reply.stopReason == StopReason.pauseTurn) {
+        // Kept for the continuation, recorded once the answer stands.
+        _messages.add(assistant);
+        _paused.add(assistant);
         continue;
       }
 
-      final calls = reply.toolCalls;
       if (calls.isEmpty) {
-        finalText.write(reply.text);
-        final text = finalText.toString();
+        final text = [..._paused, assistant].map((m) => m.text).join();
         if (runner.giveUpClassifier.isGiveUp(text) &&
             await _escalate(EscalationReason.modelGaveUp)) {
-          finalText.clear();
-          _dropPausedSegments();
-          _resetText('An anderes Modell übergeben');
           continue;
         }
         await _append(assistant);
@@ -244,8 +257,8 @@ final class _Run {
         );
       }
 
-      // Tool round.
-      finalText.clear();
+      // Tool round (also for tool calls in a paused answer: every tool_use
+      // gets its tool_result).
       if (_rounds >= config.maxToolRounds) {
         await _refuseRound(assistant, calls, 'Limit der Tool-Runden erreicht');
         throw _Stop(_failed(AgentErrorKind.toolRoundLimit));
@@ -256,14 +269,11 @@ final class _Run {
       }
       if (_roundsOnProvider >= config.escalateAfterRoundsWithoutResult &&
           await _escalate(EscalationReason.noProgress)) {
-        _dropPausedSegments();
-        _resetText('An anderes Modell übergeben');
         continue;
       }
       _rounds++;
       _roundsOnProvider++;
       await _append(assistant);
-      _unkeptText = false;
       final results = await _runTools(calls);
       await _append(Message.toolResults(results));
       _throwIfAborted();
@@ -273,6 +283,53 @@ final class _Run {
         if (await _escalate(EscalationReason.invalidToolCalls)) continue;
       }
     }
+  }
+
+  /// Before retrying a failed call at the same provider: drop the text it
+  /// streamed. Paused segments of this answer stay in the request; as the
+  /// reset also clears them in the UI, their text is sent again.
+  void _retryCurrentCall() {
+    if (!_segmentStreamed) return;
+    emit(const AgentTextReset('Neuer Versuch nach Fehler'));
+    final kept = _paused.map((m) => m.text).join();
+    if (kept.isNotEmpty) emit(AgentTextDelta(kept));
+  }
+
+  /// Gives every tool call an id that is unique in the conversation. Weak
+  /// servers repeat ids such as `call_0` or send empty ones; a colliding
+  /// call gets an internal id so that tool_use and tool_result stay
+  /// consistent. [_sourceIds] keeps the id the model sent.
+  (Message, List<ToolCallBlock>) _assignCallIds(List<ContentBlock> blocks) {
+    final used = {
+      for (final m in _messages)
+        for (final c in m.toolCalls) c.id,
+    };
+    final out = <ContentBlock>[];
+    final calls = <ToolCallBlock>[];
+    for (final b in blocks) {
+      if (b is! ToolCallBlock) {
+        out.add(b);
+        continue;
+      }
+      var call = b;
+      if (b.id.isEmpty || used.contains(b.id)) {
+        final base = b.id.isEmpty ? 'call' : b.id;
+        var n = 2;
+        while (used.contains('$base~$n')) {
+          n++;
+        }
+        call = ToolCallBlock(
+          id: '$base~$n',
+          name: b.name,
+          argumentsJson: b.argumentsJson,
+        );
+      }
+      used.add(call.id);
+      _sourceIds[call.id] = b.id;
+      out.add(call);
+      calls.add(call);
+    }
+    return (Message.assistant(out), calls);
   }
 
   // ---------------------------------------------------------------- limits
@@ -350,7 +407,6 @@ final class _Run {
         case TextDelta(text: final delta):
           if (delta.isEmpty) break;
           emit(AgentTextDelta(delta));
-          _unkeptText = true;
           _appendText(blocks, delta);
         case ThinkingDelta(text: final delta):
           if (delta.isNotEmpty) emit(AgentThinkingDelta(delta));
@@ -370,7 +426,9 @@ final class _Run {
       if (event.isTerminal) break;
     }
     if (usage case final used?) {
-      _tokensSpent += used.totalTokens;
+      // Cache reads are cheap and do not count towards the run budget.
+      _tokensSpent +=
+          used.inputTokens + used.outputTokens + used.cacheWriteTokens;
       emit(
         UsageReported(
           profileId: target.profileId,
@@ -422,26 +480,28 @@ final class _Run {
       runner.contextBuilder.catalog.lookup(call.name) == null ||
       call.tryDecodeArguments() == null;
 
-  /// The earlier execution [call] would repeat, if any: same call id, or –
-  /// after an escalation – same tool and arguments as a call of a previous
-  /// provider that was not declined.
+  /// The earlier execution [call] would repeat, if any: a call with the
+  /// same id from the model *and* the same tool and arguments, or – after an
+  /// escalation – the same tool and arguments as a call of a previous
+  /// provider that was not declined. Equal ids with other content are an id
+  /// collision, not a repetition (see [_assignCallIds]).
   _Executed? _earlierExecution(ToolCallBlock call) {
+    final sourceId = _sourceIds[call.id] ?? call.id;
     for (final e in _executed) {
-      if (e.call.id == call.id) return e;
-    }
-    final args = call.tryDecodeArguments();
-    for (final e in _executed) {
-      if (e.epoch >= _epoch || e.call.name != call.name) continue;
-      if (_isDeclined(e.outcome)) continue;
-      final same = args == null
-          ? e.call.argumentsJson == call.argumentsJson
-          : const DeepCollectionEquality().equals(
-              e.call.tryDecodeArguments(),
-              args,
-            );
-      if (same) return e;
+      if (!_sameContent(e.call, call)) continue;
+      final earlierId = _sourceIds[e.call.id] ?? e.call.id;
+      if (sourceId.isNotEmpty && earlierId == sourceId) return e;
+      if (e.epoch < _epoch && !_isDeclined(e.outcome)) return e;
     }
     return null;
+  }
+
+  static bool _sameContent(ToolCallBlock a, ToolCallBlock b) {
+    if (a.name != b.name) return false;
+    final args = b.tryDecodeArguments();
+    return args == null
+        ? a.argumentsJson == b.argumentsJson
+        : const DeepCollectionEquality().equals(a.tryDecodeArguments(), args);
   }
 
   static bool _isDeclined(ToolOutcome o) =>
@@ -567,6 +627,13 @@ final class _Run {
         reason: reason,
       ),
     );
+    // The answer of the previous provider is discarded: paused segments and
+    // streamed text of the current call.
+    _messages.removeWhere((m) => _paused.any((p) => identical(p, m)));
+    _paused.clear();
+    if (_segmentStreamed) {
+      emit(const AgentTextReset('An anderes Modell übergeben'));
+    }
     _current = next;
     _epoch++;
     _roundsOnProvider = 0;
@@ -584,27 +651,14 @@ final class _Run {
     return true;
   }
 
-  /// Tells UI and TTS to drop streamed text that is being discarded (retry,
-  /// replaced answer); only if such text was streamed.
-  void _resetText(String reason) {
-    if (!_unkeptText) return;
-    _unkeptText = false;
-    emit(AgentTextReset(reason));
-  }
-
-  /// Removes assistant messages of a paused turn that is being replaced by
-  /// an escalation.
-  void _dropPausedSegments() {
-    while (_messages.isNotEmpty &&
-        _messages.last.role == Role.assistant &&
-        _messages.last.toolCalls.isEmpty) {
-      _messages.removeLast();
-    }
-  }
-
   // ------------------------------------------------------------- history
 
+  /// Adds a kept message; records paused segments of this answer first.
   Future<void> _append(Message m) async {
+    for (final p in _paused) {
+      await _record(p);
+    }
+    _paused.clear();
     _messages.add(m);
     await _record(m);
   }

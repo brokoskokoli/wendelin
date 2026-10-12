@@ -76,6 +76,22 @@ void main() {
     expect(next.belowPrivacyFloor, isTrue);
   });
 
+  test('below the floor the first remaining target wins', () {
+    final std2 = target('openai', PrivacyLevel.standard);
+    final eu = target('mistral', PrivacyLevel.eu);
+    final resolver = DefaultProviderResolver(tee, [
+      std,
+      eu,
+      std2,
+    ], isPrivate: isPrivate);
+    final next = resolver.escalate(
+      resolver.resolve(privateInput),
+      EscalationReason.providerError,
+    )!;
+    expect(next.profileId, 'claude');
+    expect(next.belowPrivacyFloor, isTrue);
+  });
+
   test('non-private request may escalate to a lower level', () {
     final resolver = DefaultProviderResolver(tee, [std], isPrivate: isPrivate);
     final next = resolver.escalate(

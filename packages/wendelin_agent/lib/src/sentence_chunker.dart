@@ -21,10 +21,14 @@ final class SentenceChunker {
     'dr', 'nr', 'bzw', 'ca', 'evtl', 'ggf', 'inkl', 'zzgl', 'prof', 'str',
     'tel', 'vgl', 'sog', 'abs', 'hr', 'fr', 'min', 'max', 'mio', 'mrd',
     // fr
-    'mme', 'mlle', 'env', 'cf', 'ex',
+    'mme', 'mlle', 'env', 'cf',
     // en
-    'mr', 'mrs', 'ms', 'st', 'vs', 'approx', 'no', 'jr', 'sr',
+    'mr', 'mrs', 'ms', 'st', 'vs', 'approx', 'jr', 'sr',
   };
+
+  /// Abbreviations only before a number („No. 5“, „ex. 3“); elsewhere they
+  /// are ordinary words („Say no. Then …“).
+  static const numberAbbreviations = {'no', 'ex'};
 
   static const _months = {
     'januar',
@@ -164,7 +168,14 @@ final class SentenceChunker {
       ).firstMatch(s.substring(next))?.group(0);
       return following != null && _months.contains(following.toLowerCase());
     }
-    if (word.length == 1) return true; // initial, „z. B.“, „M. Dupont“
+    // Single letters are treated as initials or abbreviations („z. B.“,
+    // „M. Dupont“, „J. R. R. Tolkien“). „Plan B. Dann …“ therefore stays one
+    // chunk: a missed break only delays TTS a little, a wrong break in the
+    // middle of a name is audible.
+    if (word.length == 1) return true;
+    if (numberAbbreviations.contains(word.toLowerCase())) {
+      return RegExp(r'\d').hasMatch(s[next]);
+    }
     if (word.contains('.')) return true; // „e.g.“, „z.B.“, „U.S.“
     return abbreviations.contains(word.toLowerCase());
   }

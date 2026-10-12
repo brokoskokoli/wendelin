@@ -153,7 +153,8 @@ final class ContextBuilder {
 
   /// System-prompt addition for a model that takes over after an
   /// escalation: lists the [actions] that have already been executed so
-  /// they are not repeated.
+  /// they are not repeated. Only tool names and status appear here – the
+  /// arguments may contain untrusted data and stay in the history.
   static String escalationNote(List<ExecutedAction> actions) {
     final b = StringBuffer()
       ..writeln('Hinweis zur Übergabe:')
@@ -164,7 +165,7 @@ final class ContextBuilder {
       );
     for (final a in actions) {
       final status = a.outcome.isError ? 'Fehler' : 'erledigt';
-      b.writeln('- ${a.call.name} ${a.call.argumentsJson} ($status)');
+      b.writeln('- ${a.call.name} ($status, Call-ID ${a.call.id})');
     }
     return b.toString().trimRight();
   }

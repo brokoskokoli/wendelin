@@ -224,6 +224,42 @@ void main() {
       });
     });
 
+    test('time limit via clock at exactly maxDuration', () async {
+      late Harness h;
+      final slow = FakeTool(
+        name: 'web__search',
+        handler: (args, ctx) {
+          h.clock.advance(const Duration(seconds: 60));
+          return ToolOutcome.text('spät');
+        },
+      );
+      final (a, provider) = scripted('a', [
+        ScriptedTurn.toolCalls([call('c1', 'web__search')]),
+        ScriptedTurn.text('nie erreicht'),
+      ]);
+      h = Harness(primary: a, tools: [slow]);
+      final events = await h.run('x');
+      expect((terminal(events) as AgentFailed).error, AgentErrorKind.timeout);
+      expect(provider.requests, hasLength(1));
+    });
+
+    test('just under maxDuration the run continues', () async {
+      late Harness h;
+      final slow = FakeTool(
+        name: 'web__search',
+        handler: (args, ctx) {
+          h.clock.advance(const Duration(seconds: 59));
+          return ToolOutcome.text('knapp');
+        },
+      );
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls([call('c1', 'web__search')]),
+        ScriptedTurn.text('Geschafft.'),
+      ]);
+      h = Harness(primary: a, tools: [slow]);
+      expect(terminal(await h.run('x')), isA<AgentDone>());
+    });
+
     test('time limit via clock between steps', () async {
       late Harness h;
       final slow = FakeTool(
@@ -313,6 +349,23 @@ void main() {
       provider.enqueue(ScriptedTurn.text('Wieder da.'));
       final events = await h.run('y');
       expect((terminal(events) as AgentDone).finalText, 'Wieder da.');
+    });
+
+    test('the next run may start from the terminal event', () async {
+      final (a, provider) = scripted('a', [
+        ScriptedTurn.text('eins'),
+        ScriptedTurn.text('zwei'),
+      ]);
+      final h = Harness(primary: a);
+      final second = Completer<List<AgentEvent>>();
+      h.runner.run(UserInput(text: '1')).listen((e) {
+        if (e is AgentDone) {
+          second.complete(h.runner.run(UserInput(text: '2')).toList());
+        }
+      });
+      final events = await second.future;
+      expect((terminal(events) as AgentDone).finalText, 'zwei');
+      expect(provider.requests, hasLength(2));
     });
 
     test('a second concurrent run fails', () async {
@@ -434,6 +487,113 @@ void main() {
       expect(done.stopReason, StopReason.endTurn);
     });
 
+    test('pause segments are recorded only once the answer stands', () async {
+      final recorded = <int>[];
+      late Harness h;
+      final (a, _) = scripted('a', [
+        ScriptedTurn.text('Teil eins.', stopReason: StopReason.pauseTurn),
+        ScriptedTurn.text(' Teil zwei.'),
+      ]);
+      h = Harness(primary: a);
+      await h.run(
+        'x',
+        onEvent: (e) {
+          if (e is AgentTextDelta) recorded.add(h.conversation.messages.length);
+        },
+      );
+      // While the continuation streams, only the user message is stored.
+      expect(recorded.last, 1);
+      expect(h.conversation.messages, [
+        Message.user('x'),
+        Message.assistantText('Teil eins.'),
+        Message.assistantText(' Teil zwei.'),
+      ]);
+    });
+
+    test('retry after a pause resends the kept pause text', () async {
+      final (a, provider) = scripted('a', [
+        ScriptedTurn.text(
+          'Teil eins.',
+          stopReason: StopReason.pauseTurn,
+          chunkSize: 100,
+        ),
+        ScriptedTurn.error(
+          const NetworkException('weg'),
+          partialText: ' Te',
+          chunkSize: 100,
+        ),
+        ScriptedTurn.text(' Teil zwei.', chunkSize: 100),
+      ]);
+      final h = Harness(primary: a);
+      final events = await h.run('x');
+      expect(
+        [
+          for (final e in events)
+            if (e is AgentTextDelta)
+              e.text
+            else if (e is AgentTextReset)
+              'RESET',
+        ],
+        ['Teil eins.', ' Te', 'RESET', 'Teil eins.', ' Teil zwei.'],
+      );
+      // The retry keeps the pause segment as prefill for the same provider.
+      expect(
+        provider.requests[2].messages.last,
+        Message.assistantText('Teil eins.'),
+      );
+      expect(
+        (terminal(events) as AgentDone).finalText,
+        'Teil eins. Teil zwei.',
+      );
+      expect(h.conversation.messages, hasLength(3));
+    });
+
+    test('escalation after a pause drops it everywhere', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.text('Moment.', stopReason: StopReason.pauseTurn),
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ]);
+      final (b, pb) = scripted('b', [ScriptedTurn.text('B.')]);
+      final h = Harness(primary: a, chain: [b]);
+      final events = await h.run('x');
+      // No assistant prefill at the new provider.
+      expect(pb.requests.single.messages, [Message.user('x')]);
+      expect(
+        [
+          for (final e in events)
+            if (e is AgentTextDelta)
+              e.text
+            else if (e is AgentTextReset)
+              'RESET'
+            else if (e is Escalated)
+              'ESC',
+        ],
+        ['Mome', 'nt.', 'RESET', 'Moment.', 'ESC', 'RESET', 'B.'],
+      );
+      expect((terminal(events) as AgentDone).finalText, 'B.');
+      expect(h.conversation.messages, [
+        Message.user('x'),
+        Message.assistantText('B.'),
+      ]);
+    });
+
+    test('tool calls in a paused answer are executed as a round', () async {
+      final tool = FakeTool(name: 'web__search');
+      final c1 = call('c1', 'web__search');
+      final (a, provider) = scripted('a', [
+        ScriptedTurn.events([
+          ToolCallComplete(c1),
+          const Done(StopReason.pauseTurn),
+        ]),
+        ScriptedTurn.text('ok'),
+      ]);
+      final h = Harness(primary: a, tools: [tool]);
+      await h.run('x');
+      expect(tool.callCount, 1);
+      expect(lastResults(provider.requests[1]).single.callId, 'c1');
+    });
+
     test('stream without terminal event fails as malformed', () async {
       final (a, _) = scripted('a', [
         ScriptedTurn.events([const TextDelta('halb')]),
@@ -524,9 +684,42 @@ void main() {
       expect(tool.callCount, 0);
     });
 
+    test('cache reads do not count towards the token budget', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls([
+          call('c1', 'web__search'),
+        ], usage: const Usage(inputTokens: 10, cachedInputTokens: 1000)),
+        ScriptedTurn.text('ok'),
+      ]);
+      final h = Harness(
+        primary: a,
+        tools: [FakeTool(name: 'web__search')],
+        config: const AgentConfig(maxTokensPerRequest: 100),
+      );
+      expect(terminal(await h.run('x')), isA<AgentDone>());
+    });
+
+    test('cache writes count towards the token budget', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls([
+          call('c1', 'web__search'),
+        ], usage: const Usage(cacheWriteTokens: 100)),
+        ScriptedTurn.text('nie'),
+      ]);
+      final h = Harness(
+        primary: a,
+        tools: [FakeTool(name: 'web__search')],
+        config: const AgentConfig(maxTokensPerRequest: 100),
+      );
+      final failed = terminal(await h.run('x')) as AgentFailed;
+      expect(failed.error, AgentErrorKind.tokenBudget);
+    });
+
     test('budget guard blocks before any model call', () async {
       final (a, provider) = scripted('a', [ScriptedTurn.text('nie')]);
-      final guard = FixedBudgetGuard(BudgetStatus.block);
+      final guard = FixedBudgetGuard(
+        const BudgetCheck.block(spentMicros: 11, budgetMicros: 10),
+      );
       final h = Harness(primary: a, budget: guard);
       final events = await h.run('x');
       final failed = terminal(events) as AgentFailed;
@@ -539,7 +732,9 @@ void main() {
       final (a, _) = scripted('a', [ScriptedTurn.text('ok')]);
       final h = Harness(
         primary: a,
-        budget: FixedBudgetGuard(BudgetStatus.warn),
+        budget: FixedBudgetGuard(
+          const BudgetCheck.warn(spentMicros: 9, budgetMicros: 10),
+        ),
       );
       expect(terminal(await h.run('x')), isA<AgentDone>());
     });
@@ -605,10 +800,18 @@ void main() {
       expect(first.systemPrompt, contains('bereits ausgeführt'));
       expect(
         first.systemPrompt,
-        contains('cal__create {"title":"Tauchen","h":10} (erledigt)'),
+        contains('- cal__create (erledigt, Call-ID c1)'),
       );
+      expect(first.systemPrompt, isNot(contains('Tauchen')));
       final results = lastResults(pb.requests[1]);
-      expect(results.map((r) => r.callId), ['c1', 'b7', 'b8']);
+      // The repeated id c1 gets an internal id; tool_use and tool_result
+      // match.
+      expect(results.map((r) => r.callId), ['c1~2', 'b7', 'b8']);
+      expect(pb.requests[1].messages[3].toolCalls.map((c) => c.id), [
+        'c1~2',
+        'b7',
+        'b8',
+      ]);
       for (final r in results.take(2)) {
         expect((r.content.first as TextBlock).text, startsWith('Bereits'));
         expect((r.content.last as TextBlock).text, 'Termin angelegt');
@@ -616,7 +819,7 @@ void main() {
       final skipped = events.whereType<ToolCallFinished>().where(
         (e) => e.outcome.summary == 'Bereits ausgeführt',
       );
-      expect(skipped.map((e) => e.call.id), ['c1', 'b7']);
+      expect(skipped.map((e) => e.call.id), ['c1~2', 'b7']);
       expect(terminal(events), isA<AgentDone>());
     });
 
@@ -684,11 +887,11 @@ void main() {
       expect((terminal(events) as AgentDone).finalText, 'A fertig.');
     });
 
-    test('the same call id is never executed twice', () async {
+    test('same call id with same content is not executed twice', () async {
       final tool = FakeTool(name: 'cal__create');
       final (a, provider) = scripted('a', [
         ScriptedTurn.toolCalls([call('c1', 'cal__create', '{"t":1}')]),
-        ScriptedTurn.toolCalls([call('c1', 'cal__create', '{"t":2}')]),
+        ScriptedTurn.toolCalls([call('c1', 'cal__create', '{ "t": 1 }')]),
         ScriptedTurn.text('ok'),
       ]);
       final h = Harness(primary: a, tools: [tool]);
@@ -697,8 +900,58 @@ void main() {
         {'t': 1},
       ]);
       final result = lastResults(provider.requests[2]).single;
+      expect(result.callId, 'c1~2');
       expect((result.content.first as TextBlock).text, startsWith('Bereits'));
     });
+
+    test('empty ids never count as a repetition', () async {
+      final tool = FakeTool(name: 'web__search');
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls([call('', 'web__search', '{"q":"x"}')]),
+        ScriptedTurn.toolCalls([call('', 'web__search', '{"q":"x"}')]),
+        ScriptedTurn.text('ok'),
+      ]);
+      final h = Harness(primary: a, tools: [tool]);
+      await h.run('x');
+      expect(tool.callCount, 2);
+    });
+
+    test(
+      'id collision with other content is executed under a new id',
+      () async {
+        final create = FakeTool(name: 'cal__create');
+        final search = FakeTool(name: 'web__search');
+        final (a, provider) = scripted('a', [
+          ScriptedTurn.toolCalls([call('call_0', 'cal__create', '{"t":1}')]),
+          ScriptedTurn.toolCalls([
+            call('call_0', 'cal__create', '{"t":2}'),
+            call('call_0', 'web__search', '{"q":"x"}'),
+            call('', 'web__search', '{"q":"y"}'),
+            call('', 'web__search', '{"q":"z"}'),
+          ]),
+          ScriptedTurn.text('ok'),
+        ]);
+        final h = Harness(primary: a, tools: [create, search]);
+        final events = await h.run('x');
+        expect(create.calls, [
+          {'t': 1},
+          {'t': 2},
+        ]);
+        expect(search.callCount, 3);
+        final messages = provider.requests[2].messages;
+        final ids = messages[3].toolCalls.map((c) => c.id).toList();
+        expect(ids, ['call_0~2', 'call_0~3', 'call~2', 'call~3']);
+        expect(lastResults(provider.requests[2]).map((r) => r.callId), ids);
+        expect(
+          lastResults(provider.requests[2]).every((r) => !r.isError),
+          isTrue,
+        );
+        expect(events.whereType<ToolCallFinished>().map((e) => e.call.id), [
+          'call_0',
+          ...ids,
+        ]);
+      },
+    );
 
     test('the same provider may repeat an identical call', () async {
       final tool = FakeTool(name: 'web__search');
@@ -1155,7 +1408,9 @@ void main() {
         ScriptedTurn.error(const NetworkException('weg')),
       ]);
       final (b, _) = scripted('b', [ScriptedTurn.text('B.')]);
-      final guard = FixedBudgetGuard(BudgetStatus.warn, 8000000, 10000000);
+      final guard = FixedBudgetGuard(
+        const BudgetCheck.warn(spentMicros: 8000000, budgetMicros: 10000000),
+      );
       final h = Harness(
         primary: a,
         chain: [b],

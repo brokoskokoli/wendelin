@@ -2,62 +2,78 @@
 /// (concept: „Antwortklassifikation per Schlüsselwörtern“), in German,
 /// French and English.
 ///
-/// The phrases are deliberately first-person and about *helping/doing*, so
-/// that ordinary negative results („Ich kann keinen Termin finden“, „I can't
-/// find any events“) do not trigger an escalation.
+/// The patterns are first-person and bound to *helping/doing* or to the end
+/// of the sentence, so that ordinary negative results („Den Termin kann ich
+/// leider nicht verschieben, er ist schon vorbei“, „Das kann ich nicht
+/// finden“, „I'm not able to find any events“) do not trigger an escalation.
 final class GiveUpClassifier {
-  /// Creates a classifier; [phrases] replaces the default list.
-  GiveUpClassifier({List<String>? phrases})
-    : phrases = List.unmodifiable((phrases ?? defaultPhrases).map(_normalize));
+  /// Creates a classifier; [patterns] (matched against the lower-cased
+  /// answer with normalised apostrophes and spaces) replaces
+  /// [defaultPatterns].
+  GiveUpClassifier({List<RegExp>? patterns})
+    : patterns = List.unmodifiable(patterns ?? defaultPatterns);
 
-  /// Default phrases (lower case).
-  static const defaultPhrases = [
-    // de
-    'das kann ich nicht',
-    'kann ich leider nicht',
-    'kann ich nicht helfen',
-    'kann ich dir nicht helfen',
-    'kann ich ihnen nicht helfen',
-    'kann ich nicht erledigen',
-    'kann ich nicht beantworten',
-    'ich bin nicht in der lage',
-    'bin ich nicht in der lage',
-    'ich habe keinen zugriff',
-    'habe ich keinen zugriff',
-    'übersteigt meine fähigkeiten',
+  static const _end = r'\s*(?:[.!…]|$)';
+  static const _doDe =
+      r'(?:helfen|tun|machen|erledigen|beantworten|übernehmen)';
+  static const _doEn = r'(?:help|assist|do (?:that|this|it))';
+
+  /// Default patterns.
+  static final defaultPatterns = <RegExp>[
+    // de: „Dabei kann ich dir leider nicht helfen.“, „Das kann ich nicht.“
+    RegExp(
+      r'kann ich (?:dir |ihnen |euch )?(?:dabei |damit |hierbei )?'
+      r'(?:leider )?(?:nicht|nichts) '
+      '$_doDe',
+    ),
+    RegExp(
+      r'\b(?:das|dabei|damit|hierbei|dies) kann ich '
+      r'(?:dir |ihnen )?(?:leider )?(?:nicht|nichts)'
+      '$_end',
+    ),
+    RegExp(
+      r'(?:ich bin|bin ich) (?:leider )?nicht in der lage'
+      r'(?:'
+      '$_end'
+      r'|, (?:das|dies|dir|ihnen|dabei) )',
+    ),
+    RegExp(r'(?:ich habe|habe ich) (?:leider )?keinen zugriff'),
+    RegExp(r'übersteigt meine fähigkeiten'),
     // fr
-    'je ne peux pas vous aider',
-    "je ne peux pas t'aider",
-    'je ne peux pas faire',
-    'je ne suis pas en mesure',
-    'je suis incapable',
-    "je n'ai pas accès",
-    'dépasse mes capacités',
+    RegExp(
+      r'je ne (?:peux|suis) pas (?:en mesure de )?'
+      r"(?:vous |t'|te )?(?:aider|faire (?:ça|cela))",
+    ),
+    RegExp(
+      r'je ne peux pas'
+      '$_end',
+    ),
+    RegExp(r'je suis (?:malheureusement )?incapable'),
+    RegExp(r"je n'ai pas accès"),
+    RegExp(r'dépasse mes capacités'),
     // en
-    "i can't help",
-    'i cannot help',
-    "i can't do that",
-    'i cannot do that',
-    "i'm unable to help",
-    'i am unable to help',
-    "i'm not able to",
-    'i am not able to',
-    "i don't have access",
-    'i do not have access',
-    'beyond my capabilities',
+    RegExp(
+      r"i (?:can't|cannot|can not|am unable to|'m unable to|"
+      r"am not able to|'m not able to) "
+      '$_doEn',
+    ),
+    RegExp(
+      r"i (?:can't|cannot)"
+      '$_end',
+    ),
+    RegExp(r"i (?:don't|do not) have access"),
+    RegExp(r'beyond my capabilities'),
   ];
 
-  /// Normalised phrases.
-  final List<String> phrases;
+  /// Patterns in use.
+  final List<RegExp> patterns;
 
   /// Whether [answer] says that the model gives up.
   bool isGiveUp(String answer) {
-    final text = _normalize(answer);
-    return phrases.any(text.contains);
+    final text = answer
+        .toLowerCase()
+        .replaceAll(RegExp('[’‘`´]'), "'")
+        .replaceAll(RegExp(r'\s+'), ' ');
+    return patterns.any((p) => p.hasMatch(text));
   }
-
-  static String _normalize(String s) => s
-      .toLowerCase()
-      .replaceAll(RegExp('[’‘`´]'), "'")
-      .replaceAll(RegExp(r'\s+'), ' ');
 }

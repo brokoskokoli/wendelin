@@ -141,8 +141,8 @@ void main() {
       'Diese Anfrage wurde von einem anderen Modell an dich übergeben. '
       'Folgende Aktionen sind bereits ausgeführt. Wiederhole sie nicht; '
       'ihre Ergebnisse stehen im Verlauf:\n'
-      '- cal__create {"title":"Tauchen"} (erledigt)\n'
-      '- web__search {} (Fehler)',
+      '- cal__create (erledigt, Call-ID c1)\n'
+      '- web__search (Fehler, Call-ID c2)',
     );
   });
 }

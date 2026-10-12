@@ -68,14 +68,21 @@ enum BudgetStatus {
   block,
 }
 
-/// Answer of [BudgetGuard.check].
+/// Answer of [BudgetGuard.check]. Warnings and blocks carry the amounts.
 @immutable
 final class BudgetCheck {
-  /// Creates a result.
-  const BudgetCheck(this.status, {this.spentMicros = 0, this.budgetMicros = 0});
+  const BudgetCheck._(this.status, this.spentMicros, this.budgetMicros);
 
-  /// Within budget (amounts not needed).
-  static const ok = BudgetCheck(BudgetStatus.ok);
+  /// Within budget.
+  static const ok = BudgetCheck._(BudgetStatus.ok, 0, 0);
+
+  /// Warning threshold reached.
+  const BudgetCheck.warn({required int spentMicros, required int budgetMicros})
+    : this._(BudgetStatus.warn, spentMicros, budgetMicros);
+
+  /// Budget exhausted.
+  const BudgetCheck.block({required int spentMicros, required int budgetMicros})
+    : this._(BudgetStatus.block, spentMicros, budgetMicros);
 
   /// The state.
   final BudgetStatus status;
