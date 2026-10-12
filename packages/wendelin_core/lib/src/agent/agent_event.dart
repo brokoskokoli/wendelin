@@ -101,10 +101,13 @@ final class AgentTextDelta extends AgentEvent {
   String toString() => 'AgentTextDelta($text)';
 }
 
-/// Text streamed since the last [AgentTextReset] (or since the start of
-/// the run) is discarded – e.g. because the model call is retried or the
-/// answer is handed to another provider. UI and TTS drop what they showed or
-/// buffered for the current answer.
+/// The text streamed by the current model call is discarded – e.g. because
+/// the call is retried or the answer is handed to another provider.
+///
+/// "Current model call" means: all [AgentTextDelta]s since the most recent
+/// [ToolCallStarted], [ToolCallFinished], [AgentTextReset] or the start of
+/// the run, whichever came last. Text of earlier, kept rounds stays visible.
+/// UI and TTS drop what they showed or buffered for that segment only.
 final class AgentTextReset extends AgentEvent {
   /// Creates the event.
   const AgentTextReset(this.reason);
