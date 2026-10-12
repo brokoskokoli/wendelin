@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assistenten-Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8FA4FF}a:hover{color:#B7C5FF}
+</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #3A3F46; font-family: 'Instrument Sans', system-ui, sans-serif; color: #EDEBE6">
+  <div aria-hidden="true" style="position: absolute; inset: 0; padding: 64px 20px; display: flex; flex-direction: column; gap: 14px; opacity: 0.35">
+    <div style="height: 28px; width: 60%; border-radius: 8px; background: #6B7178"></div>
+    <div style="height: 120px; border-radius: 16px; background: #6B7178"></div>
+    <div style="height: 64px; border-radius: 16px; background: #6B7178"></div>
+    <div style="height: 64px; border-radius: 16px; background: #6B7178"></div>
+  </div>
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 560px; box-sizing: border-box; background: #101214; border-radius: 28px 28px 0 0; padding: 14px 20px 28px; display: flex; flex-direction: column; gap: 18px">
+    <div aria-hidden="true" style="width: 40px; height: 5px; border-radius: 3px; background: #2E333A; align-self: center"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="26" height="26" viewBox="0 0 100 100" aria-hidden="true"><path d="M 60 88 C 38 92, 20 72, 22 48 C 24 22, 52 8, 72 20 C 88 30, 86 56, 66 61 C 54 64, 45 55, 51 47" fill="none" stroke="#EDEBE6" stroke-width="10" stroke-linecap="round"></path><circle cx="58" cy="44" r="7.5" fill="#5B7BFF"></circle></svg>
+        <span style="font-size: 16px; font-weight: 600">Wendelin</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 6px 10px; border-radius: 999px; border: 1.5px solid #F4F2ED">
+        <span>◆ Phala · GLM klein</span>
+        <svg width="14" height="14" viewBox="0 0 20 20" role="img" aria-label="Quittung geprüft"><circle cx="10" cy="10" r="9" fill="#3FB97A"></circle><path d="M6 10.5 L9 13 L14 7.5" fill="none" stroke="#101214" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+    </div>
+
+    <div style="font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2">„Trag mir morgen um zehn Tauchen ein.“</div>
+
+    <div style="background: #1A1D21; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #23272C; display: flex; align-items: center; justify-content: center">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="#EDEBE6" stroke-width="1.8"></rect><path d="M3.5 10 L20.5 10 M8 3 L8 7 M16 3 L16 7" stroke="#EDEBE6" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+          <div style="font-size: 16px; font-weight: 600">Termin angelegt</div>
+          <div style="font-size: 14px; color: #A3A8AE">Tauchen · Di 13.10. · 10:00–11:00 · Privat</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #A3A8AE">calendar__create_event</div>
+        <button style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid #2E333A; background: transparent; color: #EDEBE6; font-family: inherit; font-size: 15px; font-weight: 600">Rückgängig · 8 s</button>
+      </div>
+    </div>
+
+    <div style="font-size: 18px; line-height: 1.45; color: #C9CCD0">Erledigt. Tauchen steht morgen um 10 Uhr in deinem privaten Kalender.</div>
+
+    <div style="flex-grow: 1"></div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <button aria-label="Texteingabe" style="width: 52px; height: 52px; border-radius: 999px; border: 1.5px solid #2E333A; background: transparent; display: flex; align-items: center; justify-content: center">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5" fill="none" stroke="#EDEBE6" stroke-width="1.8"></rect><path d="M6 10 L6.2 10 M10 10 L10.2 10 M14 10 L14.2 10 M18 10 L18.2 10 M8 14 L16 14" stroke="#EDEBE6" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      </button>
+      <div style="display: flex; align-items: center; gap: 16px">
+        <div aria-hidden="true" style="display: flex; align-items: center; gap: 4px; height: 40px">
+          <div style="width: 4px; height: 10px; border-radius: 2px; background: #5B7BFF"></div>
+          <div style="width: 4px; height: 22px; border-radius: 2px; background: #5B7BFF"></div>
+          <div style="width: 4px; height: 34px; border-radius: 2px; background: #5B7BFF"></div>
+          <div style="width: 4px; height: 18px; border-radius: 2px; background: #5B7BFF"></div>
+          <div style="width: 4px; height: 26px; border-radius: 2px; background: #5B7BFF"></div>
+          <div style="width: 4px; height: 12px; border-radius: 2px; background: #5B7BFF"></div>
+        </div>
+        <button aria-label="Weiter sprechen" style="width: 72px; height: 72px; border-radius: 999px; border: none; background: #3355E8; display: flex; align-items: center; justify-content: center">
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3" fill="none" stroke="#FFFFFF" stroke-width="2"></rect><path d="M5.5 11.5 a6.5 6.5 0 0 0 13 0 M12 18 L12 21" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"></path></svg>
+        </button>
+      </div>
+      <button aria-label="Beenden" style="width: 52px; height: 52px; border-radius: 999px; border: 1.5px solid #2E333A; background: transparent; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" stroke="#EDEBE6" stroke-width="2" stroke-linecap="round"></path></svg>
+      </button>
+    </div>
+    <div style="font-size: 13px; color: #A3A8AE; text-align: center">Hört noch 5 s zu · „Stopp“ beendet</div>
+  </div>
+</div>
+</body>
+</html>

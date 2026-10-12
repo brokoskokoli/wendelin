@@ -1,0 +1,15 @@
+name: wendelin_workspace
+publish_to: none
+environment:
+  sdk: ^3.13.0
+workspace:
+  - packages/wendelin_core
+  - packages/wendelin_providers
+  - packages/wendelin_tools
+  - packages/wendelin_agent
+  - packages/wendelin_storage
+  - packages/wendelin_integrations
+  - evals
+  - app
+dev_dependencies:
+  lints: ^6.0.0

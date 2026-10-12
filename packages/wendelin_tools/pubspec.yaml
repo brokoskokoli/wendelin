@@ -1,0 +1,12 @@
+name: wendelin_tools
+description: Wendelin tools package.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.13.0
+dependencies:
+  wendelin_core: any
+dev_dependencies:
+  test: any
+  coverage: any

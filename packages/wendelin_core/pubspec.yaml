@@ -1,0 +1,13 @@
+name: wendelin_core
+description: Wendelin core package.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.13.0
+dependencies:
+  meta: any
+  collection: any
+dev_dependencies:
+  test: any
+  coverage: any

@@ -1,0 +1,17 @@
+.DS_Store
+.dart_tool/
+build/
+coverage/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+/app/android/local.properties
+/app/android/.gradle/
+/app/ios/Pods/
+.env
+*.env
+/evals/reports/*.local.json
+.claude/worktrees/

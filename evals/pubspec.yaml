@@ -1,0 +1,12 @@
+name: wendelin_evals
+description: Model evals for Wendelin provider profiles.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.13.0
+dependencies:
+  wendelin_core: any
+dev_dependencies:
+  test: any
+  coverage: any

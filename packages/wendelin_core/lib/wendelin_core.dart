@@ -1,0 +1,2 @@
+/// Wendelin core.
+library;

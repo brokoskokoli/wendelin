@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEE-Prüfprotokoll</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#8FA4FF}a:hover{color:#B7C5FF}
+</style>
+</head>
+<body>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #101214; color: #EDEBE6; font-family: 'Instrument Sans', system-ui, sans-serif; display: flex; flex-direction: column; padding: 52px 20px 24px; gap: 16px">
+  <div style="display: flex; align-items: center; justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="#" aria-label="Zurück" style="width: 44px; height: 44px; border-radius: 12px; background: #1A1D21; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 L8 12 L15 19" fill="none" stroke="#EDEBE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </a>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em">Prüfprotokoll</h1>
+    </div>
+    <button style="height: 40px; padding: 0 12px; border-radius: 10px; border: 1.5px solid #2E333A; background: transparent; color: #EDEBE6; font-family: 'IBM Plex Mono', monospace; font-size: 13px">JSON</button>
+  </div>
+
+  <div style="background: #1A1D21; border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="font-size: 16px; font-weight: 600">◆ Phala · GLM klein</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3FB97A">Sitzung geprüft</span>
+    </div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.7; color: #A3A8AE">workload_id 7f3a·e21b·c91e<br>keyset sha256:4d0c…a17f · gepinnt<br>stale_after 13.10. 08:12</div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; font-size: 13px">
+      <span>✓ TDX-Quote (DCAP)</span><span>✓ Nonce gebunden</span>
+      <span>✓ Keyset-Signatur</span><span>✓ Frische</span>
+    </div>
+  </div>
+
+  <div style="font-size: 13px; font-weight: 600; color: #A3A8AE">Quittungen heute</div>
+  <div style="display: flex; flex-direction: column; background: #1A1D21; border-radius: 18px">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #23272C">
+      <svg width="20" height="20" viewBox="0 0 20 20" role="img" aria-label="geprüft"><circle cx="10" cy="10" r="9" fill="#3FB97A"></circle><path d="M6 10.5 L9 13 L14 7.5" fill="none" stroke="#101214" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">„Wie wird das Meer morgen?“</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #A3A8AE">08:12 · rcpt_01J9X4…QF · verified</div></div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #23272C">
+      <svg width="20" height="20" viewBox="0 0 20 20" role="img" aria-label="geprüft"><circle cx="10" cy="10" r="9" fill="#3FB97A"></circle><path d="M6 10.5 L9 13 L14 7.5" fill="none" stroke="#101214" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">„Trag mir morgen Tauchen ein“</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #A3A8AE">09:40 · rcpt_01J9X8…2M · verified</div></div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #23272C">
+      <svg width="20" height="20" viewBox="0 0 20 20" role="img" aria-label="ausstehend"><path d="M10 1.5 L18.5 17.5 L1.5 17.5 Z" fill="#E8B341"></path><path d="M10 7.5 L10 11.5 M10 14.2 L10 14.4" stroke="#101214" stroke-width="2" stroke-linecap="round"></path></svg>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">„Was steht privat an?“</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #E8B341">11:03 · nicht abrufbar · Versuch 2/3</div></div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px">
+      <svg width="20" height="20" viewBox="0 0 20 20" role="img" aria-label="fehlgeschlagen"><rect x="1.5" y="1.5" width="17" height="17" rx="3" fill="#EF6A62"></rect><path d="M6.5 6.5 L13.5 13.5 M13.5 6.5 L6.5 13.5" stroke="#101214" stroke-width="2" stroke-linecap="round"></path></svg>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><div style="font-size: 15px; font-weight: 600">„Schreib Lea, ich komme später“</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #EF6A62">11:20 · Hash weicht ab · external gesperrt</div></div>
+    </div>
+  </div>
+
+  <div style="flex-grow: 1"></div>
+  <button style="height: 52px; border-radius: 14px; border: none; background: #F4F2ED; color: #101214; font-family: inherit; font-size: 16px; font-weight: 600">Neu attestieren</button>
+</div>
+</body>
+</html>
