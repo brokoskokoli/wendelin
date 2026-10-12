@@ -12,6 +12,15 @@ void main() {
 
   final valid = <String, List<ChatEvent>>{
     'text': [const TextDelta('a'), usage, done],
+    'provider block between text': [
+      const TextDelta('Ich suche. '),
+      const ProviderBlockComplete(
+        ProviderBlock(provider: 'anthropic', rawJson: '{}'),
+      ),
+      const TextDelta('Gefunden.'),
+      usage,
+      const Done(StopReason.pauseTurn),
+    ],
     'error only': [const ErrorEvent(AuthException('x'))],
     'tool calls with deltas': [
       const ToolCallDelta(

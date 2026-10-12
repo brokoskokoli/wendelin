@@ -107,7 +107,7 @@ Die App spricht intern nur ein eigenes Nachrichtenformat; Adapter übersetzen es
 **Internes Format**
 
 - `Message { role: system|user|assistant|tool, content: List<ContentBlock> }`
-- `ContentBlock` = `Text` | `Image` | `ToolCall { id, name, argumentsJson }` | `ToolResult { callId, content, isError }` | `Thinking` (optional, nur Anzeige)
+- `ContentBlock` = `Text` | `Image` | `ToolCall { id, name, argumentsJson }` | `ToolResult { callId, content, isError }` | `Thinking` (optional, nur Anzeige) | `ProviderBlock { provider, rawJson, summary? }` (K8: anbieterspezifische Blöcke wie Claudes serverseitige Web-Suche, werden nur an denselben Anbieter unverändert zurückgegeben, nie vorgelesen)
 - `ToolSpec { name, description, inputSchema (JSON Schema) }`
 - `ChatRequest { messages, tools, model, maxTokens, temperature, toolChoice, metadata }`
 - `ChatEvent` (Stream) = `TextDelta` | `ThinkingDelta` | `ThinkingComplete` (K3) | `ToolCallDelta` | `ToolCallComplete` | `Usage { inputTokens, outputTokens, cachedTokens }` | `Done { stopReason }` | `Error`

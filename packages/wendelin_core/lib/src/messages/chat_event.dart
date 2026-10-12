@@ -21,6 +21,8 @@ import 'usage.dart';
 /// - [ThinkingDelta]s of a reasoning block are followed by one
 ///   [ThinkingComplete] carrying the full block (with signature or redacted
 ///   data) that must be sent back unchanged.
+/// - Provider-specific blocks the internal format does not model arrive as
+///   [ProviderBlockComplete] at their position in the answer.
 /// - [UsageEvent]s come before [Done].
 @immutable
 sealed class ChatEvent {
@@ -89,6 +91,27 @@ final class ThinkingComplete extends ChatEvent {
 
   @override
   String toString() => 'ThinkingComplete($block)';
+}
+
+/// A finished provider-specific block (see [ProviderBlock]), emitted at its
+/// position in the answer. The agent keeps it in the assistant message so
+/// the same provider gets it back unchanged; it is not text for UI or TTS.
+final class ProviderBlockComplete extends ChatEvent {
+  /// Creates the event.
+  const ProviderBlockComplete(this.block);
+
+  /// The block.
+  final ProviderBlock block;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProviderBlockComplete && other.block == block;
+
+  @override
+  int get hashCode => Object.hash(ProviderBlockComplete, block);
+
+  @override
+  String toString() => 'ProviderBlockComplete($block)';
 }
 
 /// A fragment of a tool call while it is being generated.

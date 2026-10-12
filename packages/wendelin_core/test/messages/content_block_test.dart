@@ -36,6 +36,15 @@ void main() {
     'thinking': const ThinkingBlock('Ich überlege', signature: 'sig=='),
     'thinking unsigned': const ThinkingBlock('Nur Text'),
     'thinking redacted': const ThinkingBlock.redacted('EqQBCkYIARgCKkD='),
+    'provider block': const ProviderBlock(
+      provider: 'anthropic',
+      rawJson: '{"type":"server_tool_use","id":"srv_1"}',
+      summary: 'Websuche: Wetter Nizza',
+    ),
+    'provider block without summary': const ProviderBlock(
+      provider: 'anthropic',
+      rawJson: '{}',
+    ),
   };
 
   group('ContentBlock JSON round trip', () {
@@ -52,6 +61,24 @@ void main() {
   });
 
   group('ContentBlock JSON format is stable', () {
+    test('provider block', () {
+      expect(
+        const ProviderBlock(provider: 'anthropic', rawJson: '{}').toJson(),
+        {'type': 'provider', 'provider': 'anthropic', 'rawJson': '{}'},
+      );
+      expect(
+        const ProviderBlock(
+          provider: 'a',
+          rawJson: '{}',
+          summary: 's',
+        ).toString(),
+        contains('s'),
+      );
+      expect(
+        const ProviderBlock(provider: 'a', rawJson: '{}'),
+        isNot(const ProviderBlock(provider: 'b', rawJson: '{}')),
+      );
+    });
     test('text', () {
       expect(const TextBlock('a').toJson(), {'type': 'text', 'text': 'a'});
     });

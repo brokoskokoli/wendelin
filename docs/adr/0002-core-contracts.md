@@ -62,3 +62,7 @@ Das Konzept erlaubt eine Eskalation zu einem Provider mit niedrigerer Datenschut
 ## 8. Nachträge aus WP05 (2026-10-13)
 
 `AgentEvent` ergänzt um `AgentTextReset(reason)` (bereits gestreamter Text der aktuellen Antwort wird verworfen, z. B. bei Retry oder Übergabe an einen anderen Provider – UI/TTS verwerfen ihn ebenfalls), `AgentThinkingDelta` (nur Anzeige) und `BudgetWarning` (Warnschwelle erreicht, Lauf geht weiter).
+
+## 9. Provider-Blöcke (2026-10-13, Review WP02)
+
+`ContentBlock` ergänzt um `ProviderBlock(provider, rawJson, summary?)`, `ChatEvent` um `ProviderBlockComplete`. Adapter legen Blöcke, die das interne Format nicht kennt (z. B. Anthropic `server_tool_use`/`web_search_tool_result`), unverändert als JSON ab und senden sie demselben Provider unverändert zurück (nötig für `pause_turn`). Andere Provider bekommen sie nie (der Agent verwirft sie beim Providerwechsel wie fremde Thinking-Blöcke). Inhalt ist Daten: nie gesprochen, nie als eigener Text des Assistenten; `summary` nur zur Anzeige.

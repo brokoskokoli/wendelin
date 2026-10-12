@@ -239,6 +239,9 @@ void main() {
       const TextDelta('a'): false,
       const ThinkingDelta('a'): false,
       const ThinkingComplete(ThinkingBlock('a', signature: 's')): false,
+      const ProviderBlockComplete(
+        ProviderBlock(provider: 'anthropic', rawJson: '{}'),
+      ): false,
       const ToolCallDelta(index: 0, id: 'i', name: 'n', argumentsFragment: '{'):
           false,
       const ToolCallComplete(call): false,
@@ -258,6 +261,9 @@ void main() {
         const TextDelta('a'),
         const ThinkingDelta('a'),
         const ThinkingComplete(ThinkingBlock('a', signature: 's')),
+        const ProviderBlockComplete(
+          ProviderBlock(provider: 'anthropic', rawJson: '{}'),
+        ),
         const ToolCallDelta(
           index: 0,
           id: 'i',
@@ -277,6 +283,16 @@ void main() {
     });
 
     test('inequality', () {
+      expect(
+        const ProviderBlockComplete(
+          ProviderBlock(provider: 'anthropic', rawJson: '{}'),
+        ),
+        isNot(
+          const ProviderBlockComplete(
+            ProviderBlock(provider: 'anthropic', rawJson: '[]'),
+          ),
+        ),
+      );
       expect(const TextDelta('a'), isNot(const TextDelta('b')));
       expect(const TextDelta('a'), isNot(const ThinkingDelta('a')));
       expect(const ThinkingDelta('a'), isNot(const ThinkingDelta('b')));

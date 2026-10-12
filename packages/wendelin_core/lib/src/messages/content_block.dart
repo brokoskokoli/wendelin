@@ -47,6 +47,11 @@ sealed class ContentBlock {
           'ThinkingBlock',
         ),
       ),
+      ProviderBlock.jsonType => ProviderBlock(
+        provider: readField(json, 'provider', 'ProviderBlock'),
+        rawJson: readField(json, 'rawJson', 'ProviderBlock'),
+        summary: readOptional<String>(json, 'summary', 'ProviderBlock'),
+      ),
       _ => throw FormatException('ContentBlock: unbekannter Typ "$type"'),
     };
   }
@@ -280,4 +285,56 @@ final class ThinkingBlock extends ContentBlock {
   @override
   String toString() =>
       isRedacted ? 'ThinkingBlock(redacted)' : 'ThinkingBlock($text)';
+}
+
+/// A provider-specific block that the internal format does not model, e.g.
+/// Anthropic's `server_tool_use` / `web_search_tool_result`.
+///
+/// The adapter that produced it stores the wire block verbatim in [rawJson]
+/// and sends it back **unchanged** when the history goes to the same
+/// [provider] again (required to resume `pause_turn`). Other providers never
+/// see it: the agent drops provider blocks of a different provider, like
+/// foreign thinking blocks. The content is untrusted data – it is never
+/// spoken and never treated as the assistant's own words; [summary] is an
+/// optional short display text (e.g. "Websuche: Wetter Nizza").
+final class ProviderBlock extends ContentBlock {
+  /// Creates a provider block.
+  const ProviderBlock({
+    required this.provider,
+    required this.rawJson,
+    this.summary,
+  });
+
+  /// JSON discriminator.
+  static const jsonType = 'provider';
+
+  /// Provider family that produced the block (`ProviderType.name`).
+  final String provider;
+
+  /// The block exactly as received on the wire (JSON text).
+  final String rawJson;
+
+  /// Optional display-only summary.
+  final String? summary;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': jsonType,
+    'provider': provider,
+    'rawJson': rawJson,
+    if (summary != null) 'summary': summary,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProviderBlock &&
+      other.provider == provider &&
+      other.rawJson == rawJson &&
+      other.summary == summary;
+
+  @override
+  int get hashCode => Object.hash(jsonType, provider, rawJson, summary);
+
+  @override
+  String toString() => 'ProviderBlock($provider, ${summary ?? '…'})';
 }
