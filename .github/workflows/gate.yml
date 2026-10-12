@@ -12,6 +12,23 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.47.7
-      - run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
       - run: flutter pub get
-      - run: dart run tool/gate.dart
+      - run: dart run tool/gate.dart --no-app
+      - name: Zeitzonen-Lauf (Ortszeit-Logik)
+        run: dart test
+        working-directory: packages/wendelin_storage
+        env:
+          TZ: Europe/Berlin
+  app:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos
+        working-directory: app
+      - run: flutter test
+        working-directory: app
