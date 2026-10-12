@@ -101,6 +101,56 @@ final class AgentTextDelta extends AgentEvent {
   String toString() => 'AgentTextDelta($text)';
 }
 
+/// Text streamed since the last [AgentTextReset] (or since the start of
+/// the run) is discarded – e.g. because the model call is retried or the
+/// answer is handed to another provider. UI and TTS drop what they showed or
+/// buffered for the current answer.
+final class AgentTextReset extends AgentEvent {
+  /// Creates the event.
+  const AgentTextReset(this.reason);
+
+  /// Why the text was discarded (for display/log only).
+  final String reason;
+
+  @override
+  String toString() => 'AgentTextReset($reason)';
+}
+
+/// A thinking/reasoning fragment from the model (display only, never spoken).
+final class AgentThinkingDelta extends AgentEvent {
+  /// Creates the event.
+  const AgentThinkingDelta(this.text);
+
+  /// The fragment.
+  final String text;
+
+  @override
+  String toString() => 'AgentThinkingDelta(${text.length} chars)';
+}
+
+/// The monthly budget of a provider profile reached its warning threshold.
+/// The run continues; a blocked budget ends the run with [AgentFailed].
+final class BudgetWarning extends AgentEvent {
+  /// Creates the event.
+  const BudgetWarning({
+    required this.profileId,
+    required this.spentMicros,
+    required this.budgetMicros,
+  });
+
+  /// The affected profile.
+  final String profileId;
+
+  /// Spent this month in micro-USD.
+  final int spentMicros;
+
+  /// Monthly budget in micro-USD.
+  final int budgetMicros;
+
+  @override
+  String toString() => 'BudgetWarning($profileId, $spentMicros/$budgetMicros)';
+}
+
 /// A tool call is about to be executed.
 final class ToolCallStarted extends AgentEvent {
   /// Creates the event.

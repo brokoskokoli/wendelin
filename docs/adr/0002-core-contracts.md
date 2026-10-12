@@ -58,3 +58,7 @@ Das Konzept erlaubt eine Eskalation zu einem Provider mit niedrigerer Datenschut
 - `copyWith` kann nullable Felder nicht auf `null` setzen (`ChatRequest`, `ProviderProfile`); dafür wird ein neues Objekt gebaut. `ToolSpec.inputSchema` wird wegen des `const`-Konstruktors nicht kopiert und gilt als unveränderlich.
 - Der Name eines Tools wird nur über `Tool.isValidToolName` geprüft (statisch, wie im WP-Dokument).
 - Umbenennungen dieser Typen brauchen eine neue ADR.
+
+## 8. Nachträge aus WP05 (2026-10-13)
+
+`AgentEvent` ergänzt um `AgentTextReset(reason)` (bereits gestreamter Text der aktuellen Antwort wird verworfen, z. B. bei Retry oder Übergabe an einen anderen Provider – UI/TTS verwerfen ihn ebenfalls), `AgentThinkingDelta` (nur Anzeige) und `BudgetWarning` (Warnschwelle erreicht, Lauf geht weiter).

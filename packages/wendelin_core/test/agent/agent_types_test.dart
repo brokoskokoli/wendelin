@@ -85,6 +85,13 @@ void main() {
         const Routed(profileId: 'p', modelId: 'm', reason: 'Standard'):
             'Standard',
         const AgentTextDelta('Hallo'): 'Hallo',
+        const AgentTextReset('Retry'): 'Retry',
+        const AgentThinkingDelta('hmm'): '3 chars',
+        const BudgetWarning(
+          profileId: 'p',
+          spentMicros: 800,
+          budgetMicros: 1000,
+        ): '800/1000',
         const ToolCallStarted(call): 'calendar__delete_event',
         ToolCallFinished(
           call: call,
