@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 
 import '../theme/app_theme.dart';
 import 'dashed_border.dart';
+import 'glyphs.dart';
 import 'icons.dart';
+import 'privacy_chip.dart';
 
 /// Routing-Regel in der Liste: Ziehgriff, Name, Bedingung in Mono.
 ///
@@ -14,6 +17,8 @@ class RuleTile extends StatelessWidget {
     super.key,
     required this.name,
     required this.condition,
+    this.target,
+    this.targetLevel,
     this.active = false,
     this.isDefault = false,
     this.reorderIndex,
@@ -23,8 +28,16 @@ class RuleTile extends StatelessWidget {
   /// Name der Regel.
   final String name;
 
-  /// Bedingung und Ziel („prefix "Claude" → Opus“).
+  /// Bedingung (`keyword "privat"`); ohne [target] auch mit Ziel.
   final String condition;
+
+  /// Ziel der Regel (`Phala GLM`), erscheint als „→ Ziel“ hinter der
+  /// Bedingung.
+  final String? target;
+
+  /// Datenschutzstufe des Ziels; zeigt das Form-Symbol vor dem Ziel
+  /// (`→ ◆ Phala GLM`).
+  final PrivacyLevel? targetLevel;
 
   /// Greift für den aktuellen Testsatz (Kobalt-Rahmen).
   final bool active;
@@ -65,7 +78,7 @@ class RuleTile extends StatelessWidget {
               spacing: WSpace.xxs3,
               children: [
                 Text(name, style: WText.label),
-                Text(condition, style: WText.mono),
+                _conditionText(),
               ],
             ),
           ),
@@ -89,6 +102,37 @@ class RuleTile extends StatelessWidget {
       color: WColors.line,
       radius: WRadius.buttonLarge,
       child: tappable,
+    );
+  }
+
+  Widget _conditionText() {
+    final t = target;
+    final level = targetLevel;
+    if (t == null) return Text(condition, style: WText.mono);
+    return Text.rich(
+      TextSpan(
+        style: WText.mono,
+        children: [
+          TextSpan(text: '$condition → '),
+          if (level != null) ...[
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Glyph(
+                GlyphShape.forPrivacy(level),
+                color: WColors.textMuted,
+              ),
+            ),
+            const TextSpan(text: ' '),
+          ],
+          TextSpan(text: t),
+        ],
+      ),
+      semanticsLabel: [
+        condition,
+        '→',
+        if (level != null) 'Datenschutzstufe ${level.label},',
+        t,
+      ].join(' '),
     );
   }
 }

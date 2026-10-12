@@ -8,7 +8,7 @@ enum MicState {
   /// Bereit: Kobalt-Kreis mit Mikrofon.
   idle,
 
-  /// Hört zu: zusätzlicher Ring in `accentLight`.
+  /// Hört zu: Ring in `accentLight` am Rand, Scheibe etwas kleiner.
   listening,
 
   /// Verarbeitet: drei Punkte statt Mikrofon.
@@ -60,17 +60,22 @@ class MicButton extends StatelessWidget {
             size: compact ? WSize.micIconCompact : WSize.micIcon,
             color: disabled ? WColors.textMuted : WColors.onAccent,
           );
-    final label = semanticLabel ?? labelFor(state);
+    final listening = state == MicState.listening;
+    // Der Ring beim Zuhören liegt innerhalb der Fläche (72 bzw. 64): außen
+    // der Ring, dann eine Lücke, innen die Kobalt-Scheibe. Kein Überstand,
+    // kein Layout-Sprung zwischen den Zuständen.
     return CustomPaint(
-      foregroundPainter: state == MicState.listening ? _RingPainter() : null,
+      painter: listening ? _ListeningPainter() : null,
       child: IconButton(
-        tooltip: label,
+        // Nur Tooltip: wird auch als Semantics-Tooltip vorgelesen; ein
+        // zusätzliches Label würde doppelt angesagt.
+        tooltip: semanticLabel ?? labelFor(state),
         onPressed: disabled ? null : onPressed,
-        icon: Semantics(label: label, child: content),
+        icon: content,
         style: IconButton.styleFrom(
           fixedSize: Size.square(extent),
           padding: EdgeInsets.zero,
-          backgroundColor: WColors.accent,
+          backgroundColor: listening ? WColors.transparent : WColors.accent,
           disabledBackgroundColor: WColors.surfaceRaised,
           shape: const CircleBorder(),
         ),
@@ -79,22 +84,29 @@ class MicButton extends StatelessWidget {
   }
 }
 
-class _RingPainter extends CustomPainter {
+class _ListeningPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final radius = size.shortestSide / 2 + WSize.micRingGap + WSize.micRing / 2;
-    canvas.drawCircle(
-      size.center(Offset.zero),
-      radius,
-      Paint()
-        ..color = WColors.accentLight
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = WSize.micRing,
-    );
+    final c = size.center(Offset.zero);
+    final r = size.shortestSide / 2;
+    canvas
+      ..drawCircle(
+        c,
+        r - WSize.micRing / 2,
+        Paint()
+          ..color = WColors.accentLight
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = WSize.micRing,
+      )
+      ..drawCircle(
+        c,
+        r - WSize.micRing - WSize.micRingGap,
+        Paint()..color = WColors.accent,
+      );
   }
 
   @override
-  bool shouldRepaint(_RingPainter oldDelegate) => false;
+  bool shouldRepaint(_ListeningPainter oldDelegate) => false;
 }
 
 class _ThinkingDots extends StatelessWidget {

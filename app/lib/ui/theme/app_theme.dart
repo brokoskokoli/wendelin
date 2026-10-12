@@ -203,7 +203,12 @@ abstract final class WSize {
 
   /// Ring um den Mikrofon-Button beim Zuhören.
   static const micRing = 3.0;
-  static const micRingGap = 4.0;
+  static const micRingGap = 3.0;
+
+  /// Zusätzlicher Rand je Seite, wenn ein 44er Bedienelement auf die
+  /// Material-Trefferfläche von 48 aufgefüllt wird. Kopfzeilen ziehen ihn
+  /// vom Abstand ab, damit das Layout den Vorlagen entspricht.
+  static const tapTargetInset = (kMinInteractiveDimension - touchMin) / 2;
 
   /// Breitenanteile: Nutzer-Blase und Antwortspalte.
   static const bubbleMaxFraction = 0.8;
@@ -218,7 +223,22 @@ abstract final class WMotion {
 }
 
 /// Textstile (tokens.json → type) plus abgeleitete Stile aus den Screens.
+///
+/// Stile ohne Zeilenhöhe in den Tokens bekommen trotzdem eine explizite
+/// Höhe: die CSS-Zeilenhöhe „normal“ der Vorlagen, also (Ascent + Descent)
+/// der Schrift × Größe, auf ganze Pixel gerundet ([normalHeight]). Ohne das
+/// rundet Flutter die Zeilen größer und die Screens driften nach unten.
 abstract final class WText {
+  /// Ascent + Descent je Schrift (hhea, Einheiten/em) aus den TTFs.
+  static const fontLineFactor = <String, double>{
+    WFonts.ui: 1.22,
+    WFonts.mono: 1.3,
+  };
+
+  /// Höhenfaktor für die Zeilenhöhe „normal“ von [family] bei [size].
+  static double normalHeight(String family, double size) =>
+      (fontLineFactor[family]! * size).roundToDouble() / size;
+
   static TextStyle _ui(
     double size,
     FontWeight w, {
@@ -229,8 +249,21 @@ abstract final class WText {
     fontFamily: WFonts.ui,
     fontSize: size,
     fontWeight: w,
-    height: height,
+    height: height ?? normalHeight(WFonts.ui, size),
     letterSpacing: ls * size,
+    color: color,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  static TextStyle _mono(
+    double size, {
+    FontWeight w = FontWeight.w400,
+    Color color = WColors.textMuted,
+  }) => TextStyle(
+    fontFamily: WFonts.mono,
+    fontSize: size,
+    fontWeight: w,
+    height: normalHeight(WFonts.mono, size),
     color: color,
     leadingDistribution: TextLeadingDistribution.even,
   );
@@ -248,12 +281,7 @@ abstract final class WText {
   static final label = _ui(16, FontWeight.w600);
   static final button = _ui(15, FontWeight.w600);
   static final caption = _ui(13, FontWeight.w400, color: WColors.textMuted);
-  static const mono = TextStyle(
-    fontFamily: WFonts.mono,
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    color: WColors.textMuted,
-  );
+  static final mono = _mono(12);
 
   /// Antworttext im Chat (16, 1.5, sekundär).
   static final chatAnswer = body.copyWith(color: WColors.textSecondary);
@@ -292,10 +320,9 @@ abstract final class WText {
   static final buttonSmall = _ui(14, FontWeight.w600);
 
   /// Badge „sensibel“ (Mono 11, 500).
-  static const monoBadge = TextStyle(
-    fontFamily: WFonts.mono,
-    fontSize: 11,
-    fontWeight: FontWeight.w500,
+  static final monoBadge = _mono(
+    11,
+    w: FontWeight.w500,
     color: WColors.textSecondary,
   );
 

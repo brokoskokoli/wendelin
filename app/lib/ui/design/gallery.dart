@@ -127,16 +127,16 @@ final Map<String, List<Widget>> gallerySections = {
       onNo: _noop,
     ),
   ],
-  'Verlauf': const [
+  'Verlauf': [
     Text('Heute · 08:12', style: WText.mono, textAlign: TextAlign.center),
-    UserBubble('Wie wird das Meer morgen früh?'),
-    AssistantText(
+    const UserBubble('Wie wird das Meer morgen früh?'),
+    const AssistantText(
       'Ruhig: 0,4 m Welle, Dünung aus Südwest, Wasser 19 °C.',
       linkLabel: 'Details',
       onLinkTap: _noop,
     ),
-    EscalationDivider('an Claude Sonnet übergeben'),
-    AssistantText(
+    const EscalationDivider('an Claude Sonnet übergeben'),
+    const AssistantText(
       'Erledigt. Tauchen steht morgen um 10 Uhr in deinem privaten Kalender.',
       large: true,
     ),
@@ -147,20 +147,20 @@ final Map<String, List<Widget>> gallerySections = {
         IntegrationTile(
           name: 'Kalender',
           icon: WIcons.calendar,
-          state: IntegrationState.active,
+          status: IntegrationStatus.active,
           detail: '6 Tools',
           onToggle: _toggle,
         ),
         IntegrationTile(
           name: 'Wetter und Meer',
           icon: WIcons.waves,
-          state: IntegrationState.available,
+          status: IntegrationStatus.available,
           onToggle: _toggle,
         ),
         IntegrationTile(
           name: 'Kontakte',
           icon: WIcons.person,
-          state: IntegrationState.available,
+          status: IntegrationStatus.available,
           sensitive: true,
           minPrivacy: PrivacyLevel.tee,
           onToggle: _toggle,
@@ -168,21 +168,22 @@ final Map<String, List<Widget>> gallerySections = {
         IntegrationTile(
           name: 'Bring! Einkaufsliste',
           icon: WIcons.cart,
-          state: IntegrationState.setupRequired,
+          status: IntegrationStatus.setupRequired,
           detail: 'Login fehlt',
           onAction: _noop,
         ),
         IntegrationTile(
           name: 'Spotify',
           icon: WIcons.music,
-          state: IntegrationState.error,
+          status: IntegrationStatus.error,
           detail: 'Token abgelaufen · pausiert',
           onAction: _noop,
         ),
         IntegrationTile(
           name: 'Todoist',
           icon: WIcons.task,
-          state: IntegrationState.notInstalled,
+          status: IntegrationStatus.unavailable,
+          detail: 'App nicht installiert',
           onStore: _noop,
         ),
       ],
@@ -191,23 +192,41 @@ final Map<String, List<Widget>> gallerySections = {
   'RuleTile': const [
     RuleTile(
       name: 'Starkes Modell',
-      condition: 'prefix "Claude" | "Fable" → Opus',
+      condition: 'prefix "Claude" | "Fable"',
+      target: 'Opus',
       active: true,
       onTap: _noop,
     ),
     RuleTile(
       name: 'Privat',
-      condition: 'keyword "privat" → Phala GLM',
+      condition: 'keyword "privat"',
+      target: 'Phala GLM',
+      targetLevel: PrivacyLevel.tee,
+      onTap: _noop,
+    ),
+    RuleTile(
+      name: 'Offline',
+      condition: 'network = none',
+      target: 'Ollama Homeserver',
+      targetLevel: PrivacyLevel.local,
+      onTap: _noop,
+    ),
+    RuleTile(
+      name: 'Notizen umschreiben',
+      condition: 'needsTool obsidian.edit',
+      target: 'Sonnet',
       onTap: _noop,
     ),
     RuleTile(
       name: 'Default',
-      condition: 'immer → Phala GLM klein',
+      condition: 'immer',
+      target: 'Phala GLM klein',
+      targetLevel: PrivacyLevel.tee,
       isDefault: true,
       onTap: _noop,
     ),
   ],
-  'SectionCard': const [
+  'SectionCard': [
     SectionCard(
       title: 'Eskalation bei Fehlschlag',
       dividers: false,

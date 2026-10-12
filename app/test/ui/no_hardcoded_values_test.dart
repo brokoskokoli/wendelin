@@ -6,43 +6,52 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// Farben gehören nach `WColors`, Abstände/Größen/Radien nach
 /// `WSpace`/`WSize`/`WRadius` (lib/ui/theme/app_theme.dart). Ausgenommen
-/// ist Zeichengeometrie in `CustomPainter`-Klassen (SVG-viewBox-Einheiten)
-/// und die Zahl 0.
+/// sind Zahlen der Zeichengeometrie in `CustomPainter`-Klassen
+/// (SVG-viewBox-Einheiten; Farben werden dort trotzdem geprüft) und die
+/// Zahl 0.
 List<String> findViolations(String source) {
   final problems = <String>[];
-  var code = source
+  final code = source
       .replaceAll(RegExp(r'//[^\n]*'), '')
       .replaceAll(RegExp(r"'(?:[^'\\\n]|\\.)*'"), "''");
-  code = _stripPainters(code);
 
+  // Farben: überall, auch in CustomPaintern.
   for (final m in RegExp(
-    r'\bColors\.\w+|\bColor\s*\(\s*0x|\bColor\.from\w+',
+    r'\b(?!WColors\b)\w*Colors\.\w+|\bColor\s*\(\s*\d|\bColor\.from\w+'
+    r'|\.withOpacity\s*\(|\.withValues\s*\(\s*alpha\s*:\s*\d',
   ).allMatches(code)) {
     problems.add('Farbe: ${m.group(0)}');
   }
 
+  // Zahlen: nicht in Zeichengeometrie von CustomPaintern (viewBox-Einheiten).
+  final layout = _stripPainters(code);
   final number = RegExp(r'(?<![\w.$])(?!0\b|0\.0\b)\d+(?:\.\d+)?\b');
   const calls = [
     'EdgeInsets',
     'EdgeInsetsDirectional',
     'SizedBox',
     'Radius.circular',
+    'Radius.elliptical',
     'BorderRadius.circular',
     'Size',
     'BoxConstraints',
+    'Offset',
+    'Positioned',
+    'PositionedDirectional',
   ];
   for (final call in calls) {
     final re = RegExp('\\b${RegExp.escape(call)}(?:\\.\\w+)?\\s*\\(');
-    for (final m in re.allMatches(code)) {
-      final args = _balanced(code, m.end - 1);
+    for (final m in re.allMatches(layout)) {
+      final args = _balanced(layout, m.end - 1);
       final n = number.firstMatch(args);
       if (n != null) problems.add('$call(…${n.group(0)}…)');
     }
   }
   for (final m in RegExp(
     r'\b(spacing|runSpacing|width|height|size|dimension|radius|fontSize|'
-    r'opacity|strokeWidth|letterSpacing|elevation)\s*:\s*(\d+(?:\.\d+)?)',
-  ).allMatches(code)) {
+    r'opacity|strokeWidth|letterSpacing|elevation|top|left|right|bottom|'
+    r'start|end|scale|thickness|indent)\s*:\s*(\d+(?:\.\d+)?)',
+  ).allMatches(layout)) {
     if (double.parse(m.group(2)!) != 0) {
       problems.add('${m.group(1)}: ${m.group(2)}');
     }
@@ -117,5 +126,32 @@ void main() {
       isEmpty,
     );
     expect(findViolations("WIconData._('<rect width=\"17\"/>')"), isEmpty);
+    expect(findViolations('color: WColors.ink'), isEmpty);
+    expect(findViolations('color: CupertinoColors.white'), isNotEmpty);
+    expect(findViolations('Color(4279374356)'), isNotEmpty);
+    expect(findViolations('WColors.ink.withOpacity(0.5)'), isNotEmpty);
+    expect(findViolations('WColors.ink.withValues(alpha: 0.5)'), isNotEmpty);
+    expect(
+      findViolations('WColors.ink.withValues(alpha: WOpacity.inactive)'),
+      isEmpty,
+    );
+    expect(findViolations('const Offset(4, 0)'), isNotEmpty);
+    expect(findViolations('Radius.elliptical(8, 4)'), isNotEmpty);
+    expect(findViolations('Positioned(top: 12, child: x)'), isNotEmpty);
+    expect(findViolations('Positioned(left: WSpace.l, child: x)'), isEmpty);
+    expect(findViolations('Transform.scale(scale: 1.2)'), isNotEmpty);
+    expect(
+      findViolations(
+        'class _P extends CustomPainter { void p() { Paint()..color = '
+        'Colors.red; } }',
+      ),
+      isNotEmpty,
+    );
+    expect(
+      findViolations(
+        'class _P extends CustomPainter { void p() { Offset(10, 3); } }',
+      ),
+      isEmpty,
+    );
   });
 }

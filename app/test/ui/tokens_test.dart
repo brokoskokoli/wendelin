@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -103,7 +102,13 @@ void main() {
       expect(style.fontFamily, family, reason: e.key);
       expect(style.fontSize, t['size'], reason: e.key);
       expect(style.fontWeight!.value, t['weight'], reason: e.key);
-      expect(style.height, t['lineHeight'], reason: e.key);
+      // Ohne Token-Zeilenhöhe: CSS „normal“ (Ascent + Descent, gerundet).
+      final size = (t['size']! as num).toDouble();
+      expect(
+        style.height,
+        t['lineHeight'] ?? WText.normalHeight(family, size),
+        reason: e.key,
+      );
       final ls = (t['letterSpacing'] as num?) ?? 0;
       expect(
         style.letterSpacing ?? 0,
@@ -111,6 +116,13 @@ void main() {
         reason: e.key,
       );
     }
+  });
+
+  test('Zeilenhöhe „normal“ folgt den Font-Metriken und rundet', () {
+    expect(WText.normalHeight(WFonts.mono, 12) * 12, 16);
+    expect(WText.normalHeight(WFonts.ui, 16) * 16, 20);
+    expect(WText.normalHeight(WFonts.ui, 13) * 13, 16);
+    expect(WText.normalHeight(WFonts.ui, 26) * 26, 32);
   });
 
   test('Schriften: alle Gewichte als Asset deklariert, OFL liegt bei', () {

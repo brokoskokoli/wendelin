@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 
 import '../theme/app_theme.dart';
 
@@ -25,6 +26,22 @@ enum CheckStatus {
     ok => 'geprüft',
     pending => 'ausstehend',
     failed => 'fehlgeschlagen',
+  };
+}
+
+/// Abbildung des Prüfstatus aus wendelin_core auf die Darstellung.
+extension VerificationStatusDisplay on VerificationStatus {
+  /// Symbol für diesen Status; `null` bei [VerificationStatus.unavailable].
+  ///
+  /// „Nicht prüfbar“ (z. B. offline, wird wiederholt) ist weder bestätigt
+  /// noch fehlgeschlagen. Ein gelbes Dreieck würde eine offene Bestätigung
+  /// vortäuschen, ein rotes Quadrat einen Angriff. Deshalb zeigt der Chip
+  /// dann kein Symbol, und es bleibt bei der Datenschutzstufe allein.
+  CheckStatus? get checkStatus => switch (this) {
+    VerificationStatus.verified => CheckStatus.ok,
+    VerificationStatus.pending => CheckStatus.pending,
+    VerificationStatus.failed => CheckStatus.failed,
+    VerificationStatus.unavailable => null,
   };
 }
 

@@ -18,8 +18,14 @@ void main() {
         var taps = 0;
         await _pump(tester, MicButton(state: state, onPressed: () => taps++));
         final label = MicButton.labelFor(state);
-        expect(find.bySemanticsLabel(label), findsOneWidget);
         expect(find.byTooltip(label), findsOneWidget);
+        // Genau eine Ansage: Tooltip, kein zusätzliches Label.
+        final data = tester
+            .getSemantics(find.byType(IconButton))
+            .getSemanticsData();
+        expect(data.tooltip, label);
+        expect(data.label, isEmpty);
+        expect(data.flagsCollection.isButton, isTrue);
         expect(tester.getSize(find.byType(IconButton)), const Size(72, 72));
         await tester.tap(find.byType(MicButton));
         expect(taps, state == MicState.disabled ? 0 : 1);
@@ -39,7 +45,11 @@ void main() {
         ),
       );
       expect(tester.getSize(find.byType(IconButton)), const Size(64, 64));
-      expect(find.bySemanticsLabel('Weiter sprechen'), findsOneWidget);
+      final data = tester
+          .getSemantics(find.byType(IconButton))
+          .getSemanticsData();
+      expect(data.tooltip, 'Weiter sprechen');
+      expect(data.label, isEmpty);
       handle.dispose();
     });
 
@@ -319,7 +329,7 @@ void main() {
         IntegrationTile(
           name: 'Kalender',
           icon: WIcons.calendar,
-          state: IntegrationState.active,
+          status: IntegrationStatus.active,
           detail: '6 Tools',
           onToggle: (v) => toggled = v,
         ),
@@ -345,7 +355,7 @@ void main() {
         IntegrationTile(
           name: 'Kontakte',
           icon: WIcons.person,
-          state: IntegrationState.available,
+          status: IntegrationStatus.available,
           sensitive: true,
           minPrivacy: PrivacyLevel.tee,
           onToggle: (v) => toggled = v,
@@ -372,7 +382,7 @@ void main() {
         const IntegrationTile(
           name: 'Wetter',
           icon: WIcons.waves,
-          state: IntegrationState.available,
+          status: IntegrationStatus.available,
         ),
       );
       expect(
@@ -384,13 +394,13 @@ void main() {
 
     for (final (state, label, color, shape) in [
       (
-        IntegrationState.setupRequired,
+        IntegrationStatus.setupRequired,
         'Einrichten',
         WColors.warn,
         GlyphShape.triangle,
       ),
       (
-        IntegrationState.error,
+        IntegrationStatus.error,
         'Neu anmelden',
         WColors.error,
         GlyphShape.square,
@@ -403,7 +413,7 @@ void main() {
           IntegrationTile(
             name: 'X',
             icon: WIcons.cart,
-            state: state,
+            status: state,
             detail: 'Grund',
             onAction: () => pressed++,
           ),
@@ -420,14 +430,15 @@ void main() {
       });
     }
 
-    testWidgets('nicht installiert: gedämpft, Store-Link', (tester) async {
+    testWidgets('unavailable: gedämpft, Store-Link', (tester) async {
       var store = 0;
       await pumpTile(
         tester,
         IntegrationTile(
           name: 'Todoist',
           icon: WIcons.task,
-          state: IntegrationState.notInstalled,
+          status: IntegrationStatus.unavailable,
+          detail: 'App nicht installiert',
           onStore: () => store++,
         ),
       );
@@ -446,10 +457,14 @@ void main() {
         const IntegrationTile(
           name: 'Todoist',
           icon: WIcons.task,
-          state: IntegrationState.notInstalled,
+          status: IntegrationStatus.unavailable,
         ),
       );
       expect(find.text('Im Store'), findsNothing);
+      expect(
+        find.textContaining('Nicht verfügbar', findRichText: true),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Zeilenhöhe 66 wie im Entwurf', (tester) async {
@@ -458,7 +473,7 @@ void main() {
         IntegrationTile(
           name: 'Kalender',
           icon: WIcons.calendar,
-          state: IntegrationState.active,
+          status: IntegrationStatus.active,
           onToggle: (_) {},
         ),
       );
@@ -543,6 +558,59 @@ void main() {
     });
   });
 
+  group('RuleTile: Ziel mit Datenschutz-Symbol', () {
+    testWidgets('„→ ◆ Phala GLM“', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(
+        tester,
+        const RuleTile(
+          name: 'Privat',
+          condition: 'keyword "privat"',
+          target: 'Phala GLM',
+          targetLevel: PrivacyLevel.tee,
+        ),
+      );
+      expect(
+        find.textContaining('keyword "privat" → ', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<Glyph>(find.byType(Glyph)).shape,
+        GlyphShape.diamond,
+      );
+      expect(
+        find.bySemanticsLabel(
+          RegExp('keyword "privat" → Datenschutzstufe TEE, Phala GLM'),
+        ),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('ohne Stufe kein Symbol, ohne Ziel nur Bedingung', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const RuleTile(name: 'S', condition: 'prefix "Claude"', target: 'Opus'),
+      );
+      expect(find.byType(Glyph), findsNothing);
+      expect(
+        find.textContaining('prefix "Claude" → Opus', findRichText: true),
+        findsOneWidget,
+      );
+      await _pump(tester, const RuleTile(name: 'S', condition: 'immer'));
+      expect(find.text('immer'), findsOneWidget);
+    });
+  });
+
+  test('VerificationStatus → CheckStatus', () {
+    expect(VerificationStatus.verified.checkStatus, CheckStatus.ok);
+    expect(VerificationStatus.pending.checkStatus, CheckStatus.pending);
+    expect(VerificationStatus.failed.checkStatus, CheckStatus.failed);
+    expect(VerificationStatus.unavailable.checkStatus, isNull);
+  });
+
   group('SectionCard', () {
     testWidgets('Trenner nur zwischen Kindern, optional Titel', (tester) async {
       await _pump(
@@ -575,6 +643,10 @@ void main() {
         ),
       );
       expect(find.byTooltip('Einstellungen'), findsOneWidget);
+      final data = tester
+          .getSemantics(find.byType(IconButton))
+          .getSemanticsData();
+      expect((data.tooltip, data.label), ('Einstellungen', ''));
       expect(tester.getSize(find.byType(IconButton)), const Size(48, 48));
       await tester.tap(find.byType(IconButton));
       expect(taps, 1);

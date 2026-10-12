@@ -7,32 +7,19 @@ import 'icons.dart';
 import 'privacy_chip.dart';
 import 'w_switch.dart';
 
-/// Zustand einer Integration (Konzept: Tool-System → Zustand).
-enum IntegrationState {
-  /// Eingeschaltet und bereit: Schalter an, grüner Status.
-  active,
-
-  /// Eingerichtet, aber aus: Schalter aus.
-  available,
-
-  /// Einrichtung nötig (z. B. Login fehlt): gelber Button.
-  setupRequired,
-
-  /// Fehler (z. B. Token abgelaufen): roter Button.
-  error,
-
-  /// Zugehörige App nicht installiert: gedämpft, Store-Link.
-  notInstalled,
-}
-
 /// Zeile einer Integration in der Liste (innerhalb einer [SectionCard]).
+///
+/// Darstellung je [IntegrationStatus] (wendelin_core): `active` Schalter an +
+/// grüner Punkt, `available` Schalter aus, `setupRequired` gelbes Dreieck +
+/// Button, `error` rotes Quadrat + Button, `unavailable` gedämpft (0.55) mit
+/// optionalem Store-Link.
 class IntegrationTile extends StatelessWidget {
   /// Erstellt eine Integrationszeile.
   const IntegrationTile({
     super.key,
     required this.name,
     required this.icon,
-    required this.state,
+    required this.status,
     this.detail,
     this.sensitive = false,
     this.minPrivacy,
@@ -48,8 +35,8 @@ class IntegrationTile extends StatelessWidget {
   /// Linien-Icon.
   final WIconData icon;
 
-  /// Zustand.
-  final IntegrationState state;
+  /// Zustand (aus wendelin_core).
+  final IntegrationStatus status;
 
   /// Zusatz in der zweiten Zeile (z. B. „6 Tools“, „Login fehlt“).
   final String? detail;
@@ -69,21 +56,28 @@ class IntegrationTile extends StatelessWidget {
   /// Beschriftung der Aktion (Standard: „Einrichten“ / „Neu anmelden“).
   final String? actionLabel;
 
-  /// Store-Link bei „nicht installiert“.
+  /// Store-Link bei `unavailable` (z. B. App nicht installiert).
   final VoidCallback? onStore;
 
   @override
   Widget build(BuildContext context) {
-    final inactive = state == IntegrationState.notInstalled;
+    final inactive = status == IntegrationStatus.unavailable;
     final info = Row(
       spacing: WSpace.m,
       children: [
         WIcon(icon),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: WSpace.xxs,
-            children: [_title(), _subtitle()],
+          // Text hat wie im Entwurf 14 Abstand oben/unten; die Zeile selbst
+          // nur so viel, dass Bedienelemente mit 48 Trefferfläche passen.
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: WSpace.m14 - WSize.listRowInset,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: WSpace.xxs,
+              children: [_title(), _subtitle()],
+            ),
           ),
         ),
       ],
@@ -138,8 +132,8 @@ class IntegrationTile extends StatelessWidget {
               width: WSize.borderThin,
             ),
           ),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
               horizontal: WSpace.xs6,
               vertical: WSpace.xxs,
             ),
@@ -153,36 +147,38 @@ class IntegrationTile extends StatelessWidget {
   }
 
   Widget _subtitle() {
-    final (GlyphShape? shape, Color color, String text) = switch (state) {
-      IntegrationState.active => (
+    final (GlyphShape? shape, Color color, String text) = switch (status) {
+      IntegrationStatus.active => (
         GlyphShape.dot,
         WColors.ok,
         detail == null ? 'Aktiv' : 'Aktiv · $detail',
       ),
-      IntegrationState.available => (
+      IntegrationStatus.available => (
         null,
         WColors.textMuted,
         detail ?? (minPrivacy == null ? 'Verfügbar' : 'Nur an Provider ab'),
       ),
-      IntegrationState.setupRequired => (
+      IntegrationStatus.setupRequired => (
         GlyphShape.triangle,
         WColors.warn,
         detail ?? 'Einrichtung nötig',
       ),
-      IntegrationState.error => (
+      IntegrationStatus.error => (
         GlyphShape.square,
         WColors.error,
         detail ?? 'Fehler',
       ),
-      IntegrationState.notInstalled => (
+      IntegrationStatus.unavailable => (
         null,
         WColors.textSecondary,
-        detail ?? 'App nicht installiert',
+        detail ?? 'Nicht verfügbar',
       ),
     };
     final level = minPrivacy;
     final showLevel =
-        state == IntegrationState.available && detail == null && level != null;
+        status == IntegrationStatus.available &&
+        detail == null &&
+        level != null;
     return Text.rich(
       TextSpan(
         style: WText.caption.copyWith(color: color),
@@ -209,27 +205,27 @@ class IntegrationTile extends StatelessWidget {
   }
 
   Widget? _trailing() {
-    switch (state) {
-      case IntegrationState.active:
-      case IntegrationState.available:
+    switch (status) {
+      case IntegrationStatus.active:
+      case IntegrationStatus.available:
         return WSwitch(
-          value: state == IntegrationState.active,
+          value: status == IntegrationStatus.active,
           onChanged: onToggle,
           semanticLabel: name,
         );
-      case IntegrationState.setupRequired:
+      case IntegrationStatus.setupRequired:
         return _ActionButton(
           label: actionLabel ?? 'Einrichten',
           color: WColors.warn,
           onPressed: onAction,
         );
-      case IntegrationState.error:
+      case IntegrationStatus.error:
         return _ActionButton(
           label: actionLabel ?? 'Neu anmelden',
           color: WColors.error,
           onPressed: onAction,
         );
-      case IntegrationState.notInstalled:
+      case IntegrationStatus.unavailable:
         if (onStore == null) return null;
         return TextButton(
           onPressed: onStore,

@@ -198,13 +198,10 @@ class WIconButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Semantics(
-        label: tooltip,
-        child: WIcon(
-          icon,
-          size: iconSize,
-          color: onPressed == null ? WColors.textMuted : WColors.text,
-        ),
+      icon: WIcon(
+        icon,
+        size: iconSize,
+        color: onPressed == null ? WColors.textMuted : WColors.text,
       ),
       style: IconButton.styleFrom(
         fixedSize: Size.square(extent),

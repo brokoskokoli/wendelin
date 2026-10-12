@@ -61,9 +61,9 @@ class MainScreenSample extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(
               WSpace.screen,
-              WSpace.screenTop,
+              WSpace.screenTop - WSize.tapTargetInset,
               WSpace.screen,
-              WSpace.m,
+              WSpace.m - WSize.tapTargetInset,
             ),
             child: Row(
               children: [
@@ -106,7 +106,7 @@ class MainScreenSample extends StatelessWidget {
               ),
               children: [
                 for (final w in <Widget>[
-                  const Text(
+                  Text(
                     'Heute · 08:12',
                     style: WText.mono,
                     textAlign: TextAlign.center,
@@ -286,13 +286,12 @@ class IntegrationsSample extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.fromLTRB(
           WSpace.screen,
-          WSpace.screenTop,
+          WSpace.screenTop - WSize.tapTargetInset,
           WSpace.screen,
           WSpace.xl24,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: WSpace.l18,
           children: [
             Row(
               spacing: WSpace.m,
@@ -306,51 +305,53 @@ class IntegrationsSample extends StatelessWidget {
                 Text('Integrationen', style: WText.screenTitle),
               ],
             ),
+            const SizedBox(height: WSpace.l18 - WSize.tapTargetInset),
             Text(
               'Nur aktive Integrationen gehen ans Modell. '
               'Ausgeschaltete kosten keine Tokens.',
               style: WText.intro,
             ),
+            const SizedBox(height: WSpace.l18),
             SectionCard(
               children: [
                 IntegrationTile(
                   name: 'Kalender',
                   icon: WIcons.calendar,
-                  state: IntegrationState.active,
+                  status: IntegrationStatus.active,
                   detail: '6 Tools',
                   onToggle: toggle,
                 ),
                 IntegrationTile(
                   name: 'Obsidian',
                   icon: WIcons.note,
-                  state: IntegrationState.active,
+                  status: IntegrationStatus.active,
                   detail: 'Vault „Leben“',
                   onToggle: toggle,
                 ),
                 const IntegrationTile(
                   name: 'Bring! Einkaufsliste',
                   icon: WIcons.cart,
-                  state: IntegrationState.setupRequired,
+                  status: IntegrationStatus.setupRequired,
                   detail: 'Login fehlt',
                   onAction: _noop,
                 ),
                 const IntegrationTile(
                   name: 'Spotify',
                   icon: WIcons.music,
-                  state: IntegrationState.error,
+                  status: IntegrationStatus.error,
                   detail: 'Token abgelaufen · pausiert',
                   onAction: _noop,
                 ),
                 IntegrationTile(
                   name: 'Wetter und Meer',
                   icon: WIcons.waves,
-                  state: IntegrationState.available,
+                  status: IntegrationStatus.available,
                   onToggle: toggle,
                 ),
                 IntegrationTile(
                   name: 'Kontakte',
                   icon: WIcons.person,
-                  state: IntegrationState.available,
+                  status: IntegrationStatus.available,
                   sensitive: true,
                   minPrivacy: PrivacyLevel.tee,
                   onToggle: toggle,
@@ -358,11 +359,13 @@ class IntegrationsSample extends StatelessWidget {
                 const IntegrationTile(
                   name: 'Todoist',
                   icon: WIcons.task,
-                  state: IntegrationState.notInstalled,
+                  status: IntegrationStatus.unavailable,
+                  detail: 'App nicht installiert',
                   onStore: _noop,
                 ),
               ],
             ),
+            const SizedBox(height: WSpace.l18),
             Row(
               spacing: WSpace.m,
               children: [

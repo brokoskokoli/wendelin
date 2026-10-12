@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/ui/theme/app_theme.dart';
 import 'package:wendelin/ui/design/compositions.dart';
 import 'package:wendelin/ui/design/gallery.dart';
+import 'package:wendelin/ui/theme/app_theme.dart';
 
 import 'helpers.dart';
 
