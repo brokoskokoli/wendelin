@@ -31,6 +31,7 @@ void toolInvokerContract(
   late FakeTool external;
   late FakeTool failing;
   late FakeTool slow;
+  late FakeTool slow2;
   late ToolInvoker invoker;
 
   ToolContext context([CancelToken? cancel]) => ToolContext(
@@ -80,16 +81,37 @@ void toolInvokerContract(
     for (final e in events.whereType<ToolFinished>()) e.call.id: e.outcome,
   };
 
+  void expectIsCancelled(ToolOutcome o, String reason) {
+    expect(o.isError, isTrue, reason: '$reason: Fehler-Outcome erwartet');
+    expect(
+      o.text,
+      ToolOutcome.cancelledText,
+      reason: '$reason: ToolOutcome.cancelled() erwartet',
+    );
+  }
+
   void expectCancelled(Iterable<ToolOutcome> outcomes) {
     expect(outcomes, isNotEmpty);
     for (final o in outcomes) {
-      expect(o.isError, isTrue, reason: 'abgebrochener Call ist ein Fehler');
-      expect(
-        o.text,
-        ToolOutcome.cancelledText,
-        reason: 'abgebrochener Call liefert ToolOutcome.cancelled()',
-      );
+      expectIsCancelled(o, 'abgebrochener Call');
     }
+  }
+
+  /// Rule for cancellation that holds for sequential and parallel invokers:
+  /// a call whose tool did not complete gets `cancelled()`; a call whose
+  /// tool really completed keeps its real (here: successful) outcome.
+  void expectCancelledUnlessCompleted(
+    List<ToolInvocationEvent> events,
+    Map<String, FakeTool> toolOf,
+  ) {
+    outcomes(events).forEach((id, o) {
+      final tool = toolOf[id]!;
+      if (tool.completedCount > 0) {
+        expect(o.isError, isFalse, reason: 'Call $id lief, echtes Outcome');
+      } else {
+        expectIsCancelled(o, 'Call $id lief nicht zu Ende');
+      }
+    });
   }
 
   group('$name erfüllt ToolInvoker-Vertrag', () {
@@ -106,8 +128,12 @@ void toolInvokerContract(
         name: 'contract__slow',
         delay: const Duration(seconds: 30),
       );
+      slow2 = FakeTool(
+        name: 'contract__slow2',
+        delay: const Duration(seconds: 30),
+      );
       invoker = await create(
-        FakeToolCatalog([read, write, external, failing, slow]),
+        FakeToolCatalog([read, write, external, failing, slow, slow2]),
       );
     });
 
@@ -186,12 +212,12 @@ void toolInvokerContract(
     });
 
     test(
-      'Abbruch während Bestätigung: terminiert, nichts ausgeführt',
+      'Abbruch während Bestätigung: terminiert, Bestätigtes nie ausgeführt',
       () async {
         final cancel = CancelToken();
         ConfirmationNeeded? open;
         final events = await run(
-          [call('1', 'contract__send'), call('2', 'contract__read')],
+          [call('1', 'contract__send'), call('2', 'contract__slow')],
           ctx: context(cancel),
           onEvent: (e) {
             if (e is ConfirmationNeeded) {
@@ -203,24 +229,43 @@ void toolInvokerContract(
         expect(open, isNotNull);
         expect(open!.answered, isTrue, reason: 'offene Bestätigung aufgelöst');
         expect(external.callCount, 0);
-        expect(read.callCount, 0);
+        expectIsCancelled(outcomes(events)['1']!, 'unbestätigter Call');
+        expectCancelledUnlessCompleted(events, {'1': external, '2': slow});
+      },
+    );
+
+    test(
+      'Abbruch während Ausführung beendet offene Calls als Fehler',
+      () async {
+        final cancel = CancelToken();
+        final events = await run(
+          [call('1', 'contract__slow'), call('2', 'contract__slow2')],
+          ctx: context(cancel),
+          onEvent: (e) {
+            if (e is ToolStarted && e.call.id == '1') {
+              Timer(const Duration(milliseconds: 20), cancel.cancel);
+            }
+          },
+        );
+        expect(slow.completedCount + slow2.completedCount, 0);
         expectCancelled(outcomes(events).values);
       },
     );
 
-    test('Abbruch während Ausführung beendet den Call als Fehler', () async {
+    test('Abbruch: fertiger Call behält sein echtes Outcome', () async {
       final cancel = CancelToken();
       final events = await run(
-        [call('1', 'contract__slow'), call('2', 'contract__read')],
+        [call('1', 'contract__read'), call('2', 'contract__slow')],
         ctx: context(cancel),
         onEvent: (e) {
-          if (e is ToolStarted && e.call.id == '1') {
-            Timer(const Duration(milliseconds: 20), cancel.cancel);
+          if (e is ToolStarted && e.call.id == '2') {
+            Timer(const Duration(milliseconds: 50), cancel.cancel);
           }
         },
       );
-      expectCancelled(outcomes(events).values);
-      expect(read.callCount, 0);
+      expect(read.completedCount, 1);
+      expect(outcomes(events)['1']!.isError, isFalse);
+      expectIsCancelled(outcomes(events)['2']!, 'abgebrochener Call');
     });
 
     test('bereits abgebrochener Kontext führt kein Tool aus', () async {

@@ -253,6 +253,39 @@ void main() {
     test('extraHeaders are unmodifiable', () {
       expect(() => full.extraHeaders['x'] = 'y', throwsUnsupportedError);
       expect(() => full.options['x'] = 'y', throwsUnsupportedError);
+      final nested = full.options['nested']! as Map<String, Object?>;
+      expect(() => nested['y'] = 1, throwsUnsupportedError);
+      expect(
+        () => (nested['list']! as List<Object?>).add(2),
+        throwsUnsupportedError,
+      );
+    });
+
+    test('options reject non-string keys', () {
+      expect(
+        () => full.copyWith(
+          options: {
+            'a': {1: 'x'},
+          },
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('options are copied deeply', () {
+      final inner = <Object?>[1];
+      final source = <String, Object?>{
+        'a': <String, Object?>{'list': inner},
+      };
+      final p = full.copyWith(options: source);
+      inner.add(2);
+      (source['a']! as Map<String, Object?>)['b'] = true;
+      source['c'] = 3;
+      expect(p.options, {
+        'a': {
+          'list': [1],
+        },
+      });
     });
   });
 }

@@ -54,6 +54,10 @@ void main() {
       const ThinkingComplete(ThinkingBlock('zwei')),
       done,
     ],
+    'open thinking block allowed when stream fails': [
+      const ThinkingDelta('Ich den'),
+      const ErrorEvent(NetworkException('weg')),
+    ],
     'redacted thinking without deltas': [
       const ThinkingComplete(ThinkingBlock.redacted('opak')),
       done,
@@ -107,6 +111,11 @@ void main() {
       const ToolCallComplete(call0),
       const ToolCallDelta(index: 0, argumentsFragment: '{"v":1}'),
       const ErrorEvent(NetworkException('x')),
+    ],
+    'thinking deltas without ThinkingComplete before Done': [
+      const ThinkingDelta('Ich denke'),
+      const TextDelta('Antwort'),
+      done,
     ],
     'thinking deltas differ from complete block': [
       const ThinkingDelta('Ich denke'),

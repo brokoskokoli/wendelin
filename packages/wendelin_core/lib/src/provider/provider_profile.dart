@@ -26,7 +26,9 @@ final class ProviderProfile {
     Map<String, String> extraHeaders = const {},
     Map<String, Object?> options = const {},
   }) : extraHeaders = Map.unmodifiable(extraHeaders),
-       options = Map.unmodifiable(options);
+       options = Map<String, Object?>.unmodifiable({
+         for (final e in options.entries) e.key: deepUnmodifiable(e.value),
+       });
 
   /// Decodes a profile written by [toJson]; throws [FormatException].
   factory ProviderProfile.fromJson(Map<String, Object?> json) {
@@ -83,7 +85,8 @@ final class ProviderProfile {
   /// Adapter-specific options, e.g. `enableServerWebSearch: true` or
   /// `thinkingBudget: 2000`. Keys are defined by the adapters
   /// (`wendelin_providers`); values must be JSON-encodable and never secrets.
-  /// Unknown keys are ignored by adapters.
+  /// Unknown keys are ignored by adapters. Deeply copied and unmodifiable
+  /// (nested maps and lists too).
   final Map<String, Object?> options;
 
   /// Encodes the profile as JSON (no secrets).

@@ -65,6 +65,10 @@ final class FakeTool implements Tool {
   /// Number of [execute] calls.
   int get callCount => calls.length;
 
+  /// Number of [execute] calls that returned normally (not thrown, not
+  /// cancelled) – i.e. whose effect has happened.
+  int completedCount = 0;
+
   /// Number of undo invocations.
   int undoCount = 0;
 
@@ -84,6 +88,7 @@ final class FakeTool implements Tool {
     if (throws case final error?) throw error;
     final result =
         await handler?.call(args, ctx) ?? outcome ?? ToolOutcome.text('ok');
+    completedCount++;
     if (!withUndo) return result;
     return ToolOutcome(
       content: result.content,

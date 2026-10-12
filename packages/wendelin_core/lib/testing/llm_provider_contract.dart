@@ -99,7 +99,8 @@ abstract final class ContractExpectations {
 ///   streams ending with `Done` complete every call, streams ending with
 ///   `ErrorEvent` may leave calls incomplete;
 /// - the `ThinkingDelta`s before a non-redacted `ThinkingComplete` add up to
-///   its text;
+///   its text, and streams ending with `Done` close every thinking block
+///   with a `ThinkingComplete`;
 /// - cancellation ends the stream with `ErrorEvent(CancelledException)` and
 ///   without `Done`.
 void llmProviderContract(
@@ -296,6 +297,13 @@ void expectWellFormedChatStream(List<ChatEvent> events) {
       }
       thinking.clear();
     }
+  }
+  if (endsWithDone) {
+    expect(
+      thinking.isEmpty,
+      isTrue,
+      reason: 'ThinkingDeltas ohne abschließendes ThinkingComplete',
+    );
   }
 }
 

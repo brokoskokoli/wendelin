@@ -99,3 +99,23 @@ Map<String, String> readStringMap(
   });
   return result;
 }
+
+/// Returns a deep copy of a JSON-like [value] in which every map
+/// (`Map<String, Object?>`) and list is unmodifiable. Scalars are returned as
+/// they are. Throws [ArgumentError] for maps with non-string keys.
+Object? deepUnmodifiable(Object? value) {
+  if (value is Map<Object?, Object?>) {
+    final copy = <String, Object?>{};
+    value.forEach((k, v) {
+      if (k is! String) {
+        throw ArgumentError.value(k, 'key', 'JSON-Schlüssel muss String sein');
+      }
+      copy[k] = deepUnmodifiable(v);
+    });
+    return Map<String, Object?>.unmodifiable(copy);
+  }
+  if (value is List<Object?>) {
+    return List<Object?>.unmodifiable(value.map(deepUnmodifiable));
+  }
+  return value;
+}
