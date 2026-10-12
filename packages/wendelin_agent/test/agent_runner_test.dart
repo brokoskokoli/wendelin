@@ -1026,6 +1026,157 @@ void main() {
     });
   });
 
+  group('text reset, thinking, budget warning', () {
+    /// Event kinds as short labels, for order checks.
+    List<String> kinds(List<AgentEvent> events) => [
+      for (final e in events)
+        switch (e) {
+          AgentTextDelta(:final text) => 'T:$text',
+          AgentTextReset() => 'RESET',
+          Escalated() => 'ESC',
+          _ => null,
+        },
+    ].nonNulls.toList();
+
+    test('retry after streamed text resets it', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.error(
+          const NetworkException('weg'),
+          partialText: 'Hal',
+          chunkSize: 10,
+        ),
+        ScriptedTurn.text('Hallo.', chunkSize: 10),
+      ]);
+      final events = await Harness(primary: a).run('x');
+      expect(kinds(events), ['T:Hal', 'RESET', 'T:Hallo.']);
+      expect(
+        events.whereType<AgentTextReset>().single.reason,
+        'Neuer Versuch nach Fehler',
+      );
+    });
+
+    test('retry without streamed text sends no reset', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls(
+          [call('c1', 'web__search')],
+          text: 'Moment.',
+          chunkSize: 10,
+        ),
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.text('Fertig.', chunkSize: 10),
+      ]);
+      final h = Harness(
+        primary: a,
+        tools: [FakeTool(name: 'web__search')],
+      );
+      final events = await h.run('x');
+      expect(kinds(events), ['T:Moment.', 'T:Fertig.']);
+    });
+
+    test('escalation after provider error resets partial text', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.error(
+          const NetworkException('weg'),
+          partialText: 'A1',
+          chunkSize: 10,
+        ),
+        ScriptedTurn.error(
+          const NetworkException('weg'),
+          partialText: 'A2',
+          chunkSize: 10,
+        ),
+      ]);
+      final (b, _) = scripted('b', [ScriptedTurn.text('B.', chunkSize: 10)]);
+      final events = await Harness(primary: a, chain: [b]).run('x');
+      expect(kinds(events), ['T:A1', 'RESET', 'T:A2', 'ESC', 'RESET', 'T:B.']);
+    });
+
+    test('escalation after "kann ich nicht" resets the answer', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.text('Das kann ich leider nicht.', chunkSize: 100),
+      ]);
+      final (b, _) = scripted('b', [ScriptedTurn.text('B.', chunkSize: 10)]);
+      final events = await Harness(primary: a, chain: [b]).run('x');
+      expect(kinds(events), [
+        'T:Das kann ich leider nicht.',
+        'ESC',
+        'RESET',
+        'T:B.',
+      ]);
+    });
+
+    test('escalation after noProgress resets the dropped text', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls(
+          [call('a1', 'web__search')],
+          text: 'Eins.',
+          chunkSize: 10,
+        ),
+        ScriptedTurn.toolCalls(
+          [call('a2', 'web__search', '{"n":2}')],
+          text: 'Zwei.',
+          chunkSize: 10,
+        ),
+      ]);
+      final (b, _) = scripted('b', [ScriptedTurn.text('B.', chunkSize: 10)]);
+      final h = Harness(
+        primary: a,
+        chain: [b],
+        tools: [FakeTool(name: 'web__search')],
+        config: const AgentConfig(escalateAfterRoundsWithoutResult: 1),
+      );
+      final events = await h.run('x');
+      expect(kinds(events), ['T:Eins.', 'T:Zwei.', 'ESC', 'RESET', 'T:B.']);
+    });
+
+    test('thinking deltas are passed on', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.events([
+          const ThinkingDelta('Hm'),
+          const ThinkingDelta(''),
+          const ThinkingDelta(', ja'),
+          const ThinkingComplete(ThinkingBlock('Hm, ja', signature: 's')),
+          const TextDelta('Ja.'),
+          const Done(StopReason.endTurn),
+        ]),
+      ]);
+      final events = await Harness(primary: a).run('x');
+      expect(events.whereType<AgentThinkingDelta>().map((e) => e.text), [
+        'Hm',
+        ', ja',
+      ]);
+      expect(streamedText(events), 'Ja.');
+    });
+
+    test('budget warning once per run and profile', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls([call('c1', 'web__search')]),
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ]);
+      final (b, _) = scripted('b', [ScriptedTurn.text('B.')]);
+      final guard = FixedBudgetGuard(BudgetStatus.warn, 8000000, 10000000);
+      final h = Harness(
+        primary: a,
+        chain: [b],
+        tools: [FakeTool(name: 'web__search')],
+        budget: guard,
+      );
+      final events = await h.run('x');
+      final warnings = events.whereType<BudgetWarning>().toList();
+      expect(warnings.map((w) => w.profileId), ['a', 'b']);
+      expect(warnings.first.spentMicros, 8000000);
+      expect(warnings.first.budgetMicros, 10000000);
+      expect(guard.checked, ['a', 'a', 'a', 'b']);
+      expect(terminal(events), isA<AgentDone>());
+      // A new run warns again.
+      (b.provider as FakeLlmProvider).enqueue(ScriptedTurn.text('nochmal'));
+      final h2 = Harness(primary: b, budget: guard);
+      final again = await h2.run('y');
+      expect(again.whereType<BudgetWarning>(), hasLength(1));
+    });
+  });
+
   group('robustness', () {
     test('invoker without results: every call still gets one', () async {
       final (a, provider) = scripted('a', [

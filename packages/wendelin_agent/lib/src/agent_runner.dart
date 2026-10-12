@@ -132,6 +132,11 @@ final class _Run {
   int _roundsOnProvider = 0;
   int _invalidOnProvider = 0;
   bool _consentDeclined = false;
+  final Set<String> _budgetWarned = {};
+
+  /// Whether text was streamed that is not yet part of a kept assistant
+  /// message (see [_resetText]).
+  bool _unkeptText = false;
 
   void emit(AgentEvent e) {
     if (!controller.isClosed) controller.add(e);
@@ -194,11 +199,13 @@ final class _Run {
         _throwIfAborted();
         if (error.retryable && !retried) {
           retried = true;
+          _resetText('Neuer Versuch nach Fehler');
           continue;
         }
         if (error.retryable &&
             await _escalate(EscalationReason.providerError)) {
           retried = false;
+          _resetText('An anderes Modell übergeben');
           continue;
         }
         _throwIfAborted();
@@ -227,6 +234,7 @@ final class _Run {
             await _escalate(EscalationReason.modelGaveUp)) {
           finalText.clear();
           _dropPausedSegments();
+          _resetText('An anderes Modell übergeben');
           continue;
         }
         await _append(assistant);
@@ -249,11 +257,13 @@ final class _Run {
       if (_roundsOnProvider >= config.escalateAfterRoundsWithoutResult &&
           await _escalate(EscalationReason.noProgress)) {
         _dropPausedSegments();
+        _resetText('An anderes Modell übergeben');
         continue;
       }
       _rounds++;
       _roundsOnProvider++;
       await _append(assistant);
+      _unkeptText = false;
       final results = await _runTools(calls);
       await _append(Message.toolResults(results));
       _throwIfAborted();
@@ -276,9 +286,20 @@ final class _Run {
     if (_tokensSpent >= config.maxTokensPerRequest) {
       throw _Stop(_failed(AgentErrorKind.tokenBudget));
     }
-    final status = await runner.budgetGuard?.check(_current.profileId);
-    if (status == BudgetStatus.block) {
-      throw _Stop(_failed(AgentErrorKind.budgetBlocked));
+    final budget = await runner.budgetGuard?.check(_current.profileId);
+    switch (budget?.status) {
+      case BudgetStatus.block:
+        throw _Stop(_failed(AgentErrorKind.budgetBlocked));
+      case BudgetStatus.warn when _budgetWarned.add(_current.profileId):
+        emit(
+          BudgetWarning(
+            profileId: _current.profileId,
+            spentMicros: budget!.spentMicros,
+            budgetMicros: budget.budgetMicros,
+          ),
+        );
+      case _:
+        break;
     }
     _throwIfAborted();
   }
@@ -329,9 +350,10 @@ final class _Run {
         case TextDelta(text: final delta):
           if (delta.isEmpty) break;
           emit(AgentTextDelta(delta));
+          _unkeptText = true;
           _appendText(blocks, delta);
-        case ThinkingDelta():
-          break; // display only, not part of the AgentEvent contract
+        case ThinkingDelta(text: final delta):
+          if (delta.isNotEmpty) emit(AgentThinkingDelta(delta));
         case ThinkingComplete(:final block):
           blocks.add(block);
         case ToolCallDelta():
@@ -560,6 +582,14 @@ final class _Run {
       }
     }
     return true;
+  }
+
+  /// Tells UI and TTS to drop streamed text that is being discarded (retry,
+  /// replaced answer); only if such text was streamed.
+  void _resetText(String reason) {
+    if (!_unkeptText) return;
+    _unkeptText = false;
+    emit(AgentTextReset(reason));
   }
 
   /// Removes assistant messages of a paused turn that is being replaced by

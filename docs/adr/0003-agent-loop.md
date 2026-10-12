@@ -11,7 +11,7 @@ WP05 baut die Agent-Schleife nur gegen die Interfaces aus `wendelin_core` (ADR 0
 - **Tool-Runde** = Ausführung der Tool-Calls einer Modellantwort. Fordert das Modell nach `maxToolRounds` (8) Runden weitere Tools an, werden sie nicht ausgeführt: Die Antwort kommt mit Fehler-Ergebnissen („Nicht ausgeführt: …“) in den Verlauf, damit jeder `tool_use` ein `tool_result` hat, und der Lauf endet mit `AgentFailed(toolRoundLimit)`.
 - **Zeit**: Ein `Timer(maxDuration)` bricht laufende Modell- und Tool-Aufrufe über das gemeinsame `CancelToken` ab. Zusätzlich prüft die Schleife vor jedem Modellaufruf die vergangene Zeit über `Clock`. Wartezeit auf Bestätigungen zählt mit.
 - **Token-Budget** (`maxTokensPerRequest`, Standard 50 000) ist die Summe aller Usage-Inkremente (Eingabe, Ausgabe, Cache lesen und schreiben) über alle Modellaufrufe eines Laufs. Es wird vor jedem Modellaufruf und vor jeder Tool-Runde geprüft. `maxOutputTokens` (1024) ist davon getrennt das `maxTokens` je Aufruf.
-- **`BudgetGuard`** wird vor jedem Modellaufruf gefragt. `block` beendet mit `AgentFailed(budgetBlocked)`, `warn` lässt den Aufruf zu (die Warnung zeigt die App selbst an).
+- **`BudgetGuard`** wird vor jedem Modellaufruf gefragt. `block` beendet mit `AgentFailed(budgetBlocked)`, `warn` lässt den Aufruf zu und meldet einmal pro Lauf und Profil `BudgetWarning` (Beträge aus `BudgetCheck`).
 - `StopReason.pauseTurn` zählt nicht als Runde. Der Text der Teilantworten ergibt zusammen `AgentDone.finalText`.
 
 ### 2. Fehler und Eskalation
@@ -26,7 +26,7 @@ WP05 baut die Agent-Schleife nur gegen die Interfaces aus `wendelin_core` (ADR 0
 - Datum und Uhrzeit kommen direkt aus `Clock.now()`; die App liefert die Gerätezeit. Die Zeitzone wird als IANA-Name angegeben.
 
 ### 4. Ereignisse und Speicherung
-- Text wird live als `AgentTextDelta` gesendet. Wird eine Antwort später verworfen (Retry, Eskalation), hat die UI ihren Text schon bekommen. `Escalated` markiert den Wechsel. Für einen Retry fehlt ein solches Signal noch (Änderungswunsch an core).
+- Text wird live als `AgentTextDelta` gesendet, Reasoning als `AgentThinkingDelta`. Wird bereits gestreamter Text verworfen (Retry nach Fehler, Eskalation nach Fehler, „kann ich nicht“ oder noProgress), folgt `AgentTextReset` – nur wenn seit der letzten behaltenen Assistant-Nachricht tatsächlich Text gestreamt wurde. Bei einer Eskalation kommt es nach `Escalated`.
 - `ConversationRecorder.record` bekommt jede Nachricht, die Teil des Gesprächs wird, in Reihenfolge. Verworfene Antworten werden nicht gespeichert. Ein Fehler beim Speichern beendet den Lauf mit `AgentFailed(internal)`.
 - Pro `AgentRunner` läuft höchstens ein Lauf gleichzeitig; ein zweiter bekommt sofort `AgentFailed(internal)`. Kündigt der Hörer das Abo, wird der Lauf wie mit `cancel()` abgebrochen.
 

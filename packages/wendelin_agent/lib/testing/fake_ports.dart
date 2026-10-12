@@ -53,18 +53,32 @@ final class InMemoryConversation
 /// [BudgetGuard] with a settable [status]; records the checked profiles.
 final class FixedBudgetGuard implements BudgetGuard {
   /// Creates a guard answering [status].
-  FixedBudgetGuard([this.status = BudgetStatus.ok]);
+  FixedBudgetGuard([
+    this.status = BudgetStatus.ok,
+    this.spentMicros = 0,
+    this.budgetMicros = 0,
+  ]);
 
   /// Answer of [check].
   BudgetStatus status;
+
+  /// Reported spending in micro-USD.
+  int spentMicros;
+
+  /// Reported budget in micro-USD.
+  int budgetMicros;
 
   /// Profiles checked, in order.
   final List<String> checked = [];
 
   @override
-  Future<BudgetStatus> check(String profileId) async {
+  Future<BudgetCheck> check(String profileId) async {
     checked.add(profileId);
-    return status;
+    return BudgetCheck(
+      status,
+      spentMicros: spentMicros,
+      budgetMicros: budgetMicros,
+    );
   }
 }
 

@@ -68,10 +68,29 @@ enum BudgetStatus {
   block,
 }
 
+/// Answer of [BudgetGuard.check].
+@immutable
+final class BudgetCheck {
+  /// Creates a result.
+  const BudgetCheck(this.status, {this.spentMicros = 0, this.budgetMicros = 0});
+
+  /// Within budget (amounts not needed).
+  static const ok = BudgetCheck(BudgetStatus.ok);
+
+  /// The state.
+  final BudgetStatus status;
+
+  /// Spent this month in micro-USD.
+  final int spentMicros;
+
+  /// Monthly budget in micro-USD.
+  final int budgetMicros;
+}
+
 /// Checks the monthly budget of a provider profile before each model call.
 abstract interface class BudgetGuard {
   /// Current budget state of [profileId].
-  Future<BudgetStatus> check(String profileId);
+  Future<BudgetCheck> check(String profileId);
 }
 
 /// Device information for the system prompt and the tool context.
