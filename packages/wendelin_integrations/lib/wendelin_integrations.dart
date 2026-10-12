@@ -23,7 +23,6 @@ export 'src/common/port_exception.dart';
 export 'src/common/time.dart' show LocalDate, timeZoneLocation;
 export 'src/common/tool_args.dart' show InvalidArgumentsException, ToolArgs;
 export 'src/memory/memory.dart';
-export 'src/memory/sensitive_content.dart';
 export 'src/web/fetch_guard.dart';
 export 'src/web/web_fetcher.dart';
 export 'src/web/web_integration.dart';

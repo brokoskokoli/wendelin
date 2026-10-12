@@ -4,7 +4,6 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../common/base_tool.dart';
 import '../common/port_exception.dart';
 import '../common/tool_args.dart';
-import 'sensitive_content.dart';
 
 /// Kind of a memory entry (concept: person, vorliebe, fakt, projekt).
 enum MemoryCategory {
@@ -74,7 +73,7 @@ final class MemoryEntry {
 /// (`wendelin_storage`); must pass `memoryStoreContract`.
 abstract interface class MemoryStorePort {
   /// Saves [text]. Throws `PortException(rejected)` for sensitive content
-  /// (see [sensitiveContentReason]) and [ArgumentError] for blank text.
+  /// (see core's [detectSensitiveContent]) and [ArgumentError] for blank text.
   Future<MemoryEntry> save(
     String text, {
     required MemoryCategory category,
@@ -206,9 +205,9 @@ final class MemorySaveTool extends IntegrationTool {
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final a = _read(args);
-    final reason = sensitiveContentReason(a.text);
-    if (reason != null) {
-      throw PortException(PortErrorKind.rejected, reason);
+    final finding = detectSensitiveContent(a.text);
+    if (finding != null) {
+      throw PortException(PortErrorKind.rejected, finding.reason);
     }
     final entry = await store.save(
       a.text,
