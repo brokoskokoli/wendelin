@@ -300,6 +300,27 @@ void main() {
       expect(o.text, contains('Unbekannte Zeitzone'));
     });
 
+    test(
+      'ganztägig in Los Angeles: lokaler Tag zählt, nicht der UTC-Tag',
+      () async {
+        final la = ctxAt(
+          DateTime.utc(2026, 10, 13),
+          timeZone: 'America/Los_Angeles',
+        );
+        final o = await tool(
+          'calendar__list_events',
+        ).execute({'start': '2026-10-16T18:00', 'end': '2026-10-16T20:00'}, la);
+        expect(
+          [for (final e in json(o)['events']! as List) (e as Map)['id']],
+          ['g'],
+        );
+        final early = await tool(
+          'calendar__list_events',
+        ).execute({'start': '2026-10-13T18:00', 'end': '2026-10-13T20:00'}, la);
+        expect(json(early)['events'], isEmpty);
+      },
+    );
+
     test('andere Gerätezeitzone verschiebt Offsets', () async {
       final o = await tool('calendar__list_events').execute({
         'start': '2026-10-15T00:00',
@@ -386,6 +407,26 @@ void main() {
           ],
           ['2026-10-15T11:15:00+02:00/2026-10-15T17:00:00+02:00'],
         );
+      },
+    );
+
+    test(
+      'ganztägiger Termin blockiert den lokalen Tag auch fern von UTC',
+      () async {
+        await port.createEvent(
+          CalendarEventDraft(
+            calendarId: 'privat',
+            title: 'Urlaub',
+            start: DateTime.utc(2026, 10, 20),
+            end: DateTime.utc(2026, 10, 21),
+            allDay: true,
+          ),
+        );
+        final o = await tool('calendar__find_free_slots').execute({
+          'start': '2026-10-20T18:00',
+          'end': '2026-10-20T20:00',
+        }, ctxAt(DateTime.utc(2026, 10, 13), timeZone: 'America/Los_Angeles'));
+        expect(json(o)['slots'], isEmpty);
       },
     );
 
@@ -753,10 +794,14 @@ void main() {
     test('nur Start: Dauer bleibt', () async {
       await run('calendar__update_event', {
         'event_id': 'a',
+        'end': '2026-10-15T11:30',
+      });
+      await run('calendar__update_event', {
+        'event_id': 'a',
         'start': '2026-10-15T13:30',
       });
       expect(stored('a').start, berlin(15, 13, 30));
-      expect(stored('a').end, berlin(15, 14, 30));
+      expect(stored('a').end, berlin(15, 15));
     });
 
     test('nur Ende', () async {

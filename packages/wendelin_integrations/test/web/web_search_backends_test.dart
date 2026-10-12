@@ -217,6 +217,19 @@ void main() {
           .having((e) => e.message, 'message', contains(text)),
     );
 
+    test('401 und 403 nennen den Schlüssel, 429 das Limit', () async {
+      for (final status in [401, 403]) {
+        await expectLater(
+          send(mock([], 'x', status: status)),
+          port(PortErrorKind.unavailable, 'API-Schlüssel'),
+        );
+      }
+      await expectLater(
+        send(mock([], 'x', status: 429)),
+        port(PortErrorKind.unavailable, 'Anfragelimit'),
+      );
+    });
+
     test('Serverfehler 500', () async {
       await expectLater(
         send(mock([], 'x', status: 500)),

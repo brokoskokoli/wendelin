@@ -235,7 +235,7 @@ final class WebFetchTool extends IntegrationTool {
 /// end the data block early.
 String _escape(String text) => text.replaceAllMapped(
   RegExp(r'</\s*(web_content|web_search_results)', caseSensitive: false),
-  (m) => '<​/${m[1]}',
+  (m) => '<\u200B/${m[1]}',
 );
 
 String _attr(String value) => value
