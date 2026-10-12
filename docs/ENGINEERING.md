@@ -64,7 +64,10 @@ Testarten:
 - **Unit-Tests** je Klasse, Tabellentests für Logik mit vielen Fällen.
 - **Adapter-Tests** gegen aufgezeichnete bzw. spezifikationsgetreu nachgebaute Streams in `test/fixtures/` (Streaming, Tool-Calls, Fehler, Abbruch).
 - **Contract-Tests**: Für jedes Interface mit mehreren Implementierungen gibt es eine wiederverwendbare Testsuite (`lib/testing/…_contract.dart`), die jede Implementierung bestehen muss (z. B. `LlmProvider`, `SecretStore`, Ports + Fakes).
-- **Fakes** für Interfaces liegen im jeweiligen Paket unter `lib/testing/` (exportiert über `package:<pkg>/testing.dart`), damit andere Pakete sie nutzen können.
+- **Fakes** für Interfaces liegen im jeweiligen Paket unter `lib/testing/`, damit andere Pakete sie nutzen können. Zwei Einstiegspunkte:
+  - `package:<pkg>/fakes.dart`: nur Fakes, **ohne** `package:test`. Nur diesen Import darf Produktivcode nutzen (z. B. der Demo-Modus der App mit `FakeLlmProvider`).
+  - `package:<pkg>/testing.dart`: Fakes plus Contract-Suiten. Nur aus Tests importieren.
+- `package:test` darf eine reguläre `dependency` eines Pakets sein, aber nur für die Contract-Suiten unter `lib/testing/*_contract.dart`. Keine andere Datei unter `lib/` importiert `package:test`.
 - **Widget- und Golden-Tests** in app für alle Design-Bausteine und Screens.
 - **Live-Tests** (echte APIs) mit `@Tags(['live'])`, standardmäßig ausgeschlossen (`dart_test.yaml`), laufen nur wenn der Key als Env-Variable gesetzt ist.
 - Jede Fehlerbehebung bekommt einen Regressionstest, der ohne Fix rot ist.

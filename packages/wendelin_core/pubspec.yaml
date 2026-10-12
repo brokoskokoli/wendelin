@@ -8,6 +8,6 @@ environment:
 dependencies:
   meta: any
   collection: any
+  test: ^1.31.1
 dev_dependencies:
-  test: any
   coverage: any
