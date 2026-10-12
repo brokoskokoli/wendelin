@@ -99,8 +99,9 @@ void main() {
       'google_mobile_ads',
       'play-services',
     ]) {
-      if (t.contains(m))
+      if (t.contains(m)) {
         errors.add('${f.path}: "$m" verletzt K7 (ohne Google-Dienste)');
+      }
     }
   }
 
