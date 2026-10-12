@@ -1,0 +1,29 @@
+# Fälle für die Listen-Integration (Konzept K6, WP12: Integration `lists`).
+# Solange `lists` nicht auf main ist, sind sie pending und werden
+# übersprungen (--include-pending lässt sie trotzdem laufen). Vorlage:
+# packages/wendelin_integrations/lib/src/lists/README.md (WP12).
+# Beim Freischalten: pending entfernen und im Eval-Runner die
+# ListsIntegration mit Fake-Port und den Listen „Einkaufsliste“ und
+# „SmartSSH“ registrieren.
+language: de
+cases:
+  - id: de-lists-add
+    category: lists
+    pending: true
+    prompt: Füge Milch und Eier zur Einkaufsliste hinzu.
+    expect:
+      calls:
+        - tool: lists__add_items
+          args:
+            list: {contains: einkauf}
+            items: {contains: [Milch, Eier]}
+
+  - id: de-lists-get
+    category: lists
+    pending: true
+    prompt: Was steht auf der Liste SmartSSH?
+    expect:
+      calls:
+        - tool: lists__get_items
+          args:
+            list: {contains: SmartSSH}

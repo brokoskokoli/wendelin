@@ -1,0 +1,9 @@
+{
+  "id": "openai-mini",
+  "name": "OpenAI klein",
+  "type": "openaiCompatible",
+  "baseUrl": "https://api.openai.com/v1",
+  "defaultModel": "gpt-5-mini",
+  "privacy": "standard",
+  "authMethod": {"kind": "apiKey", "secretRef": "OPENAI_API_KEY"}
+}

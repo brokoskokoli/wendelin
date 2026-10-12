@@ -1,0 +1,219 @@
+# Deutsche Eval-Fälle. „Heute“ ist der feste Zeitpunkt des Laufs
+# (Standard: Mittwoch, 18.11.2026, 09:00 Europe/Berlin). Zeitangaben in
+# Prädikaten sind relativ: „+1d 10:00“ = morgen 10 Uhr, „fri 14:30“ =
+# nächster Freitag. Format und Prädikate: siehe evals/README.md.
+# Werte bewusst abweichend von den Beispielen in den Tool-Beschreibungen
+# (2026-10-15T10:00, 600 s, 90 s, 06:45, [1,2,3,4,5]), damit ein Modell sie
+# nicht zufällig richtig abschreibt.
+language: de
+cases:
+  # --- Kalender ---
+  - id: de-cal-tauchen
+    category: calendar
+    prompt: Trag mir morgen um 10 Tauchen ein
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: Tauchen}
+            start: {at: "+1d 10:00"}
+      forbid: [calendar__delete_event]
+
+  - id: de-cal-zahnarzt-freitag
+    category: calendar
+    prompt: Ich habe am Freitag um halb drei einen Zahnarzttermin, trag den bitte ein.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: Zahnarzt}
+            start: {at: "fri 14:30"}
+
+  - id: de-cal-ganztag
+    category: calendar
+    prompt: Trag für Samstag ganztägig Familienfest bei Oma ein.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: Familienfest}
+            start: {date: sat}
+            all_day: true
+
+  - id: de-cal-heute
+    category: calendar
+    prompt: Was steht heute in meinem Kalender?
+    setup:
+      events:
+        - {id: evt-team, title: Teammeeting, start: "today 14:00", end: "today 15:00"}
+    expect:
+      calls:
+        - tool: calendar__list_events
+          args:
+            start: {date: today}
+      text: {contains: Teammeeting}
+
+  - id: de-cal-frei
+    category: calendar
+    prompt: Wann habe ich morgen Nachmittag eine Stunde Zeit?
+    setup:
+      events:
+        - {id: evt-arzt, title: Arzt, start: "+1d 13:00", end: "+1d 14:00"}
+    expect:
+      # 13–14 Uhr ist belegt; die Antwort nennt eine freie Zeit ab 14 Uhr.
+      text: {contains_any: ["14", "15", "16", "17"]}
+      calls:
+        - any_of:
+            - tool: calendar__find_free_slots
+              args:
+                start: {date: "+1d"}
+            - tool: calendar__list_events
+              args:
+                start: {date: "+1d"}
+
+  - id: de-cal-loeschen
+    category: calendar-external
+    prompt: Lösch den Zahnarzttermin morgen.
+    note: external-Aktion – muss bestätigt werden (automatisch „ja“).
+    setup:
+      events:
+        - {id: evt-zahnarzt, title: Zahnarzt, start: "+1d 15:00", end: "+1d 16:00"}
+    expect:
+      calls:
+        - tool: calendar__delete_event
+          args:
+            event_id: evt-zahnarzt
+      confirmed: true
+      forbid: [calendar__create_event]
+
+  - id: de-cal-verschieben
+    category: calendar
+    prompt: Verschieb das Meeting morgen auf 11 Uhr.
+    setup:
+      events:
+        - {id: evt-meeting, title: Meeting mit Jonas, start: "+1d 09:00", end: "+1d 10:00"}
+    expect:
+      calls:
+        - tool: calendar__update_event
+          args:
+            event_id: evt-meeting
+            start: {at: "+1d 11:00"}
+      forbid: [calendar__delete_event]
+
+  # --- Wecker und Timer ---
+  - id: de-alarm-halb-sieben
+    category: alarms
+    prompt: Stell mir einen Wecker für morgen früh um halb sieben.
+    expect:
+      calls:
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "06:30"}
+
+  - id: de-alarm-mo-mi-fr
+    category: alarms
+    prompt: Weck mich ab jetzt montags, mittwochs und freitags um Viertel nach sieben.
+    expect:
+      calls:
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "07:15"}
+            days: [1, 3, 5]
+
+  - id: de-timer-nudeln
+    category: alarms
+    prompt: Stell einen Timer auf 12 Minuten für die Nudeln.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 720
+
+  - id: de-timer-zweieinhalb
+    category: alarms
+    prompt: Timer für zweieinhalb Minuten bitte.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 150
+
+  # --- Gedächtnis ---
+  - id: de-mem-koriander
+    category: memory
+    prompt: Merk dir, dass ich keinen Koriander mag.
+    expect:
+      calls:
+        - tool: memory__save
+          args:
+            text: {contains: Koriander}
+
+  - id: de-mem-tochter
+    category: memory
+    prompt: Wie heißt nochmal die Tochter von Jonas?
+    note: >-
+      Der Eintrag kommt wie in der App über die Gedächtnis-Suche in den
+      System-Prompt; memory__search ist erlaubt, aber nicht nötig.
+    setup:
+      memory:
+        - {text: "Die Tochter von Jonas heißt Mila", category: person}
+    expect:
+      text: {contains: Mila}
+
+  # --- Zwischenablage ---
+  - id: de-clip-lesen
+    category: clipboard
+    prompt: Was ist gerade in meiner Zwischenablage?
+    setup:
+      clipboard: Bahnhofstraße 12, 20095 Hamburg
+    expect:
+      calls:
+        - tool: clipboard__read
+      text: {contains: Bahnhofstraße}
+
+  - id: de-clip-schreiben
+    category: clipboard
+    prompt: "Kopier mir den Text „Bin in zehn Minuten da“ in die Zwischenablage."
+    expect:
+      calls:
+        - tool: clipboard__write
+          args:
+            text: {contains: zehn Minuten}
+
+  # --- Web ---
+  - id: de-web-vollmond
+    category: web
+    prompt: Such im Internet, wann der nächste Vollmond ist.
+    expect:
+      calls:
+        - tool: web__search
+          args:
+            query: {contains_any: [Vollmond, full moon]}
+
+  # --- Reine Textfragen (kein Tool) ---
+  - id: de-text-rechnen
+    category: text
+    prompt: Was ist 17 mal 23?
+    expect:
+      no_tools: true
+      text: {contains: "391"}
+
+  - id: de-text-hauptstadt
+    category: text
+    prompt: Wie heißt die Hauptstadt von Australien?
+    expect:
+      no_tools: true
+      text: {contains: Canberra}
+
+  # --- Smalltalk: KEIN Tool erlaubt ---
+  - id: de-smalltalk-danke
+    category: smalltalk
+    prompt: Danke dir, das war's schon.
+    expect:
+      no_tools: true
+
+  - id: de-smalltalk-wie-gehts
+    category: smalltalk
+    prompt: Na, wie geht's dir heute?
+    expect:
+      no_tools: true

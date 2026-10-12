@@ -1,0 +1,96 @@
+# Cas d'évaluation en français. « Aujourd'hui » = mercredi 18/11/2026,
+# 09:00 Europe/Berlin (par défaut). Voir evals/README.md.
+language: fr
+cases:
+  - id: fr-cal-plongee
+    category: calendar
+    prompt: Ajoute plongée demain à 10h dans mon agenda.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: plongée}
+            start: {at: "+1d 10:00"}
+
+  - id: fr-cal-dentiste
+    category: calendar
+    prompt: J'ai rendez-vous chez le dentiste après-demain à 16h, note-le s'il te plaît.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: dentiste}
+            start: {at: "+2d 16:00"}
+
+  - id: fr-cal-supprimer
+    category: calendar-external
+    prompt: Supprime le rendez-vous chez le coiffeur de demain.
+    note: Action external – confirmation obligatoire (« oui » automatique).
+    setup:
+      events:
+        - {id: evt-coiffeur, title: Coiffeur, start: "+1d 11:00", end: "+1d 12:00"}
+    expect:
+      calls:
+        - tool: calendar__delete_event
+          args:
+            event_id: evt-coiffeur
+      confirmed: true
+
+  - id: fr-alarm-reveil
+    category: alarms
+    prompt: Réveille-moi demain à 5h50.
+    expect:
+      calls:
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "05:50"}
+
+  - id: fr-timer-oeufs
+    category: alarms
+    prompt: Mets un minuteur de 5 minutes pour les œufs.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 300
+
+  - id: fr-mem-soeur
+    category: memory
+    prompt: Souviens-toi que ma sœur s'appelle Claire.
+    expect:
+      calls:
+        - tool: memory__save
+          args:
+            text: {contains: Claire}
+
+  - id: fr-clip-lire
+    category: clipboard
+    prompt: Lis-moi ce qu'il y a dans le presse-papiers.
+    setup:
+      clipboard: Rendez-vous à la gare à 18h
+    expect:
+      calls:
+        - tool: clipboard__read
+      text: {contains: gare}
+
+  - id: fr-web-louvre
+    category: web
+    prompt: Cherche sur internet les horaires d'ouverture du Louvre.
+    expect:
+      calls:
+        - tool: web__search
+          args:
+            query: {contains: Louvre}  # Eigenname, in jeder Sprache gleich
+
+  - id: fr-text-calcul
+    category: text
+    prompt: Combien font 12 fois 12 ?
+    expect:
+      no_tools: true
+      text: {contains: "144"}
+
+  - id: fr-smalltalk-merci
+    category: smalltalk
+    prompt: Merci beaucoup, bonne soirée !
+    expect:
+      no_tools: true
