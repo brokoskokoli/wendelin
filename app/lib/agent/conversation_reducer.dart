@@ -121,8 +121,10 @@ final class ConversationReducer {
         }
         return next;
       case Escalated(:final toProfile):
+        // Does not end the segment: the reset after an escalation discards
+        // the text of the replaced answer (ADR 0003 §4).
         return _add(
-          s.copyWith(clearOpen: true, activeProfileId: toProfile),
+          s.copyWith(activeProfileId: toProfile),
           (id) => EscalationEntry(id, 'an ${nameOf(toProfile)} übergeben'),
         );
       case UsageReported() || Verification():
@@ -190,7 +192,9 @@ final class ConversationReducer {
 
   ConversationState _appendText(ConversationState s, String text) {
     final id = s.openTextId;
-    if (id != null) {
+    // Only continue the open entry if nothing was shown after it (e.g. an
+    // escalation divider); otherwise the text starts a new entry.
+    if (id != null && s.entries.lastOrNull?.id == id) {
       return s.copyWith(
         entries: [
           for (final e in s.entries)
@@ -204,7 +208,7 @@ final class ConversationReducer {
 
   ConversationState _appendThinking(ConversationState s, String text) {
     final id = s.openThinkingId;
-    if (id != null) {
+    if (id != null && s.entries.lastOrNull?.id == id) {
       return s.copyWith(
         entries: [
           for (final e in s.entries)
