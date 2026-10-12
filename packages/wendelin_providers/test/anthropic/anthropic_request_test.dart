@@ -454,6 +454,70 @@ void main() {
       );
     });
 
+    test('ungültige Tool-IDs konsistent in tool_use und tool_result', () {
+      List<Object?> idsOf(List<Message> messages) {
+        final body = buildAnthropicBody(
+          ChatRequest(messages: messages, model: 'm', maxTokens: 10),
+          const AnthropicOptions(),
+        );
+        return [
+          for (final m in body['messages']! as List<Object?>)
+            for (final b in (m! as Map)['content'] as List<Object?>)
+              (b! as Map)['id'] ?? (b as Map)['tool_use_id'],
+        ];
+      }
+
+      ToolCallBlock call(String id) =>
+          ToolCallBlock(id: id, name: 'n', argumentsJson: '{}');
+      ToolResultBlock result(String id) =>
+          ToolResultBlock(callId: id, content: const [TextBlock('ok')]);
+      final messages = [
+        Message.user('x'),
+        Message.assistant([
+          call('call:1'),
+          call('a_b'),
+          call('a.b'),
+          call(''),
+          call('gültig-ID_9'),
+          call('ok_1'),
+        ]),
+        Message.toolResults([
+          result('call:1'),
+          result('a_b'),
+          result('a.b'),
+          result(''),
+          result('gültig-ID_9'),
+          result('ok_1'),
+        ]),
+      ];
+      final ids = idsOf(messages);
+      expect(ids.sublist(1, 7), [
+        'call_1',
+        'a_b',
+        'a_b_2',
+        'call_0',
+        'g_ltig-ID_9',
+        'ok_1',
+      ]);
+      // tool_result verweist auf dieselben IDs.
+      expect(ids.sublist(7), ids.sublist(1, 7));
+      // Alle gültig und eindeutig.
+      expect(
+        ids.whereType<String>().every(RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch),
+        isTrue,
+      );
+      expect(ids.sublist(1, 7).toSet(), hasLength(6));
+      // Deterministisch.
+      expect(idsOf(messages), ids);
+      // Kollision mit gültiger ID, die später kommt: gültige bleibt.
+      expect(
+        idsOf([
+          Message.assistant([call('x.y'), call('x_y')]),
+        ]),
+        ['x_y_2', 'x_y'],
+      );
+    });
+
     test('Thinking in User-Nachrichten wird nicht gesendet', () {
       final body = buildAnthropicBody(
         ChatRequest(

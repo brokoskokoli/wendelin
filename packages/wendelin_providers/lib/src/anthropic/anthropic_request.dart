@@ -33,6 +33,8 @@ const _ephemeral = {'type': 'ephemeral'};
 /// - [sampling] `false` (models that reject sampling parameters): no
 ///   `temperature`.
 /// - Unreadable tool-call arguments are sent as `{"_raw": "<original>"}`.
+/// - Tool-call ids that Anthropic would reject are rewritten consistently in
+///   `tool_use` and `tool_result` (see `_ToolIds`).
 /// - `ProviderBlock`s of Anthropic in assistant messages are sent back
 ///   verbatim at their position (needed to resume `pause_turn`); blocks of
 ///   other providers are dropped.
@@ -140,6 +142,7 @@ Map<String, Object?>? _thinking(AnthropicOptions o) {
 }
 
 List<Map<String, Object?>> _messages(List<Message> messages) {
+  final ids = _ToolIds(messages);
   final result = <Map<String, Object?>>[];
   for (final m in messages) {
     final role = switch (m.role) {
@@ -150,7 +153,7 @@ List<Map<String, Object?>> _messages(List<Message> messages) {
     if (role == null) continue;
     final blocks = [
       for (final b in m.content)
-        ...?_block(b, inAssistant: role == 'assistant'),
+        ...?_block(b, ids, inAssistant: role == 'assistant'),
     ];
     if (blocks.isEmpty) continue;
     if (result.isNotEmpty && result.last['role'] == role) {
@@ -167,7 +170,8 @@ List<Map<String, Object?>> _messages(List<Message> messages) {
 }
 
 List<Map<String, Object?>>? _block(
-  ContentBlock b, {
+  ContentBlock b,
+  _ToolIds ids, {
   required bool inAssistant,
 }) => switch (b) {
   TextBlock(:final text) =>
@@ -180,7 +184,7 @@ List<Map<String, Object?>>? _block(
   ToolCallBlock(:final id, :final name) => [
     {
       'type': 'tool_use',
-      'id': id,
+      'id': ids[id],
       'name': name,
       'input': b.tryDecodeArguments() ?? {'_raw': b.argumentsJson},
     },
@@ -188,7 +192,7 @@ List<Map<String, Object?>>? _block(
   ToolResultBlock(:final callId, :final isError) => [
     {
       'type': 'tool_result',
-      'tool_use_id': callId,
+      'tool_use_id': ids[callId],
       ...?_resultContent(b),
       if (isError) 'is_error': true,
     },
@@ -216,6 +220,42 @@ List<Map<String, Object?>>? _providerBlock(ProviderBlock b) {
   } on FormatException {
     return null;
   }
+}
+
+/// Maps tool-call ids onto ids Anthropic accepts (`^[a-zA-Z0-9_-]+$`),
+/// identically for `tool_use` and `tool_result`. Valid ids stay as they
+/// are; invalid characters become `_`, empty ids `call_<n>`; collisions
+/// get a suffix `_2`, `_3`, … Deterministic for the same history.
+final class _ToolIds {
+  _ToolIds(List<Message> messages) {
+    final all = [
+      for (final m in messages)
+        for (final b in m.content)
+          if (b is ToolCallBlock) b.id else if (b is ToolResultBlock) b.callId,
+    ];
+    final taken = {
+      for (final id in all)
+        if (_valid.hasMatch(id)) id,
+    };
+    var empty = 0;
+    for (final id in all) {
+      if (_valid.hasMatch(id) || _map.containsKey(id)) continue;
+      final base = id.isEmpty
+          ? 'call_${empty++}'
+          : id.replaceAll(RegExp('[^a-zA-Z0-9_-]'), '_');
+      var candidate = base;
+      for (var n = 2; taken.contains(candidate); n++) {
+        candidate = '${base}_$n';
+      }
+      taken.add(candidate);
+      _map[id] = candidate;
+    }
+  }
+
+  static final _valid = RegExp(r'^[a-zA-Z0-9_-]+$');
+  final Map<String, String> _map = {};
+
+  String operator [](String id) => _map[id] ?? id;
 }
 
 Map<String, Object?>? _resultContent(ToolResultBlock b) {
