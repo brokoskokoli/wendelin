@@ -121,6 +121,25 @@ void main() {
     ),
   );
 
+  // qwen/qwen-2.5-7b-instruct läuft laut /v1/models mit is_tee: true; das
+  // prüft der folgende (kostenlose) Test, bevor die Chat-Anfragen laufen.
+  final phalaKey = Platform.environment['PHALA_API_KEY'];
+  test(
+    'Phala: Live-Modell ist ein TEE-Modell (is_tee)',
+    () async {
+      final models = await OpenAiChatAdapter(
+        baseUrl: Uri.parse('https://api.redpill.ai/v1'),
+        credentials: Credentials.apiKey(phalaKey!, style: ApiKeyStyle.bearer),
+        defaultModel: 'qwen/qwen-2.5-7b-instruct',
+        options: const OpenAiOptions(teeModelsOnly: true),
+      ).listModels();
+      expect(models.map((m) => m.id), contains('qwen/qwen-2.5-7b-instruct'));
+    },
+    skip: phalaKey == null || phalaKey.isEmpty
+        ? 'PHALA_API_KEY nicht gesetzt'
+        : false,
+  );
+
   _liveSuite(
     name: 'Phala',
     envKey: 'PHALA_API_KEY',
