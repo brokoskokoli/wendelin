@@ -57,18 +57,17 @@ final class DeviceCalendarPort implements CalendarPort {
     Set<String>? calendarIds,
   }) async {
     // Native instance queries include touching events and expand all-day
-    // events in UTC; query a day more on each side and filter here.
+    // events in UTC; query a day more on each side and filter here. The
+    // calendar filter is applied natively.
     const pad = Duration(days: 1);
     final raw = await _list('listEvents', {
       'start': range.start.subtract(pad).millisecondsSinceEpoch,
       'end': range.end.add(pad).millisecondsSinceEpoch,
       if (calendarIds != null) 'calendarIds': calendarIds.toList(),
     });
-    final events = [
-      for (final m in raw)
-        if (calendarIds == null || calendarIds.contains(m['calendarId']))
-          _event(m),
-    ].where((e) => e.range.overlaps(range)).toList();
+    final events = [for (final m in raw) _event(m)]
+        .where((e) => e.range.overlaps(range))
+        .toList();
     return events..sort((a, b) => a.start.compareTo(b.start));
   }
 

@@ -1,6 +1,5 @@
-import 'dart:ui';
-
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,8 +42,15 @@ Future<DeviceInfo> loadDeviceInfo() async {
   String zone;
   try {
     zone = (await FlutterTimezone.getLocalTimezone()).identifier;
-  } on PlatformException {
-    // No IANA name available: UTC keeps times correct, only less friendly.
+  } on Object catch (e) {
+    if (e is! PlatformException &&
+        e is! MissingPluginException &&
+        e is! ArgumentError) {
+      rethrow;
+    }
+    // No IANA name available: UTC keeps instants correct, only the shown
+    // local times are off. Logged so it does not go unnoticed.
+    debugPrint('Zeitzone nicht lesbar, verwende UTC: $e');
     zone = 'UTC';
   }
   return DeviceInfo(locale: locale, timeZone: zone);

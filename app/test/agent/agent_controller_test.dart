@@ -388,6 +388,66 @@ void main() {
     expect(fresh.read(agentControllerProvider).entries, isEmpty);
   });
 
+  group('Datenschutz in der Verdrahtung', () {
+    test(
+      'Gedächtnis kommt nur in den Prompt, wenn die Integration aktiv ist',
+      () async {
+        for (final enabled in [true, false]) {
+          final provider = FakeLlmProvider([ScriptedTurn.text('ok')]);
+          env = TestEnv(
+            providerConfig: scripted(provider),
+            enabled: enabled ? const {'memory'} : const {},
+          );
+          c = env.container();
+          await c.read(toolRegistryProvider).refresh();
+          await env.storage.memory.save(
+            'Taucht gern im Mittelmeer',
+            category: MemoryCategory.preference,
+            source: 'user',
+          );
+          await sendAndWait(c, 'Wo taucht man gut?');
+          expect(
+            provider.requests.single.systemPrompt,
+            enabled
+                ? contains('Taucht gern im Mittelmeer')
+                : isNot(contains('Taucht gern im Mittelmeer')),
+            reason: 'memory aktiv: $enabled',
+          );
+          c.dispose();
+        }
+        c = env.container();
+      },
+    );
+
+    test('Werkzeuge nach der schwächsten Stufe der Eskalationskette', () async {
+      final provider = FakeLlmProvider([ScriptedTurn.text('ok')]);
+      env = TestEnv(
+        providerConfig: scripted(
+          provider,
+          privacy: PrivacyLevel.tee,
+          chain: [
+            ProviderTarget(
+              profileId: 'cloud',
+              modelId: 'm',
+              provider: FakeLlmProvider(const []),
+              privacy: PrivacyLevel.standard,
+            ),
+          ],
+        ),
+        enabled: const {'calendar', 'alarms'},
+      );
+      c = env.container();
+      final registry = c.read(toolRegistryProvider)
+        ..sensitiveMinimum = PrivacyLevel.tee;
+      await registry.refresh();
+      await sendAndWait(c, 'Hallo');
+      final tools = provider.requests.single.tools.map((t) => t.name);
+      // Der Kalender ist sensibel und gehört nicht zu einem Ziel unter TEE.
+      expect(tools.where((n) => n.startsWith('calendar__')), isEmpty);
+      expect(tools, contains('alarms__set_timer'));
+    });
+  });
+
   test('isNewTopicCommand erkennt nur den Befehl', () {
     expect(AgentController.isNewTopicCommand('Neues Thema'), isTrue);
     expect(AgentController.isNewTopicCommand('neues thema.'), isTrue);
