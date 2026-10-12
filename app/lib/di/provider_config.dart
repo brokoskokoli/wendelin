@@ -16,6 +16,7 @@ final class ProviderConfig {
     required this.primary,
     List<ProviderTarget> chain = const [],
     Map<String, String> names = const {},
+    this.isPrivate,
   }) : chain = List.unmodifiable(chain),
        names = Map.unmodifiable(names);
 
@@ -42,6 +43,10 @@ final class ProviderConfig {
   /// Display name per profile id.
   final Map<String, String> names;
 
+  /// Marks a request as privately routed (its privacy level is then the
+  /// floor for escalations); `null` = never. Routing rules follow in M3.
+  final bool Function(UserInput input)? isPrivate;
+
   /// Display name of [profileId] (the id if unknown).
   String nameOf(String profileId) => names[profileId] ?? profileId;
 
@@ -54,7 +59,8 @@ final class ProviderConfig {
   ].map((t) => t.privacy).reduce((a, b) => a.isAtLeast(b) ? b : a);
 
   /// The resolver for the agent.
-  ProviderResolver resolver() => DefaultProviderResolver(primary, chain);
+  ProviderResolver resolver() =>
+      DefaultProviderResolver(primary, chain, isPrivate: isPrivate);
 }
 
 /// Loads the [ProviderConfig] from the stored profiles: the default profile

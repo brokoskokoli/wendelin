@@ -165,9 +165,11 @@ final class EnabledIntegrations extends Notifier<Set<String>> {
   Set<String> build() => ref.watch(startupProvider).enabledIntegrations;
 
   /// Records that [id] was switched on or off.
-  void set(String id, {required bool enabled}) =>
-      state = enabled ? {...state, id} : {...state}
-        ..remove(id);
+  void set(String id, {required bool enabled}) => state = {
+    for (final e in state)
+      if (e != id) e,
+    if (enabled) id,
+  };
 }
 
 /// Switching integrations on and off (permission first).
@@ -221,18 +223,24 @@ final sessionManagerProvider = Provider<SessionManager>((ref) {
   return manager;
 });
 
-/// Where requests go; `null` = no provider set up yet. Invalidate after
-/// profiles or the escalation chain changed (WP09).
+/// Where requests go; `null` = no provider set up yet. In demo mode the
+/// scripted demo provider, otherwise [storedProviderConfigProvider].
 final providerConfigProvider = FutureProvider<ProviderConfig?>((ref) {
   if (ref.watch(demoModeProvider)) {
     return ProviderConfig.demo(ref.watch(clockProvider));
   }
-  return loadProviderConfig(
+  return ref.watch(storedProviderConfigProvider.future);
+});
+
+/// The configuration from the stored profiles. Invalidate after profiles
+/// or the escalation chain changed (WP09).
+final storedProviderConfigProvider = FutureProvider<ProviderConfig?>(
+  (ref) => loadProviderConfig(
     storage: ref.watch(storageProvider),
     secrets: ref.watch(secretStoreProvider),
     catalog: ref.watch(modelCatalogProvider),
-  );
-});
+  ),
+);
 
 /// Builds the agent for each request.
 final agentFactoryProvider = Provider<AgentFactory>((ref) {

@@ -30,6 +30,7 @@ final class _FakeIntents {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late _FakeIntents intents;
+  // ignore: deprecated_member_use, AndroidIntent expects the legacy Platform.
   final android = FakePlatform(operatingSystem: 'android');
 
   setUp(() {
@@ -164,6 +165,7 @@ void main() {
 
   test('außerhalb von Android nicht verfügbar', () async {
     final port = AndroidAlarmPort(
+      // ignore: deprecated_member_use, see above.
       platform: FakePlatform(operatingSystem: 'ios'),
     );
     expect(await port.isAvailable(), isFalse);

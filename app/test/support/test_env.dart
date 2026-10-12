@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:wendelin/app.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
@@ -9,6 +10,7 @@ import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/fakes.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
@@ -21,6 +23,7 @@ final class TestEnv {
   /// Creates the environment.
   TestEnv({
     this.providerConfig,
+    this.providerConfigError,
     this.demo = false,
     Set<String> enabled = const {
       'calendar',
@@ -61,6 +64,9 @@ final class TestEnv {
   /// Provider configuration (`null` = none set up, unless [demo]).
   final ProviderConfig? providerConfig;
 
+  /// Loading the provider configuration fails with this, if set.
+  final Object? providerConfigError;
+
   /// Demo mode.
   final bool demo;
 
@@ -83,11 +89,15 @@ final class TestEnv {
     secretStoreProvider.overrideWithValue(secrets),
     startupProvider.overrideWithValue(startup),
     devicePortsProvider.overrideWithValue(ports),
+    demoPortsProvider.overrideWithValue(ports),
     deviceInfoProvider.overrideWithValue(
       const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
     ),
-    if (!demo)
-      providerConfigProvider.overrideWith((ref) async => providerConfig),
+    storedProviderConfigProvider.overrideWith(
+      (ref) async => providerConfigError == null
+          ? providerConfig
+          : throw providerConfigError!,
+    ),
   ];
 
   /// A container with [overrides].
@@ -110,6 +120,7 @@ ProviderConfig scripted(
   PrivacyLevel privacy = PrivacyLevel.standard,
   List<ProviderTarget> chain = const [],
   Map<String, String> names = const {},
+  bool Function(UserInput)? isPrivate,
 }) => ProviderConfig(
   primary: ProviderTarget(
     profileId: id,
@@ -119,6 +130,16 @@ ProviderConfig scripted(
   ),
   chain: chain,
   names: {id: name, ...names},
+  isPrivate: isPrivate,
+);
+
+/// „Zahnarzt Dr. Weber“, Do 15.10.2026 08:30–09:15 (Berlin), in „privat“.
+CalendarEventDraft zahnarztDraft() => CalendarEventDraft(
+  calendarId: 'privat',
+  title: 'Zahnarzt Dr. Weber',
+  start: DateTime.utc(2026, 10, 15, 6, 30),
+  end: DateTime.utc(2026, 10, 15, 7, 15),
+  timeZone: 'Europe/Berlin',
 );
 
 /// Tool call block with JSON arguments.
