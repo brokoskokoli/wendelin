@@ -229,6 +229,34 @@ final class _BadMemory implements MemoryStorePort {
   Future<List<MemoryEntry>> list() async => [...raw, ...await inner.list()];
 }
 
+/// List file port with switchable defects.
+final class _BadListFile implements ListFilePort {
+  _BadListFile({this.appends = false, this.normalizesNewlines = false});
+
+  final bool appends;
+  final bool normalizesNewlines;
+  final files = <String, String>{};
+
+  @override
+  Future<bool> exists(String handle) async => files.containsKey(handle);
+
+  @override
+  Future<String> read(String handle) async =>
+      files[handle] ??
+      (throw const PortException(PortErrorKind.notFound, 'fehlt'));
+
+  @override
+  Future<void> write(String handle, String content) async {
+    var c = normalizesNewlines ? content.replaceAll('\r\n', '\n') : content;
+    // Defekt wie SAF-Modus "w" ohne "t": alter Rest bleibt stehen.
+    final old = files[handle];
+    if (appends && old != null && old.length > c.length) {
+      c = c + old.substring(c.length);
+    }
+    files[handle] = c;
+  }
+}
+
 final class _LeakyBackend implements WebSearchBackend {
   @override
   String get id => 'leaky';
@@ -353,6 +381,37 @@ void main() {
       );
       await expectLater(checks[AlarmPortChecks.alarmLifecycle]!(), _fails);
       await expectLater(checks[AlarmPortChecks.unknownCancel]!(), _fails);
+    });
+  });
+
+  group('listFilePortContract erkennt', () {
+    ListFileContractSetup setup(_BadListFile p) =>
+        (port: p, newHandle: () => 'x.md', delete: null);
+
+    test('korrekte Variante besteht alle Prüfungen', () async {
+      for (final check in listFilePortContractChecks(
+        () => setup(_BadListFile()),
+      ).values) {
+        await check();
+      }
+    });
+
+    test('Überschreiben ohne Kürzen', () async {
+      await expectLater(
+        listFilePortContractChecks(
+          () => setup(_BadListFile(appends: true)),
+        )[ListFilePortChecks.truncate]!(),
+        _fails,
+      );
+    });
+
+    test('umgeschriebene Zeilenenden', () async {
+      await expectLater(
+        listFilePortContractChecks(
+          () => setup(_BadListFile(normalizesNewlines: true)),
+        )[ListFilePortChecks.exact]!(),
+        _fails,
+      );
     });
   });
 

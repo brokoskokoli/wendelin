@@ -13,6 +13,7 @@ void main() {
     ClipboardIntegration(FakeClipboardPort()),
     AlarmsIntegration(FakeAlarmPort()),
     MemoryIntegration(FakeMemoryStore()),
+    ListsIntegration(FakeListFilePort(), definitions: () => []),
     WebIntegration(
       searchBackend: FakeWebSearchBackend(),
       fetcher: WebFetcher(
@@ -40,6 +41,12 @@ void main() {
       'memory__forget',
       'web__search',
       'web__fetch',
+      'lists__list_lists',
+      'lists__get_items',
+      'lists__add_items',
+      'lists__complete_item',
+      'lists__remove_item',
+      'lists__clear_completed',
     });
     expect(tools.map((t) => t.name).toSet(), hasLength(tools.length));
   });
