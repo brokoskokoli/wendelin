@@ -24,6 +24,16 @@ void main() {
     name: 'FakeAlarmPort ohne Liste',
   );
   memoryStoreContract(FakeMemoryStore.new, name: 'FakeMemoryStore');
+  listFilePortContract(() {
+    final port = FakeListFilePort();
+    var n = 0;
+    return (
+      port: port,
+      newHandle: () => 'contract-${n++}.md',
+      delete: port.files.remove,
+      reopen: () => FakeListFilePort(files: port.files),
+    );
+  }, name: 'FakeListFilePort');
   webSearchBackendContract((scenario) {
     final hits = [
       for (var i = 0; i < 6; i++)
