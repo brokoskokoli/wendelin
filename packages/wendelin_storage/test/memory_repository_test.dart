@@ -1,0 +1,235 @@
+import 'package:test/test.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_storage/src/db/memory_repository_impl.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
+
+import 'support/storage_fixture.dart';
+
+void main() {
+  late WendelinStorage storage;
+  late FixedClock clock;
+  late MemoryRepository repo;
+
+  setUp(() {
+    final f = openTestStorage();
+    storage = f.storage;
+    clock = f.clock;
+    repo = storage.memory;
+  });
+  tearDown(() => storage.close());
+
+  Future<MemoryEntry> save(
+    String text, [
+    MemoryCategory category = MemoryCategory.fact,
+  ]) {
+    clock.advance(const Duration(minutes: 1));
+    return repo.save(text, category: category, source: 'user');
+  }
+
+  group('save, get, list, update, forget', () {
+    test('save setzt Zeiten aus der Uhr', () async {
+      final e = await save('Anna ist meine Schwester', MemoryCategory.person);
+      expect(e.createdAt, clock.now());
+      expect(e.lastUsedAt, clock.now());
+      expect(e.source, 'user');
+      expect(await repo.get(e.id), e);
+      expect(await repo.get('fehlt'), isNull);
+    });
+
+    test('list: neueste zuerst, optional nach Kategorie', () async {
+      final a = await save('a', MemoryCategory.person);
+      final b = await save('b', MemoryCategory.preference);
+      final c = await save('c', MemoryCategory.person);
+      expect(await repo.list(), [c, b, a]);
+      expect(await repo.list(category: MemoryCategory.person), [c, a]);
+      expect(await repo.list(category: MemoryCategory.project), isEmpty);
+    });
+
+    test(
+      'update ändert Text und Kategorie, Suche folgt dem neuen Text',
+      () async {
+        final e = await save('Ich mag Kaffee', MemoryCategory.preference);
+        final u = await repo.update(e.id, text: 'Ich mag Tee');
+        expect(u!.text, 'Ich mag Tee');
+        expect(u.category, MemoryCategory.preference);
+        expect(u.createdAt, e.createdAt);
+        expect(await repo.search('Kaffee'), isEmpty);
+        expect((await repo.search('Tee')).single.id, e.id);
+        final v = await repo.update(e.id, category: MemoryCategory.fact);
+        expect(v!.text, 'Ich mag Tee');
+        expect(v.category, MemoryCategory.fact);
+        expect(await repo.update('fehlt', text: 'x'), isNull);
+      },
+    );
+
+    test('forget entfernt Eintrag und Suchindex', () async {
+      final e = await save('Tauchen in Tulamben');
+      expect(await repo.forget(e.id), isTrue);
+      expect(await repo.forget(e.id), isFalse);
+      expect(await repo.get(e.id), isNull);
+      expect(await repo.search('Tulamben'), isEmpty);
+    });
+  });
+
+  group('Schutzregel', () {
+    test('save lehnt Kartennummer, IBAN und Passwort ab', () async {
+      for (final text in [
+        'Meine Visa ist 4111 1111 1111 1111',
+        'Konto DE89 3704 0044 0532 0130 00',
+        'Passwort: hund123',
+        'Die PIN ist 4711',
+      ]) {
+        await expectLater(
+          repo.save(text, category: MemoryCategory.fact, source: 'user'),
+          throwsA(isA<SensitiveContentException>()),
+          reason: text,
+        );
+      }
+      expect(await repo.list(), isEmpty);
+    });
+
+    test(
+      'update lehnt sensible Texte ab und lässt den Eintrag unverändert',
+      () async {
+        final e = await save('harmlos');
+        await expectLater(
+          repo.update(e.id, text: 'Kennwort = geheim'),
+          throwsA(
+            isA<SensitiveContentException>().having(
+              (x) => x.kind,
+              'kind',
+              SensitiveKind.credential,
+            ),
+          ),
+        );
+        expect((await repo.get(e.id))!.text, 'harmlos');
+      },
+    );
+  });
+
+  group('search (FTS5, bm25)', () {
+    late Map<String, MemoryEntry> e;
+
+    setUp(() async {
+      e = {
+        'tauchenBali': await save(
+          'Ich tauche gern in Bali, am liebsten Tulamben',
+        ),
+        'tauchenOft': await save(
+          'Tauchen Tauchen Tauchen: Tauchen ist mein Hobby, Tauchen am Wochenende',
+        ),
+        'anna': await save('Anna ist meine Schwester', MemoryCategory.person),
+        'kaffee': await save(
+          'Ich trinke Kaffee schwarz',
+          MemoryCategory.preference,
+        ),
+        'projekt': await save(
+          'Projekt Wendelin: Sprachassistent',
+          MemoryCategory.project,
+        ),
+        'zahnarzt': await save('Zahnarzt heißt Dr. Müller'),
+        'auto': await save('Mein Auto ist ein blauer Kombi'),
+        'muenchen': await save('Ich wohne in München'),
+        'geburtstag': await save(
+          'Annas Geburtstag ist am 3. Mai',
+          MemoryCategory.person,
+        ),
+        'tauchschein': await save('Tauchschein: Advanced Open Water'),
+        'sport': await save('Laufen am Dienstag'),
+        'kaffeeMaschine': await save(
+          'Die Kaffeemaschine entkalken alle 4 Wochen',
+        ),
+      };
+    });
+
+    test('relevantester Eintrag zuerst, nur passende Einträge', () async {
+      final r = await repo.search('tauch');
+      expect(r.first.id, e['tauchenOft']!.id);
+      expect(r.map((x) => x.id).toSet(), {
+        e['tauchenOft']!.id,
+        e['tauchenBali']!.id,
+        e['tauchschein']!.id,
+      });
+    });
+
+    test(
+      'mehrere Wörter: Eintrag mit beiden Wörtern vor Einträgen mit einem',
+      () async {
+        final r = await repo.search('Kaffee schwarz');
+        expect(r.first.id, e['kaffee']!.id);
+        expect([for (final x in r) x.id], contains(e['kaffeeMaschine']!.id));
+      },
+    );
+
+    test('Präfix und Umlaut-/Groß-Kleinschreibung-unabhängig', () async {
+      expect((await repo.search('MUNCHEN')).single.id, e['muenchen']!.id);
+      expect((await repo.search('Anna')).map((x) => x.id).toSet(), {
+        e['anna']!.id,
+        e['geburtstag']!.id,
+      });
+    });
+
+    test('limit begrenzt, Standard 5', () async {
+      const many = 'Tauchen Anna Kaffee Auto München Projekt Laufen';
+      expect(await repo.search(many, limit: 2), hasLength(2));
+      expect(await repo.search(many), hasLength(5));
+      expect(await repo.search('Anna', limit: 0), isEmpty);
+    });
+
+    test(
+      'FTS-Syntax im Text ist wirkungslos, leere Anfrage liefert nichts',
+      () async {
+        expect(await repo.search('"'), isEmpty);
+        expect(await repo.search('   '), isEmpty);
+        expect(await repo.search('Anna AND NOT OR (*'), isNotEmpty);
+        expect(await repo.search('body:Anna'), isNotEmpty);
+      },
+    );
+
+    test('Treffer bekommen lastUsedAt = jetzt, andere nicht', () async {
+      clock.advance(const Duration(days: 1));
+      final r = await repo.search('Schwester');
+      expect(r.single.lastUsedAt, clock.now());
+      expect((await repo.get(e['anna']!.id))!.lastUsedAt, clock.now());
+      expect(
+        (await repo.get(e['auto']!.id))!.lastUsedAt,
+        e['auto']!.lastUsedAt,
+      );
+    });
+  });
+
+  test('ftsQuery quotet Wörter als Präfix-Terme', () {
+    expect(ftsQuery('Anna "Bali" NOT'), '"Anna"* OR "Bali"* OR "NOT"*');
+    expect(ftsQuery('?!'), isNull);
+  });
+
+  test('ftsQuery lässt Ein-Zeichen-Wörter und Stoppwörter weg', () {
+    expect(ftsQuery('Was ist mit Anna?'), '"Anna"*');
+    expect(ftsQuery('what is my car'), '"car"*');
+    expect(ftsQuery('Qui est le médecin'), '"médecin"*');
+    expect(ftsQuery('a b 3 Xy'), '"Xy"*');
+    expect(ftsQuery('Der die das'), isNull);
+  });
+
+  test('Suche nur aus Stoppwörtern liefert nichts', () async {
+    await save('Ich bin in München');
+    expect(await repo.search('ich bin in'), isEmpty);
+    expect(await repo.search('Wo bin ich in München?'), hasLength(1));
+  });
+
+  test('exportMarkdown gruppiert nach Kategorie', () async {
+    expect(await repo.exportMarkdown(), '# Gedächtnis\n');
+    await save('Ich mag Tee', MemoryCategory.preference);
+    await save('Anna ist meine\nSchwester', MemoryCategory.person);
+    await save('Bernd ist mein Nachbar', MemoryCategory.person);
+    expect(
+      await repo.exportMarkdown(),
+      '# Gedächtnis\n'
+      '\n## Personen\n\n'
+      '- Anna ist meine Schwester (user, 2026-10-13)\n'
+      '- Bernd ist mein Nachbar (user, 2026-10-13)\n'
+      '\n## Vorlieben\n\n'
+      '- Ich mag Tee (user, 2026-10-13)\n',
+    );
+  });
+}
