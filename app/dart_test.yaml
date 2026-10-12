@@ -1,0 +1,6 @@
+# Golden-Tests sind plattformabhängig (Schrift-Rasterung). Sie tragen den Tag
+# `golden`; auf anderen Plattformen lassen sie sich mit
+# `flutter test --exclude-tags golden` auslassen. Formen und Farben sichern
+# zusätzlich plattformunabhängige Tests (test/ui/shapes_test.dart).
+tags:
+  golden: {}
