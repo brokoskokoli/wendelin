@@ -1,0 +1,49 @@
+# Skript für den Offline-Probelauf mit dem FakeLlmProvider
+# (profiles/fake-demo.json). Beantwortet einige Fälle richtig, einige
+# absichtlich falsch, und gibt einmal auf („kann ich nicht“), damit
+# Bewertung, Eskalation und Report sichtbar werden. {{…}} = relative Zeit.
+default:
+  - text: Das weiß ich leider nicht.
+cases:
+  de-cal-tauchen:
+    - tool: calendar__create_event
+      args: {title: Tauchen, start: "{{+1d 10:00}}"}
+    - text: Ich habe Tauchen für morgen um 10 Uhr eingetragen.
+  de-cal-zahnarzt-freitag:      # falsch: 14:00 statt 14:30
+    - tool: calendar__create_event
+      args: {title: Zahnarzt, start: "{{fri 14:00}}"}
+  de-cal-loeschen:
+    - tool: calendar__list_events
+      args: {start: "{{+1d}}", end: "{{+2d}}"}
+    - tool: calendar__delete_event
+      args: {event_id: evt-zahnarzt}
+    - text: Der Zahnarzttermin morgen ist gelöscht.
+  de-alarm-werktags:            # falsch: jeden Tag statt werktags
+    - tool: alarms__set_alarm
+      args: {time: "07:00", days: [1, 2, 3, 4, 5, 6, 7]}
+  de-timer-nudeln:
+    - tool: alarms__set_timer
+      args: {duration_seconds: 600, label: Nudeln}
+  de-mem-tochter:               # gibt auf, die Eskalation löst es
+    - text: Dabei kann ich dir leider nicht helfen.
+    - tool: memory__search
+      args: {query: Tochter Jonas}
+    - text: Die Tochter von Jonas heißt Mila.
+  de-text-rechnen:
+    - text: 17 mal 23 ist 391.
+  de-smalltalk-danke:           # falsch: Tool bei Smalltalk
+    - tool: memory__save
+      args: {text: Nutzer bedankt sich gern, category: fact}
+  fr-cal-plongee:
+    - tool: calendar__create_event
+      args: {title: Plongée, start: "{{+1d 10:00}}"}
+  fr-text-calcul:
+    - text: Cela fait 144.
+  en-cal-diving:
+    - tool: calendar__create_event
+      args: {title: Diving, start: "{{+1d 10:00}}"}
+  en-timer:                     # falsch: Sekunden statt Minuten
+    - tool: alarms__set_timer
+      args: {duration_seconds: 25}
+  en-smalltalk-hi:
+    - text: I'm doing great, thanks for asking!

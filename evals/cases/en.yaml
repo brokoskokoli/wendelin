@@ -1,0 +1,98 @@
+# English eval cases. "Today" = Wednesday 2026-10-14, 09:00 Europe/Berlin
+# (default). See evals/README.md.
+language: en
+cases:
+  - id: en-cal-diving
+    category: calendar
+    prompt: Add diving tomorrow at 10 am to my calendar.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: diving}
+            start: {at: "+1d 10:00"}
+
+  - id: en-cal-tomorrow
+    category: calendar
+    prompt: What's on my calendar tomorrow?
+    setup:
+      events:
+        - {id: evt-standup, title: Standup, start: "+1d 09:30", end: "+1d 09:45"}
+    expect:
+      calls:
+        - tool: calendar__list_events
+          args:
+            start: {date: "+1d"}
+      text: {contains: Standup}
+
+  - id: en-cal-delete
+    category: calendar-external
+    prompt: Delete my gym session tomorrow.
+    note: External action – must be confirmed (answered "yes" automatically).
+    setup:
+      events:
+        - {id: evt-gym, title: Gym, start: "+1d 18:00", end: "+1d 19:00"}
+    expect:
+      calls:
+        - tool: calendar__delete_event
+          args:
+            event_id: evt-gym
+      confirmed: true
+
+  - id: en-alarm
+    category: alarms
+    prompt: Set an alarm for 7:15 tomorrow morning.
+    expect:
+      calls:
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "07:15"}
+
+  - id: en-timer
+    category: alarms
+    prompt: Start a 25 minute timer.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 1500
+
+  - id: en-mem-vegetarian
+    category: memory
+    prompt: Remember that I'm vegetarian.
+    expect:
+      calls:
+        - tool: memory__save
+          args:
+            text: {contains: vegetarian}
+
+  - id: en-clip-write
+    category: clipboard
+    prompt: "Copy \"See you at 8\" to my clipboard."
+    expect:
+      calls:
+        - tool: clipboard__write
+          args:
+            text: {contains: See you at 8}
+
+  - id: en-web-flutter
+    category: web
+    prompt: Search the web for the latest Flutter release.
+    expect:
+      calls:
+        - tool: web__search
+          args:
+            query: {contains: Flutter}
+
+  - id: en-text-minutes
+    category: text
+    prompt: How many minutes are in three hours?
+    expect:
+      no_tools: true
+      text: {contains: "180"}
+
+  - id: en-smalltalk-hi
+    category: smalltalk
+    prompt: Hi there, how are you doing?
+    expect:
+      no_tools: true

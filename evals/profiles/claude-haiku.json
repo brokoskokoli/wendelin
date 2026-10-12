@@ -1,0 +1,8 @@
+{
+  "id": "claude-haiku",
+  "name": "Claude Haiku",
+  "type": "anthropic",
+  "defaultModel": "claude-haiku-5-5",
+  "privacy": "standard",
+  "authMethod": {"kind": "apiKey", "secretRef": "ANTHROPIC_API_KEY"}
+}
