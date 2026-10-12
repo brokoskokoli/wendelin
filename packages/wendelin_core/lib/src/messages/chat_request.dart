@@ -50,7 +50,10 @@ final class ChatRequest {
   /// System prompt, sent separately from [messages].
   final String? systemPrompt;
 
-  /// Returns a copy with the given fields replaced.
+  /// Returns a copy with the given fields replaced. Nullable fields
+  /// ([temperature], [systemPrompt]) cannot be reset to `null` through this
+  /// method; construct a new request instead (same rule as
+  /// `ProviderProfile.copyWith`).
   ChatRequest copyWith({
     List<Message>? messages,
     List<ToolSpec>? tools,

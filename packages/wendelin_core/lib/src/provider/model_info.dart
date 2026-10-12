@@ -1,6 +1,8 @@
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
+import 'provider_type.dart';
+
 /// A model offered by a provider (from `LlmProvider.listModels`).
 @immutable
 final class ModelInfo {
@@ -59,6 +61,7 @@ final class HealthCheck {
     required this.latency,
     required this.message,
     List<ModelInfo>? models,
+    this.detected,
   }) : models = models == null ? null : List.unmodifiable(models);
 
   /// Whether the provider is usable.
@@ -73,12 +76,17 @@ final class HealthCheck {
   /// Models found during the check, if any were loaded.
   final List<ModelInfo>? models;
 
+  /// Capabilities verified by the check (e.g. a mini tool call succeeded);
+  /// `null` if not probed.
+  final ProviderCapabilities? detected;
+
   @override
   bool operator ==(Object other) =>
       other is HealthCheck &&
       other.ok == ok &&
       other.latency == latency &&
       other.message == message &&
+      other.detected == detected &&
       const ListEquality<ModelInfo>().equals(other.models, models);
 
   @override
@@ -86,6 +94,7 @@ final class HealthCheck {
     ok,
     latency,
     message,
+    detected,
     models == null ? null : const ListEquality<ModelInfo>().hash(models),
   );
 

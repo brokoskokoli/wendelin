@@ -90,11 +90,13 @@ void main() {
       int ms = 5,
       String msg = 'ok',
       List<ModelInfo>? models,
+      ProviderCapabilities? detected,
     }) => HealthCheck(
       ok: ok,
       latency: Duration(milliseconds: ms),
       message: msg,
       models: models,
+      detected: detected,
     );
 
     test('equality per field', () {
@@ -108,6 +110,15 @@ void main() {
       expect(h(), isNot(h(ms: 6)));
       expect(h(), isNot(h(msg: 'x')));
       expect(h(), isNot(h(models: const [])));
+      expect(
+        h(detected: const ProviderCapabilities(tools: true)),
+        h(detected: const ProviderCapabilities(tools: true)),
+      );
+      expect(h(), isNot(h(detected: const ProviderCapabilities())));
+      expect(
+        h(detected: const ProviderCapabilities(tools: true)),
+        isNot(h(detected: const ProviderCapabilities())),
+      );
       expect(h().toString(), contains('ok'));
     });
 

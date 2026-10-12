@@ -11,7 +11,16 @@ import 'usage.dart';
 /// - The stream ends with exactly one *terminal* event: [Done] on success or
 ///   [ErrorEvent] on failure (incl. cancellation). Nothing follows it and the
 ///   stream then closes. Providers never emit stream errors.
-/// - [ToolCallDelta]s of a call come before its [ToolCallComplete].
+/// - Tool calls are numbered 0, 1, … in order of appearance. The *k*-th
+///   [ToolCallComplete] belongs to the [ToolCallDelta]s with `index == k`;
+///   those deltas come before it.
+/// - If the stream ends with [Done], every tool call that has deltas also
+///   has its [ToolCallComplete]. If it ends with [ErrorEvent] (including
+///   cancellation), calls may be left incomplete; consumers must discard
+///   incomplete calls and never execute them.
+/// - [ThinkingDelta]s of a reasoning block are followed by one
+///   [ThinkingComplete] carrying the full block (with signature or redacted
+///   data) that must be sent back unchanged.
 /// - [UsageEvent]s come before [Done].
 @immutable
 sealed class ChatEvent {
@@ -56,6 +65,30 @@ final class ThinkingDelta extends ChatEvent {
 
   @override
   String toString() => 'ThinkingDelta($text)';
+}
+
+/// A finished reasoning block, emitted after its [ThinkingDelta]s (or alone
+/// for redacted thinking).
+///
+/// Providers such as Anthropic require signed or redacted thinking blocks to
+/// be sent back **unchanged** in the next request; the agent stores [block]
+/// in the assistant message.
+final class ThinkingComplete extends ChatEvent {
+  /// Creates the event.
+  const ThinkingComplete(this.block);
+
+  /// The complete block.
+  final ThinkingBlock block;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThinkingComplete && other.block == block;
+
+  @override
+  int get hashCode => Object.hash(ThinkingComplete, block);
+
+  @override
+  String toString() => 'ThinkingComplete($block)';
 }
 
 /// A fragment of a tool call while it is being generated.
@@ -119,8 +152,12 @@ final class ToolCallComplete extends ChatEvent {
   String toString() => 'ToolCallComplete($call)';
 }
 
-/// Token usage reported by the provider. May occur more than once; consumers
-/// sum the values.
+/// Token usage reported by the provider.
+///
+/// May occur more than once per response; each event carries an
+/// **increment**, consumers sum all of them. Adapters whose API reports
+/// cumulative totals (e.g. Anthropic `message_delta`) must convert them into
+/// increments.
 final class UsageEvent extends ChatEvent {
   /// Creates the event.
   const UsageEvent(this.usage);

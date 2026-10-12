@@ -42,16 +42,41 @@ void main() {
       argumentsJson: '{}',
     );
 
-    test('ConfirmationRequired forwards the answer', () {
-      bool? answer;
+    test('ConfirmationRequired forwards only the first answer', () {
+      final answers = <bool>[];
       final e = ConfirmationRequired(
         call: call,
         description: 'Termin löschen',
-        respond: (ok) => answer = ok,
+        respond: answers.add,
       );
-      e.respond(false);
-      expect(answer, isFalse);
+      expect(e.answered, isFalse);
+      e
+        ..respond(false)
+        ..respond(true);
+      expect(answers, [false]);
+      expect(e.answered, isTrue);
       expect(e.toString(), contains('Termin löschen'));
+    });
+
+    test('EscalationConfirmationRequired forwards only the first answer', () {
+      final answers = <bool>[];
+      final e = EscalationConfirmationRequired(
+        fromProfile: 'phala',
+        toProfile: 'claude',
+        reason: EscalationReason.modelGaveUp,
+        respond: answers.add,
+      );
+      expect(e.answered, isFalse);
+      e
+        ..respond(true)
+        ..respond(false)
+        ..respond(true);
+      expect(answers, [true]);
+      expect(e.answered, isTrue);
+      expect(e.fromProfile, 'phala');
+      expect(e.toProfile, 'claude');
+      expect(e.reason, EscalationReason.modelGaveUp);
+      expect(e.toString(), contains('phala → claude'));
     });
 
     test('fields and toString of all variants', () {

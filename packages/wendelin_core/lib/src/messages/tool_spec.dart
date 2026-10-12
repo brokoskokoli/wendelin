@@ -11,13 +11,16 @@ final class ToolSpec {
     required this.inputSchema,
   });
 
-  /// Tool name (`integration__action`, see `isValidToolName`).
+  /// Tool name (`integration__action`, see `Tool.isValidToolName`).
   final String name;
 
   /// Short, precise description for the model.
   final String description;
 
   /// JSON Schema of the arguments object.
+  ///
+  /// Not copied (the constructor is `const`): treat it as immutable and never
+  /// modify a map after passing it in. Equality compares it deeply.
   final Map<String, Object?> inputSchema;
 
   @override

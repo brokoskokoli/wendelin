@@ -44,6 +44,26 @@ final class ToolOutcome {
     summary: summary,
   );
 
+  /// The user declined the confirmation; not an error, the model should
+  /// accept the decision.
+  factory ToolOutcome.declined() => ToolOutcome(
+    content: const [TextBlock(declinedText)],
+    summary: 'Abgelehnt',
+  );
+
+  /// The run was cancelled before the tool finished (error outcome).
+  factory ToolOutcome.cancelled() => ToolOutcome(
+    content: const [TextBlock(cancelledText)],
+    isError: true,
+    summary: 'Abgebrochen',
+  );
+
+  /// Model-facing text of [ToolOutcome.declined].
+  static const declinedText = 'Nutzer hat abgelehnt';
+
+  /// Model-facing text of [ToolOutcome.cancelled].
+  static const cancelledText = 'Abgebrochen';
+
   /// Content for the model.
   final List<ContentBlock> content;
 

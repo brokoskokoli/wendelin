@@ -113,14 +113,14 @@ final class ToolCallStarted extends AgentEvent {
   String toString() => 'ToolCallStarted(${call.name})';
 }
 
-/// The user must confirm [call]; call [respond] exactly once.
+/// The user must confirm [call]. Answer with [respond].
 final class ConfirmationRequired extends AgentEvent {
-  /// Creates the event.
-  const ConfirmationRequired({
+  /// Creates the event; [respond] forwards the answer to the agent.
+  ConfirmationRequired({
     required this.call,
     required this.description,
-    required this.respond,
-  });
+    required void Function(bool approved) respond,
+  }) : _answer = _Once(respond);
 
   /// The call awaiting confirmation.
   final ToolCallBlock call;
@@ -128,11 +128,69 @@ final class ConfirmationRequired extends AgentEvent {
   /// German text for the confirmation card.
   final String description;
 
-  /// Answer: `true` = execute, `false` = decline.
-  final void Function(bool approved) respond;
+  final _Once _answer;
+
+  /// Whether an answer has already been given.
+  bool get answered => _answer.done;
+
+  /// Answers: `true` = execute, `false` = decline. Idempotent: the first
+  /// answer wins, later calls are ignored.
+  void respond(bool approved) => _answer(approved);
 
   @override
   String toString() => 'ConfirmationRequired(${call.name}, $description)';
+}
+
+/// The agent wants to escalate to a provider with a **lower** privacy level
+/// than the current request requires (concept: „Datenschutz-Grenze … außer
+/// der Nutzer bestätigt“). Nothing is sent to [toProfile] before the user
+/// approves via [respond]; declining ends or continues the run without that
+/// escalation.
+final class EscalationConfirmationRequired extends AgentEvent {
+  /// Creates the event; [respond] forwards the answer to the agent.
+  EscalationConfirmationRequired({
+    required this.fromProfile,
+    required this.toProfile,
+    required this.reason,
+    required void Function(bool approved) respond,
+  }) : _answer = _Once(respond);
+
+  /// Current profile id.
+  final String fromProfile;
+
+  /// Proposed profile id (lower privacy level).
+  final String toProfile;
+
+  /// Why the agent wants to escalate.
+  final EscalationReason reason;
+
+  final _Once _answer;
+
+  /// Whether an answer has already been given.
+  bool get answered => _answer.done;
+
+  /// Answers: `true` = escalate, `false` = stay. Idempotent: the first
+  /// answer wins, later calls are ignored.
+  void respond(bool approved) => _answer(approved);
+
+  @override
+  String toString() =>
+      'EscalationConfirmationRequired($fromProfile → $toProfile, '
+      '${reason.name})';
+}
+
+/// Forwards only the first answer.
+final class _Once {
+  _Once(this._target);
+
+  final void Function(bool) _target;
+  bool done = false;
+
+  void call(bool value) {
+    if (done) return;
+    done = true;
+    _target(value);
+  }
 }
 
 /// A tool call has finished (successfully, with error, or declined).

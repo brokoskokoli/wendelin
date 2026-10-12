@@ -125,6 +125,13 @@ void main() {
     budgetMonthly: 5000000,
     warnThreshold: 0.8,
     extraHeaders: {'anthropic-beta': 'x'},
+    options: {
+      'enableServerWebSearch': true,
+      'thinkingBudget': 2000,
+      'nested': {
+        'list': [1, 'a'],
+      },
+    },
   );
   final minimal = ProviderProfile(
     id: 'p2',
@@ -147,6 +154,8 @@ void main() {
       expect(json.keys, isNot(contains('budgetMonthly')));
       expect(json.keys, isNot(contains('warnThreshold')));
       expect(json.keys, isNot(contains('extraHeaders')));
+      expect(json.keys, isNot(contains('options')));
+      expect(ProviderProfile.fromJson(viaString(json)).options, isEmpty);
       expect(ProviderProfile.fromJson(viaString(json)), minimal);
     });
     test('integer warnThreshold is accepted', () {
@@ -161,6 +170,8 @@ void main() {
       final badType = viaString(full.toJson())..['type'] = 'gemini';
       final badPrivacy = viaString(full.toJson())..['privacy'] = 'secret';
       final badHeaders = viaString(full.toJson())..['extraHeaders'] = {'a': 1};
+      final badOptions = viaString(full.toJson())..['options'] = [1];
+      expect(() => ProviderProfile.fromJson(badOptions), throwsFormatException);
       expect(() => ProviderProfile.fromJson(badType), throwsFormatException);
       expect(() => ProviderProfile.fromJson(badPrivacy), throwsFormatException);
       expect(() => ProviderProfile.fromJson(badHeaders), throwsFormatException);
@@ -180,7 +191,9 @@ void main() {
         budgetMonthly: 1,
         warnThreshold: 0.5,
         extraHeaders: {'a': 'b'},
+        options: {'o': 1},
       );
+      expect(c.options, {'o': 1});
       expect(c.id, 'x');
       expect(c.name, 'n');
       expect(c.type, ProviderType.fake);
@@ -205,11 +218,41 @@ void main() {
       expect(full, isNot(full.copyWith(budgetMonthly: 1)));
       expect(full, isNot(full.copyWith(warnThreshold: 0.1)));
       expect(full, isNot(full.copyWith(extraHeaders: {})));
+      expect(full, isNot(full.copyWith(options: {'thinkingBudget': 1})));
+      expect(
+        full.copyWith(
+          options: {
+            'a': [1],
+          },
+        ),
+        full.copyWith(
+          options: {
+            'a': [1],
+          },
+        ),
+      );
+      expect(
+        full
+            .copyWith(
+              options: {
+                'a': [1],
+              },
+            )
+            .hashCode,
+        full
+            .copyWith(
+              options: {
+                'a': [1],
+              },
+            )
+            .hashCode,
+      );
       expect(full.toString(), contains('p1'));
     });
 
     test('extraHeaders are unmodifiable', () {
       expect(() => full.extraHeaders['x'] = 'y', throwsUnsupportedError);
+      expect(() => full.options['x'] = 'y', throwsUnsupportedError);
     });
   });
 }

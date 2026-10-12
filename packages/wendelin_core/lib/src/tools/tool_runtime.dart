@@ -21,10 +21,18 @@ abstract interface class ToolCatalog {
 abstract interface class ToolInvoker {
   /// Executes [calls] and reports progress.
   ///
-  /// Contract: for every call exactly one [ToolStarted] and, at the end,
-  /// exactly one [ToolFinished]; [ConfirmationNeeded] in between if the user
-  /// must decide. The stream closes after the last [ToolFinished]. Failures
-  /// are reported as error outcomes, never as stream errors.
+  /// Contract (checked by `toolInvokerContract`):
+  /// - For every call exactly one [ToolStarted] and, after it, exactly one
+  ///   [ToolFinished]; [ConfirmationNeeded] in between if the user must
+  ///   decide. Every tool call therefore gets a result for the model.
+  /// - The stream closes after the last [ToolFinished]. Failures are
+  ///   reported as error outcomes, never as stream errors.
+  /// - Declined confirmations yield `ToolOutcome.declined()` (not an error)
+  ///   and the tool is not executed.
+  /// - Cancellation via `ctx.cancel`: open confirmations are resolved as
+  ///   declined, no further tool is executed, and every not yet finished
+  ///   call ends with `ToolOutcome.cancelled()` (an error outcome). A context
+  ///   that is already cancelled executes nothing.
   Stream<ToolInvocationEvent> invokeAll(
     List<ToolCallBlock> calls,
     ToolContext ctx,
@@ -48,17 +56,28 @@ final class ToolStarted extends ToolInvocationEvent {
   String toString() => 'ToolStarted(${call.id})';
 }
 
-/// The user must confirm [call]; complete [decision] with `true` (run) or
-/// `false` (decline). The invoker waits for it.
+/// The user must confirm [call]. Answer with [respond]; the invoker waits
+/// for [decision].
 final class ConfirmationNeeded extends ToolInvocationEvent {
-  /// Creates the event.
+  /// Creates the event; the invoker keeps [decision] to await the answer.
   const ConfirmationNeeded(super.call, this.description, this.decision);
 
   /// German text for the confirmation card (`Tool.describeForConfirmation`).
   final String description;
 
-  /// Completed by the UI/agent with the user's answer.
+  /// Completed with the user's answer. Prefer [respond], which never throws.
   final Completer<bool> decision;
+
+  /// Whether an answer has already been given.
+  bool get answered => decision.isCompleted;
+
+  /// Answers the confirmation: `true` = execute, `false` = decline.
+  ///
+  /// Idempotent: the first answer wins, later calls are ignored. The invoker
+  /// itself calls `respond(false)` when the run is cancelled.
+  void respond(bool approved) {
+    if (!decision.isCompleted) decision.complete(approved);
+  }
 
   @override
   String toString() => 'ConfirmationNeeded(${call.id}, $description)';

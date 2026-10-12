@@ -25,17 +25,14 @@ enum AppPlatform {
 
 final _toolNamePattern = RegExp(r'^[a-zA-Z0-9_-]{1,64}$');
 
-/// Whether [name] is a valid tool name: 1–64 characters out of letters,
-/// digits, `_` and `-` (no dots or spaces; some APIs reject them). By
-/// convention names follow `integration__action`.
-bool isValidToolName(String name) => _toolNamePattern.hasMatch(name);
-
 /// A single action the model can call.
 abstract interface class Tool {
-  /// Same as the top-level [isValidToolName].
+  /// Whether [name] is a valid tool name: 1–64 characters out of letters,
+  /// digits, `_` and `-` (no dots or spaces; some APIs reject them). By
+  /// convention names follow `integration__action`.
   static bool isValidToolName(String name) => _toolNamePattern.hasMatch(name);
 
-  /// Unique name, `integration__action` (see [isValidToolName]).
+  /// Unique name, `integration__action` (see [Tool.isValidToolName]).
   String get name;
 
   /// Short, precise description for the model.

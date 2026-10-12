@@ -31,7 +31,6 @@ void main() {
   for (final MapEntry(key: name, value: valid) in table.entries) {
     final label = name.length > 20 ? '${name.length} Zeichen' : '"$name"';
     test('$label → $valid', () {
-      expect(isValidToolName(name), valid);
       expect(Tool.isValidToolName(name), valid);
     });
   }

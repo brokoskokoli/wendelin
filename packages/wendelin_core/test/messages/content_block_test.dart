@@ -35,6 +35,7 @@ void main() {
     'toolResult empty': ToolResultBlock(callId: 'c3', content: const []),
     'thinking': const ThinkingBlock('Ich überlege', signature: 'sig=='),
     'thinking unsigned': const ThinkingBlock('Nur Text'),
+    'thinking redacted': const ThinkingBlock.redacted('EqQBCkYIARgCKkD='),
   };
 
   group('ContentBlock JSON round trip', () {
@@ -84,6 +85,18 @@ void main() {
         },
       );
     });
+    test('thinking redacted stores opaque data', () {
+      const r = ThinkingBlock.redacted('opak');
+      expect(r.toJson(), {
+        'type': 'thinking',
+        'text': '',
+        'redactedData': 'opak',
+      });
+      expect(r.isRedacted, isTrue);
+      expect(const ThinkingBlock('x').isRedacted, isFalse);
+      expect(r, isNot(const ThinkingBlock.redacted('anders')));
+      expect(r.toString(), 'ThinkingBlock(redacted)');
+    });
     test('thinking omits missing signature', () {
       expect(const ThinkingBlock('t').toJson(), {
         'type': 'thinking',
@@ -126,6 +139,11 @@ void main() {
         'type': 'toolResult',
         'callId': 'a',
         'content': <Object?>[],
+      },
+      'thinking redactedData wrong type': {
+        'type': 'thinking',
+        'text': '',
+        'redactedData': 1,
       },
       'thinking signature wrong type': {
         'type': 'thinking',

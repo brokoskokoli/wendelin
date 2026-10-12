@@ -24,7 +24,9 @@ final class ProviderProfile {
     this.budgetMonthly,
     this.warnThreshold,
     Map<String, String> extraHeaders = const {},
-  }) : extraHeaders = Map.unmodifiable(extraHeaders);
+    Map<String, Object?> options = const {},
+  }) : extraHeaders = Map.unmodifiable(extraHeaders),
+       options = Map.unmodifiable(options);
 
   /// Decodes a profile written by [toJson]; throws [FormatException].
   factory ProviderProfile.fromJson(Map<String, Object?> json) {
@@ -42,6 +44,7 @@ final class ProviderProfile {
       extraHeaders: json['extraHeaders'] == null
           ? const {}
           : readStringMap(json, 'extraHeaders', c),
+      options: json['options'] == null ? const {} : readMap(json, 'options', c),
     );
   }
 
@@ -77,6 +80,12 @@ final class ProviderProfile {
   /// [CustomHeadersAuth]).
   final Map<String, String> extraHeaders;
 
+  /// Adapter-specific options, e.g. `enableServerWebSearch: true` or
+  /// `thinkingBudget: 2000`. Keys are defined by the adapters
+  /// (`wendelin_providers`); values must be JSON-encodable and never secrets.
+  /// Unknown keys are ignored by adapters.
+  final Map<String, Object?> options;
+
   /// Encodes the profile as JSON (no secrets).
   Map<String, Object?> toJson() => {
     'id': id,
@@ -89,6 +98,7 @@ final class ProviderProfile {
     if (budgetMonthly != null) 'budgetMonthly': budgetMonthly,
     if (warnThreshold != null) 'warnThreshold': warnThreshold,
     if (extraHeaders.isNotEmpty) 'extraHeaders': extraHeaders,
+    if (options.isNotEmpty) 'options': options,
   };
 
   /// Returns a copy with the given fields replaced. Nullable fields cannot be
@@ -104,6 +114,7 @@ final class ProviderProfile {
     int? budgetMonthly,
     double? warnThreshold,
     Map<String, String>? extraHeaders,
+    Map<String, Object?>? options,
   }) => ProviderProfile(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -115,6 +126,7 @@ final class ProviderProfile {
     budgetMonthly: budgetMonthly ?? this.budgetMonthly,
     warnThreshold: warnThreshold ?? this.warnThreshold,
     extraHeaders: extraHeaders ?? this.extraHeaders,
+    options: options ?? this.options,
   );
 
   @override
@@ -132,7 +144,8 @@ final class ProviderProfile {
       const MapEquality<String, String>().equals(
         other.extraHeaders,
         extraHeaders,
-      );
+      ) &&
+      const DeepCollectionEquality().equals(other.options, options);
 
   @override
   int get hashCode => Object.hash(
@@ -146,6 +159,7 @@ final class ProviderProfile {
     budgetMonthly,
     warnThreshold,
     const MapEquality<String, String>().hash(extraHeaders),
+    const DeepCollectionEquality().hash(options),
   );
 
   @override

@@ -238,6 +238,7 @@ void main() {
     final events = <ChatEvent, bool>{
       const TextDelta('a'): false,
       const ThinkingDelta('a'): false,
+      const ThinkingComplete(ThinkingBlock('a', signature: 's')): false,
       const ToolCallDelta(index: 0, id: 'i', name: 'n', argumentsFragment: '{'):
           false,
       const ToolCallComplete(call): false,
@@ -256,6 +257,7 @@ void main() {
       final copies = <ChatEvent>[
         const TextDelta('a'),
         const ThinkingDelta('a'),
+        const ThinkingComplete(ThinkingBlock('a', signature: 's')),
         const ToolCallDelta(
           index: 0,
           id: 'i',
@@ -278,6 +280,10 @@ void main() {
       expect(const TextDelta('a'), isNot(const TextDelta('b')));
       expect(const TextDelta('a'), isNot(const ThinkingDelta('a')));
       expect(const ThinkingDelta('a'), isNot(const ThinkingDelta('b')));
+      expect(
+        const ThinkingComplete(ThinkingBlock('a', signature: 's')),
+        isNot(const ThinkingComplete(ThinkingBlock('a', signature: 't'))),
+      );
       const d = ToolCallDelta(
         index: 0,
         id: 'i',

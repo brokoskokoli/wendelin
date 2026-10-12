@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -17,6 +19,15 @@ void main() {
       expect(o.isError, isTrue);
       expect(o.text, 'Kalender fehlt');
       expect(o.summary, 's');
+    });
+
+    test('declined is not an error, cancelled is', () {
+      final d = ToolOutcome.declined();
+      expect(d.isError, isFalse);
+      expect(d.text, ToolOutcome.declinedText);
+      final c = ToolOutcome.cancelled();
+      expect(c.isError, isTrue);
+      expect(c.text, ToolOutcome.cancelledText);
     });
 
     test('text joins only text blocks', () {
@@ -178,6 +189,28 @@ void main() {
         isNot(SetupState(missingSteps: ['b'])),
       );
       expect(SetupState(missingSteps: ['a']).toString(), contains('a'));
+    });
+  });
+
+  group('ConfirmationNeeded', () {
+    const call = ToolCallBlock(id: 'c', name: 'x__y', argumentsJson: '{}');
+    test('respond is idempotent, first answer wins', () async {
+      final e = ConfirmationNeeded(call, 'ok?', Completer<bool>());
+      expect(e.answered, isFalse);
+      e
+        ..respond(false)
+        ..respond(true);
+      expect(e.answered, isTrue);
+      expect(await e.decision.future, isFalse);
+    });
+    test('respond after external completion is ignored', () async {
+      final e = ConfirmationNeeded(
+        call,
+        'ok?',
+        Completer<bool>()..complete(true),
+      );
+      e.respond(false);
+      expect(await e.decision.future, isTrue);
     });
   });
 

@@ -41,6 +41,11 @@ sealed class ContentBlock {
       ThinkingBlock.jsonType => ThinkingBlock(
         readField(json, 'text', 'ThinkingBlock'),
         signature: readOptional<String>(json, 'signature', 'ThinkingBlock'),
+        redactedData: readOptional<String>(
+          json,
+          'redactedData',
+          'ThinkingBlock',
+        ),
       ),
       _ => throw FormatException('ContentBlock: unbekannter Typ "$type"'),
     };
@@ -225,37 +230,54 @@ final class ToolResultBlock extends ContentBlock {
   String toString() => 'ToolResultBlock($callId, isError: $isError, $content)';
 }
 
-/// Model reasoning. Only shown in the UI or passed back to the same provider
-/// (some require the [signature]); never interpreted by the app.
+/// Model reasoning. Only shown in the UI and passed back to the same
+/// provider; never interpreted by the app.
+///
+/// Adapters must be able to send a block back **unchanged**: Anthropic
+/// rejects modified thinking blocks and checks [signature]. Redacted thinking
+/// (encrypted by the provider) has an empty [text] and the opaque payload in
+/// [redactedData].
 final class ThinkingBlock extends ContentBlock {
   /// Creates a thinking block.
-  const ThinkingBlock(this.text, {this.signature});
+  const ThinkingBlock(this.text, {this.signature, this.redactedData});
+
+  /// A redacted (encrypted) reasoning block with the opaque [data].
+  const ThinkingBlock.redacted(String data) : this('', redactedData: data);
 
   /// JSON discriminator.
   static const jsonType = 'thinking';
 
-  /// The reasoning text.
+  /// The reasoning text (empty for redacted thinking).
   final String text;
 
   /// Opaque provider signature, if any.
   final String? signature;
+
+  /// Opaque, provider-encrypted reasoning, if the block is redacted.
+  final String? redactedData;
+
+  /// Whether this is a redacted block.
+  bool get isRedacted => redactedData != null;
 
   @override
   Map<String, Object?> toJson() => {
     'type': jsonType,
     'text': text,
     if (signature != null) 'signature': signature,
+    if (redactedData != null) 'redactedData': redactedData,
   };
 
   @override
   bool operator ==(Object other) =>
       other is ThinkingBlock &&
       other.text == text &&
-      other.signature == signature;
+      other.signature == signature &&
+      other.redactedData == redactedData;
 
   @override
-  int get hashCode => Object.hash(jsonType, text, signature);
+  int get hashCode => Object.hash(jsonType, text, signature, redactedData);
 
   @override
-  String toString() => 'ThinkingBlock($text)';
+  String toString() =>
+      isRedacted ? 'ThinkingBlock(redacted)' : 'ThinkingBlock($text)';
 }
