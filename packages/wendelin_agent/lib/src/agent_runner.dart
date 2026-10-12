@@ -295,10 +295,15 @@ final class _Run {
     if (kept.isNotEmpty) emit(AgentTextDelta(kept));
   }
 
-  /// Gives every tool call an id that is unique in the conversation. Weak
-  /// servers repeat ids such as `call_0` or send empty ones; a colliding
-  /// call gets an internal id so that tool_use and tool_result stay
-  /// consistent. [_sourceIds] keeps the id the model sent.
+  /// Gives every tool call an id that is unique in the conversation and
+  /// consists only of `[A-Za-z0-9_-]`. Weak servers repeat ids such as
+  /// `call_0` or send empty ones; such a call gets an internal id
+  /// (`call_0_dup1`, `call_dup1`; other characters become `_`) so that
+  /// tool_use and tool_result stay consistent across providers. [_sourceIds] keeps the id the model sent.
+  /// Ids every provider accepts (Anthropic: `^[a-zA-Z0-9_-]+$`).
+  static final _validId = RegExp(r'^[A-Za-z0-9_-]+$');
+  static final _invalidIdChars = RegExp('[^A-Za-z0-9_-]');
+
   (Message, List<ToolCallBlock>) _assignCallIds(List<ContentBlock> blocks) {
     final used = {
       for (final m in _messages)
@@ -312,14 +317,21 @@ final class _Run {
         continue;
       }
       var call = b;
-      if (b.id.isEmpty || used.contains(b.id)) {
-        final base = b.id.isEmpty ? 'call' : b.id;
-        var n = 2;
-        while (used.contains('$base~$n')) {
-          n++;
+      final valid = _validId.hasMatch(b.id);
+      if (!valid || used.contains(b.id)) {
+        final base = b.id.isEmpty
+            ? 'call'
+            : b.id.replaceAll(_invalidIdChars, '_');
+        var id = base;
+        if (b.id.isEmpty || used.contains(id)) {
+          var n = 1;
+          while (used.contains('${base}_dup$n')) {
+            n++;
+          }
+          id = '${base}_dup$n';
         }
         call = ToolCallBlock(
-          id: '$base~$n',
+          id: id,
           name: b.name,
           argumentsJson: b.argumentsJson,
         );

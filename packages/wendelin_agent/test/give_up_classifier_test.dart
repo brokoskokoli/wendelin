@@ -9,7 +9,8 @@ void main() {
     'Ich bin nicht in der Lage, das zu tun.',
     'Darauf habe ich keinen Zugriff.',
     'Désolé, je ne peux pas vous aider.',
-    'Je n’ai pas accès à votre calendrier.',
+    "Je n'ai pas accès à internet.",
+    "Sorry, I don't have access to that.",
     'Sorry, I can’t help with that.',
     'I am not able to do this.',
     'Das kann ich nicht.',
@@ -28,6 +29,10 @@ void main() {
     "I can't find any events tomorrow.",
     'Erledigt, Tauchen steht morgen um 10 Uhr im Kalender.',
     "Je n'ai trouvé aucun rendez-vous.",
+    'Ich habe keinen Zugriff auf deinen Kalender, bitte erlaube ihn in den '
+        'Einstellungen.',
+    'Je n’ai pas accès à votre calendrier, autorisez-le dans les réglages.',
+    "I don't have access to your calendar yet, please allow it.",
     '',
   ];
   for (final t in giveUps) {

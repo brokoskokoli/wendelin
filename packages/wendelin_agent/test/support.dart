@@ -111,6 +111,27 @@ final class SilentInvoker implements ToolInvoker {
   ) => const Stream.empty();
 }
 
+/// Invoker that finishes calls in reverse order (like a parallel invoker
+/// whose last call is fastest).
+final class ReversedInvoker implements ToolInvoker {
+  @override
+  Stream<ToolInvocationEvent> invokeAll(
+    List<ToolCallBlock> calls,
+    ToolContext ctx,
+  ) async* {
+    for (final c in calls) {
+      yield ToolStarted(c);
+    }
+    for (final c in calls.reversed) {
+      yield ToolFinished(
+        c,
+        ToolOutcome.text('Ergebnis ${c.id}'),
+        Duration.zero,
+      );
+    }
+  }
+}
+
 /// Recorder that fails.
 final class FailingRecorder implements ConversationRecorder {
   @override

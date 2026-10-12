@@ -37,7 +37,14 @@ final class GiveUpClassifier {
       '$_end'
       r'|, (?:das|dies|dir|ihnen|dabei) )',
     ),
-    RegExp(r'(?:ich habe|habe ich) (?:leider )?keinen zugriff'),
+    // Only a bare „keinen Zugriff“ at the end of the sentence: „Ich habe
+    // keinen Zugriff auf deinen Kalender, bitte erlaube ihn …“ is a useful
+    // answer, not a reason to escalate.
+    RegExp(
+      r'(?:ich habe|habe ich) (?:leider )?keinen zugriff'
+      r'(?: darauf| auf das internet)?'
+      '$_end',
+    ),
     RegExp(r'übersteigt meine fähigkeiten'),
     // fr
     RegExp(
@@ -49,7 +56,10 @@ final class GiveUpClassifier {
       '$_end',
     ),
     RegExp(r'je suis (?:malheureusement )?incapable'),
-    RegExp(r"je n'ai pas accès"),
+    RegExp(
+      r"je n'ai pas accès(?: à (?:cela|internet))?"
+      '$_end',
+    ),
     RegExp(r'dépasse mes capacités'),
     // en
     RegExp(
@@ -61,7 +71,10 @@ final class GiveUpClassifier {
       r"i (?:can't|cannot)"
       '$_end',
     ),
-    RegExp(r"i (?:don't|do not) have access"),
+    RegExp(
+      r"i (?:don't|do not) have access(?: to (?:that|this|the internet))?"
+      '$_end',
+    ),
     RegExp(r'beyond my capabilities'),
   ];
 
