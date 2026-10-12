@@ -1,0 +1,6 @@
+data: {"id":"chatcmpl-Broken","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Hal"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-Broken","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"lo
+
+data: [DONE]
+

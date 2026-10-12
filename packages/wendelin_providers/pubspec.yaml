@@ -6,6 +6,9 @@ resolution: workspace
 environment:
   sdk: ^3.13.0
 dependencies:
+  collection: ^1.19.1
+  http: ^1.6.0
+  meta: ^1.19.0
   wendelin_core: any
 dev_dependencies:
   test: any
