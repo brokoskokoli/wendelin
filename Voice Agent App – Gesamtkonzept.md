@@ -11,6 +11,7 @@ Ziel ist ein persönlicher Sprachassistent für Android und iOS, der per Wake Wo
 - **Alles ist ein Plugin.** LLM-Provider, Tools, Wake-Word-Engines, STT und TTS hängen jeweils an einer eigenen Schnittstelle mit Registry. Neue Fähigkeiten kommen ohne Umbau des Kerns dazu.
 - **Provider-agnostisch.** Ein internes Nachrichten- und Tool-Format; Adapter übersetzen zu Anthropic, OpenAI-kompatiblen APIs und weiteren.
 - **Lokal zuerst.** Wake Word, VAD und STT laufen auf dem Gerät. Bis zum Wake Word verlässt kein Audio das Handy, danach nur Text.
+- **Ohne Google-Dienste lauffähig (K7).** Die App braucht keine Google Play Services; alles Pflichtige nutzt AOSP-Schnittstellen. Funktionen, die eine Fremd-App voraussetzen (System-TTS, System-Spracherkennung, Uhr-App), sind optional oder haben eine Ausweichlösung.
 - **Datenschutz wählbar.** Neben normalen APIs gibt es TEE-Provider mit Attestierungsprüfung in der App und sichtbarem Prüfprotokoll.
 - **Kontrolle beim Nutzer.** Jedes Tool hat eine Risikostufe; riskante Aktionen brauchen Bestätigung. Die App führt Tools aus, nie das Modell.
 - **Günstig per Default, stark bei Bedarf.** Ein kleines Modell antwortet standardmäßig; Regeln eskalieren zu einem stärkeren Modell.
@@ -91,9 +92,9 @@ Die Pipeline läuft in fünf Stufen, alle austauschbar: Auslöser → Aufnahme m
 4. **STT** (Interface `SpeechToText`)
    - Standard: Whisper lokal über sherpa-onnx; Modellgröße wählbar (`base` schnell, `small` besser für Deutsch und Französisch). Modelle werden beim ersten Start heruntergeladen, nicht ins APK gepackt.
    - Sprache: automatisch erkennen oder fest einstellen (de, fr, en).
-   - Alternativen: System-Spracherkennung (Android `SpeechRecognizer`, iOS `SpeechAnalyzer`), optional Cloud-STT.
+   - Alternativen: System-Spracherkennung (Android `SpeechRecognizer`, iOS `SpeechAnalyzer`; nur angeboten, wenn eine Erkennungs-App installiert ist, K7), optional Cloud-STT.
    - Ausgabe: Text + erkannte Sprache + Konfidenz (für die Routing-Regeln).
-5. **TTS** (Interface `TextToSpeech`): Systemstimme als Standard; optional sherpa-onnx-Stimmen (offline) oder Cloud-TTS. Antworten werden für Sprache gekürzt; lange Inhalte nur auf dem Bildschirm.
+5. **TTS** (Interface `TextToSpeech`): Systemstimme als Standard; ist keine Sprachausgabe installiert (z. B. Gerät ohne Google), automatisch sherpa-onnx-Stimmen (offline, K7); optional Cloud-TTS. Antworten werden für Sprache gekürzt; lange Inhalte nur auf dem Bildschirm.
 
 **Gesprächsmodus**: Nach einer Antwort kann die App 5 s weiter zuhören (Folgefrage ohne Wake Word). Abbruchwort ("Stopp") und Antippen beenden jederzeit.
 
@@ -349,7 +350,7 @@ Alle Integrationen sind einzeln aktivierbar; die Tabelle zeigt die geplanten Too
 | Wetter und Meer | `weather_forecast` (r), `marine_forecast` (r: Wellenhöhe, Dünung, Wassertemperatur) | Open-Meteo (Wetter- und Marine-API, ohne Key) | v0.3 |
 | Kontakte | `find_contact` (r) | Contacts-Provider / Contacts-Framework | v0.3 |
 | Nachrichten und Anrufe | `compose_sms` (e), `call` (e) | Intent mit vorausgefülltem Text bzw. Wählbildschirm; Nutzer sendet selbst | v0.3 |
-| Standort und Navigation | `current_location` (r), `navigate_to` (w), `distance_to` (r) | Fused Location / CoreLocation; Geo-Intents bzw. Karten-URLs | v0.3 |
+| Standort und Navigation | `current_location` (r), `navigate_to` (w), `distance_to` (r) | Android `LocationManager` (kein Fused Location, K7) / CoreLocation; Geo-Intents bzw. Karten-URLs | v0.3 |
 | Kamera und Bild | `take_photo` (r), `pick_image` (r) | Bild wird an Vision-fähige Modelle gegeben; nur wenn das gewählte Modell Vision kann | v0.4 |
 | Apps und Links | `open_app` (w), `open_url` (w) | Intents / URL-Schemes; Liste erlaubter Apps einstellbar | v0.3 |
 | Aufgaben | `add_task` (w), `list_tasks` (r), `complete_task` (w) | Erst als `Tasks.md` im Vault, später Todoist oder Google Tasks als eigene Integration | v0.4 |
@@ -495,7 +496,7 @@ wendelin/
 - Routing: Tabellentests "Satz → erwartete Regel".
 - **Modell-Eval**: 30–50 typische Befehle (Deutsch, Französisch, Englisch) mit erwarteten Tool-Calls; Kommando, das ein Provider-Profil dagegen laufen lässt und Trefferquote, Latenz und Kosten ausgibt. Grundlage für die Wahl des Default-Modells.
 - STT: kurze eigene Aufnahmen als Fixtures, Wortfehlerrate pro Modellgröße.
-- Integrationstests auf Emulator bzw. Gerät für Kalender, SAF und Intents.
+- Integrationstests auf Emulator bzw. Gerät für Kalender, SAF und Intents – auf einem AOSP-Image **ohne** Google Play Services (K7).
 
 **Offene Fragen**
 
@@ -528,3 +529,4 @@ Abweichungen, die sich bei der Umsetzung ergeben haben. Status `offen` = noch ni
 | K4 | 2026-10-13 | Tool-System → Schnittstellen | `Integration` ohne Flutter-Typen (`iconId` statt `IconData`, Einstellungsseite über `id` in der App, plus `sensitive`); `Tool.execute` liefert `ToolOutcome` (Inhalt, Fehler, optionales Undo, Kurztext für die Tool-Karte) | Kernpakete ohne Flutter testbar; Undo-Option für `write`-Tools braucht einen Rückweg (ADR 0002) | bestätigt 2026-10-13 |
 | K5 | 2026-10-13 | LLM-Provider-Schicht, Agent-Schleife, Tool-System | Vertragsdetails präzisiert: System-Prompt als eigenes Feld in `ChatRequest`; `Usage` mit 4 Zählern (inkl. Cache-Schreiben), Usage-Events als Zuwachs; Stream endet mit genau einem `Done` oder `Error`, Abbruch als Fehler-Event; `ProviderProfile` mit Budget in Mikro-USD, Warnschwelle 0–1 und adapterspezifischen `options` (z. B. serverseitige Web-Suche, Thinking-Budget); `HealthCheck.detected` (geprüfte Fähigkeiten); Abbruchvertrag der Tool-Ausführung (offene Bestätigungen gelten als abgelehnt, nach Abbruch startet kein Tool mehr, fertige Tools behalten ihr Ergebnis, Bestätigungen immer nacheinander); `UserInput.requestEscalation` für „nochmal mit …“ | Review WP01 (ADR 0002) | bestätigt 2026-10-13 |
 | K6 | 2026-10-13 | Eingebaute Integrationen | Neue Integration **Listen**: beliebig viele benannte Listen, jede mit eigener Ziel-Markdown-Datei auf dem Gerät; Tools zum Anzeigen, Hinzufügen, Abhaken, Entfernen; Einträge als Markdown-Checkboxen, damit die Dateien in Obsidian direkt nutzbar sind. Phase MVP (M1), Dateizugriff per Android-Dateiauswahl (SAF) | Wunsch Maintainer | offen |
+| K7 | 2026-10-13 | Leitprinzipien, Sprach-Pipeline, Integrationen, Teststrategie | App läuft ohne Google Play Services: Standort über `LocationManager` statt Fused Location; TTS-Ausweichlösung sherpa-onnx, wenn keine System-Sprachausgabe installiert ist; System-Spracherkennung nur, wenn vorhanden (Whisper lokal bleibt Standard); Wecker über AOSP-Intents mit Benachrichtigungs-Fallback; E2E-Tests auf AOSP-Image ohne GMS | Wunsch Maintainer (entgoogelte Geräte) | bestätigt 2026-10-13 |

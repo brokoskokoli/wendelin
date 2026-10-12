@@ -87,6 +87,23 @@ void main() {
     }
   }
 
+  // K7: keine Google Play Services / Firebase.
+  final appPubspec = File('${root.path}/app/pubspec.yaml');
+  final gradle = File('${root.path}/app/android/app/build.gradle.kts');
+  for (final f in [appPubspec, gradle]) {
+    if (!f.existsSync()) continue;
+    final t = f.readAsStringSync();
+    for (final m in [
+      'firebase',
+      'com.google.android.gms',
+      'google_mobile_ads',
+      'play-services',
+    ]) {
+      if (t.contains(m))
+        errors.add('${f.path}: "$m" verletzt K7 (ohne Google-Dienste)');
+    }
+  }
+
   if (errors.isEmpty) {
     stdout.writeln('check_deps: ok');
   } else {

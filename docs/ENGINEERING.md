@@ -72,6 +72,10 @@ Testarten:
 - **Live-Tests** (echte APIs) mit `@Tags(['live'])`, standardmäßig ausgeschlossen (`dart_test.yaml`), laufen nur wenn der Key als Env-Variable gesetzt ist.
 - Jede Fehlerbehebung bekommt einen Regressionstest, der ohne Fix rot ist.
 
+## Plattform
+
+- Keine Abhängigkeit von Google Play Services (K7): keine `com.google.android.gms`-/Firebase-Pakete, keine Plugins, die sie transitiv mitbringen. Funktionen mit Fremd-App-Bedarf erkennen die Verfügbarkeit und bieten eine Ausweichlösung an.
+
 ## Sicherheit
 
 - Keine Secrets im Repo, in SQLite, Logs oder Exporten. Secrets nur über `SecretStore`.
