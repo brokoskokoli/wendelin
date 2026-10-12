@@ -130,9 +130,9 @@ void main() {
         expect(data(o)['lists'], [
           {'name': 'Einkaufen', 'error': 'Kein Zugriff'},
           {'name': 'SmartSSH', 'open': 3},
-          {'name': 'Neu', 'open': 0},
+          {'name': 'Neu', 'open': 0, 'missing_file': true},
           {'name': 'Urlaub Packliste', 'open': 1},
-          {'name': 'Urlaub Ideen', 'open': 0},
+          {'name': 'Urlaub Ideen', 'open': 0, 'missing_file': true},
         ]);
         expect(o.summary, '5 Listen');
         expect(
@@ -422,7 +422,7 @@ void main() {
     test('unscharfer Treffer; nur das Kästchen ändert sich; Undo', () async {
       final o = await run('lists__complete_item', {
         'list': 'Einkaufen',
-        'item': 'milch',
+        'item': 'milch (1 L)',
       });
       expect(o.isError, isFalse);
       expect(
@@ -501,7 +501,7 @@ void main() {
     test('entfernt samt Unterpunkten; Undo an derselben Stelle nach fremder Änderung', () async {
       final o = await run('lists__remove_item', {
         'list': 'SmartSSH',
-        'item': 'Release',
+        'item': 'release bauen',
       });
       expect(o.isError, isFalse);
       expect(
@@ -593,7 +593,11 @@ void main() {
         '## Ideen\n'
         '- [ ] Dark Mode\n',
       );
-      expect(data(o), {'list': 'SmartSSH', 'removed': 3});
+      expect(data(o), {
+        'list': 'SmartSSH',
+        'removed': 3,
+        'kept': ['Doku'],
+      });
     });
 
     test(

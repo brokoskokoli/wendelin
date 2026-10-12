@@ -20,9 +20,17 @@ final class FakeListFilePort with FakeFailures implements ListFilePort {
   /// Number of [write] calls.
   int writes = 0;
 
+  /// Simulated I/O time per call (lets parallel calls interleave).
+  Duration delay = Duration.zero;
+
+  Future<void> _io() => delay == Duration.zero
+      ? Future<void>.value()
+      : Future<void>.delayed(delay);
+
   @override
   Future<String> read(String handle) async {
     enter('read');
+    await _io();
     return files[handle] ??
         (throw PortException(
           PortErrorKind.notFound,
@@ -40,6 +48,7 @@ final class FakeListFilePort with FakeFailures implements ListFilePort {
         'neu auswählen.',
       );
     }
+    await _io();
     writes++;
     files[handle] = content;
   }
@@ -47,6 +56,7 @@ final class FakeListFilePort with FakeFailures implements ListFilePort {
   @override
   Future<bool> exists(String handle) async {
     enter('exists');
+    await _io();
     return files.containsKey(handle);
   }
 }

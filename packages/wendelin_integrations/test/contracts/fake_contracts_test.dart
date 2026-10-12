@@ -31,6 +31,7 @@ void main() {
       port: port,
       newHandle: () => 'contract-${n++}.md',
       delete: port.files.remove,
+      reopen: () => FakeListFilePort(files: port.files),
     );
   }, name: 'FakeListFilePort');
   webSearchBackendContract((scenario) {

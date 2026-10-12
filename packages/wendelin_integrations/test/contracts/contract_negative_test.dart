@@ -386,7 +386,21 @@ void main() {
 
   group('listFilePortContract erkennt', () {
     ListFileContractSetup setup(_BadListFile p) =>
-        (port: p, newHandle: () => 'x.md', delete: null);
+        (port: p, newHandle: () => 'x.md', delete: null, reopen: null);
+
+    test('nicht persistierende Instanz', () async {
+      await expectLater(
+        listFilePortContractChecks(
+          () => (
+            port: _BadListFile(),
+            newHandle: () => 'x.md',
+            delete: null,
+            reopen: _BadListFile.new,
+          ),
+        )[ListFilePortChecks.persisted]!(),
+        _fails,
+      );
+    });
 
     test('korrekte Variante besteht alle Prüfungen', () async {
       for (final check in listFilePortContractChecks(

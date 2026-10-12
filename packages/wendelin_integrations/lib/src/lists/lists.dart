@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
@@ -173,9 +174,28 @@ final class ListsEnv {
   /// Configured lists.
   final List<ListDefinition> Function() definitions;
 
+  final Map<String, Future<void>> _tails = {};
+
+  /// Runs [body] exclusively for [target]: read-modify-write sequences of
+  /// parallel tool calls (and undos) on the same file never interleave.
+  Future<T> exclusive<T>(String target, Future<T> Function() body) {
+    final previous = _tails[target] ?? Future<void>.value();
+    final result = previous.then((_) => body());
+    final tail = result.then<void>((_) {}, onError: (Object _) {});
+    _tails[target] = tail;
+    unawaited(
+      tail.whenComplete(() {
+        if (identical(_tails[target], tail)) _tails.remove(target);
+      }),
+    );
+    return result;
+  }
+
   /// The list [query] names (name or alias, fuzzy). Throws a
-  /// [PortException] listing the candidates if none or several match.
-  ListDefinition resolve(String query) {
+  /// [PortException] listing the candidates if none or several match. With
+  /// [write], a match on whole words only (tier 1, e.g. „Urlaub“ for
+  /// „Urlaub Ideen“) is not taken but asked back.
+  ListDefinition resolve(String query, {required bool write}) {
     final defs = definitions();
     if (defs.isEmpty) {
       throw const PortException(
@@ -198,6 +218,12 @@ final class ListsEnv {
         'Bitte nachfragen, welche Liste gemeint ist.',
       );
     }
+    if (write && m.score == 1) {
+      throw PortException(
+        PortErrorKind.rejected,
+        'Meintest du die Liste „${m.best.single.name}“? Bitte nachfragen.',
+      );
+    }
     return m.best.single;
   }
 
@@ -213,9 +239,17 @@ final class ListsEnv {
       port.write(list.definition.target, list.doc.toString());
 }
 
-/// The item of [items] that [query] names (fuzzy), or a [PortException]
-/// with the candidates.
-ListItem _pickItem(String query, List<ListItem> items, String listName) {
+/// The item of [items] that [query] names (fuzzy).
+///
+/// The highest match tier wins; on the same tier open items win over done
+/// ones. Several equally good items → „Mehrdeutig“; with [write] a match on
+/// whole words only (tier 1, „Milch“ for „Milch (1 l)“) → „Meintest du …?“.
+ListItem _pickItem(
+  String query,
+  List<ListItem> items,
+  String listName, {
+  required bool write,
+}) {
   final m = bestMatches(query, items, (i) => [i.text]);
   if (m.best.isEmpty) {
     throw PortException(
@@ -223,15 +257,27 @@ ListItem _pickItem(String query, List<ListItem> items, String listName) {
       '„$query“ steht nicht auf der Liste $listName.',
     );
   }
-  if (m.best.length > 1) {
+  final open = m.best.where((i) => !i.done).toList();
+  final best = open.isNotEmpty ? open : m.best;
+  // Gleicher Text mehrfach (Duplikat in der Datei): der erste gilt.
+  final distinct = {for (final i in best) foldText(i.text)};
+  if (distinct.length > 1) {
     throw PortException(
       PortErrorKind.rejected,
       'Mehrdeutig: „$query“ passt zu '
-      '${m.best.map((i) => '„${i.text}“').join(', ')}. Bitte nachfragen.',
+      '${best.map((i) => '„${i.text}“').join(', ')}. Bitte nachfragen.',
     );
   }
-  return m.best.single;
+  if (write && m.score == 1) {
+    throw PortException(
+      PortErrorKind.rejected,
+      'Meintest du „${best.first.text}“? Bitte nachfragen.',
+    );
+  }
+  return best.first;
 }
+
+String _flat(String s) => foldText(s).replaceAll(' ', '');
 
 const _listProp = {
   'type': 'string',
@@ -275,6 +321,7 @@ final class ListListsTool extends IntegrationTool {
           'name': d.name,
           if (d.aliases.isNotEmpty) 'aliases': d.aliases,
           'open': l.items.where((i) => !i.done).length,
+          if (!l.existed) 'missing_file': true,
         });
       } on PortException catch (e) {
         result.add({'name': d.name, 'error': e.message});
@@ -324,7 +371,7 @@ final class GetItemsTool extends IntegrationTool {
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
-    final def = env.resolve(args.requireString('list'));
+    final def = env.resolve(args.requireString('list'), write: false);
     final withDone = args.optBool('include_done') ?? false;
     final l = await env.load(def);
     final items = l.items;
@@ -337,6 +384,7 @@ final class GetItemsTool extends IntegrationTool {
             if (withDone || !i.done) {'text': i.text, if (i.done) 'done': true},
         ],
         if (!withDone && items.length > open) 'done_hidden': items.length - open,
+        if (!l.existed) 'missing_file': true,
       })}',
       summary: '${def.name}: $open offen',
     );
@@ -407,18 +455,22 @@ final class AddItemsTool extends IntegrationTool {
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
-    final def = env.resolve(args.requireString('list'));
+    final def = env.resolve(args.requireString('list'), write: true);
     final wanted = _items(args);
+    return env.exclusive(def.target, () => _add(def, wanted));
+  }
+
+  Future<ToolOutcome> _add(ListDefinition def, List<String> wanted) async {
     final l = await env.load(def);
     final doc = l.doc;
     final present = {
       for (final i in l.items)
-        if (!i.done) normalizeText(i.text),
+        if (!i.done) _flat(i.text),
     };
     final added = <String>[];
     final skipped = <String>[];
     for (final text in wanted) {
-      if (present.add(normalizeText(text))) {
+      if (present.add(_flat(text))) {
         added.add(text);
       } else {
         skipped.add(text);
@@ -432,21 +484,20 @@ final class AddItemsTool extends IntegrationTool {
       }, summary: '${def.name}: schon vorhanden');
     }
     var range = l.range;
-    var createdHeading = <String>[];
+    String? heading;
+    var addedBlank = false;
     if (range == null) {
       // Abschnitt fehlt: Überschrift am Dateiende anlegen.
-      createdHeading = [
-        if (doc.lines.isNotEmpty && doc.lines.last.text.trim().isNotEmpty) '',
-        '## ${def.section!.replaceFirst(RegExp(r'^#+\s*'), '')}',
-      ];
-      doc.insert(doc.lines.length, createdHeading);
+      addedBlank =
+          doc.lines.isNotEmpty && doc.lines.last.text.trim().isNotEmpty;
+      heading = '## ${def.section!.replaceFirst(RegExp(r'^#+\s*'), '')}';
+      doc.insert(doc.lines.length, [if (addedBlank) '', heading]);
       range = doc.scope(def.section)!;
     }
     final point = doc.insertionPoint(range);
     final lines = [for (final t in added) '${point.prefix}[ ] $t'];
     doc.insert(point.at, lines);
     await env.save(l);
-    final headingText = createdHeading.isEmpty ? null : createdHeading.last;
     return jsonOutcome(
       {
         'list': def.name,
@@ -456,7 +507,10 @@ final class AddItemsTool extends IntegrationTool {
       summary: '${def.name}: ${added.join(', ')} hinzugefügt',
       undo: UndoAction(
         label: 'Einträge entfernen',
-        run: () => _undoAdd(def, lines, point.at, headingText),
+        run: () => env.exclusive(
+          def.target,
+          () => _undoAdd(def, lines, point.at, heading, addedBlank),
+        ),
       ),
     );
   }
@@ -466,34 +520,48 @@ final class AddItemsTool extends IntegrationTool {
     List<String> lines,
     int near,
     String? heading,
+    bool addedBlank,
   ) async {
     final l = await env.load(def);
     final doc = l.doc;
-    var found = 0;
+    final missing = <String>[];
     for (final text in lines) {
-      final i = doc.findLine(text, near);
-      if (i == null) continue;
+      final r = l.range;
+      final i = r == null
+          ? null
+          : doc.findLine(text, near, from: r.start, to: r.end);
+      if (i == null) {
+        missing.add(text);
+        continue;
+      }
       doc.remove(i, i + 1);
-      found++;
+    }
+    if (missing.length == lines.length) {
+      throw const PortException(
+        PortErrorKind.notFound,
+        'Rückgängig nicht möglich: Die Einträge wurden inzwischen geändert '
+        'oder entfernt',
+      );
     }
     if (heading != null) {
-      final h = doc.findLine(heading, doc.lines.length);
       final r = doc.scope(def.section);
       final empty =
           r != null &&
           doc.lines.sublist(r.start, r.end).every((x) => x.text.trim().isEmpty);
-      if (h != null && empty) {
-        final blankBefore = h > 0 && doc.lines[h - 1].text.isEmpty;
-        doc.remove(blankBefore ? h - 1 : h, r.end);
+      if (r != null && empty && doc.lines[r.start - 1].text == heading) {
+        final h = r.start - 1;
+        final blank = addedBlank && h > 0 && doc.lines[h - 1].text.isEmpty;
+        doc.remove(blank ? h - 1 : h, r.end);
       }
     }
-    if (found == 0) {
-      throw const PortException(
+    await env.save(l);
+    if (missing.isNotEmpty) {
+      throw PortException(
         PortErrorKind.notFound,
-        'Die Einträge wurden inzwischen geändert oder entfernt',
+        'Nur teilweise rückgängig: ${missing.length} von ${lines.length} '
+        'Einträgen wurden inzwischen geändert und bleiben stehen',
       );
     }
-    await env.save(l);
   }
 
   @override
@@ -538,45 +606,49 @@ final class CompleteItemTool extends IntegrationTool {
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
-    final def = env.resolve(args.requireString('list'));
+    final def = env.resolve(args.requireString('list'), write: true);
     final query = args.requireString('item');
-    final l = await env.load(def);
-    final open = l.items.where((i) => !i.done).toList();
-    final ListItem item;
-    try {
-      item = _pickItem(query, open, def.name);
-    } on PortException catch (e) {
-      if (e.kind != PortErrorKind.notFound) rethrow;
-      final done = l.items.where((i) => i.done);
-      final m = bestMatches(query, done, (i) => [i.text]);
-      if (m.best.isEmpty) rethrow;
-      return jsonOutcome({
-        'list': def.name,
-        'already_done': m.best.first.text,
-      }, summary: '${m.best.first.text} war schon erledigt');
-    }
-    l.doc.setDone(item.line, true);
-    final checked = l.doc.lines[item.line].text;
-    await env.save(l);
-    return jsonOutcome(
-      {'list': def.name, 'completed': item.text},
-      summary: '${def.name}: ${item.text} erledigt',
-      undo: UndoAction(
-        label: 'Wieder offen',
-        run: () async {
-          final fresh = await env.load(def);
-          final i = fresh.doc.findLine(checked, item.line);
-          if (i == null) {
-            throw const PortException(
-              PortErrorKind.notFound,
-              'Der Eintrag wurde inzwischen geändert oder entfernt',
-            );
-          }
-          fresh.doc.setDone(i, false);
-          await env.save(fresh);
-        },
-      ),
-    );
+    return env.exclusive(def.target, () async {
+      final l = await env.load(def);
+      final item = _pickItem(query, l.items, def.name, write: true);
+      if (item.done) {
+        return jsonOutcome({
+          'list': def.name,
+          'already_done': item.text,
+        }, summary: '${item.text} war schon erledigt');
+      }
+      l.doc.setDone(item.line, true);
+      final checked = l.doc.lines[item.line].text;
+      await env.save(l);
+      return jsonOutcome(
+        {'list': def.name, 'completed': item.text},
+        summary: '${def.name}: ${item.text} erledigt',
+        undo: UndoAction(
+          label: 'Wieder offen',
+          run: () => env.exclusive(def.target, () async {
+            final fresh = await env.load(def);
+            final r = fresh.range;
+            final i = r == null
+                ? null
+                : fresh.doc.findLine(
+                    checked,
+                    item.line,
+                    from: r.start,
+                    to: r.end,
+                  );
+            if (i == null) {
+              throw const PortException(
+                PortErrorKind.notFound,
+                'Rückgängig nicht möglich: Der Eintrag wurde inzwischen '
+                'geändert oder entfernt',
+              );
+            }
+            fresh.doc.setDone(i, false);
+            await env.save(fresh);
+          }),
+        ),
+      );
+    });
   }
 
   @override
@@ -623,56 +695,82 @@ final class RemoveItemTool extends IntegrationTool {
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
-    final def = env.resolve(args.requireString('list'));
+    final def = env.resolve(args.requireString('list'), write: true);
     final query = args.requireString('item');
-    final l = await env.load(def);
-    final items = l.items;
-    // Offene Einträge haben Vorrang vor erledigten mit gleichem Text.
-    final open = items.where((i) => !i.done).toList();
-    final ListItem item;
-    try {
-      item = _pickItem(query, open, def.name);
-    } on PortException catch (e) {
-      if (e.kind != PortErrorKind.notFound) rethrow;
-      return _remove(l, _pickItem(query, items, def.name));
-    }
-    return _remove(l, item);
+    return env.exclusive(def.target, () async {
+      final l = await env.load(def);
+      final item = _pickItem(query, l.items, def.name, write: true);
+      return _remove(l, item);
+    });
   }
 
   Future<ToolOutcome> _remove(LoadedList l, ListItem item) async {
     final def = l.definition;
-    final anchor = item.line > 0 ? l.doc.lines[item.line - 1].text : null;
-    final anchorEol = item.line > 0 ? l.doc.lines[item.line - 1].eol : null;
-    final removed = l.doc.remove(item.line, item.end);
+    final doc = l.doc;
+    // Anker: nächste nicht leere Zeile davor (mit Zahl der Leerzeilen
+    // dazwischen) und danach; gesucht wird nur im Abschnitt.
+    var p = item.line - 1;
+    while (p >= 0 && doc.lines[p].text.trim().isEmpty) {
+      p--;
+    }
+    final before = p >= 0 ? doc.lines[p].text : null;
+    final gapBefore = item.line - p - 1;
+    var n = item.end;
+    while (n < doc.lines.length && doc.lines[n].text.trim().isEmpty) {
+      n++;
+    }
+    final after = n < doc.lines.length ? doc.lines[n].text : null;
+    final gapAfter = n - item.end;
+    final terminator = item.line > 0 ? doc.lines[item.line - 1].eol : null;
+    final removed = doc.remove(item.line, item.end);
     await env.save(l);
     return jsonOutcome(
       {'list': def.name, 'removed': item.text},
       summary: '${def.name}: ${item.text} entfernt',
       undo: UndoAction(
         label: 'Wiederherstellen',
-        run: () async {
+        run: () => env.exclusive(def.target, () async {
           final fresh = await env.load(def);
-          final doc = fresh.doc;
-          var at = item.line;
-          if (anchor != null) {
-            final a = doc.findLine(anchor, item.line - 1);
-            if (a != null) at = a + 1;
+          final d = fresh.doc;
+          final r = fresh.range ?? (start: d.lines.length, end: d.lines.length);
+          bool blank(int i) => d.lines[i].text.trim().isEmpty;
+          int? at;
+          final b = before == null
+              ? null
+              : d.findLine(before, p, from: r.start, to: r.end);
+          if (b != null) {
+            at = b + 1;
+            for (var k = 0; k < gapBefore && at! < r.end && blank(at); k++) {
+              at++;
+            }
+          } else if (after != null) {
+            final a = d.findLine(after, item.line, from: r.start, to: r.end);
+            if (a != null) {
+              at = a;
+              for (
+                var k = 0;
+                k < gapAfter && at! > r.start && blank(at - 1);
+                k++
+              ) {
+                at--;
+              }
+            }
           }
-          if (at > doc.lines.length) at = doc.lines.length;
-          final atEnd = at == doc.lines.length;
-          doc.insert(
+          at ??= before == null ? r.start : item.line.clamp(r.start, r.end);
+          final atEnd = at >= d.lines.length;
+          d.insert(
             at,
-            [for (final r in removed) r.text],
+            [for (final x in removed) x.text],
             eols: [
-              for (final r in removed)
-                r.eol.isEmpty && !atEnd ? doc.defaultEol : r.eol,
+              for (final x in removed)
+                x.eol.isEmpty && !atEnd ? d.defaultEol : x.eol,
             ],
-            terminator: anchorEol == null || anchorEol.isEmpty
+            terminator: terminator == null || terminator.isEmpty
                 ? null
-                : anchorEol,
+                : terminator,
           );
           await env.save(fresh);
-        },
+        }),
       ),
     );
   }
@@ -713,33 +811,42 @@ final class ClearCompletedTool extends IntegrationTool {
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
-    final def = env.resolve(args.requireString('list'));
-    final l = await env.load(def);
-    final items = l.items;
-    final openLines = {
-      for (final i in items)
-        if (!i.done) i.line,
-    };
-    // Erledigte Einträge samt Unterzeilen, außer sie enthalten noch offene
-    // Unteraufgaben; überlappende Bereiche zusammenfassen, von hinten
-    // löschen.
-    final done = [
-      for (final i in items)
-        if (i.done && !openLines.any((o) => o > i.line && o < i.end)) i,
-    ];
-    final ranges = <(int, int)>[];
-    for (final i in done) {
-      if (ranges.isNotEmpty && i.line < ranges.last.$2) continue;
-      ranges.add((i.line, i.end));
-    }
-    for (final (start, end) in ranges.reversed) {
-      l.doc.remove(start, end);
-    }
-    if (done.isNotEmpty) await env.save(l);
-    return jsonOutcome({
-      'list': def.name,
-      'removed': done.length,
-    }, summary: '${def.name}: ${done.length} erledigte entfernt');
+    final def = env.resolve(args.requireString('list'), write: true);
+    return env.exclusive(def.target, () async {
+      final l = await env.load(def);
+      final items = l.items;
+      final openLines = {
+        for (final i in items)
+          if (!i.done) i.line,
+      };
+      bool hasOpenChild(ListItem i) =>
+          openLines.any((o) => o > i.line && o < i.end);
+      // Erledigte Einträge samt Unterzeilen, außer sie enthalten noch offene
+      // Unteraufgaben; überlappende Bereiche zusammenfassen, von hinten
+      // löschen.
+      final done = [
+        for (final i in items)
+          if (i.done && !hasOpenChild(i)) i,
+      ];
+      final kept = [
+        for (final i in items)
+          if (i.done && hasOpenChild(i)) i.text,
+      ];
+      final ranges = <(int, int)>[];
+      for (final i in done) {
+        if (ranges.isNotEmpty && i.line < ranges.last.$2) continue;
+        ranges.add((i.line, i.end));
+      }
+      for (final (start, end) in ranges.reversed) {
+        l.doc.remove(start, end);
+      }
+      if (done.isNotEmpty) await env.save(l);
+      return jsonOutcome({
+        'list': def.name,
+        'removed': done.length,
+        if (kept.isNotEmpty) 'kept': kept,
+      }, summary: '${def.name}: ${done.length} erledigte entfernt');
+    });
   }
 
   @override

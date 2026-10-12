@@ -58,37 +58,61 @@ String stemWord(String w) {
   return s;
 }
 
-/// Stem of a whole name: filler words dropped, `ae/oe/ue` read as
-/// umlauts, words stemmed and joined without spaces („Smart SSH“ =
-/// „SmartSSH“).
-String stemName(String s) {
-  final words = normalizeText(s)
-      .replaceAll('ae', 'a')
-      .replaceAll('oe', 'o')
-      .replaceAll('ue', 'u')
-      .split(' ')
-      .where((w) => w.isNotEmpty);
-  final kept = words.where((w) => !_fillers.contains(w)).toList();
-  return (kept.isEmpty ? words : kept).map(stemWord).join();
+/// [normalizeText] plus `ae/oe/ue` read as umlauts („Buecher“ = „Bücher“);
+/// used everywhere names or items are compared.
+String foldText(String s) =>
+    normalizeText(s)
+        .replaceAll('ae', 'a')
+        .replaceAll('oe', 'o')
+        .replaceAll('ue', 'u');
+
+final class _Key {
+  _Key(String s) {
+    final folded = foldText(s);
+    flat = folded.replaceAll(' ', '');
+    final words = folded.split(' ').where((w) => w.isNotEmpty).toList();
+    final kept = words.where((w) => !_fillers.contains(w)).toList();
+    final use = kept.isEmpty ? words : kept;
+    stems = use.map(stemWord).toList();
+    joined = stemWord(use.join());
+  }
+
+  late final String flat;
+  late final List<String> stems;
+  late final String joined;
 }
 
-/// How well [query] matches [candidate]: 3 = equal ignoring case,
-/// umlauts and punctuation; 2 = same stem; 1 = one stem contains the
-/// other (at least 3 characters); 0 = no match.
-int matchScore(String query, String candidate) {
-  final q = normalizeText(query).replaceAll(' ', '');
-  final c = normalizeText(candidate).replaceAll(' ', '');
-  if (q.isEmpty || c.isEmpty) return 0;
-  if (q == c) return 3;
-  final qs = stemName(query);
-  final cs = stemName(candidate);
-  if (qs.isEmpty || cs.isEmpty) return 0;
-  if (qs == cs) return 2;
-  if (qs.length >= 3 &&
-      cs.length >= 3 &&
-      (qs.contains(cs) || cs.contains(qs))) {
-    return 1;
+/// Whether [part] occurs as contiguous run of whole words in [whole].
+bool _wordRun(List<String> part, List<String> whole) {
+  if (part.isEmpty || part.length >= whole.length) return false;
+  if (part.join().length < 3) return false;
+  for (var i = 0; i + part.length <= whole.length; i++) {
+    var ok = true;
+    for (var k = 0; k < part.length && ok; k++) {
+      ok = whole[i + k] == part[k];
+    }
+    if (ok) return true;
   }
+  return false;
+}
+
+/// Stem of a whole name: filler words dropped, words stemmed and joined
+/// without spaces („Smart SSH“ = „SmartSSH“).
+String stemName(String s) => _Key(s).stems.join();
+
+/// Match tier of [query] against [candidate]:
+/// 3 = equal ignoring case, umlauts, punctuation and spaces;
+/// 2 = same word stems (plural/singular, „Einkaufsliste“ ≈ „Einkaufen“);
+/// 1 = all words of one occur as whole words in the other („Urlaub“ ≈
+/// „Urlaub Ideen“; never inside a compound like „Hausarbeit“);
+/// 0 = no match.
+int matchScore(String query, String candidate) {
+  final a = _Key(query);
+  final b = _Key(candidate);
+  if (a.flat.isEmpty || b.flat.isEmpty) return 0;
+  if (a.flat == b.flat) return 3;
+  if (a.stems.join() == b.stems.join() || a.joined == b.joined) return 2;
+  if (_wordRun(a.stems, b.stems) || _wordRun(b.stems, a.stems)) return 1;
   return 0;
 }
 

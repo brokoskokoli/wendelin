@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:wendelin_integrations/wendelin_integrations.dart';
+import 'package:wendelin_integrations/src/lists/markdown_list.dart';
 
 /// Adds [items] the way `lists__add_items` does.
 String add(String content, List<String> items, {String? section}) {

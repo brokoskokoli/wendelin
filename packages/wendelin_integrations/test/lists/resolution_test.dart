@@ -1,4 +1,6 @@
 import 'package:test/test.dart';
+import 'package:wendelin_integrations/src/lists/lists.dart';
+import 'package:wendelin_integrations/src/lists/matching.dart';
 import 'package:wendelin_integrations/testing.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
@@ -62,7 +64,7 @@ void main() {
   };
   resolved.forEach((query, id) {
     test('„$query“ → $id', () {
-      expect(env.resolve(query).id, id);
+      expect(env.resolve(query, write: false).id, id);
     });
   });
 
@@ -74,7 +76,7 @@ void main() {
 
   test('mehrdeutig: „Urlaub“ nennt beide Kandidaten', () {
     expect(
-      () => env.resolve('Urlaub'),
+      () => env.resolve('Urlaub', write: false),
       fails(PortErrorKind.rejected, [
         'Mehrdeutig',
         'Urlaub Packliste',
@@ -92,10 +94,10 @@ void main() {
       ],
     );
     expect(
-      () => e2.resolve('Einkaufsliste'),
+      () => e2.resolve('Einkaufsliste', write: false),
       fails(PortErrorKind.rejected, ['Rewe', 'Aldi']),
     );
-    expect(e2.resolve('einkaufen aldi').id, '2');
+    expect(e2.resolve('einkaufen aldi', write: false).id, '2');
   });
 
   test('genauer Name schlägt Teiltreffer', () {
@@ -106,24 +108,27 @@ void main() {
         ListDefinition(id: '2', name: 'Einkaufen dm', target: '2'),
       ],
     );
-    expect(e2.resolve('Einkaufen').id, '1');
-    expect(e2.resolve('Einkaufsliste').id, '1');
+    expect(e2.resolve('Einkaufen', write: false).id, '1');
+    expect(e2.resolve('Einkaufsliste', write: false).id, '1');
   });
 
   test('unbekannt: Fehler mit vorhandenen Listen', () {
     expect(
-      () => env.resolve('Weihnachten'),
+      () => env.resolve('Weihnachten', write: false),
       fails(PortErrorKind.notFound, ['Weihnachten', 'Einkaufen', 'Drogerie']),
     );
     expect(
-      () => env.resolve('xy'),
+      () => env.resolve('xy', write: false),
       fails(PortErrorKind.notFound, ['Vorhanden']),
     );
   });
 
   test('keine Listen eingerichtet', () {
     expect(
-      () => ListsEnv(FakeListFilePort(), () => []).resolve('Einkaufen'),
+      () => ListsEnv(
+        FakeListFilePort(),
+        () => [],
+      ).resolve('Einkaufen', write: false),
       fails(PortErrorKind.notFound, ['keine Listen']),
     );
   });

@@ -7,11 +7,14 @@ import '../src/lists/lists.dart';
 
 /// What [listFilePortContract] needs: the port, a way to get a handle for
 /// a file that does **not** exist yet (Android: a new document name inside
-/// a granted SAF folder), and optional cleanup of created files.
+/// a granted SAF folder), optional cleanup of created files, and optionally
+/// a second, independent port instance on the same storage ([reopen], e.g.
+/// after an app restart) to check that writes are really persisted.
 typedef ListFileContractSetup = ({
   ListFilePort port,
   FutureOr<String> Function() newHandle,
   FutureOr<void> Function(String handle)? delete,
+  FutureOr<ListFilePort> Function()? reopen,
 });
 
 /// Creates the setup for one check.
@@ -38,6 +41,9 @@ abstract final class ListFilePortChecks {
 
   /// Large content (300 KB).
   static const large = 'großer Inhalt (300 KB)';
+
+  /// A second port instance reads what the first wrote (if [reopen] given).
+  static const persisted = 'zweite Port-Instanz liest den Inhalt wieder';
 }
 
 /// Reusable contract suite for every [ListFilePort] (`FakeListFilePort`,
@@ -57,12 +63,17 @@ Map<String, Future<void> Function()> listFilePortContractChecks(
   ListFilePortFactory create,
 ) {
   Future<void> withFile(
-    Future<void> Function(ListFilePort port, String handle) body,
-  ) async {
+    Future<void> Function(ListFilePort port, String handle) body, {
+    Future<void> Function(ListFileContractSetup s, String handle)? full,
+  }) async {
     final s = await create();
     final handle = await s.newHandle();
     try {
-      await body(s.port, handle);
+      if (full != null) {
+        await full(s, handle);
+      } else {
+        await body(s.port, handle);
+      }
     } finally {
       if (s.delete != null && await s.port.exists(handle)) {
         await s.delete!(handle);
@@ -115,6 +126,18 @@ Map<String, Future<void> Function()> listFilePortContractChecks(
       await roundTrip(p, h, '');
       expect(await p.exists(h), isTrue);
     }),
+    ListFilePortChecks.persisted: () => withFile(
+      (_, _) async {},
+      full: (s, h) async {
+        // Ohne zweite Instanz nicht prüfbar.
+        if (s.reopen == null) return;
+        const content = '# Liste\r\n- [ ] persistiert\r\n';
+        await s.port.write(h, content);
+        final second = await s.reopen!();
+        expect(await second.exists(h), isTrue);
+        expect(await second.read(h), content);
+      },
+    ),
     ListFilePortChecks.large: () => withFile((p, h) async {
       final big = List.generate(
         10000,

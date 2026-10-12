@@ -22,9 +22,18 @@ export 'src/common/base_tool.dart' show IntegrationTool;
 export 'src/common/port_exception.dart';
 export 'src/common/time.dart' show LocalDate, timeZoneLocation;
 export 'src/common/tool_args.dart' show InvalidArgumentsException, ToolArgs;
-export 'src/lists/lists.dart';
-export 'src/lists/markdown_list.dart';
-export 'src/lists/matching.dart';
+export 'src/lists/lists.dart'
+    show
+        AddItemsTool,
+        ClearCompletedTool,
+        CompleteItemTool,
+        GetItemsTool,
+        ListDefinition,
+        ListFilePort,
+        ListListsTool,
+        ListsIntegration,
+        RemoveItemTool,
+        listDataNotice;
 export 'src/memory/memory.dart';
 export 'src/web/fetch_guard.dart';
 export 'src/web/web_fetcher.dart';

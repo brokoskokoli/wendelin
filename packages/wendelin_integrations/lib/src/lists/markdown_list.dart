@@ -12,7 +12,7 @@ final _task = RegExp(
 );
 final _listLine = RegExp(r'^[ \t]*([-*+]|\d{1,9}[.)])([ \t]|$)');
 final _heading = RegExp(r'^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$');
-final _fence = RegExp(r'^ {0,3}(`{3,}|~{3,})');
+final _fence = RegExp(r'^[ \t]*(`{3,}|~{3,})');
 
 /// One line of a file with its own line ending (`\n`, `\r\n`, `\r` or
 /// empty for a last line without line break).
@@ -99,7 +99,7 @@ final class MarkdownList {
   void _analyse() {
     _ignored.clear();
     var i = 0;
-    final first = lines.isEmpty ? null : lines.first.text.replaceFirst('﻿', '');
+    final first = lines.isEmpty ? null : _t(0);
     if (first == '---') {
       final close = lines.indexWhere(
         (l) => l.text == '---' || l.text == '...',
@@ -114,13 +114,13 @@ final class MarkdownList {
     }
     String? fence;
     for (; i < lines.length; i++) {
-      final m = _fence.firstMatch(lines[i].text);
+      final m = _fence.firstMatch(_t(i));
       if (fence != null) {
         _ignored.add(i);
         if (m != null &&
             m[1]![0] == fence[0] &&
             m[1]!.length >= fence.length &&
-            lines[i].text.trim() == m[1]) {
+            _t(i).trim() == m[1]) {
           fence = null;
         }
       } else if (m != null) {
@@ -148,12 +148,17 @@ final class MarkdownList {
     return n;
   }
 
-  bool _blank(int i) => lines[i].text.trim().isEmpty;
+  bool _blank(int i) => _t(i).trim().isEmpty;
+
+  /// Text of line [i] without a leading BOM (first line only).
+  String _t(int i) => i == 0 && lines[0].text.startsWith('\uFEFF')
+      ? lines[0].text.substring(1)
+      : lines[i].text;
 
   /// Heading level of line [i] (1–6), or `null`.
   int? headingLevel(int i) {
     if (_ignored.contains(i)) return null;
-    final m = _heading.firstMatch(lines[i].text);
+    final m = _heading.firstMatch(_t(i));
     return m == null ? null : m[1]!.length;
   }
 
@@ -162,12 +167,12 @@ final class MarkdownList {
   /// or `null` if the heading does not exist.
   ({int start, int end})? scope(String? section) {
     if (section == null) return (start: 0, end: lines.length);
-    final wanted = normalizeText(section.replaceFirst(RegExp(r'^#+\s*'), ''));
+    final wanted = foldText(section.replaceFirst(RegExp(r'^#+\s*'), ''));
     for (var i = 0; i < lines.length; i++) {
       final level = headingLevel(i);
       if (level == null) continue;
-      final title = _heading.firstMatch(lines[i].text)![2] ?? '';
-      if (normalizeText(title) != wanted) continue;
+      final title = _heading.firstMatch(_t(i))![2] ?? '';
+      if (foldText(title) != wanted) continue;
       var end = i + 1;
       while (end < lines.length) {
         final l = headingLevel(end);
@@ -185,9 +190,9 @@ final class MarkdownList {
     final result = <ListItem>[];
     for (var i = r.start; i < r.end; i++) {
       if (_ignored.contains(i)) continue;
-      final m = _task.firstMatch(lines[i].text);
+      final m = _task.firstMatch(_t(i));
       if (m == null) continue;
-      final indent = _indentOf(lines[i].text);
+      final indent = _indentOf(_t(i));
       result.add(
         ListItem._(
           i,
@@ -211,7 +216,7 @@ final class MarkdownList {
         k++;
         continue;
       }
-      if (_ignored.contains(k) || _indentOf(lines[k].text) <= indent) break;
+      if (_ignored.contains(k) || _indentOf(_t(k)) <= indent) break;
       if (headingLevel(k) != null) break;
       k++;
       end = k;
@@ -231,14 +236,14 @@ final class MarkdownList {
       }
       return (at: at, prefix: '- ');
     }
-    final m = _task.firstMatch(lines[first.line].text)!;
+    final m = _task.firstMatch(_t(first.line))!;
     var at = first.line;
     while (at < range.end) {
       if (_blank(at) || _ignored.contains(at) || headingLevel(at) != null) {
         break;
       }
-      final isList = _listLine.hasMatch(lines[at].text);
-      if (!isList && _indentOf(lines[at].text) <= first.indent) break;
+      final isList = _listLine.hasMatch(_t(at));
+      if (!isList && _indentOf(_t(at)) <= first.indent) break;
       at++;
     }
     return (at: at, prefix: '${m[1]}${m[2]}${m[3]}');
@@ -288,9 +293,11 @@ final class MarkdownList {
 
   /// Sets the checkbox of the task line [i].
   void setDone(int i, bool done) {
-    final m = _task.firstMatch(lines[i].text)!;
-    final box = m[1]!.length + m[2]!.length + m[3]!.length + 1;
+    final m = _task.firstMatch(_t(i))!;
+    var box = m[1]!.length + m[2]!.length + m[3]!.length + 1;
+    final bom = lines[i].text.length - _t(i).length;
     final t = lines[i].text;
+    box += bom;
     lines[i].text =
         '${t.substring(0, box)}${done ? 'x' : ' '}${t.substring(box + 1)}';
   }
