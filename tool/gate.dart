@@ -58,6 +58,15 @@ Future<void> main(List<String> args) async {
   for (final dir in packages) {
     final name = dir.split('/').last;
     if (only.isNotEmpty && !only.contains(name)) continue;
+    // Noch leeres Paket (nur Gerüst, kein Code unter lib/src): überspringen.
+    final src = Directory('$dir/lib/src');
+    final hasCode =
+        src.existsSync() &&
+        src.listSync(recursive: true).any((f) => f.path.endsWith('.dart'));
+    if (!hasCode && name != 'evals') {
+      stdout.writeln('\n== test $name: noch kein Code, übersprungen');
+      continue;
+    }
     if (!Directory('$dir/test').existsSync() ||
         Directory('$dir/test')
             .listSync(recursive: true)
