@@ -1,0 +1,279 @@
+import 'dart:async';
+
+import 'package:wendelin_core/wendelin_core.dart';
+
+import '../policy/risk_policy.dart';
+import '../validation/argument_validator.dart';
+import 'confirmation_turns.dart';
+import 'result_shaper.dart';
+import 'tool_audit.dart';
+
+/// Executes the tool calls of one model turn ([ToolInvoker] for the agent).
+///
+/// Per call: look up the tool, decode and validate the arguments, ask the
+/// [RiskPolicy], ask the user if needed, run the tool with a [timeout], turn
+/// exceptions into readable error outcomes, truncate and wrap the result
+/// ([ResultShaper]) and report to the [audit] sink.
+///
+/// Independent calls run in parallel; confirmations are asked strictly one
+/// after another in call order. Every call gets one [ToolStarted] (all at
+/// the start, in call order) and one [ToolFinished]; the [ToolFinished]
+/// events are emitted in call order, so results reach the model in the
+/// order of the calls. Cancellation follows the [ToolInvoker] contract.
+final class ToolExecutor implements ToolInvoker {
+  /// Creates an executor over [catalog].
+  ToolExecutor({
+    required this.catalog,
+    RiskPolicy? policy,
+    this.validator = const ArgumentValidator(),
+    this.audit,
+    this.timeout = const Duration(seconds: 20),
+    this.shaper = const ResultShaper(),
+  }) : policy = policy ?? RiskPolicy();
+
+  /// Where tools are looked up.
+  final ToolCatalog catalog;
+
+  /// Decides allow / confirm / deny.
+  final RiskPolicy policy;
+
+  /// Checks arguments against the tool's input schema.
+  final ArgumentValidator validator;
+
+  /// Optional audit log.
+  final ToolAuditSink? audit;
+
+  /// Maximum run time of a single tool.
+  final Duration timeout;
+
+  /// Truncates (default 8000 characters) and wraps tool results.
+  final ResultShaper shaper;
+
+  @override
+  Stream<ToolInvocationEvent> invokeAll(
+    List<ToolCallBlock> calls,
+    ToolContext ctx,
+  ) {
+    final out = StreamController<ToolInvocationEvent>();
+    Future<void> run() async {
+      final turns = ConfirmationTurns(ctx.cancel);
+      final running = <Future<ToolFinished>>[];
+      for (final call in calls) {
+        out.add(ToolStarted(call));
+        running.add(_run(call, ctx, turns, out.add));
+      }
+      for (final finished in running) {
+        out.add(await finished);
+      }
+      await out.close();
+    }
+
+    out.onListen = () => unawaited(run());
+    return out.stream;
+  }
+
+  Future<ToolFinished> _run(
+    ToolCallBlock call,
+    ToolContext ctx,
+    ConfirmationTurns turns,
+    void Function(ToolInvocationEvent) emit,
+  ) async {
+    final start = ctx.clock.now();
+    _Result result;
+    try {
+      result = await _process(call, ctx, turns, emit);
+    } on Object catch (e) {
+      // Defensive: a broken catalog, schema or confirmation text must not
+      // break the stream or leave the call without a result.
+      result = (
+        ToolOutcome.error('Interner Fehler bei ${call.name}: ${_brief(e)}'),
+        AuditStatus.error,
+        AuditDecision.none,
+      );
+    }
+    final (outcome, status, decision) = result;
+    final duration = ctx.clock.now().difference(start);
+    _audit(
+      ToolAuditEntry(
+        sessionId: ctx.sessionId,
+        callId: call.id,
+        tool: call.name,
+        argumentsJson: call.argumentsJson,
+        decision: decision,
+        status: status,
+        duration: duration,
+      ),
+    );
+    return ToolFinished(call, outcome, duration);
+  }
+
+  /// Everything up to the confirmation question runs synchronously, so the
+  /// confirmation turns are taken in call order.
+  Future<_Result> _process(
+    ToolCallBlock call,
+    ToolContext ctx,
+    ConfirmationTurns turns,
+    void Function(ToolInvocationEvent) emit,
+  ) async {
+    if (ctx.cancel.isCancelled) return _cancelled(AuditDecision.none);
+    final tool = catalog.lookup(call.name);
+    if (tool == null) {
+      return (
+        ToolOutcome.error(unknownToolText(call.name)),
+        AuditStatus.unknownTool,
+        AuditDecision.none,
+      );
+    }
+    final args = _decode(call);
+    if (args == null) {
+      return (
+        ToolOutcome.error(invalidJsonText),
+        AuditStatus.invalidArguments,
+        AuditDecision.none,
+      );
+    }
+    final problem = validator.validate(args, tool.inputSchema);
+    if (problem != null) {
+      return (
+        ToolOutcome.error(
+          'Ungültige Argumente für ${tool.name}: $problem. '
+          'Bitte korrigieren und erneut aufrufen.',
+        ),
+        AuditStatus.invalidArguments,
+        AuditDecision.none,
+      );
+    }
+
+    final policyDecision = policy.decide(tool, ctx.sessionId);
+    var decision = AuditDecision.allowed;
+    switch (policyDecision.action) {
+      case PolicyAction.deny:
+        return (
+          ToolOutcome.error(policyDecision.reason ?? RiskPolicy.deniedReason),
+          AuditStatus.denied,
+          AuditDecision.denied,
+        );
+      case PolicyAction.confirm:
+        final question = ConfirmationNeeded(
+          call,
+          tool.describeForConfirmation(args),
+          Completer<bool>(),
+        );
+        final approved = await turns.ask(question, emit);
+        if (ctx.cancel.isCancelled) return _cancelled(AuditDecision.declined);
+        if (!approved) {
+          return (
+            ToolOutcome.declined(),
+            AuditStatus.declined,
+            AuditDecision.declined,
+          );
+        }
+        decision = AuditDecision.confirmed;
+      case PolicyAction.allow:
+    }
+    // No await since the last cancellation check: a tool is never entered
+    // after cancellation.
+    final (outcome, status) = await _execute(tool, args, ctx);
+    return (outcome, status, decision);
+  }
+
+  Future<(ToolOutcome, AuditStatus)> _execute(
+    Tool tool,
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async {
+    // Own token per call: cancelled by the run's token or by the timeout.
+    final token = CancelToken();
+    unawaited(ctx.cancel.whenCancelled.then((_) => token.cancel()));
+    final callCtx = ToolContext(
+      sessionId: ctx.sessionId,
+      clock: ctx.clock,
+      locale: ctx.locale,
+      timeZone: ctx.timeZone,
+      cancel: token,
+    );
+
+    final result = Completer<(ToolOutcome, AuditStatus)>();
+    void finish(ToolOutcome outcome, AuditStatus status) {
+      if (!result.isCompleted) result.complete((outcome, status));
+    }
+
+    final timer = Timer(timeout, () {
+      finish(
+        ToolOutcome.error(
+          'Zeitüberschreitung: ${tool.name} hat nicht innerhalb von '
+          '${_format(timeout)} geantwortet.',
+        ),
+        AuditStatus.timeout,
+      );
+      token.cancel();
+    });
+    unawaited(
+      Future.sync(() => tool.execute(args, callCtx)).then(
+        // A tool that completed despite cancellation keeps its real outcome:
+        // its effect has happened.
+        (o) => finish(
+          shaper.shape(tool.name, o),
+          o.isError ? AuditStatus.error : AuditStatus.ok,
+        ),
+        onError: (Object e) {
+          if (e is CancelledException || ctx.cancel.isCancelled) {
+            finish(ToolOutcome.cancelled(), AuditStatus.cancelled);
+          } else {
+            finish(
+              ToolOutcome.error('Fehler bei ${tool.name}: ${_brief(e)}'),
+              AuditStatus.error,
+            );
+          }
+        },
+      ),
+    );
+    try {
+      return await result.future;
+    } finally {
+      timer.cancel();
+    }
+  }
+
+  void _audit(ToolAuditEntry entry) {
+    final sink = audit;
+    if (sink == null) return;
+    try {
+      sink.record(entry);
+    } on Object catch (e, s) {
+      // Not swallowed: reported to the zone, but the run goes on.
+      Zone.current.handleUncaughtError(e, s);
+    }
+  }
+
+  /// Error text for a call to an unknown or inactive tool.
+  static String unknownToolText(String name) =>
+      'Unbekanntes Tool „$name“. Nutze nur Tools aus der Tool-Liste.';
+
+  /// Error text for arguments that are no JSON object.
+  static const invalidJsonText =
+      'Die Argumente sind kein gültiges JSON-Objekt. Bitte die Argumente als '
+      'JSON-Objekt übergeben, z. B. {"feld": "wert"}.';
+
+  /// Empty arguments are accepted as `{}` (some providers send "" for tools
+  /// without parameters).
+  static Map<String, Object?>? _decode(ToolCallBlock call) =>
+      call.argumentsJson.trim().isEmpty
+      ? <String, Object?>{}
+      : call.tryDecodeArguments();
+
+  /// First line of [e], at most 200 characters, never a stack trace.
+  static String _brief(Object e) {
+    final line = e.toString().split('\n').first.trim();
+    return line.length > 200 ? '${line.substring(0, 199)}…' : line;
+  }
+
+  static String _format(Duration d) => d.inMilliseconds % 1000 == 0
+      ? '${d.inSeconds} s'
+      : '${d.inMilliseconds} ms';
+
+  static _Result _cancelled(AuditDecision decision) =>
+      (ToolOutcome.cancelled(), AuditStatus.cancelled, decision);
+}
+
+typedef _Result = (ToolOutcome, AuditStatus, AuditDecision);
