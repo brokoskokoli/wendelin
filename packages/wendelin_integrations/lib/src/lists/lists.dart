@@ -174,10 +174,17 @@ final class ListsEnv {
   /// Configured lists.
   final List<ListDefinition> Function() definitions;
 
-  final Map<String, Future<void>> _tails = {};
+  /// Queue tails per file handle, shared by all instances in the process
+  /// (the app may rebuild the integration while calls are running).
+  static final Map<String, Future<void>> _tails = {};
 
-  /// Runs [body] exclusively for [target]: read-modify-write sequences of
-  /// parallel tool calls (and undos) on the same file never interleave.
+  /// Number of files with a pending queue (for tests; 0 when idle).
+  static int get pendingQueues => _tails.length;
+
+  /// Runs [body] exclusively for [target], process-wide: read-modify-write
+  /// sequences of parallel tool calls (and undos) on the same file never
+  /// interleave, even across integration instances. A port call that hangs
+  /// blocks this file's queue, so ports should time out.
   Future<T> exclusive<T>(String target, Future<T> Function() body) {
     final previous = _tails[target] ?? Future<void>.value();
     final result = previous.then((_) => body());
@@ -610,7 +617,9 @@ final class CompleteItemTool extends IntegrationTool {
     final query = args.requireString('item');
     return env.exclusive(def.target, () async {
       final l = await env.load(def);
-      final item = _pickItem(query, l.items, def.name, write: true);
+      // Abhaken ist rückgängig machbar: ein eindeutiger Treffer über ganze
+      // Wörter („Milch“ → „Milch (1 l)“) wird ohne Rückfrage genommen.
+      final item = _pickItem(query, l.items, def.name, write: false);
       if (item.done) {
         return jsonOutcome({
           'list': def.name,

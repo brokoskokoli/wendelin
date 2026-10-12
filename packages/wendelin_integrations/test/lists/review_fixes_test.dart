@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/src/lists/lists.dart';
 import 'package:wendelin_integrations/src/lists/markdown_list.dart';
 import 'package:wendelin_integrations/testing.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
@@ -35,6 +36,20 @@ void main() {
 
   group('1: parallele Tool-Calls auf dieselbe Datei', () {
     setUp(() => port.delay = const Duration(milliseconds: 2));
+
+    test('zwei Integrations-Instanzen auf derselben Datei', () async {
+      final other = ListsIntegration(port, definitions: () => defs);
+      final add = other.tools.singleWhere((t) => t.name == 'lists__add_items');
+      await Future.wait([
+        add.execute({
+          'list': 'Einkaufen',
+          'items': ['Milch'],
+        }, ctx()),
+        run('lists__complete_item', {'list': 'Einkaufen', 'item': 'Brot'}),
+      ]);
+      expect(port.files['e.md'], '- [x] Brot\n- [ ] Milch\n');
+      expect(ListsEnv.pendingQueues, 0, reason: 'Einträge aufgeräumt');
+    });
 
     test('add + complete gleichzeitig: keine Änderung geht verloren', () async {
       final results = await Future.wait([
@@ -167,15 +182,88 @@ void main() {
       },
     );
 
-    test('Eintrag nur über Wortteil: Rückfrage statt Abhaken', () async {
-      port.files['e.md'] = '- [ ] Milch (1 l)\n';
+    test(
+      'complete nimmt eindeutigen Wort-Treffer, nennt den echten Eintrag; Undo',
+      () async {
+        port.files['e.md'] = '- [ ] Milch (1 l)\n';
+        final o = await run('lists__complete_item', {
+          'list': 'Einkaufen',
+          'item': 'Milch',
+        });
+        expect(o.isError, isFalse);
+        expect(data(o)['completed'], 'Milch (1 l)');
+        expect(o.summary, 'Einkaufen: Milch (1 l) erledigt');
+        expect(port.files['e.md'], '- [x] Milch (1 l)\n');
+        await o.undo!();
+        expect(port.files['e.md'], '- [ ] Milch (1 l)\n');
+      },
+    );
+
+    test('complete: zwei Wort-Treffer sind mehrdeutig', () async {
+      port.files['e.md'] = '- [ ] Milch (1 l)\n- [ ] 2x Milch\n';
       final o = await run('lists__complete_item', {
+        'list': 'Einkaufen',
+        'item': 'Milch',
+      });
+      expect(o.isError, isTrue);
+      expect(o.text, contains('Mehrdeutig'));
+      expect(port.writes, 0);
+    });
+
+    test('remove fragt bei Wort-Treffer weiterhin zurück', () async {
+      port.files['e.md'] = '- [ ] Milch (1 l)\n';
+      final o = await run('lists__remove_item', {
         'list': 'Einkaufen',
         'item': 'Milch',
       });
       expect(o.isError, isTrue);
       expect(o.text, contains('Meintest du „Milch (1 l)“'));
       expect(port.writes, 0);
+    });
+
+    test('keine Treffer in Komposita, Mindestlänge 3 Zeichen', () {
+      final env = ListsEnv(
+        port,
+        () => [
+          ListDefinition(id: 'h', name: 'Hausarbeit Garten', target: 'h.md'),
+          ListDefinition(
+            id: 'g',
+            name: 'Geschenkideen Weihnachten',
+            target: 'g.md',
+          ),
+          ListDefinition(id: 'd', name: 'dm Drogerie', target: 'd.md'),
+        ],
+      );
+      for (final q in ['Haus', 'Ideen', 'dm']) {
+        expect(
+          () => env.resolve(q, write: false),
+          throwsA(
+            isA<PortException>().having(
+              (e) => e.kind,
+              'kind',
+              PortErrorKind.notFound,
+            ),
+          ),
+          reason: q,
+        );
+      }
+      expect(env.resolve('Drogerie', write: false).id, 'd');
+    });
+
+    test('Complete-Undo sucht nur im Abschnitt', () async {
+      port.files['p.md'] = '## Todo\n- [ ] A\n## Ideen\n- [x] A\n';
+      final o = await run('lists__complete_item', {
+        'list': 'Projekt',
+        'item': 'A',
+      });
+      // Fremd: ein Abschnitt mit gleich lautender Zeile steht jetzt genau
+      // an der alten Position, der eigene Eintrag ist weiter unten.
+      port.files['p.md'] = '## Ideen\n- [x] A\n## Todo\nx\nx\nx\n- [x] A\n';
+      await o.undo!();
+      expect(
+        port.files['p.md'],
+        '## Ideen\n- [x] A\n## Todo\nx\nx\nx\n- [ ] A\n',
+      );
     });
 
     test('Wortteile unter 3 Zeichen treffen nicht', () async {
