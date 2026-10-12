@@ -6,7 +6,10 @@ resolution: workspace
 environment:
   sdk: ^3.13.0
 dependencies:
+  collection: ^1.19.1
+  meta: ^1.19.0
   wendelin_core: any
 dev_dependencies:
   test: any
   coverage: any
+  fake_async: ^1.3.3
