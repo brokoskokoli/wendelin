@@ -147,8 +147,10 @@ Prädikate (mehrere Schlüssel = und):
 - Bestätigungen von `external`-Tools werden automatisch mit „ja“
   beantwortet und als `confirmations` gezählt (Tabelle: Spalte
   „bestätigt“). Bestätigungen einer Eskalation unter die Datenschutzstufe
-  zählt `escalationConfirmations` (Tabelle: `+nE`); da die Evals nicht
-  privat routen, kommen sie derzeit nicht vor.
+  zählt `escalationConfirmations` (Tabelle: `+nE`). Das CLI routet nicht
+  privat, daher kommen sie dort derzeit nicht vor; programmatisch lässt
+  sich das mit `EvalTarget(privateRequests: true, escalationPrivacy: …)`
+  durchspielen.
 - `gaveUp`: Der `GiveUpClassifier` des Agenten hat eine Antwort als
   „kann ich nicht“ erkannt (Eskalation mit Grund `modelGaveUp` oder
   Endantwort). `escalations`: Ziel und Grund jeder Eskalation.

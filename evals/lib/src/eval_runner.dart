@@ -26,6 +26,8 @@ final class EvalTarget {
     required this.privacy,
     required this.provider,
     this.escalationModels = const [],
+    this.escalationPrivacy,
+    this.privateRequests = false,
     this.costEstimator,
   });
 
@@ -44,6 +46,13 @@ final class EvalTarget {
   /// Escalation chain on the same provider (stronger models), weakest
   /// first; empty = no escalation.
   final List<String> escalationModels;
+
+  /// Privacy level of the [escalationModels]; `null` = [privacy].
+  final PrivacyLevel? escalationPrivacy;
+
+  /// Whether requests are routed privately: escalating below [privacy]
+  /// then needs a confirmation (answered „ja“ and counted).
+  final bool privateRequests;
 
   /// Prices the model calls; `null` = cost unknown.
   final CostEstimator? costEstimator;
@@ -147,16 +156,17 @@ final class EvalRunner {
     }
     final catalog = registry.catalogFor(target.privacy, sessionId: sessionId);
     final provider = target.provider(c);
-    ProviderTarget at(String model) => ProviderTarget(
+    ProviderTarget at(String model, PrivacyLevel privacy) => ProviderTarget(
       profileId: target.profileId,
       modelId: model,
       provider: provider,
-      privacy: target.privacy,
+      privacy: privacy,
     );
     final agent = AgentRunner(
-      resolver: DefaultProviderResolver(at(target.modelId), [
-        for (final m in target.escalationModels) at(m),
-      ]),
+      resolver: DefaultProviderResolver(at(target.modelId, target.privacy), [
+        for (final m in target.escalationModels)
+          at(m, target.escalationPrivacy ?? target.privacy),
+      ], isPrivate: target.privateRequests ? (_) => true : null),
       contextBuilder: ContextBuilder(
         config: config,
         clock: clock,

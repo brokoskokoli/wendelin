@@ -168,6 +168,33 @@ void main() {
     expect(ok.profile.extraHeaders, {'X-Title': 'Wendelin Evals'});
   });
 
+  test('harmlose Header mit Bindestrich-Wörtern sind erlaubt', () {
+    final ok = EvalProfile.parse(
+      _json({
+        'type': 'anthropic',
+        'extraHeaders': {
+          'anthropic-beta': 'interleaved-thinking-2025-05-14',
+          'anthropic-version': '2023-06-01',
+          'HTTP-Referer': 'https://github.com/brokoskokoli/wendelin',
+          'X-Feature': 'fine-grained-tool-streaming-2025-05-14',
+        },
+      }),
+    );
+    expect(
+      ok.profile.extraHeaders['anthropic-beta'],
+      'interleaved-thinking-2025-05-14',
+    );
+    // Ein langer Zufallswert ohne Trenner bleibt verdächtig.
+    expect(
+      () => EvalProfile.parse(
+        _json({
+          'extraHeaders': {'X-Custom': 'a1b2c3d4e5f6g7h8i9j0k1l2m3'},
+        }),
+      ),
+      throwsFormatException,
+    );
+  });
+
   test('Beispielprofile im Repo sind gültig und enthalten keine Keys', () {
     for (final (file, variable) in [
       ('profiles/claude-haiku.json', 'ANTHROPIC_API_KEY'),

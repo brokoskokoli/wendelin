@@ -187,7 +187,9 @@ final class EvalProfile {
           name.contains('secret');
       if (authName ||
           value.toLowerCase().startsWith('bearer ') ||
-          _randomLooking.hasMatch(value)) {
+          (!_harmlessHeaders.contains(name) &&
+              !_wordList.hasMatch(value) &&
+              _randomLooking.hasMatch(value))) {
         throw FormatException(
           'extraHeaders.${e.key} sieht nach einem Geheimnis aus; Keys nur '
           'über die Umgebungsvariable',
@@ -198,6 +200,23 @@ final class EvalProfile {
 
   static final _keyLike = RegExp(
     r'(sk-|sk_|phala-|rp-|xai-|gsk_)[A-Za-z0-9_-]{16,}',
+  );
+
+  /// Known headers without secrets (beta flags, versions, attribution).
+  static const _harmlessHeaders = {
+    'anthropic-beta',
+    'anthropic-version',
+    'x-title',
+    'http-referer',
+    'referer',
+    'openai-beta',
+  };
+
+  /// Values made of hyphen- or comma-separated words such as
+  /// `interleaved-thinking-2025-05-14` or `a-b,c-d`: flags, not tokens
+  /// (every part at most 12 characters).
+  static final _wordList = RegExp(
+    r'^[A-Za-z0-9]{1,12}([-,][A-Za-z0-9]{1,12})+$',
   );
 
   /// 24+ characters of letters/digits (with `_-.`) mixing letters and

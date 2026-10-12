@@ -301,6 +301,49 @@ void main() {
     expect(EvalRunner.localeFor('it'), 'it-IT');
   });
 
+  test(
+    'normaler Fall ist completed, Report hat numerisches p50 (N16)',
+    () async {
+      final r = await runner(() => [ScriptedTurn.text('Nichts.')])
+          .runCase(tauchen);
+      expect(r.observation.completed, isTrue);
+      final report = EvalReport(meta: const {}, results: [r]).toJson();
+      final latency = (report['summary']! as Map)['latencyMs']! as Map;
+      expect(latency['p50'], isA<int>());
+      expect(latency['p90'], isA<int>());
+    },
+  );
+
+  test(
+    'Eskalation unter die Datenschutzstufe wird bestätigt und gezählt (N4)',
+    () async {
+      final provider = FakeLlmProvider([
+        ScriptedTurn.text('Dabei kann ich dir leider nicht helfen.'),
+        ScriptedTurn.text('Jetzt geht es.'),
+      ]);
+      final r = await EvalRunner(
+        target: EvalTarget(
+          profileId: 'tee',
+          modelId: 'klein',
+          privacy: PrivacyLevel.tee,
+          provider: (_) => provider,
+          escalationModels: ['gross'],
+          escalationPrivacy: PrivacyLevel.standard,
+          privateRequests: true,
+        ),
+        time: time,
+      ).runCase(tauchen);
+      expect(r.observation.escalationConfirmations, 1);
+      expect(r.observation.confirmations, 0);
+      expect(
+        r.observation.escalations.single.reason,
+        EscalationReason.modelGaveUp,
+      );
+      expect(r.observation.finalText, 'Jetzt geht es.');
+      expect(r.toJson()['escalationConfirmations'], 1);
+    },
+  );
+
   test('ObservedCall.toJson mit ungültigem JSON', () {
     const c = ObservedCall(
       name: 'x',
