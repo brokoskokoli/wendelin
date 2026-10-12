@@ -1,0 +1,16 @@
+{
+  "type": "search",
+  "query": {"original": "wendelin", "show_strict_warning": false, "is_navigational": false, "country": "de", "bad_results": false, "should_fallback": false, "postal_code": "", "city": "", "header_country": "", "more_results_available": true, "state": ""},
+  "mixed": {"type": "mixed", "main": [{"type": "web", "index": 0, "all": false}], "top": [], "side": []},
+  "web": {
+    "type": "search",
+    "results": [
+      {"title": "Wendelin – <strong>Wikipedia</strong>", "url": "https://de.wikipedia.org/wiki/Wendelin", "is_source_local": false, "is_source_both": false, "description": "<strong>Wendelin</strong> ist ein männlicher Vorname &amp; Heiliger.", "page_age": "2025-03-01T00:00:00", "profile": {"name": "Wikipedia", "url": "https://de.wikipedia.org/wiki/Wendelin", "long_name": "de.wikipedia.org", "img": "https://imgs.search.brave.com/x"}, "language": "de", "family_friendly": true, "type": "search_result", "subtype": "generic", "meta_url": {"scheme": "https", "netloc": "de.wikipedia.org", "hostname": "de.wikipedia.org", "favicon": "https://imgs.search.brave.com/y", "path": "› wiki › Wendelin"}},
+      {"title": "St. Wendel", "url": "https://www.sankt-wendel.de/", "description": "Die Kreisstadt St. Wendel im Saarland.", "type": "search_result"},
+      {"title": "Wendelin Wiedeking", "url": "https://example.org/wiedeking", "description": "Manager &quot;Porsche&quot;", "type": "search_result"},
+      {"title": "Ungültig", "url": "ftp://example.org/datei", "description": "wird verworfen", "type": "search_result"},
+      {"title": "Wendelinusbasilika", "url": "http://example.com/basilika", "description": "", "type": "search_result"}
+    ],
+    "family_friendly": true
+  }
+}

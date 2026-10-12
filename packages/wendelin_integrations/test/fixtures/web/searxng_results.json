@@ -1,0 +1,17 @@
+{
+  "query": "wendelin",
+  "number_of_results": 0,
+  "results": [
+    {"url": "https://de.wikipedia.org/wiki/Wendelin", "title": "Wendelin – Wikipedia", "content": "Wendelin ist ein männlicher Vorname.", "engine": "wikipedia", "parsed_url": ["https", "de.wikipedia.org", "/wiki/Wendelin", "", "", ""], "template": "default.html", "engines": ["wikipedia", "duckduckgo"], "positions": [1, 2], "score": 4.0, "category": "general"},
+    {"url": "https://www.sankt-wendel.de/", "title": "St. Wendel", "content": "Kreisstadt im Saarland.", "engine": "duckduckgo", "engines": ["duckduckgo"], "score": 1.0, "category": "general"},
+    {"url": "https://example.org/heiliger", "title": "Heiliger Wendelin", "engine": "google", "engines": ["google"], "score": 0.5, "category": "general"},
+    {"url": "https://example.org/b", "title": "Wendelin B", "content": "B", "engine": "google", "category": "general"},
+    {"url": "https://example.org/c", "title": "Wendelin C", "content": "C", "engine": "google", "category": "general"},
+    {"url": "https://example.org/d", "title": "Wendelin D", "content": "D", "engine": "google", "category": "general"}
+  ],
+  "answers": [],
+  "corrections": [],
+  "infoboxes": [],
+  "suggestions": ["wendelin name"],
+  "unresponsive_engines": []
+}
