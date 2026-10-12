@@ -247,7 +247,8 @@ Map<String, Future<void> Function()> toolInvokerContractChecks(
       expect(f.stubborn.completedCount, 1);
       final kept = _outcomes(events)['1']!;
       expect(kept.isError, isFalse, reason: 'fertiger Call: echtes Outcome');
-      expect(kept.text, 'stur fertig');
+      // Echte Tool-Inhalte darf der Invoker hüllen/kürzen (ADR 0002 §5).
+      expect(kept.text, contains('stur fertig'));
       _expectIsCancelled(_outcomes(events)['2']!, 'abgebrochener Call');
       f.expectNothingStartedAfterCancel();
     },
