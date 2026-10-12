@@ -123,6 +123,8 @@ void main() {
         expect(r.displayName, e.displayName);
         expect(r.contextWindow, e.contextWindow);
         expect(r.supportsVision, e.supportsVision);
+        expect(r.supportsSampling, e.supportsSampling);
+        expect(r.supportsForcedToolChoice, e.supportsForcedToolChoice);
         expect(r.longContextThreshold, e.longContextThreshold);
         expect(r.longContextPrice, e.longContextPrice);
       }

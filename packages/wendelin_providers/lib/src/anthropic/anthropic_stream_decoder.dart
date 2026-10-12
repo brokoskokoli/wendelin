@@ -13,12 +13,14 @@ const _label = 'Anthropic';
 ///
 /// Maps `message_start`, `content_block_start/delta/stop` (text, tool_use
 /// with `input_json_delta`, thinking with `signature_delta`,
-/// redacted_thinking, server-side web search), `message_delta` (stop
+/// redacted_thinking), `message_delta` (stop
 /// reason, cumulative usage → increments), `message_stop`, `ping` and
-/// `error`. Unknown event and block types are ignored.
+/// `error`. Block types the internal format does not model (server-side
+/// web search: `server_tool_use`, `web_search_tool_result`, …) become
+/// `ProviderBlockComplete` with the verbatim block – never text. Unknown
+/// event types are ignored.
 final class AnthropicStreamDecoder implements StreamDecoder {
   final Map<int, _Block> _blocks = {};
-  final Map<String, String> _searchQueries = {};
   var _toolOrdinal = 0;
   var _usage = Usage.zero;
   StopReason? _stopReason;
@@ -82,15 +84,10 @@ final class AnthropicStreamDecoder implements StreamDecoder {
       case 'redacted_thinking':
         _blocks[index] = _RedactedBlock(asString(block['data']) ?? '');
         return const [];
-      case 'server_tool_use':
-        final server = _ServerToolBlock(asString(block['id']) ?? '');
-        _blocks[index] = server;
-        return const [];
-      case 'web_search_tool_result':
-        _blocks[index] = _OtherBlock();
-        return [TextDelta(_formatSearchResult(block))];
       default:
-        _blocks[index] = _OtherBlock();
+        // server_tool_use, web_search_tool_result, mcp_tool_use, … – kept
+        // verbatim and sent back unchanged (pause_turn), never spoken.
+        _blocks[index] = _RawBlock(block);
         return const [];
     }
   }
@@ -108,7 +105,7 @@ final class AnthropicStreamDecoder implements StreamDecoder {
         if (fragment.isEmpty) return const [];
         b.arguments.write(fragment);
         return [ToolCallDelta(index: b.ordinal, argumentsFragment: fragment)];
-      case (final _ServerToolBlock b, 'input_json_delta'):
+      case (final _RawBlock b, 'input_json_delta'):
         b.input.write(asString(delta['partial_json']) ?? '');
         return const [];
       case (final _ThinkingBlock b, 'thinking_delta'):
@@ -154,9 +151,8 @@ final class AnthropicStreamDecoder implements StreamDecoder {
         ];
       case _RedactedBlock(:final data):
         return [ThinkingComplete(ThinkingBlock.redacted(data))];
-      case final _ServerToolBlock b:
-        _searchQueries[b.id] = _queryOf(b.input.toString());
-        return const [];
+      case final _RawBlock b:
+        return [ProviderBlockComplete(b.complete())];
       case null:
         throw const MalformedResponseException(
           '$_label: content_block_stop für unbekannten Block',
@@ -178,7 +174,7 @@ final class AnthropicStreamDecoder implements StreamDecoder {
         '$_label: message_stop ohne message_start',
       );
     }
-    if (_blocks.values.any((b) => b is _ToolBlock || b is _ThinkingBlock)) {
+    if (_blocks.values.any((b) => b is! _TextBlock && b is! _RedactedBlock)) {
       throw const MalformedResponseException(
         '$_label: Nachricht endet mit offenem Block',
       );
@@ -233,35 +229,6 @@ final class AnthropicStreamDecoder implements StreamDecoder {
     }
     return index;
   }
-
-  static String _queryOf(String inputJson) {
-    try {
-      return asString(asMap(jsonDecode(inputJson))?['query']) ?? '';
-    } on FormatException {
-      return '';
-    }
-  }
-
-  /// Renders a `web_search_tool_result` block as compact text so the
-  /// results stay in the (provider-neutral) history.
-  String _formatSearchResult(Map<String, Object?> block) {
-    final query = _searchQueries[asString(block['tool_use_id'])] ?? '';
-    final label = query.isEmpty ? 'Websuche' : 'Websuche „$query“';
-    final content = block['content'];
-    final error = asMap(content);
-    if (error != null) {
-      final code = asString(error['error_code']) ?? 'unbekannt';
-      return '\n[$label fehlgeschlagen: $code]\n';
-    }
-    final results = [
-      for (final r in asList(content))
-        if (asMap(r) case final m?)
-          if (asString(m['url']) case final url?)
-            '${asString(m['title']) ?? url} ($url)',
-    ];
-    if (results.isEmpty) return '\n[$label: keine Ergebnisse]\n';
-    return '\n[$label: ${results.take(5).join('; ')}]\n';
-  }
 }
 
 sealed class _Block {}
@@ -286,10 +253,47 @@ final class _RedactedBlock extends _Block {
   final String data;
 }
 
-final class _ServerToolBlock extends _Block {
-  _ServerToolBlock(this.id);
-  final String id;
+/// A block the internal format does not model, stored verbatim. Input
+/// fragments (`input_json_delta`, e.g. the query of `server_tool_use`) are
+/// merged into `input`, as the API expects the complete block back.
+final class _RawBlock extends _Block {
+  _RawBlock(this.start);
+  final Map<String, Object?> start;
   final StringBuffer input = StringBuffer();
-}
 
-final class _OtherBlock extends _Block {}
+  ProviderBlock complete() {
+    final block = Map<String, Object?>.of(start);
+    if (input.isNotEmpty) {
+      try {
+        block['input'] = jsonDecode(input.toString());
+      } on FormatException {
+        throw const MalformedResponseException(
+          '$_label: ungültige Eingabe in Server-Tool-Block',
+        );
+      }
+    }
+    return ProviderBlock(
+      provider: ProviderType.anthropic.name,
+      rawJson: jsonEncode(block),
+      summary: _summary(block),
+    );
+  }
+
+  static String? _summary(Map<String, Object?> block) {
+    switch (asString(block['type'])) {
+      case 'server_tool_use':
+        final query = asString(asMap(block['input'])?['query']);
+        if (asString(block['name']) == 'web_search' && query != null) {
+          return 'Websuche: $query';
+        }
+        return asString(block['name']);
+      case 'web_search_tool_result':
+        final content = block['content'];
+        if (content is List<Object?>) return 'Quellen: ${content.length}';
+        final code = asString(asMap(content)?['error_code']) ?? 'unbekannt';
+        return 'Websuche fehlgeschlagen: $code';
+      default:
+        return asString(block['type']);
+    }
+  }
+}

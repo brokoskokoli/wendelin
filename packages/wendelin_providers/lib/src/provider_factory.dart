@@ -38,6 +38,7 @@ abstract final class ProviderFactory {
           extraHeaders: profile.extraHeaders,
           options: AnthropicOptions.fromMap(profile.options),
           settings: settings,
+          catalog: catalog,
         );
       case ProviderType.openaiCompatible:
         final baseUrl = profile.baseUrl;

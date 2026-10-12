@@ -13,8 +13,15 @@ final class CostCalculator {
   /// Cost of [usage] on [modelId] in micro-USD (rounded half up), or `null`
   /// if the model is not in the catalog (unknown cost, not zero).
   ///
-  /// The long-context tier applies when all input tokens (uncached, cache
-  /// read and cache write) exceed the model's threshold.
+  /// [usage] must be the usage of **one** model call (sum of its
+  /// `UsageEvent`s): the long-context tier applies when that call's input
+  /// tokens (uncached, cache read and cache write) exceed the model's
+  /// threshold. Summing several calls first would apply the tier wrongly;
+  /// add the per-call costs instead.
+  ///
+  /// Known gap: fees per server-side tool use (e.g. Anthropic web search,
+  /// billed per search) are not included, because `Usage` has no field
+  /// for them.
   int? costMicros(String modelId, Usage usage) {
     final entry = catalog.lookup(modelId);
     if (entry == null) return null;

@@ -31,6 +31,7 @@ final class OpenAiStreamDecoder implements StreamDecoder {
   var _completed = false;
   String? _finishReason;
   var _finished = false;
+  var _reported = Usage.zero;
 
   @override
   List<ChatEvent> onEvent(SseEvent event) {
@@ -155,17 +156,29 @@ final class OpenAiStreamDecoder implements StreamDecoder {
     return [ThinkingComplete(ThinkingBlock(text))];
   }
 
+  /// Usage is treated as cumulative (OpenAI sends it once at the end, vLLM
+  /// with `continuous_usage_stats` in every chunk); only growth is emitted.
   List<ChatEvent> _usage(Map<String, Object?> usage) {
     final prompt = asInt(usage['prompt_tokens']) ?? 0;
     final completion = asInt(usage['completion_tokens']) ?? 0;
     final cached =
         asInt(asMap(usage['prompt_tokens_details'])?['cached_tokens']) ?? 0;
-    final value = Usage(
+    final total = Usage(
       inputTokens: prompt - cached < 0 ? 0 : prompt - cached,
       outputTokens: completion,
       cachedInputTokens: cached,
     );
-    return value == Usage.zero ? const [] : [UsageEvent(value)];
+    int grow(int now, int before) => now > before ? now - before : 0;
+    final increment = Usage(
+      inputTokens: grow(total.inputTokens, _reported.inputTokens),
+      outputTokens: grow(total.outputTokens, _reported.outputTokens),
+      cachedInputTokens: grow(
+        total.cachedInputTokens,
+        _reported.cachedInputTokens,
+      ),
+    );
+    _reported = _reported + increment;
+    return increment == Usage.zero ? const [] : [UsageEvent(increment)];
   }
 }
 

@@ -175,6 +175,29 @@ void main() {
     });
   });
 
+  test('Tools nach Name sortiert', () {
+    ToolSpec tool(String name) => ToolSpec(
+      name: name,
+      description: name,
+      inputSchema: const {'type': 'object'},
+    );
+    final body = build(
+      ChatRequest(
+        messages: [Message.user('x')],
+        tools: [tool('zeta__a'), tool('alpha__b')],
+        model: 'm',
+        maxTokens: 10,
+      ),
+    );
+    expect(
+      [
+        for (final t in body['tools']! as List<Object?>)
+          ((t! as Map)['function'] as Map)['name'],
+      ],
+      ['alpha__b', 'zeta__a'],
+    );
+  });
+
   group('OpenAiOptions.fromMap', () {
     test('liest bekannte Schlüssel, ignoriert falsche Typen', () {
       final o = OpenAiOptions.fromMap({

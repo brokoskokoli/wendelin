@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/src/anthropic/anthropic_options.dart';
@@ -207,7 +209,7 @@ void main() {
     });
 
     test('leere Texte entfallen, Fehler-Ergebnis mit is_error, Bild im '
-        'Ergebnis, kaputte Argumente als leeres Objekt', () {
+        'Ergebnis, kaputte Argumente als _raw', () {
       final body = buildAnthropicBody(
         ChatRequest(
           messages: [
@@ -242,7 +244,7 @@ void main() {
         'type': 'tool_use',
         'id': 'c',
         'name': 'n',
-        'input': <String, Object?>{},
+        'input': {'_raw': '{kaputt'},
       });
       final results = (messages[2]! as Map)['content'] as List<Object?>;
       expect(results[0], {
@@ -334,6 +336,122 @@ void main() {
           },
         ]);
       }
+    });
+
+    test('pause_turn-Fortsetzung: Server-Blöcke unverändert an ihrer '
+        'Position, server_tool_use als letzter Block', () {
+      const serverToolUse =
+          '{"type":"server_tool_use","id":"srvtoolu_1","name":"web_search",'
+          '"input":{"query":"Wetter Nizza"}}';
+      const searchResult =
+          '{"type":"web_search_tool_result","tool_use_id":"srvtoolu_0",'
+          '"content":[{"type":"web_search_result","title":"T",'
+          '"url":"https://x.example","encrypted_content":"Eq1"}]}';
+      final body = buildAnthropicBody(
+        ChatRequest(
+          messages: [
+            Message.user('Wie wird das Wetter in Nizza?'),
+            Message.assistant(const [
+              ProviderBlock(provider: 'anthropic', rawJson: searchResult),
+              TextBlock('Ich suche weiter.'),
+              ProviderBlock(provider: 'openaiCompatible', rawJson: '{"x":1}'),
+              ProviderBlock(provider: 'anthropic', rawJson: 'kein json'),
+              ProviderBlock(provider: 'anthropic', rawJson: '[1]'),
+              ProviderBlock(
+                provider: 'anthropic',
+                rawJson: serverToolUse,
+                summary: 'Websuche: Wetter Nizza',
+              ),
+            ]),
+          ],
+          model: 'claude-sonnet-5-5',
+          maxTokens: 100,
+        ),
+        const AnthropicOptions(
+          enableServerWebSearch: true,
+          cacheConversation: false,
+        ),
+      );
+      expect(body['messages'], [
+        {
+          'role': 'user',
+          'content': [
+            {'type': 'text', 'text': 'Wie wird das Wetter in Nizza?'},
+          ],
+        },
+        {
+          'role': 'assistant',
+          'content': [
+            jsonDecode(searchResult),
+            {'type': 'text', 'text': 'Ich suche weiter.'},
+            jsonDecode(serverToolUse),
+          ],
+        },
+      ]);
+    });
+
+    test('ProviderBlock in User-Nachricht wird nicht gesendet', () {
+      final body = buildAnthropicBody(
+        ChatRequest(
+          messages: [
+            Message(Role.user, const [
+              ProviderBlock(provider: 'anthropic', rawJson: '{"type":"x"}'),
+              TextBlock('x'),
+            ]),
+          ],
+          model: 'm',
+          maxTokens: 10,
+        ),
+        const AnthropicOptions(),
+      );
+      expect(((body['messages']! as List).single as Map)['content'], [
+        {'type': 'text', 'text': 'x'},
+      ]);
+    });
+
+    test('Tools nach Name sortiert (Cache-Stabilität)', () {
+      ToolSpec tool(String name) => ToolSpec(
+        name: name,
+        description: name,
+        inputSchema: const {'type': 'object'},
+      );
+      final body = buildAnthropicBody(
+        ChatRequest(
+          messages: [Message.user('x')],
+          tools: [tool('zeta__a'), tool('alpha__b'), tool('mitte__c')],
+          model: 'm',
+          maxTokens: 10,
+        ),
+        const AnthropicOptions(),
+      );
+      final tools = body['tools']! as List<Object?>;
+      expect(
+        [for (final t in tools) (t! as Map)['name']],
+        ['alpha__b', 'mitte__c', 'zeta__a'],
+      );
+      expect((tools.last! as Map)['cache_control'], {'type': 'ephemeral'});
+    });
+
+    test('ohne erzwungene Tool-Wahl: required/tool → auto, none bleibt', () {
+      Object? choice(ToolChoice c) => buildAnthropicBody(
+        sampleRequest(toolChoice: c),
+        const AnthropicOptions(),
+        forcedToolChoice: false,
+      )['tool_choice'];
+      expect(choice(ToolChoice.required), isNull);
+      expect(choice(const ToolChoice.tool('calendar__create')), isNull);
+      expect(choice(ToolChoice.none), {'type': 'none'});
+    });
+
+    test('ohne Sampling-Parameter: keine temperature', () {
+      expect(
+        buildAnthropicBody(
+          sampleRequest(),
+          const AnthropicOptions(),
+          sampling: false,
+        ).containsKey('temperature'),
+        isFalse,
+      );
     });
 
     test('Thinking in User-Nachrichten wird nicht gesendet', () {

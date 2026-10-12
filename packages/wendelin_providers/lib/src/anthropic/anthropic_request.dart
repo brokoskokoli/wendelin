@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:wendelin_core/wendelin_core.dart';
 
 import 'anthropic_options.dart';
@@ -18,10 +20,22 @@ const _ephemeral = {'type': 'ephemeral'};
 
 /// Builds the JSON body of `POST /v1/messages` (streaming) for [req].
 ///
-/// - System prompt (and inline `Role.system` messages) as `system` blocks,
-///   the first block with `cache_control`.
-/// - Tools with `cache_control` on the last one; optional server-side web
-///   search first.
+/// - System prompt as `system` block with `cache_control`. Inline
+///   `Role.system` messages (not used by the agent loop) are appended as
+///   further `system` blocks, i.e. they lose their position and changing
+///   them invalidates the cache of everything after the tools. A later
+///   version may send them as mid-conversation system messages instead.
+/// - Tools sorted by name (stable prefix for prompt caching) with
+///   `cache_control` on the last one; optional server-side web search first.
+/// - [forcedToolChoice] `false` (models that reject `tool_choice` `any` /
+///   `tool`, see `ModelEntry.supportsForcedToolChoice`): `required` and
+///   `tool` are sent as `auto`; the system prompt should name the tool.
+/// - [sampling] `false` (models that reject sampling parameters): no
+///   `temperature`.
+/// - Unreadable tool-call arguments are sent as `{"_raw": "<original>"}`.
+/// - `ProviderBlock`s of Anthropic in assistant messages are sent back
+///   verbatim at their position (needed to resume `pause_turn`); blocks of
+///   other providers are dropped.
 /// - `Role.tool` messages become `user` messages with `tool_result` blocks;
 ///   consecutive messages of the same wire role are merged.
 /// - Thinking blocks are sent back unchanged; blocks without a signature
@@ -33,8 +47,10 @@ const _ephemeral = {'type': 'ephemeral'};
 ///   failing (docs: "Thinking with tool use", mid-turn conflicts).
 Map<String, Object?> buildAnthropicBody(
   ChatRequest req,
-  AnthropicOptions options,
-) {
+  AnthropicOptions options, {
+  bool forcedToolChoice = true,
+  bool sampling = true,
+}) {
   final system = <Map<String, Object?>>[
     if (req.systemPrompt != null && req.systemPrompt!.isNotEmpty)
       {'type': 'text', 'text': req.systemPrompt},
@@ -53,7 +69,7 @@ Map<String, Object?> buildAnthropicBody(
         'name': 'web_search',
         'max_uses': options.webSearchMaxUses,
       },
-    for (final t in req.tools)
+    for (final t in [...req.tools]..sort((a, b) => a.name.compareTo(b.name)))
       {
         'name': t.name,
         'description': t.description,
@@ -70,8 +86,8 @@ Map<String, Object?> buildAnthropicBody(
     if (system.isNotEmpty) 'system': system,
     'messages': _messages(req.messages),
     if (tools.isNotEmpty) 'tools': tools,
-    if (tools.isNotEmpty) ...?_toolChoice(req.toolChoice),
-    if (req.temperature != null) 'temperature': req.temperature,
+    if (tools.isNotEmpty) ...?_toolChoice(req.toolChoice, forcedToolChoice),
+    if (req.temperature != null && sampling) 'temperature': req.temperature,
     ...?_thinking(options),
     if (options.reasoningEffort != null)
       'output_config': {'effort': options.reasoningEffort},
@@ -85,18 +101,20 @@ String _webSearchType(String model) =>
     ? 'web_search_20260209'
     : 'web_search_20250305';
 
-Map<String, Object?>? _toolChoice(ToolChoice choice) => switch (choice) {
-  ToolChoiceAuto() => null,
-  ToolChoiceNone() => {
-    'tool_choice': {'type': 'none'},
-  },
-  ToolChoiceRequired() => {
-    'tool_choice': {'type': 'any'},
-  },
-  ToolChoiceTool(:final name) => {
-    'tool_choice': {'type': 'tool', 'name': name},
-  },
-};
+Map<String, Object?>? _toolChoice(ToolChoice choice, bool forced) =>
+    switch (choice) {
+      ToolChoiceAuto() => null,
+      ToolChoiceRequired() || ToolChoiceTool() when !forced => null,
+      ToolChoiceNone() => {
+        'tool_choice': {'type': 'none'},
+      },
+      ToolChoiceRequired() => {
+        'tool_choice': {'type': 'any'},
+      },
+      ToolChoiceTool(:final name) => {
+        'tool_choice': {'type': 'tool', 'name': name},
+      },
+    };
 
 Map<String, Object?>? _thinking(AnthropicOptions o) {
   if (o.thinking == 'disabled') {
@@ -164,7 +182,7 @@ List<Map<String, Object?>>? _block(
       'type': 'tool_use',
       'id': id,
       'name': name,
-      'input': b.tryDecodeArguments() ?? const <String, Object?>{},
+      'input': b.tryDecodeArguments() ?? {'_raw': b.argumentsJson},
     },
   ],
   ToolResultBlock(:final callId, :final isError) => [
@@ -187,7 +205,18 @@ List<Map<String, Object?>>? _block(
             {'type': 'thinking', 'thinking': text, 'signature': signature},
           ]
         : null,
+  ProviderBlock() => inAssistant ? _providerBlock(b) : null,
 };
+
+List<Map<String, Object?>>? _providerBlock(ProviderBlock b) {
+  if (b.provider != ProviderType.anthropic.name) return null;
+  try {
+    final decoded = jsonDecode(b.rawJson);
+    return decoded is Map<String, Object?> ? [decoded] : null;
+  } on FormatException {
+    return null;
+  }
+}
 
 Map<String, Object?>? _resultContent(ToolResultBlock b) {
   final content = [

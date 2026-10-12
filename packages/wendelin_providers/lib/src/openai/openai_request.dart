@@ -4,7 +4,8 @@ import 'openai_options.dart';
 
 /// Builds the JSON body of `POST /chat/completions` (streaming) for [req].
 ///
-/// - System prompt as first `system` message.
+/// - System prompt as first `system` message; tools sorted by name (stable
+///   prefix for provider-side prompt caching).
 /// - User images as `image_url` data URLs.
 /// - Assistant tool calls as `tool_calls`; thinking blocks are dropped (the
 ///   Chat Completions API does not take reasoning back).
@@ -26,7 +27,9 @@ Map<String, Object?> buildOpenAiBody(
     ],
     if (hasTools)
       'tools': [
-        for (final t in req.tools)
+        for (final t in [
+          ...req.tools,
+        ]..sort((a, b) => a.name.compareTo(b.name)))
           {
             'type': 'function',
             'function': {

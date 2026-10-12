@@ -76,6 +76,8 @@ final class ModelEntry {
     this.name,
     this.contextWindow,
     this.supportsVision,
+    this.supportsSampling,
+    this.supportsForcedToolChoice,
     this.longContextThreshold,
     this.longContextPrice,
   });
@@ -97,6 +99,15 @@ final class ModelEntry {
 
   /// Whether image input works, if known.
   final bool? supportsVision;
+
+  /// Whether sampling parameters (`temperature`) are accepted; `false` for
+  /// current Claude models, which reject them. `null` = unknown (sent).
+  final bool? supportsSampling;
+
+  /// Whether a forced tool choice (`required` / a specific tool) is
+  /// accepted; `false` for Claude Opus 5.5, Sonnet 5.5 and Fable 5.1.
+  /// `null` = unknown (sent).
+  final bool? supportsForcedToolChoice;
 
   /// Prompt size (all input tokens incl. cache) above which
   /// [longContextPrice] applies, if the model has such a tier.
@@ -145,6 +156,12 @@ final class ModelEntry {
       supportsVision: json['supportsVision'] is bool
           ? json['supportsVision']! as bool
           : supportsVision,
+      supportsSampling: json['supportsSampling'] is bool
+          ? json['supportsSampling']! as bool
+          : supportsSampling,
+      supportsForcedToolChoice: json['supportsForcedToolChoice'] is bool
+          ? json['supportsForcedToolChoice']! as bool
+          : supportsForcedToolChoice,
       longContextThreshold: threshold ?? longContextThreshold,
       longContextPrice: hasLong
           ? priceFrom(longContextPrice ?? price, 'longContext')
@@ -158,6 +175,9 @@ final class ModelEntry {
     ...price.toJson(),
     if (contextWindow != null) 'contextWindow': contextWindow,
     if (supportsVision != null) 'supportsVision': supportsVision,
+    if (supportsSampling != null) 'supportsSampling': supportsSampling,
+    if (supportsForcedToolChoice != null)
+      'supportsForcedToolChoice': supportsForcedToolChoice,
     if (longContextThreshold != null)
       'longContextThreshold': longContextThreshold,
     if (longContextPrice != null) ...{
@@ -260,16 +280,26 @@ final class ModelCatalog {
 /// change – users can override them.
 final builtInModels = <ModelEntry>[
   // Anthropic
-  _claude('claude-fable-5-1', 'Claude Fable 5.1', 10, 50, 0.25),
+  // Sampling parameters: rejected from Opus 4.7 / Sonnet 5 / Haiku 5.5 on;
+  // forced tool choice: rejected by Fable 5.1, Opus 5.5, Sonnet 5.5
+  // (claude-api skill, 2026-10).
+  _claude('claude-fable-5-1', 'Claude Fable 5.1', 10, 50, 0.25, forced: false),
   _claude('claude-fable-5', 'Claude Fable 5', 10, 50, 1),
-  _claude('claude-opus-5-5', 'Claude Opus 5.5', 4, 20, 0.20),
+  _claude('claude-opus-5-5', 'Claude Opus 5.5', 4, 20, 0.20, forced: false),
   _claude('claude-opus-5', 'Claude Opus 5', 5, 25, 0.5),
   _claude('claude-opus-4-8', 'Claude Opus 4.8', 5, 25, 0.5),
   _claude('claude-opus-4-7', 'Claude Opus 4.7', 5, 25, 0.5),
-  _claude('claude-opus-4-6', 'Claude Opus 4.6', 5, 25, 0.5),
-  _claude('claude-sonnet-5-5', 'Claude Sonnet 5.5', 2, 10, 0.20),
+  _claude('claude-opus-4-6', 'Claude Opus 4.6', 5, 25, 0.5, sampling: true),
+  _claude('claude-sonnet-5-5', 'Claude Sonnet 5.5', 2, 10, 0.20, forced: false),
   _claude('claude-sonnet-5', 'Claude Sonnet 5', 2, 10, 0.20),
-  _claude('claude-sonnet-4-6', 'Claude Sonnet 4.6', 3, 15, 0.30),
+  _claude(
+    'claude-sonnet-4-6',
+    'Claude Sonnet 4.6',
+    3,
+    15,
+    0.30,
+    sampling: true,
+  ),
   ModelEntry(
     id: 'claude-haiku-5-5',
     name: 'Claude Haiku 5.5',
@@ -281,6 +311,8 @@ final builtInModels = <ModelEntry>[
     ),
     contextWindow: 1000000,
     supportsVision: true,
+    supportsSampling: false,
+    supportsForcedToolChoice: true,
     longContextThreshold: 100000,
     longContextPrice: ModelPrice.usd(
       input: 0.50,
@@ -289,7 +321,15 @@ final builtInModels = <ModelEntry>[
       cacheWrite: 0.625,
     ),
   ),
-  _claude('claude-haiku-4-5', 'Claude Haiku 4.5', 1, 5, 0.10, context: 200000),
+  _claude(
+    'claude-haiku-4-5',
+    'Claude Haiku 4.5',
+    1,
+    5,
+    0.10,
+    context: 200000,
+    sampling: true,
+  ),
   // OpenAI
   _openAi('gpt-5', 1.25, 10, 0.125),
   _openAi('gpt-5-mini', 0.25, 2, 0.025),
@@ -324,6 +364,8 @@ ModelEntry _claude(
   num output,
   num cacheRead, {
   int context = 1000000,
+  bool sampling = false,
+  bool forced = true,
 }) => ModelEntry(
   id: id,
   name: name,
@@ -335,6 +377,8 @@ ModelEntry _claude(
   ),
   contextWindow: context,
   supportsVision: true,
+  supportsSampling: sampling,
+  supportsForcedToolChoice: forced,
 );
 
 ModelEntry _openAi(String id, num input, num output, num cacheRead) =>

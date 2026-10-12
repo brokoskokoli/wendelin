@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../catalog/model_catalog.dart';
 import '../common/credentials.dart';
 import '../common/health_probe.dart';
 import '../common/http_settings.dart';
@@ -28,7 +29,9 @@ final class AnthropicMessagesAdapter implements LlmProvider {
     Map<String, String> extraHeaders = const {},
     this.options = const AnthropicOptions(),
     this.settings = const HttpSettings(),
-  }) : _base = _apiRoot(baseUrl ?? defaultBaseUrl),
+    ModelCatalog? catalog,
+  }) : catalog = catalog ?? ModelCatalog.builtIn(),
+       _base = _apiRoot(baseUrl ?? defaultBaseUrl),
        _extraHeaders = Map.unmodifiable(extraHeaders),
        _transport = HttpTransport(
          client: client ?? defaultHttpClient(),
@@ -54,6 +57,10 @@ final class AnthropicMessagesAdapter implements LlmProvider {
 
   /// Transport settings.
   final HttpSettings settings;
+
+  /// Model properties (sampling, forced tool choice); models not in the
+  /// catalog are assumed to support everything.
+  final ModelCatalog catalog;
 
   final String _base;
   final Map<String, String> _extraHeaders;
@@ -100,10 +107,20 @@ final class AnthropicMessagesAdapter implements LlmProvider {
                 ..headers.addAll(await _headers())
                 ..headers['content-type'] = 'application/json'
                 ..headers['accept'] = 'text/event-stream'
-                ..body = jsonEncode(buildAnthropicBody(req, options));
+                ..body = jsonEncode(_body(req));
           return request;
         },
       );
+
+  Map<String, Object?> _body(ChatRequest req) {
+    final model = catalog.lookup(req.model);
+    return buildAnthropicBody(
+      req,
+      options,
+      forcedToolChoice: model?.supportsForcedToolChoice ?? true,
+      sampling: model?.supportsSampling ?? true,
+    );
+  }
 
   @override
   Future<List<ModelInfo>> listModels() async {

@@ -46,7 +46,9 @@ Future<HealthCheck> runHealthProbe({
     ],
     tools: const [healthProbeTool],
     model: model,
-    maxTokens: 200,
+    // Room for reasoning models that think before calling the tool; a
+    // simple answer uses far fewer tokens.
+    maxTokens: 1024,
   );
   var toolCalled = false;
   ProviderException? error;

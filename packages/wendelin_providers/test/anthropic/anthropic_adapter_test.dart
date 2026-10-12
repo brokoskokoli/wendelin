@@ -149,35 +149,54 @@ void main() {
       expect(events.whereType<TextDelta>().single.text, 'Erledigt.');
     });
 
-    test('Web-Suche: Ergebnisse als Text, Server-Tool kein Tool-Call, '
-        'pause_turn', () async {
+    test('Web-Suche: Server-Blöcke als ProviderBlock, kein Such-Text im '
+        'Text-Stream, pause_turn', () async {
       final events = await run(
         FakeServer([FakeResponse.sse(fixture('anthropic/web_search.sse'))]),
       );
       expect(events.whereType<ToolCallDelta>(), isEmpty);
       expect(events.whereType<ToolCallComplete>(), isEmpty);
-      final text = events.whereType<TextDelta>().map((e) => e.text).join();
+      // Nur der eigene Text des Modells wird Text (und damit gesprochen).
       expect(
-        text,
-        '\n[Websuche „Wetter Berlin“: Wetter Berlin '
-        '(https://wetter.example/berlin); DWD Berlin '
-        '(https://dwd.example/berlin)]\n'
+        events.whereType<TextDelta>().map((e) => e.text).join(),
         'In Berlin sind es 18 Grad.',
+      );
+      final blocks = [
+        for (final e in events.whereType<ProviderBlockComplete>()) e.block,
+      ];
+      expect(blocks.map((b) => b.provider), ['anthropic', 'anthropic']);
+      expect(blocks.map((b) => b.summary), [
+        'Websuche: Wetter Berlin',
+        'Quellen: 2',
+      ]);
+      // server_tool_use: Startblock mit zusammengesetztem input.
+      expect(jsonDecode(blocks[0].rawJson), {
+        'type': 'server_tool_use',
+        'id': 'srvtoolu_01Search',
+        'name': 'web_search',
+        'input': {'query': 'Wetter Berlin'},
+      });
+      // web_search_tool_result: exakt wie empfangen (inkl. encrypted_content).
+      final line = fixture('anthropic/web_search.sse')
+          .split('\n')
+          .firstWhere((l) => l.contains('"web_search_tool_result"'));
+      expect(
+        jsonDecode(blocks[1].rawJson),
+        (jsonDecode(line.substring(6)) as Map)['content_block'],
+      );
+      // Reihenfolge wie in der Antwort: Blöcke vor dem Text.
+      expect(
+        events.lastIndexWhere((e) => e is ProviderBlockComplete),
+        lessThan(events.indexWhere((e) => e is TextDelta)),
       );
       expect(events.last, const Done(StopReason.pauseTurn));
     });
 
-    test('Web-Suche: Fehler und leere Ergebnisse', () async {
-      String sse(Object content) => [
-        'event: message_start',
+    test('Web-Suche: Fehler-Ergebnis und fremde Blocktypen', () async {
+      String sse(Map<String, Object?> block) => [
         'data: {"type":"message_start","message":{"usage":{"input_tokens":1}}}',
         '',
-        'event: content_block_start',
-        'data: ${jsonEncode({
-          'type': 'content_block_start',
-          'index': 0,
-          'content_block': {'type': 'web_search_tool_result', 'tool_use_id': 'unbekannt', 'content': content},
-        })}',
+        'data: ${jsonEncode({'type': 'content_block_start', 'index': 0, 'content_block': block})}',
         '',
         'data: {"type":"content_block_stop","index":0}',
         '',
@@ -187,24 +206,61 @@ void main() {
         '',
         '',
       ].join('\n');
-      final failed = await run(
+      Future<ProviderBlock> single(Map<String, Object?> block) async {
+        final events = await run(FakeServer([FakeResponse.sse(sse(block))]));
+        expect(events.whereType<TextDelta>(), isEmpty);
+        return events.whereType<ProviderBlockComplete>().single.block;
+      }
+
+      expect(
+        (await single({
+          'type': 'web_search_tool_result',
+          'tool_use_id': 'x',
+          'content': {
+            'type': 'web_search_tool_result_error',
+            'error_code': 'max_uses_exceeded',
+          },
+        })).summary,
+        'Websuche fehlgeschlagen: max_uses_exceeded',
+      );
+      expect(
+        (await single({
+          'type': 'web_search_tool_result',
+          'tool_use_id': 'x',
+          'content': {'type': 'web_search_tool_result_error'},
+        })).summary,
+        'Websuche fehlgeschlagen: unbekannt',
+      );
+      expect(
+        (await single({
+          'type': 'server_tool_use',
+          'id': 's',
+          'name': 'code_execution',
+          'input': {},
+        })).summary,
+        'code_execution',
+      );
+      final mcp = await single({'type': 'mcp_tool_use', 'id': 'm'});
+      expect(mcp.summary, 'mcp_tool_use');
+      expect(mcp.rawJson, '{"type":"mcp_tool_use","id":"m"}');
+    });
+
+    test('Server-Tool mit kaputter Eingabe → Malformed', () async {
+      final events = await run(
         FakeServer([
-          FakeResponse.sse(
-            sse({
-              'type': 'web_search_tool_result_error',
-              'error_code': 'max_uses_exceeded',
-            }),
+          const FakeResponse.sse(
+            'data: {"type":"message_start","message":{}}\n\n'
+            'data: {"type":"content_block_start","index":0,"content_block":'
+            '{"type":"server_tool_use","id":"s","name":"web_search","input":{}}}\n\n'
+            'data: {"type":"content_block_delta","index":0,'
+            '"delta":{"type":"input_json_delta","partial_json":"{kaputt"}}\n\n'
+            'data: {"type":"content_block_stop","index":0}\n\n',
           ),
         ]),
       );
       expect(
-        failed.whereType<TextDelta>().single.text,
-        '\n[Websuche fehlgeschlagen: max_uses_exceeded]\n',
-      );
-      final empty = await run(FakeServer([FakeResponse.sse(sse(<Object>[]))]));
-      expect(
-        empty.whereType<TextDelta>().single.text,
-        '\n[Websuche: keine Ergebnisse]\n',
+        (events.last as ErrorEvent).error,
+        isA<MalformedResponseException>(),
       );
     });
 
@@ -280,6 +336,13 @@ void main() {
         'data: {"type":"message_start","message":{}}\n\n'
             'data: {"type":"content_block_stop"}\n\n',
       ),
+      (
+        'offener Server-Block bei message_stop',
+        'data: {"type":"message_start","message":{}}\n\n'
+            'data: {"type":"content_block_start","index":0,"content_block":'
+            '{"type":"server_tool_use","id":"s","name":"web_search"}}\n\n'
+            'data: {"type":"message_stop"}\n\n',
+      ),
       ('JSON-Array statt Objekt', 'data: [1,2]\n\n'),
     ]) {
       test('fehlerhafter Stream: $name → Malformed', () async {
@@ -291,30 +354,40 @@ void main() {
       });
     }
 
-    test('unbekannte Events und Blocktypen werden ignoriert', () async {
-      final events = await run(
-        FakeServer([
-          const FakeResponse.sse(
-            'data: {"type":"message_start","message":{}}\n\n'
-            'data: {"type":"future_event"}\n\n'
-            'data: {"type":"content_block_start","index":0,'
-            '"content_block":{"type":"mcp_tool_use","id":"m"}}\n\n'
-            'data: {"type":"content_block_delta","index":0,'
-            '"delta":{"type":"input_json_delta","partial_json":"{}"}}\n\n'
-            'data: {"type":"content_block_stop","index":0}\n\n'
-            'data: {"type":"content_block_start","index":1,'
-            '"content_block":{"type":"text","text":"Start"}}\n\n'
-            'data: {"type":"content_block_stop","index":1}\n\n'
-            'data: {"type":"message_delta","delta":{"stop_reason":"refusal"}}\n\n'
-            'data: {"type":"message_stop"}\n\n',
+    test(
+      'unbekannte Events ignoriert, unbekannte Blöcke als ProviderBlock',
+      () async {
+        final events = await run(
+          FakeServer([
+            const FakeResponse.sse(
+              'data: {"type":"message_start","message":{}}\n\n'
+              'data: {"type":"future_event"}\n\n'
+              'data: {"type":"content_block_start","index":0,'
+              '"content_block":{"type":"mcp_tool_use","id":"m"}}\n\n'
+              'data: {"type":"content_block_delta","index":0,'
+              '"delta":{"type":"input_json_delta","partial_json":"{}"}}\n\n'
+              'data: {"type":"content_block_stop","index":0}\n\n'
+              'data: {"type":"content_block_start","index":1,'
+              '"content_block":{"type":"text","text":"Start"}}\n\n'
+              'data: {"type":"content_block_stop","index":1}\n\n'
+              'data: {"type":"message_delta","delta":{"stop_reason":"refusal"}}\n\n'
+              'data: {"type":"message_stop"}\n\n',
+            ),
+          ]),
+        );
+        expect(events, [
+          const ProviderBlockComplete(
+            ProviderBlock(
+              provider: 'anthropic',
+              rawJson: '{"type":"mcp_tool_use","id":"m","input":{}}',
+              summary: 'mcp_tool_use',
+            ),
           ),
-        ]),
-      );
-      expect(events, [
-        const TextDelta('Start'),
-        const Done(StopReason.refusal),
-      ]);
-    });
+          const TextDelta('Start'),
+          const Done(StopReason.refusal),
+        ]);
+      },
+    );
 
     test('Tool ohne Argument-Deltas → "{}"', () async {
       final events = await run(
@@ -388,6 +461,54 @@ void main() {
       expect(r.json['stream'], isTrue);
       expect(r.json['model'], 'test-model');
     });
+
+    test(
+      'Modellfähigkeiten aus dem Katalog: temperature und tool_choice',
+      () async {
+        Future<Map<String, Object?>> body(
+          String model, {
+          ModelCatalog? catalog,
+        }) async {
+          final server = FakeServer([
+            FakeResponse.sse(fixture('anthropic/text.sse')),
+          ]);
+          await AnthropicMessagesAdapter(
+                credentials: Credentials.apiKey(
+                  _key,
+                  style: ApiKeyStyle.xApiKey,
+                ),
+                defaultModel: model,
+                client: server.client,
+                catalog: catalog,
+              )
+              .chat(
+                sampleRequest(toolChoice: ToolChoice.required)
+                    .copyWith(model: model),
+              )
+              .toList();
+          return server.requests.single.json;
+        }
+
+        final opus = await body('claude-opus-5-5');
+        expect(opus.containsKey('temperature'), isFalse);
+        expect(opus.containsKey('tool_choice'), isFalse);
+        final haiku = await body('claude-haiku-5-5');
+        expect(haiku.containsKey('temperature'), isFalse);
+        expect(haiku['tool_choice'], {'type': 'any'});
+        final old = await body('claude-haiku-4-5-20251001');
+        expect(old['temperature'], 0.2);
+        final unknown = await body('mein-proxy-modell');
+        expect(unknown['temperature'], 0.2);
+        expect(unknown['tool_choice'], {'type': 'any'});
+        final custom = await body(
+          'claude-opus-4-6',
+          catalog: ModelCatalog.builtIn().mergeJson(
+            '{"models":{"claude-opus-4-6":{"supportsSampling":false}}}',
+          ),
+        );
+        expect(custom.containsKey('temperature'), isFalse);
+      },
+    );
 
     test('Base-URL mit und ohne /v1 und Schrägstrich', () async {
       for (final base in [
@@ -670,6 +791,7 @@ void main() {
       expect(health.message, contains('Tool-Aufruf funktioniert'));
       final probe = server.requests[1].json;
       expect(probe['model'], 'claude-haiku-5-5');
+      expect(probe['max_tokens'], 1024);
       expect(
         (probe['tools']! as List).single,
         containsPair('name', 'wendelin__ping'),

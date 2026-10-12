@@ -370,6 +370,29 @@ void main() {
       }
     });
 
+    test('kumulative Usage in jedem Chunk (vLLM) → nur Zuwachs', () async {
+      String usageChunk(String content, int prompt, int completion) =>
+          'data: {"choices":[{"index":0,"delta":{"content":"$content"}}],'
+          '"usage":{"prompt_tokens":$prompt,"completion_tokens":$completion,'
+          '"prompt_tokens_details":{"cached_tokens":4}}}\n\n';
+      final events = await run(
+        FakeServer([
+          FakeResponse.sse(
+            '${usageChunk('a', 10, 1)}${usageChunk('b', 10, 2)}'
+            '${usageChunk('c', 10, 3)}${chunk({}, finish: 'stop')}'
+            'data: {"choices":[],"usage":{"prompt_tokens":10,'
+            '"completion_tokens":3,"prompt_tokens_details":{"cached_tokens":4}}}\n\n'
+            'data: [DONE]\n\n',
+          ),
+        ]),
+      );
+      expect(events.whereType<UsageEvent>().map((e) => e.usage), [
+        const Usage(inputTokens: 6, outputTokens: 1, cachedInputTokens: 4),
+        const Usage(outputTokens: 1),
+        const Usage(outputTokens: 1),
+      ]);
+    });
+
     test('Usage ohne Cache-Details und Null-Usage', () async {
       final events = await run(
         FakeServer([
