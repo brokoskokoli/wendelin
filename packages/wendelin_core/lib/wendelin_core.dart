@@ -4,6 +4,9 @@
 /// Test fakes and contract suites live in `package:wendelin_core/testing.dart`.
 library;
 
+export 'src/agent/agent_event.dart';
+export 'src/agent/agent_run.dart';
+export 'src/agent/user_input.dart';
 export 'src/messages/chat_event.dart';
 export 'src/messages/chat_request.dart';
 export 'src/messages/content_block.dart';
@@ -21,3 +24,10 @@ export 'src/provider/privacy_level.dart';
 export 'src/provider/provider_exception.dart';
 export 'src/provider/provider_profile.dart';
 export 'src/provider/provider_type.dart';
+export 'src/tools/integration.dart';
+export 'src/tools/tool.dart';
+export 'src/tools/tool_context.dart';
+export 'src/tools/tool_outcome.dart';
+export 'src/tools/tool_runtime.dart';
+export 'src/util/clock.dart';
+export 'src/util/id_generator.dart';
