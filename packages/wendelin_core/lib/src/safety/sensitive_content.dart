@@ -58,17 +58,21 @@ final class SensitiveFinding {
 ///   numbers starting with 49 or 43 (German/Austrian phone numbers without
 ///   `+`), a single unseparated run longer than 19 digits.
 /// - **IBAN**: two letters (any case), two check digits and a BBAN of 11–30
-///   alphanumerics with at least 6 digits, written either compactly or in
-///   groups of four separated by spaces (last group 1–4). The mod-97
-///   checksum is deliberately *not* required, so mistyped IBANs are rejected
-///   too.
+///   alphanumerics. Written compactly or in groups of four separated by
+///   spaces (last group 1–4) with at least 6 digits, it counts without the
+///   mod-97 checksum if the BBAN has 15 or more characters, so mistyped
+///   IBANs are rejected too; shorter BBANs and any other spacing (spaces or
+///   dashes between arbitrary chunks) need a valid mod-97 checksum.
 /// - **Credentials**: a keyword (Passwort, Kennwort, Password, Passwd,
-///   Passcode, PIN, PIN-Code, PUK, TAN, API-Key, Secret, Token, Zugangscode,
-///   Zugangsdaten, Geheimzahl) followed, within up to four words, by `:`,
-///   `=`, "ist", "lautet", "heißt", "war" or "is"/"was" and a value ("Das
-///   Passwort für das WLAN ist …"), or followed directly by a value
-///   containing a digit ("PIN 1234", "Passwort hunter2"); also API-key-like
-///   tokens (`sk-…`, `pk_…`, `ghp_…`, `xoxb-…`, `tvly-…`, `AKIA…`).
+///   Passcode, PIN, PIN-Code, PUK, API-Key, Zugangscode, Zugangsdaten,
+///   Geheimzahl) followed, within up to four words, by `:`, `=`, "ist",
+///   "lautet", "heißt", "war" or "is"/"was" and a value ("Das Passwort für
+///   das WLAN ist …"), or followed directly by a value containing a digit
+///   ("PIN 1234", "Passwort hunter2"). Everyday words (TAN, Secret, Token)
+///   and card security codes (CVV, CVC, Sicherheitscode,
+///   Kartenprüfnummer) count only with `:`/`=` or a value containing a
+///   digit ("TAN ist 123456", "CVV 123"). Also API-key-like tokens (`sk-…`,
+///   `pk_…`, `ghp_…`, `xoxb-…`, `tvly-…`, `AKIA…`).
 ///
 /// Health and financial topics are not detected by keywords (too
 /// unreliable); they are only saved on the user's explicit request.
@@ -127,26 +131,76 @@ bool _containsCardNumber(String text) {
 bool _isPhone(String digits) =>
     digits.length == 13 && (digits.startsWith('49') || digits.startsWith('43'));
 
+// Compact or in groups of four separated by spaces: counts without mod-97
+// (mistyped IBANs too) if the BBAN has at least 15 characters.
 final _ibanCandidate = RegExp(
   r'(?<![A-Za-z0-9])[A-Za-z]{2}\d{2}'
   r'(?:[A-Za-z0-9]{11,30}|(?: +[A-Za-z0-9]{4}){2,7}(?: +[A-Za-z0-9]{1,4})?)'
   r'(?![A-Za-z0-9])',
 );
 
+final _ibanStart = RegExp(r'(?<![A-Za-z0-9])[A-Za-z]{2}\d{2}');
+final _alnumRun = RegExp('[A-Za-z0-9]+');
+final _nonDigit = RegExp('[^0-9]');
+
 bool _containsIban(String text) {
   for (final m in _ibanCandidate.allMatches(text)) {
-    final bban = m.group(0)!.substring(4).replaceAll(' ', '');
-    final digits = bban.replaceAll(RegExp('[^0-9]'), '').length;
-    if (bban.length >= 11 && bban.length <= 30 && digits >= 6) return true;
+    final iban = m.group(0)!.replaceAll(' ', '');
+    final bban = iban.substring(4);
+    if (bban.replaceAll(_nonDigit, '').length < 6) continue;
+    if (bban.length >= 15 || ibanChecksumValid(iban)) return true;
+  }
+  // Any spacing (single spaces or dashes between arbitrary chunks): only
+  // with a valid mod-97 checksum.
+  for (final m in _ibanStart.allMatches(text)) {
+    final iban = StringBuffer(m.group(0)!);
+    var pos = m.end;
+    while (true) {
+      if (pos < text.length && (text[pos] == ' ' || text[pos] == '-')) {
+        pos++;
+      }
+      final run = _alnumRun.matchAsPrefix(text, pos);
+      if (run == null) break;
+      iban.write(run.group(0));
+      pos = run.end;
+      final length = iban.length - 4;
+      if (length > 30) break;
+      if (length >= 11 && ibanChecksumValid(iban.toString())) return true;
+    }
   }
   return false;
 }
 
+/// ISO 13616 mod-97 check of a compact IBAN (any case, no separators).
+bool ibanChecksumValid(String iban) {
+  final s = (iban.substring(4) + iban.substring(0, 4)).toUpperCase();
+  var rest = 0;
+  for (final c in s.codeUnits) {
+    if (c >= 0x30 && c <= 0x39) {
+      rest = (rest * 10 + c - 0x30) % 97;
+    } else if (c >= 0x41 && c <= 0x5a) {
+      rest = (rest * 100 + c - 0x41 + 10) % 97;
+    } else {
+      return false;
+    }
+  }
+  return rest == 1;
+}
+
+// Strong keywords: any "ist/lautet/…" phrasing counts (conservative).
 const _keyword =
     r'(?<![\p{L}\p{N}])'
     r'(?:passw(?:o|ö)rt(?:er|e)?|kennwort|password|passwd|passcode|'
-    r'pin(?:-?code|-?nummer)?|puk|tan|api[-_ ]?key|secret|token|'
+    r'pin(?:-?code|-?nummer)?|puk|api[-_ ]?key|'
     r'zugangscode|zugangsdaten|geheimzahl)'
+    r'(?![\p{L}\p{N}])';
+
+// Weak keywords (also everyday words): only with `:`/`=` or a value
+// containing a digit.
+const _weakKeyword =
+    r'(?<![\p{L}\p{N}])'
+    r'(?:tan|secret|token|cvv|cvc|cvv2|sicherheitscode|kartenprüfnummer|'
+    r'kartenpruefnummer|prüfnummer|pruefnummer|prüfziffer)'
     r'(?![\p{L}\p{N}])';
 
 final _credential = RegExp(
@@ -157,7 +211,15 @@ final _credential = RegExp(
   r'\s*\S'
   // Or keyword directly followed by a value containing a digit.
   '|$_keyword'
-  r'\s*[:=]?\s+(?=[^\s]*\p{N})[^\s]+',
+  r'\s*[:=]?\s+(?=[^\s]*\p{N})[^\s]+'
+  // Weak keyword, up to four words, `:`/`=` and any value.
+  '|$_weakKeyword'
+  r'(?:\s+[\p{L}\p{N}-]+){0,4}?\s*[:=]\s*\S'
+  // Weak keyword (optionally "ist/lautet/is/was/war") and a value with a
+  // digit.
+  '|$_weakKeyword'
+  r'(?:\s+(?:ist|lautet|is|was|war)(?![\p{L}\p{N}]))?'
+  r'\s+(?=[^\s]*\p{N})[^\s]+',
   caseSensitive: false,
   unicode: true,
 );

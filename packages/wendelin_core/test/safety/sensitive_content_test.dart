@@ -71,17 +71,31 @@ void main() {
       ('de89 3704 0044 0532 0130 00', iban), // Ländercode klein
       ('at611904300234573201', iban), // Österreich, klein, kompakt
       ('DE89  3704  0044  0532  0130  00', iban), // doppelte Leerzeichen
-      ('XY12 AB12 34CD 56EF', iban), // genau 6 Ziffern im BBAN
-      ('DE89 1234 5678 901', iban), // 11 Zeichen BBAN
+      ('DE89 37040044 0532013000', iban), // gemischt, mod-97 gültig
+      ('DE89 370400440532013000', iban),
+      ('DE8937040044 0532 0130 00', iban),
+      ('DE89-3704-0044-0532-0130-00', iban),
+      ('IBAN: GB29-NWBK-6016-1331-9268-19.', iban),
+      ('NO9386011117947', iban), // Norwegen: 11 Zeichen BBAN, mod-97
+      ('NO93 8601 1117 947', iban),
+      ('BE68 5390 0754 7034', iban), // 12 Zeichen BBAN, mod-97
+      ('DE88 3704 0044 0532 0130 00', iban), // vertippt, 18 Zeichen BBAN
+      ('XY12 AB12 34CD 56EF 7890', iban), // 16 Zeichen BBAN, ohne mod-97
+      ('XY12 AB12 34CD 56EF 789', iban), // genau 15 Zeichen, ohne mod-97
+      ('XY12 AB12 34CD 56EF 78', null), // 14 Zeichen, mod-97 ungültig
       // --- keine IBAN
       ('Raum12 3456 7890 1234', null), // mitten im Wort
       ('Code AB12CDEFGHIJKLMN', null), // zu wenige Ziffern
-      ('XY12 AB12 34CD 5xEF', null), // 5 Ziffern
+      ('XY12 AB1x 34CD 5xEF yXYZ', null), // 4 Ziffern
+      ('XY12 AB12 34CD 56EF', null), // 12 Zeichen BBAN, mod-97 ungültig
+      ('Bestellnummer AB12 3456 7890 1234', null),
+      ('DE88-3704-0044-0532-0130-00', null), // Bindestriche, mod-97 falsch
+      ('DE88 37040044 0532013000', null), // gemischt, mod-97 falsch
+      ('NO9486011117947', null), // 11 Zeichen, mod-97 falsch
       ('DE89 1234 5678 90', null), // 10 Zeichen BBAN
       ('Flug LH12 nach Bali', null),
       ('Flug LH12 um 14 Uhr 30 Gate 22 Sitz 14', null),
       ('Zug ICE12 3456 Wagen 7', null),
-      ('DE89 37040044 0532013000', null), // gemischte Gruppen
       // --- Zugangsdaten
       ('Passwort: hund123', cred),
       ('mein passwort ist hund123', cred),
@@ -106,7 +120,13 @@ void main() {
       ('API-Key = abcdef', cred),
       ('api key: abcdef', cred),
       ('Token: xyz', cred),
-      ('Das Secret ist abc', cred),
+      ('Secret: abc', cred),
+      ('Das Token für GitHub = abc', cred),
+      ('CVV 123', cred),
+      ('CVC: 456', cred),
+      ('Sicherheitscode: 789', cred),
+      ('Die Kartenprüfnummer ist 321', cred),
+      ('Prüfnummer 999', cred),
       ('Das Passwort für das WLAN ist hunter2', cred),
       ('Die PIN meiner Bankkarte ist 1234', cred),
       ('Passwort hunter2', cred),
@@ -125,6 +145,11 @@ void main() {
       ('AKIAIOSFODNN7EXAMPLE', cred),
       // --- keine Zugangsdaten
       ('Ich muss mein Passwort ändern', null),
+      ('Das Token ist abgelaufen', null),
+      ('Das Secret ist, dass ich Kuchen mag', null),
+      ('Die Tan ist am Strand gut geworden', null),
+      ('Der Sicherheitscode ist auf der Rückseite', null),
+      ('Frag nach dem CVV', null),
       ('Erinnere mich, das Passwort zu ändern.', null),
       ('Erinnere mich an die PIN-Änderung', null),
       ('Passwort-Änderung ist am Montag fällig', null),
@@ -143,6 +168,20 @@ void main() {
       test('"$text" → ${expected?.name}', () {
         expect(detectSensitiveContent(text)?.kind, expected);
       });
+    }
+  });
+
+  group('ibanChecksumValid', () {
+    for (final (iban, valid) in [
+      ('DE89370400440532013000', true),
+      ('de89370400440532013000', true),
+      ('GB29NWBK60161331926819', true),
+      ('NO9386011117947', true),
+      ('DE88370400440532013000', false),
+      ('DE89370400440532013001', false),
+      ('DE8937040044053201300!', false),
+    ]) {
+      test('$iban → $valid', () => expect(ibanChecksumValid(iban), valid));
     }
   });
 

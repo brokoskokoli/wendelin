@@ -6,9 +6,10 @@ const redactedValue = '***';
 ///
 /// By key (see [shouldRedactField]): a field whose key names a credential
 /// (`apiKey`, `Authorization`, `password`, `client_secret`, `privateKey`,
-/// `auth`, `key`, `basicAuth`, …) is always replaced, whatever its type; a field whose key
-/// merely contains the word `token`/`tokens` is replaced unless its value is
-/// a number or boolean, so counters like `inputTokens: 12` stay readable.
+/// `auth`, `key`, `basicAuth`, …) is always replaced, whatever its type; a
+/// field whose key merely contains the word `token`/`tokens` is replaced
+/// unless its value is a number or boolean, so counters like
+/// `inputTokens: 12` stay readable.
 ///
 /// Name/value pairs (`{name: 'Authorization', value: '…'}`, also with
 /// `header`/`key` instead of `name`) have their `value` replaced when the

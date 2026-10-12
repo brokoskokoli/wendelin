@@ -66,3 +66,7 @@ Das Konzept erlaubt eine Eskalation zu einem Provider mit niedrigerer Datenschut
 ## 9. Provider-Blöcke (2026-10-13, Review WP02)
 
 `ContentBlock` ergänzt um `ProviderBlock(provider, rawJson, summary?)`, `ChatEvent` um `ProviderBlockComplete`. Adapter legen Blöcke, die das interne Format nicht kennt (z. B. Anthropic `server_tool_use`/`web_search_tool_result`), unverändert als JSON ab und senden sie demselben Provider unverändert zurück (nötig für `pause_turn`). Andere Provider bekommen sie nie (der Agent verwirft sie beim Providerwechsel wie fremde Thinking-Blöcke). Inhalt ist Daten: nie gesprochen, nie als eigener Text des Assistenten; `summary` nur zur Anzeige.
+
+## 10. Sicherheit: eine Quelle für die Gedächtnis-Schutzregel (2026-10-13, WP13)
+
+`detectSensitiveContent(text) → SensitiveFinding?` (Art `SensitiveKind` cardNumber/iban/credential plus deutscher Grund) und `luhnValid` liegen in `wendelin_core` (`lib/src/safety/`). Speicher (`MemoryRepository` in wendelin_storage), Gedächtnis-Tool und Fakes (wendelin_integrations) nutzen nur diese Funktion; eigene Kopien gibt es nicht mehr. Die Erkennung ist eine reine Funktion ohne Abhängigkeiten. Zu viel ablehnen ist hier die sichere Seite. Die Fälle stehen als Tabellentest in core.
