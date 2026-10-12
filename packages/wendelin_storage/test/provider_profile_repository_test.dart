@@ -90,6 +90,11 @@ void main() {
         _ollama().copyWith(extraHeaders: {'Authorization': 'Bearer abc'}),
         _ollama().copyWith(extraHeaders: {'X-Api-Key': 'abc'}),
         _ollama().copyWith(options: {'apiKey': 'abc'}),
+        _ollama().copyWith(options: {'password': 123456}),
+        _ollama().copyWith(options: {'apiKey': 42}),
+        _ollama().copyWith(baseUrl: 'https://user:pass@host/v1'),
+        _ollama().copyWith(baseUrl: 'https://host/v1?api_key=abc'),
+        _ollama().copyWith(baseUrl: 'https://host/v1?key=abc'),
         _ollama().copyWith(
           options: {
             'mcp': [
@@ -101,8 +106,15 @@ void main() {
         await expectLater(repo.save(p), throwsArgumentError, reason: '$p');
       }
       expect(await repo.list(), isEmpty);
-      await repo.save(_ollama().copyWith(options: {'maxTokens': 512}));
-      expect((await repo.get('ollama'))!.options, {'maxTokens': 512});
+      await repo.save(
+        _ollama().copyWith(
+          baseUrl: 'https://host:8443/v1?api-version=2024-01',
+          options: {'maxTokens': 512},
+        ),
+      );
+      final saved = (await repo.get('ollama'))!;
+      expect(saved.options, {'maxTokens': 512});
+      expect(saved.baseUrl, 'https://host:8443/v1?api-version=2024-01');
     },
   );
 }

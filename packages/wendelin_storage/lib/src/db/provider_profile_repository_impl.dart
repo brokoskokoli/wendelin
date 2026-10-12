@@ -20,6 +20,7 @@ final class DriftProviderProfileRepository
 
   @override
   Future<void> save(ProviderProfile profile) async {
+    _checkBaseUrl(profile.baseUrl);
     _checkNoSecretKeys(profile.extraHeaders, 'extraHeaders');
     _checkNoSecretKeys(profile.options, 'options');
     await _db
@@ -95,10 +96,32 @@ final class DriftProviderProfileRepository
   static ProviderProfile _profile(ProfileRow r) =>
       ProviderProfile.fromJson(jsonDecode(r.json) as Map<String, Object?>);
 
+  static void _checkBaseUrl(String? baseUrl) {
+    if (baseUrl == null) return;
+    final uri = Uri.tryParse(baseUrl);
+    if (uri == null) return;
+    if (uri.userInfo.isNotEmpty) {
+      throw ArgumentError.value(
+        'baseUrl',
+        'profile',
+        'enthält Zugangsdaten (user:pass@); Secrets gehören in den SecretStore',
+      );
+    }
+    for (final k in uri.queryParametersAll.keys) {
+      if (looksLikeSecretKey(k)) {
+        throw ArgumentError.value(
+          'baseUrl?$k',
+          'profile',
+          'sieht nach einem Secret aus; Secrets gehören in den SecretStore',
+        );
+      }
+    }
+  }
+
   static void _checkNoSecretKeys(Object? value, String path) {
     if (value is Map<Object?, Object?>) {
       value.forEach((k, v) {
-        if (looksLikeSecretKey('$k') && v is! num && v is! bool && v != null) {
+        if (shouldRedactField('$k', v)) {
           throw ArgumentError.value(
             '$path.$k',
             'profile',

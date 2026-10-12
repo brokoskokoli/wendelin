@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../model/audit_entry.dart';
 import '../model/memory_entry.dart';
+import 'epoch_micros_converter.dart';
 import 'tables.dart';
 
 part 'database.g.dart';

@@ -33,6 +33,13 @@ void main() {
       ('Karte 4111 1111 1111 1112', null),
       ('Bestellnummer 4111111111111112', null),
       ('Telefon +49 170 1234567', null),
+      ('Telefon +49 4111 1111 1111 1111', null), // mit + ignoriert
+      ('Telefon + 4111111111111111', null),
+      ('4111.1111.1111.1111', card), // Punkte
+      ('4111  1111  1111  1111', card), // mehrfache Leerzeichen
+      ('Nummer 8111111111111112', null), // Luhn-gültig, beginnt mit 8
+      ('0111111111111111 4111111111111111', card), // zweite Gruppe zählt
+      ('Termin am 13.10.2026 um 10.30', null),
       ('Termin am 2026-10-13 um 10:00', null),
       ('Seriennummer 41111111111111110000000', null),
       ('411111111117', null), // 12 Ziffern, Luhn-gültig
@@ -43,7 +50,9 @@ void main() {
       ('IBAN: DE89370400440532013000', iban),
       ('FR1420041010050500013M02606', iban),
       ('GB29 NWBK 6016 1331 9268 19', iban),
-      ('de89 3704 0044 0532 0130 00', null), // Ländercode klein
+      ('de89 3704 0044 0532 0130 00', iban), // Ländercode klein
+      ('DE89  3704  0044  0532  0130  00', iban), // doppelte Leerzeichen
+      ('Raum12 3456 7890 1234', null), // mitten im Wort
       ('Code AB12CDEFGHIJKLMN', null), // zu wenige Ziffern
       ('XY12 AB12 34CD 56EF', iban), // genau 6 Ziffern im BBAN
       ('XY12 AB12 34CD 5xEF', null), // 5 Ziffern
@@ -60,7 +69,23 @@ void main() {
       ('Geheimzahl: 1234', cred),
       ('Zugangsdaten: user / pw', cred),
       ('Passwörter: a, b', cred),
+      ('Das Passwort für das WLAN ist hunter2', cred),
+      ('Die PIN meiner Bankkarte ist 1234', cred),
+      ('PIN 1234', cred),
+      ('Passwort hunter2', cred),
+      ('my password is hunter2', cred),
+      ('The wifi password was Summer2026', cred),
+      ('Das WLAN-Passwort heißt Sonnenschein', cred),
+      ('Pin-Nummer: 0000', cred),
       ('Ich muss mein Passwort ändern', null),
+      ('Erinnere mich an die PIN-Änderung', null),
+      ('Passwort-Änderung ist am Montag fällig', null),
+      (
+        'Passwort vergessen hat sie gestern abend ist Montag',
+        null,
+      ), // > 4 Wörter
+      ('Passwort vergessen hat sie heute ist Montag', cred), // 4 Wörter
+      ('Passwort vergessen, bitte zurücksetzen', null),
       ('Pinguine sind toll: ja', null),
       ('Die Pinnwand ist voll', null),
       ('Anna ist meine Schwester', null),

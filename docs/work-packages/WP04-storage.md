@@ -7,10 +7,10 @@ Datenbank-Konstruktor nimmt einen `QueryExecutor` entgegen (App liefert `drift_f
 ## Tabellen
 - `sessions(id, startedAt, lastActivityAt, title?)`
 - `messages(id, sessionId, seq, role, contentJson, createdAt, profileId?, modelId?)` – Inhalt über core-JSON-Serialisierung.
-- `memory_entries(id, text, category {person, preference, fact, project}, source, createdAt, lastUsedAt)` + FTS5-Tabelle (Trigger zur Synchronisation).
+- `memory_entries(id, body, category {person, preference, fact, project}, source, createdAt, lastUsedAt)` + FTS5-Tabelle (Trigger zur Synchronisation).
 - `audit_log(id, at, kind {request, routing, toolCall, confirmation, escalation, usage, verification, error}, sessionId?, payloadJson)`
 - `provider_profiles(id, json)` – serialisiertes `ProviderProfile` **ohne** Secrets.
-- `usage_records(id, at, sessionId, profileId, modelId, inputTokens, outputTokens, cachedTokens, costMicros)`
+- `usage_records(id, at, sessionId, profileId, modelId, inputTokens, outputTokens, cachedTokens, cacheWriteTokens, costMicros)` – alle vier Zähler von `Usage` (K5).
 - `settings(key, valueJson)`
 
 ## Repositories (öffentliche API, keine drift-Typen nach außen)

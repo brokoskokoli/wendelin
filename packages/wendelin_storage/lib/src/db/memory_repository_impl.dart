@@ -145,10 +145,34 @@ final class DriftMemoryRepository implements MemoryRepository {
 
 final _word = RegExp(r'[\p{L}\p{N}]+', unicode: true);
 
-/// Turns free text into a safe FTS5 query: every word becomes a quoted
-/// prefix term, terms are OR-ed. Returns `null` if [text] has no words.
+/// Words ignored by [ftsQuery] (German, English, French function words).
+const ftsStopWords = {
+  // de
+  'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem',
+  'einer', 'und', 'oder', 'ist', 'sind', 'war', 'bin', 'hat', 'habe', 'ich',
+  'du', 'er', 'sie', 'es', 'wir', 'ihr', 'mein', 'meine', 'meinen', 'dein',
+  'mir', 'mich', 'dir', 'dich', 'in', 'im', 'am', 'an', 'auf', 'aus', 'bei',
+  'mit', 'von', 'vom', 'zu', 'zum', 'zur', 'für', 'nicht', 'was', 'wer',
+  'wie', 'wo', 'wann', 'noch', 'auch', 'so', 'da', 'dass',
+  // en
+  'the', 'a', 'and', 'or', 'is', 'are', 'be', 'my', 'me', 'you',
+  'your', 'of', 'to', 'on', 'at', 'for', 'with', 'what', 'who', 'how',
+  'when', 'where', 'it', 'this', 'that', 'do', 'does',
+  // fr
+  'le', 'la', 'les', 'un', 'une', 'et', 'ou', 'est', 'je', 'tu',
+  'il', 'elle', 'nous', 'vous', 'mon', 'ma', 'mes', 'de', 'au', 'aux',
+  'en', 'dans', 'sur', 'pour', 'avec', 'qui', 'que', 'quoi', 'ce',
+};
+
+/// Turns free text into a safe FTS5 query: every word with at least two
+/// characters that is not in [ftsStopWords] becomes a quoted prefix term,
+/// terms are OR-ed. Returns `null` if no word is left.
 String? ftsQuery(String text) {
-  final words = _word.allMatches(text).map((m) => m.group(0)!).toSet();
+  final words = _word
+      .allMatches(text)
+      .map((m) => m.group(0)!)
+      .where((w) => w.length >= 2 && !ftsStopWords.contains(w.toLowerCase()))
+      .toSet();
   if (words.isEmpty) return null;
   return words.map((w) => '"$w"*').join(' OR ');
 }

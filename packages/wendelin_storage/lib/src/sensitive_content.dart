@@ -37,17 +37,20 @@ final class SensitiveContentException implements Exception {
 /// Detects content that must not be stored (concept: "Passwörter und
 /// Kartennummern werden gar nicht gespeichert").
 ///
-/// - **Card numbers**: digit groups separated by single spaces or dashes;
-///   every run of consecutive whole groups with 13–19 digits in total is
-///   Luhn-checked. A single unseparated run longer than 19 digits is not a
-///   card number.
-/// - **IBAN**: two upper-case letters, two check digits, then 11–30
-///   alphanumerics (optionally in groups separated by single spaces), at
-///   least 6 of them digits. The mod-97 checksum is deliberately *not*
-///   required, so mistyped IBANs are rejected too.
+/// - **Card numbers**: digit groups separated by up to three spaces, dots or
+///   dashes; every run of consecutive whole groups with 13–19 digits in
+///   total that starts with 2–6 (Mastercard, Amex, Visa, Discover, …) is
+///   Luhn-checked. Runs starting with `+` (phone numbers) are ignored; a
+///   single unseparated run longer than 19 digits is not a card number.
+/// - **IBAN**: two letters (any case), two check digits, then 11–30
+///   alphanumerics (spaces allowed between them), at least 6 of them digits.
+///   The mod-97 checksum is deliberately *not* required, so mistyped IBANs
+///   are rejected too.
 /// - **Credentials**: a keyword (Passwort, Kennwort, Password, PIN, PIN-Code,
-///   Passcode, Zugangscode, Zugangsdaten, Geheimzahl) followed by `:`, `=`,
-///   "ist", "lautet" or "is" and a value.
+///   Passcode, Zugangscode, Zugangsdaten, Geheimzahl) followed, within up to
+///   four words, by `:`, `=`, "ist", "lautet", "heißt", "war" or "is"/"was"
+///   and a value ("Das Passwort für das WLAN ist …"), or followed directly by
+///   a value containing a digit ("PIN 1234", "Passwort hunter2").
 SensitiveKind? detectSensitiveContent(String text) {
   if (_containsCardNumber(text)) return SensitiveKind.cardNumber;
   if (_containsIban(text)) return SensitiveKind.iban;
@@ -77,14 +80,18 @@ bool luhnValid(String digits) {
   return sum % 10 == 0;
 }
 
-// Digit groups joined by single separators, not glued to other digits.
-final _digitRun = RegExp(r'(?<!\d)\d+(?:[ -]\d+)*(?!\d)');
-final _separator = RegExp(r'[ -]');
+// Digit groups joined by short separators, not glued to other digits. A
+// leading `+` is captured so phone numbers can be skipped as a whole.
+final _digitRun = RegExp(r'(\+\s?)?(?<!\d)\d+(?:[ .\-]{1,3}\d+)*(?!\d)');
+final _separator = RegExp(r'[ .\-]+');
 
 bool _containsCardNumber(String text) {
   for (final m in _digitRun.allMatches(text)) {
+    if (m.group(1) != null) continue;
     final groups = m.group(0)!.split(_separator);
     for (var start = 0; start < groups.length; start++) {
+      final first = groups[start].codeUnitAt(0);
+      if (first < 0x32 || first > 0x36) continue; // '2'..'6'
       var digits = '';
       for (var end = start; end < groups.length; end++) {
         digits += groups[end];
@@ -97,7 +104,7 @@ bool _containsCardNumber(String text) {
 }
 
 final _ibanCandidate = RegExp(
-  r'(?<![A-Za-z0-9])[A-Z]{2}\d{2}(?: ?[A-Za-z0-9]){11,30}(?![A-Za-z0-9])',
+  r'(?<![A-Za-z0-9])[A-Za-z]{2}\d{2}(?: *[A-Za-z0-9]){11,30}(?![A-Za-z0-9])',
 );
 
 bool _containsIban(String text) {
@@ -109,12 +116,21 @@ bool _containsIban(String text) {
   return false;
 }
 
+const _keyword =
+    r'(?<![\p{L}\p{N}])'
+    r'(?:passw(?:o|ö)rt(?:er|e)?|kennwort|password|passcode|'
+    r'pin(?:-?code|-?nummer)?|zugangscode|zugangsdaten|geheimzahl)'
+    r'(?![\p{L}\p{N}])';
+
 final _credential = RegExp(
-  r'(?<![\p{L}\p{N}])'
-  r'(passw(?:o|ö)rt(?:er|e)?|kennwort|password|passcode|pin(?:-?code)?|'
-  r'zugangscode|zugangsdaten|geheimzahl)'
-  r'(?![\p{L}\p{N}])'
-  r'\s*(?::|=|\bist\b|\blautet\b|\bis\b)\s*\S',
+  // Keyword, up to four words, then an assignment and a value.
+  '$_keyword'
+  r'(?:\s+[\p{L}\p{N}-]+){0,4}?'
+  r'(?:\s*[:=]|\s+(?:ist|lautet|heißt|heisst|war|is|was)(?![\p{L}\p{N}]))'
+  r'\s*\S'
+  // Or keyword directly followed by a value containing a digit.
+  '|$_keyword'
+  r'\s*[:=]?\s+(?=[^\s]*\p{N})[^\s]+',
   caseSensitive: false,
   unicode: true,
 );

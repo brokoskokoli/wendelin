@@ -18,6 +18,8 @@ final storage = openInMemoryStorage(); // package:wendelin_storage/fakes.dart
 
 `package:sqlite3` ab 3.x bündelt SQLite über einen Build-Hook (vorgebaute, per Hash geprüfte Bibliothek mit FTS5). Lokal auf macOS, in CI auf Ubuntu und in der App über `drift_flutter` läuft dieselbe SQLite-Version, ohne Systembibliothek (`libsqlite3`). `test/sqlite_test.dart` prüft, dass FTS5 und `bm25` verfügbar sind.
 
+App: `drift_flutter` ≥ 0.3 verwenden (nutzt `sqlite3` 3.x mit Build-Hook). Kein `sqlite3_flutter_libs` ≤ 0.5 einbinden, das würde eine zweite, eigene SQLite-Bibliothek mitbringen.
+
 ## Schema und Migrationen
 
 - Tabellen: `lib/src/db/tables.dart`, FTS5-Tabelle und Trigger: `lib/src/db/memory_fts.drift`.

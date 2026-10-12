@@ -170,8 +170,9 @@ void main() {
     });
 
     test('limit begrenzt, Standard 5', () async {
-      expect(await repo.search('ich mein am ist', limit: 2), hasLength(2));
-      expect(await repo.search('ich mein am ist Anna'), hasLength(5));
+      const many = 'Tauchen Anna Kaffee Auto München Projekt Laufen';
+      expect(await repo.search(many, limit: 2), hasLength(2));
+      expect(await repo.search(many), hasLength(5));
       expect(await repo.search('Anna', limit: 0), isEmpty);
     });
 
@@ -198,8 +199,22 @@ void main() {
   });
 
   test('ftsQuery quotet Wörter als Präfix-Terme', () {
-    expect(ftsQuery('Anna "x" OR'), '"Anna"* OR "x"* OR "OR"*');
+    expect(ftsQuery('Anna "Bali" NOT'), '"Anna"* OR "Bali"* OR "NOT"*');
     expect(ftsQuery('?!'), isNull);
+  });
+
+  test('ftsQuery lässt Ein-Zeichen-Wörter und Stoppwörter weg', () {
+    expect(ftsQuery('Was ist mit Anna?'), '"Anna"*');
+    expect(ftsQuery('what is my car'), '"car"*');
+    expect(ftsQuery('Qui est le médecin'), '"médecin"*');
+    expect(ftsQuery('a b 3 Xy'), '"Xy"*');
+    expect(ftsQuery('Der die das'), isNull);
+  });
+
+  test('Suche nur aus Stoppwörtern liefert nichts', () async {
+    await save('Ich bin in München');
+    expect(await repo.search('ich bin in'), isEmpty);
+    expect(await repo.search('Wo bin ich in München?'), hasLength(1));
   });
 
   test('exportMarkdown gruppiert nach Kategorie', () async {

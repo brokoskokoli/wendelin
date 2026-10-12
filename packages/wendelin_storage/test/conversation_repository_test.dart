@@ -225,7 +225,17 @@ void main() {
       );
       final edge = await repo.startNew(t0.subtract(const Duration(days: 30)));
       final recent = await repo.startNew(t0.subtract(const Duration(days: 2)));
+      // Vor 60 Tagen begonnen, aber gestern noch aktiv: bleibt.
+      final longRunning = await repo.startNew(
+        t0.subtract(const Duration(days: 60)),
+      );
+      await repo.append(
+        longRunning.id,
+        Message.user('noch da'),
+        at: t0.subtract(const Duration(days: 1)),
+      );
       expect(await repo.purgeOlderThan(const Duration(days: 30)), 1);
+      expect(await repo.session(longRunning.id), isNotNull);
       expect(await repo.session(old.id), isNull);
       expect(await repo.messages(old.id), isEmpty);
       expect(await repo.session(edge.id), isNotNull);

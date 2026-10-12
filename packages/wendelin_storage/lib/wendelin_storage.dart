@@ -13,7 +13,12 @@ export 'src/model/memory_entry.dart';
 export 'src/model/setting_key.dart';
 export 'src/model/usage_record.dart';
 export 'src/redaction.dart'
-    show looksLikeSecretKey, redactSecrets, redactedValue;
+    show
+        looksLikeSecretKey,
+        redactSecretValues,
+        redactSecrets,
+        redactedValue,
+        shouldRedactField;
 export 'src/repositories/repositories.dart';
 export 'src/secret_store.dart';
 export 'src/sensitive_content.dart';

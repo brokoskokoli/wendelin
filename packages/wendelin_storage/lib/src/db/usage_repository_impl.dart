@@ -70,7 +70,7 @@ final class DriftUsageRepository implements UsageRepository {
 
   @override
   Future<int> monthToDateCostMicros(String profileId) async {
-    final now = _clock.now();
+    final now = _clock.now().toLocal();
     final monthStart = DateTime(now.year, now.month);
     final t = _db.usageRecords;
     final sum = t.costMicros.sum();
@@ -105,7 +105,7 @@ final class DriftUsageRepository implements UsageRepository {
     }
     final buckets = <DateTime, UsageTotals>{};
     for (final r in await q.get()) {
-      final key = period(r.at);
+      final key = period(r.at.toLocal());
       final prev = buckets[key];
       final usage = Usage(
         inputTokens: r.inputTokens,

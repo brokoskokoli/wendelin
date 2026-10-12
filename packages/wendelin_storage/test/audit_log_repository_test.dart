@@ -81,6 +81,96 @@ void main() {
       expect(redactSecrets(3), 3);
     });
 
+    test(
+      'Regression: Zahlen/Booleans unter Credential-Schlüsseln werden ersetzt',
+      () {
+        expect(redactSecrets({'password': 123456, 'apiKey': 42}), {
+          'password': '***',
+          'apiKey': '***',
+        });
+        expect(redactSecrets({'pin_secret': true, 'auth': 1, 'key': 7}), {
+          'pin_secret': '***',
+          'auth': '***',
+          'key': '***',
+        });
+        // Nur token(s)-Schlüssel behalten Zahlen (Zähler).
+        expect(redactSecrets({'inputTokens': 3, 'token': 3}), {
+          'inputTokens': 3,
+          'token': 3,
+        });
+      },
+    );
+
+    test('weitere Credential-Schlüssel', () {
+      for (final key in [
+        'credential',
+        'credentials',
+        'privateKey',
+        'private_key',
+        'bearer',
+        'bearerToken',
+        'Auth',
+        'KEY',
+        'passwd',
+      ]) {
+        expect(redactSecrets({key: 'geheim'}), {key: '***'}, reason: key);
+      }
+      for (final key in ['keyword', 'author', 'monkey', 'authority']) {
+        expect(redactSecrets({key: 'x'}), {key: 'x'}, reason: key);
+      }
+    });
+
+    test('Name/Wert-Paare', () {
+      expect(
+        redactSecrets({
+          'headers': [
+            {'name': 'Authorization', 'value': 'Bearer abc'},
+            {'name': 'Accept', 'value': 'text/plain'},
+            {'header': 'x-api-key', 'value': 'k'},
+          ],
+        }),
+        {
+          'headers': [
+            {'name': 'Authorization', 'value': '***'},
+            {'name': 'Accept', 'value': 'text/plain'},
+            {'header': 'x-api-key', 'value': '***'},
+          ],
+        },
+      );
+    });
+
+    test('wertbasiert: Bearer, sk-Schlüssel, Query-Parameter', () {
+      expect(
+        redactSecrets({
+          'log': 'Header Authorization: Bearer eyJabc.def sonst nichts',
+          'basic': 'basic dXNlcjpwYXNz',
+          'error': 'ungültiger Schlüssel sk-test-ABCDEFGHIJKLMNOP_qrs',
+          'kurz': 'sk-kurz',
+          'url': 'https://x.example/v1?model=a&api_key=geheim&key=k2#frag',
+          'url2': 'https://x.example/?token=t&foo=bar&monkey=1',
+          'list': ['Bearer xyz', 3],
+        }),
+        {
+          'log': 'Header Authorization: Bearer *** sonst nichts',
+          'basic': 'basic ***',
+          'error': 'ungültiger Schlüssel ***',
+          'kurz': 'sk-kurz',
+          'url': 'https://x.example/v1?model=a&api_key=***&key=***#frag',
+          'url2': 'https://x.example/?token=***&foo=bar&monkey=1',
+          'list': ['Bearer ***', 3],
+        },
+      );
+      expect(redactSecretValues('nichts Geheimes'), 'nichts Geheimes');
+    });
+
+    test('shouldRedactField', () {
+      expect(shouldRedactField('password', null), isFalse);
+      expect(shouldRedactField('password', 1), isTrue);
+      expect(shouldRedactField('outputTokens', 1), isFalse);
+      expect(shouldRedactField('accessToken', 'x'), isTrue);
+      expect(shouldRedactField('model', 'x'), isFalse);
+    });
+
     test('looksLikeSecretKey', () {
       expect(looksLikeSecretKey('API-KEY'), isTrue);
       expect(looksLikeSecretKey('id_token'), isTrue);
