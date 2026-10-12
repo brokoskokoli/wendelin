@@ -26,6 +26,7 @@ final class FakeTool implements Tool {
     this.delay = Duration.zero,
     this.throws,
     this.withUndo = false,
+    this.ignoresCancel = false,
     this.confirmation,
   });
 
@@ -56,6 +57,10 @@ final class FakeTool implements Tool {
   /// Whether results carry an [UndoAction].
   final bool withUndo;
 
+  /// If true, the tool ignores `ctx.cancel`: [delay] runs to the end and the
+  /// normal result is returned (a tool whose effect cannot be stopped).
+  final bool ignoresCancel;
+
   /// Text for [describeForConfirmation]; default „`name` ausführen“.
   final String Function(Map<String, Object?> args)? confirmation;
 
@@ -69,6 +74,10 @@ final class FakeTool implements Tool {
   /// cancelled) – i.e. whose effect has happened.
   int completedCount = 0;
 
+  /// Number of [execute] calls entered although `ctx.cancel` was already
+  /// cancelled – an invoker must never do that.
+  int startedAfterCancel = 0;
+
   /// Number of undo invocations.
   int undoCount = 0;
 
@@ -78,13 +87,17 @@ final class FakeTool implements Tool {
     ToolContext ctx,
   ) async {
     calls.add(Map.unmodifiable(args));
+    if (ctx.cancel.isCancelled) startedAfterCancel++;
     if (delay > Duration.zero) {
       final done = Completer<void>();
       final timer = Timer(delay, done.complete);
-      await Future.any([done.future, ctx.cancel.whenCancelled]);
+      await Future.any([
+        done.future,
+        if (!ignoresCancel) ctx.cancel.whenCancelled,
+      ]);
       timer.cancel();
     }
-    ctx.cancel.throwIfCancelled();
+    if (!ignoresCancel) ctx.cancel.throwIfCancelled();
     if (throws case final error?) throw error;
     final result =
         await handler?.call(args, ctx) ?? outcome ?? ToolOutcome.text('ok');
