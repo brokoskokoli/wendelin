@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -130,13 +132,15 @@ void main() {
     });
   });
 
-  test('Fehler der Aktion wird weitergereicht, Angebot ist weg', () {
+  test('Fehler der Aktion: failed statt undone, rethrow, Angebot ist weg', () {
     fakeAsync((async) {
       final m = UndoManager(clock: _FakeClock(async))
         ..register(
           'c1',
           UndoAction(label: 'x', run: () async => throw StateError('nein')),
         );
+      final updates = <UndoUpdate>[];
+      m.updates.listen(updates.add);
       Object? error;
       m.undo('c1').catchError((Object e) {
         error = e;
@@ -145,6 +149,25 @@ void main() {
       async.flushMicrotasks();
       expect(error, isA<StateError>());
       expect(m.canUndo('c1'), isFalse);
+      expect(updates.last.state, UndoState.failed);
+      expect(updates.where((u) => u.state == UndoState.undone), isEmpty);
+    });
+  });
+
+  test('undone erst nach Abschluss der Aktion', () {
+    fakeAsync((async) {
+      final gate = Completer<void>();
+      final m = UndoManager(clock: _FakeClock(async))
+        ..register('c1', UndoAction(label: 'x', run: () => gate.future));
+      final updates = <UndoUpdate>[];
+      m.updates.listen(updates.add);
+      m.undo('c1');
+      async.flushMicrotasks();
+      expect(updates.where((u) => u.state == UndoState.undone), isEmpty);
+      expect(m.canUndo('c1'), isFalse, reason: 'kein doppeltes Undo');
+      gate.complete();
+      async.flushMicrotasks();
+      expect(updates.last.state, UndoState.undone);
     });
   });
 

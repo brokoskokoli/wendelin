@@ -14,12 +14,13 @@ import 'tool_search.dart';
 ///
 /// With [metaToolThreshold] or more active tools the model first gets only
 /// the meta tool `tools__search` (with the categories in its description);
-/// tools it finds are unlocked and offered from then on.
+/// tools it finds are unlocked for that session and offered from then on.
 ///
-/// As a [ToolCatalog] the registry itself applies no privacy filter (same as
-/// `catalogFor(PrivacyLevel.local)`); hand the agent [catalogFor] with the
-/// level of the provider in use.
-final class ToolRegistry implements ToolCatalog {
+/// The registry is no [ToolCatalog] itself: the agent always gets a view
+/// for the privacy level of the provider in use and its session
+/// ([catalogFor]), so sensitive tools cannot leak through an unfiltered
+/// catalog.
+final class ToolRegistry {
   /// Creates an empty registry for the device [platform] (no platform
   /// check if `null`).
   ToolRegistry({
@@ -37,8 +38,7 @@ final class ToolRegistry implements ToolCatalog {
   final Map<String, _Entry> _entries = {};
   final Map<String, _Entry> _toolOwner = {};
   final Set<String> _disabledTools = {};
-  final Set<String> _unlocked = {};
-  String? _unlockedSession;
+  final Map<String, Set<String>> _unlocked = {};
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   /// Emits after every change of integrations, activation, status,
@@ -102,7 +102,9 @@ final class ToolRegistry implements ToolCatalog {
     for (final tool in entry.tools) {
       _toolOwner.remove(tool.name);
       _disabledTools.remove(tool.name);
-      _unlocked.remove(tool.name);
+      for (final names in _unlocked.values) {
+        names.remove(tool.name);
+      }
     }
     _changed();
   }
@@ -156,38 +158,33 @@ final class ToolRegistry implements ToolCatalog {
   /// Status of the integration [id].
   IntegrationStatus status(String id) => info(id).status;
 
-  /// Names of the tools unlocked by `tools__search` in the current session.
-  Set<String> get unlockedTools => Set.unmodifiable(_unlocked);
+  /// Names of the tools unlocked by `tools__search` in [sessionId].
+  Set<String> unlockedTools(String sessionId) =>
+      Set.unmodifiable(_unlocked[sessionId] ?? const <String>{});
 
-  /// Forgets all unlocked tools (new session).
-  void resetUnlocked() {
-    _unlocked.clear();
-    _unlockedSession = null;
-    _changed();
+  /// Forgets the tools unlocked in [sessionId] (session ended).
+  void endSession(String sessionId) {
+    if (_unlocked.remove(sessionId) != null) _changed();
   }
 
-  /// Specs for a provider with privacy [level]: active tools sorted by name,
-  /// or – from [metaToolThreshold] on – `tools__search` followed by the
-  /// unlocked tools.
-  List<ToolSpec> activeSpecsFor(PrivacyLevel level) => [
-    for (final tool in _offered(level)) tool.spec,
-  ];
+  /// Specs for a provider with privacy [level] in [sessionId]: active tools
+  /// sorted by name, or – from [metaToolThreshold] on – `tools__search`
+  /// followed by the tools unlocked in this session.
+  List<ToolSpec> activeSpecsFor(
+    PrivacyLevel level, {
+    required String sessionId,
+  }) => [for (final tool in _offered(level, sessionId)) tool.spec];
 
-  @override
-  List<ToolSpec> activeSpecs() => activeSpecsFor(PrivacyLevel.local);
-
-  @override
-  Tool? lookup(String name) => _lookup(name, PrivacyLevel.local);
-
-  /// A [ToolCatalog] view for a provider with privacy [level].
-  ToolCatalog catalogFor(PrivacyLevel level) => _LevelCatalog(this, level);
+  /// The [ToolCatalog] for a provider with privacy [level] in [sessionId].
+  ToolCatalog catalogFor(PrivacyLevel level, {required String sessionId}) =>
+      _LevelCatalog(this, level, sessionId);
 
   /// Closes [changes].
   Future<void> dispose() => _changes.close();
 
   // --- internals ---
 
-  List<Tool> _offered(PrivacyLevel level) {
+  List<Tool> _offered(PrivacyLevel level, String sessionId) {
     final active = _active(level);
     if (active.length < metaToolThreshold) {
       return [for (final e in active) e.tool];
@@ -195,7 +192,7 @@ final class ToolRegistry implements ToolCatalog {
     return [
       _searchTool(active),
       for (final e in active)
-        if (_unlocked.contains(e.tool.name)) e.tool,
+        if (_unlocked[sessionId]?.contains(e.tool.name) ?? false) e.tool,
     ];
   }
 
@@ -204,8 +201,10 @@ final class ToolRegistry implements ToolCatalog {
     if (name == ToolSearchTool.toolName) {
       return active.length >= metaToolThreshold ? _searchTool(active) : null;
     }
-    // In meta mode not-yet-unlocked tools may still be called: they are
-    // active and the policy applies as usual.
+    // In meta mode, active tools that are not unlocked yet may still be
+    // called (the model guessed or remembered the name): they are enabled by
+    // the user, pass the privacy filter, and validation and policy apply as
+    // usual. Refusing them would only cost an extra search round.
     for (final e in active) {
       if (e.tool.name == name) return e.tool;
     }
@@ -216,11 +215,7 @@ final class ToolRegistry implements ToolCatalog {
       ToolSearchTool(candidates: active, unlock: _unlock);
 
   void _unlock(String sessionId, List<String> names) {
-    if (_unlockedSession != sessionId) {
-      _unlocked.clear();
-      _unlockedSession = sessionId;
-    }
-    _unlocked.addAll(names);
+    _unlocked.putIfAbsent(sessionId, () => {}).addAll(names);
     _changed();
   }
 
@@ -307,15 +302,17 @@ final class _Entry {
   }
 }
 
-/// [ToolCatalog] of a registry for one privacy level.
+/// [ToolCatalog] of a registry for one privacy level and session.
 final class _LevelCatalog implements ToolCatalog {
-  _LevelCatalog(this._registry, this._level);
+  _LevelCatalog(this._registry, this._level, this._sessionId);
 
   final ToolRegistry _registry;
   final PrivacyLevel _level;
+  final String _sessionId;
 
   @override
-  List<ToolSpec> activeSpecs() => _registry.activeSpecsFor(_level);
+  List<ToolSpec> activeSpecs() =>
+      _registry.activeSpecsFor(_level, sessionId: _sessionId);
 
   @override
   Tool? lookup(String name) => _registry._lookup(name, _level);

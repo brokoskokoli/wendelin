@@ -32,6 +32,47 @@ final class ArgumentValidator {
     return rest > 0 ? '$shown; und $rest weitere Probleme' : shown;
   }
 
+  /// [args] with integral numbers of `integer` fields as `int` (JSON may
+  /// deliver `3.0`), so tools can rely on the declared type. Call after a
+  /// successful [validate]; other values are returned unchanged.
+  Map<String, Object?> normalize(
+    Map<String, Object?> args,
+    Map<String, Object?> schema,
+  ) => _normalize(args, schema)! as Map<String, Object?>;
+
+  Object? _normalize(Object? value, Map<String, Object?> schema) {
+    switch (value) {
+      case final double d when _types(schema).contains('integer'):
+        return d == d.roundToDouble() ? d.toInt() : d;
+      case final List<Object?> list:
+        final items = schema['items'];
+        return items is Map<String, Object?>
+            ? [for (final v in list) _normalize(v, items)]
+            : list;
+      case final Map<String, Object?> map:
+        final props = schema['properties'];
+        final additional = schema['additionalProperties'];
+        return {
+          for (final MapEntry(:key, value: v) in map.entries)
+            key: switch (props is Map<String, Object?> ? props[key] : null) {
+              final Map<String, Object?> sub => _normalize(v, sub),
+              _ when additional is Map<String, Object?> => _normalize(
+                v,
+                additional,
+              ),
+              _ => v,
+            },
+        };
+      default:
+        return value;
+    }
+  }
+
+  static List<Object?> _types(Map<String, Object?> schema) {
+    final type = schema['type'];
+    return type is List ? type : [type];
+  }
+
   void _check(
     Object? value,
     Map<String, Object?> schema,

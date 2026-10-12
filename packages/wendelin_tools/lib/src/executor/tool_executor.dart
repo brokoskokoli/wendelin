@@ -5,6 +5,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../policy/risk_policy.dart';
 import '../validation/argument_validator.dart';
 import 'confirmation_turns.dart';
+import 'error_text.dart';
 import 'result_shaper.dart';
 import 'tool_audit.dart';
 
@@ -17,9 +18,14 @@ import 'tool_audit.dart';
 ///
 /// Independent calls run in parallel; confirmations are asked strictly one
 /// after another in call order. Every call gets one [ToolStarted] (all at
-/// the start, in call order) and one [ToolFinished]; the [ToolFinished]
-/// events are emitted in call order, so results reach the model in the
-/// order of the calls. Cancellation follows the [ToolInvoker] contract.
+/// the start, in call order) and one [ToolFinished], emitted as soon as the
+/// call is done (so the UI never waits for an earlier call's confirmation).
+/// The agent puts the results for the model back into call order by call
+/// id. Cancellation follows the [ToolInvoker] contract.
+///
+/// Everything a tool produced reaches the model inside the data envelope,
+/// including the text of exceptions it threw (sanitised, see
+/// [sanitizeErrorText]).
 final class ToolExecutor implements ToolInvoker {
   /// Creates an executor over [catalog].
   ToolExecutor({
@@ -57,14 +63,13 @@ final class ToolExecutor implements ToolInvoker {
     final out = StreamController<ToolInvocationEvent>();
     Future<void> run() async {
       final turns = ConfirmationTurns(ctx.cancel);
-      final running = <Future<ToolFinished>>[];
+      final running = <Future<void>>[];
       for (final call in calls) {
         out.add(ToolStarted(call));
-        running.add(_run(call, ctx, turns, out.add));
+        // _run never completes synchronously, so all ToolStarted come first.
+        running.add(_run(call, ctx, turns, out.add).then(out.add));
       }
-      for (final finished in running) {
-        out.add(await finished);
-      }
+      await Future.wait(running);
       await out.close();
     }
 
@@ -84,9 +89,10 @@ final class ToolExecutor implements ToolInvoker {
       result = await _process(call, ctx, turns, emit);
     } on Object catch (e) {
       // Defensive: a broken catalog, schema or confirmation text must not
-      // break the stream or leave the call without a result.
+      // break the stream or leave the call without a result. No free text
+      // of the exception reaches the model.
       result = (
-        ToolOutcome.error('Interner Fehler bei ${call.name}: ${_brief(e)}'),
+        ToolOutcome.error(internalErrorText(call.name, e)),
         AuditStatus.error,
         AuditDecision.none,
       );
@@ -124,15 +130,15 @@ final class ToolExecutor implements ToolInvoker {
         AuditDecision.none,
       );
     }
-    final args = _decode(call);
-    if (args == null) {
+    final rawArgs = _decode(call);
+    if (rawArgs == null) {
       return (
         ToolOutcome.error(invalidJsonText),
         AuditStatus.invalidArguments,
         AuditDecision.none,
       );
     }
-    final problem = validator.validate(args, tool.inputSchema);
+    final problem = validator.validate(rawArgs, tool.inputSchema);
     if (problem != null) {
       return (
         ToolOutcome.error(
@@ -143,6 +149,7 @@ final class ToolExecutor implements ToolInvoker {
         AuditDecision.none,
       );
     }
+    final args = validator.normalize(rawArgs, tool.inputSchema);
 
     final policyDecision = policy.decide(tool, ctx.sessionId);
     var decision = AuditDecision.allowed;
@@ -166,6 +173,16 @@ final class ToolExecutor implements ToolInvoker {
             ToolOutcome.declined(),
             AuditStatus.declined,
             AuditDecision.declined,
+          );
+        }
+        // The policy may have changed while the card was open (e.g.
+        // lockExternal after a failed receipt check).
+        final recheck = policy.decide(tool, ctx.sessionId);
+        if (recheck.action == PolicyAction.deny) {
+          return (
+            ToolOutcome.error(recheck.reason ?? RiskPolicy.deniedReason),
+            AuditStatus.denied,
+            AuditDecision.denied,
           );
         }
         decision = AuditDecision.confirmed;
@@ -200,10 +217,7 @@ final class ToolExecutor implements ToolInvoker {
 
     final timer = Timer(timeout, () {
       finish(
-        ToolOutcome.error(
-          'Zeitüberschreitung: ${tool.name} hat nicht innerhalb von '
-          '${_format(timeout)} geantwortet.',
-        ),
+        ToolOutcome.error(timeoutText(tool, timeout)),
         AuditStatus.timeout,
       );
       token.cancel();
@@ -221,7 +235,13 @@ final class ToolExecutor implements ToolInvoker {
             finish(ToolOutcome.cancelled(), AuditStatus.cancelled);
           } else {
             finish(
-              ToolOutcome.error('Fehler bei ${tool.name}: ${_brief(e)}'),
+              shaper.shape(
+                tool.name,
+                ToolOutcome.error(
+                  'Fehler bei ${tool.name} (${e.runtimeType}): '
+                  '${sanitizeErrorText(e)}',
+                ),
+              ),
               AuditStatus.error,
             );
           }
@@ -262,10 +282,21 @@ final class ToolExecutor implements ToolInvoker {
       ? <String, Object?>{}
       : call.tryDecodeArguments();
 
-  /// First line of [e], at most 200 characters, never a stack trace.
-  static String _brief(Object e) {
-    final line = e.toString().split('\n').first.trim();
-    return line.length > 200 ? '${line.substring(0, 199)}…' : line;
+  /// Error text when the runtime itself failed for [callName].
+  static String internalErrorText(String callName, Object error) =>
+      'Interner Fehler bei „$callName“ (${error.runtimeType}).';
+
+  /// Error text when [tool] did not answer within [timeout]. For `write` and
+  /// `external` tools the effect is unknown, so the model must not simply
+  /// retry.
+  static String timeoutText(Tool tool, Duration timeout) {
+    final base =
+        'Zeitüberschreitung: ${tool.name} hat nicht innerhalb von '
+        '${_format(timeout)} geantwortet.';
+    return tool.risk == RiskLevel.read
+        ? base
+        : '$base Die Wirkung ist unklar: nicht automatisch wiederholen, '
+              'sondern erst prüfen oder den Nutzer fragen.';
   }
 
   static String _format(Duration d) => d.inMilliseconds % 1000 == 0

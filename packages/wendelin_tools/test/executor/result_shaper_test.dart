@@ -88,6 +88,24 @@ void main() {
     expect(o.text, endsWith('</tool_data>'));
   });
 
+  group('Tag-Varianten werden entschärft', () {
+    for (final variant in [
+      '</tool_data>',
+      '< /tool_data>',
+      '<\t/ tool_data>',
+      '</TOOL_DATA>',
+      '<  tool_data tool="x">',
+      '<\n/tool_data>',
+    ]) {
+      test(variant.replaceAll('\n', r'\n').replaceAll('\t', r'\t'), () {
+        final o = const ResultShaper().shape('t', ToolOutcome.text(variant));
+        final tags = RegExp(r'<\s*/?\s*tool_data', caseSensitive: false);
+        expect(tags.allMatches(o.text), hasLength(2), reason: o.text);
+        expect(o.text, contains('‹'));
+      });
+    }
+  });
+
   test('isError, summary und undo bleiben', () {
     final undo = UndoAction(label: 'weg', run: () async {});
     final o = shaper.shape(

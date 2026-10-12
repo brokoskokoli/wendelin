@@ -444,6 +444,68 @@ void main() {
     expect(message.length, lessThan(120));
   });
 
+  group('normalize', () {
+    test('integer: 3.0 → 3, number bleibt double', () {
+      final out = validator.normalize(
+        {'a': 3.0, 'b': 3.0, 'c': 3.5, 'd': 'x'},
+        const {
+          'type': 'object',
+          'properties': {
+            'a': {'type': 'integer'},
+            'b': {'type': 'number'},
+            'c': {
+              'type': ['integer', 'number'],
+            },
+            'd': {'type': 'string'},
+          },
+        },
+      );
+      expect(out['a'], isA<int>());
+      expect(out['b'], isA<double>());
+      expect(out['c'], 3.5);
+      expect(out['d'], 'x');
+    });
+
+    test('verschachtelt, items und additionalProperties', () {
+      final out = validator.normalize(
+        {
+          'o': {'n': 1.0},
+          'l': [2.0],
+          'free': 5.0,
+          'raw': [1.0],
+        },
+        const {
+          'type': 'object',
+          'properties': {
+            'o': {
+              'type': 'object',
+              'properties': {
+                'n': {'type': 'integer'},
+              },
+            },
+            'l': {
+              'type': 'array',
+              'items': {'type': 'integer'},
+            },
+            'raw': {'type': 'array'},
+          },
+          'additionalProperties': {'type': 'integer'},
+        },
+      );
+      expect((out['o']! as Map)['n'], isA<int>());
+      expect((out['l']! as List).single, isA<int>());
+      expect(out['free'], isA<int>());
+      expect((out['raw']! as List).single, isA<double>());
+    });
+
+    test('ohne Schema für ein Feld bleibt es unverändert', () {
+      expect(
+        validator.normalize({'x': 1.0}, const {'type': 'object'})['x'],
+        isA<double>(),
+      );
+    });
+  });
+
   test('isIsoDateTime direkt', () {
     expect(isIsoDateTime('2026-10-14 10:00:00'), isTrue);
     expect(isIsoDateTime('2026-10-14t10:00:00z'), isTrue);

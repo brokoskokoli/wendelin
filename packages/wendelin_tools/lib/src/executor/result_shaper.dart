@@ -28,7 +28,9 @@ final class ResultShaper {
   static String marker(int kept, int total) =>
       '[gekürzt: $kept von $total Zeichen]';
 
-  static final _tagLike = RegExp('<(/?)(tool_data)', caseSensitive: false);
+  /// Anything a parser might read as an envelope tag: `<`, optional
+  /// whitespace, optional `/`, optional whitespace, `tool_data`.
+  static final _tagLike = RegExp(r'<(\s*/?\s*tool_data)', caseSensitive: false);
 
   /// [outcome] truncated and wrapped for [tool]; `summary`, `undo` and
   /// `isError` are kept.
@@ -76,7 +78,7 @@ final class ResultShaper {
     final escaped = [
       for (final b in content)
         if (b is TextBlock)
-          TextBlock(b.text.replaceAllMapped(_tagLike, (m) => '‹${m[1]}${m[2]}'))
+          TextBlock(b.text.replaceAllMapped(_tagLike, (m) => '‹${m[1]}'))
         else
           b,
     ];

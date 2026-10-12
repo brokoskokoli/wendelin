@@ -5,6 +5,7 @@
 /// [UndoManager] (10-s undo window for `write` tools).
 library;
 
+export 'src/executor/error_text.dart';
 export 'src/executor/result_shaper.dart';
 export 'src/executor/tool_audit.dart';
 export 'src/executor/tool_executor.dart';

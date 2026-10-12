@@ -58,6 +58,12 @@ ToolContext _ctx(String session) => ToolContext(
   timeZone: 'Europe/Berlin',
 );
 
+ToolCatalog _cat(
+  ToolRegistry r, {
+  PrivacyLevel level = PrivacyLevel.local,
+  String session = 's1',
+}) => r.catalogFor(level, sessionId: session);
+
 List<String> _names(List<ToolSpec> specs) => [for (final s in specs) s.name];
 
 void main() {
@@ -141,8 +147,8 @@ void main() {
         ..setToolEnabled('cal__list', enabled: false)
         ..unregister('cal')
         ..unregister('cal'); // no-op
-      expect(r.activeSpecs(), isEmpty);
-      expect(r.lookup('cal__list'), isNull);
+      expect(_cat(r).activeSpecs(), isEmpty);
+      expect(_cat(r).lookup('cal__list'), isNull);
       await r.registerIntegration(_integration('cal', ['list']), enabled: true);
       expect(r.isToolEnabled('cal__list'), isTrue);
     });
@@ -189,7 +195,7 @@ void main() {
       r.reportError('cal', 'Token abgelaufen');
       expect(r.status('cal'), IntegrationStatus.error);
       expect(r.info('cal').error, 'Token abgelaufen');
-      expect(r.activeSpecs(), isEmpty, reason: 'Tools pausiert');
+      expect(_cat(r).activeSpecs(), isEmpty, reason: 'Tools pausiert');
       r.clearError('cal');
       expect(r.status('cal'), IntegrationStatus.active);
       cal.availability = const Availability(
@@ -212,7 +218,7 @@ void main() {
       await r.registerIntegration(only, enabled: true);
       expect(r.status('sms'), IntegrationStatus.unavailable);
       expect(only.availabilityChecks, 0);
-      expect(r.activeSpecs(), isEmpty);
+      expect(_cat(r).activeSpecs(), isEmpty);
     });
 
     test('Prüfung wirft → Fehlerstatus, wenn aktiviert', () async {
@@ -245,16 +251,16 @@ void main() {
         _integration('setup', ['z'], missingSteps: ['login']),
         enabled: true,
       );
-      expect(_names(r.activeSpecs()), ['alpha__x', 'zoo__a', 'zoo__b']);
+      expect(_names(_cat(r).activeSpecs()), ['alpha__x', 'zoo__a', 'zoo__b']);
       r.setToolEnabled('zoo__a', enabled: false);
       expect(r.isToolEnabled('zoo__a'), isFalse);
-      expect(_names(r.activeSpecs()), ['alpha__x', 'zoo__b']);
-      expect(r.lookup('zoo__a'), isNull);
-      expect(r.lookup('off__y'), isNull);
-      expect(r.lookup('zoo__b')!.name, 'zoo__b');
+      expect(_names(_cat(r).activeSpecs()), ['alpha__x', 'zoo__b']);
+      expect(_cat(r).lookup('zoo__a'), isNull);
+      expect(_cat(r).lookup('off__y'), isNull);
+      expect(_cat(r).lookup('zoo__b')!.name, 'zoo__b');
       r.setToolEnabled('zoo__a', enabled: true);
-      expect(_names(r.activeSpecs()), ['alpha__x', 'zoo__a', 'zoo__b']);
-      expect(r.activeSpecs().first.description, 'Tool x von alpha');
+      expect(_names(_cat(r).activeSpecs()), ['alpha__x', 'zoo__a', 'zoo__b']);
+      expect(_cat(r).activeSpecs().first.description, 'Tool x von alpha');
     });
 
     test('Datenschutz: sensible Tools nur ab Mindeststufe', () async {
@@ -267,21 +273,27 @@ void main() {
         _integration('weather', ['now']),
         enabled: true,
       );
-      expect(_names(r.activeSpecsFor(PrivacyLevel.standard)), ['weather__now']);
-      expect(_names(r.activeSpecsFor(PrivacyLevel.eu)), ['weather__now']);
-      expect(_names(r.activeSpecsFor(PrivacyLevel.tee)), [
+      expect(_names(r.activeSpecsFor(PrivacyLevel.standard, sessionId: 's1')), [
+        'weather__now',
+      ]);
+      expect(_names(r.activeSpecsFor(PrivacyLevel.eu, sessionId: 's1')), [
+        'weather__now',
+      ]);
+      expect(_names(r.activeSpecsFor(PrivacyLevel.tee, sessionId: 's1')), [
         'contacts__find',
         'weather__now',
       ]);
-      expect(_names(r.activeSpecsFor(PrivacyLevel.local)), [
+      expect(_names(r.activeSpecsFor(PrivacyLevel.local, sessionId: 's1')), [
         'contacts__find',
         'weather__now',
       ]);
-      final eu = r.catalogFor(PrivacyLevel.eu);
+      final eu = r.catalogFor(PrivacyLevel.eu, sessionId: 's1');
       expect(_names(eu.activeSpecs()), ['weather__now']);
       expect(eu.lookup('contacts__find'), isNull);
       expect(
-        r.catalogFor(PrivacyLevel.tee).lookup('contacts__find'),
+        r
+            .catalogFor(PrivacyLevel.tee, sessionId: 's1')
+            .lookup('contacts__find'),
         isNotNull,
       );
 
@@ -296,7 +308,7 @@ void main() {
         _integration('contacts', ['find'], sensitive: true),
         enabled: true,
       );
-      expect(_names(r.activeSpecsFor(PrivacyLevel.standard)), [
+      expect(_names(r.activeSpecsFor(PrivacyLevel.standard, sessionId: 's1')), [
         'contacts__find',
       ]);
     });
@@ -322,13 +334,13 @@ void main() {
 
     test('29 aktive Tools: alle direkt, kein Meta-Tool', () async {
       final r = await registryWith(29);
-      expect(r.activeSpecs(), hasLength(29));
-      expect(r.lookup(ToolSearchTool.toolName), isNull);
+      expect(_cat(r).activeSpecs(), hasLength(29));
+      expect(_cat(r).lookup(ToolSearchTool.toolName), isNull);
     });
 
     test('ab 30 aktiven Tools: nur tools__search mit Kategorien', () async {
       final r = await registryWith(30);
-      final specs = r.activeSpecs();
+      final specs = _cat(r).activeSpecs();
       expect(_names(specs), [ToolSearchTool.toolName]);
       expect(specs.single.description, contains('cal (Kalender)'));
       expect(specs.single.description, contains('notes (Notizen)'));
@@ -342,35 +354,44 @@ void main() {
       final r = await registryWith(30);
       final changes = <void>[];
       r.changes.listen(changes.add);
-      final search = r.lookup(ToolSearchTool.toolName)!;
+      final search = _cat(r).lookup(ToolSearchTool.toolName)!;
       final o = await search.execute({'query': 'note3'}, _ctx('s1'));
       final found = (jsonDecode(o.text) as Map)['tools'] as List;
       expect(found.map((t) => (t as Map)['name']), ['notes__note3']);
-      expect(_names(r.activeSpecs()), [
+      expect(_names(_cat(r).activeSpecs()), [
         ToolSearchTool.toolName,
         'notes__note3',
       ]);
-      expect(r.unlockedTools, {'notes__note3'});
+      expect(r.unlockedTools('s1'), {'notes__note3'});
 
       await search.execute({'query': 'event7'}, _ctx('s1'));
-      expect(_names(r.activeSpecs()), [
+      expect(_names(_cat(r).activeSpecs()), [
         ToolSearchTool.toolName,
         'cal__event7',
         'notes__note3',
       ]);
 
-      // A new session starts with nothing unlocked.
+      // Sessions are independent: s2 does not see s1's tools and vice versa.
       await search.execute({'query': 'event2'}, _ctx('s2'));
-      expect(r.unlockedTools, {'cal__event2'});
-      r.resetUnlocked();
-      expect(_names(r.activeSpecs()), [ToolSearchTool.toolName]);
+      expect(r.unlockedTools('s2'), {'cal__event2'});
+      expect(r.unlockedTools('s1'), {'cal__event7', 'notes__note3'});
+      expect(_names(_cat(r, session: 's2').activeSpecs()), [
+        ToolSearchTool.toolName,
+        'cal__event2',
+      ]);
+      r.endSession('s1');
+      expect(_names(_cat(r).activeSpecs()), [ToolSearchTool.toolName]);
+      expect(r.unlockedTools('s1'), isEmpty);
+      expect(r.unlockedTools('s2'), {'cal__event2'});
+      r.unregister('cal');
+      expect(r.unlockedTools('s2'), isEmpty);
       await Future<void>.delayed(Duration.zero);
       expect(changes, isNotEmpty);
     });
 
     test('nicht freigeschaltete aktive Tools bleiben aufrufbar', () async {
       final r = await registryWith(30);
-      expect(r.lookup('cal__event0'), isNotNull);
+      expect(_cat(r).lookup('cal__event0'), isNotNull);
     });
 
     test('Meta-Modus zählt nach Datenschutzfilter', () async {
@@ -383,24 +404,28 @@ void main() {
         enabled: true,
       );
       await r.registerIntegration(_integration('w', ['x']), enabled: true);
-      expect(_names(r.activeSpecsFor(PrivacyLevel.standard)), ['w__x']);
-      expect(_names(r.activeSpecsFor(PrivacyLevel.tee)), [
+      expect(_names(r.activeSpecsFor(PrivacyLevel.standard, sessionId: 's1')), [
+        'w__x',
+      ]);
+      expect(_names(r.activeSpecsFor(PrivacyLevel.tee, sessionId: 's1')), [
         ToolSearchTool.toolName,
       ]);
       final search = r
-          .catalogFor(PrivacyLevel.tee)
+          .catalogFor(PrivacyLevel.tee, sessionId: 's1')
           .lookup(ToolSearchTool.toolName)!;
       final o = await search.execute({'category': 'contacts'}, _ctx('s'));
       expect(o.text, contains('contacts__a'));
       expect(
-        r.catalogFor(PrivacyLevel.standard).lookup(ToolSearchTool.toolName),
+        r
+            .catalogFor(PrivacyLevel.standard, sessionId: 's1')
+            .lookup(ToolSearchTool.toolName),
         isNull,
       );
     });
 
     test('Executor führt tools__search über die Registry aus', () async {
       final r = await registryWith(30);
-      final executor = ToolExecutor(catalog: r);
+      final executor = ToolExecutor(catalog: _cat(r));
       final events = await executor.invokeAll(const [
         ToolCallBlock(
           id: '1',
@@ -411,7 +436,7 @@ void main() {
       final o = events.whereType<ToolFinished>().single.outcome;
       expect(o.isError, isFalse);
       expect(o.text, startsWith('<tool_data tool="tools__search">'));
-      expect(r.unlockedTools, contains('notes__note1'));
+      expect(r.unlockedTools('s1'), contains('notes__note1'));
     });
   });
 
@@ -430,6 +455,6 @@ void main() {
     expect(count, greaterThanOrEqualTo(7));
     await sub.cancel();
     await r.dispose();
-    r.resetUnlocked(); // no error after dispose
+    r.endSession('s1'); // no error after dispose
   });
 }

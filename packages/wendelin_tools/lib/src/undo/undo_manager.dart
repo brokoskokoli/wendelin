@@ -13,6 +13,9 @@ enum UndoState {
 
   /// The window has passed.
   expired,
+
+  /// Running the undo failed (the offer is gone).
+  failed,
 }
 
 /// Countdown event of [UndoManager.updates].
@@ -107,13 +110,19 @@ final class UndoManager {
   }
 
   /// Runs the undo of [callId]. Returns `false` if there is none (unknown,
-  /// expired or already undone). Errors of the action are rethrown; the
-  /// offer is gone either way.
+  /// expired or already undone). Emits [UndoState.undone] after the action
+  /// succeeded; on failure emits [UndoState.failed] and rethrows. The offer
+  /// is gone either way (no double undo while the action runs).
   Future<bool> undo(String callId) async {
     if (!canUndo(callId)) return false;
     final p = _pending.remove(callId)!..cancel();
+    try {
+      await p.action();
+    } on Object {
+      _emit(callId, p, UndoState.failed);
+      rethrow;
+    }
     _emit(callId, p, UndoState.undone);
-    await p.action();
     return true;
   }
 
