@@ -1,0 +1,14 @@
+data: {"id":"chatcmpl-Text1","object":"chat.completion.chunk","created":1791844520,"model":"gpt-4.1-nano","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}],"usage":null}
+
+data: {"id":"chatcmpl-Text1","object":"chat.completion.chunk","created":1791844520,"model":"gpt-4.1-nano","choices":[{"index":0,"delta":{"content":"Hallo! "},"finish_reason":null}],"usage":null}
+
+: keep-alive
+
+data: {"id":"chatcmpl-Text1","object":"chat.completion.chunk","created":1791844520,"model":"gpt-4.1-nano","choices":[{"index":0,"delta":{"content":"Ich bin Wendelin."},"finish_reason":null}],"usage":null}
+
+data: {"id":"chatcmpl-Text1","object":"chat.completion.chunk","created":1791844520,"model":"gpt-4.1-nano","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":null}
+
+data: {"id":"chatcmpl-Text1","object":"chat.completion.chunk","created":1791844520,"model":"gpt-4.1-nano","choices":[],"usage":{"prompt_tokens":1250,"completion_tokens":9,"total_tokens":1259,"prompt_tokens_details":{"cached_tokens":1024}}}
+
+data: [DONE]
+

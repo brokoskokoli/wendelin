@@ -1,2 +1,11 @@
-/// Wendelin providers.
+/// LLM provider adapters for Wendelin: Anthropic Messages API and
+/// OpenAI-compatible Chat Completions, SSE parsing, provider templates,
+/// model catalog with prices and cost calculation.
+///
+/// Provider wire formats stay inside `src/anthropic/` and `src/openai/`;
+/// everything exported here speaks the `wendelin_core` types.
 library;
+
+export 'src/common/credentials.dart';
+export 'src/common/http_settings.dart' show HttpSettings, ProviderLog;
+export 'src/sse/sse_parser.dart';

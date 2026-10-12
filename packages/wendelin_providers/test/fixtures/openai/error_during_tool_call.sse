@@ -1,0 +1,4 @@
+data: {"id":"chatcmpl-Err1","object":"chat.completion.chunk","created":1791844520,"model":"gpt-4.1-nano","choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_Broken","type":"function","function":{"name":"contract__echo","arguments":"{\"text\":\"ha"}}]},"finish_reason":null}],"usage":null}
+
+data: {"error":{"message":"The server had an error while processing your request.","type":"server_error","param":null,"code":null}}
+
