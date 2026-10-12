@@ -6,6 +6,8 @@
 /// everything exported here speaks the `wendelin_core` types.
 library;
 
+export 'src/anthropic/anthropic_adapter.dart' show AnthropicMessagesAdapter;
+export 'src/anthropic/anthropic_options.dart';
 export 'src/common/credentials.dart';
 export 'src/common/http_settings.dart' show HttpSettings, ProviderLog;
 export 'src/sse/sse_parser.dart';
