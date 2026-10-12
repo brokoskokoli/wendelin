@@ -1,6 +1,6 @@
 # Review-Protokoll
 
-Jedes Arbeitspaket wird von einem Agenten geprüft, der den Code nicht geschrieben hat. Der Reviewer ändert keinen Produktivcode; er darf temporär Code ändern, um Tests zu prüfen (Schritt 4), und stellt den Ausgangszustand danach wieder her (`git stash`/`git checkout -- .`, am Ende `git status` sauber).
+Jedes Arbeitspaket wird von einem Agenten geprüft, der den Code nicht geschrieben hat. Der Reviewer ändert keinen Produktivcode. Für Mutationsproben (Schritt 4) arbeitet er **ausschließlich in einem eigenen Prüf-Worktree** (`git worktree add --detach ../james-wt/rev-wpNN <branch>`), nie im Worktree des Coders oder eines anderen Pakets – der Coder kann dort parallel arbeiten. Temporäre Skripte liegen in einem eigenen Unterordner. Am Ende ist der Prüf-Worktree sauber (`git status`) und wird entfernt.
 
 ## Prüfschritte
 
