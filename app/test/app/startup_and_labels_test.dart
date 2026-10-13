@@ -89,7 +89,9 @@ void main() {
       expect(integrationIcon('calendar'), WIcons.calendar);
       expect(integrationIcon('memory'), WIcons.note);
       expect(integrationIcon('lists'), WIcons.cart);
-      expect(integrationIcon('web'), WIcons.waves);
+      expect(integrationIcon('web'), WIcons.globe);
+      expect(integrationIcon('clipboard'), WIcons.clipboard);
+      expect(integrationIcon('alarms'), WIcons.alarm);
       expect(integrationIcon('irgendwas'), WIcons.task);
     });
   });

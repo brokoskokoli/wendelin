@@ -8,7 +8,8 @@ import 'package:wendelin/ui/design/gallery.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
 import 'package:wendelin/ui/screens/main_parts.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
-import 'package:wendelin/ui/screens/settings_placeholder.dart';
+import 'package:wendelin/ui/settings/provider_setup_screen.dart';
+import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
@@ -312,7 +313,7 @@ void main() {
   });
 
   testWidgets('ohne Provider: Hinweis-Karte, „Provider einrichten“ öffnet '
-      'den Platzhalter', (tester) async {
+      'die Einrichtung', (tester) async {
     final env = TestEnv();
     await pumpApp(tester, env);
     await tester.pumpAndSettle();
@@ -320,7 +321,7 @@ void main() {
     expect(find.byType(ProviderChip), findsNothing);
     await tester.tap(find.text('Provider einrichten'));
     await tester.pumpAndSettle();
-    expect(find.byType(ProviderSetupPlaceholderScreen), findsOneWidget);
+    expect(find.byType(ProviderSetupScreen), findsOneWidget);
   });
 
   testWidgets('ohne Provider: Demo starten (Debug)', (tester) async {
@@ -341,30 +342,12 @@ void main() {
     expect(find.textContaining('Base-URL fehlt'), findsOneWidget);
   });
 
-  testWidgets('Einstellungen: Integration einschalten fragt die Berechtigung', (
-    tester,
-  ) async {
-    final env = TestEnv(enabled: const {});
-    env.calendar.permissionGranted = false;
+  testWidgets('Einstellungen öffnen und zurück', (tester) async {
+    final env = TestEnv();
     await pumpApp(tester, env);
     await tester.tap(find.byTooltip('Einstellungen'));
     await tester.pumpAndSettle();
-    expect(find.byType(SettingsPlaceholderScreen), findsOneWidget);
-    expect(find.byType(IntegrationTile), findsNWidgets(5));
-    expect(env.permissionRequests, 0);
-    await tester.tap(
-      find.descendant(
-        of: find.widgetWithText(IntegrationTile, 'Kalender'),
-        matching: find.byType(WSwitch),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(env.permissionRequests, 1);
-    final tile = tester.widget<IntegrationTile>(
-      find.widgetWithText(IntegrationTile, 'Kalender'),
-    );
-    expect(tile.status, IntegrationStatus.active);
-
+    expect(find.byType(SettingsScreen), findsOneWidget);
     await tester.tap(find.byTooltip('Zurück'));
     await tester.pumpAndSettle();
     expect(find.byType(MainScreen), findsOneWidget);

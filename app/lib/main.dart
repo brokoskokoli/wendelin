@@ -9,8 +9,10 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'app.dart';
 import 'di/integration_specs.dart';
+import 'di/maintenance.dart';
 import 'di/providers.dart';
 import 'di/startup.dart';
+import 'platform/secure_secret_store.dart';
 import 'ui/theme/app_theme.dart';
 
 /// Opens the database, reads the start settings and runs the app.
@@ -21,6 +23,11 @@ Future<void> main() async {
   final startup = await StartupSettings.load(storage.settings, [
     for (final s in builtInIntegrationSpecs) s.id,
   ]);
+  await startupMaintenance(
+    storage: storage,
+    secrets: SecureSecretStore(),
+    retentionDays: startup.retentionDays,
+  );
   final device = await loadDeviceInfo();
   runApp(
     ProviderScope(

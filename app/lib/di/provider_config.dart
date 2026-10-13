@@ -73,13 +73,16 @@ Future<ProviderConfig?> loadProviderConfig({
   required WendelinStorage storage,
   required SecretStore secrets,
   required ModelCatalog catalog,
+  LlmProvider Function(ProviderProfile profile, SecretReader secrets)? create,
 }) async {
   final profile = await storage.providerProfiles.defaultProfile();
   if (profile == null) return null;
   ProviderTarget target(ProviderProfile p) => ProviderTarget(
     profileId: p.id,
     modelId: p.defaultModel,
-    provider: ProviderFactory.create(p, secrets.read, catalog: catalog),
+    provider:
+        create?.call(p, secrets.read) ??
+        ProviderFactory.create(p, secrets.read, catalog: catalog),
     privacy: p.privacy,
   );
   final names = {profile.id: profile.name};

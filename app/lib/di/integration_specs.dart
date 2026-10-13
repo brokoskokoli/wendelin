@@ -12,6 +12,7 @@ final class IntegrationDeps {
     required this.ports,
     required this.device,
     required this.httpClient,
+    this.webSearch,
   });
 
   /// Device ports (real or demo).
@@ -22,6 +23,9 @@ final class IntegrationDeps {
 
   /// Shared HTTP client (web fetch).
   final http.Client httpClient;
+
+  /// Configured search service; `null` = only `web__fetch`.
+  final WebSearchBackend? webSearch;
 }
 
 /// Registration of one integration in the app: how to build it, how to
@@ -40,6 +44,7 @@ final class IntegrationSpec {
     this.requestPermission,
     this.onSessionEnd,
     this.isSupported,
+    this.permissionRationale,
   });
 
   /// Integration id (must match `Integration.id`).
@@ -54,6 +59,9 @@ final class IntegrationSpec {
 
   /// Called with the built integration when a session ends.
   final void Function(Integration integration)? onSessionEnd;
+
+  /// Explanation shown before [requestPermission] asks the OS.
+  final String? permissionRationale;
 
   /// Whether the integration can be built with [IntegrationDeps] (e.g. its
   /// port exists); `null` = always.
@@ -70,6 +78,10 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
     ),
     requestPermission: (d) async =>
         await d.ports.requestCalendarPermission?.call() ?? true,
+    permissionRationale:
+        'Wendelin braucht Zugriff auf deine Kalender, um Termine zu lesen, '
+        'anzulegen und zu ändern. Android fragt dich gleich danach. Löschen '
+        'fragt Wendelin immer vorher nach.',
   ),
   IntegrationSpec(
     id: 'clipboard',
@@ -85,14 +97,16 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
   ),
   IntegrationSpec(
     id: 'web',
-    // Without a configured search service only `web__fetch` is offered;
-    // WP09 adds the service setup.
-    create: (d) => WebIntegration(fetcher: WebFetcher(client: d.httpClient)),
+    // Without a search service only `web__fetch` is offered (settings →
+    // Web-Suche configures one).
+    create: (d) => WebIntegration(
+      fetcher: WebFetcher(client: d.httpClient),
+      searchBackend: d.webSearch,
+    ),
   ),
   IntegrationSpec(
     id: 'lists',
-    // Device side (SAF file port and list definitions) comes with WP09; until
-    // then only the demo mode offers lists.
+    // Device: SAF files picked in settings → Listen; demo: in memory.
     isSupported: (d) => d.ports.lists != null,
     create: (d) => ListsIntegration(
       d.ports.lists!.port,

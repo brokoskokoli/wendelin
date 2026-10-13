@@ -1,4 +1,7 @@
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
+
+import 'preference_models.dart';
 
 /// Settings keys of the app (stored in `SettingsRepository`).
 ///
@@ -35,4 +38,57 @@ abstract final class AppSettings {
   /// Whether the integration [id] is switched on.
   static SettingKey<bool> integrationEnabled(String id) =>
       SettingKey.boolean('integration.$id.enabled', defaultValue: false);
+
+  /// Onboarding finished (or skipped).
+  static final onboardingDone = SettingKey.boolean(
+    'onboarding.done',
+    defaultValue: false,
+  );
+
+  /// Preferred language (`de`, `fr`, `en`); the UI is German for now.
+  static final language = SettingKey.string('app.language', defaultValue: 'de');
+
+  /// How the assistant addresses the user.
+  static final userName = SettingKey.string('assistant.userName');
+
+  /// Persona addition to the system prompt.
+  static final persona = SettingKey.string('assistant.persona');
+
+  /// Retention of audit log and conversations in days (concept: 30).
+  static final retentionDays = SettingKey.integer(
+    'privacy.retentionDays',
+    defaultValue: 30,
+  );
+
+  /// Tool switches, confirmations and the level for sensitive integrations.
+  static final toolPrefs = SettingKey<ToolPrefs>(
+    'tools.prefs',
+    encode: (p) => p.toJson(),
+    decode: (json) {
+      if (json is Map<String, Object?>) return ToolPrefs.fromJson(json);
+      throw const FormatException('tools.prefs: Objekt erwartet');
+    },
+    defaultValue: const ToolPrefs(),
+  );
+
+  /// Configured web search service (key in the SecretStore).
+  static final webSearch = SettingKey<WebSearchConfig>(
+    'web.search',
+    encode: (c) => c.toJson(),
+    decode: (json) {
+      if (json is Map<String, Object?>) return WebSearchConfig.fromJson(json);
+      throw const FormatException('web.search: Objekt erwartet');
+    },
+  );
+
+  /// The user's lists (K6).
+  static final lists = SettingKey<List<ListDefinition>>(
+    'lists.definitions',
+    encode: (lists) => [for (final l in lists) listDefinitionToJson(l)],
+    decode: (json) {
+      if (json is! List) throw const FormatException('lists: Liste erwartet');
+      return [for (final e in json) listDefinitionFromJson(e)];
+    },
+    defaultValue: const [],
+  );
 }

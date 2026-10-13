@@ -105,6 +105,26 @@ abstract final class WIcons {
     '<path d="M8 12 L11 15 L16 9" $_sj/>',
   );
 
+  /// Zwischenablage (Klemmbrett).
+  static const clipboard = WIconData._(
+    '<rect x="5" y="4.5" width="14" height="16" rx="2.5" $_s/>'
+    '<path d="M9 3 L15 3 L15 6 L9 6 Z M8.5 11 L15.5 11 M8.5 15 L13.5 15" $_sj/>',
+  );
+
+  /// Globus (Web).
+  static const globe = WIconData._(
+    '<circle cx="12" cy="12" r="8.5" $_s/>'
+    '<path d="M3.5 12 L20.5 12 M12 3.5 C9 7, 9 17, 12 20.5 '
+    'M12 3.5 C15 7, 15 17, 12 20.5" $_s/>',
+  );
+
+  /// Wecker (Uhr mit Glocken).
+  static const alarm = WIconData._(
+    '<circle cx="12" cy="13" r="7" $_s/>'
+    '<path d="M12 9.5 L12 13 L14.5 15 M5 5.5 L7.5 3.5 M19 5.5 L16.5 3.5" '
+    '$_sj/>',
+  );
+
   /// Ziehgriff (sechs Punkte), viewBox 16 × 22.
   static const dragHandle = WIconData._(
     '<circle cx="5" cy="5" r="1.6"/><circle cx="11" cy="5" r="1.6"/>'

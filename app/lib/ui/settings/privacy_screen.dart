@@ -1,0 +1,162 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
+
+import '../../di/preferences.dart';
+import '../../di/providers.dart';
+import '../design/design.dart';
+import '../screens/labels.dart';
+import 'export.dart';
+import 'settings_page.dart';
+
+/// Audit entries shown (newest first), filtered by kind.
+final auditViewProvider = FutureProvider.autoDispose
+    .family<List<AuditEntry>, AuditKind?>(
+      (ref, kind) => ref
+          .watch(storageProvider)
+          .audit
+          .query(AuditFilter(kinds: kind == null ? null : {kind}, limit: 200)),
+    );
+
+/// German name of an audit kind.
+String auditKindLabel(AuditKind k) => switch (k) {
+  AuditKind.request => 'Anfrage',
+  AuditKind.routing => 'Routing',
+  AuditKind.toolCall => 'Tool',
+  AuditKind.confirmation => 'Bestätigung',
+  AuditKind.escalation => 'Eskalation',
+  AuditKind.usage => 'Kosten',
+  AuditKind.verification => 'Prüfung',
+  AuditKind.error => 'Fehler',
+};
+
+/// Settings → Datenschutz und Logs: retention, audit log with filter,
+/// export as JSON, delete everything.
+class PrivacyScreen extends ConsumerStatefulWidget {
+  /// Creates the screen.
+  const PrivacyScreen({super.key});
+
+  @override
+  ConsumerState<PrivacyScreen> createState() => _PrivacyState();
+}
+
+class _PrivacyState extends ConsumerState<PrivacyScreen> {
+  AuditKind? _filter;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = ref.watch(retentionDaysProvider);
+    final entries = ref.watch(auditViewProvider(_filter)).value ?? const [];
+    final now = ref.watch(clockProvider).now();
+    return SettingsPage(
+      title: 'Datenschutz und Logs',
+      intro:
+          'Verläufe und Prüfprotokoll bleiben auf dem Gerät. Ältere Einträge '
+          'löscht Wendelin automatisch.',
+      children: [
+        SettingsSection(
+          title: 'Aufbewahrung',
+          children: [
+            for (final d in RetentionDays.choices)
+              SettingsRow(
+                title: d == 365 ? '1 Jahr' : '$d Tage',
+                onTap: () => unawaited(
+                  ref
+                      .read(retentionDaysProvider.notifier)
+                      .set(d)
+                      .then((_) => ref.invalidate(auditViewProvider)),
+                ),
+                trailing: d == days
+                    ? const CheckStatusIcon(
+                        CheckStatus.ok,
+                        semanticLabel: 'gewählt',
+                      )
+                    : null,
+              ),
+          ],
+        ),
+        Text('Prüfprotokoll', style: WText.sectionLabel),
+        Wrap(
+          spacing: WSpace.s,
+          runSpacing: WSpace.s,
+          children: [
+            for (final k in <AuditKind?>[null, ...AuditKind.values])
+              ChoiceChip(
+                label: Text(k == null ? 'Alle' : auditKindLabel(k)),
+                selected: _filter == k,
+                onSelected: (_) => setState(() => _filter = k),
+              ),
+          ],
+        ),
+        if (entries.isEmpty)
+          Text('Keine Einträge.', style: WText.caption)
+        else
+          SectionCard(
+            children: [
+              for (final e in entries.take(100))
+                SettingsRow(
+                  title:
+                      '${auditKindLabel(e.kind)} · '
+                      '${sessionLabel(e.at, now)}',
+                  detail: auditSummary(e),
+                ),
+            ],
+          ),
+        WideButton(
+          'Als JSON exportieren',
+          onPressed: () async => ref.read(exporterProvider)(
+            'wendelin-pruefprotokoll.json',
+            'application/json',
+            await ref.read(storageProvider).audit.exportJson(),
+          ),
+        ),
+        WideButton(
+          'Verläufe und Protokoll löschen',
+          onPressed: () => unawaited(_deleteAll()),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _deleteAll() async {
+    final ok = await confirm(
+      context,
+      title: 'Alles löschen?',
+      message:
+          'Alle Gesprächsverläufe und das Prüfprotokoll werden gelöscht. Das '
+          'lässt sich nicht rückgängig machen. Gedächtnis und Einstellungen '
+          'bleiben.',
+      yes: 'Alles löschen',
+    );
+    if (!ok) return;
+    final storage = ref.read(storageProvider);
+    await storage.audit.clear();
+    for (final s in await storage.conversations.sessions()) {
+      await storage.conversations.deleteSession(s.id);
+    }
+    ref.read(sessionManagerProvider).end();
+    ref.invalidate(auditViewProvider);
+    if (mounted) showHint(context, 'Gelöscht.');
+  }
+}
+
+/// One line about an audit entry (no secrets: the repository redacts).
+String auditSummary(AuditEntry e) {
+  final p = e.payload;
+  return switch (e.kind) {
+    AuditKind.request => '${p['text'] ?? ''}',
+    AuditKind.routing => '${p['profileId']} · ${p['modelId']}',
+    AuditKind.toolCall => '${p['tool']} · ${p['status']}',
+    AuditKind.confirmation =>
+      '${p['tool'] ?? p['toProfile']} · '
+          '${p['approved'] == true ? 'ja' : 'nein'}',
+    AuditKind.escalation => '${p['fromProfile']} → ${p['toProfile']}',
+    AuditKind.usage =>
+      '${p['modelId'] ?? p['profileId']} · '
+          '${p['inputTokens'] ?? '-'}/${p['outputTokens'] ?? '-'} Tokens',
+    AuditKind.verification => '${p['profileId']} · ${p['status']}',
+    AuditKind.error => '${p['message'] ?? p['error']}',
+  };
+}

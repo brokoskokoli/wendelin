@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'app_settings.dart';
+import 'preference_models.dart';
 
 /// Settings read once before the first frame.
 @immutable
@@ -11,6 +13,13 @@ final class StartupSettings {
     this.enabledIntegrations = const {},
     this.demoMode = false,
     this.showThinking = false,
+    this.onboardingDone = true,
+    this.language = 'de',
+    this.assistant = const AssistantPrefs(),
+    this.retentionDays = 30,
+    this.toolPrefs = const ToolPrefs(),
+    this.webSearch,
+    this.lists = const [],
   });
 
   /// Integrations the user switched on.
@@ -21,6 +30,28 @@ final class StartupSettings {
 
   /// Show reasoning text.
   final bool showThinking;
+
+  /// Whether the onboarding is done (`true` by default so tests and the
+  /// demo start on the main screen; [load] reads the stored value).
+  final bool onboardingDone;
+
+  /// Preferred language.
+  final String language;
+
+  /// Name and persona.
+  final AssistantPrefs assistant;
+
+  /// Retention of logs and conversations in days.
+  final int retentionDays;
+
+  /// Tool switches and confirmations.
+  final ToolPrefs toolPrefs;
+
+  /// Web search service.
+  final WebSearchConfig? webSearch;
+
+  /// The user's lists.
+  final List<ListDefinition> lists;
 
   /// Reads the settings for the integrations [integrationIds].
   static Future<StartupSettings> load(
@@ -37,6 +68,16 @@ final class StartupSettings {
       enabledIntegrations: enabled,
       demoMode: await settings.get(AppSettings.demoMode) ?? false,
       showThinking: await settings.get(AppSettings.showThinking) ?? false,
+      onboardingDone: await settings.get(AppSettings.onboardingDone) ?? false,
+      language: await settings.get(AppSettings.language) ?? 'de',
+      assistant: AssistantPrefs(
+        userName: await settings.get(AppSettings.userName),
+        persona: await settings.get(AppSettings.persona),
+      ),
+      retentionDays: await settings.get(AppSettings.retentionDays) ?? 30,
+      toolPrefs: await settings.get(AppSettings.toolPrefs) ?? const ToolPrefs(),
+      webSearch: await settings.get(AppSettings.webSearch),
+      lists: await settings.get(AppSettings.lists) ?? const [],
     );
   }
 }
