@@ -26,3 +26,4 @@ Jedes Paket: eigener Branch `wp/<nr>-<slug>` in eigenem Worktree, Umsetzung durc
 | --- | --- | --- |
 | M2 Sprache und Assistent | WP15–WP20 | `M2.md` |
 | M3 Routing, MCP, Erweiterung | WP21–WP29 | `M3.md` (Welle A parallel: WP21 Routing-Regeln, WP22 MCP-Client, WP23 HTTP-Tools, WP24 Bring!, WP25 App-Erkennung; Welle B: WP26–WP28 App; Welle C: WP29 E2E) |
+| M2-Nachbesserungen (Gerätetest 2026-10-13) | WP30–WP33 | `M2-fixes.md` (Welle 1 parallel: WP30 Sprach-Robustheit, WP32 Onboarding/Einstellungen, WP33 STT-Qualität; Welle 2: WP31 Sprach-UX nach WP30 und WP26) |
