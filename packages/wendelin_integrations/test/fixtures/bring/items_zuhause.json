@@ -1,0 +1,28 @@
+{
+  "uuid": "00000000-0000-4000-8000-0000000000a1",
+  "status": "SHARED",
+  "items": {
+    "purchase": [
+      {
+        "uuid": "00000000-0000-4000-8000-0000000000b1",
+        "itemId": "Milch",
+        "specification": "1 Liter",
+        "attributes": []
+      },
+      {
+        "uuid": "00000000-0000-4000-8000-0000000000b2",
+        "itemId": "Äpfel",
+        "specification": "",
+        "attributes": []
+      }
+    ],
+    "recently": [
+      {
+        "uuid": "00000000-0000-4000-8000-0000000000b3",
+        "itemId": "Brot",
+        "specification": "",
+        "attributes": []
+      }
+    ]
+  }
+}

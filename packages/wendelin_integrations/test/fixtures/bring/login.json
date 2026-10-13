@@ -1,0 +1,12 @@
+{
+  "uuid": "00000000-0000-4000-8000-000000000001",
+  "publicUuid": "00000000-0000-4000-8000-000000000002",
+  "email": "kontrakt@example.org",
+  "name": "Kontrakt",
+  "photoPath": "",
+  "bringListUUID": "00000000-0000-4000-8000-0000000000a1",
+  "access_token": "fixture-access-1",
+  "refresh_token": "fixture-refresh-1",
+  "token_type": "Bearer",
+  "expires_in": 604799
+}

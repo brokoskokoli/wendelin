@@ -25,6 +25,7 @@ void main() {
         client: MockClient((_) async => http.Response('', 200)),
       ),
     ),
+    BringIntegration(FakeBringApi(), FakeBringSecrets()),
   ];
   final tools = [for (final i in integrations) ...i.tools];
 
@@ -60,6 +61,11 @@ void main() {
       'obsidian__append_daily_note',
       'obsidian__replace_section',
       'obsidian__open_note',
+      'bring__list_lists',
+      'bring__get_items',
+      'bring__add_items',
+      'bring__remove_item',
+      'bring__complete_item',
     });
     expect(tools.map((t) => t.name).toSet(), hasLength(tools.length));
   });

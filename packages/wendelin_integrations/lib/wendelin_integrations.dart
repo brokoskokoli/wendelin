@@ -1,14 +1,16 @@
 /// Built-in Wendelin integrations on top of device ports: calendar,
-/// clipboard, alarms, memory, web, lists and Obsidian.
+/// clipboard, alarms, memory, web, lists, Obsidian and Bring!.
 ///
 /// Device access goes only through the ports ([CalendarPort],
 /// [ClipboardPort], [AlarmPort], [MemoryStorePort], [ListFilePort],
-/// [VaultPort], [NoteIndexPort]); the app implements
+/// [VaultPort], [NoteIndexPort], and for Bring! [BringApi] and
+/// [BringSecrets]); the app implements
 /// them. Fakes are in `package:wendelin_integrations/fakes.dart`, contract
 /// suites in `package:wendelin_integrations/testing.dart`.
 library;
 
 import 'src/alarms/alarms.dart';
+import 'src/bring/bring_api.dart';
 import 'src/calendar/calendar_port.dart';
 import 'src/clipboard/clipboard.dart';
 import 'src/lists/lists.dart';
@@ -16,6 +18,20 @@ import 'src/memory/memory.dart';
 import 'src/obsidian/ports.dart';
 
 export 'src/alarms/alarms.dart';
+export 'src/bring/bring_api.dart';
+export 'src/bring/bring_integration.dart';
+export 'src/bring/bring_session.dart';
+export 'src/bring/bring_tools.dart'
+    show
+        BringAddItemsTool,
+        BringCompleteItemTool,
+        BringGetItemsTool,
+        BringListListsTool,
+        BringRemoveItemTool,
+        bringDataNotice,
+        maxBringText,
+        maxRecentShown;
+export 'src/bring/http_bring_api.dart';
 export 'src/calendar/calendar_integration.dart';
 export 'src/calendar/calendar_port.dart';
 export 'src/calendar/calendar_tools.dart';

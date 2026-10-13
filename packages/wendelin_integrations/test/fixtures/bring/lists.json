@@ -1,0 +1,14 @@
+{
+  "lists": [
+    {
+      "listUuid": "00000000-0000-4000-8000-0000000000a1",
+      "name": "Zuhause",
+      "theme": "ch.publisheria.bring.theme.home"
+    },
+    {
+      "listUuid": "00000000-0000-4000-8000-0000000000a2",
+      "name": "Büro",
+      "theme": "ch.publisheria.bring.theme.work"
+    }
+  ]
+}
