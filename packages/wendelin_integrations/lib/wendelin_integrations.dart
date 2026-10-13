@@ -1,5 +1,6 @@
 /// Built-in Wendelin integrations on top of device ports: calendar,
-/// clipboard, alarms, memory, web, lists, Obsidian and Bring!.
+/// clipboard, alarms, memory, web, lists, Obsidian and Bring!, plus
+/// user-defined HTTP tools ([HttpToolsIntegration]).
 ///
 /// Device access goes only through the ports ([CalendarPort],
 /// [ClipboardPort], [AlarmPort], [MemoryStorePort], [ListFilePort],
@@ -13,6 +14,7 @@ import 'src/alarms/alarms.dart';
 import 'src/bring/bring_api.dart';
 import 'src/calendar/calendar_port.dart';
 import 'src/clipboard/clipboard.dart';
+import 'src/http_tools/http_tools_integration.dart';
 import 'src/lists/lists.dart';
 import 'src/memory/memory.dart';
 import 'src/obsidian/ports.dart';
@@ -41,6 +43,13 @@ export 'src/common/base_tool.dart' show IntegrationTool;
 export 'src/common/port_exception.dart';
 export 'src/common/time.dart' show LocalDate, timeZoneLocation;
 export 'src/common/tool_args.dart' show InvalidArgumentsException, ToolArgs;
+export 'src/http_tools/http_target.dart';
+export 'src/http_tools/http_template.dart'
+    show UrlTemplate, expandFormBody, expandHeaders, expandJsonBody;
+export 'src/http_tools/http_tool_definition.dart';
+export 'src/http_tools/http_tool_runner.dart';
+export 'src/http_tools/http_tools_integration.dart';
+export 'src/http_tools/http_transport.dart';
 export 'src/lists/lists.dart'
     show
         AddItemsTool,
