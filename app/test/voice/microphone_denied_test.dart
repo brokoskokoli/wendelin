@@ -1,6 +1,7 @@
 // Mikrofon-Berechtigung verweigert (WP18-Review N12/N14, WP19): erst die
 // Erklärung, dann kein Start – auf dem Hauptbildschirm und im Overlay.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/voice/microphone_access.dart';
@@ -71,6 +72,83 @@ void main() {
       await pumpUntil(tester, find.text(_noAccess));
       expect(env.microphone.requests, [false, true]);
       expect(audio.startCount, 0);
+    });
+  });
+
+  group('Hinweis über der Eingabezeile (WP32)', () {
+    Future<(TestEnv, List<int>)> denied(WidgetTester tester) async {
+      final opened = <int>[];
+      final audio = _audio();
+      final base = _env(audio, overlay: false);
+      final env = TestEnv(
+        providerConfig: scripted(FakeLlmProvider(const [])),
+        extraOverrides: [
+          ...base.extraOverrides,
+          appSettingsOpenerProvider.overrideWithValue(
+            () async => opened.add(1),
+          ),
+        ],
+      );
+      env.microphone.granted = false;
+      await pumpApp(tester, env);
+      await tester.pump();
+      await tester.tap(find.byType(MicButton));
+      await pumpUntil(tester, find.text('Nicht jetzt'));
+      await tester.tap(find.text('Nicht jetzt'));
+      await pumpUntil(tester, find.byType(MicrophoneNotice));
+      return (env, opened);
+    }
+
+    testWidgets('„Nicht jetzt“: Karte mit „Erlauben“, Erlauben fragt Android', (
+      tester,
+    ) async {
+      final (env, _) = await denied(tester);
+      expect(
+        find.descendant(
+          of: find.byType(MicrophoneNotice),
+          matching: find.text(_noAccess),
+        ),
+        findsOneWidget,
+      );
+      final allow = find.widgetWithText(OutlinedButton, 'Erlauben');
+      expect(
+        tester.getSize(allow).height,
+        greaterThanOrEqualTo(WSize.touchMin),
+      );
+      // Above the input row.
+      expect(
+        tester.getBottomLeft(find.byType(MicrophoneNotice)).dy,
+        lessThanOrEqualTo(tester.getTopLeft(find.byType(TextField)).dy),
+      );
+      env.microphone.granted = true;
+      await tester.tap(allow);
+      await tester.pump();
+      await tester.pump();
+      expect(env.microphone.requests.last, isTrue, reason: 'Android fragt');
+      expect(find.byType(MicrophoneNotice), findsNothing);
+      expect(find.text(_noAccess), findsNothing);
+    });
+
+    testWidgets('Android verweigert: „Android-Einstellungen“, nach Rückkehr '
+        'erlaubt verschwindet die Karte', (tester) async {
+      final (env, opened) = await denied(tester);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Erlauben'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(MicrophoneNotice), findsOneWidget);
+      expect(find.text(microphoneSettingsHint), findsOneWidget);
+      await tester.tap(
+        find.widgetWithText(OutlinedButton, 'Android-Einstellungen'),
+      );
+      await tester.pump();
+      expect(opened, [1]);
+
+      env.microphone.granted = true;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(MicrophoneNotice), findsNothing);
     });
   });
 

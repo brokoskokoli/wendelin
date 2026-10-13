@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin/ui/settings/providers_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -37,6 +38,8 @@ Future<void> chooseClaudeAndConnect(WidgetTester tester) async {
 }
 
 void main() {
+  b2ConnectionStatus();
+
   testWidgets('erfolgreich: Modelle laden, wählen, prüfen, Budget, Speichern', (
     tester,
   ) async {
@@ -86,7 +89,10 @@ void main() {
     await openNew(tester);
     await chooseClaudeAndConnect(tester);
     final field = tester.widget<TextField>(
-      find.byKey(const ValueKey('apiKey')),
+      find.descendant(
+        of: find.byKey(const ValueKey('apiKey')),
+        matching: find.byType(TextField),
+      ),
     );
     expect(field.controller!.text, isEmpty);
     expect(find.text(_key), findsNothing);
@@ -323,6 +329,74 @@ void main() {
         ).id,
         'mistral',
       );
+    });
+  });
+}
+
+/// Status of the [StatusCard] titled [title] (fails if there is none).
+CheckStatus statusOf(WidgetTester tester, String title) => tester
+    .widget<CheckStatusIcon>(
+      find.descendant(
+        of: find.widgetWithText(StatusCard, title),
+        matching: find.byType(CheckStatusIcon),
+      ),
+    )
+    .status;
+
+void b2ConnectionStatus() {
+  group('B2: Rückmeldung nach „Verbindung testen“', () {
+    testWidgets('Erfolg: „Verbindung steht“ mit Kreis über der Modellliste', (
+      tester,
+    ) async {
+      final f = RecordingFactory(
+        models: const [
+          ModelInfo(id: 'claude-haiku-5-5', displayName: 'Claude Haiku'),
+          ModelInfo(id: 'claude-sonnet-5', displayName: 'Claude Sonnet'),
+        ],
+      );
+      await pumpProviders(tester, f);
+      await openNew(tester);
+      await chooseClaudeAndConnect(tester);
+      expect(find.text('Verbindung steht'), findsOneWidget);
+      expect(find.text('2 Modelle gefunden'), findsOneWidget);
+      expect(statusOf(tester, 'Verbindung steht'), CheckStatus.ok);
+      expect(
+        tester.getTopLeft(find.text('Verbindung steht')).dy,
+        lessThan(tester.getTopLeft(find.text('Claude Haiku')).dy),
+        reason: 'über der Modellliste',
+      );
+      // Still there after a failed probe of the chosen model.
+      f.ok = false;
+      await tester.tap(find.text('Modell prüfen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Verbindung steht'), findsOneWidget);
+      expect(statusOf(tester, 'Modell nicht nutzbar'), CheckStatus.failed);
+    });
+
+    testWidgets('falscher Key: Quadrat „Verbindung fehlgeschlagen“', (
+      tester,
+    ) async {
+      await pumpProviders(tester, RecordingFactory(ok: false));
+      await openNew(tester);
+      await chooseClaudeAndConnect(tester);
+      expect(statusOf(tester, 'Verbindung fehlgeschlagen'), CheckStatus.failed);
+      expect(find.text('Verbindung steht'), findsNothing);
+    });
+
+    testWidgets('ohne Modellliste: Dreieck, die Prüfung entscheidet', (
+      tester,
+    ) async {
+      final f = RecordingFactory(
+        listError: const ServerException('Not Found', statusCode: 404),
+      );
+      await pumpProviders(tester, f);
+      await openNew(tester);
+      await chooseClaudeAndConnect(tester);
+      expect(
+        statusOf(tester, 'Modellliste nicht verfügbar'),
+        CheckStatus.pending,
+      );
+      expect(find.text('Verbindung steht'), findsNothing);
     });
   });
 }

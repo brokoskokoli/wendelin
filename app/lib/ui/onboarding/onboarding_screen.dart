@@ -18,7 +18,8 @@ import 'voice_download_step.dart';
 
 /// First start: language, first provider, speech recognition download,
 /// integrations (concept: „Onboarding“). Every step can be skipped;
-/// settings can change it later.
+/// settings can change it later. From step 2 on, the back arrow and the
+/// system back gesture go one step back; on step 1 back leaves the app.
 class OnboardingScreen extends ConsumerStatefulWidget {
   /// Creates the onboarding.
   const OnboardingScreen({super.key});
@@ -50,18 +51,25 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => switch (_step) {
-    0 => _language(),
-    1 => _provider(),
-    2 => VoiceDownloadStep(onNext: _next),
-    _ => _integrations(),
-  };
+  Widget build(BuildContext context) => PopScope(
+    canPop: _step == 0,
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop && _step > 0) setState(() => _step--);
+    },
+    child: switch (_step) {
+      0 => _language(),
+      1 => _provider(),
+      2 => VoiceDownloadStep(onNext: _next),
+      _ => _integrations(),
+    },
+  );
 
   Widget _language() {
     final current = ref.watch(languageProvider);
     return SettingsPage(
       title: 'Willkommen',
       showBack: false,
+      centered: true,
       intro:
           'Wendelin ist dein Sprachassistent. In vier Schritten ist er '
           'eingerichtet. Welche Sprache sprichst du mit ihm?',
@@ -93,7 +101,7 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
     final profiles = ref.watch(profilesProvider).value?.profiles ?? const [];
     return SettingsPage(
       title: 'Sprachmodell',
-      showBack: false,
+      centered: true,
       intro:
           'Wendelin braucht einen Provider, z. B. Claude mit deinem API-Key '
           'oder ein eigenes Modell auf dem Homeserver.',
@@ -133,7 +141,6 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
     final registry = ref.watch(toolRegistryProvider);
     return SettingsPage(
       title: 'Was darf Wendelin?',
-      showBack: false,
       intro:
           'Schalte nur ein, was du brauchst. Berechtigungen fragt Android '
           'erst jetzt beim Einschalten.',

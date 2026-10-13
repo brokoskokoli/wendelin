@@ -138,6 +138,72 @@ void main() {
       });
     });
 
+    test(
+      'System-Spracherkennung (B12): aktiv, anderer Dienst, unbekannt',
+      () async {
+        final platform = AssistantPlatform(channel: channel);
+        for (final (reply, expected) in <(Object?, RecognitionServiceStatus)>[
+          (
+            {'state': 'active'},
+            const RecognitionServiceStatus(RecognitionServiceState.active),
+          ),
+          (
+            {'state': 'other', 'appName': ' Speech Services by Google '},
+            const RecognitionServiceStatus(
+              RecognitionServiceState.other,
+              appName: 'Speech Services by Google',
+            ),
+          ),
+          (
+            {'state': 'other', 'appName': ''},
+            const RecognitionServiceStatus(RecognitionServiceState.other),
+          ),
+          (
+            {'state': 'other'},
+            const RecognitionServiceStatus(RecognitionServiceState.other),
+          ),
+          // A name only belongs to another service.
+          (
+            {'state': 'active', 'appName': 'x'},
+            const RecognitionServiceStatus(RecognitionServiceState.active),
+          ),
+          ({'state': 'unknown'}, RecognitionServiceStatus.unknown),
+          ({'state': 'kaputt'}, RecognitionServiceStatus.unknown),
+          ('active', RecognitionServiceStatus.unknown),
+          (null, RecognitionServiceStatus.unknown),
+        ]) {
+          answer = reply;
+          expect(
+            await platform.recognitionService(),
+            expected,
+            reason: '$reply',
+          );
+        }
+        expect(calls.map((c) => c.method).toSet(), {'recognitionServiceState'});
+      },
+    );
+
+    test(
+      'System-Spracherkennung ohne Plattform oder mit Fehler: unbekannt',
+      () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null);
+        expect(
+          await AssistantPlatform(channel: channel).recognitionService(),
+          RecognitionServiceStatus.unknown,
+        );
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              channel,
+              (call) async => throw PlatformException(code: 'x'),
+            );
+        expect(
+          await AssistantPlatform(channel: channel).recognitionService(),
+          RecognitionServiceStatus.unknown,
+        );
+      },
+    );
+
     test('ohne Plattform: angeboten (Standard)', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, null);

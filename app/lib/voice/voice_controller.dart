@@ -158,10 +158,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       return false;
     }
     if (!(await prepare?.call() ?? true)) {
-      state = state.copyWith(
-        error: 'Ohne Mikrofon-Zugriff geht nur Text.',
-        clearHint: true,
-      );
+      state = state.copyWith(error: microphoneDeniedHint, clearHint: true);
       return false;
     }
     if (state.active || ref.read(agentControllerProvider).running) {

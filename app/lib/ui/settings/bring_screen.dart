@@ -171,22 +171,28 @@ class _BringScreenState extends ConsumerState<BringScreen> {
   }
 
   List<Widget> _loginForm() => [
-    TextField(
-      key: const ValueKey('bringEmail'),
-      controller: _email,
-      style: WText.body,
-      keyboardType: TextInputType.emailAddress,
-      autocorrect: false,
-      decoration: const InputDecoration(labelText: 'E-Mail'),
-    ),
-    TextField(
-      key: const ValueKey('bringPassword'),
-      controller: _password,
-      style: WText.body,
-      obscureText: true,
-      autocorrect: false,
-      enableSuggestions: false,
-      decoration: const InputDecoration(labelText: 'Passwort'),
+    // One group: the password manager fills e-mail and password together.
+    AutofillGroup(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: WSpace.l18,
+        children: [
+          TextField(
+            key: const ValueKey('bringEmail'),
+            controller: _email,
+            style: WText.body,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            autofillHints: const [AutofillHints.username, AutofillHints.email],
+            decoration: const InputDecoration(labelText: 'E-Mail'),
+          ),
+          SecretField(
+            key: const ValueKey('bringPassword'),
+            controller: _password,
+            label: 'Passwort',
+          ),
+        ],
+      ),
     ),
     if (_error != null)
       Text(

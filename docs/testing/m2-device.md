@@ -34,6 +34,8 @@ tool/check_apk.sh app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 3. `adb devices` zeigt das Telefon als `device`.
 4. `adb install -r app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`
 
+Xiaomi/HyperOS (auch MIUI): Dort braucht `adb install` zusätzlich in den Entwickleroptionen „Über USB installieren“ (dafür ist eine Anmeldung mit dem Xiaomi-Konto nötig), und beim Installieren erscheint am Telefon eine Rückfrage, die bestätigt werden muss. Ohne beides bricht `adb install` mit `INSTALL_FAILED_USER_RESTRICTED` ab.
+
 **Variante B: als Datei**
 1. Die APK aufs Telefon kopieren (Kabel, Cloud oder Mail an dich selbst).
 2. In der Dateien-App antippen. Android fragt einmal, ob diese App „unbekannte Apps installieren“ darf: erlauben, zurück, „Installieren“.
@@ -43,13 +45,14 @@ Hinweis: Das Release-APK ist vorerst mit dem Debug-Schlüssel des Rechners signi
 
 ## 2. Onboarding
 
-Wendelin öffnen. Das Onboarding hat vier Schritte, jeder lässt sich überspringen:
+Wendelin öffnen. Das Onboarding hat vier Schritte, jeder lässt sich überspringen. Ab Schritt 2 gehen der Zurück-Pfeil und die Zurück-Geste einen Schritt zurück, erst in Schritt 1 schließt die Geste die App.
 
 1. **Willkommen**: Sprache wählen (für diesen Test „Deutsch“).
-2. **Sprachmodell (Provider)**: „Provider einrichten“ → Vorlage „Claude“ (Anthropic) → API-Key einfügen → „Verbindung testen“ → als Modell z. B. Claude Haiku → Datenschutzstufe lassen → „Speichern“.
-3. **Spracherkennung laden**: Whisper-Modell wählen, dann „Laden“.
-   - „Whisper base (schnell)“: 161 MB. „Whisper small (genauer)“: 376 MB, erkennt Deutsch und Französisch deutlich besser (Wortfehler auf unseren Testsätzen 9 % statt 21 %).
-   - Dazu kommt Silero VAD (0,6 MB), die Sprachaktivitätserkennung.
+2. **Sprachmodell (Provider)**: „Provider einrichten“ → Vorlage „Claude“ (Anthropic) → API-Key einfügen (ein Passwort-Manager mit Android-Autofill kann das Feld füllen) → „Verbindung testen“. Über der Modellliste steht dann „Verbindung steht“ mit grünem Haken. Als Modell z. B. Claude Haiku → Datenschutzstufe lassen → „Speichern“.
+3. **Spracherkennung laden**: Whisper-Modell antippen, dann den einen Knopf „Laden“.
+   - „Whisper base (schnell)“: 161 MB. „Whisper small (genauer)“: 375 MB, erkennt Deutsch und Französisch deutlich besser (Wortfehler auf unseren Testsätzen 9 % statt 21 %).
+   - Silero VAD (0,6 MB, die Sprachaktivitätserkennung) gehört dazu und wird automatisch mitgeladen.
+   - Darunter steht, was noch fehlt („Noch nötig: …“), bzw. „Bereit“. Dann erscheint „Weiter“.
    - **Im WLAN laden.** „Im Hintergrund weiterladen“ geht weiter zum nächsten Schritt. Ein abgebrochener Download wird später fortgesetzt (Einstellungen → Sprache, „Fortsetzen“).
    - Für die Laufzeitmessung (Abschnitt 8) brauchst du beide Modelle. Das zweite lädst du in Einstellungen → Sprache.
 4. **Was darf Wendelin?**: Für diesen Test ist nichts nötig. „Fertig“.
@@ -60,17 +63,17 @@ Die Mikrofon-Berechtigung fragt Wendelin erst, wenn die Spracherkennung geladen 
 
 1. Im Hauptbildschirm auf das Mikrofon tippen. Solange Whisper oder Silero fehlen, ist es ausgegraut, und darunter steht „Spracherkennung laden: Einstellungen → Sprache“. Das ist richtig so.
 2. Wendelin erklärt zuerst, wozu er das Mikrofon braucht („Mikrofon erlauben?“): „Erlauben“ → Android-Dialog → „Bei Nutzung der App“.
-3. Wer „Nicht jetzt“ wählt, sieht unter dem Mikrofon „Ohne Mikrofon-Zugriff geht nur Text.“ und kann trotzdem tippen.
-4. Wer „Erlauben“ wählt, im Android-Dialog aber ablehnt, sieht kurz „Ohne Mikrofon geht nur Text. Du kannst es in den Android-Einstellungen unter Apps → Wendelin erlauben.“ und danach unter dem Mikrofon „Ohne Mikrofon-Zugriff geht nur Text.“
+3. Wer „Nicht jetzt“ wählt, sieht über der Eingabezeile eine Karte „Ohne Mikrofon-Zugriff geht nur Text.“ mit dem Knopf „Erlauben“ und kann trotzdem tippen. „Erlauben“ lässt Android fragen.
+4. Wer im Android-Dialog ablehnt, sieht kurz „Ohne Mikrofon geht nur Text. In den Android-Einstellungen unter Apps → Wendelin erlauben.“ Die Karte bietet dann „Android-Einstellungen“ an. Nach dem Erlauben dort und der Rückkehr in Wendelin verschwindet sie.
 
 ## 4. Standard-Assistent setzen
 
 1. In Wendelin: Einstellungen → Assistent → „Als Standard-Assistent setzen“. Android öffnet „Standard-App für digitalen Assistenten“.
    - Direkt in Android heißt der Pfad meist Einstellungen → Apps → Standard-Apps → Digitaler Assistent → „Standard-App für digitalen Assistenten“ (Pixel und AOSP), bei Samsung Einstellungen → Apps → Standard-Apps auswählen → Digitaler Assistent.
 2. „Wendelin“ wählen und bestätigen.
-3. Zurück in Wendelin steht dort „Wendelin ist Standard-Assistent“ mit Haken.
-4. Damit wird Wendelin auch die **System-Spracherkennung** für andere Apps (Schalter „Als Spracherkennung für andere Apps anbieten“, Standard an).
-5. Die **Power-Taste**: Auf vielen Telefonen startet langes Drücken erst nach einer Einstellung den Assistenten, sonst kommt das Ausschaltmenü. Pixel: Einstellungen → System → Gesten → „Ein-/Aus-Taste gedrückt halten“ → „Digitaler Assistent“. Samsung: Einstellungen → Erweiterte Funktionen → Seitentaste → „Gedrückt halten“. Andere Auslöser: Wischen aus der unteren Ecke (Gestennavigation) oder langes Drücken der Home-Taste (3-Tasten-Navigation).
+3. Zurück in Wendelin steht dort „Wendelin ist Standard-Assistent“ mit Haken. Der Knopf ist dann weg, zum Wechseln gibt es den Link „In Android ändern“.
+4. **System-Spracherkennung** für andere Apps (Schalter „Als Spracherkennung für andere Apps anbieten“, Standard an): Sie folgt der Assistenten-Rolle nur, wenn Android die Einstellung `voice_recognition_service` mitzieht (AOSP, viele Custom-ROMs). Auf Geräten mit Google-Diensten (z. B. HyperOS) bleibt sie oft bei Google und lässt sich dort nicht umstellen. Einstellungen → Assistent zeigt den tatsächlichen Zustand: „Android nutzt Wendelin für die Spracheingabe anderer Apps.“ oder, ausgegraut, „Auf diesem Gerät nicht verfügbar“ mit dem Namen des Dienstes, den Android stattdessen nutzt. Prüfen per adb: `adb shell settings get secure voice_recognition_service`.
+5. Die **Power-Taste**: Auf HyperOS (Xiaomi) öffnet langes Drücken Wendelin ohne zusätzliche Einstellung. Auf vielen Telefonen startet langes Drücken erst nach einer Einstellung den Assistenten, sonst kommt das Ausschaltmenü. Pixel: Einstellungen → System → Gesten → „Ein-/Aus-Taste gedrückt halten“ → „Digitaler Assistent“. Samsung: Einstellungen → Erweiterte Funktionen → Seitentaste → „Gedrückt halten“. Andere Auslöser: Wischen aus der unteren Ecke (Gestennavigation) oder langes Drücken der Home-Taste (3-Tasten-Navigation).
 
 ## 5. Vault wählen und Tagesnotizen
 
@@ -78,11 +81,11 @@ Die Mikrofon-Berechtigung fragt Wendelin erst, wenn die Spracherkennung geladen 
    - Der Ordner `Download` selbst und die Speicher-Wurzel sind gesperrt. Unterordner gehen.
 2. Danach steht dort „Zugriff erteilt“, und die Integration Obsidian ist eingeschaltet (Einstellungen → Integrationen).
 3. **Tagesnotizen** wie im Obsidian-Plugin „Daily notes“ eintragen:
-   - Ordner, z. B. `Journal` (leer = Vault-Wurzel),
+   - Ordner, vorbelegt mit `Journal` (leer = Vault-Wurzel; ein schon gespeicherter Wert bleibt),
    - Datumsformat, Standard `YYYY-MM-DD`,
    - Vorlage optional, z. B. `Vorlagen/Tagesnotiz`.
    - „Tagesnotizen speichern“. Die Zeile „Heute: Journal/2026-10-13.md“ zeigt, welche Datei Wendelin ergänzt.
-4. „Index aufbauen“ (die Suche braucht ihn, Fortschritt wird angezeigt).
+4. „Index aufbauen“ (die Suche braucht ihn, Fortschritt wird angezeigt). Danach aktualisiert er sich selbst, beim Start und vor jeder Suche, auch für Notizen, die ein Sync-Dienst ablegt. Der Knopf ist nur für den ersten Aufbau nötig.
 5. Für die Testsätze eine Notiz `Wendelin-Test.md` im Vault anlegen, z. B. in Obsidian oder per `adb push`:
 
    ```markdown
@@ -115,11 +118,12 @@ Vor D3 kann die Notiz auch anders aussehen, wenn D2 sie nicht verändert hat. Na
 Jeden Punkt abhaken und Auffälliges notieren (Modell, Sprache, was erkannt wurde).
 
 **Assistent und Overlay**
-- [ ] Langer Druck auf die Power-Taste (oder die Assistenten-Geste) öffnet das Wendelin-Overlay über der aktuellen App. Wendelin hört sofort zu (Wellenform).
+- [ ] Langer Druck auf die Power-Taste (oder die Assistenten-Geste) öffnet das Wendelin-Overlay über der aktuellen App. Wendelin hört sofort zu (Wellenform). Die Wellenform gibt es nur im Overlay, im Hauptbildschirm zeigt der Ring um den Mikrofon-Knopf das Zuhören (bis WP31 gemergt ist).
 - [ ] D1 über das Overlay: Die Notiz ist ergänzt, das Overlay zeigt nur diese Anfrage (Zitat, Karte, Antwort).
 - [ ] Tipp neben das Sheet, „Beenden“ oder Zurück schließen das Overlay. Danach ist das Mikrofon aus (das Mikrofon-Symbol in der Statusleiste verschwindet).
 - [ ] Erneuter Aufruf bei offenem Overlay startet eine neue Anfrage.
-- [ ] Overlay offen lassen, die Wendelin-App öffnen, das Overlay schließen, in der App eine getippte Anfrage senden: Sie läuft, Verlauf und Prüfprotokoll zeigen sie (zwei Engines in einem Prozess, auf dem Emulator geprüft).
+- [ ] Zwei Engines in einem Prozess (auf dem Emulator geprüft): Zuerst die Wendelin-App öffnen, dann das Overlay darüber (Power-Taste), das Overlay schließen und in der App eine getippte Anfrage senden. Sie läuft, Verlauf und Prüfprotokoll zeigen sie. Umgekehrt geht es nicht: Wer bei offenem Overlay die App öffnen will, tippt neben das Sheet und schließt damit das Overlay.
+- [ ] Verlauf leeren: „Neues Thema“ tippen oder sagen, oder 5 min nichts tun. Danach beginnt eine neue Unterhaltung (nach WP31 kommen der Knopf „Neues Gespräch“ und weitere Formulierungen hinzu).
 
 **Sperrbildschirm**
 - [ ] Telefon sperren, Power-Taste lang drücken: Das Overlay zeigt nur „Gerät entsperren“. Kein Verlauf, kein Zuhören, nichts wird gesprochen.
@@ -144,10 +148,14 @@ Jeden Punkt abhaken und Auffälliges notieren (Modell, Sprache, was erkannt wurd
 - [ ] D3 mit „Ja“, dann „Rückgängig“: Der alte Abschnitt ist wieder da.
 
 **Mikrofon-Berechtigung**
-- [ ] In den Android-Einstellungen Wendelin das Mikrofon entziehen, dann auf das Mikrofon tippen: zuerst Wendelins Erklärung „Mikrofon erlauben?“, kein Absturz. „Nicht jetzt“ → „Ohne Mikrofon-Zugriff geht nur Text.“ „Erlauben“ und in Android ablehnen (oder Android fragt nicht mehr, weil schon zweimal abgelehnt) → „Ohne Mikrofon geht nur Text. Du kannst es in den Android-Einstellungen unter Apps → Wendelin erlauben.“
+- [ ] In den Android-Einstellungen Wendelin das Mikrofon entziehen, dann auf das Mikrofon tippen: zuerst Wendelins Erklärung „Mikrofon erlauben?“, kein Absturz. „Nicht jetzt“ → Karte „Ohne Mikrofon-Zugriff geht nur Text.“ mit „Erlauben“. „Erlauben“ und in Android ablehnen (oder Android fragt nicht mehr, weil schon zweimal abgelehnt) → Hinweis auf die Android-Einstellungen, die Karte bietet „Android-Einstellungen“ an. Dort erlauben, zurück: Die Karte ist weg.
 
 **System-Spracherkennung in einer anderen App**
-- [ ] Eine App mit Spracheingabe öffnen, die die System-Spracherkennung nutzt (z. B. das Mikrofon in einer Tastatur ohne eigene Erkennung wie FlorisBoard oder die Diktierfunktion einer Notiz-App). Diktieren: Der Text kommt von Wendelin (Whisper auf dem Gerät).
+
+Zeigt Einstellungen → Assistent beim Schalter „Als Spracherkennung für andere Apps anbieten“ „Auf diesem Gerät nicht verfügbar“, nutzt Android für andere Apps einen anderen Dienst (B12). Dann diesen Abschnitt überspringen.
+
+Test-App: **Kõnele** (F-Droid, `ee.ioc.phon.android.speak`). Sie nutzt die `SpeechRecognizer`-Schnittstelle von Android und lässt in ihren Einstellungen den Erkennungsdienst wählen, dort „Wendelin“ wählen (er ist nur auswählbar, solange Wendelin Standard-Assistent ist und der Schalter an ist). Tastaturen wie FlorisBoard wechseln für die Spracheingabe nur zu einer Sprach-Tastatur und eignen sich nicht.
+- [ ] In Kõnele mit Wendelin als Dienst diktieren: Der Text kommt von Wendelin (Whisper auf dem Gerät).
 - [ ] Dasselbe, während die Wendelin-App offen im Hintergrund ist (die Erkennung nutzt dann deren Whisper mit). Im Log (Abschnitt 9) stehen Zeilen „Erkenner: Whisper-Zeit …“.
 - [ ] Kaltstart des Erkenners: Wendelin-App ganz schließen (aus „Zuletzt verwendet“ wischen oder `adb shell am force-stop app.wendelin`), dann in der fremden App die Spracheingabe starten, einen kurzen Satz sagen und die Zeit vom Satzende bis zum ersten Text stoppen (mehrmals, Mittelwert notieren). Das Log zeigt die reine Whisper-Zeit („Erkenner: Whisper-Zeit …“, Abschnitt 8).
 - [ ] Speicher: während bzw. direkt nach einer Erkennung `adb shell dumpsys meminfo app.wendelin` und „TOTAL PSS“ notieren, einmal mit offener Wendelin-App (geteiltes Whisper) und einmal ohne (eigenes Modell des Erkenners, wird 30 s nach der letzten Anfrage freigegeben), je für base und small.

@@ -90,6 +90,14 @@ class AssistantPlatform {
     await _invoke<void>('setRecognizerOffered', {'offered': offered});
   }
 
+  /// Which speech recognizer Android gives other apps
+  /// (`Settings.Secure` `voice_recognition_service`, ADR 0008, B12).
+  /// Read only; Wendelin never changes it.
+  Future<RecognitionServiceStatus> recognitionService() async =>
+      RecognitionServiceStatus.fromChannel(
+        await _invoke<Object?>('recognitionServiceState'),
+      );
+
   /// Mirrors the speech settings for the recognizer service (it has no
   /// database access, ADR 0008).
   Future<void> setRecognizerConfig(RecognizerConfig config) async {
@@ -116,6 +124,69 @@ class AssistantPlatform {
     if (_listening) _channel.setMethodCallHandler(null);
     unawaited(_triggers.close());
   }
+}
+
+/// Whom Android asks when another app wants speech recognition.
+enum RecognitionServiceState {
+  /// Wendelin (`app.wendelin/.WendelinRecognitionService`).
+  active,
+
+  /// Another service; it cannot be changed on this device.
+  other,
+
+  /// Not readable (no value, no permission, no self-test possible).
+  unknown,
+}
+
+/// Current system speech recognizer with the name of its app.
+@immutable
+final class RecognitionServiceStatus {
+  /// Creates the status.
+  const RecognitionServiceStatus(this.state, {this.appName});
+
+  /// Reads the channel answer `{state, appName}`; anything else is
+  /// [RecognitionServiceState.unknown].
+  factory RecognitionServiceStatus.fromChannel(Object? value) {
+    if (value is! Map) return unknown;
+    final state = switch (value['state']) {
+      'active' => RecognitionServiceState.active,
+      'other' => RecognitionServiceState.other,
+      _ => RecognitionServiceState.unknown,
+    };
+    final name = value['appName'];
+    return RecognitionServiceStatus(
+      state,
+      appName: state == RecognitionServiceState.other && name is String
+          ? name.trim().isEmpty
+                ? null
+                : name.trim()
+          : null,
+    );
+  }
+
+  /// Nothing known.
+  static const unknown = RecognitionServiceStatus(
+    RecognitionServiceState.unknown,
+  );
+
+  /// State.
+  final RecognitionServiceState state;
+
+  /// App name of the other service (only with
+  /// [RecognitionServiceState.other], if Android shows it).
+  final String? appName;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RecognitionServiceStatus &&
+      other.state == state &&
+      other.appName == appName;
+
+  @override
+  int get hashCode => Object.hash(state, appName);
+
+  @override
+  String toString() => 'RecognitionServiceStatus(${state.name}, $appName)';
 }
 
 /// Speech settings the system recognizer uses (mirror of Einstellungen →

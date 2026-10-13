@@ -11,6 +11,7 @@ class SettingsPage extends StatelessWidget {
     required this.children,
     this.intro,
     this.showBack = true,
+    this.centered = false,
   });
 
   /// Page title.
@@ -22,44 +23,73 @@ class SettingsPage extends StatelessWidget {
   /// Content below the title.
   final List<Widget> children;
 
-  /// Shows the back button (off in the onboarding).
+  /// Shows the back button (off on the first onboarding step).
   final bool showBack;
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    body: ListView(
-      padding: const EdgeInsets.fromLTRB(
-        WSpace.screen,
-        WSpace.screenTop - WSize.tapTargetInset,
-        WSpace.screen,
-        WSpace.xl24,
-      ),
-      children: [
-        Row(
-          spacing: WSpace.m,
-          children: [
-            if (showBack)
-              WIconButton(
-                icon: WIcons.back,
-                tooltip: 'Zurück',
-                onPressed: () => Navigator.of(context).maybePop(),
-                iconSize: WSize.iconSmall,
-              ),
-            Expanded(child: Text(title, style: WText.screenTitle)),
-          ],
-        ),
-        const SizedBox(height: WSpace.l18 - WSize.tapTargetInset),
-        if (intro != null) ...[
-          Text(intro!, style: WText.intro),
-          const SizedBox(height: WSpace.l18),
-        ],
-        for (final (i, child) in children.indexed) ...[
-          if (i > 0) const SizedBox(height: WSpace.l18),
-          child,
-        ],
-      ],
-    ),
+  /// Centres intro and content vertically below the title while they fit
+  /// on the screen; longer content scrolls from the top (onboarding).
+  final bool centered;
+
+  static const _padding = EdgeInsets.fromLTRB(
+    WSpace.screen,
+    WSpace.screenTop - WSize.tapTargetInset,
+    WSpace.screen,
+    WSpace.xl24,
   );
+
+  @override
+  Widget build(BuildContext context) {
+    final header = Row(
+      spacing: WSpace.m,
+      children: [
+        if (showBack)
+          WIconButton(
+            icon: WIcons.back,
+            tooltip: 'Zurück',
+            onPressed: () => Navigator.of(context).maybePop(),
+            iconSize: WSize.iconSmall,
+          ),
+        Expanded(child: Text(title, style: WText.screenTitle)),
+      ],
+    );
+    final content = [
+      if (intro != null) ...[
+        Text(intro!, style: WText.intro),
+        const SizedBox(height: WSpace.l18),
+      ],
+      for (final (i, child) in children.indexed) ...[
+        if (i > 0) const SizedBox(height: WSpace.l18),
+        child,
+      ],
+    ];
+    const gap = SizedBox(height: WSpace.l18 - WSize.tapTargetInset);
+    if (!centered) {
+      return Scaffold(
+        body: ListView(padding: _padding, children: [header, gap, ...content]),
+      );
+    }
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: _padding.copyWith(bottom: 0),
+            sliver: SliverToBoxAdapter(child: Column(children: [header, gap])),
+          ),
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: _padding.copyWith(top: 0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: content,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Tappable row in a [SectionCard]: title, optional detail, optional

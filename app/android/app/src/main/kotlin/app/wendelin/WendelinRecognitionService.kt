@@ -166,6 +166,16 @@ class WendelinRecognitionService : RecognitionService() {
         }
     }
 
+    /**
+     * Support check of a client (Android 13+), also the self-test of [RecognitionServiceStatus]:
+     * noting the time shows that Android binds Wendelin as the default recognizer. The answer
+     * stays the framework's default (no microphone, no recording).
+     */
+    override fun onCheckRecognitionSupport(recognizerIntent: Intent, supportCallback: SupportCallback) {
+        lastSupportCheck = System.nanoTime()
+        super.onCheckRecognitionSupport(recognizerIntent, supportCallback)
+    }
+
     override fun onStopListening(listener: Callback?) {
         val s = session ?: return
         // Microphone off right away (also while the engine is still starting); Dart recognizes
@@ -240,6 +250,13 @@ class WendelinRecognitionService : RecognitionService() {
 
     companion object {
         private const val TAG = "WendelinRecognizer"
+
+        @Volatile
+        private var lastSupportCheck = 0L
+
+        /** Whether a support check reached this service after [startedAt] (`System.nanoTime`). */
+        fun supportCheckedSince(startedAt: Long): Boolean =
+            lastSupportCheck != 0L && lastSupportCheck - startedAt >= 0
 
         /** Listening (≤ 30 s) plus engine start and transcription. */
         private const val SESSION_TIMEOUT_MS = 90_000L

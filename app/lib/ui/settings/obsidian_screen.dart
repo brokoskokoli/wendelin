@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../../di/obsidian_index.dart';
+import '../../di/preference_models.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
 import '../../platform/saf_vault_port.dart';
@@ -25,6 +26,11 @@ final vaultAccessOkProvider = FutureProvider<bool>((ref) async {
     return e.kind == PortErrorKind.unsupported;
   }
 });
+
+/// Hint below the search index: it updates itself.
+const obsidianIndexHint =
+    'Wird automatisch aktualisiert (beim Start und vor jeder Suche). Der '
+    'Knopf ist nur für den ersten Aufbau nötig.';
 
 /// Settings → Obsidian: vault folder (SAF), daily notes (folder, date
 /// format, template) and the search index (build with progress).
@@ -206,8 +212,12 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
               controller: _folder,
               style: WText.body,
               decoration: const InputDecoration(
-                labelText: 'Ordner (leer = Vault-Wurzel)',
-                hintText: 'Journal',
+                labelText: 'Ordner',
+                hintText: ObsidianPrefs.defaultDailyFolder,
+                helperText:
+                    'Leer lassen = Vault-Wurzel. Neue Tagesnotizen landen '
+                    'in diesem Ordner.',
+                helperMaxLines: 2,
               ),
             ),
             TextField(
@@ -242,6 +252,7 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
                 value: index.fraction,
                 semanticsLabel: 'Index wird aufgebaut',
               ),
+            Text(obsidianIndexHint, style: WText.caption),
             WideButton(
               'Index aufbauen',
               onPressed: !prefs.hasVault || index.running

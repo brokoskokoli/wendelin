@@ -51,7 +51,13 @@ void main() {
   const vad = 'Silero VAD';
 
   group('Onboarding-Schritt „Spracherkennung laden“', () {
-    testWidgets('Laden mit Fortschritt, Abbrechen, Fortsetzen, Weiter', (
+    /// The filled button with [label], if any.
+    FilledButton? primary(WidgetTester tester, String label) {
+      final f = find.widgetWithText(FilledButton, label);
+      return f.evaluate().isEmpty ? null : tester.widget<FilledButton>(f);
+    }
+
+    testWidgets('ein Ladeweg: Silero kommt mit, „Noch nötig“, dann Weiter', (
       tester,
     ) async {
       final env = TestEnv();
@@ -61,36 +67,142 @@ void main() {
       final m = env.speechModels;
 
       expect(find.text('Spracherkennung laden'), findsOneWidget);
-      expect(find.textContaining('nicht geladen'), findsNWidgets(3));
+      // B3: no buttons per row, Silero no row of its own.
+      expect(find.byType(OutlinedButton), findsOneWidget); // „Später“
+      expect(find.byType(ModelDownloadRow), findsNothing);
+      expect(find.text(vad), findsNothing);
+      expect(
+        find.textContaining('Silero VAD gehört dazu (0,6 MB)'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Noch nötig: Whisper base (161 MB) und Silero VAD (0,6 MB)'),
+        findsOneWidget,
+      );
+      expect(primary(tester, 'Weiter'), isNull);
+
       await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
       await tester.pump();
       expect(m.running.keys, {'whisper-base', 'silero-vad'});
-      expect(find.widgetWithText(FilledButton, 'Lädt …'), findsOneWidget);
+      expect(primary(tester, 'Lädt …')!.onPressed, isNull);
       expect(find.text('Im Hintergrund weiterladen'), findsOneWidget);
 
       m.progress('whisper-base', 0.42);
       await tester.pump();
       expect(find.text('Lädt … 42 % von 161 MB'), findsOneWidget);
-      final bar = tester.widget<LinearProgressIndicator>(progressOf(base));
-      expect(bar.value, closeTo(0.42, 0.001));
+      final bar = tester.widget<LinearProgressIndicator>(
+        progressOf('Spracherkennung'),
+      );
+      expect(bar.value, closeTo(0.42 * 160609290 / 161253144, 0.001));
 
-      // Cancel keeps the part: „Fortsetzen“.
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Abbrechen').first);
+      m.finish('silero-vad');
       await settle(tester);
-      expect(m.running.keys, {'silero-vad'});
-      expect(find.textContaining('angefangen'), findsOneWidget);
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Fortsetzen'));
-      await tester.pump();
-      expect(m.running.keys, containsAll(['whisper-base', 'silero-vad']));
+      expect(
+        find.text('Noch nötig: Whisper base (161 MB)'),
+        findsOneWidget,
+        reason: 'Silero fertig, base fehlt noch',
+      );
+      expect(primary(tester, 'Weiter'), isNull);
 
-      m
-        ..finish('silero-vad')
-        ..finish('whisper-base');
+      m.finish('whisper-base');
       await settle(tester);
-      expect(find.textContaining('· geladen'), findsNWidgets(2));
-      expect(find.widgetWithText(OutlinedButton, 'Löschen'), findsNothing);
+      expect(find.text('Bereit'), findsOneWidget);
+      expect(find.text('Später'), findsNothing);
       await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
       expect(next, 1);
+    });
+
+    // B3: „Weiter“ is active exactly when the chosen combination is
+    // installed; otherwise one load button and „Noch nötig: …“.
+    for (final (whisper, silero, ready, button, status) in [
+      (
+        'absent',
+        'absent',
+        false,
+        'Laden',
+        'Noch nötig: Whisper small (375 MB) und Silero VAD (0,6 MB)',
+      ),
+      (
+        'installed',
+        'absent',
+        false,
+        'Laden',
+        'Noch nötig: Silero VAD (0,6 MB)',
+      ),
+      (
+        'absent',
+        'installed',
+        false,
+        'Laden',
+        'Noch nötig: Whisper small (375 MB)',
+      ),
+      (
+        'partial',
+        'installed',
+        false,
+        'Lädt …',
+        'Noch nötig: Whisper small (375 MB)',
+      ),
+      (
+        'installed',
+        'partial',
+        false,
+        'Lädt …',
+        'Noch nötig: Silero VAD (0,6 MB)',
+      ),
+      ('installed', 'installed', true, 'Weiter', 'Bereit'),
+    ]) {
+      testWidgets('Zustand small $whisper, Silero $silero', (tester) async {
+        final env = TestEnv();
+        final m = env.speechModels;
+        for (final (id, phase) in [
+          ('whisper-small', whisper),
+          ('silero-vad', silero),
+        ]) {
+          if (phase == 'installed') m.installed.add(id);
+          if (phase == 'partial') m.partial.add(id);
+        }
+        await env.storage.settings.set(
+          voiceSettingsKey,
+          const VoiceSettings(sttModel: 'whisper-small'),
+        );
+        await pumpScreen(tester, env, VoiceDownloadStep(onNext: () {}));
+        expect(find.text(status), findsOneWidget);
+        final b = primary(tester, button)!;
+        expect(b.onPressed != null, button != 'Lädt …');
+        expect(primary(tester, 'Weiter') != null, ready);
+        expect(
+          find.text(ready ? 'Später' : 'Weiter'),
+          findsNothing,
+          reason: 'entweder Weiter oder Laden mit Später/Hintergrund',
+        );
+      });
+    }
+
+    testWidgets('Fehler: Meldung, „Erneut laden“ lädt nur das Fehlende', (
+      tester,
+    ) async {
+      final env = TestEnv();
+      final m = env.speechModels..installed.add('silero-vad');
+      await pumpScreen(tester, env, VoiceDownloadStep(onNext: () {}));
+      await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
+      await tester.pump();
+      expect(m.running.keys, ['whisper-base']);
+      m.fail(
+        'whisper-base',
+        const ModelDownloadException(DownloadErrorKind.network, 'Netz weg.'),
+      );
+      await settle(tester);
+      expect(find.text('Netz weg.'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Erneut laden'));
+      await tester.pump();
+      expect(m.running.keys, ['whisper-base']);
+    });
+
+    test('Größen: unter 10 MB mit Komma', () {
+      expect(sizeLabel(643854), '0,6 MB');
+      expect(sizeLabel(9949999), '9,9 MB');
+      expect(sizeLabel(160609290), '161 MB');
     });
 
     testWidgets('angefangener Download wird beim Öffnen fortgesetzt', (

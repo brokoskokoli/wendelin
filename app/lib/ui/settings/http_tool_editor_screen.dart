@@ -367,17 +367,14 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
       );
     }
     return _Field(
-      child: TextFormField(
-        key: fieldKey,
-        style: WText.mono,
-        obscureText: true,
-        autocorrect: false,
-        enableSuggestions: false,
-        decoration: InputDecoration(
-          labelText: label,
+      child: AutofillGroup(
+        child: SecretField(
+          key: fieldKey,
+          label: label,
+          mono: true,
           helperText: stored ? 'Leer lassen behält den gespeicherten' : null,
+          onChanged: (v) => _edit(() => onChanged(v)),
         ),
-        onChanged: (v) => _edit(() => onChanged(v)),
       ),
     );
   }

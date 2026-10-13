@@ -58,5 +58,7 @@ dependencies {
     // builds only) brings androidx.test:runner/rules and junit 4.12, and Gradle resolves the
     // test APK consistently with it. Device tests through instrumentation: FlutterE2eTest (WP19).
     androidTestImplementation("androidx.test:runner:1.3.0")
+    // JVM tests of pure Kotlin logic (./gradlew :app:testDebugUnitTest), e.g. RecognitionServiceStatus.
+    testImplementation("junit:junit:4.12")
     androidTestImplementation("junit:junit:4.12")
 }

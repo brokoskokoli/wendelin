@@ -118,15 +118,11 @@ class _WebSearchState extends ConsumerState<WebSearchScreen> {
             ),
           ),
         if (kind != null && kind.needsKey)
-          TextField(
-            key: const ValueKey('searchKey'),
-            controller: _key,
-            style: WText.body,
-            obscureText: true,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: InputDecoration(
-              labelText: 'API-Key',
+          AutofillGroup(
+            child: SecretField(
+              key: const ValueKey('searchKey'),
+              controller: _key,
+              label: 'API-Key',
               helperText: _hasKey
                   ? 'Key gespeichert – leer lassen behält ihn'
                   : null,
