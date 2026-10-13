@@ -298,6 +298,55 @@ void main() {
   });
 
   group('verdrahtet (Provider)', () {
+    test('einzelnes Tool fällt weg: Markierung und Schalter bleiben', () async {
+      final source = FakeUserIntegrationSource(
+        kind: UserIntegrationKind.http,
+        integrations: [
+          userIntegration('http', tools: ['http__a', 'http__b']),
+        ],
+      );
+      final env = TestEnv(
+        enabled: const {},
+        extraOverrides: [
+          userIntegrationSourcesProvider.overrideWithValue([source]),
+        ],
+      );
+      final c = env.container();
+      await c.read(toolRegistryReadyProvider.future);
+      await c
+          .read(integrationActivatorProvider)
+          .setEnabled('http', enabled: true);
+      await c
+          .read(toolPrefsProvider.notifier)
+          .set(
+            const ToolPrefs(
+              disabled: {'http__a', 'http__b'},
+              alwaysConfirm: {'http__a', 'http__b'},
+              sensitive: {'http': true},
+            ),
+          );
+      await c.read(toolRegistryReadyProvider.future);
+      source.update([
+        userIntegration('http', tools: ['http__b']),
+      ]);
+      await c.read(userIntegrationSyncProvider).settled();
+
+      final prefs = c.read(toolPrefsProvider);
+      expect(prefs.disabled, {'http__b'});
+      expect(prefs.alwaysConfirm, {'http__b'});
+      expect(prefs.sensitive, {'http': true});
+      expect(c.read(enabledIntegrationsProvider), contains('http'));
+      // Storing the prefs rebuilds the registry: wait for the new one.
+      final registry = await c.read(toolRegistryReadyProvider.future);
+      expect(registry.info('http').enabled, isTrue);
+      expect(registry.info('http').integration.sensitive, isTrue);
+      expect(
+        await env.storage.settings.get(AppSettings.integrationEnabled('http')),
+        isTrue,
+      );
+      c.dispose();
+    });
+
     test(
       'http fällt weg: sensible HTTP-Tools behalten ihre Einstellungen',
       () async {

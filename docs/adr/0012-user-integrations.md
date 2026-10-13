@@ -26,6 +26,8 @@ Der Abgleich hängt an der `ToolRegistry` und wird mit ihr neu gebaut (`userInte
 
 Aufgeräumt wird nach den **tatsächlichen Tool-Namen** der entfernten Fassung, nicht nach einem Präfix: Die HTTP-Tools (WP23) nennen ihre Tools in beiden Integrationen `http` und `http_sensitive` `http__<name>`. Ein Abgleich nimmt zuerst alle entfernten und geänderten Fassungen einer Quelle heraus und registriert dann die neuen. So kann ein Tool zwischen Integrationen derselben Quelle umziehen (ein HTTP-Tool wird sensibel), ohne Namenskonflikt und ohne dass seine Einstellungen oder Secrets aufgeräumt werden.
 
+Leert sich eine Integration kurz (z. B. zieht das einzige Tool von `http_sensitive` nach `http`), gilt sie als entfernt: Ihr Schalter und ihre Markierung sind weg. Kommt sie später zurück, startet sie ausgeschaltet. Das ist die sichere Voreinstellung, der Nutzer schaltet sie bewusst wieder ein.
+
 Gelöscht wird nur, was diese Instanz vorher registriert hatte. Ein Neustart, bei dem eine Quelle (noch) nichts liefert, löscht also keine Secrets. Die Quellen werden nacheinander abgearbeitet, sich überschneidende Änderungen können sich nicht vermischen.
 
 ### 3. App-Erkennung über einen Port
