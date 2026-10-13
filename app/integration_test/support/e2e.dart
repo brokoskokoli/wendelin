@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -25,6 +27,7 @@ final class E2eApp {
     this.config,
     this.clock,
     this.extraOverrides = const [],
+    this._storage,
   });
 
   /// Fixed time of the app (agent, demo provider, undo); `null` = system.
@@ -39,18 +42,21 @@ final class E2eApp {
   /// Further overrides.
   final List<Override> extraOverrides;
 
-  /// Local database (in memory, nothing stays on the device). Uses the
-  /// same [clock] as the app, otherwise session times would not match.
-  late final WendelinStorage storage = openInMemoryStorage(
-    clock: clock ?? const SystemClock(),
-  );
+  final WendelinStorage? _storage;
+
+  /// Local database: the one given to the constructor (e.g. the app's
+  /// database on the device, closed by the test), otherwise in memory
+  /// (nothing stays on the device) with the same [clock] as the app,
+  /// otherwise session times would not match.
+  late final WendelinStorage storage =
+      _storage ?? openInMemoryStorage(clock: clock ?? const SystemClock());
 
   /// Secrets (in memory).
   final InMemorySecretStore secrets = InMemorySecretStore();
 
   /// Pumps the app and returns its container.
   Future<ProviderContainer> pump(WidgetTester tester) async {
-    addTearDown(storage.close);
+    if (_storage == null) addTearDown(storage.close);
     final device = await loadDeviceInfo();
     await tester.pumpWidget(
       ProviderScope(
@@ -170,3 +176,19 @@ Future<String> auditText(E2eApp app) async => [
   for (final e in await app.storage.audit.query())
     '${e.kind.name} ${e.payload}',
 ].join('\n');
+
+/// Live tests: the Anthropic key that `tool/e2e_android.sh` (with
+/// `WENDELIN_LIVE=1`) puts into the private app data via `run-as`. Read
+/// and deleted at once; afterwards it only lives in memory.
+Future<String> takeLiveKey() async {
+  final file = File('/data/user/0/app.wendelin/files/live_anthropic.key');
+  final end = DateTime.now().add(const Duration(seconds: 60));
+  while (!file.existsSync()) {
+    if (DateTime.now().isAfter(end)) fail('Key-Datei kam nicht an');
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+  }
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  final key = file.readAsStringSync().trim();
+  file.deleteSync();
+  return key;
+}

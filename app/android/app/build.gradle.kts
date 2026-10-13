@@ -54,6 +54,9 @@ flutter {
 }
 
 dependencies {
+    // Same versions as the debug classpath: the integration_test plugin (dev dependency, debug
+    // builds only) brings androidx.test:runner/rules and junit 4.12, and Gradle resolves the
+    // test APK consistently with it. Device tests through instrumentation: FlutterE2eTest (WP19).
     androidTestImplementation("androidx.test:runner:1.3.0")
-    androidTestImplementation("junit:junit:4.13.2")
+    androidTestImplementation("junit:junit:4.12")
 }

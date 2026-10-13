@@ -19,6 +19,44 @@ final class WhisperResult {
   final String language;
 }
 
+/// Duration of one Whisper run (for the log and measurements, WP19).
+@immutable
+final class WhisperTiming {
+  /// Creates a timing.
+  const WhisperTiming({
+    required this.modelId,
+    required this.audio,
+    required this.compute,
+    this.language,
+  });
+
+  /// Catalog id of the model.
+  final String modelId;
+
+  /// Length of the recording.
+  final Duration audio;
+
+  /// Time from handing over the audio to the text.
+  final Duration compute;
+
+  /// Fixed language (`null` = detected).
+  final String? language;
+
+  /// Compute time per audio time (real-time factor).
+  double get rtf => audio == Duration.zero
+      ? 0
+      : compute.inMicroseconds / audio.inMicroseconds;
+
+  /// Log line without any content: model, language, durations
+  /// (`tool/whisper_timing.sh` reads it from logcat).
+  @override
+  String toString() =>
+      'Whisper-Zeit $modelId ${language ?? 'auto'}: '
+      'Audio ${audio.inMilliseconds} ms, '
+      'Rechenzeit ${compute.inMilliseconds} ms, '
+      'RTF ${rtf.toStringAsFixed(2)}';
+}
+
 /// Runs Whisper on float samples (16 kHz). On the device it lives in a
 /// background isolate ([IsolateWhisperBackend]); tests use fakes.
 abstract interface class WhisperBackend {
@@ -46,6 +84,7 @@ final class WhisperSpeechToText implements SpeechToText {
     required this.modelId,
     this.languages = const {'de', 'fr', 'en'},
     this.silenceLevel = 0.002,
+    this.onTiming,
   });
 
   /// Model runner.
@@ -59,6 +98,13 @@ final class WhisperSpeechToText implements SpeechToText {
 
   /// RMS level below which audio counts as silence (≈ −54 dBFS).
   final double silenceLevel;
+
+  /// Called after every model run with its durations (never the text).
+  final void Function(WhisperTiming timing)? onTiming;
+
+  /// Durations of the last model run (`null` before the first one).
+  WhisperTiming? get lastTiming => _lastTiming;
+  WhisperTiming? _lastTiming;
 
   @override
   SpeechToTextEngineInfo get info => SpeechToTextEngineInfo(
@@ -81,6 +127,7 @@ final class WhisperSpeechToText implements SpeechToText {
       return Transcript(text: '', language: fixed);
     }
     final WhisperResult raw;
+    final watch = Stopwatch()..start();
     try {
       raw = await backend.transcribe(pcmToFloat(pcm), language: fixed);
     } on Object catch (e) {
@@ -90,6 +137,13 @@ final class WhisperSpeechToText implements SpeechToText {
         cause: e,
       );
     }
+    final timing = _lastTiming = WhisperTiming(
+      modelId: modelId,
+      audio: samplesToDuration(pcm.length),
+      compute: watch.elapsed,
+      language: fixed,
+    );
+    onTiming?.call(timing);
     final text = cleanWhisperText(raw.text);
     final detected = primaryLanguage(raw.language);
     final lang = fixed ?? (languages.contains(detected) ? detected : null);

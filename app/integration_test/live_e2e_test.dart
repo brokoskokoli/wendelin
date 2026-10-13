@@ -9,8 +9,6 @@
 // der Key liegt danach nur im In-Memory-SecretStore. Nach dem Lauf löscht das
 // Skript die App-Daten (`pm clear`).
 
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wendelin/di/provider_config.dart';
@@ -24,21 +22,7 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 import 'support/e2e.dart';
 
 const _live = bool.fromEnvironment('WENDELIN_LIVE');
-const _keyFile = '/data/user/0/app.wendelin/files/live_anthropic.key';
 const _model = 'claude-haiku-5-5';
-
-Future<String> _takeKey() async {
-  final file = File(_keyFile);
-  final end = DateTime.now().add(const Duration(seconds: 60));
-  while (!file.existsSync()) {
-    if (DateTime.now().isAfter(end)) fail('Key-Datei kam nicht an');
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-  }
-  await Future<void>.delayed(const Duration(milliseconds: 300));
-  final key = file.readAsStringSync().trim();
-  file.deleteSync();
-  return key;
-}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +32,7 @@ void main() {
     tester,
   ) async {
     await expectCalendarPermission(port);
-    final key = await _takeKey();
+    final key = await takeLiveKey();
     expect(key, isNotEmpty);
     final adapter = AnthropicMessagesAdapter(
       credentials: Credentials.apiKey(key, style: ApiKeyStyle.xApiKey),
