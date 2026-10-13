@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+      "logging": {},
+      "prompts": {"listChanged": true},
+      "resources": {"subscribe": true, "listChanged": true},
+      "tools": {"listChanged": true}
+    },
+    "serverInfo": {"name": "homeserver-mcp", "title": "Homeserver", "version": "2.3.1"},
+    "instructions": "Shell-Tools nur mit Whitelist."
+  }
+}

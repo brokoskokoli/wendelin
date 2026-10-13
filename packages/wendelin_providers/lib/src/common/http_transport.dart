@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../sse/sse_parser.dart';
 import 'http_errors.dart';
 import 'http_settings.dart';
 import 'redactor.dart';

@@ -4,7 +4,6 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../common/http_transport.dart';
 import '../common/json_util.dart';
-import '../sse/sse_parser.dart';
 import 'openai_errors.dart';
 
 /// Decodes the SSE stream of an OpenAI-compatible Chat Completions call.

@@ -1,0 +1,34 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "get_weather",
+        "title": "Weather Information Provider",
+        "description": "Get current weather information for a location",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "location": {"type": "string", "description": "City name or zip code"}
+          },
+          "required": ["location"]
+        },
+        "annotations": {"readOnlyHint": true, "openWorldHint": true}
+      },
+      {
+        "name": "docker.restart",
+        "description": "Restart a container",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "container": {"type": "string", "pattern": "^[a-z0-9_-]+$"}
+          },
+          "required": ["container"]
+        },
+        "annotations": {"readOnlyHint": false, "destructiveHint": true}
+      }
+    ],
+    "nextCursor": "page-2"
+  }
+}

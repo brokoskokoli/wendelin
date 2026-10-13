@@ -25,6 +25,7 @@ export 'src/provider/provider_exception.dart';
 export 'src/provider/provider_profile.dart';
 export 'src/provider/provider_type.dart';
 export 'src/safety/sensitive_content.dart';
+export 'src/sse/sse_parser.dart';
 export 'src/tools/integration.dart';
 export 'src/tools/tool.dart';
 export 'src/tools/tool_context.dart';

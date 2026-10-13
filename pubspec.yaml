@@ -10,6 +10,7 @@ workspace:
   - packages/wendelin_storage
   - packages/wendelin_integrations
   - packages/wendelin_voice
+  - packages/wendelin_mcp
   - evals
   - app
 dev_dependencies:
