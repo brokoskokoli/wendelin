@@ -1,0 +1,22 @@
+# WP27 – MCP-Server in der App: Einrichtung, Auth, Status, Tools (`app/` + Kotlin)
+
+Abhängig von: WP22 (`wendelin_mcp`), WP25 (`UserIntegrationSource`, Einstellungszeile „MCP-Server“, Knopf „+ MCP-Server“). Andockpunkte: `SecureSecretStore` (`app/lib/platform/secure_secret_store.dart`), `ToolRegistry`, `RiskPolicy`-Overrides, `IntegrationDetailScreen`, Audit-Recorder, Export (`app/lib/ui/settings/export.dart`). Konzept-Bezug: „MCP-Integration“ (Client, Auth, Netzwerk, Lebenszyklus, Abbildung, Vorlagen), „Einstellungen → MCP-Server“, „Sicherheit“, K7, K9 (g), K10.
+
+## Inhalt
+- **MCP-Quelle** für `UserIntegrationSource`: Serverkonfigurationen als JSON in den Einstellungen (ohne Secrets), Secrets über `SecretStore` (`McpSecrets`-Umsetzung), Tool-Cache (`McpCacheStore`) in den Einstellungen; Löschen eines Servers entfernt Konfiguration, Cache und alle zugehörigen Secrets.
+- **Server hinzufügen**: Vorlagen (Home Assistant, Obsidian Local REST API / obsidian-mcp-server, dav-mcp, „Eigener Server“) mit Name, URL-Muster, Auth-Art; Freitext-Eintrag. Vor dem Speichern `probe()` mit Ergebnis (erreichbar, Auth nötig, nicht erreichbar mit Hinweis „Tailscale/WireGuard aktiv?“, Protokollfehler). Warnung bei `http` (nur Heimnetz zulässig, WP22).
+- **Auth**: Bearer-Token oder eigene Header (maskierte Eingabe, nie wieder im Klartext angezeigt, nur ersetzbar); **OAuth 2.1**: `AuthorizationBrowser` über Custom Tabs (`androidx.browser`, kein GMS) mit Rückfall auf den System-Browser per Intent; Redirect über ein App-eigenes Schema bzw. eine Intent-Filter-Activity, `state` geprüft. Ist kein Browser installiert (AOSP), klarer Hinweis statt Absturz.
+- **Status und Tools** pro Server (Integrationsdetail): Zustand nach Konzept (Einrichtung nötig, aktiv, Fehler mit Grund, z. B. „Token abgelaufen – Neu anmelden“), letzte Prüfung, „Neu laden“ (`tools/list`), Tool-Liste mit Schalter je Tool, Risikostufe je Tool (Anzeige der Server-Annotation; Override nur verschärfend, K8 b), Schalter „alle Tools bestätigen“, Schalter „sensibel“ (K9 g, Standard aus).
+- **Lebenszyklus**: `initialize` beim Aktivieren; Tools aus dem Cache sofort verfügbar; Verbindung nur bei Bedarf; Neuprüfung bei Rückkehr in die App (über WP25); `list_changed` aus einer Antwort lädt die Liste neu und aktualisiert die Registry.
+- **Datenabfluss**: Tool-Argumente gehen an den MCP-Server; die Tool-Karte bzw. Bestätigung nennt den Server. Ob Aufrufe an MCP-/HTTP-Ziele nach einem geschützten (sensiblen) Ergebnis in derselben Anfrage zusätzlich bestätigt werden müssen, entscheidet der Maintainer (Vorschlag K12-d); falls bestätigt, hier umsetzen.
+- **Export/Import** der Serverliste ohne Secrets (Platzhalter), Import fragt die Secrets neu ab.
+- **Audit-Log**: MCP-Tool-Calls wie alle Tools (Name enthält den Server), dazu Einträge für Verbinden/Auth-Fehler ohne Header, Tokens oder vollständige OAuth-URLs mit `code`/`state`.
+
+## Abnahmekriterien
+- [ ] Widget-Tests mit `FakeMcpServer` (WP22, In-Process): Server per Vorlage anlegen, `probe` zeigt Zustände, Tools erscheinen, Tool-Schalter und Risiko-Override (nur verschärfen) wirken auf den Tool-Katalog, Server löschen räumt Registry und Secrets auf.
+- [ ] OAuth-Ablauf mit `FakeAuthorizationBrowser` und Fake-Server Ende-zu-Ende in der App (Token im `SecretStore`, nicht in Einstellungen); Redirect-Activity mit Mock-Kanal getestet; kein Browser → Hinweis.
+- [ ] Agent-Integrationstest mit Fake-Provider: Modell ruft `mcp_<server>__<tool>` auf, Ergebnis in der Daten-Hülle, `external` (destructiveHint) zeigt Bestätigungskarte, sensibler Server wird Standard-Zielen nicht angeboten (K10).
+- [ ] Kanarienwert-Test: Bearer/OAuth-Token weder in Einstellungen-JSON, Export, Audit-Log noch Debug-Log.
+- [ ] Golden der MCP-Server-Liste und der Server-Detailseite im Stil von `integrationen` (Farben/Zustandsformen aus `WColors`, Touch-Ziele ≥ 44).
+- [ ] Emulator (`Wendelin_AOSP_35`, nur explizites Serial): App verbindet sich mit einem Test-MCP-Server auf dem Host über `http://10.0.2.2:<port>` (Klartext erlaubt, weil Heimnetz-Ziel).
+- [ ] `tool/check_apk.sh` grün (keine GMS-/Firebase-Klassen durch die Browser-Bibliothek); Gate grün, APK baut.

@@ -19,3 +19,10 @@ Welle 5   WP11 End-to-End auf Emulator, Live-Tests, README-Demo        -> alle
 ```
 
 Jedes Paket: eigener Branch `wp/<nr>-<slug>` in eigenem Worktree, Umsetzung durch einen Coding-Agenten, Prüfung durch einen unabhängigen Review-Agenten nach `REVIEW.md`, Merge nach bestandenem Review.
+
+## Weitere Meilensteine
+
+| Meilenstein | Pakete | Übersicht |
+| --- | --- | --- |
+| M2 Sprache und Assistent | WP15–WP20 | `M2.md` |
+| M3 Routing, MCP, Erweiterung | WP21–WP29 | `M3.md` (Welle A parallel: WP21 Routing-Regeln, WP22 MCP-Client, WP23 HTTP-Tools, WP24 Bring!, WP25 App-Erkennung; Welle B: WP26–WP28 App; Welle C: WP29 E2E) |
