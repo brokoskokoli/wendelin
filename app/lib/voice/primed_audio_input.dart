@@ -49,7 +49,8 @@ final class PrimedAudioInput implements AudioInput {
   bool get failed => _out == null && (_error != null || _done);
 
   /// Buffered audio (for tests and the log).
-  Duration get buffered => samplesToDuration(_bufferedSamples);
+  Duration get buffered =>
+      samplesToDuration(_buffer.fold<int>(0, (sum, f) => sum + f.length));
 
   @override
   bool get isRunning => _primed != null || inner.isRunning;

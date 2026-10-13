@@ -91,6 +91,14 @@ void main() {
       isTrue,
       reason: '$lines',
     );
+
+    // Background and back: still no prewarm for typing-only users.
+    lifecycle(tester, toBackground);
+    await settle(tester);
+    lifecycle(tester, toForeground);
+    await settle(tester);
+    expect(models.warm, 0);
+    expect(models.loads, 0);
   });
 
   testWidgets('Sprache vor mehr als 24 h: kein Vorwärmen', (tester) async {
