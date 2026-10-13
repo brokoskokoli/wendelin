@@ -7,13 +7,27 @@ final patterns = <String, RegExp>{
   'GitHub-Token': RegExp(r'gh[pousr]_[A-Za-z0-9]{30,}'),
   'Private Key': RegExp(r'-----BEGIN [A-Z ]*PRIVATE KEY-----'),
   'Bearer-Token': RegExp(r'Bearer [A-Za-z0-9\-_.]{30,}'),
-  'Arbeitgeber-Identität': RegExp(
-    r'web-?fabric|[entfernt]-?it',
-    caseSensitive: false,
-  ),
 };
 
+/// Verbotene Identitäten stehen bewusst nicht im öffentlichen Repo, sondern
+/// lokal in `~/.config/wendelin/forbidden-identities` (ein Regex je Zeile).
+/// Fehlt die Datei (z. B. in der CI), entfällt nur diese Prüfung.
+Map<String, RegExp> localIdentityPatterns() {
+  final home = Platform.environment['HOME'] ?? '';
+  final file = File('$home/.config/wendelin/forbidden-identities');
+  if (!file.existsSync()) return const {};
+  final lines = file
+      .readAsLinesSync()
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty && !l.startsWith('#'));
+  return {
+    for (final (i, l) in lines.indexed)
+      'Verbotene Identität #${i + 1}': RegExp(l, caseSensitive: false),
+  };
+}
+
 void main() {
+  patterns.addAll(localIdentityPatterns());
   final files = Process.runSync('git', [
     'ls-files',
     '--cached',
