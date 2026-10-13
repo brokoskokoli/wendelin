@@ -46,8 +46,8 @@ Finder action(String model, String label) => find.descendant(
 );
 
 void main() {
-  const base = 'Whisper base (schnell)';
-  const small = 'Whisper small (genauer)';
+  const base = 'Whisper base – schnell, für schwache Geräte';
+  const small = 'Whisper small – genauer (empfohlen)';
   const vad = 'Silero VAD';
 
   group('Onboarding-Schritt „Spracherkennung laden“', () {
@@ -76,35 +76,42 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text('Noch nötig: Whisper base (161 MB) und Silero VAD (0,6 MB)'),
+        find.text(
+          'Noch nötig: Whisper small (375 MB) und Silero VAD (0,6 MB)',
+        ),
         findsOneWidget,
       );
       expect(primary(tester, 'Weiter'), isNull);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
       await tester.pump();
-      expect(m.running.keys, {'whisper-base', 'silero-vad'});
+      expect(m.running.keys, {'whisper-small', 'silero-vad'});
       expect(primary(tester, 'Lädt …')!.onPressed, isNull);
       expect(find.text('Im Hintergrund weiterladen'), findsOneWidget);
 
-      m.progress('whisper-base', 0.42);
+      m.progress('whisper-small', 0.5);
       await tester.pump();
-      expect(find.text('Lädt … 42 % von 161 MB'), findsOneWidget);
+      expect(find.text('Lädt … 50 % von 375 MB'), findsOneWidget);
       final bar = tester.widget<LinearProgressIndicator>(
         progressOf('Spracherkennung'),
       );
-      expect(bar.value, closeTo(0.42 * 160609290 / 161253144, 0.001));
+      const smallBytes = SpeechModelCatalog.whisperSmall.sizeBytes;
+      const vadBytes = SpeechModelCatalog.sileroVad.sizeBytes;
+      expect(
+        bar.value,
+        closeTo(0.5 * smallBytes / (smallBytes + vadBytes), 0.001),
+      );
 
       m.finish('silero-vad');
       await settle(tester);
       expect(
-        find.text('Noch nötig: Whisper base (161 MB)'),
+        find.text('Noch nötig: Whisper small (375 MB)'),
         findsOneWidget,
-        reason: 'Silero fertig, base fehlt noch',
+        reason: 'Silero fertig, small fehlt noch',
       );
       expect(primary(tester, 'Weiter'), isNull);
 
-      m.finish('whisper-base');
+      m.finish('whisper-small');
       await settle(tester);
       expect(find.text('Bereit'), findsOneWidget);
       expect(find.text('Später'), findsNothing);
@@ -214,7 +221,7 @@ void main() {
       expect(env.speechModels.running.keys, ['whisper-small']);
     });
 
-    testWidgets('small wählen, Später', (tester) async {
+    testWidgets('base wählen, Später', (tester) async {
       final env = TestEnv();
       var next = 0;
       final c = await pumpScreen(
@@ -222,15 +229,16 @@ void main() {
         env,
         VoiceDownloadStep(onNext: () => next++),
       );
-      env.speechModels.installed.add('whisper-small');
+      expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-small');
+      env.speechModels.installed.add('whisper-base');
       await c.read(modelStatesProvider.notifier).refresh();
       await settle(tester);
-      await tester.tap(find.text(small));
+      await tester.tap(find.text(base));
       await settle(tester);
-      expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-small');
+      expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-base');
       expect(
         (await env.storage.settings.get(voiceSettingsKey))!.sttModel,
-        'whisper-small',
+        'whisper-base',
       );
       await tester.tap(find.text('Später'));
       expect(next, 1);
@@ -338,6 +346,9 @@ void main() {
       final c = await pumpScreen(tester, env, const VoiceScreen());
       VoiceSettings saved() => c.read(voiceSettingsProvider).value!;
 
+      // Nothing stored, only base installed (before WP33): base stays.
+      expect(saved().sttModel, 'whisper-base');
+      expect(await env.storage.settings.get(voiceSettingsKey), isNull);
       // small is not installed: tapping does not select it.
       await tester.tap(find.text(small).first);
       await settle(tester);
@@ -467,6 +478,130 @@ void main() {
       await settle(tester);
       expect(find.textContaining('Android-Einstellungen'), findsOneWidget);
       expect(env.microphone.requests, contains(true));
+    });
+  });
+
+  group('Standardmodell (WP33)', () {
+    const gib = 1024 * 1024 * 1024;
+    TestEnv envWith({Iterable<String> installed = const [], int? memory}) {
+      final env = TestEnv(
+        extraOverrides: [
+          deviceMemoryProvider.overrideWith((ref) async => memory),
+        ],
+      );
+      env.speechModels.installed.addAll(installed);
+      return env;
+    }
+
+    Future<String> model(TestEnv env) async =>
+        (await env.container().read(voiceSettingsProvider.future)).sttModel;
+
+    for (final (name, installed, memory, expected) in [
+      ('frisch: small', <String>[], null, 'whisper-small'),
+      (
+        'frisch, 4-GB-Gerät: small',
+        <String>[],
+        (3.7 * gib).round(),
+        'whisper-small',
+      ),
+      ('frisch, wenig RAM: base', <String>[], 3 * gib, 'whisper-base'),
+      ('nur base installiert: base', ['whisper-base'], null, 'whisper-base'),
+      (
+        'base und small installiert: small',
+        ['whisper-base', 'whisper-small'],
+        null,
+        'whisper-small',
+      ),
+      (
+        'wenig RAM, small installiert: small',
+        ['whisper-small'],
+        2 * gib,
+        'whisper-small',
+      ),
+    ]) {
+      test(name, () async {
+        expect(
+          await model(envWith(installed: installed, memory: memory)),
+          expected,
+        );
+      });
+    }
+
+    test('gespeicherte M2-Einstellungen mit base bleiben base', () async {
+      final env = envWith(installed: ['whisper-base', 'whisper-small']);
+      await env.storage.settings.set(
+        voiceSettingsKey,
+        VoiceSettings.fromJson({'sttModel': 'whisper-base', 'tts': 'system'}),
+      );
+      expect(await model(env), 'whisper-base');
+    });
+
+    const hint = 'Empfohlen: small (genauer)';
+    testWidgets('nur base installiert: Hinweis auf small', (tester) async {
+      final env = envWith(installed: ['whisper-base', 'silero-vad']);
+      await pumpScreen(tester, env, const VoiceScreen());
+      expect(
+        find.text(
+          '$hint, '
+          '${megabytes(SpeechModelCatalog.whisperSmall.sizeBytes)} laden.',
+        ),
+        findsOneWidget,
+      );
+      // Mikrofon bleibt nutzbar: kein Hinweis auf fehlende Modelle.
+      expect(
+        find.textContaining('braucht Wendelin das gewählte'),
+        findsNothing,
+      );
+    });
+
+    for (final (name, installed, memory) in [
+      ('small aktiv', ['whisper-small', 'silero-vad'], null),
+      ('wenig RAM', ['whisper-base', 'silero-vad'], 3 * gib),
+    ]) {
+      testWidgets('kein Hinweis: $name', (tester) async {
+        await pumpScreen(
+          tester,
+          envWith(installed: installed, memory: memory),
+          const VoiceScreen(),
+        );
+        expect(find.textContaining(hint), findsNothing);
+      });
+    }
+
+    testWidgets('Onboarding wählt small vor, Texte', (tester) async {
+      final env = envWith(memory: 8 * gib);
+      final c = await pumpScreen(tester, env, VoiceDownloadStep(onNext: () {}));
+      expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-small');
+      expect(find.text(small), findsOneWidget);
+      expect(find.text(base), findsOneWidget);
+      expect(find.textContaining('genauer (empfohlen)'), findsOneWidget);
+      expect(
+        find.textContaining('schnell, für schwache Geräte'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('wenig Arbeitsspeicher'), findsNothing);
+      await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
+      await tester.pump();
+      expect(env.speechModels.running.keys, {'whisper-small', 'silero-vad'});
+    });
+
+    testWidgets('Onboarding bei wenig RAM: base mit Begründung', (
+      tester,
+    ) async {
+      final env = envWith(memory: 3 * gib);
+      final c = await pumpScreen(tester, env, VoiceDownloadStep(onNext: () {}));
+      expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-base');
+      expect(
+        find.text(
+          'Vorausgewählt ist „base“, weil das Gerät wenig Arbeitsspeicher '
+          'hat (3,0 GB). „small“ braucht beim Erkennen deutlich mehr '
+          'Speicher.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
+      await tester.pump();
+      expect(env.speechModels.running.keys, {'whisper-base', 'silero-vad'});
     });
   });
 

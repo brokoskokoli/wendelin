@@ -6,6 +6,8 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/preferences.dart';
 import '../../di/voice_providers.dart';
+import '../../platform/device_memory.dart';
+import '../../platform/voice/model_installer.dart';
 import '../design/design.dart';
 import '../voice/microphone_access.dart';
 import 'model_download_row.dart';
@@ -64,6 +66,12 @@ class VoiceScreen extends ConsumerWidget {
           Text(
             'Für die Spracheingabe braucht Wendelin das gewählte '
             'Whisper-Modell und die Sprachaktivitätserkennung.',
+            style: WText.caption,
+          ),
+        if (_recommendSmall(ref, settings))
+          Text(
+            'Empfohlen: small (genauer), '
+            '${megabytes(SpeechModelCatalog.whisperSmall.sizeBytes)} laden.',
             style: WText.caption,
           ),
         SettingsSection(
@@ -126,6 +134,15 @@ class VoiceScreen extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// Whether to suggest small (WP33): base is active, small is not on the
+/// device and the device does not have little memory.
+bool _recommendSmall(WidgetRef ref, VoiceSettings settings) {
+  const small = SpeechModelCatalog.whisperSmall;
+  return settings.sttModel == SpeechModelCatalog.whisperBase.id &&
+      ref.watch(modelStatesProvider)[small.id]?.phase != ModelPhase.installed &&
+      !isLowMemory(ref.watch(deviceMemoryProvider).value);
 }
 
 class _SpeechOutput extends ConsumerWidget {

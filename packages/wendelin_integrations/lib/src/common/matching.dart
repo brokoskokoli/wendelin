@@ -1,5 +1,8 @@
 // Unscharfer Abgleich von Listennamen und Einträgen (de/en).
 
+import 'package:collection/collection.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+
 /// Lower case, umlauts folded (ä→a, ß→ss), punctuation and whitespace
 /// collapsed to single spaces.
 String normalizeText(String s) {
@@ -147,3 +150,60 @@ Matches<T> bestMatches<T>(
   }
   return (score: top, best: best);
 }
+
+/// A candidate of [phoneticMatches].
+typedef PhoneticMatch<T> = ({T item, int distance, bool strong});
+
+/// Shortest query (letters and digits) for [phoneticMatches].
+const minPhoneticLength = 4;
+
+/// Edit distance [phoneticMatches] still accepts for a name with [length]
+/// letters and digits.
+int phoneticDistanceLimit(int length) => length <= 5
+    ? 1
+    : length <= 9
+    ? 2
+    : 3;
+
+/// Candidates of [items] whose names sound like [query] (B6: „Wandel
+/// Intest“ for „Wendelin-Test“), best first. Compared on [foldFlat] (case,
+/// umlauts, spaces, hyphens and underscores do not matter): a candidate
+/// has the same [phoneticKey] in [language] or differs by at most
+/// [phoneticDistanceLimit] edits. It is `strong` if both hold with at most
+/// one edit up to 9 letters (two above). Order: strong first, then
+/// smaller distance, then the order of [items].
+List<PhoneticMatch<T>> phoneticMatches<T>(
+  String query,
+  Iterable<T> items,
+  Iterable<String> Function(T) namesOf, {
+  String? language,
+}) {
+  final q = foldFlat(query);
+  if (q.length < minPhoneticLength) return const [];
+  final qKey = phoneticKey(q, language: language);
+  final out = <PhoneticMatch<T>>[];
+  for (final item in items) {
+    PhoneticMatch<T>? best;
+    for (final name in namesOf(item)) {
+      final n = foldFlat(name);
+      if (n.isEmpty) continue;
+      final d = editDistance(q, n);
+      final sameKey = phoneticKey(n, language: language) == qKey;
+      final limit = phoneticDistanceLimit(n.length);
+      if (!(d <= limit || (sameKey && d <= limit + 1))) continue;
+      final strong = sameKey && d <= (n.length <= 9 ? 1 : 2);
+      final m = (item: item, distance: d, strong: strong);
+      if (best == null || _better(m, best)) best = m;
+    }
+    if (best != null) out.add(best);
+  }
+  // Stable: equally good candidates keep the order of [items].
+  mergeSort(
+    out,
+    compare: (a, b) => _better(a, b) ? -1 : (_better(b, a) ? 1 : 0),
+  );
+  return out;
+}
+
+bool _better<T>(PhoneticMatch<T> a, PhoneticMatch<T> b) =>
+    a.strong != b.strong ? a.strong : a.distance < b.distance;

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/voice_providers.dart';
+import '../../platform/device_memory.dart';
 import '../../platform/voice/model_installer.dart';
 import '../design/design.dart';
 import '../settings/settings_page.dart';
@@ -142,7 +143,8 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
     final catalog = ref.watch(speechModelCatalogProvider);
     final states = ref.watch(modelStatesProvider);
     final whisper =
-        catalog.byId(settings.sttModel) ?? SpeechModelCatalog.whisperBase;
+        catalog.byId(settings.sttModel) ?? SpeechModelCatalog.whisperSmall;
+    final lowMemory = isLowMemory(ref.watch(deviceMemoryProvider).value);
     const vad = SpeechModelCatalog.sileroVad;
     final plan = DownloadPlan.of([whisper, vad], states);
 
@@ -171,11 +173,16 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
         ),
         Text(
           '${vad.displayName} gehört dazu (${sizeLabel(vad.sizeBytes)}) und '
-          'wird mitgeladen. „base“ ist schnell, „small“ erkennt Deutsch und '
-          'Französisch deutlich besser, braucht aber mehr Platz und Zeit. '
-          'Weitere Modelle: Einstellungen → Sprache.',
+          'wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen '
+          'deutlich besser und ist empfohlen. „base“ ist schnell und für '
+          'schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.',
           style: WText.caption,
         ),
+        if (lowMemory && whisper.id == SpeechModelCatalog.whisperBase.id)
+          Text(
+            lowMemoryReason(ref.watch(deviceMemoryProvider).value!),
+            style: WText.caption,
+          ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: WSpace.s,
@@ -258,4 +265,12 @@ class _ModelChoice extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Why the onboarding suggests base on a device with [totalBytes] RAM.
+String lowMemoryReason(int totalBytes) {
+  final gb = (totalBytes / (1024 * 1024 * 1024)).toStringAsFixed(1);
+  return 'Vorausgewählt ist „base“, weil das Gerät wenig Arbeitsspeicher '
+      'hat (${gb.replaceAll('.', ',')} GB). „small“ braucht beim Erkennen '
+      'deutlich mehr Speicher.';
 }

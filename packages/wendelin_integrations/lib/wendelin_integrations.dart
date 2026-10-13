@@ -72,7 +72,13 @@ export 'src/obsidian/daily_notes.dart'
 export 'src/obsidian/file_system_vault_port.dart';
 export 'src/obsidian/note_indexer.dart';
 export 'src/obsidian/obsidian_integration.dart'
-    show ObsidianEnv, ObsidianIntegration, ObsidianSettings, OpenUri;
+    show
+        NoteMatchKind,
+        NoteResolution,
+        ObsidianEnv,
+        ObsidianIntegration,
+        ObsidianSettings,
+        OpenUri;
 export 'src/obsidian/obsidian_tools.dart'
     show
         AppendDailyNoteTool,

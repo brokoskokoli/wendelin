@@ -63,6 +63,50 @@ final class ObsidianSettings {
   int get hashCode => Object.hash(vaultName, dailyNotes, locale);
 }
 
+/// How [ObsidianEnv.resolveNoteMatch] found a note, best first.
+enum NoteMatchKind {
+  /// The path exists, or exactly one note has this title (ignoring case).
+  exact,
+
+  /// The title is equal after folding case, umlauts, spaces, hyphens and
+  /// underscores („Wendelin Test“ = „Wendelin-Test“).
+  folded,
+
+  /// Same word stems or whole words of the title („Malta“ ≈ „Malta 2026“).
+  fuzzy,
+
+  /// The title sounds alike („Wandel Intest“ ≈ „Wendelin-Test“).
+  phonetic,
+}
+
+/// A note found by [ObsidianEnv.resolveNoteMatch].
+@immutable
+final class NoteResolution {
+  /// Creates the result.
+  const NoteResolution(this.path, this.kind);
+
+  /// Vault path of the note.
+  final String path;
+
+  /// How it was found.
+  final NoteMatchKind kind;
+
+  /// Whether the note was found under another name than asked for (fuzzy
+  /// or phonetic): name it in the answer and the confirmation.
+  bool get approximate =>
+      kind == NoteMatchKind.fuzzy || kind == NoteMatchKind.phonetic;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NoteResolution && other.path == path && other.kind == kind;
+
+  @override
+  int get hashCode => Object.hash(path, kind);
+
+  @override
+  String toString() => 'NoteResolution($path, ${kind.name})';
+}
+
 /// Obsidian: notes in the user's vault (`obsidian__…` tools).
 final class ObsidianIntegration implements Integration {
   /// Creates the integration on [vault] and [index]. [settings] is read on
@@ -224,17 +268,34 @@ final class ObsidianEnv {
   Future<T> exclusive<T>(String path, Future<T> Function() body) =>
       FileQueue.run('vault:$path', body);
 
-  /// The note [query] names: the exact path (`.md` optional) if it
-  /// exists, else the indexed note whose title matches best (case,
-  /// umlauts, plural, whole words). Several equally good notes →
-  /// „Mehrdeutig“; with [write] a match on whole words only is asked back.
+  /// The note [query] names, as path (see [resolveNoteMatch]).
   Future<String> resolveNote(
+    String query, {
+    required bool write,
+    required DateTime now,
+  }) async => (await resolveNoteMatch(query, write: write, now: now)).path;
+
+  /// The note [query] names and how it was found. Order: the exact path
+  /// (`.md` optional) if it exists, else among the indexed notes (in the
+  /// folder of [query], if it names one) the exact title (ignoring case),
+  /// a title equal after folding (umlauts, spaces, hyphens, underscores),
+  /// a fuzzy title (plural, whole words) and last a title that sounds
+  /// alike ([phoneticMatches], B6).
+  ///
+  /// Several equally good notes → „Mehrdeutig“. With [write] a match on
+  /// whole words only and every phonetic match is asked back („Meinst du
+  /// …?“, at most three notes). A read takes a phonetic match only if it is
+  /// the single strong one; otherwise it asks back too. Nothing that sounds
+  /// alike → „gibt es nicht“.
+  Future<NoteResolution> resolveNoteMatch(
     String query, {
     required bool write,
     required DateTime now,
   }) async {
     final path = VaultPath.note(query);
-    if (await vault.exists(path)) return path;
+    if (await vault.exists(path)) {
+      return NoteResolution(path, NoteMatchKind.exact);
+    }
     await syncIndex(now);
     final known = (await index.knownFiles()).keys.toList()..sort();
     final folder = VaultPath.parent(path);
@@ -244,18 +305,20 @@ final class ObsidianEnv {
             for (final k in known)
               if (foldText(VaultPath.parent(k)) == foldText(folder)) k,
           ];
+    final title = VaultPath.title(path).toLowerCase();
+    final exact = [
+      for (final k in inFolder)
+        if (VaultPath.title(k).toLowerCase() == title) k,
+    ];
+    if (exact.length == 1) {
+      return NoteResolution(exact.single, NoteMatchKind.exact);
+    }
     final m = bestMatches(
       VaultPath.title(path),
       inFolder,
       (k) => [VaultPath.title(k)],
     );
-    if (m.best.isEmpty) {
-      throw PortException(
-        PortErrorKind.notFound,
-        'Notiz „$query“ gibt es nicht. obsidian__search_notes hilft beim '
-        'Finden.',
-      );
-    }
+    if (m.best.isEmpty) return _phonetic(query, path, inFolder, write: write);
     if (m.best.length > 1) {
       throw PortException(
         PortErrorKind.rejected,
@@ -270,7 +333,48 @@ final class ObsidianEnv {
         'nachfragen.',
       );
     }
-    return m.best.single;
+    return NoteResolution(
+      m.best.single,
+      m.score == 3 ? NoteMatchKind.folded : NoteMatchKind.fuzzy,
+    );
+  }
+
+  /// Most notes a „Meinst du …?“ question names.
+  static const maxSuggestions = 3;
+
+  NoteResolution _phonetic(
+    String query,
+    String path,
+    List<String> candidates, {
+    required bool write,
+  }) {
+    final p = phoneticMatches(
+      VaultPath.title(path),
+      candidates,
+      (k) => [VaultPath.title(k)],
+      language: settings().locale,
+    );
+    if (p.isEmpty) {
+      throw PortException(
+        PortErrorKind.notFound,
+        'Notiz „$query“ gibt es nicht. obsidian__search_notes hilft beim '
+        'Finden.',
+      );
+    }
+    final strong = [
+      for (final c in p)
+        if (c.strong) c,
+    ];
+    if (!write && strong.length == 1) {
+      return NoteResolution(strong.single.item, NoteMatchKind.phonetic);
+    }
+    final names = [for (final c in p.take(maxSuggestions)) c.item];
+    throw PortException(
+      PortErrorKind.rejected,
+      'Notiz „$query“ gibt es nicht genau so. Meinst du '
+      '${names.length == 1 ? 'die Notiz' : 'eine der Notizen'} '
+      '${vaultNames(names)}? Bitte nachfragen.',
+    );
   }
 
   /// Reads and parses the note [path]; refuses notes larger than
