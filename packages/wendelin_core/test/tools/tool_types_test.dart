@@ -304,8 +304,18 @@ void main() {
         ),
         'sync',
       );
+      // Cancellation ends the wait at once, not after the 5-s timeout.
       final cancelled = ctx()..cancel.cancel();
-      expect(await never.confirmationText(const {}, cancelled), 'sync');
+      expect(
+        await never
+            .confirmationText(const {}, cancelled)
+            .timeout(const Duration(milliseconds: 500)),
+        'sync',
+      );
+      final later = ctx();
+      final pending = never.confirmationText(const {}, later);
+      later.cancel.cancel();
+      expect(await pending.timeout(const Duration(milliseconds: 500)), 'sync');
     });
   });
 

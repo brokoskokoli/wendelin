@@ -43,7 +43,10 @@ final class Harness {
     CostEstimator? cost,
     ConversationRecorder? recorder,
     ToolCatalog Function(PrivacyLevel)? catalogFor,
-  }) : clock = FixedClock(DateTime.utc(2026, 10, 13, 9)),
+    void Function(String, ToolCallBlock)? onToolRefused,
+    List<Message> history = const [],
+  }) : conversation = InMemoryConversation(history),
+       clock = FixedClock(DateTime.utc(2026, 10, 13, 9)),
        catalog = FakeToolCatalog(tools) {
     this.invoker = invoker ?? FakeToolInvoker(catalog);
     runner = AgentRunner(
@@ -62,6 +65,7 @@ final class Harness {
       costEstimator: cost,
       budgetGuard: budget,
       catalogFor: catalogFor,
+      onToolRefused: onToolRefused,
     );
   }
 
@@ -70,7 +74,7 @@ final class Harness {
   final FakeToolCatalog catalog;
   late final ToolInvoker invoker;
   final FixedBudgetGuard? budget;
-  final conversation = InMemoryConversation();
+  final InMemoryConversation conversation;
   late final AgentRunner runner;
 
   /// Runs [text] and collects all events; [onEvent] may answer
@@ -156,6 +160,24 @@ final class RiskInvoker implements ToolInvoker {
         ok ? ToolOutcome.text('ok') : ToolOutcome.declined(),
         Duration.zero,
       );
+    }
+  }
+}
+
+/// Invoker that records the contexts it gets and reports `ok` for every
+/// call.
+final class ContextInvoker implements ToolInvoker {
+  final contexts = <ToolContext>[];
+
+  @override
+  Stream<ToolInvocationEvent> invokeAll(
+    List<ToolCallBlock> calls,
+    ToolContext ctx,
+  ) async* {
+    contexts.add(ctx);
+    for (final c in calls) {
+      yield ToolStarted(c);
+      yield ToolFinished(c, ToolOutcome.text('ok'), Duration.zero);
     }
   }
 }

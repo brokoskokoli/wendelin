@@ -62,9 +62,12 @@ final class AgentFactory implements AgentRunFactory {
   ///
   /// Every model call gets the tool catalog of the current target's privacy
   /// level (`AgentRunner.catalogFor`), also after an escalation: TEE or
-  /// local targets may use sensitive tools, standard targets never see them
-  /// and their calls to such tools are refused. The executor looks tools up
-  /// in the catalog of the highest level ([ProviderConfig.highestPrivacy]).
+  /// local targets may use sensitive tools, standard targets never see them,
+  /// their calls to such tools are refused and audited, and arguments,
+  /// results and the answers built from them are hidden from them. The
+  /// executor looks tools up in the catalog of the level the call comes from
+  /// (`ToolContext.privacyLevel`), so also `tools__search` only lists tools
+  /// of that level; without a level it uses the lowest level of the chain.
   ///
   /// Memory entries go into the system prompt, which every target of the
   /// chain may receive, so only if the catalog of the lowest level
@@ -75,10 +78,8 @@ final class AgentFactory implements AgentRunFactory {
       providers.lowestPrivacy,
       sessionId: sessionId,
     );
-    final executorCatalog = registry.catalogFor(
-      providers.highestPrivacy,
-      sessionId: sessionId,
-    );
+    ToolCatalog catalogFor(PrivacyLevel level) =>
+        registry.catalogFor(level, sessionId: sessionId);
     final conversation = StorageConversation(storage.conversations, sessionId);
     final memoryAllowed = catalog.lookup('memory__search') != null;
     return AgentRunner(
@@ -92,11 +93,23 @@ final class AgentFactory implements AgentRunFactory {
         history: conversation,
       ),
       invoker: ToolExecutor(
-        catalog: executorCatalog,
+        catalog: catalog,
+        catalogFor: catalogFor,
         policy: policy,
         audit: audit,
       ),
-      catalogFor: (level) => registry.catalogFor(level, sessionId: sessionId),
+      catalogFor: catalogFor,
+      onToolRefused: (session, call) => audit.record(
+        ToolAuditEntry(
+          sessionId: session,
+          callId: call.id,
+          tool: call.name,
+          argumentsJson: call.argumentsJson,
+          decision: AuditDecision.denied,
+          status: AuditStatus.denied,
+          duration: Duration.zero,
+        ),
+      ),
       clock: clock,
       sessionId: sessionId,
       recorder: conversation,

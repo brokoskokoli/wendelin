@@ -58,13 +58,6 @@ final class ProviderConfig {
     ...chain,
   ].map((t) => t.privacy).reduce((a, b) => a.isAtLeast(b) ? b : a);
 
-  /// The highest privacy level among all targets: the tool executor gets
-  /// this catalog, the agent refuses calls the current target may not see.
-  PrivacyLevel get highestPrivacy => [
-    primary,
-    ...chain,
-  ].map((t) => t.privacy).reduce((a, b) => a.isAtLeast(b) ? a : b);
-
   /// The resolver for the agent.
   ProviderResolver resolver() =>
       DefaultProviderResolver(primary, chain, isPrivate: isPrivate);

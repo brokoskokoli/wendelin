@@ -1081,6 +1081,32 @@ void main() {
       },
     );
 
+    test('Bestätigungstext in der Gerätezone aus dem Kontext', () async {
+      final london = ctxAt(
+        DateTime.utc(2026, 10, 13, 12),
+        timeZone: 'Europe/London',
+      );
+      expect(
+        await tool('calendar__delete_event')
+            .confirmationText({'event_id': 'a'}, london),
+        'Termin ‚Tauchen‘ Do 15.10. 09:00–10:00 löschen',
+      );
+      expect(
+        await tool('calendar__update_event').confirmationText({
+          'event_id': 'a',
+          'start': '2026-10-15T08:00Z',
+        }, london),
+        'Termin ‚Tauchen‘ ändern: Do 15.10. 09:00–10:00',
+      );
+      expect(
+        await tool('calendar__update_event').confirmationText({
+          'event_id': 'a',
+          'start': '2026-10-15T08:00Z',
+        }, ctx()),
+        'Termin ‚Tauchen‘ ändern: Do 15.10. 10:00–11:00',
+      );
+    });
+
     test('Bestätigungstext: Port-Fehler → Text nur mit Id', () async {
       port.failNext('getEvent');
       expect(

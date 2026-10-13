@@ -318,6 +318,90 @@ void main() {
     );
   });
 
+  group('WP14: Katalog je Datenschutzstufe', () {
+    Future<ToolRegistry> registry() async {
+      final r = ToolRegistry(metaToolThreshold: 1)
+        ..sensitiveMinimum = PrivacyLevel.tee;
+      await r.registerIntegration(
+        FakeIntegration(
+          id: 'contacts',
+          tools: [FakeTool(name: 'contacts__find', description: 'Kontakt')],
+          sensitive: true,
+        ),
+        enabled: true,
+      );
+      await r.registerIntegration(
+        FakeIntegration(
+          id: 'web',
+          tools: [FakeTool(name: 'web__fetch', description: 'Kontakt Web')],
+        ),
+        enabled: true,
+      );
+      return r;
+    }
+
+    ToolContext at(PrivacyLevel? level) => ToolContext(
+      sessionId: 's1',
+      clock: const SystemClock(),
+      locale: 'de-DE',
+      timeZone: 'Europe/Berlin',
+      privacyLevel: level,
+    );
+
+    test(
+      'tools__search vom Standard-Ziel listet keine sensiblen Tools',
+      () async {
+        final r = await registry();
+        final executor = ToolExecutor(
+          catalog: r.catalogFor(PrivacyLevel.local, sessionId: 's1'),
+          catalogFor: (level) => r.catalogFor(level, sessionId: 's1'),
+        );
+        final search = _call('1', 'tools__search', '{"query":"Kontakt"}');
+        final std = await _run(executor, [
+          search,
+        ], ctx: at(PrivacyLevel.standard));
+        final stdText = _outcomes(std)['1']!.text;
+        expect(stdText, contains('web__fetch'));
+        expect(stdText, isNot(contains('contacts__find')));
+        final tee = await _run(executor, [search], ctx: at(PrivacyLevel.tee));
+        expect(_outcomes(tee)['1']!.text, contains('contacts__find'));
+      },
+    );
+
+    test('Stufe kommt beim Tool an', () async {
+      PrivacyLevel? seen;
+      final tool = FakeTool(
+        name: 'p__read',
+        handler: (args, ctx) {
+          seen = ctx.privacyLevel;
+          return ToolOutcome.text('ok');
+        },
+      );
+      await _run(ToolExecutor(catalog: FakeToolCatalog([tool])), [
+        _call('1', 'p__read'),
+      ], ctx: at(PrivacyLevel.eu));
+      expect(seen, PrivacyLevel.eu);
+    });
+
+    test('sensibles Tool vom Standard-Ziel ist unbekannt', () async {
+      final r = await registry();
+      final audit = _Audit();
+      final executor = ToolExecutor(
+        catalog: r.catalogFor(PrivacyLevel.local, sessionId: 's1'),
+        catalogFor: (level) => r.catalogFor(level, sessionId: 's1'),
+        audit: audit,
+      );
+      final events = await _run(executor, [
+        _call('1', 'contacts__find'),
+      ], ctx: at(PrivacyLevel.standard));
+      expect(_outcomes(events)['1']!.isError, isTrue);
+      expect(audit.entries.single.status, AuditStatus.unknownTool);
+      // Without a level the default catalog applies.
+      final noLevel = await _run(executor, [_call('2', 'contacts__find')]);
+      expect(_outcomes(noLevel)['2']!.isError, isFalse);
+    });
+  });
+
   group('Risiko und Bestätigung', () {
     test('external wird ohne Bestätigung nie ausgeführt, auch mit '
         'lockerndem Override', () async {

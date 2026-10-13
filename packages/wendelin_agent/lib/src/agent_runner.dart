@@ -27,6 +27,7 @@ final class AgentRunner implements AgentRun {
     this.costEstimator,
     this.budgetGuard,
     this.catalogFor,
+    this.onToolRefused,
     GiveUpClassifier? giveUpClassifier,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier();
 
@@ -64,6 +65,10 @@ final class AgentRunner implements AgentRun {
   /// every target (the [invoker] must then use the same catalog).
   final ToolCatalog Function(PrivacyLevel level)? catalogFor;
 
+  /// Called for every call refused because the current target may not see
+  /// the tool (it never reaches the [invoker], so the app audits it here).
+  final void Function(String sessionId, ToolCallBlock call)? onToolRefused;
+
   /// Detects „kann ich nicht“ answers.
   final GiveUpClassifier giveUpClassifier;
 
@@ -96,6 +101,30 @@ final class AgentRunner implements AgentRun {
   void _finished(_Run state) {
     if (identical(_active, state)) _active = null;
   }
+}
+
+/// Model- and user-facing texts of the [AgentRunner] for protected data.
+abstract final class AgentRunnerTexts {
+  /// Replaces assistant text that was built from results the target may not
+  /// see.
+  static const placeholder = '[Inhalt aus geschützter Quelle ausgeblendet]';
+
+  /// Replaces results of tools the target may not see.
+  static const redactedResult =
+      '[Ergebnis eines Tools, das diesem Modell nicht zur Verfügung steht – '
+      'ausgeblendet]';
+
+  /// Message when the user declines handing protected data to another
+  /// model.
+  static const protectedDeclined =
+      'Die Anfrage enthält Daten aus geschützten Quellen. Ohne deine '
+      'Zustimmung gebe ich sie nicht an ein anderes Modell weiter, deshalb '
+      'habe ich hier aufgehört.';
+
+  /// Error text for a call to a tool the current target may not see.
+  static String hiddenTool(String name) =>
+      'Das Tool „$name“ steht diesem Modell nicht zur Verfügung. Nutze nur '
+      'Tools aus der Tool-Liste.';
 }
 
 /// Result of one model call.
@@ -415,11 +444,12 @@ final class _Run {
   Future<_ModelReply> _callModel() async {
     final target = _current;
     final catalog = _catalog;
+    final tools = catalog.activeSpecs();
     final request = ChatRequest(
-      messages: _messagesFor(catalog),
+      messages: _messagesFor(catalog, hasTools: tools.isNotEmpty),
       model: target.modelId,
       maxTokens: config.maxOutputTokens,
-      tools: catalog.activeSpecs(),
+      tools: tools,
       temperature: config.temperature,
       systemPrompt: _systemPrompt(),
       metadata: {'sessionId': runner.sessionId},
@@ -496,7 +526,16 @@ final class _Run {
   String _systemPrompt() {
     final base = _context.systemPrompt;
     if (_epoch == 0) return base;
-    final before = _executed.where((e) => e.epoch < _epoch).toList();
+    // Calls of tools this target may not see are left out (their names
+    // and status are protected too).
+    final visible = runner.catalogFor == null ? null : _catalog;
+    final before = _executed
+        .where(
+          (e) =>
+              e.epoch < _epoch &&
+              (visible == null || visible.lookup(e.call.name) != null),
+        )
+        .toList();
     if (before.isEmpty) return base;
     final actions = [
       for (final e in before) (call: e.call, outcome: e.outcome),
@@ -533,57 +572,80 @@ final class _Run {
         : const DeepCollectionEquality().equals(a.tryDecodeArguments(), args);
   }
 
-  /// Error text for a call to a tool the current target may not see.
-  static String hiddenToolText(String name) =>
-      'Das Tool „$name“ steht diesem Modell nicht zur Verfügung. Nutze nur '
-      'Tools aus der Tool-Liste.';
-
-  /// Model-facing replacement for results of tools the target may not see.
-  static const redactedResultText =
-      '[Ergebnis eines Tools, das diesem Modell nicht zur Verfügung steht – '
-      'ausgeblendet]';
-
   /// The tool catalog of the current target.
   ToolCatalog get _catalog =>
       runner.catalogFor?.call(_current.privacy) ??
       runner.contextBuilder.catalog;
 
-  /// [_messages] as [catalog]'s target may see them: arguments and results
-  /// of calls to tools outside the catalog are redacted (they may hold
-  /// sensitive data from a more private target or an earlier run).
-  List<Message> _messagesFor(ToolCatalog catalog) {
-    if (runner.catalogFor == null) return _messages;
+  /// [_messages] as [catalog]'s target may see them.
+  ///
+  /// With per-target catalogs, calls to tools outside [catalog] are redacted
+  /// (arguments `{}`, result [AgentRunnerTexts.redactedResult]) – they may hold sensitive
+  /// data from a more private target or an earlier run – and so is every
+  /// assistant text, thinking or provider block that follows such a result
+  /// up to the next user message ([AgentRunnerTexts.placeholder]): the answer
+  /// was built from the protected data. Without any tools for the target
+  /// ([hasTools] false) tool calls and results become plain text, because
+  /// APIs reject tool blocks in a request without tools.
+  List<Message> _messagesFor(ToolCatalog catalog, {required bool hasTools}) {
+    final perTarget = runner.catalogFor != null;
     final hidden = <String>{};
     // Refused calls never ran: their result is our own error text.
     bool secret(ToolCallBlock c) =>
-        !_refused.contains(c.id) && catalog.lookup(c.name) == null;
-    return [
-      for (final m in _messages)
-        if (m.content.any(
-          (b) =>
-              (b is ToolCallBlock && secret(b)) ||
-              (b is ToolResultBlock && hidden.contains(b.callId)),
-        ))
-          Message(m.role, [
-            for (final b in m.content)
-              if (b is ToolCallBlock && secret(b))
-                _hide(b, hidden)
-              else if (b is ToolResultBlock && hidden.contains(b.callId))
-                ToolResultBlock(
-                  callId: b.callId,
-                  content: const [TextBlock(redactedResultText)],
-                )
-              else
-                b,
-          ])
-        else
-          m,
-    ];
-  }
-
-  static ToolCallBlock _hide(ToolCallBlock call, Set<String> hidden) {
-    hidden.add(call.id);
-    return ToolCallBlock(id: call.id, name: call.name, argumentsJson: '{}');
+        perTarget && !_refused.contains(c.id) && catalog.lookup(c.name) == null;
+    var tainted = false;
+    final out = <Message>[];
+    for (final m in _messages) {
+      if (m.role == Role.user) tainted = false;
+      var taintsNext = false;
+      final blocks = <ContentBlock>[];
+      for (final b in m.content) {
+        switch (b) {
+          case ToolCallBlock() when secret(b):
+            hidden.add(b.id);
+            blocks.add(
+              hasTools
+                  ? ToolCallBlock(id: b.id, name: b.name, argumentsJson: '{}')
+                  : TextBlock('[Tool-Aufruf: ${b.name}]'),
+            );
+          case ToolCallBlock() when !hasTools:
+            blocks.add(
+              TextBlock('[Tool-Aufruf: ${b.name} ${b.argumentsJson}]'),
+            );
+          case ToolResultBlock() when hidden.contains(b.callId):
+            taintsNext = true;
+            blocks.add(
+              hasTools
+                  ? ToolResultBlock(
+                      callId: b.callId,
+                      content: const [
+                        TextBlock(AgentRunnerTexts.redactedResult),
+                      ],
+                    )
+                  : const TextBlock(
+                      '[Tool-Ergebnis: ${AgentRunnerTexts.redactedResult}]',
+                    ),
+            );
+          case ToolResultBlock() when !hasTools:
+            final text = b.content.whereType<TextBlock>().map((t) => t.text);
+            blocks.add(TextBlock('[Tool-Ergebnis: ${text.join()}]'));
+          case TextBlock() when tainted && m.role == Role.assistant:
+            if (blocks.lastOrNull !=
+                const TextBlock(AgentRunnerTexts.placeholder)) {
+              blocks.add(const TextBlock(AgentRunnerTexts.placeholder));
+            }
+          case ThinkingBlock() || ProviderBlock()
+              when tainted && m.role == Role.assistant:
+            break; // built from protected data
+          case _:
+            blocks.add(b);
+        }
+      }
+      if (taintsNext) tainted = true;
+      final role = !hasTools && m.role == Role.tool ? Role.user : m.role;
+      out.add(blocks.isEmpty ? m : Message(role, blocks));
+    }
+    return out;
   }
 
   static bool _isDeclined(ToolOutcome o) =>
@@ -598,7 +660,10 @@ final class _Run {
         // Not offered to this target (e.g. sensitive tool, standard
         // provider): never reaches the invoker.
         _refused.add(call.id);
-        final outcome = ToolOutcome.error(hiddenToolText(call.name));
+        runner.onToolRefused?.call(runner.sessionId, call);
+        final outcome = ToolOutcome.error(
+          AgentRunnerTexts.hiddenTool(call.name),
+        );
         emit(ToolCallStarted(call));
         emit(ToolCallFinished(call: call, outcome: outcome));
         results[call.id] = outcome.toResultBlock(call.id);
@@ -631,6 +696,7 @@ final class _Run {
         locale: runner.contextBuilder.device.locale,
         timeZone: runner.contextBuilder.device.timeZone,
         cancel: token,
+        privacyLevel: _current.privacy,
       );
       await for (final event in runner.invoker.invokeAll(pending, ctx)) {
         switch (event) {
@@ -692,9 +758,19 @@ final class _Run {
   Future<bool> _escalate(EscalationReason reason) async {
     final next = runner.resolver.escalate(_current, reason);
     if (next == null) return false;
-    if (next.belowPrivacyFloor) {
+    // Results of tools the next target may not see are in this run: it
+    // gets them redacted, but the user decides whether to hand over at all.
+    final nextCatalog = runner.catalogFor?.call(next.privacy);
+    final protectedData =
+        nextCatalog != null &&
+        _executed.any(
+          (e) =>
+              !_isDeclined(e.outcome) &&
+              nextCatalog.lookup(e.call.name) == null,
+        );
+    if (next.belowPrivacyFloor || protectedData) {
       // Ask at most once per run; a „no“ stands.
-      if (_consentDeclined) return false;
+      if (_consentDeclined && !protectedData) return false;
       final answer = Completer<bool>();
       final question = EscalationConfirmationRequired(
         fromProfile: _current.profileId,
@@ -710,6 +786,14 @@ final class _Run {
       question.respond(false); // no-op if answered
       _throwIfAborted();
       if (!approved) {
+        if (protectedData) {
+          throw _Stop(
+            const AgentFailed(
+              error: AgentErrorKind.provider,
+              message: AgentRunnerTexts.protectedDeclined,
+            ),
+          );
+        }
         _consentDeclined = true;
         return false;
       }

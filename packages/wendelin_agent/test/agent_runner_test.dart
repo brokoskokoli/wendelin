@@ -1604,7 +1604,13 @@ void main() {
     late FakeTool web;
     ToolCatalog catalogFor(PrivacyLevel level) =>
         FakeToolCatalog([if (level.isAtLeast(PrivacyLevel.tee)) contacts, web]);
-    Harness harness(ProviderTarget primary, List<ProviderTarget> chain) {
+    final refused = <String>[];
+    Harness harness(
+      ProviderTarget primary,
+      List<ProviderTarget> chain, {
+      List<Message> history = const [],
+    }) {
+      refused.clear();
       contacts = FakeTool(
         name: 'contacts__find',
         outcome: ToolOutcome.text('Anna: 0171 1234567'),
@@ -1616,6 +1622,8 @@ void main() {
         tools: [web], // ContextBuilder catalog (lowest level)
         invoker: FakeToolInvoker(FakeToolCatalog([contacts, web])),
         catalogFor: catalogFor,
+        onToolRefused: (session, call) => refused.add('$session:${call.id}'),
+        history: history,
       );
     }
 
@@ -1627,8 +1635,18 @@ void main() {
       ], privacy: PrivacyLevel.tee);
       final (std, ps) = scripted('claude', [ScriptedTurn.text('Fertig.')]);
       final h = harness(tee, [std]);
-      final events = await h.run('Ruf Anna an');
+      final events = await h.run(
+        'Ruf Anna an',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) e.respond(true);
+        },
+      );
 
+      // Protected results in the run: the hand-over needs consent.
+      expect(
+        events.whereType<EscalationConfirmationRequired>().single.toProfile,
+        'claude',
+      );
       expect(pt.requests.first.tools.map((t) => t.name), [
         'contacts__find',
         'web__search',
@@ -1651,6 +1669,208 @@ void main() {
       expect(terminal(events), isA<AgentDone>());
     });
 
+    List<ScriptedTurn> teeTurns() => [
+      ScriptedTurn.toolCalls([call('c1', 'contacts__find', '{"q":"Anna"}')]),
+      ScriptedTurn.toolCalls([
+        call('c2', 'web__search', '{"q":"Vorwahl"}'),
+      ], text: 'Annas Nummer ist 0171 1234567. '),
+      ScriptedTurn.error(const NetworkException('weg')),
+      ScriptedTurn.error(const NetworkException('weg')),
+    ];
+
+    test(
+      '(a) text built from protected results is hidden after escalation',
+      () async {
+        final (tee, _) = scripted(
+          'phala',
+          teeTurns(),
+          privacy: PrivacyLevel.tee,
+        );
+        final (std, ps) = scripted('claude', [ScriptedTurn.text('Fertig.')]);
+        final h = harness(tee, [std]);
+        final events = await h.run(
+          'Wie ist Annas Nummer?',
+          onEvent: (e) {
+            if (e is EscalationConfirmationRequired) e.respond(true);
+          },
+        );
+        expect(terminal(events), isA<AgentDone>());
+        final sent = ps.requests.single.messages.toString();
+        expect(sent, isNot(contains('0171')));
+        expect(sent, contains(AgentRunnerTexts.placeholder));
+        // The user's own words stay.
+        expect(sent, contains('Wie ist Annas Nummer?'));
+        // The visible web call keeps its arguments.
+        expect(sent, contains('Vorwahl'));
+      },
+    );
+
+    test('(a) declined hand-over of protected data ends the run', () async {
+      final (tee, _) = scripted('phala', teeTurns(), privacy: PrivacyLevel.tee);
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('nie')]);
+      final h = harness(tee, [std]);
+      final events = await h.run(
+        'Wie ist Annas Nummer?',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) e.respond(false);
+        },
+      );
+      final failed = terminal(events) as AgentFailed;
+      expect(failed.message, contains('geschützten Quellen'));
+      expect(ps.requests, isEmpty);
+      expect(events.whereType<Escalated>(), isEmpty);
+    });
+
+    test('a declined protected call needs no consent', () async {
+      final sms = FakeTool(name: 'contacts__sms', risk: RiskLevel.external);
+      final (tee, _) = scripted('phala', [
+        ScriptedTurn.toolCalls([call('c1', 'contacts__sms')]),
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ], privacy: PrivacyLevel.tee);
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
+      final h = Harness(
+        primary: tee,
+        chain: [std],
+        invoker: FakeToolInvoker(FakeToolCatalog([sms])),
+        catalogFor: (level) =>
+            FakeToolCatalog([if (level.isAtLeast(PrivacyLevel.tee)) sms]),
+      );
+      final events = await h.run(
+        'x',
+        onEvent: (e) {
+          if (e is ConfirmationRequired) e.respond(false);
+        },
+      );
+      expect(events.whereType<EscalationConfirmationRequired>(), isEmpty);
+      expect(ps.requests, hasLength(1));
+    });
+
+    test('no consent question without protected results', () async {
+      final (tee, _) = scripted('phala', [
+        ScriptedTurn.toolCalls([call('c1', 'web__search')]),
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ], privacy: PrivacyLevel.tee);
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
+      final events = await harness(tee, [std]).run('x');
+      expect(events.whereType<EscalationConfirmationRequired>(), isEmpty);
+      expect(ps.requests, hasLength(1));
+    });
+
+    test('(b) protected answers from earlier runs are hidden', () async {
+      final history = [
+        Message.user('Wie ist Annas Nummer?'),
+        Message.assistant([
+          const ThinkingBlock('Anna suchen', signature: 's'),
+          call('h1', 'contacts__find', '{"q":"Anna"}'),
+        ]),
+        Message.toolResults([
+          ToolResultBlock(
+            callId: 'h1',
+            content: const [TextBlock('Anna: 0171 1234567')],
+          ),
+        ]),
+        Message.assistant([
+          const ThinkingBlock('0171 vorlesen', signature: 't'),
+          const TextBlock('Annas Nummer ist '),
+          const ProviderBlock(provider: 'fake', rawJson: '{"n":"0171"}'),
+          const TextBlock('0171 1234567.'),
+        ]),
+        Message.user('Danke. Wie wird das Wetter?'),
+        Message.assistantText('Sonnig.'),
+      ];
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('Gern.')]);
+      final h = harness(std, const [], history: history);
+      await h.run('Und morgen?');
+      final sent = ps.requests.single.messages;
+      expect(sent.toString(), isNot(contains('0171')));
+      expect(sent.toString(), isNot(contains('vorlesen')));
+      expect(sent[3].content, [const TextBlock(AgentRunnerTexts.placeholder)]);
+      // After the next user message the text is visible again.
+      expect(sent[5], Message.assistantText('Sonnig.'));
+      expect(sent.last, Message.user('Und morgen?'));
+    });
+
+    test('escalation note leaves out hidden calls', () async {
+      final (tee, _) = scripted('phala', [
+        ScriptedTurn.toolCalls([
+          call('c1', 'contacts__find', '{"q":"Anna"}'),
+          call('c2', 'web__search', '{"q":"x"}'),
+        ]),
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ], privacy: PrivacyLevel.tee);
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
+      await harness(tee, [std]).run(
+        'x',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) e.respond(true);
+        },
+      );
+      final prompt = ps.requests.single.systemPrompt!;
+      expect(prompt, contains('web__search'));
+      expect(prompt, isNot(contains('contacts__find')));
+    });
+
+    test('tools get the privacy level of the current target', () async {
+      final (tee, _) = scripted('phala', [
+        ScriptedTurn.toolCalls([call('c1', 'web__search')]),
+        ScriptedTurn.text('ok'),
+      ], privacy: PrivacyLevel.tee);
+      final invoker = ContextInvoker();
+      final h = Harness(
+        primary: tee,
+        tools: [FakeTool(name: 'web__search')],
+        invoker: invoker,
+        catalogFor: (_) => FakeToolCatalog([FakeTool(name: 'web__search')]),
+      );
+      await h.run('x');
+      expect(invoker.contexts.single.privacyLevel, PrivacyLevel.tee);
+    });
+
+    test('without tools for the target, tool blocks become text', () async {
+      final history = [
+        Message.user('Timer?'),
+        Message.assistant([call('h1', 'alarms__set', '{"m":5}')]),
+        Message.toolResults([
+          ToolResultBlock(callId: 'h1', content: const [TextBlock('gestellt')]),
+        ]),
+        Message.assistantText('Timer läuft.'),
+      ];
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
+      final h = Harness(
+        primary: std,
+        history: history,
+        catalogFor: (_) => FakeToolCatalog(const []),
+      );
+      await h.run('Danke');
+      final req = ps.requests.single;
+      expect(req.tools, isEmpty);
+      final blocks = req.messages.expand((m) => m.content);
+      expect(blocks.whereType<ToolCallBlock>(), isEmpty);
+      expect(blocks.whereType<ToolResultBlock>(), isEmpty);
+      expect(req.messages.map((m) => m.role), isNot(contains(Role.tool)));
+      // Hidden for this target: neither arguments nor the result.
+      expect(req.messages[1].text, '[Tool-Aufruf: alarms__set]');
+      expect(req.messages[2].text, contains('ausgeblendet'));
+    });
+
+    test('without tools and without catalogFor tool blocks are text', () async {
+      final history = [
+        Message.user('Timer?'),
+        Message.assistant([call('h1', 'alarms__set', '{"m":5}')]),
+        Message.toolResults([
+          ToolResultBlock(callId: 'h1', content: const [TextBlock('gestellt')]),
+        ]),
+      ];
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
+      await Harness(primary: std, history: history).run('Danke');
+      final req = ps.requests.single;
+      expect(req.messages[1].text, '[Tool-Aufruf: alarms__set {"m":5}]');
+      expect(req.messages[2], Message.user('[Tool-Ergebnis: gestellt]'));
+    });
+
     test('a call to a tool the target may not see is refused', () async {
       final (std, ps) = scripted('claude', [
         ScriptedTurn.toolCalls([
@@ -1670,6 +1890,7 @@ void main() {
         contains('nicht zur Verfügung'),
       );
       expect(results.last.isError, isFalse);
+      expect(refused, ['s1:c1']);
       expect((h.invoker as FakeToolInvoker).received.map((c) => c.id), ['c2']);
       expect(events.whereType<ToolCallFinished>().map((e) => e.call.id), [
         'c1',

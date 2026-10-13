@@ -35,10 +35,23 @@ final class ToolExecutor implements ToolInvoker {
     this.audit,
     this.timeout = const Duration(seconds: 20),
     this.shaper = const ResultShaper(),
+    this.catalogFor,
   }) : policy = policy ?? RiskPolicy();
 
-  /// Where tools are looked up.
+  /// Where tools are looked up when the context names no privacy level.
   final ToolCatalog catalog;
+
+  /// Catalog per privacy level (e.g. `ToolRegistry.catalogFor`). If set and
+  /// `ToolContext.privacyLevel` is given, tools are looked up only in the
+  /// catalog of that level: a call from a standard model to a sensitive tool
+  /// is an unknown tool, and `tools__search` lists only that level's tools.
+  final ToolCatalog Function(PrivacyLevel level)? catalogFor;
+
+  ToolCatalog _catalogOf(ToolContext ctx) {
+    final level = ctx.privacyLevel;
+    final perLevel = catalogFor;
+    return level == null || perLevel == null ? catalog : perLevel(level);
+  }
 
   /// Decides allow / confirm / deny.
   final RiskPolicy policy;
@@ -122,7 +135,7 @@ final class ToolExecutor implements ToolInvoker {
     void Function(ToolInvocationEvent) emit,
   ) async {
     if (ctx.cancel.isCancelled) return _cancelled(AuditDecision.none);
-    final tool = catalog.lookup(call.name);
+    final tool = _catalogOf(ctx).lookup(call.name);
     if (tool == null) {
       return (
         ToolOutcome.error(unknownToolText(call.name)),
@@ -212,6 +225,7 @@ final class ToolExecutor implements ToolInvoker {
       locale: ctx.locale,
       timeZone: ctx.timeZone,
       cancel: token,
+      privacyLevel: ctx.privacyLevel,
     );
 
     final result = Completer<(ToolOutcome, AuditStatus)>();

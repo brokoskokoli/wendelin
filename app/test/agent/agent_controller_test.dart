@@ -560,6 +560,97 @@ void main() {
       },
     );
 
+    test('Gedächtnis im Prompt nur, wenn jedes Ziel der Kette es sehen darf '
+        '(WP14)', () async {
+      for (final mixed in [true, false]) {
+        final provider = FakeLlmProvider([ScriptedTurn.text('ok')]);
+        env = TestEnv(
+          providerConfig: scripted(
+            provider,
+            privacy: PrivacyLevel.tee,
+            chain: [
+              if (mixed)
+                ProviderTarget(
+                  profileId: 'cloud',
+                  modelId: 'm',
+                  provider: FakeLlmProvider(const []),
+                  privacy: PrivacyLevel.standard,
+                ),
+            ],
+          ),
+          enabled: const {'memory'},
+        );
+        c = env.container();
+        final registry = c.read(toolRegistryProvider)
+          ..sensitiveMinimum = PrivacyLevel.tee;
+        await registry.refresh();
+        await env.storage.memory.save(
+          'Taucht gern im Mittelmeer',
+          category: MemoryCategory.preference,
+          source: 'user',
+        );
+        await sendAndWait(c, 'Wo taucht man gut?');
+        expect(
+          provider.requests.single.systemPrompt,
+          mixed
+              ? isNot(contains('Taucht gern im Mittelmeer'))
+              : contains('Taucht gern im Mittelmeer'),
+          reason: 'Kette mit Standard-Ziel: $mixed',
+        );
+        c.dispose();
+      }
+      c = env.container();
+    });
+
+    test('TEE-Ziel in gemischter Kette führt sensibles Tool aus, Standard-Ziel '
+        'wird abgelehnt und auditiert (WP14)', () async {
+      final tee = FakeLlmProvider([
+        ScriptedTurn.toolCalls([call('c1', 'calendar__create_event', _create)]),
+        ScriptedTurn.text('Eingetragen.'),
+      ]);
+      env = TestEnv(
+        providerConfig: scripted(
+          tee,
+          privacy: PrivacyLevel.tee,
+          chain: [
+            ProviderTarget(
+              profileId: 'cloud',
+              modelId: 'm',
+              provider: FakeLlmProvider(const []),
+              privacy: PrivacyLevel.standard,
+            ),
+          ],
+        ),
+        enabled: const {'calendar'},
+      );
+      c = env.container();
+      c.read(toolRegistryProvider).sensitiveMinimum = PrivacyLevel.tee;
+      await c.read(toolRegistryProvider).refresh();
+      await sendAndWait(c, 'Trag Tauchen ein');
+      expect(env.calendar.methodCalls, contains('createEvent'));
+      c.dispose();
+
+      final cloud = FakeLlmProvider([
+        ScriptedTurn.toolCalls([call('c2', 'calendar__create_event', _create)]),
+        ScriptedTurn.text('Geht nicht.'),
+      ]);
+      env = TestEnv(
+        providerConfig: scripted(cloud),
+        enabled: const {'calendar'},
+      );
+      c = env.container();
+      c.read(toolRegistryProvider).sensitiveMinimum = PrivacyLevel.tee;
+      await c.read(toolRegistryProvider).refresh();
+      await sendAndWait(c, 'Trag Tauchen ein');
+      expect(env.calendar.methodCalls, isNot(contains('createEvent')));
+      await c.read(auditRecorderProvider).flush();
+      final audit = await env.storage.audit.query(
+        const AuditFilter(kinds: {AuditKind.toolCall}),
+      );
+      expect(audit.single.payload['tool'], 'calendar__create_event');
+      expect(audit.single.payload['status'], 'denied');
+    });
+
     test('Werkzeuge nach der Stufe des aktuellen Ziels (WP14)', () async {
       final provider = FakeLlmProvider([
         ScriptedTurn.error(const NetworkException('weg')),
