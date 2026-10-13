@@ -170,13 +170,38 @@ final class HttpToolRunner {
 
   final HostResolver _resolve;
 
-  /// Calls [definition] with [args].
+  /// Calls [definition] with [args]. Only cancellation throws; any other
+  /// failure (also unexpected ones) comes back as [HttpCallResult.error].
   Future<HttpCallResult> call(
     HttpToolDefinition definition,
     Map<String, Object?> args, {
     CancelToken? cancel,
   }) async {
     final started = clock.now();
+    // Beendet die Verbindung nach Ende, Zeitlimit oder Abbruch hart.
+    final abort = CancelToken();
+    try {
+      return await _call(definition, args, cancel, started, abort);
+    } on CancelledException {
+      rethrow;
+    } on Object {
+      // Letzte Linie: nie Ausnahme-Text (evtl. Server-Inhalt) weitergeben.
+      return HttpCallResult(
+        duration: clock.now().difference(started),
+        error: 'Unerwarteter Fehler beim HTTP-Aufruf',
+      );
+    } finally {
+      abort.cancel();
+    }
+  }
+
+  Future<HttpCallResult> _call(
+    HttpToolDefinition definition,
+    Map<String, Object?> args,
+    CancelToken? cancel,
+    DateTime started,
+    CancelToken abort,
+  ) async {
     HttpCallResult fail(String message, [SentRequest? sent]) => HttpCallResult(
       duration: clock.now().difference(started),
       request: sent,
@@ -197,7 +222,13 @@ final class HttpToolRunner {
     try {
       cancel?.throwIfCancelled();
       return await orCancel(
-        _send(definition, prepared, used, started).timeout(definition.timeout),
+        _send(
+          definition,
+          prepared,
+          used,
+          started,
+          abort,
+        ).timeout(definition.timeout),
         cancel,
       );
     } on TimeoutException {
@@ -268,6 +299,7 @@ final class HttpToolRunner {
     _Prepared p,
     List<String> used,
     DateTime started,
+    CancelToken abort,
   ) async {
     final target = await checkHttpTarget(
       p.url,
@@ -293,7 +325,7 @@ final class HttpToolRunner {
       _putAll(request.headers, secretHeaders);
       final http.StreamedResponse response;
       try {
-        response = await transport.send(request, target);
+        response = await transport.send(request, target, abort: abort);
       } on Exception {
         throw PortException(
           PortErrorKind.unavailable,
@@ -311,7 +343,12 @@ final class HttpToolRunner {
             status: status,
           );
         }
-        final next = url.resolve(location);
+        final Uri next;
+        try {
+          next = url.resolve(location);
+        } on FormatException {
+          throw _CallFailure('Ungültige Weiterleitung', status: status);
+        }
         if (!target.sameOrigin(next)) {
           throw _CallFailure(
             'Weiterleitung auf ein anderes Ziel '

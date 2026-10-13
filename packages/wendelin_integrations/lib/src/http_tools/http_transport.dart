@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
+import 'package:wendelin_core/wendelin_core.dart' show CancelToken;
 
 import 'http_target.dart';
 
@@ -18,11 +19,14 @@ abstract interface class HttpToolSecrets {
 
 /// Sends one request of an HTTP tool to a checked [HttpTarget].
 abstract interface class HttpToolTransport {
-  /// Sends [request] (redirects are not followed) to [target].
+  /// Sends [request] (redirects are not followed) to [target]. When
+  /// [abort] is cancelled (call finished, timed out or cancelled), the
+  /// connection must be torn down.
   Future<http.StreamedResponse> send(
     http.BaseRequest request,
-    HttpTarget target,
-  );
+    HttpTarget target, {
+    CancelToken? abort,
+  });
 }
 
 /// Transport over any [http.Client] (tests with `MockClient`). Does **not**
@@ -38,8 +42,9 @@ final class ClientHttpToolTransport implements HttpToolTransport {
   @override
   Future<http.StreamedResponse> send(
     http.BaseRequest request,
-    HttpTarget target,
-  ) => client.send(request);
+    HttpTarget target, {
+    CancelToken? abort,
+  }) => client.send(request);
 }
 
 /// Transport over `dart:io` that connects only to the addresses checked by
@@ -62,8 +67,9 @@ final class PinnedHttpToolTransport implements HttpToolTransport {
   @override
   Future<http.StreamedResponse> send(
     http.BaseRequest request,
-    HttpTarget target,
-  ) async {
+    HttpTarget target, {
+    CancelToken? abort,
+  }) async {
     final io = HttpClient(context: context)
       ..findProxy = ((_) => 'DIRECT')
       ..connectionFactory = (uri, proxyHost, proxyPort) {
@@ -76,6 +82,7 @@ final class PinnedHttpToolTransport implements HttpToolTransport {
           ConnectionTask.fromSocket(_connect(uri, target), () {}),
         );
       };
+    unawaited(abort?.whenCancelled.then((_) => io.close(force: true)));
     final client = IOClient(io);
     try {
       return await client.send(request);

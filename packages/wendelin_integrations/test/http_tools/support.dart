@@ -9,6 +9,9 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 /// Canary secret: must never show up anywhere visible.
 const canary = 'kanarienvogel-geheim-4711';
 
+/// Second canary with Base64-typical and quoting characters.
+const canary2 = 'Zm9v+YmFy/YmF6=="ab cd';
+
 /// Resolver for the HTTP-tool tests.
 Future<List<InternetAddress>> testDns(String host) async => switch (host) {
   'api.example.org' ||

@@ -109,6 +109,9 @@ bool isSecretHeaderName(String name) {
     'apikey',
     'api_key',
     'auth',
+    'key',
+    'bearer',
+    'credential',
     'session',
     'signature',
   ].any(n.contains);
@@ -417,7 +420,8 @@ final class HttpToolDefinition {
     },
     CustomHeadersAuth(:final secretRefsByHeader) => {
       for (final h in secretRefsByHeader.keys)
-        if (!_headerName.hasMatch(h) || _reservedHeaders.contains(h))
+        if (!_headerName.hasMatch(h) ||
+            _reservedHeaders.contains(h.toLowerCase()))
           throw FormatException('$ctx: ungültiger Header-Name „$h“')
         else
           h.toLowerCase(),

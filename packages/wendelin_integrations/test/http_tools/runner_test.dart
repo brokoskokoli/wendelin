@@ -8,6 +8,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../helpers.dart';
 import 'support.dart';
 
 void main() {
@@ -296,6 +297,7 @@ void main() {
       'https://evil.example/steal',
       '//evil.example/steal',
       'https://user@api.example.org/x',
+      'http://api.example.org:443/x',
     ]) {
       test('fremder Origin abgelehnt, nichts gesendet: $to', () async {
         final m = mockRunner((_) async => redirect(to));
@@ -305,6 +307,24 @@ void main() {
         expect(m.rec.requests, hasLength(1));
       });
     }
+
+    test(
+      'kaputter Location-Header → lesbarer Fehler, keine Ausnahme',
+      () async {
+        for (final to in ['http://[::1', 'https://[zz]/']) {
+          final m = mockRunner((_) async => redirect(to));
+          final r = await m.runner.call(def(), {'id': '1'});
+          expect(r.error, 'Ungültige Weiterleitung', reason: to);
+          expect(r.status, 302);
+          expect(m.rec.requests, hasLength(1));
+          final t = await HttpToolTester(m.runner).run(def(), {'id': '1'});
+          expect(t.error, 'Ungültige Weiterleitung');
+          final o = await HttpTool(def(), m.runner).execute({'id': '1'}, ctx());
+          expect(o.isError, isTrue);
+          expect(o.text, isNot(contains('[::1')));
+        }
+      },
+    );
 
     test('höchstens 3 Weiterleitungen', () async {
       final m = mockRunner((_) async => redirect('/loop'));
@@ -413,6 +433,18 @@ void main() {
       final r = await m.runner.call(def(), {'id': '1'});
       expect(r.error, 'Zugangsdaten konnten nicht gelesen werden');
     });
+
+    test(
+      'unerwarteter Fehler (Error) entkommt nicht, Text bleibt drin',
+      () async {
+        final m = mockRunner((_) async => throw StateError('boom $canary'));
+        final r = await m.runner.call(def(), {'id': '1'});
+        expect(r.error, 'Unerwarteter Fehler beim HTTP-Aufruf');
+        expect('$r', isNot(contains(canary)));
+        final t = await HttpToolTester(m.runner).run(def(), {'id': '1'});
+        expect(t.ok, isFalse);
+      },
+    );
 
     test('Server nicht erreichbar', () async {
       final m = mockRunner(

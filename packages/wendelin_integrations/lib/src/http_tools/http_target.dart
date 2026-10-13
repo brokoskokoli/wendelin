@@ -49,8 +49,19 @@ AddressScope classifyAddress(InternetAddress address) {
   if (zeroPrefix && b[10] == 0xff && b[11] == 0xff) {
     return _classifyV4(b.sublist(12)); // ::ffff:a.b.c.d
   }
+  if (b.sublist(0, 8).every((x) => x == 0) &&
+      b[8] == 0xff &&
+      b[9] == 0xff &&
+      b[10] == 0 &&
+      b[11] == 0) {
+    return _classifyV4(b.sublist(12)); // ::ffff:0:a.b.c.d (SIIT)
+  }
   if (b[0] == 0 && b[1] == 0x64 && b[2] == 0xff && b[3] == 0x9b) {
-    return _classifyV4(b.sublist(12)); // NAT64
+    // 64:ff9b::/96 (NAT64) und 64:ff9b:1::/48 (lokales NAT64).
+    return _classifyV4(b.sublist(12));
+  }
+  if (b[0] == 0x01 && b.sublist(1, 8).every((x) => x == 0)) {
+    return AddressScope.blocked; // 100::/64 (Discard)
   }
   if (b[0] == 0x20 && b[1] == 0x02) return _classifyV4(b.sublist(2, 6));
   if ((b[0] & 0xfe) == 0xfc) return AddressScope.private; // fc00::/7

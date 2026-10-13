@@ -277,6 +277,45 @@ void main() {
     });
   });
 
+  test('Zeitlimit schließt die Verbindung hart (Pinned)', () async {
+    final socketServer = await ServerSocket.bind(
+      InternetAddress.loopbackIPv4,
+      0,
+    );
+    addTearDown(socketServer.close);
+    final closed = Completer<void>();
+    socketServer.listen((socket) {
+      // Nimmt die Anfrage an, antwortet aber nie.
+      socket.listen(
+        (_) {},
+        onDone: () {
+          if (!closed.isCompleted) closed.complete();
+          socket.destroy();
+        },
+        onError: (Object _) {
+          if (!closed.isCompleted) closed.complete();
+        },
+      );
+    });
+    final runner = HttpToolRunner(
+      transport: PinnedHttpToolTransport(),
+      secrets: FakeHttpToolSecrets({'tok': canary}),
+      allowLoopback: true,
+      resolve: (_) async => [InternetAddress.loopbackIPv4],
+    );
+    final r = await runner.call(
+      def(
+        url: 'http://hang.invalid:${socketServer.port}/x',
+        homeNetwork: true,
+        timeout: const Duration(seconds: 1),
+      ),
+      {'id': '1'},
+    );
+    expect(r.error, contains('Zeitüberschreitung'));
+    // Ohne close(force: true) bliebe der Socket bis zum Idle-Timeout offen.
+    await closed.future.timeout(const Duration(seconds: 2));
+  });
+
   group('PinnedHttpToolTransport (echter Socket)', () {
     late HttpServer server;
     final received = <HttpRequest>[];
@@ -362,6 +401,25 @@ void main() {
         expect(r.error, 'Server „pinned.invalid“ nicht erreichbar');
       },
     );
+
+    test('anderes Schema auf gleichem Host/Port: keine Verbindung', () async {
+      final target = HttpTarget(
+        origin: Uri.parse('https://pinned.invalid:${server.port}'),
+        addresses: [InternetAddress.loopbackIPv4],
+        homeNetwork: true,
+      );
+      await expectLater(
+        PinnedHttpToolTransport().send(
+          http.Request(
+            'GET',
+            Uri.parse('http://pinned.invalid:${server.port}/'),
+          ),
+          target,
+        ),
+        throwsA(isA<Exception>()),
+      );
+      expect(received, isEmpty);
+    });
 
     test('Socket nur für den geprüften Origin', () async {
       final target = HttpTarget(

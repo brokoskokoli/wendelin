@@ -236,6 +236,13 @@ void main() {
         },
         'ungültiger Header-Name',
       ),
+      'Custom-Header reserviert (Großschreibung)': (
+        (j) => j['auth'] = {
+          'kind': 'customHeaders',
+          'secretRefs': {'Content-Length': 'r'},
+        },
+        'ungültiger Header-Name',
+      ),
       'Custom-Header reserviert': (
         (j) => j['auth'] = {
           'kind': 'customHeaders',
@@ -386,6 +393,12 @@ void main() {
       'X-Secret',
       'X-Session-Id',
       'X-Hub-Signature',
+      'X-Key',
+      'Ocp-Apim-Subscription-Key',
+      'X-Bearer',
+      'X-Credential',
+      'X-Client-Secret',
+      'Session',
     ]) {
       expect(isSecretHeaderName(n), isTrue, reason: n);
     }

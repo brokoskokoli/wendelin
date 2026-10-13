@@ -94,6 +94,44 @@ void main() {
     });
   }
 
+  group('zweiter Kanarienwert mit +/=" und Leerzeichen', () {
+    final encodings = <String, String Function(String)>{
+      'roh': (v) => v,
+      'JSON-escaped': (v) {
+        final e = jsonEncode(v);
+        return e.substring(1, e.length - 1);
+      },
+      'URL-Komponente': Uri.encodeComponent,
+      'URL-Query': Uri.encodeQueryComponent,
+    };
+    for (final MapEntry(key: name, value: encode) in encodings.entries) {
+      for (final asJson in [false, true]) {
+        test('Echo $name${asJson ? ' im JSON-Dokument' : ''}', () async {
+          final m = mockRunner(
+            (_) async => asJson
+                ? jsonResponse(
+                    jsonEncode({'echo': canary2, 'enc': encode(canary2)}),
+                  )
+                : http.Response('echo=${encode(canary2)};', 200),
+            secrets: {'tok': canary2},
+          );
+          final r = await m.runner.call(def(), {'id': '1'});
+          expect(
+            m.rec.requests.single.headers['Authorization'],
+            'Bearer $canary2',
+          );
+          final texts = visible(r);
+          for (final t in texts) {
+            for (final form in encodings.values) {
+              expect(t, isNot(contains(form(canary2))), reason: name);
+            }
+          }
+          expect(r.text, contains(scrubbedSecret));
+        });
+      }
+    }
+  });
+
   test('Kanarienwert: Definition, Export, toString, Fake', () async {
     final m = mockRunner((_) async => jsonResponse('{}'));
     final defs = [
