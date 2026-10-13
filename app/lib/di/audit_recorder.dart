@@ -71,6 +71,20 @@ final class AuditRecorder implements ToolAuditSink {
     'approved': approved,
   });
 
+  /// The user undid the tool call [callId] ([ok] = the port reverted it).
+  /// Undo changes the device after the call, so it is logged like a call.
+  void undo(
+    String? sessionId, {
+    required String callId,
+    required String tool,
+    required bool ok,
+  }) => _write(AuditKind.toolCall, sessionId, {
+    'callId': callId,
+    'tool': tool,
+    'undo': true,
+    'status': ok ? 'ok' : 'failed',
+  });
+
   /// Records what [event] means for the audit log (no-op for streaming
   /// events and events recorded elsewhere).
   void agentEvent(String sessionId, AgentEvent event) {

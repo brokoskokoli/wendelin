@@ -33,6 +33,17 @@ Im Demo-Modus laufen alle Ports im Speicher; Kalender und Uhr des Geräts bleibe
 
 `dart run tool/gate.dart app` im Repo-Root. Golden-Tests tragen den Tag `golden` (`test/ui/goldens/`, `test/screens/goldens/`, `test/overlay/goldens/`).
 
+Auf CI (`CI=true`) akzeptieren Goldens bis 0,6 % und höchstens 2 000 abweichende Pixel (`test/support/golden_tolerance.dart`), weil der macOS-Runner Kanten und Glyphen leicht anders rastert; lokal bleiben sie pixelgenau.
+
+Gerätetests (`integration_test/`, AOSP-Emulator ohne Google Play) laufen mit `tool/e2e_android.sh` im Repo-Root:
+
+| Datei | Prüft |
+| --- | --- |
+| `onboarding_e2e_test.dart` | Onboarding → „Demo ohne Provider“ → Termin per Text, Audit-Log |
+| `calendar_e2e_test.dart` | `CalendarChannel.kt` direkt (anlegen, lesen, ändern, löschen, ganztägig); „Trag mir morgen um 10 Tauchen ein“ → Gerätekalender → Rückgängig; `calendar__delete_event` mit Sheet „Nein“/„Ja“ |
+| `lists_saf_e2e_test.dart` | `FilesChannel.kt`: Datei über die Dateiauswahl anlegen, persistente Freigabe, byte-genaues Schreiben/Lesen, `lists__add_items`/`lists__complete_item` |
+| `live_e2e_test.dart` | nur mit `WENDELIN_LIVE=1` und `ANTHROPIC_API_KEY`: derselbe Satz mit Claude Haiku in den Gerätekalender |
+
 ## Standard-Assistent (Emulator)
 
 ```

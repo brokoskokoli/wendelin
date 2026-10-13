@@ -39,6 +39,14 @@ void _report(String label, String model, List<ChatEvent> events) {
   print('$label ($model): $usage, Kosten: ${cost ?? '?'} µUSD');
 }
 
+/// Skips the running test without [key]. Inside the test (not `skip:`),
+/// because `--run-skipped` – needed for the `live` tag – ignores `skip:`.
+bool _skipWithout(String? key, String envKey) {
+  if (key != null && key.isNotEmpty) return false;
+  markTestSkipped('$envKey nicht gesetzt');
+  return true;
+}
+
 void _liveSuite({
   required String name,
   required String envKey,
@@ -48,6 +56,7 @@ void _liveSuite({
   final key = Platform.environment[envKey];
   group(name, () {
     test('Textanfrage', () async {
+      if (_skipWithout(key, envKey)) return;
       final events = await create(key!)
           .chat(
             ChatRequest(
@@ -69,6 +78,7 @@ void _liveSuite({
     });
 
     test('Tool-Anfrage', () async {
+      if (_skipWithout(key, envKey)) return;
       final events = await create(key!)
           .chat(
             ChatRequest(
@@ -93,7 +103,7 @@ void _liveSuite({
       expect(args, isNotNull);
       expect('${args!['title']}'.toLowerCase(), contains('tauch'));
     });
-  }, skip: key == null || key.isEmpty ? '$envKey nicht gesetzt' : false);
+  });
 }
 
 void main() {
@@ -124,21 +134,16 @@ void main() {
   // qwen/qwen-2.5-7b-instruct läuft laut /v1/models mit is_tee: true; das
   // prüft der folgende (kostenlose) Test, bevor die Chat-Anfragen laufen.
   final phalaKey = Platform.environment['PHALA_API_KEY'];
-  test(
-    'Phala: Live-Modell ist ein TEE-Modell (is_tee)',
-    () async {
-      final models = await OpenAiChatAdapter(
-        baseUrl: Uri.parse('https://api.redpill.ai/v1'),
-        credentials: Credentials.apiKey(phalaKey!, style: ApiKeyStyle.bearer),
-        defaultModel: 'qwen/qwen-2.5-7b-instruct',
-        options: const OpenAiOptions(teeModelsOnly: true),
-      ).listModels();
-      expect(models.map((m) => m.id), contains('qwen/qwen-2.5-7b-instruct'));
-    },
-    skip: phalaKey == null || phalaKey.isEmpty
-        ? 'PHALA_API_KEY nicht gesetzt'
-        : false,
-  );
+  test('Phala: Live-Modell ist ein TEE-Modell (is_tee)', () async {
+    if (_skipWithout(phalaKey, 'PHALA_API_KEY')) return;
+    final models = await OpenAiChatAdapter(
+      baseUrl: Uri.parse('https://api.redpill.ai/v1'),
+      credentials: Credentials.apiKey(phalaKey!, style: ApiKeyStyle.bearer),
+      defaultModel: 'qwen/qwen-2.5-7b-instruct',
+      options: const OpenAiOptions(teeModelsOnly: true),
+    ).listModels();
+    expect(models.map((m) => m.id), contains('qwen/qwen-2.5-7b-instruct'));
+  });
 
   _liveSuite(
     name: 'Phala',

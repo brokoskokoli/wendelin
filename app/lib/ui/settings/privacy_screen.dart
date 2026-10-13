@@ -165,6 +165,10 @@ String auditSummary(AuditEntry e) {
   return switch (e.kind) {
     AuditKind.request => '${p['text'] ?? ''}',
     AuditKind.routing => '${p['profileId']} · ${p['modelId']}',
+    // Undo is logged as its own tool entry; without the marker it would
+    // read like a second call.
+    AuditKind.toolCall when p['undo'] == true =>
+      '${p['tool']} · rückgängig · ${p['status']}',
     AuditKind.toolCall => '${p['tool']} · ${p['status']}',
     AuditKind.confirmation =>
       '${p['tool'] ?? p['toProfile']} · '

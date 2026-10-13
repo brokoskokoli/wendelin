@@ -1,7 +1,7 @@
 name: gate
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
 jobs:
   gate:
@@ -28,7 +28,9 @@ jobs:
           channel: stable
           flutter-version: 3.47.7
       - run: flutter pub get
-      - run: flutter analyze --fatal-infos lib $( [ -d test ] && echo test )
+      # Gerätetests (integration_test) brauchen einen Emulator und laufen
+      # lokal mit tool/e2e_android.sh; hier werden sie nur analysiert.
+      - run: flutter analyze --fatal-infos lib $( [ -d test ] && echo test ) $( [ -d integration_test ] && echo integration_test )
         working-directory: app
       - run: if [ -d test ]; then flutter test; fi
         working-directory: app

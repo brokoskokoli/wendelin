@@ -39,6 +39,7 @@ Future<void> main(List<String> args) async {
     'evals',
     if (Directory('app/lib').existsSync()) 'app/lib',
     if (Directory('app/test').existsSync()) 'app/test',
+    if (Directory('app/integration_test').existsSync()) 'app/integration_test',
   ]);
   await step('analyze', 'dart', [
     'analyze',

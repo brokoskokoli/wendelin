@@ -116,6 +116,27 @@ void main() {
     expect(c.read(onboardingDoneProvider), isTrue);
   });
 
+  testWidgets(
+    'Demo ohne Provider mit echten Demo-Ports (Vault): kein Provider-Update '
+    'während des Aufbaus (Regression WP11)',
+    (tester) async {
+      final env = TestEnv(
+        startup: const StartupSettings(onboardingDone: false),
+        storedProfiles: true,
+        llmFactory: RecordingFactory().call,
+        realDemoPorts: true,
+      );
+      final c = await pumpApp(tester, env);
+      await tester.tap(find.text('Weiter'));
+      await settle(tester);
+      await tester.tap(find.text('Demo ohne Provider'));
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(MainScreen), findsOneWidget);
+      expect(c.read(platformPortsProvider).obsidian?.hasVault(), isTrue);
+    },
+  );
+
   testWidgets('nach dem Onboarding startet die App im Hauptbildschirm', (
     tester,
   ) async {
