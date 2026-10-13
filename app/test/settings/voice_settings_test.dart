@@ -76,9 +76,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text(
-          'Noch nötig: Whisper small (375 MB) und Silero VAD (0,6 MB)',
-        ),
+        find.text('Noch nötig: Whisper small (375 MB) und Silero VAD (0,6 MB)'),
         findsOneWidget,
       );
       expect(primary(tester, 'Weiter'), isNull);
@@ -95,8 +93,8 @@ void main() {
       final bar = tester.widget<LinearProgressIndicator>(
         progressOf('Spracherkennung'),
       );
-      const smallBytes = SpeechModelCatalog.whisperSmall.sizeBytes;
-      const vadBytes = SpeechModelCatalog.sileroVad.sizeBytes;
+      final smallBytes = SpeechModelCatalog.whisperSmall.sizeBytes;
+      final vadBytes = SpeechModelCatalog.sileroVad.sizeBytes;
       expect(
         bar.value,
         closeTo(0.5 * smallBytes / (smallBytes + vadBytes), 0.001),
@@ -194,16 +192,16 @@ void main() {
       await pumpScreen(tester, env, VoiceDownloadStep(onNext: () {}));
       await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
       await tester.pump();
-      expect(m.running.keys, ['whisper-base']);
+      expect(m.running.keys, ['whisper-small']);
       m.fail(
-        'whisper-base',
+        'whisper-small',
         const ModelDownloadException(DownloadErrorKind.network, 'Netz weg.'),
       );
       await settle(tester);
       expect(find.text('Netz weg.'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Erneut laden'));
       await tester.pump();
-      expect(m.running.keys, ['whisper-base']);
+      expect(m.running.keys, ['whisper-small']);
     });
 
     test('Größen: unter 10 MB mit Komma', () {

@@ -16,8 +16,10 @@ String sizeLabel(int bytes) => bytes >= 10000000
     ? megabytes(bytes)
     : '${(bytes / 1000000).toStringAsFixed(1).replaceAll('.', ',')} MB';
 
-/// Name of [model] without the note in brackets („Whisper small“).
-String shortModelName(SpeechModel model) => model.displayName.split(' (').first;
+/// Name of [model] without the note after the dash or in brackets
+/// („Whisper small“).
+String shortModelName(SpeechModel model) =>
+    model.displayName.split(' – ').first.split(' (').first;
 
 /// What the onboarding download still needs for the chosen combination
 /// (Whisper model plus Silero VAD), derived from the download states.

@@ -74,7 +74,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
     await tester.pump();
     m
-      ..progress('whisper-base', 0.42)
+      ..progress('whisper-small', 0.42)
       ..finish('silero-vad');
     await settle(tester);
     await expectLater(
@@ -82,7 +82,7 @@ void main() {
       matchesGoldenFile('goldens/onboarding_download_laedt.png'),
     );
 
-    m.finish('whisper-base');
+    m.finish('whisper-small');
     await settle(tester);
     await expectLater(
       find.byKey(goldenKey),
