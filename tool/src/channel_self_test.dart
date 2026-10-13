@@ -196,6 +196,61 @@ class P {
     _has(r, 'Argument "who" von "ping" wird im Dart-Code nicht gesendet'),
     'Wert statt Schlüssel zählt nicht',
   );
+  // Switch-Ausdruck als Helfer: Arme werden vereinigt, Unauflösbares ist rot.
+  const switchDart = '''
+class P {
+  Future<void> go(int v) =>
+      _ch.invokeMethod<void>('ping', {'who': 1, ...f(v)});
+  Future<String?> n() => _ch.invokeMethod<String>('name');
+  void h() {
+    _ch.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'changed':
+          break;
+      }
+    });
+  }
+}
+Map<String, Object?> f(int v) => switch (v) {
+  1 => {'a': 1},
+  _ => {'b': v},
+};
+''';
+  const switchManifest = '"args": ["who"]';
+  final swManifest = _manifest.replaceFirst(
+    switchManifest,
+    '"args": ["who", "a", "b"]',
+  );
+  final swKt = _kt.replaceFirst(
+    'call.argument<String>("who")',
+    'call.argument<String>("who"); call.argument<String>("a"); '
+        'call.argument<String>("b")',
+  );
+  r = _run(manifest: swManifest, dart: switchDart, kt: swKt);
+  t.eq(r.errors, <String>[], 'Switch-Helfer: Arme vereinigt');
+  r = _run(
+    manifest: swManifest,
+    dart: switchDart.replaceFirst("'b': v", "'c': v"),
+  );
+  t.isTrue(
+    _has(r, 'Argument "c" von "ping" fehlt im Manifest') &&
+        _has(r, 'Argument "b" von "ping" wird im Dart-Code nicht gesendet'),
+    'Switch-Helfer: Zusatz- und fehlender Schlüssel werden erkannt',
+  );
+  r = _run(
+    manifest: swManifest,
+    dart: switchDart.replaceFirst("_ => {'b': v}", '_ => other(v)'),
+    kt: swKt,
+  );
+  t.isTrue(
+    _has(r, 'Argumente nicht auflösbar'),
+    'Switch-Arm ohne Literal ist rot (fail-closed)',
+  );
+  r = _run(dart: _dart.replaceFirst("{'who': 1}", '{...mystery()}'));
+  t.isTrue(
+    _has(r, 'Argumente nicht auflösbar'),
+    'Unauflösbarer Spread ist rot, kein globaler Rückfall',
+  );
   // Kotlin: `args?.get`, Zugriff je Methode (auch über Hilfsfunktionen).
   const ktGet = '''
 class K {

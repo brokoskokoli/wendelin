@@ -348,7 +348,6 @@ Map<String, Object?> eventArgs(RecognitionEvent e) => switch (e) {
     'type': 'result',
     'text': transcript.text.trim(),
     'confidence': transcript.confidence,
-    'language': transcript.language,
   },
   RecognitionFailed(:final kind, :final message) => {
     'type': 'error',

@@ -255,16 +255,17 @@ void _argKeys(
   for (final e in toKotlin.entries) {
     if (e.value.args.isEmpty) continue;
     final sites = dartCalls.where((c) => c.method == e.key).toList();
-    final resolved = sites.isNotEmpty && sites.every((c) => c.keys != null);
+    // Fail-closed: eine Aufrufstelle, deren Argumente nicht vollständig
+    // auflösbar sind, ist ein Fehler; es gibt keinen globalen Rückfall.
+    for (final c in sites.where((c) => c.keys == null)) {
+      ctx.at(c.at, 'Argumente nicht auflösbar: ${c.at}');
+    }
     final sent = {for (final c in sites) ...?c.keys};
     final read = {
       for (final m in _ktRead.allMatches(_ktReach(kotlin, e.key))) m[1]!,
     };
     for (final a in e.value.args) {
-      final inDart = resolved
-          ? sent.contains(a)
-          : dart.any((s) => RegExp('[\'"]$a[\'"]\\s*:').hasMatch(s.code));
-      if (!inDart) {
+      if (!sent.contains(a) && sites.every((c) => c.keys != null)) {
         ctx.err(
           ctx.manifest,
           ctx.mline(e.key),
@@ -514,10 +515,38 @@ List<_Site> _dartCalls(_Src s, List<_Src> all) => [
       s,
       m.start,
       m[3]!,
-      keys: _dartMapKeys(s.code, m.end, all),
+      keys: _dartSiteKeys(s, m.end, all, m[1]!),
       returns: _dartReturn(m[1]!, m[2]!),
     ),
 ];
+
+/// Gesendete Schlüssel einer Aufrufstelle: Map-Literal, Aufruf eines Helfers
+/// (`x.toArgs()`) oder, bei Wrappern (`_call`, `_invoke`, `_list`), das
+/// Map-Literal im `invokeMethod(method, {…})` des Wrappers in derselben Datei.
+/// `null`, wenn nichts davon vollständig auflösbar ist.
+Set<String>? _dartSiteKeys(_Src s, int from, List<_Src> all, String caller) {
+  final lit = _dartMapKeys(s.code, from, all);
+  if (lit != null) return lit;
+  final h = RegExp(r'\s*,\s*(?:[\w.]+\.)?(\w+)\s*\(\s*\)\s*\)')
+      .matchAsPrefix(s.code, from);
+  if (h != null) return _dartHelperKeys(h[1]!, all);
+  if (caller.startsWith('invoke')) return null;
+  final w = RegExp(
+    r'invokeMethod\s*(?:<[^;]*?>)?\s*\(\s*method\s*,\s*(?:const\s+)?\{',
+  ).firstMatch(s.code);
+  if (w == null) return null;
+  // `'k': ?v` im Wrapper ist optional und zählt nur, wenn die Aufrufstelle
+  // `k:` übergibt.
+  final end = s.code.indexOf(';', from);
+  final call = s.code.substring(from, end < 0 ? s.code.length : end);
+  final body = s.code.substring(w.end - 1, _closeOf(s.code, w.end - 1));
+  return {
+    for (final k in _topKeys(s.code, w.end - 1, '{', '}', ':'))
+      if (!RegExp('[\'"]$k[\'"]\\s*:\\s*\\?').hasMatch(body) ||
+          RegExp('\\b$k\\s*:').hasMatch(call))
+        k,
+  };
+}
 
 String? _dartReturn(String caller, String generic) {
   if (caller == 'invokeMapMethod') return 'map';
@@ -568,10 +597,11 @@ List<_Site> _ktCalls(_Src s) => [
 ];
 
 /// Schlüssel des Map-Literals `, {'a': 1}` (auch `, const {}`) hinter [from],
-/// `null`, wenn dort kein Literal steht. Spreads `...helper(…)` werden über
+/// `{}`, wenn kein Argument folgt, `null`, wenn dort kein Literal steht. Spreads `...helper(…)` werden über
 /// die Definition von `helper` in [all] aufgelöst; ist das nicht möglich,
 /// ist das Ergebnis `null`.
 Set<String>? _dartMapKeys(String t, int from, List<_Src> all) {
+  if (RegExp(r'\s*,?\s*\)').matchAsPrefix(t, from) != null) return {};
   final m = RegExp(r'\s*,\s*(?:const\s+)?\{').matchAsPrefix(t, from);
   if (m == null) return null;
   final open = m.end - 1;
@@ -586,17 +616,48 @@ Set<String>? _dartMapKeys(String t, int from, List<_Src> all) {
 }
 
 /// Schlüssel des Map-Literals, das die Funktion [name] zurückgibt
-/// (`=> {…}` oder `return {…}`), `null`, wenn keine Definition passt.
+/// (`=> {…}`, `return {…}` oder `=> switch (…) {p => {…}, …}` als Vereinigung
+/// der Arme), `null`, wenn keine Definition passt oder ein Arm kein Literal ist.
 Set<String>? _dartHelperKeys(String name, List<_Src> all) {
   final def = RegExp(
     '\\b${RegExp.escape(name)}\\s*\\((?:[^()]|\\([^()]*\\))*\\)\\s*'
-    r'(?:async\s*)?(?:=>\s*(?:const\s+)?\{|\{[^}]*?\breturn\s+(?:const\s+)?\{)',
+    r'(?:async\s*)?(?:=>\s*(?:const\s+)?\{|\{[^}]*?\breturn\s+(?:const\s+)?\{|'
+    r'=>\s*switch\s*\((?:[^()]|\([^()]*\))*\)\s*(\{))',
   );
   for (final s in all) {
     final d = def.firstMatch(s.code);
-    if (d != null) return _topKeys(s.code, d.end - 1, '{', '}', ':');
+    if (d == null) continue;
+    return d[1] == null
+        ? _topKeys(s.code, d.end - 1, '{', '}', ':')
+        : _switchArmKeys(s.code, d.end - 1);
   }
   return null;
+}
+
+/// Vereinigung der Schlüssel aller Arme `p => {…}` des Switch-Ausdrucks, dessen
+/// `{` bei [open] steht; `null`, wenn ein Arm kein Map-Literal ist.
+Set<String>? _switchArmKeys(String t, int open) {
+  final keys = <String>{};
+  final end = _closeOf(t, open);
+  var depth = 0, i = open;
+  while (i < end - 1) {
+    final ch = t[i];
+    if (ch == "'" || ch == '"') {
+      i = _stringEnd(t, i);
+      continue;
+    }
+    if (ch == '(' || ch == '{' || ch == '[') depth++;
+    if (ch == ')' || ch == '}' || ch == ']') depth--;
+    if (depth == 1 && t.startsWith('=>', i)) {
+      final arm = RegExp(r'=>\s*(?:const\s+)?\{').matchAsPrefix(t, i);
+      if (arm == null) return null;
+      keys.addAll(_topKeys(t, arm.end - 1, '{', '}', ':'));
+      i = _closeOf(t, arm.end - 1);
+      continue;
+    }
+    i++;
+  }
+  return keys;
 }
 
 /// Index hinter der Klammer, die bei [open] geöffnet wird.
