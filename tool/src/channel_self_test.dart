@@ -1,4 +1,6 @@
 // Selbsttests von tool/src/channel_check.dart mit kleinen Beispieldateien.
+import 'dart:io';
+
 import 'channel_check.dart';
 import 'kotlin_unit.dart';
 import 'self_check.dart';
@@ -102,7 +104,10 @@ void channelChecks(SelfCheck t) {
   r = _run(kt: _kt.replaceFirst('("who")', '("whom")'));
   t.isTrue(
     _has(r, 'XChannel.kt:4: app.wendelin/x: Argument "whom" wird gelesen') &&
-        _has(r, 'Argument "who" von "ping" kommt im Kotlin-Code nicht vor'),
+        _has(
+          r,
+          'Argument "who" von "ping" wird im Kotlin-Handler nicht gelesen',
+        ),
     'Argumentschlüssel nur in Kotlin umbenannt',
   );
   r = _run(dart: _dart.replaceFirst("case 'changed'", "case 'changes'"));
@@ -151,8 +156,93 @@ void channelChecks(SelfCheck t) {
     ),
   );
   t.eq(r.errors, <String>[], 'Zweige anderer when-Blöcke sind keine Methoden');
+  channelArgChecks(t);
   r = _run(manifest: '{');
   t.isTrue(_has(r, 'kein gültiges JSON'), 'kaputtes Manifest');
+}
+
+/// Argumentschlüssel: Helfer, Spreads, `get` und Zugriff je Methode.
+void channelArgChecks(SelfCheck t) {
+  ChannelReport r;
+  // Schlüssel aus Helfern und Spreads, Zeichenketten im Wert zählen nicht.
+  const helperDart = '''
+class P {
+  Future<void> go() =>
+      _ch.invokeMethod<void>('ping', {...?_f(1)});
+  Future<String?> n() => _ch.invokeMethod<String>('name');
+  void h() {
+    _ch.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'changed':
+          break;
+      }
+    });
+  }
+  static Map<String, Object?> _f(int v) => {
+    'who': v ? 'who' : 'w',
+  };
+}
+''';
+  r = _run(dart: helperDart);
+  t.eq(r.errors, <String>[], 'Schlüssel aus Spread-Helfer aufgelöst');
+  r = _run(dart: helperDart.replaceFirst("{\n    'who'", "{\n    'whom'"));
+  t.isTrue(
+    _has(r, 'Argument "whom" von "ping" fehlt im Manifest') &&
+        _has(r, 'Argument "who" von "ping" wird im Dart-Code nicht gesendet'),
+    'Umbenannter Schlüssel im Helfer wird erkannt',
+  );
+  r = _run(dart: _dart.replaceFirst("{'who': 1}", "{'x': 'who'}"));
+  t.isTrue(
+    _has(r, 'Argument "who" von "ping" wird im Dart-Code nicht gesendet'),
+    'Wert statt Schlüssel zählt nicht',
+  );
+  // Kotlin: `args?.get`, Zugriff je Methode (auch über Hilfsfunktionen).
+  const ktGet = '''
+class K {
+    fun h(call: MethodCall) {
+        val args = call.arguments as? Map<*, *>
+        when (call.method) {
+            "ping" -> use(args?.get("who"))
+            "name" -> 1
+        }
+    }
+    fun n() { channel.invokeMethod("changed", null) }
+    companion object { const val CHANNEL = "app.wendelin/x" }
+}
+''';
+  r = _run(kt: ktGet);
+  t.eq(r.errors, <String>[], 'args?.get("k") wird erkannt');
+  r = _run(kt: ktGet.replaceFirst('get("who")', 'get("whom")'));
+  t.isTrue(
+    _has(r, 'Argument "whom" wird gelesen') &&
+        _has(r, 'Argument "who" von "ping" wird im Kotlin-Handler nicht'),
+    'Umbenannter get-Schlüssel wird erkannt',
+  );
+  const ktHelper = '''
+class K {
+    fun h(call: MethodCall) {
+        when (call.method) {
+            "ping" -> read(call)
+            "name" -> call.argument<String>("who")
+        }
+    }
+    fun read(call: MethodCall) = call.argument<String>("who")
+    fun n() { channel.invokeMethod("changed", null) }
+    companion object { const val CHANNEL = "app.wendelin/x" }
+}
+''';
+  r = _run(kt: ktHelper);
+  t.eq(r.errors, <String>[], 'Lesen in aufgerufener Hilfsfunktion');
+  r = _run(
+    kt: ktHelper.replaceFirst(
+      'fun read(call: MethodCall) = call.argument<String>("who")',
+      'fun read(call: MethodCall) = 1',
+    ),
+  );
+  t.isTrue(
+    _has(r, 'Argument "who" von "ping" wird im Kotlin-Handler nicht gelesen'),
+    'Lesen nur in einer anderen Methode genügt nicht',
+  );
 }
 
 /// Selbsttests der Hilfen des Gate-Schritts `kotlin-unit`.
@@ -178,4 +268,21 @@ void kotlinUnitChecks(SelfCheck t) {
   ]);
   t.eq(c.tests, 7, 'Testanzahl');
   t.eq(c.failures, 3, 'Fehler und Ausfälle');
+}
+
+/// Selbsttest von [clearReports].
+void kotlinReportsClearChecks(SelfCheck t) {
+  t.group('kotlin-unit (Berichte)');
+  final d = Directory.systemTemp.createTempSync('reports');
+  try {
+    final dir = '${d.path}/r';
+    Directory(dir).createSync();
+    File('$dir/a.xml').writeAsStringSync('<testsuite tests="2">');
+    t.eq(readReports(dir).length, 1, 'alter Bericht vorhanden');
+    clearReports(dir);
+    t.eq(readReports(dir), <String>[], 'nach dem Leeren keine Berichte');
+    clearReports(dir);
+  } finally {
+    d.deleteSync(recursive: true);
+  }
 }

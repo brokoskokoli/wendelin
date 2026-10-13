@@ -65,7 +65,7 @@
           "returns": "map"
         },
         "updateEvent": {
-          "args": ["id", "calendarId", "title", "start", "end", "allDay", "location", "description", "timeZone"],
+          "args": ["id", "title", "start", "end", "allDay", "location", "description", "timeZone"],
           "returns": "map"
         },
         "deleteEvent": {"args": ["id"], "returns": "none"}
@@ -111,7 +111,7 @@
         "ready": {"args": [], "returns": "none"},
         "stopAudio": {"args": ["session"], "returns": "none"},
         "event": {
-          "args": ["session", "type", "text", "confidence", "language", "error", "message"],
+          "args": ["session", "type", "text", "confidence", "error", "message"],
           "returns": "none"
         }
       },

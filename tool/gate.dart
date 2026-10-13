@@ -152,6 +152,7 @@ Future<void> _kotlinStep(Gate gate) async {
     gate.record(StepResult(name, Outcome.skipped, Duration.zero, skip));
     return;
   }
+  clearReports(kotlinReportDir);
   await gate.step(
     name,
     'bash',

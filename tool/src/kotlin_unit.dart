@@ -47,3 +47,9 @@ List<String> readReports(String dir) {
       if (f is File && f.path.endsWith('.xml')) f.readAsStringSync(),
   ];
 }
+
+/// Löscht alte Berichte im Ordner [dir], damit nur der aktuelle Lauf zählt.
+void clearReports(String dir) {
+  final d = Directory(dir);
+  if (d.existsSync()) d.deleteSync(recursive: true);
+}

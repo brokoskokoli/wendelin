@@ -59,7 +59,11 @@ final class _FakeNative {
       case 'updateEvent':
         final id = a['id']! as String;
         if (!events.containsKey(id)) throw PlatformException(code: 'notFound');
-        return events[id] = _stored(id, a);
+        // Wie Kotlin: der Kalender eines Termins bleibt beim Ändern erhalten.
+        return events[id] = _stored(id, {
+          ...a,
+          'calendarId': events[id]!['calendarId'],
+        });
       case 'deleteEvent':
         final existing = events[a['id']];
         if (existing == null) throw PlatformException(code: 'notFound');

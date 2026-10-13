@@ -82,7 +82,7 @@ ChannelReport checkChannels({
       ctx.err(manifestPath, mline(name), 'Kanalname fehlt im Kotlin-Code');
     }
 
-    final dartCalls = [for (final s in dart) ..._dartCalls(s)];
+    final dartCalls = [for (final s in dart) ..._dartCalls(s, dart)];
     final dartHandlers = [for (final s in dart) ..._dartHandlers(s)];
     final ktHandlers = [for (final s in kotlin) ..._ktHandlers(s)];
     final ktCalls = [for (final s in kotlin) ..._ktCalls(s)];
@@ -105,7 +105,7 @@ ChannelReport checkChannels({
       senderSide: 'Kotlin',
       receiverSide: 'Dart',
     );
-    _argKeys(ctx, toKotlin, toDart, dart, kotlin);
+    _argKeys(ctx, toKotlin, toDart, dart, kotlin, dartCalls);
   }
 
   final known = {for (final k in channels.keys) '$k'};
@@ -233,17 +233,55 @@ void _direction(
   }
 }
 
+/// Lesezugriffe auf Kanalargumente in Kotlin: `call.argument<T>("k")`,
+/// `args?.get("k")` und die typisierten Zugriffe von `ChannelArgs`.
+final _ktRead = RegExp(
+  r'\b(?:argument|hasArgument|get|args\.(?:string|requireString|requireLong|'
+  r'requireBytes|isTrue|stringList))\s*(?:<[^()]*>)?\s*\(\s*"(\w+)"',
+);
+
 void _argKeys(
   _Ctx ctx,
   Map<String, _Method> toKotlin,
   Map<String, _Method> toDart,
   List<_Src> dart,
   List<_Src> kotlin,
+  List<_Site> dartCalls,
 ) {
   final all = {
     for (final m in [...toKotlin.values, ...toDart.values]) ...m.args,
   };
-  for (final entry in [...toKotlin.entries, ...toDart.entries]) {
+  // Dart → Kotlin: je Methode muss jeder Schlüssel gesendet und gelesen werden.
+  for (final e in toKotlin.entries) {
+    if (e.value.args.isEmpty) continue;
+    final sites = dartCalls.where((c) => c.method == e.key).toList();
+    final resolved = sites.isNotEmpty && sites.every((c) => c.keys != null);
+    final sent = {for (final c in sites) ...?c.keys};
+    final read = {
+      for (final m in _ktRead.allMatches(_ktReach(kotlin, e.key))) m[1]!,
+    };
+    for (final a in e.value.args) {
+      final inDart = resolved
+          ? sent.contains(a)
+          : dart.any((s) => RegExp('[\'"]$a[\'"]\\s*:').hasMatch(s.code));
+      if (!inDart) {
+        ctx.err(
+          ctx.manifest,
+          ctx.mline(e.key),
+          'Argument "$a" von "${e.key}" wird im Dart-Code nicht gesendet',
+        );
+      }
+      if (!read.contains(a)) {
+        ctx.err(
+          ctx.manifest,
+          ctx.mline(e.key),
+          'Argument "$a" von "${e.key}" wird im Kotlin-Handler nicht gelesen',
+        );
+      }
+    }
+  }
+  // Kotlin → Dart: das Vorkommen im Quelltext genügt.
+  for (final entry in toDart.entries) {
     for (final a in entry.value.args) {
       if (!dart.any((s) => RegExp('[\'"]$a[\'"]').hasMatch(s.code))) {
         ctx.err(
@@ -261,13 +299,8 @@ void _argKeys(
       }
     }
   }
-  // `call.argument<T>("k")` and the typed accessors of ChannelArgs.
-  final read = RegExp(
-    r'\b(?:argument|hasArgument|args\.(?:string|requireString|requireLong|'
-    r'requireBytes|isTrue|stringList))\s*(?:<[^()]*>)?\s*\(\s*"(\w+)"',
-  );
   for (final s in kotlin) {
-    for (final m in read.allMatches(s.code)) {
+    for (final m in _ktRead.allMatches(s.code)) {
       if (!all.contains(m[1])) {
         ctx.err(
           s.path,
@@ -277,6 +310,91 @@ void _argKeys(
       }
     }
   }
+}
+
+/// Zeilen der Funktion um den `when`-Zweig in [armLine], die nicht in einem
+/// Zweig stehen (gemeinsame Vorarbeit wie `val path = args.requireString(…)`).
+String _preamble(_Src s, int armLine) {
+  final armInd = _indent(s.lineText(armLine));
+  var head = armLine - 1;
+  while (head >= 1 &&
+      (s.lineText(head).trim().isEmpty ||
+          _indent(s.lineText(head)) >= armInd)) {
+    head--;
+  }
+  if (head < 1) return '';
+  final headInd = _indent(s.lineText(head));
+  var start = head;
+  while (start >= 1 &&
+      !(s.lineText(start).contains(RegExp(r'\bfun\b')) &&
+          _indent(s.lineText(start)) < headInd)) {
+    start--;
+  }
+  if (start < 1) return '';
+  final funInd = _indent(s.lineText(start));
+  final out = StringBuffer();
+  for (var n = start; n < s._starts.length; n++) {
+    final l = s.lineText(n);
+    if (n > start && l.trim().isNotEmpty && _indent(l) <= funInd) break;
+    if (n > start && l.trim().isNotEmpty && _indent(l) <= headInd) {
+      out.writeln(l);
+    }
+  }
+  return out.toString();
+}
+
+/// Kotlin-Text, den der Handler der Methode [method] erreicht: sein
+/// `when`-Zweig plus (transitiv) die Funktionen, die er aufruft. Ohne
+/// Zweig (`call.method == "x"`) die ganzen Dateien.
+String _ktReach(List<_Src> kotlin, String method) {
+  final buf = StringBuffer();
+  for (final s in kotlin) {
+    for (final m in _ktArm.allMatches(s.code)) {
+      if (m[1] != method || !_underHeader(s, s.line(m.start), _ktWhen)) {
+        continue;
+      }
+      final first = s.line(m.start);
+      final ind = _indent(s.lineText(first));
+      var last = first;
+      while (last < s._starts.length) {
+        final l = s.lineText(last + 1);
+        if (l.trim().isNotEmpty && _indent(l) <= ind) break;
+        last++;
+      }
+      for (var n = first; n <= last; n++) {
+        buf.writeln(s.lineText(n));
+      }
+      buf.writeln(_preamble(s, first));
+    }
+  }
+  if (buf.isEmpty) return kotlin.map((s) => s.code).join('\n');
+  final seen = <String>{};
+  void follow(String text, int depth) {
+    if (depth > 4) return;
+    for (final c in RegExp(r'\b([A-Za-z_]\w*)\s*\(').allMatches(text)) {
+      final n = c[1]!;
+      if (!seen.add(n)) continue;
+      final def = RegExp('\\bfun\\s+(?:\\w+\\.)?${RegExp.escape(n)}\\s*[(<]');
+      final next = RegExp(
+        r'\n\s*(?:(?:private|internal|override|public|suspend|inline)\s+)*'
+        r'(?:fun|(?:data\s+|sealed\s+)?class|object)\s',
+      );
+      for (final s in kotlin) {
+        for (final d in def.allMatches(s.code)) {
+          final end = next.firstMatch(s.code.substring(d.end))?.start;
+          final body = s.code.substring(
+            d.start,
+            end == null ? s.code.length : d.end + end,
+          );
+          buf.writeln(body);
+          follow(body, depth + 1);
+        }
+      }
+    }
+  }
+
+  follow(buf.toString(), 0);
+  return buf.toString();
 }
 
 // ---------------------------------------------------------------------------
@@ -390,13 +508,13 @@ final _dartCall = RegExp(
   r"\s*\(\s*'(\w+)'",
 );
 
-List<_Site> _dartCalls(_Src s) => [
+List<_Site> _dartCalls(_Src s, List<_Src> all) => [
   for (final m in _dartCall.allMatches(s.code))
     _Site(
       s,
       m.start,
       m[3]!,
-      keys: _dartMapKeys(s.code, m.end),
+      keys: _dartMapKeys(s.code, m.end, all),
       returns: _dartReturn(m[1]!, m[2]!),
     ),
 ];
@@ -450,10 +568,54 @@ List<_Site> _ktCalls(_Src s) => [
 ];
 
 /// Schlüssel des Map-Literals `, {'a': 1}` (auch `, const {}`) hinter [from],
-/// `null`, wenn dort kein Literal steht.
-Set<String>? _dartMapKeys(String t, int from) {
+/// `null`, wenn dort kein Literal steht. Spreads `...helper(…)` werden über
+/// die Definition von `helper` in [all] aufgelöst; ist das nicht möglich,
+/// ist das Ergebnis `null`.
+Set<String>? _dartMapKeys(String t, int from, List<_Src> all) {
   final m = RegExp(r'\s*,\s*(?:const\s+)?\{').matchAsPrefix(t, from);
-  return m == null ? null : _topKeys(t, m.end - 1, '{', '}', ':');
+  if (m == null) return null;
+  final open = m.end - 1;
+  final keys = _topKeys(t, open, '{', '}', ':');
+  final body = t.substring(open, _closeOf(t, open));
+  for (final sp in RegExp(r'\.\.\.\??\s*(\w+)\s*(\()?').allMatches(body)) {
+    final h = sp[2] == null ? null : _dartHelperKeys(sp[1]!, all);
+    if (h == null) return null;
+    keys.addAll(h);
+  }
+  return keys;
+}
+
+/// Schlüssel des Map-Literals, das die Funktion [name] zurückgibt
+/// (`=> {…}` oder `return {…}`), `null`, wenn keine Definition passt.
+Set<String>? _dartHelperKeys(String name, List<_Src> all) {
+  final def = RegExp(
+    '\\b${RegExp.escape(name)}\\s*\\((?:[^()]|\\([^()]*\\))*\\)\\s*'
+    r'(?:async\s*)?(?:=>\s*(?:const\s+)?\{|\{[^}]*?\breturn\s+(?:const\s+)?\{)',
+  );
+  for (final s in all) {
+    final d = def.firstMatch(s.code);
+    if (d != null) return _topKeys(s.code, d.end - 1, '{', '}', ':');
+  }
+  return null;
+}
+
+/// Index hinter der Klammer, die bei [open] geöffnet wird.
+int _closeOf(String t, int open) {
+  var depth = 0, i = open;
+  while (i < t.length) {
+    final ch = t[i];
+    if (ch == "'" || ch == '"') {
+      i = _stringEnd(t, i);
+      continue;
+    }
+    if (ch == '(' || ch == '{' || ch == '[') depth++;
+    if (ch == ')' || ch == '}' || ch == ']') {
+      depth--;
+      if (depth == 0) return i + 1;
+    }
+    i++;
+  }
+  return t.length;
 }
 
 /// Schlüssel von `mapOf("a" to 1)`; [open] ist der Index der `(`.
@@ -468,7 +630,7 @@ Set<String> _topKeys(String t, int open, String o, String c, String sep) {
     final ch = t[i];
     if (ch == "'" || ch == '"') {
       final end = _stringEnd(t, i);
-      if (depth == 1) {
+      if (depth == 1 && RegExp(r'[{(,)]\s*$').hasMatch(t.substring(0, i))) {
         final key = t.substring(i + 1, end - 1);
         if (RegExp('\\s*${RegExp.escape(sep)}(?!\\w)').matchAsPrefix(t, end) !=
             null) {

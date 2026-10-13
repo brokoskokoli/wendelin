@@ -106,7 +106,6 @@ final class DeviceCalendarPort implements CalendarPort {
   Future<CalendarEvent> updateEvent(CalendarEvent event) async {
     final m = await _call<Map<Object?, Object?>>('updateEvent', {
       'id': event.id,
-      'calendarId': event.calendarId,
       ..._fields(
         title: event.title,
         start: event.start,
