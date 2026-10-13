@@ -616,6 +616,90 @@ void main() {
       expect(h.conversation.messages.first.privacyFloor, PrivacyLevel.tee);
     });
 
+    test('memoryFloor: „Ja“ zur Eskalation gibt dem Standard-Ziel kein '
+        'Gedächtnis (K10 c)', () async {
+      final phala = FakeLlmProvider([
+        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+      ]);
+      final claude = FakeLlmProvider([ScriptedTurn.text('Tee.')]);
+      final h = Harness(
+        primary: ProviderTarget(
+          profileId: 'phala',
+          modelId: 'glm',
+          provider: phala,
+          privacy: PrivacyLevel.tee,
+        ),
+        chain: [
+          ProviderTarget(
+            profileId: 'claude',
+            modelId: 'sonnet',
+            provider: claude,
+            privacy: PrivacyLevel.standard,
+          ),
+        ],
+        memory: FixedMemoryRetriever([
+          const MemoryItem(id: 'm1', text: 'Mag Tee'),
+          const MemoryItem(
+            id: 'm2',
+            text: 'Knie-OP im März',
+            privacyFloor: PrivacyLevel.tee,
+          ),
+        ]),
+        memoryFloor: PrivacyLevel.tee,
+      );
+      await h.run(
+        'Was trinke ich gern?',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) e.respond(true);
+        },
+      );
+      expect(phala.requests.first.systemPrompt, contains('Mag Tee'));
+      final prompt = claude.requests.single.systemPrompt!;
+      expect(prompt, isNot(contains('Mag Tee')));
+      expect(prompt, isNot(contains('Knie-OP')));
+      expect(prompt, isNot(contains('Gedächtnis (')));
+    });
+
+    test('ohne memoryFloor hebt „Ja“ nur die Untergrenze des Eintrags auf '
+        '(K13 e)', () async {
+      final phala = FakeLlmProvider([
+        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+      ]);
+      final claude = FakeLlmProvider([ScriptedTurn.text('ok')]);
+      final h = Harness(
+        primary: ProviderTarget(
+          profileId: 'phala',
+          modelId: 'glm',
+          provider: phala,
+          privacy: PrivacyLevel.tee,
+        ),
+        chain: [
+          ProviderTarget(
+            profileId: 'claude',
+            modelId: 'sonnet',
+            provider: claude,
+            privacy: PrivacyLevel.standard,
+          ),
+        ],
+        memory: FixedMemoryRetriever([
+          const MemoryItem(
+            id: 'm2',
+            text: 'Knie-OP im März',
+            privacyFloor: PrivacyLevel.tee,
+          ),
+        ]),
+      );
+      await h.run(
+        'Wie geht es dem Knie?',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) e.respond(true);
+        },
+      );
+      expect(claude.requests.single.systemPrompt, contains('Knie-OP'));
+    });
+
     test('tools of a private run get its floor (memory__save)', () async {
       final invoker = ContextInvoker();
       final (primary, _) = scripted('phala', [

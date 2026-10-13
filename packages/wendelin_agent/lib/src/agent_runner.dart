@@ -578,9 +578,14 @@ final class _Run {
   String _systemPrompt() {
     // Memory entries of private runs only for targets of their level.
     final memories = _context.memories;
+    // The memory's own floor ([AgentRunner.memoryFloor], a tool-catalog
+    // boundary like K10) holds even after consent to go below the run's
+    // floor; only the entries' own floors (K13 e) can be lifted that way.
+    final all = runner.memoryFloor;
+    final memoryAllowed = all == null || _current.privacy.isAtLeast(all);
     final visible = [
       for (final m in memories)
-        if (!_hiddenFor(_memoryFloor(m))) m,
+        if (memoryAllowed && !_hiddenFor(_memoryFloor(m))) m,
     ];
     final base = visible.length == memories.length
         ? _context.systemPrompt

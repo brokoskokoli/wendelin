@@ -82,4 +82,5 @@ String privateEscalationHint(
     ? 'Die Unterhaltung ist privat (seit ${clockLabel(since)}). Mit „Ja“ '
           'sieht $toName auch ihre privaten Teile.'
     : 'Die Unterhaltung nutzt dein Gedächtnis (seit ${clockLabel(since)}). '
-          'Mit „Ja“ sieht $toName auch diese vertraulichen Teile.';
+          'Mit „Ja“ sieht $toName den bisherigen Verlauf, aber nicht das '
+          'Gedächtnis selbst.';

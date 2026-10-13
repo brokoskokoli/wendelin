@@ -9,6 +9,7 @@ import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/overlay_sheet.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
+import 'package:wendelin/ui/screens/main_parts.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/screens/private_banner.dart';
 import 'package:wendelin/ui/settings/memory_screen.dart';
@@ -150,6 +151,13 @@ void main() {
   });
 
   group('Hinweis auf die neue Regel „Privat“', () {
+    testWidgets('ohne gespeicherten Hinweis keine Karte', (tester) async {
+      final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
+      await _pumpMain(tester, env);
+      expect(find.byType(PrivateRuleNoticeCard), findsNothing);
+      expect(find.textContaining('Neu: Regel „Privat“'), findsNothing);
+    });
+
     for (final open in [true, false]) {
       testWidgets(open ? 'Routing ansehen' : 'Verstanden', (tester) async {
         final env = TestEnv(
