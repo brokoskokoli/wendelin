@@ -81,7 +81,8 @@ void main() {
       () {
         final tools = HttpToolsIntegration.all(defs, m.runner).first.tools;
         final licht = tools.first as HttpTool;
-        expect(licht.risk, RiskLevel.write);
+        // POST ohne Undo und ohne autoRun: bestätigen (external).
+        expect(licht.risk, RiskLevel.external);
         expect(licht.description, 'Testtool licht');
         expect(licht.inputSchema, defs.first.inputSchema);
         expect(tools.last.risk, RiskLevel.external);

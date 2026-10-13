@@ -15,7 +15,9 @@ import 'agent_factory.dart';
 import 'app_requirements.dart';
 import 'app_settings.dart';
 import 'audit_recorder.dart';
+import 'bring.dart';
 import 'costs.dart';
+import 'http_tools.dart';
 import 'integration_activator.dart';
 import 'integration_specs.dart';
 import 'preference_models.dart';
@@ -122,7 +124,23 @@ final integrationSpecsProvider = Provider<List<IntegrationSpec>>(
 
 /// Dependencies for building integrations.
 final integrationDepsProvider = Provider<IntegrationDeps>((ref) {
+  final demo = ref.watch(demoModeProvider);
+  // The registry is built from these integrations, so it is reached
+  // through a holder instead of a provider dependency.
+  final holder = ref.watch(_currentRegistryProvider);
+  void onRegistry(String id, void Function(ToolRegistry registry) action) {
+    final registry = holder.registry;
+    if (registry == null) return;
+    if (registry.integrations.any((i) => i.id == id)) action(registry);
+  }
+
   return IntegrationDeps(
+    // Bring! talks to a real account: not in the demo mode.
+    bringApi: demo ? null : ref.watch(bringApiProvider),
+    bringSecrets: demo ? null : ref.watch(bringSecretsProvider),
+    reportError: (id, message) =>
+        onRegistry(id, (r) => r.reportError(id, message)),
+    clearError: (id) => onRegistry(id, (r) => r.clearError(id)),
     ports: ref.watch(platformPortsProvider),
     device: ref.watch(deviceInfoProvider),
     httpClient: ref.watch(httpClientProvider),
@@ -179,6 +197,10 @@ Integration _withSensitivity(
 /// otherwise the stored switches apply.
 final toolRegistryProvider = Provider<ToolRegistry>((ref) {
   final registry = ToolRegistry(platform: _appPlatform());
+  final holder = ref.read(_currentRegistryProvider)..registry = registry;
+  ref.onDispose(() {
+    if (identical(holder.registry, registry)) holder.registry = null;
+  });
   final demo = ref.watch(demoModeProvider);
   // Read, not watch: switching an integration changes the registry itself.
   final enabled = ref.read(enabledIntegrationsProvider);
@@ -209,10 +231,20 @@ final toolRegistryProvider = Provider<ToolRegistry>((ref) {
   return registry;
 });
 
+/// The registry in use, for callbacks of integrations (error state) that
+/// cannot depend on [toolRegistryProvider] (it is built from them).
+final class _CurrentRegistry {
+  ToolRegistry? registry;
+}
+
+final _currentRegistryProvider = Provider<_CurrentRegistry>(
+  (ref) => _CurrentRegistry(),
+);
+
 /// Sources of user-defined integrations (ADR 0012). WP27 (MCP servers) and
 /// WP28 (HTTP tools) each add one source here.
 final userIntegrationSourcesProvider = Provider<List<UserIntegrationSource>>(
-  (ref) => const [],
+  (ref) => [ref.watch(httpToolSourceProvider)],
 );
 
 /// Cleanup after a user-defined integration or some of its tools were

@@ -147,6 +147,7 @@ final class HttpToolDefinition {
     this.enabled = true,
     this.timeout = httpToolDefaultTimeout,
     this.responsePath,
+    this.autoRun = false,
   }) : inputSchema = Map.unmodifiable(inputSchema),
        headers = Map.unmodifiable(headers),
        risk = risk ?? method.suggestedRisk;
@@ -227,6 +228,7 @@ final class HttpToolDefinition {
       enabled: optional<bool>('enabled') ?? true,
       timeout: Duration(seconds: timeoutSeconds),
       responsePath: optional<String>('responsePath'),
+      autoRun: optional<bool>('autoRun') ?? false,
     )..validate();
     return definition;
   }
@@ -284,13 +286,34 @@ final class HttpToolDefinition {
   /// Optional dot path (`data.items.0.name`) selecting part of a JSON answer.
   final String? responsePath;
 
+  /// Whether a `write` call may run without confirmation. HTTP tools have
+  /// no undo, so `write` is confirmed like `external` unless the user
+  /// switched this on („Ohne Nachfrage ausführen (kein Rückgängig)“). It
+  /// only has an effect when both [HttpMethod.suggestedRisk] and [risk]
+  /// are `write` (see [effectiveRisk]).
+  final bool autoRun;
+
   /// Name of the tool in the registry.
   String get toolName => 'http__$name';
 
+  /// Whether [autoRun] has an effect for this definition: the method
+  /// suggests `write` and the user chose `write`.
+  bool get autoRunApplies =>
+      method.suggestedRisk == RiskLevel.write && risk == RiskLevel.write;
+
   /// The risk the tool runs with: [risk], but never below the method's
   /// [HttpMethod.suggestedRisk] (risk levels can only be raised, K8 b).
-  RiskLevel get effectiveRisk =>
-      risk.index >= method.suggestedRisk.index ? risk : method.suggestedRisk;
+  /// `write` has no undo and is therefore raised to `external`
+  /// (confirmation), unless [autoRun] is on and [autoRunApplies].
+  RiskLevel get effectiveRisk {
+    final raised = risk.index >= method.suggestedRisk.index
+        ? risk
+        : method.suggestedRisk;
+    if (raised == RiskLevel.write && !(autoRun && autoRunApplies)) {
+      return RiskLevel.external;
+    }
+    return raised;
+  }
 
   /// The parsed [urlTemplate]; throws [FormatException].
   UrlTemplate get url => UrlTemplate.parse(urlTemplate);
@@ -451,6 +474,7 @@ final class HttpToolDefinition {
     'enabled': enabled,
     'timeoutSeconds': timeout.inSeconds,
     if (responsePath != null) 'responsePath': responsePath,
+    if (autoRun) 'autoRun': true,
   };
 
   /// A copy with the given fields replaced.
@@ -467,6 +491,7 @@ final class HttpToolDefinition {
     bool? homeNetwork,
     bool? enabled,
     Duration? timeout,
+    bool? autoRun,
   }) => HttpToolDefinition(
     id: id,
     name: name ?? this.name,
@@ -484,6 +509,7 @@ final class HttpToolDefinition {
     enabled: enabled ?? this.enabled,
     timeout: timeout ?? this.timeout,
     responsePath: responsePath,
+    autoRun: autoRun ?? this.autoRun,
   );
 
   @override

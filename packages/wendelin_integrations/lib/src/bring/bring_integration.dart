@@ -56,7 +56,7 @@ final class BringIntegration implements Integration {
   String get id => 'bring';
 
   @override
-  String get displayName => 'Bring!';
+  String get displayName => 'Bring! Einkaufsliste';
 
   @override
   String get iconId => 'shopping_cart';
@@ -77,11 +77,7 @@ final class BringIntegration implements Integration {
 
   @override
   List<SetupStep> get setup => const [
-    SetupStep(
-      id: loginStep,
-      kind: SetupStepKind.login,
-      label: 'Bei Bring! anmelden',
-    ),
+    SetupStep(id: loginStep, kind: SetupStepKind.login, label: 'Login fehlt'),
   ];
 
   @override

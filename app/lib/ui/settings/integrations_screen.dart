@@ -6,6 +6,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import '../../di/integration_decorator.dart';
 import '../../di/integration_specs.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
@@ -82,7 +83,7 @@ class IntegrationsScreen extends ConsumerWidget {
           children: [
             for (final (label, route) in [
               ('+ MCP-Server', AppRoutes.mcpServers),
-              ('+ HTTP-Tool', AppRoutes.httpTools),
+              ('+ HTTP-Tool', AppRoutes.httpToolNew),
             ])
               Expanded(
                 child: WideButton(
@@ -141,6 +142,9 @@ class IntegrationRow extends ConsumerWidget {
     final storeUrl = info.status == IntegrationStatus.unavailable
         ? info.availability.storeUrl
         : null;
+    final retry = info.status == IntegrationStatus.error
+        ? _spec(ref, info.id)?.retry
+        : null;
     final tile = IntegrationTile(
       name: info.integration.displayName,
       icon: kind == null ? integrationIcon(info.id) : WIcons.globe,
@@ -152,7 +156,10 @@ class IntegrationRow extends ConsumerWidget {
           ? ref.watch(toolPrefsProvider).sensitiveMinimum
           : null,
       onToggle: (on) => unawaited(switchIntegration(context, ref, info.id, on)),
-      onAction: () => unawaited(setUpIntegration(context, ref, info.id)),
+      actionLabel: retry?.label,
+      onAction: retry == null
+          ? () => unawaited(setUpIntegration(context, ref, info.id))
+          : () => unawaited(_retry(context, retry)),
       onStore: storeUrl == null
           ? null
           : () => unawaited(openStore(context, ref, storeUrl)),
@@ -166,6 +173,17 @@ class IntegrationRow extends ConsumerWidget {
       ),
       child: tile,
     );
+  }
+
+  /// „Erneut versuchen“: runs the spec's retry and shows the outcome.
+  Future<void> _retry(BuildContext context, IntegrationRetry retry) async {
+    final error = await retry.run(unwrapIntegration(info.integration));
+    if (context.mounted) {
+      showHint(
+        context,
+        error ?? '${info.integration.displayName} ist wieder erreichbar.',
+      );
+    }
   }
 
   /// Hint of an optional app that is missing (e.g. Obsidian links).

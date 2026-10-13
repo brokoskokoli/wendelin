@@ -6,5 +6,6 @@ String? setupPageFor(String id) => switch (id) {
   'lists' => AppRoutes.lists,
   'obsidian' => AppRoutes.obsidian,
   'web' => AppRoutes.webSearch,
+  'bring' => AppRoutes.bring,
   _ => null,
 };

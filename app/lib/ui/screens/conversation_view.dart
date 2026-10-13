@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../agent/chat_entry.dart';
 import '../design/design.dart';
+import 'bring_share_card.dart';
 import 'labels.dart';
 
 /// The conversation as a list: user bubbles, tool chips and cards, answer
@@ -94,6 +95,12 @@ class _ConversationViewState extends State<ConversationView> {
         case ToolEntry() when ToolEntryCard.isCard(e):
           flushChips();
           out.add(_answerWidth(ToolEntryCard(e, onUndo: widget.onUndo)));
+        case ToolEntry() when BringShareCard.applies(e):
+          chips.add(e);
+          flushChips();
+          out.add(
+            _answerWidth(BringShareCard(e, key: ValueKey('share${e.id}'))),
+          );
         case ToolEntry():
           chips.add(e);
         case AssistantTextEntry(:final text):

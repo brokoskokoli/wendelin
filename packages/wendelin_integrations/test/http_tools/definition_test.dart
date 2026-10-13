@@ -101,6 +101,8 @@ void main() {
       expect(c.name, 'neu');
       expect(c.method, HttpMethod.delete);
       expect(c.effectiveRisk, RiskLevel.external);
+      expect(c.autoRun, isFalse);
+      expect(d.copyWith(autoRun: true).autoRun, isTrue);
       expect(d.copyWith(), d);
       expect(c == d, isFalse);
     });
@@ -350,28 +352,122 @@ void main() {
     test('Override nur verschärfend (Tabelle)', () {
       for (final m in HttpMethod.values) {
         for (final r in RiskLevel.values) {
-          final d = def(method: m, risk: r, url: 'https://api.example.org/');
-          final expected = r.index >= m.suggestedRisk.index
-              ? r
-              : m.suggestedRisk;
-          expect(d.effectiveRisk, expected, reason: '${m.verb} + ${r.name}');
-          expect(d.effectiveRisk.index, greaterThanOrEqualTo(r.index));
-          expect(
-            d.effectiveRisk.index,
-            greaterThanOrEqualTo(m.suggestedRisk.index),
-          );
+          for (final autoRun in [false, true]) {
+            final d = def(
+              method: m,
+              risk: r,
+              url: 'https://api.example.org/',
+              autoRun: autoRun,
+            );
+            final raised = r.index >= m.suggestedRisk.index
+                ? r
+                : m.suggestedRisk;
+            final why = '${m.verb} + ${r.name} + autoRun $autoRun';
+            expect(
+              d.effectiveRisk.index,
+              greaterThanOrEqualTo(raised.index),
+              reason: why,
+            );
+            expect(
+              d.effectiveRisk.index,
+              greaterThanOrEqualTo(m.suggestedRisk.index),
+              reason: why,
+            );
+          }
         }
       }
-      // Lockern ist wirkungslos: DELETE bleibt external, POST bleibt write.
+      // Lockern ist wirkungslos: DELETE bleibt external, POST bleibt
+      // mindestens write (ohne autoRun sogar bestätigt).
       expect(
         def(method: HttpMethod.delete, risk: RiskLevel.read).effectiveRisk,
         RiskLevel.external,
       );
       expect(
-        def(method: HttpMethod.post, risk: RiskLevel.read).effectiveRisk,
-        RiskLevel.write,
+        def(
+          method: HttpMethod.post,
+          risk: RiskLevel.read,
+          autoRun: true,
+        ).effectiveRisk,
+        RiskLevel.external,
+        reason: 'autoRun nur, wenn auch die Nutzerwahl write ist',
       );
       expect(def(risk: RiskLevel.external).effectiveRisk, RiskLevel.external);
+    });
+
+    test('write ohne Undo: bestätigt, außer autoRun bei Vorschlag und Wahl '
+        'write (Tabelle)', () {
+      // (Methode, Nutzerwahl, autoRun) → effektive Stufe
+      const w = RiskLevel.write;
+      const e = RiskLevel.external;
+      const r = RiskLevel.read;
+      final table = <(HttpMethod, RiskLevel, bool, RiskLevel)>[
+        (HttpMethod.get, r, false, r),
+        (HttpMethod.get, r, true, r),
+        (HttpMethod.head, r, true, r),
+        // Nutzer verschärft GET auf write: kein Undo → bestätigt, autoRun
+        // wirkt nicht (Vorschlag ist read).
+        (HttpMethod.get, w, false, e),
+        (HttpMethod.get, w, true, e),
+        (HttpMethod.get, e, true, e),
+        (HttpMethod.post, w, false, e),
+        (HttpMethod.post, w, true, w),
+        (HttpMethod.put, w, false, e),
+        (HttpMethod.put, w, true, w),
+        (HttpMethod.patch, w, false, e),
+        (HttpMethod.patch, w, true, w),
+        // Wahl unter dem Vorschlag zählt als write, autoRun wirkt nicht.
+        (HttpMethod.post, r, true, e),
+        (HttpMethod.post, r, false, e),
+        (HttpMethod.post, e, true, e),
+        (HttpMethod.delete, w, true, e),
+        (HttpMethod.delete, e, true, e),
+        (HttpMethod.delete, r, true, e),
+      ];
+      for (final (method, risk, autoRun, expected) in table) {
+        final d = def(
+          method: method,
+          risk: risk,
+          autoRun: autoRun,
+          url: 'https://api.example.org/',
+        );
+        expect(
+          d.effectiveRisk,
+          expected,
+          reason: '${method.verb} + ${risk.name} + autoRun $autoRun',
+        );
+        expect(
+          d.autoRunApplies,
+          method.suggestedRisk == w && risk == w,
+          reason: '${method.verb} + ${risk.name}',
+        );
+      }
+    });
+
+    test('autoRun: JSON-Rundreise, alte Definitionen ohne Feld → false', () {
+      final on = def(
+        method: HttpMethod.post,
+        risk: RiskLevel.write,
+        autoRun: true,
+        url: 'https://api.example.org/',
+      );
+      final json = roundTrip(on.toJson());
+      expect(json['autoRun'], isTrue);
+      expect(json['schemaVersion'], 1);
+      final back = HttpToolDefinition.fromJson(json);
+      expect(back.autoRun, isTrue);
+      expect(back, on);
+      expect(back.effectiveRisk, RiskLevel.write);
+
+      final old = roundTrip(on.toJson())..remove('autoRun');
+      final legacy = HttpToolDefinition.fromJson(old);
+      expect(legacy.autoRun, isFalse);
+      expect(legacy.effectiveRisk, RiskLevel.external);
+      expect(on.copyWith(autoRun: false).toJson(), isNot(contains('autoRun')));
+      expect(on.copyWith(autoRun: false) == on, isFalse);
+      expect(
+        () => HttpToolDefinition.fromJson({...json, 'autoRun': 'ja'}),
+        throwsFormatException,
+      );
     });
 
     test('Methode aus Text', () {

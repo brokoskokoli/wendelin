@@ -14,6 +14,10 @@ final class IntegrationDeps {
     required this.device,
     required this.httpClient,
     this.webSearch,
+    this.bringApi,
+    this.bringSecrets,
+    this.reportError,
+    this.clearError,
   });
 
   /// Device ports (real or demo).
@@ -27,7 +31,26 @@ final class IntegrationDeps {
 
   /// Configured search service; `null` = only `web__fetch`.
   final WebSearchBackend? webSearch;
+
+  /// Bring! API client; `null` = no Bring! (demo mode).
+  final BringApi? bringApi;
+
+  /// Where the Bring! login and session live.
+  final BringSecrets? bringSecrets;
+
+  /// Puts the integration `id` into the error state (tools paused).
+  final void Function(String id, String message)? reportError;
+
+  /// Clears the error state of the integration `id`.
+  final void Function(String id)? clearError;
 }
+
+/// „Erneut versuchen“ of an integration in the error state: [label] on the
+/// tile, [run] returns `null` on success or a German message.
+typedef IntegrationRetry = ({
+  String label,
+  Future<String?> Function(Integration integration) run,
+});
 
 /// Registration of one integration in the app: how to build it, how to
 /// ask for its permission when the user enables it, and what to do when a
@@ -50,6 +73,7 @@ final class IntegrationSpec {
     this.isSupported,
     this.permissionRationale,
     this.requiredApp,
+    this.retry,
   });
 
   /// Integration id (must match `Integration.id`).
@@ -75,6 +99,10 @@ final class IntegrationSpec {
   /// The app the integration uses, if any: without a needed app it is
   /// „nicht verfügbar“, an optional one only adds a hint (WP25).
   final AppRequirement? requiredApp;
+
+  /// Action of the tile in the error state instead of „Neu anmelden“
+  /// (gets the unwrapped integration).
+  final IntegrationRetry? retry;
 }
 
 /// The built-in integrations of M1, in display order.
@@ -132,6 +160,27 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
         indexer: o.indexer,
       );
     },
+  ),
+  IntegrationSpec(
+    id: 'bring',
+    // Unofficial API with the user's account (Einstellungen → Bring!); the
+    // app is only the fallback for sharing items when the API fails.
+    isSupported: (d) => d.bringApi != null && d.bringSecrets != null,
+    requiredApp: KnownApps.bring.optional(
+      'Bring!-App fehlt: kein Ausweg über „Teilen“',
+    ),
+    create: (d) => BringIntegration(
+      d.bringApi!,
+      d.bringSecrets!,
+      onError: (message) => d.reportError?.call('bring', '$message · pausiert'),
+      onRecovered: () => d.clearError?.call('bring'),
+    ),
+    retry: (
+      label: 'Erneut versuchen',
+      run: (i) async => i is BringIntegration
+          ? i.reconnect()
+          : 'Bring! ist nicht eingerichtet.',
+    ),
   ),
   IntegrationSpec(
     id: 'lists',

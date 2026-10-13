@@ -37,6 +37,7 @@ HttpToolDefinition def({
   bool enabled = true,
   Duration timeout = const Duration(seconds: 15),
   String? responsePath,
+  bool autoRun = false,
 }) => HttpToolDefinition(
   id: 'id-$name',
   name: name,
@@ -65,6 +66,7 @@ HttpToolDefinition def({
   enabled: enabled,
   timeout: timeout,
   responsePath: responsePath,
+  autoRun: autoRun,
 );
 
 /// Requests seen by [mockRunner]'s client.

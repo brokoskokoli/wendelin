@@ -184,7 +184,10 @@ final class HttpToolRunner {
       return await _call(definition, args, cancel, started, abort);
     } on CancelledException {
       rethrow;
-    } on Object {
+    } on Object catch (e, stack) {
+      // Programmierfehler nicht verstecken: der Zone melden (die App
+      // zeigt sie im Fehlerbericht), dem Modell aber nur einen festen Text.
+      if (e is Error) Zone.current.handleUncaughtError(e, stack);
       // Letzte Linie: nie Ausnahme-Text (evtl. Server-Inhalt) weitergeben.
       return HttpCallResult(
         duration: clock.now().difference(started),
