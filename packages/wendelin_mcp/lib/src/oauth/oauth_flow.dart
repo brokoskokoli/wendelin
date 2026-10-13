@@ -583,6 +583,10 @@ final class McpOAuthFlow {
   ///
   /// Single flight per token reference: parallel callers share one refresh
   /// request (servers that rotate refresh tokens would reject the second).
+  /// The entry is released when the refresh ends, also after a failure.
+  /// Accepted on purpose: the [cancel] token of the *first* caller drives
+  /// the shared request, so cancelling it aborts the refresh for every
+  /// waiting caller as well.
   Future<McpTokenSet> refresh(McpServerConfig config, {CancelToken? cancel}) {
     final ref = _oauth(config).tokenRef;
     final running = _refreshing[ref];

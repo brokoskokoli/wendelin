@@ -438,6 +438,28 @@ void main() {
       },
     );
 
+    test('nach gescheitertem Refresh ist ein neuer Refresh möglich', () async {
+      final c = config();
+      final f = flow();
+      await f.authorize(c);
+      server.rejectRefresh = true;
+      await expectLater(
+        Future.wait([f.refresh(c), f.refresh(c)]),
+        throwsA(isA<McpException>()),
+      );
+      expect(
+        server.tokenRequests.where((r) => r['grant_type'] == 'refresh_token'),
+        hasLength(1),
+      );
+      server.rejectRefresh = false;
+      final renewed = await f.refresh(c);
+      expect(server.accessTokens, contains(renewed.accessToken));
+      expect(
+        server.tokenRequests.where((r) => r['grant_type'] == 'refresh_token'),
+        hasLength(2),
+      );
+    });
+
     test('parallele Client-Aufrufe nach Ablauf: ein Refresh', () async {
       final c = config();
       final f = flow();
