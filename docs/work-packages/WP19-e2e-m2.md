@@ -9,6 +9,8 @@ Abhängig von: WP15–WP18.
 - Live-Durchlauf (sparsam) mit Claude Haiku: gesprochener Satz aus WAV → Notiz ergänzt.
 - README-Demo-Anleitung M2.
 
+- Prüfpunkt aus WP18 (ADR 0006): Overlay kalt starten, dann die App öffnen, dann das Overlay schließen. Danach schreibt die App weiter: Anfrage senden, Verlauf und Audit-Log vorhanden, Index-Aufbau läuft (gemeinsamer drift-Isolate beider Engines). Außerdem nach Entzug der Assistenten-Rolle `WendelinRecognitionService` deaktiviert.
+
 ## Abnahmekriterien
 - [ ] Integrationstest auf dem AOSP-Emulator grün (Log).
 - [ ] Testanleitung vollständig, vom Reviewer gegengelesen.

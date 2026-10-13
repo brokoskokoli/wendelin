@@ -147,6 +147,35 @@ void main() {
       );
     });
 
+    test(
+      'Erkennungsdienst standardmäßig aus, nur mit Assistenten-Rolle an',
+      () {
+        expect(
+          block('WendelinRecognitionService'),
+          contains('android:enabled="false"'),
+        );
+        const kotlin = 'android/app/src/main/kotlin/app/wendelin';
+        final service = File('$kotlin/WendelinVoiceInteractionService.kt')
+            .readAsStringSync();
+        expect(
+          service,
+          contains('RecognizerSwitch.sync(this, holdsRole = true)'),
+        );
+        final activity = File('$kotlin/WendelinActivity.kt').readAsStringSync();
+        expect(activity, contains('RecognizerSwitch.sync(this)'));
+      },
+    );
+
+    test('Overlay immer mit FLAG_SECURE', () {
+      final overlay = File(
+        'android/app/src/main/kotlin/app/wendelin/AssistantActivity.kt',
+      ).readAsStringSync();
+      expect(
+        overlay,
+        contains('window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)'),
+      );
+    });
+
     test('keine neuen Laufzeit-Berechtigungen für den Assistenten', () {
       expect(
         manifest,

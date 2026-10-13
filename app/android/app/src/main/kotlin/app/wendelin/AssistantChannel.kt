@@ -8,6 +8,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -38,6 +40,27 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
     /** Reports a new invocation of the assistant to Dart. */
     fun trigger() {
         channel.invokeMethod("trigger", null)
+    }
+
+    /**
+     * The overlay is being left: Dart stops listening, speech output and the request, then
+     * calls `finish`. [fallback] runs if Dart does not answer within [CLOSE_TIMEOUT_MS].
+     */
+    fun requestClose(fallback: () -> Unit) {
+        val main = Handler(Looper.getMainLooper())
+        var done = false
+        val finishOnce = {
+            if (!done) {
+                done = true
+                fallback()
+            }
+        }
+        main.postDelayed(finishOnce, CLOSE_TIMEOUT_MS)
+        channel.invokeMethod("close", null, object : MethodChannel.Result {
+            override fun success(result: Any?) = finishOnce()
+            override fun error(code: String, message: String?, details: Any?) = finishOnce()
+            override fun notImplemented() = finishOnce()
+        })
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -103,5 +126,6 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
 
     companion object {
         const val CHANNEL = "app.wendelin/assistant"
+        private const val CLOSE_TIMEOUT_MS = 1000L
     }
 }

@@ -1,6 +1,7 @@
 package app.wendelin
 
 import android.content.Intent
+import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 
@@ -13,8 +14,15 @@ abstract class WendelinActivity : FlutterActivity() {
     private var calendar: CalendarChannel? = null
     private var files: FilesChannel? = null
     private var vault: VaultChannel? = null
+    private var window: WindowChannel? = null
     protected var assistant: AssistantChannel? = null
         private set
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Assistant role may have changed while the app was not running.
+        RecognizerSwitch.sync(this)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -22,6 +30,7 @@ abstract class WendelinActivity : FlutterActivity() {
         calendar = CalendarChannel(this, messenger)
         files = FilesChannel(this, messenger)
         vault = VaultChannel(this, messenger)
+        window = WindowChannel(this, messenger)
         assistant = AssistantChannel(this, messenger)
     }
 
@@ -32,6 +41,8 @@ abstract class WendelinActivity : FlutterActivity() {
         files = null
         vault?.dispose()
         vault = null
+        window?.dispose()
+        window = null
         assistant?.dispose()
         assistant = null
         super.cleanUpFlutterEngine(flutterEngine)

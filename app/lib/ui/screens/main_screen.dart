@@ -34,10 +34,26 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   PendingQuestion? _sheetFor;
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    // In the background nothing listens, speaks or runs on unseen.
+    _lifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        if (state == AppLifecycleState.hidden ||
+            state == AppLifecycleState.paused) {
+          unawaited(ref.read(voiceControllerProvider.notifier).suspend());
+        }
+      },
+    );
     if (widget.restoreSession) {
       unawaited(ref.read(agentControllerProvider.notifier).restore());
       // A large vault needs several index runs: continue in the background.

@@ -27,7 +27,9 @@ import '../voice/voice_controller_test.dart' show fakeVoice, utterance;
 /// Stand-in for the Kotlin side of the assistant.
 final class FakeAssistantPlatform extends AssistantPlatform {
   bool locked = false;
+  Completer<bool>? lockAnswer;
   bool unlockSucceeds = true;
+  Future<void> Function()? closeHandler;
   bool isDefault = false;
   int unlockRequests = 0;
   int finished = 0;
@@ -40,7 +42,11 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   Stream<void> get triggers => _triggers.stream;
 
   @override
-  Future<bool> isLocked() async => locked;
+  Future<bool> isLocked() => lockAnswer?.future ?? Future.value(locked);
+
+  @override
+  set onCloseRequested(Future<void> Function()? handler) =>
+      closeHandler = handler;
 
   @override
   Future<bool> requestUnlock() async {
@@ -394,5 +400,97 @@ void main() {
     expect(x.answer, 'Teil 1\n\nTeil 2');
     expect(x.notice, 'Abgebrochen.');
     expect(OverlayExchange.of(const []).request, isNull);
+  });
+
+  testWidgets('bis die Sperre bekannt ist: gesperrt, nichts aus dem Verlauf', (
+    tester,
+  ) async {
+    final platform = FakeAssistantPlatform()..lockAnswer = Completer<bool>();
+    final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
+    final c = await pumpOverlay(tester, env, platform, autoStart: false);
+    c.read(agentControllerProvider.notifier).seed(overlaySample());
+    await tester.pump();
+    expect(find.textContaining('Tauchen'), findsNothing);
+    expect(find.text(OverlaySheet.lockedTitle), findsNothing);
+    expect(
+      tester.widget<MicButton>(find.byType(MicButton)).state,
+      MicState.disabled,
+    );
+    platform.lockAnswer!.complete(false);
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Tauchen'), findsWidgets);
+  });
+
+  testWidgets('gesperrt: Tastatur sichtbar deaktiviert, Tipp ohne Wirkung', (
+    tester,
+  ) async {
+    final platform = FakeAssistantPlatform()
+      ..locked = true
+      ..unlockSucceeds = false;
+    await pumpOverlay(tester, TestEnv(), platform);
+    await tester.pump();
+    final button = tester.widget<WIconButton>(
+      find.ancestor(
+        of: find.byTooltip('Texteingabe'),
+        matching: find.byType(WIconButton),
+      ),
+    );
+    expect(button.onPressed, isNull);
+    final icon = tester.widget<WIcon>(
+      find.descendant(
+        of: find.byTooltip('Texteingabe'),
+        matching: find.byType(WIcon),
+      ),
+    );
+    expect(icon.color, WColors.textMuted);
+    await tester.tap(find.byTooltip('Texteingabe'), warnIfMissed: false);
+    await tester.pump();
+    expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets(
+    'Android verlässt das Overlay: erst Dart-Schließpfad, dann finish',
+    (tester) async {
+      final platform = FakeAssistantPlatform();
+      final tts = FakeTextToSpeech(manual: true);
+      final audio = FakeAudioInput(
+        frames: AudioFrames.pattern('S' * 500),
+        frameInterval: const Duration(milliseconds: 10),
+      );
+      final c = await pumpOverlay(
+        tester,
+        TestEnv(providerConfig: scripted(FakeLlmProvider(const []))),
+        platform,
+        voice: fakeVoice(audio: audio, tts: tts),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(audio.isRunning, isTrue);
+      await platform.closeHandler!();
+      await tester.pump();
+      expect(audio.isRunning, isFalse);
+      expect(c.read(voiceControllerProvider).active, isFalse);
+      expect(platform.finished, 1);
+    },
+  );
+
+  testWidgets('Overlay im Hintergrund (paused): Mikrofon aus', (tester) async {
+    final audio = FakeAudioInput(
+      frames: AudioFrames.pattern('S' * 500),
+      frameInterval: const Duration(milliseconds: 10),
+    );
+    await pumpOverlay(
+      tester,
+      TestEnv(providerConfig: scripted(FakeLlmProvider(const []))),
+      FakeAssistantPlatform(),
+      voice: fakeVoice(audio: audio),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(audio.isRunning, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(audio.isRunning, isFalse);
   });
 }

@@ -66,10 +66,13 @@
             android:name=".WendelinVoiceSessionService"
             android:permission="android.permission.BIND_VOICE_INTERACTION"
             android:exported="true" />
-        <!-- Required by Android for an assistant; answers with an error for now (ADR 0006). -->
+        <!-- Required by Android for an assistant; answers with an error for now. Disabled until
+             Wendelin holds the assistant role (RecognizerSwitch), so installing the app never
+             makes it the system speech recognizer (ADR 0006). -->
         <service
             android:name=".WendelinRecognitionService"
             android:label="Wendelin"
+            android:enabled="false"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.speech.RecognitionService" />

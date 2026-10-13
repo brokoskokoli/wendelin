@@ -64,7 +64,7 @@ void main() {
     ('Vielleicht', null),
     ('Jein', null),
     ('Ja, nein', null),
-    ('Ja, aber nicht jetzt', null),
+    ('Ja, aber nicht jetzt', YesNo.no),
     ('Mach das nicht', null),
     ('Oui non', null),
     ('Peut-être', null),
@@ -72,7 +72,66 @@ void main() {
     ('Yes, no', null),
     ('Pas de problème oui', null),
     ('Trag mir morgen um zehn Tauchen ein und ja', null),
+    // Review WP18: schwache Ja-Wörter nur allein, Zögern nie Ja.
+    ('Klar', YesNo.yes),
+    ('Klar, bitte', YesNo.yes),
+    ('Passt', YesNo.yes),
+    ('Mach', YesNo.yes),
+    ('Richtig', YesNo.yes),
+    ('Na ja', null),
+    ('Naja', null),
+    ('Mach das später', null),
+    ('Mach mal Pause', null),
+    ('Okay, warte', null),
+    ('Ja, Moment', null),
+    ('Ja, warte mal', null),
+    ('Yes, wait', null),
+    ('Yes but later', null),
+    ('Hold on', null),
+    ('Oui mais attends', null),
+    ('Oui, plus tard', null),
+    ('Klar ist das falsch', YesNo.no),
+    ('Richtig blöd', null),
+    ('Passt schon irgendwie', null),
+    ('Nein, warte', YesNo.no),
+    ('Moment', null),
+    ('Attends', null),
   ];
+
+  // Strenge Zustimmung (external, Eskalation): 1–2 reine Ja-Wörter oder
+  // eine Ja-Wendung; „nein“ wie sonst.
+  const strictCases = <(String, YesNo?)>[
+    ('Ja', YesNo.yes),
+    ('Ja.', YesNo.yes),
+    ('Ja ja', YesNo.yes),
+    ('Ja genau', YesNo.yes),
+    ('Okay', YesNo.yes),
+    ('Oui', YesNo.yes),
+    ("D'accord", YesNo.yes),
+    ('Bien sûr', YesNo.yes),
+    ('Yes', YesNo.yes),
+    ('Go ahead', YesNo.yes),
+    ('Klar', YesNo.yes),
+    ('Ja, bitte', null),
+    ('Ja, lösch ihn.', null),
+    ('OK, mach das', null),
+    ('Oui, vas-y', null),
+    ('Yes please', null),
+    ('Ja ja ja', null),
+    ('Klar, bitte', null),
+    ('Nein', YesNo.no),
+    ('Non merci', YesNo.no),
+    ("No, don't", YesNo.no),
+    ('Lieber nicht', YesNo.no),
+    ('Ja, Moment', null),
+    ('Vielleicht', null),
+  ];
+
+  for (final (text, expected) in strictCases) {
+    test('streng: „$text“ → $expected', () {
+      expect(recognizer.parse(text, strict: true), expected);
+    });
+  }
 
   for (final (text, expected) in cases) {
     test('„$text“ → $expected', () {

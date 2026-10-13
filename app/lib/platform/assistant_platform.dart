@@ -21,7 +21,8 @@ final assistantPlatformProvider = Provider<AssistantPlatform>((ref) {
 /// closing for the overlay.
 ///
 /// Calls from Kotlin to Dart: `trigger` (the assistant was invoked again
-/// while the overlay is open).
+/// while the overlay is open) and `close` (the overlay is being left: Dart
+/// stops listening, speaking and the request, then calls [finish]).
 class AssistantPlatform {
   /// Creates the bridge; `channel` is injectable for tests.
   AssistantPlatform({
@@ -31,16 +32,31 @@ class AssistantPlatform {
   final MethodChannel _channel;
   final _triggers = StreamController<void>.broadcast(sync: true);
   bool _listening = false;
+  Future<void> Function()? _onClose;
+
+  void _listen() {
+    if (_listening) return;
+    _listening = true;
+    _channel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'trigger':
+          _triggers.add(null);
+        case 'close':
+          await _onClose?.call();
+      }
+    });
+  }
 
   /// Invocations of the assistant while the overlay is open.
   Stream<void> get triggers {
-    if (!_listening) {
-      _listening = true;
-      _channel.setMethodCallHandler((call) async {
-        if (call.method == 'trigger') _triggers.add(null);
-      });
-    }
+    _listen();
     return _triggers.stream;
+  }
+
+  /// Runs [handler] when Android leaves the overlay (before it finishes).
+  set onCloseRequested(Future<void> Function()? handler) {
+    _listen();
+    _onClose = handler;
   }
 
   /// Whether Wendelin is the default assistant (role `ASSISTANT` or the

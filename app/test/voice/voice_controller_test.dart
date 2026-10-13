@@ -234,9 +234,9 @@ void main() {
       await voice().start(TriggerKind.pushToTalk);
     }
 
-    test('„Ja, bitte“ führt das Tool aus; Frage wird vorgelesen', () async {
+    test('„Ja“ führt das Tool aus; Frage wird vorgelesen', () async {
       final tts = FakeTextToSpeech();
-      await deleteBySaying(const [Transcript(text: 'Ja, bitte')], tts: tts);
+      await deleteBySaying(const [Transcript(text: 'Ja')], tts: tts);
       await voice().whenIdle;
       expect(env.calendar.events, isEmpty);
       expect(c.read(agentControllerProvider).tool('c1')!.phase, ToolPhase.done);
@@ -247,6 +247,29 @@ void main() {
       );
       expect(confirmation.payload['approved'], isTrue);
     });
+
+    test(
+      'external: nur strikte Zustimmung, „Ja, bitte“/„Okay, warte“ → Tipp',
+      () async {
+        final tts = FakeTextToSpeech();
+        await deleteBySaying(const [
+          Transcript(text: 'Ja, bitte'),
+          Transcript(text: 'Okay, warte'),
+        ], tts: tts);
+        await waitConv(c, (s) => s.pending != null);
+        await waitVoice(
+          c,
+          (v) =>
+              !v.awaitingAnswer &&
+              tts.spoken.contains('Bitte sag ja oder nein.'),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(c.read(agentControllerProvider).pending!.answered, isFalse);
+        expect(env.calendar.events, hasLength(1));
+        c.read(agentControllerProvider.notifier).answer(approved: false);
+        await voice().whenIdle;
+      },
+    );
 
     test('„Nein“ lehnt ab, das Tool läuft nicht', () async {
       await deleteBySaying(const [Transcript(text: 'Nein')]);
@@ -339,6 +362,83 @@ void main() {
     });
   });
 
+  test(
+    'erst Sprache, dann getippte Anfrage: keine Stimm-Bestätigung',
+    () async {
+      final stt = FakeSpeechToText(const [
+        Transcript(text: 'Wie spät ist es?'),
+        Transcript(text: 'Ja'),
+      ]);
+      env = voiceEnv(
+        [
+          ScriptedTurn.text('Acht Uhr.'),
+          ScriptedTurn.toolCalls([
+            call('c1', 'calendar__delete_event', _delete),
+          ]),
+          ScriptedTurn.text('Gut.'),
+        ],
+        voice: VoiceComponents(
+          audio: FakeAudioInput(frames: utterance()),
+          vad: FakeVoiceActivityDetector(),
+          stt: stt,
+          textToSpeech: (_) async => null,
+        ),
+      );
+      c = env.container();
+      await env.calendar.createEvent(zahnarztDraft());
+      await voice().start(TriggerKind.pushToTalk);
+      await voice().whenIdle;
+      expect(c.read(voiceControllerProvider).active, isFalse);
+
+      await c.read(agentControllerProvider.notifier).send('Lösch den Termin');
+      await waitConv(c, (s) => s.pending != null);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(c.read(voiceControllerProvider).awaitingAnswer, isFalse);
+      expect(
+        stt.calls,
+        hasLength(1),
+        reason: 'kein Mitschnitt für die Antwort',
+      );
+      expect(c.read(agentControllerProvider).pending!.answered, isFalse);
+      c.read(agentControllerProvider.notifier).answer(approved: false);
+      await c.read(agentControllerProvider.notifier).idle;
+      expect(env.calendar.events, hasLength(1));
+    },
+  );
+
+  test(
+    'suspend: Mikrofon aus, Sprachausgabe gestoppt, Lauf abgebrochen',
+    () async {
+      final tts = FakeTextToSpeech(manual: true);
+      start(
+        [ScriptedTurn.text('Ein langer Satz. Und noch einer.')],
+        voice: fakeVoice(
+          script: const [Transcript(text: 'Erzähl was')],
+          tts: tts,
+        ),
+      );
+      await voice().start(TriggerKind.pushToTalk);
+      await waitVoice(c, (v) => v.phase == VoiceState.speaking);
+      expect(tts.state, TtsState.speaking);
+      await voice().suspend();
+      expect(tts.state, TtsState.idle);
+      expect(tts.stops, greaterThan(0));
+      expect(c.read(voiceControllerProvider).active, isFalse);
+
+      // Getippte Anfrage läuft: suspend bricht sie ab.
+      c.dispose();
+      start([ScriptedTurn.hang(partialText: 'Moment')], voice: fakeVoice());
+      unawaited(c.read(agentControllerProvider.notifier).send('Hallo'));
+      await waitConv(
+        c,
+        (s) => s.entries.whereType<AssistantTextEntry>().isNotEmpty,
+      );
+      await voice().suspend();
+      await c.read(agentControllerProvider.notifier).idle;
+      expect(c.read(agentControllerProvider).running, isFalse);
+    },
+  );
+
   test('ohne Spracherkennung: kein Start, Hinweis', () async {
     start(const [], voice: null);
     expect(await voice().start(TriggerKind.pushToTalk), isFalse);
@@ -419,8 +519,55 @@ void main() {
     );
     expect(confirmationPrompt(tool, 'de'), 'Termin löschen? Ja oder nein?');
     expect(confirmationPrompt(tool, null), 'Termin löschen? Ja oder nein?');
-    expect(confirmationPrompt(tool, 'fr-FR'), contains('Oui ou non'));
-    expect(confirmationPrompt(tool, 'en'), contains('Yes or no'));
+    expect(
+      confirmationPrompt(tool, 'fr-FR'),
+      'Supprimer le rendez-vous ? Oui ou non ?',
+    );
+    expect(
+      confirmationPrompt(tool, 'en'),
+      'Delete the appointment? Yes or no?',
+    );
+    ToolQuestion q(String name, RiskLevel risk) => ToolQuestion(
+      ConfirmationRequired(
+        call: call('c', name, '{}'),
+        description: 'x',
+        risk: risk,
+        respond: (_) {},
+      ),
+      request: 'r',
+    );
+    expect(
+      confirmationPrompt(q('memory__forget', RiskLevel.write), 'en'),
+      'Delete: memory forget? Yes or no?',
+    );
+    expect(
+      confirmationPrompt(q('web__fetch', RiskLevel.read), 'fr'),
+      'Exécuter : web fetch ? Oui ou non ?',
+    );
+    expect(strictAnswer(q('web__fetch', RiskLevel.read)), isFalse);
+    expect(
+      strictAnswer(q('calendar__delete_event', RiskLevel.external)),
+      isTrue,
+    );
+    final escalation = EscalationQuestion(
+      EscalationConfirmationRequired(
+        fromProfile: 'a',
+        toProfile: 'b',
+        reason: EscalationReason.providerError,
+        respond: (_) {},
+      ),
+      fromName: 'Phala',
+      toName: 'Claude',
+    );
+    expect(strictAnswer(escalation), isTrue);
+    expect(
+      confirmationPrompt(escalation, 'en'),
+      'Hand over to Claude? Yes or no?',
+    );
+    expect(
+      confirmationPrompt(escalation, 'fr'),
+      contains('Transmettre à Claude'),
+    );
     expect(repeatPrompt('fr'), contains('oui ou non'));
     expect(repeatPrompt('en'), 'Please say yes or no.');
     expect(voiceErrorText(StateError('x')), contains('Sprache'));

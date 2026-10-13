@@ -21,6 +21,7 @@ final class StartupSettings {
     this.webSearch,
     this.lists = const [],
     this.obsidian = const ObsidianPrefs(),
+    this.secureScreen = false,
   });
 
   /// Integrations the user switched on.
@@ -57,6 +58,9 @@ final class StartupSettings {
   /// Obsidian vault and daily notes.
   final ObsidianPrefs obsidian;
 
+  /// Protect the main app's screen content.
+  final bool secureScreen;
+
   /// Reads the settings for the integrations [integrationIds].
   static Future<StartupSettings> load(
     SettingsRepository settings,
@@ -84,6 +88,7 @@ final class StartupSettings {
       lists: await settings.get(AppSettings.lists) ?? const [],
       obsidian:
           await settings.get(AppSettings.obsidian) ?? const ObsidianPrefs(),
+      secureScreen: await settings.get(AppSettings.secureScreen) ?? false,
     );
   }
 }

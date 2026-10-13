@@ -7,4 +7,15 @@ import android.service.voice.VoiceInteractionService
  * gesture, headset button). Everything happens in [WendelinVoiceSession]; metadata in
  * res/xml/voice_interaction_service.xml.
  */
-class WendelinVoiceInteractionService : VoiceInteractionService()
+class WendelinVoiceInteractionService : VoiceInteractionService() {
+    /** The system bound Wendelin as the active assistant. */
+    override fun onReady() {
+        super.onReady()
+        RecognizerSwitch.sync(this, holdsRole = true)
+    }
+
+    override fun onShutdown() {
+        RecognizerSwitch.sync(this)
+        super.onShutdown()
+    }
+}

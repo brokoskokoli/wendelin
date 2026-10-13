@@ -12,6 +12,7 @@ import 'di/integration_specs.dart';
 import 'di/maintenance.dart';
 import 'di/providers.dart';
 import 'di/startup.dart';
+import 'platform/screen_protection.dart';
 import 'platform/secure_secret_store.dart';
 import 'ui/overlay/assistant_overlay.dart';
 import 'ui/theme/app_theme.dart';
@@ -26,6 +27,8 @@ Future<void> main() async {
     secrets: SecureSecretStore(),
     retentionDays: startup.retentionDays,
   );
+  // „Bildschirminhalt schützen“ (the overlay is always protected natively).
+  await const ScreenProtection().apply(secure: startup.secureScreen);
   await _run(storage, startup, const WendelinApp());
 }
 

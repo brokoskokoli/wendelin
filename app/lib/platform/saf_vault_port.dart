@@ -22,7 +22,8 @@ const vaultChannelName = 'app.wendelin/vault';
 ///   created.
 /// - `list` delivers modification time and size with one query, so the
 ///   index sync needs no extra calls.
-/// - Every call has a [timeout]; a hanging provider becomes
+/// - Every call has a time limit ([timeout] 10 s, [writeTimeout] 30 s for
+///   `write`/`create`); a hanging provider becomes
 ///   `PortException(unavailable)` instead of blocking the write queue.
 final class SafVaultPort implements VaultPort {
   /// Creates the port on the tree URI [tree] reads (`null` = no vault
@@ -31,6 +32,7 @@ final class SafVaultPort implements VaultPort {
     required this.tree,
     this._channel = const MethodChannel(vaultChannelName),
     this.timeout = const Duration(seconds: 10),
+    this.writeTimeout = const Duration(seconds: 30),
   });
 
   /// Current vault tree URI.
@@ -40,6 +42,11 @@ final class SafVaultPort implements VaultPort {
 
   /// Limit per platform call.
   final Duration timeout;
+
+  /// Limit for `write` and `create` (larger notes, slow cloud providers).
+  /// Caution: a timed-out write may still complete on the native side;
+  /// the integration's optimistic lock re-reads before the next write.
+  final Duration writeTimeout;
 
   @override
   Future<List<VaultEntry>> list(String folder) async {
@@ -75,6 +82,7 @@ final class SafVaultPort implements VaultPort {
     'write',
     VaultPath.normalize(path),
     bytes: Uint8List.fromList(utf8.encode(content)),
+    limit: writeTimeout,
   );
 
   @override
@@ -82,6 +90,7 @@ final class SafVaultPort implements VaultPort {
     'create',
     VaultPath.normalize(path),
     bytes: Uint8List.fromList(utf8.encode(content)),
+    limit: writeTimeout,
   );
 
   @override
@@ -123,7 +132,12 @@ final class SafVaultPort implements VaultPort {
   static PortException _notFound(String path) =>
       PortException(PortErrorKind.notFound, '„$path“ gibt es nicht');
 
-  Future<T?> _call<T>(String method, String path, {Uint8List? bytes}) async {
+  Future<T?> _call<T>(
+    String method,
+    String path, {
+    Uint8List? bytes,
+    Duration? limit,
+  }) async {
     final uri = tree();
     if (uri == null) {
       throw const PortException(
@@ -134,7 +148,7 @@ final class SafVaultPort implements VaultPort {
     try {
       return await _channel
           .invokeMethod<T>(method, {'tree': uri, 'path': path, 'bytes': ?bytes})
-          .timeout(timeout);
+          .timeout(limit ?? timeout);
     } on TimeoutException {
       throw const PortException(
         PortErrorKind.unavailable,

@@ -174,18 +174,29 @@ void main() {
     },
   );
 
-  test('Zeitlimit: hängender Provider → unavailable', () async {
-    native.hang = true;
-    final slow = SafVaultPort(
-      tree: () => _tree,
-      timeout: const Duration(milliseconds: 20),
-    );
-    await expectLater(slow.read('x.md'), fails(PortErrorKind.unavailable));
-    await expectLater(
-      slow.write('x.md', 'y'),
-      fails(PortErrorKind.unavailable),
-    );
-  });
+  test(
+    'Zeitlimit: hängender Provider → unavailable (Schreiben länger)',
+    () async {
+      native.hang = true;
+      final slow = SafVaultPort(
+        tree: () => _tree,
+        timeout: const Duration(milliseconds: 20),
+        writeTimeout: const Duration(milliseconds: 200),
+      );
+      await expectLater(slow.read('x.md'), fails(PortErrorKind.unavailable));
+      final watch = Stopwatch()..start();
+      await expectLater(
+        slow.write('x.md', 'y'),
+        fails(PortErrorKind.unavailable),
+      );
+      expect(watch.elapsedMilliseconds, greaterThanOrEqualTo(150));
+      await expectLater(
+        slow.create('n.md', 'y'),
+        fails(PortErrorKind.unavailable),
+      );
+      expect(SafVaultPort(tree: () => _tree).writeTimeout.inSeconds, 30);
+    },
+  );
 
   test('ohne gewählten Vault: unavailable, kein Kanalaufruf', () async {
     final none = SafVaultPort(tree: () => null);

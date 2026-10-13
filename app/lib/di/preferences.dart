@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../platform/screen_protection.dart';
 import 'app_settings.dart';
 import 'preference_models.dart';
 import 'providers.dart';
@@ -213,5 +214,28 @@ final class ObsidianPrefsNotifier extends Notifier<ObsidianPrefs> {
   Future<void> set(ObsidianPrefs prefs) async {
     state = prefs;
     await _settings(ref).set(AppSettings.obsidian, prefs);
+  }
+}
+
+/// Window protection of the main app (overridden in tests).
+final screenProtectionProvider = Provider<ScreenProtection>(
+  (ref) => const ScreenProtection(),
+);
+
+/// „Bildschirminhalt schützen“ (Einstellungen → Datenschutz, default off).
+final secureScreenProvider = NotifierProvider<SecureScreen, bool>(
+  SecureScreen.new,
+);
+
+/// Screen protection setting of the main app.
+final class SecureScreen extends Notifier<bool> {
+  @override
+  bool build() => ref.watch(startupProvider).secureScreen;
+
+  /// Stores [secure] and applies it right away.
+  Future<void> set({required bool secure}) async {
+    state = secure;
+    await _settings(ref).set(AppSettings.secureScreen, secure);
+    await ref.read(screenProtectionProvider).apply(secure: secure);
   }
 }

@@ -128,7 +128,8 @@ class OverlaySheet extends StatelessWidget {
   /// Voice hint or error.
   final String? status;
 
-  /// Device locked: nothing personal is shown, only the unlock prompt.
+  /// Device locked (or lock state not known yet): nothing personal is
+  /// shown, only the unlock prompt.
   final bool locked;
 
   /// Asks for unlocking.
@@ -202,11 +203,14 @@ class OverlaySheet extends StatelessWidget {
     return !locked && q != null && !q.answered && onAnswer != null;
   }
 
+  /// While the lock state is still unknown ([onUnlock] `null`) the sheet
+  /// stays empty.
   List<Widget> _lockedContent() => [
-    Text(lockedTitle, style: WText.transcript),
-    Text(lockedText, style: WText.answer),
-    if (onUnlock != null)
+    if (onUnlock != null) ...[
+      Text(lockedTitle, style: WText.transcript),
+      Text(lockedText, style: WText.answer),
       FilledButton(onPressed: onUnlock, child: const Text('Entsperren')),
+    ],
   ];
 
   List<Widget> _content() {

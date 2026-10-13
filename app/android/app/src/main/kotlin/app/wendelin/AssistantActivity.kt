@@ -18,6 +18,8 @@ class AssistantActivity : WendelinActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Personal content: no screenshots, not visible in the app switcher.
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
         } else {
@@ -39,6 +41,9 @@ class AssistantActivity : WendelinActivity() {
     override fun onStop() {
         super.onStop()
         // The overlay belongs to the moment it was opened; it does not stay in the background.
-        if (!isChangingConfigurations && assistant?.unlocking != true) finish()
+        // Dart closes first (stops microphone, speech output, request), then finishes.
+        if (isChangingConfigurations || assistant?.unlocking == true || isFinishing) return
+        val channel = assistant
+        if (channel == null) finish() else channel.requestClose { if (!isFinishing) finish() }
     }
 }

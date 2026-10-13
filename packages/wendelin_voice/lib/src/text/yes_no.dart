@@ -13,12 +13,20 @@ enum YesNo {
 /// Rules (conservative: a wrong „yes“ is the dangerous mistake):
 /// - Case, punctuation and apostrophes are ignored („d'accord“ →
 ///   `daccord`, „don't“ → `dont`).
-/// - The answer is [YesNo.yes] if it contains yes markers and no no
-///   markers, [YesNo.no] if it contains no markers and no yes markers.
-/// - Both kinds („ja, nicht löschen“), none („vielleicht“), an empty
-///   transcript or more than [maxWords] words give `null` – the user then
-///   answers by tap.
+/// - [YesNo.yes] needs yes markers and no no markers, [YesNo.no] needs no
+///   markers and no yes markers; both or none give `null` (tap).
+/// - Weak yes words ([weakYesWords]: „mach“, „klar“, „richtig“, „passt“)
+///   count only when the whole answer is yes words and polite fillers
+///   („Klar!“, „Passt, bitte“) – „Klar ist das falsch“ is not a yes.
+/// - Hesitation („warte“, „Moment“, „wait“, „attends“, „na ja“, „später“,
+///   „aber“) never yields a yes: with a no marker it stays „no“, otherwise
+///   `null`.
 /// - Negations („nicht“, „pas“, „not“) and stop words count as „no“.
+/// - Empty transcripts or more than [maxWords] words give `null`.
+/// - With `strict` (external tools, escalation below the privacy level)
+///   a yes must be 1–2 words consisting only of yes words or one yes
+///   phrase („Ja“, „Ja genau“, „Oui“, „Bien sûr“, „Go ahead“); „no“ is
+///   recognized as usual.
 final class YesNoRecognizer {
   /// Creates the recognizer.
   const YesNoRecognizer({this.maxWords = 8});
@@ -30,13 +38,28 @@ final class YesNoRecognizer {
   /// Single words meaning „yes“ (lower case, apostrophes removed).
   static const yesWords = {
     // de
-    'ja', 'jawohl', 'jo', 'jep', 'jup', 'genau', 'klar', 'gerne', 'gern',
-    'einverstanden', 'richtig', 'passt', 'mach', 'machs', 'ok', 'okay',
-    'okey',
+    'ja', 'jawohl', 'jo', 'jep', 'jup', 'genau', 'gerne', 'gern',
+    'einverstanden', 'ok', 'okay', 'okey',
     // fr
     'oui', 'ouais', 'daccord', 'certainement', 'volontiers',
     // en
     'yes', 'yeah', 'yep', 'yup', 'sure', 'correct', 'affirmative',
+  };
+
+  /// Words that mean „yes“ only when the answer consists of yes words and
+  /// [politeWords] alone.
+  static const weakYesWords = {'mach', 'machs', 'klar', 'richtig', 'passt'};
+
+  /// Polite fillers allowed next to weak yes words.
+  static const politeWords = {
+    'bitte',
+    'please',
+    'sil',
+    'vous',
+    'te',
+    'plaît',
+    'plait',
+    'merci',
   };
 
   /// Multi-word phrases meaning „yes“ (words separated by single spaces).
@@ -54,6 +77,7 @@ final class YesNoRecognizer {
     // de
     'nein', 'nee', 'nö', 'noe', 'ne', 'nicht', 'nichts', 'kein', 'keine',
     'niemals', 'abbrechen', 'abbruch', 'stopp', 'stop', 'halt', 'lass',
+    'falsch',
     // fr
     'non', 'pas', 'jamais', 'annule', 'annuler', 'arrête', 'arrete',
     // en
@@ -73,8 +97,23 @@ final class YesNoRecognizer {
     'no way', 'leave it',
   };
 
+  /// Words of hesitation: never a yes.
+  static const hesitationWords = {
+    // de
+    'warte', 'wart', 'warten', 'moment', 'momentchen', 'sekunde', 'später',
+    'spaeter', 'pause', 'aber', 'naja', 'vielleicht', 'eventuell',
+    // fr
+    'attends', 'attendez', 'attend', 'mais', 'minute', 'peut', 'tard',
+    // en
+    'wait', 'hold', 'hang', 'later', 'but', 'maybe', 'perhaps', 'second',
+  };
+
+  /// Phrases of hesitation.
+  static const hesitationPhrases = {'na ja', 'na gut', 'plus tard'};
+
   /// The answer in [transcript], or `null` if it is not a clear yes or no.
-  YesNo? parse(String transcript) {
+  /// [strict]: see the class documentation.
+  YesNo? parse(String transcript, {bool strict = false}) {
     final words = transcript
         .toLowerCase()
         .replaceAll(RegExp('[\'’`´]'), '')
@@ -82,6 +121,7 @@ final class YesNoRecognizer {
         .where((w) => w.isNotEmpty)
         .toList();
     if (words.isEmpty || words.length > maxWords) return null;
+
     // A phrase right after a negation does not count („don't do it“).
     bool hasPhrase(Set<String> phrases, {bool negatable = false}) {
       for (final phrase in phrases) {
@@ -100,10 +140,31 @@ final class YesNoRecognizer {
       return false;
     }
 
-    final yes =
-        words.any(yesWords.contains) || hasPhrase(yesPhrases, negatable: true);
+    final hesitant =
+        words.any(hesitationWords.contains) || hasPhrase(hesitationPhrases);
     final no = words.any(noWords.contains) || hasPhrase(noPhrases);
-    if (yes == no) return null;
-    return yes ? YesNo.yes : YesNo.no;
+    final weakOnly = words.every(
+      (w) =>
+          yesWords.contains(w) ||
+          weakYesWords.contains(w) ||
+          politeWords.contains(w),
+    );
+    final yes =
+        !hesitant &&
+        (words.any(yesWords.contains) ||
+            (weakOnly && words.any(weakYesWords.contains)) ||
+            hasPhrase(yesPhrases, negatable: true));
+    if (no && !yes) return YesNo.no;
+    if (!yes || no) return null;
+    if (strict && !_strictYes(words)) return null;
+    return YesNo.yes;
+  }
+
+  /// 1–2 words, only yes words, or exactly one yes phrase.
+  static bool _strictYes(List<String> words) {
+    if (words.length > 2) return false;
+    if (words.every(yesWords.contains)) return true;
+    if (words.length == 1 && weakYesWords.contains(words.single)) return true;
+    return yesPhrases.contains(words.join(' '));
   }
 }

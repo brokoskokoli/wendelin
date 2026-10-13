@@ -144,4 +144,56 @@ void main() {
     await pumpUntil(tester, find.text('Gut.'));
     expect(env.calendar.events, hasLength(1));
   });
+
+  testWidgets('App im Hintergrund: Mikrofon aus, Sprachausgabe gestoppt', (
+    tester,
+  ) async {
+    final tts = FakeTextToSpeech(manual: true);
+    final audio = FakeAudioInput(
+      frames: AudioFrames.pattern('S' * 500),
+      frameInterval: const Duration(milliseconds: 10),
+    );
+    final components = fakeVoice(
+      audio: audio,
+      tts: tts,
+      script: const [Transcript(text: 'Erzähl was')],
+    );
+    final env = TestEnv(
+      providerConfig: scripted(
+        FakeLlmProvider([ScriptedTurn.text('Ein Satz. Noch einer.')]),
+      ),
+      extraOverrides: [
+        voiceComponentsProvider.overrideWith((ref) async => components),
+      ],
+    );
+    await pumpApp(tester, env);
+    await tester.pump();
+    await tester.tap(find.byType(MicButton));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(audio.isRunning, isTrue);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(audio.isRunning, isFalse);
+    expect(micState(tester), MicState.idle);
+
+    // Zurück, Antwort wird gesprochen, dann wieder weg: TTS stoppt.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    audio.script(utterance());
+    await tester.tap(find.byType(MicButton));
+    for (var i = 0; i < 100 && tts.state != TtsState.speaking; i++) {
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+    expect(tts.state, TtsState.speaking);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(tts.state, TtsState.idle);
+    expect(tts.interrupted, contains('Ein Satz.'));
+    expect(micState(tester), MicState.idle);
+  });
 }

@@ -59,9 +59,13 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   late final AssistantTriggerSource _triggers;
   late final StreamSubscription<TriggerEvent> _sub;
   final _text = TextEditingController();
-  bool _locked = false;
+  // Locked until the platform says otherwise: nothing personal may flash
+  // up on a locked device.
+  bool _locked = true;
+  bool _lockKnown = false;
   bool _typing = false;
   bool _closing = false;
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
@@ -71,13 +75,26 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       clock: ref.read(clockProvider),
     );
     _sub = _triggers.triggers.listen((e) => unawaited(_onTrigger(e)));
+    // Android leaves the overlay (home, screen off): the Dart close path
+    // first, so nothing keeps listening or speaking.
+    ref.read(assistantPlatformProvider).onCloseRequested = _close;
+    _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
+    unawaited(_checkLock());
     if (widget.autoStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _triggers.fire());
     }
   }
 
+  void _onLifecycle(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      unawaited(_voice.suspend());
+    }
+  }
+
   @override
   void dispose() {
+    _lifecycle.dispose();
     unawaited(_sub.cancel());
     unawaited(_triggers.dispose());
     _text.dispose();
@@ -88,10 +105,19 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   VoiceController get _voice => ref.read(voiceControllerProvider.notifier);
   AgentController get _agent => ref.read(agentControllerProvider.notifier);
 
+  Future<bool> _checkLock() async {
+    final locked = await _platform.isLocked();
+    if (mounted) {
+      setState(() {
+        _locked = locked;
+        _lockKnown = true;
+      });
+    }
+    return locked;
+  }
+
   Future<void> _onTrigger(TriggerEvent e) async {
-    if (await _platform.isLocked()) {
-      if (!mounted) return;
-      setState(() => _locked = true);
+    if (await _checkLock()) {
       if (!await _platform.requestUnlock() || !mounted) return;
       setState(() => _locked = false);
     }
@@ -113,7 +139,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
-    await _voice.cancel();
+    await _voice.suspend();
     _agent.cancel();
     await _platform.finish();
   }
@@ -157,7 +183,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       mic: mic,
       levels: voice.levels,
       locked: _locked,
-      onUnlock: () => unawaited(_unlock()),
+      onUnlock: _lockKnown ? () => unawaited(_unlock()) : null,
       status: _locked
           ? null
           : voice.error ??

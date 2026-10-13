@@ -97,6 +97,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   String? _language;
   PendingQuestion? _confirming;
   void Function()? _abortCapture;
+  TextToSpeech? _promptTts;
 
   /// Answers are only taken from short utterances.
   static const recognizer = YesNoRecognizer();
@@ -167,7 +168,19 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// output, a spoken confirmation). An open confirmation counts as „no“.
   Future<void> cancel() async {
     _abortCapture?.call();
+    final tts = _promptTts;
+    _promptTts = null;
+    if (tts != null) await tts.stop();
     await _pipeline?.cancel();
+  }
+
+  /// The app went to the background (screen off, other app, overlay
+  /// closed): stop listening and speaking and cancel the running request,
+  /// spoken or typed. Nothing keeps running unseen.
+  Future<void> suspend() async {
+    final running = ref.read(agentControllerProvider).running;
+    await cancel();
+    if (running) _agent.cancel();
   }
 
   /// Replaces the state (golden tests with sample data).
@@ -278,6 +291,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     _confirming = question;
     try {
       final tts = await components.textToSpeech(_language);
+      _promptTts = tts;
       for (var attempt = 0; attempt < 2; attempt++) {
         if (!_stillOpen(question)) return;
         final prompt = attempt == 0
@@ -294,7 +308,10 @@ final class VoiceController extends Notifier<VoiceUiState> {
           language: components.config.language,
         );
         if (!_stillOpen(question)) return;
-        final answer = recognizer.parse(transcript.text);
+        final answer = recognizer.parse(
+          transcript.text,
+          strict: strictAnswer(question),
+        );
         if (answer != null) {
           _agent.answer(approved: answer == YesNo.yes);
           return;
@@ -305,6 +322,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     } finally {
       _confirming = null;
       _abortCapture = null;
+      _promptTts = null;
       if (state.awaitingAnswer) state = state.copyWith(awaitingAnswer: false);
     }
   }
@@ -400,18 +418,52 @@ String voiceErrorText(Object error) => switch (error) {
   _ => 'Sprache hat nicht geklappt: $error',
 };
 
-/// Spoken question for an open confirmation, in [language] (de/fr/en).
-String confirmationPrompt(PendingQuestion question, String? language) =>
-    switch (VoiceTexts.of(language).language) {
-      'fr' => 'Je confirme ? Oui ou non ?',
-      'en' => 'Shall I go ahead? Yes or no?',
-      _ => switch (question) {
-        ToolQuestion(:final event) =>
-          '${confirmationTexts(event.call.name).title} Ja oder nein?',
-        EscalationQuestion(:final toName) =>
-          'An $toName übergeben? Ja oder nein?',
-      },
-    };
+/// Whether a spoken „yes“ to [question] must be strict (1–2 yes words):
+/// `external` tools and escalations below the privacy level.
+bool strictAnswer(PendingQuestion question) => switch (question) {
+  ToolQuestion(:final event) => event.risk == RiskLevel.external,
+  EscalationQuestion() => true,
+};
+
+/// Spoken question for an open confirmation, in [language] (de/fr/en);
+/// names the action.
+String confirmationPrompt(PendingQuestion question, String? language) {
+  final lang = VoiceTexts.of(language).language;
+  return switch (question) {
+    ToolQuestion(:final event) => switch (lang) {
+      'fr' => '${_actionFr(event.call.name)} Oui ou non ?',
+      'en' => '${_actionEn(event.call.name)} Yes or no?',
+      _ => '${confirmationTexts(event.call.name).title} Ja oder nein?',
+    },
+    EscalationQuestion(:final toName) => switch (lang) {
+      'fr' => 'Transmettre à $toName ? Oui ou non ?',
+      'en' => 'Hand over to $toName? Yes or no?',
+      _ => 'An $toName übergeben? Ja oder nein?',
+    },
+  };
+}
+
+String _spokenTool(String tool) =>
+    tool.replaceAll('__', ' ').replaceAll('_', ' ');
+
+bool _deletes(String tool) => RegExp('delete|remove|clear|forget')
+    .hasMatch(tool.contains('__') ? tool.substring(tool.indexOf('__')) : tool);
+
+String _actionFr(String tool) => switch (tool) {
+  'calendar__delete_event' => 'Supprimer le rendez-vous ?',
+  'obsidian__replace_section' => 'Remplacer la section de la note ?',
+  'lists__clear_completed' => 'Supprimer les éléments terminés ?',
+  _ when _deletes(tool) => 'Supprimer : ${_spokenTool(tool)} ?',
+  _ => 'Exécuter : ${_spokenTool(tool)} ?',
+};
+
+String _actionEn(String tool) => switch (tool) {
+  'calendar__delete_event' => 'Delete the appointment?',
+  'obsidian__replace_section' => 'Replace the section of the note?',
+  'lists__clear_completed' => 'Clear the completed items?',
+  _ when _deletes(tool) => 'Delete: ${_spokenTool(tool)}?',
+  _ => 'Run: ${_spokenTool(tool)}?',
+};
 
 /// Spoken request to repeat an unclear answer.
 String repeatPrompt(String? language) =>

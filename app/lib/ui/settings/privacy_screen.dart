@@ -56,6 +56,23 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
           'Verläufe und Prüfprotokoll bleiben auf dem Gerät. Ältere Einträge '
           'löscht Wendelin automatisch.',
       children: [
+        SectionCard(
+          children: [
+            SettingsRow(
+              title: 'Bildschirminhalt schützen',
+              detail:
+                  'Keine Screenshots, im App-Wechsler verdeckt. Das '
+                  'Assistenten-Overlay ist immer geschützt.',
+              trailing: WSwitch(
+                value: ref.watch(secureScreenProvider),
+                semanticLabel: 'Bildschirminhalt schützen',
+                onChanged: (on) => unawaited(
+                  ref.read(secureScreenProvider.notifier).set(secure: on),
+                ),
+              ),
+            ),
+          ],
+        ),
         SettingsSection(
           title: 'Aufbewahrung',
           children: [
