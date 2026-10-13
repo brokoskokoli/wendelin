@@ -185,6 +185,33 @@ void main() {
       expect(obs.index.notes, hasLength(5));
     });
 
+    for (final (name, make) in [
+      (
+        'Limit je Lauf',
+        (VaultPort v, NoteIndexPort i) => NoteIndexer(v, i, maxFilesPerRun: 2),
+      ),
+      (
+        'zu viele Einträge',
+        (VaultPort v, NoteIndexPort i) => NoteIndexer(v, i, maxEntries: 2),
+      ),
+    ]) {
+      test('nach unvollständigem Durchlauf ($name) synchronisiert die '
+          'nächste Suche sofort (N19)', () async {
+        final obs = Obs(
+          files: {for (var i = 0; i < 5; i++) 'n$i.md': 'Gemeinsam $i'},
+          indexer: make,
+        );
+        final start = DateTime.utc(2026, 10, 13, 12);
+        await obs.ok('search_notes', {'query': 'x'}, context: ctxAt(start));
+        obs.vault.methodCalls.clear();
+        // Eine Sekunde später, weit unter dem Intervall von 30 s.
+        await obs.ok('search_notes', {
+          'query': 'x',
+        }, context: ctxAt(start.add(const Duration(seconds: 1))));
+        expect(obs.vault.methodCalls, contains('list'));
+      });
+    }
+
     test(
       'unvollständiger Durchlauf (zu viele Einträge) wird gemeldet',
       () async {

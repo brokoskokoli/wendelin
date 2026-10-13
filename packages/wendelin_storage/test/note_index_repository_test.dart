@@ -59,6 +59,17 @@ void main() {
       },
     );
 
+    test('Ordnertreffer vor reinem Texttreffer (Pfadgewicht, N13)', () async {
+      // Gleich lange Spalten: ohne Pfadgewicht gleichauf (dann gewinnt
+      // der Pfad „Andere.md“ alphabetisch), mit Gewicht 2 der Ordner.
+      await add('Malta/Notiz.md', 'Notiz', 'eins zwei drei');
+      await add('Andere.md', 'Andere', 'Malta eins zwei');
+      for (var i = 0; i < 4; i++) {
+        await add('f$i.md', 'Titel $i', 'anderer Text $i');
+      }
+      expect(await paths('Malta'), ['Malta/Notiz.md', 'Andere.md']);
+    });
+
     test('mehr passende Wörter vor einem Wort', () async {
       await add('eins.md', 'Eins', 'Tauchen ist schön');
       await add('beide.md', 'Beide', 'Tauchen auf Malta');
