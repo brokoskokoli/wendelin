@@ -64,4 +64,6 @@ dependencies {
     // JVM tests of pure Kotlin logic (./gradlew :app:testDebugUnitTest), e.g. RecognitionServiceStatus.
     testImplementation("junit:junit:4.12")
     androidTestImplementation("junit:junit:4.12")
+    // JVM tests of the Android-free logic (AssistantLauncher, B10): ./gradlew app:testDebugUnitTest
+    testImplementation("junit:junit:4.12")
 }

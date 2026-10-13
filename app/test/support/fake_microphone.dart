@@ -76,6 +76,8 @@ final class FakePcmRecorder implements PcmRecorder {
     _timer?.cancel();
     final c = _ctrl;
     _ctrl = null;
-    await c?.close();
+    // Not awaited, like the plugin's broadcast stream: a stream nobody
+    // listened to yet (stop right after start) would never report done.
+    unawaited(c?.close());
   }
 }

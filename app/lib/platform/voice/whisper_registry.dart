@@ -33,3 +33,30 @@ Future<RemoteWhisperBackend?> lookupSharedWhisper(
   if (!await RemoteWhisperBackend.alive(port, within: within)) return null;
   return RemoteWhisperBackend(port);
 }
+
+String _liveName(String engine, String modelId) =>
+    'app.wendelin/whisper-live/$engine/$modelId';
+
+const _engines = ['app', 'overlay', 'recognizer'];
+
+/// Marks the own Whisper model [modelId] of [engine] as loaded (debug
+/// counter of the loaded models per process, B14).
+void markLiveWhisper(String engine, String modelId, SendPort port) {
+  final name = _liveName(engine, modelId);
+  IsolateNameServer.removePortNameMapping(name);
+  IsolateNameServer.registerPortWithName(port, name);
+}
+
+/// Removes the mark of [markLiveWhisper].
+void unmarkLiveWhisper(String engine, String modelId) =>
+    IsolateNameServer.removePortNameMapping(_liveName(engine, modelId));
+
+/// Number of Whisper models the engines of this process have loaded (by
+/// their marks; an engine that ended without releasing still counts).
+int liveWhisperCount([
+  Iterable<String> modelIds = const ['whisper-base', 'whisper-small'],
+]) => [
+  for (final e in _engines)
+    for (final id in modelIds)
+      if (IsolateNameServer.lookupPortByName(_liveName(e, id)) != null) id,
+].length;

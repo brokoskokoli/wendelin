@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/voice_log.dart';
 import 'isolate_exit.dart';
 import 'pcm.dart';
 import 'sherpa_runtime.dart';
@@ -233,6 +234,7 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
   Duration exitGrace = const Duration(seconds: 5);
 
   Future<(WorkerIsolate, SendPort, StreamIterator<Object?>)> _start() async {
+    voiceLog('model-load', {'kind': 'tts-sherpa'});
     final replies = ReceivePort();
     final worker = await WorkerIsolate.spawn(_main, (
       replies.sendPort,
@@ -297,6 +299,7 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     await replies.cancel();
     // The isolate frees the voices and exits; kill only after the grace.
     await isolate.awaitExit(grace: exitGrace);
+    voiceLog('model-free', {'kind': 'tts-sherpa'});
   }
 
   static void _main((SendPort, String?) args) {

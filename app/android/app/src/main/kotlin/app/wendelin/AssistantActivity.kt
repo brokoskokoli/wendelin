@@ -17,6 +17,9 @@ import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 class AssistantActivity : WendelinActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Arrived before the Flutter engine starts (that may take a while on a cold start).
+        VoiceLog.i("overlay-create restored=${savedInstanceState != null}")
+        AssistantArrivals.arrived()
         super.onCreate(savedInstanceState)
         // Personal content: no screenshots, not visible in the app switcher.
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
@@ -35,7 +38,14 @@ class AssistantActivity : WendelinActivity() {
     /** The assistant was invoked again while the overlay is open. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        VoiceLog.i("overlay-new-intent finishing=$isFinishing engine=${assistant != null}")
+        AssistantArrivals.arrived()
         assistant?.trigger()
+    }
+
+    override fun onDestroy() {
+        VoiceLog.i("overlay-destroy finishing=$isFinishing")
+        super.onDestroy()
     }
 
     override fun onStop() {
@@ -44,6 +54,14 @@ class AssistantActivity : WendelinActivity() {
         // Dart closes first (stops microphone, speech output, request), then finishes.
         if (isChangingConfigurations || assistant?.unlocking == true || isFinishing) return
         val channel = assistant
-        if (channel == null) finish() else channel.requestClose { if (!isFinishing) finish() }
+        VoiceLog.i("overlay-stop engine=${channel != null}")
+        if (channel == null) {
+            finish()
+        } else {
+            channel.requestClose { how ->
+                VoiceLog.i("overlay-close by=$how finishing=$isFinishing")
+                if (!isFinishing) finish()
+            }
+        }
     }
 }

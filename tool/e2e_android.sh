@@ -39,10 +39,15 @@
 #   7. erledigt Aufträge der Tests aus files/e2e/host-request: `assist`
 #      (Bildschirm an, Assistenten-Rolle per `cmd role add-role-holder`,
 #      KEYCODE_ASSIST öffnet das Overlay), `back` (Overlay schließen, warten
-#      bis die AssistantActivity weg ist), `unrole` (Rolle entziehen, prüfen,
+#      bis die AssistantActivity weg ist), `meminfo` (`dumpsys meminfo` nach
+#      files/e2e/meminfo.txt), `unrole` (Rolle entziehen, prüfen,
 #      dass WendelinRecognitionService wieder aus ist),
 #   8. räumt danach auf: Rolle entzogen, Test-Vault gelöscht, App-Daten
 #      gelöscht (`pm clear`, auch die Modell-Kopien).
+#
+# Sprach-Robustheit (WP30): WENDELIN_REPEAT=<n> wiederholt die Runden von
+# voice_robustness_e2e_test.dart (je Runde D3 ohne und nach Overlay-Nutzung),
+# E2E_VOICE_LOG=<datei> sammelt danach alle `Wendelin/voice`-Zeilen.
 #
 # Live (integration_test/live_e2e_test.dart, kostet ein paar Cent):
 #   WENDELIN_LIVE=1 mit ANTHROPIC_API_KEY in der Umgebung. Der Key geht per
@@ -162,6 +167,12 @@ host_request() {
         sleep 0.5
       done
       ;;
+    meminfo)
+      # Speicher der App (B14, WP30): TOTAL PSS/RSS und Native Heap.
+      adb shell dumpsys meminfo "$PKG" | tr -d '\r' |
+        grep -E 'TOTAL PSS|TOTAL RSS|TOTAL SWAP|Native Heap:|^ *TOTAL ' |
+        adb shell run-as "$PKG" sh -c "'cat > files/e2e/meminfo.txt'"
+      ;;
     unrole)
       adb shell cmd role remove-role-holder --user 0 android.app.role.ASSISTANT "$PKG"
       sleep 3
@@ -243,6 +254,10 @@ status=0
 DEFINES=()
 if [ -n "$LIVE" ]; then DEFINES+=(--dart-define=WENDELIN_LIVE=true); fi
 if [ -n "$MODELS" ]; then DEFINES+=(--dart-define=WENDELIN_VOICE_E2E=true); fi
+# Wiederholungen der Sprach-Robustheit (WP30, voice_robustness_e2e_test.dart).
+if [ -n "${WENDELIN_REPEAT:-}" ]; then
+  DEFINES+=(--dart-define=WENDELIN_REPEAT="$WENDELIN_REPEAT")
+fi
 
 # Tests, die eine zweite Engine der App starten (Overlay), definieren deren
 # Dart-Einstieg selbst (`@pragma('vm:entry-point')`): Die Engine sucht ihn in
@@ -265,11 +280,16 @@ run_instrumented() { # <test.dart>
   adb install -r build/app/outputs/flutter-apk/app-debug.apk >/dev/null
   adb install -r build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk >/dev/null
   adb logcat -c
+  adb logcat -G 16M >/dev/null 2>&1 || true
   local out
   out="$(adb shell am instrument -w -r -e class "$PKG.FlutterE2eTest" \
     "$PKG.test/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r')"
   # Ausgaben der Dart-Tests (Messwerte, Fehler) aus logcat.
-  adb logcat -d -s flutter | grep -E 'M2-|EXCEPTION|Expected|Actual|Notiz|fail' | cut -c 33- || true
+  adb logcat -d -s flutter | grep -E 'M2-|WP30-|EXCEPTION|Expected|Actual|Notiz|fail' | cut -c 33- || true
+  # Diagnosezeilen ohne Inhalte (WP30) aller Engines und der Session.
+  if [ -n "${E2E_VOICE_LOG:-}" ]; then
+    adb logcat -d | grep 'Wendelin/voice' >"$E2E_VOICE_LOG" || true
+  fi
   echo "$out" | grep -E 'INSTRUMENTATION_STATUS: (test|stack)=|^OK|FAILURES|Tests run|INSTRUMENTATION_FAILED' | head -20 || true
   adb uninstall "$PKG.test" >/dev/null 2>&1 || true
   echo "$out" | grep -q '^OK (' || return 1
