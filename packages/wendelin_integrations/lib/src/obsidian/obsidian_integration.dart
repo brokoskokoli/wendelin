@@ -10,7 +10,8 @@ import '../common/port_exception.dart';
 import '../markdown/markdown_doc.dart';
 import 'daily_notes.dart';
 import 'note_indexer.dart';
-import 'obsidian_tools.dart';
+import 'obsidian_read_tools.dart';
+import 'obsidian_write_tools.dart';
 import 'ports.dart';
 import 'vault_path.dart';
 

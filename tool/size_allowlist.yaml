@@ -7,6 +7,3 @@
 # Begründung im Review.
 
 # Integrations-Tools: Abbau in WP36 Teil d.
-packages/wendelin_integrations/lib/src/calendar/calendar_tools.dart: 859  # WP36 (R2, Teil d)
-packages/wendelin_integrations/lib/src/lists/lists.dart: 864  # WP36 (R2, Teil d)
-packages/wendelin_integrations/lib/src/obsidian/obsidian_tools.dart: 905  # WP36 (R2, Teil d)
