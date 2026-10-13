@@ -1,12 +1,14 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../agent/agent_controller.dart';
+import '../../agent/conversation_state.dart';
+import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/voice_providers.dart';
 import '../../platform/assistant_platform.dart';
@@ -16,6 +18,7 @@ import '../design/design.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/private_banner.dart';
 import '../voice/microphone_access.dart';
+import 'overlay_frame.dart';
 import 'overlay_sheet.dart';
 
 /// Root widget of the assistant overlay (Dart entrypoint `assistantMain`,
@@ -202,6 +205,79 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     unawaited(_agent.send(text));
   }
 
+  Widget _sheet(
+    ConversationState conversation,
+    VoiceUiState voice, {
+    required bool available,
+    required MicState mic,
+    required ProviderTarget? target,
+    required ProviderConfig? config,
+  }) => OverlaySheet(
+    providerName: target == null
+        ? ''
+        : providerLabel(
+            config!.nameOf(target.profileId),
+            conversation.activeRule,
+          ),
+    privacy: target?.privacy ?? PrivacyLevel.standard,
+    privateSince: _locked ? null : conversation.privateSince,
+    privateByRequest: conversation.privateByRequest,
+    onNewConversation: conversation.running
+        ? null
+        : () => unawaited(_agent.newTopic()),
+    checkStatus: conversation.verification?.checkStatus,
+    exchange: _locked
+        ? const OverlayExchange()
+        : OverlayExchange.of(
+            conversation.entries.sublist(
+              _hideBefore > conversation.entries.length ? 0 : _hideBefore,
+            ),
+          ),
+    listening: voice.listening,
+    preparing: voice.preparing,
+    mic: mic,
+    levels: voice.levels,
+    locked: _locked,
+    onUnlock: _lockKnown ? () => unawaited(_unlock()) : null,
+    status: _locked
+        ? null
+        : voice.error ??
+              voice.hint ??
+              (available ? null : voiceUnavailableHint),
+    question: _locked ? null : conversation.pending,
+    onAnswer: (yes) => _agent.answer(approved: yes),
+    hint: voice.answersByVoice ? ConfirmationHint.voice : ConfirmationHint.tap,
+    onMic: () => _onMic(voice, conversation),
+    onClose: () => unawaited(_close()),
+    onKeyboard: _toggleKeyboard,
+    onUndo: (id) => unawaited(_voice.undo(id)),
+    typing: _typing ? _typingField() : null,
+  );
+
+  void _onMic(VoiceUiState voice, ConversationState conversation) {
+    if (voice.active) {
+      unawaited(_voice.cancel());
+    } else if (conversation.running) {
+      _agent.cancel();
+    } else {
+      unawaited(
+        _voice.start(TriggerKind.assistant, prepare: _microphoneAccess),
+      );
+    }
+  }
+
+  Widget _typingField() => TextField(
+    controller: _text,
+    autofocus: true,
+    style: WText.body,
+    textInputAction: TextInputAction.send,
+    onSubmitted: _send,
+    decoration: const InputDecoration(
+      hintText: 'Schreiben statt sprechen',
+      semanticCounterText: '',
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     ref.listen(voiceControllerProvider.select((v) => v.stopCount), (_, _) {
@@ -219,112 +295,15 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
             available: available,
             running: conversation.running,
           );
-    final sheet = OverlaySheet(
-      providerName: target == null
-          ? ''
-          : providerLabel(
-              config!.nameOf(target.profileId),
-              conversation.activeRule,
-            ),
-      privacy: target?.privacy ?? PrivacyLevel.standard,
-      privateSince: _locked ? null : conversation.privateSince,
-      privateByRequest: conversation.privateByRequest,
-      onNewConversation: conversation.running
-          ? null
-          : () => unawaited(_agent.newTopic()),
-      checkStatus: conversation.verification?.checkStatus,
-      exchange: _locked
-          ? const OverlayExchange()
-          : OverlayExchange.of(
-              conversation.entries.sublist(
-                _hideBefore > conversation.entries.length ? 0 : _hideBefore,
-              ),
-            ),
-      listening: voice.listening,
-      preparing: voice.preparing,
+    final sheet = _sheet(
+      conversation,
+      voice,
+      available: available,
       mic: mic,
-      levels: voice.levels,
-      locked: _locked,
-      onUnlock: _lockKnown ? () => unawaited(_unlock()) : null,
-      status: _locked
-          ? null
-          : voice.error ??
-                voice.hint ??
-                (available ? null : voiceUnavailableHint),
-      question: _locked ? null : conversation.pending,
-      onAnswer: (yes) => _agent.answer(approved: yes),
-      hint: voice.answersByVoice
-          ? ConfirmationHint.voice
-          : ConfirmationHint.tap,
-      onMic: () {
-        if (voice.active) {
-          unawaited(_voice.cancel());
-        } else if (conversation.running) {
-          _agent.cancel();
-        } else {
-          unawaited(
-            _voice.start(TriggerKind.assistant, prepare: _microphoneAccess),
-          );
-        }
-      },
-      onClose: () => unawaited(_close()),
-      onKeyboard: _toggleKeyboard,
-      onUndo: (id) => unawaited(_voice.undo(id)),
-      typing: _typing
-          ? TextField(
-              controller: _text,
-              autofocus: true,
-              style: WText.body,
-              textInputAction: TextInputAction.send,
-              onSubmitted: _send,
-              decoration: const InputDecoration(
-                hintText: 'Schreiben statt sprechen',
-                semanticCounterText: '',
-              ),
-            )
-          : null,
+      target: target,
+      config: config,
     );
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) unawaited(_close());
-      },
-      child: Material(
-        type: MaterialType.transparency,
-        // Keyboard (text input) pushes the sheet up.
-        child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final height = math.min(
-                WSize.overlaySheet,
-                constraints.maxHeight * WSize.overlayMaxFraction,
-              );
-              return Column(
-                children: [
-                  Expanded(
-                    child: Semantics(
-                      button: true,
-                      label: 'Assistent schließen',
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => unawaited(_close()),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: height,
-                    child: OverlayPanel(child: sheet),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
+    return OverlayFrame(onClose: () => unawaited(_close()), child: sheet);
   }
 }
 

@@ -118,6 +118,40 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Widget _ruleSection() => SettingsSection(
+    title: 'Regel',
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(WSpace.l, WSpace.s, WSpace.l, 0),
+        child: TextField(
+          controller: _name,
+          style: WText.body,
+          decoration: const InputDecoration(labelText: 'Name'),
+          onChanged: (_) => setState(() {}),
+        ),
+      ),
+      SettingsRow(
+        title: 'Aktiv',
+        trailing: WSwitch(
+          value: _enabled,
+          semanticLabel: 'Regel aktiv',
+          onChanged: (v) => setState(() => _enabled = v),
+        ),
+      ),
+      SettingsRow(
+        title: 'Auslöser entfernen',
+        detail:
+            'Präfix, Schlüsselwort oder Treffer gehen nicht ans '
+            'Modell; im Verlauf bleibt der Satz vollständig.',
+        trailing: WSwitch(
+          value: _strip,
+          semanticLabel: 'Auslöser entfernen',
+          onChanged: (v) => setState(() => _strip = v),
+        ),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final (draft, error) = _draft();
@@ -130,44 +164,7 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
     return SettingsPage(
       title: _existing == null ? 'Neue Regel' : 'Regel bearbeiten',
       children: [
-        SettingsSection(
-          title: 'Regel',
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                WSpace.l,
-                WSpace.s,
-                WSpace.l,
-                0,
-              ),
-              child: TextField(
-                controller: _name,
-                style: WText.body,
-                decoration: const InputDecoration(labelText: 'Name'),
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            SettingsRow(
-              title: 'Aktiv',
-              trailing: WSwitch(
-                value: _enabled,
-                semanticLabel: 'Regel aktiv',
-                onChanged: (v) => setState(() => _enabled = v),
-              ),
-            ),
-            SettingsRow(
-              title: 'Auslöser entfernen',
-              detail:
-                  'Präfix, Schlüsselwort oder Treffer gehen nicht ans '
-                  'Modell; im Verlauf bleibt der Satz vollständig.',
-              trailing: WSwitch(
-                value: _strip,
-                semanticLabel: 'Auslöser entfernen',
-                onChanged: (v) => setState(() => _strip = v),
-              ),
-            ),
-          ],
-        ),
+        _ruleSection(),
         SettingsSection(
           title: 'Ziel',
           children: [

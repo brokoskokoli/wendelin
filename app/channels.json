@@ -1,0 +1,155 @@
+{
+  "dartNames": "app/lib/platform/channels.dart",
+  "channels": {
+    "app.wendelin/apps": {
+      "dart": ["app/lib/platform/channel_app_presence_port.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AppsChannel.kt"],
+      "toKotlin": {
+        "isInstalled": {"args": ["package"], "returns": "value"}
+      },
+      "toDart": {}
+    },
+    "app.wendelin/assistant": {
+      "dart": ["app/lib/platform/assistant_platform.dart"],
+      "kotlin": [
+        "app/android/app/src/main/kotlin/app/wendelin/AssistantChannel.kt",
+        "app/android/app/src/main/kotlin/app/wendelin/RecognizerSwitch.kt"
+      ],
+      "toKotlin": {
+        "isDefaultAssistant": {"args": [], "returns": "value"},
+        "openAssistantSettings": {"args": [], "returns": "value"},
+        "isLocked": {"args": [], "returns": "value"},
+        "requestUnlock": {"args": [], "returns": "value"},
+        "isRecognizerOffered": {"args": [], "returns": "value"},
+        "recognitionServiceState": {"args": [], "returns": "map"},
+        "setRecognizerOffered": {"args": ["offered"], "returns": "none"},
+        "setRecognizerConfig": {
+          "args": ["model", "language", "vadThreshold", "minSpeechMs"],
+          "returns": "none"
+        },
+        "finish": {"args": [], "returns": "none"}
+      },
+      "toDart": {
+        "trigger": {"args": [], "returns": "none"},
+        "close": {"args": [], "returns": "none"}
+      }
+    },
+    "app.wendelin/auth": {
+      "dart": ["app/lib/platform/channel_authorization_browser.dart"],
+      "kotlin": [
+        "app/android/app/src/main/kotlin/app/wendelin/AuthChannel.kt"
+      ],
+      "toKotlin": {
+        "isAvailable": {"args": [], "returns": "value"},
+        "authorize": {"args": ["url", "redirect", "state"], "returns": "value"}
+      },
+      "toDart": {}
+    },
+    "app.wendelin/calendar": {
+      "dart": ["app/lib/platform/device_calendar_port.dart"],
+      "kotlin": [
+        "app/android/app/src/main/kotlin/app/wendelin/CalendarChannel.kt",
+        "app/android/app/src/main/kotlin/app/wendelin/CalendarRows.kt"
+      ],
+      "toKotlin": {
+        "hasPermission": {"args": [], "returns": "value"},
+        "requestPermission": {"args": [], "returns": "value"},
+        "listCalendars": {"args": [], "returns": "list"},
+        "listEvents": {
+          "args": ["start", "end", "calendarIds"],
+          "returns": "list"
+        },
+        "getEvent": {"args": ["id"], "returns": "map"},
+        "createEvent": {
+          "args": ["calendarId", "title", "start", "end", "allDay", "location", "description", "timeZone"],
+          "returns": "map"
+        },
+        "updateEvent": {
+          "args": ["id", "title", "start", "end", "allDay", "location", "description", "timeZone"],
+          "returns": "map"
+        },
+        "deleteEvent": {"args": ["id"], "returns": "none"}
+      },
+      "toDart": {}
+    },
+    "app.wendelin/files": {
+      "dart": [
+        "app/lib/platform/saf_list_file_port.dart",
+        "app/lib/platform/document_text_import.dart"
+      ],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/FilesChannel.kt"],
+      "toKotlin": {
+        "openDocument": {"args": ["mimeTypes"], "returns": "value"},
+        "createDocument": {"args": ["name"], "returns": "value"},
+        "read": {"args": ["uri"], "returns": "value"},
+        "write": {"args": ["uri", "bytes"], "returns": "none"},
+        "exists": {"args": ["uri"], "returns": "value"},
+        "hasAccess": {"args": ["uri"], "returns": "value"},
+        "displayName": {"args": ["uri"], "returns": "value"},
+        "release": {"args": ["uri"], "returns": "none"}
+      },
+      "toDart": {}
+    },
+    "app.wendelin/network": {
+      "dart": ["app/lib/platform/channel_network_status.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/NetworkChannel.kt"],
+      "toKotlin": {
+        "state": {"args": [], "returns": "value"}
+      },
+      "toDart": {
+        "changed": {"args": [], "returns": "none"}
+      }
+    },
+    "app.wendelin/recognizer": {
+      "dart": ["app/lib/platform/recognizer/recognizer_host.dart"],
+      "kotlin": [
+        "app/android/app/src/main/kotlin/app/wendelin/RecognizerEngine.kt",
+        "app/android/app/src/main/kotlin/app/wendelin/WendelinRecognitionService.kt",
+        "app/android/app/src/main/kotlin/app/wendelin/RecognizerSwitch.kt"
+      ],
+      "toKotlin": {
+        "ready": {"args": [], "returns": "none"},
+        "stopAudio": {"args": ["session"], "returns": "none"},
+        "event": {
+          "args": ["session", "type", "text", "confidence", "error", "message"],
+          "returns": "none"
+        }
+      },
+      "toDart": {
+        "start": {
+          "args": ["session", "language", "model", "sttLanguage", "vadThreshold", "minSpeechMs"],
+          "returns": "none"
+        },
+        "audio": {"args": ["session", "pcm"], "returns": "none"},
+        "audioError": {"args": ["session", "code"], "returns": "none"},
+        "stop": {"args": ["session"], "returns": "none"},
+        "cancel": {"args": ["session"], "returns": "none"},
+        "shutdown": {"args": [], "returns": "none"}
+      }
+    },
+    "app.wendelin/vault": {
+      "dart": ["app/lib/platform/saf_vault_port.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/VaultChannel.kt"],
+      "toKotlin": {
+        "pickTree": {"args": [], "returns": "map"},
+        "hasAccess": {"args": ["tree"], "returns": "value"},
+        "release": {"args": ["tree"], "returns": "none"},
+        "list": {"args": ["tree", "path"], "returns": "list"},
+        "stat": {"args": ["tree", "path"], "returns": "map"},
+        "read": {"args": ["tree", "path"], "returns": "value"},
+        "write": {"args": ["tree", "path", "bytes"], "returns": "none"},
+        "create": {"args": ["tree", "path", "bytes"], "returns": "none"},
+        "delete": {"args": ["tree", "path"], "returns": "none"}
+      },
+      "toDart": {}
+    },
+    "app.wendelin/window": {
+      "dart": ["app/lib/platform/screen_protection.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/WindowChannel.kt"],
+      "toKotlin": {
+        "setSecure": {"args": ["secure"], "returns": "none"}
+      },
+      "toDart": {}
+    }
+  }
+}

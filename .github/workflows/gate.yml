@@ -57,4 +57,7 @@ jobs:
       - run: flutter pub get
       - run: flutter build apk --release --target-platform android-arm64
         working-directory: app
+      # JVM-Unit-Tests der Kotlin-Logik (der Gradle-Wrapper entsteht beim Build).
+      - run: ./gradlew :app:testDebugUnitTest
+        working-directory: app/android
       - run: tool/check_apk.sh app/build/app/outputs/flutter-apk/app-release.apk

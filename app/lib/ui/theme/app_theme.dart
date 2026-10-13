@@ -399,37 +399,8 @@ ThemeData buildWendelinTheme() {
         ),
       ),
     ),
-    switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected)
-            ? WColors.onAccent
-            : WColors.textMuted,
-      ),
-      trackColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected) ? WColors.accent : WColors.line,
-      ),
-      trackOutlineColor: const WidgetStatePropertyAll(WColors.transparent),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: WColors.surface,
-      hintStyle: WText.body.copyWith(color: WColors.textMuted),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: WSpace.l,
-        vertical: WSpace.m14,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(WRadius.card),
-        borderSide: const BorderSide(color: WColors.line, width: WSize.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(WRadius.card),
-        borderSide: const BorderSide(
-          color: WColors.accent,
-          width: WSize.border,
-        ),
-      ),
-    ),
+    switchTheme: _switchTheme(),
+    inputDecorationTheme: _inputTheme(),
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: WColors.ink,
       shape: RoundedRectangleBorder(
@@ -454,6 +425,35 @@ ThemeData buildWendelinTheme() {
     ),
   );
 }
+
+SwitchThemeData _switchTheme() => SwitchThemeData(
+  thumbColor: WidgetStateProperty.resolveWith(
+    (s) =>
+        s.contains(WidgetState.selected) ? WColors.onAccent : WColors.textMuted,
+  ),
+  trackColor: WidgetStateProperty.resolveWith(
+    (s) => s.contains(WidgetState.selected) ? WColors.accent : WColors.line,
+  ),
+  trackOutlineColor: const WidgetStatePropertyAll(WColors.transparent),
+);
+
+InputDecorationTheme _inputTheme() => InputDecorationTheme(
+  filled: true,
+  fillColor: WColors.surface,
+  hintStyle: WText.body.copyWith(color: WColors.textMuted),
+  contentPadding: const EdgeInsets.symmetric(
+    horizontal: WSpace.l,
+    vertical: WSpace.m14,
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(WRadius.card),
+    borderSide: const BorderSide(color: WColors.line, width: WSize.border),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(WRadius.card),
+    borderSide: const BorderSide(color: WColors.accent, width: WSize.border),
+  ),
+);
 
 /// Nur für Tests sichtbar: alle Farbtokens nach Namen (für den Tokens-Test).
 @visibleForTesting

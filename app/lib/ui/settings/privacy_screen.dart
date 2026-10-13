@@ -45,6 +45,25 @@ class PrivacyScreen extends ConsumerStatefulWidget {
 class _PrivacyState extends ConsumerState<PrivacyScreen> {
   AuditKind? _filter;
 
+  Widget _retention(int days) => SettingsSection(
+    title: 'Aufbewahrung',
+    children: [
+      for (final d in RetentionDays.choices)
+        SettingsRow(
+          title: d == 365 ? '1 Jahr' : '$d Tage',
+          onTap: () => unawaited(
+            ref
+                .read(retentionDaysProvider.notifier)
+                .set(d)
+                .then((_) => ref.invalidate(auditViewProvider)),
+          ),
+          trailing: d == days
+              ? const CheckStatusIcon(CheckStatus.ok, semanticLabel: 'gewählt')
+              : null,
+        ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final days = ref.watch(retentionDaysProvider);
@@ -73,27 +92,7 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
             ),
           ],
         ),
-        SettingsSection(
-          title: 'Aufbewahrung',
-          children: [
-            for (final d in RetentionDays.choices)
-              SettingsRow(
-                title: d == 365 ? '1 Jahr' : '$d Tage',
-                onTap: () => unawaited(
-                  ref
-                      .read(retentionDaysProvider.notifier)
-                      .set(d)
-                      .then((_) => ref.invalidate(auditViewProvider)),
-                ),
-                trailing: d == days
-                    ? const CheckStatusIcon(
-                        CheckStatus.ok,
-                        semanticLabel: 'gewählt',
-                      )
-                    : null,
-              ),
-          ],
-        ),
+        _retention(days),
         Text('Prüfprotokoll', style: WText.sectionLabel),
         Wrap(
           spacing: WSpace.s,

@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
-/// Name of the platform channel for files picked through the Android
-/// Storage Access Framework (Kotlin side: `FilesChannel.kt`).
-const filesChannelName = 'app.wendelin/files';
+import 'channels.dart';
+
+export 'channels.dart' show filesChannelName;
 
 /// [ListFilePort] on SAF documents: the handle is the document URI with a
 /// persisted read/write grant (taken by [DocumentPicker]).

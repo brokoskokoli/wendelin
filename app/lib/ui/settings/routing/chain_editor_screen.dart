@@ -49,6 +49,31 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
         );
   }
 
+  Future<void> _addLink(
+    RoutingState state,
+    String owner,
+    List<RouteTarget> chain,
+  ) async {
+    final others = [
+      for (final p in state.profiles)
+        if (p.id != owner) p,
+    ];
+    if (others.isEmpty) {
+      showHint(context, 'Lege zuerst ein weiteres Profil an.');
+      return;
+    }
+    final target = await pickTarget(
+      context,
+      title: 'Glied hinzufügen',
+      profiles: others,
+      initial: RouteTarget(
+        profileId: others.first.id,
+        modelId: others.first.defaultModel,
+      ),
+    );
+    if (target != null) await _set(state, [...chain, target]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(routingProvider).value;
@@ -111,29 +136,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
                 ),
             ],
           ),
-        WideButton(
-          '+ Glied',
-          onPressed: () async {
-            final others = [
-              for (final p in state.profiles)
-                if (p.id != owner) p,
-            ];
-            if (others.isEmpty) {
-              showHint(context, 'Lege zuerst ein weiteres Profil an.');
-              return;
-            }
-            final target = await pickTarget(
-              context,
-              title: 'Glied hinzufügen',
-              profiles: others,
-              initial: RouteTarget(
-                profileId: others.first.id,
-                modelId: others.first.defaultModel,
-              ),
-            );
-            if (target != null) await _set(state, [...chain, target]);
-          },
-        ),
+        WideButton('+ Glied', onPressed: () => _addLink(state, owner, chain)),
       ],
     );
   }

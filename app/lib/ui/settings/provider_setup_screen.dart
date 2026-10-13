@@ -11,6 +11,10 @@ import '../../di/profiles.dart';
 import '../../di/provider_setup.dart';
 import '../../di/providers.dart';
 import '../design/design.dart';
+import 'provider_setup/credentials_step.dart';
+import 'provider_setup/finish_step.dart';
+import 'provider_setup/model_step.dart';
+import 'provider_setup/template_step.dart';
 import 'settings_page.dart';
 
 /// Settings → Provider: the setup dialog in steps (concept: „Einrichtung
@@ -200,7 +204,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       _Step.finish => 'Datenschutzstufe und optional ein Monatsbudget.',
     },
     children: switch (_step) {
-      _Step.template => _templates(),
+      _Step.template => templateStep(onChoose: _choose),
       _Step.credentials => _credentials(),
       _Step.model => _modelStep(),
       _Step.finish => _finish(),
@@ -219,187 +223,41 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
         : null;
   }
 
-  List<Widget> _templates() => [
-    SectionCard(
-      children: [
-        for (final t in providerTemplates)
-          SettingsRow(
-            title: t.name,
-            trailing: PrivacyChip(t.privacy),
-            onTap: () => _choose(t),
-          ),
-      ],
-    ),
-  ];
-
-  /// Profile name; with [login] the password manager's user name.
-  Widget _nameField({required bool login}) => TextField(
-    key: const ValueKey('providerName'),
-    controller: _name,
-    style: WText.body,
-    autofillHints: login ? const [AutofillHints.username] : null,
-    decoration: const InputDecoration(labelText: 'Name'),
+  List<Widget> _credentials() => credentialsStep(
+    session: _session!,
+    name: _name,
+    baseUrl: _baseUrl,
+    apiKey: _key,
+    busy: _busy,
+    editing: _editing,
+    failure: _failure('Verbindung fehlgeschlagen'),
+    onConnect: () => unawaited(_connect()),
+    onOtherTemplate: () => setState(() => _step = _Step.template),
+    onOpenUrl: (url) => unawaited(_openUrl(url)),
   );
 
-  Widget _baseUrlField() => TextField(
-    controller: _baseUrl,
-    style: WText.body,
-    keyboardType: TextInputType.url,
-    decoration: const InputDecoration(labelText: 'Base-URL'),
+  List<Widget> _modelStep() => modelStep(
+    connection: _connection,
+    models: _models,
+    model: _model,
+    failure: _failure('Modell nicht nutzbar'),
+    busy: _busy,
+    onChanged: () => setState(() {}),
+    onPick: (id) => setState(() => _model.text = id),
+    onProbe: () => unawaited(_probe()),
   );
 
-  List<Widget> _credentials() {
-    final session = _session!;
-    final t = session.template;
-    return [
-      // Name and key form one login for the password manager: the name
-      // („Claude“) tells its entries apart, so a provider key is not
-      // offered for Bring! or other secrets of the app.
-      if (t.auth == TemplateAuth.none)
-        _nameField(login: false)
-      else
-        AutofillGroup(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: WSpace.l18,
-            children: [
-              _nameField(login: true),
-              if (t.type == ProviderType.openaiCompatible) _baseUrlField(),
-              SecretField(
-                key: const ValueKey('apiKey'),
-                controller: _key,
-                label: t.auth == TemplateAuth.apiKey
-                    ? 'API-Key'
-                    : 'API-Key (optional)',
-                helperText: session.keyStored
-                    ? 'Key gespeichert – leer lassen behält ihn'
-                    : null,
-              ),
-            ],
-          ),
-        ),
-      if (t.auth == TemplateAuth.none &&
-          t.type == ProviderType.openaiCompatible)
-        _baseUrlField(),
-      if (t.auth != TemplateAuth.none) ...[
-        if (t.keyPageUrl case final url?)
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton(
-              onPressed: () => unawaited(_openUrl(url)),
-              child: const Text('Key beim Anbieter erstellen'),
-            ),
-          ),
-      ],
-      ?_failure('Verbindung fehlgeschlagen'),
-      PrimaryButton(
-        _busy ? 'Teste …' : 'Verbindung testen',
-        onPressed: _busy ? null : () => unawaited(_connect()),
-      ),
-      if (!_editing)
-        WideButton(
-          'Andere Vorlage',
-          onPressed: () => setState(() => _step = _Step.template),
-        ),
-    ];
-  }
-
-  List<Widget> _modelStep() => [
-    if (_connection case final c?) ConnectionStatus(c),
-    if (_models.isNotEmpty)
-      SettingsSection(
-        title: 'Modelle',
-        children: [
-          for (final m in _models.take(50))
-            SettingsRow(
-              title: m.displayName,
-              mono: true,
-              onTap: () => setState(() => _model.text = m.id),
-              trailing: _model.text == m.id
-                  ? const CheckStatusIcon(
-                      CheckStatus.ok,
-                      semanticLabel: 'gewählt',
-                    )
-                  : null,
-            ),
-        ],
-      ),
-    TextField(
-      controller: _model,
-      style: WText.body,
-      onChanged: (_) => setState(() {}),
-      decoration: const InputDecoration(labelText: 'Modell-ID'),
-    ),
-    ?_failure('Modell nicht nutzbar'),
-    PrimaryButton(
-      _busy ? 'Prüfe …' : 'Modell prüfen',
-      onPressed: _busy || _model.text.trim().isEmpty
-          ? null
-          : () => unawaited(_probe()),
-    ),
-  ];
-
-  List<Widget> _finish() {
-    final detected = _detected;
-    return [
-      StatusCard(
-        status: CheckStatus.ok,
-        title: 'Modell geprüft',
-        detail: _result?.message,
-      ),
-      if (detected != null)
-        Text(
-          [
-            detected.tools ? '✓ Tools' : '✕ Tools',
-            detected.vision ? '✓ Bilder' : '✕ Bilder',
-            if (detected.tee) '✓ TEE',
-          ].join(' · '),
-          style: WText.mono,
-        ),
-      SettingsSection(
-        title: 'Datenschutzstufe',
-        children: [
-          for (final level in PrivacyLevel.values)
-            SettingsRow(
-              title: level.label,
-              trailing: _privacy == level
-                  ? const CheckStatusIcon(
-                      CheckStatus.ok,
-                      semanticLabel: 'gewählt',
-                    )
-                  : PrivacyChip(level),
-              onTap: () => setState(() => _privacy = level),
-            ),
-        ],
-      ),
-      TextField(
-        controller: _budget,
-        style: WText.body,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(
-          labelText: r'Budget pro Monat in $ (optional)',
-          errorText: _budgetError,
-        ),
-      ),
-      SettingsSection(
-        title: 'Warnen ab',
-        children: [
-          for (final w in const [0.5, 0.8, 0.9])
-            SettingsRow(
-              title: '${(w * 100).round()} % des Budgets',
-              onTap: () => setState(() => _warn = w),
-              trailing: _warn == w
-                  ? const CheckStatusIcon(
-                      CheckStatus.ok,
-                      semanticLabel: 'gewählt',
-                    )
-                  : null,
-            ),
-        ],
-      ),
-      PrimaryButton('Speichern', onPressed: () => unawaited(_save())),
-    ];
-  }
+  List<Widget> _finish() => finishStep(
+    result: _result,
+    detected: _detected,
+    privacy: _privacy,
+    onPrivacy: (level) => setState(() => _privacy = level),
+    budget: _budget,
+    budgetError: _budgetError,
+    warn: _warn,
+    onWarn: (w) => setState(() => _warn = w),
+    onSave: () => unawaited(_save()),
+  );
 
   Future<void> _openUrl(String url) async {
     try {

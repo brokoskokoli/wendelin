@@ -49,82 +49,96 @@ class IntegrationDetailScreen extends ConsumerWidget {
                 'für sensible Integrationen festlegst.'
           : null,
       children: [
-        if (setupPageFor(id) case final page?)
-          SectionCard(
-            children: [
-              SettingsRow(
-                title: switch (id) {
-                  'web' => 'Suchdienst einrichten',
-                  'lists' => 'Listen verwalten',
-                  'obsidian' => 'Vault und Tagesnotizen',
-                  'bring' => 'Bring!-Konto',
-                  _ => 'Einrichten',
-                },
-                detail: switch (id) {
-                  'web' => 'Ohne Suchdienst liest Wendelin nur Seiten',
-                  _ => null,
-                },
-                onTap: () => Navigator.of(context).pushNamed(page),
-              ),
-            ],
-          ),
-        SectionCard(
-          children: [
-            for (final tool in integration.tools)
-              SettingsRow(
-                title: tool.name,
-                mono: true,
-                detail: riskText(
-                  tool.risk,
-                  prefs.alwaysConfirm.contains(tool.name),
-                  hasUndo: hasUndo,
-                ),
-                onTap: tool.risk == RiskLevel.external
-                    ? null
-                    : () => update(
-                        prefs.withConfirm(
-                          tool.name,
-                          confirm: !prefs.alwaysConfirm.contains(tool.name),
-                        ),
-                      ),
-                trailing: WSwitch(
-                  value: !prefs.disabled.contains(tool.name),
-                  semanticLabel: tool.name,
-                  onChanged: (on) =>
-                      update(prefs.withEnabled(tool.name, enabled: on)),
-                ),
-              ),
-          ],
-        ),
+        if (setupPageFor(id) case final page?) _setupRow(context, page),
+        _toolsCard(integration, prefs, hasUndo: hasUndo, update: update),
         Text(
           'Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.',
           style: WText.caption,
         ),
-        SectionCard(
-          children: [
-            SettingsRow(
-              title: 'Sensibel',
-              detail:
-                  'Persönliche Daten: Tools nur an Provider ab der '
-                  'eingestellten Stufe',
-              trailing: WSwitch(
-                value: integration.sensitive,
-                semanticLabel: '${integration.displayName} sensibel',
-                onChanged: (on) => update(
-                  prefs.withSensitive(
-                    id,
-                    sensitive: on,
-                    byDefault: unwrapIntegration(integration).sensitive,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        _sensitiveCard(integration, prefs, update),
         if (integration.sensitive) const SensitiveLevelSection(),
       ],
     );
   }
+
+  Widget _setupRow(BuildContext context, String page) => SectionCard(
+    children: [
+      SettingsRow(
+        title: switch (id) {
+          'web' => 'Suchdienst einrichten',
+          'lists' => 'Listen verwalten',
+          'obsidian' => 'Vault und Tagesnotizen',
+          'bring' => 'Bring!-Konto',
+          _ => 'Einrichten',
+        },
+        detail: switch (id) {
+          'web' => 'Ohne Suchdienst liest Wendelin nur Seiten',
+          _ => null,
+        },
+        onTap: () => Navigator.of(context).pushNamed(page),
+      ),
+    ],
+  );
+
+  Widget _toolsCard(
+    Integration integration,
+    ToolPrefs prefs, {
+    required bool hasUndo,
+    required void Function(ToolPrefs next) update,
+  }) => SectionCard(
+    children: [
+      for (final tool in integration.tools)
+        SettingsRow(
+          title: tool.name,
+          mono: true,
+          detail: riskText(
+            tool.risk,
+            prefs.alwaysConfirm.contains(tool.name),
+            hasUndo: hasUndo,
+          ),
+          onTap: tool.risk == RiskLevel.external
+              ? null
+              : () => update(
+                  prefs.withConfirm(
+                    tool.name,
+                    confirm: !prefs.alwaysConfirm.contains(tool.name),
+                  ),
+                ),
+          trailing: WSwitch(
+            value: !prefs.disabled.contains(tool.name),
+            semanticLabel: tool.name,
+            onChanged: (on) =>
+                update(prefs.withEnabled(tool.name, enabled: on)),
+          ),
+        ),
+    ],
+  );
+
+  Widget _sensitiveCard(
+    Integration integration,
+    ToolPrefs prefs,
+    void Function(ToolPrefs next) update,
+  ) => SectionCard(
+    children: [
+      SettingsRow(
+        title: 'Sensibel',
+        detail:
+            'Persönliche Daten: Tools nur an Provider ab der '
+            'eingestellten Stufe',
+        trailing: WSwitch(
+          value: integration.sensitive,
+          semanticLabel: '${integration.displayName} sensibel',
+          onChanged: (on) => update(
+            prefs.withSensitive(
+              id,
+              sensitive: on,
+              byDefault: unwrapIntegration(integration).sensitive,
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 /// German description of a tool's level and whether it asks.

@@ -158,7 +158,7 @@ void main() {
     expect(result['session'], 1);
     expect(result['text'], 'Milch kaufen');
     expect(result['confidence'], 0.8);
-    expect(result['language'], 'de');
+    expect(result.containsKey('language'), isFalse);
     // EXTRA_LANGUAGE wins over the setting; model and VAD from the request.
     expect(engines.stt.calls.single.language, 'de');
     expect(engines.checked, ['whisper-small']);

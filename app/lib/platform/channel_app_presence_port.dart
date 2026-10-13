@@ -1,9 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
-/// Name of the platform channel for the app detection (Kotlin:
-/// `AppsChannel.kt`).
-const appsChannelName = 'app.wendelin/apps';
+import 'channels.dart';
+
+export 'channels.dart' show appsChannelName;
 
 /// [AppPresencePort] over `PackageManager.getPackageInfo` (Kotlin
 /// `AppsChannel`). Only packages declared in `<queries>` of the manifest are

@@ -54,130 +54,149 @@ class MainScreenSample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              WSpace.screen,
-              WSpace.screenTop - WSize.tapTargetInset,
-              WSpace.screen,
-              WSpace.m - WSize.tapTargetInset,
-            ),
-            child: Row(
-              children: [
-                const WendelinMark(size: WSize.markHeader),
-                const SizedBox(width: WSpace.s10),
-                const WendelinWordmark(),
-                const Spacer(),
-                WIconButton(
-                  icon: WIcons.settings,
-                  tooltip: 'Einstellungen',
-                  onPressed: _noop,
-                ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              WSpace.screen,
-              0,
-              WSpace.screen,
-              WSpace.m,
-            ),
-            child: Wrap(
-              spacing: WSpace.s,
-              runSpacing: WSpace.s,
-              children: [
-                ProviderChip(
-                  name: 'Phala · GLM klein',
-                  level: PrivacyLevel.tee,
-                ),
-                MetaChip('heute 0,03 €'),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: WSpace.screen,
-                vertical: WSpace.s,
-              ),
-              children: [
-                for (final w in <Widget>[
-                  Text(
-                    'Heute · 08:12',
-                    style: WText.mono,
-                    textAlign: TextAlign.center,
-                  ),
-                  const UserBubble('Wie wird das Meer morgen früh?'),
-                  const _AnswerGroup(
-                    tools: ['weather__marine_forecast'],
-                    answer: AssistantText(
-                      'Ruhig: 0,4 m Welle, Dünung aus Südwest, Wasser 19 °C. '
-                      'Gute Bedingungen fürs Tauchen.',
-                    ),
-                  ),
-                  const UserBubble(
-                    'Claude, fass meine Notizen zum Tauchkurs zusammen und '
-                    'häng es an die Tagesnotiz.',
-                  ),
-                  const EscalationDivider('an Claude Sonnet übergeben'),
-                  const _AnswerGroup(
-                    tools: [
-                      'obsidian__search_notes',
-                      'obsidian__append_daily_note',
-                    ],
-                    answer: AssistantText(
-                      'Fünf Punkte aus drei Notizen, angehängt unter '
-                      '„Tauchen“ in der Tagesnotiz vom 12.10.',
-                      linkLabel: 'Notiz öffnen',
-                      onLinkTap: _noop,
-                    ),
-                  ),
-                ])
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: WSpace.m14),
-                    child: w,
-                  ),
-              ],
-            ),
-          ),
-          DecoratedBox(
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: WColors.surface, width: WSize.divider),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                WSpace.l,
-                WSpace.m,
-                WSpace.l,
-                WSpace.xxl,
-              ),
-              child: Row(
-                spacing: WSpace.m,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      style: WText.body,
-                      decoration: const InputDecoration(
-                        hintText: 'Schreiben statt sprechen',
-                      ),
-                    ),
-                  ),
-                  MicButton(
-                    state: MicState.idle,
-                    onPressed: _noop,
-                    compact: true,
-                  ),
-                ],
-              ),
-            ),
+          _SampleHeader(),
+          _SampleChips(),
+          Expanded(child: _SampleConversation()),
+          _SampleInputBar(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Kopf mit Marke und Einstellungen.
+class _SampleHeader extends StatelessWidget {
+  const _SampleHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        WSpace.screen,
+        WSpace.screenTop - WSize.tapTargetInset,
+        WSpace.screen,
+        WSpace.m - WSize.tapTargetInset,
+      ),
+      child: Row(
+        children: [
+          const WendelinMark(size: WSize.markHeader),
+          const SizedBox(width: WSpace.s10),
+          const WendelinWordmark(),
+          const Spacer(),
+          WIconButton(
+            icon: WIcons.settings,
+            tooltip: 'Einstellungen',
+            onPressed: _noop,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Anbieter- und Kosten-Chips.
+class _SampleChips extends StatelessWidget {
+  const _SampleChips();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(WSpace.screen, 0, WSpace.screen, WSpace.m),
+      child: Wrap(
+        spacing: WSpace.s,
+        runSpacing: WSpace.s,
+        children: [
+          ProviderChip(name: 'Phala · GLM klein', level: PrivacyLevel.tee),
+          MetaChip('heute 0,03 €'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Verlauf mit Antworten.
+class _SampleConversation extends StatelessWidget {
+  const _SampleConversation();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: WSpace.screen,
+        vertical: WSpace.s,
+      ),
+      children: [
+        for (final w in <Widget>[
+          Text('Heute · 08:12', style: WText.mono, textAlign: TextAlign.center),
+          const UserBubble('Wie wird das Meer morgen früh?'),
+          const _AnswerGroup(
+            tools: ['weather__marine_forecast'],
+            answer: AssistantText(
+              'Ruhig: 0,4 m Welle, Dünung aus Südwest, Wasser 19 °C. '
+              'Gute Bedingungen fürs Tauchen.',
+            ),
+          ),
+          const UserBubble(
+            'Claude, fass meine Notizen zum Tauchkurs zusammen und '
+            'häng es an die Tagesnotiz.',
+          ),
+          const EscalationDivider('an Claude Sonnet übergeben'),
+          const _AnswerGroup(
+            tools: ['obsidian__search_notes', 'obsidian__append_daily_note'],
+            answer: AssistantText(
+              'Fünf Punkte aus drei Notizen, angehängt unter '
+              '„Tauchen“ in der Tagesnotiz vom 12.10.',
+              linkLabel: 'Notiz öffnen',
+              onLinkTap: _noop,
+            ),
+          ),
+        ])
+          Padding(
+            padding: const EdgeInsets.only(bottom: WSpace.m14),
+            child: w,
+          ),
+      ],
+    );
+  }
+}
+
+/// Eingabezeile mit Mikrofon.
+class _SampleInputBar extends StatelessWidget {
+  const _SampleInputBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: WColors.surface, width: WSize.divider),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          WSpace.l,
+          WSpace.m,
+          WSpace.l,
+          WSpace.xxl,
+        ),
+        child: Row(
+          spacing: WSpace.m,
+          children: [
+            Expanded(
+              child: TextField(
+                style: WText.body,
+                decoration: const InputDecoration(
+                  hintText: 'Schreiben statt sprechen',
+                ),
+              ),
+            ),
+            MicButton(state: MicState.idle, onPressed: _noop, compact: true),
+          ],
+        ),
       ),
     );
   }
@@ -281,7 +300,6 @@ class IntegrationsSample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    void toggle(bool _) {}
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -312,83 +330,103 @@ class IntegrationsSample extends StatelessWidget {
               style: WText.intro,
             ),
             const SizedBox(height: WSpace.l18),
-            SectionCard(
-              children: [
-                IntegrationTile(
-                  name: 'Kalender',
-                  icon: WIcons.calendar,
-                  status: IntegrationStatus.active,
-                  detail: '6 Tools',
-                  onToggle: toggle,
-                ),
-                IntegrationTile(
-                  name: 'Obsidian',
-                  icon: WIcons.note,
-                  status: IntegrationStatus.active,
-                  detail: 'Vault „Leben“',
-                  onToggle: toggle,
-                ),
-                const IntegrationTile(
-                  name: 'Bring! Einkaufsliste',
-                  icon: WIcons.cart,
-                  status: IntegrationStatus.setupRequired,
-                  detail: 'Login fehlt',
-                  onAction: _noop,
-                ),
-                const IntegrationTile(
-                  name: 'Spotify',
-                  icon: WIcons.music,
-                  status: IntegrationStatus.error,
-                  detail: 'Token abgelaufen · pausiert',
-                  onAction: _noop,
-                ),
-                IntegrationTile(
-                  name: 'Wetter und Meer',
-                  icon: WIcons.waves,
-                  status: IntegrationStatus.available,
-                  onToggle: toggle,
-                ),
-                IntegrationTile(
-                  name: 'Kontakte',
-                  icon: WIcons.person,
-                  status: IntegrationStatus.available,
-                  sensitive: true,
-                  minPrivacy: PrivacyLevel.tee,
-                  onToggle: toggle,
-                ),
-                const IntegrationTile(
-                  name: 'Todoist',
-                  icon: WIcons.task,
-                  status: IntegrationStatus.unavailable,
-                  detail: 'App nicht installiert',
-                  onStore: _noop,
-                ),
-              ],
-            ),
+            const _SampleIntegrationList(),
             const SizedBox(height: WSpace.l18),
-            Row(
-              spacing: WSpace.m,
-              children: [
-                for (final label in ['+ MCP-Server', '+ HTTP-Tool'])
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _noop,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(WSize.buttonHeight),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            WRadius.buttonLarge,
-                          ),
-                        ),
-                      ),
-                      child: Text(label),
-                    ),
-                  ),
-              ],
-            ),
+            const _SampleAddButtons(),
           ],
         ),
       ),
+    );
+  }
+}
+
+void _toggle(bool _) {}
+
+/// Liste der Integrationen in allen Zuständen.
+class _SampleIntegrationList extends StatelessWidget {
+  const _SampleIntegrationList();
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      children: [
+        IntegrationTile(
+          name: 'Kalender',
+          icon: WIcons.calendar,
+          status: IntegrationStatus.active,
+          detail: '6 Tools',
+          onToggle: _toggle,
+        ),
+        IntegrationTile(
+          name: 'Obsidian',
+          icon: WIcons.note,
+          status: IntegrationStatus.active,
+          detail: 'Vault „Leben“',
+          onToggle: _toggle,
+        ),
+        const IntegrationTile(
+          name: 'Bring! Einkaufsliste',
+          icon: WIcons.cart,
+          status: IntegrationStatus.setupRequired,
+          detail: 'Login fehlt',
+          onAction: _noop,
+        ),
+        const IntegrationTile(
+          name: 'Spotify',
+          icon: WIcons.music,
+          status: IntegrationStatus.error,
+          detail: 'Token abgelaufen · pausiert',
+          onAction: _noop,
+        ),
+        IntegrationTile(
+          name: 'Wetter und Meer',
+          icon: WIcons.waves,
+          status: IntegrationStatus.available,
+          onToggle: _toggle,
+        ),
+        IntegrationTile(
+          name: 'Kontakte',
+          icon: WIcons.person,
+          status: IntegrationStatus.available,
+          sensitive: true,
+          minPrivacy: PrivacyLevel.tee,
+          onToggle: _toggle,
+        ),
+        const IntegrationTile(
+          name: 'Todoist',
+          icon: WIcons.task,
+          status: IntegrationStatus.unavailable,
+          detail: 'App nicht installiert',
+          onStore: _noop,
+        ),
+      ],
+    );
+  }
+}
+
+/// „+ MCP-Server“ und „+ HTTP-Tool“.
+class _SampleAddButtons extends StatelessWidget {
+  const _SampleAddButtons();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      spacing: WSpace.m,
+      children: [
+        for (final label in ['+ MCP-Server', '+ HTTP-Tool'])
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _noop,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(WSize.buttonHeight),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(WRadius.buttonLarge),
+                ),
+              ),
+              child: Text(label),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -60,41 +60,38 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
 
   RoutingNotifier get _notifier => ref.read(routingProvider.notifier);
 
+  List<Widget> _unavailable(AsyncValue<RoutingState?> async) => [
+    if (async.hasError) ...[
+      Text(
+        'Die Regeln lassen sich nicht lesen: ${async.error}',
+        style: WText.intro,
+      ),
+      WideButton('Regeln zurücksetzen', onPressed: () => unawaited(_reset())),
+    ] else
+      Text('…', style: WText.caption),
+  ];
+
+  List<Widget> _needsProvider() => [
+    Text(
+      'Routing braucht einen Provider. Richte zuerst einen ein.',
+      style: WText.intro,
+    ),
+    WideButton(
+      'Provider einrichten',
+      onPressed: () => Navigator.of(context).pushNamed(AppRoutes.providerSetup),
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(routingProvider);
     final state = async.value;
     final rules = state?.rules;
-    final List<Widget> children;
-    if (state == null) {
-      children = [
-        if (async.hasError) ...[
-          Text(
-            'Die Regeln lassen sich nicht lesen: ${async.error}',
-            style: WText.intro,
-          ),
-          WideButton(
-            'Regeln zurücksetzen',
-            onPressed: () => unawaited(_reset()),
-          ),
-        ] else
-          Text('…', style: WText.caption),
-      ];
-    } else if (rules == null) {
-      children = [
-        Text(
-          'Routing braucht einen Provider. Richte zuerst einen ein.',
-          style: WText.intro,
-        ),
-        WideButton(
-          'Provider einrichten',
-          onPressed: () =>
-              Navigator.of(context).pushNamed(AppRoutes.providerSetup),
-        ),
-      ];
-    } else {
-      children = _content(state, rules);
-    }
+    final children = state == null
+        ? _unavailable(async)
+        : rules == null
+        ? _needsProvider()
+        : _content(state, rules);
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,18 +105,7 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
                 WSpace.l18,
               ),
               children: [
-                Row(
-                  spacing: WSpace.m,
-                  children: [
-                    WIconButton(
-                      icon: WIcons.back,
-                      tooltip: 'Zurück',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      iconSize: WSize.iconSmall,
-                    ),
-                    Expanded(child: Text('Routing', style: WText.screenTitle)),
-                  ],
-                ),
+                const _RoutingHeader(),
                 const SizedBox(height: WSpace.l18 - WSize.tapTargetInset),
                 for (final (i, child) in children.indexed) ...[
                   if (i > 0) const SizedBox(height: WSpace.l18),
@@ -174,35 +160,12 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
         children: [
           Text('Erste passende Regel gewinnt', style: WText.sectionLabel),
           const SizedBox(height: WSpace.s),
-          ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            onReorderItem: (from, to) {
-              final list = [...rules.rules];
-              list.insert(to, list.removeAt(from));
-              unawaited(_notifier.save(rules.copyWith(rules: list)));
-            },
-            children: [
-              for (final (i, rule) in rules.rules.indexed)
-                Padding(
-                  key: ValueKey(rule.id),
-                  padding: const EdgeInsets.only(bottom: WSpace.s),
-                  child: Opacity(
-                    opacity: rule.enabled ? 1 : WOpacity.inactive,
-                    child: RuleTile(
-                      name: rule.enabled ? rule.name : '${rule.name} (aus)',
-                      condition: describeCondition(rule.condition),
-                      target: targetLabel(state, rule.target),
-                      targetLevel: targetLevel(state, rule.target),
-                      active: decision?.rule?.id == rule.id,
-                      reorderIndex: i,
-                      handleLabel: 'Regel „${rule.name}“ verschieben',
-                      onTap: () => _open(RuleEditorScreen(ruleId: rule.id)),
-                    ),
-                  ),
-                ),
-            ],
+          _RuleList(
+            state: state,
+            rules: rules,
+            decision: decision,
+            onReorder: (next) => unawaited(_notifier.save(next)),
+            onOpen: (rule) => _open(RuleEditorScreen(ruleId: rule.id)),
           ),
           RuleTile(
             name: 'Default',
@@ -421,4 +384,73 @@ class _ChainCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Title row with the back button.
+class _RoutingHeader extends StatelessWidget {
+  const _RoutingHeader();
+
+  @override
+  Widget build(BuildContext context) => Row(
+    spacing: WSpace.m,
+    children: [
+      WIconButton(
+        icon: WIcons.back,
+        tooltip: 'Zurück',
+        onPressed: () => Navigator.of(context).maybePop(),
+        iconSize: WSize.iconSmall,
+      ),
+      Expanded(child: Text('Routing', style: WText.screenTitle)),
+    ],
+  );
+}
+
+/// The rules in order, draggable by their handle; [decision] marks the one
+/// that wins for the test sentence.
+class _RuleList extends StatelessWidget {
+  const _RuleList({
+    required this.state,
+    required this.rules,
+    required this.decision,
+    required this.onReorder,
+    required this.onOpen,
+  });
+
+  final RoutingState state;
+  final RuleSet rules;
+  final RouteDecision? decision;
+  final void Function(RuleSet next) onReorder;
+  final void Function(RoutingRule rule) onOpen;
+
+  @override
+  Widget build(BuildContext context) => ReorderableListView(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    buildDefaultDragHandles: false,
+    onReorderItem: (from, to) {
+      final list = [...rules.rules];
+      list.insert(to, list.removeAt(from));
+      onReorder(rules.copyWith(rules: list));
+    },
+    children: [
+      for (final (i, rule) in rules.rules.indexed)
+        Padding(
+          key: ValueKey(rule.id),
+          padding: const EdgeInsets.only(bottom: WSpace.s),
+          child: Opacity(
+            opacity: rule.enabled ? 1 : WOpacity.inactive,
+            child: RuleTile(
+              name: rule.enabled ? rule.name : '${rule.name} (aus)',
+              condition: describeCondition(rule.condition),
+              target: targetLabel(state, rule.target),
+              targetLevel: targetLevel(state, rule.target),
+              active: decision?.rule?.id == rule.id,
+              reorderIndex: i,
+              handleLabel: 'Regel „${rule.name}“ verschieben',
+              onTap: () => onOpen(rule),
+            ),
+          ),
+        ),
+    ],
+  );
 }

@@ -116,7 +116,8 @@ class FilesChannel(private val activity: Activity, messenger: BinaryMessenger) :
     private val resolver get() = activity.contentResolver
 
     private fun handle(call: MethodCall): Any? {
-        val uri = Uri.parse(call.argument<String>("uri")!!)
+        val args = ChannelArgs.of(call.arguments)
+        val uri = Uri.parse(args.requireString("uri"))
         return when (call.method) {
             "read" -> resolver.openInputStream(uri)?.use { input ->
                 val out = ByteArrayOutputStream()
@@ -131,7 +132,7 @@ class FilesChannel(private val activity: Activity, messenger: BinaryMessenger) :
             } ?: throw FileNotFoundException()
             // "wt": truncate, so a shorter content leaves no rest of the old one.
             "write" -> {
-                val bytes = call.argument<ByteArray>("bytes")!!
+                val bytes = args.requireBytes("bytes")
                 resolver.openOutputStream(uri, "wt")?.use { it.write(bytes); it.flush() }
                     ?: throw FileNotFoundException()
                 null

@@ -1,9 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
-/// Name of the platform channel for the OAuth login (Kotlin:
-/// `AuthChannel.kt`).
-const authChannelName = 'app.wendelin/auth';
+import 'channels.dart';
+
+export 'channels.dart' show authChannelName;
 
 /// Why the login in the browser did not complete.
 enum AuthorizationFailure {

@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import 'channels.dart';
+
 /// Reads the calendar the user chose for new events (settings), or `null`.
 typedef PreferredCalendar = Future<String?> Function();
 
@@ -16,11 +18,11 @@ final class DeviceCalendarPort implements CalendarPort {
   /// Creates the port; `channel` is injectable for tests.
   DeviceCalendarPort({
     PreferredCalendar? preferredCalendar,
-    this._channel = const MethodChannel(channelName),
+    this._channel = const MethodChannel(calendarChannelName),
   }) : _preferred = preferredCalendar;
 
   /// Name of the platform channel.
-  static const channelName = 'app.wendelin/calendar';
+  static const channelName = calendarChannelName;
 
   final MethodChannel _channel;
   final PreferredCalendar? _preferred;
@@ -104,7 +106,6 @@ final class DeviceCalendarPort implements CalendarPort {
   Future<CalendarEvent> updateEvent(CalendarEvent event) async {
     final m = await _call<Map<Object?, Object?>>('updateEvent', {
       'id': event.id,
-      'calendarId': event.calendarId,
       ..._fields(
         title: event.title,
         start: event.start,

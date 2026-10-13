@@ -1,7 +1,8 @@
 import 'package:flutter/services.dart';
 
-/// Name of the platform channel for window flags (Kotlin: `WindowChannel.kt`).
-const windowChannelName = 'app.wendelin/window';
+import 'channels.dart';
+
+export 'channels.dart' show windowChannelName;
 
 /// Screen content protection (`FLAG_SECURE`: no screenshots or screen
 /// recording, blank in the app switcher). The assistant overlay always

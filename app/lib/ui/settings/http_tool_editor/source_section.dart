@@ -1,0 +1,158 @@
+import 'package:flutter/material.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
+
+import '../../../di/http_tool_draft.dart';
+import '../../design/design.dart';
+import '../settings_page.dart';
+import 'editor_parts.dart';
+
+/// „Anfrage“: method, URL template, headers and body template.
+class RequestSection extends StatelessWidget {
+  /// Creates the section.
+  const RequestSection({
+    super.key,
+    required this.draft,
+    required this.url,
+    required this.onEdit,
+  });
+
+  /// The tool being edited.
+  final HttpToolDraft draft;
+
+  /// Controller of the URL field (highlights placeholders).
+  final TextEditingController url;
+
+  /// Edit callback.
+  final DraftEdit onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = draft;
+    return SettingsSection(
+      title: 'Anfrage',
+      children: [
+        EditorField(
+          child: Wrap(
+            spacing: WSpace.s,
+            runSpacing: WSpace.s,
+            children: [
+              for (final m in HttpMethod.values)
+                ChoiceChip(
+                  label: Text(m.verb),
+                  selected: d.method == m,
+                  onSelected: (_) => onEdit(() => d.setMethod(m)),
+                ),
+            ],
+          ),
+        ),
+        EditorField(
+          child: TextField(
+            key: const ValueKey('url'),
+            controller: url,
+            style: WText.mono,
+            keyboardType: TextInputType.url,
+            autocorrect: false,
+            decoration: InputDecoration(
+              labelText: 'URL-Vorlage',
+              helperText:
+                  'Platzhalter wie {entity} nur in Pfad und Query, Host fest',
+              helperMaxLines: 2,
+            ),
+            onChanged: (v) => onEdit(() => d.url = v),
+          ),
+        ),
+        for (final (i, h) in d.headers.indexed)
+          _HeaderRow(draft: d, header: h, index: i, onEdit: onEdit),
+        SettingsRow(
+          title: '+ Header',
+          detail: 'Nicht geheim; Tokens gehören in die Anmeldung',
+          onTap: () => onEdit(() => d.headers.add(HttpHeaderDraft())),
+        ),
+        if (d.method.allowsBody) ..._body(d),
+      ],
+    );
+  }
+
+  List<Widget> _body(HttpToolDraft d) => [
+    EditorField(
+      child: Wrap(
+        spacing: WSpace.s,
+        children: [
+          for (final (f, label) in [
+            (HttpBodyFormat.json, 'JSON'),
+            (HttpBodyFormat.form, 'Formular'),
+          ])
+            ChoiceChip(
+              label: Text(label),
+              selected: d.bodyFormat == f,
+              onSelected: (_) => onEdit(() => d.bodyFormat = f),
+            ),
+        ],
+      ),
+    ),
+    EditorField(
+      child: TextFormField(
+        key: const ValueKey('body'),
+        initialValue: d.body,
+        style: WText.mono,
+        minLines: 2,
+        maxLines: 8,
+        decoration: const InputDecoration(
+          labelText: 'Body-Vorlage (JSON)',
+          helperText: '"{name}" wird typgerecht ersetzt; leer = kein Body',
+        ),
+        onChanged: (v) => onEdit(() => d.body = v),
+      ),
+    ),
+  ];
+}
+
+class _HeaderRow extends StatelessWidget {
+  _HeaderRow({
+    required this.draft,
+    required this.header,
+    required this.index,
+    required this.onEdit,
+  }) : super(key: ObjectKey(header));
+
+  final HttpToolDraft draft;
+  final HttpHeaderDraft header;
+  final int index;
+  final DraftEdit onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = header;
+    return EditorField(
+      child: Row(
+        spacing: WSpace.s,
+        children: [
+          Expanded(
+            child: TextFormField(
+              key: ValueKey('headerName$index'),
+              initialValue: h.name,
+              style: WText.mono,
+              decoration: const InputDecoration(labelText: 'Header'),
+              onChanged: (v) => onEdit(() => h.name = v),
+            ),
+          ),
+          Expanded(
+            child: TextFormField(
+              key: ValueKey('headerValue$index'),
+              initialValue: h.value,
+              style: WText.mono,
+              decoration: const InputDecoration(labelText: 'Wert'),
+              onChanged: (v) => onEdit(() => h.value = v),
+            ),
+          ),
+          WIconButton(
+            icon: WIcons.close,
+            tooltip: 'Header entfernen',
+            iconSize: WSize.iconSmall,
+            onPressed: () => onEdit(() => draft.headers.remove(h)),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
-/// Platform channel between `WendelinRecognitionService` (Kotlin) and the
-/// recognizer engine (`recognizerMain`).
-const recognizerChannelName = 'app.wendelin/recognizer';
+import '../channels.dart';
+
+export '../channels.dart' show recognizerChannelName;
 
 /// One recognition request of another app, as the service sends it: the
 /// requested language (`EXTRA_LANGUAGE`) and the settings mirrored from
@@ -348,7 +348,6 @@ Map<String, Object?> eventArgs(RecognitionEvent e) => switch (e) {
     'type': 'result',
     'text': transcript.text.trim(),
     'confidence': transcript.confidence,
-    'language': transcript.language,
   },
   RecognitionFailed(:final kind, :final message) => {
     'type': 'error',

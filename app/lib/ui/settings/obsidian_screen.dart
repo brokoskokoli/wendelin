@@ -160,6 +160,99 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
     if (mounted) showHint(context, 'Tagesnotizen gespeichert.');
   }
 
+  Widget _vaultSection(ObsidianPrefs prefs, bool accessOk) => SettingsSection(
+    title: 'Vault',
+    children: [
+      SectionCard(
+        children: [
+          SettingsRow(
+            title: prefs.vaultName ?? 'Kein Vault gewählt',
+            detail: !prefs.hasVault
+                ? 'Wähle den Ordner deines Obsidian-Vaults'
+                : accessOk
+                ? 'Zugriff erteilt'
+                : 'Kein Zugriff mehr – Ordner neu wählen',
+            trailing: prefs.hasVault
+                ? CheckStatusIcon(
+                    accessOk ? CheckStatus.ok : CheckStatus.failed,
+                    semanticLabel: accessOk
+                        ? 'Zugriff erteilt'
+                        : 'kein Zugriff',
+                  )
+                : null,
+          ),
+        ],
+      ),
+      PrimaryButton(
+        prefs.hasVault ? 'Anderen Ordner wählen' : 'Vault-Ordner wählen',
+        onPressed: () => unawaited(_pick()),
+      ),
+      if (prefs.hasVault)
+        WideButton('Vault entfernen', onPressed: () => unawaited(_remove())),
+    ],
+  );
+
+  Widget _dailySection() => SettingsSection(
+    title: 'Tagesnotizen',
+    children: [
+      TextField(
+        controller: _folder,
+        style: WText.body,
+        decoration: const InputDecoration(
+          labelText: 'Ordner',
+          hintText: ObsidianPrefs.defaultDailyFolder,
+          helperText:
+              'Leer lassen = Vault-Wurzel. Neue Tagesnotizen landen '
+              'in diesem Ordner.',
+          helperMaxLines: 2,
+        ),
+      ),
+      TextField(
+        controller: _format,
+        style: WText.body,
+        decoration: const InputDecoration(
+          labelText: 'Datumsformat wie in Obsidian',
+          hintText: 'YYYY-MM-DD',
+        ),
+      ),
+      TextField(
+        controller: _template,
+        style: WText.body,
+        decoration: const InputDecoration(
+          labelText: 'Vorlage (optional)',
+          hintText: 'Vorlagen/Tagesnotiz',
+        ),
+      ),
+      Text(_preview(), style: WText.mono),
+      WideButton(
+        'Tagesnotizen speichern',
+        onPressed: () => unawaited(_saveDaily()),
+      ),
+    ],
+  );
+
+  Widget _indexSection(ObsidianPrefs prefs, IndexProgress index) =>
+      SettingsSection(
+        title: 'Suchindex',
+        children: [
+          Text(index.label, style: WText.detail),
+          if (index.running)
+            LinearProgressIndicator(
+              value: index.fraction,
+              semanticsLabel: 'Index wird aufgebaut',
+            ),
+          Text(obsidianIndexHint, style: WText.caption),
+          WideButton(
+            'Index aufbauen',
+            onPressed: !prefs.hasVault || index.running
+                ? null
+                : () => unawaited(
+                    ref.read(obsidianIndexProvider.notifier).sync(),
+                  ),
+          ),
+        ],
+      );
+
   @override
   Widget build(BuildContext context) {
     final prefs = ref.watch(obsidianPrefsProvider);
@@ -171,98 +264,9 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
           'Wendelin liest und ergänzt Notizen direkt im Vault-Ordner. Sync '
           'bleibt bei Obsidian Sync, Syncthing oder Git.',
       children: [
-        SettingsSection(
-          title: 'Vault',
-          children: [
-            SectionCard(
-              children: [
-                SettingsRow(
-                  title: prefs.vaultName ?? 'Kein Vault gewählt',
-                  detail: !prefs.hasVault
-                      ? 'Wähle den Ordner deines Obsidian-Vaults'
-                      : accessOk
-                      ? 'Zugriff erteilt'
-                      : 'Kein Zugriff mehr – Ordner neu wählen',
-                  trailing: prefs.hasVault
-                      ? CheckStatusIcon(
-                          accessOk ? CheckStatus.ok : CheckStatus.failed,
-                          semanticLabel: accessOk
-                              ? 'Zugriff erteilt'
-                              : 'kein Zugriff',
-                        )
-                      : null,
-                ),
-              ],
-            ),
-            PrimaryButton(
-              prefs.hasVault ? 'Anderen Ordner wählen' : 'Vault-Ordner wählen',
-              onPressed: () => unawaited(_pick()),
-            ),
-            if (prefs.hasVault)
-              WideButton(
-                'Vault entfernen',
-                onPressed: () => unawaited(_remove()),
-              ),
-          ],
-        ),
-        SettingsSection(
-          title: 'Tagesnotizen',
-          children: [
-            TextField(
-              controller: _folder,
-              style: WText.body,
-              decoration: const InputDecoration(
-                labelText: 'Ordner',
-                hintText: ObsidianPrefs.defaultDailyFolder,
-                helperText:
-                    'Leer lassen = Vault-Wurzel. Neue Tagesnotizen landen '
-                    'in diesem Ordner.',
-                helperMaxLines: 2,
-              ),
-            ),
-            TextField(
-              controller: _format,
-              style: WText.body,
-              decoration: const InputDecoration(
-                labelText: 'Datumsformat wie in Obsidian',
-                hintText: 'YYYY-MM-DD',
-              ),
-            ),
-            TextField(
-              controller: _template,
-              style: WText.body,
-              decoration: const InputDecoration(
-                labelText: 'Vorlage (optional)',
-                hintText: 'Vorlagen/Tagesnotiz',
-              ),
-            ),
-            Text(_preview(), style: WText.mono),
-            WideButton(
-              'Tagesnotizen speichern',
-              onPressed: () => unawaited(_saveDaily()),
-            ),
-          ],
-        ),
-        SettingsSection(
-          title: 'Suchindex',
-          children: [
-            Text(index.label, style: WText.detail),
-            if (index.running)
-              LinearProgressIndicator(
-                value: index.fraction,
-                semanticsLabel: 'Index wird aufgebaut',
-              ),
-            Text(obsidianIndexHint, style: WText.caption),
-            WideButton(
-              'Index aufbauen',
-              onPressed: !prefs.hasVault || index.running
-                  ? null
-                  : () => unawaited(
-                      ref.read(obsidianIndexProvider.notifier).sync(),
-                    ),
-            ),
-          ],
-        ),
+        _vaultSection(prefs, accessOk),
+        _dailySection(),
+        _indexSection(prefs, index),
       ],
     );
   }

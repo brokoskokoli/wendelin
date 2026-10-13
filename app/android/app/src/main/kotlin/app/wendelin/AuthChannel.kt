@@ -57,8 +57,8 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
         val url = call.argument<String>("url")?.let(Uri::parse)
         val back = call.argument<String>("redirect")?.let(Uri::parse)
         val expectedState = call.argument<String>("state")
-        if (url == null || back == null || expectedState.isNullOrEmpty() ||
-            (url.scheme != "https" && url.scheme != "http")
+        if (url == null || back == null ||
+            !OAuthRedirect.isValidRequest(url.scheme, hasRedirect = true, state = expectedState)
         ) {
             result.error("bad_args", "url, redirect oder state fehlt", null)
             return
@@ -115,11 +115,16 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
 
     private fun complete(uri: Uri): Boolean {
         val expected = redirect ?: return false
-        if (uri.scheme != expected.scheme || uri.host != expected.host || uri.path != expected.path) {
+        // Not our login (another app opened the redirect address): ignore it and keep waiting.
+        if (!OAuthRedirect.accepts(
+                OAuthRedirect.Target(expected.scheme, expected.host, expected.path),
+                OAuthRedirect.Target(uri.scheme, uri.host, uri.path),
+                state,
+                uri.getQueryParameter("state"),
+            )
+        ) {
             return false
         }
-        // Not our login (another app opened the redirect address): ignore it and keep waiting.
-        if (uri.getQueryParameter("state") != state) return false
         finish { it.success(uri.toString()) }
         // Back to the app: closes the Custom Tab above it in this task.
         activity.startActivity(

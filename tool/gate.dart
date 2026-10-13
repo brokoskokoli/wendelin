@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
+import 'src/kotlin_unit.dart';
 
 /// Mindestabdeckung je Paket unter `packages/` (und `evals`).
 const minCoverage = 85.0;
@@ -61,7 +62,7 @@ Future<void> main(List<String> args) async {
   for (final n in notes) {
     stdout.writeln(n);
   }
-  final (:targets, :tooling) = scope;
+  final (:targets, :tooling, :kotlin) = scope;
   bool wants(String t) => targets == null || targets.contains(t);
   final packages = {
     for (final MapEntry(:key, :value) in _packageDirs().entries)
@@ -73,6 +74,7 @@ Future<void> main(List<String> args) async {
     await _testPackage(gate, name, dir);
   }
   if (hasApp && !args.contains('--no-app')) await _appSteps(gate);
+  if (kotlin && hasApp && !args.contains('--no-app')) await _kotlinStep(gate);
   await _globalSteps(gate, tooling: tooling);
   exitCode = gate.finish(total.elapsed, notes: notes);
   _reports.deleteSync(recursive: true);
@@ -131,6 +133,41 @@ Future<void> _appSteps(Gate gate) async {
   );
 }
 
+/// JVM-Unit-Tests der Kotlin-Logik. Ohne Android-SDK (oder ohne den von
+/// Flutter erzeugten Gradle-Wrapper) steht der Schritt als übersprungen in
+/// der Zusammenfassung, nicht als grün.
+Future<void> _kotlinStep(Gate gate) async {
+  const name = 'kotlin-unit';
+  final sdk = androidSdk(
+    Platform.environment,
+    Platform.environment['HOME'] ?? '',
+    (p) => Directory(p).existsSync(),
+  );
+  final skip = sdk == null
+      ? 'kein Android-SDK'
+      : !File('app/android/gradlew').existsSync()
+      ? 'kein Gradle-Wrapper (flutter build apk erzeugt ihn)'
+      : null;
+  if (skip != null) {
+    gate.record(StepResult(name, Outcome.skipped, Duration.zero, skip));
+    return;
+  }
+  clearReports(kotlinReportDir);
+  await gate.step(
+    name,
+    'bash',
+    ['gradlew', ':app:testDebugUnitTest', '-q'],
+    cwd: 'app/android',
+    check: (_) async {
+      final c = countJUnit(readReports(kotlinReportDir));
+      return (
+        detail: '${c.tests} Tests',
+        failure: c.tests == 0 ? 'keine Testberichte gefunden' : null,
+      );
+    },
+  );
+}
+
 /// Prüfungen über das ganze Repo und Selbsttests der Werkzeuge.
 Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
   await gate.step('check_deps', 'dart', ['run', 'tool/check_deps.dart']);
@@ -145,6 +182,10 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
     ),
   );
   await gate.step('check_docs', 'dart', ['run', 'tool/check_docs.dart']);
+  await gate.step('check_channels', 'dart', [
+    'run',
+    'tool/check_channels.dart',
+  ]);
   if (!tooling) return;
   // Selbsttests der Werkzeuge (gate, check_sizes, check_docs) und der
   // Geräte-Skripte (nur bash, kein Android-SDK nötig).
@@ -161,16 +202,16 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
 
 /// Prüfumfang: `targets == null` heißt alle Pakete. `null` bei einem
 /// Git-Fehler im Modus `--changed`.
-({Set<String>? targets, bool tooling})? _scope(
+({Set<String>? targets, bool tooling, bool kotlin})? _scope(
   List<String> args,
   List<String> notes,
 ) {
   final only = args.where((a) => !a.startsWith('-')).toSet();
   if (!args.contains('--changed')) {
     return only.isEmpty
-        ? (targets: null, tooling: true)
+        ? (targets: null, tooling: true, kotlin: true)
         // Mit Paketen laufen die Werkzeug- und Geräte-Selbsttests weiter mit.
-        : (targets: only, tooling: true);
+        : (targets: only, tooling: true, kotlin: only.contains(appTarget));
   }
   final baseArg = args.where((a) => a.startsWith('--base=')).firstOrNull;
   final base = baseArg?.substring(7) ?? _defaultBase();
@@ -185,7 +226,7 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
   final head = '--changed gegen $base: ${changed.length} geänderte Dateien';
   if (sel.fullReason case final why?) {
     notes.add('$head, volles Gate ($why)');
-    return (targets: null, tooling: true);
+    return (targets: null, tooling: true, kotlin: true);
   }
   notes.add(
     sel.targets.isEmpty
@@ -193,7 +234,12 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
         : '$head. Geprüft: '
               '${sel.targets.entries.map((e) => '${e.key}: ${e.value}').join('; ')}',
   );
-  return (targets: sel.targets.keys.toSet(), tooling: sel.tooling);
+  // Kotlin-Unit-Tests nur, wenn sich unter app/android etwas geändert hat.
+  return (
+    targets: sel.targets.keys.toSet(),
+    tooling: sel.tooling,
+    kotlin: changed.any((p) => p.startsWith('app/android/')),
+  );
 }
 
 String _defaultBase() =>
