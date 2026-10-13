@@ -22,11 +22,11 @@ Kurzfassung der Abhängigkeiten (geprüft von `tool/check_deps.dart`): `core` h�
 
 | Ordner | Inhalt |
 | --- | --- |
-| `app/lib/main.dart`, `app/lib/app.dart` | Drei Einstiege: `main` (App), `assistantMain` (Overlay-Engine), `recognizerMain` (Spracherkennung für andere Apps, ADR 0008) |
+| `app/lib/main.dart`, `app/lib/app.dart`, `app/lib/bootstrap/` | Drei Einstiege: `main` (App), `assistantMain` (Overlay-Engine), `recognizerMain` (Spracherkennung für andere Apps, ADR 0008); Start in Schritten unter `bootstrap/` (Storage öffnen, Geräteinfo, `ProviderScope` mit Overrides) |
 | `app/lib/agent/` | `AgentController` (Anfragen, Bestätigungen, Undo), `ConversationReducer` und `ConversationState` (Events → UI-Zustand). Dazu fachfremd `bring_share.dart` und `money.dart` (N7) |
 | `app/lib/di/` | Riverpod-Verdrahtung. Enthält heute auch App-Logik (`http_tool_draft.dart`, `http_tools.dart`, `user_integrations.dart`, Teile von `voice_providers.dart`); WP39 zieht sie in Pakete. Neue Logik gehört in ein Paket, nicht hierher |
 | `app/lib/platform/` | Implementierungen der Ports (Kanäle, Plugins, sherpa-onnx in `app/lib/platform/voice/`, Spracherkennung in `app/lib/platform/recognizer/`) |
-| `app/lib/ui/` | `design/` (Bausteine, Galerie), `screens/` (Hauptbildschirm, Texte in `labels.dart`), `settings/`, `onboarding/`, `overlay/`, `theme/`, Routen in `app/lib/ui/routes.dart` |
+| `app/lib/ui/` | `design/` (Bausteine, Galerie), `screens/` (Hauptbildschirm, Texte in `labels.dart`), `settings/`, `onboarding/`, `overlay/`, `theme/`, Routen in `app/lib/ui/routes.dart` (setzt `general_routes.dart` und `integration_routes.dart` zusammen) |
 | `app/lib/voice/` | `VoiceController` (Mikrofon, Pipeline, Sprachbestätigung), `voice_components.dart` |
 | `app/lib/debug/` | Überschreibungen für Gerätetests (nur Debug-Builds) |
 
@@ -56,8 +56,8 @@ Ports liegen in dem Paket, das sie braucht; die Flutter-Implementierung liegt in
 ## App-Verdrahtung
 
 - **Start:** `app/lib/main.dart` öffnet die Datenbank (`openAppStorage`), liest `StartupSettings` (`app/lib/di/startup.dart`) und startet `WendelinApp` (`app/lib/app.dart`) bzw. das Overlay. Grundlage: ADR 0004.
-- **Provider nach Bereich:** Basis (Uhr, Ids, Storage, Secrets, HTTP) und Integrationen, Agent, Kosten in `app/lib/di/providers.dart` (wird mit WP38 geschnitten); Sprache in `app/lib/di/voice_providers.dart`; Provider-Profile und Routing in `app/lib/di/provider_config.dart`, `app/lib/di/routing.dart`; Agent-Bau in `app/lib/di/agent_factory.dart`; Einstellungen in `app/lib/di/preferences.dart`, `app/lib/di/app_settings.dart`.
-- **Integrationsregistry:** eingebaute Integrationen als `IntegrationSpec` in `app/lib/di/integration_specs.dart`, Geräteports gebündelt in `PlatformPorts` (`app/lib/platform/platform_ports.dart`). `IntegrationActivator` (`app/lib/di/integration_activator.dart`) schaltet ein und aus und fragt erst dann nach Berechtigungen. Nutzerdefinierte Integrationen (HTTP-Tools, MCP) kommen als `UserIntegrationSource` über `UserIntegrationSync` (`app/lib/di/user_integrations.dart`, ADR 0012).
+- **Provider nach Bereich:** Basis (Uhr, Ids, Storage, Secrets, HTTP, Ports) in `app/lib/di/core_providers.dart`, Integrationen und Registry in `integration_providers.dart`, Agent, Kosten in `agent_providers.dart`; `providers.dart` re-exportiert nur; Sprache in `app/lib/di/voice_providers.dart`; Provider-Profile und Routing in `app/lib/di/provider_config.dart`, `app/lib/di/routing.dart`; Agent-Bau in `app/lib/di/agent_factory.dart`; Einstellungen in `app/lib/di/preferences.dart`, `app/lib/di/app_settings.dart`.
+- **Integrationsregistry:** eingebaute Integrationen als `IntegrationSpec`, eine Datei je Integration unter `app/lib/di/integrations/`, Liste in `integrations/registry.dart` (`integration_specs.dart` re-exportiert Typen und Liste), Geräteports gebündelt in `PlatformPorts` (`app/lib/platform/platform_ports.dart`). `IntegrationActivator` (`app/lib/di/integration_activator.dart`) schaltet ein und aus und fragt erst dann nach Berechtigungen. Nutzerdefinierte Integrationen (HTTP-Tools, MCP) kommen als `UserIntegrationSource` über `UserIntegrationSync` (`app/lib/di/user_integrations.dart`, ADR 0012).
 - **Overlay-Engine:** `assistantMain` startet `AssistantOverlayApp` (`app/lib/ui/overlay/assistant_overlay.dart`) in eigener Flutter-Engine, gestartet von `AssistantActivity.kt`; beide Engines teilen die Datenbank über einen drift-Isolate (ADR 0006).
 
 ## Datenfluss einer Anfrage
@@ -120,15 +120,15 @@ Text-Faltung für Namensvergleiche (Listen, Obsidian, Routing, phonetische Suche
 
 **Neue eingebaute Integration**
 1. Ordner `packages/wendelin_integrations/lib/src/<name>/` mit Integration, Tools und ggf. Port; `README.md` im Ordner (Tools, Risiko, Berechtigungen).
-2. Export in `packages/wendelin_integrations/lib/wendelin_integrations.dart`, Fakes und Contract in `fakes.dart`/`testing.dart` (nur anhängen).
+2. Einstiegspunkt `packages/wendelin_integrations/lib/<name>.dart` (Exporte mit `show`) und **eine** Zeile in `wendelin_integrations.dart`; Fakes und Contract in `fakes.dart`/`testing.dart` (nur anhängen).
 3. Port-Implementierung in `app/lib/platform/`, Feld in `PlatformPorts`.
-4. `IntegrationSpec` in `app/lib/di/integration_specs.dart`; Einrichtungsseite ggf. in `app/lib/ui/settings/settings_routes.dart`.
+4. `IntegrationSpec` in eigener Datei `app/lib/di/integrations/<name>_spec.dart` (eigene Provider über `prepare`, nicht über `IntegrationDeps`) und **eine** Zeile in `app/lib/di/integrations/registry.dart`; Einrichtungsseite ggf. in `app/lib/ui/settings/integration_routes.dart` (und `setupPageFor` in `settings_routes.dart`).
 5. Texte in `app/lib/ui/screens/labels.dart`, Berechtigung ggf. in `AndroidManifest.xml`.
 6. Tests im Paket, Verdrahtung in `app/test/di/wiring_test.dart`.
 
 **Neue Einstellungsseite**
 1. Screen in `app/lib/ui/settings/` (Gerüst `settings_page.dart`).
-2. Route in `app/lib/ui/routes.dart`, Eintrag in `app/lib/ui/settings/settings_screen.dart`.
+2. Routenname in `app/lib/ui/routes.dart` (`AppRoutes`), Route in `app/lib/ui/settings/general_routes.dart` (allgemeine Seiten) bzw. `integration_routes.dart` (Seite einer Integration), Eintrag in `app/lib/ui/settings/settings_screen.dart`.
 3. Gespeicherte Werte in `app/lib/di/preferences.dart` bzw. `app/lib/di/preference_models.dart`.
 4. Widget- und Golden-Test unter `app/test/settings/` (Goldens nur auf macOS aktualisieren).
 

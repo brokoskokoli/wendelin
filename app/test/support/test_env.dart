@@ -3,13 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:wendelin/app.dart';
 import 'package:wendelin/di/app_requirements.dart';
-import 'package:wendelin/di/bring.dart';
-import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
-import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/di/startup.dart';
-import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/platform_ports.dart';
 import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
@@ -21,6 +17,10 @@ import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/fakes.dart';
 
+import 'env/core_overrides.dart';
+import 'env/integration_overrides.dart';
+import 'env/provider_overrides.dart';
+import 'env/voice_overrides.dart';
 import 'fake_microphone.dart';
 import 'fake_speech_models.dart';
 
@@ -151,54 +151,13 @@ final class TestEnv {
     },
   );
 
-  /// Overrides for a `ProviderScope`/`ProviderContainer`.
+  /// Overrides for a `ProviderScope`/`ProviderContainer`, built per area
+  /// (`env/`).
   List<Override> get overrides => [
-    clockProvider.overrideWithValue(clock),
-    storageProvider.overrideWithValue(storage),
-    secretStoreProvider.overrideWithValue(secrets),
-    startupProvider.overrideWithValue(startup),
-    devicePortsProvider.overrideWith(
-      (ref) => PlatformPorts(
-        calendar: calendar,
-        clipboard: clipboard,
-        alarms: alarms,
-        memory: memory,
-        apps: apps,
-        requestCalendarPermission: ports.requestCalendarPermission,
-        lists: ListsPorts(
-          port: listFiles,
-          definitions: () => ref.read(listDefinitionsProvider),
-        ),
-        obsidian: ObsidianPorts(
-          vault: vault,
-          index: notes,
-          hasVault: () => ref.read(obsidianPrefsProvider).hasVault,
-          settings: () =>
-              obsidianSettingsOf(ref.read(obsidianPrefsProvider), 'de'),
-        ),
-      ),
-    ),
-    if (llmFactory case final f?)
-      llmProviderFactoryProvider.overrideWithValue(f),
-    if (!realDemoPorts) demoPortsProvider.overrideWithValue(ports),
-    deviceInfoProvider.overrideWithValue(
-      const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
-    ),
-    if (!storedProfiles)
-      storedProviderConfigProvider.overrideWith(
-        (ref) async => providerConfigError == null
-            ? providerConfig
-            : throw providerConfigError!,
-      ),
-    bringApiProvider.overrideWithValue(bring),
-    appShareProvider.overrideWithValue(
-      (package, text) async => shared.add((package, text)),
-    ),
-    networkStatusProvider.overrideWithValue(network),
-    speechModelServiceProvider.overrideWith((ref) async => speechModels),
-    microphoneProvider.overrideWithValue(microphone),
-    systemTtsProvider.overrideWithValue(systemTts),
-    sherpaTtsProvider.overrideWithValue(sherpaTts),
+    ...coreOverrides(this),
+    ...withIntegrations(this),
+    ...withProviders(this),
+    ...withVoice(this),
     ...extraOverrides,
   ];
 

@@ -39,11 +39,10 @@ Richtwert: **höchstens ca. 1 500 Zeilen geänderter Produktivcode je Review-Ein
 
 ## Merge-Hotspots
 
-Diese Dateien ändert fast jedes Feature-Paket. Regel: **nur anhängen, nicht umsortieren oder umformatieren; bei einem Konflikt den Integrator fragen**, statt selbst semantisch zu mergen. Die Liste wird nach WP38 (Verdrahtung entflechten) gekürzt.
+Diese Dateien ändert fast jedes Feature-Paket. Regel: **nur anhängen, nicht umsortieren oder umformatieren; bei einem Konflikt den Integrator fragen**, statt selbst semantisch zu mergen. Mit WP38 entschärft (je Integration eigene Barrel-, Spec- und Routendatei; `main.dart`, `app.dart`, `providers.dart` und `test_env.dart` sind schlank bzw. Re-Export-Barrels).
 
-- `packages/wendelin_integrations/lib/wendelin_integrations.dart`, `fakes.dart`, `testing.dart` (Barrels mit `show`-Listen)
-- `app/lib/main.dart`, `app/lib/app.dart`
-- `app/lib/di/providers.dart`, `app/lib/di/integration_specs.dart`
-- `app/lib/ui/routes.dart`, `app/lib/ui/screens/labels.dart`
-- `app/test/support/test_env.dart`, `app/test/di/wiring_test.dart`
+- `packages/wendelin_integrations/lib/wendelin_integrations.dart` (nur noch eine Exportzeile je Integration), `fakes.dart`, `testing.dart`
+- `app/lib/di/integrations/registry.dart` (eine Zeile je Integration)
+- `app/lib/ui/routes.dart` (`AppRoutes`-Namen), `app/lib/ui/screens/labels.dart`
+- `app/test/di/wiring_test.dart`
 - `app/android/app/src/main/AndroidManifest.xml`, `app/pubspec.yaml`
