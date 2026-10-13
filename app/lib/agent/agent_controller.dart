@@ -251,10 +251,15 @@ final class AgentController extends Notifier<ConversationState> {
   Future<bool> undo(String callId) async {
     final manager = ref.read(undoManagerProvider);
     if (!manager.canUndo(callId)) return false;
+    final tool = state.tool(callId)?.toolName ?? '?';
+    final sessionId = _sessionId;
     state = _reducer.undoStarted(state, callId);
     try {
-      return await manager.undo(callId);
+      final ok = await manager.undo(callId);
+      _audit.undo(sessionId, callId: callId, tool: tool, ok: ok);
+      return ok;
     } on Object catch (e) {
+      _audit.undo(sessionId, callId: callId, tool: tool, ok: false);
       state = _reducer.notice(
         state,
         NoticeKind.error,

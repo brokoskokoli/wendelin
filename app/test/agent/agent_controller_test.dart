@@ -85,6 +85,17 @@ void main() {
         (s) => s.tool('c1')?.undo == UndoPhase.undone,
       );
       expect(after.tool('c1')!.undo, UndoPhase.undone);
+      // Rückgängig ändert das Gerät und steht deshalb im Audit-Log.
+      await c.read(auditRecorderProvider).flush();
+      final undone = (await env.storage.audit.query()).where(
+        (e) => e.kind == AuditKind.toolCall && e.payload['undo'] == true,
+      );
+      expect(undone.single.payload, {
+        'callId': 'c1',
+        'tool': 'calendar__create_event',
+        'undo': true,
+        'status': 'ok',
+      });
       // Zweites Undo gibt es nicht.
       expect(
         await c.read(agentControllerProvider.notifier).undo('c1'),
