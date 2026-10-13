@@ -47,8 +47,10 @@ void main() {
       await tester.tap(find.text('Nicht jetzt'));
       await pumpUntil(tester, find.text(_noAccess));
 
-      // Nur still nachgesehen, Android nie gefragt; das Mikrofon blieb zu.
-      expect(env.microphone.requests, [false]);
+      // Nur still nachgesehen (Erklärung und frühes Mikrofon, WP30),
+      // Android nie gefragt; das Mikrofon blieb zu.
+      expect(env.microphone.requests, everyElement(isFalse));
+      expect(env.microphone.starts, 0);
       expect(audio.startCount, 0);
       expect(
         tester.widget<MicButton>(find.byType(MicButton)).state,
@@ -70,7 +72,10 @@ void main() {
       await tester.tap(find.text('Erlauben'));
       await pumpUntil(tester, find.textContaining('Apps → Wendelin erlauben'));
       await pumpUntil(tester, find.text(_noAccess));
-      expect(env.microphone.requests, [false, true]);
+      // Android genau einmal gefragt (nach „Erlauben“), nie aufgenommen.
+      expect(env.microphone.requests.where((r) => r), hasLength(1));
+      expect(env.microphone.requests.last, isTrue);
+      expect(env.microphone.starts, 0);
       expect(audio.startCount, 0);
     });
   });
@@ -171,7 +176,8 @@ void main() {
       expect(find.text(microphoneExplanation), findsOneWidget);
       await tester.tap(find.text('Nicht jetzt'));
       await pumpUntil(tester, find.text(_noAccess));
-      expect(env.microphone.requests, [false]);
+      expect(env.microphone.requests, everyElement(isFalse));
+      expect(env.microphone.starts, 0);
       expect(audio.startCount, 0);
       expect(c.read(voiceControllerProvider).active, isFalse);
       // Das Overlay bleibt offen (Tippen oder Tastatur gehen weiter).

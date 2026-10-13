@@ -71,12 +71,12 @@ void main() {
   ProviderContainer container({
     required AudioInput audio,
     required Future<VoiceComponents?> Function() load,
-    bool ready = true,
+    bool? ready = true,
   }) {
     env = TestEnv(
       providerConfig: scripted(FakeLlmProvider([ScriptedTurn.text('Sonnig.')])),
       extraOverrides: [
-        voiceReadyProvider.overrideWithValue(ready),
+        if (ready != null) voiceReadyProvider.overrideWithValue(ready),
         audioInputProvider.overrideWithValue(audio),
         activeVoiceProvider.overrideWith((ref) => load()),
       ],
@@ -247,4 +247,71 @@ void main() {
     expect(lines.where((l) => l.contains(' prewarm ')), isEmpty);
     expect(audio.startCount, 0);
   });
+
+  test(
+    'frische Engine (Overlay): Modelle erst prüfen, dann sofort aufnehmen',
+    () async {
+      final audio = microphone();
+      final gate = Completer<void>();
+      final stt = RecordingStt('Hallo');
+      container(
+        audio: audio,
+        ready: null,
+        load: () async {
+          await gate.future;
+          return components(audio, stt);
+        },
+      );
+      env.speechModels.installed.addAll({
+        const VoiceSettings().sttModel,
+        SpeechModelCatalog.sileroVad.id,
+      });
+      final started = voice().start(TriggerKind.assistant);
+      for (var i = 0; i < 100 && audio.startCount == 0; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      expect(audio.startCount, 1, reason: 'vor dem Laden der Modelle');
+      gate.complete();
+      expect(await started, isTrue);
+      await voice().whenIdle;
+      expect(speechSamples(stt.heard.single), 10 * 480);
+    },
+  );
+
+  test('Berechtigung erst jetzt erteilt: Mikrofon wird neu geöffnet', () async {
+    final inner = microphone();
+    final audio = _DeniedOnce(inner);
+    final stt = RecordingStt('Hallo');
+    container(audio: audio, load: () async => components(audio, stt));
+    expect(
+      await voice().start(TriggerKind.pushToTalk, prepare: () async => true),
+      isTrue,
+    );
+    await voice().whenIdle;
+    expect(audio.starts, 2);
+    expect(stt.heard, hasLength(1));
+  });
+}
+
+/// Microphone without permission on the first start (Android asks during
+/// the explanation), then a working one.
+final class _DeniedOnce implements AudioInput {
+  _DeniedOnce(this.inner);
+
+  final FakeAudioInput inner;
+  int starts = 0;
+
+  @override
+  bool get isRunning => inner.isRunning;
+
+  @override
+  Stream<Int16List> start() {
+    if (++starts == 1) {
+      throw const VoiceException(VoiceErrorKind.permissionDenied, 'nein');
+    }
+    return inner.start();
+  }
+
+  @override
+  Future<void> stop() => inner.stop();
 }

@@ -216,17 +216,21 @@ final class VoiceController extends Notifier<VoiceUiState> {
     _micWatch = Stopwatch()..start();
     _firstFrame = null;
     _loaded = null;
-    final early = !ref.read(demoModeProvider) && ref.read(voiceReadyProvider);
-    if (!early) return _startAfterLoading(kind, prepare);
-    // Models are installed: the permission first, then the microphone,
-    // while the models load (WP18 review: no permission without models).
-    if (!(await prepare?.call() ?? true)) {
-      state = state.copyWith(error: microphoneDeniedHint, clearHint: true);
-      return false;
+    final demo = ref.read(demoModeProvider);
+    var ready = !demo && ref.read(voiceReadyProvider);
+    if (!demo && !ready && !_modelsChecked()) {
+      // Fresh engine (overlay): the installed models are not checked yet;
+      // look at the two needed ones only (the full check runs anyway).
+      ready = await _modelsInstalled();
     }
+    if (!ready) return _startAfterLoading(kind, prepare);
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
+    // Models are installed (WP18 review: no permission question without
+    // them). The microphone opens right away and buffers while the models
+    // load; without the permission it does not record (the input checks
+    // it), and the explanation may come up meanwhile.
     final cancels = _cancels;
     // The microphone of the loaded components, or (first use) the device
     // microphone they will get.
@@ -242,6 +246,20 @@ final class VoiceController extends Notifier<VoiceUiState> {
       clearError: true,
     );
     primed.prime();
+    if (!(await prepare?.call() ?? true)) {
+      await primed.stop();
+      state = state.copyWith(
+        preparing: false,
+        error: microphoneDeniedHint,
+        clearHint: true,
+      );
+      return false;
+    }
+    if (primed.failed) {
+      // Permission granted just now: open the microphone again.
+      await primed.stop();
+      primed.prime();
+    }
     final VoiceComponents? components;
     try {
       components = await _loadComponents();
@@ -272,6 +290,32 @@ final class VoiceController extends Notifier<VoiceUiState> {
     final pipeline = _pipelineFor(components);
     state = state.copyWith(preparing: false);
     return _run(pipeline, kind);
+  }
+
+  /// Whether the installed state of the chosen Whisper and Silero is
+  /// known (a fresh engine checks it in the background first).
+  bool _modelsChecked() {
+    final states = ref.read(modelStatesProvider.notifier);
+    final stt =
+        ref.read(voiceSettingsProvider).value?.sttModel ??
+        const VoiceSettings().sttModel;
+    return states.of(stt).phase != ModelPhase.unknown &&
+        states.of(SpeechModelCatalog.sileroVad.id).phase != ModelPhase.unknown;
+  }
+
+  Future<bool> _modelsInstalled() async {
+    try {
+      final service = await ref.read(speechModelServiceProvider.future);
+      final catalog = ref.read(speechModelCatalogProvider);
+      final settings = await ref.read(voiceSettingsProvider.future);
+      for (final id in [settings.sttModel, SpeechModelCatalog.sileroVad.id]) {
+        final model = catalog.byId(id);
+        if (model == null || !await service.isInstalled(model)) return false;
+      }
+      return true;
+    } on Object {
+      return false;
+    }
   }
 
   Future<bool> _startAfterLoading(

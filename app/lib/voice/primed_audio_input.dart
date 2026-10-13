@@ -44,6 +44,10 @@ final class PrimedAudioInput implements AudioInput {
   /// yet.
   bool get isPrimed => _primed != null && _out == null;
 
+  /// Whether the early recording already failed or ended (e.g. no
+  /// permission yet) and nobody took it.
+  bool get failed => _out == null && (_error != null || _done);
+
   /// Buffered audio (for tests and the log).
   Duration get buffered => samplesToDuration(_bufferedSamples);
 

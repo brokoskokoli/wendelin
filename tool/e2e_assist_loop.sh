@@ -4,8 +4,9 @@
 #
 #   DEVICE=emulator-5554 tool/e2e_assist_loop.sh [durchläufe=30] [pause_s=10]
 #
-# Je Durchlauf: `cmd voiceinteraction show` (wie der lange Druck auf die
-# Power-Taste) → warten, bis die AssistantActivity oben ist → Zurück →
+# Je Durchlauf: KEYCODE_ASSIST (wie der lange Druck auf die Power-Taste;
+# `cmd voiceinteraction show` verlangt ACCESS_VOICE_INTERACTION_SERVICE, das
+# die Shell auf dem AOSP-Image nicht hat) → warten, bis die AssistantActivity oben ist → Zurück →
 # App (MainActivity) in den Vordergrund → Home → Pause (Standard 10 s, der
 # Gerätetest nennt 2 min: pause_s=120). Gezählt werden `wm_create_activity`
 # der AssistantActivity im Event-Log gegen die Zahl der Aufrufe; dazu die
@@ -74,7 +75,7 @@ adb logcat -b events -c || true
 shown=0
 missing=0
 for i in $(seq 1 "$RUNS"); do
-  adb shell cmd voiceinteraction show
+  adb shell input keyevent KEYCODE_ASSIST
   shown=$((shown + 1))
   if wait_for 'AssistantActivity' 10; then
     status=ok
@@ -95,8 +96,8 @@ done
 
 created="$(adb logcat -d -b events | grep -c 'wm_create_activity.*app.wendelin/.AssistantActivity' || true)"
 arrived="$(adb logcat -d | grep -c 'Wendelin/voice.*session-finish reason=arrived' || true)"
-echo "Ergebnis B10: $shown Aufrufe, $created× AssistantActivity erzeugt," \
-  "$arrived× Session nach Ankunft beendet, $missing× nicht oben"
+echo "Ergebnis B10: ${shown} Aufrufe, ${created}× AssistantActivity erzeugt," \
+  "${arrived}× Session nach Ankunft beendet, ${missing}× nicht oben"
 echo "Session-Zeilen (Wendelin/voice, ohne Inhalte):"
 adb logcat -d | grep 'Wendelin/voice' | grep -E 'session-|assistant-start|overlay-' |
   awk '{ $1=""; $2=""; print }' | sort | uniq -c | sort -rn | head -20
