@@ -1,0 +1,155 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/app.dart';
+import 'package:wendelin/di/provider_config.dart';
+import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/main.dart' show loadDeviceInfo;
+import 'package:wendelin/platform/device_calendar_port.dart';
+import 'package:wendelin/ui/design/design.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_storage/fakes.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
+
+/// The app as `main.dart` builds it, with a fresh in-memory database and
+/// in-memory secrets, but the **real device ports** (calendar channel, SAF
+/// channel, clipboard, alarm intents). [config] replaces the stored
+/// provider profiles (e.g. the scripted demo provider on the real device
+/// ports); `null` reads the stored profiles as in production.
+final class E2eApp {
+  /// Creates the environment.
+  E2eApp({
+    this.startup = const StartupSettings(enabledIntegrations: {'calendar'}),
+    this.config,
+    this.extraOverrides = const [],
+  });
+
+  /// Settings at start.
+  final StartupSettings startup;
+
+  /// Provider configuration; `null` = from the stored profiles.
+  final ProviderConfig? Function(Clock clock)? config;
+
+  /// Further overrides.
+  final List<Override> extraOverrides;
+
+  /// Local database (in memory, nothing stays on the device).
+  final WendelinStorage storage = openInMemoryStorage();
+
+  /// Secrets (in memory).
+  final InMemorySecretStore secrets = InMemorySecretStore();
+
+  /// Pumps the app and returns its container.
+  Future<ProviderContainer> pump(WidgetTester tester) async {
+    final device = await loadDeviceInfo();
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (_, _) => null,
+        overrides: [
+          storageProvider.overrideWithValue(storage),
+          startupProvider.overrideWithValue(startup),
+          deviceInfoProvider.overrideWithValue(device),
+          secretStoreProvider.overrideWithValue(secrets),
+          if (config case final c?)
+            storedProviderConfigProvider.overrideWith(
+              (ref) async => c(ref.watch(clockProvider)),
+            ),
+          ...extraOverrides,
+        ],
+        child: const WendelinApp(),
+      ),
+    );
+    await tester.pump();
+    return ProviderScope.containerOf(tester.element(find.byType(WendelinApp)));
+  }
+}
+
+/// Pumps until [finder] finds something or [timeout] passes (real time:
+/// device channels and streamed answers are asynchronous).
+Future<void> pumpUntil(
+  WidgetTester tester,
+  Finder finder, {
+  Duration timeout = const Duration(seconds: 30),
+}) async {
+  final end = DateTime.now().add(timeout);
+  while (finder.evaluate().isEmpty) {
+    if (DateTime.now().isAfter(end)) {
+      final texts = find
+          .byType(RichText, skipOffstage: false)
+          .evaluate()
+          .map((e) => (e.widget as RichText).text.toPlainText())
+          .where((t) => t.trim().isNotEmpty);
+      fail(
+        'Nicht erschienen nach $timeout: $finder\n'
+        'Sichtbare Texte: ${texts.join(' | ')}',
+      );
+    }
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+/// Waits until no request is running (the composer accepts input again).
+Future<void> waitIdle(WidgetTester tester) async {
+  final end = DateTime.now().add(const Duration(seconds: 30));
+  final running = find.byWidgetPredicate(
+    (w) => w is MicButton && w.state == MicState.thinking,
+  );
+  while (running.evaluate().isNotEmpty) {
+    if (DateTime.now().isAfter(end)) fail('Anfrage läuft noch nach 30 s');
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+/// Waits until idle, types [text] into the input field and sends it.
+Future<void> send(WidgetTester tester, String text) async {
+  await waitIdle(tester);
+  await tester.enterText(find.byType(TextField), text);
+  await tester.testTextInput.receiveAction(TextInputAction.send);
+  await tester.pump();
+  expect(
+    tester.widget<TextField>(find.byType(TextField)).controller!.text,
+    isEmpty,
+    reason: 'Nachricht wurde nicht angenommen',
+  );
+}
+
+/// Waits up to [timeout] for the calendar permission (granted by the
+/// runner script with `adb shell pm grant`, see `tool/e2e_android.sh`).
+Future<void> expectCalendarPermission(
+  DeviceCalendarPort port, {
+  Duration timeout = const Duration(seconds: 60),
+}) async {
+  final end = DateTime.now().add(timeout);
+  while (!await port.hasPermission()) {
+    if (DateTime.now().isAfter(end)) {
+      fail(
+        'Keine Kalender-Berechtigung. Vorab: adb shell pm grant app.wendelin '
+        'android.permission.READ_CALENDAR (und WRITE_CALENDAR)',
+      );
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+  }
+}
+
+/// Pumps [duration] in small steps (lets sheet animations finish; no
+/// `pumpAndSettle`, the thinking indicator animates while a request runs).
+Future<void> pumpFor(
+  WidgetTester tester, [
+  Duration duration = const Duration(milliseconds: 800),
+]) async {
+  for (
+    var t = Duration.zero;
+    t < duration;
+    t += const Duration(milliseconds: 50)
+  ) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
+
+/// All audit entries of [app] as one text (kind and payload per entry).
+Future<String> auditText(E2eApp app) async => [
+  for (final e in await app.storage.audit.query())
+    '${e.kind.name} ${e.payload}',
+].join('\n');

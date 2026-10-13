@@ -1,0 +1,398 @@
+{
+  "meta": {
+    "profileId": "openai-mini",
+    "providerType": "openaiCompatible",
+    "model": "gpt-5-mini",
+    "escalationModels": [],
+    "privacy": "standard",
+    "now": "2026-11-18T09:00",
+    "timeZone": "Europe/Berlin",
+    "limit": 10,
+    "cases": 10
+  },
+  "summary": {
+    "total": 10,
+    "passed": 9,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "passRate": 0.9,
+    "latencyMs": {
+      "p50": 3336,
+      "p90": 7264
+    },
+    "usage": {
+      "input": 8675,
+      "output": 3617,
+      "cacheRead": 34688,
+      "cacheWrite": 0,
+      "total": 46980
+    },
+    "costMicros": 10270,
+    "costUsd": 0.01027,
+    "unpricedCases": 0,
+    "gaveUp": 0,
+    "escalated": 0,
+    "confirmations": 1,
+    "escalationConfirmations": 0
+  },
+  "byLanguage": {
+    "de": {
+      "total": 10,
+      "passed": 9,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 0,
+      "passRate": 0.9,
+      "latencyMs": {
+        "p50": 3336,
+        "p90": 7264
+      },
+      "usage": {
+        "input": 8675,
+        "output": 3617,
+        "cacheRead": 34688,
+        "cacheWrite": 0,
+        "total": 46980
+      },
+      "costMicros": 10270,
+      "costUsd": 0.01027,
+      "unpricedCases": 0,
+      "gaveUp": 0,
+      "escalated": 0,
+      "confirmations": 1,
+      "escalationConfirmations": 0
+    }
+  },
+  "cases": [
+    {
+      "id": "de-cal-tauchen",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Trag mir morgen um 10 Tauchen ein",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "title": "Tauchen",
+            "start": "2026-11-19T10:00"
+          },
+          "summary": "Termin angelegt: Tauchen, Do 19.11. 10:00"
+        }
+      ],
+      "finalText": "Ich habe den Termin \"Tauchen\" für morgen um 10:00 Uhr eingetragen.",
+      "latencyMs": 2606,
+      "modelCalls": 2,
+      "usage": {
+        "input": 647,
+        "output": 253,
+        "cacheRead": 3456,
+        "cacheWrite": 0
+      },
+      "costMicros": 755,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-zahnarzt-freitag",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Ich habe am Freitag um halb drei einen Zahnarzttermin, trag den bitte ein.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "title": "Zahnarzttermin",
+            "start": "2026-11-20T14:30",
+            "description": "",
+            "location": ""
+          },
+          "summary": "Termin angelegt: Zahnarzttermin, Fr 20.11. 14:30"
+        }
+      ],
+      "finalText": "Fertig — ich habe den Zahnarzttermin am Freitag, 20. November 2026 um 14:30 eingetragen. Soll ich eine Erinnerung dafür anlegen?",
+      "latencyMs": 3875,
+      "modelCalls": 2,
+      "usage": {
+        "input": 547,
+        "output": 407,
+        "cacheRead": 3584,
+        "cacheWrite": 0
+      },
+      "costMicros": 1040,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-ganztag",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Trag für Samstag ganztägig Familienfest bei Oma ein.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "title": "Familienfest bei Oma",
+            "start": "2026-11-21",
+            "all_day": true,
+            "location": "bei Oma"
+          },
+          "summary": "Termin angelegt: Familienfest bei Oma, Sa 21.11. (ganztägig)"
+        }
+      ],
+      "finalText": "Okay, ich habe das ganztägige Ereignis \"Familienfest bei Oma\" für Samstag (21.11.2026) eingetragen.",
+      "latencyMs": 5139,
+      "modelCalls": 2,
+      "usage": {
+        "input": 529,
+        "output": 594,
+        "cacheRead": 3584,
+        "cacheWrite": 0
+      },
+      "costMicros": 1410,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-heute",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Was steht heute in meinem Kalender?",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "start": "2026-11-18T00:00",
+            "end": "2026-11-18T23:59"
+          },
+          "summary": "1 Termin"
+        }
+      ],
+      "finalText": "Heute hast du von 14:00 bis 15:00 Uhr ein \"Teammeeting\" in deinem Kalender (Privat). Soll ich eine Erinnerung dafür setzen oder die Details anzeigen?",
+      "latencyMs": 5142,
+      "modelCalls": 2,
+      "usage": {
+        "input": 786,
+        "output": 477,
+        "cacheRead": 3328,
+        "cacheWrite": 0
+      },
+      "costMicros": 1234,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-frei",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Wann habe ich morgen Nachmittag eine Stunde Zeit?",
+      "status": "failed",
+      "reasons": [
+        "Nicht aufgerufen: calendar__find_free_slots(start Datum +1d) oder calendar__list_events(start Datum +1d) (aufgerufen: keine)",
+        "Antwort: „Meinst du morgen (19.11.2026) Nachmittag im Zeitraum etwa 13:00–18:00 Uhr? Soll ich nach einem freien 60‑Minuten‑Slot suchen?“ enthält nicht eines von [14, 15, 16, 17]"
+      ],
+      "toolCalls": [],
+      "finalText": "Meinst du morgen (19.11.2026) Nachmittag im Zeitraum etwa 13:00–18:00 Uhr? Soll ich nach einem freien 60‑Minuten‑Slot suchen?",
+      "latencyMs": 3336,
+      "modelCalls": 1,
+      "usage": {
+        "input": 456,
+        "output": 305,
+        "cacheRead": 1536,
+        "cacheWrite": 0
+      },
+      "costMicros": 762,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-loeschen",
+      "language": "de",
+      "category": "calendar-external",
+      "prompt": "Lösch den Zahnarzttermin morgen.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "start": "2026-11-19",
+            "end": "2026-11-19",
+            "include_details": false
+          },
+          "summary": "1 Termin"
+        },
+        {
+          "name": "calendar__delete_event",
+          "args": {
+            "event_id": "evt-zahnarzt"
+          },
+          "summary": "Termin gelöscht: Zahnarzt, Do 19.11. 15:00–16:00"
+        }
+      ],
+      "finalText": "Der Zahnarzttermin morgen habe ich gelöscht.",
+      "latencyMs": 7264,
+      "modelCalls": 3,
+      "usage": {
+        "input": 814,
+        "output": 599,
+        "cacheRead": 5504,
+        "cacheWrite": 0
+      },
+      "costMicros": 1539,
+      "confirmations": 1,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-verschieben",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Verschieb das Meeting morgen auf 11 Uhr.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "start": "2026-11-19",
+            "end": "2026-11-19"
+          },
+          "summary": "1 Termin"
+        },
+        {
+          "name": "calendar__update_event",
+          "args": {
+            "event_id": "evt-meeting",
+            "start": "2026-11-19T11:00"
+          },
+          "summary": "Termin geändert: Meeting mit Jonas, Do 19.11. 11:00–12:00"
+        }
+      ],
+      "finalText": "Ich habe das Meeting auf morgen 11:00 Uhr verschoben.",
+      "latencyMs": 16585,
+      "modelCalls": 3,
+      "usage": {
+        "input": 1111,
+        "output": 417,
+        "cacheRead": 5248,
+        "cacheWrite": 0
+      },
+      "costMicros": 1243,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-alarm-halb-sieben",
+      "language": "de",
+      "category": "alarms",
+      "prompt": "Stell mir einen Wecker für morgen früh um halb sieben.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_alarm",
+          "args": {
+            "time": "06:30"
+          },
+          "summary": "Wecker gestellt: 06:30 (einmalig)"
+        }
+      ],
+      "finalText": "Fertig — ich habe den Wecker für morgen um 06:30 Uhr gestellt.",
+      "latencyMs": 2282,
+      "modelCalls": 2,
+      "usage": {
+        "input": 729,
+        "output": 178,
+        "cacheRead": 3328,
+        "cacheWrite": 0
+      },
+      "costMicros": 621,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-alarm-mo-mi-fr",
+      "language": "de",
+      "category": "alarms",
+      "prompt": "Weck mich ab jetzt montags, mittwochs und freitags um Viertel nach sieben.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_alarm",
+          "args": {
+            "time": "07:15",
+            "label": "Wecker",
+            "days": [
+              1,
+              3,
+              5
+            ]
+          },
+          "summary": "Wecker gestellt: 07:15 (Mo, Mi, Fr)"
+        }
+      ],
+      "finalText": "Fertig — ich wecke dich ab jetzt montags, mittwochs und freitags um 07:15.",
+      "latencyMs": 3003,
+      "modelCalls": 2,
+      "usage": {
+        "input": 765,
+        "output": 262,
+        "cacheRead": 3328,
+        "cacheWrite": 0
+      },
+      "costMicros": 798,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-timer-nudeln",
+      "language": "de",
+      "category": "alarms",
+      "prompt": "Stell einen Timer auf 12 Minuten für die Nudeln.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_timer",
+          "args": {
+            "duration_seconds": 720,
+            "label": "Nudeln"
+          },
+          "summary": "Timer: 12 min"
+        }
+      ],
+      "finalText": "Timer für 12 Minuten mit Namen „Nudeln“ ist gestellt. Er läuft um 09:12 ab.",
+      "latencyMs": 1931,
+      "modelCalls": 2,
+      "usage": {
+        "input": 2291,
+        "output": 125,
+        "cacheRead": 1792,
+        "cacheWrite": 0
+      },
+      "costMicros": 868,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    }
+  ]
+}

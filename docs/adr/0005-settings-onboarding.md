@@ -35,5 +35,5 @@ Die Exporte (Gedächtnis als Markdown, Prüfprotokoll als JSON) gehen über `sha
 Beim Start und bei jeder Änderung der Aufbewahrung werden Prüfprotokoll **und** Gesprächsverläufe gelöscht, die älter als die gewählte Zahl Tage sind (Standard 30). „Alles löschen“ entfernt Verläufe und Protokoll. Gedächtnis und Einstellungen bleiben.
 
 ## Folgen
-- Gerätetests für SAF und Dateiauswahl folgen in WP11.
+- SAF und Dateiauswahl sind auf dem AOSP-Emulator getestet (WP11, `app/integration_test/lists_saf_e2e_test.dart`); den Speichern-Dialog bestätigt `tool/e2e_android.sh` per uiautomator.
 - Neue Einstellungen bekommen einen Notifier in `preferences.dart` und ein Feld in `StartupSettings`.

@@ -51,7 +51,7 @@ Der API-Key kommt ausschließlich aus einer Umgebungsvariable:
 | --- | --- | --- |
 | `profiles/claude-haiku.json` | Anthropic, `claude-haiku-5-5` | `ANTHROPIC_API_KEY` |
 | `profiles/openai-mini.json` | OpenAI, `gpt-5-mini` | `OPENAI_API_KEY` |
-| `profiles/phala-tee-small.json` | Phala/RedPill (TEE), `qwen/qwen-2.5-7b-instruct` | `PHALA_API_KEY` |
+| `profiles/phala-tee-small.json` | Phala/RedPill (TEE), `qwen/qwen-2.5-7b-instruct` (Preise weiterer TEE-Modelle im Profil) | `PHALA_API_KEY` |
 | `profiles/fake-demo.json` | Fake-Provider mit Skript | – |
 
 Ist `authMethod.secretRef` ein Variablenname (`ANTHROPIC_API_KEY`), gilt
@@ -164,4 +164,16 @@ Prädikate (mehrere Schlüssel = und):
 Die Bewertungslogik ist eine Bibliothek (`lib/src/`) und unabhängig von
 echten Providern getestet (`dart test`, Abdeckung ≥ 85 % im Gate). Der
 Test `cli_test.dart` führt den Fake-Probelauf aus und prüft den Report.
-Live-Läufe sind keine Tests; Reports mit echten Läufen nicht committen.
+Live-Läufe sind keine Tests. Probeläufe als `reports/*.local.json`;
+committet werden nur dokumentierte Läufe (`reports/<datum>-<profil>.json`)
+mit Auswertung in [`reports/README.md`](reports/README.md).
+
+Der Live-Durchlauf des M1-Satzes („Trag mir morgen um 10 Tauchen ein“ mit
+allen drei Live-Profilen durch die echte Agent-Schleife) und Proben zum
+Verlauf mit ausgeblendeten Tool-Aufrufen (WP14) liegen in
+`test/live/dod_live_test.dart`:
+
+```sh
+set -a; . ~/.wendelin-live.env; set +a
+dart test test/live -t live --run-skipped
+```
