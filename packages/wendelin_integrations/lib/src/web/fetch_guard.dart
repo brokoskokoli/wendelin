@@ -71,15 +71,8 @@ Future<void> checkFetchTarget(
 }
 
 /// Whether [address] is loopback, private, link-local, CGNAT, multicast,
-/// reserved or unspecified (IPv4 and IPv6, including IPv4-mapped).
-///
-/// Unlike `checkHttpTarget`, this policy does not look into SIIT and 6to4
-/// addresses and lets the discard prefix `100::/64` pass (behaviour before
-/// WP36, kept unchanged).
-bool isPrivateAddress(InternetAddress address) {
-  final (:scope, :embedding) = classifyNet(address);
-  return switch (embedding) {
-    Ipv4Embedding.siit || Ipv4Embedding.sixToFour => false,
-    _ => scope != NetScope.public && scope != NetScope.discard,
-  };
-}
+/// reserved, discard or unspecified (IPv4 and IPv6). IPv4 parts embedded in
+/// IPv6 (mapped, SIIT, NAT64, 6to4) are judged by their IPv4 scope, the same
+/// policy as `classifyAddress` (HTTP tools).
+bool isPrivateAddress(InternetAddress address) =>
+    classifyNet(address).scope != NetScope.public;

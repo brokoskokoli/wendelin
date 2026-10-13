@@ -34,7 +34,7 @@ const _v4Edges = [
 
 /// IPv6-Grenzfälle (ohne eingebettetes IPv4).
 const _v6Edges = [
-  '::', '::1', '::2', '::fffe:ffff:ffff', '::1:0:0:0', //
+  '::', '::1', '::2', '::fffe:ffff:ffff', '::1:0:0:0', '::1:ffff:a00:1', //
   '1::', '100::', '100::ffff:ffff:ffff:ffff', '100:0:0:1::', '0:ffff::1',
   'ff::1', '200::', '2001::1', '2001:db8::1', '2001:ffff::1', '2002::',
   '2002:ffff:ffff::', '2003::', '2606:2800:220:1::1', '2a00:1450::1',
@@ -135,6 +135,17 @@ Future<String> _outcome(Future<Object?> Function() run) async {
   }
 }
 
+/// Gewollte Abweichung seit dem Sicherheitsfix: web__fetch bewertet SIIT,
+/// 6to4 und `100::/64` jetzt wie die HTTP-Tools (vorher öffentlich).
+/// Für diese Adressen gilt nicht mehr der eingefrorene Stand, sondern
+/// `scope != public`.
+bool _intendedWebDeviation(InternetAddress a) {
+  final c = classifyNet(a);
+  return c.embedding == Ipv4Embedding.siit ||
+      c.embedding == Ipv4Embedding.sixToFour ||
+      c.scope == NetScope.discard;
+}
+
 void main() {
   final addresses = _addresses();
   const name = 'ziel.example.org';
@@ -151,6 +162,14 @@ void main() {
 
   test('isPrivateAddress (web__fetch) unverändert', () {
     for (final a in addresses) {
+      if (_intendedWebDeviation(a)) {
+        expect(
+          isPrivateAddress(a),
+          classifyNet(a).scope != NetScope.public,
+          reason: '$a',
+        );
+        continue;
+      }
       expect(isPrivateAddress(a), legacyIsPrivateAddress(a), reason: '$a');
     }
   });
@@ -180,6 +199,7 @@ void main() {
 
   test('checkFetchTarget (web__fetch) unverändert', () async {
     for (final a in addresses) {
+      if (_intendedWebDeviation(a)) continue;
       final lit = _uriHost(a);
       Future<List<InternetAddress>> dns(String host) async => switch (host) {
         name => [a],
@@ -299,6 +319,11 @@ void main() {
               <String>{},
               {h.toLowerCase()},
             ]) {
+              if (answer != null &&
+                  answer.isNotEmpty &&
+                  _intendedWebDeviation(answer.first)) {
+                continue;
+              }
               expect(
                 await _outcome(
                   () => checkFetchTarget(

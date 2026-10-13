@@ -151,4 +151,39 @@ void main() {
     expect(isPrivateAddress(InternetAddress('198.18.0.1')), isTrue);
     expect(isPrivateAddress(InternetAddress('192.0.0.8')), isTrue);
   });
+
+  group('SIIT, 6to4 und Discard', () {
+    const blocked = [
+      '::ffff:0:c0a8:101',
+      '::ffff:0:7f00:1',
+      '2002:c0a8:101::1',
+      '2002:7f00:1::1',
+      '2002:a9fe:a9fe::1',
+      '100::1',
+    ];
+    const allowedLiterals = ['2002:5db8:d822::1', '::ffff:0:5db8:d822'];
+    for (final a in blocked) {
+      test('lehnt $a ab (Literal und DNS)', () async {
+        await expectLater(check('http://[$a]/'), throwsA(isA<PortException>()));
+        await expectLater(
+          checkFetchTarget(
+            Uri.parse('https://dns.example.org/'),
+            allowedHosts: const {},
+            resolve: (_) async => [InternetAddress(a)],
+          ),
+          throwsA(isA<PortException>()),
+        );
+      });
+    }
+    for (final a in allowedLiterals) {
+      test('erlaubt $a (Literal und DNS)', () async {
+        await check('http://[$a]/');
+        await checkFetchTarget(
+          Uri.parse('https://dns.example.org/'),
+          allowedHosts: const {},
+          resolve: (_) async => [InternetAddress(a)],
+        );
+      });
+    }
+  });
 }
