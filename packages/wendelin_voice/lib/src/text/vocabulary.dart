@@ -181,6 +181,10 @@ typedef VocabularyCorrection = ({String text, List<VocabularyTerm> terms});
 ///   and (unless it equals the name) neither starts nor ends with one;
 /// - it does not differ from the name only in an inflection ending
 ///   ([onlyEndingDiffers]: „ein Rezept“ stays, „Wendelins“ stays);
+/// - for a title, it starts with the same letter („Karten Ideen“ stays);
+/// - it does not split a single word into a name of several words
+///   („Wochenplan“ stays), unless the name is glued to the assistant name
+///   or a [gluedWords] entry;
 /// - no other name fits the same or an overlapping run equally well.
 ///
 /// A [gluedWords] entry in front of a name is split off again
@@ -301,6 +305,14 @@ final class VocabularyCorrector {
     final flat = StringBuffer();
     var words = 0;
     var allStop = true;
+    final glued =
+        keep.isNotEmpty ||
+        vocabulary.terms.any(
+          (t) =>
+              t.name &&
+              headFlat.length > t.flat.length &&
+              headFlat.startsWith(t.flat),
+        );
     for (var j = first; j < tokens.length && j - first < maxWords; j++) {
       final t = tokens[j];
       flat.write(j == first ? headFlat : t.flat);
@@ -310,7 +322,17 @@ final class VocabularyCorrector {
       final run = flat.toString();
       final edgeStop = headStop || (j > first && t.stop);
       for (final term in vocabulary.terms) {
-        final c = _match(first, j, run, words, edgeStop, term, language, keep);
+        final c = _match(
+          first,
+          j,
+          run,
+          words,
+          edgeStop,
+          term,
+          language,
+          keep,
+          glued: glued,
+        );
         if (c != null) out.add(c);
       }
     }
@@ -324,10 +346,15 @@ final class VocabularyCorrector {
     bool edgeStop,
     VocabularyTerm term,
     String? language,
-    String keep,
-  ) {
+    String keep, {
+    required bool glued,
+  }) {
     final limit = maxDistance(term.flat.length);
     if ((run.length - term.flat.length).abs() > limit) return null;
+    // Fewer words than the name: a single word would be split („Wochenplan“
+    // → „Wochen Plan“). Only glued names are split („Notizwendelintest“,
+    // „Wendelintest“ = assistant name + rest).
+    if (words < term.words && !glued) return null;
     if (run == term.flat) {
       // Same letters: only a different split is corrected.
       final split = keep.isNotEmpty || words != term.words;
@@ -335,6 +362,10 @@ final class VocabularyCorrector {
     }
     if (edgeStop || run.length < minLength) return null;
     if (onlyEndingDiffers(run, term.flat)) return null;
+    // Titles keep their first letter: „Karten Ideen“ is no „Garten Ideen“
+    // (g/k, b/p, d/t share a phonetic code). The assistant name may differ
+    // („Vendelin“).
+    if (!term.name && run[0] != term.flat[0]) return null;
     if (term.key(language) != phoneticKey(run, language: language)) {
       return null;
     }

@@ -5,12 +5,14 @@ import 'package:test/test.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
-/// A realistic vault (18 names): the assistant name, note titles and list
+/// A realistic vault (20 names): the assistant name, note titles and list
 /// names like on the device in the test of 2026-10-13 (B6). Single-word
 /// titles are dropped by [Vocabulary] but listed here on purpose.
 final _vocabulary = Vocabulary(
   const [
     'Wendelin-Test',
+    'Garten Ideen',
+    'Wochen Plan',
     'Garten',
     'Rezepte',
     'Geschenke',
@@ -64,6 +66,7 @@ void main() {
       ('Wendolin', 'Wendelin'),
       // Mehrwortiger Titel.
       ('Lies Projekt Phönix vor', 'Lies Projekt Phoenix vor'),
+      ('Zeig den Wochen Plahn', 'Zeig den Wochen Plan'),
       ('Reise Malorka planen', 'Reise Mallorca planen'),
       // Französisch und Englisch mit dem einfachen Schlüssel.
       ('Lis la note Wandel Intest', 'Lis la note Wendelin-Test'),
@@ -116,6 +119,10 @@ void main() {
       'I need some gift ideas for mom.',
       'We work from the home office today.',
       'Add eggs to the shopping list.',
+      // Re-Review: g/k am Anfang, Einzelwort nicht auf Mehrwort-Titel trennen.
+      'Ich sammle Karten Ideen.',
+      'Der Wochenplan ist fertig.',
+      'Wendelinus war ein Heiliger.',
       // Ältere Fälle.
       'Ich muss heute einkaufen.',
       'Wir haben gestern eingekauft.',
@@ -224,7 +231,7 @@ void main() {
 
     test('toString nennt keine Namen (Datenschutz)', () {
       expect(_vocabulary.toString(), isNot(contains('Wendelin')));
-      expect(_vocabulary.toString(), contains('7'));
+      expect(_vocabulary.toString(), contains('9'));
     });
 
     test('Grenzwerte der Distanz', () {
@@ -289,9 +296,9 @@ void main() {
     });
 
     test('Sprache wird durchgereicht und wählt den Schlüssel (M18)', () async {
-      // „Kesar“/„Cesar“: Kölner Phonetik (de) verschieden (4… / 8…), der
-      // einfache Schlüssel (fr/en) gleich.
-      final v = Vocabulary(['Cesar Plan']);
+      // „Bace“/„Bake“: Kölner Phonetik (de) verschieden (c vor e → 8, k → 4),
+      // der einfache Schlüssel (fr/en) gleich.
+      final v = Vocabulary(['Bake Plan']);
       Future<(String, String?)> run(Transcript t, String? language) async {
         final inner = FakeSpeechToText([t]);
         final stt = CorrectingSpeechToText(inner, vocabulary: () => v);
@@ -299,22 +306,22 @@ void main() {
         return (out.text, inner.calls.single.language);
       }
 
-      expect(await run(const Transcript(text: 'Kesar Plan'), 'de'), (
-        'Kesar Plan',
+      expect(await run(const Transcript(text: 'Bace Plan'), 'de'), (
+        'Bace Plan',
         'de',
       ));
-      expect(await run(const Transcript(text: 'Kesar Plan'), 'fr'), (
-        'Cesar Plan',
+      expect(await run(const Transcript(text: 'Bace Plan'), 'fr'), (
+        'Bake Plan',
         'fr',
       ));
       // Die erkannte Sprache des Ergebnisses geht vor.
       expect(
-        await run(const Transcript(text: 'Kesar Plan', language: 'en'), 'de'),
-        ('Cesar Plan', 'de'),
+        await run(const Transcript(text: 'Bace Plan', language: 'en'), 'de'),
+        ('Bake Plan', 'de'),
       );
       expect(
-        await run(const Transcript(text: 'Kesar Plan', language: 'de'), null),
-        ('Kesar Plan', null),
+        await run(const Transcript(text: 'Bace Plan', language: 'de'), null),
+        ('Bace Plan', null),
       );
     });
 

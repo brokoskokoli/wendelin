@@ -107,6 +107,21 @@ final class NoteResolution {
   String toString() => 'NoteResolution($path, ${kind.name})';
 }
 
+/// Notice line (with line break) of a read whose note was found under
+/// another name ([found] is fuzzy or phonetic, B6): the model names the
+/// note in its answer. Empty otherwise.
+String approximateNotice(String query, NoteResolution found) =>
+    found.approximate
+    ? 'Hinweis: Eine Notiz „$query“ gibt es nicht genau so. Gelesen wurde die '
+          '${found.kind == NoteMatchKind.phonetic ? 'ähnlich klingende' : 'ähnlich benannte'} '
+          'Notiz ${vaultNames([found.path])}. Nenne sie in der Antwort.\n'
+    : '';
+
+/// ` match="<kind>"` for `<note_content>` of an approximate match, else
+/// empty.
+String matchAttribute(NoteResolution found) =>
+    found.approximate ? ' match="${found.kind.name}"' : '';
+
 /// Obsidian: notes in the user's vault (`obsidian__…` tools).
 final class ObsidianIntegration implements Integration {
   /// Creates the integration on [vault] and [index]. [settings] is read on
@@ -276,6 +291,10 @@ final class ObsidianEnv {
   /// [FileQueue]).
   Future<T> exclusive<T>(String path, Future<T> Function() body) =>
       FileQueue.run('vault:$path', body);
+
+  /// [resolveNoteMatch] for reading.
+  Future<NoteResolution> resolveForRead(String query, DateTime now) =>
+      resolveNoteMatch(query, write: false, now: now);
 
   /// The note [query] names, as path (see [resolveNoteMatch]).
   Future<String> resolveNote(

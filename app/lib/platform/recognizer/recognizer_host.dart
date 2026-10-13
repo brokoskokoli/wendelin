@@ -74,9 +74,10 @@ final class RecognizerRequest {
 
 /// Models for the recognizer engine (device: `DeviceRecognizerEngines`).
 abstract interface class RecognizerEngines {
-  /// Throws `VoiceException(modelMissing)` unless Whisper [modelId] and
-  /// Silero are installed.
-  Future<void> checkInstalled(String modelId);
+  /// The Whisper model to use: [modelId] if installed, else an installed
+  /// one (small, then base). Throws `VoiceException(modelMissing)` if no
+  /// Whisper model or Silero is installed.
+  Future<String> checkInstalled(String modelId);
 
   /// A fresh Silero VAD (freed with [releaseVad]).
   VoiceActivityDetector vad(double threshold);
@@ -270,13 +271,14 @@ final class RecognizerHost {
     final req = _current = _Request(id, audio);
     await _cancel(previous);
     final String? language;
+    final String model;
     final VoiceActivityDetector vad;
     try {
       language = recognitionLanguage(
         request.language,
         fallback: request.sttLanguage,
       );
-      await engines.checkInstalled(request.model);
+      model = await engines.checkInstalled(request.model);
       if (req.cancelled) return;
       vad = engines.vad(request.vadThreshold);
     } on Object catch (e) {
@@ -286,7 +288,7 @@ final class RecognizerHost {
     final session = req.session = RecognitionSession(
       audio: audio,
       vad: vad,
-      stt: engines.speechToText(request.model),
+      stt: engines.speechToText(model),
       endpoint: request.endpoint,
       language: language,
       onEvent: (e) => _send(req, e),

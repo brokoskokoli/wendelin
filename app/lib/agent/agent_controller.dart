@@ -9,6 +9,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../di/audit_recorder.dart';
 import '../di/provider_config.dart';
 import '../di/providers.dart';
+import '../di/vocabulary_provider.dart';
 import 'chat_entry.dart';
 import 'conversation_reducer.dart';
 import 'conversation_state.dart';
@@ -188,6 +189,11 @@ final class AgentController extends Notifier<ConversationState> {
     required StreamController<AgentEvent>? out,
   }) async {
     final trimmed = input.text.trim();
+    // Note names the speech correction filled in only count for the spoken
+    // request they came from (WP33, B8).
+    if (input.source != InputSource.voice) {
+      ref.read(correctedTitlesProvider).record(const []);
+    }
     // Mark as running right away, so a second tap cannot start another run.
     state = state.copyWith(running: true);
     _out = out;

@@ -134,6 +134,18 @@ void main() {
     expect(c.take('Urlaub Ideen.md'), isFalse);
   });
 
+  test('getippte Anfrage verwirft die Markierung', () async {
+    final env = TestEnv(
+      providerConfig: scripted(FakeLlmProvider([ScriptedTurn.text('Ok.')])),
+    );
+    final c = env.container();
+    addTearDown(c.dispose);
+    final corrected = c.read(correctedTitlesProvider)
+      ..record(Vocabulary(['Wendelin-Test']).terms);
+    await c.read(agentControllerProvider.notifier).send('Hallo');
+    expect(corrected.take('Wendelin-Test.md'), isFalse);
+  });
+
   test('Obsidian-Integration fragt beim Schreiben nach (Verdrahtung)', () {
     final env = TestEnv();
     final c = env.container();

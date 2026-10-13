@@ -84,12 +84,28 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
   }
 
   @override
-  Future<void> checkInstalled(String modelId) async {
-    await _installed(modelId, 'Das Whisper-Modell');
+  Future<String> checkInstalled(String modelId) async {
+    final id = await _whisperOnDevice(modelId);
     await _installed(
       SpeechModelCatalog.sileroVad.id,
       'Die Sprachaktivitätserkennung',
     );
+    return id;
+  }
+
+  /// [modelId] if installed, else the installed Whisper model (small, then
+  /// base): the mirrored setting may be missing or name a deleted model
+  /// (WP33: the default changed from base to small).
+  Future<String> _whisperOnDevice(String modelId) async {
+    final wanted = catalog.byId(modelId);
+    if (wanted != null && await models.isInstalled(wanted)) return modelId;
+    for (final m in const [
+      SpeechModelCatalog.whisperSmall,
+      SpeechModelCatalog.whisperBase,
+    ]) {
+      if (await models.isInstalled(m)) return m.id;
+    }
+    return (await _installed(modelId, 'Das Whisper-Modell')).id;
   }
 
   @override

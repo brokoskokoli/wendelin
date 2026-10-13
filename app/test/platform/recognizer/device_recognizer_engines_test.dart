@@ -76,13 +76,48 @@ void main() {
 
   group('checkInstalled', () {
     test('Whisper und Silero da: in Ordnung', () async {
-      await engines().checkInstalled('whisper-base');
+      expect(await engines().checkInstalled('whisper-base'), 'whisper-base');
     });
 
+    for (final (name, installed, id, expected) in [
+      // Kein Spiegel (Standard small), nur base da: base (WP33).
+      (
+        'small fehlt, base da',
+        {'whisper-base'},
+        'whisper-small',
+        'whisper-base',
+      ),
+      (
+        'base fehlt, small da',
+        {'whisper-small'},
+        'whisper-base',
+        'whisper-small',
+      ),
+      (
+        'beide da: small vor base',
+        {'whisper-base', 'whisper-small'},
+        'whisper-huge',
+        'whisper-small',
+      ),
+      (
+        'angefragtes geht vor',
+        {'whisper-base', 'whisper-small'},
+        'whisper-base',
+        'whisper-base',
+      ),
+    ]) {
+      test('Ausweichen: $name', () async {
+        models.installed
+          ..clear()
+          ..addAll({...installed, 'silero-vad'});
+        expect(await engines().checkInstalled(id), expected);
+      });
+    }
+
     for (final (name, missing, id) in [
-      ('Whisper fehlt', 'whisper-base', 'whisper-base'),
+      ('kein Whisper', 'whisper-base', 'whisper-small'),
       ('Silero fehlt', 'silero-vad', 'whisper-base'),
-      ('unbekanntes Modell', '', 'whisper-huge'),
+      ('unbekanntes Modell, kein Whisper', 'whisper-base', 'whisper-huge'),
     ]) {
       test('$name: modelMissing', () async {
         models.installed.remove(missing);
