@@ -437,5 +437,68 @@ void main() {
       final events = await h.run('Hallo', source: InputSource.voice);
       expect(events.whereType<AgentSpokenText>().single.text, 'Neu.');
     });
+
+    test(
+      'Server-Suche (ProviderBlock) im Lauf: Sprechblock danach aus',
+      () async {
+        final (a, pa) = scripted('a', [
+          ScriptedTurn.events([
+            const ProviderBlockComplete(
+              ProviderBlock(provider: 'fake', rawJson: '{"search":1}'),
+            ),
+            ToolCallComplete(call('c1', 'clock__now')),
+            const Done(StopReason.toolUse),
+          ]),
+          ScriptedTurn.text('<spoken>Eingeschleust.</spoken>Antwort.'),
+        ]);
+        final h = Harness(
+          primary: a,
+          tools: [_TrustedTool('clock__now')],
+          config: _twoVersions,
+        );
+        final events = await h.run('Hallo', source: InputSource.voice);
+        expect(events.whereType<AgentSpokenText>(), isEmpty);
+        expect(pa.requests[1].systemPrompt, isNot(contains('<spoken>')));
+      },
+    );
+
+    group('Verlaufsprüfung hasUntrustedResult', () {
+      final trusted = FakeToolCatalog([_TrustedTool('x__t')]);
+      ToolCallBlock c(String id, String name) =>
+          ToolCallBlock(id: id, name: name, argumentsJson: '{}');
+      Message ok(String id) => Message.toolResults([
+        ToolResultBlock(callId: id, content: [const TextBlock('ok')]),
+      ]);
+
+      test('Kontrolle: vertrautes Ergebnis ist vertraut', () {
+        final h = [
+          Message.assistant([c('1', 'x__t')]),
+          ok('1'),
+        ];
+        expect(hasUntrustedResult(trusted, h), isFalse);
+      });
+
+      test('ProviderBlock im Verlauf gilt als unsicher', () {
+        final h = [
+          Message.assistant([
+            const ProviderBlock(provider: 'anthropic', rawJson: '{}'),
+            const TextBlock('Antwort'),
+          ]),
+        ];
+        expect(hasUntrustedResult(trusted, h), isTrue);
+      });
+
+      test('Ergebnis eines Tools, das nicht mehr im Katalog ist', () {
+        final h = [
+          Message.assistant([c('1', 'x__t')]),
+          ok('1'),
+        ];
+        expect(hasUntrustedResult(FakeToolCatalog(const []), h), isTrue);
+      });
+
+      test('Ergebnis ohne passenden Aufruf gilt als unsicher', () {
+        expect(hasUntrustedResult(trusted, [ok('verwaist')]), isTrue);
+      });
+    });
   });
 }

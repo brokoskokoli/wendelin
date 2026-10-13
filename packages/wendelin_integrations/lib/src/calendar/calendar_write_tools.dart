@@ -98,12 +98,14 @@ final class CreateEventTool extends IntegrationTool
         timeZone: times.allDay ? 'UTC' : loc.name,
       ),
     );
-    final names = await calendarNames(env.port);
     final when = event.allDay
         ? describeEventSpan(event, loc)
         : germanDateTime(event.start, loc);
     return jsonOutcome(
-      {'created': eventJson(event, loc, names)},
+      {
+        // Only the calendar id: names of shared calendars come from others.
+        'created': eventJson(event, loc, const {}),
+      },
       summary: 'Termin angelegt: ${event.title}, $when',
       undo: UndoAction(
         label: 'Termin entfernen',

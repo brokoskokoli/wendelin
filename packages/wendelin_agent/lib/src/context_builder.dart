@@ -71,6 +71,9 @@ bool hasUntrustedResult(ToolCatalog catalog, List<Message> messages) {
   for (final m in messages) {
     for (final b in m.content) {
       if (b is ToolCallBlock) names[b.id] = b.name;
+      // Server-side tools (web search) deliver third-party text as provider
+      // blocks: never trusted.
+      if (b is ProviderBlock) return true;
       if (b is ToolResultBlock) {
         final name = names[b.callId];
         if (name == null ||

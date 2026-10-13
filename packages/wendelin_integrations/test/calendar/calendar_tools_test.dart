@@ -500,7 +500,7 @@ void main() {
       final created = json(o)['created']! as Map;
       expect(created['start'], '2026-10-15T10:00:00+02:00');
       expect(created['end'], '2026-10-15T11:00:00+02:00');
-      expect(created['calendar'], 'Privat');
+      expect(created['calendar'], 'privat'); // id only, never the name
       expect(o.summary, 'Termin angelegt: Tauchen, Do 15.10. 10:00');
       final stored = port.events.single;
       expect(stored.start, berlin(15, 10));
