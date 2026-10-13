@@ -8,6 +8,7 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/ui/design/mic_button.dart';
 import 'package:wendelin/voice/level_meter.dart';
 import 'package:wendelin/voice/voice_components.dart';
@@ -28,22 +29,19 @@ VoiceComponents fakeVoice({
   List<Transcript> script = const [],
   FakeTextToSpeech? tts,
   AudioInput? audio,
-  Future<bool> Function()? prepare,
 }) => VoiceComponents(
   audio: audio ?? FakeAudioInput(frames: utterance()),
   vad: FakeVoiceActivityDetector(),
   stt: FakeSpeechToText(script),
   textToSpeech: (_) async => tts,
-  prepare: prepare,
+  config: const VoicePipelineConfig(),
 );
 
 /// [TestEnv] whose voice parts are [voice] (`null` = no speech).
 TestEnv voiceEnv(List<ScriptedTurn> turns, {required VoiceComponents? voice}) =>
     TestEnv(
       providerConfig: scripted(FakeLlmProvider(turns)),
-      extraOverrides: [
-        voiceComponentsProvider.overrideWith((ref) async => voice),
-      ],
+      extraOverrides: [activeVoiceProvider.overrideWith((ref) async => voice)],
     );
 
 Future<ConversationState> waitConv(
@@ -102,7 +100,7 @@ void main() {
       env = TestEnv(
         providerConfig: scripted(provider),
         extraOverrides: [
-          voiceComponentsProvider.overrideWith(
+          activeVoiceProvider.overrideWith(
             (ref) async => fakeVoice(
               script: const [
                 Transcript(
@@ -173,7 +171,7 @@ void main() {
     env = TestEnv(
       providerConfig: scripted(provider),
       extraOverrides: [
-        voiceComponentsProvider.overrideWith(
+        activeVoiceProvider.overrideWith(
           (ref) async => fakeVoice(audio: audio),
         ),
       ],
@@ -321,12 +319,13 @@ void main() {
           ]),
         ),
         extraOverrides: [
-          voiceComponentsProvider.overrideWith(
+          activeVoiceProvider.overrideWith(
             (ref) async => VoiceComponents(
               audio: audio,
               vad: FakeVoiceActivityDetector(),
               stt: stt,
               textToSpeech: (_) async => null,
+              config: const VoicePipelineConfig(),
             ),
           ),
         ],
@@ -382,6 +381,7 @@ void main() {
           vad: FakeVoiceActivityDetector(),
           stt: stt,
           textToSpeech: (_) async => null,
+          config: const VoicePipelineConfig(),
         ),
       );
       c = env.container();
@@ -456,16 +456,17 @@ void main() {
 
   test('prepare verneint (keine Berechtigung): kein Start', () async {
     var asked = 0;
-    start(
-      const [],
-      voice: fakeVoice(
+    start(const [], voice: fakeVoice());
+    expect(
+      await voice().start(
+        TriggerKind.pushToTalk,
         prepare: () async {
           asked++;
           return false;
         },
       ),
+      isFalse,
     );
-    expect(await voice().start(TriggerKind.pushToTalk), isFalse);
     expect(asked, 1);
     expect(c.read(voiceControllerProvider).error, contains('Mikrofon'));
   });

@@ -9,6 +9,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../agent/agent_controller.dart';
 import '../agent/conversation_state.dart';
 import '../di/providers.dart';
+import '../di/voice_providers.dart';
 import '../ui/design/mic_button.dart';
 import '../ui/screens/labels.dart';
 import 'level_meter.dart';
@@ -114,8 +115,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
       agentControllerProvider.select((s) => s.pending),
       (_, next) => _onPending(next),
     );
-    // New components (demo switched, WP17 model loaded): rebuild lazily.
-    ref.listen(voiceComponentsProvider, (_, _) => unawaited(_reset()));
+    // Demo switched: drop the pipeline; other new components (model or
+    // settings changed) are picked up at the next start (_pipelineFor).
+    ref.listen(demoModeProvider, (_, _) => unawaited(_reset()));
     ref.onDispose(() => unawaited(_reset()));
     return const VoiceUiState();
   }
@@ -127,27 +129,32 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Future<void> get whenIdle => _pipeline?.whenIdle ?? Future.value();
 
   /// Starts a voice request from [kind]. Returns `false` (with [VoiceUiState.error]
-  /// set) when speech is unavailable or a request already runs.
-  Future<bool> start(TriggerKind kind) async {
+  /// set) when speech is unavailable or a request already runs. [prepare]
+  /// runs first, e.g. asking for the microphone permission with an
+  /// explanation (`ensureMicrophoneAccess`); `false` stops.
+  Future<bool> start(
+    TriggerKind kind, {
+    Future<bool> Function()? prepare,
+  }) async {
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
-    final VoiceComponents? components;
-    try {
-      components = await ref.read(voiceComponentsProvider.future);
-    } on Object catch (e) {
-      state = state.copyWith(error: 'Sprache nicht verfügbar: $e');
-      return false;
-    }
-    if (components == null) {
-      state = state.copyWith(error: voiceUnavailableHint, clearHint: true);
-      return false;
-    }
-    if (!(await components.prepare?.call() ?? true)) {
+    if (!(await prepare?.call() ?? true)) {
       state = state.copyWith(
         error: 'Ohne Mikrofon-Zugriff geht nur Text.',
         clearHint: true,
       );
+      return false;
+    }
+    final VoiceComponents? components;
+    try {
+      components = await ref.read(activeVoiceProvider.future);
+    } on Object catch (e) {
+      state = state.copyWith(error: voiceErrorText(e), clearHint: true);
+      return false;
+    }
+    if (components == null) {
+      state = state.copyWith(error: voiceUnavailableHint, clearHint: true);
       return false;
     }
     final pipeline = _pipelineFor(components);
@@ -159,9 +166,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
 
   /// Microphone button: starts push-to-talk when idle, otherwise cancels
   /// the voice request (tap aborts in every state).
-  Future<void> tap() async {
+  Future<void> tap({Future<bool> Function()? prepare}) async {
     if (state.active) return cancel();
-    await start(TriggerKind.pushToTalk);
+    await start(TriggerKind.pushToTalk, prepare: prepare);
   }
 
   /// Aborts the voice request (listening, recognition, answer, speech

@@ -7,6 +7,7 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
@@ -89,7 +90,8 @@ Future<ProviderContainer> pumpOverlay(
           overrides: [
             ...env.overrides,
             assistantPlatformProvider.overrideWithValue(platform),
-            voiceComponentsProvider.overrideWith(
+            voiceReadyProvider.overrideWithValue(true),
+            activeVoiceProvider.overrideWith(
               (ref) async => voice ?? fakeVoice(),
             ),
           ],

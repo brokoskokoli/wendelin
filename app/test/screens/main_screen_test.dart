@@ -363,6 +363,8 @@ void main() {
     await tester.tap(find.byTooltip('Einstellungen'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Design-Galerie'), 100);
+    await tester.ensureVisible(find.byType(WSwitch).last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(WSwitch).last);
     await tester.pumpAndSettle();
     expect(containerOf(tester).read(demoModeProvider), isTrue);

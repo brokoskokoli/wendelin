@@ -11,9 +11,11 @@ import '../../agent/money.dart';
 import '../../di/obsidian_index.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
+import '../../di/voice_providers.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
 import '../routes.dart';
+import '../voice/microphone_access.dart';
 import 'confirmation_sheet.dart';
 import 'conversation_view.dart';
 import 'main_parts.dart';
@@ -79,7 +81,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final voice = ref.watch(voiceControllerProvider);
     final mic = micStateFor(
       voice,
-      available: ref.watch(voiceComponentsProvider).value != null,
+      available: ref.watch(voiceReadyProvider),
       running: conversation.running,
     );
     final active = _activeTarget(providers, conversation.activeProfileId);
@@ -138,7 +140,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 } else if (conversation.running) {
                   _controller.cancel();
                 } else {
-                  unawaited(ref.read(voiceControllerProvider.notifier).tap());
+                  unawaited(
+                    ref
+                        .read(voiceControllerProvider.notifier)
+                        .tap(prepare: _microphoneAccess),
+                  );
                 }
               },
               onSend: (text) {
@@ -151,6 +157,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         ],
       ),
     );
+  }
+
+  /// Microphone permission with explanation (WP17); not in the demo.
+  Future<bool> _microphoneAccess() async {
+    if (ref.read(demoModeProvider)) return true;
+    return ensureMicrophoneAccess(context, ref.read(microphoneProvider));
   }
 
   void _openProviderSetup() =>

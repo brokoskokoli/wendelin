@@ -9,7 +9,7 @@ Flutter-App (Android zuerst): UI, Riverpod-Verdrahtung der Pakete unter `package
 | `lib/di/` | Riverpod-Provider, Agent-Fabrik, Sitzungen, Audit, Kosten/Budget, Provider-Konfiguration, Demo-Provider, Integrations-Specs |
 | `lib/agent/` | `AgentController` (Notifier) und reiner `ConversationReducer` über `AgentEvent`s |
 | `lib/platform/` | Ports: `DeviceCalendarPort` (Kanal `app.wendelin/calendar` → `CalendarChannel.kt`), `FlutterClipboardPort`, `AndroidAlarmPort` (`AlarmClock`-Intents), `RepositoryMemoryPort`, `SafListFilePort` + `DocumentPicker` (Kanal `app.wendelin/files` → `FilesChannel.kt`), `SafVaultPort` + `VaultAccess` (Kanal `app.wendelin/vault` → `VaultChannel.kt`), `RepositoryNoteIndexPort`, `AssistantPlatform` (Kanal `app.wendelin/assistant` → `AssistantChannel.kt`), `SecureSecretStore` |
-| `lib/voice/` | Sprache in der App: `VoiceComponents` (Schnittstelle zu WP17), `VoiceController` (Push-to-talk, Overlay, Bestätigung per Stimme), Pegelanzeige |
+| `lib/voice/` | Sprache in der App: `activeVoiceProvider` (Komponenten aus WP17 bzw. Demo), `VoiceController` (Push-to-talk, Overlay, Bestätigung per Stimme), Pegelanzeige |
 | `lib/ui/overlay/` | Assistenten-Overlay (Dart-Einstieg `assistantMain`, `AssistantActivity.kt`) |
 | `lib/ui/design/` | Design-System (WP07) |
 | `lib/ui/screens/` | Hauptbildschirm, Bestätigungs-Sheet |

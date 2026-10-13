@@ -28,7 +28,8 @@ void main() {
           FakeLlmProvider([ScriptedTurn.text('Morgen wird es sonnig.')]),
         ),
         extraOverrides: [
-          voiceComponentsProvider.overrideWith(
+          voiceReadyProvider.overrideWithValue(true),
+          activeVoiceProvider.overrideWith(
             (ref) async => fakeVoice(
               audio: audio,
               tts: tts,
@@ -64,7 +65,8 @@ void main() {
         FakeLlmProvider([ScriptedTurn.hang(partialText: 'Moment')]),
       ),
       extraOverrides: [
-        voiceComponentsProvider.overrideWith(
+        voiceReadyProvider.overrideWithValue(true),
+        activeVoiceProvider.overrideWith(
           (ref) async =>
               fakeVoice(script: const [Transcript(text: 'Erzähl was')]),
         ),
@@ -97,7 +99,8 @@ void main() {
         ]),
       ),
       extraOverrides: [
-        voiceComponentsProvider.overrideWith(
+        voiceReadyProvider.overrideWithValue(true),
+        activeVoiceProvider.overrideWith(
           (ref) async => fakeVoice(
             audio: FakeAudioInput(
               frames: utterance(),
@@ -163,7 +166,8 @@ void main() {
         FakeLlmProvider([ScriptedTurn.text('Ein Satz. Noch einer.')]),
       ),
       extraOverrides: [
-        voiceComponentsProvider.overrideWith((ref) async => components),
+        voiceReadyProvider.overrideWithValue(true),
+        activeVoiceProvider.overrideWith((ref) async => components),
       ],
     );
     await pumpApp(tester, env);

@@ -8,11 +8,13 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../agent/agent_controller.dart';
 import '../../di/providers.dart';
+import '../../di/voice_providers.dart';
 import '../../platform/assistant_platform.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
 import '../design/design.dart';
 import '../screens/confirmation_sheet.dart';
+import '../voice/microphone_access.dart';
 import 'overlay_sheet.dart';
 
 /// Root widget of the assistant overlay (Dart entrypoint `assistantMain`,
@@ -126,7 +128,13 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) await _voice.cancel();
     if (ref.read(agentControllerProvider).running) return;
-    await _voice.start(e.source);
+    await _voice.start(e.source, prepare: _microphoneAccess);
+  }
+
+  /// Microphone permission with explanation (WP17); not in the demo.
+  Future<bool> _microphoneAccess() async {
+    if (ref.read(demoModeProvider)) return true;
+    return ensureMicrophoneAccess(context, ref.read(microphoneProvider));
   }
 
   Future<void> _unlock() async {
@@ -164,7 +172,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     final voice = ref.watch(voiceControllerProvider);
     final config = ref.watch(providerConfigProvider).value;
     final target = config?.targetFor(conversation.activeProfileId);
-    final available = ref.watch(voiceComponentsProvider).value != null;
+    final available = ref.watch(voiceReadyProvider);
     final mic = _locked
         ? MicState.disabled
         : micStateFor(
@@ -198,7 +206,9 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
         } else if (conversation.running) {
           _agent.cancel();
         } else {
-          unawaited(_voice.start(TriggerKind.assistant));
+          unawaited(
+            _voice.start(TriggerKind.assistant, prepare: _microphoneAccess),
+          );
         }
       },
       onClose: () => unawaited(_close()),
