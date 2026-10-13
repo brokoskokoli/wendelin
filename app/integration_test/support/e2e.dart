@@ -39,8 +39,11 @@ final class E2eApp {
   /// Further overrides.
   final List<Override> extraOverrides;
 
-  /// Local database (in memory, nothing stays on the device).
-  final WendelinStorage storage = openInMemoryStorage();
+  /// Local database (in memory, nothing stays on the device). Uses the
+  /// same [clock] as the app, otherwise session times would not match.
+  late final WendelinStorage storage = openInMemoryStorage(
+    clock: clock ?? const SystemClock(),
+  );
 
   /// Secrets (in memory).
   final InMemorySecretStore secrets = InMemorySecretStore();
