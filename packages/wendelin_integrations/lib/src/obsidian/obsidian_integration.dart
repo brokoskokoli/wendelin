@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:meta/meta.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../common/data_envelope.dart';
 import '../common/file_queue.dart';
 import '../common/matching.dart';
 import '../common/port_exception.dart';
@@ -10,6 +13,20 @@ import 'note_indexer.dart';
 import 'obsidian_tools.dart';
 import 'ports.dart';
 import 'vault_path.dart';
+
+/// Data tags of the Obsidian tools; content inside is escaped.
+const obsidianDataTags = [
+  'note_content',
+  'note_search_results',
+  'folder_listing',
+  'vault_names',
+];
+
+/// [names] from the vault (paths, headings) as a data block for messages
+/// to the model: JSON list in `<vault_names>`, tags escaped.
+String vaultNames(Iterable<String> names) =>
+    '<vault_names>${escapeDataTags(jsonEncode(names.toList()), obsidianDataTags)}'
+    '</vault_names>';
 
 /// Opens an `obsidian://` link (the app: `url_launcher` or an intent).
 typedef OpenUri = Future<void> Function(Uri uri);
@@ -123,11 +140,16 @@ final class ObsidianIntegration implements Integration {
 
 /// A note read from the vault.
 final class LoadedNote {
-  /// Creates a loaded note.
-  LoadedNote(this.path, this.doc);
+  /// Creates a loaded note; [original] is the content as read (`null` for
+  /// a note that does not exist yet).
+  LoadedNote(this.path, this.doc, {this.original});
 
   /// Vault path.
   final String path;
+
+  /// Content when it was loaded; [ObsidianEnv.save] writes only if the
+  /// file still has it.
+  final String? original;
 
   /// Parsed content (ATX and setext headings).
   final MarkdownDoc doc;
@@ -190,7 +212,7 @@ final class ObsidianEnv {
     try {
       final report = await indexer.sync();
       _lastSync = now;
-      ok = report.pending == 0 && report.failed == 0;
+      ok = report.pending == 0 && report.failed == 0 && report.complete;
       return report;
     } finally {
       if (!ok) _dirty = true;
@@ -237,14 +259,15 @@ final class ObsidianEnv {
     if (m.best.length > 1) {
       throw PortException(
         PortErrorKind.rejected,
-        'Mehrdeutig: „$query“ passt zu ${m.best.take(5).join(', ')}. '
+        'Mehrdeutig: „$query“ passt zu ${vaultNames(m.best.take(5))}. '
         'Bitte nachfragen, welche Notiz gemeint ist.',
       );
     }
     if (write && m.score == 1) {
       throw PortException(
         PortErrorKind.rejected,
-        'Meintest du die Notiz „${m.best.single}“? Bitte nachfragen.',
+        'Meintest du die Notiz ${vaultNames([m.best.single])}? Bitte '
+        'nachfragen.',
       );
     }
     return m.best.single;
@@ -260,11 +283,23 @@ final class ObsidianEnv {
       );
     }
     final content = await vault.read(path);
-    return LoadedNote(path, MarkdownDoc.parse(content, setext: true));
+    return LoadedNote(
+      path,
+      MarkdownDoc.parse(content, setext: true),
+      original: content,
+    );
   }
 
-  /// Writes [note] back and marks the index as outdated.
+  /// Writes [note] back and marks the index as outdated. Optimistic lock:
+  /// if the file changed since [load] (Obsidian Sync, editor, the lists
+  /// integration on the same file), throws [WriteConflict] without
+  /// writing; [exclusive] then runs the whole step again on the new
+  /// content.
   Future<void> save(LoadedNote note) async {
+    final original = note.original;
+    if (original != null && await vault.read(note.path) != original) {
+      throw const WriteConflict();
+    }
     markDirty();
     await vault.write(note.path, note.doc.toString());
   }
@@ -284,16 +319,16 @@ final class ObsidianEnv {
     if (m.best.length > 1) {
       throw PortException(
         PortErrorKind.rejected,
-        'Mehrdeutig: Überschrift „$query“ passt in „$path“ zu '
-        '${m.best.map((h) => '„${h.title}“ (Zeile ${h.line + 1})').join(', ')}. '
+        'Mehrdeutig: Überschrift „$query“ passt in ${vaultNames([path])} zu '
+        '${vaultNames(m.best.map((h) => '${h.title} (Zeile ${h.line + 1})'))}. '
         'Bitte nachfragen.',
       );
     }
     if (write && m.score == 1) {
       throw PortException(
         PortErrorKind.rejected,
-        'Meintest du die Überschrift „${m.best.single.title}“? Bitte '
-        'nachfragen.',
+        'Meintest du die Überschrift ${vaultNames([m.best.single.title])}? '
+        'Bitte nachfragen.',
       );
     }
     return m.best.single;

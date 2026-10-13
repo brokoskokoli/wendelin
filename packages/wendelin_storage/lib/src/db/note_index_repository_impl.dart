@@ -6,8 +6,14 @@ import 'database.dart';
 import 'memory_repository_impl.dart' show ftsQuery;
 
 /// drift implementation of [NoteIndexRepository] on `note_files` +
-/// `note_fts` (FTS5, bm25 with title weight 10).
+/// `note_fts` (FTS5, bm25 with weights path 2, title 10, body 1).
 final class DriftNoteIndexRepository implements NoteIndexRepository {
+  /// bm25 weight of the title column (body = 1).
+  static const titleWeight = 10.0;
+
+  /// bm25 weight of the path column (folder names).
+  static const pathWeight = 2.0;
+
   /// Creates the repository.
   DriftNoteIndexRepository(this._db);
 
@@ -19,18 +25,34 @@ final class DriftNoteIndexRepository implements NoteIndexRepository {
     required String title,
     required String body,
     required DateTime modifiedAt,
-  }) => _db.transaction(() async {
-    await _db.customStatement('DELETE FROM note_fts WHERE path = ?1', [path]);
-    await _db.customStatement(
-      'INSERT INTO note_fts (path, title, body) VALUES (?1, ?2, ?3)',
-      [path, title, body],
-    );
-    await _db
-        .into(_db.noteFiles)
-        .insertOnConflictUpdate(
-          NoteFileRow(path: path, title: title, modifiedAt: modifiedAt),
+  }) => upsertAll([
+    (path: path, title: title, body: body, modifiedAt: modifiedAt),
+  ]);
+
+  @override
+  Future<void> upsertAll(List<NoteIndexEntry> notes) async {
+    if (notes.isEmpty) return;
+    await _db.transaction(() async {
+      for (final n in notes) {
+        await _db.customStatement('DELETE FROM note_fts WHERE path = ?1', [
+          n.path,
+        ]);
+        await _db.customStatement(
+          'INSERT INTO note_fts (path, title, body) VALUES (?1, ?2, ?3)',
+          [n.path, n.title, n.body],
         );
-  });
+        await _db
+            .into(_db.noteFiles)
+            .insertOnConflictUpdate(
+              NoteFileRow(
+                path: n.path,
+                title: n.title,
+                modifiedAt: n.modifiedAt,
+              ),
+            );
+      }
+    });
+  }
 
   @override
   Future<void> remove(String path) => _db.transaction(() async {
@@ -46,7 +68,7 @@ final class DriftNoteIndexRepository implements NoteIndexRepository {
         .customSelect(
           "SELECT path, title, snippet(note_fts, 2, '', '', '…', 16) AS s "
           'FROM note_fts WHERE note_fts MATCH ?1 '
-          'ORDER BY bm25(note_fts, 0.0, 10.0, 1.0), path '
+          'ORDER BY bm25(note_fts, $pathWeight, $titleWeight, 1.0), path '
           'LIMIT ?2',
           variables: [Variable.withString(match), Variable.withInt(limit)],
           readsFrom: {_db.noteFts},

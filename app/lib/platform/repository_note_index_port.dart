@@ -22,6 +22,10 @@ final class RepositoryNoteIndexPort implements wi.NoteIndexPort {
       repository.upsert(path, title: title, body: body, modifiedAt: modifiedAt);
 
   @override
+  Future<void> upsertAll(List<wi.IndexedNote> notes) =>
+      repository.upsertAll(notes);
+
+  @override
   Future<void> remove(String path) => repository.remove(path);
 
   @override

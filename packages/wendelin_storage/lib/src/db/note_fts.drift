@@ -4,9 +4,10 @@ import 'tables.dart';
 -- FTS5 table keyed by path; note_files holds path, title and modification
 -- time. Both are written together in one transaction by
 -- DriftNoteIndexRepository (no triggers: the body is not stored elsewhere).
--- Column weights for bm25: path 0, title 10, body 1.
+-- Column weights for bm25: path 2 (folder names are searchable), title 10,
+-- body 1.
 CREATE VIRTUAL TABLE note_fts USING fts5(
-  path UNINDEXED,
+  path,
   title,
   body,
   tokenize = 'unicode61 remove_diacritics 2'

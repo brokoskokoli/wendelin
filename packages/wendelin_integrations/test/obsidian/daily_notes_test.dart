@@ -138,8 +138,14 @@ void main() {
     test('höchstens maxLines Zeilen', () {
       final after = [for (var i = 0; i < 50; i++) 'n$i'];
       final out = lineDiff([], after, maxLines: 10).split('\n');
-      expect(out, hasLength(11));
-      expect(out.last, '… (40 weitere Zeilen)');
+      expect(out, hasLength(10));
+      expect(out.last, '… 41 weitere Zeilen');
+    });
+
+    test('lange Zeilen werden gekürzt', () {
+      final out = lineDiff(['x' * 200], [], maxChars: 20);
+      expect(out, '- ${'x' * 17}…');
+      expect(out.length, 20);
     });
   });
 }

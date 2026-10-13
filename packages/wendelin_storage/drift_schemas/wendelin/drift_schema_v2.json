@@ -47,7 +47,7 @@
           }
         ],
         "is_virtual": true,
-        "create_virtual_stmt": "CREATE VIRTUAL TABLE \"note_fts\" USING fts5(path UNINDEXED, title, body, tokenize = 'unicode61 remove_diacritics 2')",
+        "create_virtual_stmt": "CREATE VIRTUAL TABLE \"note_fts\" USING fts5(path, title, body, tokenize = 'unicode61 remove_diacritics 2')",
         "without_rowid": false,
         "constraints": []
       }
@@ -848,7 +848,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE VIRTUAL TABLE IF NOT EXISTS \"note_fts\" USING fts5(path UNINDEXED, title, body, tokenize = 'unicode61 remove_diacritics 2');"
+          "sql": "CREATE VIRTUAL TABLE IF NOT EXISTS \"note_fts\" USING fts5(path, title, body, tokenize = 'unicode61 remove_diacritics 2');"
         }
       ]
     },

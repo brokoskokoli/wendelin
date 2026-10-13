@@ -23,8 +23,12 @@ final class FileSystemVaultPort implements VaultPort {
     return p.isEmpty ? _root : '$_root/$p';
   }
 
+  /// Whether [resolved] lies inside the vault and not in a hidden folder
+  /// (a link must not lead into `.obsidian/` either).
   bool _inside(String resolved) =>
-      resolved == _root || resolved.startsWith('$_root/');
+      resolved == _root ||
+      (resolved.startsWith('$_root/') &&
+          !VaultPath.isHidden(resolved.substring(_root.length + 1)));
 
   /// [path] as absolute file system path, after checking that it and its
   /// deepest existing ancestor resolve inside the vault.
@@ -48,7 +52,8 @@ final class FileSystemVaultPort implements VaultPort {
     if (!_inside(resolved)) {
       throw PortException(
         PortErrorKind.rejected,
-        'Pfad „$path“ führt aus dem Vault hinaus (Verknüpfung)',
+        'Pfad „$path“ führt aus dem Vault hinaus oder in einen versteckten '
+        'Ordner (Verknüpfung)',
       );
     }
     return full;
@@ -73,7 +78,8 @@ final class FileSystemVaultPort implements VaultPort {
       final name = e.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
       final path = VaultPath.join(base, name);
       var type = FileSystemEntity.typeSync(e.path, followLinks: false);
-      if (type == FileSystemEntityType.link) {
+      final isLink = type == FileSystemEntityType.link;
+      if (isLink) {
         try {
           if (!_inside(e.resolveSymbolicLinksSync())) continue;
         } on FileSystemException {
@@ -82,7 +88,7 @@ final class FileSystemVaultPort implements VaultPort {
         type = FileSystemEntity.typeSync(e.path);
       }
       if (type == FileSystemEntityType.directory) {
-        result.add(VaultEntry(path: path, isFolder: true));
+        result.add(VaultEntry(path: path, isFolder: true, isLink: isLink));
       } else if (type == FileSystemEntityType.file) {
         final stat = File(e.path).statSync();
         result.add(
@@ -91,6 +97,7 @@ final class FileSystemVaultPort implements VaultPort {
             isFolder: false,
             modifiedAt: stat.modified,
             size: stat.size,
+            isLink: isLink,
           ),
         );
       }

@@ -31,7 +31,7 @@ final class Schema2 extends i0.VersionedSchema {
   late final Shape0 noteFts = Shape0(
     source: i0.VersionedVirtualTable(
       entityName: 'note_fts',
-      moduleAndArgs: 'fts5(path UNINDEXED, title, body, tokenize = \'unicode61 remove_diacritics 2\')',
+      moduleAndArgs: 'fts5(path, title, body, tokenize = \'unicode61 remove_diacritics 2\')',
       columns: [_column_0, _column_1, _column_2],
       attachedDatabase: database,
     ),

@@ -116,6 +116,16 @@ void main() {
     expect(index.notes.containsKey('Weg.md'), isTrue);
   });
 
+  test('schreibt in Stapeln über upsertAll', () async {
+    final big = FakeVaultPort(
+      files: {for (var i = 0; i < 120; i++) 'n$i.md': 'x'},
+    );
+    final r = await NoteIndexer(big, index).sync();
+    expect(r.indexed, 120);
+    expect(index.batches, 3);
+    expect(index.methodCalls.where((m) => m == 'upsert'), isEmpty);
+  });
+
   test('gleichzeitige Läufe teilen sich einen', () async {
     vault.delay = const Duration(milliseconds: 1);
     final indexer = NoteIndexer(vault, index);

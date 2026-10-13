@@ -107,7 +107,7 @@ class NoteFts extends Table
   bool get dontWriteConstraints => true;
   @override
   String get moduleAndArgs =>
-      'fts5(path UNINDEXED, title, body, tokenize = \'unicode61 remove_diacritics 2\')';
+      'fts5(path, title, body, tokenize = \'unicode61 remove_diacritics 2\')';
 }
 
 class NoteFt extends DataClass implements Insertable<NoteFt> {

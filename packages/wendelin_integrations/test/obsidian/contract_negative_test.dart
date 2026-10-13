@@ -85,6 +85,18 @@ final class _BadIndex implements NoteIndexPort {
   }
 
   @override
+  Future<void> upsertAll(List<IndexedNote> notes) async {
+    for (final n in notes) {
+      await upsert(
+        n.path,
+        title: n.title,
+        body: n.body,
+        modifiedAt: n.modifiedAt,
+      );
+    }
+  }
+
+  @override
   Future<void> remove(String path) => inner.remove(path);
 
   @override

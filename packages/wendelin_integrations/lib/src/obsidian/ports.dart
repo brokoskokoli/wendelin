@@ -9,6 +9,7 @@ final class VaultEntry {
     required this.isFolder,
     this.modifiedAt,
     this.size,
+    this.isLink = false,
   });
 
   /// Vault-relative path (`Projekte/App.md`).
@@ -23,6 +24,10 @@ final class VaultEntry {
   /// Size in bytes (files; `null` if unknown).
   final int? size;
 
+  /// Whether the entry is a symbolic link (inside the vault). The index
+  /// sync does not descend into linked folders (no cycles, no duplicates).
+  final bool isLink;
+
   /// Last path segment.
   String get name => path.split('/').last;
 
@@ -32,10 +37,11 @@ final class VaultEntry {
       other.path == path &&
       other.isFolder == isFolder &&
       other.modifiedAt == modifiedAt &&
-      other.size == size;
+      other.size == size &&
+      other.isLink == isLink;
 
   @override
-  int get hashCode => Object.hash(path, isFolder, modifiedAt, size);
+  int get hashCode => Object.hash(path, isFolder, modifiedAt, size, isLink);
 
   @override
   String toString() => 'VaultEntry($path${isFolder ? '/' : ''})';
@@ -117,6 +123,15 @@ final class NoteHit {
   String toString() => 'NoteHit($path)';
 }
 
+/// One note for [NoteIndexPort.upsertAll] (a record, so storage can use
+/// the same shape without importing this package).
+typedef IndexedNote = ({
+  String path,
+  String title,
+  String body,
+  DateTime modifiedAt,
+});
+
 /// Full-text index over the vault notes. The app wires it to
 /// `NoteIndexRepository` (`wendelin_storage`, SQLite FTS5); must pass
 /// `noteIndexPortContract`.
@@ -129,12 +144,16 @@ abstract interface class NoteIndexPort {
     required DateTime modifiedAt,
   });
 
+  /// Adds or replaces all [notes] at once (one transaction where the
+  /// implementation supports it); used by the index sync.
+  Future<void> upsertAll(List<IndexedNote> notes);
+
   /// Removes [path] from the index (no error if unknown).
   Future<void> remove(String path);
 
   /// The best [limit] notes for [query], best first: words are matched as
   /// prefixes, case and diacritics are ignored, title matches rank above
-  /// body matches. Empty for blank queries; never throws for special
+  /// body matches; folder names in the path are searchable too. Empty for blank queries; never throws for special
   /// characters.
   Future<List<NoteHit>> search(String query, {int limit = 10});
 

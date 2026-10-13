@@ -31,6 +31,34 @@ void main() {
       expect(await paths('Garten'), ['b.md', 'a.md']);
     });
 
+    test('Titelgewicht 10 entscheidet gegen kurzen Text (M7)', () async {
+      // Ohne Gewicht gewänne der kurze Text von b.md gegen den langen
+      // Titel von a.md; erst das Titelgewicht dreht die Reihenfolge.
+      await add(
+        'a.md',
+        'Garten Haus Hof Weg Tor Zaun Dach',
+        List.filled(40, 'Füllwort').join(' '),
+      );
+      await add('b.md', 'Notiz', 'Garten Beet');
+      for (var i = 0; i < 5; i++) {
+        await add('f$i.md', 'Titel $i', 'anderer Text $i');
+      }
+      expect(await paths('Garten'), ['a.md', 'b.md']);
+    });
+
+    test(
+      'Ordnernamen sind durchsuchbar, zählen weniger als der Titel',
+      () async {
+        await add('Reisen/Europa/Malta.md', 'Malta', 'Tauchen');
+        await add('Archiv/Reisen.md', 'Reisen', 'alt');
+        expect(await paths('europa'), ['Reisen/Europa/Malta.md']);
+        expect(await paths('Reisen'), [
+          'Archiv/Reisen.md',
+          'Reisen/Europa/Malta.md',
+        ]);
+      },
+    );
+
     test('mehr passende Wörter vor einem Wort', () async {
       await add('eins.md', 'Eins', 'Tauchen ist schön');
       await add('beide.md', 'Beide', 'Tauchen auf Malta');
@@ -119,6 +147,16 @@ void main() {
   });
 
   group('Pflege', () {
+    test('upsertAll in einem Zug; leere Liste ist ok', () async {
+      await notes.upsertAll([]);
+      await notes.upsertAll([
+        (path: 'a.md', title: 'A', body: 'Mango', modifiedAt: t),
+        (path: 'b.md', title: 'B', body: 'Mango', modifiedAt: t),
+      ]);
+      expect(await notes.count(), 2);
+      expect(await paths('Mango'), ['a.md', 'b.md']);
+    });
+
     test('upsert ersetzt Text, Titel und Zeit', () async {
       await add('n.md', 'Alt', 'Apfel');
       final later = t.add(const Duration(minutes: 1));

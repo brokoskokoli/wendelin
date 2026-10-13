@@ -32,6 +32,10 @@ final class FakeVaultPort with FakeFailures implements VaultPort {
   /// Number of [write] and [create] calls.
   int writes = 0;
 
+  /// Called after every [read] with its path (e.g. to simulate Obsidian
+  /// Sync writing between read and write).
+  void Function(String path)? onRead;
+
   /// Simulated I/O time per call (lets parallel calls interleave).
   Duration delay = Duration.zero;
 
@@ -99,7 +103,9 @@ final class FakeVaultPort with FakeFailures implements VaultPort {
     enter('read');
     final p = _existing(path);
     await _io();
-    return files[p] ?? (throw _notFound(path));
+    final content = files[p] ?? (throw _notFound(path));
+    onRead?.call(p);
+    return content;
   }
 
   @override

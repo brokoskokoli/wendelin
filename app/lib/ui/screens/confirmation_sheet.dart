@@ -74,12 +74,23 @@ class ConfirmationSheet extends StatelessWidget {
             SheetHeader(
               trailing: ProviderChip(name: providerName, level: privacy),
             ),
-            if (quote != null && quote.isNotEmpty)
-              Text('„$quote“', style: WText.quote),
-            card,
-            const VoiceHint(
-              'Antworte per Tipp – Sprache kommt in M2',
-              dot: false,
+            // Langer Inhalt (z. B. ein Diff) scrollt statt überzulaufen.
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: WSpace.l18,
+                  children: [
+                    if (quote != null && quote.isNotEmpty)
+                      Text('„$quote“', style: WText.quote),
+                    card,
+                    const VoiceHint(
+                      'Antworte per Tipp – Sprache kommt in M2',
+                      dot: false,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -91,7 +102,7 @@ class ConfirmationSheet extends StatelessWidget {
     final texts = confirmationTexts(event.call.name);
     return ConfirmationCard(
       title: texts.title,
-      detail: event.description,
+      detail: clampConfirmationDetail(event.description),
       toolName: event.call.name,
       risk: toolRisk,
       onYes: () => answer(true),
@@ -100,4 +111,28 @@ class ConfirmationSheet extends StatelessWidget {
       noLabel: texts.no,
     );
   }
+}
+
+/// Most lines of a confirmation detail shown in the sheet.
+const maxDetailLines = 10;
+
+/// Longest detail line shown in the sheet.
+const maxDetailLineChars = 80;
+
+/// Shortens a long confirmation [detail] (e.g. a diff) so the card and its
+/// buttons fit on a phone: at most [maxDetailLines] lines of at most
+/// [maxDetailLineChars] characters, the rest counted in a last line.
+String clampConfirmationDetail(String detail) {
+  final lines = [
+    for (final l in detail.split('\n'))
+      l.length <= maxDetailLineChars
+          ? l
+          : '${l.substring(0, maxDetailLineChars - 1)}…',
+  ];
+  if (lines.length <= maxDetailLines) return lines.join('\n');
+  final rest = lines.length - (maxDetailLines - 1);
+  return [
+    ...lines.take(maxDetailLines - 1),
+    '… $rest weitere Zeilen',
+  ].join('\n');
 }

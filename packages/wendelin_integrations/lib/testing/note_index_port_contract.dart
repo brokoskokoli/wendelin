@@ -36,6 +36,12 @@ abstract final class NoteIndexChecks {
 
   /// Snippet around the match.
   static const snippet = 'Ausschnitt enthält das Suchwort und ist kurz';
+
+  /// upsertAll writes several notes at once.
+  static const batch = 'upsertAll schreibt mehrere Notizen; leere Liste ist ok';
+
+  /// Folder names in the path are searchable.
+  static const folders = 'Ordnernamen im Pfad sind durchsuchbar';
 }
 
 /// Reusable contract suite for every [NoteIndexPort] (`FakeNoteIndex`,
@@ -172,6 +178,29 @@ Map<String, Future<void> Function()> noteIndexPortContractChecks(
         await i.search(q);
       }
       expect(await paths(i, '"Gemeinsam"', limit: 3), hasLength(3));
+    },
+    NoteIndexChecks.batch: () async {
+      final i = await create();
+      await i.upsertAll([]);
+      await i.upsertAll([
+        (path: 'a.md', title: 'A', body: 'Mango', modifiedAt: t),
+        (path: 'b.md', title: 'B', body: 'Mango', modifiedAt: t),
+      ]);
+      await i.upsertAll([
+        (path: 'a.md', title: 'A', body: 'Papaya', modifiedAt: t),
+      ]);
+      expect(await paths(i, 'Mango'), ['b.md']);
+      expect(await paths(i, 'Papaya'), ['a.md']);
+      expect((await i.knownFiles()).keys.toSet(), {'a.md', 'b.md'});
+    },
+    NoteIndexChecks.folders: () async {
+      final i = await seeded({
+        'Reisen/Europa/Malta.md': ('Malta', 'Tauchen'),
+        'Projekte/App.md': ('App', 'Code'),
+      });
+      expect(await paths(i, 'Reisen'), ['Reisen/Europa/Malta.md']);
+      expect(await paths(i, 'europa'), ['Reisen/Europa/Malta.md']);
+      expect(await paths(i, 'Projekte'), ['Projekte/App.md']);
     },
     NoteIndexChecks.snippet: () async {
       final filler = List.filled(80, 'Fülltext').join(' ');

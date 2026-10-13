@@ -48,6 +48,7 @@ export 'src/obsidian/obsidian_tools.dart'
     show
         AppendDailyNoteTool,
         AppendToNoteTool,
+        confirmationDiffLines,
         CreateNoteTool,
         ListFolderTool,
         OpenNoteTool,

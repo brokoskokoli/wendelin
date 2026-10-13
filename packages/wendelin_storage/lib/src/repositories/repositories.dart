@@ -186,6 +186,15 @@ abstract interface class SettingsRepository {
   Future<void> remove(SettingKey<Object> key);
 }
 
+/// One note for [NoteIndexRepository.upsertAll]; the same record shape as
+/// `IndexedNote` of `wendelin_integrations`.
+typedef NoteIndexEntry = ({
+  String path,
+  String title,
+  String body,
+  DateTime modifiedAt,
+});
+
 /// Full-text index over the notes of the Obsidian vault (SQLite FTS5).
 ///
 /// Mirrors `NoteIndexPort` of `wendelin_integrations` method by method;
@@ -200,10 +209,14 @@ abstract interface class NoteIndexRepository {
     required DateTime modifiedAt,
   });
 
+  /// Adds or replaces all [notes] in one transaction (index sync).
+  Future<void> upsertAll(List<NoteIndexEntry> notes);
+
   /// Removes [path]; no error if it is not indexed.
   Future<void> remove(String path);
 
-  /// The best [limit] notes for [query] (bm25, title weighted ×10): every
+  /// The best [limit] notes for [query] (bm25: title ×10, path ×2 so folder
+  /// names are searchable, body ×1): every
   /// word with at least two characters that is not a stop word is a
   /// prefix term, terms are OR-ed; case and diacritics are ignored.
   Future<List<NoteSearchHit>> search(String query, {int limit = 10});

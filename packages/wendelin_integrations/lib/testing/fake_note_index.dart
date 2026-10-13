@@ -3,7 +3,8 @@ import '../src/obsidian/ports.dart';
 import 'fake_failures.dart';
 
 /// In-memory [NoteIndexPort] with a simple ranking: notes matching more
-/// query words first, then title matches before body matches. Words are
+/// query words first, then title matches before folder and body
+/// matches. Words are
 /// matched as prefixes, case and umlauts ignored.
 final class FakeNoteIndex with FakeFailures implements NoteIndexPort {
   /// Indexed notes by path.
@@ -22,6 +23,22 @@ final class FakeNoteIndex with FakeFailures implements NoteIndexPort {
   }) async {
     enter('upsert');
     notes[path] = (title: title, body: body, modifiedAt: modifiedAt);
+  }
+
+  /// Number of [upsertAll] calls.
+  int batches = 0;
+
+  @override
+  Future<void> upsertAll(List<IndexedNote> notes) async {
+    enter('upsertAll');
+    batches++;
+    for (final n in notes) {
+      this.notes[n.path] = (
+        title: n.title,
+        body: n.body,
+        modifiedAt: n.modifiedAt,
+      );
+    }
   }
 
   @override
@@ -45,13 +62,15 @@ final class FakeNoteIndex with FakeFailures implements NoteIndexPort {
     for (final MapEntry(key: path, value: n) in notes.entries) {
       final title = _words(n.title);
       final body = _words(n.body);
+      final folders = _words(path.split('/').reversed.skip(1).join(' '));
       var distinct = 0;
       var score = 0;
       for (final t in terms) {
         final inTitle = title.where((w) => w.startsWith(t)).length;
         final inBody = body.where((w) => w.startsWith(t)).length;
-        if (inTitle + inBody > 0) distinct++;
-        score += inTitle * 10 + inBody;
+        final inPath = folders.where((w) => w.startsWith(t)).length;
+        if (inTitle + inBody + inPath > 0) distinct++;
+        score += inTitle * 10 + inPath * 2 + inBody;
       }
       if (distinct > 0) scored.add((distinct * 1000 + score, path));
     }

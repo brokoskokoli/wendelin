@@ -243,14 +243,30 @@ void main() {
       );
     });
 
-    test('Index-Sync liest nichts hinter Links nach außen', () async {
+    test('Index-Sync: nichts hinter Links nach außen, verknüpfte Ordner '
+        'nicht verfolgt', () async {
       final index = FakeNoteIndex();
       await NoteIndexer(port, index).sync();
-      expect(index.notes.keys.toSet(), {
-        'Notiz.md',
-        'Innen/Ziel.md',
-        'Verweis/Ziel.md',
-      });
+      expect(index.notes.keys.toSet(), {'Notiz.md', 'Innen/Ziel.md'});
+      expect(
+        (await port.list('')).singleWhere((e) => e.path == 'Verweis').isLink,
+        isTrue,
+      );
+    });
+
+    test('Links in versteckte Ordner werden abgewiesen', () async {
+      Directory('${vaultDir.path}/.obsidian').createSync();
+      File('${vaultDir.path}/.obsidian/app.json').writeAsStringSync('{}');
+      Link('${vaultDir.path}/Konfig').createSync('${vaultDir.path}/.obsidian');
+      Link('${vaultDir.path}/konfig.md')
+          .createSync('${vaultDir.path}/.obsidian/app.json');
+      final names = (await port.list('')).map((e) => e.path).toSet();
+      expect(names, isNot(contains('Konfig')));
+      expect(names, isNot(contains('konfig.md')));
+      await expectLater(port.read('konfig.md'), rejected());
+      await expectLater(port.read('Konfig/app.json'), rejected());
+      await expectLater(port.write('Konfig/neu.md', 'x'), rejected());
+      expect(File('${vaultDir.path}/.obsidian/neu.md').existsSync(), isFalse);
     });
 
     test('write in einen Ordner wird abgewiesen, ohne Temp-Reste', () async {

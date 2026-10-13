@@ -1,13 +1,14 @@
 /// A line-based diff of [before] and [after] for the confirmation card:
 /// removed lines start with `- `, added ones with `+ `, unchanged ones with
 /// two spaces. Runs of more than [context] × 2 unchanged lines are
-/// shortened to `  …`; at most [maxLines] lines are returned (the rest is
-/// counted in a last line).
+/// shortened to `  …`; lines are cut to [maxChars] characters and at
+/// most [maxLines] lines are returned (the rest is counted in a last line).
 String lineDiff(
   List<String> before,
   List<String> after, {
   int context = 1,
   int maxLines = 40,
+  int maxChars = 80,
 }) {
   final n = before.length;
   final m = after.length;
@@ -66,9 +67,13 @@ String lineDiff(
     }
     k = end - 1;
   }
-  if (out.length <= maxLines) return out.join('\n');
+  final cut = [
+    for (final l in out)
+      l.length <= maxChars ? l : '${l.substring(0, maxChars - 1)}…',
+  ];
+  if (cut.length <= maxLines) return cut.join('\n');
   return [
-    ...out.take(maxLines),
-    '… (${out.length - maxLines} weitere Zeilen)',
+    ...cut.take(maxLines - 1),
+    '… ${cut.length - maxLines + 1} weitere Zeilen',
   ].join('\n');
 }

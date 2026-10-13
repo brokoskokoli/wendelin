@@ -74,6 +74,9 @@ final class NoteIndexer {
   /// Longest body text stored per note.
   final int maxIndexedChars;
 
+  /// Notes written to the index per [NoteIndexPort.upsertAll] call.
+  static const batchSize = 50;
+
   Future<IndexSyncReport>? _running;
 
   /// Runs one sync; a call while another runs joins that run.
@@ -95,7 +98,8 @@ final class NoteIndexer {
         }
         if (VaultPath.isHidden(e.name)) continue;
         if (e.isFolder) {
-          folders.add(e.path);
+          // Verknüpfte Ordner nicht verfolgen (Zyklen, doppelte Notizen).
+          if (!e.isLink) folders.add(e.path);
         } else if (e.path.toLowerCase().endsWith('.md')) {
           files[e.path] = e;
         }
@@ -114,24 +118,33 @@ final class NoteIndexer {
     changed.sort((a, b) => b.$2.compareTo(a.$2));
     var indexed = 0;
     var failed = 0;
+    final batch = <IndexedNote>[];
+    Future<void> flush() async {
+      if (batch.isEmpty) return;
+      await index.upsertAll(List.of(batch));
+      indexed += batch.length;
+      batch.clear();
+    }
+
     for (final (path, modified) in changed.take(maxFilesPerRun)) {
       try {
         final size = files[path]!.size ?? await vault.size(path);
         final body = size > maxFileBytes ? '' : await vault.read(path);
-        await index.upsert(
-          path,
+        batch.add((
+          path: path,
           title: VaultPath.title(path),
           body: body.length > maxIndexedChars
               ? body.substring(0, maxIndexedChars)
               : body,
           modifiedAt: modified,
-        );
-        indexed++;
+        ));
       } on PortException {
         // Nicht lesbar (gerade gelöscht, Rechte): beim nächsten Lauf erneut.
         failed++;
       }
+      if (batch.length >= batchSize) await flush();
     }
+    await flush();
     var removed = 0;
     if (complete) {
       for (final path in known.keys) {

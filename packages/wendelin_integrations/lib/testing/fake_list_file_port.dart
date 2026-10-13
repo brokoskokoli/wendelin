@@ -20,6 +20,10 @@ final class FakeListFilePort with FakeFailures implements ListFilePort {
   /// Number of [write] calls.
   int writes = 0;
 
+  /// Called after every [read] with its handle (e.g. to simulate Obsidian
+  /// Sync writing between read and write).
+  void Function(String handle)? onRead;
+
   /// Simulated I/O time per call (lets parallel calls interleave).
   Duration delay = Duration.zero;
 
@@ -31,11 +35,14 @@ final class FakeListFilePort with FakeFailures implements ListFilePort {
   Future<String> read(String handle) async {
     enter('read');
     await _io();
-    return files[handle] ??
+    final content =
+        files[handle] ??
         (throw PortException(
           PortErrorKind.notFound,
           'Datei „$handle“ gibt es nicht',
         ));
+    onRead?.call(handle);
+    return content;
   }
 
   @override
