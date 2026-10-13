@@ -50,6 +50,15 @@ final class ProviderConfig {
   /// Display name of [profileId] (the id if unknown).
   String nameOf(String profileId) => names[profileId] ?? profileId;
 
+  /// The target of profile [id] (the one answering right now), else the
+  /// primary target.
+  ProviderTarget targetFor(String? id) {
+    for (final t in [primary, ...chain]) {
+      if (t.profileId == id) return t;
+    }
+    return primary;
+  }
+
   /// The lowest privacy level among all targets. The tool catalog is built
   /// for it, so an escalation never sends sensitive tools to a provider
   /// that may not see them.

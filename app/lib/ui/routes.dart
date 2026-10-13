@@ -30,11 +30,14 @@ abstract final class AppRoutes {
   /// Costs.
   static const costs = '/settings/costs';
 
-  /// Assistant (name, persona).
+  /// Assistant (default assistant, name, persona).
   static const assistant = '/settings/assistant';
 
   /// Voice: Whisper model, language, speech output.
   static const voice = '/settings/voice';
+
+  /// Obsidian vault, daily notes, search index.
+  static const obsidian = '/settings/obsidian';
 
   /// Design gallery (debug builds only).
   static const gallery = '/debug/gallery';

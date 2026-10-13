@@ -12,22 +12,57 @@ import 'di/integration_specs.dart';
 import 'di/maintenance.dart';
 import 'di/providers.dart';
 import 'di/startup.dart';
+import 'platform/screen_protection.dart';
 import 'platform/secure_secret_store.dart';
+import 'ui/overlay/assistant_overlay.dart';
 import 'ui/theme/app_theme.dart';
 
 /// Opens the database, reads the start settings and runs the app.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicenses();
-  final storage = WendelinStorage(driftDatabase(name: 'wendelin'));
-  final startup = await StartupSettings.load(storage.settings, [
-    for (final s in builtInIntegrationSpecs) s.id,
-  ]);
+  final (storage, startup) = await _openStorage();
   await startupMaintenance(
     storage: storage,
     secrets: SecureSecretStore(),
     retentionDays: startup.retentionDays,
   );
+  // „Bildschirminhalt schützen“ (the overlay is always protected natively).
+  await const ScreenProtection().apply(secure: startup.secureScreen);
+  await _run(storage, startup, const WendelinApp());
+}
+
+/// Entry point of the assistant overlay (`AssistantActivity`, started by
+/// the `VoiceInteractionSession` with a transparent window). Runs in its
+/// own Flutter engine next to a possibly open main app; both share the
+/// database through one drift isolate.
+@pragma('vm:entry-point')
+Future<void> assistantMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final (storage, startup) = await _openStorage();
+  await _run(storage, startup, const AssistantOverlayApp());
+}
+
+Future<(WendelinStorage, StartupSettings)> _openStorage() async {
+  // Shared across isolates: the overlay engine and the main app may run
+  // at the same time in one process.
+  final storage = WendelinStorage(
+    driftDatabase(
+      name: 'wendelin',
+      native: const DriftNativeOptions(shareAcrossIsolates: true),
+    ),
+  );
+  final startup = await StartupSettings.load(storage.settings, [
+    for (final s in builtInIntegrationSpecs) s.id,
+  ]);
+  return (storage, startup);
+}
+
+Future<void> _run(
+  WendelinStorage storage,
+  StartupSettings startup,
+  Widget app,
+) async {
   final device = await loadDeviceInfo();
   runApp(
     ProviderScope(
@@ -38,7 +73,7 @@ Future<void> main() async {
         startupProvider.overrideWithValue(startup),
         deviceInfoProvider.overrideWithValue(device),
       ],
-      child: const WendelinApp(),
+      child: app,
     ),
   );
 }

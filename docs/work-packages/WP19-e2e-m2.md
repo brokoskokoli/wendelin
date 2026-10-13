@@ -11,6 +11,8 @@ Abhängig von: WP15–WP18.
 - Offene Punkte aus dem WP18-Review: (a) Mikrofon-Berechtigung erst anfragen, wenn Sprachmodelle vorhanden sind (sonst Hinweis „Spracherkennung laden“), (b) Widget-Tests „Berechtigung verweigert → Erklärung, kein Start“ für Hauptbildschirm und Overlay (N12/N14), (c) Test „Abbruch stoppt die gesprochene Bestätigungsfrage“ (N11), (d) Hinweis in Einstellungen → Assistent: nach Wechsel des Assistenten die Spracherkennung neu wählen, (e) Prüfpunkt Zwei-Engines (Overlay-Kaltstart → App öffnen → Overlay schließen → App schreibt weiter) auf dem Emulator.
 - Laufzeitmessung Whisper base/small auf dem Emulator (und Vorlage für das Gerät des Maintainers) als Grundlage für den Standard (K-Vorschlag: small mit fester Sprache).
 
+- Prüfpunkt aus WP18 (ADR 0006): Overlay kalt starten, dann die App öffnen, dann das Overlay schließen. Danach schreibt die App weiter: Anfrage senden, Verlauf und Audit-Log vorhanden, Index-Aufbau läuft (gemeinsamer drift-Isolate beider Engines). Außerdem nach Entzug der Assistenten-Rolle `WendelinRecognitionService` deaktiviert.
+
 ## Abnahmekriterien
 - [ ] Integrationstest auf dem AOSP-Emulator grün (Log).
 - [ ] Testanleitung vollständig, vom Reviewer gegengelesen.

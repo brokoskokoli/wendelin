@@ -93,6 +93,12 @@ final class TestEnv {
   /// Offline speech output (sherpa-onnx).
   final sherpaTts = FakeTextToSpeech();
 
+  /// Obsidian vault (used once a vault is chosen in the settings).
+  final vault = FakeVaultPort();
+
+  /// Obsidian search index.
+  final notes = FakeNoteIndex();
+
   /// Builds the adapter for stored profiles; `null` = real adapters.
   final LlmProviderFactory? llmFactory;
 
@@ -142,6 +148,13 @@ final class TestEnv {
         lists: ListsPorts(
           port: listFiles,
           definitions: () => ref.read(listDefinitionsProvider),
+        ),
+        obsidian: ObsidianPorts(
+          vault: vault,
+          index: notes,
+          hasVault: () => ref.read(obsidianPrefsProvider).hasVault,
+          settings: () =>
+              obsidianSettingsOf(ref.read(obsidianPrefsProvider), 'de'),
         ),
       ),
     ),

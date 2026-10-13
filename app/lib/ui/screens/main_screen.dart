@@ -8,9 +8,14 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
 import '../../agent/money.dart';
+import '../../di/obsidian_index.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
+import '../../di/voice_providers.dart';
+import '../../voice/voice_components.dart';
+import '../../voice/voice_controller.dart';
 import '../routes.dart';
+import '../voice/microphone_access.dart';
 import 'confirmation_sheet.dart';
 import 'conversation_view.dart';
 import 'main_parts.dart';
@@ -31,12 +36,33 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   PendingQuestion? _sheetFor;
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    // In the background nothing listens, speaks or runs on unseen.
+    _lifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        if (state == AppLifecycleState.hidden ||
+            state == AppLifecycleState.paused) {
+          unawaited(ref.read(voiceControllerProvider.notifier).suspend());
+        }
+      },
+    );
     if (widget.restoreSession) {
       unawaited(ref.read(agentControllerProvider.notifier).restore());
+      // A large vault needs several index runs: continue in the background.
+      if (ref.read(enabledIntegrationsProvider).contains('obsidian') ||
+          ref.read(demoModeProvider)) {
+        unawaited(ref.read(obsidianIndexProvider.notifier).sync());
+      }
     }
   }
 
@@ -52,6 +78,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final config = ref.watch(providerConfigProvider);
     final cost = ref.watch(todayCostProvider).value ?? 0;
     final providers = config.value;
+    final voice = ref.watch(voiceControllerProvider);
+    final mic = micStateFor(
+      voice,
+      available: ref.watch(voiceReadyProvider),
+      running: conversation.running,
+    );
     final active = _activeTarget(providers, conversation.activeProfileId);
 
     Widget? setupHint;
@@ -97,7 +129,24 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             top: false,
             child: Composer(
               running: conversation.running,
-              onCancel: _controller.cancel,
+              mic: mic,
+              micHint: voiceUnavailableHint,
+              status: voice.error ?? voice.hint,
+              onMic: () {
+                if (voice.active) {
+                  unawaited(
+                    ref.read(voiceControllerProvider.notifier).cancel(),
+                  );
+                } else if (conversation.running) {
+                  _controller.cancel();
+                } else {
+                  unawaited(
+                    ref
+                        .read(voiceControllerProvider.notifier)
+                        .tap(prepare: _microphoneAccess),
+                  );
+                }
+              },
               onSend: (text) {
                 if (conversation.running || text.trim().isEmpty) return false;
                 unawaited(_controller.send(text));
@@ -110,16 +159,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     );
   }
 
+  /// Microphone permission with explanation (WP17); not in the demo.
+  Future<bool> _microphoneAccess() async {
+    if (ref.read(demoModeProvider)) return true;
+    return ensureMicrophoneAccess(context, ref.read(microphoneProvider));
+  }
+
   void _openProviderSetup() =>
       Navigator.of(context).pushNamed(AppRoutes.providerSetup);
 
-  static ProviderTarget? _activeTarget(ProviderConfig? config, String? id) {
-    if (config == null) return null;
-    for (final t in [config.primary, ...config.chain]) {
-      if (t.profileId == id) return t;
-    }
-    return config.primary;
-  }
+  static ProviderTarget? _activeTarget(ProviderConfig? config, String? id) =>
+      config?.targetFor(id);
 
   void _onPending(PendingQuestion? next) {
     if (next == null) {
@@ -142,13 +192,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: false,
-      builder: (_) => ConfirmationSheet(
-        question: question,
-        providerName: active == null ? '' : config!.nameOf(active.profileId),
-        privacy: active?.privacy ?? PrivacyLevel.standard,
-        toolRisk: question is ToolQuestion
-            ? question.event.risk
-            : RiskLevel.external,
+      builder: (_) => Consumer(
+        builder: (context, ref, _) => ConfirmationSheet(
+          question: question,
+          providerName: active == null ? '' : config!.nameOf(active.profileId),
+          privacy: active?.privacy ?? PrivacyLevel.standard,
+          toolRisk: question is ToolQuestion
+              ? question.event.risk
+              : RiskLevel.external,
+          // A voice request also takes a spoken „ja“/„nein“.
+          hint: ref.watch(voiceControllerProvider.select((v) => v.active))
+              ? ConfirmationHint.voice
+              : ConfirmationHint.tap,
+        ),
       ),
     );
     if (identical(_sheetFor, question)) _sheetFor = null;

@@ -2,7 +2,7 @@
 
 Sprach-Kern in reinem Dart (WP15): Schnittstellen für Auslöser, Mikrofon, VAD, STT und TTS, Endpointing, die `VoicePipeline`, das Kürzen von Antworten für die Sprachausgabe, die TTS-Auswahl (K7) sowie Modellkatalog und Download. Die Plattform-Implementierungen (sherpa-onnx, System-TTS, Aufnahme) liegen in der App (WP17).
 
-- `package:wendelin_voice/wendelin_voice.dart`: API
+- `package:wendelin_voice/wendelin_voice.dart`: API (darin auch `YesNoRecognizer`: „ja“/„nein“ auf Bestätigungen in de/fr/en, WP18)
 - `package:wendelin_voice/fakes.dart`: Fakes, ohne `package:test`
 - `package:wendelin_voice/testing.dart`: Fakes plus Contract-Suites (`audioInputContract`, `voiceActivityDetectorContract`, `speechToTextContract`, `textToSpeechContract`, `modelStoreContract`)
 

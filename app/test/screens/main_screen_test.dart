@@ -10,6 +10,7 @@ import 'package:wendelin/ui/screens/main_parts.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
+import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
@@ -285,32 +286,33 @@ void main() {
     await pumpUntil(tester, find.text('Ruhig: 0,4 m Welle, Wasser 19 °C.'));
   });
 
-  testWidgets('Mikrofon: in M1 aus, während des Laufs „Antwort abbrechen“', (
-    tester,
-  ) async {
-    final env = TestEnv(
-      providerConfig: scripted(
-        FakeLlmProvider([ScriptedTurn.hang(partialText: 'Moment')]),
-      ),
-    );
-    await pumpApp(tester, env);
-    final mic = tester.widget<MicButton>(find.byType(MicButton));
-    expect(mic.state, MicState.disabled);
-    expect(find.byTooltip(Composer.micHint), findsOneWidget);
+  testWidgets(
+    'Mikrofon: ohne Spracherkennung aus, im Lauf „Antwort abbrechen“',
+    (tester) async {
+      final env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider([ScriptedTurn.hang(partialText: 'Moment')]),
+        ),
+      );
+      await pumpApp(tester, env);
+      final mic = tester.widget<MicButton>(find.byType(MicButton));
+      expect(mic.state, MicState.disabled);
+      expect(find.byTooltip(voiceUnavailableHint), findsOneWidget);
 
-    await send(tester, 'Hallo');
-    await pumpUntil(tester, find.text('Moment'));
-    expect(
-      tester.widget<MicButton>(find.byType(MicButton)).state,
-      MicState.thinking,
-    );
-    await tester.tap(find.byType(MicButton));
-    await pumpUntil(tester, find.text('Abgebrochen.'));
-    expect(
-      tester.widget<MicButton>(find.byType(MicButton)).state,
-      MicState.disabled,
-    );
-  });
+      await send(tester, 'Hallo');
+      await pumpUntil(tester, find.text('Moment'));
+      expect(
+        tester.widget<MicButton>(find.byType(MicButton)).state,
+        MicState.thinking,
+      );
+      await tester.tap(find.byType(MicButton));
+      await pumpUntil(tester, find.text('Abgebrochen.'));
+      expect(
+        tester.widget<MicButton>(find.byType(MicButton)).state,
+        MicState.disabled,
+      );
+    },
+  );
 
   testWidgets('ohne Provider: Hinweis-Karte, „Provider einrichten“ öffnet '
       'die Einrichtung', (tester) async {
@@ -361,6 +363,8 @@ void main() {
     await tester.tap(find.byTooltip('Einstellungen'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Design-Galerie'), 100);
+    await tester.ensureVisible(find.byType(WSwitch).last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(WSwitch).last);
     await tester.pumpAndSettle();
     expect(containerOf(tester).read(demoModeProvider), isTrue);

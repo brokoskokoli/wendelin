@@ -67,4 +67,124 @@ void main() {
       );
     },
   );
+
+  group('Standard-Assistent (WP18)', () {
+    /// The element declaring `.name`, up to its end (self-closing or
+    /// with children).
+    String block(String name) {
+      final at = manifest.indexOf('android:name=".$name"');
+      expect(at, isNonNegative, reason: name);
+      final start = manifest.lastIndexOf('<', at);
+      final tag = RegExp(r'<(\w+)').firstMatch(manifest.substring(start))![1]!;
+      final nextOpen = manifest.indexOf('<', at);
+      final selfClose = manifest.indexOf('/>', at);
+      final end = selfClose >= 0 && (nextOpen < 0 || selfClose < nextOpen)
+          ? selfClose + 2
+          : manifest.indexOf('</$tag>', at) + tag.length + 3;
+      return manifest.substring(start, end);
+    }
+
+    test('VoiceInteractionService nur für das System, mit Metadaten', () {
+      final service = block('WendelinVoiceInteractionService');
+      expect(
+        service,
+        contains(
+          'android:permission="android.permission.BIND_VOICE_INTERACTION"',
+        ),
+      );
+      expect(
+        service,
+        contains('android.service.voice.VoiceInteractionService'),
+      );
+      expect(service, contains('android:name="android.voice_interaction"'));
+      expect(
+        service,
+        contains('android:resource="@xml/voice_interaction_service"'),
+      );
+    });
+
+    test('Session-Service ebenfalls nur für das System', () {
+      expect(
+        block('WendelinVoiceSessionService'),
+        contains(
+          'android:permission="android.permission.BIND_VOICE_INTERACTION"',
+        ),
+      );
+    });
+
+    test('Metadaten: Session, Erkenner, Assist', () {
+      final xml = File('$res/voice_interaction_service.xml').readAsStringSync();
+      expect(
+        xml,
+        contains(
+          'android:sessionService="app.wendelin.WendelinVoiceSessionService"',
+        ),
+      );
+      expect(
+        xml,
+        contains(
+          'android:recognitionService="app.wendelin.WendelinRecognitionService"',
+        ),
+      );
+      expect(xml, contains('android:supportsAssist="true"'));
+      expect(
+        block('WendelinRecognitionService'),
+        contains('android.speech.RecognitionService'),
+      );
+    });
+
+    test('Overlay-Activity: nicht exportiert, transparent, ohne Verlauf', () {
+      final activity = block('AssistantActivity');
+      expect(activity, contains('android:exported="false"'));
+      expect(activity, contains('android:theme="@style/AssistantTheme"'));
+      expect(activity, contains('android:excludeFromRecents="true"'));
+      final styles = File('android/app/src/main/res/values/styles.xml')
+          .readAsStringSync();
+      expect(styles, contains('<style name="AssistantTheme"'));
+      expect(
+        styles,
+        contains('<item name="android:windowIsTranslucent">true</item>'),
+      );
+    });
+
+    test(
+      'Erkennungsdienst standardmäßig aus, nur mit Assistenten-Rolle an',
+      () {
+        expect(
+          block('WendelinRecognitionService'),
+          contains('android:enabled="false"'),
+        );
+        const kotlin = 'android/app/src/main/kotlin/app/wendelin';
+        final service = File('$kotlin/WendelinVoiceInteractionService.kt')
+            .readAsStringSync();
+        expect(
+          service,
+          contains('RecognizerSwitch.sync(this, holdsRole = true)'),
+        );
+        final activity = File('$kotlin/WendelinActivity.kt').readAsStringSync();
+        expect(activity, contains('RecognizerSwitch.sync(this)'));
+      },
+    );
+
+    test('Overlay immer mit FLAG_SECURE', () {
+      final overlay = File(
+        'android/app/src/main/kotlin/app/wendelin/AssistantActivity.kt',
+      ).readAsStringSync();
+      expect(
+        overlay,
+        contains('window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)'),
+      );
+    });
+
+    test('keine neuen Laufzeit-Berechtigungen für den Assistenten', () {
+      expect(
+        manifest,
+        isNot(
+          contains(
+            'uses-permission android:name="android.permission.BIND_VOICE_INTERACTION"',
+          ),
+        ),
+      );
+    });
+  });
 }

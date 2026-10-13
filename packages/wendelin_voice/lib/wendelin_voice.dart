@@ -23,5 +23,6 @@ export 'src/pipeline/voice_events.dart';
 export 'src/pipeline/voice_pipeline.dart';
 export 'src/text/spoken_answer.dart';
 export 'src/text/voice_texts.dart';
+export 'src/text/yes_no.dart';
 export 'src/tts/speech_queue.dart';
 export 'src/tts/tts_selector.dart';

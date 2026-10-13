@@ -105,6 +105,22 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
     ),
   ),
   IntegrationSpec(
+    id: 'obsidian',
+    // Device: SAF vault; until a folder is chosen (Einstellungen →
+    // Obsidian) it shows „Einrichtung nötig“. Demo: in-memory vault.
+    isSupported: (d) => d.ports.obsidian != null,
+    create: (d) {
+      final o = d.ports.obsidian!;
+      return ObsidianIntegration(
+        o.vault,
+        o.index,
+        settings: o.settings,
+        openUri: o.openUri,
+        indexer: o.indexer,
+      );
+    },
+  ),
+  IntegrationSpec(
     id: 'lists',
     // Device: SAF files picked in settings → Listen; demo: in memory.
     isSupported: (d) => d.ports.lists != null,

@@ -60,7 +60,7 @@ final class ConversationReducer {
   ConversationState apply(ConversationState s, AgentEvent event) {
     switch (event) {
       case Routed(:final profileId):
-        return s.copyWith(activeProfileId: profileId);
+        return s.copyWith(activeProfileId: profileId, clearVerification: true);
       case AgentTextDelta(:final text):
         return _appendText(s, text);
       case AgentThinkingDelta(:final text):
@@ -124,10 +124,15 @@ final class ConversationReducer {
         // Does not end the segment: the reset after an escalation discards
         // the text of the replaced answer (ADR 0003 §4).
         return _add(
-          s.copyWith(activeProfileId: toProfile),
+          s.copyWith(activeProfileId: toProfile, clearVerification: true),
           (id) => EscalationEntry(id, 'an ${nameOf(toProfile)} übergeben'),
         );
-      case UsageReported() || Verification():
+      case Verification(:final profileId, :final status):
+        // Receipt check of the answering provider (head of the overlay).
+        return profileId == s.activeProfileId || s.activeProfileId == null
+            ? s.copyWith(verification: status)
+            : s;
+      case UsageReported():
         return s;
       case AgentDone(:final finalText):
         var next = s;

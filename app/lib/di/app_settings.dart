@@ -54,6 +54,12 @@ abstract final class AppSettings {
   /// Persona addition to the system prompt.
   static final persona = SettingKey.string('assistant.persona');
 
+  /// Protect the main app's screen content (`FLAG_SECURE`), off by default.
+  static final secureScreen = SettingKey.boolean(
+    'privacy.secureScreen',
+    defaultValue: false,
+  );
+
   /// Retention of audit log and conversations in days (concept: 30).
   static final retentionDays = SettingKey.integer(
     'privacy.retentionDays',
@@ -90,5 +96,16 @@ abstract final class AppSettings {
       return [for (final e in json) listDefinitionFromJson(e)];
     },
     defaultValue: const [],
+  );
+
+  /// Obsidian vault and daily notes.
+  static final obsidian = SettingKey<ObsidianPrefs>(
+    'obsidian.prefs',
+    encode: (p) => p.toJson(),
+    decode: (json) {
+      if (json is Map<String, Object?>) return ObsidianPrefs.fromJson(json);
+      throw const FormatException('obsidian.prefs: Objekt erwartet');
+    },
+    defaultValue: const ObsidianPrefs(),
   );
 }

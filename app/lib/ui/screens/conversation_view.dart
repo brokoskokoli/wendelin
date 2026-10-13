@@ -91,9 +91,9 @@ class _ConversationViewState extends State<ConversationView> {
 
     for (final e in widget.entries) {
       switch (e) {
-        case ToolEntry() when _isCard(e):
+        case ToolEntry() when ToolEntryCard.isCard(e):
           flushChips();
-          out.add(_answerWidth(_ToolCard(e, onUndo: widget.onUndo)));
+          out.add(_answerWidth(ToolEntryCard(e, onUndo: widget.onUndo)));
         case ToolEntry():
           chips.add(e);
         case AssistantTextEntry(:final text):
@@ -126,11 +126,6 @@ class _ConversationViewState extends State<ConversationView> {
     flushChips();
     return out;
   }
-
-  static bool _isCard(ToolEntry e) =>
-      e.undo == UndoPhase.pending ||
-      e.undo == UndoPhase.running ||
-      e.undo == UndoPhase.undone;
 }
 
 Widget _answerWidth(Widget child) => FractionallySizedBox(
@@ -176,11 +171,21 @@ class _AnswerBlock extends StatelessWidget {
 }
 
 /// Result card of a `write` tool while it can be undone (and after undo).
-class _ToolCard extends StatelessWidget {
-  const _ToolCard(this.entry, {required this.onUndo});
+class ToolEntryCard extends StatelessWidget {
+  /// Creates the card for [entry].
+  const ToolEntryCard(this.entry, {super.key, required this.onUndo});
 
+  /// The tool call.
   final ToolEntry entry;
+
+  /// Undo by call id.
   final ValueChanged<String> onUndo;
+
+  /// Whether [entry] is shown as card (undo offered, running or done).
+  static bool isCard(ToolEntry e) =>
+      e.undo == UndoPhase.pending ||
+      e.undo == UndoPhase.running ||
+      e.undo == UndoPhase.undone;
 
   @override
   Widget build(BuildContext context) {

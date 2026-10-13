@@ -296,13 +296,32 @@ void main() {
     expect(_texts(s), ['Alt', 'Neu']);
   });
 
-  test('UsageReported und Verification ändern den Zustand nicht', () {
+  test('UsageReported ändert den Zustand nicht', () {
     final before = _apply([const AgentTextDelta('x')]);
     final after = _apply([
       const UsageReported(profileId: 'p', modelId: 'm', usage: Usage.zero),
-      const Verification(profileId: 'p', status: VerificationStatus.verified),
     ], before);
     expect(identical(after, before), isTrue);
+  });
+
+  test('Verification des antwortenden Profils merkt sich den Prüfstatus', () {
+    final routed = _apply([
+      const Routed(profileId: 'p', modelId: 'm', reason: 'Standard'),
+    ]);
+    final checked = _apply([
+      const Verification(profileId: 'p', status: VerificationStatus.verified),
+    ], routed);
+    expect(checked.verification, VerificationStatus.verified);
+    // Prüfung eines anderen Profils betrifft den Kopf nicht.
+    final other = _apply([
+      const Verification(profileId: 'q', status: VerificationStatus.failed),
+    ], checked);
+    expect(other.verification, VerificationStatus.verified);
+    // Neues Routing: alter Status gilt nicht mehr.
+    final next = _apply([
+      const Routed(profileId: 'q', modelId: 'm', reason: 'Standard'),
+    ], other);
+    expect(next.verification, isNull);
   });
 
   group('Ende des Laufs', () {

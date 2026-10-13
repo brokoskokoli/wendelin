@@ -33,11 +33,15 @@ final class AuditRecorder implements ToolAuditSink {
   /// Waits until every entry recorded so far is written.
   Future<void> flush() => _tail;
 
-  /// A user request was sent.
-  void request(String sessionId, UserInput input) =>
+  /// A user request was sent; [trigger] is what started it (`pushToTalk`,
+  /// `assistant`, …; `null` = typed in the app).
+  void request(String sessionId, UserInput input, {String? trigger}) =>
       _write(AuditKind.request, sessionId, {
         'source': input.source.name,
+        'trigger': ?trigger,
         'text': input.text,
+        'language': ?input.language,
+        'sttConfidence': ?input.sttConfidence,
         if (input.requestEscalation) 'requestEscalation': true,
       });
 
