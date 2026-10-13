@@ -15,6 +15,15 @@ final defaultAssistantProvider = FutureProvider<bool>(
   (ref) => ref.watch(assistantPlatformProvider).isDefaultAssistant(),
 );
 
+/// Hint below „Als Spracherkennung anbieten“: Android keeps the system
+/// speech recognizer on Wendelin after the assistant is switched, and it
+/// then no longer answers (ADR 0006 §2).
+const assistantSwitchHint =
+    'Wechselst du später zu einem anderen Assistenten (oder „Keiner“), '
+    'antwortet die Spracherkennung von Wendelin anderen Apps nicht mehr. '
+    'Wähle die Spracheingabe dann in den Android-Einstellungen neu, meist '
+    'unter Apps → Standard-Apps → Digitaler Assistent.';
+
 /// Settings → Assistent: Wendelin as default assistant (link to the system
 /// settings), the speech recognizer for other apps, the user's name and a
 /// personality addition for the system prompt.
@@ -122,6 +131,7 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
               ),
             ],
           ),
+          Text(assistantSwitchHint, style: WText.caption),
         ],
       ),
       Text(

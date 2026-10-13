@@ -62,6 +62,9 @@ void main() {
       findsOneWidget,
     );
     expect(tester.widget<WSwitch>(find.byType(WSwitch)).value, isTrue);
+    // Hinweis: nach einem Assistentenwechsel die Spracheingabe neu wählen.
+    expect(find.text(assistantSwitchHint), findsOneWidget);
+    expect(assistantSwitchHint, contains('Digitaler Assistent'));
     await tester.tap(find.byType(WSwitch));
     await tester.pump();
     expect(platform.recognizerOffered, isFalse);

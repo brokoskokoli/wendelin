@@ -219,8 +219,16 @@ class RecognitionServiceTest {
         // still starting) when the stop arrives.
         start(recognizer, outcome, "en-06.wav", "en-US", stopRightAway = true)
         val stoppedAt = System.currentTimeMillis()
+        val atStop = outcome.events.count { it == "rms" }
+        // Vermerk (WP20-Review K3): „keine rms nach stopListening“ ist vom Client aus nicht
+        // genau prüfbar. Start und Stopp gehen asynchron (oneway binder) an den Dienst, ein
+        // Pegel, den der Dienst vor dem Stopp abgeschickt hat, kann danach noch ankommen. Der
+        // Dienst selbst meldet nach onStopListening keinen Pegel mehr (onChunk prüft
+        // audioOpen auf dem Main-Thread). Geprüft wird deshalb: höchstens die Blöcke, die in
+        // 300 ms unterwegs sein können (3 × 100 ms), danach keiner mehr.
         Thread.sleep(300)
         val levels = outcome.events.count { it == "rms" }
+        assertTrue("$atStop → $levels: $outcome", levels - atStop <= 3)
         assertTrue(outcome.toString(), outcome.done.await(30, TimeUnit.SECONDS))
         val tookMs = System.currentTimeMillis() - stoppedAt
         instrumentation.runOnMainSync { recognizer.destroy() }

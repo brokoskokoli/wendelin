@@ -239,14 +239,30 @@ void main() {
   );
 
   test('Modellfehler der App: kein Ausweichen', () async {
+    var loads = 0;
     final e = DeviceRecognizerEngines(
       models: models,
       lookupShared: (_) async =>
           _GoneBackend(const VoiceException(VoiceErrorKind.failed, 'kaputt')),
-      startWhisper: (_) async => fail('nicht laden'),
+      startWhisper: (_) async {
+        loads++;
+        return _BrokenBackend();
+      },
     );
     final stt = await e.speechToText('whisper-base');
-    await expectLater(text(stt), throwsA(isA<VoiceException>()));
+    await expectLater(
+      text(stt),
+      throwsA(
+        isA<VoiceException>().having(
+          (e) => e.kind,
+          'kind',
+          VoiceErrorKind.failed,
+        ),
+      ),
+    );
+    // Ein Fehler des Modells selbst lädt kein zweites Modell (N7).
+    expect(loads, 0);
+    expect(e.holdsOwnModel, isFalse);
   });
 
   test('idle ohne eigenes Modell tut nichts', () {
