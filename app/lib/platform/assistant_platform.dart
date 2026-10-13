@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
-/// Name of the platform channel of the system assistant (Kotlin side:
-/// `AssistantChannel.kt`).
-const assistantChannelName = 'app.wendelin/assistant';
+import 'channels.dart';
+
+export 'channels.dart' show assistantChannelName;
 
 /// Bridge to the system assistant (overridden in tests).
 final assistantPlatformProvider = Provider<AssistantPlatform>((ref) {

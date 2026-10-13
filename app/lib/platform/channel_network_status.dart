@@ -1,9 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 
-/// Name of the platform channel for the connectivity (Kotlin:
-/// `NetworkChannel.kt`).
-const networkChannelName = 'app.wendelin/network';
+import 'channels.dart';
+
+export 'channels.dart' show networkChannelName;
 
 /// [NetworkStatus] from Android's `ConnectivityManager` (no Play
 /// Services): the Kotlin side answers `state` and pushes `changed` when the

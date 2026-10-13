@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'check_deps.dart' show pubspecWorkspaceDeps;
+import 'src/channel_self_test.dart';
 import 'src/doc_paths.dart';
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
@@ -20,6 +21,7 @@ Future<void> main() async {
   _sizeRules(t);
   _docPaths(t);
   _depsAndGit(t);
+  channelChecks(t);
   await _exitCodes(t);
   exitCode = t.finish('tool self-test');
 }

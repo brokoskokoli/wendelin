@@ -145,6 +145,10 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
     ),
   );
   await gate.step('check_docs', 'dart', ['run', 'tool/check_docs.dart']);
+  await gate.step('check_channels', 'dart', [
+    'run',
+    'tool/check_channels.dart',
+  ]);
   if (!tooling) return;
   // Selbsttests der Werkzeuge (gate, check_sizes, check_docs) und der
   // Geräte-Skripte (nur bash, kein Android-SDK nötig).

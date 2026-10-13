@@ -4,11 +4,10 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import 'channels.dart';
 import 'saf_list_file_port.dart' show decodeUtf8KeepingBom;
 
-/// Name of the platform channel of the Obsidian vault (Kotlin side:
-/// `VaultChannel.kt`).
-const vaultChannelName = 'app.wendelin/vault';
+export 'channels.dart' show vaultChannelName;
 
 /// [VaultPort] on an Android Storage Access Framework tree: the vault
 /// folder chosen with `ACTION_OPEN_DOCUMENT_TREE` ([VaultAccess.pick]),
