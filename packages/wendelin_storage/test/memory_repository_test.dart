@@ -18,9 +18,9 @@ void main() {
   });
   tearDown(() => storage.close());
 
-  Future<MemoryEntry> save(
+  Future<StoredMemory> save(
     String text, [
-    MemoryCategory category = MemoryCategory.fact,
+    StoredMemoryCategory category = StoredMemoryCategory.fact,
   ]) {
     clock.advance(const Duration(minutes: 1));
     return repo.save(text, category: category, source: 'user');
@@ -30,7 +30,7 @@ void main() {
     test('clearPrivacyFloor entfernt nur die Untergrenze', () async {
       final e = await repo.save(
         'Diagnose X',
-        category: MemoryCategory.fact,
+        category: StoredMemoryCategory.fact,
         source: 'user',
         privacyFloor: PrivacyLevel.tee,
       );
@@ -43,7 +43,10 @@ void main() {
     });
 
     test('save setzt Zeiten aus der Uhr', () async {
-      final e = await save('Anna ist meine Schwester', MemoryCategory.person);
+      final e = await save(
+        'Anna ist meine Schwester',
+        StoredMemoryCategory.person,
+      );
       expect(e.createdAt, clock.now());
       expect(e.lastUsedAt, clock.now());
       expect(e.source, 'user');
@@ -52,27 +55,27 @@ void main() {
     });
 
     test('list: neueste zuerst, optional nach Kategorie', () async {
-      final a = await save('a', MemoryCategory.person);
-      final b = await save('b', MemoryCategory.preference);
-      final c = await save('c', MemoryCategory.person);
+      final a = await save('a', StoredMemoryCategory.person);
+      final b = await save('b', StoredMemoryCategory.preference);
+      final c = await save('c', StoredMemoryCategory.person);
       expect(await repo.list(), [c, b, a]);
-      expect(await repo.list(category: MemoryCategory.person), [c, a]);
-      expect(await repo.list(category: MemoryCategory.project), isEmpty);
+      expect(await repo.list(category: StoredMemoryCategory.person), [c, a]);
+      expect(await repo.list(category: StoredMemoryCategory.project), isEmpty);
     });
 
     test(
       'update ändert Text und Kategorie, Suche folgt dem neuen Text',
       () async {
-        final e = await save('Ich mag Kaffee', MemoryCategory.preference);
+        final e = await save('Ich mag Kaffee', StoredMemoryCategory.preference);
         final u = await repo.update(e.id, text: 'Ich mag Tee');
         expect(u!.text, 'Ich mag Tee');
-        expect(u.category, MemoryCategory.preference);
+        expect(u.category, StoredMemoryCategory.preference);
         expect(u.createdAt, e.createdAt);
         expect(await repo.search('Kaffee'), isEmpty);
         expect((await repo.search('Tee')).single.id, e.id);
-        final v = await repo.update(e.id, category: MemoryCategory.fact);
+        final v = await repo.update(e.id, category: StoredMemoryCategory.fact);
         expect(v!.text, 'Ich mag Tee');
-        expect(v.category, MemoryCategory.fact);
+        expect(v.category, StoredMemoryCategory.fact);
         expect(await repo.update('fehlt', text: 'x'), isNull);
       },
     );
@@ -95,7 +98,7 @@ void main() {
         'Die PIN ist 4711',
       ]) {
         await expectLater(
-          repo.save(text, category: MemoryCategory.fact, source: 'user'),
+          repo.save(text, category: StoredMemoryCategory.fact, source: 'user'),
           throwsA(isA<SensitiveContentException>()),
           reason: text,
         );
@@ -123,7 +126,7 @@ void main() {
   });
 
   group('search (FTS5, bm25)', () {
-    late Map<String, MemoryEntry> e;
+    late Map<String, StoredMemory> e;
 
     setUp(() async {
       e = {
@@ -133,21 +136,24 @@ void main() {
         'tauchenOft': await save(
           'Tauchen Tauchen Tauchen: Tauchen ist mein Hobby, Tauchen am Wochenende',
         ),
-        'anna': await save('Anna ist meine Schwester', MemoryCategory.person),
+        'anna': await save(
+          'Anna ist meine Schwester',
+          StoredMemoryCategory.person,
+        ),
         'kaffee': await save(
           'Ich trinke Kaffee schwarz',
-          MemoryCategory.preference,
+          StoredMemoryCategory.preference,
         ),
         'projekt': await save(
           'Projekt Wendelin: Sprachassistent',
-          MemoryCategory.project,
+          StoredMemoryCategory.project,
         ),
         'zahnarzt': await save('Zahnarzt heißt Dr. Müller'),
         'auto': await save('Mein Auto ist ein blauer Kombi'),
         'muenchen': await save('Ich wohne in München'),
         'geburtstag': await save(
           'Annas Geburtstag ist am 3. Mai',
-          MemoryCategory.person,
+          StoredMemoryCategory.person,
         ),
         'tauchschein': await save('Tauchschein: Advanced Open Water'),
         'sport': await save('Laufen am Dienstag'),
@@ -234,9 +240,9 @@ void main() {
 
   test('exportMarkdown gruppiert nach Kategorie', () async {
     expect(await repo.exportMarkdown(), '# Gedächtnis\n');
-    await save('Ich mag Tee', MemoryCategory.preference);
-    await save('Anna ist meine\nSchwester', MemoryCategory.person);
-    await save('Bernd ist mein Nachbar', MemoryCategory.person);
+    await save('Ich mag Tee', StoredMemoryCategory.preference);
+    await save('Anna ist meine\nSchwester', StoredMemoryCategory.person);
+    await save('Bernd ist mein Nachbar', StoredMemoryCategory.person);
     expect(
       await repo.exportMarkdown(),
       '# Gedächtnis\n'

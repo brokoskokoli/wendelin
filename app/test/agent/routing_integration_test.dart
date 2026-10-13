@@ -185,7 +185,7 @@ void main() {
           .set(const ToolPrefs(sensitiveMinimum: PrivacyLevel.tee));
       await env.storage.memory.save(
         'Mag Tee mit Pfefferminz',
-        category: MemoryCategory.preference,
+        category: StoredMemoryCategory.preference,
         source: 'user',
       );
     }

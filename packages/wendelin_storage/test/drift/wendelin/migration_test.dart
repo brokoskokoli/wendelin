@@ -76,7 +76,7 @@ void main() {
       expect(turns.single.message.privacyFloor, PrivacyLevel.tee);
       final memory = await storage.memory.save(
         'Knie-OP im März',
-        category: MemoryCategory.fact,
+        category: StoredMemoryCategory.fact,
         source: 'session:s1',
         privacyFloor: PrivacyLevel.tee,
       );

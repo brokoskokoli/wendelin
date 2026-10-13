@@ -98,7 +98,7 @@ void main() {
       await tester.runAsync(() async {
         await env.storage.memory.save(
           'Neu gemerkt',
-          category: MemoryCategory.fact,
+          category: StoredMemoryCategory.fact,
           source: 'user',
         );
         await env.storage.audit.record(
@@ -218,7 +218,7 @@ void main() {
     final env = TestEnv();
     await env.storage.memory.save(
       'X',
-      category: MemoryCategory.fact,
+      category: StoredMemoryCategory.fact,
       source: 'u',
     );
     await pumpHome(tester, env, const SettingsScreen());

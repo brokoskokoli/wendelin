@@ -606,7 +606,7 @@ void main() {
           await c.read(toolRegistryProvider).refresh();
           await env.storage.memory.save(
             'Taucht gern im Mittelmeer',
-            category: MemoryCategory.preference,
+            category: StoredMemoryCategory.preference,
             source: 'user',
           );
           await sendAndWait(c, 'Wo taucht man gut?');
@@ -649,7 +649,7 @@ void main() {
         await registry.refresh();
         await env.storage.memory.save(
           'Taucht gern im Mittelmeer',
-          category: MemoryCategory.preference,
+          category: StoredMemoryCategory.preference,
           source: 'user',
         );
         await sendAndWait(c, 'Wo taucht man gut?');

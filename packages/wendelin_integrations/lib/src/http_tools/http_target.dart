@@ -1,95 +1,53 @@
-// Zielprüfung der HTTP-Tools (SSRF, DNS-Rebinding), siehe ADR 0011.
+// Zielprüfung der HTTP-Tools (SSRF, DNS-Rebinding), siehe ADR 0011. Nur die
+// Policy; Adressbereiche klassifiziert `common/net_scope.dart`.
 
 import 'dart:io';
 
 import 'package:meta/meta.dart';
 
+import '../common/net_scope.dart';
 import '../common/port_exception.dart';
-import '../web/fetch_guard.dart' show HostResolver;
 
-/// Network scope of an IP address.
+/// Network scope of an IP address as the HTTP-tool policy sees it.
 enum AddressScope {
   /// Routable on the internet.
   public,
 
-  /// Private network: RFC 1918, CGNAT/Tailscale `100.64.0.0/10`, IPv6 ULA
-  /// `fc00::/7`, site-local `fec0::/10`.
+  /// Private network: [NetScope.privateNetwork], [NetScope.carrierNat]
+  /// (Tailscale), [NetScope.uniqueLocal], [NetScope.siteLocal].
   private,
 
-  /// Loopback (`127.0.0.0/8`, `::1`).
+  /// Loopback ([NetScope.loopback]).
   loopback,
 
-  /// Link-local (`169.254.0.0/16`, `fe80::/10`).
+  /// Link-local ([NetScope.linkLocal]).
   linkLocal,
 
-  /// Never a valid target: unspecified, `0.0.0.0/8`, multicast, broadcast,
-  /// reserved, benchmark and IETF-protocol ranges.
+  /// Never a valid target: unspecified, multicast, broadcast, reserved,
+  /// benchmark, IETF-protocol and discard ranges.
   blocked,
 }
 
 /// The [AddressScope] of [address]; IPv4 embedded in IPv6 (mapped,
-/// compatible, NAT64 `64:ff9b::/96`, 6to4 `2002::/16`) is classified by
-/// its IPv4 part.
-AddressScope classifyAddress(InternetAddress address) {
-  final b = address.rawAddress;
-  if (address.type == InternetAddressType.IPv4 && b.length == 4) {
-    return _classifyV4(b);
-  }
-  if (address.type != InternetAddressType.IPv6 || b.length != 16) {
-    return AddressScope.blocked;
-  }
-  final zeroPrefix = b.sublist(0, 10).every((x) => x == 0);
-  if (zeroPrefix && b[10] == 0 && b[11] == 0) {
-    if (b.sublist(12, 15).every((x) => x == 0)) {
-      if (b[15] == 0) return AddressScope.blocked; // ::
-      if (b[15] == 1) return AddressScope.loopback; // ::1
-    }
-    return _classifyV4(b.sublist(12)); // ::a.b.c.d
-  }
-  if (zeroPrefix && b[10] == 0xff && b[11] == 0xff) {
-    return _classifyV4(b.sublist(12)); // ::ffff:a.b.c.d
-  }
-  if (b.sublist(0, 8).every((x) => x == 0) &&
-      b[8] == 0xff &&
-      b[9] == 0xff &&
-      b[10] == 0 &&
-      b[11] == 0) {
-    return _classifyV4(b.sublist(12)); // ::ffff:0:a.b.c.d (SIIT)
-  }
-  if (b[0] == 0 && b[1] == 0x64 && b[2] == 0xff && b[3] == 0x9b) {
-    // 64:ff9b::/96 (NAT64) und 64:ff9b:1::/48 (lokales NAT64).
-    return _classifyV4(b.sublist(12));
-  }
-  if (b[0] == 0x01 && b.sublist(1, 8).every((x) => x == 0)) {
-    return AddressScope.blocked; // 100::/64 (Discard)
-  }
-  if (b[0] == 0x20 && b[1] == 0x02) return _classifyV4(b.sublist(2, 6));
-  if ((b[0] & 0xfe) == 0xfc) return AddressScope.private; // fc00::/7
-  if (b[0] == 0xfe && (b[1] & 0xc0) == 0x80) return AddressScope.linkLocal;
-  if (b[0] == 0xfe && (b[1] & 0xc0) == 0xc0) return AddressScope.private;
-  if (b[0] == 0xff) return AddressScope.blocked; // Multicast
-  return AddressScope.public;
-}
-
-AddressScope _classifyV4(List<int> b) {
-  final a0 = b[0];
-  final a1 = b[1];
-  if (a0 == 127) return AddressScope.loopback;
-  if (a0 == 169 && a1 == 254) return AddressScope.linkLocal;
-  if (a0 == 10 ||
-      (a0 == 172 && a1 >= 16 && a1 <= 31) ||
-      (a0 == 192 && a1 == 168) ||
-      (a0 == 100 && a1 >= 64 && a1 <= 127)) {
-    return AddressScope.private;
-  }
-  if (a0 == 0 ||
-      (a0 == 192 && a1 == 0 && b[2] == 0) ||
-      (a0 == 198 && (a1 == 18 || a1 == 19)) ||
-      a0 >= 224) {
-    return AddressScope.blocked;
-  }
-  return AddressScope.public;
-}
+/// compatible, SIIT, NAT64, 6to4) is classified by its IPv4 part
+/// ([classifyNet]).
+AddressScope classifyAddress(InternetAddress address) =>
+    switch (classifyNet(address).scope) {
+      NetScope.public => AddressScope.public,
+      NetScope.loopback => AddressScope.loopback,
+      NetScope.linkLocal => AddressScope.linkLocal,
+      NetScope.privateNetwork ||
+      NetScope.carrierNat ||
+      NetScope.uniqueLocal ||
+      NetScope.siteLocal => AddressScope.private,
+      NetScope.unspecified ||
+      NetScope.ietfProtocol ||
+      NetScope.benchmark ||
+      NetScope.multicast ||
+      NetScope.reserved ||
+      NetScope.discard ||
+      NetScope.invalid => AddressScope.blocked,
+    };
 
 const _homeSuffixes = [
   '.local',
@@ -100,21 +58,15 @@ const _homeSuffixes = [
   '.ts.net',
 ];
 
-final _numericHost = RegExp(r'^(0x[0-9a-f]*|[0-9]+)(\.(0x[0-9a-f]*|[0-9]+))*$');
 final _dottedQuad = RegExp(
   r'^(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$',
 );
 
-String _trimDot(String host) {
-  final h = host.toLowerCase();
-  return h.endsWith('.') ? h.substring(0, h.length - 1) : h;
-}
-
-/// Whether [host] names a home-network target by itself: a private IP
-/// literal (RFC 1918, Tailscale `100.64.0.0/10`, ULA) or a name ending in
+/// Whether [host] names a home-network target by itself: an IP literal of
+/// [AddressScope.private] (LAN, Tailscale, ULA) or a name ending in
 /// `.local`, `.lan`, `.home`, `.home.arpa`, `.internal` or `.ts.net`.
 bool isHomeNetworkHost(String host) {
-  final h = _trimDot(host);
+  final h = normalizeHostName(host);
   final literal = _literal(h);
   if (literal != null) return classifyAddress(literal) == AddressScope.private;
   return _homeSuffixes.any(h.endsWith);
@@ -148,7 +100,7 @@ final class HttpTarget {
   /// Whether [url] has the same scheme, host and port as [origin].
   bool sameOrigin(Uri url) =>
       url.scheme == origin.scheme &&
-      _trimDot(url.host) == _trimDot(origin.host) &&
+      normalizeHostName(url.host) == normalizeHostName(origin.host) &&
       url.port == origin.port &&
       url.userInfo.isEmpty;
 
@@ -186,10 +138,10 @@ Future<HttpTarget> checkHttpTarget(
     throw _rejected('nur http- und https-Adressen');
   }
   if (url.userInfo.isNotEmpty) throw _rejected('Zugangsdaten in der Adresse');
-  final host = _trimDot(url.host);
+  final host = normalizeHostName(url.host);
   if (host.isEmpty) throw _rejected('kein Host');
   final literal = _literal(host);
-  final localName = host == 'localhost' || host.endsWith('.localhost');
+  final localName = isLocalhostName(host);
   final local =
       localName ||
       (literal != null &&
@@ -212,7 +164,7 @@ Future<HttpTarget> checkHttpTarget(
   if (literal == null && host.contains('%')) {
     throw _rejected('IPv6-Zonen-Angabe in „$host“');
   }
-  if (literal == null && _numericHost.hasMatch(host)) {
+  if (literal == null && isNumericHostSpelling(host)) {
     throw _rejected('ungewöhnliche IP-Schreibweise „$host“');
   }
   final List<InternetAddress> addresses;

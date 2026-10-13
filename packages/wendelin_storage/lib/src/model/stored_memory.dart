@@ -2,7 +2,7 @@ import 'package:meta/meta.dart';
 import 'package:wendelin_core/wendelin_core.dart' show PrivacyLevel;
 
 /// Category of a memory entry (concept: person, vorliebe, fakt, projekt).
-enum MemoryCategory {
+enum StoredMemoryCategory {
   /// A person and facts about them.
   person,
 
@@ -18,9 +18,9 @@ enum MemoryCategory {
 
 /// One long-term memory entry.
 @immutable
-final class MemoryEntry {
+final class StoredMemory {
   /// Creates an entry.
-  const MemoryEntry({
+  const StoredMemory({
     required this.id,
     required this.text,
     required this.category,
@@ -37,7 +37,7 @@ final class MemoryEntry {
   final String text;
 
   /// Category.
-  final MemoryCategory category;
+  final StoredMemoryCategory category;
 
   /// Where the entry came from, e.g. `user` ("merk dir …") or
   /// `suggestion` (confirmed end-of-conversation suggestion).
@@ -55,7 +55,7 @@ final class MemoryEntry {
 
   @override
   bool operator ==(Object other) =>
-      other is MemoryEntry &&
+      other is StoredMemory &&
       other.id == id &&
       other.text == text &&
       other.category == category &&
@@ -76,5 +76,5 @@ final class MemoryEntry {
   );
 
   @override
-  String toString() => 'MemoryEntry($id, ${category.name}, $text)';
+  String toString() => 'StoredMemory($id, ${category.name}, $text)';
 }

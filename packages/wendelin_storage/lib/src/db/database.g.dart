@@ -1175,14 +1175,14 @@ class $MemoryEntriesTable extends MemoryEntries
     requiredDuringInsert: true,
   );
   @override
-  late final GeneratedColumnWithTypeConverter<MemoryCategory, String> category =
-      GeneratedColumn<String>(
-        'category',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<MemoryCategory>($MemoryEntriesTable.$convertercategory);
+  late final GeneratedColumnWithTypeConverter<StoredMemoryCategory, String>
+  category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<StoredMemoryCategory>($MemoryEntriesTable.$convertercategory);
   static const VerificationMeta _sourceMeta = const VerificationMeta('source');
   @override
   late final GeneratedColumn<String> source = GeneratedColumn<String>(
@@ -1324,8 +1324,10 @@ class $MemoryEntriesTable extends MemoryEntries
     return $MemoryEntriesTable(attachedDatabase, alias);
   }
 
-  static JsonTypeConverter2<MemoryCategory, String, String> $convertercategory =
-      const EnumNameConverter<MemoryCategory>(MemoryCategory.values);
+  static JsonTypeConverter2<StoredMemoryCategory, String, String>
+  $convertercategory = const EnumNameConverter<StoredMemoryCategory>(
+    StoredMemoryCategory.values,
+  );
   static TypeConverter<DateTime, int> $convertercreatedAt = epochMicros;
   static TypeConverter<DateTime, int> $converterlastUsedAt = epochMicros;
 }
@@ -1336,7 +1338,7 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
   /// The remembered text. Named `body` (not `text`) because drift's
   /// schema-dump code generator cannot name a column getter `text`.
   final String body;
-  final MemoryCategory category;
+  final StoredMemoryCategory category;
   final String source;
   final DateTime createdAt;
   final DateTime lastUsedAt;
@@ -1429,7 +1431,7 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
   MemoryRow copyWith({
     String? id,
     String? body,
-    MemoryCategory? category,
+    StoredMemoryCategory? category,
     String? source,
     DateTime? createdAt,
     DateTime? lastUsedAt,
@@ -1499,7 +1501,7 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
 class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
   final Value<String> id;
   final Value<String> body;
-  final Value<MemoryCategory> category;
+  final Value<StoredMemoryCategory> category;
   final Value<String> source;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastUsedAt;
@@ -1518,7 +1520,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
   MemoryEntriesCompanion.insert({
     required String id,
     required String body,
-    required MemoryCategory category,
+    required StoredMemoryCategory category,
     required String source,
     required DateTime createdAt,
     required DateTime lastUsedAt,
@@ -1555,7 +1557,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
   MemoryEntriesCompanion copyWith({
     Value<String>? id,
     Value<String>? body,
-    Value<MemoryCategory>? category,
+    Value<StoredMemoryCategory>? category,
     Value<String>? source,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastUsedAt,

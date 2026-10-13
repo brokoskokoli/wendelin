@@ -13,7 +13,7 @@ Kurzfassung der Abhängigkeiten (geprüft von `tool/check_deps.dart`): `core` h�
 | `wendelin_tools` | `packages/wendelin_tools/lib/wendelin_tools.dart` | `ToolRegistry` (`src/registry/tool_registry.dart`), `ToolExecutor` (`src/executor/tool_executor.dart`), `RiskPolicy` (`src/policy/risk_policy.dart`), `UndoManager` (`src/undo/undo_manager.dart`), `ArgumentValidator`, `ToolAuditSink` |
 | `wendelin_agent` | `packages/wendelin_agent/lib/wendelin_agent.dart` | `AgentRunner` (`src/agent_runner.dart`), `ContextBuilder`, `ProviderResolver`, Routing-Regeln in `src/routing/` (`RuleBasedProviderResolver`, `routing_engine.dart`, `conditions.dart`), `SentenceChunker`, Ports in `src/ports.dart` |
 | `wendelin_storage` | `packages/wendelin_storage/lib/wendelin_storage.dart` | drift-Datenbank `src/db/database.dart` und Tabellen `src/db/tables.dart`, Repositories (`src/repositories/repositories.dart`, Umsetzung `src/db/*_impl.dart`), `SecretStore` (`src/secret_store.dart`), Schema-Tests unter `test/drift/` |
-| `wendelin_integrations` | `packages/wendelin_integrations/lib/wendelin_integrations.dart` | Je Integration ein Ordner unter `src/`: `calendar/`, `clipboard/`, `alarms/`, `memory/`, `web/` (Abruf, Suche), `lists/`, `obsidian/`, `bring/`, `http_tools/`; gemeinsame Bausteine in `src/common/` (`base_tool.dart`, `tool_args.dart`, `matching.dart`, `app_presence.dart`) |
+| `wendelin_integrations` | `packages/wendelin_integrations/lib/wendelin_integrations.dart` | Je Integration ein Ordner unter `src/`: `calendar/`, `clipboard/`, `alarms/`, `memory/`, `web/` (Abruf, Suche), `lists/`, `obsidian/`, `bring/`, `http_tools/`; gemeinsame Bausteine in `src/common/` (`base_tool.dart`, `tool_args.dart`, `matching.dart`, `app_presence.dart`, `net_scope.dart`) |
 | `wendelin_voice` | `packages/wendelin_voice/lib/wendelin_voice.dart` | `VoicePipeline` (`src/pipeline/voice_pipeline.dart`), `Endpointer`, Schnittstellen in `src/io/`, `SpokenAnswer` (`src/text/spoken_answer.dart`), `TtsSelector`, Modellkatalog und Download in `src/models/` |
 | `wendelin_mcp` | `packages/wendelin_mcp/lib/wendelin_mcp.dart` | `McpClient` (`src/client.dart`), Transporte in `src/transport/`, OAuth in `src/oauth/oauth_flow.dart`, Abbildung auf Tools in `src/tools/mcp_integration.dart`, Netzregeln `src/net_policy.dart` |
 | `evals` | `evals/lib/src/cli.dart` | Modell-Evals und Live-Tests (`evals/README.md`) |
@@ -108,6 +108,8 @@ Bewusst getrennt, je mit eigenen Timeouts und Fehlerabbildung. **Keinen neuen St
 - Bring!: `packages/wendelin_integrations/lib/src/bring/http_bring_api.dart`
 - HTTP-Tools: `packages/wendelin_integrations/lib/src/http_tools/http_transport.dart` (`http_target.dart`, ADR 0011)
 - Modell-Download: `packages/wendelin_voice/lib/src/models/model_downloader.dart`
+
+Netzziele: Adressbereiche (Loopback, RFC 1918, CGNAT/Tailscale, ULA, Link-Local, IPv4 in IPv6 …) klassifiziert **nur** `packages/wendelin_integrations/lib/src/common/net_scope.dart` (`classifyNet`, `NetScope`, `HostResolver`). `fetch_guard.dart` und `http_target.dart` enthalten nur ihre Policy (welche Bereiche erlaubt sind, welche Meldung kommt). `packages/wendelin_mcp/lib/src/net_policy.dart` stellt WP36 b darauf um.
 
 ## Checklisten „Feature → Dateien“
 

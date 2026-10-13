@@ -247,13 +247,13 @@ void main() {
       final env = TestEnv();
       final private = await env.storage.memory.save(
         'Anna hat Diabetes',
-        category: MemoryCategory.person,
+        category: StoredMemoryCategory.person,
         source: 'user',
         privacyFloor: PrivacyLevel.tee,
       );
       await env.storage.memory.save(
         'Lieblingsfarbe Blau',
-        category: MemoryCategory.preference,
+        category: StoredMemoryCategory.preference,
         source: 'user',
       );
       await pumpPage(tester, env, const MemoryScreen());
@@ -289,7 +289,7 @@ void main() {
       final env = TestEnv();
       await env.storage.memory.save(
         'Lieblingsfarbe Blau',
-        category: MemoryCategory.preference,
+        category: StoredMemoryCategory.preference,
         source: 'user',
       );
       await pumpPage(tester, env, const MemoryScreen());

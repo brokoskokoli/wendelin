@@ -1,9 +1,9 @@
 import 'package:wendelin_core/wendelin_core.dart'
     show PrivacyLevel, detectSensitiveContent;
-import 'package:wendelin_integrations/wendelin_integrations.dart' as wi;
-import 'package:wendelin_storage/wendelin_storage.dart' as st;
+import 'package:wendelin_integrations/wendelin_integrations.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
 
-/// [wi.MemoryStorePort] on the `MemoryRepository` of `wendelin_storage`.
+/// [MemoryStorePort] on the `MemoryRepository` of `wendelin_storage`.
 ///
 /// Both the integration's and the storage's protection rule apply: text is
 /// checked with core's `detectSensitiveContent` first, and a
@@ -12,17 +12,17 @@ import 'package:wendelin_storage/wendelin_storage.dart' as st;
 ///
 /// The repository sets `lastUsedAt` to the creation time on save; the port
 /// reports `null` until a search returned the entry (port contract).
-final class RepositoryMemoryPort implements wi.MemoryStorePort {
+final class RepositoryMemoryPort implements MemoryStorePort {
   /// Creates the port on [repository].
   RepositoryMemoryPort(this.repository);
 
   /// Storage repository.
-  final st.MemoryRepository repository;
+  final MemoryRepository repository;
 
   @override
-  Future<wi.MemoryEntry> save(
+  Future<MemoryEntry> save(
     String text, {
-    required wi.MemoryCategory category,
+    required MemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
   }) async {
@@ -31,7 +31,7 @@ final class RepositoryMemoryPort implements wi.MemoryStorePort {
     }
     final finding = detectSensitiveContent(text);
     if (finding != null) {
-      throw wi.PortException(wi.PortErrorKind.rejected, finding.reason);
+      throw PortException(PortErrorKind.rejected, finding.reason);
     }
     try {
       final saved = await repository.save(
@@ -41,23 +41,23 @@ final class RepositoryMemoryPort implements wi.MemoryStorePort {
         privacyFloor: privacyFloor,
       );
       return _toPort(saved);
-    } on st.SensitiveContentException catch (e) {
-      throw wi.PortException(wi.PortErrorKind.rejected, e.message);
+    } on SensitiveContentException catch (e) {
+      throw PortException(PortErrorKind.rejected, e.message);
     }
   }
 
   @override
-  Future<List<wi.MemoryEntry>> search(String query, {int limit = 5}) async {
+  Future<List<MemoryEntry>> search(String query, {int limit = 5}) async {
     final hits = await repository.search(query, limit: limit);
     return [for (final e in hits) _toPort(e, used: true)];
   }
 
   @override
-  Future<wi.MemoryEntry> forget(String id) async {
+  Future<MemoryEntry> forget(String id) async {
     final entry = await repository.get(id);
     if (entry == null || !await repository.forget(id)) {
-      throw wi.PortException(
-        wi.PortErrorKind.notFound,
+      throw PortException(
+        PortErrorKind.notFound,
         'Eintrag „$id“ gibt es nicht',
       );
     }
@@ -65,12 +65,12 @@ final class RepositoryMemoryPort implements wi.MemoryStorePort {
   }
 
   @override
-  Future<List<wi.MemoryEntry>> list() async => [
+  Future<List<MemoryEntry>> list() async => [
     for (final e in await repository.list()) _toPort(e),
   ];
 
-  static wi.MemoryEntry _toPort(st.MemoryEntry e, {bool used = false}) =>
-      wi.MemoryEntry(
+  static MemoryEntry _toPort(StoredMemory e, {bool used = false}) =>
+      MemoryEntry(
         id: e.id,
         text: e.text,
         category: _toPortCategory(e.category),
@@ -82,17 +82,17 @@ final class RepositoryMemoryPort implements wi.MemoryStorePort {
         privacyFloor: e.privacyFloor,
       );
 
-  static st.MemoryCategory _toStorage(wi.MemoryCategory c) => switch (c) {
-    wi.MemoryCategory.person => st.MemoryCategory.person,
-    wi.MemoryCategory.preference => st.MemoryCategory.preference,
-    wi.MemoryCategory.fact => st.MemoryCategory.fact,
-    wi.MemoryCategory.project => st.MemoryCategory.project,
+  static StoredMemoryCategory _toStorage(MemoryCategory c) => switch (c) {
+    MemoryCategory.person => StoredMemoryCategory.person,
+    MemoryCategory.preference => StoredMemoryCategory.preference,
+    MemoryCategory.fact => StoredMemoryCategory.fact,
+    MemoryCategory.project => StoredMemoryCategory.project,
   };
 
-  static wi.MemoryCategory _toPortCategory(st.MemoryCategory c) => switch (c) {
-    st.MemoryCategory.person => wi.MemoryCategory.person,
-    st.MemoryCategory.preference => wi.MemoryCategory.preference,
-    st.MemoryCategory.fact => wi.MemoryCategory.fact,
-    st.MemoryCategory.project => wi.MemoryCategory.project,
+  static MemoryCategory _toPortCategory(StoredMemoryCategory c) => switch (c) {
+    StoredMemoryCategory.person => MemoryCategory.person,
+    StoredMemoryCategory.preference => MemoryCategory.preference,
+    StoredMemoryCategory.fact => MemoryCategory.fact,
+    StoredMemoryCategory.project => MemoryCategory.project,
   };
 }

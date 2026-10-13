@@ -126,12 +126,12 @@ void main() {
       final env = exportingEnv(exports);
       await env.storage.memory.save(
         'Taucht gern im Mittelmeer',
-        category: MemoryCategory.preference,
+        category: StoredMemoryCategory.preference,
         source: 'user',
       );
       await env.storage.memory.save(
         'Schwester heißt Anna',
-        category: MemoryCategory.person,
+        category: StoredMemoryCategory.person,
         source: 'user',
       );
       await pumpPage(tester, env, const MemoryScreen());
@@ -155,7 +155,7 @@ void main() {
       final edited = (await env.storage.memory.list()).firstWhere(
         (e) => e.text.contains('Ostsee'),
       );
-      expect(edited.category, MemoryCategory.fact);
+      expect(edited.category, StoredMemoryCategory.fact);
 
       await tester.tap(find.byTooltip('Löschen: Schwester heißt Anna'));
       await tester.pumpAndSettle();
@@ -174,7 +174,7 @@ void main() {
       final env = TestEnv();
       await env.storage.memory.save(
         'Lieblingszahl',
-        category: MemoryCategory.fact,
+        category: StoredMemoryCategory.fact,
         source: 'user',
       );
       await pumpPage(tester, env, const MemoryScreen());
