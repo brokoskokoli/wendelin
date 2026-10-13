@@ -4,6 +4,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../../agent/conversation_state.dart';
 import '../design/design.dart';
 import 'labels.dart';
+import 'private_banner.dart';
 
 /// Bottom sheet „Bestätigung“ (docs/design/screens/bestaetigung): asks
 /// before an `external` tool or an escalation below the privacy level.
@@ -19,7 +20,11 @@ class ConfirmationSheet extends StatelessWidget {
     required this.privacy,
     this.toolRisk = RiskLevel.external,
     this.hint = ConfirmationHint.tap,
+    this.privateSince,
   });
+
+  /// Since when the conversation is private (hint at an escalation).
+  final DateTime? privateSince;
 
   /// What to ask.
   final PendingQuestion question;
@@ -47,6 +52,7 @@ class ConfirmationSheet extends StatelessWidget {
       question,
       (yes) => Navigator.of(context).pop(yes),
       toolRisk: toolRisk,
+      privateSince: privateSince,
     );
     return SafeArea(
       top: false,
@@ -108,11 +114,14 @@ enum ConfirmationHint {
   Widget get widget => VoiceHint(text, dot: listens);
 }
 
-/// The confirmation card for [question]; [answer] gets `true` for yes.
+/// The confirmation card for [question]; [answer] gets `true` for yes. In
+/// a private conversation ([privateSince]) the escalation question says
+/// that the target would also see its private parts.
 Widget confirmationCardFor(
   PendingQuestion question,
   void Function(bool yes) answer, {
   RiskLevel toolRisk = RiskLevel.external,
+  DateTime? privateSince,
 }) => switch (question) {
   ToolQuestion(:final event) => () {
     final texts = confirmationTexts(event.call.name);
@@ -129,9 +138,11 @@ Widget confirmationCardFor(
   }(),
   EscalationQuestion(:final fromName, :final toName) => ConfirmationCard(
     title: 'An $toName übergeben?',
-    detail:
-        '$toName hat eine niedrigere Datenschutzstufe als $fromName. '
-        'Deine Anfrage und der bisherige Verlauf gehen dann dorthin.',
+    detail: [
+      '$toName hat eine niedrigere Datenschutzstufe als $fromName. '
+          'Deine Anfrage und der bisherige Verlauf gehen dann dorthin.',
+      if (privateSince != null) privateEscalationHint(privateSince, toName),
+    ].join('\n'),
     toolName: '$fromName → $toName',
     risk: RiskLevel.external,
     onYes: () => answer(true),

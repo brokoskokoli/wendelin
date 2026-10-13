@@ -1,22 +1,53 @@
 import 'package:flutter/foundation.dart';
+import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
-import 'app_settings.dart';
 import 'demo_provider.dart';
+import 'routing.dart';
 
-/// The providers a request can go to: the default target and the
-/// escalation chain, plus display names per profile.
+/// The rules and profiles behind a [ProviderConfig] with routing rules
+/// (M3, ADR 0009).
+@immutable
+final class RoutingSetup {
+  /// Creates the setup; [profiles] are copied.
+  RoutingSetup({
+    required this.rules,
+    required List<RoutingProfile> profiles,
+    required this.clock,
+    required this.network,
+  }) : profiles = List.unmodifiable(profiles);
+
+  /// The stored rules.
+  final RuleSet rules;
+
+  /// All profiles; those whose adapter cannot be built have none.
+  final List<RoutingProfile> profiles;
+
+  /// Time for `timeWindow`.
+  final Clock clock;
+
+  /// Connectivity for `network`.
+  final NetworkStatus network;
+}
+
+/// The providers a request can go to: the default target and the further
+/// targets (escalation chain, or with routing rules every other available
+/// profile), plus display names per profile.
 @immutable
 final class ProviderConfig {
-  /// Creates a configuration.
+  /// Creates a configuration. With [routing] requests are routed by rules
+  /// (`RuleBasedProviderResolver`); without, everything goes to [primary]
+  /// and escalates along [chain] (`DefaultProviderResolver`, demo mode and
+  /// device tests).
   ProviderConfig({
     required this.primary,
     List<ProviderTarget> chain = const [],
     Map<String, String> names = const {},
     this.isPrivate,
+    this.routing,
   }) : chain = List.unmodifiable(chain),
        names = Map.unmodifiable(names);
 
@@ -34,18 +65,22 @@ final class ProviderConfig {
     names: const {DemoLlmProvider.profileId: 'Demo · Skript'},
   );
 
-  /// Where every request goes first.
+  /// The default target.
   final ProviderTarget primary;
 
-  /// Escalation chain after [primary], weakest first.
+  /// Further targets, weakest first: the escalation chain, or with
+  /// [routing] every other available profile (with its default model).
   final List<ProviderTarget> chain;
 
   /// Display name per profile id.
   final Map<String, String> names;
 
-  /// Marks a request as privately routed (its privacy level is then the
-  /// floor for escalations); `null` = never. Routing rules follow in M3.
+  /// Without [routing]: marks a request as privately routed (its privacy
+  /// level is then the floor for escalations); `null` = never.
   final bool Function(UserInput input)? isPrivate;
+
+  /// Routing rules; `null` = default target and chain only.
+  final RoutingSetup? routing;
 
   /// Display name of [profileId] (the id if unknown).
   String nameOf(String profileId) => names[profileId] ?? profileId;
@@ -59,54 +94,90 @@ final class ProviderConfig {
     return primary;
   }
 
-  /// The lowest privacy level among all targets. The tool catalog is built
-  /// for it, so an escalation never sends sensitive tools to a provider
-  /// that may not see them.
+  /// The lowest privacy level among all targets a request can reach. The
+  /// tool catalog is built for it, so neither a rule nor an escalation
+  /// sends sensitive tools to a provider that may not see them.
   PrivacyLevel get lowestPrivacy => [
     primary,
     ...chain,
   ].map((t) => t.privacy).reduce((a, b) => a.isAtLeast(b) ? b : a);
 
   /// The resolver for the agent.
-  ProviderResolver resolver() =>
-      DefaultProviderResolver(primary, chain, isPrivate: isPrivate);
+  ProviderResolver resolver() => switch (routing) {
+    final r? => RuleBasedProviderResolver(
+      rules: r.rules,
+      profiles: r.profiles,
+      clock: r.clock,
+      network: r.network,
+    ),
+    null => DefaultProviderResolver(primary, chain, isPrivate: isPrivate),
+  };
 }
 
-/// Loads the [ProviderConfig] from the stored profiles: the default profile
-/// and the escalation chain from the settings. Returns `null` if no default
-/// profile is set (the main screen then offers „Provider einrichten“).
+/// Loads the [ProviderConfig] from the stored profiles and routing rules
+/// ([loadRuleSet]: migrates the M2 escalation chain on the first load).
+/// Returns `null` if no default profile is set (the main screen then
+/// offers „Provider einrichten“).
 ///
-/// Chain entries that are unknown or cannot be built are skipped; a broken
-/// default profile throws.
+/// Profiles whose adapter cannot be built take no requests (rules to them
+/// are skipped); a broken default profile throws.
 Future<ProviderConfig?> loadProviderConfig({
   required WendelinStorage storage,
   required SecretStore secrets,
   required ModelCatalog catalog,
   LlmProvider Function(ProviderProfile profile, SecretReader secrets)? create,
+  Clock clock = const SystemClock(),
+  NetworkStatus? network,
 }) async {
-  final profile = await storage.providerProfiles.defaultProfile();
-  if (profile == null) return null;
-  ProviderTarget target(ProviderProfile p) => ProviderTarget(
-    profileId: p.id,
-    modelId: p.defaultModel,
-    provider:
-        create?.call(p, secrets.read) ??
-        ProviderFactory.create(p, secrets.read, catalog: catalog),
-    privacy: p.privacy,
-  );
-  final names = {profile.id: profile.name};
-  final chain = <ProviderTarget>[];
-  final ids = await storage.settings.get(AppSettings.escalationChain) ?? [];
-  for (final id in ids) {
-    if (id == profile.id) continue;
-    final p = await storage.providerProfiles.get(id);
-    if (p == null) continue;
-    try {
-      chain.add(target(p));
-      names[p.id] = p.name;
-    } on ArgumentError {
-      // Not buildable (e.g. missing base URL): not part of the chain.
+  final rules = await loadRuleSet(storage);
+  if (rules == null) return null;
+  LlmProvider build(ProviderProfile p) =>
+      create?.call(p, secrets.read) ??
+      ProviderFactory.create(p, secrets.read, catalog: catalog);
+  final profiles = await storage.providerProfiles.list();
+  final defaultId = rules.defaultTarget.profileId;
+  final routing = <RoutingProfile>[];
+  final names = <String, String>{};
+  ProviderTarget? primary;
+  final others = <ProviderTarget>[];
+  for (final p in profiles) {
+    names[p.id] = p.name;
+    LlmProvider? provider;
+    if (p.id == defaultId) {
+      provider = build(p); // A broken default profile throws.
+    } else {
+      try {
+        provider = build(p);
+      } on ArgumentError {
+        // Not buildable (e.g. missing base URL): takes no requests.
+      }
+    }
+    routing.add(routingProfileOf(p, provider: provider));
+    if (provider == null) continue;
+    final target = ProviderTarget(
+      profileId: p.id,
+      modelId: p.id == defaultId ? rules.defaultTarget.modelId : p.defaultModel,
+      provider: provider,
+      privacy: p.privacy,
+    );
+    if (p.id == defaultId) {
+      primary = target;
+    } else {
+      others.add(target);
     }
   }
-  return ProviderConfig(primary: target(profile), chain: chain, names: names);
+  if (primary == null) {
+    throw StateError('Standardprofil $defaultId fehlt');
+  }
+  return ProviderConfig(
+    primary: primary,
+    chain: others,
+    names: names,
+    routing: RoutingSetup(
+      rules: rules,
+      profiles: routing,
+      clock: clock,
+      network: network ?? FixedNetworkStatus(),
+    ),
+  );
 }

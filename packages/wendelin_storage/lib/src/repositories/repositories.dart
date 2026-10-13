@@ -79,6 +79,11 @@ abstract interface class MemoryRepository {
     MemoryCategory? category,
   });
 
+  /// Removes the privacy floor of entry [id] (the user confirmed that the
+  /// entry may reach every target); returns the updated entry or `null` if
+  /// it does not exist.
+  Future<MemoryEntry?> clearPrivacyFloor(String id);
+
   /// Deletes entry [id]; returns whether it existed.
   Future<bool> forget(String id);
 

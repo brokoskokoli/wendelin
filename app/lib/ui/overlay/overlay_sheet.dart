@@ -7,6 +7,7 @@ import '../design/design.dart';
 import '../screens/bring_share_card.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/conversation_view.dart';
+import '../screens/private_banner.dart';
 
 /// What the assistant overlay shows of the current request: the latest
 /// user request and everything after it.
@@ -82,7 +83,15 @@ class OverlaySheet extends StatelessWidget {
     this.onUnlock,
     this.typing,
     this.conversationMode = false,
+    this.privateSince,
+    this.onNewConversation,
   });
+
+  /// Since when the conversation is private („Unterhaltung privat“).
+  final DateTime? privateSince;
+
+  /// Starts a new conversation (ends the private one).
+  final VoidCallback? onNewConversation;
 
   /// Active provider (`''` = none set up).
   final String providerName;
@@ -227,11 +236,17 @@ class OverlaySheet extends StatelessWidget {
           q,
           onAnswer!,
           toolRisk: q is ToolQuestion ? q.event.risk : RiskLevel.external,
+          privateSince: privateSince,
         ),
         if (statusText != null) Text(statusText, style: WText.caption),
       ];
     }
     return [
+      if (privateSince case final since?)
+        PrivateConversationBanner(
+          since: since,
+          onNewConversation: onNewConversation,
+        ),
       ?typing,
       if (typing == null)
         if (listening && (request == null || mic == MicState.listening))

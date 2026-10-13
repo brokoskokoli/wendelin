@@ -22,7 +22,17 @@ String categoryLabel(MemoryCategory c) => switch (c) {
   MemoryCategory.project => 'Projekt',
 };
 
+/// Second line of a memory entry: category and, for entries of private
+/// runs, their privacy floor („Fakt · privat, nur ab TEE“).
+String memoryDetail(MemoryEntry e) => switch (e.privacyFloor) {
+  final floor? =>
+    '${categoryLabel(e.category)} · privat, nur ab ${floor.label}',
+  null => categoryLabel(e.category),
+};
+
 /// Settings → Gedächtnis: read, edit, delete entries; export as Markdown.
+/// Entries saved by private runs show their privacy floor; the user can
+/// lift it (with confirmation) in the edit dialog.
 class MemoryScreen extends ConsumerWidget {
   /// Creates the screen.
   const MemoryScreen({super.key});
@@ -47,7 +57,7 @@ class MemoryScreen extends ConsumerWidget {
               for (final e in list)
                 SettingsRow(
                   title: e.text,
-                  detail: categoryLabel(e.category),
+                  detail: memoryDetail(e),
                   onTap: () => unawaited(_edit(context, ref, e)),
                   trailing: WIconButton(
                     icon: WIcons.close,
@@ -90,21 +100,55 @@ class MemoryScreen extends ConsumerWidget {
   }
 
   Future<void> _edit(BuildContext context, WidgetRef ref, MemoryEntry e) async {
-    final result = await showDialog<(String, MemoryCategory)>(
+    final result = await showDialog<_EditResult>(
       context: context,
       builder: (_) => _EditDialog(e),
     );
-    if (result == null) return;
+    if (result == null || !context.mounted) return;
+    if (result == _EditResult.liftFloor) {
+      await _liftFloor(context, ref, e);
+      return;
+    }
     try {
       await ref
           .read(storageProvider)
           .memory
-          .update(e.id, text: result.$1, category: result.$2);
+          .update(e.id, text: result.text, category: result.category);
     } on SensitiveContentException catch (error) {
       if (context.mounted) showHint(context, error.message);
     }
     ref.invalidate(memoryEntriesProvider);
   }
+
+  Future<void> _liftFloor(
+    BuildContext context,
+    WidgetRef ref,
+    MemoryEntry e,
+  ) async {
+    final level = e.privacyFloor?.label ?? '';
+    final ok = await confirm(
+      context,
+      title: 'Untergrenze aufheben?',
+      message:
+          '„${e.text}“ stammt aus einer privaten Anfrage und geht bisher nur '
+          'an Provider ab $level. Danach können ihn alle Provider sehen.',
+      yes: 'Aufheben',
+    );
+    if (!ok) return;
+    await ref.read(storageProvider).memory.clearPrivacyFloor(e.id);
+    ref.invalidate(memoryEntriesProvider);
+  }
+}
+
+/// Result of the edit dialog: new text and category, or [liftFloor].
+final class _EditResult {
+  const _EditResult(this.text, this.category);
+
+  /// The user wants to lift the privacy floor.
+  static const liftFloor = _EditResult('', MemoryCategory.fact);
+
+  final String text;
+  final MemoryCategory category;
 }
 
 class _EditDialog extends StatefulWidget {
@@ -148,6 +192,20 @@ class _EditDialogState extends State<_EditDialog> {
               ),
           ],
         ),
+        if (widget.entry.privacyFloor case final floor?) ...[
+          Text(
+            'Aus einer privaten Anfrage: geht nur an Provider ab '
+            '${floor.label}.',
+            style: WText.detail,
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(_EditResult.liftFloor),
+              child: const Text('Untergrenze aufheben'),
+            ),
+          ),
+        ],
       ],
     ),
     actions: [
@@ -158,7 +216,9 @@ class _EditDialogState extends State<_EditDialog> {
       FilledButton(
         onPressed: _text.text.trim().isEmpty
             ? null
-            : () => Navigator.of(context).pop((_text.text.trim(), _category)),
+            : () =>
+                  Navigator.of(context)
+                      .pop(_EditResult(_text.text.trim(), _category)),
         child: const Text('Speichern'),
       ),
     ],

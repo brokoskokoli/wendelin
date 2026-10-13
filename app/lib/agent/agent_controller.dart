@@ -81,7 +81,35 @@ final class AgentController extends Notifier<ConversationState> {
       entries: entriesFromMessages([
         for (final m in messages) m.message,
       ], sessionStart: last.startedAt),
+      privateSince: privateSinceOf(messages),
     );
+  }
+
+  /// Time of the first message with a privacy floor in [messages], or
+  /// `null`: from then on the conversation is private (taint propagation,
+  /// ADR 0009 §4).
+  static DateTime? privateSinceOf(List<StoredMessage> messages) => messages
+      .where((m) => m.message.privacyFloor != null)
+      .map((m) => m.createdAt)
+      .firstOrNull;
+
+  /// Looks up whether the session [sessionId] became private.
+  Future<void> _refreshPrivacy(String sessionId) async {
+    if (state.privateSince != null) return;
+    final List<StoredMessage> messages;
+    try {
+      messages = await ref
+          .read(storageProvider)
+          .conversations
+          .messages(sessionId);
+    } on Object catch (e, stack) {
+      _report(e, stack);
+      return;
+    }
+    final since = privateSinceOf(messages);
+    if (since != null && sessionId == _shownSessionId) {
+      state = state.copyWith(privateSince: since);
+    }
   }
 
   /// Sends [text] to the agent. „neues Thema“ starts a new session instead.
@@ -167,7 +195,7 @@ final class AgentController extends Notifier<ConversationState> {
     final isNew = sessionId != _shownSessionId;
     _shownSessionId = sessionId;
     state = _reducer.userMessage(
-      state,
+      isNew ? state.copyWith(clearPrivate: true) : state,
       trimmed,
       sessionStart: isNew ? ref.read(clockProvider).now() : null,
     );
@@ -306,6 +334,9 @@ final class AgentController extends Notifier<ConversationState> {
         }
       case UsageReported(:final profileId, :final modelId, :final usage):
         unawaited(_recordUsage(sessionId, event, profileId, modelId, usage));
+      case EscalationConfirmationRequired() || AgentDone() || AgentFailed():
+        // The answers and the request are stored by now (with their floor).
+        unawaited(_refreshPrivacy(sessionId));
       case _:
     }
     state = _reducer.apply(state, event);

@@ -1,3 +1,4 @@
+import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
@@ -60,8 +61,14 @@ final class ConversationReducer {
   /// Applies one event of the agent run.
   ConversationState apply(ConversationState s, AgentEvent event) {
     switch (event) {
-      case Routed(:final profileId):
-        return s.copyWith(activeProfileId: profileId, clearVerification: true);
+      case Routed(:final profileId, :final reason):
+        final byRule = reason != RuleSet.defaultReason;
+        return s.copyWith(
+          activeProfileId: profileId,
+          clearVerification: true,
+          activeRule: byRule ? reason : null,
+          clearRule: !byRule,
+        );
       case AgentTextDelta(:final text):
         return _appendText(s, text);
       case AgentThinkingDelta(:final text):
@@ -126,7 +133,11 @@ final class ConversationReducer {
         // Does not end the segment: the reset after an escalation discards
         // the text of the replaced answer (ADR 0003 §4).
         return _add(
-          s.copyWith(activeProfileId: toProfile, clearVerification: true),
+          s.copyWith(
+            activeProfileId: toProfile,
+            clearVerification: true,
+            clearRule: true,
+          ),
           (id) => EscalationEntry(id, 'an ${nameOf(toProfile)} übergeben'),
         );
       case Verification(:final profileId, :final status):

@@ -18,6 +18,7 @@ import 'ui/settings/obsidian_screen.dart';
 import 'ui/settings/privacy_screen.dart';
 import 'ui/settings/provider_setup_screen.dart';
 import 'ui/settings/providers_screen.dart';
+import 'ui/settings/routing/routing_screen.dart';
 import 'ui/settings/settings_screen.dart';
 import 'ui/settings/voice_screen.dart';
 import 'ui/settings/web_search_screen.dart';
@@ -43,13 +44,8 @@ class WendelinApp extends StatelessWidget {
       AppRoutes.providerSetup: (_) => const ProviderSetupScreen(),
       AppRoutes.providers: (_) => const ProvidersScreen(),
       AppRoutes.integrations: (_) => const IntegrationsScreen(),
-      // Placeholders until WP26 (routing), WP27 (MCP).
-      AppRoutes.routing: (_) => const ComingSoonScreen(
-        title: 'Routing',
-        what:
-            'Regeln, welcher Provider eine Anfrage bekommt, mit Testfeld '
-            'und Eskalationsketten.',
-      ),
+      AppRoutes.routing: (_) => const RoutingScreen(),
+      // Placeholder until WP27 (MCP).
       AppRoutes.mcpServers: (_) => const ComingSoonScreen(
         title: 'MCP-Server',
         what:

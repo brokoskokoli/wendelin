@@ -27,6 +27,21 @@ void main() {
   }
 
   group('save, get, list, update, forget', () {
+    test('clearPrivacyFloor entfernt nur die Untergrenze', () async {
+      final e = await repo.save(
+        'Diagnose X',
+        category: MemoryCategory.fact,
+        source: 'user',
+        privacyFloor: PrivacyLevel.tee,
+      );
+      expect(e.privacyFloor, PrivacyLevel.tee);
+      final cleared = await repo.clearPrivacyFloor(e.id);
+      expect(cleared!.privacyFloor, isNull);
+      expect(cleared.text, 'Diagnose X');
+      expect((await repo.get(e.id))!.privacyFloor, isNull);
+      expect(await repo.clearPrivacyFloor('fehlt'), isNull);
+    });
+
     test('save setzt Zeiten aus der Uhr', () async {
       final e = await save('Anna ist meine Schwester', MemoryCategory.person);
       expect(e.createdAt, clock.now());

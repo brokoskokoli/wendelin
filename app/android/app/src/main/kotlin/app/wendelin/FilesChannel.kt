@@ -65,7 +65,10 @@ class FilesChannel(private val activity: Activity, messenger: BinaryMessenger) :
             "openDocument" -> pick(result, Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "*/*"
-                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("text/markdown", "text/x-markdown", "text/plain"))
+                // Default: list files; the routing import asks for JSON.
+                val types = call.argument<List<String>>("mimeTypes")
+                    ?: listOf("text/markdown", "text/x-markdown", "text/plain")
+                putExtra(Intent.EXTRA_MIME_TYPES, types.toTypedArray())
             })
             "createDocument" -> pick(result, Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)

@@ -11,8 +11,8 @@ import '../routes.dart';
 import 'provider_setup_screen.dart';
 import 'settings_page.dart';
 
-/// Settings → Provider: profiles with privacy chip, the default profile and
-/// the escalation chain (order of escalation).
+/// Settings → Provider: profiles with privacy chip and the default
+/// profile; the escalation chains per profile are on the routing page.
 class ProvidersScreen extends ConsumerWidget {
   /// Creates the screen.
   const ProvidersScreen({super.key});
@@ -25,8 +25,9 @@ class ProvidersScreen extends ConsumerWidget {
     return SettingsPage(
       title: 'Provider',
       intro:
-          'Der Standard bekommt jede Anfrage. Scheitert er, übergibt '
-          'Wendelin an die Eskalationskette, der Reihe nach.',
+          'Der Standard bekommt jede Anfrage, für die keine Routing-Regel '
+          'greift. Scheitert ein Provider, übergibt Wendelin an seine '
+          'Eskalationskette.',
       children: [
         if (data == null)
           Text(
@@ -54,7 +55,18 @@ class ProvidersScreen extends ConsumerWidget {
                   ),
               ],
             ),
-          if (data.profiles.length > 1) _ChainSection(data, notifier),
+          if (data.profiles.length > 1)
+            SettingsSection(
+              title: 'Eskalationsketten',
+              children: [
+                SettingsRow(
+                  title: 'Routing',
+                  detail: 'Regeln und Ketten je Profil',
+                  onTap: () =>
+                      Navigator.of(context).pushNamed(AppRoutes.routing),
+                ),
+              ],
+            ),
         ],
         WideButton(
           '+ Provider',
@@ -131,67 +143,6 @@ class _ProfileRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ChainSection extends StatelessWidget {
-  const _ChainSection(this.data, this.notifier);
-
-  final ProfilesState data;
-  final ProfilesNotifier notifier;
-
-  @override
-  Widget build(BuildContext context) {
-    final chain = data.chain;
-    final candidates = [
-      for (final p in data.profiles)
-        if (p.id != data.defaultId) p,
-    ];
-    void set(List<String> ids) => unawaited(notifier.setChain(ids));
-    return SettingsSection(
-      title: 'Eskalationskette',
-      children: [
-        for (final p in candidates)
-          SettingsRow(
-            title: p.name,
-            detail: chain.contains(p.id)
-                ? 'Platz ${chain.indexOf(p.id) + 1}'
-                : 'nicht in der Kette',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (chain.indexOf(p.id) > 0)
-                  TextButton(
-                    onPressed: () {
-                      final i = chain.indexOf(p.id);
-                      set(
-                        [...chain]
-                          ..removeAt(i)
-                          ..insert(i - 1, p.id),
-                      );
-                    },
-                    child: Text(
-                      'Früher',
-                      semanticsLabel: '${p.name} früher in der Kette',
-                    ),
-                  ),
-                WSwitch(
-                  value: chain.contains(p.id),
-                  semanticLabel: '${p.name} in der Eskalationskette',
-                  onChanged: (on) => set(
-                    on
-                        ? [...chain, p.id]
-                        : [
-                            for (final c in chain)
-                              if (c != p.id) c,
-                          ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }

@@ -7,9 +7,11 @@ import 'package:wendelin/di/bring.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/platform_ports.dart';
+import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -112,6 +114,9 @@ final class TestEnv {
   /// Texts shared with other apps (package, text).
   final shared = <(String, String)>[];
 
+  /// Connectivity for the routing condition `network`.
+  final network = FixedNetworkStatus();
+
   /// Builds the adapter for stored profiles; `null` = real adapters.
   final LlmProviderFactory? llmFactory;
 
@@ -189,6 +194,7 @@ final class TestEnv {
     appShareProvider.overrideWithValue(
       (package, text) async => shared.add((package, text)),
     ),
+    networkStatusProvider.overrideWithValue(network),
     speechModelServiceProvider.overrideWith((ref) async => speechModels),
     microphoneProvider.overrideWithValue(microphone),
     systemTtsProvider.overrideWithValue(systemTts),

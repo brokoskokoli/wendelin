@@ -23,7 +23,11 @@ class RuleTile extends StatelessWidget {
     this.isDefault = false,
     this.reorderIndex,
     this.onTap,
+    this.handleLabel,
   });
+
+  /// Semantics-Label des Ziehgriffs (Standard „Verschieben“).
+  final String? handleLabel;
 
   /// Name der Regel.
   final String name;
@@ -53,33 +57,55 @@ class RuleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget handle = WIcon(
-      isDefault ? WIcons.fixedHandle : WIcons.dragHandle,
-      size: WSize.ruleHandleWidth,
-      height: WSize.icon,
-      color: WColors.lineSubtle,
+    // The grip area is the tile's left edge (padding, grip, gap): at least
+    // 44 wide and as high as the tile, so it is easy to hit.
+    Widget handle = ColoredBox(
+      color: WColors.transparent,
+      child: SizedBox(
+        width: WSize.touchMin,
+        child: Center(
+          child: WIcon(
+            isDefault ? WIcons.fixedHandle : WIcons.dragHandle,
+            size: WSize.ruleHandleWidth,
+            height: WSize.icon,
+            color: WColors.lineSubtle,
+          ),
+        ),
+      ),
     );
     final index = reorderIndex;
     if (!isDefault && index != null) {
       handle = ReorderableDragStartListener(
         index: index,
-        child: Semantics(label: 'Verschieben', child: handle),
+        child: Semantics(
+          container: true,
+          label: handleLabel ?? 'Verschieben',
+          child: handle,
+        ),
       );
     }
-    final content = Padding(
-      padding: const EdgeInsets.all(WSpace.m14),
+    final content = IntrinsicHeight(
       child: Row(
-        spacing: WSpace.m,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           handle,
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: WSpace.xxs3,
-              children: [
-                Text(name, style: WText.label),
-                _conditionText(),
-              ],
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                0,
+                WSpace.m14,
+                WSpace.m14,
+                WSpace.m14,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                spacing: WSpace.xxs3,
+                children: [
+                  Text(name, style: WText.label),
+                  _conditionText(),
+                ],
+              ),
             ),
           ),
         ],

@@ -23,6 +23,7 @@ import 'integration_specs.dart';
 import 'preference_models.dart';
 import 'preferences.dart';
 import 'provider_config.dart';
+import 'routing.dart';
 import 'sensitivity.dart';
 import 'session_manager.dart';
 import 'startup.dart';
@@ -443,14 +444,16 @@ final providerConfigProvider = FutureProvider<ProviderConfig?>((ref) {
   return ref.watch(storedProviderConfigProvider.future);
 });
 
-/// The configuration from the stored profiles. Invalidate after profiles
-/// or the escalation chain changed (WP09).
+/// The configuration from the stored profiles and routing rules.
+/// Invalidate after profiles or rules changed (WP09, WP26).
 final storedProviderConfigProvider = FutureProvider<ProviderConfig?>(
   (ref) => loadProviderConfig(
     storage: ref.watch(storageProvider),
     secrets: ref.watch(secretStoreProvider),
     catalog: ref.watch(modelCatalogProvider),
     create: ref.watch(llmProviderFactoryProvider),
+    clock: ref.watch(clockProvider),
+    network: ref.watch(networkStatusProvider),
   ),
 );
 
