@@ -1,0 +1,467 @@
+{
+  "meta": {
+    "profileId": "claude-haiku",
+    "model": "claude-haiku-5-5",
+    "now": "2026-11-18T09:00"
+  },
+  "summary": {
+    "text": {
+      "commands": 10,
+      "clean": 2,
+      "withBlock": 0,
+      "inputTokens": 54,
+      "outputTokens": 2779,
+      "cachedTokens": 66440,
+      "costMicros": 3119,
+      "issues": {
+        "doppelpunkt": 5,
+        "lang": 6
+      }
+    },
+    "hint": {
+      "commands": 10,
+      "clean": 9,
+      "withBlock": 0,
+      "inputTokens": 54,
+      "outputTokens": 2352,
+      "cachedTokens": 72889,
+      "costMicros": 2596,
+      "issues": {
+        "doppelpunkt": 1,
+        "lang": 1
+      }
+    },
+    "two": {
+      "commands": 10,
+      "clean": 7,
+      "withBlock": 10,
+      "inputTokens": 58,
+      "outputTokens": 4067,
+      "cachedTokens": 84819,
+      "costMicros": 3661,
+      "issues": {
+        "doppelpunkt": 3
+      }
+    }
+  },
+  "runs": [
+    {
+      "id": "sp-de-heute",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": false,
+      "spoken": "Heute stehen drei Termine an. Um 9:30 Uhr hast du den Zahnarzt, von 10:30 Uhr bis 14:00 Uhr ist dann frei. Um 14:00 Uhr folgt das Teammeeting bis 15:00 Uhr, und um 18:30 Uhr die Chorprobe, die bis 20:00 Uhr dauert.",
+      "written": "Heute stehen drei Termine an. Um 9:30 Uhr hast du den Zahnarzt, von 10:30 Uhr bis 14:00 Uhr ist dann frei. Um 14:00 Uhr folgt das Teammeeting bis 15:00 Uhr, und um 18:30 Uhr die Chorprobe, die bis 20:00 Uhr dauert.",
+      "input": 6,
+      "output": 224,
+      "cacheRead": 4253,
+      "costMicros": 730,
+      "ms": 2423
+    },
+    {
+      "id": "sp-de-morgen",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt",
+        "lang"
+      ],
+      "block": false,
+      "spoken": "Morgen, Donnerstag, hast du vier Termine. Um 7:15 Uhr joggst du mit Anna, bis 8:00 Uhr. Um 11:00 Uhr ist der Termin beim Steuerberater, bis 12:00 Uhr. Um 16:30 Uhr beginnt der Geburtstag von Oma, bis 18:00 Uhr. Abends um 20:15 Uhr geht es ins Kino, bis 22:30 Uhr.",
+      "written": "Morgen, Donnerstag, hast du vier Termine. Um 7:15 Uhr joggst du mit Anna, bis 8:00 Uhr. Um 11:00 Uhr ist der Termin beim Steuerberater, bis 12:00 Uhr. Um 16:30 Uhr beginnt der Geburtstag von Oma, bis 18:00 Uhr. Abends um 20:15 Uhr geht es ins Kino, bis 22:30 Uhr.",
+      "input": 6,
+      "output": 257,
+      "cacheRead": 8432,
+      "costMicros": 277,
+      "ms": 3723
+    },
+    {
+      "id": "sp-de-freitag",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": false,
+      "spoken": "Am Freitag, dem 20. November, hast du nur einen Termin: Zahnarzt um 14:30 Uhr, der bis 15:30 Uhr geht. Er steht in deinem Kalender Privat.",
+      "written": "Am Freitag, dem 20. November, hast du nur einen Termin: Zahnarzt um 14:30 Uhr, der bis 15:30 Uhr geht. Er steht in deinem Kalender Privat.",
+      "input": 6,
+      "output": 201,
+      "cacheRead": 8432,
+      "costMicros": 227,
+      "ms": 2230
+    },
+    {
+      "id": "sp-de-uhrzeit",
+      "variant": "text",
+      "issues": [],
+      "block": false,
+      "spoken": "Heute ist Mittwoch, der 18. November 2026, und es ist 9 Uhr.",
+      "written": "Heute ist Mittwoch, der 18. November 2026, und es ist 9 Uhr.",
+      "input": 4,
+      "output": 35,
+      "cacheRead": 4173,
+      "costMicros": 71,
+      "ms": 1080
+    },
+    {
+      "id": "sp-de-erklaerung",
+      "variant": "text",
+      "issues": [
+        "lang"
+      ],
+      "block": false,
+      "spoken": "Ein Prompt-Cache ist ein Zwischenspeicher bei KI-Sprachmodellen. Wenn viele Anfragen mit demselben Anfang beginnen, etwa mit derselben langen Systemanweisung oder einem gleichbleibenden Dokument, muss das Modell diesen Teil nicht jedes Mal neu verarbeiten. Der Anbieter speichert die bereits berechnete Verarbeitung dieses Anfangs und nutzt sie bei der nächsten Anfrage wieder. Das macht Antworten schneller und oft auch günstiger, weil wiederholte Eingabetokens meist weniger kosten. Der Cache greift nur bei identischem Anfang, und er verfällt nach einiger Zeit.",
+      "written": "Ein Prompt-Cache ist ein Zwischenspeicher bei KI-Sprachmodellen. Wenn viele Anfragen mit demselben Anfang beginnen, etwa mit derselben langen Systemanweisung oder einem gleichbleibenden Dokument, muss das Modell diesen Teil nicht jedes Mal neu verarbeiten. Der Anbieter speichert die bereits berechnete Verarbeitung dieses Anfangs und nutzt sie bei der nächsten Anfrage wieder. Das macht Antworten schneller und oft auch günstiger, weil wiederholte Eingabetokens meist weniger kosten. Der Cache greift nur bei identischem Anfang, und er verfällt nach einiger Zeit.",
+      "input": 4,
+      "output": 459,
+      "cacheRead": 4173,
+      "costMicros": 284,
+      "ms": 3512
+    },
+    {
+      "id": "sp-de-tipps",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt",
+        "lang"
+      ],
+      "block": false,
+      "spoken": "Gerne! Erstens: Halte feste Schlafenszeiten ein, auch am Wochenende. Zweitens: Verbanne Bildschirme etwa eine Stunde vor dem Schlafengehen und sorge für ein dunkles, kühles Schlafzimmer. Drittens: Verzichte am Nachmittag und Abend auf Koffein und schwere Mahlzeiten, damit dein Körper zur Ruhe kommt.",
+      "written": "Gerne! Erstens: Halte feste Schlafenszeiten ein, auch am Wochenende. Zweitens: Verbanne Bildschirme etwa eine Stunde vor dem Schlafengehen und sorge für ein dunkles, kühles Schlafzimmer. Drittens: Verzichte am Nachmittag und Abend auf Koffein und schwere Mahlzeiten, damit dein Körper zur Ruhe kommt.",
+      "input": 4,
+      "output": 157,
+      "cacheRead": 4173,
+      "costMicros": 132,
+      "ms": 1466
+    },
+    {
+      "id": "sp-de-gedaechtnis",
+      "variant": "text",
+      "issues": [
+        "lang"
+      ],
+      "block": false,
+      "spoken": "Ich habe nichts über dich gespeichert. Ich habe in deinem Gedächtnis nach Namen, Vorlieben und Projekten gesucht und nichts gefunden. Ich merke mir nur Dinge, wenn du mich ausdrücklich darum bittest, etwa mit „Merk dir, dass ...“. Sag mir einfach, was ich mir merken soll.",
+      "written": "Ich habe nichts über dich gespeichert. Ich habe in deinem Gedächtnis nach Namen, Vorlieben und Projekten gesucht und nichts gefunden. Ich merke mir nur Dinge, wenn du mich ausdrücklich darum bittest, etwa mit „Merk dir, dass ...“. Sag mir einfach, was ich mir merken soll.",
+      "input": 6,
+      "output": 478,
+      "cacheRead": 8428,
+      "costMicros": 392,
+      "ms": 3605
+    },
+    {
+      "id": "sp-de-reise",
+      "variant": "text",
+      "issues": [
+        "lang"
+      ],
+      "block": false,
+      "spoken": "Von Deutschland aus dauert ein Direktflug nach Lissabon meist etwa drei Stunden, von Berlin oder Hamburg eher etwas kürzer, aus dem Süden etwas länger. Die Kosten liegen je nach Saison und Buchungszeitpunkt oft bei etwa 80 bis 250 Euro für Hin- und Rückflug in der Economy. Meine Websuche hat dazu leider nichts Brauchbares gefunden, das sind also Richtwerte aus dem Gedächtnis. Wenn du mir sagst, von welchem Flughafen du fliegen möchtest, kann ich dir genauer sagen, was das ungefähr bedeutet.",
+      "written": "Von Deutschland aus dauert ein Direktflug nach Lissabon meist etwa drei Stunden, von Berlin oder Hamburg eher etwas kürzer, aus dem Süden etwas länger. Die Kosten liegen je nach Saison und Buchungszeitpunkt oft bei etwa 80 bis 250 Euro für Hin- und Rückflug in der Economy. Meine Websuche hat dazu leider nichts Brauchbares gefunden, das sind also Richtwerte aus dem Gedächtnis. Wenn du mir sagst, von welchem Flughafen du fliegen möchtest, kann ich dir genauer sagen, was das ungefähr bedeutet.",
+      "input": 6,
+      "output": 551,
+      "cacheRead": 8450,
+      "costMicros": 412,
+      "ms": 5620
+    },
+    {
+      "id": "sp-fr-demain",
+      "variant": "text",
+      "issues": [],
+      "block": false,
+      "spoken": "Demain, jeudi 19 novembre, vous avez deux rendez-vous. À 9 h, c'est le dentiste, jusqu'à 10 h. À 12 h 30, vous déjeunez avec Marc, jusqu'à 14 h.",
+      "written": "Demain, jeudi 19 novembre, vous avez deux rendez-vous. À 9 h, c'est le dentiste, jusqu'à 10 h. À 12 h 30, vous déjeunez avec Marc, jusqu'à 14 h.",
+      "input": 6,
+      "output": 243,
+      "cacheRead": 7968,
+      "costMicros": 315,
+      "ms": 2536
+    },
+    {
+      "id": "sp-en-today",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt",
+        "lang"
+      ],
+      "block": false,
+      "spoken": "You have three events today. Standup is at 9:15 this morning, and it's short, ending at 9:30. Dentist is at 3:00 this afternoon, running until 4:00. Dinner with Sam is at 7:30 this evening, until 9:00.",
+      "written": "You have three events today. Standup is at 9:15 this morning, and it's short, ending at 9:30. Dentist is at 3:00 this afternoon, running until 4:00. Dinner with Sam is at 7:30 this evening, until 9:00.",
+      "input": 6,
+      "output": 174,
+      "cacheRead": 7958,
+      "costMicros": 279,
+      "ms": 2766
+    },
+    {
+      "id": "sp-de-heute",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Heute stehen drei Termine an. Um halb zehn ist der Zahnarzt, um zwei Uhr nachmittags das Teammeeting und um halb sieben abends die Chorprobe.",
+      "written": "Heute stehen drei Termine an. Um halb zehn ist der Zahnarzt, um zwei Uhr nachmittags das Teammeeting und um halb sieben abends die Chorprobe.",
+      "input": 6,
+      "output": 160,
+      "cacheRead": 8154,
+      "costMicros": 298,
+      "ms": 2660
+    },
+    {
+      "id": "sp-de-morgen",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Morgen hast du vier Termine. Um Viertel nach sieben joggst du mit Anna, um elf Uhr ist der Termin beim Steuerberater, um halb fünf nachmittags steht der Geburtstag von Oma an, und um Viertel nach acht geht es ins Kino.",
+      "written": "Morgen hast du vier Termine. Um Viertel nach sieben joggst du mit Anna, um elf Uhr ist der Termin beim Steuerberater, um halb fünf nachmittags steht der Geburtstag von Oma an, und um Viertel nach acht geht es ins Kino.",
+      "input": 6,
+      "output": 244,
+      "cacheRead": 8824,
+      "costMicros": 278,
+      "ms": 2647
+    },
+    {
+      "id": "sp-de-freitag",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Am Freitag, dem 20. November, hast du um halb drei nachmittags einen Termin beim Zahnarzt.",
+      "written": "Am Freitag, dem 20. November, hast du um halb drei nachmittags einen Termin beim Zahnarzt.",
+      "input": 6,
+      "output": 183,
+      "cacheRead": 8824,
+      "costMicros": 223,
+      "ms": 2247
+    },
+    {
+      "id": "sp-de-uhrzeit",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Heute ist Mittwoch, der 18. November 2026, und es ist neun Uhr.",
+      "written": "Heute ist Mittwoch, der 18. November 2026, und es ist neun Uhr.",
+      "input": 4,
+      "output": 34,
+      "cacheRead": 4369,
+      "costMicros": 73,
+      "ms": 851
+    },
+    {
+      "id": "sp-de-erklaerung",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Ein Prompt-Cache speichert bei KI-Sprachmodellen den bereits verarbeiteten Anfang einer Eingabe, etwa lange Systemanweisungen. Wiederholt sich dieser Anfang bei der nächsten Anfrage, muss das Modell ihn nicht noch einmal berechnen. Das macht Antworten schneller und oft auch günstiger.",
+      "written": "Ein Prompt-Cache speichert bei KI-Sprachmodellen den bereits verarbeiteten Anfang einer Eingabe, etwa lange Systemanweisungen. Wiederholt sich dieser Anfang bei der nächsten Anfrage, muss das Modell ihn nicht noch einmal berechnen. Das macht Antworten schneller und oft auch günstiger.",
+      "input": 4,
+      "output": 257,
+      "cacheRead": 4369,
+      "costMicros": 185,
+      "ms": 2056
+    },
+    {
+      "id": "sp-de-tipps",
+      "variant": "hint",
+      "issues": [
+        "doppelpunkt",
+        "lang"
+      ],
+      "block": false,
+      "spoken": "Gerne! Erstens: Geh möglichst jeden Tag zur gleichen Zeit ins Bett und stehe zur gleichen Zeit auf. Zweitens: Verzichte abends etwa eine Stunde vor dem Schlafen auf helle Bildschirme und Koffein. Drittens: Halte dein Schlafzimmer kühl, dunkel und ruhig.",
+      "written": "Gerne! Erstens: Geh möglichst jeden Tag zur gleichen Zeit ins Bett und stehe zur gleichen Zeit auf. Zweitens: Verzichte abends etwa eine Stunde vor dem Schlafen auf helle Bildschirme und Koffein. Drittens: Halte dein Schlafzimmer kühl, dunkel und ruhig.",
+      "input": 4,
+      "output": 136,
+      "cacheRead": 4369,
+      "costMicros": 124,
+      "ms": 1470
+    },
+    {
+      "id": "sp-de-gedaechtnis",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Ich habe in meinem Gedächtnis bisher nichts über dich gespeichert. Wenn du möchtest, kann ich dir etwas merken, zum Beispiel Vorlieben oder wichtige Dinge aus deinem Alltag.",
+      "written": "Ich habe in meinem Gedächtnis bisher nichts über dich gespeichert. Wenn du möchtest, kann ich dir etwas merken, zum Beispiel Vorlieben oder wichtige Dinge aus deinem Alltag.",
+      "input": 6,
+      "output": 438,
+      "cacheRead": 8820,
+      "costMicros": 377,
+      "ms": 3113
+    },
+    {
+      "id": "sp-de-reise",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Ein Direktflug von Deutschland nach Lissabon dauert etwa drei Stunden. Je nach Strecke, Airline und Reisezeit kostet er grob 80 bis 200 Euro einfach, wobei Preise außerhalb der Hauptreisezeit auch darunter liegen können. Aktuelle Preise habe ich gerade nicht abrufen können, deshalb lohnt ein Blick auf einer Buchungsseite.",
+      "written": "Ein Direktflug von Deutschland nach Lissabon dauert etwa drei Stunden. Je nach Strecke, Airline und Reisezeit kostet er grob 80 bis 200 Euro einfach, wobei Preise außerhalb der Hauptreisezeit auch darunter liegen können. Aktuelle Preise habe ich gerade nicht abrufen können, deshalb lohnt ein Blick auf einer Buchungsseite.",
+      "input": 6,
+      "output": 433,
+      "cacheRead": 8842,
+      "costMicros": 354,
+      "ms": 4453
+    },
+    {
+      "id": "sp-fr-demain",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Demain, jeudi 19 novembre, vous avez deux rendez-vous. Il y a d'abord le dentiste à neuf heures, puis le déjeuner avec Marc à midi et demie.",
+      "written": "Demain, jeudi 19 novembre, vous avez deux rendez-vous. Il y a d'abord le dentiste à neuf heures, puis le déjeuner avec Marc à midi et demie.",
+      "input": 6,
+      "output": 251,
+      "cacheRead": 8164,
+      "costMicros": 349,
+      "ms": 2853
+    },
+    {
+      "id": "sp-en-today",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "You have three things today. Standup is at a quarter past nine, the dentist is at three in the afternoon, and you have dinner with Sam at half past seven in the evening.",
+      "written": "You have three things today. Standup is at a quarter past nine, the dentist is at three in the afternoon, and you have dinner with Sam at half past seven in the evening.",
+      "input": 6,
+      "output": 216,
+      "cacheRead": 8154,
+      "costMicros": 335,
+      "ms": 2205
+    },
+    {
+      "id": "sp-de-heute",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Heute stehen drei Termine an. Um halb zehn ist Zahnarzt, um zwei Uhr nachmittags das Teammeeting, und um halb sieben abends die Chorprobe.",
+      "written": "Heute, Mittwoch, 18. November, hast du drei Termine:\n- 09:30 bis 10:30 Uhr: Zahnarzt\n- 14:00 bis 15:00 Uhr: Teammeeting\n- 18:30 bis 20:00 Uhr: Chorprobe",
+      "input": 6,
+      "output": 272,
+      "cacheRead": 8311,
+      "costMicros": 376,
+      "ms": 2510
+    },
+    {
+      "id": "sp-de-morgen",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Morgen hast du vier Termine. Der erste ist um viertel nach sieben Uhr das Joggen mit Anna, der letzte um Viertel nach acht Uhr abends das Kino.",
+      "written": "Morgen, Donnerstag, den 19. November, hast du vier Termine im Kalender „Privat“:\n\n- 07:15 bis 08:00 Uhr: Joggen mit Anna\n- 11:00 bis 12:00 Uhr: Steuerberater\n- 16:30 bis 18:00 Uhr: Geburtstag Oma\n- 20:15 bis 22:30 Uhr: Kino",
+      "input": 6,
+      "output": 350,
+      "cacheRead": 9138,
+      "costMicros": 335,
+      "ms": 2823
+    },
+    {
+      "id": "sp-de-freitag",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Am Freitag hast du um halb drei nachmittags einen Termin beim Zahnarzt. Sonst ist nichts eingetragen.",
+      "written": "Am Freitag, dem 20. November, steht im Kalender nur ein Termin: Zahnarzt von 14:30 bis 15:30 Uhr im Kalender Privat.",
+      "input": 6,
+      "output": 255,
+      "cacheRead": 9138,
+      "costMicros": 262,
+      "ms": 2436
+    },
+    {
+      "id": "sp-de-uhrzeit",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Heute ist Mittwoch, der 18. November 2026, und es ist neun Uhr.",
+      "written": "Heute ist Mittwoch, der 18. November 2026. Es ist 09:00 Uhr (Zeitzone Europe/Berlin).",
+      "input": 4,
+      "output": 95,
+      "cacheRead": 4526,
+      "costMicros": 105,
+      "ms": 1067
+    },
+    {
+      "id": "sp-de-erklaerung",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Ein Prompt-Cache speichert Teile einer Eingabe, die sich wiederholen, damit ein KI-Modell sie nicht jedes Mal neu verarbeiten muss. Dadurch antwortet es schneller, und die Nutzung ist oft günstiger. Er greift vor allem, wenn der Anfang einer Anfrage gleich bleibt.",
+      "written": "Ein Prompt-Cache ist ein Zwischenspeicher bei KI-Sprachmodellen. Wenn der Anfang eines Prompts, etwa eine lange Systemanweisung oder ein großes Dokument, bei mehreren Anfragen gleich bleibt, berechnet das Modell diesen Teil nur einmal und legt das Ergebnis im Cache ab. Bei der nächsten Anfrage mit demselben Anfang wird der gespeicherte Teil wiederverwendet. Das spart Rechenzeit und Kosten, weil wiederholte Eingaben günstiger abgerechnet werden. Der Cache läuft nach einiger Zeit ohne Nutzung wieder ab. Den Begriff gibt es außerdem im Web-Bereich für zwischengespeicherte Dateien, aber gemeint ist hier meist die KI-Variante.",
+      "input": 4,
+      "output": 833,
+      "cacheRead": 4526,
+      "costMicros": 474,
+      "ms": 4804
+    },
+    {
+      "id": "sp-de-tipps",
+      "variant": "two",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": true,
+      "spoken": "Drei Tipps für besseren Schlaf: Geh möglichst jeden Tag zur gleichen Zeit ins Bett. Verzichte abends auf helle Bildschirme und schwere Mahlzeiten. Und sorge für ein dunkles, kühles und ruhiges Schlafzimmer.",
+      "written": "1. Halte feste Schlafenszeiten ein, auch am Wochenende. So stellt sich dein innerer Rhythmus besser ein.\n2. Reduziere abends Bildschirmzeit und lass schwere Mahlzeiten und Koffein einige Stunden vor dem Schlafen weg.\n3. Achte auf ein dunkles, kühles und leises Schlafzimmer. Eine Stunde Entspannung vor dem Schlafen, etwa mit Lesen oder ruhiger Musik, hilft zusätzlich.",
+      "input": 4,
+      "output": 308,
+      "cacheRead": 4526,
+      "costMicros": 211,
+      "ms": 2181
+    },
+    {
+      "id": "sp-de-gedaechtnis",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Ich habe bisher nichts über dich gespeichert. Du kannst mir sagen, was ich mir merken soll, dann speichere ich es.",
+      "written": "Ich habe in meinem Gedächtnis keine Einträge über dich gefunden. Wenn du möchtest, dass ich dir etwas merke, zum Beispiel Vorlieben oder wichtige Fakten, sag mir einfach „Merk dir …“ und was es sein soll.",
+      "input": 8,
+      "output": 451,
+      "cacheRead": 13937,
+      "costMicros": 420,
+      "ms": 4077
+    },
+    {
+      "id": "sp-de-reise",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Ein Direktflug von Deutschland nach Lissabon dauert etwa drei Stunden. Die Preise liegen grob zwischen achtzig und zweihundertfünfzig Euro pro Strecke, je nach Saison und Buchungszeitpunkt. Meine Websuche hat leider keine brauchbaren Ergebnisse geliefert, deshalb sind das Richtwerte aus meinem Wissen.",
+      "written": "Von Deutschland aus dauert ein Direktflug nach Lissabon etwa zweieinhalb bis drei Stunden, von Berlin eher etwas länger. Die Preise liegen grob bei achtzig bis zweihundertfünfzig Euro pro Strecke, je nach Saison, Abflughafen und wie früh du buchst. Die Websuche hat keine aktuellen Preisvergleiche geliefert, daher sind das Richtwerte. Für einen genauen Preis müsstest du Abflugort und Reisedaten nennen, dann kann ich es gezielter prüfen, sofern die Suche das hergibt.",
+      "input": 8,
+      "output": 866,
+      "cacheRead": 14085,
+      "costMicros": 667,
+      "ms": 6084
+    },
+    {
+      "id": "sp-fr-demain",
+      "variant": "two",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": true,
+      "spoken": "Demain, jeudi, vous avez deux rendez-vous : le dentiste à neuf heures, puis le déjeuner avec Marc à midi et demi.",
+      "written": "Demain, jeudi 19 novembre, vous avez deux rendez-vous dans votre agenda privé. Le dentiste est de 9 h à 10 h, et le déjeuner avec Marc est de 12 h 30 à 14 h.",
+      "input": 6,
+      "output": 324,
+      "cacheRead": 8321,
+      "costMicros": 406,
+      "ms": 2736
+    },
+    {
+      "id": "sp-en-today",
+      "variant": "two",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": true,
+      "spoken": "You have three events today: a standup at quarter past nine, the dentist at three in the afternoon, and dinner with Sam at half past seven in the evening.",
+      "written": "Heute stehen drei Termine im Kalender:\n- 09:15 bis 09:30 Uhr: Standup\n- 15:00 bis 16:00 Uhr: Dentist\n- 19:30 bis 21:00 Uhr: Dinner with Sam",
+      "input": 6,
+      "output": 313,
+      "cacheRead": 8311,
+      "costMicros": 405,
+      "ms": 4978
+    }
+  ]
+}

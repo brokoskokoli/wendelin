@@ -80,6 +80,15 @@ void main() {
     expect(_texts(s), ['Ich trage das ein.', 'Erledigt.']);
   });
 
+  test('AgentSpokenText bleibt unsichtbar (WP41)', () {
+    final before = reducer.apply(
+      ConversationState(),
+      const AgentTextDelta('Antwort'),
+    );
+    final after = reducer.apply(before, const AgentSpokenText('Sprechtext'));
+    expect(after, same(before));
+  });
+
   group('AgentTextReset', () {
     test('verwirft nur den Text des aktuellen Modellaufrufs', () {
       final s = _apply([

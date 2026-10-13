@@ -5,7 +5,7 @@
 library;
 
 export 'src/case_result.dart';
-export 'src/cli.dart' show defaultNow, defaultTimeZone, runCli;
+export 'src/cli.dart' show buildProvider, defaultNow, defaultTimeZone, runCli;
 export 'src/eval_case.dart';
 export 'src/eval_profile.dart';
 export 'src/eval_runner.dart';
@@ -14,4 +14,6 @@ export 'src/fake_script.dart';
 export 'src/predicates.dart';
 export 'src/report.dart';
 export 'src/scorer.dart';
+export 'src/speech_check.dart';
+export 'src/speech_eval.dart';
 export 'src/summary.dart';

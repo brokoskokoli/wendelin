@@ -34,7 +34,7 @@ void main() {
       'de: Fett und Link-Text, URL weg',
       'de',
       '**Wichtig:** Der Termin steht [hier](https://example.com/x) drin.',
-      ['Wichtig: Der Termin steht hier drin.'],
+      ['Wichtig. Der Termin steht hier drin.'],
     ),
     (
       'de: nackte URL entfernt, Satzende bleibt',
@@ -47,13 +47,13 @@ void main() {
       'de',
       'Deine Einkaufsliste:\n- Milch\n- Brot\n- Eier\n- Butter\n- Käse\n'
           '- Äpfel\n- Mehl',
-      ['Deine Einkaufsliste:', 'Milch, Brot, Eier und 4 weitere.'],
+      ['Deine Einkaufsliste.', 'Milch, Brot, Eier und 4 weitere.'],
     ),
     (
       'de: kurze nummerierte Liste ausgeschrieben',
       'de',
       'Offen sind:\n1. Steuer\n2. Arzt.\n3. Auto',
-      ['Offen sind:', 'Steuer, Arzt und Auto.'],
+      ['Offen sind.', 'Steuer, Arzt und Auto.'],
     ),
     (
       'de: Checkboxen und Unterpunkte',
@@ -71,13 +71,13 @@ void main() {
       'de: Codeblock nur auf dem Bildschirm',
       'de',
       'So geht es:\n```dart\nprint(1);\n```\nFertig.',
-      ['So geht es:', 'Fertig.', restDe],
+      ['So geht es.', 'Fertig.', restDe],
     ),
     (
       'de: Tabelle nur auf dem Bildschirm',
       'de',
       'Die Werte:\n| a | b |\n|---|---|\n| 1 | 2 |\nEnde.',
-      ['Die Werte:', 'Ende.', restDe],
+      ['Die Werte.', 'Ende.', restDe],
     ),
     (
       'de: Überschrift, Zitat, Trennlinie, Inline-Code',
@@ -103,7 +103,7 @@ void main() {
       'fr: Liste mit „et N autres“',
       'fr',
       'Voici ta liste :\n- lait\n- pain\n- œufs\n- beurre\n- fromage',
-      ['Voici ta liste:', 'lait, pain, œufs et 2 autres.'],
+      ['Voici ta liste.', 'lait, pain, œufs et 2 autres.'],
     ),
     ('fr: kurze Liste mit „et“', 'fr', '* lait\n* pain', ['lait et pain.']),
     (
@@ -123,7 +123,7 @@ void main() {
       'en: list with „and N more“',
       'en',
       'You have:\n+ apples\n+ pears\n+ plums\n+ figs\n+ kiwis',
-      ['You have:', 'apples, pears, plums and 2 more.'],
+      ['You have.', 'apples, pears, plums and 2 more.'],
     ),
     (
       'en: URL in angle brackets removed',
@@ -169,7 +169,7 @@ void main() {
     test('Zeile mit Fett am Anfang wird gestreamt, nicht gepuffert', () {
       final a = SpokenAnswer();
       expect(a.add('**Achtung:** Das ist wichtig. Und '), [
-        'Achtung: Das ist wichtig.',
+        'Achtung. Das ist wichtig.',
       ]);
     });
 
@@ -351,7 +351,7 @@ void main() {
       'Satz nur aus einem Link: weggelassen, Hinweis auf den Bildschirm',
       () {
         expect(SpokenAnswer.shorten('Quelle:\nhttps://example.com/a\nDanke.'), [
-          'Quelle:',
+          'Quelle.',
           'Danke.',
           restDe,
         ]);

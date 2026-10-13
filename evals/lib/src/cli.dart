@@ -100,7 +100,7 @@ Future<int> runCli(
       return 1;
     }
 
-    final provider = _provider(profile, profileFile, time, env, client);
+    final provider = buildProvider(profile, profileFile, time, env, client);
     final p = profile.profile;
     for (final model in [p.defaultModel, ...profile.escalationModels]) {
       if (profile.catalog.lookup(model) == null) {
@@ -190,7 +190,9 @@ Directory _casesDir(String? option) {
   return Directory('cases');
 }
 
-ProviderForCase _provider(
+/// The provider of [profile] (fake script or real adapter with the key from
+/// [env]); throws [FormatException] if the key variable is missing.
+ProviderForCase buildProvider(
   EvalProfile profile,
   File profileFile,
   EvalTime time,

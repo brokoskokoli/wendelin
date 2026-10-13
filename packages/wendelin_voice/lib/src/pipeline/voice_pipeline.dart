@@ -489,6 +489,9 @@ final class VoicePipeline {
     if (gen != _gen) return;
     final spoken = SpokenAnswer(config: config.shortening, language: language);
     var segment = 0;
+    // The `<spoken>` block of this segment was spoken (WP41, stage 2): the
+    // written text of the segment stays on the screen only.
+    var hasBlock = false;
     void say(List<String> sentences) =>
         queue?.addAll(sentences, segment: segment);
 
@@ -501,13 +504,24 @@ final class VoicePipeline {
         _emit(VoiceAgentEvent(e));
         switch (e) {
           case AgentTextDelta(:final text):
-            say(spoken.add(text));
+            if (!hasBlock) say(spoken.add(text));
+          case AgentSpokenText(:final text):
+            hasBlock = true;
+            say(
+              SpokenAnswer.shorten(
+                text,
+                language: language,
+                config: config.shortening,
+              ),
+            );
           case AgentTextReset():
             final dropped = queue?.dropSegment(segment) ?? const [];
             spoken.reset(unspoken: dropped);
+            hasBlock = false;
           case ToolCallStarted() || ToolCallFinished():
             say(spoken.endSegment());
             segment++;
+            hasBlock = false;
           case AgentDone():
             say(spoken.finish());
           case AgentFailed(:final error, :final message):

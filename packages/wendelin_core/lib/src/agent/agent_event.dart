@@ -102,6 +102,21 @@ final class AgentTextDelta extends AgentEvent {
   String toString() => 'AgentTextDelta($text)';
 }
 
+/// The separate spoken version of the answer (WP41, stage 2): the
+/// `<spoken>` block at the start of the model's text, complete. It is only
+/// for speech output: never shown, not part of the history and not part of
+/// the final text.
+final class AgentSpokenText extends AgentEvent {
+  /// Creates the event.
+  const AgentSpokenText(this.text);
+
+  /// The text to speak.
+  final String text;
+
+  @override
+  String toString() => 'AgentSpokenText($text)';
+}
+
 /// The text streamed by the current model call is discarded – e.g. because
 /// the call is retried or the answer is handed to another provider.
 ///

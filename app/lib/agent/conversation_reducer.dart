@@ -71,6 +71,8 @@ final class ConversationReducer {
         );
       case AgentTextDelta(:final text):
         return _appendText(s, text);
+      case AgentSpokenText():
+        return s; // speech output only, never shown (WP41)
       case AgentThinkingDelta(:final text):
         return _appendThinking(s, text);
       case AgentTextReset():

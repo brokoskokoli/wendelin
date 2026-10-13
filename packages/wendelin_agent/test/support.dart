@@ -90,10 +90,15 @@ final class Harness {
     String text, {
     void Function(AgentEvent e)? onEvent,
     bool requestEscalation = false,
+    InputSource source = InputSource.text,
   }) async {
     final events = <AgentEvent>[];
     await for (final e in runner.run(
-      UserInput(text: text, requestEscalation: requestEscalation),
+      UserInput(
+        text: text,
+        requestEscalation: requestEscalation,
+        source: source,
+      ),
     )) {
       events.add(e);
       onEvent?.call(e);

@@ -159,6 +159,18 @@ Prädikate (mehrere Schlüssel = und):
 - Kosten über `CostCalculator` je Modellaufruf; fehlt ein Preis, ist die
   Fall-Kosten `null` und die Summe mit `+?` markiert.
 
+## Sprech-Eval (WP41)
+
+`dart run wendelin_evals:speech --profile profiles/<profil>.json [--model m] [--out reports/<datum>-speech-<profil>.json]`
+lässt die zehn Sprach-Befehle aus `speech/cases.yaml` in drei Varianten
+laufen: `text` (getippt, Antwort wird unverändert vorgelesen), `hint`
+(Stufe 1, Stil-Hinweis) und `two` (Stufe 2, `<spoken>`-Block). Gemessen wird
+der Anteil sauberer Sprechtexte (`speechIssues`: kein Markdown, keine
+Listen, Doppelpunkte, Abkürzungen, Emojis, URLs, höchstens drei Sätze) sowie
+Tokens und Kosten je Variante. Bei `two` zählt der Block, ohne Block der
+geschriebene Text (Rückfall der App). Die lokale Aufbereitung (Stufe 0)
+läuft hier nicht mit: gemessen wird, was das Modell liefert.
+
 ## Entwicklung
 
 Die Bewertungslogik ist eine Bibliothek (`lib/src/`) und unabhängig von

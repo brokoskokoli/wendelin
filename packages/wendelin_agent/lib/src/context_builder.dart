@@ -6,6 +6,18 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'agent_config.dart';
 import 'ports.dart';
 
+/// How the answer is prepared for speech output (WP41).
+enum SpeechStyle {
+  /// Typed request: nothing changes.
+  none,
+
+  /// Voice request, stage 1: the system prompt ends with a style hint.
+  hint,
+
+  /// Voice request, stage 2: additionally a `<spoken>` block comes first.
+  twoVersions,
+}
+
 /// Everything the model sees besides the model id: system prompt, tool
 /// specs and messages (history + the new user message).
 @immutable
@@ -16,6 +28,7 @@ final class AgentContext {
     required List<ToolSpec> tools,
     required List<Message> messages,
     List<MemoryItem> memories = const [],
+    this.speech = SpeechStyle.none,
   }) : tools = List.unmodifiable(tools),
        messages = List.unmodifiable(messages),
        memories = List.unmodifiable(memories);
@@ -32,6 +45,9 @@ final class AgentContext {
   /// The memory entries in [systemPrompt] (the agent rebuilds the prompt
   /// without entries a target may not see).
   final List<MemoryItem> memories;
+
+  /// Speech preparation of the answer (decides the end of the prompt).
+  final SpeechStyle speech;
 }
 
 /// A tool call that has already been executed in this run, for the
@@ -81,9 +97,11 @@ final class ContextBuilder {
     final previous =
         await history?.recentMessages(turns: config.historyTurns) ??
         const <Message>[];
+    final speech = speechStyleFor(input);
     return AgentContext(
-      systemPrompt: systemPrompt(memories: memories),
+      systemPrompt: systemPrompt(memories: memories, speech: speech),
       memories: memories,
+      speech: speech,
       tools: catalog.activeSpecs(),
       messages: [
         ...previous,
@@ -92,9 +110,19 @@ final class ContextBuilder {
     );
   }
 
+  /// The speech style of [input]: only spoken requests get one (WP41).
+  SpeechStyle speechStyleFor(UserInput input) {
+    if (input.source != InputSource.voice) return SpeechStyle.none;
+    return config.spokenVersions ? SpeechStyle.twoVersions : SpeechStyle.hint;
+  }
+
   /// The system prompt with [memories] (at most [AgentConfig.memoryEntries]
-  /// are used).
-  String systemPrompt({List<MemoryItem> memories = const []}) {
+  /// are used). The speech hint for [speech] comes last, in the changing
+  /// part: the stable part stays byte-identical for the prompt cache.
+  String systemPrompt({
+    List<MemoryItem> memories = const [],
+    SpeechStyle speech = SpeechStyle.none,
+  }) {
     final now = clock.now();
     final b = StringBuffer()
       ..writeln(
@@ -155,8 +183,31 @@ final class ContextBuilder {
         b.writeln('- $category${_oneLine(m.text)}');
       }
     }
+    if (speech != SpeechStyle.none) {
+      b
+        ..writeln()
+        ..writeln(speechHint);
+      if (speech == SpeechStyle.twoVersions) b.writeln(twoVersionsHint);
+    }
     return b.toString().trimRight();
   }
+
+  /// Style hint for spoken requests (WP41, stage 1).
+  static const speechHint =
+      'Sprachausgabe: Deine Antwort wird laut vorgelesen. Schreibe kurze, '
+      'ganze Sätze ohne Überschriften, Tabellen, Aufzählungszeichen und '
+      'Doppelpunkt-Aufzählungen. Nenne Listen als Satz („Milch, Brot und '
+      'Eier“). Schreibe Uhrzeiten, Daten und Zahlen so, wie man sie spricht '
+      '(„um zehn Uhr“, „am Dienstag, dem 14.“). Höchstens drei Sätze; '
+      'Details nur auf Nachfrage.';
+
+  /// Addition to [speechHint] for two versions (WP41, stage 2).
+  static const twoVersionsHint =
+      'Beginne jede Antwort mit einem Block <spoken>…</spoken>: der kurze '
+      'Sprechtext (höchstens drei Sätze, in der Sprache des Nutzers, ohne '
+      'Markdown und Sonderzeichen). Danach folgt die geschriebene Antwort '
+      'mit allen Details für den Bildschirm, ohne den Block zu wiederholen. '
+      'Der Block steht immer ganz vorn, auch bei sehr kurzen Antworten.';
 
   /// System-prompt addition for a model that takes over after an
   /// escalation: lists the [actions] that have already been executed so

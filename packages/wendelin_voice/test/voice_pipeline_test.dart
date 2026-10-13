@@ -366,6 +366,35 @@ void main() {
     },
   );
 
+  test('Sprechtext-Block (WP41): nur er wird gesprochen, nicht der Text', () {
+    runFake((async) {
+      final h = Harness(
+        agent: ScriptedAgent([
+          const AgentSpokenText('Du hast heute zwei Termine.'),
+          const AgentTextDelta('**Termine**\n- 10:00 Zahnarzt\n- 14:00 Chor\n'),
+          const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+        ]),
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.tts.spoken, ['Du hast heute zwei Termine.']);
+    });
+  });
+
+  test('Kein Block: der geschriebene Text wird aufbereitet gesprochen', () {
+    runFake((async) {
+      final h = Harness(
+        agent: ScriptedAgent([
+          const AgentTextDelta('Dein Termin: um 10:00 Uhr.'),
+          const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+        ]),
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.tts.spoken, ['Dein Termin, um 10 Uhr.']);
+    });
+  });
+
   test('Text vor einem Tool-Aufruf wird gesprochen, dann die Antwort', () {
     runFake((async) {
       final h = Harness(
