@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wendelin as system assistant (VoiceInteractionService). The session starts the Flutter
+     overlay (AssistantActivity); the recognition service is required by Android. -->
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="app.wendelin.WendelinVoiceSessionService"
+    android:recognitionService="app.wendelin.WendelinRecognitionService"
+    android:settingsActivity="app.wendelin.MainActivity"
+    android:supportsAssist="true"
+    android:supportsLocalInteraction="false" />

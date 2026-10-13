@@ -1,0 +1,443 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/agent/chat_entry.dart';
+import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/ui/design/mic_button.dart';
+import 'package:wendelin/voice/level_meter.dart';
+import 'package:wendelin/voice/voice_components.dart';
+import 'package:wendelin/voice/voice_controller.dart';
+import 'package:wendelin_core/testing.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
+import 'package:wendelin_voice/testing.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
+
+import '../support/test_env.dart';
+
+/// One short utterance: 0,3 s speech, then 0,9 s silence.
+List<Int16List> utterance() => AudioFrames.pattern('S' * 10 + '.' * 30);
+
+/// Fake voice parts (Audio → VAD → STT → TTS) for the controller.
+VoiceComponents fakeVoice({
+  List<Transcript> script = const [],
+  FakeTextToSpeech? tts,
+  AudioInput? audio,
+  Future<bool> Function()? prepare,
+}) => VoiceComponents(
+  audio: audio ?? FakeAudioInput(frames: utterance()),
+  vad: FakeVoiceActivityDetector(),
+  stt: FakeSpeechToText(script),
+  textToSpeech: (_) async => tts,
+  prepare: prepare,
+);
+
+/// [TestEnv] whose voice parts are [voice] (`null` = no speech).
+TestEnv voiceEnv(List<ScriptedTurn> turns, {required VoiceComponents? voice}) =>
+    TestEnv(
+      providerConfig: scripted(FakeLlmProvider(turns)),
+      extraOverrides: [
+        voiceComponentsProvider.overrideWith((ref) async => voice),
+      ],
+    );
+
+Future<ConversationState> waitConv(
+  ProviderContainer c,
+  bool Function(ConversationState s) test,
+) => waitUntil(c, agentControllerProvider, test);
+
+Future<VoiceUiState> waitVoice(
+  ProviderContainer c,
+  bool Function(VoiceUiState v) test,
+) => waitUntil(c, voiceControllerProvider, test);
+
+Future<T> waitUntil<T>(
+  ProviderContainer c,
+  ProviderListenable<T> provider,
+  bool Function(T value) test,
+) async {
+  final now = c.read(provider);
+  if (test(now)) return now;
+  final done = Completer<T>();
+  final sub = c.listen(provider, (_, next) {
+    if (test(next) && !done.isCompleted) done.complete(next);
+  });
+  try {
+    return await done.future.timeout(const Duration(seconds: 5));
+  } finally {
+    sub.close();
+  }
+}
+
+const _delete = '{"event_id":"e1"}';
+
+void main() {
+  late TestEnv env;
+  late ProviderContainer c;
+
+  ProviderContainer start(
+    List<ScriptedTurn> turns, {
+    required VoiceComponents? voice,
+  }) {
+    env = voiceEnv(turns, voice: voice);
+    return c = env.container();
+  }
+
+  tearDown(() => c.dispose());
+
+  VoiceController voice() => c.read(voiceControllerProvider.notifier);
+
+  test(
+    'Push-to-talk: Audio → STT → Agent → TTS, mit Auslöser im Audit-Log',
+    () async {
+      final tts = FakeTextToSpeech();
+      final provider = FakeLlmProvider([
+        ScriptedTurn.text('Ruhig. Das Wasser hat 19 Grad.'),
+      ]);
+      env = TestEnv(
+        providerConfig: scripted(provider),
+        extraOverrides: [
+          voiceComponentsProvider.overrideWith(
+            (ref) async => fakeVoice(
+              script: const [
+                Transcript(
+                  text: 'Wie wird das Meer morgen?',
+                  language: 'de',
+                  confidence: 0.8,
+                ),
+              ],
+              tts: tts,
+            ),
+          ),
+        ],
+      );
+      c = env.container();
+      final phases = <VoiceState>[];
+      c.listen(
+        voiceControllerProvider.select((v) => v.phase),
+        (_, p) => phases.add(p),
+      );
+
+      expect(await voice().start(TriggerKind.pushToTalk), isTrue);
+      await voice().whenIdle;
+
+      expect(phases.first, VoiceState.listening);
+      expect(
+        phases,
+        containsAllInOrder([VoiceState.transcribing, VoiceState.thinking]),
+      );
+      expect(phases.last, VoiceState.idle);
+      final s = c.read(agentControllerProvider);
+      expect(
+        s.entries.whereType<UserEntry>().single.text,
+        'Wie wird das Meer morgen?',
+      );
+      expect(
+        s.entries.whereType<AssistantTextEntry>().single.text,
+        'Ruhig. Das Wasser hat 19 Grad.',
+      );
+      expect(tts.spoken, ['Ruhig.', 'Das Wasser hat 19 Grad.']);
+      expect(
+        provider.requests.single.messages.last.content
+            .whereType<TextBlock>()
+            .single
+            .text,
+        'Wie wird das Meer morgen?',
+      );
+
+      await c.read(auditRecorderProvider).flush();
+      final request = (await env.storage.audit.query()).firstWhere(
+        (e) => e.kind == AuditKind.request,
+      );
+      expect(request.payload, {
+        'source': 'voice',
+        'trigger': 'pushToTalk',
+        'text': 'Wie wird das Meer morgen?',
+        'language': 'de',
+        'sttConfidence': 0.8,
+      });
+    },
+  );
+
+  test('Tippen beim Zuhören bricht ab: keine Anfrage, Mikrofon aus', () async {
+    final audio = FakeAudioInput(
+      frames: AudioFrames.pattern('S' * 300),
+      frameInterval: const Duration(milliseconds: 5),
+    );
+    final provider = FakeLlmProvider([ScriptedTurn.text('nie')]);
+    env = TestEnv(
+      providerConfig: scripted(provider),
+      extraOverrides: [
+        voiceComponentsProvider.overrideWith(
+          (ref) async => fakeVoice(audio: audio),
+        ),
+      ],
+    );
+    c = env.container();
+    await voice().start(TriggerKind.pushToTalk);
+    await waitVoice(c, (v) => v.levels.isNotEmpty);
+    expect(c.read(voiceControllerProvider).listening, isTrue);
+
+    await voice().tap();
+    await voice().whenIdle;
+    expect(c.read(voiceControllerProvider).phase, VoiceState.idle);
+    expect(audio.isRunning, isFalse);
+    expect(provider.requests, isEmpty);
+    expect(c.read(agentControllerProvider).entries, isEmpty);
+  });
+
+  test('Tippen beim Denken bricht den Lauf ab', () async {
+    start([
+      ScriptedTurn.hang(partialText: 'Moment'),
+    ], voice: fakeVoice(script: const [Transcript(text: 'Erzähl was')]));
+    await voice().start(TriggerKind.pushToTalk);
+    await waitConv(c, (s) => s.running);
+    await waitConv(
+      c,
+      (s) => s.entries.whereType<AssistantTextEntry>().isNotEmpty,
+    );
+    expect(c.read(voiceControllerProvider).phase, VoiceState.thinking);
+
+    await voice().tap();
+    await voice().whenIdle;
+    await c.read(agentControllerProvider.notifier).idle;
+    expect(c.read(agentControllerProvider).running, isFalse);
+    expect(c.read(voiceControllerProvider).active, isFalse);
+  });
+
+  group('Bestätigung per Stimme', () {
+    Future<void> deleteBySaying(
+      List<Transcript> answers, {
+      FakeTextToSpeech? tts,
+    }) async {
+      start(
+        [
+          ScriptedTurn.toolCalls([
+            call('c1', 'calendar__delete_event', _delete),
+          ]),
+          ScriptedTurn.text('Erledigt.'),
+        ],
+        voice: fakeVoice(
+          script: [
+            const Transcript(text: 'Lösch den Zahnarzttermin', language: 'de'),
+            ...answers,
+          ],
+          tts: tts,
+        ),
+      );
+      await env.calendar.createEvent(zahnarztDraft());
+      await voice().start(TriggerKind.pushToTalk);
+    }
+
+    test('„Ja, bitte“ führt das Tool aus; Frage wird vorgelesen', () async {
+      final tts = FakeTextToSpeech();
+      await deleteBySaying(const [Transcript(text: 'Ja, bitte')], tts: tts);
+      await voice().whenIdle;
+      expect(env.calendar.events, isEmpty);
+      expect(c.read(agentControllerProvider).tool('c1')!.phase, ToolPhase.done);
+      expect(tts.spoken, contains('Termin löschen? Ja oder nein?'));
+      await c.read(auditRecorderProvider).flush();
+      final confirmation = (await env.storage.audit.query()).firstWhere(
+        (e) => e.kind == AuditKind.confirmation,
+      );
+      expect(confirmation.payload['approved'], isTrue);
+    });
+
+    test('„Nein“ lehnt ab, das Tool läuft nicht', () async {
+      await deleteBySaying(const [Transcript(text: 'Nein')]);
+      await voice().whenIdle;
+      expect(env.calendar.events, hasLength(1));
+      expect(
+        c.read(agentControllerProvider).tool('c1')!.phase,
+        ToolPhase.declined,
+      );
+    });
+
+    test('unklar: einmal nachfragen, danach bleibt nur der Tipp', () async {
+      final tts = FakeTextToSpeech();
+      await deleteBySaying(const [
+        Transcript(text: 'Vielleicht'),
+        Transcript(text: 'Hm, mal sehen'),
+      ], tts: tts);
+      await waitConv(c, (s) => s.pending != null);
+      // Zwei Versuche, dann wartet die Karte auf einen Tipp.
+      await waitVoice(
+        c,
+        (v) =>
+            !v.awaitingAnswer && tts.spoken.contains('Bitte sag ja oder nein.'),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final pending = c.read(agentControllerProvider).pending;
+      expect(pending, isNotNull);
+      expect(pending!.answered, isFalse);
+      c.read(agentControllerProvider.notifier).answer(approved: true);
+      await voice().whenIdle;
+      expect(env.calendar.events, isEmpty);
+    });
+
+    test('Tipp während des Zuhörens beendet die Aufnahme', () async {
+      final audio = FakeAudioInput(
+        frames: AudioFrames.pattern('S' * 10 + '.' * 30),
+        frameInterval: const Duration(milliseconds: 2),
+      );
+      final stt = FakeSpeechToText(const [
+        Transcript(text: 'Lösch den Zahnarzttermin'),
+      ]);
+      env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider([
+            ScriptedTurn.toolCalls([
+              call('c1', 'calendar__delete_event', _delete),
+            ]),
+            ScriptedTurn.text('Erledigt.'),
+          ]),
+        ),
+        extraOverrides: [
+          voiceComponentsProvider.overrideWith(
+            (ref) async => VoiceComponents(
+              audio: audio,
+              vad: FakeVoiceActivityDetector(),
+              stt: stt,
+              textToSpeech: (_) async => null,
+            ),
+          ),
+        ],
+      );
+      c = env.container();
+      await env.calendar.createEvent(zahnarztDraft());
+      await voice().start(TriggerKind.pushToTalk);
+      await waitVoice(c, (v) => v.awaitingAnswer);
+      audio.script(AudioFrames.pattern('S' * 2000));
+      c.read(agentControllerProvider.notifier).answer(approved: false);
+      await waitVoice(c, (v) => !v.awaitingAnswer);
+      await voice().whenIdle;
+      expect(audio.isRunning, isFalse);
+      expect(stt.calls, hasLength(1), reason: 'keine Erkennung der Antwort');
+      expect(env.calendar.events, hasLength(1));
+    });
+
+    test('getippte Anfrage: keine Stimm-Bestätigung', () async {
+      start([
+        ScriptedTurn.toolCalls([call('c1', 'calendar__delete_event', _delete)]),
+        ScriptedTurn.text('Gut.'),
+      ], voice: fakeVoice(script: const [Transcript(text: 'Ja')]));
+      await env.calendar.createEvent(zahnarztDraft());
+      // Voice controller exists, but the request is typed.
+      c.read(voiceControllerProvider);
+      await c.read(agentControllerProvider.notifier).send('Lösch den Termin');
+      await waitConv(c, (s) => s.pending != null);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(c.read(voiceControllerProvider).awaitingAnswer, isFalse);
+      expect(c.read(agentControllerProvider).pending!.answered, isFalse);
+      c.read(agentControllerProvider.notifier).answer(approved: false);
+      await c.read(agentControllerProvider.notifier).idle;
+    });
+  });
+
+  test('ohne Spracherkennung: kein Start, Hinweis', () async {
+    start(const [], voice: null);
+    expect(await voice().start(TriggerKind.pushToTalk), isFalse);
+    expect(c.read(voiceControllerProvider).error, voiceUnavailableHint);
+  });
+
+  test('Mikrofon verweigert: Fehlertext, wieder bereit', () async {
+    start(const [], voice: fakeVoice(audio: DeniedAudioInput()));
+    await voice().start(TriggerKind.pushToTalk);
+    await voice().whenIdle;
+    final v = c.read(voiceControllerProvider);
+    expect(v.error, 'Kein Zugriff auf das Mikrofon.');
+    expect(v.active, isFalse);
+  });
+
+  test('prepare verneint (keine Berechtigung): kein Start', () async {
+    var asked = 0;
+    start(
+      const [],
+      voice: fakeVoice(
+        prepare: () async {
+          asked++;
+          return false;
+        },
+      ),
+    );
+    expect(await voice().start(TriggerKind.pushToTalk), isFalse);
+    expect(asked, 1);
+    expect(c.read(voiceControllerProvider).error, contains('Mikrofon'));
+  });
+
+  test('nichts verstanden: Hinweis', () async {
+    start(
+      const [],
+      voice: fakeVoice(
+        audio: FakeAudioInput(
+          frames: AudioFrames.pattern('.' * 20),
+          closeAfterFrames: true,
+        ),
+      ),
+    );
+    await voice().start(TriggerKind.pushToTalk);
+    await voice().whenIdle;
+    expect(c.read(voiceControllerProvider).hint, 'Ich habe nichts verstanden.');
+  });
+
+  test('Mikrofon-Zustand je Lage', () {
+    const idle = VoiceUiState();
+    const listening = VoiceUiState(phase: VoiceState.listening);
+    const answering = VoiceUiState(awaitingAnswer: true);
+    const thinking = VoiceUiState(phase: VoiceState.speaking);
+    final cases = <(VoiceUiState, bool, bool, MicState)>[
+      (idle, true, false, MicState.idle),
+      (idle, false, false, MicState.disabled),
+      (idle, false, true, MicState.thinking),
+      (idle, true, true, MicState.thinking),
+      (listening, true, false, MicState.listening),
+      (answering, true, true, MicState.listening),
+      (thinking, true, true, MicState.thinking),
+    ];
+    for (final (v, available, running, expected) in cases) {
+      expect(
+        micStateFor(v, available: available, running: running),
+        expected,
+        reason: '$v $available $running',
+      );
+    }
+  });
+
+  test('Rückfragen in de/fr/en', () {
+    final tool = ToolQuestion(
+      ConfirmationRequired(
+        call: call('c', 'calendar__delete_event', '{}'),
+        description: 'x',
+        respond: (_) {},
+      ),
+      request: 'r',
+    );
+    expect(confirmationPrompt(tool, 'de'), 'Termin löschen? Ja oder nein?');
+    expect(confirmationPrompt(tool, null), 'Termin löschen? Ja oder nein?');
+    expect(confirmationPrompt(tool, 'fr-FR'), contains('Oui ou non'));
+    expect(confirmationPrompt(tool, 'en'), contains('Yes or no'));
+    expect(repeatPrompt('fr'), contains('oui ou non'));
+    expect(repeatPrompt('en'), 'Please say yes or no.');
+    expect(voiceErrorText(StateError('x')), contains('Sprache'));
+  });
+
+  test('Pegel: Stille 0, Sprache deutlich, höchstens 6 Balken', () async {
+    expect(MeteredAudioInput.levelOf(AudioFrames.silence()), 0);
+    expect(MeteredAudioInput.levelOf(AudioFrames.speech()), greaterThan(0.4));
+    expect(MeteredAudioInput.levelOf(Int16List(0)), 0);
+    final audio = FakeAudioInput(
+      frames: AudioFrames.pattern('S' * 200),
+      frameInterval: const Duration(milliseconds: 2),
+    );
+    start(const [], voice: fakeVoice(audio: audio));
+    await voice().start(TriggerKind.pushToTalk);
+    final v = await waitVoice(c, (v) => v.levels.length == waveBars);
+    expect(v.levels.every((l) => l > 0.4), isTrue);
+    await voice().cancel();
+  });
+}

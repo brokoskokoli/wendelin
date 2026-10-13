@@ -90,6 +90,8 @@ final devicePortsProvider = Provider<PlatformPorts>(
   (ref) => PlatformPorts.device(
     ref.watch(storageProvider),
     listDefinitions: () => ref.read(listDefinitionsProvider),
+    obsidian: () => ref.read(obsidianPrefsProvider),
+    language: () => ref.read(languageProvider),
   ),
 );
 
@@ -111,8 +113,8 @@ final integrationSpecsProvider = Provider<List<IntegrationSpec>>(
 );
 
 /// Dependencies for building integrations.
-final integrationDepsProvider = Provider<IntegrationDeps>(
-  (ref) => IntegrationDeps(
+final integrationDepsProvider = Provider<IntegrationDeps>((ref) {
+  return IntegrationDeps(
     ports: ref.watch(platformPortsProvider),
     device: ref.watch(deviceInfoProvider),
     httpClient: ref.watch(httpClientProvider),
@@ -124,8 +126,8 @@ final integrationDepsProvider = Provider<IntegrationDeps>(
         client: ref.watch(httpClientProvider),
       ),
     },
-  ),
-);
+  );
+});
 
 /// The built integrations by id.
 final integrationsProvider = Provider<Map<String, Integration>>((ref) {

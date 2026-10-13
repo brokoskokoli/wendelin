@@ -31,6 +31,8 @@ final class AgentController extends Notifier<ConversationState> {
   String? _shownSessionId;
   ProviderConfig? _providers;
   final _done = <Completer<void>>[];
+  StreamController<AgentEvent>? _out;
+  bool _cancelRequested = false;
 
   ConversationReducer get _reducer => ConversationReducer(
     nameOf: (id) => _providers?.nameOf(id) ?? id,
@@ -87,9 +89,44 @@ final class AgentController extends Notifier<ConversationState> {
     final trimmed = text.trim();
     if (trimmed.isEmpty || state.running) return;
     if (isNewTopicCommand(trimmed)) return newTopic();
+    await _start(UserInput(text: trimmed), trigger: null, out: null);
+  }
 
+  /// Runs [input] (e.g. a voice transcript) like [send] and returns the
+  /// agent events of this request; the stream ends after `AgentDone` or
+  /// `AgentFailed`. [trigger] names what started it (audit log, e.g.
+  /// `assistant`). If the request cannot start (busy, no provider), the
+  /// stream holds a single `AgentFailed`.
+  Stream<AgentEvent> submit(UserInput input, {String? trigger}) {
+    final out = StreamController<AgentEvent>();
+    final text = input.text.trim();
+    if (text.isEmpty || state.running) {
+      out
+        ..add(
+          AgentFailed(
+            error: AgentErrorKind.internal,
+            message: text.isEmpty
+                ? 'Die Anfrage ist leer.'
+                : 'Es läuft schon eine Anfrage.',
+          ),
+        )
+        ..close();
+      return out.stream;
+    }
+    unawaited(_start(input, trigger: trigger, out: out));
+    return out.stream;
+  }
+
+  Future<void> _start(
+    UserInput input, {
+    required String? trigger,
+    required StreamController<AgentEvent>? out,
+  }) async {
+    final trimmed = input.text.trim();
     // Mark as running right away, so a second tap cannot start another run.
     state = state.copyWith(running: true);
+    _out = out;
+    _cancelRequested = false;
     final ProviderConfig? providers;
     try {
       providers = await ref.read(providerConfigProvider.future);
@@ -117,6 +154,15 @@ final class AgentController extends Notifier<ConversationState> {
       _finishWithNotice(NoticeKind.error, 'Die Anfrage konnte nicht starten.');
       return;
     }
+    if (_cancelRequested) {
+      // Cancelled while starting (e.g. tap in the overlay): nothing runs.
+      _finishWithNotice(
+        NoticeKind.info,
+        'Abgebrochen.',
+        error: AgentErrorKind.cancelled,
+      );
+      return;
+    }
     _sessionId = sessionId;
     final isNew = sessionId != _shownSessionId;
     _shownSessionId = sessionId;
@@ -126,12 +172,19 @@ final class AgentController extends Notifier<ConversationState> {
       sessionStart: isNew ? ref.read(clockProvider).now() : null,
     );
 
-    final input = UserInput(text: trimmed);
-    _audit.request(sessionId, input);
+    final request = UserInput(
+      text: trimmed,
+      images: input.images,
+      source: input.source,
+      sttConfidence: input.sttConfidence,
+      language: input.language,
+      requestEscalation: input.requestEscalation,
+    );
+    _audit.request(sessionId, request, trigger: trigger);
     final run = ref.read(agentFactoryProvider).create(providers, sessionId);
     _run = run;
     _events = run
-        .run(input)
+        .run(request)
         .listen(
           (event) => _onEvent(sessionId, event),
           onError: (Object e, StackTrace stack) => _failed(sessionId, e, stack),
@@ -164,8 +217,16 @@ final class AgentController extends Notifier<ConversationState> {
         ),
       );
 
-  /// Cancels the running request.
-  void cancel() => _run?.cancel();
+  /// Cancels the running request (also while it is still starting).
+  void cancel() {
+    if (!state.running) return;
+    final run = _run;
+    if (run == null) {
+      _cancelRequested = true;
+    } else {
+      run.cancel();
+    }
+  }
 
   /// Answers the open question (tool confirmation or escalation consent).
   void answer({required bool approved}) {
@@ -228,6 +289,7 @@ final class AgentController extends Notifier<ConversationState> {
 
   void _onEvent(String sessionId, AgentEvent event) {
     _audit.agentEvent(sessionId, event);
+    _out?.add(event);
     switch (event) {
       case ToolCallFinished(:final call, :final outcome):
         final undo = outcome.undo;
@@ -272,14 +334,28 @@ final class AgentController extends Notifier<ConversationState> {
       state = state.copyWith(running: false, clearPending: true);
     }
     ref.read(sessionManagerProvider).touch();
+    _closeOut();
     _completeIdle();
   }
 
-  void _finishWithNotice(NoticeKind kind, String text) {
+  void _finishWithNotice(
+    NoticeKind kind,
+    String text, {
+    AgentErrorKind error = AgentErrorKind.internal,
+  }) {
     state = _reducer
         .notice(state, kind, text)
         .copyWith(running: false, clearPending: true);
+    _out?.add(AgentFailed(error: error, message: text));
+    _closeOut();
     _completeIdle();
+  }
+
+  void _closeOut() {
+    final out = _out;
+    _out = null;
+    _cancelRequested = false;
+    if (out != null) unawaited(out.close());
   }
 
   void _completeIdle() {

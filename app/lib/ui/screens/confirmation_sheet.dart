@@ -18,6 +18,7 @@ class ConfirmationSheet extends StatelessWidget {
     required this.providerName,
     required this.privacy,
     this.toolRisk = RiskLevel.external,
+    this.hint = ConfirmationHint.tap,
   });
 
   /// What to ask.
@@ -32,30 +33,21 @@ class ConfirmationSheet extends StatelessWidget {
   /// Risk level of the tool (tool questions).
   final RiskLevel toolRisk;
 
+  /// Hint under the card (tap only, or „Sag einfach „ja“ oder „nein““
+  /// while a voice request listens for the answer).
+  final ConfirmationHint hint;
+
   @override
   Widget build(BuildContext context) {
-    void answer(bool yes) => Navigator.of(context).pop(yes);
-    final (quote, card) = switch (question) {
-      ToolQuestion(:final event, :final request) => (
-        request,
-        _toolCard(event, answer),
-      ),
-      EscalationQuestion(:final fromName, :final toName) => (
-        null,
-        ConfirmationCard(
-          title: 'An $toName übergeben?',
-          detail:
-              '$toName hat eine niedrigere Datenschutzstufe als $fromName. '
-              'Deine Anfrage und der bisherige Verlauf gehen dann dorthin.',
-          toolName: '$fromName → $toName',
-          risk: RiskLevel.external,
-          onYes: () => answer(true),
-          onNo: () => answer(false),
-          yesLabel: 'Ja, übergeben',
-          noLabel: 'Nein',
-        ),
-      ),
+    final quote = switch (question) {
+      ToolQuestion(:final request) => request,
+      EscalationQuestion() => null,
     };
+    final card = confirmationCardFor(
+      question,
+      (yes) => Navigator.of(context).pop(yes),
+      toolRisk: toolRisk,
+    );
     return SafeArea(
       top: false,
       child: Padding(
@@ -84,10 +76,7 @@ class ConfirmationSheet extends StatelessWidget {
                     if (quote != null && quote.isNotEmpty)
                       Text('„$quote“', style: WText.quote),
                     card,
-                    const VoiceHint(
-                      'Antworte per Tipp – Sprache kommt in M2',
-                      dot: false,
-                    ),
+                    hint.widget,
                   ],
                 ),
               ),
@@ -97,8 +86,35 @@ class ConfirmationSheet extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _toolCard(ConfirmationRequired event, void Function(bool) answer) {
+/// Hint under a confirmation card.
+enum ConfirmationHint {
+  /// Only a tap answers (typed request).
+  tap('Antworte per Tipp', listens: false),
+
+  /// A voice request listens for „ja“/„nein“ (or a tap).
+  voice('Sag einfach „ja“ oder „nein“', listens: true);
+
+  const ConfirmationHint(this.text, {required this.listens});
+
+  /// Hint text.
+  final String text;
+
+  /// Whether the microphone listens (cobalt dot).
+  final bool listens;
+
+  /// The hint as widget.
+  Widget get widget => VoiceHint(text, dot: listens);
+}
+
+/// The confirmation card for [question]; [answer] gets `true` for yes.
+Widget confirmationCardFor(
+  PendingQuestion question,
+  void Function(bool yes) answer, {
+  RiskLevel toolRisk = RiskLevel.external,
+}) => switch (question) {
+  ToolQuestion(:final event) => () {
     final texts = confirmationTexts(event.call.name);
     return ConfirmationCard(
       title: texts.title,
@@ -110,8 +126,20 @@ class ConfirmationSheet extends StatelessWidget {
       yesLabel: texts.yes,
       noLabel: texts.no,
     );
-  }
-}
+  }(),
+  EscalationQuestion(:final fromName, :final toName) => ConfirmationCard(
+    title: 'An $toName übergeben?',
+    detail:
+        '$toName hat eine niedrigere Datenschutzstufe als $fromName. '
+        'Deine Anfrage und der bisherige Verlauf gehen dann dorthin.',
+    toolName: '$fromName → $toName',
+    risk: RiskLevel.external,
+    onYes: () => answer(true),
+    onNo: () => answer(false),
+    yesLabel: 'Ja, übergeben',
+    noLabel: 'Nein',
+  ),
+};
 
 /// Most lines of a confirmation detail shown in the sheet.
 const maxDetailLines = 10;

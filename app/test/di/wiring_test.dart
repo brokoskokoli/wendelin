@@ -306,10 +306,13 @@ void main() {
         'clipboard',
         'lists',
         'memory',
+        'obsidian',
         'web',
       ]);
       expect(registry.status('memory'), IntegrationStatus.active);
       expect(registry.status('calendar'), IntegrationStatus.available);
+      // Obsidian: registriert; eingeschaltet ohne Vault „Einrichtung nötig“.
+      expect(registry.status('obsidian'), IntegrationStatus.available);
     });
 
     test('Demo-Modus: In-Memory-Ports, alles aktiv, Demo-Provider', () async {

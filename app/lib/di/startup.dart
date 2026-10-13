@@ -20,6 +20,7 @@ final class StartupSettings {
     this.toolPrefs = const ToolPrefs(),
     this.webSearch,
     this.lists = const [],
+    this.obsidian = const ObsidianPrefs(),
   });
 
   /// Integrations the user switched on.
@@ -53,6 +54,9 @@ final class StartupSettings {
   /// The user's lists.
   final List<ListDefinition> lists;
 
+  /// Obsidian vault and daily notes.
+  final ObsidianPrefs obsidian;
+
   /// Reads the settings for the integrations [integrationIds].
   static Future<StartupSettings> load(
     SettingsRepository settings,
@@ -78,6 +82,8 @@ final class StartupSettings {
       toolPrefs: await settings.get(AppSettings.toolPrefs) ?? const ToolPrefs(),
       webSearch: await settings.get(AppSettings.webSearch),
       lists: await settings.get(AppSettings.lists) ?? const [],
+      obsidian:
+          await settings.get(AppSettings.obsidian) ?? const ObsidianPrefs(),
     );
   }
 }

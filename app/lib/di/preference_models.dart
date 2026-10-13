@@ -213,3 +213,75 @@ ListDefinition listDefinitionFromJson(Object? json) {
     section: section as String?,
   );
 }
+
+/// The user's Obsidian settings: chosen vault (SAF tree URI with persisted
+/// grant, display name) and daily notes. No secrets.
+@immutable
+final class ObsidianPrefs {
+  /// Creates the settings.
+  const ObsidianPrefs({
+    this.vaultUri,
+    this.vaultName,
+    this.dailyNotes = const DailyNoteSettings(),
+  });
+
+  /// Decodes [toJson]; malformed parts fall back to the defaults.
+  factory ObsidianPrefs.fromJson(Map<String, Object?> json) {
+    String? text(Object? v) => v is String && v.isNotEmpty ? v : null;
+    final daily = json['dailyNotes'];
+    final d = daily is Map ? daily : const <Object?, Object?>{};
+    return ObsidianPrefs(
+      vaultUri: text(json['vaultUri']),
+      vaultName: text(json['vaultName']),
+      dailyNotes: DailyNoteSettings(
+        folder: text(d['folder']) ?? '',
+        format: text(d['format']) ?? const DailyNoteSettings().format,
+        template: text(d['template']),
+      ),
+    );
+  }
+
+  /// Tree URI of the vault folder; `null` = none chosen.
+  final String? vaultUri;
+
+  /// Folder name of the vault (as Obsidian names the vault).
+  final String? vaultName;
+
+  /// Daily-note folder, date format and template.
+  final DailyNoteSettings dailyNotes;
+
+  /// Whether a vault is chosen.
+  bool get hasVault => vaultUri != null;
+
+  /// JSON for the settings.
+  Map<String, Object?> toJson() => {
+    'vaultUri': ?vaultUri,
+    'vaultName': ?vaultName,
+    'dailyNotes': {
+      'folder': dailyNotes.folder,
+      'format': dailyNotes.format,
+      'template': ?dailyNotes.template,
+    },
+  };
+
+  /// A copy with another vault (`null` removes it).
+  ObsidianPrefs withVault(String? uri, String? name) =>
+      ObsidianPrefs(vaultUri: uri, vaultName: name, dailyNotes: dailyNotes);
+
+  /// A copy with other daily-note settings.
+  ObsidianPrefs withDailyNotes(DailyNoteSettings daily) => ObsidianPrefs(
+    vaultUri: vaultUri,
+    vaultName: vaultName,
+    dailyNotes: daily,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ObsidianPrefs &&
+      other.vaultUri == vaultUri &&
+      other.vaultName == vaultName &&
+      other.dailyNotes == dailyNotes;
+
+  @override
+  int get hashCode => Object.hash(vaultUri, vaultName, dailyNotes);
+}

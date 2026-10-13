@@ -62,6 +62,7 @@ final class ConversationState {
     this.openThinkingId,
     this.lastRequest,
     this.nextSeq = 1,
+    this.verification,
   }) : entries = List.unmodifiable(entries);
 
   /// The empty conversation.
@@ -91,6 +92,9 @@ final class ConversationState {
   /// Counter for entry ids.
   final int nextSeq;
 
+  /// Last receipt check (TEE) of the answering provider, if any.
+  final VerificationStatus? verification;
+
   /// A copy with the given fields replaced; `clear…` resets nullable
   /// fields to `null`.
   ConversationState copyWith({
@@ -104,6 +108,8 @@ final class ConversationState {
     bool clearOpen = false,
     String? lastRequest,
     int? nextSeq,
+    VerificationStatus? verification,
+    bool clearVerification = false,
   }) => ConversationState(
     entries: entries ?? this.entries,
     running: running ?? this.running,
@@ -113,6 +119,7 @@ final class ConversationState {
     openThinkingId: clearOpen ? null : openThinkingId ?? this.openThinkingId,
     lastRequest: lastRequest ?? this.lastRequest,
     nextSeq: nextSeq ?? this.nextSeq,
+    verification: clearVerification ? null : verification ?? this.verification,
   );
 
   /// The tool entry of [callId], if any.

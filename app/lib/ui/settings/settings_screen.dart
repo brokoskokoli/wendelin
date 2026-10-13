@@ -23,6 +23,7 @@ class SettingsScreen extends ConsumerWidget {
       'Was Wendelin darf, Tools, Risikostufen',
       AppRoutes.integrations,
     ),
+    ('Obsidian', 'Vault, Tagesnotizen, Suchindex', AppRoutes.obsidian),
     ('Listen', 'Einkaufen, Projekte … als Markdown-Dateien', AppRoutes.lists),
     ('Web-Suche', 'Suchdienst und Key', AppRoutes.webSearch),
     ('Gedächtnis', 'Einträge ansehen, ändern, exportieren', AppRoutes.memory),
@@ -32,7 +33,11 @@ class SettingsScreen extends ConsumerWidget {
       AppRoutes.privacy,
     ),
     ('Kosten', 'Heute und im Monat je Provider', AppRoutes.costs),
-    ('Assistent', 'Dein Name, Persönlichkeit', AppRoutes.assistant),
+    (
+      'Assistent',
+      'Standard-Assistent, dein Name, Persönlichkeit',
+      AppRoutes.assistant,
+    ),
     ('Sprache', 'Spracherkennung, Stimme, Tempo', AppRoutes.voice),
   ];
 

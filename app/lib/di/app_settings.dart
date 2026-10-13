@@ -91,4 +91,15 @@ abstract final class AppSettings {
     },
     defaultValue: const [],
   );
+
+  /// Obsidian vault and daily notes.
+  static final obsidian = SettingKey<ObsidianPrefs>(
+    'obsidian.prefs',
+    encode: (p) => p.toJson(),
+    decode: (json) {
+      if (json is Map<String, Object?>) return ObsidianPrefs.fromJson(json);
+      throw const FormatException('obsidian.prefs: Objekt erwartet');
+    },
+    defaultValue: const ObsidianPrefs(),
+  );
 }

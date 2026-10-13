@@ -80,28 +80,42 @@ class MainChips extends StatelessWidget {
 
 /// Text field and microphone at the bottom of the main screen.
 ///
-/// Speech comes with M2: the microphone is disabled („Sprache kommt in
-/// M2“). While a request runs it turns into „Antwort abbrechen“.
+/// The microphone starts push-to-talk ([mic] `idle`), shows listening and
+/// thinking, and a tap while active cancels ([onMic] decides). Without
+/// speech recognition it is disabled with [micHint]. A voice [status]
+/// („Ich habe nichts verstanden.“, microphone error) shows above.
 class Composer extends StatefulWidget {
   /// Creates the composer.
   const Composer({
     super.key,
     required this.running,
     required this.onSend,
-    required this.onCancel,
+    required this.mic,
+    required this.onMic,
+    this.micHint,
+    this.status,
   });
 
-  /// Whether a request runs.
+  /// Whether a request runs (text cannot be sent then).
   final bool running;
 
   /// Sends the text; returns whether it was accepted.
   final bool Function(String text) onSend;
 
-  /// Cancels the running request.
-  final VoidCallback onCancel;
+  /// State of the microphone button.
+  final MicState mic;
 
-  /// Hint of the disabled microphone.
-  static const micHint = 'Sprache kommt in M2';
+  /// Tap on the microphone (start, or cancel while active).
+  final VoidCallback onMic;
+
+  /// Label of the disabled microphone (why it is off).
+  final String? micHint;
+
+  /// Voice hint or error shown above the field.
+  final String? status;
+
+  /// Label of the microphone while listening (a tap aborts).
+  static const listeningLabel = 'Zuhören abbrechen';
 
   @override
   State<Composer> createState() => _ComposerState();
@@ -124,51 +138,70 @@ class _ComposerState extends State<Composer> {
   }
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
-      border: Border(
-        top: BorderSide(color: WColors.surface, width: WSize.divider),
+  Widget build(BuildContext context) {
+    final listening = widget.mic == MicState.listening;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: WColors.surface, width: WSize.divider),
+        ),
       ),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(
-        WSpace.l,
-        WSpace.m,
-        WSpace.l,
-        WSpace.xxl,
-      ),
-      child: Row(
-        spacing: WSpace.m,
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _text,
-              focusNode: _focus,
-              style: WText.body,
-              textInputAction: TextInputAction.send,
-              onSubmitted: _submit,
-              decoration: const InputDecoration(
-                hintText: 'Schreiben statt sprechen',
-                semanticCounterText: '',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          WSpace.l,
+          WSpace.m,
+          WSpace.l,
+          WSpace.xxl,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: WSpace.s,
+          children: [
+            if (widget.status case final status?)
+              Text(
+                status,
+                style: WText.caption,
+                textAlign: TextAlign.center,
+                semanticsLabel: status,
               ),
-            ),
-          ),
-          widget.running
-              ? MicButton(
-                  state: MicState.thinking,
-                  onPressed: widget.onCancel,
-                  compact: true,
-                )
-              : const MicButton(
-                  state: MicState.disabled,
-                  onPressed: null,
-                  compact: true,
-                  semanticLabel: Composer.micHint,
+            Row(
+              spacing: WSpace.m,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _text,
+                    focusNode: _focus,
+                    style: WText.body,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: _submit,
+                    decoration: InputDecoration(
+                      hintText: listening
+                          ? 'Ich höre zu …'
+                          : 'Schreiben statt sprechen',
+                      semanticCounterText: '',
+                    ),
+                  ),
                 ),
-        ],
+                MicButton(
+                  state: widget.mic,
+                  onPressed: widget.mic == MicState.disabled
+                      ? null
+                      : widget.onMic,
+                  compact: true,
+                  semanticLabel: switch (widget.mic) {
+                    MicState.disabled => widget.micHint,
+                    MicState.listening => Composer.listeningLabel,
+                    _ => null,
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Hint card shown while no provider is set up.

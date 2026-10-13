@@ -185,6 +185,11 @@ abstract final class WSize {
   static const dragHandleWidth = 40.0;
   static const dragHandleHeight = 5.0;
 
+  /// Assistenten-Overlay: Höhe des Sheets (Vorlage 560 von 844) und
+  /// größter Anteil an der Bildschirmhöhe (kleine Geräte, Tastatur).
+  static const overlaySheet = 560.0;
+  static const overlayMaxFraction = 0.8;
+
   /// Ziehgriff in Regelzeilen.
   static const ruleHandleWidth = 16.0;
 

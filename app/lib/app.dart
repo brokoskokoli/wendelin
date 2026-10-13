@@ -10,6 +10,7 @@ import 'ui/settings/costs_screen.dart';
 import 'ui/settings/integrations_screen.dart';
 import 'ui/settings/lists_screen.dart';
 import 'ui/settings/memory_screen.dart';
+import 'ui/settings/obsidian_screen.dart';
 import 'ui/settings/privacy_screen.dart';
 import 'ui/settings/provider_setup_screen.dart';
 import 'ui/settings/providers_screen.dart';
@@ -45,6 +46,7 @@ class WendelinApp extends StatelessWidget {
       AppRoutes.costs: (_) => const CostsScreen(),
       AppRoutes.assistant: (_) => const AssistantScreen(),
       AppRoutes.voice: (_) => const VoiceScreen(),
+      AppRoutes.obsidian: (_) => const ObsidianScreen(),
       if (kDebugMode) AppRoutes.gallery: (_) => const DesignGallery(),
     },
   );

@@ -195,3 +195,23 @@ final class ListDefinitionsNotifier extends Notifier<List<ListDefinition>> {
     }
   }
 }
+
+/// Obsidian vault and daily notes.
+final obsidianPrefsProvider =
+    NotifierProvider<ObsidianPrefsNotifier, ObsidianPrefs>(
+      ObsidianPrefsNotifier.new,
+    );
+
+/// Obsidian settings.
+final class ObsidianPrefsNotifier extends Notifier<ObsidianPrefs> {
+  @override
+  ObsidianPrefs build() => ref.watch(startupProvider).obsidian;
+
+  /// Stores [prefs]. The caller re-checks the setup step of the
+  /// integration (`ToolRegistry.refresh('obsidian')`); the registry is not
+  /// read here because the platform ports read this provider.
+  Future<void> set(ObsidianPrefs prefs) async {
+    state = prefs;
+    await _settings(ref).set(AppSettings.obsidian, prefs);
+  }
+}

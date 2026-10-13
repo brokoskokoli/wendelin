@@ -7,6 +7,7 @@ import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin/ui/settings/integrations_screen.dart';
 import 'package:wendelin/ui/settings/lists_screen.dart';
+import 'package:wendelin/ui/settings/obsidian_screen.dart';
 import 'package:wendelin/ui/settings/web_search_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
@@ -50,7 +51,8 @@ void main() {
   testWidgets('alle Integrationen mit Zustand und Toolzahl', (tester) async {
     final env = TestEnv(enabled: const {'memory', 'web'});
     await pumpIntegrations(tester, env);
-    expect(find.byType(IntegrationTile), findsNWidgets(6));
+    expect(find.byType(IntegrationTile), findsNWidgets(7));
+    expect(tileWidget(tester, 'Obsidian').status, IntegrationStatus.available);
     expect(tileWidget(tester, 'Gedächtnis').status, IntegrationStatus.active);
     expect(tileWidget(tester, 'Gedächtnis').detail, '3 Tools');
     expect(tileWidget(tester, 'Gedächtnis').sensitive, isTrue);
@@ -117,6 +119,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ListsScreen), findsOneWidget);
   });
+
+  testWidgets(
+    'Obsidian ohne Vault: „Einrichten“ öffnet Einstellungen → Obsidian',
+    (tester) async {
+      final env = TestEnv(enabled: const {'obsidian'});
+      await pumpIntegrations(tester, env);
+      final obsidian = tileWidget(tester, 'Obsidian');
+      expect(obsidian.status, IntegrationStatus.setupRequired);
+      expect(obsidian.detail, 'Obsidian-Vault-Ordner wählen');
+      await tester.tap(
+        find.descendant(
+          of: tile('Obsidian'),
+          matching: find.byType(OutlinedButton),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ObsidianScreen), findsOneWidget);
+    },
+  );
 
   testWidgets('Web-Detail führt zur Suchdienst-Einrichtung', (tester) async {
     final env = TestEnv(enabled: const {'web'});

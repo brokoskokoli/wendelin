@@ -5,11 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/preference_models.dart';
 import '../../di/preferences.dart';
+import '../../platform/assistant_platform.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
 
-/// Settings → Assistent: the user's name and a personality addition for
-/// the system prompt.
+/// Whether Wendelin is the default assistant right now.
+final defaultAssistantProvider = FutureProvider<bool>(
+  (ref) => ref.watch(assistantPlatformProvider).isDefaultAssistant(),
+);
+
+/// Settings → Assistent: Wendelin as default assistant (link to the system
+/// settings), the user's name and a personality addition for the system
+/// prompt.
 class AssistantScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const AssistantScreen({super.key});
@@ -21,6 +28,7 @@ class AssistantScreen extends ConsumerStatefulWidget {
 class _AssistantState extends ConsumerState<AssistantScreen> {
   final _name = TextEditingController();
   final _persona = TextEditingController();
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
@@ -28,10 +36,24 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
     final prefs = ref.read(assistantPrefsProvider);
     _name.text = prefs.userName ?? '';
     _persona.text = prefs.persona ?? '';
+    // Back from the system settings: check the status again.
+    _lifecycle = AppLifecycleListener(
+      onResume: () => ref.invalidate(defaultAssistantProvider),
+    );
+  }
+
+  Future<void> _openSystemSettings() async {
+    final opened = await ref
+        .read(assistantPlatformProvider)
+        .openAssistantSettings();
+    if (!opened && mounted) {
+      showHint(context, 'Die Systemeinstellungen ließen sich nicht öffnen.');
+    }
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _name.dispose();
     _persona.dispose();
     super.dispose();
@@ -47,8 +69,45 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
   @override
   Widget build(BuildContext context) => SettingsPage(
     title: 'Assistent',
-    intro: 'Beides geht als Teil der Anweisungen an das Modell.',
     children: [
+      SettingsSection(
+        title: 'Standard-Assistent',
+        children: [
+          SectionCard(
+            children: [
+              SettingsRow(
+                title: switch (ref.watch(defaultAssistantProvider).value) {
+                  true => 'Wendelin ist Standard-Assistent',
+                  _ => 'Nicht als Standard-Assistent gesetzt',
+                },
+                detail:
+                    'Langer Druck auf die Power-Taste oder die '
+                    'Assistenten-Geste öffnet Wendelin über jeder App.',
+                trailing: ref.watch(defaultAssistantProvider).value == true
+                    ? const CheckStatusIcon(
+                        CheckStatus.ok,
+                        semanticLabel: 'gesetzt',
+                      )
+                    : null,
+              ),
+            ],
+          ),
+          PrimaryButton(
+            'Als Standard-Assistent setzen',
+            onPressed: () => unawaited(_openSystemSettings()),
+          ),
+          Text(
+            'Android öffnet die Auswahl „Standard-App für digitalen '
+            'Assistenten“. Dort Wendelin wählen.',
+            style: WText.caption,
+          ),
+        ],
+      ),
+      Text(
+        'Name und Persönlichkeit gehen als Teil der Anweisungen an das '
+        'Modell.',
+        style: WText.intro,
+      ),
       TextField(
         controller: _name,
         style: WText.body,

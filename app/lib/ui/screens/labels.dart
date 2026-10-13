@@ -22,6 +22,7 @@ WIconData integrationIcon(String integrationId) => switch (integrationId) {
   'alarms' => WIcons.alarm,
   'lists' => WIcons.cart,
   'web' => WIcons.globe,
+  'obsidian' => WIcons.note,
   _ => WIcons.task,
 };
 
