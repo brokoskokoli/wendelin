@@ -434,17 +434,25 @@ void main() {
       expect(r.error, 'Zugangsdaten konnten nicht gelesen werden');
     });
 
-    test(
-      'unerwarteter Fehler (Error) entkommt nicht, Text bleibt drin',
-      () async {
-        final m = mockRunner((_) async => throw StateError('boom $canary'));
-        final r = await m.runner.call(def(), {'id': '1'});
-        expect(r.error, 'Unerwarteter Fehler beim HTTP-Aufruf');
-        expect('$r', isNot(contains(canary)));
-        final t = await HttpToolTester(m.runner).run(def(), {'id': '1'});
-        expect(t.ok, isFalse);
-      },
-    );
+    test('unerwarteter Fehler (Error) entkommt nicht, Text bleibt drin, '
+        'Zone bekommt ihn gemeldet', () async {
+      final reported = <Object>[];
+      final done = Completer<void>();
+      unawaited(
+        runZonedGuarded(() async {
+          final m = mockRunner((_) async => throw StateError('boom $canary'));
+          final r = await m.runner.call(def(), {'id': '1'});
+          expect(r.error, 'Unerwarteter Fehler beim HTTP-Aufruf');
+          expect('$r', isNot(contains(canary)));
+          final t = await HttpToolTester(m.runner).run(def(), {'id': '1'});
+          expect(t.ok, isFalse);
+          done.complete();
+        }, (e, _) => reported.add(e)),
+      );
+      await done.future;
+      expect(reported, hasLength(2));
+      expect(reported.first, isA<StateError>());
+    });
 
     test('Server nicht erreichbar', () async {
       final m = mockRunner(

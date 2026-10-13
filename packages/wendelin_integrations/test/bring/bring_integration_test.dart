@@ -16,7 +16,7 @@ void main() {
     test('Metadaten, Tools und Risikostufen', () {
       final b = BringIntegration(FakeBringApi(), FakeBringSecrets());
       expect(b.id, 'bring');
-      expect(b.displayName, 'Bring!');
+      expect(b.displayName, 'Bring! Einkaufsliste');
       expect(b.iconId, isNotEmpty);
       expect(b.sensitive, isFalse);
       expect(b.platforms, {AppPlatform.android, AppPlatform.ios});

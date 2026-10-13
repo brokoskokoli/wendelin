@@ -4,10 +4,10 @@ Nutzerdefinierte Tools (Konzept „Erweiterungswege 1. HTTP-Tool“), Entscheidu
 
 | Tool | Risiko | Zweck |
 | --- | --- | --- |
-| `http__<name>` | vom Nutzer gewählt, nie unter dem Vorschlag der Methode | eine `HttpToolDefinition` ausführen |
+| `http__<name>` | vom Nutzer gewählt, nie unter dem Vorschlag der Methode; `write` wird ohne `autoRun` bestätigt | eine `HttpToolDefinition` ausführen |
 
 - **Integrationen**: `http` („HTTP-Tools“) enthält alle aktiven, nicht sensiblen Definitionen, `http_sensitive` („HTTP-Tools (sensibel)“, `sensitive = true`) die sensiblen. `HttpToolsIntegration.all(definitions, runner)` liefert beide (die zweite nur, wenn es sensible gibt). Der Tool-Name bleibt beim Umschalten gleich.
-- **Risiko**: Vorschlag nach Methode, `GET`/`HEAD` → read, `POST`/`PUT`/`PATCH` → write, `DELETE` → external. `effectiveRisk` ist das Maximum aus Nutzerwahl und Vorschlag (K8 b, nur verschärfen). Es gibt kein Undo.
+- **Risiko**: Vorschlag nach Methode, `GET`/`HEAD` → read, `POST`/`PUT`/`PATCH` → write, `DELETE` → external. `effectiveRisk` ist das Maximum aus Nutzerwahl und Vorschlag (K8 b, nur verschärfen). Es gibt kein Undo, deshalb wird `write` wie `external` bestätigt (K13 j). Nur mit `autoRun: true` („Ohne Nachfrage ausführen (kein Rückgängig)“ im Editor) bleibt es bei `write`, und das nur, wenn Vorschlag **und** Nutzerwahl `write` sind (also `POST`/`PUT`/`PATCH` mit Wahl `write`). Ein auf `write` verschärftes `GET` wird immer bestätigt.
 - **Plattformen**: Android, iOS. **Berechtigung**: `INTERNET`. Ohne Einrichtung gibt es keine Tools.
 
 ## Definition (`HttpToolDefinition`, JSON mit `schemaVersion`)
@@ -21,9 +21,11 @@ Nutzerdefinierte Tools (Konzept „Erweiterungswege 1. HTTP-Tool“), Entscheidu
   "inputSchema": {"type": "object", "properties": {"entity": {"type": "string"}, "brightness": {"type": "integer"}}, "required": ["entity"]},
   "body": {"entity_id": "{entity}", "brightness": "{brightness}"},
   "auth": {"kind": "apiKey", "secretRef": "http.ha_light_on.token"},
-  "risk": "write", "sensitive": false, "homeNetwork": true, "enabled": true, "timeoutSeconds": 15
+  "risk": "write", "autoRun": true, "sensitive": false, "homeNetwork": true, "enabled": true, "timeoutSeconds": 15
 }
 ```
+
+`autoRun` ist optional (Standard `false`, wird nur bei `true` geschrieben). Die Schema-Version bleibt 1: Ältere Definitionen ohne das Feld lesen sich als `false`, also mit Bestätigung, und eine ältere App, die das Feld nicht kennt, ignoriert es.
 
 `ApiKeyAuth` ohne `headerName` sendet `Authorization: Bearer <Secret>`, mit `headerName` den Wert roh in diesem Header. `CustomHeadersAuth` bildet Header auf Secret-Referenzen ab. OAuth wird nicht unterstützt. Export/Import über `exportHttpTools`/`importHttpTools`; ungültige Definitionen werden mit lesbarem Fehler abgelehnt.
 
@@ -51,7 +53,7 @@ Weitere Beispiele:
 
 ## Ausführung und Ergebnis
 
-- Zeitlimit je Definition (Standard 15 s, 1–120 s) für den ganzen Aufruf. Danach (und nach Abbruch oder Ende) schließt der Pinning-Transport die Verbindung hart. Außer Abbruch entkommt keine Ausnahme aus `call()`: Unerwartetes wird zu „Unerwarteter Fehler beim HTTP-Aufruf“, ein kaputter `Location`-Header zu „Ungültige Weiterleitung“. Antwort höchstens 256 KB, danach Abbruch und Hinweis „abgeschnitten“. Nur Text, JSON und XML werden gelesen.
+- Zeitlimit je Definition (Standard 15 s, 1–120 s) für den ganzen Aufruf. Danach (und nach Abbruch oder Ende) schließt der Pinning-Transport die Verbindung hart. Außer Abbruch entkommt keine Ausnahme aus `call()`: Unerwartetes wird zu „Unerwarteter Fehler beim HTTP-Aufruf“ (Programmierfehler, also `Error`, meldet der Runner zusätzlich über `Zone.current.handleUncaughtError`), ein kaputter `Location`-Header zu „Ungültige Weiterleitung“. Antwort höchstens 256 KB, danach Abbruch und Hinweis „abgeschnitten“. Nur Text, JSON und XML werden gelesen.
 - `responsePath` (`data.items.0.name`) wählt einen Teil der JSON-Antwort aus. Fehlt der Pfad, ist das ein Fehler.
 - Das Ergebnis steht mit Daten-Hinweis in `<http_response …>`. Tags im Inhalt werden entschärft, das Kürzen übernimmt der `ResultShaper`. Bei Status ≥ 400 kommt `isError` mit Status und einem Ausschnitt von 300 Zeichen. Den Reason-Phrase des Servers sieht das Modell nicht.
 
