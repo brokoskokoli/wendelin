@@ -126,6 +126,29 @@ void main() {
       );
     });
 
+    test('an abort while the question is open wins over a „Ja“', () async {
+      // M17: answered „Ja“, then cancelled before the run resumed – no
+      // hand-over, the run ends as cancelled.
+      final (tee, _) = scripted('phala', [
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ], privacy: PrivacyLevel.tee);
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('nie')]);
+      final h = Harness(primary: tee, chain: [std], isPrivate: (_) => true);
+      final events = await h.run(
+        'x',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) {
+            e.respond(true);
+            h.runner.cancel();
+          }
+        },
+      );
+      expect(events.whereType<Escalated>(), isEmpty);
+      expect(ps.requests, isEmpty);
+      expect((terminal(events) as AgentFailed).error, AgentErrorKind.cancelled);
+    });
+
     test('twice invalid tool calls → escalation', () async {
       final tool = FakeTool(name: 'cal__create');
       final (a, _) = scripted('a', [

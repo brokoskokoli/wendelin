@@ -277,3 +277,11 @@ StepCheck coverageCheck(double cov, String tests, double min) {
     failure: cov < min ? 'Abdeckung $c < $min %' : null,
   );
 }
+
+/// Löscht `coverage/` in [dir] vor dem Testlauf, damit keine Hitmaps
+/// früherer Läufe (gelöschte oder umbenannte Tests und Dateien) in die
+/// Abdeckung eingehen.
+void clearCoverage(String dir) {
+  final cov = Directory('$dir/coverage');
+  if (cov.existsSync()) cov.deleteSync(recursive: true);
+}

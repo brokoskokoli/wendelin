@@ -8,7 +8,7 @@ import 'dart:async';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../agent_runner.dart';
+import '../agent_runner_texts.dart';
 import '../provider_resolver.dart';
 import 'privacy_scope.dart';
 import 'run_budget.dart';

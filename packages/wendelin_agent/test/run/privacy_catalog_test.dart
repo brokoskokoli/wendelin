@@ -1,6 +1,7 @@
 // WP14: risk level, tool catalog and redaction per target.
 
 import 'package:test/test.dart';
+import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -433,4 +434,29 @@ void main() {
       ]);
     });
   });
+  test(
+    'a memory entry above the memory floor taints with its own floor',
+    () async {
+      // M12: an entry counts with the higher of its own floor and
+      // `memoryFloor`, so a `local` entry seen by a local target taints the
+      // run with `local`, not with the lower `tee`.
+      final (local, pl) = scripted('ollama', [
+        ScriptedTurn.text('Tee.'),
+      ], privacy: PrivacyLevel.local);
+      final h = Harness(
+        primary: local,
+        memory: FixedMemoryRetriever([
+          const MemoryItem(
+            id: 'm1',
+            text: 'Mag Tee',
+            privacyFloor: PrivacyLevel.local,
+          ),
+        ]),
+        memoryFloor: PrivacyLevel.tee,
+      );
+      await h.run('Was trinke ich gern?');
+      expect(pl.requests.single.systemPrompt, contains('Mag Tee'));
+      expect(h.conversation.messages.first.privacyFloor, PrivacyLevel.local);
+    },
+  );
 }

@@ -7,11 +7,11 @@ library;
 
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../agent_runner.dart';
 import '../context_builder.dart';
 import '../provider_resolver.dart';
 import 'privacy_scope.dart';
 import 'run_budget.dart';
+import 'run_config.dart';
 import 'run_state.dart';
 
 /// Result of one model call.
@@ -49,7 +49,7 @@ final class ModelCall {
   );
 
   /// The runner (context builder, session, cost estimator).
-  final AgentRunner runner;
+  final RunConfig runner;
   final RunState _state;
   final PrivacyScope _privacy;
   final RunBudget _budget;

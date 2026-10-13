@@ -405,6 +405,21 @@ environment:
     '84,9 % ist rot',
   );
   t.eq(lcovCoverage(const []), 100.0, 'ohne Zeilen 100 %');
+  final pkg = Directory.systemTemp.createTempSync('gate_cov_');
+  try {
+    File('${pkg.path}/coverage/test/alt.dart.vm.json')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('{}');
+    clearCoverage(pkg.path);
+    t.isTrue(
+      !Directory('${pkg.path}/coverage').existsSync(),
+      'coverage/ wird vor dem Testlauf gelöscht',
+    );
+    clearCoverage(pkg.path);
+    t.isTrue(pkg.existsSync(), 'ohne coverage/ kein Fehler');
+  } finally {
+    pkg.deleteSync(recursive: true);
+  }
 }
 
 /// Die Prüfskripte enden bei einem Fehler mit Exit-Code ungleich 0.

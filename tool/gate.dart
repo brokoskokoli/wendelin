@@ -261,6 +261,7 @@ Future<void> _testPackage(Gate gate, String name, String dir) async {
     return;
   }
   final json = _reportFile(name);
+  clearCoverage(dir);
   await gate.step(
     'test $name',
     'dart',

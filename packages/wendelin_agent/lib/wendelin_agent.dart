@@ -9,6 +9,7 @@ library;
 
 export 'src/agent_config.dart';
 export 'src/agent_runner.dart';
+export 'src/agent_runner_texts.dart';
 export 'src/context_builder.dart';
 export 'src/give_up_classifier.dart';
 export 'src/ports.dart';

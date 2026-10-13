@@ -8,9 +8,10 @@ library;
 import 'package:collection/collection.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../agent_runner.dart';
+import '../agent_runner_texts.dart';
 import '../ports.dart';
 import '../provider_resolver.dart';
+import 'run_config.dart';
 import 'run_state.dart';
 
 /// Answers „what may the current target see?“ for one run.
@@ -31,7 +32,7 @@ final class PrivacyScope {
   PrivacyScope(this.runner, this._state);
 
   /// The runner (catalog per level, memory floor).
-  final AgentRunner runner;
+  final RunConfig runner;
   final RunState _state;
 
   bool _consentDeclined = false;
@@ -222,7 +223,7 @@ final class PrivacyScope {
             runFloor.isAtLeast(floor));
   }
 
-  /// The floor of memory entry [m]: its own, at least [AgentRunner.
+  /// The floor of memory entry [m]: its own, at least [RunConfig.
   /// memoryFloor].
   PrivacyLevel? _memoryFloor(MemoryItem m) {
     final own = m.privacyFloor;

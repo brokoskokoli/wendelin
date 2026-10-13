@@ -136,6 +136,47 @@ void main() {
       expect((terminal(events) as AgentDone).finalText, 'B fertig.');
     });
 
+    test('an abort during a failed call wins over the hand-over', () async {
+      // M6: the abort is checked before the error is handled, also in the
+      // escalation branch (the retry is already used up).
+      late final Harness h;
+      final (a, _) = scripted('a', [
+        ScriptedTurn.error(const NetworkException('weg')),
+      ]);
+      final aborting = ProviderTarget(
+        profileId: 'a',
+        modelId: 'a-model',
+        provider: _AbortOnCall(a.provider, 1, () => h.runner.cancel()),
+        privacy: PrivacyLevel.standard,
+      );
+      final (b, pb) = scripted('b', [ScriptedTurn.text('nie')]);
+      h = Harness(primary: aborting, chain: [b]);
+      final events = await h.run('x');
+      expect(events.whereType<Escalated>(), isEmpty);
+      expect(pb.requests, isEmpty);
+      expect((terminal(events) as AgentFailed).error, AgentErrorKind.cancelled);
+    });
+
+    test('the new target gets its own retry after a hand-over', () async {
+      // M8: `retried` is reset by the hand-over.
+      final (a, pa) = scripted('a', [
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ]);
+      final (b, pb) = scripted('b', [
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.text('Hier ist B.'),
+      ]);
+      final (c, pc) = scripted('c', [ScriptedTurn.text('nie')]);
+      final h = Harness(primary: a, chain: [b, c]);
+      final events = await h.run('x');
+      expect(pa.requests, hasLength(2));
+      expect(pb.requests, hasLength(2));
+      expect(pc.requests, isEmpty);
+      expect(events.whereType<Escalated>().single.toProfile, 'b');
+      expect((terminal(events) as AgentDone).finalText, 'Hier ist B.');
+    });
+
     test('each model call gets its own retry', () async {
       final (a, pa) = scripted('a', [
         ScriptedTurn.error(const NetworkException('weg')),
@@ -378,4 +419,37 @@ void main() {
       },
     );
   });
+}
+
+/// Delegates to [inner], but its call number [at] (0-based) aborts the run
+/// via [abort] and then fails with a retryable error, ignoring the token.
+final class _AbortOnCall implements LlmProvider {
+  _AbortOnCall(this.inner, this.at, this.abort);
+
+  final LlmProvider inner;
+  final int at;
+  final void Function() abort;
+  var _calls = 0;
+
+  @override
+  ProviderType get type => inner.type;
+
+  @override
+  ProviderCapabilities get caps => inner.caps;
+
+  @override
+  Future<List<ModelInfo>> listModels() => inner.listModels();
+
+  @override
+  Future<HealthCheck> test() => inner.test();
+
+  @override
+  Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) async* {
+    if (_calls++ == at) {
+      abort();
+      yield const ErrorEvent(NetworkException('weg'));
+      return;
+    }
+    yield* inner.chat(req, cancel: cancel);
+  }
 }

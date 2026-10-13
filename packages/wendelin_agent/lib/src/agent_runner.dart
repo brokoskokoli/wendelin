@@ -11,6 +11,7 @@ import 'run/escalation.dart';
 import 'run/model_call.dart';
 import 'run/privacy_scope.dart';
 import 'run/run_budget.dart';
+import 'run/run_config.dart';
 import 'run/run_start.dart';
 import 'run/run_state.dart';
 import 'run/tool_round.dart';
@@ -22,7 +23,7 @@ import 'run/tool_round.dart';
 /// a final answer or a limit; escalate along the resolver's chain when the
 /// model fails. See `docs/adr/0003-agent-loop.md` for the details; the
 /// loop is [_Run], its parts are under `src/run/`.
-final class AgentRunner implements AgentRun {
+final class AgentRunner implements AgentRun, RunConfig {
   /// Creates a runner.
   AgentRunner({
     required this.resolver,
@@ -40,24 +41,30 @@ final class AgentRunner implements AgentRun {
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier();
 
   /// Chooses providers and escalation targets.
+  @override
   final ProviderResolver resolver;
 
   /// Builds system prompt, tool specs and messages.
+  @override
   final ContextBuilder contextBuilder;
 
   /// Executes tool calls.
+  @override
   final ToolInvoker invoker;
 
   /// Time source for limits and tools.
+  @override
   final Clock clock;
 
   /// Session id passed to tools.
+  @override
   final String sessionId;
 
   /// Persists the conversation; `null` = not persisted.
   final ConversationRecorder? recorder;
 
   /// Prices model calls; `null` = no cost.
+  @override
   final CostEstimator? costEstimator;
 
   /// Checked before every model call; `null` = no budget.
@@ -71,10 +78,12 @@ final class AgentRunner implements AgentRun {
   /// the [invoker], and calls and results of such tools in the history are
   /// redacted for that target. `null` = the [ContextBuilder.catalog] for
   /// every target (the [invoker] must then use the same catalog).
+  @override
   final ToolCatalog Function(PrivacyLevel level)? catalogFor;
 
   /// Called for every call refused because the current target may not see
   /// the tool (it never reaches the [invoker], so the app audits it here).
+  @override
   final void Function(String sessionId, ToolCallBlock call)? onToolRefused;
 
   /// Privacy floor of every memory entry: the lowest level allowed to see
@@ -83,6 +92,7 @@ final class AgentRunner implements AgentRun {
   /// weaker targets get no memory in the system prompt, and a run that
   /// does see it is tainted (escalations below ask first). `null` = no
   /// floor besides the entries' own.
+  @override
   final PrivacyLevel? memoryFloor;
 
   /// Detects „kann ich nicht“ answers.
@@ -117,39 +127,6 @@ final class AgentRunner implements AgentRun {
   void _finished(_Run state) {
     if (identical(_active, state)) _active = null;
   }
-}
-
-/// Model- and user-facing texts of the [AgentRunner] for protected data.
-abstract final class AgentRunnerTexts {
-  /// Replaces assistant text that was built from results the target may not
-  /// see.
-  static const placeholder = '[Inhalt aus geschützter Quelle ausgeblendet]';
-
-  /// Replaces results of tools the target may not see and every result in
-  /// a protected section.
-  static const redactedResult =
-      '[Tool-Ergebnis aus geschützter Quelle ausgeblendet]';
-
-  /// Replaces messages of an earlier private turn for targets below its
-  /// privacy floor.
-  static const privateHidden = '[privater Gesprächsteil ausgeblendet]';
-
-  /// Message when a private request has no target with enough privacy.
-  static const noPrivateTarget =
-      'Die Anfrage ist privat, aber kein ausreichend geschütztes Modell ist '
-      'verfügbar. Ich habe sie deshalb nicht gesendet.';
-
-  /// Message when the user declines handing protected data to another
-  /// model.
-  static const protectedDeclined =
-      'Die Anfrage enthält Daten aus geschützten Quellen. Ohne deine '
-      'Zustimmung gebe ich sie nicht an ein anderes Modell weiter, deshalb '
-      'habe ich hier aufgehört.';
-
-  /// Error text for a call to a tool the current target may not see.
-  static String hiddenTool(String name) =>
-      'Das Tool „$name“ steht diesem Modell nicht zur Verfügung. Nutze nur '
-      'Tools aus der Tool-Liste.';
 }
 
 /// State and loop of one [AgentRunner.run] call.

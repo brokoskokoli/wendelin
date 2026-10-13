@@ -7,8 +7,9 @@ library;
 import 'package:collection/collection.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../agent_runner.dart';
+import '../agent_runner_texts.dart';
 import 'privacy_scope.dart';
+import 'run_config.dart';
 import 'run_state.dart';
 
 /// Routes [input], builds the context into [state] and records the user
@@ -20,7 +21,7 @@ import 'run_state.dart';
 /// the floor follows the taint before the user message is recorded, and
 /// a private request without a sufficient target is never sent.
 Future<bool> startRun(
-  AgentRunner runner,
+  RunConfig runner,
   UserInput input,
   RunState state,
   PrivacyScope privacy,

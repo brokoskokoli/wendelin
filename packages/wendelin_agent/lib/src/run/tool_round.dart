@@ -7,8 +7,9 @@ library;
 import 'package:collection/collection.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../agent_runner.dart';
+import '../agent_runner_texts.dart';
 import 'privacy_scope.dart';
+import 'run_config.dart';
 import 'run_state.dart';
 
 /// Executes the tool calls of one model answer.
@@ -27,7 +28,7 @@ final class ToolRound {
   ToolRound(this.runner, this._state, this._privacy, this._control);
 
   /// The runner (invoker, session, clock, device).
-  final AgentRunner runner;
+  final RunConfig runner;
   final RunState _state;
   final PrivacyScope _privacy;
   final RunControl _control;
