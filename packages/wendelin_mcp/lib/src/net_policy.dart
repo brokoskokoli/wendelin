@@ -1,5 +1,13 @@
 import 'dart:io';
 
+import 'package:wendelin_integrations/wendelin_integrations.dart'
+    show
+        Ipv4Embedding,
+        NetScope,
+        classifyNet,
+        isLocalhostName,
+        normalizeHostName;
+
 import 'errors.dart';
 
 // Netzziel-Regeln (ADR 0010): https überall, http nur ins Heimnetz.
@@ -66,8 +74,9 @@ void checkRedirect(Uri from, Uri to) {
 /// Whether [host] is `localhost` or a loopback literal.
 bool isLoopbackHost(String host) {
   final h = _trim(host);
-  if (h == 'localhost' || h.endsWith('.localhost')) return true;
-  return InternetAddress.tryParse(h)?.isLoopback ?? false;
+  if (isLocalhostName(h)) return true;
+  final address = InternetAddress.tryParse(h);
+  return address != null && _isNativeLoopback(address);
 }
 
 /// Whether [host] lies in the home network as defined by [checkServerUrl].
@@ -77,20 +86,27 @@ bool isHomeNetworkHost(String host) {
   if (_homeSuffixes.any(h.endsWith)) return true;
   final address = InternetAddress.tryParse(h);
   if (address == null) return false;
-  final b = address.rawAddress;
-  if (address.type == InternetAddressType.IPv4) {
-    return b[0] == 10 || // 10/8 (auch Emulator 10.0.2.2)
-        (b[0] == 172 && b[1] >= 16 && b[1] <= 31) || // 172.16/12
-        (b[0] == 192 && b[1] == 168) || // 192.168/16
-        (b[0] == 100 && b[1] >= 64 && b[1] <= 127); // 100.64/10 Tailscale
-  }
-  return (b[0] & 0xfe) == 0xfc || // fc00::/7 ULA (Tailscale fd7a:…)
-      (b[0] == 0xfe && (b[1] & 0xc0) == 0x80); // fe80::/10
+  final c = classifyNet(address);
+  if (c.embedding != Ipv4Embedding.none) return false;
+  return switch (c.scope) {
+    NetScope.privateNetwork ||
+    NetScope.carrierNat ||
+    NetScope.uniqueLocal => true,
+    // 169.254/16 bleibt wie bisher ausgeschlossen, nur fe80::/10 zählt.
+    NetScope.linkLocal => address.type == InternetAddressType.IPv6,
+    _ => false,
+  };
+}
+
+// Loopback nur als 127/8 oder ::1, nicht als eingebettetes IPv4.
+bool _isNativeLoopback(InternetAddress address) {
+  final c = classifyNet(address);
+  return c.scope == NetScope.loopback && c.embedding == Ipv4Embedding.none;
 }
 
 String _trim(String host) {
-  var h = host.toLowerCase();
-  if (h.startsWith('[') && h.endsWith(']')) h = h.substring(1, h.length - 1);
-  if (h.endsWith('.')) h = h.substring(0, h.length - 1);
-  return h;
+  final h = host.toLowerCase();
+  return normalizeHostName(
+    h.startsWith('[') && h.endsWith(']') ? h.substring(1, h.length - 1) : h,
+  );
 }
