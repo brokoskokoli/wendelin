@@ -66,14 +66,14 @@ dart run tool/gate.dart --verbose    # bisherige, ausführliche Ausgabe
 2. `dart analyze --fatal-infos` (bzw. `flutter analyze` für app)
 3. `dart test` in jedem Paket, `flutter test` in app (Reporter `failures-only`, Testanzahl aus dem JSON-Bericht)
 4. Zeilenabdeckung je Paket unter `packages/` **≥ 85 %** (`dart test --coverage` + `coverage:format_coverage`)
-5. `dart run tool/check_deps.dart` (Abhängigkeitsregeln oben)
+5. `dart run tool/check_deps.dart` (Abhängigkeitsregeln oben, auch für `dev_dependencies`)
 6. `dart run tool/check_secrets.dart` (keine Schlüssel-Muster im Baum; verbotene Identitäten aus einer lokalen, nicht versionierten Liste)
 7. `dart run tool/check_sizes.dart` (Größen, siehe unten) und `dart run tool/check_docs.dart` (Pfadangaben in `docs/ARCHITECTURE.md`, dieser Datei, `CLAUDE.md` und den Paket-READMEs existieren)
 8. Selbsttests ohne Android-SDK: `dart run tool/self_test.dart` (Gate-Auswahl, Größen-Check, Doku-Pfade), `bash tool/android_device.sh --self-test` (Geräteauswahl mit Fake-adb), `tool/check_apk.sh --self-test` (APK-Prüfung mit Attrappen)
 
 Ausgabe: Standard ist eine Zeile je Schritt. Bei einem Fehler erscheinen die letzten 200 Zeilen dieses Schritts (Testname, Fehlermeldung, Datei). Am Ende steht eine Tabelle mit Ergebnis, Dauer, Testanzahl und Abdeckung je Schritt, die Gesamtdauer und `GATE GRÜN` bzw. `GATE ROT: <Schritte>`. Der Exit-Code ist bei Rot ungleich 0.
 
-`--changed` vergleicht mit dem Merge-Base von origin/main (bzw. `--base=<ref>`) und nimmt nicht committete und neue Dateien dazu. Geprüft werden die geänderten Pakete und transitiv alle abhängigen (Liste aus `tool/check_deps.dart`, die App hängt von allen ab). Änderungen an `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, `tool/gate.dart` oder `tool/check_deps.dart` lösen das ganze Gate aus, reine Doku nur die globalen Prüfungen. Die Ausgabe nennt den Grund je Paket. `--changed` ist für Zwischenstände; vor Commit und Merge gilt das volle Gate. CI prüft immer alles.
+`--changed` vergleicht mit dem Merge-Base von origin/main (bzw. `--base=<ref>`) und nimmt nicht committete und neue Dateien dazu. Geprüft werden die geänderten Pakete und transitiv alle abhängigen (Erlaubnisliste aus `tool/check_deps.dart` plus die echten Kanten der pubspecs inklusive `dev_dependencies`; die App hängt von allen ab). Änderungen an `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, `tool/gate.dart` oder `tool/check_deps.dart` lösen das ganze Gate aus, reine Doku (Markdown) nur die globalen Prüfungen. Andere Dateien unter `docs/` gelten nicht als Doku: `docs/design/` prüft die App (Tokens), alles andere das ganze Gate. Die Ausgabe nennt den Grund je Paket. `--changed` ist für Zwischenstände; vor Commit und Merge gilt das volle Gate. CI prüft immer alles.
 
 ## Größen
 

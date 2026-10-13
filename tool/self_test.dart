@@ -4,6 +4,7 @@
 //   dart run tool/self_test.dart
 import 'dart:io';
 
+import 'check_deps.dart' show pubspecWorkspaceDeps;
 import 'src/doc_paths.dart';
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
@@ -18,6 +19,8 @@ Future<void> main() async {
   _sizeScan(t);
   _sizeRules(t);
   _docPaths(t);
+  _depsAndGit(t);
+  await _exitCodes(t);
   exitCode = t.finish('tool self-test');
 }
 
@@ -56,6 +59,9 @@ void _changedSelection(SelfCheck t) {
     'nur App': (['app/lib/main.dart'], {'app'}),
     'evals': (['evals/lib/src/cli.dart'], {'evals'}),
     'tool/gate.dart → alles': (['docs/x.md', 'tool/gate.dart'], null),
+    'tool/check_deps.dart → alles': (['tool/check_deps.dart'], null),
+    'docs/design (Tokens) → App': (['docs/design/tokens.json'], {'app'}),
+    'andere Nicht-Doku unter docs/ → alles': (['docs/notes/a.json'], null),
     'pubspec.lock → alles': (['pubspec.lock'], null),
     'analysis_options.yaml → alles': (['analysis_options.yaml'], null),
     'unbekanntes Paket → alles': (['packages/wendelin_neu/lib/a.dart'], null),
@@ -328,4 +334,110 @@ Siehe `app/lib/di/providers.dart`, `agent_runner.dart:720`, `di/`,
     index.resolves('design/DESIGN.md', docDir: 'docs'),
     'relativ zum Dokument',
   );
+}
+
+void _depsAndGit(SelfCheck t) {
+  t.group('Abhängigkeiten und Git');
+  // Transitiv: a ← b ← c (c hängt über b von a ab).
+  final chain = {
+    'a': <String>{},
+    'b': {'a'},
+    'c': {'b'},
+    'd': <String>{},
+  };
+  final s = selectChanged(['packages/a/lib/x.dart'], chain);
+  t.eq(s.targets.keys.toSet(), {'a', 'b', 'c'}, 'transitive Abhängige');
+  t.eq(s.targets['c'], 'hängt von a ab', 'Grund über zwei Stufen');
+
+  const pubspec = '''
+name: wendelin_tools
+dependencies:
+  meta: ^1.0.0
+  wendelin_core: any
+dev_dependencies:
+  test: any
+  wendelin_storage: any
+environment:
+  wendelin_fake: any
+''';
+  t.eq(pubspecWorkspaceDeps(pubspec), {
+    'wendelin_core',
+    'wendelin_storage',
+  }, 'dependencies und dev_dependencies');
+  final deps = workspaceDeps(pubspecs: {'wendelin_tools': pubspec});
+  t.isTrue(
+    deps['wendelin_tools']!.contains('wendelin_storage'),
+    'dev_dependency ist eine Kante für --changed',
+  );
+  final viaDev = selectChanged(['packages/wendelin_storage/lib/a.dart'], deps);
+  t.isTrue(
+    viaDev.targets.containsKey('wendelin_tools'),
+    'Änderung in storage prüft tools (Test-Abhängigkeit)',
+  );
+
+  final calls = <String>[];
+  final paths = changedPaths('origin/main', (args) {
+    calls.add(args.first);
+    return switch (args.first) {
+      'merge-base' => 'abc123\n',
+      'diff' => 'packages/b/lib/x.dart\x00docs/a.md\x00',
+      'ls-files' => 'packages/c/lib/neu.dart\x00docs/a.md\x00',
+      _ => '',
+    };
+  });
+  t.eq(paths, [
+    'docs/a.md',
+    'packages/b/lib/x.dart',
+    'packages/c/lib/neu.dart',
+  ], 'geänderte und neue (untracked) Dateien, ohne Doppelte');
+  t.eq(calls, ['merge-base', 'diff', 'ls-files'], 'Git-Aufrufe');
+
+  t.group('Abdeckung');
+  final lcov = [
+    'SF:/p/lib/src/a.dart', 'LF:100', 'LH:85', //
+    'SF:/p/lib/src/db.g.dart', 'LF:100', 'LH:0', //
+    'SF:/p/lib/testing/fake.dart', 'LF:50', 'LH:0',
+  ];
+  t.eq(lcovCoverage(lcov), 85.0, 'ohne generierten Code und lib/testing');
+  t.eq(coverageCheck(85.0, '3 Tests', 85).failure, null, '85 % reicht');
+  t.isTrue(
+    coverageCheck(84.9, '3 Tests', 85).failure?.contains('84.9 %') ?? false,
+    '84,9 % ist rot',
+  );
+  t.eq(lcovCoverage(const []), 100.0, 'ohne Zeilen 100 %');
+}
+
+/// Die Prüfskripte enden bei einem Fehler mit Exit-Code ungleich 0.
+Future<void> _exitCodes(SelfCheck t) async {
+  t.group('Exit-Codes der Prüfskripte');
+  final tool = File.fromUri(Platform.script).parent.path;
+  final dir = Directory.systemTemp.createTempSync('tool_selftest_');
+  try {
+    File('${dir.path}/packages/x/lib/big.dart')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('// x\n' * 801);
+    final sizes = await Process.run('dart', [
+      'run',
+      '$tool/check_sizes.dart',
+    ], workingDirectory: dir.path);
+    t.eq(sizes.exitCode, 1, 'check_sizes: Datei > 800 ohne Allowlist');
+    t.isTrue(
+      '${sizes.stderr}'.contains('nicht auf der Allowlist'),
+      'check_sizes nennt den Fehler',
+    );
+
+    await Process.run('git', ['init', '-q'], workingDirectory: dir.path);
+    File('${dir.path}/CLAUDE.md').writeAsStringSync('Siehe `fehlt/a.dart`.\n');
+    final docs = await Process.run('dart', [
+      'run',
+      '$tool/check_docs.dart',
+    ], workingDirectory: dir.path);
+    t.eq(docs.exitCode, 1, 'check_docs: fehlender Pfad');
+    t.isTrue(
+      '${docs.stderr}'.contains('CLAUDE.md:1: Pfad `fehlt/a.dart`'),
+      'check_docs nennt Datei und Zeile',
+    );
+  } finally {
+    dir.deleteSync(recursive: true);
+  }
 }

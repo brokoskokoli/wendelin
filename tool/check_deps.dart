@@ -41,7 +41,7 @@ void main() {
         : Directory('${root.path}/packages/${entry.key}');
     final pubspec = File('${dir.path}/pubspec.yaml');
     if (!pubspec.existsSync()) continue;
-    final deps = _workspaceDeps(pubspec.readAsStringSync());
+    final deps = pubspecWorkspaceDeps(pubspec.readAsStringSync());
     for (final dep in deps) {
       if (!entry.value.contains(dep)) {
         errors.add('${entry.key}: Abhängigkeit auf $dep nicht erlaubt');
@@ -115,11 +115,15 @@ void main() {
   }
 }
 
-Set<String> _workspaceDeps(String pubspec) {
+/// Workspace-Pakete (`wendelin_*`) unter `dependencies` und
+/// `dev_dependencies` einer pubspec. Auch Test-Abhängigkeiten zählen: Sie
+/// sind Kanten für die Regeln und für `gate.dart --changed`.
+Set<String> pubspecWorkspaceDeps(String pubspec) {
   final result = <String>{};
+  final section = RegExp(r'^(dev_)?dependencies:\s*$');
   var inDeps = false;
   for (final line in pubspec.split('\n')) {
-    if (RegExp(r'^dependencies:\s*$').hasMatch(line)) {
+    if (section.hasMatch(line)) {
       inDeps = true;
       continue;
     }

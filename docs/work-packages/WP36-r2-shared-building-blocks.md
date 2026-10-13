@@ -9,6 +9,7 @@ Abhängig von: **WP35** (Größen-Check, `--changed`, Messwerte). Teil b zusätz
 | a | Netzziel-Kern in `wendelin_integrations`, `fetch_guard` und `http_target` darauf; `MemoryEntry`-Umbenennung; SSE-Testduplikat | nach WP35 |
 | b | `wendelin_mcp/src/net_policy.dart` auf den Kern | nach WP27-Merge (WP27 nutzt `net_policy` in der App) |
 | c | Text-Faltung in `wendelin_core`, Umstellung von Listen/Obsidian-Matching, Routing und Kommentar in MCP-Naming | nach WP33-Merge (WP33 baut die phonetische Titelsuche auf `foldText`) |
+| d | Große Integrations-Tool-Dateien unter die Fehlerschwelle (800 Zeilen) bringen: `calendar_tools.dart`, `lists.dart`, `obsidian_tools.dart` (Allowlist-Einträge aus WP35) | nach Teil c und dem Merge von WP33 (WP33 ändert Listen- und Obsidian-Suche) |
 
 ## Inhalt
 
@@ -32,6 +33,10 @@ Abhängig von: **WP35** (Größen-Check, `--changed`, Messwerte). Teil b zusätz
 - `app/lib/platform/repository_memory_port.dart` und alle anderen Präfix-Importe (`as wi` / `as st`) werden ohne Präfix lesbar. Doppelte Felddefinitionen bleiben getrennt, sind aber über die Abbildung im Port-Adapter getestet.
 - Alternativ (nur mit Begründung im Bericht): Domänenmodell nach `wendelin_core`. Das ist größer und nur sinnvoll, wenn beide Modelle feldgleich sind.
 
+**Integrations-Tools aufteilen, Teil d**
+- `packages/wendelin_integrations/lib/src/calendar/calendar_tools.dart` (859 Zeilen), `…/lists/lists.dart` (864) und `…/obsidian/obsidian_tools.dart` (905) stehen in `tool/size_allowlist.yaml`. Je Datei ein Schnitt nach Tools bzw. Themen (z. B. Lesen/Schreiben, Port-Typen in eigene Datei), jede Datei danach ≤ 600 Zeilen. Der Barrel exportiert dieselben Namen; Tool-Namen, Schemas, Risikostufen und Nutzertexte bleiben byte-gleich.
+- Die drei Einträge verschwinden aus `tool/size_allowlist.yaml` (der Größen-Check verlangt das, sobald eine Datei unter 800 Zeilen fällt).
+
 **SSE-Testduplikat (N1), Teil a**
 - `packages/wendelin_providers/test/sse/sse_parser_test.dart` entfällt. Fälle, die es nur dort gibt (z. B. `fake_server`-Fälle), ziehen nach `packages/wendelin_core/test/sse/`. Die Abdeckung von `wendelin_core` bleibt gleich oder steigt. Die Testanzahl in providers sinkt um genau die Duplikate (im Bericht belegt).
 
@@ -41,6 +46,7 @@ Abhängig von: **WP35** (Größen-Check, `--changed`, Messwerte). Teil b zusätz
 - [ ] Faltung (c): `foldForMatch` mit Semantik-Tabelle im Test. `matching.dart` und `routing_text.dart` nutzen sie. MCP-Naming mit Ausnahme-Kommentar. Liste der Zeichen mit abweichendem Altverhalten im Bericht. Bestehende Routing-, Listen- und Obsidian-Tests unverändert grün.
 - [ ] `MemoryEntry`/`MemoryCategory` gibt es nur noch in `wendelin_integrations`. Keine Präfix-Importe mehr für diese Typen in `app/`. Kein Schema-Diff (`*.steps.dart`, `drift_schemas` unverändert).
 - [ ] SSE-Parser-Test nur noch in `wendelin_core`.
+- [ ] Teil d: `calendar_tools.dart`, `lists.dart`, `obsidian_tools.dart` und ihre Nachfolger je ≤ 600 Zeilen, ihre Allowlist-Einträge entfernt.
 - [ ] Mutationsproben (je Teil ≥ 5) gegen die verschobenen Invarianten: z. B. Grenze `100.64.0.0/10` ±1, `fe80::/10` als öffentlich, Loopback-Erkennung umgedreht, Policy erlaubt `private` für Web-Abruf, Faltung lässt Umlaut stehen, Routing-Variante faltet æ anders. Jede Mutation macht einen Test rot.
 - [ ] Abdeckung je berührtem Paket nicht niedriger als vorher, Gate grün (voll).
 - [ ] Diff je Teil ≤ ca. 1 500 Zeilen Produktivcode. Reine Verschiebungen ausgewiesen.

@@ -53,6 +53,8 @@ ADR-Nummer vorab vergeben: **ADR 0013** Plattformkanäle (Manifest, ggf. Pigeon)
 
 Richtwert (Gutachten H1): **höchstens ca. 1 500 Zeilen geänderter Produktivcode je Review-Einheit** (hinzugefügt plus entfernt unter `lib/` bzw. `app/lib/` und Kotlin `main`, ohne Tests, ohne generierten Code). Reine Verschiebungen, die `git diff --color-moved=zebra main...HEAD` als verschoben markiert, dürfen darüber hinausgehen, wenn der Abschlussbericht sie ausweist. Größere Pakete werden in Teil-Reviews mit eigenem Merge geschnitten (in den WPs als a/b/c vorgeschlagen). Jeder Teil hat ein eigenes Review nach `REVIEW.md`, mit eigenen Mutationsproben.
 
+**Grenzfall:** `app/lib/ui/settings/http_tool_editor_screen.dart` hat genau 800 Zeilen, also die Fehlerschwelle des Größen-Checks (Stand WP35). Jede weitere Zeile macht das Gate rot. Laufende Pakete, die dort ändern (z. B. WP32 Secret-Felder), teilen die Datei vorher auf (siehe WP40, Editor-Abschnitte) statt sie auf die Allowlist zu setzen.
+
 Messung: `git diff --shortstat main...HEAD -- '*/lib/*' ':!*.g.dart' ':!*.steps.dart'` plus Kotlin `main`. Ab WP35 liefert `dart run tool/check_sizes.dart --report` die Dateigrößen.
 
 ## Messwerte vorher/nachher

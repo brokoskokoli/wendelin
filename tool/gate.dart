@@ -6,6 +6,7 @@ import 'dart:io';
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
 
+/// Mindestabdeckung je Paket unter `packages/` (und `evals`).
 const minCoverage = 85.0;
 
 const usage = '''
@@ -13,7 +14,7 @@ Gate: muss vor jedem Commit grün sein.
 
   dart run tool/gate.dart                  alles (Pakete, evals, App, Prüfungen)
   dart run tool/gate.dart --no-app         ohne Flutter-App (wie der Ubuntu-Job in CI)
-  dart run tool/gate.dart wendelin_core    nur diese Pakete (+ globale Prüfungen)
+  dart run tool/gate.dart wendelin_core    nur diese Pakete (+ globale Prüfungen, Selbsttests)
   dart run tool/gate.dart --changed        nur geänderte Pakete und ihre Abhängigen
 
 Schalter:
@@ -168,13 +169,14 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
   if (!args.contains('--changed')) {
     return only.isEmpty
         ? (targets: null, tooling: true)
-        : (targets: only, tooling: false);
+        // Mit Paketen laufen die Werkzeug- und Geräte-Selbsttests weiter mit.
+        : (targets: only, tooling: true);
   }
   final baseArg = args.where((a) => a.startsWith('--base=')).firstOrNull;
   final base = baseArg?.substring(7) ?? _defaultBase();
   final List<String> changed;
   try {
-    changed = _changedPaths(base);
+    changed = changedPaths(base, _git);
   } on ProcessException catch (e) {
     stderr.writeln('--changed: ${e.message}');
     return null;
@@ -205,23 +207,12 @@ String _defaultBase() =>
     ? 'origin/main'
     : 'main';
 
-/// Geänderte Pfade seit dem Merge-Base mit [base], inklusive nicht
-/// committeter und neuer (nicht ignorierter) Dateien.
-List<String> _changedPaths(String base) {
-  String git(List<String> a) {
-    final r = Process.runSync('git', a);
-    if (r.exitCode != 0) {
-      throw ProcessException('git', a, '${r.stderr}'.trim(), r.exitCode);
-    }
-    return r.stdout as String;
+String _git(List<String> a) {
+  final r = Process.runSync('git', a);
+  if (r.exitCode != 0) {
+    throw ProcessException('git', a, '${r.stderr}'.trim(), r.exitCode);
   }
-
-  final mergeBase = git(['merge-base', base, 'HEAD']).trim();
-  return {
-    ...git(['diff', '--name-only', '--no-renames', '-z', mergeBase])
-        .split('\x00'),
-    ...git(['ls-files', '--others', '--exclude-standard', '-z']).split('\x00'),
-  }.where((p) => p.isNotEmpty).toList()..sort();
+  return r.stdout as String;
 }
 
 /// Prüfziel → Ordner, sortiert, `evals` am Ende.
@@ -278,12 +269,7 @@ Future<void> _testPackage(Gate gate, String name, String dir) async {
     check: (r) async {
       final tests = testDetail(countTests(json));
       if (r.exitCode != 0) return (detail: tests, failure: null);
-      final cov = await _coverage(dir);
-      final c = '${cov.toStringAsFixed(1)} %';
-      return (
-        detail: [if (tests.isNotEmpty) tests, c].join(', '),
-        failure: cov < minCoverage ? 'Abdeckung $c < $minCoverage %' : null,
-      );
+      return coverageCheck(await _coverage(dir), tests, minCoverage);
     },
   );
 }
@@ -306,22 +292,5 @@ Future<double> _coverage(String dir) async {
     stderr.writeln(r.stderr);
     return 0;
   }
-  var found = 0, hit = 0;
-  var skip = false;
-  for (final line in File(lcov).readAsLinesSync()) {
-    if (line.startsWith('SF:')) {
-      final f = line.substring(3);
-      skip =
-          f.endsWith('.g.dart') ||
-          // drift `make-migrations` (generierte Schema-Schritte).
-          f.endsWith('.steps.dart') ||
-          f.contains('/lib/testing/') ||
-          f.endsWith('/lib/testing.dart');
-    } else if (!skip && line.startsWith('LF:')) {
-      found += int.parse(line.substring(3));
-    } else if (!skip && line.startsWith('LH:')) {
-      hit += int.parse(line.substring(3));
-    }
-  }
-  return found == 0 ? 100 : hit * 100 / found;
+  return lcovCoverage(File(lcov).readAsLinesSync());
 }
