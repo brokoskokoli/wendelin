@@ -22,6 +22,7 @@ Future<void> main() async {
   _docPaths(t);
   _depsAndGit(t);
   channelChecks(t);
+  kotlinUnitChecks(t);
   await _exitCodes(t);
   exitCode = t.finish('tool self-test');
 }

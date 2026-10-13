@@ -36,7 +36,7 @@ ChannelReport checkChannels({
     r.errors.add('$manifestPath:1: kein gültiges JSON (${e.message})');
     return r;
   }
-  final root = json is Map ? json : const {};
+  final root = json is Map<String, Object?> ? json : const <String, Object?>{};
   final namesPath = root['dartNames'];
   final channels = root['channels'];
   if (namesPath is! String || channels is! Map) {
@@ -57,7 +57,7 @@ ChannelReport checkChannels({
 
   for (final e in channels.entries) {
     final name = '${e.key}';
-    final c = e.value is Map ? e.value as Map : const {};
+    final c = e.value is Map ? e.value as Map : const <String, Object?>{};
     r.channels++;
     final dart = <_Src>[], kotlin = <_Src>[];
     for (final (key, into) in [('dart', dart), ('kotlin', kotlin)]) {
@@ -76,10 +76,10 @@ ChannelReport checkChannels({
     final ctx = _Ctx(r, manifestPath, mline, name);
 
     if (names != null && !names.text.contains("'$name'")) {
-      ctx.err('$manifestPath', mline(name), 'Kanalname fehlt in $namesPath');
+      ctx.err(manifestPath, mline(name), 'Kanalname fehlt in $namesPath');
     }
     if (!kotlin.any((k) => k.text.contains('"$name"'))) {
-      ctx.err('$manifestPath', mline(name), 'Kanalname fehlt im Kotlin-Code');
+      ctx.err(manifestPath, mline(name), 'Kanalname fehlt im Kotlin-Code');
     }
 
     final dartCalls = [for (final s in dart) ..._dartCalls(s)];
@@ -261,8 +261,10 @@ void _argKeys(
       }
     }
   }
+  // `call.argument<T>("k")` and the typed accessors of ChannelArgs.
   final read = RegExp(
-    r'\b(?:argument|hasArgument)\s*(?:<[^()]*>)?\s*\(\s*"(\w+)"',
+    r'\b(?:argument|hasArgument|args\.(?:string|requireString|requireLong|'
+    r'requireBytes|isTrue|stringList))\s*(?:<[^()]*>)?\s*\(\s*"(\w+)"',
   );
   for (final s in kotlin) {
     for (final m in read.allMatches(s.code)) {

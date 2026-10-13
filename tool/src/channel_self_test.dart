@@ -1,5 +1,6 @@
 // Selbsttests von tool/src/channel_check.dart mit kleinen Beispieldateien.
 import 'channel_check.dart';
+import 'kotlin_unit.dart';
 import 'self_check.dart';
 
 const _dartPath = 'app/lib/platform/x.dart';
@@ -152,4 +153,29 @@ void channelChecks(SelfCheck t) {
   t.eq(r.errors, <String>[], 'Zweige anderer when-Blöcke sind keine Methoden');
   r = _run(manifest: '{');
   t.isTrue(_has(r, 'kein gültiges JSON'), 'kaputtes Manifest');
+}
+
+/// Selbsttests der Hilfen des Gate-Schritts `kotlin-unit`.
+void kotlinUnitChecks(SelfCheck t) {
+  t.group('kotlin-unit');
+  final dirs = {'/env/sdk', '/home/u/Library/Android/sdk'};
+  bool isDir(String p) => dirs.contains(p);
+  t.eq(
+    androidSdk({'ANDROID_HOME': '/env/sdk'}, '/home/u', isDir),
+    '/env/sdk',
+    'ANDROID_HOME zuerst',
+  );
+  t.eq(
+    androidSdk({'ANDROID_HOME': '/fehlt'}, '/home/u', isDir),
+    '/home/u/Library/Android/sdk',
+    'fehlender Ordner fällt auf den Standardort zurück',
+  );
+  t.eq(androidSdk({}, '/nirgends', isDir), null, 'ohne SDK null');
+  final c = countJUnit([
+    '<testsuite name="a" tests="4" skipped="0" failures="1" errors="0">',
+    '<testsuite name="b" tests="3" failures="0" errors="2">',
+    'kein Bericht',
+  ]);
+  t.eq(c.tests, 7, 'Testanzahl');
+  t.eq(c.failures, 3, 'Fehler und Ausfälle');
 }

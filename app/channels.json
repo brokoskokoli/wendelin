@@ -48,7 +48,8 @@
     "app.wendelin/calendar": {
       "dart": ["app/lib/platform/device_calendar_port.dart"],
       "kotlin": [
-        "app/android/app/src/main/kotlin/app/wendelin/CalendarChannel.kt"
+        "app/android/app/src/main/kotlin/app/wendelin/CalendarChannel.kt",
+        "app/android/app/src/main/kotlin/app/wendelin/CalendarRows.kt"
       ],
       "toKotlin": {
         "hasPermission": {"args": [], "returns": "value"},
