@@ -1,6 +1,7 @@
 import '../messages/content_block.dart';
 import '../messages/stop_reason.dart';
 import '../messages/usage.dart';
+import '../tools/tool.dart';
 import '../tools/tool_outcome.dart';
 
 /// Why the agent handed a request to another provider.
@@ -173,6 +174,7 @@ final class ConfirmationRequired extends AgentEvent {
     required this.call,
     required this.description,
     required void Function(bool approved) respond,
+    this.risk = RiskLevel.external,
   }) : _answer = _Once(respond);
 
   /// The call awaiting confirmation.
@@ -180,6 +182,9 @@ final class ConfirmationRequired extends AgentEvent {
 
   /// German text for the confirmation card.
   final String description;
+
+  /// Effective risk level of the call (see `ConfirmationNeeded.risk`).
+  final RiskLevel risk;
 
   final _Once _answer;
 
@@ -191,7 +196,8 @@ final class ConfirmationRequired extends AgentEvent {
   void respond(bool approved) => _answer(approved);
 
   @override
-  String toString() => 'ConfirmationRequired(${call.name}, $description)';
+  String toString() =>
+      'ConfirmationRequired(${call.name}, ${risk.name}, $description)';
 }
 
 /// The agent wants to escalate to a provider with a **lower** privacy level

@@ -41,7 +41,7 @@ final class ParallelToolInvoker implements ToolInvoker {
           if (!ctx.cancel.isCancelled) {
             final c = ConfirmationNeeded(
               call,
-              tool.describeForConfirmation(args),
+              await tool.confirmationText(args, ctx),
               Completer<bool>(),
             );
             out.add(c);

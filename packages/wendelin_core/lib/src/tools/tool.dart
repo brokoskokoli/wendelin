@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../messages/tool_spec.dart';
 import 'tool_context.dart';
 import 'tool_outcome.dart';
@@ -51,8 +53,55 @@ abstract interface class Tool {
   Future<ToolOutcome> execute(Map<String, Object?> args, ToolContext ctx);
 
   /// German one-liner for the confirmation card, e.g.
-  /// „Termin ‚Tauchen‘ Do 10:00–11:00 löschen“.
+  /// „Termin ‚Tauchen‘ Do 10:00–11:00 löschen“. Synchronous fallback; tools
+  /// that need to look something up implement [ConfirmationPreparer].
   String describeForConfirmation(Map<String, Object?> args);
+}
+
+/// Optional capability of a [Tool]: builds the confirmation text
+/// asynchronously with the [ToolContext], e.g. to look up the title and time
+/// of the event that will be deleted. Runtimes call it through
+/// [ToolConfirmation.confirmationText], which falls back to
+/// [Tool.describeForConfirmation].
+abstract interface class ConfirmationPreparer {
+  /// German one-liner for the confirmation card. Must not change anything.
+  Future<String> prepareConfirmation(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  );
+}
+
+/// Confirmation text of any [Tool].
+extension ToolConfirmation on Tool {
+  /// Longest time [confirmationText] waits for the preparer.
+  static const defaultTimeout = Duration(seconds: 5);
+
+  /// The text for the confirmation card: [ConfirmationPreparer.
+  /// prepareConfirmation] if the tool implements it, else
+  /// [Tool.describeForConfirmation]. If preparing fails, takes longer than
+  /// [timeout] or the run is cancelled, the synchronous text is used – the
+  /// user is asked either way.
+  Future<String> confirmationText(
+    Map<String, Object?> args,
+    ToolContext ctx, {
+    Duration timeout = defaultTimeout,
+  }) async {
+    final self = this;
+    if (self is! ConfirmationPreparer) return describeForConfirmation(args);
+    final preparer = self as ConfirmationPreparer;
+    try {
+      final text = await Future.any([
+        preparer.prepareConfirmation(args, ctx).timeout(timeout),
+        ctx.cancel.whenCancelled.then<String>(
+          (_) => throw TimeoutException('abgebrochen'),
+        ),
+      ]);
+      if (text.trim().isNotEmpty) return text;
+    } on Object {
+      // Fallback below: a failed lookup must not block the question.
+    }
+    return describeForConfirmation(args);
+  }
 }
 
 /// Conversion of a [Tool] to the spec sent to the model.

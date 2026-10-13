@@ -11,7 +11,11 @@ final class _DefectiveInvoker implements ToolInvoker {
     this.catalog, {
     this.checksCancelOnlyAtStart = false,
     this.reportsFinishedAsCancelled = false,
+    this.ignoresPrepare = false,
   });
+
+  /// Defect: uses the synchronous `describeForConfirmation` only.
+  final bool ignoresPrepare;
 
   final ToolCatalog catalog;
 
@@ -43,7 +47,9 @@ final class _DefectiveInvoker implements ToolInvoker {
         if (tool.risk == RiskLevel.external) {
           final c = ConfirmationNeeded(
             call,
-            tool.describeForConfirmation(args),
+            ignoresPrepare
+                ? tool.describeForConfirmation(args)
+                : await tool.confirmationText(args, ctx),
             Completer<bool>(),
           );
           yield c;
@@ -147,6 +153,16 @@ void main() {
       );
       await expectLater(
         checks[ToolInvokerChecks.cancelKeepsCompleted]!(),
+        fails,
+      );
+    });
+
+    test('Bestätigungstext ohne prepareConfirmation', () async {
+      final checks = toolInvokerContractChecks(
+        (c) => _DefectiveInvoker(c, ignoresPrepare: true),
+      );
+      await expectLater(
+        checks[ToolInvokerChecks.preparedConfirmation]!(),
         fails,
       );
     });
