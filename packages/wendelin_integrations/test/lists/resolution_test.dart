@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
+import 'package:wendelin_integrations/src/common/matching.dart';
 import 'package:wendelin_integrations/src/lists/lists.dart';
-import 'package:wendelin_integrations/src/lists/matching.dart';
 import 'package:wendelin_integrations/testing.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
