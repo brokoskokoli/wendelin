@@ -107,20 +107,29 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
     _active++;
     final own = _own;
     if (own != null && _ownId == modelId) {
-      return WhisperSpeechToText(backend: await own, modelId: modelId);
+      return WhisperSpeechToText(
+        backend: await own,
+        modelId: modelId,
+        onTiming: _logTiming,
+      );
     }
     final shared = await _lookupShared(modelId);
     if (shared != null) {
       return WhisperSpeechToText(
         backend: _SharedOrOwn(shared, () => _loadOwn(modelId)),
         modelId: modelId,
+        onTiming: _logTiming,
       );
     }
     return WhisperSpeechToText(
       backend: await _loadOwn(modelId),
       modelId: modelId,
+      onTiming: _logTiming,
     );
   }
+
+  /// Durations only, never the text (device measurements, WP19).
+  static void _logTiming(WhisperTiming t) => debugPrint('Erkenner: $t');
 
   /// The own model [modelId], loaded once (another model is released).
   Future<WhisperBackend> _loadOwn(String modelId) async {

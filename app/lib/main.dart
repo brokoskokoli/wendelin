@@ -3,11 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'app.dart';
+import 'debug/device_test_overrides.dart';
 import 'di/integration_specs.dart';
 import 'di/maintenance.dart';
 import 'di/providers.dart';
@@ -22,7 +24,7 @@ import 'ui/theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerFontLicenses();
-  final (storage, startup) = await _openStorage();
+  final (storage, startup) = await openAppStorage();
   await startupMaintenance(
     storage: storage,
     secrets: SecureSecretStore(),
@@ -40,8 +42,15 @@ Future<void> main() async {
 @pragma('vm:entry-point')
 Future<void> assistantMain() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final (storage, startup) = await _openStorage();
-  await _run(storage, startup, const AssistantOverlayApp());
+  final (storage, startup) = await openAppStorage();
+  await _run(
+    storage,
+    startup,
+    const AssistantOverlayApp(),
+    // Debug builds only: WAV instead of the microphone and a scripted
+    // provider for the device tests (WP19); release builds skip this.
+    extra: kDebugMode ? await deviceTestOverrides() : const [],
+  );
 }
 
 /// Entry point of the system speech recognizer (`WendelinRecognitionService`
@@ -50,7 +59,9 @@ Future<void> assistantMain() async {
 @pragma('vm:entry-point')
 Future<void> recognizerMain() => runRecognizerEngine();
 
-Future<(WendelinStorage, StartupSettings)> _openStorage() async {
+/// Opens the app database (shared with the other engine of the process)
+/// and reads the start settings.
+Future<(WendelinStorage, StartupSettings)> openAppStorage() async {
   // Shared across isolates: the overlay engine and the main app may run
   // at the same time in one process.
   final storage = WendelinStorage(
@@ -68,8 +79,9 @@ Future<(WendelinStorage, StartupSettings)> _openStorage() async {
 Future<void> _run(
   WendelinStorage storage,
   StartupSettings startup,
-  Widget app,
-) async {
+  Widget app, {
+  List<Override> extra = const [],
+}) async {
   final device = await loadDeviceInfo();
   runApp(
     ProviderScope(
@@ -79,6 +91,7 @@ Future<void> _run(
         storageProvider.overrideWithValue(storage),
         startupProvider.overrideWithValue(startup),
         deviceInfoProvider.overrideWithValue(device),
+        ...extra,
       ],
       child: app,
     ),

@@ -99,6 +99,10 @@ STUB
   expect "Assistenten-Service ohne BIND_VOICE_INTERACTION erkannt" 1 "WendelinVoiceInteractionService ohne"
   echo "$good_manifest" | sed 's/android:enabled="false"/android:enabled="true"/' >"$dir/manifest.xml"
   expect "RecognitionService ab Werk aktiv erkannt" 1 "WendelinRecognitionService nicht ab Werk deaktiviert"
+  echo "$good_manifest" | sed 's# android:permission="android.permission.DUMP"##' >"$dir/manifest.xml"
+  expect "ProfileInstallReceiver ohne DUMP erkannt" 1 "ProfileInstallReceiver ohne android.permission.DUMP"
+  echo "$good_manifest" | sed 's#<activity android:name="app.wendelin.AssistantActivity" android:exported="false" />#&\n    <provider android:name="app.wendelin.Leak" android:exported="true" />#' >"$dir/manifest.xml"
+  expect "fremde exportierte Komponente erkannt" 1 "app.wendelin.Leak unerwartet exportiert"
   echo "$good_manifest" >"$dir/manifest.xml"
 
   printf 'android.permission.ACCESS_FINE_LOCATION\n' >>"$dir/perms.txt"

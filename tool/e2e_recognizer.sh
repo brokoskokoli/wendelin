@@ -25,18 +25,14 @@
 # die Assistenten-Rolle und deinstalliert die App.
 set -euo pipefail
 
-SDK="${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}"
-ADB="$SDK/platform-tools/adb"
 PKG=app.wendelin
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MODELS="${WENDELIN_MODELS:?WENDELIN_MODELS=<Verzeichnis mit whisper-base/ und silero-vad/> setzen}"
-DEVICE="${DEVICE:-$("$ADB" devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
-[ -n "$DEVICE" ] || { echo "Kein Android-Gerät verbunden" >&2; exit 1; }
-adb() { "$ADB" -s "$DEVICE" "$@"; }
+# DEVICE bzw. ANDROID_SERIAL; ohne beides genau ein Gerät, sonst Abbruch.
+# shellcheck source=tool/android_device.sh
+. "$ROOT/tool/android_device.sh"
 
-case "$DEVICE" in emulator-*) ;; *) echo "Abbruch: $DEVICE ist kein Emulator" >&2; exit 1 ;; esac
-[ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" = "1" ] ||
-  { echo "Abbruch: $DEVICE ist kein Emulator" >&2; exit 1; }
+is_emulator || { echo "Abbruch: $DEVICE ist kein Emulator" >&2; exit 1; }
 [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] ||
   { echo "Gerät $DEVICE ist noch nicht hochgefahren" >&2; exit 1; }
 for f in whisper-base/base-encoder.int8.onnx whisper-base/base-decoder.int8.onnx \
@@ -80,7 +76,8 @@ copy_model silero-vad silero_vad.onnx
 adb shell rm -rf "$TMP"
 
 # 4. Test
-OUT="$(adb shell am instrument -w -r "$PKG.test/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r')"
+OUT="$(adb shell am instrument -w -r -e class "$PKG.RecognitionServiceTest" \
+  "$PKG.test/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r')"
 echo "$OUT" | grep -E 'INSTRUMENTATION_STATUS: (test|stack)=|^OK|FAILURES|Tests run|INSTRUMENTATION_FAILED' || true
 echo "$OUT" | grep -q '^OK (' || { echo "$OUT" | tail -40; echo "Erkenner-Test fehlgeschlagen" >&2; exit 1; }
 echo "Erkenner-Test bestanden"

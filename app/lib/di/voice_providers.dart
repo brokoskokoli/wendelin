@@ -498,7 +498,12 @@ final speechToTextProvider = FutureProvider<SpeechToText>((ref) async {
     withdrawSharedWhisper(model.id, backend.sharePort);
     unawaited(backend.dispose());
   });
-  return WhisperSpeechToText(backend: backend, modelId: model.id);
+  return WhisperSpeechToText(
+    backend: backend,
+    modelId: model.id,
+    // Durations only, never the text (measurements on the device, WP19).
+    onTiming: (t) => debugPrint('$t'),
+  );
 });
 
 /// Android system TTS.

@@ -1,4 +1,5 @@
-// Gate: format, analyze, tests mit Abdeckung, Abhängigkeitsregeln, Secret-Scan.
+// Gate: format, analyze, tests mit Abdeckung, Abhängigkeitsregeln, Secret-Scan,
+// Selbsttests der Geräte-Skripte (android_device.sh, check_apk.sh).
 //
 //   dart run tool/gate.dart                  # alles
 //   dart run tool/gate.dart wendelin_core    # nur ein Paket (+ globale Prüfungen)
@@ -114,6 +115,15 @@ Future<void> main(List<String> args) async {
 
   await step('check_deps', 'dart', ['run', 'tool/check_deps.dart']);
   await step('check_secrets', 'dart', ['run', 'tool/check_secrets.dart']);
+  // Selbsttests der Geräte-Skripte (nur bash, kein Android-SDK nötig).
+  await step('android_device self-test', 'bash', [
+    'tool/android_device.sh',
+    '--self-test',
+  ]);
+  await step('check_apk self-test', 'bash', [
+    'tool/check_apk.sh',
+    '--self-test',
+  ]);
 
   stdout.writeln('\n==========');
   if (failures.isEmpty) {

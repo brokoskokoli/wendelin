@@ -343,6 +343,60 @@ void main() {
       expect(env.calendar.events, hasLength(1));
     });
 
+    test('Abbruch stoppt die gesprochene Bestätigungsfrage (N11)', () async {
+      final tts = FakeTextToSpeech(manual: true);
+      final audio = FakeAudioInput(
+        frames: AudioFrames.pattern('S' * 10 + '.' * 30),
+        frameInterval: const Duration(milliseconds: 2),
+      );
+      final stt = FakeSpeechToText(const [
+        Transcript(text: 'Lösch den Zahnarzttermin'),
+      ]);
+      env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider([
+            ScriptedTurn.toolCalls([
+              call('c1', 'calendar__delete_event', _delete),
+            ]),
+            ScriptedTurn.text('Erledigt.'),
+          ]),
+        ),
+        extraOverrides: [
+          activeVoiceProvider.overrideWith(
+            (ref) async => VoiceComponents(
+              audio: audio,
+              vad: FakeVoiceActivityDetector(),
+              stt: stt,
+              textToSpeech: (_) async => tts,
+              config: const VoicePipelineConfig(),
+            ),
+          ),
+        ],
+      );
+      c = env.container();
+      await env.calendar.createEvent(zahnarztDraft());
+      await voice().start(TriggerKind.pushToTalk);
+      // Die Frage läuft (manuelle Sprachausgabe endet erst mit stop).
+      for (var i = 0; i < 100 && tts.current == null; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(tts.current, 'Termin löschen? Ja oder nein?');
+      final starts = audio.startCount;
+
+      await voice().cancel();
+      await voice().whenIdle;
+      expect(tts.interrupted, ['Termin löschen? Ja oder nein?']);
+      expect(tts.current, isNull);
+      expect(tts.state, TtsState.idle);
+      // Kein Zuhören auf die Antwort danach, nichts gelöscht.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(audio.startCount, starts);
+      expect(c.read(voiceControllerProvider).awaitingAnswer, isFalse);
+      expect(stt.calls, hasLength(1));
+      expect(env.calendar.events, hasLength(1));
+      expect(c.read(agentControllerProvider).running, isFalse);
+    });
+
     test('getippte Anfrage: keine Stimm-Bestätigung', () async {
       start([
         ScriptedTurn.toolCalls([call('c1', 'calendar__delete_event', _delete)]),
@@ -445,6 +499,26 @@ void main() {
     expect(c.read(voiceControllerProvider).error, voiceUnavailableHint);
   });
 
+  test(
+    'ohne Spracherkennung: keine Frage nach dem Mikrofon (WP18-Review a)',
+    () async {
+      var asked = 0;
+      start(const [], voice: null);
+      expect(
+        await voice().start(
+          TriggerKind.pushToTalk,
+          prepare: () async {
+            asked++;
+            return true;
+          },
+        ),
+        isFalse,
+      );
+      expect(asked, 0);
+      expect(c.read(voiceControllerProvider).error, voiceUnavailableHint);
+    },
+  );
+
   test('Mikrofon verweigert: Fehlertext, wieder bereit', () async {
     start(const [], voice: fakeVoice(audio: DeniedAudioInput()));
     await voice().start(TriggerKind.pushToTalk);
@@ -469,6 +543,56 @@ void main() {
     );
     expect(asked, 1);
     expect(c.read(voiceControllerProvider).error, contains('Mikrofon'));
+  });
+
+  group('während der Berechtigungsfrage (M9)', () {
+    test('getippte Anfrage gestartet: kein Zuhören danach', () async {
+      final audio = FakeAudioInput(frames: utterance());
+      start([
+        ScriptedTurn.hang(partialText: 'Moment'),
+      ], voice: fakeVoice(audio: audio));
+      final started = await voice().start(
+        TriggerKind.pushToTalk,
+        prepare: () async {
+          // Der Nutzer tippt, während der Dialog offen ist.
+          unawaited(c.read(agentControllerProvider.notifier).send('Getippt'));
+          await waitConv(c, (s) => s.running);
+          return true;
+        },
+      );
+      expect(started, isFalse);
+      expect(audio.startCount, 0);
+      expect(c.read(voiceControllerProvider).active, isFalse);
+      c.read(agentControllerProvider.notifier).cancel();
+      await c.read(agentControllerProvider.notifier).idle;
+    });
+
+    test('andere Sprach-Anfrage gestartet: keine zweite', () async {
+      final audio = FakeAudioInput(
+        frames: utterance(),
+        frameInterval: const Duration(milliseconds: 20),
+      );
+      start(
+        [ScriptedTurn.text('Gut.')],
+        voice: fakeVoice(
+          audio: audio,
+          script: const [Transcript(text: 'Hallo')],
+        ),
+      );
+      final started = await voice().start(
+        TriggerKind.assistant,
+        prepare: () async {
+          expect(await voice().start(TriggerKind.pushToTalk), isTrue);
+          await waitVoice(c, (v) => v.listening);
+          return true;
+        },
+      );
+      expect(started, isFalse);
+      expect(audio.startCount, 1, reason: 'nur die erste Anfrage hört zu');
+      expect(c.read(voiceControllerProvider).trigger, TriggerKind.pushToTalk);
+      await voice().cancel();
+      await voice().whenIdle;
+    });
   });
 
   test('nichts verstanden: Hinweis', () async {

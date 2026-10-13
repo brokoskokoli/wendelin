@@ -138,6 +138,18 @@ void main() {
     },
   );
 
+  test('Frist: 20 s plus Länge der Aufnahme (WP19)', () {
+    final port = ReceivePort();
+    addTearDown(port.close);
+    final backend = RemoteWhisperBackend(port.sendPort);
+    expect(backend.timeout, const Duration(seconds: 20));
+    expect(
+      backend.waitFor(Float32List(16000 * 4)),
+      const Duration(seconds: 24),
+    );
+    expect(backend.waitFor(Float32List(0)), const Duration(seconds: 20));
+  });
+
   test('unerwartete Antwort', () async {
     final odd = fakeOwner((reply) => reply.send(const ['weird']));
     await expectLater(

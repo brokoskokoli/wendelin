@@ -99,6 +99,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
   PendingQuestion? _confirming;
   void Function()? _abortCapture;
   TextToSpeech? _promptTts;
+  // Counts [cancel] calls: a spoken confirmation that started before a
+  // cancel never goes on to listen (the stopped question returns first).
+  int _cancels = 0;
 
   /// Answers are only taken from short utterances.
   static const recognizer = YesNoRecognizer();
@@ -130,8 +133,10 @@ final class VoiceController extends Notifier<VoiceUiState> {
 
   /// Starts a voice request from [kind]. Returns `false` (with [VoiceUiState.error]
   /// set) when speech is unavailable or a request already runs. [prepare]
-  /// runs first, e.g. asking for the microphone permission with an
-  /// explanation (`ensureMicrophoneAccess`); `false` stops.
+  /// runs once the speech models are there, e.g. asking for the microphone
+  /// permission with an explanation (`ensureMicrophoneAccess`); `false`
+  /// stops. Without models it is never called (hint
+  /// [voiceUnavailableHint] instead of a permission dialog).
   Future<bool> start(
     TriggerKind kind, {
     Future<bool> Function()? prepare,
@@ -139,13 +144,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
-    if (!(await prepare?.call() ?? true)) {
-      state = state.copyWith(
-        error: 'Ohne Mikrofon-Zugriff geht nur Text.',
-        clearHint: true,
-      );
-      return false;
-    }
+    // Models first: without speech recognition there is nothing to ask the
+    // microphone permission for (WP18 review, WP19).
     final VoiceComponents? components;
     try {
       components = await ref.read(activeVoiceProvider.future);
@@ -155,6 +155,16 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     if (components == null) {
       state = state.copyWith(error: voiceUnavailableHint, clearHint: true);
+      return false;
+    }
+    if (!(await prepare?.call() ?? true)) {
+      state = state.copyWith(
+        error: 'Ohne Mikrofon-Zugriff geht nur Text.',
+        clearHint: true,
+      );
+      return false;
+    }
+    if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
     final pipeline = _pipelineFor(components);
@@ -174,6 +184,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// Aborts the voice request (listening, recognition, answer, speech
   /// output, a spoken confirmation). An open confirmation counts as „no“.
   Future<void> cancel() async {
+    _cancels++;
     _abortCapture?.call();
     final tts = _promptTts;
     _promptTts = null;
@@ -286,35 +297,38 @@ final class VoiceController extends Notifier<VoiceUiState> {
     unawaited(_confirmByVoice(next));
   }
 
-  bool _stillOpen(PendingQuestion q) {
-    final pending = ref.read(agentControllerProvider).pending;
-    return identical(pending, q) && !q.answered;
-  }
-
   Future<void> _confirmByVoice(PendingQuestion question) async {
     final components = _components;
     final audio = _audio;
     if (components == null || audio == null || audio.isRunning) return;
+    final cancels = _cancels;
+    bool stillOpen() {
+      final pending = ref.read(agentControllerProvider).pending;
+      return cancels == _cancels &&
+          identical(pending, question) &&
+          !question.answered;
+    }
+
     _confirming = question;
     try {
       final tts = await components.textToSpeech(_language);
       _promptTts = tts;
       for (var attempt = 0; attempt < 2; attempt++) {
-        if (!_stillOpen(question)) return;
+        if (!stillOpen()) return;
         final prompt = attempt == 0
             ? confirmationPrompt(question, _language)
             : repeatPrompt(_language);
         await _say(tts, prompt);
-        if (!_stillOpen(question)) return;
+        if (!stillOpen()) return;
         state = state.copyWith(awaitingAnswer: true, levels: const []);
         final pcm = await _capture(components, audio);
         state = state.copyWith(awaitingAnswer: false);
-        if (pcm == null || !_stillOpen(question)) return;
+        if (pcm == null || !stillOpen()) return;
         final transcript = await components.stt.transcribe(
           pcm,
           language: components.config.language,
         );
-        if (!_stillOpen(question)) return;
+        if (!stillOpen()) return;
         final answer = recognizer.parse(
           transcript.text,
           strict: strictAnswer(question),

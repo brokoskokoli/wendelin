@@ -17,3 +17,8 @@ Abhängig von: WP15–WP18.
 ## Abnahmekriterien
 - [ ] Integrationstest auf dem AOSP-Emulator grün (Log).
 - [ ] Testanleitung vollständig, vom Reviewer gegengelesen.
+
+## Ergebnis
+- Gerätetests: `app/integration_test/voice_note_e2e_test.dart`, `overlay_e2e_test.dart`, `voice_live_e2e_test.dart`, Aufruf `WENDELIN_MODELS=<dir> tool/e2e_android.sh`. Ergebnisse, Laufzeit und Empfehlung zum Standardmodell: `docs/notes/m2-e2e-2026-10-13.md`.
+- Geräte-Testanleitung: `docs/testing/m2-device.md`, Laufzeit auf dem Telefon mit `tool/whisper_timing.sh`.
+- Nicht umgesetzt: eigene Client-App für „Aufrufer hat die Berechtigung, Wendelin nicht“. Aufnahme aus einer fremden App im Vordergrund und geteiltes Whisper stehen als Prüfpunkte in der Geräte-Testanleitung.

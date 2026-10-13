@@ -56,15 +56,23 @@ final class RemoteWhisperBackend implements WhisperBackend {
   /// Creates the client for [port] (the Whisper isolate's inbox).
   RemoteWhisperBackend(
     this.port, {
-    this.timeout = const Duration(seconds: 60),
+    this.timeout = const Duration(seconds: 20),
     this.pingTimeout = const Duration(seconds: 3),
   });
 
   /// The Whisper isolate's inbox.
   final SendPort port;
 
-  /// Longest wait for one transcription.
+  /// Longest wait for one transcription on top of the length of the
+  /// recording ([waitFor]): the shared isolate may first finish a request
+  /// of its own engine. Measured on the emulator (WP19): Whisper small
+  /// needs well under the audio length, so 20 s plus the audio length only
+  /// runs out when the owner hangs or is gone.
   final Duration timeout;
+
+  /// How long to wait for the text of [samples] (16 kHz).
+  Duration waitFor(Float32List samples) =>
+      timeout + Duration(microseconds: samples.length * 1000000 ~/ 16000);
 
   /// Each transcription first checks that the isolate still answers: a
   /// gone owner shows up after this time instead of after [timeout].
@@ -109,7 +117,7 @@ final class RemoteWhisperBackend implements WhisperBackend {
       ]);
       final Object? answer;
       try {
-        answer = await reply.first.timeout(timeout);
+        answer = await reply.first.timeout(waitFor(samples));
       } on TimeoutException catch (e) {
         throw VoiceException(
           VoiceErrorKind.unavailable,
