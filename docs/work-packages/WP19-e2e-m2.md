@@ -8,6 +8,8 @@ Abhängig von: WP15–WP18.
 - **Geräte-Testanleitung** `docs/testing/m2-device.md` für den Maintainer: APK installieren, Onboarding, Modell laden, Standard-Assistent setzen, Vault wählen, Testsätze (de/fr/en), erwartetes Ergebnis, Checkliste zum Abhaken, wie Logs/Audit exportiert werden.
 - Live-Durchlauf (sparsam) mit Claude Haiku: gesprochener Satz aus WAV → Notiz ergänzt.
 - README-Demo-Anleitung M2.
+- Offene Punkte aus dem WP18-Review: (a) Mikrofon-Berechtigung erst anfragen, wenn Sprachmodelle vorhanden sind (sonst Hinweis „Spracherkennung laden“), (b) Widget-Tests „Berechtigung verweigert → Erklärung, kein Start“ für Hauptbildschirm und Overlay (N12/N14), (c) Test „Abbruch stoppt die gesprochene Bestätigungsfrage“ (N11), (d) Hinweis in Einstellungen → Assistent: nach Wechsel des Assistenten die Spracherkennung neu wählen, (e) Prüfpunkt Zwei-Engines (Overlay-Kaltstart → App öffnen → Overlay schließen → App schreibt weiter) auf dem Emulator.
+- Laufzeitmessung Whisper base/small auf dem Emulator (und Vorlage für das Gerät des Maintainers) als Grundlage für den Standard (K-Vorschlag: small mit fester Sprache).
 
 ## Abnahmekriterien
 - [ ] Integrationstest auf dem AOSP-Emulator grün (Log).
