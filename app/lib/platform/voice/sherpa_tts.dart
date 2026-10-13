@@ -217,8 +217,9 @@ final class SherpaTextToSpeech implements TextToSpeech {
   }
 }
 
-/// [SpeechSynthesizer] with sherpa-onnx in a background isolate; each
-/// voice is loaded on first use and kept.
+/// [SpeechSynthesizer] with sherpa-onnx in a background isolate; a voice
+/// is loaded on first use and kept until another voice is needed (only
+/// the last one stays resident, B14).
 final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
   /// Creates the synthesizer; [voices] maps voice ids to their files.
   IsolateSherpaSynthesizer(this.voices);
@@ -306,14 +307,22 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     final (out, libraryDir) = args;
     sherpaLibraryDir = libraryDir;
     final inbox = ReceivePort();
-    final engines = <String, so.OfflineTts>{};
+    // Only the voice used last stays loaded (B14): a language change frees
+    // the previous one first.
+    String? loadedId;
+    so.OfflineTts? loaded;
     out.send(inbox.sendPort);
     inbox.listen((message) {
       if (message is (String, String, String, String, String, double)) {
         final (id, model, tokens, dataDir, text, speed) = message;
         try {
           ensureSherpaBindings();
-          final tts = engines[id] ??= so.OfflineTts(
+          if (loadedId != id) {
+            loaded?.free();
+            loaded = null;
+            loadedId = null;
+          }
+          final tts = loaded ??= so.OfflineTts(
             so.OfflineTtsConfig(
               model: so.OfflineTtsModelConfig(
                 vits: so.OfflineTtsVitsModelConfig(
@@ -326,6 +335,7 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
               ),
             ),
           );
+          loadedId = id;
           final audio = tts.generate(text: text, speed: speed);
           out.send((
             TransferableTypedData.fromList([
@@ -337,9 +347,7 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
           out.send('$e');
         }
       } else {
-        for (final t in engines.values) {
-          t.free();
-        }
+        loaded?.free();
         inbox.close();
         Isolate.exit();
       }

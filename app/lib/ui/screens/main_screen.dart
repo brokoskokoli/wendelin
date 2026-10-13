@@ -60,15 +60,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           // Also frees the speech models after a while (B14).
           unawaited(voice.background());
         } else if (state == AppLifecycleState.resumed) {
-          voice.prewarm();
+          voice.prewarm(onlyIfUsed: true);
           // Back from the Android settings: allowed there meanwhile?
           unawaited(_recheckMicrophone());
         }
       },
     );
-    // Visible: load Whisper now, so the first tap starts at once (B11).
+    // Visible: load Whisper now, so the first tap starts at once (B11);
+    // only for people who use speech (base load).
     Future(() {
-      if (mounted) ref.read(voiceControllerProvider.notifier).prewarm();
+      if (!mounted) return;
+      ref.read(voiceControllerProvider.notifier).prewarm(onlyIfUsed: true);
     });
     if (widget.restoreSession) {
       unawaited(ref.read(agentControllerProvider.notifier).restore());

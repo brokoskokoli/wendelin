@@ -8,12 +8,14 @@ package app.wendelin
  * 2. Wait until the [AssistantActivity] reports that it was created or got the new intent
  *    ([onArrived]); then end the session ([end], `finish()`), so no hidden session stays behind.
  * 3. If the start throws, or nothing arrives within [confirmTimeoutMs], start once more with a
- *    fresh intent; if that fails too, log it and end the session.
+ *    fresh intent marked as retry (`start(true)`); if that fails too, log it and end the session.
+ *    An overlay that arrives late (cold start) gets the retry intent too; it must not start a
+ *    second request then ([RetryFilter]).
  *
  * Every step is logged without content ([log], tag `Wendelin/voice`).
  */
 class AssistantLauncher(
-    private val start: () -> Unit,
+    private val start: (retry: Boolean) -> Unit,
     private val schedule: (delayMs: Long, block: () -> Unit) -> Cancelable,
     private val end: () -> Unit,
     private val log: (String) -> Unit,
@@ -43,7 +45,7 @@ class AssistantLauncher(
     private fun launch() {
         attempt++
         try {
-            start()
+            start(attempt > 1)
             log("assistant-start attempt=$attempt result=ok")
         } catch (e: Exception) {
             log("assistant-start attempt=$attempt result=error error=${e.javaClass.simpleName}")
@@ -63,6 +65,13 @@ class AssistantLauncher(
     fun onArrived() {
         if (done) return
         finish("arrived")
+    }
+
+    /** The session is destroyed: drop the pending retry without ending it again. */
+    fun cancel() {
+        waiting?.cancel()
+        waiting = null
+        done = true
     }
 
     /** The system hid the session (e.g. another app came up). */
@@ -86,6 +95,21 @@ class AssistantLauncher(
         /** First start plus one retry. */
         const val MAX_ATTEMPTS = 2
     }
+}
+
+/**
+ * Whether an intent that reaches an open overlay starts a request (B10 review): a retry intent
+ * right after an arrival is the late twin of the first start (cold start), so it only confirms the
+ * arrival; otherwise (a new invocation, or a retry long after the last arrival) it triggers.
+ */
+object RetryFilter {
+    /** Retry intents within this time after an arrival belong to the same invocation. */
+    const val SAME_INVOCATION_MS =
+        AssistantLauncher.CONFIRM_TIMEOUT_MS * AssistantLauncher.MAX_ATTEMPTS
+
+    /** [sinceArrivalMs]: time since the overlay last arrived, `null` if never. */
+    fun triggers(retry: Boolean, sinceArrivalMs: Long?): Boolean =
+        !retry || sinceArrivalMs == null || sinceArrivalMs > SAME_INVOCATION_MS
 }
 
 /**

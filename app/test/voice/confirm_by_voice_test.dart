@@ -227,6 +227,27 @@ void main() {
   }
 
   group('Ausstiegswege der Stimm-Bestätigung (B7)', () {
+    test(
+      'Komponenten fehlen bei der Frage: Karte „Antworte per Tipp“',
+      () async {
+        final tts = ScriptedTts();
+        await deleteByVoice(answers: const [], tts: tts);
+        // The components go away while the request thinks (e.g. a reset).
+        c.listen(voiceControllerProvider.select((v) => v.phase), (_, phase) {
+          if (phase == VoiceState.thinking) voice().forgetComponents();
+        });
+        await waitVoice(c, (v) => v.tapOnly);
+        expect(c.read(voiceControllerProvider).answersByVoice, isFalse);
+        expect(exits(), hasLength(1));
+        expect(exits().single, contains('reason=no-components'));
+        expect(exits().single, contains('tap=true'));
+        expect(tts.spoken, isNot(contains(_question)));
+        c.read(agentControllerProvider.notifier).answer(approved: false);
+        await voice().whenIdle;
+        expect(env.calendar.events, hasLength(1));
+      },
+    );
+
     test('Normalfall: Frage, Zuhören, „Ja“', () async {
       final tts = ScriptedTts();
       await deleteByVoice(

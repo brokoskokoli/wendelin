@@ -28,12 +28,13 @@ class WendelinVoiceSession(context: Context) : VoiceInteractionSession(context) 
     private val arrived: () -> Unit = { launcher.onArrived() }
 
     private val launcher = AssistantLauncher(
-        start = {
+        start = { retry ->
             AssistantArrivals.await(arrived)
             // A fresh intent for every attempt.
             startAssistantActivity(
                 Intent(context, AssistantActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    .putExtra(AssistantActivity.EXTRA_RETRY, retry),
             )
         },
         schedule = { delayMs, block ->
@@ -63,8 +64,10 @@ class WendelinVoiceSession(context: Context) : VoiceInteractionSession(context) 
     }
 
     override fun onDestroy() {
-        AssistantArrivals.clear(arrived)
         VoiceLog.i("session-destroy pending=${launcher.pending}")
+        // No retry may start an overlay for a session that is gone.
+        launcher.cancel()
+        AssistantArrivals.clear(arrived)
         super.onDestroy()
     }
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -10,91 +10,17 @@ import '../agent/agent_controller.dart';
 import '../agent/conversation_state.dart';
 import '../di/providers.dart';
 import '../di/voice_providers.dart';
-import '../ui/design/mic_button.dart';
-import '../ui/screens/labels.dart';
+import 'answer_capture.dart';
+import 'confirm_prompts.dart';
 import 'level_meter.dart';
 import 'primed_audio_input.dart';
 import 'voice_components.dart';
 import 'voice_log.dart';
+import 'voice_ui_state.dart';
+import 'voice_usage.dart';
 
-/// Number of waveform bars (as in the overlay design).
-const waveBars = 6;
-
-/// What the voice UI (microphone button, waveform, hints) shows.
-@immutable
-final class VoiceUiState {
-  /// Creates a state.
-  const VoiceUiState({
-    this.phase = VoiceState.idle,
-    this.levels = const [],
-    this.trigger,
-    this.hint,
-    this.error,
-    this.awaitingAnswer = false,
-    this.preparing = false,
-    this.tapOnly = false,
-  });
-
-  /// State of the voice pipeline.
-  final VoiceState phase;
-
-  /// Recent microphone levels (0–1), newest last, at most [waveBars].
-  final List<double> levels;
-
-  /// What started the current request.
-  final TriggerKind? trigger;
-
-  /// Neutral hint („Ich habe nichts verstanden.“).
-  final String? hint;
-
-  /// Why speech failed (microphone, recognition).
-  final String? error;
-
-  /// Listening for a spoken „ja“/„nein“ to an open confirmation.
-  final bool awaitingAnswer;
-
-  /// The microphone already records (and buffers) while the speech models
-  /// still load (B11). Signal for a „Moment …“ display (WP31).
-  final bool preparing;
-
-  /// The open confirmation of a voice request can only be answered by tap
-  /// (the spoken answer could not start or got no answer, B7).
-  final bool tapOnly;
-
-  /// Whether a voice request (or a spoken confirmation) is in progress.
-  bool get active => phase != VoiceState.idle || awaitingAnswer || preparing;
-
-  /// Whether the microphone is open.
-  bool get listening =>
-      phase == VoiceState.listening || awaitingAnswer || preparing;
-
-  /// Whether an open confirmation may be answered by voice („Sag einfach
-  /// ja oder nein“), otherwise only by tap („Antworte per Tipp“).
-  bool get answersByVoice => active && !tapOnly;
-
-  /// A copy with the given fields replaced (`clear…` resets to `null`).
-  VoiceUiState copyWith({
-    VoiceState? phase,
-    List<double>? levels,
-    TriggerKind? trigger,
-    String? hint,
-    bool clearHint = false,
-    String? error,
-    bool clearError = false,
-    bool? awaitingAnswer,
-    bool? preparing,
-    bool? tapOnly,
-  }) => VoiceUiState(
-    phase: phase ?? this.phase,
-    levels: levels ?? this.levels,
-    trigger: trigger ?? this.trigger,
-    hint: clearHint ? null : hint ?? this.hint,
-    error: clearError ? null : error ?? this.error,
-    awaitingAnswer: awaitingAnswer ?? this.awaitingAnswer,
-    preparing: preparing ?? this.preparing,
-    tapOnly: tapOnly ?? this.tapOnly,
-  );
-}
+export 'confirm_prompts.dart';
+export 'voice_ui_state.dart';
 
 /// Voice requests of the app: push-to-talk on the main screen and the
 /// assistant overlay (`TriggerKind.assistant`).
@@ -143,6 +69,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
   bool _voiceRun = false;
   // Main screen or overlay visible (prewarm, release, B11/B14).
   bool _foreground = false;
+  // Main screen: warm up only for people who use speech (base load).
+  bool _warmOnlyIfUsed = false;
   Timer? _releaseTimer;
   // Tap → first frame / models ready, for `mic-ready` (B11).
   Stopwatch? _micWatch;
@@ -161,9 +89,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
 
   /// Longest wait for the first microphone frame of the answer: then the
   /// microphone counts as not started (B7, H5).
+  @visibleForTesting
   static Duration micStartTimeout = const Duration(seconds: 3);
 
   /// Longest spoken question (the engine may never report its end, B7).
+  @visibleForTesting
   static Duration promptTimeout = const Duration(seconds: 15);
 
   @override
@@ -178,7 +108,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       })
       // Models arrive (download, first refresh): warm up if visible.
       ..listen(voiceReadyProvider, (_, ready) {
-        if (ready && _foreground) prewarm();
+        if (ready && _foreground) unawaited(_warm());
       })
       // Demo switched: drop the pipeline; other new components (model or
       // settings changed) are picked up at the next start (_pipelineFor).
@@ -213,7 +143,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
       return false;
     }
     _releaseTimer?.cancel();
-    _micWatch = Stopwatch()..start();
+    // `clock`: tests measure on a fake clock.
+    _micWatch = clock.stopwatch()..start();
     _firstFrame = null;
     _loaded = null;
     final demo = ref.read(demoModeProvider);
@@ -354,6 +285,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       trigger: TriggerEvent(source: kind, at: ref.read(clockProvider).now()),
     );
     if (!started) voiceLog('start-failed', {'reason': 'busy'});
+    if (started) unawaited(noteVoiceUse(ref));
     return started;
   }
 
@@ -386,7 +318,6 @@ final class VoiceController extends Notifier<VoiceUiState> {
       'trigger': state.trigger,
     });
   }
-
 
   /// Microphone button: starts push-to-talk when idle, otherwise cancels
   /// the voice request (tap aborts in every state).
@@ -422,20 +353,32 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// The screen is visible (main screen, unlocked overlay): load the speech
   /// models in the background, so the first tap needs no loading (B11).
   /// Nothing happens without installed models or in the demo.
-  void prewarm() {
+  ///
+  /// [onlyIfUsed] (main screen): only if speech was used within
+  /// [voiceRecentUseProvider], so people who only type carry no Whisper
+  /// (base load); otherwise the first tap loads, and the microphone buffers
+  /// meanwhile.
+  void prewarm({bool onlyIfUsed = false}) {
     _foreground = true;
+    _warmOnlyIfUsed = onlyIfUsed;
     _releaseTimer?.cancel();
+    unawaited(_warm());
+  }
+
+  Future<void> _warm() async {
     if (ref.read(demoModeProvider) || !ref.read(voiceReadyProvider)) return;
+    if (_warmOnlyIfUsed && !await voiceUsedRecently(ref)) {
+      voiceLog('prewarm-skip', {'reason': 'unused'});
+      return;
+    }
     final watch = Stopwatch()..start();
-    unawaited(() async {
-      try {
-        final components = await ref.read(activeVoiceProvider.future);
-        await components?.warmUp?.call();
-        voiceLog('prewarm', {'ms': watch.elapsed});
-      } on Object catch (e) {
-        voiceLog('prewarm-failed', {'error': errorCode(e)});
-      }
-    }());
+    try {
+      final components = await ref.read(activeVoiceProvider.future);
+      await components?.warmUp?.call();
+      voiceLog('prewarm', {'ms': watch.elapsed});
+    } on Object catch (e) {
+      voiceLog('prewarm-failed', {'error': errorCode(e)});
+    }
   }
 
   /// The screen went to the background: [suspend], then free Whisper and
@@ -472,6 +415,14 @@ final class VoiceController extends Notifier<VoiceUiState> {
     } on Object catch (e) {
       voiceLog('release-failed', {'error': errorCode(e)});
     }
+  }
+
+  /// Forgets the loaded components while a request runs (test of the
+  /// `no-components` exit of the spoken confirmation, B7).
+  @visibleForTesting
+  void forgetComponents() {
+    _components = null;
+    _audio = null;
   }
 
   /// Replaces the state (golden tests with sample data).
@@ -671,13 +622,26 @@ final class VoiceController extends Notifier<VoiceUiState> {
         final prompt = attempt == 0
             ? confirmationPrompt(question, _language)
             : repeatPrompt(_language);
-        await _sayBounded(tts, prompt, attempt: attempt);
+        await sayBounded(
+          tts,
+          prompt,
+          language: _language,
+          timeout: promptTimeout,
+          attempt: attempt,
+        );
         if (closed() case final r?) {
           reason = r;
           return;
         }
         state = state.copyWith(awaitingAnswer: true, levels: const []);
-        final capture = await _capture(components, audio);
+        final capture = await captureAnswer(
+          components,
+          audio,
+          limits: answerEndpoint,
+          micStartTimeout: micStartTimeout,
+          onAbort: (abort) => _abortCapture = abort,
+          onError: (e) => state = state.copyWith(error: voiceErrorText(e)),
+        );
         state = state.copyWith(awaitingAnswer: false);
         if (closed() case final r?) {
           reason = r;
@@ -746,7 +710,13 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (tts == null) return;
     _promptTts = tts;
     try {
-      await _sayBounded(tts, tapAnswerPrompt(_language), source: 'tap-hint');
+      await sayBounded(
+        tts,
+        tapAnswerPrompt(_language),
+        language: _language,
+        timeout: promptTimeout,
+        source: 'tap-hint',
+      );
     } finally {
       if (identical(_promptTts, tts)) _promptTts = null;
     }
@@ -758,126 +728,6 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (next == null || next.answered) return;
     if (!identical(ref.read(agentControllerProvider).pending, next)) return;
     _maybeConfirm(next);
-  }
-
-  /// Speaks [text] after the answer sentences; never hangs longer than
-  /// [promptTimeout] and never throws (the card shows the question too).
-  Future<void> _sayBounded(
-    TextToSpeech? tts,
-    String text, {
-    int attempt = 0,
-    String source = 'confirm',
-  }) async {
-    if (tts == null) {
-      voiceLog('confirm-prompt', {'source': source, 'tts': false});
-      return;
-    }
-    final watch = Stopwatch()..start();
-    try {
-      await _say(tts, text).timeout(promptTimeout);
-      voiceLog('confirm-prompt', {
-        'source': source,
-        'attempt': attempt + 1,
-        'ms': watch.elapsed,
-      });
-    } on TimeoutException {
-      voiceLog('confirm-prompt', {'source': source, 'result': 'tts-timeout'});
-      await tts.stop();
-    } on Object catch (e) {
-      voiceLog('confirm-prompt', {
-        'source': source,
-        'result': 'tts-error',
-        'error': errorCode(e),
-      });
-    }
-  }
-
-  Future<void> _say(TextToSpeech tts, String text) async {
-    // Let the answer sentences before the tool call finish first.
-    if (tts.state == TtsState.speaking) {
-      await tts.states
-          .firstWhere((s) => s == TtsState.idle)
-          .timeout(const Duration(seconds: 30), onTimeout: () => TtsState.idle);
-      // `firstWhere` resumes inside the engine's state event; speaking from
-      // there would fire a new state event while it still fires one.
-      await Future<void>.delayed(Duration.zero);
-    }
-    await tts.speak(text, language: _language);
-  }
-
-  /// Records one short utterance; `pcm` is `null` if nothing was said, the
-  /// capture was aborted or the microphone did not deliver ([reason]).
-  Future<({Int16List? pcm, String reason})> _capture(
-    VoiceComponents components,
-    AudioInput audio,
-  ) async {
-    const limits = answerEndpoint;
-    final endpointer = Endpointer(limits);
-    final done = Completer<(Endpoint?, String)>();
-    void end(Endpoint? e, String reason) {
-      if (!done.isCompleted) done.complete((e, reason));
-    }
-
-    _abortCapture = () => end(null, 'aborted');
-    final watch = Stopwatch()..start();
-    var frames = 0;
-    StreamSubscription<Int16List>? sub;
-    voiceLog('confirm-listen-start');
-    try {
-      components.vad.reset();
-      sub = audio.start().listen(
-        (frame) {
-          if (done.isCompleted || frame.isEmpty) return;
-          if (frames++ == 0) {
-            voiceLog('confirm-mic', {'after': watch.elapsed});
-          }
-          final e = endpointer.add(
-            frame,
-            speech: components.vad.isSpeech(frame),
-          );
-          if (e != null) end(e, 'endpoint');
-        },
-        onError: (Object error) {
-          voiceLog('confirm-mic-error', {'error': errorCode(error)});
-          state = state.copyWith(error: voiceErrorText(error));
-          end(null, 'stream-error');
-        },
-        onDone: () => end(endpointer.finish(), 'stream-done'),
-      );
-    } on Object catch (error) {
-      voiceLog('confirm-mic-error', {'error': errorCode(error)});
-      end(null, 'start-error');
-    }
-    // The microphone must deliver soon, otherwise it did not start (H5).
-    final micGuard = Timer(micStartTimeout, () {
-      if (frames == 0) end(null, 'mic-timeout');
-    });
-    final guard = Timer(
-      limits.noSpeechTimeout + limits.maxDuration,
-      () => end(endpointer.finish(EndpointReason.maxDuration), 'guard'),
-    );
-    final (result, how) = await done.future;
-    micGuard.cancel();
-    guard.cancel();
-    try {
-      if (audio.isRunning) await audio.stop();
-    } on Object catch (e) {
-      voiceLog('confirm-mic-error', {'error': errorCode(e)});
-    }
-    unawaited(sub?.cancel());
-    _abortCapture = null;
-    final utterance = result?.kind == EndpointKind.utterance;
-    final reason = result == null
-        ? how
-        : utterance
-        ? 'utterance'
-        : 'no-speech';
-    voiceLog('confirm-listen-end', {
-      'result': reason,
-      'ms': watch.elapsed,
-      'frames': frames,
-    });
-    return (pcm: utterance ? result!.pcm : null, reason: reason);
   }
 }
 
@@ -902,84 +752,8 @@ final class ControllerAgentRun implements AgentRun {
   void cancel() => controller.cancel();
 }
 
-/// Microphone button state: listening (also for a spoken answer),
-/// thinking while a voice or typed request runs, idle when speech is
-/// [available], otherwise disabled.
-MicState micStateFor(
-  VoiceUiState voice, {
-  required bool available,
-  required bool running,
-}) {
-  if (voice.listening) return MicState.listening;
-  if (voice.active || running) return MicState.thinking;
-  return available ? MicState.idle : MicState.disabled;
-}
-
 /// German text for a failure of a voice component.
 String voiceErrorText(Object error) => switch (error) {
   VoiceException(:final message) => message,
   _ => 'Sprache hat nicht geklappt: $error',
 };
-
-/// Whether a spoken „yes“ to [question] must be strict (1–2 yes words):
-/// `external` tools and escalations below the privacy level.
-bool strictAnswer(PendingQuestion question) => switch (question) {
-  ToolQuestion(:final event) => event.risk == RiskLevel.external,
-  EscalationQuestion() => true,
-};
-
-/// Spoken question for an open confirmation, in [language] (de/fr/en);
-/// names the action.
-String confirmationPrompt(PendingQuestion question, String? language) {
-  final lang = VoiceTexts.of(language).language;
-  return switch (question) {
-    ToolQuestion(:final event) => switch (lang) {
-      'fr' => '${_actionFr(event.call.name)} Oui ou non ?',
-      'en' => '${_actionEn(event.call.name)} Yes or no?',
-      _ => '${confirmationTexts(event.call.name).title} Ja oder nein?',
-    },
-    EscalationQuestion(:final toName) => switch (lang) {
-      'fr' => 'Transmettre à $toName ? Oui ou non ?',
-      'en' => 'Hand over to $toName? Yes or no?',
-      _ => 'An $toName übergeben? Ja oder nein?',
-    },
-  };
-}
-
-String _spokenTool(String tool) =>
-    tool.replaceAll('__', ' ').replaceAll('_', ' ');
-
-bool _deletes(String tool) => RegExp('delete|remove|clear|forget')
-    .hasMatch(tool.contains('__') ? tool.substring(tool.indexOf('__')) : tool);
-
-String _actionFr(String tool) => switch (tool) {
-  'calendar__delete_event' => 'Supprimer le rendez-vous ?',
-  'obsidian__replace_section' => 'Remplacer la section de la note ?',
-  'lists__clear_completed' => 'Supprimer les éléments terminés ?',
-  _ when _deletes(tool) => 'Supprimer : ${_spokenTool(tool)} ?',
-  _ => 'Exécuter : ${_spokenTool(tool)} ?',
-};
-
-String _actionEn(String tool) => switch (tool) {
-  'calendar__delete_event' => 'Delete the appointment?',
-  'obsidian__replace_section' => 'Replace the section of the note?',
-  'lists__clear_completed' => 'Clear the completed items?',
-  _ when _deletes(tool) => 'Delete: ${_spokenTool(tool)}?',
-  _ => 'Run: ${_spokenTool(tool)}?',
-};
-
-/// Spoken request to repeat an unclear answer.
-String repeatPrompt(String? language) =>
-    switch (VoiceTexts.of(language).language) {
-      'fr' => 'Dis oui ou non, s’il te plaît.',
-      'en' => 'Please say yes or no.',
-      _ => 'Bitte sag ja oder nein.',
-    };
-
-/// Spoken note that the open confirmation now needs a tap (B7).
-String tapAnswerPrompt(String? language) =>
-    switch (VoiceTexts.of(language).language) {
-      'fr' => 'Réponds en touchant l’écran, s’il te plaît.',
-      'en' => 'Please answer with a tap.',
-      _ => 'Antworte bitte per Tipp.',
-    };

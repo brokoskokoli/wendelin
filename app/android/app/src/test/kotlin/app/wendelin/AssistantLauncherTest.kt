@@ -12,10 +12,12 @@ class AssistantLauncherTest {
     private var starts = 0
     private var ends = 0
     private var failures = 0
+    private val retries = mutableListOf<Boolean>()
 
     private fun launcher() = AssistantLauncher(
-        start = {
+        start = { retry ->
             starts++
+            retries.add(retry)
             if (failures > 0) {
                 failures--
                 throw IllegalStateException("hidden session")
@@ -133,5 +135,37 @@ class AssistantLauncherTest {
         AssistantArrivals.clear(cb)
         AssistantArrivals.arrived()
         assertEquals(1, calls)
+    }
+
+    @Test
+    fun retryIntentIsMarked() {
+        val l = launcher()
+        l.onShow(0)
+        fireTimers()
+        assertEquals(listOf(false, true), retries)
+    }
+
+    @Test
+    fun destroyedSession_noRetryAndNoSecondEnd() {
+        val l = launcher()
+        l.onShow(0)
+        l.cancel()
+        assertTrue(timers.isEmpty())
+        assertFalse(l.pending)
+        l.onHide()
+        l.onArrived()
+        assertEquals(1, starts)
+        assertEquals(0, ends)
+    }
+
+    @Test
+    fun retryFilter_lateTwinDoesNotTriggerAgain() {
+        // Cold start: the overlay arrives, then the retry intent of the same invocation.
+        assertFalse(RetryFilter.triggers(retry = true, sinceArrivalMs = 400))
+        // A retry long after the last arrival (first intent lost): it starts the request.
+        assertTrue(RetryFilter.triggers(retry = true, sinceArrivalMs = 60_000))
+        assertTrue(RetryFilter.triggers(retry = true, sinceArrivalMs = null))
+        // A new invocation always triggers.
+        assertTrue(RetryFilter.triggers(retry = false, sinceArrivalMs = 100))
     }
 }

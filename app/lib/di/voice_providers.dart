@@ -576,7 +576,7 @@ Future<List<SherpaVoice>> installedSherpaVoices(
 
 /// The sherpa-onnx synthesizer of the offline voices; its `dispose` frees
 /// the loaded voices, the next answer loads them again (B14).
-final sherpaSynthesizerProvider = Provider<IsolateSherpaSynthesizer>((ref) {
+final sherpaSynthesizerProvider = Provider<SpeechSynthesizer>((ref) {
   final synthesizer = IsolateSherpaSynthesizer(
     () async => {
       for (final v in await installedSherpaVoices(

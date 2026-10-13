@@ -6,6 +6,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
@@ -14,6 +15,7 @@ import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin/voice/voice_log.dart';
+import 'package:wendelin/voice/voice_usage.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -95,63 +97,83 @@ void main() {
 
   test(
     'Aufnahme startet sofort, Laden dauert 2 s: kein Satzanfang verloren',
-    () async {
-      final audio = microphone();
-      final stt = RecordingStt('Wie wird das Wetter?');
-      container(
-        audio: audio,
-        load: () async {
-          await Future<void>.delayed(const Duration(seconds: 2));
-          return components(audio, stt);
-        },
-      );
-      // The screen is up (controllers built) before the tap.
-      c
-        ..read(voiceControllerProvider)
-        ..read(agentControllerProvider);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      final watch = Stopwatch()..start();
-      final started = voice().start(TriggerKind.pushToTalk);
-      while (audio.startCount == 0 && watch.elapsedMilliseconds < 1000) {
-        await Future<void>.delayed(const Duration(milliseconds: 1));
-      }
-      final micAfter = watch.elapsedMilliseconds;
-      expect(audio.startCount, 1);
-      expect(micAfter, lessThanOrEqualTo(50), reason: 'Tipp → Mikrofon');
-      // While the models load: buffering, shown as preparing (WP31).
-      final v = c.read(voiceControllerProvider);
-      expect(v.preparing, isTrue);
-      expect(v.listening, isTrue);
-      expect(v.active, isTrue);
-
-      expect(await started, isTrue);
-      expect(watch.elapsed, greaterThanOrEqualTo(const Duration(seconds: 2)));
-      expect(c.read(voiceControllerProvider).preparing, isFalse);
-      await voice().whenIdle;
-
-      // The whole utterance reached Whisper, from its first frame on.
-      expect(stt.heard, hasLength(1));
-      expect(speechSamples(stt.heard.single), 10 * 480);
-      expect(
+    () {
+      // Fake clock: the 2 s load and the 30 ms frames take no real time.
+      fakeAsync((async) {
+        final audio = microphone();
+        final stt = RecordingStt('Wie wird das Wetter?');
+        container(
+          audio: audio,
+          load: () async {
+            await Future<void>.delayed(const Duration(seconds: 2));
+            return components(audio, stt);
+          },
+        );
+        // The screen is up (controllers built) before the tap.
         c
-            .read(agentControllerProvider)
-            .entries
-            .whereType<UserEntry>()
-            .single
-            .text,
-        'Wie wird das Wetter?',
-      );
-      expect(audio.startCount, 1, reason: 'eine Aufnahme, kein Neustart');
-      expect(audio.isRunning, isFalse);
+          ..read(voiceControllerProvider)
+          ..read(agentControllerProvider);
+        async.elapse(const Duration(milliseconds: 20));
+        final tap = async.elapsed;
+        var started = false;
+        unawaited(
+          voice().start(TriggerKind.pushToTalk).then((ok) => started = ok),
+        );
+        async.flushMicrotasks();
+        expect(audio.startCount, 1, reason: 'Tipp → Mikrofon ohne Wartezeit');
+        expect(async.elapsed - tap, Duration.zero);
+        // While the models load: buffering, shown as preparing (WP31).
+        final v = c.read(voiceControllerProvider);
+        expect(v.preparing, isTrue);
+        expect(v.listening, isTrue);
+        expect(v.active, isTrue);
 
-      final ready = lines.singleWhere((l) => l.contains(' mic-ready '));
-      final after = int.parse(RegExp(r'after=(\d+)').firstMatch(ready)![1]!);
-      final load = int.parse(RegExp(r'load=(\d+)').firstMatch(ready)![1]!);
-      expect(after, lessThanOrEqualTo(150), reason: ready);
-      expect(load, greaterThanOrEqualTo(2000), reason: ready);
-      expect(ready, contains('model=whisper-small'));
+        async.elapse(const Duration(milliseconds: 1990));
+        expect(started, isFalse, reason: 'Modelle laden noch');
+        async.elapse(const Duration(milliseconds: 20));
+        expect(started, isTrue);
+        expect(c.read(voiceControllerProvider).preparing, isFalse);
+        var idle = false;
+        unawaited(voice().whenIdle.then((_) => idle = true));
+        for (var i = 0; i < 100 && !idle; i++) {
+          async.elapse(const Duration(milliseconds: 100));
+        }
+        expect(idle, isTrue);
+
+        // The whole utterance reached Whisper, from its first frame on.
+        expect(stt.heard, hasLength(1));
+        expect(speechSamples(stt.heard.single), 10 * 480);
+        expect(
+          c
+              .read(agentControllerProvider)
+              .entries
+              .whereType<UserEntry>()
+              .single
+              .text,
+          'Wie wird das Wetter?',
+        );
+        expect(audio.startCount, 1, reason: 'eine Aufnahme, kein Neustart');
+        expect(audio.isRunning, isFalse);
+
+        final ready = lines.singleWhere((l) => l.contains(' mic-ready '));
+        final after = int.parse(RegExp(r'after=(\d+)').firstMatch(ready)![1]!);
+        final load = int.parse(RegExp(r'load=(\d+)').firstMatch(ready)![1]!);
+        expect(after, lessThanOrEqualTo(150), reason: ready);
+        expect(load, greaterThanOrEqualTo(2000), reason: ready);
+        expect(ready, contains('model=whisper-small'));
+      });
     },
   );
+
+  test('Sprachanfrage merkt sich nur den Zeitpunkt (Vorwärmen)', () async {
+    final audio = microphone();
+    final stt = RecordingStt('Hallo');
+    container(audio: audio, load: () async => components(audio, stt));
+    expect(await env.storage.settings.get(voiceLastUseKey), isNull);
+    expect(await voice().start(TriggerKind.pushToTalk), isTrue);
+    await voice().whenIdle;
+    expect(await env.storage.settings.get(voiceLastUseKey), testNow.toUtc());
+  });
 
   test('ohne installierte Modelle: keine Aufnahme, Hinweis', () async {
     final audio = microphone();
@@ -274,6 +296,37 @@ void main() {
       gate.complete();
       expect(await started, isTrue);
       await voice().whenIdle;
+      expect(speechSamples(stt.heard.single), 10 * 480);
+    },
+  );
+
+  test(
+    'Erklärung abgelehnt: Mikrofon zu, Puffer leer, nichts erkannt',
+    () async {
+      final audio = microphone();
+      final stt = RecordingStt('Hallo');
+      container(audio: audio, load: () async => components(audio, stt));
+      // The explanation is open while the microphone already buffers.
+      expect(
+        await voice().start(
+          TriggerKind.pushToTalk,
+          prepare: () async {
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+            return false;
+          },
+        ),
+        isFalse,
+      );
+      expect(audio.startCount, 1);
+      expect(audio.isRunning, isFalse, reason: 'Mikrofon zu');
+      final v = c.read(voiceControllerProvider);
+      expect(v.error, microphoneDeniedHint);
+      expect(v.preparing, isFalse);
+      expect(v.active, isFalse);
+      // A later request starts empty: no frame of the declined recording.
+      expect(await voice().start(TriggerKind.pushToTalk), isTrue);
+      await voice().whenIdle;
+      expect(stt.heard, hasLength(1));
       expect(speechSamples(stt.heard.single), 10 * 480);
     },
   );

@@ -6,9 +6,12 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/voice/engine_whisper.dart';
+import 'package:wendelin/platform/voice/pcm.dart';
+import 'package:wendelin/platform/voice/sherpa_tts.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
@@ -239,9 +242,11 @@ void main() {
     ProviderContainer engineContainer({
       String model = 'whisper-small',
       Duration releaseDelay = const Duration(minutes: 2),
+      List<Override> extra = const [],
     }) {
       final env = TestEnv(
         extraOverrides: [
+          ...extra,
           whisperLoaderProvider.overrideWithValue((m, _) => process.load(m.id)),
           whisperDirectoryProvider.overrideWithValue(dir),
           voiceActivityDetectorProvider.overrideWith(
@@ -338,6 +343,40 @@ void main() {
       expect(process.live, hasLength(1));
     });
 
+    test(
+      'zurück, während background() noch wartet: nichts wird freigegeben',
+      () async {
+        final app = engineContainer(
+          releaseDelay: const Duration(milliseconds: 30),
+        );
+        addTearDown(app.dispose);
+        await app.read(activeVoiceProvider.future);
+        final voice = app.read(voiceControllerProvider.notifier);
+        // The release timer is armed after suspend(); the screen is back
+        // before that (only `_foreground` stops the release then).
+        final going = voice.background();
+        voice.prewarm();
+        await going;
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        expect(process.live, hasLength(1));
+        expect(lines.where((l) => l.contains(' release ')), isEmpty);
+      },
+    );
+
+    test('Freigabe gibt auch die Offline-Stimme frei', () async {
+      final synth = _CountingSynthesizer();
+      final app = engineContainer(
+        extra: [sherpaSynthesizerProvider.overrideWithValue(synth)],
+      );
+      addTearDown(app.dispose);
+      await app.read(activeVoiceProvider.future);
+      await app
+          .read(voiceControllerProvider.notifier)
+          .releaseModels(reason: 'idle');
+      expect(process.live, isEmpty);
+      expect(synth.disposed, 1);
+    });
+
     test('Besitzer (App) wird geschlossen: Overlay lädt eigenes', () async {
       final app = engineContainer();
       final overlay = engineContainer();
@@ -355,4 +394,19 @@ void main() {
       expect(process.live, hasLength(1));
     });
   });
+}
+
+/// Offline voices that count [dispose].
+final class _CountingSynthesizer implements SpeechSynthesizer {
+  int disposed = 0;
+
+  @override
+  Future<Wav> synthesize(
+    String text, {
+    required String voiceId,
+    double speed = 1.0,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> dispose() async => disposed++;
 }
