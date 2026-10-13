@@ -1,0 +1,13 @@
+import 'tables.dart';
+
+-- Full-text index over the Obsidian vault notes (schema v2). A standalone
+-- FTS5 table keyed by path; note_files holds path, title and modification
+-- time. Both are written together in one transaction by
+-- DriftNoteIndexRepository (no triggers: the body is not stored elsewhere).
+-- Column weights for bm25: path 0, title 10, body 1.
+CREATE VIRTUAL TABLE note_fts USING fts5(
+  path UNINDEXED,
+  title,
+  body,
+  tokenize = 'unicode61 remove_diacritics 2'
+);

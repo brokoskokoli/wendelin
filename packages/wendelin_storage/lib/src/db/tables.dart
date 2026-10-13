@@ -112,3 +112,19 @@ class Settings extends Table {
   @override
   Set<Column<Object>> get primaryKey => {key};
 }
+
+/// Notes of the Obsidian vault known to the search index; the text lives
+/// only in the FTS5 table `note_fts` (see `note_fts.drift`), kept in step
+/// by `DriftNoteIndexRepository`.
+@DataClassName('NoteFileRow')
+class NoteFiles extends Table {
+  /// Vault-relative path.
+  TextColumn get path => text()();
+  TextColumn get title => text()();
+
+  /// Modification time of the file when it was indexed.
+  IntColumn get modifiedAt => integer().map(epochMicros)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {path};
+}

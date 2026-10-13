@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../model/audit_entry.dart';
 import '../model/memory_entry.dart';
+import 'database.steps.dart';
 import 'epoch_micros_converter.dart';
 import 'tables.dart';
 
@@ -17,8 +18,9 @@ part 'database.g.dart';
     ProviderProfiles,
     UsageRecords,
     Settings,
+    NoteFiles,
   ],
-  include: {'memory_fts.drift'},
+  include: {'memory_fts.drift', 'note_fts.drift'},
 )
 final class WendelinDatabase extends _$WendelinDatabase {
   /// Opens the database on [executor].
@@ -26,7 +28,7 @@ final class WendelinDatabase extends _$WendelinDatabase {
 
   /// Current schema version. Bump it together with a migration step and a
   /// new schema dump (`dart run drift_dev make-migrations`).
-  static const version = 1;
+  static const version = 2;
 
   @override
   int get schemaVersion => version;
@@ -34,6 +36,13 @@ final class WendelinDatabase extends _$WendelinDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
+    onUpgrade: stepByStep(
+      // v2 (WP16): Suchindex für Obsidian-Notizen.
+      from1To2: (m, schema) async {
+        await m.createTable(schema.noteFiles);
+        await m.createTable(schema.noteFts);
+      },
+    ),
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },

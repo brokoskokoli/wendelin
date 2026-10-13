@@ -1,7 +1,8 @@
 /// Test support for the integration ports: everything from `fakes.dart`
 /// plus the contract suites every port implementation must pass
 /// (`calendarPortContract`, `clipboardPortContract`, `alarmPortContract`,
-/// `memoryStoreContract`, `webSearchBackendContract`, `listFilePortContract`).
+/// `memoryStoreContract`, `webSearchBackendContract`, `listFilePortContract`,
+/// `vaultPortContract`, `noteIndexPortContract`).
 ///
 /// Depends on `package:test`; import it only from tests.
 library;
@@ -12,4 +13,6 @@ export 'testing/calendar_port_contract.dart';
 export 'testing/clipboard_port_contract.dart';
 export 'testing/list_file_port_contract.dart';
 export 'testing/memory_store_contract.dart';
+export 'testing/note_index_port_contract.dart';
+export 'testing/vault_port_contract.dart';
 export 'testing/web_search_backend_contract.dart';

@@ -14,6 +14,11 @@ void main() {
     AlarmsIntegration(FakeAlarmPort()),
     MemoryIntegration(FakeMemoryStore()),
     ListsIntegration(FakeListFilePort(), definitions: () => []),
+    ObsidianIntegration(
+      FakeVaultPort(),
+      FakeNoteIndex(),
+      settings: () => const ObsidianSettings(),
+    ),
     WebIntegration(
       searchBackend: FakeWebSearchBackend(),
       fetcher: WebFetcher(
@@ -47,6 +52,14 @@ void main() {
       'lists__complete_item',
       'lists__remove_item',
       'lists__clear_completed',
+      'obsidian__search_notes',
+      'obsidian__read_note',
+      'obsidian__list_folder',
+      'obsidian__create_note',
+      'obsidian__append_to_note',
+      'obsidian__append_daily_note',
+      'obsidian__replace_section',
+      'obsidian__open_note',
     });
     expect(tools.map((t) => t.name).toSet(), hasLength(tools.length));
   });
