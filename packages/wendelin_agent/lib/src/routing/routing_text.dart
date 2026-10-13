@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:wendelin_core/wendelin_core.dart' show foldLetter;
 
 /// A request text prepared for rule matching (ADR 0009 §1).
 ///
@@ -144,24 +145,8 @@ final class RoutingText {
   static final _mark = RegExp(r'^\p{M}$', unicode: true);
   static final _trailing = RegExp(r'[\s,.;:!?\-–—]');
 
-  static String _fold(String lower) {
-    if (lower.length != 1) {
-      return lower.split('').map(_fold).join();
-    }
-    return _folding[lower] ?? lower;
-  }
-
-  static const _folding = {
-    'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a', //
-    'ç': 'c',
-    'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
-    'ñ': 'n',
-    'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o', 'ø': 'o',
-    'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
-    'ý': 'y', 'ÿ': 'y',
-    'ß': 'ss', 'œ': 'oe', 'æ': 'ae',
-  };
+  static String _fold(String lower) =>
+      lower.length != 1 ? lower.split('').map(_fold).join() : foldLetter(lower);
 }
 
 /// A range `[start, end)` in [RoutingText.normalized].

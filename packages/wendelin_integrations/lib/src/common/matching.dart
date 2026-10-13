@@ -4,29 +4,9 @@ import 'package:collection/collection.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 /// Lower case, umlauts folded (ä→a, ß→ss), punctuation and whitespace
-/// collapsed to single spaces.
-String normalizeText(String s) {
-  final lower = s.toLowerCase();
-  final b = StringBuffer();
-  for (final r in lower.runes) {
-    final c = String.fromCharCode(r);
-    b.write(switch (c) {
-      'ä' || 'à' || 'á' || 'â' => 'a',
-      'ö' || 'ò' || 'ó' || 'ô' => 'o',
-      'ü' || 'ù' || 'ú' || 'û' => 'u',
-      'é' || 'è' || 'ê' || 'ë' => 'e',
-      'í' || 'ì' || 'î' || 'ï' => 'i',
-      'ç' => 'c',
-      'ñ' => 'n',
-      'ß' => 'ss',
-      _ => c,
-    });
-  }
-  return b
-      .toString()
-      .replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), ' ')
-      .trim();
-}
+/// collapsed to single spaces ([foldForMatch] without the special letters
+/// ã å õ ø ý ÿ æ œ).
+String normalizeText(String s) => foldForMatch(s, basicOnly: true);
 
 const _fillers = {
   'die',

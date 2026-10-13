@@ -24,6 +24,10 @@ abstract final class McpNaming {
   /// Hex characters of the hash suffix.
   static const hashLength = 6;
 
+  // Bewusst keine `foldForMatch` aus wendelin_core: Tool-Namen brauchen
+  // ä→ae (ASCII-Slug) und müssen stabil bleiben, sonst ändern sich Namen in
+  // Registry, Regeln und Audit-Log. Die Faltung für Vergleiche (ä→a) ist
+  // eine andere Aufgabe.
   static const _transliterate = {
     'ä': 'ae',
     'ö': 'oe',

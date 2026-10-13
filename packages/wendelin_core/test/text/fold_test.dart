@@ -27,6 +27,38 @@ void main() {
     }
   });
 
+  group('foldForMatch basicOnly (Listen, Obsidian)', () {
+    for (final (input, expected) in [
+      ('Äpfel Größe Café', 'apfel grosse cafe'),
+      ('Æble', 'æble'),
+      ('Øresund', 'øresund'),
+      ('Œuvre', 'œuvre'),
+      ('Ångström', 'ångstrom'),
+      ('Ýmir ÿ', 'ýmir ÿ'),
+      ('Wendelin-Test', 'wendelin test'),
+    ]) {
+      test('$input → $expected', () {
+        expect(foldForMatch(input, basicOnly: true), expected);
+      });
+    }
+    test('ý folds in the full variant', () {
+      expect(foldForMatch('Ýmir'), 'ymir');
+    });
+  });
+
+  group('foldLetter', () {
+    for (final (input, expected) in [
+      ('ä', 'a'),
+      ('ß', 'ss'),
+      ('æ', 'ae'),
+      ('ø', 'o'),
+      ('ý', 'y'),
+      ('x', 'x'),
+    ]) {
+      test('$input → $expected', () => expect(foldLetter(input), expected));
+    }
+  });
+
   group('foldFlat', () {
     for (final (input, expected) in [
       ('Wendelin-Test', 'wendelintest'),
