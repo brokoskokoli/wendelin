@@ -10,6 +10,7 @@ import '../../di/providers.dart';
 import '../../di/sensitivity.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
+import 'settings_routes.dart';
 
 /// Tools of one integration: each on/off, and `read`/`write` tools can be
 /// set to „Immer nachfragen“. Levels can only be made stricter (K8 b):
@@ -37,6 +38,23 @@ class IntegrationDetailScreen extends ConsumerWidget {
                 'für sensible Integrationen festlegst.'
           : null,
       children: [
+        if (setupPageFor(id) case final page?)
+          SectionCard(
+            children: [
+              SettingsRow(
+                title: switch (id) {
+                  'web' => 'Suchdienst einrichten',
+                  'lists' => 'Listen verwalten',
+                  _ => 'Einrichten',
+                },
+                detail: switch (id) {
+                  'web' => 'Ohne Suchdienst liest Wendelin nur Seiten',
+                  _ => null,
+                },
+                onTap: () => Navigator.of(context).pushNamed(page),
+              ),
+            ],
+          ),
         SectionCard(
           children: [
             for (final tool in integration.tools)

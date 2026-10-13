@@ -6,6 +6,7 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin/ui/settings/integrations_screen.dart';
+import 'package:wendelin/ui/settings/lists_screen.dart';
 import 'package:wendelin/ui/settings/web_search_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
@@ -54,9 +55,10 @@ void main() {
     expect(tileWidget(tester, 'Gedächtnis').detail, '3 Tools');
     expect(tileWidget(tester, 'Gedächtnis').sensitive, isTrue);
     expect(tileWidget(tester, 'Kalender').status, IntegrationStatus.available);
+    // Ohne Suchdienst ist Web aktiv, nur mit web__fetch (WP14).
     final web = tileWidget(tester, 'Web');
-    expect(web.status, IntegrationStatus.setupRequired);
-    expect(web.detail, contains('Suchdienst'));
+    expect(web.status, IntegrationStatus.active);
+    expect(web.detail, '1 Tool');
   });
 
   testWidgets('Einschalten: erst Erklärung, dann Berechtigung', (tester) async {
@@ -97,12 +99,31 @@ void main() {
     expect(env.permissionRequests, 0);
   });
 
-  testWidgets('„Einrichten“ bei Web öffnet die Web-Suche', (tester) async {
+  testWidgets('„Einrichten“ bei Listen öffnet die Listen-Seite', (
+    tester,
+  ) async {
+    final env = TestEnv(enabled: const {'lists'});
+    await pumpIntegrations(tester, env);
+    expect(
+      tileWidget(tester, 'Listen').status,
+      IntegrationStatus.setupRequired,
+    );
+    await tester.tap(
+      find.descendant(
+        of: tile('Listen'),
+        matching: find.byType(OutlinedButton),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(ListsScreen), findsOneWidget);
+  });
+
+  testWidgets('Web-Detail führt zur Suchdienst-Einrichtung', (tester) async {
     final env = TestEnv(enabled: const {'web'});
     await pumpIntegrations(tester, env);
-    await tester.tap(
-      find.descendant(of: tile('Web'), matching: find.byType(OutlinedButton)),
-    );
+    await tester.tap(find.text('Web'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Suchdienst einrichten'));
     await tester.pumpAndSettle();
     expect(find.byType(WebSearchScreen), findsOneWidget);
   });

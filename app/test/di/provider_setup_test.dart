@@ -22,7 +22,10 @@ const _key = 'testschluessel-0123456789abcdef-GEHEIM';
 /// stored, `listModels` needs no model, `test()` fails with 404 for a model
 /// the server does not know (like Ollama or OpenRouter).
 final class RecordingFactory {
-  RecordingFactory({this.ok = true, this.models = const []});
+  RecordingFactory({this.ok = true, this.models = const [], this.listError});
+
+  /// Thrown by `listModels` (server without a model list).
+  ProviderException? listError;
 
   /// Whether the key is accepted.
   bool ok;
@@ -69,6 +72,7 @@ final class _ServerLikeProvider implements LlmProvider {
   Future<List<ModelInfo>> listModels() async {
     await _key();
     if (!f.ok) throw const AuthException('API-Key ungültig (401)');
+    if (f.listError case final e?) throw e;
     return f.models;
   }
 
@@ -154,6 +158,25 @@ void main() {
         );
         expect(wrong.ok, isFalse);
         expect(wrong.message, contains('404'));
+      }
+    });
+
+    test('keine Modellliste (nicht Auth): weiter mit freier Eingabe', () async {
+      for (final error in <ProviderException>[
+        const ServerException('Not Found', statusCode: 404),
+        const NetworkException('keine Verbindung'),
+        const MalformedResponseException('kein JSON'),
+      ]) {
+        final f = RecordingFactory(listError: error);
+        final s = session(f, InMemorySecretStore(), template: 'custom');
+        final r = await s.loadModels(baseUrl: 'http://nas/v1');
+        expect(r.ok, isTrue, reason: '$error');
+        expect(r.models, isEmpty);
+        expect(r.message, contains('Bitte die Modell-ID eingeben'));
+        expect(
+          (await s.probe(baseUrl: 'http://nas/v1', model: 'qwen')).ok,
+          isTrue,
+        );
       }
     });
 

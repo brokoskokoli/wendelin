@@ -306,24 +306,20 @@ void main() {
     },
   );
 
-  test(
-    'Web an, kein Suchdienst → nur web__fetch',
-    skip: 'wartet auf WP14 (optionale Einrichtungsschritte)',
-    () async {
-      final env = TestEnv(enabled: const {'web'});
-      final c = env.container();
-      addTearDown(c.dispose);
-      final registry = c.read(toolRegistryProvider);
-      await registry.refresh();
-      expect(registry.status('web'), IntegrationStatus.active);
-      expect(
-        registry
-            .activeSpecsFor(PrivacyLevel.standard, sessionId: 's')
-            .map((t) => t.name),
-        ['web__fetch'],
-      );
-    },
-  );
+  test('Web an, kein Suchdienst → nur web__fetch', () async {
+    final env = TestEnv(enabled: const {'web'});
+    final c = env.container();
+    addTearDown(c.dispose);
+    final registry = c.read(toolRegistryProvider);
+    await registry.refresh();
+    expect(registry.status('web'), IntegrationStatus.active);
+    expect(
+      registry
+          .activeSpecsFor(PrivacyLevel.standard, sessionId: 's')
+          .map((t) => t.name),
+      ['web__fetch'],
+    );
+  });
 
   group('Aufbewahrung', () {
     test('Standard 30 Tage auf leerer Datenbank', () async {

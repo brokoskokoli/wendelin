@@ -133,7 +133,9 @@ final class ProviderSetupSession {
   }
 
   /// Step 1: connects with the stored key and loads the models (no model
-  /// is needed yet). Never throws.
+  /// is needed yet). Only a rejected key ([AuthException]) fails; any other
+  /// problem with the model list continues with an empty list, and the user
+  /// types the model id (the probe then decides). Never throws.
   Future<SetupTestResult> loadModels({String? baseUrl}) async {
     final LlmProvider provider;
     try {
@@ -150,8 +152,17 @@ final class ProviderSetupSession {
             : 'Verbindung steht, ${models.length} Modelle gefunden.',
         models: models,
       );
-    } on ProviderException catch (e) {
+    } on AuthException catch (e) {
       return SetupTestResult(ok: false, message: e.message);
+    } on ProviderException catch (e) {
+      // Many servers have no (working) model list; the probe of the typed
+      // model decides whether the connection works.
+      return SetupTestResult(
+        ok: true,
+        message:
+            'Modellliste nicht verfügbar (${e.message}). Bitte die '
+            'Modell-ID eingeben.',
+      );
     }
   }
 

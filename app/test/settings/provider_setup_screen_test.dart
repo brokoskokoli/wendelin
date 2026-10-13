@@ -164,6 +164,35 @@ void main() {
     expect(find.text('Modell prüfen'), findsOneWidget);
   });
 
+  testWidgets('Server ohne Modellliste: Modell-ID frei eingeben', (
+    tester,
+  ) async {
+    final f = RecordingFactory(
+      listError: const ServerException('Not Found', statusCode: 404),
+    );
+    final env = await pumpProviders(tester, f);
+    await openNew(tester);
+    await tester.tap(find.text('Eigener Endpunkt'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Base-URL'),
+      'http://nas:8080/v1',
+    );
+    await tester.tap(find.text('Verbindung testen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Modelle'), findsNothing);
+    await tester.enterText(find.widgetWithText(TextField, 'Modell-ID'), 'qwen');
+    await tester.pump();
+    await tester.tap(find.text('Modell prüfen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    expect(
+      (await env.storage.providerProfiles.list()).single.defaultModel,
+      'qwen',
+    );
+  });
+
   testWidgets('ungültiges Budget wird gemeldet', (tester) async {
     final f = RecordingFactory(models: const [ModelInfo(id: 'm')]);
     final env = await pumpProviders(tester, f);

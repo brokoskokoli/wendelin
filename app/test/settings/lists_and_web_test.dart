@@ -190,9 +190,14 @@ void main() {
     ) async {
       final env = TestEnv(enabled: const {'web'});
       final c = await pumpPage(tester, env, const WebSearchScreen());
+      final before = c.read(toolRegistryProvider);
+      expect(before.status('web'), IntegrationStatus.active);
       expect(
-        c.read(toolRegistryProvider).status('web'),
-        IntegrationStatus.setupRequired,
+        before
+            .activeSpecsFor(PrivacyLevel.standard, sessionId: 's')
+            .map((t) => t.name),
+        ['web__fetch'],
+        reason: 'ohne Suchdienst nur Seiten lesen',
       );
       await tester.tap(find.text('Brave Search'));
       await settle(tester);
