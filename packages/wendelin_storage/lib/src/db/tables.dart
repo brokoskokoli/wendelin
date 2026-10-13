@@ -4,7 +4,7 @@
 import 'package:drift/drift.dart';
 
 import '../model/audit_entry.dart';
-import '../model/memory_entry.dart';
+import '../model/stored_memory.dart';
 import 'epoch_micros_converter.dart';
 
 /// Conversation sessions.
@@ -56,7 +56,7 @@ class MemoryEntries extends Table {
   /// The remembered text. Named `body` (not `text`) because drift's
   /// schema-dump code generator cannot name a column getter `text`.
   TextColumn get body => text()();
-  TextColumn get category => textEnum<MemoryCategory>()();
+  TextColumn get category => textEnum<StoredMemoryCategory>()();
   TextColumn get source => text()();
   IntColumn get createdAt => integer().map(epochMicros)();
   IntColumn get lastUsedAt => integer().map(epochMicros)();

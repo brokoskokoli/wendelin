@@ -2,9 +2,9 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../model/audit_entry.dart';
 import '../model/conversation.dart';
-import '../model/memory_entry.dart';
 import '../model/note_search_hit.dart';
 import '../model/setting_key.dart';
+import '../model/stored_memory.dart';
 import '../model/usage_record.dart';
 
 /// Conversation sessions and their messages.
@@ -64,39 +64,39 @@ abstract interface class ConversationRepository {
 /// passwords/PINs) with a `SensitiveContentException`.
 abstract interface class MemoryRepository {
   /// Stores a new entry (with [privacyFloor] of a private run).
-  Future<MemoryEntry> save(
+  Future<StoredMemory> save(
     String text, {
-    required MemoryCategory category,
+    required StoredMemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
   });
 
   /// Changes text and/or category of entry [id]; returns the updated entry
   /// or `null` if it does not exist.
-  Future<MemoryEntry?> update(
+  Future<StoredMemory?> update(
     String id, {
     String? text,
-    MemoryCategory? category,
+    StoredMemoryCategory? category,
   });
 
   /// Removes the privacy floor of entry [id] (the user confirmed that the
   /// entry may reach every target); returns the updated entry or `null` if
   /// it does not exist.
-  Future<MemoryEntry?> clearPrivacyFloor(String id);
+  Future<StoredMemory?> clearPrivacyFloor(String id);
 
   /// Deletes entry [id]; returns whether it existed.
   Future<bool> forget(String id);
 
   /// The entry with [id], or `null`.
-  Future<MemoryEntry?> get(String id);
+  Future<StoredMemory?> get(String id);
 
   /// All entries (optionally of one [category]), newest first.
-  Future<List<MemoryEntry>> list({MemoryCategory? category});
+  Future<List<StoredMemory>> list({StoredMemoryCategory? category});
 
   /// Up to [limit] entries matching [query], most relevant first (FTS5
   /// bm25). Words are matched as prefixes and combined with OR; FTS syntax
   /// in [query] has no effect. Updates `lastUsedAt` of the returned entries.
-  Future<List<MemoryEntry>> search(String query, {int limit = 5});
+  Future<List<StoredMemory>> search(String query, {int limit = 5});
 
   /// All entries as Markdown, grouped by category.
   Future<String> exportMarkdown();

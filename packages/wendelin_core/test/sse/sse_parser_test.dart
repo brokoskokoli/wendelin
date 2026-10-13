@@ -1,11 +1,17 @@
-// Kopie der Parser-Tests aus wendelin_providers (Parser liegt seit WP22 in
-// core); die Provider-Tests laufen dort unverändert weiter.
+// Parser-Tests (Parser liegt seit WP22 in core). Seit WP36 die einzige
+// Kopie; die Provider-Mitschnitte unter `test/fixtures/sse/` stammen aus
+// `wendelin_providers/test/fixtures/`.
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+
+/// Reads a recorded stream from `test/fixtures/sse/`.
+String fixture(String path) =>
+    File('test/fixtures/sse/$path').readAsStringSync();
 
 Future<List<SseEvent>> parseChunks(List<List<int>> chunks) =>
     SseParser.parse(Stream.fromIterable(chunks)).toList();
@@ -151,6 +157,9 @@ void main() {
             'event: message\ndata: {"jsonrpc":"2.0","id":1}\n\n'
             'event: endpoint\ndata: /messages?sessionId=ä1\n\n'
             'id: 3\ndata: {"a":\ndata: "b"}\n\n',
+        'anthropic/text': fixture('anthropic/text.sse'),
+        'anthropic/thinking': fixture('anthropic/thinking.sse'),
+        'openai/parallel': fixture('openai/parallel_tool_calls.sse'),
         'synthetisch':
             'event: x\r\ndata: Grüße 🦊\r\ndata: zweite\r\n\r\n'
             ': kommentar\rdata: ä\r\rid: 9\ndata: [DONE]\n\n',

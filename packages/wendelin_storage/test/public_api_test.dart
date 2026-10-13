@@ -93,18 +93,18 @@ void main() {
     expect(m.hashCode, m2.hashCode);
     expect(m.toString(), contains('s#1'));
 
-    final e = MemoryEntry(
+    final e = StoredMemory(
       id: 'e',
       text: 'Tee',
-      category: MemoryCategory.preference,
+      category: StoredMemoryCategory.preference,
       source: 'user',
       createdAt: t,
       lastUsedAt: t,
     );
-    final e2 = MemoryEntry(
+    final e2 = StoredMemory(
       id: 'e',
       text: 'Tee',
-      category: MemoryCategory.preference,
+      category: StoredMemoryCategory.preference,
       source: 'user',
       createdAt: t,
       lastUsedAt: t,

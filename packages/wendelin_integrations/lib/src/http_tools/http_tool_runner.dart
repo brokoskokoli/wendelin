@@ -7,9 +7,9 @@ import 'package:meta/meta.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../common/base_tool.dart' show ellipsize;
+import '../common/net_scope.dart' show HostResolver;
 import '../common/port_exception.dart';
 import '../common/tool_args.dart';
-import '../web/fetch_guard.dart' show HostResolver;
 import '../web/web_search_backend.dart' show orCancel;
 import 'http_target.dart';
 import 'http_template.dart';

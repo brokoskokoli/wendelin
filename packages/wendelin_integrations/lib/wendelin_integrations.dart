@@ -43,6 +43,7 @@ export 'src/clipboard/clipboard.dart';
 export 'src/common/app_presence.dart';
 export 'src/common/base_tool.dart' show IntegrationTool, ellipsize;
 export 'src/common/data_envelope.dart';
+export 'src/common/net_scope.dart';
 export 'src/common/port_exception.dart';
 export 'src/common/time.dart' show LocalDate, timeZoneLocation;
 export 'src/common/tool_args.dart' show InvalidArgumentsException, ToolArgs;

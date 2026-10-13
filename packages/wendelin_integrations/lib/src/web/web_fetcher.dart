@@ -41,9 +41,9 @@ final class FetchedPage {
 
 /// Fetches web pages as text with guard rails:
 ///
-/// - only `http`/`https`; no local or private targets (loopback, 10.x,
-///   172.16–31.x, 192.168.x, link-local, CGNAT, IPv6 ULA …) unless the host
-///   is in [allowedHosts]; checked again for every redirect hop;
+/// - only `http`/`https`; no local or private targets (loopback, private
+///   networks, link-local, CGNAT, IPv6 ULA …, see `checkFetchTarget`) unless
+///   the host is in [allowedHosts]; checked again for every redirect hop;
 /// - at most [maxBytes] of body are read (the rest is dropped, the page is
 ///   marked as truncated);
 /// - only text content (HTML, plain text, JSON, XML); HTML becomes text.

@@ -10,21 +10,21 @@ import 'export.dart';
 import 'settings_page.dart';
 
 /// All memory entries, newest first (refresh with `ref.invalidate`).
-final memoryEntriesProvider = FutureProvider.autoDispose<List<MemoryEntry>>(
+final memoryEntriesProvider = FutureProvider.autoDispose<List<StoredMemory>>(
   (ref) => ref.watch(storageProvider).memory.list(),
 );
 
 /// German name of a memory category.
-String categoryLabel(MemoryCategory c) => switch (c) {
-  MemoryCategory.person => 'Person',
-  MemoryCategory.preference => 'Vorliebe',
-  MemoryCategory.fact => 'Fakt',
-  MemoryCategory.project => 'Projekt',
+String categoryLabel(StoredMemoryCategory c) => switch (c) {
+  StoredMemoryCategory.person => 'Person',
+  StoredMemoryCategory.preference => 'Vorliebe',
+  StoredMemoryCategory.fact => 'Fakt',
+  StoredMemoryCategory.project => 'Projekt',
 };
 
 /// Second line of a memory entry: category and, for entries of private
 /// runs, their privacy floor („Fakt · privat, nur ab TEE“).
-String memoryDetail(MemoryEntry e) => switch (e.privacyFloor) {
+String memoryDetail(StoredMemory e) => switch (e.privacyFloor) {
   final floor? =>
     '${categoryLabel(e.category)} · privat, nur ab ${floor.label}',
   null => categoryLabel(e.category),
@@ -40,7 +40,7 @@ class MemoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entries = ref.watch(memoryEntriesProvider);
-    final list = entries.value ?? const <MemoryEntry>[];
+    final list = entries.value ?? const <StoredMemory>[];
     return SettingsPage(
       title: 'Gedächtnis',
       intro:
@@ -86,7 +86,7 @@ class MemoryScreen extends ConsumerWidget {
   Future<void> _delete(
     BuildContext context,
     WidgetRef ref,
-    MemoryEntry e,
+    StoredMemory e,
   ) async {
     final ok = await confirm(
       context,
@@ -99,7 +99,11 @@ class MemoryScreen extends ConsumerWidget {
     ref.invalidate(memoryEntriesProvider);
   }
 
-  Future<void> _edit(BuildContext context, WidgetRef ref, MemoryEntry e) async {
+  Future<void> _edit(
+    BuildContext context,
+    WidgetRef ref,
+    StoredMemory e,
+  ) async {
     final result = await showDialog<_EditResult>(
       context: context,
       builder: (_) => _EditDialog(e),
@@ -123,7 +127,7 @@ class MemoryScreen extends ConsumerWidget {
   Future<void> _liftFloor(
     BuildContext context,
     WidgetRef ref,
-    MemoryEntry e,
+    StoredMemory e,
   ) async {
     final level = e.privacyFloor?.label ?? '';
     final ok = await confirm(
@@ -146,16 +150,16 @@ final class _EditResult {
   const _EditResult(this.text, this.category);
 
   /// The user wants to lift the privacy floor.
-  static const liftFloor = _EditResult('', MemoryCategory.fact);
+  static const liftFloor = _EditResult('', StoredMemoryCategory.fact);
 
   final String text;
-  final MemoryCategory category;
+  final StoredMemoryCategory category;
 }
 
 class _EditDialog extends StatefulWidget {
   const _EditDialog(this.entry);
 
-  final MemoryEntry entry;
+  final StoredMemory entry;
 
   @override
   State<_EditDialog> createState() => _EditDialogState();
@@ -164,7 +168,7 @@ class _EditDialog extends StatefulWidget {
 class _EditDialogState extends State<_EditDialog> {
   late final _text = TextEditingController(text: widget.entry.text)
     ..addListener(() => setState(() {}));
-  late MemoryCategory _category = widget.entry.category;
+  late StoredMemoryCategory _category = widget.entry.category;
 
   @override
   void dispose() {
@@ -185,7 +189,7 @@ class _EditDialogState extends State<_EditDialog> {
           spacing: WSpace.s,
           runSpacing: WSpace.s,
           children: [
-            for (final c in MemoryCategory.values)
+            for (final c in StoredMemoryCategory.values)
               ChoiceChip(
                 label: Text(categoryLabel(c)),
                 selected: _category == c,

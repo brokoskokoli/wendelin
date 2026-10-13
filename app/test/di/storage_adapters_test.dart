@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/storage_adapters.dart';
 import 'package:wendelin/platform/repository_memory_port.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_integrations/wendelin_integrations.dart' as wi;
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
 
 void main() {
@@ -12,13 +12,13 @@ void main() {
     final port = RepositoryMemoryPort(storage.memory);
     await port.save(
       'Knie-OP im März',
-      category: wi.MemoryCategory.fact,
+      category: MemoryCategory.fact,
       source: 'session:s1',
       privacyFloor: PrivacyLevel.tee,
     );
     await port.save(
       'Knie ist wieder gut',
-      category: wi.MemoryCategory.fact,
+      category: MemoryCategory.fact,
       source: 'session:s1',
     );
     final items = await StorageMemoryRetriever(storage.memory)

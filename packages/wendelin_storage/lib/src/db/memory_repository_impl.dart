@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../model/memory_entry.dart';
+import '../model/stored_memory.dart';
 import '../repositories/repositories.dart';
 import '../sensitive_content.dart';
 import 'database.dart';
@@ -16,9 +16,9 @@ final class DriftMemoryRepository implements MemoryRepository {
   final IdGenerator _ids;
 
   @override
-  Future<MemoryEntry> save(
+  Future<StoredMemory> save(
     String text, {
-    required MemoryCategory category,
+    required StoredMemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
   }) async {
@@ -38,10 +38,10 @@ final class DriftMemoryRepository implements MemoryRepository {
   }
 
   @override
-  Future<MemoryEntry?> update(
+  Future<StoredMemory?> update(
     String id, {
     String? text,
-    MemoryCategory? category,
+    StoredMemoryCategory? category,
   }) async {
     if (text != null) checkNotSensitive(text);
     await (_db.update(_db.memoryEntries)..where((m) => m.id.equals(id))).write(
@@ -54,7 +54,7 @@ final class DriftMemoryRepository implements MemoryRepository {
   }
 
   @override
-  Future<MemoryEntry?> clearPrivacyFloor(String id) async {
+  Future<StoredMemory?> clearPrivacyFloor(String id) async {
     await (_db.update(_db.memoryEntries)..where((m) => m.id.equals(id))).write(
       const MemoryEntriesCompanion(privacyFloor: Value(null)),
     );
@@ -69,7 +69,7 @@ final class DriftMemoryRepository implements MemoryRepository {
       0;
 
   @override
-  Future<MemoryEntry?> get(String id) async {
+  Future<StoredMemory?> get(String id) async {
     final row = await (_db.select(
       _db.memoryEntries,
     )..where((m) => m.id.equals(id))).getSingleOrNull();
@@ -77,7 +77,7 @@ final class DriftMemoryRepository implements MemoryRepository {
   }
 
   @override
-  Future<List<MemoryEntry>> list({MemoryCategory? category}) async {
+  Future<List<StoredMemory>> list({StoredMemoryCategory? category}) async {
     final q = _db.select(_db.memoryEntries)
       ..orderBy([
         (m) => OrderingTerm.desc(m.createdAt),
@@ -88,7 +88,7 @@ final class DriftMemoryRepository implements MemoryRepository {
   }
 
   @override
-  Future<List<MemoryEntry>> search(String query, {int limit = 5}) async {
+  Future<List<StoredMemory>> search(String query, {int limit = 5}) async {
     final match = ftsQuery(query);
     if (match == null || limit <= 0) return const [];
     return _db.transaction(() async {
@@ -104,7 +104,7 @@ final class DriftMemoryRepository implements MemoryRepository {
           )
           .asyncMap((r) => _db.memoryEntries.mapFromRow(r))
           .get();
-      if (rows.isEmpty) return const <MemoryEntry>[];
+      if (rows.isEmpty) return const <StoredMemory>[];
       final now = _clock.now();
       final ids = [for (final r in rows) r.id];
       await (_db.update(_db.memoryEntries)..where((m) => m.id.isIn(ids))).write(
@@ -118,7 +118,7 @@ final class DriftMemoryRepository implements MemoryRepository {
   Future<String> exportMarkdown() async {
     final entries = await list();
     final b = StringBuffer('# Gedächtnis\n');
-    for (final category in MemoryCategory.values) {
+    for (final category in StoredMemoryCategory.values) {
       final inCategory = entries.where((e) => e.category == category).toList()
         ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
       if (inCategory.isEmpty) continue;
@@ -132,10 +132,10 @@ final class DriftMemoryRepository implements MemoryRepository {
   }
 
   static const _heading = {
-    MemoryCategory.person: 'Personen',
-    MemoryCategory.preference: 'Vorlieben',
-    MemoryCategory.fact: 'Fakten',
-    MemoryCategory.project: 'Projekte',
+    StoredMemoryCategory.person: 'Personen',
+    StoredMemoryCategory.preference: 'Vorlieben',
+    StoredMemoryCategory.fact: 'Fakten',
+    StoredMemoryCategory.project: 'Projekte',
   };
 
   static String _date(DateTime d) =>
@@ -143,7 +143,7 @@ final class DriftMemoryRepository implements MemoryRepository {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
-  static MemoryEntry _entry(MemoryRow r) => MemoryEntry(
+  static StoredMemory _entry(MemoryRow r) => StoredMemory(
     id: r.id,
     text: r.body,
     category: r.category,

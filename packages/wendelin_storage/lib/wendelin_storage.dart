@@ -9,9 +9,9 @@ library;
 
 export 'src/model/audit_entry.dart';
 export 'src/model/conversation.dart';
-export 'src/model/memory_entry.dart';
 export 'src/model/note_search_hit.dart';
 export 'src/model/setting_key.dart';
+export 'src/model/stored_memory.dart';
 export 'src/model/usage_record.dart';
 export 'src/redaction.dart'
     show

@@ -4,7 +4,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/testing.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
-import 'package:wendelin_storage/wendelin_storage.dart' as st;
+import 'package:wendelin_storage/wendelin_storage.dart';
 
 void main() {
   memoryStoreContract(
@@ -69,15 +69,14 @@ void main() {
 }
 
 /// Repository whose own protection rule rejects everything.
-final class _RejectingRepository implements st.MemoryRepository {
+final class _RejectingRepository implements MemoryRepository {
   @override
-  Future<st.MemoryEntry> save(
+  Future<StoredMemory> save(
     String text, {
-    required st.MemoryCategory category,
+    required StoredMemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
-  }) async =>
-      throw const st.SensitiveContentException(SensitiveKind.cardNumber);
+  }) async => throw const SensitiveContentException(SensitiveKind.cardNumber);
 
   @override
   Object? noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
