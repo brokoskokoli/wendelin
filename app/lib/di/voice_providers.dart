@@ -609,6 +609,9 @@ final class VoiceComponents {
 
 /// The voice building blocks; fails with `VoiceException(modelMissing)`
 /// while Whisper or Silero are not downloaded.
+///
+/// Whoever runs a `VoicePipeline` on them must call `cancel()` when the
+/// app goes to the background (ADR 0007 §12), so the microphone is freed.
 final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
   final selector = ref.watch(ttsSelectorProvider);
   return VoiceComponents(

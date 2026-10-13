@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import 'isolate_exit.dart';
 import 'pcm.dart';
 import 'sherpa_runtime.dart';
 
@@ -224,19 +225,27 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
   /// Voice files by id (resolved on every call).
   final Future<Map<String, PiperVoiceFiles>> Function() voices;
 
-  Future<(Isolate, SendPort, StreamIterator<Object?>)>? _worker;
+  Future<(WorkerIsolate, SendPort, StreamIterator<Object?>)>? _worker;
   Future<void> _queue = Future.value();
 
-  Future<(Isolate, SendPort, StreamIterator<Object?>)> _start() async {
+  /// How long [dispose] waits for the isolate to free the voices and exit
+  /// before it is killed.
+  Duration exitGrace = const Duration(seconds: 5);
+
+  Future<(WorkerIsolate, SendPort, StreamIterator<Object?>)> _start() async {
     final replies = ReceivePort();
-    final isolate = await Isolate.spawn(_main, (
+    final worker = await WorkerIsolate.spawn(_main, (
       replies.sendPort,
       sherpaLibraryDir,
     ), debugName: 'sherpa-tts');
     final events = StreamIterator<Object?>(replies);
     await events.moveNext();
-    return (isolate, events.current! as SendPort, events);
+    return (worker, events.current! as SendPort, events);
   }
+
+  /// The background isolate; `null` before the first synthesis.
+  @visibleForTesting
+  Future<WorkerIsolate>? get worker => _worker?.then((w) => w.$1);
 
   @override
   Future<Wav> synthesize(
@@ -286,7 +295,8 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     final (isolate, port, replies) = await worker;
     port.send(null);
     await replies.cancel();
-    isolate.kill(priority: Isolate.beforeNextEvent);
+    // The isolate frees the voices and exits; kill only after the grace.
+    await isolate.awaitExit(grace: exitGrace);
   }
 
   static void _main((SendPort, String?) args) {

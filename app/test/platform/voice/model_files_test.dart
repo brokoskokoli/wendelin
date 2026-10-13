@@ -225,6 +225,26 @@ void main() {
       expect(File('${target.path}/voice/ok').existsSync(), isFalse);
     });
 
+    test('Schreibfehler (Datei, wo ein Ordner hin muss): abgelehnt, '
+        'nichts bleibt liegen', () async {
+      final clash = File('${tmp.path}/c.tar.bz2')
+        ..writeAsBytesSync(
+          bz2(
+            tar([
+              tarEntry('voice/a', [1]),
+              tarEntry('voice/a/b', [2]),
+            ]),
+          ),
+        );
+      final target = Directory('${tmp.path}/c');
+      await expectLater(
+        extractTarBz2(clash, target),
+        _rejected('ließ sich nicht entpacken'),
+      );
+      expect(target.existsSync(), isFalse);
+      expect(Directory('${target.path}.tmp').existsSync(), isFalse);
+    });
+
     test('bzip2-Bombe und kaputtes bzip2 werden abgelehnt', () async {
       final bomb = File('${tmp.path}/b.tar.bz2')
         ..writeAsBytesSync(bz2(tar([tarEntry('big', Uint8List(4 << 20))])));
@@ -373,6 +393,35 @@ void main() {
         expect(await inst.isInstalled(model), isFalse);
       },
     );
+
+    test(
+      'abgeschnittene Datei gilt als fehlend und wird neu geladen',
+      () async {
+        final (inst, requests) = installer({'v.onnx': small});
+        await inst.install(plain);
+        expect(await inst.isInstalled(plain), isTrue);
+        final file = File(inst.store.pathOf(plain.id, 'v.onnx'))
+          ..writeAsBytesSync(small.sublist(0, 5));
+        expect(await inst.isInstalled(plain), isFalse);
+        expect(await inst.remainingBytes(plain), small.length);
+        await inst.install(plain);
+        expect(file.readAsBytesSync(), small);
+        expect(await inst.isInstalled(plain), isTrue);
+        expect(requests, hasLength(2));
+      },
+    );
+
+    test('heruntergeladenes, zu kurzes Archiv wird neu geladen', () async {
+      final (inst, requests) = installer({'vits-x.tar.bz2': voiceTar});
+      final model = voiceModel(voiceTar);
+      final archive = File(inst.store.pathOf(model.id, 'vits-x.tar.bz2'))
+        ..parent.createSync(recursive: true)
+        ..writeAsBytesSync(voiceTar.sublist(0, 10));
+      await inst.install(model);
+      expect(requests, hasLength(1));
+      expect(await inst.isInstalled(model), isTrue);
+      expect(archive.existsSync(), isFalse);
+    });
 
     test('zu wenig Platz: Fehler vor dem Download', () async {
       final (inst, requests) = installer({'v.onnx': small}, free: 10 << 20);

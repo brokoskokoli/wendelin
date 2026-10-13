@@ -67,6 +67,36 @@ void main() {
     expect(input.isRunning, isFalse);
   });
 
+  for (final stopFails in [false, true]) {
+    test('Fehler ohne Stream-Ende: Abo beendet, Recorder gestoppt '
+        '(stop wirft: $stopFails)', () async {
+      final rec = FakePcmRecorder();
+      if (stopFails) rec.stopError = StateError('schon aus');
+      final input = RecordAudioInput(rec);
+      final errors = <Object>[];
+      final done = Completer<void>();
+      input.start().listen((_) {}, onError: errors.add, onDone: done.complete);
+      await Future<void>.delayed(const Duration(milliseconds: 15));
+      rec.emitError(StateError('Mikrofon weg'));
+      await done.future;
+      expect(errors.single, _kind(VoiceErrorKind.unavailable));
+      expect(rec.cancelled, isTrue, reason: 'Abo auf den Byte-Stream');
+      expect(rec.stops, 1);
+      expect(input.isRunning, isFalse);
+      if (!stopFails) {
+        // Restart works after the failure.
+        rec.stopError = null;
+        final first = Completer<void>();
+        input.start().listen((_) {
+          if (!first.isCompleted) first.complete();
+        });
+        await first.future;
+        await input.stop();
+        expect(rec.starts, 2);
+      }
+    });
+  }
+
   test('Plattform beendet den Stream: Aufnahme endet', () async {
     final rec = FakePcmRecorder();
     final input = RecordAudioInput(rec);

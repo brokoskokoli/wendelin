@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -185,6 +186,21 @@ void main() {
       );
       expect(whisperConfidence('nein nein nein gut', audio: second), 0.9);
     });
+  });
+
+  test('abgeschnittene Modelldatei: modelMissing vor dem Laden', () async {
+    final tmp = Directory.systemTemp.createTempSync('whisper');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    const model = SpeechModelCatalog.whisperBase;
+    for (final f in model.files) {
+      File('${tmp.path}/${f.name}').writeAsBytesSync([1, 2, 3]);
+    }
+    final files = WhisperFiles.of(model, tmp.path);
+    expect(files.sizes[files.encoder], 29120534);
+    await expectLater(
+      IsolateWhisperBackend.start(files),
+      _kind(VoiceErrorKind.modelMissing),
+    );
   });
 
   test('WhisperFiles.of wählt Encoder, Decoder, Tokens', () {

@@ -8,6 +8,7 @@ import 'package:meta/meta.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import 'isolate_exit.dart';
 import 'sherpa_runtime.dart';
 import 'whisper_stt.dart';
 
@@ -19,6 +20,7 @@ final class WhisperFiles {
     required this.encoder,
     required this.decoder,
     required this.tokens,
+    this.sizes = const {},
   });
 
   /// The files of catalog model [model] in [directory] (`*-encoder*`,
@@ -32,8 +34,12 @@ final class WhisperFiles {
       encoder: pick((n) => n.contains('-encoder')),
       decoder: pick((n) => n.contains('-decoder')),
       tokens: pick((n) => n.endsWith('tokens.txt')),
+      sizes: {for (final f in model.files) '$directory/${f.name}': f.sizeBytes},
     );
   }
+
+  /// Expected size per path (from the catalog); checked before loading.
+  final Map<String, int> sizes;
 
   /// Encoder `.onnx`.
   final String encoder;
@@ -115,7 +121,10 @@ final class IsolateWhisperBackend implements WhisperBackend {
     int? threads,
   }) async {
     for (final p in [files.encoder, files.decoder, files.tokens]) {
-      if (!File(p).existsSync()) {
+      final f = File(p);
+      final size = files.sizes[p];
+      // A truncated model would end the process inside sherpa-onnx.
+      if (!f.existsSync() || (size != null && f.lengthSync() != size)) {
         throw const VoiceException(
           VoiceErrorKind.modelMissing,
           'Das Whisper-Modell ist nicht (vollständig) geladen.',
@@ -123,7 +132,7 @@ final class IsolateWhisperBackend implements WhisperBackend {
       }
     }
     final replies = ReceivePort();
-    final isolate = await Isolate.spawn(_main, (
+    final worker = await WorkerIsolate.spawn(_main, (
       replies.sendPort,
       files.encoder,
       files.decoder,
@@ -136,17 +145,21 @@ final class IsolateWhisperBackend implements WhisperBackend {
     final first = events.current;
     if (first is! SendPort) {
       replies.close();
-      isolate.kill();
+      worker.kill();
       throw VoiceException(
         VoiceErrorKind.failed,
         'Das Whisper-Modell ließ sich nicht laden.',
         cause: first,
       );
     }
-    return IsolateWhisperBackend._(isolate, first, events);
+    return IsolateWhisperBackend._(worker, first, events);
   }
 
-  final Isolate _isolate;
+  final WorkerIsolate _isolate;
+
+  /// How long [dispose] waits for the isolate to free the model and exit
+  /// before it is killed.
+  static Duration exitGrace = const Duration(seconds: 5);
   final SendPort _requests;
   final StreamIterator<Object?> _replies;
   Future<void> _queue = Future.value();
@@ -171,6 +184,10 @@ final class IsolateWhisperBackend implements WhisperBackend {
     return result;
   }
 
+  /// The background isolate (for tests: did it exit by itself?).
+  @visibleForTesting
+  WorkerIsolate get worker => _isolate;
+
   @override
   Future<void> dispose() async {
     if (_closed) return;
@@ -178,8 +195,8 @@ final class IsolateWhisperBackend implements WhisperBackend {
     await _queue;
     _requests.send(null);
     await _replies.cancel();
-    // The isolate frees the model and exits; kill is a safety net.
-    _isolate.kill(priority: Isolate.beforeNextEvent);
+    // The isolate frees the model and exits; kill only after the grace.
+    await _isolate.awaitExit(grace: exitGrace);
   }
 
   static void _main((SendPort, String, String, String, int?, String?) args) {

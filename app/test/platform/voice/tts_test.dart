@@ -22,6 +22,13 @@ final class FakeTtsChannel {
 
   List<String> engines;
   Duration speakTime;
+  List<Object> voices = [
+    {'name': 'de-de-x-net', 'locale': 'de-DE', 'network_required': '1'},
+    {'name': 'de-de-x-local', 'locale': 'de-DE', 'network_required': '0'},
+    {'name': 'fr-fr-x-local', 'locale': 'fr-FR'},
+    {'name': '', 'locale': 'en-US'},
+    'kaputt',
+  ];
   bool missing = false;
   final calls = <MethodCall>[];
   Completer<int>? _speaking;
@@ -38,13 +45,7 @@ final class FakeTtsChannel {
       case 'getEngines':
         return engines;
       case 'getVoices':
-        return [
-          {'name': 'de-de-x-local', 'locale': 'de-DE', 'network_required': '0'},
-          {'name': 'de-de-x-net', 'locale': 'de-DE', 'network_required': '1'},
-          {'name': 'fr-fr-x-local', 'locale': 'fr-FR'},
-          {'name': '', 'locale': 'en-US'},
-          'kaputt',
-        ];
+        return voices;
       case 'speak':
         final c = _speaking = Completer<int>();
         Timer(speakTime, () {
@@ -146,29 +147,97 @@ void main() {
       final voices = await tts.voices();
       expect(voices.map((v) => v.id), ['de-de-x-local', 'fr-fr-x-local']);
       expect(voices.first.language, 'de-DE');
+      expect(offlineVoiceFor(voices, null, 'es'), isNull);
+      expect(offlineVoiceFor(voices, null, null)!.id, 'de-de-x-local');
       expect(await tts.voices(), same(voices)); // cached
     });
+
+    List<Object?> setVoices() => [
+      for (final c in channel.calls)
+        if (c.method == 'setVoice') c.arguments,
+    ];
 
     test('Stimme, Sprache und Tempo gehen an die Engine', () async {
       final tts = SystemTextToSpeech(tts: FlutterTts());
       await tts.speak('Hallo', voice: 'fr-fr-x-local', rate: 1.5);
-      await tts.speak('Hallo', language: 'de-DE');
-      final setVoice = channel.calls.firstWhere((c) => c.method == 'setVoice');
-      expect(setVoice.arguments, {'name': 'fr-fr-x-local', 'locale': 'fr-FR'});
+      await tts.speak('Hallo', language: 'de-AT');
+      expect(setVoices(), [
+        {'name': 'fr-fr-x-local', 'locale': 'fr-FR'},
+        {'name': 'de-de-x-local', 'locale': 'de-DE'},
+      ]);
       final rates = [
         for (final c in channel.calls)
           if (c.method == 'setSpeechRate') c.arguments,
       ];
       expect(rates, [0.75, 0.5]);
-      expect(
-        channel.calls.firstWhere((c) => c.method == 'setLanguage').arguments,
-        'de-DE',
-      );
+      expect(channel.methods, isNot(contains('setLanguage')));
       expect(
         channel.methods.where((m) => m == 'awaitSpeakCompletion'),
         hasLength(1),
       );
     });
+
+    test(
+      'ohne gewählte Stimme nie die Netzstimme oder der Engine-Standard',
+      () async {
+        final tts = SystemTextToSpeech(tts: FlutterTts());
+        await tts.speak('Hallo');
+        await tts.speak('Hallo', voice: 'de-de-x-net', language: 'de');
+        await tts.speak('Hallo', voice: 'tts-de-thorsten', language: 'de');
+        expect(
+          setVoices(),
+          everyElement({'name': 'de-de-x-local', 'locale': 'de-DE'}),
+        );
+        expect(setVoices(), hasLength(3));
+      },
+    );
+
+    test('keine Offline-Stimme der Sprache: Fehler statt Netzstimme', () async {
+      final tts = SystemTextToSpeech(tts: FlutterTts());
+      await expectLater(
+        tts.speak('Hello', language: 'en'),
+        throwsA(
+          isA<VoiceException>().having(
+            (e) => e.kind,
+            'kind',
+            VoiceErrorKind.unavailable,
+          ),
+        ),
+      );
+      expect(channel.methods, isNot(contains('speak')));
+      expect(tts.state, TtsState.idle);
+    });
+
+    test(
+      'nur Netzstimmen: nicht verfügbar, TtsSelector nimmt sherpa',
+      () async {
+        channel.voices = [
+          {'name': 'de-net', 'locale': 'de-DE', 'network_required': '1'},
+        ];
+        final system = SystemTextToSpeech(tts: FlutterTts());
+        expect(await system.isAvailable, isFalse);
+        final sherpa = FakeTextToSpeech();
+        final selection = await TtsSelector(
+          system: system,
+          sherpa: sherpa,
+        ).select(language: 'de');
+        expect(selection.engine, TtsEngine.sherpa);
+      },
+    );
+
+    test(
+      'System ohne Offline-Stimme für Französisch: sherpa spricht',
+      () async {
+        channel.voices = [
+          {'name': 'de-de-x-local', 'locale': 'de-DE'},
+        ];
+        final selection = await TtsSelector(
+          system: SystemTextToSpeech(tts: FlutterTts()),
+          sherpa: FakeTextToSpeech(),
+        ).select(language: 'fr');
+        expect(selection.engine, TtsEngine.sherpa);
+      },
+    );
 
     test('Äußerungen nacheinander; stop verwirft wartende', () async {
       final tts = SystemTextToSpeech(tts: FlutterTts());

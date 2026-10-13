@@ -90,9 +90,17 @@ final class ModelInstaller implements SpeechModelService {
   Future<bool> _fileInstalled(SpeechModel model, ModelFile f) async =>
       f.archive == ModelArchive.tarBz2
       ? unpackedDir(model, f).exists()
-      : store.exists(model.id, f.name);
+      : _finalComplete(model, f);
 
-  /// Whether every file of [model] is installed (archives unpacked).
+  /// Whether the final file exists with exactly its catalog size (a
+  /// truncated model would crash sherpa-onnx when loaded).
+  Future<bool> _finalComplete(SpeechModel model, ModelFile f) async {
+    final file = File(store.pathOf(model.id, f.name));
+    return await file.exists() && await file.length() == f.sizeBytes;
+  }
+
+  /// Whether every file of [model] is installed: plain files with their
+  /// catalog size, archives unpacked.
   @override
   Future<bool> isInstalled(SpeechModel model) async {
     for (final f in model.files) {
@@ -110,7 +118,7 @@ final class ModelInstaller implements SpeechModelService {
     var n = 0;
     for (final f in model.files) {
       if (await _fileInstalled(model, f)) continue;
-      if (await store.exists(model.id, f.name)) continue; // only unpacking
+      if (await _finalComplete(model, f)) continue; // only unpacking
       n += f.sizeBytes - await store.partialLength(model.id, f.name);
     }
     return n;
@@ -135,6 +143,13 @@ final class ModelInstaller implements SpeechModelService {
         if (!await _fileInstalled(model, f)) f,
     ];
     if (missing.isEmpty) return;
+    for (final f in missing) {
+      // A final file of the wrong size is downloaded again.
+      if (await store.exists(model.id, f.name) &&
+          !await _finalComplete(model, f)) {
+        await store.deleteFile(model.id, f.name);
+      }
+    }
     final archive = missing.any((f) => f.archive == ModelArchive.tarBz2);
     final need = requiredSpace(await remainingBytes(model), archive: archive);
     await store.root.create(recursive: true);

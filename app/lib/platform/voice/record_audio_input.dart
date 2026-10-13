@@ -65,6 +65,8 @@ final class RecordAudioInput implements AudioInput {
 
   final PcmRecorder _recorder;
   StreamController<Int16List>? _out;
+  // Cancelled via a local copy in _finish() and stop().
+  // ignore: cancel_subscriptions
   StreamSubscription<Uint8List>? _sub;
   Future<void> _stopping = Future.value();
 
@@ -123,13 +125,26 @@ final class RecordAudioInput implements AudioInput {
               ),
       );
     }
-    unawaited(_finish(out));
+    // The platform may still be recording (an error does not always end
+    // the stream): stop it, and let a new start wait for that.
+    _stopping = _finish(out, stopRecorder: true);
   }
 
-  Future<void> _finish(StreamController<Int16List> out) async {
+  Future<void> _finish(
+    StreamController<Int16List> out, {
+    bool stopRecorder = false,
+  }) async {
     if (identical(_out, out)) _out = null;
-    await _sub?.cancel();
+    final sub = _sub;
     _sub = null;
+    await sub?.cancel();
+    if (stopRecorder) {
+      try {
+        await _recorder.stop();
+      } on Object {
+        // Nothing to stop any more.
+      }
+    }
     if (!out.isClosed) await out.close();
   }
 

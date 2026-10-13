@@ -96,6 +96,12 @@ String safeRelativePath(String name) {
 /// 3. write into a temporary sibling directory and rename it to [target]
 ///    (an existing [target] is replaced only after success).
 ///
+/// A file system error while writing (storage full, clashing entries)
+/// becomes [ArchiveRejected] as well; nothing half-written stays.
+///
+/// Memory: the whole archive and the unpacked tar are held in memory (a
+/// Piper voice: 21 MB archive, 37 MB tar, so about 60 MB at peak).
+///
 /// The archive itself is left alone; the caller deletes it afterwards.
 /// Runs in a background isolate. Throws [ArchiveRejected].
 Future<void> extractTarBz2(
@@ -131,9 +137,9 @@ void _extract(String archivePath, String targetPath, int? limit) {
 
   final target = Directory(targetPath);
   final tmp = Directory('$targetPath.tmp');
-  if (tmp.existsSync()) tmp.deleteSync(recursive: true);
-  tmp.createSync(recursive: true);
   try {
+    if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+    tmp.createSync(recursive: true);
     for (final e in entries) {
       final path = '${tmp.path}/${e.path}';
       if (e.directory) {
@@ -145,9 +151,24 @@ void _extract(String archivePath, String targetPath, int? limit) {
     }
     if (target.existsSync()) target.deleteSync(recursive: true);
     tmp.renameSync(targetPath);
+  } on FileSystemException catch (e) {
+    // Full storage or entries that clash (a file where a folder must be):
+    // nothing half-written stays, the caller discards the archive.
+    _removeQuietly(tmp);
+    throw ArchiveRejected(
+      'Das Archiv ließ sich nicht entpacken (${e.osError?.message ?? e.message}).',
+    );
   } on Object {
-    if (tmp.existsSync()) tmp.deleteSync(recursive: true);
+    _removeQuietly(tmp);
     rethrow;
+  }
+}
+
+void _removeQuietly(Directory d) {
+  try {
+    if (d.existsSync()) d.deleteSync(recursive: true);
+  } on FileSystemException {
+    // Left for the next attempt, which deletes it first.
   }
 }
 

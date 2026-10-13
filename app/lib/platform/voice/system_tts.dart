@@ -11,6 +11,11 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 /// - [voices] leaves out voices that need the network: the text of an
 ///   answer must not leave the device without the user choosing a cloud
 ///   service (concept: Sicherheit).
+/// - [speak] always sets an offline voice explicitly: [voice] if it is
+///   one, otherwise the first offline voice of the language. Without one it
+///   throws `VoiceException(unavailable)` instead of using the engine
+///   default; [isAvailable] is false without any offline voice, so
+///   `TtsSelector` uses the sherpa voice.
 /// - Utterances run one after the other; [stop] ends the current one and
 ///   drops the waiting ones. Rate 1.0 is the engine's normal speed.
 final class SystemTextToSpeech implements TextToSpeech {
@@ -32,7 +37,6 @@ final class SystemTextToSpeech implements TextToSpeech {
   Future<void> _queue = Future.value();
   int _generation = 0;
   List<TtsVoice>? _voiceCache;
-  final _voiceLocales = <String, String>{};
 
   @override
   TtsState get state => _state;
@@ -52,7 +56,10 @@ final class SystemTextToSpeech implements TextToSpeech {
   Future<bool> get isAvailable async {
     try {
       final engines = await _tts.getEngines;
-      return engines is List && engines.isNotEmpty;
+      // Without an offline voice it would have to use the network.
+      return engines is List &&
+          engines.isNotEmpty &&
+          (await voices()).isNotEmpty;
     } on MissingPluginException {
       return false;
     } on PlatformException {
@@ -75,7 +82,6 @@ final class SystemTextToSpeech implements TextToSpeech {
           continue;
         }
         if (v['network_required']?.toString() == '1') continue;
-        _voiceLocales[name] = locale;
         result.add(TtsVoice(id: name, language: locale, name: name));
       }
     }
@@ -95,15 +101,17 @@ final class SystemTextToSpeech implements TextToSpeech {
     final run = _queue.then((_) async {
       if (generation != _generation) return; // stopped while waiting
       await _ensureSetup();
-      if (voice != null) {
-        if (_voiceCache == null) await voices();
-        final locale = _voiceLocales[voice];
-        if (locale != null) {
-          await _tts.setVoice({'name': voice, 'locale': locale});
-        }
-      } else if (language != null) {
-        await _tts.setLanguage(language);
+      // Always an explicit offline voice: the engine default could be a
+      // network voice and send the answer text off the device.
+      final chosen = offlineVoiceFor(await voices(), voice, language);
+      if (chosen == null) {
+        throw VoiceException(
+          VoiceErrorKind.unavailable,
+          'Die Systemstimme hat keine Offline-Stimme'
+          '${language == null ? '' : ' für „$language“'}.',
+        );
       }
+      await _tts.setVoice({'name': chosen.id, 'locale': chosen.language});
       // flutter_tts: 0.5 is the normal rate on every platform.
       await _tts.setSpeechRate((rate * 0.5).clamp(0.05, 1.0));
       if (generation != _generation) return;
@@ -130,4 +138,19 @@ final class SystemTextToSpeech implements TextToSpeech {
       // Engine already gone: the speak future ends via its timeout.
     }
   }
+}
+
+/// The offline voice to use: [id] if it is in [voices], otherwise the first
+/// voice of [language] (primary subtag; any voice without [language]).
+TtsVoice? offlineVoiceFor(List<TtsVoice> voices, String? id, String? language) {
+  for (final v in voices) {
+    if (v.id == id) return v;
+  }
+  String primary(String tag) => tag.split(RegExp('[-_]')).first.toLowerCase();
+  for (final v in voices) {
+    if (language == null || primary(v.language) == primary(language)) {
+      return v;
+    }
+  }
+  return null;
 }

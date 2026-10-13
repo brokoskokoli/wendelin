@@ -42,6 +42,8 @@ final class PcmBytesDecoder {
 
   /// Samples in [bytes] (plus a byte carried over from the last call).
   Int16List convert(List<int> bytes) {
+    // An empty chunk keeps a byte carried over from before.
+    if (bytes.isEmpty) return Int16List(0);
     final carry = _carry;
     final total = bytes.length + (carry == null ? 0 : 1);
     final n = total ~/ 2;

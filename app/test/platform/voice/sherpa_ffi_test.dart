@@ -86,6 +86,8 @@ void main() {
       expect(r.language, 'de');
       expect(r.text.toLowerCase(), contains('brot'));
       await b.dispose();
+      await b.worker.exited;
+      expect(b.worker.killed, isFalse, reason: 'selbst beendet');
       await b.dispose();
       expect(() => b.transcribe(Float32List(10)), throwsStateError);
     });
@@ -120,7 +122,6 @@ void main() {
         final synth = IsolateSherpaSynthesizer(
           () async => {'tts-de-thorsten': files},
         );
-        addTearDown(synth.dispose);
         final wav = await synth.synthesize(
           'Hallo, ich bin Wendelin.',
           voiceId: 'tts-de-thorsten',
@@ -128,6 +129,10 @@ void main() {
         expect(wav.sampleRate, 22050);
         expect(wav.duration, greaterThan(const Duration(milliseconds: 800)));
         expect(rmsLevel(wav.samples), greaterThan(0.01));
+        final worker = await synth.worker!;
+        await synth.dispose();
+        await worker.exited;
+        expect(worker.killed, isFalse, reason: 'selbst beendet');
       },
     );
   });

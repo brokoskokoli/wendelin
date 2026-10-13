@@ -1,4 +1,4 @@
-# ADR 0006 – Sprach-Plattform Android (`app/lib/platform/voice/`)
+# ADR 0007 – Sprach-Plattform Android (`app/lib/platform/voice/`)
 
 Status: vorgeschlagen · 2026-10-13
 
@@ -32,9 +32,18 @@ Die Einstellung „Gesprochene Sprache“ steht anfangs auf „Wie die App“ (f
 `RecordAudioInput.start` fragt nie selbst; ohne Berechtigung kommt `VoiceException(permissionDenied)`. Die App ruft vorher `ensureMicrophoneAccess` (Erklärung, dann Android-Dialog), beim ersten Sprechen (WP18) oder in Einstellungen → Sprache.
 
 ### 9. Nur Offline-Systemstimmen
-`SystemTextToSpeech.voices` blendet Stimmen mit `network_required` aus, damit Antworttext ohne ausdrückliche Wahl eines Cloud-Dienstes das Gerät nicht verlässt.
+`SystemTextToSpeech.voices` blendet Stimmen mit `network_required` aus, damit Antworttext ohne ausdrückliche Wahl eines Cloud-Dienstes das Gerät nicht verlässt. Das gilt auch ohne gewählte Stimme: `speak` setzt immer ausdrücklich eine Offline-Stimme der Antwortsprache per `setVoice` (nie den Engine-Standard, der eine Netzstimme sein kann). Gibt es keine, wirft `speak` `VoiceException(unavailable)`, und die System-TTS meldet sich ohne Offline-Stimme als nicht verfügbar bzw. für diese Sprache unpassend, sodass `TtsSelector` die sherpa-Stimme nimmt.
+
+### 10. Modelldateien vor dem Laden prüfen
+Ein abgeschnittenes Modell würde sherpa-onnx (nativer `exit`) mitsamt App beenden. `ModelInstaller.isInstalled` und `IsolateWhisperBackend.start` prüfen deshalb vor jedem Laden die Dateigröße gegen `ModelFile.sizeBytes`; eine falsche Größe gilt als `modelMissing`, die Datei wird beim nächsten Laden verworfen und neu heruntergeladen.
+
+### 11. Isolate sauber beenden
+`dispose` der Whisper- und TTS-Isolate schickt den Stopp-Auftrag, wartet auf das `onExit` des Isolats (das vorher die nativen Modelle freigibt) und tötet es nur nach einer Frist (5 s) als Sicherheitsnetz (`WorkerIsolate`).
+
+### 12. Pflicht für WP18: Stopp bei App im Hintergrund
+Die Bausteine halten das Mikrofon nicht selbst an. Wer die `VoicePipeline` betreibt (WP18: Hauptbildschirm, Overlay, Assistent), muss bei `AppLifecycleState.paused`/`hidden` (bzw. Ende der Assistenten-Sitzung) `VoicePipeline.cancel()` aufrufen, damit `AudioInput.stop()` das Mikrofon freigibt und keine Aufnahme im Hintergrund weiterläuft (Konzept: kein Dauerzuhören außer Wake Word im Foreground Service, M4). Die laufende Sprachausgabe endet dabei ebenfalls. Nach `resumed` wird nicht automatisch weiter zugehört.
 
 ## Folgen
-- Ein beschädigtes Modell beendet den Prozess (nativer `exit` in sherpa-onnx); Schutz ist die SHA-256-Prüfung. Ein Test dafür ist nicht möglich.
+- Ein beschädigtes Modell gleicher Größe beendet den Prozess (nativer `exit` in sherpa-onnx); Schutz sind SHA-256 beim Download und die Größenprüfung vor dem Laden. Ein Test mit kaputtem Inhalt ist nicht möglich.
 - Die Pipeline mit Agent und Auslösern baut WP18 aus `voiceComponentsProvider`.
 - Laufzeiten auf dem Gerät (Whisper small) und echte Aufnahmen misst WP19.

@@ -16,6 +16,12 @@ final class FakePcmRecorder implements PcmRecorder {
   final Duration period;
   final int chunk;
   Object? startError;
+
+  /// [stop] throws this, if set.
+  Object? stopError;
+
+  /// Whether the consumer cancelled its subscription to the last stream.
+  bool cancelled = false;
   final requests = <bool>[];
   int starts = 0;
   int stops = 0;
@@ -36,9 +42,12 @@ final class FakePcmRecorder implements PcmRecorder {
     final e = startError;
     if (e != null) throw e;
     starts++;
+    cancelled = false;
     // Closed in stop()/endFromPlatform().
     // ignore: close_sinks
-    final ctrl = _ctrl = StreamController<Uint8List>();
+    final ctrl = _ctrl = StreamController<Uint8List>(
+      onCancel: () => cancelled = true,
+    );
     var n = 0;
     _timer = Timer.periodic(period, (_) {
       ctrl.add(Uint8List.fromList(List.generate(chunk, (i) => (n + i) & 0xff)));
@@ -56,9 +65,14 @@ final class FakePcmRecorder implements PcmRecorder {
     await c?.close();
   }
 
+  /// Emits [error] on the stream without ending it (recording goes on).
+  void emitError(Object error) => _ctrl!.addError(error);
+
   @override
   Future<void> stop() async {
     stops++;
+    final e = stopError;
+    if (e != null) throw e;
     _timer?.cancel();
     final c = _ctrl;
     _ctrl = null;

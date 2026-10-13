@@ -16,6 +16,15 @@ void main() {
       expect(d.convert([0x00]), isEmpty);
       expect(d.convert([0x80]), [-32768]);
     });
+
+    test('leerer Chunk nach ungeradem Chunk behält den Übertrag', () {
+      final d = PcmBytesDecoder();
+      expect(d.convert([0x34]), isEmpty);
+      expect(d.convert([]), isEmpty);
+      expect(d.convert([0x12, 0x01, 0x00]), [0x1234, 1]);
+      expect(d.convert([]), isEmpty);
+      expect(d.convert([0x02, 0x00]), [2]);
+    });
   });
 
   test('float/pcm hin und zurück, rmsLevel', () {
