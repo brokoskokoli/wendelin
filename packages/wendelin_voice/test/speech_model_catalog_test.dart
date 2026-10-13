@@ -15,7 +15,7 @@ void main() {
     expect(catalog.ofKind(SpeechModelKind.vad).single.id, 'silero-vad');
     expect(catalog.voiceFor('de-DE')?.id, 'tts-de-thorsten');
     expect(catalog.voiceFor('fr')?.id, 'tts-fr-siwis');
-    expect(catalog.voiceFor('en_US')?.id, 'tts-en-amy');
+    expect(catalog.voiceFor('en_US')?.id, 'tts-en-ljspeech');
     expect(catalog.voiceFor('it'), isNull);
     expect(
       catalog.byId('whisper-small'),
@@ -52,6 +52,13 @@ void main() {
         expect(f.archive, ModelArchive.none);
       }
     }
+  });
+
+  test('Pflicht-Attribution für SIWIS, englische Stimme gemeinfrei', () {
+    expect(SpeechModelCatalog.voiceFr.attribution, contains('SIWIS'));
+    expect(SpeechModelCatalog.voiceFr.attribution, contains('CC BY 4.0'));
+    expect(SpeechModelCatalog.voiceEn.license, contains('Public Domain'));
+    expect(SpeechModelCatalog.whisperBase.attribution, isNull);
   });
 
   test('Stimmen sind Archive, die die Plattform entpackt', () {

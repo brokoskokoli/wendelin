@@ -50,6 +50,12 @@ final class FakeServer {
   /// Fails the body with a network error after this many bytes.
   int? failAfter;
 
+  /// Content-Range start reported for 206 answers (default: the real one).
+  int? reportedRangeStart;
+
+  /// Whether 206 answers carry a Content-Range header.
+  bool sendContentRange = true;
+
   late final client = MockClient.streaming((req, _) async {
     requests.add(req);
     final status = nextStatus;
@@ -69,10 +75,16 @@ final class FakeServer {
       }
       code = 206;
     }
+    final rs = reportedRangeStart ?? start;
+    reportedRangeStart = null;
     return http.StreamedResponse(
       _body(data.sublist(start)),
       code,
       contentLength: data.length - start,
+      headers: {
+        if (code == 206 && sendContentRange)
+          'content-range': 'bytes $rs-${data.length - 1}/${data.length}',
+      },
     );
   });
 
@@ -210,14 +222,67 @@ void main() {
     expect(store.finalBytes('m', 'a.onnx'), payload);
   });
 
-  test('zu großer Teil wird verworfen', () async {
-    store.seedPartial('m', 'a.onnx', List.filled(payload.length + 5, 0));
+  test('zu großer Teil wird verworfen und ohne Range neu geladen', () async {
+    store.seedPartial('m', 'a.onnx', List.filled(payload.length + 1, 7));
     final server = FakeServer({'a.onnx': payload});
     await ModelDownloader(
       client: server.client,
       store: store,
     ).download(model([file('a.onnx', payload)]));
+    expect(server.requests.single.headers['Range'], isNull);
     expect(store.finalBytes('m', 'a.onnx'), payload);
+  });
+
+  test('Content-Range passt nicht zum Offset: einmal von vorn', () async {
+    store.seedPartial('m', 'a.onnx', payload.sublist(0, 400));
+    final server = FakeServer({'a.onnx': payload})..reportedRangeStart = 300;
+    await ModelDownloader(
+      client: server.client,
+      store: store,
+    ).download(model([file('a.onnx', payload)]));
+    expect(server.requests, hasLength(2));
+    expect(server.requests.last.headers['Range'], isNull);
+    expect(store.finalBytes('m', 'a.onnx'), payload);
+  });
+
+  test('206 ohne Content-Range wird akzeptiert', () async {
+    store.seedPartial('m', 'a.onnx', payload.sublist(0, 400));
+    final server = FakeServer({'a.onnx': payload})..sendContentRange = false;
+    await ModelDownloader(
+      client: server.client,
+      store: store,
+    ).download(model([file('a.onnx', payload)]));
+    expect(server.requests, hasLength(1));
+    expect(store.finalBytes('m', 'a.onnx'), payload);
+  });
+
+  test('paralleler Download desselben Modells: busy', () async {
+    final server = FakeServer({'a.onnx': payload})..hangAfter = 100;
+    final d = ModelDownloader(client: server.client, store: store);
+    final m = model([file('a.onnx', payload)]);
+    final cancel = CancelToken();
+    final first = d.download(m, cancel: cancel);
+    await expectLater(d.download(m), downloadError(DownloadErrorKind.busy));
+    cancel.cancel();
+    await expectLater(first, downloadError(DownloadErrorKind.cancelled));
+    // The lock is released afterwards.
+    server.hangAfter = null;
+    await d.download(m);
+    expect(store.finalBytes('m', 'a.onnx'), payload);
+  });
+
+  test('Dateinamen mit Pfadtrennern werden abgewiesen', () async {
+    final d = ModelDownloader(
+      client: FakeServer(const {}).client,
+      store: store,
+    );
+    for (final name in ['../x.onnx', 'a/b.onnx', r'a\b', '.hidden', '']) {
+      await expectLater(
+        d.download(model([file(name, small)])),
+        throwsArgumentError,
+        reason: name,
+      );
+    }
   });
 
   test('416 auf Range: Teil verwerfen und einmal neu versuchen', () async {

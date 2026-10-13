@@ -82,7 +82,7 @@ void main() {
           2050,
         ),
         (
-          'Geräusch < 250 ms wird verworfen, echte Äußerung danach',
+          'Geräusch < 200 ms wird verworfen, echte Äußerung danach',
           '..SS${rep('.', 16)}${rep('S', 6)}${rep('.', 16)}',
           const EndpointConfig(),
           EndpointKind.utterance,
@@ -93,15 +93,15 @@ void main() {
           2100,
         ),
         (
-          'genau 250 ms Sprache reichen',
-          '${rep('S', 5)}${rep('.', 16)}',
+          'genau 200 ms Sprache reichen',
+          '${rep('S', 4)}${rep('.', 16)}',
           const EndpointConfig(),
           EndpointKind.utterance,
           EndpointReason.silence,
           0,
-          250,
-          1050,
-          1050,
+          200,
+          1000,
+          1000,
         ),
         (
           'nur Stille: nichts nach Timeout',
@@ -181,9 +181,9 @@ void main() {
     expect(feed('.', into: e)?.reason, EndpointReason.silence);
   });
 
-  test('200 ms Sprache sind zu kurz und werden verworfen', () {
+  test('150 ms Sprache sind zu kurz und werden verworfen', () {
     final e = Endpointer();
-    expect(feed('${rep('S', 4)}${rep('.', 16)}', into: e), isNull);
+    expect(feed('${rep('S', 3)}${rep('.', 16)}', into: e), isNull);
     expect(e.inSpeech, isFalse);
     expect(e.result, isNull);
   });
@@ -233,7 +233,7 @@ void main() {
     expect(c.preRoll, ms * 300);
     expect(c.endSilence, ms * 800);
     expect(c.maxDuration, const Duration(seconds: 30));
-    expect(c.minSpeech, ms * 250);
+    expect(c.minSpeech, ms * 200); // Review WP15; Kalibrierung in WP17
   });
 
   test('Endpoint.toString nennt Art und Grund', () {

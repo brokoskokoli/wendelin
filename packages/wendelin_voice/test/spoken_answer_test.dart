@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 const restDe = 'Den Rest siehst du auf dem Bildschirm.';
@@ -281,6 +282,128 @@ void main() {
     for (final (input, expected) in cases) {
       test('"$input"', () => expect(cleanForSpeech(input), expected));
     }
+  });
+
+  group('Review WP15', () {
+    test('Überschriften zählen nicht zum Satzlimit', () {
+      expect(SpokenAnswer.shorten('# Titel\nEins. Zwei. Drei.'), [
+        'Titel',
+        'Eins.',
+        'Zwei.',
+        'Drei.',
+      ]);
+    });
+
+    test('Text vor einem Tool-Aufruf zählt nicht zum Satzlimit', () {
+      final a = SpokenAnswer();
+      expect([
+        ...a.add('Ich schaue nach. Einen Moment. Gleich da.'),
+        ...a.endSegment(),
+      ], hasLength(3));
+      expect(
+        [...a.add('Eins. Zwei. Drei.'), ...a.finish()],
+        ['Eins.', 'Zwei.', 'Drei.'],
+      );
+    });
+
+    test('maxChars: genau an der Grenze passt, ein Zeichen mehr nicht', () {
+      // 'Eins zwei drei vier.' = 20, 'Fünf.' = 5 Zeichen.
+      const text = 'Eins zwei drei vier. Fünf.';
+      expect(
+        SpokenAnswer.shorten(
+          text,
+          config: const SpeechShortening(maxChars: 25),
+        ),
+        ['Eins zwei drei vier.', 'Fünf.'],
+      );
+      expect(
+        SpokenAnswer.shorten(
+          text,
+          config: const SpeechShortening(maxChars: 24),
+        ),
+        ['Eins zwei drei vier.', restDe],
+      );
+      expect(
+        SpokenAnswer.shorten(
+          text,
+          config: const SpeechShortening(maxChars: 20),
+        ),
+        ['Eins zwei drei vier.', restDe],
+      );
+      expect(
+        SpokenAnswer.shorten(
+          text,
+          config: const SpeechShortening(maxChars: 19),
+        ),
+        ['Eins zwei drei…', restDe],
+      );
+    });
+
+    test('Emojis werden entfernt', () {
+      expect(SpokenAnswer.shorten('Super 🎉👍🏽! Gern geschehen 😊.'), [
+        'Super!',
+        'Gern geschehen.',
+      ]);
+      expect(SpokenAnswer.shorten('🇩🇪 👨‍👩‍👧 ✅'), isEmpty);
+    });
+
+    test(
+      'Satz nur aus einem Link: weggelassen, Hinweis auf den Bildschirm',
+      () {
+        expect(SpokenAnswer.shorten('Quelle:\nhttps://example.com/a\nDanke.'), [
+          'Quelle:',
+          'Danke.',
+          restDe,
+        ]);
+      },
+    );
+
+    test('Reset: bereits gesprochene Sätze werden beim erneuten Senden übersprungen', () {
+      final a = SpokenAnswer();
+      expect(a.add('Eins hier. Zwei hier. Drei hier'), [
+        'Eins hier.',
+        'Zwei hier.',
+      ]);
+      a.reset(unspoken: ['Zwei hier.']);
+      expect(a.add('Eins hier. Zwei hier. Drei hier. Vier'), ['Zwei hier.']);
+      // Limit 3: Eins (spoken once), Zwei, Drei – Vier is cut.
+      expect(a.add(' hier. Fünf hier'), ['Drei hier.']);
+      expect(a.truncated, isTrue);
+    });
+
+    test('Reset: abweichender neuer Text beendet das Überspringen', () {
+      final a = SpokenAnswer();
+      expect(a.add('Eins hier. Zwei hier'), ['Eins hier.']);
+      a.reset();
+      expect(a.add('Anders. Eins hier. Noch mehr'), ['Anders.', 'Eins hier.']);
+    });
+  });
+
+  test('VoiceTexts: Fehlertexte je Sprache', () {
+    expect(
+      VoiceTexts.de.failure(AgentErrorKind.provider, 'Kaputt.'),
+      'Kaputt.',
+    );
+    expect(
+      VoiceTexts.de.failure(AgentErrorKind.provider, ' '),
+      VoiceTexts.de.failed,
+    );
+    expect(
+      VoiceTexts.fr.failure(AgentErrorKind.timeout, 'x'),
+      VoiceTexts.fr.tooSlow,
+    );
+    expect(
+      VoiceTexts.en.failure(AgentErrorKind.budgetBlocked, 'x'),
+      VoiceTexts.en.noBudget,
+    );
+    expect(
+      VoiceTexts.en.failure(AgentErrorKind.tokenBudget, 'x'),
+      VoiceTexts.en.noBudget,
+    );
+    expect(
+      VoiceTexts.fr.failure(AgentErrorKind.internal, 'x'),
+      VoiceTexts.fr.failed,
+    );
   });
 
   test('VoiceTexts nach Sprache', () {

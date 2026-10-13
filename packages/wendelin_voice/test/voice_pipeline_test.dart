@@ -75,7 +75,7 @@ final class Harness {
     AgentRun? agent,
     AudioInput? audio,
     VoiceActivityDetector? vad,
-    Future<TextToSpeech?> Function()? textToSpeech,
+    Future<TextToSpeech?> Function(String?)? textToSpeech,
     List<Transcript> transcripts = const [
       Transcript(text: 'Wie wird das Wetter?', language: 'de', confidence: 0.9),
     ],
@@ -116,7 +116,7 @@ final class Harness {
       vad: vad ?? this.vad,
       stt: stt,
       agent: recording,
-      textToSpeech: textToSpeech ?? () async => withTts ? tts : null,
+      textToSpeech: textToSpeech ?? (_) async => withTts ? tts : null,
       config: config,
       clock: clock,
       triggers: triggers,
@@ -286,6 +286,48 @@ void main() {
       settle(async);
       expect(h.tts.spoken, ['Erster Satz falsch.', 'Richtige Antwort.']);
       expect(h.pipeline.state, VoiceState.idle);
+    });
+  });
+
+  test('pauseTurn-Retry: erneut gesendeter Pause-Text nicht doppelt', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [
+          ScriptedTurn.text(
+            'Ich suche kurz. Einen Moment bitte. ',
+            stopReason: StopReason.pauseTurn,
+          ),
+          ScriptedTurn.error(
+            const ServerException('überlastet', statusCode: 503),
+          ),
+          ScriptedTurn.text('Es wird warm.'),
+        ],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.agentEvents.whereType<AgentTextReset>(), hasLength(1));
+      expect(h.tts.spoken, [
+        'Ich suche kurz.',
+        'Einen Moment bitte.',
+        'Es wird warm.',
+      ]);
+    });
+  });
+
+  test('Fehlermeldung in der Antwortsprache, Teiltext verworfen', () {
+    runFake((async) {
+      final h = Harness(
+        transcripts: const [Transcript(text: 'Bonjour', language: 'fr')],
+        turns: [
+          ScriptedTurn.error(
+            const AuthException('Schlüssel ungültig'),
+            partialText: 'Je cherche',
+          ),
+        ],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.tts.spoken, [VoiceTexts.fr.failed]);
     });
   });
 
@@ -567,6 +609,26 @@ void main() {
     expect(p.isStopWord('Bushaltestelle'), isFalse);
   });
 
+  test('Abbruchwörter mit Wiederholung und Füllwörtern (de/fr/en)', () {
+    final p = Harness().pipeline;
+    for (final t in [
+      'Stopp, stopp.',
+      'Stopp bitte',
+      'Nein, stopp!',
+      'Halt.',
+      'Hör auf, stopp',
+      'Arrête, s’il te plaît',
+      'Non, arrête !',
+      'Stop it, please',
+      'No, cancel that',
+    ]) {
+      expect(p.isStopWord(t), isTrue, reason: t);
+    }
+    for (final t in ['Bitte', 'Nein', 'Das ist halt so', 'Stop the timer']) {
+      expect(p.isStopWord(t), isFalse, reason: t);
+    }
+  });
+
   group('nichts verstanden', () {
     test('nur Stille bis zum Timeout', () {
       runFake((async) {
@@ -624,6 +686,50 @@ void main() {
         expect(h.pipeline.state, VoiceState.idle);
       });
     });
+
+    test('Mikrofon liefert nichts: vor Sprachbeginn greift der Timeout', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            endpoint: EndpointConfig(noSpeechTimeout: Duration(seconds: 2)),
+            listenGrace: Duration(seconds: 1),
+          ),
+        );
+        h.fakeAudio.script(const []);
+        h.pipeline.start();
+        async.elapse(const Duration(milliseconds: 2900));
+        expect(h.pipeline.state, VoiceState.listening);
+        async.elapse(const Duration(milliseconds: 200));
+        expect(
+          h.eventsOf<VoiceNothingUnderstood>().single.reason,
+          EndpointReason.noSpeech,
+        );
+      });
+    });
+
+    test(
+      'Mikrofon verstummt mitten in der Sprache: kein Abbruch vor Maximum',
+      () {
+        runFake((async) {
+          final h = Harness(
+            config: const VoicePipelineConfig(
+              endpoint: EndpointConfig(
+                noSpeechTimeout: Duration(seconds: 1),
+                maxDuration: Duration(seconds: 5),
+              ),
+              listenGrace: Duration(seconds: 1),
+            ),
+            turns: [ScriptedTurn.text('Ok.')],
+          );
+          h.fakeAudio.script(AudioFrames.pattern('S' * 20, frame: frame));
+          h.pipeline.start();
+          async.elapse(const Duration(seconds: 3));
+          expect(h.pipeline.state, VoiceState.listening);
+          settle(async);
+          expect(h.tts.spoken, ['Ok.']);
+        });
+      },
+    );
   });
 
   test('finishListening (Push-to-talk losgelassen) transkribiert sofort', () {
@@ -762,7 +868,7 @@ void main() {
       runFake((async) {
         final h = Harness(
           turns: [ScriptedTurn.text('Hallo.')],
-          textToSpeech: () => Future.error(StateError('keine Engine')),
+          textToSpeech: (_) => Future.error(StateError('keine Engine')),
         );
         h.pipeline.start();
         settle(async);
@@ -803,6 +909,7 @@ void main() {
           turns: [ScriptedTurn.text('Ok.')],
         );
         h.pipeline.start();
+        async.flushMicrotasks(); // the first recording has its frames
         h.fakeAudio.script(AudioFrames.pattern('.' * 400, frame: frame));
         settle(async);
         expect(h.fakeAudio.startCount, 2);
@@ -833,6 +940,85 @@ void main() {
         expect(h.recording.inputs.map((i) => i.text), ['Eins', 'Zwei']);
         expect(h.tts.spoken, ['Erste.', 'Zweite.']);
         // Third window: the scripted audio has run out → silence → idle.
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+  });
+
+  group('Auslöser während des Zuhörens (Review WP15)', () {
+    test('Trigger während listening: neue Anfrage wird beantwortet', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Antwort.')]);
+        h.pipeline.start();
+        async.elapse(const Duration(milliseconds: 300));
+        h.triggers.fire(TriggerKind.assistant);
+        settle(async);
+        expect(h.eventsOf<VoiceError>(), isEmpty);
+        expect(h.tts.spoken, ['Antwort.']);
+        expect(h.fakeAudio.startCount, 2);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('cancel() und start() direkt nacheinander', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Antwort.')]);
+        h.pipeline.start();
+        async.elapse(const Duration(milliseconds: 300));
+        h.pipeline.cancel();
+        expect(h.pipeline.start(), isTrue);
+        settle(async);
+        expect(h.eventsOf<VoiceError>(), isEmpty);
+        expect(h.tts.spoken, ['Antwort.']);
+      });
+    });
+
+    test('doppelter Assistent-Trigger', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Antwort.')]);
+        h.triggers
+          ..fire(TriggerKind.assistant)
+          ..fire(TriggerKind.assistant);
+        settle(async);
+        expect(h.eventsOf<VoiceError>(), isEmpty);
+        expect(h.tts.spoken, ['Antwort.']);
+        expect(h.recording.inputs, hasLength(1));
+      });
+    });
+
+    test('finishListening nach Neustart beendet die neue Aufnahme', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Ja.')]);
+        h.fakeAudio.script(AudioFrames.pattern('S' * 200, frame: frame));
+        h.pipeline.start();
+        async.elapse(const Duration(milliseconds: 300));
+        h.triggers.fire();
+        async.elapse(const Duration(seconds: 1));
+        h.pipeline.finishListening();
+        settle(async);
+        expect(h.stt.calls, hasLength(1));
+        expect(h.tts.spoken, ['Ja.']);
+      });
+    });
+
+    test('Trigger im Folgefenster des Gesprächsmodus', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(conversationMode: true),
+          transcripts: const [
+            Transcript(text: 'Eins'),
+            Transcript(text: 'Zwei'),
+          ],
+          turns: [ScriptedTurn.text('Erste.'), ScriptedTurn.text('Zweite.')],
+        );
+        h.pipeline.start();
+        while (!h.eventsOf<VoiceListening>().any((e) => e.followUp)) {
+          async.elapse(const Duration(milliseconds: 10));
+        }
+        h.triggers.fire(TriggerKind.assistant);
+        settle(async);
+        expect(h.eventsOf<VoiceError>(), isEmpty);
+        expect(h.tts.spoken, ['Erste.', 'Zweite.']);
         expect(h.pipeline.state, VoiceState.idle);
       });
     });

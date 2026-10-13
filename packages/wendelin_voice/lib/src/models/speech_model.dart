@@ -65,6 +65,7 @@ final class SpeechModel {
     required this.license,
     required this.source,
     this.note,
+    this.attribution,
   });
 
   /// Stable id, also the directory name in the `ModelStore`.
@@ -90,6 +91,10 @@ final class SpeechModel {
 
   /// Caveats (e.g. checksum taken from host metadata, not re-hashed).
   final String? note;
+
+  /// Mandatory attribution (license requirement) that the app must show
+  /// on its license page when the model is offered; `null` = none needed.
+  final String? attribution;
 
   /// Total download size.
   int get sizeBytes => files.fold(0, (n, f) => n + f.sizeBytes);

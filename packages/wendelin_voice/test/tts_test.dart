@@ -157,6 +157,37 @@ void main() {
       expect(s.toString(), contains('none'));
     });
 
+    test('Sprache: Engine ohne Stimme der Sprache wird übersprungen', () async {
+      final system = FakeTextToSpeech(
+        voices: const [TtsVoice(id: 'de', language: 'de-DE')],
+      );
+      final sherpa = FakeTextToSpeech(
+        voices: const [TtsVoice(id: 'fr', language: 'fr')],
+      );
+      final selector = TtsSelector(system: system, sherpa: sherpa);
+      expect((await selector.select(language: 'de')).tts, same(system));
+      expect((await selector.select(language: 'fr-CH')).tts, same(sherpa));
+      expect((await selector.select(language: 'it')).engine, TtsEngine.none);
+      expect(await selector.current('fr'), same(sherpa));
+    });
+
+    test(
+      'Sprache: leere Stimmenliste gilt als passend, Fehler als nicht',
+      () async {
+        final system = FakeTextToSpeech(voices: const []);
+        expect(
+          (await TtsSelector(system: system).select(language: 'fr')).tts,
+          same(system),
+        );
+        final broken = _ThrowingVoices();
+        expect(
+          (await TtsSelector(system: broken).select(language: 'fr')).engine,
+          TtsEngine.none,
+        );
+        expect((await TtsSelector(system: broken).select()).tts, same(broken));
+      },
+    );
+
     test('Einstellung wird bei jeder Auswahl neu gelesen', () async {
       var pref = TtsPreference.automatic;
       final system = FakeTextToSpeech();
@@ -234,6 +265,31 @@ final class _ThrowingAvailability implements TextToSpeech {
 
   @override
   Future<List<TtsVoice>> voices() async => const [];
+
+  @override
+  TtsState get state => TtsState.idle;
+
+  @override
+  Stream<TtsState> get states => const Stream.empty();
+
+  @override
+  Future<void> speak(
+    String text, {
+    String? voice,
+    String? language,
+    double rate = 1.0,
+  }) async {}
+
+  @override
+  Future<void> stop() async {}
+}
+
+final class _ThrowingVoices implements TextToSpeech {
+  @override
+  Future<bool> get isAvailable async => true;
+
+  @override
+  Future<List<TtsVoice>> voices() => Future.error(StateError('weg'));
 
   @override
   TtsState get state => TtsState.idle;

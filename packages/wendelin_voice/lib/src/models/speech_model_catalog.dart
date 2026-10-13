@@ -159,9 +159,13 @@ final class SpeechModelCatalog {
     kind: SpeechModelKind.tts,
     displayName: 'Français – Siwis',
     languages: {'fr'},
-    license: 'CC BY 4.0 (SIWIS), Piper MIT – Lizenz vor Release prüfen',
+    license: 'CC BY 4.0 (SIWIS-Datenbank), Piper MIT',
     source: _ghSource,
     note: '$_ghNote $_int8Note',
+    attribution:
+        'Stimme „Siwis“ trainiert auf der SIWIS French Speech Synthesis '
+        'Database (J. Yamagishi et al., University of Edinburgh / Idiap), '
+        'CC BY 4.0; Modell: Piper (rhasspy), sherpa-onnx-Export.',
     files: [
       ModelFile(
         name: 'vits-piper-fr_FR-siwis-medium-int8.tar.bz2',
@@ -174,22 +178,22 @@ final class SpeechModelCatalog {
     ],
   );
 
-  /// English voice: Piper „Amy“ (low, int8).
+  /// English voice: Piper „LJSpeech“ (medium, int8; public-domain data).
   static const voiceEn = SpeechModel(
-    id: 'tts-en-amy',
+    id: 'tts-en-ljspeech',
     kind: SpeechModelKind.tts,
-    displayName: 'English – Amy',
+    displayName: 'English – LJSpeech',
     languages: {'en'},
-    license: 'Piper-Stimme, Lizenz laut Modellkarte vor Release prüfen',
+    license: 'Public Domain (LJ Speech Dataset), Piper MIT',
     source: _ghSource,
     note: '$_ghNote $_int8Note',
     files: [
       ModelFile(
-        name: 'vits-piper-en_US-amy-low-int8.tar.bz2',
-        url: '$_gh/tts-models/vits-piper-en_US-amy-low-int8.tar.bz2',
-        sizeBytes: 21099246,
+        name: 'vits-piper-en_US-ljspeech-medium-int8.tar.bz2',
+        url: '$_gh/tts-models/vits-piper-en_US-ljspeech-medium-int8.tar.bz2',
+        sizeBytes: 21090429,
         sha256:
-            '93070ac9fadf512e56c46bdd0c5d2ce96b424fdc4e683d560167410bd2c4df7d',
+            '24dc3bd77dd48c291e52c297878d3437c9492f245d823d7f6a06c4bbb67f4b6b',
         archive: ModelArchive.tarBz2,
       ),
     ],

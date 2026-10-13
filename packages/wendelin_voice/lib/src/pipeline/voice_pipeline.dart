@@ -24,6 +24,7 @@ final class VoicePipelineConfig {
     this.language,
     this.shortening = const SpeechShortening(),
     this.stopWords = defaultStopWords,
+    this.fillerWords = defaultFillerWords,
     this.conversationMode = false,
     this.followUpWindow = const Duration(seconds: 5),
     this.voice,
@@ -33,16 +34,26 @@ final class VoicePipelineConfig {
     this.speakErrors = true,
   });
 
-  /// Stop words (lower case, without punctuation) in de/fr/en.
+  /// Stop words (lower case) in de/fr/en.
   static const defaultStopWords = {
-    'stopp',
-    'stop',
-    'abbrechen',
-    'abbruch',
-    'arrête',
-    'arrête toi',
-    'annule',
-    'cancel',
+    // de
+    'stopp', 'stop', 'halt', 'abbrechen', 'abbruch', 'aufhören', 'ruhe',
+    // fr
+    'arrête', 'arrêtez', 'annule', 'annuler', 'stoppe',
+    // en
+    'cancel', 'quiet', 'enough',
+  };
+
+  /// Words that may accompany a stop word („Stopp bitte“, „Nein, stopp“).
+  static const defaultFillerWords = {
+    // de
+    'bitte', 'nein', 'jetzt', 'sofort', 'mal', 'doch', 'ok', 'okay', 'danke',
+    'hör', 'auf',
+    // fr
+    'non', 'maintenant', 's', 'il', 'te', 'vous', 'plaît', 'plait', 'toi',
+    'merci', 'ça', 'ca', 'tout', 'de', 'suite',
+    // en
+    'please', 'no', 'now', 'it', 'that', 'thanks',
   };
 
   /// Endpointing limits (pre-roll, end silence, maximum, minimum speech).
@@ -54,8 +65,14 @@ final class VoicePipelineConfig {
   /// Limits of the spoken answer.
   final SpeechShortening shortening;
 
-  /// A transcript consisting only of one of these words aborts the request.
+  /// A transcript that consists only of these words and [fillerWords]
+  /// (with at least one stop word, repetitions allowed) aborts the request.
+  /// While the answer is spoken there is no barge-in yet (v0.4), so then
+  /// only tapping ([VoicePipeline.cancel]) stops it.
   final Set<String> stopWords;
+
+  /// Words allowed next to a stop word.
+  final Set<String> fillerWords;
 
   /// Conversation mode (from M4, off by default): after an answer, keep
   /// listening for [followUpWindow] for a follow-up question.
@@ -98,7 +115,8 @@ final class VoicePipelineConfig {
 ///   the answer for [VoicePipelineConfig.followUpWindow].
 final class VoicePipeline {
   /// Creates a pipeline. [textToSpeech] is asked for the engine before
-  /// every answer (see `TtsSelector.current`); `null` = text only.
+  /// every answer with the answer language (see `TtsSelector.current`);
+  /// `null` = text only.
   VoicePipeline({
     required this.audio,
     required this.vad,
@@ -130,8 +148,9 @@ final class VoicePipeline {
   /// Time source for trigger timestamps.
   final Clock clock;
 
-  /// Resolves the speech output before every answer (`null` = text only).
-  final Future<TextToSpeech?> Function() textToSpeech;
+  /// Resolves the speech output for the answer language (BCP 47 or `null`)
+  /// before every answer (`null` = text only).
+  final Future<TextToSpeech?> Function(String? language) textToSpeech;
   StreamSubscription<TriggerEvent>? _triggerSub;
 
   final _states = StreamController<VoiceState>.broadcast(sync: true);
@@ -147,6 +166,7 @@ final class VoicePipeline {
   bool _agentRunning = false;
   Future<void> _agentDrained = Future.value();
   Future<void> _session = Future.value();
+  Future<void> _listening = Future.value();
 
   /// Current state.
   VoiceState get state => _state;
@@ -226,6 +246,7 @@ final class VoicePipeline {
         VoiceListening(trigger: followUp ? null : trigger, followUp: followUp),
       );
       final endpoint = await _listen(
+        gen,
         followUp
             ? config.endpoint.withNoSpeechTimeout(config.followUpWindow)
             : config.endpoint,
@@ -261,17 +282,37 @@ final class VoicePipeline {
     if (gen == _gen) _setState(VoiceState.idle);
   }
 
-  /// Whether [text] consists only of a stop word.
+  /// Whether [text] is a stop command: only stop words and filler words,
+  /// at least one stop word („Stopp, stopp.“, „Nein, stopp bitte“).
   bool isStopWord(String text) {
-    final norm = text
+    final words = text
         .toLowerCase()
-        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    return config.stopWords.contains(norm);
+        .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    return words.any(config.stopWords.contains) &&
+        words.every(
+          (w) => config.stopWords.contains(w) || config.fillerWords.contains(w),
+        );
   }
 
-  Future<Endpoint?> _listen(EndpointConfig limits) async {
+  /// Records one utterance. Recordings are serialized: a new one waits
+  /// until the previous (e.g. just cancelled) one has stopped the
+  /// microphone, and each only clears its own hooks.
+  Future<Endpoint?> _listen(int gen, EndpointConfig limits) {
+    final previous = _listening;
+    final run = _listenAfter(previous, gen, limits);
+    _listening = run.then((_) {});
+    return run;
+  }
+
+  Future<Endpoint?> _listenAfter(
+    Future<void> previous,
+    int gen,
+    EndpointConfig limits,
+  ) async {
+    await previous;
+    if (gen != _gen) return null;
     final endpointer = Endpointer(limits);
     final done = Completer<Endpoint?>();
     void end(Endpoint? e) {
@@ -285,7 +326,9 @@ final class VoicePipeline {
     }
 
     StreamSubscription<Int16List>? sub;
-    Timer? guard;
+    final guards = <Timer>[];
+    _endListening = end;
+    _endpointer = endpointer;
     try {
       vad.reset();
       sub = audio.start().listen(
@@ -301,21 +344,36 @@ final class VoicePipeline {
         onError: fail,
         onDone: () => end(endpointer.finish()),
       );
-      _endListening = end;
-      _endpointer = endpointer;
-      guard = Timer(
-        limits.maxDuration + config.listenGrace,
-        () => end(endpointer.finish(EndpointReason.maxDuration)),
-      );
+      // Safety nets in wall-clock time in case the microphone stops
+      // delivering frames: before speech after the no-speech timeout,
+      // otherwise after the maximum duration (each plus a grace period).
+      guards
+        ..add(
+          Timer(limits.noSpeechTimeout + config.listenGrace, () {
+            if (!endpointer.inSpeech) {
+              end(endpointer.finish(EndpointReason.noSpeech));
+            }
+          }),
+        )
+        ..add(
+          Timer(
+            limits.maxDuration + config.listenGrace,
+            () => end(endpointer.finish(EndpointReason.maxDuration)),
+          ),
+        );
     } on Object catch (error) {
       fail(error);
     }
     final result = await done.future;
-    _endListening = null;
-    _endpointer = null;
-    guard?.cancel();
+    if (identical(_endpointer, endpointer)) {
+      _endListening = null;
+      _endpointer = null;
+    }
+    for (final g in guards) {
+      g.cancel();
+    }
     try {
-      if (audio.isRunning) await audio.stop();
+      if (sub != null && audio.isRunning) await audio.stop();
     } on Object catch (error) {
       _emit(VoiceError(VoiceState.listening, error));
     }
@@ -361,7 +419,7 @@ final class VoicePipeline {
   Future<SpeechQueue?> _newQueue(int gen, String? language) async {
     TextToSpeech? tts;
     try {
-      tts = await textToSpeech();
+      tts = await textToSpeech(language);
     } on Object catch (error) {
       if (gen == _gen) _emit(VoiceError(_state, error));
     }
@@ -421,8 +479,11 @@ final class VoicePipeline {
           case AgentDone():
             say(spoken.finish());
           case AgentFailed(:final error, :final message):
+            // Buffered, incomplete text of the failed answer is dropped on
+            // purpose (it may stop mid-sentence); sentences already queued
+            // are still spoken, then the failure in the answer language.
             if (error != AgentErrorKind.cancelled && config.speakErrors) {
-              say([message]);
+              say([VoiceTexts.of(language).failure(error, message)]);
             }
           default:
             // Thinking, routing, usage, confirmations: display only.

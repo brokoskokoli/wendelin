@@ -12,7 +12,7 @@ final class EndpointConfig {
     this.preRoll = const Duration(milliseconds: 300),
     this.endSilence = const Duration(milliseconds: 800),
     this.maxDuration = const Duration(seconds: 30),
-    this.minSpeech = const Duration(milliseconds: 250),
+    this.minSpeech = const Duration(milliseconds: 200),
     this.noSpeechTimeout = const Duration(seconds: 8),
   });
 
@@ -27,7 +27,9 @@ final class EndpointConfig {
   final Duration maxDuration;
 
   /// Speech shorter than this (from the first to the last speech frame) is
-  /// treated as noise: it is dropped and listening continues.
+  /// treated as noise: it is dropped and listening continues. 200 ms keeps
+  /// short answers like „Ja“ or „Nein“; calibrate with real Silero VAD
+  /// output on devices (WP17) and adjust if clicks or breaths get through.
   final Duration minSpeech;
 
   /// Listening ends with [EndpointKind.nothing] if no valid speech has

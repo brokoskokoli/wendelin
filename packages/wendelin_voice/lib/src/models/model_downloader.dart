@@ -27,6 +27,9 @@ enum DownloadErrorKind {
 
   /// Aborted via `CancelToken` (the partial file is kept for resuming).
   cancelled,
+
+  /// The same model is already being downloaded.
+  busy,
 }
 
 /// Error of [ModelDownloader.download].
@@ -117,12 +120,42 @@ final class ModelDownloader {
   ///
   /// Throws [ModelDownloadException]; [onProgress] is called after every
   /// received chunk.
+  ///
+  /// Only one download per model runs at a time (a second call fails with
+  /// [DownloadErrorKind.busy]); file names must be plain names
+  /// (`ArgumentError` otherwise), so a catalog entry can never write
+  /// outside the model directory.
   Future<void> download(
     SpeechModel model, {
     void Function(DownloadProgress progress)? onProgress,
     CancelToken? cancel,
   }) async {
-    final token = cancel ?? CancelToken();
+    for (final f in model.files) {
+      if (!_safeName.hasMatch(f.name) || f.name.startsWith('.')) {
+        throw ArgumentError.value(f.name, 'name', 'kein einfacher Dateiname');
+      }
+    }
+    if (!_active.add(model.id)) {
+      throw ModelDownloadException(
+        DownloadErrorKind.busy,
+        '${model.displayName} wird bereits heruntergeladen.',
+      );
+    }
+    try {
+      await _download(model, onProgress, cancel ?? CancelToken());
+    } finally {
+      _active.remove(model.id);
+    }
+  }
+
+  static final _safeName = RegExp(r'^[A-Za-z0-9._-]+$');
+  final _active = <String>{};
+
+  Future<void> _download(
+    SpeechModel model,
+    void Function(DownloadProgress progress)? onProgress,
+    CancelToken token,
+  ) async {
     var done = 0; // bytes of finished files
     for (final f in model.files) {
       _checkCancel(token, f);
@@ -187,6 +220,12 @@ final class ModelDownloader {
     }
 
     switch (response.statusCode) {
+      case 206 when offset > 0 && !_rangeMatches(response, offset):
+        // The server resumes somewhere else: start over from zero (the
+        // retry sends no Range header, so this cannot repeat).
+        await _drain(response);
+        await _guard(f, () => store.deletePartial(id, f.name));
+        return _downloadFile(model, f, token, progress, retried: true);
       case 206 when offset > 0:
         break;
       case 200:
@@ -200,12 +239,7 @@ final class ModelDownloader {
         return _downloadFile(model, f, token, progress, retried: true);
       default:
         await _drain(response);
-        throw ModelDownloadException(
-          DownloadErrorKind.http,
-          'Download von ${f.name} fehlgeschlagen (HTTP '
-          '${response.statusCode}).',
-          file: f.name,
-        );
+        throw _httpError(f, response.statusCode);
     }
 
     final digest = _DigestSink();
@@ -306,6 +340,22 @@ final class ModelDownloader {
         file: f.name,
         receivedBytes: received,
         totalBytes: m.sizeBytes,
+      );
+
+  /// Whether a `206` answer starts at [offset] (`Content-Range` begins
+  /// with `bytes OFFSET-`); a missing header is accepted.
+  static bool _rangeMatches(http.StreamedResponse r, int offset) {
+    final range = r.headers['content-range'];
+    if (range == null) return true;
+    return RegExp(r'^bytes\s+(\d+)-').firstMatch(range.trim())?.group(1) ==
+        '$offset';
+  }
+
+  static ModelDownloadException _httpError(ModelFile f, int status) =>
+      ModelDownloadException(
+        DownloadErrorKind.http,
+        'Download von ${f.name} fehlgeschlagen (HTTP $status).',
+        file: f.name,
       );
 
   static Future<void> _drain(http.StreamedResponse r) =>

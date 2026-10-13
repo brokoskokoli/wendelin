@@ -73,26 +73,46 @@ final class TtsSelector {
 
   final TtsPreference Function() _preference;
 
-  /// Picks the engine for the next answer.
-  Future<TtsSelection> select() async {
-    final preferSherpa = _preference() == TtsPreference.sherpa;
+  /// Picks the engine for the next answer in [language] (BCP 47).
+  ///
+  /// With [language], an engine that lists voices but none for that
+  /// language counts as unavailable (e.g. sherpa with only a German voice
+  /// for a French answer). An engine without a voice list is trusted.
+  Future<TtsSelection> select({String? language}) async {
+    final preference = _preference();
+    final preferSherpa = preference == TtsPreference.sherpa;
     final order = preferSherpa
         ? [(TtsEngine.sherpa, sherpa), (TtsEngine.system, system)]
         : [(TtsEngine.system, system), (TtsEngine.sherpa, sherpa)];
     for (final (i, (engine, tts)) in order.indexed) {
       if (tts == null) continue;
-      if (await _available(tts)) {
+      if (await _available(tts) && await _speaks(tts, language)) {
         // Only an explicit preference makes the second engine a fallback;
         // automatic mode prefers the system voice by definition.
-        final fallback = i > 0 && _preference() != TtsPreference.automatic;
+        final fallback = i > 0 && preference != TtsPreference.automatic;
         return TtsSelection(engine: engine, tts: tts, fallback: fallback);
       }
     }
     return const TtsSelection(engine: TtsEngine.none, tts: null);
   }
 
-  /// The engine for the next answer (`null` = text only).
-  Future<TextToSpeech?> current() async => (await select()).tts;
+  /// The engine for the next answer in [language] (`null` = text only).
+  Future<TextToSpeech?> current([String? language]) async =>
+      (await select(language: language)).tts;
+
+  static Future<bool> _speaks(TextToSpeech tts, String? language) async {
+    if (language == null) return true;
+    final lang = _primary(language);
+    try {
+      final voices = await tts.voices();
+      return voices.isEmpty || voices.any((v) => _primary(v.language) == lang);
+    } on Object {
+      return false; // treated like an unavailable engine
+    }
+  }
+
+  static String _primary(String tag) =>
+      tag.split(RegExp('[-_]')).first.toLowerCase();
 
   static Future<bool> _available(TextToSpeech tts) async {
     try {

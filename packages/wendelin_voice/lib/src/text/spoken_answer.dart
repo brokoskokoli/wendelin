@@ -86,6 +86,16 @@ final class SpokenAnswer {
   bool _truncatedInSegment = false;
   bool _omittedInSegment = false;
   bool _finished = false;
+  bool _heading = false; // the current prose line is a heading
+
+  /// Sentences returned in the current segment; `counted` = counts towards
+  /// [SpeechShortening.maxSentences].
+  final _segment = <({String text, bool counted})>[];
+
+  /// Sentences of a discarded segment that were already spoken; if the
+  /// agent sends them again after the reset (pauseTurn retry), they are
+  /// skipped instead of being spoken twice.
+  final _replay = <String>[];
 
   /// Whether sentences were dropped because of the limits.
   bool get truncated => _truncated;
@@ -115,6 +125,13 @@ final class SpokenAnswer {
     final out = <String>[];
     if (_finished) return out;
     _flushAll(out);
+    // Short bridging text before a tool call („Ich schaue nach.“) does not
+    // use up the sentence limit of the actual answer.
+    for (final e in _segment) {
+      if (e.counted) _sentences--;
+    }
+    _segment.clear();
+    _replay.clear();
     _truncatedInSegment = false;
     _omittedInSegment = false;
     return out;
@@ -123,18 +140,32 @@ final class SpokenAnswer {
   /// Discards the text of the current segment (`AgentTextReset`).
   ///
   /// [unspoken] are sentences returned earlier that were not spoken and are
-  /// dropped by the caller; they no longer count towards the limits.
+  /// dropped by the caller; they no longer count towards the limits. The
+  /// other sentences of the segment were spoken (or are playing): if the
+  /// agent repeats them right after the reset (it re-sends the kept text of
+  /// a paused answer), they are skipped and not counted again.
   void reset({Iterable<String> unspoken = const []}) {
     _line = '';
     _mode = _LineMode.undecided;
     _fed = 0;
     _inCode = false;
+    _heading = false;
     _list.clear();
     _chunker.reset();
-    for (final s in unspoken) {
-      _sentences--;
-      _chars -= s.length;
+    final dropped = List.of(unspoken);
+    final spoken = <String>[];
+    for (final e in _segment) {
+      if (dropped.remove(e.text)) {
+        if (e.counted) _sentences--;
+        _chars -= e.text.length;
+      } else {
+        spoken.add(e.text);
+      }
     }
+    _segment.clear();
+    _replay
+      ..clear()
+      ..addAll(spoken);
     if (_sentences < 0) _sentences = 0;
     if (_chars < 0) _chars = 0;
     if (_truncatedInSegment) _truncated = false;
@@ -169,6 +200,7 @@ final class SpokenAnswer {
       if (_mode != _LineMode.prose) return;
       _endList(out);
       _fed = _proseStart(_line);
+      _heading = _isHeading(_line);
     }
     if (_mode != _LineMode.prose) return;
     // Hold back the unfinished last word: it may be the start of a URL,
@@ -194,6 +226,7 @@ final class SpokenAnswer {
     }
     if (mode == _LineMode.prose) {
       _feed('${line.substring(fed)}\n', out);
+      _heading = false;
       return;
     }
     if (t.trim().isEmpty) return; // blank lines keep a list open
@@ -218,12 +251,14 @@ final class SpokenAnswer {
     }
     if (_list.isNotEmpty && indent >= 2) return; // sub item / continuation
     _endList(out);
+    _heading = _isHeading(line);
     _feed('${line.substring(_proseStart(line))}\n', out);
+    _heading = false;
   }
 
   void _feed(String text, List<String> out) {
     if (text.isEmpty) return;
-    for (final s in _chunker.add(stripUrls(text))) {
+    for (final s in _chunker.add(stripUrls(text, placeholder: urlMark))) {
       _accept(s, out);
     }
   }
@@ -247,22 +282,38 @@ final class SpokenAnswer {
   }
 
   void _accept(String raw, List<String> out) {
-    if (_truncated) return;
     var s = cleanForSpeech(raw);
-    if (s.isEmpty) return;
+    if (s.isEmpty) {
+      // A sentence that was only a link: on the screen only.
+      if (raw.contains(urlMark)) _markOmitted();
+      return;
+    }
+    if (_replay.isNotEmpty) {
+      if (_replay.first == s) {
+        _replay.removeAt(0);
+        _segment.add((text: s, counted: false));
+        return;
+      }
+      _replay.clear();
+    }
+    if (_truncated) return;
+    final counted = !_heading;
     final fits =
-        _sentences < config.maxSentences &&
+        (!counted || _sentences < config.maxSentences) &&
         _chars + s.length <= config.maxChars;
     if (!fits) {
       _truncated = true;
       _truncatedInSegment = true;
-      if (_sentences > 0) return;
+      if (_chars > 0) return;
       s = _cutAtWord(s, config.maxChars);
     }
-    _sentences++;
+    if (counted) _sentences++;
     _chars += s.length;
+    _segment.add((text: s, counted: counted));
     out.add(s);
   }
+
+  static bool _isHeading(String line) => line.trimLeft().startsWith('#');
 
   void _markOmitted() {
     _omitted = true;
@@ -343,6 +394,10 @@ final _angleUrl = RegExp(r'<(?:https?://|www\.)[^>]*>');
 final _url = RegExp(r'(?:https?://|www\.)[^\s<>]+');
 final _urlTrail = RegExp(r'[.,;:!?)»”"]+$');
 final _emptyBrackets = RegExp(r'\[\s*\]|\(\s*\)|<\s*>');
+final _emoji = RegExp(
+  r'[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{1F3FB}-\u{1F3FF}\u200D\uFE0F\u20E3]',
+  unicode: true,
+);
 final _strong = RegExp(r'\*\*|__|~~|`');
 final _emphasis = RegExp(
   r'(?<![\p{L}\p{N}])[*_](?=\S)|(?<=\S)[*_](?![\p{L}\p{N}])',
@@ -360,6 +415,8 @@ String cleanForSpeech(String text) {
       .replaceAllMapped(_link, (m) => m[1]!)
       .replaceAll(_angleUrl, '');
   s = stripUrls(s)
+      .replaceAll(urlMark, '')
+      .replaceAll(_emoji, '')
       .replaceAll(_emptyBrackets, '')
       .replaceAll(_strong, '')
       .replaceAll(_emphasis, '')
@@ -369,9 +426,14 @@ String cleanForSpeech(String text) {
   return _hasWord.hasMatch(s) ? s : '';
 }
 
-/// Removes bare URLs from [text], keeping sentence punctuation that
-/// directly follows them.
-String stripUrls(String text) => text.replaceAllMapped(_url, (m) {
-  final trail = _urlTrail.firstMatch(m[0]!)?.group(0);
-  return trail ?? '';
-});
+/// Marks where [SpokenAnswer] removed a URL before sentence chunking
+/// (private-use character, removed by [cleanForSpeech]).
+const urlMark = '\uE000';
+
+/// Removes bare URLs from [text] (replaced by [placeholder]), keeping
+/// sentence punctuation that directly follows them.
+String stripUrls(String text, {String placeholder = ''}) =>
+    text.replaceAllMapped(_url, (m) {
+      final trail = _urlTrail.firstMatch(m[0]!)?.group(0);
+      return '$placeholder${trail ?? ''}';
+    });
