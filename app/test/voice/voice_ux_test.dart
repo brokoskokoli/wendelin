@@ -35,7 +35,10 @@ void main() {
         ),
       ],
     );
-    return c = env.container();
+    c = env.container();
+    // The UI keeps the controller alive from the start.
+    c.read(voiceControllerProvider);
+    return c;
   }
 
   VoiceController voice() => c.read(voiceControllerProvider.notifier);
@@ -75,7 +78,7 @@ void main() {
     );
 
     test(
-      'Tipp-Abbruch beim Zuhören: Status „Abgebrochen“, kein Stopp-Zähler',
+      'Tipp-Abbruch beim Zuhören: Status „Abgebrochen“, Overlay-Stopp-Zähler',
       () async {
         start(const [], script: const []);
         await voice().start(TriggerKind.pushToTalk);
@@ -83,7 +86,9 @@ void main() {
         await voice().cancel();
         final v = c.read(voiceControllerProvider);
         expect(v.hint, 'Abgebrochen.');
-        expect(v.stopCount, 0);
+        // Wie beim Stopp-Wort: das Overlay blendet den alten Austausch aus
+        // und schließt (je nach Einstellung).
+        expect(v.stopCount, 1);
       },
     );
   });
@@ -156,6 +161,121 @@ void main() {
             .text,
         'Zurückgenommen.',
       );
+    });
+
+    test('Rückgängig stoppt eine gesprochene Bestätigungsfrage', () async {
+      final tts = FakeTextToSpeech(manual: true);
+      start(
+        [
+          create,
+          answer,
+          ScriptedTurn.toolCalls([
+            call('c2', 'calendar__delete_event', '{"event_id":"e1"}'),
+          ]),
+          ScriptedTurn.text('Erledigt.'),
+        ],
+        script: const [Transcript(text: 'Lösch den Termin', language: 'de')],
+        tts: tts,
+      );
+      await env.calendar.createEvent(zahnarztDraft());
+      await agent().send('Trag Tauchen ein');
+      await agent().idle;
+      await voice().start(TriggerKind.pushToTalk);
+      for (var i = 0; i < 100 && tts.current == null; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(tts.current, 'Termin löschen? Ja oder nein?');
+      expect(c.read(voiceControllerProvider).phase, isNot(VoiceState.idle));
+
+      await voice().undo('c1');
+
+      expect(tts.interrupted, contains('Termin löschen? Ja oder nein?'));
+      // Typed card: no sound, and nothing keeps talking.
+      expect(tts.current, isNull);
+      expect(tts.spoken, ['Termin löschen? Ja oder nein?']);
+      expect(env.calendar.events, hasLength(1));
+      expect(c.read(agentControllerProvider).running, isFalse);
+    });
+
+    test('Rückgängig in der Denkphase beendet die Sprachanfrage', () async {
+      final tts = FakeTextToSpeech(manual: true);
+      start(
+        [
+          create,
+          answer,
+          ScriptedTurn.toolCalls([
+            call('c2', 'calendar__delete_event', '{"event_id":"e1"}'),
+          ]),
+          ScriptedTurn.text('Erledigt.'),
+        ],
+        script: const [Transcript(text: 'Lösch den Termin', language: 'de')],
+        tts: tts,
+      );
+      await env.calendar.createEvent(zahnarztDraft());
+      await agent().send('Trag Tauchen ein');
+      await agent().idle;
+      await voice().start(TriggerKind.pushToTalk);
+      await waitVoice(c, (v) => v.phase == VoiceState.thinking);
+
+      await voice().undo('c1');
+      await voice().whenIdle;
+
+      expect(c.read(voiceControllerProvider).phase, VoiceState.idle);
+      expect(c.read(agentControllerProvider).running, isFalse);
+      expect(env.calendar.events, hasLength(1));
+    });
+
+    test('Art der Anfrage gehört zur Karte: Sprach-Karte nach Tipp', () async {
+      final tts = FakeTextToSpeech();
+      start(
+        [
+          create,
+          answer,
+          ScriptedTurn.toolCalls([
+            call('c2', 'calendar__create_event', _create),
+          ]),
+          answer,
+        ],
+        script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
+        tts: tts,
+      );
+      await voice().start(TriggerKind.pushToTalk);
+      await voice().whenIdle;
+      await agent().send('Und nochmal');
+      await agent().idle;
+      tts.spoken.clear();
+
+      expect(await voice().undo('c1'), 'Zurückgenommen.');
+      expect(tts.spoken, ['Zurückgenommen.']);
+      tts.spoken.clear();
+      expect(await voice().undo('c2'), 'Zurückgenommen.');
+      expect(tts.spoken, isEmpty);
+    });
+
+    test('Art der Anfrage gehört zur Karte: Tipp-Karte nach Sprache', () async {
+      final tts = FakeTextToSpeech();
+      start(
+        [
+          create,
+          answer,
+          ScriptedTurn.toolCalls([
+            call('c2', 'calendar__create_event', _create),
+          ]),
+          answer,
+        ],
+        script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
+        tts: tts,
+      );
+      await agent().send('Trag Tauchen ein');
+      await agent().idle;
+      await voice().start(TriggerKind.pushToTalk);
+      await voice().whenIdle;
+      tts.spoken.clear();
+
+      expect(await voice().undo('c1'), 'Zurückgenommen.');
+      expect(tts.spoken, isEmpty);
+      expect(await voice().undo('c2'), 'Zurückgenommen.');
+      expect(tts.spoken, ['Zurückgenommen.']);
     });
 
     test('Rückgängig scheitert: kein Text, kein Ton', () async {

@@ -178,7 +178,10 @@ class _DotsState extends State<_Dots> with SingleTickerProviderStateMixin {
         children: [
           for (var i = 0; i < 3; i++)
             Transform.translate(
-              offset: Offset(0, move ? -_bounce(i) * WSize.hintDot : 0),
+              offset: Offset(
+                0,
+                widget.animated ? -_bounce(i) * WSize.hintDot : 0,
+              ),
               child: const DecoratedBox(
                 decoration: BoxDecoration(
                   color: WColors.onAccent,
@@ -192,9 +195,7 @@ class _DotsState extends State<_Dots> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// 0…1: the dot [i] jumps in its third of the period.
-  double _bounce(int i) {
-    final t = (_c.value - i / 3) % 1.0;
-    return t < 1 / 3 ? math.sin(t * 3 * math.pi) : 0;
-  }
+  /// 0…1: a wave over the three dots, so the still image of „speaking“
+  /// (animations off) differs from „thinking“ (dots in a row).
+  double _bounce(int i) => (1 + math.sin(2 * math.pi * (_c.value - i / 3))) / 2;
 }

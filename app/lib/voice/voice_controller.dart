@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../agent/agent_controller.dart';
+import '../agent/chat_entry.dart';
 import '../agent/conversation_state.dart';
 import '../di/preferences.dart';
 import '../di/providers.dart';
@@ -69,7 +70,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
   int _cancels = 0;
   // The running agent request came from the voice pipeline.
   bool _voiceRun = false;
-  bool _lastByVoice = false; // for the spoken „Zurückgenommen.“ (B9)
+  bool _lastByVoice = false; // request kind of the current/last run (B9)
+  // Request kind per tool card (B9: „Zurückgenommen.“ follows the card).
+  final _callByVoice = <String, bool>{};
   // Main screen or overlay visible (prewarm, release, B11/B14).
   bool _foreground = false;
   // Main screen: warm up only for people who use speech (base load).
@@ -109,6 +112,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
       ..listen(agentControllerProvider.select((s) => s.running), (_, running) {
         if (running) _lastByVoice = _voiceRun;
         if (!running) _voiceRun = false;
+      })
+      ..listen(agentControllerProvider.select((s) => s.entries), (_, entries) {
+        for (final e in entries.whereType<ToolEntry>()) {
+          _callByVoice.putIfAbsent(e.id, () => _lastByVoice);
+        }
       })
       // Models arrive (download, first refresh): warm up if visible.
       ..listen(voiceReadyProvider, (_, ready) {
@@ -538,24 +546,26 @@ final class VoiceController extends Notifier<VoiceUiState> {
   // „Abgebrochen“: stop word (meta line, overlay reacts to stopCount) or
   // a tap before the agent got the request (B5).
   void _onCancelled(VoiceCancelReason reason, VoiceState during) {
-    if (reason == VoiceCancelReason.stopWord) {
-      _agent.addNotice(cancelledText);
-      state = state.copyWith(
-        stopCount: state.stopCount + 1,
-        hint: cancelledText,
-      );
-    } else if (reason == VoiceCancelReason.tap &&
-        (during == VoiceState.listening || during == VoiceState.transcribing)) {
-      state = state.copyWith(hint: cancelledText);
-    }
+    final stop = reason == VoiceCancelReason.stopWord;
+    final tap =
+        reason == VoiceCancelReason.tap &&
+        (during == VoiceState.listening || during == VoiceState.transcribing);
+    if (!stop && !tap) return;
+    if (stop) _agent.addNotice(cancelledText);
+    // Both: the overlay hides the old exchange and closes (setting).
+    state = state.copyWith(stopCount: state.stopCount + 1, hint: cancelledText);
   }
 
   /// Undoes [callId]: stops a spoken answer at once, adds „Zurückgenommen.“
   /// and speaks it if the request came by voice (B9). Returns the text, or
   /// `null` if the undo failed.
   Future<String?> undo(String callId) async {
-    if (state.phase == VoiceState.speaking) await _pipeline?.cancel();
-    final byVoice = _lastByVoice;
+    // Any voice activity ends first (sentence gap, spoken confirmation).
+    if (_voiceRun || state.phase != VoiceState.idle) await cancel();
+    final tts = _promptTts;
+    _promptTts = null;
+    if (tts != null) await tts.stop();
+    final byVoice = _callByVoice[callId] ?? _lastByVoice;
     final language = byVoice ? _language : ref.read(languageProvider);
     if (!await _agent.undo(callId)) return null;
     final text = undoneText(language);
