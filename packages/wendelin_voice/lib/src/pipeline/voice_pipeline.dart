@@ -25,6 +25,7 @@ final class VoicePipelineConfig {
     this.shortening = const SpeechShortening(),
     this.stopWords = defaultStopWords,
     this.fillerWords = defaultFillerWords,
+    this.stopPhrases = defaultStopPhrases,
     this.conversationMode = false,
     this.followUpWindow = const Duration(seconds: 5),
     this.voice,
@@ -45,10 +46,20 @@ final class VoicePipelineConfig {
   };
 
   /// Words that may accompany a stop word („Stopp bitte“, „Nein, stopp“).
+  /// Multi-word stop commands (lower case, words separated by spaces).
+  static const defaultStopPhrases = {
+    // de
+    'hör auf', 'hört auf', 'hören sie auf', 'sei still', 'sei ruhig',
+    // fr
+    'arrête ça', 'arrête ca', 'tais toi', 'taisez vous', 'ça suffit',
+    'ca suffit',
+    // en
+    'stop it', 'stop that', 'be quiet', 'that is enough',
+  };
+
   static const defaultFillerWords = {
     // de
     'bitte', 'nein', 'jetzt', 'sofort', 'mal', 'doch', 'ok', 'okay', 'danke',
-    'hör', 'auf',
     // fr
     'non', 'maintenant', 's', 'il', 'te', 'vous', 'plaît', 'plait', 'toi',
     'merci', 'ça', 'ca', 'tout', 'de', 'suite',
@@ -73,6 +84,10 @@ final class VoicePipelineConfig {
 
   /// Words allowed next to a stop word.
   final Set<String> fillerWords;
+
+  /// Phrases that count like a stop word („Hör auf!“, „arrête ça“,
+  /// „stop it“).
+  final Set<String> stopPhrases;
 
   /// Conversation mode (from M4, off by default): after an answer, keep
   /// listening for [followUpWindow] for a follow-up question.
@@ -290,10 +305,27 @@ final class VoicePipeline {
         .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
         .where((w) => w.isNotEmpty)
         .toList();
-    return words.any(config.stopWords.contains) &&
-        words.every(
-          (w) => config.stopWords.contains(w) || config.fillerWords.contains(w),
-        );
+    // Words covered by a stop phrase count as stop words.
+    final stop = [for (final w in words) config.stopWords.contains(w)];
+    for (final phrase in config.stopPhrases) {
+      final p = phrase.split(' ');
+      for (var i = 0; i + p.length <= words.length; i++) {
+        var match = true;
+        for (var k = 0; k < p.length && match; k++) {
+          match = words[i + k] == p[k];
+        }
+        if (match) stop.fillRange(i, i + p.length, true);
+      }
+    }
+    var any = false;
+    for (var i = 0; i < words.length; i++) {
+      if (stop[i]) {
+        any = true;
+      } else if (!config.fillerWords.contains(words[i])) {
+        return false;
+      }
+    }
+    return any;
   }
 
   /// Records one utterance. Recordings are serialized: a new one waits

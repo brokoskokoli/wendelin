@@ -35,4 +35,4 @@ Noch Aufgabe der Plattform:
 - `TtsSelector.select(language:)` wählt die Systemstimme, sonst sherpa. Eine Engine, die zwar Stimmen nennt, aber keine für die Antwortsprache, gilt als nicht verfügbar.
 - `TextToSpeech.speak` bekommt die Antwortsprache, wenn keine Stimme gesetzt ist.
 
-**Abbruch.** Während der Sprachausgabe gibt es noch kein Barge-in (ab v0.4). Stoppen geht dann nur durch Antippen (`VoicePipeline.cancel`). Das Abbruchwort wirkt nur, wenn es als ganze Äußerung erkannt wird.
+**Abbruch.** Während der Sprachausgabe gibt es noch kein Barge-in (ab v0.4). Stoppen geht dann nur durch Antippen (`VoicePipeline.cancel`). Das Abbruchwort wirkt nur, wenn die ganze Äußerung ein Stopp-Befehl ist: Stoppwörter, Stopp-Phrasen („Hör auf“, „arrête ça“, „stop it“) und Füllwörter („bitte“, „nein“).

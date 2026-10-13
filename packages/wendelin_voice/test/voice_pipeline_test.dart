@@ -617,6 +617,13 @@ void main() {
       'Nein, stopp!',
       'Halt.',
       'Hör auf, stopp',
+      'Hör auf!',
+      'hör auf',
+      'Bitte hör auf.',
+      'Arrête ça !',
+      'Tais-toi',
+      'Stop it!',
+      'Be quiet, please',
       'Arrête, s’il te plaît',
       'Non, arrête !',
       'Stop it, please',
@@ -624,7 +631,15 @@ void main() {
     ]) {
       expect(p.isStopWord(t), isTrue, reason: t);
     }
-    for (final t in ['Bitte', 'Nein', 'Das ist halt so', 'Stop the timer']) {
+    for (final t in [
+      'Bitte',
+      'Nein',
+      'Das ist halt so',
+      'Stop the timer',
+      'Hör auf zu reden über das Wetter',
+      'auf',
+      'Arrête la musique',
+    ]) {
       expect(p.isStopWord(t), isFalse, reason: t);
     }
   });
@@ -879,6 +894,24 @@ void main() {
     });
   });
 
+  test('von außen abgebrochener Agent-Lauf wird nicht angesagt', () {
+    runFake((async) {
+      final h = Harness(
+        agent: ScriptedAgent([
+          const AgentFailed(
+            error: AgentErrorKind.cancelled,
+            message: 'Abgebrochen',
+          ),
+        ]),
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.agentEvents.single, isA<AgentFailed>());
+      expect(h.tts.spoken, isEmpty);
+      expect(h.pipeline.state, VoiceState.idle);
+    });
+  });
+
   test('ohne Sprachausgabe: nur Text, kein Zustand speaking', () {
     runFake((async) {
       final h = Harness(withTts: false, turns: [ScriptedTurn.text('Hallo.')]);
@@ -970,6 +1003,22 @@ void main() {
         settle(async);
         expect(h.eventsOf<VoiceError>(), isEmpty);
         expect(h.tts.spoken, ['Antwort.']);
+      });
+    });
+
+    test('Trigger, dann sofort cancel(): Mikrofon startet nicht erneut', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Nie.')]);
+        h.pipeline.start();
+        async.elapse(const Duration(milliseconds: 300));
+        expect(h.fakeAudio.startCount, 1);
+        h.triggers.fire(TriggerKind.assistant); // waits for the old stop
+        h.pipeline.cancel();
+        settle(async);
+        expect(h.fakeAudio.startCount, 1);
+        expect(h.fakeAudio.isRunning, isFalse);
+        expect(h.pipeline.state, VoiceState.idle);
+        expect(h.recording.inputs, isEmpty);
       });
     });
 
