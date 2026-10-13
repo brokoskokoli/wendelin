@@ -1700,8 +1700,9 @@ void main() {
         expect(sent, contains(AgentRunnerTexts.placeholder));
         // The user's own words stay.
         expect(sent, contains('Wie ist Annas Nummer?'));
-        // The visible web call keeps its arguments.
-        expect(sent, contains('Vorwahl'));
+        // In the protected section also the visible web call is hidden.
+        expect(sent, isNot(contains('Vorwahl')));
+        expect(sent, contains('web__search'));
       },
     );
 
@@ -1791,6 +1792,90 @@ void main() {
       expect(sent[5], Message.assistantText('Sonnig.'));
       expect(sent.last, Message.user('Und morgen?'));
     });
+
+    test(
+      '(c) calls of visible tools in a protected section are hidden',
+      () async {
+        // Run 1 on TEE: contacts, then a web search quoting the number.
+        final (tee, _) = scripted('phala', [
+          ScriptedTurn.toolCalls([
+            call('c1', 'contacts__find', '{"q":"Anna"}'),
+          ]),
+          ScriptedTurn.toolCalls([
+            call('c2', 'web__search', '{"q":"0171 1234567 Anna"}'),
+          ]),
+          ScriptedTurn.text('Gefunden.'),
+          // Run 2 fails on TEE and escalates.
+          ScriptedTurn.error(const NetworkException('weg')),
+          ScriptedTurn.error(const NetworkException('weg')),
+        ], privacy: PrivacyLevel.tee);
+        final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
+        final h = harness(tee, [std]);
+        await h.run('Such Annas Nummer im Web');
+        expect(web.calls.single['q'], '0171 1234567 Anna');
+        final events = await h.run('Und nochmal?');
+        // Earlier protected sections are hidden, so no question is needed.
+        expect(events.whereType<EscalationConfirmationRequired>(), isEmpty);
+        final sent = ps.requests.single.messages;
+        expect(sent.toString(), isNot(contains('0171')));
+        final webCall = sent.expand((m) => m.toolCalls).last;
+        expect(webCall.name, 'web__search');
+        expect(webCall.argumentsJson, '{}');
+      },
+    );
+
+    test('(c) without tools the protected call text is hidden too', () async {
+      final history = [
+        Message.user('Annas Nummer suchen'),
+        Message.assistant([call('h1', 'contacts__find', '{"q":"Anna"}')]),
+        Message.toolResults([
+          ToolResultBlock(
+            callId: 'h1',
+            content: const [TextBlock('Anna: 0171 1234567')],
+          ),
+        ]),
+        Message.assistant([call('h2', 'web__search', '{"q":"0171"}')]),
+        Message.toolResults([
+          ToolResultBlock(callId: 'h2', content: const [TextBlock('0171 …')]),
+        ]),
+      ];
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
+      final h = Harness(
+        primary: std,
+        history: history,
+        catalogFor: (_) => FakeToolCatalog(const []),
+      );
+      await h.run('Danke');
+      final sent = ps.requests.single.messages;
+      expect(sent.toString(), isNot(contains('0171')));
+      expect(sent[3].text, '[Tool-Aufruf: web__search]');
+    });
+
+    test(
+      '(d) a protected message that would be empty gets a placeholder',
+      () async {
+        final history = [
+          Message.user('Annas Nummer?'),
+          Message.assistant([call('h1', 'contacts__find', '{"q":"Anna"}')]),
+          Message.toolResults([
+            ToolResultBlock(
+              callId: 'h1',
+              content: const [TextBlock('Anna: 0171 1234567')],
+            ),
+          ]),
+          Message.assistant([
+            const ThinkingBlock('0171 merken', signature: 's'),
+            const ProviderBlock(provider: 'fake', rawJson: '{"n":"0171"}'),
+          ]),
+        ];
+        final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
+        final h = harness(std, const [], history: history);
+        await h.run('Weiter');
+        final sent = ps.requests.single.messages;
+        expect(sent.toString(), isNot(contains('0171')));
+        expect(sent[3], Message.assistantText(AgentRunnerTexts.placeholder));
+      },
+    );
 
     test('escalation note leaves out hidden calls', () async {
       final (tee, _) = scripted('phala', [

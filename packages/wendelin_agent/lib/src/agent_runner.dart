@@ -109,10 +109,10 @@ abstract final class AgentRunnerTexts {
   /// see.
   static const placeholder = '[Inhalt aus geschützter Quelle ausgeblendet]';
 
-  /// Replaces results of tools the target may not see.
+  /// Replaces results of tools the target may not see and every result in
+  /// a protected section.
   static const redactedResult =
-      '[Ergebnis eines Tools, das diesem Modell nicht zur Verfügung steht – '
-      'ausgeblendet]';
+      '[Tool-Ergebnis aus geschützter Quelle ausgeblendet]';
 
   /// Message when the user declines handing protected data to another
   /// model.
@@ -577,7 +577,9 @@ final class _Run {
       runner.catalogFor?.call(_current.privacy) ??
       runner.contextBuilder.catalog;
 
-  /// [_messages] as [catalog]'s target may see them.
+  /// [_messages] as [catalog]'s target may see them. A protected section
+  /// starts after a hidden result and ends with the next user message; in it
+  /// also calls of visible tools are hidden.
   ///
   /// With per-target catalogs, calls to tools outside [catalog] are redacted
   /// (arguments `{}`, result [AgentRunnerTexts.redactedResult]) – they may hold sensitive
@@ -590,10 +592,14 @@ final class _Run {
   List<Message> _messagesFor(ToolCatalog catalog, {required bool hasTools}) {
     final perTarget = runner.catalogFor != null;
     final hidden = <String>{};
-    // Refused calls never ran: their result is our own error text.
-    bool secret(ToolCallBlock c) =>
-        perTarget && !_refused.contains(c.id) && catalog.lookup(c.name) == null;
     var tainted = false;
+    // Hidden: calls of tools outside the catalog (refused calls never ran,
+    // their result is our own error text) and, in a protected section,
+    // every call – its arguments may quote the protected result.
+    bool secret(ToolCallBlock c) =>
+        perTarget &&
+        (tainted ||
+            (!_refused.contains(c.id) && catalog.lookup(c.name) == null));
     final out = <Message>[];
     for (final m in _messages) {
       if (m.role == Role.user) tainted = false;
@@ -643,6 +649,11 @@ final class _Run {
       }
       if (taintsNext) tainted = true;
       final role = !hasTools && m.role == Role.tool ? Role.user : m.role;
+      if (blocks.isEmpty && m.content.isNotEmpty) {
+        // Everything was protected (e.g. only thinking): keep the turn, not
+        // its content.
+        blocks.add(const TextBlock(AgentRunnerTexts.placeholder));
+      }
       out.add(blocks.isEmpty ? m : Message(role, blocks));
     }
     return out;
