@@ -29,6 +29,7 @@ final class AgentContext {
     required List<Message> messages,
     List<MemoryItem> memories = const [],
     this.speech = SpeechStyle.none,
+    this.untrustedSeen = false,
   }) : tools = List.unmodifiable(tools),
        messages = List.unmodifiable(messages),
        memories = List.unmodifiable(memories);
@@ -48,6 +49,38 @@ final class AgentContext {
 
   /// Speech preparation of the answer (decides the end of the prompt).
   final SpeechStyle speech;
+
+  /// Whether the history already holds a tool result that is not trusted
+  /// ([isTrustedResult]); the run then starts with stage 2 switched off.
+  final bool untrustedSeen;
+}
+
+/// Whether a result of the tool [name] is trusted: only a successful result
+/// of a tool marked [TrustedContentSource]. Fail-closed: unknown tools
+/// (`lookup == null`) and every error text count as untrusted.
+bool isTrustedResult(
+  ToolCatalog catalog,
+  String name, {
+  bool isError = false,
+}) => !isError && catalog.lookup(name) is TrustedContentSource;
+
+/// Whether [messages] hold a tool result that is not trusted (results
+/// without a matching call count as untrusted).
+bool hasUntrustedResult(ToolCatalog catalog, List<Message> messages) {
+  final names = <String, String>{};
+  for (final m in messages) {
+    for (final b in m.content) {
+      if (b is ToolCallBlock) names[b.id] = b.name;
+      if (b is ToolResultBlock) {
+        final name = names[b.callId];
+        if (name == null ||
+            !isTrustedResult(catalog, name, isError: b.isError)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 /// A tool call that has already been executed in this run, for the
@@ -102,6 +135,7 @@ final class ContextBuilder {
       systemPrompt: systemPrompt(memories: memories, speech: speech),
       memories: memories,
       speech: speech,
+      untrustedSeen: hasUntrustedResult(catalog, previous),
       tools: catalog.activeSpecs(),
       messages: [
         ...previous,

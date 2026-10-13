@@ -37,6 +37,8 @@ Future<bool> startRun(
   );
   state.context = await runner.contextBuilder.build(input);
   state.messages.addAll(state.context.messages);
+  // Fail-closed (WP41): an untrusted result from an earlier turn counts too.
+  state.untrustedSeen = state.context.untrustedSeen;
   // A private request without any target of enough privacy is not sent.
   final noPrivateTarget = state.current.belowPrivacyFloor;
   final retry =

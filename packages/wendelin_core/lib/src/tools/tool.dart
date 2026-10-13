@@ -16,12 +16,14 @@ enum RiskLevel {
   external,
 }
 
-/// Marker for tools whose results can contain text written by third
-/// parties (web pages, MCP/HTTP servers, shared lists, notes). The agent
-/// treats a run that has seen such a result as untrusted: invisible
-/// channels like the `<spoken>` block (WP41) are switched off for the rest
-/// of the run, because the user cannot check what would be spoken.
-abstract interface class UntrustedContentSource {}
+/// Marker for tools whose successful result only contains data the user or
+/// the app produced itself (a confirmation of what was just set or saved).
+/// Fail-closed (WP41): every other result – tools without this marker,
+/// unknown tools and every error text – counts as untrusted, i.e. possibly
+/// written by third parties. Once the conversation contains such a result,
+/// invisible channels like the `<spoken>` block are switched off, because
+/// the user cannot check what would be spoken.
+abstract interface class TrustedContentSource {}
 
 /// Mobile platform an integration supports.
 enum AppPlatform {

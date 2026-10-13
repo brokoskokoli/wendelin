@@ -61,8 +61,7 @@ final class ListListsTool extends IntegrationTool {
 }
 
 /// `lists__get_items` (read).
-final class GetItemsTool extends IntegrationTool
-    implements UntrustedContentSource {
+final class GetItemsTool extends IntegrationTool {
   /// Creates the tool.
   const GetItemsTool(this.env);
 

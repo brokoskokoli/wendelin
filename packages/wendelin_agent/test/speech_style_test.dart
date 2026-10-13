@@ -36,11 +36,14 @@ UserInput _in(InputSource source) => UserInput(text: 'Hallo', source: source);
   return ((text: texts.toString(), spoken: spoken), rest);
 }
 
-/// A tool whose results come from a third party.
-final class _UntrustedTool implements Tool, UntrustedContentSource {
-  _UntrustedTool(String name) : _inner = FakeTool(name: name);
+/// A tool whose results only contain own data (fail-closed: all other tools
+/// count as untrusted).
+final class _TrustedTool implements Tool, TrustedContentSource {
+  _TrustedTool(String name, {this._fails = false})
+    : _inner = FakeTool(name: name);
 
   final FakeTool _inner;
+  final bool _fails;
 
   @override
   String get name => _inner.name;
@@ -52,7 +55,9 @@ final class _UntrustedTool implements Tool, UntrustedContentSource {
   RiskLevel get risk => _inner.risk;
   @override
   Future<ToolOutcome> execute(Map<String, Object?> args, ToolContext ctx) =>
-      _inner.execute(args, ctx);
+      _fails
+      ? Future.value(ToolOutcome.error('Fehler'))
+      : _inner.execute(args, ctx);
   @override
   String describeForConfirmation(Map<String, Object?> args) =>
       _inner.describeForConfirmation(args);
@@ -291,7 +296,7 @@ void main() {
         ]);
         final h = Harness(
           primary: a,
-          tools: [FakeTool(name: 'x__t')],
+          tools: [_TrustedTool('x__t')],
           config: _twoVersions,
           memory: FixedMemoryRetriever(const [
             MemoryItem(id: 'p', text: 'Offen', privacyFloor: PrivacyLevel.tee),
@@ -340,7 +345,7 @@ void main() {
       ]);
       final h = Harness(
         primary: a,
-        tools: [_UntrustedTool('web__fetch')],
+        tools: [FakeTool(name: 'web__fetch')],
         config: _twoVersions,
       );
       final events = await h.run('Hallo', source: InputSource.voice);
@@ -358,7 +363,7 @@ void main() {
       ]);
       final h = Harness(
         primary: a,
-        tools: [FakeTool(name: 'clock__now')],
+        tools: [_TrustedTool('clock__now')],
         config: _twoVersions,
       );
       final events = await h.run('Hallo', source: InputSource.voice);
@@ -366,7 +371,31 @@ void main() {
       expect(pa.requests[1].systemPrompt, contains('<spoken>'));
     });
 
-    test('unsicher gesehen gilt nur für diesen Lauf', () async {
+    test('unbekanntes Tool (nicht im Katalog): Sprechblock aus', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls([call('c1', 'gibt__es_nicht')]),
+        ScriptedTurn.text('<spoken>Eingeschleust.</spoken>Antwort.'),
+      ]);
+      final h = Harness(primary: a, config: _twoVersions);
+      final events = await h.run('Hallo', source: InputSource.voice);
+      expect(events.whereType<AgentSpokenText>(), isEmpty);
+    });
+
+    test('Fehlertext eines vertrauten Tools gilt als unsicher', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls([call('c1', 'x__t')]),
+        ScriptedTurn.text('<spoken>Eingeschleust.</spoken>Antwort.'),
+      ]);
+      final h = Harness(
+        primary: a,
+        tools: [_TrustedTool('x__t', fails: true)],
+        config: _twoVersions,
+      );
+      final events = await h.run('Hallo', source: InputSource.voice);
+      expect(events.whereType<AgentSpokenText>(), isEmpty);
+    });
+
+    test('unsicher Gesehenes gilt auch in späteren Zügen', () async {
       final (a, pa) = scripted('a', [
         ScriptedTurn.toolCalls([call('c1', 'web__fetch')]),
         ScriptedTurn.text('Eins.'),
@@ -374,13 +403,39 @@ void main() {
       ]);
       final h = Harness(
         primary: a,
-        tools: [_UntrustedTool('web__fetch')],
+        tools: [FakeTool(name: 'web__fetch')],
+        config: _twoVersions,
+      );
+      await h.run('Hallo', source: InputSource.voice);
+      final events = await h.run('Nochmal', source: InputSource.voice);
+      expect(events.whereType<AgentSpokenText>(), isEmpty);
+      expect(pa.requests[2].systemPrompt, isNot(contains('<spoken>')));
+    });
+
+    test('Verlauf nur mit vertrauten Ergebnissen: Sprechblock an', () async {
+      final (a, pa) = scripted('a', [
+        ScriptedTurn.toolCalls([call('c1', 'x__t')]),
+        ScriptedTurn.text('Eins.'),
+        ScriptedTurn.text('<spoken>Zwei.</spoken>Zwei lang.'),
+      ]);
+      final h = Harness(
+        primary: a,
+        tools: [_TrustedTool('x__t')],
         config: _twoVersions,
       );
       await h.run('Hallo', source: InputSource.voice);
       final events = await h.run('Nochmal', source: InputSource.voice);
       expect(events.whereType<AgentSpokenText>().single.text, 'Zwei.');
       expect(pa.requests[2].systemPrompt, contains('<spoken>'));
+    });
+
+    test('Neues Gespräch (leerer Verlauf): wieder Sprechblock', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.text('<spoken>Neu.</spoken>Neu lang.'),
+      ]);
+      final h = Harness(primary: a, config: _twoVersions);
+      final events = await h.run('Hallo', source: InputSource.voice);
+      expect(events.whereType<AgentSpokenText>().single.text, 'Neu.');
     });
   });
 }

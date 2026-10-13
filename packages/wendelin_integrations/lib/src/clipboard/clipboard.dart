@@ -122,7 +122,8 @@ final class ClipboardReadTool extends IntegrationTool {
 /// For undo the previous text is read before writing and kept in memory
 /// until the undo action is dropped. Reading may show the iOS paste prompt
 /// and fails on Android in the background; then there is no undo.
-final class ClipboardWriteTool extends IntegrationTool {
+final class ClipboardWriteTool extends IntegrationTool
+    implements TrustedContentSource {
   /// Creates the tool; see [undoReadsPrevious].
   const ClipboardWriteTool(this.port, {this.undoReadsPrevious = true});
 

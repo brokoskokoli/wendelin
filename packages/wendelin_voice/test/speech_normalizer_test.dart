@@ -139,6 +139,36 @@ void main() {
       ['Start 9 Uhr 30 morgen.'],
     ),
     (
+      'de: Uhr ohne Einleitungswort',
+      'de',
+      'Der Zug fährt 10:30 Uhr ab.',
+      ['Der Zug fährt 10 Uhr 30 ab.'],
+    ),
+    (
+      'de: von … bis einheitlich',
+      'de',
+      'Offen von 9:30 bis 10:30.',
+      ['Offen von 9 Uhr 30 bis 10 Uhr 30.'],
+    ),
+    (
+      'de: gegen, zwischen, seit',
+      'de',
+      'Gegen 14:15, zwischen 8:05 bis 9:20, seit 7:45.',
+      ['Gegen 14 Uhr 15, zwischen 8 Uhr 5 bis 9 Uhr 20, seit 7 Uhr 45.'],
+    ),
+    (
+      'en: between, since, around',
+      'en',
+      'Between 9:30 until 10:30, since 8:15, around 14:00.',
+      ['Between 9:30 a.m. until 10:30 a.m., since 8:15 a.m., around 2 p.m.'],
+    ),
+    (
+      'fr: entre, depuis, vers',
+      'fr',
+      'Entre 9:30 de 10:30, depuis 8:15, vers 14:00.',
+      ['Entre 9 heures 30 de 10 heures 30, depuis 8 heures 15, vers 14 heures.'],
+    ),
+    (
       'de: am ist keine Marke',
       'de',
       'um 10:30 am Dienstag',

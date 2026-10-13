@@ -8,6 +8,7 @@ import 'package:collection/collection.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../agent_runner_texts.dart';
+import '../context_builder.dart';
 import 'privacy_scope.dart';
 import 'run_config.dart';
 import 'run_state.dart';
@@ -174,9 +175,13 @@ final class ToolRound {
             ),
           );
         case ToolFinished(:final call, :final outcome, :final duration):
-          // Invariant: a result from an untrusted source switches the
-          // invisible speech text off for the rest of the run.
-          if (_privacy.catalog.lookup(call.name) is UntrustedContentSource) {
+          // Invariant (fail-closed): every result that is not explicitly
+          // trusted switches the invisible speech text off.
+          if (!isTrustedResult(
+            _privacy.catalog,
+            call.name,
+            isError: outcome.isError,
+          )) {
             _state.untrustedSeen = true;
           }
           _state.executed.add((

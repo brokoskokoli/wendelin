@@ -116,8 +116,7 @@ final class BringListListsTool extends IntegrationTool {
 }
 
 /// `bring__get_items` (read): open and recently bought items.
-final class BringGetItemsTool extends IntegrationTool
-    implements UntrustedContentSource {
+final class BringGetItemsTool extends IntegrationTool {
   /// Creates the tool.
   const BringGetItemsTool(this.session);
 

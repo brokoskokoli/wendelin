@@ -26,7 +26,8 @@ String _describeArgsSpan(ToolArgs args, tz.Location loc, {CalendarEvent? old}) {
 }
 
 /// `calendar__create_event` (write, undo deletes the event).
-final class CreateEventTool extends IntegrationTool {
+final class CreateEventTool extends IntegrationTool
+    implements TrustedContentSource {
   /// Creates the tool.
   const CreateEventTool(this.env);
 

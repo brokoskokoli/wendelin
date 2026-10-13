@@ -101,7 +101,7 @@ final class HttpToolsIntegration implements Integration {
 }
 
 /// One [HttpToolDefinition] as tool `http__<name>`. No undo.
-final class HttpTool extends IntegrationTool implements UntrustedContentSource {
+final class HttpTool extends IntegrationTool {
   /// Creates the tool.
   const HttpTool(this.definition, this.runner);
 

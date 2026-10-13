@@ -46,6 +46,10 @@ void main() {
     expect(search.categories, {'cal': 'Kalender', 'shop': 'Einkauf'});
   });
 
+  test('Ergebnis (MCP-Beschreibungen) ist nicht vertrauenswürdig (WP41)', () {
+    expect(search, isNot(isA<TrustedContentSource>()));
+  });
+
   test('Trefferzahl entscheidet, dann Name; maxResults', () {
     expect(
       [for (final t in search.search('Termin löschen')) t.name],

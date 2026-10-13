@@ -3,11 +3,11 @@
 /// language dependent (de/fr/en, anything else is German).
 library;
 
-/// A clock time: optional lead-in word („um“, „at“, „à“ …), `h:mm`, optional
+/// A clock time: optional lead-in word („um“, „von“, „at“, „à“ …), `h:mm`, optional
 /// unit („Uhr“, „h“, „heures“). Whether it is a time at all is decided in
 /// [normalizeForSpeech] (ratios, verses and scores look alike).
 final _time = RegExp(
-  r'(?<![\p{L}\p{N}])((?:um|ab|bis|at|from|until|à|de|jusqu[’'
+  r'(?<![\p{L}\p{N}])((?:um|ab|bis|von|gegen|zwischen|seit|at|from|until|between|since|around|à|de|vers|depuis|entre|jusqu[’'
   "'"
   r']à)\s+)?'
   r'(?<![\d:.,])([01]?\d|2[0-3]):([0-5]\d)(?![\d:])'
