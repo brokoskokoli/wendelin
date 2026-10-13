@@ -210,6 +210,25 @@ void main() {
     expect(tileWidget(tester, 'Obsidian').detail, isNull);
   });
 
+  testWidgets('optionale App, Prüfung scheitert: Obsidian bleibt nutzbar', (
+    tester,
+  ) async {
+    final env = TestEnv(enabled: const {'obsidian'});
+    final c = await pumpIntegrations(tester, env);
+    expect(
+      tileWidget(tester, 'Obsidian').status,
+      IntegrationStatus.setupRequired,
+      reason: 'ohne Vault',
+    );
+    env.apps.failNext('isInstalled');
+    await resume(tester);
+    final t = tileWidget(tester, 'Obsidian');
+    expect(t.status, IntegrationStatus.setupRequired, reason: 'kein Fehler');
+    expect(t.detail, 'Obsidian-Vault-Ordner wählen', reason: 'kein Hinweis');
+    expect(c.read(installedAppsProvider)['md.obsidian'], isNull);
+    expect(env.apps.methodCalls.length, greaterThan(1));
+  });
+
   test('integrationDetail: aktive Integration mit App-Hinweis', () {
     final info = IntegrationInfo(
       integration: spotify(),

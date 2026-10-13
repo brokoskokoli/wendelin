@@ -23,6 +23,9 @@ final class FakeUserIntegrationSource implements UserIntegrationSource {
   /// Ids whose secrets were deleted, in order.
   final List<String> deletedSecrets = [];
 
+  /// All cleanup calls, in order.
+  final List<IntegrationRemoval> removals = [];
+
   /// How often [load] ran.
   int loads = 0;
 
@@ -47,7 +50,10 @@ final class FakeUserIntegrationSource implements UserIntegrationSource {
   }
 
   @override
-  Future<void> deleteSecrets(String id) async => deletedSecrets.add(id);
+  Future<void> deleteSecrets(IntegrationRemoval removal) async {
+    removals.add(removal);
+    if (removal.whole) deletedSecrets.add(removal.id);
+  }
 }
 
 /// A user-defined integration [id] with read tools named `<id>__<tool>`.

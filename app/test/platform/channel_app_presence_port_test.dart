@@ -10,11 +10,13 @@ final class _FakeAppsChannel {
   Set<String> installed = {};
   final List<MethodCall> calls = [];
   PlatformException? failure;
+  bool answerNull = false;
 
   Future<Object?> handle(MethodCall call) async {
     calls.add(call);
     if (failure case final f?) throw f;
     if (call.method != 'isInstalled') throw MissingPluginException();
+    if (answerNull) return null;
     final pkg = (call.arguments as Map<Object?, Object?>)['package'];
     return installed.contains(pkg);
   }
@@ -59,6 +61,20 @@ void main() {
 
   test('Kanalfehler wird PortException(failed)', () async {
     platform.failure = PlatformException(code: 'boom');
+    await expectLater(
+      const ChannelAppPresencePort().isInstalled('md.obsidian'),
+      throwsA(
+        isA<PortException>().having(
+          (e) => e.kind,
+          'kind',
+          PortErrorKind.failed,
+        ),
+      ),
+    );
+  });
+
+  test('keine Antwort wird PortException(failed), nicht „fehlt“', () async {
+    platform.answerNull = true;
     await expectLater(
       const ChannelAppPresencePort().isInstalled('md.obsidian'),
       throwsA(

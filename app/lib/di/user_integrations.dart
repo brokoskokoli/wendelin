@@ -25,7 +25,8 @@ enum UserIntegrationKind {
 /// tools change at runtime when the user adds, edits or deletes one.
 ///
 /// [UserIntegrationSync] registers what [load] returns, follows [changes]
-/// and calls [deleteSecrets] once an integration has disappeared.
+/// and calls [deleteSecrets] once an integration or some of its tools have
+/// disappeared.
 abstract interface class UserIntegrationSource {
   /// What this source provides.
   UserIntegrationKind get kind;
@@ -39,13 +40,43 @@ abstract interface class UserIntegrationSource {
   /// Emits when [load] would return something else.
   Stream<void> get changes;
 
-  /// Removes the secrets (token, header values, OAuth tokens) of the
-  /// deleted integration [id] from the `SecretStore`.
-  Future<void> deleteSecrets(String id);
+  /// Follow-up cleanup: removes the secrets (token, header values, OAuth
+  /// tokens) of what [removal] describes from the `SecretStore`, reading
+  /// the secret references from [IntegrationRemoval.integration] (the
+  /// removed version). The source deletes secrets itself when the user
+  /// deletes something; this call only catches what was left behind and
+  /// must tolerate secrets that are already gone (ADR 0012 §2).
+  Future<void> deleteSecrets(IntegrationRemoval removal);
 }
 
-/// Called with the id of a deleted user-defined integration (cleanup).
-typedef IntegrationCleanup = Future<void> Function(String id);
+/// What disappeared from a user-defined integration: the whole
+/// integration ([whole]) or some of its tools (e.g. one HTTP tool deleted).
+final class IntegrationRemoval {
+  /// Creates the description.
+  const IntegrationRemoval({
+    required this.integration,
+    required this.toolNames,
+    required this.whole,
+  });
+
+  /// The removed (or replaced) version of the integration.
+  final Integration integration;
+
+  /// Names of the tools that are gone. Tools that moved to another
+  /// integration of the same source (e.g. `http` → `http_sensitive`) are
+  /// not included.
+  final Set<String> toolNames;
+
+  /// Whether the integration itself was deleted (not only some tools).
+  final bool whole;
+
+  /// Integration id.
+  String get id => integration.id;
+}
+
+/// Cleanup after a user-defined integration or some of its tools were
+/// removed (settings, marks, …).
+typedef IntegrationCleanup = Future<void> Function(IntegrationRemoval removal);
 
 /// Keeps the [ToolRegistry] in step with the [UserIntegrationSource]s
 /// (ADR 0012):
@@ -53,9 +84,12 @@ typedef IntegrationCleanup = Future<void> Function(String id);
 /// - new integrations are registered with their stored switch
 ///   (`AppSettings.integrationEnabled`), so a restart restores it;
 /// - a changed integration (new object) replaces the old one and keeps
-///   the current switch;
+///   the current switch; for tools that are gone the source deletes
+///   their secrets and [cleanups] run;
 /// - a removed integration is unregistered; its source deletes its
 ///   secrets, then [cleanups] run and the stored switch is removed;
+/// - tools that moved between integrations of one source keep their
+///   settings and secrets;
 /// - an integration whose id or tool names clash with a registered one is
 ///   rejected ([rejected]) instead of replacing anything.
 ///
@@ -179,35 +213,83 @@ final class UserIntegrationSync {
       (id, entry) => identical(entry.$1, source) && !next.containsKey(id),
     );
 
-    for (final id in current.keys.toList()) {
-      if (!next.containsKey(id)) await _remove(source, current, id);
-    }
-    for (final integration in next.values) {
-      final old = current[integration.id];
-      if (identical(old, integration)) continue;
-      if (old == null) {
-        final enabled =
-            await settings.get(
-              AppSettings.integrationEnabled(integration.id),
-            ) ??
-            false;
-        if (await _register(source, integration, enabled: enabled)) {
-          current[integration.id] = integration;
-        }
+    // 1. Take out everything removed or changed first, so tools may move
+    //    between integrations of this source without a clash.
+    final removed = <Integration>[];
+    final changed = <(Integration old, Integration next, bool enabled)>[];
+    for (final MapEntry(key: id, value: old) in current.entries.toList()) {
+      final now = next[id];
+      if (identical(now, old)) continue;
+      if (now == null) {
+        removed.add(old);
       } else {
-        // Changed: replace, keep the switch; if the new version is refused
-        // the old one stays registered.
-        final enabled = registry.info(old.id).enabled;
-        registry.unregister(old.id);
-        if (await _register(source, integration, enabled: enabled)) {
-          current[integration.id] = integration;
-        } else {
-          final reason = _rejected[integration.id];
-          await _register(source, old, enabled: enabled);
-          // Keep the refusal of the new version visible.
-          if (reason != null) _rejected[integration.id] = reason;
-        }
+        changed.add((old, now, registry.info(id).enabled));
       }
+      current.remove(id);
+      registry.unregister(id);
+    }
+
+    // 2. Register new and changed versions. A refused change keeps the
+    //    old version.
+    final replaced = <Integration>[];
+    for (final integration in next.values) {
+      if (current.containsKey(integration.id)) continue;
+      final change = changed
+          .where((c) => c.$1.id == integration.id)
+          .firstOrNull;
+      final enabled =
+          change?.$3 ??
+          await settings.get(AppSettings.integrationEnabled(integration.id)) ??
+          false;
+      if (await _register(source, integration, enabled: enabled)) {
+        current[integration.id] = integration;
+        if (change != null) replaced.add(change.$1);
+      } else if (change != null) {
+        final reason = _rejected[integration.id];
+        if (await _register(source, change.$1, enabled: enabled)) {
+          current[integration.id] = change.$1;
+        }
+        // Keep the refusal of the new version visible.
+        if (reason != null) _rejected[integration.id] = reason;
+      }
+    }
+
+    // 3. Clean up what is really gone.
+    final stillThere = {
+      for (final i in current.values)
+        for (final t in i.tools) t.name,
+    };
+    Set<String> gone(Integration old) => {
+      for (final t in old.tools)
+        if (!stillThere.contains(t.name)) t.name,
+    };
+    for (final old in removed) {
+      _rejected.remove(old.id);
+      await _cleanUp(
+        source,
+        IntegrationRemoval(integration: old, toolNames: gone(old), whole: true),
+      );
+      await _guard(
+        () => settings.remove(AppSettings.integrationEnabled(old.id)),
+      );
+    }
+    for (final old in replaced) {
+      final tools = gone(old);
+      if (tools.isEmpty) continue;
+      await _cleanUp(
+        source,
+        IntegrationRemoval(integration: old, toolNames: tools, whole: false),
+      );
+    }
+  }
+
+  Future<void> _cleanUp(
+    UserIntegrationSource source,
+    IntegrationRemoval removal,
+  ) async {
+    await _guard(() => source.deleteSecrets(removal));
+    for (final cleanup in cleanups) {
+      await _guard(() => cleanup(removal));
     }
   }
 
@@ -228,21 +310,6 @@ final class UserIntegrationSync {
     _rejected.remove(integration.id);
     onRegistered?.call(integration);
     return true;
-  }
-
-  Future<void> _remove(
-    UserIntegrationSource source,
-    Map<String, Integration> current,
-    String id,
-  ) async {
-    current.remove(id);
-    registry.unregister(id);
-    _rejected.remove(id);
-    await _guard(() => source.deleteSecrets(id));
-    for (final cleanup in cleanups) {
-      await _guard(() => cleanup(id));
-    }
-    await _guard(() => settings.remove(AppSettings.integrationEnabled(id)));
   }
 
   /// Runs one cleanup step; a failure is reported and the others still run.

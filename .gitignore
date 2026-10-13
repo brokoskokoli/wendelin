@@ -15,3 +15,5 @@ coverage/
 *.env
 /evals/reports/*.local.json
 .claude/worktrees/
+# Golden-Test-Fehlerbilder (flutter test erzeugt sie bei Abweichungen)
+failures/

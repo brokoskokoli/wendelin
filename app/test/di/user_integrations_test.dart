@@ -93,17 +93,18 @@ void main() {
   });
 
   test('entfernen: Registry leer, Secrets und Aufräumen aufgerufen', () async {
+    final removedHa = userIntegration('http_ha');
     final http = FakeUserIntegrationSource(
       kind: UserIntegrationKind.http,
-      integrations: [userIntegration('http_ha'), userIntegration('http_n8n')],
+      integrations: [removedHa, userIntegration('http_n8n')],
     );
     final cleaned = <String>[];
     final s = sync(
       [http],
       cleanups: [
-        (id) async => cleaned.add('a:$id'),
-        (id) async => throw StateError('kaputt'),
-        (id) async => cleaned.add('c:$id'),
+        (r) async => cleaned.add('a:${r.id}'),
+        (r) async => throw StateError('kaputt'),
+        (r) async => cleaned.add('c:${r.id}'),
       ],
     );
     await s.ready;
@@ -113,6 +114,14 @@ void main() {
     await s.settled();
     expect(registry.integrations.map((i) => i.id), ['http_n8n']);
     expect(http.deletedSecrets, ['http_ha']);
+    final removal = http.removals.single;
+    expect(removal.whole, isTrue);
+    expect(removal.toolNames, {'http_ha__ping'});
+    expect(
+      removal.integration,
+      same(removedHa),
+      reason: 'Quelle liest Secret-Refs aus der entfernten Fassung',
+    );
     expect(cleaned, ['a:http_ha', 'c:http_ha'], reason: 'Fehler stoppt nicht');
     expect(errors.single, isA<StateError>());
     expect(
@@ -218,7 +227,118 @@ void main() {
     expect(registry.integrations.map((i) => i.id), ['mcp_ok']);
   });
 
+  test(
+    'ändern: weggefallene Tools werden aufgeräumt, die übrigen nicht',
+    () async {
+      final source = FakeUserIntegrationSource(
+        kind: UserIntegrationKind.http,
+        integrations: [
+          userIntegration('http', tools: ['http__a', 'http__b']),
+        ],
+      );
+      final cleaned = <IntegrationRemoval>[];
+      final s = sync([source], cleanups: [(r) async => cleaned.add(r)]);
+      await s.ready;
+      final old = source.integrations.single;
+      source.update([
+        userIntegration('http', tools: ['http__b']),
+      ]);
+      await s.settled();
+      expect(activeTools(registry), isEmpty, reason: 'Schalter aus');
+      expect(
+        registry.integrations.single.integration.tools.map((t) => t.name),
+        ['http__b'],
+      );
+      final r = cleaned.single;
+      expect(r.whole, isFalse);
+      expect(r.toolNames, {'http__a'});
+      expect(r.integration, same(old));
+      expect(source.removals.single.toolNames, {'http__a'});
+      expect(source.deletedSecrets, isEmpty, reason: 'Integration bleibt');
+      await s.dispose();
+    },
+  );
+
+  test('http/http_sensitive: Tool wechselt die Integration, nichts wird '
+      'aufgeräumt; http fällt weg, sensible behalten ihre Tools', () async {
+    final source = FakeUserIntegrationSource(
+      kind: UserIntegrationKind.http,
+      integrations: [
+        userIntegration('http', tools: ['http__a', 'http__b']),
+        userIntegration('http_sensitive', tools: ['http__s']),
+      ],
+    );
+    final cleaned = <IntegrationRemoval>[];
+    final s = sync([source], cleanups: [(r) async => cleaned.add(r)]);
+    await s.ready;
+    registry
+      ..setEnabled('http', enabled: true)
+      ..setEnabled('http_sensitive', enabled: true);
+
+    // http__b wird sensibel: zieht nach http_sensitive um.
+    source.update([
+      userIntegration('http', tools: ['http__a']),
+      userIntegration('http_sensitive', tools: ['http__s', 'http__b']),
+    ]);
+    await s.settled();
+    expect(s.rejected, isEmpty, reason: 'kein Namenskonflikt beim Umzug');
+    expect(activeTools(registry), ['http__a', 'http__b', 'http__s']);
+    expect(cleaned, isEmpty);
+
+    // Das letzte nicht sensible Tool wird gelöscht: http fällt weg.
+    source.update([
+      userIntegration('http_sensitive', tools: ['http__s', 'http__b']),
+    ]);
+    await s.settled();
+    expect(activeTools(registry), ['http__b', 'http__s']);
+    final r = cleaned.single;
+    expect((r.id, r.whole), ('http', true));
+    expect(r.toolNames, {'http__a'});
+    await s.dispose();
+  });
+
   group('verdrahtet (Provider)', () {
+    test(
+      'http fällt weg: sensible HTTP-Tools behalten ihre Einstellungen',
+      () async {
+        final source = FakeUserIntegrationSource(
+          kind: UserIntegrationKind.http,
+          integrations: [
+            userIntegration('http', tools: ['http__a']),
+            userIntegration('http_sensitive', tools: ['http__s']),
+          ],
+        );
+        final env = TestEnv(
+          enabled: const {},
+          extraOverrides: [
+            userIntegrationSourcesProvider.overrideWithValue([source]),
+          ],
+        );
+        final c = env.container();
+        await c.read(toolRegistryReadyProvider.future);
+        await c
+            .read(toolPrefsProvider.notifier)
+            .set(
+              const ToolPrefs(
+                disabled: {'http__a', 'http__s'},
+                alwaysConfirm: {'http__a', 'http__s'},
+                sensitive: {'http_sensitive': true, 'http': false},
+              ),
+            );
+        // Rebuilt with the marks: wait for the new sync.
+        await c.read(toolRegistryReadyProvider.future);
+        source.update([
+          userIntegration('http_sensitive', tools: ['http__s']),
+        ]);
+        await c.read(userIntegrationSyncProvider).settled();
+        final prefs = c.read(toolPrefsProvider);
+        expect(prefs.disabled, {'http__s'});
+        expect(prefs.alwaysConfirm, {'http__s'});
+        expect(prefs.sensitive, {'http_sensitive': true});
+        c.dispose();
+      },
+    );
+
     test('Schalter über den Aktivator, Neustart, Löschen räumt auf', () async {
       final source = FakeUserIntegrationSource(
         integrations: [
@@ -290,5 +410,5 @@ final class _ThrowingSource implements UserIntegrationSource {
   Future<List<Integration>> load() async => throw StateError('kaputt');
 
   @override
-  Future<void> deleteSecrets(String id) async {}
+  Future<void> deleteSecrets(IntegrationRemoval removal) async {}
 }

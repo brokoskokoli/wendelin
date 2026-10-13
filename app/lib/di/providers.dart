@@ -215,31 +215,44 @@ final userIntegrationSourcesProvider = Provider<List<UserIntegrationSource>>(
   (ref) => const [],
 );
 
-/// Cleanup after a user-defined integration was deleted, besides the
-/// secrets its source deletes: forgets its tool switches, confirmations
-/// and „sensibel“ mark.
+/// Cleanup after a user-defined integration or some of its tools were
+/// removed, besides the secrets its source deletes: forgets the tool
+/// switches and confirmations of exactly the removed tools (names from
+/// the removed version, not a prefix: `http` and `http_sensitive` both
+/// name their tools `http__…`) and, if the whole integration is gone, its
+/// „sensibel“ mark and switch.
 final userIntegrationCleanupsProvider = Provider<List<IntegrationCleanup>>(
   (ref) => [
-    (id) async {
-      final notifier = ref.read(toolPrefsProvider.notifier);
+    (removal) async {
       final prefs = ref.read(toolPrefsProvider);
-      bool ownTool(String name) => name.startsWith('${id}__');
-      if (!prefs.sensitive.containsKey(id) &&
-          !prefs.disabled.any(ownTool) &&
-          !prefs.alwaysConfirm.any(ownTool)) {
+      final tools = removal.toolNames;
+      final markGone = removal.whole && prefs.sensitive.containsKey(removal.id);
+      if (!markGone &&
+          !prefs.disabled.any(tools.contains) &&
+          !prefs.alwaysConfirm.any(tools.contains)) {
         return;
       }
-      await notifier.set(
-        ToolPrefs(
-          disabled: {...prefs.disabled.where((n) => !ownTool(n))},
-          alwaysConfirm: {...prefs.alwaysConfirm.where((n) => !ownTool(n))},
-          sensitiveMinimum: prefs.sensitiveMinimum,
-          sensitive: {...prefs.sensitive}..remove(id),
-        ),
-      );
+      await ref
+          .read(toolPrefsProvider.notifier)
+          .set(
+            ToolPrefs(
+              disabled: prefs.disabled.difference(tools),
+              alwaysConfirm: prefs.alwaysConfirm.difference(tools),
+              sensitiveMinimum: prefs.sensitiveMinimum,
+              sensitive: {
+                for (final e in prefs.sensitive.entries)
+                  if (!(removal.whole && e.key == removal.id)) e.key: e.value,
+              },
+            ),
+          );
     },
-    (id) async =>
-        ref.read(enabledIntegrationsProvider.notifier).set(id, enabled: false),
+    (removal) async {
+      if (removal.whole) {
+        ref
+            .read(enabledIntegrationsProvider.notifier)
+            .set(removal.id, enabled: false);
+      }
+    },
   ],
 );
 

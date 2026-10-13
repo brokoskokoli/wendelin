@@ -23,7 +23,15 @@ final class ChannelAppPresencePort implements AppPresencePort {
       final installed = await _channel.invokeMethod<bool>('isInstalled', {
         'package': androidPackage,
       });
-      return installed ?? false;
+      if (installed == null) {
+        // A missing answer is no „not installed“: it would pause
+        // integrations for nothing.
+        throw const PortException(
+          PortErrorKind.failed,
+          'Installierte Apps lassen sich nicht prüfen (keine Antwort).',
+        );
+      }
+      return installed;
     } on PlatformException catch (e) {
       throw PortException(
         PortErrorKind.failed,
