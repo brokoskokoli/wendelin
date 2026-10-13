@@ -128,14 +128,14 @@ void main() {
   });
 
   test('Policies: Sicht der Web-Abrufe und HTTP-Tools', () {
-    // web__fetch: alles außer öffentlich ist privat; SIIT, 6to4 und
-    // 100::/64 bleiben wie vor WP36 öffentlich.
+    // web__fetch: alles außer öffentlich ist privat (auch SIIT, 6to4 und
+    // 100::/64, wie bei den HTTP-Tools).
     expect(isPrivateAddress(InternetAddress('100.64.0.0')), isTrue);
     expect(isPrivateAddress(InternetAddress('100.63.255.255')), isFalse);
     expect(isPrivateAddress(InternetAddress('fe80::1')), isTrue);
-    expect(isPrivateAddress(InternetAddress('::ffff:0:10.0.0.1')), isFalse);
-    expect(isPrivateAddress(InternetAddress('2002:a00:1::1')), isFalse);
-    expect(isPrivateAddress(InternetAddress('100::1')), isFalse);
+    expect(isPrivateAddress(InternetAddress('::ffff:0:10.0.0.1')), isTrue);
+    expect(isPrivateAddress(InternetAddress('2002:a00:1::1')), isTrue);
+    expect(isPrivateAddress(InternetAddress('100::1')), isTrue);
     // HTTP-Tools: Grobklassen.
     expect(
       classifyAddress(InternetAddress('100.127.255.255')),
