@@ -171,6 +171,20 @@ class RecognitionServiceTest {
     }
 
     @Test
+    fun h2_realMicrophone_opensWithCallerAttribution() {
+        // Emulator microphone (silence or host audio): AudioRecord with the caller's
+        // attribution opens, the levels arrive, and the request ends cleanly.
+        val outcome = recognize(null, language = "de-DE")
+        assertTrue(outcome.toString(), outcome.events.take(2) == listOf("ready", "rms"))
+        assertTrue(
+            outcome.toString(),
+            outcome.error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ||
+                outcome.error == SpeechRecognizer.ERROR_NO_MATCH ||
+                outcome.error == null,
+        )
+    }
+
+    @Test
     fun i_notOffered_serviceDisabled() {
         RecognizerSwitch.setOffered(context, false)
         assertEquals(
@@ -206,12 +220,12 @@ class RecognitionServiceTest {
         return recognizer!!
     }
 
-    private fun start(recognizer: SpeechRecognizer, outcome: Outcome, wav: String, language: String?) {
-        val name = fixture(wav)
+    /** Starts a request; [wav] `null` = the real microphone. */
+    private fun start(recognizer: SpeechRecognizer, outcome: Outcome, wav: String?, language: String?) {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             if (language != null) putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
-            putExtra(TestAudio.EXTRA_AUDIO_FILE, name)
+            if (wav != null) putExtra(TestAudio.EXTRA_AUDIO_FILE, fixture(wav))
         }
         instrumentation.runOnMainSync {
             recognizer.setRecognitionListener(listener(outcome))
@@ -219,7 +233,7 @@ class RecognitionServiceTest {
         }
     }
 
-    private fun recognize(wav: String, language: String?, timeoutS: Long = 60): Outcome {
+    private fun recognize(wav: String?, language: String?, timeoutS: Long = 60): Outcome {
         val recognizer = create()
         val outcome = Outcome()
         start(recognizer, outcome, wav, language)
