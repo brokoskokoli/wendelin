@@ -4,6 +4,7 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/user_integrations.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/coming_soon_screen.dart';
+import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
 import 'package:wendelin/ui/settings/http_tools_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
@@ -50,7 +51,8 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('+ HTTP-Tool'));
     await settle(tester);
-    expect(find.byType(HttpToolsScreen), findsOneWidget);
+    expect(find.byType(HttpToolEditorScreen), findsOneWidget);
+    expect(find.text('Neues HTTP-Tool'), findsOneWidget);
   });
 
   testWidgets('eigene Integrationen: eigener Abschnitt mit MCP/HTTP, '

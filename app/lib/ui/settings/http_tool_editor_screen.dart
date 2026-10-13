@@ -434,21 +434,24 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
                         onChanged: (v) => _edit(() => a.name = v),
                       ),
                     ),
-                    DropdownButton<String>(
-                      key: ValueKey('argType$i'),
-                      value: a.type,
-                      items: [
-                        for (final t in httpArgTypes)
-                          DropdownMenuItem(value: t, child: Text(t)),
-                      ],
-                      onChanged: (t) => _edit(() => a.type = t ?? a.type),
-                    ),
                     WIconButton(
                       icon: WIcons.close,
                       tooltip: 'Argument entfernen',
                       iconSize: WSize.iconSmall,
                       onPressed: () => _edit(() => d.args.remove(a)),
                     ),
+                  ],
+                ),
+                Wrap(
+                  spacing: WSpace.s,
+                  children: [
+                    for (final t in httpArgTypes)
+                      ChoiceChip(
+                        key: ValueKey('argType$i-$t'),
+                        label: Text(t),
+                        selected: a.type == t,
+                        onSelected: (_) => _edit(() => a.type = t),
+                      ),
                   ],
                 ),
                 TextFormField(

@@ -24,6 +24,9 @@ abstract final class AppRoutes {
   /// Declarative HTTP tools (WP28).
   static const httpTools = '/settings/http-tools';
 
+  /// Editor of a new HTTP tool (WP28).
+  static const httpToolNew = '/settings/http-tools/new';
+
   /// Bring! login and state (WP28).
   static const bring = '/settings/bring';
 

@@ -35,6 +35,8 @@ class IntegrationDetailScreen extends ConsumerWidget {
             .firstOrNull
             ?.integration;
     final prefs = ref.watch(toolPrefsProvider);
+    // User-defined integrations (MCP, HTTP) have no undo (K12 c).
+    final hasUndo = ref.watch(userIntegrationSyncProvider).kindOf(id) == null;
     if (integration == null) {
       return const SettingsPage(title: 'Integration', children: []);
     }
@@ -75,6 +77,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
                 detail: riskText(
                   tool.risk,
                   prefs.alwaysConfirm.contains(tool.name),
+                  hasUndo: hasUndo,
                 ),
                 onTap: tool.risk == RiskLevel.external
                     ? null
@@ -125,15 +128,19 @@ class IntegrationDetailScreen extends ConsumerWidget {
 }
 
 /// German description of a tool's level and whether it asks.
-String riskText(RiskLevel risk, bool alwaysConfirm) => switch (risk) {
-  RiskLevel.read =>
-    alwaysConfirm ? 'liest · fragt immer nach' : 'liest · ohne Nachfrage',
-  RiskLevel.write =>
-    alwaysConfirm
-        ? 'ändert · fragt immer nach'
-        : 'ändert · ohne Nachfrage, 10 s rückgängig',
-  RiskLevel.external => 'Außenwirkung · fragt immer nach',
-};
+/// [hasUndo] is false for tools without undo (MCP and HTTP tools).
+String riskText(RiskLevel risk, bool alwaysConfirm, {bool hasUndo = true}) =>
+    switch (risk) {
+      RiskLevel.read =>
+        alwaysConfirm ? 'liest · fragt immer nach' : 'liest · ohne Nachfrage',
+      RiskLevel.write =>
+        alwaysConfirm
+            ? 'ändert · fragt immer nach'
+            : hasUndo
+            ? 'ändert · ohne Nachfrage, 10 s rückgängig'
+            : 'ändert · ohne Nachfrage, kein Rückgängig',
+      RiskLevel.external => 'Außenwirkung · fragt immer nach',
+    };
 
 /// Minimum privacy level for tools of sensitive integrations.
 class SensitiveLevelSection extends ConsumerWidget {

@@ -28,6 +28,8 @@ Aufgeräumt wird nach den **tatsächlichen Tool-Namen** der entfernten Fassung, 
 
 Leert sich eine Integration kurz (z. B. zieht das einzige Tool von `http_sensitive` nach `http`), gilt sie als entfernt: Ihr Schalter und ihre Markierung sind weg. Kommt sie später zurück, startet sie ausgeschaltet. Das ist die sichere Voreinstellung, der Nutzer schaltet sie bewusst wieder ein.
 
+**Ausnahme beim Speichern eines HTTP-Tools (WP28):** Speichert der Nutzer im Editor ein HTTP-Tool und ist die Ziel-Integration (`http` bzw. `http_sensitive`) noch nicht registriert, wird ihr Schalter vorher eingeschaltet. Das Speichern ist die ausdrückliche Einrichtung durch den Nutzer, ein neues Tool soll sofort nutzbar sein. Eine schon registrierte Integration behält den Schalter des Nutzers. Ein Import schaltet nichts ein (und setzt `autoRun` jeder importierten Definition auf `false`).
+
 Gelöscht wird nur, was diese Instanz vorher registriert hatte. Ein Neustart, bei dem eine Quelle (noch) nichts liefert, löscht also keine Secrets. Die Quellen werden nacheinander abgearbeitet, sich überschneidende Änderungen können sich nicht vermischen.
 
 ### 3. App-Erkennung über einen Port

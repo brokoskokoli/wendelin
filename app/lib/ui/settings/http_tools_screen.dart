@@ -71,7 +71,8 @@ class HttpToolsScreen extends ConsumerWidget {
               ),
               Text(
                 'Export und Import enthalten keine Secrets. Nach dem Import '
-                'Token und geheime Header neu eingeben.',
+                'Token und geheime Header neu eingeben; „Ohne Nachfrage '
+                'ausführen“ ist dann aus.',
                 style: WText.caption,
               ),
             ],
@@ -107,7 +108,8 @@ class HttpToolsScreen extends ConsumerWidget {
         showHint(
           context,
           '${imported.length} HTTP-Tool${imported.length == 1 ? '' : 's'} '
-          'importiert. Secrets bitte neu eingeben.',
+          'importiert. Secrets bitte neu eingeben; „Ohne Nachfrage '
+          'ausführen“ ist aus.',
         );
       }
     } on FormatException catch (e) {

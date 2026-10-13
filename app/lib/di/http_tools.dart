@@ -205,8 +205,9 @@ final class HttpToolRepository {
           .convert(exportHttpTools(await definitions()));
 
   /// Imports the definitions of an export [text]; each gets a new id and
-  /// secret references of its own (the secrets must be entered again).
-  /// Returns the imported definitions. Throws [FormatException] with a
+  /// secret references of its own (the secrets must be entered again) and
+  /// `autoRun` off (asks again until the user switches it on). Does not
+  /// switch the HTTP integrations on. Returns the imported definitions. Throws [FormatException] with a
   /// readable message (invalid JSON, invalid definition, name taken).
   Future<List<HttpToolDefinition>> importJson(String text) => _locked(() async {
     final Object? json;
@@ -221,6 +222,7 @@ final class HttpToolRepository {
     final imported = [
       for (final d in importHttpTools(json)) _rekey(d, newId()),
     ];
+    imported.forEach(_checkRefs);
     final next = [...await definitions(), ...imported];
     validateHttpToolSet(next);
     await _write(next);
@@ -239,11 +241,10 @@ final class HttpToolRepository {
       }),
       final other => other,
     };
-    return HttpToolDefinition.fromJson({
-      ...d.toJson(),
-      'id': id,
-      'auth': auth.toJson(),
-    });
+    // „Ohne Nachfrage“ entscheidet der Nutzer auf diesem Gerät selbst.
+    final json = {...d.toJson(), 'id': id, 'auth': auth.toJson()}
+      ..remove('autoRun');
+    return HttpToolDefinition.fromJson(json);
   }
 
   static void _checkRefs(HttpToolDefinition d) {

@@ -9,6 +9,7 @@ import 'ui/settings/assistant_screen.dart';
 import 'ui/settings/bring_screen.dart';
 import 'ui/settings/coming_soon_screen.dart';
 import 'ui/settings/costs_screen.dart';
+import 'ui/settings/http_tool_editor_screen.dart';
 import 'ui/settings/http_tools_screen.dart';
 import 'ui/settings/integrations_screen.dart';
 import 'ui/settings/lists_screen.dart';
@@ -56,6 +57,7 @@ class WendelinApp extends StatelessWidget {
             'Tool-Liste.',
       ),
       AppRoutes.httpTools: (_) => const HttpToolsScreen(),
+      AppRoutes.httpToolNew: (_) => const HttpToolEditorScreen(),
       AppRoutes.bring: (_) => const BringScreen(),
       AppRoutes.lists: (_) => const ListsScreen(),
       AppRoutes.webSearch: (_) => const WebSearchScreen(),

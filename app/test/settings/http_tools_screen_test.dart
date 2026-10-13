@@ -11,6 +11,7 @@ import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/export.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
 import 'package:wendelin/ui/settings/http_tools_screen.dart';
+import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
@@ -316,5 +317,42 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Importieren'));
     await settle(tester);
     expect(find.textContaining('Import fehlgeschlagen'), findsOneWidget);
+  });
+
+  testWidgets('Detailseite: HTTP-write mit autoRun zeigt „kein Rückgängig“, '
+      'eingebaute write-Tools „10 s rückgängig“', (tester) async {
+    final env = TestEnv();
+    await storeHttpTools(env, [
+      testHttpTool(risk: RiskLevel.write, autoRun: true),
+    ]);
+    final c = await pumpHttpTools(tester, env);
+    expect(c.read(toolRegistryProvider).status('http'), isNotNull);
+    await tester.pumpWidget(
+      env.app(home: const IntegrationDetailScreen('http')),
+    );
+    await syncSettle(tester);
+    expect(
+      find.text('ändert · ohne Nachfrage, kein Rückgängig'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('10 s rückgängig'), findsNothing);
+    expect(
+      riskText(RiskLevel.write, false),
+      'ändert · ohne Nachfrage, 10 s rückgängig',
+    );
+    expect(
+      riskText(RiskLevel.write, true, hasUndo: false),
+      'ändert · fragt immer nach',
+    );
+  });
+
+  testWidgets('Argumenttyp per Auswahl-Chip', (tester) async {
+    final env = TestEnv();
+    await pumpHttpTools(tester, env);
+    await fillLicht(tester);
+    await tester.tap(find.byKey(const ValueKey('argType0-integer')));
+    await tester.pump();
+    expect(find.text('raum (integer)'), findsOneWidget);
+    expect(find.byType(DropdownButton<String>), findsNothing);
   });
 }

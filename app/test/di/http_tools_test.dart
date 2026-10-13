@@ -171,14 +171,30 @@ void main() {
           urlTemplate: 'https://api.example.org/',
           auth: const ApiKeyAuth('irgendwas'),
         );
-        final text = jsonEncode(exportHttpTools([foreign, bearer]));
+        final headers = HttpToolDefinition(
+          id: 'h',
+          name: 'kopf',
+          description: 'd',
+          method: HttpMethod.post,
+          urlTemplate: 'https://api.example.org/',
+          auth: CustomHeadersAuth({'X-Token': 'provider.x'}),
+          risk: RiskLevel.write,
+          autoRun: true,
+        );
+        final text = jsonEncode(exportHttpTools([foreign, bearer, headers]));
         final imported = await repo.importJson(text);
-        expect(imported.map((d) => d.id), ['neu-1', 'neu-2']);
+        expect(imported.map((d) => d.id), ['neu-1', 'neu-2', 'neu-3']);
+        expect(
+          imported.last.auth,
+          CustomHeadersAuth({'X-Token': httpHeaderRef('neu-3', 'X-Token')}),
+        );
+        expect(imported.last.autoRun, isFalse, reason: 'Import fragt wieder');
+        expect(imported.last.effectiveRisk, RiskLevel.external);
         expect(
           imported.first.auth,
           CustomHeadersAuth({'X-Key': httpHeaderRef('neu-1', 'X-Key')}),
         );
-        expect(imported.last.auth, ApiKeyAuth(httpBearerRef('neu-2')));
+        expect(imported[1].auth, ApiKeyAuth(httpBearerRef('neu-2')));
         expect(await repo.definitions(), imported);
         final s = SecretStoreHttpToolSecrets(secrets);
         for (final d in imported) {
