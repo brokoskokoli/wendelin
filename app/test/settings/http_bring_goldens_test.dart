@@ -15,7 +15,10 @@ void main() {
     final env = TestEnv();
     final tool = testHttpTool(risk: RiskLevel.write, autoRun: true);
     await storeHttpTools(env, [tool]);
-    setView(tester, const Size(390, 2600));
+    // Zwei Hälften statt eines 390×2600-Bildes: Die CI-Toleranz deckelt
+    // abweichende Pixel absolut (golden_tolerance.dart), und der lange
+    // Editor überschritt sie allein durch Kantenglättung.
+    setView(tester, const Size(390, 1400));
     await tester.pumpWidget(
       env.app(
         home: RepaintBoundary(
@@ -28,7 +31,22 @@ void main() {
     expect(find.textContaining('$redactedSecret gespeichert'), findsOneWidget);
     await expectLater(
       find.byKey(goldenKey),
-      matchesGoldenFile('goldens/http_tool_editor.png'),
+      matchesGoldenFile('goldens/http_tool_editor_oben.png'),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Löschen'),
+      400,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await settle(tester);
+    await expectLater(
+      find.byKey(goldenKey),
+      matchesGoldenFile('goldens/http_tool_editor_unten.png'),
     );
   });
 
