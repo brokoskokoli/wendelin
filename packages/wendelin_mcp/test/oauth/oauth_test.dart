@@ -190,6 +190,18 @@ void main() {
       await expectKind(flow().authorize(config()), McpErrorKind.authRequired);
     });
 
+    test('Mix-up: Metadaten mit fremdem issuer werden abgelehnt', () async {
+      server.metadataIssuer = 'https://evil.example/as';
+      await expectKind(flow().authorize(config()), McpErrorKind.rejected);
+      expect(server.lastAuthorization, isNull);
+    });
+
+    test('issuer mit abschließendem Schrägstrich gilt als gleich', () async {
+      server.metadataIssuer = '${server.issuer}/';
+      await flow().authorize(config());
+      expect(server.accessTokens, hasLength(1));
+    });
+
     test('Server ohne PKCE S256', () async {
       server.announceS256 = false;
       await expectKind(flow().authorize(config()), McpErrorKind.protocol);
@@ -399,6 +411,91 @@ void main() {
       );
     });
 
+    test(
+      'parallele Aufrufe teilen sich eine Erneuerung (Token-Rotation)',
+      () async {
+        final c = config();
+        final f = flow();
+        final first = await f.authorize(c);
+        clock.advance(const Duration(hours: 2));
+        final tokens = await Future.wait([
+          f.accessToken(c),
+          f.accessToken(c),
+          f.accessToken(c, forceRefresh: true),
+        ]);
+        expect(tokens.toSet(), hasLength(1));
+        expect(tokens.first, isNot(first.accessToken));
+        expect(
+          server.tokenRequests.where((r) => r['grant_type'] == 'refresh_token'),
+          hasLength(1),
+        );
+        // Danach ist eine neue Erneuerung wieder möglich.
+        await f.refresh(c);
+        expect(
+          server.tokenRequests.where((r) => r['grant_type'] == 'refresh_token'),
+          hasLength(2),
+        );
+      },
+    );
+
+    test('parallele Client-Aufrufe nach Ablauf: ein Refresh', () async {
+      final c = config();
+      final f = flow();
+      await f.authorize(c);
+      final client = mcp(c, f);
+      await client.ping();
+      clock.advance(const Duration(hours: 2));
+      await Future.wait([client.ping(), client.ping(), client.ping()]);
+      expect(
+        server.tokenRequests.where((r) => r['grant_type'] == 'refresh_token'),
+        hasLength(1),
+      );
+      await client.dispose();
+    });
+
+    test(
+      'kaputte gespeicherte Client-Daten beim Erneuern → McpException',
+      () async {
+        final c = config();
+        final f = flow();
+        await f.authorize(c);
+        for (final broken in [
+          '{kaputt',
+          jsonEncode({
+            'client_id': server.registrations.keys.single,
+            'client_secret': 42,
+          }),
+        ]) {
+          secrets.values['mcp.oauth.client'] = broken;
+          await expectLater(
+            f.refresh(c),
+            throwsA(
+              isA<McpException>()
+                  .having((e) => e.kind, 'kind', McpErrorKind.authRequired)
+                  .having((e) => e.message, 'message', contains('beschädigt')),
+            ),
+          );
+        }
+      },
+    );
+
+    test(
+      'gespeicherte Registrierung mit falschem Secret-Typ → kein Absturz',
+      () async {
+        final f = flow();
+        await f.authorize(config());
+        final stored = jsonDecode(
+          secrets.values['mcp.oauth.client']!,
+        ) as Map<String, Object?>;
+        secrets.values['mcp.oauth.client'] = jsonEncode({
+          ...stored,
+          'client_secret': 42,
+        });
+        await f.authorize(config());
+        expect(server.registrations, hasLength(1));
+      },
+    );
+
     test('nicht angemeldet, Abmelden, kaputte Token-Daten', () async {
       final c = config();
       final f = flow();
@@ -446,6 +543,37 @@ void main() {
         expect(parseChallenge(header), expected);
       });
     }
+
+    test('Ablaufpuffer 30 s', () {
+      final expires = DateTime.utc(2026, 10, 13, 12);
+      final t = McpTokenSet(
+        accessToken: 'a',
+        expiresAt: expires,
+        tokenEndpoint: Uri.parse('https://as.example/token'),
+        clientId: 'c',
+        resource: 'r',
+      );
+      for (final (offset, expired) in [
+        (-31, false),
+        (-30, true),
+        (-29, true),
+        (0, true),
+        (10, true),
+      ]) {
+        expect(
+          t.isExpired(expires.add(Duration(seconds: offset))),
+          expired,
+          reason: 'Abstand $offset s',
+        );
+      }
+      final forever = McpTokenSet(
+        accessToken: 'a',
+        tokenEndpoint: Uri.parse('https://as.example/token'),
+        clientId: 'c',
+        resource: 'r',
+      );
+      expect(forever.isExpired(DateTime.utc(2100)), isFalse);
+    });
 
     test('kanonische Ressource', () {
       expect(

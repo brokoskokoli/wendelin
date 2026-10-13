@@ -52,7 +52,7 @@ void main() {
             'isError': true,
           },
         ),
-        FakeMcpTool('note_add'),
+        FakeMcpTool('note_add', annotations: {'destructiveHint': false}),
         FakeMcpTool('debug_dump'),
         FakeMcpTool(
           'slow',
@@ -129,6 +129,7 @@ void main() {
         'debug_dump': McpToolOverride(enabled: false),
         'get_weather': McpToolOverride(risk: RiskLevel.write),
         'docker.restart': McpToolOverride(risk: RiskLevel.read),
+        'note_add': McpToolOverride(autoRun: true),
       },
     );
     final changed = i.toolsChanged.first;
@@ -146,7 +147,9 @@ void main() {
       byMcp['docker.restart']!.name,
       matches(RegExp(r'^mcp_home__docker_restart_[0-9a-f]{6}$')),
     );
-    expect(byMcp['note_add']!.risk, RiskLevel.write);
+    expect(byMcp['note_add']!.risk, RiskLevel.write); // autoRun
+    expect(byMcp['slow']!.risk, RiskLevel.external); // ohne Angaben
+    expect(i.skippedTools.single.toString(), 'debug_dump: abgeschaltet');
     expect(i.tools, same(i.mcpTools));
     for (final t in tools) {
       expect(Tool.isValidToolName(t.name), isTrue);
@@ -157,6 +160,45 @@ void main() {
     expect(byMcp['note_add']!.description, 'note_add');
     expect(byMcp['get_weather']!.toString(), contains('get_weather'));
     expect(byMcp['get_weather']!.spec.name, 'mcp_home__get_weather');
+  });
+
+  test(
+    'Kontextbudget: zu große Schemas und zu viele Tools werden gemeldet',
+    () {
+      final i = integration();
+      Map<String, Object?> schemaOf(int bytes) => {
+        'type': 'object',
+        'description': 'x' * bytes,
+      };
+      final tools = i.buildTools([
+        McpToolInfo(name: 'gross', inputSchema: schemaOf(maxSchemaBytes)),
+        McpToolInfo(name: 'grenze', inputSchema: schemaOf(maxSchemaBytes - 60)),
+        for (var n = 0; n < maxToolsPerServer + 2; n++)
+          McpToolInfo(name: 'tool_$n'),
+      ]);
+      expect(tools, hasLength(maxToolsPerServer));
+      expect(tools.first.mcpName, 'grenze');
+      expect(
+        McpSchema.from(schemaOf(maxSchemaBytes - 60)).withinBudget,
+        isTrue,
+      );
+      final skipped = {for (final s in i.skippedTools) s.name: s.reason};
+      expect(skipped.keys, ['gross', 'tool_127', 'tool_128', 'tool_129']);
+      expect(skipped['gross'], startsWith('Schema zu groß (8 KB'));
+      expect(skipped['tool_129'], 'mehr als 128 Tools auf diesem Server');
+    },
+  );
+
+  test('doppelte Tool-Namen: erstes Vorkommen bleibt', () {
+    final i = integration();
+    final tools = i.buildTools([
+      const McpToolInfo(name: 'dup', description: 'erstes'),
+      const McpToolInfo(name: 'dup', description: 'zweites'),
+      const McpToolInfo(name: 'anders'),
+    ]);
+    expect(tools.map((t) => t.name), ['mcp_home__dup', 'mcp_home__anders']);
+    expect(tools.first.description, 'erstes');
+    expect(i.skippedTools.single.toString(), 'dup: Name doppelt vergeben');
   });
 
   test('confirmAll macht alle Tools external', () async {

@@ -204,6 +204,7 @@ final class McpOAuthFlow {
   final McpLog? log;
 
   final Random _random;
+  final Map<String, Future<McpTokenSet>> _refreshing = {};
 
   static McpOAuth _oauth(McpServerConfig config) => switch (config.auth) {
     final McpOAuth o => o,
@@ -483,7 +484,9 @@ final class McpOAuthFlow {
             json['client_id'] is String) {
           return (
             json['client_id']! as String,
-            json['client_secret'] as String?,
+            json['client_secret'] is String
+                ? json['client_secret']! as String
+                : null,
           );
         }
       } on FormatException {
@@ -577,10 +580,26 @@ final class McpOAuthFlow {
   }
 
   /// Renews the tokens of [config] with the refresh token.
-  Future<McpTokenSet> refresh(
-    McpServerConfig config, {
+  ///
+  /// Single flight per token reference: parallel callers share one refresh
+  /// request (servers that rotate refresh tokens would reject the second).
+  Future<McpTokenSet> refresh(McpServerConfig config, {CancelToken? cancel}) {
+    final ref = _oauth(config).tokenRef;
+    final running = _refreshing[ref];
+    if (running != null) return running;
+    final run = _refresh(config, cancel).whenComplete(() {
+      // Kein Pfeil: remove() gäbe dieses Future zurück, whenComplete würde
+      // darauf warten (Verklemmung).
+      _refreshing.remove(ref);
+    });
+    _refreshing[ref] = run;
+    return run;
+  }
+
+  Future<McpTokenSet> _refresh(
+    McpServerConfig config,
     CancelToken? cancel,
-  }) async {
+  ) async {
     final auth = _oauth(config);
     final tokens = await storedTokens(config);
     final refreshToken = tokens?.refreshToken;
@@ -593,10 +612,25 @@ final class McpOAuthFlow {
     String? clientSecret;
     final stored = await secrets.read(auth.clientRef);
     if (stored != null) {
-      final json = jsonDecode(stored);
+      final Object? json;
+      try {
+        json = jsonDecode(stored);
+      } on FormatException {
+        throw const McpException(
+          McpErrorKind.authRequired,
+          'Gespeicherte Client-Daten beschädigt: bitte neu anmelden',
+        );
+      }
       if (json is Map<String, Object?> &&
           json['client_id'] == tokens.clientId) {
-        clientSecret = json['client_secret'] as String?;
+        final secret = json['client_secret'];
+        if (secret != null && secret is! String) {
+          throw const McpException(
+            McpErrorKind.authRequired,
+            'Gespeicherte Client-Daten beschädigt: bitte neu anmelden',
+          );
+        }
+        clientSecret = secret as String?;
       }
     }
     log?.call('MCP-OAuth: Token erneuern');

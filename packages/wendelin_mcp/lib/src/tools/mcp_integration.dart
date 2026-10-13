@@ -20,6 +20,24 @@ typedef McpErrorReporter = void Function(String integrationId, String message);
 /// Longest tool description passed on from the server.
 const maxMcpDescription = 1024;
 
+/// Most tools offered per server (context budget).
+const maxToolsPerServer = 128;
+
+/// A server tool that is not offered, with a German [reason].
+final class McpSkippedTool {
+  /// Creates the entry.
+  const McpSkippedTool(this.name, this.reason);
+
+  /// MCP tool name.
+  final String name;
+
+  /// Why it is left out.
+  final String reason;
+
+  @override
+  String toString() => '$name: $reason';
+}
+
 /// One configured MCP server as an [Integration]: its tools land in the same
 /// registry as the built-in ones (`mcp_<slug>__<tool>`).
 ///
@@ -54,6 +72,7 @@ final class McpIntegration implements Integration {
   final StreamController<void> _toolsChanged =
       StreamController<void>.broadcast();
   List<McpTool> _tools = const [];
+  List<McpSkippedTool> _skipped = const [];
   bool _authFailed = false;
 
   /// The server config.
@@ -169,24 +188,63 @@ final class McpIntegration implements Integration {
     return _tools;
   }
 
-  /// Maps [infos] onto tools (names, risk, overrides; disabled tools are
-  /// left out).
+  /// Tools of the server that are not offered, with the reason (shown in
+  /// the settings), as of the last [buildTools].
+  List<McpSkippedTool> get skippedTools => _skipped;
+
+  /// Maps [infos] onto tools (names, risk, overrides). Left out (and listed
+  /// in [skippedTools]): tools the user switched off, repeated names (the
+  /// first one wins), schemas over [maxSchemaBytes] and everything beyond
+  /// [maxToolsPerServer] – these limits keep the model's context small.
   List<McpTool> buildTools(List<McpToolInfo> infos) {
     final names = McpNaming.toolNames(config.slug, infos.map((t) => t.name));
-    return List.unmodifiable([
-      for (final info in infos)
-        if (config.toolOverrides[info.name]?.enabled ?? true)
-          McpTool(
-            integration: this,
-            info: info,
-            name: names[info.name]!,
-            risk: mcpRisk(
-              info.annotations,
-              confirmAll: config.confirmAll,
-              override: config.toolOverrides[info.name]?.risk,
-            ),
+    final seen = <String>{};
+    final tools = <McpTool>[];
+    final skipped = <McpSkippedTool>[];
+    for (final info in infos) {
+      final override = config.toolOverrides[info.name];
+      if (!seen.add(info.name)) {
+        skipped.add(McpSkippedTool(info.name, 'Name doppelt vergeben'));
+        continue;
+      }
+      if (!(override?.enabled ?? true)) {
+        skipped.add(McpSkippedTool(info.name, 'abgeschaltet'));
+        continue;
+      }
+      final tool = McpTool(
+        integration: this,
+        info: info,
+        name: names[info.name]!,
+        risk: mcpRisk(
+          info.annotations,
+          confirmAll: config.confirmAll,
+          autoRun: override?.autoRun ?? false,
+          override: override?.risk,
+        ),
+      );
+      if (!tool._schema.withinBudget) {
+        skipped.add(
+          McpSkippedTool(
+            info.name,
+            'Schema zu groß (${tool._schema.encodedBytes ~/ 1024} KB, '
+            'höchstens ${maxSchemaBytes ~/ 1024} KB)',
           ),
-    ]);
+        );
+        continue;
+      }
+      if (tools.length >= maxToolsPerServer) {
+        skipped.add(
+          McpSkippedTool(
+            info.name,
+            'mehr als $maxToolsPerServer Tools auf diesem Server',
+          ),
+        );
+        continue;
+      }
+      tools.add(tool);
+    }
+    _skipped = List.unmodifiable(skipped);
+    return List.unmodifiable(tools);
   }
 
   void _setFailure(McpException? e) {

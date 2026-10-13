@@ -30,6 +30,9 @@ McpTransport _defaultFactory(
     ? LegacySseTransport(url, deps)
     : StreamableHttpTransport(url, deps);
 
+/// Most tools [McpClient.listTools] collects from one server.
+const maxListedTools = 1024;
+
 /// Result of [McpClient.probe].
 enum McpReachability {
   /// `initialize` succeeded.
@@ -84,7 +87,7 @@ final class McpProbeResult {
 /// Connects only on demand: Streamable HTTP keeps just the session id
 /// between calls, Legacy-SSE opens its event stream per operation. With
 /// [McpTransportKind.auto] Streamable HTTP is tried first; if the server
-/// answers the `POST` with 404/405 and a `GET` yields an `endpoint` event,
+/// answers the `POST` with 400/404/405 and a `GET` yields an `endpoint` event,
 /// Legacy-SSE is used from then on.
 ///
 /// Secrets are resolved per request through [secrets] (or [oauth]) and are
@@ -290,7 +293,10 @@ final class McpClient {
       return _detected = McpTransportKind.streamable;
     } on McpException catch (e) {
       final status = e.statusCode;
-      if (e.kind != McpErrorKind.server || (status != 404 && status != 405)) {
+      // Rückwärtskompatibilität laut Spezifikation: 400, 404 oder 405 auf den
+      // POST deuten auf einen reinen Legacy-SSE-Server.
+      if (e.kind != McpErrorKind.server ||
+          (status != 400 && status != 404 && status != 405)) {
         rethrow;
       }
       _log('MCP: POST abgelehnt (HTTP $status), versuche Legacy-SSE');
@@ -416,6 +422,12 @@ final class McpClient {
           if (entry is Map<String, Object?>) {
             all.add(McpToolInfo.fromJson(entry));
           }
+        }
+        // Schutz vor riesigen Listen: mehr als maxListedTools werden nie
+        // angeboten (McpIntegration nimmt ohnehin nur maxToolsPerServer).
+        if (all.length >= maxListedTools) {
+          _log('MCP: mehr als $maxListedTools Tools, Rest ignoriert');
+          return all.sublist(0, maxListedTools);
         }
         final next = result['nextCursor'];
         if (next is! String || next.isEmpty) return all;

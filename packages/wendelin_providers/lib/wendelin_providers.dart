@@ -6,6 +6,9 @@
 /// everything exported here speaks the `wendelin_core` types.
 library;
 
+// SSE-Parser liegt seit WP22 in wendelin_core und wird hier weiter exportiert.
+export 'package:wendelin_core/wendelin_core.dart' show SseEvent, SseParser;
+
 export 'src/anthropic/anthropic_adapter.dart' show AnthropicMessagesAdapter;
 export 'src/anthropic/anthropic_options.dart';
 export 'src/catalog/cost_calculator.dart';
@@ -16,4 +19,3 @@ export 'src/common/http_settings.dart' show HttpSettings, ProviderLog;
 export 'src/openai/openai_adapter.dart' show OpenAiChatAdapter;
 export 'src/openai/openai_options.dart';
 export 'src/provider_factory.dart';
-export 'src/sse/sse_parser.dart';

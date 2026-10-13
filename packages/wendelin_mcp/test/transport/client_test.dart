@@ -471,6 +471,14 @@ void main() {
       );
     });
 
+    test('auto fällt auch bei 400 auf Legacy-SSE zurück', () async {
+      final server = await fake(mode: FakeTransportMode.legacySse)
+        ..legacyPostStatus = 400;
+      final c = client(server.url);
+      await c.ping();
+      expect(c.transport, McpTransportKind.sse);
+    });
+
     test('auto fällt bei 500 nicht zurück', () async {
       final methods = <String>[];
       final raw = await rawServer((req, body) {
@@ -597,6 +605,45 @@ void main() {
             (e) => e.kind,
             'kind',
             McpErrorKind.protocol,
+          ),
+        ),
+      );
+    });
+
+    test('endlose data-Zeile ohne Leerzeile → zu groß', () async {
+      final raw = await rawServer((req, body) async {
+        if (req.method == 'GET') {
+          req.response.headers.contentType = ContentType(
+            'text',
+            'event-stream',
+          );
+          req.response.write('event: endpoint\ndata: /messages\n\n');
+          req.response.write('event: message\ndata: ');
+          for (var i = 0; i < 200; i++) {
+            try {
+              req.response.write('x' * 1000);
+              await req.response.flush();
+            } on Object {
+              return;
+            }
+          }
+          await req.response.close();
+          return;
+        }
+        await answer(req, 'Accepted', status: 202);
+      });
+      cleanups.add(() => raw.close(force: true));
+      await expectLater(
+        client(
+          rawUrl(raw),
+          transport: McpTransportKind.sse,
+          timeouts: const McpTimeouts(maxResponseBytes: 20000),
+        ).ping(),
+        throwsA(
+          isA<McpException>().having(
+            (e) => e.kind,
+            'kind',
+            McpErrorKind.tooLarge,
           ),
         ),
       );
@@ -807,6 +854,32 @@ void main() {
           ),
         );
       }
+    });
+
+    test('tools/list: höchstens maxListedTools Tools', () async {
+      var page = 0;
+      final raw = await rawServer((req, body) async {
+        final m = rpc(body);
+        if (m['method'] == 'initialize') {
+          return answer(req, initResult(m['id']));
+        }
+        if (m['id'] == null) return answer(req, '', status: 202);
+        page++;
+        return answer(req, {
+          'jsonrpc': '2.0',
+          'id': m['id'],
+          'result': {
+            'tools': [
+              for (var i = 0; i < 600; i++) {'name': 'p${page}_$i'},
+            ],
+            'nextCursor': 'weiter',
+          },
+        });
+      });
+      cleanups.add(() => raw.close(force: true));
+      final tools = await client(rawUrl(raw)).listTools();
+      expect(tools, hasLength(maxListedTools));
+      expect(page, 2);
     });
 
     test('tools/list: endlose Paginierung wird abgebrochen', () async {

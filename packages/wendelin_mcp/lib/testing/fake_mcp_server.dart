@@ -199,6 +199,10 @@ final class FakeMcpServer {
   /// The next MCP `POST`s answer with this status instead.
   final List<int> failNext = [];
 
+  /// Status a Legacy-SSE server answers a `POST` to `/mcp` with (405, 404
+  /// or 400 are all seen in the wild).
+  int legacyPostStatus = 405;
+
   /// Endpoint announced by Legacy-SSE (`null` = own `/messages`).
   String? legacyEndpoint;
 
@@ -209,6 +213,10 @@ final class FakeMcpServer {
 
   /// Serves metadata only at the OpenID Connect location.
   bool oidcOnly = false;
+
+  /// `issuer` announced in the metadata (`null` = the real one; set it to
+  /// simulate a mix-up attack).
+  String? metadataIssuer;
 
   /// Offers dynamic client registration.
   bool dynamicRegistration = true;
@@ -370,7 +378,7 @@ final class FakeMcpServer {
     if (!_authorized(headers)) return _unauthorized(res);
     if (mode == FakeTransportMode.legacySse) {
       if (req.method == 'GET') return _legacyOpen(res);
-      return _send(res, 405, 'method not allowed');
+      return _send(res, legacyPostStatus, 'method not allowed');
     }
     if (req.method == 'DELETE') {
       deletes++;
@@ -574,7 +582,8 @@ final class FakeMcpServer {
   // --- OAuth ----------------------------------------------------------------
 
   Map<String, Object?> get _asMetadata => {
-    'issuer': (withResourceMetadata ? issuer : origin).toString(),
+    'issuer':
+        metadataIssuer ?? (withResourceMetadata ? issuer : origin).toString(),
     'authorization_endpoint': origin.replace(path: '/as/authorize').toString(),
     'token_endpoint': origin.replace(path: '/as/token').toString(),
     if (dynamicRegistration)

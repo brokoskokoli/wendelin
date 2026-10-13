@@ -210,13 +210,14 @@ final class McpOAuth extends McpAuth {
 @immutable
 final class McpToolOverride {
   /// Creates an override.
-  const McpToolOverride({this.enabled = true, this.risk});
+  const McpToolOverride({this.enabled = true, this.risk, this.autoRun = false});
 
   /// Decodes [toJson].
   factory McpToolOverride.fromJson(Map<String, Object?> json) {
     final risk = _opt<String>(json, 'risk');
     return McpToolOverride(
       enabled: _opt<bool>(json, 'enabled') ?? true,
+      autoRun: _opt<bool>(json, 'autoRun') ?? false,
       risk: risk == null
           ? null
           : RiskLevel.values.firstWhere(
@@ -233,23 +234,31 @@ final class McpToolOverride {
   /// (K8 b).
   final RiskLevel? risk;
 
+  /// Whether a tool with base level `write` may run without confirmation
+  /// (MCP tools have no undo, so they are confirmed by default). Has no
+  /// effect on `read`/`external` tools or under `confirmAll`.
+  final bool autoRun;
+
   /// JSON form.
   Map<String, Object?> toJson() => {
     if (!enabled) 'enabled': false,
     if (risk != null) 'risk': risk!.name,
+    if (autoRun) 'autoRun': true,
   };
 
   @override
   bool operator ==(Object other) =>
       other is McpToolOverride &&
       other.enabled == enabled &&
-      other.risk == risk;
+      other.risk == risk &&
+      other.autoRun == autoRun;
 
   @override
-  int get hashCode => Object.hash(enabled, risk);
+  int get hashCode => Object.hash(enabled, risk, autoRun);
 
   @override
-  String toString() => 'McpToolOverride($enabled, ${risk?.name})';
+  String toString() =>
+      'McpToolOverride($enabled, ${risk?.name}${autoRun ? ', autoRun' : ''})';
 }
 
 /// One configured MCP server. JSON-serializable; contains no secrets, so

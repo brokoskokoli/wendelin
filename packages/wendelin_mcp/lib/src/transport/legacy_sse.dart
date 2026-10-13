@@ -22,7 +22,6 @@ final class LegacySseTransport extends TransportBase {
   Completer<void>? _abort;
   final Map<Object, Completer<JsonRpcMessage>> _pending = {};
   McpException? _streamError;
-  var _received = 0;
 
   @override
   bool get perOperation => true;
@@ -40,7 +39,6 @@ final class LegacySseTransport extends TransportBase {
     final endpoint = Completer<Uri>();
     _abort = abort;
     _streamError = null;
-    _received = 0;
     try {
       var opened = false;
       await guarded(cancel, deps.timeouts.connect, (connectAbort) async {
@@ -77,18 +75,23 @@ final class LegacySseTransport extends TransportBase {
             challenge: response.headers['www-authenticate'],
           );
         }
-        _sub = SseParser.parse(response.stream).listen(
-          (event) => _onEvent(event, endpoint),
-          onError: (Object e) => _fail(mapError(e), endpoint),
-          onDone: () => _fail(
-            const McpException(
-              McpErrorKind.network,
-              'Server hat den SSE-Stream beendet',
-            ),
-            endpoint,
-          ),
-          cancelOnError: true,
-        );
+        // Byte-Limit vor dem Parser: auch eine endlose Zeile ohne
+        // Ereignisende bleibt begrenzt (über die Dauer eines Vorgangs).
+        _sub =
+            SseParser.parse(
+              limitBytes(response.stream, deps.timeouts.maxResponseBytes),
+            ).listen(
+              (event) => _onEvent(event, endpoint),
+              onError: (Object e) => _fail(mapError(e), endpoint),
+              onDone: () => _fail(
+                const McpException(
+                  McpErrorKind.network,
+                  'Server hat den SSE-Stream beendet',
+                ),
+                endpoint,
+              ),
+              cancelOnError: true,
+            );
         _endpoint = await endpoint.future;
         opened = true;
       });
@@ -104,17 +107,6 @@ final class LegacySseTransport extends TransportBase {
   }
 
   void _onEvent(SseEvent event, Completer<Uri> endpoint) {
-    _received += event.data.length;
-    if (_received > deps.timeouts.maxResponseBytes) {
-      _fail(
-        McpException(
-          McpErrorKind.tooLarge,
-          'Antwort zu groß (über ${deps.timeouts.maxResponseBytes ~/ 1024} KB)',
-        ),
-        endpoint,
-      );
-      return;
-    }
     if (event.event == 'endpoint') {
       if (endpoint.isCompleted) return;
       final target = url.resolve(event.data.trim());

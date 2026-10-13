@@ -1,3 +1,9 @@
+import 'dart:convert';
+
+/// Largest accepted input schema (encoded JSON, bytes): a bigger schema
+/// would eat the model's context on every request.
+const maxSchemaBytes = 8 * 1024;
+
 /// Keywords the argument validator of `wendelin_tools` enforces.
 const supportedSchemaKeywords = {
   'type',
@@ -39,7 +45,7 @@ const _supportedFormats = {'date-time'};
 /// is documented instead of silently dropped. The server validates such
 /// parts itself and answers with an error the model can read.
 final class McpSchema {
-  McpSchema._(this.schema, this.unsupported);
+  McpSchema._(this.schema, this.unsupported, this.encodedBytes);
 
   /// Prepares [raw] (`inputSchema` from `tools/list`).
   factory McpSchema.from(Map<String, Object?> raw) {
@@ -50,6 +56,7 @@ final class McpSchema {
     return McpSchema._(
       Map.unmodifiable(schema),
       List.unmodifiable(unsupported),
+      utf8.encode(jsonEncode(schema)).length,
     );
   }
 
@@ -58,6 +65,12 @@ final class McpSchema {
 
   /// Schema parts the runtime does not enforce (`path: keyword`).
   final List<String> unsupported;
+
+  /// Size of the encoded schema in bytes (see [maxSchemaBytes]).
+  final int encodedBytes;
+
+  /// Whether the schema fits the context budget.
+  bool get withinBudget => encodedBytes <= maxSchemaBytes;
 
   static void _walk(Map<String, Object?> node, String path, List<String> out) {
     String at(String key) => path.isEmpty ? key : '$path.$key';

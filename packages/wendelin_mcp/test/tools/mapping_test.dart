@@ -102,63 +102,69 @@ void main() {
   });
 
   group('Risiko (Tabelle)', () {
+    const r = RiskLevel.read;
+    const w = RiskLevel.write;
+    const e = RiskLevel.external;
+    // Alle Hinweis-Kombinationen (null/true/false) × autoRun × confirmAll.
+    // Spalten: readOnly, destructive, Basis, effektiv ohne autoRun,
+    // effektiv mit autoRun (jeweils ohne confirmAll).
+    for (final (readOnly, destructive, base, plain, auto) in [
+      (null, null, e, e, e), // fehlender destructiveHint zählt als true
+      (null, true, e, e, e),
+      (null, false, w, e, w), // write ohne Undo → bestätigen, außer autoRun
+      (true, null, r, r, r),
+      (true, true, r, r, r), // destructiveHint gilt nur ohne readOnlyHint
+      (true, false, r, r, r),
+      (false, null, e, e, e),
+      (false, true, e, e, e),
+      (false, false, w, e, w),
+    ]) {
+      final a = McpToolAnnotations(
+        readOnlyHint: readOnly,
+        destructiveHint: destructive,
+      );
+      for (final autoRun in [false, true]) {
+        for (final confirmAll in [false, true]) {
+          final expected = confirmAll ? e : (autoRun ? auto : plain);
+          test('readOnly=$readOnly destructive=$destructive autoRun=$autoRun '
+              'confirmAll=$confirmAll → ${expected.name}', () {
+            expect(
+              mcpBaseRisk(a, confirmAll: confirmAll),
+              confirmAll ? e : base,
+            );
+            expect(
+              mcpRisk(a, confirmAll: confirmAll, autoRun: autoRun),
+              expected,
+            );
+          });
+        }
+      }
+    }
+
     const ro = McpToolAnnotations(readOnlyHint: true);
-    const destructive = McpToolAnnotations(destructiveHint: true);
-    const both = McpToolAnnotations(readOnlyHint: true, destructiveHint: true);
-    const notDestructive = McpToolAnnotations(destructiveHint: false);
-    const none = McpToolAnnotations();
-    for (final (label, annotations, confirmAll, override, expected) in [
-      ('readOnlyHint', ro, false, null, RiskLevel.read),
-      ('destructiveHint', destructive, false, null, RiskLevel.external),
-      ('beides → strenger', both, false, null, RiskLevel.external),
-      ('keine Angaben', none, false, null, RiskLevel.write),
-      ('destructive=false', notDestructive, false, null, RiskLevel.write),
-      ('confirmAll bei read', ro, true, null, RiskLevel.external),
-      ('confirmAll bei write', none, true, null, RiskLevel.external),
-      (
-        'Override verschärft read→write',
-        ro,
-        false,
-        RiskLevel.write,
-        RiskLevel.write,
-      ),
-      (
-        'Override verschärft read→external',
-        ro,
-        false,
-        RiskLevel.external,
-        RiskLevel.external,
-      ),
-      (
-        'Override lockert nicht external→read',
-        destructive,
-        false,
-        RiskLevel.read,
-        RiskLevel.external,
-      ),
-      (
-        'Override lockert nicht write→read',
-        none,
-        false,
-        RiskLevel.read,
-        RiskLevel.write,
-      ),
-      (
-        'Override lockert confirmAll nicht',
-        ro,
-        true,
-        RiskLevel.read,
-        RiskLevel.external,
-      ),
-      ('Override gleich', none, false, RiskLevel.write, RiskLevel.write),
+    const writeTool = McpToolAnnotations(destructiveHint: false);
+    for (final (label, annotations, autoRun, override, expected) in [
+      ('Override verschärft read→write', ro, false, w, w),
+      ('Override verschärft read→external', ro, false, e, e),
+      ('Override verschärft autoRun-write→external', writeTool, true, e, e),
+      ('Override lockert nicht external→read', writeTool, false, r, e),
+      ('Override lockert nicht autoRun-write→read', writeTool, true, r, w),
+      ('Override gleich', writeTool, true, w, w),
+      ('autoRun wirkt nicht auf read', ro, true, null, r),
     ]) {
       test(label, () {
         expect(
-          mcpRisk(annotations, confirmAll: confirmAll, override: override),
+          mcpRisk(annotations, autoRun: autoRun, override: override),
           expected,
         );
       });
     }
+    test('Override lockert confirmAll nicht, autoRun auch nicht', () {
+      expect(
+        mcpRisk(writeTool, confirmAll: true, autoRun: true, override: r),
+        e,
+      );
+    });
   });
 
   group('Netzziele (Tabelle)', () {
@@ -338,6 +344,7 @@ void main() {
       confirmAll: true,
       toolOverrides: const {
         'shell': McpToolOverride(risk: RiskLevel.external),
+        'note': McpToolOverride(autoRun: true),
         'debug': McpToolOverride(enabled: false),
       },
     );
@@ -397,6 +404,15 @@ void main() {
       expect(
         const McpToolOverride(risk: RiskLevel.read).toString(),
         contains('read'),
+      );
+      expect(
+        const McpToolOverride(autoRun: true).toString(),
+        contains('autoRun'),
+      );
+      expect(const McpToolOverride(autoRun: true).toJson(), {'autoRun': true});
+      expect(
+        const McpToolOverride(autoRun: true),
+        isNot(const McpToolOverride()),
       );
     });
 
