@@ -17,8 +17,9 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * Platform side of `AssistantPlatform` (app/lib/platform/assistant_platform.dart): default
- * assistant status and settings, lock state, unlock request, closing the overlay, and the
- * `trigger` call to Dart when the assistant is invoked again.
+ * assistant status and settings, lock state, unlock request, closing the overlay, the
+ * `trigger` call to Dart when the assistant is invoked again, and the system speech recognizer
+ * (offered to other apps, speech settings mirrored for it; [RecognizerSwitch]).
  */
 class AssistantChannel(private val activity: Activity, messenger: BinaryMessenger) :
     MethodChannel.MethodCallHandler {
@@ -69,6 +70,15 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
             "openAssistantSettings" -> result.success(openAssistantSettings())
             "isLocked" -> result.success(keyguard().isKeyguardLocked)
             "requestUnlock" -> requestUnlock(result)
+            "isRecognizerOffered" -> result.success(RecognizerSwitch.isOffered(activity))
+            "setRecognizerOffered" -> {
+                RecognizerSwitch.setOffered(activity, call.argument<Boolean>("offered") != false)
+                result.success(null)
+            }
+            "setRecognizerConfig" -> {
+                RecognizerConfig.fromArgs(call.arguments as? Map<*, *>).save(activity)
+                result.success(null)
+            }
             "finish" -> {
                 activity.finish()
                 result.success(null)

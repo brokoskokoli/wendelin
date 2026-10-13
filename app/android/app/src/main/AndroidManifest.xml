@@ -66,9 +66,10 @@
             android:name=".WendelinVoiceSessionService"
             android:permission="android.permission.BIND_VOICE_INTERACTION"
             android:exported="true" />
-        <!-- Required by Android for an assistant; answers with an error for now. Disabled until
-             Wendelin holds the assistant role (RecognizerSwitch), so installing the app never
-             makes it the system speech recognizer (ADR 0006). -->
+        <!-- System speech recognizer for other apps (local Whisper, WP20/ADR 0008); Android
+             also requires it for an assistant. Disabled until Wendelin holds the assistant role
+             and the user offers it (RecognizerSwitch), so installing the app never makes it the
+             system speech recognizer (ADR 0006). -->
         <service
             android:name=".WendelinRecognitionService"
             android:label="Wendelin"
@@ -77,6 +78,9 @@
             <intent-filter>
                 <action android:name="android.speech.RecognitionService" />
             </intent-filter>
+            <meta-data
+                android:name="android.speech"
+                android:resource="@xml/recognition_service" />
         </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

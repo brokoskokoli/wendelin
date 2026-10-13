@@ -16,6 +16,7 @@ import '../platform/voice/sherpa_tts.dart';
 import '../platform/voice/silero_vad.dart';
 import '../platform/voice/system_tts.dart';
 import '../platform/voice/tar_bz2.dart';
+import '../platform/voice/whisper_registry.dart';
 import '../platform/voice/whisper_sherpa.dart';
 import '../platform/voice/whisper_stt.dart';
 import 'preferences.dart';
@@ -491,7 +492,12 @@ final speechToTextProvider = FutureProvider<SpeechToText>((ref) async {
   final backend = await IsolateWhisperBackend.start(
     WhisperFiles.of(model, service.directoryOf(model).path),
   );
-  ref.onDispose(() => unawaited(backend.dispose()));
+  // The system recognizer (other engine) uses this model too (ADR 0008).
+  publishSharedWhisper(model.id, backend.sharePort);
+  ref.onDispose(() {
+    withdrawSharedWhisper(model.id, backend.sharePort);
+    unawaited(backend.dispose());
+  });
   return WhisperSpeechToText(backend: backend, modelId: model.id);
 });
 

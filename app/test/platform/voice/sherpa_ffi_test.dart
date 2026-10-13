@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/voice/sherpa_tts.dart';
 import 'package:wendelin/platform/voice/silero_vad.dart';
+import 'package:wendelin/platform/voice/whisper_share.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin_voice/testing.dart';
@@ -76,6 +77,22 @@ void main() {
       ]);
       expect(anySpeech(noise), isFalse);
     });
+
+    test(
+      'Whisper-Isolat beantwortet auch geteilte Anfragen (ADR 0008)',
+      () async {
+        await whisper();
+        final remote = WhisperSpeechToText(
+          backend: RemoteWhisperBackend(backend!.sharePort),
+          modelId: 'whisper-base',
+        );
+        final t = await remote.transcribe(padded, language: 'de');
+        expect(t.text.toLowerCase(), contains('milch und brot'));
+        // The owner keeps working afterwards.
+        final own = await (await whisper()).transcribe(padded, language: 'de');
+        expect(own.text.toLowerCase(), contains('milch und brot'));
+      },
+    );
 
     test('Whisper mit fester Sprache, Abbau des Isolats', () async {
       final b = await IsolateWhisperBackend.start(

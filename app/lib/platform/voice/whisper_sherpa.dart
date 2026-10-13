@@ -10,6 +10,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'isolate_exit.dart';
 import 'sherpa_runtime.dart';
+import 'whisper_share.dart';
 import 'whisper_stt.dart';
 
 /// Paths of a downloaded Whisper model (sherpa-onnx export).
@@ -184,6 +185,10 @@ final class IsolateWhisperBackend implements WhisperBackend {
     return result;
   }
 
+  /// Inbox of the Whisper isolate; it also answers [RemoteWhisperBackend]
+  /// requests of other engines (`publishSharedWhisper`, ADR 0008).
+  SendPort get sharePort => _requests;
+
   /// The background isolate (for tests: did it exit by itself?).
   @visibleForTesting
   WorkerIsolate get worker => _isolate;
@@ -226,7 +231,12 @@ final class IsolateWhisperBackend implements WhisperBackend {
         } on Object catch (e) {
           out.send('$e');
         }
-      } else {
+      } else if (isSharedWhisperRequest(message)) {
+        answerSharedWhisper(
+          message! as List<Object?>,
+          (samples, language) => engine.transcribe(samples, language: language),
+        );
+      } else if (message == null) {
         engine.dispose();
         inbox.close();
         Isolate.exit();

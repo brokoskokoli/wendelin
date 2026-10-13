@@ -12,6 +12,7 @@ import 'di/integration_specs.dart';
 import 'di/maintenance.dart';
 import 'di/providers.dart';
 import 'di/startup.dart';
+import 'platform/recognizer/device_recognizer_engines.dart';
 import 'platform/screen_protection.dart';
 import 'platform/secure_secret_store.dart';
 import 'ui/overlay/assistant_overlay.dart';
@@ -42,6 +43,12 @@ Future<void> assistantMain() async {
   final (storage, startup) = await _openStorage();
   await _run(storage, startup, const AssistantOverlayApp());
 }
+
+/// Entry point of the system speech recognizer (`WendelinRecognitionService`
+/// starts it in a headless engine, ADR 0008): Whisper and Silero for other
+/// apps, without database, UI or agent.
+@pragma('vm:entry-point')
+Future<void> recognizerMain() => runRecognizerEngine();
 
 Future<(WendelinStorage, StartupSettings)> _openStorage() async {
   // Shared across isolates: the overlay engine and the main app may run
