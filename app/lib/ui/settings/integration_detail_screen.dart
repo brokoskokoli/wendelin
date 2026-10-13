@@ -1,0 +1,144 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+
+import '../../di/preference_models.dart';
+import '../../di/preferences.dart';
+import '../../di/providers.dart';
+import '../../di/sensitivity.dart';
+import '../design/design.dart';
+import 'settings_page.dart';
+
+/// Tools of one integration: each on/off, and `read`/`write` tools can be
+/// set to „Immer nachfragen“. Levels can only be made stricter (K8 b):
+/// `external` tools always ask.
+class IntegrationDetailScreen extends ConsumerWidget {
+  /// Creates the page for the integration [id].
+  const IntegrationDetailScreen(this.id, {super.key});
+
+  /// Integration id.
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final integration = ref.watch(integrationsProvider)[id];
+    final prefs = ref.watch(toolPrefsProvider);
+    if (integration == null) {
+      return const SettingsPage(title: 'Integration', children: []);
+    }
+    void update(ToolPrefs next) =>
+        unawaited(ref.read(toolPrefsProvider.notifier).set(next));
+    return SettingsPage(
+      title: integration.displayName,
+      intro: integration.sensitive
+          ? 'Sensibel: Die Tools gehen nur an Provider ab der Stufe, die du '
+                'für sensible Integrationen festlegst.'
+          : null,
+      children: [
+        SectionCard(
+          children: [
+            for (final tool in integration.tools)
+              SettingsRow(
+                title: tool.name,
+                mono: true,
+                detail: riskText(
+                  tool.risk,
+                  prefs.alwaysConfirm.contains(tool.name),
+                ),
+                onTap: tool.risk == RiskLevel.external
+                    ? null
+                    : () => update(
+                        prefs.withConfirm(
+                          tool.name,
+                          confirm: !prefs.alwaysConfirm.contains(tool.name),
+                        ),
+                      ),
+                trailing: WSwitch(
+                  value: !prefs.disabled.contains(tool.name),
+                  semanticLabel: tool.name,
+                  onChanged: (on) =>
+                      update(prefs.withEnabled(tool.name, enabled: on)),
+                ),
+              ),
+          ],
+        ),
+        Text(
+          'Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.',
+          style: WText.caption,
+        ),
+        SectionCard(
+          children: [
+            SettingsRow(
+              title: 'Sensibel',
+              detail:
+                  'Persönliche Daten: Tools nur an Provider ab der '
+                  'eingestellten Stufe',
+              trailing: WSwitch(
+                value: integration.sensitive,
+                semanticLabel: '${integration.displayName} sensibel',
+                onChanged: (on) => update(
+                  prefs.withSensitive(
+                    id,
+                    sensitive: on,
+                    byDefault: unwrapIntegration(integration).sensitive,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (integration.sensitive) const SensitiveLevelSection(),
+      ],
+    );
+  }
+}
+
+/// German description of a tool's level and whether it asks.
+String riskText(RiskLevel risk, bool alwaysConfirm) => switch (risk) {
+  RiskLevel.read =>
+    alwaysConfirm ? 'liest · fragt immer nach' : 'liest · ohne Nachfrage',
+  RiskLevel.write =>
+    alwaysConfirm
+        ? 'ändert · fragt immer nach'
+        : 'ändert · ohne Nachfrage, 10 s rückgängig',
+  RiskLevel.external => 'Außenwirkung · fragt immer nach',
+};
+
+/// Minimum privacy level for tools of sensitive integrations.
+class SensitiveLevelSection extends ConsumerWidget {
+  /// Creates the section.
+  const SensitiveLevelSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(toolPrefsProvider);
+    final options = <(PrivacyLevel?, String)>[
+      (null, 'An alle Provider'),
+      (PrivacyLevel.eu, 'Ab EU'),
+      (PrivacyLevel.tee, 'Ab TEE'),
+      (PrivacyLevel.local, 'Nur lokal'),
+    ];
+    return SettingsSection(
+      title: 'Sensible Integrationen',
+      children: [
+        for (final (level, label) in options)
+          SettingsRow(
+            title: label,
+            onTap: () => unawaited(
+              ref
+                  .read(toolPrefsProvider.notifier)
+                  .set(prefs.withSensitiveMinimum(level)),
+            ),
+            trailing: prefs.sensitiveMinimum == level
+                ? const CheckStatusIcon(
+                    CheckStatus.ok,
+                    semanticLabel: 'gewählt',
+                  )
+                : null,
+          ),
+      ],
+    );
+  }
+}

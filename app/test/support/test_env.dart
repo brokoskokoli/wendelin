@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:wendelin/app.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
@@ -26,6 +27,11 @@ final class TestEnv {
     this.providerConfigError,
     this.demo = false,
     this.realDemoPorts = false,
+    this.llmFactory,
+    this.storedProfiles = false,
+    this.extraOverrides = const [],
+    StartupSettings? startup,
+    this._storage,
     Set<String> enabled = const {
       'calendar',
       'clipboard',
@@ -33,13 +39,24 @@ final class TestEnv {
       'memory',
       'web',
     },
-  }) : startup = StartupSettings(enabledIntegrations: enabled, demoMode: demo);
+  }) : startup =
+           startup ??
+           StartupSettings(enabledIntegrations: enabled, demoMode: demo);
+
+  /// Further overrides (e.g. the exporter).
+  final List<Override> extraOverrides;
+
+  /// Reads the provider configuration from the stored profiles (with
+  /// [llmFactory]) instead of [providerConfig].
+  final bool storedProfiles;
 
   /// Clock of all components.
   final clock = FixedClock(testNow);
 
   /// Local database.
-  late final WendelinStorage storage = openInMemoryStorage(clock: clock);
+  late final WendelinStorage storage =
+      _storage ?? openInMemoryStorage(clock: clock);
+  final WendelinStorage? _storage;
 
   /// Secrets.
   final secrets = InMemorySecretStore();
@@ -55,6 +72,12 @@ final class TestEnv {
 
   /// Memory.
   final memory = FakeMemoryStore();
+
+  /// List files (handle → content).
+  final listFiles = FakeListFilePort();
+
+  /// Builds the adapter for stored profiles; `null` = real adapters.
+  final LlmProviderFactory? llmFactory;
 
   /// Calendar permission requests.
   int permissionRequests = 0;
@@ -92,16 +115,32 @@ final class TestEnv {
     storageProvider.overrideWithValue(storage),
     secretStoreProvider.overrideWithValue(secrets),
     startupProvider.overrideWithValue(startup),
-    devicePortsProvider.overrideWithValue(ports),
+    devicePortsProvider.overrideWith(
+      (ref) => PlatformPorts(
+        calendar: calendar,
+        clipboard: clipboard,
+        alarms: alarms,
+        memory: memory,
+        requestCalendarPermission: ports.requestCalendarPermission,
+        lists: ListsPorts(
+          port: listFiles,
+          definitions: () => ref.read(listDefinitionsProvider),
+        ),
+      ),
+    ),
+    if (llmFactory case final f?)
+      llmProviderFactoryProvider.overrideWithValue(f),
     if (!realDemoPorts) demoPortsProvider.overrideWithValue(ports),
     deviceInfoProvider.overrideWithValue(
       const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
     ),
-    storedProviderConfigProvider.overrideWith(
-      (ref) async => providerConfigError == null
-          ? providerConfig
-          : throw providerConfigError!,
-    ),
+    if (!storedProfiles)
+      storedProviderConfigProvider.overrideWith(
+        (ref) async => providerConfigError == null
+            ? providerConfig
+            : throw providerConfigError!,
+      ),
+    ...extraOverrides,
   ];
 
   /// A container with [overrides].

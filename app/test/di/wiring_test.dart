@@ -7,9 +7,12 @@ import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/platform/platform_ports.dart';
+import 'package:wendelin/platform/saf_list_file_port.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
@@ -301,6 +304,7 @@ void main() {
         'alarms',
         'calendar',
         'clipboard',
+        'lists',
         'memory',
         'web',
       ]);
@@ -373,10 +377,30 @@ void main() {
       },
     );
 
-    test('ohne Listen-Port (Gerät bis WP09): keine Listen-Integration', () {
-      final c = TestEnv().container();
+    test('ohne Listen-Port (andere Plattform): keine Listen-Integration', () {
+      final env = TestEnv();
+      final c = ProviderContainer(
+        overrides: [
+          ...env.overrides,
+          platformPortsProvider.overrideWithValue(env.ports),
+        ],
+        retry: (_, _) => null,
+      );
       addTearDown(c.dispose);
+      expect(env.ports.lists, isNull);
       expect(c.read(integrationsProvider).keys, isNot(contains('lists')));
+    });
+
+    test('Gerät: Listen über den SAF-Port, Definitionen per Rückruf', () {
+      final defs = [
+        ListDefinition(id: 'a', name: 'Einkaufen', target: 'content://x'),
+      ];
+      final ports = PlatformPorts.device(
+        openInMemoryStorage(),
+        listDefinitions: () => defs,
+      );
+      expect(ports.lists!.port, isA<SafListFilePort>());
+      expect(ports.lists!.definitions(), same(defs));
     });
 
     test('Demo-Modus umschalten speichert die Wahl', () async {

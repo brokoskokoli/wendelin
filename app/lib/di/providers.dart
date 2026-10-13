@@ -17,9 +17,13 @@ import 'audit_recorder.dart';
 import 'costs.dart';
 import 'integration_activator.dart';
 import 'integration_specs.dart';
+import 'preference_models.dart';
+import 'preferences.dart';
 import 'provider_config.dart';
+import 'sensitivity.dart';
 import 'session_manager.dart';
 import 'startup.dart';
+import 'web_search.dart';
 
 // Riverpod wiring of the app. `main.dart` overrides [storageProvider],
 // [startupProvider] and [deviceInfoProvider]; tests also override the ports
@@ -27,6 +31,9 @@ import 'startup.dart';
 
 /// Time source.
 final clockProvider = Provider<Clock>((ref) => const SystemClock());
+
+/// Ids for profiles, lists and key references.
+final idGeneratorProvider = Provider<IdGenerator>((ref) => UuidV4Generator());
 
 /// Local database; overridden in `main.dart` (drift_flutter) and in tests
 /// (in-memory).
@@ -80,7 +87,10 @@ final class DemoModeNotifier extends Notifier<bool> {
 
 /// Ports of the real device.
 final devicePortsProvider = Provider<PlatformPorts>(
-  (ref) => PlatformPorts.device(ref.watch(storageProvider)),
+  (ref) => PlatformPorts.device(
+    ref.watch(storageProvider),
+    listDefinitions: () => ref.read(listDefinitionsProvider),
+  ),
 );
 
 /// In-memory ports of the demo mode.
@@ -106,15 +116,29 @@ final integrationDepsProvider = Provider<IntegrationDeps>(
     ports: ref.watch(platformPortsProvider),
     device: ref.watch(deviceInfoProvider),
     httpClient: ref.watch(httpClientProvider),
+    webSearch: switch (ref.watch(webSearchConfigProvider)) {
+      null => null,
+      final config => StoredKeyWebSearch(
+        config,
+        secrets: ref.watch(secretStoreProvider),
+        client: ref.watch(httpClientProvider),
+      ),
+    },
   ),
 );
 
 /// The built integrations by id.
 final integrationsProvider = Provider<Map<String, Integration>>((ref) {
   final deps = ref.watch(integrationDepsProvider);
+  final marks = ref.watch(toolPrefsProvider.select((p) => p.sensitive));
   return {
     for (final spec in ref.watch(integrationSpecsProvider))
-      if (spec.isSupported?.call(deps) ?? true) spec.id: spec.create(deps),
+      if (spec.isSupported?.call(deps) ?? true)
+        spec.id: switch ((spec.create(deps), marks[spec.id])) {
+          (final i, final mark?) when mark != i.sensitive =>
+            SensitivityOverride(i, sensitive: mark),
+          (final i, _) => i,
+        },
   };
 });
 
@@ -135,6 +159,21 @@ final toolRegistryProvider = Provider<ToolRegistry>((ref) {
           .catchError(_reportRegistrationError),
     );
   }
+  // Tool switches and the level for sensitive integrations.
+  void apply(ToolPrefs prefs) {
+    registry.sensitiveMinimum = prefs.sensitiveMinimum;
+    for (final info in registry.integrations) {
+      for (final tool in info.integration.tools) {
+        registry.setToolEnabled(
+          tool.name,
+          enabled: !prefs.disabled.contains(tool.name),
+        );
+      }
+    }
+  }
+
+  apply(ref.read(toolPrefsProvider));
+  ref.listen(toolPrefsProvider, (_, next) => apply(next));
   ref.onDispose(registry.dispose);
   return registry;
 });
@@ -194,8 +233,24 @@ final integrationActivatorProvider = Provider<IntegrationActivator>(
   ),
 );
 
-/// Risk policy (per-tool overrides come with WP09).
-final riskPolicyProvider = Provider<RiskPolicy>((ref) => RiskPolicy());
+/// Risk policy with the user's per-tool confirmations (only stricter).
+final riskPolicyProvider = Provider<RiskPolicy>((ref) {
+  final policy = RiskPolicy();
+  var confirmed = <String>{};
+  void apply(ToolPrefs prefs) {
+    for (final name in confirmed.difference(prefs.alwaysConfirm)) {
+      policy.clearOverride(name);
+    }
+    for (final name in prefs.alwaysConfirm) {
+      policy.setOverride(name, PolicyAction.confirm);
+    }
+    confirmed = prefs.alwaysConfirm;
+  }
+
+  apply(ref.read(toolPrefsProvider));
+  ref.listen(toolPrefsProvider, (_, next) => apply(next));
+  return policy;
+});
 
 /// Undo offers of `write` tools (10 s).
 final undoManagerProvider = Provider<UndoManager>((ref) {
@@ -224,7 +279,9 @@ final sessionManagerProvider = Provider<SessionManager>((ref) {
       final integrations = ref.read(integrationsProvider);
       for (final spec in ref.read(integrationSpecsProvider)) {
         final integration = integrations[spec.id];
-        if (integration != null) spec.onSessionEnd?.call(integration);
+        if (integration != null) {
+          spec.onSessionEnd?.call(unwrapIntegration(integration));
+        }
       }
     },
   );
@@ -248,13 +305,32 @@ final storedProviderConfigProvider = FutureProvider<ProviderConfig?>(
     storage: ref.watch(storageProvider),
     secrets: ref.watch(secretStoreProvider),
     catalog: ref.watch(modelCatalogProvider),
+    create: ref.watch(llmProviderFactoryProvider),
   ),
 );
+
+/// Builds the adapter for a profile (fake in tests).
+typedef LlmProviderFactory = LlmProvider Function(
+  ProviderProfile profile,
+  SecretReader secrets,
+);
+
+/// Adapter factory used by the provider setup and the configuration.
+final llmProviderFactoryProvider = Provider<LlmProviderFactory>((ref) {
+  final catalog = ref.watch(modelCatalogProvider);
+  return (profile, secrets) =>
+      ProviderFactory.create(profile, secrets, catalog: catalog);
+});
 
 /// Builds the agent for each request.
 final agentFactoryProvider = Provider<AgentRunFactory>((ref) {
   final storage = ref.watch(storageProvider);
+  final assistant = ref.watch(assistantPrefsProvider);
   return AgentFactory(
+    config: AgentConfig(
+      userName: assistant.userName,
+      personaAddon: assistant.persona,
+    ),
     registry: ref.watch(toolRegistryProvider),
     storage: storage,
     policy: ref.watch(riskPolicyProvider),

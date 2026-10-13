@@ -17,9 +17,11 @@ String sessionLabel(DateTime at, DateTime now) {
 /// Icon of an integration id (fallback: task).
 WIconData integrationIcon(String integrationId) => switch (integrationId) {
   'calendar' => WIcons.calendar,
-  'memory' || 'clipboard' => WIcons.note,
+  'memory' => WIcons.note,
+  'clipboard' => WIcons.clipboard,
+  'alarms' => WIcons.alarm,
   'lists' => WIcons.cart,
-  'web' => WIcons.waves,
+  'web' => WIcons.globe,
   _ => WIcons.task,
 };
 

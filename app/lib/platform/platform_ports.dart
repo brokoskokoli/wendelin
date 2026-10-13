@@ -7,6 +7,7 @@ import 'android_alarm_port.dart';
 import 'device_calendar_port.dart';
 import 'flutter_clipboard_port.dart';
 import 'repository_memory_port.dart';
+import 'saf_list_file_port.dart';
 
 /// The device ports the built-in integrations run on.
 ///
@@ -26,7 +27,10 @@ final class PlatformPorts {
 
   /// Real device ports (Android): calendar channel, system clipboard,
   /// `AlarmClock` intents, memory in the local database.
-  factory PlatformPorts.device(WendelinStorage storage) {
+  factory PlatformPorts.device(
+    WendelinStorage storage, {
+    required List<ListDefinition> Function() listDefinitions,
+  }) {
     final calendar = DeviceCalendarPort(
       preferredCalendar: () =>
           storage.settings.get(AppSettings.defaultCalendarId),
@@ -37,6 +41,7 @@ final class PlatformPorts {
       alarms: const AndroidAlarmPort(),
       memory: RepositoryMemoryPort(storage.memory),
       requestCalendarPermission: calendar.requestPermission,
+      lists: ListsPorts(port: SafListFilePort(), definitions: listDefinitions),
     );
   }
 
@@ -64,8 +69,7 @@ final class PlatformPorts {
   /// Asks for calendar access; `null` if the port needs none.
   final Future<bool> Function()? requestCalendarPermission;
 
-  /// List files and definitions; `null` = no lists on this device yet
-  /// (the SAF port and the list settings come with WP09).
+  /// List files and definitions; `null` = no lists on this platform.
   final ListsPorts? lists;
 }
 
