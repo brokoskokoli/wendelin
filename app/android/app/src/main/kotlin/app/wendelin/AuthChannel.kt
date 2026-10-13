@@ -17,7 +17,8 @@ import io.flutter.plugin.common.MethodChannel
  * OAuth login of MCP servers (WP27). Opens the authorization page in a Custom Tab
  * (androidx.browser, no Google services, K7) or, without a Custom Tabs browser, in any browser.
  * The redirect to `app.wendelin://oauth/mcp` reaches [OAuthRedirectActivity], which hands it back
- * through [deliver]. `state` and issuer are checked in Dart (McpOAuthFlow), not here.
+ * through [deliver] only if it carries the `state` of the running login; other redirects are
+ * ignored and the login keeps waiting. Dart (McpOAuthFlow) checks state and issuer again.
  *
  * Errors: `no_browser` (nothing can show the page), `cancelled` (the user came back without a
  * redirect, or a new login replaced this one), `bad_args`.
@@ -29,6 +30,7 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
     private val handler = Handler(Looper.getMainLooper())
     private var pending: MethodChannel.Result? = null
     private var redirect: Uri? = null
+    private var state: String? = null
     private var left = false
 
     init {
@@ -54,8 +56,11 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
     private fun authorize(call: MethodCall, result: MethodChannel.Result) {
         val url = call.argument<String>("url")?.let(Uri::parse)
         val back = call.argument<String>("redirect")?.let(Uri::parse)
-        if (url == null || back == null || (url.scheme != "https" && url.scheme != "http")) {
-            result.error("bad_args", "url oder redirect fehlt", null)
+        val expectedState = call.argument<String>("state")
+        if (url == null || back == null || expectedState.isNullOrEmpty() ||
+            (url.scheme != "https" && url.scheme != "http")
+        ) {
+            result.error("bad_args", "url, redirect oder state fehlt", null)
             return
         }
         // Only one login at a time; an older one counts as cancelled.
@@ -66,6 +71,7 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
         }
         pending = result
         redirect = back
+        state = expectedState
         left = false
         waiting = this
     }
@@ -112,6 +118,8 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
         if (uri.scheme != expected.scheme || uri.host != expected.host || uri.path != expected.path) {
             return false
         }
+        // Not our login (another app opened the redirect address): ignore it and keep waiting.
+        if (uri.getQueryParameter("state") != state) return false
         finish { it.success(uri.toString()) }
         // Back to the app: closes the Custom Tab above it in this task.
         activity.startActivity(
@@ -125,6 +133,7 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
         val result = pending ?: return
         pending = null
         redirect = null
+        state = null
         left = false
         if (waiting === this) waiting = null
         answer(result)

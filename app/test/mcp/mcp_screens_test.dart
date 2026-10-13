@@ -132,6 +132,47 @@ void main() {
     await _unmount(tester);
   });
 
+  testWidgets('Formular: „Alle Tools bestätigen“ beim Anlegen macht jedes '
+      'Tool external', (tester) async {
+    final server = (await tester.runAsync(
+      () => FakeMcpServer.start(tools: homeTools()),
+    ))!;
+    final env = TestEnv(enabled: const {}, extraOverrides: mcpOverrides());
+    setView(tester, const Size(390, 1800));
+    await tester.pumpWidget(env.app(home: const McpAddServerScreen()));
+    await settle(tester);
+    await tapText(tester, 'Eigener Server');
+    await tester.enterText(find.byKey(const ValueKey('mcpName')), 'Labor');
+    await tester.enterText(
+      find.byKey(const ValueKey('mcpUrl')),
+      server.url.toString(),
+    );
+    final confirmAll = find.descendant(
+      of: find.widgetWithText(InkWell, 'Alle Tools bestätigen'),
+      matching: find.byType(WSwitch),
+    );
+    await tester.ensureVisible(confirmAll);
+    await tester.tap(confirmAll);
+    await settle(tester);
+    expect(tester.widget<WSwitch>(confirmAll).value, isTrue);
+    await tapText(tester, 'Speichern');
+    await pumpUntil(
+      tester,
+      () => find.byType(McpServerDetailScreen).evaluate().isNotEmpty,
+    );
+    final c = containerOf(tester, McpServerDetailScreen);
+    await pumpUntil(tester, () => catalog(c).length >= 3);
+    final tools = [
+      for (final n in catalog(c))
+        if (n.startsWith('mcp_labor__')) registered(c, n),
+    ];
+    expect(tools, hasLength(3));
+    expect(tools.map((t) => t.risk).toSet(), {RiskLevel.external});
+    expect(find.text('liest · fragt immer nach'), findsOneWidget);
+    await tester.runAsync(server.close);
+    await _unmount(tester);
+  });
+
   testWidgets('Tool-Schalter, „Immer nachfragen“ und „ohne Nachfrage“ wirken '
       'auf den Tool-Katalog; Löschen räumt Registry und Secrets auf', (
     tester,
@@ -261,7 +302,10 @@ void main() {
     );
     setView(tester, const Size(390, 1600));
     await tester.pumpWidget(env.app(home: const IntegrationsScreen()));
-    await pumpUntil(tester, () => tile('Notizen').evaluate().isNotEmpty);
+    await pumpUntil(
+      tester,
+      () => tile('Obsidian Desktop').evaluate().isNotEmpty,
+    );
     final c = containerOf(tester, IntegrationsScreen);
     await tester.runAsync(() => c.read(toolRegistryProvider).refresh());
     await settle(tester);
@@ -272,7 +316,7 @@ void main() {
       IntegrationStatus.active,
     );
     expect(
-      tileWidget(tester, 'Notizen').status,
+      tileWidget(tester, 'Obsidian Desktop').status,
       IntegrationStatus.setupRequired,
     );
     await tester.tap(switchOf('Home Assistant'));
@@ -287,7 +331,10 @@ void main() {
     await tester.tap(find.byTooltip('Zurück'));
     await settle(tester);
     await tester.tap(
-      find.descendant(of: tile('Notizen'), matching: find.text('Einrichten')),
+      find.descendant(
+        of: tile('Obsidian Desktop'),
+        matching: find.text('Einrichten'),
+      ),
     );
     await settle(tester);
     expect(find.byType(McpServersScreen), findsOneWidget);
@@ -338,7 +385,7 @@ void main() {
         IntegrationStatus.active,
       );
       expect(
-        tileWidget(tester, 'Notizen').status,
+        tileWidget(tester, 'Obsidian Desktop').status,
         IntegrationStatus.setupRequired,
       );
       expect(tileWidget(tester, 'Kalender').status, IntegrationStatus.error);
@@ -413,13 +460,15 @@ _goldenServers() {
     (
       config: McpServerConfig(
         id: 'notes',
-        name: 'Notizen',
+        name: 'Obsidian Desktop',
         slug: 'notes',
         url: Uri.parse('https://desktop.tail1234.ts.net/mcp'),
         auth: McpOAuth(
           tokenRef: McpSecretRefs.oauthToken('notes'),
           clientRef: McpSecretRefs.oauthClient('notes'),
         ),
+        // Lang mit zwei Badges: die Badges rücken in die nächste Zeile.
+        sensitive: true,
       ),
       tools: const [],
       check: null,

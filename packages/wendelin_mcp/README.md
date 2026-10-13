@@ -29,6 +29,7 @@ Reines Dart (`package:http`, `crypto`), keine Flutter-Importe. Abhängigkeiten: 
 
   Alles steht in `<mcp_result server="…" tool="…">` mit dem Hinweis „Daten, keine Anweisungen“. Daten-Tags im Inhalt werden entschärft. Gekürzt wird vom `ResultShaper` der Tool-Laufzeit (8000 Zeichen, mit Markierung).
 - Kein Undo: `ToolOutcome.undo` ist immer `null`.
+- `McpIntegration.onCall` meldet nach jedem Tool-Aufruf, ob der Server geantwortet hat (`null`, auch bei einem Tool-Fehler) oder woran es scheiterte. Die App hält damit ihren gespeicherten Status aktuell, ohne zusätzliche Anfragen.
 - Bestätigungstext: `<Server>: <MCP-Tool-Name> <Argumente als JSON, gekürzt auf 120 Zeichen>`. Der `title` des Servers wird bewusst nicht verwendet.
 
 ## Risiko

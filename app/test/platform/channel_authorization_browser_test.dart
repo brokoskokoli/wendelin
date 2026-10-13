@@ -42,6 +42,7 @@ void main() {
     expect(calls.single.arguments, {
       'url': 'https://as.example.org/authorize?state=s',
       'redirect': 'app.wendelin://oauth/mcp',
+      'state': 's',
     });
   });
 

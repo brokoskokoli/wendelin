@@ -494,6 +494,150 @@ void main() {
     );
   });
 
+  group('Review-Nachbesserungen', () {
+    test('„Alle Tools bestätigen“ beim Anlegen: jedes Tool external', () async {
+      await addAndEnable(c, draftFor(server, confirmAll: true));
+      final mcp = c
+          .read(toolRegistryProvider)
+          .integrations
+          .expand((i) => i.integration.tools)
+          .where((t) => t.name.startsWith('mcp_'));
+      expect(mcp, hasLength(3));
+      expect(mcp.map((t) => t.risk).toSet(), {RiskLevel.external});
+    });
+
+    test('Tool-Aufruf schreibt die letzte Prüfung fort (ohne Extra-Anfrage)', () async {
+      final view = await addAndEnable(c, draftFor(server));
+      final id = view.config.id;
+      final port = server.url.port;
+      await server.close();
+      await tool('mcp_homeserver__get_state')
+          .execute(const {'entity': 'x'}, _ctx());
+      await waitUntil(
+        () => source().server(id)!.check!.status == McpReachability.unreachable,
+      );
+      expect(
+        (await env.storage.settings.get(McpSettings.check(id)))!.status,
+        McpReachability.unreachable,
+      );
+      // Server wieder da (gleicher Port): der nächste Aufruf heilt die Anzeige.
+      server = await FakeMcpServer.start(tools: homeTools(), port: port);
+      final before = server.requests.length;
+      await tool('mcp_homeserver__get_state')
+          .execute(const {'entity': 'x'}, _ctx());
+      await waitUntil(
+        () => source().server(id)!.check!.status == McpReachability.reachable,
+      );
+      // Nur der Aufruf selbst (initialize, initialized, tools/call), kein probe.
+      expect(
+        server.requests.skip(before).where((r) => r.rpcMethod == 'tools/list'),
+        isEmpty,
+      );
+    });
+
+    test(
+      'Import prüft erst alles: ein ungültiger Eintrag legt nichts an',
+      () async {
+        await c.read(toolRegistryReadyProvider.future);
+        final json = jsonEncode({
+          'format': McpServerSource.exportFormat,
+          'version': 1,
+          'servers': [
+            {
+              'name': 'Gut',
+              'slug': 'gut',
+              'url': 'http://homeserver.local/mcp',
+              'auth': {'kind': 'none'},
+            },
+            {
+              'name': 'Internet',
+              'slug': 'internet',
+              'url': 'http://example.org/mcp',
+              'auth': {'kind': 'none'},
+            },
+          ],
+        });
+        await expectLater(
+          source().importJson(json),
+          throwsA(isA<McpException>()),
+        );
+        expect(source().servers, isEmpty);
+        expect(await env.storage.settings.get(McpSettings.servers), isEmpty);
+      },
+    );
+
+    test('Ändern auf Klartext ins Internet wird abgelehnt', () async {
+      final view = await addAndEnable(c, draftFor(server));
+      await expectLater(
+        source().update(
+          view.config.copyWith(url: Uri.parse('http://example.org/mcp')),
+        ),
+        throwsA(isA<McpException>()),
+      );
+      expect(source().server(view.config.id)!.config.url, server.url);
+    });
+
+    test('setSecret nur für Referenzen des Servers', () async {
+      server.auth = FakeAuthMode.bearer;
+      final view = await addAndEnable(
+        c,
+        draftFor(server, auth: McpAuthKind.bearer, token: server.bearerToken),
+      );
+      expect(
+        () => source().setSecret(view.config.id, 'provider.claude', 'x'),
+        throwsArgumentError,
+      );
+      expect(await env.secrets.read('provider.claude'), isNull);
+    });
+
+    test(
+      'Neu laden mit abgelehntem Token: Integration im Zustand „Fehler“',
+      () async {
+        server.auth = FakeAuthMode.bearer;
+        final view = await addAndEnable(
+          c,
+          draftFor(server, auth: McpAuthKind.bearer, token: server.bearerToken),
+        );
+        server.bearerToken = 'anders';
+        final check = await source().reload(view.config.id);
+        expect(check.status, McpReachability.authRequired);
+        final info = c.read(toolRegistryProvider).info(view.integrationId);
+        expect(info.status, IntegrationStatus.error);
+        expect(info.error, startsWith('Anmeldung nötig'));
+      },
+    );
+
+    test('Audit-Fehlertexte ohne Query von Adressen', () async {
+      final web = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      web.listen((r) async {
+        await r.drain<void>();
+        r.response.statusCode = 500;
+        r.response.write(
+          'Fehler, siehe app.wendelin://oauth/mcp?code=GEHEIM&state=s',
+        );
+        await r.response.close();
+      });
+      addTearDown(() => web.close(force: true));
+      await c.read(toolRegistryReadyProvider.future);
+      final view = await source().add(
+        McpDraft(
+          name: 'Web',
+          url: Uri.parse('http://127.0.0.1:${web.port}/mcp'),
+        ),
+      );
+      expect(view.check!.ok, isFalse);
+      var audit = '';
+      for (var i = 0; i < 100 && !audit.contains('„Web“'); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        audit = jsonEncode([
+          for (final e in await env.storage.audit.query()) e.toJson(),
+        ]);
+      }
+      expect(audit, contains('MCP-Server „Web“'));
+      expect(audit, isNot(contains('GEHEIM')));
+    });
+  });
+
   test('sanitizeMcpDetail entfernt code und state aus Adressen', () {
     expect(
       sanitizeMcpDetail(

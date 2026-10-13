@@ -36,7 +36,8 @@ final class AuthorizationBrowserException implements Exception {
 /// page in a Custom Tab (`androidx.browser`, no Google services, K7) or, if
 /// no browser supports Custom Tabs, in any browser. The redirect to the
 /// app's scheme reaches `OAuthRedirectActivity`, which hands it back here.
-/// `state` and issuer are checked by `McpOAuthFlow`, not by the platform.
+/// The platform only accepts a redirect with the login's `state`;
+/// `McpOAuthFlow` checks `state` and issuer again.
 final class ChannelAuthorizationBrowser implements AuthorizationBrowser {
   /// Creates the browser; [channel] is injectable for tests.
   const ChannelAuthorizationBrowser({
@@ -65,6 +66,9 @@ final class ChannelAuthorizationBrowser implements AuthorizationBrowser {
       final back = await _channel.invokeMethod<String>('authorize', {
         'url': url.toString(),
         'redirect': redirect.toString(),
+        // Kotlin hands back only the redirect with this state; others
+        // (e.g. opened by another app) are ignored.
+        'state': url.queryParameters['state'] ?? '',
       });
       final uri = back == null ? null : Uri.tryParse(back);
       if (uri == null) {

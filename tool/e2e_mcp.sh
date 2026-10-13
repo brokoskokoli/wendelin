@@ -7,7 +7,9 @@
 # Emulator erreicht ihn als 10.0.2.2) und führt
 # integration_test/mcp_e2e_test.dart aus: Prüfen, Anlegen mit Bearer-Token,
 # Tools in der Registry, Aufruf, Löschen; OAuth ohne Browser (AOSP) gibt
-# einen Hinweis. Klartext-http ist erlaubt, weil 10.0.2.2 als Heimnetz-Ziel
+# einen Hinweis. Danach integration_test/oauth_redirect_e2e_test.dart: die
+# Rückleitung app.wendelin://oauth/mcp per `am start`, falscher state wird
+# ignoriert. Klartext-http ist erlaubt, weil 10.0.2.2 als Heimnetz-Ziel
 # gilt (ADR 0010 §6). Ein echtes Gerät wird abgelehnt (keine Ausnahme).
 set -euo pipefail
 
@@ -46,3 +48,22 @@ cd "$ROOT/app"
 flutter test integration_test/mcp_e2e_test.dart -d "$DEVICE" \
   --dart-define=MCP_URL="http://10.0.2.2:$PORT/mcp" \
   --dart-define=MCP_TOKEN="$TOKEN"
+
+# Rückleitung über die Intent-Filter-Activity: während der Test auf die
+# Anmeldung wartet, erst ein falscher, dann der richtige state.
+redirects() {
+  while true; do
+    sleep 3
+    adb shell am start -W -a android.intent.action.VIEW \
+      -d "'app.wendelin://oauth/mcp?state=e2e-falsch&code=boese'" >/dev/null 2>&1 || true
+    sleep 1
+    adb shell am start -W -a android.intent.action.VIEW \
+      -d "'app.wendelin://oauth/mcp?state=e2e-richtig&code=e2e-code'" >/dev/null 2>&1 || true
+  done
+}
+redirects &
+REDIRECTS=$!
+status=0
+flutter test integration_test/oauth_redirect_e2e_test.dart -d "$DEVICE" || status=$?
+kill "$REDIRECTS" 2>/dev/null || true
+exit $status

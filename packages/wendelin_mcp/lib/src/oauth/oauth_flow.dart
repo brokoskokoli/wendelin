@@ -245,10 +245,11 @@ final class McpOAuthFlow {
     final Uri back;
     try {
       back = await browser.authorize(url, redirectUri);
-    } on Object catch (e) {
-      throw McpException(
+    } on Object {
+      // No details: the text reaches the UI and the audit log.
+      throw const McpException(
         McpErrorKind.authRequired,
-        'Anmeldung abgebrochen (${e.runtimeType})',
+        'Anmeldung abgebrochen',
       );
     }
     final code = _checkRedirect(back, state, meta.issuer);
@@ -281,17 +282,23 @@ final class McpOAuthFlow {
       );
     }
     final params = back.queryParameters;
-    final error = params['error'];
-    if (error != null) {
-      throw McpException(
-        McpErrorKind.authRequired,
-        'Anmeldung abgelehnt: ${excerpt(error, 60)}',
-      );
-    }
+    // state first: a redirect without our state may come from anyone, its
+    // `error` text must not reach the UI or the audit log.
     if (params['state'] != state) {
       throw const McpException(
         McpErrorKind.rejected,
         'Anmeldung verworfen: state stimmt nicht überein',
+      );
+    }
+    final error = params['error'];
+    if (error != null) {
+      // Only an error code as in RFC 6749 (e.g. access_denied).
+      final code = RegExp(r'^[a-z_]{1,40}$').hasMatch(error)
+          ? error
+          : 'unbekannter Fehler';
+      throw McpException(
+        McpErrorKind.authRequired,
+        'Anmeldung abgelehnt: $code',
       );
     }
     final iss = params['iss'];

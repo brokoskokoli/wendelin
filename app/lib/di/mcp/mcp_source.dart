@@ -483,11 +483,14 @@ final class McpServerSource implements UserIntegrationSource {
       if (entry is! Map<String, Object?>) {
         throw const FormatException('Eintrag ist kein Objekt');
       }
-      parsed.add(McpServerConfig.fromJson({...entry, 'id': 'import'}));
+      final config = McpServerConfig.fromJson({...entry, 'id': 'import'});
+      // Everything is checked before anything is added: a bad entry leaves
+      // the list unchanged.
+      checkServerUrl(config.url);
+      parsed.add(config);
     }
     final added = <McpServerView>[];
     for (final imported in parsed) {
-      checkServerUrl(imported.url);
       final id = ids.next();
       final taken = _slugs();
       final slug = taken.contains(imported.slug) || imported.slug.isEmpty
@@ -563,9 +566,14 @@ final class McpServerSource implements UserIntegrationSource {
       clock: clock,
       log: log,
     );
-    final integration = McpIntegration(client: client, reportError: _onError);
+    late final _Server server;
+    final integration = McpIntegration(
+      client: client,
+      reportError: _onError,
+      onCall: (failure) => unawaited(_onCall(server, failure)),
+    );
     await integration.loadCachedTools();
-    final server = _Server(config, client, integration)
+    server = _Server(config, client, integration)
       ..check = check
       ..infos = (await client.cachedTools())?.tools ?? const [];
     server.wrap();
@@ -627,6 +635,37 @@ final class McpServerSource implements UserIntegrationSource {
     _notify();
   }
 
+  /// Keeps the stored check current with the outcome of a tool call (no
+  /// extra request): a server that answers again is no longer shown as
+  /// „nicht erreichbar“, and the other way round.
+  Future<void> _onCall(_Server server, McpException? failure) async {
+    if (_disposed || !identical(_servers[server.config.id], server)) return;
+    final status = switch (failure?.kind) {
+      null || McpErrorKind.server => McpReachability.reachable,
+      McpErrorKind.authRequired => McpReachability.authRequired,
+      McpErrorKind.protocol ||
+      McpErrorKind.tooLarge => McpReachability.protocolError,
+      _ => McpReachability.unreachable,
+    };
+    final old = server.check;
+    if (old?.status == status) return;
+    final check = McpCheck(
+      at: clock.now(),
+      status: status,
+      detail: failure?.message,
+      serverName: old?.serverName,
+      transport: old?.transport ?? server.client.transport,
+    );
+    server.check = check;
+    try {
+      await settings.set(McpSettings.check(server.config.id), check);
+    } on Object catch (e) {
+      log?.call('MCP: Prüfergebnis nicht gespeichert: ${e.runtimeType}');
+    }
+    _auditCheck(server.config, check);
+    _notify();
+  }
+
   void _onError(String integrationId, String message) {
     final server = _servers.values
         .where((s) => s.config.integrationId == integrationId)
@@ -678,7 +717,7 @@ final class McpServerSource implements UserIntegrationSource {
         if (!check.ok)
           'message':
               'MCP-Server „${config.name}“: '
-              '${sanitizeMcpDetail(check.detail ?? check.status.name)}',
+              '${check.detail ?? check.status.name}',
       },
     ),
   );
@@ -692,18 +731,27 @@ final class McpServerSource implements UserIntegrationSource {
             'source': 'mcp',
             'error': error,
             'server': config.name,
-            'message':
-                'MCP-Server „${config.name}“: ${sanitizeMcpDetail(message)}',
+            'message': 'MCP-Server „${config.name}“: $message',
           },
         ),
       );
 
+  /// Writes [entry]; its `message` loses the query of every address (an
+  /// OAuth redirect carries `code` and `state`).
   void _record(AuditEntry entry) {
     final repository = audit;
     if (repository == null) return;
+    final message = entry.payload['message'];
+    final clean = message is String
+        ? AuditEntry(
+            at: entry.at,
+            kind: entry.kind,
+            payload: {...entry.payload, 'message': sanitizeMcpDetail(message)},
+          )
+        : entry;
     unawaited(
       repository
-          .record(entry)
+          .record(clean)
           .then<void>(
             (_) {},
             onError: (Object e) => log?.call(
