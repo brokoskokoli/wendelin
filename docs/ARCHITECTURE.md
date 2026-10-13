@@ -109,7 +109,7 @@ Bewusst getrennt, je mit eigenen Timeouts und Fehlerabbildung. **Keinen neuen St
 - HTTP-Tools: `packages/wendelin_integrations/lib/src/http_tools/http_transport.dart` (`http_target.dart`, ADR 0011)
 - Modell-Download: `packages/wendelin_voice/lib/src/models/model_downloader.dart`
 
-Netzziele: Adressbereiche (Loopback, RFC 1918, CGNAT/Tailscale, ULA, Link-Local, IPv4 in IPv6 …) klassifiziert **nur** `packages/wendelin_integrations/lib/src/common/net_scope.dart` (`classifyNet`, `NetScope`, `HostResolver`). `fetch_guard.dart` und `http_target.dart` enthalten nur ihre Policy (welche Bereiche erlaubt sind, welche Meldung kommt). `packages/wendelin_mcp/lib/src/net_policy.dart` stellt WP36 b darauf um.
+Netzziele: Adressbereiche (Loopback, RFC 1918, CGNAT/Tailscale, ULA, Link-Local, IPv4 in IPv6 …) klassifiziert **nur** `packages/wendelin_integrations/lib/src/common/net_scope.dart` (`classifyNet`, `NetScope`, `HostResolver`). `fetch_guard.dart` und `http_target.dart` enthalten nur ihre Policy (welche Bereiche erlaubt sind, welche Meldung kommt). `packages/wendelin_mcp/lib/src/net_policy.dart` (MCP-Server-URLs, `isHomeNetworkHost`, `isLoopbackHost`) fragt ebenfalls nur den Kern ab (WP36 b).
 
 ## Checklisten „Feature → Dateien“
 
