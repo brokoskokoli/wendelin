@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../di/providers.dart';
@@ -20,13 +21,19 @@ Future<void> runWendelinApp(
     ProviderScope(
       // Failures are shown, not retried in the background.
       retry: (_, _) => null,
-      overrides: [
-        storageProvider.overrideWithValue(storage),
-        startupProvider.overrideWithValue(startup),
-        deviceInfoProvider.overrideWithValue(device),
-        ...extra,
-      ],
+      overrides: [...engineOverrides(storage, startup, device), ...extra],
       child: app,
     ),
   );
 }
+
+/// The overrides every engine needs: database, start settings, device.
+List<Override> engineOverrides(
+  WendelinStorage storage,
+  StartupSettings startup,
+  DeviceInfo device,
+) => [
+  storageProvider.overrideWithValue(storage),
+  startupProvider.overrideWithValue(startup),
+  deviceInfoProvider.overrideWithValue(device),
+];

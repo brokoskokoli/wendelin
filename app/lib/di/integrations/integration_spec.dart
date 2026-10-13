@@ -36,11 +36,19 @@ final class IntegrationDeps {
   /// What the specs prepared via [IntegrationSpec.prepare], by spec id.
   final Map<String, Object?> extras;
 
-  /// The prepared value of the spec [id], `null` if none or of another type.
-  T? extra<T>(String id) => switch (extras[id]) {
-    final T value => value,
-    _ => null,
-  };
+  /// The prepared value of the spec [id], `null` if there is none (or it is `null`).
+  ///
+  /// Throws a [StateError] if there is a value of another type than [T].
+  T? extra<T>(String id) {
+    return switch (extras[id]) {
+      null => null,
+      final T value => value,
+      final other => throw StateError(
+        "Integration '$id': prepared value is "
+        '${other.runtimeType}, expected $T.',
+      ),
+    };
+  }
 }
 
 /// „Erneut versuchen“ of an integration in the error state: [label] on the
