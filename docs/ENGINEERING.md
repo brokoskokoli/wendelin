@@ -13,12 +13,13 @@ packages/
   wendelin_tools/            # reines Dart: ToolRegistry, ToolExecutor, Risiko, Argumentprüfung, Undo
   wendelin_agent/            # reines Dart: Agent-Schleife, Kontextaufbau, Limits, Eskalation
   wendelin_storage/          # reines Dart + drift: Datenbank, Repositories, SecretStore-Interface
-  wendelin_integrations/     # reines Dart: eingebaute Integrationen über Ports (Kalender, Clipboard, Wecker, Gedächtnis, Web)
+  wendelin_integrations/     # reines Dart: eingebaute Integrationen über Ports (Kalender, Zwischenablage, Wecker, Gedächtnis, Web-Abruf und -Suche, Listen, Obsidian, Bring!, HTTP-Tools, App-Erkennung)
   wendelin_voice/            # reines Dart: Sprach-Pipeline, Endpointing, Sprechtext, TTS-Auswahl, Modellkatalog/Download
   wendelin_mcp/              # reines Dart: MCP-Client (Streamable HTTP, Legacy-SSE, OAuth 2.1), Abbildung auf das Tool-System
 app/                         # Flutter-App: UI, Riverpod-Verdrahtung, Plattform-Implementierungen der Ports
 evals/                       # Modell-Evals (Dart-CLI)
-tool/                        # Prüfskripte (Abhängigkeitsregeln, Secret-Scan)
+tool/                        # Gate und Prüfskripte (Abhängigkeiten, Secrets, Größen, Doku-Pfade), Gerätetests
+docs/ARCHITECTURE.md         # Architekturkarte: wo liegt was, Ports, Datenfluss, Checklisten
 docs/adr/                    # Architekturentscheidungen
 docs/work-packages/          # Arbeitspakete mit Abnahmekriterien
 ```
@@ -40,7 +41,7 @@ evals                  -> core, providers, tools, agent, integrations
 
 - Pakete unter `packages/` importieren **niemals** `package:flutter`, `dart:ui` oder Flutter-Plugins. Sie laufen mit `dart test`.
 - Provider- oder SDK-spezifische Typen (Anthropic-JSON, OpenAI-JSON) existieren nur innerhalb von `wendelin_providers/lib/src/<adapter>/`.
-- Zugriff auf Gerätefunktionen geschieht nur über **Ports** (abstrakte Klassen) in `wendelin_integrations`; die Flutter-Implementierung liegt in `app/lib/platform/`.
+- Zugriff auf Gerätefunktionen nur über **Ports** (abstrakte Klassen). Ports liegen in dem Paket, das sie braucht (`ports.dart` bzw. `*_port.dart`), die Flutter-Implementierung in `app/lib/platform/`. Übersicht: `docs/ARCHITECTURE.md`.
 - Jede Integration hat einen eigenen Ordner mit kurzer `README.md` (Tools, Risikostufen, Berechtigungen, Plattformen).
 
 ## Code-Stil
@@ -54,16 +55,43 @@ evals                  -> core, providers, tools, agent, integrations
 ## Tests (Gate – muss vor jedem Commit grün sein)
 
 ```
-dart run tool/gate.dart          # führt alles unten aus
+dart run tool/gate.dart              # alles, kompakte Ausgabe
+dart run tool/gate.dart --no-app     # ohne Flutter-App (wie der Ubuntu-Job in CI)
+dart run tool/gate.dart <paket>      # nur diese Pakete (+ globale Prüfungen)
+dart run tool/gate.dart --changed    # nur geänderte Pakete und alle, die von ihnen abhängen
+dart run tool/gate.dart --verbose    # bisherige, ausführliche Ausgabe
 ```
 
-1. `dart format --output=none --set-exit-if-changed .`
+1. `dart format --output=none --set-exit-if-changed` auf den geprüften Ordnern
 2. `dart analyze --fatal-infos` (bzw. `flutter analyze` für app)
-3. `dart test` in jedem Paket, `flutter test` in app
+3. `dart test` in jedem Paket, `flutter test` in app (Reporter `failures-only`, Testanzahl aus dem JSON-Bericht)
 4. Zeilenabdeckung je Paket unter `packages/` **≥ 85 %** (`dart test --coverage` + `coverage:format_coverage`)
-5. `dart run tool/check_deps.dart` (Abhängigkeitsregeln oben)
-6. `dart run tool/check_secrets.dart` (keine Schlüssel-Muster, keine verbotenen Identitäten im Baum)
-7. Selbsttests der Geräte-Skripte ohne Android-SDK: `bash tool/android_device.sh --self-test` (Geräteauswahl mit Fake-adb), `tool/check_apk.sh --self-test` (APK-Prüfung mit Attrappen)
+5. `dart run tool/check_deps.dart` (Abhängigkeitsregeln oben, auch für `dev_dependencies`)
+6. `dart run tool/check_secrets.dart` (keine Schlüssel-Muster im Baum; verbotene Identitäten aus einer lokalen, nicht versionierten Liste)
+7. `dart run tool/check_sizes.dart` (Größen, siehe unten) und `dart run tool/check_docs.dart` (Pfadangaben in `docs/ARCHITECTURE.md`, dieser Datei, `CLAUDE.md` und den Paket-READMEs existieren)
+8. Selbsttests ohne Android-SDK: `dart run tool/self_test.dart` (Gate-Auswahl, Größen-Check, Doku-Pfade), `bash tool/android_device.sh --self-test` (Geräteauswahl mit Fake-adb), `tool/check_apk.sh --self-test` (APK-Prüfung mit Attrappen)
+
+Ausgabe: Standard ist eine Zeile je Schritt. Bei einem Fehler erscheinen die letzten 200 Zeilen dieses Schritts (Testname, Fehlermeldung, Datei). Am Ende steht eine Tabelle mit Ergebnis, Dauer, Testanzahl und Abdeckung je Schritt, die Gesamtdauer und `GATE GRÜN` bzw. `GATE ROT: <Schritte>`. Der Exit-Code ist bei Rot ungleich 0.
+
+`--changed` vergleicht mit dem Merge-Base von origin/main (bzw. `--base=<ref>`) und nimmt nicht committete und neue Dateien dazu. Geprüft werden die geänderten Pakete und transitiv alle abhängigen (Erlaubnisliste aus `tool/check_deps.dart` plus die echten Kanten der pubspecs inklusive `dev_dependencies`; die App hängt von allen ab). Änderungen an `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, `tool/gate.dart` oder `tool/check_deps.dart` lösen das ganze Gate aus, reine Doku (Markdown) nur die globalen Prüfungen. Andere Dateien unter `docs/` gelten nicht als Doku: `docs/design/` prüft die App (Tokens), alles andere das ganze Gate. Die Ausgabe nennt den Grund je Paket. `--changed` ist für Zwischenstände; vor Commit und Merge gilt das volle Gate. CI prüft immer alles.
+
+## Größen
+
+Richtwerte, geprüft von `tool/check_sizes.dart` (Dart und Kotlin gleich):
+
+| Einheit | Ziel | Warnung | Fehler |
+| --- | --- | --- | --- |
+| Produktivdatei | ≤ 400 Zeilen | > 600 | > 800 |
+| Testdatei | | > 1 000 | > 1 500 |
+| Funktion bzw. `build()` | | > 80 | > 150 |
+| Klasse | | > 400 | |
+| Review-Einheit | ca. 1 500 Zeilen geänderter Produktivcode | | |
+
+- Ausgenommen: generierter Code (`*.g.dart`, `*.steps.dart`, drift-Schemas unter `test/**/generated/`) und Fixtures (`test/fixtures/`). `lib/testing/` erzeugt nur Warnungen.
+- Funktions- und Klassenlängen misst eine Klammer-Heuristik (`tool/src/size_scan.dart`): Kommentare und Strings werden ausgeblendet, gezählt wird von der Zeile des Namens bis zur schließenden Klammer; Closures zählen zur umgebenden Funktion.
+- Bestandsdateien über der Fehlerschwelle stehen in `tool/size_allowlist.yaml` mit ihrer Zeilenzahl als Obergrenze und dem Paket, das sie abbaut. Sie dürfen nicht wachsen; fällt eine unter die Schwelle, muss der Eintrag raus. Die Liste schrumpft nur.
+- `dart run tool/check_sizes.dart --verbose` listet die Warnungen, `--report` die größten Dateien, Klassen und Funktionen.
+- Größere Arbeitspakete werden in Teil-Reviews mit eigenem Merge geschnitten (`docs/work-packages/README.md`).
 
 Testarten:
 - **Unit-Tests** je Klasse, Tabellentests für Logik mit vielen Fällen.

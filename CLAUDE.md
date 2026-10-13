@@ -4,6 +4,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 
 ## Verbindliche Dokumente
 - `docs/ENGINEERING.md`: Layout, Abhängigkeitsregeln, Tests, Sicherheit und Git. Lies es vor jeder Codeänderung.
+- `docs/ARCHITECTURE.md`: Architekturkarte (wo liegt was, Ports, Datenfluss, Checklisten „Feature → Dateien“).
 - `docs/work-packages/`: Arbeitspakete mit Abnahmekriterien. `REVIEW.md` beschreibt das Prüfprotokoll.
 - `docs/adr/`: Architekturentscheidungen. Neue grundlegende Entscheidungen bekommen eine eigene ADR.
 
@@ -15,6 +16,9 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 ## Arbeiten
 - Toolchain: Flutter 3.47 / Dart 3.13 (`/opt/homebrew/bin`), Android SDK unter `~/Library/Android/sdk`, AVD `Wendelin_AOSP_35` (AOSP-Image ohne Google Play, K7). Gerätetests: `tool/e2e_android.sh` (nur auf Emulatoren).
 - `flutter pub get` im Repo-Root (Pub-Workspace). Das Gate läuft mit `dart run tool/gate.dart [--no-app] [paket…]` und muss vor jedem Commit grün sein.
+- Gate-Ausgabe ist kompakt (Tabelle am Ende, bei Rot das Ende der Fehlerausgabe); `--verbose` nur bei Bedarf. Für Zwischenstände `--changed` (geänderte Pakete und ihre Abhängigen), vor dem Commit das volle Gate.
+- Einzelne Tests: `dart test test/<pfad>` im Paket, App-Tests mit `flutter test test/<pfad>` in `app/`.
+- Goldens nur auf macOS aktualisieren (`flutter test --update-goldens`); auf Linux `flutter test --exclude-tags golden`.
 - Reine Dart-Pakete unter `packages/` importieren kein Flutter. Gerätezugriff geht nur über Ports.
 - Fakes zum Wiederverwenden stellt `package:<pkg>/fakes.dart` bereit, Contract-Suites `package:<pkg>/testing.dart`.
 - Parallele Arbeit läuft in Git-Worktrees unter `../james-wt/<wp>`, mit einem Branch `wp/<nr>-<slug>` pro Arbeitspaket. Gemergt wird erst nach bestandenem Review.

@@ -1,3 +1,7 @@
+// Plattformabhängig (FFI bzw. Dateisystem), siehe app/dart_test.yaml.
+@Tags(['platform-sensitive'])
+library;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';

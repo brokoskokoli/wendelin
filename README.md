@@ -32,14 +32,15 @@ packages/wendelin_providers     Anthropic- und OpenAI-kompatible Adapter, Modell
 packages/wendelin_tools         ToolRegistry, ToolExecutor, Risikostufen, Undo
 packages/wendelin_agent         Agent-Schleife, Kontext, Limits, Eskalation
 packages/wendelin_storage       drift/SQLite: Verlauf, Gedächtnis, Audit-Log, Kosten
-packages/wendelin_integrations  Kalender, Zwischenablage, Wecker, Gedächtnis, Web, Listen, Obsidian (über Ports)
+packages/wendelin_integrations  Kalender, Zwischenablage, Wecker, Gedächtnis, Web, Listen, Obsidian, Bring!, HTTP-Tools (über Ports)
 packages/wendelin_voice         Sprach-Kern: Pipeline, Endpointing, VAD/STT/TTS-Schnittstellen, Modell-Download
+packages/wendelin_mcp           MCP-Client (Streamable HTTP, Legacy-SSE, OAuth 2.1) und Abbildung auf das Tool-System
 app/                            Flutter-App: UI, Verdrahtung, Android-Kanäle (Kalender, Dateien, Sprache, Assistent)
 evals/                          Modell-Evals (Dart-CLI) und Live-Tests
 tool/                           Gate, Prüfskripte, Gerätetests
 ```
 
-Die Pakete unter `packages/` sind reines Dart ohne Flutter; Gerätezugriff geht über Ports, die die App implementiert. Details und Abhängigkeitsregeln: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).
+Die Pakete unter `packages/` sind reines Dart ohne Flutter; Gerätezugriff geht über Ports, die die App implementiert. Wo was liegt (Ports, Datenfluss einer Anfrage, Plattformkanäle, Checklisten): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Regeln und Abhängigkeiten: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).
 
 ## Entwickeln und Gate
 
@@ -47,9 +48,13 @@ Voraussetzungen: Flutter 3.47 / Dart 3.13, Android SDK (API 35).
 
 ```sh
 flutter pub get
-dart run tool/gate.dart        # Format, Analyse, Tests, Abdeckung ≥ 85 %, Abhängigkeitsregeln, Secret-Scan, Selbsttests der Geräte-Skripte
+dart run tool/gate.dart        # Format, Analyse, Tests, Abdeckung ≥ 85 %, Abhängigkeiten, Secrets, Größen, Doku-Pfade, Selbsttests
 dart run tool/gate.dart --no-app   # ohne Flutter-App (wie der Ubuntu-Job in CI)
+dart run tool/gate.dart --changed  # Zwischenstand: nur geänderte Pakete und ihre Abhängigen
+dart run tool/gate.dart --help     # alle Schalter
 ```
+
+Die Ausgabe ist kompakt (eine Zeile je Schritt, bei Fehlern das Ende der Ausgabe des Schritts, am Ende eine Tabelle mit Dauer und `GATE GRÜN`/`GATE ROT`); `--verbose` zeigt alles.
 
 Das Gate muss vor jedem Commit grün sein. GitHub Actions (`.github/workflows/gate.yml`) führt es bei jedem Push aus: die Pakete auf Ubuntu, die App (Analyse und Widget-/Golden-Tests) auf macOS.
 
