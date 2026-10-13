@@ -1,0 +1,37 @@
+# id	lang	voice	text
+de-01	de	Anna	Trag mir morgen um zehn Uhr Tauchen ein.
+de-02	de	Flo (German (Germany))	Wie wird das Wetter heute in Berlin?
+de-03	de	Anna	Schreib Milch und Brot auf die Einkaufsliste.
+de-04	de	Reed (German (Germany))	Erinnere mich in zwanzig Minuten an den Kuchen.
+de-05	de	Anna	Ergänze in meiner Tagesnotiz, dass ich den Zahnarzt angerufen habe.
+de-06	de	Flo (German (Germany))	Was steht heute Nachmittag in meinem Kalender?
+de-07	de	Anna	Stell einen Wecker für halb sieben.
+de-08	de	Reed (German (Germany))	Lies mir die letzte Notiz vor.
+de-09	de	Anna	Wie viel kostet ein Kilo Äpfel auf dem Markt?
+de-10	de	Flo (German (Germany))	Schick die Liste an meine Schwester.
+de-11	de	Anna	Ja.
+de-12	de	Anna	Nein.
+fr-01	fr	Thomas	Ajoute du lait et du pain à la liste de courses.
+fr-02	fr	Jacques	Quel temps fera-t-il demain à Paris ?
+fr-03	fr	Thomas	Rappelle-moi d'appeler ma mère ce soir.
+fr-04	fr	Flo (French (France))	Qu'est-ce que j'ai dans mon agenda cet après-midi ?
+fr-05	fr	Thomas	Mets un réveil à sept heures et demie.
+fr-06	fr	Jacques	Note dans mon journal que la réunion est reportée.
+fr-07	fr	Thomas	Lis-moi la dernière note.
+fr-08	fr	Flo (French (France))	Combien de temps faut-il pour aller à Lyon en train ?
+fr-09	fr	Thomas	Crée un rendez-vous chez le médecin jeudi à neuf heures.
+fr-10	fr	Jacques	Envoie la liste à mon frère.
+fr-11	fr	Thomas	Oui.
+fr-12	fr	Thomas	Non.
+en-01	en	Samantha	Add milk and bread to the shopping list.
+en-02	en	Daniel	What is the weather like in London tomorrow?
+en-03	en	Samantha	Remind me to call the dentist at four.
+en-04	en	Flo (English (US))	What is on my calendar this afternoon?
+en-05	en	Samantha	Set an alarm for half past six.
+en-06	en	Daniel	Append to my daily note that the meeting moved to Friday.
+en-07	en	Samantha	Read me the last note.
+en-08	en	Flo (English (US))	How long does it take to drive to Manchester?
+en-09	en	Samantha	Create an appointment with the doctor on Thursday at nine.
+en-10	en	Daniel	Send the list to my brother.
+en-11	en	Samantha	Yes.
+en-12	en	Samantha	No.

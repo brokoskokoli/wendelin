@@ -10,7 +10,7 @@ import '../routes.dart';
 import 'settings_page.dart';
 
 /// Settings overview: one row per area (concept: „Einstellungen“). Routing,
-/// MCP, HTTP tools and voice follow in later milestones.
+/// MCP and HTTP tools follow in later milestones.
 class SettingsScreen extends ConsumerWidget {
   /// Creates the overview.
   const SettingsScreen({super.key});
@@ -33,6 +33,7 @@ class SettingsScreen extends ConsumerWidget {
     ),
     ('Kosten', 'Heute und im Monat je Provider', AppRoutes.costs),
     ('Assistent', 'Dein Name, Persönlichkeit', AppRoutes.assistant),
+    ('Sprache', 'Spracherkennung, Stimme, Tempo', AppRoutes.voice),
   ];
 
   @override

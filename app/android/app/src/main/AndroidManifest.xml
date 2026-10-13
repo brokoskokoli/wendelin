@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.READ_CALENDAR"/>
     <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
+    <!-- Voice input (WP17): asked on first use, after an explanation. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="Wendelin"
         android:name="${applicationName}"
@@ -56,6 +58,10 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.SET_TIMER"/>
+        </intent>
+        <!-- Installed TTS engines for the system voice (flutter_tts, K7). -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
         </intent>
     </queries>
 </manifest>

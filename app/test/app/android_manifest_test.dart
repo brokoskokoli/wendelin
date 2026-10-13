@@ -54,6 +54,17 @@ void main() {
       'android.permission.READ_CALENDAR',
       'android.permission.WRITE_CALENDAR',
       'com.android.alarm.permission.SET_ALARM',
+      'android.permission.RECORD_AUDIO',
     });
   });
+
+  test(
+    'System-TTS-Engines sind sichtbar (Paket-Sichtbarkeit ab Android 11)',
+    () {
+      expect(
+        manifest,
+        contains('<action android:name="android.intent.action.TTS_SERVICE"/>'),
+      );
+    },
+  );
 }

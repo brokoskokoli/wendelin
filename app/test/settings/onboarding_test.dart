@@ -39,7 +39,7 @@ void main() {
     final c = await pumpApp(tester, env);
     expect(find.byType(MainScreen), findsNothing);
     expect(find.text('Willkommen'), findsOneWidget);
-    expect(find.textContaining('Whisper'), findsNothing, reason: 'erst M2');
+    expect(find.textContaining('Whisper'), findsNothing);
 
     await tester.tap(find.text('Français'));
     await settle(tester);
@@ -49,6 +49,10 @@ void main() {
     await settle(tester);
 
     expect(find.text('Sprachmodell'), findsOneWidget);
+    await tester.tap(find.text('Später'));
+    await settle(tester);
+
+    expect(find.text('Spracherkennung laden'), findsOneWidget);
     await tester.tap(find.text('Später'));
     await settle(tester);
 
@@ -94,7 +98,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Speichern'));
     await settle(tester);
-    expect(find.text('Was darf Wendelin?'), findsOneWidget);
+    expect(find.text('Spracherkennung laden'), findsOneWidget);
     expect(await env.storage.providerProfiles.defaultProfile(), isNotNull);
   });
 
