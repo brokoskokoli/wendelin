@@ -33,17 +33,36 @@ final class StreamableHttpTransport extends TransportBase {
   Future<void> open({CancelToken? cancel}) async {}
 
   // Pooled keep-alive sockets can be dead without the client knowing (server
-  // restart, network change). A request on such a socket fails although the
-  // server is fine, so after a failure or a long pause use a fresh one.
+  // restart, network change); a request on such a socket fails although the
+  // server is fine. A `tools/call` may already have run when the connection
+  // breaks and must not be repeated, so after a pause or a failure a `ping`
+  // (idempotent, repeatable) tests the connection first.
   final Stopwatch _idle = Stopwatch();
   bool _suspect = false;
 
-  bool _freshConnection() =>
-      _suspect ||
-      (_idle.isRunning && _idle.elapsed >= deps.timeouts.idleReconnect);
+  bool _needsCheck() =>
+      _suspect || (_idle.isRunning && _idle.elapsed >= deps.timeouts.idleCheck);
+
+  Future<void> _verifyConnection(CancelToken? cancel) async {
+    if (!_needsCheck()) return;
+    for (var attempt = 0; ; attempt++) {
+      try {
+        await _roundTrip('ping', null, cancel);
+        return;
+      } on McpException catch (e) {
+        if (e.kind == McpErrorKind.network && attempt == 0) continue;
+        if (e.kind == McpErrorKind.network ||
+            e.kind == McpErrorKind.authRequired ||
+            e.kind == McpErrorKind.sessionExpired) {
+          rethrow;
+        }
+        // The server answered (even with an error): the connection is fine.
+        return;
+      }
+    }
+  }
 
   Future<Map<String, String>> _headers() async => {
-    if (_freshConnection()) 'connection': 'close',
     'content-type': 'application/json',
     'accept': 'application/json, text/event-stream',
     'mcp-session-id': ?_sessionId,
@@ -56,9 +75,36 @@ final class StreamableHttpTransport extends TransportBase {
     String method,
     Map<String, Object?>? params, {
     CancelToken? cancel,
-  }) {
+  }) async {
+    if (method == 'tools/call') await _verifyConnection(cancel);
+    return _roundTrip(method, params, cancel);
+  }
+
+  Future<Object?> _roundTrip(
+    String method,
+    Map<String, Object?>? params,
+    CancelToken? cancel,
+  ) async {
     final id = nextId();
     final message = JsonRpcRequest(id, method, params);
+    try {
+      return await _exchange(message, id, cancel);
+    } on McpException catch (e) {
+      if (e.kind == McpErrorKind.network) _suspect = true;
+      rethrow;
+    } finally {
+      // Idle time counts from the end of the answer.
+      _idle
+        ..reset()
+        ..start();
+    }
+  }
+
+  Future<Object?> _exchange(
+    JsonRpcRequest message,
+    Object id,
+    CancelToken? cancel,
+  ) {
     return guarded(cancel, deps.timeouts.response, (abort) async {
       final response = await _post(message, abort);
       final type = response.headers['content-type'] ?? '';
@@ -134,9 +180,6 @@ final class StreamableHttpTransport extends TransportBase {
       rethrow;
     }
     _suspect = false;
-    _idle
-      ..reset()
-      ..start();
     final status = response.statusCode;
     if (status >= 200 && status < 300) {
       final session = response.headers['mcp-session-id'];

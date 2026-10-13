@@ -19,7 +19,7 @@ final class McpTimeouts {
     this.connect = const Duration(seconds: 10),
     this.response = const Duration(seconds: 30),
     this.maxResponseBytes = 1024 * 1024,
-    this.idleReconnect = const Duration(seconds: 15),
+    this.idleCheck = const Duration(seconds: 2),
   });
 
   /// Until the response headers arrive.
@@ -31,10 +31,10 @@ final class McpTimeouts {
   /// Largest accepted response body (JSON or SSE stream of one request).
   final int maxResponseBytes;
 
-  /// After this much idle time (or after a network failure) the next request
-  /// opens a fresh connection (`Connection: close`) instead of reusing a
-  /// pooled keep-alive socket that the server or a NAT may have dropped.
-  final Duration idleReconnect;
+  /// After this much idle time (or after a network failure) a `tools/call`
+  /// is preceded by a `ping`, so that a dead keep-alive socket is found
+  /// without risking a repeated side effect.
+  final Duration idleCheck;
 }
 
 /// Receives debug lines; they never contain header values or bodies.

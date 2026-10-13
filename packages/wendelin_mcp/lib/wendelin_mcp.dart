@@ -24,5 +24,6 @@ export 'src/tools/risk.dart';
 export 'src/tools/schema.dart';
 export 'src/transport/http_call.dart' show McpLog, McpTimeouts;
 export 'src/transport/legacy_sse.dart';
+export 'src/transport/mcp_http_client.dart' show newMcpHttpClient;
 export 'src/transport/streamable_http.dart';
 export 'src/transport/transport.dart';
