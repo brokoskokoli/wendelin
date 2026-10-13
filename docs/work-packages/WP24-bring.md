@@ -5,7 +5,7 @@ Abhängig von: core, integrations (bestehend; `common/matching.dart` für unscha
 ## Client
 - Interface `BringApi` (login, refresh, lists, items, saveItem, removeItem, completeItem) + `HttpBringApi` gegen die inoffizielle REST-API (wie sie die Home-Assistant-Integration nutzt; Endpunkte und Felder in der README dokumentieren, Quelle angeben, nicht deren Code kopieren).
 - Zugangsdaten (E-Mail, Passwort) und Tokens nur über ein `BringSecrets`-Interface (App: `SecretStore`). Token-Ablauf → einmal neu anmelden, sonst Fehlerzustand.
-- Robustheit, weil die API jederzeit brechen kann: unerwartete Antworten (fehlende Felder, andere Typen, HTML statt JSON, 401/403/429/5xx) führen zu einem klaren `PortException` mit Art, nie zu einem Absturz; die Integration meldet dann „Fehler“ (`reportError`, Tools pausiert) mit verständlichem Text und Hinweis auf den Fallback.
+- Robustheit, weil die API jederzeit brechen kann: unerwartete Antworten (fehlende Felder, andere Typen, HTML statt JSON, 401/403/429/5xx) führen zu einem klaren `PortException` mit Art, nie zu einem Absturz. Dauerhafte Fehler (Login/Token auch nach Erneuerung abgelehnt, unerwartete Antworten) setzen die Integration auf „Fehler“ (`reportError`, Tools pausiert) mit verständlichem Text und Hinweis auf den Fallback; vorübergehende (offline, Zeitlimit, 429, 5xx) lassen nur den Aufruf scheitern („später erneut versuchen“, Hinweis auf den Fallback), ohne zu pausieren.
 - Zeitlimit, Rate-Limit-Behandlung (kein automatisches Wiederholen schreibender Aufrufe).
 
 ## Tools (Risikostufen laut Konzept)
@@ -28,7 +28,7 @@ Abhängig von: core, integrations (bestehend; `common/matching.dart` für unscha
 
 ## Abnahmekriterien
 - [ ] Alle Tools mit `FakeBringApi` getestet inkl. Undo, Duplikaten, Mehrdeutigkeit, Mengenangabe.
-- [ ] `HttpBringApi` gegen Fixtures: Login, Token-Erneuerung, Listen, Artikel; Fehlerfälle (401 nach Erneuerung, 429, 5xx, HTML-Antwort, fehlende Felder) → definierter Fehler, Integration auf „Fehler“.
+- [ ] `HttpBringApi` gegen Fixtures: Login, Token-Erneuerung, Listen, Artikel; Fehlerfälle → definierter Fehler; 401 nach Erneuerung, HTML-Antwort, fehlende Felder → Integration auf „Fehler“; 429 und 5xx → Aufruf scheitert, Integration bleibt aktiv.
 - [ ] Contract-Suite `bringApiContract` von Fake und HTTP-Implementierung bestanden.
 - [ ] Kanarienwert-Test: Passwort/Token in keinem Ergebnis, Fehlertext, `toString`, Log.
 - [ ] Eval-Fälle für WP29 in der README (de/fr/en, je 2, z. B. „Setz 2 Liter Milch auf die Bring-Liste“).
