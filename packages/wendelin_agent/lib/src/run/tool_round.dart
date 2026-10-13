@@ -174,6 +174,11 @@ final class ToolRound {
             ),
           );
         case ToolFinished(:final call, :final outcome, :final duration):
+          // Invariant: a result from an untrusted source switches the
+          // invisible speech text off for the rest of the run.
+          if (_privacy.catalog.lookup(call.name) is UntrustedContentSource) {
+            _state.untrustedSeen = true;
+          }
           _state.executed.add((
             call: call,
             outcome: outcome,

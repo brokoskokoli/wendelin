@@ -78,7 +78,7 @@ final class ModelCall {
     StopReason? stopReason;
     ProviderException? error;
 
-    final splitter = _state.context.speech == SpeechStyle.twoVersions
+    final splitter = _state.speech == SpeechStyle.twoVersions
         ? SpokenBlockSplitter()
         : null;
     void text(String delta) {
@@ -163,16 +163,17 @@ final class ModelCall {
   }
 
   /// The system prompt for the current target: without memories it may
-  /// not see, and after an escalation with the note on earlier tool calls.
+  /// not see, with the speech hint of the run (stage 2 drops to stage 1 after
+  /// an untrusted tool result; only the changing end of the prompt differs
+  /// for the cache), and after an escalation with the note on earlier tool calls.
   String _systemPrompt() {
     final memories = _state.context.memories;
     final visible = _privacy.visibleMemories();
-    final base = visible.length == memories.length
+    final speech = _state.speech;
+    final base =
+        visible.length == memories.length && speech == _state.context.speech
         ? _state.context.systemPrompt
-        : runner.contextBuilder.systemPrompt(
-            memories: visible,
-            speech: _state.context.speech,
-          );
+        : runner.contextBuilder.systemPrompt(memories: visible, speech: speech);
     if (_state.epoch == 0) return base;
     // Calls of tools this target may not see are left out (their names
     // and status are protected too).

@@ -12,15 +12,20 @@ typedef SplitText = ({String text, String? spoken});
 ///   start means plain text: everything is passed through unchanged.
 /// - The block is reported once, when it is complete, so the speech output
 ///   never gets a half sentence of a broken block.
-/// - A block that never ends (stream ends, or longer than [maxBlock]) is
-///   broken: its content is passed on as ordinary text and nothing is
-///   reported as spoken – the caller falls back to speaking the text.
+/// - Tags are recognised in any letter case.
+/// - A block that never ends (stream ends) is broken: its content is passed
+///   on as ordinary text and nothing is reported as spoken – the caller
+///   falls back to speaking the text.
+/// - A block longer than [maxBlock] is not spoken either; its content is
+///   held back until the closing tag (which never becomes visible) and then
+///   dropped. Without a closing tag it is passed on as text at the end.
 final class SpokenBlockSplitter {
   /// Creates a splitter.
   SpokenBlockSplitter({this.maxBlock = 1200});
 
   static const _open = '<spoken>';
   static const _close = '</spoken>';
+  static final _closeTag = RegExp(_close, caseSensitive: false);
 
   /// Longest accepted block (characters).
   final int maxBlock;
@@ -28,6 +33,7 @@ final class SpokenBlockSplitter {
   _Phase _phase = _Phase.start;
   String _buffer = '';
   bool _trimNext = false;
+  bool _tooLong = false;
 
   /// Adds [delta]; returns what can be passed on now.
   SplitText add(String delta) {
@@ -40,10 +46,13 @@ final class SpokenBlockSplitter {
       case _Phase.start:
         _buffer += delta;
         final t = _buffer.trimLeft();
-        if (t.length < _open.length && _open.startsWith(t)) {
+        if (t.length < _open.length && _open.startsWith(t.toLowerCase())) {
           return (text: '', spoken: null); // could still become the tag
         }
-        if (!t.startsWith(_open)) return _release();
+        if (t.length < _open.length ||
+            t.substring(0, _open.length).toLowerCase() != _open) {
+          return _release();
+        }
         _phase = _Phase.block;
         _buffer = t.substring(_open.length);
         return _inBlock();
@@ -66,13 +75,15 @@ final class SpokenBlockSplitter {
   }
 
   SplitText _inBlock() {
-    final end = _buffer.indexOf(_close);
-    if (end < 0) {
-      if (_buffer.length > maxBlock) return _release(text: _buffer);
+    final match = _closeTag.firstMatch(_buffer);
+    if (match == null) {
+      if (_buffer.length > maxBlock) _tooLong = true;
       return (text: '', spoken: null);
     }
-    final spoken = _buffer.substring(0, end).trim();
-    final rest = _buffer.substring(end + _close.length).trimLeft();
+    final spoken = _tooLong || match.start > maxBlock
+        ? ''
+        : _buffer.substring(0, match.start).trim();
+    final rest = _buffer.substring(match.end).trimLeft();
     _phase = _Phase.text;
     _trimNext = rest.isEmpty;
     _buffer = '';

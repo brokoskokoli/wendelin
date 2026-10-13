@@ -272,7 +272,7 @@ final class McpIntegration implements Integration {
 ///
 /// No undo (`ToolOutcome.undo` stays `null`): the effect happens on the
 /// server and cannot be reverted by the app.
-final class McpTool implements Tool {
+final class McpTool implements Tool, UntrustedContentSource {
   /// Creates the tool.
   McpTool({
     required this.integration,

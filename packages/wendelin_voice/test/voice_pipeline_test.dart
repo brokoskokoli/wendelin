@@ -381,6 +381,25 @@ void main() {
     });
   });
 
+  test('AgentTextReset hebt die Block-Sperre auf: Antwort ohne Block wird '
+      'gesprochen', () {
+    runFake((async) {
+      final h = Harness(
+        agent: ScriptedAgent([
+          const AgentSpokenText('Erster Versuch mit Block.'),
+          const AgentTextDelta('Geschriebene Details.'),
+          const AgentTextReset('Neuer Versuch'),
+          const AgentTextDelta('Zweiter Versuch ohne Block.'),
+          const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+        ]),
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.tts.spoken, contains('Zweiter Versuch ohne Block.'));
+      expect(h.tts.spoken, isNot(contains('Geschriebene Details.')));
+    });
+  });
+
   test('Kein Block: der geschriebene Text wird aufbereitet gesprochen', () {
     runFake((async) {
       final h = Harness(

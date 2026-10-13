@@ -75,6 +75,19 @@ final class RunState {
   /// Tool calls executed in this run.
   final List<Executed> executed = [];
 
+  /// Whether a tool result from an untrusted source
+  /// ([UntrustedContentSource]) reached the model in this run. From then on
+  /// the `<spoken>` block is off (WP41): the user cannot see what injected
+  /// text would make the assistant say.
+  bool untrustedSeen = false;
+
+  /// The speech style the next model call uses: stage 2 falls back to
+  /// stage 1 once [untrustedSeen].
+  SpeechStyle get speech =>
+      untrustedSeen && context.speech == SpeechStyle.twoVersions
+      ? SpeechStyle.hint
+      : context.speech;
+
   /// Number of hand-overs to another target so far.
   int epoch = 0;
 

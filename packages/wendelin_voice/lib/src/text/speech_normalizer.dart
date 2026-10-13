@@ -3,9 +3,24 @@
 /// language dependent (de/fr/en, anything else is German).
 library;
 
+/// A clock time: optional lead-in word („um“, „at“, „à“ …), `h:mm`, optional
+/// unit („Uhr“, „h“, „heures“). Whether it is a time at all is decided in
+/// [normalizeForSpeech] (ratios, verses and scores look alike).
 final _time = RegExp(
+  r'(?<![\p{L}\p{N}])((?:um|ab|bis|at|from|until|à|de|jusqu[’'
+  "'"
+  r']à)\s+)?'
   r'(?<![\d:.,])([01]?\d|2[0-3]):([0-5]\d)(?![\d:])'
-  r'(?:\s*(?:Uhr|uhr|h|heures|a\.m\.|p\.m\.))?',
+  r'(?:\s*(Uhr|uhr|h(?![\p{L}\p{N}])|heures))?',
+  caseSensitive: false,
+  unicode: true,
+);
+
+/// An English a.m./p.m. marker right after a time.
+final _meridiem = RegExp(
+  r'^\s*([ap])\.?\s?m(?![\p{L}\p{N}])',
+  caseSensitive: false,
+  unicode: true,
 );
 final _arrows = RegExp('[\u2190-\u21FF\u27F5-\u27FF\u2B05-\u2B07]|->|=>|<-');
 final _colonEnd = RegExp(r'\s*:+(?=[\s)»”"]*$)');
@@ -66,19 +81,30 @@ String _lang(String? language) {
 }
 
 /// Rewrites [sentence] for the speech output in [language]:
-/// times (`10:30` → „10 Uhr 30“), abbreviations, arrows, and colons
+/// times after „um“/„at“/„à“, with „Uhr“ or with a leading zero (`um 10:30`
+/// → „um 10 Uhr 30“; ratios, verses and scores stay), abbreviations, arrows, and colons
 /// (at the end or before a capital → period, before a lower-case word →
 /// comma).
 String normalizeForSpeech(String sentence, String? language) {
   final lang = _lang(language);
   var s = sentence.replaceAllMapped(_time, (m) {
-    final h = int.parse(m[1]!);
-    final min = int.parse(m[2]!);
-    return switch (lang) {
+    final hour = m[2]!;
+    final h = int.parse(hour);
+    final min = int.parse(m[3]!);
+    // Already a 12-hour time (a.m./p.m., also „pm“): leave it alone. The
+    // German „am“ is a preposition, not a marker.
+    final marker = _meridiem.firstMatch(m.input.substring(m.end));
+    if (marker != null && !(lang != 'en' && marker[0]!.trim() == 'am')) {
+      return m[0]!;
+    }
+    final isTime = m[1] != null || m[4] != null || hour == '0$h' && h < 10;
+    if (!isTime) return m[0]!;
+    final spoken = switch (lang) {
       'fr' => '$h ${h == 1 ? 'heure' : 'heures'}${min == 0 ? '' : ' $min'}',
       'en' => _english(h, min),
       _ => '$h Uhr${min == 0 ? '' : ' $min'}',
     };
+    return '${m[1] ?? ''}$spoken';
   });
   for (final (re, spoken) in _compiled[lang]!) {
     s = s.replaceAllMapped(re, (m) => m.end == s.length ? '$spoken.' : spoken);

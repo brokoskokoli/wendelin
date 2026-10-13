@@ -82,7 +82,8 @@ final class WebIntegration implements Integration {
 }
 
 /// `web__search` (read).
-final class WebSearchTool extends IntegrationTool {
+final class WebSearchTool extends IntegrationTool
+    implements UntrustedContentSource {
   /// Creates the tool.
   const WebSearchTool(this.backend);
 
@@ -152,7 +153,8 @@ final class WebSearchTool extends IntegrationTool {
 }
 
 /// `web__fetch` (read): page text, marked as data.
-final class WebFetchTool extends IntegrationTool {
+final class WebFetchTool extends IntegrationTool
+    implements UntrustedContentSource {
   /// Creates the tool.
   const WebFetchTool(this.fetcher);
 
