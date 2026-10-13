@@ -61,7 +61,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       // A large vault needs several index runs: continue in the background.
       if (ref.read(enabledIntegrationsProvider).contains('obsidian') ||
           ref.read(demoModeProvider)) {
-        unawaited(ref.read(obsidianIndexProvider.notifier).sync());
+        // After the first build: sync() updates its provider right away,
+        // which Riverpod forbids while widgets build (e.g. right after the
+        // onboarding).
+        unawaited(
+          Future(() async {
+            if (mounted) await ref.read(obsidianIndexProvider.notifier).sync();
+          }),
+        );
       }
     }
   }

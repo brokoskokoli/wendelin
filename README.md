@@ -14,7 +14,15 @@ Persönlicher Sprachassistent für Android (später iOS): lokal transkribieren, 
 
 M1 umfasst: Anthropic- und OpenAI-kompatible Adapter, Provider-Einrichtung mit Verbindungstest, Agent-Schleife mit Bestätigungen und Eskalation, Integrationen Kalender, Zwischenablage, Wecker/Timer, Gedächtnis, Web (Abruf, Suche mit eigenem Suchdienst) und Listen (Markdown-Dateien über die Android-Dateiauswahl), Einstellungen, Onboarding, Kosten und Audit-Log.
 
-Als Nächstes: M2 (Sprache, Assistent-Overlay, Obsidian), siehe [`docs/work-packages/M2.md`](docs/work-packages/M2.md).
+**M2 (Sprache und Assistent) ist in Abnahme.** Ziel: Der lange Druck auf die Power-Taste öffnet Wendelin als Standard-Assistent, und ein gesprochener Befehl ergänzt eine Notiz im Obsidian-Vault. Gemergt sind:
+
+- Sprach-Kern `wendelin_voice` (Pipeline, Endpointing, TTS-Auswahl, Modellkatalog und Download; WP15),
+- Obsidian-Integration mit Vault-Port, Notiz-Tools, Tagesnotiz und Volltext-Index (WP16),
+- Sprach-Plattform: Whisper und Silero VAD lokal über sherpa-onnx, Aufnahme, System-TTS mit sherpa-Fallback, Modell-Download (WP17, ADR 0007),
+- Standard-Assistent mit Overlay, Push-to-talk im Hauptbildschirm, Vault über die Dateiauswahl (WP18, ADR 0006),
+- lokale System-Spracherkennung (`RecognitionService` mit Whisper) für andere Apps, ab Werk aus (WP20, ADR 0008).
+
+Offen ist der End-to-End-Nachweis M2 (WP19, Emulator mit Audio aus Datei und Geräte-Testanleitung). Pakete und Stand: [`docs/work-packages/M2.md`](docs/work-packages/M2.md).
 
 ## Aufbau
 
@@ -24,8 +32,9 @@ packages/wendelin_providers     Anthropic- und OpenAI-kompatible Adapter, Modell
 packages/wendelin_tools         ToolRegistry, ToolExecutor, Risikostufen, Undo
 packages/wendelin_agent         Agent-Schleife, Kontext, Limits, Eskalation
 packages/wendelin_storage       drift/SQLite: Verlauf, Gedächtnis, Audit-Log, Kosten
-packages/wendelin_integrations  Kalender, Zwischenablage, Wecker, Gedächtnis, Web, Listen (über Ports)
-app/                            Flutter-App: UI, Verdrahtung, Android-Kanäle (Kalender, Dateien)
+packages/wendelin_integrations  Kalender, Zwischenablage, Wecker, Gedächtnis, Web, Listen, Obsidian (über Ports)
+packages/wendelin_voice         Sprach-Kern: Pipeline, Endpointing, VAD/STT/TTS-Schnittstellen, Modell-Download
+app/                            Flutter-App: UI, Verdrahtung, Android-Kanäle (Kalender, Dateien, Sprache, Assistent)
 evals/                          Modell-Evals (Dart-CLI) und Live-Tests
 tool/                           Gate, Prüfskripte, Gerätetests
 ```
@@ -47,9 +56,10 @@ Das Gate muss vor jedem Commit grün sein. GitHub Actions (`.github/workflows/ga
 Weitere Prüfungen (lokal, brauchen Android-SDK bzw. Emulator):
 
 ```sh
-tool/check_apk.sh              # Release-APK: keine GMS-/Firebase-Klassen, Backup aus, nur erwartete Berechtigungen
+tool/check_apk.sh              # Release-APK: keine GMS-/Firebase-Klassen, Backup aus, nur erwartete Berechtigungen und exportierte Komponenten
 tool/check_apk.sh --self-test  # Selbsttest des Prüfskripts mit Attrappen (ohne SDK)
 tool/e2e_android.sh            # Gerätetests app/integration_test/ auf dem verbundenen Emulator
+WENDELIN_MODELS=<dir> tool/e2e_recognizer.sh   # System-Spracherkennung (androidTest, WP20)
 ```
 
 `tool/e2e_android.sh` läuft nur auf Emulatoren (ein echtes Gerät nur mit `E2E_ALLOW_DEVICE=1`), legt bei Bedarf einen lokalen Kalender an, erteilt die Kalender-Berechtigung per `adb shell pm grant` und bestätigt den Speichern-Dialog der Dateiauswahl. Getestet wird auf einem AVD mit AOSP-Image ohne Google Play:
@@ -108,7 +118,7 @@ Kosten (heute, in USD) stehen im Chip neben dem Provider, Details unter Einstell
 
 ## Ohne Google Play Services (K7)
 
-Wendelin läuft auf entgoogelten Geräten (z. B. LineageOS ohne GApps, GrapheneOS): keine Abhängigkeit von `com.google.android.gms` oder Firebase, Kalender über `CalendarContract`, Dateien über das Storage Access Framework, Wecker über AOSP-Intents (der Benachrichtigungs-Fallback ohne Uhr-App ist noch offen). Geprüft mit `tool/check_apk.sh` und den Gerätetests auf einem AOSP-Image ohne Google Play.
+Wendelin läuft auf entgoogelten Geräten (z. B. LineageOS ohne GApps, GrapheneOS): keine Abhängigkeit von `com.google.android.gms` oder Firebase, Kalender über `CalendarContract`, Dateien über das Storage Access Framework, Wecker über AOSP-Intents (der Benachrichtigungs-Fallback ohne Uhr-App ist noch offen), Spracherkennung lokal mit Whisper, Sprachausgabe über System-TTS mit sherpa-onnx als Ausweichlösung. Geprüft mit `tool/check_apk.sh` und den Gerätetests auf einem AOSP-Image ohne Google Play.
 
 ## Lizenzhinweise
 

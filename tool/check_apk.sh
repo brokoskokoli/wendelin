@@ -10,6 +10,11 @@
 #     com.google.android.play, com.android.vending (apkanalyzer dex packages)
 #   - <application> mit android:allowBackup="false" und
 #     android:dataExtractionRules; keine Berechtigungen außer der Liste
+#     (M2: RECORD_AUDIO für Push-to-talk, Assistent und Spracherkennung)
+#   - exportierte Komponenten nur aus der Liste: MainActivity, die
+#     Assistenten-Services nur mit BIND_VOICE_INTERACTION, der
+#     RecognitionService ab Werk deaktiviert (enabled="false", ADR 0006),
+#     ProfileInstallReceiver nur mit DUMP; alles andere nicht exportiert
 #   - Gradle-Abhängigkeiten (releaseRuntimeClasspath) ohne GMS/Firebase;
 #     ist der Baum nicht lesbar, ist das ein Fehler – überspringen nur mit
 #     CHECK_APK_SKIP_GRADLE=1
@@ -40,18 +45,30 @@ STUB
       android:label="Wendelin"
       android:allowBackup="false"
       android:dataExtractionRules="@xml/data_extraction_rules">
-    <activity android:name=".MainActivity" />
+    <activity android:name="app.wendelin.MainActivity" android:exported="true" />
+    <activity android:name="app.wendelin.AssistantActivity" android:exported="false" />
+    <service android:name="app.wendelin.WendelinVoiceInteractionService"
+        android:permission="android.permission.BIND_VOICE_INTERACTION"
+        android:exported="true" />
+    <service android:name="app.wendelin.WendelinVoiceSessionService"
+        android:permission="android.permission.BIND_VOICE_INTERACTION"
+        android:exported="true" />
+    <service android:name="app.wendelin.WendelinRecognitionService"
+        android:enabled="false" android:exported="true" />
+    <receiver android:name="androidx.profileinstaller.ProfileInstallReceiver"
+        android:permission="android.permission.DUMP" android:exported="true" />
   </application>
 </manifest>'
   run() {
     APKANALYZER="$dir/apkanalyzer" CHECK_APK_SKIP_GRADLE=1 \
-      "$ROOT/tool/check_apk.sh" "$dir/x.apk" >/dev/null 2>&1
+      "$ROOT/tool/check_apk.sh" "$dir/x.apk" >"$dir/out.txt" 2>&1
   }
-  expect() { # name, erwarteter Exit (0/1)
+  expect() { # name, erwarteter Exit (0/1), [erwartete Fehlermeldung]
     local got=0
     run || got=$?
-    if [ "$got" != "$2" ]; then
+    if [ "$got" != "$2" ] || { [ -n "${3:-}" ] && ! grep -qF "$3" "$dir/out.txt"; }; then
       echo "Selbsttest FEHLER: $1 (Exit $got, erwartet $2)" >&2
+      sed 's/^/    /' "$dir/out.txt" >&2
       status=1
     else
       echo "ok: $1"
@@ -59,24 +76,33 @@ STUB
   }
   printf 'P d 1 2 3 app.wendelin\nP d 1 2 3 io.flutter\n' >"$dir/dex.txt"
   echo "$good_manifest" >"$dir/manifest.xml"
-  printf 'android.permission.INTERNET\nandroid.permission.READ_CALENDAR\n' >"$dir/perms.txt"
-  expect "sauberes APK" 0
+  printf 'android.permission.INTERNET\nandroid.permission.READ_CALENDAR\nandroid.permission.RECORD_AUDIO\n' >"$dir/perms.txt"
+  expect "sauberes APK (mit RECORD_AUDIO und Assistenten-Diensten)" 0
 
   printf 'P d 1 2 3 com.google.android.gms.common\n' >>"$dir/dex.txt"
-  expect "GMS-Klasse erkannt" 1
+  expect "GMS-Klasse erkannt" 1 "GMS-/Firebase-Klassen im APK"
   printf 'P d 1 2 3 app.wendelin\n' >"$dir/dex.txt"
 
   echo "$good_manifest" | sed 's/allowBackup="false"/allowBackup="true"/' >"$dir/manifest.xml"
-  expect "allowBackup=true erkannt" 1
+  expect "allowBackup=true erkannt" 1 '<application> hat nicht android:allowBackup="false"'
 
   # allowBackup="false" nur an einem anderen Element zählt nicht.
   echo "$good_manifest" | sed 's/ android:allowBackup="false"//' |
-    sed 's#<activity android:name=".MainActivity" />#<activity android:allowBackup="false" />#' >"$dir/manifest.xml"
-  expect "allowBackup nur außerhalb von <application>" 1
+    sed 's#<activity android:name="app.wendelin.AssistantActivity"#<activity android:allowBackup="false" android:name="app.wendelin.AssistantActivity"#' >"$dir/manifest.xml"
+  expect "allowBackup nur außerhalb von <application>" 1 '<application> hat nicht android:allowBackup="false"'
+  echo "$good_manifest" >"$dir/manifest.xml"
+
+  echo "$good_manifest" | sed 's#android:exported="false" />#android:exported="true" />#' >"$dir/manifest.xml"
+  expect "exportierte AssistantActivity erkannt" 1 "AssistantActivity unerwartet exportiert"
+  # Nur beim ersten Service (VoiceInteractionService) die Berechtigung weglassen.
+  echo "$good_manifest" | awk '!done && /BIND_VOICE_INTERACTION/ { sub(/android:permission="android.permission.BIND_VOICE_INTERACTION"/, ""); done = 1 } { print }' >"$dir/manifest.xml"
+  expect "Assistenten-Service ohne BIND_VOICE_INTERACTION erkannt" 1 "WendelinVoiceInteractionService ohne"
+  echo "$good_manifest" | sed 's/android:enabled="false"/android:enabled="true"/' >"$dir/manifest.xml"
+  expect "RecognitionService ab Werk aktiv erkannt" 1 "WendelinRecognitionService nicht ab Werk deaktiviert"
   echo "$good_manifest" >"$dir/manifest.xml"
 
   printf 'android.permission.ACCESS_FINE_LOCATION\n' >>"$dir/perms.txt"
-  expect "unerwartete Berechtigung erkannt" 1
+  expect "unerwartete Berechtigung erkannt" 1 "ACCESS_FINE_LOCATION"
   return $status
 }
 
@@ -131,7 +157,44 @@ else
   fi
 fi
 
-ALLOWED='^(android\.permission\.INTERNET|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
+# Exportierte Komponenten (eine Zeile je Start-Tag).
+components="$("$APKANALYZER" manifest print "$APK" | tr '\n' ' ' |
+  grep -oE '<(activity|activity-alias|service|receiver|provider)[[:space:]][^>]*>' |
+  sed -E 's/[[:space:]]+/ /g' || true)"
+attr() { { echo "$1" | grep -oE "android:$2=\"[^\"]*\"" || true; } | head -1 | sed -E 's/.*="(.*)"/\1/'; }
+exported_ok=1
+while IFS= read -r tag; do
+  [ -n "$tag" ] || continue
+  [ "$(attr "$tag" exported)" = "true" ] || continue
+  name="$(attr "$tag" name)"
+  perm="$(attr "$tag" permission)"
+  problem=""
+  case "$name" in
+    app.wendelin.MainActivity) ;;
+    app.wendelin.WendelinVoiceInteractionService | app.wendelin.WendelinVoiceSessionService)
+      [ "$perm" = "android.permission.BIND_VOICE_INTERACTION" ] ||
+        problem="ohne android.permission.BIND_VOICE_INTERACTION" ;;
+    app.wendelin.WendelinRecognitionService)
+      [ "$(attr "$tag" enabled)" = "false" ] ||
+        problem="nicht ab Werk deaktiviert (android:enabled=\"false\")" ;;
+    androidx.profileinstaller.ProfileInstallReceiver)
+      [ "$perm" = "android.permission.DUMP" ] || problem="ohne android.permission.DUMP" ;;
+    *) problem="unerwartet exportiert" ;;
+  esac
+  if [ -n "$problem" ]; then
+    echo "FEHLER: Komponente $name $problem" >&2
+    exported_ok=0
+    fail=1
+  fi
+done <<<"$(echo "$components" | sed 's/> </>\n</g')"
+if [ -z "$components" ]; then
+  echo "FEHLER: keine Komponenten im Manifest gefunden" >&2
+  fail=1
+elif [ "$exported_ok" = 1 ]; then
+  echo "ok: exportierte Komponenten wie erwartet"
+fi
+
+ALLOWED='^(android\.permission\.INTERNET|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.RECORD_AUDIO|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
 perms="$("$APKANALYZER" manifest permissions "$APK")"
 if extra="$(echo "$perms" | grep -vE "$ALLOWED")"; then
   echo "FEHLER: unerwartete Berechtigungen:" >&2
