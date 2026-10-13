@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
@@ -307,15 +308,78 @@ void main() {
     );
   });
 
-  test('Abbruch', () async {
-    final token = CancelToken();
-    final f = fetcher((_) => Completer<http.StreamedResponse>().future);
-    final future = f.fetch(page, cancel: token);
-    token.cancel();
-    await expectLater(future, throwsA(isA<CancelledException>()));
-    await expectLater(
-      f.fetch(page, cancel: token),
-      throwsA(isA<CancelledException>()),
-    );
+  group('Abbruch', () {
+    // Deterministisch mit fake_async: Nach dem Abbruch wird die Zeit über
+    // das Zeitlimit hinaus vorgespult. Eine verlassene Anfrage, deren
+    // TimeoutException unbehandelt bliebe, ließe den Test hier scheitern
+    // (früher erst Sekunden nach Testende, „failed after completed“).
+    const limit = Duration(seconds: 5);
+
+    void cancelled(
+      void Function(WebFetcher f, CancelToken token, List<Object?> result)
+      act, {
+      int expectedRequests = 0,
+    }) => fakeAsync((async) {
+      var requests = 0;
+      final f = fetcher((_) {
+        requests++;
+        return Completer<http.StreamedResponse>().future;
+      }, timeout: limit);
+      final token = CancelToken();
+      final result = <Object?>[];
+      act(f, token, result);
+      async.elapse(Duration.zero);
+      expect(result, [isA<CancelledException>()]);
+      async.elapse(limit * 2);
+      expect(async.pendingTimers, isEmpty);
+      expect(requests, expectedRequests);
+    });
+
+    void capture(Future<FetchedPage> future, List<Object?> result) =>
+        unawaited(future.then(result.add, onError: result.add));
+
+    test('Token schon abgebrochen: keine Anfrage', () {
+      cancelled((f, token, result) {
+        token.cancel();
+        capture(f.fetch(page, cancel: token), result);
+      });
+    });
+
+    test('Abbruch während der Adressprüfung', () {
+      cancelled((f, token, result) {
+        capture(f.fetch(page, cancel: token), result);
+        token.cancel();
+      });
+    });
+
+    test('Abbruch während der Anfrage', () {
+      cancelled(expectedRequests: 1, (f, token, result) {
+        capture(f.fetch(page, cancel: token), result);
+        Future<void>(token.cancel);
+      });
+    });
+
+    test('Abbruch während der Körper hängt', () {
+      fakeAsync((async) {
+        final f = fetcher(
+          (_) async => http.StreamedResponse(
+            StreamController<List<int>>().stream,
+            200,
+            headers: {'content-type': 'text/plain'},
+          ),
+          timeout: limit,
+        );
+        final token = CancelToken();
+        final result = <Object?>[];
+        capture(f.fetch(page, cancel: token), result);
+        async.flushMicrotasks();
+        expect(result, isEmpty);
+        token.cancel();
+        async.flushMicrotasks();
+        expect(result, [isA<CancelledException>()]);
+        async.elapse(limit * 2);
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
   });
 }
