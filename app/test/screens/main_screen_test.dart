@@ -11,6 +11,7 @@ import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/screens/settings_placeholder.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
@@ -169,6 +170,39 @@ void main() {
     expect(env.calendar.events, hasLength(1));
     final chip = tester.widget<ToolChip>(find.byType(ToolChip));
     expect(chip.status, CheckStatus.failed);
+  });
+
+  testWidgets('verschärftes write-Tool zeigt Stufe external', (tester) async {
+    final env = TestEnv(
+      providerConfig: scripted(
+        FakeLlmProvider([
+          ScriptedTurn.toolCalls([
+            call(
+              'c1',
+              'calendar__create_event',
+              '{"title":"Tauchen","start":"2026-10-15T10:00"}',
+            ),
+          ]),
+          ScriptedTurn.text('Gut, nicht eingetragen.'),
+        ]),
+      ),
+    );
+    await pumpApp(tester, env);
+    containerOf(tester)
+        .read(riskPolicyProvider)
+        .setOverride('calendar__create_event', PolicyAction.confirm);
+
+    await send(tester, 'Trag Tauchen ein');
+    await pumpUntil(tester, find.byType(ConfirmationSheet));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('calendar__create_event · Stufe external'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byType(OutlinedButton).first);
+    await tester.pumpAndSettle();
+    await pumpUntil(tester, find.text('Gut, nicht eingetragen.'));
+    expect(env.calendar.methodCalls, isNot(contains('createEvent')));
   });
 
   testWidgets('„Ja“ im Sheet führt das Tool aus', (tester) async {

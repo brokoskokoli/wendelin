@@ -159,40 +159,45 @@ void main() {
     });
   });
 
-  test('Sitzungsende leert den Kalender-Cache (Bestätigungstext)', () async {
-    final port = FakeCalendarPort();
-    final deps = IntegrationDeps(
-      ports: PlatformPorts(
-        calendar: port,
-        clipboard: FakeClipboardPort(),
-        alarms: FakeAlarmPort(),
-        memory: FakeMemoryStore(),
-      ),
-      device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
-      httpClient: http.Client(),
-    );
-    final spec = builtInIntegrationSpecs.firstWhere((s) => s.id == 'calendar');
-    final calendar = spec.create(deps) as CalendarIntegration;
-    final ctx = ToolContext(
-      sessionId: 's',
-      clock: FixedClock(testNow),
-      locale: 'de-DE',
-      timeZone: 'Europe/Berlin',
-    );
-    Tool tool(String name) => calendar.tools.firstWhere((t) => t.name == name);
-    final created = await tool('calendar__create_event')
-        .execute({'title': 'Tauchen', 'start': '2026-10-14T10:00'}, ctx);
-    expect(created.isError, isFalse);
-    final id = port.events.single.id;
-    final delete = tool('calendar__delete_event');
-    expect(
-      delete.describeForConfirmation({'event_id': id}),
-      contains('Tauchen'),
-    );
-    spec.onSessionEnd!(calendar);
-    expect(
-      delete.describeForConfirmation({'event_id': id}),
-      isNot(contains('Tauchen')),
-    );
-  });
+  test(
+    'Kalender: Bestätigungstext live nachgeschlagen, kein Cache (WP14)',
+    () async {
+      final port = FakeCalendarPort();
+      final deps = IntegrationDeps(
+        ports: PlatformPorts(
+          calendar: port,
+          clipboard: FakeClipboardPort(),
+          alarms: FakeAlarmPort(),
+          memory: FakeMemoryStore(),
+        ),
+        device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
+        httpClient: http.Client(),
+      );
+      final spec = builtInIntegrationSpecs.firstWhere(
+        (s) => s.id == 'calendar',
+      );
+      final calendar = spec.create(deps) as CalendarIntegration;
+      final ctx = ToolContext(
+        sessionId: 's',
+        clock: FixedClock(testNow),
+        locale: 'de-DE',
+        timeZone: 'Europe/Berlin',
+      );
+      Tool tool(String name) =>
+          calendar.tools.firstWhere((t) => t.name == name);
+      final created = await tool('calendar__create_event')
+          .execute({'title': 'Tauchen', 'start': '2026-10-14T10:00'}, ctx);
+      expect(created.isError, isFalse);
+      final id = port.events.single.id;
+      final delete = tool('calendar__delete_event');
+      // Synchron nur die Id, vor der Frage schlägt das Tool den Termin nach.
+      expect(delete.describeForConfirmation({'event_id': id}), contains(id));
+      expect(
+        await delete.confirmationText({'event_id': id}, ctx),
+        contains('Tauchen'),
+      );
+      // Kein Cache mehr, also auch kein Aufräumen am Sitzungsende.
+      expect(spec.onSessionEnd, isNull);
+    },
+  );
 }

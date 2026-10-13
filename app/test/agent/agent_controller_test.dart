@@ -560,8 +560,12 @@ void main() {
       },
     );
 
-    test('Werkzeuge nach der schwächsten Stufe der Eskalationskette', () async {
-      final provider = FakeLlmProvider([ScriptedTurn.text('ok')]);
+    test('Werkzeuge nach der Stufe des aktuellen Ziels (WP14)', () async {
+      final provider = FakeLlmProvider([
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ]);
+      final cloud = FakeLlmProvider([ScriptedTurn.text('ok')]);
       env = TestEnv(
         providerConfig: scripted(
           provider,
@@ -570,7 +574,7 @@ void main() {
             ProviderTarget(
               profileId: 'cloud',
               modelId: 'm',
-              provider: FakeLlmProvider(const []),
+              provider: cloud,
               privacy: PrivacyLevel.standard,
             ),
           ],
@@ -582,10 +586,14 @@ void main() {
         ..sensitiveMinimum = PrivacyLevel.tee;
       await registry.refresh();
       await sendAndWait(c, 'Hallo');
-      final tools = provider.requests.single.tools.map((t) => t.name);
-      // Der Kalender ist sensibel und gehört nicht zu einem Ziel unter TEE.
-      expect(tools.where((n) => n.startsWith('calendar__')), isEmpty);
-      expect(tools, contains('alarms__set_timer'));
+      // Das TEE-Ziel sieht den sensiblen Kalender …
+      final teeTools = provider.requests.first.tools.map((t) => t.name);
+      expect(teeTools, contains('calendar__create_event'));
+      expect(teeTools, contains('alarms__set_timer'));
+      // … das Standard-Ziel nach der Eskalation nicht.
+      final cloudTools = cloud.requests.single.tools.map((t) => t.name);
+      expect(cloudTools.where((n) => n.startsWith('calendar__')), isEmpty);
+      expect(cloudTools, contains('alarms__set_timer'));
     });
   });
 
