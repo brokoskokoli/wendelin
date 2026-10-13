@@ -12,10 +12,16 @@ final class SetupTestResult {
     required this.message,
     List<ModelInfo> models = const [],
     this.detected,
-  }) : models = List.unmodifiable(models);
+    bool? verified,
+  }) : models = List.unmodifiable(models),
+       verified = verified ?? ok;
 
   /// Whether the step worked.
   final bool ok;
+
+  /// Whether the provider answered (the connection is confirmed); `false`
+  /// when the setup continues without a model list and the probe decides.
+  final bool verified;
 
   /// Secret-free text for the user.
   final String message;
@@ -159,6 +165,7 @@ final class ProviderSetupSession {
       // model decides whether the connection works.
       return SetupTestResult(
         ok: true,
+        verified: false,
         message:
             'Modellliste nicht verfügbar (${e.message}). Bitte die '
             'Modell-ID eingeben.',

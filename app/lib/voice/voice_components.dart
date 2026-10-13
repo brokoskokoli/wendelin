@@ -42,6 +42,10 @@ final voiceReadyProvider = Provider<bool>((ref) {
 /// Hint of the disabled microphone while speech recognition is missing.
 const voiceUnavailableHint = 'Spracherkennung laden: Einstellungen → Sprache';
 
+/// Voice error after the microphone permission was not given; the main
+/// screen shows it as a card with „Erlauben“ above the input row.
+const microphoneDeniedHint = 'Ohne Mikrofon-Zugriff geht nur Text.';
+
 /// What the demo „hears“ (the demo provider understands these).
 const demoPhrases = [
   'Trag mir morgen um 10 Tauchen ein',

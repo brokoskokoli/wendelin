@@ -71,6 +71,18 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   /// „Als Spracherkennung für andere Apps anbieten“.
   bool recognizerOffered = true;
 
+  /// System speech recognizer for other apps (B12).
+  RecognitionServiceStatus recognition = RecognitionServiceStatus.unknown;
+
+  /// Number of reads of [recognition].
+  int recognitionChecks = 0;
+
+  @override
+  Future<RecognitionServiceStatus> recognitionService() async {
+    recognitionChecks++;
+    return recognition;
+  }
+
   /// Mirrored speech settings (WP20).
   final recognizerConfigs = <RecognizerConfig>[];
 

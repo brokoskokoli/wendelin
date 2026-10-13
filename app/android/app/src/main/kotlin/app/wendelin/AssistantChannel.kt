@@ -71,6 +71,7 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
             "isLocked" -> result.success(keyguard().isKeyguardLocked)
             "requestUnlock" -> requestUnlock(result)
             "isRecognizerOffered" -> result.success(RecognizerSwitch.isOffered(activity))
+            "recognitionServiceState" -> RecognitionServiceStatus.read(activity) { result.success(it) }
             "setRecognizerOffered" -> {
                 RecognizerSwitch.setOffered(activity, call.argument<Boolean>("offered") != false)
                 result.success(null)

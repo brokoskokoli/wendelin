@@ -67,6 +67,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   final _budget = TextEditingController();
   List<ModelInfo> _models = const [];
   SetupTestResult? _result;
+  SetupTestResult? _connection;
   ProviderCapabilities? _detected;
   bool _busy = false;
   PrivacyLevel _privacy = PrivacyLevel.standard;
@@ -134,6 +135,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       _busy = false;
       _result = result;
       if (!result.ok) return;
+      _connection = result;
       _models = result.models;
       final ids = [for (final m in _models) m.id];
       if (ids.isNotEmpty && !ids.contains(_model.text)) {
@@ -194,7 +196,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       _Step.template => 'Wähle, mit wem Wendelin sprechen soll.',
       _Step.credentials =>
         'Der Key wird nur im sicheren Speicher des Geräts abgelegt.',
-      _Step.model => 'Verbindung steht. Wähle das Standardmodell.',
+      _Step.model => 'Wähle das Standardmodell.',
       _Step.finish => 'Datenschutzstufe und optional ein Monatsbudget.',
     },
     children: switch (_step) {
@@ -205,9 +207,16 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     },
   );
 
-  Widget? _failure() {
+  Widget? _failure(String title) {
     final r = _result;
-    return r != null && !r.ok ? _Status(ok: false, text: r.message) : null;
+    return r != null && !r.ok
+        ? StatusCard(
+            key: const ValueKey('setupFailure'),
+            status: CheckStatus.failed,
+            title: title,
+            detail: r.message,
+          )
+        : null;
   }
 
   List<Widget> _templates() => [
@@ -223,39 +232,56 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     ),
   ];
 
+  /// Profile name; with [login] the password manager's user name.
+  Widget _nameField({required bool login}) => TextField(
+    key: const ValueKey('providerName'),
+    controller: _name,
+    style: WText.body,
+    autofillHints: login ? const [AutofillHints.username] : null,
+    decoration: const InputDecoration(labelText: 'Name'),
+  );
+
+  Widget _baseUrlField() => TextField(
+    controller: _baseUrl,
+    style: WText.body,
+    keyboardType: TextInputType.url,
+    decoration: const InputDecoration(labelText: 'Base-URL'),
+  );
+
   List<Widget> _credentials() {
     final session = _session!;
     final t = session.template;
     return [
-      TextField(
-        controller: _name,
-        style: WText.body,
-        decoration: const InputDecoration(labelText: 'Name'),
-      ),
-      if (t.type == ProviderType.openaiCompatible)
-        TextField(
-          controller: _baseUrl,
-          style: WText.body,
-          keyboardType: TextInputType.url,
-          decoration: const InputDecoration(labelText: 'Base-URL'),
-        ),
-      if (t.auth != TemplateAuth.none) ...[
-        TextField(
-          key: const ValueKey('apiKey'),
-          controller: _key,
-          style: WText.body,
-          obscureText: true,
-          autocorrect: false,
-          enableSuggestions: false,
-          decoration: InputDecoration(
-            labelText: t.auth == TemplateAuth.apiKey
-                ? 'API-Key'
-                : 'API-Key (optional)',
-            helperText: session.keyStored
-                ? 'Key gespeichert – leer lassen behält ihn'
-                : null,
+      // Name and key form one login for the password manager: the name
+      // („Claude“) tells its entries apart, so a provider key is not
+      // offered for Bring! or other secrets of the app.
+      if (t.auth == TemplateAuth.none)
+        _nameField(login: false)
+      else
+        AutofillGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: WSpace.l18,
+            children: [
+              _nameField(login: true),
+              if (t.type == ProviderType.openaiCompatible) _baseUrlField(),
+              SecretField(
+                key: const ValueKey('apiKey'),
+                controller: _key,
+                label: t.auth == TemplateAuth.apiKey
+                    ? 'API-Key'
+                    : 'API-Key (optional)',
+                helperText: session.keyStored
+                    ? 'Key gespeichert – leer lassen behält ihn'
+                    : null,
+              ),
+            ],
           ),
         ),
+      if (t.auth == TemplateAuth.none &&
+          t.type == ProviderType.openaiCompatible)
+        _baseUrlField(),
+      if (t.auth != TemplateAuth.none) ...[
         if (t.keyPageUrl case final url?)
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -265,7 +291,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
             ),
           ),
       ],
-      ?_failure(),
+      ?_failure('Verbindung fehlgeschlagen'),
       PrimaryButton(
         _busy ? 'Teste …' : 'Verbindung testen',
         onPressed: _busy ? null : () => unawaited(_connect()),
@@ -279,6 +305,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   }
 
   List<Widget> _modelStep() => [
+    if (_connection case final c?) ConnectionStatus(c),
     if (_models.isNotEmpty)
       SettingsSection(
         title: 'Modelle',
@@ -303,7 +330,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       onChanged: (_) => setState(() {}),
       decoration: const InputDecoration(labelText: 'Modell-ID'),
     ),
-    ?_failure(),
+    ?_failure('Modell nicht nutzbar'),
     PrimaryButton(
       _busy ? 'Prüfe …' : 'Modell prüfen',
       onPressed: _busy || _model.text.trim().isEmpty
@@ -315,7 +342,11 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   List<Widget> _finish() {
     final detected = _detected;
     return [
-      _Status(ok: true, text: _result?.message ?? ''),
+      StatusCard(
+        status: CheckStatus.ok,
+        title: 'Modell geprüft',
+        detail: _result?.message,
+      ),
       if (detected != null)
         Text(
           [
@@ -380,18 +411,35 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   }
 }
 
-class _Status extends StatelessWidget {
-  const _Status({required this.ok, required this.text});
+/// Result of the connection test above the model list: „Verbindung
+/// steht“ (circle) when the provider answered, a triangle when the setup
+/// continues without a model list and the probe decides.
+class ConnectionStatus extends StatelessWidget {
+  /// Creates the status of [result].
+  const ConnectionStatus(this.result, {super.key});
 
-  final bool ok;
-  final String text;
+  /// Result of the connection test.
+  final SetupTestResult result;
 
   @override
-  Widget build(BuildContext context) => Row(
-    spacing: WSpace.s,
-    children: [
-      CheckStatusIcon(ok ? CheckStatus.ok : CheckStatus.failed),
-      Expanded(child: Text(text, style: WText.detail)),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final n = result.models.length;
+    return result.verified
+        ? StatusCard(
+            key: const ValueKey('connectionStatus'),
+            status: CheckStatus.ok,
+            title: 'Verbindung steht',
+            detail: n == 0
+                ? 'Keine Modellliste. Bitte die Modell-ID eingeben.'
+                : n == 1
+                ? '1 Modell gefunden'
+                : '$n Modelle gefunden',
+          )
+        : StatusCard(
+            key: const ValueKey('connectionStatus'),
+            status: CheckStatus.pending,
+            title: 'Modellliste nicht verfügbar',
+            detail: result.message,
+          );
+  }
 }

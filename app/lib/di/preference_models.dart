@@ -222,24 +222,40 @@ final class ObsidianPrefs {
   const ObsidianPrefs({
     this.vaultUri,
     this.vaultName,
-    this.dailyNotes = const DailyNoteSettings(),
+    this.dailyNotes = defaultDailyNotes,
   });
 
-  /// Decodes [toJson]; malformed parts fall back to the defaults.
+  /// Decodes [toJson]; malformed parts fall back to the defaults. Stored
+  /// daily-note settings stay as they are, also an empty folder (= vault
+  /// root); only without any the folder is [defaultDailyFolder].
   factory ObsidianPrefs.fromJson(Map<String, Object?> json) {
     String? text(Object? v) => v is String && v.isNotEmpty ? v : null;
     final daily = json['dailyNotes'];
-    final d = daily is Map ? daily : const <Object?, Object?>{};
+    if (daily is! Map) {
+      return ObsidianPrefs(
+        vaultUri: text(json['vaultUri']),
+        vaultName: text(json['vaultName']),
+      );
+    }
     return ObsidianPrefs(
       vaultUri: text(json['vaultUri']),
       vaultName: text(json['vaultName']),
       dailyNotes: DailyNoteSettings(
-        folder: text(d['folder']) ?? '',
-        format: text(d['format']) ?? const DailyNoteSettings().format,
-        template: text(d['template']),
+        folder: daily['folder'] is String ? daily['folder'] as String : '',
+        format: text(daily['format']) ?? const DailyNoteSettings().format,
+        template: text(daily['template']),
       ),
     );
   }
+
+  /// Daily-note folder until the user chooses one (Obsidian's common
+  /// „Journal“; empty = vault root stays possible).
+  static const defaultDailyFolder = 'Journal';
+
+  /// Daily-note settings until the user saves own ones.
+  static const defaultDailyNotes = DailyNoteSettings(
+    folder: defaultDailyFolder,
+  );
 
   /// Tree URI of the vault folder; `null` = none chosen.
   final String? vaultUri;

@@ -94,6 +94,7 @@ class Composer extends StatefulWidget {
     required this.onMic,
     this.micHint,
     this.status,
+    this.notice,
   });
 
   /// Whether a request runs (text cannot be sent then).
@@ -113,6 +114,10 @@ class Composer extends StatefulWidget {
 
   /// Voice hint or error shown above the field.
   final String? status;
+
+  /// Card shown above the field instead of [status] (microphone not
+  /// allowed).
+  final Widget? notice;
 
   /// Label of the microphone while listening (a tap aborts).
   static const listeningLabel = 'Zuhören abbrechen';
@@ -158,7 +163,9 @@ class _ComposerState extends State<Composer> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: WSpace.s,
           children: [
-            if (widget.status case final status?)
+            if (widget.notice case final notice?)
+              notice
+            else if (widget.status case final status?)
               Text(
                 status,
                 style: WText.caption,

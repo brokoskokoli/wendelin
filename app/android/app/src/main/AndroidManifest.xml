@@ -114,6 +114,10 @@
         <package android:name="ch.publisheria.bring"/>
         <package android:name="md.obsidian"/>
         <package android:name="com.spotify.music"/>
+        <!-- Speech recognizers: name of the service Android gives other apps (B12, only read). -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
         <!-- Installed TTS engines for the system voice (flutter_tts, K7). -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE"/>

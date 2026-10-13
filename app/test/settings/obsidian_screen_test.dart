@@ -164,8 +164,12 @@ void main() {
       ),
     );
     final c = await pumpObsidian(tester, env, FakeVaultAccess());
-    expect(find.text('Heute: 2026-10-13.md'), findsOneWidget);
+    // Nothing saved yet: „Journal“ is prefilled.
+    expect(find.text('Heute: Journal/2026-10-13.md'), findsOneWidget);
     final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), '');
+    await tester.pump();
+    expect(find.text('Heute: 2026-10-13.md'), findsOneWidget);
     await tester.enterText(fields.at(0), 'Journal');
     await tester.enterText(fields.at(1), 'YYYY/MM/YYYY-MM-DD dddd');
     await tester.enterText(fields.at(2), 'Vorlagen/Tag');
@@ -256,6 +260,61 @@ void main() {
     );
     expect(prefs.withVault(null, null).hasVault, isFalse);
     expect(prefs.withVault(null, null).dailyNotes, prefs.dailyNotes);
+  });
+
+  group('Tagesnotiz-Ordner „Journal“ (WP32)', () {
+    // Stored by M2 (before WP32): vault chosen, daily notes with an empty
+    // folder (= vault root) or an own folder.
+    Map<String, Object?> m2Json(String folder) => {
+      'vaultUri': _tree,
+      'vaultName': 'Leben',
+      'dailyNotes': {'folder': folder, 'format': 'YYYY-MM-DD'},
+    };
+
+    test('ohne gespeicherten Wert: Journal', () {
+      expect(const ObsidianPrefs().dailyNotes.folder, 'Journal');
+      expect(
+        ObsidianPrefs.fromJson(const {'vaultUri': _tree}).dailyNotes.folder,
+        'Journal',
+      );
+    });
+
+    test('gespeicherte M2-Einstellungen bleiben, auch die leere Wurzel', () {
+      expect(ObsidianPrefs.fromJson(m2Json('')).dailyNotes.folder, '');
+      expect(ObsidianPrefs.fromJson(m2Json('Tage')).dailyNotes.folder, 'Tage');
+      // Saved empty (= root) survives the round trip.
+      const root = ObsidianPrefs(
+        vaultUri: _tree,
+        dailyNotes: DailyNoteSettings(),
+      );
+      expect(ObsidianPrefs.fromJson(root.toJson()).dailyNotes.folder, '');
+    });
+
+    testWidgets('Bildschirm mit gespeicherter M2-Wurzel: Feld bleibt leer', (
+      tester,
+    ) async {
+      final env = TestEnv(
+        startup: StartupSettings(obsidian: ObsidianPrefs.fromJson(m2Json(''))),
+      );
+      await pumpObsidian(tester, env, FakeVaultAccess());
+      expect(find.text('Heute: 2026-10-13.md'), findsOneWidget);
+      final folder = tester.widget<TextField>(find.byType(TextField).first);
+      expect(folder.controller!.text, isEmpty);
+      expect(find.textContaining('Leer lassen = Vault-Wurzel'), findsOneWidget);
+    });
+
+    testWidgets('Index: Hinweis auf die automatische Aktualisierung', (
+      tester,
+    ) async {
+      final env = TestEnv(
+        startup: const StartupSettings(
+          obsidian: ObsidianPrefs(vaultUri: _tree, vaultName: 'Leben'),
+        ),
+      );
+      await pumpObsidian(tester, env, FakeVaultAccess());
+      expect(find.text(obsidianIndexHint), findsOneWidget);
+      expect(obsidianIndexHint, contains('nur für den ersten Aufbau'));
+    });
   });
 
   test('Einstellungen der Integration: Name und Sprache', () {

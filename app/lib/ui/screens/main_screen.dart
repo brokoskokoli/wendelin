@@ -39,6 +39,7 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   PendingQuestion? _sheetFor;
+  bool _micDeniedByAndroid = false;
   late final AppLifecycleListener _lifecycle;
 
   @override
@@ -56,6 +57,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         if (state == AppLifecycleState.hidden ||
             state == AppLifecycleState.paused) {
           unawaited(ref.read(voiceControllerProvider.notifier).suspend());
+        } else if (state == AppLifecycleState.resumed) {
+          // Back from the Android settings: allowed there meanwhile?
+          unawaited(_recheckMicrophone());
         }
       },
     );
@@ -171,6 +175,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               mic: mic,
               micHint: voiceUnavailableHint,
               status: voice.error ?? voice.hint,
+              notice: voice.error == microphoneDeniedHint
+                  ? MicrophoneNotice(
+                      deniedByAndroid: _micDeniedByAndroid,
+                      onAllow: () => unawaited(_allowMicrophone()),
+                      onOpenSettings: () =>
+                          unawaited(ref.read(appSettingsOpenerProvider)()),
+                    )
+                  : null,
               onMic: () {
                 if (voice.active) {
                   unawaited(
@@ -201,7 +213,39 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   /// Microphone permission with explanation (WP17); not in the demo.
   Future<bool> _microphoneAccess() async {
     if (ref.read(demoModeProvider)) return true;
-    return ensureMicrophoneAccess(context, ref.read(microphoneProvider));
+    final access = await requestMicrophoneAccess(
+      context,
+      ref.read(microphoneProvider),
+    );
+    if (mounted) {
+      setState(() => _micDeniedByAndroid = access == MicrophoneAccess.denied);
+    }
+    return access == MicrophoneAccess.granted;
+  }
+
+  /// „Erlauben“ on the notice: the explanation was read, Android asks.
+  Future<void> _allowMicrophone() async {
+    final granted = await ref.read(microphoneProvider).hasPermission();
+    if (!mounted) return;
+    if (granted) {
+      ref.read(voiceControllerProvider.notifier).clearMessages();
+    } else {
+      setState(() => _micDeniedByAndroid = true);
+    }
+  }
+
+  /// Clears the notice once the microphone is allowed (Android settings).
+  Future<void> _recheckMicrophone() async {
+    if (ref.read(voiceControllerProvider).error != microphoneDeniedHint) {
+      return;
+    }
+    final granted = await ref
+        .read(microphoneProvider)
+        .hasPermission(request: false);
+    if (granted && mounted) {
+      ref.read(voiceControllerProvider.notifier).clearMessages();
+      setState(() => _micDeniedByAndroid = false);
+    }
   }
 
   void _openProviderSetup() =>
