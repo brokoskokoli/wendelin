@@ -100,6 +100,7 @@ final class DriftConversationRepository implements ConversationRepository {
       createdAt: createdAt,
       profileId: profileId,
       modelId: modelId,
+      privacyFloor: message.privacyFloor?.name,
     );
     await _db.into(_db.messages).insert(row);
     return _message(row);
@@ -166,6 +167,7 @@ final class DriftConversationRepository implements ConversationRepository {
     message: Message.fromJson({
       'role': r.role,
       'content': jsonDecode(r.contentJson),
+      'privacyFloor': r.privacyFloor,
     }),
     createdAt: r.createdAt,
     profileId: r.profileId,

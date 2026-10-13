@@ -61,7 +61,7 @@ void main() {
     addTearDown(storage.close);
     final s = await storage.conversations.startNew(DateTime(2026));
     expect(s.id, hasLength(36));
-    expect(WendelinStorage.schemaVersion, 2);
+    expect(WendelinStorage.schemaVersion, 3);
   });
 
   test('Wertobjekte: Gleichheit, hashCode, toString', () {

@@ -9,9 +9,10 @@
 // 3. add an upgrade test below (`verifier.migrateAndValidate(db, N)` on a
 //    connection from `verifier.schemaAt(N - 1)`), ideally with data from
 //    `generated/schema_v<N-1>.dart` that must survive the upgrade.
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:test/test.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/src/db/database.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
@@ -27,15 +28,47 @@ void main() {
 
   test('aktuelle Schema-Version ist eingecheckt', () {
     expect(GeneratedHelper.versions.last, WendelinDatabase.version);
-    expect(WendelinDatabase.version, 2);
+    expect(WendelinDatabase.version, 3);
   });
 
-  test('neue Datenbank entspricht dem Schema-Dump v2', () async {
-    final schema = await verifier.schemaAt(2);
+  test('neue Datenbank entspricht dem Schema-Dump v3', () async {
+    final schema = await verifier.schemaAt(3);
     final db = WendelinDatabase(schema.newConnection());
     addTearDown(db.close);
-    await verifier.migrateAndValidate(db, 2);
+    await verifier.migrateAndValidate(db, 3);
   });
+
+  test(
+    'Upgrade v2 → v3 ergänzt die Untergrenze, Nachrichten bleiben',
+    () async {
+      final schema = await verifier.schemaAt(2);
+      schema.rawDatabase
+        ..execute(
+          'INSERT INTO sessions (id, started_at, last_activity_at, title) '
+          "VALUES ('s1', 1, 2, 'Alt')",
+        )
+        ..execute(
+          'INSERT INTO messages (id, session_id, seq, role, content_json, '
+          "created_at) VALUES ('m1', 's1', 1, 'user', "
+          '\'[{"type":"text","text":"Hallo"}]\', 1)',
+        );
+      final db = WendelinDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 3);
+      await db.close();
+
+      final storage = WendelinStorage(schema.newConnection());
+      addTearDown(storage.close);
+      final old = (await storage.conversations.messages('s1')).single;
+      expect(old.message, Message.user('Hallo'));
+      expect(old.message.privacyFloor, isNull);
+      await storage.conversations.append(
+        's1',
+        Message.user('privat: Befund').withPrivacyFloor(PrivacyLevel.tee),
+      );
+      final turns = await storage.conversations.lastTurns('s1', 1);
+      expect(turns.single.message.privacyFloor, PrivacyLevel.tee);
+    },
+  );
 
   test('Upgrade v1 → v2 legt den Notizindex an, Daten bleiben', () async {
     final schema = await verifier.schemaAt(1);

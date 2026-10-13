@@ -114,6 +114,15 @@ abstract final class AgentRunnerTexts {
   static const redactedResult =
       '[Tool-Ergebnis aus geschützter Quelle ausgeblendet]';
 
+  /// Replaces messages of an earlier private turn for targets below its
+  /// privacy floor.
+  static const privateHidden = '[privater Gesprächsteil ausgeblendet]';
+
+  /// Message when a private request has no target with enough privacy.
+  static const noPrivateTarget =
+      'Die Anfrage ist privat, aber kein ausreichend geschütztes Modell ist '
+      'verfügbar. Ich habe sie deshalb nicht gesendet.';
+
   /// Message when the user declines handing protected data to another
   /// model.
   static const protectedDeclined =
@@ -174,6 +183,10 @@ final class _Run {
   int _roundsOnProvider = 0;
   int _invalidOnProvider = 0;
   bool _consentDeclined = false;
+
+  /// The user agreed to hand this run to a target below its privacy floor;
+  /// earlier private turns up to that floor are then visible to it.
+  bool _belowFloorConsented = false;
 
   /// Ids of calls refused because the target could not see the tool.
   final Set<String> _refused = {};
@@ -245,14 +258,37 @@ final class _Run {
     );
     _context = await runner.contextBuilder.build(input);
     _messages.addAll(_context.messages);
+    // A private request without any target of enough privacy is not sent.
+    final noPrivateTarget = _current.belowPrivacyFloor;
+    final retry = input.requestEscalation || _current.requestedTarget != null;
+    if (retry) {
+      // „nochmal mit …“ repeats the previous turn: its privacy floor applies
+      // to this run too (K8 d).
+      final previous = _context.messages
+          .take(_context.messages.length - 1)
+          .lastWhereOrNull((m) => m.role == Role.user)
+          ?.privacyFloor;
+      final floor = _current.privacyFloor;
+      if (previous != null && (floor == null || !floor.isAtLeast(previous))) {
+        _current = _current.withPrivacyFloor(previous);
+      }
+    }
     await _record(_context.messages.last);
+    if (noPrivateTarget) {
+      throw _Stop(
+        const AgentFailed(
+          error: AgentErrorKind.provider,
+          message: AgentRunnerTexts.noPrivateTarget,
+        ),
+      );
+    }
     // The model gets the routed text (trigger stripped); the recorded and
     // displayed message stays as the user said it.
     if (_current.effectiveText case final text?) {
       _messages.last = Message.user(text, images: input.images);
     }
 
-    if (input.requestEscalation || _current.requestedTarget != null) {
+    if (retry) {
       await _escalate(EscalationReason.userRequested);
     }
 
@@ -606,7 +642,7 @@ final class _Run {
         (tainted ||
             (!_refused.contains(c.id) && catalog.lookup(c.name) == null));
     final out = <Message>[];
-    for (final m in _messages) {
+    for (final m in _withoutPrivateHistory()) {
       if (m.role == Role.user) tainted = false;
       var taintsNext = false;
       final blocks = <ContentBlock>[];
@@ -660,6 +696,45 @@ final class _Run {
         blocks.add(const TextBlock(AgentRunnerTexts.placeholder));
       }
       out.add(blocks.isEmpty ? m : Message(role, blocks));
+    }
+    return out;
+  }
+
+  /// [_messages] with earlier private turns the current target may not see
+  /// replaced by [AgentRunnerTexts.privateHidden]: a user placeholder and,
+  /// if the turn had an answer, one assistant placeholder (tool calls and
+  /// results disappear together, so pairs stay intact).
+  ///
+  /// A message is hidden when its floor is above the target's level, unless
+  /// the user agreed to go below this run's floor and that floor covers it.
+  List<Message> _withoutPrivateHistory() {
+    final target = _current.privacy;
+    final runFloor = _current.privacyFloor;
+    bool hidden(PrivacyLevel? floor) =>
+        floor != null &&
+        !target.isAtLeast(floor) &&
+        !(_belowFloorConsented &&
+            runFloor != null &&
+            runFloor.isAtLeast(floor));
+    final out = <Message>[];
+    var hiding = false;
+    var answered = false;
+    for (final m in _messages) {
+      if (!hidden(m.privacyFloor)) {
+        hiding = false;
+        out.add(m);
+        continue;
+      }
+      if (m.role == Role.user || !hiding) {
+        out.add(Message.user(AgentRunnerTexts.privateHidden));
+        hiding = true;
+        answered = false;
+        if (m.role == Role.user) continue;
+      }
+      if (!answered) {
+        out.add(Message.assistantText(AgentRunnerTexts.privateHidden));
+        answered = true;
+      }
     }
     return out;
   }
@@ -774,6 +849,9 @@ final class _Run {
   Future<bool> _escalate(EscalationReason reason) async {
     final next = runner.resolver.escalate(_current, reason);
     if (next == null) return false;
+    final same =
+        next.profileId == _current.profileId &&
+        next.modelId == _current.modelId;
     // Results of tools the next target may not see are in this run: it
     // gets them redacted, but the user decides whether to hand over at all.
     final nextCatalog = runner.catalogFor?.call(next.privacy);
@@ -801,6 +879,7 @@ final class _Run {
       ]);
       question.respond(false); // no-op if answered
       _throwIfAborted();
+      if (approved && next.belowPrivacyFloor) _belowFloorConsented = true;
       if (!approved) {
         if (protectedData) {
           throw _Stop(
@@ -813,6 +892,12 @@ final class _Run {
         _consentDeclined = true;
         return false;
       }
+    }
+    if (same) {
+      // Retry on the same target („nochmal mit <aktuelles Ziel>“): nothing
+      // to hand over, only the consent above may have been needed.
+      _current = next;
+      return true;
     }
     emit(
       Escalated(
@@ -861,7 +946,12 @@ final class _Run {
     await _record(m);
   }
 
+  /// Records [m]; messages of a private run carry its privacy floor so
+  /// later turns can hide them from weaker targets.
   Future<void> _record(Message m) async {
-    await runner.recorder?.record(m);
+    final floor = _current.privacyFloor;
+    await runner.recorder?.record(
+      floor == null ? m : m.withPrivacyFloor(floor),
+    );
   }
 }

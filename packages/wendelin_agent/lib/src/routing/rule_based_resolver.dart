@@ -94,16 +94,62 @@ final class RuleBasedProviderResolver implements ProviderResolver {
       profiles: profiles,
       needProvider: true,
     );
-    final target = _build(decision.target)!;
     final requested = _requested(ctx.text);
+    final routed = _build(decision.target)!;
+    final floor = _floorOf(decision.privateMatches);
+    if (floor == null || routed.privacy.isAtLeast(floor)) {
+      return Resolution(
+        target: routed,
+        reason: decision.reason,
+        privacyFloor: floor,
+        effectiveText: decision.effectiveText,
+        requestedTarget: requested == null ? null : _build(requested),
+        routeProfileId: routed.profileId,
+      );
+    }
+    // Private, but the winning rule's target is too weak (or the private
+    // rule's own target is unavailable): privacy wins over rule order.
+    final (target, reason) =
+        _compliant(decision.privateMatches, floor) ?? (routed, decision.reason);
     return Resolution(
       target: target,
-      reason: decision.reason,
-      privacyFloor: decision.private ? target.privacy : null,
-      effectiveText: decision.effectiveText,
+      reason: reason,
+      privacyFloor: floor,
       requestedTarget: requested == null ? null : _build(requested),
       routeProfileId: target.profileId,
     );
+  }
+
+  /// The floor of the matched private rules: the highest level of their
+  /// targets; an unavailable target counts as [PrivacyLevel.tee].
+  PrivacyLevel? _floorOf(List<RoutingRule> privateRules) {
+    PrivacyLevel? floor;
+    for (final rule in privateRules) {
+      final level = _build(rule.target)?.privacy ?? PrivacyLevel.tee;
+      if (floor == null || level.isAtLeast(floor)) floor = level;
+    }
+    return floor;
+  }
+
+  /// The first available target with at least [floor]: the private rules'
+  /// targets, then the default target and its chain.
+  (ProviderTarget, String)? _compliant(
+    List<RoutingRule> privateRules,
+    PrivacyLevel floor,
+  ) {
+    final candidates = [
+      for (final rule in privateRules) (rule.target, rule.name),
+      (rules.defaultTarget, RuleSet.defaultReason),
+      for (final t in rules.chainOf(rules.defaultTarget.profileId))
+        (t, RuleSet.defaultReason),
+    ];
+    for (final (t, reason) in candidates) {
+      final built = _build(t);
+      if (built != null && built.privacy.isAtLeast(floor)) {
+        return (built, reason);
+      }
+    }
+    return null;
   }
 
   @override
@@ -111,12 +157,14 @@ final class RuleBasedProviderResolver implements ProviderResolver {
     final floor = current.privacyFloor;
     final route = current.routeProfileId ?? current.profileId;
     final requested = current.requestedTarget;
-    if (reason == EscalationReason.userRequested &&
-        requested != null &&
-        !_same(requested, current.target)) {
+    if (reason == EscalationReason.userRequested && requested != null) {
+      // „nochmal mit <aktuelles Ziel>“ retries on the same target.
+      final again = _same(requested, current.target);
       return Resolution(
-        target: requested,
-        reason: 'Nutzerwunsch: ${profiles[requested.profileId]?.name}',
+        target: again ? current.target : requested,
+        reason: again
+            ? 'Nutzerwunsch: erneut'
+            : 'Nutzerwunsch: ${profiles[requested.profileId]?.name}',
         privacyFloor: floor,
         routeProfileId: route,
       );
@@ -180,21 +228,59 @@ final class RuleBasedProviderResolver implements ProviderResolver {
     return out;
   }
 
-  /// The target named after a retry phrase, or `null`. The longest
-  /// matching name wins; on a tie the earlier source.
+  /// Words that may stand before a retry phrase („Kannst du das nochmal
+  /// mit Claude machen?“), normalized.
+  static const retryFillers = {
+    'bitte', 'kannst', 'du', 'das', 'es', 'mach', 'machs', 'frag', 'ok', //
+    'okay', 'nein', 'also', 'und', 'jetzt', 'versuch', 'probier', 'dann',
+    'please', 'can', 'you', 'do', 'it', 'that', 'try', 'now', 'no', 'and',
+    'so', 'then', 'ask',
+    'peux', 'tu', 'le', 'fais', 'essaie', 's', 'il', 'te', 'plait', 'non',
+    'et', 'alors', 'maintenant', 'demande',
+  };
+
+  /// Most filler words before and extra words after the name.
+  static const maxFillers = 4, maxTrailingWords = 2;
+
+  /// The target named after a retry phrase, or `null`. The phrase must
+  /// start the request (after at most [maxFillers] [retryFillers]) and the
+  /// name may be followed by at most [maxTrailingWords] words, so dictated
+  /// sentences („Schreib Anna: ich gehe nochmal mit Claude ins Kino“) do
+  /// not count. The longest matching name wins; on a tie the earlier source
+  /// (rules before profiles).
   RouteTarget? _requested(RoutingText text) {
-    for (final phrase in retryPhrases) {
-      final span = text.findPhrase(phrase);
-      if (span == null) continue;
-      final rest = text.normalized.substring(span.end).trim();
-      (String, RouteTarget)? best;
-      for (final alias in _aliases) {
-        final a = alias.$1;
-        final hit = rest == a || rest.startsWith('$a ');
-        if (hit && (best == null || a.length > best.$1.length)) best = alias;
+    final words = text.normalized.isEmpty
+        ? const <String>[]
+        : text.normalized.split(' ');
+    var start = 0;
+    while (start < words.length &&
+        start < maxFillers &&
+        retryFillers.contains(words[start])) {
+      start++;
+    }
+    for (var at = 0; at <= start; at++) {
+      for (final phrase in retryPhrases) {
+        final p = phrase.split(' ');
+        if (!_wordsAt(words, at, p)) continue;
+        final rest = words.sublist(at + p.length);
+        (String, RouteTarget)? best;
+        for (final alias in _aliases) {
+          final a = alias.$1.split(' ');
+          if (!_wordsAt(rest, 0, a)) continue;
+          if (rest.length - a.length > maxTrailingWords) continue;
+          if (best == null || alias.$1.length > best.$1.length) best = alias;
+        }
+        if (best != null) return best.$2;
       }
-      if (best != null) return best.$2;
     }
     return null;
+  }
+
+  static bool _wordsAt(List<String> words, int at, List<String> phrase) {
+    if (at + phrase.length > words.length) return false;
+    for (var i = 0; i < phrase.length; i++) {
+      if (words[at + i] != phrase[i]) return false;
+    }
+    return true;
   }
 }

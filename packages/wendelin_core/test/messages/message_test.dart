@@ -119,4 +119,21 @@ void main() {
     );
     expect(Message.user('a').toString(), contains('user'));
   });
+
+  test('privacy floor: JSON, equality, copy', () {
+    final m = Message.user('privat: Befund').withPrivacyFloor(PrivacyLevel.tee);
+    expect(m.privacyFloor, PrivacyLevel.tee);
+    expect(m.toJson()['privacyFloor'], 'tee');
+    expect(Message.fromJson(m.toJson()), m);
+    expect(Message.user('a').toJson().containsKey('privacyFloor'), isFalse);
+    expect(Message.fromJson(Message.user('a').toJson()).privacyFloor, isNull);
+    expect(m, isNot(Message.user('privat: Befund')));
+    expect(m.hashCode, isNot(Message.user('privat: Befund').hashCode));
+    expect(m.withPrivacyFloor(null), Message.user('privat: Befund'));
+    expect(m.toString(), contains('floor: tee'));
+    expect(
+      () => Message.fromJson({...m.toJson(), 'privacyFloor': 'geheim'}),
+      throwsFormatException,
+    );
+  });
 }

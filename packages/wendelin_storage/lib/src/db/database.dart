@@ -28,7 +28,7 @@ final class WendelinDatabase extends _$WendelinDatabase {
 
   /// Current schema version. Bump it together with a migration step and a
   /// new schema dump (`dart run drift_dev make-migrations`).
-  static const version = 2;
+  static const version = 3;
 
   @override
   int get schemaVersion => version;
@@ -41,6 +41,10 @@ final class WendelinDatabase extends _$WendelinDatabase {
       from1To2: (m, schema) async {
         await m.createTable(schema.noteFiles);
         await m.createTable(schema.noteFts);
+      },
+      // v3 (WP21): Datenschutz-Untergrenze privater Gesprächszüge.
+      from2To3: (m, schema) async {
+        await m.addColumn(schema.messages, schema.messages.privacyFloor);
       },
     ),
     beforeOpen: (details) async {

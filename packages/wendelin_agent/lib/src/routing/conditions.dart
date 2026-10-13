@@ -224,8 +224,12 @@ final class PrefixCondition extends Condition {
 /// [pattern] matches the normalized text (lower case, no accents, single
 /// spaces instead of punctuation).
 ///
-/// Runtime protection: patterns longer than [maxPatternLength] are invalid,
-/// and only the first [maxInputLength] characters are searched.
+/// Runtime protection (Dart's `RegExp` has no timeout and runs
+/// synchronously): patterns longer than [maxPatternLength] are invalid, so
+/// are backreferences and repeated groups that contain a repetition or an
+/// alternation (`(a+)+`, `(a|aa)*` – exponential backtracking) and more
+/// than [maxOpenRepetitions] unbounded repetitions (polynomial
+/// backtracking). Only the first [maxInputLength] characters are searched.
 final class RegexCondition extends Condition {
   /// Creates the condition. An invalid [pattern] does not throw; the
   /// condition reports a [problem] and never matches.
@@ -234,8 +238,12 @@ final class RegexCondition extends Condition {
   /// Longest allowed pattern.
   static const maxPatternLength = 200;
 
+  /// Most unbounded repetitions per pattern: three (`.*.*.*x`) already
+  /// take seconds on [maxInputLength] characters, two stay below 0.1 s.
+  static const maxOpenRepetitions = 2;
+
   /// Longest text searched.
-  static const maxInputLength = 2000;
+  static const maxInputLength = 300;
 
   /// The pattern (Dart `RegExp` syntax, case-insensitive, Unicode).
   final String pattern;
@@ -246,11 +254,63 @@ final class RegexCondition extends Condition {
     if (pattern.length > maxPatternLength) {
       return 'Regulärer Ausdruck ist länger als $maxPatternLength Zeichen.';
     }
+    if (_unsafe(pattern) case final problem?) return problem;
     try {
       return RegExp(pattern, caseSensitive: false, unicode: true);
     } on FormatException catch (e) {
       return 'Ungültiger regulärer Ausdruck: ${e.message}';
     }
+  }
+
+  /// Why [pattern] could backtrack catastrophically, or `null`.
+  static String? _unsafe(String pattern) {
+    if (RegExp(r'\\[1-9]|\\k<').hasMatch(pattern)) {
+      return 'Rückverweise sind in regulären Ausdrücken nicht erlaubt.';
+    }
+    // Per open group: (contains a repetition, contains an alternation).
+    final stack = <(bool, bool)>[(false, false)];
+    var open = 0;
+    var inClass = false;
+    var i = 0;
+    while (i < pattern.length) {
+      final c = pattern[i];
+      if (c == r'\') {
+        i += 2;
+        continue;
+      }
+      i++;
+      if (inClass) {
+        if (c == ']') inClass = false;
+        continue;
+      }
+      switch (c) {
+        case '[':
+          inClass = true;
+        case '(':
+          stack.add((false, false));
+        case ')':
+          final (rep, alt) = stack.length > 1
+              ? stack.removeLast()
+              : (false, false);
+          final repeated = i < pattern.length && '*+{'.contains(pattern[i]);
+          if (repeated && (rep || alt)) {
+            return 'Wiederholte Gruppen mit Wiederholung oder Alternative '
+                '(z. B. „(a+)+“) sind nicht erlaubt.';
+          }
+          if (rep || repeated) stack.last = (true, stack.last.$2);
+        case '*' || '+' || '{':
+          stack.last = (true, stack.last.$2);
+          final bounded =
+              c == '{' && !RegExp(r'^\d*,').hasMatch(pattern.substring(i));
+          if (!bounded && ++open > maxOpenRepetitions) {
+            return 'Höchstens $maxOpenRepetitions offene Wiederholungen '
+                '(*, +, {n,}) pro Ausdruck.';
+          }
+        case '|':
+          stack.last = (stack.last.$1, true);
+      }
+    }
+    return null;
   }
 
   @override

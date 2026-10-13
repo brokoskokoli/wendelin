@@ -270,6 +270,16 @@ void main() {
         r'$.rules[0].condition.start: Uhrzeit HH:MM erwartet.',
       ),
       (
+        'hour 24',
+        withRule({'type': 'timeWindow', 'start': '24:00', 'end': '01:00'}),
+        r'$.rules[0].condition.start: Uhrzeit HH:MM erwartet.',
+      ),
+      (
+        'minute 60',
+        withRule({'type': 'timeWindow', 'start': '23:59', 'end': '01:60'}),
+        r'$.rules[0].condition.end: Uhrzeit HH:MM erwartet.',
+      ),
+      (
         'time not HH:MM',
         withRule({'type': 'timeWindow', 'start': 'abends', 'end': '01:00'}),
         'Uhrzeit HH:MM erwartet.',

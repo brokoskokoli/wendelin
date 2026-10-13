@@ -257,12 +257,55 @@ void main() {
       expect(c.evaluate(ctxFor('(unclosed')), isNull);
     });
 
-    test('only the first 2000 characters are searched', () {
+    test('only the first 300 characters are searched', () {
       final c = RegexCondition('ziel');
-      final near = '${'x ' * 997}ziel';
-      final far = '${'x ' * 1000}ziel';
+      final near = '${'x ' * 148}ziel';
+      final far = '${'x ' * 149}ziel';
       expect(c.evaluate(ctxFor(near)), isNotNull);
       expect(c.evaluate(ctxFor(far)), isNull);
+    });
+
+    final unsafe = <String>[
+      r'(a+)+$',
+      r'(a*)*b',
+      r'(a|aa)*$',
+      r'(x+x+)+y',
+      r'((ab)*c)+',
+      r'(\w+\s?){2,}',
+      r'(a)\1',
+      r'(?<x>a)\k<x>',
+      r'\w*\w*\w*x',
+      r'.*a.*b.+c',
+      r'a{2,}b{1,9}c*',
+    ];
+    for (final p in unsafe) {
+      test('„$p“ is rejected', () {
+        final c = RegexCondition(p);
+        expect(c.problem, isNotNull);
+        expect(c.evaluate(ctxFor('a' * 26)), isNull);
+      });
+    }
+
+    final safe = <String>[
+      r'^claude\b',
+      r'(?:ab)+c',
+      r'(claude|fable) bitte',
+      r'(a+)?b',
+      r'[(+*]+x',
+      r'\(a+\)+',
+      r'\w*\w*x',
+      r'a{2}b{3}c+d*',
+    ];
+    for (final p in safe) {
+      test('„$p“ is allowed', () => expect(RegexCondition(p).problem, isNull));
+    }
+
+    test('allowed patterns stay fast on the longest input', () {
+      final watch = Stopwatch()..start();
+      for (final p in safe) {
+        RegexCondition(p).evaluate(ctxFor('a' * 5000));
+      }
+      expect(watch.elapsed, lessThan(const Duration(seconds: 1)));
     });
 
     test('an empty match has no trigger', () {

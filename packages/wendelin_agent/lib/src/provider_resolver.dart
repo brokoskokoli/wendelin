@@ -66,6 +66,16 @@ final class Resolution {
   /// Stays the same across escalations.
   final String? routeProfileId;
 
+  /// This resolution with [floor] as [privacyFloor].
+  Resolution withPrivacyFloor(PrivacyLevel? floor) => Resolution(
+    target: target,
+    reason: reason,
+    privacyFloor: floor,
+    effectiveText: effectiveText,
+    requestedTarget: requestedTarget,
+    routeProfileId: routeProfileId,
+  );
+
   /// Provider profile id.
   String get profileId => target.profileId;
 

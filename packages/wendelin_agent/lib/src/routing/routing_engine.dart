@@ -52,7 +52,7 @@ final class RouteDecision {
     required this.rule,
     required this.target,
     required this.skipped,
-    this.private = false,
+    this.privateMatches = const [],
     this.effectiveText,
   });
 
@@ -65,8 +65,14 @@ final class RouteDecision {
   /// Rules looked at before the winner, in order, with reasons.
   final List<SkippedRule> skipped;
 
-  /// Whether the route is private (a `privacy` condition matched).
-  final bool private;
+  /// Enabled, valid rules whose `privacy` condition matched – anywhere in
+  /// the list, before or after the winner and even if their target is not
+  /// available (ADR 0009 §4). The resolver derives the privacy floor from
+  /// them.
+  final List<RoutingRule> privateMatches;
+
+  /// Whether the request is private (a `privacy` condition matched).
+  bool get private => privateMatches.isNotEmpty;
 
   /// The text for the model with the trigger removed (`stripTrigger`);
   /// `null` = the original text.
@@ -132,7 +138,7 @@ RouteDecision decideRoute(
       rule: rule,
       target: rule.target,
       skipped: List.unmodifiable(skipped),
-      private: match.private,
+      privateMatches: _privateMatches(rules, ctx, rule, match),
       effectiveText: effective,
     );
   }
@@ -140,8 +146,25 @@ RouteDecision decideRoute(
     rule: null,
     target: rules.defaultTarget,
     skipped: List.unmodifiable(skipped),
+    privateMatches: _privateMatches(rules, ctx, null, null),
   );
 }
+
+/// Privacy does not depend on rule order or target availability: every
+/// enabled, valid rule with a `privacy` condition is checked.
+List<RoutingRule> _privateMatches(
+  RuleSet rules,
+  RoutingContext ctx,
+  RoutingRule? winner,
+  ConditionMatch? winnerMatch,
+) => List.unmodifiable([
+  for (final rule in rules.rules)
+    if (rule.enabled && rule.isPrivate && problemOf(rule) == null)
+      if ((identical(rule, winner) ? winnerMatch : rule.condition.evaluate(ctx))
+              ?.private ??
+          false)
+        rule,
+]);
 
 /// The first problem of a condition of [rule], or `null`.
 String? problemOf(RoutingRule rule) {

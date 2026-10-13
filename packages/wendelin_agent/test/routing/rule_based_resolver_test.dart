@@ -246,6 +246,17 @@ void main() {
       ('Encore une fois avec Mistral', mistral),
       ('again with claude, please', claudeOpus),
       ('try again with Phala GLM klein', phalaSmall),
+      ('Bitte nochmal mit Claude', claudeOpus),
+      ('Et maintenant encore avec Claude', claudeOpus),
+      ('Can you do it again with Claude please', claudeOpus),
+      // Dictated sentences: the phrase is not at the start.
+      ('Schreib Anna: ich gehe morgen nochmal mit Claude ins Kino', null),
+      ('Sag Tom, dass ich nochmal mit Fable rede', null),
+      ('Envoie à Marie: on dîne encore avec Claude ce soir', null),
+      ('Tell Bob I will go again with Claude tomorrow', null),
+      // Too many words after the name.
+      ('nochmal mit Claude ins Kino gehen', null),
+      ('again with Claude to the cinema', null),
       ('nochmal mit Gefühl', null),
       ('nochmal', null),
       ('Claude, nochmal', null),
@@ -292,19 +303,23 @@ void main() {
       expect(r1.modelId, 'glm-large');
     });
 
-    test('naming the current target falls back to the chain', () {
+    test('naming the current target retries on it (no next link)', () {
       final resolver = conceptResolver();
       final r0 = resolve('nochmal mit Phala GLM klein', r: resolver);
       final r1 = resolver.escalate(r0, EscalationReason.userRequested)!;
-      expect(r1.modelId, 'glm-large');
+      expect((r1.profileId, r1.modelId), ('phala', 'glm-small'));
+      expect(r1.reason, 'Nutzerwunsch: erneut');
     });
 
     test('same privacy check: below the floor needs consent', () {
       final resolver = conceptResolver();
-      final r0 = resolve('privat, nochmal mit Claude', r: resolver);
-      expect(r0.privacyFloor, PrivacyLevel.tee);
+      final r0 = resolve(
+        'nochmal mit Claude',
+        r: resolver,
+      ).withPrivacyFloor(PrivacyLevel.tee);
       final r1 = resolver.escalate(r0, EscalationReason.userRequested)!;
       expect(r1.profileId, 'claude');
+      expect(r1.privacyFloor, PrivacyLevel.tee);
       expect(r1.belowPrivacyFloor, isTrue);
     });
 
