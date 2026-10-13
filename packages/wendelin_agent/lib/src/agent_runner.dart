@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import 'agent_config.dart';
@@ -8,13 +7,21 @@ import 'context_builder.dart';
 import 'give_up_classifier.dart';
 import 'ports.dart';
 import 'provider_resolver.dart';
+import 'run/escalation.dart';
+import 'run/model_call.dart';
+import 'run/privacy_scope.dart';
+import 'run/run_budget.dart';
+import 'run/run_start.dart';
+import 'run/run_state.dart';
+import 'run/tool_round.dart';
 
 /// The provider-independent agent loop (concept: „Agent-Schleife“).
 ///
 /// One [run] at a time: build the context, route, call the model with
 /// streaming, execute requested tools through the [ToolInvoker], repeat until
 /// a final answer or a limit; escalate along the resolver's chain when the
-/// model fails. See `docs/adr/0003-agent-loop.md` for the details.
+/// model fails. See `docs/adr/0003-agent-loop.md` for the details; the
+/// loop is [_Run], its parts are under `src/run/`.
 final class AgentRunner implements AgentRun {
   /// Creates a runner.
   AgentRunner({
@@ -145,75 +152,79 @@ abstract final class AgentRunnerTexts {
       'Tools aus der Tool-Liste.';
 }
 
-/// Result of one model call.
-final class _ModelReply {
-  _ModelReply(this.blocks, this.stopReason, this.error);
-
-  final List<ContentBlock> blocks;
-  final StopReason? stopReason;
-  final ProviderException? error;
-
-  List<ToolCallBlock> get toolCalls =>
-      blocks.whereType<ToolCallBlock>().toList();
-
-  String get text => blocks.whereType<TextBlock>().map((b) => b.text).join();
-}
-
-/// A run ended early (abort or limit); carries the terminal event.
-final class _Stop implements Exception {
-  _Stop(this.event);
-  final AgentFailed event;
-}
-
-/// An executed tool call; [epoch] counts escalations before it.
-typedef _Executed = ({ToolCallBlock call, ToolOutcome outcome, int epoch});
-
-/// State of one [AgentRunner.run] call.
-final class _Run {
-  _Run(this.runner, this.input);
+/// State and loop of one [AgentRunner.run] call.
+///
+/// [startRun] routes and builds the context, then the loop calls the model
+/// until a final answer or a limit. Each way it goes on has a named step: [_retryOrEscalateOnError], [_handlePauseTurn],
+/// [_answerOrEscalate] and [_toolRound]. The details live in the units under
+/// `src/run/`: [PrivacyScope] (what the target may see, taint), [RunBudget]
+/// (limits), [Escalation] (hand-over), [ToolRound] (tool execution) and
+/// [ModelCall] (request and streaming); [RunState] holds the conversation.
+///
+/// Invariants (details at the enforcing places):
+/// - An abort wins over every error ([drive], [throwIfAborted]).
+/// - A failed call is retried at most once per model call before the run
+///   escalates ([_retryOrEscalateOnError]).
+/// - `pauseTurn` without tool calls continues without counting a round
+///   ([_handlePauseTurn]).
+/// - [_segmentStreamed] decides whether a retry or hand-over sends an
+///   `AgentTextReset` ([emit]).
+/// - The privacy floor never sinks and rises to the taint level
+///   ([RunState.raiseFloor], [PrivacyScope.raiseFloorToTaint]); counters per
+///   provider restart at every hand-over ([RunBudget.onEscalated]).
+final class _Run implements RunControl {
+  _Run(this.runner, this.input) : _state = RunState(runner.recorder);
 
   final AgentRunner runner;
   final UserInput input;
   final controller = StreamController<AgentEvent>();
+  @override
   final token = CancelToken();
 
   AgentConfig get config => runner._config;
 
+  // ------------------------------------------------------------ Lauf-Zustand
+  // Abort, time limit, event segment and conversation of this run.
+
+  /// Why the run was aborted; the first abort wins.
   AgentErrorKind? _abortKind;
+
+  /// Aborts the run with [AgentErrorKind.timeout] after `maxDuration`.
   Timer? _timer;
+
+  /// When the run started (for the clock check between steps).
   late DateTime _start;
-  late Resolution _current;
-  late AgentContext _context;
-  final List<Message> _messages = [];
-  final List<_Executed> _executed = [];
-  int _epoch = 0;
-  int _tokensSpent = 0;
-  int _rounds = 0;
-  int _roundsOnProvider = 0;
-  int _invalidOnProvider = 0;
-  bool _consentDeclined = false;
-
-  /// The user agreed to hand this run to a target below its privacy floor;
-  /// earlier private turns up to that floor are then visible to it.
-  bool _belowFloorConsented = false;
-
-  /// Ids of calls refused because the target could not see the tool.
-  final Set<String> _refused = {};
-  final Set<String> _budgetWarned = {};
-
-  /// Assistant messages of a paused turn (`StopReason.pauseTurn`), not yet
-  /// recorded.
-  final List<Message> _paused = [];
-
-  /// Id the model sent for each (possibly renamed) call id.
-  final Map<String, String> _sourceIds = {};
 
   /// Whether text was streamed in the current segment, i.e. since the last
   /// tool event or text reset (the scope of `AgentTextReset`).
   bool _segmentStreamed = false;
 
+  /// Target, context, messages, paused answer, executed calls, epoch.
+  final RunState _state;
+
+  // ------------------------------------------------------------------ units
+
+  late final RunBudget _budget = RunBudget(config);
+  late final PrivacyScope _privacy = PrivacyScope(runner, _state);
+  late final ToolRound _tools = ToolRound(runner, _state, _privacy, this);
+  late final _model = ModelCall(runner, _state, _privacy, _budget, this);
+  late final Escalation _escalation = Escalation(
+    runner.resolver,
+    _state,
+    _privacy,
+    _budget,
+    this,
+  );
+
+  @override
+  bool get segmentStreamed => _segmentStreamed;
+
+  @override
   void emit(AgentEvent e) {
     if (controller.isClosed) return;
+    // Invariant: a text delta opens a segment, tool events and resets close
+    // it; only an open segment needs an `AgentTextReset` on retry or
+    // hand-over.
     switch (e) {
       case AgentTextDelta():
         _segmentStreamed = true;
@@ -235,9 +246,10 @@ final class _Run {
     AgentEvent terminal;
     try {
       terminal = await _loop();
-    } on _Stop catch (s) {
+    } on RunStop catch (s) {
       terminal = s.event;
     } on Object catch (e) {
+      // Invariant: an abort wins over the error it caused.
       terminal = _abortKind != null
           ? _failed(_abortKind!)
           : AgentFailed(
@@ -256,127 +268,64 @@ final class _Run {
   Future<AgentEvent> _loop() async {
     _start = runner.clock.now();
     _timer = Timer(config.maxDuration, () => abort(AgentErrorKind.timeout));
-
-    _current = runner.resolver.resolve(input);
-    emit(
-      Routed(
-        profileId: _current.profileId,
-        modelId: _current.modelId,
-        reason: _current.reason,
-      ),
-    );
-    _context = await runner.contextBuilder.build(input);
-    _messages.addAll(_context.messages);
-    // A private request without any target of enough privacy is not sent.
-    final noPrivateTarget = _current.belowPrivacyFloor;
-    final retry = input.requestEscalation || _current.requestedTarget != null;
+    final retry = await startRun(runner, input, _state, _privacy, this);
     if (retry) {
-      // „nochmal mit …“ repeats the previous turn: its privacy floor applies
-      // to this run too (K8 d).
-      final previous = _context.messages
-          .take(_context.messages.length - 1)
-          .lastWhereOrNull((m) => m.role == Role.user)
-          ?.privacyFloor;
-      final floor = _current.privacyFloor;
-      if (previous != null && (floor == null || !floor.isAtLeast(previous))) {
-        _current = _current.withPrivacyFloor(previous);
-      }
-    }
-    _raiseFloorToTaint();
-    await _record(_context.messages.last);
-    if (noPrivateTarget) {
-      throw _Stop(
-        const AgentFailed(
-          error: AgentErrorKind.provider,
-          message: AgentRunnerTexts.noPrivateTarget,
-        ),
-      );
-    }
-    // The model gets the routed text (trigger stripped); the recorded and
-    // displayed message stays as the user said it.
-    if (_current.effectiveText case final text?) {
-      _messages.last = Message.user(text, images: input.images);
-    }
-
-    if (retry) {
-      await _escalate(EscalationReason.userRequested);
+      await _escalation.escalate(EscalationReason.userRequested);
     }
 
     var retried = false;
     while (true) {
       await _checkBeforeCall();
-      final reply = await _callModel();
+      final reply = await _model.call();
 
       if (reply.error case final error?) {
-        _throwIfAborted();
-        if (error.retryable && !retried) {
-          retried = true;
-          _retryCurrentCall();
-          continue;
-        }
-        if (error.retryable &&
-            await _escalate(EscalationReason.providerError)) {
-          retried = false;
-          continue;
-        }
-        _throwIfAborted();
-        throw _Stop(
-          AgentFailed(
-            error: AgentErrorKind.provider,
-            message: 'Der Anbieter hat einen Fehler gemeldet: ${error.message}',
-            cause: error,
-          ),
-        );
+        retried = await _retryOrEscalateOnError(error, retried: retried);
+        continue;
       }
       retried = false;
-      final (assistant, calls) = _assignCallIds(reply.blocks);
+      final (assistant, calls) = _tools.assignCallIds(reply.blocks);
 
       if (calls.isEmpty && reply.stopReason == StopReason.pauseTurn) {
-        // Kept for the continuation, recorded once the answer stands.
-        _messages.add(assistant);
-        _paused.add(assistant);
+        _handlePauseTurn(assistant);
         continue;
       }
-
       if (calls.isEmpty) {
-        final text = [..._paused, assistant].map((m) => m.text).join();
-        if (runner.giveUpClassifier.isGiveUp(text) &&
-            await _escalate(EscalationReason.modelGaveUp)) {
-          continue;
-        }
-        await _append(assistant);
-        return AgentDone(
-          finalText: text,
-          stopReason: reply.stopReason ?? StopReason.other,
-        );
+        final done = await _answerOrEscalate(assistant, reply.stopReason);
+        if (done != null) return done;
+        continue; // handed over after „kann ich nicht“
       }
-
       // Tool round (also for tool calls in a paused answer: every tool_use
       // gets its tool_result).
-      if (_rounds >= config.maxToolRounds) {
-        await _refuseRound(assistant, calls, 'Limit der Tool-Runden erreicht');
-        throw _Stop(_failed(AgentErrorKind.toolRoundLimit));
-      }
-      if (_tokensSpent >= config.maxTokensPerRequest) {
-        await _refuseRound(assistant, calls, 'Token-Budget aufgebraucht');
-        throw _Stop(_failed(AgentErrorKind.tokenBudget));
-      }
-      if (_roundsOnProvider >= config.escalateAfterRoundsWithoutResult &&
-          await _escalate(EscalationReason.noProgress)) {
-        continue;
-      }
-      _rounds++;
-      _roundsOnProvider++;
-      await _append(assistant);
-      final results = await _runTools(calls);
-      await _append(Message.toolResults(results));
-      _throwIfAborted();
-
-      _invalidOnProvider += calls.where(_isInvalid).length;
-      if (_invalidOnProvider >= config.escalateAfterInvalidToolCalls) {
-        if (await _escalate(EscalationReason.invalidToolCalls)) continue;
-      }
+      await _toolRound(assistant, calls);
     }
+  }
+
+  /// A model call failed with [error]. Returns the new `retried` flag when
+  /// the loop goes on (retry or hand-over); else throws the terminal event.
+  Future<bool> _retryOrEscalateOnError(
+    ProviderException error, {
+    required bool retried,
+  }) async {
+    // Invariant: an abort wins over the error it caused.
+    throwIfAborted();
+    // Invariant: at most one retry at the same provider per model call;
+    // `retried` is reset after every successful call and every hand-over.
+    if (error.retryable && !retried) {
+      _retryCurrentCall();
+      return true;
+    }
+    if (error.retryable &&
+        await _escalation.escalate(EscalationReason.providerError)) {
+      return false;
+    }
+    throwIfAborted();
+    throw RunStop(
+      AgentFailed(
+        error: AgentErrorKind.provider,
+        message: 'Der Anbieter hat einen Fehler gemeldet: ${error.message}',
+        cause: error,
+      ),
+    );
   }
 
   /// Before retrying a failed call at the same provider: drop the text it
@@ -385,57 +334,64 @@ final class _Run {
   void _retryCurrentCall() {
     if (!_segmentStreamed) return;
     emit(const AgentTextReset('Neuer Versuch nach Fehler'));
-    final kept = _paused.map((m) => m.text).join();
+    final kept = _state.paused.map((m) => m.text).join();
     if (kept.isNotEmpty) emit(AgentTextDelta(kept));
   }
 
-  /// Gives every tool call an id that is unique in the conversation and
-  /// consists only of `[A-Za-z0-9_-]`. Weak servers repeat ids such as
-  /// `call_0` or send empty ones; such a call gets an internal id
-  /// (`call_0_dup1`, `call_dup1`; other characters become `_`) so that
-  /// tool_use and tool_result stay consistent across providers. [_sourceIds] keeps the id the model sent.
-  /// Ids every provider accepts (Anthropic: `^[a-zA-Z0-9_-]+$`).
-  static final _validId = RegExp(r'^[A-Za-z0-9_-]+$');
-  static final _invalidIdChars = RegExp('[^A-Za-z0-9_-]');
+  /// The model paused its turn (`StopReason.pauseTurn`) without tool calls.
+  void _handlePauseTurn(Message assistant) {
+    // Invariant: the turn continues with the next call without counting a
+    // tool round. The segment is kept for the continuation and recorded
+    // once the answer stands.
+    _state.messages.add(assistant);
+    _state.paused.add(assistant);
+  }
 
-  (Message, List<ToolCallBlock>) _assignCallIds(List<ContentBlock> blocks) {
-    final used = {
-      for (final m in _messages)
-        for (final c in m.toolCalls) c.id,
-    };
-    final out = <ContentBlock>[];
-    final calls = <ToolCallBlock>[];
-    for (final b in blocks) {
-      if (b is! ToolCallBlock) {
-        out.add(b);
-        continue;
-      }
-      var call = b;
-      final valid = _validId.hasMatch(b.id);
-      if (!valid || used.contains(b.id)) {
-        final base = b.id.isEmpty
-            ? 'call'
-            : b.id.replaceAll(_invalidIdChars, '_');
-        var id = base;
-        if (b.id.isEmpty || used.contains(id)) {
-          var n = 1;
-          while (used.contains('${base}_dup$n')) {
-            n++;
-          }
-          id = '${base}_dup$n';
-        }
-        call = ToolCallBlock(
-          id: id,
-          name: b.name,
-          argumentsJson: b.argumentsJson,
-        );
-      }
-      used.add(call.id);
-      _sourceIds[call.id] = b.id;
-      out.add(call);
-      calls.add(call);
+  /// A final answer: returns [AgentDone], or `null` when it gave up
+  /// („kann ich nicht“) and the run was handed over.
+  Future<AgentDone?> _answerOrEscalate(
+    Message assistant,
+    StopReason? stopReason,
+  ) async {
+    final text = [..._state.paused, assistant].map((m) => m.text).join();
+    if (runner.giveUpClassifier.isGiveUp(text) &&
+        await _escalation.escalate(EscalationReason.modelGaveUp)) {
+      return null;
     }
-    return (Message.assistant(out), calls);
+    await _state.append(assistant);
+    return AgentDone(
+      finalText: text,
+      stopReason: stopReason ?? StopReason.other,
+    );
+  }
+
+  /// Runs the tool [calls] of [assistant] as one round, unless a limit
+  /// refuses it (throws) or the run is handed over for lack of progress.
+  Future<void> _toolRound(Message assistant, List<ToolCallBlock> calls) async {
+    // Invariant: at most `maxToolRounds` rounds; the next one is refused
+    // with a result for every call, then the run ends.
+    if (_budget.roundLimitReached) {
+      await _tools.refuse(assistant, calls, 'Limit der Tool-Runden erreicht');
+      throw RunStop(_failed(AgentErrorKind.toolRoundLimit));
+    }
+    if (_budget.tokensExhausted) {
+      await _tools.refuse(assistant, calls, 'Token-Budget aufgebraucht');
+      throw RunStop(_failed(AgentErrorKind.tokenBudget));
+    }
+    if (_budget.noProgress &&
+        await _escalation.escalate(EscalationReason.noProgress)) {
+      return;
+    }
+    _budget.onRound();
+    await _state.append(assistant);
+    final results = await _tools.run(calls);
+    await _state.append(Message.toolResults(results));
+    throwIfAborted();
+
+    _budget.onInvalidCalls(calls.where(_tools.isInvalid).length);
+    if (_budget.tooManyInvalid) {
+      await _escalation.escalate(EscalationReason.invalidToolCalls);
+    }
   }
 
   // ---------------------------------------------------------------- limits
@@ -445,574 +401,18 @@ final class _Run {
         runner.clock.now().difference(_start) >= config.maxDuration) {
       abort(AgentErrorKind.timeout);
     }
-    _throwIfAborted();
-    if (_tokensSpent >= config.maxTokensPerRequest) {
-      throw _Stop(_failed(AgentErrorKind.tokenBudget));
+    throwIfAborted();
+    if (_budget.tokensExhausted) {
+      throw RunStop(_failed(AgentErrorKind.tokenBudget));
     }
-    final budget = await runner.budgetGuard?.check(_current.profileId);
-    switch (budget?.status) {
-      case BudgetStatus.block:
-        throw _Stop(_failed(AgentErrorKind.budgetBlocked));
-      case BudgetStatus.warn when _budgetWarned.add(_current.profileId):
-        emit(
-          BudgetWarning(
-            profileId: _current.profileId,
-            spentMicros: budget!.spentMicros,
-            budgetMicros: budget.budgetMicros,
-          ),
-        );
-      case _:
-        break;
-    }
-    _throwIfAborted();
+    await _budget.checkGuard(runner.budgetGuard, _state.current, this);
+    throwIfAborted();
   }
 
-  void _throwIfAborted() {
-    if (_abortKind case final kind?) throw _Stop(_failed(kind));
+  @override
+  void throwIfAborted() {
+    if (_abortKind case final kind?) throw RunStop(_failed(kind));
   }
 
-  AgentFailed _failed(AgentErrorKind kind) => AgentFailed(
-    error: kind,
-    message: switch (kind) {
-      AgentErrorKind.cancelled => 'Abgebrochen.',
-      AgentErrorKind.timeout =>
-        'Das hat zu lange gedauert, ich habe nach '
-            '${config.maxDuration.inSeconds} Sekunden abgebrochen.',
-      AgentErrorKind.toolRoundLimit =>
-        'Ich bin nach ${config.maxToolRounds} Tool-Runden zu keinem '
-            'Ergebnis gekommen und habe abgebrochen.',
-      AgentErrorKind.tokenBudget =>
-        'Das Token-Budget für diese Anfrage ist aufgebraucht.',
-      AgentErrorKind.budgetBlocked =>
-        'Das Monatsbudget für diesen Anbieter ist erreicht.',
-      AgentErrorKind.provider => 'Der Anbieter ist nicht erreichbar.',
-      AgentErrorKind.internal => 'Interner Fehler im Agenten.',
-    },
-  );
-
-  // ----------------------------------------------------------- model call
-
-  Future<_ModelReply> _callModel() async {
-    _raiseFloorToTaint();
-    final target = _current;
-    final catalog = _catalog;
-    final tools = catalog.activeSpecs();
-    final request = ChatRequest(
-      messages: _messagesFor(catalog, hasTools: tools.isNotEmpty),
-      model: target.modelId,
-      maxTokens: config.maxOutputTokens,
-      tools: tools,
-      temperature: config.temperature,
-      systemPrompt: _systemPrompt(),
-      metadata: {'sessionId': runner.sessionId},
-    );
-    final blocks = <ContentBlock>[];
-    Usage? usage;
-    StopReason? stopReason;
-    ProviderException? error;
-
-    await for (final event in target.provider.chat(request, cancel: token)) {
-      switch (event) {
-        case TextDelta(text: final delta):
-          if (delta.isEmpty) break;
-          emit(AgentTextDelta(delta));
-          _appendText(blocks, delta);
-        case ThinkingDelta(text: final delta):
-          if (delta.isNotEmpty) emit(AgentThinkingDelta(delta));
-        case ThinkingComplete(:final block):
-          blocks.add(block);
-        case ProviderBlockComplete(:final block):
-          // Kept in place for the same provider; never text, never spoken.
-          blocks.add(block);
-        case ToolCallDelta():
-          break; // assembled calls arrive as ToolCallComplete
-        case ToolCallComplete(:final call):
-          blocks.add(call);
-        case UsageEvent(usage: final increment):
-          usage = (usage ?? Usage.zero) + increment;
-        case Done(stopReason: final reason):
-          stopReason = reason;
-        case ErrorEvent(error: final e):
-          error = e;
-      }
-      if (event.isTerminal) break;
-    }
-    if (usage case final used?) {
-      // Cache reads are cheap and do not count towards the run budget.
-      _tokensSpent +=
-          used.inputTokens + used.outputTokens + used.cacheWriteTokens;
-      emit(
-        UsageReported(
-          profileId: target.profileId,
-          modelId: target.modelId,
-          usage: used,
-          costMicros: runner.costEstimator?.estimateMicros(
-            profileId: target.profileId,
-            modelId: target.modelId,
-            usage: used,
-          ),
-        ),
-      );
-    }
-    if (error == null && stopReason == null) {
-      error = const MalformedResponseException(
-        'Antwortstrom ohne Abschluss beendet',
-      );
-    }
-    // Incomplete tool calls of a failed stream are never executed: the
-    // whole reply is discarded on error.
-    return _ModelReply(error == null ? blocks : const [], stopReason, error);
-  }
-
-  /// Appends [text] to the last block if it is text, else starts a new
-  /// text block – keeps the order of text, thinking and tool-call blocks.
-  void _appendText(List<ContentBlock> blocks, String text) {
-    if (blocks.isNotEmpty && blocks.last is TextBlock) {
-      final last = blocks.removeLast() as TextBlock;
-      blocks.add(TextBlock(last.text + text));
-    } else {
-      blocks.add(TextBlock(text));
-    }
-  }
-
-  String _systemPrompt() {
-    // Memory entries of private runs only for targets of their level.
-    final memories = _context.memories;
-    // The memory's own floor ([AgentRunner.memoryFloor], a tool-catalog
-    // boundary like K10) holds even after consent to go below the run's
-    // floor; only the entries' own floors (K13 e) can be lifted that way.
-    final all = runner.memoryFloor;
-    final memoryAllowed = all == null || _current.privacy.isAtLeast(all);
-    final visible = [
-      for (final m in memories)
-        if (memoryAllowed && !_hiddenFor(_memoryFloor(m))) m,
-    ];
-    final base = visible.length == memories.length
-        ? _context.systemPrompt
-        : runner.contextBuilder.systemPrompt(memories: visible);
-    if (_epoch == 0) return base;
-    // Calls of tools this target may not see are left out (their names
-    // and status are protected too).
-    final shown = runner.catalogFor == null ? null : _catalog;
-    final before = _executed
-        .where(
-          (e) =>
-              e.epoch < _epoch &&
-              (shown == null || shown.lookup(e.call.name) != null),
-        )
-        .toList();
-    if (before.isEmpty) return base;
-    final actions = [
-      for (final e in before) (call: e.call, outcome: e.outcome),
-    ];
-    return '$base\n\n${ContextBuilder.escalationNote(actions)}';
-  }
-
-  // ----------------------------------------------------------------- tools
-
-  bool _isInvalid(ToolCallBlock call) =>
-      _catalog.lookup(call.name) == null || call.tryDecodeArguments() == null;
-
-  /// The earlier execution [call] would repeat, if any: a call with the
-  /// same id from the model *and* the same tool and arguments, or – after an
-  /// escalation – the same tool and arguments as a call of a previous
-  /// provider that was not declined. Equal ids with other content are an id
-  /// collision, not a repetition (see [_assignCallIds]).
-  _Executed? _earlierExecution(ToolCallBlock call) {
-    final sourceId = _sourceIds[call.id] ?? call.id;
-    for (final e in _executed) {
-      if (!_sameContent(e.call, call)) continue;
-      final earlierId = _sourceIds[e.call.id] ?? e.call.id;
-      if (sourceId.isNotEmpty && earlierId == sourceId) return e;
-      if (e.epoch < _epoch && !_isDeclined(e.outcome)) return e;
-    }
-    return null;
-  }
-
-  static bool _sameContent(ToolCallBlock a, ToolCallBlock b) {
-    if (a.name != b.name) return false;
-    final args = b.tryDecodeArguments();
-    return args == null
-        ? a.argumentsJson == b.argumentsJson
-        : const DeepCollectionEquality().equals(a.tryDecodeArguments(), args);
-  }
-
-  /// The tool catalog of the current target.
-  ToolCatalog get _catalog =>
-      runner.catalogFor?.call(_current.privacy) ??
-      runner.contextBuilder.catalog;
-
-  /// [_messages] as [catalog]'s target may see them. A protected section
-  /// starts after a hidden result and ends with the next user message; in it
-  /// also calls of visible tools are hidden.
-  ///
-  /// With per-target catalogs, calls to tools outside [catalog] are redacted
-  /// (arguments `{}`, result [AgentRunnerTexts.redactedResult]) – they may hold sensitive
-  /// data from a more private target or an earlier run – and so is every
-  /// assistant text, thinking or provider block that follows such a result
-  /// up to the next user message ([AgentRunnerTexts.placeholder]): the answer
-  /// was built from the protected data. Without any tools for the target
-  /// ([hasTools] false) tool calls and results become plain text, because
-  /// APIs reject tool blocks in a request without tools.
-  List<Message> _messagesFor(ToolCatalog catalog, {required bool hasTools}) {
-    final perTarget = runner.catalogFor != null;
-    final hidden = <String>{};
-    var tainted = false;
-    // Hidden: calls of tools outside the catalog (refused calls never ran,
-    // their result is our own error text) and, in a protected section,
-    // every call – its arguments may quote the protected result.
-    bool secret(ToolCallBlock c) =>
-        perTarget &&
-        (tainted ||
-            (!_refused.contains(c.id) && catalog.lookup(c.name) == null));
-    final out = <Message>[];
-    for (final m in _withoutPrivateHistory()) {
-      if (m.role == Role.user) tainted = false;
-      var taintsNext = false;
-      final blocks = <ContentBlock>[];
-      for (final b in m.content) {
-        switch (b) {
-          case ToolCallBlock() when secret(b):
-            hidden.add(b.id);
-            blocks.add(
-              hasTools
-                  ? ToolCallBlock(id: b.id, name: b.name, argumentsJson: '{}')
-                  : TextBlock('[Tool-Aufruf: ${b.name}]'),
-            );
-          case ToolCallBlock() when !hasTools:
-            blocks.add(
-              TextBlock('[Tool-Aufruf: ${b.name} ${b.argumentsJson}]'),
-            );
-          case ToolResultBlock() when hidden.contains(b.callId):
-            taintsNext = true;
-            blocks.add(
-              hasTools
-                  ? ToolResultBlock(
-                      callId: b.callId,
-                      content: const [
-                        TextBlock(AgentRunnerTexts.redactedResult),
-                      ],
-                    )
-                  : const TextBlock(
-                      '[Tool-Ergebnis: ${AgentRunnerTexts.redactedResult}]',
-                    ),
-            );
-          case ToolResultBlock() when !hasTools:
-            final text = b.content.whereType<TextBlock>().map((t) => t.text);
-            blocks.add(TextBlock('[Tool-Ergebnis: ${text.join()}]'));
-          case TextBlock() when tainted && m.role == Role.assistant:
-            if (blocks.lastOrNull !=
-                const TextBlock(AgentRunnerTexts.placeholder)) {
-              blocks.add(const TextBlock(AgentRunnerTexts.placeholder));
-            }
-          case ThinkingBlock() || ProviderBlock()
-              when tainted && m.role == Role.assistant:
-            break; // built from protected data
-          case _:
-            blocks.add(b);
-        }
-      }
-      if (taintsNext) tainted = true;
-      final role = !hasTools && m.role == Role.tool ? Role.user : m.role;
-      if (blocks.isEmpty && m.content.isNotEmpty) {
-        // Everything was protected (e.g. only thinking): keep the turn, not
-        // its content.
-        blocks.add(const TextBlock(AgentRunnerTexts.placeholder));
-      }
-      out.add(blocks.isEmpty ? m : Message(role, blocks));
-    }
-    return out;
-  }
-
-  /// [_messages] with earlier private turns the current target may not see
-  /// replaced by [AgentRunnerTexts.privateHidden]: a user placeholder and,
-  /// if the turn had an answer, one assistant placeholder (tool calls and
-  /// results disappear together, so pairs stay intact).
-  ///
-  /// A message is hidden when its floor is above the target's level, unless
-  /// the user agreed to go below this run's floor and that floor covers it.
-  List<Message> _withoutPrivateHistory() {
-    final hidden = _hiddenFor;
-    final out = <Message>[];
-    var hiding = false;
-    var answered = false;
-    for (final m in _messages) {
-      if (!hidden(m.privacyFloor)) {
-        hiding = false;
-        out.add(m);
-        continue;
-      }
-      if (m.role == Role.user || !hiding) {
-        out.add(Message.user(AgentRunnerTexts.privateHidden));
-        hiding = true;
-        answered = false;
-        if (m.role == Role.user) continue;
-      }
-      if (!answered) {
-        out.add(Message.assistantText(AgentRunnerTexts.privateHidden));
-        answered = true;
-      }
-    }
-    return out;
-  }
-
-  /// Whether content with privacy [floor] (an earlier private turn or
-  /// memory entry) is hidden from the current target: its level is below
-  /// [floor], and the user did not agree to go below this run's floor
-  /// covering it.
-  bool _hiddenFor(PrivacyLevel? floor) {
-    final runFloor = _current.privacyFloor;
-    return floor != null &&
-        !_current.privacy.isAtLeast(floor) &&
-        !(_belowFloorConsented &&
-            runFloor != null &&
-            runFloor.isAtLeast(floor));
-  }
-
-  /// The floor of memory entry [m]: its own, at least [AgentRunner.
-  /// memoryFloor].
-  PrivacyLevel? _memoryFloor(MemoryItem m) {
-    final own = m.privacyFloor;
-    final all = runner.memoryFloor;
-    if (own == null) return all;
-    if (all == null) return own;
-    return own.isAtLeast(all) ? own : all;
-  }
-
-  /// Taint propagation: once the current target sees private content (an
-  /// earlier private turn or memory entry), whatever this run produces may
-  /// contain it. The run's floor rises to the highest such floor, so its
-  /// messages are stored with it, tools persist with it, and escalations
-  /// below it need consent.
-  void _raiseFloorToTaint() {
-    PrivacyLevel? taint;
-    for (final floor in [
-      for (final m in _messages) m.privacyFloor,
-      for (final m in _context.memories) _memoryFloor(m),
-    ]) {
-      if (floor == null || _hiddenFor(floor)) continue;
-      if (taint == null || floor.isAtLeast(taint)) taint = floor;
-    }
-    final current = _current.privacyFloor;
-    if (taint != null && (current == null || !current.isAtLeast(taint))) {
-      _current = _current.withPrivacyFloor(taint);
-    }
-  }
-
-  static bool _isDeclined(ToolOutcome o) =>
-      !o.isError && o.text == ToolOutcome.declinedText;
-
-  Future<List<ToolResultBlock>> _runTools(List<ToolCallBlock> calls) async {
-    final results = <String, ToolResultBlock>{};
-    final pending = <ToolCallBlock>[];
-    final catalog = _catalog;
-    for (final call in calls) {
-      if (runner.catalogFor != null && catalog.lookup(call.name) == null) {
-        // Not offered to this target (e.g. sensitive tool, standard
-        // provider): never reaches the invoker.
-        _refused.add(call.id);
-        runner.onToolRefused?.call(runner.sessionId, call);
-        final outcome = ToolOutcome.error(
-          AgentRunnerTexts.hiddenTool(call.name),
-        );
-        emit(ToolCallStarted(call));
-        emit(ToolCallFinished(call: call, outcome: outcome));
-        results[call.id] = outcome.toResultBlock(call.id);
-        continue;
-      }
-      final earlier = _earlierExecution(call);
-      if (earlier == null) {
-        pending.add(call);
-        continue;
-      }
-      final outcome = ToolOutcome(
-        content: [
-          const TextBlock(
-            'Bereits ausgeführt, nicht wiederholt. Früheres Ergebnis:',
-          ),
-          ...earlier.outcome.content,
-        ],
-        isError: earlier.outcome.isError,
-        summary: 'Bereits ausgeführt',
-      );
-      emit(ToolCallStarted(call));
-      emit(ToolCallFinished(call: call, outcome: outcome));
-      results[call.id] = outcome.toResultBlock(call.id);
-    }
-
-    if (pending.isNotEmpty) {
-      final ctx = ToolContext(
-        sessionId: runner.sessionId,
-        clock: runner.clock,
-        locale: runner.contextBuilder.device.locale,
-        timeZone: runner.contextBuilder.device.timeZone,
-        cancel: token,
-        privacyLevel: _current.privacy,
-        privacyFloor: _current.privacyFloor,
-      );
-      await for (final event in runner.invoker.invokeAll(pending, ctx)) {
-        switch (event) {
-          case ToolStarted(:final call):
-            emit(ToolCallStarted(call));
-          case ConfirmationNeeded(:final call, :final description):
-            emit(
-              ConfirmationRequired(
-                call: call,
-                description: description,
-                respond: event.respond,
-                risk: event.risk,
-              ),
-            );
-          case ToolFinished(:final call, :final outcome, :final duration):
-            _executed.add((call: call, outcome: outcome, epoch: _epoch));
-            emit(
-              ToolCallFinished(
-                call: call,
-                outcome: outcome,
-                duration: duration,
-              ),
-            );
-            results[call.id] = outcome.toResultBlock(call.id);
-        }
-      }
-    }
-
-    // Every tool_use needs a tool_result, even if an invoker broke its
-    // contract.
-    return [
-      for (final call in calls)
-        results[call.id] ??
-            ToolOutcome.error('Kein Ergebnis vom Tool erhalten')
-                .toResultBlock(call.id),
-    ];
-  }
-
-  /// Records [assistant] with error results for [calls] that are not
-  /// executed, so every tool call in the history has a result.
-  Future<void> _refuseRound(
-    Message assistant,
-    List<ToolCallBlock> calls,
-    String why,
-  ) async {
-    await _append(assistant);
-    await _append(
-      Message.toolResults([
-        for (final c in calls)
-          ToolOutcome.error('Nicht ausgeführt: $why').toResultBlock(c.id),
-      ]),
-    );
-  }
-
-  // ------------------------------------------------------------ escalation
-
-  /// Tries to hand the request to the next provider; returns whether it
-  /// happened.
-  Future<bool> _escalate(EscalationReason reason) async {
-    final next = runner.resolver.escalate(_current, reason);
-    if (next == null) return false;
-    final same =
-        next.profileId == _current.profileId &&
-        next.modelId == _current.modelId;
-    // Results of tools the next target may not see are in this run: it
-    // gets them redacted, but the user decides whether to hand over at all.
-    final nextCatalog = runner.catalogFor?.call(next.privacy);
-    final protectedData =
-        nextCatalog != null &&
-        _executed.any(
-          (e) =>
-              !_isDeclined(e.outcome) &&
-              nextCatalog.lookup(e.call.name) == null,
-        );
-    if (next.belowPrivacyFloor || protectedData) {
-      // Ask at most once per run; a „no“ stands.
-      if (_consentDeclined && !protectedData) return false;
-      final answer = Completer<bool>();
-      final question = EscalationConfirmationRequired(
-        fromProfile: _current.profileId,
-        toProfile: next.profileId,
-        reason: reason,
-        respond: answer.complete,
-      );
-      emit(question);
-      final approved = await Future.any([
-        answer.future,
-        token.whenCancelled.then((_) => false),
-      ]);
-      question.respond(false); // no-op if answered
-      _throwIfAborted();
-      if (approved && next.belowPrivacyFloor) _belowFloorConsented = true;
-      if (!approved) {
-        if (protectedData) {
-          throw _Stop(
-            const AgentFailed(
-              error: AgentErrorKind.provider,
-              message: AgentRunnerTexts.protectedDeclined,
-            ),
-          );
-        }
-        _consentDeclined = true;
-        return false;
-      }
-    }
-    if (same) {
-      // Retry on the same target („nochmal mit <aktuelles Ziel>“): nothing
-      // to hand over, only the consent above may have been needed.
-      _current = next;
-      return true;
-    }
-    emit(
-      Escalated(
-        fromProfile: _current.profileId,
-        toProfile: next.profileId,
-        reason: reason,
-      ),
-    );
-    // The answer of the previous provider is discarded: paused segments and
-    // streamed text of the current call.
-    _messages.removeWhere((m) => _paused.any((p) => identical(p, m)));
-    _paused.clear();
-    if (_segmentStreamed) {
-      emit(const AgentTextReset('An anderes Modell übergeben'));
-    }
-    _current = next;
-    _epoch++;
-    _roundsOnProvider = 0;
-    _invalidOnProvider = 0;
-    // Signed thinking belongs to the provider that produced it; provider
-    // blocks only make sense for their provider family.
-    final family = _current.provider.type.name;
-    bool foreign(ContentBlock b) =>
-        b is ThinkingBlock || (b is ProviderBlock && b.provider != family);
-    for (var i = 0; i < _messages.length; i++) {
-      final m = _messages[i];
-      if (m.content.any(foreign)) {
-        _messages[i] = Message(m.role, [
-          for (final b in m.content)
-            if (!foreign(b)) b,
-        ]);
-      }
-    }
-    return true;
-  }
-
-  // ------------------------------------------------------------- history
-
-  /// Adds a kept message; records paused segments of this answer first.
-  Future<void> _append(Message m) async {
-    for (final p in _paused) {
-      await _record(p);
-    }
-    _paused.clear();
-    _messages.add(m);
-    await _record(m);
-  }
-
-  /// Records [m]; messages of a private run carry its privacy floor so
-  /// later turns can hide them from weaker targets.
-  Future<void> _record(Message m) async {
-    final floor = _current.privacyFloor;
-    await runner.recorder?.record(
-      floor == null ? m : m.withPrivacyFloor(floor),
-    );
-  }
+  AgentFailed _failed(AgentErrorKind kind) => failedEvent(kind, config);
 }
