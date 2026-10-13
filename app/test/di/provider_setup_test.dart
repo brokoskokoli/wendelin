@@ -8,6 +8,7 @@ import 'package:wendelin/di/maintenance.dart';
 import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/di/provider_setup.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/routing.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
@@ -447,7 +448,31 @@ void main() {
       );
     });
 
-    test('Kette, Standard und Löschen räumen auf', () async {
+    test('neues Standardmodell gilt auch für das Standardziel', () async {
+      final n = c.read(profilesProvider.notifier);
+      await n.save(profile('a'));
+      expect(
+        (await c.read(storedProviderConfigProvider.future))!.primary.modelId,
+        'claude-haiku-4-5',
+      );
+      final p = profile('a');
+      await n.save(
+        ProviderProfile(
+          id: p.id,
+          name: p.name,
+          type: p.type,
+          defaultModel: 'claude-sonnet-4-5',
+          privacy: p.privacy,
+          authMethod: p.authMethod,
+        ),
+      );
+      expect(
+        (await c.read(storedProviderConfigProvider.future))!.primary.modelId,
+        'claude-sonnet-4-5',
+      );
+    });
+
+    test('Standard und Löschen räumen auf, Regeln folgen', () async {
       final n = c.read(profilesProvider.notifier);
       await env.secrets.write('provider.b.apiKey', _key);
       for (final id in ['a', 'b', 'c']) {
@@ -455,23 +480,21 @@ void main() {
           profile(id, secret: id == 'b' ? 'provider.b.apiKey' : null),
         );
       }
-      await n.setChain(['b', 'c']);
-      var state = await c.read(profilesProvider.future);
-      expect(state.chain, ['b', 'c']);
-      expect(
-        (await c.read(storedProviderConfigProvider.future))!.chain
-            .map((t) => t.profileId),
-        ['b', 'c'],
-      );
       await n.setDefault('c');
-      state = await c.read(profilesProvider.future);
+      var state = await c.read(profilesProvider.future);
       expect(state.defaultId, 'c');
-      expect(state.chain, ['b'], reason: 'Standard nicht in der Kette');
+      final config = (await c.read(storedProviderConfigProvider.future))!;
+      expect(config.primary.profileId, 'c');
+      expect(config.routing!.rules.defaultTarget.profileId, 'c');
+      expect(
+        (await c.read(routingProvider.future)).rules!.defaultTarget.profileId,
+        'c',
+        reason: 'der Regelsatz folgt dem Standardprofil',
+      );
 
       await n.delete('b');
       state = await c.read(profilesProvider.future);
       expect(state.byId('b'), isNull);
-      expect(state.chain, isEmpty);
       expect(await env.secrets.read('provider.b.apiKey'), isNull);
 
       await n.delete('c');

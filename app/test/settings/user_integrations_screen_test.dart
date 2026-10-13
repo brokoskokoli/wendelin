@@ -7,6 +7,7 @@ import 'package:wendelin/ui/settings/coming_soon_screen.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
 import 'package:wendelin/ui/settings/http_tools_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
+import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -16,8 +17,8 @@ import 'integrations_screen_test.dart';
 import 'other_screens_test.dart' show pumpPage;
 
 void main() {
-  testWidgets('Übersicht: Routing und MCP-Server führen zu Platzhaltern, '
-      'HTTP-Tools zur Liste', (tester) async {
+  testWidgets('Übersicht: Routing öffnet den Editor, MCP-Server führt zum '
+      'Platzhalter, HTTP-Tools zur Liste', (tester) async {
     await pumpPage(tester, TestEnv(), const SettingsScreen());
     final titles = [for (final (t, _, _) in SettingsScreen.areas) t];
     expect(titles.take(5), [
@@ -27,7 +28,12 @@ void main() {
       'MCP-Server',
       'HTTP-Tools',
     ]);
-    for (final title in ['Routing', 'MCP-Server']) {
+    await tester.tap(find.text('Routing'));
+    await settle(tester);
+    expect(find.byType(RoutingScreen), findsOneWidget);
+    await tester.tap(find.byTooltip('Zurück'));
+    await settle(tester);
+    for (final title in ['MCP-Server']) {
       await tester.tap(find.text(title));
       await settle(tester);
       expect(find.byType(ComingSoonScreen), findsOneWidget, reason: title);

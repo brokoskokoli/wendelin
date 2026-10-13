@@ -28,6 +28,7 @@ final class AgentRunner implements AgentRun {
     this.budgetGuard,
     this.catalogFor,
     this.onToolRefused,
+    this.memoryFloor,
     GiveUpClassifier? giveUpClassifier,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier();
 
@@ -68,6 +69,14 @@ final class AgentRunner implements AgentRun {
   /// Called for every call refused because the current target may not see
   /// the tool (it never reaches the [invoker], so the app audits it here).
   final void Function(String sessionId, ToolCallBlock call)? onToolRefused;
+
+  /// Privacy floor of every memory entry: the lowest level allowed to see
+  /// the memory at all (e.g. `tee` for the sensitive memory integration).
+  /// Each entry counts with the higher of its own floor and this one, so
+  /// weaker targets get no memory in the system prompt, and a run that
+  /// does see it is tainted (escalations below ask first). `null` = no
+  /// floor besides the entries' own.
+  final PrivacyLevel? memoryFloor;
 
   /// Detects „kann ich nicht“ answers.
   final GiveUpClassifier giveUpClassifier;
@@ -569,9 +578,14 @@ final class _Run {
   String _systemPrompt() {
     // Memory entries of private runs only for targets of their level.
     final memories = _context.memories;
+    // The memory's own floor ([AgentRunner.memoryFloor], a tool-catalog
+    // boundary like K10) holds even after consent to go below the run's
+    // floor; only the entries' own floors (K13 e) can be lifted that way.
+    final all = runner.memoryFloor;
+    final memoryAllowed = all == null || _current.privacy.isAtLeast(all);
     final visible = [
       for (final m in memories)
-        if (!_hiddenFor(m.privacyFloor)) m,
+        if (memoryAllowed && !_hiddenFor(_memoryFloor(m))) m,
     ];
     final base = visible.length == memories.length
         ? _context.systemPrompt
@@ -755,6 +769,16 @@ final class _Run {
             runFloor.isAtLeast(floor));
   }
 
+  /// The floor of memory entry [m]: its own, at least [AgentRunner.
+  /// memoryFloor].
+  PrivacyLevel? _memoryFloor(MemoryItem m) {
+    final own = m.privacyFloor;
+    final all = runner.memoryFloor;
+    if (own == null) return all;
+    if (all == null) return own;
+    return own.isAtLeast(all) ? own : all;
+  }
+
   /// Taint propagation: once the current target sees private content (an
   /// earlier private turn or memory entry), whatever this run produces may
   /// contain it. The run's floor rises to the highest such floor, so its
@@ -764,7 +788,7 @@ final class _Run {
     PrivacyLevel? taint;
     for (final floor in [
       for (final m in _messages) m.privacyFloor,
-      for (final m in _context.memories) m.privacyFloor,
+      for (final m in _context.memories) _memoryFloor(m),
     ]) {
       if (floor == null || _hiddenFor(floor)) continue;
       if (taint == null || floor.isAtLeast(taint)) taint = floor;

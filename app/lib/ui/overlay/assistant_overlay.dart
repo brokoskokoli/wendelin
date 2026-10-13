@@ -14,6 +14,7 @@ import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
 import '../design/design.dart';
 import '../screens/confirmation_sheet.dart';
+import '../screens/private_banner.dart';
 import '../voice/microphone_access.dart';
 import 'overlay_sheet.dart';
 
@@ -181,8 +182,18 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
             running: conversation.running,
           );
     final sheet = OverlaySheet(
-      providerName: target == null ? '' : config!.nameOf(target.profileId),
+      providerName: target == null
+          ? ''
+          : providerLabel(
+              config!.nameOf(target.profileId),
+              conversation.activeRule,
+            ),
       privacy: target?.privacy ?? PrivacyLevel.standard,
+      privateSince: _locked ? null : conversation.privateSince,
+      privateByRequest: conversation.privateByRequest,
+      onNewConversation: conversation.running
+          ? null
+          : () => unawaited(_agent.newTopic()),
       checkStatus: conversation.verification?.checkStatus,
       exchange: _locked
           ? const OverlayExchange()

@@ -3,28 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
-import 'app_settings.dart';
 import 'providers.dart';
+import 'routing.dart';
 
-/// Stored provider profiles, the default and the escalation chain.
+/// Stored provider profiles and the default. Escalation chains belong to
+/// the routing rules since M3 (`routing.dart`).
 @immutable
 final class ProfilesState {
   /// Creates the state.
   ProfilesState({
     required List<ProviderProfile> profiles,
     required this.defaultId,
-    required List<String> chain,
-  }) : profiles = List.unmodifiable(profiles),
-       chain = List.unmodifiable(chain);
+  }) : profiles = List.unmodifiable(profiles);
 
   /// All profiles in insertion order.
   final List<ProviderProfile> profiles;
 
   /// Id of the default profile.
   final String? defaultId;
-
-  /// Escalation chain after the default, weakest first.
-  final List<String> chain;
 
   /// The profile [id], or `null`.
   ProviderProfile? byId(String id) =>
@@ -42,32 +38,37 @@ final class ProfilesNotifier extends AsyncNotifier<ProfilesState> {
   @override
   Future<ProfilesState> build() async {
     final storage = ref.watch(storageProvider);
-    final profiles = await storage.providerProfiles.list();
-    final ids = {for (final p in profiles) p.id};
-    final chain = await storage.settings.get(AppSettings.escalationChain);
     return ProfilesState(
-      profiles: profiles,
+      profiles: await storage.providerProfiles.list(),
       defaultId: (await storage.providerProfiles.defaultProfile())?.id,
-      chain: [
-        for (final id in chain ?? const <String>[])
-          if (ids.contains(id)) id,
-      ],
     );
   }
 
   /// Stores [profile]; the first profile (or [makeDefault]) becomes the
-  /// default.
+  /// default. A changed default model also changes the routing targets
+  /// that used the old one ([followDefaultModel]).
   Future<void> save(ProviderProfile profile, {bool makeDefault = false}) =>
       _change((storage) async {
+        final before = await storage.providerProfiles.get(profile.id);
         await storage.providerProfiles.save(profile);
+        if (before != null) {
+          await followDefaultModel(
+            storage,
+            profileId: profile.id,
+            from: before.defaultModel,
+            to: profile.defaultModel,
+          );
+        }
         final hasDefault = await storage.providerProfiles.defaultProfile();
         if (makeDefault || hasDefault == null) {
           await storage.providerProfiles.setDefault(profile.id);
         }
       });
 
-  /// Deletes profile [id] with its secrets and removes it from the chain.
-  /// If it was the default, the first remaining profile becomes the default.
+  /// Deletes profile [id] with its secrets. If it was the default, the
+  /// first remaining profile becomes the default (the routing rules follow,
+  /// see `loadRuleSet`); rules and chain links to it stay and are shown
+  /// with a warning in the routing editor.
   Future<void> delete(String id) => _change((storage) async {
     final profile = await storage.providerProfiles.get(id);
     if (profile == null) return;
@@ -76,11 +77,6 @@ final class ProfilesNotifier extends AsyncNotifier<ProfilesState> {
       await secrets.delete(secretRef);
     }
     await storage.providerProfiles.delete(id);
-    final chain = await storage.settings.get(AppSettings.escalationChain);
-    await storage.settings.set(AppSettings.escalationChain, [
-      for (final c in chain ?? const <String>[])
-        if (c != id) c,
-    ]);
     if (await storage.providerProfiles.defaultProfile() == null) {
       final rest = await storage.providerProfiles.list();
       if (rest.isNotEmpty) {
@@ -89,20 +85,10 @@ final class ProfilesNotifier extends AsyncNotifier<ProfilesState> {
     }
   });
 
-  /// Makes [id] the default profile (and removes it from the chain).
-  Future<void> setDefault(String id) => _change((storage) async {
-    await storage.providerProfiles.setDefault(id);
-    final chain = await storage.settings.get(AppSettings.escalationChain);
-    await storage.settings.set(AppSettings.escalationChain, [
-      for (final c in chain ?? const <String>[])
-        if (c != id) c,
-    ]);
-  });
-
-  /// Stores the escalation chain [ids] (order = order of escalation).
-  Future<void> setChain(List<String> ids) => _change(
-    (storage) => storage.settings.set(AppSettings.escalationChain, ids),
-  );
+  /// Makes [id] the default profile (also the default target of the
+  /// routing rules).
+  Future<void> setDefault(String id) =>
+      _change((storage) => storage.providerProfiles.setDefault(id));
 
   Future<void> _change(
     Future<void> Function(WendelinStorage storage) body,
@@ -110,6 +96,7 @@ final class ProfilesNotifier extends AsyncNotifier<ProfilesState> {
     await body(ref.read(storageProvider));
     ref
       ..invalidate(storedProviderConfigProvider)
+      ..invalidate(routingProvider)
       ..invalidateSelf();
     await future;
   }

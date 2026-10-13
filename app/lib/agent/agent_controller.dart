@@ -81,7 +81,72 @@ final class AgentController extends Notifier<ConversationState> {
       entries: entriesFromMessages([
         for (final m in messages) m.message,
       ], sessionStart: last.startedAt),
+      privateSince: privateSinceOf(messages),
+      privateByRequest: await _anyPrivateRequest(messages),
     );
+  }
+
+  /// Whether one of the user [messages] with a privacy floor was itself a
+  /// private request (and not only tainted, e.g. by the memory).
+  Future<bool> _anyPrivateRequest(List<StoredMessage> messages) async {
+    final floored = [
+      for (final m in messages)
+        if (m.message.role == Role.user && m.message.privacyFloor != null)
+          m.message.text,
+    ];
+    if (floored.isEmpty) return false;
+    final ProviderConfig? config;
+    try {
+      config = await ref.read(providerConfigProvider.future);
+    } on Object {
+      return true; // Unknown: the stricter hint.
+    }
+    return floored.any((t) => _isPrivateRequest(config, UserInput(text: t)));
+  }
+
+  /// Whether [input] is routed privately (a `privacy` rule matches).
+  static bool _isPrivateRequest(ProviderConfig? config, UserInput input) {
+    if (config == null) return false;
+    try {
+      return config.resolver().resolve(input).privacyFloor != null;
+    } on Object {
+      return false;
+    }
+  }
+
+  /// The session [sessionId] ended (inactivity, „neues Thema“): a shown
+  /// private state belongs to it and ends too.
+  void sessionEnded(String sessionId) {
+    if (sessionId == _shownSessionId && state.privateSince != null) {
+      state = state.copyWith(clearPrivate: true);
+    }
+  }
+
+  /// Time of the first message with a privacy floor in [messages], or
+  /// `null`: from then on the conversation is private (taint propagation,
+  /// ADR 0009 §4).
+  static DateTime? privateSinceOf(List<StoredMessage> messages) => messages
+      .where((m) => m.message.privacyFloor != null)
+      .map((m) => m.createdAt)
+      .firstOrNull;
+
+  /// Looks up whether the session [sessionId] became private.
+  Future<void> _refreshPrivacy(String sessionId) async {
+    if (state.privateSince != null) return;
+    final List<StoredMessage> messages;
+    try {
+      messages = await ref
+          .read(storageProvider)
+          .conversations
+          .messages(sessionId);
+    } on Object catch (e, stack) {
+      _report(e, stack);
+      return;
+    }
+    final since = privateSinceOf(messages);
+    if (since != null && sessionId == _shownSessionId) {
+      state = state.copyWith(privateSince: since);
+    }
   }
 
   /// Sends [text] to the agent. „neues Thema“ starts a new session instead.
@@ -167,10 +232,13 @@ final class AgentController extends Notifier<ConversationState> {
     final isNew = sessionId != _shownSessionId;
     _shownSessionId = sessionId;
     state = _reducer.userMessage(
-      state,
+      isNew ? state.copyWith(clearPrivate: true) : state,
       trimmed,
       sessionStart: isNew ? ref.read(clockProvider).now() : null,
     );
+    if (_isPrivateRequest(providers, input)) {
+      state = state.copyWith(privateByRequest: true);
+    }
 
     final request = UserInput(
       text: trimmed,
@@ -306,6 +374,9 @@ final class AgentController extends Notifier<ConversationState> {
         }
       case UsageReported(:final profileId, :final modelId, :final usage):
         unawaited(_recordUsage(sessionId, event, profileId, modelId, usage));
+      case EscalationConfirmationRequired() || AgentDone() || AgentFailed():
+        // The answers and the request are stored by now (with their floor).
+        unawaited(_refreshPrivacy(sessionId));
       case _:
     }
     state = _reducer.apply(state, event);

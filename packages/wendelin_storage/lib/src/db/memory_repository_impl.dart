@@ -54,6 +54,14 @@ final class DriftMemoryRepository implements MemoryRepository {
   }
 
   @override
+  Future<MemoryEntry?> clearPrivacyFloor(String id) async {
+    await (_db.update(_db.memoryEntries)..where((m) => m.id.equals(id))).write(
+      const MemoryEntriesCompanion(privacyFloor: Value(null)),
+    );
+    return get(id);
+  }
+
+  @override
   Future<bool> forget(String id) async =>
       await (_db.delete(
         _db.memoryEntries,

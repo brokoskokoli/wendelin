@@ -9,6 +9,7 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import '../agent/agent_controller.dart';
 import '../platform/platform_ports.dart';
 import '../platform/secure_secret_store.dart';
 import 'agent_factory.dart';
@@ -23,6 +24,7 @@ import 'integration_specs.dart';
 import 'preference_models.dart';
 import 'preferences.dart';
 import 'provider_config.dart';
+import 'routing.dart';
 import 'sensitivity.dart';
 import 'session_manager.dart';
 import 'startup.dart';
@@ -419,6 +421,8 @@ final sessionManagerProvider = Provider<SessionManager>((ref) {
     conversations: ref.watch(storageProvider).conversations,
     clock: ref.watch(clockProvider),
     onSessionEnd: (id) {
+      // „Unterhaltung privat“ ends with its session.
+      ref.read(agentControllerProvider.notifier).sessionEnded(id);
       // Read lazily: the registry may have been rebuilt meanwhile.
       ref.read(toolRegistryProvider).endSession(id);
       final integrations = ref.read(integrationsProvider);
@@ -443,14 +447,16 @@ final providerConfigProvider = FutureProvider<ProviderConfig?>((ref) {
   return ref.watch(storedProviderConfigProvider.future);
 });
 
-/// The configuration from the stored profiles. Invalidate after profiles
-/// or the escalation chain changed (WP09).
+/// The configuration from the stored profiles and routing rules.
+/// Invalidate after profiles or rules changed (WP09, WP26).
 final storedProviderConfigProvider = FutureProvider<ProviderConfig?>(
   (ref) => loadProviderConfig(
     storage: ref.watch(storageProvider),
     secrets: ref.watch(secretStoreProvider),
     catalog: ref.watch(modelCatalogProvider),
     create: ref.watch(llmProviderFactoryProvider),
+    clock: ref.watch(clockProvider),
+    network: ref.watch(networkStatusProvider),
   ),
 );
 

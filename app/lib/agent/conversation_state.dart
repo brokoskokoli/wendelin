@@ -63,6 +63,9 @@ final class ConversationState {
     this.lastRequest,
     this.nextSeq = 1,
     this.verification,
+    this.activeRule,
+    this.privateSince,
+    this.privateByRequest = false,
   }) : entries = List.unmodifiable(entries);
 
   /// The empty conversation.
@@ -95,6 +98,20 @@ final class ConversationState {
   /// Last receipt check (TEE) of the answering provider, if any.
   final VerificationStatus? verification;
 
+  /// Routing rule that chose the current provider (`Routed.reason`);
+  /// `null` = default target or after an escalation.
+  final String? activeRule;
+
+  /// Since when the conversation is private: time of its first message
+  /// with a privacy floor (a private request, or a run that saw private
+  /// content). It stays private until a new conversation starts.
+  final DateTime? privateSince;
+
+  /// Whether a request of this conversation was routed privately („privat“
+  /// rule); `false` while it is only confidential because a run used the
+  /// memory (or other content with a privacy floor).
+  final bool privateByRequest;
+
   /// A copy with the given fields replaced; `clear…` resets nullable
   /// fields to `null`.
   ConversationState copyWith({
@@ -110,6 +127,11 @@ final class ConversationState {
     int? nextSeq,
     VerificationStatus? verification,
     bool clearVerification = false,
+    String? activeRule,
+    bool clearRule = false,
+    DateTime? privateSince,
+    bool? privateByRequest,
+    bool clearPrivate = false,
   }) => ConversationState(
     entries: entries ?? this.entries,
     running: running ?? this.running,
@@ -120,6 +142,11 @@ final class ConversationState {
     lastRequest: lastRequest ?? this.lastRequest,
     nextSeq: nextSeq ?? this.nextSeq,
     verification: clearVerification ? null : verification ?? this.verification,
+    activeRule: clearRule ? null : activeRule ?? this.activeRule,
+    privateSince: clearPrivate ? null : privateSince ?? this.privateSince,
+    privateByRequest: clearPrivate
+        ? false
+        : privateByRequest ?? this.privateByRequest,
   );
 
   /// The tool entry of [callId], if any.

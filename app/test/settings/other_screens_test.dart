@@ -14,6 +14,7 @@ import 'package:wendelin/ui/settings/integrations_screen.dart';
 import 'package:wendelin/ui/settings/memory_screen.dart';
 import 'package:wendelin/ui/settings/privacy_screen.dart';
 import 'package:wendelin/ui/settings/providers_screen.dart';
+import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -70,7 +71,9 @@ void main() {
   });
 
   group('Provider', () {
-    testWidgets('Profile, Standard wechseln, Kette, Löschen', (tester) async {
+    testWidgets('Profile, Standard wechseln, Link zu Ketten, Löschen', (
+      tester,
+    ) async {
       final env = TestEnv(
         storedProfiles: true,
         llmFactory: (p, s) => FakeLlmProvider(const []),
@@ -86,30 +89,18 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(
-        find
-            .byWidgetPredicate(
-              (w) =>
-                  w is Semantics &&
-                  w.properties.label == 'Profil b in der Eskalationskette',
-            )
-            .first,
-      );
+      // Die Ketten stehen seit M3 unter Routing (je Profil).
+      expect(find.text('Eskalationsketten'), findsOneWidget);
+      await tester.tap(find.text('Routing'));
       await settle(tester);
-      expect((await c.read(profilesProvider.future)).chain, ['b']);
-      expect(
-        (await c.read(storedProviderConfigProvider.future))!
-            .chain
-            .single
-            .profileId,
-        'b',
-      );
+      expect(find.byType(RoutingScreen), findsOneWidget);
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await settle(tester);
 
       await tester.tap(find.text('Als Standard'));
       await settle(tester);
       final state = await c.read(profilesProvider.future);
       expect(state.defaultId, 'b');
-      expect(state.chain, isEmpty);
 
       await tester.tap(find.text('Löschen').first);
       await tester.pumpAndSettle();

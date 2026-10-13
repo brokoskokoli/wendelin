@@ -623,8 +623,8 @@ void main() {
       },
     );
 
-    test('Gedächtnis im Prompt nur, wenn jedes Ziel der Kette es sehen darf '
-        '(WP14)', () async {
+    test('Gedächtnis je Ziel: das TEE-Ziel bekommt es auch in gemischter '
+        'Kette, der Lauf wird dafür vertraulich (WP14, Review WP26)', () async {
       for (final mixed in [true, false]) {
         final provider = FakeLlmProvider([ScriptedTurn.text('ok')]);
         env = TestEnv(
@@ -655,10 +655,15 @@ void main() {
         await sendAndWait(c, 'Wo taucht man gut?');
         expect(
           provider.requests.single.systemPrompt,
-          mixed
-              ? isNot(contains('Taucht gern im Mittelmeer'))
-              : contains('Taucht gern im Mittelmeer'),
+          contains('Taucht gern im Mittelmeer'),
           reason: 'Kette mit Standard-Ziel: $mixed',
+        );
+        final sessionId = c.read(sessionManagerProvider).currentId!;
+        final stored = await env.storage.conversations.messages(sessionId);
+        expect(
+          stored.map((m) => m.message.privacyFloor),
+          everyElement(PrivacyLevel.tee),
+          reason: 'Gedächtnis gesehen: Eskalation darunter fragt nach',
         );
         c.dispose();
       }

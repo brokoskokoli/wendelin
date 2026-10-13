@@ -11,14 +11,17 @@ import '../../agent/money.dart';
 import '../../di/obsidian_index.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
+import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
+import '../design/design.dart';
 import '../routes.dart';
 import '../voice/microphone_access.dart';
 import 'confirmation_sheet.dart';
 import 'conversation_view.dart';
 import 'main_parts.dart';
+import 'private_banner.dart';
 
 /// Main screen (docs/design/screens/hauptbildschirm): head, provider and
 /// cost chips, conversation, text field and microphone. Confirmations open
@@ -94,6 +97,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final active = _activeTarget(providers, conversation.activeProfileId);
 
     Widget? setupHint;
+    final notice = ref.watch(privateRuleNoticeProvider).value;
     if (config.hasError) {
       setupHint = ProviderSetupCard(
         onSetup: _openProviderSetup,
@@ -105,6 +109,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       setupHint = ProviderSetupCard(
         onSetup: _openProviderSetup,
         onDemo: () => ref.read(demoModeProvider.notifier).set(enabled: true),
+      );
+    } else if (notice != null) {
+      setupHint = PrivateRuleNoticeCard(
+        text: privateRuleNoticeText(notice),
+        onOpen: () {
+          unawaited(dismissPrivateRuleNotice(ref));
+          unawaited(Navigator.of(context).pushNamed(AppRoutes.routing));
+        },
+        onDismiss: () => unawaited(dismissPrivateRuleNotice(ref)),
       );
     }
 
@@ -119,10 +132,29 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           MainChips(
             providerName: active == null
                 ? null
-                : providers!.nameOf(active.profileId),
+                : providerLabel(
+                    providers!.nameOf(active.profileId),
+                    conversation.activeRule,
+                  ),
             privacy: active?.privacy,
             costLabel: 'heute ${formatUsd(cost)}',
           ),
+          if (conversation.privateSince case final since?)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                WSpace.screen,
+                0,
+                WSpace.screen,
+                WSpace.m,
+              ),
+              child: PrivateConversationBanner(
+                since: since,
+                byRequest: conversation.privateByRequest,
+                onNewConversation: conversation.running
+                    ? null
+                    : () => unawaited(_controller.newTopic()),
+              ),
+            ),
           Expanded(
             child: ConversationView(
               entries: conversation.entries,
@@ -204,6 +236,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           question: question,
           providerName: active == null ? '' : config!.nameOf(active.profileId),
           privacy: active?.privacy ?? PrivacyLevel.standard,
+          privateSince: ref.watch(
+            agentControllerProvider.select((s) => s.privateSince),
+          ),
+          privateByRequest: ref.watch(
+            agentControllerProvider.select((s) => s.privateByRequest),
+          ),
           toolRisk: question is ToolQuestion
               ? question.event.risk
               : RiskLevel.external,

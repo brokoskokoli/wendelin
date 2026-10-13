@@ -22,7 +22,9 @@ abstract final class AppSettings {
   /// Calendar for new events, chosen by the user (device calendar id).
   static final defaultCalendarId = SettingKey.string('calendar.defaultId');
 
-  /// Escalation chain after the default profile: profile ids, weakest first.
+  /// M2 escalation chain after the default profile (profile ids, weakest
+  /// first). Since M3 only read once, when `loadRuleSet` migrates it into
+  /// the routing rules (`RoutingSettings.rules`).
   static final escalationChain = SettingKey<List<String>>(
     'routing.escalationChain',
     encode: (ids) => ids,
