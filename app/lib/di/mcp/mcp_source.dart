@@ -8,9 +8,11 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../integration_decorator.dart';
 import '../user_integrations.dart';
+import 'mcp_draft.dart';
 import 'mcp_persistence.dart';
 import 'mcp_secrets.dart';
-import 'mcp_templates.dart';
+
+export 'mcp_draft.dart';
 
 /// Redirect of the OAuth login: caught by the intent filter of
 /// `OAuthRedirectActivity` (Kotlin) and handed back to the waiting
@@ -20,112 +22,6 @@ final mcpRedirectUri = Uri.parse('app.wendelin://oauth/mcp');
 /// Gets an error of a server that should set its integration to
 /// „Fehler“ (e.g. `ToolRegistry.reportError`).
 typedef McpErrorSink = void Function(String integrationId, String message);
-
-/// What the „Server hinzufügen“ form produces. Secret values only live here
-/// until [McpServerSource.add] writes them to the `SecretStore`.
-final class McpDraft {
-  /// Creates a draft.
-  McpDraft({
-    required this.name,
-    required this.url,
-    this.transport = McpTransportKind.auto,
-    this.auth = McpAuthKind.none,
-    this.token,
-    List<(String, String)> headers = const [],
-    this.clientId,
-    this.confirmAll = false,
-    this.sensitive = false,
-  }) : headers = List.unmodifiable(headers);
-
-  /// Display name.
-  final String name;
-
-  /// Endpoint.
-  final Uri url;
-
-  /// Transport choice.
-  final McpTransportKind transport;
-
-  /// Authentication kind.
-  final McpAuthKind auth;
-
-  /// Bearer token ([McpAuthKind.bearer]).
-  final String? token;
-
-  /// Own headers as (name, secret value) ([McpAuthKind.headers]).
-  final List<(String, String)> headers;
-
-  /// Pre-registered OAuth client id; `null` = dynamic registration.
-  final String? clientId;
-
-  /// Every tool needs confirmation.
-  final bool confirmAll;
-
-  /// Tools only go to providers of the level for sensitive integrations.
-  final bool sensitive;
-
-  /// The configuration with secret references of server [id], and the
-  /// secrets to store under them.
-  (McpServerConfig, Map<String, String>) toConfig(String id, String slug) {
-    final secrets = <String, String>{};
-    final McpAuth authConfig;
-    switch (auth) {
-      case McpAuthKind.none:
-        authConfig = const McpNoAuth();
-      case McpAuthKind.bearer:
-        final ref = McpSecretRefs.bearer(id);
-        if (token case final t? when t.isNotEmpty) secrets[ref] = t;
-        authConfig = McpBearerAuth(ref);
-      case McpAuthKind.headers:
-        final refs = <String, String>{};
-        for (final (i, (name, value)) in headers.indexed) {
-          final ref = McpSecretRefs.header(id, i);
-          refs[name] = ref;
-          if (value.isNotEmpty) secrets[ref] = value;
-        }
-        authConfig = McpHeadersAuth(refs);
-      case McpAuthKind.oauth:
-        authConfig = McpOAuth(
-          tokenRef: McpSecretRefs.oauthToken(id),
-          clientRef: McpSecretRefs.oauthClient(id),
-          clientId: (clientId?.trim().isEmpty ?? true)
-              ? null
-              : clientId!.trim(),
-        );
-    }
-    return (
-      McpServerConfig(
-        id: id,
-        name: name.trim(),
-        slug: slug,
-        url: url,
-        transport: transport,
-        auth: authConfig,
-        sensitive: sensitive,
-        confirmAll: confirmAll,
-      ),
-      secrets,
-    );
-  }
-}
-
-/// Failure of the OAuth login that the UI shows as a hint.
-final class McpSignInException implements Exception {
-  /// Creates the failure with a German [message].
-  const McpSignInException(this.message);
-
-  /// No browser is installed (AOSP without a browser).
-  static const noBrowser = McpSignInException(
-    'Kein Browser installiert. Für die Anmeldung wird ein Browser '
-    'gebraucht, z. B. Fennec oder Firefox aus F-Droid.',
-  );
-
-  /// German text.
-  final String message;
-
-  @override
-  String toString() => message;
-}
 
 /// An MCP server as registered in the `ToolRegistry`: the [McpIntegration]
 /// with a snapshot of its tools (the registry copies them, and the sync

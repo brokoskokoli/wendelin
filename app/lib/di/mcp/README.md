@@ -5,6 +5,7 @@ App-Seite des MCP-Clients aus `packages/wendelin_mcp` (ADR 0010), angebunden als
 | Datei | Inhalt |
 | --- | --- |
 | `mcp_source.dart` | `McpServerSource`: Server anlegen (`add`, vorher `probeDraft`), ändern (`update`), `reload`, OAuth `signIn`/`signOut`, `setSecret`, `remove`, Export/Import. `McpServerIntegration` ist die Fassung für die Registry. |
+| `mcp_draft.dart` | `McpDraft` (Formular „Server hinzufügen“ → Konfiguration + Secrets), `McpSignInException`; wird von `mcp_source.dart` re-exportiert |
 | `mcp_persistence.dart` | Einstellungsschlüssel (`mcp.servers`, `mcp.<id>.tools`, `mcp.<id>.check`), `McpCheck` (letzte Prüfung), `SettingsMcpCacheStore` |
 | `mcp_secrets.dart` | `SecretStoreMcpSecrets` (besteht `mcpSecretsContract`), Secret-Referenzen `mcp.<id>.bearer`, `.header.<n>`, `.oauth.token`, `.oauth.client` |
 | `mcp_templates.dart` | Vorlagen: Home Assistant, Obsidian (obsidian-mcp-server), Kalender (dav-mcp), eigener Server |
