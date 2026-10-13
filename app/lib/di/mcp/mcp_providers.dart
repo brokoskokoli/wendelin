@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
 import '../../platform/channel_authorization_browser.dart';
@@ -29,6 +30,14 @@ final mcpLogProvider = Provider<McpLog?>(
   (ref) => kDebugMode ? (line) => debugPrint(line) : null,
 );
 
+/// HTTP client of the MCP servers: short keep-alive, so a restarted server
+/// is not reached over a dead pooled socket.
+final mcpHttpClientProvider = Provider<http.Client>((ref) {
+  final client = newMcpHttpClient();
+  ref.onDispose(client.close);
+  return client;
+});
+
 /// The MCP servers (WP27) as source of user-defined integrations.
 ///
 /// Switching a server on connects it (`initialize`, `tools/list`); the
@@ -38,7 +47,7 @@ final mcpServerSourceProvider = Provider<McpServerSource>((ref) {
   final source = McpServerSource(
     settings: storage.settings,
     secrets: SecretStoreMcpSecrets(ref.watch(secretStoreProvider)),
-    httpClient: ref.watch(httpClientProvider),
+    httpClient: ref.watch(mcpHttpClientProvider),
     browser: ref.watch(mcpAuthorizationBrowserProvider),
     browserAvailable: ref.watch(mcpBrowserAvailableProvider),
     ids: ref.watch(idGeneratorProvider),

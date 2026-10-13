@@ -19,6 +19,8 @@ final class McpTimeouts {
     this.connect = const Duration(seconds: 10),
     this.response = const Duration(seconds: 30),
     this.maxResponseBytes = 1024 * 1024,
+    this.idleCheck = const Duration(seconds: 2),
+    this.pingTimeout = const Duration(seconds: 5),
   });
 
   /// Until the response headers arrive.
@@ -29,6 +31,15 @@ final class McpTimeouts {
 
   /// Largest accepted response body (JSON or SSE stream of one request).
   final int maxResponseBytes;
+
+  /// After this much idle time (or after a network failure) a `tools/call`
+  /// is preceded by a `ping`, so that a dead keep-alive socket is found
+  /// without risking a repeated side effect.
+  final Duration idleCheck;
+
+  /// Time limit of the connection-check `ping` (short, so that a dead
+  /// connection does not block the agent loop for the whole [response] limit).
+  final Duration pingTimeout;
 }
 
 /// Receives debug lines; they never contain header values or bodies.

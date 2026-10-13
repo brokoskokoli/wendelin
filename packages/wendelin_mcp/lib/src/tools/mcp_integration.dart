@@ -325,6 +325,7 @@ final class McpTool implements Tool {
         info.name,
         args,
         cancel: ctx.cancel,
+        idempotent: risk == RiskLevel.read,
       );
       integration.onCall?.call(null);
       return mcpOutcome(result, server: server, tool: info.name);

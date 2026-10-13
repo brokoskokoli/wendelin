@@ -32,6 +32,44 @@ final class StreamableHttpTransport extends TransportBase {
   @override
   Future<void> open({CancelToken? cancel}) async {}
 
+  // Pooled keep-alive sockets can be dead without the client knowing (server
+  // restart, network change); a request on such a socket fails although the
+  // server is fine. A `tools/call` may already have run when the connection
+  // breaks and must not be repeated, so after a pause or a failure a `ping`
+  // (idempotent, repeatable) tests the connection first.
+  final Stopwatch _idle = Stopwatch();
+  bool _suspect = false;
+
+  bool _needsCheck() =>
+      _suspect || (_idle.isRunning && _idle.elapsed >= deps.timeouts.idleCheck);
+
+  Future<void> _verifyConnection(CancelToken? cancel) async {
+    if (!_needsCheck()) return;
+    for (var attempt = 0; ; attempt++) {
+      try {
+        await _roundTrip(
+          'ping',
+          null,
+          cancel,
+          limit: deps.timeouts.pingTimeout,
+        );
+        return;
+      } on McpException catch (e) {
+        if (e.kind == McpErrorKind.network && attempt == 0) continue;
+        // A ping that fails again or times out means the server is not
+        // reachable: report it instead of sending the `tools/call` anyway.
+        if (e.kind == McpErrorKind.network ||
+            e.kind == McpErrorKind.timeout ||
+            e.kind == McpErrorKind.authRequired ||
+            e.kind == McpErrorKind.sessionExpired) {
+          rethrow;
+        }
+        // The server answered (even with an error): the connection is fine.
+        return;
+      }
+    }
+  }
+
   Future<Map<String, String>> _headers() async => {
     'content-type': 'application/json',
     'accept': 'application/json, text/event-stream',
@@ -45,10 +83,39 @@ final class StreamableHttpTransport extends TransportBase {
     String method,
     Map<String, Object?>? params, {
     CancelToken? cancel,
-  }) {
+  }) async {
+    if (method == 'tools/call') await _verifyConnection(cancel);
+    return _roundTrip(method, params, cancel);
+  }
+
+  Future<Object?> _roundTrip(
+    String method,
+    Map<String, Object?>? params,
+    CancelToken? cancel, {
+    Duration? limit,
+  }) async {
     final id = nextId();
     final message = JsonRpcRequest(id, method, params);
-    return guarded(cancel, deps.timeouts.response, (abort) async {
+    try {
+      return await _exchange(message, id, cancel, limit);
+    } on McpException catch (e) {
+      if (e.kind == McpErrorKind.network) _suspect = true;
+      rethrow;
+    } finally {
+      // Idle time counts from the end of the answer.
+      _idle
+        ..reset()
+        ..start();
+    }
+  }
+
+  Future<Object?> _exchange(
+    JsonRpcRequest message,
+    Object id,
+    CancelToken? cancel,
+    Duration? limit,
+  ) {
+    return guarded(cancel, limit ?? deps.timeouts.response, (abort) async {
       final response = await _post(message, abort);
       final type = response.headers['content-type'] ?? '';
       if (type.startsWith('text/event-stream')) {
@@ -106,16 +173,23 @@ final class StreamableHttpTransport extends TransportBase {
     Future<void> abort,
   ) async {
     final hadSession = _sessionId != null;
-    final response = await sendRequest(
-      deps.client,
-      'POST',
-      url,
-      headers: await _headers(),
-      body: message.encode(),
-      connect: deps.timeouts.connect,
-      abort: abort,
-      log: deps.log,
-    );
+    final http.StreamedResponse response;
+    try {
+      response = await sendRequest(
+        deps.client,
+        'POST',
+        url,
+        headers: await _headers(),
+        body: message.encode(),
+        connect: deps.timeouts.connect,
+        abort: abort,
+        log: deps.log,
+      );
+    } on Object {
+      _suspect = true;
+      rethrow;
+    }
+    _suspect = false;
     final status = response.statusCode;
     if (status >= 200 && status < 300) {
       final session = response.headers['mcp-session-id'];
