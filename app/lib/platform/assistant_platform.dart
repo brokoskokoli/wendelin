@@ -128,8 +128,13 @@ class AssistantPlatform {
 
 /// Whom Android asks when another app wants speech recognition.
 enum RecognitionServiceState {
-  /// Wendelin (`app.wendelin/.WendelinRecognitionService`).
+  /// Wendelin (`app.wendelin/.WendelinRecognitionService`), and its
+  /// service may answer.
   active,
+
+  /// Android names Wendelin, but its service is off (no assistant role or
+  /// not offered): other apps get errors.
+  inactive,
 
   /// Another service; it cannot be changed on this device.
   other,
@@ -150,6 +155,7 @@ final class RecognitionServiceStatus {
     if (value is! Map) return unknown;
     final state = switch (value['state']) {
       'active' => RecognitionServiceState.active,
+      'inactive' => RecognitionServiceState.inactive,
       'other' => RecognitionServiceState.other,
       _ => RecognitionServiceState.unknown,
     };

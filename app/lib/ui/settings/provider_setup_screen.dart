@@ -232,35 +232,56 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     ),
   ];
 
+  /// Profile name; with [login] the password manager's user name.
+  Widget _nameField({required bool login}) => TextField(
+    key: const ValueKey('providerName'),
+    controller: _name,
+    style: WText.body,
+    autofillHints: login ? const [AutofillHints.username] : null,
+    decoration: const InputDecoration(labelText: 'Name'),
+  );
+
+  Widget _baseUrlField() => TextField(
+    controller: _baseUrl,
+    style: WText.body,
+    keyboardType: TextInputType.url,
+    decoration: const InputDecoration(labelText: 'Base-URL'),
+  );
+
   List<Widget> _credentials() {
     final session = _session!;
     final t = session.template;
     return [
-      TextField(
-        controller: _name,
-        style: WText.body,
-        decoration: const InputDecoration(labelText: 'Name'),
-      ),
-      if (t.type == ProviderType.openaiCompatible)
-        TextField(
-          controller: _baseUrl,
-          style: WText.body,
-          keyboardType: TextInputType.url,
-          decoration: const InputDecoration(labelText: 'Base-URL'),
-        ),
-      if (t.auth != TemplateAuth.none) ...[
+      // Name and key form one login for the password manager: the name
+      // („Claude“) tells its entries apart, so a provider key is not
+      // offered for Bring! or other secrets of the app.
+      if (t.auth == TemplateAuth.none)
+        _nameField(login: false)
+      else
         AutofillGroup(
-          child: SecretField(
-            key: const ValueKey('apiKey'),
-            controller: _key,
-            label: t.auth == TemplateAuth.apiKey
-                ? 'API-Key'
-                : 'API-Key (optional)',
-            helperText: session.keyStored
-                ? 'Key gespeichert – leer lassen behält ihn'
-                : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: WSpace.l18,
+            children: [
+              _nameField(login: true),
+              if (t.type == ProviderType.openaiCompatible) _baseUrlField(),
+              SecretField(
+                key: const ValueKey('apiKey'),
+                controller: _key,
+                label: t.auth == TemplateAuth.apiKey
+                    ? 'API-Key'
+                    : 'API-Key (optional)',
+                helperText: session.keyStored
+                    ? 'Key gespeichert – leer lassen behält ihn'
+                    : null,
+              ),
+            ],
           ),
         ),
+      if (t.auth == TemplateAuth.none &&
+          t.type == ProviderType.openaiCompatible)
+        _baseUrlField(),
+      if (t.auth != TemplateAuth.none) ...[
         if (t.keyPageUrl case final url?)
           Align(
             alignment: AlignmentDirectional.centerStart,

@@ -170,6 +170,7 @@ void main() {
 
     testWidgets('ohne App-Namen: „einen anderen Dienst“', (tester) async {
       final platform = FakeAssistantPlatform()
+        ..isDefault = true
         ..recognition = const RecognitionServiceStatus(
           RecognitionServiceState.other,
         );
@@ -181,6 +182,71 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('anderer Dienst ohne Rolle: bedienbar, Wert kann sich ändern', (
+      tester,
+    ) async {
+      final platform = FakeAssistantPlatform()
+        ..recognition = const RecognitionServiceStatus(
+          RecognitionServiceState.other,
+          appName: 'Google',
+        );
+      await pumpAssistant(tester, platform);
+      expect(find.textContaining(notAvailableOnDevice), findsNothing);
+      expect(
+        find.textContaining(
+          'Android nutzt für andere Apps derzeit Google. Das kann sich '
+          'ändern, sobald Wendelin Standard-Assistent ist.',
+        ),
+        findsOneWidget,
+      );
+      expect(recognizerSwitch(tester).onChanged, isNotNull);
+    });
+
+    testWidgets('anderer Dienst, gespeichert „aus“: wieder einschaltbar', (
+      tester,
+    ) async {
+      final platform = FakeAssistantPlatform()
+        ..isDefault = true
+        ..recognizerOffered = false
+        ..recognition = const RecognitionServiceStatus(
+          RecognitionServiceState.other,
+          appName: 'Google',
+        );
+      await pumpAssistant(tester, platform);
+      expect(recognizerSwitch(tester).value, isFalse);
+      expect(recognizerSwitch(tester).onChanged, isNotNull);
+      expect(find.textContaining('hängt vom Gerät ab'), findsOneWidget);
+      final checks = platform.recognitionChecks;
+      await tester.tap(find.byType(WSwitch));
+      await tester.pump();
+      await tester.pump();
+      expect(platform.recognizerOffered, isTrue);
+      expect(platform.recognitionChecks, greaterThan(checks), reason: 'neu');
+      // Android stays with Google: now locked and marked.
+      expect(recognizerSwitch(tester).onChanged, isNull);
+      expect(find.textContaining(notAvailableOnDevice), findsOneWidget);
+    });
+
+    for (final isDefault in [true, false]) {
+      testWidgets('verweist auf Wendelin, aber aus (Rolle: $isDefault)', (
+        tester,
+      ) async {
+        final platform = FakeAssistantPlatform()
+          ..isDefault = isDefault
+          ..recognizerOffered = !isDefault
+          ..recognition = const RecognitionServiceStatus(
+            RecognitionServiceState.inactive,
+          );
+        await pumpAssistant(tester, platform);
+        expect(
+          find.textContaining(inactiveRecognizerHint(isDefault: isDefault)),
+          findsOneWidget,
+        );
+        expect(find.textContaining(recognizerActiveHint), findsNothing);
+        expect(recognizerSwitch(tester).onChanged, isNotNull);
+      });
+    }
 
     for (final state in [
       RecognitionServiceState.active,
@@ -203,6 +269,7 @@ void main() {
 
     testWidgets('Neuprüfung bei Rückkehr in die App', (tester) async {
       final platform = FakeAssistantPlatform()
+        ..isDefault = true
         ..recognition = const RecognitionServiceStatus(
           RecognitionServiceState.active,
         );

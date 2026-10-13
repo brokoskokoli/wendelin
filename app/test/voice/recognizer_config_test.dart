@@ -167,6 +167,10 @@ void main() {
             {'state': 'active', 'appName': 'x'},
             const RecognitionServiceStatus(RecognitionServiceState.active),
           ),
+          (
+            {'state': 'inactive', 'appName': 'x'},
+            const RecognitionServiceStatus(RecognitionServiceState.inactive),
+          ),
           ({'state': 'unknown'}, RecognitionServiceStatus.unknown),
           ({'state': 'kaputt'}, RecognitionServiceStatus.unknown),
           ('active', RecognitionServiceStatus.unknown),

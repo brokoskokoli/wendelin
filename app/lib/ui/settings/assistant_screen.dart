@@ -27,10 +27,26 @@ const notAvailableOnDevice = 'Auf diesem Gerät nicht verfügbar';
 const recognizerActiveHint =
     'Android nutzt Wendelin für die Spracheingabe anderer Apps.';
 
-/// Hint when Android keeps another speech recognizer for other apps.
+/// Hint when Android keeps another speech recognizer for other apps
+/// although Wendelin is assistant and offers itself.
 String otherRecognizerHint(String? appName) =>
     'Android nutzt für andere Apps ${appName ?? 'einen anderen Dienst'}. '
     'Das lässt sich auf diesem Gerät nicht umstellen.';
+
+/// Hint when another speech recognizer is set while Wendelin does not
+/// (yet) take part: no assistant role, or not offered.
+String otherRecognizerForNowHint(String? appName, {required bool isDefault}) =>
+    'Android nutzt für andere Apps derzeit '
+    '${appName ?? 'einen anderen Dienst'}. '
+    '${isDefault ? 'Ob Android nach dem Einschalten zu Wendelin wechselt, '
+              'hängt vom Gerät ab.' : 'Das kann sich ändern, sobald Wendelin '
+              'Standard-Assistent ist.'}';
+
+/// Hint when Android names Wendelin but its recognizer is off.
+String inactiveRecognizerHint({required bool isDefault}) =>
+    'Android verweist für andere Apps auf Wendelin, die Spracherkennung ist '
+    'aber aus${isDefault ? ' (Schalter aus).' : ': Wendelin ist nicht '
+              'Standard-Assistent.'} Andere Apps bekommen dann einen Fehler.';
 
 /// Hint below „Als Spracherkennung anbieten“: Android keeps the system
 /// speech recognizer on Wendelin after the assistant is switched, and it
@@ -88,6 +104,12 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
     super.dispose();
   }
 
+  /// Switches the offer; Android may then name another recognizer.
+  Future<void> _setOffered(bool on) async {
+    await ref.read(recognizerOfferedProvider.notifier).set(offered: on);
+    ref.invalidate(recognitionServiceProvider);
+  }
+
   Future<void> _save() async {
     await ref
         .read(assistantPrefsProvider.notifier)
@@ -101,7 +123,14 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
     final recognizer =
         ref.watch(recognitionServiceProvider).value ??
         RecognitionServiceStatus.unknown;
-    final elsewhere = recognizer.state == RecognitionServiceState.other;
+    final offered = ref.watch(recognizerOfferedProvider).value ?? true;
+    // Locked only when Wendelin takes part and Android still keeps another
+    // service; before (no role, switched off) the value may still change,
+    // and a stored „off“ must stay switchable.
+    final elsewhere =
+        recognizer.state == RecognitionServiceState.other &&
+        isDefault &&
+        offered;
     return SettingsPage(
       title: 'Assistent',
       children: [
@@ -149,9 +178,16 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
                   key: const ValueKey('recognizerRow'),
                   title: 'Als Spracherkennung für andere Apps anbieten',
                   detail: switch (recognizer.state) {
-                    RecognitionServiceState.other =>
+                    RecognitionServiceState.other when elsewhere =>
                       '$notAvailableOnDevice. '
                           '${otherRecognizerHint(recognizer.appName)}',
+                    RecognitionServiceState.other => otherRecognizerForNowHint(
+                      recognizer.appName,
+                      isDefault: isDefault,
+                    ),
+                    RecognitionServiceState.inactive => inactiveRecognizerHint(
+                      isDefault: isDefault,
+                    ),
                     RecognitionServiceState.active =>
                       '$recognizerActiveHint Whisper erkennt auf dem Gerät, '
                           'Aufnahmen werden nicht gespeichert.',
@@ -165,18 +201,14 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
                   trailing: Opacity(
                     opacity: elsewhere ? WOpacity.inactive : 1,
                     child: WSwitch(
-                      value: ref.watch(recognizerOfferedProvider).value ?? true,
+                      value: offered,
                       semanticLabel: elsewhere
                           ? 'Als Spracherkennung für andere Apps anbieten, '
                                 '$notAvailableOnDevice'
                           : 'Als Spracherkennung für andere Apps anbieten',
                       onChanged: elsewhere
                           ? null
-                          : (on) => unawaited(
-                              ref
-                                  .read(recognizerOfferedProvider.notifier)
-                                  .set(offered: on),
-                            ),
+                          : (on) => unawaited(_setOffered(on)),
                     ),
                   ),
                 ),

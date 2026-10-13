@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.provider.Settings
 import android.speech.RecognitionSupport
 import android.speech.RecognitionSupportCallback
@@ -19,10 +18,13 @@ import android.speech.SpeechRecognizer
  * services (e.g. HyperOS) it often stays with Google and cannot be changed there. Wendelin only
  * reads it and never changes it (no `WRITE_SECURE_SETTINGS`).
  *
- * Result for the channel: `{state: active | other | unknown, appName?}`.
+ * Result for the channel: `{state: active | inactive | other | unknown, appName?}`.
  */
 object RecognitionServiceStatus {
     const val ACTIVE = "active"
+
+    /** The setting names Wendelin, but its service is off (no assistant role or not offered). */
+    const val INACTIVE = "inactive"
     const val OTHER = "other"
     const val UNKNOWN = "unknown"
 
@@ -48,13 +50,52 @@ object RecognitionServiceStatus {
         return pkg to if (rest.startsWith(".")) pkg + rest else rest
     }
 
-    /** Compares the setting [value] with Wendelin's own recognizer component. */
-    fun evaluate(value: String?, ownPackage: String, ownClass: String): Evaluation {
+    /**
+     * Compares the setting [value] with Wendelin's own recognizer component. Pointing to
+     * Wendelin is only [ACTIVE] while the service may answer ([serviceActive],
+     * [RecognizerSwitch.isActive]); otherwise other apps get errors: [INACTIVE].
+     */
+    fun evaluate(
+        value: String?,
+        ownPackage: String,
+        ownClass: String,
+        serviceActive: Boolean,
+    ): Evaluation {
         val (pkg, cls) = parseComponent(value) ?: return Evaluation(UNKNOWN)
-        return if (pkg == ownPackage && cls == ownClass) {
-            Evaluation(ACTIVE)
-        } else {
-            Evaluation(OTHER, pkg)
+        return when {
+            pkg != ownPackage || cls != ownClass -> Evaluation(OTHER, pkg)
+            serviceActive -> Evaluation(ACTIVE)
+            else -> Evaluation(INACTIVE)
+        }
+    }
+
+    /** Delayed tasks: the main looper in the app, a fake in JVM tests. */
+    interface Scheduler {
+        fun post(delayMs: Long, task: Runnable)
+        fun cancel(task: Runnable)
+    }
+
+    /**
+     * One self-test run: answers exactly once, with the result or [UNKNOWN] after [timeoutMs].
+     * Every run has its own timeout task, so parallel runs never cancel each other's timeout.
+     */
+    class OnceWithTimeout(
+        private val scheduler: Scheduler,
+        timeoutMs: Long,
+        private val onDone: (Evaluation) -> Unit,
+    ) {
+        private var finished = false
+        private val timeout = Runnable { finish(Evaluation(UNKNOWN)) }
+
+        init {
+            scheduler.post(timeoutMs, timeout)
+        }
+
+        fun finish(evaluation: Evaluation) {
+            if (finished) return
+            finished = true
+            scheduler.cancel(timeout)
+            onDone(evaluation)
         }
     }
 
@@ -83,6 +124,7 @@ object RecognitionServiceStatus {
             value,
             context.packageName,
             WendelinRecognitionService::class.java.name,
+            RecognizerSwitch.isActive(context),
         )
         if (evaluation.state != UNKNOWN) {
             answer(toArgs(evaluation, evaluation.otherPackage?.let { appLabel(context, it) }))
@@ -107,21 +149,22 @@ object RecognitionServiceStatus {
             return
         }
         val main = Handler(Looper.getMainLooper())
-        var finished = false
         var recognizer: SpeechRecognizer? = null
         val startedAt = System.nanoTime()
-        fun finish(evaluation: Evaluation) {
-            if (finished) return
-            finished = true
-            main.removeCallbacksAndMessages(SelfTestToken)
+        val run = OnceWithTimeout(
+            object : Scheduler {
+                override fun post(delayMs: Long, task: Runnable) {
+                    main.postDelayed(task, delayMs)
+                }
+
+                override fun cancel(task: Runnable) = main.removeCallbacks(task)
+            },
+            SELF_TEST_TIMEOUT_MS,
+        ) {
             recognizer?.destroy()
-            done(evaluation)
+            done(it)
         }
-        main.postAtTime(
-            { finish(Evaluation(UNKNOWN)) },
-            SelfTestToken,
-            SystemClock.uptimeMillis() + SELF_TEST_TIMEOUT_MS,
-        )
+        fun finish(evaluation: Evaluation) = run.finish(evaluation)
         try {
             val created = SpeechRecognizer.createSpeechRecognizer(context)
             recognizer = created
@@ -162,6 +205,4 @@ object RecognitionServiceStatus {
             finish(Evaluation(UNKNOWN))
         }
     }
-
-    private object SelfTestToken
 }

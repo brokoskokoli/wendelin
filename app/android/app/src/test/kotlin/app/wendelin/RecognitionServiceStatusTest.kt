@@ -9,13 +9,65 @@ class RecognitionServiceStatusTest {
     private val pkg = "app.wendelin"
     private val cls = "app.wendelin.WendelinRecognitionService"
 
-    private fun state(value: String?) = RecognitionServiceStatus.evaluate(value, pkg, cls)
+    private fun state(value: String?, serviceActive: Boolean = true) =
+        RecognitionServiceStatus.evaluate(value, pkg, cls, serviceActive)
+
+    /** Scheduler driven by the test: pending tasks run on [runAll]. */
+    private class FakeScheduler : RecognitionServiceStatus.Scheduler {
+        val pending = mutableListOf<Runnable>()
+
+        override fun post(delayMs: Long, task: Runnable) {
+            pending += task
+        }
+
+        override fun cancel(task: Runnable) {
+            pending.remove(task)
+        }
+
+        fun runAll() = pending.toList().forEach { it.run() }
+    }
 
     @Test
     fun ownServiceShortAndLongFormIsActive() {
         assertEquals("active", state("app.wendelin/.WendelinRecognitionService").state)
         assertEquals("active", state("app.wendelin/app.wendelin.WendelinRecognitionService").state)
         assertEquals("active", state(" app.wendelin/.WendelinRecognitionService\n").state)
+    }
+
+    @Test
+    fun ownServiceSwitchedOffIsInactive() {
+        // Role missing or „anbieten“ off: the component is disabled, other apps get errors.
+        val off = state("app.wendelin/.WendelinRecognitionService", serviceActive = false)
+        assertEquals("inactive", off.state)
+        assertNull(off.otherPackage)
+        assertEquals(
+            mapOf("state" to "inactive"),
+            RecognitionServiceStatus.toArgs(off, "x"),
+        )
+        // Another service stays „other“ whatever Wendelin's switch says.
+        assertEquals("other", state("com.example/.Rec", serviceActive = false).state)
+        assertEquals("unknown", state(null, serviceActive = false).state)
+    }
+
+    @Test
+    fun parallelSelfTestsKeepTheirOwnTimeout() {
+        val scheduler = FakeScheduler()
+        val results = mutableListOf<Pair<String, String>>()
+        val first = RecognitionServiceStatus.OnceWithTimeout(scheduler, 2000) {
+            results += "first" to it.state
+        }
+        RecognitionServiceStatus.OnceWithTimeout(scheduler, 2000) {
+            results += "second" to it.state
+        }
+        assertEquals(2, scheduler.pending.size)
+        // The first answers: only its own timeout is cancelled.
+        first.finish(RecognitionServiceStatus.Evaluation("active"))
+        assertEquals(1, scheduler.pending.size)
+        scheduler.runAll()
+        assertEquals(listOf("first" to "active", "second" to "unknown"), results)
+        // Answers once: a late result or timeout changes nothing.
+        first.finish(RecognitionServiceStatus.Evaluation("other"))
+        assertEquals(2, results.size)
     }
 
     @Test

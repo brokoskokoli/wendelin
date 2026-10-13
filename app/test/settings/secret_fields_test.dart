@@ -48,6 +48,21 @@ void main() {
     await tester.tap(find.text('Claude'));
     await tester.pumpAndSettle();
     expectSecret(tester, const ValueKey('apiKey'));
+    // The profile name is the user name of this login, so the password
+    // manager keeps provider keys apart from other secrets.
+    final name = fieldOf(tester, const ValueKey('providerName'));
+    expect(name.autofillHints, [AutofillHints.username]);
+    final group = find.ancestor(
+      of: find.byKey(const ValueKey('apiKey')),
+      matching: find.byType(AutofillGroup),
+    );
+    expect(
+      find.descendant(
+        of: group,
+        matching: find.byKey(const ValueKey('providerName')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Websuche: API-Key', (tester) async {
