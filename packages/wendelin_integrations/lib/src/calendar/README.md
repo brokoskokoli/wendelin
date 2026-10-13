@@ -17,7 +17,7 @@ Alle Systemkalender des Geräts (Google, Exchange, CalDAV, lokal). Neue Termine 
 
 **Serientermine**: Die Id eines Vorkommens ist die Id der Serie. `calendar__update_event` lehnt deshalb Zeit- und Datumsänderungen an Serien ab („Serientermin: einzelne Vorkommen bitte in der Kalender-App ändern“); Titel, Ort und Notizen ändern die ganze Serie, das Ergebnis sagt „(ganze Serie)“. Löschen betrifft immer die ganze Serie.
 
-**Bestätigungstext**: `describeForConfirmation` ist synchron und kennt nur die Argumente. Die Integration merkt sich deshalb zuletzt gesehene Termine (bis 500, nur Titel, Start, Ende, ganztägig, Serie; kein Ort, keine Notizen, keine Teilnehmer), um beim Löschen Titel und Zeit zu nennen; unbekannte Ids erscheinen als „Termin (ID …) löschen“. Die App ruft `CalendarIntegration.clearCache()` am Sitzungsende.
+**Bestätigungstext**: `calendar__update_event` und `calendar__delete_event` implementieren `ConfirmationPreparer`: Vor der Frage schlagen sie den Termin live über `getEvent` nach und nennen Titel, Zeit (in der Gerätezone aus dem `ToolContext`) und „(ganze Serie)“. Schlägt das fehl, nennt der synchrone Text nur die Id („Termin (ID …) löschen“). Es gibt keinen Termin-Cache mehr.
 
 **Port**: `CalendarPort` (`hasPermission`, `listCalendars`, `defaultCalendarId`, `listEvents`, `getEvent`, `createEvent`, `updateEvent`, `deleteEvent`). Fake: `FakeCalendarPort`, Vertrag: `calendarPortContract`.
 

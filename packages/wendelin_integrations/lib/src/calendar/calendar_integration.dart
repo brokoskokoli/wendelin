@@ -17,9 +17,6 @@ final class CalendarIntegration implements Integration {
   /// Shared tool state.
   final CalendarToolEnv env;
 
-  /// Forgets cached event titles and times; call when a session ends.
-  void clearCache() => env.clearCache();
-
   @override
   String get id => 'calendar';
 

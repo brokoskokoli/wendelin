@@ -65,6 +65,7 @@ final class WebIntegration implements Integration {
       id: backendStep,
       kind: SetupStepKind.config,
       label: 'Suchdienst einrichten (Brave, Tavily oder SearXNG)',
+      optional: true,
     ),
   ];
 
