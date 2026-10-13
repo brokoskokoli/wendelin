@@ -32,7 +32,18 @@ final class StreamableHttpTransport extends TransportBase {
   @override
   Future<void> open({CancelToken? cancel}) async {}
 
+  // Pooled keep-alive sockets can be dead without the client knowing (server
+  // restart, network change). A request on such a socket fails although the
+  // server is fine, so after a failure or a long pause use a fresh one.
+  final Stopwatch _idle = Stopwatch();
+  bool _suspect = false;
+
+  bool _freshConnection() =>
+      _suspect ||
+      (_idle.isRunning && _idle.elapsed >= deps.timeouts.idleReconnect);
+
   Future<Map<String, String>> _headers() async => {
+    if (_freshConnection()) 'connection': 'close',
     'content-type': 'application/json',
     'accept': 'application/json, text/event-stream',
     'mcp-session-id': ?_sessionId,
@@ -106,16 +117,26 @@ final class StreamableHttpTransport extends TransportBase {
     Future<void> abort,
   ) async {
     final hadSession = _sessionId != null;
-    final response = await sendRequest(
-      deps.client,
-      'POST',
-      url,
-      headers: await _headers(),
-      body: message.encode(),
-      connect: deps.timeouts.connect,
-      abort: abort,
-      log: deps.log,
-    );
+    final http.StreamedResponse response;
+    try {
+      response = await sendRequest(
+        deps.client,
+        'POST',
+        url,
+        headers: await _headers(),
+        body: message.encode(),
+        connect: deps.timeouts.connect,
+        abort: abort,
+        log: deps.log,
+      );
+    } on Object {
+      _suspect = true;
+      rethrow;
+    }
+    _suspect = false;
+    _idle
+      ..reset()
+      ..start();
     final status = response.statusCode;
     if (status >= 200 && status < 300) {
       final session = response.headers['mcp-session-id'];

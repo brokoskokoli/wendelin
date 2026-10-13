@@ -315,11 +315,12 @@ final class McpClient {
   Future<T> _run<T>(
     Future<T> Function(McpTransport t) op, {
     CancelToken? cancel,
+    bool idempotent = false,
   }) async {
     try {
       checkServerUrl(config.url);
       try {
-        return await _attempt(op, cancel);
+        return await _attempt(op, cancel, idempotent: idempotent);
       } on McpException catch (e) {
         if (e.kind != McpErrorKind.authRequired || e.statusCode == null) {
           rethrow;
@@ -334,7 +335,7 @@ final class McpClient {
         // Token vom Server abgelehnt: einmal erneuern und wiederholen.
         await _headers(forceRefresh: true);
         _session = null;
-        return await _attempt(op, cancel);
+        return await _attempt(op, cancel, idempotent: idempotent);
       }
     } on McpException catch (e) {
       if (e.kind == McpErrorKind.authRequired && e.challenge != null) {
@@ -347,8 +348,9 @@ final class McpClient {
 
   Future<T> _attempt<T>(
     Future<T> Function(McpTransport t) op,
-    CancelToken? cancel,
-  ) async {
+    CancelToken? cancel, {
+    bool idempotent = false,
+  }) async {
     final kind = await _kind(cancel);
     if (kind == McpTransportKind.sse) {
       final t = _newTransport(McpTransportKind.sse);
@@ -367,8 +369,11 @@ final class McpClient {
       try {
         return await op(t);
       } on McpException catch (e) {
-        if (e.kind != McpErrorKind.sessionExpired || attempt > 0) rethrow;
-        _log('MCP: Sitzung abgelaufen, neu initialisieren');
+        final lost =
+            e.kind == McpErrorKind.sessionExpired ||
+            (idempotent && e.kind == McpErrorKind.network);
+        if (!lost || attempt > 0) rethrow;
+        _log('MCP: Verbindung/Sitzung verloren, neu initialisieren');
         _session = null;
       }
     }
@@ -444,11 +449,16 @@ final class McpClient {
   Future<McpToolCache?> cachedTools() async =>
       _cached ??= await cache?.read(config.id);
 
-  /// Calls the tool [name] (MCP name) with [arguments].
+  /// Calls the tool [name] (MCP name) with [arguments]. A lost connection
+  /// (network error) is retried once with a new session only if
+  /// [idempotent]; otherwise the call may already have run on the server
+  /// and the error is reported instead. An expired session (HTTP 404) is
+  /// always renewed, because the server has not executed that request.
   Future<McpCallResult> callTool(
     String name,
     Map<String, Object?> arguments, {
     CancelToken? cancel,
+    bool idempotent = false,
   }) => _run(
     (t) async => McpCallResult.fromResult(
       await t.request('tools/call', {
@@ -457,6 +467,7 @@ final class McpClient {
       }, cancel: cancel),
     ),
     cancel: cancel,
+    idempotent: idempotent,
   );
 
   /// `ping`.
