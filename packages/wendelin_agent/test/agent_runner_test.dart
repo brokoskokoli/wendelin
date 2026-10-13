@@ -1558,6 +1558,126 @@ void main() {
     });
   });
 
+  group('WP14: risk level and catalog per target', () {
+    test('ConfirmationRequired carries the effective risk', () async {
+      final (a, _) = scripted('a', [
+        ScriptedTurn.toolCalls([call('c1', 'cal__create')]),
+        ScriptedTurn.text('ok'),
+      ]);
+      final h = Harness(
+        primary: a,
+        tools: [FakeTool(name: 'cal__create', risk: RiskLevel.write)],
+        invoker: RiskInvoker(RiskLevel.external),
+      );
+      final events = await h.run(
+        'x',
+        onEvent: (e) {
+          if (e is ConfirmationRequired) e.respond(true);
+        },
+      );
+      expect(
+        events.whereType<ConfirmationRequired>().single.risk,
+        RiskLevel.external,
+      );
+      final (b, _) = scripted('b', [
+        ScriptedTurn.toolCalls([call('c1', 'cal__create')]),
+        ScriptedTurn.text('ok'),
+      ]);
+      final h2 = Harness(
+        primary: b,
+        tools: [FakeTool(name: 'cal__create', risk: RiskLevel.write)],
+        invoker: RiskInvoker(RiskLevel.write),
+      );
+      final events2 = await h2.run(
+        'x',
+        onEvent: (e) {
+          if (e is ConfirmationRequired) e.respond(false);
+        },
+      );
+      expect(
+        events2.whereType<ConfirmationRequired>().single.risk,
+        RiskLevel.write,
+      );
+    });
+
+    late FakeTool contacts;
+    late FakeTool web;
+    ToolCatalog catalogFor(PrivacyLevel level) =>
+        FakeToolCatalog([if (level.isAtLeast(PrivacyLevel.tee)) contacts, web]);
+    Harness harness(ProviderTarget primary, List<ProviderTarget> chain) {
+      contacts = FakeTool(
+        name: 'contacts__find',
+        outcome: ToolOutcome.text('Anna: 0171 1234567'),
+      );
+      web = FakeTool(name: 'web__search');
+      return Harness(
+        primary: primary,
+        chain: chain,
+        tools: [web], // ContextBuilder catalog (lowest level)
+        invoker: FakeToolInvoker(FakeToolCatalog([contacts, web])),
+        catalogFor: catalogFor,
+      );
+    }
+
+    test('each target gets the catalog of its privacy level', () async {
+      final (tee, pt) = scripted('phala', [
+        ScriptedTurn.toolCalls([call('c1', 'contacts__find', '{"q":"Anna"}')]),
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ], privacy: PrivacyLevel.tee);
+      final (std, ps) = scripted('claude', [ScriptedTurn.text('Fertig.')]);
+      final h = harness(tee, [std]);
+      final events = await h.run('Ruf Anna an');
+
+      expect(pt.requests.first.tools.map((t) => t.name), [
+        'contacts__find',
+        'web__search',
+      ]);
+      expect(contacts.callCount, 1);
+      final req = ps.requests.single;
+      expect(req.tools.map((t) => t.name), ['web__search']);
+      // Arguments and result of the sensitive call are hidden from claude.
+      final hiddenCall = req.messages[1].toolCalls.single;
+      expect(hiddenCall.argumentsJson, '{}');
+      final hiddenResult = req.messages[2].content.single as ToolResultBlock;
+      expect(
+        (hiddenResult.content.single as TextBlock).text,
+        contains('ausgeblendet'),
+      );
+      expect(req.messages.toString(), isNot(contains('0171')));
+      expect(req.messages.toString(), isNot(contains('Anna"')));
+      // The stored history keeps everything.
+      expect(h.conversation.messages.toString(), contains('0171'));
+      expect(terminal(events), isA<AgentDone>());
+    });
+
+    test('a call to a tool the target may not see is refused', () async {
+      final (std, ps) = scripted('claude', [
+        ScriptedTurn.toolCalls([
+          call('c1', 'contacts__find', '{"q":"Anna"}'),
+          call('c2', 'web__search', '{"q":"x"}'),
+        ]),
+        ScriptedTurn.text('ok'),
+      ]);
+      final h = harness(std, const []);
+      final events = await h.run('x');
+      expect(contacts.callCount, 0);
+      expect(web.callCount, 1);
+      final results = lastResults(ps.requests[1]);
+      expect(results.first.isError, isTrue);
+      expect(
+        (results.first.content.single as TextBlock).text,
+        contains('nicht zur Verfügung'),
+      );
+      expect(results.last.isError, isFalse);
+      expect((h.invoker as FakeToolInvoker).received.map((c) => c.id), ['c2']);
+      expect(events.whereType<ToolCallFinished>().map((e) => e.call.id), [
+        'c1',
+        'c2',
+      ]);
+    });
+  });
+
   group('robustness', () {
     test('results reach the model in call order, not finish order', () async {
       final (a, provider) = scripted('a', [

@@ -42,6 +42,7 @@ final class Harness {
     this.budget,
     CostEstimator? cost,
     ConversationRecorder? recorder,
+    ToolCatalog Function(PrivacyLevel)? catalogFor,
   }) : clock = FixedClock(DateTime.utc(2026, 10, 13, 9)),
        catalog = FakeToolCatalog(tools) {
     this.invoker = invoker ?? FakeToolInvoker(catalog);
@@ -60,6 +61,7 @@ final class Harness {
       recorder: recorder ?? conversation,
       costEstimator: cost,
       budgetGuard: budget,
+      catalogFor: catalogFor,
     );
   }
 
@@ -126,6 +128,32 @@ final class ReversedInvoker implements ToolInvoker {
       yield ToolFinished(
         c,
         ToolOutcome.text('Ergebnis ${c.id}'),
+        Duration.zero,
+      );
+    }
+  }
+}
+
+/// Invoker that asks every call with the given effective [risk] and then
+/// reports it as done.
+final class RiskInvoker implements ToolInvoker {
+  RiskInvoker(this.risk);
+
+  final RiskLevel risk;
+
+  @override
+  Stream<ToolInvocationEvent> invokeAll(
+    List<ToolCallBlock> calls,
+    ToolContext ctx,
+  ) async* {
+    for (final c in calls) {
+      yield ToolStarted(c);
+      final q = ConfirmationNeeded(c, 'Frage', Completer<bool>(), risk: risk);
+      yield q;
+      final ok = await q.decision.future;
+      yield ToolFinished(
+        c,
+        ok ? ToolOutcome.text('ok') : ToolOutcome.declined(),
         Duration.zero,
       );
     }

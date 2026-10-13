@@ -26,6 +26,7 @@ final class AgentRunner implements AgentRun {
     this.recorder,
     this.costEstimator,
     this.budgetGuard,
+    this.catalogFor,
     GiveUpClassifier? giveUpClassifier,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier();
 
@@ -52,6 +53,16 @@ final class AgentRunner implements AgentRun {
 
   /// Checked before every model call; `null` = no budget.
   final BudgetGuard? budgetGuard;
+
+  /// The tools a target with the given privacy level may see (e.g.
+  /// `ToolRegistry.catalogFor`). With it, every model call gets the catalog
+  /// of the current target – also after an escalation – so TEE or local
+  /// targets can use sensitive tools that standard targets never see. Calls
+  /// to tools the current target may not see are refused before they reach
+  /// the [invoker], and calls and results of such tools in the history are
+  /// redacted for that target. `null` = the [ContextBuilder.catalog] for
+  /// every target (the [invoker] must then use the same catalog).
+  final ToolCatalog Function(PrivacyLevel level)? catalogFor;
 
   /// Detects „kann ich nicht“ answers.
   final GiveUpClassifier giveUpClassifier;
@@ -134,6 +145,9 @@ final class _Run {
   int _roundsOnProvider = 0;
   int _invalidOnProvider = 0;
   bool _consentDeclined = false;
+
+  /// Ids of calls refused because the target could not see the tool.
+  final Set<String> _refused = {};
   final Set<String> _budgetWarned = {};
 
   /// Assistant messages of a paused turn (`StopReason.pauseTurn`), not yet
@@ -400,11 +414,12 @@ final class _Run {
 
   Future<_ModelReply> _callModel() async {
     final target = _current;
+    final catalog = _catalog;
     final request = ChatRequest(
-      messages: _messages,
+      messages: _messagesFor(catalog),
       model: target.modelId,
       maxTokens: config.maxOutputTokens,
-      tools: _context.tools,
+      tools: catalog.activeSpecs(),
       temperature: config.temperature,
       systemPrompt: _systemPrompt(),
       metadata: {'sessionId': runner.sessionId},
@@ -492,8 +507,7 @@ final class _Run {
   // ----------------------------------------------------------------- tools
 
   bool _isInvalid(ToolCallBlock call) =>
-      runner.contextBuilder.catalog.lookup(call.name) == null ||
-      call.tryDecodeArguments() == null;
+      _catalog.lookup(call.name) == null || call.tryDecodeArguments() == null;
 
   /// The earlier execution [call] would repeat, if any: a call with the
   /// same id from the model *and* the same tool and arguments, or – after an
@@ -519,13 +533,77 @@ final class _Run {
         : const DeepCollectionEquality().equals(a.tryDecodeArguments(), args);
   }
 
+  /// Error text for a call to a tool the current target may not see.
+  static String hiddenToolText(String name) =>
+      'Das Tool „$name“ steht diesem Modell nicht zur Verfügung. Nutze nur '
+      'Tools aus der Tool-Liste.';
+
+  /// Model-facing replacement for results of tools the target may not see.
+  static const redactedResultText =
+      '[Ergebnis eines Tools, das diesem Modell nicht zur Verfügung steht – '
+      'ausgeblendet]';
+
+  /// The tool catalog of the current target.
+  ToolCatalog get _catalog =>
+      runner.catalogFor?.call(_current.privacy) ??
+      runner.contextBuilder.catalog;
+
+  /// [_messages] as [catalog]'s target may see them: arguments and results
+  /// of calls to tools outside the catalog are redacted (they may hold
+  /// sensitive data from a more private target or an earlier run).
+  List<Message> _messagesFor(ToolCatalog catalog) {
+    if (runner.catalogFor == null) return _messages;
+    final hidden = <String>{};
+    // Refused calls never ran: their result is our own error text.
+    bool secret(ToolCallBlock c) =>
+        !_refused.contains(c.id) && catalog.lookup(c.name) == null;
+    return [
+      for (final m in _messages)
+        if (m.content.any(
+          (b) =>
+              (b is ToolCallBlock && secret(b)) ||
+              (b is ToolResultBlock && hidden.contains(b.callId)),
+        ))
+          Message(m.role, [
+            for (final b in m.content)
+              if (b is ToolCallBlock && secret(b))
+                _hide(b, hidden)
+              else if (b is ToolResultBlock && hidden.contains(b.callId))
+                ToolResultBlock(
+                  callId: b.callId,
+                  content: const [TextBlock(redactedResultText)],
+                )
+              else
+                b,
+          ])
+        else
+          m,
+    ];
+  }
+
+  static ToolCallBlock _hide(ToolCallBlock call, Set<String> hidden) {
+    hidden.add(call.id);
+    return ToolCallBlock(id: call.id, name: call.name, argumentsJson: '{}');
+  }
+
   static bool _isDeclined(ToolOutcome o) =>
       !o.isError && o.text == ToolOutcome.declinedText;
 
   Future<List<ToolResultBlock>> _runTools(List<ToolCallBlock> calls) async {
     final results = <String, ToolResultBlock>{};
     final pending = <ToolCallBlock>[];
+    final catalog = _catalog;
     for (final call in calls) {
+      if (runner.catalogFor != null && catalog.lookup(call.name) == null) {
+        // Not offered to this target (e.g. sensitive tool, standard
+        // provider): never reaches the invoker.
+        _refused.add(call.id);
+        final outcome = ToolOutcome.error(hiddenToolText(call.name));
+        emit(ToolCallStarted(call));
+        emit(ToolCallFinished(call: call, outcome: outcome));
+        results[call.id] = outcome.toResultBlock(call.id);
+        continue;
+      }
       final earlier = _earlierExecution(call);
       if (earlier == null) {
         pending.add(call);
@@ -564,6 +642,7 @@ final class _Run {
                 call: call,
                 description: description,
                 respond: event.respond,
+                risk: event.risk,
               ),
             );
           case ToolFinished(:final call, :final outcome, :final duration):
