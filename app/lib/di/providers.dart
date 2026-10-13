@@ -21,6 +21,7 @@ import 'costs.dart';
 import 'http_tools.dart';
 import 'integration_activator.dart';
 import 'integration_specs.dart';
+import 'mcp/mcp_providers.dart';
 import 'preference_models.dart';
 import 'preferences.dart';
 import 'provider_config.dart';
@@ -246,7 +247,10 @@ final _currentRegistryProvider = Provider<_CurrentRegistry>(
 /// Sources of user-defined integrations (ADR 0012). WP27 (MCP servers) and
 /// WP28 (HTTP tools) each add one source here.
 final userIntegrationSourcesProvider = Provider<List<UserIntegrationSource>>(
-  (ref) => [ref.watch(httpToolSourceProvider)],
+  (ref) => [
+    ref.watch(mcpServerSourceProvider),
+    ref.watch(httpToolSourceProvider),
+  ],
 );
 
 /// Cleanup after a user-defined integration or some of its tools were

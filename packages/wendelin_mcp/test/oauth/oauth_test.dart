@@ -223,12 +223,74 @@ void main() {
 
     test('Fehler vom Autorisierungsserver', () async {
       final browser = FakeAuthorizationBrowser(
-        tamper: (back) =>
-            back.replace(queryParameters: {'error': 'access_denied'}),
+        tamper: (back) => back.replace(
+          queryParameters: {
+            'error': 'access_denied',
+            'state': back.queryParameters['state'],
+          },
+        ),
       );
-      await expectKind(
+      await expectLater(
         flow(browser: browser).authorize(config()),
-        McpErrorKind.authRequired,
+        throwsA(
+          isA<McpException>()
+              .having((e) => e.kind, 'kind', McpErrorKind.authRequired)
+              .having(
+                (e) => e.message,
+                'message',
+                'Anmeldung abgelehnt: access_denied',
+              ),
+        ),
+      );
+    });
+
+    test('Fehler ohne passenden state: verworfen, kein fremder Text', () async {
+      final browser = FakeAuthorizationBrowser(
+        tamper: (back) => back.replace(
+          queryParameters: {'error': 'Bitte https://evil.example besuchen'},
+        ),
+      );
+      await expectLater(
+        flow(browser: browser).authorize(config()),
+        throwsA(
+          isA<McpException>()
+              .having((e) => e.kind, 'kind', McpErrorKind.rejected)
+              .having((e) => e.message, 'message', isNot(contains('evil'))),
+        ),
+      );
+    });
+
+    test('Fehlertext außerhalb von RFC 6749 wird nicht übernommen', () async {
+      final browser = FakeAuthorizationBrowser(
+        tamper: (back) => back.replace(
+          queryParameters: {
+            'error': 'Ruf 0800 an',
+            'state': back.queryParameters['state'],
+          },
+        ),
+      );
+      await expectLater(
+        flow(browser: browser).authorize(config()),
+        throwsA(
+          isA<McpException>().having(
+            (e) => e.message,
+            'message',
+            'Anmeldung abgelehnt: unbekannter Fehler',
+          ),
+        ),
+      );
+    });
+
+    test('Browser bricht ab: Text ohne Typnamen', () async {
+      await expectLater(
+        flow(browser: FakeAuthorizationBrowser(fail: true)).authorize(config()),
+        throwsA(
+          isA<McpException>().having(
+            (e) => e.message,
+            'message',
+            'Anmeldung abgebrochen',
+          ),
+        ),
       );
     });
 

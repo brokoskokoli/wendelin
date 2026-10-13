@@ -11,13 +11,15 @@
 #   - <application> mit android:allowBackup="false" und
 #     android:dataExtractionRules; keine Berechtigungen außer der Liste
 #     (M2: RECORD_AUDIO für Push-to-talk, Assistent und Spracherkennung)
-#   - exportierte Komponenten nur aus der Liste: MainActivity, die
+#   - exportierte Komponenten nur aus der Liste: MainActivity,
+#     OAuthRedirectActivity (OAuth-Rückleitung, WP27), die
 #     Assistenten-Services nur mit BIND_VOICE_INTERACTION, der
 #     RecognitionService ab Werk deaktiviert (enabled="false", ADR 0006),
 #     ProfileInstallReceiver nur mit DUMP; alles andere nicht exportiert
 #   - Gradle-Abhängigkeiten (releaseRuntimeClasspath) ohne GMS/Firebase;
 #     ist der Baum nicht lesbar, ist das ein Fehler – überspringen nur mit
-#     CHECK_APK_SKIP_GRADLE=1
+#     CHECK_APK_SKIP_GRADLE=1 (mit Warnung). Eine nicht aufgelöste
+#     Abhängigkeit (FAILED) ist ein Fehler.
 #
 # Umgebung: ANDROID_SDK_ROOT, APKANALYZER (Pfad, z. B. für Attrappen).
 set -euo pipefail
@@ -107,6 +109,26 @@ STUB
 
   printf 'android.permission.ACCESS_FINE_LOCATION\n' >>"$dir/perms.txt"
   expect "unerwartete Berechtigung erkannt" 1 "ACCESS_FINE_LOCATION"
+  printf 'android.permission.INTERNET\n' >"$dir/perms.txt"
+
+  # Gradle-Schritt mit einem Baum aus einer Datei.
+  run() {
+    APKANALYZER="$dir/apkanalyzer" CHECK_APK_GRADLE_DEPS="$dir/deps.txt" \
+      "$ROOT/tool/check_apk.sh" "$dir/x.apk" >"$dir/out.txt" 2>&1
+  }
+  printf '+--- androidx.browser:browser:1.8.0\n|    \\--- androidx.core:core:1.13.1\n' >"$dir/deps.txt"
+  expect "Gradle-Baum sauber" 0 "ok: Gradle-Abhängigkeiten ohne GMS/Firebase"
+  printf '+--- androidx.browser:browser:1.8.0 FAILED\n' >"$dir/deps.txt"
+  expect "nicht aufgelöste Abhängigkeit (FAILED) erkannt" 1 "nicht aufgelöst"
+  printf '+--- com.google.android.gms:play-services-base:18.0.0\n' >"$dir/deps.txt"
+  expect "GMS im Gradle-Baum erkannt" 1 "GMS/Firebase im Gradle-Abhängigkeitsbaum"
+  : >"$dir/deps.txt"
+  expect "leerer Gradle-Baum erkannt" 1 "nicht lesbar"
+  run() {
+    APKANALYZER="$dir/apkanalyzer" CHECK_APK_SKIP_GRADLE=1 \
+      "$ROOT/tool/check_apk.sh" "$dir/x.apk" >"$dir/out.txt" 2>&1
+  }
+  expect "Überspringen warnt" 0 "WARNUNG: Gradle-Abhängigkeiten NICHT geprüft"
   return $status
 }
 
@@ -175,6 +197,8 @@ while IFS= read -r tag; do
   problem=""
   case "$name" in
     app.wendelin.MainActivity) ;;
+    # OAuth-Rückleitung der MCP-Server (WP27): nimmt nur die Adresse an, state prüft die App.
+    app.wendelin.OAuthRedirectActivity) ;;
     app.wendelin.WendelinVoiceInteractionService | app.wendelin.WendelinVoiceSessionService)
       [ "$perm" = "android.permission.BIND_VOICE_INTERACTION" ] ||
         problem="ohne android.permission.BIND_VOICE_INTERACTION" ;;
@@ -208,11 +232,26 @@ else
   echo "ok: Berechtigungen $(echo "$perms" | tr '\n' ' ')"
 fi
 
+# Abhängigkeitsbaum; CHECK_APK_GRADLE_DEPS=<datei> liefert ihn aus einer Datei
+# (Selbsttest).
+gradle_deps() {
+  if [ -n "${CHECK_APK_GRADLE_DEPS:-}" ]; then
+    cat "$CHECK_APK_GRADLE_DEPS"
+  else
+    (cd "$ROOT/app/android" && ./gradlew -q :app:dependencies --configuration releaseRuntimeClasspath 2>&1)
+  fi
+}
+
 if [ "${CHECK_APK_SKIP_GRADLE:-}" = "1" ]; then
-  echo "Hinweis: Gradle-Abhängigkeiten übersprungen (CHECK_APK_SKIP_GRADLE=1)"
-elif ! deps="$(cd "$ROOT/app/android" && ./gradlew -q :app:dependencies --configuration releaseRuntimeClasspath 2>&1)" || [ -z "$deps" ]; then
+  echo "WARNUNG: Gradle-Abhängigkeiten NICHT geprüft (CHECK_APK_SKIP_GRADLE=1)" >&2
+elif ! deps="$(gradle_deps)" || [ -z "$deps" ]; then
   echo "FEHLER: Gradle-Abhängigkeitsbaum nicht lesbar (CHECK_APK_SKIP_GRADLE=1 überspringt):" >&2
   echo "$deps" | tail -5 >&2
+  fail=1
+elif echo "$deps" | grep -qE '(^|[[:space:]])FAILED$|[[:space:]]FAILED[[:space:]]'; then
+  # Eine nicht auflösbare Abhängigkeit verdeckt ihren eigenen Baum.
+  echo "FEHLER: Gradle-Abhängigkeiten nicht aufgelöst:" >&2
+  echo "$deps" | grep -E 'FAILED' | head >&2
   fail=1
 elif echo "$deps" | grep -qE 'com\.google\.android\.gms|com\.google\.firebase'; then
   echo "FEHLER: GMS/Firebase im Gradle-Abhängigkeitsbaum:" >&2

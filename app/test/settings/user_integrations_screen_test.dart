@@ -3,10 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/user_integrations.dart';
 import 'package:wendelin/ui/design/design.dart';
-import 'package:wendelin/ui/settings/coming_soon_screen.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
 import 'package:wendelin/ui/settings/http_tools_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
+import 'package:wendelin/ui/settings/mcp/mcp_servers_screen.dart';
 import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -17,8 +17,8 @@ import 'integrations_screen_test.dart';
 import 'other_screens_test.dart' show pumpPage;
 
 void main() {
-  testWidgets('Übersicht: Routing öffnet den Editor, MCP-Server führt zum '
-      'Platzhalter, HTTP-Tools zur Liste', (tester) async {
+  testWidgets('Übersicht: Routing öffnet den Editor, MCP-Server die '
+      'Serverliste (WP27), HTTP-Tools die Liste', (tester) async {
     await pumpPage(tester, TestEnv(), const SettingsScreen());
     final titles = [for (final (t, _, _) in SettingsScreen.areas) t];
     expect(titles.take(5), [
@@ -33,14 +33,11 @@ void main() {
     expect(find.byType(RoutingScreen), findsOneWidget);
     await tester.tap(find.byTooltip('Zurück'));
     await settle(tester);
-    for (final title in ['MCP-Server']) {
-      await tester.tap(find.text(title));
-      await settle(tester);
-      expect(find.byType(ComingSoonScreen), findsOneWidget, reason: title);
-      expect(find.text('Kommt in M3'), findsOneWidget);
-      await tester.tap(find.byTooltip('Zurück'));
-      await settle(tester);
-    }
+    await tester.tap(find.text('MCP-Server'));
+    await settle(tester);
+    expect(find.byType(McpServersScreen), findsOneWidget);
+    await tester.tap(find.byTooltip('Zurück'));
+    await settle(tester);
     await tester.tap(find.text('HTTP-Tools'));
     await settle(tester);
     expect(find.byType(HttpToolsScreen), findsOneWidget);
@@ -52,7 +49,7 @@ void main() {
     await pumpIntegrations(tester, TestEnv());
     await tester.tap(find.text('+ MCP-Server'));
     await settle(tester);
-    expect(find.widgetWithText(ComingSoonScreen, 'MCP-Server'), findsOneWidget);
+    expect(find.byType(McpServersScreen), findsOneWidget);
     await tester.tap(find.byTooltip('Zurück'));
     await settle(tester);
     await tester.tap(find.text('+ HTTP-Tool'));

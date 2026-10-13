@@ -15,6 +15,7 @@ import '../design/design.dart';
 import '../routes.dart';
 import '../screens/labels.dart';
 import 'integration_detail_screen.dart';
+import 'mcp/mcp_server_detail_screen.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
 
@@ -168,7 +169,12 @@ class IntegrationRow extends ConsumerWidget {
     return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => IntegrationDetailScreen(info.id),
+          builder: (_) => switch (kind) {
+            UserIntegrationKind.mcp => McpServerDetailScreen.forIntegration(
+              info.id,
+            ),
+            _ => IntegrationDetailScreen(info.id),
+          },
         ),
       ),
       child: tile,

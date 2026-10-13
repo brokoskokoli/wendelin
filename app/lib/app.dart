@@ -7,12 +7,12 @@ import 'ui/routes.dart';
 import 'ui/screens/main_screen.dart';
 import 'ui/settings/assistant_screen.dart';
 import 'ui/settings/bring_screen.dart';
-import 'ui/settings/coming_soon_screen.dart';
 import 'ui/settings/costs_screen.dart';
 import 'ui/settings/http_tool_editor_screen.dart';
 import 'ui/settings/http_tools_screen.dart';
 import 'ui/settings/integrations_screen.dart';
 import 'ui/settings/lists_screen.dart';
+import 'ui/settings/mcp/mcp_servers_screen.dart';
 import 'ui/settings/memory_screen.dart';
 import 'ui/settings/obsidian_screen.dart';
 import 'ui/settings/privacy_screen.dart';
@@ -45,13 +45,7 @@ class WendelinApp extends StatelessWidget {
       AppRoutes.providers: (_) => const ProvidersScreen(),
       AppRoutes.integrations: (_) => const IntegrationsScreen(),
       AppRoutes.routing: (_) => const RoutingScreen(),
-      // Placeholder until WP27 (MCP).
-      AppRoutes.mcpServers: (_) => const ComingSoonScreen(
-        title: 'MCP-Server',
-        what:
-            'Server hinzufügen (Vorlage oder frei), Anmeldung, Status und '
-            'Tool-Liste.',
-      ),
+      AppRoutes.mcpServers: (_) => const McpServersScreen(),
       AppRoutes.httpTools: (_) => const HttpToolsScreen(),
       AppRoutes.httpToolNew: (_) => const HttpToolEditorScreen(),
       AppRoutes.bring: (_) => const BringScreen(),

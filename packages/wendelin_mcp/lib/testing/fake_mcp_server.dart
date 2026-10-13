@@ -118,7 +118,8 @@ final class FakeMcpServer {
   FakeMcpServer._(this._server, {String host = '127.0.0.1'})
     : origin = Uri(scheme: 'http', host: host, port: _server.port);
 
-  /// Starts the server on a free port of [address] (loopback by default;
+  /// Starts the server on [port] (default: a free one) of [address]
+  /// (loopback by default;
   /// `InternetAddress.anyIPv4` for an emulator, with [publicHost] `10.0.2.2`
   /// so the metadata URLs point where the emulator reaches the host).
   static Future<FakeMcpServer> start({
@@ -128,10 +129,11 @@ final class FakeMcpServer {
     FakeResponseStyle style = FakeResponseStyle.json,
     FakeAuthMode auth = FakeAuthMode.none,
     List<FakeMcpTool> tools = const [],
+    int port = 0,
   }) async {
     final server = await HttpServer.bind(
       address ?? InternetAddress.loopbackIPv4,
-      0,
+      port,
     );
     final fake = FakeMcpServer._(server, host: publicHost)
       ..mode = mode

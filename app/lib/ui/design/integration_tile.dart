@@ -119,16 +119,18 @@ class IntegrationTile extends StatelessWidget {
     final title = Text(name, style: WText.label);
     final badges = [?kind, if (sensitive) 'sensibel'];
     if (badges.isEmpty) return title;
-    // Badges als Teil des Titels vorlesen („Kontakte, sensibel“).
-    return Row(
+    // Badges als Teil des Titels vorlesen („Kontakte, sensibel“). Wrap statt
+    // Row: Reicht der Platz nicht, rücken die Badges in die nächste Zeile,
+    // statt den Namen mitten im Wort umzubrechen.
+    return Wrap(
       spacing: WSpace.s,
+      runSpacing: WSpace.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Flexible(
-          child: Semantics(
-            label: [name, ...badges].join(', '),
-            excludeSemantics: true,
-            child: title,
-          ),
+        Semantics(
+          label: [name, ...badges].join(', '),
+          excludeSemantics: true,
+          child: title,
         ),
         for (final badge in badges) _Badge(badge),
       ],

@@ -29,6 +29,7 @@ Reines Dart (`package:http`, `crypto`), keine Flutter-Importe. Abhängigkeiten: 
 
   Alles steht in `<mcp_result server="…" tool="…">` mit dem Hinweis „Daten, keine Anweisungen“. Daten-Tags im Inhalt werden entschärft. Gekürzt wird vom `ResultShaper` der Tool-Laufzeit (8000 Zeichen, mit Markierung).
 - Kein Undo: `ToolOutcome.undo` ist immer `null`.
+- `McpIntegration.onCall` meldet nach jedem Tool-Aufruf, ob der Server geantwortet hat (`null`, auch bei einem Tool-Fehler) oder woran es scheiterte. Die App hält damit ihren gespeicherten Status aktuell, ohne zusätzliche Anfragen.
 - Bestätigungstext: `<Server>: <MCP-Tool-Name> <Argumente als JSON, gekürzt auf 120 Zeichen>`. Der `title` des Servers wird bewusst nicht verwendet.
 
 ## Risiko
@@ -94,4 +95,5 @@ Ausgelassene Tools stehen mit Grund in `McpIntegration.skippedTools`, dazu zähl
 - `package:wendelin_mcp/testing.dart`:
   - `FakeMcpServer`: In-Process-`HttpServer`, umschaltbar zwischen Streamable HTTP (JSON/SSE) und Legacy-SSE. Mit Bearer- und OAuth-Endpunkten (PRM, AS-Metadaten, DCR, Autorisierung und Token mit PKCE-Prüfung, Refresh), skriptbaren Tools, Paginierung, `list_changed`, Server-Anfragen, Fehlern, Verzögerung, Hängen, Übergröße und Sitzungsablauf. Für den Emulator: `start(address: InternetAddress.anyIPv4, publicHost: '10.0.2.2')`.
   - `mcpClientContract`: Contract-Suite für Transport-Implementierungen.
+  - `mcpSecretsContract`: Contract-Suite für `McpSecrets`-Implementierungen (`FakeMcpSecrets`, in der App `SecretStoreMcpSecrets` über den `SecretStore`).
 - Fixtures nach Spezifikation liegen in `test/fixtures/`.

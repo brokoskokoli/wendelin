@@ -85,6 +85,7 @@ void main() {
     McpErrorReporter? reportError,
     Uri? url,
     McpCacheStore? cache,
+    McpCallObserver? onCall,
   }) {
     final client = McpClient(
       config: McpServerConfig(
@@ -102,7 +103,11 @@ void main() {
       oauth: oauth,
       cache: cache,
     );
-    final i = McpIntegration(client: client, reportError: reportError);
+    final i = McpIntegration(
+      client: client,
+      reportError: reportError,
+      onCall: onCall,
+    );
     cleanups
       ..add(client.dispose)
       ..add(i.dispose);
@@ -188,6 +193,24 @@ void main() {
       expect(skipped['tool_129'], 'mehr als 128 Tools auf diesem Server');
     },
   );
+
+  test('onCall meldet Antwort, Tool-Fehler und Verbindungsfehler, nicht den '
+      'Abbruch', () async {
+    final seen = <McpErrorKind?>[];
+    final i = integration(onCall: (e) => seen.add(e?.kind));
+    await i.loadTools(refresh: true);
+    Tool tool(String n) => i.mcpTools.firstWhere((t) => t.mcpName == n);
+    await tool('get_weather').execute({'city': 'Kiel'}, ctx());
+    await tool('docker.restart').execute(const {}, ctx());
+    final cancel = CancelToken();
+    final slow = tool('slow').execute(const {}, ctx(cancel));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    cancel.cancel();
+    await slow;
+    await server.close();
+    await tool('note_add').execute(const {}, ctx());
+    expect(seen, [null, null, McpErrorKind.network]);
+  });
 
   test('doppelte Tool-Namen: erstes Vorkommen bleibt', () {
     final i = integration();

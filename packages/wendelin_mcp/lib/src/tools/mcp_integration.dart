@@ -17,6 +17,11 @@ import 'schema.dart';
 /// e.g. `ToolRegistry.reportError`.
 typedef McpErrorReporter = void Function(String integrationId, String message);
 
+/// Told after every tool call that reached the transport: `null` if the
+/// server answered (also with a tool error), otherwise the failure. Lets
+/// the app keep its stored status current without extra requests.
+typedef McpCallObserver = void Function(McpException? failure);
+
 /// Longest tool description passed on from the server.
 const maxMcpDescription = 1024;
 
@@ -48,7 +53,7 @@ final class McpSkippedTool {
 /// registry copies the tools on registration).
 final class McpIntegration implements Integration {
   /// Creates the integration for [client] (whose config is used).
-  McpIntegration({required this.client, this.reportError}) {
+  McpIntegration({required this.client, this.reportError, this.onCall}) {
     _changes = client.toolsChanged.listen((_) {
       unawaited(
         loadTools().then<void>(
@@ -67,6 +72,9 @@ final class McpIntegration implements Integration {
 
   /// Sets the integration to „Fehler“ in the registry.
   final McpErrorReporter? reportError;
+
+  /// Outcome of each tool call (see [McpCallObserver]).
+  final McpCallObserver? onCall;
 
   late final StreamSubscription<void> _changes;
   final StreamController<void> _toolsChanged =
@@ -318,8 +326,10 @@ final class McpTool implements Tool {
         args,
         cancel: ctx.cancel,
       );
+      integration.onCall?.call(null);
       return mcpOutcome(result, server: server, tool: info.name);
     } on McpException catch (e) {
+      if (e.kind != McpErrorKind.cancelled) integration.onCall?.call(e);
       switch (e.kind) {
         case McpErrorKind.cancelled:
           return ToolOutcome.cancelled();
