@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../di/preference_models.dart';
 import '../../di/preferences.dart';
 import '../../platform/assistant_platform.dart';
+import '../../voice/recognizer_config.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
 
@@ -15,8 +16,8 @@ final defaultAssistantProvider = FutureProvider<bool>(
 );
 
 /// Settings → Assistent: Wendelin as default assistant (link to the system
-/// settings), the user's name and a personality addition for the system
-/// prompt.
+/// settings), the speech recognizer for other apps, the user's name and a
+/// personality addition for the system prompt.
 class AssistantScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const AssistantScreen({super.key});
@@ -100,6 +101,26 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
             'Android öffnet die Auswahl „Standard-App für digitalen '
             'Assistenten“. Dort Wendelin wählen.',
             style: WText.caption,
+          ),
+          SectionCard(
+            children: [
+              SettingsRow(
+                title: 'Als Spracherkennung für andere Apps anbieten',
+                detail:
+                    'Solange Wendelin Standard-Assistent ist, können andere '
+                    'Apps die Spracheingabe nutzen. Whisper erkennt auf dem '
+                    'Gerät, Aufnahmen werden nicht gespeichert.',
+                trailing: WSwitch(
+                  value: ref.watch(recognizerOfferedProvider).value ?? true,
+                  semanticLabel: 'Als Spracherkennung für andere Apps anbieten',
+                  onChanged: (on) => unawaited(
+                    ref
+                        .read(recognizerOfferedProvider.notifier)
+                        .set(offered: on),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

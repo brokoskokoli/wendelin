@@ -21,6 +21,7 @@ export 'src/models/speech_model_catalog.dart';
 export 'src/pipeline/endpointer.dart';
 export 'src/pipeline/voice_events.dart';
 export 'src/pipeline/voice_pipeline.dart';
+export 'src/recognizer/recognition_session.dart';
 export 'src/text/spoken_answer.dart';
 export 'src/text/voice_texts.dart';
 export 'src/text/yes_no.dart';

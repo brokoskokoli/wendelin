@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- System speech recognizer (WP20): makes Wendelin's RecognitionService parseable for the
+     voice input settings (RecognitionServiceInfo). -->
+<recognition-service xmlns:android="http://schemas.android.com/apk/res/android" />

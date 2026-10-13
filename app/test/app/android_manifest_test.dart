@@ -166,6 +166,30 @@ void main() {
       },
     );
 
+    test('Erkennungsdienst (WP20): Metadaten, Rolle und Einstellung', () {
+      final service = block('WendelinRecognitionService');
+      expect(service, contains('android:name="android.speech"'));
+      expect(service, contains('android:resource="@xml/recognition_service"'));
+      expect(
+        File('$res/recognition_service.xml').readAsStringSync(),
+        contains('<recognition-service'),
+      );
+      const kotlin = 'android/app/src/main/kotlin/app/wendelin';
+      final switcher = File('$kotlin/RecognizerSwitch.kt').readAsStringSync();
+      // Enabled only with the role and while offered (default on).
+      expect(switcher, contains('holdsRole && isOffered(context)'));
+      expect(switcher, contains('getBoolean(KEY_OFFERED, true)'));
+      final recognizer = File('$kotlin/WendelinRecognitionService.kt')
+          .readAsStringSync();
+      // Checked again per request (role changes are not observable).
+      expect(recognizer, contains('RecognizerSwitch.isActive(this)'));
+      // Test audio only in debuggable builds.
+      expect(
+        File('$kotlin/RecognizerAudio.kt').readAsStringSync(),
+        contains('ApplicationInfo.FLAG_DEBUGGABLE'),
+      );
+    });
+
     test('Overlay immer mit FLAG_SECURE', () {
       final overlay = File(
         'android/app/src/main/kotlin/app/wendelin/AssistantActivity.kt',

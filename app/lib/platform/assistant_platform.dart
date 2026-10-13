@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -78,14 +79,31 @@ class AssistantPlatform {
   Future<bool> requestUnlock() async =>
       await _invoke<bool>('requestUnlock') ?? false;
 
+  /// Whether Wendelin offers itself as speech recognizer to other apps
+  /// while it is the default assistant (default `true`).
+  Future<bool> isRecognizerOffered() async =>
+      await _invoke<bool>('isRecognizerOffered') ?? true;
+
+  /// Turns the speech recognizer for other apps on or off (takes effect
+  /// only while Wendelin is the default assistant).
+  Future<void> setRecognizerOffered({required bool offered}) async {
+    await _invoke<void>('setRecognizerOffered', {'offered': offered});
+  }
+
+  /// Mirrors the speech settings for the recognizer service (it has no
+  /// database access, ADR 0008).
+  Future<void> setRecognizerConfig(RecognizerConfig config) async {
+    await _invoke<void>('setRecognizerConfig', config.toArgs());
+  }
+
   /// Closes the overlay activity.
   Future<void> finish() async {
     await _invoke<void>('finish');
   }
 
-  Future<T?> _invoke<T>(String method) async {
+  Future<T?> _invoke<T>(String method, [Object? args]) async {
     try {
-      return await _channel.invokeMethod<T>(method);
+      return await _channel.invokeMethod<T>(method, args);
     } on MissingPluginException {
       return null;
     } on PlatformException {
@@ -98,6 +116,51 @@ class AssistantPlatform {
     if (_listening) _channel.setMethodCallHandler(null);
     unawaited(_triggers.close());
   }
+}
+
+/// Speech settings the system recognizer uses (mirror of Einstellungen →
+/// Sprache): Whisper model, language (`null` = detect), Silero threshold,
+/// minimum speech duration.
+@immutable
+final class RecognizerConfig {
+  /// Creates the configuration.
+  const RecognizerConfig({
+    required this.model,
+    required this.language,
+    required this.vadThreshold,
+    required this.minSpeechMs,
+  });
+
+  /// Whisper model id.
+  final String model;
+
+  /// Fixed language or `null` (detect).
+  final String? language;
+
+  /// Silero threshold.
+  final double vadThreshold;
+
+  /// Minimum speech duration (ms).
+  final int minSpeechMs;
+
+  /// Channel arguments (`language` `''` = detect).
+  Map<String, Object> toArgs() => {
+    'model': model,
+    'language': language ?? '',
+    'vadThreshold': vadThreshold,
+    'minSpeechMs': minSpeechMs,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is RecognizerConfig &&
+      other.model == model &&
+      other.language == language &&
+      other.vadThreshold == vadThreshold &&
+      other.minSpeechMs == minSpeechMs;
+
+  @override
+  int get hashCode => Object.hash(model, language, vadThreshold, minSpeechMs);
 }
 
 /// [TriggerSource] of the system assistant: fires

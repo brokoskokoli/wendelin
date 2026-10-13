@@ -9,6 +9,7 @@ import '../../di/list_access.dart';
 import '../../di/preferences.dart';
 import '../../di/profiles.dart';
 import '../../di/providers.dart';
+import '../../voice/recognizer_config.dart';
 import '../design/design.dart';
 import '../screens/labels.dart';
 import '../settings/integrations_screen.dart';
@@ -187,8 +188,11 @@ class _StartGateState extends ConsumerState<StartGate> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      ref.watch(onboardingDoneProvider) || ref.watch(demoModeProvider)
-      ? widget.home
-      : const OnboardingScreen();
+  Widget build(BuildContext context) {
+    // Keeps the system recognizer's copy of the speech settings current.
+    ref.watch(recognizerConfigSyncProvider);
+    return ref.watch(onboardingDoneProvider) || ref.watch(demoModeProvider)
+        ? widget.home
+        : const OnboardingScreen();
+  }
 }

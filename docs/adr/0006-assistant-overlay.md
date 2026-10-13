@@ -21,7 +21,7 @@ Auf dem Emulator (AOSP 35) geprüft:
 - Sobald die Komponente aktiv ist, setzt Android `voice_recognition_service` auf Wendelin. Für die Assistenten-Rolle braucht Android den Dienst zwingend. Solange Wendelin Standard-Assistent ist, bekommen Apps, die die System-Spracherkennung nutzen, deshalb einen Fehler.
 - Nach dem Entzug der Rolle ist die Komponente wieder aus. Android lässt die Einstellung zwar stehen, sie zeigt dann aber auf einen deaktivierten Dienst, es gibt also keinen Erkenner mehr.
 
-Folgepaket: den Dienst mit dem lokalen Whisper aus WP17 betreiben.
+Folgepaket: den Dienst mit dem lokalen Whisper aus WP17 betreiben. Umgesetzt in WP20 (ADR 0008): Der Dienst erkennt jetzt lokal und ist zusätzlich an die Einstellung „Als Spracherkennung für andere Apps anbieten“ gebunden.
 
 ### 3. Sperrbildschirm: erst entsperren, vorher nichts zeigen oder sprechen
 Das Overlay darf über dem Sperrbildschirm erscheinen (`setShowWhenLocked`). Es startet als „gesperrt“ mit leerem Sheet und Mikrofon und Tastatur aus, bis `isLocked()` geantwortet hat. Auf einem gesperrten Gerät blitzt so nichts Persönliches auf. Ist das Gerät gesperrt (`KeyguardManager.isKeyguardLocked`), startet keine Anfrage. Das Sheet zeigt nur „Gerät entsperren“ ohne Verlauf, Transkript, Tool-Karten oder Antwort, Mikrofon und Tastatur sind aus, und die App fordert `requestDismissKeyguard` an. Erst nach dem Entsperren hört Wendelin zu. Wird das Entsperren abgebrochen, bleibt es dabei, bis „Entsperren“ oder „Beenden“ getippt wird. So erreicht kein sensibler Inhalt (Kalender, Notizen, Gedächtnis) den Bildschirm oder den Lautsprecher eines gesperrten Geräts. Der Reviewer-Hinweis aus WP15 ist damit umgesetzt.

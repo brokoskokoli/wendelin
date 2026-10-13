@@ -27,7 +27,12 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Emulator test of the system speech recognizer (WP20, tool/e2e_recognizer.sh).
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    // Only in the test APK: the STT fixtures as audio for the recognizer test.
+    sourceSets["androidTest"].assets.srcDir("../../test/fixtures/stt")
 
     buildTypes {
         release {
@@ -46,4 +51,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    androidTestImplementation("androidx.test:runner:1.3.0")
+    androidTestImplementation("junit:junit:4.13.2")
 }

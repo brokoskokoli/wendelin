@@ -51,4 +51,20 @@ void main() {
     expect(find.text('Wendelin ist Standard-Assistent'), findsOneWidget);
     expect(find.byType(CheckStatusIcon), findsOneWidget);
   });
+
+  testWidgets('Spracherkennung für andere Apps: an, ausschalten', (
+    tester,
+  ) async {
+    final platform = FakeAssistantPlatform();
+    await pumpAssistant(tester, platform);
+    expect(
+      find.text('Als Spracherkennung für andere Apps anbieten'),
+      findsOneWidget,
+    );
+    expect(tester.widget<WSwitch>(find.byType(WSwitch)).value, isTrue);
+    await tester.tap(find.byType(WSwitch));
+    await tester.pump();
+    expect(platform.recognizerOffered, isFalse);
+    expect(tester.widget<WSwitch>(find.byType(WSwitch)).value, isFalse);
+  });
 }

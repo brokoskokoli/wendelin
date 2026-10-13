@@ -14,6 +14,7 @@ und `lib/ui/onboarding/voice_download_step.dart`.
 | `file_model_store.dart` | `ModelStore` | Dateisystem, `<id>/<datei>.part` + atomares Umbenennen |
 | `model_installer.dart` | Download-Ablauf | Speicherplatzprüfung, `ModelDownloader`, sicheres Entpacken, Archiv erst danach löschen |
 | `tar_bz2.dart` | `.tar.bz2` entpacken | bzip2 mit Größenlimit, eigener Tar-Leser: nur relative Pfade ohne `..`, keine Links/Geräte, temporäres Verzeichnis + Umbenennen; Schreibfehler verwerfen das Archiv |
+| `whisper_share.dart`, `whisper_registry.dart` | Whisper zwischen Engines teilen (ADR 0008) | Das Whisper-Isolat der App beantwortet auch Anfragen der Erkenner-Engine; Port prozessweit im `IsolateNameServer` |
 | `isolate_exit.dart` | Isolate beenden | auf `onExit` warten, `kill` nur nach 5 s |
 | `disk_space.dart` | freier Speicher | libc `statvfs` per FFI (64-bit Android, macOS); sonst unbekannt |
 | `pcm.dart`, `wer.dart` | Hilfen | PCM/WAV, Wortfehlerrate für `tool/stt_wer.dart` |
