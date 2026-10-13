@@ -24,6 +24,12 @@ abstract final class RoutingSettings {
     encode: (r) => RuleSetJson().encode(r),
     decode: (json) => RuleSetJson().decode(json),
   );
+
+  /// One-time hint after the migration switched the rule „Privat“ on:
+  /// the name of its target profile. Removed when the user dismisses it.
+  static final privateRuleNotice = SettingKey.string(
+    'routing.privateRuleNotice',
+  );
 }
 
 /// Id of the preset rule „Privat“.
@@ -96,6 +102,16 @@ Future<RuleSet?> loadRuleSet(WendelinStorage storage) async {
       legacyChain: await settings.get(AppSettings.escalationChain) ?? const [],
     );
     await settings.set(RoutingSettings.rules, rules);
+    final privat = rules.rules.where((r) => r.id == privateRuleId).first;
+    if (privat.enabled) {
+      final target = await storage.providerProfiles.get(
+        privat.target.profileId,
+      );
+      await settings.set(
+        RoutingSettings.privateRuleNotice,
+        target?.name ?? privat.target.profileId,
+      );
+    }
   } else if (rules.defaultTarget.profileId != defaultProfile.id) {
     rules = rules.copyWith(
       defaultTarget: RouteTarget(
@@ -136,6 +152,31 @@ Future<void> followDefaultModel(
     await storage.settings.set(RoutingSettings.rules, updated);
   }
 }
+
+/// The pending hint about the new rule „Privat“ (target profile name), or
+/// `null`. Re-read after the configuration (and with it the migration)
+/// loaded.
+final privateRuleNoticeProvider = FutureProvider<String?>((ref) async {
+  await ref.watch(storedProviderConfigProvider.future).catchError((_) => null);
+  return ref
+      .watch(storageProvider)
+      .settings
+      .get(RoutingSettings.privateRuleNotice);
+});
+
+/// Dismisses the hint about the rule „Privat“.
+Future<void> dismissPrivateRuleNotice(WidgetRef ref) async {
+  await ref
+      .read(storageProvider)
+      .settings
+      .remove(RoutingSettings.privateRuleNotice);
+  ref.invalidate(privateRuleNoticeProvider);
+}
+
+/// Text of the hint about the rule „Privat“ for [target].
+String privateRuleNoticeText(String target) =>
+    'Neu: Regel „Privat“ – Anfragen mit „privat“, „vertraulich“ … gehen an '
+    '$target und bleiben bei Eskalationen auf dessen Datenschutzstufe.';
 
 /// [profile] as the router sees it (no adapter: for the editor).
 RoutingProfile routingProfileOf(

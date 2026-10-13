@@ -14,9 +14,12 @@ String clockLabel(DateTime at) {
 String providerLabel(String name, String? rule) =>
     rule == null || rule.isEmpty ? name : '$name · $rule';
 
-/// Text of the hint while a conversation is private.
-String privateConversationText(DateTime since) =>
-    'Unterhaltung privat (seit ${clockLabel(since)})';
+/// Text of the hint while a conversation is private ([byRequest]: a
+/// „privat“ request) or only confidential (a run used the memory).
+String privateConversationText(DateTime since, {bool byRequest = true}) =>
+    byRequest
+    ? 'Unterhaltung privat (seit ${clockLabel(since)})'
+    : 'Vertraulich: Gedächtnis genutzt (seit ${clockLabel(since)})';
 
 /// Shown while the conversation is private (ADR 0009 §4, taint
 /// propagation): after a private request every later answer of the
@@ -27,7 +30,11 @@ class PrivateConversationBanner extends StatelessWidget {
     super.key,
     required this.since,
     required this.onNewConversation,
+    this.byRequest = true,
   });
+
+  /// A „privat“ request (else only confidential: memory used).
+  final bool byRequest;
 
   /// First private message of the conversation.
   final DateTime since;
@@ -50,7 +57,7 @@ class PrivateConversationBanner extends StatelessWidget {
         ),
         Expanded(
           child: Text(
-            privateConversationText(since),
+            privateConversationText(since, byRequest: byRequest),
             style: WText.detail.copyWith(color: WColors.text),
           ),
         ),
@@ -67,6 +74,12 @@ class PrivateConversationBanner extends StatelessWidget {
 }
 
 /// Extra sentence of the escalation question in a private conversation.
-String privateEscalationHint(DateTime since, String toName) =>
-    'Die Unterhaltung ist privat (seit ${clockLabel(since)}). Mit „Ja“ '
-    'sieht $toName auch ihre privaten Teile.';
+String privateEscalationHint(
+  DateTime since,
+  String toName, {
+  bool byRequest = true,
+}) => byRequest
+    ? 'Die Unterhaltung ist privat (seit ${clockLabel(since)}). Mit „Ja“ '
+          'sieht $toName auch ihre privaten Teile.'
+    : 'Die Unterhaltung nutzt dein Gedächtnis (seit ${clockLabel(since)}). '
+          'Mit „Ja“ sieht $toName auch diese vertraulichen Teile.';

@@ -21,7 +21,11 @@ class ConfirmationSheet extends StatelessWidget {
     this.toolRisk = RiskLevel.external,
     this.hint = ConfirmationHint.tap,
     this.privateSince,
+    this.privateByRequest = true,
   });
+
+  /// Whether the private state comes from a „privat“ request.
+  final bool privateByRequest;
 
   /// Since when the conversation is private (hint at an escalation).
   final DateTime? privateSince;
@@ -53,6 +57,7 @@ class ConfirmationSheet extends StatelessWidget {
       (yes) => Navigator.of(context).pop(yes),
       toolRisk: toolRisk,
       privateSince: privateSince,
+      privateByRequest: privateByRequest,
     );
     return SafeArea(
       top: false,
@@ -122,6 +127,7 @@ Widget confirmationCardFor(
   void Function(bool yes) answer, {
   RiskLevel toolRisk = RiskLevel.external,
   DateTime? privateSince,
+  bool privateByRequest = true,
 }) => switch (question) {
   ToolQuestion(:final event) => () {
     final texts = confirmationTexts(event.call.name);
@@ -141,7 +147,12 @@ Widget confirmationCardFor(
     detail: [
       '$toName hat eine niedrigere Datenschutzstufe als $fromName. '
           'Deine Anfrage und der bisherige Verlauf gehen dann dorthin.',
-      if (privateSince != null) privateEscalationHint(privateSince, toName),
+      if (privateSince != null)
+        privateEscalationHint(
+          privateSince,
+          toName,
+          byRequest: privateByRequest,
+        ),
     ].join('\n'),
     toolName: '$fromName → $toName',
     risk: RiskLevel.external,

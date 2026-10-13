@@ -47,6 +47,7 @@ final class Harness {
     List<Message> history = const [],
     ProviderResolver? resolver,
     MemoryRetriever? memory,
+    PrivacyLevel? memoryFloor,
   }) : conversation = InMemoryConversation(history),
        clock = FixedClock(DateTime.utc(2026, 10, 13, 9)),
        catalog = FakeToolCatalog(tools) {
@@ -71,6 +72,7 @@ final class Harness {
       budgetGuard: budget,
       catalogFor: catalogFor,
       onToolRefused: onToolRefused,
+      memoryFloor: memoryFloor,
     );
   }
 

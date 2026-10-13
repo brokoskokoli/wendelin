@@ -84,8 +84,12 @@ class OverlaySheet extends StatelessWidget {
     this.typing,
     this.conversationMode = false,
     this.privateSince,
+    this.privateByRequest = true,
     this.onNewConversation,
   });
+
+  /// Whether the private state comes from a „privat“ request.
+  final bool privateByRequest;
 
   /// Since when the conversation is private („Unterhaltung privat“).
   final DateTime? privateSince;
@@ -237,6 +241,7 @@ class OverlaySheet extends StatelessWidget {
           onAnswer!,
           toolRisk: q is ToolQuestion ? q.event.risk : RiskLevel.external,
           privateSince: privateSince,
+          privateByRequest: privateByRequest,
         ),
         if (statusText != null) Text(statusText, style: WText.caption),
       ];
@@ -245,6 +250,7 @@ class OverlaySheet extends StatelessWidget {
       if (privateSince case final since?)
         PrivateConversationBanner(
           since: since,
+          byRequest: privateByRequest,
           onNewConversation: onNewConversation,
         ),
       ?typing,

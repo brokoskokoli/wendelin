@@ -82,7 +82,44 @@ final class AgentController extends Notifier<ConversationState> {
         for (final m in messages) m.message,
       ], sessionStart: last.startedAt),
       privateSince: privateSinceOf(messages),
+      privateByRequest: await _anyPrivateRequest(messages),
     );
+  }
+
+  /// Whether one of the user [messages] with a privacy floor was itself a
+  /// private request (and not only tainted, e.g. by the memory).
+  Future<bool> _anyPrivateRequest(List<StoredMessage> messages) async {
+    final floored = [
+      for (final m in messages)
+        if (m.message.role == Role.user && m.message.privacyFloor != null)
+          m.message.text,
+    ];
+    if (floored.isEmpty) return false;
+    final ProviderConfig? config;
+    try {
+      config = await ref.read(providerConfigProvider.future);
+    } on Object {
+      return true; // Unknown: the stricter hint.
+    }
+    return floored.any((t) => _isPrivateRequest(config, UserInput(text: t)));
+  }
+
+  /// Whether [input] is routed privately (a `privacy` rule matches).
+  static bool _isPrivateRequest(ProviderConfig? config, UserInput input) {
+    if (config == null) return false;
+    try {
+      return config.resolver().resolve(input).privacyFloor != null;
+    } on Object {
+      return false;
+    }
+  }
+
+  /// The session [sessionId] ended (inactivity, „neues Thema“): a shown
+  /// private state belongs to it and ends too.
+  void sessionEnded(String sessionId) {
+    if (sessionId == _shownSessionId && state.privateSince != null) {
+      state = state.copyWith(clearPrivate: true);
+    }
   }
 
   /// Time of the first message with a privacy floor in [messages], or
@@ -199,6 +236,9 @@ final class AgentController extends Notifier<ConversationState> {
       trimmed,
       sessionStart: isNew ? ref.read(clockProvider).now() : null,
     );
+    if (_isPrivateRequest(providers, input)) {
+      state = state.copyWith(privateByRequest: true);
+    }
 
     final request = UserInput(
       text: trimmed,

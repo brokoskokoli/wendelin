@@ -131,7 +131,8 @@ class MemoryScreen extends ConsumerWidget {
       title: 'Untergrenze aufheben?',
       message:
           '„${e.text}“ stammt aus einer privaten Anfrage und geht bisher nur '
-          'an Provider ab $level. Danach können ihn alle Provider sehen.',
+          'an Provider ab $level. Danach können ihn alle Provider sehen, die '
+          'das Gedächtnis sehen dürfen.',
       yes: 'Aufheben',
     );
     if (!ok) return;

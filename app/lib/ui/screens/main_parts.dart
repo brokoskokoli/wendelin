@@ -204,6 +204,54 @@ class _ComposerState extends State<Composer> {
   }
 }
 
+/// One-time hint about the new routing rule „Privat“ (after the M3
+/// migration): what it does, a link to the routing page, dismiss.
+class PrivateRuleNoticeCard extends StatelessWidget {
+  /// Creates the card.
+  const PrivateRuleNoticeCard({
+    super.key,
+    required this.text,
+    required this.onOpen,
+    required this.onDismiss,
+  });
+
+  /// The hint.
+  final String text;
+
+  /// Opens the routing page.
+  final VoidCallback onOpen;
+
+  /// Hides the hint for good.
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) => SectionCard(
+    dividers: false,
+    spacing: WSpace.m,
+    padding: const EdgeInsets.all(WSpace.l18),
+    children: [
+      Text(text, style: WText.intro),
+      Row(
+        spacing: WSpace.s,
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: onDismiss,
+              child: const Text('Verstanden'),
+            ),
+          ),
+          Expanded(
+            child: FilledButton(
+              onPressed: onOpen,
+              child: const Text('Routing ansehen'),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 /// Hint card shown while no provider is set up.
 class ProviderSetupCard extends StatelessWidget {
   /// Creates the card.

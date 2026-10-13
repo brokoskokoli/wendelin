@@ -9,6 +9,7 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import '../agent/agent_controller.dart';
 import '../platform/platform_ports.dart';
 import '../platform/secure_secret_store.dart';
 import 'agent_factory.dart';
@@ -420,6 +421,8 @@ final sessionManagerProvider = Provider<SessionManager>((ref) {
     conversations: ref.watch(storageProvider).conversations,
     clock: ref.watch(clockProvider),
     onSessionEnd: (id) {
+      // „Unterhaltung privat“ ends with its session.
+      ref.read(agentControllerProvider.notifier).sessionEnded(id);
       // Read lazily: the registry may have been rebuilt meanwhile.
       ref.read(toolRegistryProvider).endSession(id);
       final integrations = ref.read(integrationsProvider);

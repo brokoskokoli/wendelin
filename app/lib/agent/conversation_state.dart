@@ -65,6 +65,7 @@ final class ConversationState {
     this.verification,
     this.activeRule,
     this.privateSince,
+    this.privateByRequest = false,
   }) : entries = List.unmodifiable(entries);
 
   /// The empty conversation.
@@ -106,6 +107,11 @@ final class ConversationState {
   /// content). It stays private until a new conversation starts.
   final DateTime? privateSince;
 
+  /// Whether a request of this conversation was routed privately („privat“
+  /// rule); `false` while it is only confidential because a run used the
+  /// memory (or other content with a privacy floor).
+  final bool privateByRequest;
+
   /// A copy with the given fields replaced; `clear…` resets nullable
   /// fields to `null`.
   ConversationState copyWith({
@@ -124,6 +130,7 @@ final class ConversationState {
     String? activeRule,
     bool clearRule = false,
     DateTime? privateSince,
+    bool? privateByRequest,
     bool clearPrivate = false,
   }) => ConversationState(
     entries: entries ?? this.entries,
@@ -137,6 +144,9 @@ final class ConversationState {
     verification: clearVerification ? null : verification ?? this.verification,
     activeRule: clearRule ? null : activeRule ?? this.activeRule,
     privateSince: clearPrivate ? null : privateSince ?? this.privateSince,
+    privateByRequest: clearPrivate
+        ? false
+        : privateByRequest ?? this.privateByRequest,
   );
 
   /// The tool entry of [callId], if any.

@@ -556,6 +556,66 @@ void main() {
       );
     });
 
+    test('memoryFloor: standard targets get no memory at all', () async {
+      final (primary, claude) = scripted('claude', [ScriptedTurn.text('ok')]);
+      final h = Harness(
+        primary: primary,
+        memory: memory,
+        memoryFloor: PrivacyLevel.tee,
+      );
+      await h.run('Was trinke ich gern?');
+      final prompt = claude.requests.single.systemPrompt!;
+      expect(prompt, isNot(contains('Mag Tee')));
+      expect(prompt, isNot(contains('Gedächtnis (')));
+      expect(
+        h.conversation.messages.map((m) => m.privacyFloor),
+        everyElement(isNull),
+      );
+    });
+
+    test('memoryFloor: a TEE run with memory is tainted, escalation to '
+        'standard asks first', () async {
+      final phala = FakeLlmProvider([
+        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+      ]);
+      final claude = FakeLlmProvider([ScriptedTurn.text('Tee.')]);
+      final h = Harness(
+        primary: ProviderTarget(
+          profileId: 'phala',
+          modelId: 'glm',
+          provider: phala,
+          privacy: PrivacyLevel.tee,
+        ),
+        chain: [
+          ProviderTarget(
+            profileId: 'claude',
+            modelId: 'sonnet',
+            provider: claude,
+            privacy: PrivacyLevel.standard,
+          ),
+        ],
+        memory: FixedMemoryRetriever([
+          const MemoryItem(id: 'm1', text: 'Mag Tee'),
+        ]),
+        memoryFloor: PrivacyLevel.tee,
+      );
+      final asked = <EscalationConfirmationRequired>[];
+      await h.run(
+        'Was trinke ich gern?',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) {
+            asked.add(e);
+            e.respond(false);
+          }
+        },
+      );
+      expect(phala.requests.first.systemPrompt, contains('Mag Tee'));
+      expect(asked.single.toProfile, 'claude');
+      expect(claude.requests, isEmpty);
+      expect(h.conversation.messages.first.privacyFloor, PrivacyLevel.tee);
+    });
+
     test('tools of a private run get its floor (memory__save)', () async {
       final invoker = ContextInvoker();
       final (primary, _) = scripted('phala', [

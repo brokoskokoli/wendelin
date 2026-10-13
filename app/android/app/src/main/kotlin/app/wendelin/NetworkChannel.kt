@@ -26,7 +26,10 @@ class NetworkChannel(context: Context, messenger: BinaryMessenger) :
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) = push()
-        override fun onLost(network: Network) = push()
+
+        // The lost network may still be reported as active for a moment:
+        // it counts as gone, so without a successor the state is offline.
+        override fun onLost(network: Network) = push(lost = network)
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = push()
     }
 
@@ -59,16 +62,20 @@ class NetworkChannel(context: Context, messenger: BinaryMessenger) :
         }
     }
 
-    private fun state(): String {
+    /** Current state; [lost] is a network that just went away. */
+    private fun state(lost: Network? = null): String {
         val cm = manager ?: return ONLINE
         val network = cm.activeNetwork ?: return OFFLINE
+        if (network == lost) return OFFLINE
         val caps = cm.getNetworkCapabilities(network) ?: return OFFLINE
         if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return OFFLINE
+        // Captive portal or no working internet: not online.
+        if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) return OFFLINE
         return if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) ONLINE else METERED
     }
 
-    private fun push() {
-        main.post { if (registered) channel.invokeMethod("changed", state()) }
+    private fun push(lost: Network? = null) {
+        main.post { if (registered) channel.invokeMethod("changed", state(lost)) }
     }
 
     companion object {

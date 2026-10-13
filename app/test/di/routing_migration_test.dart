@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/agent_factory.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/routing.dart';
@@ -293,6 +294,54 @@ void main() {
     final offline = config.resolver().resolve(input);
     expect(offline.profileId, 'ollama');
     expect(offline.reason, 'Offline');
+  });
+
+  test('Standardziel nutzt das Modell der Regeln, nicht nur das des '
+      'Profils', () async {
+    final storage = await _m2Storage(profiles: [_profile('a')], defaultId: 'a');
+    final rules = (await loadRuleSet(storage))!;
+    await storage.settings.set(
+      RoutingSettings.rules,
+      rules.copyWith(
+        defaultTarget: const RouteTarget(profileId: 'a', modelId: 'gross'),
+      ),
+    );
+    final config = (await load(storage))!;
+    expect(config.primary.modelId, 'gross');
+    expect(
+      config.resolver().resolve(UserInput(text: 'hallo')).modelId,
+      'gross',
+    );
+  });
+
+  test('Hinweis auf die Regel „Privat“ nur, wenn sie aktiv wird', () async {
+    final on = await _m2Storage(
+      profiles: [
+        _profile('a'),
+        _profile('p', privacy: PrivacyLevel.tee),
+      ],
+      defaultId: 'a',
+    );
+    await loadRuleSet(on);
+    expect(
+      await on.settings.get(RoutingSettings.privateRuleNotice),
+      'Profil p',
+    );
+    final off = await _m2Storage(profiles: [_profile('a')], defaultId: 'a');
+    await loadRuleSet(off);
+    expect(await off.settings.get(RoutingSettings.privateRuleNotice), isNull);
+  });
+
+  test('memoryFloorOf: niedrigste Stufe mit memory__search', () {
+    final memory = FakeToolCatalog([FakeTool(name: 'memory__search')]);
+    final none = FakeToolCatalog(const []);
+    ToolCatalog Function(PrivacyLevel) from(PrivacyLevel min) =>
+        (level) => level.isAtLeast(min) ? memory : none;
+    expect(memoryFloorOf(from(PrivacyLevel.standard)), isNull);
+    expect(memoryFloorOf(from(PrivacyLevel.eu)), PrivacyLevel.eu);
+    expect(memoryFloorOf(from(PrivacyLevel.tee)), PrivacyLevel.tee);
+    expect(memoryFloorOf(from(PrivacyLevel.local)), PrivacyLevel.local);
+    expect(memoryFloorOf((_) => none), PrivacyLevel.tee);
   });
 
   test('ProviderConfig ohne Regeln bleibt beim DefaultProviderResolver', () {

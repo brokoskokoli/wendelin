@@ -69,8 +69,13 @@ void main() {
       final status = ChannelNetworkStatus();
       await status.start();
       addTearDown(status.dispose);
-      await push('offline');
+      // Online bekannt: ein Fehler darf weder offline noch etwas anderes
+      // erzwingen.
+      expect(status.current, NetworkState.online);
       answer = 'fehler';
+      await status.refresh();
+      expect(status.current, NetworkState.online);
+      await push('offline');
       await status.refresh();
       expect(status.current, NetworkState.offline);
 

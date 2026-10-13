@@ -190,6 +190,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
             ),
       privacy: target?.privacy ?? PrivacyLevel.standard,
       privateSince: _locked ? null : conversation.privateSince,
+      privateByRequest: conversation.privateByRequest,
       onNewConversation: conversation.running
           ? null
           : () => unawaited(_agent.newTopic()),

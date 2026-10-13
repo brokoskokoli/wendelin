@@ -5,12 +5,14 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_reducer.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/overlay_sheet.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/screens/private_banner.dart';
 import 'package:wendelin/ui/settings/memory_screen.dart';
+import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
@@ -41,6 +43,17 @@ void main() {
       c
           .read(agentControllerProvider.notifier)
           .seed(ConversationState(privateSince: testNow));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Vertraulich: Gedächtnis genutzt (seit 08:12)'),
+        findsOneWidget,
+        reason: 'nur Gedächtnis: ruhigerer Text',
+      );
+      c
+          .read(agentControllerProvider.notifier)
+          .seed(
+            ConversationState(privateSince: testNow, privateByRequest: true),
+          );
       await tester.pumpAndSettle();
       expect(find.text('Unterhaltung privat (seit 08:12)'), findsOneWidget);
 
@@ -124,7 +137,48 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('(seit 08:12)'), findsOneWidget);
+      await pumpComponent(tester, [
+        confirmationCardFor(
+          question,
+          (_) {},
+          privateSince: testNow,
+          privateByRequest: false,
+        ),
+      ]);
+      expect(find.textContaining('nutzt dein Gedächtnis'), findsOneWidget);
     });
+  });
+
+  group('Hinweis auf die neue Regel „Privat“', () {
+    for (final open in [true, false]) {
+      testWidgets(open ? 'Routing ansehen' : 'Verstanden', (tester) async {
+        final env = TestEnv(
+          providerConfig: scripted(FakeLlmProvider(const [])),
+        );
+        await env.storage.settings.set(
+          RoutingSettings.privateRuleNotice,
+          'Phala GLM',
+        );
+        await _pumpMain(tester, env);
+        expect(find.text(privateRuleNoticeText('Phala GLM')), findsOneWidget);
+        await tester.tap(find.text(open ? 'Routing ansehen' : 'Verstanden'));
+        await settle(tester);
+        expect(
+          find.byType(RoutingScreen),
+          open ? findsOneWidget : findsNothing,
+        );
+        expect(
+          await env.storage.settings.get(RoutingSettings.privateRuleNotice),
+          isNull,
+          reason: 'nur einmal',
+        );
+        if (open) {
+          tester.state<NavigatorState>(find.byType(Navigator)).pop();
+          await settle(tester);
+        }
+        expect(find.text(privateRuleNoticeText('Phala GLM')), findsNothing);
+      });
+    }
   });
 
   group('Regel im ProviderChip', () {

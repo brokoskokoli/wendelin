@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/di/preference_models.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/routing.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
@@ -162,6 +164,7 @@ void main() {
     // Die Anfrage ist schon mit Untergrenze gespeichert: Hinweis „privat“.
     final private = await waitFor(c, (s) => s.privateSince != null);
     expect(private.privateSince, testNow);
+    expect(private.privateByRequest, isTrue);
 
     controller.answer(approved: false);
     await controller.idle;
@@ -171,5 +174,57 @@ void main() {
     // „Neue Unterhaltung“ beendet den privaten Zustand.
     await controller.newTopic();
     expect(c.read(agentControllerProvider).privateSince, isNull);
+  });
+
+  group('Gedächtnis je Ziel (Review WP26)', () {
+    /// A memory entry; sensitive integrations (memory) only for TEE and
+    /// better, as the user set it in „Datenschutz“.
+    Future<void> remember() async {
+      await c
+          .read(toolPrefsProvider.notifier)
+          .set(const ToolPrefs(sensitiveMinimum: PrivacyLevel.tee));
+      await env.storage.memory.save(
+        'Mag Tee mit Pfefferminz',
+        category: MemoryCategory.preference,
+        source: 'user',
+      );
+    }
+
+    test('Standard-Ziel bekommt kein Gedächtnis, TEE-Ziel schon und die '
+        'Unterhaltung wird vertraulich', () async {
+      await setUpEnv(
+        phala: [ScriptedTurn.text('Pfefferminz.')],
+        claude: [ScriptedTurn.text('Weiß ich nicht.')],
+      );
+      await remember();
+      var s = await send('Claude, welchen Tee mag ich?');
+      expect(
+        llm['claude']!.requests.single.systemPrompt,
+        isNot(contains('Pfefferminz')),
+      );
+      expect(s.privateSince, isNull);
+
+      await c.read(agentControllerProvider.notifier).newTopic();
+      s = await send('Welchen Tee mag ich?');
+      expect(
+        llm['phala']!.requests.single.systemPrompt,
+        contains('Pfefferminz'),
+      );
+      final ready = await waitFor(c, (s) => s.privateSince != null);
+      expect(ready.privateByRequest, isFalse, reason: 'nur Gedächtnis');
+    });
+
+    test('Sitzungsende setzt „Unterhaltung privat“ zurück', () async {
+      await setUpEnv(
+        phala: [ScriptedTurn.text('Pfefferminz.')],
+        claude: const [],
+      );
+      await remember();
+      await send('Welchen Tee mag ich?');
+      await waitFor(c, (s) => s.privateSince != null);
+      c.read(sessionManagerProvider).end();
+      expect(c.read(agentControllerProvider).privateSince, isNull);
+      expect(c.read(agentControllerProvider).privateByRequest, isFalse);
+    });
   });
 }

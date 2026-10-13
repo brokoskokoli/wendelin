@@ -69,9 +69,11 @@ final class AgentFactory implements AgentRunFactory {
   /// (`ToolContext.privacyLevel`), so also `tools__search` only lists tools
   /// of that level; without a level it uses the lowest level of the chain.
   ///
-  /// Memory entries go into the system prompt, which every target of the
-  /// chain may receive, so only if the catalog of the lowest level
-  /// ([ProviderConfig.lowestPrivacy]) offers the memory integration.
+  /// Memory per target: the retriever is passed if any reachable target
+  /// may see the memory integration, and the runner gets the lowest level
+  /// whose catalog offers `memory__search` as `memoryFloor` ([memoryFloorOf]).
+  /// Weaker targets (also after „nochmal mit …“) get no memory in the
+  /// system prompt; a run that sees it is tainted with that level.
   @override
   AgentRun create(ProviderConfig providers, String sessionId) {
     final catalog = registry.catalogFor(
@@ -81,7 +83,11 @@ final class AgentFactory implements AgentRunFactory {
     ToolCatalog catalogFor(PrivacyLevel level) =>
         registry.catalogFor(level, sessionId: sessionId);
     final conversation = StorageConversation(storage.conversations, sessionId);
-    final memoryAllowed = catalog.lookup('memory__search') != null;
+    final memoryAllowed = [
+      providers.primary,
+      ...providers.chain,
+    ].any((t) => catalogFor(t.privacy).lookup('memory__search') != null);
+    final memoryFloor = memoryFloorOf(catalogFor);
     return AgentRunner(
       resolver: providers.resolver(),
       contextBuilder: ContextBuilder(
@@ -115,6 +121,21 @@ final class AgentFactory implements AgentRunFactory {
       recorder: conversation,
       costEstimator: costEstimator,
       budgetGuard: budgetGuard,
+      memoryFloor: memoryFloor,
     );
   }
+}
+
+/// The lowest privacy level whose catalog offers `memory__search` (from
+/// [catalogFor]), `tee` if none does; `null` if every level may see the
+/// memory (no floor needed).
+PrivacyLevel? memoryFloorOf(ToolCatalog Function(PrivacyLevel) catalogFor) {
+  final weakestFirst = [...PrivacyLevel.values]
+    ..sort((a, b) => a.isAtLeast(b) ? 1 : -1);
+  for (final level in weakestFirst) {
+    if (catalogFor(level).lookup('memory__search') != null) {
+      return level == PrivacyLevel.standard ? null : level;
+    }
+  }
+  return PrivacyLevel.tee;
 }

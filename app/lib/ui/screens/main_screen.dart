@@ -11,6 +11,7 @@ import '../../agent/money.dart';
 import '../../di/obsidian_index.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
+import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
@@ -96,6 +97,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final active = _activeTarget(providers, conversation.activeProfileId);
 
     Widget? setupHint;
+    final notice = ref.watch(privateRuleNoticeProvider).value;
     if (config.hasError) {
       setupHint = ProviderSetupCard(
         onSetup: _openProviderSetup,
@@ -107,6 +109,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       setupHint = ProviderSetupCard(
         onSetup: _openProviderSetup,
         onDemo: () => ref.read(demoModeProvider.notifier).set(enabled: true),
+      );
+    } else if (notice != null) {
+      setupHint = PrivateRuleNoticeCard(
+        text: privateRuleNoticeText(notice),
+        onOpen: () {
+          unawaited(dismissPrivateRuleNotice(ref));
+          unawaited(Navigator.of(context).pushNamed(AppRoutes.routing));
+        },
+        onDismiss: () => unawaited(dismissPrivateRuleNotice(ref)),
       );
     }
 
@@ -138,6 +149,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               ),
               child: PrivateConversationBanner(
                 since: since,
+                byRequest: conversation.privateByRequest,
                 onNewConversation: conversation.running
                     ? null
                     : () => unawaited(_controller.newTopic()),
@@ -226,6 +238,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           privacy: active?.privacy ?? PrivacyLevel.standard,
           privateSince: ref.watch(
             agentControllerProvider.select((s) => s.privateSince),
+          ),
+          privateByRequest: ref.watch(
+            agentControllerProvider.select((s) => s.privateByRequest),
           ),
           toolRisk: question is ToolQuestion
               ? question.event.risk
