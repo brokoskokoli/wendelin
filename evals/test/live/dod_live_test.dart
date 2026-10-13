@@ -36,11 +36,21 @@ LlmProvider _adapter(EvalProfile p) =>
 // ignore: avoid_print
 void _log(String line) => print(line);
 
+/// Skips the running test when [profile] has no key in the environment.
+/// Inside the test (not `skip:`), because `--run-skipped` – needed for the
+/// `live` tag – would otherwise run it without a key.
+bool _skipWithoutKey(EvalProfile profile) {
+  if (_key(profile) != null) return false;
+  markTestSkipped('${profile.apiKeyVariable} fehlt');
+  return true;
+}
+
 void _dodSuite(String profileName) {
   final profile = _profile(profileName);
   final p = profile.profile;
   group('DoD ${p.id} (${p.defaultModel})', () {
     test('„Trag mir morgen um 10 Tauchen ein“ legt den Termin an', () async {
+      if (_skipWithoutKey(profile)) return;
       final tauchen = loadCases(Directory('cases'))
           .singleWhere((c) => c.id == 'de-cal-tauchen');
       final adapter = _adapter(profile);
@@ -65,7 +75,7 @@ void _dodSuite(String profileName) {
       );
       expect(r.status, CaseStatus.passed, reason: r.reasons.join('; '));
     });
-  }, skip: _key(profile) == null ? '${profile.apiKeyVariable} fehlt' : false);
+  });
 }
 
 const _otherTool = ToolSpec(
@@ -113,42 +123,47 @@ void _historySuite(String profileName) {
   final profile = _profile(profileName);
   final model = profile.profile.defaultModel;
   group('WP14-Verlauf ${profile.profile.id}', () {
-    test('ausgeblendeter Tool-Aufruf (Tool nicht in der Liste, Args {})', () {
-      // Sicht eines Ziels ohne Kalender-Tools auf einen früheren Lauf mit
-      // Kalender (AgentRunner._messagesFor mit hasTools = true).
-      return _expectAccepted(
-        _adapter(profile),
-        model,
-        [
-          Message.user('Was steht morgen an?'),
-          Message(Role.assistant, [
-            const ToolCallBlock(
-              id: 'toolu_hidden_1',
-              name: 'calendar__list_events',
-              argumentsJson: '{}',
-            ),
-          ]),
-          Message(Role.tool, [
-            ToolResultBlock(
-              callId: 'toolu_hidden_1',
-              content: [const TextBlock(_redacted)],
-            ),
-          ]),
-          Message(Role.assistant, [const TextBlock(_placeholder)]),
-          Message.user('Danke. Antworte nur mit „ok“.'),
-        ],
-        tools: const [_otherTool],
-        label: 'ausgeblendeter tool_use',
-      );
-    });
+    test(
+      'ausgeblendeter Tool-Aufruf (Tool nicht in der Liste, Args {})',
+      () async {
+        if (_skipWithoutKey(profile)) return;
+        // Sicht eines Ziels ohne Kalender-Tools auf einen früheren Lauf mit
+        // Kalender (AgentRunner._messagesFor mit hasTools = true).
+        await _expectAccepted(
+          _adapter(profile),
+          model,
+          [
+            Message.user('Was steht morgen an?'),
+            Message(Role.assistant, [
+              const ToolCallBlock(
+                id: 'toolu_hidden_1',
+                name: 'calendar__list_events',
+                argumentsJson: '{}',
+              ),
+            ]),
+            Message(Role.tool, [
+              ToolResultBlock(
+                callId: 'toolu_hidden_1',
+                content: [const TextBlock(_redacted)],
+              ),
+            ]),
+            Message(Role.assistant, [const TextBlock(_placeholder)]),
+            Message.user('Danke. Antworte nur mit „ok“.'),
+          ],
+          tools: const [_otherTool],
+          label: 'ausgeblendeter tool_use',
+        );
+      },
+    );
 
     test(
       'ohne Tools: Aufrufe als Text, aufeinanderfolgende Nutzernachrichten',
-      () {
+      () async {
+        if (_skipWithoutKey(profile)) return;
         // hasTools = false: Tool-Aufruf und -Ergebnis werden Text, die
         // Tool-Nachricht wird zur Nutzernachricht – direkt vor der nächsten
         // Nutzernachricht.
-        return _expectAccepted(_adapter(profile), model, [
+        await _expectAccepted(_adapter(profile), model, [
           Message.user('Was steht morgen an?'),
           Message(Role.assistant, [
             const TextBlock('[Tool-Aufruf: calendar__list_events]'),
@@ -158,7 +173,7 @@ void _historySuite(String profileName) {
         ], label: 'aufeinanderfolgende Nutzernachrichten');
       },
     );
-  }, skip: _key(profile) == null ? '${profile.apiKeyVariable} fehlt' : false);
+  });
 }
 
 void main() {

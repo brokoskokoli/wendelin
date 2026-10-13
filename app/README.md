@@ -33,7 +33,7 @@ Im Demo-Modus laufen alle Ports im Speicher; Kalender und Uhr des Geräts bleibe
 
 `dart run tool/gate.dart app` im Repo-Root. Golden-Tests tragen den Tag `golden` (`test/ui/goldens/`, `test/screens/goldens/`, `test/overlay/goldens/`).
 
-Auf CI (`CI=true`) akzeptieren Goldens bis 1 % abweichende Pixel (`test/support/golden_tolerance.dart`), weil der macOS-Runner Kanten und Glyphen leicht anders rastert; lokal bleiben sie pixelgenau.
+Auf CI (`CI=true`) akzeptieren Goldens bis 0,6 % und höchstens 2 000 abweichende Pixel (`test/support/golden_tolerance.dart`), weil der macOS-Runner Kanten und Glyphen leicht anders rastert; lokal bleiben sie pixelgenau.
 
 Gerätetests (`integration_test/`, AOSP-Emulator ohne Google Play) laufen mit `tool/e2e_android.sh` im Repo-Root:
 

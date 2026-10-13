@@ -104,6 +104,58 @@ void main() {
     },
   );
 
+  test('Rückgängig schlägt im Port fehl → Audit „failed“, Hinweis', () async {
+    start([
+      ScriptedTurn.toolCalls([call('c1', 'calendar__create_event', _create)]),
+      ScriptedTurn.text('Erledigt.'),
+    ]);
+    await sendAndWait(c, 'Trag mir morgen um 10 Tauchen ein');
+    env.calendar.failNext('deleteEvent');
+
+    expect(await c.read(agentControllerProvider.notifier).undo('c1'), isFalse);
+    expect(env.calendar.events, hasLength(1), reason: 'Termin bleibt');
+    await c.read(auditRecorderProvider).flush();
+    final undone = (await env.storage.audit.query()).where(
+      (e) => e.kind == AuditKind.toolCall && e.payload['undo'] == true,
+    );
+    expect(undone.single.payload, {
+      'callId': 'c1',
+      'tool': 'calendar__create_event',
+      'undo': true,
+      'status': 'failed',
+    });
+    expect(
+      c
+          .read(agentControllerProvider)
+          .entries
+          .whereType<NoticeEntry>()
+          .map((n) => n.text),
+      contains(startsWith('Rückgängig hat nicht geklappt')),
+    );
+  });
+
+  test(
+    'Rückgängig ohne Angebot (zweites Mal) schreibt nichts ins Audit',
+    () async {
+      start([
+        ScriptedTurn.toolCalls([call('c1', 'calendar__create_event', _create)]),
+        ScriptedTurn.text('Erledigt.'),
+      ]);
+      await sendAndWait(c, 'Trag mir morgen um 10 Tauchen ein');
+      final controller = c.read(agentControllerProvider.notifier);
+      final both = await Future.wait([
+        controller.undo('c1'),
+        controller.undo('c1'),
+      ]);
+      expect(both, [isTrue, isFalse]);
+      await c.read(auditRecorderProvider).flush();
+      final undone = (await env.storage.audit.query()).where(
+        (e) => e.payload['undo'] == true,
+      );
+      expect(undone.map((e) => e.payload['status']), ['ok']);
+    },
+  );
+
   test('external-Tool: „Nein“ → Tool wird nicht ausgeführt', () async {
     start([
       ScriptedTurn.toolCalls([

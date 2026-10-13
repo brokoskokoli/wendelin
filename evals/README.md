@@ -177,3 +177,7 @@ Verlauf mit ausgeblendeten Tool-Aufrufen (WP14) liegen in
 set -a; . ~/.wendelin-live.env; set +a
 dart test test/live -t live --run-skipped
 ```
+
+`--run-skipped` hebt nur die Standard-Sperre des Tags `live` auf
+(`dart_test.yaml`). Fehlt ein Key, überspringt sich der betroffene Test
+selbst (`markTestSkipped`); die anderen Profile laufen.

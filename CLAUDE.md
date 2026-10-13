@@ -13,7 +13,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - Agenten ändern das Konzept nicht still. Sie melden Abweichungen in ihrem Abschlussbericht, und der Orchestrator trägt sie ein.
 
 ## Arbeiten
-- Toolchain: Flutter 3.47 / Dart 3.13 (`/opt/homebrew/bin`), Android SDK unter `~/Library/Android/sdk`, AVD `Medium_Phone_API_35`.
+- Toolchain: Flutter 3.47 / Dart 3.13 (`/opt/homebrew/bin`), Android SDK unter `~/Library/Android/sdk`, AVD `Wendelin_AOSP_35` (AOSP-Image ohne Google Play, K7). Gerätetests: `tool/e2e_android.sh` (nur auf Emulatoren).
 - `flutter pub get` im Repo-Root (Pub-Workspace). Das Gate läuft mit `dart run tool/gate.dart [--no-app] [paket…]` und muss vor jedem Commit grün sein.
 - Reine Dart-Pakete unter `packages/` importieren kein Flutter. Gerätezugriff geht nur über Ports.
 - Fakes zum Wiederverwenden stellt `package:<pkg>/fakes.dart` bereit, Contract-Suites `package:<pkg>/testing.dart`.

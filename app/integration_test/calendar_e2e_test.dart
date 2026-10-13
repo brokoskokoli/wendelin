@@ -14,6 +14,7 @@ import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/platform/device_calendar_port.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import 'support/e2e.dart';
@@ -22,10 +23,8 @@ import 'support/e2e.dart';
 const _title = 'Tauchen';
 
 Future<List<CalendarEvent>> _tomorrowDiving(DeviceCalendarPort port) async {
-  final now = DateTime.now();
-  final tomorrow = DateTime(now.year, now.month, now.day + 1);
   final events = await port.listEvents(
-    TimeRange(tomorrow, tomorrow.add(const Duration(days: 1))),
+    TimeRange(e2eTomorrow, e2eTomorrow.add(const Duration(days: 1))),
   );
   return events.where((e) => e.title == _title).toList();
 }
@@ -56,7 +55,7 @@ void main() {
     tester,
   ) async {
     final calendarId = (await port.defaultCalendarId())!;
-    final start = DateTime.now().add(const Duration(days: 3));
+    final start = e2eNow.add(const Duration(days: 3, hours: 2));
     final created = await port.createEvent(
       CalendarEventDraft(
         calendarId: calendarId,
@@ -123,8 +122,7 @@ void main() {
     tester,
   ) async {
     final calendarId = (await port.defaultCalendarId())!;
-    final now = DateTime.now();
-    final day = DateTime.utc(now.year, now.month, now.day + 4);
+    final day = DateTime.utc(e2eNow.year, e2eNow.month, e2eNow.day + 4);
     final created = await port.createEvent(
       CalendarEventDraft(
         calendarId: calendarId,
@@ -157,7 +155,10 @@ void main() {
   testWidgets(
     '„Trag mir morgen um 10 Tauchen ein“ → Gerätekalender → Rückgängig',
     (tester) async {
-      final app = E2eApp(config: ProviderConfig.demo);
+      final app = E2eApp(
+        config: ProviderConfig.demo,
+        clock: FixedClock(e2eNow),
+      );
       await app.pump(tester);
 
       await send(tester, 'Trag mir morgen um 10 Tauchen ein');
@@ -192,7 +193,7 @@ void main() {
   testWidgets('calendar__delete_event fragt nach: Nein behält, Ja löscht', (
     tester,
   ) async {
-    final app = E2eApp(config: ProviderConfig.demo);
+    final app = E2eApp(config: ProviderConfig.demo, clock: FixedClock(e2eNow));
     await app.pump(tester);
 
     await send(tester, 'Trag mir morgen um 10 Tauchen ein');

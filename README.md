@@ -48,10 +48,11 @@ Weitere Prüfungen (lokal, brauchen Android-SDK bzw. Emulator):
 
 ```sh
 tool/check_apk.sh              # Release-APK: keine GMS-/Firebase-Klassen, Backup aus, nur erwartete Berechtigungen
+tool/check_apk.sh --self-test  # Selbsttest des Prüfskripts mit Attrappen (ohne SDK)
 tool/e2e_android.sh            # Gerätetests app/integration_test/ auf dem verbundenen Emulator
 ```
 
-`tool/e2e_android.sh` legt bei Bedarf einen lokalen Kalender an, erteilt die Kalender-Berechtigung per `adb shell pm grant` und bestätigt den Speichern-Dialog der Dateiauswahl. Getestet wird auf einem AVD mit AOSP-Image ohne Google Play:
+`tool/e2e_android.sh` läuft nur auf Emulatoren (ein echtes Gerät nur mit `E2E_ALLOW_DEVICE=1`), legt bei Bedarf einen lokalen Kalender an, erteilt die Kalender-Berechtigung per `adb shell pm grant` und bestätigt den Speichern-Dialog der Dateiauswahl. Getestet wird auf einem AVD mit AOSP-Image ohne Google Play:
 
 ```sh
 sdkmanager "system-images;android-35;default;arm64-v8a"
@@ -60,7 +61,7 @@ emulator -avd Wendelin_AOSP_35 -no-window -no-audio -no-boot-anim -gpu swiftshad
 tool/e2e_android.sh
 ```
 
-Live-Tests gegen echte APIs tragen `@Tags(['live'])` und laufen nur auf Wunsch mit Keys aus der Umgebung (siehe [`evals/README.md`](evals/README.md)).
+Live-Tests gegen echte APIs tragen `@Tags(['live'])` und laufen nur auf Wunsch (`dart test -t live --run-skipped`) mit Keys aus der Umgebung; ohne Key überspringt sich ein Test selbst (siehe [`evals/README.md`](evals/README.md)).
 
 ## Demo-Anleitung M1
 

@@ -17,7 +17,8 @@
 #   4. führt die Tests aus und prüft danach, dass kein Testtermin übrig ist.
 #
 # Umgebungsvariablen: ANDROID_SDK_ROOT (Standard ~/Library/Android/sdk),
-# DEVICE (Standard: erstes Gerät).
+# DEVICE (Standard: erstes Gerät). Läuft nur auf Emulatoren (Seriennummer
+# emulator-*, ro.kernel.qemu=1); ein echtes Gerät nur mit E2E_ALLOW_DEVICE=1.
 #
 # Live (integration_test/live_e2e_test.dart, kostet ein paar Cent):
 #   WENDELIN_LIVE=1 mit ANTHROPIC_API_KEY in der Umgebung. Der Key geht per
@@ -33,6 +34,22 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEVICE="${DEVICE:-$("$ADB" devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$DEVICE" ] || { echo "Kein Android-Gerät verbunden" >&2; exit 1; }
 adb() { "$ADB" -s "$DEVICE" "$@"; }
+
+# Nur Emulatoren: Das Skript schreibt in den Kalender, tippt in der
+# Dateiauswahl und löscht App-Daten. Ein echtes Gerät nur mit
+# E2E_ALLOW_DEVICE=1.
+is_emulator() {
+  case "$DEVICE" in emulator-*) ;; *) return 1 ;; esac
+  [ "$(adb shell getprop ro.kernel.qemu | tr -d '\r')" = "1" ]
+}
+if ! is_emulator; then
+  if [ "${E2E_ALLOW_DEVICE:-}" != "1" ]; then
+    echo "Abbruch: $DEVICE ist kein Emulator (Gerätetests schreiben in" \
+      "Kalender und Dateien). Freigabe nur mit E2E_ALLOW_DEVICE=1." >&2
+    exit 1
+  fi
+  echo "Warnung: E2E_ALLOW_DEVICE=1 – Tests laufen auf dem echten Gerät $DEVICE" >&2
+fi
 
 if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" != "1" ]; then
   echo "Gerät $DEVICE ist noch nicht hochgefahren" >&2
@@ -93,7 +110,15 @@ helper() {
 }
 helper &
 HELPER=$!
-trap 'kill $HELPER 2>/dev/null || true; if [ -n "$LIVE" ]; then adb shell run-as "$PKG" rm -f files/live_anthropic.key 2>/dev/null || true; fi' EXIT
+cleanup() {
+  kill "$HELPER" 2>/dev/null || true
+  if [ -n "$LIVE" ]; then
+    adb shell run-as "$PKG" rm -f files/live_anthropic.key 2>/dev/null || true
+  fi
+  # Testdateien der Dateiauswahl und den uiautomator-Abzug entfernen.
+  adb shell 'rm -f /sdcard/Download/wendelin-e2e-*.md /sdcard/wendelin_ui.xml' 2>/dev/null || true
+}
+trap cleanup EXIT
 
 # 4. Tests
 cd "$ROOT/app"

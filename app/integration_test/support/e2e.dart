@@ -23,8 +23,12 @@ final class E2eApp {
   E2eApp({
     this.startup = const StartupSettings(enabledIntegrations: {'calendar'}),
     this.config,
+    this.clock,
     this.extraOverrides = const [],
   });
+
+  /// Fixed time of the app (agent, demo provider, undo); `null` = system.
+  final Clock? clock;
 
   /// Settings at start.
   final StartupSettings startup;
@@ -43,6 +47,7 @@ final class E2eApp {
 
   /// Pumps the app and returns its container.
   Future<ProviderContainer> pump(WidgetTester tester) async {
+    addTearDown(storage.close);
     final device = await loadDeviceInfo();
     await tester.pumpWidget(
       ProviderScope(
@@ -52,6 +57,7 @@ final class E2eApp {
           startupProvider.overrideWithValue(startup),
           deviceInfoProvider.overrideWithValue(device),
           secretStoreProvider.overrideWithValue(secrets),
+          if (clock case final c?) clockProvider.overrideWithValue(c),
           if (config case final c?)
             storedProviderConfigProvider.overrideWith(
               (ref) async => c(ref.watch(clockProvider)),
@@ -65,6 +71,14 @@ final class E2eApp {
     return ProviderScope.containerOf(tester.element(find.byType(WendelinApp)));
   }
 }
+
+/// Fixed „now“ of the device tests: Tuesday, 12 March 2030, 08:00 local
+/// time – far from real events and from a DST change; „morgen“ is
+/// [e2eTomorrow].
+final e2eNow = DateTime(2030, 3, 12, 8);
+
+/// The day after [e2eNow].
+final e2eTomorrow = DateTime(2030, 3, 13);
 
 /// Pumps until [finder] finds something or [timeout] passes (real time:
 /// device channels and streamed answers are asynchronous).

@@ -27,7 +27,9 @@ Future<Uint8List> _png(int dark) async {
 }
 
 void main() {
-  testWidgets('CI-Toleranz: bis 1 % Pixel ok, darüber Fehler', (tester) async {
+  testWidgets('CI-Toleranz: bis 0,6 % und 2000 Pixel ok, darüber Fehler', (
+    tester,
+  ) async {
     await tester.runAsync(() async {
       final dir = Directory.systemTemp.createTempSync('golden_tol');
       addTearDown(() => dir.deleteSync(recursive: true));
@@ -35,6 +37,7 @@ void main() {
       final comparator = TolerantGoldenComparator(
         Uri.file('${dir.path}/x_test.dart'),
         tolerance: ciGoldenTolerance,
+        maxPixels: ciGoldenMaxPixels,
       );
       final golden = Uri.parse('g.png');
 
@@ -45,11 +48,25 @@ void main() {
         reason: '0,56 % wie auf dem macOS-Runner',
       );
       await expectLater(
-        comparator.compare(await _png(300), golden),
+        comparator.compare(await _png(70), golden),
         throwsA(isA<FlutterError>()),
-        reason: '3 % ist eine echte Änderung',
+        reason: '0,7 % liegt über dem Anteil',
+      );
+      final strict = TolerantGoldenComparator(
+        Uri.file('${dir.path}/x_test.dart'),
+        tolerance: ciGoldenTolerance,
+        maxPixels: 50,
+      );
+      await expectLater(
+        strict.compare(await _png(56), golden),
+        throwsA(isA<FlutterError>()),
+        reason: 'über der absoluten Pixelgrenze',
       );
     });
+  });
+
+  test('pngPixelCount liest die Größe aus dem PNG', () async {
+    expect(pngPixelCount(await _png(0)), 10000);
   });
 
   test('nur mit CI=true aktiv', () {

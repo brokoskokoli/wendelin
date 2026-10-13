@@ -204,6 +204,36 @@ void main() {
   });
 
   group('Datenschutz und Logs', () {
+    test('auditSummary: Rückgängig ist als solches erkennbar', () {
+      AuditEntry tool(Map<String, Object?> p) =>
+          AuditEntry(at: testNow, kind: AuditKind.toolCall, payload: p);
+      expect(
+        auditSummary(tool({'tool': 'calendar__create_event', 'status': 'ok'})),
+        'calendar__create_event · ok',
+      );
+      expect(
+        auditSummary(
+          tool({
+            'callId': 'c1',
+            'tool': 'calendar__create_event',
+            'undo': true,
+            'status': 'ok',
+          }),
+        ),
+        'calendar__create_event · rückgängig · ok',
+      );
+      expect(
+        auditSummary(
+          tool({
+            'tool': 'calendar__create_event',
+            'undo': true,
+            'status': 'failed',
+          }),
+        ),
+        'calendar__create_event · rückgängig · failed',
+      );
+    });
+
     Future<TestEnv> withAudit([ExportLog? log]) async {
       final env = log == null ? TestEnv() : exportingEnv(log);
       await env.storage.audit.record(
