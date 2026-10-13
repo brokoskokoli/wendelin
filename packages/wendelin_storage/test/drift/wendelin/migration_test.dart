@@ -48,6 +48,11 @@ void main() {
           "VALUES ('s1', 1, 2, 'Alt')",
         )
         ..execute(
+          'INSERT INTO memory_entries (id, body, category, source, '
+          "created_at, last_used_at) VALUES ('m1', 'Mag Tee', 'preference', "
+          "'user', 1, 1)",
+        )
+        ..execute(
           'INSERT INTO messages (id, session_id, seq, role, content_json, '
           "created_at) VALUES ('m1', 's1', 1, 'user', "
           '\'[{"type":"text","text":"Hallo"}]\', 1)',
@@ -61,12 +66,23 @@ void main() {
       final old = (await storage.conversations.messages('s1')).single;
       expect(old.message, Message.user('Hallo'));
       expect(old.message.privacyFloor, isNull);
+      final tea = (await storage.memory.search('Tee')).single;
+      expect((tea.id, tea.privacyFloor), ('m1', null));
       await storage.conversations.append(
         's1',
         Message.user('privat: Befund').withPrivacyFloor(PrivacyLevel.tee),
       );
       final turns = await storage.conversations.lastTurns('s1', 1);
       expect(turns.single.message.privacyFloor, PrivacyLevel.tee);
+      final memory = await storage.memory.save(
+        'Knie-OP im März',
+        category: MemoryCategory.fact,
+        source: 'session:s1',
+        privacyFloor: PrivacyLevel.tee,
+      );
+      expect(memory.privacyFloor, PrivacyLevel.tee);
+      final knee = (await storage.memory.search('Knie')).single;
+      expect(knee.privacyFloor, PrivacyLevel.tee);
     },
   );
 

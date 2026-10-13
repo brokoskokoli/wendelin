@@ -39,7 +39,12 @@ final class StorageMemoryRetriever implements MemoryRetriever {
     final hits = await repository.search(query, limit: limit);
     return [
       for (final e in hits)
-        MemoryItem(id: e.id, text: e.text, category: e.category.name),
+        MemoryItem(
+          id: e.id,
+          text: e.text,
+          category: e.category.name,
+          privacyFloor: e.privacyFloor,
+        ),
     ];
   }
 }

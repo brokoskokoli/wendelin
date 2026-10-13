@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -204,7 +205,7 @@ void main() {
       expect(sentText(provider), contains(secret));
     });
 
-    test('an escalation of a normal turn hides them, no question', () async {
+    test('a run that saw them is tainted: escalation below asks', () async {
       final (primary, phala) = scripted('phala', [
         ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
         ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
@@ -217,12 +218,23 @@ void main() {
         chain: [claudeTarget],
         history: history,
       );
-      final events = await h.run('Wetter?');
-      expect(events.whereType<EscalationConfirmationRequired>(), isEmpty);
-      expect(events.whereType<Escalated>().single.toProfile, 'claude');
+      final asked = <EscalationConfirmationRequired>[];
+      await h.run(
+        'Wetter?',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) {
+            asked.add(e);
+            e.respond(false);
+          }
+        },
+      );
+      expect(asked.single.toProfile, 'claude');
       expect(sentText(phala), contains(secret));
-      expect(sentText(claude), isNot(contains('Diabetes')));
-      expect(sentText(claude), isNot(contains('140')));
+      expect(claude.requests, isEmpty);
+      expect(
+        h.conversation.messages.skip(history.length).map((m) => m.privacyFloor),
+        everyElement(PrivacyLevel.tee),
+      );
     });
 
     test('a hidden turn without answer gives only the user placeholder', () {
@@ -396,4 +408,180 @@ void main() {
       expect(terminal(events), isA<AgentDone>());
     },
   );
+
+  group('taint propagation (re-review 1)', () {
+    const geheim = 'Diagnose Diabetes-GEHEIM';
+
+    test('private → summary at Phala → Claude sees nothing of it', () async {
+      final phala = FakeLlmProvider([
+        ScriptedTurn.text('Notiert.'),
+        ScriptedTurn.text('Kurz: $geheim.'),
+      ]);
+      final claude = FakeLlmProvider([ScriptedTurn.text('Meinung.')]);
+      final (primary, _) = scripted('x', const []);
+      final h = Harness(
+        primary: primary,
+        resolver: conceptResolver(
+          profiles: withProviders({'phala': phala, 'claude': claude}),
+        ),
+      );
+      await h.run('privat: $geheim');
+      final summary = await h.run('fasse das kurz zusammen');
+      expect((summary.first as Routed).reason, 'Standard');
+      expect(sentText(phala), contains(geheim));
+      // The summary turn saw the private turn: stored with its floor.
+      expect(
+        h.conversation.messages.skip(2).map((m) => m.privacyFloor),
+        everyElement(PrivacyLevel.tee),
+      );
+      await h.run('Claude, was meinst du dazu?');
+      expect(sentText(claude), isNot(contains('GEHEIM')));
+      expect(sentText(claude), isNot(contains('Diabetes')));
+      expect(claude.requests.single.messages.map((m) => m.text).toList(), [
+        AgentRunnerTexts.privateHidden,
+        AgentRunnerTexts.privateHidden,
+        AgentRunnerTexts.privateHidden,
+        AgentRunnerTexts.privateHidden,
+        'was meinst du dazu?',
+      ]);
+      expect(h.conversation.messages[4].privacyFloor, isNull);
+    });
+
+    test('tainted run escalating to Claude asks first', () async {
+      final phala = FakeLlmProvider([
+        ScriptedTurn.text('Notiert.'),
+        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+      ]);
+      final claude = FakeLlmProvider([ScriptedTurn.text('Zusammenfassung')]);
+      final (primary, _) = scripted('x', const []);
+      final h = Harness(
+        primary: primary,
+        resolver: conceptResolver(
+          rules: conceptRules(
+            chains: {
+              'phala': [claudeSonnet],
+            },
+          ),
+          profiles: withProviders({'phala': phala, 'claude': claude}),
+        ),
+      );
+      await h.run('privat: $geheim');
+      final asked = <EscalationConfirmationRequired>[];
+      await h.run(
+        'fasse das kurz zusammen',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) {
+            asked.add(e);
+            e.respond(false);
+          }
+        },
+      );
+      expect(asked.single.toProfile, 'claude');
+      expect(claude.requests, isEmpty);
+    });
+
+    test(
+      'escalation from Claude to Phala taints the rest of the run',
+      () async {
+        final phala = FakeLlmProvider([
+          ScriptedTurn.text('Notiert.'),
+          ScriptedTurn.text('Kurz: $geheim.'),
+        ]);
+        final claude = FakeLlmProvider([
+          ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+          ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+          ScriptedTurn.text('Meinung.'),
+        ]);
+        final (primary, _) = scripted('x', const []);
+        final h = Harness(
+          primary: primary,
+          resolver: conceptResolver(
+            rules: conceptRules(
+              chains: {
+                'claude': [phalaLarge],
+              },
+            ),
+            profiles: withProviders({'phala': phala, 'claude': claude}),
+          ),
+        );
+        await h.run('privat: $geheim');
+        final events = await h.run('Claude, fasse das kurz zusammen');
+        expect(events.whereType<Escalated>().single.toProfile, 'phala');
+        // Claude's failed attempts saw placeholders only.
+        expect(sentText(claude), isNot(contains('GEHEIM')));
+        final turn2 = h.conversation.messages.skip(2).toList();
+        expect(turn2.first.privacyFloor, isNull, reason: 'user text');
+        expect(turn2.last.text, contains('GEHEIM'));
+        expect(turn2.last.privacyFloor, PrivacyLevel.tee);
+        await h.run('Claude, was meinst du dazu?');
+        expect(sentText(claude), isNot(contains('GEHEIM')));
+      },
+    );
+  });
+
+  group('memory of private runs (re-review 2)', () {
+    final memory = FixedMemoryRetriever([
+      const MemoryItem(id: 'm1', text: 'Mag Tee'),
+      const MemoryItem(
+        id: 'm2',
+        text: 'Knie-OP im März',
+        privacyFloor: PrivacyLevel.tee,
+      ),
+    ]);
+
+    test('private entries stay out of the prompt of weaker targets', () async {
+      final (primary, claude) = scripted('claude', [ScriptedTurn.text('ok')]);
+      final h = Harness(primary: primary, memory: memory);
+      await h.run('Wie geht es dem Knie?');
+      final prompt = claude.requests.single.systemPrompt!;
+      expect(prompt, contains('Mag Tee'));
+      expect(prompt, isNot(contains('Knie-OP')));
+      expect(
+        h.conversation.messages.map((m) => m.privacyFloor),
+        everyElement(isNull),
+      );
+    });
+
+    test('a target of their level sees them and the run is tainted', () async {
+      final (primary, phala) = scripted('phala', [
+        ScriptedTurn.text('ok'),
+      ], privacy: PrivacyLevel.tee);
+      final h = Harness(primary: primary, memory: memory);
+      await h.run('Wie geht es dem Knie?');
+      expect(phala.requests.single.systemPrompt, contains('Knie-OP'));
+      expect(
+        h.conversation.messages.map((m) => m.privacyFloor),
+        everyElement(PrivacyLevel.tee),
+      );
+    });
+
+    test('tools of a private run get its floor (memory__save)', () async {
+      final invoker = ContextInvoker();
+      final (primary, _) = scripted('phala', [
+        ScriptedTurn.toolCalls([call('c1', 'memory__save')]),
+        ScriptedTurn.text('Gemerkt.'),
+      ], privacy: PrivacyLevel.tee);
+      final h = Harness(
+        primary: primary,
+        invoker: invoker,
+        isPrivate: (i) => i.text.startsWith('privat'),
+      );
+      await h.run('privat: merk dir die Knie-OP');
+      expect(invoker.contexts.single.privacyFloor, PrivacyLevel.tee);
+      await h.run('Wetter?');
+      expect(invoker.contexts, hasLength(1));
+    });
+  });
+
+  test('five filler words are too many (3)', () {
+    final r = conceptResolver().resolve(
+      UserInput(text: 'und bitte kannst du das nochmal mit Claude'),
+    );
+    expect(r.requestedTarget, isNull);
+    final four = conceptResolver().resolve(
+      UserInput(text: 'bitte kannst du das nochmal mit Claude'),
+    );
+    expect(four.requestedTarget, isNotNull);
+  });
 }

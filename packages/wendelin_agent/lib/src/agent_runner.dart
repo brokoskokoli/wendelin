@@ -273,6 +273,7 @@ final class _Run {
         _current = _current.withPrivacyFloor(previous);
       }
     }
+    _raiseFloorToTaint();
     await _record(_context.messages.last);
     if (noPrivateTarget) {
       throw _Stop(
@@ -483,6 +484,7 @@ final class _Run {
   // ----------------------------------------------------------- model call
 
   Future<_ModelReply> _callModel() async {
+    _raiseFloorToTaint();
     final target = _current;
     final catalog = _catalog;
     final tools = catalog.activeSpecs();
@@ -565,16 +567,24 @@ final class _Run {
   }
 
   String _systemPrompt() {
-    final base = _context.systemPrompt;
+    // Memory entries of private runs only for targets of their level.
+    final memories = _context.memories;
+    final visible = [
+      for (final m in memories)
+        if (!_hiddenFor(m.privacyFloor)) m,
+    ];
+    final base = visible.length == memories.length
+        ? _context.systemPrompt
+        : runner.contextBuilder.systemPrompt(memories: visible);
     if (_epoch == 0) return base;
     // Calls of tools this target may not see are left out (their names
     // and status are protected too).
-    final visible = runner.catalogFor == null ? null : _catalog;
+    final shown = runner.catalogFor == null ? null : _catalog;
     final before = _executed
         .where(
           (e) =>
               e.epoch < _epoch &&
-              (visible == null || visible.lookup(e.call.name) != null),
+              (shown == null || shown.lookup(e.call.name) != null),
         )
         .toList();
     if (before.isEmpty) return base;
@@ -708,14 +718,7 @@ final class _Run {
   /// A message is hidden when its floor is above the target's level, unless
   /// the user agreed to go below this run's floor and that floor covers it.
   List<Message> _withoutPrivateHistory() {
-    final target = _current.privacy;
-    final runFloor = _current.privacyFloor;
-    bool hidden(PrivacyLevel? floor) =>
-        floor != null &&
-        !target.isAtLeast(floor) &&
-        !(_belowFloorConsented &&
-            runFloor != null &&
-            runFloor.isAtLeast(floor));
+    final hidden = _hiddenFor;
     final out = <Message>[];
     var hiding = false;
     var answered = false;
@@ -737,6 +740,39 @@ final class _Run {
       }
     }
     return out;
+  }
+
+  /// Whether content with privacy [floor] (an earlier private turn or
+  /// memory entry) is hidden from the current target: its level is below
+  /// [floor], and the user did not agree to go below this run's floor
+  /// covering it.
+  bool _hiddenFor(PrivacyLevel? floor) {
+    final runFloor = _current.privacyFloor;
+    return floor != null &&
+        !_current.privacy.isAtLeast(floor) &&
+        !(_belowFloorConsented &&
+            runFloor != null &&
+            runFloor.isAtLeast(floor));
+  }
+
+  /// Taint propagation: once the current target sees private content (an
+  /// earlier private turn or memory entry), whatever this run produces may
+  /// contain it. The run's floor rises to the highest such floor, so its
+  /// messages are stored with it, tools persist with it, and escalations
+  /// below it need consent.
+  void _raiseFloorToTaint() {
+    PrivacyLevel? taint;
+    for (final floor in [
+      for (final m in _messages) m.privacyFloor,
+      for (final m in _context.memories) m.privacyFloor,
+    ]) {
+      if (floor == null || _hiddenFor(floor)) continue;
+      if (taint == null || floor.isAtLeast(taint)) taint = floor;
+    }
+    final current = _current.privacyFloor;
+    if (taint != null && (current == null || !current.isAtLeast(taint))) {
+      _current = _current.withPrivacyFloor(taint);
+    }
   }
 
   static bool _isDeclined(ToolOutcome o) =>
@@ -788,6 +824,7 @@ final class _Run {
         timeZone: runner.contextBuilder.device.timeZone,
         cancel: token,
         privacyLevel: _current.privacy,
+        privacyFloor: _current.privacyFloor,
       );
       await for (final event in runner.invoker.invokeAll(pending, ctx)) {
         switch (event) {

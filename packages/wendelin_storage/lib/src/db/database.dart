@@ -42,9 +42,14 @@ final class WendelinDatabase extends _$WendelinDatabase {
         await m.createTable(schema.noteFiles);
         await m.createTable(schema.noteFts);
       },
-      // v3 (WP21): Datenschutz-Untergrenze privater Gesprächszüge.
+      // v3 (WP21): Datenschutz-Untergrenze privater Gesprächszüge und
+      // Gedächtnis-Einträge.
       from2To3: (m, schema) async {
         await m.addColumn(schema.messages, schema.messages.privacyFloor);
+        await m.addColumn(
+          schema.memoryEntries,
+          schema.memoryEntries.privacyFloor,
+        );
       },
     ),
     beforeOpen: (details) async {

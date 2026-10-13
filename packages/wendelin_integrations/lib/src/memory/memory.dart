@@ -31,6 +31,7 @@ final class MemoryEntry {
     required this.source,
     required this.createdAt,
     this.lastUsedAt,
+    this.privacyFloor,
   });
 
   /// Id.
@@ -51,6 +52,15 @@ final class MemoryEntry {
   /// When it was last returned by a search, if ever.
   final DateTime? lastUsedAt;
 
+  /// Set when saved by a private (or tainted) run: only targets with at
+  /// least this privacy level may see the entry (ADR 0009).
+  final PrivacyLevel? privacyFloor;
+
+  /// Whether a target with [level] may see this entry (`null` = unknown
+  /// level: only entries without floor).
+  bool visibleTo(PrivacyLevel? level) =>
+      privacyFloor == null || (level != null && level.isAtLeast(privacyFloor!));
+
   @override
   bool operator ==(Object other) =>
       other is MemoryEntry &&
@@ -59,11 +69,19 @@ final class MemoryEntry {
       other.category == category &&
       other.source == source &&
       other.createdAt == createdAt &&
-      other.lastUsedAt == lastUsedAt;
+      other.lastUsedAt == lastUsedAt &&
+      other.privacyFloor == privacyFloor;
 
   @override
-  int get hashCode =>
-      Object.hash(id, text, category, source, createdAt, lastUsedAt);
+  int get hashCode => Object.hash(
+    id,
+    text,
+    category,
+    source,
+    createdAt,
+    lastUsedAt,
+    privacyFloor,
+  );
 
   @override
   String toString() => 'MemoryEntry($id, ${category.name}, $text)';
@@ -72,12 +90,14 @@ final class MemoryEntry {
 /// Long-term memory store. The app wires it to `MemoryRepository`
 /// (`wendelin_storage`); must pass `memoryStoreContract`.
 abstract interface class MemoryStorePort {
-  /// Saves [text]. Throws `PortException(rejected)` for sensitive content
-  /// (see core's [detectSensitiveContent]) and [ArgumentError] for blank text.
+  /// Saves [text] (with [privacyFloor], kept as given). Throws
+  /// `PortException(rejected)` for sensitive content (see core's
+  /// [detectSensitiveContent]) and [ArgumentError] for blank text.
   Future<MemoryEntry> save(
     String text, {
     required MemoryCategory category,
     required String source,
+    PrivacyLevel? privacyFloor,
   });
 
   /// The [limit] most relevant entries for [query] (empty if none); marks
@@ -213,6 +233,7 @@ final class MemorySaveTool extends IntegrationTool {
       a.text,
       category: a.category,
       source: 'session:${ctx.sessionId}',
+      privacyFloor: ctx.privacyFloor,
     );
     return jsonOutcome(
       {'saved': _entryJson(entry)},
@@ -270,7 +291,11 @@ final class MemorySearchTool extends IntegrationTool {
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final query = args.requireString('query');
     final limit = args.optInt('limit', min: 1, max: 20) ?? 5;
-    final found = await store.search(query, limit: limit);
+    // Entries of private runs only for targets of their level.
+    final found = [
+      for (final e in await store.search(query, limit: limit))
+        if (e.visibleTo(ctx.privacyLevel)) e,
+    ];
     return jsonOutcome(
       {
         'memories': [for (final e in found.take(limit)) _entryJson(e)],
@@ -322,7 +347,18 @@ final class MemoryForgetTool extends IntegrationTool {
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
-    final removed = await store.forget(args.requireString('id'));
+    final id = args.requireString('id');
+    // Entries of private runs do not exist for weaker targets.
+    final hidden = (await store.list()).any(
+      (e) => e.id == id && !e.visibleTo(ctx.privacyLevel),
+    );
+    if (hidden) {
+      throw PortException(
+        PortErrorKind.notFound,
+        'Eintrag „$id“ gibt es nicht',
+      );
+    }
+    final removed = await store.forget(id);
     return jsonOutcome(
       {'forgotten': removed.id},
       summary: 'Vergessen: ${ellipsize(removed.text, 50)}',
@@ -332,6 +368,7 @@ final class MemoryForgetTool extends IntegrationTool {
           removed.text,
           category: removed.category,
           source: removed.source,
+          privacyFloor: removed.privacyFloor,
         ),
       ),
     );

@@ -61,6 +61,9 @@ class MemoryEntries extends Table {
   IntColumn get createdAt => integer().map(epochMicros)();
   IntColumn get lastUsedAt => integer().map(epochMicros)();
 
+  /// `PrivacyLevel.name` if saved by a private run (v3), else null.
+  TextColumn get privacyFloor => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }

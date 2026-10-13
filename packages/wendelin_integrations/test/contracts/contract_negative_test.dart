@@ -180,9 +180,14 @@ final class _BadAlarms implements AlarmPort {
 }
 
 final class _BadMemory implements MemoryStorePort {
-  _BadMemory({this.storesSensitive = false, this.silentForget = false});
+  _BadMemory({
+    this.storesSensitive = false,
+    this.silentForget = false,
+    this.dropsFloor = false,
+  });
 
   final bool storesSensitive;
+  final bool dropsFloor;
   final bool silentForget;
   final inner = FakeMemoryStore();
   final List<MemoryEntry> raw = [];
@@ -192,6 +197,7 @@ final class _BadMemory implements MemoryStorePort {
     String text, {
     required MemoryCategory category,
     required String source,
+    PrivacyLevel? privacyFloor,
   }) async {
     if (storesSensitive && detectSensitiveContent(text) != null) {
       final e = MemoryEntry(
@@ -204,7 +210,12 @@ final class _BadMemory implements MemoryStorePort {
       raw.add(e);
       return e;
     }
-    return inner.save(text, category: category, source: source);
+    return inner.save(
+      text,
+      category: category,
+      source: source,
+      privacyFloor: dropsFloor ? null : privacyFloor,
+    );
   }
 
   @override
@@ -435,6 +446,15 @@ void main() {
         memoryStoreContractChecks(
           () => _BadMemory(storesSensitive: true),
         )[MemoryStoreChecks.sensitive]!(),
+        _fails,
+      );
+    });
+
+    test('verlorene Untergrenze', () async {
+      await expectLater(
+        memoryStoreContractChecks(
+          () => _BadMemory(dropsFloor: true),
+        )[MemoryStoreChecks.privacyFloor]!(),
         _fails,
       );
     });

@@ -1210,6 +1210,17 @@ class $MemoryEntriesTable extends MemoryEntries
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       ).withConverter<DateTime>($MemoryEntriesTable.$converterlastUsedAt);
+  static const VerificationMeta _privacyFloorMeta = const VerificationMeta(
+    'privacyFloor',
+  );
+  @override
+  late final GeneratedColumn<String> privacyFloor = GeneratedColumn<String>(
+    'privacy_floor',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1218,6 +1229,7 @@ class $MemoryEntriesTable extends MemoryEntries
     source,
     createdAt,
     lastUsedAt,
+    privacyFloor,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1251,6 +1263,15 @@ class $MemoryEntriesTable extends MemoryEntries
       );
     } else if (isInserting) {
       context.missing(_sourceMeta);
+    }
+    if (data.containsKey('privacy_floor')) {
+      context.handle(
+        _privacyFloorMeta,
+        privacyFloor.isAcceptableOrUnknown(
+          data['privacy_floor']!,
+          _privacyFloorMeta,
+        ),
+      );
     }
     return context;
   }
@@ -1291,6 +1312,10 @@ class $MemoryEntriesTable extends MemoryEntries
           data['${effectivePrefix}last_used_at'],
         )!,
       ),
+      privacyFloor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}privacy_floor'],
+      ),
     );
   }
 
@@ -1315,6 +1340,9 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
   final String source;
   final DateTime createdAt;
   final DateTime lastUsedAt;
+
+  /// `PrivacyLevel.name` if saved by a private run (v3), else null.
+  final String? privacyFloor;
   const MemoryRow({
     required this.id,
     required this.body,
@@ -1322,6 +1350,7 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
     required this.source,
     required this.createdAt,
     required this.lastUsedAt,
+    this.privacyFloor,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1344,6 +1373,9 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
         $MemoryEntriesTable.$converterlastUsedAt.toSql(lastUsedAt),
       );
     }
+    if (!nullToAbsent || privacyFloor != null) {
+      map['privacy_floor'] = Variable<String>(privacyFloor);
+    }
     return map;
   }
 
@@ -1355,6 +1387,9 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
       source: Value(source),
       createdAt: Value(createdAt),
       lastUsedAt: Value(lastUsedAt),
+      privacyFloor: privacyFloor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(privacyFloor),
     );
   }
 
@@ -1372,6 +1407,7 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
       source: serializer.fromJson<String>(json['source']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
+      privacyFloor: serializer.fromJson<String?>(json['privacyFloor']),
     );
   }
   @override
@@ -1386,6 +1422,7 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
       'source': serializer.toJson<String>(source),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
+      'privacyFloor': serializer.toJson<String?>(privacyFloor),
     };
   }
 
@@ -1396,6 +1433,7 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
     String? source,
     DateTime? createdAt,
     DateTime? lastUsedAt,
+    Value<String?> privacyFloor = const Value.absent(),
   }) => MemoryRow(
     id: id ?? this.id,
     body: body ?? this.body,
@@ -1403,6 +1441,7 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
     source: source ?? this.source,
     createdAt: createdAt ?? this.createdAt,
     lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+    privacyFloor: privacyFloor.present ? privacyFloor.value : this.privacyFloor,
   );
   MemoryRow copyWithCompanion(MemoryEntriesCompanion data) {
     return MemoryRow(
@@ -1414,6 +1453,9 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
       lastUsedAt: data.lastUsedAt.present
           ? data.lastUsedAt.value
           : this.lastUsedAt,
+      privacyFloor: data.privacyFloor.present
+          ? data.privacyFloor.value
+          : this.privacyFloor,
     );
   }
 
@@ -1425,14 +1467,22 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
           ..write('category: $category, ')
           ..write('source: $source, ')
           ..write('createdAt: $createdAt, ')
-          ..write('lastUsedAt: $lastUsedAt')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('privacyFloor: $privacyFloor')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, body, category, source, createdAt, lastUsedAt);
+  int get hashCode => Object.hash(
+    id,
+    body,
+    category,
+    source,
+    createdAt,
+    lastUsedAt,
+    privacyFloor,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1442,7 +1492,8 @@ class MemoryRow extends DataClass implements Insertable<MemoryRow> {
           other.category == this.category &&
           other.source == this.source &&
           other.createdAt == this.createdAt &&
-          other.lastUsedAt == this.lastUsedAt);
+          other.lastUsedAt == this.lastUsedAt &&
+          other.privacyFloor == this.privacyFloor);
 }
 
 class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
@@ -1452,6 +1503,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
   final Value<String> source;
   final Value<DateTime> createdAt;
   final Value<DateTime> lastUsedAt;
+  final Value<String?> privacyFloor;
   final Value<int> rowid;
   const MemoryEntriesCompanion({
     this.id = const Value.absent(),
@@ -1460,6 +1512,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
     this.source = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastUsedAt = const Value.absent(),
+    this.privacyFloor = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MemoryEntriesCompanion.insert({
@@ -1469,6 +1522,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
     required String source,
     required DateTime createdAt,
     required DateTime lastUsedAt,
+    this.privacyFloor = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        body = Value(body),
@@ -1483,6 +1537,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
     Expression<String>? source,
     Expression<int>? createdAt,
     Expression<int>? lastUsedAt,
+    Expression<String>? privacyFloor,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1492,6 +1547,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
       if (source != null) 'source': source,
       if (createdAt != null) 'created_at': createdAt,
       if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (privacyFloor != null) 'privacy_floor': privacyFloor,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1503,6 +1559,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
     Value<String>? source,
     Value<DateTime>? createdAt,
     Value<DateTime>? lastUsedAt,
+    Value<String?>? privacyFloor,
     Value<int>? rowid,
   }) {
     return MemoryEntriesCompanion(
@@ -1512,6 +1569,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
       source: source ?? this.source,
       createdAt: createdAt ?? this.createdAt,
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      privacyFloor: privacyFloor ?? this.privacyFloor,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1543,6 +1601,9 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
         $MemoryEntriesTable.$converterlastUsedAt.toSql(lastUsedAt.value),
       );
     }
+    if (privacyFloor.present) {
+      map['privacy_floor'] = Variable<String>(privacyFloor.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1558,6 +1619,7 @@ class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
           ..write('source: $source, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('privacyFloor: $privacyFloor, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();

@@ -5,7 +5,12 @@ import 'package:wendelin_core/wendelin_core.dart';
 @immutable
 final class MemoryItem {
   /// Creates an entry.
-  const MemoryItem({required this.id, required this.text, this.category});
+  const MemoryItem({
+    required this.id,
+    required this.text,
+    this.category,
+    this.privacyFloor,
+  });
 
   /// Stable id.
   final String id;
@@ -15,6 +20,10 @@ final class MemoryItem {
 
   /// Optional category (person, vorliebe, fakt, projekt).
   final String? category;
+
+  /// Set when saved by a private run: only targets with at least this
+  /// level get the entry in their system prompt.
+  final PrivacyLevel? privacyFloor;
 
   @override
   String toString() => 'MemoryItem($id, $text)';

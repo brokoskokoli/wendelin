@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:wendelin_core/wendelin_core.dart' show PrivacyLevel;
 
 /// Category of a memory entry (concept: person, vorliebe, fakt, projekt).
 enum MemoryCategory {
@@ -26,6 +27,7 @@ final class MemoryEntry {
     required this.source,
     required this.createdAt,
     required this.lastUsedAt,
+    this.privacyFloor,
   });
 
   /// Stable id.
@@ -47,6 +49,10 @@ final class MemoryEntry {
   /// When the entry was last returned by a search (or saved).
   final DateTime lastUsedAt;
 
+  /// Set when saved by a private run: only targets with at least this
+  /// privacy level may see the entry (schema v3).
+  final PrivacyLevel? privacyFloor;
+
   @override
   bool operator ==(Object other) =>
       other is MemoryEntry &&
@@ -55,11 +61,19 @@ final class MemoryEntry {
       other.category == category &&
       other.source == source &&
       other.createdAt == createdAt &&
-      other.lastUsedAt == lastUsedAt;
+      other.lastUsedAt == lastUsedAt &&
+      other.privacyFloor == privacyFloor;
 
   @override
-  int get hashCode =>
-      Object.hash(id, text, category, source, createdAt, lastUsedAt);
+  int get hashCode => Object.hash(
+    id,
+    text,
+    category,
+    source,
+    createdAt,
+    lastUsedAt,
+    privacyFloor,
+  );
 
   @override
   String toString() => 'MemoryEntry($id, ${category.name}, $text)';

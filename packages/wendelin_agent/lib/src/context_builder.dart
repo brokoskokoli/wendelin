@@ -15,8 +15,10 @@ final class AgentContext {
     required this.systemPrompt,
     required List<ToolSpec> tools,
     required List<Message> messages,
+    List<MemoryItem> memories = const [],
   }) : tools = List.unmodifiable(tools),
-       messages = List.unmodifiable(messages);
+       messages = List.unmodifiable(messages),
+       memories = List.unmodifiable(memories);
 
   /// The system prompt.
   final String systemPrompt;
@@ -26,6 +28,10 @@ final class AgentContext {
 
   /// History followed by the new user message.
   final List<Message> messages;
+
+  /// The memory entries in [systemPrompt] (the agent rebuilds the prompt
+  /// without entries a target may not see).
+  final List<MemoryItem> memories;
 }
 
 /// A tool call that has already been executed in this run, for the
@@ -77,6 +83,7 @@ final class ContextBuilder {
         const <Message>[];
     return AgentContext(
       systemPrompt: systemPrompt(memories: memories),
+      memories: memories,
       tools: catalog.activeSpecs(),
       messages: [
         ...previous,

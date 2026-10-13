@@ -325,6 +325,16 @@
               "dart_expr": "epochMicros",
               "dart_type_name": "DateTime"
             }
+          },
+          {
+            "name": "privacy_floor",
+            "getter_name": "privacyFloor",
+            "moor_type": "string",
+            "nullable": true,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
           }
         ],
         "is_virtual": false,
@@ -885,7 +895,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"memory_entries\" (\"id\" TEXT NOT NULL, \"body\" TEXT NOT NULL, \"category\" TEXT NOT NULL, \"source\" TEXT NOT NULL, \"created_at\" INTEGER NOT NULL, \"last_used_at\" INTEGER NOT NULL, PRIMARY KEY (\"id\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"memory_entries\" (\"id\" TEXT NOT NULL, \"body\" TEXT NOT NULL, \"category\" TEXT NOT NULL, \"source\" TEXT NOT NULL, \"created_at\" INTEGER NOT NULL, \"last_used_at\" INTEGER NOT NULL, \"privacy_floor\" TEXT NULL, PRIMARY KEY (\"id\"));"
         }
       ]
     },

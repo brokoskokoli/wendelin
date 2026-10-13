@@ -46,6 +46,7 @@ final class Harness {
     void Function(String, ToolCallBlock)? onToolRefused,
     List<Message> history = const [],
     ProviderResolver? resolver,
+    MemoryRetriever? memory,
   }) : conversation = InMemoryConversation(history),
        clock = FixedClock(DateTime.utc(2026, 10, 13, 9)),
        catalog = FakeToolCatalog(tools) {
@@ -60,6 +61,7 @@ final class Harness {
         device: device,
         catalog: catalog,
         history: conversation,
+        memory: memory,
       ),
       invoker: this.invoker,
       clock: clock,
