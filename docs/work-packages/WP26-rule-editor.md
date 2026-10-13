@@ -11,6 +11,9 @@ Abhängig von: WP21 (Regel-Engine), WP25 (Einstellungszeile und Route „Routing
 - **Import/Export** der Regeln als JSON (Teilen-Dialog bzw. Datei, wie bestehender Export); Import zeigt eine Vorschau und ersetzt erst nach Bestätigung.
 - **Gespräch**: `Routed` zeigt die Regel im ProviderChip bzw. als Meta-Zeile; „an … übergeben“ wie bisher.
 
+## Nachtrag aus Review WP21 (Orchestrator)
+- Nach einer privaten Anfrage wird die Sitzung durch Taint-Propagation privat (bis Sitzungsende); Gedächtnis-Einträge aus privaten Läufen tragen dauerhaft eine Untergrenze. UX: sichtbare Anzeige „Unterhaltung privat (seit …)“ im Hauptbildschirm/Overlay mit Aktion „Neue Unterhaltung“; im Gedächtnis-Editor die Untergrenze je Eintrag anzeigen und (mit Bestätigung) zurücksetzen; Hinweistext bei der Eskalationsrückfrage in privaten Sitzungen.
+
 ## Abnahmekriterien
 - [ ] Golden der Routing-Seite gegen `docs/design/screens/routing@1x.png` (Testfeld, Kobalt-Rahmen, gestrichelte Default-Regel, Kette, „+ Regel“).
 - [ ] Widget-Tests: Regel anlegen/bearbeiten/löschen, Drag-and-drop ändert Reihenfolge und Ergebnis des Testfelds, Default nicht verschiebbar, Warnungen angezeigt, Import-Vorschau mit Abbrechen.
@@ -20,3 +23,4 @@ Abhängig von: WP21 (Regel-Engine), WP25 (Einstellungszeile und Route „Routing
 - [ ] Audit-Log enthält die Routing-Entscheidung mit Regelname, ohne Secrets.
 - [ ] Touch-Ziele ≥ 44, Semantics-Labels für Ziehgriff und Regeln.
 - [ ] Gate grün, APK baut.
+- [ ] Anzeige „Unterhaltung privat“ + „Neue Unterhaltung“ und Untergrenze im Gedächtnis-Editor (Widget-Tests).
