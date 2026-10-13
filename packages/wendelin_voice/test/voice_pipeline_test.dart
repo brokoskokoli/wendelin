@@ -1,0 +1,968 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:fake_async/fake_async.dart';
+import 'package:test/test.dart';
+import 'package:wendelin_agent/fakes.dart';
+import 'package:wendelin_agent/wendelin_agent.dart';
+import 'package:wendelin_core/fakes.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_voice/fakes.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
+
+const frame = Duration(milliseconds: 30);
+
+/// 150 ms silence, 600 ms speech, 900 ms silence (ends after 800 ms).
+List<Int16List> utterance() =>
+    AudioFrames.pattern('${'.' * 5}${'S' * 20}${'.' * 30}', frame: frame);
+
+/// Records the inputs and delegates to [inner].
+final class RecordingAgent implements AgentRun {
+  RecordingAgent(this.inner);
+
+  final AgentRun inner;
+  final inputs = <UserInput>[];
+  int cancels = 0;
+
+  @override
+  Stream<AgentEvent> run(UserInput input) {
+    inputs.add(input);
+    return inner.run(input);
+  }
+
+  @override
+  void cancel() {
+    cancels++;
+    inner.cancel();
+  }
+}
+
+/// Plays fixed agent events (to test reactions without the agent loop).
+final class ScriptedAgent implements AgentRun {
+  ScriptedAgent(this.events);
+
+  final List<AgentEvent> events;
+
+  @override
+  Stream<AgentEvent> run(UserInput input) async* {
+    for (final e in events) {
+      await Future<void>.delayed(Duration.zero);
+      yield e;
+    }
+  }
+
+  @override
+  void cancel() {}
+}
+
+/// Agent whose stream fails (contract violation).
+final class BrokenAgent implements AgentRun {
+  @override
+  Stream<AgentEvent> run(UserInput input) => Stream.error(StateError('kaputt'));
+
+  @override
+  void cancel() {}
+}
+
+final class Harness {
+  Harness({
+    List<ScriptedTurn> turns = const [],
+    List<Tool> tools = const [],
+    this.config = const VoicePipelineConfig(),
+    Duration utteranceDuration = const Duration(milliseconds: 200),
+    bool manualTts = false,
+    bool withTts = true,
+    AgentRun? agent,
+    AudioInput? audio,
+    VoiceActivityDetector? vad,
+    Future<TextToSpeech?> Function()? textToSpeech,
+    List<Transcript> transcripts = const [
+      Transcript(text: 'Wie wird das Wetter?', language: 'de', confidence: 0.9),
+    ],
+  }) : provider = FakeLlmProvider(turns),
+       tts = FakeTextToSpeech(
+         utteranceDuration: utteranceDuration,
+         manual: manualTts,
+       ),
+       stt = FakeSpeechToText(transcripts),
+       fakeAudio = FakeAudioInput(frames: utterance(), frameInterval: frame) {
+    final clock = FixedClock(DateTime.utc(2026, 10, 13, 9));
+    final catalog = FakeToolCatalog(tools);
+    final runner = AgentRunner(
+      resolver: DefaultProviderResolver(
+        ProviderTarget(
+          profileId: 'p',
+          modelId: 'm',
+          provider: provider,
+          privacy: PrivacyLevel.standard,
+        ),
+        const [],
+      ),
+      contextBuilder: ContextBuilder(
+        config: const AgentConfig(),
+        clock: clock,
+        device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
+        catalog: catalog,
+        history: InMemoryConversation(),
+      ),
+      invoker: FakeToolInvoker(catalog),
+      clock: clock,
+      sessionId: 's',
+    );
+    recording = RecordingAgent(agent ?? runner);
+    triggers = FakeTriggerSource(clock);
+    pipeline = VoicePipeline(
+      audio: audio ?? fakeAudio,
+      vad: vad ?? this.vad,
+      stt: stt,
+      agent: recording,
+      textToSpeech: textToSpeech ?? () async => withTts ? tts : null,
+      config: config,
+      clock: clock,
+      triggers: triggers,
+    );
+    pipeline.states.listen(states.add);
+    pipeline.events.listen(events.add);
+  }
+
+  final VoicePipelineConfig config;
+  final FakeLlmProvider provider;
+  final FakeTextToSpeech tts;
+  final FakeSpeechToText stt;
+  final FakeAudioInput fakeAudio;
+  final vad = FakeVoiceActivityDetector();
+  late final RecordingAgent recording;
+  late final FakeTriggerSource triggers;
+  late final VoicePipeline pipeline;
+  final states = <VoiceState>[];
+  final events = <VoiceEvent>[];
+
+  List<T> eventsOf<T extends VoiceEvent>() => events.whereType<T>().toList();
+
+  List<AgentEvent> get agentEvents => [
+    for (final e in eventsOf<VoiceAgentEvent>()) e.event,
+  ];
+}
+
+void runFake(void Function(FakeAsync async) body) => fakeAsync(body);
+
+void settle(FakeAsync async) => async.elapse(const Duration(seconds: 10));
+
+void main() {
+  test('Ablauf: zuhören → transkribieren → denken → sprechen → idle', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [
+          ScriptedTurn.text('Morgen wird es sonnig. Am Abend regnet es.'),
+        ],
+      );
+      expect(h.pipeline.start(), isTrue);
+      expect(h.pipeline.state, VoiceState.listening);
+      settle(async);
+      expect(h.states, [
+        VoiceState.listening,
+        VoiceState.transcribing,
+        VoiceState.thinking,
+        VoiceState.speaking,
+        VoiceState.idle,
+      ]);
+      expect(h.tts.spoken, ['Morgen wird es sonnig.', 'Am Abend regnet es.']);
+      final input = h.recording.inputs.single;
+      expect(input.text, 'Wie wird das Wetter?');
+      expect(input.source, InputSource.voice);
+      expect(input.sttConfidence, 0.9);
+      expect(input.language, 'de');
+      expect(h.tts.calls.first.language, 'de');
+      // Pre-roll + speech + trailing silence went to STT.
+      expect(
+        h.stt.calls.single.samples,
+        greaterThan(durationToSamples(frame) * 20),
+      );
+      expect(h.fakeAudio.isRunning, isFalse);
+      expect(h.vad.resets, 1);
+      final listening = h.eventsOf<VoiceListening>().single;
+      expect(listening.trigger?.source, TriggerKind.pushToTalk);
+      expect(listening.followUp, isFalse);
+      expect(
+        h.eventsOf<VoiceTranscribed>().single.transcript.text,
+        'Wie wird das Wetter?',
+      );
+      expect(h.agentEvents.last, isA<AgentDone>());
+      expect(h.eventsOf<VoiceSpeaking>().map((e) => e.sentence), h.tts.spoken);
+    });
+  });
+
+  test('erster Satz wird gesprochen, bevor die Antwort fertig ist', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [
+          ScriptedTurn.text(
+            'Erster Satz hier. Und dann kommt noch viel mehr Text.',
+          ),
+        ],
+      );
+      final provider = FakeLlmProvider([
+        ScriptedTurn.text(
+          'Erster Satz hier. Und dann kommt noch viel mehr Text.',
+        ),
+      ], eventDelay: const Duration(milliseconds: 50));
+      final slow = Harness(agent: _runnerFor(provider));
+      slow.pipeline.start();
+      async.elapse(const Duration(milliseconds: 1800)); // listening + STT
+      while (slow.tts.spoken.isEmpty) {
+        async.elapse(const Duration(milliseconds: 50));
+      }
+      expect(slow.tts.spoken, ['Erster Satz hier.']);
+      expect(slow.agentEvents.whereType<AgentDone>(), isEmpty);
+      settle(async);
+      expect(slow.tts.spoken, hasLength(2));
+      h.pipeline.dispose();
+    });
+  });
+
+  test('Thinking wird angezeigt, aber nie gesprochen', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [
+          ScriptedTurn.text(
+            'Es wird sonnig.',
+            thinking: 'Geheime Überlegung. Nicht vorlesen.',
+          ),
+        ],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.agentEvents.whereType<AgentThinkingDelta>(), isNotEmpty);
+      expect(h.tts.spoken, ['Es wird sonnig.']);
+      expect(h.tts.calls.map((c) => c.text).join(), isNot(contains('Geheim')));
+    });
+  });
+
+  test('ProviderBlocks (z. B. Websuche) werden nie gesprochen', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [
+          ScriptedTurn.events([
+            const ProviderBlockComplete(
+              ProviderBlock(
+                provider: 'fake',
+                rawJson: '{"result":"Suchergebnis: Geheimtext."}',
+                summary: 'Websuche: Geheimtext',
+              ),
+            ),
+            const TextDelta('Laut Suche wird es warm.'),
+            const UsageEvent(Usage(inputTokens: 1, outputTokens: 1)),
+            const Done(StopReason.endTurn),
+          ]),
+        ],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.tts.spoken, ['Laut Suche wird es warm.']);
+      expect(h.tts.calls.map((c) => c.text).join(), isNot(contains('Geheim')));
+    });
+  });
+
+  test('AgentTextReset verwirft gepufferte, noch nicht gesprochene Sätze', () {
+    runFake((async) {
+      final h = Harness(
+        manualTts: true,
+        turns: [
+          ScriptedTurn.error(
+            const ServerException('überlastet', statusCode: 503),
+            partialText:
+                'Erster Satz falsch. Zweiter Satz auch falsch. Dritter',
+          ),
+          ScriptedTurn.text('Richtige Antwort.'),
+        ],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.agentEvents.whereType<AgentTextReset>(), hasLength(1));
+      expect(h.tts.spoken, ['Erster Satz falsch.']); // already playing
+      h.tts.completeCurrent();
+      settle(async);
+      h.tts.completeCurrent();
+      settle(async);
+      expect(h.tts.spoken, ['Erster Satz falsch.', 'Richtige Antwort.']);
+      expect(h.pipeline.state, VoiceState.idle);
+    });
+  });
+
+  test(
+    'Reset verwirft nur den aktuellen Abschnitt, nicht Text vor dem Tool',
+    () {
+      runFake((async) {
+        final call = const ToolCallBlock(
+          id: 'c1',
+          name: 'x',
+          argumentsJson: '{}',
+        );
+        final h = Harness(
+          manualTts: true,
+          agent: ScriptedAgent([
+            const AgentTextDelta('Ich schaue nach. Einen Moment.'),
+            ToolCallStarted(call),
+            ToolCallFinished(call: call, outcome: ToolOutcome.text('ok')),
+            const AgentTextDelta('Falsch. Auch falsch.'),
+            const AgentTextReset('Neuer Versuch'),
+            const AgentTextDelta('Richtig.'),
+            const AgentDone(
+              finalText: 'Richtig.',
+              stopReason: StopReason.endTurn,
+            ),
+          ]),
+        );
+        h.pipeline.start();
+        settle(async);
+        for (var i = 0; i < 5; i++) {
+          h.tts.completeCurrent();
+          settle(async);
+        }
+        expect(h.tts.spoken, ['Ich schaue nach.', 'Einen Moment.', 'Richtig.']);
+      });
+    },
+  );
+
+  test('Text vor einem Tool-Aufruf wird gesprochen, dann die Antwort', () {
+    runFake((async) {
+      final h = Harness(
+        tools: [FakeTool(name: 'weather__get')],
+        turns: [
+          ScriptedTurn.toolCalls([
+            const ToolCallBlock(
+              id: 'c1',
+              name: 'weather__get',
+              argumentsJson: '{}',
+            ),
+          ], text: 'Ich schaue nach'),
+          ScriptedTurn.text('Es bleibt trocken.'),
+        ],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.tts.spoken, ['Ich schaue nach', 'Es bleibt trocken.']);
+      expect(h.agentEvents.whereType<ToolCallFinished>(), hasLength(1));
+      expect(h.pipeline.state, VoiceState.idle);
+    });
+  });
+
+  test('zwischen Sätzen und während Tools: Zustand thinking', () {
+    runFake((async) {
+      final h = Harness(
+        tools: [FakeTool(name: 'slow', delay: const Duration(seconds: 2))],
+        turns: [
+          ScriptedTurn.toolCalls([
+            const ToolCallBlock(id: 'c1', name: 'slow', argumentsJson: '{}'),
+          ], text: 'Moment.'),
+          ScriptedTurn.text('Fertig.'),
+        ],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(
+        h.states,
+        containsAllInOrder([
+          VoiceState.thinking,
+          VoiceState.speaking,
+          VoiceState.thinking,
+          VoiceState.speaking,
+          VoiceState.idle,
+        ]),
+      );
+    });
+  });
+
+  test('Antwort wird für die Sprache gekürzt, Rest nur auf dem Bildschirm', () {
+    runFake((async) {
+      final h = Harness(
+        turns: [
+          ScriptedTurn.text(
+            'Hier ist alles. Erstens dies. Zweitens das. Drittens jenes. '
+            'Viertens noch mehr.',
+          ),
+        ],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.tts.spoken, [
+        'Hier ist alles.',
+        'Erstens dies.',
+        'Zweitens das.',
+        VoiceTexts.de.rest,
+      ]);
+      final done = h.agentEvents.whereType<AgentDone>().single;
+      expect(done.finalText, contains('Viertens'));
+    });
+  });
+
+  test('Sprache aus dem Transkript gilt für Agent, TTS und Hinweise', () {
+    runFake((async) {
+      final h = Harness(
+        config: const VoicePipelineConfig(
+          shortening: SpeechShortening(maxSentences: 1),
+        ),
+        transcripts: const [
+          Transcript(text: 'Quel temps fait-il ?', language: 'fr'),
+        ],
+        turns: [ScriptedTurn.text('Il fait beau. Il fait chaud.')],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.recording.inputs.single.language, 'fr');
+      expect(h.tts.spoken, ['Il fait beau.', VoiceTexts.fr.rest]);
+      expect(h.tts.calls.every((c) => c.language == 'fr'), isTrue);
+      expect(h.stt.calls.single.language, isNull);
+    });
+  });
+
+  test('feste Sprache, Stimme und Tempo aus der Konfiguration', () {
+    runFake((async) {
+      final h = Harness(
+        config: const VoicePipelineConfig(
+          language: 'de',
+          voice: 'v1',
+          rate: 1.3,
+        ),
+        transcripts: const [Transcript(text: 'Hallo')],
+        turns: [ScriptedTurn.text('Hallo.')],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.stt.calls.single.language, 'de');
+      expect(h.recording.inputs.single.language, 'de');
+      expect(h.tts.calls.single.voice, 'v1');
+      expect(h.tts.calls.single.rate, 1.3);
+    });
+  });
+
+  group('Abbruch in jedem Zustand', () {
+    test('listening', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Nie.')]);
+        h.pipeline.start();
+        async.elapse(const Duration(milliseconds: 300));
+        h.pipeline.cancel();
+        expect(h.pipeline.state, VoiceState.idle);
+        settle(async);
+        expect(h.fakeAudio.isRunning, isFalse);
+        expect(h.stt.calls, isEmpty);
+        expect(h.recording.inputs, isEmpty);
+        final c = h.eventsOf<VoiceCancelled>().single;
+        expect(c.reason, VoiceCancelReason.tap);
+        expect(c.during, VoiceState.listening);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('transcribing: STT-Ergebnis wird verworfen', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Nie.')]);
+        h.stt.hold = true;
+        h.pipeline.start();
+        settle(async);
+        expect(h.pipeline.state, VoiceState.transcribing);
+        h.pipeline.cancel();
+        h.stt.release();
+        settle(async);
+        expect(h.recording.inputs, isEmpty);
+        expect(h.eventsOf<VoiceTranscribed>(), isEmpty);
+        expect(
+          h.eventsOf<VoiceCancelled>().single.during,
+          VoiceState.transcribing,
+        );
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('thinking: Agent wird abgebrochen, nichts gesprochen', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.hang()]);
+        h.pipeline.start();
+        settle(async);
+        expect(h.pipeline.state, VoiceState.thinking);
+        h.pipeline.cancel();
+        settle(async);
+        expect(h.recording.cancels, 1);
+        expect(h.tts.spoken, isEmpty);
+        expect(h.eventsOf<VoiceCancelled>().single.during, VoiceState.thinking);
+        // The cancelled run's AgentFailed is not forwarded or spoken.
+        expect(h.agentEvents.whereType<AgentFailed>(), isEmpty);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('speaking: Ausgabe gestoppt, Rest verworfen', () {
+      runFake((async) {
+        final h = Harness(
+          manualTts: true,
+          turns: [ScriptedTurn.text('Eins hier. Zwei hier. Drei hier.')],
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.pipeline.state, VoiceState.speaking);
+        h.pipeline.cancel();
+        settle(async);
+        expect(h.tts.interrupted, ['Eins hier.']);
+        expect(h.tts.spoken, ['Eins hier.']);
+        expect(h.eventsOf<VoiceCancelled>().single.during, VoiceState.speaking);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('nach dem Abbruch startet eine neue Anfrage normal', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.hang(), ScriptedTurn.text('Zweite Antwort.')],
+          transcripts: const [
+            Transcript(text: 'Erste'),
+            Transcript(text: 'Zweite'),
+          ],
+        );
+        h.pipeline.start();
+        settle(async);
+        h.pipeline.cancel();
+        expect(h.pipeline.start(), isTrue);
+        settle(async);
+        expect(h.recording.inputs.map((i) => i.text), ['Erste', 'Zweite']);
+        expect(h.tts.spoken, ['Zweite Antwort.']);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('cancel im Leerlauf ist wirkungslos', () {
+      runFake((async) {
+        final h = Harness();
+        h.pipeline.cancel();
+        settle(async);
+        expect(h.events, isEmpty);
+      });
+    });
+  });
+
+  test('Abbruchwort „Stopp“ beendet ohne Agent', () {
+    runFake((async) {
+      final h = Harness(
+        transcripts: const [Transcript(text: 'Stopp!', language: 'de')],
+        turns: [ScriptedTurn.text('Nie.')],
+      );
+      h.pipeline.start();
+      settle(async);
+      expect(h.recording.inputs, isEmpty);
+      final c = h.eventsOf<VoiceCancelled>().single;
+      expect(c.reason, VoiceCancelReason.stopWord);
+      expect(c.during, VoiceState.transcribing);
+      expect(h.tts.spoken, isEmpty);
+      expect(h.pipeline.state, VoiceState.idle);
+    });
+  });
+
+  test('Abbruchwörter nur als ganze Äußerung', () {
+    final p = Harness().pipeline;
+    expect(p.isStopWord('Stopp.'), isTrue);
+    expect(p.isStopWord('  ABBRECHEN '), isTrue);
+    expect(p.isStopWord('Arrête-toi !'), isTrue);
+    expect(p.isStopWord('Cancel'), isTrue);
+    expect(p.isStopWord('Stopp die Musik'), isFalse);
+    expect(p.isStopWord('Bushaltestelle'), isFalse);
+  });
+
+  group('nichts verstanden', () {
+    test('nur Stille bis zum Timeout', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            endpoint: EndpointConfig(noSpeechTimeout: Duration(seconds: 1)),
+          ),
+        );
+        h.fakeAudio.script(AudioFrames.pattern('.' * 60, frame: frame));
+        h.pipeline.start();
+        settle(async);
+        expect(
+          h.eventsOf<VoiceNothingUnderstood>().single.reason,
+          EndpointReason.noSpeech,
+        );
+        expect(h.tts.spoken, [VoiceTexts.de.nothingUnderstood]);
+        expect(h.stt.calls, isEmpty);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('leeres Transkript, ohne Ansage wenn abgeschaltet', () {
+      runFake((async) {
+        final h = Harness(
+          transcripts: const [Transcript(text: '  ')],
+          config: const VoicePipelineConfig(speakNothingUnderstood: false),
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.eventsOf<VoiceNothingUnderstood>().single.reason, isNull);
+        expect(h.tts.spoken, isEmpty);
+        expect(h.recording.inputs, isEmpty);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('Mikrofon liefert nichts: Schutz-Timer beendet das Zuhören', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            endpoint: EndpointConfig(maxDuration: Duration(seconds: 2)),
+            listenGrace: Duration(seconds: 1),
+          ),
+        );
+        h.fakeAudio.script(const []);
+        h.pipeline.start();
+        async.elapse(const Duration(milliseconds: 2900));
+        expect(h.pipeline.state, VoiceState.listening);
+        async.elapse(const Duration(milliseconds: 200));
+        expect(
+          h.eventsOf<VoiceNothingUnderstood>().single.reason,
+          EndpointReason.maxDuration,
+        );
+        settle(async);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+  });
+
+  test('finishListening (Push-to-talk losgelassen) transkribiert sofort', () {
+    runFake((async) {
+      final h = Harness(turns: [ScriptedTurn.text('Ja.')]);
+      h.fakeAudio.script(AudioFrames.pattern('S' * 200, frame: frame));
+      h.pipeline.finishListening(); // no effect while idle
+      h.pipeline.start();
+      async.elapse(const Duration(seconds: 1));
+      h.pipeline.finishListening();
+      settle(async);
+      expect(h.stt.calls, hasLength(1));
+      expect(h.tts.spoken, ['Ja.']);
+    });
+  });
+
+  test('Mikrofon-Stream endet von selbst: Gesagtes wird verarbeitet', () {
+    runFake((async) {
+      final audio = FakeAudioInput(
+        frames: AudioFrames.pattern('S' * 20, frame: frame),
+        frameInterval: frame,
+        closeAfterFrames: true,
+      );
+      final h = Harness(audio: audio, turns: [ScriptedTurn.text('Ok.')]);
+      h.pipeline.start();
+      settle(async);
+      expect(h.tts.spoken, ['Ok.']);
+    });
+  });
+
+  group('Fehler', () {
+    test('keine Mikrofon-Berechtigung', () {
+      runFake((async) {
+        final h = Harness(audio: DeniedAudioInput());
+        h.pipeline.start();
+        settle(async);
+        final e = h.eventsOf<VoiceError>().single;
+        expect(e.during, VoiceState.listening);
+        expect(
+          (e.error as VoiceException).kind,
+          VoiceErrorKind.permissionDenied,
+        );
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('Mikrofon bricht mit Fehler ab', () {
+      runFake((async) {
+        final h = Harness();
+        h.fakeAudio.script(const []);
+        h.pipeline.start();
+        async.elapse(const Duration(milliseconds: 100));
+        h.fakeAudio.fail(StateError('weg'));
+        settle(async);
+        expect(h.eventsOf<VoiceError>().single.during, VoiceState.listening);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('VAD wirft', () {
+      runFake((async) {
+        final h = Harness(vad: _ThrowingVad());
+        h.pipeline.start();
+        settle(async);
+        expect(h.eventsOf<VoiceError>().single.error, isA<StateError>());
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('STT wirft', () {
+      runFake((async) {
+        final h = Harness();
+        h.stt.nextError = const VoiceException(
+          VoiceErrorKind.modelMissing,
+          'Kein Modell',
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.eventsOf<VoiceError>().single.during, VoiceState.transcribing);
+        expect(h.recording.inputs, isEmpty);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('Agent schlägt fehl: Meldung wird gesprochen', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [
+            ScriptedTurn.error(const AuthException('Schlüssel ungültig')),
+          ],
+        );
+        h.pipeline.start();
+        settle(async);
+        final failed = h.agentEvents.whereType<AgentFailed>().single;
+        expect(h.tts.spoken, [failed.message]);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('Agent schlägt fehl, Ansage abgeschaltet', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(speakErrors: false),
+          turns: [
+            ScriptedTurn.error(const AuthException('Schlüssel ungültig')),
+          ],
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.tts.spoken, isEmpty);
+      });
+    });
+
+    test('Agent-Stream wirft', () {
+      runFake((async) {
+        final h = Harness(agent: BrokenAgent());
+        h.pipeline.start();
+        settle(async);
+        expect(h.eventsOf<VoiceError>().single.during, VoiceState.thinking);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('TTS-Fehler wird gemeldet, Antwort läuft weiter', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Eins hier. Zwei hier.')]);
+        h.tts.nextError = StateError('Audio belegt');
+        h.pipeline.start();
+        settle(async);
+        expect(h.eventsOf<VoiceError>().single.during, VoiceState.speaking);
+        expect(h.tts.spoken, ['Zwei hier.']);
+      });
+    });
+
+    test('TTS-Auswahl wirft: Antwort nur als Text', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Hallo.')],
+          textToSpeech: () => Future.error(StateError('keine Engine')),
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.eventsOf<VoiceError>(), hasLength(1));
+        expect(h.agentEvents.last, isA<AgentDone>());
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+  });
+
+  test('ohne Sprachausgabe: nur Text, kein Zustand speaking', () {
+    runFake((async) {
+      final h = Harness(withTts: false, turns: [ScriptedTurn.text('Hallo.')]);
+      h.pipeline.start();
+      settle(async);
+      expect(h.states, isNot(contains(VoiceState.speaking)));
+      expect(h.agentEvents.last, isA<AgentDone>());
+      expect(h.pipeline.state, VoiceState.idle);
+    });
+  });
+
+  group('Gesprächsmodus (vorbereitet, Standard aus)', () {
+    test('Standard: nach der Antwort kein weiteres Zuhören', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Ok.')]);
+        expect(h.config.conversationMode, isFalse);
+        expect(h.config.followUpWindow, const Duration(seconds: 5));
+        h.pipeline.start();
+        settle(async);
+        expect(h.fakeAudio.startCount, 1);
+      });
+    });
+
+    test('an: hört 5 s weiter zu, schweigt still ohne Folgefrage', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(conversationMode: true),
+          turns: [ScriptedTurn.text('Ok.')],
+        );
+        h.pipeline.start();
+        h.fakeAudio.script(AudioFrames.pattern('.' * 400, frame: frame));
+        settle(async);
+        expect(h.fakeAudio.startCount, 2);
+        final followUp = h.eventsOf<VoiceListening>().last;
+        expect(followUp.followUp, isTrue);
+        expect(followUp.trigger, isNull);
+        expect(h.eventsOf<VoiceNothingUnderstood>(), isEmpty);
+        expect(h.tts.spoken, ['Ok.']);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('an: Folgefrage wird beantwortet', () {
+      runFake((async) {
+        final h = Harness(
+          config: const VoicePipelineConfig(
+            conversationMode: true,
+            followUpWindow: Duration(seconds: 1),
+          ),
+          transcripts: const [
+            Transcript(text: 'Eins'),
+            Transcript(text: 'Zwei'),
+          ],
+          turns: [ScriptedTurn.text('Erste.'), ScriptedTurn.text('Zweite.')],
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.recording.inputs.map((i) => i.text), ['Eins', 'Zwei']);
+        expect(h.tts.spoken, ['Erste.', 'Zweite.']);
+        // Third window: the scripted audio has run out → silence → idle.
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+  });
+
+  group('Auslöser', () {
+    test('TriggerSource startet das Zuhören mit Quelle', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Ok.')]);
+        final t = h.triggers.fire(TriggerKind.assistant);
+        expect(h.pipeline.state, VoiceState.listening);
+        expect(h.eventsOf<VoiceListening>().single.trigger, t);
+        settle(async);
+        expect(h.tts.spoken, ['Ok.']);
+      });
+    });
+
+    test('neuer Auslöser während einer Anfrage startet neu', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.hang(), ScriptedTurn.text('Neu.')],
+          transcripts: const [
+            Transcript(text: 'A'),
+            Transcript(text: 'B'),
+          ],
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.pipeline.state, VoiceState.thinking);
+        h.triggers.fire(TriggerKind.widget);
+        expect(h.pipeline.state, VoiceState.listening);
+        expect(
+          h.eventsOf<VoiceCancelled>().single.reason,
+          VoiceCancelReason.retrigger,
+        );
+        settle(async);
+        expect(h.tts.spoken, ['Neu.']);
+      });
+    });
+
+    test('start während einer Anfrage liefert false', () {
+      runFake((async) {
+        final h = Harness();
+        expect(h.pipeline.start(), isTrue);
+        expect(h.pipeline.start(), isFalse);
+        h.pipeline.cancel();
+        settle(async);
+      });
+    });
+  });
+
+  test('dispose bricht ab und schließt die Streams', () {
+    runFake((async) {
+      final h = Harness(turns: [ScriptedTurn.hang()]);
+      var statesDone = false;
+      h.pipeline.states.listen(null, onDone: () => statesDone = true);
+      h.pipeline.start();
+      settle(async);
+      h.pipeline.dispose();
+      settle(async);
+      expect(statesDone, isTrue);
+      expect(
+        h.eventsOf<VoiceCancelled>().single.reason,
+        VoiceCancelReason.disposed,
+      );
+      expect(h.pipeline.start(), isFalse);
+      h.pipeline.dispose(); // idempotent
+      settle(async);
+    });
+  });
+
+  test('whenIdle endet mit der Anfrage', () {
+    runFake((async) {
+      final h = Harness(turns: [ScriptedTurn.text('Ok.')]);
+      h.pipeline.start();
+      var done = false;
+      h.pipeline.whenIdle.then((_) => done = true);
+      settle(async);
+      expect(done, isTrue);
+    });
+  });
+
+  test('Ereignisse haben lesbare toString-Ausgaben', () {
+    final t = TriggerEvent(source: TriggerKind.widget, at: DateTime.utc(2026));
+    final strings = [
+      VoiceListening(trigger: t, followUp: false),
+      const VoiceTranscribed(Transcript(text: 'x')),
+      const VoiceNothingUnderstood(EndpointReason.noSpeech),
+      const VoiceAgentEvent(AgentTextDelta('y')),
+      const VoiceSpeaking('z'),
+      const VoiceCancelled(VoiceCancelReason.tap, during: VoiceState.speaking),
+      VoiceError(VoiceState.listening, StateError('e')),
+    ].map((e) => e.toString());
+    expect(strings, everyElement(startsWith('Voice')));
+  });
+}
+
+AgentRun _runnerFor(FakeLlmProvider provider) {
+  final clock = FixedClock(DateTime.utc(2026, 10, 13, 9));
+  final catalog = FakeToolCatalog(const []);
+  return AgentRunner(
+    resolver: DefaultProviderResolver(
+      ProviderTarget(
+        profileId: 'p',
+        modelId: 'm',
+        provider: provider,
+        privacy: PrivacyLevel.standard,
+      ),
+      const [],
+    ),
+    contextBuilder: ContextBuilder(
+      config: const AgentConfig(),
+      clock: clock,
+      device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
+      catalog: catalog,
+      history: InMemoryConversation(),
+    ),
+    invoker: FakeToolInvoker(catalog),
+    clock: clock,
+    sessionId: 's',
+  );
+}
+
+final class _ThrowingVad implements VoiceActivityDetector {
+  @override
+  double get threshold => 0.5;
+
+  @override
+  double speechProbability(Int16List frame) => throw StateError('VAD kaputt');
+
+  @override
+  void reset() {}
+}

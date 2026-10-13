@@ -14,6 +14,7 @@ packages/
   wendelin_agent/            # reines Dart: Agent-Schleife, Kontextaufbau, Limits, Eskalation
   wendelin_storage/          # reines Dart + drift: Datenbank, Repositories, SecretStore-Interface
   wendelin_integrations/     # reines Dart: eingebaute Integrationen über Ports (Kalender, Clipboard, Wecker, Gedächtnis, Web)
+  wendelin_voice/            # reines Dart: Sprach-Pipeline, Endpointing, Sprechtext, TTS-Auswahl, Modellkatalog/Download
 app/                         # Flutter-App: UI, Riverpod-Verdrahtung, Plattform-Implementierungen der Ports
 evals/                       # Modell-Evals (Dart-CLI)
 tool/                        # Prüfskripte (Abhängigkeitsregeln, Secret-Scan)
@@ -30,6 +31,7 @@ wendelin_tools         -> core
 wendelin_agent         -> core            (nutzt Tools/Provider nur über Core-Interfaces)
 wendelin_storage       -> core
 wendelin_integrations  -> core
+wendelin_voice         -> core, agent
 app                    -> alle
 evals                  -> core, providers, tools, agent, integrations
 ```
