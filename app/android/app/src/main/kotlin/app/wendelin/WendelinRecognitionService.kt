@@ -1,6 +1,7 @@
 package app.wendelin
 
 import android.Manifest
+import android.app.AppOpsManager
 import android.content.ContextParams
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -77,8 +78,14 @@ class WendelinRecognitionService : RecognitionService() {
             notify { listener.error(SpeechRecognizer.ERROR_CLIENT) }
             return
         }
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        if (!mayRecord(listener)) {
             notify { listener.error(SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) }
+            return
+        }
+        if (recognizerIntent?.hasExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE) == true) {
+            // Audio from the caller (Android 13) is not supported: Wendelin only records itself.
+            Log.i(TAG, "EXTRA_AUDIO_SOURCE wird nicht unterstützt")
+            notify { listener.error(SpeechRecognizer.ERROR_CLIENT) }
             return
         }
         val id = ++nextId
@@ -161,6 +168,9 @@ class WendelinRecognitionService : RecognitionService() {
 
     override fun onStopListening(listener: Callback?) {
         val s = session ?: return
+        // Microphone off right away (also while the engine is still starting); Dart recognizes
+        // the audio received so far.
+        s.stopAudio()
         engine?.send("stop", mapOf("session" to s.id))
     }
 
@@ -175,6 +185,32 @@ class WendelinRecognitionService : RecognitionService() {
         engine?.destroy()
         engine = null
         super.onDestroy()
+    }
+
+    /**
+     * Whether Wendelin may record for this caller: its own `RECORD_AUDIO` and, from Android 12,
+     * the calling app's (from its `AttributionSource`): runtime permission and app op, checked
+     * without noting an access. The framework checks the caller before as well.
+     */
+    private fun mayRecord(listener: Callback): Boolean {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return false
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val caller = listener.callingAttributionSource
+        if (checkPermission(Manifest.permission.RECORD_AUDIO, -1, caller.uid) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+        val mode = getSystemService(AppOpsManager::class.java).unsafeCheckOpNoThrow(
+            AppOpsManager.OPSTR_RECORD_AUDIO,
+            caller.uid,
+            caller.packageName ?: return false,
+        )
+        return mode == AppOpsManager.MODE_ALLOWED ||
+            mode == AppOpsManager.MODE_FOREGROUND ||
+            mode == AppOpsManager.MODE_DEFAULT
     }
 
     /** Context whose recordings count for the calling app (Android 12+). */

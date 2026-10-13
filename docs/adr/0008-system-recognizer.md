@@ -24,13 +24,13 @@ Offen war, wo Whisper für den Dienst läuft:
 
 ### 1. Ablauf
 `WendelinRecognitionService.onStartListening`:
-1. Prüft, ob der Dienst aktiv sein darf (Rolle **und** Einstellung, §4), sonst `ERROR_CLIENT`. Prüft, ob die App `RECORD_AUDIO` hat, sonst `ERROR_INSUFFICIENT_PERMISSIONS`. Ab Android 12 prüft das Framework vorher die Berechtigung des Aufrufers.
+1. Prüft, ob der Dienst aktiv sein darf (Rolle **und** Einstellung, §4), sonst `ERROR_CLIENT`. Prüft dann die Mikrofon-Berechtigung, sonst `ERROR_INSUFFICIENT_PERMISSIONS`: Wendelin selbst braucht `RECORD_AUDIO`. Ab Android 12 prüft der Dienst zusätzlich den direkten Aufrufer aus dessen `AttributionSource`: Laufzeitberechtigung und App-Op `RECORD_AUDIO` (`unsafeCheckOpNoThrow`), ohne den Zugriff zu verbuchen. `PermissionChecker.checkPermissionForPreflight` für die ganze Kette ist keine öffentliche API. Davor lehnt schon das Framework (`RecognitionService`) Aufrufer ohne Berechtigung ab. Audio vom Aufrufer (`EXTRA_AUDIO_SOURCE`, Android 13) wird nicht unterstützt und ergibt `ERROR_CLIENT`, Wendelin nimmt nur selbst auf.
 2. Öffnet das Mikrofon (`AudioRecord`, `VOICE_RECOGNITION`, 16 kHz mono PCM16). Ab Android 12 läuft die Aufnahme über einen Context mit der `AttributionSource` des Aufrufers, sie zählt also für die aufrufende App im Vordergrund. Danach `onReadyForSpeech`.
 3. Startet bei Bedarf die Engine (`RecognizerEngine`, Einstieg `recognizerMain`) und schickt `start` mit `EXTRA_LANGUAGE` und den gespiegelten Einstellungen.
 4. Schickt alle 100 ms einen Audio-Block an Dart und meldet den Pegel per `onRmsChanged` (dBFS −60…0 → −2…10).
 5. Dart (`RecognizerHost` → `RecognitionSession`) meldet `began` (`onBeginningOfSpeech`), `ended` (`onEndOfSpeech`, Mikrofon aus), dann `result` (`onResults` mit einer Hypothese und `CONFIDENCE_SCORES`) oder `error`.
 
-`onStopListening` beendet das Zuhören: Die bisherige Sprache wird erkannt, ohne Sprache kommt `ERROR_NO_MATCH`. `onCancel` stoppt das Mikrofon, danach kommen keine Callbacks mehr. Ein Wächter beendet eine Anfrage nach 90 s mit `ERROR_CLIENT`. `onDestroy` ruft `shutdown` (gibt Whisper frei) und zerstört die Engine.
+`onStopListening` schaltet das Mikrofon sofort in Kotlin ab und schickt `stop`. Dart beendet daraufhin den Audio-Stream (`ChannelAudioInput.end`): Die bis dahin empfangenen Blöcke werden noch erkannt, ohne Sprache kommt `ERROR_NO_MATCH`. Das gilt auch, wenn die Engine noch startet und die Modelle prüft, weil `start`, Audio und `stop` in Kotlin gepuffert und in dieser Reihenfolge zugestellt werden. `onCancel` stoppt das Mikrofon, danach kommen keine Callbacks mehr. Ein Wächter beendet eine Anfrage nach 90 s mit `ERROR_CLIENT`. `onDestroy` ruft `shutdown` (gibt Whisper frei) und zerstört die Engine.
 
 Teilergebnisse (`onPartialResults`) gibt es nicht: Whisper erkennt die Äußerung als Ganzes. `onBufferReceived` wird nicht gesendet, damit kein Audio an andere Apps geht.
 
@@ -40,6 +40,7 @@ Teilergebnisse (`onPartialResults`) gibt es nicht: Whisper erkennt die Äußerun
 | Stille bis zum Timeout ohne Sprache (8 s) | `ERROR_SPEECH_TIMEOUT` |
 | Sprache gehört, aber leerer Text; `stopListening` ohne Sprache | `ERROR_NO_MATCH` |
 | Keine Mikrofon-Berechtigung (Aufrufer oder Wendelin) | `ERROR_INSUFFICIENT_PERMISSIONS` |
+| Audio vom Aufrufer (`EXTRA_AUDIO_SOURCE`) | `ERROR_CLIENT` |
 | Mikrofon fällt aus | `ERROR_AUDIO` |
 | `EXTRA_LANGUAGE` nicht de/fr/en | `ERROR_LANGUAGE_NOT_SUPPORTED` (vor Android 12 `ERROR_CLIENT`) |
 | Whisper oder Silero nicht geladen | `ERROR_CLIENT`, Hinweis im Log „Wendelin → Einstellungen → Sprache“ |
@@ -47,7 +48,7 @@ Teilergebnisse (`onPartialResults`) gibt es nicht: Whisper erkennt die Äußerun
 | Zweite gleichzeitige Anfrage eines anderen Clients | `ERROR_RECOGNIZER_BUSY` (Basisklasse `RecognitionService`) |
 
 ### 3. Whisper teilen (`whisper_share.dart`, `whisper_registry.dart`)
-`speechToTextProvider` (App und Overlay) registriert den Eingangs-Port seines Whisper-Isolats unter `app.wendelin/whisper/<modell>` im `IsolateNameServer` und meldet ihn bei `dispose` wieder ab. Das Isolat beantwortet neben den eigenen Aufträgen auch geteilte: Listen mit `TransferableTypedData` und Antwort-Port, weil Engines verschiedene Isolat-Gruppen sind und keine Records austauschen können. Der Erkenner prüft zuerst mit `ping` (3 s), ob das Isolat lebt. Endet die Engine der App, ohne `dispose` aufzurufen, läuft der `ping` ins Leere, und der Erkenner lädt selbst.
+`speechToTextProvider` (App und Overlay) registriert den Eingangs-Port seines Whisper-Isolats unter `app.wendelin/whisper/<modell>` im `IsolateNameServer` und meldet ihn bei `dispose` wieder ab. Das Isolat beantwortet neben den eigenen Aufträgen auch geteilte: Listen mit `TransferableTypedData` und Antwort-Port, weil Engines verschiedene Isolat-Gruppen sind und keine Records austauschen können. Der Erkenner prüft zuerst mit `ping` (3 s), ob das Isolat lebt, und vor jeder Erkennung noch einmal. Endet die Engine der App, ohne `dispose` aufzurufen, läuft der `ping` nach 3 s ins Leere statt erst nach 60 s. Antwortet das geteilte Whisper nicht (kein `pong` oder keine Antwort binnen 60 s), meldet es `unavailable`. Der Erkenner lädt dann sein eigenes Modell und erkennt dieselbe Äußerung damit. Ein Fehler des Modells selbst (`failed`) führt nicht zum Ausweichen. Das eigene Modell wird 30 s nach der letzten Anfrage freigegeben. Gezählt werden die laufenden Anfragen, und die Frist beginnt auch dann, wenn eine Anfrage schon vorbei ist, bevor das Modell fertig geladen hat.
 
 ### 4. Aktivierung
 Die Komponente bleibt im Manifest deaktiviert. `RecognizerSwitch` schaltet sie nur ein, wenn Wendelin die Assistenten-Rolle hält **und** die Einstellung „Als Spracherkennung für andere Apps anbieten“ (Einstellungen → Assistent, Standard an) gesetzt ist. Die Einstellung liegt in den SharedPreferences `app.wendelin.recognizer`, weil Kotlin sie ohne Dart lesen muss. Sie gilt sofort. Jede Anfrage prüft beides erneut, denn Rollenwechsel lassen sich nicht beobachten. Auf dem Emulator geprüft: Ist das Angebot aus, bleibt Wendelin Assistent (`voice_interaction_service`, `dumpsys voiceinteraction`), und Anfragen an den Dienst scheitern.

@@ -39,7 +39,7 @@ class RecognitionServiceTest {
 
     /** What the client saw. */
     class Outcome {
-        val events = mutableListOf<String>()
+        val events: MutableList<String> = java.util.concurrent.CopyOnWriteArrayList()
         var error: Int? = null
         var results: List<String> = emptyList()
         var confidence: Float? = null
@@ -59,6 +59,13 @@ class RecognitionServiceTest {
         RecognizerConfig(language = "de").save(context)
     }
 
+    /**
+     * Client and service share the app's uid here, so this path checks Wendelin's own
+     * permission and that of the caller at once: on Android 12+ the framework rejects the
+     * caller first, `WendelinRecognitionService.mayRecord` (own permission, the caller's
+     * permission and app op) is the second check. A separate client app would be needed to
+     * reach only the second one (WP19).
+     */
     @Test
     fun a_withoutMicrophonePermission_insufficientPermissions() {
         assertTrue(
@@ -143,7 +150,11 @@ class RecognitionServiceTest {
         start(recognizer, outcome, "en-01.wav", "en-US")
         assertTrue("Sprachbeginn", outcome.began.await(30, TimeUnit.SECONDS))
         instrumentation.runOnMainSync { recognizer.cancel() }
+        // Microphone off at once: after a short grace no more levels or other callbacks.
+        Thread.sleep(500)
+        val afterCancel = outcome.events.size
         assertTrue(outcome.toString(), !outcome.done.await(12, TimeUnit.SECONDS))
+        assertEquals(outcome.toString(), afterCancel, outcome.events.size)
         // The same client can start again.
         val next = Outcome()
         start(recognizer, next, "en-07.wav", "en-US")
@@ -151,6 +162,19 @@ class RecognitionServiceTest {
         instrumentation.runOnMainSync { recognizer.destroy() }
         assertEquals(next.toString(), null, next.error)
         assertTrue(next.results.single().lowercase().contains("note"))
+    }
+
+    @Test
+    fun g2_cancelRightAfterStart_microphoneOff() {
+        // Cancel before Dart has started the session: the microphone must stop in Kotlin.
+        val recognizer = create()
+        val outcome = Outcome()
+        start(recognizer, outcome, "en-06.wav", "en-US", cancelRightAway = true)
+        Thread.sleep(300)
+        val seen = outcome.events.size
+        assertTrue(outcome.toString(), !outcome.done.await(3, TimeUnit.SECONDS))
+        instrumentation.runOnMainSync { recognizer.destroy() }
+        assertEquals(outcome.toString(), seen, outcome.events.size)
     }
 
     @Test
@@ -182,6 +206,51 @@ class RecognitionServiceTest {
                 outcome.error == SpeechRecognizer.ERROR_NO_MATCH ||
                 outcome.error == null,
         )
+    }
+
+    @Test
+    fun h3_stopDuringColdStart_microphoneOffAtOnce() {
+        // A fresh service starts its engine with every recognizer; stop right away, while
+        // Dart is still starting (start, audio and stop are queued in Kotlin).
+        val recognizer = create()
+        val outcome = Outcome()
+        // „Append to my daily note that the meeting moved to Friday.“ (≈ 4 s of speech)
+        // Stop right behind the start: Dart is still checking the models (or the engine is
+        // still starting) when the stop arrives.
+        start(recognizer, outcome, "en-06.wav", "en-US", stopRightAway = true)
+        val stoppedAt = System.currentTimeMillis()
+        Thread.sleep(300)
+        val levels = outcome.events.count { it == "rms" }
+        assertTrue(outcome.toString(), outcome.done.await(30, TimeUnit.SECONDS))
+        val tookMs = System.currentTimeMillis() - stoppedAt
+        instrumentation.runOnMainSync { recognizer.destroy() }
+        // The microphone stopped with stopListening: no levels afterwards, and the answer does
+        // not wait for the end of the sentence (≈ 4 s + 0.8 s silence).
+        assertEquals(outcome.toString(), levels, outcome.events.count { it == "rms" })
+        assertTrue("$tookMs ms: $outcome", tookMs < 3500)
+        assertTrue(
+            outcome.toString(),
+            outcome.error == SpeechRecognizer.ERROR_NO_MATCH ||
+                (outcome.error == null && !outcome.results.single().lowercase().contains("friday")),
+        )
+    }
+
+    @Test
+    fun h4_callerAudioSource_rejected() {
+        val recognizer = create()
+        val outcome = Outcome()
+        val pipe = ParcelFileDescriptor.createPipe()
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, pipe[0])
+        }
+        instrumentation.runOnMainSync {
+            recognizer.setRecognitionListener(listener(outcome))
+            recognizer.startListening(intent)
+        }
+        assertTrue(outcome.toString(), outcome.done.await(30, TimeUnit.SECONDS))
+        instrumentation.runOnMainSync { recognizer.destroy() }
+        pipe.forEach { it.close() }
+        assertEquals(outcome.toString(), SpeechRecognizer.ERROR_CLIENT, outcome.error)
     }
 
     @Test
@@ -221,7 +290,14 @@ class RecognitionServiceTest {
     }
 
     /** Starts a request; [wav] `null` = the real microphone. */
-    private fun start(recognizer: SpeechRecognizer, outcome: Outcome, wav: String?, language: String?) {
+    private fun start(
+        recognizer: SpeechRecognizer,
+        outcome: Outcome,
+        wav: String?,
+        language: String?,
+        stopRightAway: Boolean = false,
+        cancelRightAway: Boolean = false,
+    ) {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             if (language != null) putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
@@ -230,6 +306,8 @@ class RecognitionServiceTest {
         instrumentation.runOnMainSync {
             recognizer.setRecognitionListener(listener(outcome))
             recognizer.startListening(intent)
+            if (stopRightAway) recognizer.stopListening()
+            if (cancelRightAway) recognizer.cancel()
         }
     }
 

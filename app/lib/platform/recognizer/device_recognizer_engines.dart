@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
@@ -103,14 +104,28 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
   Future<SpeechToText> speechToText(String modelId) async {
     _idle?.cancel();
     if (_disposed) throw StateError('Erkenner ist beendet.');
+    _active++;
     final own = _own;
     if (own != null && _ownId == modelId) {
       return WhisperSpeechToText(backend: await own, modelId: modelId);
     }
     final shared = await _lookupShared(modelId);
     if (shared != null) {
-      return WhisperSpeechToText(backend: shared, modelId: modelId);
+      return WhisperSpeechToText(
+        backend: _SharedOrOwn(shared, () => _loadOwn(modelId)),
+        modelId: modelId,
+      );
     }
+    return WhisperSpeechToText(
+      backend: await _loadOwn(modelId),
+      modelId: modelId,
+    );
+  }
+
+  /// The own model [modelId], loaded once (another model is released).
+  Future<WhisperBackend> _loadOwn(String modelId) async {
+    final own = _own;
+    if (own != null && _ownId == modelId) return own;
     final model = await _installed(modelId, 'Das Whisper-Modell');
     await _releaseOwn();
     final loading = _startWhisper(
@@ -119,7 +134,10 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
     _ownId = modelId;
     _own = loading;
     try {
-      return WhisperSpeechToText(backend: await loading, modelId: modelId);
+      final backend = await loading;
+      // The request may have ended while the model loaded.
+      _armIdle();
+      return backend;
     } on Object {
       if (identical(_own, loading)) {
         _own = null;
@@ -133,11 +151,22 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
   @visibleForTesting
   bool get holdsOwnModel => _own != null;
 
+  /// Requests between [speechToText] and [idle].
+  int _active = 0;
+
   @override
   void idle() {
+    if (_active > 0) _active--;
+    _armIdle();
+  }
+
+  /// Releases the own model [idleRelease] after the last request.
+  void _armIdle() {
     _idle?.cancel();
-    if (_own != null) {
-      _idle = Timer(idleRelease, () => unawaited(_releaseOwn()));
+    if (_own != null && _active == 0 && !_disposed) {
+      _idle = Timer(idleRelease, () {
+        if (_active == 0) unawaited(_releaseOwn());
+      });
     }
   }
 
@@ -175,4 +204,32 @@ Future<void> runRecognizerEngine() async {
   );
   await RecognizerHost(engines: DeviceRecognizerEngines(models: installer))
       .attach();
+}
+
+/// Whisper of the app engine, with the own model as fallback when the app
+/// engine is gone or does not answer in time (`VoiceErrorKind.unavailable`
+/// of [RemoteWhisperBackend]).
+final class _SharedOrOwn implements WhisperBackend {
+  _SharedOrOwn(this.shared, this.own);
+
+  final WhisperBackend shared;
+  final Future<WhisperBackend> Function() own;
+
+  @override
+  Future<WhisperResult> transcribe(
+    Float32List samples, {
+    String? language,
+  }) async {
+    try {
+      return await shared.transcribe(samples, language: language);
+    } on VoiceException catch (e) {
+      if (e.kind != VoiceErrorKind.unavailable) rethrow;
+      debugPrint('Erkenner: Whisper der App antwortet nicht, lade eigenes.');
+    }
+    return (await own()).transcribe(samples, language: language);
+  }
+
+  /// The shared model belongs to the app; the own one to the engines.
+  @override
+  Future<void> dispose() async {}
 }

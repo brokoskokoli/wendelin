@@ -233,6 +233,43 @@ void main() {
     },
   );
 
+  test('stop während des Kaltstarts: bisherige Sprache wird erkannt', () async {
+    // Kotlin buffers start, audio and stop while the engine starts; the
+    // stop must not get lost while the models are checked.
+    final gate = Completer<void>();
+    host = RecognizerHost(
+      engines: _SlowEngines(engines, gate.future),
+      channel: channel,
+    );
+    final starting = start(const {});
+    await audio(AudioFrames.pattern('..SSSSSSSSSS', frame: frame));
+    await host.handle(const MethodCall('stop', {'session': 1}));
+    gate.complete();
+    await starting;
+    await pumpEventQueue();
+    expect(types(), ['began', 'ended', 'result']);
+    // All frames up to the stop, nothing after it.
+    expect(engines.stt.calls.single.samples, 12 * 480);
+  });
+
+  test('stop während des Kaltstarts ohne Sprache: noMatch', () async {
+    final gate = Completer<void>();
+    host = RecognizerHost(
+      engines: _SlowEngines(engines, gate.future),
+      channel: channel,
+    );
+    final starting = start(const {});
+    await audio(AudioFrames.pattern('.....', frame: frame));
+    await host.handle(const MethodCall('stop', {'session': 1}));
+    await audio(utterance()); // after the stop: ignored
+    gate.complete();
+    await starting;
+    await pumpEventQueue();
+    expect(types(), ['error']);
+    expect(events().single['error'], 'noMatch');
+    expect(engines.stt.calls, isEmpty);
+  });
+
   test('cancel: keine weiteren Ereignisse', () async {
     await start(const {});
     await audio(AudioFrames.pattern('..SSSS', frame: frame));
@@ -402,6 +439,43 @@ void main() {
         ..fail(StateError('ignored'));
       expect(input.start, throwsStateError);
       await sub.cancel();
+    });
+
+    test('end: gepufferte Frames, dann Ende; danach nichts mehr', () async {
+      final input = ChannelAudioInput(() async {})
+        ..push(
+          bytesOf([
+            Int16List.fromList(const [5]),
+          ]),
+        )
+        ..end()
+        ..end()
+        ..push(
+          bytesOf([
+            Int16List.fromList(const [6]),
+          ]),
+        )
+        ..fail(StateError('ignored'));
+      final frames = await input.start().toList();
+      expect(frames.map((f) => f.toList()), [
+        [5],
+      ]);
+      await input.stop();
+    });
+
+    test('end nach start schließt den Stream', () async {
+      final input = ChannelAudioInput(() async {});
+      final frames = input.start().toList();
+      input
+        ..push(
+          bytesOf([
+            Int16List.fromList(const [7]),
+          ]),
+        )
+        ..end();
+      expect((await frames).single.toList(), [7]);
+      await input.stop();
+      input.end(); // after stop: no-op
     });
 
     test('Fehler vor start kommt im Stream', () async {

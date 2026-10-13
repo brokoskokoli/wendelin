@@ -16,8 +16,8 @@ final defaultAssistantProvider = FutureProvider<bool>(
 );
 
 /// Settings → Assistent: Wendelin as default assistant (link to the system
-/// settings), the speech recognizer for other apps, the user's name and a personality addition for the system
-/// prompt.
+/// settings), the speech recognizer for other apps, the user's name and a
+/// personality addition for the system prompt.
 class AssistantScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const AssistantScreen({super.key});

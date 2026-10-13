@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:fake_async/fake_async.dart';
@@ -175,11 +176,77 @@ void main() {
         ..flushMicrotasks()
         ..elapse(const Duration(seconds: 5));
       expect(own.single.disposed, 0);
+      // Two overlapping requests: released only after the last one.
+      e.speechToText('whisper-base');
+      async.flushMicrotasks();
+      e.idle();
+      async.elapse(const Duration(seconds: 31));
+      expect(own.single.disposed, 0);
       e.idle();
       async.elapse(const Duration(seconds: 31));
       expect(own.single.disposed, 1);
       expect(e.holdsOwnModel, isFalse);
     });
+  });
+
+  test('Anfrage endet, bevor das Modell geladen ist: trotzdem freigegeben', () {
+    fakeAsync((async) {
+      final gate = Completer<void>();
+      final e = DeviceRecognizerEngines(
+        models: models,
+        lookupShared: (_) async {
+          await gate.future; // e.g. the 3 s ping of a busy app engine
+          return null;
+        },
+        startWhisper: (_) async {
+          final b = FakeBackend('eigen');
+          own.add(b);
+          return b;
+        },
+      );
+      e.speechToText('whisper-base').ignore();
+      async.flushMicrotasks();
+      e.idle(); // request over (speech timeout, cancel)
+      gate.complete();
+      async.flushMicrotasks();
+      expect(own.single.disposed, 0);
+      async.elapse(const Duration(seconds: 31));
+      expect(own.single.disposed, 1);
+      expect(e.holdsOwnModel, isFalse);
+    });
+  });
+
+  test(
+    'Whisper der App antwortet nicht mehr: eigenes Modell übernimmt',
+    () async {
+      final e = DeviceRecognizerEngines(
+        models: models,
+        lookupShared: (_) async => _GoneBackend(
+          const VoiceException(VoiceErrorKind.unavailable, 'weg'),
+        ),
+        startWhisper: (_) async {
+          final b = FakeBackend('eigen');
+          own.add(b);
+          return b;
+        },
+      );
+      final stt = await e.speechToText('whisper-base');
+      expect(await text(stt), 'eigen');
+      expect(e.holdsOwnModel, isTrue);
+      await stt.transcribe(Int16List.fromList(List.filled(1600, 3000)));
+      expect(own, hasLength(1));
+    },
+  );
+
+  test('Modellfehler der App: kein Ausweichen', () async {
+    final e = DeviceRecognizerEngines(
+      models: models,
+      lookupShared: (_) async =>
+          _GoneBackend(const VoiceException(VoiceErrorKind.failed, 'kaputt')),
+      startWhisper: (_) async => fail('nicht laden'),
+    );
+    final stt = await e.speechToText('whisper-base');
+    await expectLater(text(stt), throwsA(isA<VoiceException>()));
   });
 
   test('idle ohne eigenes Modell tut nichts', () {
@@ -212,6 +279,19 @@ void main() {
     // Only constructs (sherpa-onnx is not loaded on the test host).
     DeviceRecognizerEngines(models: models);
   });
+}
+
+final class _GoneBackend implements WhisperBackend {
+  _GoneBackend(this.error);
+
+  final Object error;
+
+  @override
+  Future<WhisperResult> transcribe(Float32List samples, {String? language}) =>
+      Future.error(error);
+
+  @override
+  Future<void> dispose() async {}
 }
 
 final class _BrokenBackend implements WhisperBackend {

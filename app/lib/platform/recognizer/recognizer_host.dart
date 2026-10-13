@@ -111,6 +111,7 @@ final class ChannelAudioInput implements AudioInput {
   // ignore: close_sinks
   StreamController<Int16List>? _controller;
   bool _done = false;
+  bool _ended = false;
 
   @override
   bool get isRunning => _controller != null;
@@ -127,12 +128,23 @@ final class ChannelAudioInput implements AudioInput {
     _early.clear();
     final error = _earlyError;
     if (error != null) c.addError(error);
+    if (_ended) unawaited(c.close());
     return c.stream;
+  }
+
+  /// The service stopped recording (`stopListening`): the frames received
+  /// so far are still delivered, then the stream ends. Works before
+  /// [start], too (the engine was still starting).
+  void end() {
+    if (_ended || _done) return;
+    _ended = true;
+    final c = _controller;
+    if (c != null) unawaited(c.close());
   }
 
   /// Adds little-endian PCM16 [bytes] from the service.
   void push(Uint8List bytes) {
-    if (_done || bytes.length < 2) return;
+    if (_done || _ended || bytes.length < 2) return;
     final frame = Int16List(bytes.length ~/ 2);
     final data = ByteData.sublistView(bytes);
     for (var i = 0; i < frame.length; i++) {
@@ -144,7 +156,7 @@ final class ChannelAudioInput implements AudioInput {
 
   /// The recording failed in the service.
   void fail(Object error) {
-    if (_done) return;
+    if (_done || _ended) return;
     final c = _controller;
     c == null ? _earlyError = error : c.addError(error);
   }
@@ -221,7 +233,11 @@ final class RecognizerHost {
           );
         }
       case 'stop':
-        if (matches) current.session?.stop();
+        // The service has already stopped the microphone. Ending the
+        // audio (instead of the session) also works while the engine is
+        // still checking the models: the frames so far are recognized,
+        // without speech the request ends with noMatch.
+        if (matches) current.audio.end();
       case 'cancel':
         if (matches) await _cancelCurrent();
       case 'shutdown':

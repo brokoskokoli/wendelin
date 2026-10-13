@@ -49,16 +49,26 @@ void answerSharedWhisper(
 
 /// [WhisperBackend] on the Whisper isolate of another engine (found by
 /// `lookupSharedWhisper`). It does not own the model: [dispose] does
-/// nothing, and if the owner is gone, requests time out.
+/// nothing. If the owner is gone or does not answer in time, requests fail
+/// with `VoiceErrorKind.unavailable` (the recognizer then loads its own
+/// model); an error of the model itself is `VoiceErrorKind.failed`.
 final class RemoteWhisperBackend implements WhisperBackend {
   /// Creates the client for [port] (the Whisper isolate's inbox).
-  RemoteWhisperBackend(this.port, {this.timeout = const Duration(seconds: 60)});
+  RemoteWhisperBackend(
+    this.port, {
+    this.timeout = const Duration(seconds: 60),
+    this.pingTimeout = const Duration(seconds: 3),
+  });
 
   /// The Whisper isolate's inbox.
   final SendPort port;
 
   /// Longest wait for one transcription.
   final Duration timeout;
+
+  /// Each transcription first checks that the isolate still answers: a
+  /// gone owner shows up after this time instead of after [timeout].
+  final Duration pingTimeout;
 
   /// Whether the Whisper isolate behind [port] answers within [within]
   /// (it is busy while it transcribes for its own engine).
@@ -83,6 +93,12 @@ final class RemoteWhisperBackend implements WhisperBackend {
     Float32List samples, {
     String? language,
   }) async {
+    if (!await alive(port, within: pingTimeout)) {
+      throw const VoiceException(
+        VoiceErrorKind.unavailable,
+        'Das Whisper-Modell der App antwortet nicht.',
+      );
+    }
     final reply = ReceivePort();
     try {
       port.send([
@@ -96,7 +112,7 @@ final class RemoteWhisperBackend implements WhisperBackend {
         answer = await reply.first.timeout(timeout);
       } on TimeoutException catch (e) {
         throw VoiceException(
-          VoiceErrorKind.failed,
+          VoiceErrorKind.unavailable,
           'Whisper hat nicht rechtzeitig geantwortet.',
           cause: e,
         );

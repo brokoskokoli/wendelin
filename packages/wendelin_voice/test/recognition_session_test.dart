@@ -299,6 +299,40 @@ void main() {
       });
     });
 
+    test('Sprache kurz vor dem Sicherheitsnetz wird nicht abgeschnitten', () {
+      // The microphone delivers late (wall clock ahead of audio time):
+      // speech starts at 9.9 s wall clock, just before the no-speech net
+      // (8 s + 2 s); the net must not end the utterance.
+      fakeAsync((async) {
+        final h = Harness(frames: const []);
+        unawaited(h.session.run());
+        async.flushMicrotasks();
+        for (var i = 0; i < 99; i++) {
+          // 100 ms wall clock, but only 70 ms of audio each.
+          h.fakeAudio.push(
+            AudioFrames.silence(const Duration(milliseconds: 70)),
+          );
+          async.elapse(const Duration(milliseconds: 100));
+        }
+        expect(h.events, isEmpty);
+        for (var i = 0; i < 10; i++) {
+          h.fakeAudio.push(AudioFrames.speech(frame));
+          async.elapse(const Duration(milliseconds: 30));
+        }
+        expect(h.events, ['began']);
+        for (var i = 0; i < 30 && h.fakeAudio.isRunning; i++) {
+          h.fakeAudio.push(AudioFrames.silence(frame));
+          async.elapse(const Duration(milliseconds: 30));
+        }
+        expect(h.events, ['began', 'ended', 'result:Milch kaufen']);
+        // The whole utterance: 300 ms pre-roll, speech, 810 ms silence.
+        expect(
+          h.fakeStt.calls.single.samples,
+          durationToSamples(const Duration(milliseconds: 300) + frame * 37),
+        );
+      });
+    });
+
     test('Sprache ohne Ende: Höchstdauer, dann Ergebnis', () {
       fakeAsync((async) {
         final h = Harness(

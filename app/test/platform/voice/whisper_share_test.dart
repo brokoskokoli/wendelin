@@ -80,7 +80,7 @@ void main() {
     reply.close();
   });
 
-  test('Besitzer weg: ping und Erkennung laufen in die Frist', () async {
+  test('Besitzer weg: nach der Ping-Frist unavailable statt 60 s', () async {
     final dead = ReceivePort()..close();
     expect(
       await RemoteWhisperBackend.alive(
@@ -89,27 +89,65 @@ void main() {
       ),
       isFalse,
     );
+    final watch = Stopwatch()..start();
     await expectLater(
       RemoteWhisperBackend(
         dead.sendPort,
-        timeout: const Duration(milliseconds: 50),
+        pingTimeout: const Duration(milliseconds: 50),
       ).transcribe(Float32List(16)),
-      throwsA(isA<VoiceException>()),
+      throwsA(
+        isA<VoiceException>().having(
+          (e) => e.kind,
+          'kind',
+          VoiceErrorKind.unavailable,
+        ),
+      ),
     );
+    expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
   });
 
-  test('unerwartete Antwort', () async {
-    final odd = ReceivePort();
-    odd.listen((m) {
+  /// A port that answers pings and then [onTranscribe].
+  ReceivePort fakeOwner(void Function(SendPort reply) onTranscribe) {
+    final port = ReceivePort();
+    port.listen((m) {
       final list = m as List<Object?>;
-      (list.last! as SendPort).send(['weird']);
+      final reply = list.last! as SendPort;
+      list.first == 'ping' ? reply.send(const ['pong']) : onTranscribe(reply);
     });
-    expect(await RemoteWhisperBackend.alive(odd.sendPort), isFalse);
+    addTearDown(port.close);
+    return port;
+  }
+
+  test(
+    'Besitzer lebt, antwortet aber nicht rechtzeitig: unavailable',
+    () async {
+      final slow = fakeOwner((_) {});
+      await expectLater(
+        RemoteWhisperBackend(
+          slow.sendPort,
+          timeout: const Duration(milliseconds: 50),
+        ).transcribe(Float32List(16)),
+        throwsA(
+          isA<VoiceException>().having(
+            (e) => e.kind,
+            'kind',
+            VoiceErrorKind.unavailable,
+          ),
+        ),
+      );
+    },
+  );
+
+  test('unerwartete Antwort', () async {
+    final odd = fakeOwner((reply) => reply.send(const ['weird']));
     await expectLater(
       RemoteWhisperBackend(odd.sendPort).transcribe(Float32List(4)),
       throwsStateError,
     );
-    odd.close();
+    final noPong = ReceivePort();
+    noPong.listen((m) => ((m as List<Object?>).last! as SendPort).send('x'));
+    expect(await RemoteWhisperBackend.alive(noPong.sendPort), isFalse);
+    noPong.close();
   });
 
   group('Registry (zwischen Engines)', () {
