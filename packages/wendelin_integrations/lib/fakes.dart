@@ -1,7 +1,8 @@
 /// In-memory fakes of the integration ports: [FakeCalendarPort],
 /// [FakeClipboardPort], [FakeAlarmPort], [FakeMemoryStore],
 /// [FakeWebSearchBackend], [FakeListFilePort], [FakeVaultPort],
-/// [FakeNoteIndex], [FakeBringApi], [FakeBringSecrets], [FakeHttpToolSecrets].
+/// [FakeNoteIndex], [FakeBringApi], [FakeBringSecrets], [FakeHttpToolSecrets],
+/// [FakeAppPresencePort].
 ///
 /// Does **not** depend on `package:test`, so the app may use it in
 /// production code (demo mode). Tests import `testing.dart`, which also
@@ -9,6 +10,7 @@
 library;
 
 import 'testing/fake_alarm_port.dart';
+import 'testing/fake_app_presence_port.dart';
 import 'testing/fake_bring_api.dart';
 import 'testing/fake_calendar_port.dart';
 import 'testing/fake_clipboard_port.dart';
@@ -20,6 +22,7 @@ import 'testing/fake_vault_port.dart';
 import 'testing/fake_web_search_backend.dart';
 
 export 'testing/fake_alarm_port.dart';
+export 'testing/fake_app_presence_port.dart';
 export 'testing/fake_bring_api.dart';
 export 'testing/fake_calendar_port.dart';
 export 'testing/fake_clipboard_port.dart';

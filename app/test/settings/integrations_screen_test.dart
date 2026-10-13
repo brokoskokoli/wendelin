@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/app_requirements.dart';
+import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -9,6 +11,7 @@ import 'package:wendelin/ui/settings/integrations_screen.dart';
 import 'package:wendelin/ui/settings/lists_screen.dart';
 import 'package:wendelin/ui/settings/obsidian_screen.dart';
 import 'package:wendelin/ui/settings/web_search_screen.dart';
+import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
@@ -223,19 +226,33 @@ void main() {
     );
   });
 
-  testWidgets('MCP/HTTP-Tool: Hinweis auf M3', (tester) async {
-    await pumpIntegrations(tester, TestEnv());
-    await tester.tap(find.text('+ MCP-Server'));
-    await tester.pump();
-    expect(find.text('Kommt mit M3.'), findsOneWidget);
-  });
-
   testWidgets('Golden Integrationen (390 × 844)', tags: ['golden'], (
     tester,
   ) async {
-    final env = TestEnv(enabled: const {'calendar', 'memory', 'web', 'lists'});
-    env.alarms.available = false;
+    // Wie im Entwurf: aktiv, verfügbar, Einrichtung nötig und eine
+    // Integration, deren App fehlt (ausgegraut, „Im Store“).
+    final env = TestEnv(
+      enabled: const {'calendar', 'web', 'lists'},
+      extraOverrides: [
+        integrationSpecsProvider.overrideWithValue([
+          ...builtInIntegrationSpecs.where(
+            (s) => s.id != 'memory' && s.id != 'alarms',
+          ),
+          IntegrationSpec(
+            id: 'spotify',
+            create: (_) => FakeIntegration(
+              id: 'spotify',
+              displayName: 'Spotify',
+              tools: [FakeTool(name: 'spotify__play')],
+            ),
+            requiredApp: KnownApps.spotify,
+          ),
+        ]),
+      ],
+    );
+    env.apps.uninstall(KnownApps.spotify.androidPackage);
     await pumpIntegrations(tester, env, size: screenSize);
+    expect(find.text('Im Store'), findsOneWidget);
     await expectLater(
       find.byType(IntegrationsScreen),
       matchesGoldenFile('goldens/integrationen.png'),

@@ -11,7 +11,6 @@ import '../../di/profiles.dart';
 import '../../di/providers.dart';
 import '../../voice/recognizer_config.dart';
 import '../design/design.dart';
-import '../screens/labels.dart';
 import '../settings/integrations_screen.dart';
 import '../settings/provider_setup_screen.dart';
 import '../settings/settings_page.dart';
@@ -143,18 +142,10 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
           stream: registry.changes,
           builder: (context, _) => SectionCard(
             children: [
-              for (final info in displayOrder(registry.integrations))
-                IntegrationTile(
-                  name: info.integration.displayName,
-                  icon: integrationIcon(info.id),
-                  status: info.status,
-                  detail: integrationDetail(info),
-                  sensitive: info.integration.sensitive,
-                  onToggle: (on) =>
-                      unawaited(switchIntegration(context, ref, info.id, on)),
-                  onAction: () =>
-                      unawaited(setUpIntegration(context, ref, info.id)),
-                ),
+              // Only this platform's integrations; missing apps greyed out
+              // (concept: „Integrationen auswählen“).
+              for (final info in displayOrder(selectableIntegrations(registry)))
+                IntegrationRow(info),
             ],
           ),
         ),
@@ -166,7 +157,8 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
 
 /// Shows the onboarding until it is done (outside the demo mode). On start
 /// it also checks the grants of the list files (a lost grant marks the
-/// lists integration „Datei neu auswählen“).
+/// lists integration „Datei neu auswählen“); on every return to the app it
+/// checks the integrations again (installed apps).
 class StartGate extends ConsumerStatefulWidget {
   /// Creates the gate around [home].
   const StartGate({super.key, required this.home});
@@ -179,9 +171,23 @@ class StartGate extends ConsumerStatefulWidget {
 }
 
 class _StartGateState extends ConsumerState<StartGate> {
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
+    // Back in the app: apps may have been installed or removed meanwhile
+    // (concept: „App-Erkennung“). The start check is the registry's first
+    // refresh.
+    _lifecycle = AppLifecycleListener(
+      onResume: () => unawaited(ref.read(toolRegistryProvider).refresh()),
+    );
     if (ref.read(listDefinitionsProvider).isNotEmpty) {
       unawaited(Future(() => checkListAccess(ref)));
     }

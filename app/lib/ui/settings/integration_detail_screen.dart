@@ -24,7 +24,16 @@ class IntegrationDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final integration = ref.watch(integrationsProvider)[id];
+    // Built-in ones by spec, user-defined ones (MCP, HTTP) from the
+    // registry.
+    final integration =
+        ref.watch(integrationsProvider)[id] ??
+        ref
+            .watch(toolRegistryProvider)
+            .integrations
+            .where((i) => i.id == id)
+            .firstOrNull
+            ?.integration;
     final prefs = ref.watch(toolPrefsProvider);
     if (integration == null) {
       return const SettingsPage(title: 'Integration', children: []);

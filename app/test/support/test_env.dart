@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:wendelin/app.dart';
+import 'package:wendelin/di/app_requirements.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
@@ -78,6 +79,11 @@ final class TestEnv {
   /// Memory.
   final memory = FakeMemoryStore();
 
+  /// Installed apps (all known apps unless a test removes one).
+  final apps = FakeAppPresencePort(
+    installed: [for (final app in KnownApps.all) app.androidPackage],
+  );
+
   /// List files (handle → content).
   final listFiles = FakeListFilePort();
 
@@ -126,6 +132,7 @@ final class TestEnv {
     clipboard: clipboard,
     alarms: alarms,
     memory: memory,
+    apps: apps,
     requestCalendarPermission: () async {
       permissionRequests++;
       return calendar.permissionGranted = true;
@@ -144,6 +151,7 @@ final class TestEnv {
         clipboard: clipboard,
         alarms: alarms,
         memory: memory,
+        apps: apps,
         requestCalendarPermission: ports.requestCalendarPermission,
         lists: ListsPorts(
           port: listFiles,

@@ -12,8 +12,17 @@ abstract final class AppRoutes {
   /// Provider profiles, default and escalation chain.
   static const providers = '/settings/providers';
 
+  /// Routing rules and escalation chains (WP26).
+  static const routing = '/settings/routing';
+
   /// Integrations.
   static const integrations = '/settings/integrations';
+
+  /// MCP servers (WP27).
+  static const mcpServers = '/settings/mcp';
+
+  /// Declarative HTTP tools (WP28).
+  static const httpTools = '/settings/http-tools';
 
   /// Lists (K6).
   static const lists = '/settings/lists';

@@ -4,8 +4,8 @@
 ///
 /// Device access goes only through the ports ([CalendarPort],
 /// [ClipboardPort], [AlarmPort], [MemoryStorePort], [ListFilePort],
-/// [VaultPort], [NoteIndexPort], and for Bring! [BringApi] and
-/// [BringSecrets]); the app implements
+/// [VaultPort], [NoteIndexPort], [AppPresencePort], and for Bring!
+/// [BringApi] and [BringSecrets]); the app implements
 /// them. Fakes are in `package:wendelin_integrations/fakes.dart`, contract
 /// suites in `package:wendelin_integrations/testing.dart`.
 library;
@@ -14,6 +14,7 @@ import 'src/alarms/alarms.dart';
 import 'src/bring/bring_api.dart';
 import 'src/calendar/calendar_port.dart';
 import 'src/clipboard/clipboard.dart';
+import 'src/common/app_presence.dart';
 import 'src/http_tools/http_tools_integration.dart';
 import 'src/lists/lists.dart';
 import 'src/memory/memory.dart';
@@ -39,6 +40,7 @@ export 'src/calendar/calendar_port.dart';
 export 'src/calendar/calendar_tools.dart';
 export 'src/calendar/free_slots.dart';
 export 'src/clipboard/clipboard.dart';
+export 'src/common/app_presence.dart';
 export 'src/common/base_tool.dart' show IntegrationTool, ellipsize;
 export 'src/common/data_envelope.dart';
 export 'src/common/port_exception.dart';

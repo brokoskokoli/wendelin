@@ -4,6 +4,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../platform/platform_ports.dart';
+import 'app_requirements.dart';
 
 /// What an integration needs to be built.
 final class IntegrationDeps {
@@ -35,7 +36,10 @@ final class IntegrationDeps {
 /// This is the extension point for further integrations (e.g. WP12 lists):
 /// add a spec to [builtInIntegrationSpecs] (and a port to [PlatformPorts]
 /// if it needs device access). Registry, activation, session end and the
-/// settings list pick it up from there.
+/// settings list pick it up from there. Integrations that use another app
+/// name it in [requiredApp] (and its package in `<queries>`). User-defined
+/// integrations (MCP, HTTP tools) come from a `UserIntegrationSource`
+/// instead (ADR 0012).
 final class IntegrationSpec {
   /// Creates a spec.
   const IntegrationSpec({
@@ -45,6 +49,7 @@ final class IntegrationSpec {
     this.onSessionEnd,
     this.isSupported,
     this.permissionRationale,
+    this.requiredApp,
   });
 
   /// Integration id (must match `Integration.id`).
@@ -66,6 +71,10 @@ final class IntegrationSpec {
   /// Whether the integration can be built with [IntegrationDeps] (e.g. its
   /// port exists); `null` = always.
   final bool Function(IntegrationDeps deps)? isSupported;
+
+  /// The app the integration uses, if any: without a needed app it is
+  /// „nicht verfügbar“, an optional one only adds a hint (WP25).
+  final AppRequirement? requiredApp;
 }
 
 /// The built-in integrations of M1, in display order.
@@ -109,6 +118,10 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
     // Device: SAF vault; until a folder is chosen (Einstellungen →
     // Obsidian) it shows „Einrichtung nötig“. Demo: in-memory vault.
     isSupported: (d) => d.ports.obsidian != null,
+    // The vault is a folder; the app only opens notes (obsidian:// links).
+    requiredApp: KnownApps.obsidian.optional(
+      'Obsidian-App fehlt: Öffnen in Obsidian geht nicht',
+    ),
     create: (d) {
       final o = d.ports.obsidian!;
       return ObsidianIntegration(

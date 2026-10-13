@@ -4,9 +4,11 @@ import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../di/app_requirements.dart';
 import '../di/app_settings.dart';
 import '../di/preference_models.dart';
 import 'android_alarm_port.dart';
+import 'channel_app_presence_port.dart';
 import 'device_calendar_port.dart';
 import 'flutter_clipboard_port.dart';
 import 'repository_memory_port.dart';
@@ -26,6 +28,7 @@ final class PlatformPorts {
     required this.clipboard,
     required this.alarms,
     required this.memory,
+    required this.apps,
     this.requestCalendarPermission,
     this.lists,
     this.obsidian,
@@ -48,6 +51,7 @@ final class PlatformPorts {
       clipboard: const FlutterClipboardPort(),
       alarms: const AndroidAlarmPort(),
       memory: RepositoryMemoryPort(storage.memory),
+      apps: const ChannelAppPresencePort(),
       requestCalendarPermission: calendar.requestPermission,
       lists: ListsPorts(port: SafListFilePort(), definitions: listDefinitions),
       obsidian: ObsidianPorts(
@@ -63,12 +67,16 @@ final class PlatformPorts {
   static ObsidianPrefs _noVault() => const ObsidianPrefs();
   static String _german() => 'de';
 
-  /// In-memory ports for the demo mode: nothing touches the device.
+  /// In-memory ports for the demo mode: nothing touches the device (all
+  /// known apps count as installed).
   factory PlatformPorts.demo() => PlatformPorts(
     calendar: FakeCalendarPort(),
     clipboard: FakeClipboardPort(),
     alarms: FakeAlarmPort(),
     memory: FakeMemoryStore(),
+    apps: FakeAppPresencePort(
+      installed: [for (final app in KnownApps.all) app.androidPackage],
+    ),
     lists: ListsPorts.demo(),
     obsidian: ObsidianPorts.demo(),
   );
@@ -84,6 +92,9 @@ final class PlatformPorts {
 
   /// Long-term memory.
   final MemoryStorePort memory;
+
+  /// Which other apps are installed (app detection, WP25).
+  final AppPresencePort apps;
 
   /// Asks for calendar access; `null` if the port needs none.
   final Future<bool> Function()? requestCalendarPermission;
@@ -158,6 +169,24 @@ Future<void> launchObsidianUri(Uri uri) async {
     throw const PortException(
       PortErrorKind.unavailable,
       'Obsidian ist auf diesem Gerät nicht installiert.',
+    );
+  }
+}
+
+/// Opens [url] in the browser or the app that handles it (`ACTION_VIEW`),
+/// e.g. the download page of a missing app.
+Future<void> openExternalUrl(Uri url) async {
+  try {
+    await AndroidIntent(action: 'action_view', data: url.toString()).launch();
+  } on PlatformException {
+    throw const PortException(
+      PortErrorKind.unavailable,
+      'Keine App zum Öffnen der Adresse gefunden.',
+    );
+  } on UnsupportedError {
+    throw const PortException(
+      PortErrorKind.unsupported,
+      'Adressen lassen sich hier nicht öffnen.',
     );
   }
 }

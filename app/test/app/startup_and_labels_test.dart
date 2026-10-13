@@ -171,6 +171,7 @@ void main() {
           clipboard: FakeClipboardPort(),
           alarms: FakeAlarmPort(),
           memory: FakeMemoryStore(),
+          apps: FakeAppPresencePort(),
         ),
         device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
         httpClient: http.Client(),
