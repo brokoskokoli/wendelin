@@ -264,7 +264,13 @@ final class BringAddItemsTool extends IntegrationTool {
     final recent = {for (final i in items.recently) _flat(i.name): i};
     final added = <({BringItem item, BringItem? before})>[];
     final skipped = <BringItem>[];
+    final notAdded = <BringItem>[];
+    String? error;
     for (final w in wanted) {
+      if (error != null) {
+        notAdded.add(w);
+        continue;
+      }
       final key = _flat(w.name);
       final existing = open[key];
       if (existing != null) {
@@ -282,12 +288,12 @@ final class BringAddItemsTool extends IntegrationTool {
       try {
         await session.run((a) => session.api.saveItem(a, list.uuid, item));
       } on PortException catch (e) {
+        // Ohne Teilerfolg normaler Fehler; sonst abbrechen und den
+        // eingetragenen Teil mit Undo melden.
         if (added.isEmpty) rethrow;
-        throw PortException(
-          e.kind,
-          'Nur teilweise hinzugefügt (${added.map((x) => _label(x.item)).join(', ')}), '
-          'danach Fehler: ${e.message}',
-        );
+        error = e.message;
+        notAdded.add(w);
+        continue;
       }
       open[key] = item;
       added.add((item: item, before: before));
@@ -297,15 +303,20 @@ final class BringAddItemsTool extends IntegrationTool {
       'added': [for (final a in added) a.item.toJson()],
       if (skipped.isNotEmpty)
         'already_present': [for (final s in skipped) s.toJson()],
+      if (error != null) ...{
+        'not_added': [for (final n in notAdded) n.toJson()],
+        'error': error,
+      },
     };
     if (added.isEmpty) {
       return jsonOutcome(result, summary: '${list.name}: schon vorhanden');
     }
+    final labels = added.map((a) => _label(a.item)).join(', ');
     return jsonOutcome(
       result,
-      summary:
-          '${list.name}: ${added.map((a) => _label(a.item)).join(', ')} '
-          'hinzugefügt',
+      summary: error == null
+          ? '${list.name}: $labels hinzugefügt'
+          : '${list.name}: teilweise hinzugefügt ($labels)',
       undo: UndoAction(
         label: 'Artikel entfernen',
         run: () => session.exclusive(list.uuid, () => _undo(list, added)),

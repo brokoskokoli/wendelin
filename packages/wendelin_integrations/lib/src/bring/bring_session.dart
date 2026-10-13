@@ -8,6 +8,12 @@ const bringFallbackHint =
     'Bring!-Tools sind pausiert. Ausweg: Artikel über „Teilen“ an die '
     'Bring!-App schicken.';
 
+/// Hint appended to temporary errors (offline, timeout, 429, 5xx); the
+/// integration stays active.
+const bringRetryHint =
+    'Bitte später erneut versuchen. Ausweg: Artikel über „Teilen“ an die '
+    'Bring!-App schicken.';
+
 /// Login handling and error state of the Bring! tools.
 ///
 /// Every API call runs through [run]: the session is taken from memory,
@@ -15,9 +21,11 @@ const bringFallbackHint =
 /// starts. A rejected token (`permissionDenied`) is renewed **once** (refresh
 /// token, then a new login) and the call repeated once; HTTP 401 means the
 /// call was not applied, so this is safe for writes too. Nothing else is
-/// repeated. Failures of the service (rejected login, 429, 5xx, timeout,
-/// unexpected answers) call [onError] (the app: `ToolRegistry.reportError`,
-/// tools paused) and are rethrown with [bringFallbackHint].
+/// repeated. Lasting failures (login or token still rejected after the
+/// renewal, unexpected answers: HTML, missing fields, unknown status) call
+/// [onError] (the app: `ToolRegistry.reportError`, tools paused) and are
+/// rethrown with [bringFallbackHint]. Temporary ones (`unavailable`:
+/// offline, timeout, 429, 5xx) only fail the call, with [bringRetryHint].
 final class BringSession {
   /// Creates the session.
   BringSession(this.api, this.secrets, {this.onError, this.onRecovered});
@@ -67,6 +75,9 @@ final class BringSession {
     } on PortException catch (e) {
       if (identical(e, notSetUp) || e.kind == PortErrorKind.notFound) {
         rethrow;
+      }
+      if (e.kind == PortErrorKind.unavailable) {
+        throw PortException(e.kind, '${e.message}. $bringRetryHint');
       }
       if (e.kind == PortErrorKind.permissionDenied) await _drop();
       _failed = true;

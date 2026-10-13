@@ -184,6 +184,17 @@ void main() {
         ),
       );
       expect(await bring.reconnect(), contains('nicht erreichbar'));
+      // Vorübergehend: kein Fehlerzustand.
+      expect(errors, isEmpty);
+      expect(bring.session.failed, isFalse);
+      api.failNext(
+        'lists',
+        const PortException(
+          PortErrorKind.failed,
+          'Bring!: unerwartete Antwort',
+        ),
+      );
+      expect(await bring.reconnect(), contains(bringFallbackHint));
       expect(errors, hasLength(1));
       expect(recovered, 0);
       expect(await bring.reconnect(), isNull);
@@ -279,17 +290,15 @@ void main() {
       expect(paths, ['lists', 'token', 'lists']);
     });
 
-    final cases = <String, Canned Function()>{
+    final lasting = <String, Canned Function()>{
       '401 nach Erneuerung': () =>
           canned(401, bringFixture('unauthorized.json')),
-      '429': () => canned(429, '', {'retry-after': '30'}),
-      '500': () => canned(500, bringFixture('maintenance.html')),
-      '503': () => canned(503),
       'HTML-Antwort': () => canned(200, bringFixture('maintenance.html')),
       'fehlende Felder': () =>
           canned(200, bringFixture('items_missing_fields.json')),
+      'unerwarteter Status 418': () => canned(418),
     };
-    for (final MapEntry(key: name, value: answer) in cases.entries) {
+    for (final MapEntry(key: name, value: answer) in lasting.entries) {
       test('$name → definierter Fehler, Integration auf „Fehler“', () async {
         // Anmelden und Listen auflösen, dann scheitert der Artikelabruf.
         await call('bring__list_lists', {});
@@ -306,5 +315,75 @@ void main() {
         expect(errors, hasLength(1), reason: o.text);
       });
     }
+
+    final temporary = <String, Canned Function()>{
+      '429': () => canned(429, '', {'retry-after': '0'}),
+      '500': () => canned(500, bringFixture('maintenance.html')),
+      '503': () => canned(503),
+    };
+    for (final MapEntry(key: name, value: answer) in temporary.entries) {
+      test(
+        '$name → Fehler, aber nicht pausiert; Folgeaufruf gelingt',
+        () async {
+          await call('bring__list_lists', {});
+          server.next.addAll([
+            canned(200, bringFixture('lists.json')),
+            answer(),
+          ]);
+          final o = await call('bring__get_items', {});
+          expect(o.isError, isTrue);
+          expect(o.text, contains(bringRetryHint));
+          expect(o.text, isNot(contains(bringFallbackHint)));
+          expect(o.text, isNot(contains('<html')));
+          expect(errors, isEmpty);
+          expect(bring.session.failed, isFalse);
+          final again = await call('bring__get_items', {});
+          expect(again.isError, isFalse, reason: again.text);
+        },
+      );
+    }
+
+    test(
+      '429-Sperre bleibt: Aufrufe scheitern ohne Anfrage, ohne Pause',
+      () async {
+        final clock = FixedClock(DateTime.utc(2026, 10, 13, 12));
+        bring = BringIntegration(
+          HttpBringApi(client: server.client, clock: clock),
+          secrets,
+          onError: errors.add,
+        );
+        await call('bring__list_lists', {});
+        server.next.add(canned(429, '', {'retry-after': '60'}));
+        expect((await call('bring__list_lists', {})).isError, isTrue);
+        final sent = server.requests.length;
+        final blocked = await call('bring__get_items', {});
+        expect(blocked.text, contains('Anfragelimit'));
+        expect(server.requests, hasLength(sent));
+        expect(errors, isEmpty);
+        clock.advance(const Duration(seconds: 60));
+        expect((await call('bring__get_items', {})).isError, isFalse);
+      },
+    );
+
+    test('Refresh 503 → kein Login-Fallback, Fehler ohne Pause', () async {
+      await call('bring__list_lists', {});
+      server.expireTokens();
+      final before = server.requests.length;
+      // lists → 401 (abgelaufen), token → 503.
+      server.next.addAll([
+        canned(401, bringFixture('unauthorized.json')),
+        canned(503),
+      ]);
+      final o = await call('bring__list_lists', {});
+      expect(o.isError, isTrue);
+      expect(o.text, contains('Serverfehler'));
+      final paths = [
+        for (final r in server.requests.skip(before))
+          r.url.path.split('/').last,
+      ];
+      expect(paths, ['lists', 'token']);
+      expect(paths, isNot(contains('bringauth')));
+      expect(errors, isEmpty);
+    });
   });
 }

@@ -222,17 +222,32 @@ void main() {
       expect(api.methodCalls, isNot(contains('removeItem')));
     });
 
-    test('Fehler nach dem ersten Artikel: Teilerfolg benannt', () async {
+    test('Fehler nach dem ersten Artikel: Teilerfolg mit Undo', () async {
       final failing = _FailSecond(api);
       final b2 = BringIntegration(failing, secrets, onError: errors.add);
       final r = await b2.tools
           .singleWhere((t) => t.name == 'bring__add_items')
           .execute({
-            'items': ['Eier', 'Butter'],
+            'items': ['Eier', 'Butter', 'Käse', 'Milch'],
           }, ctx());
-      expect(r.isError, isTrue);
-      expect(r.text, contains('Nur teilweise hinzugefügt (Eier)'));
-      expect(errors, hasLength(1));
+      expect(r.isError, isFalse);
+      expect(r.summary, 'Zuhause: teilweise hinzugefügt (Eier)');
+      final d = data(r);
+      expect(d['added'], [
+        {'name': 'Eier'},
+      ]);
+      // Nach dem Fehler wird abgebrochen: auch Milch (offen) nicht geprüft.
+      expect(d['not_added'], [
+        {'name': 'Butter'},
+        {'name': 'Käse'},
+        {'name': 'Milch'},
+      ]);
+      expect(d['error'], contains('Serverfehler'));
+      expect(failing.saves, 2);
+      expect(names(home().purchase), ['Milch', 'Äpfel', 'Eier']);
+      expect(errors, isEmpty);
+      await r.undo!();
+      expect(names(home().purchase), ['Milch', 'Äpfel']);
     });
 
     test('Fehler beim ersten Artikel: normaler Fehler', () async {
@@ -248,7 +263,9 @@ void main() {
       });
       expect(o.isError, isTrue);
       expect(o.text, isNot(contains('teilweise')));
-      expect(o.text, contains(bringFallbackHint));
+      expect(o.text, contains(bringRetryHint));
+      expect(o.text, isNot(contains(bringFallbackHint)));
+      expect(errors, isEmpty);
     });
 
     test('ungültige Angaben', () async {
@@ -567,7 +584,7 @@ void main() {
 final class _FailSecond implements BringApi {
   _FailSecond(this.inner);
   final FakeBringApi inner;
-  var _saves = 0;
+  var saves = 0;
 
   @override
   Future<BringAuth> login(String email, String password) =>
@@ -581,7 +598,7 @@ final class _FailSecond implements BringApi {
       inner.items(auth, listUuid);
   @override
   Future<void> saveItem(BringAuth auth, String listUuid, BringItem item) {
-    if (++_saves == 2) {
+    if (++saves == 2) {
       throw const PortException(
         PortErrorKind.unavailable,
         'Bring! hat einen Serverfehler (HTTP 500)',
