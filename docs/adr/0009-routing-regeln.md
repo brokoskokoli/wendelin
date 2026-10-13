@@ -1,0 +1,48 @@
+# ADR 0009 – Routing-Regeln und Eskalationsketten
+
+Status: vorgeschlagen · 2026-10-13
+
+## Kontext
+Bis M2 ging jede Anfrage an ein Standardprofil. Die Eskalation lief über eine globale Kette (`routing.escalationChain`), „privat“ war ein Callback in der App (`DefaultProviderResolver`, `ProviderConfig.isPrivate`). Das Konzept („Routing und Eskalation“) verlangt eine geordnete Regelliste mit kombinierbaren Bedingungen, Ketten pro Profil, eine Datenschutz-Untergrenze (K8 d) und einen Regel-Editor mit Testfeld und JSON-Export. WP21 baut die Logik dafür in reinem Dart (`wendelin_agent/lib/src/routing/`), den Editor baut WP26.
+
+## Entscheidungen
+
+### 1. Normalisierter Text für alle Textbedingungen
+`keyword`, `prefix`, `regex` und `privacy` arbeiten auf `RoutingText.normalized`:
+- Kleinschreibung, diakritische Zeichen gefaltet (`ä→a`, `é→e`, `ß→ss`, `œ→oe`), kombinierende Akzente fallen weg,
+- jede Folge aus Zeichen, die weder Buchstabe noch Ziffer sind, wird zu einem Leerzeichen, Ränder werden abgeschnitten.
+
+„Claude, …“, „CLAUDE: …“ und „„Claude“ – …“ sehen für eine Regel also gleich aus. `keyword` und `prefix` treffen nur ganze Wörter („Claudia“ greift nicht bei „Claude“), `prefix` nur am Satzanfang. Umschreibungen wie `ue` für `ü` werden nicht gefaltet, weil STT und Tastatur Umlaute liefern und `ue` in vielen Wörtern regulär vorkommt.
+
+`regex` läuft ebenfalls auf dem normalisierten Text (case-insensitiv, Unicode). Laufzeitschutz: Muster bis 200 Zeichen, gesucht wird in den ersten 2 000 Zeichen. Ungültige oder zu lange Muster machen die Regel ungültig (`Condition.problem`), sie wird übersprungen und als `RuleSetIssue` gemeldet, das Routing stürzt nicht ab. Dart-`RegExp` hat keinen Timeout. Katastrophales Backtracking bleibt durch die Längengrenzen begrenzt, ist aber nicht ausgeschlossen. Die Regeln schreibt nur der Nutzer selbst.
+
+Jedes Zeichen des normalisierten Texts kennt seine Position im Original, so lassen sich Treffer im Originaltext entfernen (§3).
+
+### 2. `needsTool` ohne Modellaufruf
+`needsTool = <integration>[.read|.edit]` entscheidet ein `ToolCategoryMatcher`. Die Standardimplementierung `KeywordToolCategoryMatcher` nutzt Wortstamm-Listen (de/fr/en): Themenwörter je Integration („notiz“, „note“, „kalender“, „rendez vous“ …) und für `.read`/`.edit` zusätzlich ein passendes Verb („umschreib“, „ergänz“, „rewrite“, „réécri“ bzw. „lies“, „zeig“, „montre“). Ein Modellaufruf vor jeder Anfrage würde Latenz und Kosten verdoppeln und den Text an einen Anbieter schicken, bevor feststeht, welcher es sein darf. Die Listen sind ersetzbar, das Interface erlaubt später einen lokalen Klassifikator.
+
+### 3. `stripTrigger` nur für den Modelltext
+Mit `stripTrigger` liefert der Resolver `Resolution.effectiveText`: Der Originaltext ohne die auslösenden Stellen (Präfix, Schlüsselwort, Regex-Treffer) und ohne die danach hängenden Trennzeichen („Claude, trag … ein“ → „trag … ein“). Der `AgentRunner` schreibt die Nutzernachricht unverändert ins Gespräch (Recorder, Anzeige, Verlauf) und ersetzt nur in der Anfrage an das Modell den Text. `UserInput` bleibt unverändert. Bleibt nach dem Entfernen nichts mit Buchstaben oder Ziffern übrig („Claude.“), geht der Originaltext ans Modell, damit nie eine leere Anfrage entsteht.
+
+### 4. Ketten pro Profil, Datenschutz-Untergrenze
+`RuleSet.chains` ordnet jeder Profil-Id eine Kette von `{profileId, modelId}` zu. Eskaliert wird entlang der Kette **des Profils der gewählten Route** (`Resolution.routeProfileId`, bleibt über alle Eskalationen gleich), ab der Position des aktuellen Ziels. Nicht verfügbare Profile (gelöscht, deaktiviert, Adapter nicht baubar) werden übersprungen.
+
+Eine Route ist privat, wenn eine `privacy`-Bedingung zum Treffer beigetragen hat (nicht unter `not`, bei `or` nur der greifende Zweig). Dann ist die Untergrenze die Stufe des Regelziels und bleibt über alle Eskalationen gleich (K8 d). Wie beim `DefaultProviderResolver` wird ein Ziel mit ausreichender Stufe weiter hinten in der Kette vorgezogen. Gibt es keins, kommt das nächste mit `belowPrivacyFloor` zurück, und der Agent fragt über `EscalationConfirmationRequired`. Ein „Nein“ gilt für die ganze Anfrage (bestehendes Verhalten im `AgentRunner`). Eine `privacy`-Regel mit Ziel unter `tee` ergibt die Warnung `privacyTargetTooWeak`.
+
+„nochmal mit <Name>“ („noch mal mit“, „encore avec“, „again with“, „retry with“ …) mit einem Profilnamen, einem Profil-Alias, einem Regel-Alias oder einem Präfix- bzw. Schlüsselwort einer Regel setzt `Resolution.requestedTarget`. Der Agent eskaliert dann sofort (auch ohne `UserInput.requestEscalation`), und zwar direkt zu diesem Ziel statt zum nächsten Kettenglied, mit derselben Datenschutzprüfung. Bei mehreren Treffern gewinnt der längste Name, bei gleicher Länge der Regel-Alias vor dem Profilnamen, weil er ein bestimmtes Modell meint („nochmal mit Claude“ → Regel „Starkes Modell“ → Opus, „nochmal mit Claude API“ → Profil mit Standardmodell).
+
+### 5. Migration der globalen Kette
+`RuleSet.fromGlobalChain(defaultTarget, globalChain)` macht aus der bisherigen globalen Kette (Profil-Ids mit ihrem Standardmodell) die Kette des Standardprofils. Das Standardprofil selbst und doppelte Profile fallen heraus. Das Verhalten entspricht dem `DefaultProviderResolver` (Test). Der `DefaultProviderResolver` bleibt für Demo-Modus und Evals bestehen. Die App stellt in WP26 auf `RuleBasedProviderResolver` um und ruft die Migration einmalig beim Laden auf, wenn noch kein Regelsatz gespeichert ist.
+
+### 6. Bedingungen, Registry, JSON
+`Condition` ist eine `sealed class`. Jeder Typ hat einen JSON-Namen (`and`, `or`, `not`, `keyword`, `prefix`, `regex`, `language`, `sttConfidence`, `inputLength`, `hasImage`, `network`, `timeWindow`, `needsTool`, `privacy`). Die `ConditionRegistry` ordnet Namen Decoder und Encoder zu, ein neuer Typ braucht nur eine Unterklasse und einen Registry-Eintrag. Der JSON-Export (`RuleSetJson`) trägt `schemaVersion: 1`, enthält nur Profil- und Modell-Ids und keine Secrets. Unbekannte Typen, fehlende Felder oder neuere Schema-Versionen ergeben eine `RuleSetFormatException` mit deutschem Text und JSON-Pfad. Eine kaputte Regex ist dagegen kein Formatfehler: Die Regel wird importiert und als ungültig gemeldet, damit der Nutzer sie im Editor reparieren kann.
+
+`timeWindow`: Minuten seit Mitternacht, `start > end` geht über Mitternacht, `start == end` heißt ganzer Tag. Die Wochentage beziehen sich auf den Beginn des Fensters (Fr 22:00–06:00 umfasst Sa 03:00). `network: online` schließt eine getaktete Verbindung ein, `metered` meint nur diese. Uhr (`Clock`) und Netz (`NetworkStatus`, Port) werden injiziert.
+
+### 7. Prüfwerkzeug
+`explain(RuleSet, RoutingContext, {profiles})` liefert die gewählte Regel (oder Standard), das Ziel, den Modelltext und alle vorher geprüften Regeln mit Grund (`disabled`, `invalid`, `profileMissing`, `profileDisabled`, `profileUnavailable`, `noMatch`). Der Resolver nutzt dieselbe Funktion. `validateRuleSet` liefert die Warnungen für den Editor.
+
+## Folgen
+- Der Resolver ist zustandslos, und alle Entscheidungen lassen sich mit Fake-Uhr, `FixedNetworkStatus` und `FakeToolCategoryMatcher` als Tabellentests prüfen.
+- Die Untergrenze einer früheren Anfrage gilt nicht automatisch für „nochmal mit …“ in einer neuen Anfrage. Maßgeblich ist das Routing des neuen Satzes. Das bleibt offen für WP26/WP29.
+- `KeywordToolCategoryMatcher` ist eine Heuristik. Falsche Treffer schicken eine Anfrage an ein anderes Modell, an den Datenschutzfiltern (K10) ändert das nichts.

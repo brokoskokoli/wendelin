@@ -246,8 +246,13 @@ final class _Run {
     _context = await runner.contextBuilder.build(input);
     _messages.addAll(_context.messages);
     await _record(_context.messages.last);
+    // The model gets the routed text (trigger stripped); the recorded and
+    // displayed message stays as the user said it.
+    if (_current.effectiveText case final text?) {
+      _messages.last = Message.user(text, images: input.images);
+    }
 
-    if (input.requestEscalation) {
+    if (input.requestEscalation || _current.requestedTarget != null) {
       await _escalate(EscalationReason.userRequested);
     }
 

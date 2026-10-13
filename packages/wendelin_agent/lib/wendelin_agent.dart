@@ -1,4 +1,5 @@
-/// Wendelin agent loop: context building, provider resolution, limits,
+/// Wendelin agent loop: context building, provider resolution (routing
+/// rules, escalation chains per profile), limits,
 /// escalation and sentence chunking for TTS. Depends only on
 /// `wendelin_core` interfaces.
 ///
@@ -12,4 +13,20 @@ export 'src/context_builder.dart';
 export 'src/give_up_classifier.dart';
 export 'src/ports.dart';
 export 'src/provider_resolver.dart';
+export 'src/routing/conditions.dart';
+export 'src/routing/routing_context.dart';
+export 'src/routing/routing_engine.dart'
+    show
+        RouteDecision,
+        RuleSetIssue,
+        RuleSetIssueKind,
+        SkipReason,
+        SkippedRule,
+        explain,
+        validateRuleSet;
+export 'src/routing/routing_text.dart';
+export 'src/routing/rule_based_resolver.dart';
+export 'src/routing/rule_set.dart';
+export 'src/routing/rule_set_json.dart';
+export 'src/routing/tool_category_matcher.dart';
 export 'src/sentence_chunker.dart';
