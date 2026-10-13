@@ -20,3 +20,6 @@ Abhängig von: WP46 (a und b), WP47, WP49; WP38 gemergt. Andockpunkte: Provider-
 - [ ] Phala-Profil einrichten, drei Fragen (eine mit Tool, z. B. Kalender) → jede Antwort grün, Prüfprotokoll zeigt alle Stufen.
 - [ ] Flugmodus direkt nach einer Antwort → gelb, nach Rückkehr des Netzes grün bzw. nach 3 Versuchen rot.
 - [ ] Prüfprotokoll exportieren und die Datei ansehen: keine Inhalte.
+
+## Nachtrag (Maintainer 2026-10-14)
+- Einstellung „GPU-Prüfung über NVIDIA“: Aus (Standard) / Vorher / Nachher mit kurzer Erklärung (Netzaufruf an NVIDIA, keine Inhalte). Bei „Nachher“ und fehlgeschlagener Prüfung: System-Benachrichtigung + roter Status an der Antwort und im Prüfprotokoll; folgende Anfragen an den Knoten fragen vorher nach. Bei „Vorher“ und Fehler: Hinweis mit „Ohne GPU-Prüfung senden“ (nur diese Anfrage) oder Abbrechen.

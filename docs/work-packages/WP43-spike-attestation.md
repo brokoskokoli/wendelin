@@ -26,3 +26,6 @@ Abhängig von: – (sofort startbar). Ergebnis: Notiz `docs/notes/attestation-sp
 - [ ] APK-Zuwachs für A und B gemessen (`tool/check_apk.sh` bleibt grün).
 - [ ] Liste der Gate-/CI-Änderungen für WP47.
 - [ ] Kosten der Live-Probe im Bericht (Ziel < 0,01 USD).
+
+## Nachtrag (Maintainer 2026-10-14)
+- NRAS-Latenz und -Verfügbarkeit messen (Grundlage für den blockierenden Modus „Vorher“), Format der NRAS-Antwort als Fixture (ohne Secrets).

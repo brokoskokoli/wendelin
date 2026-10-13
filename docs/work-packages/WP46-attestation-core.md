@@ -37,3 +37,6 @@ Die genaue Form (Sync/Async, Fehlertypen) legt das Paket fest und meldet sie WP4
 - [ ] Gesperrter Provider sendet nachweislich keinen Request (Fake-Transport zählt).
 - [ ] Keine Quittungs- oder Prompt-Inhalte im Log; Diagnose `Wendelin/attest:` mit Stufe und Ergebnis.
 - [ ] ADR 0014 angelegt; Größe je Teil ≤ ~1 500 Zeilen Produktivcode; Gate grün.
+
+## Nachtrag (Maintainer 2026-10-14)
+- NRAS-GPU-Prüfung als Port `GpuAttestationVerifier` mit Modi `off`/`before`/`after` (siehe `M4.md`, Entscheidung 4): `before` blockiert das Senden von Anfrageinhalten bis zur grünen Prüfung (fail-closed), `after` prüft asynchron und meldet ein Fehlschlagen als Ereignis; Ergebnis je Sitzung gecacht. Tests mit Fake-NRAS (grün, rot, Zeitüberschreitung, nicht erreichbar) für beide Modi.
