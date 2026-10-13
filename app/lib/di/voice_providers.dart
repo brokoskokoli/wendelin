@@ -44,6 +44,7 @@ final class VoiceSettings {
     this.ttsRate = 1.0,
     this.minSpeechMs = 200,
     this.vadThreshold = 0.5,
+    this.stopClosesOverlay = true,
   });
 
   /// [sttLanguage]: use the language chosen in the onboarding.
@@ -82,6 +83,9 @@ final class VoiceSettings {
   /// Silero speech probability threshold.
   final double vadThreshold;
 
+  /// A spoken „Stopp“ in the assistant overlay closes it (WP31, B5).
+  final bool stopClosesOverlay;
+
   /// The STT language for app language [appLanguage] (`null` = detect).
   String? effectiveLanguage(String appLanguage) => switch (sttLanguage) {
     followApp => appLanguage,
@@ -103,6 +107,7 @@ final class VoiceSettings {
     double? ttsRate,
     int? minSpeechMs,
     double? vadThreshold,
+    bool? stopClosesOverlay,
   }) => VoiceSettings(
     sttModel: sttModel ?? this.sttModel,
     sttLanguage: sttLanguage ?? this.sttLanguage,
@@ -111,6 +116,7 @@ final class VoiceSettings {
     ttsRate: ttsRate ?? this.ttsRate,
     minSpeechMs: minSpeechMs ?? this.minSpeechMs,
     vadThreshold: vadThreshold ?? this.vadThreshold,
+    stopClosesOverlay: stopClosesOverlay ?? this.stopClosesOverlay,
   );
 
   /// JSON for the settings store.
@@ -122,6 +128,7 @@ final class VoiceSettings {
     'ttsRate': ttsRate,
     'minSpeechMs': minSpeechMs,
     'vadThreshold': vadThreshold,
+    'stopClosesOverlay': stopClosesOverlay,
   };
 
   /// Reads [json]; unknown or invalid values fall back to the defaults.
@@ -153,6 +160,8 @@ final class VoiceSettings {
       vadThreshold:
           pick<num>('vadThreshold', (v) => v > 0 && v < 1)?.toDouble() ??
           d.vadThreshold,
+      stopClosesOverlay:
+          pick<bool>('stopClosesOverlay', (_) => true) ?? d.stopClosesOverlay,
     );
   }
 
@@ -165,7 +174,8 @@ final class VoiceSettings {
       other.ttsVoice == ttsVoice &&
       other.ttsRate == ttsRate &&
       other.minSpeechMs == minSpeechMs &&
-      other.vadThreshold == vadThreshold;
+      other.vadThreshold == vadThreshold &&
+      other.stopClosesOverlay == stopClosesOverlay;
 
   @override
   int get hashCode => Object.hash(
@@ -176,6 +186,7 @@ final class VoiceSettings {
     ttsRate,
     minSpeechMs,
     vadThreshold,
+    stopClosesOverlay,
   );
 }
 

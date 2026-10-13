@@ -6,6 +6,7 @@ import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/agent_controller.dart';
+import '../../agent/chat_entry.dart';
 import '../../agent/conversation_state.dart';
 import '../../agent/money.dart';
 import '../../di/obsidian_index.dart';
@@ -141,6 +142,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           MainHeader(
             onSettings: () =>
                 Navigator.of(context).pushNamed(AppRoutes.settings),
+            onNewConversation:
+                conversation.entries.any((e) => e is! SessionStartEntry)
+                ? () => unawaited(_controller.newTopic())
+                : null,
+            newConversationEnabled: !conversation.running,
           ),
           MainChips(
             providerName: active == null
@@ -173,7 +179,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               entries: conversation.entries,
               now: ref.watch(clockProvider).now(),
               showThinking: ref.watch(showThinkingProvider),
-              onUndo: (id) => unawaited(_controller.undo(id)),
+              onUndo: (id) => unawaited(_undo(id)),
               header: setupHint,
             ),
           ),
@@ -182,6 +188,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             child: Composer(
               running: conversation.running,
               mic: mic,
+              levels: voice.levels,
               micHint: voiceUnavailableHint,
               status: voice.error ?? voice.hint,
               notice: voice.error == microphoneDeniedHint
@@ -217,6 +224,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         ],
       ),
     );
+  }
+
+  /// Undo: a spoken answer stops, „Zurückgenommen.“ is shown (snackbar and
+  /// line in the conversation) and spoken if the request came by voice.
+  Future<void> _undo(String id) async {
+    final text = await ref.read(voiceControllerProvider.notifier).undo(id);
+    if (text == null || !mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 
   /// Microphone permission with explanation (WP17); not in the demo.

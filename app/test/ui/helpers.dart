@@ -8,10 +8,16 @@ const screenSize = Size(390, 844);
 /// Schlüssel der Fläche, die als Golden aufgenommen wird.
 const goldenKey = ValueKey('golden');
 
-/// Baut [child] im Wendelin-Theme in einer festen Fläche.
-Widget themed(Widget child) => MaterialApp(
+/// Baut [child] im Wendelin-Theme in einer festen Fläche. Ohne
+/// [animations] sind die Animationen abgeschaltet (ruhige Goldens,
+/// `pumpAndSettle` endet).
+Widget themed(Widget child, {bool animations = false}) => MaterialApp(
   debugShowCheckedModeBanner: false,
   theme: buildWendelinTheme(),
+  builder: (context, home) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(disableAnimations: !animations),
+    child: home!,
+  ),
   home: child,
 );
 

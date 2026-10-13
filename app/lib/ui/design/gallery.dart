@@ -105,6 +105,13 @@ final Map<String, List<Widget>> gallerySections = {
       onUndo: _noop,
       undoRemaining: Duration.zero,
     ),
+    ToolResultCard(
+      title: 'Termin angelegt',
+      detail: 'Tauchen · Di 13.10. · 10:00–11:00 · Privat',
+      toolName: 'calendar__create_event',
+      icon: WIcons.calendar,
+      undone: true,
+    ),
   ],
   'ConfirmationCard': const [
     ConfirmationCard(

@@ -3,15 +3,17 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../agent/agent_controller.dart';
+import '../agent/chat_entry.dart';
 import '../agent/conversation_state.dart';
+import '../di/preferences.dart';
 import '../di/providers.dart';
 import '../di/voice_providers.dart';
 import 'answer_capture.dart';
 import 'confirm_prompts.dart';
+import 'controller_agent_run.dart';
 import 'level_meter.dart';
 import 'primed_audio_input.dart';
 import 'voice_components.dart';
@@ -20,6 +22,7 @@ import 'voice_ui_state.dart';
 import 'voice_usage.dart';
 
 export 'confirm_prompts.dart';
+export 'controller_agent_run.dart';
 export 'voice_ui_state.dart';
 
 /// Voice requests of the app: push-to-talk on the main screen and the
@@ -67,6 +70,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
   int _cancels = 0;
   // The running agent request came from the voice pipeline.
   bool _voiceRun = false;
+  bool _lastByVoice = false; // request kind of the current/last run (B9)
+  // Request kind per tool card (B9: „Zurückgenommen.“ follows the card).
+  final _callByVoice = <String, bool>{};
   // Main screen or overlay visible (prewarm, release, B11/B14).
   bool _foreground = false;
   // Main screen: warm up only for people who use speech (base load).
@@ -104,7 +110,17 @@ final class VoiceController extends Notifier<VoiceUiState> {
         (_, next) => _onPending(next),
       )
       ..listen(agentControllerProvider.select((s) => s.running), (_, running) {
+        if (running) _lastByVoice = _voiceRun;
         if (!running) _voiceRun = false;
+      })
+      ..listen(agentControllerProvider.select((s) => s.entries), (prev, now) {
+        // IDs can repeat (call_N): new entries overwrite, new topic clears.
+        var from = prev?.length ?? 0;
+        if (now.length < from) _callByVoice.clear();
+        if (now.length < from) from = 0;
+        for (final e in now.skip(from).whereType<ToolEntry>()) {
+          _callByVoice[e.id] = _lastByVoice;
+        }
       })
       // Models arrive (download, first refresh): warm up if visible.
       ..listen(voiceReadyProvider, (_, ready) {
@@ -525,9 +541,54 @@ final class VoiceController extends Notifier<VoiceUiState> {
         voiceLog('speak', {'source': 'answer'});
       case VoiceCancelled(:final reason, :final during):
         voiceLog('voice-cancelled', {'reason': reason, 'phase': during});
+        _onCancelled(reason, during);
       case VoiceAgentEvent():
         break;
     }
+  }
+
+  // „Abgebrochen“: stop word (meta line, overlay reacts to stopCount) or
+  // a tap before the agent got the request (B5).
+  void _onCancelled(VoiceCancelReason reason, VoiceState during) {
+    final stop = reason == VoiceCancelReason.stopWord;
+    final tap =
+        reason == VoiceCancelReason.tap &&
+        (during == VoiceState.listening || during == VoiceState.transcribing);
+    if (!stop && !tap) return;
+    if (stop) _agent.addNotice(cancelledText);
+    // Both: the overlay hides the old exchange and closes (setting).
+    state = state.copyWith(stopCount: state.stopCount + 1, hint: cancelledText);
+  }
+
+  /// Undoes [callId]: stops a spoken answer at once, adds „Zurückgenommen.“
+  /// and speaks it if the request came by voice (B9). Returns the text, or
+  /// `null` if the undo failed.
+  Future<String?> undo(String callId) async {
+    // Any voice activity ends first (sentence gap, spoken confirmation).
+    if (_voiceRun || state.phase != VoiceState.idle) await cancel();
+    final tts = _promptTts;
+    _promptTts = null;
+    if (tts != null) await tts.stop();
+    final byVoice = _callByVoice[callId] ?? _lastByVoice;
+    final language = byVoice ? _language : ref.read(languageProvider);
+    if (!await _agent.undo(callId)) return null;
+    final text = undoneText(language);
+    _agent.addNotice(text);
+    final components = _components;
+    if (byVoice && components != null) {
+      _promptTts = await components
+          .textToSpeech(language)
+          .catchError((Object _) => null);
+      await sayBounded(
+        _promptTts,
+        text,
+        language: language,
+        timeout: promptTimeout,
+        source: 'undo',
+      );
+      _promptTts = null;
+    }
+    return text;
   }
 
   void _onPending(PendingQuestion? next) {
@@ -729,27 +790,6 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (!identical(ref.read(agentControllerProvider).pending, next)) return;
     _maybeConfirm(next);
   }
-}
-
-/// [AgentRun] of the voice pipeline on the [AgentController]: the request
-/// runs like a typed one (conversation, audit with [trigger], undo,
-/// confirmations), only the events also go back to the pipeline.
-final class ControllerAgentRun implements AgentRun {
-  /// Creates the adapter; [trigger] names what started the request.
-  ControllerAgentRun(this.controller, {required this.trigger});
-
-  /// The conversation controller.
-  final AgentController controller;
-
-  /// Name of the current trigger (`pushToTalk`, `assistant`).
-  final String? Function() trigger;
-
-  @override
-  Stream<AgentEvent> run(UserInput input) =>
-      controller.submit(input, trigger: trigger());
-
-  @override
-  void cancel() => controller.cancel();
 }
 
 /// German text for a failure of a voice component.

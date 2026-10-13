@@ -53,14 +53,96 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('nur „thinking“ zeigt Punkte statt Mikrofon', (tester) async {
+    testWidgets('Punkte statt Mikrofon bei „thinking“ und „speaking“', (
+      tester,
+    ) async {
+      for (final state in [MicState.thinking, MicState.speaking]) {
+        await _pump(tester, MicButton(state: state, onPressed: () {}));
+        expect(find.byType(WIcon), findsNothing, reason: '$state');
+      }
+      // Vorbereiten zeigt das Mikrofon (mit gedämpftem Ring).
       await _pump(
         tester,
-        MicButton(state: MicState.thinking, onPressed: () {}),
+        MicButton(state: MicState.preparing, onPressed: () {}),
       );
-      expect(find.byType(WIcon), findsNothing);
+      expect(find.byType(WIcon), findsOneWidget);
       await _pump(tester, MicButton(state: MicState.idle, onPressed: () {}));
       expect(find.byType(WIcon), findsOneWidget);
+    });
+  });
+
+  group('ToolResultCard rückgängig', () {
+    testWidgets('Hinweis statt Button, durchgestrichen', (tester) async {
+      await _pump(
+        tester,
+        ToolResultCard(
+          title: 'Termin angelegt',
+          detail: 'Tauchen',
+          toolName: 'calendar__create_event',
+          undone: true,
+          onUndo: () {},
+          undoRemaining: const Duration(seconds: 5),
+        ),
+      );
+      expect(find.text('Rückgängig gemacht'), findsOneWidget);
+      expect(find.byType(OutlinedButton), findsNothing);
+      final title = tester.widget<Text>(find.text('Termin angelegt'));
+      expect(title.style!.decoration, TextDecoration.lineThrough);
+    });
+  });
+
+  group('MicButton speaking', () {
+    Offset firstDot(WidgetTester tester) => tester.getTopLeft(
+      find
+          .descendant(
+            of: find.byType(MicButton),
+            matching: find.byType(DecoratedBox),
+          )
+          .last,
+    );
+
+    Future<void> pumpSpeaking(WidgetTester tester, {required bool animate}) =>
+        tester.pumpWidget(
+          themed(
+            Scaffold(
+              body: Center(
+                child: MicButton(state: MicState.speaking, onPressed: () {}),
+              ),
+            ),
+            animations: animate,
+          ),
+        );
+
+    testWidgets('die Punkte bewegen sich', (tester) async {
+      await pumpSpeaking(tester, animate: true);
+      final ys = <double>{};
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 75));
+        ys.add(firstDot(tester).dy);
+      }
+      expect(ys.length, greaterThan(1));
+      // Entfernt man den Knopf, endet die Animation (kein offener Ticker).
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('bei abgeschalteten Animationen stehen sie still', (
+      tester,
+    ) async {
+      await pumpSpeaking(tester, animate: false);
+      final ys = <double>{};
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 75));
+        ys.add(firstDot(tester).dy);
+      }
+      expect(ys, hasLength(1));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('Label „Sprachausgabe stoppen“, vorbereiten „Moment …“', (
+      tester,
+    ) async {
+      expect(MicButton.labelFor(MicState.speaking), 'Sprachausgabe stoppen');
+      expect(MicButton.labelFor(MicState.preparing), 'Moment …');
     });
   });
 

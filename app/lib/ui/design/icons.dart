@@ -60,6 +60,18 @@ abstract final class WIcons {
     'fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>',
   );
 
+  /// Neues Gespräch (Sprechblase mit Plus).
+  static const newChat = WIconData._(
+    '<path d="M20 12.5 V16 a2.5 2.5 0 0 1 -2.5 2.5 H10 L6 21 V18.5 H6.5 '
+    'A2.5 2.5 0 0 1 4 16 V8 a2.5 2.5 0 0 1 2.5 -2.5 H12" $_sj/>'
+    '<path d="M18 3 L18 9 M15 6 L21 6" $_s/>',
+  );
+
+  /// Senden (Pfeil nach oben).
+  static const send = WIconData._(
+    '<path d="M12 19 L12 5 M6 11 L12 5 L18 11" $_sj/>',
+  );
+
   /// Kalender.
   static const calendar = WIconData._(
     '<rect x="3.5" y="5" width="17" height="15" rx="2.5" $_s/>'

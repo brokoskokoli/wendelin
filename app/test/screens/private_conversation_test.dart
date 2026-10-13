@@ -34,7 +34,7 @@ Future<ProviderContainer> _pumpMain(WidgetTester tester, TestEnv env) async {
 
 void main() {
   group('Unterhaltung privat', () {
-    testWidgets('Hauptbildschirm zeigt seit wann, „Neue Unterhaltung“ endet', (
+    testWidgets('Hauptbildschirm zeigt seit wann, „Neues Gespräch“ endet', (
       tester,
     ) async {
       final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
@@ -58,13 +58,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Unterhaltung privat (seit 08:12)'), findsOneWidget);
 
-      await tester.tap(find.text('Neue Unterhaltung'));
+      await tester.tap(find.text('Neues Gespräch'));
       await settle(tester);
       expect(find.byType(PrivateConversationBanner), findsNothing);
       expect(c.read(agentControllerProvider).privateSince, isNull);
     });
 
-    testWidgets('während einer Anfrage ist „Neue Unterhaltung“ gesperrt', (
+    testWidgets('während einer Anfrage ist „Neues Gespräch“ gesperrt', (
       tester,
     ) async {
       final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
@@ -74,7 +74,7 @@ void main() {
           .seed(ConversationState(privateSince: testNow, running: true));
       await tester.pump();
       final button = tester.widget<TextButton>(
-        find.widgetWithText(TextButton, 'Neue Unterhaltung'),
+        find.widgetWithText(TextButton, 'Neues Gespräch'),
       );
       expect(button.onPressed, isNull);
     });
@@ -109,7 +109,7 @@ void main() {
       );
       expect(find.text('Unterhaltung privat (seit 08:12)'), findsOneWidget);
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-      await tester.tap(find.text('Neue Unterhaltung'));
+      await tester.tap(find.text('Neues Gespräch'));
       expect(ended, 1);
       handle.dispose();
     });

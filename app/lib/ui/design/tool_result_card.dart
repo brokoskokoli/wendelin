@@ -15,6 +15,7 @@ class ToolResultCard extends StatelessWidget {
     required this.toolName,
     this.onUndo,
     this.undoRemaining,
+    this.undone = false,
     this.icon = WIcons.task,
   });
 
@@ -33,6 +34,13 @@ class ToolResultCard extends StatelessWidget {
   /// Verbleibende Zeit für „Rückgängig“ (aufgerundet auf Sekunden).
   final Duration? undoRemaining;
 
+  /// Zustand „rückgängig“: Inhalt gedämpft und durchgestrichen, statt des
+  /// Buttons der Hinweis [undoneLabel].
+  final bool undone;
+
+  /// Hinweis im Zustand [undone].
+  static const undoneLabel = 'Rückgängig gemacht';
+
   /// Icon der Integration.
   final WIconData icon;
 
@@ -42,6 +50,9 @@ class ToolResultCard extends StatelessWidget {
     if (r == null || r <= Duration.zero) return 0;
     return (r.inMilliseconds + 999) ~/ 1000;
   }
+
+  TextStyle _struck(TextStyle style) =>
+      undone ? style.copyWith(decoration: TextDecoration.lineThrough) : style;
 
   @override
   Widget build(BuildContext context) {
@@ -76,8 +87,8 @@ class ToolResultCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     spacing: WSpace.xxs,
                     children: [
-                      Text(title, style: WText.label),
-                      Text(detail, style: WText.detail),
+                      Text(title, style: _struck(WText.label)),
+                      Text(detail, style: _struck(WText.detail)),
                     ],
                   ),
                 ),
@@ -93,7 +104,13 @@ class ToolResultCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (canUndo)
+                if (undone)
+                  Text(
+                    undoneLabel,
+                    style: WText.caption,
+                    semanticsLabel: undoneLabel,
+                  )
+                else if (canUndo)
                   OutlinedButton(
                     onPressed: onUndo,
                     style: OutlinedButton.styleFrom(

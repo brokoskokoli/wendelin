@@ -120,6 +120,23 @@ class VoiceScreen extends ConsumerWidget {
             ),
           ],
         ),
+        SettingsSection(
+          title: 'Assistent-Overlay',
+          children: [
+            SettingsRow(
+              title: 'Stopp schließt das Overlay',
+              detail:
+                  'Sagst du „Stopp“, zeigt Wendelin kurz „Abgebrochen“ '
+                  'und schließt das Overlay.',
+              trailing: WSwitch(
+                value: settings.stopClosesOverlay,
+                semanticLabel: 'Stopp schließt das Overlay',
+                onChanged: (v) =>
+                    change((s) => s.copyWith(stopClosesOverlay: v)),
+              ),
+            ),
+          ],
+        ),
         const _Microphone(),
         SettingsSection(
           title: 'Lizenzen der Sprachmodelle',
@@ -155,6 +172,7 @@ class _SpeechOutput extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final catalog = ref.watch(speechModelCatalogProvider);
     final selection = ref.watch(ttsSelectionProvider).value;
+    final sampleLang = sampleLanguage(settings, ref.watch(languageProvider));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.l18,
@@ -213,9 +231,9 @@ class _SpeechOutput extends ConsumerWidget {
               ? null
               : () => unawaited(
                   selection!.tts!.speak(
-                    'Hallo, ich bin Wendelin.',
+                    sampleText(sampleLang),
                     voice: settings.ttsVoice,
-                    language: ref.read(languageProvider),
+                    language: sampleLang,
                     rate: settings.ttsRate,
                   ),
                 ),
@@ -260,6 +278,19 @@ class _SpeechOutput extends ConsumerWidget {
     );
   }
 }
+
+/// Language of the „Probe hören“ sample: the fixed spoken language, else
+/// the app language (B13).
+String sampleLanguage(VoiceSettings settings, String appLanguage) =>
+    settings.effectiveLanguage(appLanguage) ?? appLanguage;
+
+/// Sample sentence in [language] (de/fr/en, else German).
+String sampleText(String language) =>
+    switch (language.split(RegExp('[-_]')).first) {
+      'fr' => 'Bonjour, je suis Wendelin.',
+      'en' => 'Hello, I am Wendelin.',
+      _ => 'Hallo, ich bin Wendelin.',
+    };
 
 /// German status line for the chosen speech output.
 String ttsSelectionText(TtsSelection s) => switch (s.engine) {
