@@ -1,6 +1,7 @@
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import 'bring_share.dart';
 import 'chat_entry.dart';
 import 'conversation_state.dart';
 import 'money.dart';
@@ -113,6 +114,7 @@ final class ConversationReducer {
             undoLabel: undo?.label,
             undo: undo == null ? UndoPhase.none : UndoPhase.pending,
             undoRemaining: undo == null ? Duration.zero : undoWindow,
+            shareText: bringShareTextFor(call, outcome),
           ),
         );
         final pending = next.pending;

@@ -4,6 +4,7 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/user_integrations.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/coming_soon_screen.dart';
+import 'package:wendelin/ui/settings/http_tools_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -14,8 +15,8 @@ import 'integrations_screen_test.dart';
 import 'other_screens_test.dart' show pumpPage;
 
 void main() {
-  testWidgets('Übersicht: Routing, MCP-Server, HTTP-Tools führen zu '
-      'Platzhaltern', (tester) async {
+  testWidgets('Übersicht: Routing und MCP-Server führen zu Platzhaltern, '
+      'HTTP-Tools zur Liste', (tester) async {
     await pumpPage(tester, TestEnv(), const SettingsScreen());
     final titles = [for (final (t, _, _) in SettingsScreen.areas) t];
     expect(titles.take(5), [
@@ -25,7 +26,7 @@ void main() {
       'MCP-Server',
       'HTTP-Tools',
     ]);
-    for (final title in ['Routing', 'MCP-Server', 'HTTP-Tools']) {
+    for (final title in ['Routing', 'MCP-Server']) {
       await tester.tap(find.text(title));
       await settle(tester);
       expect(find.byType(ComingSoonScreen), findsOneWidget, reason: title);
@@ -33,6 +34,9 @@ void main() {
       await tester.tap(find.byTooltip('Zurück'));
       await settle(tester);
     }
+    await tester.tap(find.text('HTTP-Tools'));
+    await settle(tester);
+    expect(find.byType(HttpToolsScreen), findsOneWidget);
   });
 
   testWidgets('„+ MCP-Server“ und „+ HTTP-Tool“ öffnen ihre Bereiche', (
@@ -46,7 +50,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('+ HTTP-Tool'));
     await settle(tester);
-    expect(find.widgetWithText(ComingSoonScreen, 'HTTP-Tools'), findsOneWidget);
+    expect(find.byType(HttpToolsScreen), findsOneWidget);
   });
 
   testWidgets('eigene Integrationen: eigener Abschnitt mit MCP/HTTP, '
@@ -120,6 +124,6 @@ void main() {
   testWidgets('ohne eigene Integrationen kein Abschnitt', (tester) async {
     await pumpIntegrations(tester, TestEnv());
     expect(find.text('Eigene Integrationen'), findsNothing);
-    expect(find.byType(IntegrationTile), findsNWidgets(7));
+    expect(find.byType(IntegrationTile), findsNWidgets(8));
   });
 }

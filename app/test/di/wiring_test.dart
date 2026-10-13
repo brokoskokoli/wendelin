@@ -302,6 +302,7 @@ void main() {
       await registry.refresh();
       expect(registry.integrations.map((i) => i.id), [
         'alarms',
+        'bring',
         'calendar',
         'clipboard',
         'lists',

@@ -55,6 +55,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
                   'web' => 'Suchdienst einrichten',
                   'lists' => 'Listen verwalten',
                   'obsidian' => 'Vault und Tagesnotizen',
+                  'bring' => 'Bring!-Konto',
                   _ => 'Einrichten',
                 },
                 detail: switch (id) {

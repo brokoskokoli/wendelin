@@ -6,8 +6,10 @@ import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/routes.dart';
 import 'ui/screens/main_screen.dart';
 import 'ui/settings/assistant_screen.dart';
+import 'ui/settings/bring_screen.dart';
 import 'ui/settings/coming_soon_screen.dart';
 import 'ui/settings/costs_screen.dart';
+import 'ui/settings/http_tools_screen.dart';
 import 'ui/settings/integrations_screen.dart';
 import 'ui/settings/lists_screen.dart';
 import 'ui/settings/memory_screen.dart';
@@ -40,7 +42,7 @@ class WendelinApp extends StatelessWidget {
       AppRoutes.providerSetup: (_) => const ProviderSetupScreen(),
       AppRoutes.providers: (_) => const ProvidersScreen(),
       AppRoutes.integrations: (_) => const IntegrationsScreen(),
-      // Placeholders until WP26 (routing), WP27 (MCP), WP28 (HTTP tools).
+      // Placeholders until WP26 (routing), WP27 (MCP).
       AppRoutes.routing: (_) => const ComingSoonScreen(
         title: 'Routing',
         what:
@@ -53,10 +55,8 @@ class WendelinApp extends StatelessWidget {
             'Server hinzufügen (Vorlage oder frei), Anmeldung, Status und '
             'Tool-Liste.',
       ),
-      AppRoutes.httpTools: (_) => const ComingSoonScreen(
-        title: 'HTTP-Tools',
-        what: 'Eigene Tools mit Methode, URL-Vorlage und Auth definieren.',
-      ),
+      AppRoutes.httpTools: (_) => const HttpToolsScreen(),
+      AppRoutes.bring: (_) => const BringScreen(),
       AppRoutes.lists: (_) => const ListsScreen(),
       AppRoutes.webSearch: (_) => const WebSearchScreen(),
       AppRoutes.memory: (_) => const MemoryScreen(),

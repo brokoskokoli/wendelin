@@ -105,6 +105,7 @@ final class ToolEntry extends ChatEntry {
     this.undoLabel,
     this.undo = UndoPhase.none,
     this.undoRemaining = Duration.zero,
+    this.shareText,
   });
 
   /// `integration__action`.
@@ -125,6 +126,10 @@ final class ToolEntry extends ChatEntry {
   /// Time left to undo (only while [undo] is pending).
   final Duration undoRemaining;
 
+  /// Items to hand to the Bring! app when the Bring! API failed
+  /// (fallback „An Bring! senden“); `null` otherwise.
+  final String? shareText;
+
   /// Integration id (prefix before `__`).
   String get integrationId {
     final i = toolName.indexOf('__');
@@ -138,6 +143,7 @@ final class ToolEntry extends ChatEntry {
     String? undoLabel,
     UndoPhase? undo,
     Duration? undoRemaining,
+    String? shareText,
   }) => ToolEntry(
     id,
     toolName: toolName,
@@ -146,6 +152,7 @@ final class ToolEntry extends ChatEntry {
     undoLabel: undoLabel ?? this.undoLabel,
     undo: undo ?? this.undo,
     undoRemaining: undoRemaining ?? this.undoRemaining,
+    shareText: shareText ?? this.shareText,
   );
 }
 

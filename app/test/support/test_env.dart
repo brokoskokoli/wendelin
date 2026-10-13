@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:wendelin/app.dart';
 import 'package:wendelin/di/app_requirements.dart';
+import 'package:wendelin/di/bring.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
@@ -105,6 +106,12 @@ final class TestEnv {
   /// Obsidian search index.
   final notes = FakeNoteIndex();
 
+  /// Bring! account (no request ever goes to the real API in tests).
+  final bring = FakeBringApi();
+
+  /// Texts shared with other apps (package, text).
+  final shared = <(String, String)>[];
+
   /// Builds the adapter for stored profiles; `null` = real adapters.
   final LlmProviderFactory? llmFactory;
 
@@ -178,6 +185,10 @@ final class TestEnv {
             ? providerConfig
             : throw providerConfigError!,
       ),
+    bringApiProvider.overrideWithValue(bring),
+    appShareProvider.overrideWithValue(
+      (package, text) async => shared.add((package, text)),
+    ),
     speechModelServiceProvider.overrideWith((ref) async => speechModels),
     microphoneProvider.overrideWithValue(microphone),
     systemTtsProvider.overrideWithValue(systemTts),

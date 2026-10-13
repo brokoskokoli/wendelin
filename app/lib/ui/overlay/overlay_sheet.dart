@@ -4,6 +4,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../../agent/chat_entry.dart';
 import '../../agent/conversation_state.dart';
 import '../design/design.dart';
+import '../screens/bring_share_card.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/conversation_view.dart';
 
@@ -248,6 +249,8 @@ class OverlaySheet extends StatelessWidget {
             alignment: AlignmentDirectional.centerStart,
             child: ToolChip(t.toolName, status: _status(t)),
           ),
+      for (final t in exchange.tools)
+        if (BringShareCard.applies(t)) BringShareCard(t),
       if (exchange.answer case final answer?)
         AssistantText(answer, large: true),
       if (statusText != null) Text(statusText, style: WText.caption),
