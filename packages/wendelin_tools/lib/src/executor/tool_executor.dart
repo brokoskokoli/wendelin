@@ -161,12 +161,16 @@ final class ToolExecutor implements ToolInvoker {
           AuditDecision.denied,
         );
       case PolicyAction.confirm:
-        final question = ConfirmationNeeded(
-          call,
-          tool.describeForConfirmation(args),
-          Completer<bool>(),
+        final risk = RiskPolicy.effectiveRisk(tool.risk, policyDecision.action);
+        final approved = await turns.ask(
+          () async => ConfirmationNeeded(
+            call,
+            await tool.confirmationText(args, ctx),
+            Completer<bool>(),
+            risk: risk,
+          ),
+          emit,
         );
-        final approved = await turns.ask(question, emit);
         if (ctx.cancel.isCancelled) return _cancelled(AuditDecision.declined);
         if (!approved) {
           return (

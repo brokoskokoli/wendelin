@@ -75,6 +75,13 @@ final class RiskPolicy {
     RiskLevel.external => PolicyAction.confirm,
   };
 
+  /// The risk level a call is *treated* as: a call the policy wants
+  /// confirmed counts as `external` (also a `read`/`write` tool the user made
+  /// stricter), otherwise the tool's own [risk]. Shown on the confirmation
+  /// card instead of `Tool.risk`.
+  static RiskLevel effectiveRisk(RiskLevel risk, PolicyAction action) =>
+      action == PolicyAction.confirm ? RiskLevel.external : risk;
+
   /// Text given to the model when external tools are locked.
   static const lockedReason =
       'Aktionen mit Außenwirkung sind in dieser Sitzung gesperrt, weil die '

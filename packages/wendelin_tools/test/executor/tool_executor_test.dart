@@ -201,6 +201,123 @@ void main() {
     });
   });
 
+  group('WP14: effektive Stufe und vorbereiteter Bestätigungstext', () {
+    test('verschärftes write-Tool fragt mit Stufe external', () async {
+      final write = FakeTool(name: 'p__write', risk: RiskLevel.write);
+      final read = FakeTool(name: 'p__read');
+      final send = FakeTool(name: 'p__send', risk: RiskLevel.external);
+      final policy = RiskPolicy(
+        overrides: {
+          'p__write': PolicyAction.confirm,
+          'p__read': PolicyAction.confirm,
+        },
+      );
+      final executor = ToolExecutor(
+        catalog: FakeToolCatalog([write, read, send]),
+        policy: policy,
+      );
+      final events = await _run(
+        executor,
+        [_call('1', 'p__write'), _call('2', 'p__read'), _call('3', 'p__send')],
+        onEvent: (e) {
+          if (e is ConfirmationNeeded) e.respond(true);
+        },
+      );
+      expect(events.whereType<ConfirmationNeeded>().map((e) => e.risk), [
+        RiskLevel.external,
+        RiskLevel.external,
+        RiskLevel.external,
+      ]);
+      expect(write.callCount, 1);
+    });
+
+    test('effectiveRisk: nur Bestätigung hebt die Stufe', () {
+      for (final risk in RiskLevel.values) {
+        expect(
+          RiskPolicy.effectiveRisk(risk, PolicyAction.confirm),
+          RiskLevel.external,
+        );
+        expect(RiskPolicy.effectiveRisk(risk, PolicyAction.allow), risk);
+        expect(RiskPolicy.effectiveRisk(risk, PolicyAction.deny), risk);
+      }
+    });
+
+    test('Text aus prepareConfirmation, erst wenn der Zug dran ist', () async {
+      final prepared = <String>[];
+      FakeTool tool(String name) => FakeTool(
+        name: name,
+        risk: RiskLevel.external,
+        prepare: (args, ctx) async {
+          prepared.add(name);
+          return 'live $name';
+        },
+      );
+      final executor = ToolExecutor(
+        catalog: FakeToolCatalog([tool('p__a'), tool('p__b')]),
+      );
+      final order = <String>[];
+      final events = await _run(
+        executor,
+        [_call('1', 'p__a'), _call('2', 'p__b')],
+        onEvent: (e) {
+          if (e is ConfirmationNeeded) {
+            // The second text is only prepared after the first answer.
+            order.add('${e.call.name}:${prepared.length}');
+            e.respond(true);
+          }
+        },
+      );
+      expect(order, ['p__a:1', 'p__b:2']);
+      expect(events.whereType<ConfirmationNeeded>().map((e) => e.description), [
+        'live p__a',
+        'live p__b',
+      ]);
+    });
+
+    test('fehlschlagende Vorbereitung: synchroner Text', () async {
+      final tool = FakeTool(
+        name: 'p__send',
+        risk: RiskLevel.external,
+        confirmation: (_) => 'Senden',
+        prepare: (args, ctx) => Future.error(StateError('offline')),
+      );
+      final events = await _run(
+        ToolExecutor(catalog: FakeToolCatalog([tool])),
+        [_call('1', 'p__send')],
+        onEvent: (e) {
+          if (e is ConfirmationNeeded) e.respond(false);
+        },
+      );
+      expect(
+        events.whereType<ConfirmationNeeded>().single.description,
+        'Senden',
+      );
+    });
+
+    test(
+      'Abbruch während der Vorbereitung: keine Frage, nicht ausgeführt',
+      () async {
+        final cancel = CancelToken();
+        final tool = FakeTool(
+          name: 'p__send',
+          risk: RiskLevel.external,
+          prepare: (args, ctx) async {
+            cancel.cancel();
+            return 'zu spät';
+          },
+        );
+        final events = await _run(
+          ToolExecutor(catalog: FakeToolCatalog([tool])),
+          [_call('1', 'p__send')],
+          ctx: _ctx(cancel: cancel),
+        );
+        expect(events.whereType<ConfirmationNeeded>(), isEmpty);
+        expect(tool.callCount, 0);
+        expect(_outcomes(events)['1']!.text, ToolOutcome.cancelledText);
+      },
+    );
+  });
+
   group('Risiko und Bestätigung', () {
     test('external wird ohne Bestätigung nie ausgeführt, auch mit '
         'lockerndem Override', () async {
