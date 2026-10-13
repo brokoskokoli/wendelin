@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
@@ -262,6 +263,28 @@ void main() {
       final f = send(never, cancel: token);
       token.cancel();
       await expectLater(f, throwsA(isA<CancelledException>()));
+    });
+
+    test('Abbruch vorab: verlassene Anfrage meldet später nichts', () {
+      // Die Anfrage samt Zeitlimit läuft schon, wenn der abgebrochene Token
+      // geprüft wird. Ihre spätere TimeoutException darf nicht unbehandelt
+      // bleiben (sonst „failed after completed“ unter Last).
+      fakeAsync((async) {
+        final never = MockClient((_) => Completer<http.Response>().future);
+        final token = CancelToken()..cancel();
+        final result = <Object?>[];
+        unawaited(
+          send(
+            never,
+            cancel: token,
+            timeout: const Duration(seconds: 1),
+          ).then(result.add, onError: result.add),
+        );
+        async.flushMicrotasks();
+        expect(result, [isA<CancelledException>()]);
+        async.elapse(const Duration(seconds: 2));
+        expect(async.pendingTimers, isEmpty);
+      });
     });
 
     test('readResultList: falsche Struktur', () async {

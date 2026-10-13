@@ -81,9 +81,17 @@ void checkSearchArgs(String query, int count) {
 
 /// Completes with [future] or throws [CancelledException] once [cancel]
 /// fires, whichever comes first.
+///
+/// [future] is usually already running (e.g. `send(…).timeout(…)`). If
+/// [cancel] has fired before, its result is dropped: a later error (such as
+/// the [TimeoutException] of the abandoned request) must not surface as an
+/// uncaught error.
 Future<T> orCancel<T>(Future<T> future, CancelToken? cancel) {
   if (cancel == null) return future;
-  cancel.throwIfCancelled();
+  if (cancel.isCancelled) {
+    future.ignore();
+    throw const CancelledException();
+  }
   return Future.any([
     future,
     cancel.whenCancelled.then<T>((_) => throw const CancelledException()),

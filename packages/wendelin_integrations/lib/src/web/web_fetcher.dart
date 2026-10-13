@@ -83,11 +83,13 @@ final class WebFetcher {
   Future<FetchedPage> fetch(Uri url, {CancelToken? cancel}) async {
     var current = url;
     for (var hop = 0; ; hop++) {
+      cancel?.throwIfCancelled();
       await checkFetchTarget(
         current,
         allowedHosts: allowedHosts,
         resolve: _resolve,
       );
+      cancel?.throwIfCancelled();
       final request = http.Request('GET', current)
         ..followRedirects = false
         ..headers['Accept'] =
