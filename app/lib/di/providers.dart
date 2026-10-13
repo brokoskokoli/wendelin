@@ -31,6 +31,7 @@ import 'session_manager.dart';
 import 'startup.dart';
 import 'user_integrations.dart';
 import 'vocabulary_provider.dart';
+import 'voice_providers.dart' show voiceSettingsProvider;
 import 'web_search.dart';
 
 // Riverpod wiring of the app. `main.dart` overrides [storageProvider],
@@ -483,10 +484,14 @@ final llmProviderFactoryProvider = Provider<LlmProviderFactory>((ref) {
 final agentFactoryProvider = Provider<AgentRunFactory>((ref) {
   final storage = ref.watch(storageProvider);
   final assistant = ref.watch(assistantPrefsProvider);
+  final twoVersions = ref.watch(
+    voiceSettingsProvider.select((s) => s.value?.twoVersions ?? false),
+  );
   return AgentFactory(
     config: AgentConfig(
       userName: assistant.userName,
       personaAddon: assistant.persona,
+      spokenVersions: twoVersions,
     ),
     registry: ref.watch(toolRegistryProvider),
     storage: storage,

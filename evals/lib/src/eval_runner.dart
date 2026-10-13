@@ -83,6 +83,7 @@ final class EvalRunner {
     required this.target,
     required this.time,
     this.config = const AgentConfig(),
+    this.voice = false,
     GiveUpClassifier? giveUpClassifier,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier(),
        scorer = Scorer(time);
@@ -95,6 +96,9 @@ final class EvalRunner {
 
   /// Agent limits.
   final AgentConfig config;
+
+  /// Whether the request counts as spoken (WP41: speech hint, stage 2).
+  final bool voice;
 
   /// Detects „kann ich nicht“ answers (the agent's own classifier).
   final GiveUpClassifier giveUpClassifier;
@@ -192,10 +196,15 @@ final class EvalRunner {
     var confirmations = 0;
     var escalationConfirmations = 0;
     var finalText = '';
+    String? spokenText;
     AgentFailed? failure;
     final watch = Stopwatch()..start();
     await for (final event in agent.run(
-      UserInput(text: c.prompt, language: c.language),
+      UserInput(
+        text: c.prompt,
+        language: c.language,
+        source: voice ? InputSource.voice : InputSource.text,
+      ),
     )) {
       switch (event) {
         case ConfirmationRequired():
@@ -220,6 +229,8 @@ final class EvalRunner {
           modelCalls++;
           usage = usage + u;
           cost = cost == null || costMicros == null ? null : cost + costMicros;
+        case AgentSpokenText(:final text):
+          spokenText ??= text;
         case AgentDone(finalText: final text):
           finalText = text;
         case AgentFailed():
@@ -245,6 +256,7 @@ final class EvalRunner {
       completed: true,
       escalations: escalations,
       gaveUp: gaveUp,
+      spokenText: spokenText,
     );
   }
 

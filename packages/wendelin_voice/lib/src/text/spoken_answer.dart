@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 
+import 'speech_normalizer.dart';
 import 'voice_texts.dart';
 
 /// Limits for the spoken version of an answer (concept: „Antworten werden
@@ -283,6 +284,7 @@ final class SpokenAnswer {
 
   void _accept(String raw, List<String> out) {
     var s = cleanForSpeech(raw);
+    if (s.isNotEmpty) s = normalizeForSpeech(s, texts.language);
     if (s.isEmpty) {
       // A sentence that was only a link: on the screen only.
       if (raw.contains(urlMark)) _markOmitted();

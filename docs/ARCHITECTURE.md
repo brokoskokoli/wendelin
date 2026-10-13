@@ -82,7 +82,7 @@ Ports liegen in dem Paket, das sie braucht; die Flutter-Implementierung liegt in
 
 ## Voice-Pipeline (ADR 0007, 0008)
 
-VAD (`app/lib/platform/voice/silero_vad.dart`) → STT (`app/lib/platform/voice/whisper_stt.dart`) → Endpointing (`packages/wendelin_voice/lib/src/pipeline/endpointer.dart`) → Agent → Sprechtext (`spoken_answer.dart`, `SentenceChunker`) → TTS (`TtsSelector`, `speech_queue.dart`, System-TTS mit sherpa-Fallback). Modellkatalog `speech_model_catalog.dart`, Download `model_downloader.dart`, Installation `app/lib/platform/voice/model_installer.dart`. Whisper wird zwischen Overlay, App und Spracherkennung geteilt: `app/lib/platform/voice/whisper_share.dart`, `app/lib/platform/voice/whisper_registry.dart`.
+VAD (`app/lib/platform/voice/silero_vad.dart`) → STT (`app/lib/platform/voice/whisper_stt.dart`) → Endpointing (`packages/wendelin_voice/lib/src/pipeline/endpointer.dart`) → Agent → Sprechtext (`spoken_answer.dart`, `speech_normalizer.dart` Stufe 0, `SentenceChunker`; Stufe 1 Hinweis in `ContextBuilder.speechHint`, Stufe 2 `<spoken>`-Block per `packages/wendelin_agent/lib/src/run/spoken_block.dart` und `AgentSpokenText`) → TTS (`TtsSelector`, `speech_queue.dart`, System-TTS mit sherpa-Fallback). Modellkatalog `speech_model_catalog.dart`, Download `model_downloader.dart`, Installation `app/lib/platform/voice/model_installer.dart`. Whisper wird zwischen Overlay, App und Spracherkennung geteilt: `app/lib/platform/voice/whisper_share.dart`, `app/lib/platform/voice/whisper_registry.dart`.
 
 ## Plattformkanäle
 

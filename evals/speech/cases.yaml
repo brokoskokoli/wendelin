@@ -1,0 +1,92 @@
+# WP41: zehn typische Sprach-Befehle für die Sprech-Eval
+# (dart run wendelin_evals:speech). Gemessen wird, ob die Antwort so
+# vorgelesen werden kann (Anteil sauberer Sprechtexte), nicht die Tool-Wahl;
+# `expect` ist nur Pflicht des Fall-Formats. „Heute“ ist Mi 18.11.2026.
+cases:
+  - id: sp-de-heute
+    language: de
+    category: calendar
+    prompt: Was steht heute an?
+    setup:
+      events:
+        - {id: e1, title: Zahnarzt, start: "today 09:30", end: "today 10:30"}
+        - {id: e2, title: Teammeeting, start: "today 14:00", end: "today 15:00"}
+        - {id: e3, title: Chorprobe, start: "today 18:30", end: "today 20:00"}
+    expect: {text: {contains: " "}}
+
+  - id: sp-de-morgen
+    language: de
+    category: calendar
+    prompt: Welche Termine habe ich morgen?
+    setup:
+      events:
+        - {id: e1, title: Joggen mit Anna, start: "+1d 07:15", end: "+1d 08:00"}
+        - {id: e2, title: Steuerberater, start: "+1d 11:00", end: "+1d 12:00"}
+        - {id: e3, title: Geburtstag Oma, start: "+1d 16:30", end: "+1d 18:00"}
+        - {id: e4, title: Kino, start: "+1d 20:15", end: "+1d 22:30"}
+    expect: {text: {contains: " "}}
+
+  - id: sp-de-freitag
+    language: de
+    category: calendar
+    prompt: Was habe ich am Freitag vor?
+    setup:
+      events:
+        - {id: e1, title: Zahnarzt, start: "fri 14:30", end: "fri 15:30"}
+    expect: {text: {contains: " "}}
+
+  - id: sp-de-uhrzeit
+    language: de
+    category: smalltalk
+    prompt: Welcher Tag ist heute und wie spät ist es?
+    expect: {text: {contains: " "}}
+
+  - id: sp-de-erklaerung
+    language: de
+    category: text
+    prompt: Erklär mir kurz, was ein Prompt-Cache ist.
+    expect: {text: {contains: " "}}
+
+  - id: sp-de-tipps
+    language: de
+    category: text
+    prompt: Gib mir drei Tipps für besseren Schlaf.
+    expect: {text: {contains: " "}}
+
+  - id: sp-de-gedaechtnis
+    language: de
+    category: memory
+    prompt: Was weißt du über mich?
+    setup:
+      memory:
+        - {text: "Frau heißt Anna.", category: person}
+        - {text: "Taucht gern am Wochenende.", category: preference}
+        - {text: "Arbeitet von 9 bis 17 Uhr.", category: fact}
+    expect: {text: {contains: " "}}
+
+  - id: sp-de-reise
+    language: de
+    category: text
+    prompt: Wie lange dauert ein Flug nach Lissabon und was kostet er ungefähr?
+    expect: {text: {contains: " "}}
+
+  - id: sp-fr-demain
+    language: fr
+    category: calendar
+    prompt: Qu'est-ce que j'ai demain ?
+    setup:
+      events:
+        - {id: e1, title: Dentiste, start: "+1d 09:00", end: "+1d 10:00"}
+        - {id: e2, title: Déjeuner avec Marc, start: "+1d 12:30", end: "+1d 14:00"}
+    expect: {text: {contains: " "}}
+
+  - id: sp-en-today
+    language: en
+    category: calendar
+    prompt: What's on my calendar today?
+    setup:
+      events:
+        - {id: e1, title: Standup, start: "today 09:15", end: "today 09:30"}
+        - {id: e2, title: Dentist, start: "today 15:00", end: "today 16:00"}
+        - {id: e3, title: Dinner with Sam, start: "today 19:30", end: "today 21:00"}
+    expect: {text: {contains: " "}}

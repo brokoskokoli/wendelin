@@ -128,6 +128,14 @@ void main() {
     expect(i.tools, isEmpty);
   });
 
+  test('Tools: Ergebnisse sind nie vertrauenswürdig (WP41)', () async {
+    final tools = await integration().loadTools();
+    expect(tools, isNotEmpty);
+    for (final t in tools) {
+      expect(t, isNot(isA<TrustedContentSource>()), reason: t.name);
+    }
+  });
+
   test('Tools: Namen, Risiko, Overrides, abgeschaltete fehlen', () async {
     final i = integration(
       overrides: const {

@@ -59,6 +59,7 @@ final class RunObservation {
     this.completed = false,
     this.escalations = const [],
     this.gaveUp = false,
+    this.spokenText,
   });
 
   /// Tool calls in order.
@@ -100,6 +101,9 @@ final class RunObservation {
   /// „kann ich nicht“ (escalated with reason `modelGaveUp`, or the final
   /// answer is classified as giving up).
   final bool gaveUp;
+
+  /// The `<spoken>` block of the answer (WP41, stage 2); `null` = none.
+  final String? spokenText;
 }
 
 /// Outcome category of a case.

@@ -1,0 +1,462 @@
+{
+  "meta": {
+    "profileId": "phala-tee-small",
+    "model": "google/gemma-4-31b-it",
+    "now": "2026-11-18T09:00"
+  },
+  "summary": {
+    "text": {
+      "commands": 10,
+      "clean": 2,
+      "withBlock": 0,
+      "inputTokens": 34270,
+      "outputTokens": 863,
+      "cachedTokens": 14026,
+      "costMicros": 6589,
+      "issues": {
+        "doppelpunkt": 6,
+        "lang": 2,
+        "zeilen": 2,
+        "fehler": 1
+      }
+    },
+    "hint": {
+      "commands": 10,
+      "clean": 10,
+      "withBlock": 0,
+      "inputTokens": 44013,
+      "outputTokens": 679,
+      "cachedTokens": 20024,
+      "costMicros": 8416,
+      "issues": {}
+    },
+    "two": {
+      "commands": 10,
+      "clean": 8,
+      "withBlock": 10,
+      "inputTokens": 36605,
+      "outputTokens": 1167,
+      "cachedTokens": 29713,
+      "costMicros": 8256,
+      "issues": {
+        "doppelpunkt": 2
+      }
+    }
+  },
+  "runs": [
+    {
+      "id": "sp-de-heute",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": false,
+      "spoken": "Heute hast du drei Termine: Um 09:30 Uhr geht es zum Zahnarzt, um 14:00 Uhr steht das Teammeeting an und um 18:30 Uhr hast du die Chorprobe.",
+      "written": "Heute hast du drei Termine: Um 09:30 Uhr geht es zum Zahnarzt, um 14:00 Uhr steht das Teammeeting an und um 18:30 Uhr hast du die Chorprobe.",
+      "input": 5777,
+      "output": 107,
+      "cacheRead": 8,
+      "costMicros": 917,
+      "ms": 22005
+    },
+    {
+      "id": "sp-de-morgen",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": false,
+      "spoken": "Morgen hast du vier Termine: Um 07:15 Uhr gehst du joggen mit Anna, um 11:00 Uhr hast du einen Termin beim Steuerberater, um 16:30 Uhr ist der Geburtstag deiner Oma und um 20:15 Uhr bist du im Kino.",
+      "written": "Morgen hast du vier Termine: Um 07:15 Uhr gehst du joggen mit Anna, um 11:00 Uhr hast du einen Termin beim Steuerberater, um 16:30 Uhr ist der Geburtstag deiner Oma und um 20:15 Uhr bist du im Kino.",
+      "input": 5858,
+      "output": 126,
+      "cacheRead": 8,
+      "costMicros": 937,
+      "ms": 10094
+    },
+    {
+      "id": "sp-de-freitag",
+      "variant": "text",
+      "issues": [],
+      "block": false,
+      "spoken": "Am Freitag steht bisher nichts in deinem Kalender.",
+      "written": "Am Freitag steht bisher nichts in deinem Kalender.",
+      "input": 2845,
+      "output": 68,
+      "cacheRead": 2729,
+      "costMicros": 663,
+      "ms": 15162
+    },
+    {
+      "id": "sp-de-uhrzeit",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": false,
+      "spoken": "Heute ist Mittwoch, der 18. November 2026, und es ist 09:00 Uhr.",
+      "written": "Heute ist Mittwoch, der 18. November 2026, und es ist 09:00 Uhr.",
+      "input": 2745,
+      "output": 28,
+      "cacheRead": 0,
+      "costMicros": 425,
+      "ms": 1413
+    },
+    {
+      "id": "sp-de-erklaerung",
+      "variant": "text",
+      "issues": [
+        "lang",
+        "zeilen"
+      ],
+      "block": false,
+      "spoken": "Ein Prompt-Cache ist wie ein Kurzzeitgedächtnis für Künstliche Intelligenzen. Wenn du der KI sehr lange Texte schickst, wie etwa ein ganzes Buch oder eine umfangreiche Dokumentation, muss sie diese normalerweise bei jeder einzelnen Frage komplett neu lesen und verarbeiten.\n\nMit einem Prompt-Cache speichert das System die bereits verarbeiteten Informationen zwischen. Wenn du eine weitere Frage zum selben Text stellst, greift die KI einfach auf das gespeicherte Ergebnis zurück, anstatt alles erneut zu berechnen. Das macht die Antworten deutlich schneller und reduziert die Kosten, da weniger Rechenleistung benötigt wird.",
+      "written": "Ein Prompt-Cache ist wie ein Kurzzeitgedächtnis für Künstliche Intelligenzen. Wenn du der KI sehr lange Texte schickst, wie etwa ein ganzes Buch oder eine umfangreiche Dokumentation, muss sie diese normalerweise bei jeder einzelnen Frage komplett neu lesen und verarbeiten.\n\nMit einem Prompt-Cache speichert das System die bereits verarbeiteten Informationen zwischen. Wenn du eine weitere Frage zum selben Text stellst, greift die KI einfach auf das gespeicherte Ergebnis zurück, anstatt alles erneut zu berechnen. Das macht die Antworten deutlich schneller und reduziert die Kosten, da weniger Rechenleistung benötigt wird.",
+      "input": 21,
+      "output": 128,
+      "cacheRead": 2724,
+      "costMicros": 266,
+      "ms": 8158
+    },
+    {
+      "id": "sp-de-tipps",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt",
+        "lang",
+        "zeilen"
+      ],
+      "block": false,
+      "spoken": "Hier sind drei einfache Tipps für besseren Schlaf:\n\nErstens solltest du versuchen, jeden Tag zur gleichen Zeit ins Bett zu gehen und aufzustehen, um deinen biologischen Rhythmus zu stabilisieren.\n\nZweitens ist es hilfreich, eine Stunde vor dem Schlafengehen auf Bildschirme wie Smartphones oder Tablets zu verzichten, da das blaue Licht die Melatoninproduktion hemmt.\n\nDrittens kann ein kühles, gut gelüftetes Schlafzimmer und eine entspannende Abendroutine, wie etwa Lesen oder ein warmes Bad, deinem Körper signalisieren, dass es Zeit für die Nachtruhe ist.",
+      "written": "Hier sind drei einfache Tipps für besseren Schlaf:\n\nErstens solltest du versuchen, jeden Tag zur gleichen Zeit ins Bett zu gehen und aufzustehen, um deinen biologischen Rhythmus zu stabilisieren.\n\nZweitens ist es hilfreich, eine Stunde vor dem Schlafengehen auf Bildschirme wie Smartphones oder Tablets zu verzichten, da das blaue Licht die Melatoninproduktion hemmt.\n\nDrittens kann ein kühles, gut gelüftetes Schlafzimmer und eine entspannende Abendroutine, wie etwa Lesen oder ein warmes Bad, deinem Körper signalisieren, dass es Zeit für die Nachtruhe ist.",
+      "input": 2738,
+      "output": 133,
+      "cacheRead": 4,
+      "costMicros": 472,
+      "ms": 6674
+    },
+    {
+      "id": "sp-de-gedaechtnis",
+      "variant": "text",
+      "issues": [],
+      "block": false,
+      "spoken": "Ich weiß nur das über dich, was du mir im Laufe unserer Gespräche explizit anvertraut hast und was ich mir auf deine Bitte hin gemerkt habe. Wenn du möchtest, kann ich gerne nachsehen, welche Informationen ich aktuell in meinem Gedächtnis gespeichert habe.",
+      "written": "Ich weiß nur das über dich, was du mir im Laufe unserer Gespräche explizit anvertraut hast und was ich mir auf deine Bitte hin gemerkt habe. Wenn du möchtest, kann ich gerne nachsehen, welche Informationen ich aktuell in meinem Gedächtnis gespeichert habe.",
+      "input": 15,
+      "output": 60,
+      "cacheRead": 2725,
+      "costMicros": 234,
+      "ms": 12418
+    },
+    {
+      "id": "sp-de-reise",
+      "variant": "text",
+      "issues": [
+        "fehler"
+      ],
+      "block": false,
+      "spoken": "",
+      "written": "",
+      "input": 2743,
+      "output": 23,
+      "cacheRead": 4,
+      "costMicros": 422,
+      "ms": 60009,
+      "failure": "Das hat zu lange gedauert, ich habe nach 60 Sekunden abgebrochen."
+    },
+    {
+      "id": "sp-fr-demain",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": false,
+      "spoken": "Demain, vous avez deux rendez-vous : un chez le dentiste à 9h00 et un déjeuner avec Marc à 12h30.",
+      "written": "Demain, vous avez deux rendez-vous : un chez le dentiste à 9h00 et un déjeuner avec Marc à 12h30.",
+      "input": 5732,
+      "output": 92,
+      "cacheRead": 2912,
+      "costMicros": 1120,
+      "ms": 2800
+    },
+    {
+      "id": "sp-en-today",
+      "variant": "text",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": false,
+      "spoken": "You have three events today: a Standup at 9:15 AM, a dentist appointment at 3:00 PM, and dinner with Sam at 7:30 PM.",
+      "written": "You have three events today: a Standup at 9:15 AM, a dentist appointment at 3:00 PM, and dinner with Sam at 7:30 PM.",
+      "input": 5796,
+      "output": 98,
+      "cacheRead": 2912,
+      "costMicros": 1133,
+      "ms": 2794
+    },
+    {
+      "id": "sp-de-heute",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Du hast heute noch drei Termine. Um halb zehn ist der Zahnarzt, um vierzehn Uhr das Teammeeting und um halb sieben die Chorprobe.",
+      "written": "Du hast heute noch drei Termine. Um halb zehn ist der Zahnarzt, um vierzehn Uhr das Teammeeting und um halb sieben die Chorprobe.",
+      "input": 5975,
+      "output": 90,
+      "cacheRead": 8,
+      "costMicros": 939,
+      "ms": 10893
+    },
+    {
+      "id": "sp-de-morgen",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Morgen hast du vier Termine. Du gehst um viertel nach sieben Uhr joggen mit Anna, hast um elf Uhr einen Termin beim Steuerberater, besuchst um halb fünf Uhr deine Oma zum Geburtstag und bist ab zwanzig Uhr fünfzehn im Kino.",
+      "written": "Morgen hast du vier Termine. Du gehst um viertel nach sieben Uhr joggen mit Anna, hast um elf Uhr einen Termin beim Steuerberater, besuchst um halb fünf Uhr deine Oma zum Geburtstag und bist ab zwanzig Uhr fünfzehn im Kino.",
+      "input": 6070,
+      "output": 115,
+      "cacheRead": 3040,
+      "costMicros": 1191,
+      "ms": 3255
+    },
+    {
+      "id": "sp-de-freitag",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Am Freitag hast du um halb drei einen Termin beim Zahnarzt.",
+      "written": "Am Freitag hast du um halb drei einen Termin beim Zahnarzt.",
+      "input": 5850,
+      "output": 71,
+      "cacheRead": 5632,
+      "costMicros": 1332,
+      "ms": 2330
+    },
+    {
+      "id": "sp-de-uhrzeit",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Heute ist Mittwoch, der achtzehnte November zweitausendsechsundzwanzig, und es ist neun Uhr.",
+      "written": "Heute ist Mittwoch, der achtzehnte November zweitausendsechsundzwanzig, und es ist neun Uhr.",
+      "input": 2844,
+      "output": 28,
+      "cacheRead": 2784,
+      "costMicros": 648,
+      "ms": 1223
+    },
+    {
+      "id": "sp-de-erklaerung",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Ein Prompt-Cache speichert häufig genutzte Teile eines Eingabetextes, damit sie nicht bei jeder Anfrage neu berechnet werden müssen. Das macht die Antwortzeiten schneller und reduziert die Kosten für die Nutzung großer Sprachmodelle. Es ist vergleichbar mit einem Zwischenspeicher für wiederkehrende Informationen.",
+      "written": "Ein Prompt-Cache speichert häufig genutzte Teile eines Eingabetextes, damit sie nicht bei jeder Anfrage neu berechnet werden müssen. Das macht die Antwortzeiten schneller und reduziert die Kosten für die Nutzung großer Sprachmodelle. Es ist vergleichbar mit einem Zwischenspeicher für wiederkehrende Informationen.",
+      "input": 2840,
+      "output": 63,
+      "cacheRead": 4,
+      "costMicros": 455,
+      "ms": 6197
+    },
+    {
+      "id": "sp-de-tipps",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Versuche, jeden Tag zur gleichen Zeit aufzustehen und ins Bett zu gehen. Meide helles Licht und Bildschirme kurz vor dem Schlafen. Eine kühle, dunkle und ruhige Schlafumgebung hilft deinem Körper beim Entspannen.",
+      "written": "Versuche, jeden Tag zur gleichen Zeit aufzustehen und ins Bett zu gehen. Meide helles Licht und Bildschirme kurz vor dem Schlafen. Eine kühle, dunkle und ruhige Schlafumgebung hilft deinem Körper beim Entspannen.",
+      "input": 2842,
+      "output": 54,
+      "cacheRead": 2784,
+      "costMicros": 660,
+      "ms": 1598
+    },
+    {
+      "id": "sp-de-gedaechtnis",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Ich weiß nur das über dich, was du mir explizit anvertraut hast. Wenn du möchtest, kann ich in meinen Notizen nachsehen, ob ich mir bereits etwas für dich gemerkt habe.",
+      "written": "Ich weiß nur das über dich, was du mir explizit anvertraut hast. Wenn du möchtest, kann ich in meinen Notizen nachsehen, ob ich mir bereits etwas für dich gemerkt habe.",
+      "input": 2840,
+      "output": 45,
+      "cacheRead": 2784,
+      "costMicros": 656,
+      "ms": 1505
+    },
+    {
+      "id": "sp-de-reise",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Das hängt stark von deinem Abflugort ab. Wenn du mir sagst, von wo aus du fliegst, schaue ich gerne nach den aktuellen Flugzeiten und Preisen für dich.",
+      "written": "Das hängt stark von deinem Abflugort ab. Wenn du mir sagst, von wo aus du fliegst, schaue ich gerne nach den aktuellen Flugzeiten und Preisen für dich.",
+      "input": 2847,
+      "output": 40,
+      "cacheRead": 2784,
+      "costMicros": 654,
+      "ms": 1272
+    },
+    {
+      "id": "sp-fr-demain",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "Demain, vous avez rendez-vous chez le dentiste à neuf heures et un déjeuner avec Marc à douze heures trente.",
+      "written": "Demain, vous avez rendez-vous chez le dentiste à neuf heures et un déjeuner avec Marc à douze heures trente.",
+      "input": 5925,
+      "output": 83,
+      "cacheRead": 196,
+      "costMicros": 942,
+      "ms": 5809
+    },
+    {
+      "id": "sp-en-today",
+      "variant": "hint",
+      "issues": [],
+      "block": false,
+      "spoken": "You have three events today. There is a Standup at nine fifteen, a dentist appointment at three o'clock, and dinner with Sam at seven thirty.",
+      "written": "You have three events today. There is a Standup at nine fifteen, a dentist appointment at three o'clock, and dinner with Sam at seven thirty.",
+      "input": 5980,
+      "output": 90,
+      "cacheRead": 8,
+      "costMicros": 939,
+      "ms": 15301
+    },
+    {
+      "id": "sp-de-heute",
+      "variant": "two",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": true,
+      "spoken": "Heute hast du drei Termine: erstens der Zahnarzt um halb zehn, dann das Teammeeting um vierzehn Uhr und schließlich die Chorprobe um halb sieben abends.",
+      "written": "Heute stehen drei Termine an: der Zahnarzt von halb zehn bis halb elf, das Teammeeting von vierzehn bis fünfzehn Uhr und die Chorprobe von halb sieben bis zwanzig Uhr.",
+      "input": 6123,
+      "output": 141,
+      "cacheRead": 8,
+      "costMicros": 984,
+      "ms": 23491
+    },
+    {
+      "id": "sp-de-morgen",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Morgen hast du vier Termine. Du gehst um viertel nach sieben joggen, hast um elf Uhr einen Termin beim Steuerberater, besuchst um halb fünf deine Oma und gehst um viertel nach acht ins Kino.",
+      "written": "Morgen, Donnerstag, dem 19. November, stehen folgende Termine an:\n- 07:15 Uhr: Joggen mit Anna\n- 11:00 Uhr: Steuerberater\n- 16:30 Uhr: Geburtstag Oma\n- 20:15 Uhr: Kino",
+      "input": 6226,
+      "output": 189,
+      "cacheRead": 3200,
+      "costMicros": 1261,
+      "ms": 3866
+    },
+    {
+      "id": "sp-de-freitag",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Am Freitag hast du um halb drei einen Termin beim Zahnarzt.",
+      "written": "Am Freitag, dem zwanzigsten November, hast du von vierzehn Uhr dreißig bis fünfzehn Uhr dreißig einen Termin beim Zahnarzt.",
+      "input": 5993,
+      "output": 110,
+      "cacheRead": 2852,
+      "costMicros": 1163,
+      "ms": 6241
+    },
+    {
+      "id": "sp-de-uhrzeit",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Heute ist Mittwoch, der achtzehnte November zweitausendsechsundzwanzig, und es ist neun Uhr.",
+      "written": "Heute ist Mittwoch, der 18. November 2026, und es ist 09:00 Uhr.",
+      "input": 20,
+      "output": 60,
+      "cacheRead": 2897,
+      "costMicros": 248,
+      "ms": 5646
+    },
+    {
+      "id": "sp-de-erklaerung",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Ein Prompt-Cache speichert häufig genutzte Teile eines Textes, damit eine KI sie nicht jedes Mal neu verarbeiten muss. Das macht die Antworten schneller und spart Rechenkosten.",
+      "written": "Ein Prompt-Cache ist ein Mechanismus, bei dem große Mengen an Eingabedaten, wie zum Beispiel lange Dokumente oder komplexe Anweisungen, zwischengespeichert werden. Wenn derselbe Kontext in einer weiteren Anfrage verwendet wird, kann die KI direkt auf diese gespeicherten Daten zugreifen, anstatt sie erneut zu analysieren. Dies reduziert die Latenzzeit und senkt die Kosten für die Nutzung von Sprachmodellen.",
+      "input": 21,
+      "output": 135,
+      "cacheRead": 2897,
+      "costMicros": 283,
+      "ms": 10028
+    },
+    {
+      "id": "sp-de-tipps",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Achte auf einen regelmäßigen Schlafrythmus, vermeide Koffein am späten Nachmittag und sorge für ein kühles, dunkles Schlafzimmer.",
+      "written": "Hier sind drei Tipps für besseren Schlaf:\n\n1. Regelmäßigkeit: Gehe möglichst jeden Tag zur gleichen Zeit ins Bett und stehe zur gleichen Zeit auf.\n2. Abendroutine: Verzichte in den Stunden vor dem Schlafengehen auf helles Licht und Bildschirme.\n3. Optimale Umgebung: Ein kühles, gut gelüftetes und dunkles Zimmer fördert das Durchschlafen.",
+      "input": 18,
+      "output": 129,
+      "cacheRead": 2897,
+      "costMicros": 279,
+      "ms": 9270
+    },
+    {
+      "id": "sp-de-gedaechtnis",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Ich weiß bisher noch nichts über dich. Wenn du möchtest, kannst du mir Dinge erzählen, die ich mir für die Zukunft merken soll.",
+      "written": "Ich habe derzeit keine gespeicherten Informationen über dich.",
+      "input": 15,
+      "output": 46,
+      "cacheRead": 2898,
+      "costMicros": 241,
+      "ms": 6939
+    },
+    {
+      "id": "sp-de-reise",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Ein Direktflug von Deutschland nach Lissabon dauert in der Regel zwischen drei und vier Stunden. Die Preise variieren stark, liegen aber oft zwischen einhundert und dreihundert Euro für den Hin- und Rückflug.",
+      "written": "Ein Direktflug aus Deutschland dauert je nach Abflugort etwa drei bis vier Stunden. Die Kosten für einen Hin- und Rückflug liegen im Durchschnitt zwischen einhundert und dreihundert Euro, abhängig von der Airline und der Buchungszeit.",
+      "input": 5969,
+      "output": 128,
+      "cacheRead": 5760,
+      "costMicros": 1386,
+      "ms": 2983
+    },
+    {
+      "id": "sp-fr-demain",
+      "variant": "two",
+      "issues": [],
+      "block": true,
+      "spoken": "Demain, vous avez rendez-vous chez le dentiste à neuf heures, puis un déjeuner avec Marc à douze heures trente.",
+      "written": "Demain, vous avez rendez-vous chez le dentiste à neuf heures et un déjeuner avec Marc à douze heures trente.",
+      "input": 6078,
+      "output": 114,
+      "cacheRead": 3200,
+      "costMicros": 1204,
+      "ms": 2899
+    },
+    {
+      "id": "sp-en-today",
+      "variant": "two",
+      "issues": [
+        "doppelpunkt"
+      ],
+      "block": true,
+      "spoken": "You have three events today: a Standup at nine fifteen, the dentist at three, and dinner with Sam at seven thirty.",
+      "written": "You have three events today: a Standup at nine fifteen, the dentist at three, and dinner with Sam at seven thirty.",
+      "input": 6142,
+      "output": 115,
+      "cacheRead": 3104,
+      "costMicros": 1207,
+      "ms": 2966
+    }
+  ]
+}

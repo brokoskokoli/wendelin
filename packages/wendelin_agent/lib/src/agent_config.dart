@@ -18,6 +18,7 @@ final class AgentConfig {
     this.escalateAfterInvalidToolCalls = 2,
     this.escalateAfterRoundsWithoutResult = 4,
     this.temperature,
+    this.spokenVersions = false,
   }) : assert(maxToolRounds > 0, 'maxToolRounds must be positive'),
        assert(maxTokensPerRequest > 0, 'maxTokensPerRequest must be positive'),
        assert(maxOutputTokens > 0, 'maxOutputTokens must be positive');
@@ -61,4 +62,9 @@ final class AgentConfig {
 
   /// Sampling temperature; `null` = provider default.
   final double? temperature;
+
+  /// Stage 2 of the speech-friendly answers (WP41): for voice requests the
+  /// model first writes a short spoken version in `<spoken>…</spoken>`,
+  /// then the written answer. Costs more output tokens; off by default.
+  final bool spokenVersions;
 }

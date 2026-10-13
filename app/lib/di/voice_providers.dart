@@ -45,6 +45,7 @@ final class VoiceSettings {
     this.minSpeechMs = 200,
     this.vadThreshold = 0.5,
     this.stopClosesOverlay = true,
+    this.twoVersions = false,
   });
 
   /// [sttLanguage]: use the language chosen in the onboarding.
@@ -86,6 +87,10 @@ final class VoiceSettings {
   /// A spoken „Stopp“ in the assistant overlay closes it (WP31, B5).
   final bool stopClosesOverlay;
 
+  /// „Antwort in zwei Fassungen“ (WP41, stage 2): the model writes a
+  /// separate spoken version first. More tokens, more natural speech.
+  final bool twoVersions;
+
   /// The STT language for app language [appLanguage] (`null` = detect).
   String? effectiveLanguage(String appLanguage) => switch (sttLanguage) {
     followApp => appLanguage,
@@ -108,6 +113,7 @@ final class VoiceSettings {
     int? minSpeechMs,
     double? vadThreshold,
     bool? stopClosesOverlay,
+    bool? twoVersions,
   }) => VoiceSettings(
     sttModel: sttModel ?? this.sttModel,
     sttLanguage: sttLanguage ?? this.sttLanguage,
@@ -117,6 +123,7 @@ final class VoiceSettings {
     minSpeechMs: minSpeechMs ?? this.minSpeechMs,
     vadThreshold: vadThreshold ?? this.vadThreshold,
     stopClosesOverlay: stopClosesOverlay ?? this.stopClosesOverlay,
+    twoVersions: twoVersions ?? this.twoVersions,
   );
 
   /// JSON for the settings store.
@@ -129,6 +136,7 @@ final class VoiceSettings {
     'minSpeechMs': minSpeechMs,
     'vadThreshold': vadThreshold,
     'stopClosesOverlay': stopClosesOverlay,
+    'twoVersions': twoVersions,
   };
 
   /// Reads [json]; unknown or invalid values fall back to the defaults.
@@ -162,6 +170,7 @@ final class VoiceSettings {
           d.vadThreshold,
       stopClosesOverlay:
           pick<bool>('stopClosesOverlay', (_) => true) ?? d.stopClosesOverlay,
+      twoVersions: pick<bool>('twoVersions', (_) => true) ?? d.twoVersions,
     );
   }
 
@@ -175,7 +184,8 @@ final class VoiceSettings {
       other.ttsRate == ttsRate &&
       other.minSpeechMs == minSpeechMs &&
       other.vadThreshold == vadThreshold &&
-      other.stopClosesOverlay == stopClosesOverlay;
+      other.stopClosesOverlay == stopClosesOverlay &&
+      other.twoVersions == twoVersions;
 
   @override
   int get hashCode => Object.hash(
@@ -187,6 +197,7 @@ final class VoiceSettings {
     minSpeechMs,
     vadThreshold,
     stopClosesOverlay,
+    twoVersions,
   );
 }
 

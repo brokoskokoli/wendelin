@@ -13,6 +13,7 @@ import 'privacy_scope.dart';
 import 'run_budget.dart';
 import 'run_config.dart';
 import 'run_state.dart';
+import 'spoken_block.dart';
 
 /// Result of one model call.
 final class ModelReply {
@@ -77,21 +78,39 @@ final class ModelCall {
     StopReason? stopReason;
     ProviderException? error;
 
+    final splitter = _state.speech == SpeechStyle.twoVersions
+        ? SpokenBlockSplitter()
+        : null;
+    void text(String delta) {
+      if (delta.isEmpty) return;
+      _control.emit(AgentTextDelta(delta));
+      _appendText(blocks, delta);
+    }
+
+    void split(SplitText r) {
+      if (r.spoken case final spoken?) _control.emit(AgentSpokenText(spoken));
+      text(r.text);
+    }
+
     await for (final event in target.provider.chat(
       request,
       cancel: _control.token,
     )) {
       switch (event) {
         case TextDelta(text: final delta):
-          if (delta.isEmpty) break;
-          _control.emit(AgentTextDelta(delta));
-          _appendText(blocks, delta);
+          if (splitter != null) {
+            split(splitter.add(delta));
+          } else {
+            text(delta);
+          }
         case ThinkingDelta(text: final delta):
           if (delta.isNotEmpty) _control.emit(AgentThinkingDelta(delta));
         case ThinkingComplete(:final block):
           blocks.add(block);
         case ProviderBlockComplete(:final block):
           // Kept in place for the same provider; never text, never spoken.
+          // Server-side tool results (web search) are third-party text.
+          _state.untrustedSeen = true;
           blocks.add(block);
         case ToolCallDelta():
           break; // assembled calls arrive as ToolCallComplete
@@ -106,6 +125,7 @@ final class ModelCall {
       }
       if (event.isTerminal) break;
     }
+    if (splitter != null) split(splitter.finish());
     if (usage case final used?) _reportUsage(target, used);
     if (error == null && stopReason == null) {
       error = const MalformedResponseException(
@@ -145,13 +165,17 @@ final class ModelCall {
   }
 
   /// The system prompt for the current target: without memories it may
-  /// not see, and after an escalation with the note on earlier tool calls.
+  /// not see, with the speech hint of the run (stage 2 drops to stage 1 after
+  /// an untrusted tool result; only the changing end of the prompt differs
+  /// for the cache), and after an escalation with the note on earlier tool calls.
   String _systemPrompt() {
     final memories = _state.context.memories;
     final visible = _privacy.visibleMemories();
-    final base = visible.length == memories.length
+    final speech = _state.speech;
+    final base =
+        visible.length == memories.length && speech == _state.context.speech
         ? _state.context.systemPrompt
-        : runner.contextBuilder.systemPrompt(memories: visible);
+        : runner.contextBuilder.systemPrompt(memories: visible, speech: speech);
     if (_state.epoch == 0) return base;
     // Calls of tools this target may not see are left out (their names
     // and status are protected too).

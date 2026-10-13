@@ -71,6 +71,23 @@ class VoiceScreen extends ConsumerWidget {
             ),
           ],
         ),
+        SettingsSection(
+          title: 'Antworten',
+          children: [
+            SettingsRow(
+              title: 'Antwort in zwei Fassungen',
+              detail:
+                  'Wendelin schreibt zuerst einen kurzen Sprechtext und '
+                  'danach die ausführliche Antwort für den Bildschirm. '
+                  'Mehr Tokens, natürlichere Sprache.',
+              trailing: WSwitch(
+                value: settings.twoVersions,
+                semanticLabel: 'Antwort in zwei Fassungen',
+                onChanged: (v) => change((s) => s.copyWith(twoVersions: v)),
+              ),
+            ),
+          ],
+        ),
         const _Microphone(),
         SettingsSection(
           title: 'Lizenzen der Sprachmodelle',

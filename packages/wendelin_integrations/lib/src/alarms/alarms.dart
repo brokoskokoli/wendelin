@@ -182,7 +182,8 @@ final class AlarmsIntegration implements Integration {
 }
 
 /// `alarms__set_alarm` (write; undo only if the platform returns an id).
-final class SetAlarmTool extends IntegrationTool {
+final class SetAlarmTool extends IntegrationTool
+    implements TrustedContentSource {
   /// Creates the tool.
   const SetAlarmTool(this.port);
 
@@ -262,7 +263,8 @@ final class SetAlarmTool extends IntegrationTool {
 }
 
 /// `alarms__set_timer` (write; undo only if the platform returns an id).
-final class SetTimerTool extends IntegrationTool {
+final class SetTimerTool extends IntegrationTool
+    implements TrustedContentSource {
   /// Creates the tool.
   const SetTimerTool(this.port);
 

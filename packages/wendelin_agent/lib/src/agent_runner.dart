@@ -203,7 +203,7 @@ final class _Run implements RunControl {
     // it; only an open segment needs an `AgentTextReset` on retry or
     // hand-over.
     switch (e) {
-      case AgentTextDelta():
+      case AgentTextDelta() || AgentSpokenText():
         _segmentStreamed = true;
       case ToolCallStarted() || ToolCallFinished() || AgentTextReset():
         _segmentStreamed = false;

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/agent_factory.dart';
 import 'package:wendelin/di/preferences.dart';
+import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/voice/model_installer.dart';
@@ -465,6 +467,35 @@ void main() {
       expect(c.read(voiceSettingsProvider).value!.stopClosesOverlay, isFalse);
     });
 
+    test('„Antwort in zwei Fassungen“: Standard aus, wird gespeichert', () {
+      expect(const VoiceSettings().twoVersions, isFalse);
+      final on = const VoiceSettings().copyWith(twoVersions: true);
+      expect(VoiceSettings.fromJson(on.toJson()).twoVersions, isTrue);
+      expect(VoiceSettings.fromJson(const {}).twoVersions, isFalse);
+    });
+
+    testWidgets('Schalter „Antwort in zwei Fassungen“ mit Erklärung und '
+        'Wirkung auf den Agenten', (tester) async {
+      final c = await pumpScreen(tester, env0(), const VoiceScreen());
+      expect(c.read(agentFactoryProvider), isA<AgentFactory>());
+      expect(
+        (c.read(agentFactoryProvider) as AgentFactory).config.spokenVersions,
+        isFalse,
+      );
+      await tester.ensureVisible(find.text('Antwort in zwei Fassungen'));
+      expect(
+        find.textContaining('Mehr Tokens, natürlichere Sprache'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byType(WSwitch).at(1));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.twoVersions, isTrue);
+      expect(
+        (c.read(agentFactoryProvider) as AgentFactory).config.spokenVersions,
+        isTrue,
+      );
+    });
+
     test('Sprache und Text der Probe', () {
       const fixed = VoiceSettings(sttLanguage: 'fr');
       expect(sampleLanguage(fixed, 'de'), 'fr');
@@ -495,6 +526,10 @@ void main() {
 
     testWidgets('Lizenzen inklusive Pflicht-Attribution', (tester) async {
       await pumpScreen(tester, env0(), const VoiceScreen());
+      await tester.scrollUntilVisible(
+        find.textContaining('SIWIS French Speech Synthesis'),
+        200,
+      );
       expect(
         find.textContaining('SIWIS French Speech Synthesis'),
         findsOneWidget,

@@ -139,6 +139,7 @@ final class AuditRecorder implements ToolAuditSink {
           'message': message,
         });
       case AgentTextDelta() ||
+          AgentSpokenText() ||
           AgentTextReset() ||
           AgentThinkingDelta() ||
           ToolCallStarted() ||

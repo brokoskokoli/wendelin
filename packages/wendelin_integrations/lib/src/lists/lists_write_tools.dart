@@ -7,7 +7,8 @@ import 'lists.dart';
 import 'markdown_list.dart';
 
 /// `lists__add_items` (write; undo removes exactly the added lines).
-final class AddItemsTool extends IntegrationTool {
+final class AddItemsTool extends IntegrationTool
+    implements TrustedContentSource {
   /// Creates the tool.
   const AddItemsTool(this.env);
 

@@ -28,3 +28,9 @@ Antworten sind für den Bildschirm geschrieben (Markdown, Listen, Doppelpunkte, 
 
 ## Offene Entscheidung
 - Ob Stufe 2 später Standard wird, entscheidet der Maintainer nach der Eval (Kosten vs. Klang).
+
+## Restrisiko
+- Ein früherer Lauf mit Fremdinhalt (Web, Mail, Kalender von Dritten) kann über `memory__save` eingeschleusten Text speichern. Dieser steht später im System-Prompt, ohne dass Stufe 2 abgeschaltet wird.
+- Das betrifft Prompt-Injection allgemein, nicht nur den Sprechtext.
+- Stufe 2 ist standardmäßig aus.
+- Mögliche spätere Abhilfe: die Herkunft eines Gedächtniseintrags beim Speichern festhalten (Lauf mit oder ohne Fremdinhalt) und Einträge aus unsicheren Läufen im Prompt kennzeichnen oder bestätigen lassen.
