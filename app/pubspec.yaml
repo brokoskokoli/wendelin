@@ -32,6 +32,7 @@ dependencies:
   wendelin_agent: any
   wendelin_core: any
   wendelin_integrations: any
+  wendelin_mcp: any
   wendelin_providers: any
   wendelin_storage: any
   wendelin_tools: any

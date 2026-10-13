@@ -94,4 +94,5 @@ Ausgelassene Tools stehen mit Grund in `McpIntegration.skippedTools`, dazu zähl
 - `package:wendelin_mcp/testing.dart`:
   - `FakeMcpServer`: In-Process-`HttpServer`, umschaltbar zwischen Streamable HTTP (JSON/SSE) und Legacy-SSE. Mit Bearer- und OAuth-Endpunkten (PRM, AS-Metadaten, DCR, Autorisierung und Token mit PKCE-Prüfung, Refresh), skriptbaren Tools, Paginierung, `list_changed`, Server-Anfragen, Fehlern, Verzögerung, Hängen, Übergröße und Sitzungsablauf. Für den Emulator: `start(address: InternetAddress.anyIPv4, publicHost: '10.0.2.2')`.
   - `mcpClientContract`: Contract-Suite für Transport-Implementierungen.
+  - `mcpSecretsContract`: Contract-Suite für `McpSecrets`-Implementierungen (`FakeMcpSecrets`, in der App `SecretStoreMcpSecrets` über den `SecretStore`).
 - Fixtures nach Spezifikation liegen in `test/fixtures/`.

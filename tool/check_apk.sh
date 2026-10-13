@@ -11,7 +11,8 @@
 #   - <application> mit android:allowBackup="false" und
 #     android:dataExtractionRules; keine Berechtigungen außer der Liste
 #     (M2: RECORD_AUDIO für Push-to-talk, Assistent und Spracherkennung)
-#   - exportierte Komponenten nur aus der Liste: MainActivity, die
+#   - exportierte Komponenten nur aus der Liste: MainActivity,
+#     OAuthRedirectActivity (OAuth-Rückleitung, WP27), die
 #     Assistenten-Services nur mit BIND_VOICE_INTERACTION, der
 #     RecognitionService ab Werk deaktiviert (enabled="false", ADR 0006),
 #     ProfileInstallReceiver nur mit DUMP; alles andere nicht exportiert
@@ -175,6 +176,8 @@ while IFS= read -r tag; do
   problem=""
   case "$name" in
     app.wendelin.MainActivity) ;;
+    # OAuth-Rückleitung der MCP-Server (WP27): nimmt nur die Adresse an, state prüft die App.
+    app.wendelin.OAuthRedirectActivity) ;;
     app.wendelin.WendelinVoiceInteractionService | app.wendelin.WendelinVoiceSessionService)
       [ "$perm" = "android.permission.BIND_VOICE_INTERACTION" ] ||
         problem="ohne android.permission.BIND_VOICE_INTERACTION" ;;

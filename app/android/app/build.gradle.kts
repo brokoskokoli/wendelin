@@ -54,6 +54,9 @@ flutter {
 }
 
 dependencies {
+    // OAuth login of MCP servers in a Custom Tab (WP27). Plain AndroidX, no Google Play Services
+    // or Firebase (K7, checked by tool/check_apk.sh); without a Custom Tabs browser any browser.
+    implementation("androidx.browser:browser:1.8.0")
     // Same versions as the debug classpath: the integration_test plugin (dev dependency, debug
     // builds only) brings androidx.test:runner/rules and junit 4.12, and Gradle resolves the
     // test APK consistently with it. Device tests through instrumentation: FlutterE2eTest (WP19).
