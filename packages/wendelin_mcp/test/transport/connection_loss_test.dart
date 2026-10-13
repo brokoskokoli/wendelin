@@ -197,6 +197,147 @@ void main() {
     });
   });
 
+  group('Verbindungsprüfung (ping)', () {
+    // Zählt Anfragen je Methode; [onCall] darf eine tools/call- oder
+    // ping-Anfrage sabotieren (true = behandelt).
+    Future<(HttpServer, Map<String, int>)> serve(
+      Future<bool> Function(HttpRequest req, String method, int n)? onCall,
+    ) async {
+      final counts = <String, int>{};
+      final server = await rawServer((req, body) async {
+        if (body.isEmpty) return answer(req, '', status: 204);
+        final m = rpc(body);
+        final method = m['method'] as String;
+        if (m['id'] == null) return answer(req, '', status: 202);
+        final n = counts[method] = (counts[method] ?? 0) + 1;
+        if (method == 'initialize') return answer(req, initResult(m['id']));
+        if (onCall != null && await onCall(req, method, n)) return;
+        return answer(req, {
+          'jsonrpc': '2.0',
+          'id': m['id'],
+          'result': method == 'tools/call'
+              ? {
+                  'content': [
+                    {'type': 'text', 'text': 'ok'},
+                  ],
+                }
+              : <String, Object?>{},
+        });
+      });
+      cleanups.add(() => server.close(force: true));
+      return (server, counts);
+    }
+
+    Matcher failsWith(McpErrorKind kind) =>
+        throwsA(isA<McpException>().having((e) => e.kind, 'kind', kind));
+
+    test(
+      'Abbruch beim Lesen des Bodys: nächster tools/call pingt zuerst',
+      () async {
+        final (server, counts) = await serve((req, method, n) async {
+          if (method != 'tools/call' || n != 1) return false;
+          // Header gehen raus, der Body bricht ab.
+          final socket = await req.response.detachSocket(writeHeaders: false);
+          socket.write(
+            'HTTP/1.1 200 OK\r\ncontent-type: application/json\r\n'
+            'content-length: 1000\r\n\r\n{"jsonrpc"',
+          );
+          await socket.flush();
+          socket.destroy();
+          return true;
+        });
+        // Große Schwelle: nur _suspect kann den ping auslösen.
+        final c = client(
+          rawUrl(server),
+          timeouts: const McpTimeouts(idleCheck: Duration(hours: 1)),
+        );
+        await c.ping();
+        expect(counts['ping'], 1);
+
+        await expectLater(
+          c.callTool('t', const {}),
+          failsWith(McpErrorKind.network),
+        );
+        expect(counts['ping'], 1);
+
+        await c.callTool('t', const {});
+        expect(counts['ping'], 2);
+        expect(counts['tools/call'], 2);
+      },
+    );
+
+    test('Standard-Leerlaufschwelle ist 2 s, ping-Timeout 5 s', () {
+      expect(const McpTimeouts().idleCheck, const Duration(seconds: 2));
+      expect(const McpTimeouts().pingTimeout, const Duration(seconds: 5));
+    });
+
+    test('Leerlauf unter der Schwelle: kein ping, darüber: ping', () async {
+      final (server, counts) = await serve(null);
+      final c = client(
+        rawUrl(server),
+        timeouts: const McpTimeouts(idleCheck: Duration(milliseconds: 400)),
+      );
+      await c.callTool('t', const {});
+      await c.callTool('t', const {});
+      expect(counts['ping'], isNull);
+
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await c.callTool('t', const {});
+      expect(counts['ping'], 1);
+      expect(counts['tools/call'], 3);
+    });
+
+    test(
+      'ping scheitert zweimal mit Netzfehler: Fehler, kein tools/call',
+      () async {
+        var cut = false;
+        final (server, counts) = await serve((req, method, n) async {
+          if (!cut || method != 'ping') return false;
+          (await req.response.detachSocket(writeHeaders: false)).destroy();
+          return true;
+        });
+        final c = client(rawUrl(server));
+        await c.callTool('t', const {});
+        expect(counts['tools/call'], 1);
+
+        cut = true;
+        await expectLater(
+          c.callTool('t', const {}),
+          failsWith(McpErrorKind.network),
+        );
+        // Der Server sieht mindestens zwei Pings (dart:io wiederholt auf
+        // toten Sockets selbst), aber keinen weiteren tools/call.
+        expect(counts['ping'], greaterThanOrEqualTo(2));
+        expect(counts['tools/call'], 1);
+      },
+    );
+
+    test('ping läuft in den Timeout: Fehler, kein tools/call', () async {
+      var hang = false;
+      final (server, counts) = await serve((req, method, n) async {
+        // Antwortet nie; der Socket bleibt offen.
+        return hang && method == 'ping';
+      });
+      final c = client(
+        rawUrl(server),
+        timeouts: const McpTimeouts(
+          idleCheck: Duration.zero,
+          pingTimeout: Duration(milliseconds: 200),
+        ),
+      );
+      await c.callTool('t', const {});
+
+      hang = true;
+      final watch = Stopwatch()..start();
+      await expectLater(
+        c.callTool('t', const {}),
+        failsWith(McpErrorKind.timeout),
+      );
+      expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
+      expect(counts['tools/call'], 1);
+    });
+  });
+
   group('Auth-Wiederholung (Token abgelehnt)', () {
     test('nach dem Erneuern kein Wiederholen bei Netzfehler (write)', () async {
       final server = await FakeMcpServer.start(

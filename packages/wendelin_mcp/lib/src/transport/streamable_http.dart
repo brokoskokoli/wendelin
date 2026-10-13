@@ -47,11 +47,19 @@ final class StreamableHttpTransport extends TransportBase {
     if (!_needsCheck()) return;
     for (var attempt = 0; ; attempt++) {
       try {
-        await _roundTrip('ping', null, cancel);
+        await _roundTrip(
+          'ping',
+          null,
+          cancel,
+          limit: deps.timeouts.pingTimeout,
+        );
         return;
       } on McpException catch (e) {
         if (e.kind == McpErrorKind.network && attempt == 0) continue;
+        // A ping that fails again or times out means the server is not
+        // reachable: report it instead of sending the `tools/call` anyway.
         if (e.kind == McpErrorKind.network ||
+            e.kind == McpErrorKind.timeout ||
             e.kind == McpErrorKind.authRequired ||
             e.kind == McpErrorKind.sessionExpired) {
           rethrow;
@@ -83,12 +91,13 @@ final class StreamableHttpTransport extends TransportBase {
   Future<Object?> _roundTrip(
     String method,
     Map<String, Object?>? params,
-    CancelToken? cancel,
-  ) async {
+    CancelToken? cancel, {
+    Duration? limit,
+  }) async {
     final id = nextId();
     final message = JsonRpcRequest(id, method, params);
     try {
-      return await _exchange(message, id, cancel);
+      return await _exchange(message, id, cancel, limit);
     } on McpException catch (e) {
       if (e.kind == McpErrorKind.network) _suspect = true;
       rethrow;
@@ -104,8 +113,9 @@ final class StreamableHttpTransport extends TransportBase {
     JsonRpcRequest message,
     Object id,
     CancelToken? cancel,
+    Duration? limit,
   ) {
-    return guarded(cancel, deps.timeouts.response, (abort) async {
+    return guarded(cancel, limit ?? deps.timeouts.response, (abort) async {
       final response = await _post(message, abort);
       final type = response.headers['content-type'] ?? '';
       if (type.startsWith('text/event-stream')) {
