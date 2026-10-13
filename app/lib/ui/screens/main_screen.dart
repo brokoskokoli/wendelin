@@ -54,15 +54,24 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     // In the background nothing listens, speaks or runs on unseen.
     _lifecycle = AppLifecycleListener(
       onStateChange: (state) {
+        final voice = ref.read(voiceControllerProvider.notifier);
         if (state == AppLifecycleState.hidden ||
             state == AppLifecycleState.paused) {
-          unawaited(ref.read(voiceControllerProvider.notifier).suspend());
+          // Also frees the speech models after a while (B14).
+          unawaited(voice.background());
         } else if (state == AppLifecycleState.resumed) {
+          voice.prewarm(onlyIfUsed: true);
           // Back from the Android settings: allowed there meanwhile?
           unawaited(_recheckMicrophone());
         }
       },
     );
+    // Visible: load Whisper now, so the first tap starts at once (B11);
+    // only for people who use speech (base load).
+    Future(() {
+      if (!mounted) return;
+      ref.read(voiceControllerProvider.notifier).prewarm(onlyIfUsed: true);
+    });
     if (widget.restoreSession) {
       unawaited(ref.read(agentControllerProvider.notifier).restore());
       // A large vault needs several index runs: continue in the background.
@@ -290,7 +299,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               ? question.event.risk
               : RiskLevel.external,
           // A voice request also takes a spoken „ja“/„nein“.
-          hint: ref.watch(voiceControllerProvider.select((v) => v.active))
+          hint:
+              ref.watch(voiceControllerProvider.select((v) => v.answersByVoice))
               ? ConfirmationHint.voice
               : ConfirmationHint.tap,
         ),

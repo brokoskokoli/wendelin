@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../voice/engine_whisper.dart';
 import '../voice/file_model_store.dart';
 import '../voice/model_installer.dart';
 import '../voice/silero_vad.dart';
@@ -29,8 +30,9 @@ typedef VadFactory = VoiceActivityDetector Function(
 
 /// Models of the recognizer engine on the device (ADR 0008):
 /// - Whisper of the app engine, if it has one loaded (no second copy);
-///   otherwise loaded here and released [idleRelease] after the last
-///   request.
+///   otherwise loaded here, offered to the other engines while loaded
+///   ([WhisperDirectory], at most one per process, B14) and released
+///   [idleRelease] after the last request.
 /// - A Silero VAD per request (small, loads in milliseconds).
 final class DeviceRecognizerEngines implements RecognizerEngines {
   /// Creates the engines over the installed [models].
@@ -41,6 +43,7 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
     WhisperStarter? startWhisper,
     SharedWhisperLookup? lookupShared,
     VadFactory? createVad,
+    this.directory = const IsolateWhisperDirectory(),
   }) : _startWhisper = startWhisper ?? IsolateWhisperBackend.start,
        _lookupShared = lookupShared ?? lookupSharedWhisper,
        _createVad = createVad ?? _silero;
@@ -53,6 +56,9 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
 
   /// How long an own Whisper model stays loaded after the last request.
   final Duration idleRelease;
+
+  /// Where the own model is offered to the app and overlay engines.
+  final WhisperDirectory directory;
 
   final WhisperStarter _startWhisper;
   final SharedWhisperLookup _lookupShared;
@@ -144,6 +150,7 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
     _own = loading;
     try {
       final backend = await loading;
+      if (identical(_own, loading)) directory.publish(modelId, backend);
       // The request may have ended while the model loaded.
       _armIdle();
       return backend;
@@ -181,11 +188,14 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
 
   Future<void> _releaseOwn() async {
     final own = _own;
+    final id = _ownId;
     _own = null;
     _ownId = null;
     if (own == null) return;
     try {
-      await (await own).dispose();
+      final backend = await own;
+      if (id != null) directory.withdraw(id, backend);
+      await backend.dispose();
     } on Object catch (e) {
       debugPrint('Erkenner: Whisper ließ sich nicht freigeben: $e');
     }

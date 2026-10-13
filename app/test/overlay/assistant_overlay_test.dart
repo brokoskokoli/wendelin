@@ -524,4 +524,57 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(audio.isRunning, isFalse);
   });
+
+  group('Sprachmodelle im Overlay (B11/B14)', () {
+    late int warm;
+    late int released;
+    VoiceComponents counting() => VoiceComponents(
+      audio: FakeAudioInput(),
+      vad: FakeVoiceActivityDetector(),
+      stt: FakeSpeechToText(const []),
+      textToSpeech: (_) async => null,
+      config: const VoicePipelineConfig(),
+      warmUp: () async => warm++,
+      release: () async => released++,
+    );
+    setUp(() {
+      warm = 0;
+      released = 0;
+    });
+
+    testWidgets('Schließen gibt die Modelle frei', (tester) async {
+      final platform = FakeAssistantPlatform();
+      final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
+      await pumpOverlay(
+        tester,
+        env,
+        platform,
+        autoStart: false,
+        voice: counting(),
+      );
+      await tester.pump();
+      await tester.tap(find.byTooltip('Beenden'));
+      await tester.pump();
+      await tester.pump();
+      expect(released, 1);
+      expect(platform.finished, 1);
+    });
+
+    testWidgets('gesperrt: kein Vorwärmen vor dem Entsperren', (tester) async {
+      final platform = FakeAssistantPlatform()
+        ..locked = true
+        ..unlockSucceeds = false;
+      final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
+      final c = await pumpOverlay(tester, env, platform, voice: counting());
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(find.text(OverlaySheet.lockedTitle), findsOneWidget);
+      expect(warm, 0, reason: 'nicht vor dem Entsperren');
+
+      platform.unlockSucceeds = true;
+      await tester.tap(find.text('Entsperren'));
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(warm, greaterThan(0), reason: 'entsperrt: vorwärmen');
+      await c.read(voiceControllerProvider.notifier).cancel();
+    });
+  });
 }

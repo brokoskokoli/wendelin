@@ -30,7 +30,8 @@ const deviceTestFolder = 'e2e';
 /// ```
 ///
 /// - `audio`: WAV (16 kHz mono) in `files/e2e/` instead of the microphone
-///   ([WavAudioInput]),
+///   ([WavAudioInput]); a list plays one file per recording (command, then
+///   the spoken answer to a confirmation),
 /// - `turns`: a scripted provider (`FakeLlmProvider`) instead of the stored
 ///   profiles: a tool call or a text answer per turn.
 ///
@@ -64,6 +65,8 @@ List<Override> parseDeviceTestOverrides(String json, String dir) {
   final turns = raw is List<Object?> ? _turns(raw) : null;
   return [
     if (audio is String) audioInputProvider.overrideWithValue(_wav(dir, audio)),
+    if (audio is List<Object?>)
+      audioInputProvider.overrideWithValue(_wavs(dir, audio)),
     if (turns != null)
       storedProviderConfigProvider.overrideWith(
         (ref) async => deviceTestProviderConfig(FakeLlmProvider(turns)),
@@ -71,11 +74,23 @@ List<Override> parseDeviceTestOverrides(String json, String dir) {
   ];
 }
 
-WavAudioInput _wav(String dir, String name) {
-  if (name.isEmpty || name.contains('/') || name.contains(r'\')) {
+String _wavPath(String dir, Object? name) {
+  if (name is! String ||
+      name.isEmpty ||
+      name.contains('/') ||
+      name.contains(r'\')) {
     throw FormatException('audio: nur ein Dateiname, nicht „$name“');
   }
-  return WavAudioInput.file('$dir/$name');
+  return '$dir/$name';
+}
+
+WavAudioInput _wav(String dir, String name) =>
+    WavAudioInput.file(_wavPath(dir, name));
+
+/// One WAV per recording (command, then the spoken answer, WP30).
+WavAudioInput _wavs(String dir, List<Object?> names) {
+  if (names.isEmpty) throw const FormatException('audio: leere Liste');
+  return WavAudioInput.files([for (final n in names) _wavPath(dir, n)]);
 }
 
 List<ScriptedTurn> _turns(List<Object?> raw) => [

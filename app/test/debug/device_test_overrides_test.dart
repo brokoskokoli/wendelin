@@ -60,6 +60,38 @@ void main() {
       },
     );
 
+    test('Folge: je Aufnahme die nächste Datei, danach die letzte', () async {
+      writeWav('cmd.wav', [7, 7]);
+      writeWav('nein.wav', [9]);
+      final input = WavAudioInput.files([
+        '${dir.path}/cmd.wav',
+        '${dir.path}/nein.wav',
+      ], speed: 50);
+      expect(input.recordings, [
+        [7, 7],
+        [9],
+      ]);
+      // 300 ms Vorlauf = 15 Frames à 20 ms; danach die Aufnahme.
+      final i2 = WavAudioInput.sequence(
+        [
+          Int16List.fromList([7, 7]),
+          Int16List.fromList([9]),
+        ],
+        speed: 50,
+        leadingSilence: const Duration(milliseconds: 20),
+      );
+      Future<int> firstSample() async {
+        final frames = await i2.start().take(2).toList();
+        await i2.stop();
+        return frames[1].first;
+      }
+
+      expect(await firstSample(), 7);
+      expect(await firstSample(), 9);
+      expect(await firstSample(), 9);
+      expect(i2.starts, 3);
+    });
+
     test('Datei mit 16 kHz', () {
       writeWav('a.wav', [1, 2, 3]);
       expect(WavAudioInput.file('${dir.path}/a.wav').samples, [1, 2, 3]);
@@ -113,10 +145,27 @@ void main() {
       expect(call.argumentsJson, '{"text":"Zahnarzt angerufen"}');
     });
 
+    test('Liste von WAVs: eine je Aufnahme', () {
+      File('${dir.path}/a.wav').writeAsBytesSync(Wav(Int16List(8)).encode());
+      File('${dir.path}/b.wav').writeAsBytesSync(Wav(Int16List(4)).encode());
+      final c = ProviderContainer(
+        overrides: parseDeviceTestOverrides(
+          '{"audio": ["a.wav", "b.wav"]}',
+          dir.path,
+        ),
+      );
+      addTearDown(c.dispose);
+      final input = c.read(audioInputProvider) as WavAudioInput;
+      expect(input.recordings.map((r) => r.length), [8, 4]);
+    });
+
     test('nur Dateinamen, bekannte Züge', () {
       for (final json in [
         '{"audio": "../x.wav"}',
         '{"audio": ""}',
+        '{"audio": []}',
+        '{"audio": ["a.wav", "../b.wav"]}',
+        '{"audio": [1]}',
         '{"turns": [{"nix": 1}]}',
         '"text"',
       ]) {

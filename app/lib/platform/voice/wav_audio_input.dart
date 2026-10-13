@@ -16,12 +16,30 @@ final class WavAudioInput implements AudioInput {
   /// Plays [samples] (16 kHz mono PCM16) in frames of [frame], paced in
   /// real time divided by [speed].
   WavAudioInput(
-    this.samples, {
+    Int16List samples, {
+    Duration frame = const Duration(milliseconds: 20),
+    double speed = 1,
+    Duration leadingSilence = const Duration(milliseconds: 300),
+    DateTime Function() now = DateTime.now,
+  }) : this.sequence(
+         [samples],
+         frame: frame,
+         speed: speed,
+         leadingSilence: leadingSilence,
+         now: now,
+       );
+
+  /// Plays [recordings] one per [start] (the n-th recording for the n-th
+  /// start, the last one again after that): e.g. a command and then the
+  /// spoken „Nein“ to the confirmation (WP30, B7).
+  WavAudioInput.sequence(
+    this.recordings, {
     this.frame = const Duration(milliseconds: 20),
     this.speed = 1,
     this.leadingSilence = const Duration(milliseconds: 300),
     this.now = DateTime.now,
-  }) : assert(speed > 0, 'speed > 0');
+  }) : assert(speed > 0, 'speed > 0'),
+       assert(recordings.isNotEmpty, 'at least one recording');
 
   /// Reads the WAV file at [path] (16 kHz mono PCM16).
   factory WavAudioInput.file(String path, {double speed = 1}) {
@@ -34,8 +52,18 @@ final class WavAudioInput implements AudioInput {
     return WavAudioInput(wav.samples, speed: speed);
   }
 
-  /// The recording.
-  final Int16List samples;
+  /// Reads the WAV files at [paths] (16 kHz mono PCM16), one per recording
+  /// ([WavAudioInput.sequence]).
+  factory WavAudioInput.files(List<String> paths, {double speed = 1}) =>
+      WavAudioInput.sequence([
+        for (final path in paths) WavAudioInput.file(path).samples,
+      ], speed: speed);
+
+  /// The recordings, one per [start].
+  final List<Int16List> recordings;
+
+  /// The first recording.
+  Int16List get samples => recordings.first;
 
   /// Length of one frame.
   final Duration frame;
@@ -68,6 +96,7 @@ final class WavAudioInput implements AudioInput {
   @override
   Stream<Int16List> start() {
     if (_out != null) throw StateError('Aufnahme läuft schon');
+    final samples = recordings[_starts.clamp(0, recordings.length - 1)];
     _starts++;
     _endOfRecording = null;
     // Closed in stop().

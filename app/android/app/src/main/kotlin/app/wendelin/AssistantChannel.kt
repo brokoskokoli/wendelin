@@ -45,22 +45,24 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
 
     /**
      * The overlay is being left: Dart stops listening, speech output and the request, then
-     * calls `finish`. [fallback] runs if Dart does not answer within [CLOSE_TIMEOUT_MS].
+     * calls `finish`. [fallback] runs once with how it ended: `dart` (answered), `dart-error`,
+     * `not-implemented` or `timeout` (no answer within [CLOSE_TIMEOUT_MS]).
      */
-    fun requestClose(fallback: () -> Unit) {
+    fun requestClose(fallback: (how: String) -> Unit) {
         val main = Handler(Looper.getMainLooper())
         var done = false
-        val finishOnce = {
+        val finishOnce = { how: String ->
             if (!done) {
                 done = true
-                fallback()
+                fallback(how)
             }
         }
-        main.postDelayed(finishOnce, CLOSE_TIMEOUT_MS)
+        main.postDelayed({ finishOnce("timeout") }, CLOSE_TIMEOUT_MS)
         channel.invokeMethod("close", null, object : MethodChannel.Result {
-            override fun success(result: Any?) = finishOnce()
-            override fun error(code: String, message: String?, details: Any?) = finishOnce()
-            override fun notImplemented() = finishOnce()
+            override fun success(result: Any?) = finishOnce("dart")
+            override fun error(code: String, message: String?, details: Any?) =
+                finishOnce("dart-error")
+            override fun notImplemented() = finishOnce("not-implemented")
         })
     }
 
@@ -81,6 +83,7 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
                 result.success(null)
             }
             "finish" -> {
+                VoiceLog.i("overlay-finish finishing=${activity.isFinishing}")
                 activity.finish()
                 result.success(null)
             }

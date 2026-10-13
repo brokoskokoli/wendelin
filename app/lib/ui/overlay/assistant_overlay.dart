@@ -115,6 +115,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
         _locked = locked;
         _lockKnown = true;
       });
+      // Unlocked and visible: load Whisper (never before unlocking, B11).
+      if (!locked) _voice.prewarm();
     }
     return locked;
   }
@@ -150,6 +152,15 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     _closing = true;
     await _voice.suspend();
     _agent.cancel();
+    // The engine ends with the overlay: free an own Whisper model now, so
+    // none stays behind in the process (B14).
+    try {
+      await _voice
+          .releaseModels(reason: 'overlay-close')
+          .timeout(const Duration(milliseconds: 600));
+    } on TimeoutException {
+      // Finish anyway; the release continues in the background.
+    }
     await _platform.finish();
   }
 
@@ -210,7 +221,9 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
                 (available ? null : voiceUnavailableHint),
       question: _locked ? null : conversation.pending,
       onAnswer: (yes) => _agent.answer(approved: yes),
-      hint: voice.active ? ConfirmationHint.voice : ConfirmationHint.tap,
+      hint: voice.answersByVoice
+          ? ConfirmationHint.voice
+          : ConfirmationHint.tap,
       onMic: () {
         if (voice.active) {
           unawaited(_voice.cancel());

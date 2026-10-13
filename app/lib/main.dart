@@ -19,6 +19,7 @@ import 'platform/screen_protection.dart';
 import 'platform/secure_secret_store.dart';
 import 'ui/overlay/assistant_overlay.dart';
 import 'ui/theme/app_theme.dart';
+import 'voice/voice_log.dart';
 
 /// Opens the database, reads the start settings and runs the app.
 Future<void> main() async {
@@ -41,6 +42,7 @@ Future<void> main() async {
 /// database through one drift isolate.
 @pragma('vm:entry-point')
 Future<void> assistantMain() async {
+  voiceLogEngine = 'overlay';
   WidgetsFlutterBinding.ensureInitialized();
   final (storage, startup) = await openAppStorage();
   await _run(
@@ -57,7 +59,10 @@ Future<void> assistantMain() async {
 /// starts it in a headless engine, ADR 0008): Whisper and Silero for other
 /// apps, without database, UI or agent.
 @pragma('vm:entry-point')
-Future<void> recognizerMain() => runRecognizerEngine();
+Future<void> recognizerMain() {
+  voiceLogEngine = 'recognizer';
+  return runRecognizerEngine();
+}
 
 /// Opens the app database (shared with the other engine of the process)
 /// and reads the start settings.

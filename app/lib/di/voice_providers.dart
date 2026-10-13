@@ -9,6 +9,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/voice/audio_playback.dart';
+import '../platform/voice/engine_whisper.dart';
 import '../platform/voice/file_model_store.dart';
 import '../platform/voice/model_installer.dart';
 import '../platform/voice/record_audio_input.dart';
@@ -16,9 +17,9 @@ import '../platform/voice/sherpa_tts.dart';
 import '../platform/voice/silero_vad.dart';
 import '../platform/voice/system_tts.dart';
 import '../platform/voice/tar_bz2.dart';
-import '../platform/voice/whisper_registry.dart';
 import '../platform/voice/whisper_sherpa.dart';
 import '../platform/voice/whisper_stt.dart';
+import '../voice/voice_log.dart';
 import 'preferences.dart';
 import 'providers.dart';
 
@@ -331,8 +332,10 @@ final class ModelStatesNotifier extends Notifier<Map<String, ModelState>> {
       debugPrint('Modellverzeichnis nicht verfügbar: $e');
       return;
     }
+    if (!ref.mounted) return;
     for (final m in ref.read(speechModelCatalogProvider).models) {
-      if (of(m.id).busy) continue;
+      // The container may be gone after an await (tests, engine end).
+      if (!ref.mounted || of(m.id).busy) continue;
       final phase = await service.isInstalled(m)
           ? ModelPhase.installed
           : await service.hasPartial(m)
@@ -401,7 +404,7 @@ final class ModelStatesNotifier extends Notifier<Map<String, ModelState>> {
     if (!ref.mounted) return;
     switch (model.kind) {
       case SpeechModelKind.stt:
-        ref.invalidate(speechToTextProvider);
+        ref.invalidate(engineWhisperProvider);
       case SpeechModelKind.vad:
         ref.invalidate(voiceActivityDetectorProvider);
       case SpeechModelKind.tts:
@@ -474,33 +477,69 @@ final voiceActivityDetectorProvider = FutureProvider<VoiceActivityDetector>((
     'Die Sprachaktivitätserkennung',
   );
   final service = await ref.watch(speechModelServiceProvider.future);
+  final watch = Stopwatch()..start();
   final vad = SileroVoiceActivityDetector(
     modelPath: '${service.directoryOf(model).path}/${model.files.single.name}',
     threshold: threshold,
   );
-  ref.onDispose(vad.dispose);
+  voiceLog('model-load', {
+    'model': model.id,
+    'kind': 'vad',
+    'ms': watch.elapsed,
+  });
+  ref.onDispose(() {
+    vad.dispose();
+    voiceLog('model-free', {'model': model.id, 'kind': 'vad'});
+  });
   return vad;
 });
 
-/// Whisper (in a background isolate) for the chosen model size.
-final speechToTextProvider = FutureProvider<SpeechToText>((ref) async {
+/// Loads an own Whisper model of [model] from [directory] (tests replace
+/// it with a counting fake).
+typedef WhisperModelLoader = Future<WhisperBackend> Function(
+  SpeechModel model,
+  String directory,
+);
+
+/// How this engine loads a Whisper model (background isolate).
+final whisperLoaderProvider = Provider<WhisperModelLoader>(
+  (ref) =>
+      (model, dir) => IsolateWhisperBackend.start(WhisperFiles.of(model, dir)),
+);
+
+/// Whisper models of the other engines of the process (ADR 0008, B14).
+final whisperDirectoryProvider = Provider<WhisperDirectory>(
+  (ref) => const IsolateWhisperDirectory(),
+);
+
+/// Whisper of this engine for the chosen model size: the model another
+/// engine already loaded, otherwise an own one (at most one per process,
+/// B14). The build waits until a model is ready.
+final engineWhisperProvider = FutureProvider<EngineWhisper>((ref) async {
   final id = await ref.watch(
     voiceSettingsProvider.selectAsync((s) => s.sttModel),
   );
   final model = await _installedModel(ref, id, 'Das Whisper-Modell');
   final service = await ref.watch(speechModelServiceProvider.future);
-  final backend = await IsolateWhisperBackend.start(
-    WhisperFiles.of(model, service.directoryOf(model).path),
-  );
-  // The system recognizer (other engine) uses this model too (ADR 0008).
-  publishSharedWhisper(model.id, backend.sharePort);
-  ref.onDispose(() {
-    withdrawSharedWhisper(model.id, backend.sharePort);
-    unawaited(backend.dispose());
-  });
-  return WhisperSpeechToText(
-    backend: backend,
+  final load = ref.watch(whisperLoaderProvider);
+  final whisper = EngineWhisper(
     modelId: model.id,
+    load: () => load(model, service.directoryOf(model).path),
+    directory: ref.watch(whisperDirectoryProvider),
+  );
+  // Model change or new download: the old model is freed before the new
+  // one loads (EngineWhisper waits for it).
+  ref.onDispose(() => unawaited(whisper.release(reason: 'replaced')));
+  await whisper.warm();
+  return whisper;
+});
+
+/// Whisper as [SpeechToText] for the chosen model size.
+final speechToTextProvider = FutureProvider<SpeechToText>((ref) async {
+  final whisper = await ref.watch(engineWhisperProvider.future);
+  return WhisperSpeechToText(
+    backend: whisper,
+    modelId: whisper.modelId,
     // Durations only, never the text (measurements on the device, WP19).
     onTiming: (t) => debugPrint('$t'),
   );
@@ -535,23 +574,33 @@ Future<List<SherpaVoice>> installedSherpaVoices(
   return voices;
 }
 
+/// The sherpa-onnx synthesizer of the offline voices; its `dispose` frees
+/// the loaded voices, the next answer loads them again (B14).
+final sherpaSynthesizerProvider = Provider<SpeechSynthesizer>((ref) {
+  final synthesizer = IsolateSherpaSynthesizer(
+    () async => {
+      for (final v in await installedSherpaVoices(
+        await ref.read(speechModelServiceProvider.future),
+        ref.read(speechModelCatalogProvider),
+      ))
+        v.id: v.files,
+    },
+  );
+  ref.onDispose(() => unawaited(synthesizer.dispose()));
+  return synthesizer;
+});
+
 /// Offline voices (sherpa-onnx), K7 fallback.
 final sherpaTtsProvider = Provider<TextToSpeech>((ref) {
   Future<List<SherpaVoice>> voices() async => installedSherpaVoices(
     await ref.read(speechModelServiceProvider.future),
     ref.read(speechModelCatalogProvider),
   );
-  final synthesizer = IsolateSherpaSynthesizer(
-    () async => {for (final v in await voices()) v.id: v.files},
-  );
   final playback = AudioplayersPlayback();
-  ref.onDispose(() {
-    unawaited(synthesizer.dispose());
-    unawaited(playback.dispose());
-  });
+  ref.onDispose(() => unawaited(playback.dispose()));
   return SherpaTextToSpeech(
     installed: voices,
-    synthesizer: synthesizer,
+    synthesizer: ref.watch(sherpaSynthesizerProvider),
     playback: playback,
   );
 });
@@ -600,6 +649,8 @@ final class VoiceComponents {
     required this.stt,
     required this.textToSpeech,
     required this.config,
+    this.warmUp,
+    this.release,
   });
 
   /// Microphone.
@@ -616,6 +667,13 @@ final class VoiceComponents {
 
   /// Pipeline settings.
   final VoicePipelineConfig config;
+
+  /// Loads the models again after [release] (`null`: always loaded).
+  final Future<void> Function()? warmUp;
+
+  /// Frees the large models (Whisper, offline voice) until [warmUp] or the
+  /// next use (B14: idle in the background).
+  final Future<void> Function()? release;
 }
 
 /// The voice building blocks; fails with `VoiceException(modelMissing)`
@@ -625,11 +683,18 @@ final class VoiceComponents {
 /// app goes to the background (ADR 0007 §12), so the microphone is freed.
 final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
   final selector = ref.watch(ttsSelectorProvider);
+  final whisper = await ref.watch(engineWhisperProvider.future);
+  final sherpa = ref.watch(sherpaSynthesizerProvider);
   return VoiceComponents(
     audio: ref.watch(audioInputProvider),
     vad: await ref.watch(voiceActivityDetectorProvider.future),
     stt: await ref.watch(speechToTextProvider.future),
     textToSpeech: selector.current,
     config: await ref.watch(voicePipelineConfigProvider.future),
+    warmUp: whisper.warm,
+    release: () async {
+      await whisper.release(reason: 'idle');
+      await sherpa.dispose();
+    },
   );
 });

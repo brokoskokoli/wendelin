@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/recognizer/device_recognizer_engines.dart';
+import 'package:wendelin/platform/voice/engine_whisper.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin_voice/fakes.dart';
@@ -265,6 +266,26 @@ void main() {
     expect(e.holdsOwnModel, isFalse);
   });
 
+  test('eigenes Modell wird den anderen Engines angeboten und beim Freigeben '
+      'zurückgezogen (B14)', () {
+    fakeAsync((async) {
+      final directory = _Directory();
+      final e = DeviceRecognizerEngines(
+        models: models,
+        startWhisper: (files) async => FakeBackend('eigen'),
+        lookupShared: (id) async => null,
+        directory: directory,
+      );
+      e.speechToText('whisper-base');
+      async.flushMicrotasks();
+      expect(directory.published.keys, ['whisper-base']);
+      e.idle();
+      async.elapse(const Duration(seconds: 31));
+      expect(directory.published, isEmpty);
+      expect(directory.withdrawn, 1);
+    });
+  });
+
   test('idle ohne eigenes Modell tut nichts', () {
     fakeAsync((async) {
       engines().idle();
@@ -317,4 +338,27 @@ final class _BrokenBackend implements WhisperBackend {
 
   @override
   Future<void> dispose() async => throw StateError('kaputt');
+}
+
+final class _Directory implements WhisperDirectory {
+  final published = <String, WhisperBackend>{};
+  int withdrawn = 0;
+
+  @override
+  Future<WhisperBackend?> lookup(String modelId) async => null;
+
+  @override
+  void publish(String modelId, WhisperBackend backend) =>
+      published[modelId] = backend;
+
+  @override
+  void withdraw(String modelId, WhisperBackend backend) {
+    if (identical(published[modelId], backend)) {
+      published.remove(modelId);
+      withdrawn++;
+    }
+  }
+
+  @override
+  int liveModels() => published.length;
 }

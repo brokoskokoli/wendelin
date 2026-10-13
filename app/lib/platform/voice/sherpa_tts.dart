@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/voice_log.dart';
 import 'isolate_exit.dart';
 import 'pcm.dart';
 import 'sherpa_runtime.dart';
@@ -216,8 +217,9 @@ final class SherpaTextToSpeech implements TextToSpeech {
   }
 }
 
-/// [SpeechSynthesizer] with sherpa-onnx in a background isolate; each
-/// voice is loaded on first use and kept.
+/// [SpeechSynthesizer] with sherpa-onnx in a background isolate; a voice
+/// is loaded on first use and kept until another voice is needed (only
+/// the last one stays resident, B14).
 final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
   /// Creates the synthesizer; [voices] maps voice ids to their files.
   IsolateSherpaSynthesizer(this.voices);
@@ -233,6 +235,7 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
   Duration exitGrace = const Duration(seconds: 5);
 
   Future<(WorkerIsolate, SendPort, StreamIterator<Object?>)> _start() async {
+    voiceLog('model-load', {'kind': 'tts-sherpa'});
     final replies = ReceivePort();
     final worker = await WorkerIsolate.spawn(_main, (
       replies.sendPort,
@@ -297,20 +300,29 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     await replies.cancel();
     // The isolate frees the voices and exits; kill only after the grace.
     await isolate.awaitExit(grace: exitGrace);
+    voiceLog('model-free', {'kind': 'tts-sherpa'});
   }
 
   static void _main((SendPort, String?) args) {
     final (out, libraryDir) = args;
     sherpaLibraryDir = libraryDir;
     final inbox = ReceivePort();
-    final engines = <String, so.OfflineTts>{};
+    // Only the voice used last stays loaded (B14): a language change frees
+    // the previous one first.
+    String? loadedId;
+    so.OfflineTts? loaded;
     out.send(inbox.sendPort);
     inbox.listen((message) {
       if (message is (String, String, String, String, String, double)) {
         final (id, model, tokens, dataDir, text, speed) = message;
         try {
           ensureSherpaBindings();
-          final tts = engines[id] ??= so.OfflineTts(
+          if (loadedId != id) {
+            loaded?.free();
+            loaded = null;
+            loadedId = null;
+          }
+          final tts = loaded ??= so.OfflineTts(
             so.OfflineTtsConfig(
               model: so.OfflineTtsModelConfig(
                 vits: so.OfflineTtsVitsModelConfig(
@@ -323,6 +335,7 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
               ),
             ),
           );
+          loadedId = id;
           final audio = tts.generate(text: text, speed: speed);
           out.send((
             TransferableTypedData.fromList([
@@ -334,9 +347,7 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
           out.send('$e');
         }
       } else {
-        for (final t in engines.values) {
-          t.free();
-        }
+        loaded?.free();
         inbox.close();
         Isolate.exit();
       }

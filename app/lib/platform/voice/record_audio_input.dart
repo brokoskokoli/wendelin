@@ -156,13 +156,15 @@ final class RecordAudioInput implements AudioInput {
     return _stopping = () async {
       final sub = _sub;
       _sub = null;
-      await sub?.cancel();
+      // Not awaited: a cancelled stream answers with a shared root-zone
+      // future; the recorder stop below is what ends the recording.
+      unawaited(sub?.cancel());
       try {
         await _recorder.stop();
       } on Object {
         // Already stopped by the platform; the stream ends anyway.
       }
-      if (!out.isClosed) await out.close();
+      if (!out.isClosed) unawaited(out.close());
     }();
   }
 }
