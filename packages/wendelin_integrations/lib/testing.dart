@@ -2,7 +2,8 @@
 /// plus the contract suites every port implementation must pass
 /// (`calendarPortContract`, `clipboardPortContract`, `alarmPortContract`,
 /// `memoryStoreContract`, `webSearchBackendContract`, `listFilePortContract`,
-/// `vaultPortContract`, `noteIndexPortContract`, `bringApiContract`).
+/// `vaultPortContract`, `noteIndexPortContract`, `bringApiContract`,
+/// `httpToolSecretsContract`).
 ///
 /// Depends on `package:test`; import it only from tests.
 library;
@@ -12,6 +13,7 @@ export 'testing/alarm_port_contract.dart';
 export 'testing/bring_api_contract.dart';
 export 'testing/calendar_port_contract.dart';
 export 'testing/clipboard_port_contract.dart';
+export 'testing/http_tool_secrets_contract.dart';
 export 'testing/list_file_port_contract.dart';
 export 'testing/memory_store_contract.dart';
 export 'testing/note_index_port_contract.dart';
