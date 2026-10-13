@@ -197,9 +197,7 @@ class ToolEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final undone = entry.undo == UndoPhase.undone;
-    final (title, detail) = undone
-        ? ('Rückgängig gemacht', entry.summary ?? entry.toolName)
-        : splitSummary(entry.summary, entry.toolName);
+    final (title, detail) = splitSummary(entry.summary, entry.toolName);
     final canUndo = entry.undo == UndoPhase.pending;
     return ToolResultCard(
       key: ValueKey(entry.id),
@@ -208,6 +206,7 @@ class ToolEntryCard extends StatelessWidget {
       toolName: entry.toolName,
       icon: integrationIcon(entry.integrationId),
       undoRemaining: canUndo ? entry.undoRemaining : null,
+      undone: undone,
       onUndo: canUndo ? () => onUndo(entry.id) : null,
     );
   }

@@ -14,6 +14,7 @@ import 'chat_entry.dart';
 import 'conversation_reducer.dart';
 import 'conversation_state.dart';
 import 'history_entries.dart';
+import 'new_topic_command.dart';
 
 /// The conversation on the main screen.
 final agentControllerProvider =
@@ -154,7 +155,7 @@ final class AgentController extends Notifier<ConversationState> {
   Future<void> send(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || state.running) return;
-    if (isNewTopicCommand(trimmed)) return newTopic();
+    if (isNewTopicPhrase(trimmed)) return newTopic();
     await _start(UserInput(text: trimmed), trigger: null, out: null);
   }
 
@@ -176,6 +177,14 @@ final class AgentController extends Notifier<ConversationState> {
                 : 'Es läuft schon eine Anfrage.',
           ),
         )
+        ..close();
+      return out.stream;
+    }
+    if (isNewTopicPhrase(text)) {
+      // Spoken „neues Thema“: same as typed, nothing goes to the model.
+      unawaited(newTopic());
+      out
+        ..add(const AgentDone(finalText: '', stopReason: StopReason.endTurn))
         ..close();
       return out.stream;
     }
@@ -343,6 +352,11 @@ final class AgentController extends Notifier<ConversationState> {
     }
   }
 
+  /// Adds a small hint line to the conversation („Abgebrochen.“,
+  /// „Zurückgenommen.“).
+  void addNotice(String text, {NoticeKind kind = NoticeKind.info}) =>
+      state = _reducer.notice(state, kind, text);
+
   /// Ends the session and clears the conversation („neues Thema“).
   Future<void> newTopic() async {
     if (state.running) return;
@@ -360,11 +374,8 @@ final class AgentController extends Notifier<ConversationState> {
   @visibleForTesting
   void seed(ConversationState value) => state = value;
 
-  /// Whether [text] asks for a new topic.
-  static bool isNewTopicCommand(String text) {
-    final t = text.toLowerCase().replaceAll(RegExp(r'[^a-zäöüß ]'), '').trim();
-    return t == 'neues thema';
-  }
+  /// Whether [text] asks for a new topic (see [isNewTopicCommand]).
+  static bool isNewTopicCommand(String text) => isNewTopicPhrase(text);
 
   void _onEvent(String sessionId, AgentEvent event) {
     _audit.agentEvent(sessionId, event);

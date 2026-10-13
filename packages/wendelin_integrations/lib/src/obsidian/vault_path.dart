@@ -1,3 +1,4 @@
+import '../common/matching.dart';
 import '../common/port_exception.dart';
 
 /// Vault-relative paths: normalization and the safety rules every tool and
@@ -113,3 +114,14 @@ abstract final class VaultPath {
     }
   }
 }
+
+/// Start of the hint line in a confirmation text when the note was found
+/// under another title than asked for („Gefunden: Wendelin-Test“).
+const noteFoundPrefix = 'Gefunden: ';
+
+/// Hint line (with line break) if the note [found] has another title than
+/// [query] (compared folded), else empty (B8).
+String foundHint(String query, String found) =>
+    foldText(VaultPath.title(query)) == foldText(VaultPath.title(found))
+    ? ''
+    : '$noteFoundPrefix${VaultPath.title(found)}\n';

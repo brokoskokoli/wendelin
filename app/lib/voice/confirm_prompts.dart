@@ -16,6 +16,15 @@ bool strictAnswer(PendingQuestion question) => switch (question) {
 String confirmationPrompt(PendingQuestion question, String? language) {
   final lang = VoiceTexts.of(language).language;
   return switch (question) {
+    ToolQuestion(:final event) when _replaceSection(event) != null => () {
+      // Names the note the confirmation resolved (B8).
+      final (:note, :section) = _replaceSection(event)!;
+      return switch (lang) {
+        'fr' => 'Dans $note, remplacer la section $section, d’accord ?',
+        'en' => 'In $note, replace the section $section, shall I?',
+        _ => 'In $note den Abschnitt $section ersetzen, soll ich?',
+      };
+    }(),
     ToolQuestion(:final event) => switch (lang) {
       'fr' => '${_actionFr(event.call.name)} Oui ou non ?',
       'en' => '${_actionEn(event.call.name)} Yes or no?',
@@ -27,6 +36,25 @@ String confirmationPrompt(PendingQuestion question, String? language) {
       _ => 'An $toName übergeben? Ja oder nein?',
     },
   };
+}
+
+final _replaceText = RegExp(
+  '^Abschnitt „(.+)“ in „(.+)“ ersetzen:',
+  multiLine: true,
+);
+
+/// Note title and section of the confirmation text of
+/// `obsidian__replace_section` (`prepareConfirmation` of WP31/B8).
+({String note, String section})? _replaceSection(ConfirmationRequired event) {
+  if (event.call.name != 'obsidian__replace_section') return null;
+  final m = _replaceText.firstMatch(event.description);
+  if (m == null) return null;
+  final path = m.group(2)!;
+  final name = path.substring(path.lastIndexOf('/') + 1);
+  final note = name.toLowerCase().endsWith('.md')
+      ? name.substring(0, name.length - 3)
+      : name;
+  return (note: note, section: m.group(1)!);
 }
 
 String _spokenTool(String tool) =>
@@ -66,3 +94,14 @@ String tapAnswerPrompt(String? language) =>
       'en' => 'Please answer with a tap.',
       _ => 'Antworte bitte per Tipp.',
     };
+
+/// „Zurückgenommen.“ after an undo, in the language of the request (B9).
+String undoneText(String? language) =>
+    switch (VoiceTexts.of(language).language) {
+      'fr' => 'Annulé.',
+      'en' => 'Undone.',
+      _ => 'Zurückgenommen.',
+    };
+
+/// „Abgebrochen.“ after a stop word or a tap on an empty request.
+const cancelledText = 'Abgebrochen.';

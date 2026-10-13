@@ -49,6 +49,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Design-System'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Integrationen'), 500);
+    await tester.ensureVisible(find.text('Integrationen'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Integrationen'));
     await tester.pumpAndSettle();
     expect(find.byType(IntegrationsSample), findsOneWidget);

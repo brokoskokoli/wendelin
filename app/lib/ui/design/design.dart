@@ -18,6 +18,7 @@ export 'provider_chip.dart';
 export 'rule_tile.dart';
 export 'secret_field.dart';
 export 'section_card.dart';
+export 'send_button.dart';
 export 'sheet_parts.dart';
 export 'status_card.dart';
 export 'tool_chip.dart';

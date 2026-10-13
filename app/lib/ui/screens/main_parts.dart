@@ -2,15 +2,31 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../voice/voice_ui_state.dart';
 import '../design/design.dart';
 
 /// Head of the main screen: lockup and settings button.
 class MainHeader extends StatelessWidget {
   /// Creates the head.
-  const MainHeader({super.key, required this.onSettings});
+  const MainHeader({
+    super.key,
+    required this.onSettings,
+    this.onNewConversation,
+    this.newConversationEnabled = true,
+  });
 
   /// Opens the settings.
   final VoidCallback onSettings;
+
+  /// „Neues Gespräch“ (same action as the one of the private banner);
+  /// `null` hides the button (empty conversation).
+  final VoidCallback? onNewConversation;
+
+  /// Whether „Neues Gespräch“ can be tapped (not while a request runs).
+  final bool newConversationEnabled;
+
+  /// Label of the button.
+  static const newConversationLabel = 'Neues Gespräch';
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -26,6 +42,14 @@ class MainHeader extends StatelessWidget {
         const SizedBox(width: WSpace.s10),
         const WendelinWordmark(),
         const Spacer(),
+        if (onNewConversation case final onNew?) ...[
+          WIconButton(
+            icon: WIcons.newChat,
+            tooltip: newConversationLabel,
+            onPressed: newConversationEnabled ? onNew : null,
+          ),
+          const SizedBox(width: WSpace.s),
+        ],
         WIconButton(
           icon: WIcons.settings,
           tooltip: 'Einstellungen',
@@ -92,6 +116,7 @@ class Composer extends StatefulWidget {
     required this.onSend,
     required this.mic,
     required this.onMic,
+    this.levels = const [],
     this.micHint,
     this.status,
     this.notice,
@@ -109,6 +134,9 @@ class Composer extends StatefulWidget {
   /// Tap on the microphone (start, or cancel while active).
   final VoidCallback onMic;
 
+  /// Recent microphone levels (0–1) for the listening bar.
+  final List<double> levels;
+
   /// Label of the disabled microphone (why it is off).
   final String? micHint;
 
@@ -121,6 +149,9 @@ class Composer extends StatefulWidget {
 
   /// Label of the microphone while listening (a tap aborts).
   static const listeningLabel = 'Zuhören abbrechen';
+
+  /// Text of the listening bar.
+  static const listeningText = 'Ich höre zu …';
 
   @override
   State<Composer> createState() => _ComposerState();
@@ -145,6 +176,7 @@ class _ComposerState extends State<Composer> {
   @override
   Widget build(BuildContext context) {
     final listening = widget.mic == MicState.listening;
+    final preparing = widget.mic == MicState.preparing;
     return DecoratedBox(
       decoration: const BoxDecoration(
         border: Border(
@@ -172,6 +204,7 @@ class _ComposerState extends State<Composer> {
                 textAlign: TextAlign.center,
                 semanticsLabel: status,
               ),
+            if (listening) ListeningBar(levels: widget.levels),
             Row(
               spacing: WSpace.m,
               children: [
@@ -183,24 +216,30 @@ class _ComposerState extends State<Composer> {
                     textInputAction: TextInputAction.send,
                     onSubmitted: _submit,
                     decoration: InputDecoration(
-                      hintText: listening
-                          ? 'Ich höre zu …'
+                      hintText: preparing
+                          ? MicButton.preparingLabel
                           : 'Schreiben statt sprechen',
                       semanticCounterText: '',
                     ),
                   ),
                 ),
-                MicButton(
-                  state: widget.mic,
-                  onPressed: widget.mic == MicState.disabled
-                      ? null
-                      : widget.onMic,
-                  compact: true,
-                  semanticLabel: switch (widget.mic) {
-                    MicState.disabled => widget.micHint,
-                    MicState.listening => Composer.listeningLabel,
-                    _ => null,
-                  },
+                // Text in the field: „Senden“ replaces the microphone.
+                ValueListenableBuilder(
+                  valueListenable: _text,
+                  builder: (context, value, _) => value.text.trim().isEmpty
+                      ? MicButton(
+                          state: widget.mic,
+                          onPressed: widget.mic == MicState.disabled
+                              ? null
+                              : widget.onMic,
+                          compact: true,
+                          semanticLabel: switch (widget.mic) {
+                            MicState.disabled => widget.micHint,
+                            MicState.listening => Composer.listeningLabel,
+                            _ => null,
+                          },
+                        )
+                      : SendButton(onPressed: () => _submit(_text.text)),
                 ),
               ],
             ),
@@ -209,6 +248,32 @@ class _ComposerState extends State<Composer> {
       ),
     );
   }
+}
+
+/// Level bar above the text field while the microphone listens: the
+/// waveform of the overlay and „Ich höre zu …“.
+class ListeningBar extends StatelessWidget {
+  /// Creates the bar for the recent [levels] (0–1, newest last).
+  const ListeningBar({super.key, required this.levels});
+
+  /// Recent microphone levels.
+  final List<double> levels;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    label: Composer.listeningText,
+    child: ExcludeSemantics(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        spacing: WSpace.m,
+        children: [
+          Waveform(amplitudes: waveBarsOf(levels)),
+          Text(Composer.listeningText, style: WText.caption),
+        ],
+      ),
+    ),
+  );
 }
 
 /// One-time hint about the new routing rule „Privat“ (after the M3

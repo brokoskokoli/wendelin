@@ -6,6 +6,15 @@ import '../ui/design/mic_button.dart';
 /// Number of waveform bars (as in the overlay design).
 const waveBars = 6;
 
+/// [waveBars] bars for the waveform: newest level right, flat bars to the
+/// left while there are fewer levels.
+List<double> waveBarsOf(List<double> levels) {
+  final recent = levels.length > waveBars
+      ? levels.sublist(levels.length - waveBars)
+      : levels;
+  return [for (var i = recent.length; i < waveBars; i++) 0.0, ...recent];
+}
+
 /// What the voice UI (microphone button, waveform, hints) shows.
 @immutable
 final class VoiceUiState {
@@ -19,6 +28,7 @@ final class VoiceUiState {
     this.awaitingAnswer = false,
     this.preparing = false,
     this.tapOnly = false,
+    this.stopCount = 0,
   });
 
   /// State of the voice pipeline.
@@ -47,6 +57,10 @@ final class VoiceUiState {
   /// (the spoken answer could not start or got no answer, B7).
   final bool tapOnly;
 
+  /// How often a spoken „Stopp“ aborted a request (WP31, B5); the overlay
+  /// reacts to every change.
+  final int stopCount;
+
   /// Whether a voice request (or a spoken confirmation) is in progress.
   bool get active => phase != VoiceState.idle || awaitingAnswer || preparing;
 
@@ -70,6 +84,7 @@ final class VoiceUiState {
     bool? awaitingAnswer,
     bool? preparing,
     bool? tapOnly,
+    int? stopCount,
   }) => VoiceUiState(
     phase: phase ?? this.phase,
     levels: levels ?? this.levels,
@@ -79,10 +94,12 @@ final class VoiceUiState {
     awaitingAnswer: awaitingAnswer ?? this.awaitingAnswer,
     preparing: preparing ?? this.preparing,
     tapOnly: tapOnly ?? this.tapOnly,
+    stopCount: stopCount ?? this.stopCount,
   );
 }
 
 /// Microphone button state: listening (also for a spoken answer),
+/// preparing while the speech models load, speaking during speech output,
 /// thinking while a voice or typed request runs, idle when speech is
 /// [available], otherwise disabled.
 MicState micStateFor(
@@ -90,7 +107,12 @@ MicState micStateFor(
   required bool available,
   required bool running,
 }) {
-  if (voice.listening) return MicState.listening;
+  if (voice.awaitingAnswer || voice.phase == VoiceState.listening) {
+    return MicState.listening;
+  }
+  // Models still load while the microphone already buffers (B11).
+  if (voice.preparing) return MicState.preparing;
+  if (voice.phase == VoiceState.speaking) return MicState.speaking;
   if (voice.active || running) return MicState.thinking;
   return available ? MicState.idle : MicState.disabled;
 }

@@ -53,6 +53,10 @@ class AssistantOverlayScreen extends ConsumerStatefulWidget {
   /// Whether the first trigger fires when the overlay opens.
   final bool autoStart;
 
+  /// How long „Abgebrochen.“ stays before the overlay closes.
+  @visibleForTesting
+  static Duration stopCloseDelay = const Duration(milliseconds: 1200);
+
   @override
   ConsumerState<AssistantOverlayScreen> createState() =>
       _AssistantOverlayState();
@@ -68,6 +72,11 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   bool _lockKnown = false;
   bool _typing = false;
   bool _closing = false;
+  // After a spoken „Stopp“ (B5): entries before this index belong to the
+  // exchange that was cancelled and are not shown; the overlay closes
+  // after [stopCloseDelay] if the setting says so.
+  int _hideBefore = 0;
+  Timer? _closeTimer;
   late final AppLifecycleListener _lifecycle;
 
   @override
@@ -97,6 +106,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
 
   @override
   void dispose() {
+    _closeTimer?.cancel();
     _lifecycle.dispose();
     unawaited(_sub.cancel());
     unawaited(_triggers.dispose());
@@ -127,6 +137,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       setState(() => _locked = false);
     }
     if (!mounted) return;
+    _closeTimer?.cancel();
     setState(() => _typing = false);
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) await _voice.cancel();
@@ -138,6 +149,19 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   Future<bool> _microphoneAccess() async {
     if (ref.read(demoModeProvider)) return true;
     return ensureMicrophoneAccess(context, ref.read(microphoneProvider));
+  }
+
+  void _onStop() {
+    final entries = ref.read(agentControllerProvider).entries;
+    setState(() => _hideBefore = entries.length);
+    final closes =
+        ref.read(voiceSettingsProvider).value?.stopClosesOverlay ?? true;
+    _closeTimer?.cancel();
+    if (closes) {
+      _closeTimer = Timer(AssistantOverlayScreen.stopCloseDelay, () {
+        if (mounted) unawaited(_close());
+      });
+    }
   }
 
   Future<void> _unlock() async {
@@ -180,6 +204,9 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(voiceControllerProvider.select((v) => v.stopCount), (_, _) {
+      _onStop();
+    });
     final conversation = ref.watch(agentControllerProvider);
     final voice = ref.watch(voiceControllerProvider);
     final config = ref.watch(providerConfigProvider).value;
@@ -208,8 +235,13 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       checkStatus: conversation.verification?.checkStatus,
       exchange: _locked
           ? const OverlayExchange()
-          : OverlayExchange.of(conversation.entries),
+          : OverlayExchange.of(
+              conversation.entries.sublist(
+                _hideBefore > conversation.entries.length ? 0 : _hideBefore,
+              ),
+            ),
       listening: voice.listening,
+      preparing: voice.preparing,
       mic: mic,
       levels: voice.levels,
       locked: _locked,
@@ -237,7 +269,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       },
       onClose: () => unawaited(_close()),
       onKeyboard: _toggleKeyboard,
-      onUndo: (id) => unawaited(_agent.undo(id)),
+      onUndo: (id) => unawaited(_voice.undo(id)),
       typing: _typing
           ? TextField(
               controller: _text,

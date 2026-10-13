@@ -39,7 +39,7 @@ class PrivateConversationBanner extends StatelessWidget {
   /// First private message of the conversation.
   final DateTime since;
 
-  /// Ends the session („Neue Unterhaltung“); `null` while a request runs.
+  /// Ends the session („Neues Gespräch“); `null` while a request runs.
   final VoidCallback? onNewConversation;
 
   @override
@@ -66,7 +66,7 @@ class PrivateConversationBanner extends StatelessWidget {
           style: TextButton.styleFrom(
             minimumSize: const Size(WSize.touchMin, WSize.touchMin),
           ),
-          child: const Text('Neue Unterhaltung'),
+          child: const Text('Neues Gespräch'),
         ),
       ],
     ),

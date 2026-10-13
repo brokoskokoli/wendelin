@@ -468,8 +468,9 @@ final class ReplaceSectionTool extends IntegrationTool
     try {
       final heading = a.requireString('heading');
       final content = textLines(a, 'content');
+      final query = a.requireString('path');
       final path = await env.resolveNote(
-        a.requireString('path'),
+        query,
         write: true,
         now: ctx.clock.now(),
       );
@@ -482,7 +483,9 @@ final class ReplaceSectionTool extends IntegrationTool
         env.prepared.remove(env.prepared.keys.first);
       }
       env.prepared[_key(path, heading, content)] = old.join('\n');
-      return 'Abschnitt „${s.heading.title}“ in „$path“ ersetzen:\n'
+      // Found under another name than asked for: say so first (B8).
+      final hint = foundHint(query, path);
+      return '${hint}Abschnitt „${s.heading.title}“ in „$path“ ersetzen:\n'
           '${lineDiff(old, content, maxLines: confirmationDiffLines)}';
     } on InvalidArgumentsException {
       return fallbackDescription;

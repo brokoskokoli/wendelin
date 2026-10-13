@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/voice/model_installer.dart';
 import 'package:wendelin/platform/voice/tar_bz2.dart';
+import 'package:wendelin/ui/design/design.dart' show WSwitch;
 import 'package:wendelin/ui/onboarding/voice_download_step.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/settings/model_download_row.dart';
@@ -414,6 +416,65 @@ void main() {
       await tester.tap(find.text('Standard der Sprache').last);
       await settle(tester);
       expect(c.read(voiceSettingsProvider).value!.ttsVoice, isNull);
+    });
+
+    // B13: the sample comes in the spoken language.
+    for (final (title, lang, text) in [
+      ('Français', 'fr', 'Bonjour, je suis Wendelin.'),
+      ('English', 'en', 'Hello, I am Wendelin.'),
+      ('Deutsch', 'de', 'Hallo, ich bin Wendelin.'),
+    ]) {
+      testWidgets('Probe hören in fester Sprache $title', (tester) async {
+        final env = env0();
+        final sherpa = env.sherpaTts;
+        await pumpScreen(tester, env, const VoiceScreen());
+        await tester.tap(find.text(title));
+        await settle(tester);
+        await tester.tap(find.text('Probe hören'));
+        await settle(tester);
+        expect(sherpa.calls.single.language, lang);
+        expect(sherpa.calls.single.text, text);
+      });
+    }
+
+    testWidgets('Probe hören: „Automatisch“ nimmt die App-Sprache', (
+      tester,
+    ) async {
+      final env = env0();
+      final sherpa = env.sherpaTts;
+      final c = await pumpScreen(tester, env, const VoiceScreen());
+      await tester.tap(find.text('Automatisch erkennen'));
+      await settle(tester);
+      await tester.tap(find.text('Probe hören'));
+      await settle(tester);
+      expect(sherpa.calls.single.language, c.read(languageProvider));
+    });
+
+    test('„Stopp schließt das Overlay“: Standard an, wird gespeichert', () {
+      expect(const VoiceSettings().stopClosesOverlay, isTrue);
+      final off = const VoiceSettings().copyWith(stopClosesOverlay: false);
+      expect(VoiceSettings.fromJson(off.toJson()).stopClosesOverlay, isFalse);
+      expect(VoiceSettings.fromJson(const {}).stopClosesOverlay, isTrue);
+    });
+
+    testWidgets('Schalter „Stopp schließt das Overlay“', (tester) async {
+      final c = await pumpScreen(tester, env0(), const VoiceScreen());
+      await tester.ensureVisible(find.text('Stopp schließt das Overlay'));
+      await tester.tap(find.byType(WSwitch).first);
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.stopClosesOverlay, isFalse);
+    });
+
+    test('Sprache und Text der Probe', () {
+      const fixed = VoiceSettings(sttLanguage: 'fr');
+      expect(sampleLanguage(fixed, 'de'), 'fr');
+      expect(sampleLanguage(const VoiceSettings(), 'en'), 'en');
+      expect(
+        sampleLanguage(const VoiceSettings(sttLanguage: 'auto'), 'de'),
+        'de',
+      );
+      expect(sampleText('fr-FR'), 'Bonjour, je suis Wendelin.');
+      expect(sampleText('xx'), 'Hallo, ich bin Wendelin.');
     });
 
     testWidgets('Modell löschen nach Rückfrage', (tester) async {

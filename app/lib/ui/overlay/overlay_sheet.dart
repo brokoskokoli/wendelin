@@ -7,6 +7,7 @@ import '../design/design.dart';
 import '../screens/bring_share_card.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/conversation_view.dart';
+import '../screens/main_parts.dart';
 import '../screens/private_banner.dart';
 
 /// What the assistant overlay shows of the current request: the latest
@@ -75,6 +76,7 @@ class OverlaySheet extends StatelessWidget {
     required this.onUndo,
     this.checkStatus,
     this.listening = false,
+    this.preparing = false,
     this.question,
     this.onAnswer,
     this.hint = ConfirmationHint.tap,
@@ -111,6 +113,9 @@ class OverlaySheet extends StatelessWidget {
 
   /// Whether the microphone is open (placeholder instead of transcript).
   final bool listening;
+
+  /// The microphone buffers while the speech models load („Moment …“).
+  final bool preparing;
 
   /// Microphone button state.
   final MicState mic;
@@ -255,9 +260,12 @@ class OverlaySheet extends StatelessWidget {
         ),
       ?typing,
       if (typing == null)
-        if (listening && (request == null || mic == MicState.listening))
+        if (listening &&
+            (request == null ||
+                mic == MicState.listening ||
+                mic == MicState.preparing))
           Text(
-            'Ich höre zu …',
+            preparing ? MicButton.preparingLabel : Composer.listeningText,
             style: WText.transcript.copyWith(color: WColors.textMuted),
           )
         else if (request != null)

@@ -369,7 +369,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(containerOf(tester).read(demoModeProvider), isTrue);
     await tester.tap(find.text('Design-Galerie'));
-    await tester.pumpAndSettle();
+    // Die Galerie zeigt die bewegten Punkte (Sprechen): kein Settle.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
     expect(find.byType(DesignGallery), findsOneWidget);
   });
 

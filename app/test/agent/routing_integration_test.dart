@@ -171,7 +171,7 @@ void main() {
     expect(llm['claude']!.requests, isEmpty, reason: '„Nein“ gilt');
     expect(c.read(agentControllerProvider).privateSince, testNow);
 
-    // „Neue Unterhaltung“ beendet den privaten Zustand.
+    // „Neues Gespräch“ beendet den privaten Zustand.
     await controller.newTopic();
     expect(c.read(agentControllerProvider).privateSince, isNull);
   });

@@ -781,6 +781,43 @@ void main() {
       expect(obs.vault.writes, 0);
     });
 
+    // B8: found under another name than asked for → hint before the answer.
+    for (final query in [
+      'Wendelin Test',
+      'wendelin-test',
+      'Wendelin-Test.md',
+    ]) {
+      test(
+        'Bestätigung ohne Hinweis, wenn nur gefaltet gleich: „$query“',
+        () async {
+          final obs = Obs(files: {'Wendelin-Test.md': note});
+          final text = await obs.tool('replace_section').confirmationText({
+            ...args,
+            'path': query,
+          }, ctx());
+          expect(text, startsWith('Abschnitt „Status“ in „Wendelin-Test.md“'));
+          expect(text, isNot(contains(noteFoundPrefix)));
+        },
+      );
+    }
+
+    for (final query in ['Wendelin-Tests']) {
+      test('Bestätigung nennt die gefundene Notiz: „$query“', () async {
+        final obs = Obs(files: {'Wendelin-Test.md': note});
+        final text = await obs.tool('replace_section').confirmationText({
+          ...args,
+          'path': query,
+        }, ctx());
+        expect(
+          text,
+          startsWith(
+            'Gefunden: Wendelin-Test\n'
+            'Abschnitt „Status“ in „Wendelin-Test.md“ ersetzen:',
+          ),
+        );
+      });
+    }
+
     test('ohne vorbereiteten Diff wird nichts geschrieben', () async {
       final obs = Obs(files: {'P.md': note});
       final o = await obs.call('replace_section', args, prepare: false);
