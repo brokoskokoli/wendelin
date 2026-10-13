@@ -9,16 +9,29 @@ environment:
   sdk: ^3.13.0
 
 dependencies:
+  android_intent_plus: ^6.1.0
+  drift: ^2.35.2
+  drift_flutter: ^0.3.1
   flutter:
     sdk: flutter
+  flutter_riverpod: ^3.4.3
+  flutter_secure_storage: ^11.2.0
   flutter_svg: ^2.3.0
+  flutter_timezone: ^5.1.1
+  http: ^1.6.0
+  platform: ^3.1.6
+  wendelin_agent: any
   wendelin_core: any
+  wendelin_integrations: any
+  wendelin_providers: any
+  wendelin_storage: any
+  wendelin_tools: any
 
 dev_dependencies:
+  fake_async: any
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-
 flutter:
   uses-material-design: true
   assets:
@@ -44,3 +57,20 @@ flutter:
           weight: 400
         - asset: assets/fonts/IBMPlexMono-Medium.ttf
           weight: 500
+
+# Launcher-Icons laut docs/design/DESIGN.md. Erzeugt mit
+#   dart pub global activate flutter_launcher_icons 0.14.4
+#   dart pub global run flutter_launcher_icons
+# (bewusst keine dev_dependency: sie würde im Workspace xml/cli_util
+# herabstufen). Die erzeugten Dateien sind eingecheckt; die Änderung des
+# Tools an ios/Runner.xcodeproj/project.pbxproj danach verwerfen.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "../docs/design/logo/app-icon-dark.png"
+  adaptive_icon_background: "#101214"
+  adaptive_icon_foreground: "../docs/design/logo/app-icon-foreground.png"
+  # Die Vorlage enthält die Schutzzone bereits.
+  adaptive_icon_foreground_inset: 0
+  remove_alpha_ios: true
+  min_sdk_android: 26
