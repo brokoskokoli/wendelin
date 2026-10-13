@@ -545,6 +545,56 @@ void main() {
     expect(c.read(voiceControllerProvider).error, contains('Mikrofon'));
   });
 
+  group('während der Berechtigungsfrage (M9)', () {
+    test('getippte Anfrage gestartet: kein Zuhören danach', () async {
+      final audio = FakeAudioInput(frames: utterance());
+      start([
+        ScriptedTurn.hang(partialText: 'Moment'),
+      ], voice: fakeVoice(audio: audio));
+      final started = await voice().start(
+        TriggerKind.pushToTalk,
+        prepare: () async {
+          // Der Nutzer tippt, während der Dialog offen ist.
+          unawaited(c.read(agentControllerProvider.notifier).send('Getippt'));
+          await waitConv(c, (s) => s.running);
+          return true;
+        },
+      );
+      expect(started, isFalse);
+      expect(audio.startCount, 0);
+      expect(c.read(voiceControllerProvider).active, isFalse);
+      c.read(agentControllerProvider.notifier).cancel();
+      await c.read(agentControllerProvider.notifier).idle;
+    });
+
+    test('andere Sprach-Anfrage gestartet: keine zweite', () async {
+      final audio = FakeAudioInput(
+        frames: utterance(),
+        frameInterval: const Duration(milliseconds: 20),
+      );
+      start(
+        [ScriptedTurn.text('Gut.')],
+        voice: fakeVoice(
+          audio: audio,
+          script: const [Transcript(text: 'Hallo')],
+        ),
+      );
+      final started = await voice().start(
+        TriggerKind.assistant,
+        prepare: () async {
+          expect(await voice().start(TriggerKind.pushToTalk), isTrue);
+          await waitVoice(c, (v) => v.listening);
+          return true;
+        },
+      );
+      expect(started, isFalse);
+      expect(audio.startCount, 1, reason: 'nur die erste Anfrage hört zu');
+      expect(c.read(voiceControllerProvider).trigger, TriggerKind.pushToTalk);
+      await voice().cancel();
+      await voice().whenIdle;
+    });
+  });
+
   test('nichts verstanden: Hinweis', () async {
     start(
       const [],

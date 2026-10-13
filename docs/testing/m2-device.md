@@ -60,7 +60,8 @@ Die Mikrofon-Berechtigung fragt Wendelin erst, wenn die Spracherkennung geladen 
 
 1. Im Hauptbildschirm auf das Mikrofon tippen. Solange Whisper oder Silero fehlen, ist es ausgegraut, und darunter steht „Spracherkennung laden: Einstellungen → Sprache“. Das ist richtig so.
 2. Wendelin erklärt zuerst, wozu er das Mikrofon braucht („Mikrofon erlauben?“): „Erlauben“ → Android-Dialog → „Bei Nutzung der App“.
-3. Wer „Nicht jetzt“ wählt, sieht „Ohne Mikrofon geht nur Text.“ und kann trotzdem tippen.
+3. Wer „Nicht jetzt“ wählt, sieht unter dem Mikrofon „Ohne Mikrofon-Zugriff geht nur Text.“ und kann trotzdem tippen.
+4. Wer „Erlauben“ wählt, im Android-Dialog aber ablehnt, sieht kurz „Ohne Mikrofon geht nur Text. Du kannst es in den Android-Einstellungen unter Apps → Wendelin erlauben.“ und danach unter dem Mikrofon „Ohne Mikrofon-Zugriff geht nur Text.“
 
 ## 4. Standard-Assistent setzen
 
@@ -143,11 +144,13 @@ Jeden Punkt abhaken und Auffälliges notieren (Modell, Sprache, was erkannt wurd
 - [ ] D3 mit „Ja“, dann „Rückgängig“: Der alte Abschnitt ist wieder da.
 
 **Mikrofon-Berechtigung**
-- [ ] In den Android-Einstellungen Wendelin das Mikrofon entziehen, dann auf das Mikrofon tippen: zuerst Wendelins Erklärung, kein Absturz, Hinweis „Ohne Mikrofon geht nur Text.“
+- [ ] In den Android-Einstellungen Wendelin das Mikrofon entziehen, dann auf das Mikrofon tippen: zuerst Wendelins Erklärung „Mikrofon erlauben?“, kein Absturz. „Nicht jetzt“ → „Ohne Mikrofon-Zugriff geht nur Text.“ „Erlauben“ und in Android ablehnen (oder Android fragt nicht mehr, weil schon zweimal abgelehnt) → „Ohne Mikrofon geht nur Text. Du kannst es in den Android-Einstellungen unter Apps → Wendelin erlauben.“
 
 **System-Spracherkennung in einer anderen App**
 - [ ] Eine App mit Spracheingabe öffnen, die die System-Spracherkennung nutzt (z. B. das Mikrofon in einer Tastatur ohne eigene Erkennung wie FlorisBoard oder die Diktierfunktion einer Notiz-App). Diktieren: Der Text kommt von Wendelin (Whisper auf dem Gerät).
 - [ ] Dasselbe, während die Wendelin-App offen im Hintergrund ist (die Erkennung nutzt dann deren Whisper mit). Im Log (Abschnitt 9) stehen Zeilen „Erkenner: Whisper-Zeit …“.
+- [ ] Kaltstart des Erkenners: Wendelin-App ganz schließen (aus „Zuletzt verwendet“ wischen oder `adb shell am force-stop app.wendelin`), dann in der fremden App die Spracheingabe starten, einen kurzen Satz sagen und die Zeit vom Satzende bis zum ersten Text stoppen (mehrmals, Mittelwert notieren). Das Log zeigt die reine Whisper-Zeit („Erkenner: Whisper-Zeit …“, Abschnitt 8).
+- [ ] Speicher: während bzw. direkt nach einer Erkennung `adb shell dumpsys meminfo app.wendelin` und „TOTAL PSS“ notieren, einmal mit offener Wendelin-App (geteiltes Whisper) und einmal ohne (eigenes Modell des Erkenners, wird 30 s nach der letzten Anfrage freigegeben), je für base und small.
 - [ ] Einstellungen → Assistent → „Als Spracherkennung für andere Apps anbieten“ aus: Die Spracheingabe der anderen App meldet einen Fehler. Wendelin bleibt Assistent.
 - [ ] Zu einem anderen Assistenten (oder „Keiner“) wechseln: Die System-Spracherkennung antwortet nicht mehr. Der Hinweis in Einstellungen → Assistent beschreibt das.
 
@@ -180,7 +183,7 @@ Vorlage zum Ausfüllen:
 | | whisper-base | | | | | | | |
 | | whisper-small | | | | | | | |
 
-Zum Vergleich (Emulator auf Apple Silicon, 4 Kerne, siehe `docs/notes/m2-e2e-2026-10-13.md`): base Ø 184 ms je Satz (RTF 0,05), small Ø 546 ms (RTF 0,15). Ein Telefon ist langsamer: Ist small dort im Mittel unter etwa 2 s je Satz (RTF ≲ 0,5), empfehlen wir small mit fester Sprache als Standard.
+Zum Vergleich (Emulator auf Apple Silicon, 4 Kerne, siehe `docs/notes/m2-e2e-2026-10-13.md`): base Ø 182 ms je Satz (RTF 0,05), small Ø 539 ms (RTF 0,15). Ein Telefon ist langsamer: Ist small dort im Mittel unter etwa 2 s je Satz (RTF ≲ 0,5), empfehlen wir small mit fester Sprache als Standard.
 
 ## 9. Logs und Prüfprotokoll exportieren
 

@@ -61,6 +61,7 @@ dart run tool/gate.dart          # führt alles unten aus
 4. Zeilenabdeckung je Paket unter `packages/` **≥ 85 %** (`dart test --coverage` + `coverage:format_coverage`)
 5. `dart run tool/check_deps.dart` (Abhängigkeitsregeln oben)
 6. `dart run tool/check_secrets.dart` (keine Schlüssel-Muster, keine verbotenen Identitäten im Baum)
+7. Selbsttests der Geräte-Skripte ohne Android-SDK: `bash tool/android_device.sh --self-test` (Geräteauswahl mit Fake-adb), `tool/check_apk.sh --self-test` (APK-Prüfung mit Attrappen)
 
 Testarten:
 - **Unit-Tests** je Klasse, Tabellentests für Logik mit vielen Fällen.

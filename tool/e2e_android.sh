@@ -20,6 +20,12 @@
 # DEVICE bzw. ANDROID_SERIAL (ohne beides muss genau ein Gerät verbunden
 # sein, sonst Abbruch). Läuft nur auf Emulatoren (Seriennummer emulator-*,
 # ro.kernel.qemu=1); ein echtes Gerät nur mit E2E_ALLOW_DEVICE=1.
+# Achtung, auf einem echten Gerät: Das Skript legt Testtermine im Kalender
+# an, schreibt /sdcard/Download/wendelin-e2e-*.md und mit WENDELIN_MODELS
+# /sdcard/Documents/WendelinE2E (wird danach gelöscht), setzt und entzieht
+# die Assistenten-Rolle und löscht mit WENDELIN_LIVE oder WENDELIN_MODELS
+# alle Wendelin-Daten (`pm clear app.wendelin`: Verläufe, Einstellungen,
+# Keys, Modelle).
 #
 # Sprache und Assistent (M2, WP19): mit WENDELIN_MODELS=<dir> (darin
 # whisper-base/, whisper-small/, silero-vad/ wie in tool/e2e_recognizer.sh)
@@ -59,7 +65,11 @@ if ! is_emulator; then
       "Kalender und Dateien). Freigabe nur mit E2E_ALLOW_DEVICE=1." >&2
     exit 1
   fi
-  echo "Warnung: E2E_ALLOW_DEVICE=1 – Tests laufen auf dem echten Gerät $DEVICE" >&2
+  echo "Warnung: E2E_ALLOW_DEVICE=1 – Tests laufen auf dem echten Gerät $DEVICE." \
+    "Sie legen Testtermine an, schreiben /sdcard/Download/wendelin-e2e-*.md" \
+    "und /sdcard/Documents/WendelinE2E (Test-Vault, wird gelöscht), ändern die" \
+    "Assistenten-Rolle und löschen mit WENDELIN_LIVE/WENDELIN_MODELS alle" \
+    "Wendelin-Daten (pm clear app.wendelin)." >&2
 fi
 
 if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" != "1" ]; then
@@ -155,7 +165,9 @@ host_request() {
     unrole)
       adb shell cmd role remove-role-holder --user 0 android.app.role.ASSISTANT "$PKG"
       sleep 3
-      if adb shell dumpsys package "$PKG" | sed -n '/enabledComponents:/,/disabledComponents:\|^ *[A-Za-z]*:$/p' |
+      # Nur der Abschnitt enabledComponents (bis zur nächsten Überschrift).
+      if adb shell dumpsys package "$PKG" | tr -d '\r' |
+        awk '/enabledComponents:/ {on = 1; next} on && /^ *[A-Za-z]+:$/ {on = 0} on' |
         grep -q WendelinRecognitionService; then
         in_app sh -c "'echo aktiv > files/e2e/recognizer-state'"
       else

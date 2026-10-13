@@ -20,7 +20,7 @@ M1 umfasst: Anthropic- und OpenAI-kompatible Adapter, Provider-Einrichtung mit V
 - Obsidian-Integration mit Vault-Port, Notiz-Tools, Tagesnotiz und Volltext-Index (WP16),
 - Sprach-Plattform: Whisper und Silero VAD lokal über sherpa-onnx, Aufnahme, System-TTS mit sherpa-Fallback, Modell-Download (WP17, ADR 0007),
 - Standard-Assistent mit Overlay, Push-to-talk im Hauptbildschirm, Vault über die Dateiauswahl (WP18, ADR 0006),
-- lokale System-Spracherkennung (`RecognitionService` mit Whisper) für andere Apps, ab Werk aus (WP20, ADR 0008).
+- lokale System-Spracherkennung (`RecognitionService` mit Whisper) für andere Apps (WP20, ADR 0008): aktiv nur, solange Wendelin die Assistenten-Rolle hält; die Einstellung „Als Spracherkennung für andere Apps anbieten“ ist standardmäßig an und abschaltbar.
 
 Der End-to-End-Nachweis auf dem Emulator steht (WP19): Eine WAV statt des Mikrofons, Whisper base und small lokal, das Overlay über `KEYCODE_ASSIST` und eine byte-genau ergänzte Tagesnotiz im Test-Vault, dazu ein Live-Durchlauf mit Claude Haiku ([`docs/notes/m2-e2e-2026-10-13.md`](docs/notes/m2-e2e-2026-10-13.md)). Offen ist der Test auf einem echten Telefon nach [`docs/testing/m2-device.md`](docs/testing/m2-device.md). Pakete und Stand: [`docs/work-packages/M2.md`](docs/work-packages/M2.md).
 
@@ -47,7 +47,7 @@ Voraussetzungen: Flutter 3.47 / Dart 3.13, Android SDK (API 35).
 
 ```sh
 flutter pub get
-dart run tool/gate.dart        # Format, Analyse, Tests, Abdeckung ≥ 85 %, Abhängigkeitsregeln, Secret-Scan
+dart run tool/gate.dart        # Format, Analyse, Tests, Abdeckung ≥ 85 %, Abhängigkeitsregeln, Secret-Scan, Selbsttests der Geräte-Skripte
 dart run tool/gate.dart --no-app   # ohne Flutter-App (wie der Ubuntu-Job in CI)
 ```
 
@@ -57,7 +57,8 @@ Weitere Prüfungen (lokal, brauchen Android-SDK bzw. Emulator):
 
 ```sh
 tool/check_apk.sh              # Release-APK: keine GMS-/Firebase-Klassen, Backup aus, nur erwartete Berechtigungen und exportierte Komponenten
-tool/check_apk.sh --self-test  # Selbsttest des Prüfskripts mit Attrappen (ohne SDK)
+tool/check_apk.sh --self-test  # Selbsttest des Prüfskripts mit Attrappen (ohne SDK, auch im Gate)
+bash tool/android_device.sh --self-test  # Geräteauswahl mit Fake-adb: 0/1/2 Geräte, DEVICE/ANDROID_SERIAL (auch im Gate)
 tool/e2e_android.sh            # Gerätetests app/integration_test/ auf dem verbundenen Emulator
 WENDELIN_MODELS=<dir> tool/e2e_android.sh      # dazu Sprache und Assistent (M2, WP19)
 WENDELIN_MODELS=<dir> tool/e2e_recognizer.sh   # System-Spracherkennung (androidTest, WP20)
