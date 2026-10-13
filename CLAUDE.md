@@ -23,6 +23,14 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - Fakes zum Wiederverwenden stellt `package:<pkg>/fakes.dart` bereit, Contract-Suites `package:<pkg>/testing.dart`.
 - Parallele Arbeit läuft in Git-Worktrees unter `../james-wt/<wp>`, mit einem Branch `wp/<nr>-<slug>` pro Arbeitspaket. Gemergt wird erst nach bestandenem Review.
 
+## Agenten und Tokenverbrauch
+- Lies gezielt: erst `grep -n`, dann den Ausschnitt mit `sed -n` oder Read mit Bereich. Ganze große Dateien liest du nicht.
+- Bestehende Dateien änderst du mit Edit. Komplett neu schreibst du nur neue Dateien.
+- Während der Arbeit läuft `dart run tool/gate.dart --changed`. Das volle Gate läuft einmal vor dem Abschluss-Commit.
+- Abschlussberichte sind kurz, höchstens etwa 10 bis 15 Zeilen. Belege nennst du als Datei:Zeile statt als langes Zitat.
+- Nachbesserungen und Re-Reviews übernimmt ein frischer Agent mit Befundliste und Diff, statt einen großen Kontext fortzusetzen.
+- Modelle: Coder nutzen Sonnet, Reviewer das Standardmodell (Entscheidung Maintainer 2026-10-13).
+
 ## Git und Identität (wichtig)
 - Erlaubt sind nur `Stefan Richter <16724498+brokoskokoli@users.noreply.github.com>` und der Trailer `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine anderen Namen oder Mailadressen, insbesondere keine Arbeitgeber-Domains.
 - Die Identität ist repo-lokal gesetzt, Hooks in `tool/hooks/` prüfen sie. Niemals `--no-verify` oder Identitäts-Overrides verwenden.
