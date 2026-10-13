@@ -40,6 +40,9 @@ class Messages extends Table {
   TextColumn get profileId => text().nullable()();
   TextColumn get modelId => text().nullable()();
 
+  /// `PrivacyLevel.name` of a privately routed turn (v3), else null.
+  TextColumn get privacyFloor => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -57,6 +60,9 @@ class MemoryEntries extends Table {
   TextColumn get source => text()();
   IntColumn get createdAt => integer().map(epochMicros)();
   IntColumn get lastUsedAt => integer().map(epochMicros)();
+
+  /// `PrivacyLevel.name` if saved by a private run (v3), else null.
+  TextColumn get privacyFloor => text().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

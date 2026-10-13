@@ -1,4 +1,5 @@
-import 'package:wendelin_core/wendelin_core.dart' show detectSensitiveContent;
+import 'package:wendelin_core/wendelin_core.dart'
+    show PrivacyLevel, detectSensitiveContent;
 import 'package:wendelin_integrations/wendelin_integrations.dart' as wi;
 import 'package:wendelin_storage/wendelin_storage.dart' as st;
 
@@ -23,6 +24,7 @@ final class RepositoryMemoryPort implements wi.MemoryStorePort {
     String text, {
     required wi.MemoryCategory category,
     required String source,
+    PrivacyLevel? privacyFloor,
   }) async {
     if (text.trim().isEmpty) {
       throw ArgumentError.value(text, 'text', 'darf nicht leer sein');
@@ -36,6 +38,7 @@ final class RepositoryMemoryPort implements wi.MemoryStorePort {
         text,
         category: _toStorage(category),
         source: source,
+        privacyFloor: privacyFloor,
       );
       return _toPort(saved);
     } on st.SensitiveContentException catch (e) {
@@ -76,6 +79,7 @@ final class RepositoryMemoryPort implements wi.MemoryStorePort {
         lastUsedAt: used || e.lastUsedAt.isAfter(e.createdAt)
             ? e.lastUsedAt
             : null,
+        privacyFloor: e.privacyFloor,
       );
 
   static st.MemoryCategory _toStorage(wi.MemoryCategory c) => switch (c) {

@@ -114,6 +114,15 @@ abstract final class AgentRunnerTexts {
   static const redactedResult =
       '[Tool-Ergebnis aus geschützter Quelle ausgeblendet]';
 
+  /// Replaces messages of an earlier private turn for targets below its
+  /// privacy floor.
+  static const privateHidden = '[privater Gesprächsteil ausgeblendet]';
+
+  /// Message when a private request has no target with enough privacy.
+  static const noPrivateTarget =
+      'Die Anfrage ist privat, aber kein ausreichend geschütztes Modell ist '
+      'verfügbar. Ich habe sie deshalb nicht gesendet.';
+
   /// Message when the user declines handing protected data to another
   /// model.
   static const protectedDeclined =
@@ -174,6 +183,10 @@ final class _Run {
   int _roundsOnProvider = 0;
   int _invalidOnProvider = 0;
   bool _consentDeclined = false;
+
+  /// The user agreed to hand this run to a target below its privacy floor;
+  /// earlier private turns up to that floor are then visible to it.
+  bool _belowFloorConsented = false;
 
   /// Ids of calls refused because the target could not see the tool.
   final Set<String> _refused = {};
@@ -245,9 +258,38 @@ final class _Run {
     );
     _context = await runner.contextBuilder.build(input);
     _messages.addAll(_context.messages);
+    // A private request without any target of enough privacy is not sent.
+    final noPrivateTarget = _current.belowPrivacyFloor;
+    final retry = input.requestEscalation || _current.requestedTarget != null;
+    if (retry) {
+      // „nochmal mit …“ repeats the previous turn: its privacy floor applies
+      // to this run too (K8 d).
+      final previous = _context.messages
+          .take(_context.messages.length - 1)
+          .lastWhereOrNull((m) => m.role == Role.user)
+          ?.privacyFloor;
+      final floor = _current.privacyFloor;
+      if (previous != null && (floor == null || !floor.isAtLeast(previous))) {
+        _current = _current.withPrivacyFloor(previous);
+      }
+    }
+    _raiseFloorToTaint();
     await _record(_context.messages.last);
+    if (noPrivateTarget) {
+      throw _Stop(
+        const AgentFailed(
+          error: AgentErrorKind.provider,
+          message: AgentRunnerTexts.noPrivateTarget,
+        ),
+      );
+    }
+    // The model gets the routed text (trigger stripped); the recorded and
+    // displayed message stays as the user said it.
+    if (_current.effectiveText case final text?) {
+      _messages.last = Message.user(text, images: input.images);
+    }
 
-    if (input.requestEscalation) {
+    if (retry) {
       await _escalate(EscalationReason.userRequested);
     }
 
@@ -442,6 +484,7 @@ final class _Run {
   // ----------------------------------------------------------- model call
 
   Future<_ModelReply> _callModel() async {
+    _raiseFloorToTaint();
     final target = _current;
     final catalog = _catalog;
     final tools = catalog.activeSpecs();
@@ -524,16 +567,24 @@ final class _Run {
   }
 
   String _systemPrompt() {
-    final base = _context.systemPrompt;
+    // Memory entries of private runs only for targets of their level.
+    final memories = _context.memories;
+    final visible = [
+      for (final m in memories)
+        if (!_hiddenFor(m.privacyFloor)) m,
+    ];
+    final base = visible.length == memories.length
+        ? _context.systemPrompt
+        : runner.contextBuilder.systemPrompt(memories: visible);
     if (_epoch == 0) return base;
     // Calls of tools this target may not see are left out (their names
     // and status are protected too).
-    final visible = runner.catalogFor == null ? null : _catalog;
+    final shown = runner.catalogFor == null ? null : _catalog;
     final before = _executed
         .where(
           (e) =>
               e.epoch < _epoch &&
-              (visible == null || visible.lookup(e.call.name) != null),
+              (shown == null || shown.lookup(e.call.name) != null),
         )
         .toList();
     if (before.isEmpty) return base;
@@ -601,7 +652,7 @@ final class _Run {
         (tainted ||
             (!_refused.contains(c.id) && catalog.lookup(c.name) == null));
     final out = <Message>[];
-    for (final m in _messages) {
+    for (final m in _withoutPrivateHistory()) {
       if (m.role == Role.user) tainted = false;
       var taintsNext = false;
       final blocks = <ContentBlock>[];
@@ -659,6 +710,71 @@ final class _Run {
     return out;
   }
 
+  /// [_messages] with earlier private turns the current target may not see
+  /// replaced by [AgentRunnerTexts.privateHidden]: a user placeholder and,
+  /// if the turn had an answer, one assistant placeholder (tool calls and
+  /// results disappear together, so pairs stay intact).
+  ///
+  /// A message is hidden when its floor is above the target's level, unless
+  /// the user agreed to go below this run's floor and that floor covers it.
+  List<Message> _withoutPrivateHistory() {
+    final hidden = _hiddenFor;
+    final out = <Message>[];
+    var hiding = false;
+    var answered = false;
+    for (final m in _messages) {
+      if (!hidden(m.privacyFloor)) {
+        hiding = false;
+        out.add(m);
+        continue;
+      }
+      if (m.role == Role.user || !hiding) {
+        out.add(Message.user(AgentRunnerTexts.privateHidden));
+        hiding = true;
+        answered = false;
+        if (m.role == Role.user) continue;
+      }
+      if (!answered) {
+        out.add(Message.assistantText(AgentRunnerTexts.privateHidden));
+        answered = true;
+      }
+    }
+    return out;
+  }
+
+  /// Whether content with privacy [floor] (an earlier private turn or
+  /// memory entry) is hidden from the current target: its level is below
+  /// [floor], and the user did not agree to go below this run's floor
+  /// covering it.
+  bool _hiddenFor(PrivacyLevel? floor) {
+    final runFloor = _current.privacyFloor;
+    return floor != null &&
+        !_current.privacy.isAtLeast(floor) &&
+        !(_belowFloorConsented &&
+            runFloor != null &&
+            runFloor.isAtLeast(floor));
+  }
+
+  /// Taint propagation: once the current target sees private content (an
+  /// earlier private turn or memory entry), whatever this run produces may
+  /// contain it. The run's floor rises to the highest such floor, so its
+  /// messages are stored with it, tools persist with it, and escalations
+  /// below it need consent.
+  void _raiseFloorToTaint() {
+    PrivacyLevel? taint;
+    for (final floor in [
+      for (final m in _messages) m.privacyFloor,
+      for (final m in _context.memories) m.privacyFloor,
+    ]) {
+      if (floor == null || _hiddenFor(floor)) continue;
+      if (taint == null || floor.isAtLeast(taint)) taint = floor;
+    }
+    final current = _current.privacyFloor;
+    if (taint != null && (current == null || !current.isAtLeast(taint))) {
+      _current = _current.withPrivacyFloor(taint);
+    }
+  }
+
   static bool _isDeclined(ToolOutcome o) =>
       !o.isError && o.text == ToolOutcome.declinedText;
 
@@ -708,6 +824,7 @@ final class _Run {
         timeZone: runner.contextBuilder.device.timeZone,
         cancel: token,
         privacyLevel: _current.privacy,
+        privacyFloor: _current.privacyFloor,
       );
       await for (final event in runner.invoker.invokeAll(pending, ctx)) {
         switch (event) {
@@ -769,6 +886,9 @@ final class _Run {
   Future<bool> _escalate(EscalationReason reason) async {
     final next = runner.resolver.escalate(_current, reason);
     if (next == null) return false;
+    final same =
+        next.profileId == _current.profileId &&
+        next.modelId == _current.modelId;
     // Results of tools the next target may not see are in this run: it
     // gets them redacted, but the user decides whether to hand over at all.
     final nextCatalog = runner.catalogFor?.call(next.privacy);
@@ -796,6 +916,7 @@ final class _Run {
       ]);
       question.respond(false); // no-op if answered
       _throwIfAborted();
+      if (approved && next.belowPrivacyFloor) _belowFloorConsented = true;
       if (!approved) {
         if (protectedData) {
           throw _Stop(
@@ -808,6 +929,12 @@ final class _Run {
         _consentDeclined = true;
         return false;
       }
+    }
+    if (same) {
+      // Retry on the same target („nochmal mit <aktuelles Ziel>“): nothing
+      // to hand over, only the consent above may have been needed.
+      _current = next;
+      return true;
     }
     emit(
       Escalated(
@@ -856,7 +983,12 @@ final class _Run {
     await _record(m);
   }
 
+  /// Records [m]; messages of a private run carry its privacy floor so
+  /// later turns can hide them from weaker targets.
   Future<void> _record(Message m) async {
-    await runner.recorder?.record(m);
+    final floor = _current.privacyFloor;
+    await runner.recorder?.record(
+      floor == null ? m : m.withPrivacyFloor(floor),
+    );
   }
 }

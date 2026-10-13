@@ -12,6 +12,7 @@ final class ToolContext {
     required this.timeZone,
     CancelToken? cancel,
     this.privacyLevel,
+    this.privacyFloor,
   }) : cancel = cancel ?? CancelToken();
 
   /// Current conversation session.
@@ -34,4 +35,10 @@ final class ToolContext {
   /// (a standard target never reaches a sensitive tool, also not through
   /// `tools__search`). `null` = the invoker's default catalog.
   final PrivacyLevel? privacyLevel;
+
+  /// Privacy floor of the run the calls come from (a private or tainted
+  /// run), if any. Tools that persist content for later turns (e.g.
+  /// `memory__save`) store it with this floor so weaker targets never see
+  /// it.
+  final PrivacyLevel? privacyFloor;
 }

@@ -280,4 +280,89 @@ void main() {
     );
     expect(a.toString(), contains('fact'));
   });
+
+  group('private runs (ADR 0009)', () {
+    ToolContext at(PrivacyLevel? level, {PrivacyLevel? floor}) => ToolContext(
+      sessionId: 's1',
+      clock: FixedClock(DateTime.utc(2026, 10, 13, 12)),
+      locale: 'de-DE',
+      timeZone: 'Europe/Berlin',
+      privacyLevel: level,
+      privacyFloor: floor,
+    );
+
+    test('memory__save stores the floor of the run', () async {
+      await tool('memory__save').execute({
+        'text': 'Knie-OP im März',
+        'category': 'fact',
+      }, at(PrivacyLevel.tee, floor: PrivacyLevel.tee));
+      expect(store.entries.single.privacyFloor, PrivacyLevel.tee);
+      await tool('memory__save').execute({
+        'text': 'Mag Tee',
+        'category': 'preference',
+      }, at(PrivacyLevel.standard));
+      expect(store.entries.last.privacyFloor, isNull);
+    });
+
+    test('memory__search hides entries above the target level', () async {
+      await store.save(
+        'Knie-OP im März',
+        category: MemoryCategory.fact,
+        source: 's',
+        privacyFloor: PrivacyLevel.tee,
+      );
+      await store.save(
+        'Knie ist wieder gut',
+        category: MemoryCategory.fact,
+        source: 's',
+      );
+      Future<List<Object?>> found(PrivacyLevel? level) async =>
+          json(
+                await tool('memory__search')
+                    .execute({'query': 'Knie'}, at(level)),
+              )['memories']!
+              as List<Object?>;
+      expect(await found(PrivacyLevel.standard), hasLength(1));
+      expect(await found(null), hasLength(1));
+      expect(await found(PrivacyLevel.tee), hasLength(2));
+      expect(await found(PrivacyLevel.local), hasLength(2));
+    });
+
+    test(
+      'memory__forget treats hidden entries as unknown; undo keeps floor',
+      () async {
+        final e = await store.save(
+          'Knie-OP im März',
+          category: MemoryCategory.fact,
+          source: 's',
+          privacyFloor: PrivacyLevel.tee,
+        );
+        final weak = await tool('memory__forget')
+            .execute({'id': e.id}, at(PrivacyLevel.standard));
+        expect(weak.isError, isTrue);
+        expect(weak.text, isNot(contains('Knie')));
+        expect(store.entries, hasLength(1));
+        final o = await tool('memory__forget')
+            .execute({'id': e.id}, at(PrivacyLevel.tee));
+        expect(store.entries, isEmpty);
+        await o.undo!();
+        expect(store.entries.single.privacyFloor, PrivacyLevel.tee);
+      },
+    );
+
+    test('entry equality includes the floor', () {
+      final t = DateTime.utc(2026);
+      MemoryEntry e(PrivacyLevel? f) => MemoryEntry(
+        id: '1',
+        text: 'x',
+        category: MemoryCategory.fact,
+        source: 's',
+        createdAt: t,
+        privacyFloor: f,
+      );
+      expect(e(PrivacyLevel.tee), isNot(e(null)));
+      expect(e(PrivacyLevel.tee).hashCode, e(PrivacyLevel.tee).hashCode);
+      expect(e(PrivacyLevel.tee).visibleTo(PrivacyLevel.eu), isFalse);
+    });
+  });
 }

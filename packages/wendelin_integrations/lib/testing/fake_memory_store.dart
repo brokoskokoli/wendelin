@@ -29,6 +29,7 @@ final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
     String text, {
     required MemoryCategory category,
     required String source,
+    PrivacyLevel? privacyFloor,
   }) async {
     enter('save');
     if (text.trim().isEmpty) {
@@ -44,6 +45,7 @@ final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
       category: category,
       source: source,
       createdAt: clock.now(),
+      privacyFloor: privacyFloor,
     );
     _entries.add(entry);
     return entry;
@@ -69,6 +71,7 @@ final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
           source: e.source,
           createdAt: e.createdAt,
           lastUsedAt: now,
+          privacyFloor: e.privacyFloor,
         ),
     ];
   }

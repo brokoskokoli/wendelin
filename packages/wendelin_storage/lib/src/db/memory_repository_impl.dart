@@ -20,6 +20,7 @@ final class DriftMemoryRepository implements MemoryRepository {
     String text, {
     required MemoryCategory category,
     required String source,
+    PrivacyLevel? privacyFloor,
   }) async {
     checkNotSensitive(text);
     final now = _clock.now();
@@ -30,6 +31,7 @@ final class DriftMemoryRepository implements MemoryRepository {
       source: source,
       createdAt: now,
       lastUsedAt: now,
+      privacyFloor: privacyFloor?.name,
     );
     await _db.into(_db.memoryEntries).insert(row);
     return _entry(row);
@@ -140,6 +142,9 @@ final class DriftMemoryRepository implements MemoryRepository {
     source: r.source,
     createdAt: r.createdAt,
     lastUsedAt: r.lastUsedAt,
+    privacyFloor: r.privacyFloor == null
+        ? null
+        : PrivacyLevel.values.byName(r.privacyFloor!),
   );
 }
 

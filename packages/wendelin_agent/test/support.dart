@@ -45,18 +45,23 @@ final class Harness {
     ToolCatalog Function(PrivacyLevel)? catalogFor,
     void Function(String, ToolCallBlock)? onToolRefused,
     List<Message> history = const [],
+    ProviderResolver? resolver,
+    MemoryRetriever? memory,
   }) : conversation = InMemoryConversation(history),
        clock = FixedClock(DateTime.utc(2026, 10, 13, 9)),
        catalog = FakeToolCatalog(tools) {
     this.invoker = invoker ?? FakeToolInvoker(catalog);
     runner = AgentRunner(
-      resolver: DefaultProviderResolver(primary, chain, isPrivate: isPrivate),
+      resolver:
+          resolver ??
+          DefaultProviderResolver(primary, chain, isPrivate: isPrivate),
       contextBuilder: ContextBuilder(
         config: config,
         clock: clock,
         device: device,
         catalog: catalog,
         history: conversation,
+        memory: memory,
       ),
       invoker: this.invoker,
       clock: clock,

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:test/test.dart';
 
+import 'package:wendelin_core/wendelin_core.dart' show PrivacyLevel;
+
 import '../src/common/port_exception.dart';
 import '../src/memory/memory.dart';
 
@@ -28,6 +30,9 @@ abstract final class MemoryStoreChecks {
 
   /// Sensitive content is rejected and not stored.
   static const sensitive = 'sensible Inhalte werden abgewiesen';
+
+  /// The privacy floor is stored and returned unchanged.
+  static const privacyFloor = 'Untergrenze wird gespeichert und geliefert';
 
   /// Blank text throws ArgumentError.
   static const blank = 'leerer Text wirft ArgumentError';
@@ -76,6 +81,26 @@ Map<String, Future<void> Function()> memoryStoreContractChecks(
         listed.singleWhere((x) => x.id == other.id).category,
         MemoryCategory.person,
       );
+    },
+    MemoryStoreChecks.privacyFloor: () async {
+      final s = await create();
+      final open = await fact(s, 'Mag Tee');
+      final private = await s.save(
+        'Arzttermin wegen Knie',
+        category: MemoryCategory.fact,
+        source: 'session:s1',
+        privacyFloor: PrivacyLevel.tee,
+      );
+      expect(open.privacyFloor, isNull);
+      expect(private.privacyFloor, PrivacyLevel.tee);
+      final listed = await s.list();
+      expect(
+        listed.singleWhere((e) => e.id == private.id).privacyFloor,
+        PrivacyLevel.tee,
+      );
+      expect(listed.singleWhere((e) => e.id == open.id).privacyFloor, isNull);
+      expect((await s.search('Knie')).single.privacyFloor, PrivacyLevel.tee);
+      expect((await s.forget(private.id)).privacyFloor, PrivacyLevel.tee);
     },
     MemoryStoreChecks.listOrder: () async {
       final s = await create();

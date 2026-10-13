@@ -37,6 +37,9 @@ final class Resolution {
     required this.target,
     required this.reason,
     this.privacyFloor,
+    this.effectiveText,
+    this.requestedTarget,
+    this.routeProfileId,
   });
 
   /// Chosen provider and model.
@@ -48,6 +51,30 @@ final class Resolution {
   /// Set when the request was routed privately: escalation targets must
   /// offer at least this level unless the user consents.
   final PrivacyLevel? privacyFloor;
+
+  /// The user text to send to the model instead of `UserInput.text`, e.g.
+  /// with the routing trigger removed (`stripTrigger`); `null` = unchanged.
+  /// The stored and displayed text always stays the original.
+  final String? effectiveText;
+
+  /// The user named an escalation target („nochmal mit Claude“): the agent
+  /// escalates right away, and the resolver goes to this target instead of
+  /// the next chain link (same privacy check).
+  final ProviderTarget? requestedTarget;
+
+  /// Profile whose escalation chain applies; `null` = the target's profile.
+  /// Stays the same across escalations.
+  final String? routeProfileId;
+
+  /// This resolution with [floor] as [privacyFloor].
+  Resolution withPrivacyFloor(PrivacyLevel? floor) => Resolution(
+    target: target,
+    reason: reason,
+    privacyFloor: floor,
+    effectiveText: effectiveText,
+    requestedTarget: requestedTarget,
+    routeProfileId: routeProfileId,
+  );
 
   /// Provider profile id.
   String get profileId => target.profileId;

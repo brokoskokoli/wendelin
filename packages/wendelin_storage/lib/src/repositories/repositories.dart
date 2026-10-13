@@ -63,11 +63,12 @@ abstract interface class ConversationRepository {
 /// [save] and [update] reject sensitive content (card numbers, IBANs,
 /// passwords/PINs) with a `SensitiveContentException`.
 abstract interface class MemoryRepository {
-  /// Stores a new entry.
+  /// Stores a new entry (with [privacyFloor] of a private run).
   Future<MemoryEntry> save(
     String text, {
     required MemoryCategory category,
     required String source,
+    PrivacyLevel? privacyFloor,
   });
 
   /// Changes text and/or category of entry [id]; returns the updated entry

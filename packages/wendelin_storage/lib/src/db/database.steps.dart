@@ -639,8 +639,251 @@ i1.GeneratedColumn<String> _column_37(String aliasedName) =>
       type: i1.DriftSqlType.string,
       $customConstraints: '',
     );
+
+final class Schema3 extends i0.VersionedSchema {
+  Schema3({required super.database}) : super(version: 3);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    noteFts,
+    sessions,
+    messages,
+    memoryEntries,
+    auditLog,
+    providerProfiles,
+    usageRecords,
+    settings,
+    noteFiles,
+    sessionsLastActivity,
+    messagesSessionSeq,
+    auditLogAt,
+    usageRecordsProfileAt,
+    usageRecordsAt,
+    memoryFts,
+    memoryEntriesAi,
+    memoryEntriesAd,
+    memoryEntriesAu,
+  ];
+  late final Shape0 noteFts = Shape0(
+    source: i0.VersionedVirtualTable(
+      entityName: 'note_fts',
+      moduleAndArgs: 'fts5(path, title, body, tokenize = \'unicode61 remove_diacritics 2\')',
+      columns: [_column_0, _column_1, _column_2],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape1 sessions = Shape1(
+    source: i0.VersionedTable(
+      entityName: 'sessions',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_3, _column_4, _column_5, _column_6],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape10 messages = Shape10(
+    source: i0.VersionedTable(
+      entityName: 'messages',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_3,
+        _column_7,
+        _column_8,
+        _column_9,
+        _column_10,
+        _column_11,
+        _column_12,
+        _column_13,
+        _column_38,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape11 memoryEntries = Shape11(
+    source: i0.VersionedTable(
+      entityName: 'memory_entries',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_3,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_11,
+        _column_17,
+        _column_38,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape4 auditLog = Shape4(
+    source: i0.VersionedTable(
+      entityName: 'audit_log',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [_column_18, _column_19, _column_20, _column_21, _column_22],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape5 providerProfiles = Shape5(
+    source: i0.VersionedTable(
+      entityName: 'provider_profiles',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [_column_3, _column_23],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape6 usageRecords = Shape6(
+    source: i0.VersionedTable(
+      entityName: 'usage_records',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [],
+      columns: [
+        _column_18,
+        _column_19,
+        _column_24,
+        _column_25,
+        _column_26,
+        _column_27,
+        _column_28,
+        _column_29,
+        _column_30,
+        _column_31,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape7 settings = Shape7(
+    source: i0.VersionedTable(
+      entityName: 'settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY("key")'],
+      columns: [_column_32, _column_33],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape8 noteFiles = Shape8(
+    source: i0.VersionedTable(
+      entityName: 'note_files',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(path)'],
+      columns: [_column_34, _column_35, _column_36],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index sessionsLastActivity = i1.Index(
+    'sessions_last_activity',
+    'CREATE INDEX sessions_last_activity ON sessions (last_activity_at)',
+  );
+  final i1.Index messagesSessionSeq = i1.Index(
+    'messages_session_seq',
+    'CREATE UNIQUE INDEX messages_session_seq ON messages (session_id, seq)',
+  );
+  final i1.Index auditLogAt = i1.Index(
+    'audit_log_at',
+    'CREATE INDEX audit_log_at ON audit_log (at)',
+  );
+  final i1.Index usageRecordsProfileAt = i1.Index(
+    'usage_records_profile_at',
+    'CREATE INDEX usage_records_profile_at ON usage_records (profile_id, at)',
+  );
+  final i1.Index usageRecordsAt = i1.Index(
+    'usage_records_at',
+    'CREATE INDEX usage_records_at ON usage_records (at)',
+  );
+  late final Shape9 memoryFts = Shape9(
+    source: i0.VersionedVirtualTable(
+      entityName: 'memory_fts',
+      moduleAndArgs: 'fts5(entry_id UNINDEXED, body, tokenize = \'unicode61 remove_diacritics 2\')',
+      columns: [_column_37, _column_2],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Trigger memoryEntriesAi = i1.Trigger(
+    'CREATE TRIGGER memory_entries_ai AFTER INSERT ON memory_entries BEGIN INSERT INTO memory_fts (entry_id, body) VALUES (new.id, new.body);END',
+    'memory_entries_ai',
+  );
+  final i1.Trigger memoryEntriesAd = i1.Trigger(
+    'CREATE TRIGGER memory_entries_ad AFTER DELETE ON memory_entries BEGIN DELETE FROM memory_fts WHERE entry_id = old.id;END',
+    'memory_entries_ad',
+  );
+  final i1.Trigger memoryEntriesAu = i1.Trigger(
+    'CREATE TRIGGER memory_entries_au AFTER UPDATE OF body ON memory_entries BEGIN DELETE FROM memory_fts WHERE entry_id = old.id;INSERT INTO memory_fts (entry_id, body) VALUES (new.id, new.body);END',
+    'memory_entries_au',
+  );
+}
+
+class Shape10 extends i0.VersionedTable {
+  Shape10({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get sessionId =>
+      columnsByName['session_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get seq =>
+      columnsByName['seq']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get role =>
+      columnsByName['role']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get contentJson =>
+      columnsByName['content_json']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get profileId =>
+      columnsByName['profile_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get modelId =>
+      columnsByName['model_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get privacyFloor =>
+      columnsByName['privacy_floor']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<String> _column_38(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'privacy_floor',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+
+class Shape11 extends i0.VersionedTable {
+  Shape11({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get body =>
+      columnsByName['body']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get category =>
+      columnsByName['category']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get source =>
+      columnsByName['source']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get lastUsedAt =>
+      columnsByName['last_used_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get privacyFloor =>
+      columnsByName['privacy_floor']! as i1.GeneratedColumn<String>;
+}
+
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
+  required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -649,6 +892,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from1To2(migrator, schema);
         return 2;
+      case 2:
+        final schema = Schema3(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from2To3(migrator, schema);
+        return 3;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -657,6 +905,7 @@ i0.MigrationStepWithVersion migrationSteps({
 
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
+  required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
 }) => i0.VersionedSchema.stepByStepHelper(
-  step: migrationSteps(from1To2: from1To2),
+  step: migrationSteps(from1To2: from1To2, from2To3: from2To3),
 );
