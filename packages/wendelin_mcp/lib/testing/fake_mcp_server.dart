@@ -267,6 +267,7 @@ final class FakeMcpServer {
 
   final Map<String, _Grant> _codes = {};
   final Map<String, _LegacySession> _legacy = {};
+  final Set<String> _closedLegacy = {};
   var _counter = 0;
   final List<Completer<void>> _hanging = [];
 
@@ -531,18 +532,27 @@ final class FakeMcpServer {
   Future<void> _legacyOpen(HttpResponse res) async {
     final sid = _id('legacy');
     sessions.add(sid);
-    res.statusCode = 200;
-    res.headers.contentType = ContentType(
-      'text',
-      'event-stream',
-      charset: 'utf-8',
-    );
-    res.bufferOutput = false;
-    final session = _LegacySession(res);
+    res
+      ..statusCode = 200
+      ..persistentConnection = false
+      ..headers.chunkedTransferEncoding = false
+      ..headers.contentType = ContentType(
+        'text',
+        'event-stream',
+        charset: 'utf-8',
+      );
+    // Eigener Socket: Nur so erkennt der Server eine Trennung durch den
+    // Client auf allen Plattformen sofort (onDone/onError beim Lesen);
+    // ein gescheiterter Schreibversuch tritt unter Linux nicht zuverlässig
+    // auf.
+    // ignore: close_sinks, wird in _LegacySession.close geschlossen.
+    final socket = await res.detachSocket();
+    final session = _LegacySession(socket);
     _legacy[sid] = session;
     session.event('endpoint', legacyEndpoint ?? '/messages?sessionId=$sid');
     await session.done.future;
     _legacy.remove(sid);
+    _closedLegacy.add(sid);
     sessions.remove(sid);
   }
 
@@ -553,12 +563,18 @@ final class FakeMcpServer {
     if (!_authorized(headers)) return _unauthorized(res);
     final sid = req.uri.queryParameters['sessionId'];
     final session = _legacy[sid];
+    final message = jsonDecode(body) as Map<String, Object?>;
+    final method = message['method'] as String?;
+    // Antworten des Clients auf Server-Anfragen dürfen kurz nach dem Ende
+    // des Streams eintreffen (der Client schließt nach seiner Antwort).
+    if (method == null && _closedLegacy.contains(sid)) {
+      clientAnswers.add(message);
+      return _send(res, 202, 'Accepted');
+    }
     if (session == null) return _send(res, 404, 'unknown session');
     if (failNext.isNotEmpty) {
       return _send(res, failNext.removeAt(0), 'scripted failure');
     }
-    final message = jsonDecode(body) as Map<String, Object?>;
-    final method = message['method'] as String?;
     final id = message['id'];
     await _send(res, 202, 'Accepted');
     if (method == null) {
@@ -704,38 +720,39 @@ final class _Grant {
 }
 
 final class _LegacySession {
-  _LegacySession(this.res) {
-    unawaited(res.done.then((_) => close(), onError: (Object _) => close()));
-    // Kommentarzeilen als Keep-alive; scheitert das Schreiben, hat der
-    // Client die Verbindung getrennt.
-    _keepAlive = Timer.periodic(const Duration(milliseconds: 50), (_) {
-      if (done.isCompleted) return;
-      try {
-        res.write(':\n\n');
-        res.flush().catchError((Object _) => close());
-      } on Object {
-        unawaited(close());
-      }
-    });
+  _LegacySession(this.socket) {
+    // Der Client sendet nach dem GET nichts mehr; Ende oder Fehler des
+    // Lesestroms heißt: Verbindung getrennt.
+    _reading = socket.listen(
+      (_) {},
+      onDone: () => unawaited(close()),
+      onError: (Object _) => unawaited(close()),
+      cancelOnError: true,
+    );
   }
 
-  final HttpResponse res;
+  final Socket socket;
   final Completer<void> done = Completer<void>();
-  late final Timer _keepAlive;
+  late final StreamSubscription<List<int>> _reading;
 
   void event(String name, String data) {
     if (done.isCompleted) return;
-    res.write('event: $name\ndata: $data\n\n');
+    try {
+      socket.add(utf8.encode('event: $name\ndata: $data\n\n'));
+    } on Object {
+      unawaited(close());
+    }
   }
 
   Future<void> close() async {
     if (done.isCompleted) return;
     done.complete();
-    _keepAlive.cancel();
+    await _reading.cancel();
     try {
-      await res.close();
+      await socket.close();
     } on Object {
       // Client hat die Verbindung schon getrennt.
     }
+    socket.destroy();
   }
 }
