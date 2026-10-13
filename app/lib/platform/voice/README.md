@@ -18,9 +18,11 @@ und `lib/ui/onboarding/voice_download_step.dart`.
 | `isolate_exit.dart` | Isolate beenden | auf `onExit` warten, `kill` nur nach 5 s |
 | `disk_space.dart` | freier Speicher | libc `statvfs` per FFI (64-bit Android, macOS); sonst unbekannt |
 | `pcm.dart`, `wer.dart` | Hilfen | PCM/WAV, Wortfehlerrate für `tool/stt_wer.dart` |
+| `wav_audio_input.dart` | `AudioInput` aus einer WAV (nur Gerätetests, WP19) | spielt die Aufnahme in Echtzeit, danach Stille; das Overlay bekommt ihn in Debug-Builds über `lib/debug/device_test_overrides.dart` |
 
-**Berechtigungen:** `RECORD_AUDIO`, erst beim ersten Sprechen bzw. in
-Einstellungen → Sprache nach einer Erklärung (`ensureMicrophoneAccess`).
+**Berechtigungen:** `RECORD_AUDIO`, erst beim ersten Sprechen (sobald die
+Modelle da sind) bzw. in Einstellungen → Sprache nach einer Erklärung
+(`ensureMicrophoneAccess`).
 `<queries>` für `TTS_SERVICE`, damit Android 11+ die TTS-Engines zeigt.
 
 **Ohne Google-Dienste (K7):** `sherpa_onnx`, `record`, `flutter_tts`,
@@ -40,6 +42,8 @@ SHA-256-Prüfung jedes Downloads und die Größenprüfung vor jedem Laden.
 **Pflicht für den Betreiber der Pipeline (WP18):** Bei App im Hintergrund
 `VoicePipeline.cancel()` aufrufen (ADR 0007 §12), damit das Mikrofon
 freigegeben wird.
+
+**Laufzeit:** Jede Whisper-Erkennung meldet ihre Dauer ohne Inhalt (`WhisperTiming`, logcat „Whisper-Zeit …“, beim System-Erkenner „Erkenner: Whisper-Zeit …“). `tool/whisper_timing.sh` wertet das auf dem Telefon aus, Emulator-Werte in `docs/notes/m2-e2e-2026-10-13.md`.
 
 **Messen:** `tool/stt_wer.dart` (WER) und `tool/vad_calibrate.dart`
 (Schwelle, Mindestsprechdauer), Fixtures aus `tool/make_stt_fixtures.sh`.

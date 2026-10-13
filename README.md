@@ -22,7 +22,7 @@ M1 umfasst: Anthropic- und OpenAI-kompatible Adapter, Provider-Einrichtung mit V
 - Standard-Assistent mit Overlay, Push-to-talk im Hauptbildschirm, Vault über die Dateiauswahl (WP18, ADR 0006),
 - lokale System-Spracherkennung (`RecognitionService` mit Whisper) für andere Apps, ab Werk aus (WP20, ADR 0008).
 
-Offen ist der End-to-End-Nachweis M2 (WP19, Emulator mit Audio aus Datei und Geräte-Testanleitung). Pakete und Stand: [`docs/work-packages/M2.md`](docs/work-packages/M2.md).
+Der End-to-End-Nachweis auf dem Emulator steht (WP19): Eine WAV statt des Mikrofons, Whisper base und small lokal, das Overlay über `KEYCODE_ASSIST` und eine byte-genau ergänzte Tagesnotiz im Test-Vault, dazu ein Live-Durchlauf mit Claude Haiku ([`docs/notes/m2-e2e-2026-10-13.md`](docs/notes/m2-e2e-2026-10-13.md)). Offen ist der Test auf einem echten Telefon nach [`docs/testing/m2-device.md`](docs/testing/m2-device.md). Pakete und Stand: [`docs/work-packages/M2.md`](docs/work-packages/M2.md).
 
 ## Aufbau
 
@@ -59,10 +59,12 @@ Weitere Prüfungen (lokal, brauchen Android-SDK bzw. Emulator):
 tool/check_apk.sh              # Release-APK: keine GMS-/Firebase-Klassen, Backup aus, nur erwartete Berechtigungen und exportierte Komponenten
 tool/check_apk.sh --self-test  # Selbsttest des Prüfskripts mit Attrappen (ohne SDK)
 tool/e2e_android.sh            # Gerätetests app/integration_test/ auf dem verbundenen Emulator
+WENDELIN_MODELS=<dir> tool/e2e_android.sh      # dazu Sprache und Assistent (M2, WP19)
 WENDELIN_MODELS=<dir> tool/e2e_recognizer.sh   # System-Spracherkennung (androidTest, WP20)
+tool/whisper_timing.sh [--clear]               # Whisper-Laufzeit auf dem eigenen Telefon aus logcat
 ```
 
-`tool/e2e_android.sh` läuft nur auf Emulatoren (ein echtes Gerät nur mit `E2E_ALLOW_DEVICE=1`), legt bei Bedarf einen lokalen Kalender an, erteilt die Kalender-Berechtigung per `adb shell pm grant` und bestätigt den Speichern-Dialog der Dateiauswahl. Getestet wird auf einem AVD mit AOSP-Image ohne Google Play:
+`tool/e2e_android.sh` läuft nur auf Emulatoren (ein echtes Gerät nur mit `E2E_ALLOW_DEVICE=1`; bei mehreren Geräten `DEVICE` oder `ANDROID_SERIAL` setzen), legt bei Bedarf einen lokalen Kalender an, erteilt die Kalender-Berechtigung per `adb shell pm grant` und bestätigt den Speichern-Dialog der Dateiauswahl. Mit `WENDELIN_MODELS` (Ordner mit `whisper-base/`, `whisper-small/`, `silero-vad/` aus dem Modellkatalog) kopiert es zusätzlich Modelle und WAVs per `run-as` in die App, wählt den Test-Vault in der Ordnerauswahl, setzt die Assistenten-Rolle und öffnet das Overlay. Tests, die eine zweite Engine starten (Overlay), laufen über Android-Instrumentierung. Getestet wird auf einem AVD mit AOSP-Image ohne Google Play:
 
 ```sh
 sdkmanager "system-images;android-35;default;arm64-v8a"
@@ -115,6 +117,27 @@ Danach unter „Was darf Wendelin?“ bzw. Einstellungen → Integrationen den *
 | Setz Milch auf die Einkaufsliste | Eintrag in der Markdown-Liste (vorher unter Einstellungen → Listen eine Datei wählen) |
 
 Kosten (heute, in USD) stehen im Chip neben dem Provider, Details unter Einstellungen → Kosten. Das Prüfprotokoll mit jeder Anfrage, jedem Tool-Aufruf, jeder Bestätigung und jedem „Rückgängig“ steht unter Einstellungen → Datenschutz und Logs.
+
+## Demo-Anleitung M2
+
+Sprache und Assistent auf dem Telefon. Die ausführliche Fassung mit Checkliste ist [`docs/testing/m2-device.md`](docs/testing/m2-device.md).
+
+1. **Installieren und Provider einrichten** wie bei M1 (für den Alltag `flutter build apk --release --split-per-abi`, dann `app-arm64-v8a-release.apk`).
+2. **Spracherkennung laden:** Im Onboarding-Schritt „Spracherkennung laden“ oder unter Einstellungen → Sprache Whisper wählen und laden, am besten im WLAN. Zur Wahl stehen „base“ (161 MB, schnell) und „small“ (376 MB, für Deutsch und Französisch deutlich genauer). Dazu kommt Silero VAD (0,6 MB). Nichts davon steckt im APK.
+3. **Mikrofon:** Beim ersten Tipp auf das Mikrofon erklärt Wendelin, wozu er es braucht, dann fragt Android.
+4. **Standard-Assistent:** Einstellungen → Assistent → „Als Standard-Assistent setzen“ → „Wendelin“ wählen. Bei Bedarf in Android das lange Drücken der Power-Taste auf „Digitaler Assistent“ stellen.
+5. **Vault:** Einstellungen → Obsidian → „Vault-Ordner wählen“ (Android-Ordnerauswahl), Tagesnotizen eintragen (Ordner, Datumsformat wie in Obsidian, Vorlage), „Index aufbauen“.
+6. **Ausprobieren:** Power-Taste lang drücken und sagen:
+
+| Satz | Erwartung |
+| --- | --- |
+| Ergänze in meiner Tagesnotiz, dass ich den Zahnarzt angerufen habe. | Overlay über der aktuellen App, Karte „Tagesnotiz …: …“ mit „Rückgängig · 10 s“, neue Zeile in der Tagesnotiz |
+| Was steht in meiner Notiz Wendelin-Test? | Wendelin liest vor, ohne Rückfrage |
+| Ersetze in meiner Notiz Wendelin-Test den Abschnitt Status durch erledigt. | Bestätigung mit Zeilen-Diff, Wendelin fragt „Soll ich das tun? Ja oder nein?“, „Ja“ ersetzt |
+| Note dans mon journal que la réunion est reportée. | wie oben auf Französisch (Gesprochene Sprache vorher auf „Français“ oder „Automatisch“) |
+| Append to my daily note that the meeting moved to Friday. | wie oben auf Englisch |
+
+„Stopp“ beendet, solange Wendelin zuhört. Ein Tipp beendet jederzeit. Auf dem gesperrten Telefon zeigt das Overlay nur „Gerät entsperren“. Als Standard-Assistent ist Wendelin auch die Spracheingabe anderer Apps (Einstellungen → Assistent, abschaltbar).
 
 ## Ohne Google Play Services (K7)
 
