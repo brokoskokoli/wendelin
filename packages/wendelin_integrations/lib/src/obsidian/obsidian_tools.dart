@@ -238,11 +238,8 @@ final class ReadNoteTool extends IntegrationTool {
     final heading = args.optString('heading');
     final limit =
         args.optInt('max_chars', min: 500, max: maxChars) ?? defaultChars;
-    final path = await env.resolveNote(
-      query,
-      write: false,
-      now: ctx.clock.now(),
-    );
+    final found = await env.resolveForRead(query, ctx.clock.now());
+    final path = found.path;
     final note = await env.load(path);
     final doc = note.doc;
     var text = doc.toString();
@@ -263,8 +260,8 @@ final class ReadNoteTool extends IntegrationTool {
     }
     final cut = truncateText(text, limit);
     return ToolOutcome.text(
-      '$noteDataNotice\n'
-      '<note_content path="${escapeDataAttr(path)}"'
+      '$noteDataNotice\n${approximateNotice(query, found)}'
+      '<note_content path="${escapeDataAttr(path)}"${matchAttribute(found)}'
       '${h == null ? '' : ' heading="${escapeDataAttr(h.title)}"'}'
       '${cut.truncated ? ' truncated="true"' : ''}>\n'
       '${_escape(cut.text)}\n'

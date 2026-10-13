@@ -50,7 +50,9 @@ Wendelin öffnen. Das Onboarding hat vier Schritte, jeder lässt sich übersprin
 1. **Willkommen**: Sprache wählen (für diesen Test „Deutsch“).
 2. **Sprachmodell (Provider)**: „Provider einrichten“ → Vorlage „Claude“ (Anthropic) → API-Key einfügen (ein Passwort-Manager mit Android-Autofill kann das Feld füllen) → „Verbindung testen“. Über der Modellliste steht dann „Verbindung steht“ mit grünem Haken. Als Modell z. B. Claude Haiku → Datenschutzstufe lassen → „Speichern“.
 3. **Spracherkennung laden**: Whisper-Modell antippen, dann den einen Knopf „Laden“.
-   - „Whisper base (schnell)“: 161 MB. „Whisper small (genauer)“: 375 MB, erkennt Deutsch und Französisch deutlich besser (Wortfehler auf unseren Testsätzen 9 % statt 21 %).
+   - Vorausgewählt ist „Whisper small – genauer (empfohlen)“: 375 MB, erkennt Deutsch, Französisch und Namen deutlich besser (Wortfehler auf unseren Testsätzen 9 % statt 21 %; Standard seit WP33). „Whisper base – schnell, für schwache Geräte“: 161 MB, etwa dreimal schneller, verfehlt aber öfter Eigennamen wie Notiztitel.
+   - Hat das Telefon wenig Arbeitsspeicher (unter 3,5 GB laut System, also Geräte mit 3 GB oder weniger), ist base vorausgewählt, und der Schritt nennt den Grund.
+   - Eine bestehende Installation behält ihr Modell. War nur base geladen, bleibt base aktiv; Einstellungen → Sprache empfiehlt dann small.
    - Silero VAD (0,6 MB, die Sprachaktivitätserkennung) gehört dazu und wird automatisch mitgeladen.
    - Darunter steht, was noch fehlt („Noch nötig: …“), bzw. „Bereit“. Dann erscheint „Weiter“.
    - **Im WLAN laden.** „Im Hintergrund weiterladen“ geht weiter zum nächsten Schritt. Ein abgebrochener Download wird später fortgesetzt (Einstellungen → Sprache, „Fortsetzen“).
@@ -216,7 +218,8 @@ Zum Vergleich (Emulator auf Apple Silicon, 4 Kerne, siehe `docs/notes/m2-e2e-202
 - **Whisper erkennt den Satz als Ganzes**, es gibt keinen Zwischentext beim Sprechen. Andere Apps bekommen über die System-Spracherkennung ebenfalls keine Teilergebnisse.
 - **Feste Sprache:** Mit „Wie die App“ werden fremdsprachige Sätze falsch erkannt. „Automatisch erkennen“ hilft, ist bei kurzen Sätzen („Ja“) aber unsicher.
 - **Zahlen und Uhrzeiten** schreibt Whisper mal als Ziffern, mal als Wort („halb sieben“ gegen „6:30“).
-- **Speicher:** Whisper small belegt geladen etwa 0,5 GB RAM. Auf Telefonen mit wenig Speicher kann Android die App im Hintergrund beenden.
+- **Speicher:** Whisper small (Standard) belegt geladen deutlich mehr RAM als base (gemessen bis ≈ 1,3 GB PSS, B14). Auf Telefonen mit wenig Speicher kann Android die App im Hintergrund beenden; dort „Whisper base – schnell“ wählen.
+- **Eigennamen:** Mehrwortige Notiztitel und Listennamen sowie „Wendelin“ korrigiert Wendelin nach der Erkennung lokal (Vokabular aus Notizindex und Listen, nur im Speicher); einwortige Titel nicht. Schreibt er in eine Notiz, deren Namen die Korrektur eingesetzt hat, fragt er einmal nach. Findet er eine Notiz nur nach Klang, fragt er bei Änderungen immer nach („Meinst du die Notiz …?“); lesen darf er einen eindeutigen Treffer direkt und nennt ihn. Die System-Spracherkennung für andere Apps korrigiert nichts.
 - **Assistentenwechsel:** Nach dem Wechsel zu einem anderen Assistenten zeigt die System-Spracherkennung unter Umständen noch auf Wendelin und antwortet dann nicht. In Android neu wählen.
 - **SAF-Vault:** Wendelin schreibt eine Notiz in einem Zug neu (kein atomares Umbenennen über SAF). Ändert ein Sync-Dienst sie im selben Moment, erkennt die optimistische Sperre das und versucht es erneut.
 - **Signatur:** Release-Builds sind vorerst mit dem Debug-Schlüssel signiert (siehe Abschnitt 1).

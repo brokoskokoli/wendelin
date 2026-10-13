@@ -30,6 +30,7 @@ import 'sensitivity.dart';
 import 'session_manager.dart';
 import 'startup.dart';
 import 'user_integrations.dart';
+import 'vocabulary_provider.dart';
 import 'web_search.dart';
 
 // Riverpod wiring of the app. `main.dart` overrides [storageProvider],
@@ -144,6 +145,7 @@ final integrationDepsProvider = Provider<IntegrationDeps>((ref) {
     reportError: (id, message) =>
         onRegistry(id, (r) => r.reportError(id, message)),
     clearError: (id) => onRegistry(id, (r) => r.clearError(id)),
+    spokenCorrection: ref.watch(correctedTitlesProvider).take,
     ports: ref.watch(platformPortsProvider),
     device: ref.watch(deviceInfoProvider),
     httpClient: ref.watch(httpClientProvider),

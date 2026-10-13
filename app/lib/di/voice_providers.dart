@@ -8,6 +8,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../platform/device_memory.dart';
 import '../platform/voice/audio_playback.dart';
 import '../platform/voice/engine_whisper.dart';
 import '../platform/voice/file_model_store.dart';
@@ -22,6 +23,7 @@ import '../platform/voice/whisper_stt.dart';
 import '../voice/voice_log.dart';
 import 'preferences.dart';
 import 'providers.dart';
+import 'vocabulary_provider.dart';
 
 // Riverpod wiring of the voice building blocks (WP17): settings, model
 // downloads, microphone, Silero VAD, Whisper, system and sherpa TTS. The
@@ -32,9 +34,10 @@ import 'providers.dart';
 @immutable
 final class VoiceSettings {
   /// Creates the settings; defaults calibrated in
-  /// `docs/notes/stt-wer-2026-10-13.md`.
+  /// `docs/notes/stt-wer-2026-10-13.md` (whisper-small with a fixed
+  /// language since WP33; see [VoiceSettingsNotifier] for base).
   const VoiceSettings({
-    this.sttModel = 'whisper-base',
+    this.sttModel = 'whisper-small',
     this.sttLanguage = followApp,
     this.tts = TtsPreference.automatic,
     this.ttsVoice,
@@ -176,7 +179,9 @@ final class VoiceSettings {
   );
 }
 
-/// Settings key of [VoiceSettings].
+/// Settings key of [VoiceSettings]. No default value: whether settings
+/// were ever stored decides the model of older installations (see
+/// [VoiceSettingsNotifier]).
 final voiceSettingsKey = SettingKey<VoiceSettings>(
   'voice.settings',
   encode: (s) => s.toJson(),
@@ -184,7 +189,6 @@ final voiceSettingsKey = SettingKey<VoiceSettings>(
     if (json is Map<String, Object?>) return VoiceSettings.fromJson(json);
     throw const FormatException('voice.settings: Objekt erwartet');
   },
-  defaultValue: const VoiceSettings(),
 );
 
 /// Voice settings (read from the settings store on first use).
@@ -193,12 +197,37 @@ final voiceSettingsProvider =
       VoiceSettingsNotifier.new,
     );
 
+/// Total RAM of the device in bytes (`null` = unknown); tests override it.
+final deviceMemoryProvider = FutureProvider<int?>((ref) => deviceTotalMemory());
+
 /// Voice settings notifier.
 final class VoiceSettingsNotifier extends AsyncNotifier<VoiceSettings> {
   @override
   Future<VoiceSettings> build() async =>
       await ref.read(storageProvider).settings.get(voiceSettingsKey) ??
-      const VoiceSettings();
+      VoiceSettings(sttModel: await _unsetModel());
+
+  /// Model while nothing is stored: small (WP33), but base if only base is
+  /// on the device (installation from before WP33, else the microphone
+  /// would be greyed out) or the device has little memory and small is not
+  /// there yet.
+  Future<String> _unsetModel() async {
+    const base = SpeechModelCatalog.whisperBase;
+    const small = SpeechModelCatalog.whisperSmall;
+    final SpeechModelService service;
+    try {
+      service = await ref.read(speechModelServiceProvider.future);
+    } on Object catch (e) {
+      debugPrint('Modellverzeichnis nicht verfügbar: $e');
+      return small.id;
+    }
+    if (await service.isInstalled(small)) return small.id;
+    if (await service.isInstalled(base) ||
+        isLowMemory(await ref.read(deviceMemoryProvider.future))) {
+      return base.id;
+    }
+    return small.id;
+  }
 
   /// Stores [settings].
   Future<void> set(VoiceSettings settings) async {
@@ -688,7 +717,12 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
   return VoiceComponents(
     audio: ref.watch(audioInputProvider),
     vad: await ref.watch(voiceActivityDetectorProvider.future),
-    stt: await ref.watch(speechToTextProvider.future),
+    // Names from the vault are corrected after recognition (WP33, B6).
+    stt: CorrectingSpeechToText(
+      await ref.watch(speechToTextProvider.future),
+      vocabulary: ref.read(vocabularySourceProvider).current,
+      onCorrected: ref.read(correctedTitlesProvider).record,
+    ),
     textToSpeech: selector.current,
     config: await ref.watch(voicePipelineConfigProvider.future),
     warmUp: whisper.warm,

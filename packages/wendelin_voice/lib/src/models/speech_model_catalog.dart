@@ -46,11 +46,11 @@ final class SpeechModelCatalog {
     voiceEn,
   ]);
 
-  /// Whisper base, multilingual, int8 (fast; default).
+  /// Whisper base, multilingual, int8 (fast; for weak devices).
   static const whisperBase = SpeechModel(
     id: 'whisper-base',
     kind: SpeechModelKind.stt,
-    displayName: 'Whisper base (schnell)',
+    displayName: 'Whisper base – schnell, für schwache Geräte',
     languages: {'de', 'fr', 'en'},
     license: 'MIT (OpenAI Whisper)',
     source: _hfSource,
@@ -79,11 +79,12 @@ final class SpeechModelCatalog {
     ],
   );
 
-  /// Whisper small, multilingual, int8 (better for German and French).
+  /// Whisper small, multilingual, int8 (better for German, French and
+  /// names; default since WP33).
   static const whisperSmall = SpeechModel(
     id: 'whisper-small',
     kind: SpeechModelKind.stt,
-    displayName: 'Whisper small (genauer)',
+    displayName: 'Whisper small – genauer (empfohlen)',
     languages: {'de', 'fr', 'en'},
     license: 'MIT (OpenAI Whisper)',
     source: _hfSource,

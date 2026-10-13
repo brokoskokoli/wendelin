@@ -18,6 +18,7 @@ final class IntegrationDeps {
     this.bringSecrets,
     this.reportError,
     this.clearError,
+    this.spokenCorrection,
   });
 
   /// Device ports (real or demo).
@@ -43,6 +44,10 @@ final class IntegrationDeps {
 
   /// Clears the error state of the integration `id`.
   final void Function(String id)? clearError;
+
+  /// Whether the speech correction put the title of a note path into the
+  /// current request (consumed once; WP33, B8).
+  final bool Function(String path)? spokenCorrection;
 }
 
 /// „Erneut versuchen“ of an integration in the error state: [label] on the
@@ -158,6 +163,7 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
         settings: o.settings,
         openUri: o.openUri,
         indexer: o.indexer,
+        spokenCorrection: d.spokenCorrection,
       );
     },
   ),

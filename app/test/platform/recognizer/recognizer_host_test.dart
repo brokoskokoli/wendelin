@@ -20,15 +20,19 @@ final class FakeEngines implements RecognizerEngines {
   final checked = <String>[];
   final sttModels = <String>[];
   bool missing = false;
+
+  /// Model [checkInstalled] answers with (`null` = the requested one).
+  String? installedModel;
   int idles = 0;
   int disposed = 0;
 
   @override
-  Future<void> checkInstalled(String modelId) async {
+  Future<String> checkInstalled(String modelId) async {
     checked.add(modelId);
     if (missing) {
       throw const VoiceException(VoiceErrorKind.modelMissing, 'fehlt');
     }
+    return installedModel ?? modelId;
   }
 
   @override
@@ -121,6 +125,19 @@ void main() {
     }
     await pumpEventQueue();
   }
+
+  test(
+    'ohne Spiegel, nur base installiert: Erkennung mit base (WP33)',
+    () async {
+      engines.installedModel = 'whisper-base';
+      // Kein „model“ in der Anfrage: Standard whisper-small.
+      await start({'language': 'de-DE'});
+      await audio(utterance());
+      expect(types(), ['began', 'ended', 'result']);
+      expect(engines.checked, ['whisper-small']);
+      expect(engines.sttModels, ['whisper-base']);
+    },
+  );
 
   test('attach meldet „ready“', () async {
     await host.attach();
@@ -379,7 +396,7 @@ void main() {
         final r = RecognizerRequest.fromArgs(args);
         expect(r.session, 0);
         expect(r.language, isNull);
-        expect(r.model, 'whisper-base');
+        expect(r.model, 'whisper-small');
         expect(r.sttLanguage, isNull);
         expect(r.vadThreshold, 0.5);
         expect(r.minSpeechMs, 200);
@@ -510,9 +527,9 @@ final class _SlowEngines implements RecognizerEngines {
   final Future<void> gate;
 
   @override
-  Future<void> checkInstalled(String modelId) async {
+  Future<String> checkInstalled(String modelId) async {
     await gate;
-    await inner.checkInstalled(modelId);
+    return inner.checkInstalled(modelId);
   }
 
   @override
@@ -538,5 +555,5 @@ final class _ThrowingEngines extends FakeEngines {
   final Object error;
 
   @override
-  Future<void> checkInstalled(String modelId) async => throw error;
+  Future<String> checkInstalled(String modelId) async => throw error;
 }

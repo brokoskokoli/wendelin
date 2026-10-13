@@ -36,7 +36,7 @@ void main() {
       // „Wie die App“ → app language (de).
       expect(platform.recognizerConfigs, [
         const RecognizerConfig(
-          model: 'whisper-base',
+          model: 'whisper-small',
           language: 'de',
           vadThreshold: 0.5,
           minSpeechMs: 200,
@@ -47,7 +47,7 @@ void main() {
           .read(voiceSettingsProvider.notifier)
           .change(
             (s) => s.copyWith(
-              sttModel: 'whisper-small',
+              sttModel: 'whisper-base',
               sttLanguage: VoiceSettings.detect,
               vadThreshold: 0.6,
               minSpeechMs: 300,
@@ -57,7 +57,7 @@ void main() {
       expect(
         platform.recognizerConfigs.last,
         const RecognizerConfig(
-          model: 'whisper-small',
+          model: 'whisper-base',
           language: null,
           vadThreshold: 0.6,
           minSpeechMs: 300,

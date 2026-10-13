@@ -134,6 +134,69 @@ void main() {
     );
   }
 
+  // WP33/B6: D2 mit whisper-base. Der Skript-Provider übernimmt den
+  // Notiznamen aus dem Transkript (wie ein Modell); gefunden wird die Notiz
+  // über die Vokabular-Korrektur bzw. die phonetische Titelsuche. Nur
+  // b6-01 (Anna): Bei Reed/Flo erkennt base schon „Notiz“ nicht mehr
+  // („Was steht in meiner Gute? Es ist mit der Intest.“).
+  for (final fixture in ['b6-01']) {
+    testWidgets('whisper-base: D2 ($fixture) findet die Notiz Wendelin-Test', (
+      tester,
+    ) async {
+      const note = 'Wendelin-Test.md';
+      if (await port.exists(note)) {
+        await port.write(note, _b6Note);
+      } else {
+        await port.create(note, _b6Note);
+      }
+      final audio = WavAudioInput.file(await fixtureWav(fixture));
+      final provider = _NoteNameProvider();
+      final app = E2eApp(
+        startup: StartupSettings(
+          enabledIntegrations: const {'obsidian'},
+          obsidian: testObsidian(vault),
+        ),
+        config: (_) => deviceTestProviderConfig(provider),
+        extraOverrides: [audioInputProvider.overrideWithValue(audio)],
+      );
+      await app.storage.settings.set(
+        voiceSettingsKey,
+        const VoiceSettings(sttModel: 'whisper-base'),
+      );
+      // Der Index kennt die Notiz (sonst baut ihn die erste Suche auf).
+      await app.storage.notes.upsert(
+        note,
+        title: 'Wendelin-Test',
+        body: _b6Note,
+        modifiedAt: DateTime.utc(2030, 3, 12),
+      );
+      await app.pump(tester);
+      await pumpUntil(
+        tester,
+        find.byWidgetPredicate(
+          (w) => w is MicButton && w.state == MicState.idle,
+        ),
+      );
+      await tester.tap(find.byType(MicButton));
+      await pumpUntil(
+        tester,
+        find.text('Gefunden.'),
+        timeout: const Duration(seconds: 90),
+      );
+      // ignore: avoid_print
+      print(
+        'WP33 D2 $fixture base: Transkript „${provider.heard}“, '
+        'Notizname „${provider.asked}“',
+      );
+      final result = provider.toolResult!;
+      expect(result, contains('<note_content path="$note"'));
+      expect(result, contains('offen'));
+      expect(await auditText(app), contains('obsidian__read_note'));
+      await waitIdle(tester);
+      await port.delete(note);
+    }, skip: !voiceE2e);
+  }
+
   testWidgets(
     'Laufzeit Whisper base/small (feste Sprache) auf den STT-Fixtures',
     (tester) async {
@@ -189,4 +252,60 @@ void main() {
     skip: !voiceE2e,
     timeout: const Timeout(Duration(minutes: 15)),
   );
+}
+
+const _b6Note = '# Wendelin-Test\n\n## Status\n\noffen\n';
+
+/// Plays a model that reads the note named in the spoken request: the
+/// first turn calls `obsidian__read_note` with the words after „Notiz“
+/// from the transcript, the second answers „Gefunden.“.
+final class _NoteNameProvider implements LlmProvider {
+  final _inner = FakeLlmProvider(const []);
+
+  /// What Whisper heard (after the correction).
+  String? heard;
+
+  /// The note name passed to the tool.
+  String? asked;
+
+  /// The tool result of `obsidian__read_note`.
+  String? toolResult;
+
+  @override
+  ProviderType get type => _inner.type;
+
+  @override
+  ProviderCapabilities get caps => _inner.caps;
+
+  @override
+  Future<List<ModelInfo>> listModels() => _inner.listModels();
+
+  @override
+  Future<HealthCheck> test() => _inner.test();
+
+  @override
+  Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) {
+    final last = req.messages.last.content;
+    final results = last.whereType<ToolResultBlock>();
+    if (results.isNotEmpty) {
+      toolResult = results.first.content
+          .whereType<TextBlock>()
+          .map((b) => b.text)
+          .join();
+      _inner.enqueue(ScriptedTurn.text('Gefunden.'));
+    } else {
+      heard = last.whereType<TextBlock>().map((b) => b.text).join();
+      asked = RegExp(r'Notiz\s*(.+?)[\s?.!]*$').firstMatch(heard!)?[1] ?? heard;
+      _inner.enqueue(
+        ScriptedTurn.toolCalls([
+          ToolCallBlock(
+            id: 'r1',
+            name: 'obsidian__read_note',
+            argumentsJson: jsonEncode({'path': asked}),
+          ),
+        ]),
+      );
+    }
+    return _inner.chat(req, cancel: cancel);
+  }
 }

@@ -3,7 +3,7 @@
 //
 //   cd app
 //   dart run tool/stt_wer.dart --models <dir> [--model whisper-base]
-//       [--fixtures test/fixtures/stt] [--threads 4]
+//       [--fixtures test/fixtures/stt] [--threads 4] [--vocabulary <datei>]
 //
 // <dir> enthält je Modell einen Ordner mit den Dateien aus dem Katalog
 // (z. B. <dir>/whisper-base/base-encoder.int8.onnx). Die Modelle werden
@@ -13,7 +13,9 @@
 // Jede Aufnahme bekommt die Stille, die der Endpointer mitliefert (300 ms
 // Pre-Roll, 800 ms Endstille). Gemessen wird über `WhisperSpeechToText` (dieselbe Bereinigung wie in der
 // App), einmal mit automatischer Spracherkennung und einmal mit fester
-// Sprache. Auf dem Emulator/Gerät läuft dieselbe Messung mit
+// Sprache, jeweils ohne und mit Vokabular-Korrektur (WP33, Spalte
+// „Korrektur“; die Fixtures `b6-…` mit Notiznamen stehen in eigenen
+// Spalten). Auf dem Emulator/Gerät läuft dieselbe Messung mit
 // `integration_test` nicht; dort genügt ein Stichprobentest.
 import 'dart:io';
 import 'dart:typed_data';
@@ -47,6 +49,15 @@ Future<void> main(List<String> args) async {
     SpeechModelCatalog.whisperSmall,
   ].where((m) => only == null || m.id == only);
 
+  final vocabularyFile = opt('vocabulary');
+  final vocabulary = Vocabulary(
+    vocabularyFile == null
+        ? measureVocabulary
+        : File(vocabularyFile).readAsLinesSync(),
+    names: const ['Wendelin'],
+  );
+  const corrector = VocabularyCorrector();
+
   final rows = <String>[];
   final langs = ['de', 'fr', 'en'];
   for (final model in models) {
@@ -64,7 +75,11 @@ Future<void> main(List<String> args) async {
       modelId: model.id,
     );
     for (final fixed in [false, true]) {
-      final perLang = {for (final l in langs) l: WerCounter()};
+      // [0]: ohne Korrektur, [1]: mit Vokabular-Korrektur.
+      final perLang = [
+        for (var k = 0; k < 2; k++) {for (final l in langs) l: WerCounter()},
+      ];
+      final b6 = [WerCounter(), WerCounter()];
       var audioMs = 0;
       var cpuMs = 0;
       for (final s in samples) {
@@ -75,37 +90,73 @@ Future<void> main(List<String> args) async {
         );
         cpuMs += watch.elapsedMilliseconds;
         audioMs += samplesToDuration(s.pcm.length).inMilliseconds;
-        final errors = wordErrors(s.text, t.text, s.language);
-        perLang[s.language]!.add(errors, sentence: s.id);
-        stderr.writeln(
-          '${model.id} ${fixed ? 'fest' : 'auto'} ${s.id} '
-          '[${t.language} ${t.confidence?.toStringAsFixed(2)}] '
-          '${errors.errors}/${errors.words}: ${t.text}',
+        final corrected = corrector.correct(
+          t.text,
+          vocabulary,
+          language: t.language,
+        );
+        for (final (k, text) in [(0, t.text), (1, corrected)]) {
+          final errors = wordErrors(s.text, text, s.language);
+          (isVocabularyFixture(s.id) ? b6[k] : perLang[k][s.language]!).add(
+            errors,
+            sentence: s.id,
+          );
+          if (k == 1 && text == t.text) continue;
+          stderr.writeln(
+            '${model.id} ${fixed ? 'fest' : 'auto'}${k == 1 ? ' korr.' : ''} '
+            '${s.id} [${t.language} ${t.confidence?.toStringAsFixed(2)}] '
+            '${errors.errors}/${errors.words}: $text',
+          );
+        }
+      }
+      for (var k = 0; k < 2; k++) {
+        final all = WerCounter();
+        for (final c in perLang[k].values) {
+          all.merge(c);
+        }
+        rows.add(
+          '| ${model.id} | ${fixed ? 'fest' : 'automatisch'} | '
+          '${k == 0 ? 'ohne' : 'mit'} | '
+          '${[for (final l in langs) perLang[k][l]!.percent].join(' | ')} | '
+          '${all.percent} | ${all.exact}/${all.sentences} | '
+          '${b6[k].percent} | ${b6[k].exact}/${b6[k].sentences} | '
+          '${(cpuMs / samples.length).round()} ms | '
+          '${(cpuMs / audioMs).toStringAsFixed(2)} |',
         );
       }
-      final all = WerCounter();
-      for (final c in perLang.values) {
-        all.merge(c);
-      }
-      rows.add(
-        '| ${model.id} | ${fixed ? 'fest' : 'automatisch'} | '
-        '${[for (final l in langs) perLang[l]!.percent].join(' | ')} | '
-        '${all.percent} | ${all.exact}/${all.sentences} | '
-        '${(cpuMs / samples.length).round()} ms | '
-        '${(cpuMs / audioMs).toStringAsFixed(2)} |',
-      );
     }
     engine.dispose();
   }
 
   stdout
     ..writeln(
-      '| Modell | Sprache | WER de | WER fr | WER en | WER gesamt | '
-      'Sätze fehlerfrei | Ø Zeit/Satz | RTF |',
+      '| Modell | Sprache | Korrektur | WER de | WER fr | WER en | '
+      'WER gesamt | Sätze fehlerfrei | WER B6 | B6 fehlerfrei | '
+      'Ø Zeit/Satz | RTF |',
     )
-    ..writeln('|---|---|---:|---:|---:|---:|---:|---:|---:|');
+    ..writeln('|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
   rows.forEach(stdout.writeln);
 }
+
+/// Titles of the WER measurement with correction (like a small vault: note
+/// titles and list names; the assistant name „Wendelin“ is always added). Override with
+/// `--vocabulary <file>` (one name per line).
+const measureVocabulary = [
+  'Wendelin-Test',
+  'Tagesnotiz',
+  'Journal',
+  'Einkaufen',
+  'Einkaufsliste',
+  'Urlaub Ideen',
+  'Projekt Phoenix',
+  'Courses',
+  'Shopping',
+  'Zahnarzt',
+];
+
+/// Fixtures with names from the vocabulary (B6, `b6-…`): own column, so
+/// the WER of the 36 command sentences stays comparable.
+bool isVocabularyFixture(String id) => id.startsWith('b6-');
 
 /// A fixture: id, language, reference text and audio.
 typedef Fixture = ({String id, String language, String text, Int16List pcm});
