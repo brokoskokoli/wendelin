@@ -113,9 +113,13 @@ final class VoiceController extends Notifier<VoiceUiState> {
         if (running) _lastByVoice = _voiceRun;
         if (!running) _voiceRun = false;
       })
-      ..listen(agentControllerProvider.select((s) => s.entries), (_, entries) {
-        for (final e in entries.whereType<ToolEntry>()) {
-          _callByVoice.putIfAbsent(e.id, () => _lastByVoice);
+      ..listen(agentControllerProvider.select((s) => s.entries), (prev, now) {
+        // IDs can repeat (call_N): new entries overwrite, new topic clears.
+        var from = prev?.length ?? 0;
+        if (now.length < from) _callByVoice.clear();
+        if (now.length < from) from = 0;
+        for (final e in now.skip(from).whereType<ToolEntry>()) {
+          _callByVoice[e.id] = _lastByVoice;
         }
       })
       // Models arrive (download, first refresh): warm up if visible.

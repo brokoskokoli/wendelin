@@ -102,7 +102,9 @@ void main() {
     test(
       'Stimme: Ausgabe stoppt sofort, „Zurückgenommen.“ wird gesprochen',
       () async {
-        final tts = FakeTextToSpeech(manual: true);
+        final tts = FakeTextToSpeech(
+          utteranceDuration: const Duration(milliseconds: 120),
+        );
         start(
           [create, answer],
           script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
@@ -130,7 +132,9 @@ void main() {
       ('en', 'Undone.'),
     ]) {
       test('Sprache der Anfrage: $lang', () async {
-        final tts = FakeTextToSpeech(manual: true);
+        final tts = FakeTextToSpeech(
+          utteranceDuration: const Duration(milliseconds: 120),
+        );
         start(
           [create, answer],
           script: [Transcript(text: 'x', language: lang)],
@@ -164,7 +168,9 @@ void main() {
     });
 
     test('Rückgängig stoppt eine gesprochene Bestätigungsfrage', () async {
-      final tts = FakeTextToSpeech(manual: true);
+      final tts = FakeTextToSpeech(
+        utteranceDuration: const Duration(milliseconds: 120),
+      );
       start(
         [
           create,
@@ -198,7 +204,9 @@ void main() {
     });
 
     test('Rückgängig in der Denkphase beendet die Sprachanfrage', () async {
-      final tts = FakeTextToSpeech(manual: true);
+      final tts = FakeTextToSpeech(
+        utteranceDuration: const Duration(milliseconds: 120),
+      );
       start(
         [
           create,
@@ -276,6 +284,56 @@ void main() {
       expect(tts.spoken, isEmpty);
       expect(await voice().undo('c2'), 'Zurückgenommen.');
       expect(tts.spoken, ['Zurückgenommen.']);
+    });
+
+    test('Neues Gespräch leert die Zuordnung', () async {
+      final tts = FakeTextToSpeech();
+      start(
+        [create, answer, create, answer],
+        script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
+        tts: tts,
+      );
+      await voice().start(TriggerKind.pushToTalk);
+      await voice().whenIdle;
+      await agent().newTopic();
+      await agent().send('Tipp');
+      await agent().idle;
+      tts.spoken.clear();
+
+      expect(await voice().undo('c1'), 'Zurückgenommen.');
+      expect(tts.spoken, isEmpty);
+    });
+
+    test('Zweites Rückgängig stoppt das noch gesprochene erste', () async {
+      final tts = FakeTextToSpeech(
+        utteranceDuration: const Duration(milliseconds: 120),
+      );
+      start(
+        [
+          create,
+          answer,
+          ScriptedTurn.toolCalls([
+            call('c2', 'calendar__create_event', _create),
+          ]),
+          answer,
+        ],
+        script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
+        tts: tts,
+      );
+      await voice().start(TriggerKind.pushToTalk);
+      await voice().whenIdle;
+      await agent().send('Und nochmal');
+      await agent().idle;
+      tts.spoken.clear();
+      tts.interrupted.clear();
+
+      final first = voice().undo('c1');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(tts.current, 'Zurückgenommen.');
+      final second = voice().undo('c2');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(tts.interrupted, ['Zurückgenommen.']);
+      await Future.wait([first, second]);
     });
 
     test('Rückgängig scheitert: kein Text, kein Ton', () async {
