@@ -22,6 +22,7 @@ class IntegrationTile extends StatelessWidget {
     required this.status,
     this.detail,
     this.sensitive = false,
+    this.kind,
     this.minPrivacy,
     this.onToggle,
     this.onAction,
@@ -43,6 +44,10 @@ class IntegrationTile extends StatelessWidget {
 
   /// Zeigt das Badge „sensibel“.
   final bool sensitive;
+
+  /// Art einer nutzerdefinierten Integration als Badge („MCP“, „HTTP“);
+  /// `null` bei eingebauten.
+  final String? kind;
 
   /// Mindest-Datenschutzstufe; im Zustand „verfügbar“ als Hinweis gezeigt.
   final PrivacyLevel? minPrivacy;
@@ -112,36 +117,20 @@ class IntegrationTile extends StatelessWidget {
 
   Widget _title() {
     final title = Text(name, style: WText.label);
-    if (!sensitive) return title;
-    // Badge als Teil des Titels vorlesen („Kontakte, sensibel“).
+    final badges = [?kind, if (sensitive) 'sensibel'];
+    if (badges.isEmpty) return title;
+    // Badges als Teil des Titels vorlesen („Kontakte, sensibel“).
     return Row(
       spacing: WSpace.s,
       children: [
         Flexible(
           child: Semantics(
-            label: '$name, sensibel',
+            label: [name, ...badges].join(', '),
             excludeSemantics: true,
             child: title,
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(WRadius.badge),
-            border: Border.all(
-              color: WColors.lineSubtle,
-              width: WSize.borderThin,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: WSpace.xs6,
-              vertical: WSpace.xxs,
-            ),
-            child: ExcludeSemantics(
-              child: Text('sensibel', style: WText.monoBadge),
-            ),
-          ),
-        ),
+        for (final badge in badges) _Badge(badge),
       ],
     );
   }
@@ -242,6 +231,27 @@ class IntegrationTile extends StatelessWidget {
         );
     }
   }
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(WRadius.badge),
+      border: Border.all(color: WColors.lineSubtle, width: WSize.borderThin),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: WSpace.xs6,
+        vertical: WSpace.xxs,
+      ),
+      child: ExcludeSemantics(child: Text(text, style: WText.monoBadge)),
+    ),
+  );
 }
 
 class _ActionButton extends StatelessWidget {

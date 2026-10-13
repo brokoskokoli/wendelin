@@ -105,6 +105,13 @@
         <intent>
             <action android:name="android.intent.action.SET_TIMER"/>
         </intent>
+        <!-- Apps of integrations (WP25, app detection): only these packages are visible to
+             PackageManager, no QUERY_ALL_PACKAGES. Bring! (shopping list fallback), Obsidian
+             (open notes), Spotify (later). Keep in step with KnownApps in
+             lib/di/app_requirements.dart. -->
+        <package android:name="ch.publisheria.bring"/>
+        <package android:name="md.obsidian"/>
+        <package android:name="com.spotify.music"/>
         <!-- Installed TTS engines for the system voice (flutter_tts, K7). -->
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE"/>

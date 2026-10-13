@@ -6,7 +6,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 
 /**
- * Flutter activity with Wendelin's platform channels (calendar, files, vault, assistant).
+ * Flutter activity with Wendelin's platform channels (calendar, files, vault, apps, assistant).
  * Both the main app ([MainActivity]) and the assistant overlay ([AssistantActivity]) run
  * the tools, so both engines need the same channels.
  */
@@ -15,6 +15,7 @@ abstract class WendelinActivity : FlutterActivity() {
     private var files: FilesChannel? = null
     private var vault: VaultChannel? = null
     private var window: WindowChannel? = null
+    private var apps: AppsChannel? = null
     protected var assistant: AssistantChannel? = null
         private set
 
@@ -31,6 +32,7 @@ abstract class WendelinActivity : FlutterActivity() {
         files = FilesChannel(this, messenger)
         vault = VaultChannel(this, messenger)
         window = WindowChannel(this, messenger)
+        apps = AppsChannel(this, messenger)
         assistant = AssistantChannel(this, messenger)
     }
 
@@ -43,6 +45,8 @@ abstract class WendelinActivity : FlutterActivity() {
         vault = null
         window?.dispose()
         window = null
+        apps?.dispose()
+        apps = null
         assistant?.dispose()
         assistant = null
         super.cleanUpFlutterEngine(flutterEngine)

@@ -12,6 +12,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../platform/platform_ports.dart';
 import '../platform/secure_secret_store.dart';
 import 'agent_factory.dart';
+import 'app_requirements.dart';
 import 'app_settings.dart';
 import 'audit_recorder.dart';
 import 'costs.dart';
@@ -23,6 +24,7 @@ import 'provider_config.dart';
 import 'sensitivity.dart';
 import 'session_manager.dart';
 import 'startup.dart';
+import 'user_integrations.dart';
 import 'web_search.dart';
 
 // Riverpod wiring of the app. `main.dart` overrides [storageProvider],
@@ -60,6 +62,12 @@ final httpClientProvider = Provider<http.Client>((ref) {
   ref.onDispose(client.close);
   return client;
 });
+
+/// Opens web addresses (download page of a missing app); throws a
+/// `PortException` if nothing can open it.
+final urlLauncherProvider = Provider<Future<void> Function(Uri url)>(
+  (ref) => openExternalUrl,
+);
 
 /// Model prices.
 final modelCatalogProvider = Provider<ModelCatalog>(
@@ -129,20 +137,41 @@ final integrationDepsProvider = Provider<IntegrationDeps>((ref) {
   );
 });
 
+/// Last known answers of the app detection (hints for optional apps).
+final installedAppsProvider = Provider<InstalledApps>(
+  (ref) => InstalledApps(ref.watch(platformPortsProvider).apps),
+);
+
 /// The built integrations by id.
 final integrationsProvider = Provider<Map<String, Integration>>((ref) {
   final deps = ref.watch(integrationDepsProvider);
   final marks = ref.watch(toolPrefsProvider.select((p) => p.sensitive));
+  final apps = ref.watch(installedAppsProvider);
   return {
     for (final spec in ref.watch(integrationSpecsProvider))
       if (spec.isSupported?.call(deps) ?? true)
-        spec.id: switch ((spec.create(deps), marks[spec.id])) {
-          (final i, final mark?) when mark != i.sensitive =>
-            SensitivityOverride(i, sensitive: mark),
-          (final i, _) => i,
-        },
+        spec.id: _withSensitivity(switch ((
+          spec.create(deps),
+          spec.requiredApp,
+        )) {
+          (final i, final app?) => AppRequirementGuard(i, app, apps),
+          (final i, null) => i,
+        }, marks),
   };
 });
+
+/// [integration] with the user's „sensibel“ mark from [marks], if it
+/// differs from its own.
+Integration _withSensitivity(
+  Integration integration,
+  Map<String, bool> marks,
+) => switch (marks[integration.id]) {
+  final mark? when mark != integration.sensitive => SensitivityOverride(
+    integration,
+    sensitive: mark,
+  ),
+  _ => integration,
+};
 
 /// All integrations with their state; decides which tools the model sees.
 ///
@@ -178,6 +207,73 @@ final toolRegistryProvider = Provider<ToolRegistry>((ref) {
   ref.listen(toolPrefsProvider, (_, next) => apply(next));
   ref.onDispose(registry.dispose);
   return registry;
+});
+
+/// Sources of user-defined integrations (ADR 0012). WP27 (MCP servers) and
+/// WP28 (HTTP tools) each add one source here.
+final userIntegrationSourcesProvider = Provider<List<UserIntegrationSource>>(
+  (ref) => const [],
+);
+
+/// Cleanup after a user-defined integration was deleted, besides the
+/// secrets its source deletes: forgets its tool switches, confirmations
+/// and „sensibel“ mark.
+final userIntegrationCleanupsProvider = Provider<List<IntegrationCleanup>>(
+  (ref) => [
+    (id) async {
+      final notifier = ref.read(toolPrefsProvider.notifier);
+      final prefs = ref.read(toolPrefsProvider);
+      bool ownTool(String name) => name.startsWith('${id}__');
+      if (!prefs.sensitive.containsKey(id) &&
+          !prefs.disabled.any(ownTool) &&
+          !prefs.alwaysConfirm.any(ownTool)) {
+        return;
+      }
+      await notifier.set(
+        ToolPrefs(
+          disabled: {...prefs.disabled.where((n) => !ownTool(n))},
+          alwaysConfirm: {...prefs.alwaysConfirm.where((n) => !ownTool(n))},
+          sensitiveMinimum: prefs.sensitiveMinimum,
+          sensitive: {...prefs.sensitive}..remove(id),
+        ),
+      );
+    },
+    (id) async =>
+        ref.read(enabledIntegrationsProvider.notifier).set(id, enabled: false),
+  ],
+);
+
+/// Keeps the user-defined integrations in the registry
+/// ([UserIntegrationSync]); rebuilt together with the registry.
+final userIntegrationSyncProvider = Provider<UserIntegrationSync>((ref) {
+  final registry = ref.watch(toolRegistryProvider);
+  final sync = UserIntegrationSync(
+    registry: registry,
+    sources: ref.watch(userIntegrationSourcesProvider),
+    settings: ref.watch(storageProvider).settings,
+    cleanups: ref.watch(userIntegrationCleanupsProvider),
+    // Read lazily: a changed mark rebuilds the registry and this sync.
+    decorate: (i) => _withSensitivity(i, ref.read(toolPrefsProvider).sensitive),
+    onRegistered: (integration) {
+      final disabled = ref.read(toolPrefsProvider).disabled;
+      for (final tool in integration.tools) {
+        registry.setToolEnabled(
+          tool.name,
+          enabled: !disabled.contains(tool.name),
+        );
+      }
+    },
+    onError: (error, stack) => FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: error,
+        stack: stack,
+        library: 'wendelin',
+        context: ErrorDescription('bei nutzerdefinierten Integrationen'),
+      ),
+    ),
+  );
+  ref.onDispose(sync.dispose);
+  return sync;
 });
 
 void _reportRegistrationError(Object error, StackTrace stack) =>
@@ -218,7 +314,9 @@ final class EnabledIntegrations extends Notifier<Set<String>> {
 /// active tools.
 final toolRegistryReadyProvider = FutureProvider<ToolRegistry>((ref) async {
   final registry = ref.watch(toolRegistryProvider);
+  final sync = ref.watch(userIntegrationSyncProvider);
   await registry.refresh();
+  await sync.ready;
   return registry;
 });
 

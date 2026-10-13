@@ -10,7 +10,7 @@ import '../routes.dart';
 import 'settings_page.dart';
 
 /// Settings overview: one row per area (concept: „Einstellungen“). Routing,
-/// MCP and HTTP tools follow in later milestones.
+/// MCP servers and HTTP tools open placeholder pages until WP26–WP28.
 class SettingsScreen extends ConsumerWidget {
   /// Creates the overview.
   const SettingsScreen({super.key});
@@ -18,11 +18,14 @@ class SettingsScreen extends ConsumerWidget {
   /// Areas in display order: title, detail, route.
   static const areas = [
     ('Provider', 'Profile, Standard, Eskalation, Budget', AppRoutes.providers),
+    ('Routing', 'Regeln, Testfeld, Eskalationsketten', AppRoutes.routing),
     (
       'Integrationen',
       'Was Wendelin darf, Tools, Risikostufen',
       AppRoutes.integrations,
     ),
+    ('MCP-Server', 'Server, Anmeldung, Status, Tools', AppRoutes.mcpServers),
+    ('HTTP-Tools', 'Eigene Tools definieren und testen', AppRoutes.httpTools),
     ('Obsidian', 'Vault, Tagesnotizen, Suchindex', AppRoutes.obsidian),
     ('Listen', 'Einkaufen, Projekte … als Markdown-Dateien', AppRoutes.lists),
     ('Web-Suche', 'Suchdienst und Key', AppRoutes.webSearch),

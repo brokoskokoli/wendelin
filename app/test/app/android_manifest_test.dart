@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/app_requirements.dart';
+import 'package:wendelin/di/integration_specs.dart';
 
 /// Checks the Android configuration that protects local data and keeps the
 /// app free of unneeded permissions (concept: Sicherheit, K7).
@@ -67,6 +69,54 @@ void main() {
       );
     },
   );
+
+  group('App-Erkennung (WP25)', () {
+    final queries = RegExp(
+      '<queries>(.*?)</queries>',
+      dotAll: true,
+    ).firstMatch(manifest)![1]!;
+    final declared = RegExp(r'<package android:name="([^"]+)"/>')
+        .allMatches(queries)
+        .map((m) => m[1])
+        .toSet();
+
+    test('jede bekannte App steht in <queries>, nichts darüber hinaus', () {
+      expect(declared, {for (final a in KnownApps.all) a.androidPackage});
+    });
+
+    test('jede App-Anforderung einer Integration ist eine bekannte App', () {
+      for (final spec in builtInIntegrationSpecs) {
+        final app = spec.requiredApp;
+        if (app != null) {
+          expect(declared, contains(app.androidPackage), reason: spec.id);
+        }
+      }
+    });
+
+    test('kein QUERY_ALL_PACKAGES, Store-Links ohne Play Store (K7)', () {
+      expect(
+        manifest,
+        isNot(contains('android.permission.QUERY_ALL_PACKAGES')),
+      );
+      for (final app in KnownApps.all) {
+        expect(app.storeUrl, startsWith('https://'));
+        expect(app.storeUrl, isNot(contains('play.google.com')));
+        expect(app.storeUrl, isNot(startsWith('market:')));
+      }
+    });
+
+    test('Kanal ist in beiden Engines registriert', () {
+      const kotlin = 'android/app/src/main/kotlin/app/wendelin';
+      expect(
+        File('$kotlin/WendelinActivity.kt').readAsStringSync(),
+        contains('AppsChannel(this, messenger)'),
+      );
+      expect(
+        File('$kotlin/AppsChannel.kt').readAsStringSync(),
+        contains('"app.wendelin/apps"'),
+      );
+    });
+  });
 
   group('Standard-Assistent (WP18)', () {
     /// The element declaring `.name`, up to its end (self-closing or
