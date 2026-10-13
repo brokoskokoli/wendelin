@@ -6,12 +6,17 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import '../helpers.dart';
 
 /// Env on a fake vault with [files] (index synced on first use).
-ObsidianEnv _env(Iterable<String> files, {String locale = 'de'}) {
+ObsidianEnv _env(
+  Iterable<String> files, {
+  String locale = 'de',
+  bool Function(String path)? spokenCorrection,
+}) {
   final vault = FakeVaultPort(files: {for (final f in files) f: 'x'});
   return ObsidianIntegration(
     vault,
     FakeNoteIndex(),
     settings: () => ObsidianSettings(vaultName: 'V', locale: locale),
+    spokenCorrection: spokenCorrection,
   ).env;
 }
 
@@ -178,6 +183,43 @@ void main() {
     });
   });
 
+  group('Name aus der Sprachkorrektur (B8)', () {
+    test('Schreiben fragt einmal nach, Lesen nicht', () async {
+      final corrected = {'Wendelin-Test.md'};
+      final asked = <String>[];
+      final env = _env(
+        ['Wendelin-Test.md'],
+        spokenCorrection: (path) {
+          asked.add(path);
+          return corrected.remove(path);
+        },
+      );
+      expect(
+        await _resolve(env, 'Wendelin-Test'),
+        const NoteResolution('Wendelin-Test.md', NoteMatchKind.exact),
+      );
+      expect(asked, isEmpty, reason: 'Lesen fragt nicht');
+      final e = await _fails(env, 'Wendelin-Test', write: true);
+      expect(e.kind, PortErrorKind.rejected);
+      expect(e.message, contains('Spracherkennung ergänzt'));
+      expect(e.message, contains('<vault_names>["Wendelin-Test.md"]'));
+      // Nach der Rückfrage (verbraucht) geht das Schreiben durch.
+      expect(
+        await _resolve(env, 'Wendelin-Test', write: true),
+        const NoteResolution('Wendelin-Test.md', NoteMatchKind.exact),
+      );
+      expect(asked, ['Wendelin-Test.md', 'Wendelin-Test.md']);
+    });
+
+    test('ohne Korrektur unverändert', () async {
+      final env = _env(['Wendelin-Test.md'], spokenCorrection: (_) => false);
+      expect(
+        (await _resolve(env, 'Wendelin-Test', write: true)).path,
+        'Wendelin-Test.md',
+      );
+    });
+  });
+
   group('phoneticMatches', () {
     List<PhoneticMatch<String>> m(String q, List<String> names) =>
         phoneticMatches(q, names, (n) => [n]);
@@ -212,6 +254,31 @@ void main() {
       ], (_) => ['Gar nichts', 'Wendelin-Tests', 'Wendelin-Test']);
       expect(r.single.distance, 1);
       expect(r.single.strong, isTrue);
+    });
+
+    test('strong: bis 9 Buchstaben 1 Edit, ab 10 Buchstaben 2', () {
+      // Alle Paare mit gleichem Kölner Schlüssel (nur Vokale geändert).
+      for (final (query, name, distance, strong) in [
+        ('Wandeline', 'Wendeline', 1, true), // 9 Buchstaben
+        ('Wandelina', 'Wendeline', 2, false),
+        ('Wandelines', 'Wendelines', 1, true), // 10 Buchstaben
+        ('Wandelinas', 'Wendelines', 2, true),
+        ('Wandalinas', 'Wendelines', 3, false),
+      ]) {
+        final r = m(query, [name]);
+        expect(r.single.distance, distance, reason: query);
+        expect(r.single.strong, strong, reason: query);
+      }
+    });
+
+    test('strong geht vor kleinerer Distanz', () {
+      // „Wandelinet“: 1 Edit, aber anderer Schlüssel (t ≠ s) → schwach;
+      // „Wendelinas“: 2 Edits, gleicher Schlüssel, 10 Buchstaben → stark.
+      final r = m('Wandelines', ['Wandelinet', 'Wendelinas']);
+      expect(r.map((x) => (x.item, x.distance, x.strong)), [
+        ('Wendelinas', 2, true),
+        ('Wandelinet', 1, false),
+      ]);
     });
 
     test('Grenzen der Distanz', () {

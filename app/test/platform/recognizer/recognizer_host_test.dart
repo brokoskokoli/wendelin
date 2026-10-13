@@ -379,7 +379,7 @@ void main() {
         final r = RecognizerRequest.fromArgs(args);
         expect(r.session, 0);
         expect(r.language, isNull);
-        expect(r.model, 'whisper-base');
+        expect(r.model, 'whisper-small');
         expect(r.sttLanguage, isNull);
         expect(r.vadThreshold, 0.5);
         expect(r.minSpeechMs, 200);

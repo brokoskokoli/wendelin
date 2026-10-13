@@ -2,47 +2,7 @@
 // Eigennamen (Notiztitel, Listennamen, Assistentenname) mit erkannter
 // Sprache (WP33, B6). Reines Dart, ohne Abhängigkeiten.
 
-/// Lower case, diacritics folded (ä→a, é→e, ß→ss), everything but letters
-/// and digits removed: „Wendelin-Test“ → `wendelintest`.
-String foldFlat(String s) {
-  final b = StringBuffer();
-  for (final r in s.toLowerCase().runes) {
-    final c = String.fromCharCode(r);
-    final folded = _diacritics[c] ?? c;
-    if (_letterOrDigit.hasMatch(folded)) b.write(folded);
-  }
-  return b.toString();
-}
-
-final _letterOrDigit = RegExp(r'^[\p{L}\p{N}]+$', unicode: true);
-
-const _diacritics = {
-  'ä': 'a',
-  'à': 'a',
-  'á': 'a',
-  'â': 'a',
-  'ö': 'o',
-  'ò': 'o',
-  'ó': 'o',
-  'ô': 'o',
-  'ü': 'u',
-  'ù': 'u',
-  'ú': 'u',
-  'û': 'u',
-  'é': 'e',
-  'è': 'e',
-  'ê': 'e',
-  'ë': 'e',
-  'í': 'i',
-  'ì': 'i',
-  'î': 'i',
-  'ï': 'i',
-  'ç': 'c',
-  'ñ': 'n',
-  'ß': 'ss',
-  'œ': 'oe',
-  'æ': 'ae',
-};
+import '../text/fold.dart';
 
 /// Phonetic key of [text] for comparing names „by sound“: Kölner Phonetik
 /// for German ([language] `de` or `null`), a simple Soundex variant without

@@ -721,6 +721,7 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
     stt: CorrectingSpeechToText(
       await ref.watch(speechToTextProvider.future),
       vocabulary: ref.read(vocabularySourceProvider).current,
+      onCorrected: ref.read(correctedTitlesProvider).record,
     ),
     textToSpeech: selector.current,
     config: await ref.watch(voicePipelineConfigProvider.future),

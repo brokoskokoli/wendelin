@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
+import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/vocabulary_provider.dart';
 import 'package:wendelin/di/voice_providers.dart';
@@ -47,7 +48,7 @@ void main() {
   group('VocabularySource', () {
     test('Assistentenname, Notiztitel, Listen; neu nur bei Änderung', () async {
       var paths = ['Projekte/Wendelin-Test.md', 'Reisen/Malta 2026.md'];
-      var lists = ['Einkaufen', 'Einkaufsliste'];
+      var lists = ['Einkaufen', 'Wocheneinkauf Markt'];
       final source = VocabularySource(
         notePaths: () async => paths,
         listNames: () => lists,
@@ -57,9 +58,10 @@ void main() {
         'Wendelin',
         'Wendelin-Test',
         'Malta 2026',
-        'Einkaufen',
-        'Einkaufsliste',
+        'Wocheneinkauf Markt',
       ]);
+      // Einwortige Titel und Listen werden nicht korrigiert.
+      expect(v1.terms.map((t) => t.text), isNot(contains('Einkaufen')));
       expect(identical(await source.current(), v1), isTrue);
 
       paths = [...paths.reversed];
@@ -69,10 +71,10 @@ void main() {
         reason: 'Reihenfolge des Index egal',
       );
 
-      lists = ['Baumarkt'];
+      lists = ['Baumarkt Liste'];
       final v2 = await source.current();
       expect(identical(v2, v1), isFalse);
-      expect(v2.terms.map((t) => t.text), contains('Baumarkt'));
+      expect(v2.terms.map((t) => t.text), contains('Baumarkt Liste'));
     });
 
     test('Index nicht lesbar: letztes Vokabular, Log ohne Namen', () async {
@@ -114,6 +116,37 @@ void main() {
     expect(components.stt, isA<CorrectingSpeechToText>());
     final t = await components.stt.transcribe(utterance().first);
     expect(t.text, 'Lies Wendelin-Test vor');
+    // Der eingesetzte Titel ist für die Obsidian-Tools markiert (B8).
+    final corrected = c.read(correctedTitlesProvider);
+    expect(corrected.take('Projekte/Wendelin-Test.md'), isTrue);
+    expect(corrected.take('Projekte/Wendelin-Test.md'), isFalse);
+  });
+
+  test('CorrectedTitles: nur Titel, je Erkennung ersetzt', () {
+    final v = Vocabulary(
+      ['Wendelin-Test', 'Urlaub Ideen'],
+      names: ['Wendelin'],
+    );
+    final c = CorrectedTitles()..record(v.terms);
+    expect(c.take('Wendelin.md'), isFalse, reason: 'Assistentenname');
+    expect(c.take('A/Wendelin Test.md'), isTrue);
+    c.record(const []);
+    expect(c.take('Urlaub Ideen.md'), isFalse);
+  });
+
+  test('Obsidian-Integration fragt beim Schreiben nach (Verdrahtung)', () {
+    final env = TestEnv();
+    final c = env.container();
+    addTearDown(c.dispose);
+    final deps = c.read(integrationDepsProvider);
+    final integration =
+        builtInIntegrationSpecs
+                .singleWhere((s) => s.id == 'obsidian')
+                .create(deps)
+            as ObsidianIntegration;
+    c.read(correctedTitlesProvider).record(Vocabulary(['Wendelin-Test']).terms);
+    expect(integration.env.spokenCorrection!('Wendelin-Test.md'), isTrue);
+    expect(integration.env.spokenCorrection!('Wendelin-Test.md'), isFalse);
   });
 
   test(

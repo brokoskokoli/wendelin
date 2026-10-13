@@ -54,6 +54,7 @@ Future<void> main(List<String> args) async {
     vocabularyFile == null
         ? measureVocabulary
         : File(vocabularyFile).readAsLinesSync(),
+    names: const ['Wendelin'],
   );
   const corrector = VocabularyCorrector();
 
@@ -137,11 +138,10 @@ Future<void> main(List<String> args) async {
   rows.forEach(stdout.writeln);
 }
 
-/// Names of the WER measurement with correction (like a small vault: the
-/// assistant name, note titles, list names). Override with
+/// Titles of the WER measurement with correction (like a small vault: note
+/// titles and list names; the assistant name „Wendelin“ is always added). Override with
 /// `--vocabulary <file>` (one name per line).
 const measureVocabulary = [
-  'Wendelin',
   'Wendelin-Test',
   'Tagesnotiz',
   'Journal',

@@ -2,20 +2,6 @@ import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 void main() {
-  group('foldFlat', () {
-    for (final (input, expected) in [
-      ('Wendelin-Test', 'wendelintest'),
-      ('Wandel Intest', 'wandelintest'),
-      ('Größe_Ärger', 'grossearger'),
-      ('Café crème', 'cafecreme'),
-      ('Œuvre', 'oeuvre'),
-      ('Notiz 2026', 'notiz2026'),
-      ('  ', ''),
-    ]) {
-      test('$input → $expected', () => expect(foldFlat(input), expected));
-    }
-  });
-
   group('colognePhonetic', () {
     for (final (input, expected) in [
       // Lehrbuchbeispiel der Kölner Phonetik.
@@ -39,6 +25,12 @@ void main() {
       ('Hexe', '048'),
       ('Dachs', '248'),
       ('Pharao', '37'),
+      // G, K, Q → 4 (M17): Gabel = Kabel, Quark.
+      ('Gabel', '415'),
+      ('Kabel', '415'),
+      ('Quark', '474'),
+      ('Garten', '4726'),
+      ('Karten', '4726'),
       ('Ypsilon', '01856'),
       ('Raum 12', '7612'),
       ('', ''),

@@ -18,7 +18,7 @@ final class RecognizerRequest {
   const RecognizerRequest({
     required this.session,
     this.language,
-    this.model = 'whisper-base',
+    this.model = 'whisper-small',
     this.sttLanguage,
     this.vadThreshold = 0.5,
     this.minSpeechMs = 200,

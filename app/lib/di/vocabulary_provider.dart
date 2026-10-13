@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_core/wendelin_core.dart' show foldFlat;
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -45,13 +46,12 @@ final class VocabularySource {
       return _vocabulary;
     }
     final names = [
-      assistantName,
       for (final p in paths.toList()..sort()) VaultPath.title(p),
       ...listNames(),
     ];
     if (listEquals(names, _names)) return _vocabulary;
     _names = names;
-    return _vocabulary = Vocabulary(names);
+    return _vocabulary = Vocabulary(names, names: [assistantName]);
   }
 }
 
@@ -67,4 +67,31 @@ final vocabularySourceProvider = Provider<VocabularySource>(
       ],
     ],
   ),
+);
+
+/// Note titles the speech correction put into the last spoken request
+/// (WP33, B8). Lives in memory only. A write to such a note is asked back
+/// once ([take] consumes the title), because the user never said the exact
+/// name; the assistant name and list names are not tracked.
+final class CorrectedTitles {
+  final _titles = <String>{};
+
+  /// Replaces the titles with those of the last transcription.
+  void record(Iterable<VocabularyTerm> terms) {
+    _titles
+      ..clear()
+      ..addAll([
+        for (final t in terms)
+          if (!t.name) t.flat,
+      ]);
+  }
+
+  /// Whether the title of the note [path] came from the correction; removes
+  /// it, so the next write after the question goes through.
+  bool take(String path) => _titles.remove(foldFlat(VaultPath.title(path)));
+}
+
+/// [CorrectedTitles] shared by the speech input and the Obsidian tools.
+final correctedTitlesProvider = Provider<CorrectedTitles>(
+  (ref) => CorrectedTitles(),
 );

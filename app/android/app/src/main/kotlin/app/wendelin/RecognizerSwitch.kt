@@ -65,7 +65,7 @@ object RecognizerSwitch {
  * app on every change (`setRecognizerConfig` on the assistant channel).
  */
 data class RecognizerConfig(
-    val model: String = "whisper-base",
+    val model: String = "whisper-small",
     val language: String = "",
     val vadThreshold: Double = 0.5,
     val minSpeechMs: Int = 200,

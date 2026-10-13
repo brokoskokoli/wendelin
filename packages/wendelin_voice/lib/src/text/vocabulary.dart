@@ -37,7 +37,7 @@ const _stopEn =
 
 /// One name of the [Vocabulary].
 final class VocabularyTerm {
-  VocabularyTerm._(this.text, this.flat, this.words);
+  VocabularyTerm._(this.text, this.flat, this.words, {required this.name});
 
   /// The name as it should appear in the transcript („Wendelin-Test“).
   final String text;
@@ -47,6 +47,9 @@ final class VocabularyTerm {
 
   /// Number of words of [text] (hyphen and underscore separate words).
   final int words;
+
+  /// A proper name (the assistant name), corrected even as a single word.
+  final bool name;
 
   final Map<String, String> _keys = {};
 
@@ -59,22 +62,40 @@ final class VocabularyTerm {
 /// titles from the index, list names. Lives in memory only; [toString]
 /// never shows the names.
 final class Vocabulary {
-  /// Creates the vocabulary from [names]. Names shorter than
-  /// [VocabularyCorrector.minLength] letters or digits (without spaces and
-  /// punctuation), stopwords and duplicates (same [foldFlat]) are dropped;
-  /// the first spelling wins.
-  factory Vocabulary(Iterable<String> names) {
+  /// Creates the vocabulary from [titles] (note titles, list names) and
+  /// proper [names] (the assistant name).
+  ///
+  /// Titles of a single word („Garten“, „Rezepte“) are dropped: they are
+  /// often ordinary words, and correcting them would change everyday
+  /// sentences („die Karten“ → „die Garten“). The title search and its
+  /// „Meinst du …?“ question catch them instead. Also dropped: entries
+  /// shorter than [VocabularyCorrector.minLength] letters or digits,
+  /// stopwords and duplicates (same [foldFlat]; the first spelling wins,
+  /// [names] first).
+  factory Vocabulary(
+    Iterable<String> titles, {
+    Iterable<String> names = const [],
+  }) {
     final seen = <String>{};
     final terms = <VocabularyTerm>[];
-    for (final raw in names) {
+    void add(String raw, {required bool name}) {
       final text = raw.trim();
       final flat = foldFlat(text);
+      final words = _wordsOf(text).length;
       if (flat.length < VocabularyCorrector.minLength ||
           vocabularyStopwords.contains(flat) ||
+          (!name && words < 2) ||
           !seen.add(flat)) {
-        continue;
+        return;
       }
-      terms.add(VocabularyTerm._(text, flat, _wordsOf(text).length));
+      terms.add(VocabularyTerm._(text, flat, words, name: name));
+    }
+
+    for (final n in names) {
+      add(n, name: true);
+    }
+    for (final t in titles) {
+      add(t, name: false);
     }
     return Vocabulary._(List.unmodifiable(terms));
   }
@@ -145,6 +166,10 @@ final class _Candidate {
   bool overlaps(_Candidate o) => first <= o.last && o.first <= last;
 }
 
+/// Result of [VocabularyCorrector.correctDetailed]: the corrected text and
+/// the names put into it.
+typedef VocabularyCorrection = ({String text, List<VocabularyTerm> terms});
+
 /// Replaces word runs in a transcript that sound like a [Vocabulary] name
 /// („Wandel Intest“ → „Wendelin-Test“). Conservative: a run is replaced
 /// only if
@@ -154,6 +179,8 @@ final class _Candidate {
 ///   („Wendel in“ → „Wendelin“);
 /// - it has at least [minLength] letters, is not made of stopwords only
 ///   and (unless it equals the name) neither starts nor ends with one;
+/// - it does not differ from the name only in an inflection ending
+///   ([onlyEndingDiffers]: „ein Rezept“ stays, „Wendelins“ stays);
 /// - no other name fits the same or an overlapping run equally well.
 ///
 /// A [gluedWords] entry in front of a name is split off again
@@ -172,14 +199,38 @@ final class VocabularyCorrector {
   /// corrector separates them again.
   static const gluedWords = ['notiz', 'note', 'liste', 'list'];
 
+  /// Word endings (inflection) whose difference alone is never corrected.
+  static const endings = {'', 'e', 'n', 's', 'en', 'er', 'es', 'em'};
+
+  /// Whether [a] and [b] differ only in their endings: after the common
+  /// beginning both rests are inflection [endings] („rezept“/„rezepte“,
+  /// „iden“/„ideen“). Such a difference is grammar, not a misheard name.
+  static bool onlyEndingDiffers(String a, String b) {
+    var i = 0;
+    while (i < a.length && i < b.length && a[i] == b[i]) {
+      i++;
+    }
+    return endings.contains(a.substring(i)) && endings.contains(b.substring(i));
+  }
+
   /// Allowed edit distance for a name with [length] letters: 1 up to 9
   /// letters, 2 above.
   static int maxDistance(int length) => length <= 9 ? 1 : 2;
 
   /// [text] with the names of [vocabulary] corrected; [language] chooses
   /// the phonetic key (`null` = German).
-  String correct(String text, Vocabulary vocabulary, {String? language}) {
-    if (vocabulary.isEmpty || text.isEmpty) return text;
+  String correct(String text, Vocabulary vocabulary, {String? language}) =>
+      correctDetailed(text, vocabulary, language: language).text;
+
+  /// Like [correct], plus the names that were put into the text.
+  VocabularyCorrection correctDetailed(
+    String text,
+    Vocabulary vocabulary, {
+    String? language,
+  }) {
+    if (vocabulary.isEmpty || text.isEmpty) {
+      return (text: text, terms: const []);
+    }
     final tokens = [
       for (final m in _token.allMatches(text)) _Token(m.start, m.end, m[0]!),
     ];
@@ -218,7 +269,7 @@ final class VocabularyCorrector {
       }
     }
     final chosen = _choose(candidates);
-    if (chosen.isEmpty) return text;
+    if (chosen.isEmpty) return (text: text, terms: const []);
     final b = StringBuffer();
     var at = 0;
     for (final c in chosen..sort((a, b) => a.first.compareTo(b.first))) {
@@ -229,7 +280,10 @@ final class VocabularyCorrector {
       at = tokens[c.last].end;
     }
     b.write(text.substring(at));
-    return b.toString();
+    return (
+      text: b.toString(),
+      terms: List.unmodifiable([for (final c in chosen) c.term]),
+    );
   }
 
   /// Compares the runs starting at token [first] (whose letters are
@@ -280,6 +334,7 @@ final class VocabularyCorrector {
       return _Candidate(first, last, term, 0, split, keep: keep);
     }
     if (edgeStop || run.length < minLength) return null;
+    if (onlyEndingDiffers(run, term.flat)) return null;
     if (term.key(language) != phoneticKey(run, language: language)) {
       return null;
     }
@@ -325,6 +380,7 @@ final class CorrectingSpeechToText implements SpeechToText {
     this.inner, {
     required this.vocabulary,
     this.corrector = const VocabularyCorrector(),
+    this.onCorrected,
   });
 
   /// The recognizer.
@@ -336,21 +392,29 @@ final class CorrectingSpeechToText implements SpeechToText {
   /// Correction rules.
   final VocabularyCorrector corrector;
 
+  /// Told after every transcription which names the correction put in
+  /// (empty if none), e.g. so writes to such a note are asked back (B8).
+  final void Function(List<VocabularyTerm> terms)? onCorrected;
+
   @override
   SpeechToTextEngineInfo get info => inner.info;
 
   @override
   Future<Transcript> transcribe(Int16List pcm, {String? language}) async {
     final t = await inner.transcribe(pcm, language: language);
-    if (t.text.isEmpty) return t;
-    final text = corrector.correct(
+    if (t.text.isEmpty) {
+      onCorrected?.call(const []);
+      return t;
+    }
+    final c = corrector.correctDetailed(
       t.text,
       await vocabulary(),
       language: t.language ?? language,
     );
-    if (text == t.text) return t;
+    onCorrected?.call(c.terms);
+    if (c.terms.isEmpty) return t;
     return Transcript(
-      text: text,
+      text: c.text,
       language: t.language,
       confidence: t.confidence,
     );

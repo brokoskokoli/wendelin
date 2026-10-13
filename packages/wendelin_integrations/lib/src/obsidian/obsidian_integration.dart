@@ -118,12 +118,14 @@ final class ObsidianIntegration implements Integration {
     required ObsidianSettings Function() settings,
     OpenUri? openUri,
     NoteIndexer? indexer,
+    bool Function(String path)? spokenCorrection,
   }) : env = ObsidianEnv(
          vault: vault,
          index: index,
          settings: settings,
          openUri: openUri,
          indexer: indexer,
+         spokenCorrection: spokenCorrection,
        );
 
   /// Id of the setup step „choose the vault folder“.
@@ -209,7 +211,14 @@ final class ObsidianEnv {
     this.openUri,
     NoteIndexer? indexer,
     this.minSyncInterval = const Duration(seconds: 30),
+    this.spokenCorrection,
   }) : indexer = indexer ?? NoteIndexer(vault, index);
+
+  /// Whether the speech recognition correction (WP33) put the title of the
+  /// note [path] into the current request; answers `true` at most once per
+  /// correction (the app consumes it). A write to such a note is asked
+  /// back once (B8), because the user never said the exact name.
+  final bool Function(String path)? spokenCorrection;
 
   /// Vault access.
   final VaultPort vault;
@@ -286,8 +295,25 @@ final class ObsidianEnv {
   /// whole words only and every phonetic match is asked back („Meinst du
   /// …?“, at most three notes). A read takes a phonetic match only if it is
   /// the single strong one; otherwise it asks back too. Nothing that sounds
-  /// alike → „gibt es nicht“.
+  /// alike → „gibt es nicht“. A write to a note whose name the speech
+  /// correction filled in ([spokenCorrection]) is asked back once.
   Future<NoteResolution> resolveNoteMatch(
+    String query, {
+    required bool write,
+    required DateTime now,
+  }) async {
+    final found = await _resolve(query, write: write, now: now);
+    if (write && (spokenCorrection?.call(found.path) ?? false)) {
+      throw PortException(
+        PortErrorKind.rejected,
+        'Den Notiznamen hat die Spracherkennung ergänzt. Meinst du die '
+        'Notiz ${vaultNames([found.path])}? Bitte nachfragen.',
+      );
+    }
+    return found;
+  }
+
+  Future<NoteResolution> _resolve(
     String query, {
     required bool write,
     required DateTime now,
