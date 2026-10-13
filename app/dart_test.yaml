@@ -4,3 +4,9 @@
 # zusätzlich plattformunabhängige Tests (test/ui/shapes_test.dart).
 tags:
   golden: {}
+  # Plattformabhängige Tests (Gutachten N5): FFI nur auf macOS
+  # (test/platform/voice/ffi_support.dart) bzw. Dateisystem-Annahmen
+  # (model_files_test.dart). Sie laufen im Gate mit; bei einem Fehler nur
+  # auf einer Plattform zuerst hier nachsehen. Auslassen mit
+  # `flutter test --exclude-tags platform-sensitive`.
+  platform-sensitive: {}

@@ -1,0 +1,15 @@
+# Bestandsdateien über der Fehlerschwelle (docs/ENGINEERING.md, „Größen“).
+#
+# Format: <pfad>[#<Klasse.funktion>]: <höchstens Zeilen>  # <abbauendes Paket>
+# Eine Datei auf der Liste darf nicht über ihre Grenze wachsen. Liegt sie
+# unter der Fehlerschwelle, meldet tool/check_sizes.dart, dass der Eintrag
+# zu entfernen ist. Die Liste schrumpft nur, neue Einträge nur mit
+# Begründung im Review.
+
+packages/wendelin_agent/lib/src/agent_runner.dart: 1018  # WP37 (R3, Runner zerlegen)
+packages/wendelin_agent/test/agent_runner_test.dart: 2054  # WP37 (R3, Test in Themen schneiden)
+
+# Integrations-Tools: noch kein R-Paket eingeplant (offen seit WP35).
+packages/wendelin_integrations/lib/src/calendar/calendar_tools.dart: 859  # WP35: Abbau offen
+packages/wendelin_integrations/lib/src/lists/lists.dart: 864  # WP35: Abbau offen
+packages/wendelin_integrations/lib/src/obsidian/obsidian_tools.dart: 905  # WP35: Abbau offen

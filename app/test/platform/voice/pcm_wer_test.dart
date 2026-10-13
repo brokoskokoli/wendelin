@@ -1,3 +1,7 @@
+// Plattformabhängig (FFI bzw. Dateisystem), siehe app/dart_test.yaml.
+@Tags(['platform-sensitive'])
+library;
+
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';

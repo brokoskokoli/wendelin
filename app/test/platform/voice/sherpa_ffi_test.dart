@@ -4,6 +4,9 @@
 //
 // <modelle>/whisper-base, silero-vad, tts-de-thorsten (entpackt) wie im
 // ModelStore. Ohne WENDELIN_MODELS werden die Tests übersprungen.
+@Tags(['platform-sensitive'])
+library;
+
 import 'dart:io';
 import 'dart:typed_data';
 
