@@ -8,13 +8,14 @@ Verbindlich für alle Beiträge, auch für Coding- und Review-Agenten. Fachliche
 pubspec.yaml                 # Dart-Pub-Workspace (eine pubspec.lock für alles)
 analysis_options.yaml        # strenge Lints, gilt für alle Pakete
 packages/
-  wendelin_core/             # reines Dart: Nachrichtenformat, Interfaces, Events, Fehler. KEINE Abhängigkeiten außer meta/collection
+  wendelin_core/             # reines Dart: Nachrichtenformat, Interfaces, Events, Fehler, SSE-Parser. KEINE Abhängigkeiten außer meta/collection
   wendelin_providers/        # reines Dart: LLM-Adapter (Anthropic, OpenAI-kompatibel), SSE, Modellkatalog, Kosten
   wendelin_tools/            # reines Dart: ToolRegistry, ToolExecutor, Risiko, Argumentprüfung, Undo
   wendelin_agent/            # reines Dart: Agent-Schleife, Kontextaufbau, Limits, Eskalation
   wendelin_storage/          # reines Dart + drift: Datenbank, Repositories, SecretStore-Interface
   wendelin_integrations/     # reines Dart: eingebaute Integrationen über Ports (Kalender, Clipboard, Wecker, Gedächtnis, Web)
   wendelin_voice/            # reines Dart: Sprach-Pipeline, Endpointing, Sprechtext, TTS-Auswahl, Modellkatalog/Download
+  wendelin_mcp/              # reines Dart: MCP-Client (Streamable HTTP, Legacy-SSE, OAuth 2.1), Abbildung auf das Tool-System
 app/                         # Flutter-App: UI, Riverpod-Verdrahtung, Plattform-Implementierungen der Ports
 evals/                       # Modell-Evals (Dart-CLI)
 tool/                        # Prüfskripte (Abhängigkeitsregeln, Secret-Scan)
@@ -32,6 +33,7 @@ wendelin_agent         -> core            (nutzt Tools/Provider nur über Core-I
 wendelin_storage       -> core
 wendelin_integrations  -> core
 wendelin_voice         -> core, agent
+wendelin_mcp           -> core, integrations
 app                    -> alle
 evals                  -> core, providers, tools, agent, integrations
 ```

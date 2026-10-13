@@ -1,0 +1,8 @@
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "content": [],
+    "structuredContent": {"sha": "a1b2c3d", "files": 3}
+  }
+}

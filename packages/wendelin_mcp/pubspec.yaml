@@ -1,0 +1,17 @@
+name: wendelin_mcp
+description: Wendelin MCP client (Streamable HTTP, Legacy-SSE, OAuth 2.1) and its mapping onto the tool system.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+environment:
+  sdk: ^3.13.0
+dependencies:
+  collection: ^1.19.1
+  crypto: ^3.0.7
+  http: ^1.6.0
+  meta: ^1.19.0
+  test: ^1.31.1
+  wendelin_core: any
+  wendelin_integrations: any
+dev_dependencies:
+  coverage: any

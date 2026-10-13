@@ -1,0 +1,18 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "tools": [
+      {
+        "name": "git_commit",
+        "description": "Commit staged changes",
+        "inputSchema": {
+          "type": "object",
+          "properties": {"message": {"type": "string"}},
+          "required": ["message"]
+        },
+        "outputSchema": {"type": "object", "properties": {"sha": {"type": "string"}}}
+      }
+    ]
+  }
+}

@@ -13,6 +13,7 @@ const allowed = <String, Set<String>>{
   'wendelin_storage': {'wendelin_core'},
   'wendelin_integrations': {'wendelin_core'},
   'wendelin_voice': {'wendelin_core', 'wendelin_agent'},
+  'wendelin_mcp': {'wendelin_core', 'wendelin_integrations'},
   'wendelin_evals': {
     'wendelin_core',
     'wendelin_providers',
