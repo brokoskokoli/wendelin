@@ -818,8 +818,8 @@ void main() {
       expect(json(o)['scope'], 'ganze Serie');
       expect(o.summary, endsWith('(ganze Serie)'));
       expect(
-        tool('calendar__update_event')
-            .describeForConfirmation({'event_id': 's', 'title': 'X'}),
+        await tool('calendar__update_event')
+            .confirmationText({'event_id': 's', 'title': 'X'}, ctx()),
         'Termin ‚Lauftraining‘ ändern (ganze Serie)',
       );
     });
@@ -964,7 +964,7 @@ void main() {
       expect(stored('a').start, berlin(15, 10));
     });
 
-    test('Bestätigungstext nutzt bekannten Titel', () async {
+    test('Bestätigungstext schlägt den Titel live nach', () async {
       final t = tool('calendar__update_event');
       expect(
         t.describeForConfirmation({
@@ -973,22 +973,24 @@ void main() {
         }),
         'Termin (ID a) ändern: Do 15.10. 12:00–13:00',
       );
-      await run('calendar__list_events', {
-        'start': '2026-10-15',
-        'end': '2026-10-15',
-      });
       expect(
-        t.describeForConfirmation({
+        await t.confirmationText({
           'event_id': 'a',
           'start': '2026-10-15T12:00',
-        }),
+        }, ctx()),
         'Termin ‚Tauchen‘ ändern: Do 15.10. 12:00–13:00',
       );
       expect(
-        t.describeForConfirmation({'event_id': 'a'}),
+        await t.confirmationText({'event_id': 'a'}, ctx()),
         'Termin ‚Tauchen‘ ändern',
       );
+      expect(
+        await t.confirmationText({'event_id': 'fehlt'}, ctx()),
+        'Termin (ID fehlt) ändern',
+      );
+      expect(await t.confirmationText({}, ctx()), 'Termin ändern');
       expect(t.describeForConfirmation({}), 'Termin ändern');
+      expect(port.methodCalls, isNot(contains('updateEvent')));
     });
   });
 
@@ -1061,71 +1063,58 @@ void main() {
           t.describeForConfirmation({'event_id': 'a'}),
           'Termin (ID a) löschen',
         );
-        await run('calendar__list_events', {
-          'start': '2026-10-15',
-          'end': '2026-10-16',
-        });
         expect(
-          t.describeForConfirmation({'event_id': 'a'}),
+          await t.confirmationText({'event_id': 'a'}, ctx()),
           'Termin ‚Tauchen‘ Do 15.10. 10:00–11:00 löschen',
         );
         expect(
-          t.describeForConfirmation({'event_id': 'r'}),
+          await t.confirmationText({'event_id': 'r'}, ctx()),
           'Termin ‚Training‘ Fr 16.10. 18:00–19:00 löschen (ganze Serie)',
         );
-        expect(t.describeForConfirmation({}), 'Termin löschen');
-        await run('calendar__delete_event', {'event_id': 'a'});
+        expect(await t.confirmationText({}, ctx()), 'Termin löschen');
         expect(
-          t.describeForConfirmation({'event_id': 'a'}),
-          'Termin (ID a) löschen',
+          await t.confirmationText({'event_id': 'weg'}, ctx()),
+          'Termin (ID weg) löschen',
         );
+        expect(port.methodCalls, isNot(contains('deleteEvent')));
+        expect(port.events, hasLength(2));
       },
     );
-  });
 
-  test('Cache speichert nur Titel und Zeiten; clearCache leert', () async {
-    port = FakeCalendarPort(
-      events: [
-        event(
-          'a',
-          berlin(15, 10),
-          berlin(15, 11),
-          location: 'Hafen',
-          description: 'geheim',
-          attendees: ['anna@example.org'],
-        ),
-      ],
-    );
-    integration = CalendarIntegration(port);
-    await run('calendar__list_events', {
-      'start': '2026-10-15',
-      'end': '2026-10-15',
+    test('Bestätigungstext in der Gerätezone aus dem Kontext', () async {
+      final london = ctxAt(
+        DateTime.utc(2026, 10, 13, 12),
+        timeZone: 'Europe/London',
+      );
+      expect(
+        await tool('calendar__delete_event')
+            .confirmationText({'event_id': 'a'}, london),
+        'Termin ‚Tauchen‘ Do 15.10. 09:00–10:00 löschen',
+      );
+      expect(
+        await tool('calendar__update_event').confirmationText({
+          'event_id': 'a',
+          'start': '2026-10-15T08:00Z',
+        }, london),
+        'Termin ‚Tauchen‘ ändern: Do 15.10. 09:00–10:00',
+      );
+      expect(
+        await tool('calendar__update_event').confirmationText({
+          'event_id': 'a',
+          'start': '2026-10-15T08:00Z',
+        }, ctx()),
+        'Termin ‚Tauchen‘ ändern: Do 15.10. 10:00–11:00',
+      );
     });
-    final cached = integration.env.cached('a')!;
-    expect(cached.title, 'Tauchen');
-    expect(cached.start, berlin(15, 10));
-    expect(cached.location, isNull);
-    expect(cached.description, isNull);
-    expect(cached.attendees, isEmpty);
-    integration.clearCache();
-    expect(integration.env.cached('a'), isNull);
-    expect(
-      tool('calendar__delete_event').describeForConfirmation({'event_id': 'a'}),
-      'Termin (ID a) löschen',
-    );
-  });
 
-  test('Cache ist begrenzt', () {
-    final env = CalendarToolEnv(port);
-    for (var i = 0; i <= CalendarToolEnv.cacheSize; i++) {
-      env.remember(event('e$i', berlin(15, 10), berlin(15, 11)));
-    }
-    expect(env.cached('e0'), isNull);
-    expect(env.cached('e1'), isNotNull);
-    env.remember(event('e1', berlin(15, 10), berlin(15, 11)));
-    env.remember(event('neu', berlin(15, 10), berlin(15, 11)));
-    expect(env.cached('e1'), isNotNull, reason: 'zuletzt genutzt bleibt');
-    expect(env.cached('e2'), isNull);
+    test('Bestätigungstext: Port-Fehler → Text nur mit Id', () async {
+      port.failNext('getEvent');
+      expect(
+        await tool('calendar__delete_event')
+            .confirmationText({'event_id': 'a'}, ctx()),
+        'Termin (ID a) löschen',
+      );
+    });
   });
 
   test('describeZone fällt bei ungültiger Gerätezone auf UTC zurück', () {

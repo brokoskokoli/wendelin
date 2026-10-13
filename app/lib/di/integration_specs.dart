@@ -70,7 +70,6 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
     ),
     requestPermission: (d) async =>
         await d.ports.requestCalendarPermission?.call() ?? true,
-    onSessionEnd: (i) => (i as CalendarIntegration).clearCache(),
   ),
   IntegrationSpec(
     id: 'clipboard',

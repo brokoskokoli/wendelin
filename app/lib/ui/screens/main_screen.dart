@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
@@ -148,7 +147,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         providerName: active == null ? '' : config!.nameOf(active.profileId),
         privacy: active?.privacy ?? PrivacyLevel.standard,
         toolRisk: question is ToolQuestion
-            ? _riskOf(question.event.call.name)
+            ? question.event.risk
             : RiskLevel.external,
       ),
     );
@@ -159,23 +158,5 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     if (identical(ref.read(agentControllerProvider).pending, question)) {
       _controller.answer(approved: approved ?? false);
     }
-  }
-
-  /// Level shown in the sheet. Until `ConfirmationRequired` carries the
-  /// level (planned core follow-up), it is derived from the policy: every
-  /// call the policy asks about is shown as `external` (needs confirmation),
-  /// also a `write` tool the user made stricter.
-  RiskLevel _riskOf(String toolName) {
-    for (final integration in ref.read(integrationsProvider).values) {
-      for (final tool in integration.tools) {
-        if (tool.name != toolName) continue;
-        final session = ref.read(sessionManagerProvider).currentId ?? '';
-        final decision = ref.read(riskPolicyProvider).decide(tool, session);
-        return decision.action == PolicyAction.confirm
-            ? RiskLevel.external
-            : tool.risk;
-      }
-    }
-    return RiskLevel.external;
   }
 }

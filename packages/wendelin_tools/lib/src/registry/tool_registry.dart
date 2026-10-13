@@ -296,7 +296,7 @@ final class _Entry {
         available: shown.available,
         enabled: enabled,
         hasError: error != null,
-        setupComplete: setup.complete,
+        setupComplete: setup.requiredComplete(integration.setup),
       ),
     );
   }

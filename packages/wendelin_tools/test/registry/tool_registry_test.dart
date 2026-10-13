@@ -181,6 +181,37 @@ void main() {
       expect(s(true, true, false, true), IntegrationStatus.active);
     });
 
+    test('nur optionale Schritte offen: aktiv', () async {
+      final r = ToolRegistry();
+      final web = FakeIntegration(
+        id: 'web',
+        tools: [FakeTool(name: 'web__fetch')],
+        setup: const [
+          SetupStep(
+            id: 'search',
+            kind: SetupStepKind.config,
+            label: 'Suchdienst',
+            optional: true,
+          ),
+          SetupStep(id: 'net', kind: SetupStepKind.permission, label: 'Netz'),
+        ],
+        missingSteps: ['search'],
+      );
+      await r.registerIntegration(web, enabled: true);
+      expect(r.status('web'), IntegrationStatus.active);
+      expect(r.info('web').setup.missingSteps, ['search']);
+      expect(
+        r
+            .catalogFor(PrivacyLevel.standard, sessionId: 's')
+            .activeSpecs()
+            .map((s) => s.name),
+        ['web__fetch'],
+      );
+      web.missingSteps = ['search', 'net'];
+      await r.refresh('web');
+      expect(r.status('web'), IntegrationStatus.setupRequired);
+    });
+
     test('Verfügbarkeit, Aktivierung, Setup und Fehler', () async {
       final r = ToolRegistry();
       final cal = _integration('cal', ['list'], missingSteps: ['perm']);

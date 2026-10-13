@@ -25,6 +25,10 @@ abstract final class ToolInvokerChecks {
   static const confirmYes =
       'external: Bestätigung vor Ausführung, ja führt aus';
 
+  /// The confirmation text comes from `prepareConfirmation` (async).
+  static const preparedConfirmation =
+      'Bestätigungstext aus prepareConfirmation, Stufe external';
+
   /// external: no does not execute and is no error.
   static const confirmNo =
       'external: nein führt nicht aus, kein Fehler-Outcome';
@@ -139,9 +143,23 @@ Map<String, Future<void> Function()> toolInvokerContractChecks(
       final asks = events.whereType<ConfirmationNeeded>().toList();
       expect(asks, hasLength(1));
       expect(asks.single.description, 'Nachricht senden');
+      expect(asks.single.risk, RiskLevel.external);
       expect(executedBeforeAnswer, 0);
       expect(f.external.callCount, 1);
       expect(_outcomes(events)['1']!.isError, isFalse);
+    },
+    ToolInvokerChecks.preparedConfirmation: () async {
+      final f = await fixture();
+      final events = await f.run(
+        [_call('1', 'contract__prepared', '{"id":"7"}')],
+        onEvent: (e) {
+          if (e is ConfirmationNeeded) e.respond(false);
+        },
+      );
+      final ask = events.whereType<ConfirmationNeeded>().single;
+      expect(ask.description, 'Termin 7 „Tauchen“ löschen');
+      expect(ask.risk, RiskLevel.external);
+      expect(f.prepared.callCount, 0);
     },
     ToolInvokerChecks.confirmNo: () async {
       final f = await fixture();
@@ -283,6 +301,15 @@ final class _Fixture {
     confirmation: (_) => 'Nachricht senden',
   );
   final external2 = FakeTool(name: 'contract__send2', risk: RiskLevel.external);
+  final prepared = FakeTool(
+    name: 'contract__prepared',
+    risk: RiskLevel.external,
+    confirmation: (_) => 'Termin löschen',
+    prepare: (args, ctx) async {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      return 'Termin ${args['id']} „Tauchen“ löschen';
+    },
+  );
   final failing = FakeTool(
     name: 'contract__fail',
     throws: StateError('kaputt'),
@@ -307,6 +334,7 @@ final class _Fixture {
     write,
     external,
     external2,
+    prepared,
     failing,
     slow,
     slow2,

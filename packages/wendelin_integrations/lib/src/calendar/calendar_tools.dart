@@ -8,17 +8,14 @@ import '../common/tool_args.dart';
 import 'calendar_port.dart';
 import 'free_slots.dart';
 
-/// Shared state of the calendar tools: the port, a cache of recently seen
-/// events (so `describeForConfirmation`, which is synchronous and gets only
-/// the arguments, can name the event that will be deleted) and the zone
-/// used for confirmation texts.
+/// Shared state of the calendar tools: the port and the zone used for
+/// confirmation texts. Confirmation texts of update/delete look the event up
+/// live (`prepareConfirmation`); nothing is cached.
 final class CalendarToolEnv {
   /// Creates the environment. [deviceTimeZone] supplies the IANA zone for
-  /// confirmation texts; without it the zone of the last execution is used.
+  /// synchronous confirmation texts; without it the zone of the last
+  /// execution is used.
   CalendarToolEnv(this.port, {this.deviceTimeZone});
-
-  /// Maximum number of cached events.
-  static const cacheSize = 500;
 
   /// Device calendar.
   final CalendarPort port;
@@ -26,35 +23,7 @@ final class CalendarToolEnv {
   /// Zone for confirmation texts.
   final String Function()? deviceTimeZone;
 
-  final _cache = <String, CalendarEvent>{};
   String? _lastZone;
-
-  /// The cached event with [id], if seen recently.
-  CalendarEvent? cached(String id) => _cache[id];
-
-  /// Caches the parts of [event] needed for confirmation texts (title,
-  /// times, all-day, series), most recent last; the oldest is dropped
-  /// beyond [cacheSize]. Location, notes, attendees are not kept.
-  void remember(CalendarEvent event) {
-    _cache
-      ..remove(event.id)
-      ..[event.id] = CalendarEvent(
-        id: event.id,
-        calendarId: '',
-        title: event.title,
-        start: event.start,
-        end: event.end,
-        allDay: event.allDay,
-        recurring: event.recurring,
-      );
-    if (_cache.length > cacheSize) _cache.remove(_cache.keys.first);
-  }
-
-  /// Drops [id] from the cache.
-  void forget(String id) => _cache.remove(id);
-
-  /// Empties the cache; the app calls it when a session ends.
-  void clearCache() => _cache.clear();
 
   /// The zone for an execution: [override] if given, else the device zone
   /// from [ctx].
@@ -285,7 +254,6 @@ final class ListEventsTool extends IntegrationTool {
     );
     final events = raw.where((e) => _overlapsLocal(e, range, loc)).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
-    events.forEach(env.remember);
     final shown = events.take(maxEvents).toList();
     return jsonOutcome(
       {
@@ -618,7 +586,6 @@ final class CreateEventTool extends IntegrationTool {
         timeZone: times.allDay ? 'UTC' : loc.name,
       ),
     );
-    env.remember(event);
     final names = await _calendarNames(env.port);
     final when = event.allDay
         ? describeEventSpan(event, loc)
@@ -628,10 +595,7 @@ final class CreateEventTool extends IntegrationTool {
       summary: 'Termin angelegt: ${event.title}, $when',
       undo: UndoAction(
         label: 'Termin entfernen',
-        run: () async {
-          await env.port.deleteEvent(event.id);
-          env.forget(event.id);
-        },
+        run: () => env.port.deleteEvent(event.id),
       ),
     );
   }
@@ -681,7 +645,8 @@ final class CreateEventTool extends IntegrationTool {
 }
 
 /// `calendar__update_event` (write, undo restores the previous state).
-final class UpdateEventTool extends IntegrationTool {
+final class UpdateEventTool extends IntegrationTool
+    implements ConfirmationPreparer {
   /// Creates the tool.
   const UpdateEventTool(this.env);
 
@@ -765,7 +730,6 @@ final class UpdateEventTool extends IntegrationTool {
             : (notes.isEmpty ? null : notes),
       ),
     );
-    env.remember(updated);
     final names = await _calendarNames(env.port);
     final series = old.recurring ? ' (ganze Serie)' : '';
     return jsonOutcome(
@@ -778,18 +742,34 @@ final class UpdateEventTool extends IntegrationTool {
           '${describeEventSpan(updated, loc)}$series',
       undo: UndoAction(
         label: 'Änderung rückgängig',
-        run: () async => env.remember(await env.port.updateEvent(old)),
+        run: () async => env.port.updateEvent(old),
       ),
     );
   }
 
   @override
-  String describe(ToolArgs args) {
+  String describe(ToolArgs args) => _text(args, null, env.describeZone);
+
+  /// Looks the event up to name its title, time and series.
+  @override
+  Future<String> prepareConfirmation(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async {
+    final a = ToolArgs(args);
+    try {
+      final old = await env.port.getEvent(a.requireString('event_id'));
+      return _text(a, old, timeZoneLocation(ctx.timeZone));
+    } on InvalidArgumentsException {
+      return fallbackDescription;
+    }
+  }
+
+  String _text(ToolArgs args, CalendarEvent? old, tz.Location deviceZone) {
     final id = args.requireString('event_id');
-    final old = env.cached(id);
     final title = old == null ? '(ID $id)' : '‚${old.title}‘';
     final zone = _optText(args, 'time_zone');
-    final loc = zone == null ? env.describeZone : timeZoneLocation(zone);
+    final loc = zone == null ? deviceZone : timeZoneLocation(zone);
     final series = old?.recurring ?? false ? ' (ganze Serie)' : '';
     if (!args.has('start')) return 'Termin $title ändern$series';
     return 'Termin $title ändern: '
@@ -801,7 +781,8 @@ final class UpdateEventTool extends IntegrationTool {
 }
 
 /// `calendar__delete_event` (external: always confirmed).
-final class DeleteEventTool extends IntegrationTool {
+final class DeleteEventTool extends IntegrationTool
+    implements ConfirmationPreparer {
   /// Creates the tool.
   const DeleteEventTool(this.env);
 
@@ -838,7 +819,6 @@ final class DeleteEventTool extends IntegrationTool {
       throw PortException(PortErrorKind.notFound, 'Termin „$id“ gibt es nicht');
     }
     await env.port.deleteEvent(id);
-    env.forget(id);
     return jsonOutcome(
       {
         'deleted': id,
@@ -852,13 +832,26 @@ final class DeleteEventTool extends IntegrationTool {
   }
 
   @override
-  String describe(ToolArgs args) {
-    final id = args.requireString('event_id');
-    final event = env.cached(id);
-    if (event == null) return 'Termin (ID $id) löschen';
-    return 'Termin ‚${event.title}‘ '
-        '${describeEventSpan(event, env.describeZone)} löschen'
-        '${event.recurring ? ' (ganze Serie)' : ''}';
+  String describe(ToolArgs args) =>
+      'Termin (ID ${args.requireString('event_id')}) löschen';
+
+  /// Looks the event up to name its title, time and series.
+  @override
+  Future<String> prepareConfirmation(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async {
+    final a = ToolArgs(args);
+    try {
+      final id = a.requireString('event_id');
+      final event = await env.port.getEvent(id);
+      if (event == null) return describe(a);
+      return 'Termin ‚${event.title}‘ '
+          '${describeEventSpan(event, timeZoneLocation(ctx.timeZone))} löschen'
+          '${event.recurring ? ' (ganze Serie)' : ''}';
+    } on InvalidArgumentsException {
+      return fallbackDescription;
+    }
   }
 
   @override

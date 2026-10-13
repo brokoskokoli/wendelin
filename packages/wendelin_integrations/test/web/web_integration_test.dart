@@ -73,9 +73,12 @@ void main() {
     test('ohne Suchdienst nur web__fetch, Einrichtung offen', () async {
       integration = make(server: true);
       expect(integration.tools.map((t) => t.name), ['web__fetch']);
-      expect((await integration.setupState()).missingSteps, [
-        WebIntegration.backendStep,
-      ]);
+      final state = await integration.setupState();
+      expect(state.missingSteps, [WebIntegration.backendStep]);
+      // The step is optional: web stays usable with web__fetch only.
+      expect(integration.setup.single.optional, isTrue);
+      expect(state.complete, isFalse);
+      expect(state.requiredComplete(integration.setup), isTrue);
       expect(integration.serverSideAvailable, isTrue);
     });
   });

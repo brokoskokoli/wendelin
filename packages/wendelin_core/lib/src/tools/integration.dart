@@ -89,7 +89,12 @@ enum SetupStepKind {
 @immutable
 final class SetupStep {
   /// Creates a setup step.
-  const SetupStep({required this.id, required this.kind, required this.label});
+  const SetupStep({
+    required this.id,
+    required this.kind,
+    required this.label,
+    this.optional = false,
+  });
 
   /// Id, unique within the integration.
   final String id;
@@ -100,18 +105,25 @@ final class SetupStep {
   /// German UI label, e.g. „Kalenderzugriff erlauben“.
   final String label;
 
+  /// Whether the integration works without this step (with fewer tools,
+  /// e.g. web without a search service offers only `web__fetch`). An
+  /// integration whose missing steps are all optional counts as active.
+  final bool optional;
+
   @override
   bool operator ==(Object other) =>
       other is SetupStep &&
       other.id == id &&
       other.kind == kind &&
-      other.label == label;
+      other.label == label &&
+      other.optional == optional;
 
   @override
-  int get hashCode => Object.hash(id, kind, label);
+  int get hashCode => Object.hash(id, kind, label, optional);
 
   @override
-  String toString() => 'SetupStep($id, ${kind.name})';
+  String toString() =>
+      'SetupStep($id, ${kind.name}${optional ? ', optional' : ''})';
 }
 
 /// Setup progress of an integration.
@@ -126,6 +138,16 @@ final class SetupState {
 
   /// Whether all steps are done.
   bool get complete => missingSteps.isEmpty;
+
+  /// Whether every missing step is optional according to [steps] (the
+  /// integration's `setup`). Unknown missing ids count as required.
+  bool requiredComplete(Iterable<SetupStep> steps) {
+    final optional = {
+      for (final s in steps)
+        if (s.optional) s.id,
+    };
+    return missingSteps.every(optional.contains);
+  }
 
   @override
   bool operator ==(Object other) =>

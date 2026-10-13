@@ -21,22 +21,27 @@ final class ConfirmationTurns {
   /// [question] is answered afterwards (`respond(false)` is a no-op if the
   /// user already answered), so no card stays open.
   Future<bool> ask(
-    ConfirmationNeeded question,
+    FutureOr<ConfirmationNeeded> Function() question,
     void Function(ToolInvocationEvent) emit,
   ) async {
     final previous = _previous;
     final mine = Completer<void>();
     _previous = mine.future;
+    ConfirmationNeeded? asked;
     try {
       await Future.any([previous, cancel.whenCancelled]);
       if (cancel.isCancelled) return false;
-      emit(question);
+      // Built inside the turn: the text may be looked up live and reflects
+      // the effect of earlier confirmed calls.
+      asked = await question();
+      if (cancel.isCancelled) return false;
+      emit(asked);
       return await Future.any([
-        question.decision.future,
+        asked.decision.future,
         cancel.whenCancelled.then((_) => false),
       ]);
     } finally {
-      question.respond(false);
+      asked?.respond(false);
       mine.complete();
     }
   }

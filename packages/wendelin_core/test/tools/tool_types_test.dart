@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:test/test.dart';
+import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 void main() {
@@ -189,6 +190,132 @@ void main() {
         isNot(SetupState(missingSteps: ['b'])),
       );
       expect(SetupState(missingSteps: ['a']).toString(), contains('a'));
+    });
+  });
+
+  group('WP14 additions', () {
+    const call = ToolCallBlock(id: 'c', name: 'x__y', argumentsJson: '{}');
+    ToolContext ctx() => ToolContext(
+      sessionId: 's',
+      clock: FixedClock(DateTime.utc(2026)),
+      locale: 'de-DE',
+      timeZone: 'Europe/Berlin',
+    );
+
+    test('ConfirmationNeeded carries the effective risk', () {
+      expect(
+        ConfirmationNeeded(call, 'ok?', Completer<bool>()).risk,
+        RiskLevel.external,
+      );
+      expect(
+        ConfirmationNeeded(
+          call,
+          'ok?',
+          Completer<bool>(),
+          risk: RiskLevel.write,
+        ).risk,
+        RiskLevel.write,
+      );
+    });
+
+    test('optional setup steps', () {
+      const req = SetupStep(
+        id: 'perm',
+        kind: SetupStepKind.permission,
+        label: 'Erlauben',
+      );
+      const opt = SetupStep(
+        id: 'search',
+        kind: SetupStepKind.config,
+        label: 'Suchdienst',
+        optional: true,
+      );
+      expect(opt, isNot(req));
+      expect(
+        opt,
+        isNot(
+          const SetupStep(
+            id: 'search',
+            kind: SetupStepKind.config,
+            label: 'Suchdienst',
+          ),
+        ),
+      );
+      expect(opt.hashCode, isNot(req.hashCode));
+      expect(opt.toString(), contains('optional'));
+      expect(req.toString(), isNot(contains('optional')));
+      expect(SetupState().requiredComplete(const [req, opt]), isTrue);
+      expect(
+        SetupState(missingSteps: ['search']).requiredComplete(const [req, opt]),
+        isTrue,
+      );
+      expect(
+        SetupState(missingSteps: ['search', 'perm'])
+            .requiredComplete(const [req, opt]),
+        isFalse,
+      );
+      expect(
+        SetupState(missingSteps: ['unknown']).requiredComplete(const [opt]),
+        isFalse,
+      );
+    });
+
+    test('confirmationText falls back to describeForConfirmation', () async {
+      expect(
+        await const _ListEvents().confirmationText(const {}, ctx()),
+        'Termine lesen',
+      );
+    });
+
+    test('confirmationText uses the preparer', () async {
+      final tool = FakeTool(
+        name: 'x__y',
+        prepare: (args, ctx) async => 'live ${ctx.timeZone}',
+      );
+      expect(
+        await tool.confirmationText(const {}, ctx()),
+        'live Europe/Berlin',
+      );
+    });
+
+    test('failing, empty, slow or cancelled preparation falls back', () async {
+      final failing = FakeTool(
+        name: 'x__y',
+        confirmation: (_) => 'sync',
+        prepare: (args, ctx) => Future.error(StateError('weg')),
+      );
+      expect(await failing.confirmationText(const {}, ctx()), 'sync');
+      final empty = FakeTool(
+        name: 'x__y',
+        confirmation: (_) => 'sync',
+        prepare: (args, ctx) async => '  ',
+      );
+      expect(await empty.confirmationText(const {}, ctx()), 'sync');
+      final never = FakeTool(
+        name: 'x__y',
+        confirmation: (_) => 'sync',
+        prepare: (args, ctx) => Completer<String>().future,
+      );
+      expect(
+        await never.confirmationText(
+          const {},
+          ctx(),
+          timeout: const Duration(milliseconds: 10),
+        ),
+        'sync',
+      );
+      // Cancellation ends the wait at once, not after the 5-s timeout.
+      final cancelled = ctx()..cancel.cancel();
+      expect(
+        await never
+            .confirmationText(const {}, cancelled)
+            .timeout(const Duration(milliseconds: 500)),
+        'sync',
+      );
+      final later = ctx();
+      final pending = never.confirmationText(const {}, later);
+      later.cancel.cancel();
+      expect(await pending.timeout(const Duration(milliseconds: 500)), 'sync');
     });
   });
 

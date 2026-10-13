@@ -5,7 +5,7 @@
 | `web__search` | read | Websuche über den konfigurierten Dienst (1–10 Treffer: Titel, URL, Snippet) |
 | `web__fetch` | read | Seite als Text lesen (Standard 20 000, höchstens 50 000 Zeichen) |
 
-**Suchdienste** (`WebSearchBackend`): `BraveSearchBackend` (Header `X-Subscription-Token`), `TavilyBackend` (Bearer), `SearxngBackend` (eigene Instanz, `format=json` muss in `settings.yml` aktiv sein). Schlüssel kommen als Konstruktorparameter aus dem `SecretStore` der App und erscheinen nie in Fehlermeldungen. Ohne Suchdienst gibt es nur `web__fetch`, der Setup-Schritt `search_backend` bleibt offen. Getestet gegen Fixtures in `test/fixtures/web/` (kein Live-Zugriff). Vertrag: `webSearchBackendContract` mit Szenarien, Fake: `FakeWebSearchBackend`.
+**Suchdienste** (`WebSearchBackend`): `BraveSearchBackend` (Header `X-Subscription-Token`), `TavilyBackend` (Bearer), `SearxngBackend` (eigene Instanz, `format=json` muss in `settings.yml` aktiv sein). Schlüssel kommen als Konstruktorparameter aus dem `SecretStore` der App und erscheinen nie in Fehlermeldungen. Ohne Suchdienst gibt es nur `web__fetch`: Der Setup-Schritt `search_backend` ist optional (`SetupStep.optional`) und bleibt offen, die Integration gilt in der Registry trotzdem als aktiv. Getestet gegen Fixtures in `test/fixtures/web/` (kein Live-Zugriff). Vertrag: `webSearchBackendContract` mit Szenarien, Fake: `FakeWebSearchBackend`.
 
 **`web__fetch`-Schutz** (`WebFetcher`, `checkFetchTarget`):
 - nur `http`/`https`, keine Zugangsdaten in der URL;

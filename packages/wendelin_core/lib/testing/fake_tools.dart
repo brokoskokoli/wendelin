@@ -10,7 +10,7 @@ typedef FakeToolHandler = FutureOr<ToolOutcome> Function(
 
 /// Configurable [Tool] for tests: risk, result, delay, failure, undo and a
 /// record of all calls.
-final class FakeTool implements Tool {
+final class FakeTool implements Tool, ConfirmationPreparer {
   /// Creates a fake tool.
   ///
   /// Result precedence: [throws] (thrown after [delay]) > [handler] >
@@ -28,6 +28,7 @@ final class FakeTool implements Tool {
     this.withUndo = false,
     this.ignoresCancel = false,
     this.confirmation,
+    this.prepare,
   });
 
   @override
@@ -60,6 +61,10 @@ final class FakeTool implements Tool {
   /// If true, the tool ignores `ctx.cancel`: [delay] runs to the end and the
   /// normal result is returned (a tool whose effect cannot be stopped).
   final bool ignoresCancel;
+
+  /// Async text for [prepareConfirmation]; default: [describeForConfirmation].
+  final Future<String> Function(Map<String, Object?> args, ToolContext ctx)?
+  prepare;
 
   /// Text for [describeForConfirmation]; default „`name` ausführen“.
   final String Function(Map<String, Object?> args)? confirmation;
@@ -114,6 +119,12 @@ final class FakeTool implements Tool {
   @override
   String describeForConfirmation(Map<String, Object?> args) =>
       confirmation?.call(args) ?? '$name ausführen';
+
+  @override
+  Future<String> prepareConfirmation(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => await prepare?.call(args, ctx) ?? describeForConfirmation(args);
 }
 
 /// Configurable [Integration] for tests.
@@ -236,8 +247,9 @@ final class FakeToolInvoker implements ToolInvoker {
         if (tool.risk == RiskLevel.external) {
           final confirmation = ConfirmationNeeded(
             call,
-            tool.describeForConfirmation(args),
+            await tool.confirmationText(args, ctx),
             Completer<bool>(),
+            risk: tool.risk,
           );
           yield confirmation;
           approved = await Future.any([

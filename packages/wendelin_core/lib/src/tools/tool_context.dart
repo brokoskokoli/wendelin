@@ -1,4 +1,5 @@
 import '../provider/cancel_token.dart';
+import '../provider/privacy_level.dart';
 import '../util/clock.dart';
 
 /// Environment passed to `Tool.execute`.
@@ -10,6 +11,7 @@ final class ToolContext {
     required this.locale,
     required this.timeZone,
     CancelToken? cancel,
+    this.privacyLevel,
   }) : cancel = cancel ?? CancelToken();
 
   /// Current conversation session.
@@ -26,4 +28,10 @@ final class ToolContext {
 
   /// Cancelled when the user aborts the run; long tools should check it.
   final CancelToken cancel;
+
+  /// Privacy level of the model the calls come from, if known. Invokers
+  /// that serve several levels look tools up in the catalog of this level
+  /// (a standard target never reaches a sensitive tool, also not through
+  /// `tools__search`). `null` = the invoker's default catalog.
+  final PrivacyLevel? privacyLevel;
 }

@@ -66,10 +66,21 @@ final class ToolStarted extends ToolInvocationEvent {
 /// for [decision].
 final class ConfirmationNeeded extends ToolInvocationEvent {
   /// Creates the event; the invoker keeps [decision] to await the answer.
-  const ConfirmationNeeded(super.call, this.description, this.decision);
+  const ConfirmationNeeded(
+    super.call,
+    this.description,
+    this.decision, {
+    this.risk = RiskLevel.external,
+  });
 
-  /// German text for the confirmation card (`Tool.describeForConfirmation`).
+  /// German text for the confirmation card (`ToolConfirmation.confirmationText`).
   final String description;
+
+  /// The *effective* risk level the runtime applied to this call: the
+  /// tool's own level, raised by stricter policy overrides (a `write` tool
+  /// the user wants confirmed is shown as `external`). The UI shows this,
+  /// not `Tool.risk`.
+  final RiskLevel risk;
 
   /// Completed with the user's answer. Prefer [respond], which never throws.
   final Completer<bool> decision;

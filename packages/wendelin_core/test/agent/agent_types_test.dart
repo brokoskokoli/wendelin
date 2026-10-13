@@ -49,6 +49,16 @@ void main() {
         description: 'Termin löschen',
         respond: answers.add,
       );
+      expect(e.risk, RiskLevel.external);
+      expect(
+        ConfirmationRequired(
+          call: call,
+          description: 'x',
+          respond: (_) {},
+          risk: RiskLevel.write,
+        ).toString(),
+        contains('write'),
+      );
       expect(e.answered, isFalse);
       e
         ..respond(false)

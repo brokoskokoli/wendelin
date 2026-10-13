@@ -323,10 +323,18 @@ void main() {
           'calendar': IntegrationStatus.active,
           'clipboard': IntegrationStatus.active,
           'memory': IntegrationStatus.active,
-          // Ohne Suchdienst bleibt der Einrichtungsschritt offen.
-          'web': IntegrationStatus.setupRequired,
+          // Ohne Suchdienst ist web aktiv (nur web__fetch); der optionale
+          // Einrichtungsschritt bleibt offen (WP14).
+          'web': IntegrationStatus.active,
         },
       );
+      expect(registry.info('web').setup.missingSteps, ['search_backend']);
+      final webTools = registry
+          .catalogFor(PrivacyLevel.standard, sessionId: 's')
+          .activeSpecs()
+          .map((t) => t.name)
+          .where((n) => n.startsWith('web__'));
+      expect(webTools, ['web__fetch']);
       final config = (await c.read(providerConfigProvider.future))!;
       expect(config.primary.profileId, DemoLlmProvider.profileId);
       expect(config.primary.provider, isA<DemoLlmProvider>());
