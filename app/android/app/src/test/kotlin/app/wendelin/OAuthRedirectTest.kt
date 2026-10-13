@@ -37,13 +37,9 @@ class OAuthRedirectTest {
     }
 
     @Test
-    fun recognizerServiceIsEnabledOnlyWithRoleAndOffer() {
-        val on = PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        val off = PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
-        assertEquals(on, RecognizerSwitch.wantedState(holdsRole = true, offered = true))
-        assertEquals(off, RecognizerSwitch.wantedState(holdsRole = true, offered = false))
-        assertEquals(off, RecognizerSwitch.wantedState(holdsRole = false, offered = true))
-        assertEquals(off, RecognizerSwitch.wantedState(holdsRole = false, offered = false))
+    fun recognizerServiceIsEnabledOnlyWhenWanted() {
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_ENABLED, RecognizerSwitch.stateFor(true))
+        assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, RecognizerSwitch.stateFor(false))
     }
 
     @Test

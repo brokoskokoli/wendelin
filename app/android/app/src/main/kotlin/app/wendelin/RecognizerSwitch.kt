@@ -26,15 +26,15 @@ object RecognizerSwitch {
 
     fun sync(context: Context, holdsRole: Boolean = holdsAssistantRole(context)) {
         val component = ComponentName(context, WendelinRecognitionService::class.java)
-        val wanted = wantedState(holdsRole, isOffered(context))
+        val wanted = stateFor(holdsRole && isOffered(context))
         val pm = context.packageManager
         if (pm.getComponentEnabledSetting(component) == wanted) return
         pm.setComponentEnabledSetting(component, wanted, PackageManager.DONT_KILL_APP)
     }
 
-    /** Component state of the service: enabled only with the assistant role and when offered. */
-    fun wantedState(holdsRole: Boolean, offered: Boolean): Int =
-        if (holdsRole && offered) {
+    /** Component state of the service: enabled only while it is wanted (role held and offered). */
+    fun stateFor(wanted: Boolean): Int =
+        if (wanted) {
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         } else {
             PackageManager.COMPONENT_ENABLED_STATE_DEFAULT

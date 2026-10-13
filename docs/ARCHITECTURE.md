@@ -86,7 +86,9 @@ VAD (`app/lib/platform/voice/silero_vad.dart`) → STT (`app/lib/platform/voice/
 
 ## Plattformkanäle
 
-Kotlin unter `app/android/app/src/main/kotlin/app/wendelin/`. Kanalnamen sind Strings auf beiden Seiten (WP40 prüft sie künftig).
+Kotlin unter `app/android/app/src/main/kotlin/app/wendelin/`. Kanalnamen sind Konstanten in `app/lib/platform/channels.dart` und `CHANNEL` in der Kotlin-Klasse. **Das Manifest `app/channels.json` listet je Kanal Dart-/Kotlin-Dateien, Methoden (Richtung, Argumentschlüssel, Rückgabeart); `tool/check_channels.dart` (Gate) vergleicht es per Textanalyse mit beiden Seiten** (Methode nur auf einer Seite, Argumentschlüssel nur auf einer Seite, Kanal ohne Manifest-Eintrag und umgekehrt sind Fehler mit Datei und Zeile).
+
+Die Logik ohne Android-Abhängigkeit liegt in reinen Kotlin-Klassen mit JVM-Unit-Tests (`app/android/app/src/test/kotlin/app/wendelin/`, Gate-Schritt `kotlin-unit`): `ChannelArgs.kt` (Argumentprüfung), `CalendarRows.kt` (Zeilen → Maps, Zeitzonen, Dauer, Filter), `VaultTree.kt` (`VaultResolver`: Pfade, Ordner anlegen, Lesen/Schreiben auf einem `VaultTree`), `OAuthRedirect.kt` (Redirect-Prüfung). Die Android-Seite dazu: `CalendarStore.kt`, `SafVaultTree.kt`.
 
 | Kanal (`app.wendelin/…`) | Dart | Kotlin |
 | --- | --- | --- |
@@ -97,6 +99,7 @@ Kotlin unter `app/android/app/src/main/kotlin/app/wendelin/`. Kanalnamen sind St
 | network | `app/lib/platform/channel_network_status.dart` | `NetworkChannel.kt` |
 | assistant | `app/lib/platform/assistant_platform.dart` | `AssistantChannel.kt` |
 | window | `app/lib/platform/screen_protection.dart` | `WindowChannel.kt` |
+| auth | `app/lib/platform/channel_authorization_browser.dart` | `AuthChannel.kt` (mit `OAuthRedirectActivity.kt`) |
 | recognizer | `app/lib/platform/recognizer/recognizer_host.dart` | `RecognizerEngine.kt` (mit `WendelinRecognitionService.kt`, `RecognizerSwitch.kt`) |
 
 ## HTTP-Stacks (N3)
@@ -131,8 +134,9 @@ Text-Faltung für Namensvergleiche (Listen, Obsidian, Routing, phonetische Suche
 
 **Neuer Kotlin-Kanal**
 1. Kotlin-Klasse in `app/android/app/src/main/kotlin/app/wendelin/`, registriert in `WendelinActivity.kt` (Basis von `MainActivity.kt` und `AssistantActivity.kt`).
-2. Dart-Seite in `app/lib/platform/` mit Kanalname als Konstante, Test mit Mock-Handler unter `app/test/platform/`.
-3. Zeile in der Tabelle oben.
+2. Dart-Seite in `app/lib/platform/` mit Kanalname als Konstante in `app/lib/platform/channels.dart`, Test mit Mock-Handler unter `app/test/platform/`.
+3. Kanal und alle Methoden in `app/channels.json` eintragen (sonst ist `tool/check_channels.dart` rot), Zeile in der Tabelle oben.
+4. Logik ohne Android-Typen in eine reine Kotlin-Klasse (wie `CalendarRows.kt`, `VaultTree.kt`, Argumente über `ChannelArgs.kt`) mit JUnit-Test unter `app/android/app/src/test/kotlin/app/wendelin/`.
 
 **Neue Provider-Art**
 1. Adapter unter `packages/wendelin_providers/lib/src/<adapter>/` (Wire-Format nur dort), Contract-Suite `llmProviderContract` aus `wendelin_core`.

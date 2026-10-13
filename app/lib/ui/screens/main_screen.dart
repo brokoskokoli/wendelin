@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
-import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/agent_controller.dart';
 import '../../agent/chat_entry.dart';
@@ -16,11 +15,11 @@ import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
-import '../design/design.dart';
 import '../routes.dart';
 import '../voice/microphone_access.dart';
-import 'confirmation_sheet.dart';
 import 'conversation_view.dart';
+import 'main_composer.dart';
+import 'main_confirmation.dart';
 import 'main_parts.dart';
 import 'private_banner.dart';
 
@@ -110,30 +109,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     );
     final active = _activeTarget(providers, conversation.activeProfileId);
 
-    Widget? setupHint;
-    final notice = ref.watch(privateRuleNoticeProvider).value;
-    if (config.hasError) {
-      setupHint = ProviderSetupCard(
-        onSetup: _openProviderSetup,
-        error:
-            'Das Provider-Profil lässt sich nicht verwenden: '
-            '${config.error}',
-      );
-    } else if (config.hasValue && providers == null) {
-      setupHint = ProviderSetupCard(
-        onSetup: _openProviderSetup,
-        onDemo: () => ref.read(demoModeProvider.notifier).set(enabled: true),
-      );
-    } else if (notice != null) {
-      setupHint = PrivateRuleNoticeCard(
-        text: privateRuleNoticeText(notice),
-        onOpen: () {
-          unawaited(dismissPrivateRuleNotice(ref));
-          unawaited(Navigator.of(context).pushNamed(AppRoutes.routing));
-        },
-        onDismiss: () => unawaited(dismissPrivateRuleNotice(ref)),
-      );
-    }
+    final setupHint = _setupHint(config, providers);
 
     return Scaffold(
       body: Column(
@@ -159,20 +135,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             costLabel: 'heute ${formatUsd(cost)}',
           ),
           if (conversation.privateSince case final since?)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                WSpace.screen,
-                0,
-                WSpace.screen,
-                WSpace.m,
-              ),
-              child: PrivateConversationBanner(
-                since: since,
-                byRequest: conversation.privateByRequest,
-                onNewConversation: conversation.running
-                    ? null
-                    : () => unawaited(_controller.newTopic()),
-              ),
+            MainPrivateBanner(
+              since: since,
+              byRequest: conversation.privateByRequest,
+              onNewConversation: conversation.running
+                  ? null
+                  : () => unawaited(_controller.newTopic()),
             ),
           Expanded(
             child: ConversationView(
@@ -183,47 +151,47 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               header: setupHint,
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Composer(
-              running: conversation.running,
-              mic: mic,
-              levels: voice.levels,
-              micHint: voiceUnavailableHint,
-              status: voice.error ?? voice.hint,
-              notice: voice.error == microphoneDeniedHint
-                  ? MicrophoneNotice(
-                      deniedByAndroid: _micDeniedByAndroid,
-                      onAllow: () => unawaited(_allowMicrophone()),
-                      onOpenSettings: () =>
-                          unawaited(ref.read(appSettingsOpenerProvider)()),
-                    )
-                  : null,
-              onMic: () {
-                if (voice.active) {
-                  unawaited(
-                    ref.read(voiceControllerProvider.notifier).cancel(),
-                  );
-                } else if (conversation.running) {
-                  _controller.cancel();
-                } else {
-                  unawaited(
-                    ref
-                        .read(voiceControllerProvider.notifier)
-                        .tap(prepare: _microphoneAccess),
-                  );
-                }
-              },
-              onSend: (text) {
-                if (conversation.running || text.trim().isEmpty) return false;
-                unawaited(_controller.send(text));
-                return true;
-              },
-            ),
+          MainComposer(
+            conversation: conversation,
+            voice: voice,
+            mic: mic,
+            micDeniedByAndroid: _micDeniedByAndroid,
+            onAllowMicrophone: () => unawaited(_allowMicrophone()),
+            microphoneAccess: _microphoneAccess,
           ),
         ],
       ),
     );
+  }
+
+  Widget? _setupHint(
+    AsyncValue<ProviderConfig?> config,
+    ProviderConfig? providers,
+  ) {
+    final notice = ref.watch(privateRuleNoticeProvider).value;
+    if (config.hasError) {
+      return ProviderSetupCard(
+        onSetup: _openProviderSetup,
+        error:
+            'Das Provider-Profil lässt sich nicht verwenden: '
+            '${config.error}',
+      );
+    } else if (config.hasValue && providers == null) {
+      return ProviderSetupCard(
+        onSetup: _openProviderSetup,
+        onDemo: () => ref.read(demoModeProvider.notifier).set(enabled: true),
+      );
+    } else if (notice != null) {
+      return PrivateRuleNoticeCard(
+        text: privateRuleNoticeText(notice),
+        onOpen: () {
+          unawaited(dismissPrivateRuleNotice(ref));
+          unawaited(Navigator.of(context).pushNamed(AppRoutes.routing));
+        },
+        onDismiss: () => unawaited(dismissPrivateRuleNotice(ref)),
+      );
+    }
+    return null;
   }
 
   /// Undo: a spoken answer stops, „Zurückgenommen.“ is shown (snackbar and
@@ -292,37 +260,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   Future<void> _showSheet(PendingQuestion question) async {
     if (_sheetFor != null) Navigator.of(context).pop();
     _sheetFor = question;
-    final config = ref.read(providerConfigProvider).value;
-    final active = _activeTarget(
-      config,
-      ref.read(agentControllerProvider).activeProfileId,
-    );
-    final approved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: false,
-      builder: (_) => Consumer(
-        builder: (context, ref, _) => ConfirmationSheet(
-          question: question,
-          providerName: active == null ? '' : config!.nameOf(active.profileId),
-          privacy: active?.privacy ?? PrivacyLevel.standard,
-          privateSince: ref.watch(
-            agentControllerProvider.select((s) => s.privateSince),
-          ),
-          privateByRequest: ref.watch(
-            agentControllerProvider.select((s) => s.privateByRequest),
-          ),
-          toolRisk: question is ToolQuestion
-              ? question.event.risk
-              : RiskLevel.external,
-          // A voice request also takes a spoken „ja“/„nein“.
-          hint:
-              ref.watch(voiceControllerProvider.select((v) => v.answersByVoice))
-              ? ConfirmationHint.voice
-              : ConfirmationHint.tap,
-        ),
-      ),
-    );
+    final approved = await showQuestionSheet(context, ref, question);
     if (identical(_sheetFor, question)) _sheetFor = null;
     if (!mounted) return;
     // Only answer the question this sheet was opened for; a dismissed sheet

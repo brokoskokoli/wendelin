@@ -10,6 +10,8 @@ import '../../../di/mcp/mcp_templates.dart';
 import '../../../di/providers.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
+import 'mcp_add_check.dart';
+import 'mcp_add_parts.dart';
 import 'mcp_labels.dart';
 import 'mcp_server_detail_screen.dart';
 
@@ -69,31 +71,17 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
   McpDraft? _draft() {
     final name = _name.text.trim();
     final text = _url.text.trim();
-    final url = Uri.tryParse(text);
-    String? error;
-    if (name.isEmpty) {
-      error = 'Bitte einen Namen angeben.';
-    } else if (McpTemplate.hasPlaceholder(text)) {
-      error = 'Bitte die Platzhalter in <…> in der Adresse ersetzen.';
-    } else if (url == null || !url.hasScheme || url.host.isEmpty) {
-      error = 'Bitte eine vollständige Adresse angeben (https://…).';
-    } else {
-      try {
-        checkServerUrl(url);
-      } on McpException catch (e) {
-        error = e.message;
-      }
-    }
-    if (error == null &&
-        _auth == McpAuthKind.headers &&
-        _headerName.text.trim().isEmpty) {
-      error = 'Bitte den Namen des Headers angeben.';
-    }
+    final error = mcpAddError(
+      name: name,
+      urlText: text,
+      auth: _auth,
+      headerName: _headerName.text,
+    );
     setState(() => _error = error);
     if (error != null) return null;
     return McpDraft(
       name: name,
-      url: url!,
+      url: Uri.parse(text),
       auth: _auth,
       token: _token.text,
       headers: [
@@ -165,18 +153,7 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
         intro:
             'Wähle eine Vorlage oder trage einen eigenen Server ein. '
             'Erreichbar über https oder im Heimnetz (Tailscale, WireGuard).',
-        children: [
-          SectionCard(
-            children: [
-              for (final t in McpTemplate.all)
-                SettingsRow(
-                  title: t == McpTemplate.custom ? 'Eigener Server' : t.name,
-                  detail: t.description,
-                  onTap: () => _choose(t),
-                ),
-            ],
-          ),
-        ],
+        children: [McpTemplateList(onChoose: _choose)],
       );
     }
     final url = Uri.tryParse(_url.text.trim());
@@ -208,60 +185,29 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
             helperMaxLines: 2,
           ),
         ),
-        SettingsSection(
-          title: 'Anmeldung',
-          children: [
-            for (final kind in McpAuthKind.values)
-              SettingsRow(
-                title: kind.label,
-                onTap: () => setState(() {
-                  _auth = kind;
-                  _probe = null;
-                }),
-                trailing: _auth == kind
-                    ? const CheckStatusIcon(
-                        CheckStatus.ok,
-                        semanticLabel: 'gewählt',
-                      )
-                    : null,
-              ),
-          ],
+        McpAuthChoice(
+          auth: _auth,
+          onPick: (kind) => setState(() {
+            _auth = kind;
+            _probe = null;
+          }),
         ),
-        ..._authFields(template),
-        SectionCard(
-          children: [
-            SettingsRow(
-              title: 'Alle Tools bestätigen',
-              detail: 'Jeder Aufruf fragt nach',
-              trailing: WSwitch(
-                value: _confirmAll,
-                semanticLabel: 'Alle Tools bestätigen',
-                onChanged: (on) => setState(() => _confirmAll = on),
-              ),
-            ),
-            SettingsRow(
-              title: 'Sensibel',
-              detail: 'Tools nur an Provider ab der eingestellten Stufe',
-              trailing: WSwitch(
-                value: _sensitive,
-                semanticLabel: 'Sensibel',
-                onChanged: (on) => setState(() => _sensitive = on),
-              ),
-            ),
-          ],
+        ...mcpAuthFields(
+          auth: _auth,
+          template: template,
+          token: _token,
+          headerName: _headerName,
+          headerValue: _headerValue,
+          clientId: _clientId,
+        ),
+        McpAddOptions(
+          confirmAll: _confirmAll,
+          sensitive: _sensitive,
+          onConfirmAll: (on) => setState(() => _confirmAll = on),
+          onSensitive: (on) => setState(() => _sensitive = on),
         ),
         if (_error != null) Text(_error!, style: WText.caption),
-        if (_probe != null)
-          Row(
-            spacing: WSpace.s,
-            children: [
-              CheckStatusIcon(
-                _probeOk ? CheckStatus.ok : CheckStatus.failed,
-                semanticLabel: _probeOk ? 'erreichbar' : 'Problem',
-              ),
-              Expanded(child: Text(_probe!, style: WText.detail)),
-            ],
-          ),
+        if (_probe != null) McpProbeRow(text: _probe!, ok: _probeOk),
         WideButton(
           'Verbindung prüfen',
           onPressed: _busy ? null : () => unawaited(_check()),
@@ -273,58 +219,4 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
       ],
     );
   }
-
-  List<Widget> _authFields(McpTemplate template) => switch (_auth) {
-    McpAuthKind.none => const [],
-    McpAuthKind.bearer => [
-      TextField(
-        key: const ValueKey('mcpToken'),
-        controller: _token,
-        style: WText.body,
-        obscureText: true,
-        autocorrect: false,
-        enableSuggestions: false,
-        decoration: InputDecoration(
-          labelText: 'Token',
-          helperText: template.authHint ?? 'Wird nie wieder angezeigt',
-          helperMaxLines: 2,
-        ),
-      ),
-    ],
-    McpAuthKind.headers => [
-      TextField(
-        key: const ValueKey('mcpHeaderName'),
-        controller: _headerName,
-        style: WText.body,
-        autocorrect: false,
-        decoration: const InputDecoration(labelText: 'Header, z. B. X-Api-Key'),
-      ),
-      TextField(
-        key: const ValueKey('mcpHeaderValue'),
-        controller: _headerValue,
-        style: WText.body,
-        obscureText: true,
-        autocorrect: false,
-        enableSuggestions: false,
-        decoration: const InputDecoration(
-          labelText: 'Wert',
-          helperText: 'Wird nie wieder angezeigt',
-        ),
-      ),
-    ],
-    McpAuthKind.oauth => [
-      TextField(
-        key: const ValueKey('mcpClientId'),
-        controller: _clientId,
-        style: WText.body,
-        autocorrect: false,
-        decoration: const InputDecoration(
-          labelText: 'Client-ID (optional)',
-          helperText:
-              'Leer lassen: Wendelin registriert sich selbst beim Server',
-          helperMaxLines: 2,
-        ),
-      ),
-    ],
-  };
 }

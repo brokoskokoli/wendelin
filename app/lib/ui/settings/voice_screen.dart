@@ -50,76 +50,10 @@ class VoiceScreen extends ConsumerWidget {
           'Wendelin erkennt Sprache auf dem Gerät (Whisper). Die Modelle '
           'werden einmal geladen und bleiben auf dem Gerät.',
       children: [
-        SettingsSection(
-          title: 'Spracherkennung',
-          children: [
-            for (final m in catalog.ofKind(SpeechModelKind.stt))
-              ModelDownloadRow(
-                model: m,
-                selected: settings.sttModel == m.id,
-                onSelect: () => change((s) => s.copyWith(sttModel: m.id)),
-              ),
-            ModelDownloadRow(model: SpeechModelCatalog.sileroVad),
-          ],
-        ),
-        if (!sttReady)
-          Text(
-            'Für die Spracheingabe braucht Wendelin das gewählte '
-            'Whisper-Modell und die Sprachaktivitätserkennung.',
-            style: WText.caption,
-          ),
-        if (_recommendSmall(ref, settings))
-          Text(
-            'Empfohlen: small (genauer), '
-            '${megabytes(SpeechModelCatalog.whisperSmall.sizeBytes)} laden.',
-            style: WText.caption,
-          ),
-        SettingsSection(
-          title: 'Gesprochene Sprache',
-          children: [
-            for (final (value, title) in [
-              (
-                VoiceSettings.followApp,
-                'Wie die App (${languageNames[appLanguage] ?? appLanguage})',
-              ),
-              (VoiceSettings.detect, 'Automatisch erkennen'),
-              for (final e in languageNames.entries) (e.key, e.value),
-            ])
-              _ChoiceRow(
-                title: title,
-                selected: settings.sttLanguage == value,
-                onTap: () => change((s) => s.copyWith(sttLanguage: value)),
-              ),
-          ],
-        ),
-        Text(
-          'Mit fester Sprache erkennt Whisper kurze Sätze zuverlässiger.',
-          style: WText.caption,
-        ),
+        ..._recognition(ref, settings, catalog, change, sttReady: sttReady),
+        ..._language(settings, appLanguage, change),
         _SpeechOutput(settings: settings, change: change),
-        SettingsSection(
-          title: 'Feinabstimmung',
-          children: [
-            _ChipsRow(
-              title: 'Mindestsprechdauer',
-              detail: 'Kürzere Geräusche (Klicks, Atmer) werden ignoriert.',
-              values: VoiceSettings.minSpeechChoices,
-              selected: settings.minSpeechMs,
-              label: (v) => '$v ms',
-              onSelected: (v) => change((s) => s.copyWith(minSpeechMs: v)),
-            ),
-            _ChipsRow(
-              title: 'Empfindlichkeit der Spracherkennung',
-              detail:
-                  'Schwelle von Silero VAD: niedriger hört leiser, höher '
-                  'ignoriert mehr Geräusche.',
-              values: VoiceSettings.thresholds,
-              selected: settings.vadThreshold,
-              label: (v) => v.toStringAsFixed(1).replaceAll('.', ','),
-              onSelected: (v) => change((s) => s.copyWith(vadThreshold: v)),
-            ),
-          ],
-        ),
+        ..._tuning(settings, change),
         SettingsSection(
           title: 'Assistent-Overlay',
           children: [
@@ -152,6 +86,99 @@ class VoiceScreen extends ConsumerWidget {
     );
   }
 }
+
+typedef _Change = void Function(VoiceSettings Function(VoiceSettings));
+
+/// Whisper models, voice activity model and the hints below them.
+List<Widget> _recognition(
+  WidgetRef ref,
+  VoiceSettings settings,
+  SpeechModelCatalog catalog,
+  _Change change, {
+  required bool sttReady,
+}) => [
+  SettingsSection(
+    title: 'Spracherkennung',
+    children: [
+      for (final m in catalog.ofKind(SpeechModelKind.stt))
+        ModelDownloadRow(
+          model: m,
+          selected: settings.sttModel == m.id,
+          onSelect: () => change((s) => s.copyWith(sttModel: m.id)),
+        ),
+      ModelDownloadRow(model: SpeechModelCatalog.sileroVad),
+    ],
+  ),
+  if (!sttReady)
+    Text(
+      'Für die Spracheingabe braucht Wendelin das gewählte '
+      'Whisper-Modell und die Sprachaktivitätserkennung.',
+      style: WText.caption,
+    ),
+  if (_recommendSmall(ref, settings))
+    Text(
+      'Empfohlen: small (genauer), '
+      '${megabytes(SpeechModelCatalog.whisperSmall.sizeBytes)} laden.',
+      style: WText.caption,
+    ),
+];
+
+/// Language of the spoken input.
+List<Widget> _language(
+  VoiceSettings settings,
+  String appLanguage,
+  _Change change,
+) => [
+  SettingsSection(
+    title: 'Gesprochene Sprache',
+    children: [
+      for (final (value, title) in [
+        (
+          VoiceSettings.followApp,
+          'Wie die App (${languageNames[appLanguage] ?? appLanguage})',
+        ),
+        (VoiceSettings.detect, 'Automatisch erkennen'),
+        for (final e in languageNames.entries) (e.key, e.value),
+      ])
+        _ChoiceRow(
+          title: title,
+          selected: settings.sttLanguage == value,
+          onTap: () => change((s) => s.copyWith(sttLanguage: value)),
+        ),
+    ],
+  ),
+  Text(
+    'Mit fester Sprache erkennt Whisper kurze Sätze zuverlässiger.',
+    style: WText.caption,
+  ),
+];
+
+/// Minimum speech duration and VAD sensitivity.
+List<Widget> _tuning(VoiceSettings settings, _Change change) => [
+  SettingsSection(
+    title: 'Feinabstimmung',
+    children: [
+      _ChipsRow(
+        title: 'Mindestsprechdauer',
+        detail: 'Kürzere Geräusche (Klicks, Atmer) werden ignoriert.',
+        values: VoiceSettings.minSpeechChoices,
+        selected: settings.minSpeechMs,
+        label: (v) => '$v ms',
+        onSelected: (v) => change((s) => s.copyWith(minSpeechMs: v)),
+      ),
+      _ChipsRow(
+        title: 'Empfindlichkeit der Spracherkennung',
+        detail:
+            'Schwelle von Silero VAD: niedriger hört leiser, höher '
+            'ignoriert mehr Geräusche.',
+        values: VoiceSettings.thresholds,
+        selected: settings.vadThreshold,
+        label: (v) => v.toStringAsFixed(1).replaceAll('.', ','),
+        onSelected: (v) => change((s) => s.copyWith(vadThreshold: v)),
+      ),
+    ],
+  ),
+];
 
 /// Whether to suggest small (WP33): base is active, small is not on the
 /// device and the device does not have little memory.

@@ -138,6 +138,34 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
     }
   }
 
+  Widget _status(DownloadPlan plan) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: WSpace.s,
+    children: [
+      StatusCard(
+        key: const ValueKey('downloadStatus'),
+        status: plan.ready
+            ? CheckStatus.ok
+            : plan.error != null && !plan.busy
+            ? CheckStatus.failed
+            : CheckStatus.pending,
+        title: plan.status,
+        detail: plan.ready
+            ? null
+            : plan.busy
+            ? 'Lädt … ${(plan.progress * 100).floor()} %'
+            : plan.error,
+      ),
+      if (plan.busy)
+        LinearProgressIndicator(
+          value: plan.progress,
+          color: WColors.accent,
+          backgroundColor: WColors.surfaceRaised,
+          semanticsLabel: 'Fortschritt Spracherkennung',
+        ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final settings =
@@ -185,33 +213,7 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
             lowMemoryReason(ref.watch(deviceMemoryProvider).value!),
             style: WText.caption,
           ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: WSpace.s,
-          children: [
-            StatusCard(
-              key: const ValueKey('downloadStatus'),
-              status: plan.ready
-                  ? CheckStatus.ok
-                  : plan.error != null && !plan.busy
-                  ? CheckStatus.failed
-                  : CheckStatus.pending,
-              title: plan.status,
-              detail: plan.ready
-                  ? null
-                  : plan.busy
-                  ? 'Lädt … ${(plan.progress * 100).floor()} %'
-                  : plan.error,
-            ),
-            if (plan.busy)
-              LinearProgressIndicator(
-                value: plan.progress,
-                color: WColors.accent,
-                backgroundColor: WColors.surfaceRaised,
-                semanticsLabel: 'Fortschritt Spracherkennung',
-              ),
-          ],
-        ),
+        _status(plan),
         if (plan.ready)
           PrimaryButton('Weiter', onPressed: widget.onNext)
         else ...[

@@ -105,42 +105,43 @@ class ConfirmationCard extends StatelessWidget {
         ),
       ),
     );
-    final buttons = Row(
-      spacing: WSpace.m,
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: onNo,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(WSize.buttonHeightLarge),
-              textStyle: WText.buttonLarge,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(WRadius.buttonLarge),
-              ),
-            ),
-            child: Text(noLabel),
-          ),
-        ),
-        Expanded(
-          child: FilledButton(
-            onPressed: onYes,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(WSize.buttonHeightLarge),
-              textStyle: WText.buttonLarge,
-            ),
-            child: Text(yesLabel),
-          ),
-        ),
-      ],
-    );
     return Column(
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         card,
         if (expand) const Spacer() else const SizedBox(height: WSpace.l18),
-        buttons,
+        _buttons(),
       ],
     );
   }
+
+  Widget _buttons() => Row(
+    spacing: WSpace.m,
+    children: [
+      Expanded(
+        child: OutlinedButton(
+          onPressed: onNo,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(WSize.buttonHeightLarge),
+            textStyle: WText.buttonLarge,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(WRadius.buttonLarge),
+            ),
+          ),
+          child: Text(noLabel),
+        ),
+      ),
+      Expanded(
+        child: FilledButton(
+          onPressed: onYes,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(WSize.buttonHeightLarge),
+            textStyle: WText.buttonLarge,
+          ),
+          child: Text(yesLabel),
+        ),
+      ),
+    ],
+  );
 }

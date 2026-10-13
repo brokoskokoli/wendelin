@@ -69,7 +69,9 @@ dart run tool/gate.dart --verbose    # bisherige, ausführliche Ausgabe
 5. `dart run tool/check_deps.dart` (Abhängigkeitsregeln oben, auch für `dev_dependencies`)
 6. `dart run tool/check_secrets.dart` (keine Schlüssel-Muster im Baum; verbotene Identitäten aus einer lokalen, nicht versionierten Liste)
 7. `dart run tool/check_sizes.dart` (Größen, siehe unten) und `dart run tool/check_docs.dart` (Pfadangaben in `docs/ARCHITECTURE.md`, dieser Datei, `CLAUDE.md` und den Paket-READMEs existieren)
-8. Selbsttests ohne Android-SDK: `dart run tool/self_test.dart` (Gate-Auswahl, Größen-Check, Doku-Pfade), `bash tool/android_device.sh --self-test` (Geräteauswahl mit Fake-adb), `tool/check_apk.sh --self-test` (APK-Prüfung mit Attrappen)
+8. `dart run tool/check_channels.dart` (Plattformkanäle: `app/channels.json` gegen Dart und Kotlin, < 1 s). **Manifest-Pflicht:** Jeder `MethodChannel` und jede Methode steht mit Argumentschlüsseln im Manifest; Dart- und Kotlin-Seite müssen dazu passen.
+9. `kotlin-unit`: JVM-Unit-Tests der Kotlin-Logik (`./gradlew :app:testDebugUnitTest` in `app/android`). Läuft im vollen Gate und bei `--changed` nur, wenn sich etwas unter `app/android/` geändert hat; ohne Android-SDK (`ANDROID_HOME`, `ANDROID_SDK_ROOT`, `~/Library/Android/sdk`, `~/Android/Sdk`) oder ohne Gradle-Wrapper steht der Schritt als „übersprungen“ in der Zusammenfassung, nicht als grün. Kotlin-Logik ohne Android-Abhängigkeit gehört in reine Klassen mit Unit-Test (kein Robolectric).
+10. Selbsttests ohne Android-SDK: `dart run tool/self_test.dart` (Gate-Auswahl, Größen-Check, Doku-Pfade, Kanal-Check), `bash tool/android_device.sh --self-test` (Geräteauswahl mit Fake-adb), `tool/check_apk.sh --self-test` (APK-Prüfung mit Attrappen)
 
 Ausgabe: Standard ist eine Zeile je Schritt. Bei einem Fehler erscheinen die letzten 200 Zeilen dieses Schritts (Testname, Fehlermeldung, Datei). Am Ende steht eine Tabelle mit Ergebnis, Dauer, Testanzahl und Abdeckung je Schritt, die Gesamtdauer und `GATE GRÜN` bzw. `GATE ROT: <Schritte>`. Der Exit-Code ist bei Rot ungleich 0.
 

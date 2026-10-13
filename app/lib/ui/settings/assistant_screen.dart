@@ -117,6 +117,105 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Widget _recognizerCard({
+    required bool isDefault,
+    required RecognitionServiceStatus recognizer,
+    required bool offered,
+    required bool elsewhere,
+  }) => SectionCard(
+    children: [
+      SettingsRow(
+        key: const ValueKey('recognizerRow'),
+        title: 'Als Spracherkennung für andere Apps anbieten',
+        detail: switch (recognizer.state) {
+          RecognitionServiceState.other when elsewhere =>
+            '$notAvailableOnDevice. '
+                '${otherRecognizerHint(recognizer.appName)}',
+          RecognitionServiceState.other => otherRecognizerForNowHint(
+            recognizer.appName,
+            isDefault: isDefault,
+          ),
+          RecognitionServiceState.inactive => inactiveRecognizerHint(
+            isDefault: isDefault,
+          ),
+          RecognitionServiceState.active =>
+            '$recognizerActiveHint Whisper erkennt auf dem Gerät, '
+                'Aufnahmen werden nicht gespeichert.',
+          RecognitionServiceState.unknown =>
+            'Solange Wendelin Standard-Assistent ist, können '
+                'andere Apps die Spracheingabe nutzen. Whisper '
+                'erkennt auf dem Gerät, Aufnahmen werden nicht '
+                'gespeichert.',
+        },
+        // The stored choice stays; Android decides here.
+        trailing: Opacity(
+          opacity: elsewhere ? WOpacity.inactive : 1,
+          child: WSwitch(
+            value: offered,
+            semanticLabel: elsewhere
+                ? 'Als Spracherkennung für andere Apps anbieten, '
+                      '$notAvailableOnDevice'
+                : 'Als Spracherkennung für andere Apps anbieten',
+            onChanged: elsewhere ? null : (on) => unawaited(_setOffered(on)),
+          ),
+        ),
+      ),
+    ],
+  );
+
+  Widget _defaultAssistant({
+    required bool isDefault,
+    required RecognitionServiceStatus recognizer,
+    required bool offered,
+    required bool elsewhere,
+  }) => SettingsSection(
+    title: 'Standard-Assistent',
+    children: [
+      SectionCard(
+        children: [
+          SettingsRow(
+            title: isDefault
+                ? 'Wendelin ist Standard-Assistent'
+                : 'Nicht als Standard-Assistent gesetzt',
+            detail:
+                'Langer Druck auf die Power-Taste oder die '
+                'Assistenten-Geste öffnet Wendelin über jeder App.',
+            trailing: isDefault
+                ? const CheckStatusIcon(
+                    CheckStatus.ok,
+                    semanticLabel: 'gesetzt',
+                  )
+                : null,
+          ),
+        ],
+      ),
+      if (isDefault)
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton(
+            onPressed: () => unawaited(_openSystemSettings()),
+            style: TextButton.styleFrom(
+              foregroundColor: WColors.link,
+              minimumSize: const Size(WSize.touchMin, WSize.touchMin),
+            ),
+            child: const Text('In Android ändern'),
+          ),
+        )
+      else
+        PrimaryButton(
+          'Als Standard-Assistent setzen',
+          onPressed: () => unawaited(_openSystemSettings()),
+        ),
+      _recognizerCard(
+        isDefault: isDefault,
+        recognizer: recognizer,
+        offered: offered,
+        elsewhere: elsewhere,
+      ),
+      if (!elsewhere) Text(assistantSwitchHint, style: WText.caption),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final isDefault = ref.watch(defaultAssistantProvider).value == true;
@@ -134,88 +233,11 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
     return SettingsPage(
       title: 'Assistent',
       children: [
-        SettingsSection(
-          title: 'Standard-Assistent',
-          children: [
-            SectionCard(
-              children: [
-                SettingsRow(
-                  title: isDefault
-                      ? 'Wendelin ist Standard-Assistent'
-                      : 'Nicht als Standard-Assistent gesetzt',
-                  detail:
-                      'Langer Druck auf die Power-Taste oder die '
-                      'Assistenten-Geste öffnet Wendelin über jeder App.',
-                  trailing: isDefault
-                      ? const CheckStatusIcon(
-                          CheckStatus.ok,
-                          semanticLabel: 'gesetzt',
-                        )
-                      : null,
-                ),
-              ],
-            ),
-            if (isDefault)
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextButton(
-                  onPressed: () => unawaited(_openSystemSettings()),
-                  style: TextButton.styleFrom(
-                    foregroundColor: WColors.link,
-                    minimumSize: const Size(WSize.touchMin, WSize.touchMin),
-                  ),
-                  child: const Text('In Android ändern'),
-                ),
-              )
-            else
-              PrimaryButton(
-                'Als Standard-Assistent setzen',
-                onPressed: () => unawaited(_openSystemSettings()),
-              ),
-            SectionCard(
-              children: [
-                SettingsRow(
-                  key: const ValueKey('recognizerRow'),
-                  title: 'Als Spracherkennung für andere Apps anbieten',
-                  detail: switch (recognizer.state) {
-                    RecognitionServiceState.other when elsewhere =>
-                      '$notAvailableOnDevice. '
-                          '${otherRecognizerHint(recognizer.appName)}',
-                    RecognitionServiceState.other => otherRecognizerForNowHint(
-                      recognizer.appName,
-                      isDefault: isDefault,
-                    ),
-                    RecognitionServiceState.inactive => inactiveRecognizerHint(
-                      isDefault: isDefault,
-                    ),
-                    RecognitionServiceState.active =>
-                      '$recognizerActiveHint Whisper erkennt auf dem Gerät, '
-                          'Aufnahmen werden nicht gespeichert.',
-                    RecognitionServiceState.unknown =>
-                      'Solange Wendelin Standard-Assistent ist, können '
-                          'andere Apps die Spracheingabe nutzen. Whisper '
-                          'erkennt auf dem Gerät, Aufnahmen werden nicht '
-                          'gespeichert.',
-                  },
-                  // The stored choice stays; Android decides here.
-                  trailing: Opacity(
-                    opacity: elsewhere ? WOpacity.inactive : 1,
-                    child: WSwitch(
-                      value: offered,
-                      semanticLabel: elsewhere
-                          ? 'Als Spracherkennung für andere Apps anbieten, '
-                                '$notAvailableOnDevice'
-                          : 'Als Spracherkennung für andere Apps anbieten',
-                      onChanged: elsewhere
-                          ? null
-                          : (on) => unawaited(_setOffered(on)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (!elsewhere) Text(assistantSwitchHint, style: WText.caption),
-          ],
+        _defaultAssistant(
+          isDefault: isDefault,
+          recognizer: recognizer,
+          offered: offered,
+          elsewhere: elsewhere,
         ),
         Text(
           'Name und Persönlichkeit gehen als Teil der Anweisungen an das '

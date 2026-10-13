@@ -279,48 +279,72 @@ class _GroupEditor extends StatelessWidget {
   final VoidCallback onChanged;
   final VoidCallback? onRemove;
 
+  Widget _head() => Wrap(
+    spacing: WSpace.s,
+    runSpacing: WSpace.s,
+    crossAxisAlignment: WrapCrossAlignment.center,
+    children: [
+      Text(isRoot ? 'Es gilt' : 'Gruppe', style: WText.detail),
+      ChoiceChip(
+        label: const Text('alle (und)'),
+        selected: !group.any,
+        onSelected: (_) {
+          group.any = false;
+          onChanged();
+        },
+      ),
+      ChoiceChip(
+        label: const Text('eine (oder)'),
+        selected: group.any,
+        onSelected: (_) {
+          group.any = true;
+          onChanged();
+        },
+      ),
+      if (!isRoot)
+        FilterChip(
+          label: const Text('nicht'),
+          selected: group.negated,
+          onSelected: (v) {
+            group.negated = v;
+            onChanged();
+          },
+        ),
+    ],
+  );
+
+  Widget _addButtons() => Wrap(
+    spacing: WSpace.s,
+    children: [
+      TextButton(
+        onPressed: () {
+          group.children.add(LeafNode());
+          onChanged();
+        },
+        child: Text(isRoot ? '+ Bedingung' : '+ Bedingung in Gruppe'),
+      ),
+      if (isRoot)
+        TextButton(
+          onPressed: () {
+            group.children.add(
+              GroupNode(any: !group.any, children: [LeafNode()]),
+            );
+            onChanged();
+          },
+          child: const Text('+ Gruppe'),
+        ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
-    final head = Wrap(
-      spacing: WSpace.s,
-      runSpacing: WSpace.s,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Text(isRoot ? 'Es gilt' : 'Gruppe', style: WText.detail),
-        ChoiceChip(
-          label: const Text('alle (und)'),
-          selected: !group.any,
-          onSelected: (_) {
-            group.any = false;
-            onChanged();
-          },
-        ),
-        ChoiceChip(
-          label: const Text('eine (oder)'),
-          selected: group.any,
-          onSelected: (_) {
-            group.any = true;
-            onChanged();
-          },
-        ),
-        if (!isRoot)
-          FilterChip(
-            label: const Text('nicht'),
-            selected: group.negated,
-            onSelected: (v) {
-              group.negated = v;
-              onChanged();
-            },
-          ),
-      ],
-    );
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.s,
       children: [
         Row(
           children: [
-            Expanded(child: head),
+            Expanded(child: _head()),
             if (onRemove != null)
               WIconButton(
                 icon: WIcons.close,
@@ -353,28 +377,7 @@ class _GroupEditor extends StatelessWidget {
               },
             ),
           },
-        Wrap(
-          spacing: WSpace.s,
-          children: [
-            TextButton(
-              onPressed: () {
-                group.children.add(LeafNode());
-                onChanged();
-              },
-              child: Text(isRoot ? '+ Bedingung' : '+ Bedingung in Gruppe'),
-            ),
-            if (isRoot)
-              TextButton(
-                onPressed: () {
-                  group.children.add(
-                    GroupNode(any: !group.any, children: [LeafNode()]),
-                  );
-                  onChanged();
-                },
-                child: const Text('+ Gruppe'),
-              ),
-          ],
-        ),
+        _addButtons(),
       ],
     );
     if (isRoot) return body;
@@ -468,6 +471,70 @@ class _LeafEditor extends StatelessWidget {
     );
   }
 
+  Widget _networkChips() => Wrap(
+    spacing: WSpace.s,
+    children: [
+      for (final s in NetworkState.values)
+        ChoiceChip(
+          label: Text(switch (s) {
+            NetworkState.offline => 'offline',
+            NetworkState.online => 'online',
+            NetworkState.metered => 'mobile Daten',
+          }),
+          selected: node.network == s,
+          onSelected: (_) {
+            node.network = s;
+            onChanged();
+          },
+        ),
+    ],
+  );
+
+  List<Widget> _timeWindow() => [
+    Wrap(
+      spacing: WSpace.xs,
+      runSpacing: WSpace.xs,
+      children: [
+        for (var d = DateTime.monday; d <= DateTime.sunday; d++)
+          FilterChip(
+            label: Text(weekdayLabels[d - 1]),
+            selected: node.days.contains(d),
+            onSelected: (on) {
+              on ? node.days.add(d) : node.days.remove(d);
+              onChanged();
+            },
+          ),
+      ],
+    ),
+    Row(
+      spacing: WSpace.s,
+      children: [
+        Expanded(
+          child: TextFormField(
+            key: ValueKey('${node.key}-start'),
+            initialValue: node.start,
+            decoration: const InputDecoration(labelText: 'von (HH:MM)'),
+            onChanged: (v) {
+              node.start = v;
+              onChanged();
+            },
+          ),
+        ),
+        Expanded(
+          child: TextFormField(
+            key: ValueKey('${node.key}-end'),
+            initialValue: node.end,
+            decoration: const InputDecoration(labelText: 'bis (HH:MM)'),
+            onChanged: (v) {
+              node.end = v;
+              onChanged();
+            },
+          ),
+        ),
+      ],
+    ),
+  ];
+
   List<Widget> _input() {
     Widget field(String label, {String? hint, TextInputType? keyboard}) =>
         TextFormField(
@@ -501,70 +568,8 @@ class _LeafEditor extends StatelessWidget {
         field('Mehr Zeichen als', hint: '280', keyboard: TextInputType.number),
       ],
       'needsTool' => [field('Kategorie', hint: 'obsidian.edit')],
-      'network' => [
-        Wrap(
-          spacing: WSpace.s,
-          children: [
-            for (final s in NetworkState.values)
-              ChoiceChip(
-                label: Text(switch (s) {
-                  NetworkState.offline => 'offline',
-                  NetworkState.online => 'online',
-                  NetworkState.metered => 'mobile Daten',
-                }),
-                selected: node.network == s,
-                onSelected: (_) {
-                  node.network = s;
-                  onChanged();
-                },
-              ),
-          ],
-        ),
-      ],
-      'timeWindow' => [
-        Wrap(
-          spacing: WSpace.xs,
-          runSpacing: WSpace.xs,
-          children: [
-            for (var d = DateTime.monday; d <= DateTime.sunday; d++)
-              FilterChip(
-                label: Text(weekdayLabels[d - 1]),
-                selected: node.days.contains(d),
-                onSelected: (on) {
-                  on ? node.days.add(d) : node.days.remove(d);
-                  onChanged();
-                },
-              ),
-          ],
-        ),
-        Row(
-          spacing: WSpace.s,
-          children: [
-            Expanded(
-              child: TextFormField(
-                key: ValueKey('${node.key}-start'),
-                initialValue: node.start,
-                decoration: const InputDecoration(labelText: 'von (HH:MM)'),
-                onChanged: (v) {
-                  node.start = v;
-                  onChanged();
-                },
-              ),
-            ),
-            Expanded(
-              child: TextFormField(
-                key: ValueKey('${node.key}-end'),
-                initialValue: node.end,
-                decoration: const InputDecoration(labelText: 'bis (HH:MM)'),
-                onChanged: (v) {
-                  node.end = v;
-                  onChanged();
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
+      'network' => [_networkChips()],
+      'timeWindow' => _timeWindow(),
       _ => const [],
     };
   }
