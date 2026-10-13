@@ -8,6 +8,8 @@ import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/vocabulary_provider.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/platform/voice/engine_whisper.dart';
+import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
@@ -107,8 +109,12 @@ void main() {
         voiceActivityDetectorProvider.overrideWith(
           (ref) async => FakeVoiceActivityDetector(),
         ),
+        // Since WP30 the components hold the engine Whisper (B14).
+        whisperLoaderProvider.overrideWithValue((_, _) async => _NoWhisper()),
+        whisperDirectoryProvider.overrideWithValue(_NoDirectory()),
       ],
     );
+    env.speechModels.installed.add('whisper-small');
     await _index(env, ['Projekte/Wendelin-Test.md']);
     final c = env.container();
     addTearDown(c.dispose);
@@ -238,4 +244,29 @@ void main() {
       expect('Wendelin-Test'.allMatches(all).length, 1);
     },
   );
+}
+
+/// Whisper backend that is never asked: the STT itself is faked.
+final class _NoWhisper implements WhisperBackend {
+  @override
+  Future<WhisperResult> transcribe(Float32List samples, {String? language}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> dispose() async {}
+}
+
+/// No other engine shares a Whisper.
+final class _NoDirectory implements WhisperDirectory {
+  @override
+  Future<WhisperBackend?> lookup(String modelId) async => null;
+
+  @override
+  void publish(String modelId, WhisperBackend backend) {}
+
+  @override
+  void withdraw(String modelId, WhisperBackend backend) {}
+
+  @override
+  int liveModels() => 0;
 }
