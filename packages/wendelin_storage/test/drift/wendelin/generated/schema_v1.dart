@@ -4,7 +4,10 @@
 //
 import 'package:drift/drift.dart';
 
-class MemoryFts extends Table with TableInfo, VirtualTableInfo {
+class MemoryFts extends Table
+    with
+        TableInfo<MemoryFts, MemoryFtsData>,
+        VirtualTableInfo<MemoryFts, MemoryFtsData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -35,8 +38,18 @@ class MemoryFts extends Table with TableInfo, VirtualTableInfo {
   @override
   Set<GeneratedColumn> get $primaryKey => const {};
   @override
-  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
-    throw UnsupportedError('TableInfo.map in schema verification code');
+  MemoryFtsData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MemoryFtsData(
+      entryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entry_id'],
+      ),
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      ),
+    );
   }
 
   @override
@@ -51,7 +64,149 @@ class MemoryFts extends Table with TableInfo, VirtualTableInfo {
       'fts5(entry_id UNINDEXED, body, tokenize = \'unicode61 remove_diacritics 2\')';
 }
 
-class MemoryEntries extends Table with TableInfo {
+class MemoryFtsData extends DataClass implements Insertable<MemoryFtsData> {
+  final String? entryId;
+  final String? body;
+  const MemoryFtsData({this.entryId, this.body});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || entryId != null) {
+      map['entry_id'] = Variable<String>(entryId);
+    }
+    if (!nullToAbsent || body != null) {
+      map['body'] = Variable<String>(body);
+    }
+    return map;
+  }
+
+  MemoryFtsCompanion toCompanion(bool nullToAbsent) {
+    return MemoryFtsCompanion(
+      entryId: entryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(entryId),
+      body: body == null && nullToAbsent ? const Value.absent() : Value(body),
+    );
+  }
+
+  factory MemoryFtsData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MemoryFtsData(
+      entryId: serializer.fromJson<String?>(json['entryId']),
+      body: serializer.fromJson<String?>(json['body']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'entryId': serializer.toJson<String?>(entryId),
+      'body': serializer.toJson<String?>(body),
+    };
+  }
+
+  MemoryFtsData copyWith({
+    Value<String?> entryId = const Value.absent(),
+    Value<String?> body = const Value.absent(),
+  }) => MemoryFtsData(
+    entryId: entryId.present ? entryId.value : this.entryId,
+    body: body.present ? body.value : this.body,
+  );
+  MemoryFtsData copyWithCompanion(MemoryFtsCompanion data) {
+    return MemoryFtsData(
+      entryId: data.entryId.present ? data.entryId.value : this.entryId,
+      body: data.body.present ? data.body.value : this.body,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoryFtsData(')
+          ..write('entryId: $entryId, ')
+          ..write('body: $body')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(entryId, body);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MemoryFtsData &&
+          other.entryId == this.entryId &&
+          other.body == this.body);
+}
+
+class MemoryFtsCompanion extends UpdateCompanion<MemoryFtsData> {
+  final Value<String?> entryId;
+  final Value<String?> body;
+  final Value<int> rowid;
+  const MemoryFtsCompanion({
+    this.entryId = const Value.absent(),
+    this.body = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MemoryFtsCompanion.insert({
+    this.entryId = const Value.absent(),
+    this.body = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  static Insertable<MemoryFtsData> custom({
+    Expression<String>? entryId,
+    Expression<String>? body,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (entryId != null) 'entry_id': entryId,
+      if (body != null) 'body': body,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MemoryFtsCompanion copyWith({
+    Value<String?>? entryId,
+    Value<String?>? body,
+    Value<int>? rowid,
+  }) {
+    return MemoryFtsCompanion(
+      entryId: entryId ?? this.entryId,
+      body: body ?? this.body,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (entryId.present) {
+      map['entry_id'] = Variable<String>(entryId.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoryFtsCompanion(')
+          ..write('entryId: $entryId, ')
+          ..write('body: $body, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class MemoryEntries extends Table
+    with TableInfo<MemoryEntries, MemoryEntriesData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -121,8 +276,34 @@ class MemoryEntries extends Table with TableInfo {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
-    throw UnsupportedError('TableInfo.map in schema verification code');
+  MemoryEntriesData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MemoryEntriesData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      lastUsedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_used_at'],
+      )!,
+    );
   }
 
   @override
@@ -136,7 +317,242 @@ class MemoryEntries extends Table with TableInfo {
   bool get dontWriteConstraints => true;
 }
 
-class Sessions extends Table with TableInfo {
+class MemoryEntriesData extends DataClass
+    implements Insertable<MemoryEntriesData> {
+  final String id;
+  final String body;
+  final String category;
+  final String source;
+  final int createdAt;
+  final int lastUsedAt;
+  const MemoryEntriesData({
+    required this.id,
+    required this.body,
+    required this.category,
+    required this.source,
+    required this.createdAt,
+    required this.lastUsedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['body'] = Variable<String>(body);
+    map['category'] = Variable<String>(category);
+    map['source'] = Variable<String>(source);
+    map['created_at'] = Variable<int>(createdAt);
+    map['last_used_at'] = Variable<int>(lastUsedAt);
+    return map;
+  }
+
+  MemoryEntriesCompanion toCompanion(bool nullToAbsent) {
+    return MemoryEntriesCompanion(
+      id: Value(id),
+      body: Value(body),
+      category: Value(category),
+      source: Value(source),
+      createdAt: Value(createdAt),
+      lastUsedAt: Value(lastUsedAt),
+    );
+  }
+
+  factory MemoryEntriesData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MemoryEntriesData(
+      id: serializer.fromJson<String>(json['id']),
+      body: serializer.fromJson<String>(json['body']),
+      category: serializer.fromJson<String>(json['category']),
+      source: serializer.fromJson<String>(json['source']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      lastUsedAt: serializer.fromJson<int>(json['lastUsedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'body': serializer.toJson<String>(body),
+      'category': serializer.toJson<String>(category),
+      'source': serializer.toJson<String>(source),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'lastUsedAt': serializer.toJson<int>(lastUsedAt),
+    };
+  }
+
+  MemoryEntriesData copyWith({
+    String? id,
+    String? body,
+    String? category,
+    String? source,
+    int? createdAt,
+    int? lastUsedAt,
+  }) => MemoryEntriesData(
+    id: id ?? this.id,
+    body: body ?? this.body,
+    category: category ?? this.category,
+    source: source ?? this.source,
+    createdAt: createdAt ?? this.createdAt,
+    lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+  );
+  MemoryEntriesData copyWithCompanion(MemoryEntriesCompanion data) {
+    return MemoryEntriesData(
+      id: data.id.present ? data.id.value : this.id,
+      body: data.body.present ? data.body.value : this.body,
+      category: data.category.present ? data.category.value : this.category,
+      source: data.source.present ? data.source.value : this.source,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      lastUsedAt: data.lastUsedAt.present
+          ? data.lastUsedAt.value
+          : this.lastUsedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoryEntriesData(')
+          ..write('id: $id, ')
+          ..write('body: $body, ')
+          ..write('category: $category, ')
+          ..write('source: $source, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastUsedAt: $lastUsedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, body, category, source, createdAt, lastUsedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MemoryEntriesData &&
+          other.id == this.id &&
+          other.body == this.body &&
+          other.category == this.category &&
+          other.source == this.source &&
+          other.createdAt == this.createdAt &&
+          other.lastUsedAt == this.lastUsedAt);
+}
+
+class MemoryEntriesCompanion extends UpdateCompanion<MemoryEntriesData> {
+  final Value<String> id;
+  final Value<String> body;
+  final Value<String> category;
+  final Value<String> source;
+  final Value<int> createdAt;
+  final Value<int> lastUsedAt;
+  final Value<int> rowid;
+  const MemoryEntriesCompanion({
+    this.id = const Value.absent(),
+    this.body = const Value.absent(),
+    this.category = const Value.absent(),
+    this.source = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MemoryEntriesCompanion.insert({
+    required String id,
+    required String body,
+    required String category,
+    required String source,
+    required int createdAt,
+    required int lastUsedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       body = Value(body),
+       category = Value(category),
+       source = Value(source),
+       createdAt = Value(createdAt),
+       lastUsedAt = Value(lastUsedAt);
+  static Insertable<MemoryEntriesData> custom({
+    Expression<String>? id,
+    Expression<String>? body,
+    Expression<String>? category,
+    Expression<String>? source,
+    Expression<int>? createdAt,
+    Expression<int>? lastUsedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (body != null) 'body': body,
+      if (category != null) 'category': category,
+      if (source != null) 'source': source,
+      if (createdAt != null) 'created_at': createdAt,
+      if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MemoryEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? body,
+    Value<String>? category,
+    Value<String>? source,
+    Value<int>? createdAt,
+    Value<int>? lastUsedAt,
+    Value<int>? rowid,
+  }) {
+    return MemoryEntriesCompanion(
+      id: id ?? this.id,
+      body: body ?? this.body,
+      category: category ?? this.category,
+      source: source ?? this.source,
+      createdAt: createdAt ?? this.createdAt,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (lastUsedAt.present) {
+      map['last_used_at'] = Variable<int>(lastUsedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoryEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('body: $body, ')
+          ..write('category: $category, ')
+          ..write('source: $source, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class Sessions extends Table with TableInfo<Sessions, SessionsData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -183,8 +599,26 @@ class Sessions extends Table with TableInfo {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
-    throw UnsupportedError('TableInfo.map in schema verification code');
+  SessionsData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SessionsData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}started_at'],
+      )!,
+      lastActivityAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_activity_at'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      ),
+    );
   }
 
   @override
@@ -198,7 +632,197 @@ class Sessions extends Table with TableInfo {
   bool get dontWriteConstraints => true;
 }
 
-class Messages extends Table with TableInfo {
+class SessionsData extends DataClass implements Insertable<SessionsData> {
+  final String id;
+  final int startedAt;
+  final int lastActivityAt;
+  final String? title;
+  const SessionsData({
+    required this.id,
+    required this.startedAt,
+    required this.lastActivityAt,
+    this.title,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['started_at'] = Variable<int>(startedAt);
+    map['last_activity_at'] = Variable<int>(lastActivityAt);
+    if (!nullToAbsent || title != null) {
+      map['title'] = Variable<String>(title);
+    }
+    return map;
+  }
+
+  SessionsCompanion toCompanion(bool nullToAbsent) {
+    return SessionsCompanion(
+      id: Value(id),
+      startedAt: Value(startedAt),
+      lastActivityAt: Value(lastActivityAt),
+      title: title == null && nullToAbsent
+          ? const Value.absent()
+          : Value(title),
+    );
+  }
+
+  factory SessionsData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SessionsData(
+      id: serializer.fromJson<String>(json['id']),
+      startedAt: serializer.fromJson<int>(json['startedAt']),
+      lastActivityAt: serializer.fromJson<int>(json['lastActivityAt']),
+      title: serializer.fromJson<String?>(json['title']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'startedAt': serializer.toJson<int>(startedAt),
+      'lastActivityAt': serializer.toJson<int>(lastActivityAt),
+      'title': serializer.toJson<String?>(title),
+    };
+  }
+
+  SessionsData copyWith({
+    String? id,
+    int? startedAt,
+    int? lastActivityAt,
+    Value<String?> title = const Value.absent(),
+  }) => SessionsData(
+    id: id ?? this.id,
+    startedAt: startedAt ?? this.startedAt,
+    lastActivityAt: lastActivityAt ?? this.lastActivityAt,
+    title: title.present ? title.value : this.title,
+  );
+  SessionsData copyWithCompanion(SessionsCompanion data) {
+    return SessionsData(
+      id: data.id.present ? data.id.value : this.id,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      lastActivityAt: data.lastActivityAt.present
+          ? data.lastActivityAt.value
+          : this.lastActivityAt,
+      title: data.title.present ? data.title.value : this.title,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SessionsData(')
+          ..write('id: $id, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('lastActivityAt: $lastActivityAt, ')
+          ..write('title: $title')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, startedAt, lastActivityAt, title);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SessionsData &&
+          other.id == this.id &&
+          other.startedAt == this.startedAt &&
+          other.lastActivityAt == this.lastActivityAt &&
+          other.title == this.title);
+}
+
+class SessionsCompanion extends UpdateCompanion<SessionsData> {
+  final Value<String> id;
+  final Value<int> startedAt;
+  final Value<int> lastActivityAt;
+  final Value<String?> title;
+  final Value<int> rowid;
+  const SessionsCompanion({
+    this.id = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.lastActivityAt = const Value.absent(),
+    this.title = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SessionsCompanion.insert({
+    required String id,
+    required int startedAt,
+    required int lastActivityAt,
+    this.title = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       startedAt = Value(startedAt),
+       lastActivityAt = Value(lastActivityAt);
+  static Insertable<SessionsData> custom({
+    Expression<String>? id,
+    Expression<int>? startedAt,
+    Expression<int>? lastActivityAt,
+    Expression<String>? title,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (startedAt != null) 'started_at': startedAt,
+      if (lastActivityAt != null) 'last_activity_at': lastActivityAt,
+      if (title != null) 'title': title,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SessionsCompanion copyWith({
+    Value<String>? id,
+    Value<int>? startedAt,
+    Value<int>? lastActivityAt,
+    Value<String?>? title,
+    Value<int>? rowid,
+  }) {
+    return SessionsCompanion(
+      id: id ?? this.id,
+      startedAt: startedAt ?? this.startedAt,
+      lastActivityAt: lastActivityAt ?? this.lastActivityAt,
+      title: title ?? this.title,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<int>(startedAt.value);
+    }
+    if (lastActivityAt.present) {
+      map['last_activity_at'] = Variable<int>(lastActivityAt.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('lastActivityAt: $lastActivityAt, ')
+          ..write('title: $title, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class Messages extends Table with TableInfo<Messages, MessagesData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -286,8 +910,42 @@ class Messages extends Table with TableInfo {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
-    throw UnsupportedError('TableInfo.map in schema verification code');
+  MessagesData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MessagesData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_id'],
+      )!,
+      seq: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}seq'],
+      )!,
+      role: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}role'],
+      )!,
+      contentJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_id'],
+      ),
+      modelId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model_id'],
+      ),
+    );
   }
 
   @override
@@ -301,7 +959,301 @@ class Messages extends Table with TableInfo {
   bool get dontWriteConstraints => true;
 }
 
-class AuditLog extends Table with TableInfo {
+class MessagesData extends DataClass implements Insertable<MessagesData> {
+  final String id;
+  final String sessionId;
+  final int seq;
+  final String role;
+  final String contentJson;
+  final int createdAt;
+  final String? profileId;
+  final String? modelId;
+  const MessagesData({
+    required this.id,
+    required this.sessionId,
+    required this.seq,
+    required this.role,
+    required this.contentJson,
+    required this.createdAt,
+    this.profileId,
+    this.modelId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['session_id'] = Variable<String>(sessionId);
+    map['seq'] = Variable<int>(seq);
+    map['role'] = Variable<String>(role);
+    map['content_json'] = Variable<String>(contentJson);
+    map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || profileId != null) {
+      map['profile_id'] = Variable<String>(profileId);
+    }
+    if (!nullToAbsent || modelId != null) {
+      map['model_id'] = Variable<String>(modelId);
+    }
+    return map;
+  }
+
+  MessagesCompanion toCompanion(bool nullToAbsent) {
+    return MessagesCompanion(
+      id: Value(id),
+      sessionId: Value(sessionId),
+      seq: Value(seq),
+      role: Value(role),
+      contentJson: Value(contentJson),
+      createdAt: Value(createdAt),
+      profileId: profileId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(profileId),
+      modelId: modelId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(modelId),
+    );
+  }
+
+  factory MessagesData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MessagesData(
+      id: serializer.fromJson<String>(json['id']),
+      sessionId: serializer.fromJson<String>(json['sessionId']),
+      seq: serializer.fromJson<int>(json['seq']),
+      role: serializer.fromJson<String>(json['role']),
+      contentJson: serializer.fromJson<String>(json['contentJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      profileId: serializer.fromJson<String?>(json['profileId']),
+      modelId: serializer.fromJson<String?>(json['modelId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'sessionId': serializer.toJson<String>(sessionId),
+      'seq': serializer.toJson<int>(seq),
+      'role': serializer.toJson<String>(role),
+      'contentJson': serializer.toJson<String>(contentJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'profileId': serializer.toJson<String?>(profileId),
+      'modelId': serializer.toJson<String?>(modelId),
+    };
+  }
+
+  MessagesData copyWith({
+    String? id,
+    String? sessionId,
+    int? seq,
+    String? role,
+    String? contentJson,
+    int? createdAt,
+    Value<String?> profileId = const Value.absent(),
+    Value<String?> modelId = const Value.absent(),
+  }) => MessagesData(
+    id: id ?? this.id,
+    sessionId: sessionId ?? this.sessionId,
+    seq: seq ?? this.seq,
+    role: role ?? this.role,
+    contentJson: contentJson ?? this.contentJson,
+    createdAt: createdAt ?? this.createdAt,
+    profileId: profileId.present ? profileId.value : this.profileId,
+    modelId: modelId.present ? modelId.value : this.modelId,
+  );
+  MessagesData copyWithCompanion(MessagesCompanion data) {
+    return MessagesData(
+      id: data.id.present ? data.id.value : this.id,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      seq: data.seq.present ? data.seq.value : this.seq,
+      role: data.role.present ? data.role.value : this.role,
+      contentJson: data.contentJson.present
+          ? data.contentJson.value
+          : this.contentJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      modelId: data.modelId.present ? data.modelId.value : this.modelId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessagesData(')
+          ..write('id: $id, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('seq: $seq, ')
+          ..write('role: $role, ')
+          ..write('contentJson: $contentJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('profileId: $profileId, ')
+          ..write('modelId: $modelId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    sessionId,
+    seq,
+    role,
+    contentJson,
+    createdAt,
+    profileId,
+    modelId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MessagesData &&
+          other.id == this.id &&
+          other.sessionId == this.sessionId &&
+          other.seq == this.seq &&
+          other.role == this.role &&
+          other.contentJson == this.contentJson &&
+          other.createdAt == this.createdAt &&
+          other.profileId == this.profileId &&
+          other.modelId == this.modelId);
+}
+
+class MessagesCompanion extends UpdateCompanion<MessagesData> {
+  final Value<String> id;
+  final Value<String> sessionId;
+  final Value<int> seq;
+  final Value<String> role;
+  final Value<String> contentJson;
+  final Value<int> createdAt;
+  final Value<String?> profileId;
+  final Value<String?> modelId;
+  final Value<int> rowid;
+  const MessagesCompanion({
+    this.id = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.seq = const Value.absent(),
+    this.role = const Value.absent(),
+    this.contentJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.modelId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MessagesCompanion.insert({
+    required String id,
+    required String sessionId,
+    required int seq,
+    required String role,
+    required String contentJson,
+    required int createdAt,
+    this.profileId = const Value.absent(),
+    this.modelId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       sessionId = Value(sessionId),
+       seq = Value(seq),
+       role = Value(role),
+       contentJson = Value(contentJson),
+       createdAt = Value(createdAt);
+  static Insertable<MessagesData> custom({
+    Expression<String>? id,
+    Expression<String>? sessionId,
+    Expression<int>? seq,
+    Expression<String>? role,
+    Expression<String>? contentJson,
+    Expression<int>? createdAt,
+    Expression<String>? profileId,
+    Expression<String>? modelId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (sessionId != null) 'session_id': sessionId,
+      if (seq != null) 'seq': seq,
+      if (role != null) 'role': role,
+      if (contentJson != null) 'content_json': contentJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (profileId != null) 'profile_id': profileId,
+      if (modelId != null) 'model_id': modelId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MessagesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? sessionId,
+    Value<int>? seq,
+    Value<String>? role,
+    Value<String>? contentJson,
+    Value<int>? createdAt,
+    Value<String?>? profileId,
+    Value<String?>? modelId,
+    Value<int>? rowid,
+  }) {
+    return MessagesCompanion(
+      id: id ?? this.id,
+      sessionId: sessionId ?? this.sessionId,
+      seq: seq ?? this.seq,
+      role: role ?? this.role,
+      contentJson: contentJson ?? this.contentJson,
+      createdAt: createdAt ?? this.createdAt,
+      profileId: profileId ?? this.profileId,
+      modelId: modelId ?? this.modelId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<String>(sessionId.value);
+    }
+    if (seq.present) {
+      map['seq'] = Variable<int>(seq.value);
+    }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (contentJson.present) {
+      map['content_json'] = Variable<String>(contentJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<String>(profileId.value);
+    }
+    if (modelId.present) {
+      map['model_id'] = Variable<String>(modelId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessagesCompanion(')
+          ..write('id: $id, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('seq: $seq, ')
+          ..write('role: $role, ')
+          ..write('contentJson: $contentJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('profileId: $profileId, ')
+          ..write('modelId: $modelId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class AuditLog extends Table with TableInfo<AuditLog, AuditLogData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -357,8 +1309,30 @@ class AuditLog extends Table with TableInfo {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
-    throw UnsupportedError('TableInfo.map in schema verification code');
+  AuditLogData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AuditLogData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      at: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}at'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_id'],
+      ),
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      )!,
+    );
   }
 
   @override
@@ -370,7 +1344,209 @@ class AuditLog extends Table with TableInfo {
   bool get dontWriteConstraints => true;
 }
 
-class ProviderProfiles extends Table with TableInfo {
+class AuditLogData extends DataClass implements Insertable<AuditLogData> {
+  final int id;
+  final int at;
+  final String kind;
+  final String? sessionId;
+  final String payloadJson;
+  const AuditLogData({
+    required this.id,
+    required this.at,
+    required this.kind,
+    this.sessionId,
+    required this.payloadJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['at'] = Variable<int>(at);
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || sessionId != null) {
+      map['session_id'] = Variable<String>(sessionId);
+    }
+    map['payload_json'] = Variable<String>(payloadJson);
+    return map;
+  }
+
+  AuditLogCompanion toCompanion(bool nullToAbsent) {
+    return AuditLogCompanion(
+      id: Value(id),
+      at: Value(at),
+      kind: Value(kind),
+      sessionId: sessionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sessionId),
+      payloadJson: Value(payloadJson),
+    );
+  }
+
+  factory AuditLogData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AuditLogData(
+      id: serializer.fromJson<int>(json['id']),
+      at: serializer.fromJson<int>(json['at']),
+      kind: serializer.fromJson<String>(json['kind']),
+      sessionId: serializer.fromJson<String?>(json['sessionId']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'at': serializer.toJson<int>(at),
+      'kind': serializer.toJson<String>(kind),
+      'sessionId': serializer.toJson<String?>(sessionId),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+    };
+  }
+
+  AuditLogData copyWith({
+    int? id,
+    int? at,
+    String? kind,
+    Value<String?> sessionId = const Value.absent(),
+    String? payloadJson,
+  }) => AuditLogData(
+    id: id ?? this.id,
+    at: at ?? this.at,
+    kind: kind ?? this.kind,
+    sessionId: sessionId.present ? sessionId.value : this.sessionId,
+    payloadJson: payloadJson ?? this.payloadJson,
+  );
+  AuditLogData copyWithCompanion(AuditLogCompanion data) {
+    return AuditLogData(
+      id: data.id.present ? data.id.value : this.id,
+      at: data.at.present ? data.at.value : this.at,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AuditLogData(')
+          ..write('id: $id, ')
+          ..write('at: $at, ')
+          ..write('kind: $kind, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('payloadJson: $payloadJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, at, kind, sessionId, payloadJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AuditLogData &&
+          other.id == this.id &&
+          other.at == this.at &&
+          other.kind == this.kind &&
+          other.sessionId == this.sessionId &&
+          other.payloadJson == this.payloadJson);
+}
+
+class AuditLogCompanion extends UpdateCompanion<AuditLogData> {
+  final Value<int> id;
+  final Value<int> at;
+  final Value<String> kind;
+  final Value<String?> sessionId;
+  final Value<String> payloadJson;
+  const AuditLogCompanion({
+    this.id = const Value.absent(),
+    this.at = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+  });
+  AuditLogCompanion.insert({
+    this.id = const Value.absent(),
+    required int at,
+    required String kind,
+    this.sessionId = const Value.absent(),
+    required String payloadJson,
+  }) : at = Value(at),
+       kind = Value(kind),
+       payloadJson = Value(payloadJson);
+  static Insertable<AuditLogData> custom({
+    Expression<int>? id,
+    Expression<int>? at,
+    Expression<String>? kind,
+    Expression<String>? sessionId,
+    Expression<String>? payloadJson,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (at != null) 'at': at,
+      if (kind != null) 'kind': kind,
+      if (sessionId != null) 'session_id': sessionId,
+      if (payloadJson != null) 'payload_json': payloadJson,
+    });
+  }
+
+  AuditLogCompanion copyWith({
+    Value<int>? id,
+    Value<int>? at,
+    Value<String>? kind,
+    Value<String?>? sessionId,
+    Value<String>? payloadJson,
+  }) {
+    return AuditLogCompanion(
+      id: id ?? this.id,
+      at: at ?? this.at,
+      kind: kind ?? this.kind,
+      sessionId: sessionId ?? this.sessionId,
+      payloadJson: payloadJson ?? this.payloadJson,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (at.present) {
+      map['at'] = Variable<int>(at.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<String>(sessionId.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AuditLogCompanion(')
+          ..write('id: $id, ')
+          ..write('at: $at, ')
+          ..write('kind: $kind, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('payloadJson: $payloadJson')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class ProviderProfiles extends Table
+    with TableInfo<ProviderProfiles, ProviderProfilesData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -401,8 +1577,18 @@ class ProviderProfiles extends Table with TableInfo {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
-    throw UnsupportedError('TableInfo.map in schema verification code');
+  ProviderProfilesData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ProviderProfilesData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      json: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}json'],
+      )!,
+    );
   }
 
   @override
@@ -416,7 +1602,137 @@ class ProviderProfiles extends Table with TableInfo {
   bool get dontWriteConstraints => true;
 }
 
-class UsageRecords extends Table with TableInfo {
+class ProviderProfilesData extends DataClass
+    implements Insertable<ProviderProfilesData> {
+  final String id;
+  final String json;
+  const ProviderProfilesData({required this.id, required this.json});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['json'] = Variable<String>(json);
+    return map;
+  }
+
+  ProviderProfilesCompanion toCompanion(bool nullToAbsent) {
+    return ProviderProfilesCompanion(id: Value(id), json: Value(json));
+  }
+
+  factory ProviderProfilesData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ProviderProfilesData(
+      id: serializer.fromJson<String>(json['id']),
+      json: serializer.fromJson<String>(json['json']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'json': serializer.toJson<String>(json),
+    };
+  }
+
+  ProviderProfilesData copyWith({String? id, String? json}) =>
+      ProviderProfilesData(id: id ?? this.id, json: json ?? this.json);
+  ProviderProfilesData copyWithCompanion(ProviderProfilesCompanion data) {
+    return ProviderProfilesData(
+      id: data.id.present ? data.id.value : this.id,
+      json: data.json.present ? data.json.value : this.json,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProviderProfilesData(')
+          ..write('id: $id, ')
+          ..write('json: $json')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, json);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ProviderProfilesData &&
+          other.id == this.id &&
+          other.json == this.json);
+}
+
+class ProviderProfilesCompanion extends UpdateCompanion<ProviderProfilesData> {
+  final Value<String> id;
+  final Value<String> json;
+  final Value<int> rowid;
+  const ProviderProfilesCompanion({
+    this.id = const Value.absent(),
+    this.json = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ProviderProfilesCompanion.insert({
+    required String id,
+    required String json,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       json = Value(json);
+  static Insertable<ProviderProfilesData> custom({
+    Expression<String>? id,
+    Expression<String>? json,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (json != null) 'json': json,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ProviderProfilesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? json,
+    Value<int>? rowid,
+  }) {
+    return ProviderProfilesCompanion(
+      id: id ?? this.id,
+      json: json ?? this.json,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (json.present) {
+      map['json'] = Variable<String>(json.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ProviderProfilesCompanion(')
+          ..write('id: $id, ')
+          ..write('json: $json, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class UsageRecords extends Table
+    with TableInfo<UsageRecords, UsageRecordsData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -523,8 +1839,50 @@ class UsageRecords extends Table with TableInfo {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
-    throw UnsupportedError('TableInfo.map in schema verification code');
+  UsageRecordsData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return UsageRecordsData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      at: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}at'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      modelId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model_id'],
+      )!,
+      inputTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}input_tokens'],
+      )!,
+      outputTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}output_tokens'],
+      )!,
+      cachedTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cached_tokens'],
+      )!,
+      cacheWriteTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cache_write_tokens'],
+      )!,
+      costMicros: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cost_micros'],
+      )!,
+    );
   }
 
   @override
@@ -536,7 +1894,340 @@ class UsageRecords extends Table with TableInfo {
   bool get dontWriteConstraints => true;
 }
 
-class Settings extends Table with TableInfo {
+class UsageRecordsData extends DataClass
+    implements Insertable<UsageRecordsData> {
+  final int id;
+  final int at;
+  final String sessionId;
+  final String profileId;
+  final String modelId;
+  final int inputTokens;
+  final int outputTokens;
+  final int cachedTokens;
+  final int cacheWriteTokens;
+  final int costMicros;
+  const UsageRecordsData({
+    required this.id,
+    required this.at,
+    required this.sessionId,
+    required this.profileId,
+    required this.modelId,
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.cachedTokens,
+    required this.cacheWriteTokens,
+    required this.costMicros,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['at'] = Variable<int>(at);
+    map['session_id'] = Variable<String>(sessionId);
+    map['profile_id'] = Variable<String>(profileId);
+    map['model_id'] = Variable<String>(modelId);
+    map['input_tokens'] = Variable<int>(inputTokens);
+    map['output_tokens'] = Variable<int>(outputTokens);
+    map['cached_tokens'] = Variable<int>(cachedTokens);
+    map['cache_write_tokens'] = Variable<int>(cacheWriteTokens);
+    map['cost_micros'] = Variable<int>(costMicros);
+    return map;
+  }
+
+  UsageRecordsCompanion toCompanion(bool nullToAbsent) {
+    return UsageRecordsCompanion(
+      id: Value(id),
+      at: Value(at),
+      sessionId: Value(sessionId),
+      profileId: Value(profileId),
+      modelId: Value(modelId),
+      inputTokens: Value(inputTokens),
+      outputTokens: Value(outputTokens),
+      cachedTokens: Value(cachedTokens),
+      cacheWriteTokens: Value(cacheWriteTokens),
+      costMicros: Value(costMicros),
+    );
+  }
+
+  factory UsageRecordsData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return UsageRecordsData(
+      id: serializer.fromJson<int>(json['id']),
+      at: serializer.fromJson<int>(json['at']),
+      sessionId: serializer.fromJson<String>(json['sessionId']),
+      profileId: serializer.fromJson<String>(json['profileId']),
+      modelId: serializer.fromJson<String>(json['modelId']),
+      inputTokens: serializer.fromJson<int>(json['inputTokens']),
+      outputTokens: serializer.fromJson<int>(json['outputTokens']),
+      cachedTokens: serializer.fromJson<int>(json['cachedTokens']),
+      cacheWriteTokens: serializer.fromJson<int>(json['cacheWriteTokens']),
+      costMicros: serializer.fromJson<int>(json['costMicros']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'at': serializer.toJson<int>(at),
+      'sessionId': serializer.toJson<String>(sessionId),
+      'profileId': serializer.toJson<String>(profileId),
+      'modelId': serializer.toJson<String>(modelId),
+      'inputTokens': serializer.toJson<int>(inputTokens),
+      'outputTokens': serializer.toJson<int>(outputTokens),
+      'cachedTokens': serializer.toJson<int>(cachedTokens),
+      'cacheWriteTokens': serializer.toJson<int>(cacheWriteTokens),
+      'costMicros': serializer.toJson<int>(costMicros),
+    };
+  }
+
+  UsageRecordsData copyWith({
+    int? id,
+    int? at,
+    String? sessionId,
+    String? profileId,
+    String? modelId,
+    int? inputTokens,
+    int? outputTokens,
+    int? cachedTokens,
+    int? cacheWriteTokens,
+    int? costMicros,
+  }) => UsageRecordsData(
+    id: id ?? this.id,
+    at: at ?? this.at,
+    sessionId: sessionId ?? this.sessionId,
+    profileId: profileId ?? this.profileId,
+    modelId: modelId ?? this.modelId,
+    inputTokens: inputTokens ?? this.inputTokens,
+    outputTokens: outputTokens ?? this.outputTokens,
+    cachedTokens: cachedTokens ?? this.cachedTokens,
+    cacheWriteTokens: cacheWriteTokens ?? this.cacheWriteTokens,
+    costMicros: costMicros ?? this.costMicros,
+  );
+  UsageRecordsData copyWithCompanion(UsageRecordsCompanion data) {
+    return UsageRecordsData(
+      id: data.id.present ? data.id.value : this.id,
+      at: data.at.present ? data.at.value : this.at,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      modelId: data.modelId.present ? data.modelId.value : this.modelId,
+      inputTokens: data.inputTokens.present
+          ? data.inputTokens.value
+          : this.inputTokens,
+      outputTokens: data.outputTokens.present
+          ? data.outputTokens.value
+          : this.outputTokens,
+      cachedTokens: data.cachedTokens.present
+          ? data.cachedTokens.value
+          : this.cachedTokens,
+      cacheWriteTokens: data.cacheWriteTokens.present
+          ? data.cacheWriteTokens.value
+          : this.cacheWriteTokens,
+      costMicros: data.costMicros.present
+          ? data.costMicros.value
+          : this.costMicros,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UsageRecordsData(')
+          ..write('id: $id, ')
+          ..write('at: $at, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('profileId: $profileId, ')
+          ..write('modelId: $modelId, ')
+          ..write('inputTokens: $inputTokens, ')
+          ..write('outputTokens: $outputTokens, ')
+          ..write('cachedTokens: $cachedTokens, ')
+          ..write('cacheWriteTokens: $cacheWriteTokens, ')
+          ..write('costMicros: $costMicros')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    at,
+    sessionId,
+    profileId,
+    modelId,
+    inputTokens,
+    outputTokens,
+    cachedTokens,
+    cacheWriteTokens,
+    costMicros,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UsageRecordsData &&
+          other.id == this.id &&
+          other.at == this.at &&
+          other.sessionId == this.sessionId &&
+          other.profileId == this.profileId &&
+          other.modelId == this.modelId &&
+          other.inputTokens == this.inputTokens &&
+          other.outputTokens == this.outputTokens &&
+          other.cachedTokens == this.cachedTokens &&
+          other.cacheWriteTokens == this.cacheWriteTokens &&
+          other.costMicros == this.costMicros);
+}
+
+class UsageRecordsCompanion extends UpdateCompanion<UsageRecordsData> {
+  final Value<int> id;
+  final Value<int> at;
+  final Value<String> sessionId;
+  final Value<String> profileId;
+  final Value<String> modelId;
+  final Value<int> inputTokens;
+  final Value<int> outputTokens;
+  final Value<int> cachedTokens;
+  final Value<int> cacheWriteTokens;
+  final Value<int> costMicros;
+  const UsageRecordsCompanion({
+    this.id = const Value.absent(),
+    this.at = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.modelId = const Value.absent(),
+    this.inputTokens = const Value.absent(),
+    this.outputTokens = const Value.absent(),
+    this.cachedTokens = const Value.absent(),
+    this.cacheWriteTokens = const Value.absent(),
+    this.costMicros = const Value.absent(),
+  });
+  UsageRecordsCompanion.insert({
+    this.id = const Value.absent(),
+    required int at,
+    required String sessionId,
+    required String profileId,
+    required String modelId,
+    required int inputTokens,
+    required int outputTokens,
+    required int cachedTokens,
+    required int cacheWriteTokens,
+    required int costMicros,
+  }) : at = Value(at),
+       sessionId = Value(sessionId),
+       profileId = Value(profileId),
+       modelId = Value(modelId),
+       inputTokens = Value(inputTokens),
+       outputTokens = Value(outputTokens),
+       cachedTokens = Value(cachedTokens),
+       cacheWriteTokens = Value(cacheWriteTokens),
+       costMicros = Value(costMicros);
+  static Insertable<UsageRecordsData> custom({
+    Expression<int>? id,
+    Expression<int>? at,
+    Expression<String>? sessionId,
+    Expression<String>? profileId,
+    Expression<String>? modelId,
+    Expression<int>? inputTokens,
+    Expression<int>? outputTokens,
+    Expression<int>? cachedTokens,
+    Expression<int>? cacheWriteTokens,
+    Expression<int>? costMicros,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (at != null) 'at': at,
+      if (sessionId != null) 'session_id': sessionId,
+      if (profileId != null) 'profile_id': profileId,
+      if (modelId != null) 'model_id': modelId,
+      if (inputTokens != null) 'input_tokens': inputTokens,
+      if (outputTokens != null) 'output_tokens': outputTokens,
+      if (cachedTokens != null) 'cached_tokens': cachedTokens,
+      if (cacheWriteTokens != null) 'cache_write_tokens': cacheWriteTokens,
+      if (costMicros != null) 'cost_micros': costMicros,
+    });
+  }
+
+  UsageRecordsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? at,
+    Value<String>? sessionId,
+    Value<String>? profileId,
+    Value<String>? modelId,
+    Value<int>? inputTokens,
+    Value<int>? outputTokens,
+    Value<int>? cachedTokens,
+    Value<int>? cacheWriteTokens,
+    Value<int>? costMicros,
+  }) {
+    return UsageRecordsCompanion(
+      id: id ?? this.id,
+      at: at ?? this.at,
+      sessionId: sessionId ?? this.sessionId,
+      profileId: profileId ?? this.profileId,
+      modelId: modelId ?? this.modelId,
+      inputTokens: inputTokens ?? this.inputTokens,
+      outputTokens: outputTokens ?? this.outputTokens,
+      cachedTokens: cachedTokens ?? this.cachedTokens,
+      cacheWriteTokens: cacheWriteTokens ?? this.cacheWriteTokens,
+      costMicros: costMicros ?? this.costMicros,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (at.present) {
+      map['at'] = Variable<int>(at.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<String>(sessionId.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<String>(profileId.value);
+    }
+    if (modelId.present) {
+      map['model_id'] = Variable<String>(modelId.value);
+    }
+    if (inputTokens.present) {
+      map['input_tokens'] = Variable<int>(inputTokens.value);
+    }
+    if (outputTokens.present) {
+      map['output_tokens'] = Variable<int>(outputTokens.value);
+    }
+    if (cachedTokens.present) {
+      map['cached_tokens'] = Variable<int>(cachedTokens.value);
+    }
+    if (cacheWriteTokens.present) {
+      map['cache_write_tokens'] = Variable<int>(cacheWriteTokens.value);
+    }
+    if (costMicros.present) {
+      map['cost_micros'] = Variable<int>(costMicros.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UsageRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('at: $at, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('profileId: $profileId, ')
+          ..write('modelId: $modelId, ')
+          ..write('inputTokens: $inputTokens, ')
+          ..write('outputTokens: $outputTokens, ')
+          ..write('cachedTokens: $cachedTokens, ')
+          ..write('cacheWriteTokens: $cacheWriteTokens, ')
+          ..write('costMicros: $costMicros')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class Settings extends Table with TableInfo<Settings, SettingsData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -567,8 +2258,18 @@ class Settings extends Table with TableInfo {
   @override
   Set<GeneratedColumn> get $primaryKey => {key};
   @override
-  Never map(Map<String, dynamic> data, {String? tablePrefix}) {
-    throw UnsupportedError('TableInfo.map in schema verification code');
+  SettingsData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SettingsData(
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      )!,
+      valueJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value_json'],
+      )!,
+    );
   }
 
   @override
@@ -580,6 +2281,136 @@ class Settings extends Table with TableInfo {
   List<String> get customConstraints => const ['PRIMARY KEY("key")'];
   @override
   bool get dontWriteConstraints => true;
+}
+
+class SettingsData extends DataClass implements Insertable<SettingsData> {
+  final String key;
+  final String valueJson;
+  const SettingsData({required this.key, required this.valueJson});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value_json'] = Variable<String>(valueJson);
+    return map;
+  }
+
+  SettingsCompanion toCompanion(bool nullToAbsent) {
+    return SettingsCompanion(key: Value(key), valueJson: Value(valueJson));
+  }
+
+  factory SettingsData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SettingsData(
+      key: serializer.fromJson<String>(json['key']),
+      valueJson: serializer.fromJson<String>(json['valueJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'valueJson': serializer.toJson<String>(valueJson),
+    };
+  }
+
+  SettingsData copyWith({String? key, String? valueJson}) => SettingsData(
+    key: key ?? this.key,
+    valueJson: valueJson ?? this.valueJson,
+  );
+  SettingsData copyWithCompanion(SettingsCompanion data) {
+    return SettingsData(
+      key: data.key.present ? data.key.value : this.key,
+      valueJson: data.valueJson.present ? data.valueJson.value : this.valueJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingsData(')
+          ..write('key: $key, ')
+          ..write('valueJson: $valueJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, valueJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SettingsData &&
+          other.key == this.key &&
+          other.valueJson == this.valueJson);
+}
+
+class SettingsCompanion extends UpdateCompanion<SettingsData> {
+  final Value<String> key;
+  final Value<String> valueJson;
+  final Value<int> rowid;
+  const SettingsCompanion({
+    this.key = const Value.absent(),
+    this.valueJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SettingsCompanion.insert({
+    required String key,
+    required String valueJson,
+    this.rowid = const Value.absent(),
+  }) : key = Value(key),
+       valueJson = Value(valueJson);
+  static Insertable<SettingsData> custom({
+    Expression<String>? key,
+    Expression<String>? valueJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (valueJson != null) 'value_json': valueJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SettingsCompanion copyWith({
+    Value<String>? key,
+    Value<String>? valueJson,
+    Value<int>? rowid,
+  }) {
+    return SettingsCompanion(
+      key: key ?? this.key,
+      valueJson: valueJson ?? this.valueJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (valueJson.present) {
+      map['value_json'] = Variable<String>(valueJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingsCompanion(')
+          ..write('key: $key, ')
+          ..write('valueJson: $valueJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
 }
 
 class DatabaseAtV1 extends GeneratedDatabase {

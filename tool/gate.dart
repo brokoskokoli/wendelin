@@ -124,7 +124,8 @@ Future<void> main(List<String> args) async {
 }
 
 /// Zeilenabdeckung aus dem von `dart test --coverage` geschriebenen JSON,
-/// nur für Dateien unter lib/ (ohne generierte *.g.dart und lib/testing/).
+/// nur für Dateien unter lib/ (ohne generierte *.g.dart/*.steps.dart und
+/// lib/testing/).
 Future<double> _coverage(String dir) async {
   final lcov = '$dir/coverage/lcov.info';
   final r = await Process.run('dart', [
@@ -147,6 +148,8 @@ Future<double> _coverage(String dir) async {
       final f = line.substring(3);
       skip =
           f.endsWith('.g.dart') ||
+          // drift `make-migrations` (generierte Schema-Schritte).
+          f.endsWith('.steps.dart') ||
           f.contains('/lib/testing/') ||
           f.endsWith('/lib/testing.dart');
     } else if (!skip && line.startsWith('LF:')) {

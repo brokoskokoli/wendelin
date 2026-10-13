@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../model/audit_entry.dart';
 import '../model/conversation.dart';
 import '../model/memory_entry.dart';
+import '../model/note_search_hit.dart';
 import '../model/setting_key.dart';
 import '../model/usage_record.dart';
 
@@ -183,4 +184,49 @@ abstract interface class SettingsRepository {
 
   /// Removes [key] (afterwards [get] returns the default).
   Future<void> remove(SettingKey<Object> key);
+}
+
+/// One note for [NoteIndexRepository.upsertAll]; the same record shape as
+/// `IndexedNote` of `wendelin_integrations`.
+typedef NoteIndexEntry = ({
+  String path,
+  String title,
+  String body,
+  DateTime modifiedAt,
+});
+
+/// Full-text index over the notes of the Obsidian vault (SQLite FTS5).
+///
+/// Mirrors `NoteIndexPort` of `wendelin_integrations` method by method;
+/// storage must not depend on integrations, so the app adapts it
+/// (`RepositoryNoteIndexPort`) like `MemoryRepository` → `MemoryStorePort`.
+abstract interface class NoteIndexRepository {
+  /// Adds or replaces the note [path] (title, text, modification time).
+  Future<void> upsert(
+    String path, {
+    required String title,
+    required String body,
+    required DateTime modifiedAt,
+  });
+
+  /// Adds or replaces all [notes] in one transaction (index sync).
+  Future<void> upsertAll(List<NoteIndexEntry> notes);
+
+  /// Removes [path]; no error if it is not indexed.
+  Future<void> remove(String path);
+
+  /// The best [limit] notes for [query] (bm25: title ×10, path ×2 so folder
+  /// names are searchable, body ×1): every
+  /// word with at least two characters that is not a stop word is a
+  /// prefix term, terms are OR-ed; case and diacritics are ignored.
+  Future<List<NoteSearchHit>> search(String query, {int limit = 10});
+
+  /// Indexed paths with the modification time they were indexed at.
+  Future<Map<String, DateTime>> knownFiles();
+
+  /// Number of indexed notes.
+  Future<int> count();
+
+  /// Empties the index (e.g. after choosing another vault).
+  Future<void> clear();
 }

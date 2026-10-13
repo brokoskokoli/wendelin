@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../common/base_tool.dart';
+import '../common/data_envelope.dart';
 import '../common/tool_args.dart';
 import 'web_fetcher.dart';
 import 'web_search_backend.dart';
@@ -232,15 +233,8 @@ final class WebFetchTool extends IntegrationTool {
   String get fallbackDescription => 'Webseite lesen';
 }
 
-/// Neutralizes opening and closing data tags inside fetched content (also
-/// with whitespace or other case, e.g. `< /WEB_CONTENT >`), so a page can
-/// neither end the data block early nor fake a new one.
-String _escape(String text) => text.replaceAllMapped(
-  RegExp(r'<(\s*/?\s*web_(?:content|search_results))', caseSensitive: false),
-  (m) => '&lt;${m[1]}',
-);
+const _tags = ['web_content', 'web_search_results'];
 
-String _attr(String value) => value
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;');
+String _escape(String text) => escapeDataTags(text, _tags);
+
+String _attr(String value) => escapeDataAttr(value);

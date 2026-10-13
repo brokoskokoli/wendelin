@@ -3,17 +3,24 @@
 part of 'database.dart';
 
 // ignore_for_file: type=lint
-class MemoryFts extends Table
-    with TableInfo<MemoryFts, MemoryFt>, VirtualTableInfo<MemoryFts, MemoryFt> {
+class NoteFts extends Table
+    with TableInfo<NoteFts, NoteFt>, VirtualTableInfo<NoteFts, NoteFt> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  MemoryFts(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _entryIdMeta = const VerificationMeta(
-    'entryId',
+  NoteFts(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: '',
   );
-  late final GeneratedColumn<String> entryId = GeneratedColumn<String>(
-    'entry_id',
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -30,26 +37,34 @@ class MemoryFts extends Table
     $customConstraints: '',
   );
   @override
-  List<GeneratedColumn> get $columns => [entryId, body];
+  List<GeneratedColumn> get $columns => [path, title, body];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'memory_fts';
+  static const String $name = 'note_fts';
   @override
   VerificationContext validateIntegrity(
-    Insertable<MemoryFt> instance, {
+    Insertable<NoteFt> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('entry_id')) {
+    if (data.containsKey('path')) {
       context.handle(
-        _entryIdMeta,
-        entryId.isAcceptableOrUnknown(data['entry_id']!, _entryIdMeta),
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
       );
     } else if (isInserting) {
-      context.missing(_entryIdMeta);
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
     }
     if (data.containsKey('body')) {
       context.handle(
@@ -65,12 +80,16 @@ class MemoryFts extends Table
   @override
   Set<GeneratedColumn> get $primaryKey => const {};
   @override
-  MemoryFt map(Map<String, dynamic> data, {String? tablePrefix}) {
+  NoteFt map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MemoryFt(
-      entryId: attachedDatabase.typeMapping.read(
+    return NoteFt(
+      path: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}entry_id'],
+        data['${effectivePrefix}path'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
       )!,
       body: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -80,40 +99,47 @@ class MemoryFts extends Table
   }
 
   @override
-  MemoryFts createAlias(String alias) {
-    return MemoryFts(attachedDatabase, alias);
+  NoteFts createAlias(String alias) {
+    return NoteFts(attachedDatabase, alias);
   }
 
   @override
   bool get dontWriteConstraints => true;
   @override
   String get moduleAndArgs =>
-      'fts5(entry_id UNINDEXED, body, tokenize = \'unicode61 remove_diacritics 2\')';
+      'fts5(path, title, body, tokenize = \'unicode61 remove_diacritics 2\')';
 }
 
-class MemoryFt extends DataClass implements Insertable<MemoryFt> {
-  final String entryId;
+class NoteFt extends DataClass implements Insertable<NoteFt> {
+  final String path;
+  final String title;
   final String body;
-  const MemoryFt({required this.entryId, required this.body});
+  const NoteFt({required this.path, required this.title, required this.body});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['entry_id'] = Variable<String>(entryId);
+    map['path'] = Variable<String>(path);
+    map['title'] = Variable<String>(title);
     map['body'] = Variable<String>(body);
     return map;
   }
 
-  MemoryFtsCompanion toCompanion(bool nullToAbsent) {
-    return MemoryFtsCompanion(entryId: Value(entryId), body: Value(body));
+  NoteFtsCompanion toCompanion(bool nullToAbsent) {
+    return NoteFtsCompanion(
+      path: Value(path),
+      title: Value(title),
+      body: Value(body),
+    );
   }
 
-  factory MemoryFt.fromJson(
+  factory NoteFt.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MemoryFt(
-      entryId: serializer.fromJson<String>(json['entry_id']),
+    return NoteFt(
+      path: serializer.fromJson<String>(json['path']),
+      title: serializer.fromJson<String>(json['title']),
       body: serializer.fromJson<String>(json['body']),
     );
   }
@@ -121,73 +147,88 @@ class MemoryFt extends DataClass implements Insertable<MemoryFt> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'entry_id': serializer.toJson<String>(entryId),
+      'path': serializer.toJson<String>(path),
+      'title': serializer.toJson<String>(title),
       'body': serializer.toJson<String>(body),
     };
   }
 
-  MemoryFt copyWith({String? entryId, String? body}) =>
-      MemoryFt(entryId: entryId ?? this.entryId, body: body ?? this.body);
-  MemoryFt copyWithCompanion(MemoryFtsCompanion data) {
-    return MemoryFt(
-      entryId: data.entryId.present ? data.entryId.value : this.entryId,
+  NoteFt copyWith({String? path, String? title, String? body}) => NoteFt(
+    path: path ?? this.path,
+    title: title ?? this.title,
+    body: body ?? this.body,
+  );
+  NoteFt copyWithCompanion(NoteFtsCompanion data) {
+    return NoteFt(
+      path: data.path.present ? data.path.value : this.path,
+      title: data.title.present ? data.title.value : this.title,
       body: data.body.present ? data.body.value : this.body,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('MemoryFt(')
-          ..write('entryId: $entryId, ')
+    return (StringBuffer('NoteFt(')
+          ..write('path: $path, ')
+          ..write('title: $title, ')
           ..write('body: $body')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(entryId, body);
+  int get hashCode => Object.hash(path, title, body);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is MemoryFt &&
-          other.entryId == this.entryId &&
+      (other is NoteFt &&
+          other.path == this.path &&
+          other.title == this.title &&
           other.body == this.body);
 }
 
-class MemoryFtsCompanion extends UpdateCompanion<MemoryFt> {
-  final Value<String> entryId;
+class NoteFtsCompanion extends UpdateCompanion<NoteFt> {
+  final Value<String> path;
+  final Value<String> title;
   final Value<String> body;
   final Value<int> rowid;
-  const MemoryFtsCompanion({
-    this.entryId = const Value.absent(),
+  const NoteFtsCompanion({
+    this.path = const Value.absent(),
+    this.title = const Value.absent(),
     this.body = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  MemoryFtsCompanion.insert({
-    required String entryId,
+  NoteFtsCompanion.insert({
+    required String path,
+    required String title,
     required String body,
     this.rowid = const Value.absent(),
-  }) : entryId = Value(entryId),
+  }) : path = Value(path),
+       title = Value(title),
        body = Value(body);
-  static Insertable<MemoryFt> custom({
-    Expression<String>? entryId,
+  static Insertable<NoteFt> custom({
+    Expression<String>? path,
+    Expression<String>? title,
     Expression<String>? body,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (entryId != null) 'entry_id': entryId,
+      if (path != null) 'path': path,
+      if (title != null) 'title': title,
       if (body != null) 'body': body,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  MemoryFtsCompanion copyWith({
-    Value<String>? entryId,
+  NoteFtsCompanion copyWith({
+    Value<String>? path,
+    Value<String>? title,
     Value<String>? body,
     Value<int>? rowid,
   }) {
-    return MemoryFtsCompanion(
-      entryId: entryId ?? this.entryId,
+    return NoteFtsCompanion(
+      path: path ?? this.path,
+      title: title ?? this.title,
       body: body ?? this.body,
       rowid: rowid ?? this.rowid,
     );
@@ -196,8 +237,11 @@ class MemoryFtsCompanion extends UpdateCompanion<MemoryFt> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (entryId.present) {
-      map['entry_id'] = Variable<String>(entryId.value);
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
     }
     if (body.present) {
       map['body'] = Variable<String>(body.value);
@@ -210,423 +254,10 @@ class MemoryFtsCompanion extends UpdateCompanion<MemoryFt> {
 
   @override
   String toString() {
-    return (StringBuffer('MemoryFtsCompanion(')
-          ..write('entryId: $entryId, ')
+    return (StringBuffer('NoteFtsCompanion(')
+          ..write('path: $path, ')
+          ..write('title: $title, ')
           ..write('body: $body, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $MemoryEntriesTable extends MemoryEntries
-    with TableInfo<$MemoryEntriesTable, MemoryRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $MemoryEntriesTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
-  @override
-  late final GeneratedColumn<String> body = GeneratedColumn<String>(
-    'body',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  @override
-  late final GeneratedColumnWithTypeConverter<MemoryCategory, String> category =
-      GeneratedColumn<String>(
-        'category',
-        aliasedName,
-        false,
-        type: DriftSqlType.string,
-        requiredDuringInsert: true,
-      ).withConverter<MemoryCategory>($MemoryEntriesTable.$convertercategory);
-  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
-  @override
-  late final GeneratedColumn<String> source = GeneratedColumn<String>(
-    'source',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  @override
-  late final GeneratedColumnWithTypeConverter<DateTime, int> createdAt =
-      GeneratedColumn<int>(
-        'created_at',
-        aliasedName,
-        false,
-        type: DriftSqlType.int,
-        requiredDuringInsert: true,
-      ).withConverter<DateTime>($MemoryEntriesTable.$convertercreatedAt);
-  @override
-  late final GeneratedColumnWithTypeConverter<DateTime, int> lastUsedAt =
-      GeneratedColumn<int>(
-        'last_used_at',
-        aliasedName,
-        false,
-        type: DriftSqlType.int,
-        requiredDuringInsert: true,
-      ).withConverter<DateTime>($MemoryEntriesTable.$converterlastUsedAt);
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    body,
-    category,
-    source,
-    createdAt,
-    lastUsedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'memory_entries';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<MemoryRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('body')) {
-      context.handle(
-        _bodyMeta,
-        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_bodyMeta);
-    }
-    if (data.containsKey('source')) {
-      context.handle(
-        _sourceMeta,
-        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_sourceMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  MemoryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MemoryRow(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}id'],
-      )!,
-      body: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}body'],
-      )!,
-      category: $MemoryEntriesTable.$convertercategory.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.string,
-          data['${effectivePrefix}category'],
-        )!,
-      ),
-      source: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}source'],
-      )!,
-      createdAt: $MemoryEntriesTable.$convertercreatedAt.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}created_at'],
-        )!,
-      ),
-      lastUsedAt: $MemoryEntriesTable.$converterlastUsedAt.fromSql(
-        attachedDatabase.typeMapping.read(
-          DriftSqlType.int,
-          data['${effectivePrefix}last_used_at'],
-        )!,
-      ),
-    );
-  }
-
-  @override
-  $MemoryEntriesTable createAlias(String alias) {
-    return $MemoryEntriesTable(attachedDatabase, alias);
-  }
-
-  static JsonTypeConverter2<MemoryCategory, String, String> $convertercategory =
-      const EnumNameConverter<MemoryCategory>(MemoryCategory.values);
-  static TypeConverter<DateTime, int> $convertercreatedAt = epochMicros;
-  static TypeConverter<DateTime, int> $converterlastUsedAt = epochMicros;
-}
-
-class MemoryRow extends DataClass implements Insertable<MemoryRow> {
-  final String id;
-
-  /// The remembered text. Named `body` (not `text`) because drift's
-  /// schema-dump code generator cannot name a column getter `text`.
-  final String body;
-  final MemoryCategory category;
-  final String source;
-  final DateTime createdAt;
-  final DateTime lastUsedAt;
-  const MemoryRow({
-    required this.id,
-    required this.body,
-    required this.category,
-    required this.source,
-    required this.createdAt,
-    required this.lastUsedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['body'] = Variable<String>(body);
-    {
-      map['category'] = Variable<String>(
-        $MemoryEntriesTable.$convertercategory.toSql(category),
-      );
-    }
-    map['source'] = Variable<String>(source);
-    {
-      map['created_at'] = Variable<int>(
-        $MemoryEntriesTable.$convertercreatedAt.toSql(createdAt),
-      );
-    }
-    {
-      map['last_used_at'] = Variable<int>(
-        $MemoryEntriesTable.$converterlastUsedAt.toSql(lastUsedAt),
-      );
-    }
-    return map;
-  }
-
-  MemoryEntriesCompanion toCompanion(bool nullToAbsent) {
-    return MemoryEntriesCompanion(
-      id: Value(id),
-      body: Value(body),
-      category: Value(category),
-      source: Value(source),
-      createdAt: Value(createdAt),
-      lastUsedAt: Value(lastUsedAt),
-    );
-  }
-
-  factory MemoryRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MemoryRow(
-      id: serializer.fromJson<String>(json['id']),
-      body: serializer.fromJson<String>(json['body']),
-      category: $MemoryEntriesTable.$convertercategory.fromJson(
-        serializer.fromJson<String>(json['category']),
-      ),
-      source: serializer.fromJson<String>(json['source']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'body': serializer.toJson<String>(body),
-      'category': serializer.toJson<String>(
-        $MemoryEntriesTable.$convertercategory.toJson(category),
-      ),
-      'source': serializer.toJson<String>(source),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
-    };
-  }
-
-  MemoryRow copyWith({
-    String? id,
-    String? body,
-    MemoryCategory? category,
-    String? source,
-    DateTime? createdAt,
-    DateTime? lastUsedAt,
-  }) => MemoryRow(
-    id: id ?? this.id,
-    body: body ?? this.body,
-    category: category ?? this.category,
-    source: source ?? this.source,
-    createdAt: createdAt ?? this.createdAt,
-    lastUsedAt: lastUsedAt ?? this.lastUsedAt,
-  );
-  MemoryRow copyWithCompanion(MemoryEntriesCompanion data) {
-    return MemoryRow(
-      id: data.id.present ? data.id.value : this.id,
-      body: data.body.present ? data.body.value : this.body,
-      category: data.category.present ? data.category.value : this.category,
-      source: data.source.present ? data.source.value : this.source,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      lastUsedAt: data.lastUsedAt.present
-          ? data.lastUsedAt.value
-          : this.lastUsedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('MemoryRow(')
-          ..write('id: $id, ')
-          ..write('body: $body, ')
-          ..write('category: $category, ')
-          ..write('source: $source, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('lastUsedAt: $lastUsedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode =>
-      Object.hash(id, body, category, source, createdAt, lastUsedAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is MemoryRow &&
-          other.id == this.id &&
-          other.body == this.body &&
-          other.category == this.category &&
-          other.source == this.source &&
-          other.createdAt == this.createdAt &&
-          other.lastUsedAt == this.lastUsedAt);
-}
-
-class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
-  final Value<String> id;
-  final Value<String> body;
-  final Value<MemoryCategory> category;
-  final Value<String> source;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> lastUsedAt;
-  final Value<int> rowid;
-  const MemoryEntriesCompanion({
-    this.id = const Value.absent(),
-    this.body = const Value.absent(),
-    this.category = const Value.absent(),
-    this.source = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.lastUsedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  MemoryEntriesCompanion.insert({
-    required String id,
-    required String body,
-    required MemoryCategory category,
-    required String source,
-    required DateTime createdAt,
-    required DateTime lastUsedAt,
-    this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       body = Value(body),
-       category = Value(category),
-       source = Value(source),
-       createdAt = Value(createdAt),
-       lastUsedAt = Value(lastUsedAt);
-  static Insertable<MemoryRow> custom({
-    Expression<String>? id,
-    Expression<String>? body,
-    Expression<String>? category,
-    Expression<String>? source,
-    Expression<int>? createdAt,
-    Expression<int>? lastUsedAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (body != null) 'body': body,
-      if (category != null) 'category': category,
-      if (source != null) 'source': source,
-      if (createdAt != null) 'created_at': createdAt,
-      if (lastUsedAt != null) 'last_used_at': lastUsedAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  MemoryEntriesCompanion copyWith({
-    Value<String>? id,
-    Value<String>? body,
-    Value<MemoryCategory>? category,
-    Value<String>? source,
-    Value<DateTime>? createdAt,
-    Value<DateTime>? lastUsedAt,
-    Value<int>? rowid,
-  }) {
-    return MemoryEntriesCompanion(
-      id: id ?? this.id,
-      body: body ?? this.body,
-      category: category ?? this.category,
-      source: source ?? this.source,
-      createdAt: createdAt ?? this.createdAt,
-      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (body.present) {
-      map['body'] = Variable<String>(body.value);
-    }
-    if (category.present) {
-      map['category'] = Variable<String>(
-        $MemoryEntriesTable.$convertercategory.toSql(category.value),
-      );
-    }
-    if (source.present) {
-      map['source'] = Variable<String>(source.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<int>(
-        $MemoryEntriesTable.$convertercreatedAt.toSql(createdAt.value),
-      );
-    }
-    if (lastUsedAt.present) {
-      map['last_used_at'] = Variable<int>(
-        $MemoryEntriesTable.$converterlastUsedAt.toSql(lastUsedAt.value),
-      );
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('MemoryEntriesCompanion(')
-          ..write('id: $id, ')
-          ..write('body: $body, ')
-          ..write('category: $category, ')
-          ..write('source: $source, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('lastUsedAt: $lastUsedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1457,6 +1088,420 @@ class MessagesCompanion extends UpdateCompanion<MessageRow> {
           ..write('createdAt: $createdAt, ')
           ..write('profileId: $profileId, ')
           ..write('modelId: $modelId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MemoryEntriesTable extends MemoryEntries
+    with TableInfo<$MemoryEntriesTable, MemoryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MemoryEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<MemoryCategory, String> category =
+      GeneratedColumn<String>(
+        'category',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<MemoryCategory>($MemoryEntriesTable.$convertercategory);
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> createdAt =
+      GeneratedColumn<int>(
+        'created_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($MemoryEntriesTable.$convertercreatedAt);
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> lastUsedAt =
+      GeneratedColumn<int>(
+        'last_used_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($MemoryEntriesTable.$converterlastUsedAt);
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    body,
+    category,
+    source,
+    createdAt,
+    lastUsedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'memory_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MemoryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MemoryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MemoryRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      category: $MemoryEntriesTable.$convertercategory.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}category'],
+        )!,
+      ),
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      createdAt: $MemoryEntriesTable.$convertercreatedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}created_at'],
+        )!,
+      ),
+      lastUsedAt: $MemoryEntriesTable.$converterlastUsedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}last_used_at'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $MemoryEntriesTable createAlias(String alias) {
+    return $MemoryEntriesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<MemoryCategory, String, String> $convertercategory =
+      const EnumNameConverter<MemoryCategory>(MemoryCategory.values);
+  static TypeConverter<DateTime, int> $convertercreatedAt = epochMicros;
+  static TypeConverter<DateTime, int> $converterlastUsedAt = epochMicros;
+}
+
+class MemoryRow extends DataClass implements Insertable<MemoryRow> {
+  final String id;
+
+  /// The remembered text. Named `body` (not `text`) because drift's
+  /// schema-dump code generator cannot name a column getter `text`.
+  final String body;
+  final MemoryCategory category;
+  final String source;
+  final DateTime createdAt;
+  final DateTime lastUsedAt;
+  const MemoryRow({
+    required this.id,
+    required this.body,
+    required this.category,
+    required this.source,
+    required this.createdAt,
+    required this.lastUsedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['body'] = Variable<String>(body);
+    {
+      map['category'] = Variable<String>(
+        $MemoryEntriesTable.$convertercategory.toSql(category),
+      );
+    }
+    map['source'] = Variable<String>(source);
+    {
+      map['created_at'] = Variable<int>(
+        $MemoryEntriesTable.$convertercreatedAt.toSql(createdAt),
+      );
+    }
+    {
+      map['last_used_at'] = Variable<int>(
+        $MemoryEntriesTable.$converterlastUsedAt.toSql(lastUsedAt),
+      );
+    }
+    return map;
+  }
+
+  MemoryEntriesCompanion toCompanion(bool nullToAbsent) {
+    return MemoryEntriesCompanion(
+      id: Value(id),
+      body: Value(body),
+      category: Value(category),
+      source: Value(source),
+      createdAt: Value(createdAt),
+      lastUsedAt: Value(lastUsedAt),
+    );
+  }
+
+  factory MemoryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MemoryRow(
+      id: serializer.fromJson<String>(json['id']),
+      body: serializer.fromJson<String>(json['body']),
+      category: $MemoryEntriesTable.$convertercategory.fromJson(
+        serializer.fromJson<String>(json['category']),
+      ),
+      source: serializer.fromJson<String>(json['source']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      lastUsedAt: serializer.fromJson<DateTime>(json['lastUsedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'body': serializer.toJson<String>(body),
+      'category': serializer.toJson<String>(
+        $MemoryEntriesTable.$convertercategory.toJson(category),
+      ),
+      'source': serializer.toJson<String>(source),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'lastUsedAt': serializer.toJson<DateTime>(lastUsedAt),
+    };
+  }
+
+  MemoryRow copyWith({
+    String? id,
+    String? body,
+    MemoryCategory? category,
+    String? source,
+    DateTime? createdAt,
+    DateTime? lastUsedAt,
+  }) => MemoryRow(
+    id: id ?? this.id,
+    body: body ?? this.body,
+    category: category ?? this.category,
+    source: source ?? this.source,
+    createdAt: createdAt ?? this.createdAt,
+    lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+  );
+  MemoryRow copyWithCompanion(MemoryEntriesCompanion data) {
+    return MemoryRow(
+      id: data.id.present ? data.id.value : this.id,
+      body: data.body.present ? data.body.value : this.body,
+      category: data.category.present ? data.category.value : this.category,
+      source: data.source.present ? data.source.value : this.source,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      lastUsedAt: data.lastUsedAt.present
+          ? data.lastUsedAt.value
+          : this.lastUsedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoryRow(')
+          ..write('id: $id, ')
+          ..write('body: $body, ')
+          ..write('category: $category, ')
+          ..write('source: $source, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastUsedAt: $lastUsedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, body, category, source, createdAt, lastUsedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MemoryRow &&
+          other.id == this.id &&
+          other.body == this.body &&
+          other.category == this.category &&
+          other.source == this.source &&
+          other.createdAt == this.createdAt &&
+          other.lastUsedAt == this.lastUsedAt);
+}
+
+class MemoryEntriesCompanion extends UpdateCompanion<MemoryRow> {
+  final Value<String> id;
+  final Value<String> body;
+  final Value<MemoryCategory> category;
+  final Value<String> source;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> lastUsedAt;
+  final Value<int> rowid;
+  const MemoryEntriesCompanion({
+    this.id = const Value.absent(),
+    this.body = const Value.absent(),
+    this.category = const Value.absent(),
+    this.source = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MemoryEntriesCompanion.insert({
+    required String id,
+    required String body,
+    required MemoryCategory category,
+    required String source,
+    required DateTime createdAt,
+    required DateTime lastUsedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       body = Value(body),
+       category = Value(category),
+       source = Value(source),
+       createdAt = Value(createdAt),
+       lastUsedAt = Value(lastUsedAt);
+  static Insertable<MemoryRow> custom({
+    Expression<String>? id,
+    Expression<String>? body,
+    Expression<String>? category,
+    Expression<String>? source,
+    Expression<int>? createdAt,
+    Expression<int>? lastUsedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (body != null) 'body': body,
+      if (category != null) 'category': category,
+      if (source != null) 'source': source,
+      if (createdAt != null) 'created_at': createdAt,
+      if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MemoryEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? body,
+    Value<MemoryCategory>? category,
+    Value<String>? source,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? lastUsedAt,
+    Value<int>? rowid,
+  }) {
+    return MemoryEntriesCompanion(
+      id: id ?? this.id,
+      body: body ?? this.body,
+      category: category ?? this.category,
+      source: source ?? this.source,
+      createdAt: createdAt ?? this.createdAt,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(
+        $MemoryEntriesTable.$convertercategory.toSql(category.value),
+      );
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(
+        $MemoryEntriesTable.$convertercreatedAt.toSql(createdAt.value),
+      );
+    }
+    if (lastUsedAt.present) {
+      map['last_used_at'] = Variable<int>(
+        $MemoryEntriesTable.$converterlastUsedAt.toSql(lastUsedAt.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoryEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('body: $body, ')
+          ..write('category: $category, ')
+          ..write('source: $source, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2843,30 +2888,502 @@ class SettingsCompanion extends UpdateCompanion<SettingRow> {
   }
 }
 
+class $NoteFilesTable extends NoteFiles
+    with TableInfo<$NoteFilesTable, NoteFileRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NoteFilesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> modifiedAt =
+      GeneratedColumn<int>(
+        'modified_at',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($NoteFilesTable.$convertermodifiedAt);
+  @override
+  List<GeneratedColumn> get $columns => [path, title, modifiedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'note_files';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NoteFileRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {path};
+  @override
+  NoteFileRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NoteFileRow(
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      modifiedAt: $NoteFilesTable.$convertermodifiedAt.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}modified_at'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $NoteFilesTable createAlias(String alias) {
+    return $NoteFilesTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, int> $convertermodifiedAt = epochMicros;
+}
+
+class NoteFileRow extends DataClass implements Insertable<NoteFileRow> {
+  /// Vault-relative path.
+  final String path;
+  final String title;
+
+  /// Modification time of the file when it was indexed.
+  final DateTime modifiedAt;
+  const NoteFileRow({
+    required this.path,
+    required this.title,
+    required this.modifiedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['path'] = Variable<String>(path);
+    map['title'] = Variable<String>(title);
+    {
+      map['modified_at'] = Variable<int>(
+        $NoteFilesTable.$convertermodifiedAt.toSql(modifiedAt),
+      );
+    }
+    return map;
+  }
+
+  NoteFilesCompanion toCompanion(bool nullToAbsent) {
+    return NoteFilesCompanion(
+      path: Value(path),
+      title: Value(title),
+      modifiedAt: Value(modifiedAt),
+    );
+  }
+
+  factory NoteFileRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NoteFileRow(
+      path: serializer.fromJson<String>(json['path']),
+      title: serializer.fromJson<String>(json['title']),
+      modifiedAt: serializer.fromJson<DateTime>(json['modifiedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'path': serializer.toJson<String>(path),
+      'title': serializer.toJson<String>(title),
+      'modifiedAt': serializer.toJson<DateTime>(modifiedAt),
+    };
+  }
+
+  NoteFileRow copyWith({String? path, String? title, DateTime? modifiedAt}) =>
+      NoteFileRow(
+        path: path ?? this.path,
+        title: title ?? this.title,
+        modifiedAt: modifiedAt ?? this.modifiedAt,
+      );
+  NoteFileRow copyWithCompanion(NoteFilesCompanion data) {
+    return NoteFileRow(
+      path: data.path.present ? data.path.value : this.path,
+      title: data.title.present ? data.title.value : this.title,
+      modifiedAt: data.modifiedAt.present
+          ? data.modifiedAt.value
+          : this.modifiedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteFileRow(')
+          ..write('path: $path, ')
+          ..write('title: $title, ')
+          ..write('modifiedAt: $modifiedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(path, title, modifiedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NoteFileRow &&
+          other.path == this.path &&
+          other.title == this.title &&
+          other.modifiedAt == this.modifiedAt);
+}
+
+class NoteFilesCompanion extends UpdateCompanion<NoteFileRow> {
+  final Value<String> path;
+  final Value<String> title;
+  final Value<DateTime> modifiedAt;
+  final Value<int> rowid;
+  const NoteFilesCompanion({
+    this.path = const Value.absent(),
+    this.title = const Value.absent(),
+    this.modifiedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NoteFilesCompanion.insert({
+    required String path,
+    required String title,
+    required DateTime modifiedAt,
+    this.rowid = const Value.absent(),
+  }) : path = Value(path),
+       title = Value(title),
+       modifiedAt = Value(modifiedAt);
+  static Insertable<NoteFileRow> custom({
+    Expression<String>? path,
+    Expression<String>? title,
+    Expression<int>? modifiedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (path != null) 'path': path,
+      if (title != null) 'title': title,
+      if (modifiedAt != null) 'modified_at': modifiedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NoteFilesCompanion copyWith({
+    Value<String>? path,
+    Value<String>? title,
+    Value<DateTime>? modifiedAt,
+    Value<int>? rowid,
+  }) {
+    return NoteFilesCompanion(
+      path: path ?? this.path,
+      title: title ?? this.title,
+      modifiedAt: modifiedAt ?? this.modifiedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (modifiedAt.present) {
+      map['modified_at'] = Variable<int>(
+        $NoteFilesTable.$convertermodifiedAt.toSql(modifiedAt.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteFilesCompanion(')
+          ..write('path: $path, ')
+          ..write('title: $title, ')
+          ..write('modifiedAt: $modifiedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class MemoryFts extends Table
+    with TableInfo<MemoryFts, MemoryFt>, VirtualTableInfo<MemoryFts, MemoryFt> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  MemoryFts(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _entryIdMeta = const VerificationMeta(
+    'entryId',
+  );
+  late final GeneratedColumn<String> entryId = GeneratedColumn<String>(
+    'entry_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: '',
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: '',
+  );
+  @override
+  List<GeneratedColumn> get $columns => [entryId, body];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'memory_fts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MemoryFt> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('entry_id')) {
+      context.handle(
+        _entryIdMeta,
+        entryId.isAcceptableOrUnknown(data['entry_id']!, _entryIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entryIdMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => const {};
+  @override
+  MemoryFt map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MemoryFt(
+      entryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entry_id'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+    );
+  }
+
+  @override
+  MemoryFts createAlias(String alias) {
+    return MemoryFts(attachedDatabase, alias);
+  }
+
+  @override
+  bool get dontWriteConstraints => true;
+  @override
+  String get moduleAndArgs =>
+      'fts5(entry_id UNINDEXED, body, tokenize = \'unicode61 remove_diacritics 2\')';
+}
+
+class MemoryFt extends DataClass implements Insertable<MemoryFt> {
+  final String entryId;
+  final String body;
+  const MemoryFt({required this.entryId, required this.body});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['entry_id'] = Variable<String>(entryId);
+    map['body'] = Variable<String>(body);
+    return map;
+  }
+
+  MemoryFtsCompanion toCompanion(bool nullToAbsent) {
+    return MemoryFtsCompanion(entryId: Value(entryId), body: Value(body));
+  }
+
+  factory MemoryFt.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MemoryFt(
+      entryId: serializer.fromJson<String>(json['entry_id']),
+      body: serializer.fromJson<String>(json['body']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'entry_id': serializer.toJson<String>(entryId),
+      'body': serializer.toJson<String>(body),
+    };
+  }
+
+  MemoryFt copyWith({String? entryId, String? body}) =>
+      MemoryFt(entryId: entryId ?? this.entryId, body: body ?? this.body);
+  MemoryFt copyWithCompanion(MemoryFtsCompanion data) {
+    return MemoryFt(
+      entryId: data.entryId.present ? data.entryId.value : this.entryId,
+      body: data.body.present ? data.body.value : this.body,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoryFt(')
+          ..write('entryId: $entryId, ')
+          ..write('body: $body')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(entryId, body);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MemoryFt &&
+          other.entryId == this.entryId &&
+          other.body == this.body);
+}
+
+class MemoryFtsCompanion extends UpdateCompanion<MemoryFt> {
+  final Value<String> entryId;
+  final Value<String> body;
+  final Value<int> rowid;
+  const MemoryFtsCompanion({
+    this.entryId = const Value.absent(),
+    this.body = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MemoryFtsCompanion.insert({
+    required String entryId,
+    required String body,
+    this.rowid = const Value.absent(),
+  }) : entryId = Value(entryId),
+       body = Value(body);
+  static Insertable<MemoryFt> custom({
+    Expression<String>? entryId,
+    Expression<String>? body,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (entryId != null) 'entry_id': entryId,
+      if (body != null) 'body': body,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MemoryFtsCompanion copyWith({
+    Value<String>? entryId,
+    Value<String>? body,
+    Value<int>? rowid,
+  }) {
+    return MemoryFtsCompanion(
+      entryId: entryId ?? this.entryId,
+      body: body ?? this.body,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (entryId.present) {
+      map['entry_id'] = Variable<String>(entryId.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemoryFtsCompanion(')
+          ..write('entryId: $entryId, ')
+          ..write('body: $body, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$WendelinDatabase extends GeneratedDatabase {
   _$WendelinDatabase(QueryExecutor e) : super(e);
-  late final MemoryFts memoryFts = MemoryFts(this);
-  late final $MemoryEntriesTable memoryEntries = $MemoryEntriesTable(this);
-  late final Trigger memoryEntriesAi = Trigger(
-    'CREATE TRIGGER memory_entries_ai AFTER INSERT ON memory_entries BEGIN INSERT INTO memory_fts (entry_id, body) VALUES (new.id, new.body);END',
-    'memory_entries_ai',
-  );
-  late final Trigger memoryEntriesAd = Trigger(
-    'CREATE TRIGGER memory_entries_ad AFTER DELETE ON memory_entries BEGIN DELETE FROM memory_fts WHERE entry_id = old.id;END',
-    'memory_entries_ad',
-  );
-  late final Trigger memoryEntriesAu = Trigger(
-    'CREATE TRIGGER memory_entries_au AFTER UPDATE OF body ON memory_entries BEGIN DELETE FROM memory_fts WHERE entry_id = old.id;INSERT INTO memory_fts (entry_id, body) VALUES (new.id, new.body);END',
-    'memory_entries_au',
-  );
+  late final NoteFts noteFts = NoteFts(this);
   late final $SessionsTable sessions = $SessionsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
+  late final $MemoryEntriesTable memoryEntries = $MemoryEntriesTable(this);
   late final $AuditLogTable auditLog = $AuditLogTable(this);
   late final $ProviderProfilesTable providerProfiles = $ProviderProfilesTable(
     this,
   );
   late final $UsageRecordsTable usageRecords = $UsageRecordsTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $NoteFilesTable noteFiles = $NoteFilesTable(this);
   late final Index sessionsLastActivity = Index(
     'sessions_last_activity',
     'CREATE INDEX sessions_last_activity ON sessions (last_activity_at)',
@@ -2887,30 +3404,52 @@ abstract class _$WendelinDatabase extends GeneratedDatabase {
     'usage_records_at',
     'CREATE INDEX usage_records_at ON usage_records (at)',
   );
+  late final MemoryFts memoryFts = MemoryFts(this);
+  late final Trigger memoryEntriesAi = Trigger(
+    'CREATE TRIGGER memory_entries_ai AFTER INSERT ON memory_entries BEGIN INSERT INTO memory_fts (entry_id, body) VALUES (new.id, new.body);END',
+    'memory_entries_ai',
+  );
+  late final Trigger memoryEntriesAd = Trigger(
+    'CREATE TRIGGER memory_entries_ad AFTER DELETE ON memory_entries BEGIN DELETE FROM memory_fts WHERE entry_id = old.id;END',
+    'memory_entries_ad',
+  );
+  late final Trigger memoryEntriesAu = Trigger(
+    'CREATE TRIGGER memory_entries_au AFTER UPDATE OF body ON memory_entries BEGIN DELETE FROM memory_fts WHERE entry_id = old.id;INSERT INTO memory_fts (entry_id, body) VALUES (new.id, new.body);END',
+    'memory_entries_au',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-    memoryFts,
-    memoryEntries,
-    memoryEntriesAi,
-    memoryEntriesAd,
-    memoryEntriesAu,
+    noteFts,
     sessions,
     messages,
+    memoryEntries,
     auditLog,
     providerProfiles,
     usageRecords,
     settings,
+    noteFiles,
     sessionsLastActivity,
     messagesSessionSeq,
     auditLogAt,
     usageRecordsProfileAt,
     usageRecordsAt,
+    memoryFts,
+    memoryEntriesAi,
+    memoryEntriesAd,
+    memoryEntriesAu,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sessions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('messages', kind: UpdateKind.delete)],
+    ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'memory_entries',
@@ -2934,13 +3473,6 @@ abstract class _$WendelinDatabase extends GeneratedDatabase {
         TableUpdate('memory_fts', kind: UpdateKind.delete),
         TableUpdate('memory_fts', kind: UpdateKind.insert),
       ],
-    ),
-    WritePropagation(
-      on: TableUpdateQuery.onTableName(
-        'sessions',
-        limitUpdateKind: UpdateKind.delete,
-      ),
-      result: [TableUpdate('messages', kind: UpdateKind.delete)],
     ),
   ]);
 }
