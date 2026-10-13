@@ -14,6 +14,7 @@ import 'ui/settings/privacy_screen.dart';
 import 'ui/settings/provider_setup_screen.dart';
 import 'ui/settings/providers_screen.dart';
 import 'ui/settings/settings_screen.dart';
+import 'ui/settings/voice_screen.dart';
 import 'ui/settings/web_search_screen.dart';
 import 'ui/theme/app_theme.dart';
 
@@ -43,6 +44,7 @@ class WendelinApp extends StatelessWidget {
       AppRoutes.privacy: (_) => const PrivacyScreen(),
       AppRoutes.costs: (_) => const CostsScreen(),
       AppRoutes.assistant: (_) => const AssistantScreen(),
+      AppRoutes.voice: (_) => const VoiceScreen(),
       if (kDebugMode) AppRoutes.gallery: (_) => const DesignGallery(),
     },
   );

@@ -33,6 +33,9 @@ abstract final class AppRoutes {
   /// Assistant (name, persona).
   static const assistant = '/settings/assistant';
 
+  /// Voice: Whisper model, language, speech output.
+  static const voice = '/settings/voice';
+
   /// Design gallery (debug builds only).
   static const gallery = '/debug/gallery';
 }

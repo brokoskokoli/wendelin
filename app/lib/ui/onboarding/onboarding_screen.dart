@@ -14,10 +14,11 @@ import '../screens/labels.dart';
 import '../settings/integrations_screen.dart';
 import '../settings/provider_setup_screen.dart';
 import '../settings/settings_page.dart';
+import 'voice_download_step.dart';
 
-/// First start: language, first provider, integrations (concept:
-/// „Onboarding“). Whisper download and default assistant come with M2 and
-/// are not shown. Every step can be skipped; settings can change it later.
+/// First start: language, first provider, speech recognition download,
+/// integrations (concept: „Onboarding“). Every step can be skipped;
+/// settings can change it later.
 class OnboardingScreen extends ConsumerStatefulWidget {
   /// Creates the onboarding.
   const OnboardingScreen({super.key});
@@ -52,6 +53,7 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) => switch (_step) {
     0 => _language(),
     1 => _provider(),
+    2 => VoiceDownloadStep(onNext: _next),
     _ => _integrations(),
   };
 
@@ -61,7 +63,7 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
       title: 'Willkommen',
       showBack: false,
       intro:
-          'Wendelin ist dein Sprachassistent. In drei Schritten ist er '
+          'Wendelin ist dein Sprachassistent. In vier Schritten ist er '
           'eingerichtet. Welche Sprache sprichst du mit ihm?',
       children: [
         const Center(child: WendelinLockup()),

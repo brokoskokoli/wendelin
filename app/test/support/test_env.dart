@@ -6,6 +6,7 @@ import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/platform_ports.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
@@ -14,6 +15,10 @@ import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
+import 'package:wendelin_voice/fakes.dart';
+
+import 'fake_microphone.dart';
+import 'fake_speech_models.dart';
 
 /// Fixed „now“ of the tests: Tuesday, 13 Oct 2026, 08:12 local time.
 final testNow = DateTime(2026, 10, 13, 8, 12);
@@ -75,6 +80,18 @@ final class TestEnv {
 
   /// List files (handle → content).
   final listFiles = FakeListFilePort();
+
+  /// Speech model downloads (WP17).
+  final speechModels = FakeSpeechModelService();
+
+  /// Microphone (permission granted unless a test changes it).
+  final microphone = FakePcmRecorder();
+
+  /// System speech output.
+  final systemTts = FakeTextToSpeech();
+
+  /// Offline speech output (sherpa-onnx).
+  final sherpaTts = FakeTextToSpeech();
 
   /// Builds the adapter for stored profiles; `null` = real adapters.
   final LlmProviderFactory? llmFactory;
@@ -140,6 +157,10 @@ final class TestEnv {
             ? providerConfig
             : throw providerConfigError!,
       ),
+    speechModelServiceProvider.overrideWith((ref) async => speechModels),
+    microphoneProvider.overrideWithValue(microphone),
+    systemTtsProvider.overrideWithValue(systemTts),
+    sherpaTtsProvider.overrideWithValue(sherpaTts),
     ...extraOverrides,
   ];
 

@@ -1,0 +1,456 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/platform/voice/model_installer.dart';
+import 'package:wendelin/platform/voice/tar_bz2.dart';
+import 'package:wendelin/ui/onboarding/voice_download_step.dart';
+import 'package:wendelin/ui/routes.dart';
+import 'package:wendelin/ui/settings/model_download_row.dart';
+import 'package:wendelin/ui/settings/settings_screen.dart';
+import 'package:wendelin/ui/settings/voice_screen.dart';
+import 'package:wendelin_voice/fakes.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
+
+import '../support/test_env.dart';
+import '../ui/helpers.dart';
+import 'integrations_screen_test.dart' show settle;
+
+const _tall = Size(390, 2600);
+
+Future<ProviderContainer> pumpScreen(
+  WidgetTester tester,
+  TestEnv env,
+  Widget screen,
+) async {
+  setView(tester, _tall);
+  await tester.pumpWidget(env.app(home: screen));
+  await settle(tester);
+  return ProviderScope.containerOf(tester.element(find.byWidget(screen)));
+}
+
+/// The progress bar of [model].
+Finder progressOf(String model) => find.byWidgetPredicate(
+  (w) =>
+      w is LinearProgressIndicator && w.semanticsLabel == 'Fortschritt $model',
+);
+
+/// The action button of the row titled [model].
+Finder action(String model, String label) => find.descendant(
+  of: find.ancestor(
+    of: find.text(model),
+    matching: find.byType(ModelDownloadRow),
+  ),
+  matching: find.widgetWithText(OutlinedButton, label),
+);
+
+void main() {
+  const base = 'Whisper base (schnell)';
+  const small = 'Whisper small (genauer)';
+  const vad = 'Silero VAD';
+
+  group('Onboarding-Schritt „Spracherkennung laden“', () {
+    testWidgets('Laden mit Fortschritt, Abbrechen, Fortsetzen, Weiter', (
+      tester,
+    ) async {
+      final env = TestEnv();
+      var next = 0;
+      final step = VoiceDownloadStep(onNext: () => next++);
+      await pumpScreen(tester, env, step);
+      final m = env.speechModels;
+
+      expect(find.text('Spracherkennung laden'), findsOneWidget);
+      expect(find.textContaining('nicht geladen'), findsNWidgets(3));
+      await tester.tap(find.widgetWithText(FilledButton, 'Laden'));
+      await tester.pump();
+      expect(m.running.keys, {'whisper-base', 'silero-vad'});
+      expect(find.widgetWithText(FilledButton, 'Lädt …'), findsOneWidget);
+      expect(find.text('Im Hintergrund weiterladen'), findsOneWidget);
+
+      m.progress('whisper-base', 0.42);
+      await tester.pump();
+      expect(find.text('Lädt … 42 % von 161 MB'), findsOneWidget);
+      final bar = tester.widget<LinearProgressIndicator>(progressOf(base));
+      expect(bar.value, closeTo(0.42, 0.001));
+
+      // Cancel keeps the part: „Fortsetzen“.
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Abbrechen').first);
+      await settle(tester);
+      expect(m.running.keys, {'silero-vad'});
+      expect(find.textContaining('angefangen'), findsOneWidget);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Fortsetzen'));
+      await tester.pump();
+      expect(m.running.keys, containsAll(['whisper-base', 'silero-vad']));
+
+      m
+        ..finish('silero-vad')
+        ..finish('whisper-base');
+      await settle(tester);
+      expect(find.textContaining('· geladen'), findsNWidgets(2));
+      expect(find.widgetWithText(OutlinedButton, 'Löschen'), findsNothing);
+      await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
+      expect(next, 1);
+    });
+
+    testWidgets('angefangener Download wird beim Öffnen fortgesetzt', (
+      tester,
+    ) async {
+      final env = TestEnv();
+      env.speechModels.partial.add('whisper-small');
+      await pumpScreen(tester, env, VoiceDownloadStep(onNext: () {}));
+      expect(env.speechModels.running.keys, ['whisper-small']);
+    });
+
+    testWidgets('small wählen, Später', (tester) async {
+      final env = TestEnv();
+      var next = 0;
+      final c = await pumpScreen(
+        tester,
+        env,
+        VoiceDownloadStep(onNext: () => next++),
+      );
+      env.speechModels.installed.add('whisper-small');
+      await c.read(modelStatesProvider.notifier).refresh();
+      await settle(tester);
+      await tester.tap(find.text(small));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-small');
+      expect(
+        (await env.storage.settings.get(voiceSettingsKey))!.sttModel,
+        'whisper-small',
+      );
+      await tester.tap(find.text('Später'));
+      expect(next, 1);
+    });
+  });
+
+  group('Fehler beim Download', () {
+    for (final (name, error, text) in [
+      (
+        'Prüfsumme',
+        const ModelDownloadException(
+          DownloadErrorKind.checksum,
+          'Prüfsumme von base-encoder.int8.onnx stimmt nicht; die Datei wurde '
+          'verworfen.',
+        ),
+        'Prüfsumme von base-encoder.int8.onnx stimmt nicht',
+      ),
+      (
+        'Speicherplatz',
+        const InsufficientSpaceException(
+          requiredBytes: 300000000,
+          freeBytes: 100000000,
+        ),
+        'Zu wenig Speicherplatz: 300 MB nötig, 100 MB frei.',
+      ),
+      (
+        'Archiv',
+        const ArchiveRejected('Unsicherer Pfad im Archiv: ../x'),
+        'Unsicherer Pfad',
+      ),
+      ('unbekannt', StateError('x'), 'Der Download ist fehlgeschlagen.'),
+    ]) {
+      testWidgets(name, (tester) async {
+        final env = TestEnv();
+        await pumpScreen(tester, env, const VoiceScreen());
+        await tester.tap(action(base, 'Laden'));
+        await tester.pump();
+        env.speechModels.fail('whisper-base', error);
+        await settle(tester);
+        expect(find.textContaining(text), findsOneWidget);
+        expect(action(base, 'Erneut laden'), findsOneWidget);
+        await tester.tap(action(base, 'Erneut laden'));
+        await tester.pump();
+        expect(find.textContaining(text), findsNothing);
+        expect(env.speechModels.running.keys, ['whisper-base']);
+      });
+    }
+
+    testWidgets('Fehler mit Rest: Fortsetzen statt Laden', (tester) async {
+      final env = TestEnv();
+      await pumpScreen(tester, env, const VoiceScreen());
+      await tester.tap(action(vad, 'Laden'));
+      await tester.pump();
+      env.speechModels.fail(
+        'silero-vad',
+        const ModelDownloadException(DownloadErrorKind.network, 'Netz weg.'),
+        keepPartial: true,
+      );
+      await settle(tester);
+      expect(find.text('Netz weg.'), findsOneWidget);
+      expect(action(vad, 'Fortsetzen'), findsOneWidget);
+    });
+
+    testWidgets('Entpacken zeigt unbestimmten Fortschritt', (tester) async {
+      final env = TestEnv();
+      await pumpScreen(tester, env, const VoiceScreen());
+      await tester.tap(action('Deutsch – Thorsten', 'Laden'));
+      await tester.pump();
+      env.speechModels.unpack('tts-de-thorsten');
+      await tester.pump();
+      expect(find.text('Wird entpackt …'), findsOneWidget);
+      final bar = tester.widget<LinearProgressIndicator>(
+        progressOf('Deutsch – Thorsten'),
+      );
+      expect(bar.value, isNull);
+      expect(action('Deutsch – Thorsten', 'Abbrechen'), findsNothing);
+      env.speechModels.finish('tts-de-thorsten');
+      await settle(tester);
+    });
+  });
+
+  group('Einstellungen → Sprache', () {
+    TestEnv env0() {
+      final env = TestEnv(startup: const StartupSettings(language: 'fr'));
+      env.systemTts.available = false;
+      env.speechModels.installed.addAll(['whisper-base', 'silero-vad']);
+      return env;
+    }
+
+    testWidgets('über die Übersicht erreichbar', (tester) async {
+      setView(tester, _tall);
+      final env = env0();
+      await tester.pumpWidget(env.app(home: const SettingsScreen()));
+      await settle(tester);
+      await tester.tap(find.text('Sprache'));
+      await settle(tester);
+      expect(find.byType(VoiceScreen), findsOneWidget);
+      expect(AppRoutes.voice, '/settings/voice');
+    });
+
+    testWidgets('Modell, Sprache, Ausgabe, Tempo, Feinabstimmung speichern', (
+      tester,
+    ) async {
+      final env = env0();
+      final c = await pumpScreen(tester, env, const VoiceScreen());
+      VoiceSettings saved() => c.read(voiceSettingsProvider).value!;
+
+      // small is not installed: tapping does not select it.
+      await tester.tap(find.text(small).first);
+      await settle(tester);
+      expect(saved().sttModel, 'whisper-base');
+
+      expect(find.text('Wie die App (Français)'), findsOneWidget);
+      await tester.tap(find.text('Automatisch erkennen'));
+      await settle(tester);
+      expect(saved().sttLanguage, VoiceSettings.detect);
+      await tester.tap(find.text('English'));
+      await settle(tester);
+      expect(saved().effectiveLanguage('fr'), 'en');
+
+      await tester.tap(find.text('Offline-Stimme'));
+      await settle(tester);
+      expect(saved().tts, TtsPreference.sherpa);
+      expect(
+        find.text('Wendelin spricht mit der Offline-Stimme.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('1,2×'));
+      await tester.tap(find.text('300 ms'));
+      await tester.tap(find.text('0,6'));
+      await settle(tester);
+      expect(saved().ttsRate, 1.2);
+      expect(saved().minSpeechMs, 300);
+      expect(saved().vadThreshold, 0.6);
+      expect(saved().endpoint.minSpeech, const Duration(milliseconds: 300));
+      expect(await env.storage.settings.get(voiceSettingsKey), saved());
+
+      final config = await c.read(voicePipelineConfigProvider.future);
+      expect(config.language, 'en');
+      expect(config.rate, 1.2);
+      expect(config.endpoint.minSpeech, const Duration(milliseconds: 300));
+    });
+
+    testWidgets('ohne Systemstimme: Hinweis auf Offline-Stimme', (
+      tester,
+    ) async {
+      await pumpScreen(tester, env0(), const VoiceScreen());
+      expect(
+        find.text('Wendelin spricht mit der Offline-Stimme.'),
+        findsOneWidget,
+        reason: 'automatisch fällt ohne Systemstimme auf sherpa zurück',
+      );
+    });
+
+    testWidgets('Stimme wählen, Probe hören', (tester) async {
+      final env = env0();
+      final sherpa = env.sherpaTts;
+      final c = await pumpScreen(tester, env, const VoiceScreen());
+      await tester.tap(find.text('Standard der Sprache'));
+      await settle(tester);
+      await tester.tap(find.text('fake-fr (fr)'));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.ttsVoice, 'fake-fr');
+      await tester.tap(find.text('Probe hören'));
+      await settle(tester);
+      expect(sherpa.calls.single.voice, 'fake-fr');
+      expect(sherpa.calls.single.language, 'fr');
+
+      await tester.tap(find.text('fake-fr'));
+      await settle(tester);
+      await tester.tap(find.text('Standard der Sprache').last);
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.ttsVoice, isNull);
+    });
+
+    testWidgets('Modell löschen nach Rückfrage', (tester) async {
+      final env = env0();
+      await pumpScreen(tester, env, const VoiceScreen());
+      await tester.tap(action(base, 'Löschen'));
+      await settle(tester);
+      expect(find.text('$base löschen?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Löschen'));
+      await settle(tester);
+      expect(env.speechModels.deleted, ['whisper-base']);
+      expect(action(base, 'Laden'), findsOneWidget);
+      expect(
+        find.textContaining('braucht Wendelin das gewählte'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Lizenzen inklusive Pflicht-Attribution', (tester) async {
+      await pumpScreen(tester, env0(), const VoiceScreen());
+      expect(
+        find.textContaining('SIWIS French Speech Synthesis'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('CC0 (Thorsten-Voice)'), findsOneWidget);
+    });
+
+    testWidgets('Mikrofon: Erklärung vor der Android-Abfrage', (tester) async {
+      final env = env0();
+      final mic = env.microphone..granted = false;
+      await pumpScreen(tester, env, const VoiceScreen());
+      expect(find.text('nicht erlaubt'), findsOneWidget);
+      expect(mic.requests, [false]);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Erlauben'));
+      await settle(tester);
+      expect(find.text('Mikrofon erlauben?'), findsOneWidget);
+      expect(find.textContaining('verlässt es nicht'), findsOneWidget);
+      await tester.tap(find.text('Nicht jetzt'));
+      await settle(tester);
+      expect(mic.requests, everyElement(isFalse));
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Erlauben'));
+      await settle(tester);
+      mic.granted = true;
+      await tester.tap(find.widgetWithText(FilledButton, 'Erlauben'));
+      await settle(tester);
+      expect(mic.requests, contains(true));
+      expect(find.text('erlaubt'), findsOneWidget);
+    });
+
+    testWidgets('Mikrofon abgelehnt: Hinweis auf Android-Einstellungen', (
+      tester,
+    ) async {
+      final env = env0();
+      env.microphone.granted = false;
+      await pumpScreen(tester, env, const VoiceScreen());
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Erlauben'));
+      await settle(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Erlauben'));
+      await settle(tester);
+      expect(find.textContaining('Android-Einstellungen'), findsOneWidget);
+      expect(env.microphone.requests, contains(true));
+    });
+  });
+
+  group('VoiceSettings und Bausteine', () {
+    test('JSON hin und zurück, ungültige Werte fallen auf Standard', () {
+      const s = VoiceSettings(
+        sttModel: 'whisper-small',
+        sttLanguage: 'fr',
+        tts: TtsPreference.system,
+        ttsVoice: 'v',
+        ttsRate: 1.5,
+        minSpeechMs: 300,
+        vadThreshold: 0.4,
+      );
+      expect(VoiceSettings.fromJson(s.toJson()), s);
+      expect(s.toJson().containsKey('ttsVoice'), isTrue);
+      expect(const VoiceSettings().toJson().containsKey('ttsVoice'), isFalse);
+      expect(
+        VoiceSettings.fromJson({
+          'sttModel': 'evil',
+          'sttLanguage': 'xx',
+          'tts': 'loud',
+          'ttsVoice': '',
+          'ttsRate': 9,
+          'minSpeechMs': 5,
+          'vadThreshold': 1.5,
+        }),
+        const VoiceSettings(),
+      );
+      expect(s.hashCode, VoiceSettings.fromJson(s.toJson()).hashCode);
+      expect(const VoiceSettings().effectiveLanguage('de'), 'de');
+      expect(
+        const VoiceSettings(sttLanguage: VoiceSettings.detect)
+            .effectiveLanguage('de'),
+        isNull,
+      );
+      expect(s.copyWith(clearVoice: true).ttsVoice, isNull);
+      expect(s.copyWith(ttsRate: 1.0).ttsVoice, 'v');
+      expect(() => voiceSettingsKey.decode('x'), throwsFormatException);
+    });
+
+    test('ohne Modelle: Bausteine melden modelMissing', () async {
+      final c = TestEnv().container();
+      addTearDown(c.dispose);
+      for (final p in [
+        voiceActivityDetectorProvider.future,
+        speechToTextProvider.future,
+        voiceComponentsProvider.future,
+      ]) {
+        await expectLater(
+          c.read(p),
+          throwsA(
+            isA<VoiceException>().having(
+              (e) => e.kind,
+              'kind',
+              VoiceErrorKind.modelMissing,
+            ),
+          ),
+        );
+      }
+      expect(c.read(audioInputProvider), isA<AudioInput>());
+      final selection = await c.read(ttsSelectionProvider.future);
+      expect(selection.engine, TtsEngine.system);
+    });
+
+    test('Statusmeldungen der Sprachausgabe', () {
+      expect(
+        ttsSelectionText(const TtsSelection(engine: TtsEngine.none, tts: null)),
+        contains('nur auf dem Bildschirm'),
+      );
+      final fake = FakeTextToSpeech();
+      expect(
+        ttsSelectionText(
+          TtsSelection(engine: TtsEngine.system, tts: fake, fallback: true),
+        ),
+        contains('Keine Offline-Stimme'),
+      );
+      expect(
+        ttsSelectionText(
+          TtsSelection(engine: TtsEngine.sherpa, tts: fake, fallback: true),
+        ),
+        contains('Keine Systemstimme installiert'),
+      );
+      expect(
+        ttsSelectionText(TtsSelection(engine: TtsEngine.system, tts: fake)),
+        'Wendelin spricht mit der Systemstimme.',
+      );
+    });
+
+    test('ModelState', () {
+      const a = ModelState(ModelPhase.downloading, progress: 0.5);
+      expect(a.busy, isTrue);
+      expect(a, const ModelState(ModelPhase.downloading, progress: 0.5));
+      expect(a.hashCode, isNot(const ModelState(ModelPhase.absent).hashCode));
+      expect(a.toString(), contains('downloading'));
+      expect(const ModelState(ModelPhase.partial).busy, isFalse);
+    });
+  });
+}
