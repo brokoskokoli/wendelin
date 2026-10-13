@@ -31,6 +31,9 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - Nachbesserungen und Re-Reviews übernimmt ein frischer Agent mit Befundliste und Diff, statt einen großen Kontext fortzusetzen.
 - Modelle: Coder nutzen Sonnet, Reviewer das Standardmodell (Entscheidung Maintainer 2026-10-13).
 
+## Briefings
+- Kurze Rollen-Briefings für Agenten liegen in `docs/agents/` (`coder.md`, `reviewer.md`, `integrator.md`, `common.md`).
+
 ## Git und Identität (wichtig)
 - Erlaubt sind nur `Stefan Richter <16724498+brokoskokoli@users.noreply.github.com>` und der Trailer `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine anderen Namen oder Mailadressen, insbesondere keine Arbeitgeber-Domains.
 - Die Identität ist repo-lokal gesetzt, Hooks in `tool/hooks/` prüfen sie. Niemals `--no-verify` oder Identitäts-Overrides verwenden.
