@@ -154,15 +154,16 @@ class CalendarChannel(private val activity: Activity, messenger: BinaryMessenger
             Instances.RRULE,
             Instances.EVENT_TIMEZONE,
         )
-        var selection: String? = null
-        var args: Array<String>? = null
+        // Cancelled occurrences (e.g. a declined meeting) are not shown.
+        var selection = "(${Instances.STATUS} IS NULL OR ${Instances.STATUS} != ?)"
+        val args = mutableListOf(Instances.STATUS_CANCELED.toString())
         if (calendarIds != null) {
             if (calendarIds.isEmpty()) return emptyList()
-            selection = "${Instances.CALENDAR_ID} IN (${calendarIds.joinToString(",") { "?" }})"
-            args = calendarIds.toTypedArray()
+            selection += " AND ${Instances.CALENDAR_ID} IN (${calendarIds.joinToString(",") { "?" }})"
+            args.addAll(calendarIds)
         }
         val rows = mutableListOf<MutableMap<String, Any?>>()
-        resolver.query(builder.build(), projection, selection, args, "${Instances.BEGIN} ASC")?.use { c ->
+        resolver.query(builder.build(), projection, selection, args.toTypedArray(), "${Instances.BEGIN} ASC")?.use { c ->
             while (c.moveToNext()) {
                 rows.add(
                     eventMap(
@@ -261,7 +262,8 @@ class CalendarChannel(private val activity: Activity, messenger: BinaryMessenger
     }
 
     private fun deleteEvent(id: String): Any? {
-        getEvent(id) ?: throw ChannelError("notFound")
+        val existing = getEvent(id) ?: throw ChannelError("notFound")
+        if (!calendarWritable(existing["calendarId"] as String)) throw ChannelError("readOnly")
         val uri = ContentUris.withAppendedId(Events.CONTENT_URI, id.toLong())
         if (resolver.delete(uri, null, null) == 0) throw ChannelError("notFound")
         return null
@@ -306,6 +308,16 @@ class CalendarChannel(private val activity: Activity, messenger: BinaryMessenger
         if (rows.isEmpty()) return
         val ids = rows.map { it["id"] as String }.distinct()
         val byEvent = mutableMapOf<String, MutableList<String>>()
+        // SQLite allows at most 999 bound parameters per statement.
+        for (chunk in ids.chunked(ATTENDEE_CHUNK)) {
+            readAttendees(chunk, byEvent)
+        }
+        for (row in rows) {
+            row["attendees"] = byEvent[row["id"] as String] ?: emptyList<String>()
+        }
+    }
+
+    private fun readAttendees(ids: List<String>, byEvent: MutableMap<String, MutableList<String>>) {
         val cursor: Cursor? = resolver.query(
             Attendees.CONTENT_URI,
             arrayOf(Attendees.EVENT_ID, Attendees.ATTENDEE_NAME, Attendees.ATTENDEE_EMAIL),
@@ -321,9 +333,6 @@ class CalendarChannel(private val activity: Activity, messenger: BinaryMessenger
                 }
             }
         }
-        for (row in rows) {
-            row["attendees"] = byEvent[row["id"] as String] ?: emptyList<String>()
-        }
     }
 
     private class ChannelError(val code: String) : Exception(code)
@@ -331,6 +340,7 @@ class CalendarChannel(private val activity: Activity, messenger: BinaryMessenger
     companion object {
         const val CHANNEL = "app.wendelin/calendar"
         private const val PERMISSION_REQUEST = 4711
+        private const val ATTENDEE_CHUNK = 500
         private val PERMISSIONS = arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
 
         /** Length of an RFC 2445 duration such as `P3600S` or `P1D` in milliseconds. */

@@ -106,7 +106,17 @@ final class AgentController extends Notifier<ConversationState> {
     }
     _providers = providers;
 
-    final sessionId = await ref.read(sessionManagerProvider).ensure();
+    final String sessionId;
+    try {
+      // The first request after start waits until every integration was
+      // checked, so its active tools are offered.
+      await ref.read(toolRegistryReadyProvider.future);
+      sessionId = await ref.read(sessionManagerProvider).ensure();
+    } on Object catch (e, stack) {
+      _report(e, stack);
+      _finishWithNotice(NoticeKind.error, 'Die Anfrage konnte nicht starten.');
+      return;
+    }
     _sessionId = sessionId;
     final isNew = sessionId != _shownSessionId;
     _shownSessionId = sessionId;
@@ -122,8 +132,37 @@ final class AgentController extends Notifier<ConversationState> {
     _run = run;
     _events = run
         .run(input)
-        .listen((event) => _onEvent(sessionId, event), onDone: _finished);
+        .listen(
+          (event) => _onEvent(sessionId, event),
+          onError: (Object e, StackTrace stack) => _failed(sessionId, e, stack),
+          onDone: _finished,
+          cancelOnError: true,
+        );
   }
+
+  /// The agent stream broke its contract (no terminal event, an error):
+  /// end the run like a failure so the screen is usable again.
+  void _failed(String sessionId, Object error, StackTrace stack) {
+    _report(error, stack);
+    _onEvent(
+      sessionId,
+      const AgentFailed(
+        error: AgentErrorKind.internal,
+        message: 'Interner Fehler, die Anfrage wurde abgebrochen.',
+      ),
+    );
+    _finished();
+  }
+
+  static void _report(Object error, StackTrace stack) =>
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stack,
+          library: 'wendelin',
+          context: ErrorDescription('in der Agent-Anfrage'),
+        ),
+      );
 
   /// Cancels the running request.
   void cancel() => _run?.cancel();

@@ -332,6 +332,45 @@ void main() {
       expect(config.primary.provider, isA<DemoLlmProvider>());
     });
 
+    test(
+      'Demo-Modus: Listen „Einkaufen“ und „SmartSSH“ über den Fake-Port',
+      () async {
+        // Die echten Demo-Ports der App, nicht die Test-Fakes der Umgebung.
+        final c = TestEnv(demo: true, realDemoPorts: true).container();
+        addTearDown(c.dispose);
+        final registry = c.read(toolRegistryProvider);
+        await registry.refresh();
+        expect(registry.status('lists'), IntegrationStatus.active);
+        final catalog = registry.catalogFor(PrivacyLevel.local, sessionId: 's');
+        final ctx = ToolContext(
+          sessionId: 's',
+          clock: FixedClock(testNow),
+          locale: 'de-DE',
+          timeZone: 'Europe/Berlin',
+        );
+        final lists = await catalog
+            .lookup('lists__list_lists')!
+            .execute({}, ctx);
+        expect(lists.text, allOf(contains('Einkaufen'), contains('SmartSSH')));
+        final added = await catalog.lookup('lists__add_items')!.execute({
+          'list': 'Einkaufsliste',
+          'items': ['Eier'],
+        }, ctx);
+        expect(added.isError, isFalse, reason: added.text);
+        final port = c.read(platformPortsProvider).lists!.port;
+        expect(
+          await port.read('demo://Listen/Einkaufen.md'),
+          contains('- [ ] Eier'),
+        );
+      },
+    );
+
+    test('ohne Listen-Port (Gerät bis WP09): keine Listen-Integration', () {
+      final c = TestEnv().container();
+      addTearDown(c.dispose);
+      expect(c.read(integrationsProvider).keys, isNot(contains('lists')));
+    });
+
     test('Demo-Modus umschalten speichert die Wahl', () async {
       final env = TestEnv();
       final c = env.container();

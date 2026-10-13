@@ -61,9 +61,13 @@ final class _FakeNative {
         if (!events.containsKey(id)) throw PlatformException(code: 'notFound');
         return events[id] = _stored(id, a);
       case 'deleteEvent':
-        if (events.remove(a['id']) == null) {
-          throw PlatformException(code: 'notFound');
-        }
+        final existing = events[a['id']];
+        if (existing == null) throw PlatformException(code: 'notFound');
+        final cal = calendars.singleWhere(
+          (c) => c['id'] == existing['calendarId'],
+        );
+        if (cal['writable'] != true) throw PlatformException(code: 'readOnly');
+        events.remove(a['id']);
         return null;
     }
     throw MissingPluginException(call.method);
@@ -232,6 +236,22 @@ void main() {
       port(PortErrorKind.rejected),
     );
     expect(native.calls.where((c) => c.method == 'createEvent'), isEmpty);
+  });
+
+  test('Löschen in schreibgeschütztem Kalender: readOnly', () async {
+    native.events['9'] = {
+      'id': '9',
+      'calendarId': '3',
+      'title': 'Tag der Einheit',
+      'start': DateTime.utc(2031, 10, 3).millisecondsSinceEpoch,
+      'end': DateTime.utc(2031, 10, 4).millisecondsSinceEpoch,
+      'allDay': true,
+    };
+    await expectLater(
+      DeviceCalendarPort().deleteEvent('9'),
+      port(PortErrorKind.readOnly),
+    );
+    expect(native.events, contains('9'));
   });
 
   test('Fehlercodes werden zu deutschen PortExceptions', () {

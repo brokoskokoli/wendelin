@@ -1,10 +1,11 @@
+import 'package:wendelin_core/wendelin_core.dart' show detectSensitiveContent;
 import 'package:wendelin_integrations/wendelin_integrations.dart' as wi;
 import 'package:wendelin_storage/wendelin_storage.dart' as st;
 
 /// [wi.MemoryStorePort] on the `MemoryRepository` of `wendelin_storage`.
 ///
 /// Both the integration's and the storage's protection rule apply: text is
-/// checked with `sensitiveContentReason` first, and a
+/// checked with core's `detectSensitiveContent` first, and a
 /// `SensitiveContentException` of the repository also becomes
 /// `PortException(rejected)`.
 ///
@@ -26,9 +27,9 @@ final class RepositoryMemoryPort implements wi.MemoryStorePort {
     if (text.trim().isEmpty) {
       throw ArgumentError.value(text, 'text', 'darf nicht leer sein');
     }
-    final reason = wi.sensitiveContentReason(text);
-    if (reason != null) {
-      throw wi.PortException(wi.PortErrorKind.rejected, reason);
+    final finding = detectSensitiveContent(text);
+    if (finding != null) {
+      throw wi.PortException(wi.PortErrorKind.rejected, finding.reason);
     }
     try {
       final saved = await repository.save(

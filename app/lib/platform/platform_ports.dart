@@ -21,6 +21,7 @@ final class PlatformPorts {
     required this.alarms,
     required this.memory,
     this.requestCalendarPermission,
+    this.lists,
   });
 
   /// Real device ports (Android): calendar channel, system clipboard,
@@ -45,6 +46,7 @@ final class PlatformPorts {
     clipboard: FakeClipboardPort(),
     alarms: FakeAlarmPort(),
     memory: FakeMemoryStore(),
+    lists: ListsPorts.demo(),
   );
 
   /// Device calendar.
@@ -61,4 +63,49 @@ final class PlatformPorts {
 
   /// Asks for calendar access; `null` if the port needs none.
   final Future<bool> Function()? requestCalendarPermission;
+
+  /// List files and definitions; `null` = no lists on this device yet
+  /// (the SAF port and the list settings come with WP09).
+  final ListsPorts? lists;
+}
+
+/// File port and list definitions of the lists integration.
+final class ListsPorts {
+  /// Creates the bundle.
+  const ListsPorts({required this.port, required this.definitions});
+
+  /// In-memory lists „Einkaufen“ and „SmartSSH“ for the demo mode.
+  factory ListsPorts.demo() {
+    final definitions = [
+      ListDefinition(
+        id: 'einkaufen',
+        name: 'Einkaufen',
+        aliases: const ['Einkaufsliste'],
+        target: 'demo://Listen/Einkaufen.md',
+      ),
+      ListDefinition(
+        id: 'smartssh',
+        name: 'SmartSSH',
+        target: 'demo://Projekte/SmartSSH.md',
+        section: 'Todo',
+      ),
+    ];
+    return ListsPorts(
+      port: FakeListFilePort(
+        files: {
+          'demo://Listen/Einkaufen.md':
+              '# Einkaufen\n\n- [ ] Milch\n- [x] Brot\n',
+          'demo://Projekte/SmartSSH.md':
+              '# SmartSSH\n\n## Todo\n\n- [ ] Release-Notizen\n',
+        },
+      ),
+      definitions: () => definitions,
+    );
+  }
+
+  /// Reads and writes the Markdown files.
+  final ListFilePort port;
+
+  /// The user's lists.
+  final List<ListDefinition> Function() definitions;
 }

@@ -99,6 +99,37 @@ void main() {
     expect(env.calendar.events, hasLength(1), reason: 'bleibt bestehen');
   });
 
+  testWidgets('Rückgängig: nach 9,9 s noch da, nach 10 s weg', (tester) async {
+    final env = TestEnv(
+      providerConfig: scripted(
+        FakeLlmProvider([
+          ScriptedTurn.toolCalls([
+            call(
+              'c1',
+              'calendar__create_event',
+              '{"title":"Tauchen","start":"2026-10-14T10:00"}',
+            ),
+          ]),
+          ScriptedTurn.text('Erledigt.'),
+        ]),
+      ),
+    );
+    await pumpApp(tester, env);
+    await send(tester, 'Trag mir morgen um 10 Tauchen ein');
+    // Ohne Verzögerung im Skript: alles läuft im selben Augenblick, das
+    // Undo-Fenster beginnt bei 0.
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Erledigt.'), findsOneWidget);
+    expect(find.textContaining('Rückgängig · '), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 9900));
+    expect(find.textContaining('Rückgängig · '), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    expect(find.textContaining('Rückgängig'), findsNothing);
+    expect(find.byType(ToolResultCard), findsNothing);
+  });
+
   testWidgets('external-Tool → Bestätigungs-Sheet; „Nein“ → nicht ausgeführt', (
     tester,
   ) async {

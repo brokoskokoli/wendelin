@@ -7,9 +7,16 @@ import 'audit_recorder.dart';
 import 'provider_config.dart';
 import 'storage_adapters.dart';
 
+/// Builds the agent for one request (replaceable in tests).
+abstract interface class AgentRunFactory {
+  /// An agent for one request in [sessionId] with the targets of
+  /// [providers].
+  AgentRun create(ProviderConfig providers, String sessionId);
+}
+
 /// Builds one [AgentRun] per request, wired to the registry, the local
 /// database and the audit log.
-final class AgentFactory {
+final class AgentFactory implements AgentRunFactory {
   /// Creates the factory.
   const AgentFactory({
     required this.registry,
@@ -57,6 +64,7 @@ final class AgentFactory {
   /// (see [ProviderConfig.lowestPrivacy]). Memory entries go into the
   /// prompt only if that catalog offers the memory integration, i.e. it is
   /// active and allowed for this privacy level.
+  @override
   AgentRun create(ProviderConfig providers, String sessionId) {
     final catalog = registry.catalogFor(
       providers.lowestPrivacy,

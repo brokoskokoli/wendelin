@@ -76,7 +76,7 @@ final class _RejectingRepository implements st.MemoryRepository {
     required st.MemoryCategory category,
     required String source,
   }) async =>
-      throw const st.SensitiveContentException(st.SensitiveKind.cardNumber);
+      throw const st.SensitiveContentException(SensitiveKind.cardNumber);
 
   @override
   Object? noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

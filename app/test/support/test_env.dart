@@ -25,6 +25,7 @@ final class TestEnv {
     this.providerConfig,
     this.providerConfigError,
     this.demo = false,
+    this.realDemoPorts = false,
     Set<String> enabled = const {
       'calendar',
       'clipboard',
@@ -70,6 +71,9 @@ final class TestEnv {
   /// Demo mode.
   final bool demo;
 
+  /// Uses the app's own in-memory demo ports instead of this environment's.
+  final bool realDemoPorts;
+
   /// The device ports.
   late final ports = PlatformPorts(
     calendar: calendar,
@@ -89,7 +93,7 @@ final class TestEnv {
     secretStoreProvider.overrideWithValue(secrets),
     startupProvider.overrideWithValue(startup),
     devicePortsProvider.overrideWithValue(ports),
-    demoPortsProvider.overrideWithValue(ports),
+    if (!realDemoPorts) demoPortsProvider.overrideWithValue(ports),
     deviceInfoProvider.overrideWithValue(
       const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
     ),

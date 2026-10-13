@@ -114,7 +114,7 @@ final integrationsProvider = Provider<Map<String, Integration>>((ref) {
   final deps = ref.watch(integrationDepsProvider);
   return {
     for (final spec in ref.watch(integrationSpecsProvider))
-      spec.id: spec.create(deps),
+      if (spec.isSupported?.call(deps) ?? true) spec.id: spec.create(deps),
   };
 });
 
@@ -171,6 +171,15 @@ final class EnabledIntegrations extends Notifier<Set<String>> {
     if (enabled) id,
   };
 }
+
+/// The registry once availability and setup of every integration have been
+/// checked. Requests wait for it, so the first one after start sees all
+/// active tools.
+final toolRegistryReadyProvider = FutureProvider<ToolRegistry>((ref) async {
+  final registry = ref.watch(toolRegistryProvider);
+  await registry.refresh();
+  return registry;
+});
 
 /// Switching integrations on and off (permission first).
 final integrationActivatorProvider = Provider<IntegrationActivator>(
@@ -243,7 +252,7 @@ final storedProviderConfigProvider = FutureProvider<ProviderConfig?>(
 );
 
 /// Builds the agent for each request.
-final agentFactoryProvider = Provider<AgentFactory>((ref) {
+final agentFactoryProvider = Provider<AgentRunFactory>((ref) {
   final storage = ref.watch(storageProvider);
   return AgentFactory(
     registry: ref.watch(toolRegistryProvider),

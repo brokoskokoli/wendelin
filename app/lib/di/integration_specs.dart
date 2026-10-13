@@ -39,6 +39,7 @@ final class IntegrationSpec {
     required this.create,
     this.requestPermission,
     this.onSessionEnd,
+    this.isSupported,
   });
 
   /// Integration id (must match `Integration.id`).
@@ -53,6 +54,10 @@ final class IntegrationSpec {
 
   /// Called with the built integration when a session ends.
   final void Function(Integration integration)? onSessionEnd;
+
+  /// Whether the integration can be built with [IntegrationDeps] (e.g. its
+  /// port exists); `null` = always.
+  final bool Function(IntegrationDeps deps)? isSupported;
 }
 
 /// The built-in integrations of M1, in display order.
@@ -84,5 +89,15 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
     // Without a configured search service only `web__fetch` is offered;
     // WP09 adds the service setup.
     create: (d) => WebIntegration(fetcher: WebFetcher(client: d.httpClient)),
+  ),
+  IntegrationSpec(
+    id: 'lists',
+    // Device side (SAF file port and list definitions) comes with WP09; until
+    // then only the demo mode offers lists.
+    isSupported: (d) => d.ports.lists != null,
+    create: (d) => ListsIntegration(
+      d.ports.lists!.port,
+      definitions: d.ports.lists!.definitions,
+    ),
   ),
 ];

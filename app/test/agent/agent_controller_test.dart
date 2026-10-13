@@ -1,12 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/di/agent_factory.dart';
 import 'package:wendelin/di/integration_specs.dart';
+import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/session_manager.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -388,6 +392,143 @@ void main() {
     expect(fresh.read(agentControllerProvider).entries, isEmpty);
   });
 
+  group('Review WP08', () {
+    test(
+      'Sitzungsende vergisst per tools__search freigeschaltete Tools',
+      () async {
+        final provider = FakeLlmProvider([ScriptedTurn.text('ok')]);
+        env = TestEnv(
+          providerConfig: scripted(provider),
+          enabled: const {'spy'},
+        );
+        c = ProviderContainer(
+          overrides: [
+            ...env.overrides,
+            integrationSpecsProvider.overrideWithValue([
+              ...builtInIntegrationSpecs,
+              IntegrationSpec(
+                id: 'spy',
+                create: (_) => FakeIntegration(
+                  id: 'spy',
+                  tools: [
+                    for (var i = 0; i < 30; i++)
+                      FakeTool(
+                        name: 'spy__werkzeug$i',
+                        description: 'Spion $i',
+                      ),
+                  ],
+                ),
+              ),
+            ]),
+          ],
+          retry: (_, _) => null,
+        );
+        await sendAndWait(c, 'A');
+        final old = c.read(sessionManagerProvider).currentId!;
+        final registry = c.read(toolRegistryProvider);
+        final search = registry
+            .catalogFor(PrivacyLevel.standard, sessionId: old)
+            .lookup('tools__search');
+        expect(search, isNotNull, reason: 'ab 30 Tools gibt es das Meta-Tool');
+        await search!.execute(
+          {'query': 'spy werkzeug'},
+          ToolContext(
+            sessionId: old,
+            clock: env.clock,
+            locale: 'de-DE',
+            timeZone: 'Europe/Berlin',
+          ),
+        );
+        expect(registry.unlockedTools(old), isNotEmpty);
+
+        await c.read(agentControllerProvider.notifier).newTopic();
+        expect(registry.unlockedTools(old), isEmpty);
+        expect(c.read(sessionManagerProvider).currentId, isNot(old));
+      },
+    );
+
+    test('Sitzung lässt sich nicht öffnen: Lauf endet sauber', () async {
+      final provider = FakeLlmProvider([ScriptedTurn.text('nie')]);
+      env = TestEnv(providerConfig: scripted(provider));
+      c = ProviderContainer(
+        overrides: [
+          ...env.overrides,
+          sessionManagerProvider.overrideWithValue(
+            SessionManager(
+              conversations: _BrokenConversations(),
+              clock: env.clock,
+              onSessionEnd: (_) {},
+            ),
+          ),
+        ],
+        retry: (_, _) => null,
+      );
+      final errors = <FlutterErrorDetails>[];
+      final previous = FlutterError.onError;
+      FlutterError.onError = errors.add;
+      addTearDown(() => FlutterError.onError = previous);
+      final s = await sendAndWait(c, 'Hallo');
+      expect(s.running, isFalse);
+      expect(s.entries.whereType<NoticeEntry>().single.kind, NoticeKind.error);
+      expect(errors.single.exception, isA<StateError>());
+      expect(provider.requests, isEmpty);
+      // Danach geht es wieder.
+      expect(c.read(agentControllerProvider.notifier).idle, completes);
+    });
+
+    test('Fehler im Agent-Stream beendet den Lauf mit Hinweis', () async {
+      env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
+      c = ProviderContainer(
+        overrides: [
+          ...env.overrides,
+          agentFactoryProvider.overrideWithValue(_BrokenFactory()),
+        ],
+        retry: (_, _) => null,
+      );
+      final errors = <FlutterErrorDetails>[];
+      final previous = FlutterError.onError;
+      FlutterError.onError = errors.add;
+      addTearDown(() => FlutterError.onError = previous);
+      final s = await sendAndWait(c, 'Hallo');
+      expect(s.running, isFalse);
+      expect(
+        s.entries.whereType<NoticeEntry>().single.text,
+        contains('Interner Fehler'),
+      );
+      expect(errors, hasLength(1));
+      final audit = await env.storage.audit.query(
+        const AuditFilter(kinds: {AuditKind.error}),
+      );
+      expect(audit.single.payload['error'], 'internal');
+    });
+
+    test('erste Anfrage wartet, bis alle Integrationen geprüft sind', () async {
+      final gate = Completer<void>();
+      final provider = FakeLlmProvider([ScriptedTurn.text('ok')]);
+      env = TestEnv(
+        providerConfig: scripted(provider),
+        enabled: const {'slow'},
+      );
+      c = ProviderContainer(
+        overrides: [
+          ...env.overrides,
+          integrationSpecsProvider.overrideWithValue([
+            IntegrationSpec(id: 'slow', create: (_) => _SlowIntegration(gate)),
+          ]),
+        ],
+        retry: (_, _) => null,
+      );
+      final controller = c.read(agentControllerProvider.notifier);
+      final sent = controller.send('Hallo');
+      await pumpEventQueue();
+      expect(provider.requests, isEmpty, reason: 'wartet auf die Prüfung');
+      gate.complete();
+      await sent;
+      await controller.idle;
+      expect(provider.requests.single.tools.map((t) => t.name), ['slow__tool']);
+    });
+  });
+
   group('Datenschutz in der Verdrahtung', () {
     test(
       'Gedächtnis kommt nur in den Prompt, wenn die Integration aktiv ist',
@@ -453,4 +594,66 @@ void main() {
     expect(AgentController.isNewTopicCommand('neues thema.'), isTrue);
     expect(AgentController.isNewTopicCommand('ein neues Thema bitte'), isFalse);
   });
+}
+
+final class _BrokenConversations implements ConversationRepository {
+  @override
+  Future<Session> currentOrNew(
+    DateTime now, {
+    Duration inactivity = ConversationRepository.defaultInactivity,
+  }) => Future.error(StateError('Datenbank gesperrt'));
+
+  @override
+  Object? noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// An agent whose stream breaks its contract with an error.
+final class _BrokenFactory implements AgentRunFactory {
+  @override
+  AgentRun create(ProviderConfig providers, String sessionId) => _BrokenRun();
+}
+
+final class _BrokenRun implements AgentRun {
+  @override
+  Stream<AgentEvent> run(UserInput input) => Stream.error(StateError('kaputt'));
+
+  @override
+  void cancel() {}
+}
+
+/// Integration whose availability check waits for [gate].
+final class _SlowIntegration implements Integration {
+  _SlowIntegration(this.gate);
+
+  final Completer<void> gate;
+
+  @override
+  String get id => 'slow';
+
+  @override
+  String get displayName => 'Langsam';
+
+  @override
+  String get iconId => 'slow';
+
+  @override
+  Set<AppPlatform> get platforms => AppPlatform.values.toSet();
+
+  @override
+  bool get sensitive => false;
+
+  @override
+  Future<Availability> checkAvailability() async {
+    await gate.future;
+    return Availability.yes;
+  }
+
+  @override
+  List<SetupStep> get setup => const [];
+
+  @override
+  Future<SetupState> setupState() async => SetupState();
+
+  @override
+  late final List<Tool> tools = [FakeTool(name: 'slow__tool')];
 }

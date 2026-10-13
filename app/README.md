@@ -21,6 +21,8 @@ Neue Integration: Port in `PlatformPorts` ergänzen (echt und Demo), `Integratio
 3. „Trag mir morgen um 10 Tauchen ein“ schreiben und senden: Tool-Karte „Termin angelegt“ mit „Rückgängig · 10 s“, danach die Antwort.
 4. „Lösch den Termin“: Bestätigungs-Sheet, „Nein, behalten“ lässt den Termin stehen.
 
+Im Demo-Modus gibt es außerdem die Listen „Einkaufen“ und „SmartSSH“ (im Speicher); das Demo-Skript selbst versteht nur Termine.
+
 Im Demo-Modus laufen alle Ports im Speicher; Kalender und Uhr des Geräts bleiben unberührt. Die Design-Galerie ist unter Einstellungen → Entwicklung erreichbar.
 
 ## Tests

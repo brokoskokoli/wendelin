@@ -20,7 +20,7 @@ Jeder Baustein ist ein eigener Provider in `app/lib/di/providers.dart`. `main.da
 `DeviceCalendarPort` spricht über den Kanal `app.wendelin/calendar` mit `CalendarChannel.kt` (direkt `CalendarContract`, Berechtigungsanfrage über die Activity). `device_calendar` (letzte Version 2024-09) ist für AGP 9/Kotlin 2.4 ein Risiko und bringt eigene Zeitzonen-Typen mit. Der Kanal macht nur einfache Abfragen; Überlappungsfilter (halboffen), Standardkalender und deutsche Fehlermeldungen liegen in Dart und sind mit einer Kanal-Attrappe gegen `calendarPortContract` getestet.
 
 ### 5. Erweiterungspunkt für Integrationen
-`IntegrationSpec` (Bau, Berechtigungsanfrage beim Einschalten, Aufräumen bei Sitzungsende) und `PlatformPorts` (Geräte-Ports, echt oder Demo). Eine neue Integration (z. B. WP12 Listen) ergänzt einen Port in `PlatformPorts` und eine Spec in `builtInIntegrationSpecs`; Registry, Einstellungen, Sitzungsende und Demo-Modus übernehmen sie von dort.
+`IntegrationSpec` (Bau, Berechtigungsanfrage beim Einschalten, Aufräumen bei Sitzungsende) und `PlatformPorts` (Geräte-Ports, echt oder Demo). Eine neue Integration ergänzt einen Port in `PlatformPorts` und eine Spec in `builtInIntegrationSpecs`; Registry, Einstellungen, Sitzungsende und Demo-Modus übernehmen sie von dort. `IntegrationSpec.isSupported` blendet Integrationen ohne Port aus. Listen (WP12) sind so eingehängt: im Demo-Modus mit `FakeListFilePort` und den Listen „Einkaufen“ und „SmartSSH“, auf dem Gerät erst mit dem SAF-Port und den Listen-Einstellungen aus WP09.
 
 ### 6. Berechtigungen erst beim Einschalten
 `IntegrationActivator.setEnabled` fragt die Berechtigung der Integration an, schaltet sie in der Registry und speichert den Schalter. Beim Start wird nichts angefragt; eine abgelehnte Berechtigung zeigt „Einrichtung nötig“, `setUp` fragt erneut.
@@ -28,7 +28,16 @@ Jeder Baustein ist ein eigener Provider in `app/lib/di/providers.dart`. `main.da
 ### 7. Demo-Modus nur im Debug-Build
 `DemoLlmProvider` spielt je Antwort einen `FakeLlmProvider`-Zug („Trag mir morgen um 10 Tauchen ein“ → `calendar__create_event`, „Lösch den Termin“ → `calendar__delete_event`). Ports sind dann In-Memory-Fakes, alle Integrationen aktiv; das Gerät wird nicht berührt. In Release-Builds ist der Schalter wirkungslos.
 
-### 8. Kosten in USD
+### 8. Kein Android-Backup
+`allowBackup="false"`, `dataExtractionRules` (Cloud-Backup und Geräteumzug schließen alle Bereiche aus) und `fullBackupContent` für Android 6–11. Die Datenbank enthält Verläufe, Audit-Log und Gedächtnis und darf das Gerät nicht verlassen (Konzept „Sicherheit“). Die Secrets sind an den Keystore gebunden und wären nach einer Wiederherstellung ohnehin unlesbar; `flutter_secure_storage` würde sie dann verwerfen. Geprüft in `app/test/app/android_manifest_test.dart`.
+
+### 9. Registrierung abwarten
+Integrationen werden synchron registriert, ihre Verfügbarkeits- und Einrichtungsprüfung läuft asynchron. `toolRegistryReadyProvider` wartet auf `registry.refresh()`; jede Anfrage wartet darauf, bevor `AgentFactory.create` den Katalog baut. Sonst sähe die erste Anfrage nach dem Start noch keine aktiven Tools.
+
+### 10. Risikostufe im Bestätigungs-Sheet
+`ConfirmationRequired` trägt keine Risikostufe. Bis das Folgepaket sie in core ergänzt, leitet das Sheet sie aus der `RiskPolicy` ab: Jeder Aufruf, für den die Policy eine Bestätigung verlangt, wird als `external` angezeigt (auch ein vom Nutzer verschärftes `write`-Tool).
+
+### 11. Kosten in USD
 Preise und Budgets sind Mikro-USD (ADR 0002). Der Kosten-Chip zeigt „heute 0,03 $“ statt „€“ wie im Entwurf, weil es keine Umrechnung gibt.
 
 ## Folgen
