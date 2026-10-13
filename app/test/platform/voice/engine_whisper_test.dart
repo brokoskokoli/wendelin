@@ -269,6 +269,14 @@ void main() {
       return env.container();
     }
 
+    // Condition instead of wall-clock waiting: yields to the event loop
+    // until [cond] holds (bounded, so a real defect still fails).
+    Future<void> untilTrue(bool Function() cond) async {
+      for (var i = 0; i < 5000 && !cond(); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+    }
+
     test('App und Overlay: genau ein Whisper', () async {
       final app = engineContainer();
       final overlay = engineContainer();
@@ -295,7 +303,11 @@ void main() {
           .read(voiceSettingsProvider.notifier)
           .change((s) => s.copyWith(sttModel: 'whisper-small'));
       await app.read(speechToTextProvider.future);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await untilTrue(
+        () =>
+            process.live.length == 1 &&
+            process.live.single.modelId == 'whisper-small',
+      );
       expect(process.live.single.modelId, 'whisper-small');
       expect(
         process.events.indexOf('freed whisper-base'),
@@ -306,15 +318,14 @@ void main() {
     test(
       'im Hintergrund nach der Frist: 0 Whisper, Vorwärmen lädt neu',
       () async {
-        final app = engineContainer(
-          releaseDelay: const Duration(milliseconds: 30),
-        );
+        final app = engineContainer(releaseDelay: Duration.zero);
         addTearDown(app.dispose);
         await app.read(activeVoiceProvider.future);
         final voice = app.read(voiceControllerProvider.notifier);
         expect(process.live, hasLength(1));
         await voice.background();
-        await Future<void>.delayed(const Duration(milliseconds: 80));
+        // Zero deadline: the timer is event-driven, no wall clock involved.
+        await untilTrue(() => process.live.isEmpty);
         expect(process.live, isEmpty);
         expect(
           lines.any(
@@ -323,32 +334,29 @@ void main() {
           isTrue,
         );
         app.read(modelStatesProvider); // installed models known
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await untilTrue(() => app.read(voiceReadyProvider));
         voice.prewarm();
-        await Future<void>.delayed(const Duration(milliseconds: 20));
+        await untilTrue(() => process.live.length == 1);
         expect(process.live, hasLength(1));
       },
     );
 
     test('Rückkehr vor der Frist: nichts wird freigegeben', () async {
-      final app = engineContainer(
-        releaseDelay: const Duration(milliseconds: 30),
-      );
+      final app = engineContainer(releaseDelay: Duration.zero);
       addTearDown(app.dispose);
       await app.read(activeVoiceProvider.future);
       final voice = app.read(voiceControllerProvider.notifier);
       await voice.background();
+      // Back before the (zero) deadline expires: prewarm cancels the timer.
       voice.prewarm();
-      await Future<void>.delayed(const Duration(milliseconds: 80));
+      await pumpEventQueue();
       expect(process.live, hasLength(1));
     });
 
     test(
       'zurück, während background() noch wartet: nichts wird freigegeben',
       () async {
-        final app = engineContainer(
-          releaseDelay: const Duration(milliseconds: 30),
-        );
+        final app = engineContainer(releaseDelay: Duration.zero);
         addTearDown(app.dispose);
         await app.read(activeVoiceProvider.future);
         final voice = app.read(voiceControllerProvider.notifier);
@@ -357,7 +365,7 @@ void main() {
         final going = voice.background();
         voice.prewarm();
         await going;
-        await Future<void>.delayed(const Duration(milliseconds: 80));
+        await pumpEventQueue();
         expect(process.live, hasLength(1));
         expect(lines.where((l) => l.contains(' release ')), isEmpty);
       },
@@ -384,7 +392,7 @@ void main() {
       await app.read(voiceComponentsProvider.future);
       final o = await overlay.read(voiceComponentsProvider.future);
       app.dispose();
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await untilTrue(() => process.live.isEmpty);
       expect(process.live, isEmpty);
       final t = await o.stt.transcribe(
         AudioFrames.pattern('S' * 20)
