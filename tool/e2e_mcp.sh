@@ -30,24 +30,36 @@ SERVER=$!
 exec 3>"$WORK/in"
 cleanup() {
   exec 3>&- || true
+  # Hält ein Kindprozess (Gradle-Daemon, adb) den Schreibzugang des FIFO
+  # offen, endet der Server nie von selbst: dann beenden.
+  for _ in $(seq 1 10); do
+    kill -0 "$SERVER" 2>/dev/null || break
+    sleep 0.5
+  done
+  # shellcheck disable=SC2046
+  kill $(pgrep -P "$SERVER" 2>/dev/null) 2>/dev/null || true
   wait "$SERVER" 2>/dev/null || true
   rm -rf "$WORK"
 }
 trap cleanup EXIT
 
 for _ in $(seq 1 120); do
-  grep -q 'port=[0-9]' "$WORK/out" 2>/dev/null && break
+  grep -q 'http_port=[0-9]' "$WORK/out" 2>/dev/null && break
   sleep 0.5
 done
 # `dart run` may print „Running build hooks...“ in the same line.
-PORT="$(grep -o 'port=[0-9]*' "$WORK/out" | head -1 | cut -d= -f2)"
+PORT="$(grep -oE '(^|[^_])port=[0-9]+' "$WORK/out" | head -1 | cut -d= -f2)"
+HTTP_PORT="$(grep -o 'http_port=[0-9]*' "$WORK/out" | head -1 | cut -d= -f2)"
+[ -n "$HTTP_PORT" ] || { echo "Test-REST-Server startet nicht" >&2; exit 1; }
 [ -n "$PORT" ] || { echo "Test-MCP-Server startet nicht: $(cat "$WORK/err")" >&2; exit 1; }
 echo "Test-MCP-Server auf 127.0.0.1:$PORT (Emulator: 10.0.2.2:$PORT)"
 
 cd "$ROOT/app"
+status=0
 flutter test integration_test/mcp_e2e_test.dart -d "$DEVICE" \
   --dart-define=MCP_URL="http://10.0.2.2:$PORT/mcp" \
-  --dart-define=MCP_TOKEN="$TOKEN"
+  --dart-define=MCP_TOKEN="$TOKEN" \
+  --dart-define=HTTP_URL="http://10.0.2.2:$HTTP_PORT" 3>&- || status=$?
 
 # Rückleitung über die Intent-Filter-Activity: während der Test auf die
 # Anmeldung wartet, erst ein falscher, dann der richtige state.
@@ -63,7 +75,6 @@ redirects() {
 }
 redirects &
 REDIRECTS=$!
-status=0
-flutter test integration_test/oauth_redirect_e2e_test.dart -d "$DEVICE" || status=$?
+flutter test integration_test/oauth_redirect_e2e_test.dart -d "$DEVICE" 3>&- || status=$?
 kill "$REDIRECTS" 2>/dev/null || true
 exit $status

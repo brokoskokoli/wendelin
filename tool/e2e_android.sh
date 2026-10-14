@@ -49,6 +49,15 @@
 # voice_robustness_e2e_test.dart (je Runde D3 ohne und nach Overlay-Nutzung),
 # E2E_VOICE_LOG=<datei> sammelt danach alle `Wendelin/voice`-Zeilen.
 #
+# Tests mit eigenem Skript (WP29): app_presence_e2e_test.dart
+# (tool/e2e_app_presence.sh: Attrappen-APKs), mcp_e2e_test.dart und
+# oauth_redirect_e2e_test.dart (tool/e2e_mcp.sh: Test-Server auf dem Rechner,
+# `am start`-Rückleitungen) brauchen Vorbereitung, die dieses Skript nicht
+# leistet. Im Sammellauf (ohne Argumente) werden sie nicht rot, sondern als
+# „übersprungen – Skript X“ gemeldet; mit E2E_SCRIPTS=1 ruft das Skript
+# sie danach selbst auf (dasselbe Gerät). Nennt man sie ausdrücklich als
+# Argument, laufen sie ebenfalls über ihr Skript.
+#
 # Live (integration_test/live_e2e_test.dart, kostet ein paar Cent):
 #   WENDELIN_LIVE=1 mit ANTHROPIC_API_KEY in der Umgebung. Der Key geht per
 #   `adb shell run-as` über stdin in die privaten App-Daten (nicht auf die
@@ -249,7 +258,29 @@ trap cleanup EXIT
 
 # 4. Tests
 cd "$ROOT/app"
-if [ $# -eq 0 ]; then set -- integration_test/*_test.dart; fi
+COLLECT=0
+if [ $# -eq 0 ]; then
+  COLLECT=1
+  set -- integration_test/*_test.dart
+fi
+# Tests mit eigenem Skript herausnehmen (siehe Kopf).
+script_for() { # <test.dart> -> Skript oder leer
+  case "$(basename "$1")" in
+    app_presence_e2e_test.dart) echo tool/e2e_app_presence.sh ;;
+    mcp_e2e_test.dart | oauth_redirect_e2e_test.dart) echo tool/e2e_mcp.sh ;;
+  esac
+}
+SCRIPTS=()
+KEEP=()
+for f in "$@"; do
+  s="$(script_for "$f")"
+  if [ -z "$s" ]; then
+    KEEP+=("$f")
+  else
+    case " ${SCRIPTS[*]-} " in *" $s "*) ;; *) SCRIPTS+=("$s") ;; esac
+  fi
+done
+set -- ${KEEP[@]+"${KEEP[@]}"}
 status=0
 DEFINES=()
 if [ -n "$LIVE" ]; then DEFINES+=(--dart-define=WENDELIN_LIVE=true); fi
@@ -285,7 +316,7 @@ run_instrumented() { # <test.dart>
   out="$(adb shell am instrument -w -r -e class "$PKG.FlutterE2eTest" \
     "$PKG.test/androidx.test.runner.AndroidJUnitRunner" | tr -d '\r')"
   # Ausgaben der Dart-Tests (Messwerte, Fehler) aus logcat.
-  adb logcat -d -s flutter | grep -E 'M2-|WP30-|EXCEPTION|Expected|Actual|Notiz|fail' | cut -c 33- || true
+  adb logcat -d -s flutter | grep -E 'M2-|WP30-|TOTAL|Native Heap|EXCEPTION|Expected|Actual|Notiz|fail' | cut -c 33- || true
   # Diagnosezeilen ohne Inhalte (WP30) aller Engines und der Session.
   if [ -n "${E2E_VOICE_LOG:-}" ]; then
     adb logcat -d | grep 'Wendelin/voice' >"$E2E_VOICE_LOG" || true
@@ -302,6 +333,22 @@ for f in ${INSTRUMENTED[@]+"${INSTRUMENTED[@]}"}; do
 done
 if [ -n "$LIVE" ] && installed; then
   adb shell pm clear "$PKG" >/dev/null || true
+fi
+
+if [ ${#SCRIPTS[@]} -gt 0 ]; then
+  # Der Hintergrund-Helfer (Berechtigungen, Modelle, Dateiauswahl) würde die
+  # Skripte stören (run-as auf eine gerade deinstallierte App).
+  kill "$HELPER" 2>/dev/null || true
+  if [ "$COLLECT" = 1 ] && [ "${E2E_SCRIPTS:-}" != "1" ]; then
+    for s in "${SCRIPTS[@]}"; do
+      echo "übersprungen – Skript $s (eigene Vorbereitung; E2E_SCRIPTS=1 ruft es auf)"
+    done
+  else
+    for s in "${SCRIPTS[@]}"; do
+      echo "Skript $s"
+      DEVICE="$DEVICE" bash "$ROOT/$s" || status=1
+    done
+  fi
 fi
 
 left="$(adb shell "content query --uri content://com.android.calendar/events --projection _id --where \"title='Tauchen' AND deleted=0\"" | grep -c '_id=' || true)"
