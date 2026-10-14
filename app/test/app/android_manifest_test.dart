@@ -60,7 +60,18 @@ void main() {
       'android.permission.POST_NOTIFICATIONS',
       'android.permission.RECORD_AUDIO',
       'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+      // Wake-Word-Dienst (WP50, ADR 0013).
+      'android.permission.FOREGROUND_SERVICE',
+      'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+      'android.permission.WAKE_LOCK',
     });
+    expect(manifest, isNot(contains('BOOT_COMPLETED')));
+    expect(
+      manifest,
+      contains('''android:name=".WakeWordService"
+            android:foregroundServiceType="microphone"
+            android:exported="false"'''),
+    );
   });
 
   test(

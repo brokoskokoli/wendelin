@@ -117,8 +117,10 @@ final class VoicePipeline {
   /// Completes when the current request (including speech output) is over.
   Future<void> get whenIdle => _session;
 
-  /// Starts listening. Returns `false` if a request is already running.
-  bool start({TriggerEvent? trigger}) => _begin(trigger);
+  /// Starts listening. Returns `false` if a request is already running. The
+  /// pre-roll of [trigger] (wake word) is fed to the endpointer first.
+  bool start({TriggerEvent? trigger}) =>
+      _begin(trigger, preRoll: trigger?.preRoll);
 
   bool _begin(
     TriggerEvent? trigger, {

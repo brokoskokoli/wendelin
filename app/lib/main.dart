@@ -9,6 +9,7 @@ import 'di/maintenance.dart';
 import 'platform/recognizer/device_recognizer_engines.dart';
 import 'platform/screen_protection.dart';
 import 'platform/secure_secret_store.dart';
+import 'platform/wake/device_wake_parts.dart';
 import 'ui/overlay/assistant_overlay.dart';
 import 'ui/theme/app_theme.dart';
 import 'voice/voice_log.dart';
@@ -57,4 +58,14 @@ Future<void> assistantMain() async {
 Future<void> recognizerMain() {
   voiceLogEngine = 'recognizer';
   return runRecognizerEngine();
+}
+
+/// Entry point of the wake word service (`WakeWordService` starts it in a
+/// headless engine, ADR 0013): the feature chain, the templates of all
+/// learned voices and, on a candidate, Whisper; without database, UI or
+/// agent.
+@pragma('vm:entry-point')
+Future<void> wakeWordMain() {
+  voiceLogEngine = 'wake';
+  return runWakeEngine();
 }

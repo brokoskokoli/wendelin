@@ -58,6 +58,10 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
     @Volatile private var running = false
     private var thread: Thread? = null
 
+    /** Audio session of the running recording (0 before the start): tells it from foreign ones. */
+    @Volatile var sessionId = 0
+        private set
+
     @SuppressLint("MissingPermission") // Checked by the service before.
     override fun start(onChunk: (ByteArray) -> Unit, onError: (Throwable) -> Unit) {
         val minBuffer = AudioRecord.getMinBufferSize(
@@ -81,6 +85,7 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
             throw IllegalStateException("AudioRecord not initialized")
         }
         record.startRecording()
+        sessionId = record.audioSessionId
         running = true
         thread = Thread({
             val chunk = ByteArray(RecognizerAudioSource.CHUNK_SAMPLES * 2)

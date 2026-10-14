@@ -1,18 +1,27 @@
 package app.wendelin
 
 import android.content.Intent
+import android.os.Bundle
 import io.flutter.embedding.engine.FlutterEngine
 
 /**
  * The main app (conversation, settings). Most channels come from [WendelinActivity]; the battery
- * channel (settings only) is registered here, not in the overlay engine.
+ * and wake-word channels (settings only) are registered here, not in the overlay engine.
  */
 class MainActivity : WendelinActivity() {
     private var battery: BatteryChannel? = null
+    private var wake: WakeChannel? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // The visible app may start the wake-word service (WP50, source `app`).
+        WakeStarter.sync(this, "app")
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         battery = BatteryChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        wake = WakeChannel(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -23,6 +32,8 @@ class MainActivity : WendelinActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         battery?.dispose()
         battery = null
+        wake?.dispose()
+        wake = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

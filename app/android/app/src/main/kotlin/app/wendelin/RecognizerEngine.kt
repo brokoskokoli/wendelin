@@ -13,12 +13,18 @@ import io.flutter.plugin.common.MethodChannel
  * Headless Flutter engine running `recognizerMain` (app/lib/main.dart) for
  * [WendelinRecognitionService] (ADR 0008): Silero VAD, the pipeline's endpointing and Whisper
  * in Dart, without UI, database or agent. Calls to Dart wait until it reported `ready`.
+ * [WakeWordService] (WP50) runs `wakeWordMain` on its own channel the same way.
  *
  * Main thread only.
  */
-class RecognizerEngine(context: Context, private val handler: (MethodCall) -> Unit) {
+class RecognizerEngine(
+    context: Context,
+    private val handler: (MethodCall) -> Unit,
+    entrypoint: String = "recognizerMain",
+    channelName: String = CHANNEL,
+) {
     private val engine = FlutterEngine(context.applicationContext)
-    private val channel = MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
+    private val channel = MethodChannel(engine.dartExecutor.binaryMessenger, channelName)
     private val pending = mutableListOf<Pair<String, Any?>>()
     private val main = Handler(Looper.getMainLooper())
     private var ready = false
@@ -37,7 +43,7 @@ class RecognizerEngine(context: Context, private val handler: (MethodCall) -> Un
         }
         val loader = FlutterInjector.instance().flutterLoader()
         engine.dartExecutor.executeDartEntrypoint(
-            DartExecutor.DartEntrypoint(loader.findAppBundlePath(), "recognizerMain"),
+            DartExecutor.DartEntrypoint(loader.findAppBundlePath(), entrypoint),
         )
     }
 

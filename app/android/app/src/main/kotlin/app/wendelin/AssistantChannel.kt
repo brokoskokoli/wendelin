@@ -18,7 +18,8 @@ import io.flutter.plugin.common.MethodChannel
 /**
  * Platform side of `AssistantPlatform` (app/lib/platform/assistant_platform.dart): default
  * assistant status and settings, lock state, unlock request, closing the overlay, the
- * `trigger` call to Dart when the assistant is invoked again, and the system speech recognizer
+ * `trigger` call to Dart when the assistant is invoked again, the audio of a wake word hit
+ * (`takeWakeHandoff`, WP50), and the system speech recognizer
  * (offered to other apps, speech settings mirrored for it; [RecognizerSwitch]).
  */
 class AssistantChannel(private val activity: Activity, messenger: BinaryMessenger) :
@@ -82,6 +83,7 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
                 RecognizerConfig.fromArgs(call.arguments as? Map<*, *>).save(activity)
                 result.success(null)
             }
+            "takeWakeHandoff" -> result.success(WakeHandoff.take(System.currentTimeMillis()))
             "finish" -> {
                 VoiceLog.i("overlay-finish finishing=${activity.isFinishing}")
                 activity.finish()

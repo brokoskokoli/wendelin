@@ -37,5 +37,11 @@ const torchChannelName = 'app.wendelin/torch';
 /// `VaultChannel.kt`: Obsidian vault tree.
 const vaultChannelName = 'app.wendelin/vault';
 
+/// `WakeChannel.kt`: wake word settings and state (main app).
+const wakeChannelName = 'app.wendelin/wake';
+
+/// `WakeWordService.kt`: the headless engine of the wake word service.
+const wakeEngineChannelName = 'app.wendelin/wake-engine';
+
 /// `WindowChannel.kt`: screen protection.
 const windowChannelName = 'app.wendelin/window';

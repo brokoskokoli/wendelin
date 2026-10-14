@@ -27,6 +27,7 @@
           "args": ["model", "language", "vadThreshold", "minSpeechMs"],
           "returns": "none"
         },
+        "takeWakeHandoff": {"args": [], "returns": "value"},
         "finish": {"args": [], "returns": "none"}
       },
       "toDart": {
@@ -174,6 +175,43 @@
         "delete": {"args": ["tree", "path"], "returns": "none"}
       },
       "toDart": {}
+    },
+    "app.wendelin/wake": {
+      "dart": ["app/lib/platform/wake/wake_platform.dart"],
+      "kotlin": [
+        "app/android/app/src/main/kotlin/app/wendelin/WakeChannel.kt",
+        "app/android/app/src/main/kotlin/app/wendelin/WakePolicy.kt"
+      ],
+      "toKotlin": {
+        "configure": {"args": ["enabled", "mode", "verify"], "returns": "none"},
+        "status": {"args": [], "returns": "map"}
+      },
+      "toDart": {}
+    },
+    "app.wendelin/wake-engine": {
+      "dart": [
+        "app/lib/platform/wake/wake_host.dart",
+        "app/lib/platform/wake/service_audio_input.dart"
+      ],
+      "kotlin": [
+        "app/android/app/src/main/kotlin/app/wendelin/WakeWordService.kt",
+        "app/android/app/src/main/kotlin/app/wendelin/RecognizerEngine.kt"
+      ],
+      "toKotlin": {
+        "ready": {"args": [], "returns": "none"},
+        "startMic": {"args": [], "returns": "none"},
+        "stopMic": {"args": [], "returns": "none"},
+        "hit": {"args": ["pcm", "kw", "score"], "returns": "none"},
+        "failed": {"args": ["reason"], "returns": "none"}
+      },
+      "toDart": {
+        "run": {"args": ["verify"], "returns": "none"},
+        "audio": {"args": ["pcm"], "returns": "none"},
+        "audioError": {"args": ["message"], "returns": "none"},
+        "conflict": {"args": ["reason"], "returns": "none"},
+        "overlayClosed": {"args": [], "returns": "none"},
+        "shutdown": {"args": [], "returns": "none"}
+      }
     },
     "app.wendelin/window": {
       "dart": ["app/lib/platform/screen_protection.dart"],

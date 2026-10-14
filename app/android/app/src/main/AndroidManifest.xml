@@ -15,6 +15,12 @@
     <!-- Asks to exempt the app from battery optimization (WP56; no Play Store, K7). The system
          dialog decides; without it the assistant can fail to start after a long idle time. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- Wake word (WP50, ADR 0013): foreground service of type microphone with a permanent
+         notification; a partial wake lock keeps the detection running with the screen off.
+         No boot receiver: after a restart only the assistant role starts it. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
         android:label="Wendelin"
         android:name="${applicationName}"
@@ -74,6 +80,12 @@
             android:name=".WendelinVoiceSessionService"
             android:permission="android.permission.BIND_VOICE_INTERACTION"
             android:exported="true" />
+        <!-- Wake word listener (WP50): never exported; started by the app, the assistant service
+             and its own notification. -->
+        <service
+            android:name=".WakeWordService"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
         <!-- System speech recognizer for other apps (local Whisper, WP20/ADR 0008); Android
              also requires it for an assistant. Disabled until Wendelin holds the assistant role
              and the user offers it (RecognizerSwitch), so installing the app never makes it the
