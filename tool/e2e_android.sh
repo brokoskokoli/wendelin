@@ -175,7 +175,10 @@ host_request() {
       # an (Sperrbildschirm), dann KEYCODE_ASSIST. Entfernt wird die PIN von
       # `unlock` und beim Aufräumen.
       is_emulator || { echo "Sperre nur auf dem Emulator" >&2; exit 1; }
-      adb shell locksettings set-pin "$LOCK_PIN" >/dev/null
+      # Ist die PIN schon gesetzt (zweite Runde), schlägt set-pin fehl; dann prüfen.
+      adb shell locksettings set-pin "$LOCK_PIN" >/dev/null 2>&1 ||
+        adb shell locksettings verify --old "$LOCK_PIN" >/dev/null 2>&1 ||
+        { echo "PIN konnte nicht gesetzt werden" >&2; exit 1; }
       adb shell input keyevent KEYCODE_SLEEP
       sleep 2
       adb shell input keyevent KEYCODE_WAKEUP
