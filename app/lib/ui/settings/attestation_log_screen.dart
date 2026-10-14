@@ -97,6 +97,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             record: r,
             name: config?.nameOf(r.profileId) ?? r.profileId,
             locked: ref.watch(attestationHubProvider).isLocked(r.profileId),
+            noTools: config?.noToolsFor(r.profileId) ?? false,
             now: now,
             onReattest: () => unawaited(_reattest(r.profileId)),
           ),
@@ -193,6 +194,7 @@ class _SessionCard extends StatelessWidget {
     required this.record,
     required this.name,
     required this.locked,
+    required this.noTools,
     required this.now,
     required this.onReattest,
   });
@@ -200,6 +202,7 @@ class _SessionCard extends StatelessWidget {
   final AttestationRecord record;
   final String name;
   final bool locked;
+  final bool noTools;
   final DateTime now;
   final VoidCallback onReattest;
 
@@ -255,6 +258,7 @@ class _SessionCard extends StatelessWidget {
                     ),
                 ],
               ),
+              if (!noTools) const ToolTlsHint(),
               PrimaryButton(
                 'Neu attestieren',
                 key: ValueKey('reattest-${record.profileId}'),
@@ -319,7 +323,12 @@ List<Widget> stageRows(AttestationRecord r) => [
     StageLine(
       label: stageLabel(s.stage),
       result: stageResultLabel(s.result),
-      detail: s.detail,
+      detail: _stageDetail(s),
       status: stageResultStatus(s.result),
     ),
 ];
+
+String? _stageDetail(StageRecord s) {
+  final parts = [?s.detail, ?stageExplanation(s.stage)];
+  return parts.isEmpty ? null : parts.join('\n');
+}

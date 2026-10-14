@@ -70,6 +70,7 @@ final class AttestationGate {
           logId: report.logId,
           detail: report.detail,
           reasonCode: report.reasonCode,
+          toolsInvolved: report.toolsInvolved,
         ),
       );
     }

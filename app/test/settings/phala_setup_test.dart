@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/ui/design/design.dart' show WSwitch;
 import 'package:wendelin/ui/settings/provider_setup/attestation_stages_card.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -57,6 +58,7 @@ void main() {
     expect(p.privacy, PrivacyLevel.tee);
     expect(p.options.containsKey('attestationFallback'), isFalse);
     expect(p.options['attestation'], 'phala');
+    expect(p.options.containsKey('noTools'), isFalse, reason: 'Standard aus');
   });
 
   testWidgets('fehlgeschlagene Attestierung: Quadrat und die Stufe, die '
@@ -80,5 +82,85 @@ void main() {
     );
     expect(find.text('Signatur ungültig'), findsOneWidget);
     expect(find.text('Speichern'), findsNothing, reason: 'bleibt bei der Wahl');
+  });
+
+  testWidgets(
+    '„Ohne Tools (alles verschlüsselt)\u201c: Standard aus, Erklärtext, '
+    'wird gespeichert und beim Bearbeiten wieder angezeigt',
+    (tester) async {
+      final env = await _openPhala(tester, ScriptedVerifier());
+      await tester.tap(find.text('Modell prüfen'));
+      await tester.pumpAndSettle();
+      final row = find.text('Ohne Tools (alles verschlüsselt)');
+      await tester.scrollUntilVisible(
+        row,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('keine Aktionen ausführen'), findsOneWidget);
+      expect(find.textContaining('Kalender, Taschenlampe'), findsOneWidget);
+      expect(tester.widget<WSwitch>(find.byType(WSwitch)).value, isFalse);
+      await tester.tap(find.byType(WSwitch));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Speichern'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+      final saved = (await env.storage.providerProfiles.list()).single;
+      expect(saved.options['noTools'], isTrue);
+      expect(saved.options['attestation'], 'phala');
+    },
+  );
+
+  testWidgets('Bearbeiten: der Schalter zeigt den gespeicherten Wert und '
+      'Ausschalten entfernt die Option', (tester) async {
+    final gateway = ScriptedGateway();
+    final env = TestEnv(
+      storedProfiles: true,
+      llmFactory: (profile, _) =>
+          scriptedTee(verifier: ScriptedVerifier(), gateway: gateway),
+    );
+    final profile = ProviderProfile(
+      id: 'phala',
+      name: 'Phala (RedPill)',
+      type: ProviderType.openaiCompatible,
+      baseUrl: 'https://api.redpill.ai/v1',
+      defaultModel: 'z-ai/glm-5.3-flash',
+      privacy: PrivacyLevel.tee,
+      authMethod: const NoAuth(),
+      options: {'attestation': 'phala', 'noTools': true},
+    );
+    await env.storage.providerProfiles.save(profile);
+    setView(tester, const Size(390, 1800));
+    await tester.pumpWidget(
+      env.app(home: ProviderSetupScreen(existing: profile)),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('apiKey')), _key);
+    await tester.tap(find.text('Verbindung testen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Modell prüfen'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byType(WSwitch),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.widget<WSwitch>(find.byType(WSwitch)).value, isTrue);
+    await tester.tap(find.byType(WSwitch));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Speichern'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    final saved = (await env.storage.providerProfiles.list()).single;
+    expect(saved.options.containsKey('noTools'), isFalse);
+    expect(saved.options['attestation'], 'phala');
   });
 }

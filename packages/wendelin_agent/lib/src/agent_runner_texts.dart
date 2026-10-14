@@ -9,6 +9,11 @@ abstract final class AgentRunnerTexts {
   /// see.
   static const placeholder = '[Inhalt aus geschützter Quelle ausgeblendet]';
 
+  /// Appended to the system prompt when the profile offers no tools.
+  static const noToolsNote =
+      'Über dieses Profil sind keine Aktionen möglich (keine Tools). '
+      'Behaupte nie, etwas ausgeführt oder erledigt zu haben.';
+
   /// Replaces results of tools the target may not see and every result in
   /// a protected section.
   static const redactedResult =

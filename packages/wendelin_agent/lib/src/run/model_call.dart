@@ -7,6 +7,7 @@ library;
 
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../agent_runner_texts.dart';
 import '../context_builder.dart';
 import '../provider_resolver.dart';
 import 'attestation_gate.dart';
@@ -68,7 +69,9 @@ final class ModelCall {
     final config = runner.contextBuilder.config;
     final target = _state.current;
     final catalog = _privacy.catalog;
-    final tools = catalog.activeSpecs();
+    // A profile without tools (WP63) gets none; the history then reads as text.
+    final noTools = !target.provider.caps.tools;
+    final tools = noTools ? const <ToolSpec>[] : catalog.activeSpecs();
     final request = ChatRequest(
       messages: _privacy.messagesFor(catalog, hasTools: tools.isNotEmpty),
       model: target.modelId,
@@ -237,6 +240,13 @@ final class ModelCall {
   /// an untrusted tool result; only the changing end of the prompt differs
   /// for the cache).
   String _systemPrompt() {
+    final base = _basePrompt();
+    return _state.current.provider.caps.tools
+        ? base
+        : '$base\n\n${AgentRunnerTexts.noToolsNote}';
+  }
+
+  String _basePrompt() {
     final memories = _state.context.memories;
     final visible = _privacy.visibleMemories();
     final speech = _state.speech;

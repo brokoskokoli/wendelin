@@ -24,6 +24,7 @@ final class AttestationReport {
     required this.status,
     this.detail,
     this.reasonCode,
+    this.toolsInvolved = false,
   });
 
   /// Id of the audit-log entry with every check stage.
@@ -40,16 +41,32 @@ final class AttestationReport {
   /// `upstream_tcb_out_of_date` (operator's security update pending).
   final String? reasonCode;
 
+  /// Whether tool definitions were sent or tool calls were received in this
+  /// request. Tool arguments are not end-to-end encrypted, only protected by
+  /// the pinned TLS connection (ADR 0018, WP63).
+  final bool toolsInvolved;
+
+  /// This report with [toolsInvolved] set.
+  AttestationReport withToolsInvolved(bool value) => AttestationReport(
+    logId: logId,
+    status: status,
+    detail: detail,
+    reasonCode: reasonCode,
+    toolsInvolved: value,
+  );
+
   @override
   bool operator ==(Object other) =>
       other is AttestationReport &&
+      other.toolsInvolved == toolsInvolved &&
       other.logId == logId &&
       other.status == status &&
       other.detail == detail &&
       other.reasonCode == reasonCode;
 
   @override
-  int get hashCode => Object.hash(logId, status, detail, reasonCode);
+  int get hashCode =>
+      Object.hash(logId, status, detail, reasonCode, toolsInvolved);
 
   @override
   String toString() => 'AttestationReport($logId, ${status.name})';

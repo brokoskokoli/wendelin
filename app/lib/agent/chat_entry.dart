@@ -39,6 +39,7 @@ final class AnswerAttestation {
     this.logId = '',
     this.detail,
     this.reasonCode,
+    this.toolsInvolved = false,
   });
 
   /// Conversation step (model call) the result belongs to.
@@ -56,18 +57,24 @@ final class AnswerAttestation {
   /// Stable reason of a non-green result (`upstream_tcb_out_of_date`, …).
   final String? reasonCode;
 
+  /// Tools were sent or tool calls received in this call: their arguments
+  /// are protected by the pinned TLS connection only (WP63).
+  final bool toolsInvolved;
+
   /// A copy with another result for the same answer.
   AnswerAttestation withResult({
     required AttestationStatus status,
     String? logId,
     String? detail,
     String? reasonCode,
+    bool toolsInvolved = false,
   }) => AnswerAttestation(
     stepId: stepId,
     status: status,
     logId: logId ?? this.logId,
     detail: detail,
     reasonCode: reasonCode,
+    toolsInvolved: toolsInvolved,
   );
 
   @override
@@ -77,10 +84,12 @@ final class AnswerAttestation {
       other.status == status &&
       other.logId == logId &&
       other.detail == detail &&
-      other.reasonCode == reasonCode;
+      other.reasonCode == reasonCode &&
+      other.toolsInvolved == toolsInvolved;
 
   @override
-  int get hashCode => Object.hash(stepId, status, logId, detail, reasonCode);
+  int get hashCode =>
+      Object.hash(stepId, status, logId, detail, reasonCode, toolsInvolved);
 }
 
 /// Answer text of one model call (streamed; may be discarded by
