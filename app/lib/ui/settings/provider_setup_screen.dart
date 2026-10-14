@@ -157,6 +157,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       _busy = false;
       _result = result;
       if (!result.ok) return;
+      SecretField.finishAutofill();
       _connection = result;
       _models = result.models;
       final ids = [for (final m in _models) m.id];

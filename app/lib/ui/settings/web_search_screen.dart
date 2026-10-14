@@ -72,6 +72,7 @@ class _WebSearchState extends ConsumerState<WebSearchScreen> {
       );
     }
     _key.clear();
+    SecretField.finishAutofill();
     if (mounted) Navigator.of(context).pop();
   }
 

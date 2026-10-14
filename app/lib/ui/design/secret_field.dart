@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
 
 /// Input for a secret (API key, password, token): masked, offered to the
 /// password manager (Android autofill, [autofillHints]) and kept out of
-/// the keyboard's suggestions and learning ([TextField.enableSuggestions],
-/// [TextField.autocorrect], [TextField.enableIMEPersonalizedLearning]).
+/// the keyboard's learning ([TextField.autocorrect],
+/// [TextField.enableIMEPersonalizedLearning]; the masked field already has
+/// no suggestions).
+///
+/// Deliberately neither `enableSuggestions: false` nor
+/// `TextInputType.visiblePassword`: both make Android classify the field as
+/// no real password field, so password managers offered nothing above the
+/// keyboard (WP65). [finishAutofill] after saving lets the manager store it.
 ///
 /// A stored secret is never shown again: the screen says that one is
 /// stored ([helperText]) and the field only replaces it. Several fields of
@@ -21,6 +28,9 @@ class SecretField extends StatelessWidget {
     this.autofillHints = passwordHints,
     this.mono = false,
   });
+
+  /// Tells the password manager that the login is done (save prompt).
+  static void finishAutofill() => TextInput.finishAutofillContext();
 
   /// Autofill hint of a password, key or token.
   static const passwordHints = [AutofillHints.password];
@@ -50,9 +60,7 @@ class SecretField extends StatelessWidget {
     style: mono ? WText.mono : WText.body,
     obscureText: true,
     autocorrect: false,
-    enableSuggestions: false,
     enableIMEPersonalizedLearning: false,
-    keyboardType: TextInputType.visiblePassword,
     autofillHints: autofillHints,
     decoration: InputDecoration(
       labelText: label,

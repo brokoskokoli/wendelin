@@ -10,8 +10,10 @@ import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/settings/assistant_screen.dart';
+import 'package:wendelin/ui/settings/audit_log_screen.dart';
 import 'package:wendelin/ui/settings/costs_screen.dart';
 import 'package:wendelin/ui/settings/export.dart';
+import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin/ui/settings/integrations_screen.dart';
 import 'package:wendelin/ui/settings/memory_screen.dart';
 import 'package:wendelin/ui/settings/privacy_screen.dart';
@@ -72,6 +74,33 @@ void main() {
     await tester.tap(find.text('Integrationen'));
     await settle(tester);
     expect(find.byType(IntegrationsScreen), findsOneWidget);
+  });
+
+  testWidgets('Hauptmenü ohne Obsidian, Listen, Web-Suche, Gedächtnis', (
+    tester,
+  ) async {
+    await pumpPage(tester, TestEnv(), const SettingsScreen());
+    for (final name in ['Obsidian', 'Listen', 'Web-Suche', 'Gedächtnis']) {
+      expect(find.text(name), findsNothing, reason: name);
+    }
+  });
+
+  testWidgets('Integrationen führen zu Listen, Web, Obsidian, Gedächtnis', (
+    tester,
+  ) async {
+    for (final (id, row) in [
+      ('lists', 'Listen verwalten'),
+      ('web', 'Suchdienst einrichten'),
+      ('obsidian', 'Vault und Tagesnotizen'),
+      ('memory', 'Gedächtnis ansehen'),
+    ]) {
+      await pumpPage(
+        tester,
+        TestEnv(enabled: {id}),
+        IntegrationDetailScreen(id),
+      );
+      expect(find.text(row), findsOneWidget, reason: id);
+    }
   });
 
   group('Provider', () {
@@ -253,10 +282,28 @@ void main() {
       return env;
     }
 
-    testWidgets('Protokoll mit Filter, Export, Aufbewahrung', (tester) async {
+    testWidgets('Prüfprotokoll nur hinter dem Button, Aufbewahrung', (
+      tester,
+    ) async {
+      final env = await withAudit();
+      final c = await pumpPage(tester, env, const PrivacyScreen());
+      // WP65: nothing of the log inline, only status and the button.
+      expect(find.text('Wie wird das Meer?'), findsNothing);
+      expect(find.byType(ChoiceChip), findsNothing);
+      expect(find.text('Als JSON exportieren'), findsNothing);
+      expect(find.text('2 Einträge'), findsOneWidget);
+      expect(find.text('Prüfprotokoll ansehen'), findsOneWidget);
+
+      await tester.tap(find.text('90 Tage'));
+      await settle(tester);
+      expect(c.read(retentionDaysProvider), 90);
+      expect(await env.storage.settings.get(AppSettings.retentionDays), 90);
+    });
+
+    testWidgets('Prüfprotokoll-Seite: Filter und Export', (tester) async {
       final exports = ExportLog();
       final env = await withAudit(exports);
-      final c = await pumpPage(tester, env, const PrivacyScreen());
+      await pumpPage(tester, env, const AuditLogScreen());
       expect(find.text('Wie wird das Meer?'), findsOneWidget);
       expect(find.text('calendar__create_event · ok'), findsOneWidget);
 
@@ -269,11 +316,6 @@ void main() {
       await settle(tester);
       expect(exports.files.single.$2, 'application/json');
       expect(exports.files.single.$3, contains('calendar__create_event'));
-
-      await tester.tap(find.text('90 Tage'));
-      await settle(tester);
-      expect(c.read(retentionDaysProvider), 90);
-      expect(await env.storage.settings.get(AppSettings.retentionDays), 90);
     });
 
     testWidgets('alles löschen nur nach Bestätigung', (tester) async {

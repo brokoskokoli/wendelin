@@ -9,6 +9,7 @@ import '../../di/preferences.dart';
 import '../../di/providers.dart';
 import '../../di/sensitivity.dart';
 import '../design/design.dart';
+import '../routes.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
 
@@ -50,6 +51,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
           : null,
       children: [
         if (setupPageFor(id) case final page?) _setupRow(context, page),
+        if (id == 'memory') _setupRow(context, AppRoutes.memory),
         _toolsCard(integration, prefs, hasUndo: hasUndo, update: update),
         Text(
           'Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.',
@@ -69,10 +71,12 @@ class IntegrationDetailScreen extends ConsumerWidget {
           'lists' => 'Listen verwalten',
           'obsidian' => 'Vault und Tagesnotizen',
           'bring' => 'Bring!-Konto',
+          'memory' => 'Gedächtnis ansehen',
           _ => 'Einrichten',
         },
         detail: switch (id) {
           'web' => 'Ohne Suchdienst liest Wendelin nur Seiten',
+          'memory' => 'Einträge ansehen, ändern, exportieren',
           _ => null,
         },
         onTap: () => Navigator.of(context).pushNamed(page),

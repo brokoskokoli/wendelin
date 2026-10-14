@@ -98,17 +98,24 @@ Future<String?> askText(
       builder: (context) => AlertDialog(
         backgroundColor: WColors.surface,
         title: Text(title, style: WText.label),
-        content: TextField(
-          key: const ValueKey('mcpDialogField'),
-          controller: controller,
-          autofocus: true,
-          obscureText: obscure,
-          autocorrect: false,
-          enableSuggestions: false,
-          maxLines: obscure ? 1 : maxLines,
-          style: WText.body,
-          decoration: InputDecoration(labelText: label),
-        ),
+        content: obscure
+            ? AutofillGroup(
+                child: SecretField(
+                  key: const ValueKey('mcpDialogField'),
+                  controller: controller,
+                  label: label,
+                ),
+              )
+            : TextField(
+                key: const ValueKey('mcpDialogField'),
+                controller: controller,
+                autofocus: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                maxLines: maxLines,
+                style: WText.body,
+                decoration: InputDecoration(labelText: label),
+              ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

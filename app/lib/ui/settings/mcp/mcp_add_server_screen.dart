@@ -127,6 +127,7 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
     }
     _token.clear();
     _headerValue.clear();
+    SecretField.finishAutofill();
     // Set up explicitly by the user: switch it on (connects the server).
     await sync.settled();
     await activator.setEnabled(server.integrationId, enabled: true);

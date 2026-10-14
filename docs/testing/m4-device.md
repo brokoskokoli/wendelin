@@ -306,6 +306,9 @@ Quelle M4: `docs/work-packages/M4.md` („Messbare Definition of Done“) und da
 - [ ] **D4.11** TCB `OutOfDate` rot mit Hinweis (Entscheidung 3): 12.6. Emulator belegt (WP46 Fixture).
 - [ ] **D4.12** Taschenlampe als Integration inklusive gesperrtes Gerät (K16): Block 8. Emulator belegt (WP48, WP53 mit Fake-Torch; die echte LED nur am Gerät).
 - [ ] **D4.13** Wake Word nur mit Assistentenrolle (Entscheidung 5) und Mikrofon-Indikator „nur beim Laden“ als Standard, wählbar „immer“ (Entscheidung 7): 10.2, 10.3, 10.6.
+- [ ] **D4.14** (WP65) Passwortmanager: Beim Antippen von Bring!-Passwort, Anbieter-API-Key, Websuche-Key, MCP-Token/-Header-Wert und HTTP-Tool-Secret erscheint die Autofill-Leiste des Passwortmanagers über der Tastatur (mit Gerät und Manager nennen, z. B. Bitwarden); nach dem Speichern bietet er an, den Eintrag zu sichern. Offen, nur am Gerät prüfbar.
+- [ ] **D4.15** (WP65) Prüfprotokoll nur über „Prüfprotokoll ansehen“ (Datenschutz und Logs; Anbieter-Einrichtung nach dem Test), keine Liste inline. Hauptmenü ohne Obsidian/Listen/Web-Suche/Gedächtnis (nur unter Integrationen).
+- [ ] **D4.16** (WP65) Aktivierungswort ohne geladene Modelle: Hinweis „Dafür muss zuerst das Sprachmodell geladen werden“ mit Button „Sprachmodell laden“, Einlernen/Kalibrieren/Ausprobieren gesperrt, nach dem Laden frei.
 
 ## Aufräumen
 

@@ -9,6 +9,7 @@ import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/ui/design/design.dart' show WSwitch;
 import 'package:wendelin/ui/settings/wake/wake_calibrate_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_enroll_screen.dart';
+import 'package:wendelin/ui/settings/wake/wake_models.dart';
 import 'package:wendelin/ui/settings/wake/wake_test_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_word_screen.dart';
 import 'package:wendelin/voice/wake/utterance_capture.dart';
@@ -53,7 +54,9 @@ TestEnv wakeEnv({
       ...extra,
     ],
   );
-  if (installed) env.speechModels.installed.add('wake-features');
+  if (installed) {
+    env.speechModels.installed.addAll(['wake-features', 'whisper-small']);
+  }
   return env;
 }
 
@@ -125,7 +128,53 @@ void main() {
             .onPressed,
         isNull,
       );
-      expect(find.textContaining('zuerst die Merkmalsmodelle'), findsOneWidget);
+      expect(
+        find.textContaining('zuerst das Sprachmodell geladen werden'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('ohne Modell: Kalibrieren und Ausprobieren gesperrt, '
+        'Laden-Button lädt beide Modelle', (tester) async {
+      final env = wakeEnv(installed: false);
+      final c = await pumpWake(tester, env, const WakeWordScreen());
+      for (final label in [
+        'Kalibrieren (30 min, empfohlen)',
+        'Jetzt ausprobieren',
+      ]) {
+        expect(
+          tester
+              .widget<OutlinedButton>(
+                find.widgetWithText(OutlinedButton, label),
+              )
+              .onPressed,
+          isNull,
+          reason: label,
+        );
+      }
+      expect(c.read(wakeMissingModelsProvider).map((m) => m.id), [
+        'wake-features',
+        'whisper-small',
+      ]);
+      await tester.tap(find.text('Sprachmodell laden'));
+      await tester.pump();
+      expect(
+        env.speechModels.running.keys,
+        containsAll(['wake-features', 'whisper-small']),
+      );
+    });
+
+    testWidgets('Whisper fehlt nur bei eingeschalteter Nachprüfung', (
+      tester,
+    ) async {
+      final env = wakeEnv(installed: false);
+      env.speechModels.installed.add('wake-features');
+      final c = await pumpWake(tester, env, const WakeWordScreen());
+      expect(c.read(wakeMissingModelsProvider).map((m) => m.id), [
+        'whisper-small',
+      ]);
+      await c.read(wakeVerifyProvider.notifier).set(enabled: false);
+      expect(c.read(wakeMissingModelsProvider), isEmpty);
     });
 
     testWidgets('Nachprüfung ist standardmäßig an und lässt sich abschalten', (

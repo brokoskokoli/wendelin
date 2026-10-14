@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/bring_screen.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
+import 'package:wendelin/ui/settings/mcp/mcp_add_server_screen.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin/ui/settings/web_search_screen.dart';
 
@@ -33,7 +34,10 @@ void expectSecret(WidgetTester tester, Key key) {
   final field = fieldOf(tester, key);
   expect(field.obscureText, isTrue);
   expect(field.autofillHints, [AutofillHints.password]);
-  expect(field.enableSuggestions, isFalse);
+  // WP65: neither of these may be set, otherwise Android password
+  // managers offer nothing above the keyboard.
+  expect(field.keyboardType, isNot(TextInputType.visiblePassword));
+  expect(field.enableSuggestions, isTrue);
   expect(field.autocorrect, isFalse);
   expect(field.enableIMEPersonalizedLearning, isFalse);
   expect(
@@ -106,5 +110,12 @@ void main() {
     await tester.tap(find.text('+ Geheimer Header'));
     await tester.pumpAndSettle();
     expectSecret(tester, const ValueKey('secretHeaderValue0'));
+  });
+
+  testWidgets('MCP: Token und Header-Wert sind Passwortfelder', (tester) async {
+    await pumpPage(tester, TestEnv(), const McpAddServerScreen());
+    await tester.tap(find.text('Home Assistant'));
+    await tester.pumpAndSettle();
+    expectSecret(tester, const ValueKey('mcpToken'));
   });
 }

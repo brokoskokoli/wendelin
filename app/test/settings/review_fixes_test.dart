@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/platform/saf_list_file_port.dart';
 import 'package:wendelin/ui/design/design.dart';
+import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/settings/integration_detail_screen.dart';
 import 'package:wendelin/ui/settings/lists_screen.dart';
@@ -85,7 +88,17 @@ void main() {
         await settle(tester);
       }
 
-      await open('Gedächtnis');
+      // WP65: Gedächtnis is no main menu entry any more.
+      expect(find.text('Gedächtnis'), findsNothing);
+      Future<void> openMemory() async {
+        unawaited(
+          Navigator.of(tester.element(find.byType(SettingsScreen)))
+              .pushNamed(AppRoutes.memory),
+        );
+        await settle(tester);
+      }
+
+      await openMemory();
       expect(find.text('Noch keine Einträge.'), findsOneWidget);
       await back(tester);
       await open('Datenschutz und Logs');
@@ -117,11 +130,11 @@ void main() {
         );
       });
 
-      await open('Gedächtnis');
+      await openMemory();
       expect(find.text('Neu gemerkt'), findsOneWidget);
       await back(tester);
       await open('Datenschutz und Logs');
-      expect(find.text('Neue Anfrage'), findsOneWidget);
+      expect(find.text('1 Eintrag'), findsOneWidget);
       await back(tester);
       await open('Kosten');
       expect(find.textContaining('heute 0,03'), findsOneWidget);
@@ -222,7 +235,10 @@ void main() {
       source: 'u',
     );
     await pumpHome(tester, env, const SettingsScreen());
-    await tester.tap(find.text('Gedächtnis'));
+    unawaited(
+      Navigator.of(tester.element(find.byType(SettingsScreen)))
+          .pushNamed(AppRoutes.memory),
+    );
     await settle(tester);
     await tester.tap(find.text('X'));
     await tester.pumpAndSettle();

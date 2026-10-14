@@ -56,6 +56,9 @@ abstract final class AppRoutes {
   /// Privacy and logs.
   static const privacy = '/settings/privacy';
 
+  /// Audit log page (Prüfprotokoll, WP65).
+  static const auditLog = '/settings/privacy/audit';
+
   /// TEE verification log (Prüfprotokoll) and GPU check setting (WP52).
   static const attestationLog = '/settings/privacy/tee';
 

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
-import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
 import '../../../voice/wake/wake_storage.dart';
 import '../../design/design.dart';
@@ -12,6 +11,7 @@ import '../model_download_row.dart';
 import '../settings_page.dart';
 import 'wake_calibrate_screen.dart';
 import 'wake_enroll_screen.dart';
+import 'wake_models.dart';
 import 'wake_service_section.dart';
 import 'wake_test_screen.dart';
 
@@ -26,13 +26,7 @@ class WakeWordScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
-    final installed =
-        ref.watch(
-          modelStatesProvider.select(
-            (s) => s[SpeechModelCatalog.wakeFeatures.id]?.phase,
-          ),
-        ) ==
-        ModelPhase.installed;
+    final installed = ref.watch(wakeMissingModelsProvider).isEmpty;
     return SettingsPage(
       title: 'Aktivierungswort',
       intro:
@@ -42,7 +36,12 @@ class WakeWordScreen extends ConsumerWidget {
           'gespeichert.',
       children: [
         WakeServiceSection(
-          onEnroll: () => unawaited(_enroll(context, ref, speakers, null)),
+          onEnroll: installed
+              ? () => unawaited(_enroll(context, ref, speakers, null))
+              : () => showHint(
+                  context,
+                  'Dafür muss zuerst das Sprachmodell geladen werden.',
+                ),
         ),
         SettingsSection(
           title: 'Merkmalsmodelle',
@@ -71,11 +70,7 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_enroll(context, ref, speakers, null))
               : null,
         ),
-        if (!installed)
-          Text(
-            'Dafür müssen zuerst die Merkmalsmodelle geladen sein.',
-            style: WText.caption,
-          ),
+        if (!installed) const WakeModelsNotice(),
         WideButton(
           'Kalibrieren (30 min, empfohlen)',
           onPressed: installed && speakers.isNotEmpty
