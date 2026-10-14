@@ -404,6 +404,7 @@ final class AttestationStatusChanged extends AgentEvent {
     required this.status,
     required this.logId,
     this.detail,
+    this.reasonCode,
   });
 
   /// The conversation step (model call) the status belongs to.
@@ -417,6 +418,11 @@ final class AttestationStatusChanged extends AgentEvent {
 
   /// Short German hint (e.g. TCB note), secret-free.
   final String? detail;
+
+  /// Stable reason of a non-green result the UI words on its own, e.g.
+  /// `upstream_tcb_out_of_date`, `tcb_relaunch_advised`, `gpu_failed`
+  /// (see `AttestationReport.reasonCode`).
+  final String? reasonCode;
 
   @override
   String toString() => 'AttestationStatusChanged($stepId, ${status.name})';

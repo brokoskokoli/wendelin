@@ -198,7 +198,7 @@ final class ModelCall {
     List<ContentBlock> blocks, {
     required bool failed,
   }) async {
-    _attest.begin(provider, request);
+    _attest.begin(provider, request, failed: failed);
     if (failed || !blocks.any((b) => b is ToolCallBlock)) {
       await _attest.settle();
     }

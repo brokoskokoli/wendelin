@@ -173,7 +173,8 @@ final class AuditRecorder implements ToolAuditSink {
       case AttestationStatusChanged(:final logId, :final stepId):
         // The result itself is written by the provider's log sink; here it
         // only gets its place in the conversation.
-        attestation?.attach(logId, sessionId, stepId);
+        // Pending (yellow) events carry no log id yet.
+        if (logId.isNotEmpty) attestation?.attach(logId, sessionId, stepId);
     }
   }
 
