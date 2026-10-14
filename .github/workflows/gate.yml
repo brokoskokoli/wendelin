@@ -15,22 +15,18 @@ jobs:
       - run: flutter pub get
       # Rust-Prüfmodul native/attest (WP47): fmt, clippy, test, deny und "frb-Code aktuell"
       # laufen im Gate; mit CI=true ist ein fehlendes Werkzeug ein Fehler.
-      - uses: dtolnay/rust-toolchain@stable
+      # Version = native/attest/rust-toolchain.toml.
+      - uses: dtolnay/rust-toolchain@1.99.0
         with:
           components: rustfmt, clippy
+      # rust-cache sichert auch ~/.cargo/bin; installiert wird nur, was fehlt.
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: native/attest
       - name: Rust-Werkzeuge (cargo-deny, flutter_rust_bridge_codegen)
-        uses: actions/cache@v4
-        id: rust-tools
-        with:
-          path: ~/.cargo/bin
-          key: rust-tools-${{ runner.os }}-deny-0.19-frb-2.12.0
-      - if: steps.rust-tools.outputs.cache-hit != 'true'
         run: |
-          cargo install cargo-deny --locked
-          cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
+          command -v cargo-deny >/dev/null || cargo install cargo-deny --version '~0.19' --locked
+          command -v flutter_rust_bridge_codegen >/dev/null || cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
       - run: dart run tool/gate.dart --no-app
       - name: Zeitzonen-Lauf (Ortszeit-Logik)
         run: dart test
@@ -82,20 +78,15 @@ jobs:
           cache: true
       - run: flutter pub get
       # Rust-Prüfmodul (WP47): cargo-ndk baut die .so für arm64-v8a, Gradle packt sie ins APK.
-      - uses: dtolnay/rust-toolchain@stable
+      # Version = native/attest/rust-toolchain.toml.
+      - uses: dtolnay/rust-toolchain@1.99.0
         with:
           targets: aarch64-linux-android
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: native/attest
-      - name: cargo-ndk und NDK
-        uses: actions/cache@v4
-        id: ndk-tools
-        with:
-          path: ~/.cargo/bin
-          key: rust-tools-${{ runner.os }}-ndk-4.1
-      - if: steps.ndk-tools.outputs.cache-hit != 'true'
-        run: cargo install cargo-ndk --locked
+      - name: cargo-ndk
+        run: command -v cargo-ndk >/dev/null || cargo install cargo-ndk --version 4.1.2 --locked
       - run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358"
       - run: flutter build apk --release --target-platform android-arm64
         working-directory: app

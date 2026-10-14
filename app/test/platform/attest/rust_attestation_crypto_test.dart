@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
+    show PanicException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -185,6 +187,48 @@ void main() {
     backend.throwOnVerify = true;
     await expectLater(
       c.verifyQuote(quote, col, now),
+      throwsA(isA<QuoteVerificationException>()),
+    );
+  });
+
+  test('TDRelaunchAdvised ist rot wie OutOfDate und nennt den Grund', () async {
+    final c = build();
+    final col = QuoteCollateral(Uint8List(0));
+    const names = {
+      'TDRelaunchAdvised': TcbStatus.outOfDate,
+      'TDRelaunchAdvisedConfigurationNeeded':
+          TcbStatus.outOfDateConfigurationNeeded,
+    };
+    for (final e in names.entries) {
+      backend.quoteResult = _info(backend, status: e.key);
+      final v = await c.verifyQuote(quote, col, now);
+      expect(v.tcbStatus, e.value);
+      expect(
+        v.advisoryIds,
+        contains(RustAttestationCrypto.relaunchAdvisedReason),
+      );
+      expect(v.advisoryIds, contains('INTEL-SA-1'));
+    }
+  });
+
+  test('PanicException aus Rust wird zur QuoteVerificationException', () async {
+    final c = build();
+    final col = QuoteCollateral(Uint8List(0));
+    backend.panic = PanicException('boom');
+    await expectLater(
+      c.verifyQuote(quote, col, now),
+      throwsA(isA<QuoteVerificationException>()),
+    );
+    expect(
+      () => c.verifyEd25519(Uint8List(32), Uint8List(1), Uint8List(64)),
+      throwsA(isA<QuoteVerificationException>()),
+    );
+    expect(
+      () => c.sha256(Uint8List(1)),
+      throwsA(isA<QuoteVerificationException>()),
+    );
+    expect(
+      () => c.sha384(Uint8List(1)),
       throwsA(isA<QuoteVerificationException>()),
     );
   });

@@ -120,6 +120,23 @@ fn expired_keyset_only_breaks_freshness() {
 }
 
 #[test]
+fn keyset_is_expired_exactly_at_not_after() {
+    only_red(&check(&report(), NOT_AFTER - 1), &[]);
+    only_red(&check(&report(), NOT_AFTER), &["not_expired"]);
+}
+
+#[test]
+fn cargo_release_profile_unwinds_so_panics_become_dart_errors() {
+    // flutter_rust_bridge fängt Panics mit catch_unwind; mit panic = "abort" stürzte die App ab.
+    let toml = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml")).unwrap();
+    assert!(
+        toml.contains("panic = \"unwind\""),
+        "panic muss unwind sein"
+    );
+    assert!(!toml.contains("panic = \"abort\""));
+}
+
+#[test]
 fn expired_collateral_fails_quote_stage() {
     // nach nextUpdate (2026-11-12T22:38:12Z)
     let v = check(&report(), 1_794_523_093);

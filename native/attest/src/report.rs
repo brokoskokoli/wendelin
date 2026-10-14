@@ -131,9 +131,7 @@ fn verify_inner(
         return Err(e.clone());
     }
     r.quote_ok = q.ok;
-    let mut want = rd.to_vec();
-    want.extend([0u8; 32]);
-    r.quote_report_data_ok = q.report_data == want;
+    r.quote_report_data_ok = quote_report_data_matches(&q.report_data, &rd);
     let (replayed, compose_ev) = replay_rtmr3(ev)?;
     r.rtmr3_replay_ok = replayed.as_slice() == q.rt_mr3.as_slice();
     let ac = s(ev, &["app_compose"]).ok_or("app_compose fehlt")?;
@@ -141,6 +139,13 @@ fn verify_inner(
         compose_ev.is_some() && compose_ev == Some(hex::encode(Sha256::digest(ac.as_bytes())));
     r.compose_hash = compose_ev;
     Ok(())
+}
+
+/// `report_data` des Quotes (64 Byte) muss `sha256(statement) || 32 Null-Byte` sein; alle 64 Byte zählen.
+pub(crate) fn quote_report_data_matches(report_data: &[u8], digest: &[u8]) -> bool {
+    let mut want = digest.to_vec();
+    want.extend([0u8; 32]);
+    report_data == want.as_slice()
 }
 
 /// RTMR3 aus dem Ereignisprotokoll: je Ereignis `sha384(typ_le32 ":" name ":" nutzlast)`,
@@ -265,4 +270,42 @@ pub fn tls_spki_listed(report_json: &str, observed_spki_hex: &str, host: &str) -
                         .is_none_or(|d| d.eq_ignore_ascii_case(host))
             })
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ed25519_dalek::Verifier;
+
+    #[test]
+    fn quote_report_data_compares_all_64_bytes() {
+        let digest = [7u8; 32];
+        let mut rd = digest.to_vec();
+        rd.extend([0u8; 32]);
+        assert!(quote_report_data_matches(&rd, &digest));
+        for i in [0usize, 31, 32, 47, 63] {
+            let mut bad = rd.clone();
+            bad[i] ^= 1;
+            assert!(!quote_report_data_matches(&bad, &digest), "Byte {i}");
+        }
+        assert!(!quote_report_data_matches(&rd[..32], &digest));
+        assert!(!quote_report_data_matches(
+            &[rd.clone(), vec![0]].concat(),
+            &digest
+        ));
+    }
+
+    #[test]
+    fn weak_key_signature_is_rejected_by_strict_verification() {
+        // Öffentlicher Schlüssel = Neutralelement (kleine Ordnung), R = Neutralelement, S = 0:
+        // die nicht strikte Prüfung `verify` akzeptiert das für jede Nachricht.
+        let mut pk = [0u8; 32];
+        pk[0] = 1;
+        let mut sig = [0u8; 64];
+        sig[0] = 1;
+        let vk = VerifyingKey::from_bytes(&pk).unwrap();
+        let s = Signature::from_slice(&sig).unwrap();
+        assert!(vk.verify(b"beliebig", &s).is_ok(), "Testvektor taugt nicht");
+        assert!(!ed25519_ok(&pk, b"beliebig", &sig));
+    }
 }

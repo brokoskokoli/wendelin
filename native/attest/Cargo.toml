@@ -28,5 +28,5 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
 opt-level = "z"
 lto = true
 codegen-units = 1
-panic = "abort"
+panic = "unwind"
 strip = true

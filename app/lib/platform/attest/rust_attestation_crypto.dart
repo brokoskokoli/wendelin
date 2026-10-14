@@ -21,6 +21,10 @@ final class RustAttestationCrypto implements AttestationCrypto {
     this.renewBefore = const Duration(days: 3),
   });
 
+  /// Grund, der bei `TDRelaunchAdvised*` zusätzlich in `advisoryIds` steht.
+  static const relaunchAdvisedReason =
+      'Neustart der TEE beim Betreiber empfohlen';
+
   /// Rust-Funktionen.
   final AttestBackend backend;
 
@@ -57,7 +61,10 @@ final class RustAttestationCrypto implements AttestationCrypto {
       tcbStatus: _tcb(r.tcbStatus),
       reportData: r.reportData,
       rtmr3: r.rtMr3,
-      advisoryIds: r.advisoryIds,
+      advisoryIds: [
+        ...r.advisoryIds,
+        if (r.tcbStatus.startsWith('TDRelaunchAdvised')) relaunchAdvisedReason,
+      ],
     );
   }
 
@@ -70,6 +77,10 @@ final class RustAttestationCrypto implements AttestationCrypto {
     'OutOfDate' => TcbStatus.outOfDate,
     'OutOfDateConfigurationNeeded' => TcbStatus.outOfDateConfigurationNeeded,
     'Revoked' => TcbStatus.revoked,
+    // Intel empfiehlt einen Neustart der TEE (neuer TCB-Stand verfügbar): wie "veraltet" rot.
+    'TDRelaunchAdvised' => TcbStatus.outOfDate,
+    'TDRelaunchAdvisedConfigurationNeeded' =>
+      TcbStatus.outOfDateConfigurationNeeded,
     _ => throw QuoteVerificationException('unbekannter TCB-Status: $s'),
   };
 
@@ -107,13 +118,22 @@ final class RustAttestationCrypto implements AttestationCrypto {
     Uint8List publicKey,
     Uint8List message,
     Uint8List signature,
-  ) => backend.ed25519(publicKey, message, signature);
+  ) => _sync(() => backend.ed25519(publicKey, message, signature));
 
   @override
-  Uint8List sha256(Uint8List data) => backend.sha256(data);
+  Uint8List sha256(Uint8List data) => _sync(() => backend.sha256(data));
 
   @override
-  Uint8List sha384(Uint8List data) => backend.sha384(data);
+  Uint8List sha384(Uint8List data) => _sync(() => backend.sha384(data));
+
+  /// Ein Panic im Rust-Modul (`PanicException`) wird zum Prüffehler, nicht zum Absturz.
+  static T _sync<T>(T Function() call) {
+    try {
+      return call();
+    } on Object catch (e) {
+      throw QuoteVerificationException('Prüfmodul: ${e.runtimeType}');
+    }
+  }
 
   @override
   Uint8List spkiSha256(Uint8List certificateDer) {

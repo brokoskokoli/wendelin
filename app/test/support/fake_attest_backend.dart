@@ -28,6 +28,9 @@ final class FakeAttestBackend implements AttestBackend {
   var throwOnVerify = false;
   var throwOnSpki = false;
 
+  /// Wird (falls gesetzt) bei jedem Aufruf geworfen, wie ein Rust-Panic.
+  Object? panic;
+
   @override
   Future<CollateralRequest> collateralRequest(Uint8List quote) async {
     requests++;
@@ -59,6 +62,7 @@ final class FakeAttestBackend implements AttestBackend {
     int nowUnix,
   ) async {
     lastNow = nowUnix;
+    if (panic != null) throw panic!;
     if (throwOnVerify) throw StateError('x');
     return quoteResult;
   }
@@ -72,14 +76,22 @@ final class FakeAttestBackend implements AttestBackend {
       throw UnimplementedError();
 
   @override
-  bool ed25519(Uint8List pk, Uint8List msg, Uint8List sig) =>
-      pk.length == 32 && sig.isNotEmpty;
+  bool ed25519(Uint8List pk, Uint8List msg, Uint8List sig) {
+    if (panic != null) throw panic!;
+    return pk.length == 32 && sig.isNotEmpty;
+  }
 
   @override
-  Uint8List sha256(Uint8List data) => Uint8List.fromList([data.length]);
+  Uint8List sha256(Uint8List data) {
+    if (panic != null) throw panic!;
+    return Uint8List.fromList([data.length]);
+  }
 
   @override
-  Uint8List sha384(Uint8List data) => Uint8List.fromList([data.length, 384]);
+  Uint8List sha384(Uint8List data) {
+    if (panic != null) throw panic!;
+    return Uint8List.fromList([data.length, 384]);
+  }
 
   @override
   Uint8List spkiSha256(Uint8List der) {
