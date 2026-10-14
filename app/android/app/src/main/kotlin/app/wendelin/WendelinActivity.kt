@@ -7,7 +7,7 @@ import io.flutter.embedding.engine.FlutterEngine
 
 /**
  * Flutter activity with Wendelin's platform channels (calendar, files, vault, apps, network,
- * OAuth login, assistant).
+ * OAuth login, assistant, battery).
  * Both the main app ([MainActivity]) and the assistant overlay ([AssistantActivity]) run
  * the tools, so both engines need the same channels.
  */
@@ -19,6 +19,7 @@ abstract class WendelinActivity : FlutterActivity() {
     private var apps: AppsChannel? = null
     private var network: NetworkChannel? = null
     private var auth: AuthChannel? = null
+    private var battery: BatteryChannel? = null
     protected var assistant: AssistantChannel? = null
         private set
 
@@ -39,6 +40,7 @@ abstract class WendelinActivity : FlutterActivity() {
         network = NetworkChannel(this, messenger)
         auth = AuthChannel(this, messenger)
         assistant = AssistantChannel(this, messenger)
+        battery = BatteryChannel(this, messenger)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -58,6 +60,8 @@ abstract class WendelinActivity : FlutterActivity() {
         auth = null
         assistant?.dispose()
         assistant = null
+        battery?.dispose()
+        battery = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 

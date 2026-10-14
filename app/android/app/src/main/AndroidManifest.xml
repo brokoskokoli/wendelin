@@ -9,6 +9,9 @@
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
     <!-- Voice input (WP17): asked on first use, after an explanation. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Asks to exempt the app from battery optimization (WP56; no Play Store, K7). The system
+         dialog decides; without it the assistant can fail to start after a long idle time. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <application
         android:label="Wendelin"
         android:name="${applicationName}"
@@ -111,6 +114,12 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Vendor power settings (WP56, BatteryVendors): visible so resolveActivity works. -->
+        <package android:name="com.miui.securitycenter"/>
+        <package android:name="com.miui.powerkeeper"/>
+        <package android:name="com.samsung.android.lool"/>
+        <package android:name="com.oneplus.security"/>
+        <package android:name="com.huawei.systemmanager"/>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
