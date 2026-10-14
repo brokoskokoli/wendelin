@@ -247,14 +247,17 @@ String testDetail(({int passed, int failed, int skipped})? c) {
 }
 
 /// Zeilenabdeckung in Prozent aus `lcov.info`, ohne generierten Code
-/// (`*.g.dart`, `*.steps.dart`) und ohne `lib/testing/`.
-double lcovCoverage(Iterable<String> lines) {
+/// (`*.g.dart`, `*.steps.dart`) und ohne `lib/testing/`. Mit [under]
+/// zählen nur Dateien, deren Pfad diesen Ausschnitt enthält (z. B.
+/// `lib/di/`).
+double lcovCoverage(Iterable<String> lines, {String? under}) {
   var found = 0, hit = 0;
   var skip = false;
   for (final line in lines) {
     if (line.startsWith('SF:')) {
       final f = line.substring(3);
       skip =
+          (under != null && !f.contains(under)) ||
           f.endsWith('.g.dart') ||
           // drift `make-migrations` (generierte Schema-Schritte).
           f.endsWith('.steps.dart') ||

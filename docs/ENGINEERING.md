@@ -65,7 +65,7 @@ dart run tool/gate.dart --verbose    # bisherige, ausführliche Ausgabe
 1. `dart format --output=none --set-exit-if-changed` auf den geprüften Ordnern
 2. `dart analyze --fatal-infos` (bzw. `flutter analyze` für app)
 3. `dart test` in jedem Paket, `flutter test` in app (Reporter `failures-only`, Testanzahl aus dem JSON-Bericht)
-4. Zeilenabdeckung je Paket unter `packages/` **≥ 85 %** (`dart test --coverage` + `coverage:format_coverage`)
+4. Zeilenabdeckung je Paket unter `packages/` **≥ 85 %** (`dart test --coverage` + `coverage:format_coverage`). Für die App wird `app/lib/di/` gemessen (`flutter test --coverage`, nur dieser Ordner), Schwelle **`minAppDiCoverage` in `tool/gate.dart`** (Messwert nach WP39 abgerundet auf volle 5 %, mindestens 70 %); die Gate-Zeile `test app` zeigt den Wert. **`di/` ist nur Verdrahtung:** `Provider(...)`, dünne Notifier, die an Paket-Logik delegieren, und Adapter auf Plugins oder Einstellungen. Logik ohne Flutter-Bezug (Modelle, Validierung, Zustandsmaschinen, Abgleich) gehört in ein reines Dart-Paket und fällt dort unter die 85-%-Regel
 5. `dart run tool/check_deps.dart` (Abhängigkeitsregeln oben, auch für `dev_dependencies`)
 6. `dart run tool/check_secrets.dart` (keine Schlüssel-Muster im Baum; verbotene Identitäten aus einer lokalen, nicht versionierten Liste)
 7. `dart run tool/check_sizes.dart` (Größen, siehe unten) und `dart run tool/check_docs.dart` (Pfadangaben in `docs/ARCHITECTURE.md`, dieser Datei, `CLAUDE.md` und den Paket-READMEs existieren)

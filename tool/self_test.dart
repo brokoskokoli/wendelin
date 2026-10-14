@@ -409,6 +409,13 @@ environment:
     '84,9 % ist rot',
   );
   t.eq(lcovCoverage(const []), 100.0, 'ohne Zeilen 100 %');
+  final appLcov = [
+    'SF:lib/di/a.dart', 'LF:100', 'LH:80', //
+    'SF:lib/ui/b.dart', 'LF:100', 'LH:0', //
+    'SF:lib/di/c.dart', 'LF:100', 'LH:60',
+  ];
+  t.eq(lcovCoverage(appLcov, under: 'lib/di/'), 70.0, 'nur lib/di/');
+  t.eq(lcovCoverage(appLcov), 140 * 100 / 300, 'ohne Filter alles');
   final pkg = Directory.systemTemp.createTempSync('gate_cov_');
   try {
     File('${pkg.path}/coverage/test/alt.dart.vm.json')
