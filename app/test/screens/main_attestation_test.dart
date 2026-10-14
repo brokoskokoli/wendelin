@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/ui/design/design.dart';

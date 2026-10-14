@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/ui/design/design.dart';
-import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin/ui/settings/provider_setup/attestation_stages_card.dart';
+import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 

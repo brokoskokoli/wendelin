@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_hub.dart';
@@ -12,7 +11,6 @@ import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/fakes.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
-import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../support/tee_app_support.dart';
 import '../support/test_env.dart';

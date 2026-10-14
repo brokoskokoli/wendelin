@@ -102,8 +102,9 @@ final FutureProvider<ProviderConfig?> providerConfigProvider =
 final FutureProvider<ProviderConfig?> storedProviderConfigProvider =
     FutureProvider<ProviderConfig?>((ref) async {
       final profiles = await ref.watch(storageProvider).providerProfiles.list();
-      if (anyNeedsAttestation(profiles))
+      if (anyNeedsAttestation(profiles)) {
         await awaitCheckModule(ref.read(attestationCryptoProvider.future));
+      }
       return loadProviderConfig(
         storage: ref.watch(storageProvider),
         secrets: ref.watch(secretStoreProvider),
