@@ -1,0 +1,41 @@
+# ADR 0014 – TEE-Attestierung: Vertrauensanker, Prüfstufen, Status
+
+Status: vorgeschlagen · 2026-10-14 (WP46, Grundlage: Spike WP43, `docs/notes/attestation-spike-2026-10-14.md`)
+
+## Kontext
+TEE-Provider (Phala/RedPill) sollen nur genutzt werden, wenn die Enklave geprüft ist (Konzept „TEE-Provider und Attestierung“, K2, K23). Die Prüfung besteht aus kryptografischen Schritten (TDX-Quote, Ed25519, Hashes) und aus Protokolllogik (Bindung, Frische, Pinning, Status). WP46 baut die Logik in Dart gegen einen Port, WP47 liefert die Krypto in Rust.
+
+## Entscheidungen
+
+### 1. Port `AttestationCrypto` trennt Krypto von Logik
+`packages/wendelin_providers/lib/src/tee/attestation_crypto.dart`: `verifyQuote(quote, collateral, now)`, `collateralFor(quote)`, `verifyEd25519`, `sha256`, `sha384`, `spkiSha256`. `verifyQuote` ist asynchron und wirft `QuoteVerificationException` (nie ein Verdikt für ein ungültiges Quote) bzw. `CollateralUnavailableException` (transient, gelb). Die Hashes und `verifyEd25519` sind synchron und rein; `verifyEd25519` gibt bei kaputten Schlüsseln `false` zurück. Vertragssuite `attestationCryptoContract` (`package:wendelin_providers/testing.dart`), Fake `FakeAttestationCrypto` (`fakes.dart`: echte Hashes und echtes Ed25519 in BigInt, **keine** Quote-Signaturprüfung). Test-Hook für WP47: `test/tee/real_crypto_hook_test.dart` (`realAttestationCrypto()`), derselbe Fixture-Satz läuft dann gegen die Rust-Prüfung.
+
+### 2. Prüfstufen sind einzelne Ergebnisse
+`AttestationStage`: Quote, TCB, Nonce-Bindung, Keyset-Digest, Keyset-Endorsement, Frische, Event-Log (RTMR3-Replay), Compose-Hash, Provenance, TLS-SPKI sowie bei der Quittung Abruf, Signatur, Bindung, Request-Hash, Response-Hash, Upstream, Ereignisse. Jede Stufe liefert `pass|warn|fail|unavailable|info`. Keine Stufe versteckt eine andere; das Prüfprotokoll (`AttestationLogEntry`) zeigt alle.
+
+Die Bindungskette ist: Quote → `report_data = sha256({"keyset_digest","nonce","purpose"})` → Keyset (`sha256(JCS(workload_keyset))`). Der API fehlen `workload_id`, `freshness.stale_after` und `keyset_endorsement` (Spike). Frische ist daher die eigene Nonce plus `not_after`; die Endorsement-Stufe wird als `info` protokolliert. Ein später auftauchendes `stale_after` oder `workload_id` wird bereits ausgewertet.
+
+### 3. Statussemantik
+- `fail` ist rot. `unavailable` (Netz, Kollateral) ist gelb, solange Versuche übrig sind; die Quittung wird bis zu 3 Mal geholt, danach rot (`AttestationPolicy`). `warn` und `info` ändern den Status nicht (Endstatus grün, Hinweis an den Nutzer).
+- TCB: `UpToDate` grün; `SWHardeningNeeded`, `ConfigurationNeeded`, `ConfigurationAndSWHardeningNeeded` grün mit Hinweis samt Advisory-IDs; `OutOfDate`, `OutOfDateConfigurationNeeded`, `Revoked` rot mit Hinweis (Maintainer-Entscheidung 3).
+- Je Antwort ist der Endstatus grün oder rot; gelb ist nur Zwischenstand. Ereignis `AttestationStatusChanged(stepId, status, logId, detail)` (Core, ADR 0002 §12).
+
+### 4. Fehlerverhalten
+Attestierung rot: kein Request, `ProviderException` `AttestationFailedException(stage)`, Provider gesperrt bis `reattest()`. Attestierung nur nicht erreichbar: Fehler mit `retryable`, nicht gesperrt. Quittung rot: weitere Anfragen gesperrt bis zur neuen Attestierung. Pinning-Wechsel (Keyset-Digest der Quittung weicht ab): Antwort rot, aber keine Sperre; die nächste Anfrage attestiert neu und meldet den Hinweis „Anbieter hat ein Update ausgerollt, neu geprüft“. Fallback auf einen weniger geschützten Provider nur über die bestehende Eskalation mit Nutzerbestätigung.
+
+### 5. Pinning
+`AttestationPinStore` (Port): Keyset-Digest, Compose-Hash, Commit, Zeitpunkt je Profil. Ein Wechsel eines der drei Werte meldet `PinChange.changed`. `source_provenance.repo_commit` wird gegen eine Liste vertrauenswürdiger Commits geprüft; leer heißt nur protokollieren.
+
+### 6. Rohbytes im Transport
+`HttpTransport.stream` bekommt einen optionalen `ExchangeTap` (`common/exchange_tap.dart`), der die exakt gesendeten Request-Bytes, Status, Header und die empfangenen Antwort-Bytes sammelt und beim Ende (vor dem terminalen Ereignis) als `ExchangeRecord` meldet. `OpenAiChatAdapter.chatObserved` reicht ihn durch. Wire-Typen bleiben im Adapter. Der Request trägt `provider.aci_verified: true` (`OpenAiOptions.extraBody`), damit `upstream.verified.required` wahr wird; die Prüfung verlangt das.
+
+### 7. Quittung nach dem Stream, Tools warten
+`AttestedProvider` holt die Quittung nach dem Stream-Ende im Hintergrund (der Stream schließt sofort). `AttestationAware` (Core) gibt dem Agent `reportFor(ChatRequest)` (Bericht je `chat`-Aufruf, über die Identität der Anfrage gebunden, daher sicher bei parallelen Läufen auf einem Provider) und `reports`. Der Agent meldet den Status je Modellaufruf; Tools mit **effektiver** Stufe `external` (Port `ToolRiskAssessor`, vom `ToolExecutor` über `RiskPolicy.effectiveRisk(tool.risk, decide(...).action)` beantwortet: eigene Stufe `external` oder vom Nutzer bzw. der Integration auf „bestätigen“ gesetzt, z. B. MCP-write ohne `autoRun`) starten erst nach grüner Quittung, bei Rot oder fehlendem Ergebnis gar nicht (Fehlerergebnis ans Modell), Lese- und Schreib-Tools laufen sofort (`run/attestation_gate.dart`, `ToolRound`). Ein Invoker ohne `ToolRiskAssessor` wird nach der statischen `Tool.risk` beurteilt.
+
+### 8. GPU-Prüfung über NVIDIA NRAS
+`GpuAttestationVerifier` (Port) mit `NrasGpuVerifier`: Bericht `GET /attestation/report?model=&nonce=`, lokale Nonce-Bindung der `nvidia_payload`, `POST` an NRAS, Gesamt-JWT `x-nvidia-overall-att-result` und `eat_nonce`. Die **lokale Nonce-Bindung** der GPU-Evidenz (`verifyLocal`, ohne Aufruf bei NVIDIA) läuft in jedem Modus einmal je Modell und Sitzung vor der ersten Anfrage; Fehlschlag ist rot und die Anfrage geht nicht raus. Auch bei Modus `off` fragt Wendelin den Report-Endpunkt des Gateways einmal je Modell ab (für die lokale Nonce-Bindung); ein Netzfehler blockiert die erste Anfrage gelb (bis ca. 15 s), „Ohne GPU-Prüfung senden“ (`allowOnce`) ist der Ausweg. Modi `off` (Standard; Sitzungsprotokoll mit `info`-Stufe „GPU: nicht über NVIDIA geprüft“) / `before` (blockiert Inhalte, fail-closed, Ergebnis je Sitzung gecacht) / `after` (asynchron; Fehlschlag meldet roten Bericht mit `reasonCode` `gpu_failed`/`gpu_unavailable` auf `reports`, die nächste Anfrage **desselben Modells** prüft zuerst). Protokolltext bei NRAS grün: „geprüft (NRAS, Signatur ungeprüft)“. „Ohne GPU-Prüfung senden“ gilt einmal (`allowNextRequestWithoutGpuCheck`). **Offen:** Die JWT-Signatur gegen NVIDIA-JWKS wird nicht geprüft (Spike: offen), die Logik vertraut dem TLS-Kanal zu NRAS.
+
+### 9. Offene Befunde
+- **TLS-SPKI:** Die SPKIs der Zertifikate von `api.redpill.ai` & Co. stimmen nicht mit `tls_public_keys` überein (Spike, Frage 8). Die Stufe prüft die Konsistenz von `downstream_tls_binding` und Keyset (rot bei Widerspruch). Der Abgleich mit dem Zertifikat der Verbindung (`observedSpki`, Port) ist standardmäßig nur protokolliert (`info`), `enforceTlsPin` macht daraus rot. Bis zur Klärung bei Phala wäre Erzwingen dauerhaft rot. Eine Dart-Implementierung von `observedSpki` über `SecureSocket` steht aus (nicht Teil von WP46).
+- **Upstream-TCB (entschieden, Maintainer 3):** Stufe `receipt.upstream.tcb` lädt `GET /aci/sessions/{session_id}` (aus `upstream.verified`) und wertet `claims.tcb_up_to_date` und `claims.extra.tcb_status` aus. `OutOfDate*` oder `refuted` ist **rot** mit eigenem Code `upstream_tcb_out_of_date` und dem Text „Sicherheits-Update beim Betreiber ausstehend (Upstream-TCB OutOfDate)“ (`Revoked`: `upstream_tcb_revoked`); der Code steht in `StageResult.code` und `AttestationReport.reasonCode`, damit die UI das von Manipulation unterscheidet und später Modelle mit aktuellem TCB bevorzugen kann. Session nicht ladbar: gelb mit Wiederholung, nach 3 Versuchen rot. Die Session-Id wird geprüft: `sha256(JCS(Dokument))` (ACI §8) muss der signierten `session_id` entsprechen, sonst rot mit Code `upstream_session_mismatch`. Fehlen beide TCB-Felder der Session, ist das fail-closed `unavailable` (gelb, Wiederholung, nach 3 Versuchen rot).
+- `repo_commit` ist nicht an die Messung gebunden (Spike); Provenance bleibt ein Abgleich mit der Liste.

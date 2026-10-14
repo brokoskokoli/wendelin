@@ -62,6 +62,8 @@ final class Redactor {
       InvalidRequestException() => InvalidRequestException(m),
       CancelledException() => CancelledException(m),
       MalformedResponseException() => MalformedResponseException(m),
+      AttestationFailedException(:final stage, :final unavailable) =>
+        AttestationFailedException(m, stage: stage, unavailable: unavailable),
     };
   }
 }

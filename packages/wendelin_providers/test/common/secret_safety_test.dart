@@ -174,6 +174,11 @@ void main() {
         const InvalidRequestException(msg),
         const CancelledException(msg),
         const MalformedResponseException(msg),
+        const AttestationFailedException(
+          msg,
+          stage: 'quote',
+          unavailable: true,
+        ),
       ];
       for (final e in cases) {
         final red = r.redact(e);
@@ -185,6 +190,9 @@ void main() {
         const Duration(seconds: 3),
       );
       expect((r.redact(cases[4]) as ServerException).statusCode, 503);
+      final attest = r.redact(cases.last) as AttestationFailedException;
+      expect(attest.stage, 'quote');
+      expect(attest.unavailable, isTrue);
       const clean = AuthException('sauber');
       expect(identical(r.redact(clean), clean), isTrue);
     });

@@ -45,6 +45,17 @@ abstract interface class ToolInvoker {
   );
 }
 
+/// Optional capability of a [ToolInvoker]: tells the *effective* risk of a
+/// call, i.e. what the invoker's policy will do with it (a `read`/`write`
+/// tool the user or the integration made confirm-only counts as `external`).
+/// The agent uses it to hold back everything that is effectively `external`
+/// until a TEE answer is verified. An invoker without it is judged by the
+/// static [Tool.risk].
+abstract interface class ToolRiskAssessor {
+  /// The risk level [tool] is treated as in [sessionId].
+  RiskLevel effectiveRisk(Tool tool, String sessionId);
+}
+
 /// Progress of [ToolInvoker.invokeAll].
 sealed class ToolInvocationEvent {
   const ToolInvocationEvent(this.call);

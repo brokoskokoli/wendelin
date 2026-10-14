@@ -73,6 +73,8 @@ final class ConversationReducer {
         return _appendText(s, text);
       case AgentSpokenText():
         return s; // speech output only, never shown (WP41)
+      case AttestationStatusChanged():
+        return s; // shown per answer from WP52 on
       case AgentThinkingDelta(:final text):
         return _appendThinking(s, text);
       case AgentTextReset():

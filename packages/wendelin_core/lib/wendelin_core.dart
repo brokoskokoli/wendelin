@@ -16,6 +16,7 @@ export 'src/messages/stop_reason.dart';
 export 'src/messages/tool_choice.dart';
 export 'src/messages/tool_spec.dart';
 export 'src/messages/usage.dart';
+export 'src/provider/attestation.dart';
 export 'src/provider/auth_method.dart';
 export 'src/provider/cancel_token.dart';
 export 'src/provider/llm_provider.dart';

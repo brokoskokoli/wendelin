@@ -9,6 +9,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../agent_runner_texts.dart';
 import '../context_builder.dart';
+import 'attestation_gate.dart';
 import 'privacy_scope.dart';
 import 'run_config.dart';
 import 'run_state.dart';
@@ -26,13 +27,20 @@ import 'run_state.dart';
 ///   its contract or the round is refused ([refuse]).
 final class ToolRound {
   /// Creates the tool rounds of [runner]'s run.
-  ToolRound(this.runner, this._state, this._privacy, this._control);
+  ToolRound(
+    this.runner,
+    this._state,
+    this._privacy,
+    this._control,
+    this._attest,
+  );
 
   /// The runner (invoker, session, clock, device).
   final RunConfig runner;
   final RunState _state;
   final PrivacyScope _privacy;
   final RunControl _control;
+  final AttestationGate _attest;
 
   /// Id the model sent for each (possibly renamed) call id.
   final Map<String, String> _sourceIds = {};
@@ -109,7 +117,9 @@ final class ToolRound {
       results[call.id] = outcome.toResultBlock(call.id);
     }
 
-    if (pending.isNotEmpty) await _invoke(pending, results);
+    if (pending.isNotEmpty) await _invokeGated(pending, results);
+    // Status of the answer that caused this round (once per model call).
+    await _attest.settle();
 
     // Every tool_use needs a tool_result, even if an invoker broke its
     // contract.
@@ -143,6 +153,53 @@ final class ToolRound {
       isError: earlier.outcome.isError,
       summary: 'Bereits ausgeführt',
     );
+  }
+
+  /// Like [_invoke], but with a provider that verifies its answers
+  /// afterwards (TEE): `external` calls start only after a green
+  /// verification, everything else runs at once. Invariant (fail-closed):
+  /// a red or missing verification refuses the `external` calls; they never
+  /// reach the invoker.
+  Future<void> _invokeGated(
+    List<ToolCallBlock> pending,
+    Map<String, ToolResultBlock> results,
+  ) async {
+    final external = [
+      for (final call in pending)
+        if (_isExternal(call)) call,
+    ];
+    if (!_attest.expectsReport || external.isEmpty) {
+      return _invoke(pending, results);
+    }
+    final immediate = [
+      for (final call in pending)
+        if (!external.contains(call)) call,
+    ];
+    if (immediate.isNotEmpty) await _invoke(immediate, results);
+    final report = await _attest.settle();
+    if (report?.status == AttestationStatus.green) {
+      return _invoke(external, results);
+    }
+    for (final call in external) {
+      final outcome = ToolOutcome.error(AgentRunnerTexts.unverifiedAnswer);
+      _control.emit(ToolCallStarted(call));
+      _control.emit(ToolCallFinished(call: call, outcome: outcome));
+      results[call.id] = outcome.toResultBlock(call.id);
+    }
+  }
+
+  /// Whether [call] is effectively `external` for the invoker's policy (own
+  /// level or made confirm-only by the user or an integration). Without a
+  /// [ToolRiskAssessor] the contract is fail-closed: everything except
+  /// [RiskLevel.read] counts as `external` and waits for the receipt.
+  bool _isExternal(ToolCallBlock call) {
+    final tool = _privacy.catalog.lookup(call.name);
+    if (tool == null) return false;
+    final invoker = runner.invoker;
+    final risk = invoker is ToolRiskAssessor
+        ? (invoker as ToolRiskAssessor).effectiveRisk(tool, runner.sessionId)
+        : (tool.risk == RiskLevel.read ? RiskLevel.read : RiskLevel.external);
+    return risk == RiskLevel.external;
   }
 
   /// Runs [pending] through the invoker and collects their [results].

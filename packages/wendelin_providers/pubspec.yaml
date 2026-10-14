@@ -7,9 +7,10 @@ environment:
   sdk: ^3.13.0
 dependencies:
   collection: ^1.19.1
+  crypto: ^3.0.7
   http: ^1.6.0
   meta: ^1.19.0
+  test: any
   wendelin_core: any
 dev_dependencies:
-  test: any
   coverage: any

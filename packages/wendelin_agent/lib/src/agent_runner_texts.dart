@@ -16,6 +16,12 @@ abstract final class AgentRunnerTexts {
   /// privacy floor.
   static const privateHidden = '[privater Gesprächsteil ausgeblendet]';
 
+  /// Error text for an `external` tool call whose answer could not be
+  /// verified (TEE receipt red or missing).
+  static const unverifiedAnswer =
+      'Nicht ausgeführt: Die Antwort des Modells konnte nicht verifiziert '
+      'werden (TEE-Prüfung).';
+
   /// Message when a private request has no target with enough privacy.
   static const noPrivateTarget =
       'Die Anfrage ist privat, aber kein ausreichend geschütztes Modell ist '

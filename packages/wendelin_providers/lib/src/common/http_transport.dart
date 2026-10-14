@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 
+import 'exchange_tap.dart';
 import 'http_errors.dart';
 import 'http_settings.dart';
 import 'redactor.dart';
@@ -75,6 +76,7 @@ final class HttpTransport {
     required HttpErrorMapper onHttpError,
     RetryPolicy? retry,
     CancelToken? cancel,
+    ExchangeTap? tap,
   }) {
     final token = cancel ?? CancelToken();
     final abort = Completer<void>();
@@ -89,6 +91,7 @@ final class HttpTransport {
     void finish(ChatEvent terminal, {bool abortHttp = false}) {
       if (finished) return;
       finished = true;
+      tap?.end(completed: terminal is Done);
       if (terminal is ErrorEvent) {
         final error = redactor.redact(terminal.error);
         log('$label: Fehler ${error.runtimeType}: ${error.message}');
@@ -132,6 +135,9 @@ final class HttpTransport {
         for (var attempt = 0; ; attempt++) {
           final request = await build(attempt, abort.future);
           if (finished) return;
+          if (tap != null && request is http.Request) {
+            tap.request(request.bodyBytes);
+          }
           log('$label: ${request.method} ${request.url}');
           final response = await client
               .send(request)
@@ -147,10 +153,11 @@ final class HttpTransport {
             return;
           }
           log('$label: HTTP ${response.statusCode}');
+          tap?.head(response.statusCode, response.headers);
           if (response.statusCode >= 200 && response.statusCode < 300) {
             _listen(response, decoder(), emitAll, fail, (s) => sub = s, () {
               if (!finished) abortRequest();
-            });
+            }, tap);
             return;
           }
           final body = await _readBody(response);
@@ -197,8 +204,15 @@ final class HttpTransport {
     void Function(Object) fail,
     void Function(StreamSubscription<SseEvent>) setSub,
     void Function() onIdleTimeout,
+    ExchangeTap? tap,
   ) {
-    final body = response.stream.timeout(
+    final source = tap == null
+        ? response.stream
+        : response.stream.map((chunk) {
+            tap.chunk(chunk);
+            return chunk;
+          });
+    final body = source.timeout(
       settings.idleTimeout,
       onTimeout: (sink) {
         onIdleTimeout();

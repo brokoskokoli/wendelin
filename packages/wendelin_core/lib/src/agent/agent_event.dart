@@ -1,6 +1,7 @@
 import '../messages/content_block.dart';
 import '../messages/stop_reason.dart';
 import '../messages/usage.dart';
+import '../provider/attestation.dart';
 import '../tools/tool.dart';
 import '../tools/tool_outcome.dart';
 
@@ -358,6 +359,36 @@ final class Verification extends AgentEvent {
 
   @override
   String toString() => 'Verification($profileId, ${status.name})';
+}
+
+/// Verification result of one TEE answer (or of the session): [status] is
+/// the traffic light shown at the conversation step, [logId] names the entry
+/// in the audit log (Prüfprotokoll) with the result of every check stage.
+/// Final per answer is green or red; yellow only while a check is pending
+/// or being retried.
+final class AttestationStatusChanged extends AgentEvent {
+  /// Creates the event.
+  const AttestationStatusChanged({
+    required this.stepId,
+    required this.status,
+    required this.logId,
+    this.detail,
+  });
+
+  /// The conversation step (model call) the status belongs to.
+  final String stepId;
+
+  /// Traffic light.
+  final AttestationStatus status;
+
+  /// Id of the audit-log entry.
+  final String logId;
+
+  /// Short German hint (e.g. TCB note), secret-free.
+  final String? detail;
+
+  @override
+  String toString() => 'AttestationStatusChanged($stepId, ${status.name})';
 }
 
 /// The run finished with a final answer (terminal).

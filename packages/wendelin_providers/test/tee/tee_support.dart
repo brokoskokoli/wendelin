@@ -1,0 +1,157 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/fakes.dart';
+import 'package:wendelin_providers/wendelin_providers.dart';
+
+/// Parsed JSON fixture of the 2026-10-14 probe (`test/fixtures/tee/`).
+Map<String, Object?> teeJson(String name) =>
+    jsonDecode(File('test/fixtures/tee/$name.json').readAsStringSync())
+        as Map<String, Object?>;
+
+/// Deep copy of [json] so tests can manipulate it.
+Map<String, Object?> copyJson(Map<String, Object?> json) =>
+    jsonDecode(jsonEncode(json)) as Map<String, Object?>;
+
+/// The nonce of the probe (32 × 0xab).
+final probeNonce = Uint8List.fromList(List.filled(32, 0xab));
+
+/// Check time of the offline probe (collateral valid).
+final probeNow = DateTime.fromMillisecondsSinceEpoch(
+  1791934700 * 1000,
+  isUtc: true,
+);
+
+/// A scripted answer for [TeeServer].
+typedef TeeHandler = FutureOr<http.Response> Function(http.Request request);
+
+/// Mock gateway that routes by URL path and records the requests.
+final class TeeServer {
+  /// Creates a server; [routes] maps a path suffix (e.g. `aci/attestation`)
+  /// to its handler.
+  TeeServer(this.routes);
+
+  /// Routes by path suffix.
+  final Map<String, TeeHandler> routes;
+
+  /// Requests received.
+  final List<http.Request> requests = [];
+
+  /// The client to inject.
+  late final http.Client client = MockClient((request) async {
+    requests.add(request);
+    for (final e in routes.entries) {
+      if (request.url.path.contains(e.key)) return e.value(request);
+    }
+    return http.Response('{"error":"nicht gefunden"}', 404);
+  });
+
+  /// Number of requests whose path contains [part].
+  int count(String part) =>
+      requests.where((r) => r.url.path.contains(part)).length;
+}
+
+/// JSON handler returning [body].
+TeeHandler jsonBody(Object? body, {int status = 200}) =>
+    (_) => http.Response(
+      jsonEncode(body),
+      status,
+      headers: {'content-type': 'application/json'},
+    );
+
+/// A [PhalaVerifier] against [server] with the probe's nonce.
+PhalaVerifier probeVerifier(
+  TeeServer server,
+  AttestationCrypto crypto, {
+  DateTime? now,
+  Uint8List? nonce,
+  Set<String> trustedCommits = const {},
+  AttestationPinStore? pins,
+  bool expectUpstreamEnforced = true,
+}) => PhalaVerifier(
+  crypto: crypto,
+  baseUrl: Uri.parse('https://gateway.test/v1'),
+  profileId: 'phala',
+  client: server.client,
+  settings: HttpSettings(clock: FixedClock(now ?? probeNow)),
+  nonceSource: () => nonce ?? probeNonce,
+  trustedCommits: trustedCommits,
+  pins: pins,
+  expectUpstreamEnforced: expectUpstreamEnforced,
+);
+
+/// Server answering the attestation with [attestation].
+TeeServer attestationServer([Map<String, Object?>? attestation]) => TeeServer({
+  'aci/attestation': jsonBody(attestation ?? teeJson('gateway_attestation')),
+});
+
+/// The stages of [stages] with [outcome].
+List<AttestationStage> stagesWith(
+  Iterable<StageResult> stages,
+  StageOutcome outcome,
+) => [
+  for (final s in stages)
+    if (s.outcome == outcome) s.stage,
+];
+
+/// `sha256:<hex>` of [bytes] with the fake's real hash function.
+String sha256Of(Uint8List bytes) =>
+    'sha256:${FakeAttestationCrypto().sha256(bytes).map((v) => v.toRadixString(16).padLeft(2, '0')).join()}';
+
+/// The probe receipt with hashes that match [request] and [response] and
+/// `required: true`. The signature is no longer valid: use a
+/// `FakeAttestationCrypto(ed25519Result: true)`.
+Map<String, Object?> syntheticReceipt(
+  Uint8List request,
+  Uint8List response, [
+  void Function(Map<String, Object?>)? edit,
+  Map<String, Object?>? session,
+]) {
+  final sessionId = sessionIdOf(session ?? upToDateSession());
+  final r = copyJson(teeJson('receipt'));
+  for (final e in (r['event_log']! as List).cast<Map<String, Object?>>()) {
+    switch (e['type']) {
+      case 'request.received' || 'middleware.forwarded' || 'request.forwarded':
+        e['body_hash'] = sha256Of(request);
+      case 'response.returned':
+        e['body_hash'] = sha256Of(response);
+      case 'upstream.verified':
+        e['required'] = true;
+        e['session_id'] = sessionId;
+    }
+  }
+  edit?.call(r);
+  return r;
+}
+
+/// `sha256(JCS(session))` as the gateway names it in `upstream.verified`.
+String sessionIdOf(Map<String, Object?> session) =>
+    sha256Of(Uint8List.fromList(utf8.encode(_jcs(session))))
+        .substring('sha256:'.length);
+
+String _jcs(Object? v) => switch (v) {
+  Map() =>
+    '{${(v.keys.cast<String>().toList()..sort()).map((k) => '${jsonEncode(k)}:${_jcs(v[k])}').join(',')}}',
+  List() => '[${v.map(_jcs).join(',')}]',
+  _ => jsonEncode(v),
+};
+
+/// The probe's upstream session (`OutOfDate`, `tcb_up_to_date` refuted).
+Map<String, Object?> outOfDateSession() => copyJson(teeJson('session'));
+
+/// The probe's session manipulated to an up-to-date TCB.
+Map<String, Object?> upToDateSession() {
+  final s = outOfDateSession();
+  final claims = s['claims']! as Map<String, Object?>;
+  (claims['extra']! as Map<String, Object?>)['tcb_status'] = 'UpToDate';
+  claims['tcb_up_to_date'] = {
+    'status': 'asserted',
+    'source': 'hardware_proven',
+  };
+  return s;
+}

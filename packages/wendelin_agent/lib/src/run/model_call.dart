@@ -9,6 +9,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../context_builder.dart';
 import '../provider_resolver.dart';
+import 'attestation_gate.dart';
 import 'privacy_scope.dart';
 import 'run_budget.dart';
 import 'run_config.dart';
@@ -47,6 +48,7 @@ final class ModelCall {
     this._privacy,
     this._budget,
     this._control,
+    this._attest,
   );
 
   /// The runner (context builder, session, cost estimator).
@@ -55,6 +57,7 @@ final class ModelCall {
   final PrivacyScope _privacy;
   final RunBudget _budget;
   final RunControl _control;
+  final AttestationGate _attest;
 
   /// Calls the model of the current target and streams its answer.
   Future<ModelReply> call() async {
@@ -132,9 +135,30 @@ final class ModelCall {
         'Antwortstrom ohne Abschluss beendet',
       );
     }
+    await _reportAttestation(
+      target.provider,
+      request,
+      blocks,
+      failed: error != null,
+    );
     // Incomplete tool calls of a failed stream are never executed: the
     // whole reply is discarded on error.
     return ModelReply(error == null ? blocks : const [], stopReason, error);
+  }
+
+  /// Remembers the verification of the answer; without tool calls nothing
+  /// waits for it, so it is reported now. With tool calls the tool round
+  /// reports it (external tools wait for it).
+  Future<void> _reportAttestation(
+    LlmProvider provider,
+    ChatRequest request,
+    List<ContentBlock> blocks, {
+    required bool failed,
+  }) async {
+    _attest.begin(provider, request);
+    if (failed || !blocks.any((b) => b is ToolCallBlock)) {
+      await _attest.settle();
+    }
   }
 
   void _reportUsage(Resolution target, Usage used) {

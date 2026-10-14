@@ -146,9 +146,11 @@ final class AuditRecorder implements ToolAuditSink {
           ConfirmationRequired() ||
           EscalationConfirmationRequired() ||
           ToolCallFinished() ||
+          AttestationStatusChanged() ||
           AgentDone():
       // Tool calls come from the executor (record), answers to
       // confirmations from the controller; text is not logged here.
+      // Attestation results get their own log (WP49).
     }
   }
 
