@@ -278,6 +278,15 @@ host_request() {
         adb shell run-as "$PKG" sh -c "'cat > files/e2e/meminfo.txt'"
       ;;
     unrole)
+      # `am instrument` (Start jedes instrumentierten Tests) beendet die App per
+      # force-stop; das System bindet den VoiceInteractionService danach nicht
+      # neu, solange die Rolle gehalten bleibt (z. B. von einem Test davor).
+      # Ohne gebundenen Dienst gibt es beim Entzug kein onShutdown. Darum die
+      # Rolle zuerst neu vergeben, damit der Dienst im laufenden Prozess hängt.
+      adb shell cmd role remove-role-holder --user 0 android.app.role.ASSISTANT "$PKG" || true
+      sleep 1
+      adb shell cmd role add-role-holder --user 0 android.app.role.ASSISTANT "$PKG"
+      sleep 3
       adb shell cmd role remove-role-holder --user 0 android.app.role.ASSISTANT "$PKG"
       sleep 3
       # Nur der Abschnitt enabledComponents (bis zur nächsten Überschrift).
