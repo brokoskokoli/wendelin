@@ -34,6 +34,14 @@ jobs:
         working-directory: app
       - run: if [ -d test ]; then flutter test; fi
         working-directory: app
+      # Bei roten Goldens die Vergleichsbilder sichern (nur Test-Widgets, keine Daten).
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: app/test/**/failures/
+          if-no-files-found: ignore
+          retention-days: 7
   # K7 am fertigen APK: keine GMS-/Firebase-Klassen, Manifest (exportierte
   # Komponenten, Berechtigungen, Backup) und Gradle-Baum ohne GMS und ohne
   # nicht aufgelöste Abhängigkeiten. arm64 reicht für die Prüfung.
