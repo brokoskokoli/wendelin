@@ -266,7 +266,7 @@ void main() {
     );
 
     Future<(FakeTool, Completer<AttestationReport?>, Future<List<AgentEvent>>)>
-    startWithStricter(FakeTool tool, Set<String> stricter) async {
+    startWithStricter(FakeTool tool, Set<String>? stricter) async {
       final report = Completer<AttestationReport?>();
       final provider = VerifyingFake(
         FakeLlmProvider([
@@ -284,7 +284,9 @@ void main() {
           privacy: PrivacyLevel.tee,
         ),
         tools: [tool],
-        invoker: AssessingInvoker(FakeToolInvoker(catalog), stricter),
+        invoker: stricter == null
+            ? FakeToolInvoker(catalog)
+            : AssessingInvoker(FakeToolInvoker(catalog), stricter),
       );
       final done = h.run('Hi');
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -330,6 +332,27 @@ void main() {
       );
       final (_, report, done) = await startWithStricter(write, {});
       expect(write.callCount, 1);
+      report.complete(_report(AttestationStatus.green));
+      await done;
+    });
+
+    test('ohne ToolRiskAssessor: write wird wie external behandelt', () async {
+      final write = FakeTool(
+        name: 'notes__add',
+        risk: RiskLevel.write,
+        outcome: ToolOutcome.text('ok'),
+      );
+      final (_, report, done) = await startWithStricter(write, null);
+      expect(write.callCount, 0, reason: 'fail-closed: wartet auf Quittung');
+      report.complete(_report(AttestationStatus.red));
+      await done;
+      expect(write.callCount, 0);
+    });
+
+    test('ohne ToolRiskAssessor: read läuft sofort', () async {
+      final read = FakeTool(name: 'cal__list', outcome: ToolOutcome.text('2'));
+      final (_, report, done) = await startWithStricter(read, null);
+      expect(read.callCount, 1);
       report.complete(_report(AttestationStatus.green));
       await done;
     });

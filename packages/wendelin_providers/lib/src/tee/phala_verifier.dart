@@ -274,9 +274,20 @@ final class PhalaVerifier implements AttestationVerifier {
       return const StageResult.fail(s, 'session_id fehlt');
     }
     try {
-      return upstreamTcbStage(
-        GatewaySession.parse(await _get(_url('aci/sessions/$id'))),
+      final session = GatewaySession.parse(
+        await _get(_url('aci/sessions/$id')),
       );
+      final actual = AttestCodec.hex(
+        crypto.sha256(AttestCodec.jcsBytes(session.raw)),
+      );
+      if (actual != id.toLowerCase()) {
+        return const StageResult.fail(
+          s,
+          'Upstream-Session passt nicht zur signierten session_id',
+          code: StageResult.upstreamSessionMismatch,
+        );
+      }
+      return upstreamTcbStage(session);
     } on AttestationFormatException catch (e) {
       return StageResult.fail(s, e.message);
     } on MalformedResponseException {

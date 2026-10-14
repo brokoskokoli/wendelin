@@ -110,7 +110,9 @@ Map<String, Object?> syntheticReceipt(
   Uint8List request,
   Uint8List response, [
   void Function(Map<String, Object?>)? edit,
+  Map<String, Object?>? session,
 ]) {
+  final sessionId = sessionIdOf(session ?? upToDateSession());
   final r = copyJson(teeJson('receipt'));
   for (final e in (r['event_log']! as List).cast<Map<String, Object?>>()) {
     switch (e['type']) {
@@ -120,11 +122,24 @@ Map<String, Object?> syntheticReceipt(
         e['body_hash'] = sha256Of(response);
       case 'upstream.verified':
         e['required'] = true;
+        e['session_id'] = sessionId;
     }
   }
   edit?.call(r);
   return r;
 }
+
+/// `sha256(JCS(session))` as the gateway names it in `upstream.verified`.
+String sessionIdOf(Map<String, Object?> session) =>
+    sha256Of(Uint8List.fromList(utf8.encode(_jcs(session))))
+        .substring('sha256:'.length);
+
+String _jcs(Object? v) => switch (v) {
+  Map() =>
+    '{${(v.keys.cast<String>().toList()..sort()).map((k) => '${jsonEncode(k)}:${_jcs(v[k])}').join(',')}}',
+  List() => '[${v.map(_jcs).join(',')}]',
+  _ => jsonEncode(v),
+};
 
 /// The probe's upstream session (`OutOfDate`, `tcb_up_to_date` refuted).
 Map<String, Object?> outOfDateSession() => copyJson(teeJson('session'));

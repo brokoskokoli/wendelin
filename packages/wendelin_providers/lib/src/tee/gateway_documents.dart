@@ -337,6 +337,7 @@ final class GatewaySession {
     final extra = claims['extra'];
     final upToDate = claims['tcb_up_to_date'];
     return GatewaySession._(
+      raw: json,
       upToDateStatus: upToDate is Map<String, Object?>
           ? upToDate['status'] as String?
           : null,
@@ -346,7 +347,15 @@ final class GatewaySession {
     );
   }
 
-  const GatewaySession._({this.upToDateStatus, this.tcbStatus});
+  const GatewaySession._({
+    required this.raw,
+    this.upToDateStatus,
+    this.tcbStatus,
+  });
+
+  /// The whole document; `sha256(JCS(raw))` is the `session_id` the signed
+  /// receipt names.
+  final Map<String, Object?> raw;
 
   /// `claims.tcb_up_to_date.status` (`refuted`, `asserted`, …).
   final String? upToDateStatus;

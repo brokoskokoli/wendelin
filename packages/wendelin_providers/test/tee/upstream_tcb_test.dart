@@ -16,7 +16,7 @@ Future<ReceiptResult> _verify(
   Map<String, Object?> session, {
   int sessionStatus = 200,
 }) async {
-  final receipt = syntheticReceipt(_empty, _empty);
+  final receipt = syntheticReceipt(_empty, _empty, null, session);
   final server = TeeServer({
     'aci/attestation': jsonBody(teeJson('gateway_attestation')),
     'aci/receipts/': jsonBody(receipt),
@@ -55,6 +55,58 @@ void main() {
           StageOutcome.pass,
         ),
       );
+    });
+
+    test('tcb_status OutOfDate bei tcb_up_to_date asserted: rot', () async {
+      final s = upToDateSession();
+      (((s['claims']! as Map)['extra']!) as Map)['tcb_status'] = 'OutOfDate';
+      final r = await _verify(s);
+      expect(r.status, AttestationStatus.red);
+      expect(r.firstProblem?.code, StageResult.upstreamTcbOutOfDate);
+    });
+
+    test('session_id passt zum Dokument: grün (Fixture-Hash)', () {
+      expect(
+        sessionIdOf(outOfDateSession()),
+        '0ac00b896a90626238d2637016c0e7f23feb833d1375deade10e86eaef584523',
+      );
+    });
+
+    test('Session-Dokument manipuliert (Hash weicht ab): rot', () async {
+      final receipt = syntheticReceipt(
+        _empty,
+        _empty,
+        null,
+        outOfDateSession(),
+      );
+      final server = TeeServer({
+        'aci/attestation': jsonBody(teeJson('gateway_attestation')),
+        'aci/receipts/': jsonBody(receipt),
+        // Served document differs from the one the receipt names.
+        'aci/sessions/': jsonBody(upToDateSession()),
+      });
+      final v = probeVerifier(
+        server,
+        FakeAttestationCrypto(ed25519Result: true),
+      );
+      final s = (await v.attest()).session!;
+      final r = await v.verifyReceipt(
+        ReceiptRef(id: 'rcpt-1', session: s),
+        _empty,
+        _empty,
+      );
+      expect(r.status, AttestationStatus.red);
+      expect(r.firstProblem?.code, StageResult.upstreamSessionMismatch);
+    });
+
+    test('Session ohne beide TCB-Felder: unavailable, nicht grün', () async {
+      final s = upToDateSession();
+      (s['claims']! as Map)
+        ..remove('tcb_up_to_date')
+        ..remove('extra');
+      final r = await _verify(s);
+      expect(r.status, AttestationStatus.yellow);
+      expect(r.firstProblem?.outcome, StageOutcome.unavailable);
     });
 
     test('nur tcb_up_to_date refuted (Status UpToDate) ist rot', () async {
@@ -116,6 +168,18 @@ void main() {
         await h.chat();
         final report = await h.provider.pendingReport();
         expect(report?.status, AttestationStatus.green);
+        expect(h.server.count('aci/sessions'), 3);
+      });
+
+      test('Session ohne TCB-Felder: nach 3 Versuchen rot', () async {
+        final s = upToDateSession();
+        (s['claims']! as Map)
+          ..remove('tcb_up_to_date')
+          ..remove('extra');
+        final h = TeeHarness()..sessionDoc = s;
+        await h.chat();
+        final report = await h.provider.pendingReport();
+        expect(report?.status, AttestationStatus.red);
         expect(h.server.count('aci/sessions'), 3);
       });
 

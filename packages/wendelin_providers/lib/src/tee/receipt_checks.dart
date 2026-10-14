@@ -168,7 +168,13 @@ StageResult upstreamTcbStage(GatewaySession session) {
     return StageResult(s, StageOutcome.warn, 'Hinweis: Upstream-TCB $status');
   }
   if (session.upToDateStatus == null && status == null) {
-    return const StageResult(s, StageOutcome.warn, 'Upstream-TCB unbekannt');
+    // Fail-closed: without any TCB claim nothing is known about the
+    // upstream. `unavailable` is retried and red after the last attempt.
+    return const StageResult(
+      s,
+      StageOutcome.unavailable,
+      'Upstream-TCB unbekannt',
+    );
   }
   return const StageResult.pass(s);
 }

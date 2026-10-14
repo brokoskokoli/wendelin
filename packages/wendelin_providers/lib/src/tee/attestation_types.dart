@@ -120,6 +120,10 @@ final class StageResult {
   /// security update is pending); not a forgery.
   static const upstreamTcbOutOfDate = 'upstream_tcb_out_of_date';
 
+  /// Code: the upstream session document does not hash to the `session_id`
+  /// the signed receipt names (manipulated or swapped document).
+  static const upstreamSessionMismatch = 'upstream_session_mismatch';
+
   /// Code: the upstream's platform TCB is revoked.
   static const upstreamTcbRevoked = 'upstream_tcb_revoked';
 

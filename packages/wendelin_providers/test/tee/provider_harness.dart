@@ -47,6 +47,7 @@ final class TeeHarness {
           lastRequest ?? Uint8List(0),
           lastResponse ?? Uint8List(0),
           receiptEdit,
+          sessionDoc ?? upToDateSession(),
         );
         return _json(jsonEncode(receipt), 200);
       },

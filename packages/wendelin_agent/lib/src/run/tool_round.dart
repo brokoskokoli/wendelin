@@ -190,14 +190,15 @@ final class ToolRound {
 
   /// Whether [call] is effectively `external` for the invoker's policy (own
   /// level or made confirm-only by the user or an integration). Without a
-  /// [ToolRiskAssessor] the static [Tool.risk] counts.
+  /// [ToolRiskAssessor] the contract is fail-closed: everything except
+  /// [RiskLevel.read] counts as `external` and waits for the receipt.
   bool _isExternal(ToolCallBlock call) {
     final tool = _privacy.catalog.lookup(call.name);
     if (tool == null) return false;
     final invoker = runner.invoker;
     final risk = invoker is ToolRiskAssessor
         ? (invoker as ToolRiskAssessor).effectiveRisk(tool, runner.sessionId)
-        : tool.risk;
+        : (tool.risk == RiskLevel.read ? RiskLevel.read : RiskLevel.external);
     return risk == RiskLevel.external;
   }
 
