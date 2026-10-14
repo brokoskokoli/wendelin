@@ -37,6 +37,9 @@ enum AttestationStage {
   /// TLS SPKI of the endpoint against the keyset.
   tlsSpki('tls.spki'),
 
+  /// NVIDIA NRAS check of the GPU evidence.
+  gpu('gpu'),
+
   /// Receipt could be fetched.
   receiptFetch('receipt.fetch'),
 
@@ -151,6 +154,18 @@ final class AttestedSession {
   final String? workloadId;
 }
 
+/// How the attested state compares to the stored pin.
+enum PinChange {
+  /// Same keyset, commit and compose hash as pinned.
+  none,
+
+  /// Nothing pinned yet; the state was pinned now.
+  first,
+
+  /// The provider rolled out an update: the user is informed.
+  changed,
+}
+
 /// Result of [AttestationVerifier.attest].
 @immutable
 final class AttestationResult {
@@ -160,6 +175,7 @@ final class AttestationResult {
     required this.stages,
     this.session,
     this.notes = const [],
+    this.pinChange = PinChange.none,
   });
 
   /// Traffic light of the session.
@@ -173,6 +189,9 @@ final class AttestationResult {
 
   /// Hints for the user (TCB advisories, unlisted commit, …).
   final List<String> notes;
+
+  /// Comparison with the stored pin (only for green results).
+  final PinChange pinChange;
 
   /// First failed or unavailable stage, if any.
   StageResult? get firstProblem => stages

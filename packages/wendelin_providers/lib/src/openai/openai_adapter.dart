@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../common/credentials.dart';
+import '../common/exchange_tap.dart';
 import '../common/health_probe.dart';
 import '../common/http_settings.dart';
 import '../common/http_transport.dart';
@@ -113,41 +114,49 @@ final class OpenAiChatAdapter implements LlmProvider {
 
   @override
   Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) =>
-      _transport.stream(
-        cancel: cancel,
-        decoder: () => OpenAiStreamDecoder(
-          label: label,
-          emitReasoning: options.emitReasoning,
-        ),
-        onHttpError: _httpError,
-        retry: (status, body, attempt) {
-          if (attempt == 0 &&
-              options.includeUsage &&
-              !_usageOptionRejected &&
-              rejectsStreamOptions(status, body)) {
-            _usageOptionRejected = true;
-            return true;
-          }
-          return false;
-        },
-        build: (attempt, abortTrigger) async {
-          final body = buildOpenAiBody(
-            req,
-            options,
-            maxTokensField: _maxTokensField,
-            includeUsage: options.includeUsage && !_usageOptionRejected,
-          );
-          return http.AbortableRequest(
-              'POST',
-              Uri.parse('$_base/chat/completions'),
-              abortTrigger: abortTrigger,
-            )
-            ..headers.addAll(await _headers())
-            ..headers['content-type'] = 'application/json'
-            ..headers['accept'] = 'text/event-stream'
-            ..body = jsonEncode(body);
-        },
+      chatObserved(req, cancel: cancel);
+
+  /// Like [chat]; additionally reports the raw bytes of the exchange to
+  /// [observer] when the call ends (before the terminal event is emitted).
+  /// Used by the TEE decorator to check receipts against the exact bytes.
+  Stream<ChatEvent> chatObserved(
+    ChatRequest req, {
+    CancelToken? cancel,
+    ExchangeObserver? observer,
+  }) => _transport.stream(
+    cancel: cancel,
+    tap: observer == null ? null : ExchangeTap(observer),
+    decoder: () =>
+        OpenAiStreamDecoder(label: label, emitReasoning: options.emitReasoning),
+    onHttpError: _httpError,
+    retry: (status, body, attempt) {
+      if (attempt == 0 &&
+          options.includeUsage &&
+          !_usageOptionRejected &&
+          rejectsStreamOptions(status, body)) {
+        _usageOptionRejected = true;
+        return true;
+      }
+      return false;
+    },
+    build: (attempt, abortTrigger) async {
+      final body = buildOpenAiBody(
+        req,
+        options,
+        maxTokensField: _maxTokensField,
+        includeUsage: options.includeUsage && !_usageOptionRejected,
       );
+      return http.AbortableRequest(
+          'POST',
+          Uri.parse('$_base/chat/completions'),
+          abortTrigger: abortTrigger,
+        )
+        ..headers.addAll(await _headers())
+        ..headers['content-type'] = 'application/json'
+        ..headers['accept'] = 'text/event-stream'
+        ..body = jsonEncode(body);
+    },
+  );
 
   @override
   Future<List<ModelInfo>> listModels() async {
