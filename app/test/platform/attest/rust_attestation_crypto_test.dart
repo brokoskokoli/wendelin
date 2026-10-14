@@ -267,4 +267,32 @@ void main() {
       expect(() => c.spkiSha256(Uint8List(7)), throwsFormatException);
     },
   );
+
+  test(
+    'E2EE-Aufrufe gehen an Rust, Fehler und Panics werden E2eeCryptoException',
+    () {
+      final c = build();
+      final pair = c.e2eeGenerateKeypair();
+      expect(pair.public, hasLength(32));
+      expect(
+        c.e2eeEncrypt(pair.public, Uint8List(3), Uint8List(1)),
+        hasLength(66),
+      );
+      expect(c.e2eeDecrypt(pair.secret, 'abcd', Uint8List(1)), [4]);
+      expect(
+        () => c.e2eeDecrypt(pair.secret, '', Uint8List(1)),
+        throwsA(isA<E2eeCryptoException>()),
+      );
+      backend.panic = PanicException('boom');
+      expect(c.e2eeGenerateKeypair, throwsA(isA<E2eeCryptoException>()));
+      expect(
+        () => c.e2eeEncrypt(pair.public, Uint8List(1), Uint8List(1)),
+        throwsA(isA<E2eeCryptoException>()),
+      );
+      expect(
+        () => c.e2eeDecrypt(pair.secret, 'ab', Uint8List(1)),
+        throwsA(isA<E2eeCryptoException>()),
+      );
+    },
+  );
 }

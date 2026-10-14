@@ -10,6 +10,7 @@ import 'attestation_audit.dart';
 import 'attestation_log.dart';
 import 'attestation_policy.dart';
 import 'attestation_types.dart';
+import 'e2ee_v2.dart';
 import 'gpu_attestation.dart';
 import 'gpu_gate.dart';
 import 'tls_pin_gate.dart';
@@ -22,6 +23,12 @@ import 'tls_pin_gate.dart';
 ///   ends with `ErrorEvent(AttestationFailedException)` and the provider is
 ///   locked until [reattest] succeeds. The request never goes to another
 ///   provider because of it.
+/// - Every request is end-to-end encrypted to the E2EE key of the attested
+///   keyset (WP62, [PhalaE2eeChannel]); a missing key, a response without
+///   the E2EE headers, plaintext in encrypted fields or a decryption error
+///   ends the call with `ErrorEvent(AttestationFailedException)` (stage
+///   `e2ee.*`), never with plaintext and never at another provider; the next
+///   call attests again.
 /// - After the stream ended it fetches the receipt, checks it against the
 ///   exact bytes of the exchange (up to 3 attempts for a network error) and
 ///   reports the result through [pendingReport] and [reports]. A red receipt
@@ -55,6 +62,16 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
             '(the gateway must enforce the upstream check)',
       );
     }
+    final channel = inner.wireCodec;
+    if (channel is! PhalaE2eeChannel || channel.bound) {
+      throw ArgumentError.value(
+        channel,
+        'inner',
+        'The adapter needs an unbound PhalaE2eeChannel as wireCodec '
+            '(every request to the gateway must be end-to-end encrypted)',
+      );
+    }
+    channel.bind(() => _session, settings.clock);
     _gpu = GpuGate(
       mode: gpuMode,
       verifier: gpuVerifier,
@@ -235,11 +252,24 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           );
         } else if (event is ErrorEvent) {
           _latest = _byRequest[req] = Future.value();
+          if (_isE2eeFailure(event.error)) {
+            // Keys may have rotated: attest again before the next request.
+            _audit.log('Wendelin/attest: E2EE-Fehler (${_stageOf(event)})');
+            _session = null;
+          }
         }
         yield event;
       }
       if (!rotated) return;
     }
+  }
+
+  static bool _isE2eeFailure(Object? error) =>
+      error is AttestationFailedException && error.stage.startsWith('e2ee.');
+
+  static String _stageOf(ErrorEvent event) {
+    final error = event.error;
+    return error is AttestationFailedException ? error.stage : 'e2ee';
   }
 
   static bool _isTlsMismatch(Object? error) =>

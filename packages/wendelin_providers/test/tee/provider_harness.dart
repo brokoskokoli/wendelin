@@ -8,6 +8,7 @@ import 'package:wendelin_providers/fakes.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 import '../support/fake_server.dart';
+import 'e2ee_support.dart';
 import 'tee_support.dart';
 
 /// An [AttestedProvider] against a mock gateway: attestation (probe data),
@@ -28,10 +29,7 @@ final class TeeHarness {
     server = TeeServer({
       'aci/attestation': (_) async {
         final status = attestationStatus;
-        return _json(
-          status == 200 ? jsonEncode(teeJson('gateway_attestation')) : '{}',
-          status,
-        );
+        return _json(status == 200 ? jsonEncode(attestation) : '{}', status);
       },
       'aci/sessions/': (_) async {
         if (sessionFailures > 0) {
@@ -49,19 +47,35 @@ final class TeeHarness {
         final receipt = syntheticReceipt(
           lastRequest ?? Uint8List(0),
           lastResponse ?? Uint8List(0),
-          receiptEdit,
+          (r) {
+            r['workload_keyset_digest'] = attestation['workload_keyset_digest'];
+            receiptEdit?.call(r);
+          },
           sessionDoc ?? upToDateSession(),
         );
         return _json(jsonEncode(receipt), 200);
       },
       'chat/completions': (request) {
-        lastRequest = request.bodyBytes;
-        lastResponse = Uint8List.fromList(utf8.encode(fixture(chatFixture)));
+        final FakeE2eeExchange exchange;
+        try {
+          exchange = e2ee.open(request.headers, request.bodyBytes);
+        } on E2eeRejection catch (e) {
+          return _json(e.body, 400);
+        }
+        lastExchange = exchange;
+        lastRequest = exchange.plainBytes;
+        final plain = fixture(chatFixture);
+        lastResponse = Uint8List.fromList(
+          utf8.encode(
+            sealResponse?.call(exchange, plain) ?? exchange.sealSse(plain),
+          ),
+        );
         return http.Response.bytes(
           lastResponse!,
           200,
           headers: {
             'content-type': 'text/event-stream',
+            ...(responseHeaders?.call(exchange) ?? exchange.responseHeaders),
             if (sendReceiptId) 'x-receipt-id': 'rcpt-test',
           },
         );
@@ -74,6 +88,7 @@ final class TeeHarness {
         : pinWrap(server.client, enforce: false);
     final content = pinWrap == null ? client : pinWrap(client, enforce: true);
     final settings = HttpSettings(clock: clock, log: diagnostics.add);
+    attestation = attestationFor(e2ee);
     verifier = PhalaVerifier(
       crypto: this.crypto,
       baseUrl: url,
@@ -93,6 +108,7 @@ final class TeeHarness {
         defaultModel: 'm',
         client: client is _Split ? client : _Split(content, tee),
         settings: settings,
+        wireCodec: PhalaE2eeChannel(crypto: this.crypto),
         options: const OpenAiOptions(
           extraBody: {
             'provider': {'aci_verified': true},
@@ -109,6 +125,22 @@ final class TeeHarness {
       tlsPin: tlsPin,
     );
   }
+
+  /// The service side of the end-to-end encryption (WP62); its key is the
+  /// one in the attested keyset.
+  final FakeE2eeService e2ee = FakeE2eeService(now: () => probeNow);
+
+  /// The attestation document the gateway serves (key of [e2ee]).
+  late Map<String, Object?> attestation;
+
+  /// The decrypted request of the last chat call.
+  FakeE2eeExchange? lastExchange;
+
+  /// Replaces how the answer is encrypted (default: [FakeE2eeExchange.sealSse]).
+  String Function(FakeE2eeExchange exchange, String plainSse)? sealResponse;
+
+  /// Replaces the E2EE response headers (default: proper ones).
+  Map<String, String> Function(FakeE2eeExchange exchange)? responseHeaders;
 
   /// Pin state shared by verifier and provider (WP61).
   final TlsPinGate? tlsPin;
@@ -155,10 +187,10 @@ final class TeeHarness {
   /// Whether the chat response carries `x-receipt-id`.
   bool sendReceiptId = true;
 
-  /// Request body of the last chat call.
+  /// Decrypted request body of the last chat call (what the receipt hashes).
   Uint8List? lastRequest;
 
-  /// Response body of the last chat call.
+  /// Response body of the last chat call as it went over the wire.
   Uint8List? lastResponse;
 
   late final PhalaVerifier verifier;

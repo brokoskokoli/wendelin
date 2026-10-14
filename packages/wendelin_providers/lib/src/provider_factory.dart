@@ -14,6 +14,7 @@ import 'tee/attestation_crypto.dart';
 import 'tee/attestation_log.dart';
 import 'tee/attestation_pin_store.dart';
 import 'tee/attested_provider.dart';
+import 'tee/e2ee_v2.dart';
 import 'tee/gpu_attestation.dart';
 import 'tee/phala_verifier.dart';
 import 'tee/tls_pin_gate.dart';
@@ -158,6 +159,9 @@ abstract final class ProviderFactory {
             (TlsPinGate g, {required bool enforce}) =>
                 PinnedHttpClient(gate: g, enforce: enforce, connect: connect);
         final adapter = OpenAiChatAdapter(
+          wireCodec: attested
+              ? PhalaE2eeChannel(crypto: attestation.crypto)
+              : null,
           baseUrl: Uri.parse(baseUrl),
           credentials: Credentials(
             profile.authMethod,

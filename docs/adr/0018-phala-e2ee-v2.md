@@ -1,0 +1,21 @@
+# ADR 0018 – Phala-E2EE v2 verpflichtend (WP62, K37)
+
+Status: vorgeschlagen · 2026-10-14
+
+## Kontext
+Phala/RedPill bietet Ende-zu-Ende-Verschlüsselung der Nachrichtenfelder zum Gateway-CVM (Protokoll v2, `X-E2EE-*`). Wendelin sendet an Phala-Profile nur noch verschlüsselt (Wunsch Maintainer). Quelle des Protokolls: `Dstack-TEE/private-ai-gateway` @ 57477f5d (`spec/e2ee-v2.md`, `src/aci/e2ee.rs`); die Notiz mit Zeilenbelegen liegt in `docs/notes/wp62-phala-e2ee-spec.md`. Die Phala-Doku nennt nur `secp256k1`; der Server bietet im Keyset auch `x25519` an, und die Spezifikation empfiehlt es.
+
+## Entscheidung
+- **Suite** `x25519-aes-256-gcm-hkdf-sha256`: je Feld ephemeres X25519, HKDF-SHA256 ohne Salt mit info `aci.e2ee.v2.x25519`, AES-256-GCM, 12-Byte-Nonce, AAD als JCS-JSON, Hex von `ephemeral(32) ‖ nonce(12) ‖ ciphertext ‖ tag(16)`. Die Primitive stehen in Rust (`native/attest/src/e2ee.rs`, `x25519-dalek`, `hkdf`, `aes-gcm`) hinter dem Port `AttestationCrypto`; AAD, Feldliste und Header (alles, was an der Protokollversion hängt) kapselt `E2eeProtocolV2` in Dart (`packages/wendelin_providers/lib/src/tee/e2ee_v2.dart`). v3 ersetzt nur diesen Baustein.
+- **Schlüssel nur aus der geprüften Attestierung:** Stufe `e2ee.key` des `PhalaVerifier` wählt den Eintrag in `workload_keyset.e2ee_public_keys` nach `algo` (nie nach `key_id`, nie hartkodiert). Das Keyset ist über `report_data` gebunden; fehlt der Schlüssel oder nennt der Dienst Version 2 nicht, ist die Sitzung rot. Ablauf `not_after`: vor jeder Anfrage prüft der `AttestedProvider` (neu attestieren) und der Kanal (kein Senden).
+- **Einhängepunkt:** `OpenAiChatAdapter.wireCodec` (`ChatWireCodec`/`ChatWire` in `common/chat_wire.dart`) verschlüsselt den Body, setzt Header, prüft den Antwortkopf und öffnet jedes SSE-Ereignis. Der `AttestedProvider` verlangt einen freien `PhalaE2eeChannel` (sonst `ArgumentError`): ein Phala-Provider ohne Verschlüsselung lässt sich nicht bauen.
+- **Fail-closed:** fehlende E2EE-Header, Klartext in `content`/`reasoning`/`reasoning_content`, Entschlüsselungsfehler und ein anderer Keyset-Digest im Antwortkopf enden mit `ErrorEvent(AttestationFailedException)` (Stufe `e2ee.*`), nie mit Klartext, nie bei einem anderen Anbieter (K28). Danach attestiert die nächste Anfrage neu. Jede HTTP-Anfrage (auch Wiederholungen) bekommt neue Nonce, neuen Zeitstempel, neuen Client-Schlüssel und neue Verschlüsselung (Replay-Schutz des Dienstes: 300 s).
+- **Quittung:** `request.received.body_hash` gilt dem **entschlüsselten**, kompakt serialisierten Body (Member-Reihenfolge wie gesendet), `response.returned.body_hash` den **Chiffre-Wire-Bytes** der Antwort. `ExchangeRecord.requestBytes` hält deshalb den Klartext-Body (`ExchangeTap.plainRequest`), `responseBytes` die rohen Bytes. Ein String-Inhalt, der wie ein JSON-Array aussieht, geht als Ein-Teil-Array, weil der Dienst solche Texte sonst in strukturierten Inhalt umwandeln würde.
+- **Grenzen (an WP63):** `tools`, `tool_choice`, `messages[].tool_calls` und die `tool_calls` der Antwort bleiben Klartext (nur gepinntes TLS, WP61). Die Verschlüsselung endet im Gateway-CVM, nicht im Modell-TEE. Eine Antwort ohne verschlüsselbares Feld (nur Tool-Aufruf) kann nur über den Kopf (`X-E2EE-Applied`) und die Quittung geprüft werden.
+
+## Belege
+- Rundlauf und Vektoren: `native/attest/src/e2ee.rs` (Test `frozen_vector_matches_independent_implementation`, Vektor mit Node.js `crypto` erzeugt, `native/attest/tests/e2ee_vector.txt`); AAD gegen die veröffentlichten Strings der Spezifikation in `test/tee/e2ee_v2_test.dart`. Phala veröffentlicht keine Chiffre-Vektoren.
+- Live (2026-10-14, `test/live/live_test.dart`): gegen `api.redpill.ai` antwortet der Dienst auf eine richtig verschlüsselte Anfrage mit HTTP 402 `insufficient_quota` (Entschlüsselung bestanden, dann Abrechnung), auf eine falsch gebundene AAD und auf Klartext mit `400 e2ee_decryption_failed`.
+
+## Folgen
+Das Referenz-Fake `E2eeReference` (reines Dart, langsam, nicht konstantzeitig) und `FakeE2eeService` (Gegenstelle) dienen Tests, Gerätetest-Fixtures und dem Demo-Modus; ihre Byte-Kompatibilität zu Rust sichert die Vertragssuite `attestationCryptoContract`.

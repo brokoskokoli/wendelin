@@ -68,6 +68,19 @@ final class WorkloadKeyset {
       _req<int>(json, 'not_after', AttestationStage.freshness),
       keys('receipt_signing_keys'),
       tls,
+      [
+        if (json['e2ee_public_keys'] is List<Object?>)
+          for (final k in json['e2ee_public_keys']! as List<Object?>)
+            if (k is Map<String, Object?> &&
+                k['key_id'] is String &&
+                k['algo'] is String &&
+                k['public_key'] is String)
+              KeysetKey(
+                k['key_id']! as String,
+                k['algo']! as String,
+                k['public_key']! as String,
+              ),
+      ],
     );
   }
 
@@ -76,7 +89,11 @@ final class WorkloadKeyset {
     this.notAfterEpoch,
     this.receiptSigningKeys,
     this.tlsSpkiByDomain,
+    this.e2eePublicKeys,
   );
+
+  /// `e2ee_public_keys` (empty if the keyset has none).
+  final List<KeysetKey> e2eePublicKeys;
 
   /// The keyset as delivered (input of the digest).
   final Map<String, Object?> raw;
@@ -190,6 +207,12 @@ final class GatewayAttestation {
           ? binding['spki_sha256'] as String?
           : null,
       hasEndorsement: att.containsKey('keyset_endorsement'),
+      supportedE2eeVersions: switch (json['service_capabilities']) {
+        {'supported_e2ee_versions': final List<Object?> v} => [
+          for (final e in v) '$e',
+        ],
+        _ => null,
+      },
     );
   }
 
@@ -207,7 +230,12 @@ final class GatewayAttestation {
     required this.downstreamTlsDomain,
     required this.downstreamTlsSpki,
     required this.hasEndorsement,
+    required this.supportedE2eeVersions,
   });
+
+  /// `service_capabilities.supported_e2ee_versions`, `null` if not given.
+  /// Not bound by the quote: only a hint, the key itself is what counts.
+  final List<String>? supportedE2eeVersions;
 
   /// `api_version`.
   final String apiVersion;

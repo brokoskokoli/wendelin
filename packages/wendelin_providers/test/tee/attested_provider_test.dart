@@ -9,6 +9,7 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 
 import '../openai/openai_contract_test.dart' show openAiResponseFor;
 import '../support/fake_server.dart';
+import 'e2ee_support.dart';
 import 'provider_harness.dart';
 import 'tee_support.dart';
 
@@ -16,10 +17,11 @@ AttestationFailedException _error(List<ChatEvent> events) =>
     (events.last as ErrorEvent).error as AttestationFailedException;
 
 void main() {
+  final service = FakeE2eeService(now: () => probeNow);
   llmProviderContract((scenario) {
     final chat = FakeServer([openAiResponseFor(scenario)]);
     final tee = TeeServer({
-      'aci/attestation': jsonBody(teeJson('gateway_attestation')),
+      'aci/attestation': jsonBody(attestationFor(service)),
       'aci/sessions/': jsonBody(upToDateSession()),
     });
     return AttestedProvider(
@@ -30,7 +32,8 @@ void main() {
           style: ApiKeyStyle.bearer,
         ),
         defaultModel: 'contract-model',
-        client: splitClient(chat.client, tee.client),
+        client: splitClient(e2eeFront(service, chat.client), tee.client),
+        wireCodec: PhalaE2eeChannel(crypto: FakeAttestationCrypto()),
         options: const OpenAiOptions(
           extraBody: {
             'provider': {'aci_verified': true},

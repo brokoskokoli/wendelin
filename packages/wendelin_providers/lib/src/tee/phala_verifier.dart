@@ -15,6 +15,7 @@ import 'attestation_policy.dart';
 import 'attestation_stages.dart';
 import 'attestation_types.dart';
 import 'codec.dart';
+import 'e2ee_v2.dart';
 import 'gateway_documents.dart';
 import 'receipt_checks.dart';
 import 'tls_pin_gate.dart';
@@ -178,7 +179,8 @@ final class PhalaVerifier implements AttestationVerifier {
           enforce: gate != null || enforceTlsPin,
           host: gate == null ? null : baseUrl.host,
         ),
-      );
+      )
+      ..add(_checks.e2eeKey(doc));
 
     final status = policy.sessionStatus(stages);
     if (status != AttestationStatus.green) return _attestFailed(stages);
@@ -211,6 +213,7 @@ final class PhalaVerifier implements AttestationVerifier {
         composeHash: AttestCodec.hex(crypto.sha256(utf8Bytes(doc.appCompose))),
         attestedAt: now,
         workloadId: doc.workloadId,
+        e2eeKey: E2eeProtocolV2.selectKey(doc.keyset.e2eePublicKeys),
       );
 
   Future<PinChange> _pin(AttestedSession s) async {

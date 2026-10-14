@@ -72,3 +72,28 @@ pub fn sha384(data: Vec<u8>) -> Vec<u8> {
 pub fn spki_sha256(certificate_der: Vec<u8>) -> Result<Vec<u8>, String> {
     crate::spki::spki_sha256(&certificate_der).map(|h| h.to_vec())
 }
+
+pub use crate::e2ee::E2eeKeypair;
+
+/// Frisches X25519-Schlüsselpaar für eine E2EE-Anfrage (Phala, Protokoll v2); der private Teil
+/// bleibt im Speicher des Aufrufers und dient nur dem Entschlüsseln der Antwort.
+#[flutter_rust_bridge::frb(sync)]
+pub fn e2ee_generate_keypair() -> E2eeKeypair {
+    crate::e2ee::generate_keypair()
+}
+
+/// Verschlüsselt ein Feld (Suite `x25519-aes-256-gcm-hkdf-sha256`); liefert das Hex-Wire-Format.
+#[flutter_rust_bridge::frb(sync)]
+pub fn e2ee_encrypt(
+    recipient_public: Vec<u8>,
+    plaintext: Vec<u8>,
+    aad: Vec<u8>,
+) -> Result<String, String> {
+    crate::e2ee::encrypt(&recipient_public, &plaintext, &aad)
+}
+
+/// Entschlüsselt ein Feld im Hex-Wire-Format; jeder Fehler (Hex, Länge, Tag, AAD) ist ein `Err`.
+#[flutter_rust_bridge::frb(sync)]
+pub fn e2ee_decrypt(secret: Vec<u8>, wire_hex: String, aad: Vec<u8>) -> Result<Vec<u8>, String> {
+    crate::e2ee::decrypt(&secret, &wire_hex, &aad)
+}

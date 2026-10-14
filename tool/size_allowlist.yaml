@@ -9,4 +9,4 @@
 # Integrations-Tools: Abbau in WP36 Teil d.
 
 # Erzeugter flutter_rust_bridge-Code (WP47), nicht von Hand änderbar.
-app/lib/platform/attest/generated/frb_generated.dart: 1000  # WP47 (erzeugt, kein Abbau)
+app/lib/platform/attest/generated/frb_generated.dart: 1200  # WP47/WP62 (erzeugt, kein Abbau)

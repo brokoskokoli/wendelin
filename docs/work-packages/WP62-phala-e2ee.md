@@ -13,8 +13,8 @@ Abhängig von: WP61. Bezug: Wunsch Maintainer 2026-10-14 („nur die End-to-End-
 - **v3:** Phala hat v2 eingefroren, Umstellung bis 10.02.2027 → Protokollversion als eigener Baustein kapseln.
 
 ## Abnahmekriterien
-- [ ] Rust-Tests mit Testvektoren (Rundlauf und, falls Phala welche veröffentlicht, deren Vektoren).
-- [ ] Dart-Tests: Request enthält keinen Klartext der Nachrichten (Fake-Server prüft Body); fehlende/kaputte Verschlüsselung in der Antwort → Fehler, kein Klartext; Stream mit verschlüsselten Deltas.
-- [ ] Live-Test (`@Tags(['live'])`, ein kleiner Request, ein Streaming-Request) gegen RedPill mit Gemma 4 31B grün.
+- [x] Rust-Tests mit Testvektoren (Rundlauf und, falls Phala welche veröffentlicht, deren Vektoren).
+- [x] Dart-Tests: Request enthält keinen Klartext der Nachrichten (Fake-Server prüft Body); fehlende/kaputte Verschlüsselung in der Antwort → Fehler, kein Klartext; Stream mit verschlüsselten Deltas.
+- [~] Live-Test (`@Tags(['live'])`, ein kleiner Request, ein Streaming-Request) gegen RedPill mit Gemma 4 31B: Key ohne Guthaben (HTTP 402); stattdessen Beleg, dass der Dienst richtig und falsch verschlüsselte Anfragen unterscheidet (siehe ADR 0018). Antwortpfad live offen bis Guthaben da ist.
 - [ ] Emulator-Lauf durch separaten E2E-Agenten.
 - [ ] Gate grün (inkl. Rust/CI).

@@ -11,6 +11,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 import 'api.dart';
 import 'collateral.dart';
+import 'e2ee.dart';
 import 'frb_generated.dart';
 import 'quote.dart';
 import 'report.dart';
@@ -38,6 +39,9 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   CollateralRequest dco_decode_collateral_request(dynamic raw);
+
+  @protected
+  E2eeKeypair dco_decode_e_2_ee_keypair(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
@@ -85,6 +89,9 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   CollateralRequest sse_decode_collateral_request(SseDeserializer deserializer);
+
+  @protected
+  E2eeKeypair sse_decode_e_2_ee_keypair(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
@@ -142,6 +149,9 @@ abstract class AttestNativeApiImplPlatform
     CollateralRequest self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_e_2_ee_keypair(E2eeKeypair self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
