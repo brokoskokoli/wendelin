@@ -6,8 +6,6 @@ import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
-import 'package:wendelin/platform/voice/model_installer.dart';
-import 'package:wendelin/platform/voice/tar_bz2.dart';
 import 'package:wendelin/ui/design/design.dart' show WSwitch;
 import 'package:wendelin/ui/onboarding/voice_download_step.dart';
 import 'package:wendelin/ui/routes.dart';

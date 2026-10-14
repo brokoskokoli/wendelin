@@ -26,7 +26,7 @@ Die Einstellung „Gesprochene Sprache“ steht anfangs auf „Wie die App“ (f
 `FileModelStore` unter `<App-Support>/models/<id>/`, Teil-Downloads als `.part`. `ModelInstaller` prüft vorher den freien Platz (libc `statvfs` per FFI, Download + 3 × Archiv + 50 MB), lädt mit `ModelDownloader`, entpackt `.tar.bz2` mit eigenem Tar-Leser (nur Dateien/Ordner, relative Pfade ohne `..`, bzip2 mit Größenlimit) in ein temporäres Verzeichnis und benennt es um; erst danach wird das Archiv gelöscht. Ein angefangener Download wird beim Öffnen des Onboarding-Schritts fortgesetzt und ist in den Einstellungen als „Fortsetzen“ sichtbar.
 
 ### 7. Einstellungen als eigener Schlüssel
-`voice.settings` (JSON) mit eigenem `AsyncNotifier` in `lib/di/voice_providers.dart` statt eines Felds in `StartupSettings`: Die Werte werden erst gebraucht, wenn gesprochen wird, und die Datei bleibt getrennt von den Einstellungen anderer Pakete. Ungültige Werte fallen einzeln auf den Standard zurück.
+`voice.settings` (JSON) mit eigenem `AsyncNotifier` in `lib/di/voice_settings_providers.dart` (Modell `VoiceSettings` in `wendelin_voice`) statt eines Felds in `StartupSettings`: Die Werte werden erst gebraucht, wenn gesprochen wird, und die Datei bleibt getrennt von den Einstellungen anderer Pakete. Ungültige Werte fallen einzeln auf den Standard zurück.
 
 ### 8. Mikrofon nur nach Erklärung
 `RecordAudioInput.start` fragt nie selbst; ohne Berechtigung kommt `VoiceException(permissionDenied)`. Die App ruft vorher `ensureMicrophoneAccess` (Erklärung, dann Android-Dialog), beim ersten Sprechen (WP18) oder in Einstellungen → Sprache.
