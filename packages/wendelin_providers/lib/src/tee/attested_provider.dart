@@ -6,10 +6,12 @@ import '../common/exchange_tap.dart';
 import '../common/health_probe.dart';
 import '../common/http_settings.dart';
 import '../openai/openai_adapter.dart';
+import 'attestation_audit.dart';
 import 'attestation_log.dart';
 import 'attestation_policy.dart';
 import 'attestation_types.dart';
 import 'gpu_attestation.dart';
+import 'gpu_gate.dart';
 
 /// Decorator that makes an OpenAI-compatible TEE provider verifiable
 /// (concept: „TEE-Provider und Attestierung“, ADR 0014).
@@ -34,14 +36,21 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     required this.inner,
     required this.verifier,
     required this.profileId,
-    this.gpuVerifier,
-    this.gpuMode = GpuCheckMode.off,
+    GpuAttestationVerifier? gpuVerifier,
+    GpuCheckMode gpuMode = GpuCheckMode.off,
     this.policy = const AttestationPolicy(),
     this.logSink,
     this.settings = const HttpSettings(),
     this.retryDelay = const Duration(seconds: 2),
-    this.gpuTimeout = const Duration(seconds: 15),
-  });
+    Duration gpuTimeout = const Duration(seconds: 15),
+  }) {
+    _gpu = GpuGate(
+      mode: gpuMode,
+      verifier: gpuVerifier,
+      timeout: gpuTimeout,
+      onResult: _onGpuResult,
+    );
+  }
 
   /// The wrapped adapter. It must send `provider.aci_verified: true`
   /// (`OpenAiOptions.extraBody`) so the gateway enforces the upstream check.
@@ -53,11 +62,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// Provider profile id (audit log, pin).
   final String profileId;
 
-  /// NRAS check; `null` = unavailable.
-  final GpuAttestationVerifier? gpuVerifier;
+  late final GpuGate _gpu;
 
   /// When the GPU evidence is checked (changeable at runtime).
-  GpuCheckMode gpuMode;
+  GpuCheckMode get gpuMode => _gpu.mode;
+  set gpuMode(GpuCheckMode mode) => _gpu.mode = mode;
 
   /// Stage results → status.
   final AttestationPolicy policy;
@@ -71,17 +80,15 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// Wait between receipt attempts.
   final Duration retryDelay;
 
-  /// Upper bound for one GPU check.
-  final Duration gpuTimeout;
-
   AttestedSession? _session;
   AttestationFailedException? _lock;
   Future<AttestationFailedException?>? _attesting;
   Future<AttestationReport?>? _pending;
-  final Map<String, bool> _gpuOk = {};
-  bool _gpuNeedsCheck = false;
-  bool _skipGpuOnce = false;
-  int _counter = 0;
+  late final AttestationAudit _audit = AttestationAudit(
+    profileId,
+    logSink,
+    settings,
+  );
   final StreamController<AttestationReport> _reports =
       StreamController<AttestationReport>.broadcast();
 
@@ -122,7 +129,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     final error = await _attest();
     final stage = error?.stage;
     return AttestationReport(
-      logId: _lastLogId,
+      logId: _audit.lastLogId,
       status: error == null
           ? AttestationStatus.green
           : error.unavailable
@@ -134,14 +141,14 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   /// Lets the next request through although the GPU check failed or was not
   /// reachable (the user chose „ohne GPU-Prüfung senden“). Valid once.
-  void allowNextRequestWithoutGpuCheck() => _skipGpuOnce = true;
+  void allowNextRequestWithoutGpuCheck() => _gpu.allowOnce();
 
   @override
   Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) async* {
     _pending = null;
     final error = await _prepare(req.model);
     if (error != null) {
-      _log('Wendelin/attest: Anfrage nicht gesendet (${error.stage})');
+      _audit.log('Wendelin/attest: Anfrage nicht gesendet (${error.stage})');
       yield ErrorEvent(error);
       return;
     }
@@ -173,7 +180,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     if (session == null || !settings.clock.now().isBefore(session.notAfter)) {
       if (await _attest() case final error?) return error;
     }
-    return _gpuBefore(model);
+    return _gpu.before(model);
   }
 
   Future<AttestationFailedException?> _attest() =>
@@ -192,7 +199,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     final session = result.session;
     final green = result.status == AttestationStatus.green && session != null;
     final changed = result.pinChange == PinChange.changed;
-    final id = _record(
+    final id = _audit.record(
       AttestationLogKind.session,
       result.status,
       result.stages,
@@ -214,7 +221,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     if (green) {
       _session = session;
       _lock = null;
-      _gpuOk.clear();
+      _gpu.reset();
       return null;
     }
     final problem = result.firstProblem;
@@ -241,44 +248,19 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   ) async {
     try {
       final id = record.responseHeaders['x-receipt-id'];
-      var stages = <StageResult>[];
-      var status = AttestationStatus.red;
-      var pinChanged = false;
-      if (id == null || id.isEmpty) {
-        stages = const [
-          StageResult.fail(
-            AttestationStage.receiptFetch,
-            'Antwort ohne x-receipt-id',
-          ),
-        ];
-      } else {
-        for (var attempt = 1; ; attempt++) {
-          final result = await verifier.verifyReceipt(
-            ReceiptRef(id: id, session: session),
-            record.requestBytes,
-            record.responseBytes,
-          );
-          stages = result.stages;
-          pinChanged = result.pinChanged;
-          status = policy.receiptStatus(stages, attempt: attempt);
-          if (status != AttestationStatus.yellow) break;
-          _emit(
-            AttestationReport(
-              logId: _record(
-                AttestationLogKind.receipt,
-                status,
-                stages,
-                model: model,
-                receiptId: id,
-              ),
-              status: status,
-              detail: 'Quittung nicht abrufbar, neuer Versuch',
-            ),
-          );
-          await Future<void>.delayed(retryDelay);
-        }
-      }
-      final logId = _record(
+      final (:stages, :status, :pinChanged) = id == null || id.isEmpty
+          ? (
+              stages: const [
+                StageResult.fail(
+                  AttestationStage.receiptFetch,
+                  'Antwort ohne x-receipt-id',
+                ),
+              ],
+              status: AttestationStatus.red,
+              pinChanged: false,
+            )
+          : await _receiptAttempts(id, record, session, model);
+      final logId = _audit.record(
         AttestationLogKind.receipt,
         status,
         stages,
@@ -305,7 +287,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
             : policy.notes(stages).firstOrNull,
       );
       _emit(report);
-      if (status == AttestationStatus.green) _gpuAfter(model);
+      if (status == AttestationStatus.green) _gpu.after(model);
       return report;
     } on Object {
       _lock = const AttestationFailedException(
@@ -313,7 +295,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         stage: 'internal',
       );
       final report = AttestationReport(
-        logId: _record(
+        logId: _audit.record(
           AttestationLogKind.receipt,
           AttestationStatus.red,
           const [
@@ -325,6 +307,48 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       );
       _emit(report);
       return report;
+    }
+  }
+
+  /// Fetches and checks the receipt; a network failure is retried up to
+  /// `policy.maxReceiptAttempts` times with a yellow interim report.
+  Future<
+    ({List<StageResult> stages, AttestationStatus status, bool pinChanged})
+  >
+  _receiptAttempts(
+    String id,
+    ExchangeRecord record,
+    AttestedSession session,
+    String model,
+  ) async {
+    for (var attempt = 1; ; attempt++) {
+      final result = await verifier.verifyReceipt(
+        ReceiptRef(id: id, session: session),
+        record.requestBytes,
+        record.responseBytes,
+      );
+      final status = policy.receiptStatus(result.stages, attempt: attempt);
+      if (status != AttestationStatus.yellow) {
+        return (
+          stages: result.stages,
+          status: status,
+          pinChanged: result.pinChanged,
+        );
+      }
+      _emit(
+        AttestationReport(
+          logId: _audit.record(
+            AttestationLogKind.receipt,
+            status,
+            result.stages,
+            model: model,
+            receiptId: id,
+          ),
+          status: status,
+          detail: 'Quittung nicht abrufbar, neuer Versuch',
+        ),
+      );
+      await Future<void>.delayed(retryDelay);
     }
   }
 
@@ -340,73 +364,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           .id ??
       'receipt';
 
-  // --- GPU --------------------------------------------------------------
-
-  Future<AttestationFailedException?> _gpuBefore(String model) async {
-    final verifier = gpuVerifier;
-    if (gpuMode == GpuCheckMode.off || verifier == null) return null;
-    if (_skipGpuOnce) {
-      _skipGpuOnce = false;
-      return null;
-    }
-    final needed = gpuMode == GpuCheckMode.before
-        ? _gpuOk[model] != true
-        : _gpuNeedsCheck;
-    if (!needed) return null;
-    final result = await _gpuCheck(verifier, model);
-    if (result.ok) return null;
-    final unavailable =
-        result.verdict == GpuVerdict.unreachable ||
-        result.verdict == GpuVerdict.timeout;
-    return AttestationFailedException(
-      'GPU-Prüfung nicht bestanden (${result.detail ?? result.verdict.name}); '
-      'Anfrage nicht gesendet',
-      stage: 'gpu',
-      unavailable: unavailable,
-    );
-  }
-
-  void _gpuAfter(String model) {
-    final verifier = gpuVerifier;
-    if (gpuMode != GpuCheckMode.after ||
-        verifier == null ||
-        _gpuOk[model] == true) {
-      return;
-    }
-    unawaited(_gpuCheck(verifier, model));
-  }
-
-  Future<GpuAttestationResult> _gpuCheck(
-    GpuAttestationVerifier verifier,
-    String model,
-  ) async {
-    final GpuAttestationResult result;
-    try {
-      result = await verifier
-          .verify(model: model)
-          .timeout(
-            gpuTimeout,
-            onTimeout: () => const GpuAttestationResult(
-              GpuVerdict.timeout,
-              'Zeitüberschreitung',
-            ),
-          );
-    } on Object {
-      return _gpuResult(
-        model,
-        const GpuAttestationResult(GpuVerdict.unreachable, 'interner Fehler'),
-      );
-    }
-    return _gpuResult(model, result);
-  }
-
-  GpuAttestationResult _gpuResult(String model, GpuAttestationResult result) {
-    _gpuOk[model] = result.ok;
-    _gpuNeedsCheck = !result.ok;
+  void _onGpuResult(String model, GpuAttestationResult result) {
     final status = result.ok ? AttestationStatus.green : AttestationStatus.red;
-    final id = _record(AttestationLogKind.gpu, status, [
+    final id = _audit.record(AttestationLogKind.gpu, status, [
       StageResult(
-        AttestationStage.quote,
+        AttestationStage.gpu,
         result.ok ? StageOutcome.pass : StageOutcome.fail,
         'gpu: ${result.verdict.name}',
       ),
@@ -420,53 +382,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
             : 'GPU-Prüfung: ${result.detail ?? result.verdict.name}',
       ),
     );
-    return result;
-  }
-
-  // --- Log --------------------------------------------------------------
-
-  String _lastLogId = '';
-
-  String _record(
-    AttestationLogKind kind,
-    AttestationStatus status,
-    List<StageResult> stages, {
-    String? model,
-    String? receiptId,
-    AttestedSession? session,
-    List<String> notes = const [],
-  }) {
-    final now = settings.clock.now();
-    final id = 'att-${now.microsecondsSinceEpoch}-${_counter++}';
-    _lastLogId = id;
-    for (final s in stages) {
-      _log('Wendelin/attest: ${kind.name} ${s.stage.id}=${s.outcome.name}');
-    }
-    _log('Wendelin/attest: ${kind.name} ${status.name}');
-    logSink?.record(
-      AttestationLogEntry(
-        logId: id,
-        time: now,
-        kind: kind,
-        profileId: profileId,
-        status: status,
-        stages: stages,
-        model: model,
-        receiptId: receiptId,
-        repoCommit: session?.repoCommit,
-        composeHash: session?.composeHash,
-        keysetDigest: session?.keysetDigest,
-        notes: notes,
-      ),
-    );
-    return id;
   }
 
   void _emit(AttestationReport report) {
     if (!_reports.isClosed) _reports.add(report);
   }
-
-  void _log(String line) => settings.log?.call(line);
 
   @override
   String toString() => 'AttestedProvider($profileId, $inner)';

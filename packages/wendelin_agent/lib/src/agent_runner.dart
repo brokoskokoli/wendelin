@@ -7,6 +7,7 @@ import 'context_builder.dart';
 import 'give_up_classifier.dart';
 import 'ports.dart';
 import 'provider_resolver.dart';
+import 'run/attestation_gate.dart';
 import 'run/escalation.dart';
 import 'run/model_call.dart';
 import 'run/privacy_scope.dart';
@@ -183,8 +184,22 @@ final class _Run implements RunControl {
 
   late final RunBudget _budget = RunBudget(config);
   late final PrivacyScope _privacy = PrivacyScope(runner, _state);
-  late final ToolRound _tools = ToolRound(runner, _state, _privacy, this);
-  late final _model = ModelCall(runner, _state, _privacy, _budget, this);
+  late final AttestationGate _attest = AttestationGate(this, runner.sessionId);
+  late final ToolRound _tools = ToolRound(
+    runner,
+    _state,
+    _privacy,
+    this,
+    _attest,
+  );
+  late final _model = ModelCall(
+    runner,
+    _state,
+    _privacy,
+    _budget,
+    this,
+    _attest,
+  );
   late final Escalation _escalation = Escalation(
     runner.resolver,
     _state,

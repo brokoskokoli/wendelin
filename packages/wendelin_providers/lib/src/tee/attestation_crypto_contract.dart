@@ -107,40 +107,48 @@ void attestationCryptoContract(
     }
 
     if (quoteCase != null) {
-      test('verifyQuote: Report-Felder des echten Quotes', () async {
-        final c = await create();
-        final v = await c.verifyQuote(
-          quoteCase.quote,
-          quoteCase.collateral,
-          quoteCase.now,
-        );
-        expect(AttestCodec.hex(v.reportData), quoteCase.reportDataHex);
-        expect(AttestCodec.hex(v.rtmr3), quoteCase.rtmr3Hex);
-      });
-
-      if (verifiesQuoteSignatures) {
-        test('verifyQuote: manipuliertes Quote wird abgelehnt', () async {
-          final c = await create();
-          final bad = Uint8List.fromList(quoteCase.quote);
-          bad[bad.length - 40] ^= 1; // inside the signature data
-          await expectLater(
-            c.verifyQuote(bad, quoteCase.collateral, quoteCase.now),
-            throwsA(isA<QuoteVerificationException>()),
-          );
-        });
-
-        test('verifyQuote: abgelaufenes Kollateral wird abgelehnt', () async {
-          final c = await create();
-          await expectLater(
-            c.verifyQuote(
-              quoteCase.quote,
-              quoteCase.collateral,
-              quoteCase.now.add(const Duration(days: 400)),
-            ),
-            throwsA(isA<QuoteVerificationException>()),
-          );
-        });
-      }
+      _quoteTests(create, quoteCase, verifiesQuoteSignatures);
     }
   });
+}
+
+void _quoteTests(
+  FutureOr<AttestationCrypto> Function() create,
+  QuoteCase quoteCase,
+  bool verifiesQuoteSignatures,
+) {
+  test('verifyQuote: Report-Felder des echten Quotes', () async {
+    final c = await create();
+    final v = await c.verifyQuote(
+      quoteCase.quote,
+      quoteCase.collateral,
+      quoteCase.now,
+    );
+    expect(AttestCodec.hex(v.reportData), quoteCase.reportDataHex);
+    expect(AttestCodec.hex(v.rtmr3), quoteCase.rtmr3Hex);
+  });
+
+  if (verifiesQuoteSignatures) {
+    test('verifyQuote: manipuliertes Quote wird abgelehnt', () async {
+      final c = await create();
+      final bad = Uint8List.fromList(quoteCase.quote);
+      bad[bad.length - 40] ^= 1; // inside the signature data
+      await expectLater(
+        c.verifyQuote(bad, quoteCase.collateral, quoteCase.now),
+        throwsA(isA<QuoteVerificationException>()),
+      );
+    });
+
+    test('verifyQuote: abgelaufenes Kollateral wird abgelehnt', () async {
+      final c = await create();
+      await expectLater(
+        c.verifyQuote(
+          quoteCase.quote,
+          quoteCase.collateral,
+          quoteCase.now.add(const Duration(days: 400)),
+        ),
+        throwsA(isA<QuoteVerificationException>()),
+      );
+    });
+  }
 }

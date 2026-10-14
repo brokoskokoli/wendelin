@@ -74,5 +74,46 @@ void main() {
       expect(a, isNot(const ServerException('x', statusCode: 503)));
       expect(a, isNot(const ServerException('y', statusCode: 500)));
     });
+    test('AttestationFailedException: retryable nur wenn nicht prüfbar', () {
+      const failed = AttestationFailedException('x', stage: 'quote');
+      const offline = AttestationFailedException(
+        'x',
+        stage: 'quote',
+        unavailable: true,
+      );
+      expect(failed.retryable, isFalse);
+      expect(offline.retryable, isTrue);
+      expect(failed.stage, 'quote');
+    });
+    test('AttestationReport vergleicht Felder', () {
+      const a = AttestationReport(
+        logId: 'l',
+        status: AttestationStatus.green,
+        detail: 'd',
+      );
+      expect(
+        a,
+        const AttestationReport(
+          logId: 'l',
+          status: AttestationStatus.green,
+          detail: 'd',
+        ),
+      );
+      expect(
+        a,
+        isNot(
+          const AttestationReport(logId: 'l', status: AttestationStatus.red),
+        ),
+      );
+      expect(a.hashCode, isNot(0));
+      expect(
+        const AttestationStatusChanged(
+          stepId: 's:1',
+          status: AttestationStatus.red,
+          logId: 'l',
+        ).toString(),
+        contains('red'),
+      );
+    });
   });
 }
