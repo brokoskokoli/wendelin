@@ -260,4 +260,27 @@ void main() {
     expect(out, contains('de-cal-tauchen: error'));
     expect(out, isNot(contains('test-key-123')));
   });
+
+  test(
+    'TEE-Profil läuft ohne Prüf-Verdrahtung, mit aci_verified (WP54b)',
+    () async {
+      final bodies = <String>[];
+      final auth = <String?>[];
+      final client = MockClient((req) async {
+        bodies.add(req.body);
+        auth.add(req.headers['authorization']);
+        return http.Response('{}', 401);
+      });
+      final (code, out, err) = await run(
+        ['-p', 'profiles/phala-tee-small.json', '-n', '1'],
+        env: {'PHALA_API_KEY': 'test-key-123'},
+        client: client,
+      );
+      expect(code, 0, reason: err);
+      expect(out, contains('de-cal-tauchen: error'));
+      expect(auth.first, 'Bearer test-key-123');
+      expect(bodies.first, contains('"aci_verified":true'));
+      expect(out, isNot(contains('test-key-123')));
+    },
+  );
 }

@@ -1,0 +1,1325 @@
+{
+  "meta": {
+    "profileId": "phala-tee-small",
+    "providerType": "openaiCompatible",
+    "model": "google/gemma-4-31b-it",
+    "privacy": "tee",
+    "now": "2026-11-18T09:00",
+    "timeZone": "Europe/Berlin",
+    "cases": 42
+  },
+  "summary": {
+    "total": 40,
+    "passed": 40,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 2,
+    "passRate": 1.0,
+    "latencyMs": {
+      "p50": 4673,
+      "p90": 12368
+    },
+    "usage": {
+      "input": 138822,
+      "output": 2062,
+      "cacheRead": 137750,
+      "cacheWrite": 0,
+      "total": 278634
+    },
+    "costMicros": 32100,
+    "costUsd": 0.0321,
+    "unpricedCases": 0,
+    "gaveUp": 0,
+    "escalated": 0,
+    "confirmations": 3,
+    "escalationConfirmations": 0
+  },
+  "byLanguage": {
+    "de": {
+      "total": 20,
+      "passed": 20,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 2,
+      "passRate": 1.0,
+      "latencyMs": {
+        "p50": 2804,
+        "p90": 15570
+      },
+      "usage": {
+        "input": 79715,
+        "output": 1064,
+        "cacheRead": 68307,
+        "cacheWrite": 0,
+        "total": 149086
+      },
+      "costMicros": 17568,
+      "costUsd": 0.017568,
+      "unpricedCases": 0,
+      "gaveUp": 0,
+      "escalated": 0,
+      "confirmations": 1,
+      "escalationConfirmations": 0
+    },
+    "en": {
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passRate": 1.0,
+      "latencyMs": {
+        "p50": 4697,
+        "p90": 8333
+      },
+      "usage": {
+        "input": 22685,
+        "output": 487,
+        "cacheRead": 38818,
+        "cacheWrite": 0,
+        "total": 61990
+      },
+      "costMicros": 6537,
+      "costUsd": 0.006537,
+      "unpricedCases": 0,
+      "gaveUp": 0,
+      "escalated": 0,
+      "confirmations": 1,
+      "escalationConfirmations": 0
+    },
+    "fr": {
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passRate": 1.0,
+      "latencyMs": {
+        "p50": 6201,
+        "p90": 12368
+      },
+      "usage": {
+        "input": 36422,
+        "output": 511,
+        "cacheRead": 30625,
+        "cacheWrite": 0,
+        "total": 67558
+      },
+      "costMicros": 7995,
+      "costUsd": 0.007995,
+      "unpricedCases": 0,
+      "gaveUp": 0,
+      "escalated": 0,
+      "confirmations": 1,
+      "escalationConfirmations": 0
+    }
+  },
+  "cases": [
+    {
+      "id": "de-cal-tauchen",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Trag mir morgen um 10 Tauchen ein",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "start": "2026-11-19T10:00",
+            "title": "Tauchen"
+          },
+          "summary": "Termin angelegt: Tauchen, Do 19.11. 10:00"
+        }
+      ],
+      "finalText": "Alles klar, ich habe Tauchen für morgen um 10 Uhr eingetragen.",
+      "latencyMs": 6164,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5622,
+        "output": 61,
+        "cacheRead": 8,
+        "cacheWrite": 0
+      },
+      "costMicros": 872,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-zahnarzt-freitag",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Ich habe am Freitag um halb drei einen Zahnarzttermin, trag den bitte ein.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "start": "2026-11-20T14:30",
+            "title": "Zahnarzttermin"
+          },
+          "summary": "Termin angelegt: Zahnarzttermin, Fr 20.11. 14:30"
+        }
+      ],
+      "finalText": "Alles klar, ich habe den Zahnarzttermin für Freitag um 14:30 Uhr eingetragen.",
+      "latencyMs": 2244,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5652,
+        "output": 68,
+        "cacheRead": 5536,
+        "cacheWrite": 0
+      },
+      "costMicros": 1294,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-ganztag",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Trag für Samstag ganztägig Familienfest bei Oma ein.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "all_day": true,
+            "start": "2026-11-21",
+            "title": "Familienfest bei Oma"
+          },
+          "summary": "Termin angelegt: Familienfest bei Oma, Sa 21.11. (ganztägig)"
+        }
+      ],
+      "finalText": "Ich habe das Familienfest bei Oma für Samstag eingetragen.",
+      "latencyMs": 5991,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5610,
+        "output": 59,
+        "cacheRead": 8,
+        "cacheWrite": 0
+      },
+      "costMicros": 869,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-heute",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Was steht heute in meinem Kalender?",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "end": "2026-11-18T23:59",
+            "start": "2026-11-18T00:00"
+          },
+          "summary": "1 Termin"
+        }
+      ],
+      "finalText": "Heute hast du um 14 Uhr ein Teammeeting.",
+      "latencyMs": 4467,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5649,
+        "output": 70,
+        "cacheRead": 2692,
+        "cacheWrite": 0
+      },
+      "costMicros": 1081,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-frei",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Wann habe ich morgen Nachmittag eine Stunde Zeit?",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__find_free_slots",
+          "args": {
+            "day_start": "12:00",
+            "end": "2026-11-19T20:00",
+            "min_duration_minutes": 60,
+            "start": "2026-11-19T12:00"
+          },
+          "summary": "2 freie Zeiten, ab Do 19.11. 12:00"
+        }
+      ],
+      "finalText": "Morgen Nachmittag hast du von 12 bis 13 Uhr Zeit und dann wieder durchgehend ab 14 Uhr bis zum Abend.",
+      "latencyMs": 8563,
+      "modelCalls": 2,
+      "usage": {
+        "input": 3003,
+        "output": 111,
+        "cacheRead": 2728,
+        "cacheWrite": 0
+      },
+      "costMicros": 706,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-loeschen",
+      "language": "de",
+      "category": "calendar-external",
+      "prompt": "Lösch den Zahnarzttermin morgen.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "end": "2026-11-19T23:59",
+            "start": "2026-11-19T00:00"
+          },
+          "summary": "1 Termin"
+        },
+        {
+          "name": "calendar__delete_event",
+          "args": {
+            "event_id": "evt-zahnarzt"
+          },
+          "summary": "Termin gelöscht: Zahnarzt, Do 19.11. 15:00–16:00"
+        }
+      ],
+      "finalText": "Ich habe den Zahnarzttermin für morgen gelöscht.",
+      "latencyMs": 15570,
+      "modelCalls": 3,
+      "usage": {
+        "input": 449,
+        "output": 97,
+        "cacheRead": 8186,
+        "cacheWrite": 0
+      },
+      "costMicros": 726,
+      "confirmations": 1,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-cal-verschieben",
+      "language": "de",
+      "category": "calendar",
+      "prompt": "Verschieb das Meeting morgen auf 11 Uhr.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "end": "2026-11-19T23:59",
+            "start": "2026-11-19T00:00"
+          },
+          "summary": "1 Termin"
+        },
+        {
+          "name": "calendar__update_event",
+          "args": {
+            "event_id": "evt-meeting",
+            "start": "2026-11-19T11:00:00+01:00"
+          },
+          "summary": "Termin geändert: Meeting mit Jonas, Do 19.11. 11:00–12:00"
+        }
+      ],
+      "finalText": "Ich habe das Meeting mit Jonas morgen auf 11 Uhr verschoben.",
+      "latencyMs": 19202,
+      "modelCalls": 3,
+      "usage": {
+        "input": 540,
+        "output": 128,
+        "cacheRead": 8189,
+        "cacheWrite": 0
+      },
+      "costMicros": 754,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-alarm-halb-sieben",
+      "language": "de",
+      "category": "alarms",
+      "prompt": "Stell mir einen Wecker für morgen früh um halb sieben.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_alarm",
+          "args": {
+            "time": "06:30"
+          },
+          "summary": "Wecker gestellt: 06:30 (einmalig)"
+        }
+      ],
+      "finalText": "Alles klar, dein Wecker für morgen früh um halb sieben ist gestellt.",
+      "latencyMs": 5008,
+      "modelCalls": 2,
+      "usage": {
+        "input": 2832,
+        "output": 42,
+        "cacheRead": 2728,
+        "cacheWrite": 0
+      },
+      "costMicros": 649,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-alarm-mo-mi-fr",
+      "language": "de",
+      "category": "alarms",
+      "prompt": "Weck mich ab jetzt montags, mittwochs und freitags um Viertel nach sieben.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_alarm",
+          "args": {
+            "days": [
+              1,
+              3,
+              5
+            ],
+            "time": "07:15"
+          },
+          "summary": "Wecker gestellt: 07:15 (Mo, Mi, Fr)"
+        }
+      ],
+      "finalText": "Alles klar, ich habe den Wecker für montags, mittwochs und freitags auf 7:15 Uhr gestellt.",
+      "latencyMs": 26432,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5592,
+        "output": 63,
+        "cacheRead": 5440,
+        "cacheWrite": 0
+      },
+      "costMicros": 1276,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-timer-nudeln",
+      "language": "de",
+      "category": "alarms",
+      "prompt": "Stell einen Timer auf 12 Minuten für die Nudeln.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_timer",
+          "args": {
+            "duration_seconds": 720,
+            "label": "Nudeln"
+          },
+          "summary": "Timer: 12 min"
+        }
+      ],
+      "finalText": "Alles klar, der Timer für die Nudeln läuft und klingelt in 12 Minuten.",
+      "latencyMs": 2804,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5605,
+        "output": 53,
+        "cacheRead": 5408,
+        "cacheWrite": 0
+      },
+      "costMicros": 1271,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-timer-zweieinhalb",
+      "language": "de",
+      "category": "alarms",
+      "prompt": "Timer für zweieinhalb Minuten bitte.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_timer",
+          "args": {
+            "duration_seconds": 150
+          },
+          "summary": "Timer: 2 min 30 s"
+        }
+      ],
+      "finalText": "Alles klar, der Timer ist gestellt.",
+      "latencyMs": 2546,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5582,
+        "output": 33,
+        "cacheRead": 5408,
+        "cacheWrite": 0
+      },
+      "costMicros": 1258,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-mem-koriander",
+      "language": "de",
+      "category": "memory",
+      "prompt": "Merk dir, dass ich keinen Koriander mag.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "memory__save",
+          "args": {
+            "category": "preference",
+            "text": "Mag keinen Koriander"
+          },
+          "summary": "Gemerkt: Mag keinen Koriander"
+        }
+      ],
+      "finalText": "Alles klar, ich habe mir gemerkt, dass du keinen Koriander magst.",
+      "latencyMs": 5501,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5550,
+        "output": 48,
+        "cacheRead": 8,
+        "cacheWrite": 0
+      },
+      "costMicros": 855,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-mem-tochter",
+      "language": "de",
+      "category": "memory",
+      "prompt": "Wie heißt nochmal die Tochter von Jonas?",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "Die Tochter von Jonas heißt Mila.",
+      "latencyMs": 1288,
+      "modelCalls": 1,
+      "usage": {
+        "input": 2773,
+        "output": 8,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      },
+      "costMicros": 420,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-clip-lesen",
+      "language": "de",
+      "category": "clipboard",
+      "prompt": "Was ist gerade in meiner Zwischenablage?",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "clipboard__read",
+          "args": {},
+          "summary": "Zwischenablage gelesen (31 Zeichen)"
+        }
+      ],
+      "finalText": "In deiner Zwischenablage steht: Bahnhofstraße 12, 20095 Hamburg.",
+      "latencyMs": 2373,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5553,
+        "output": 35,
+        "cacheRead": 2880,
+        "cacheWrite": 0
+      },
+      "costMicros": 1065,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-clip-schreiben",
+      "language": "de",
+      "category": "clipboard",
+      "prompt": "Kopier mir den Text „Bin in zehn Minuten da“ in die Zwischenablage.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "clipboard__write",
+          "args": {
+            "text": "Bin in zehn Minuten da"
+          },
+          "summary": "Kopiert: Bin in zehn Minuten da"
+        }
+      ],
+      "finalText": "Alles klar, ich habe den Text in die Zwischenablage kopiert.",
+      "latencyMs": 1909,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5567,
+        "output": 39,
+        "cacheRead": 5408,
+        "cacheWrite": 0
+      },
+      "costMicros": 1258,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-web-vollmond",
+      "language": "de",
+      "category": "web",
+      "prompt": "Such im Internet, wann der nächste Vollmond ist.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "web__search",
+          "args": {
+            "query": "nächster Vollmond Datum November Dezember 2026"
+          },
+          "summary": "Websuche: 1 Treffer"
+        },
+        {
+          "name": "web__search",
+          "args": {
+            "query": "Vollmond Kalender November Dezember 2026"
+          },
+          "summary": "Websuche: 1 Treffer"
+        }
+      ],
+      "finalText": "Der nächste Vollmond ist am 24. November 2026.",
+      "latencyMs": 3015,
+      "modelCalls": 3,
+      "usage": {
+        "input": 8625,
+        "output": 79,
+        "cacheRead": 8224,
+        "cacheWrite": 0
+      },
+      "costMicros": 1947,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-text-rechnen",
+      "language": "de",
+      "category": "text",
+      "prompt": "Was ist 17 mal 23?",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "17 mal 23 ist 391.",
+      "latencyMs": 2302,
+      "modelCalls": 1,
+      "usage": {
+        "input": 2739,
+        "output": 13,
+        "cacheRead": 4,
+        "cacheWrite": 0
+      },
+      "costMicros": 417,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-text-hauptstadt",
+      "language": "de",
+      "category": "text",
+      "prompt": "Wie heißt die Hauptstadt von Australien?",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "Die Hauptstadt von Australien heißt Canberra.",
+      "latencyMs": 2033,
+      "modelCalls": 1,
+      "usage": {
+        "input": 2736,
+        "output": 8,
+        "cacheRead": 4,
+        "cacheWrite": 0
+      },
+      "costMicros": 414,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-smalltalk-danke",
+      "language": "de",
+      "category": "smalltalk",
+      "prompt": "Danke dir, das war's schon.",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "Gerne! Wenn du wieder Hilfe brauchst, bin ich für dich da. Einen schönen Tag noch!",
+      "latencyMs": 2365,
+      "modelCalls": 1,
+      "usage": {
+        "input": 18,
+        "output": 22,
+        "cacheRead": 2724,
+        "cacheWrite": 0
+      },
+      "costMicros": 217,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-smalltalk-wie-gehts",
+      "language": "de",
+      "category": "smalltalk",
+      "prompt": "Na, wie geht's dir heute?",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "Mir geht es prima, danke der Nachfrage! Und bei dir? Wie kann ich dir heute behilflich sein?",
+      "latencyMs": 2303,
+      "modelCalls": 1,
+      "usage": {
+        "input": 18,
+        "output": 27,
+        "cacheRead": 2724,
+        "cacheWrite": 0
+      },
+      "costMicros": 219,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-cal-diving",
+      "language": "en",
+      "category": "calendar",
+      "prompt": "Add diving tomorrow at 10 am to my calendar.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "start": "2026-11-19T10:00",
+            "title": "Diving"
+          },
+          "summary": "Termin angelegt: Diving, Do 19.11. 10:00"
+        }
+      ],
+      "finalText": "I've added diving to your calendar for tomorrow at 10 am.",
+      "latencyMs": 8102,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5624,
+        "output": 60,
+        "cacheRead": 8,
+        "cacheWrite": 0
+      },
+      "costMicros": 871,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-cal-tomorrow",
+      "language": "en",
+      "category": "calendar",
+      "prompt": "What's on my calendar tomorrow?",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "end": "2026-11-19T23:59",
+            "start": "2026-11-19T00:00"
+          },
+          "summary": "1 Termin"
+        }
+      ],
+      "finalText": "You have one event tomorrow: a Standup from 9:30 AM to 9:45 AM.",
+      "latencyMs": 8333,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5141,
+        "output": 82,
+        "cacheRead": 508,
+        "cacheWrite": 0
+      },
+      "costMicros": 846,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-cal-delete",
+      "language": "en",
+      "category": "calendar-external",
+      "prompt": "Delete my gym session tomorrow.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "end": "2026-11-19T23:59",
+            "start": "2026-11-19T00:00"
+          },
+          "summary": "1 Termin"
+        },
+        {
+          "name": "calendar__delete_event",
+          "args": {
+            "event_id": "evt-gym"
+          },
+          "summary": "Termin gelöscht: Gym, Do 19.11. 18:00–19:00"
+        }
+      ],
+      "finalText": "Ich habe deine Gym-Session für morgen gelöscht.",
+      "latencyMs": 10178,
+      "modelCalls": 3,
+      "usage": {
+        "input": 429,
+        "output": 95,
+        "cacheRead": 8183,
+        "cacheWrite": 0
+      },
+      "costMicros": 722,
+      "confirmations": 1,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-alarm",
+      "language": "en",
+      "category": "alarms",
+      "prompt": "Set an alarm for 7:15 tomorrow morning.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_alarm",
+          "args": {
+            "time": "07:15"
+          },
+          "summary": "Wecker gestellt: 07:15 (einmalig)"
+        }
+      ],
+      "finalText": "OK, I've set your alarm for 7:15 tomorrow morning.",
+      "latencyMs": 2567,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5564,
+        "output": 44,
+        "cacheRead": 2880,
+        "cacheWrite": 0
+      },
+      "costMicros": 1071,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-timer",
+      "language": "en",
+      "category": "alarms",
+      "prompt": "Start a 25 minute timer.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_timer",
+          "args": {
+            "duration_seconds": 1500
+          },
+          "summary": "Timer: 25 min"
+        }
+      ],
+      "finalText": "OK. Der Timer ist gestellt und läuft in 25 Minuten ab.",
+      "latencyMs": 4697,
+      "modelCalls": 2,
+      "usage": {
+        "input": 111,
+        "output": 41,
+        "cacheRead": 5461,
+        "cacheWrite": 0
+      },
+      "costMicros": 446,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-mem-vegetarian",
+      "language": "en",
+      "category": "memory",
+      "prompt": "Remember that I'm vegetarian.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "memory__save",
+          "args": {
+            "category": "preference",
+            "text": "I'm vegetarian."
+          },
+          "summary": "Gemerkt: I'm vegetarian."
+        }
+      ],
+      "finalText": "I've remembered that you're vegetarian.",
+      "latencyMs": 5491,
+      "modelCalls": 2,
+      "usage": {
+        "input": 90,
+        "output": 40,
+        "cacheRead": 5460,
+        "cacheWrite": 0
+      },
+      "costMicros": 441,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-clip-write",
+      "language": "en",
+      "category": "clipboard",
+      "prompt": "Copy \"See you at 8\" to my clipboard.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "clipboard__write",
+          "args": {
+            "text": "See you at 8"
+          },
+          "summary": "Kopiert: See you at 8"
+        }
+      ],
+      "finalText": "Done! I've copied \"See you at 8\" to your clipboard.",
+      "latencyMs": 2096,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5553,
+        "output": 41,
+        "cacheRead": 5408,
+        "cacheWrite": 0
+      },
+      "costMicros": 1257,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-web-flutter",
+      "language": "en",
+      "category": "web",
+      "prompt": "Search the web for the latest Flutter release.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "web__search",
+          "args": {
+            "query": "latest Flutter release version"
+          },
+          "summary": "Websuche: 1 Treffer"
+        }
+      ],
+      "finalText": "I couldn't find the latest Flutter release in the search results. Please check the official Flutter website or the GitHub repository for the most current version.",
+      "latencyMs": 4673,
+      "modelCalls": 2,
+      "usage": {
+        "input": 139,
+        "output": 53,
+        "cacheRead": 5462,
+        "cacheWrite": 0
+      },
+      "costMicros": 455,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-text-minutes",
+      "language": "en",
+      "category": "text",
+      "prompt": "How many minutes are in three hours?",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "There are 180 minutes in three hours.",
+      "latencyMs": 2427,
+      "modelCalls": 1,
+      "usage": {
+        "input": 17,
+        "output": 12,
+        "cacheRead": 2724,
+        "cacheWrite": 0
+      },
+      "costMicros": 212,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "en-smalltalk-hi",
+      "language": "en",
+      "category": "smalltalk",
+      "prompt": "Hi there, how are you doing?",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "I'm doing great, thank you for asking! How can I help you today?",
+      "latencyMs": 4850,
+      "modelCalls": 1,
+      "usage": {
+        "input": 17,
+        "output": 19,
+        "cacheRead": 2724,
+        "cacheWrite": 0
+      },
+      "costMicros": 216,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-cal-plongee",
+      "language": "fr",
+      "category": "calendar",
+      "prompt": "Ajoute plongée demain à 10h dans mon agenda.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "start": "2026-11-19T10:00",
+            "title": "Plongée"
+          },
+          "summary": "Termin angelegt: Plongée, Do 19.11. 10:00"
+        }
+      ],
+      "finalText": "C'est fait, j'ai ajouté la plongée à ton agenda pour demain à 10h.",
+      "latencyMs": 8399,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5380,
+        "output": 68,
+        "cacheRead": 258,
+        "cacheWrite": 0
+      },
+      "costMicros": 857,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-cal-dentiste",
+      "language": "fr",
+      "category": "calendar",
+      "prompt": "J'ai rendez-vous chez le dentiste après-demain à 16h, note-le s'il te plaît.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__create_event",
+          "args": {
+            "start": "2026-11-20T16:00",
+            "title": "Rendez-vous chez le dentiste"
+          },
+          "summary": "Termin angelegt: Rendez-vous chez le dentiste, Fr 20.11. 16:00"
+        }
+      ],
+      "finalText": "C'est noté, j'ai ajouté ton rendez-vous chez le dentiste pour après-demain à 16h.",
+      "latencyMs": 2616,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5684,
+        "output": 79,
+        "cacheRead": 2912,
+        "cacheWrite": 0
+      },
+      "costMicros": 1107,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-cal-supprimer",
+      "language": "fr",
+      "category": "calendar-external",
+      "prompt": "Supprime le rendez-vous chez le coiffeur de demain.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "calendar__list_events",
+          "args": {
+            "end": "2026-11-19T23:59",
+            "start": "2026-11-19T00:00"
+          },
+          "summary": "1 Termin"
+        },
+        {
+          "name": "calendar__delete_event",
+          "args": {
+            "event_id": "evt-coiffeur"
+          },
+          "summary": "Termin gelöscht: Coiffeur, Do 19.11. 11:00–12:00"
+        }
+      ],
+      "finalText": "C'est fait, j'ai supprimé ton rendez-vous chez le coiffeur pour demain.",
+      "latencyMs": 12368,
+      "modelCalls": 3,
+      "usage": {
+        "input": 8388,
+        "output": 107,
+        "cacheRead": 262,
+        "cacheWrite": 0
+      },
+      "costMicros": 1327,
+      "confirmations": 1,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-alarm-reveil",
+      "language": "fr",
+      "category": "alarms",
+      "prompt": "Réveille-moi demain à 5h50.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_alarm",
+          "args": {
+            "time": "05:50"
+          },
+          "summary": "Wecker gestellt: 05:50 (einmalig)"
+        }
+      ],
+      "finalText": "C'est fait, je t'ai programmé un réveil pour demain à 5h50.",
+      "latencyMs": 24086,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5550,
+        "output": 50,
+        "cacheRead": 8,
+        "cacheWrite": 0
+      },
+      "costMicros": 857,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-timer-oeufs",
+      "language": "fr",
+      "category": "alarms",
+      "prompt": "Mets un minuteur de 5 minutes pour les œufs.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "alarms__set_timer",
+          "args": {
+            "duration_seconds": 300,
+            "label": "œufs"
+          },
+          "summary": "Timer: 5 min"
+        }
+      ],
+      "finalText": "C'est fait ! Le minuteur de 5 minutes pour les œufs est lancé.",
+      "latencyMs": 6680,
+      "modelCalls": 2,
+      "usage": {
+        "input": 126,
+        "output": 50,
+        "cacheRead": 5466,
+        "cacheWrite": 0
+      },
+      "costMicros": 452,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-mem-soeur",
+      "language": "fr",
+      "category": "memory",
+      "prompt": "Souviens-toi que ma sœur s'appelle Claire.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "memory__save",
+          "args": {
+            "category": "person",
+            "text": "Ma sœur s'appelle Claire."
+          },
+          "summary": "Gemerkt: Ma sœur s'appelle Claire."
+        }
+      ],
+      "finalText": "C'est noté, je m'en souviendrai.",
+      "latencyMs": 2768,
+      "modelCalls": 2,
+      "usage": {
+        "input": 5572,
+        "output": 47,
+        "cacheRead": 5408,
+        "cacheWrite": 0
+      },
+      "costMicros": 1263,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-clip-lire",
+      "language": "fr",
+      "category": "clipboard",
+      "prompt": "Lis-moi ce qu'il y a dans le presse-papiers.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "clipboard__read",
+          "args": {},
+          "summary": "Zwischenablage gelesen (27 Zeichen)"
+        }
+      ],
+      "finalText": "Le presse-papiers contient : Rendez-vous à la gare à 18h.",
+      "latencyMs": 7615,
+      "modelCalls": 2,
+      "usage": {
+        "input": 91,
+        "output": 34,
+        "cacheRead": 5470,
+        "cacheWrite": 0
+      },
+      "costMicros": 439,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-web-louvre",
+      "language": "fr",
+      "category": "web",
+      "prompt": "Cherche sur internet les horaires d'ouverture du Louvre.",
+      "status": "passed",
+      "toolCalls": [
+        {
+          "name": "web__search",
+          "args": {
+            "query": "horaires d'ouverture musée du Louvre"
+          },
+          "summary": "Websuche: 1 Treffer"
+        }
+      ],
+      "finalText": "Je suis désolé, je n'ai pas réussi à trouver les horaires d'ouverture du Louvre pour le moment.",
+      "latencyMs": 6201,
+      "modelCalls": 2,
+      "usage": {
+        "input": 146,
+        "output": 51,
+        "cacheRead": 5465,
+        "cacheWrite": 0
+      },
+      "costMicros": 456,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-text-calcul",
+      "language": "fr",
+      "category": "text",
+      "prompt": "Combien font 12 fois 12 ?",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "12 fois 12 font 144.",
+      "latencyMs": 1000,
+      "modelCalls": 1,
+      "usage": {
+        "input": 2745,
+        "output": 13,
+        "cacheRead": 2688,
+        "cacheWrite": 0
+      },
+      "costMicros": 619,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "fr-smalltalk-merci",
+      "language": "fr",
+      "category": "smalltalk",
+      "prompt": "Merci beaucoup, bonne soirée !",
+      "status": "passed",
+      "toolCalls": [],
+      "finalText": "Je vous en prie ! Bonne soirée à vous aussi !",
+      "latencyMs": 963,
+      "modelCalls": 1,
+      "usage": {
+        "input": 2740,
+        "output": 12,
+        "cacheRead": 2688,
+        "cacheWrite": 0
+      },
+      "costMicros": 618,
+      "confirmations": 0,
+      "escalationConfirmations": 0,
+      "gaveUp": false,
+      "escalations": []
+    },
+    {
+      "id": "de-lists-add",
+      "language": "de",
+      "category": "lists",
+      "prompt": "Füge Milch und Eier zur Einkaufsliste hinzu.",
+      "status": "skipped",
+      "reasons": [
+        "pending: Integration fehlt noch"
+      ]
+    },
+    {
+      "id": "de-lists-get",
+      "language": "de",
+      "category": "lists",
+      "prompt": "Was steht auf der Liste SmartSSH?",
+      "status": "skipped",
+      "reasons": [
+        "pending: Integration fehlt noch"
+      ]
+    }
+  ]
+}
