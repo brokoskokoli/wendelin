@@ -229,9 +229,38 @@ ProviderForCase buildProvider(
       'Umgebungsvariable $variable fehlt (API-Key für ${p.id})',
     );
   }
+  Future<String?> secrets(_) async => variable == null ? null : env[variable];
+  if (needsAttestation(p)) {
+    // The evals measure the model, not the attestation (that needs the
+    // native crypto of the app and is covered by the TEE suites). The
+    // adapter is built like the factory builds the attested one, including
+    // `aci_verified`, so requests and costs match the app.
+    final extra = p.options['extraBody'];
+    final body = extra is Map<String, Object?> ? extra : <String, Object?>{};
+    final adapter = OpenAiChatAdapter(
+      baseUrl: Uri.parse(p.baseUrl!),
+      credentials: Credentials(
+        p.authMethod,
+        secrets,
+        style: ApiKeyStyle.bearer,
+      ),
+      defaultModel: p.defaultModel,
+      label: p.name,
+      client: client,
+      extraHeaders: p.extraHeaders,
+      options: OpenAiOptions.fromMap({
+        ...p.options,
+        'extraBody': {
+          ...body,
+          'provider': {'aci_verified': true},
+        },
+      }),
+    );
+    return (_) => adapter;
+  }
   final adapter = ProviderFactory.create(
     p,
-    (_) async => variable == null ? null : env[variable],
+    secrets,
     client: client,
     catalog: profile.catalog,
   );
