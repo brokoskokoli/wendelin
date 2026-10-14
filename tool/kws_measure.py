@@ -18,7 +18,7 @@ onnxruntime und sherpa-onnx (~/wendelin-models/kws/wp58/venv):
       --whisper <sherpa-whisper-ordner> [--model wendelin.onnx] [--neg-max-h 1.0] [--cond clean,both]
 Je Stimme sind die ersten 15 Einlern-Aufnahmen die Vorlagen, die Positiv-Clips derselben Stimme der Test.
 Stufe 1 = Modell ueber niedriger Schwelle ODER Kosinus-Aehnlichkeit zu einer Vorlage; Stufe 2 =
-Whisper-Transkript der letzten 2 s enthaelt unscharf "Wendelin" (Spiegel von matchesWakeWord in Dart).
+Whisper-Transkript von 2 s vor bis --tail (0,9 s) nach dem Treffer enthaelt unscharf "Wendelin" (Spiegel von matchesWakeWord in Dart).
 """
 import argparse, glob, os, sys, time
 import numpy as np
@@ -179,7 +179,8 @@ def main():
 
 
 # ---------- zweistufige Entscheidung (WP44 Nachtrag 2) ----------
-SPELL = ["wendelin", "wendeline", "wendelien", "wendlin", "vendelin", "wendeling", "wendelyn", "wendellin"]
+SPELL = ["wendelin", "wendeline", "wendelien", "wendlin", "vendelin", "wendeling", "wendelyn", "wendellin",
+         "wendelmann", "wendemann", "wendelen", "wendelan"]
 
 
 def fold(t):
@@ -199,9 +200,50 @@ def dist(a, b):
     return prev[-1]
 
 
+def cologne(t):
+    """Koelner Phonetik (Spiegel von colognePhonetic in phonetics.dart)."""
+    s = fold(t).replace(" ", "")
+    raw = []
+    for i, c in enumerate(s):
+        prev = s[i - 1] if i else ""
+        nxt = s[i + 1] if i + 1 < len(s) else ""
+        if c in "aeijouy": raw.append("0")
+        elif c == "h": pass
+        elif c == "b": raw.append("1")
+        elif c == "p": raw.append("3" if nxt == "h" else "1")
+        elif c in "dt": raw.append("8" if nxt and nxt in "csz" else "2")
+        elif c in "fvw": raw.append("3")
+        elif c in "gkq": raw.append("4")
+        elif c == "c":
+            if not nxt: raw.append("8")
+            elif i == 0: raw.append("4" if nxt in "ahkloqrux" else "8")
+            elif prev and prev in "sz": raw.append("8")
+            else: raw.append("4" if nxt in "ahkoqux" else "8")
+        elif c == "x": raw.append("8" if prev and prev in "ckq" else "48")
+        elif c == "l": raw.append("5")
+        elif c in "mn": raw.append("6")
+        elif c == "r": raw.append("7")
+        elif c in "sz": raw.append("8")
+        elif c.isdigit(): raw.append(c)
+    out, last = [], ""
+    for c in "".join(raw):
+        if c == last: continue
+        last = c
+        if c == "0" and out: continue
+        out.append(c)
+    return "".join(out)
+
+
+WAKE_KEY = cologne("wendelin")
+
+
+def sounds_like(w):
+    return 6 <= len(w) <= 11 and w[0] in "wvf" and cologne(w) == WAKE_KEY
+
+
 def matches_wake_word(text, max_dist=1):
     w = fold(text).split()
-    near = lambda s: any(abs(len(s) - len(p)) <= 3 and dist(s, p) <= max_dist for p in SPELL)
+    near = lambda s: sounds_like(s) or any(abs(len(s) - len(p)) <= 3 and dist(s, p) <= max_dist for p in SPELL)
     return any(near(w[i]) or (i + 1 < len(w) and near(w[i] + w[i + 1])) for i in range(len(w)))
 
 
@@ -221,6 +263,7 @@ def two_stage_main():
     a.add_argument("--pool", action="store_true", help="Mittelwert der letzten 8 Embeddings statt 16x96")
     a.add_argument("--neg-max-h", type=float, default=1.0); a.add_argument("--cond", default="clean,both")
     a.add_argument("--seed", type=int, default=1)
+    a.add_argument("--tail", type=float, default=0.9, help="Nachlauf nach dem Treffer fuer Stufe 2 (s)")
     a = a.parse_args()
     rng = np.random.default_rng(a.seed)
     af = C.make_features(a.oww, 1)
@@ -248,7 +291,8 @@ def two_stage_main():
         return V, np.array([C.window_end(j) for j in range(n)]), ms
 
     def transcribe(x, end):
-        seg = x[max(0, end - 2 * C.SR):end]
+        # 2 s vor dem Fensterende + Nachlauf (Dart: verifyWindow + verifyTail)
+        seg = x[max(0, end - 2 * C.SR):end + int(a.tail * C.SR)]
         s = rec.create_stream(); s.accept_waveform(C.SR, seg.astype("float32")); rec.decode_stream(s)
         return s.result.text
 
@@ -310,7 +354,7 @@ def two_stage_main():
                     nonlocal wt, wd
                     if key not in cache:
                         t0 = time.time(); cache[key] = transcribe(x, we[j])
-                        wt += time.time() - t0; wd += min(2 * C.SR, we[j]) / C.SR
+                        wt += time.time() - t0; wd += (min(2 * C.SR, we[j]) + int(a.tail * C.SR)) / C.SR
                     return matches_wake_word(cache[key], d)
                 for ci, (x, win) in enumerate(zip(P[v], PW[v])):
                     ev = idx(win); tot["n"] += 1; tot["hit1"] += bool(ev)
@@ -321,6 +365,10 @@ def two_stage_main():
                     ev = idx(win); tot["c"] += len(ev)
                     xp = pad(x)
                     tot["k"] += sum(confirm(("n", ci, j), xp, win[1], j) for j in ev)
+                    if os.environ.get("SHOW_FA"):
+                        for j in ev:
+                            if matches_wake_word(cache[("n", ci, j)], 1):
+                                print("FA:", repr(cache[("n", ci, j)]), flush=True)
                     tot["kb"] += sum(confirm(("n", ci, j), xp, win[1], j, 2) for j in ev)
             nv = len(tmpl)
             print(f"| {cond} | {name} | {thr} | {tot['hit1']}/{tot['n']} = {100*tot['hit1']/tot['n']:.0f} % | "
