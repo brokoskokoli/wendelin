@@ -126,6 +126,9 @@ void main() {
       expect(audio.isRunning, isTrue, reason: 'Fenster offen');
 
       await voice().suspend(); // paused / hidden
+      // At once, not through the silence timeout of the window.
+      expect(audio.isRunning, isFalse, reason: 'Mikrofon sofort aus');
+      expect(log.any((l) => l.contains('reason=silence')), isFalse);
       await voice().whenIdle;
       expect(c.read(voiceControllerProvider).followUp, isFalse);
       expect(c.read(voiceControllerProvider).active, isFalse);
