@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/ui/design/design.dart' show WSwitch;
@@ -38,6 +39,7 @@ TestEnv wakeEnv({
   WakeVerifier? verifier,
   Float32List Function(int)? vector,
   bool installed = true,
+  List<Override> extra = const [],
 }) {
   final env = TestEnv(
     extraOverrides: [
@@ -48,6 +50,7 @@ TestEnv wakeEnv({
       wakeVerifierProvider.overrideWith((ref) async => verifier),
       wakePromptToneProvider.overrideWithValue(() async {}),
       wakeEnrollPauseProvider.overrideWithValue(Duration.zero),
+      ...extra,
     ],
   );
   if (installed) env.speechModels.installed.add('wake-features');

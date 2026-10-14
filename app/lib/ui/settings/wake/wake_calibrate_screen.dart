@@ -11,6 +11,7 @@ import '../../../voice/wake/wake_calibrator.dart';
 import '../../design/design.dart';
 import '../../voice/microphone_access.dart';
 import '../settings_page.dart';
+import 'wake_lifecycle.dart';
 
 /// „Kalibrieren“ (WP60): the phone lies around for about 30 minutes, the
 /// screen stays on (only here), the microphone indicator is visible. Only
@@ -34,7 +35,8 @@ class WakeCalibrateScreen extends ConsumerStatefulWidget {
   ConsumerState<WakeCalibrateScreen> createState() => _State();
 }
 
-class _State extends ConsumerState<WakeCalibrateScreen> {
+class _State extends ConsumerState<WakeCalibrateScreen>
+    with WidgetsBindingObserver, WakeBackgroundAbort {
   WakeCalibrator? _cal;
   var _denied = false;
 
@@ -62,7 +64,9 @@ class _State extends ConsumerState<WakeCalibrateScreen> {
     setState(() => _cal = cal);
     await protection.keepScreenOn(on: true);
     try {
-      await cal.run();
+      // Left (or sent to the background) while the screen lock was being
+      // set: never start the microphone.
+      if (mounted && cal.phase == CalibrationPhase.idle) await cal.run();
     } finally {
       await protection.keepScreenOn(on: false);
     }
@@ -72,11 +76,18 @@ class _State extends ConsumerState<WakeCalibrateScreen> {
   }
 
   @override
-  void dispose() {
+  Future<void> abortForBackground() async {
     final c = _cal;
-    if (c != null && c.phase == CalibrationPhase.listening) {
-      unawaited(c.cancel());
+    if (c != null &&
+        (c.phase == CalibrationPhase.listening ||
+            c.phase == CalibrationPhase.idle)) {
+      await c.cancel();
     }
+  }
+
+  @override
+  void dispose() {
+    unawaited(abortForBackground());
     super.dispose();
   }
 

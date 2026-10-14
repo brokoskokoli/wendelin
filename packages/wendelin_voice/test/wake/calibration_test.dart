@@ -85,6 +85,26 @@ void main() {
       },
     );
 
+    test('requireNegatives false: leerer Hintergrund ist verwertbar', () {
+      final c = calibrateThreshold(
+        positiveScores: [0.9, 0.92, 0.95],
+        negativeEvents: [],
+        negativeHours: 0.2,
+        requireNegatives: false,
+      );
+      expect(c.meetsTarget, isTrue);
+      expect(c.falseAlarmsPerHour, 0);
+      expect(c.threshold, 0.9);
+      expect(
+        calibrateThreshold(
+          positiveScores: [0.9, 0.92, 0.95],
+          negativeEvents: [],
+          negativeHours: 0.2,
+        ).meetsTarget,
+        isFalse,
+      );
+    });
+
     group('robust', () {
       test('Untergrenze: Schwelle nie unter 0,85', () {
         final c = calibrateThreshold(

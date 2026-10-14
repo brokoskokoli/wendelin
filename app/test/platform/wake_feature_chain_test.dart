@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -122,6 +123,39 @@ void main() {
       expect(r.closed, isTrue);
     },
   );
+
+  test(
+    'close während des Ladens gibt die Modelle frei, nichts bleibt offen',
+    () async {
+      final r = FakeRunner();
+      final gate = Completer<WakeModelRunner>();
+      final x = ChainWakeFeatureExtractor(() => gate.future);
+      final opening = x.open();
+      final closing = x.close();
+      gate.complete(r);
+      await opening;
+      await closing;
+      expect(r.closed, isTrue);
+      expect(() => x.accept(pcm(10)), throwsStateError);
+    },
+  );
+
+  test('zwei open während des Ladens laden nur einmal', () async {
+    final r = FakeRunner();
+    var loads = 0;
+    final gate = Completer<WakeModelRunner>();
+    final x = ChainWakeFeatureExtractor(() {
+      loads++;
+      return gate.future;
+    });
+    final a = x.open();
+    final b = x.open();
+    gate.complete(r);
+    await Future.wait([a, b]);
+    expect(loads, 1);
+    expect(await x.accept(pcm(1280 * 25)), hasLength(1));
+    expect(r.closed, isFalse);
+  });
 }
 
 final class _Capture implements WakeModelRunner {

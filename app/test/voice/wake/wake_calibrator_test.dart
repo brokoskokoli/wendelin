@@ -54,8 +54,9 @@ void main() {
         vector: (end) =>
             ++calls % 40 == 0 ? v([0.7, 0.7, 0, 0]) : v([0, 0, 1, 0]),
       );
+      final audio = SilentAudio(12);
       final cal = WakeCalibrator(
-        audio: SilentAudio(12),
+        audio: audio,
         features: features,
         templates: templates(),
         store: store,
@@ -66,6 +67,7 @@ void main() {
       );
       await cal.run();
       expect(cal.phase, CalibrationPhase.done);
+      expect(audio.isRunning, isFalse); // Mikrofon freigegeben
       expect(cal.elapsed.inMinutes, 10);
       expect(tones.length, cal.prompts);
       expect(cal.prompts, 4); // 1, 4, 7, 10 min
@@ -104,6 +106,72 @@ void main() {
       );
     },
   );
+
+  /// Prompts at 1, 4, 7 min: [answer] inside the answer window, else [other].
+  Float32List Function(int) answering(Float32List answer, Float32List other) =>
+      (end) {
+        final sec = end / 16000;
+        final into = (sec - 60) % 180;
+        return sec >= 60 && into >= 0.6 && into <= 4 ? answer : other;
+      };
+
+  test('Antworten auf die Aufforderung sind keine Fehlalarme', () async {
+    final store = FakeWakeTemplateStore();
+    final cal = WakeCalibrator(
+      audio: SilentAudio(12),
+      features: fakeFeatures(
+        vector: answering(v([1, 0, 0, 0]), v([0, 0, 1, 0])),
+      ),
+      templates: templates(),
+      store: store,
+      onPrompt: () async {},
+      duration: const Duration(minutes: 10),
+    );
+    await cal.run();
+    expect(cal.answered, cal.prompts - 1); // die letzte kommt zu spät
+    expect(cal.result!.falseAlarmsPerHour, 0);
+    expect(cal.result!.meetsTarget, isTrue);
+    expect(cal.stored, isTrue);
+  });
+
+  test('Schwelle folgt den Antworten, nicht den Wiederholungen', () async {
+    final cal = WakeCalibrator(
+      audio: SilentAudio(12),
+      // Antworten mit Ähnlichkeit 0.9; die Einlern-Aufnahmen gleichen
+      // einander fast völlig (Leave-one-out nahe 1.0).
+      features: fakeFeatures(
+        vector: answering(v([0.9, 0, 0, 0.436]), v([0, 0, 1, 0])),
+      ),
+      templates: templates(),
+      store: FakeWakeTemplateStore(),
+      onPrompt: () async {},
+      duration: const Duration(minutes: 10),
+    );
+    await cal.run();
+    final r = cal.result!;
+    expect(r.meetsTarget, isTrue);
+    expect(r.threshold, closeTo(0.9, 0.01));
+    expect(r.threshold, lessThan(calibrationMaxThreshold));
+  });
+
+  test('ruhiger Hintergrund ohne Ereignisse ist verwertbar', () async {
+    final store = FakeWakeTemplateStore();
+    final cal = WakeCalibrator(
+      audio: SilentAudio(12),
+      features: fakeFeatures(vector: (_) => v([0, 0, 1, 0])),
+      templates: templates(),
+      store: store,
+      onPrompt: () async {},
+      duration: const Duration(minutes: 10),
+      firstPrompt: const Duration(hours: 1),
+    );
+    await cal.run();
+    final r = cal.result!;
+    expect(r.meetsTarget, isTrue);
+    expect(r.falseAlarmsPerHour, 0);
+    expect(r.threshold, greaterThanOrEqualTo(wakeMinThreshold));
+    expect(cal.stored, isTrue);
+  });
 
   test('Abbruch: keine Änderung, keine Ergebnis', () async {
     final store = FakeWakeTemplateStore();

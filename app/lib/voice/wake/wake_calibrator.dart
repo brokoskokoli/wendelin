@@ -218,13 +218,13 @@ class WakeCalibrator extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    final positives = [
-      ...leaveOneOutScores(templates.embeddings),
-      ..._positives,
-    ];
+    final positives = _weightedPositives();
+    // No peak above the floor at all: a quiet background (rate 0), not a
+    // missing measurement.
     var cal = calibrateThreshold(
       positiveScores: positives,
       negativeEvents: _negatives,
+      requireNegatives: false,
       negativeHours: hours,
     );
     if (cal.threshold > calibrationMaxThreshold) {
@@ -246,6 +246,18 @@ class WakeCalibrator extends ChangeNotifier {
     }
     _phase = CalibrationPhase.done;
     notifyListeners();
+  }
+
+  /// Leave-one-out scores of the recordings (nearly identical for one voice,
+  /// thus too optimistic) and the answers to the prompts (live conditions).
+  /// The answers are repeated so that they weigh as much as all
+  /// leave-one-out scores together; otherwise the threshold would stick at
+  /// [calibrationMaxThreshold].
+  List<double> _weightedPositives() {
+    final loo = leaveOneOutScores(templates.embeddings);
+    if (_positives.isEmpty) return loo;
+    final repeat = (loo.length / _positives.length).ceil().clamp(1, 1000);
+    return [...loo, for (var i = 0; i < repeat; i++) ..._positives];
   }
 
   /// Ends the run with what was heard so far (see [canFinishEarly]).

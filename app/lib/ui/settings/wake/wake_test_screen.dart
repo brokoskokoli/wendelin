@@ -10,6 +10,7 @@ import '../../../voice/wake/wake_tester.dart';
 import '../../design/design.dart';
 import '../../voice/microphone_access.dart';
 import '../settings_page.dart';
+import 'wake_lifecycle.dart';
 
 /// Text for the second stage of a test hit.
 String confirmationText(WakeConfirmation c) => switch (c) {
@@ -33,7 +34,8 @@ class WakeTestScreen extends ConsumerStatefulWidget {
   ConsumerState<WakeTestScreen> createState() => _WakeTestScreenState();
 }
 
-class _WakeTestScreenState extends ConsumerState<WakeTestScreen> {
+class _WakeTestScreenState extends ConsumerState<WakeTestScreen>
+    with WidgetsBindingObserver, WakeBackgroundAbort {
   WakeTester? _tester;
   var _denied = false;
 
@@ -59,6 +61,9 @@ class _WakeTestScreenState extends ConsumerState<WakeTestScreen> {
     setState(() => _tester = t);
     await t.run();
   }
+
+  @override
+  Future<void> abortForBackground() async => _tester?.stop();
 
   @override
   void dispose() {

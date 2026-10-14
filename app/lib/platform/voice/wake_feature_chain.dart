@@ -123,6 +123,8 @@ final class ChainWakeFeatureExtractor implements WakeFeatureExtractor {
   final Future<WakeModelRunner> Function() load;
 
   WakeFeatureChain? _chain;
+  Future<WakeModelRunner>? _loading;
+  var _epoch = 0;
 
   @override
   String get featureVersion => wakeFeatureVersion;
@@ -130,7 +132,20 @@ final class ChainWakeFeatureExtractor implements WakeFeatureExtractor {
   @override
   Future<void> open() async {
     if (_chain != null) return;
-    _chain = WakeFeatureChain(await load());
+    final epoch = _epoch;
+    final loading = _loading ??= load();
+    final WakeModelRunner runner;
+    try {
+      runner = await loading;
+    } on Object {
+      if (identical(_loading, loading)) _loading = null;
+      rethrow;
+    }
+    // Closed while loading (close() released the runner) or another open
+    // call finished first: nothing more to do.
+    if (epoch != _epoch || _chain != null) return;
+    _loading = null;
+    _chain = WakeFeatureChain(runner);
   }
 
   @override
@@ -145,7 +160,17 @@ final class ChainWakeFeatureExtractor implements WakeFeatureExtractor {
 
   @override
   Future<void> close() async {
+    _epoch++;
+    final loading = _loading;
+    _loading = null;
     _chain?.runner.close();
     _chain = null;
+    if (loading != null) {
+      try {
+        (await loading).close();
+      } on Object {
+        // Loading failed: nothing to release.
+      }
+    }
   }
 }

@@ -10,6 +10,7 @@ import '../../../voice/wake/wake_enroller.dart';
 import '../../design/design.dart';
 import '../../voice/microphone_access.dart';
 import '../settings_page.dart';
+import 'wake_lifecycle.dart';
 
 /// Hint for recording [index] (0-based): near, far, quiet, normal.
 String enrollHint(int index) => switch (index ~/ 4) {
@@ -49,7 +50,8 @@ class WakeEnrollScreen extends ConsumerStatefulWidget {
   ConsumerState<WakeEnrollScreen> createState() => _WakeEnrollScreenState();
 }
 
-class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen> {
+class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
+    with WidgetsBindingObserver, WakeBackgroundAbort {
   WakeEnroller? _enroller;
   var _denied = false;
 
@@ -76,6 +78,9 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen> {
     setState(() => _enroller = e);
     await e.run();
   }
+
+  @override
+  Future<void> abortForBackground() async => _enroller?.cancel();
 
   @override
   void dispose() {

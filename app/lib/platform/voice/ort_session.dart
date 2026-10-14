@@ -2,6 +2,7 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 // Minimal binding of the ONNX Runtime C API (WP60). The sherpa-onnx plugin
 // ships `libonnxruntime.so` anyway (and offers no generic session in its
@@ -21,6 +22,7 @@ const _createSessionOptions = 10;
 const _setIntraOpNumThreads = 24;
 const _createTensorWithData = 49;
 const _getTensorMutableData = 51;
+const _getTensorElementType = 60;
 const _getDimensionsCount = 61;
 const _getDimensions = 62;
 const _getTensorTypeAndShape = 65;
@@ -32,6 +34,9 @@ const _releaseSession = 95;
 const _releaseValue = 96;
 const _releaseTensorInfo = 99;
 const _releaseSessionOptions = 100;
+
+/// ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT.
+const _floatElementType = 1;
 
 typedef _Status = Pointer<Void>;
 typedef _PP = Pointer<Pointer<Void>>;
@@ -97,6 +102,8 @@ typedef _TensorD = _Status Function(
 );
 typedef _PtrOutN = _Status Function(Pointer<Void>, _PP);
 typedef _PtrOutD = _Status Function(Pointer<Void>, _PP);
+typedef _ElemN = _Status Function(Pointer<Void>, Pointer<Int32>);
+typedef _ElemD = _Status Function(Pointer<Void>, Pointer<Int32>);
 typedef _CountN = _Status Function(Pointer<Void>, Pointer<IntPtr>);
 typedef _CountD = _Status Function(Pointer<Void>, Pointer<IntPtr>);
 typedef _DimsN = _Status Function(Pointer<Void>, Pointer<Int64>, IntPtr);
@@ -148,6 +155,12 @@ final class OrtRuntime {
     if (table == nullptr) {
       throw const OrtException('API-Version nicht verfügbar');
     }
+    return OrtRuntime.fromTable(table);
+  }
+
+  /// Uses an already resolved API table (tests serve a fake one).
+  @visibleForTesting
+  factory OrtRuntime.fromTable(Pointer<Pointer<Void>> table) {
     final rt = OrtRuntime._(_Pointers(table));
     final env = calloc<Pointer<Void>>();
     final name = 'wendelin'.toNativeUtf8();
@@ -219,6 +232,8 @@ final class _Pointers {
       .asFunction<_TensorD>();
   late final tensorData = _at<_PtrOutN>(_getTensorMutableData)
       .asFunction<_PtrOutD>();
+  late final elementType = _at<_ElemN>(_getTensorElementType)
+      .asFunction<_ElemD>();
   late final dimsCount = _at<_CountN>(_getDimensionsCount)
       .asFunction<_CountD>();
   late final dims = _at<_DimsN>(_getDimensions).asFunction<_DimsD>();
@@ -279,7 +294,7 @@ final class OrtSession {
           input.length * 4,
           dims,
           shape.length,
-          1, // ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT
+          _floatElementType,
           value,
         ),
       );
@@ -311,9 +326,14 @@ final class OrtSession {
     final a = _rt._a;
     final info = calloc<Pointer<Void>>();
     final count = calloc<IntPtr>();
+    final type = calloc<Int32>();
     final ptr = calloc<Pointer<Void>>();
     try {
       _rt._check(a.typeAndShape(value, info));
+      _rt._check(a.elementType(info.value, type));
+      if (type.value != _floatElementType) {
+        throw OrtException('Ausgabetyp ${type.value} statt float32');
+      }
       _rt._check(a.dimsCount(info.value, count));
       final rank = count.value;
       final dims = calloc<Int64>(rank);
@@ -336,6 +356,7 @@ final class OrtSession {
       if (info.value != nullptr) a.releaseTensorInfo(info.value);
       calloc.free(info);
       calloc.free(count);
+      calloc.free(type);
       calloc.free(ptr);
     }
   }
