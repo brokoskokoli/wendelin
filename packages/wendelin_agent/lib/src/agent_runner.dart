@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import 'agent_config.dart';
+import 'agent_runner_texts.dart';
 import 'context_builder.dart';
-import 'give_up_classifier.dart';
 import 'ports.dart';
 import 'provider_resolver.dart';
 import 'run/attestation_gate.dart';
@@ -21,8 +21,9 @@ import 'run/tool_round.dart';
 ///
 /// One [run] at a time: build the context, route, call the model with
 /// streaming, execute requested tools through the [ToolInvoker], repeat until
-/// a final answer or a limit; escalate along the resolver's chain when the
-/// model fails. See `docs/adr/0003-agent-loop.md` for the details; the
+/// a final answer or a limit. A failing provider ends the run with the reason;
+/// the runner never switches to another provider on its own (K28), only on the
+/// user's explicit request („nochmal mit …“). See `docs/adr/0003-agent-loop.md` for the details; the
 /// loop is [_Run], its parts are under `src/run/`.
 final class AgentRunner implements AgentRun, RunConfig {
   /// Creates a runner.
@@ -38,8 +39,7 @@ final class AgentRunner implements AgentRun, RunConfig {
     this.catalogFor,
     this.onToolRefused,
     this.memoryFloor,
-    GiveUpClassifier? giveUpClassifier,
-  }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier();
+  });
 
   /// Chooses providers and escalation targets.
   @override
@@ -96,9 +96,6 @@ final class AgentRunner implements AgentRun, RunConfig {
   @override
   final PrivacyLevel? memoryFloor;
 
-  /// Detects „kann ich nicht“ answers.
-  final GiveUpClassifier giveUpClassifier;
-
   AgentConfig get _config => contextBuilder.config;
 
   _Run? _active;
@@ -133,23 +130,22 @@ final class AgentRunner implements AgentRun, RunConfig {
 /// State and loop of one [AgentRunner.run] call.
 ///
 /// [startRun] routes and builds the context, then the loop calls the model
-/// until a final answer or a limit. Each way it goes on has a named step: [_retryOrEscalateOnError], [_handlePauseTurn],
-/// [_answerOrEscalate] and [_toolRound]. The details live in the units under
+/// until a final answer or a limit. Each way it goes on has a named step: [_retryOnError], [_handlePauseTurn],
+/// [_answer] and [_toolRound]. The details live in the units under
 /// `src/run/`: [PrivacyScope] (what the target may see, taint), [RunBudget]
 /// (limits), [Escalation] (hand-over), [ToolRound] (tool execution) and
 /// [ModelCall] (request and streaming); [RunState] holds the conversation.
 ///
 /// Invariants (details at the enforcing places):
 /// - An abort wins over every error ([drive], [throwIfAborted]).
-/// - A failed call is retried at most once per model call before the run
-///   escalates ([_retryOrEscalateOnError]).
+/// - A failed call is retried at most once per model call at the same
+///   provider; then the run fails with the reason ([_retryOnError]).
 /// - `pauseTurn` without tool calls continues without counting a round
 ///   ([_handlePauseTurn]).
 /// - [_segmentStreamed] decides whether a retry or hand-over sends an
 ///   `AgentTextReset` ([emit]).
 /// - The privacy floor never sinks and rises to the taint level
-///   ([RunState.raiseFloor], [PrivacyScope.raiseFloorToTaint]); counters per
-///   provider restart at every hand-over ([RunBudget.onEscalated]).
+///   ([RunState.raiseFloor], [PrivacyScope.raiseFloorToTaint]).
 final class _Run implements RunControl {
   _Run(this.runner, this.input) : _state = RunState(runner.recorder);
 
@@ -177,7 +173,7 @@ final class _Run implements RunControl {
   /// tool event or text reset (the scope of `AgentTextReset`).
   bool _segmentStreamed = false;
 
-  /// Target, context, messages, paused answer, executed calls, epoch.
+  /// Target, context, messages, paused answer, executed calls.
   final RunState _state;
 
   // ------------------------------------------------------------------ units
@@ -204,7 +200,6 @@ final class _Run implements RunControl {
     runner.resolver,
     _state,
     _privacy,
-    _budget,
     this,
   );
 
@@ -261,8 +256,20 @@ final class _Run implements RunControl {
     _start = runner.clock.now();
     _timer = Timer(config.maxDuration, () => abort(AgentErrorKind.timeout));
     final retry = await startRun(runner, input, _state, _privacy, this);
-    if (retry) {
-      await _escalation.escalate(EscalationReason.userRequested);
+    if (retry &&
+        !await _escalation.escalate(EscalationReason.userRequested) &&
+        _privacy.consentDeclined) {
+      // K28: the user declined the target they asked for; the target routed
+      // first does not answer instead.
+      throw RunStop(
+        AgentFailed(
+          error: AgentErrorKind.provider,
+          message: AgentRunnerTexts.notSent(
+            _escalation.declinedName ?? _state.current.target.displayName,
+            language: input.language,
+          ),
+        ),
+      );
     }
 
     var retried = false;
@@ -271,7 +278,7 @@ final class _Run implements RunControl {
       final reply = await _model.call();
 
       if (reply.error case final error?) {
-        retried = await _retryOrEscalateOnError(error, retried: retried);
+        retried = await _retryOnError(error, retried: retried);
         continue;
       }
       retried = false;
@@ -282,9 +289,8 @@ final class _Run implements RunControl {
         continue;
       }
       if (calls.isEmpty) {
-        final done = await _answerOrEscalate(assistant, reply.stopReason);
-        if (done != null) return done;
-        continue; // handed over after „kann ich nicht“
+        final done = await _answer(assistant, reply.stopReason);
+        return done;
       }
       // Tool round (also for tool calls in a paused answer: every tool_use
       // gets its tool_result).
@@ -293,8 +299,8 @@ final class _Run implements RunControl {
   }
 
   /// A model call failed with [error]. Returns the new `retried` flag when
-  /// the loop goes on (retry or hand-over); else throws the terminal event.
-  Future<bool> _retryOrEscalateOnError(
+  /// the loop goes on (retry); else throws the terminal event.
+  Future<bool> _retryOnError(
     ProviderException error, {
     required bool retried,
   }) async {
@@ -309,15 +315,17 @@ final class _Run implements RunControl {
       _retryCurrentCall();
       return true;
     }
-    if (error.retryable &&
-        await _escalation.escalate(EscalationReason.providerError)) {
-      return false;
-    }
+    // Invariant (K28): after the retry the run ends with the reason. It
+    // never goes on at another provider; a new request of the user may.
     throwIfAborted();
     throw RunStop(
       AgentFailed(
         error: AgentErrorKind.provider,
-        message: 'Der Anbieter hat einen Fehler gemeldet: ${error.message}',
+        message: AgentRunnerTexts.providerFailure(
+          _state.current.target.displayName,
+          error,
+          language: input.language,
+        ),
         cause: error,
       ),
     );
@@ -342,7 +350,11 @@ final class _Run implements RunControl {
     throw RunStop(
       AgentFailed(
         error: AgentErrorKind.provider,
-        message: 'Der Anbieter hat einen Fehler gemeldet: ${error.message}',
+        message: AgentRunnerTexts.providerFailure(
+          _state.current.target.displayName,
+          error,
+          language: input.language,
+        ),
         cause: error,
       ),
     );
@@ -367,17 +379,10 @@ final class _Run implements RunControl {
     _state.paused.add(assistant);
   }
 
-  /// A final answer: returns [AgentDone], or `null` when it gave up
-  /// („kann ich nicht“) and the run was handed over.
-  Future<AgentDone?> _answerOrEscalate(
-    Message assistant,
-    StopReason? stopReason,
-  ) async {
+  /// A final answer ends the run with [AgentDone]; an answer like „kann ich
+  /// nicht“ is shown as it is.
+  Future<AgentDone> _answer(Message assistant, StopReason? stopReason) async {
     final text = [..._state.paused, assistant].map((m) => m.text).join();
-    if (runner.giveUpClassifier.isGiveUp(text) &&
-        await _escalation.escalate(EscalationReason.modelGaveUp)) {
-      return null;
-    }
     await _state.append(assistant);
     return AgentDone(
       finalText: text,
@@ -386,7 +391,7 @@ final class _Run implements RunControl {
   }
 
   /// Runs the tool [calls] of [assistant] as one round, unless a limit
-  /// refuses it (throws) or the run is handed over for lack of progress.
+  /// refuses it (throws).
   Future<void> _toolRound(Message assistant, List<ToolCallBlock> calls) async {
     // Invariant: at most `maxToolRounds` rounds; the next one is refused
     // with a result for every call, then the run ends.
@@ -398,20 +403,11 @@ final class _Run implements RunControl {
       await _tools.refuse(assistant, calls, 'Token-Budget aufgebraucht');
       throw RunStop(_failed(AgentErrorKind.tokenBudget));
     }
-    if (_budget.noProgress &&
-        await _escalation.escalate(EscalationReason.noProgress)) {
-      return;
-    }
     _budget.onRound();
     await _state.append(assistant);
     final results = await _tools.run(calls);
     await _state.append(Message.toolResults(results));
     throwIfAborted();
-
-    _budget.onInvalidCalls(calls.where(_tools.isInvalid).length);
-    if (_budget.tooManyInvalid) {
-      await _escalation.escalate(EscalationReason.invalidToolCalls);
-    }
   }
 
   // ---------------------------------------------------------------- limits

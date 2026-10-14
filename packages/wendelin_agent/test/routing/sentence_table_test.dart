@@ -87,6 +87,5 @@ void main() {
     expect(p.privacyFloor, PrivacyLevel.tee);
     expect(go('Schreib die Notiz um').modelId, 'claude-sonnet');
     expect(go('hallo').modelId, 'glm-small');
-    expect(go('hallo').routeProfileId, 'phala');
   });
 }

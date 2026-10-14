@@ -5,7 +5,8 @@
 /// The patterns are first-person and bound to *helping/doing* or to the end
 /// of the sentence, so that ordinary negative results („Den Termin kann ich
 /// leider nicht verschieben, er ist schon vorbei“, „Das kann ich nicht
-/// finden“, „I'm not able to find any events“) do not trigger an escalation.
+/// finden“, „I'm not able to find any events“) are not misjudged. Only the
+/// evals use it as a metric; no run behaviour depends on it (K28).
 final class GiveUpClassifier {
   /// Creates a classifier; [patterns] (matched against the lower-cased
   /// answer with normalised apostrophes and spaces) replaces

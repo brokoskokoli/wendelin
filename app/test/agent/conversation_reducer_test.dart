@@ -272,7 +272,7 @@ void main() {
         EscalationConfirmationRequired(
           fromProfile: 'phala',
           toProfile: 'sonnet',
-          reason: EscalationReason.providerError,
+          reason: EscalationReason.userRequested,
           respond: (_) {},
         ),
       ]);
@@ -293,7 +293,7 @@ void main() {
       const Escalated(
         fromProfile: 'phala',
         toProfile: 'sonnet',
-        reason: EscalationReason.modelGaveUp,
+        reason: EscalationReason.userRequested,
       ),
       const AgentTextReset('Übergabe'),
       const AgentTextDelta('Fünf Punkte'),
@@ -314,7 +314,7 @@ void main() {
       const Escalated(
         fromProfile: 'phala',
         toProfile: 'sonnet',
-        reason: EscalationReason.providerError,
+        reason: EscalationReason.userRequested,
       ),
       const AgentTextDelta('Neu'),
     ]);

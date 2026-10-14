@@ -134,4 +134,33 @@ void main() {
       matchesGoldenFile('goldens/bestaetigung.png'),
     );
   });
+
+  testWidgets('Fehlerkarte: Anbieter nicht erreichbar, kein Wechsel (K28)', (
+    tester,
+  ) async {
+    final c = await pumpMain(tester, phalaEnv());
+    c
+        .read(agentControllerProvider.notifier)
+        .seed(
+          ConversationState(
+            entries: [
+              SessionStartEntry('s', testNow),
+              const UserEntry('u', 'Claude, wie spät ist es?'),
+              const NoticeEntry(
+                'n',
+                NoticeKind.error,
+                'Claude ist gerade nicht erreichbar.',
+              ),
+            ],
+            activeProfileId: 'phala',
+          ),
+        );
+    await tester.pumpAndSettle();
+    expect(find.text('Claude ist gerade nicht erreichbar.'), findsOneWidget);
+    expect(find.textContaining('übergeben'), findsNothing);
+    await expectLater(
+      find.byKey(goldenKey),
+      matchesGoldenFile('goldens/fehlerkarte_anbieter.png'),
+    );
+  });
 }

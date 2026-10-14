@@ -24,6 +24,14 @@ import 'env/provider_overrides.dart';
 import 'env/voice_overrides.dart';
 import 'fake_microphone.dart';
 
+/// The M2 key `routing.escalationChain`. The app no longer reads it (K28);
+/// tests store values under it to see that they have no effect.
+final legacyEscalationChain = SettingKey<Object>(
+  'routing.escalationChain',
+  encode: (v) => v,
+  decode: (json) => json!,
+);
+
 /// Fixed „now“ of the tests: Tuesday, 13 Oct 2026, 08:12 local time.
 final testNow = DateTime(2026, 10, 13, 8, 12);
 
@@ -190,7 +198,7 @@ ProviderConfig scripted(
   String id = 'claude',
   String name = 'Claude Haiku',
   PrivacyLevel privacy = PrivacyLevel.standard,
-  List<ProviderTarget> chain = const [],
+  List<ProviderTarget> others = const [],
   Map<String, String> names = const {},
   bool Function(UserInput)? isPrivate,
 }) => ProviderConfig(
@@ -199,8 +207,9 @@ ProviderConfig scripted(
     modelId: 'claude-haiku-4-5',
     provider: provider,
     privacy: privacy,
+    name: name,
   ),
-  chain: chain,
+  others: others,
   names: {id: name, ...names},
   isPrivate: isPrivate,
 );

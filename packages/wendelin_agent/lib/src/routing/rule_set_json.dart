@@ -208,10 +208,6 @@ final class RuleSetJson {
         },
     ],
     'defaultTarget': _target(rules.defaultTarget),
-    'chains': {
-      for (final MapEntry(:key, :value) in rules.chains.entries)
-        key: value.map(_target).toList(),
-    },
   };
 
   static Map<String, Object?> _target(RouteTarget t) => {
@@ -230,16 +226,13 @@ final class RuleSetJson {
         '$schemaVersion).',
       );
     }
+    // Older exports carry `chains` (escalation chains); they are ignored.
     return RuleSet(
       rules: r.optionalList('rules', _rule),
       defaultTarget: _readTarget(
         r.field('defaultTarget'),
         r.path('defaultTarget'),
       ),
-      chains: {
-        for (final MapEntry(:key, :value) in r.optionalMap('chains').entries)
-          key: JsonReader.asList(value, r.path('chains.$key'), _readTarget),
-      },
     );
   }
 

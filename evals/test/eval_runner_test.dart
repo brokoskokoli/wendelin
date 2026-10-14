@@ -15,16 +15,12 @@ EvalCase _case(String yaml) =>
 void main() {
   final time = EvalTime.parse('2026-10-14T09:00', defaultTimeZone);
 
-  EvalRunner runner(
-    List<ScriptedTurn> Function() turns, {
-    List<String> escalation = const [],
-  }) => EvalRunner(
+  EvalRunner runner(List<ScriptedTurn> Function() turns) => EvalRunner(
     target: EvalTarget(
       profileId: 'fake',
       modelId: 'fake-model',
       privacy: PrivacyLevel.local,
       provider: (_) => FakeLlmProvider(turns()),
-      escalationModels: escalation,
       costEstimator: const FlatCostEstimator(),
     ),
     time: time,
@@ -174,35 +170,7 @@ void main() {
   });
 
   test(
-    'Aufgeben wird beobachtet und eskaliert, wenn eine Kette existiert',
-    () async {
-      final r = await runner(
-        () => [
-          ScriptedTurn.text('Dabei kann ich dir leider nicht helfen.'),
-          ScriptedTurn.toolCalls([
-            _call('c1', 'calendar__create_event', {
-              'title': 'Tauchen',
-              'start': '2026-10-15T10:00',
-            }),
-          ]),
-          ScriptedTurn.text('Erledigt.'),
-        ],
-        escalation: ['fake-strong'],
-      ).runCase(tauchen);
-      expect(r.status, CaseStatus.passed);
-      expect(r.observation.gaveUp, isTrue);
-      expect(r.observation.escalations.single, (
-        to: 'fake',
-        reason: EscalationReason.modelGaveUp,
-      ));
-      expect(r.toJson()['escalations'], [
-        {'to': 'fake', 'reason': 'modelGaveUp'},
-      ]);
-    },
-  );
-
-  test(
-    'Aufgeben ohne Kette: Endantwort wird als aufgegeben markiert',
+    'Aufgeben: Endantwort wird markiert, es gibt keine Eskalation (K28)',
     () async {
       final r = await runner(() => [ScriptedTurn.text('Das kann ich nicht.')])
           .runCase(tauchen);
@@ -218,7 +186,7 @@ void main() {
     ).runCase(tauchen);
     expect(r.status, CaseStatus.error);
     expect(r.observation.failure!.error, AgentErrorKind.provider);
-    expect(r.reasons.single, contains('Key ungültig'));
+    expect(r.reasons.single, contains('Zugang abgelehnt'));
     expect(r.toJson()['failure'], {'kind': 'provider', 'message': anything});
   });
 
@@ -311,36 +279,6 @@ void main() {
       final latency = (report['summary']! as Map)['latencyMs']! as Map;
       expect(latency['p50'], isA<int>());
       expect(latency['p90'], isA<int>());
-    },
-  );
-
-  test(
-    'Eskalation unter die Datenschutzstufe wird bestätigt und gezählt (N4)',
-    () async {
-      final provider = FakeLlmProvider([
-        ScriptedTurn.text('Dabei kann ich dir leider nicht helfen.'),
-        ScriptedTurn.text('Jetzt geht es.'),
-      ]);
-      final r = await EvalRunner(
-        target: EvalTarget(
-          profileId: 'tee',
-          modelId: 'klein',
-          privacy: PrivacyLevel.tee,
-          provider: (_) => provider,
-          escalationModels: ['gross'],
-          escalationPrivacy: PrivacyLevel.standard,
-          privateRequests: true,
-        ),
-        time: time,
-      ).runCase(tauchen);
-      expect(r.observation.escalationConfirmations, 1);
-      expect(r.observation.confirmations, 0);
-      expect(
-        r.observation.escalations.single.reason,
-        EscalationReason.modelGaveUp,
-      );
-      expect(r.observation.finalText, 'Jetzt geht es.');
-      expect(r.toJson()['escalationConfirmations'], 1);
     },
   );
 

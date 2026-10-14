@@ -13,11 +13,10 @@ import 'tool_category_matcher.dart';
 ///   whose target profile is available wins, else the default target.
 ///   `Resolution.reason` is the rule name. A `privacy` match sets the
 ///   privacy floor to the level of the rule's target (K8 d).
-/// - `escalate`: walks the chain **of the routed profile**
-///   (`RuleSet.chains`), skipping unavailable profiles; the floor stays.
-/// - „nochmal mit Name“ (de/fr/en) with a profile name, a profile alias,
-///   a rule alias or a rule's prefix/keyword word escalates directly to
-///   that target.
+/// - `escalate`: only for „nochmal mit Name“ (de/fr/en) with a profile name,
+///   a profile alias, a rule alias or a rule's prefix/keyword word: goes
+///   directly to that target; the floor stays. There is no automatic
+///   switch after errors (K28).
 final class RuleBasedProviderResolver implements ProviderResolver {
   /// Creates the resolver. Throws [ArgumentError] if the default target's
   /// profile is missing, disabled or has no adapter.
@@ -75,7 +74,7 @@ final class RuleBasedProviderResolver implements ProviderResolver {
   /// Warnings about [rules] (skipped rules, weak private targets …).
   late final List<RuleSetIssue> issues;
 
-  late final List<(String, RouteTarget)> _aliases;
+  late final List<_Alias> _aliases;
 
   /// The routing context for [input] right now.
   RoutingContext contextFor(UserInput input) => RoutingContext(
@@ -94,17 +93,29 @@ final class RuleBasedProviderResolver implements ProviderResolver {
       profiles: profiles,
       needProvider: true,
     );
-    final requested = _requested(ctx.text);
+    final named = _requested(ctx.text);
     final routed = _build(decision.target)!;
     final floor = _floorOf(decision.privateMatches);
+    final unavailable = named != null && named.built == null
+        ? _unavailable(named.target)
+        : _prefixUnavailable(decision, ctx);
+    if (unavailable != null) {
+      // The user named a target we cannot use: no silent normal routing.
+      return Resolution(
+        target: routed,
+        reason: decision.reason,
+        privacyFloor: floor,
+        unavailable: unavailable,
+      );
+    }
+    final requested = named?.built;
     if (floor == null || routed.privacy.isAtLeast(floor)) {
       return Resolution(
         target: routed,
         reason: decision.reason,
         privacyFloor: floor,
         effectiveText: decision.effectiveText,
-        requestedTarget: requested == null ? null : _build(requested),
-        routeProfileId: routed.profileId,
+        requestedTarget: requested,
       );
     }
     // Private, but the winning rule's target is too weak (or the private
@@ -115,9 +126,37 @@ final class RuleBasedProviderResolver implements ProviderResolver {
       target: target,
       reason: reason,
       privacyFloor: floor,
-      requestedTarget: requested == null ? null : _build(requested),
-      routeProfileId: target.profileId,
+      requestedTarget: requested,
     );
+  }
+
+  UnavailableTarget _unavailable(RouteTarget t) {
+    final p = profiles[t.profileId];
+    final reason = switch (profileProblem(p, needProvider: true)) {
+      SkipReason.profileMissing => 'missing',
+      SkipReason.profileDisabled => 'disabled',
+      _ => 'incomplete',
+    };
+    return UnavailableTarget(p?.name ?? t.profileId, reason);
+  }
+
+  /// A rule whose trigger words matched (prefix „X, …“) but whose target
+  /// profile is disabled or incomplete, before the winning rule.
+  UnavailableTarget? _prefixUnavailable(RouteDecision d, RoutingContext ctx) {
+    for (final s in d.skipped) {
+      if (s.reason != SkipReason.profileMissing &&
+          s.reason != SkipReason.profileDisabled &&
+          s.reason != SkipReason.profileUnavailable) {
+        continue;
+      }
+      // A privacy keyword is no choice of a target.
+      if (s.rule.isPrivate) continue;
+      final match = s.rule.condition.evaluate(ctx);
+      if (match != null && match.triggers.isNotEmpty) {
+        return _unavailable(s.rule.target);
+      }
+    }
+    return null;
   }
 
   /// The floor of the matched private rules: the highest level of their
@@ -132,7 +171,7 @@ final class RuleBasedProviderResolver implements ProviderResolver {
   }
 
   /// The first available target with at least [floor]: the private rules'
-  /// targets, then the default target and its chain.
+  /// targets, then the default target.
   (ProviderTarget, String)? _compliant(
     List<RoutingRule> privateRules,
     PrivacyLevel floor,
@@ -140,8 +179,6 @@ final class RuleBasedProviderResolver implements ProviderResolver {
     final candidates = [
       for (final rule in privateRules) (rule.target, rule.name),
       (rules.defaultTarget, RuleSet.defaultReason),
-      for (final t in rules.chainOf(rules.defaultTarget.profileId))
-        (t, RuleSet.defaultReason),
     ];
     for (final (t, reason) in candidates) {
       final built = _build(t);
@@ -155,7 +192,6 @@ final class RuleBasedProviderResolver implements ProviderResolver {
   @override
   Resolution? escalate(Resolution current, EscalationReason reason) {
     final floor = current.privacyFloor;
-    final route = current.routeProfileId ?? current.profileId;
     final requested = current.requestedTarget;
     if (reason == EscalationReason.userRequested && requested != null) {
       // „nochmal mit <aktuelles Ziel>“ retries on the same target.
@@ -166,28 +202,9 @@ final class RuleBasedProviderResolver implements ProviderResolver {
             ? 'Nutzerwunsch: erneut'
             : 'Nutzerwunsch: ${profiles[requested.profileId]?.name}',
         privacyFloor: floor,
-        routeProfileId: route,
       );
     }
-    final chain = [for (final t in rules.chainOf(route)) ?_build(t)];
-    final index = chain.indexWhere((t) => _same(t, current.target));
-    final remaining = chain
-        .skip(index + 1)
-        .where((t) => !_same(t, current.target))
-        .toList();
-    if (remaining.isEmpty) return null;
-    final next = floor == null
-        ? remaining.first
-        : remaining.firstWhere(
-            (t) => t.privacy.isAtLeast(floor),
-            orElse: () => remaining.first,
-          );
-    return Resolution(
-      target: next,
-      reason: 'Eskalation: ${reason.name}',
-      privacyFloor: floor,
-      routeProfileId: route,
-    );
+    return null;
   }
 
   static bool _same(ProviderTarget a, ProviderTarget b) =>
@@ -201,16 +218,19 @@ final class RuleBasedProviderResolver implements ProviderResolver {
       modelId: t.modelId,
       provider: p!.provider!,
       privacy: p.privacy,
+      name: p.name,
     );
   }
 
   /// Names for „nochmal mit …“: rules first (they carry a specific
   /// model), then profiles.
-  List<(String, RouteTarget)> _collectAliases() {
-    final out = <(String, RouteTarget)>[];
+  List<_Alias> _collectAliases() {
+    final out = <_Alias>[];
+    // Unavailable profiles are recognized too: naming them is an explicit
+    // choice that must fail with a reason, not route elsewhere.
     void add(String name, RouteTarget t) {
       final n = RoutingText.normalize(name);
-      if (n.isNotEmpty && _build(t) != null) out.add((n, t));
+      if (n.isNotEmpty) out.add(_Alias(n, t, _build(t)));
     }
 
     for (final rule in rules.rules) {
@@ -248,7 +268,7 @@ final class RuleBasedProviderResolver implements ProviderResolver {
   /// sentences („Schreib Anna: ich gehe nochmal mit Claude ins Kino“) do
   /// not count. The longest matching name wins; on a tie the earlier source
   /// (rules before profiles).
-  RouteTarget? _requested(RoutingText text) {
+  _Alias? _requested(RoutingText text) {
     final words = text.normalized.isEmpty
         ? const <String>[]
         : text.normalized.split(' ');
@@ -263,14 +283,16 @@ final class RuleBasedProviderResolver implements ProviderResolver {
         final p = phrase.split(' ');
         if (!_wordsAt(words, at, p)) continue;
         final rest = words.sublist(at + p.length);
-        (String, RouteTarget)? best;
+        _Alias? best;
         for (final alias in _aliases) {
-          final a = alias.$1.split(' ');
+          final a = alias.name.split(' ');
           if (!_wordsAt(rest, 0, a)) continue;
           if (rest.length - a.length > maxTrailingWords) continue;
-          if (best == null || alias.$1.length > best.$1.length) best = alias;
+          if (best == null || alias.name.length > best.name.length) {
+            best = alias;
+          }
         }
-        if (best != null) return best.$2;
+        if (best != null) return best;
       }
     }
     return null;
@@ -283,4 +305,13 @@ final class RuleBasedProviderResolver implements ProviderResolver {
     }
     return true;
   }
+}
+
+/// A name for „nochmal mit …“; [built] is `null` if the target is unusable.
+final class _Alias {
+  const _Alias(this.name, this.target, this.built);
+
+  final String name;
+  final RouteTarget target;
+  final ProviderTarget? built;
 }

@@ -10,15 +10,15 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 /// eval keys:
 /// - `catalog`: price overrides in the `ModelCatalog.mergeJson` format
 ///   (`{"models": {"<id>": {"input": 0.1, "output": 0.4}}}`),
-/// - `escalationModels`: stronger models of the same profile to escalate
-///   to (weakest first),
+/// - `escalationModels`: no longer used (Wendelin does not switch models
+///   on its own, K28); the key is accepted and ignored,
 /// - `script`: for `type: fake` the path of the fake script (relative to
 ///   the profile file).
 ///
 /// It never contains a key: the API key comes from an environment variable
 /// (see [apiKeyVariable]).
 final class EvalProfile {
-  EvalProfile._(this.profile, this.catalog, this.escalationModels, this.script);
+  EvalProfile._(this.profile, this.catalog, this.script);
 
   /// Parses [json]; throws [FormatException].
   factory EvalProfile.parse(String json) {
@@ -43,12 +43,8 @@ final class EvalProfile {
     }
     final map = Map.of(decoded);
     final catalogJson = map.remove('catalog');
-    final escalation = map.remove('escalationModels');
+    map.remove('escalationModels');
     final script = map.remove('script');
-    if (escalation != null &&
-        (escalation is! List || escalation.any((e) => e is! String))) {
-      throw const FormatException('escalationModels: Liste von Modell-Ids');
-    }
     if (script != null && script is! String) {
       throw const FormatException('script: Pfad erwartet');
     }
@@ -59,7 +55,6 @@ final class EvalProfile {
     return EvalProfile._(
       ProviderProfile.fromJson(map),
       catalog,
-      escalation == null ? const [] : List<String>.from(escalation as List),
       script as String?,
     );
   }
@@ -69,9 +64,6 @@ final class EvalProfile {
 
   /// Prices (built-in plus overrides).
   final ModelCatalog catalog;
-
-  /// Escalation chain on the same profile.
-  final List<String> escalationModels;
 
   /// Fake script path (only for `type: fake`).
   final String? script;
@@ -98,12 +90,8 @@ final class EvalProfile {
   }
 
   /// The profile with [model] as default model.
-  EvalProfile withModel(String model) => EvalProfile._(
-    profile.copyWith(defaultModel: model),
-    catalog,
-    escalationModels,
-    script,
-  );
+  EvalProfile withModel(String model) =>
+      EvalProfile._(profile.copyWith(defaultModel: model), catalog, script);
 
   /// Cost estimator from [catalog].
   CostEstimator get costEstimator =>

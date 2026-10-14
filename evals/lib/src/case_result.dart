@@ -97,9 +97,8 @@ final class RunObservation {
   /// Escalations, in order.
   final List<ObservedEscalation> escalations;
 
-  /// Whether the `GiveUpClassifier` flagged an answer of the model as
-  /// „kann ich nicht“ (escalated with reason `modelGaveUp`, or the final
-  /// answer is classified as giving up).
+  /// Whether the `GiveUpClassifier` flagged the final answer as
+  /// „kann ich nicht“. The run stays with the answer (K28).
   final bool gaveUp;
 
   /// The `<spoken>` block of the answer (WP41, stage 2); `null` = none.

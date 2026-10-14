@@ -5,21 +5,10 @@ import '../provider/attestation.dart';
 import '../tools/tool.dart';
 import '../tools/tool_outcome.dart';
 
-/// Why the agent handed a request to another provider.
+/// Why the agent hands a request to another provider. Wendelin never does
+/// so on its own (concept K28): only on the user's explicit request.
 enum EscalationReason {
-  /// API error, timeout or rate limit.
-  providerError,
-
-  /// Invalid tool JSON or unknown tool, twice.
-  invalidToolCalls,
-
-  /// Too many tool rounds without a final answer.
-  noProgress,
-
-  /// The model said it cannot solve the task.
-  modelGaveUp,
-
-  /// The user asked for it (`UserInput.requestEscalation`).
+  /// The user asked for it („nochmal mit Claude“, `UserInput.requestEscalation`).
   userRequested,
 }
 
@@ -40,7 +29,8 @@ enum AgentErrorKind {
   /// Monthly cost budget blocks further calls.
   budgetBlocked,
 
-  /// Provider failed and no escalation target was available.
+  /// The chosen provider failed (after one retry); there is no automatic
+  /// switch to another one.
   provider,
 
   /// Unexpected internal error.

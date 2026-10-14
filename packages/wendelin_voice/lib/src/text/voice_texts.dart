@@ -85,10 +85,16 @@ final class VoiceTexts {
   final String failed;
 
   /// Spoken text for a failed agent run. In German the agent's own (German,
-  /// more specific) [message] is used; other languages get a short generic
-  /// phrase for [kind], so the answer language does not switch.
+  /// more specific) [message] is used. A provider failure carries the
+  /// reason already translated into the request language (`AgentRunnerTexts`,
+  /// never the raw exception text), so it is spoken in every language; other
+  /// languages get a short generic phrase for [kind], so the answer language
+  /// does not switch.
   String failure(AgentErrorKind kind, String message) {
-    if (language == 'de' && message.trim().isNotEmpty) return message;
+    final usable = message.trim().isNotEmpty;
+    if (usable && (language == 'de' || kind == AgentErrorKind.provider)) {
+      return message;
+    }
     return switch (kind) {
       AgentErrorKind.timeout => tooSlow,
       AgentErrorKind.tokenBudget || AgentErrorKind.budgetBlocked => noBudget,

@@ -30,7 +30,7 @@ void main() {
   /// Starts the app logic with a Phala-like TEE provider as default target.
   void start({
     GpuCheckMode mode = GpuCheckMode.off,
-    List<ProviderTarget> chain = const [],
+    List<ProviderTarget> others = const [],
   }) {
     verifier = ScriptedVerifier();
     gateway = ScriptedGateway();
@@ -52,7 +52,7 @@ void main() {
           provider: provider,
           privacy: PrivacyLevel.tee,
         ),
-        chain: chain,
+        others: others,
         names: const {'phala': 'Phala · GLM klein'},
       ),
       storage: base.storage,
@@ -183,7 +183,7 @@ void main() {
     for (final privacy in [PrivacyLevel.standard, PrivacyLevel.tee]) {
       test('Sitzung fehlgeschlagen ($privacy): weder Frage noch Aufruf, '
           'Fehler sichtbar', () async {
-        start(chain: [otherTarget(privacy)]);
+        start(others: [otherTarget(privacy)]);
         verifier.sessionStages = const [
           StageResult.fail(AttestationStage.quote, 'ungültig'),
         ];
@@ -200,7 +200,7 @@ void main() {
 
     test('Quittung rot: die Folgeanfrage geht nicht an den nächsten '
         'Anbieter', () async {
-      start(chain: [otherTarget(PrivacyLevel.standard)]);
+      start(others: [otherTarget(PrivacyLevel.standard)]);
       verifier.receipts = [
         failedReceipt(AttestationStage.receiptSignature, code: null),
       ];
@@ -277,7 +277,7 @@ void main() {
       final std = FakeLlmProvider([ScriptedTurn.text('Standard-Antwort.')]);
       start(
         mode: GpuCheckMode.before,
-        chain: [
+        others: [
           ProviderTarget(
             profileId: 'claude',
             modelId: 'sonnet',

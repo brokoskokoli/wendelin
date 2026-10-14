@@ -43,12 +43,12 @@ void main() {
     final report =
         jsonDecode(File(path).readAsStringSync()) as Map<String, Object?>;
     final summary = report['summary']! as Map<String, Object?>;
-    // Das Demo-Skript beantwortet 11 von 40 Fällen richtig.
+    // Das Demo-Skript beantwortet 10 von 40 Fällen richtig.
     expect(summary['total'], 40);
-    expect(summary['passed'], 11);
+    expect(summary['passed'], 10);
     expect(summary['skipped'], 2);
     expect(summary['gaveUp'], 1);
-    expect(summary['escalated'], 1);
+    expect(summary['escalated'], 0);
     expect(summary['costMicros'], greaterThan(0));
     expect(summary['unpricedCases'], 0);
     final byLang = report['byLanguage']! as Map<String, Object?>;

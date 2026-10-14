@@ -121,7 +121,7 @@ void main() {
         EscalationConfirmationRequired(
           fromProfile: 'phala',
           toProfile: 'claude',
-          reason: EscalationReason.providerError,
+          reason: EscalationReason.userRequested,
           respond: (_) {},
         ),
         fromName: 'Phala GLM',
@@ -206,7 +206,7 @@ void main() {
         const Escalated(
           fromProfile: 'claude',
           toProfile: 'phala',
-          reason: EscalationReason.providerError,
+          reason: EscalationReason.userRequested,
         ),
       );
       expect(s.activeRule, isNull);

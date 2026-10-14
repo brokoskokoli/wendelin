@@ -32,7 +32,7 @@ CaseResult _r(
     costMicros: cost,
     gaveUp: gaveUp,
     escalations: escalated
-        ? [(to: 'x', reason: EscalationReason.modelGaveUp)]
+        ? [(to: 'x', reason: EscalationReason.userRequested)]
         : const [],
   ),
 );

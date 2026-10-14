@@ -28,6 +28,20 @@ Future<bool> startRun(
   RunControl control,
 ) async {
   state.current = runner.resolver.resolve(input);
+  if (state.current.unavailable case final u?) {
+    // K28: the user named a target that cannot be used; nothing else
+    // answers instead.
+    throw RunStop(
+      AgentFailed(
+        error: AgentErrorKind.provider,
+        message: AgentRunnerTexts.targetUnavailable(
+          u.name,
+          u.reason,
+          language: input.language,
+        ),
+      ),
+    );
+  }
   control.emit(
     Routed(
       profileId: state.current.profileId,

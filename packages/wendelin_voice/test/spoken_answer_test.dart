@@ -388,6 +388,15 @@ void main() {
       VoiceTexts.de.failure(AgentErrorKind.provider, ' '),
       VoiceTexts.de.failed,
     );
+    // The reason of a provider failure is translated by the agent.
+    expect(
+      VoiceTexts.fr.failure(AgentErrorKind.provider, 'Claude est injoignable.'),
+      'Claude est injoignable.',
+    );
+    expect(
+      VoiceTexts.en.failure(AgentErrorKind.provider, ' '),
+      VoiceTexts.en.failed,
+    );
     expect(
       VoiceTexts.fr.failure(AgentErrorKind.timeout, 'x'),
       VoiceTexts.fr.tooSlow,

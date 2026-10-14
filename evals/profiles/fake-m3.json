@@ -19,8 +19,5 @@
         "output": 15.0
       }
     }
-  },
-  "escalationModels": [
-    "fake-strong"
-  ]
+  }
 }

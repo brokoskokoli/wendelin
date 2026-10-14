@@ -64,6 +64,7 @@ final class ModelCall {
   Future<ModelReply> call() async {
     // Invariant: the floor follows the taint before every model call.
     _privacy.raiseFloorToTaint();
+    _state.modelCalled = true;
     final config = runner.contextBuilder.config;
     final target = _state.current;
     final catalog = _privacy.catalog;
@@ -234,30 +235,13 @@ final class ModelCall {
   /// The system prompt for the current target: without memories it may
   /// not see, with the speech hint of the run (stage 2 drops to stage 1 after
   /// an untrusted tool result; only the changing end of the prompt differs
-  /// for the cache), and after an escalation with the note on earlier tool calls.
+  /// for the cache).
   String _systemPrompt() {
     final memories = _state.context.memories;
     final visible = _privacy.visibleMemories();
     final speech = _state.speech;
-    final base =
-        visible.length == memories.length && speech == _state.context.speech
+    return visible.length == memories.length && speech == _state.context.speech
         ? _state.context.systemPrompt
         : runner.contextBuilder.systemPrompt(memories: visible, speech: speech);
-    if (_state.epoch == 0) return base;
-    // Calls of tools this target may not see are left out (their names
-    // and status are protected too).
-    final shown = _privacy.perTarget ? _privacy.catalog : null;
-    final before = _state.executed
-        .where(
-          (e) =>
-              e.epoch < _state.epoch &&
-              (shown == null || shown.lookup(e.call.name) != null),
-        )
-        .toList();
-    if (before.isEmpty) return base;
-    final actions = [
-      for (final e in before) (call: e.call, outcome: e.outcome),
-    ];
-    return '$base\n\n${ContextBuilder.escalationNote(actions)}';
   }
 }

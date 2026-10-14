@@ -1,6 +1,6 @@
 /// Wendelin agent loop: context building, provider resolution (routing
-/// rules, escalation chains per profile), limits,
-/// escalation and sentence chunking for TTS. Depends only on
+/// rules), limits, the explicit hand-over on request („nochmal mit …“, never
+/// automatic) and sentence chunking for TTS. Depends only on
 /// `wendelin_core` interfaces.
 ///
 /// Simple implementations of the ports (for tests, evals and the demo mode)

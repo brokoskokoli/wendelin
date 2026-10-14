@@ -2,6 +2,7 @@
 // PrivacyScope (src-internal, see `lib/src/run/`).
 
 import 'package:test/test.dart';
+import 'package:wendelin_agent/src/run/escalation.dart';
 import 'package:wendelin_agent/src/run/privacy_scope.dart';
 import 'package:wendelin_agent/src/run/run_budget.dart';
 import 'package:wendelin_agent/src/run/run_state.dart';
@@ -25,12 +26,7 @@ RunState _state(PrivacyLevel privacy, {PrivacyLevel? floor}) => RunState(null)
 
 void main() {
   group('RunBudget', () {
-    const config = AgentConfig(
-      maxToolRounds: 2,
-      maxTokensPerRequest: 100,
-      escalateAfterRoundsWithoutResult: 1,
-      escalateAfterInvalidToolCalls: 2,
-    );
+    const config = AgentConfig(maxToolRounds: 2, maxTokensPerRequest: 100);
 
     test('round limit after maxToolRounds rounds', () {
       final budget = RunBudget(config);
@@ -53,19 +49,6 @@ void main() {
       expect(budget.tokensExhausted, isFalse);
       budget.onTokens(const Usage(inputTokens: 1, outputTokens: 0));
       expect(budget.tokensExhausted, isTrue);
-    });
-
-    test('a hand-over resets only the per-provider counters', () {
-      final budget = RunBudget(config)
-        ..onRound()
-        ..onRound()
-        ..onInvalidCalls(2);
-      expect(budget.noProgress, isTrue);
-      expect(budget.tooManyInvalid, isTrue);
-      budget.onEscalated();
-      expect(budget.noProgress, isFalse);
-      expect(budget.tooManyInvalid, isFalse);
-      expect(budget.roundLimitReached, isTrue);
     });
   });
 
@@ -125,4 +108,33 @@ void main() {
       expect(state.current.privacyFloor, isNull);
     });
   });
+
+  group('Escalation', () {
+    test('a target change after the first model call is a bug (K28)', () {
+      final (primary, _) = scripted('p', const []);
+      final state = _state(PrivacyLevel.standard)..modelCalled = true;
+      final control = _NoControl();
+      final escalation = Escalation(
+        DefaultProviderResolver(primary),
+        state,
+        PrivacyScope(Harness(primary: primary).runner, state),
+        control,
+      );
+      expect(
+        () => escalation.escalate(EscalationReason.userRequested),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+  });
+}
+
+final class _NoControl implements RunControl {
+  @override
+  final token = CancelToken();
+  @override
+  bool get segmentStreamed => false;
+  @override
+  void emit(AgentEvent e) {}
+  @override
+  void throwIfAborted() {}
 }

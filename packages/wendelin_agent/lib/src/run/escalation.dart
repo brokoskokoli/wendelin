@@ -1,59 +1,51 @@
-/// Escalation of one agent run (concept: „Routing und Eskalation“, K8 d,
-/// K10 c, ADR 0009): asks the resolver for the next target, asks the user
-/// before handing private or protected data to a weaker target, and hands
-/// the run over. Internal to `wendelin_agent`, not exported.
+/// Hand-over of one agent run on the user's explicit request („nochmal mit
+/// Claude“; concept K28, ADR 0009): asks the resolver for the requested
+/// target, asks the user before handing private or protected data to a
+/// weaker target, and hands the run over. Never used on provider errors. Internal to `wendelin_agent`, not exported.
 library;
 
 import 'dart:async';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
-import '../agent_runner_texts.dart';
 import '../provider_resolver.dart';
 import 'privacy_scope.dart';
-import 'run_budget.dart';
 import 'run_state.dart';
 
-/// Hands a run to the next target of the resolver's chain.
+/// Hands a run to the target the user asked for.
 ///
 /// Invariants:
-/// - Below the privacy floor or with protected results on board, the user
-///   is asked first. A „no“ below the floor stands for the whole run (no
-///   second question); a „no“ to protected data ends the run.
-/// - A hand-over resets the per-provider counters of the [RunBudget] and
-///   drops the previous provider's paused answer, streamed text
+/// - Below the privacy floor the user is asked first; the run only ever
+///   asks once, because the hand-over happens before the first model call.
+/// - A hand-over drops the previous provider's paused answer, streamed text
 ///   (`AgentTextReset`), signed thinking and foreign provider blocks.
 final class Escalation {
   /// Creates the escalation of one run.
-  Escalation(
-    this._resolver,
-    this._state,
-    this._privacy,
-    this._budget,
-    this._control,
-  );
+  Escalation(this._resolver, this._state, this._privacy, this._control);
 
   final ProviderResolver _resolver;
   final RunState _state;
   final PrivacyScope _privacy;
-  final RunBudget _budget;
   final RunControl _control;
 
-  /// Tries to hand the request to the next provider; returns whether it
-  /// happened.
+  /// Name of the target the user declined, if any.
+  String? declinedName;
+
+  /// Tries to hand the request to the requested provider; returns whether
+  /// it happened.
   Future<bool> escalate(EscalationReason reason) async {
+    // Invariant (K28): the target only changes before the first model call.
+    assert(!_state.modelCalled, 'target change after the first model call');
     final current = _state.current;
     final next = _resolver.escalate(current, reason);
     if (next == null) return false;
     final same =
         next.profileId == current.profileId && next.modelId == current.modelId;
-    // Results of tools the next target may not see are in this run: it
-    // gets them redacted, but the user decides whether to hand over at all.
-    final protectedData = _privacy.holdsProtectedFor(next);
-    if (next.belowPrivacyFloor || protectedData) {
-      if (!await _consent(next, reason, protectedData: protectedData)) {
-        return false;
-      }
+    // The hand-over happens before the first model call of the run, so no
+    // tool results of this run exist yet; earlier turns reach the target
+    // redacted. Below the privacy floor the user decides.
+    if (next.belowPrivacyFloor && !await _consent(next, reason)) {
+      return false;
     }
     if (same) {
       // Retry on the same target („nochmal mit <aktuelles Ziel>“): nothing
@@ -65,15 +57,8 @@ final class Escalation {
     return true;
   }
 
-  /// Asks the user whether [next] may get this run; throws [RunStop] when
-  /// protected data is declined.
-  Future<bool> _consent(
-    Resolution next,
-    EscalationReason reason, {
-    required bool protectedData,
-  }) async {
-    // Ask at most once per run; a „no“ stands.
-    if (_privacy.consentDeclined && !protectedData) return false;
+  /// Asks the user whether [next] may get this run.
+  Future<bool> _consent(Resolution next, EscalationReason reason) async {
     final answer = Completer<bool>();
     final question = EscalationConfirmationRequired(
       fromProfile: _state.current.profileId,
@@ -93,15 +78,8 @@ final class Escalation {
       _privacy.consented(belowFloor: next.belowPrivacyFloor);
       return true;
     }
-    if (protectedData) {
-      throw RunStop(
-        const AgentFailed(
-          error: AgentErrorKind.provider,
-          message: AgentRunnerTexts.protectedDeclined,
-        ),
-      );
-    }
     _privacy.declined();
+    declinedName = next.target.displayName;
     return false;
   }
 
@@ -123,9 +101,6 @@ final class Escalation {
       _control.emit(const AgentTextReset('An anderes Modell übergeben'));
     }
     _state.current = next;
-    _state.epoch++;
-    // Invariant: counters per provider start fresh at the new provider.
-    _budget.onEscalated();
     _dropForeignBlocks();
   }
 

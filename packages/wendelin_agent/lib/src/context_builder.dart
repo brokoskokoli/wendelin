@@ -86,10 +86,6 @@ bool hasUntrustedResult(ToolCatalog catalog, List<Message> messages) {
   return false;
 }
 
-/// A tool call that has already been executed in this run, for the
-/// escalation note.
-typedef ExecutedAction = ({ToolCallBlock call, ToolOutcome outcome});
-
 /// Builds the context of a request (concept: „Agent-Schleife“, step 1).
 ///
 /// The system prompt starts with the stable part (role, rules, persona) and
@@ -247,25 +243,6 @@ final class ContextBuilder {
       'Markdown und Sonderzeichen). Danach folgt die geschriebene Antwort '
       'mit allen Details für den Bildschirm, ohne den Block zu wiederholen. '
       'Der Block steht immer ganz vorn, auch bei sehr kurzen Antworten.';
-
-  /// System-prompt addition for a model that takes over after an
-  /// escalation: lists the [actions] that have already been executed so
-  /// they are not repeated. Only tool names and status appear here – the
-  /// arguments may contain untrusted data and stay in the history.
-  static String escalationNote(List<ExecutedAction> actions) {
-    final b = StringBuffer()
-      ..writeln('Hinweis zur Übergabe:')
-      ..writeln(
-        'Diese Anfrage wurde von einem anderen Modell an dich übergeben. '
-        'Folgende Aktionen sind bereits ausgeführt. Wiederhole sie nicht; '
-        'ihre Ergebnisse stehen im Verlauf:',
-      );
-    for (final a in actions) {
-      final status = a.outcome.isError ? 'Fehler' : 'erledigt';
-      b.writeln('- ${a.call.name} ($status, Call-ID ${a.call.id})');
-    }
-    return b.toString().trimRight();
-  }
 
   static const _weekdays = [
     'Montag',

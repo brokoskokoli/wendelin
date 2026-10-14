@@ -6,8 +6,8 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import 'providers.dart';
 import 'routing.dart';
 
-/// Stored provider profiles and the default. Escalation chains belong to
-/// the routing rules since M3 (`routing.dart`).
+/// Stored provider profiles and the default. Routing rules are in
+/// `routing.dart`; there are no escalation chains (K28).
 @immutable
 final class ProfilesState {
   /// Creates the state.
@@ -67,7 +67,7 @@ final class ProfilesNotifier extends AsyncNotifier<ProfilesState> {
 
   /// Deletes profile [id] with its secrets. If it was the default, the
   /// first remaining profile becomes the default (the routing rules follow,
-  /// see `loadRuleSet`); rules and chain links to it stay and are shown
+  /// see `loadRuleSet`); rules to it stay and are shown
   /// with a warning in the routing editor.
   Future<void> delete(String id) => _change((storage) async {
     final profile = await storage.providerProfiles.get(id);

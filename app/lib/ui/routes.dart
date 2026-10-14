@@ -23,10 +23,10 @@ abstract final class AppRoutes {
   /// New provider profile (setup dialog).
   static const providerSetup = '/settings/provider';
 
-  /// Provider profiles, default and escalation chain.
+  /// Provider profiles and the default.
   static const providers = '/settings/providers';
 
-  /// Routing rules and escalation chains (WP26).
+  /// Routing rules (WP26).
   static const routing = '/settings/routing';
 
   /// Integrations.

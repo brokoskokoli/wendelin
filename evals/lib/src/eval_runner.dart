@@ -26,9 +26,6 @@ final class EvalTarget {
     required this.modelId,
     required this.privacy,
     required this.provider,
-    this.escalationModels = const [],
-    this.escalationPrivacy,
-    this.privateRequests = false,
     this.costEstimator,
   });
 
@@ -43,17 +40,6 @@ final class EvalTarget {
 
   /// Provider per case.
   final ProviderForCase provider;
-
-  /// Escalation chain on the same provider (stronger models), weakest
-  /// first; empty = no escalation.
-  final List<String> escalationModels;
-
-  /// Privacy level of the [escalationModels]; `null` = [privacy].
-  final PrivacyLevel? escalationPrivacy;
-
-  /// Whether requests are routed privately: escalating below [privacy]
-  /// then needs a confirmation (answered „ja“ and counted).
-  final bool privateRequests;
 
   /// Prices the model calls; `null` = cost unknown.
   final CostEstimator? costEstimator;
@@ -188,17 +174,15 @@ final class EvalRunner {
     }
     final catalog = registry.catalogFor(target.privacy, sessionId: sessionId);
     final provider = target.provider(c);
-    ProviderTarget at(String model, PrivacyLevel privacy) => ProviderTarget(
-      profileId: target.profileId,
-      modelId: model,
-      provider: provider,
-      privacy: privacy,
-    );
     final agent = AgentRunner(
-      resolver: DefaultProviderResolver(at(target.modelId, target.privacy), [
-        for (final m in target.escalationModels)
-          at(m, target.escalationPrivacy ?? target.privacy),
-      ], isPrivate: target.privateRequests ? (_) => true : null),
+      resolver: DefaultProviderResolver(
+        ProviderTarget(
+          profileId: target.profileId,
+          modelId: target.modelId,
+          provider: provider,
+          privacy: target.privacy,
+        ),
+      ),
       contextBuilder: ContextBuilder(
         config: config,
         clock: clock,
@@ -213,7 +197,6 @@ final class EvalRunner {
       clock: clock,
       sessionId: sessionId,
       costEstimator: target.costEstimator,
-      giveUpClassifier: giveUpClassifier,
     );
 
     final calls = <ObservedCall>[];
@@ -268,9 +251,7 @@ final class EvalRunner {
       }
     }
     watch.stop();
-    final gaveUp =
-        escalations.any((e) => e.reason == EscalationReason.modelGaveUp) ||
-        giveUpClassifier.isGiveUp(finalText);
+    final gaveUp = giveUpClassifier.isGiveUp(finalText);
     return RunObservation(
       calls: calls,
       finalText: finalText,

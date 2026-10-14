@@ -96,7 +96,6 @@ final class Harness {
           provider: provider,
           privacy: PrivacyLevel.standard,
         ),
-        const [],
       ),
       contextBuilder: ContextBuilder(
         config: const AgentConfig(),
@@ -327,7 +326,9 @@ void main() {
       );
       h.pipeline.start();
       settle(async);
-      expect(h.tts.spoken, [VoiceTexts.fr.failed]);
+      // The translated reason is spoken, never the raw exception text.
+      expect(h.tts.spoken.single, contains('refusé'));
+      expect(h.tts.spoken.single, isNot(contains('Schlüssel')));
     });
   });
 
@@ -1320,7 +1321,6 @@ AgentRun _runnerFor(FakeLlmProvider provider) {
         provider: provider,
         privacy: PrivacyLevel.standard,
       ),
-      const [],
     ),
     contextBuilder: ContextBuilder(
       config: const AgentConfig(),

@@ -115,34 +115,4 @@ void main() {
     final ctx = await builder(tools: [a, b]).build(UserInput(text: 'x'));
     expect(ctx.tools.map((t) => t.name), ['cal__create', 'clip__read']);
   });
-
-  test('escalation note lists executed actions', () {
-    final note = ContextBuilder.escalationNote([
-      (
-        call: const ToolCallBlock(
-          id: 'c1',
-          name: 'cal__create',
-          argumentsJson: '{"title":"Tauchen"}',
-        ),
-        outcome: ToolOutcome.text('ok'),
-      ),
-      (
-        call: const ToolCallBlock(
-          id: 'c2',
-          name: 'web__search',
-          argumentsJson: '{}',
-        ),
-        outcome: ToolOutcome.error('kaputt'),
-      ),
-    ]);
-    expect(
-      note,
-      'Hinweis zur Übergabe:\n'
-      'Diese Anfrage wurde von einem anderen Modell an dich übergeben. '
-      'Folgende Aktionen sind bereits ausgeführt. Wiederhole sie nicht; '
-      'ihre Ergebnisse stehen im Verlauf:\n'
-      '- cal__create (erledigt, Call-ID c1)\n'
-      '- web__search (Fehler, Call-ID c2)',
-    );
-  });
 }

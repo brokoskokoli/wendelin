@@ -43,7 +43,7 @@ List<RoutingProfile> conceptProfiles({
 
 /// The example rules of the concept („Routing und Eskalation“) plus a
 /// disabled one.
-RuleSet conceptRules({Map<String, List<RouteTarget>>? chains}) => RuleSet(
+RuleSet conceptRules() => RuleSet(
   rules: [
     RoutingRule(
       id: 'strong',
@@ -79,12 +79,6 @@ RuleSet conceptRules({Map<String, List<RouteTarget>>? chains}) => RuleSet(
     ),
   ],
   defaultTarget: phalaSmall,
-  chains:
-      chains ??
-      {
-        'phala': [phalaLarge, claudeSonnet, claudeOpus],
-        'claude': [claudeOpus],
-      },
 );
 
 /// A context for [text] with fake clock and network.

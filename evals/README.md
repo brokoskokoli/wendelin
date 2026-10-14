@@ -68,9 +68,8 @@ je Suche erfasst der `CostCalculator` nicht, und die Fälle prüfen
   (Format von `ModelCatalog.mergeJson`, USD pro Million Tokens). Ohne Preis
   bleibt die Kosten-Spalte `?` (Phala-Modelle stehen nicht im Katalog);
   das CLI warnt dann vor dem Lauf.
-- `escalationModels`: stärkere Modelle desselben Profils als
-  Eskalationskette. Ohne Kette wird nicht eskaliert, „kann ich nicht“ wird
-  trotzdem im Report vermerkt.
+- `escalationModels`: veraltet und ohne Wirkung (Wendelin wechselt nie von
+  selbst das Modell, K28); der Schlüssel wird gelesen und ignoriert.
 - `script`: nur für `type: fake`, Pfad zum Fake-Skript (relativ zum Profil).
 
 ## Fälle (`cases/*.yaml`)
@@ -146,14 +145,11 @@ Prädikate (mehrere Schlüssel = und):
   der Fall-Sprache (`de-DE`, `fr-FR`, `en-US`).
 - Bestätigungen von `external`-Tools werden automatisch mit „ja“
   beantwortet und als `confirmations` gezählt (Tabelle: Spalte
-  „bestätigt“). Bestätigungen einer Eskalation unter die Datenschutzstufe
-  zählt `escalationConfirmations` (Tabelle: `+nE`). Das CLI routet nicht
-  privat, daher kommen sie dort derzeit nicht vor; programmatisch lässt
-  sich das mit `EvalTarget(privateRequests: true, escalationPrivacy: …)`
-  durchspielen.
-- `gaveUp`: Der `GiveUpClassifier` des Agenten hat eine Antwort als
-  „kann ich nicht“ erkannt (Eskalation mit Grund `modelGaveUp` oder
-  Endantwort). `escalations`: Ziel und Grund jeder Eskalation.
+  „bestätigt“). `escalationConfirmations` und `escalations` bleiben als
+  Wächter im Report: Sie müssen 0 bleiben, denn ohne Nutzerwunsch gibt es
+  keinen Anbieterwechsel (K28).
+- `gaveUp`: Der `GiveUpClassifier` hat die Endantwort als „kann ich nicht“
+  erkannt; der Lauf bleibt bei dieser Antwort.
 - Latenz-Perzentile (nearest rank) nur über Fälle, deren Agent-Lauf
   tatsächlich stattfand (nicht über übersprungene oder nicht aufgebaute).
 - Kosten über `CostCalculator` je Modellaufruf; fehlt ein Preis, ist die

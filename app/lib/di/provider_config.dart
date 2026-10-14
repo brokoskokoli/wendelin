@@ -34,21 +34,22 @@ final class RoutingSetup {
 }
 
 /// The providers a request can go to: the default target and the further
-/// targets (escalation chain, or with routing rules every other available
-/// profile), plus display names per profile.
+/// targets (with routing rules every other available profile; they only get
+/// a request by a rule or the user's „nochmal mit …“, never after an
+/// error, K28), plus display names per profile.
 @immutable
 final class ProviderConfig {
   /// Creates a configuration. With [routing] requests are routed by rules
   /// (`RuleBasedProviderResolver`); without, everything goes to [primary]
-  /// and escalates along [chain] (`DefaultProviderResolver`, demo mode and
-  /// device tests).
+  /// and nothing else (`DefaultProviderResolver`, demo mode and device
+  /// tests); [others] only widens the tool catalog and memory checks.
   ProviderConfig({
     required this.primary,
-    List<ProviderTarget> chain = const [],
+    List<ProviderTarget> others = const [],
     Map<String, String> names = const {},
     this.isPrivate,
     this.routing,
-  }) : chain = List.unmodifiable(chain),
+  }) : others = List.unmodifiable(others),
        names = Map.unmodifiable(names);
 
   /// Demo mode: everything goes to the scripted [DemoLlmProvider].
@@ -68,18 +69,18 @@ final class ProviderConfig {
   /// The default target.
   final ProviderTarget primary;
 
-  /// Further targets, weakest first: the escalation chain, or with
-  /// [routing] every other available profile (with its default model).
-  final List<ProviderTarget> chain;
+  /// Further targets: with [routing] every other available profile (with
+  /// its default model). Never used automatically (K28).
+  final List<ProviderTarget> others;
 
   /// Display name per profile id.
   final Map<String, String> names;
 
   /// Without [routing]: marks a request as privately routed (its privacy
-  /// level is then the floor for escalations); `null` = never.
+  /// level is then the floor); `null` = never.
   final bool Function(UserInput input)? isPrivate;
 
-  /// Routing rules; `null` = default target and chain only.
+  /// Routing rules; `null` = default target only.
   final RoutingSetup? routing;
 
   /// Display name of [profileId] (the id if unknown).
@@ -88,18 +89,18 @@ final class ProviderConfig {
   /// The target of profile [id] (the one answering right now), else the
   /// primary target.
   ProviderTarget targetFor(String? id) {
-    for (final t in [primary, ...chain]) {
+    for (final t in [primary, ...others]) {
       if (t.profileId == id) return t;
     }
     return primary;
   }
 
   /// The lowest privacy level among all targets a request can reach. The
-  /// tool catalog is built for it, so neither a rule nor an escalation
+  /// tool catalog is built for it, so neither a rule nor „nochmal mit …“
   /// sends sensitive tools to a provider that may not see them.
   PrivacyLevel get lowestPrivacy => [
     primary,
-    ...chain,
+    ...others,
   ].map((t) => t.privacy).reduce((a, b) => a.isAtLeast(b) ? b : a);
 
   /// The resolver for the agent.
@@ -110,12 +111,12 @@ final class ProviderConfig {
       clock: r.clock,
       network: r.network,
     ),
-    null => DefaultProviderResolver(primary, chain, isPrivate: isPrivate),
+    null => DefaultProviderResolver(primary, isPrivate: isPrivate),
   };
 }
 
 /// Loads the [ProviderConfig] from the stored profiles and routing rules
-/// ([loadRuleSet]: migrates the M2 escalation chain on the first load).
+/// ([loadRuleSet]).
 /// Returns `null` if no default profile is set (the main screen then
 /// offers „Provider einrichten“).
 ///
@@ -159,6 +160,7 @@ Future<ProviderConfig?> loadProviderConfig({
       modelId: p.id == defaultId ? rules.defaultTarget.modelId : p.defaultModel,
       provider: provider,
       privacy: effectivePrivacy(p),
+      name: p.name,
     );
     if (p.id == defaultId) {
       primary = target;
@@ -171,7 +173,7 @@ Future<ProviderConfig?> loadProviderConfig({
   }
   return ProviderConfig(
     primary: primary,
-    chain: others,
+    others: others,
     names: names,
     routing: RoutingSetup(
       rules: rules,

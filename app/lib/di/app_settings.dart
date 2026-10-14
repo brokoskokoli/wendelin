@@ -22,21 +22,6 @@ abstract final class AppSettings {
   /// Calendar for new events, chosen by the user (device calendar id).
   static final defaultCalendarId = SettingKey.string('calendar.defaultId');
 
-  /// M2 escalation chain after the default profile (profile ids, weakest
-  /// first). Since M3 only read once, when `loadRuleSet` migrates it into
-  /// the routing rules (`RoutingSettings.rules`).
-  static final escalationChain = SettingKey<List<String>>(
-    'routing.escalationChain',
-    encode: (ids) => ids,
-    decode: (json) {
-      if (json is List && json.every((e) => e is String)) {
-        return json.cast<String>();
-      }
-      throw const FormatException('routing.escalationChain: Liste erwartet');
-    },
-    defaultValue: const [],
-  );
-
   /// Whether the integration [id] is switched on.
   static SettingKey<bool> integrationEnabled(String id) =>
       SettingKey.boolean('integration.$id.enabled', defaultValue: false);

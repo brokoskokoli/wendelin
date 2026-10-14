@@ -160,10 +160,6 @@ void main() {
           ),
         ],
         defaultTarget: const RouteTarget(profileId: 'aus', modelId: 'm'),
-        chains: {
-          'phala': [claudeSonnet, ollama],
-          'weg': [phalaSmall],
-        },
       );
       final profiles = {
         for (final p in conceptProfiles(disabled: {'ollama'})) p.id: p,
@@ -177,8 +173,6 @@ void main() {
         (RuleSetIssueKind.privacyTargetTooWeak, 'b', 'mistral'),
         (RuleSetIssueKind.profileDisabled, 'c', 'ollama'),
         (RuleSetIssueKind.defaultTargetUnavailable, null, 'aus'),
-        (RuleSetIssueKind.chainTargetUnavailable, null, 'ollama'),
-        (RuleSetIssueKind.chainTargetUnavailable, null, 'weg'),
       ]);
       expect(issues.first.message, contains('weder TEE noch lokal'));
       expect(issues[2].message, contains('200'));
