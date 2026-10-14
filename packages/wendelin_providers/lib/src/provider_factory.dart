@@ -155,9 +155,8 @@ abstract final class ProviderFactory {
         final connect = attestation?.tlsConnect;
         final build =
             attestation?.pinnedClient ??
-            (TlsPinGate g, {required bool enforce}) => connect == null
-                ? PinnedHttpClient(gate: g, enforce: enforce)
-                : PinnedHttpClient(gate: g, enforce: enforce, connect: connect);
+            (TlsPinGate g, {required bool enforce}) =>
+                PinnedHttpClient(gate: g, enforce: enforce, connect: connect);
         final adapter = OpenAiChatAdapter(
           baseUrl: Uri.parse(baseUrl),
           credentials: Credentials(

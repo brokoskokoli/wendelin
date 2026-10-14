@@ -29,8 +29,8 @@ final class PinnedHttpClient extends http.BaseClient {
   PinnedHttpClient({
     required this.gate,
     required this.enforce,
-    this.connect = _systemConnect,
-  }) {
+    TlsConnect? connect,
+  }) : connect = connect ?? _systemConnect {
     _fresh();
   }
 
