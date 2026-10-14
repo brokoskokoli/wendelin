@@ -118,6 +118,37 @@ final class AgentSpokenText extends AgentEvent {
   String toString() => 'AgentSpokenText($text)';
 }
 
+/// The spoken text of the current model call is held back until a check
+/// (WP55, [SpokenVersion.checked]) has decided: the speech output must not
+/// read the written text of this segment yet. Ends with [AgentSpokenVerdict]
+/// (and, if accepted, [AgentSpokenText]); an [AgentTextReset] or the end of
+/// the segment also ends the hold.
+final class AgentSpokenHold extends AgentEvent {
+  /// Creates the event.
+  const AgentSpokenHold();
+
+  @override
+  String toString() => 'AgentSpokenHold()';
+}
+
+/// The result of the check of the spoken text against the written answer
+/// (WP55). When [accepted] the spoken text follows as [AgentSpokenText];
+/// else the written answer is read out and the UI may say so. [reason] is
+/// short and without answer content (it goes to the audit log).
+final class AgentSpokenVerdict extends AgentEvent {
+  /// Creates the event.
+  const AgentSpokenVerdict({required this.accepted, required this.reason});
+
+  /// Whether the spoken text is read out.
+  final bool accepted;
+
+  /// Why (short, one line).
+  final String reason;
+
+  @override
+  String toString() => 'AgentSpokenVerdict($accepted, $reason)';
+}
+
 /// The text streamed by the current model call is discarded – e.g. because
 /// the call is retried or the answer is handed to another provider.
 ///

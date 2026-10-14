@@ -39,6 +39,8 @@ Future<bool> startRun(
   state.messages.addAll(state.context.messages);
   // Fail-closed (WP41): an untrusted result from an earlier turn counts too.
   state.untrustedSeen = state.context.untrustedSeen;
+  state.language = input.language;
+  state.spokenVersion = runner.contextBuilder.config.spokenVersion;
   // A private request without any target of enough privacy is not sent.
   final noPrivateTarget = state.current.belowPrivacyFloor;
   final retry =

@@ -125,14 +125,16 @@ final llmProviderFactoryProvider = Provider<LlmProviderFactory>((ref) {
 final agentFactoryProvider = Provider<AgentRunFactory>((ref) {
   final storage = ref.watch(storageProvider);
   final assistant = ref.watch(assistantPrefsProvider);
-  final twoVersions = ref.watch(
-    voiceSettingsProvider.select((s) => s.value?.twoVersions ?? false),
+  final spokenVersion = ref.watch(
+    voiceSettingsProvider.select(
+      (s) => s.value?.spokenVersion ?? SpokenVersion.off,
+    ),
   );
   return AgentFactory(
     config: AgentConfig(
       userName: assistant.userName,
       personaAddon: assistant.persona,
-      spokenVersions: twoVersions,
+      spokenVersion: spokenVersion,
     ),
     registry: ref.watch(toolRegistryProvider),
     storage: storage,

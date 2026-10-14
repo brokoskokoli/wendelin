@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 void main() {
@@ -11,7 +12,7 @@ void main() {
     expect(s.minSpeechMs, 200);
     expect(s.vadThreshold, 0.5);
     expect(s.stopClosesOverlay, isTrue);
-    expect(s.twoVersions, isFalse);
+    expect(s.spokenVersion, SpokenVersion.off);
     // M4, Entscheidung 2: Gesprächsmodus aus, Frage noch nicht gestellt.
     expect(s.conversationMode, isFalse);
     expect(s.conversationAsked, isFalse);
@@ -30,7 +31,7 @@ void main() {
       minSpeechMs: 300,
       vadThreshold: 0.4,
       stopClosesOverlay: false,
-      twoVersions: true,
+      spokenVersion: SpokenVersion.checked,
       conversationMode: true,
       conversationAsked: true,
       bargeIn: BargeInMode.speech,
@@ -50,6 +51,7 @@ void main() {
         'vadThreshold': 1.5,
         'stopClosesOverlay': 'ja',
         'twoVersions': 1,
+        'spokenVersion': 'weird',
         'conversationMode': 'an',
         'conversationAsked': 1,
         'bargeIn': 'laut',
@@ -57,6 +59,24 @@ void main() {
       const VoiceSettings(),
     );
     expect(VoiceSettings.fromJson(const {}), const VoiceSettings());
+  });
+
+  test('Migration: alter Schalter twoVersions wird zur Stufe', () {
+    expect(
+      VoiceSettings.fromJson({'twoVersions': true}).spokenVersion,
+      SpokenVersion.protected,
+    );
+    expect(
+      VoiceSettings.fromJson({'twoVersions': false}).spokenVersion,
+      SpokenVersion.off,
+    );
+    // The new key wins; the old key is not written any more.
+    expect(
+      VoiceSettings.fromJson({'twoVersions': true, 'spokenVersion': 'always'})
+          .spokenVersion,
+      SpokenVersion.always,
+    );
+    expect(const VoiceSettings().toJson().containsKey('twoVersions'), isFalse);
   });
 
   test('Das JSON-Format ist festgeschrieben', () {
@@ -69,7 +89,7 @@ void main() {
       'minSpeechMs': 200,
       'vadThreshold': 0.5,
       'stopClosesOverlay': true,
-      'twoVersions': false,
+      'spokenVersion': 'off',
       'conversationMode': false,
       'conversationAsked': false,
       'conversationOfferPending': false,

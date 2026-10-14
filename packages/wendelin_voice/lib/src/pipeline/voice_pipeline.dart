@@ -14,6 +14,7 @@ import '../text/voice_texts.dart';
 import '../tts/speech_queue.dart';
 import 'conversation.dart';
 import 'endpointer.dart';
+import 'speech_hold.dart';
 import 'voice_events.dart';
 import 'voice_pipeline_config.dart';
 
@@ -532,6 +533,14 @@ final class VoicePipeline {
     void say(List<String> sentences) =>
         queue?.addAll(sentences, segment: segment);
 
+    // Checked mode: the written text waits for the verdict on the spoken one.
+    final hold = SpeechHold();
+    void releaseHeld() {
+      for (final d in hold.release()) {
+        say(spoken.add(d));
+      }
+    }
+
     final drained = Completer<void>();
     _agentDrained = drained.future;
     _agentRunning = true;
@@ -541,8 +550,13 @@ final class VoicePipeline {
         _emit(VoiceAgentEvent(e));
         switch (e) {
           case AgentTextDelta(:final text):
-            if (!hasBlock) say(spoken.add(text));
+            if (!hasBlock && !hold.take(text)) say(spoken.add(text));
+          case AgentSpokenHold():
+            hold.start();
+          case AgentSpokenVerdict(accepted: false):
+            releaseHeld();
           case AgentSpokenText(:final text):
+            hold.drop();
             hasBlock = true;
             say(
               SpokenAnswer.shorten(
@@ -552,14 +566,17 @@ final class VoicePipeline {
               ),
             );
           case AgentTextReset():
+            hold.drop();
             final dropped = queue?.dropSegment(segment) ?? const [];
             spoken.reset(unspoken: dropped);
             hasBlock = false;
           case ToolCallStarted() || ToolCallFinished():
+            releaseHeld();
             say(spoken.endSegment());
             segment++;
             hasBlock = false;
           case AgentDone():
+            releaseHeld();
             say(spoken.finish());
           case ConfirmationRequired() || EscalationConfirmationRequired():
             confirmations.add(e);

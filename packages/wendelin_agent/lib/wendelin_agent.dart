@@ -30,4 +30,6 @@ export 'src/routing/rule_based_resolver.dart';
 export 'src/routing/rule_set.dart';
 export 'src/routing/rule_set_json.dart';
 export 'src/routing/tool_category_matcher.dart';
+export 'src/run/spoken_check.dart'
+    show CheckVerdict, SpokenCheck, SpokenPrecheck;
 export 'src/sentence_chunker.dart';

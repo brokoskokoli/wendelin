@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 
 import '../pipeline/endpointer.dart';
 import '../pipeline/voice_pipeline_config.dart';
@@ -19,7 +20,7 @@ final class VoiceSettings {
     this.minSpeechMs = 200,
     this.vadThreshold = 0.5,
     this.stopClosesOverlay = true,
-    this.twoVersions = false,
+    this.spokenVersion = SpokenVersion.off,
     this.conversationMode = false,
     this.conversationAsked = false,
     this.conversationOfferPending = false,
@@ -65,9 +66,10 @@ final class VoiceSettings {
   /// A spoken „Stopp“ in the assistant overlay closes it (WP31, B5).
   final bool stopClosesOverlay;
 
-  /// „Antwort in zwei Fassungen“ (WP41, stage 2): the model writes a
-  /// separate spoken version first. More tokens, more natural speech.
-  final bool twoVersions;
+  /// „Sprechfassung“ (WP41, WP55): whether the model writes a separate
+  /// spoken version first and how it is protected after foreign content.
+  /// More tokens, more natural speech.
+  final SpokenVersion spokenVersion;
 
   /// „Weiter zuhören nach der Antwort“ (K23 d): after a spoken answer the
   /// microphone stays open for a follow-up window. Default off (M4, decision
@@ -111,7 +113,7 @@ final class VoiceSettings {
     int? minSpeechMs,
     double? vadThreshold,
     bool? stopClosesOverlay,
-    bool? twoVersions,
+    SpokenVersion? spokenVersion,
     bool? conversationMode,
     bool? conversationAsked,
     bool? conversationOfferPending,
@@ -125,7 +127,7 @@ final class VoiceSettings {
     minSpeechMs: minSpeechMs ?? this.minSpeechMs,
     vadThreshold: vadThreshold ?? this.vadThreshold,
     stopClosesOverlay: stopClosesOverlay ?? this.stopClosesOverlay,
-    twoVersions: twoVersions ?? this.twoVersions,
+    spokenVersion: spokenVersion ?? this.spokenVersion,
     conversationMode: conversationMode ?? this.conversationMode,
     conversationAsked: conversationAsked ?? this.conversationAsked,
     conversationOfferPending:
@@ -143,7 +145,7 @@ final class VoiceSettings {
     'minSpeechMs': minSpeechMs,
     'vadThreshold': vadThreshold,
     'stopClosesOverlay': stopClosesOverlay,
-    'twoVersions': twoVersions,
+    'spokenVersion': spokenVersion.name,
     'conversationMode': conversationMode,
     'conversationAsked': conversationAsked,
     'conversationOfferPending': conversationOfferPending,
@@ -181,7 +183,13 @@ final class VoiceSettings {
           d.vadThreshold,
       stopClosesOverlay:
           pick<bool>('stopClosesOverlay', (_) => true) ?? d.stopClosesOverlay,
-      twoVersions: pick<bool>('twoVersions', (_) => true) ?? d.twoVersions,
+      // Migration (WP55): the former switch „twoVersions“ becomes the level
+      // `protected` (its behaviour) or `off`.
+      spokenVersion:
+          SpokenVersion.values.asNameMap()[json['spokenVersion']] ??
+          (json['twoVersions'] == true
+              ? SpokenVersion.protected
+              : d.spokenVersion),
       conversationMode:
           pick<bool>('conversationMode', (_) => true) ?? d.conversationMode,
       conversationAsked:
@@ -204,7 +212,7 @@ final class VoiceSettings {
       other.minSpeechMs == minSpeechMs &&
       other.vadThreshold == vadThreshold &&
       other.stopClosesOverlay == stopClosesOverlay &&
-      other.twoVersions == twoVersions &&
+      other.spokenVersion == spokenVersion &&
       other.conversationMode == conversationMode &&
       other.conversationAsked == conversationAsked &&
       other.conversationOfferPending == conversationOfferPending &&
@@ -220,7 +228,7 @@ final class VoiceSettings {
     minSpeechMs,
     vadThreshold,
     stopClosesOverlay,
-    twoVersions,
+    spokenVersion,
     conversationMode,
     conversationAsked,
     conversationOfferPending,

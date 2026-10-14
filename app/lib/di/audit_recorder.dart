@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:wendelin_agent/wendelin_agent.dart' show SpokenCheck;
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
@@ -148,8 +149,17 @@ final class AuditRecorder implements ToolAuditSink {
           'error': error.name,
           'message': message,
         });
+      case AgentSpokenVerdict(:final accepted, :final reason):
+        // Only verdict and reason, never the texts (WP55).
+        _write(AuditKind.verification, sessionId, {
+          'spokenCheck': true,
+          'accepted': accepted,
+          // Fixed codes only; anything else is not logged (WP55).
+          'reason': SpokenCheck.codes.contains(reason) ? reason : 'error',
+        });
       case AgentTextDelta() ||
           AgentSpokenText() ||
+          AgentSpokenHold() ||
           AgentTextReset() ||
           AgentThinkingDelta() ||
           ToolCallStarted() ||

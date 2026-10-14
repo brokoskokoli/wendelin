@@ -150,7 +150,9 @@ final class ContextBuilder {
   /// The speech style of [input]: only spoken requests get one (WP41).
   SpeechStyle speechStyleFor(UserInput input) {
     if (input.source != InputSource.voice) return SpeechStyle.none;
-    return config.spokenVersions ? SpeechStyle.twoVersions : SpeechStyle.hint;
+    return config.spokenVersion.wantsBlock
+        ? SpeechStyle.twoVersions
+        : SpeechStyle.hint;
   }
 
   /// The system prompt with [memories] (at most [AgentConfig.memoryEntries]

@@ -12,6 +12,9 @@ import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/settings/model_download_row.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin/ui/settings/voice_screen.dart';
+import 'package:wendelin/ui/settings/voice_spoken_section.dart';
+import 'package:wendelin_agent/wendelin_agent.dart' show AgentConfig;
+import 'package:wendelin_core/wendelin_core.dart' show SpokenVersion;
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -465,33 +468,44 @@ void main() {
       expect(c.read(voiceSettingsProvider).value!.stopClosesOverlay, isFalse);
     });
 
-    test('„Antwort in zwei Fassungen“: Standard aus, wird gespeichert', () {
-      expect(const VoiceSettings().twoVersions, isFalse);
-      final on = const VoiceSettings().copyWith(twoVersions: true);
-      expect(VoiceSettings.fromJson(on.toJson()).twoVersions, isTrue);
-      expect(VoiceSettings.fromJson(const {}).twoVersions, isFalse);
+    test('„Sprechfassung“: Standard aus, wird gespeichert, alter Schalter '
+        'wandert', () {
+      expect(const VoiceSettings().spokenVersion, SpokenVersion.off);
+      final on = const VoiceSettings().copyWith(
+        spokenVersion: SpokenVersion.checked,
+      );
+      expect(
+        VoiceSettings.fromJson(on.toJson()).spokenVersion,
+        SpokenVersion.checked,
+      );
+      expect(
+        VoiceSettings.fromJson(const {'twoVersions': true}).spokenVersion,
+        SpokenVersion.protected,
+      );
     });
 
-    testWidgets('Schalter „Antwort in zwei Fassungen“ mit Erklärung und '
-        'Wirkung auf den Agenten', (tester) async {
+    testWidgets('Auswahl „Sprechfassung“ mit Erklärungen, Warnung bei '
+        '„Immer“ und Wirkung auf den Agenten', (tester) async {
       final c = await pumpScreen(tester, env0(), const VoiceScreen());
-      expect(c.read(agentFactoryProvider), isA<AgentFactory>());
-      expect(
-        (c.read(agentFactoryProvider) as AgentFactory).config.spokenVersions,
-        isFalse,
-      );
-      await tester.ensureVisible(find.text('Antwort in zwei Fassungen'));
-      expect(
-        find.textContaining('Mehr Tokens, natürlichere Sprache'),
-        findsOneWidget,
-      );
-      await tester.tap(find.byType(WSwitch).at(1));
-      await settle(tester);
-      expect(c.read(voiceSettingsProvider).value!.twoVersions, isTrue);
-      expect(
-        (c.read(agentFactoryProvider) as AgentFactory).config.spokenVersions,
-        isTrue,
-      );
+      AgentConfig config() =>
+          (c.read(agentFactoryProvider) as AgentFactory).config;
+      expect(config().spokenVersion, SpokenVersion.off);
+      await tester.ensureVisible(find.text('Mit KI-Prüfung'));
+      for (final t in spokenVersionTexts.values) {
+        expect(find.text(t.$1), findsOneWidget);
+        expect(find.text(t.$2), findsOneWidget);
+      }
+      expect(find.text(spokenVersionAlwaysWarning), findsNothing);
+      for (final level in SpokenVersion.values) {
+        await tester.tap(find.byKey(ValueKey('spoken-${level.name}')));
+        await settle(tester);
+        expect(c.read(voiceSettingsProvider).value!.spokenVersion, level);
+        expect(config().spokenVersion, level);
+        expect(
+          find.text(spokenVersionAlwaysWarning),
+          level == SpokenVersion.always ? findsOneWidget : findsNothing,
+        );
+      }
     });
 
     test('Sprache und Text der Probe', () {

@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 
 /// Limits and persona settings of the agent loop (concept: „Agent-Schleife“,
 /// „Routing und Eskalation“).
@@ -18,7 +19,8 @@ final class AgentConfig {
     this.escalateAfterInvalidToolCalls = 2,
     this.escalateAfterRoundsWithoutResult = 4,
     this.temperature,
-    this.spokenVersions = false,
+    this.spokenVersion = SpokenVersion.off,
+    this.spokenCheckTimeout = const Duration(seconds: 5),
   }) : assert(maxToolRounds > 0, 'maxToolRounds must be positive'),
        assert(maxTokensPerRequest > 0, 'maxTokensPerRequest must be positive'),
        assert(maxOutputTokens > 0, 'maxOutputTokens must be positive');
@@ -63,8 +65,13 @@ final class AgentConfig {
   /// Sampling temperature; `null` = provider default.
   final double? temperature;
 
-  /// Stage 2 of the speech-friendly answers (WP41): for voice requests the
-  /// model first writes a short spoken version in `<spoken>…</spoken>`,
-  /// then the written answer. Costs more output tokens; off by default.
-  final bool spokenVersions;
+  /// Stage 2 of the speech-friendly answers (WP41, WP55): for voice requests
+  /// the model first writes a short spoken version in `<spoken>…</spoken>`,
+  /// then the written answer. Costs more output tokens; off by default. The
+  /// level decides how the spoken text is protected after foreign content.
+  final SpokenVersion spokenVersion;
+
+  /// Time limit of the check call for [SpokenVersion.checked]; on timeout
+  /// the written answer is read out.
+  final Duration spokenCheckTimeout;
 }

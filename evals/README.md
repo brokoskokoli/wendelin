@@ -205,3 +205,16 @@ dart run wendelin_evals:run --routing-table                                     
 ```
 
 `--routing-table` routet die Sätze der WP21-Satztabelle (de/fr/en) durch den echten `RuleBasedProviderResolver` mit den Beispielregeln des Konzepts und zeigt Regel und Ziel; Exit-Code 1, wenn eine Regel nicht wie erwartet greift. `test/live/routing_live_test.dart` (`-t live`) prüft „Claude, sag nur OK“ mit Haiku gegen die Regel „Starkes Modell“.
+
+## Prüfung des Sprechtexts (WP55)
+
+```sh
+set -a; . ~/.wendelin-live.env; set +a
+dart run wendelin_evals:spoken_check --profile profiles/claude-haiku.json --out reports/<datum>-spoken-check-haiku.json
+dart run wendelin_evals:spoken_check --profile profiles/phala-tee-small.json --out reports/<datum>-spoken-check-phala.json
+```
+
+Zehn Paare aus Sprechtext und geschriebener Antwort (`spoken-check/cases.yaml`,
+fünf passend, fünf manipuliert, de/fr/en). Ausgegeben werden die Trefferquote
+des Modells allein und mit lokaler Vorprüfung, die Latenz des Prüfaufrufs und
+die Kosten.

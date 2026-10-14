@@ -6,6 +6,7 @@ library;
 
 export 'src/agent/agent_event.dart';
 export 'src/agent/agent_run.dart';
+export 'src/agent/spoken_version.dart';
 export 'src/agent/user_input.dart';
 export 'src/messages/chat_event.dart';
 export 'src/messages/chat_request.dart';

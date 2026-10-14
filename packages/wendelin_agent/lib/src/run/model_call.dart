@@ -15,6 +15,7 @@ import 'run_budget.dart';
 import 'run_config.dart';
 import 'run_state.dart';
 import 'spoken_block.dart';
+import 'spoken_check.dart';
 
 /// Result of one model call.
 final class ModelReply {
@@ -90,8 +91,19 @@ final class ModelCall {
       _appendText(blocks, delta);
     }
 
+    // Checked mode after foreign content: the spoken text waits for the
+    // verdict (the speech output holds the written text back meanwhile).
+    String? held;
     void split(SplitText r) {
-      if (r.spoken case final spoken?) _control.emit(AgentSpokenText(spoken));
+      if (r.spoken case final spoken?) {
+        if (_state.spokenVersion == SpokenVersion.checked &&
+            _state.untrustedSeen) {
+          held = spoken;
+          _control.emit(const AgentSpokenHold());
+        } else {
+          _control.emit(AgentSpokenText(spoken));
+        }
+      }
       text(r.text);
     }
 
@@ -130,6 +142,9 @@ final class ModelCall {
     }
     if (splitter != null) split(splitter.finish());
     if (usage case final used?) _reportUsage(target, used);
+    if (held case final spoken? when error == null && stopReason != null) {
+      await _checkSpoken(target, spoken, _writtenText(blocks));
+    }
     if (error == null && stopReason == null) {
       error = const MalformedResponseException(
         'Antwortstrom ohne Abschluss beendet',
@@ -144,6 +159,34 @@ final class ModelCall {
     // Incomplete tool calls of a failed stream are never executed: the
     // whole reply is discarded on error.
     return ModelReply(error == null ? blocks : const [], stopReason, error);
+  }
+
+  String _writtenText(List<ContentBlock> blocks) =>
+      blocks.whereType<TextBlock>().map((b) => b.text).join();
+
+  /// Checks the held spoken text against the written answer of this call
+  /// (WP55): only a match releases it; the cost counts like any model call.
+  Future<void> _checkSpoken(
+    Resolution target,
+    String spoken,
+    String written,
+  ) async {
+    final verdict =
+        await SpokenCheck(runner.contextBuilder.config.spokenCheckTimeout).run(
+          target.provider,
+          target.modelId,
+          spoken: spoken,
+          written: written,
+          parent: _control.token,
+          language: _state.language,
+          sessionId: runner.sessionId,
+        );
+    _control.throwIfAborted();
+    if (verdict.usage case final used?) _reportUsage(target, used);
+    _control.emit(
+      AgentSpokenVerdict(accepted: verdict.match, reason: verdict.reason),
+    );
+    if (verdict.match) _control.emit(AgentSpokenText(spoken));
   }
 
   /// Remembers the verification of the answer; without tool calls nothing

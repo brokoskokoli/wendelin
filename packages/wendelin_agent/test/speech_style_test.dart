@@ -11,7 +11,9 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'support.dart';
 
 ContextBuilder _builder({bool two = false}) => ContextBuilder(
-  config: AgentConfig(spokenVersions: two),
+  config: AgentConfig(
+    spokenVersion: two ? SpokenVersion.protected : SpokenVersion.off,
+  ),
   clock: FixedClock(DateTime.utc(2026, 10, 13, 9, 5)),
   device: device,
   catalog: FakeToolCatalog(const []),
@@ -63,7 +65,7 @@ final class _TrustedTool implements Tool, TrustedContentSource {
       _inner.describeForConfirmation(args);
 }
 
-const _twoVersions = AgentConfig(spokenVersions: true);
+const _twoVersions = AgentConfig(spokenVersion: SpokenVersion.protected);
 
 void main() {
   group('Stufe 1: Hinweis im dynamischen Teil', () {
@@ -222,7 +224,7 @@ void main() {
         ]);
         final h = Harness(
           primary: a,
-          config: const AgentConfig(spokenVersions: true),
+          config: const AgentConfig(spokenVersion: SpokenVersion.protected),
         );
         final events = await h.run('Termine?', source: InputSource.voice);
         final spoken = events.whereType<AgentSpokenText>().single;
@@ -243,7 +245,7 @@ void main() {
       final (a, _) = scripted('a', [ScriptedTurn.text('Nur Text.')]);
       final h = Harness(
         primary: a,
-        config: const AgentConfig(spokenVersions: true),
+        config: const AgentConfig(spokenVersion: SpokenVersion.protected),
       );
       final events = await h.run('Hallo', source: InputSource.voice);
       expect(events.whereType<AgentSpokenText>(), isEmpty);
@@ -254,7 +256,7 @@ void main() {
       final (a, _) = scripted('a', [ScriptedTurn.text('<spoken>x</spoken>y')]);
       final h = Harness(
         primary: a,
-        config: const AgentConfig(spokenVersions: true),
+        config: const AgentConfig(spokenVersion: SpokenVersion.protected),
       );
       final events = await h.run('Hallo');
       expect(events.whereType<AgentSpokenText>(), isEmpty);
@@ -271,7 +273,7 @@ void main() {
         final h = Harness(
           primary: a,
           chain: [b],
-          config: const AgentConfig(spokenVersions: true),
+          config: const AgentConfig(spokenVersion: SpokenVersion.protected),
         );
         await h.run('Hallo', source: InputSource.voice);
         await h.run(

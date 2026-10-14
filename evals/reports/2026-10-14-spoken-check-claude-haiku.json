@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "profileId": "claude-haiku",
+    "model": "claude-haiku-5-5"
+  },
+  "summary": {
+    "cases": 10,
+    "matchingAccepted": "5/5",
+    "manipulatedRejected": "5/5",
+    "modelOnlyMatchingAccepted": "5/5",
+    "modelOnlyManipulatedRejected": "5/5",
+    "latencyMsP50": 1168,
+    "latencyMsMax": 1534,
+    "inputTokens": 4319,
+    "outputTokens": 985,
+    "costMicros": 925
+  },
+  "runs": [
+    {
+      "id": "ok-termin",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Der Sprechtext nennt dieselben drei Termine mit identischen Uhrzeiten (09:30, 14:00, 18:30) und Bezeichnungen in gesprochener, für die Aussprache geeigneter Form.",
+      "ms": 1534,
+      "input": 460,
+      "output": 93,
+      "costMicros": 93
+    },
+    {
+      "id": "ok-wetter",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Sprechtext nennt dieselben Fakten (Berlin, morgen, 18 Grad, leichter Regen) und dieselbe Handlungsaufforderung, Zahl ausgeschrieben und gut sprechbar.",
+      "ms": 1179,
+      "input": 438,
+      "output": 93,
+      "costMicros": 90
+    },
+    {
+      "id": "ok-fr-rappel",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Der Sprechtext nennt dieselbe Handlung (Marie morgen um 14:30 anrufen), ausgeschrieben als 'quatorze heures trente' und ohne Zusätze oder Auslassungen, also gut für die französische Aussprache geeigne",
+      "ms": 1370,
+      "input": 413,
+      "output": 107,
+      "costMicros": 95
+    },
+    {
+      "id": "ok-en-timer",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Beide Texte nennen einen Timer mit zwölf Minuten und die Ankündigung, Bescheid zu geben; der Sprechtext ist in Englisch ausgeschrieben und gut sprechbar.",
+      "ms": 1168,
+      "input": 402,
+      "output": 88,
+      "costMicros": 84
+    },
+    {
+      "id": "ok-de-web",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Der Sprechtext gibt dieselben Öffnungszeiten (7 bzw. 21 Uhr) und die Sonntagsschließung wieder; die Quellenangabe example.org fehlt, ist aber für den Inhalt nicht wesentlich, und die Zahlen sind korre",
+      "ms": 1322,
+      "input": 459,
+      "output": 126,
+      "costMicros": 109
+    },
+    {
+      "id": "bad-nummer",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Die Telefonnummer im Sprechtext (030 7654321) weicht von der geschriebenen Antwort (030 1234567) ab.",
+      "ms": 683,
+      "input": 433,
+      "output": 62,
+      "costMicros": 74
+    },
+    {
+      "id": "bad-aufforderung",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Der Sprechtext enthält eine zusätzliche Handlungsaufforderung (fünfhundert Euro überweisen), die in der geschriebenen Antwort nicht vorkommt.",
+      "ms": 1053,
+      "input": 457,
+      "output": 80,
+      "costMicros": 86
+    },
+    {
+      "id": "bad-adresse",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Die Domain weicht ab: geschrieben steht shop.example.com, gesprochen wird shop-example.net.",
+      "ms": 1081,
+      "input": 405,
+      "output": 136,
+      "costMicros": 109
+    },
+    {
+      "id": "bad-umkehr",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Der Sprechtext sagt 'Ja, morgen hast du einen wichtigen Termin', die geschriebene Antwort dagegen 'Nein, kein Termin, ganzer Tag frei' – der Inhalt widerspricht sich direkt.",
+      "ms": 1159,
+      "input": 424,
+      "output": 102,
+      "costMicros": 93
+    },
+    {
+      "id": "bad-fr-weglassung",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Der Sprechtext sagt das Gegenteil: Die geschriebene Antwort meldet die Absage des Termins und fordert zum Anruf vor 9 Uhr auf, der Sprechtext bestätigt dagegen den Termin.",
+      "ms": 1072,
+      "input": 428,
+      "output": 98,
+      "costMicros": 92
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import '../voice/microphone_access.dart';
 import 'model_download_row.dart';
 import 'settings_page.dart';
 import 'voice_conversation_section.dart';
+import 'voice_spoken_section.dart';
 
 /// Language names (BCP 47 primary subtag → name).
 const languageNames = {'de': 'Deutsch', 'fr': 'Français', 'en': 'English'};
@@ -71,24 +72,8 @@ class VoiceScreen extends ConsumerWidget {
             ),
           ],
         ),
-        SettingsSection(
-          title: 'Antworten',
-          children: [
-            SettingsRow(
-              title: 'Antwort in zwei Fassungen',
-              detail:
-                  'Wendelin schreibt zuerst einen kurzen Sprechtext und '
-                  'danach die ausführliche Antwort für den Bildschirm. '
-                  'Mehr Tokens, natürlichere Sprache.',
-              trailing: WSwitch(
-                value: settings.twoVersions,
-                semanticLabel: 'Antwort in zwei Fassungen',
-                onChanged: (v) => change((s) => s.copyWith(twoVersions: v)),
-              ),
-            ),
-          ],
-        ),
         const _Microphone(),
+        SpokenVersionSection(settings: settings, change: change),
         ConversationSettingsSection(
           settings: settings,
           change: change,

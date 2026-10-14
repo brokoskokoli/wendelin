@@ -540,6 +540,27 @@ void main() {
         AuditKind.toolCall,
       ]);
     });
+
+    test('Sprechprüfung: nur feste Gründe, nie Modelltext', () async {
+      final storage = openInMemoryStorage();
+      final recorder = AuditRecorder(storage.audit, clock: const SystemClock())
+        ..agentEvent(
+          's',
+          const AgentSpokenVerdict(accepted: true, reason: 'match'),
+        )
+        ..agentEvent(
+          's',
+          const AgentSpokenVerdict(
+            accepted: false,
+            reason: 'Der Termin ist um 10 Uhr, geheim',
+          ),
+        );
+      await recorder.flush();
+      final reasons = [
+        for (final e in await storage.audit.query()) e.payload['reason'],
+      ];
+      expect(reasons, unorderedEquals(['match', 'error']));
+    });
   });
 }
 

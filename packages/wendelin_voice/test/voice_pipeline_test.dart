@@ -381,6 +381,102 @@ void main() {
     });
   });
 
+  group('Prüfung des Sprechtexts (WP55)', () {
+    List<String> spokenFor(List<AgentEvent> events) {
+      late List<String> spoken;
+      runFake((async) {
+        final h = Harness(agent: ScriptedAgent(events));
+        h.pipeline.start();
+        settle(async);
+        spoken = h.tts.spoken;
+      });
+      return spoken;
+    }
+
+    const done = AgentDone(finalText: 'x', stopReason: StopReason.endTurn);
+
+    test('Treffer: der Sprechtext wird gesprochen, der Text nicht', () {
+      expect(
+        spokenFor([
+          const AgentSpokenHold(),
+          const AgentTextDelta('Termin um 10:00 Uhr.'),
+          const AgentSpokenVerdict(accepted: true, reason: 'ok'),
+          const AgentSpokenText('Termin um zehn Uhr.'),
+          done,
+        ]),
+        ['Termin um zehn Uhr.'],
+      );
+    });
+
+    test('kein Treffer: während der Prüfung still, dann die Antwort', () {
+      expect(
+        spokenFor([
+          const AgentSpokenHold(),
+          const AgentTextDelta('Termin um 10:00 Uhr.'),
+          const AgentSpokenVerdict(accepted: false, reason: 'anders'),
+          done,
+        ]),
+        ['Termin um 10 Uhr.'],
+      );
+    });
+
+    test('Halten ohne Urteil vor dem Tool-Aufruf: Antwort wird gesprochen', () {
+      expect(
+        spokenFor([
+          const AgentSpokenHold(),
+          const AgentTextDelta('Ich schaue nach.'),
+          const ToolCallStarted(
+            ToolCallBlock(id: 'c', name: 't', argumentsJson: '{}'),
+          ),
+          done,
+        ]),
+        contains('Ich schaue nach.'),
+      );
+    });
+
+    test(
+      'Halten, Text, Ende ohne Tool und ohne Urteil: Antwort gesprochen',
+      () {
+        expect(
+          spokenFor([
+            const AgentSpokenHold(),
+            const AgentTextDelta('Termin um 10:00 Uhr.'),
+            done,
+          ]),
+          ['Termin um 10 Uhr.'],
+        );
+      },
+    );
+
+    test('Freigabe vor dem Tool-Aufruf: Reihenfolge bleibt erhalten', () {
+      expect(
+        spokenFor([
+          const AgentSpokenHold(),
+          const AgentTextDelta('Ich schaue nach.'),
+          const ToolCallStarted(
+            ToolCallBlock(id: 'c', name: 't', argumentsJson: '{}'),
+          ),
+          const AgentTextDelta('Fertig.'),
+          done,
+        ]),
+        ['Ich schaue nach.', 'Fertig.'],
+      );
+    });
+
+    test('Reset beendet das Halten: neuer Text wird gesprochen', () {
+      expect(
+        spokenFor([
+          const AgentSpokenHold(),
+          const AgentTextDelta('Alt.'),
+          const AgentTextReset('neu'),
+          const AgentTextDelta('Neu.'),
+          done,
+        ]),
+        ['Neu.'],
+      );
+    });
+  });
+
   test('AgentTextReset hebt die Block-Sperre auf: Antwort ohne Block wird '
       'gesprochen', () {
     runFake((async) {
