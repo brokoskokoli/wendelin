@@ -10,8 +10,11 @@ import 'package:wendelin_providers/testing.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 import '../support/fake_server.dart';
+import 'e2ee_support.dart';
 import 'provider_harness.dart';
 import 'tee_support.dart';
+
+final _service = FakeE2eeService();
 
 /// Verifier whose behaviour the test scripts.
 final class ScriptedVerifier implements AttestationVerifier {
@@ -25,6 +28,7 @@ final class ScriptedVerifier implements AttestationVerifier {
       repoCommit: null,
       composeHash: 'c',
       attestedAt: DateTime.utc(2026),
+      e2eeKey: keyOf(_service),
     ),
   );
   Future<ReceiptResult> Function(ReceiptRef) onReceipt = (ref) async =>
@@ -60,7 +64,8 @@ final class ScriptedVerifier implements AttestationVerifier {
         baseUrl: Uri.parse('https://gateway.test/v1'),
         credentials: Credentials.apiKey('k', style: ApiKeyStyle.bearer),
         defaultModel: 'm',
-        client: server.client,
+        client: e2eeFront(_service, server.client),
+        wireCodec: PhalaE2eeChannel(crypto: FakeAttestationCrypto()),
         options: const OpenAiOptions(
           extraBody: {
             'provider': {'aci_verified': true},
@@ -149,6 +154,7 @@ void main() {
         credentials: Credentials.apiKey('k', style: ApiKeyStyle.bearer),
         defaultModel: 'm',
         client: TeeServer({}).client,
+        wireCodec: PhalaE2eeChannel(crypto: FakeAttestationCrypto()),
         options: options,
       ),
       verifier: ScriptedVerifier(),

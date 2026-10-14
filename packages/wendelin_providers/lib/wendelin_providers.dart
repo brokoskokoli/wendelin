@@ -26,6 +26,7 @@ export 'src/tee/attestation_pin_store.dart';
 export 'src/tee/attestation_policy.dart';
 export 'src/tee/attestation_types.dart';
 export 'src/tee/attested_provider.dart' show AttestedProvider;
+export 'src/tee/e2ee_v2.dart' show E2eeProtocolV2, E2eeV2Wire, PhalaE2eeChannel;
 export 'src/tee/gpu_attestation.dart';
 export 'src/tee/phala_verifier.dart' show PhalaVerifier;
 export 'src/tee/tls_pin_gate.dart' show TlsPinGate;

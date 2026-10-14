@@ -122,7 +122,7 @@ void attestationCryptoContract(
       }
       final one = c.e2eeEncrypt(service.public, text('a'), aad);
       expect(c.e2eeEncrypt(service.public, text('a'), aad), isNot(one));
-      throwsE2ee(void Function() f) =>
+      void throwsE2ee(void Function() f) =>
           expect(f, throwsA(isA<E2eeCryptoException>()));
       throwsE2ee(() => c.e2eeDecrypt(service.secret, one, text('andere AAD')));
       throwsE2ee(() => c.e2eeDecrypt(c.e2eeGenerateKeypair().secret, one, aad));

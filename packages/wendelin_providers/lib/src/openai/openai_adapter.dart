@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../common/chat_wire.dart';
 import '../common/credentials.dart';
 import '../common/exchange_tap.dart';
 import '../common/health_probe.dart';
@@ -34,6 +35,7 @@ final class OpenAiChatAdapter implements LlmProvider {
       streaming: true,
     ),
     this.settings = const HttpSettings(),
+    this.wireCodec,
   }) : _base = _trimSlash(baseUrl.toString()),
        _extraHeaders = Map.unmodifiable(extraHeaders),
        _transport = HttpTransport(
@@ -63,6 +65,10 @@ final class OpenAiChatAdapter implements LlmProvider {
 
   /// Transport settings.
   final HttpSettings settings;
+
+  /// Transforms the exchange on the wire (end-to-end encryption, WP62);
+  /// `null` = plain JSON.
+  final ChatWireCodec? wireCodec;
 
   final String _base;
   final Map<String, String> _extraHeaders;
@@ -123,40 +129,64 @@ final class OpenAiChatAdapter implements LlmProvider {
     ChatRequest req, {
     CancelToken? cancel,
     ExchangeObserver? observer,
-  }) => _transport.stream(
-    cancel: cancel,
-    tap: observer == null ? null : ExchangeTap(observer),
-    decoder: () =>
-        OpenAiStreamDecoder(label: label, emitReasoning: options.emitReasoning),
-    onHttpError: _httpError,
-    retry: (status, body, attempt) {
-      if (attempt == 0 &&
-          options.includeUsage &&
-          !_usageOptionRejected &&
-          rejectsStreamOptions(status, body)) {
-        _usageOptionRejected = true;
-        return true;
-      }
-      return false;
-    },
-    build: (attempt, abortTrigger) async {
-      final body = buildOpenAiBody(
-        req,
-        options,
-        maxTokensField: _maxTokensField,
-        includeUsage: options.includeUsage && !_usageOptionRejected,
-      );
-      return http.AbortableRequest(
-          'POST',
-          Uri.parse('$_base/chat/completions'),
-          abortTrigger: abortTrigger,
-        )
-        ..headers.addAll(await _headers())
-        ..headers['content-type'] = 'application/json'
-        ..headers['accept'] = 'text/event-stream'
-        ..body = jsonEncode(body);
-    },
-  );
+  }) {
+    final tap = observer == null ? null : ExchangeTap(observer);
+    ChatWire? wire;
+    return _transport.stream(
+      cancel: cancel,
+      tap: tap,
+      checkHead: (headers) => wire?.checkHead(headers),
+      decoder: () {
+        final decoder = OpenAiStreamDecoder(
+          label: label,
+          emitReasoning: options.emitReasoning,
+        );
+        final w = wire;
+        return w == null ? decoder : WireStreamDecoder(decoder, w);
+      },
+      onHttpError: _httpError,
+      retry: (status, body, attempt) {
+        if (attempt == 0 &&
+            options.includeUsage &&
+            !_usageOptionRejected &&
+            rejectsStreamOptions(status, body)) {
+          _usageOptionRejected = true;
+          return true;
+        }
+        return false;
+      },
+      build: (attempt, abortTrigger) async {
+        final body = buildOpenAiBody(
+          req,
+          options,
+          maxTokensField: _maxTokensField,
+          includeUsage: options.includeUsage && !_usageOptionRejected,
+        );
+        final codec = wireCodec;
+        final w = wire = codec == null
+            ? null
+            : await codec.begin(model: req.model);
+        String text;
+        if (w == null) {
+          text = jsonEncode(body);
+        } else {
+          final sealed = w.seal(body);
+          text = sealed.wire;
+          tap?.plainRequest(sealed.plain);
+        }
+        return http.AbortableRequest(
+            'POST',
+            Uri.parse('$_base/chat/completions'),
+            abortTrigger: abortTrigger,
+          )
+          ..headers.addAll(await _headers())
+          ..headers.addAll(w?.headers ?? const {})
+          ..headers['content-type'] = 'application/json'
+          ..headers['accept'] = 'text/event-stream'
+          ..body = text;
+      },
+    );
+  }
 
   @override
   Future<List<ModelInfo>> listModels() async {

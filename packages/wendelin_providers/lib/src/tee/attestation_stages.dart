@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'attestation_crypto.dart';
 import 'attestation_types.dart';
 import 'codec.dart';
+import 'e2ee_v2.dart';
 import 'gateway_documents.dart';
 
 /// The offline checks of the gateway attestation, one function per stage
@@ -197,6 +198,28 @@ final class AttestationChecks {
       return doc.downstreamTlsSpki?.toLowerCase();
     }
     return null;
+  }
+
+  /// The (digest-bound) keyset carries an E2EE key of the suite we speak and
+  /// the service names protocol version 2 (WP62). Without a key nothing
+  /// could be encrypted, so the session is not usable.
+  StageResult e2eeKey(GatewayAttestation doc) {
+    const s = AttestationStage.e2eeKey;
+    final versions = doc.supportedE2eeVersions;
+    if (versions != null && !versions.contains(E2eeProtocolV2.version)) {
+      return const StageResult.fail(
+        s,
+        'Anbieter unterstützt Ende-zu-Ende-Verschlüsselung v2 nicht',
+      );
+    }
+    final key = E2eeProtocolV2.selectKey(doc.keyset.e2eePublicKeys);
+    return key == null
+        ? const StageResult.fail(
+            s,
+            'Keyset enthält keinen Verschlüsselungsschlüssel der Suite '
+            '${E2eeProtocolV2.algo}',
+          )
+        : StageResult.pass(s, key.keyId);
   }
 
   /// Consistency of `downstream_tls_binding` with the keyset's

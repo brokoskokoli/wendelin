@@ -37,6 +37,9 @@ enum AttestationStage {
   /// TLS SPKI of the endpoint against the keyset.
   tlsSpki('tls.spki'),
 
+  /// The attested keyset has an E2EE key of the suite we speak (WP62).
+  e2eeKey('e2ee.key'),
+
   /// NVIDIA NRAS check of the GPU evidence.
   gpu('gpu'),
 
@@ -143,6 +146,26 @@ final class StageResult {
   String toString() => '${stage.id}=${outcome.name}';
 }
 
+/// A public E2EE key of the attested keyset.
+@immutable
+final class E2eeKey {
+  /// Creates a key.
+  const E2eeKey({
+    required this.keyId,
+    required this.algo,
+    required this.publicKey,
+  });
+
+  /// `key_id` (a label only; the key is chosen by [algo]).
+  final String keyId;
+
+  /// `algo`, the suite.
+  final String algo;
+
+  /// Raw public key.
+  final Uint8List publicKey;
+}
+
 /// The attested state of a session, the basis for checking receipts.
 @immutable
 final class AttestedSession {
@@ -155,7 +178,13 @@ final class AttestedSession {
     required this.composeHash,
     required this.attestedAt,
     this.workloadId,
+    this.e2eeKey,
   });
+
+  /// The E2EE key of the attested keyset (suite of `E2eeProtocolV2`); every
+  /// request is encrypted to it. `null` only in sessions of tests that do
+  /// not speak E2EE: the provider then refuses to send.
+  final E2eeKey? e2eeKey;
 
   /// `sha256:<hex>` of the keyset (the pin).
   final String keysetDigest;

@@ -77,6 +77,7 @@ final class HttpTransport {
     RetryPolicy? retry,
     CancelToken? cancel,
     ExchangeTap? tap,
+    void Function(Map<String, String> headers)? checkHead,
   }) {
     final token = cancel ?? CancelToken();
     final abort = Completer<void>();
@@ -155,6 +156,14 @@ final class HttpTransport {
           log('$label: HTTP ${response.statusCode}');
           tap?.head(response.statusCode, response.headers);
           if (response.statusCode >= 200 && response.statusCode < 300) {
+            if (checkHead != null) {
+              try {
+                checkHead(response.headers);
+              } on Object {
+                unawaited(response.stream.listen(null).cancel());
+                rethrow;
+              }
+            }
             _listen(response, decoder(), emitAll, fail, (s) => sub = s, () {
               if (!finished) abortRequest();
             }, tap);

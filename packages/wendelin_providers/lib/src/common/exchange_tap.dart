@@ -13,7 +13,8 @@ final class ExchangeRecord {
     required this.completed,
   });
 
-  /// The request body exactly as sent.
+  /// The request body exactly as sent, or the plain body the receipt covers
+  /// if the exchange is end-to-end encrypted.
   final Uint8List requestBytes;
 
   /// HTTP status, or `null` if no response head arrived.
@@ -47,9 +48,16 @@ final class ExchangeTap {
   final BytesBuilder _body = BytesBuilder(copy: false);
   bool _done = false;
 
+  Uint8List? _plain;
+
+  /// The next [request] hashes [bytes] instead of the wire body (E2EE: the
+  /// gateway's receipt covers the decrypted request).
+  void plainRequest(Uint8List bytes) => _plain = bytes;
+
   /// A new attempt starts with [bytes] as request body.
   void request(Uint8List bytes) {
-    _request = bytes;
+    _request = _plain ?? bytes;
+    _plain = null;
     _status = null;
     _headers = const {};
     _body.clear();
