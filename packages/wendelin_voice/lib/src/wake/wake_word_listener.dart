@@ -23,8 +23,10 @@ final class WakeWordDetection {
   /// The stage-1 hit.
   final WakeWordHit hit;
 
-  /// Audio from [PreRollBuffer.defaultCapacity] before the hit up to the
-  /// moment of confirmation, gap-free (the next utterance may start in it).
+  /// Audio from [PreRollBuffer.defaultCapacity] before the end of the hit
+  /// (stream position, independent of how late the engine reported it) up to
+  /// the moment of confirmation, gap-free (the next utterance may start in
+  /// it).
   final Int16List preRoll;
 
   /// Time between hit and confirmation (stage 2 duration, in audio time).
@@ -94,6 +96,7 @@ final class WakeWordListener {
     this.lockout = const Duration(milliseconds: 1500),
     this.preRoll = PreRollBuffer.defaultCapacity,
     this.verifyWindow = const Duration(seconds: 2),
+    this.verifyTail = const Duration(milliseconds: 900),
     this.verifyTimeout = const Duration(seconds: 8),
   });
 
@@ -118,6 +121,11 @@ final class WakeWordListener {
   /// Audio before the hit that stage 2 transcribes.
   final Duration verifyWindow;
 
+  /// Audio recorded after the hit before stage 2 starts (the word may still
+  /// be ending; Whisper then sees about `verifyWindow + verifyTail`, ~3 s).
+  /// Skipped without a verifier. Adds this much latency.
+  final Duration verifyTail;
+
   /// Longest wait for stage 2 (a timeout counts as rejected).
   final Duration verifyTimeout;
 
@@ -125,9 +133,16 @@ final class WakeWordListener {
   final _stateChanges = StreamController<WakeListenerState>.broadcast(
     sync: true,
   );
+  // Window + tail + 2 s of slack for an engine that lags behind the
+  // microphone, at most the buffer limit.
   late final PreRollBuffer _ring = PreRollBuffer(
-    capacity: verifyWindow > preRoll ? verifyWindow : preRoll,
+    capacity: _min(
+      PreRollBuffer.maxCapacity,
+      _max(preRoll, verifyWindow + verifyTail + const Duration(seconds: 2)),
+    ),
   );
+  Completer<void>? _tailWait;
+  int _tailTarget = 0;
   // Cancelled in stop/_release.
   // ignore: cancel_subscriptions
   StreamSubscription<Int16List>? _sub;
@@ -143,6 +158,12 @@ final class WakeWordListener {
   int _generation = 0;
   int _processed = 0;
   Future<void> _chain = Future.value();
+
+  /// Samples of audio currently held in memory (ring and post-hit
+  /// collection); 0 after stop or pause.
+  @visibleForTesting
+  int get bufferedSamples =>
+      _ring.length + _since.fold<int>(0, (n, f) => n + f.length);
 
   /// Confirmed wake words.
   Stream<WakeWordDetection> get detections => _detections.stream;
@@ -214,6 +235,10 @@ final class WakeWordListener {
     _ring.add(frame);
     if (_verifying) _since.add(frame);
     _position += frame.length;
+    if (_tailWait != null && _position >= _tailTarget) {
+      _tailWait!.complete();
+      _tailWait = null;
+    }
     // Engine and verifier see the frames strictly in order.
     _chain = _chain.then((_) => _process(frame, gen));
   }
@@ -233,12 +258,29 @@ final class WakeWordListener {
 
   Future<void> _onCandidate(WakeWordHit hit, int gen) async {
     _candidates++;
+    final end = hit.endSample;
+    final v = verifier;
+    final tail = v == null ? 0 : durationToSamples(verifyTail);
+    if (tail > 0 && _position < end + tail) {
+      _tailTarget = end + tail;
+      final wait = _tailWait = Completer<void>();
+      await wait.future.timeout(verifyTimeout, onTimeout: () {});
+      _tailWait = null;
+      if (gen != _generation) return;
+    }
+    // From here on the frames are collected for the consumer, the snapshot
+    // holds everything up to now (engine lag included).
     _verifying = true;
     _since.clear();
-    final lead = _ring.snapshot(last: verifyWindow);
-    final hitAt = _position;
+    final snap = _ring.snapshot();
+    final snapStart = _position - snap.length;
+    int rel(int abs) => (abs - snapStart).clamp(0, snap.length);
+    final lead = Int16List.sublistView(
+      snap,
+      rel(end - durationToSamples(verifyWindow)),
+      rel(end + tail),
+    );
     var ok = true;
-    final v = verifier;
     if (v != null) {
       try {
         ok = await v.confirm(lead).timeout(verifyTimeout);
@@ -254,8 +296,8 @@ final class WakeWordListener {
     if (!ok) return;
     _confirmed++;
     final pre = Int16List.sublistView(
-      lead,
-      (lead.length - durationToSamples(preRoll)).clamp(0, lead.length),
+      snap,
+      rel(end - durationToSamples(preRoll)),
     );
     final total = pre.length + since.fold<int>(0, (n, f) => n + f.length);
     final out = Int16List(total)..setAll(0, pre);
@@ -268,7 +310,7 @@ final class WakeWordListener {
       WakeWordDetection(
         hit: hit,
         preRoll: out,
-        latency: samplesToDuration(_position - hitAt),
+        latency: samplesToDuration(_position - end),
       ),
     );
   }
@@ -304,6 +346,12 @@ final class WakeWordListener {
 
   Future<void> _release() async {
     _generation++;
+    // No audio stays in memory while the microphone is released.
+    _ring.clear();
+    _since.clear();
+    _verifying = false;
+    _tailWait?.complete();
+    _tailWait = null;
     final sub = _sub;
     _sub = null;
     await sub?.cancel();
@@ -342,3 +390,6 @@ final class WakeWordListener {
     await _stateChanges.close();
   }
 }
+
+Duration _min(Duration a, Duration b) => a < b ? a : b;
+Duration _max(Duration a, Duration b) => a > b ? a : b;

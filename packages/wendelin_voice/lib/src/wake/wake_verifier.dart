@@ -7,7 +7,7 @@ import '../io/speech_to_text.dart';
 /// Stage 2: confirms a candidate (port, so tests run without Whisper).
 abstract interface class WakeVerifier {
   /// Whether [pcm] (16 kHz mono, pre-roll plus candidate window, at most
-  /// about two seconds) really contains the wake word.
+  /// about three seconds) really contains the wake word.
   Future<bool> confirm(Int16List pcm);
 }
 
@@ -22,15 +22,36 @@ const wakeWordSpellings = [
   'wendeling',
   'wendelyn',
   'wendellin',
+  'wendelmann',
+  'wendemann',
+  'wendelen',
+  'wendelan',
+  'wendeln',
+  'wendeli',
 ];
+
+/// Kölner Phonetik of „Wendelin“ (`36256`): words that sound like it but
+/// are spelled differently („Wendelmann“, „Fendelien“) count as well.
+final _wakeKey = colognePhonetic('wendelin');
+
+/// Whether [word] (folded, one word) sounds like „Wendelin“: same
+/// Kölner-Phonetik key, plausible length and the same initial sound
+/// (w/v/f).
+bool soundsLikeWakeWord(String word) =>
+    word.length >= 6 &&
+    word.length <= 11 &&
+    'wvf'.contains(word[0]) &&
+    colognePhonetic(word) == _wakeKey;
 
 /// Whether [transcript] contains „Wendelin“ fuzzily: after folding (case,
 /// diacritics, punctuation) a word or a pair of neighbouring words
-/// („Wende Lin“) must be within [maxDistance] edits of a spelling.
+/// („Wende Lin“) must be within [maxDistance] edits of a spelling or sound
+/// like it ([soundsLikeWakeWord]).
 bool matchesWakeWord(String transcript, {int maxDistance = 1}) {
   final words = foldForMatch(transcript).split(' ').where((w) => w.isNotEmpty);
   final list = words.toList();
   bool near(String s) {
+    if (soundsLikeWakeWord(s)) return true;
     for (final spelling in wakeWordSpellings) {
       if (_distance(s, spelling) <= maxDistance) return true;
     }
@@ -68,7 +89,7 @@ final class TranscriptWakeVerifier implements WakeVerifier {
   /// Creates the verifier; only the last [maxSamples] are transcribed.
   TranscriptWakeVerifier(
     this.stt, {
-    this.maxSamples = 32000,
+    this.maxSamples = 48000,
     this.language = 'de',
     this.maxDistance = 1,
   });
@@ -76,7 +97,7 @@ final class TranscriptWakeVerifier implements WakeVerifier {
   /// The recognizer.
   final SpeechToText stt;
 
-  /// Longest transcribed audio (default 2 s).
+  /// Longest transcribed audio (default 3 s).
   final int maxSamples;
 
   /// Recognition language.

@@ -77,11 +77,20 @@ void main() {
         'Wende Lin': true,
         'Wendlin': true,
         'WENDELIN?': true,
+        'Wendelmann': true,
+        'wendemann': true,
+        'Wendelen': true,
+        'Fendelien': true,
+        'Wendelmann, wie spät': true,
         'Wendel': false,
         'Windel': false,
         'Wendeltreppe': false,
         'Berlin': false,
         'Wenzel': false,
+        'Wandelnd': false,
+        'Wettelin': false,
+        'Handelmann': false,
+        'Mendelin': false,
         '': false,
         'Danke schön': false,
       };
@@ -91,11 +100,11 @@ void main() {
       expect(matchesWakeWord('Wendel', maxDistance: 2), isTrue);
     });
 
-    test('TranscriptWakeVerifier kürzt auf die letzten 2 s', () async {
+    test('TranscriptWakeVerifier kürzt auf die letzten 3 s', () async {
       final stt = FixedTranscriptStt('Hey Wendelin');
       final v = TranscriptWakeVerifier(stt);
       expect(await v.confirm(Int16List(100000)), isTrue);
-      expect(stt.lastSamples, 32000);
+      expect(stt.lastSamples, 48000);
       stt.text = 'Guten Tag';
       expect(await v.confirm(Int16List(1000)), isFalse);
       expect(stt.lastSamples, 1000);

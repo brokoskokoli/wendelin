@@ -35,6 +35,17 @@ final class WakeCalibration {
       'WakeCalibration($threshold, recall $recall, $falseAlarmsPerHour/h)';
 }
 
+/// Lowest threshold [calibrateThreshold] ever returns (a personal template
+/// below it would fire on most speech).
+const wakeMinThreshold = 0.85;
+
+/// Fewest templates (and thus leave-one-out scores) a calibration needs.
+const wakeMinTemplates = 2;
+
+/// Share of positives allowed below the threshold when negatives do not
+/// constrain it (a single odd recording must not lower it).
+const wakePositiveQuantile = 0.1;
+
 /// Picks the similarity threshold for personal templates.
 ///
 /// [positiveScores] are the best template similarities of the speaker's own
@@ -43,12 +54,17 @@ final class WakeCalibration {
 /// event** (already separated by the refractory time) and [negativeHours]
 /// the length of that background. The result is the lowest threshold with
 /// `events at/above / negativeHours <= targetPerHour`, e.g. 1 per hour before
-/// stage 2. A pure function.
+/// stage 2, but never below [minThreshold]. Without negatives (nothing to
+/// measure the rate on) or with fewer than [wakeMinTemplates] positives the
+/// result has `meetsTarget == false`. If the negatives do not constrain the
+/// threshold, the [wakePositiveQuantile] quantile of the positives is used
+/// instead of their minimum (outlier-robust). A pure function.
 WakeCalibration calibrateThreshold({
   required List<double> positiveScores,
   required List<double> negativeEvents,
   required double negativeHours,
   double targetPerHour = 1,
+  double minThreshold = wakeMinThreshold,
 }) {
   if (negativeHours <= 0) throw ArgumentError.value(negativeHours, 'hours');
   final neg = [...negativeEvents]..sort();
@@ -57,12 +73,16 @@ WakeCalibration calibrateThreshold({
   final allowed = (targetPerHour * negativeHours).floor();
   double threshold;
   if (neg.length <= allowed) {
-    // Every negative may pass: the lowest positive keeps full recall.
-    threshold = pos.isEmpty ? 0 : pos.first;
+    // Every negative may pass: a low quantile of the positives keeps the
+    // recall high without letting one outlier decide.
+    threshold = pos.isEmpty
+        ? 0
+        : pos[((pos.length - 1) * wakePositiveQuantile).floor()];
   } else {
     // Exclude all but the [allowed] highest events.
     threshold = neg[neg.length - allowed - 1] + 1e-6;
   }
+  if (threshold < minThreshold) threshold = minThreshold;
   final recall = pos.isEmpty
       ? 0.0
       : pos.where((p) => p >= threshold).length / pos.length;
@@ -71,7 +91,11 @@ WakeCalibration calibrateThreshold({
     threshold: threshold,
     recall: recall,
     falseAlarmsPerHour: fa,
-    meetsTarget: fa <= targetPerHour && recall > 0,
+    meetsTarget:
+        pos.length >= wakeMinTemplates &&
+        neg.isNotEmpty &&
+        fa <= targetPerHour &&
+        recall > 0,
   );
 }
 

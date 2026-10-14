@@ -79,6 +79,7 @@ final class PreRollBuffer {
 
   /// Forgets everything.
   void clear() {
+    _ring.fillRange(0, _ring.length, 0);
     _head = 0;
     _filled = 0;
   }

@@ -19,14 +19,21 @@ void main() {
   late WakeWordListener listener;
   late List<WakeWordDetection> found;
 
-  void setUpListener({WakeVerifier? v, Set<int> hits = const {}}) {
+  // Ohne Nachlauf, damit die Tests nicht auf 0,9 s Audio warten müssen.
+  void setUpListener({
+    WakeVerifier? v,
+    Set<int> hits = const {},
+    Duration tail = Duration.zero,
+    Duration acceptDelay = Duration.zero,
+  }) {
     audio = FakeAudioInput();
-    engine = FakeWakeWordEngine(hitAtFrame: hits);
+    engine = FakeWakeWordEngine(hitAtFrame: hits, acceptDelay: acceptDelay);
     verifier = FakeWakeVerifier();
     listener = WakeWordListener(
       audio: audio,
       engine: engine,
       verifier: v ?? verifier,
+      verifyTail: tail,
     );
     found = [];
     listener.detections.listen(found.add);
@@ -43,17 +50,13 @@ void main() {
   test('Treffer wird bestätigt: Pre-Roll = 300 ms vor dem Treffer + lückenlos '
       'alles danach, sample-genau', () async {
     setUpListener(hits: {19});
-    verifier = FakeWakeVerifier(delay: const Duration(milliseconds: 15));
-    listener = WakeWordListener(
-      audio: audio,
-      engine: engine,
-      verifier: verifier,
-    );
-    found = [];
-    listener.detections.listen(found.add);
+    final gate = verifier.gate = Completer<void>();
     await listener.start();
     await feed(20); // Treffer bei Frame 19 (Samples 9120..9599)
-    await feed(5, startAt: 20); // läuft während der Prüfung weiter
+    expect(verifier.calls, hasLength(1)); // Prüfung läuft noch
+    await feed(5, startAt: 20); // Frames kommen während der Prüfung
+    expect(found, isEmpty);
+    gate.complete();
     await settle();
     expect(found, hasLength(1));
     final pre = found.single.preRoll;
@@ -62,13 +65,75 @@ void main() {
     for (var i = 1; i < pre.length; i++) {
       expect(pre[i], pre[i - 1] + 1, reason: 'Lücke bei $i');
     }
-    expect(pre.length, greaterThanOrEqualTo(4800));
-    expect(pre.last, pre.length + (9600 - 4800) - 1);
+    expect(pre.length, 4800 + 5 * 480);
+    expect(pre.last, 9600 + 5 * 480 - 1);
     // Die Prüfung bekommt höchstens 2 s Audio, die letzten vor dem Treffer.
     expect(verifier.calls.single.length, 9600);
     expect(verifier.calls.single.last, 9599);
     expect(listener.stats.confirmed, 1);
     expect(listener.stats.candidates, 1);
+    await listener.dispose();
+  });
+
+  test(
+    'Nachlauf: Prüfung bekommt ~3 s, davon 0,9 s nach dem Treffer',
+    () async {
+      setUpListener(hits: {99}, tail: const Duration(milliseconds: 900));
+      await listener.start();
+      await feed(100); // Treffer bei Frame 99 (Ende Sample 48000)
+      expect(verifier.calls, isEmpty); // wartet noch auf den Nachlauf
+      await feed(40, startAt: 100);
+      expect(verifier.calls, hasLength(1));
+      final lead = verifier.calls.single;
+      expect(lead.first, 48000 - 32000);
+      expect(lead.length, 32000 + 14400);
+      expect(lead.last, (48000 + 14400 - 1) % 30000); // Zähler läuft um
+      expect(found, hasLength(1));
+      expect(
+        found.single.latency,
+        greaterThanOrEqualTo(const Duration(milliseconds: 900)),
+      );
+      // Pre-Roll beginnt 300 ms vor dem Treffer und enthält den Nachlauf.
+      expect(found.single.preRoll.first, (48000 - 4800) % 30000);
+      await listener.dispose();
+    },
+  );
+
+  test('Pause und Stop leeren Ring und Nachlauf-Sammlung', () async {
+    setUpListener(hits: {10});
+    verifier.gate = Completer<void>();
+    await listener.start();
+    await feed(15);
+    expect(listener.bufferedSamples, greaterThan(0));
+    await listener.pause();
+    expect(listener.bufferedSamples, 0);
+    await listener.resume();
+    await feed(5);
+    expect(listener.bufferedSamples, greaterThan(0));
+    await listener.stop();
+    expect(listener.bufferedSamples, 0);
+    await listener.dispose();
+  });
+
+  test('Pre-Roll hängt am Treffer, nicht am Verarbeitungszeitpunkt '
+      '(verzögerte Engine)', () async {
+    setUpListener(hits: {19}, acceptDelay: const Duration(milliseconds: 3));
+    await listener.start();
+    // Audio läuft der Engine davon: bis zur Verarbeitung von Frame 19 sind
+    // schon 40 Frames da.
+    for (var i = 0; i < 40; i++) {
+      audio.push(counting(i * 480));
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(found, hasLength(1));
+    final pre = found.single.preRoll;
+    expect(pre.first, 9600 - 4800);
+    for (var i = 1; i < pre.length; i++) {
+      expect(pre[i], pre[i - 1] + 1, reason: 'Lücke bei $i');
+    }
+    expect(pre.last, 40 * 480 - 1);
+    // Die Prüfung sieht nur Audio bis zum Treffer (+ Nachlauf 0).
+    expect(verifier.calls.single.last, 9599);
     await listener.dispose();
   });
 

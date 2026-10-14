@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import '../src/io/speech_to_text.dart';
@@ -13,7 +14,14 @@ import '../src/wake/wake_word_engine.dart';
 final class FakeWakeWordEngine implements WakeWordEngine {
   /// Creates the fake. [hitAtFrame]: zero-based frame indexes that produce a
   /// hit (counted since the last [reset]).
-  FakeWakeWordEngine({this.hitAtFrame = const {}, this.keywordId = 'wake'});
+  FakeWakeWordEngine({
+    this.hitAtFrame = const {},
+    this.keywordId = 'wake',
+    this.acceptDelay = Duration.zero,
+  });
+
+  /// Time [accept] takes per frame (an engine that lags behind the audio).
+  final Duration acceptDelay;
 
   /// The marker sample value.
   static const marker = 12345;
@@ -51,6 +59,7 @@ final class FakeWakeWordEngine implements WakeWordEngine {
   @override
   Future<List<WakeWordHit>> accept(Int16List frame) async {
     if (!_open) throw StateError('FakeWakeWordEngine ist nicht offen');
+    if (acceptDelay > Duration.zero) await Future<void>.delayed(acceptDelay);
     final e = acceptError;
     if (e != null) throw e;
     final index = _frames++;
@@ -145,6 +154,10 @@ final class FakeWakeVerifier implements WakeVerifier {
   /// Time one confirmation takes.
   final Duration delay;
 
+  /// While set, [confirm] waits for it (the test decides when the check
+  /// ends, frames keep arriving meanwhile).
+  Completer<void>? gate;
+
   /// Thrown by [confirm] when set.
   Object? error;
 
@@ -155,6 +168,7 @@ final class FakeWakeVerifier implements WakeVerifier {
   Future<bool> confirm(Int16List pcm) async {
     calls.add(pcm);
     if (delay > Duration.zero) await Future<void>.delayed(delay);
+    await gate?.future;
     final e = error;
     if (e != null) throw e;
     return answer?.call(calls.length) ?? true;
