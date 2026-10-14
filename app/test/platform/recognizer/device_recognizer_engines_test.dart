@@ -10,8 +10,6 @@ import 'package:wendelin/platform/voice/whisper_stt.dart';
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
-import '../../support/fake_speech_models.dart';
-
 final class FakeBackend implements WhisperBackend {
   FakeBackend(this.name);
 

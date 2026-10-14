@@ -22,7 +22,6 @@ import 'env/integration_overrides.dart';
 import 'env/provider_overrides.dart';
 import 'env/voice_overrides.dart';
 import 'fake_microphone.dart';
-import 'fake_speech_models.dart';
 
 /// Fixed „now“ of the tests: Tuesday, 13 Oct 2026, 08:12 local time.
 final testNow = DateTime(2026, 10, 13, 8, 12);

@@ -27,10 +27,7 @@ void scopedSecretStoreContract(
   String prefix = 'scope.',
   String name = 'ScopedSecretStore',
 }) {
-  secretStoreContract(
-    () => ScopedSecretStore(create(), prefix),
-    name: name,
-  );
+  secretStoreContract(() => ScopedSecretStore(create(), prefix), name: name);
   group('$name: Präfix-Vertrag', () {
     scopedSecretStoreContractChecks(create, prefix: prefix).forEach(test);
   });
@@ -79,4 +76,3 @@ Map<String, Future<void> Function()> scopedSecretStoreContractChecks(
     expect(await s.listKeys(), {'id1.b', 'id2.a'});
   },
 };
-
