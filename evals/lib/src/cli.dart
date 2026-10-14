@@ -32,6 +32,10 @@ ArgParser _parser() => ArgParser()
   ..addOption('cases-dir', help: 'Verzeichnis mit *.yaml (Standard: cases).')
   ..addOption('limit', abbr: 'n', help: 'Höchstens n Fälle laufen lassen.')
   ..addOption('out', abbr: 'o', help: 'JSON-Report schreiben.')
+  ..addOption(
+    'integrations',
+    help: 'Nur diese Integrationen (kommagetrennt, z. B. calendar,alarms).',
+  )
   ..addOption('now', defaultsTo: defaultNow, help: 'Fester „heute“-Zeitpunkt.')
   ..addOption('time-zone', defaultsTo: defaultTimeZone, help: 'IANA-Zone.')
   ..addFlag(
@@ -120,6 +124,7 @@ Future<int> runCli(
         costEstimator: profile.costEstimator,
       ),
       time: time,
+      onlyIntegrations: args.option('integrations')?.split(',').toSet(),
     );
     out.writeln(
       'Profil ${p.id} (${p.type.name}), Modell ${p.defaultModel}, '

@@ -89,6 +89,25 @@ void main() {
     );
   });
 
+  test('--integrations reduziert den Tool-Katalog', () async {
+    final all = await run([
+      '-p',
+      'profiles/fake-demo.json',
+      '-c',
+      'de-cal-tauchen',
+    ]);
+    final reduced = await run([
+      '-p',
+      'profiles/fake-demo.json',
+      '-c',
+      'de-cal-tauchen',
+      '--integrations',
+      'alarms,memory',
+    ]);
+    expect(all.$2, contains('1/1'));
+    expect(reduced.$2, isNot(contains('1/1')));
+  });
+
   test('pending-Fälle mit --include-pending', () async {
     final (code, out, _) = await run([
       '-p',

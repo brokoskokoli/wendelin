@@ -1,0 +1,9 @@
+{
+  "id": "ollama-local",
+  "name": "Ollama lokal (Mac, Spike WP57)",
+  "type": "openaiCompatible",
+  "baseUrl": "http://localhost:11434/v1",
+  "defaultModel": "gemma4:e2b",
+  "privacy": "local",
+  "authMethod": {"kind": "none"}
+}
