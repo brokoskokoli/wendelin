@@ -29,6 +29,7 @@ final class WakeServiceStatus {
   const WakeServiceStatus({
     this.running = false,
     this.enabled,
+    this.offByUser = false,
     this.holdsRole = false,
     this.charging = false,
     this.pausedUntil,
@@ -42,6 +43,7 @@ final class WakeServiceStatus {
     return WakeServiceStatus(
       running: value['running'] == true,
       enabled: value['enabled'] is bool ? value['enabled'] as bool : null,
+      offByUser: value['offByUser'] == true,
       holdsRole: value['holdsRole'] == true,
       charging: value['charging'] == true,
       pausedUntil: until is int && until > 0
@@ -59,6 +61,11 @@ final class WakeServiceStatus {
   /// The switch as Kotlin knows it (the notification's „Aus“ changes it
   /// behind the app's back); `null` if unknown.
   final bool? enabled;
+
+  /// The notification's „Aus“ switched it off (not the app). Only this
+  /// is adopted: a plain `enabled == false` may be an answer read before
+  /// the app's own switch-on.
+  final bool offByUser;
 
   /// Wendelin is the system assistant (required for the wake word).
   final bool holdsRole;

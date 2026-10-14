@@ -45,11 +45,18 @@ final wakeStatusProvider = FutureProvider.autoDispose<WakeServiceStatus>(
   (ref) => ref.watch(wakePlatformProvider).status(),
 );
 
+/// Length of the confirmation tone in samples (0.15 s at 16 kHz).
+const wakeToneSamples = 2400;
+
+/// Microphone samples set to zero after a tone starts: the tone plus 50 ms
+/// (the speaker is not cancelled from the recording otherwise).
+const wakeToneMuteSamples = wakeToneSamples + 800;
+
 /// Short tone (660 Hz, 0.15 s) at a wake word hit (replaced in tests).
 final wakeConfirmToneProvider = Provider<Future<void> Function()>((ref) {
   final playback = AudioplayersPlayback();
   ref.onDispose(() => unawaited(playback.dispose()));
-  final samples = Int16List(2400);
+  final samples = Int16List(wakeToneSamples);
   for (var i = 0; i < samples.length; i++) {
     final fade = math.min(1.0, math.min(i, samples.length - i) / 400);
     samples[i] = (math.sin(2 * math.pi * 660 * i / 16000) * 7000 * fade)

@@ -77,12 +77,12 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     if (!await adoptStatus(status)) await push();
   }
 
-  /// Takes over an „Aus“ that Kotlin reports (notification button) so the
+  /// Takes over an „Aus“ that Kotlin reports (`offByUser`, notification button) so the
   /// next [push] does not switch the service on again. `true` if the
   /// switch was changed.
   Future<bool> adoptStatus(WakeServiceStatus status) async {
     final s = await future;
-    if (status.enabled != false || !s.enabled) return false;
+    if (!status.offByUser || !s.enabled) return false;
     state = AsyncData(WakeServiceSettings(condition: s.condition));
     await ref.read(storageProvider).settings.set(wakeEnabledKey, false);
     return true;

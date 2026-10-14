@@ -18,8 +18,10 @@ import '../settings_page.dart';
 const wakeExplainPoints = [
   (
     'Dauerhafte Benachrichtigung',
-    'Solange Wendelin zuhört, zeigt Android eine Benachrichtigung. Sie '
-        'lässt sich nicht ausblenden.',
+    'Solange Wendelin zuhört, zeigt Android eine Benachrichtigung. Ab '
+        'Android 14 kannst du sie wegwischen, der Dienst läuft dann weiter. '
+        'Ohne die Berechtigung für Benachrichtigungen zeigt Android keine; '
+        'Wendelin hört trotzdem zu.',
   ),
   (
     'Mikrofon-Punkt',
@@ -27,9 +29,10 @@ const wakeExplainPoints = [
         'zuhört.',
   ),
   (
-    'Alles bleibt auf dem Gerät',
-    'Die Erkennung läuft auf dem Gerät. Es wird kein Audio gesendet oder '
-        'gespeichert; erst nach dem Aktivierungswort hört der Assistent zu.',
+    'Zuhören bleibt auf dem Gerät',
+    'Die Erkennung des Wortes läuft auf dem Gerät. Was du nach „Wendelin“ '
+        'sagst, wird als Text an den gewählten KI-Anbieter geschickt. Audio '
+        'wird weder gesendet noch gespeichert.',
   ),
   (
     'Akku',

@@ -10,6 +10,8 @@ import 'package:wendelin/platform/battery_platform.dart';
 import 'package:wendelin/platform/wake/wake_platform.dart';
 import 'package:wendelin/ui/design/design.dart' show WSwitch;
 import 'package:wendelin/ui/settings/wake/wake_explain.dart';
+import 'package:wendelin/ui/settings/wake/wake_service_section.dart'
+    show wakeStopText;
 import 'package:wendelin/ui/settings/wake/wake_word_screen.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 
@@ -199,8 +201,39 @@ void main() {
       enabled: true,
       condition: WakeCondition.always,
     );
-    expect(status('Vom System beendet'), findsOneWidget);
-    expect(status('timeout'), findsOneWidget);
+    expect(
+      status('Vom System beendet (Zeitlimit von Android)'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('timeout'), findsNothing);
+  });
+
+  test('Stopp-Gründe: verständlicher Text, nie rohe Codes', () {
+    const table = {
+      'timeout': 'Vom System beendet (Zeitlimit von Android)',
+      'no-role': 'Beendet: Wendelin ist nicht mehr dein Assistent',
+      'no-permission': 'Beendet: Mikrofon-Berechtigung fehlt',
+      'engine-failed': 'Beendet: Die Erkennung ist ausgefallen',
+      'not-charging': 'Beendet: Das Gerät lädt nicht mehr',
+      'unplug': 'Beendet: Das Gerät lädt nicht mehr',
+      'user-off': 'Aus',
+      'seltsam': 'Vom System beendet',
+      null: 'Vom System beendet',
+    };
+    table.forEach((reason, text) {
+      expect(wakeStopText(reason), text, reason: '$reason');
+    });
+    for (final r in ['no-role', 'engine-failed']) {
+      expect(wakeStopText(r), isNot(contains('System')));
+    }
+  });
+
+  test('Erklärtexte: ehrlich zu Benachrichtigung und Anbieter', () {
+    final all = wakeExplainPoints.map((p) => '${p.$1} ${p.$2}').join(' ');
+    expect(all, isNot(contains('nicht ausblenden')));
+    expect(all, contains('wegwischen'));
+    expect(all, contains('als Text an den gewählten KI-Anbieter'));
+    expect(all, isNot(contains('Alles bleibt auf dem Gerät')));
   });
 
   testWidgets('Bedingung „Immer“ und Bestätigungston lassen sich ändern', (
@@ -334,7 +367,11 @@ void main() {
         enabled: true,
       );
       expect(switchValue(tester, 'Aktivierungswort einschalten'), isTrue);
-      s.wake.current = const WakeServiceStatus(enabled: false, holdsRole: true);
+      s.wake.current = const WakeServiceStatus(
+        enabled: false,
+        offByUser: true,
+        holdsRole: true,
+      );
       c.invalidate(wakeStatusProvider);
       await settle(tester);
       expect(switchValue(tester, 'Aktivierungswort einschalten'), isFalse);

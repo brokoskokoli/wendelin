@@ -49,19 +49,28 @@ String _clock(DateTime t) =>
     '${t.minute.toString().padLeft(2, '0')}';
 
 /// Text of the status row.
-String wakeStatusText(
-  WakeServiceSettings settings,
-  WakeServiceStatus status,
-) => switch (wakeStateKind(settings, status)) {
-  WakeStateKind.off => 'Aus',
-  WakeStateKind.running => 'Läuft',
-  WakeStateKind.paused =>
-    status.pausedUntil != null
-        ? 'Pausiert bis ${_clock(status.pausedUntil!)}'
-        : 'Pausiert: wartet auf das Laden',
-  WakeStateKind.killed =>
-    'Vom System beendet'
-        '${status.lastStop == null ? '' : ' (letzter Grund: ${status.lastStop})'}',
+String wakeStatusText(WakeServiceSettings settings, WakeServiceStatus status) =>
+    switch (wakeStateKind(settings, status)) {
+      WakeStateKind.off => 'Aus',
+      WakeStateKind.running => 'Läuft',
+      WakeStateKind.paused =>
+        status.pausedUntil != null
+            ? 'Pausiert bis ${_clock(status.pausedUntil!)}'
+            : 'Pausiert: wartet auf das Laden',
+      WakeStateKind.killed => wakeStopText(status.lastStop),
+    };
+
+/// Plain German for the log code of the last stop (the status row when the
+/// switch is on but the service does not run).
+String wakeStopText(String? reason) => switch (reason) {
+  'timeout' => 'Vom System beendet (Zeitlimit von Android)',
+  'no-role' => 'Beendet: Wendelin ist nicht mehr dein Assistent',
+  'no-permission' => 'Beendet: Mikrofon-Berechtigung fehlt',
+  'engine-failed' => 'Beendet: Die Erkennung ist ausgefallen',
+  'not-charging' || 'unplug' => 'Beendet: Das Gerät lädt nicht mehr',
+  'paused' => 'Beendet: pausiert',
+  'user-off' || 'disabled' => 'Aus',
+  _ => 'Vom System beendet',
 };
 
 /// Settings → Aktivierungswort, top part (WP50 b): switch (locked without
@@ -166,7 +175,8 @@ class _State extends ConsumerState<WakeServiceSection> {
     final noVoice = speakers.isEmpty;
     final locked = (noRole || noVoice) && !settings.enabled;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: WSpace.l18,
       children: [
         SettingsSection(
           title: 'Zuhören im Hintergrund',

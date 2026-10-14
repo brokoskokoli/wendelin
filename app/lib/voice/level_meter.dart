@@ -23,11 +23,26 @@ final class MeteredAudioInput implements AudioInput {
   @override
   bool get isRunning => inner.isRunning;
 
+  int _pendingMute = 0;
+
+  /// Sets the first [samples] of the next [start] to zero (an own tone
+  /// that plays while the microphone opens must not be recorded).
+  void muteNextStart(int samples) => _pendingMute = samples;
+
   @override
-  Stream<Int16List> start() => inner.start().map((frame) {
-    if (!_levels.isClosed) _levels.add(levelOf(frame));
-    return frame;
-  });
+  Stream<Int16List> start() {
+    var mute = _pendingMute;
+    _pendingMute = 0;
+    return inner.start().map((frame) {
+      if (mute > 0) {
+        final n = math.min(mute, frame.length);
+        frame = Int16List.fromList(frame)..fillRange(0, n, 0);
+        mute -= n;
+      }
+      if (!_levels.isClosed) _levels.add(levelOf(frame));
+      return frame;
+    });
+  }
 
   @override
   Future<void> stop() async {

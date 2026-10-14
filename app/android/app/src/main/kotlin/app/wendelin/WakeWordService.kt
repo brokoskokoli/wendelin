@@ -30,6 +30,7 @@ class WakeWordService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var resume: Runnable? = null
     private var handoffCheck: Runnable? = null
+    private var lastConflict: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -56,7 +57,7 @@ class WakeWordService : Service() {
                 begin("resume")
             }
             ACTION_OFF -> {
-                WakeSettingsStore.save(this, WakeSettingsStore.load(this).copy(enabled = false, pausedUntilMs = 0L))
+                WakeSettingsStore.save(this, WakeSettingsStore.load(this).copy(enabled = false, pausedUntilMs = 0L, offByUser = true))
                 end("user-off")
             }
         }
@@ -105,6 +106,7 @@ class WakeWordService : Service() {
         e.send("run", mapOf("verify" to settings.verify))
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
             VoiceLog.i("wake-conflict reason=${reason ?: "none"}")
+            lastConflict = reason
             // Do not depend on Dart alone: a call or foreign recording closes the microphone here.
             if (WakePolicy.closesMicFor(reason)) stopMic()
             engine?.send("conflict", mapOf("reason" to reason))
@@ -130,6 +132,10 @@ class WakeWordService : Service() {
 
     private fun startMic() {
         if (mic != null) return
+        if (!WakePolicy.mayStartMic(lastConflict)) {
+            VoiceLog.i("wake-mic-start skipped=conflict reason=$lastConflict")
+            return
+        }
         val source = MicAudioSource(this)
         try {
             source.start(
@@ -230,6 +236,7 @@ class WakeWordService : Service() {
         handoffCheck = null
         watcher?.stop()
         watcher = null
+        lastConflict = null
         stopMic()
         engine?.destroy()
         engine = null

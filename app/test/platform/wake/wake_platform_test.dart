@@ -34,6 +34,7 @@ void main() {
         'charging': true,
         'pausedUntil': 1760000000000,
         'lastStop': 'unplug',
+        'offByUser': true,
       },
     );
     final s = await WakePlatform().status();
@@ -42,6 +43,7 @@ void main() {
     expect(s.charging, isTrue);
     expect(s.pausedUntil, DateTime.fromMillisecondsSinceEpoch(1760000000000));
     expect(s.lastStop, 'unplug');
+    expect(s.offByUser, isTrue);
   });
 
   test('ohne Android oder bei Fehlern: nicht aktiv, keine Ausnahme', () async {

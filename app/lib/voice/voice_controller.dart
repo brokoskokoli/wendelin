@@ -67,6 +67,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   VoicePipeline? _pipeline;
   VoiceComponents? _components;
   MeteredAudioInput? _audio;
+  int _muteMicSamples = 0;
   PrimedAudioInput? _primed;
   final _subs = <StreamSubscription<Object?>>[];
   String? _language;
@@ -166,7 +167,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
     TriggerKind kind, {
     Future<bool> Function()? prepare,
     Int16List? preRoll,
+    int muteMicSamples = 0,
   }) async {
+    _muteMicSamples = muteMicSamples;
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
@@ -310,6 +313,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
   }
 
   bool _run(VoicePipeline pipeline, TriggerKind kind, [Int16List? preRoll]) {
+    _audio?.muteNextStart(_muteMicSamples);
+    _muteMicSamples = 0;
     final started = pipeline.start(
       trigger: TriggerEvent(
         source: kind,

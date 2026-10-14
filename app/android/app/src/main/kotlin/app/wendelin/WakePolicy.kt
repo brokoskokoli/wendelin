@@ -23,6 +23,12 @@ data class WakeSettings(
     val verify: Boolean = true,
     /** „Pause 1 h“: nothing starts before this time (epoch ms), 0 = not paused. */
     val pausedUntilMs: Long = 0L,
+    /**
+     * Switched off by the notification's „Aus“ (not by the app). Set only there; every
+     * `configure` of the app clears it. The app adopts an „Aus“ only with this flag, so a status
+     * read before its own `configure(enabled=true)` cannot switch it off again.
+     */
+    val offByUser: Boolean = false,
 ) {
     /**
      * [old] changed by the channel arguments `enabled`, `mode`, `verify`; missing or invalid
@@ -35,6 +41,7 @@ data class WakeSettings(
             mode = (args?.get("mode") as? String)?.let { WakeMode.parse(it) } ?: mode,
             verify = args?.get("verify") as? Boolean ?: verify,
             pausedUntilMs = if (on) pausedUntilMs else 0L,
+            offByUser = if (args?.containsKey("enabled") == true) false else offByUser,
         )
     }
 }
@@ -86,6 +93,9 @@ object WakePolicy {
 
     /** Whether the microphone is closed by the service itself, not only by Dart: any conflict. */
     fun closesMicFor(conflict: String?): Boolean = conflict == "call" || conflict == "recording"
+
+    /** Whether `startMic` of Dart may open the microphone while the last [conflict] holds. */
+    fun mayStartMic(conflict: String?): Boolean = !closesMicFor(conflict)
 
     /** Whether a service that runs for [mode] has to stop when charging changes to [charging]. */
     fun stopsOnUnplug(mode: WakeMode, charging: Boolean): Boolean =
