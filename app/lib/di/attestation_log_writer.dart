@@ -54,6 +54,8 @@ final class AttestationLogWriter implements AttestationLogSink {
       return null;
     }
 
+    // The first stage code wins: stages run in pipeline order, so the first
+    // coded failure is the root cause; later codes are follow-on effects.
     final reason = e.stages
         .where((s) => s.code != null)
         .map((s) => s.code)
@@ -91,5 +93,7 @@ final class AttestationLogWriter implements AttestationLogSink {
   }
 
   static String? _short(String? s) =>
-      s == null || s.length <= 200 ? s : '${s.substring(0, 200)}…';
+      s == null || s.length <= StageRecord.maxDetailLength
+      ? s
+      : '${s.substring(0, StageRecord.maxDetailLength)}…';
 }

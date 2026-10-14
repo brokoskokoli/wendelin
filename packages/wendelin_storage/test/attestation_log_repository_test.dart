@@ -54,6 +54,23 @@ void main() {
   });
   tearDown(() => storage.close());
 
+  test('add kürzt langes detail auf 200 Zeichen', () async {
+    await repo.add(
+      AttestationRecord(
+        logId: 'long',
+        at: t0,
+        profileId: 'near',
+        kind: AttestationRecordKind.receipt,
+        status: AttestationStatus.red,
+        stages: [StageRecord('quote', 'fail', detail: 'y' * 500, code: 'c')],
+      ),
+    );
+    final s = (await repo.byLogId('long'))!.stages.single;
+    expect(s.detail, '${'y' * 200}…');
+    expect(s.code, 'c');
+    expect(jsonDecode(await repo.exportJson()), isNotNull);
+  });
+
   test('add/byLogId: Roundtrip aller Felder', () async {
     final r = rec('l1', t0, sessionId: 's1', stepId: 'st1');
     await repo.add(r);

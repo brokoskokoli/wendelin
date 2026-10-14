@@ -45,6 +45,20 @@ final class StageRecord {
   /// Stable reason code (e.g. `upstream_tcb_out_of_date`).
   final String? code;
 
+  /// Maximum length of a stored [detail]; longer texts are cut by the
+  /// repository (server texts must not bloat the log).
+  static const maxDetailLength = 200;
+
+  /// Copy whose [detail] is cut to [maxDetailLength] characters plus `…`.
+  StageRecord shortened() => detail == null || detail!.length <= maxDetailLength
+      ? this
+      : StageRecord(
+          stage,
+          result,
+          detail: '${detail!.substring(0, maxDetailLength)}…',
+          code: code,
+        );
+
   /// JSON form.
   Map<String, Object?> toJson() => {
     'stage': stage,

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../common/http_settings.dart';
@@ -20,6 +22,8 @@ final class AttestationAudit {
   /// Clock and diagnostic log.
   final HttpSettings settings;
 
+  static final Random _random = Random.secure();
+
   int _counter = 0;
 
   /// Id of the entry written last.
@@ -39,7 +43,12 @@ final class AttestationAudit {
     List<String> notes = const [],
   }) {
     final now = settings.clock.now();
-    final id = 'att-${now.microsecondsSinceEpoch}-${_counter++}';
+    // The random part keeps ids of different provider instances apart (the
+    // store replaces entries with the same id).
+    final nonce = ((_random.nextInt(1 << 32) << 32) | _random.nextInt(1 << 32))
+        .toRadixString(16)
+        .padLeft(16, '0');
+    final id = 'att-${now.microsecondsSinceEpoch}-${_counter++}-$nonce';
     lastLogId = id;
     for (final s in stages) {
       log('Wendelin/attest: ${kind.name} ${s.stage.id}=${s.outcome.name}');

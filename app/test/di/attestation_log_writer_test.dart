@@ -67,6 +67,35 @@ void main() {
     },
   );
 
+  test('Grundcode: der erste Stufen-Code gewinnt (Ursache vor Folgen)', () {
+    final e = AttestationLogEntry(
+      logId: 'l',
+      time: DateTime.utc(2026),
+      kind: AttestationLogKind.receipt,
+      profileId: 'near',
+      status: AttestationStatus.red,
+      stages: const [
+        StageResult.fail(AttestationStage.quote, 'a', code: 'first_code'),
+        StageResult.fail(AttestationStage.gpu, 'b', code: 'last_code'),
+      ],
+    );
+    expect(AttestationLogWriter.toRecord(e).reasonCode, 'first_code');
+  });
+
+  test('langer Servertext im detail wird auf 200 Zeichen gekürzt', () {
+    final long = 'x' * 500;
+    final e = AttestationLogEntry(
+      logId: 'l',
+      time: DateTime.utc(2026),
+      kind: AttestationLogKind.receipt,
+      profileId: 'near',
+      status: AttestationStatus.red,
+      stages: [StageResult.fail(AttestationStage.quote, long)],
+    );
+    final d = AttestationLogWriter.toRecord(e).stages.single.detail!;
+    expect(d, '${'x' * 200}…');
+  });
+
   test('Schreibfehler gehen an onError', () async {
     final errors = <Object>[];
     final writer = AttestationLogWriter(

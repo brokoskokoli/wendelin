@@ -34,7 +34,9 @@ final class DriftAttestationLogRepository implements AttestationLogRepository {
             repoCommit: Value(record.repoCommit),
             composeHash: Value(record.composeHash),
             status: record.status.name,
-            stagesJson: jsonEncode([for (final s in record.stages) s.toJson()]),
+            stagesJson: jsonEncode([
+              for (final s in record.stages) s.shortened().toJson(),
+            ]),
             tcbStatus: Value(record.tcbStatus),
             reasonCode: Value(record.reasonCode),
           ),
