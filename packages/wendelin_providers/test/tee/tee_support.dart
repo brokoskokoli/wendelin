@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/fakes.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 /// Parsed JSON fixture of the 2026-10-14 probe (`test/fixtures/tee/`).
@@ -97,3 +98,30 @@ List<AttestationStage> stagesWith(
   for (final s in stages)
     if (s.outcome == outcome) s.stage,
 ];
+
+/// `sha256:<hex>` of [bytes] with the fake's real hash function.
+String sha256Of(Uint8List bytes) =>
+    'sha256:${FakeAttestationCrypto().sha256(bytes).map((v) => v.toRadixString(16).padLeft(2, '0')).join()}';
+
+/// The probe receipt with hashes that match [request] and [response] and
+/// `required: true`. The signature is no longer valid: use a
+/// `FakeAttestationCrypto(ed25519Result: true)`.
+Map<String, Object?> syntheticReceipt(
+  Uint8List request,
+  Uint8List response, [
+  void Function(Map<String, Object?>)? edit,
+]) {
+  final r = copyJson(teeJson('receipt'));
+  for (final e in (r['event_log']! as List).cast<Map<String, Object?>>()) {
+    switch (e['type']) {
+      case 'request.received' || 'middleware.forwarded' || 'request.forwarded':
+        e['body_hash'] = sha256Of(request);
+      case 'response.returned':
+        e['body_hash'] = sha256Of(response);
+      case 'upstream.verified':
+        e['required'] = true;
+    }
+  }
+  edit?.call(r);
+  return r;
+}

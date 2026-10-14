@@ -212,8 +212,6 @@ void main() {
         ];
         expect(nonces.toSet(), hasLength(2));
         expect(nonces.every((n) => n.length == 64), isTrue);
-        expect(utf8.encode(nonces.first).length, 64);
-        expect(Uint8List(0), isEmpty);
       },
     );
   });
