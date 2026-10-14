@@ -30,7 +30,6 @@ void main() {
   /// Starts the app logic with a Phala-like TEE provider as default target.
   void start({
     GpuCheckMode mode = GpuCheckMode.off,
-    bool fallback = false,
     List<ProviderTarget> chain = const [],
   }) {
     verifier = ScriptedVerifier();
@@ -44,7 +43,6 @@ void main() {
       gpu: gpu,
       gpuMode: mode,
       logSink: writer,
-      fallbackOnFailure: fallback,
     );
     env = TestEnv(
       providerConfig: ProviderConfig(
@@ -170,40 +168,47 @@ void main() {
     },
   );
 
-  group('Ausweichen bei fehlgeschlagener Prüfung', () {
-    final local = FakeLlmProvider([ScriptedTurn.text('Lokale Antwort.')]);
-    ProviderTarget fallbackTarget() => ProviderTarget(
-      profileId: 'lokal',
-      modelId: 'llama',
-      provider: local,
-      privacy: PrivacyLevel.local,
+  group('Keine Übergabe nach fehlgeschlagener Prüfung', () {
+    late FakeLlmProvider other;
+    setUp(
+      () => other = FakeLlmProvider([ScriptedTurn.text('Andere Antwort.')]),
+    );
+    ProviderTarget otherTarget(PrivacyLevel privacy) => ProviderTarget(
+      profileId: 'claude',
+      modelId: 'sonnet',
+      provider: other,
+      privacy: privacy,
     );
 
-    test('Option an: der nächste Anbieter antwortet, nichts ging an den TEE-Anbieter', () async {
-      start(fallback: true, chain: [fallbackTarget()]);
-      verifier.sessionStages = const [
-        StageResult.fail(AttestationStage.quote, 'ungültig'),
-      ];
-      await send('Frage');
-      final s = c.read(agentControllerProvider);
-      expect(gateway.requests, 0, reason: 'nichts an den TEE-Anbieter');
-      expect(s.entries.whereType<EscalationEntry>(), isNotEmpty);
-      expect(
-        s.entries.whereType<AssistantTextEntry>().last.text,
-        'Lokale Antwort.',
-      );
-    });
+    for (final privacy in [PrivacyLevel.standard, PrivacyLevel.tee]) {
+      test('Sitzung fehlgeschlagen ($privacy): weder Frage noch Aufruf, '
+          'Fehler sichtbar', () async {
+        start(chain: [otherTarget(privacy)]);
+        verifier.sessionStages = const [
+          StageResult.fail(AttestationStage.quote, 'ungültig'),
+        ];
+        await send('Frage');
+        final s = c.read(agentControllerProvider);
+        expect(s.pending, isNull, reason: 'keine Rückfrage zur Übergabe');
+        expect(other.requests, isEmpty);
+        expect(gateway.requests, 0);
+        expect(s.entries.whereType<EscalationEntry>(), isEmpty);
+        expect(s.entries.whereType<AssistantTextEntry>(), isEmpty);
+        expect(s.entries.whereType<NoticeEntry>(), isNotEmpty);
+      });
+    }
 
-    test('Option aus: kein Ausweichen, die Anfrage endet mit Fehler', () async {
-      start(chain: [fallbackTarget()]);
-      verifier.sessionStages = const [
-        StageResult.fail(AttestationStage.quote, 'ungültig'),
+    test('Quittung rot: die Folgeanfrage geht nicht an den nächsten '
+        'Anbieter', () async {
+      start(chain: [otherTarget(PrivacyLevel.standard)]);
+      verifier.receipts = [
+        failedReceipt(AttestationStage.receiptSignature, code: null),
       ];
       await send('Frage');
-      final s = c.read(agentControllerProvider);
-      expect(s.pending, isNull);
-      expect(s.entries.whereType<AssistantTextEntry>(), isEmpty);
-      expect(s.entries.whereType<NoticeEntry>(), isNotEmpty);
+      expect(provider.locked, isTrue);
+      await send('Noch eine Frage');
+      expect(other.requests, isEmpty);
+      expect(c.read(agentControllerProvider).pending, isNull);
     });
   });
 
@@ -265,6 +270,33 @@ void main() {
       await send('Zweite Frage');
       expect(gpu.calls.length, callsBefore + 1);
       expect(gateway.requests, 1);
+    });
+
+    test('Vorher + nicht erreichbar + Standard-Anbieter in der Kette: Dialog, '
+        'kein Aufruf beim zweiten Anbieter', () async {
+      final std = FakeLlmProvider([ScriptedTurn.text('Standard-Antwort.')]);
+      start(
+        mode: GpuCheckMode.before,
+        chain: [
+          ProviderTarget(
+            profileId: 'claude',
+            modelId: 'sonnet',
+            provider: std,
+            privacy: PrivacyLevel.standard,
+          ),
+        ],
+      );
+      gpu.result = const GpuAttestationResult(GpuVerdict.unreachable);
+      await send('Vertrauliche Frage');
+      final s = c.read(agentControllerProvider);
+      expect(std.requests, isEmpty);
+      expect(gateway.requests, 0);
+      expect(s.gpuBlock?.profileId, 'phala');
+      expect(s.entries.whereType<AssistantTextEntry>(), isEmpty);
+      await c
+          .read(agentControllerProvider.notifier)
+          .resolveGpuBlock(sendWithout: false);
+      expect(std.requests, isEmpty, reason: 'auch nach „Abbrechen“');
     });
 
     test('Aus: kein Aufruf an NVIDIA', () async {

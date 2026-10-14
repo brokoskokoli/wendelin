@@ -19,8 +19,8 @@ import 'gpu_gate.dart';
 /// - Before the first request, after `not_after` and after a pin change the
 ///   provider is attested. If that fails, **no request is sent**; the call
 ///   ends with `ErrorEvent(AttestationFailedException)` and the provider is
-///   locked until [reattest] succeeds. (A fallback to another provider is
-///   the agent's escalation with user confirmation.)
+///   locked until [reattest] succeeds. The request never goes to another
+///   provider because of it.
 /// - After the stream ended it fetches the receipt, checks it against the
 ///   exact bytes of the exchange (up to 3 attempts for a network error) and
 ///   reports the result through [pendingReport] and [reports]. A red receipt
@@ -42,7 +42,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.logSink,
     this.settings = const HttpSettings(),
     this.retryDelay = const Duration(seconds: 2),
-    this.fallbackOnFailure = false,
     Duration gpuTimeout = const Duration(seconds: 15),
   }) {
     final provider = inner.options.extraBody['provider'];
@@ -89,10 +88,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   /// Wait between receipt attempts.
   final Duration retryDelay;
-
-  /// A failed check lets the agent hand the request to another provider
-  /// (`AttestationFailedException.fallback`); the lock stays.
-  final bool fallbackOnFailure;
 
   AttestedSession? _session;
   List<StageResult> _lastStages = const [];
@@ -236,10 +231,9 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     try {
       result = await verifier.attest();
     } on Object {
-      return _lock = AttestationFailedException(
+      return _lock = const AttestationFailedException(
         'TEE-Anbieter nicht verifiziert: interner Fehler',
         stage: 'internal',
-        fallback: fallbackOnFailure,
       );
     }
     _lastStages = List.unmodifiable(result.stages);
@@ -291,7 +285,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     return _lock = AttestationFailedException(
       'TEE-Anbieter nicht verifiziert ($stage): ${problem?.detail ?? 'Prüfung fehlgeschlagen'}',
       stage: stage,
-      fallback: fallbackOnFailure,
     );
   }
 
@@ -332,7 +325,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
             'Antwort nicht verifiziert (${_problem(stages)}); '
             'Anbieter gesperrt bis zur neuen Prüfung',
             stage: _problem(stages),
-            fallback: fallbackOnFailure,
           );
         }
       }
@@ -351,10 +343,9 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       if (status == AttestationStatus.green) _gpu.after(model);
       return report;
     } on Object {
-      _lock = AttestationFailedException(
+      _lock = const AttestationFailedException(
         'Antwort nicht verifiziert (internal)',
         stage: 'internal',
-        fallback: fallbackOnFailure,
       );
       final report = AttestationReport(
         logId: _audit.record(

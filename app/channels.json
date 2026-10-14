@@ -117,7 +117,8 @@
       "toKotlin": {
         "hasPermission": {"args": [], "returns": "value"},
         "requestPermission": {"args": [], "returns": "value"},
-        "show": {"args": ["title", "text"], "returns": "value"}
+        "show": {"args": ["title", "text"], "returns": "value"},
+        "takeLaunchTarget": {"args": [], "returns": "value"}
       },
       "toDart": {}
     },

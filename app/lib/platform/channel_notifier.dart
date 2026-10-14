@@ -15,7 +15,14 @@ abstract interface class AttestationNotifier {
 
   /// Posts a notification; `false` if it was not shown (no permission).
   Future<bool> show({required String title, required String text});
+
+  /// What a tap on the notification asked for (`attestation_log`), once;
+  /// `null` if the app was not opened from it.
+  Future<String?> takeLaunchTarget();
 }
+
+/// [AttestationNotifier.takeLaunchTarget] value: open the Prüfprotokoll.
+const attestationLogTarget = 'attestation_log';
 
 /// [AttestationNotifier] over the Kotlin `NotifyChannel`.
 final class ChannelAttestationNotifier implements AttestationNotifier {
@@ -35,6 +42,17 @@ final class ChannelAttestationNotifier implements AttestationNotifier {
   @override
   Future<bool> show({required String title, required String text}) =>
       _call('show', {'title': title, 'text': text});
+
+  @override
+  Future<String?> takeLaunchTarget() async {
+    try {
+      return await _channel.invokeMethod<String>('takeLaunchTarget');
+    } on PlatformException {
+      return null;
+    } on MissingPluginException {
+      return null;
+    }
+  }
 
   Future<bool> _call(String method, Object? args) async {
     try {
@@ -61,4 +79,7 @@ final class NoopAttestationNotifier implements AttestationNotifier {
   @override
   Future<bool> show({required String title, required String text}) async =>
       false;
+
+  @override
+  Future<String?> takeLaunchTarget() async => null;
 }

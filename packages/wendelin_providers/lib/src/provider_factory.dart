@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -26,7 +28,12 @@ final class AttestationWiring {
     this.pins,
     this.gpuMode = GpuCheckMode.off,
     this.trustedCommits = const {},
+    this.nonceSource,
   });
+
+  /// Nonce for the session attestation; `null` = random (production). Only
+  /// device tests with recorded fixtures set it.
+  final Uint8List Function()? nonceSource;
 
   /// Cryptographic primitives.
   final AttestationCrypto crypto;
@@ -44,14 +51,12 @@ final class AttestationWiring {
   final Set<String> trustedCommits;
 }
 
-/// Whether [profile] is a Phala/RedPill TEE profile whose answers must be
-/// attested (template option `attestation: phala`, or an older profile on
-/// the RedPill host).
+/// Whether [profile] is a Phala/RedPill profile whose answers must be
+/// attested: bound to the template option `attestation: phala` (or an older
+/// profile on the RedPill host), not to the privacy level, so a profile is
+/// only „TEE“ when the app really checks it.
 bool needsAttestation(ProviderProfile profile) {
-  if (profile.type != ProviderType.openaiCompatible ||
-      profile.privacy != PrivacyLevel.tee) {
-    return false;
-  }
+  if (profile.type != ProviderType.openaiCompatible) return false;
   if (profile.options['attestation'] == 'phala') return true;
   return Uri.tryParse(profile.baseUrl ?? '')?.host == 'api.redpill.ai';
 }
@@ -100,6 +105,15 @@ abstract final class ProviderFactory {
         final model = (catalog ?? ModelCatalog.builtIn()).lookup(
           profile.defaultModel,
         );
+        if (attestation == null && needsAttestation(profile)) {
+          // Fail-closed: a profile that must be attested is never built
+          // unchecked.
+          throw ArgumentError.value(
+            profile.id,
+            'attestation',
+            'Profile mit TEE-Prüfung brauchen die Prüf-Verdrahtung',
+          );
+        }
         final attested = attestation != null && needsAttestation(profile);
         final adapter = OpenAiChatAdapter(
           baseUrl: Uri.parse(baseUrl),
@@ -119,7 +133,7 @@ abstract final class ProviderFactory {
             tools: true,
             streaming: true,
             vision: model?.supportsVision ?? false,
-            tee: profile.privacy == PrivacyLevel.tee,
+            tee: attested,
           ),
           settings: settings,
         );
@@ -135,6 +149,7 @@ abstract final class ProviderFactory {
             settings: settings,
             pins: attestation.pins,
             trustedCommits: attestation.trustedCommits,
+            nonceSource: attestation.nonceSource,
           ),
           profileId: profile.id,
           gpuVerifier: NrasGpuVerifier(
@@ -142,7 +157,6 @@ abstract final class ProviderFactory {
             client: client ?? defaultHttpClient(),
           ),
           gpuMode: attestation.gpuMode,
-          fallbackOnFailure: profile.options['attestationFallback'] == true,
           logSink: attestation.logSink,
           settings: settings,
         );

@@ -302,6 +302,9 @@ final class _Run implements RunControl {
     throwIfAborted();
     // Invariant: at most one retry at the same provider per model call;
     // `retried` is reset after every successful call and every hand-over.
+    if (error is AttestationFailedException) {
+      return _onAttestationError(error, retried: retried);
+    }
     if (error.retryable && !retried) {
       _retryCurrentCall();
       return true;
@@ -309,6 +312,31 @@ final class _Run implements RunControl {
     if (error.retryable &&
         await _escalation.escalate(EscalationReason.providerError)) {
       return false;
+    }
+    throwIfAborted();
+    throw RunStop(
+      AgentFailed(
+        error: AgentErrorKind.provider,
+        message: 'Der Anbieter hat einen Fehler gemeldet: ${error.message}',
+        cause: error,
+      ),
+    );
+  }
+
+  /// A TEE check failed. Invariant: a failed or impossible check (session,
+  /// receipt, GPU) never hands the request to another provider, neither
+  /// silently nor after asking. Only a check that could not be completed
+  /// (`unavailable`) is retried once at the same provider; else the run
+  /// ends with the reason (the user may ask again, e.g. „nochmal mit
+  /// Claude“, which is a new request). The GPU dialog „Ohne GPU-Prüfung
+  /// senden“ stays with the same provider.
+  Future<bool> _onAttestationError(
+    AttestationFailedException error, {
+    required bool retried,
+  }) async {
+    if (error.unavailable && !retried) {
+      _retryCurrentCall();
+      return true;
     }
     throwIfAborted();
     throw RunStop(

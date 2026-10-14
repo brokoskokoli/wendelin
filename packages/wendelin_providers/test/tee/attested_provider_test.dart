@@ -134,27 +134,6 @@ void main() {
       },
     );
 
-    test(
-      'Ausweichen erlaubt: rote Prüfung ist für den Agenten weiterreichbar',
-      () async {
-        final crypto = FakeAttestationCrypto(
-          ed25519Result: true,
-          quoteError: const QuoteVerificationException('x'),
-        );
-        final off = TeeHarness(crypto: crypto);
-        final blocked = _error(await off.chat());
-        expect(blocked.fallback, isFalse);
-        expect(blocked.retryable, isFalse);
-        final on = TeeHarness(crypto: crypto, fallbackOnFailure: true);
-        final first = _error(await on.chat());
-        expect(first.fallback, isTrue);
-        expect(first.retryable, isTrue);
-        expect(on.chatRequests, 0, reason: 'nichts gesendet');
-        final locked = _error(await on.chat());
-        expect(locked.fallback, isTrue, reason: 'auch die Sperre');
-      },
-    );
-
     test('reattest hebt die Sperre auf, wenn die Prüfung besteht', () async {
       final crypto = FakeAttestationCrypto(
         ed25519Result: true,

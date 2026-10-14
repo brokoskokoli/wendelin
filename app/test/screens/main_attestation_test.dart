@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
+import 'package:wendelin/ui/settings/attestation_log_screen.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/fakes.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../support/tee_app_support.dart';
 import '../support/test_env.dart';
@@ -36,6 +40,7 @@ void main() {
   Future<ProviderContainer> pumpTee(
     WidgetTester tester, {
     GpuCheckMode mode = GpuCheckMode.off,
+    String? launchTarget,
   }) async {
     verifier = ScriptedVerifier();
     gateway = ScriptedGateway();
@@ -57,6 +62,7 @@ void main() {
         names: const {'phala': 'Phala · GLM klein'},
       ),
     );
+    env.notifier.launchTarget = launchTarget;
     setView(tester, screenSize);
     await tester.pumpWidget(env.app());
     await tester.pump();
@@ -103,6 +109,57 @@ void main() {
     await _settle(tester);
     expect(c.read(attestationHubProvider).isLocked('phala'), isFalse);
     expect(find.textContaining('Sperre ist aufgehoben'), findsOneWidget);
+  });
+
+  testWidgets('Tippen auf die Benachrichtigung öffnet das Prüfprotokoll', (
+    tester,
+  ) async {
+    await pumpTee(tester, launchTarget: 'attestation_log');
+    await _settle(tester);
+    expect(find.byType(AttestationLogScreen), findsOneWidget);
+  });
+
+  testWidgets('Start ohne Benachrichtigung: kein Prüfprotokoll', (
+    tester,
+  ) async {
+    await pumpTee(tester);
+    await _settle(tester);
+    expect(find.byType(AttestationLogScreen), findsNothing);
+  });
+
+  testWidgets('„Neu prüfen“ nutzt den Anbieter der roten Antwort, nicht den '
+      'aktiven', (tester) async {
+    final c = await pumpTee(tester);
+    verifier.receipts = [failedReceipt(AttestationStage.receiptSignature)];
+    await sendText(tester, 'Frage');
+    expect(c.read(attestationHubProvider).isLocked('phala'), isTrue);
+    final controller = c.read(agentControllerProvider.notifier);
+    // ignore: invalid_use_of_protected_member
+    controller.state = controller.state.copyWith(activeProfileId: 'anderer');
+    await tester.pump();
+    final logId = controller.state.entries
+        .whereType<AssistantTextEntry>()
+        .last
+        .attestation!
+        .logId;
+    await tester.runAsync(
+      () => env.storage.attestations.add(
+        AttestationRecord(
+          logId: logId,
+          at: DateTime.utc(2026, 10, 13),
+          profileId: 'phala',
+          kind: AttestationRecordKind.receipt,
+          status: AttestationStatus.red,
+          stages: const [],
+        ),
+      ),
+    );
+    verifier.receipts = [
+      const ReceiptResult(stages: [], status: AttestationStatus.green),
+    ];
+    await tester.tap(find.text('Neu prüfen'));
+    await _settle(tester);
+    expect(c.read(attestationHubProvider).isLocked('phala'), isFalse);
   });
 
   testWidgets('GPU „Vorher“ fehlgeschlagen: Dialog; „Ohne GPU-Prüfung senden“ '

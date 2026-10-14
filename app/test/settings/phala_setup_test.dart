@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/provider_setup/attestation_stages_card.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -46,15 +45,7 @@ void main() {
     expect(find.text('Erste Attestierung'), findsOneWidget);
     expect(find.textContaining('TDX-Quote (DCAP) · bestanden'), findsOneWidget);
     expect(find.textContaining('Nonce gebunden · bestanden'), findsOneWidget);
-    expect(
-      find.text('Bei fehlgeschlagener Prüfung ausweichen'),
-      findsOneWidget,
-    );
-    final toggle = tester.widget<WSwitch>(find.byType(WSwitch));
-    expect(toggle.value, isFalse);
-
-    await tester.tap(find.byType(WSwitch));
-    await tester.pumpAndSettle();
+    expect(find.textContaining('ausweichen'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('Speichern'),
       300,
@@ -64,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
     final p = (await env.storage.providerProfiles.list()).single;
     expect(p.privacy, PrivacyLevel.tee);
-    expect(p.options['attestationFallback'], isTrue);
+    expect(p.options.containsKey('attestationFallback'), isFalse);
     expect(p.options['attestation'], 'phala');
   });
 

@@ -100,13 +100,16 @@ void main() {
     );
 
     group('Phala-Profil mit Attestierung', () {
-      ProviderProfile phala({Map<String, Object?>? options, String? baseUrl}) =>
-          profile(
-            ProviderType.openaiCompatible,
-            baseUrl: baseUrl ?? 'https://api.redpill.ai/v1',
-            privacy: PrivacyLevel.tee,
-            options: options ?? {'attestation': 'phala'},
-          );
+      ProviderProfile phala({
+        Map<String, Object?>? options,
+        String? baseUrl,
+        PrivacyLevel privacy = PrivacyLevel.tee,
+      }) => profile(
+        ProviderType.openaiCompatible,
+        baseUrl: baseUrl ?? 'https://api.redpill.ai/v1',
+        privacy: privacy,
+        options: options ?? {'attestation': 'phala'},
+      );
       final wiring = AttestationWiring(
         crypto: FakeAttestationCrypto(),
         logSink: InMemoryAttestationLog(),
@@ -137,11 +140,17 @@ void main() {
       });
 
       test(
-        'ohne Wiring, anderer Host oder ohne TEE-Stufe: normaler Adapter',
+        'ohne Wiring fail-closed; anderer Host ohne Option: normaler Adapter',
         () {
           expect(
-            ProviderFactory.create(phala(), (_) async => 'k'),
-            isA<OpenAiChatAdapter>(),
+            () => ProviderFactory.create(phala(), (_) async => 'k'),
+            throwsArgumentError,
+            reason: 'nie ungeprüft bauen',
+          );
+          expect(
+            needsAttestation(phala(privacy: PrivacyLevel.standard)),
+            isTrue,
+            reason: 'an die Option gebunden, nicht an die Datenschutzstufe',
           );
           expect(
             ProviderFactory.create(
@@ -155,11 +164,12 @@ void main() {
             needsAttestation(
               profile(
                 ProviderType.openaiCompatible,
-                baseUrl: 'https://api.redpill.ai/v1',
-                options: {'attestation': 'phala'},
+                baseUrl: 'https://llm.example/v1',
+                privacy: PrivacyLevel.tee,
               ),
             ),
             isFalse,
+            reason: 'TEE-Stufe allein heißt nicht geprüft',
           );
         },
       );
@@ -214,7 +224,7 @@ void main() {
         final p = ProviderFactory.create(
           profile(
             ProviderType.openaiCompatible,
-            baseUrl: 'https://api.redpill.ai/v1',
+            baseUrl: 'https://llm.example/v1',
             privacy: PrivacyLevel.tee,
             model: 'gpt-4.1-nano',
             options: {'teeModelsOnly': true},
@@ -223,7 +233,7 @@ void main() {
           client: server.client,
         );
         expect(p, isA<OpenAiChatAdapter>());
-        expect(p.caps.tee, isTrue);
+        expect(p.caps.tee, isFalse, reason: 'nicht geprüft: kein TEE');
         expect(p.caps.vision, isTrue);
         final events = await p.chat(sampleRequest()).toList();
         expect(

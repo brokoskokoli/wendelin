@@ -5,7 +5,9 @@ import android.app.Activity
 import android.app.NotificationChannel
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import io.flutter.plugin.common.BinaryMessenger
@@ -24,6 +26,7 @@ class NotifyChannel(private val activity: Activity, messenger: BinaryMessenger) 
     private val channel = MethodChannel(messenger, CHANNEL)
     private var pendingPermission: MethodChannel.Result? = null
     private var nextId = 1
+    private var pendingTarget: String? = null
 
     init {
         channel.setMethodCallHandler(this)
@@ -31,6 +34,14 @@ class NotifyChannel(private val activity: Activity, messenger: BinaryMessenger) 
 
     fun dispose() {
         channel.setMethodCallHandler(null)
+    }
+
+    /** A tap on the notification started or resumed the activity with [intent]. */
+    fun handleIntent(intent: Intent?) {
+        intent?.getStringExtra(EXTRA_OPEN)?.let {
+            pendingTarget = it
+            intent.removeExtra(EXTRA_OPEN)
+        }
     }
 
     fun onPermissionResult(requestCode: Int, grantResults: IntArray) {
@@ -44,6 +55,10 @@ class NotifyChannel(private val activity: Activity, messenger: BinaryMessenger) 
         when (call.method) {
             "hasPermission" -> result.success(hasPermission())
             "requestPermission" -> requestPermission(result)
+            "takeLaunchTarget" -> {
+                result.success(pendingTarget)
+                pendingTarget = null
+            }
             "show" -> show(call.argument<String>("title"), call.argument<String>("text"), result)
             else -> result.notImplemented()
         }
@@ -80,11 +95,22 @@ class NotifyChannel(private val activity: Activity, messenger: BinaryMessenger) 
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "TEE-Prüfung", NotificationManager.IMPORTANCE_HIGH),
         )
+        // Tap opens the Prüfprotokoll (MainActivity is singleTop, so it gets onNewIntent).
+        val open = Intent(activity, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .putExtra(EXTRA_OPEN, "attestation_log")
+        val contentIntent = PendingIntent.getActivity(
+            activity,
+            0,
+            open,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         val notification = Notification.Builder(activity, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_wendelin)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
+            .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .build()
         manager.notify(nextId++, notification)
@@ -93,6 +119,7 @@ class NotifyChannel(private val activity: Activity, messenger: BinaryMessenger) 
 
     companion object {
         const val CHANNEL = "app.wendelin/notify"
+        private const val EXTRA_OPEN = "app.wendelin.open"
         private const val CHANNEL_ID = "attestation"
         private const val PERMISSION_REQUEST = 4712
     }

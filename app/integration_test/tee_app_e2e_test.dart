@@ -1,24 +1,68 @@
-// Gerätetest (WP52): Phala-Profil mit Fixture-Transport (Debug-Überschreibung der Provider-
-// Factory) in der echten App auf dem Emulator. Die Attestierung läuft mit den Probe-Daten aus
-// WP43 und einer Prüf-Attrappe für Quote und Ed25519 (Fixture-Signaturen sind nach dem Umbau
-// der Hashes nicht mehr gültig); alles andere (Stufen, Quittungsbindung, Sperre, Protokoll,
-// Anzeige) ist die echte App. Kein Netz.
+// Gerätetest (WP52): Phala-Profil in der echten App auf dem Emulator. Der Provider kommt aus
+// der echten Factory-Verdrahtung (`llmProviderFactoryProvider`, AttestedProvider, PhalaVerifier)
+// mit dem Rust-Prüfmodul (`RustAttestationCrypto`): die TDX-Quote wird echt gegen das
+// aufgezeichnete Intel-Kollateral geprüft. Ersetzt sind nur der Transport (aufgezeichnetes
+// Gateway, Uhr und Nonce der Aufzeichnung) und die Ed25519-Prüfung der Quittung (die
+// Fixture-Quittungen werden mit den echten Hashes neu gebaut, ihre Signatur kann nicht mehr
+// stimmen). Alles andere (Stufen, Quittungsbindung, Sperre, Protokoll, Anzeige) ist die echte
+// App. Kein Netz.
 //
 // Läuft über `tool/e2e_android.sh` (nur Emulator).
+
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wendelin/di/attestation_providers.dart';
-import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/platform/attest/attest_backend.dart';
+import 'package:wendelin/platform/attest/collateral_cache.dart';
+import 'package:wendelin/platform/attest/pcs_collateral_client.dart';
+import 'package:wendelin/platform/attest/rust_attestation_crypto.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_providers/fakes.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'support/e2e.dart';
 import 'support/tee_gateway.dart';
+
+/// Rust check module, but the receipt's Ed25519 signature counts as valid
+/// (the recorded receipts are rebuilt with the real hashes, see above).
+final class _ReceiptSignatureSubstitute implements AttestationCrypto {
+  _ReceiptSignatureSubstitute(this._rust);
+
+  final AttestationCrypto _rust;
+
+  @override
+  Future<QuoteVerdict> verifyQuote(
+    Uint8List quote,
+    QuoteCollateral collateral,
+    DateTime now,
+  ) => _rust.verifyQuote(quote, collateral, now);
+
+  @override
+  Future<QuoteCollateral> collateralFor(Uint8List quote) =>
+      _rust.collateralFor(quote);
+
+  @override
+  bool verifyEd25519(
+    Uint8List publicKey,
+    Uint8List message,
+    Uint8List signature,
+  ) => true;
+
+  @override
+  Uint8List sha256(Uint8List data) => _rust.sha256(data);
+
+  @override
+  Uint8List sha384(Uint8List data) => _rust.sha384(data);
+
+  @override
+  Uint8List spkiSha256(Uint8List certificateDer) =>
+      _rust.spkiSha256(certificateDer);
+}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -27,46 +71,33 @@ void main() {
     WidgetTester tester,
   ) async {
     final gateway = FixtureGateway();
+    final backend = await FrbAttestBackend.init();
+    final tmp = Directory.systemTemp.createTempSync('tee-app-e2e');
+    addTearDown(() => tmp.deleteSync(recursive: true));
     final app = E2eApp(
       extraOverrides: [
-        llmProviderFactoryProvider.overrideWith(
-          (ref) => (profile, secrets) {
-            final provider = AttestedProvider(
-              inner: OpenAiChatAdapter(
-                baseUrl: Uri.parse(profile.baseUrl!),
-                credentials: Credentials.apiKey(
-                  'e2e-key',
-                  style: ApiKeyStyle.bearer,
-                ),
-                defaultModel: profile.defaultModel,
-                client: gateway.client,
-                options: const OpenAiOptions(
-                  extraBody: {
-                    'provider': {'aci_verified': true},
-                  },
-                ),
-                capabilities: const ProviderCapabilities(
-                  tools: true,
-                  streaming: true,
-                  tee: true,
-                ),
+        // The production factory builds the provider; only the transport
+        // (recorded gateway), the clock/nonce of the recording and the
+        // collateral source (recorded Intel PCS answers) are replaced.
+        attestationTransportProvider.overrideWithValue(
+          AttestationTransport(
+            client: gateway.client,
+            settings: HttpSettings(clock: FixedClock(probeNow)),
+            nonceSource: () => probeNonce,
+          ),
+        ),
+        attestationCryptoProvider.overrideWith(
+          (ref) async => _ReceiptSignatureSubstitute(
+            RustAttestationCrypto(
+              backend: backend,
+              pcs: PcsCollateralClient(
+                client: pcsFixtureClient(),
+                backend: backend,
               ),
-              verifier: PhalaVerifier(
-                crypto: FakeAttestationCrypto(ed25519Result: true),
-                baseUrl: Uri.parse(profile.baseUrl!),
-                profileId: profile.id,
-                client: gateway.client,
-                settings: HttpSettings(clock: FixedClock(probeNow)),
-                nonceSource: () => probeNonce,
-              ),
-              profileId: profile.id,
-              logSink: ref.read(attestationLogWriterProvider),
-              settings: HttpSettings(clock: FixedClock(probeNow)),
-              retryDelay: Duration.zero,
-            );
-            ref.read(attestationHubProvider).register(profile.id, provider);
-            return provider;
-          },
+              cache: CollateralCache(dir: tmp, now: () => probeNow),
+              clock: () => probeNow,
+            ),
+          ),
         ),
       ],
     );

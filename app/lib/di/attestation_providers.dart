@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
@@ -108,6 +110,32 @@ final Provider<AttestationHub> attestationHubProvider =
       return hub;
     });
 
+/// Transport of the TEE check (HTTP client, clock, nonce). `null` in the app
+/// (real network); the device test overrides it with recorded fixtures while
+/// everything else, the factory included, stays the production path.
+final class AttestationTransport {
+  /// Creates the transport.
+  const AttestationTransport({
+    required this.client,
+    required this.settings,
+    this.nonceSource,
+  });
+
+  /// HTTP client of the adapter and the checks.
+  final http.Client client;
+
+  /// Clock and log of the HTTP side.
+  final HttpSettings settings;
+
+  /// Fixed nonce of the recording.
+  final Uint8List Function()? nonceSource;
+}
+
+/// Override point of [AttestationTransport] (tests only).
+final attestationTransportProvider = Provider<AttestationTransport?>(
+  (ref) => null,
+);
+
 /// Wiring the provider factory gives to TEE profiles; `null` while the
 /// check module is not loaded.
 AttestationWiring? attestationWiringOf(Ref ref) {
@@ -118,5 +146,6 @@ AttestationWiring? attestationWiringOf(Ref ref) {
     logSink: ref.read(attestationLogWriterProvider),
     pins: ref.read(attestationPinStoreProvider),
     gpuMode: ref.read(gpuCheckModeProvider),
+    nonceSource: ref.read(attestationTransportProvider)?.nonceSource,
   );
 }

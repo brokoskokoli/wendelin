@@ -21,7 +21,6 @@ final class TeeHarness {
     this.gpu,
     GpuCheckMode gpuMode = GpuCheckMode.off,
     http.Client? chatClient,
-    bool fallbackOnFailure = false,
   }) : crypto = crypto ?? FakeAttestationCrypto(ed25519Result: true) {
     server = TeeServer({
       'aci/attestation': (_) async {
@@ -98,7 +97,6 @@ final class TeeHarness {
       logSink: log,
       settings: settings,
       retryDelay: Duration.zero,
-      fallbackOnFailure: fallbackOnFailure,
     );
   }
 

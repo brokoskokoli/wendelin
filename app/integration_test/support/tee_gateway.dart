@@ -74,6 +74,17 @@ final class FixtureGateway {
       200,
       headers: {'content-type': 'application/json'},
     );
+    if (path.endsWith('attestation/report')) {
+      // GPU evidence of the model: only the nonce binding is checked locally
+      // (mode „Aus“), so the recorded payload is replaced by one with the
+      // verifier's own nonce.
+      return json({
+        'nvidia_payload': {
+          'nonce': request.url.queryParameters['nonce'],
+          'evidence_list': <Object?>[],
+        },
+      });
+    }
     if (path.endsWith('aci/attestation')) {
       return json(jsonDecode(gatewayAttestation));
     }
@@ -116,5 +127,58 @@ final class FixtureGateway {
         'x-receipt-id': 'rcpt-fixture',
       },
     );
+  });
+}
+
+Uint8List _hexBytes(String hex) => Uint8List.fromList([
+  for (var i = 0; i < hex.length; i += 2)
+    int.parse(hex.substring(i, i + 2), radix: 16),
+]);
+
+/// Intel PCS stand-in that answers from the recorded collateral (headers
+/// URL-encoded like the real service).
+http.Client pcsFixtureClient() {
+  final collateral = jsonDecode(collateralPcs) as Map<String, dynamic>;
+  String chain(String k) => Uri.encodeComponent(collateral[k] as String);
+  return MockClient((req) async {
+    final p = req.url.path;
+    if (p.endsWith('/pckcrl')) {
+      return http.Response.bytes(
+        _hexBytes(collateral['pck_crl'] as String),
+        200,
+        headers: {'sgx-pck-crl-issuer-chain': chain('pck_crl_issuer_chain')},
+      );
+    }
+    if (p.endsWith('/tcb')) {
+      return http.Response(
+        jsonEncode({
+          'tcbInfo': jsonDecode(collateral['tcb_info'] as String),
+          'signature': collateral['tcb_info_signature'],
+        }),
+        200,
+        headers: {'sgx-tcb-info-issuer-chain': chain('tcb_info_issuer_chain')},
+      );
+    }
+    if (p.endsWith('/qe/identity')) {
+      return http.Response(
+        jsonEncode({
+          'enclaveIdentity': jsonDecode(collateral['qe_identity'] as String),
+          'signature': collateral['qe_identity_signature'],
+        }),
+        200,
+        headers: {
+          'sgx-enclave-identity-issuer-chain': chain(
+            'qe_identity_issuer_chain',
+          ),
+        },
+      );
+    }
+    if (p.endsWith('.der')) {
+      return http.Response.bytes(
+        _hexBytes(collateral['root_ca_crl'] as String),
+        200,
+      );
+    }
+    return http.Response('?', 404);
   });
 }

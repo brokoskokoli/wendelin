@@ -131,7 +131,6 @@ final class ProviderSetupSession {
     PrivacyLevel? privacy,
     int? budgetMicros,
     double? warnThreshold,
-    bool? attestationFallback,
   }) {
     final base = template.toProfile(
       id: profileId,
@@ -156,10 +155,7 @@ final class ProviderSetupSession {
       budgetMonthly: budgetMicros,
       warnThreshold: budgetMicros == null ? null : warnThreshold,
       extraHeaders: existing?.extraHeaders ?? const {},
-      options: {
-        ...existing?.options ?? base.options,
-        'attestationFallback': ?attestationFallback,
-      },
+      options: {...existing?.options ?? base.options},
     );
   }
 

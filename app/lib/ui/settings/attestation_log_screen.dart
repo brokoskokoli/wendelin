@@ -6,6 +6,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../../di/attestation_log_view.dart';
+import '../../di/attestation_providers.dart';
 import '../../di/providers.dart';
 import '../attestation/attestation_texts.dart';
 import '../attestation/stage_line.dart';
@@ -75,6 +76,14 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
         if (_filter == null || r.status == _filter) r,
     ];
     final now = ref.watch(clockProvider).now();
+    // Newest session entry per provider (the list is newest first).
+    final latest = <String, AttestationRecord>{};
+    for (final r in records) {
+      if (r.kind == AttestationRecordKind.session) {
+        latest.putIfAbsent(r.profileId, () => r);
+      }
+    }
+    final sessions = latest.values.toList();
     final config = ref.watch(providerConfigProvider).value;
     return SettingsPage(
       title: 'Prüfprotokoll',
@@ -83,6 +92,13 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
           'Antwort. Hier steht, was geprüft wurde. Nie Inhalte, nur Ids, '
           'Prüfsummen und Ergebnisse.',
       children: [
+        for (final r in sessions)
+          _SessionCard(
+            record: r,
+            name: config?.nameOf(r.profileId) ?? r.profileId,
+            locked: ref.watch(attestationHubProvider).isLocked(r.profileId),
+            now: now,
+          ),
         const GpuCheckSection(),
         Wrap(
           spacing: WSpace.s,
@@ -124,6 +140,11 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
                 ),
             ],
           ),
+        if (sessions.isNotEmpty)
+          PrimaryButton(
+            'Neu attestieren',
+            onPressed: () => unawaited(_reattest(sessions)),
+          ),
         WideButton(
           'Als JSON exportieren',
           onPressed: () async => ref.read(exporterProvider)(
@@ -140,6 +161,24 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
     );
   }
 
+  /// Attests the providers again (lifts a lock when the check passes).
+  Future<void> _reattest(List<AttestationRecord> sessions) async {
+    final hub = ref.read(attestationHubProvider);
+    var allGreen = true;
+    for (final r in sessions) {
+      final report = await hub.reattest(r.profileId);
+      if (report?.status != AttestationStatus.green) allGreen = false;
+    }
+    ref.invalidate(attestationRecordsProvider);
+    if (!mounted) return;
+    showHint(
+      context,
+      allGreen
+          ? 'Neu attestiert, eine Sperre ist aufgehoben.'
+          : 'Die neue Prüfung ist nicht bestanden.',
+    );
+  }
+
   Future<void> _delete() async {
     final ok = await confirm(
       context,
@@ -153,6 +192,81 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
     await ref.read(storageProvider).attestations.deleteAll();
     ref.invalidate(attestationRecordsProvider);
     if (mounted) showHint(context, 'Gelöscht.');
+  }
+}
+
+/// Session of one provider: result, ids and the stage results in two
+/// columns (design: `pruefprotokoll.html`).
+class _SessionCard extends StatelessWidget {
+  const _SessionCard({
+    required this.record,
+    required this.name,
+    required this.locked,
+    required this.now,
+  });
+
+  final AttestationRecord record;
+  final String name;
+  final bool locked;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = recordStatus(record);
+    final label = locked
+        ? 'gesperrt'
+        : switch (record.status) {
+            AttestationStatus.green => 'Sitzung geprüft',
+            AttestationStatus.yellow => 'Sitzung nicht prüfbar',
+            AttestationStatus.red => 'Sitzung fehlgeschlagen',
+          };
+    final color = locked ? CheckStatus.failed.color : status.color;
+    return SectionCard(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(WSpace.l),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: WSpace.s,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(child: Text(name, style: WText.label)),
+                  Text(label, style: WText.mono.copyWith(color: color)),
+                ],
+              ),
+              Text(
+                [
+                  ?record.workloadKeysetDigest,
+                  if (record.repoCommit != null) 'Commit ${record.repoCommit}',
+                  sessionLabel(record.at, now),
+                ].join('\n'),
+                style: WText.mono.copyWith(color: WColors.textMuted),
+              ),
+              Wrap(
+                spacing: WSpace.l,
+                runSpacing: WSpace.xs,
+                children: [
+                  for (final st in record.stages)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: WSpace.xs,
+                      children: [
+                        CheckStatusIcon(
+                          stageResultStatus(st.result) ?? CheckStatus.pending,
+                          size: WSize.statusIconSmall,
+                        ),
+                        Text(stageLabel(st.stage), style: WText.caption),
+                      ],
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

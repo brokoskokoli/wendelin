@@ -82,9 +82,25 @@ void main() {
     await tester.tap(find.text('Wird geprüft'));
     await tester.pump();
     expect(find.textContaining('ausstehend'), findsOneWidget);
+    await tester.ensureVisible(find.text('Alle'));
     await tester.tap(find.text('Alle'));
     await tester.pump();
     expect(find.textContaining('rcpt_01J9X4QF'), findsNWidgets(3));
+  });
+
+  testWidgets('Sitzungskarte mit Stufen und „Neu attestieren“', (tester) async {
+    final env = TestEnv();
+    await _seed(env);
+    await pumpPage(tester, env, const AttestationLogScreen());
+    expect(find.text('phala'), findsOneWidget);
+    expect(find.text('Sitzung geprüft'), findsOneWidget);
+    expect(find.text('TDX-Quote (DCAP)'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Neu attestieren'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Neu attestieren'), findsOneWidget);
   });
 
   testWidgets('Tippen öffnet das Detail mit Ergebnis je Stufe und Grund', (

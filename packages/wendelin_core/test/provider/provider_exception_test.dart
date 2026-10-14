@@ -84,12 +84,6 @@ void main() {
       expect(failed.retryable, isFalse);
       expect(offline.retryable, isTrue);
       expect(failed.stage, 'quote');
-      const fallback = AttestationFailedException(
-        'x',
-        stage: 'quote',
-        fallback: true,
-      );
-      expect(fallback.retryable, isTrue, reason: 'Ausweichen erlaubt');
     });
     test('AttestationReport vergleicht Felder', () {
       const a = AttestationReport(

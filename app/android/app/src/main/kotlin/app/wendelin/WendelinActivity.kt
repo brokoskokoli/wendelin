@@ -20,7 +20,8 @@ abstract class WendelinActivity : FlutterActivity() {
     private var network: NetworkChannel? = null
     private var auth: AuthChannel? = null
     private var torch: TorchChannel? = null
-    private var notify: NotifyChannel? = null
+    protected var notify: NotifyChannel? = null
+        private set
     protected var assistant: AssistantChannel? = null
         private set
 
@@ -42,6 +43,7 @@ abstract class WendelinActivity : FlutterActivity() {
         auth = AuthChannel(this, messenger)
         torch = TorchChannel(this, messenger)
         notify = NotifyChannel(this, messenger)
+        notify?.handleIntent(intent)
         assistant = AssistantChannel(this, messenger)
     }
 

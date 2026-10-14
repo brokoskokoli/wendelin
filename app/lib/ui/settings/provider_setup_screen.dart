@@ -79,7 +79,6 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   PrivacyLevel _privacy = PrivacyLevel.standard;
   double _warn = 0.8;
   String? _budgetError;
-  bool _attestationFallback = false;
 
   bool get _editing => widget.existing != null;
 
@@ -98,7 +97,6 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     _privacy = p.privacy;
     _budget.text = budgetText(p.budgetMonthly);
     _warn = p.warnThreshold ?? 0.8;
-    _attestationFallback = p.options['attestationFallback'] == true;
   }
 
   @override
@@ -200,7 +198,6 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       privacy: _privacy,
       budgetMicros: budget,
       warnThreshold: _warn,
-      attestationFallback: _attested ? _attestationFallback : null,
     );
     await ref.read(profilesProvider.notifier).save(profile);
     await session.commit();
@@ -282,8 +279,6 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     warn: _warn,
     onWarn: (w) => setState(() => _warn = w),
     attested: _attested,
-    attestationFallback: _attestationFallback,
-    onAttestationFallback: (on) => setState(() => _attestationFallback = on),
     onSave: () => unawaited(_save()),
   );
 

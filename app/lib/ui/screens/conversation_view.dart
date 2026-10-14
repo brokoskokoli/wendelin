@@ -44,7 +44,7 @@ class ConversationView extends StatefulWidget {
   final ValueChanged<AnswerAttestation>? onAttestationTap;
 
   /// „Neu prüfen“ of the warning card of a failed answer.
-  final VoidCallback? onReattest;
+  final ValueChanged<AnswerAttestation>? onReattest;
 
   @override
   State<ConversationView> createState() => _ConversationViewState();
@@ -285,7 +285,7 @@ class AttestedAnswer extends StatelessWidget {
   final ValueChanged<AnswerAttestation>? onTap;
 
   /// Checks the provider again.
-  final VoidCallback? onReattest;
+  final ValueChanged<AnswerAttestation>? onReattest;
 
   @override
   Widget build(BuildContext context) {
@@ -312,7 +312,7 @@ class AttestedAnswer extends StatelessWidget {
               actionBelow: true,
               action: message.canRecheck && onReattest != null
                   ? TextButton(
-                      onPressed: onReattest,
+                      onPressed: () => onReattest!(attestation),
                       style: TextButton.styleFrom(
                         foregroundColor: WColors.link,
                         minimumSize: const Size(WSize.touchMin, WSize.touchMin),

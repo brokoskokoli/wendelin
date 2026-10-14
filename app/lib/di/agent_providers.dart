@@ -125,6 +125,7 @@ typedef LlmProviderFactory = LlmProvider Function(
 final Provider<LlmProviderFactory> llmProviderFactoryProvider =
     Provider<LlmProviderFactory>((ref) {
       final catalog = ref.watch(modelCatalogProvider);
+      final transport = ref.watch(attestationTransportProvider);
       return (profile, secrets) {
         final wiring = needsAttestation(profile)
             ? attestationWiringOf(ref)
@@ -141,6 +142,8 @@ final Provider<LlmProviderFactory> llmProviderFactoryProvider =
           secrets,
           catalog: catalog,
           attestation: wiring,
+          client: transport?.client,
+          settings: transport?.settings ?? const HttpSettings(),
         );
         if (provider is AttestedProvider) {
           ref.read(attestationHubProvider).register(profile.id, provider);

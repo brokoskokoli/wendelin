@@ -18,7 +18,7 @@ AnswerAttestation _a(
 Widget _answer(
   AnswerAttestation a, {
   ValueChanged<AnswerAttestation>? onTap,
-  VoidCallback? onReattest,
+  ValueChanged<AnswerAttestation>? onReattest,
 }) => SizedBox(
   width: 350,
   child: AttestedAnswer(
@@ -72,7 +72,7 @@ void main() {
           Scaffold(
             body: _answer(
               _a(AttestationStatus.red),
-              onReattest: () => rechecks++,
+              onReattest: (_) => rechecks++,
             ),
           ),
         ),
@@ -93,7 +93,7 @@ void main() {
             body: SingleChildScrollView(
               child: _answer(
                 _a(AttestationStatus.red, reason: reason),
-                onReattest: () {},
+                onReattest: (_) {},
               ),
             ),
           ),
@@ -171,14 +171,14 @@ void main() {
       await pumpComponent(tester, [
         _answer(_a(AttestationStatus.green)),
         _answer(_a(AttestationStatus.yellow, log: '')),
-        _answer(_a(AttestationStatus.red), onReattest: () {}),
+        _answer(_a(AttestationStatus.red), onReattest: (_) {}),
         _answer(
           _a(AttestationStatus.red, reason: AttestationReason.tcbOutOfDate),
-          onReattest: () {},
+          onReattest: (_) {},
         ),
         _answer(
           _a(AttestationStatus.red, reason: AttestationReason.relaunchAdvised),
-          onReattest: () {},
+          onReattest: (_) {},
         ),
       ]);
       await expectLater(

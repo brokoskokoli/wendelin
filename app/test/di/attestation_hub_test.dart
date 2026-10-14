@@ -173,14 +173,9 @@ void main() {
       final p = create(_phala(), env.secrets.read);
       expect(p, isA<AttestedProvider>());
       expect(c.read(attestationHubProvider).provider('phala'), same(p));
-      expect(
-        (p as AttestedProvider).fallbackOnFailure,
-        isFalse,
-        reason: 'Ausweichen standardmäßig aus',
-      );
     });
 
-    test('Option „ausweichen“ und GPU-Modus aus den Einstellungen', () async {
+    test('GPU-Modus aus den Einstellungen', () async {
       final env = TestEnv(
         storedProfiles: true,
         startup: const StartupSettings(gpuCheck: GpuCheckMode.before),
@@ -189,10 +184,9 @@ void main() {
       addTearDown(c.dispose);
       await awaitCheckModule(c.read(attestationCryptoProvider.future));
       final p = c.read(llmProviderFactoryProvider)(
-        _phala(options: {'attestationFallback': true}),
+        _phala(),
         env.secrets.read,
       ) as AttestedProvider;
-      expect(p.fallbackOnFailure, isTrue);
       expect(p.gpuMode, GpuCheckMode.before);
     });
 

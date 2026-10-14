@@ -15,11 +15,13 @@ import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
+import '../../platform/channel_notifier.dart' show attestationLogTarget;
 import '../../voice/conversation_offer.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
 import '../routes.dart';
 import '../settings/attestation_log_detail.dart';
+import '../settings/attestation_log_screen.dart';
 import '../settings/settings_page.dart' show confirm;
 import '../voice/microphone_access.dart';
 import 'conversation_offer_card.dart';
@@ -71,6 +73,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           voice.prewarm(onlyIfUsed: true);
           // Back from the Android settings: allowed there meanwhile?
           unawaited(_recheckMicrophone());
+          unawaited(_openFromNotification());
         }
       },
     );
@@ -80,6 +83,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       if (!mounted) return;
       ref.read(voiceControllerProvider.notifier).prewarm(onlyIfUsed: true);
     });
+    Future(() => unawaited(_openFromNotification()));
     if (widget.restoreSession) {
       unawaited(ref.read(agentControllerProvider.notifier).restore());
       // A TEE default provider is attested in the background (WP52).
@@ -116,6 +120,31 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         ),
       ),
     );
+  }
+
+  /// The app was opened from the notification of a failed GPU check: shows
+  /// the Prüfprotokoll.
+  Future<void> _openFromNotification() async {
+    final target = await ref
+        .read(attestationNotifierProvider)
+        .takeLaunchTarget();
+    if (!mounted || target != attestationLogTarget) return;
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => const AttestationLogScreen()),
+      ),
+    );
+  }
+
+  /// „Neu prüfen“ on a red answer: checks the provider that gave this answer
+  /// (from its log entry), not the one that is active now.
+  Future<void> _reattest(AnswerAttestation a, ConversationState c) async {
+    final record = a.logId.isEmpty
+        ? null
+        : await ref.read(storageProvider).attestations.byLogId(a.logId);
+    final profile = record?.profileId ?? c.activeProfileId;
+    if (profile == null) return;
+    await _controller.reattest(profile);
   }
 
   /// The GPU check before the request failed: nothing was sent. Asks
@@ -205,11 +234,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               onUndo: (id) => unawaited(_undo(id)),
               header: setupHint,
               onAttestationTap: _openAttestation,
-              onReattest: conversation.activeProfileId == null
-                  ? null
-                  : () => unawaited(
-                      _controller.reattest(conversation.activeProfileId!),
-                    ),
+              onReattest: (a) => unawaited(_reattest(a, conversation)),
             ),
           ),
           MainComposer(

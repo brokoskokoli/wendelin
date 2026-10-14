@@ -238,6 +238,16 @@ final class RecordingNotifier implements AttestationNotifier {
     return granted = true;
   }
 
+  /// What the next [takeLaunchTarget] returns (once).
+  String? launchTarget;
+
+  @override
+  Future<String?> takeLaunchTarget() async {
+    final t = launchTarget;
+    launchTarget = null;
+    return t;
+  }
+
   @override
   Future<bool> show({required String title, required String text}) async {
     if (!granted) return false;

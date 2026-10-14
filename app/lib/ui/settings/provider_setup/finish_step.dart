@@ -17,8 +17,6 @@ List<Widget> finishStep({
   required double warn,
   required void Function(double w) onWarn,
   required bool attested,
-  required bool attestationFallback,
-  required void Function(bool on) onAttestationFallback,
   required VoidCallback onSave,
 }) {
   return [
@@ -41,36 +39,21 @@ List<Widget> finishStep({
     SettingsSection(
       title: 'Datenschutzstufe',
       children: [
+        // „TEE“ only for profiles whose attestation the app really checks.
         for (final level in PrivacyLevel.values)
-          SettingsRow(
-            title: level.label,
-            trailing: privacy == level
-                ? const CheckStatusIcon(
-                    CheckStatus.ok,
-                    semanticLabel: 'gewählt',
-                  )
-                : PrivacyChip(level),
-            onTap: () => onPrivacy(level),
-          ),
+          if (level != PrivacyLevel.tee || attested)
+            SettingsRow(
+              title: level.label,
+              trailing: privacy == level
+                  ? const CheckStatusIcon(
+                      CheckStatus.ok,
+                      semanticLabel: 'gewählt',
+                    )
+                  : PrivacyChip(level),
+              onTap: () => onPrivacy(level),
+            ),
       ],
     ),
-    if (attested)
-      SectionCard(
-        children: [
-          SettingsRow(
-            title: 'Bei fehlgeschlagener Prüfung ausweichen',
-            detail:
-                'Besteht die TEE-Prüfung nicht, darf Wendelin die Anfrage an '
-                'den nächsten Anbieter der Kette übergeben. Bei privaten '
-                'Anfragen nur nach deiner Bestätigung. Standard: aus.',
-            trailing: WSwitch(
-              value: attestationFallback,
-              semanticLabel: 'Bei fehlgeschlagener Prüfung ausweichen',
-              onChanged: onAttestationFallback,
-            ),
-          ),
-        ],
-      ),
     TextField(
       controller: budget,
       style: WText.body,

@@ -119,7 +119,6 @@ AttestedProvider scriptedTee({
   GpuAttestationVerifier? gpu,
   GpuCheckMode gpuMode = GpuCheckMode.off,
   AttestationLogSink? logSink,
-  bool fallbackOnFailure = false,
 }) => AttestedProvider(
   inner: OpenAiChatAdapter(
     baseUrl: Uri.parse('https://gateway.test/v1'),
@@ -145,5 +144,4 @@ AttestedProvider scriptedTee({
   logSink: logSink,
   settings: HttpSettings(clock: FixedClock(testNow)),
   retryDelay: Duration.zero,
-  fallbackOnFailure: fallbackOnFailure,
 );
