@@ -9,6 +9,7 @@ import '../../di/list_access.dart';
 import '../../di/preferences.dart';
 import '../../di/profiles.dart';
 import '../../di/providers.dart';
+import '../../di/voice_settings_providers.dart';
 import '../../voice/recognizer_config.dart';
 import '../design/design.dart';
 import '../settings/integrations_screen.dart';
@@ -60,6 +61,7 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
       0 => _language(),
       1 => _provider(),
       2 => VoiceDownloadStep(onNext: _next),
+      3 => _conversation(),
       _ => _integrations(),
     },
   );
@@ -71,7 +73,7 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
       showBack: false,
       centered: true,
       intro:
-          'Wendelin ist dein Sprachassistent. In vier Schritten ist er '
+          'Wendelin ist dein Sprachassistent. In fünf Schritten ist er '
           'eingerichtet. Welche Sprache sprichst du mit ihm?',
       children: [
         const Center(child: WendelinLockup()),
@@ -136,6 +138,34 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
       ],
     );
   }
+
+  Future<void> _setConversation({required bool on}) async {
+    await ref
+        .read(voiceSettingsProvider.notifier)
+        .change(
+          (s) => s.copyWith(conversationMode: on, conversationAsked: true),
+        );
+    _next();
+  }
+
+  Widget _conversation() => SettingsPage(
+    title: 'Gespräch',
+    centered: true,
+    intro:
+        'Soll Wendelin nach seinen Antworten kurz weiter zuhören, damit du '
+        'ohne Tippen nachfragen kannst? Das lässt sich jederzeit unter '
+        'Einstellungen → Sprache ändern.',
+    children: [
+      PrimaryButton(
+        'Ja, weiter zuhören',
+        onPressed: () => unawaited(_setConversation(on: true)),
+      ),
+      WideButton(
+        'Nein, nur nach Tippen',
+        onPressed: () => unawaited(_setConversation(on: false)),
+      ),
+    ],
+  );
 
   Widget _integrations() {
     final registry = ref.watch(toolRegistryProvider);

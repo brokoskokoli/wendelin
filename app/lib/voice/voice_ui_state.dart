@@ -29,6 +29,8 @@ final class VoiceUiState {
     this.preparing = false,
     this.tapOnly = false,
     this.stopCount = 0,
+    this.followUpUntil,
+    this.followUpWindow = Duration.zero,
   });
 
   /// State of the voice pipeline.
@@ -61,6 +63,16 @@ final class VoiceUiState {
   /// reacts to every change.
   final int stopCount;
 
+  /// End of the follow-up window while the conversation mode listens for a
+  /// follow-up question without a tap (K23 d); `null` otherwise.
+  final DateTime? followUpUntil;
+
+  /// Length of that window (for the remaining-time display).
+  final Duration followUpWindow;
+
+  /// Whether the follow-up window is open.
+  bool get followUp => followUpUntil != null;
+
   /// Whether a voice request (or a spoken confirmation) is in progress.
   bool get active => phase != VoiceState.idle || awaitingAnswer || preparing;
 
@@ -85,6 +97,9 @@ final class VoiceUiState {
     bool? preparing,
     bool? tapOnly,
     int? stopCount,
+    DateTime? followUpUntil,
+    Duration? followUpWindow,
+    bool clearFollowUp = false,
   }) => VoiceUiState(
     phase: phase ?? this.phase,
     levels: levels ?? this.levels,
@@ -95,6 +110,10 @@ final class VoiceUiState {
     preparing: preparing ?? this.preparing,
     tapOnly: tapOnly ?? this.tapOnly,
     stopCount: stopCount ?? this.stopCount,
+    followUpUntil: clearFollowUp ? null : followUpUntil ?? this.followUpUntil,
+    followUpWindow: clearFollowUp
+        ? Duration.zero
+        : followUpWindow ?? this.followUpWindow,
   );
 }
 

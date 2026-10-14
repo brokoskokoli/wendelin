@@ -7,6 +7,7 @@ export 'check_status.dart';
 export 'confirmation_card.dart';
 export 'dashed_border.dart';
 export 'escalation_divider.dart';
+export 'follow_up_countdown.dart';
 export 'glyphs.dart';
 export 'icons.dart';
 export 'integration_tile.dart';

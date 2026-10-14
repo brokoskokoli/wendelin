@@ -120,6 +120,8 @@ class Composer extends StatefulWidget {
     this.micHint,
     this.status,
     this.notice,
+    this.followUpUntil,
+    this.now = DateTime.now,
   });
 
   /// Whether a request runs (text cannot be sent then).
@@ -146,6 +148,13 @@ class Composer extends StatefulWidget {
   /// Card shown above the field instead of [status] (microphone not
   /// allowed).
   final Widget? notice;
+
+  /// End of the follow-up window (conversation mode) while the microphone
+  /// listens without a tap; `null` = ordinary listening.
+  final DateTime? followUpUntil;
+
+  /// Current time for the follow-up countdown.
+  final DateTime Function() now;
 
   /// Label of the microphone while listening (a tap aborts).
   static const listeningLabel = 'Zuhören abbrechen';
@@ -204,7 +213,12 @@ class _ComposerState extends State<Composer> {
                 textAlign: TextAlign.center,
                 semanticsLabel: status,
               ),
-            if (listening) ListeningBar(levels: widget.levels),
+            if (listening)
+              ListeningBar(
+                levels: widget.levels,
+                followUpUntil: widget.followUpUntil,
+                now: widget.now,
+              ),
             Row(
               spacing: WSpace.m,
               children: [
@@ -253,23 +267,47 @@ class _ComposerState extends State<Composer> {
 /// Level bar above the text field while the microphone listens: the
 /// waveform of the overlay and „Ich höre zu …“.
 class ListeningBar extends StatelessWidget {
-  /// Creates the bar for the recent [levels] (0–1, newest last).
-  const ListeningBar({super.key, required this.levels});
+  /// Creates the bar for the recent [levels] (0–1, newest last). With
+  /// [followUpUntil] it shows the follow-up window („Ich höre noch zu …“
+  /// and the remaining time, measured with [now]).
+  const ListeningBar({
+    super.key,
+    required this.levels,
+    this.followUpUntil,
+    this.now = DateTime.now,
+  });
 
   /// Recent microphone levels.
   final List<double> levels;
 
+  /// End of the follow-up window, if one is open.
+  final DateTime? followUpUntil;
+
+  /// Current time for the countdown.
+  final DateTime Function() now;
+
   @override
-  Widget build(BuildContext context) => Semantics(
+  Widget build(BuildContext context) {
+    final until = followUpUntil;
+    return until == null
+        ? _bar(Composer.listeningText)
+        : FollowUpCountdown(
+            until: until,
+            now: now,
+            builder: (_, seconds) => _bar('$followUpListeningText $seconds s'),
+          );
+  }
+
+  Widget _bar(String text) => Semantics(
     liveRegion: true,
-    label: Composer.listeningText,
+    label: text,
     child: ExcludeSemantics(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         spacing: WSpace.m,
         children: [
           Waveform(amplitudes: waveBarsOf(levels)),
-          Text(Composer.listeningText, style: WText.caption),
+          Text(text, style: WText.caption),
         ],
       ),
     ),

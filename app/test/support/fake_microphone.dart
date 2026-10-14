@@ -23,6 +23,9 @@ final class FakePcmRecorder implements PcmRecorder {
   /// Whether the consumer cancelled its subscription to the last stream.
   bool cancelled = false;
   final requests = <bool>[];
+
+  /// Source profile of every started stream.
+  final profiles = <CaptureProfile>[];
   int starts = 0;
   int stops = 0;
   // ignore: close_sinks
@@ -38,7 +41,10 @@ final class FakePcmRecorder implements PcmRecorder {
   }
 
   @override
-  Future<Stream<Uint8List>> startStream() async {
+  Future<Stream<Uint8List>> startStream([
+    CaptureProfile profile = CaptureProfile.recognition,
+  ]) async {
+    profiles.add(profile);
     final e = startError;
     if (e != null) throw e;
     starts++;

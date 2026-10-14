@@ -210,6 +210,17 @@ final ttsSelectionProvider = FutureProvider.autoDispose<TtsSelection>((
       .select(language: ref.watch(languageProvider));
 });
 
+/// Detector for „Wendelin“/„Stopp“ during the speech output (K23 c).
+/// `null` = not available: the wake word model comes with WP58 (and the
+/// engine with WP44), until then the setting says „nicht verfügbar“ and
+/// the pipeline gets barge-in `off`. Tests and WP58 override it.
+final bargeInDetectorProvider = Provider<BargeInDetector?>((ref) => null);
+
+/// Whether barge-in works on this device (a detector exists).
+final bargeInAvailableProvider = Provider<bool>(
+  (ref) => ref.watch(bargeInDetectorProvider) != null,
+);
+
 /// Pipeline settings from Einstellungen → Sprache.
 final voicePipelineConfigProvider = FutureProvider<VoicePipelineConfig>((
   ref,
@@ -220,6 +231,9 @@ final voicePipelineConfigProvider = FutureProvider<VoicePipelineConfig>((
     language: s.effectiveLanguage(ref.watch(languageProvider)),
     voice: s.ttsVoice,
     rate: s.ttsRate,
+    conversationMode: s.conversationMode,
+    // Without a detector there is nothing to interrupt with (WP58).
+    bargeIn: ref.watch(bargeInAvailableProvider) ? s.bargeIn : BargeInMode.off,
   );
 });
 
@@ -233,6 +247,7 @@ final class VoiceComponents {
     required this.stt,
     required this.textToSpeech,
     required this.config,
+    this.bargeInDetector,
     this.warmUp,
     this.release,
   });
@@ -251,6 +266,9 @@ final class VoiceComponents {
 
   /// Pipeline settings.
   final VoicePipelineConfig config;
+
+  /// Detector for barge-in (`null`: none, see [bargeInDetectorProvider]).
+  final BargeInDetector? bargeInDetector;
 
   /// Loads the models again after [release] (`null`: always loaded).
   final Future<void> Function()? warmUp;
@@ -280,6 +298,7 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
     ),
     textToSpeech: selector.current,
     config: await ref.watch(voicePipelineConfigProvider.future),
+    bargeInDetector: ref.watch(bargeInDetectorProvider),
     warmUp: whisper.warm,
     release: () async {
       await whisper.release(reason: 'idle');

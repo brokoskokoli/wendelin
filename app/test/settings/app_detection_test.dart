@@ -266,7 +266,12 @@ void main() {
     final c = ProviderScope.containerOf(
       tester.element(find.byType(OnboardingScreen)),
     );
-    for (final step in ['Weiter', 'Später', 'Später']) {
+    for (final step in [
+      'Weiter',
+      'Später',
+      'Später',
+      'Nein, nur nach Tippen',
+    ]) {
       await tester.tap(find.text(step));
       await settle(tester);
     }

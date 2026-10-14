@@ -22,6 +22,7 @@ export 'src/models/speech_model.dart';
 export 'src/models/speech_model_catalog.dart';
 export 'src/models/speech_model_service.dart';
 export 'src/models/voice_settings.dart';
+export 'src/pipeline/conversation_offer.dart';
 export 'src/pipeline/endpointer.dart';
 export 'src/pipeline/voice_events.dart';
 export 'src/pipeline/voice_pipeline.dart';

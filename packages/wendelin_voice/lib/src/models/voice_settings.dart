@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import '../pipeline/endpointer.dart';
+import '../pipeline/voice_pipeline_config.dart';
 import '../tts/tts_selector.dart';
 
 /// Settings of Einstellungen → Sprache.
@@ -19,6 +20,10 @@ final class VoiceSettings {
     this.vadThreshold = 0.5,
     this.stopClosesOverlay = true,
     this.twoVersions = false,
+    this.conversationMode = false,
+    this.conversationAsked = false,
+    this.conversationOfferPending = false,
+    this.bargeIn = BargeInMode.keywords,
   });
 
   /// [sttLanguage]: use the language chosen in the onboarding.
@@ -64,6 +69,26 @@ final class VoiceSettings {
   /// separate spoken version first. More tokens, more natural speech.
   final bool twoVersions;
 
+  /// „Weiter zuhören nach der Antwort“ (K23 d): after a spoken answer the
+  /// microphone stays open for a follow-up window. Default off (M4, decision
+  /// 2 of the maintainer).
+  final bool conversationMode;
+
+  /// The one-time question „Soll ich nach meinen Antworten standardmäßig
+  /// weiter zuhören?“ was answered (or the setting was chosen otherwise).
+  /// It is never asked again.
+  final bool conversationAsked;
+
+  /// The question is due: a request (possibly in the short-lived overlay
+  /// engine) ended with an answer a follow-up would have suited. The main
+  /// screen shows the card until it is answered. Persisted, because the
+  /// overlay runs in its own engine.
+  final bool conversationOfferPending;
+
+  /// Barge-in during the speech output (K23 c). Only effective where a
+  /// detector exists (WP58); default: keywords.
+  final BargeInMode bargeIn;
+
   /// The STT language for app language [appLanguage] (`null` = detect).
   String? effectiveLanguage(String appLanguage) => switch (sttLanguage) {
     followApp => appLanguage,
@@ -87,6 +112,10 @@ final class VoiceSettings {
     double? vadThreshold,
     bool? stopClosesOverlay,
     bool? twoVersions,
+    bool? conversationMode,
+    bool? conversationAsked,
+    bool? conversationOfferPending,
+    BargeInMode? bargeIn,
   }) => VoiceSettings(
     sttModel: sttModel ?? this.sttModel,
     sttLanguage: sttLanguage ?? this.sttLanguage,
@@ -97,6 +126,11 @@ final class VoiceSettings {
     vadThreshold: vadThreshold ?? this.vadThreshold,
     stopClosesOverlay: stopClosesOverlay ?? this.stopClosesOverlay,
     twoVersions: twoVersions ?? this.twoVersions,
+    conversationMode: conversationMode ?? this.conversationMode,
+    conversationAsked: conversationAsked ?? this.conversationAsked,
+    conversationOfferPending:
+        conversationOfferPending ?? this.conversationOfferPending,
+    bargeIn: bargeIn ?? this.bargeIn,
   );
 
   /// JSON for the settings store.
@@ -110,6 +144,10 @@ final class VoiceSettings {
     'vadThreshold': vadThreshold,
     'stopClosesOverlay': stopClosesOverlay,
     'twoVersions': twoVersions,
+    'conversationMode': conversationMode,
+    'conversationAsked': conversationAsked,
+    'conversationOfferPending': conversationOfferPending,
+    'bargeIn': bargeIn.name,
   };
 
   /// Reads [json]; unknown or invalid values fall back to the defaults.
@@ -144,6 +182,14 @@ final class VoiceSettings {
       stopClosesOverlay:
           pick<bool>('stopClosesOverlay', (_) => true) ?? d.stopClosesOverlay,
       twoVersions: pick<bool>('twoVersions', (_) => true) ?? d.twoVersions,
+      conversationMode:
+          pick<bool>('conversationMode', (_) => true) ?? d.conversationMode,
+      conversationAsked:
+          pick<bool>('conversationAsked', (_) => true) ?? d.conversationAsked,
+      conversationOfferPending:
+          pick<bool>('conversationOfferPending', (_) => true) ??
+          d.conversationOfferPending,
+      bargeIn: BargeInMode.values.asNameMap()[json['bargeIn']] ?? d.bargeIn,
     );
   }
 
@@ -158,7 +204,11 @@ final class VoiceSettings {
       other.minSpeechMs == minSpeechMs &&
       other.vadThreshold == vadThreshold &&
       other.stopClosesOverlay == stopClosesOverlay &&
-      other.twoVersions == twoVersions;
+      other.twoVersions == twoVersions &&
+      other.conversationMode == conversationMode &&
+      other.conversationAsked == conversationAsked &&
+      other.conversationOfferPending == conversationOfferPending &&
+      other.bargeIn == bargeIn;
 
   @override
   int get hashCode => Object.hash(
@@ -171,5 +221,9 @@ final class VoiceSettings {
     vadThreshold,
     stopClosesOverlay,
     twoVersions,
+    conversationMode,
+    conversationAsked,
+    conversationOfferPending,
+    bargeIn,
   );
 }
