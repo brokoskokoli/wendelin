@@ -26,8 +26,6 @@ const wakeWordSpellings = [
   'wendemann',
   'wendelen',
   'wendelan',
-  'wendeln',
-  'wendeli',
 ];
 
 /// Kölner Phonetik of „Wendelin“ (`36256`): words that sound like it but
