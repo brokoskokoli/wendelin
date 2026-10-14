@@ -237,6 +237,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     preparing: voice.preparing,
     mic: mic,
     levels: voice.levels,
+    conversationMode:
+        ref.watch(voiceSettingsProvider).value?.conversationMode ?? false,
+    followUpUntil: voice.followUpUntil,
+    now: ref.read(clockProvider).now,
     locked: _locked,
     onUnlock: _lockKnown ? () => unawaited(_unlock()) : null,
     status: _locked

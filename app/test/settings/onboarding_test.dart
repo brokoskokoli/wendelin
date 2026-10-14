@@ -6,6 +6,7 @@ import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
@@ -56,6 +57,16 @@ void main() {
     expect(find.text('Spracherkennung laden'), findsOneWidget);
     await tester.tap(find.text('Später'));
     await settle(tester);
+
+    // Gesprächsmodus (M4, Entscheidung 2): eigener Schritt, Antwort wird
+    // gespeichert, die Nachfrage im Hauptbildschirm kommt dann nie.
+    expect(find.text('Gespräch'), findsOneWidget);
+    expect(find.textContaining('Einstellungen → Sprache'), findsOneWidget);
+    await tester.tap(find.text('Ja, weiter zuhören'));
+    await settle(tester);
+    final voice = await c.read(voiceSettingsProvider.future);
+    expect(voice.conversationMode, isTrue);
+    expect(voice.conversationAsked, isTrue);
 
     expect(find.text('Was darf Wendelin?'), findsOneWidget);
     await tester.runAsync(() => c.read(toolRegistryProvider).refresh());
@@ -209,7 +220,12 @@ void main() {
       await settle(tester);
       await tester.tap(find.text('Später'));
       await settle(tester);
+      await tester.tap(find.text('Nein, nur nach Tippen'));
+      await settle(tester);
       expect(find.text('Was darf Wendelin?'), findsOneWidget);
+      await tester.tap(find.byTooltip('Zurück'));
+      await settle(tester);
+      expect(find.text('Gespräch'), findsOneWidget);
       await tester.tap(find.byTooltip('Zurück'));
       await settle(tester);
       expect(find.text('Spracherkennung laden'), findsOneWidget);

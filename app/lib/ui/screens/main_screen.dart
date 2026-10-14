@@ -13,10 +13,12 @@ import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
+import '../../voice/conversation_offer.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
 import '../routes.dart';
 import '../voice/microphone_access.dart';
+import 'conversation_offer_card.dart';
 import 'conversation_view.dart';
 import 'main_composer.dart';
 import 'main_confirmation.dart';
@@ -180,6 +182,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       return ProviderSetupCard(
         onSetup: _openProviderSetup,
         onDemo: () => ref.read(demoModeProvider.notifier).set(enabled: true),
+      );
+    } else if (ref.watch(conversationOfferProvider)) {
+      return ConversationOfferCard(
+        onAnswer: (yes) => unawaited(
+          ref.read(conversationOfferProvider.notifier).answer(yes: yes),
+        ),
       );
     } else if (notice != null) {
       return PrivateRuleNoticeCard(

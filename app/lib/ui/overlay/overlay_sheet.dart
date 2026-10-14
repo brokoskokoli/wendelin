@@ -85,6 +85,8 @@ class OverlaySheet extends StatelessWidget {
     this.onUnlock,
     this.typing,
     this.conversationMode = false,
+    this.followUpUntil,
+    this.now = DateTime.now,
     this.privateSince,
     this.privateByRequest = true,
     this.onNewConversation,
@@ -161,12 +163,22 @@ class OverlaySheet extends StatelessWidget {
   /// is greyed out.
   final bool conversationMode;
 
+  /// End of the open follow-up window (listening without a tap), if any.
+  final DateTime? followUpUntil;
+
+  /// Current time for the countdown of the window.
+  final DateTime Function() now;
+
   /// Hint of the conversation mode (design text).
   static const followUpHint = 'Hört noch 5 s zu · „Stopp“ beendet';
 
   /// Hint while the conversation mode does not exist yet.
   static const followUpComingHint =
-      'Gesprächsmodus kommt mit M4 · „Stopp“ beendet';
+      'Gesprächsmodus aus · in den Einstellungen einschaltbar';
+
+  /// Hint with the remaining time of the open follow-up window.
+  static String followUpWindowHint(int seconds) =>
+      'Hört noch $seconds s zu · „Stopp“ beendet';
 
   /// Shown on the lock screen instead of any content.
   static const lockedTitle = 'Gerät entsperren';
@@ -208,14 +220,24 @@ class OverlaySheet extends StatelessWidget {
       else
         Opacity(
           opacity: conversationMode ? 1 : WOpacity.inactive,
-          child: Text(
-            conversationMode ? followUpHint : followUpComingHint,
-            style: WText.caption,
-            textAlign: TextAlign.center,
-          ),
+          child: _modeHint(),
         ),
     ],
   );
+
+  Widget _modeHint() {
+    Text text(String t) =>
+        Text(t, style: WText.caption, textAlign: TextAlign.center);
+    final until = followUpUntil;
+    if (until != null) {
+      return FollowUpCountdown(
+        until: until,
+        now: now,
+        builder: (_, seconds) => text(followUpWindowHint(seconds)),
+      );
+    }
+    return text(conversationMode ? followUpHint : followUpComingHint);
+  }
 
   bool get _asking {
     final q = question;
@@ -265,7 +287,11 @@ class OverlaySheet extends StatelessWidget {
                 mic == MicState.listening ||
                 mic == MicState.preparing))
           Text(
-            preparing ? MicButton.preparingLabel : Composer.listeningText,
+            preparing
+                ? MicButton.preparingLabel
+                : followUpUntil != null
+                ? followUpListeningText
+                : Composer.listeningText,
             style: WText.transcript.copyWith(color: WColors.textMuted),
           )
         else if (request != null)

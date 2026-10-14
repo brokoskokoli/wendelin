@@ -11,6 +11,7 @@ import '../design/design.dart';
 import '../voice/microphone_access.dart';
 import 'model_download_row.dart';
 import 'settings_page.dart';
+import 'voice_conversation_section.dart';
 
 /// Language names (BCP 47 primary subtag → name).
 const languageNames = {'de': 'Deutsch', 'fr': 'Français', 'en': 'English'};
@@ -88,6 +89,11 @@ class VoiceScreen extends ConsumerWidget {
           ],
         ),
         const _Microphone(),
+        ConversationSettingsSection(
+          settings: settings,
+          change: change,
+          bargeInAvailable: ref.watch(bargeInAvailableProvider),
+        ),
         SettingsSection(
           title: 'Lizenzen der Sprachmodelle',
           children: [

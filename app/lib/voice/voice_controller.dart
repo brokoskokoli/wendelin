@@ -11,9 +11,12 @@ import '../agent/conversation_state.dart';
 import '../di/preferences.dart';
 import '../di/providers.dart';
 import '../di/voice_providers.dart';
+import '../platform/voice/capture_profile_follower.dart';
+import '../platform/voice/record_audio_input.dart';
 import 'answer_capture.dart';
 import 'confirm_prompts.dart';
 import 'controller_agent_run.dart';
+import 'conversation_offer.dart';
 import 'level_meter.dart';
 import 'primed_audio_input.dart';
 import 'voice_components.dart';
@@ -64,6 +67,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
   PrimedAudioInput? _primed;
   final _subs = <StreamSubscription<Object?>>[];
   String? _language;
+  final _answers = SpokenAnswerTracker();
+  CaptureProfileFollower? _profile;
   PendingQuestion? _confirming;
   PendingQuestion? _queued;
   void Function()? _abortCapture;
@@ -470,6 +475,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     _subs.clear();
     unawaited(_audio?.dispose());
+    unawaited(_profile?.dispose());
+    _profile = null;
     final audio = MeteredAudioInput(_primedFor(components.audio));
     final pipeline = VoicePipeline(
       audio: audio,
@@ -477,12 +484,17 @@ final class VoiceController extends Notifier<VoiceUiState> {
       stt: components.stt,
       agent: ControllerAgentRun(_agent, trigger: () => state.trigger?.name),
       textToSpeech: components.textToSpeech,
+      bargeInDetector: components.bargeInDetector,
       config: components.config,
       clock: ref.read(clockProvider),
     );
     _components = components;
     _audio = audio;
     _pipeline = pipeline;
+    // Source of the microphone follows the speech output (K23 c).
+    if (components.audio case final ProfiledAudioInput input) {
+      _profile = CaptureProfileFollower(input, pipeline.states);
+    }
     _subs
       ..add(pipeline.states.listen(_onState))
       ..add(pipeline.events.listen(_onEvent))
@@ -499,6 +511,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
       unawaited(s.cancel());
     }
     _subs.clear();
+    await _profile?.dispose();
+    _profile = null;
     await pipeline?.dispose();
     await _audio?.dispose();
     _audio = null;
@@ -512,7 +526,17 @@ final class VoiceController extends Notifier<VoiceUiState> {
     state = state.copyWith(
       phase: s,
       levels: s == VoiceState.listening ? const [] : state.levels,
+      clearFollowUp: s != VoiceState.listening,
     );
+    // After the events of the same moment (a cancel emits idle first).
+    if (s == VoiceState.idle) scheduleMicrotask(_offerConversation);
+  }
+
+  void _offerConversation() {
+    if (!ref.mounted || state.phase != VoiceState.idle) return;
+    if (_answers.finished(ref.read(clockProvider).now())) {
+      unawaited(ref.read(conversationOfferProvider.notifier).offer());
+    }
   }
 
   void _onLevel(double level) {

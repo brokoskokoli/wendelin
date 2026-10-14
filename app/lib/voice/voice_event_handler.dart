@@ -6,8 +6,18 @@ part of 'voice_controller.dart';
 extension _VoiceEventHandler on VoiceController {
   void _onEvent(VoiceEvent e) {
     switch (e) {
-      case VoiceListening():
-        state = state.copyWith(clearHint: true, clearError: true);
+      case VoiceListening(:final followUp):
+        state = state.copyWith(
+          clearHint: true,
+          clearError: true,
+          clearFollowUp: !followUp,
+        );
+      case VoiceFollowUpListening(:final window, :final until):
+        state = state.copyWith(followUpUntil: until, followUpWindow: window);
+        voiceLogPipelineEvent(e);
+      case VoiceConversationEnded():
+        state = state.copyWith(clearFollowUp: true);
+        voiceLogPipelineEvent(e);
       case VoiceTranscribed(:final transcript):
         _language = transcript.language;
       case VoiceNothingUnderstood(:final reason):
@@ -18,17 +28,17 @@ extension _VoiceEventHandler on VoiceController {
       case VoiceError(:final during, :final error):
         voiceLog('voice-error', {'phase': during, 'error': errorCode(error)});
         state = state.copyWith(error: voiceErrorText(error));
-      case VoiceSpeaking():
+      case VoiceSpeaking(:final sentence):
+        _answers.spoke(sentence);
         // Source of what is heard: the answer (not the confirmation).
         voiceLog('speak', {'source': 'answer'});
       case VoiceCancelled(:final reason, :final during):
         voiceLog('voice-cancelled', {'reason': reason, 'phase': during});
         _onCancelled(reason, during);
-      case VoiceAgentEvent():
-      case VoiceFollowUpListening():
       case VoiceBargeIn():
-      case VoiceConversationEnded():
-        voiceLogPipelineEvent(e); // agent, follow-up window, barge-in, exit
+        voiceLogPipelineEvent(e); // barge-in
+      case VoiceAgentEvent():
+        break;
     }
   }
 
@@ -39,6 +49,7 @@ extension _VoiceEventHandler on VoiceController {
     final tap =
         reason == VoiceCancelReason.tap &&
         (during == VoiceState.listening || during == VoiceState.transcribing);
+    _answers.cancelled();
     if (!stop && !tap) return;
     if (stop) _agent.addNotice(cancelledText);
     // Both: the overlay hides the old exchange and closes (setting).

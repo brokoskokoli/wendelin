@@ -7,6 +7,27 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'pcm.dart';
 
+/// Which source the microphone records from.
+enum CaptureProfile {
+  /// Speech recognition (default): `VOICE_RECOGNITION`, no automatic gain
+  /// on most devices. The only profile of every request to Whisper.
+  recognition,
+
+  /// During the speech output (barge-in, K23 c): `VOICE_COMMUNICATION`
+  /// with the acoustic echo canceler, so the own voice is suppressed.
+  speechOutput,
+}
+
+/// A microphone whose source can be chosen before it starts.
+abstract interface class ProfiledAudioInput implements AudioInput {
+  /// Source of the next [start] (a running recording keeps its source).
+  CaptureProfile get profile;
+
+  /// Chooses the source of the next [start]; ignored while [isRunning].
+  /// Returns whether it was applied.
+  bool useProfile(CaptureProfile profile);
+}
+
 /// The part of the `record` plugin that [RecordAudioInput] uses
 /// (replaceable in tests).
 abstract interface class PcmRecorder {
@@ -14,8 +35,11 @@ abstract interface class PcmRecorder {
   /// asks the user.
   Future<bool> hasPermission({bool request = true});
 
-  /// Starts a 16 kHz mono PCM stream (little-endian bytes).
-  Future<Stream<Uint8List>> startStream();
+  /// Starts a 16 kHz mono PCM stream (little-endian bytes) from the source
+  /// of [profile].
+  Future<Stream<Uint8List>> startStream([
+    CaptureProfile profile = CaptureProfile.recognition,
+  ]);
 
   /// Stops the stream.
   Future<void> stop();
@@ -34,14 +58,21 @@ final class RecordPcmRecorder implements PcmRecorder {
       _recorder.hasPermission(request: request);
 
   @override
-  Future<Stream<Uint8List>> startStream() => _recorder.startStream(
-    const RecordConfig(
+  Future<Stream<Uint8List>> startStream([
+    CaptureProfile profile = CaptureProfile.recognition,
+  ]) => _recorder.startStream(
+    RecordConfig(
       encoder: AudioEncoder.pcm16bits,
       sampleRate: AudioInput.sampleRate,
       numChannels: 1,
-      // Speech recognition source: no automatic gain on most devices.
+      // Recognition: no automatic gain on most devices. Speech output:
+      // communication source plus the plugin's AcousticEchoCanceler
+      // (created with the recording, released with it).
+      echoCancel: profile == CaptureProfile.speechOutput,
       androidConfig: AndroidRecordConfig(
-        audioSource: AndroidAudioSource.voiceRecognition,
+        audioSource: profile == CaptureProfile.speechOutput
+            ? AndroidAudioSource.voiceCommunication
+            : AndroidAudioSource.voiceRecognition,
       ),
     ),
   );
@@ -58,7 +89,7 @@ final class RecordPcmRecorder implements PcmRecorder {
 /// an explanation, see `ensureMicrophoneAccess`), so a missing permission
 /// becomes `VoiceException(permissionDenied)`; any other failure is
 /// `VoiceException(unavailable)` on the frame stream.
-final class RecordAudioInput implements AudioInput {
+final class RecordAudioInput implements ProfiledAudioInput {
   /// Creates the input.
   RecordAudioInput([PcmRecorder? recorder])
     : _recorder = recorder ?? RecordPcmRecorder();
@@ -70,8 +101,20 @@ final class RecordAudioInput implements AudioInput {
   StreamSubscription<Uint8List>? _sub;
   Future<void> _stopping = Future.value();
 
+  CaptureProfile _profile = CaptureProfile.recognition;
+
   @override
   bool get isRunning => _out != null;
+
+  @override
+  CaptureProfile get profile => _profile;
+
+  @override
+  bool useProfile(CaptureProfile profile) {
+    if (isRunning) return false;
+    _profile = profile;
+    return true;
+  }
 
   @override
   Stream<Int16List> start() {
@@ -91,7 +134,7 @@ final class RecordAudioInput implements AudioInput {
           'Wendelin darf das Mikrofon nicht benutzen.',
         );
       }
-      final bytes = await _recorder.startStream();
+      final bytes = await _recorder.startStream(_profile);
       if (!identical(_out, out)) {
         // stop() came first.
         await _recorder.stop();
