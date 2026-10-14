@@ -7,4 +7,9 @@
 - **Geräte:** nur ein Emulator `Wendelin_AOSP_35` mit explizitem Serial `emulator-xxxx`, über `tool/android_device.sh`. Vorher `adb devices`. Niemals ein echtes Gerät, niemals `E2E_ALLOW_DEVICE`. Ist der Emulator belegt oder läuft ein fremder, wartest du nicht: Melde den Gerätetest als offen.
 - **Warten:** Lange Läufe (Gate, Build, Emulator, CI) startest du im Hintergrund. Pollen nicht im Sekundentakt.
 - **Konzept:** Abweichungen trägst du nicht selbst ein, sondern meldest sie im Bericht.
+- **Kontextgrenze und Übergabe:** Dein Kontext wächst mit jedem Werkzeugaufruf, und jeder weitere Schritt wird teurer. Nach etwa **100 Werkzeugaufrufen** (oder früher, wenn du merkst, dass du viel gelesen hast) hörst du an der nächsten sauberen Stelle auf und übergibst:
+  1. Schreibe den Stand nach `../james-wt/handoff/<wp>.md` (außerhalb des Repos, nie committen): Ziel, was fertig ist (Datei:Zeile), was halb fertig ist, nächste Schritte in Reihenfolge, offene Fragen, Gate-Stand, laufende Hintergrundprozesse, Erkenntnisse, die man sonst neu erarbeiten müsste (z. B. Fallen, Messwerte, Befehle).
+  2. Lass den Worktree so stehen (uncommittete Änderungen sind erlaubt). Ist das Gate grün und ein Teil in sich fertig, darf er vorher committet werden.
+  3. Beende dich mit dem Bericht `ÜBERGABE: ../james-wt/handoff/<wp>.md` und 3 bis 5 Zeilen Stand. Der Orchestrator startet einen frischen Agenten, der mit der Übergabedatei weitermacht.
+  Als Nachfolger liest du zuerst die Übergabedatei und `git status`/`git diff --stat` im Worktree, nicht den ganzen Verlauf neu.
 - **Bericht:** höchstens 10 bis 15 Zeilen, Belege als Datei:Zeile.
