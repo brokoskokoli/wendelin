@@ -13,9 +13,10 @@ List<Int16List> utterance() =>
 
 /// Plays one scripted answer per run (the last one repeats).
 final class ScriptedAgent implements AgentRun {
-  ScriptedAgent(this.answers);
+  ScriptedAgent(this.answers, {this.step = Duration.zero});
 
   final List<List<AgentEvent>> answers;
+  final Duration step;
   final inputs = <String>[];
 
   @override
@@ -25,7 +26,7 @@ final class ScriptedAgent implements AgentRun {
         : answers.length - 1;
     inputs.add(input.text);
     for (final e in answers[i]) {
-      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(step);
       yield e;
     }
   }
@@ -48,7 +49,10 @@ final class H {
     ),
     bool manualTts = false,
     this.withDetector = true,
-  }) : agent = ScriptedAgent(answers ?? [say('Antwort.')]),
+    Duration agentStep = Duration.zero,
+    Duration detectorStartDelay = Duration.zero,
+  }) : agent = ScriptedAgent(answers ?? [say('Antwort.')], step: agentStep),
+       detector = FakeBargeInDetector(startDelay: detectorStartDelay),
        tts = FakeTextToSpeech(
          utteranceDuration: const Duration(milliseconds: 200),
          manual: manualTts,
@@ -76,7 +80,7 @@ final class H {
   final FakeTextToSpeech tts;
   final FakeSpeechToText stt;
   final FakeAudioInput audio;
-  final detector = FakeBargeInDetector();
+  final FakeBargeInDetector detector;
   late final VoicePipeline pipeline;
   final events = <VoiceEvent>[];
   final states = <VoiceState>[];
@@ -196,6 +200,12 @@ void main() {
       during: (h, async) {},
     );
     table(
+      'TTS-Fehler',
+      ConversationEndReason.error,
+      () => H()..tts.nextError = StateError('tts'),
+      during: (h, async) {},
+    );
+    table(
       'Mikrofonfehler im Fenster',
       ConversationEndReason.error,
       H.new,
@@ -205,6 +215,16 @@ void main() {
         h.audio.fail(StateError('mic'));
       },
     );
+
+    test('nach dem Ende keine ausstehenden Timer', () {
+      fakeAsync((async) {
+        final h = H()..pipeline.start();
+        h.silenceAfterFirst(async);
+        h.until(async, () => h.ends.isNotEmpty);
+        expect(h.ends, [ConversationEndReason.silence]);
+        expect(async.pendingTimers, isEmpty);
+      });
+    });
 
     test('Höchstzahl: 1 Frage + maxFollowUps Folgefragen', () {
       fakeAsync((async) {
@@ -424,6 +444,64 @@ void main() {
         h.tts.completeCurrent();
         async.elapse(const Duration(seconds: 1));
         expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
+
+    test('Tipp im Spalt eines ausstehenden Starts: Detektor aus', () {
+      fakeAsync((async) {
+        final h = H(
+          manualTts: true,
+          detectorStartDelay: const Duration(milliseconds: 500),
+          config: const VoicePipelineConfig(bargeIn: BargeInMode.keywords),
+        )..pipeline.start();
+        h.until(async, () => h.pipeline.state == VoiceState.speaking);
+        expect(h.detector.isRunning, isFalse); // start still pending
+        h.pipeline.cancel();
+        async.elapse(const Duration(seconds: 2));
+        expect(h.pipeline.state, VoiceState.idle);
+        expect(h.detector.isRunning, isFalse);
+      });
+    });
+
+    test('dispose kündigt das Signal-Abonnement', () {
+      fakeAsync((async) {
+        final h = speaking(async);
+        expect(h.detector.hasListeners, isTrue);
+        h.pipeline.dispose();
+        async.flushMicrotasks();
+        expect(h.detector.hasListeners, isFalse);
+      });
+    });
+
+    test('speaking -> thinking -> speaking: Detektor bleibt, Signal wirkt', () {
+      fakeAsync((async) {
+        final h = H(
+          manualTts: true,
+          agentStep: const Duration(seconds: 1),
+          answers: [
+            [
+              const AgentTextDelta('Erster Satz. '),
+              const AgentTextDelta('Zweiter Satz.'),
+              const AgentDone(
+                finalText: 'Erster Satz. Zweiter Satz.',
+                stopReason: StopReason.endTurn,
+              ),
+            ],
+          ],
+          config: const VoicePipelineConfig(bargeIn: BargeInMode.keywords),
+        )..pipeline.start();
+        h.until(async, () => h.pipeline.state == VoiceState.speaking);
+        h.tts.completeCurrent();
+        h.until(async, () => h.pipeline.state == VoiceState.thinking);
+        expect(h.detector.isRunning, isTrue);
+        h.until(async, () => h.pipeline.state == VoiceState.speaking);
+        expect(h.detector.isRunning, isTrue);
+        expect(h.detector.startCount, 1);
+        h.detector.emit(const BargeInSignal.keyword(BargeInKeyword.stop));
+        async.flushMicrotasks();
+        expect(h.events.whereType<VoiceBargeIn>(), hasLength(1));
+        expect(h.pipeline.state, VoiceState.idle);
+        expect(h.detector.isRunning, isFalse);
       });
     });
 

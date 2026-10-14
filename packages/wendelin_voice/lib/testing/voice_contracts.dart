@@ -292,6 +292,15 @@ void bargeInDetectorContract(
       expect(d.isRunning, isFalse);
     });
 
+    test('stop während start aussteht: danach aus', () async {
+      final d = await create();
+      final starting = d.start();
+      await d.stop();
+      await starting;
+      await d.stop();
+      expect(d.isRunning, isFalse);
+    });
+
     test('liefert Signale nur während des Laufs', () async {
       final d = await create();
       final got = <BargeInSignal>[];

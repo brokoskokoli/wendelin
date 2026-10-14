@@ -102,6 +102,7 @@ final class VoicePipeline {
   Future<void> _agentDrained = Future.value();
   Future<void> _session = Future.value();
   Future<void> _listening = Future.value();
+  Future<void> _bargeOps = Future.value();
 
   /// Current state.
   VoiceState get state => _state;
@@ -302,14 +303,32 @@ final class VoicePipeline {
     );
   }
 
+  /// Starts and stops the detector with the state. Operations run one after
+  /// the other: a stop never overtakes a pending start, and a start that
+  /// finishes after the speech has ended is stopped again.
   void _syncBargeDetector(VoiceState s) {
     final d = bargeInDetector;
     if (d == null || config.bargeIn == BargeInMode.off) return;
     if (s == VoiceState.speaking) {
-      d.start().catchError((Object e) => _emit(VoiceError(s, e)));
+      _bargeOps = _bargeOps.then((_) async {
+        try {
+          await d.start();
+        } on Object catch (e) {
+          _emit(VoiceError(VoiceState.speaking, e));
+        }
+        if (_state != VoiceState.speaking && _state != VoiceState.thinking) {
+          await _stopDetector(d);
+        }
+      });
     } else if (s != VoiceState.thinking) {
-      unawaited(d.stop().catchError((Object _) {}));
+      _bargeOps = _bargeOps.then((_) => _stopDetector(d));
     }
+  }
+
+  Future<void> _stopDetector(BargeInDetector d) async {
+    try {
+      await d.stop();
+    } on Object catch (_) {}
   }
 
   /// Whether [text] is a stop command: only stop words and filler words,
