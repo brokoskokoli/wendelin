@@ -58,6 +58,7 @@ void main() {
       'android.permission.WRITE_CALENDAR',
       'com.android.alarm.permission.SET_ALARM',
       'android.permission.RECORD_AUDIO',
+      'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
     });
   });
 
@@ -81,8 +82,20 @@ void main() {
         .map((m) => m[1])
         .toSet();
 
+    // Hersteller-Einstellungsseiten (WP56, BatteryVendors.kt).
+    const vendorPackages = {
+      'com.miui.securitycenter',
+      'com.miui.powerkeeper',
+      'com.samsung.android.lool',
+      'com.oneplus.security',
+      'com.huawei.systemmanager',
+    };
+
     test('jede bekannte App steht in <queries>, nichts darüber hinaus', () {
-      expect(declared, {for (final a in KnownApps.all) a.androidPackage});
+      expect(declared, {
+        for (final a in KnownApps.all) a.androidPackage,
+        ...vendorPackages,
+      });
     });
 
     test('jede App-Anforderung einer Integration ist eine bekannte App', () {

@@ -13,6 +13,9 @@ const assistantChannelName = 'app.wendelin/assistant';
 /// `AuthChannel.kt`: OAuth authorization in the browser.
 const authChannelName = 'app.wendelin/auth';
 
+/// `BatteryChannel.kt`: battery optimization, standby bucket, vendor settings.
+const batteryChannelName = 'app.wendelin/battery';
+
 /// `CalendarChannel.kt`: device calendar.
 const calendarChannelName = 'app.wendelin/calendar';
 

@@ -45,6 +45,17 @@
       },
       "toDart": {}
     },
+    "app.wendelin/battery": {
+      "dart": ["app/lib/platform/battery_platform.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/BatteryChannel.kt"],
+      "toKotlin": {
+        "status": {"args": [], "returns": "map"},
+        "requestIgnoreOptimizations": {"args": [], "returns": "value"},
+        "openBatterySettings": {"args": [], "returns": "value"},
+        "openVendorSettings": {"args": [], "returns": "value"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/calendar": {
       "dart": ["app/lib/platform/device_calendar_port.dart"],
       "kotlin": [

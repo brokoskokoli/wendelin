@@ -6,6 +6,9 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
+import android.view.View
+import android.view.ViewGroup
+import io.flutter.embedding.engine.FlutterEngine
 
 /**
  * The assistant overlay: a transparent window with its own Flutter engine running the Dart
@@ -21,8 +24,11 @@ class AssistantActivity : WendelinActivity() {
         // Arrived before the Flutter engine starts (that may take a while on a cold start).
         VoiceLog.i("overlay-create restored=${savedInstanceState != null}")
         lastArrival = SystemClock.elapsedRealtime()
+        createdAt = lastArrival
         AssistantArrivals.arrived()
         super.onCreate(savedInstanceState)
+        showPlaceholder()
+        frameWatchdog.start()
         // Personal content: no screenshots, not visible in the app switcher.
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -32,6 +38,51 @@ class AssistantActivity : WendelinActivity() {
             window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         }
     }
+
+    // Cold start: the engine needs a moment, show a native placeholder until the first frame.
+    private var placeholder: View? = null
+
+    private fun showPlaceholder() {
+        val view = AssistantSplash.create(this)
+        placeholder = view
+        addContentView(
+            view,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
+    }
+
+    private fun hidePlaceholder() {
+        (placeholder?.parent as? ViewGroup)?.removeView(placeholder)
+        placeholder = null
+    }
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        VoiceLog.i("overlay-engine-ready after=${sinceCreate()}ms")
+        super.configureFlutterEngine(flutterEngine)
+    }
+
+    override fun onFlutterUiDisplayed() {
+        VoiceLog.i("overlay-first-frame after=${sinceCreate()}ms")
+        frameWatchdog.stop()
+        hidePlaceholder()
+        super.onFlutterUiDisplayed()
+    }
+
+    // No first frame within 10 s: close instead of leaving the placeholder up.
+    private val frameWatchdog = FirstFrameWatchdog(
+        schedule = { delayMs, block ->
+            val r = Runnable(block)
+            window.decorView.postDelayed(r, delayMs)
+            AssistantLauncher.Cancelable { window.decorView.removeCallbacks(r) }
+        },
+        finish = { if (!isFinishing) finish() },
+        log = VoiceLog::i,
+    )
+
+    private fun sinceCreate(): Long = SystemClock.elapsedRealtime() - (createdAt ?: 0L)
 
     override fun getDartEntrypointFunctionName(): String = "assistantMain"
 
@@ -61,8 +112,11 @@ class AssistantActivity : WendelinActivity() {
 
     // When the overlay last arrived (create or new intent), elapsed realtime.
     private var lastArrival: Long? = null
+    private var createdAt: Long? = null
 
     override fun onDestroy() {
+        frameWatchdog.stop()
+        hidePlaceholder()
         VoiceLog.i("overlay-destroy finishing=$isFinishing")
         super.onDestroy()
     }

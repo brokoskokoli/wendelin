@@ -8,6 +8,7 @@ import '../../di/preferences.dart';
 import '../../platform/assistant_platform.dart';
 import '../../voice/recognizer_config.dart';
 import '../design/design.dart';
+import 'battery_hints.dart';
 import 'settings_page.dart';
 
 /// Whether Wendelin is the default assistant right now.
@@ -239,6 +240,9 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
           offered: offered,
           elsewhere: elsewhere,
         ),
+        // Only with something to say, so the column adds no empty gap.
+        if (ref.watch(batteryStatusProvider).value?.hasHints ?? false)
+          const BatteryHints(),
         Text(
           'Name und Persönlichkeit gehen als Teil der Anweisungen an das '
           'Modell.',
