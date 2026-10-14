@@ -91,7 +91,13 @@ void main() {
       final c = await app.pump(tester);
       final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
       unawaited(nav.pushNamed(AppRoutes.wakeWord));
-      await pumpUntil(tester, find.text('Stimme einlernen'));
+      await pumpUntil(tester, find.text('Aktivierungswort'));
+      // Seit WP50b steht der Dienst oben, die Schaltfläche liegt weiter unten.
+      await tester.scrollUntilVisible(
+        find.text('Stimme einlernen'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pump(const Duration(seconds: 1));
       audio.inner = WavAudioInput.sequence([
         for (var i = 1; i <= 15; i++)
@@ -163,7 +169,10 @@ void main() {
       print('WP50 meminfo nach den Treffern:\n${await _meminfo(dir)}');
       final m = RegExp(r'wakeWord=(\d+)/(\d+)').firstMatch(text)!;
       expect(m[1], m[2], reason: 'Stufe 1 muss jedes Mal treffen');
-      await service.setEnabled(enabled: false);
+      // WENDELIN_KEEP: Dienst an lassen (Neustart-Prüfung, WP54).
+      if (!const bool.fromEnvironment('WENDELIN_KEEP')) {
+        await service.setEnabled(enabled: false);
+      }
     },
     skip: !voiceE2e,
     timeout: const Timeout(Duration(minutes: 40)),

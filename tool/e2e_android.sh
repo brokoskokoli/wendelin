@@ -47,7 +47,8 @@
 #
 # Wake-Word-Dienst (WP50): integration_test/wake_service_e2e_test.dart nutzt die
 # Aufträge `role` und `wake-loop` (WAKE_RUNS, WAKE_LOG=<datei> für das Log).
-# WENDELIN_KEEP=1 lässt Rolle und App-Daten stehen (Neustart-Test von Hand).
+# WENDELIN_KEEP=1 lässt Rolle, App-Daten und den eingeschalteten Dienst stehen
+# (Neustart-Test, WP54: `adb -s <emulator> reboot`, dann `wake-start source=vis`).
 #
 # Sprach-Robustheit (WP30): WENDELIN_REPEAT=<n> wiederholt die Runden von
 # voice_robustness_e2e_test.dart (je Runde D3 ohne und nach Overlay-Nutzung),
@@ -383,6 +384,8 @@ status=0
 DEFINES=()
 if [ -n "$LIVE" ]; then DEFINES+=(--dart-define=WENDELIN_LIVE=true); fi
 if [ -n "$MODELS" ]; then DEFINES+=(--dart-define=WENDELIN_VOICE_E2E=true); fi
+# WP54: der Wake-Word-Dienst bleibt nach dem Test an (Neustart-Prüfung).
+if [ -n "${WENDELIN_KEEP:-}" ]; then DEFINES+=(--dart-define=WENDELIN_KEEP=true); fi
 # Wiederholungen der Sprach-Robustheit (WP30, voice_robustness_e2e_test.dart).
 if [ -n "${WENDELIN_REPEAT:-}" ]; then
   DEFINES+=(--dart-define=WENDELIN_REPEAT="$WENDELIN_REPEAT")
@@ -404,8 +407,9 @@ for f in "$@"; do
 done
 run_instrumented() { # <test.dart>
   echo "Instrumentiert: $1"
-  (cd android && ./gradlew -q app:assembleDebugAndroidTest >/dev/null)
+  # Zuerst die App bauen: Das legt in frischen Worktrees erst android/gradlew an.
   flutter build apk --debug -t "$1" ${DEFINES[@]+"${DEFINES[@]}"} >/dev/null
+  (cd android && ./gradlew -q app:assembleDebugAndroidTest >/dev/null)
   adb install -r build/app/outputs/flutter-apk/app-debug.apk >/dev/null
   adb install -r build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk >/dev/null
   adb logcat -c
