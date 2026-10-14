@@ -46,14 +46,20 @@ class WendelinVoiceInteractionService : VoiceInteractionService() {
 
     override fun onShutdown() {
         if (current === this) current = null
-        if (powerRegistered) {
-            powerRegistered = false
-            unregisterReceiver(power)
-        }
+        // First what must happen, then the cleanup that may throw: an exception here kills the
+        // process before the recognizer is switched off (seen once in the emulator run).
         // isRoleHeld can still report the old holder here (race): disable without asking.
         RecognizerSwitch.sync(this, RecognizerSwitch.Trigger.SHUTDOWN)
         // The role may be gone: the wake word needs it (decision 5).
         WakeStarter.sync(this, "vis-shutdown")
+        if (powerRegistered) {
+            powerRegistered = false
+            try {
+                unregisterReceiver(power)
+            } catch (e: IllegalArgumentException) {
+                VoiceLog.i("vis-shutdown receiver already gone")
+            }
+        }
         super.onShutdown()
     }
 
