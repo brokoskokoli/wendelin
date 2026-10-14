@@ -18,7 +18,7 @@ Abhängig von: – (sofort). Bezug: Rückmeldung des Maintainers 2026-10-14 (Xia
 - Kaltstart robust: Die Sitzung zeigt sofort ein natives Platzhalter-Fenster („Wendelin startet …“) und startet die Engine danach, statt still zu warten.
 
 **Akku-Prüfung in der App**
-- Status „Akku-Optimierung“: `PowerManager.isIgnoringBatteryOptimizations`. Wenn aktiv: Hinweis unter Einstellungen → Assistent (und im Onboarding-Schritt „Standard-Assistent“) mit Knopf, der `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (Permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; kein Play-Store, K7) bzw. als Rückfall die Systemliste öffnet.
+- Status „Akku-Optimierung“: `PowerManager.isIgnoringBatteryOptimizations`. Wenn aktiv: Hinweis unter Einstellungen → Assistent (ein Onboarding-Schritt „Standard-Assistent“ existiert nicht, der Hinweis steht daher nur unter Einstellungen) mit Knopf, der `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (Permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; kein Play-Store, K7) bzw. als Rückfall die Systemliste öffnet.
 - App-Standby-Bucket anzeigen (`UsageStatsManager.getAppStandbyBucket`), wenn `rare`/`restricted`.
 - Hersteller-Hinweise: Für Xiaomi/HyperOS (und als Tabelle erweiterbar: Samsung, OnePlus, Huawei) kurze Anleitung „Autostart an, Akkusparer: Keine Einschränkungen“ mit Deep-Link, falls die Einstellungsseite per Intent erreichbar ist (vorher per `resolveActivity` prüfen, sonst nur Text). Diese Werte lassen sich nicht zuverlässig auslesen – der Hinweis ist eine Checkliste, kein Status.
 - Gemeinsame Bausteine so bauen, dass WP50 (Wake-Word-Dienst) sie wiederverwendet.

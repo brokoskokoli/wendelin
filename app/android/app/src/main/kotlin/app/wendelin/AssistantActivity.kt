@@ -28,6 +28,7 @@ class AssistantActivity : WendelinActivity() {
         AssistantArrivals.arrived()
         super.onCreate(savedInstanceState)
         showPlaceholder()
+        frameWatchdog.start()
         // Personal content: no screenshots, not visible in the app switcher.
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -65,9 +66,21 @@ class AssistantActivity : WendelinActivity() {
 
     override fun onFlutterUiDisplayed() {
         VoiceLog.i("overlay-first-frame after=${sinceCreate()}ms")
+        frameWatchdog.stop()
         hidePlaceholder()
         super.onFlutterUiDisplayed()
     }
+
+    // No first frame within 10 s: close instead of leaving the placeholder up.
+    private val frameWatchdog = FirstFrameWatchdog(
+        schedule = { delayMs, block ->
+            val r = Runnable(block)
+            window.decorView.postDelayed(r, delayMs)
+            AssistantLauncher.Cancelable { window.decorView.removeCallbacks(r) }
+        },
+        finish = { if (!isFinishing) finish() },
+        log = VoiceLog::i,
+    )
 
     private fun sinceCreate(): Long = SystemClock.elapsedRealtime() - (createdAt ?: 0L)
 
@@ -102,6 +115,7 @@ class AssistantActivity : WendelinActivity() {
     private var createdAt: Long? = null
 
     override fun onDestroy() {
+        frameWatchdog.stop()
         hidePlaceholder()
         VoiceLog.i("overlay-destroy finishing=$isFinishing")
         super.onDestroy()
