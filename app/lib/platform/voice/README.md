@@ -18,6 +18,7 @@ und `lib/ui/onboarding/voice_download_step.dart`.
 | `isolate_exit.dart` | Isolate beenden | auf `onExit` warten, `kill` nur nach 5 s |
 | `disk_space.dart` | freier Speicher | libc `statvfs` per FFI (64-bit Android, macOS); sonst unbekannt |
 | `pcm.dart`, `wer.dart` | Hilfen | PCM/WAV, Wortfehlerrate für `tool/stt_wer.dart` |
+| `ort_session.dart`, `onnx_wake_models.dart`, `wake_feature_chain.dart` | `WakeFeatureExtractor` (WP60, K29) | openWakeWord-Kette (Mel + Embedding, Katalog `wake-features`) direkt über die C-API von `libonnxruntime.so` (liegt durch sherpa-onnx im APK, keine zweite native Bibliothek); Chunks à 1 280 Samples, 16 Embeddings je Fenster |
 | `wav_audio_input.dart` | `AudioInput` aus einer WAV (nur Gerätetests, WP19) | spielt die Aufnahme in Echtzeit, danach Stille; das Overlay bekommt ihn in Debug-Builds über `lib/debug/device_test_overrides.dart` |
 
 **Berechtigungen:** `RECORD_AUDIO`, erst beim ersten Sprechen (sobald die

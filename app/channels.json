@@ -179,7 +179,8 @@
       "dart": ["app/lib/platform/screen_protection.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/WindowChannel.kt"],
       "toKotlin": {
-        "setSecure": {"args": ["secure"], "returns": "none"}
+        "setSecure": {"args": ["secure"], "returns": "none"},
+        "setKeepScreenOn": {"args": ["on"], "returns": "none"}
       },
       "toDart": {}
     }

@@ -58,13 +58,16 @@ const wakePositiveQuantile = 0.1;
 /// measure the rate on) or with fewer than [wakeMinTemplates] positives the
 /// result has `meetsTarget == false`. If the negatives do not constrain the
 /// threshold, the [wakePositiveQuantile] quantile of the positives is used
-/// instead of their minimum (outlier-robust). A pure function.
+/// instead of their minimum (outlier-robust). [requireNegatives] `false`:
+/// empty [negativeEvents] mean a measured quiet background, not a missing
+/// one. A pure function.
 WakeCalibration calibrateThreshold({
   required List<double> positiveScores,
   required List<double> negativeEvents,
   required double negativeHours,
   double targetPerHour = 1,
   double minThreshold = wakeMinThreshold,
+  bool requireNegatives = true,
 }) {
   if (negativeHours <= 0) throw ArgumentError.value(negativeHours, 'hours');
   final neg = [...negativeEvents]..sort();
@@ -93,7 +96,7 @@ WakeCalibration calibrateThreshold({
     falseAlarmsPerHour: fa,
     meetsTarget:
         pos.length >= wakeMinTemplates &&
-        neg.isNotEmpty &&
+        (neg.isNotEmpty || !requireNegatives) &&
         fa <= targetPerHour &&
         recall > 0,
   );

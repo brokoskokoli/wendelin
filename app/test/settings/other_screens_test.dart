@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,9 +18,11 @@ import 'package:wendelin/ui/settings/privacy_screen.dart';
 import 'package:wendelin/ui/settings/providers_screen.dart';
 import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
+import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
+import 'package:wendelin_voice/wendelin_voice.dart' show WakeTemplates;
 
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
@@ -275,11 +279,23 @@ void main() {
     testWidgets('alles löschen nur nach Bestätigung', (tester) async {
       final env = await withAudit();
       await env.storage.attestations.add(_attestation(DateTime.now()));
+      // WP60: eingelernte Stimmen gehören zu „Alles löschen“.
+      final wake = SecretWakeTemplateStore(env.secrets);
+      await wake.save(
+        WakeTemplates(
+          speakerId: 'a',
+          featureVersion: 'v1',
+          threshold: 0.9,
+          embeddings: [Float32List(4)],
+        ),
+      );
+      await wake.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
       await pumpPage(tester, env, const PrivacyScreen());
       await tester.tap(find.text('Verläufe und Protokoll löschen'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Abbrechen'));
       await settle(tester);
+      expect(await wake.load('a'), isNotNull);
       expect(await env.storage.audit.query(), hasLength(2));
       expect(await env.storage.attestations.latest(), hasLength(1));
 
@@ -290,6 +306,9 @@ void main() {
       expect(await env.storage.audit.query(), isEmpty);
       expect(await env.storage.attestations.latest(), isEmpty);
       expect(await env.storage.conversations.sessions(), isEmpty);
+      expect(await wake.load('a'), isNull);
+      expect(await wake.speakers(), isEmpty);
+      expect(await env.secrets.listKeys(), isNot(contains('wake.speakers')));
     });
 
     test('purgeExpired löscht nur Älteres', () async {

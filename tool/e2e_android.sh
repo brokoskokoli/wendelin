@@ -136,6 +136,16 @@ prepare_voice() {
   for f in "$ROOT"/app/test/fixtures/stt/*.wav; do
     copy_in "$f" "e2e/stt/$(basename "$f")"
   done
+  if [ -d "$MODELS/wake-features" ] && [ -d "$MODELS/wake-e2e" ]; then
+    # Aktivierungswort (WP60): openWakeWord-Modelle und WAVs zum Einlernen.
+    in_app mkdir -p files/models/wake-features files/e2e/wake
+    for f in "$MODELS"/wake-features/*; do
+      copy_in "$f" "models/wake-features/$(basename "$f")"
+    done
+    for f in "$MODELS"/wake-e2e/*.wav; do
+      copy_in "$f" "e2e/wake/$(basename "$f")"
+    done
+  fi
   in_app touch files/e2e/ready
   echo "Modelle und WAVs bereit"
 }

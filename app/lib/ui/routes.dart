@@ -68,6 +68,9 @@ abstract final class AppRoutes {
   /// Voice: Whisper model, language, speech output.
   static const voice = '/settings/voice';
 
+  /// Wake word: learn the voice, calibrate, try (WP60).
+  static const wakeWord = '/settings/voice/wake';
+
   /// Obsidian vault, daily notes, search index.
   static const obsidian = '/settings/obsidian';
 
