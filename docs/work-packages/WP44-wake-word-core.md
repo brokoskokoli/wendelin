@@ -21,3 +21,12 @@ Abhängig von: WP42 (Modell, Varianten, Schwellen). Port und Puffer können vorh
 
 ## Nachtrag (2026-10-14)
 - Nach WP42 ist Plan B ausgelöst: Das Modell kommt aus **WP58** (openWakeWord, eigenes Modell). WP44 startet erst nach WP58 bzw. baut die Engine-Schnittstelle so, dass das Modell austauschbar ist (Fake-Detektor in Tests).
+
+## Nachtrag 2 – persönliches Einlernen und Nachprüfung (Entscheidung Maintainer 2026-10-14, K29)
+Aktivierungswort bleibt „Wendelin“. Erkennung zweistufig plus persönliche Vorlagen:
+- **Stufe 1 – Kandidat:** openWakeWord-Feature-Kette (Mel + Embedding, Apache-2.0, aus WP58) liefert je Fenster ein Embedding; ein Kandidat entsteht, wenn (a) das WP58-Modell über einer **niedrigen** Schwelle liegt **oder** (b) die Kosinus-Ähnlichkeit zu einer der persönlichen Vorlagen über der kalibrierten Schwelle liegt.
+- **Persönliche Vorlagen:** Port `WakeTemplateStore` (je Sprecher eine Menge Embeddings + kalibrierte Schwelle, Versionsnummer der Feature-Modelle); nur Embeddings, nie Rohaudio. Ähnlichkeitsmaß und Entscheidungsregel als reine Funktionen mit Tabellentests.
+- **Stufe 2 – Nachprüfung:** Kandidat → Whisper (bereits geladenes bzw. bei Bedarf base) transkribiert Pre-Roll + Fenster (max. ~2 s); nur wenn der Text unscharf „Wendelin“ (Varianten, Faltung aus `fold.dart`) enthält, wird ausgelöst. Port, damit Tests ohne Whisper laufen. Kennzahl im Diagnose-Log: Kandidaten/h, bestätigt/h (ohne Inhalte).
+- **Kalibrierfunktion** (für WP60): nimmt Positiv-Embeddings und Negativ-Embeddings (Hintergrund) und berechnet die Schwelle für eine Ziel-Falschauslösungsrate (z. B. ≤ 1/h vor Stufe 2) – reine Funktion, getestet.
+- Ausführung der ONNX-Feature-Modelle über das vorhandene onnxruntime (sherpa-onnx) in der schlanken Engine (WP42-Empfehlung); Modelldateien per Katalog-Download (Lizenz/Attribution).
+- Messung: `tool/kws_measure.py` um die zweistufige Entscheidung erweitern (synthetische Sprecher als „Einlerner“: je Stimme 15 Vorlagen, Rest als Test) und Ergebnis in der Notiz.

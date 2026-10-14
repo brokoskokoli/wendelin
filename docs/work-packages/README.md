@@ -33,6 +33,7 @@ Jedes Paket: eigener Branch `wp/<nr>-<slug>` in eigenem Worktree, Umsetzung durc
 | Spike lokales Sprachmodell (Wunsch 2026-10-14) | WP57 | `WP57-spike-local-llm.md` (abgeschlossen; Entscheidung: nicht weiter verfolgt) |
 | Eigenes Wake-Word-Modell (Plan B aus WP42) | WP58 | `WP58-wake-word-model.md` (vor WP44) |
 | Kein automatischer Anbieterwechsel (Entscheidung 2026-10-14) | WP59 | `WP59-no-auto-escalation.md` (nach WP52) |
+| Wake Word: Einlernen deiner Stimme (Entscheidung 2026-10-14, K29) | WP44 (Nachtrag 2), WP60 | `WP44-wake-word-core.md`, `WP60-wake-word-enrollment.md` |
 | Refactoring für KI-Wartbarkeit (Gutachten 2026-10-13) | WP35–WP40 (R1–R6) | `R-refactoring.md` (verhaltensneutral; R1 WP35 Agenten-Tooling/Karte sofort; danach R2 WP36 gemeinsame Bausteine (Teile nach WP27/WP33) und R3 WP37 Agent-Runner parallel; R4 WP38 Verdrahtung nach WP27, WP30, WP32, WP31; R5 WP39 App-Logik in Pakete nach WP38; R6 WP40 Plattformkanäle/Screens nach WP27, WP30, WP32) |
 | M4 Wake Word und TEE | WP42–WP54 | `M4.md` (Welle 0 Spikes parallel: WP42 Wake Word/Audio, WP43 Attestierung/Rust-Build; Welle A parallel: WP44 Wake-Word-Kern, WP45 Gesprächsmodus/Barge-in, WP46 Attestierungs-Kern (a/b), WP47 Rust-Prüfmodul, WP48 Taschenlampe, WP49 Prüfprotokoll-Speicher; Welle B App nach WP38/WP40: WP50 Wake-Word-Dienst (a/b), WP51 Gesprächsmodus/Barge-in App, WP52 TEE in der App, WP53 Taschenlampe bei Sperre; Welle C: WP54 E2E) |
 
