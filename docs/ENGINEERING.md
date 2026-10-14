@@ -16,7 +16,7 @@ packages/
   wendelin_integrations/     # reines Dart: eingebaute Integrationen über Ports (Kalender, Zwischenablage, Wecker, Gedächtnis, Web-Abruf und -Suche, Listen, Obsidian, Bring!, HTTP-Tools, App-Erkennung)
   wendelin_voice/            # reines Dart: Sprach-Pipeline, Endpointing, Sprechtext, TTS-Auswahl, Modellkatalog/Download
   wendelin_mcp/              # reines Dart: MCP-Client (Streamable HTTP, Legacy-SSE, OAuth 2.1), Abbildung auf das Tool-System
-native/attest/               # Rust-Prüfmodul für TEE-Attestierungen (WP47, ADR 0015): Quote/ACI/Quittung, Ed25519, SHA-2, SPKI; kein Netz im Crate
+native/attest/               # Rust-Prüfmodul für TEE-Attestierungen (WP47, ADR 0017): Quote/ACI/Quittung, Ed25519, SHA-2, SPKI; kein Netz im Crate
 app/                         # Flutter-App: UI, Riverpod-Verdrahtung, Plattform-Implementierungen der Ports
 evals/                       # Modell-Evals (Dart-CLI)
 tool/                        # Gate und Prüfskripte (Abhängigkeiten, Secrets, Größen, Doku-Pfade), Gerätetests

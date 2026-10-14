@@ -52,7 +52,7 @@ Ports liegen in dem Paket, das sie braucht; die Flutter-Implementierung liegt in
 | `AudioInput`, `VoiceActivityDetector`, `SpeechToText`, `TextToSpeech`, `TriggerSource`, `BargeInDetector` (WP45, App-Adapter mit WP51/WP58) | `packages/wendelin_voice/lib/src/io/` | `app/lib/platform/voice/` (`record_audio_input.dart`, `silero_vad.dart`, `whisper_stt.dart`, `system_tts.dart`, `sherpa_tts.dart`), `app/lib/platform/assistant_platform.dart` |
 | `ModelStore` | `packages/wendelin_voice/lib/src/models/model_store.dart` | `app/lib/platform/voice/file_model_store.dart` |
 | `SecretStore` | `packages/wendelin_storage/lib/src/secret_store.dart` | `app/lib/platform/secure_secret_store.dart` |
-| `AttestationCrypto` (WP46/WP47) | `packages/wendelin_providers/lib/src/tee/attestation_crypto.dart` | `RustAttestationCrypto` in `app/lib/platform/attest/rust_attestation_crypto.dart` über das Rust-Crate `native/attest` (`flutter_rust_bridge`, ADR 0015); Kollateral von Intel PCS (`pcs_collateral_client.dart`) mit Dateicache bis `nextUpdate` (`collateral_cache.dart`); Provider `attestationCryptoProvider` in `app/lib/di/attestation_providers.dart` |
+| `AttestationCrypto` (WP46/WP47) | `packages/wendelin_providers/lib/src/tee/attestation_crypto.dart` | `RustAttestationCrypto` in `app/lib/platform/attest/rust_attestation_crypto.dart` über das Rust-Crate `native/attest` (`flutter_rust_bridge`, ADR 0017); Kollateral von Intel PCS (`pcs_collateral_client.dart`) mit Dateicache bis `nextUpdate` (`collateral_cache.dart`); Provider `attestationCryptoProvider` in `app/lib/di/attestation_providers.dart` |
 
 ## App-Verdrahtung
 

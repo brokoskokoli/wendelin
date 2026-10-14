@@ -1,4 +1,4 @@
-# ADR 0015 – Rust-Prüfmodul für die TEE-Attestierung (`native/attest`)
+# ADR 0017 – Rust-Prüfmodul für die TEE-Attestierung (`native/attest`)
 
 Status: vorgeschlagen · 2026-10-14
 
@@ -13,6 +13,10 @@ Weg A: Crate `native/attest` (Rust, `dcap-qvl` mit `rustcrypto`-Backend, `ed2551
 - **Erzeugter Code eingecheckt**, das Gate prüft, dass er aktuell ist. Rust-Schritte im Gate; ohne Toolchain lokal übersprungen, in CI Pflicht.
 - **Gradle** baut die `.so` mit `cargo-ndk` für die ABIs des Flutter-Builds.
 - Weg B (AAR) bleibt als Rückfall möglich, weil der Port `AttestationCrypto` implementierungsunabhängig ist.
+
+## Nicht ausgewertete Quote-Bytes (Befund Emulator-Lauf)
+
+Ein Vertragstest kippte `quote[len-40]` und erwartete Ablehnung; der Prüfer akzeptierte. Ursache: In der Fixture (5006 Byte) liegen die Signaturdaten bei 636..4936, dahinter stehen 70 Nullbyte Auffüllung (4936..5005, also auch `len-40`). Ein Byte-für-Byte-Scan (jedes Byte einzeln gekippt) ergab als akzeptierte Bereiche nur: die Auffüllung, die Längen-/Typfelder 632 und 764..765 sowie 1252..1253, und die eingebettete PEM-Kette (1258..4936). Header, TD-Report-Body (inkl. `report_data`, RTMRs), ECDSA-Signatur, Attestation Key, QE-Report, QE-Report-Signatur und QE-Auth-Daten werden alle geprüft (jedes der 632 signierten Byte einzeln, Test `flipping_any_authenticated_quote_area_is_rejected`). Die eingebettete Kette ist kein Fehler: `dcap-qvl` nimmt die PCK-Kette aus dem Kollateral, sobald dort vorhanden, und prüft sie gegen den fest eingebauten Intel-Anker. Die Kette im Quote ist byte-identisch zur Kollateral-Kette (Test `embedded_chain_equals_collateral_chain_so_it_is_redundant`); fehlt sie im Kollateral, wird die eingebettete geprüft (Leaf und Zwischenzertifikat; die mitgelieferte Wurzel ist nie Vertrauensanker). Der Vertragstest kippt deshalb jetzt Offset 568 (erstes Byte von `report_data`) im signierten Bereich.
 
 ## Folgen
 Das Repo braucht eine Rust-Toolchain für APK-Builds (Hinweise in `docs/ENGINEERING.md`). Der APK wächst um die `.so` (Messwerte im WP47-Bericht).

@@ -516,3 +516,181 @@ fn aci_verified_receipt_binds_sent_and_received_bytes() {
         hash(av("response_body.json").replace("ok", "OK"))
     );
 }
+
+// --- Byte-Kipptests je Bereich des TDX-Quotes (v4, 5006 Byte in der Fixture) ---
+// Layout: Header 0..48, TD-Report-Body 48..632 (report_data ab 48+520), sig_data_len 632..636,
+// ECDSA-Signatur 636..700, Attestation Key 700..764, Zertifizierungsdaten-Typ/-Größe 764..770,
+// QE-Report 770..1154, QE-Report-Signatur 1154..1218, QE-Auth-Daten 1218..1252 (Länge + 32 Byte),
+// innerer Typ/Größe 1252..1258, PEM-Kette 1258..4936, danach 70 Nullbyte (Auffüllung, ungeprüft).
+const Q_BODY: usize = 48;
+const Q_SIG: usize = 636;
+const Q_AK: usize = 700;
+const Q_QE_REPORT: usize = 770;
+const Q_QE_SIG: usize = 1154;
+const Q_QE_AUTH: usize = 1220;
+const Q_PEM: usize = 1258;
+const Q_PEM_END: usize = 4936;
+
+fn quote_ok_with(mutate: impl Fn(&mut Vec<u8>), col: &str) -> bool {
+    let mut b = quote_bytes();
+    mutate(&mut b);
+    wendelin_attest::quote::verify_quote(&b, col, NOW).ok
+}
+
+#[test]
+fn quote_layout_assumptions_hold() {
+    let q = quote_bytes();
+    assert_eq!(q.len(), 5006);
+    assert_eq!(u16::from_le_bytes([q[0], q[1]]), 4, "Version");
+    let sig_len = u32::from_le_bytes(q[632..636].try_into().unwrap()) as usize;
+    assert_eq!(636 + sig_len, Q_PEM_END);
+    assert!(q[Q_PEM..].starts_with(b"-----BEGIN CERTIFICATE-----"));
+    assert!(
+        q[Q_PEM_END..].iter().all(|b| *b == 0),
+        "Auffüllung nach den Signaturdaten"
+    );
+}
+
+#[test]
+fn unflipped_quote_is_accepted_baseline() {
+    assert!(quote_ok_with(|_| {}, &fx("collateral_pcs.json")));
+}
+
+#[test]
+fn flipping_any_authenticated_quote_area_is_rejected() {
+    let col = fx("collateral_pcs.json");
+    let areas: [(&str, usize); 14] = [
+        ("Header: Version", 0),
+        ("Header: TEE-Typ", 4),
+        ("Header: QE-Vendor-ID", 12),
+        ("Body: TEE-TCB-SVN", Q_BODY),
+        ("Body: MRSEAM", Q_BODY + 16),
+        ("Body: MRTD", Q_BODY + 136),
+        ("Body: RTMR0", Q_BODY + 328),
+        ("Body: RTMR3", Q_BODY + 472),
+        ("Body: report_data (erstes Byte)", Q_BODY + 520),
+        ("Body: report_data (letztes Byte)", Q_BODY + 583),
+        ("ECDSA-Signatur", Q_SIG + 5),
+        ("Attestation Key", Q_AK + 5),
+        ("QE-Report", Q_QE_REPORT + 10),
+        ("QE-Report-Signatur", Q_QE_SIG + 5),
+    ];
+    for (name, at) in areas {
+        assert!(
+            !quote_ok_with(|b| b[at] ^= 1, &col),
+            "{name} (Offset {at}) wurde akzeptiert"
+        );
+    }
+    // QE-Auth-Daten sind im QE-Report (report_data) gebunden.
+    assert!(
+        !quote_ok_with(|b| b[Q_QE_AUTH + 5] ^= 1, &col),
+        "QE-Auth-Daten"
+    );
+    // Jedes Byte der signierten Bereiche (Header, Body) einzeln.
+    for at in 0..632 {
+        assert!(
+            !quote_ok_with(|b| b[at] ^= 1, &col),
+            "Offset {at} wurde akzeptiert"
+        );
+    }
+}
+
+#[test]
+fn truncated_quote_is_rejected() {
+    let col = fx("collateral_pcs.json");
+    // Die letzten 70 Byte sind Auffüllung; ab 71 fehlt Signaturmaterial.
+    for cut in [71usize, 100, 4000, 4936 - 1] {
+        assert!(
+            !quote_ok_with(|b| b.truncate(b.len() - cut.min(b.len())), &col),
+            "gekürzt um {cut}"
+        );
+    }
+}
+
+fn collateral_without_chain() -> String {
+    let mut c: Value = serde_json::from_str(&fx("collateral_pcs.json")).unwrap();
+    c.as_object_mut().unwrap().remove("pck_certificate_chain");
+    c.to_string()
+}
+
+#[test]
+fn embedded_chain_equals_collateral_chain_so_it_is_redundant() {
+    let q = quote_bytes();
+    let c: Value = serde_json::from_str(&fx("collateral_pcs.json")).unwrap();
+    let from_collateral = pem::parse_many(c["pck_certificate_chain"].as_str().unwrap()).unwrap();
+    let from_quote = pem::parse_many(&q[Q_PEM..Q_PEM_END]).unwrap();
+    assert_eq!(from_quote.len(), 3);
+    assert_eq!(
+        from_collateral, from_quote,
+        "dekodierte Zertifikate identisch"
+    );
+}
+
+/// dcap-qvl nimmt die PCK-Kette aus dem Kollateral, sofern vorhanden; die im Quote eingebettete
+/// Kette bleibt dann ungenutzt. Ohne Kette im Kollateral wird sie aber geprüft (Wurzel Intel, CRL).
+#[test]
+fn embedded_chain_is_verified_when_collateral_has_none() {
+    let col = collateral_without_chain();
+    assert!(
+        quote_ok_with(|_| {}, &col),
+        "Basis ohne Kette im Kollateral"
+    );
+    // Leaf: 0..1747, Zwischenzertifikat: 1773..2703, Wurzel: ab 2729 (siehe unten).
+    for at in [Q_PEM + 100, Q_PEM + 1500, Q_PEM + 2000, Q_PEM + 2500] {
+        assert!(
+            !quote_ok_with(|b| b[at] ^= 1, &col),
+            "Kette Offset {at} wurde akzeptiert"
+        );
+    }
+}
+
+#[test]
+fn tampered_collateral_chain_is_rejected() {
+    let mut c: Value = serde_json::from_str(&fx("collateral_pcs.json")).unwrap();
+    let mut chain = c["pck_certificate_chain"]
+        .as_str()
+        .unwrap()
+        .to_string()
+        .into_bytes();
+    for at in [100usize, 1500, 2000, 2500] {
+        let keep = chain[at];
+        chain[at] ^= 1;
+        c["pck_certificate_chain"] = Value::String(String::from_utf8(chain.clone()).unwrap());
+        assert!(
+            !quote_ok_with(|_| {}, &c.to_string()),
+            "Kollateral-Kette Offset {at}"
+        );
+        chain[at] = keep;
+    }
+}
+
+/// Die Wurzel in der Kette ist nur Beiwerk: Vertraut wird allein dem eingebauten Intel-Anker.
+#[test]
+fn root_certificate_inside_chain_is_not_trusted_material() {
+    let col = collateral_without_chain();
+    assert!(quote_ok_with(|b| b[Q_PEM + 3000] ^= 1, &col));
+}
+
+/// Bereiche, die der Prüfer nachweislich nicht auswertet und die keine Aussage tragen:
+/// Auffüllung hinter den Signaturdaten, Typ-/Größenfelder der Zertifizierungsdaten (die Kette
+/// kommt aus dem Kollateral) und die eingebettete PEM-Kette (identisch zum Kollateral).
+#[test]
+fn documented_unauthenticated_quote_bytes_do_not_change_the_verdict() {
+    let col = fx("collateral_pcs.json");
+    let reference = wendelin_attest::quote::verify_quote(&quote_bytes(), &col, NOW);
+    for at in [Q_PEM_END, 4966, 5005, Q_PEM + 100, Q_PEM + 1500] {
+        let mut b = quote_bytes();
+        b[at] ^= 1;
+        let v = wendelin_attest::quote::verify_quote(&b, &col, NOW);
+        assert!(v.ok, "Offset {at}");
+        assert_eq!(
+            (&v.report_data, &v.rt_mr3, &v.mr_td, &v.tcb_status),
+            (
+                &reference.report_data,
+                &reference.rt_mr3,
+                &reference.mr_td,
+                &reference.tcb_status
+            ),
+        );
+    }
+}

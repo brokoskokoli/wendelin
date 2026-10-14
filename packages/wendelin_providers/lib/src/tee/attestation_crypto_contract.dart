@@ -132,7 +132,10 @@ void _quoteTests(
     test('verifyQuote: manipuliertes Quote wird abgelehnt', () async {
       final c = await create();
       final bad = Uint8List.fromList(quoteCase.quote);
-      bad[bad.length - 40] ^= 1; // inside the signature data
+      // Offset 568 = 48 (Header) + 520: erstes Byte von report_data im signierten
+      // TD-Report-Body. (Die letzten 70 Byte des Fixture-Quotes sind Nullbyte-Auffüllung
+      // hinter den Signaturdaten und werden nicht ausgewertet, siehe ADR 0017.)
+      bad[48 + 520] ^= 1;
       await expectLater(
         c.verifyQuote(bad, quoteCase.collateral, quoteCase.now),
         throwsA(isA<QuoteVerificationException>()),
