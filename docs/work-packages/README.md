@@ -30,7 +30,7 @@ Jedes Paket: eigener Branch `wp/<nr>-<slug>` in eigenem Worktree, Umsetzung durc
 | Vorlesefreundliche Antworten (Wunsch 2026-10-13, K19) | WP41 | `WP41-speech-friendly-answers.md` (nach WP31) |
 | Sprechfassung: Schutzstufen und KI-Prüfung (Wunsch 2026-10-14) | WP55 | `WP55-spoken-version-check.md` (nach WP41) |
 | Power-Taste nach längerer Pause, Akku-Hinweise (Rückmeldung 2026-10-14) | WP56 | `WP56-assistant-after-idle.md` (sofort) |
-| Spike lokales Sprachmodell (Wunsch 2026-10-14) | WP57 | `WP57-spike-local-llm.md` (sofort, kein App-Code) |
+| Spike lokales Sprachmodell (Wunsch 2026-10-14) | WP57 | `WP57-spike-local-llm.md` (abgeschlossen; Entscheidung: nicht weiter verfolgt) |
 | Refactoring für KI-Wartbarkeit (Gutachten 2026-10-13) | WP35–WP40 (R1–R6) | `R-refactoring.md` (verhaltensneutral; R1 WP35 Agenten-Tooling/Karte sofort; danach R2 WP36 gemeinsame Bausteine (Teile nach WP27/WP33) und R3 WP37 Agent-Runner parallel; R4 WP38 Verdrahtung nach WP27, WP30, WP32, WP31; R5 WP39 App-Logik in Pakete nach WP38; R6 WP40 Plattformkanäle/Screens nach WP27, WP30, WP32) |
 | M4 Wake Word und TEE | WP42–WP54 | `M4.md` (Welle 0 Spikes parallel: WP42 Wake Word/Audio, WP43 Attestierung/Rust-Build; Welle A parallel: WP44 Wake-Word-Kern, WP45 Gesprächsmodus/Barge-in, WP46 Attestierungs-Kern (a/b), WP47 Rust-Prüfmodul, WP48 Taschenlampe, WP49 Prüfprotokoll-Speicher; Welle B App nach WP38/WP40: WP50 Wake-Word-Dienst (a/b), WP51 Gesprächsmodus/Barge-in App, WP52 TEE in der App, WP53 Taschenlampe bei Sperre; Welle C: WP54 E2E) |
 

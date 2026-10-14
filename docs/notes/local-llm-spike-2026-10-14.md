@@ -46,3 +46,6 @@ Ohne die 3 Web-Fälle (37 Fälle): Qwen voll 24/37, reduziert 26/37 (p50 1,5 s s
 2. Agent: Schutz gegen "Aktion behauptet ohne Tool-Aufruf" bei schwachen Modellen (Aktionsverb + keine Tool-Calls = Eskalation).
 3. K14 c: RAM-Budget "lokales LLM entlädt Whisper und umgekehrt" (gemeinsam ≤ 3 GB, nicht gleichzeitig).
 4. Eval-Set um echte Mehrschritt- und Rückfrage-Fälle erweitern (aktuell nur Einzelaufrufe) und Wiederholungsläufe (Streuung).
+
+## Entscheidung des Maintainers (2026-10-14)
+Lokale Sprachmodelle werden nicht weiter verfolgt (Trefferquote und Latenz reichen nicht). Die Konzeptvorschläge oben entfallen; Eval-Profil und Skripte bleiben als Messwerkzeug erhalten.
