@@ -10,11 +10,19 @@ Aufruf (Python-venv ausserhalb des Repos, siehe tool/kws_measure.md):
 Ausgabe: Markdown-Tabellen (Variante x Schwelle x Bedingung -> Trefferquote,
 Falschausloesungen/h, Latenz, Echtzeitfaktor). Aufnahmen bleiben lokal.
 Mono-WAVs mit 16 kHz; andere Raten werden einfach resampled.
+
+Zweistufige Entscheidung (WP44 Nachtrag 2, K29), Python-venv mit openwakeword,
+onnxruntime und sherpa-onnx (~/wendelin-models/kws/wp58/venv):
+  python -I tool/kws_measure.py --two-stage --enroll <wav-ordner Stimme_NN.wav> \
+      --pos <wav-ordner> --neg <wav-ordner> --oww <ordner mit melspectrogram/embedding_model.onnx> \
+      --whisper <sherpa-whisper-ordner> [--model wendelin.onnx] [--neg-max-h 1.0] [--cond clean,both]
+Je Stimme sind die ersten 15 Einlern-Aufnahmen die Vorlagen, die Positiv-Clips derselben Stimme der Test.
+Stufe 1 = Modell ueber niedriger Schwelle ODER Kosinus-Aehnlichkeit zu einer Vorlage; Stufe 2 =
+Whisper-Transkript von 2 s vor bis --tail (0,9 s) nach dem Treffer enthaelt unscharf "Wendelin" (Spiegel von matchesWakeWord in Dart).
 """
-import argparse, glob, os, time
+import argparse, glob, os, sys, time
 import numpy as np
 import soundfile as sf
-import sherpa_onnx
 
 SR = 16000
 
@@ -68,6 +76,7 @@ def condition(x, name, rng):
 
 
 def make_spotter(model_dir, chunk, bpe, threads):
+    import sherpa_onnx
     def pick(kind):
         pat = f"{kind}-*chunk-{chunk}-left-64.int8.onnx"
         r = glob.glob(os.path.join(model_dir, pat))
@@ -105,6 +114,9 @@ def run(spotter, x, kwline, tail=0.6, step=0.1):
 
 
 def main():
+    if "--two-stage" in sys.argv:
+        sys.argv.remove("--two-stage")
+        return two_stage_main()
     a = argparse.ArgumentParser()
     a.add_argument("--model-dir", required=True)
     a.add_argument("--pos", required=True)
@@ -164,6 +176,206 @@ def main():
                     print(f"| {cond} | {kw} | {b} | {th} | {ok}/{len(px)} = {100*ok/max(1,len(px)):.0f} % "
                           f"| {fa/nh if nh else 0:.1f} ({fa}) | {l} | {cpu/dur:.3f} |", flush=True)
     print(f"\nNegativ-Audio je Bedingung: {nh:.2f} h")
+
+
+# ---------- zweistufige Entscheidung (WP44 Nachtrag 2) ----------
+SPELL = ["wendelin", "wendeline", "wendelien", "wendlin", "vendelin", "wendeling", "wendelyn", "wendellin",
+         "wendelmann", "wendemann", "wendelen", "wendelan"]
+
+
+def fold(t):
+    import unicodedata
+    t = t.lower().replace("ß", "ss")
+    t = "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn")
+    return " ".join("".join(c if c.isalnum() else " " for c in t).split())
+
+
+def dist(a, b):
+    prev = list(range(len(b) + 1))
+    for i in range(1, len(a) + 1):
+        cur = [i] + [0] * len(b)
+        for j in range(1, len(b) + 1):
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] != b[j - 1]))
+        prev = cur
+    return prev[-1]
+
+
+def cologne(t):
+    """Koelner Phonetik (Spiegel von colognePhonetic in phonetics.dart)."""
+    s = fold(t).replace(" ", "")
+    raw = []
+    for i, c in enumerate(s):
+        prev = s[i - 1] if i else ""
+        nxt = s[i + 1] if i + 1 < len(s) else ""
+        if c in "aeijouy": raw.append("0")
+        elif c == "h": pass
+        elif c == "b": raw.append("1")
+        elif c == "p": raw.append("3" if nxt == "h" else "1")
+        elif c in "dt": raw.append("8" if nxt and nxt in "csz" else "2")
+        elif c in "fvw": raw.append("3")
+        elif c in "gkq": raw.append("4")
+        elif c == "c":
+            if not nxt: raw.append("8")
+            elif i == 0: raw.append("4" if nxt in "ahkloqrux" else "8")
+            elif prev and prev in "sz": raw.append("8")
+            else: raw.append("4" if nxt in "ahkoqux" else "8")
+        elif c == "x": raw.append("8" if prev and prev in "ckq" else "48")
+        elif c == "l": raw.append("5")
+        elif c in "mn": raw.append("6")
+        elif c == "r": raw.append("7")
+        elif c in "sz": raw.append("8")
+        elif c.isdigit(): raw.append(c)
+    out, last = [], ""
+    for c in "".join(raw):
+        if c == last: continue
+        last = c
+        if c == "0" and out: continue
+        out.append(c)
+    return "".join(out)
+
+
+WAKE_KEY = cologne("wendelin")
+
+
+def sounds_like(w):
+    return 6 <= len(w) <= 11 and w[0] in "wvf" and cologne(w) == WAKE_KEY
+
+
+def matches_wake_word(text, max_dist=1):
+    w = fold(text).split()
+    near = lambda s: sounds_like(s) or any(abs(len(s) - len(p)) <= 3 and dist(s, p) <= max_dist for p in SPELL)
+    return any(near(w[i]) or (i + 1 < len(w) and near(w[i] + w[i + 1])) for i in range(len(w)))
+
+
+def two_stage_main():
+    here = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, os.path.join(here, "train_wake_word"))
+    import common as C
+    import sherpa_onnx
+    a = argparse.ArgumentParser()
+    a.add_argument("--enroll", required=True); a.add_argument("--pos", required=True)
+    a.add_argument("--neg", required=True); a.add_argument("--oww", required=True)
+    a.add_argument("--whisper", required=True); a.add_argument("--whisper-name", default="base")
+    a.add_argument("--model"); a.add_argument("--model-thr", default="0.3,0.5")
+    a.add_argument("--thr", default="0.7,0.8,0.85,0.9,0.95")
+    a.add_argument("--n-templates", type=int, default=15)
+    a.add_argument("--tmpl-offset", type=float, default=0.3, help="Fensterende nach Wortende (s) fuer die Vorlage")
+    a.add_argument("--pool", action="store_true", help="Mittelwert der letzten 8 Embeddings statt 16x96")
+    a.add_argument("--neg-max-h", type=float, default=1.0); a.add_argument("--cond", default="clean,both")
+    a.add_argument("--seed", type=int, default=1)
+    a.add_argument("--tail", type=float, default=0.9, help="Nachlauf nach dem Treffer fuer Stufe 2 (s)")
+    a = a.parse_args()
+    rng = np.random.default_rng(a.seed)
+    af = C.make_features(a.oww, 1)
+    sess = None
+    if a.model:
+        import onnxruntime as ort
+        so = ort.SessionOptions(); so.intra_op_num_threads = 1
+        sess = ort.InferenceSession(a.model, so, providers=["CPUExecutionProvider"])
+    w = a.whisper
+    rec = sherpa_onnx.OfflineRecognizer.from_whisper(
+        encoder=f"{w}/{a.whisper_name}-encoder.int8.onnx", decoder=f"{w}/{a.whisper_name}-decoder.int8.onnx",
+        tokens=f"{w}/{a.whisper_name}-tokens.txt", language="de", num_threads=4)
+    pad = lambda x: np.concatenate([np.zeros(C.SR, "float32"), x, np.zeros(C.SR, "float32")])
+
+    def windows(x):
+        """Fenster-Vektoren (N,D) normiert, Fensterenden, Modellwerte."""
+        emb = C.embed(af, [pad(x)])[0]
+        n = len(emb) - C.WIN + 1
+        if n <= 0:
+            return np.zeros((0, 1)), np.zeros(0, int), np.zeros(0)
+        W = np.stack([emb[j:j + C.WIN] for j in range(n)]).astype("float32")
+        ms = sess.run(None, {"input": W})[0][:, 0] if sess else np.zeros(n)
+        V = W[:, -8:].mean(axis=1) if a.pool else W.reshape(n, -1)
+        V = V / (np.linalg.norm(V, axis=1, keepdims=True) + 1e-9)
+        return V, np.array([C.window_end(j) for j in range(n)]), ms
+
+    def transcribe(x, end):
+        # 2 s vor dem Fensterende + Nachlauf (Dart: verifyWindow + verifyTail)
+        seg = x[max(0, end - 2 * C.SR):end + int(a.tail * C.SR)]
+        s = rec.create_stream(); s.accept_waveform(C.SR, seg.astype("float32")); rec.decode_stream(s)
+        return s.result.text
+
+    def events(hit_idx, refr=19):
+        ev, last = [], -10 ** 9
+        for j in hit_idx:
+            if j - last >= refr:
+                ev.append(j)
+                last = j
+        return ev
+
+    voices = {}
+    for f in sorted(glob.glob(os.path.join(a.enroll, "*.wav"))):
+        voices.setdefault(os.path.basename(f).split("_")[0], []).append(f)
+    posf = {}
+    for f in sorted(glob.glob(os.path.join(a.pos, "*.wav"))):
+        posf.setdefault(os.path.basename(f).split("_")[1].split(".")[0], []).append(f)
+    tmpl = {}
+    for v, fs in voices.items():
+        T = []
+        for f in fs[: a.n_templates]:
+            x = load(f); V, we, _ = windows(x)
+            j = int(np.argmax(we >= (C.SR + speech_end(x) * C.SR + a.tmpl_offset * C.SR)))
+            T.append(V[j])
+        tmpl[v] = np.stack(T)
+    negx = []
+    for p in sorted(glob.glob(os.path.join(a.neg, "*.wav"))):
+        negx.append(load(p))
+        if sum(map(len, negx)) / C.SR / 3600 >= a.neg_max_h:
+            break
+    thrs = [float(t) for t in a.thr.split(",")]
+    mthrs = [float(t) for t in a.model_thr.split(",")] if sess else []
+    rules = [("Vorlage", "t", t) for t in thrs] + [("Modell", "m", t) for t in mthrs] + \
+            ([("Modell " + str(mthrs[0]) + " ODER Vorlage", "tm", t) for t in thrs[1:3]] if mthrs else [])
+    print(f"Einlerner (Stimmen): {len(tmpl)}, Vorlagen je Stimme: {a.n_templates}, Negativ {sum(map(len, negx))/C.SR/3600:.2f} h, "
+          f"Whisper {a.whisper_name}, Merkmal {'Mittel 8' if a.pool else '16x96'}, Vorlagenversatz {a.tmpl_offset} s\n")
+    print("| Bedingung | Regel | Schwelle | Treffer Stufe 1 | Kandidaten/h | Treffer nach Stufe 2 (Abstand 1 / 2) | bestaetigt/h (Abstand 1 / 2) | Whisper-RTF |")
+    print("|---|---|---|---|---|---|---|---|")
+    for cond in a.cond.split(","):
+        P = {v: [condition(load(f), cond, rng) for f in fs] for v, fs in posf.items()}
+        N = [condition(x, cond, rng) for x in negx]
+        nh = sum(map(len, N)) / C.SR / 3600
+        PW = {v: [windows(x) for x in xs] for v, xs in P.items()}
+        NW = [windows(x) for x in N]
+        cache, wt, wd = {}, 0.0, 0.0
+        for name, kind, thr in rules:
+            tot = {"hit1": 0, "hit2": 0, "n": 0, "c": 0, "k": 0, "hit2b": 0, "kb": 0}
+            for v, T in tmpl.items():
+                def idx(win, kind=kind, thr=thr, T=T):
+                    V, we, ms = win
+                    if not len(V): return []
+                    sim = (V @ T.T).max(axis=1)
+                    mt = (mthrs[0] if kind == "tm" else thr)
+                    ok = np.zeros(len(V), bool)
+                    if "t" in kind: ok |= sim >= thr
+                    if "m" in kind: ok |= ms >= mt
+                    return events(np.where(ok)[0])
+                def confirm(key, x, we, j, d=1):
+                    nonlocal wt, wd
+                    if key not in cache:
+                        t0 = time.time(); cache[key] = transcribe(x, we[j])
+                        wt += time.time() - t0; wd += (min(2 * C.SR, we[j]) + int(a.tail * C.SR)) / C.SR
+                    return matches_wake_word(cache[key], d)
+                for ci, (x, win) in enumerate(zip(P[v], PW[v])):
+                    ev = idx(win); tot["n"] += 1; tot["hit1"] += bool(ev)
+                    xp = pad(x)
+                    tot["hit2"] += any(confirm(("p", v, ci, j), xp, win[1], j) for j in ev[:3])
+                    tot["hit2b"] += any(confirm(("p", v, ci, j), xp, win[1], j, 2) for j in ev[:3])
+                for ci, (x, win) in enumerate(zip(N, NW)):
+                    ev = idx(win); tot["c"] += len(ev)
+                    xp = pad(x)
+                    tot["k"] += sum(confirm(("n", ci, j), xp, win[1], j) for j in ev)
+                    if os.environ.get("SHOW_FA"):
+                        for j in ev:
+                            if matches_wake_word(cache[("n", ci, j)], 1):
+                                print("FA:", repr(cache[("n", ci, j)]), flush=True)
+                    tot["kb"] += sum(confirm(("n", ci, j), xp, win[1], j, 2) for j in ev)
+            nv = len(tmpl)
+            print(f"| {cond} | {name} | {thr} | {tot['hit1']}/{tot['n']} = {100*tot['hit1']/tot['n']:.0f} % | "
+                  f"{tot['c']/nv/nh:.1f} | {100*tot['hit2']/tot['n']:.0f} / {100*tot['hit2b']/tot['n']:.0f} % | "
+                  f"{tot['k']/nv/nh:.2f} / {tot['kb']/nv/nh:.2f} | "
+                  f"{wt/max(wd,1e-9):.2f} |", flush=True)
+        print(f"\nNegativ-Audio ({cond}): {nh:.2f} h\n")
 
 
 if __name__ == "__main__":

@@ -162,6 +162,8 @@ final class ModelStatesNotifier extends Notifier<Map<String, ModelState>> {
         ref.invalidate(voiceActivityDetectorProvider);
       case SpeechModelKind.tts:
         ref.invalidate(ttsSelectionProvider);
+      case SpeechModelKind.wake:
+        break; // the wake word engine loads its models itself (WP50)
     }
   }
 }

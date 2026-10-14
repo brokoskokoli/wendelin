@@ -2,7 +2,7 @@
 /// plus the contract suites every implementation must pass
 /// (`audioInputContract`, `voiceActivityDetectorContract`,
 /// `speechToTextContract`, `textToSpeechContract`, `modelStoreContract`,
-/// `bargeInDetectorContract`).
+/// `bargeInDetectorContract`, `wakeWordEngineContract`).
 ///
 /// Depends on `package:test`; import it only from tests.
 library;
@@ -10,3 +10,4 @@ library;
 export 'fakes.dart';
 export 'testing/model_store_contract.dart';
 export 'testing/voice_contracts.dart';
+export 'testing/wake_contracts.dart';

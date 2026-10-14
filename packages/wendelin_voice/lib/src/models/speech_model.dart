@@ -10,6 +10,9 @@ enum SpeechModelKind {
 
   /// sherpa-onnx (Piper/VITS) voice.
   tts,
+
+  /// Wake word feature models (openWakeWord mel + embedding).
+  wake,
 }
 
 /// How a downloaded file must be unpacked by the platform.
