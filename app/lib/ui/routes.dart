@@ -1,3 +1,17 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+
+import 'design/gallery.dart';
+import 'settings/general_routes.dart';
+import 'settings/integration_routes.dart';
+
+/// The route table of the app: only puts the areas together.
+Map<String, WidgetBuilder> buildAppRoutes() => {
+  ...generalRoutes(),
+  ...integrationRoutes(),
+  if (kDebugMode) AppRoutes.gallery: (_) => const DesignGallery(),
+};
+
 /// Named routes of the app.
 abstract final class AppRoutes {
   /// Main screen.

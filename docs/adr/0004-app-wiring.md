@@ -40,6 +40,9 @@ Integrationen werden synchron registriert, ihre Verfügbarkeits- und Einrichtung
 ### 11. Kosten in USD
 Preise und Budgets sind Mikro-USD (ADR 0002). Der Kosten-Chip zeigt „heute 0,03 $“ statt „€“ wie im Entwurf, weil es keine Umrechnung gibt.
 
+### 12. Registry und Barrels (WP38)
+Neue eingebaute Integrationen ändern höchstens drei gemeinsame Stellen: eine Exportzeile in `packages/wendelin_integrations/lib/wendelin_integrations.dart` (Einstiegspunkt `lib/<name>.dart` mit den `show`-Listen), eine Zeile in `app/lib/di/integrations/registry.dart` und bei eigener Einstellungsseite eine Zeile in `app/lib/ui/settings/integration_routes.dart` (plus `AppRoutes`-Name). Alles andere liegt in eigenen Dateien: `app/lib/di/integrations/<name>_spec.dart` definiert den `IntegrationSpec`. Was nur diese Integration braucht (Provider, z. B. Suchdienst, Bring!-Konto), liest die Spec in `IntegrationSpec.prepare(ref)`; es läuft in `integrationDepsProvider` (Änderungen bauen die Integrationen neu) und kommt über `IntegrationDeps.extra<T>(id)` in `create`/`isSupported`. `IntegrationDeps` enthält nur Gemeinsames (Ports, Gerät, HTTP-Client, Fehlerzustand). `providers.dart` ist ein reines Re-Export-Barrel über `core_providers.dart`, `integration_providers.dart` und `agent_providers.dart`; neue Provider kommen in die Bereichsdatei oder eine Feature-Datei. Der Start liegt in `bootstrap/`, die Route-Tabelle setzt `ui/routes.dart` aus `general_routes.dart` und `integration_routes.dart` zusammen.
+
 ## Folgen
 - WP09 schreibt Profile, Eskalationskette (`AppSettings.escalationChain`), Kalenderwahl und Schalter und invalidiert danach `storedProviderConfigProvider`. Die Platzhalter-Einstellungen (`SettingsPlaceholderScreen`) werden ersetzt.
 - Der native Kalender-Code ist zusätzlich auf einem AOSP-Emulator ohne Google Play getestet (WP11, `app/integration_test/calendar_e2e_test.dart`).
