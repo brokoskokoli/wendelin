@@ -33,6 +33,12 @@ final class AttestationChecks {
         StageOutcome.warn,
         'Hinweis: ${v.tcbStatus.name}$advisories',
       ),
+      TcbStatus.relaunchAdvised ||
+      TcbStatus.relaunchAdvisedConfigurationNeeded => StageResult.fail(
+        AttestationStage.tcb,
+        'Neustart der TEE beim Betreiber empfohlen (${v.tcbStatus.name})$advisories',
+        code: StageResult.tcbRelaunchAdvised,
+      ),
       TcbStatus.outOfDate ||
       TcbStatus.outOfDateConfigurationNeeded ||
       TcbStatus.revoked => StageResult.fail(

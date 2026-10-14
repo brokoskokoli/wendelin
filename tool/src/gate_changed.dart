@@ -96,6 +96,8 @@ final class Selection {
 String classifyPath(String path, Set<String> knownTargets) {
   final p = path.startsWith('./') ? path.substring(2) : path;
   if (_fullGatePaths.contains(p) || p.startsWith('tool/src/gate_')) return '*';
+  // Rust-Crate (WP47): Cargo, Quellen und Tests laufen nur im vollen Gate.
+  if (p.startsWith('native/')) return '*';
   final segs = p.split('/');
   // Unter docs/ ist nur Markdown reine Doku. Andere Dateien lesen Tests
   // (z. B. docs/design/tokens.json in app/test/ui/tokens_test.dart).

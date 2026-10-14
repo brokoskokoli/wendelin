@@ -43,6 +43,39 @@ android {
     }
 }
 
+// Rust-Prüfmodul native/attest (WP47): cargo-ndk legt die .so je ABI unter build/rust/jniLibs ab.
+// Welche ABIs, bestimmt Flutter über -Ptarget-platform (android-arm, android-arm64, android-x64).
+val rustAbis = (project.findProperty("target-platform") as String?)
+    ?.split(",")
+    ?.mapNotNull {
+        when (it.trim()) {
+            "android-arm" -> "armeabi-v7a"
+            "android-arm64" -> "arm64-v8a"
+            "android-x64" -> "x86_64"
+            else -> null
+        }
+    }
+    ?.takeIf { it.isNotEmpty() }
+    ?: listOf("arm64-v8a", "x86_64")
+val rustJniLibs = layout.buildDirectory.dir("rust/jniLibs")
+val buildRustAttest = tasks.register<Exec>("buildRustAttest") {
+    val repo = rootProject.projectDir.resolve("../..")
+    inputs.dir(repo.resolve("native/attest/src"))
+    inputs.files(repo.resolve("native/attest/Cargo.toml"), repo.resolve("native/attest/Cargo.lock"))
+    inputs.property("abis", rustAbis.joinToString(","))
+    outputs.dir(rustJniLibs)
+    environment("ANDROID_NDK_HOME", android.ndkDirectory.absolutePath)
+    commandLine(
+        repo.resolve("tool/build_attest_android.sh").absolutePath,
+        rustJniLibs.get().asFile.absolutePath,
+        rustAbis.joinToString(","),
+    )
+}
+android.sourceSets["main"].jniLibs.srcDir(rustJniLibs.get().asFile)
+tasks.configureEach {
+    if (name.startsWith("merge") && name.endsWith("JniLibFolders")) dependsOn(buildRustAttest)
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17

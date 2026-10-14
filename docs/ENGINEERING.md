@@ -16,6 +16,7 @@ packages/
   wendelin_integrations/     # reines Dart: eingebaute Integrationen über Ports (Kalender, Zwischenablage, Wecker, Gedächtnis, Web-Abruf und -Suche, Listen, Obsidian, Bring!, HTTP-Tools, App-Erkennung)
   wendelin_voice/            # reines Dart: Sprach-Pipeline, Endpointing, Sprechtext, TTS-Auswahl, Modellkatalog/Download
   wendelin_mcp/              # reines Dart: MCP-Client (Streamable HTTP, Legacy-SSE, OAuth 2.1), Abbildung auf das Tool-System
+native/attest/               # Rust-Prüfmodul für TEE-Attestierungen (WP47, ADR 0017): Quote/ACI/Quittung, Ed25519, SHA-2, SPKI; kein Netz im Crate
 app/                         # Flutter-App: UI, Riverpod-Verdrahtung, Plattform-Implementierungen der Ports
 evals/                       # Modell-Evals (Dart-CLI)
 tool/                        # Gate und Prüfskripte (Abhängigkeiten, Secrets, Größen, Doku-Pfade), Gerätetests
@@ -73,6 +74,8 @@ dart run tool/gate.dart --verbose    # bisherige, ausführliche Ausgabe
 9. `kotlin-unit`: JVM-Unit-Tests der Kotlin-Logik (`./gradlew :app:testDebugUnitTest` in `app/android`). Läuft im vollen Gate und bei `--changed` nur, wenn sich etwas unter `app/android/` geändert hat; ohne Android-SDK (`ANDROID_HOME`, `ANDROID_SDK_ROOT`, `~/Library/Android/sdk`, `~/Android/Sdk`) oder ohne Gradle-Wrapper steht der Schritt als „übersprungen“ in der Zusammenfassung, nicht als grün. Kotlin-Logik ohne Android-Abhängigkeit gehört in reine Klassen mit Unit-Test (kein Robolectric).
 10. Selbsttests ohne Android-SDK: `dart run tool/self_test.dart` (Gate-Auswahl, Größen-Check, Doku-Pfade, Kanal-Check), `bash tool/android_device.sh --self-test` (Geräteauswahl mit Fake-adb), `tool/check_apk.sh --self-test` (APK-Prüfung mit Attrappen)
 
+11. Rust (`native/attest`, Schritte `rust fmt`, `rust clippy`, `rust test`, `rust deny`, `rust frb`): `cargo fmt --check`, `cargo clippy --all-targets --locked -- -D warnings`, `cargo test --locked`, `cargo deny check` (Lizenzen und Quellen laut `native/attest/deny.toml`) und „frb-Code aktuell“ (`flutter_rust_bridge_codegen generate` in `app/`, danach darf sich keine Datei unter `app/lib/platform/attest/generated/` oder `native/attest/src/frb_generated.rs` geändert haben). Läuft im vollen Gate und mit `dart run tool/gate.dart native/attest`; Änderungen unter `native/` lösen bei `--changed` das volle Gate aus. **Ohne Rust-Toolchain** (`cargo`, `cargo-deny`, `flutter_rust_bridge_codegen`) steht der Schritt lokal als „übersprungen“ mit Hinweis in der Tabelle; in CI (`CI=true`) ist ein fehlendes Werkzeug ein Fehler.
+
 Ausgabe: Standard ist eine Zeile je Schritt. Bei einem Fehler erscheinen die letzten 200 Zeilen dieses Schritts (Testname, Fehlermeldung, Datei). Am Ende steht eine Tabelle mit Ergebnis, Dauer, Testanzahl und Abdeckung je Schritt, die Gesamtdauer und `GATE GRÜN` bzw. `GATE ROT: <Schritte>`. Der Exit-Code ist bei Rot ungleich 0.
 
 `--changed` vergleicht mit dem Merge-Base von origin/main (bzw. `--base=<ref>`) und nimmt nicht committete und neue Dateien dazu. Geprüft werden die geänderten Pakete und transitiv alle abhängigen (Erlaubnisliste aus `tool/check_deps.dart` plus die echten Kanten der pubspecs inklusive `dev_dependencies`; die App hängt von allen ab). Änderungen an `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, `tool/gate.dart` oder `tool/check_deps.dart` lösen das ganze Gate aus, reine Doku (Markdown) nur die globalen Prüfungen. Andere Dateien unter `docs/` gelten nicht als Doku: `docs/design/` prüft die App (Tokens), alles andere das ganze Gate. Die Ausgabe nennt den Grund je Paket. `--changed` ist für Zwischenstände; vor Commit und Merge gilt das volle Gate. CI prüft immer alles.
@@ -110,6 +113,16 @@ Testarten:
 ## Plattform
 
 - Keine Abhängigkeit von Google Play Services (K7): keine `com.google.android.gms`-/Firebase-Pakete, keine Plugins, die sie transitiv mitbringen. Funktionen mit Fremd-App-Bedarf erkennen die Verfügbarkeit und bieten eine Ausweichlösung an.
+
+## Rust (`native/attest`, WP47)
+
+- **Zweck:** nur Prüflogik, die Dart nicht sinnvoll abdeckt (TDX-Quote über `dcap-qvl`, ACI-Bericht, Quittung, Ed25519, SHA-2, SPKI). **Kein Netz im Crate:** Kollateral holt Dart über den App-HTTP-Client und reicht es hinein; die Zeit (`now`) kommt von außen. Prüfungen melden Fehlschläge im Ergebnis (`ok`, Stufenfelder), `Err`/Ausnahme nur bei unlesbarer Eingabe.
+- **Schnittstelle:** `native/attest/src/api.rs` ist die einzige von `flutter_rust_bridge` gescannte Datei (Konfiguration `app/flutter_rust_bridge.yaml`); erzeugter Code (`app/lib/platform/attest/generated/`, `native/attest/src/frb_generated.rs`) ist eingecheckt und wird nie von Hand geändert. Nach Änderungen an `api.rs` oder den dort genutzten Typen: `cd app && flutter_rust_bridge_codegen generate`, Ergebnis committen.
+- **Abhängigkeiten:** nur permissive Lizenzen (`native/attest/deny.toml`: MIT, Apache-2.0, BSD, ISC, Zlib, Unicode-3.0, Unlicense). Neue Crates brauchen einen Grund im Commit; `reqwest`/`tokio`/TLS-Stacks gehören nicht in den Crate (N3: ein HTTP-Stack, in Dart).
+- **Tests:** `cargo test` mit den echten Fixtures aus `packages/wendelin_providers/test/fixtures/tee/`. Jede Prüfstufe hat einen Negativtest, der genau diese Stufe rot färbt und die übrigen grün lässt (Mutationsschutz gegen „Ergebnis fest true“). Gerätetest: `app/integration_test/attest_e2e_test.dart` auf dem Emulator.
+- **Toolchain (Mac):** `brew install rustup` (keg-only, PATH `/opt/homebrew/opt/rustup/bin`), die Toolchain (Version, Komponenten, Android-Targets) pinnt `native/attest/rust-toolchain.toml` und rustup installiert sie beim ersten Aufruf selbst, `cargo install cargo-ndk cargo-deny --locked`, `cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked` (Version = Dart-Paket `flutter_rust_bridge` in `app/pubspec.yaml`). NDK 28.2 aus dem Android-SDK.
+- **APK-Bau:** Gradle (`app/android/app/build.gradle.kts`, Task `buildRustAttest`) ruft `tool/build_attest_android.sh` (cargo-ndk) für die ABIs des Flutter-Builds (`-Ptarget-platform`) und packt die `.so` per `jniLibs`. Ohne Rust: `WENDELIN_SKIP_RUST=1` überspringt den Bau (nur Dart-Arbeit; das Prüfmodul fehlt dann im APK). Release-Profil: `opt-level = "z"`, LTO, `strip`, `panic = "abort"`.
+- **Testdaten im Gerätetest:** `app/integration_test/support/tee_fixtures.g.dart` wird aus den Fixtures erzeugt (`dart run tool/gen_attest_fixtures.dart`); der Selbsttest des Gates prüft, dass sie nicht abweicht.
 
 ## Sicherheit
 

@@ -23,6 +23,13 @@ enum TcbStatus {
 
   /// The TCB level or the key is revoked.
   revoked,
+
+  /// Intel advises relaunching the TEE (a newer TCB level is available);
+  /// the operator has to act. Red with its own reason code.
+  relaunchAdvised,
+
+  /// Like [relaunchAdvised], and a configuration change is needed.
+  relaunchAdvisedConfigurationNeeded,
 }
 
 /// Fields of a quote whose signature chain was verified, plus the TCB status.

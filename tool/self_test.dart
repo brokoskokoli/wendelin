@@ -5,10 +5,12 @@
 import 'dart:io';
 
 import 'check_deps.dart' show pubspecWorkspaceDeps;
+import 'gen_attest_fixtures.dart' as fixtures;
 import 'src/channel_self_test.dart';
 import 'src/doc_paths.dart';
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
+import 'src/gate_rust.dart';
 import 'src/self_check.dart';
 import 'src/size_rules.dart';
 import 'src/size_scan.dart';
@@ -17,6 +19,7 @@ Future<void> main() async {
   final t = SelfCheck();
   _changedSelection(t);
   await _gateRun(t);
+  await _gateRust(t);
   _sizeScan(t);
   _sizeRules(t);
   _docPaths(t);
@@ -96,6 +99,137 @@ void _changedSelection(SelfCheck t) {
   t.isTrue(docs.globalOnly, 'nur Doku: globalOnly');
   final tool = selectChanged(['tool/check_sizes.dart'], deps);
   t.isTrue(tool.tooling && tool.targets.isEmpty, 'tool/: nur Werkzeuge');
+}
+
+Future<void> _gateRust(SelfCheck t) async {
+  t.group('Gate Rust (WP47)');
+  t.isTrue(
+    File(fixtures.output).readAsStringSync() == fixtures.generate(),
+    '${fixtures.output} passt zu den TEE-Fixtures '
+    '(dart run tool/gen_attest_fixtures.dart)',
+  );
+  t.eq(
+    classifyPath('native/attest/src/lib.rs', {'wendelin_core'}),
+    '*',
+    'native/ löst das volle Gate aus',
+  );
+  Gate gate(List<List<String>> calls, {int Function(List<String>)? exit}) =>
+      Gate(
+        verbose: false,
+        out: StringBuffer(),
+        runner: (exe, args, {cwd, required verbose}) async {
+          calls.add([exe, ...args]);
+          return ProcResult(exit?.call(args) ?? 0, [
+            'test result: ok. 7 passed; 0 failed',
+            'test result: ok. 2 passed',
+          ]);
+        },
+      );
+  Map<String, Outcome> outcomes(Gate g) => {
+    for (final r in g.results) r.name: r.outcome,
+  };
+  String? all(RustTool tool) => '/x';
+  String? noDeny(RustTool tool) => tool == RustTool.deny ? null : '/x';
+  String? none(RustTool tool) => null;
+  Map<String, List<int>> same() => {
+    'a': [1],
+  };
+
+  var calls = <List<String>>[];
+  var g = gate(calls);
+  await rustSteps(g, ci: false, toolDir: all, snapshot: same);
+  t.eq(outcomes(g), {
+    for (final n in ['fmt', 'clippy', 'test', 'deny', 'frb'])
+      'rust $n': Outcome.ok,
+  }, 'alle Rust-Schritte grün');
+  t.isTrue(
+    calls.any(
+      (c) => c.contains('clippy') && c.contains('-D') && c.contains('warnings'),
+    ),
+    'clippy mit -D warnings',
+  );
+  t.isTrue(
+    calls.any((c) => c.contains('fmt') && c.contains('--check')),
+    'fmt --check',
+  );
+  t.eq(
+    g.results.firstWhere((r) => r.name == 'rust test').detail,
+    '9 Tests',
+    'Testanzahl',
+  );
+
+  calls = [];
+  g = gate(calls);
+  var n = 0;
+  await rustSteps(
+    g,
+    ci: false,
+    toolDir: all,
+    snapshot: () => {
+      'a': [++n],
+    },
+  );
+  t.eq(outcomes(g)['rust frb'], Outcome.red, 'veralteter frb-Code ist rot');
+
+  g = gate([], exit: (a) => a.contains('clippy') ? 1 : 0);
+  await rustSteps(g, ci: false, toolDir: all, snapshot: same);
+  t.eq(outcomes(g)['rust clippy'], Outcome.red, 'clippy-Warnung ist rot');
+
+  calls = [];
+  g = gate(calls);
+  await rustSteps(g, ci: false, toolDir: none);
+  t.eq(outcomes(g), {'rust': Outcome.skipped}, 'ohne cargo lokal übersprungen');
+  t.isTrue(
+    g.results.single.detail.contains('Rust fehlt'),
+    'Hinweis „Rust fehlt“',
+  );
+  t.isTrue(calls.isEmpty, 'ohne cargo kein Prozess');
+  g = gate([]);
+  await rustSteps(g, ci: true, toolDir: none);
+  t.eq(outcomes(g), {'rust': Outcome.red}, 'ohne cargo in CI rot');
+
+  g = gate([]);
+  await rustSteps(g, ci: false, toolDir: noDeny, snapshot: same);
+  t.eq(
+    outcomes(g)['rust deny'],
+    Outcome.skipped,
+    'ohne cargo-deny lokal übersprungen',
+  );
+  g = gate([]);
+  await rustSteps(g, ci: true, toolDir: noDeny, snapshot: same);
+  t.eq(outcomes(g)['rust deny'], Outcome.red, 'ohne cargo-deny in CI rot');
+
+  t.eq(
+    changedFiles(
+      {
+        'a': [1],
+        'b': [2],
+        'c': [3],
+      },
+      {
+        'a': [1],
+        'b': [9],
+        'd': [4],
+      },
+    ),
+    ['b', 'c', 'd'],
+    'Vergleich erkennt geändert, neu, entfallen',
+  );
+  t.eq(
+    findToolDir(
+      'cargo',
+      path: ['/usr/bin'],
+      home: '/h',
+      exists: (f) => f == '/opt/homebrew/opt/rustup/bin/cargo',
+    ),
+    '/opt/homebrew/opt/rustup/bin',
+    'cargo im keg-only-rustup gefunden',
+  );
+  t.eq(
+    findToolDir('cargo', path: ['/usr/bin'], home: '/h', exists: (_) => false),
+    null,
+    'cargo fehlt',
+  );
 }
 
 Future<void> _gateRun(SelfCheck t) async {

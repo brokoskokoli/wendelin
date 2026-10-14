@@ -13,6 +13,20 @@ jobs:
           channel: stable
           flutter-version: 3.47.7
       - run: flutter pub get
+      # Rust-Prüfmodul native/attest (WP47): fmt, clippy, test, deny und "frb-Code aktuell"
+      # laufen im Gate; mit CI=true ist ein fehlendes Werkzeug ein Fehler.
+      # Version = native/attest/rust-toolchain.toml.
+      - uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          components: rustfmt, clippy
+      # rust-cache sichert auch ~/.cargo/bin; installiert wird nur, was fehlt.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native/attest
+      - name: Rust-Werkzeuge (cargo-deny, flutter_rust_bridge_codegen)
+        run: |
+          command -v cargo-deny >/dev/null || cargo install cargo-deny --version '~0.19' --locked
+          command -v flutter_rust_bridge_codegen >/dev/null || cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
       - run: dart run tool/gate.dart --no-app
       - name: Zeitzonen-Lauf (Ortszeit-Logik)
         run: dart test
@@ -63,6 +77,17 @@ jobs:
           flutter-version: 3.47.7
           cache: true
       - run: flutter pub get
+      # Rust-Prüfmodul (WP47): cargo-ndk baut die .so für arm64-v8a, Gradle packt sie ins APK.
+      # Version = native/attest/rust-toolchain.toml.
+      - uses: dtolnay/rust-toolchain@1.99.0
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native/attest
+      - name: cargo-ndk
+        run: command -v cargo-ndk >/dev/null || cargo install cargo-ndk --version 4.1.2 --locked
+      - run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358"
       - run: flutter build apk --release --target-platform android-arm64
         working-directory: app
       # JVM-Unit-Tests der Kotlin-Logik (der Gradle-Wrapper entsteht beim Build).

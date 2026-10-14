@@ -1,0 +1,7 @@
+# Feste Toolchain für reproduzierbare Builds (lokal und CI). Beim Anheben auch
+# .github/workflows/gate.yml (dtolnay/rust-toolchain@1.99.0) anpassen.
+[toolchain]
+channel = "1.99.0"
+components = ["rustfmt", "clippy"]
+targets = ["aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android"]
+profile = "minimal"

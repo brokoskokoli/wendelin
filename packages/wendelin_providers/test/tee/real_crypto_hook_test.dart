@@ -5,7 +5,10 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 import 'fake_crypto_test.dart' show probeQuoteCase;
 import 'fixture_suite.dart';
 
-/// Test hook for WP47: return the Rust implementation of
+/// Test hook for WP47. The Rust implementation needs the native library and
+/// therefore cannot run in this pure Dart package: the contract suite runs
+/// against it in `app/integration_test/attest_e2e_test.dart` (emulator). If a
+/// pure Dart build of the module exists, return the Rust implementation of
 /// [AttestationCrypto] (flutter_rust_bridge) here and the contract suite and
 /// all fixture tests run against the real verification. Until WP47 delivers
 /// it, this returns `null` and the tests are skipped.
