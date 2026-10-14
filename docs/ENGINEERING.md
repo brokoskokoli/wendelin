@@ -36,7 +36,7 @@ wendelin_integrations  -> core
 wendelin_voice         -> core, agent
 wendelin_mcp           -> core, integrations
 app                    -> alle
-evals                  -> core, providers, tools, agent, integrations
+evals                  -> core, providers, tools, agent, integrations, mcp
 ```
 
 - Pakete unter `packages/` importieren **niemals** `package:flutter`, `dart:ui` oder Flutter-Plugins. Sie laufen mit `dart test`.

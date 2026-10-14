@@ -1,0 +1,42 @@
+language: fr
+cases:
+  - id: m3-fr-bring-add
+    category: bring
+    prompt: Ajoute des œufs et du beurre à ma liste Bring.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__add_items
+          args:
+            items:
+              contains: [Eier, Butter]
+
+  - id: m3-fr-bring-complete
+    category: bring
+    prompt: J'ai acheté le pain, coche-le dans Bring.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__complete_item
+          args:
+            item: {contains_any: [Brot, pain]}
+
+  - id: m3-fr-http-light
+    category: http
+    prompt: Allume la lumière du salon avec Home Assistant.
+    setup: {backends: [http]}
+    expect:
+      calls:
+        - tool: http__ha_light_on
+          args:
+            entity_id: light.wohnzimmer
+
+  - id: m3-fr-mcp-toggle
+    category: mcp
+    prompt: Allume ou éteins la lumière du salon via le serveur Home.
+    setup: {backends: [mcp]}
+    expect:
+      calls:
+        - tool: mcp_home__toggle_light
+          args:
+            room: {contains_any: [salon, Wohnzimmer]}

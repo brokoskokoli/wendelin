@@ -1,0 +1,26 @@
+{
+  "id": "fake-m3",
+  "name": "Fake-Provider (offline)",
+  "type": "fake",
+  "defaultModel": "fake-model",
+  "privacy": "local",
+  "authMethod": {
+    "kind": "none"
+  },
+  "script": "../fake/m3_script.yaml",
+  "catalog": {
+    "models": {
+      "fake-model": {
+        "input": 1.0,
+        "output": 5.0
+      },
+      "fake-strong": {
+        "input": 3.0,
+        "output": 15.0
+      }
+    }
+  },
+  "escalationModels": [
+    "fake-strong"
+  ]
+}

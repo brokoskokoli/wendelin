@@ -20,6 +20,7 @@ const allowed = <String, Set<String>>{
     'wendelin_tools',
     'wendelin_agent',
     'wendelin_integrations',
+    'wendelin_mcp',
   },
 };
 

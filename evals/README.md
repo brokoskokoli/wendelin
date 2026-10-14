@@ -193,3 +193,15 @@ dart test test/live -t live --run-skipped
 `--run-skipped` hebt nur die Standard-Sperre des Tags `live` auf
 (`dart_test.yaml`). Fehlt ein Key, überspringt sich der betroffene Test
 selbst (`markTestSkipped`); die anderen Profile laufen.
+
+## M3-Fälle und Routing-Tabelle (WP29)
+
+`cases-m3/` enthält je vier Fälle in de, fr und en für **Bring!** (`bring__…`), ein **HTTP-Tool** in Home-Assistant-Form (`http__ha_get_state`, `http__ha_light_on`) und einen **MCP-Server** „Home“ (`mcp_home__get_state`, `mcp_home__toggle_light`, `mcp_home__delete_scene` mit Bestätigung). Der Fall wählt seine Fake-Backends mit `setup: {backends: [bring, http, mcp]}`; `lib/src/case_backends.dart` startet sie je Fall (Bring!: `FakeBringApi`, HTTP: `MockClient`, MCP: `FakeMcpServer` im Prozess) und räumt sie danach auf.
+
+```sh
+dart run wendelin_evals:run -p profiles/fake-m3.json --cases-dir cases-m3        # offline, alles richtig
+dart run wendelin_evals:run -p profiles/claude-haiku.json --cases-dir cases-m3   # live, Key aus der Umgebung
+dart run wendelin_evals:run --routing-table                                      # Satz -> greifende Regel
+```
+
+`--routing-table` routet die Sätze der WP21-Satztabelle (de/fr/en) durch den echten `RuleBasedProviderResolver` mit den Beispielregeln des Konzepts und zeigt Regel und Ziel; Exit-Code 1, wenn eine Regel nicht wie erwartet greift. `test/live/routing_live_test.dart` (`-t live`) prüft „Claude, sag nur OK“ mit Haiku gegen die Regel „Starkes Modell“.

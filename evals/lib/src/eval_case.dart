@@ -152,6 +152,7 @@ final class CaseSetup {
     this.events = const [],
     this.memory = const [],
     this.searchResults,
+    this.backends = const {},
   });
 
   /// Clipboard text.
@@ -165,7 +166,15 @@ final class CaseSetup {
 
   /// Search hits; `null` = the default hits.
   final List<SeedSearchResult>? searchResults;
+
+  /// Extra integrations with fake backends (WP29): `bring` (Bring! account
+  /// with two lists), `http` (Home-Assistant-like HTTP tools, fake
+  /// responses), `mcp` (in-process `FakeMcpServer`, server name „Home“).
+  final Set<String> backends;
 }
+
+/// Backends a case may ask for in `setup.backends`.
+const caseBackends = {'bring', 'http', 'mcp'};
 
 /// One eval case: a user request and what should happen.
 @immutable
@@ -381,7 +390,20 @@ CallOption _option(Map<String, Object?> m) {
 }
 
 CaseSetup _setup(Map<String, Object?> m) {
-  _only(m, const {'clipboard', 'events', 'memory', 'search_results'});
+  _only(m, const {
+    'clipboard',
+    'events',
+    'memory',
+    'search_results',
+    'backends',
+  });
+  final backends = m['backends'] ?? const <Object?>[];
+  if (backends is! List ||
+      backends.any((b) => b is! String || !caseBackends.contains(b))) {
+    throw FormatException(
+      'backends: Liste aus ${caseBackends.join(', ')} erwartet',
+    );
+  }
   final events = m['events'] ?? const <Object?>[];
   final memory = m['memory'] ?? const <Object?>[];
   final results = m['search_results'];
@@ -392,6 +414,7 @@ CaseSetup _setup(Map<String, Object?> m) {
   }
   return CaseSetup(
     clipboard: m['clipboard'] as String?,
+    backends: {for (final b in backends) b as String},
     events: [
       for (final e in events)
         () {
