@@ -21,6 +21,7 @@ export 'src/redaction.dart'
         redactedValue,
         shouldRedactField;
 export 'src/repositories/repositories.dart';
+export 'src/scoped_secret_store.dart';
 export 'src/secret_store.dart';
 export 'src/sensitive_content.dart';
 export 'src/storage.dart';
