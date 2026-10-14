@@ -153,6 +153,7 @@ tap_text() { # <abzug> <text-regex>
   adb shell input tap $(((n[0] + n[2]) / 2)) $(((n[1] + n[3]) / 2))
 }
 resumed() { adb shell dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity'; }
+LOCK_PIN=4711
 host_request() {
   local action
   action="$(in_app cat files/e2e/host-request 2>/dev/null | tr -d '\r' || true)"
@@ -168,6 +169,28 @@ host_request() {
       fi
       adb shell input keyevent KEYCODE_ASSIST
       for _ in $(seq 1 40); do resumed | grep -q AssistantActivity && break; sleep 0.5; done
+      ;;
+    assist-locked)
+      # WP53: gesperrtes Gerät (PIN nur auf dem Emulator), Bildschirm aus und
+      # an (Sperrbildschirm), dann KEYCODE_ASSIST. Entfernt wird die PIN von
+      # `unlock` und beim Aufräumen.
+      is_emulator || { echo "Sperre nur auf dem Emulator" >&2; exit 1; }
+      adb shell locksettings set-pin "$LOCK_PIN" >/dev/null
+      adb shell input keyevent KEYCODE_SLEEP
+      sleep 2
+      adb shell input keyevent KEYCODE_WAKEUP
+      sleep 2
+      if ! adb shell cmd role get-role-holders android.app.role.ASSISTANT | grep -q "$PKG"; then
+        adb shell cmd role add-role-holder --user 0 android.app.role.ASSISTANT "$PKG"
+        sleep 2
+      fi
+      adb shell input keyevent KEYCODE_ASSIST
+      for _ in $(seq 1 40); do resumed | grep -q AssistantActivity && break; sleep 0.5; done
+      ;;
+    unlock)
+      adb shell locksettings clear --old "$LOCK_PIN" >/dev/null 2>&1 || true
+      adb shell input keyevent KEYCODE_WAKEUP
+      adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
       ;;
     back)
       adb shell input keyevent KEYCODE_BACK
@@ -243,6 +266,10 @@ helper &
 HELPER=$!
 cleanup() {
   kill "$HELPER" 2>/dev/null || true
+  # Sperre aus WP53 sicher entfernen (nur Emulator).
+  if is_emulator; then
+    adb shell locksettings clear --old "$LOCK_PIN" >/dev/null 2>&1 || true
+  fi
   if [ -n "$LIVE" ]; then
     adb shell run-as "$PKG" rm -f files/live_anthropic.key 2>/dev/null || true
   fi

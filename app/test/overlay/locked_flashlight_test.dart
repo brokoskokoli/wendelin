@@ -2,6 +2,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/di/integrations/integration_spec.dart';
+import 'package:wendelin/di/integrations/registry.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/overlay_sheet.dart';
@@ -120,6 +122,28 @@ void main() {
     tester,
   ) async {
     env = TestEnv(providerConfig: scripted(llm), enabled: const {'memory'});
+    final (_, _, tts) = await run(tester, 'Taschenlampe an');
+    expect(env.torch.on, isFalse);
+    expect(llm.requests, isEmpty);
+    expect(tts.spoken.join(' '), 'Das hat nicht geklappt.');
+  });
+
+  testWidgets('Spec ohne allowedWhileLocked: Befehl wird nicht ausgeführt', (
+    tester,
+  ) async {
+    env = TestEnv(
+      providerConfig: scripted(llm),
+      enabled: _all,
+      extraOverrides: [
+        integrationSpecsProvider.overrideWithValue([
+          for (final s in builtInIntegrationSpecs)
+            if (s.id == 'flashlight')
+              IntegrationSpec(id: s.id, create: s.create)
+            else
+              s,
+        ]),
+      ],
+    );
     final (_, _, tts) = await run(tester, 'Taschenlampe an');
     expect(env.torch.on, isFalse);
     expect(llm.requests, isEmpty);
