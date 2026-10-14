@@ -148,8 +148,16 @@ final class AuditRecorder implements ToolAuditSink {
           'error': error.name,
           'message': message,
         });
+      case AgentSpokenVerdict(:final accepted, :final reason):
+        // Only verdict and reason, never the texts (WP55).
+        _write(AuditKind.verification, sessionId, {
+          'spokenCheck': true,
+          'accepted': accepted,
+          'reason': reason,
+        });
       case AgentTextDelta() ||
           AgentSpokenText() ||
+          AgentSpokenHold() ||
           AgentTextReset() ||
           AgentThinkingDelta() ||
           ToolCallStarted() ||

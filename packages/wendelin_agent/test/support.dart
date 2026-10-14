@@ -91,6 +91,7 @@ final class Harness {
     void Function(AgentEvent e)? onEvent,
     bool requestEscalation = false,
     InputSource source = InputSource.text,
+    String? language,
   }) async {
     final events = <AgentEvent>[];
     await for (final e in runner.run(
@@ -98,6 +99,7 @@ final class Harness {
         text: text,
         requestEscalation: requestEscalation,
         source: source,
+        language: language,
       ),
     )) {
       events.add(e);

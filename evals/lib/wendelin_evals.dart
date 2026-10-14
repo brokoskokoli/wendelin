@@ -18,4 +18,5 @@ export 'src/routing_table.dart';
 export 'src/scorer.dart';
 export 'src/speech_check.dart';
 export 'src/speech_eval.dart';
+export 'src/spoken_check_eval.dart';
 export 'src/summary.dart';

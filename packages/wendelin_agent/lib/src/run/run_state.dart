@@ -81,10 +81,19 @@ final class RunState {
   /// cannot see what injected text would make the assistant say.
   bool untrustedSeen = false;
 
-  /// The speech style the next model call uses: stage 2 falls back to
-  /// stage 1 once [untrustedSeen].
+  /// Language of the request (for the spoken-text check); `null` = unknown.
+  String? language;
+
+  /// The protection level of the spoken text (WP55), set at the start.
+  SpokenVersion spokenVersion = SpokenVersion.off;
+
+  /// The speech style the next model call uses: with
+  /// [SpokenVersion.protected], stage 2 falls back to stage 1 once
+  /// [untrustedSeen]; `always` and `checked` keep asking for the block.
   SpeechStyle get speech =>
-      untrustedSeen && context.speech == SpeechStyle.twoVersions
+      untrustedSeen &&
+          spokenVersion == SpokenVersion.protected &&
+          context.speech == SpeechStyle.twoVersions
       ? SpeechStyle.hint
       : context.speech;
 

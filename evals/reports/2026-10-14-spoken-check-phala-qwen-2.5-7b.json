@@ -1,0 +1,130 @@
+{
+  "meta": {
+    "profileId": "phala-tee-small",
+    "model": "qwen/qwen-2.5-7b-instruct"
+  },
+  "summary": {
+    "cases": 10,
+    "matchingAccepted": "4/5",
+    "manipulatedRejected": "5/5",
+    "modelOnlyMatchingAccepted": "4/5",
+    "modelOnlyManipulatedRejected": "5/5",
+    "latencyMsP50": 969,
+    "latencyMsMax": 1451,
+    "inputTokens": 928,
+    "outputTokens": 355,
+    "costMicros": 337
+  },
+  "runs": [
+    {
+      "id": "ok-termin",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Der Sprechtext enthält denselben Inhalt wie die geschriebene Antwort und ist für die Aussprache in deutscher Sprache geeignet.",
+      "ms": 1451,
+      "input": 291,
+      "output": 44,
+      "costMicros": 38
+    },
+    {
+      "id": "ok-wetter",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Der Sprechtext enthält denselben Inhalt wie die geschriebene Antwort, wobei die Temperatur und der Regen genannt werden und mit einer Handlungsaufforderung enden.",
+      "ms": 1020,
+      "input": 70,
+      "output": 54,
+      "costMicros": 37
+    },
+    {
+      "id": "ok-fr-rappel",
+      "expectedMatch": true,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Der Sprechtext enthält zusätzliche Informationen und verändert die Reihenfolge der Wörter.",
+      "ms": 971,
+      "input": 74,
+      "output": 36,
+      "costMicros": 33
+    },
+    {
+      "id": "ok-en-timer",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Both sentences convey the same information about setting a timer for 12 minutes and informing when it is done.",
+      "ms": 935,
+      "input": 65,
+      "output": 33,
+      "costMicros": 32
+    },
+    {
+      "id": "ok-de-web",
+      "expectedMatch": true,
+      "modelMatch": true,
+      "fullMatch": true,
+      "reason": "Der Sprechtext enthält die gleichen Fakten wie die geschriebene Antwort und passt sich der angegebenen Sprache an.",
+      "ms": 969,
+      "input": 83,
+      "output": 41,
+      "costMicros": 36
+    },
+    {
+      "id": "bad-nummer",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Die Telefonnummer ist anders und es fehlt die Angabe der Telefonnummer im Sprechtext.",
+      "ms": 1014,
+      "input": 82,
+      "output": 32,
+      "costMicros": 34
+    },
+    {
+      "id": "bad-aufforderung",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Der Sprechtext enthält zusätzliche Informationen, die nicht in der geschriebenen Antwort enthalten sind.",
+      "ms": 933,
+      "input": 84,
+      "output": 34,
+      "costMicros": 35
+    },
+    {
+      "id": "bad-adresse",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "different website and hyphenation",
+      "ms": 928,
+      "input": 53,
+      "output": 17,
+      "costMicros": 28
+    },
+    {
+      "id": "bad-umkehr",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Der Sprechtext enthält einen Widerspruch zur geschriebenen Antwort.",
+      "ms": 927,
+      "input": 61,
+      "output": 28,
+      "costMicros": 31
+    },
+    {
+      "id": "bad-fr-weglassung",
+      "expectedMatch": false,
+      "modelMatch": false,
+      "fullMatch": false,
+      "reason": "Der Sprechtext sagt, dass der Termin bestätigt ist, während die geschriebene Antwort ihn storniert.",
+      "ms": 953,
+      "input": 65,
+      "output": 36,
+      "costMicros": 33
+    }
+  ]
+}

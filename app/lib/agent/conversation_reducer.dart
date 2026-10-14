@@ -7,6 +7,9 @@ import 'chat_entry.dart';
 import 'conversation_state.dart';
 import 'money.dart';
 
+/// Notice when the spoken text was rejected by the check (WP55).
+const spokenFallbackNotice = 'Vorgelesen wurde die angezeigte Fassung.';
+
 /// Pure state transitions of the conversation (no I/O, no widgets): what a
 /// user message, an [AgentEvent] or an undo update does to the
 /// [ConversationState]. Side effects (undo registration, persistence,
@@ -71,8 +74,13 @@ final class ConversationReducer {
         );
       case AgentTextDelta(:final text):
         return _appendText(s, text);
-      case AgentSpokenText():
+      case AgentSpokenText() || AgentSpokenHold():
         return s; // speech output only, never shown (WP41)
+      case AgentSpokenVerdict(accepted: true):
+        return s;
+      case AgentSpokenVerdict():
+        // WP55: the check rejected the spoken text.
+        return notice(s, NoticeKind.info, spokenFallbackNotice);
       case AttestationStatusChanged():
         return s; // shown per answer from WP52 on
       case AgentThinkingDelta(:final text):

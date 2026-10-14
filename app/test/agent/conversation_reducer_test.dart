@@ -89,6 +89,28 @@ void main() {
     expect(after, same(before));
   });
 
+  test('Prüfurteil (WP55): Treffer unsichtbar, Ablehnung als Hinweis', () {
+    final before = reducer.apply(
+      ConversationState(),
+      const AgentTextDelta('Antwort'),
+    );
+    expect(reducer.apply(before, const AgentSpokenHold()), same(before));
+    expect(
+      reducer.apply(
+        before,
+        const AgentSpokenVerdict(accepted: true, reason: 'ok'),
+      ),
+      same(before),
+    );
+    final after = reducer.apply(
+      before,
+      const AgentSpokenVerdict(accepted: false, reason: 'anders'),
+    );
+    final notice = after.entries.last as NoticeEntry;
+    expect(notice.text, spokenFallbackNotice);
+    expect(notice.text, isNot(contains('anders')));
+  });
+
   group('AgentTextReset', () {
     test('verwirft nur den Text des aktuellen Modellaufrufs', () {
       final s = _apply([

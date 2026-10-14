@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:http/http.dart' as http;
 import 'package:wendelin_agent/wendelin_agent.dart';
+import 'package:wendelin_core/wendelin_core.dart' show SpokenVersion;
 
 import 'cli.dart';
 import 'eval_case.dart';
@@ -56,7 +57,11 @@ Future<List<SpeechRun>> runSpeechEval({
       target: target,
       time: time,
       voice: variant != SpeechVariant.text,
-      config: AgentConfig(spokenVersions: variant == SpeechVariant.two),
+      config: AgentConfig(
+        spokenVersion: variant == SpeechVariant.two
+            ? SpokenVersion.protected
+            : SpokenVersion.off,
+      ),
     );
     for (final c in cases) {
       final o = await runner.observe(c);
