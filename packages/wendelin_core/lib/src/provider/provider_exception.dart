@@ -125,3 +125,27 @@ final class MalformedResponseException extends ProviderException {
   @override
   bool get retryable => false;
 }
+
+/// A TEE provider could not be attested or its receipt was invalid (WP46).
+///
+/// Nothing was sent to the provider when this is raised before a request;
+/// [stage] names the failed check (`quote`, `receipt.signature`, `gpu`, …).
+/// Retryable only when the check could not be completed (network), not when
+/// it failed.
+final class AttestationFailedException extends ProviderException {
+  /// Creates the exception.
+  const AttestationFailedException(
+    super.message, {
+    required this.stage,
+    this.unavailable = false,
+  });
+
+  /// Stable name of the failed check stage (secret-free).
+  final String stage;
+
+  /// The check could not be completed (e.g. network), as opposed to failed.
+  final bool unavailable;
+
+  @override
+  bool get retryable => unavailable;
+}

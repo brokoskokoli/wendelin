@@ -19,3 +19,5 @@ export 'src/common/http_settings.dart' show HttpSettings, ProviderLog;
 export 'src/openai/openai_adapter.dart' show OpenAiChatAdapter;
 export 'src/openai/openai_options.dart';
 export 'src/provider_factory.dart';
+export 'src/tee/attestation_crypto.dart';
+export 'src/tee/attestation_types.dart';
