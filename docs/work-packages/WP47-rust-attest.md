@@ -22,3 +22,10 @@ Abhängig von: WP43 (Weg A oder B, Gate/CI-Liste), Port-Signatur aus WP46. Andoc
 
 ## Prüfliste für den Maintainer (echtes Telefon)
 - [ ] Prüfzeit der Attestierung beim ersten Start einer Phala-Sitzung (Logzeile `attest-done ms=…`) notieren.
+
+## Nachtrag aus Spike WP43 (Review 2026-10-14)
+- Ausgangspunkt: Prototyp `native/attest/` auf Branch `wp/43-spike-attestation` (nicht auf main), Ergebnisse in `docs/notes/attestation-spike-2026-10-14.md`, Fixtures in `packages/wendelin_providers/test/fixtures/tee/`.
+- Offen aus WP43: vollständiger APK-Bau mit Rust-Bibliothek und `tool/check_apk.sh` (APK-Zuwachs messen); `cargo deny`-Liste braucht zusätzlich ISC, Zlib, Unicode-3.0, Unlicense-OR-MIT.
+- Negativtests ergänzen, die im Prototyp fehlen: RTMR3-Replay, Compose-Hash, TLS-Bindung (Mutation „Ergebnis fest true“ muss rot werden); schwache `||`-Prüfung in `tests/fixtures.rs:55` und falscher Kommentar Z. 34 (Byte 600 liegt in report_data) korrigieren.
+- Quellenbelege für report_data und Keyset-Digest im Gateway-Quellcode mit Datei:Zeile nachtragen.
+- Fixture mit `provider.aci_verified: true` ergänzen.
