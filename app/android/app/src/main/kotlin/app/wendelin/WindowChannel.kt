@@ -34,6 +34,14 @@ class WindowChannel(private val activity: Activity, messenger: BinaryMessenger) 
                 }
                 result.success(null)
             }
+            "setKeepScreenOn" -> {
+                if (call.argument<Boolean>("on") == true) {
+                    activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
     }

@@ -8,6 +8,7 @@ import '../../di/preferences.dart';
 import '../../di/voice_providers.dart';
 import '../../platform/device_memory.dart';
 import '../design/design.dart';
+import '../routes.dart';
 import '../voice/microphone_access.dart';
 import 'model_download_row.dart';
 import 'settings_page.dart';
@@ -69,6 +70,16 @@ class VoiceScreen extends ConsumerWidget {
                 onChanged: (v) =>
                     change((s) => s.copyWith(stopClosesOverlay: v)),
               ),
+            ),
+          ],
+        ),
+        SettingsSection(
+          title: 'Aktivierungswort',
+          children: [
+            SettingsRow(
+              title: 'Wendelin lernt deine Stimme',
+              detail: 'Einlernen, kalibrieren und ausprobieren',
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.wakeWord),
             ),
           ],
         ),

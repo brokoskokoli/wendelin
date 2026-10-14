@@ -6,6 +6,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
+import '../../di/wake_providers.dart';
 import '../design/design.dart';
 import '../routes.dart';
 import '../screens/labels.dart';
@@ -155,15 +156,16 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
       context,
       title: 'Alles löschen?',
       message:
-          'Alle Gesprächsverläufe und das Prüfprotokoll werden gelöscht. Das '
-          'lässt sich nicht rückgängig machen. Gedächtnis und Einstellungen '
-          'bleiben.',
+          'Alle Gesprächsverläufe, das Prüfprotokoll und die eingelernten '
+          'Stimmen (Aktivierungswort) werden gelöscht. Das lässt sich nicht '
+          'rückgängig machen. Gedächtnis und Einstellungen bleiben.',
       yes: 'Alles löschen',
     );
     if (!ok) return;
     final storage = ref.read(storageProvider);
     await storage.audit.clear();
     await storage.attestations.deleteAll();
+    await ref.read(wakeSpeakersProvider.notifier).removeAll();
     for (final s in await storage.conversations.sessions()) {
       await storage.conversations.deleteSession(s.id);
     }

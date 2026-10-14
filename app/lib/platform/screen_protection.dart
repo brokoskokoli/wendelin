@@ -24,4 +24,13 @@ class ScreenProtection {
       // Kein Android-Fenster.
     }
   }
+
+  /// Keeps the screen on while a long run needs it (calibration, WP60).
+  Future<void> keepScreenOn({required bool on}) async {
+    try {
+      await _channel.invokeMethod<void>('setKeepScreenOn', {'on': on});
+    } on MissingPluginException {
+      // Kein Android-Fenster.
+    }
+  }
 }
