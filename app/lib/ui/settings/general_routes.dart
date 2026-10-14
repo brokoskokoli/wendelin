@@ -12,6 +12,7 @@ import 'providers_screen.dart';
 import 'routing/routing_screen.dart';
 import 'settings_screen.dart';
 import 'voice_screen.dart';
+import 'voice_voices_screen.dart';
 import 'wake/wake_word_screen.dart';
 
 /// Routes of the general settings pages (overview, providers, routing,
@@ -28,5 +29,6 @@ Map<String, WidgetBuilder> generalRoutes() => {
   AppRoutes.costs: (_) => const CostsScreen(),
   AppRoutes.assistant: (_) => const AssistantScreen(),
   AppRoutes.voice: (_) => const VoiceScreen(),
+  AppRoutes.voices: (_) => const VoiceVoicesScreen(),
   AppRoutes.wakeWord: (_) => const WakeWordScreen(),
 };

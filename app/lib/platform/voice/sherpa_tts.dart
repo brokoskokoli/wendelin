@@ -112,7 +112,13 @@ final class SherpaTextToSpeech implements TextToSpeech {
     required this.installed,
     required this.synthesizer,
     required this.playback,
+    this.preferred,
   });
+
+  /// Chosen voice id per language (primary subtag, WP66); used when no
+  /// installed voice matches the requested id. A voice that is not
+  /// installed (any more) is skipped.
+  final Map<String, String> Function()? preferred;
 
   /// Installed voices.
   final Future<List<SherpaVoice>> Function() installed;
@@ -161,7 +167,12 @@ final class SherpaTextToSpeech implements TextToSpeech {
     final generation = _generation;
     final run = _queue.then((_) async {
       if (generation != _generation) return;
-      final chosen = _pick(await installed(), voice, language);
+      final chosen = _pick(
+        await installed(),
+        voice,
+        language,
+        preferred?.call() ?? const {},
+      );
       if (chosen == null) {
         throw const VoiceException(
           VoiceErrorKind.modelMissing,
@@ -189,6 +200,7 @@ final class SherpaTextToSpeech implements TextToSpeech {
     List<SherpaVoice> voices,
     String? id,
     String? language,
+    Map<String, String> preferred,
   ) {
     if (voices.isEmpty) return null;
     if (id != null) {
@@ -198,6 +210,10 @@ final class SherpaTextToSpeech implements TextToSpeech {
     }
     if (language != null) {
       final lang = language.split(RegExp('[-_]')).first.toLowerCase();
+      final want = preferred[lang];
+      for (final v in voices) {
+        if (v.id == want && v.language == lang) return v;
+      }
       for (final v in voices) {
         if (v.language == lang) return v;
       }

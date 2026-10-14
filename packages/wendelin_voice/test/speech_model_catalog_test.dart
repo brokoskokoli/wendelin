@@ -61,6 +61,48 @@ void main() {
     expect(SpeechModelCatalog.whisperBase.attribution, isNull);
   });
 
+  test('je Sprache mindestens eine weibliche und eine männliche Stimme', () {
+    for (final lang in ['de', 'fr', 'en']) {
+      final voices = catalog.voicesFor(lang);
+      expect(
+        voices.map((v) => v.gender),
+        containsAll([VoiceGender.female, VoiceGender.male]),
+        reason: lang,
+      );
+      expect(catalog.voiceFor(lang), voices.first, reason: 'Standard');
+    }
+    expect(catalog.voicesFor('fr-CA').map((v) => v.id), [
+      'tts-fr-siwis',
+      'tts-fr-gilles',
+    ]);
+    expect(catalog.voicesFor('it'), isEmpty);
+    expect(SpeechModelCatalog.whisperBase.gender, isNull);
+  });
+
+  test('Stimmen: freie Lizenz, echte Prüfsumme, Quelle gepinnt', () {
+    const sums = {
+      'tts-de-kerstin':
+          'bcd8039667940cf2efc939b844f4b33d0823096572fcc1a8caaa2faa77f3379c',
+      'tts-fr-gilles':
+          '92d2bfd9b6b32b9787557c466b15620e453aecc10ec521762660e034941b3c43',
+      'tts-en-joe':
+          '644527f29eca0ada5595d7b6e4daf6388f5ac0c4870b4d42996a6687fcefeb37',
+    };
+    for (final MapEntry(:key, :value) in sums.entries) {
+      final m = catalog.byId(key)!;
+      expect(m.files.single.sha256, value, reason: key);
+      expect(m.license, startsWith('CC0'));
+      expect(m.sizeBytes, lessThan(25000000));
+      expect(m.note, contains('selbst gehasht'));
+    }
+    for (final m in catalog.ofKind(SpeechModelKind.tts)) {
+      expect(m.gender, isNotNull, reason: m.id);
+      expect(m.languages, hasLength(1));
+      expect(m.license, isNot(contains('NC')), reason: 'keine NC-Lizenz');
+      expect(m.license, isNot(contains('GPL')));
+    }
+  });
+
   test('Stimmen sind Archive, die die Plattform entpackt', () {
     for (final m in catalog.ofKind(SpeechModelKind.tts)) {
       expect(m.files.single.archive, ModelArchive.tarBz2);

@@ -215,7 +215,6 @@ class _SpeechOutput extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final catalog = ref.watch(speechModelCatalogProvider);
     final selection = ref.watch(ttsSelectionProvider).value;
     final sampleLang = sampleLanguage(settings, ref.watch(languageProvider));
     return Column(
@@ -247,17 +246,20 @@ class _SpeechOutput extends ConsumerWidget {
         SettingsSection(
           title: 'Offline-Stimmen',
           children: [
-            for (final m in catalog.ofKind(SpeechModelKind.tts))
-              ModelDownloadRow(model: m),
+            SettingsRow(
+              title: 'Stimmen',
+              detail: 'Je Sprache eine weibliche und eine männliche Stimme',
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.voices),
+            ),
           ],
         ),
         SettingsSection(
           title: 'Stimme und Tempo',
           children: [
             SettingsRow(
-              title: 'Stimme',
+              title: 'Systemstimme',
               detail: settings.ttsVoice ?? 'Standard der Sprache',
-              onTap: selection?.tts == null
+              onTap: selection?.engine != TtsEngine.system
                   ? null
                   : () => unawaited(_chooseVoice(context, selection!.tts!)),
             ),

@@ -186,6 +186,8 @@ final sherpaTtsProvider = Provider<TextToSpeech>((ref) {
     installed: voices,
     synthesizer: ref.watch(sherpaSynthesizerProvider),
     playback: playback,
+    preferred: () =>
+        ref.read(voiceSettingsProvider).value?.sherpaVoices ?? const {},
   );
 });
 

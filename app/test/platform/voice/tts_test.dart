@@ -313,6 +313,37 @@ void main() {
       ]);
     });
 
+    test(
+      'Stimmenwahl je Sprache (WP66): bevorzugte Stimme, sonst Standard',
+      () async {
+        const kerstin = SherpaVoice(
+          id: 'tts-de-kerstin',
+          language: 'de',
+          name: 'Kerstin',
+          files: PiperVoiceFiles(model: 'm', tokens: 't', dataDir: 'd'),
+        );
+        final synth = FakeSynthesizer();
+        var chosen = <String, String>{'de': 'tts-de-kerstin'};
+        final tts = SherpaTextToSpeech(
+          installed: () async => const [_voice, kerstin, _voiceFr],
+          synthesizer: synth,
+          playback: FakePlayback(time: Duration.zero),
+          preferred: () => chosen,
+        );
+        await tts.speak('a', language: 'de');
+        await tts.speak('b', voice: 'tts-de-thorsten', language: 'de');
+        chosen = {'de': 'tts-de-fehlt', 'fr': 'tts-de-kerstin'};
+        await tts.speak('c', language: 'de');
+        await tts.speak('d', language: 'fr');
+        expect(synth.calls.map((c) => c.$2), [
+          'tts-de-kerstin',
+          'tts-de-thorsten',
+          'tts-de-thorsten',
+          'tts-fr-siwis',
+        ]);
+      },
+    );
+
     test('stop verwirft wartende Äußerungen', () async {
       final playback = FakePlayback(time: const Duration(seconds: 5));
       final tts = SherpaTextToSpeech(
