@@ -28,14 +28,46 @@ void main() {
 
   test('aktuelle Schema-Version ist eingecheckt', () {
     expect(GeneratedHelper.versions.last, WendelinDatabase.version);
-    expect(WendelinDatabase.version, 3);
+    expect(WendelinDatabase.version, 4);
   });
 
-  test('neue Datenbank entspricht dem Schema-Dump v3', () async {
-    final schema = await verifier.schemaAt(3);
+  test('neue Datenbank entspricht dem Schema-Dump v4', () async {
+    final schema = await verifier.schemaAt(4);
     final db = WendelinDatabase(schema.newConnection());
     addTearDown(db.close);
-    await verifier.migrateAndValidate(db, 3);
+    await verifier.migrateAndValidate(db, 4);
+  });
+
+  test('Upgrade v3 → v4 legt das Prüfprotokoll an, Daten bleiben', () async {
+    final schema = await verifier.schemaAt(3);
+    schema.rawDatabase
+      ..execute(
+        'INSERT INTO sessions (id, started_at, last_activity_at, title) '
+        "VALUES ('s1', 1, 2, 'Alt')",
+      )
+      ..execute(
+        'INSERT INTO audit_log (at, kind, session_id, payload_json) '
+        "VALUES (5, 'error', 's1', '{}')",
+      );
+    final db = WendelinDatabase(schema.newConnection());
+    await verifier.migrateAndValidate(db, 4);
+    await db.close();
+
+    final storage = WendelinStorage(schema.newConnection());
+    addTearDown(storage.close);
+    expect((await storage.conversations.session('s1'))?.title, 'Alt');
+    expect(await storage.audit.query(), hasLength(1));
+    expect(await storage.attestations.latest(), isEmpty);
+    await storage.attestations.add(
+      AttestationRecord(
+        logId: 'l1',
+        at: DateTime.utc(2026, 10, 14),
+        profileId: 'tee',
+        kind: AttestationRecordKind.session,
+        status: AttestationStatus.green,
+      ),
+    );
+    expect((await storage.attestations.latest()).single.logId, 'l1');
   });
 
   test(

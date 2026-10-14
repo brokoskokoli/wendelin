@@ -273,18 +273,21 @@ void main() {
 
     testWidgets('alles löschen nur nach Bestätigung', (tester) async {
       final env = await withAudit();
+      await env.storage.attestations.add(_attestation(DateTime.now()));
       await pumpPage(tester, env, const PrivacyScreen());
       await tester.tap(find.text('Verläufe und Protokoll löschen'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Abbrechen'));
       await settle(tester);
       expect(await env.storage.audit.query(), hasLength(2));
+      expect(await env.storage.attestations.latest(), hasLength(1));
 
       await tester.tap(find.text('Verläufe und Protokoll löschen'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Alles löschen'));
       await settle(tester);
       expect(await env.storage.audit.query(), isEmpty);
+      expect(await env.storage.attestations.latest(), isEmpty);
       expect(await env.storage.conversations.sessions(), isEmpty);
     });
 
@@ -296,8 +299,14 @@ void main() {
       await env.storage.audit.record(
         AuditEntry(at: DateTime.now(), kind: AuditKind.error),
       );
+      await env.storage.attestations.add(_attestation(DateTime(2020), 'old'));
+      await env.storage.attestations.add(_attestation(DateTime.now(), 'new'));
       await purgeExpired(env.storage, 30);
       expect(await env.storage.audit.query(), hasLength(1));
+      expect(
+        [for (final a in await env.storage.attestations.latest()) a.logId],
+        ['new'],
+      );
     });
   });
 
@@ -374,3 +383,12 @@ void main() {
     expect(ToolPrefs.fromJson({'disabled': 3}).disabled, isEmpty);
   });
 }
+
+AttestationRecord _attestation(DateTime at, [String id = 'l1']) =>
+    AttestationRecord(
+      logId: id,
+      at: at,
+      profileId: 'near',
+      kind: AttestationRecordKind.receipt,
+      status: AttestationStatus.green,
+    );

@@ -3275,6 +3275,974 @@ class NoteFilesCompanion extends UpdateCompanion<NoteFileRow> {
   }
 }
 
+class $AttestationLogTable extends AttestationLog
+    with TableInfo<$AttestationLogTable, AttestationRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AttestationLogTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _logIdMeta = const VerificationMeta('logId');
+  @override
+  late final GeneratedColumn<String> logId = GeneratedColumn<String>(
+    'log_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> at =
+      GeneratedColumn<int>(
+        'at',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<DateTime>($AttestationLogTable.$converterat);
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<String> profileId = GeneratedColumn<String>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<String> sessionId = GeneratedColumn<String>(
+    'session_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stepIdMeta = const VerificationMeta('stepId');
+  @override
+  late final GeneratedColumn<String> stepId = GeneratedColumn<String>(
+    'step_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _receiptIdMeta = const VerificationMeta(
+    'receiptId',
+  );
+  @override
+  late final GeneratedColumn<String> receiptId = GeneratedColumn<String>(
+    'receipt_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _workloadKeysetDigestMeta =
+      const VerificationMeta('workloadKeysetDigest');
+  @override
+  late final GeneratedColumn<String> workloadKeysetDigest =
+      GeneratedColumn<String>(
+        'workload_keyset_digest',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _workloadIdMeta = const VerificationMeta(
+    'workloadId',
+  );
+  @override
+  late final GeneratedColumn<String> workloadId = GeneratedColumn<String>(
+    'workload_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _repoCommitMeta = const VerificationMeta(
+    'repoCommit',
+  );
+  @override
+  late final GeneratedColumn<String> repoCommit = GeneratedColumn<String>(
+    'repo_commit',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _composeHashMeta = const VerificationMeta(
+    'composeHash',
+  );
+  @override
+  late final GeneratedColumn<String> composeHash = GeneratedColumn<String>(
+    'compose_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stagesJsonMeta = const VerificationMeta(
+    'stagesJson',
+  );
+  @override
+  late final GeneratedColumn<String> stagesJson = GeneratedColumn<String>(
+    'stages_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tcbStatusMeta = const VerificationMeta(
+    'tcbStatus',
+  );
+  @override
+  late final GeneratedColumn<String> tcbStatus = GeneratedColumn<String>(
+    'tcb_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reasonCodeMeta = const VerificationMeta(
+    'reasonCode',
+  );
+  @override
+  late final GeneratedColumn<String> reasonCode = GeneratedColumn<String>(
+    'reason_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    logId,
+    at,
+    profileId,
+    model,
+    kind,
+    sessionId,
+    stepId,
+    receiptId,
+    workloadKeysetDigest,
+    workloadId,
+    repoCommit,
+    composeHash,
+    status,
+    stagesJson,
+    tcbStatus,
+    reasonCode,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'attestation_log';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AttestationRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('log_id')) {
+      context.handle(
+        _logIdMeta,
+        logId.isAcceptableOrUnknown(data['log_id']!, _logIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_logIdMeta);
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    }
+    if (data.containsKey('step_id')) {
+      context.handle(
+        _stepIdMeta,
+        stepId.isAcceptableOrUnknown(data['step_id']!, _stepIdMeta),
+      );
+    }
+    if (data.containsKey('receipt_id')) {
+      context.handle(
+        _receiptIdMeta,
+        receiptId.isAcceptableOrUnknown(data['receipt_id']!, _receiptIdMeta),
+      );
+    }
+    if (data.containsKey('workload_keyset_digest')) {
+      context.handle(
+        _workloadKeysetDigestMeta,
+        workloadKeysetDigest.isAcceptableOrUnknown(
+          data['workload_keyset_digest']!,
+          _workloadKeysetDigestMeta,
+        ),
+      );
+    }
+    if (data.containsKey('workload_id')) {
+      context.handle(
+        _workloadIdMeta,
+        workloadId.isAcceptableOrUnknown(data['workload_id']!, _workloadIdMeta),
+      );
+    }
+    if (data.containsKey('repo_commit')) {
+      context.handle(
+        _repoCommitMeta,
+        repoCommit.isAcceptableOrUnknown(data['repo_commit']!, _repoCommitMeta),
+      );
+    }
+    if (data.containsKey('compose_hash')) {
+      context.handle(
+        _composeHashMeta,
+        composeHash.isAcceptableOrUnknown(
+          data['compose_hash']!,
+          _composeHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('stages_json')) {
+      context.handle(
+        _stagesJsonMeta,
+        stagesJson.isAcceptableOrUnknown(data['stages_json']!, _stagesJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stagesJsonMeta);
+    }
+    if (data.containsKey('tcb_status')) {
+      context.handle(
+        _tcbStatusMeta,
+        tcbStatus.isAcceptableOrUnknown(data['tcb_status']!, _tcbStatusMeta),
+      );
+    }
+    if (data.containsKey('reason_code')) {
+      context.handle(
+        _reasonCodeMeta,
+        reasonCode.isAcceptableOrUnknown(data['reason_code']!, _reasonCodeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AttestationRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AttestationRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      logId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}log_id'],
+      )!,
+      at: $AttestationLogTable.$converterat.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}at'],
+        )!,
+      ),
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}session_id'],
+      ),
+      stepId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}step_id'],
+      ),
+      receiptId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}receipt_id'],
+      ),
+      workloadKeysetDigest: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}workload_keyset_digest'],
+      ),
+      workloadId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}workload_id'],
+      ),
+      repoCommit: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}repo_commit'],
+      ),
+      composeHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}compose_hash'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      stagesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}stages_json'],
+      )!,
+      tcbStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tcb_status'],
+      ),
+      reasonCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason_code'],
+      ),
+    );
+  }
+
+  @override
+  $AttestationLogTable createAlias(String alias) {
+    return $AttestationLogTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, int> $converterat = epochMicros;
+}
+
+class AttestationRow extends DataClass implements Insertable<AttestationRow> {
+  final int id;
+
+  /// Id the agent event `AttestationStatusChanged.logId` refers to.
+  final String logId;
+  final DateTime at;
+  final String profileId;
+  final String? model;
+
+  /// `session`, `receipt` or `gpu`.
+  final String kind;
+  final String? sessionId;
+  final String? stepId;
+  final String? receiptId;
+  final String? workloadKeysetDigest;
+  final String? workloadId;
+  final String? repoCommit;
+
+  /// Compose hash or image digest.
+  final String? composeHash;
+
+  /// `AttestationStatus.name`.
+  final String status;
+
+  /// JSON list of `{stage, result, detail?, code?}`.
+  final String stagesJson;
+  final String? tcbStatus;
+  final String? reasonCode;
+  const AttestationRow({
+    required this.id,
+    required this.logId,
+    required this.at,
+    required this.profileId,
+    this.model,
+    required this.kind,
+    this.sessionId,
+    this.stepId,
+    this.receiptId,
+    this.workloadKeysetDigest,
+    this.workloadId,
+    this.repoCommit,
+    this.composeHash,
+    required this.status,
+    required this.stagesJson,
+    this.tcbStatus,
+    this.reasonCode,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['log_id'] = Variable<String>(logId);
+    {
+      map['at'] = Variable<int>($AttestationLogTable.$converterat.toSql(at));
+    }
+    map['profile_id'] = Variable<String>(profileId);
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
+    map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || sessionId != null) {
+      map['session_id'] = Variable<String>(sessionId);
+    }
+    if (!nullToAbsent || stepId != null) {
+      map['step_id'] = Variable<String>(stepId);
+    }
+    if (!nullToAbsent || receiptId != null) {
+      map['receipt_id'] = Variable<String>(receiptId);
+    }
+    if (!nullToAbsent || workloadKeysetDigest != null) {
+      map['workload_keyset_digest'] = Variable<String>(workloadKeysetDigest);
+    }
+    if (!nullToAbsent || workloadId != null) {
+      map['workload_id'] = Variable<String>(workloadId);
+    }
+    if (!nullToAbsent || repoCommit != null) {
+      map['repo_commit'] = Variable<String>(repoCommit);
+    }
+    if (!nullToAbsent || composeHash != null) {
+      map['compose_hash'] = Variable<String>(composeHash);
+    }
+    map['status'] = Variable<String>(status);
+    map['stages_json'] = Variable<String>(stagesJson);
+    if (!nullToAbsent || tcbStatus != null) {
+      map['tcb_status'] = Variable<String>(tcbStatus);
+    }
+    if (!nullToAbsent || reasonCode != null) {
+      map['reason_code'] = Variable<String>(reasonCode);
+    }
+    return map;
+  }
+
+  AttestationLogCompanion toCompanion(bool nullToAbsent) {
+    return AttestationLogCompanion(
+      id: Value(id),
+      logId: Value(logId),
+      at: Value(at),
+      profileId: Value(profileId),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
+      kind: Value(kind),
+      sessionId: sessionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sessionId),
+      stepId: stepId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(stepId),
+      receiptId: receiptId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receiptId),
+      workloadKeysetDigest: workloadKeysetDigest == null && nullToAbsent
+          ? const Value.absent()
+          : Value(workloadKeysetDigest),
+      workloadId: workloadId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(workloadId),
+      repoCommit: repoCommit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(repoCommit),
+      composeHash: composeHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(composeHash),
+      status: Value(status),
+      stagesJson: Value(stagesJson),
+      tcbStatus: tcbStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tcbStatus),
+      reasonCode: reasonCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reasonCode),
+    );
+  }
+
+  factory AttestationRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AttestationRow(
+      id: serializer.fromJson<int>(json['id']),
+      logId: serializer.fromJson<String>(json['logId']),
+      at: serializer.fromJson<DateTime>(json['at']),
+      profileId: serializer.fromJson<String>(json['profileId']),
+      model: serializer.fromJson<String?>(json['model']),
+      kind: serializer.fromJson<String>(json['kind']),
+      sessionId: serializer.fromJson<String?>(json['sessionId']),
+      stepId: serializer.fromJson<String?>(json['stepId']),
+      receiptId: serializer.fromJson<String?>(json['receiptId']),
+      workloadKeysetDigest: serializer.fromJson<String?>(
+        json['workloadKeysetDigest'],
+      ),
+      workloadId: serializer.fromJson<String?>(json['workloadId']),
+      repoCommit: serializer.fromJson<String?>(json['repoCommit']),
+      composeHash: serializer.fromJson<String?>(json['composeHash']),
+      status: serializer.fromJson<String>(json['status']),
+      stagesJson: serializer.fromJson<String>(json['stagesJson']),
+      tcbStatus: serializer.fromJson<String?>(json['tcbStatus']),
+      reasonCode: serializer.fromJson<String?>(json['reasonCode']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'logId': serializer.toJson<String>(logId),
+      'at': serializer.toJson<DateTime>(at),
+      'profileId': serializer.toJson<String>(profileId),
+      'model': serializer.toJson<String?>(model),
+      'kind': serializer.toJson<String>(kind),
+      'sessionId': serializer.toJson<String?>(sessionId),
+      'stepId': serializer.toJson<String?>(stepId),
+      'receiptId': serializer.toJson<String?>(receiptId),
+      'workloadKeysetDigest': serializer.toJson<String?>(workloadKeysetDigest),
+      'workloadId': serializer.toJson<String?>(workloadId),
+      'repoCommit': serializer.toJson<String?>(repoCommit),
+      'composeHash': serializer.toJson<String?>(composeHash),
+      'status': serializer.toJson<String>(status),
+      'stagesJson': serializer.toJson<String>(stagesJson),
+      'tcbStatus': serializer.toJson<String?>(tcbStatus),
+      'reasonCode': serializer.toJson<String?>(reasonCode),
+    };
+  }
+
+  AttestationRow copyWith({
+    int? id,
+    String? logId,
+    DateTime? at,
+    String? profileId,
+    Value<String?> model = const Value.absent(),
+    String? kind,
+    Value<String?> sessionId = const Value.absent(),
+    Value<String?> stepId = const Value.absent(),
+    Value<String?> receiptId = const Value.absent(),
+    Value<String?> workloadKeysetDigest = const Value.absent(),
+    Value<String?> workloadId = const Value.absent(),
+    Value<String?> repoCommit = const Value.absent(),
+    Value<String?> composeHash = const Value.absent(),
+    String? status,
+    String? stagesJson,
+    Value<String?> tcbStatus = const Value.absent(),
+    Value<String?> reasonCode = const Value.absent(),
+  }) => AttestationRow(
+    id: id ?? this.id,
+    logId: logId ?? this.logId,
+    at: at ?? this.at,
+    profileId: profileId ?? this.profileId,
+    model: model.present ? model.value : this.model,
+    kind: kind ?? this.kind,
+    sessionId: sessionId.present ? sessionId.value : this.sessionId,
+    stepId: stepId.present ? stepId.value : this.stepId,
+    receiptId: receiptId.present ? receiptId.value : this.receiptId,
+    workloadKeysetDigest: workloadKeysetDigest.present
+        ? workloadKeysetDigest.value
+        : this.workloadKeysetDigest,
+    workloadId: workloadId.present ? workloadId.value : this.workloadId,
+    repoCommit: repoCommit.present ? repoCommit.value : this.repoCommit,
+    composeHash: composeHash.present ? composeHash.value : this.composeHash,
+    status: status ?? this.status,
+    stagesJson: stagesJson ?? this.stagesJson,
+    tcbStatus: tcbStatus.present ? tcbStatus.value : this.tcbStatus,
+    reasonCode: reasonCode.present ? reasonCode.value : this.reasonCode,
+  );
+  AttestationRow copyWithCompanion(AttestationLogCompanion data) {
+    return AttestationRow(
+      id: data.id.present ? data.id.value : this.id,
+      logId: data.logId.present ? data.logId.value : this.logId,
+      at: data.at.present ? data.at.value : this.at,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      model: data.model.present ? data.model.value : this.model,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      stepId: data.stepId.present ? data.stepId.value : this.stepId,
+      receiptId: data.receiptId.present ? data.receiptId.value : this.receiptId,
+      workloadKeysetDigest: data.workloadKeysetDigest.present
+          ? data.workloadKeysetDigest.value
+          : this.workloadKeysetDigest,
+      workloadId: data.workloadId.present
+          ? data.workloadId.value
+          : this.workloadId,
+      repoCommit: data.repoCommit.present
+          ? data.repoCommit.value
+          : this.repoCommit,
+      composeHash: data.composeHash.present
+          ? data.composeHash.value
+          : this.composeHash,
+      status: data.status.present ? data.status.value : this.status,
+      stagesJson: data.stagesJson.present
+          ? data.stagesJson.value
+          : this.stagesJson,
+      tcbStatus: data.tcbStatus.present ? data.tcbStatus.value : this.tcbStatus,
+      reasonCode: data.reasonCode.present
+          ? data.reasonCode.value
+          : this.reasonCode,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AttestationRow(')
+          ..write('id: $id, ')
+          ..write('logId: $logId, ')
+          ..write('at: $at, ')
+          ..write('profileId: $profileId, ')
+          ..write('model: $model, ')
+          ..write('kind: $kind, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('stepId: $stepId, ')
+          ..write('receiptId: $receiptId, ')
+          ..write('workloadKeysetDigest: $workloadKeysetDigest, ')
+          ..write('workloadId: $workloadId, ')
+          ..write('repoCommit: $repoCommit, ')
+          ..write('composeHash: $composeHash, ')
+          ..write('status: $status, ')
+          ..write('stagesJson: $stagesJson, ')
+          ..write('tcbStatus: $tcbStatus, ')
+          ..write('reasonCode: $reasonCode')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    logId,
+    at,
+    profileId,
+    model,
+    kind,
+    sessionId,
+    stepId,
+    receiptId,
+    workloadKeysetDigest,
+    workloadId,
+    repoCommit,
+    composeHash,
+    status,
+    stagesJson,
+    tcbStatus,
+    reasonCode,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AttestationRow &&
+          other.id == this.id &&
+          other.logId == this.logId &&
+          other.at == this.at &&
+          other.profileId == this.profileId &&
+          other.model == this.model &&
+          other.kind == this.kind &&
+          other.sessionId == this.sessionId &&
+          other.stepId == this.stepId &&
+          other.receiptId == this.receiptId &&
+          other.workloadKeysetDigest == this.workloadKeysetDigest &&
+          other.workloadId == this.workloadId &&
+          other.repoCommit == this.repoCommit &&
+          other.composeHash == this.composeHash &&
+          other.status == this.status &&
+          other.stagesJson == this.stagesJson &&
+          other.tcbStatus == this.tcbStatus &&
+          other.reasonCode == this.reasonCode);
+}
+
+class AttestationLogCompanion extends UpdateCompanion<AttestationRow> {
+  final Value<int> id;
+  final Value<String> logId;
+  final Value<DateTime> at;
+  final Value<String> profileId;
+  final Value<String?> model;
+  final Value<String> kind;
+  final Value<String?> sessionId;
+  final Value<String?> stepId;
+  final Value<String?> receiptId;
+  final Value<String?> workloadKeysetDigest;
+  final Value<String?> workloadId;
+  final Value<String?> repoCommit;
+  final Value<String?> composeHash;
+  final Value<String> status;
+  final Value<String> stagesJson;
+  final Value<String?> tcbStatus;
+  final Value<String?> reasonCode;
+  const AttestationLogCompanion({
+    this.id = const Value.absent(),
+    this.logId = const Value.absent(),
+    this.at = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.model = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.stepId = const Value.absent(),
+    this.receiptId = const Value.absent(),
+    this.workloadKeysetDigest = const Value.absent(),
+    this.workloadId = const Value.absent(),
+    this.repoCommit = const Value.absent(),
+    this.composeHash = const Value.absent(),
+    this.status = const Value.absent(),
+    this.stagesJson = const Value.absent(),
+    this.tcbStatus = const Value.absent(),
+    this.reasonCode = const Value.absent(),
+  });
+  AttestationLogCompanion.insert({
+    this.id = const Value.absent(),
+    required String logId,
+    required DateTime at,
+    required String profileId,
+    this.model = const Value.absent(),
+    required String kind,
+    this.sessionId = const Value.absent(),
+    this.stepId = const Value.absent(),
+    this.receiptId = const Value.absent(),
+    this.workloadKeysetDigest = const Value.absent(),
+    this.workloadId = const Value.absent(),
+    this.repoCommit = const Value.absent(),
+    this.composeHash = const Value.absent(),
+    required String status,
+    required String stagesJson,
+    this.tcbStatus = const Value.absent(),
+    this.reasonCode = const Value.absent(),
+  }) : logId = Value(logId),
+       at = Value(at),
+       profileId = Value(profileId),
+       kind = Value(kind),
+       status = Value(status),
+       stagesJson = Value(stagesJson);
+  static Insertable<AttestationRow> custom({
+    Expression<int>? id,
+    Expression<String>? logId,
+    Expression<int>? at,
+    Expression<String>? profileId,
+    Expression<String>? model,
+    Expression<String>? kind,
+    Expression<String>? sessionId,
+    Expression<String>? stepId,
+    Expression<String>? receiptId,
+    Expression<String>? workloadKeysetDigest,
+    Expression<String>? workloadId,
+    Expression<String>? repoCommit,
+    Expression<String>? composeHash,
+    Expression<String>? status,
+    Expression<String>? stagesJson,
+    Expression<String>? tcbStatus,
+    Expression<String>? reasonCode,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (logId != null) 'log_id': logId,
+      if (at != null) 'at': at,
+      if (profileId != null) 'profile_id': profileId,
+      if (model != null) 'model': model,
+      if (kind != null) 'kind': kind,
+      if (sessionId != null) 'session_id': sessionId,
+      if (stepId != null) 'step_id': stepId,
+      if (receiptId != null) 'receipt_id': receiptId,
+      if (workloadKeysetDigest != null)
+        'workload_keyset_digest': workloadKeysetDigest,
+      if (workloadId != null) 'workload_id': workloadId,
+      if (repoCommit != null) 'repo_commit': repoCommit,
+      if (composeHash != null) 'compose_hash': composeHash,
+      if (status != null) 'status': status,
+      if (stagesJson != null) 'stages_json': stagesJson,
+      if (tcbStatus != null) 'tcb_status': tcbStatus,
+      if (reasonCode != null) 'reason_code': reasonCode,
+    });
+  }
+
+  AttestationLogCompanion copyWith({
+    Value<int>? id,
+    Value<String>? logId,
+    Value<DateTime>? at,
+    Value<String>? profileId,
+    Value<String?>? model,
+    Value<String>? kind,
+    Value<String?>? sessionId,
+    Value<String?>? stepId,
+    Value<String?>? receiptId,
+    Value<String?>? workloadKeysetDigest,
+    Value<String?>? workloadId,
+    Value<String?>? repoCommit,
+    Value<String?>? composeHash,
+    Value<String>? status,
+    Value<String>? stagesJson,
+    Value<String?>? tcbStatus,
+    Value<String?>? reasonCode,
+  }) {
+    return AttestationLogCompanion(
+      id: id ?? this.id,
+      logId: logId ?? this.logId,
+      at: at ?? this.at,
+      profileId: profileId ?? this.profileId,
+      model: model ?? this.model,
+      kind: kind ?? this.kind,
+      sessionId: sessionId ?? this.sessionId,
+      stepId: stepId ?? this.stepId,
+      receiptId: receiptId ?? this.receiptId,
+      workloadKeysetDigest: workloadKeysetDigest ?? this.workloadKeysetDigest,
+      workloadId: workloadId ?? this.workloadId,
+      repoCommit: repoCommit ?? this.repoCommit,
+      composeHash: composeHash ?? this.composeHash,
+      status: status ?? this.status,
+      stagesJson: stagesJson ?? this.stagesJson,
+      tcbStatus: tcbStatus ?? this.tcbStatus,
+      reasonCode: reasonCode ?? this.reasonCode,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (logId.present) {
+      map['log_id'] = Variable<String>(logId.value);
+    }
+    if (at.present) {
+      map['at'] = Variable<int>(
+        $AttestationLogTable.$converterat.toSql(at.value),
+      );
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<String>(profileId.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<String>(sessionId.value);
+    }
+    if (stepId.present) {
+      map['step_id'] = Variable<String>(stepId.value);
+    }
+    if (receiptId.present) {
+      map['receipt_id'] = Variable<String>(receiptId.value);
+    }
+    if (workloadKeysetDigest.present) {
+      map['workload_keyset_digest'] = Variable<String>(
+        workloadKeysetDigest.value,
+      );
+    }
+    if (workloadId.present) {
+      map['workload_id'] = Variable<String>(workloadId.value);
+    }
+    if (repoCommit.present) {
+      map['repo_commit'] = Variable<String>(repoCommit.value);
+    }
+    if (composeHash.present) {
+      map['compose_hash'] = Variable<String>(composeHash.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (stagesJson.present) {
+      map['stages_json'] = Variable<String>(stagesJson.value);
+    }
+    if (tcbStatus.present) {
+      map['tcb_status'] = Variable<String>(tcbStatus.value);
+    }
+    if (reasonCode.present) {
+      map['reason_code'] = Variable<String>(reasonCode.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AttestationLogCompanion(')
+          ..write('id: $id, ')
+          ..write('logId: $logId, ')
+          ..write('at: $at, ')
+          ..write('profileId: $profileId, ')
+          ..write('model: $model, ')
+          ..write('kind: $kind, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('stepId: $stepId, ')
+          ..write('receiptId: $receiptId, ')
+          ..write('workloadKeysetDigest: $workloadKeysetDigest, ')
+          ..write('workloadId: $workloadId, ')
+          ..write('repoCommit: $repoCommit, ')
+          ..write('composeHash: $composeHash, ')
+          ..write('status: $status, ')
+          ..write('stagesJson: $stagesJson, ')
+          ..write('tcbStatus: $tcbStatus, ')
+          ..write('reasonCode: $reasonCode')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class MemoryFts extends Table
     with TableInfo<MemoryFts, MemoryFt>, VirtualTableInfo<MemoryFts, MemoryFt> {
   @override
@@ -3504,6 +4472,7 @@ abstract class _$WendelinDatabase extends GeneratedDatabase {
   late final $UsageRecordsTable usageRecords = $UsageRecordsTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
   late final $NoteFilesTable noteFiles = $NoteFilesTable(this);
+  late final $AttestationLogTable attestationLog = $AttestationLogTable(this);
   late final Index sessionsLastActivity = Index(
     'sessions_last_activity',
     'CREATE INDEX sessions_last_activity ON sessions (last_activity_at)',
@@ -3523,6 +4492,14 @@ abstract class _$WendelinDatabase extends GeneratedDatabase {
   late final Index usageRecordsAt = Index(
     'usage_records_at',
     'CREATE INDEX usage_records_at ON usage_records (at)',
+  );
+  late final Index attestationLogAt = Index(
+    'attestation_log_at',
+    'CREATE INDEX attestation_log_at ON attestation_log (at)',
+  );
+  late final Index attestationLogSession = Index(
+    'attestation_log_session',
+    'CREATE INDEX attestation_log_session ON attestation_log (session_id)',
   );
   late final MemoryFts memoryFts = MemoryFts(this);
   late final Trigger memoryEntriesAi = Trigger(
@@ -3551,11 +4528,14 @@ abstract class _$WendelinDatabase extends GeneratedDatabase {
     usageRecords,
     settings,
     noteFiles,
+    attestationLog,
     sessionsLastActivity,
     messagesSessionSeq,
     auditLogAt,
     usageRecordsProfileAt,
     usageRecordsAt,
+    attestationLogAt,
+    attestationLogSession,
     memoryFts,
     memoryEntriesAi,
     memoryEntriesAd,

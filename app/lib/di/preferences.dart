@@ -96,10 +96,11 @@ final class RetentionDays extends Notifier<int> {
   }
 }
 
-/// Deletes audit entries and conversations older than [days].
+/// Deletes audit entries, verification log and conversations older than [days].
 Future<void> purgeExpired(WendelinStorage storage, int days) async {
   final age = Duration(days: days);
   await storage.audit.purgeOlderThan(age);
+  await storage.attestations.purgeOlderThan(age);
   await storage.conversations.purgeOlderThan(age);
 }
 

@@ -9,6 +9,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../agent/agent_controller.dart';
 import 'agent_factory.dart';
+import 'attestation_log_writer.dart';
 import 'audit_recorder.dart';
 import 'core_providers.dart';
 import 'costs.dart';
@@ -47,11 +48,17 @@ final undoManagerProvider = Provider<UndoManager>((ref) {
   return manager;
 });
 
+/// Verification log (Prüfprotokoll) writer; the log sink of TEE providers.
+final attestationLogWriterProvider = Provider<AttestationLogWriter>(
+  (ref) => AttestationLogWriter(ref.watch(storageProvider).attestations),
+);
+
 /// Audit log writer.
 final auditRecorderProvider = Provider<AuditRecorder>(
   (ref) => AuditRecorder(
     ref.watch(storageProvider).audit,
     clock: ref.watch(clockProvider),
+    attestation: ref.watch(attestationLogWriterProvider),
   ),
 );
 

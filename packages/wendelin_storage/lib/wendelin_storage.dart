@@ -7,6 +7,7 @@
 /// contract suites: `package:wendelin_storage/testing.dart`.
 library;
 
+export 'src/model/attestation_record.dart';
 export 'src/model/audit_entry.dart';
 export 'src/model/conversation.dart';
 export 'src/model/note_search_hit.dart';
