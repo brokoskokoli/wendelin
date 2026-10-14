@@ -12,6 +12,7 @@ import 'attestation_policy.dart';
 import 'attestation_types.dart';
 import 'gpu_attestation.dart';
 import 'gpu_gate.dart';
+import 'tls_pin_gate.dart';
 
 /// Decorator that makes an OpenAI-compatible TEE provider verifiable
 /// (concept: „TEE-Provider und Attestierung“, ADR 0014).
@@ -42,6 +43,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.logSink,
     this.settings = const HttpSettings(),
     this.retryDelay = const Duration(seconds: 2),
+    this.tlsPin,
     Duration gpuTimeout = const Duration(seconds: 15),
   }) {
     final provider = inner.options.extraBody['provider'];
@@ -88,6 +90,12 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   /// Wait between receipt attempts.
   final Duration retryDelay;
+
+  /// Pin state of the enforcing client of [inner] (WP61). If a connection
+  /// is refused because its certificate does not match the attestation, the
+  /// provider attests once more (certificate rotation) and retries the
+  /// request; a second mismatch locks the provider.
+  final TlsPinGate? tlsPin;
 
   AttestedSession? _session;
   List<StageResult> _lastStages = const [];
@@ -138,7 +146,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   ProviderCapabilities get caps => inner.caps;
 
   @override
-  Future<List<ModelInfo>> listModels() => inner.listModels();
+  Future<List<ModelInfo>> listModels() async {
+    if (await _prepareSession() case final error?) throw error;
+    return inner.listModels();
+  }
 
   @override
   Future<HealthCheck> test() => runHealthProbe(
@@ -186,41 +197,66 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   @override
   Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) async* {
     _latest = null;
-    final error = await _prepare(req.model);
-    if (error != null) {
-      _audit.log('Wendelin/attest: Anfrage nicht gesendet (${error.stage})');
-      yield ErrorEvent(error);
-      return;
-    }
-    if (cancel?.isCancelled ?? false) {
-      yield const ErrorEvent(CancelledException());
-      return;
-    }
-    final session = _session!;
-    ExchangeRecord? record;
-    await for (final event in inner.chatObserved(
-      req,
-      cancel: cancel,
-      observer: (r) => record = r,
-    )) {
-      if (event is Done && record != null) {
-        _latest = _byRequest[req] = _checkReceipt(record!, session, req.model);
-      } else if (event is ErrorEvent) {
-        _latest = _byRequest[req] = Future.value();
+    for (var attempt = 0; ; attempt++) {
+      final error = await _prepare(req.model);
+      if (error != null) {
+        _audit.log('Wendelin/attest: Anfrage nicht gesendet (${error.stage})');
+        yield ErrorEvent(error);
+        return;
       }
-      yield event;
+      if (cancel?.isCancelled ?? false) {
+        yield const ErrorEvent(CancelledException());
+        return;
+      }
+      final session = _session!;
+      ExchangeRecord? record;
+      tlsPin?.takeMismatch();
+      var rotated = false;
+      await for (final event in inner.chatObserved(
+        req,
+        cancel: cancel,
+        observer: (r) => record = r,
+      )) {
+        if (event is ErrorEvent && (tlsPin?.takeMismatch() ?? false)) {
+          // The connection was refused before any byte of the request.
+          if (attempt == 0) {
+            _audit.log('Wendelin/attest: TLS-Schlüssel weicht ab, neu prüfen');
+            _session = null;
+            rotated = true;
+            break;
+          }
+          final failure = event.error;
+          if (failure is AttestationFailedException) _lock = failure;
+        }
+        if (event is Done && record != null) {
+          _latest = _byRequest[req] = _checkReceipt(
+            record!,
+            session,
+            req.model,
+          );
+        } else if (event is ErrorEvent) {
+          _latest = _byRequest[req] = Future.value();
+        }
+        yield event;
+      }
+      if (!rotated) return;
     }
   }
 
   // --- Session ----------------------------------------------------------
 
   Future<AttestationFailedException?> _prepare(String model) async {
+    if (await _prepareSession() case final error?) return error;
+    return _gpu.before(model);
+  }
+
+  Future<AttestationFailedException?> _prepareSession() async {
     if (_lock != null) return _lock;
     final session = _session;
     if (session == null || !settings.clock.now().isBefore(session.notAfter)) {
-      if (await _attest() case final error?) return error;
+      return _attest();
     }
-    return _gpu.before(model);
+    return null;
   }
 
   Future<AttestationFailedException?> _attest() =>

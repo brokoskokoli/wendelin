@@ -16,6 +16,8 @@ import 'tee/attestation_pin_store.dart';
 import 'tee/attested_provider.dart';
 import 'tee/gpu_attestation.dart';
 import 'tee/phala_verifier.dart';
+import 'tee/tls_pin_gate.dart';
+import 'tee/tls_pinned_client.dart';
 
 /// What the factory needs to make a Phala/RedPill profile verifiable
 /// (ADR 0014): the crypto port (Rust in the app), where the audit log goes,
@@ -29,7 +31,16 @@ final class AttestationWiring {
     this.gpuMode = GpuCheckMode.off,
     this.trustedCommits = const {},
     this.nonceSource,
+    this.pinnedClient,
   });
+
+  /// Builds the HTTP client of a TEE profile on top of the pin [TlsPinGate]:
+  /// `enforce: true` for everything that carries content, `false` for the
+  /// attestation endpoints. `null` = [PinnedHttpClient] (production). Only
+  /// device tests with recorded fixtures replace it; the pin is then not
+  /// enforced by the transport.
+  final http.Client Function(TlsPinGate gate, {required bool enforce})?
+  pinnedClient;
 
   /// Nonce for the session attestation; `null` = random (production). Only
   /// device tests with recorded fixtures set it.
@@ -133,6 +144,13 @@ abstract final class ProviderFactory {
           );
         }
         final attested = attestation != null && needsAttestation(profile);
+        final gate = attested
+            ? TlsPinGate(spkiSha256: attestation.crypto.spkiSha256)
+            : null;
+        final build =
+            attestation?.pinnedClient ??
+            (TlsPinGate g, {required bool enforce}) =>
+                PinnedHttpClient(gate: g, enforce: enforce);
         final adapter = OpenAiChatAdapter(
           baseUrl: Uri.parse(baseUrl),
           credentials: Credentials(
@@ -142,7 +160,7 @@ abstract final class ProviderFactory {
           ),
           defaultModel: profile.defaultModel,
           label: profile.name,
-          client: client,
+          client: gate == null ? client : build(gate, enforce: true),
           extraHeaders: profile.extraHeaders,
           options: OpenAiOptions.fromMap(
             attested ? _withAciVerified(profile.options) : profile.options,
@@ -163,13 +181,15 @@ abstract final class ProviderFactory {
             crypto: attestation.crypto,
             baseUrl: root,
             profileId: profile.id,
-            client: client,
+            client: build(gate!, enforce: false),
+            tlsPin: gate,
             settings: settings,
             pins: attestation.pins,
             trustedCommits: attestation.trustedCommits,
             nonceSource: attestation.nonceSource,
           ),
           profileId: profile.id,
+          tlsPin: gate,
           gpuVerifier: NrasGpuVerifier(
             baseUrl: root,
             client: client ?? defaultHttpClient(),

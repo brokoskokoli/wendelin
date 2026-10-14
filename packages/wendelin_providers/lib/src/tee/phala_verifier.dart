@@ -17,6 +17,7 @@ import 'attestation_types.dart';
 import 'codec.dart';
 import 'gateway_documents.dart';
 import 'receipt_checks.dart';
+import 'tls_pin_gate.dart';
 
 /// [AttestationVerifier] for the Phala/RedPill gateway (ACI, spec
 /// `Dstack-TEE/private-ai-gateway`). [baseUrl] includes the version path,
@@ -38,6 +39,7 @@ final class PhalaVerifier implements AttestationVerifier {
     this.headers,
     this.observedSpki,
     this.enforceTlsPin = false,
+    this.tlsPin,
     this.expectUpstreamEnforced = true,
     Uint8List Function()? nonceSource,
   }) : _nonce = nonceSource ?? _secureNonce,
@@ -74,11 +76,17 @@ final class PhalaVerifier implements AttestationVerifier {
   final Future<Map<String, String>> Function()? headers;
 
   /// Hex SPKI hash of the certificate seen on the TLS connection, if the
-  /// platform provides it (see ADR 0014, open finding).
+  /// platform provides it. Superseded by [tlsPin] in the app (WP61).
   final Future<String?> Function()? observedSpki;
 
   /// Make a mismatch of [observedSpki] a failure (default: logged only).
   final bool enforceTlsPin;
+
+  /// Pin state shared with the enforcing client (WP61). When set, the
+  /// certificate seen on the attestation connection is checked (always
+  /// enforced) and the pin of a green attestation is handed to the gate; any
+  /// other outcome clears it.
+  final TlsPinGate? tlsPin;
 
   /// Require `upstream.verified.required == true` (the request carried
   /// `provider.aci_verified`).
@@ -110,6 +118,7 @@ final class PhalaVerifier implements AttestationVerifier {
 
   @override
   Future<AttestationResult> attest() async {
+    final gate = tlsPin?..expect(null);
     final nonce = _nonce();
     final now = settings.clock.now();
     final GatewayAttestation doc;
@@ -163,13 +172,17 @@ final class PhalaVerifier implements AttestationVerifier {
       ..add(
         _checks.tlsSpki(
           doc,
-          observedSpki: await observedSpki?.call(),
-          enforce: enforceTlsPin,
+          observedSpki: gate != null
+              ? gate.observed
+              : await observedSpki?.call(),
+          enforce: gate != null || enforceTlsPin,
+          host: gate == null ? null : baseUrl.host,
         ),
       );
 
     final status = policy.sessionStatus(stages);
     if (status != AttestationStatus.green) return _attestFailed(stages);
+    gate?.expect(_checks.pinFor(doc, baseUrl.host));
     final session = _session(doc, now);
     return AttestationResult(
       status: status,

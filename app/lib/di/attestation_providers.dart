@@ -141,11 +141,18 @@ final attestationTransportProvider = Provider<AttestationTransport?>(
 AttestationWiring? attestationWiringOf(Ref ref) {
   final crypto = ref.read(attestationCryptoProvider).asData?.value;
   if (crypto == null) return null;
+  final transport = ref.read(attestationTransportProvider);
   return AttestationWiring(
     crypto: crypto,
     logSink: ref.read(attestationLogWriterProvider),
     pins: ref.read(attestationPinStoreProvider),
     gpuMode: ref.read(gpuCheckModeProvider),
-    nonceSource: ref.read(attestationTransportProvider)?.nonceSource,
+    nonceSource: transport?.nonceSource,
+    // Production: the pinned TLS clients of the package. The device test
+    // replays recorded fixtures through its own client and therefore has no
+    // TLS connection to pin.
+    pinnedClient: transport == null
+        ? null
+        : (gate, {required enforce}) => transport.client,
   );
 }
