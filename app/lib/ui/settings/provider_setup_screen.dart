@@ -94,7 +94,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     _name.text = p.name;
     _baseUrl.text = p.baseUrl ?? '';
     _model.text = p.defaultModel;
-    _privacy = p.privacy;
+    _privacy = effectivePrivacy(p);
     _budget.text = budgetText(p.budgetMonthly);
     _warn = p.warnThreshold ?? 0.8;
   }

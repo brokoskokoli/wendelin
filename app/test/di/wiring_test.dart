@@ -7,6 +7,7 @@ import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/integrations/clipboard_spec.dart';
 import 'package:wendelin/di/integrations/flashlight_spec.dart';
 import 'package:wendelin/di/provider_config.dart';
+import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/platform/platform_ports.dart';
@@ -49,6 +50,35 @@ void main() {
       final storage = openInMemoryStorage();
       await storage.providerProfiles.save(_profile('a'));
       expect(await load(storage), isNull);
+    });
+
+    test('altes Profil mit „TEE“ ohne Prüfung zählt nicht als TEE', () async {
+      final storage = openInMemoryStorage();
+      await storage.providerProfiles.save(
+        _profile(
+          'tinfoil',
+          type: ProviderType.openaiCompatible,
+          privacy: PrivacyLevel.tee,
+          baseUrl: 'https://inference.tinfoil.sh/v1',
+        ),
+      );
+      await storage.providerProfiles.save(_profile('cloud'));
+      await storage.providerProfiles.setDefault('cloud');
+      final config = (await loadProviderConfig(
+        storage: storage,
+        secrets: InMemorySecretStore(),
+        catalog: ModelCatalog.builtIn(),
+        create: (p, _) => FakeLlmProvider(const []),
+      ))!;
+      expect(
+        config.routing!.profiles.map((p) => p.privacy),
+        everyElement(PrivacyLevel.standard),
+      );
+      final rule = privatePresetRule(
+        await storage.providerProfiles.list(),
+        _profile('cloud'),
+      );
+      expect(rule.enabled, isFalse, reason: 'kein TEE-Ziel für „Privat“');
     });
 
     test('Standardprofil und Eskalationskette aus den Einstellungen', () async {

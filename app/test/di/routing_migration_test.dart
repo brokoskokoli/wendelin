@@ -20,10 +20,15 @@ ProviderProfile _profile(
 }) => ProviderProfile(
   id: id,
   name: 'Profil $id',
-  type: type,
+  type: privacy == PrivacyLevel.tee ? ProviderType.openaiCompatible : type,
   defaultModel: 'model-$id',
   privacy: privacy,
   authMethod: ApiKeyAuth('provider.$id'),
+  // „TEE“ counts only for profiles the app attests.
+  baseUrl: privacy == PrivacyLevel.tee ? 'https://api.redpill.ai/v1' : null,
+  options: privacy == PrivacyLevel.tee
+      ? const {'attestation': 'phala'}
+      : const {},
 );
 
 /// Storage as M2 left it: profiles, a default profile and the global
@@ -53,7 +58,8 @@ void main() {
     catalog: ModelCatalog.builtIn(),
     create: (p, _) => switch (p.type) {
       // Like a profile without base URL: cannot be built.
-      ProviderType.openaiCompatible => throw ArgumentError('baseUrl'),
+      ProviderType.openaiCompatible when p.baseUrl == null =>
+        throw ArgumentError('baseUrl'),
       _ => providers.putIfAbsent(p.id, () => FakeLlmProvider(const [])),
     },
     clock: FixedClock(testNow),

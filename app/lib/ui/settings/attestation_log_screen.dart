@@ -98,6 +98,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             name: config?.nameOf(r.profileId) ?? r.profileId,
             locked: ref.watch(attestationHubProvider).isLocked(r.profileId),
             now: now,
+            onReattest: () => unawaited(_reattest(r.profileId)),
           ),
         const GpuCheckSection(),
         Wrap(
@@ -140,11 +141,6 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
                 ),
             ],
           ),
-        if (sessions.isNotEmpty)
-          PrimaryButton(
-            'Neu attestieren',
-            onPressed: () => unawaited(_reattest(sessions)),
-          ),
         WideButton(
           'Als JSON exportieren',
           onPressed: () async => ref.read(exporterProvider)(
@@ -161,19 +157,14 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
     );
   }
 
-  /// Attests the providers again (lifts a lock when the check passes).
-  Future<void> _reattest(List<AttestationRecord> sessions) async {
-    final hub = ref.read(attestationHubProvider);
-    var allGreen = true;
-    for (final r in sessions) {
-      final report = await hub.reattest(r.profileId);
-      if (report?.status != AttestationStatus.green) allGreen = false;
-    }
+  /// Attests only [profileId] again (lifts its lock when the check passes).
+  Future<void> _reattest(String profileId) async {
+    final report = await ref.read(attestationHubProvider).reattest(profileId);
     ref.invalidate(attestationRecordsProvider);
     if (!mounted) return;
     showHint(
       context,
-      allGreen
+      report?.status == AttestationStatus.green
           ? 'Neu attestiert, eine Sperre ist aufgehoben.'
           : 'Die neue Prüfung ist nicht bestanden.',
     );
@@ -203,12 +194,14 @@ class _SessionCard extends StatelessWidget {
     required this.name,
     required this.locked,
     required this.now,
+    required this.onReattest,
   });
 
   final AttestationRecord record;
   final String name;
   final bool locked;
   final DateTime now;
+  final VoidCallback onReattest;
 
   @override
   Widget build(BuildContext context) {
@@ -261,6 +254,11 @@ class _SessionCard extends StatelessWidget {
                       ],
                     ),
                 ],
+              ),
+              PrimaryButton(
+                'Neu attestieren',
+                key: ValueKey('reattest-${record.profileId}'),
+                onPressed: onReattest,
               ),
             ],
           ),

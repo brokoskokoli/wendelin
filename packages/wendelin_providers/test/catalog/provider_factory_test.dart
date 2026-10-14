@@ -130,6 +130,38 @@ void main() {
         expect((extra['provider']! as Map)['aci_verified'], isTrue);
       });
 
+      test('Host mit Punkt am Ende oder Großbuchstaben wird geprüft', () {
+        for (final url in [
+          'https://api.redpill.ai./v1',
+          'https://API.RedPill.ai/v1',
+        ]) {
+          final p = phala(baseUrl: url, options: const {});
+          expect(needsAttestation(p), isTrue, reason: url);
+          expect(
+            () => ProviderFactory.create(p, (_) async => 'k'),
+            throwsArgumentError,
+            reason: 'nie ungeprüft bauen',
+          );
+          expect(
+            ProviderFactory.create(p, (_) async => 'k', attestation: wiring),
+            isA<AttestedProvider>(),
+          );
+        }
+      });
+
+      test('effectivePrivacy: TEE nur für geprüfte Profile', () {
+        expect(effectivePrivacy(phala()), PrivacyLevel.tee);
+        final unchecked = phala(
+          baseUrl: 'https://llm.example/v1',
+          options: const {},
+        );
+        expect(effectivePrivacy(unchecked), PrivacyLevel.standard);
+        expect(
+          effectivePrivacy(phala(privacy: PrivacyLevel.local)),
+          PrivacyLevel.local,
+        );
+      });
+
       test('älteres Profil auf dem RedPill-Host ohne Option wird geprüft', () {
         final p = ProviderFactory.create(
           phala(options: const {'teeModelsOnly': true}),

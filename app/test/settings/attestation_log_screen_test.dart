@@ -10,6 +10,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart' show GpuCheckMode;
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../support/tee_app_support.dart';
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
 import 'integrations_screen_test.dart' show settle;
@@ -21,10 +22,11 @@ AttestationRecord _record(
   AttestationRecordKind kind = AttestationRecordKind.receipt,
   String? reason,
   int minute = 0,
+  String profileId = 'phala',
 }) => AttestationRecord(
   logId: id,
   at: testNow.add(Duration(minutes: minute)),
-  profileId: 'phala',
+  profileId: profileId,
   model: 'z-ai/glm-5.3-flash',
   kind: kind,
   status: status,
@@ -101,6 +103,48 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Neu attestieren'), findsOneWidget);
+  });
+
+  testWidgets('„Neu attestieren“ prüft nur das Profil der eigenen Karte', (
+    tester,
+  ) async {
+    final env = TestEnv();
+    await _seed(env);
+    await env.storage.attestations.add(
+      _record(
+        's2',
+        AttestationStatus.green,
+        kind: AttestationRecordKind.session,
+        minute: 5,
+        profileId: 'phala2',
+      ),
+    );
+    final first = ScriptedVerifier();
+    final second = ScriptedVerifier();
+    final container = await pumpPage(tester, env, const AttestationLogScreen());
+    final hub = container.read(attestationHubProvider)
+      ..register(
+        'phala',
+        scriptedTee(verifier: first, gateway: ScriptedGateway()),
+      )
+      ..register(
+        'phala2',
+        scriptedTee(verifier: second, gateway: ScriptedGateway()),
+      );
+    expect(hub.isLocked('phala2'), isFalse);
+    expect(find.text('Neu attestieren'), findsNWidgets(2));
+    final button = find.byKey(const ValueKey('reattest-phala2'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+    expect(second.attests, 1);
+    expect(first.attests, 0, reason: 'nur dieses Profil');
+    final other = find.byKey(const ValueKey('reattest-phala'));
+    await tester.ensureVisible(other);
+    await tester.tap(other);
+    await settle(tester);
+    expect(first.attests, 1);
+    expect(second.attests, 1);
   });
 
   testWidgets('Tippen öffnet das Detail mit Ergebnis je Stufe und Grund', (

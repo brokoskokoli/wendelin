@@ -58,8 +58,26 @@ final class AttestationWiring {
 bool needsAttestation(ProviderProfile profile) {
   if (profile.type != ProviderType.openaiCompatible) return false;
   if (profile.options['attestation'] == 'phala') return true;
-  return Uri.tryParse(profile.baseUrl ?? '')?.host == 'api.redpill.ai';
+  return _normalizedHost(profile.baseUrl) == 'api.redpill.ai';
 }
+
+/// Host of [url] in lower case and without a trailing dot, so
+/// `API.RedPill.ai.` counts as `api.redpill.ai`.
+String _normalizedHost(String? url) {
+  var host = (Uri.tryParse(url ?? '')?.host ?? '').toLowerCase();
+  while (host.endsWith('.')) {
+    host = host.substring(0, host.length - 1);
+  }
+  return host;
+}
+
+/// Privacy level that counts for [profile]: „TEE“ only for profiles the app
+/// really attests ([needsAttestation]); an unchecked profile is capped to
+/// `standard` (older profiles may still carry `tee`).
+PrivacyLevel effectivePrivacy(ProviderProfile profile) =>
+    profile.privacy == PrivacyLevel.tee && !needsAttestation(profile)
+    ? PrivacyLevel.standard
+    : profile.privacy;
 
 /// Creates the matching adapter for a [ProviderProfile].
 abstract final class ProviderFactory {

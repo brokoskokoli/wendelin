@@ -158,7 +158,7 @@ Future<ProviderConfig?> loadProviderConfig({
       profileId: p.id,
       modelId: p.id == defaultId ? rules.defaultTarget.modelId : p.defaultModel,
       provider: provider,
-      privacy: p.privacy,
+      privacy: effectivePrivacy(p),
     );
     if (p.id == defaultId) {
       primary = target;

@@ -123,6 +123,23 @@ final class ProviderSetupSession {
     _newRef = ref;
   }
 
+  /// Never stores `tee` for a profile the app does not attest.
+  PrivacyLevel _cap(PrivacyLevel level, ProviderProfile base) =>
+      level == PrivacyLevel.tee && !needsAttestation(_withOptions(base))
+      ? PrivacyLevel.standard
+      : level;
+
+  ProviderProfile _withOptions(ProviderProfile base) => ProviderProfile(
+    id: base.id,
+    name: base.name,
+    type: base.type,
+    baseUrl: base.baseUrl,
+    defaultModel: base.defaultModel,
+    privacy: base.privacy,
+    authMethod: base.authMethod,
+    options: {...existing?.options ?? base.options},
+  );
+
   /// The profile as configured so far.
   ProviderProfile draft({
     String? name,
@@ -150,7 +167,7 @@ final class ProviderSetupSession {
       type: base.type,
       baseUrl: base.baseUrl,
       defaultModel: base.defaultModel,
-      privacy: privacy ?? base.privacy,
+      privacy: _cap(privacy ?? base.privacy, base),
       authMethod: base.authMethod,
       budgetMonthly: budgetMicros,
       warnThreshold: budgetMicros == null ? null : warnThreshold,

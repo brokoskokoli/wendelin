@@ -115,6 +115,33 @@ void main() {
       existing: existing,
     );
 
+    test('Bearbeiten speichert „TEE“ nie für ein ungeprüftes Profil', () async {
+      final old = ProviderProfile(
+        id: 'tinfoil-1',
+        name: 'Tinfoil',
+        type: ProviderType.openaiCompatible,
+        baseUrl: 'https://inference.tinfoil.sh/v1',
+        defaultModel: 'm',
+        privacy: PrivacyLevel.tee,
+        authMethod: const ApiKeyAuth('provider.tinfoil-1.apiKey'),
+      );
+      final s = session(
+        RecordingFactory(),
+        InMemorySecretStore(),
+        template: 'tinfoil',
+        existing: old,
+      );
+      expect(s.draft(privacy: PrivacyLevel.tee).privacy, PrivacyLevel.standard);
+      expect(s.draft(privacy: PrivacyLevel.local).privacy, PrivacyLevel.local);
+      final phala = session(
+        RecordingFactory(),
+        InMemorySecretStore(),
+        template: 'phala',
+      );
+      await phala.storeKey('k');
+      expect(phala.draft(privacy: PrivacyLevel.tee).privacy, PrivacyLevel.tee);
+    });
+
     test('Key nur im SecretStore; Modelle laden ohne Modell, Probe mit dem '
         'gewählten', () async {
       final secrets = InMemorySecretStore();

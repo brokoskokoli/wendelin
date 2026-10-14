@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_hub.dart';
@@ -164,6 +167,31 @@ void main() {
   });
 
   group('Provider-Factory der App', () {
+    test(
+      'Nonce-Quelle der Verdrahtung ist im Standard null (zufällig)',
+      () async {
+        final c = TestEnv(storedProfiles: true).container();
+        addTearDown(c.dispose);
+        await awaitCheckModule(c.read(attestationCryptoProvider.future));
+        final wiring = Provider(attestationWiringOf);
+        expect(c.read(wiring)?.nonceSource, isNull);
+        final fixed = TestEnv(
+          extraOverrides: [
+            attestationTransportProvider.overrideWithValue(
+              AttestationTransport(
+                client: ScriptedGateway().client,
+                settings: const HttpSettings(),
+                nonceSource: () => Uint8List(32),
+              ),
+            ),
+          ],
+        ).container();
+        addTearDown(fixed.dispose);
+        await awaitCheckModule(fixed.read(attestationCryptoProvider.future));
+        expect(fixed.read(wiring)?.nonceSource, isNotNull);
+      },
+    );
+
     test('TEE-Profil wird AttestedProvider und im Hub registriert', () async {
       final env = TestEnv(storedProfiles: true);
       final c = env.container();
