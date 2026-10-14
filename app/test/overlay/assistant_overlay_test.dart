@@ -3,12 +3,14 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/di/wake_settings.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
@@ -119,6 +121,7 @@ Future<ProviderContainer> pumpOverlay(
   FakeAssistantPlatform platform, {
   bool autoStart = true,
   VoiceComponents? voice,
+  List<Override> extra = const [],
 }) async {
   setView(tester, screenSize);
   await tester.pumpWidget(
@@ -129,6 +132,7 @@ Future<ProviderContainer> pumpOverlay(
         child: ProviderScope(
           overrides: [
             ...env.overrides,
+            ...extra,
             assistantPlatformProvider.overrideWithValue(platform),
             voiceReadyProvider.overrideWithValue(true),
             activeVoiceProvider.overrideWith(
@@ -169,7 +173,111 @@ ConversationState overlaySample() => ConversationState(
   verification: VerificationStatus.verified,
 );
 
+/// Stand-in that records the audio Whisper gets.
+final class _CapturingStt implements SpeechToText {
+  final heard = <Int16List>[];
+
+  @override
+  SpeechToTextEngineInfo get info => const SpeechToTextEngineInfo(
+    name: 'Capture',
+    languages: {'de'},
+    model: 'fake',
+  );
+
+  @override
+  Future<Transcript> transcribe(Int16List pcm, {String? language}) async {
+    heard.add(pcm);
+    return const Transcript(text: '');
+  }
+}
+
+Future<int> _toneCalls(
+  WidgetTester tester, {
+  required bool tone,
+  required bool wake,
+}) async {
+  var plays = 0;
+  final platform = FakeAssistantPlatform();
+  if (wake) platform.wakeHandoff = Int16List.fromList(List.filled(8000, 300));
+  final env = TestEnv(
+    providerConfig: scripted(FakeLlmProvider([ScriptedTurn.text('x')])),
+  );
+  await tester.runAsync(() async {
+    await env.storage.settings.set(wakeToneKey, tone);
+  });
+  await pumpOverlay(
+    tester,
+    env,
+    platform,
+    extra: [wakeConfirmToneProvider.overrideWithValue(() async => plays++)],
+  );
+  await tester.pump(const Duration(milliseconds: 60));
+  return plays;
+}
+
+void toneTests() {
+  group('Bestätigungston (WP50 b)', () {
+    testWidgets('Wake Word + Ton an: Ton', (tester) async {
+      expect(await _toneCalls(tester, tone: true, wake: true), 1);
+    });
+    testWidgets('anderer Auslöser: kein Ton', (tester) async {
+      expect(await _toneCalls(tester, tone: true, wake: false), 0);
+    });
+    testWidgets('Ton aus: kein Ton', (tester) async {
+      expect(await _toneCalls(tester, tone: false, wake: true), 0);
+    });
+
+    testWidgets('der Ton wird aus der Aufnahme geschnitten (exakt)', (
+      tester,
+    ) async {
+      final platform = FakeAssistantPlatform()
+        ..wakeHandoff = Int16List.fromList(List.filled(8000, 300));
+      final stt = _CapturingStt();
+      final env = TestEnv(
+        providerConfig: scripted(FakeLlmProvider([ScriptedTurn.text('x')])),
+      );
+      // 10 frames of quiet noise (the tone leaking in), then speech, silence.
+      Int16List quiet() => Int16List.fromList(List.filled(480, 100));
+      final frames = [
+        for (var i = 0; i < 10; i++) quiet(),
+        ...AudioFrames.pattern('S' * 10 + '.' * 30),
+      ];
+      await pumpOverlay(
+        tester,
+        env,
+        platform,
+        extra: [wakeConfirmToneProvider.overrideWithValue(() async {})],
+        voice: VoiceComponents(
+          audio: FakeAudioInput(
+            frames: frames,
+            frameInterval: const Duration(milliseconds: 30),
+          ),
+          vad: FakeVoiceActivityDetector(),
+          stt: stt,
+          textToSpeech: (_) async => null,
+          config: const VoicePipelineConfig(),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 60));
+      await pumpUntil(tester, find.byType(OverlaySheet));
+      for (var i = 0; i < 80 && stt.heard.isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+      final pcm = stt.heard.single;
+      // Of the quiet 4800 samples (all inside the endpointer's pre-roll)
+      // the first 3200 (tone 2400 + 800) are zero, the last 1600 stay.
+      expect(pcm.where((s) => s == 100).length, 4800 - wakeToneMuteSamples);
+      final first = pcm.indexOf(100);
+      expect(
+        pcm.sublist(first - wakeToneMuteSamples, first).every((s) => s == 0),
+        isTrue,
+      );
+    });
+  });
+}
+
 void main() {
+  toneTests();
   testWidgets('Golden: Overlay laut Entwurf (390 × 844)', (tester) async {
     final env = TestEnv(
       providerConfig: scripted(
@@ -316,6 +424,8 @@ void main() {
           FakeLlmProvider([ScriptedTurn.text('Es ist 8 Uhr 12.')]),
         ),
       );
+      // Ohne Ton: nichts wird aus der Aufnahme geschnitten.
+      await tester.runAsync(() => env.storage.settings.set(wakeToneKey, false));
       final c = await pumpOverlay(
         tester,
         env,

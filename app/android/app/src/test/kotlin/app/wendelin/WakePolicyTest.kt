@@ -91,6 +91,24 @@ class WakePolicyTest {
     }
 
     @Test
+    fun offByUserIsClearedByEveryConfigure() {
+        val off = WakeSettings(enabled = false, offByUser = true)
+        assertTrue(off.withArgs(null).offByUser)
+        assertTrue(off.withArgs(mapOf("verify" to false)).offByUser)
+        val on = off.withArgs(mapOf("enabled" to true))
+        assertTrue(on.enabled)
+        assertFalse(on.offByUser)
+        assertFalse(off.withArgs(mapOf("enabled" to false)).offByUser)
+    }
+
+    @Test
+    fun startMicWaitsWhileAConflictHolds() {
+        assertFalse(WakePolicy.mayStartMic("call"))
+        assertFalse(WakePolicy.mayStartMic("recording"))
+        assertTrue(WakePolicy.mayStartMic(null))
+    }
+
+    @Test
     fun aHitIsHandedOverOnceAndGoesStale() {
         WakeHandoff.clear()
         val pcm = byteArrayOf(1, 2, 3, 4)

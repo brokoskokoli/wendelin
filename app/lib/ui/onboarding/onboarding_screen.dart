@@ -10,8 +10,10 @@ import '../../di/preferences.dart';
 import '../../di/profiles.dart';
 import '../../di/providers.dart';
 import '../../di/voice_settings_providers.dart';
+import '../../di/wake_service.dart';
 import '../../voice/recognizer_config.dart';
 import '../design/design.dart';
+import '../routes.dart';
 import '../settings/integrations_screen.dart';
 import '../settings/provider_setup_screen.dart';
 import '../settings/settings_page.dart';
@@ -62,7 +64,8 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
       1 => _provider(),
       2 => VoiceDownloadStep(onNext: _next),
       3 => _conversation(),
-      _ => _integrations(),
+      4 => _integrations(),
+      _ => _wake(),
     },
   );
 
@@ -73,7 +76,7 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
       showBack: false,
       centered: true,
       intro:
-          'Wendelin ist dein Sprachassistent. In fünf Schritten ist er '
+          'Wendelin ist dein Sprachassistent. In sechs Schritten ist er '
           'eingerichtet. Welche Sprache sprichst du mit ihm?',
       children: [
         const Center(child: WendelinLockup()),
@@ -186,10 +189,31 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
             ],
           ),
         ),
-        PrimaryButton('Fertig', onPressed: () => unawaited(_finish())),
+        PrimaryButton('Weiter', onPressed: _next),
       ],
     );
   }
+
+  /// Optional last step: the wake word (ADR 0005). Leads to enrolling and
+  /// switching on; can be skipped.
+  Widget _wake() => SettingsPage(
+    title: 'Aktivierungswort',
+    intro:
+        'Wendelin kann auf „Wendelin“ hören, auch wenn das Telefon liegt. '
+        'Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht '
+        'auch später in den Einstellungen.',
+    children: [
+      PrimaryButton(
+        'Einlernen und einschalten',
+        onPressed: () => unawaited(
+          Navigator.of(context)
+              .pushNamed<void>(AppRoutes.wakeWord)
+              .then((_) => _finish()),
+        ),
+      ),
+      WideButton('Überspringen', onPressed: () => unawaited(_finish())),
+    ],
+  );
 }
 
 /// Shows the onboarding until it is done (outside the demo mode). On start
@@ -225,6 +249,10 @@ class _StartGateState extends ConsumerState<StartGate> {
     _lifecycle = AppLifecycleListener(
       onResume: () => unawaited(ref.read(toolRegistryProvider).refresh()),
     );
+    // The wake word service: adopt „Aus“ from the notification, send the
+    // settings (also makes `wakeServiceProvider` listen to the verify
+    // setting).
+    unawaited(ref.read(wakeServiceProvider.notifier).sync());
     if (ref.read(listDefinitionsProvider).isNotEmpty) {
       unawaited(Future(() => checkListAccess(ref)));
     }

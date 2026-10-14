@@ -69,6 +69,25 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
         );
   }
 
+  /// Start of the app: takes over „Aus“ from the notification (Kotlin
+  /// switched the service off), otherwise sends the settings again (the
+  /// assistant role may have changed).
+  Future<void> sync() async {
+    final status = await ref.read(wakePlatformProvider).status();
+    if (!await adoptStatus(status)) await push();
+  }
+
+  /// Takes over an „Aus“ that Kotlin reports (`offByUser`, notification button) so the
+  /// next [push] does not switch the service on again. `true` if the
+  /// switch was changed.
+  Future<bool> adoptStatus(WakeServiceStatus status) async {
+    final s = await future;
+    if (!status.offByUser || !s.enabled) return false;
+    state = AsyncData(WakeServiceSettings(condition: s.condition));
+    await ref.read(storageProvider).settings.set(wakeEnabledKey, false);
+    return true;
+  }
+
   /// Switches the service on or off. Without a learned voice it cannot be
   /// switched on (`false`, WP50 Nachtrag).
   Future<bool> setEnabled({required bool enabled}) async {

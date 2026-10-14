@@ -11,6 +11,7 @@ import '../../agent/conversation_state.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/voice_providers.dart';
+import '../../di/wake_settings.dart';
 import '../../platform/assistant_platform.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
@@ -97,6 +98,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
     unawaited(_checkLock());
     if (widget.autoStart) {
+      // Load the tone setting and the tone itself before the first hit.
+      ref
+        ..read(wakeToneProvider)
+        ..read(wakeConfirmToneProvider);
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => unawaited(_fireFirst()),
       );
@@ -162,9 +167,21 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) await _voice.cancel();
     if (ref.read(agentControllerProvider).running) return;
+    // Wake word hit: a short tone (setting „Bestätigungston“), not awaited.
+    // Setting and tone are loaded in initState; the tone is cut from the
+    // recording (the microphone hears the speaker otherwise).
+    var tone = false;
+    if (e.source == TriggerKind.wakeWord) {
+      tone =
+          ref.read(wakeToneProvider).value ??
+          await ref.read(wakeToneProvider.future);
+    }
+    if (!mounted) return;
+    if (tone) unawaited(ref.read(wakeConfirmToneProvider)());
     await _voice.start(
       e.source,
       preRoll: e.preRoll,
+      muteMicSamples: tone ? wakeToneMuteSamples : 0,
       // No permission dialog on the lock screen.
       prepare: locked ? _microphoneGranted : _microphoneAccess,
     );

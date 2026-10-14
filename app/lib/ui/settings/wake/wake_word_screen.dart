@@ -12,11 +12,13 @@ import '../model_download_row.dart';
 import '../settings_page.dart';
 import 'wake_calibrate_screen.dart';
 import 'wake_enroll_screen.dart';
+import 'wake_service_section.dart';
 import 'wake_test_screen.dart';
 
 /// Einstellungen → Sprache → Aktivierungswort (WP60): „Wendelin lernt deine
 /// Stimme“. Einlernen (etwa 3 min), Kalibrieren (etwa 30 min, empfohlen),
-/// weitere Personen, Ausprobieren und der Schalter für die Nachprüfung.
+/// weitere Personen, Ausprobieren, der Dienst-Schalter und die Nachprüfung
+/// (WP50 b: [WakeServiceSection]).
 class WakeWordScreen extends ConsumerWidget {
   /// Creates the screen.
   const WakeWordScreen({super.key});
@@ -24,7 +26,6 @@ class WakeWordScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
-    final verify = ref.watch(wakeVerifyProvider).value ?? true;
     final installed =
         ref.watch(
           modelStatesProvider.select(
@@ -40,6 +41,9 @@ class WakeWordScreen extends ConsumerWidget {
           'Zahlenwerte, verschlüsselt auf dem Gerät. Audio wird nie '
           'gespeichert.',
       children: [
+        WakeServiceSection(
+          onEnroll: () => unawaited(_enroll(context, ref, speakers, null)),
+        ),
         SettingsSection(
           title: 'Merkmalsmodelle',
           children: [
@@ -72,25 +76,6 @@ class WakeWordScreen extends ConsumerWidget {
             'Dafür müssen zuerst die Merkmalsmodelle geladen sein.',
             style: WText.caption,
           ),
-        SettingsSection(
-          title: 'Prüfen',
-          children: [
-            SettingsRow(
-              title: 'Nachprüfung mit Whisper',
-              detail:
-                  'Wendelin hört nur zu, wenn Whisper „Wendelin“ bestätigt. '
-                  'Schalte es aus, wenn es mit deiner Stimme zu streng ist; '
-                  'dann gibt es mehr Fehlauslösungen.',
-              trailing: WSwitch(
-                value: verify,
-                semanticLabel: 'Nachprüfung mit Whisper',
-                onChanged: (v) => unawaited(
-                  ref.read(wakeVerifyProvider.notifier).set(enabled: v),
-                ),
-              ),
-            ),
-          ],
-        ),
         WideButton(
           'Kalibrieren (30 min, empfohlen)',
           onPressed: installed && speakers.isNotEmpty

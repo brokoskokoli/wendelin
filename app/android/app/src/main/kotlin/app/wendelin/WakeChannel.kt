@@ -37,6 +37,7 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
                     mapOf(
                         "running" to WakeWordService.running,
                         "enabled" to s.enabled,
+                        "offByUser" to s.offByUser,
                         "mode" to s.mode.key,
                         "pausedUntil" to s.pausedUntilMs,
                         "holdsRole" to RecognizerSwitch.holdsAssistantRole(context),
