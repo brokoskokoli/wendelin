@@ -7,6 +7,7 @@ const _files = {
   'gatewayAttestation': 'gateway_attestation.json',
   'collateralPcs': 'collateral_pcs.json',
   'receipt': 'receipt.json',
+  'session': 'session.json',
 };
 const fixtureDir = 'packages/wendelin_providers/test/fixtures/tee';
 const output = 'app/integration_test/support/tee_fixtures.g.dart';
