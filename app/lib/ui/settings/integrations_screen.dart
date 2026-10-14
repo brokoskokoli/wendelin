@@ -6,11 +6,9 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
-import '../../di/integration_decorator.dart';
 import '../../di/integration_specs.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
-import '../../di/user_integrations.dart';
 import '../design/design.dart';
 import '../routes.dart';
 import '../screens/labels.dart';

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/mcp/mcp_secrets.dart';
 import 'package:wendelin/platform/secure_secret_store.dart';
 import 'package:wendelin_mcp/testing.dart';
+import 'package:wendelin_mcp/wendelin_mcp.dart';
 import 'package:wendelin_storage/fakes.dart';
 
 void main() {

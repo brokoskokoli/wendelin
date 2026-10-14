@@ -9,8 +9,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:wendelin/di/mcp/mcp_source.dart';
 import 'package:wendelin/platform/channel_authorization_browser.dart';
+import 'package:wendelin_mcp/wendelin_mcp.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

@@ -9,6 +9,12 @@ library;
 
 import 'src/tools/mcp_integration.dart';
 
+export 'src/app/mcp_app_ports.dart';
+export 'src/app/mcp_check.dart';
+export 'src/app/mcp_draft.dart';
+export 'src/app/mcp_secret_refs.dart';
+export 'src/app/mcp_server_source.dart';
+export 'src/app/mcp_templates.dart';
 export 'src/client.dart';
 export 'src/config.dart';
 export 'src/errors.dart';

@@ -1,9 +1,11 @@
 /// Test support for code built on `wendelin_storage`: everything from
-/// `fakes.dart` plus the reusable contract suite `secretStoreContract`.
+/// `fakes.dart` plus the reusable contract suites `secretStoreContract` and
+/// `scopedSecretStoreContract`.
 ///
 /// Depends on `package:test`; import it only from tests. Production code
 /// (e.g. the app's demo mode) imports `package:wendelin_storage/fakes.dart`.
 library;
 
 export 'fakes.dart';
+export 'testing/scoped_secret_store_contract.dart';
 export 'testing/secret_store_contract.dart';

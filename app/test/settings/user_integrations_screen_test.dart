@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/providers.dart';
-import 'package:wendelin/di/user_integrations.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
 import 'package:wendelin/ui/settings/http_tools_screen.dart';
@@ -10,6 +9,7 @@ import 'package:wendelin/ui/settings/mcp/mcp_servers_screen.dart';
 import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../support/fake_user_integrations.dart';
 import '../support/test_env.dart';

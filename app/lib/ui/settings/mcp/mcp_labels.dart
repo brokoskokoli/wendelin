@@ -2,9 +2,6 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
-import '../../../di/mcp/mcp_persistence.dart';
-import '../../../di/mcp/mcp_source.dart';
-
 /// Hint when a server cannot be reached (concept: „Netzwerk“).
 const mcpUnreachableHint = 'Tailscale/WireGuard aktiv?';
 

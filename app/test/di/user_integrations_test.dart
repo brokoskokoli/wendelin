@@ -7,6 +7,7 @@ import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/user_integrations.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
@@ -34,107 +35,13 @@ void main() {
     await storage.close();
   });
 
-  UserIntegrationSync sync(
-    List<UserIntegrationSource> sources, {
-    List<IntegrationCleanup> cleanups = const [],
-    void Function(Integration)? onRegistered,
-  }) => UserIntegrationSync(
-    registry: registry,
-    sources: sources,
-    settings: storage.settings,
-    cleanups: cleanups,
-    onRegistered: onRegistered,
-    onError: (e, _) => errors.add(e),
-  );
-
-  test('hinzufügen: registriert, aus bis eingeschaltet, Art bekannt', () async {
-    final source = FakeUserIntegrationSource();
-    final s = sync([source]);
-    await s.ready;
-    expect(s.ids, isEmpty);
-
-    source.update([
-      userIntegration('mcp_home', tools: ['git', 'docker']),
-    ]);
-    await s.settled();
-    expect(s.ids, ['mcp_home']);
-    expect(s.kindOf('mcp_home'), UserIntegrationKind.mcp);
-    expect(s.kindOf('calendar'), isNull);
-    expect(registry.info('mcp_home').enabled, isFalse);
-    registry.setEnabled('mcp_home', enabled: true);
-    expect(activeTools(registry), ['mcp_home__docker', 'mcp_home__git']);
-    await s.dispose();
-  });
-
-  test('ändern: neue Tools ersetzen die alten, Schalter bleibt', () async {
-    final source = FakeUserIntegrationSource(
-      integrations: [
-        userIntegration('mcp_home', tools: ['git']),
-      ],
-    );
-    final registered = <String>[];
-    final s = sync([source], onRegistered: (i) => registered.add(i.id));
-    await s.ready;
-    registry.setEnabled('mcp_home', enabled: true);
-
-    source.update([
-      userIntegration('mcp_home', tools: ['git', 'shell']),
-    ]);
-    await s.settled();
-    expect(activeTools(registry), ['mcp_home__git', 'mcp_home__shell']);
-    expect(registry.info('mcp_home').enabled, isTrue);
-    expect(registered, ['mcp_home', 'mcp_home']);
-
-    // Dasselbe Objekt gilt als unverändert: keine Neuregistrierung.
-    source.notify();
-    await s.settled();
-    expect(registered, hasLength(2));
-    await s.dispose();
-  });
-
-  test('entfernen: Registry leer, Secrets und Aufräumen aufgerufen', () async {
-    final removedHa = userIntegration('http_ha');
-    final http = FakeUserIntegrationSource(
-      kind: UserIntegrationKind.http,
-      integrations: [removedHa, userIntegration('http_n8n')],
-    );
-    final cleaned = <String>[];
-    final s = sync(
-      [http],
-      cleanups: [
-        (r) async => cleaned.add('a:${r.id}'),
-        (r) async => throw StateError('kaputt'),
-        (r) async => cleaned.add('c:${r.id}'),
-      ],
-    );
-    await s.ready;
-    await storage.settings.set(AppSettings.integrationEnabled('http_ha'), true);
-
-    http.update([userIntegration('http_n8n')]);
-    await s.settled();
-    expect(registry.integrations.map((i) => i.id), ['http_n8n']);
-    expect(http.deletedSecrets, ['http_ha']);
-    final removal = http.removals.single;
-    expect(removal.whole, isTrue);
-    expect(removal.toolNames, {'http_ha__ping'});
-    expect(
-      removal.integration,
-      same(removedHa),
-      reason: 'Quelle liest Secret-Refs aus der entfernten Fassung',
-    );
-    expect(cleaned, ['a:http_ha', 'c:http_ha'], reason: 'Fehler stoppt nicht');
-    expect(errors.single, isA<StateError>());
-    expect(
-      await storage.settings.get(AppSettings.integrationEnabled('http_ha')),
-      isFalse,
-    );
-
-    http.update([]);
-    await s.settled();
-    expect(registry.integrations, isEmpty);
-    expect(http.deletedSecrets, ['http_ha', 'http_n8n']);
-    await s.dispose();
-  });
+  UserIntegrationSync sync(List<UserIntegrationSource> sources) =>
+      UserIntegrationSync(
+        registry: ToolRegistryUserIntegrations(registry),
+        sources: sources,
+        switches: SettingsUserIntegrationSwitches(storage.settings),
+        onError: (e, _) => errors.add(e),
+      );
 
   test('Neustart stellt den gespeicherten Schalter wieder her', () async {
     await storage.settings.set(AppSettings.integrationEnabled('mcp_on'), true);
@@ -191,109 +98,6 @@ void main() {
     expect(registry.info('mcp_c').enabled, isTrue);
     expect(s.rejected.keys, ['mcp_c']);
     expect(source.deletedSecrets, isEmpty, reason: 'abgewiesen ≠ gelöscht');
-    await s.dispose();
-  });
-
-  test('zwei Quellen mit derselben Id: die zweite wird abgewiesen', () async {
-    final mcp = FakeUserIntegrationSource(
-      integrations: [userIntegration('dup')],
-    );
-    final http = FakeUserIntegrationSource(
-      kind: UserIntegrationKind.http,
-      integrations: [
-        userIntegration('dup', tools: ['other']),
-      ],
-    );
-    final s = sync([mcp, http]);
-    await s.ready;
-    expect(s.kindOf('dup'), UserIntegrationKind.mcp);
-    expect(s.rejected.keys, ['dup']);
-    await s.dispose();
-  });
-
-  test('Ladefehler wird gemeldet, andere Quellen laufen weiter', () async {
-    final broken = _ThrowingSource();
-    final ok = FakeUserIntegrationSource(
-      integrations: [userIntegration('mcp_ok')],
-    );
-    final s = sync([broken, ok]);
-    await s.ready;
-    expect(errors.single, isA<StateError>());
-    expect(s.ids, ['mcp_ok']);
-    await s.dispose();
-    // Nach dispose passiert nichts mehr.
-    ok.update([]);
-    await s.settled();
-    expect(registry.integrations.map((i) => i.id), ['mcp_ok']);
-  });
-
-  test(
-    'ändern: weggefallene Tools werden aufgeräumt, die übrigen nicht',
-    () async {
-      final source = FakeUserIntegrationSource(
-        kind: UserIntegrationKind.http,
-        integrations: [
-          userIntegration('http', tools: ['http__a', 'http__b']),
-        ],
-      );
-      final cleaned = <IntegrationRemoval>[];
-      final s = sync([source], cleanups: [(r) async => cleaned.add(r)]);
-      await s.ready;
-      final old = source.integrations.single;
-      source.update([
-        userIntegration('http', tools: ['http__b']),
-      ]);
-      await s.settled();
-      expect(activeTools(registry), isEmpty, reason: 'Schalter aus');
-      expect(
-        registry.integrations.single.integration.tools.map((t) => t.name),
-        ['http__b'],
-      );
-      final r = cleaned.single;
-      expect(r.whole, isFalse);
-      expect(r.toolNames, {'http__a'});
-      expect(r.integration, same(old));
-      expect(source.removals.single.toolNames, {'http__a'});
-      expect(source.deletedSecrets, isEmpty, reason: 'Integration bleibt');
-      await s.dispose();
-    },
-  );
-
-  test('http/http_sensitive: Tool wechselt die Integration, nichts wird '
-      'aufgeräumt; http fällt weg, sensible behalten ihre Tools', () async {
-    final source = FakeUserIntegrationSource(
-      kind: UserIntegrationKind.http,
-      integrations: [
-        userIntegration('http', tools: ['http__a', 'http__b']),
-        userIntegration('http_sensitive', tools: ['http__s']),
-      ],
-    );
-    final cleaned = <IntegrationRemoval>[];
-    final s = sync([source], cleanups: [(r) async => cleaned.add(r)]);
-    await s.ready;
-    registry
-      ..setEnabled('http', enabled: true)
-      ..setEnabled('http_sensitive', enabled: true);
-
-    // http__b wird sensibel: zieht nach http_sensitive um.
-    source.update([
-      userIntegration('http', tools: ['http__a']),
-      userIntegration('http_sensitive', tools: ['http__s', 'http__b']),
-    ]);
-    await s.settled();
-    expect(s.rejected, isEmpty, reason: 'kein Namenskonflikt beim Umzug');
-    expect(activeTools(registry), ['http__a', 'http__b', 'http__s']);
-    expect(cleaned, isEmpty);
-
-    // Das letzte nicht sensible Tool wird gelöscht: http fällt weg.
-    source.update([
-      userIntegration('http_sensitive', tools: ['http__s', 'http__b']),
-    ]);
-    await s.settled();
-    expect(activeTools(registry), ['http__b', 'http__s']);
-    final r = cleaned.single;
-    expect((r.id, r.whole), ('http', true));
-    expect(r.toolNames, {'http__a'});
     await s.dispose();
   });
 
@@ -446,18 +250,4 @@ void main() {
       c.dispose();
     });
   });
-}
-
-final class _ThrowingSource implements UserIntegrationSource {
-  @override
-  UserIntegrationKind get kind => UserIntegrationKind.http;
-
-  @override
-  Stream<void> get changes => const Stream.empty();
-
-  @override
-  Future<List<Integration>> load() async => throw StateError('kaputt');
-
-  @override
-  Future<void> deleteSecrets(IntegrationRemoval removal) async {}
 }

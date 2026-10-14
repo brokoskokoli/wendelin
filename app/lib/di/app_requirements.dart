@@ -1,8 +1,6 @@
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
-import 'integration_decorator.dart';
-
 /// Another app an integration uses (concept: „App-Erkennung“).
 ///
 /// Without a [needed] app the integration is „nicht verfügbar“ (greyed

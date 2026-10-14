@@ -5,18 +5,9 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart'
     show BZip2Decoder, InputMemoryStream, OutputMemoryStream;
+import 'package:wendelin_voice/wendelin_voice.dart' show ArchiveRejected;
 
-/// Why unpacking failed.
-final class ArchiveRejected implements Exception {
-  /// Creates the error.
-  const ArchiveRejected(this.message);
-
-  /// German message for the user.
-  final String message;
-
-  @override
-  String toString() => 'ArchiveRejected($message)';
-}
+export 'package:wendelin_voice/wendelin_voice.dart' show ArchiveRejected;
 
 /// One regular file or directory of a tar archive.
 typedef TarEntry = ({String path, bool directory, Uint8List data});

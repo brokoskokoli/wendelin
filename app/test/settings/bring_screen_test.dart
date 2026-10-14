@@ -14,8 +14,8 @@ import 'integrations_screen_test.dart';
 const bringPassword = 'kanarien-passwort';
 
 Future<void> loginBring(TestEnv env) async {
-  await env.secrets.write(SecretStoreBringSecrets.emailKey, env.bring.email);
-  await env.secrets.write(SecretStoreBringSecrets.passwordKey, bringPassword);
+  await env.secrets.write('bring.email', env.bring.email);
+  await env.secrets.write('bring.password', bringPassword);
 }
 
 void main() {
@@ -62,9 +62,9 @@ void main() {
     expect(find.text(env.bring.email), findsOneWidget);
     expect(find.text('Aktiv'), findsOneWidget);
     expect(await env.secrets.listKeys(), {
-      SecretStoreBringSecrets.emailKey,
-      SecretStoreBringSecrets.passwordKey,
-      SecretStoreBringSecrets.sessionKey,
+      'bring.email',
+      'bring.password',
+      'bring.session',
     });
 
     await tester.tap(find.byTooltip('Zurück'));
@@ -86,10 +86,7 @@ void main() {
     // Eine Sitzung entsteht beim ersten Aufruf.
     final integration = bringIntegrationOf(c.read(integrationsProvider))!;
     expect(await tester.runAsync(integration.reconnect), isNull);
-    expect(
-      await env.secrets.read(SecretStoreBringSecrets.sessionKey),
-      isNotNull,
-    );
+    expect(await env.secrets.read('bring.session'), isNotNull);
 
     await tester.tap(find.text('Bring! Einkaufsliste'));
     await settle(tester);

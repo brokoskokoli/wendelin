@@ -8,8 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wendelin/di/mcp/mcp_providers.dart';
-import 'package:wendelin/di/mcp/mcp_source.dart';
-import 'package:wendelin/di/mcp/mcp_templates.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin_core/wendelin_core.dart';

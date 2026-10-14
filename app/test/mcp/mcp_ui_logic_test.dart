@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/di/mcp/mcp_templates.dart';
 import 'package:wendelin/ui/settings/mcp/mcp_add_check.dart';
 import 'package:wendelin/ui/settings/mcp/mcp_tool_sheet.dart';
 import 'package:wendelin_core/wendelin_core.dart';

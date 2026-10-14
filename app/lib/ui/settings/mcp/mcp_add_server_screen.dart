@@ -5,8 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
 import '../../../di/mcp/mcp_providers.dart';
-import '../../../di/mcp/mcp_source.dart';
-import '../../../di/mcp/mcp_templates.dart';
 import '../../../di/providers.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';

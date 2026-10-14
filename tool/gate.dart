@@ -10,6 +10,13 @@ import 'src/kotlin_unit.dart';
 /// Mindestabdeckung je Paket unter `packages/` (und `evals`).
 const minCoverage = 85.0;
 
+/// Mindestabdeckung von `app/lib/di/` (Verdrahtung der App, WP39). Die
+/// Logik liegt in den Paketen und fällt unter [minCoverage]; hier zählt
+/// nur, dass die Verdrahtung und die Adapter von Tests durchlaufen werden.
+/// Gemessen nach WP39: 93,7 %; Schwelle = Messwert abgerundet auf volle
+/// 5 %, mindestens 70 % (`docs/ENGINEERING.md`, Gate Schritt 4).
+const minAppDiCoverage = 90.0;
+
 const usage = '''
 Gate: muss vor jedem Commit grün sein.
 
@@ -124,12 +131,28 @@ Future<void> _appSteps(Gate gate) async {
   ], cwd: 'app');
   if (!appDirs.contains('test')) return;
   final json = _reportFile('app');
+  clearCoverage('app');
   await gate.step(
     'test app',
     'flutter',
-    ['test', ..._testFlags(gate.verbose, json)],
+    ['test', '--coverage', ..._testFlags(gate.verbose, json)],
     cwd: 'app',
-    check: (_) async => (detail: testDetail(countTests(json)), failure: null),
+    check: (r) async {
+      final tests = testDetail(countTests(json));
+      if (r.exitCode != 0) return (detail: tests, failure: null);
+      final lcov = File('app/coverage/lcov.info');
+      if (!lcov.existsSync()) {
+        return (detail: tests, failure: 'keine Abdeckung (app/coverage)');
+      }
+      final cov = lcovCoverage(lcov.readAsLinesSync(), under: 'lib/di/');
+      final c = '${cov.toStringAsFixed(1)} %';
+      return (
+        detail: [if (tests.isNotEmpty) tests, 'di $c'].join(', '),
+        failure: cov < minAppDiCoverage
+            ? 'Abdeckung app/lib/di $c < $minAppDiCoverage %'
+            : null,
+      );
+    },
   );
 }
 

@@ -6,7 +6,6 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/voice_providers.dart';
 import '../../platform/device_memory.dart';
-import '../../platform/voice/model_installer.dart';
 import '../design/design.dart';
 import '../settings/settings_page.dart';
 

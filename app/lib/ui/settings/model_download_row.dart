@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/voice_providers.dart';
-import '../../platform/voice/model_installer.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
 

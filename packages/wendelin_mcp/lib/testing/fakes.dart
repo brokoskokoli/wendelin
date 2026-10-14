@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import '../src/app/mcp_app_ports.dart';
+import '../src/app/mcp_check.dart';
+import '../src/config.dart';
 import '../src/ports.dart';
 
 /// [McpSecrets] in memory; records every write (to check that tokens land
@@ -87,5 +90,55 @@ final class FakeAuthorizationBrowser implements AuthorizationBrowser {
     } finally {
       client.close(force: true);
     }
+  }
+}
+
+/// [McpConfigStore] in memory.
+final class FakeMcpConfigStore implements McpConfigStore {
+  /// Creates the store with [initial] servers.
+  FakeMcpConfigStore([List<McpServerConfig> initial = const []])
+    : stored = [...initial];
+
+  /// The stored servers.
+  List<McpServerConfig> stored;
+
+  /// The stored checks by server id.
+  final Map<String, McpCheck> checks = {};
+
+  @override
+  Future<List<McpServerConfig>> servers() async => [...stored];
+
+  @override
+  Future<void> saveServers(List<McpServerConfig> servers) async =>
+      stored = [...servers];
+
+  @override
+  Future<McpCheck?> check(String serverId) async => checks[serverId];
+
+  @override
+  Future<void> saveCheck(String serverId, McpCheck check) async =>
+      checks[serverId] = check;
+
+  @override
+  Future<void> deleteCheck(String serverId) async => checks.remove(serverId);
+}
+
+/// An [McpAuditSink] that records its entries.
+final class FakeMcpAudit {
+  /// The entries written, in order.
+  final List<({McpAuditKind kind, DateTime at, Map<String, Object?> payload})>
+  entries = [];
+
+  /// Set to make the sink fail.
+  bool fail = false;
+
+  /// The sink to hand to the source.
+  Future<void> call(
+    McpAuditKind kind,
+    DateTime at,
+    Map<String, Object?> payload,
+  ) async {
+    if (fail) throw StateError('Audit nicht verfügbar');
+    entries.add((kind: kind, at: at, payload: payload));
   }
 }

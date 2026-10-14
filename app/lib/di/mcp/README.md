@@ -1,14 +1,14 @@
 # MCP-Server in der App (WP27)
 
-App-Seite des MCP-Clients aus `packages/wendelin_mcp` (ADR 0010), angebunden als `UserIntegrationSource` (ADR 0012).
+App-Seite des MCP-Clients aus `packages/wendelin_mcp` (ADR 0010), angebunden als `UserIntegrationSource` (ADR 0012). Seit WP39 liegt die Logik im Paket (`packages/wendelin_mcp/lib/src/app/`); hier bleiben nur Adapter und Verdrahtung.
 
-| Datei | Inhalt |
+| Ort | Inhalt |
 | --- | --- |
-| `mcp_source.dart` | `McpServerSource`: Server anlegen (`add`, vorher `probeDraft`), ändern (`update`), `reload`, OAuth `signIn`/`signOut`, `setSecret`, `remove`, Export/Import. `McpServerIntegration` ist die Fassung für die Registry. |
-| `mcp_draft.dart` | `McpDraft` (Formular „Server hinzufügen“ → Konfiguration + Secrets), `McpSignInException`; wird von `mcp_source.dart` re-exportiert |
-| `mcp_persistence.dart` | Einstellungsschlüssel (`mcp.servers`, `mcp.<id>.tools`, `mcp.<id>.check`), `McpCheck` (letzte Prüfung), `SettingsMcpCacheStore` |
-| `mcp_secrets.dart` | `SecretStoreMcpSecrets` (besteht `mcpSecretsContract`), Secret-Referenzen `mcp.<id>.bearer`, `.header.<n>`, `.oauth.token`, `.oauth.client` |
-| `mcp_templates.dart` | Vorlagen: Home Assistant, Obsidian (obsidian-mcp-server), Kalender (dav-mcp), eigener Server |
+| Paket `src/app/mcp_server_source.dart` | `McpServerSource`: Server anlegen (`add`, vorher `probeDraft`), ändern (`update`), `reload`, OAuth `signIn`/`signOut`, `setSecret`, `remove`, Export/Import. `McpServerIntegration` ist die Fassung für die Registry. |
+| Paket `src/app/mcp_app_ports.dart` | Ports `McpConfigStore` (Konfiguration, Prüfergebnis) und `McpAuditSink`; der Tool-Cache läuft über `McpCacheStore` |
+| Paket `src/app/mcp_draft.dart`, `mcp_templates.dart`, `mcp_check.dart`, `mcp_secret_refs.dart` | `McpDraft` (Formular → Konfiguration + Secrets), Vorlagen (Home Assistant, Obsidian, Kalender, eigener Server), `McpCheck` (letzte Prüfung), Secret-Referenzen `mcp.<id>.bearer`, `.header.<n>`, `.oauth.token`, `.oauth.client` |
+| `mcp_persistence.dart` | Einstellungsschlüssel (`mcp.servers`, `mcp.<id>.tools`, `mcp.<id>.check`), `SettingsMcpConfigStore`, `SettingsMcpCacheStore`, Audit-Adapter |
+| `mcp_secrets.dart` | `SecretStoreMcpSecrets` auf `ScopedSecretStore` (Namensraum `mcp.`, besteht `mcpSecretsContract`) |
 | `mcp_providers.dart` | Riverpod: Quelle, Browser für OAuth, Debug-Log |
 
 ## Regeln

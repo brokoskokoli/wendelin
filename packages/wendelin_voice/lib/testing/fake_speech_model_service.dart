@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:wendelin/platform/voice/model_installer.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_voice/wendelin_voice.dart';
+
+import '../src/models/model_downloader.dart';
+import '../src/models/speech_model.dart';
+import '../src/models/speech_model_service.dart';
 
 /// A running fake download, driven by the test.
 final class FakeDownload {
