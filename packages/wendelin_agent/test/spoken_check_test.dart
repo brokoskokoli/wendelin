@@ -132,6 +132,22 @@ void main() {
       });
     }
 
+    test(
+      'geprüft + Abbruch des Stroms nach „match“: sichtbare Antwort',
+      () async {
+        final (events, _, _) = await _foreign(
+          SpokenVersion.checked,
+          check: [
+            ScriptedTurn.error(
+              const ServerException('x', statusCode: 500),
+              partialText: '{"match": true}',
+            ),
+          ],
+        );
+        expect(_kinds(events), ['hold', 'no']);
+      },
+    );
+
     test('geprüft + Zeitüberschreitung: sichtbare Antwort', () async {
       final (events, _, _) = await _foreign(
         SpokenVersion.checked,
