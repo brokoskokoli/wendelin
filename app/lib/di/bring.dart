@@ -6,7 +6,6 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../platform/app_share.dart';
-import 'integration_decorator.dart';
 import 'providers.dart';
 
 /// [BringSecrets] on the app's [SecretStore]: e-mail and password of the
@@ -14,19 +13,24 @@ import 'providers.dart';
 /// SQLite, logs or exports.
 final class SecretStoreBringSecrets implements BringSecrets {
   /// Creates the adapter.
-  const SecretStoreBringSecrets(this.store);
+  SecretStoreBringSecrets(SecretStore store)
+    : store = ScopedSecretStore(store, namespace);
 
-  /// The device secret store.
-  final SecretStore store;
+  /// The Bring! part of the device secret store (keys `bring.*`).
+  final ScopedSecretStore store;
 
-  /// Key of the login e-mail.
-  static const emailKey = 'bring.email';
+  /// Prefix of all Bring! keys in the device secret store.
+  static const namespace = 'bring.';
 
-  /// Key of the password.
-  static const passwordKey = 'bring.password';
+  /// Key of the login e-mail (in [store]; `bring.email` on the device).
+  static const emailKey = 'email';
 
-  /// Key of the session (JSON of [BringAuth]).
-  static const sessionKey = 'bring.session';
+  /// Key of the password (`bring.password` on the device).
+  static const passwordKey = 'password';
+
+  /// Key of the session, JSON of [BringAuth] (`bring.session` on the
+  /// device).
+  static const sessionKey = 'session';
 
   @override
   Future<BringCredentials?> credentials() async {
@@ -60,9 +64,7 @@ final class SecretStoreBringSecrets implements BringSecrets {
 
   /// Deletes login and session.
   Future<void> clear() async {
-    for (final key in [emailKey, passwordKey, sessionKey]) {
-      await store.delete(key);
-    }
+    await store.deleteAll();
   }
 
   @override

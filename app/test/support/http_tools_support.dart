@@ -85,10 +85,7 @@ Future<void> storeHttpTools(TestEnv env, List<HttpToolDefinition> tools) async {
   ]);
   for (final t in tools) {
     for (final ref in httpSecretRefs(t.auth)) {
-      await env.secrets.write(
-        SecretStoreHttpToolSecrets.keyOf(ref),
-        httpCanary,
-      );
+      await env.secrets.write('$httpToolSecretNamespace$ref', httpCanary);
     }
   }
   for (final id in [

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:wendelin_mcp/wendelin_mcp.dart';
 
-import '../../../di/mcp/mcp_templates.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 

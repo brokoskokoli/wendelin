@@ -5,6 +5,7 @@ library;
 
 export 'src/common/base_tool.dart' show IntegrationTool, ellipsize;
 export 'src/common/data_envelope.dart';
+export 'src/common/integration_decorator.dart';
 export 'src/common/net_scope.dart';
 export 'src/common/port_exception.dart';
 export 'src/common/time.dart' show LocalDate, timeZoneLocation;

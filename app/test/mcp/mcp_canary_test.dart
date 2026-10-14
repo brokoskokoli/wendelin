@@ -4,9 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:wendelin/di/mcp/mcp_persistence.dart';
 import 'package:wendelin/di/mcp/mcp_secrets.dart';
-import 'package:wendelin/di/mcp/mcp_source.dart';
-import 'package:wendelin/di/mcp/mcp_templates.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_mcp/testing.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
@@ -67,12 +66,13 @@ void main() {
   });
 
   McpServerSource source({AuthorizationBrowser? browser}) => McpServerSource(
-    settings: settings,
+    configs: SettingsMcpConfigStore(settings),
+    cache: SettingsMcpCacheStore(settings),
     secrets: SecretStoreMcpSecrets(secretStore),
     httpClient: client,
     browser: browser ?? FakeAuthorizationBrowser(),
     ids: UuidV4Generator(),
-    audit: storage.audit,
+    audit: auditLogMcpSink(storage.audit),
     log: logs.add,
   );
 

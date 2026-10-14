@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
 import 'app_requirements.dart';
@@ -194,9 +195,11 @@ final userIntegrationCleanupsProvider = Provider<List<IntegrationCleanup>>(
 final userIntegrationSyncProvider = Provider<UserIntegrationSync>((ref) {
   final registry = ref.watch(toolRegistryProvider);
   final sync = UserIntegrationSync(
-    registry: registry,
+    registry: ToolRegistryUserIntegrations(registry),
     sources: ref.watch(userIntegrationSourcesProvider),
-    settings: ref.watch(storageProvider).settings,
+    switches: SettingsUserIntegrationSwitches(
+      ref.watch(storageProvider).settings,
+    ),
     cleanups: ref.watch(userIntegrationCleanupsProvider),
     // Read lazily: a changed mark rebuilds the registry and this sync.
     decorate: (i) => _withSensitivity(i, ref.read(toolPrefsProvider).sensitive),

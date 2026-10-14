@@ -7,8 +7,8 @@ import 'package:wendelin_mcp/wendelin_mcp.dart';
 
 import '../../platform/channel_authorization_browser.dart';
 import '../providers.dart';
+import 'mcp_persistence.dart';
 import 'mcp_secrets.dart';
-import 'mcp_source.dart';
 
 /// Shows the OAuth login (Custom Tabs; fake in tests).
 final mcpAuthorizationBrowserProvider = Provider<AuthorizationBrowser>(
@@ -45,14 +45,15 @@ final mcpHttpClientProvider = Provider<http.Client>((ref) {
 final mcpServerSourceProvider = Provider<McpServerSource>((ref) {
   final storage = ref.watch(storageProvider);
   final source = McpServerSource(
-    settings: storage.settings,
+    configs: SettingsMcpConfigStore(storage.settings),
+    cache: SettingsMcpCacheStore(storage.settings),
     secrets: SecretStoreMcpSecrets(ref.watch(secretStoreProvider)),
     httpClient: ref.watch(mcpHttpClientProvider),
     browser: ref.watch(mcpAuthorizationBrowserProvider),
     browserAvailable: ref.watch(mcpBrowserAvailableProvider),
     ids: ref.watch(idGeneratorProvider),
     clock: ref.watch(clockProvider),
-    audit: storage.audit,
+    audit: auditLogMcpSink(storage.audit),
     // Read lazily: the registry is rebuilt (e.g. after a „sensibel“ mark).
     reportError: (id, message) {
       try {

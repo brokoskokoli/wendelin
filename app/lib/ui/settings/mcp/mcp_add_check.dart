@@ -1,7 +1,5 @@
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
-import '../../../di/mcp/mcp_templates.dart';
-
 /// Why the entries of „+ Server“ cannot be saved, or `null` when they can.
 /// Plain `http` only passes into the home network ([checkServerUrl]).
 String? mcpAddError({

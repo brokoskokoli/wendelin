@@ -68,3 +68,9 @@ Weitere Beispiele:
 ## Testhilfen
 
 `FakeHttpToolSecrets` (zeichnet Lesezugriffe auf), `httpToolSecretsContract` (auch für den `SecretStore`-Adapter der App), `ClientHttpToolTransport` mit `MockClient` und einem eigenen Resolver.
+
+## Entwurf, Repository und Quelle (seit WP39 im Paket)
+
+- `HttpToolDraft` (`http_tool_draft.dart`): Formularmodell des Editors (Liste → JSON-Schema, Validierung, Secret-Änderungen).
+- `HttpToolRepository` (`http_tool_repository.dart`): gespeicherte Definitionen, Import/Export, Secrets je Tool (`<id>.bearer`, `<id>.h.<header>`). Persistenz über die Ports `HttpToolStore` (App: Einstellung `http.tools`) und `HttpToolSecretVault` (App: `ScopedSecretStore` im Namensraum `http_tool.`). Fakes: `FakeHttpToolStore`, `FakeHttpToolSecretVault`.
+- `HttpToolSource` (`http_tool_source.dart`): `UserIntegrationSource` für `http` und `http_sensitive`.

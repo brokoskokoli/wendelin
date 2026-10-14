@@ -1,6 +1,6 @@
-import 'package:wendelin_mcp/wendelin_mcp.dart';
+import '../config.dart';
 
-import 'mcp_secrets.dart';
+import 'mcp_secret_refs.dart';
 import 'mcp_templates.dart';
 
 /// What the „Server hinzufügen“ form produces. Secret values only live here

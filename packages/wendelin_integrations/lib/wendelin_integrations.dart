@@ -23,4 +23,5 @@ export 'http_tools.dart';
 export 'lists.dart';
 export 'memory.dart';
 export 'obsidian.dart';
+export 'user.dart';
 export 'web.dart';

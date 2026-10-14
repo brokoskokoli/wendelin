@@ -6,7 +6,6 @@ import 'package:wendelin_mcp/wendelin_mcp.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../../di/mcp/mcp_providers.dart';
-import '../../../di/mcp/mcp_source.dart';
 import '../../../di/providers.dart';
 import '../../design/design.dart';
 import '../integration_detail_screen.dart'

@@ -3,16 +3,22 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_mcp/wendelin_mcp.dart';
-import 'package:wendelin_storage/wendelin_storage.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 
-import '../integration_decorator.dart';
-import '../user_integrations.dart';
+import '../client.dart';
+import '../config.dart';
+import '../errors.dart';
+import '../net_policy.dart';
+import '../oauth/oauth_flow.dart';
+import '../ports.dart';
+import '../protocol.dart';
+import '../tools/mcp_integration.dart';
+import '../tools/naming.dart';
+import '../transport/http_call.dart' show McpLog;
+import 'mcp_app_ports.dart';
+import 'mcp_check.dart';
 import 'mcp_draft.dart';
-import 'mcp_persistence.dart';
-import 'mcp_secrets.dart';
-
-export 'mcp_draft.dart';
+import 'mcp_secret_refs.dart';
 
 /// Redirect of the OAuth login: caught by the intent filter of
 /// `OAuthRedirectActivity` (Kotlin) and handed back to the waiting
@@ -89,9 +95,8 @@ final class McpServerView {
 
 /// The MCP servers as [UserIntegrationSource] (WP27, ADR 0010/0012).
 ///
-/// - Configuration (without secrets) in the settings ([McpSettings]),
-///   secrets in [secrets], tool lists in the settings
-///   ([SettingsMcpCacheStore]).
+/// - Configuration (without secrets) in [configs], secrets in [secrets],
+///   tool lists in [cache].
 /// - [load] builds one [McpIntegration] per server with the cached tools,
 ///   without network.
 /// - Connections only on demand: [reload] (activation, „Neu laden“),
@@ -102,7 +107,8 @@ final class McpServerView {
 final class McpServerSource implements UserIntegrationSource {
   /// Creates the source.
   McpServerSource({
-    required this.settings,
+    required this.configs,
+    required this.cache,
     required this.secrets,
     required this.httpClient,
     required this.browser,
@@ -115,8 +121,11 @@ final class McpServerSource implements UserIntegrationSource {
     Uri? redirectUri,
   }) : redirectUri = redirectUri ?? mcpRedirectUri;
 
-  /// Configuration, tool caches and checks.
-  final SettingsRepository settings;
+  /// Configuration and checks.
+  final McpConfigStore configs;
+
+  /// Cached tool lists.
+  final McpCacheStore cache;
 
   /// Bearer tokens, header values, OAuth tokens.
   final McpSecrets secrets;
@@ -135,7 +144,7 @@ final class McpServerSource implements UserIntegrationSource {
 
   /// Audit log for connections and auth failures (no headers, tokens or
   /// OAuth URLs with `code`/`state`).
-  final AuditLogRepository? audit;
+  final McpAuditSink? audit;
 
   /// Sets an integration to „Fehler“ (e.g. token expired).
   final McpErrorSink? reportError;
@@ -424,8 +433,7 @@ final class McpServerSource implements UserIntegrationSource {
   // --- internals ---
 
   Future<void> _loadStored() async {
-    final configs = await settings.get(McpSettings.servers) ?? const [];
-    for (final config in configs) {
+    for (final config in await configs.servers()) {
       if (_servers.containsKey(config.id)) continue;
       _servers[config.id] = await _build(
         config,
@@ -436,7 +444,7 @@ final class McpServerSource implements UserIntegrationSource {
 
   Future<McpCheck?> _readCheck(String id) async {
     try {
-      return await settings.get(McpSettings.check(id));
+      return await configs.check(id);
     } on FormatException {
       return null;
     }
@@ -458,7 +466,7 @@ final class McpServerSource implements UserIntegrationSource {
       httpClient: httpClient,
       secrets: secrets,
       oauth: oauth,
-      cache: SettingsMcpCacheStore(settings),
+      cache: cache,
       clock: clock,
       log: log,
     );
@@ -503,7 +511,7 @@ final class McpServerSource implements UserIntegrationSource {
       ..check = check
       ..infos = (await server.client.cachedTools())?.tools ?? server.infos;
     try {
-      await settings.set(McpSettings.check(server.config.id), check);
+      await configs.saveCheck(server.config.id, check);
     } on Object catch (e) {
       log?.call('MCP: Prüfergebnis nicht gespeichert: ${e.runtimeType}');
     }
@@ -554,7 +562,7 @@ final class McpServerSource implements UserIntegrationSource {
     );
     server.check = check;
     try {
-      await settings.set(McpSettings.check(server.config.id), check);
+      await configs.saveCheck(server.config.id, check);
     } on Object catch (e) {
       log?.call('MCP: Prüfergebnis nicht gespeichert: ${e.runtimeType}');
     }
@@ -582,13 +590,12 @@ final class McpServerSource implements UserIntegrationSource {
     for (final ref in config.auth.secretRefs) {
       await guard(() => secrets.delete(ref));
     }
-    await guard(() => settings.remove(McpSettings.cache(config.id)));
-    await guard(() => settings.remove(McpSettings.check(config.id)));
+    await guard(() => cache.delete(config.id));
+    await guard(() => configs.deleteCheck(config.id));
   }
 
-  Future<void> _saveConfigs() => settings.set(McpSettings.servers, [
-    for (final s in _servers.values) s.config,
-  ]);
+  Future<void> _saveConfigs() =>
+      configs.saveServers([for (final s in _servers.values) s.config]);
 
   Set<String> _slugs() => {for (final s in _servers.values) s.config.slug};
 
@@ -600,11 +607,8 @@ final class McpServerSource implements UserIntegrationSource {
     if (!_changes.isClosed) _changes.add(null);
   }
 
-  void _auditCheck(McpServerConfig config, McpCheck check) => _record(
-    AuditEntry(
-      at: clock.now(),
-      kind: check.ok ? AuditKind.verification : AuditKind.error,
-      payload: {
+  void _auditCheck(McpServerConfig config, McpCheck check) =>
+      _record(check.ok ? McpAuditKind.verification : McpAuditKind.error, {
         'source': 'mcp',
         'profileId': config.integrationId,
         'server': config.name,
@@ -614,46 +618,31 @@ final class McpServerSource implements UserIntegrationSource {
           'message':
               'MCP-Server „${config.name}“: '
               '${check.detail ?? check.status.name}',
-      },
-    ),
-  );
+      });
 
   void _auditError(McpServerConfig config, String error, String message) =>
-      _record(
-        AuditEntry(
-          at: clock.now(),
-          kind: AuditKind.error,
-          payload: {
-            'source': 'mcp',
-            'error': error,
-            'server': config.name,
-            'message': 'MCP-Server „${config.name}“: $message',
-          },
-        ),
-      );
+      _record(McpAuditKind.error, {
+        'source': 'mcp',
+        'error': error,
+        'server': config.name,
+        'message': 'MCP-Server „${config.name}“: $message',
+      });
 
-  /// Writes [entry]; its `message` loses the query of every address (an
+  /// Writes an entry; its `message` loses the query of every address (an
   /// OAuth redirect carries `code` and `state`).
-  void _record(AuditEntry entry) {
-    final repository = audit;
-    if (repository == null) return;
-    final message = entry.payload['message'];
+  void _record(McpAuditKind kind, Map<String, Object?> payload) {
+    final sink = audit;
+    if (sink == null) return;
+    final message = payload['message'];
     final clean = message is String
-        ? AuditEntry(
-            at: entry.at,
-            kind: entry.kind,
-            payload: {...entry.payload, 'message': sanitizeMcpDetail(message)},
-          )
-        : entry;
+        ? {...payload, 'message': sanitizeMcpDetail(message)}
+        : payload;
     unawaited(
-      repository
-          .record(clean)
-          .then<void>(
-            (_) {},
-            onError: (Object e) => log?.call(
-              'MCP: Audit-Eintrag nicht geschrieben: ${e.runtimeType}',
-            ),
-          ),
+      sink(kind, clock.now(), clean).then<void>(
+        (_) {},
+        onError: (Object e) =>
+            log?.call('MCP: Audit-Eintrag nicht geschrieben: ${e.runtimeType}'),
+      ),
     );
   }
 

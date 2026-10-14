@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/mcp/mcp_persistence.dart';
 import 'package:wendelin/di/mcp/mcp_providers.dart';
-import 'package:wendelin/di/mcp/mcp_source.dart';
-import 'package:wendelin/di/mcp/mcp_templates.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin_mcp/testing.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';

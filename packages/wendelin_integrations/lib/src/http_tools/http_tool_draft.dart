@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_integrations/wendelin_integrations.dart';
 
-import 'http_tools.dart';
+import 'http_secret_refs.dart';
+import 'http_tool_definition.dart';
 
 /// Types offered for an argument in the simple list.
 const httpArgTypes = ['string', 'integer', 'number', 'boolean'];

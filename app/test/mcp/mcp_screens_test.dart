@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/di/mcp/mcp_persistence.dart';
 import 'package:wendelin/di/mcp/mcp_providers.dart';
-import 'package:wendelin/di/mcp/mcp_secrets.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/integrations_screen.dart';

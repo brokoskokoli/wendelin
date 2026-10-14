@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 
-import '../../../di/http_tool_draft.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'editor_parts.dart';
