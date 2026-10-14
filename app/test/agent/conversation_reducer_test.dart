@@ -474,6 +474,24 @@ void main() {
       expect(shield(s)?.stepId, 's:1');
     });
 
+    test('toolsInvolved wandert an die Antwort (WP63)', () {
+      final s = _apply([
+        const AgentTextDelta('Antwort'),
+        const AttestationStatusChanged(
+          stepId: 's:1',
+          status: AttestationStatus.green,
+          logId: 'l1',
+          toolsInvolved: true,
+        ),
+      ]);
+      expect(shield(s)?.toolsInvolved, isTrue);
+      final plain = _apply([
+        const AgentTextDelta('Antwort'),
+        status(AttestationStatus.green),
+      ]);
+      expect(shield(plain)?.toolsInvolved, isFalse);
+    });
+
     test('Zwischenstand gelb wird zu grün oder rot (gleicher Schritt)', () {
       final yellow = _apply([
         const AgentTextDelta('Antwort'),

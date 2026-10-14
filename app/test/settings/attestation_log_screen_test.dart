@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_providers.dart';
+import 'package:wendelin/ui/design/design.dart' show ToolTlsHint;
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
 import 'package:wendelin/ui/settings/attestation_log_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -23,6 +24,7 @@ AttestationRecord _record(
   String? reason,
   int minute = 0,
   String profileId = 'phala',
+  bool e2eeFailed = false,
 }) => AttestationRecord(
   logId: id,
   at: testNow.add(Duration(minutes: minute)),
@@ -37,6 +39,12 @@ AttestationRecord _record(
   stages: [
     const StageRecord('quote', 'pass'),
     const StageRecord('nonce', 'pass'),
+    const StageRecord('tls.spki', 'pass'),
+    StageRecord(
+      'e2ee.key',
+      e2eeFailed ? 'fail' : 'pass',
+      detail: e2eeFailed ? 'Schlüssel fehlt' : null,
+    ),
     StageRecord(
       'receipt.upstream.tcb',
       status == AttestationStatus.red ? 'fail' : 'pass',
@@ -167,6 +175,51 @@ void main() {
     expect(find.text('TCB veraltet'), findsOneWidget);
     expect(find.text('rcpt_01J9X4QF'), findsOneWidget);
     expect(find.text('sha256:4d0c…a17f'), findsOneWidget);
+  });
+
+  testWidgets('Detail: Stufe „Ende-zu-Ende-verschlüsselt“ neben TLS, mit '
+      'Erklärtext und Tool-Hinweis', (tester) async {
+    final env = TestEnv();
+    await _seed(env);
+    await pumpPage(tester, env, const AttestationLogDetailScreen(logId: 'l1'));
+    await settle(tester);
+    expect(
+      find.textContaining('TLS-Verbindung geprüft · bestanden'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Ende-zu-Ende-verschlüsselt · bestanden'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Verschlüsselung endet im Gateway des Anbieters'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('nicht im Modell selbst'), findsOneWidget);
+    expect(find.text(ToolTlsHint.text), findsOneWidget);
+  });
+
+  testWidgets('Detail: fehlgeschlagene Verschlüsselung ist rot benannt', (
+    tester,
+  ) async {
+    final env = TestEnv();
+    await env.storage.attestations.add(
+      _record('e1', AttestationStatus.red, e2eeFailed: true),
+    );
+    await pumpPage(tester, env, const AttestationLogDetailScreen(logId: 'e1'));
+    await settle(tester);
+    expect(
+      find.textContaining('Ende-zu-Ende-verschlüsselt · fehlgeschlagen'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Schlüssel fehlt'), findsOneWidget);
+  });
+
+  testWidgets('Sitzungskarte zeigt den Tool-Hinweis immer', (tester) async {
+    final env = TestEnv();
+    await _seed(env);
+    await pumpPage(tester, env, const AttestationLogScreen());
+    expect(find.text(ToolTlsHint.text), findsOneWidget);
   });
 
   testWidgets('Detail: unbekannte Id zeigt einen Hinweis', (tester) async {
@@ -307,6 +360,22 @@ void main() {
     await expectLater(
       find.byKey(goldenKey),
       matchesGoldenFile('goldens/attestation_log_detail.png'),
+    );
+    await env.storage.attestations.add(
+      _record('e9', AttestationStatus.red, e2eeFailed: true, minute: 9),
+    );
+    await tester.pumpWidget(
+      env.app(
+        home: const RepaintBoundary(
+          key: goldenKey,
+          child: AttestationLogDetailScreen(logId: 'e9'),
+        ),
+      ),
+    );
+    await settle(tester);
+    await expectLater(
+      find.byKey(goldenKey),
+      matchesGoldenFile('goldens/attestation_log_detail_e2ee_failed.png'),
     );
   });
 }

@@ -106,6 +106,16 @@ void main() {
       },
     );
 
+    test('toolsInvolved der Quittung gelangt ins Ereignis (WP63)', () async {
+      final report = Completer<AttestationReport?>()
+        ..complete(_report(AttestationStatus.green).withToolsInvolved(true));
+      final h = build([ScriptedTurn.text('Hallo')], report, []);
+      final events = await h.run('Hi');
+      final all = events.whereType<AttestationStatusChanged>().toList();
+      expect(all.first.toolsInvolved, isFalse, reason: 'gelb: noch unbekannt');
+      expect(all.last.toolsInvolved, isTrue);
+    });
+
     test('external-Tool wartet auf die Quittung und läuft bei Grün', () async {
       final sms = FakeTool(
         name: 'sms__send',

@@ -51,6 +51,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.settings = const HttpSettings(),
     this.retryDelay = const Duration(seconds: 2),
     this.tlsPin,
+    this.noTools = false,
     Duration gpuTimeout = const Duration(seconds: 15),
   }) {
     final provider = inner.options.extraBody['provider'];
@@ -114,6 +115,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// request; a second mismatch locks the provider.
   final TlsPinGate? tlsPin;
 
+  /// „Ohne Tools (alles verschlüsselt)“ (WP63): no tool definitions and no
+  /// tool calls or results from the history are sent, so nothing of the
+  /// request is left outside the end-to-end encryption.
+  final bool noTools;
+
   AttestedSession? _session;
   List<StageResult> _lastStages = const [];
   AttestationFailedException? _lock;
@@ -160,7 +166,15 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   ProviderType get type => inner.type;
 
   @override
-  ProviderCapabilities get caps => inner.caps;
+  ProviderCapabilities get caps => noTools
+      ? ProviderCapabilities(
+          tools: false,
+          streaming: inner.caps.streaming,
+          vision: inner.caps.vision,
+          promptCaching: inner.caps.promptCaching,
+          tee: inner.caps.tee,
+        )
+      : inner.caps;
 
   @override
   Future<List<ModelInfo>> listModels() async {
@@ -226,10 +240,12 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         return;
       }
       final session = _session!;
+      final sent = noTools ? _withoutTools(req) : req;
+      var toolsInvolved = sent.tools.isNotEmpty;
       ExchangeRecord? record;
       var rotated = false;
       await for (final event in inner.chatObserved(
-        req,
+        sent,
         cancel: cancel,
         observer: (r) => record = r,
       )) {
@@ -244,11 +260,16 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           final failure = event.error;
           if (failure is AttestationFailedException) _lock = failure;
         }
+        if (event is ToolCallComplete || event is ToolCallDelta) {
+          toolsInvolved = true;
+        }
         if (event is Done && record != null) {
+          final involved = toolsInvolved;
           _latest = _byRequest[req] = _checkReceipt(
             record!,
             session,
             req.model,
+            toolsInvolved: involved,
           );
         } else if (event is ErrorEvent) {
           _latest = _byRequest[req] = Future.value();
@@ -262,6 +283,28 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       }
       if (!rotated) return;
     }
+  }
+
+  /// [req] without tool definitions, tool calls and tool results.
+  static ChatRequest _withoutTools(ChatRequest req) => ChatRequest(
+    messages: [
+      for (final m in req.messages)
+        if (m.role != Role.tool)
+          if (m.content.any((b) => b is ToolCallBlock))
+            ?_dropToolCalls(m)
+          else
+            m,
+    ],
+    model: req.model,
+    maxTokens: req.maxTokens,
+    temperature: req.temperature,
+    metadata: req.metadata,
+    systemPrompt: req.systemPrompt,
+  );
+
+  static Message? _dropToolCalls(Message m) {
+    final rest = m.content.where((b) => b is! ToolCallBlock).toList();
+    return rest.isEmpty ? null : Message(m.role, rest);
   }
 
   static bool _isE2eeFailure(Object? error) =>
@@ -362,8 +405,9 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   Future<AttestationReport?> _checkReceipt(
     ExchangeRecord record,
     AttestedSession session,
-    String model,
-  ) async {
+    String model, {
+    bool toolsInvolved = false,
+  }) async {
     try {
       final id = record.responseHeaders['x-receipt-id'];
       final (:stages, :status, :pinChanged) = id == null || id.isEmpty
@@ -407,6 +451,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
             ? 'Anbieter hat ein Update ausgerollt, neu geprüft'
             : problem?.detail ?? policy.notes(stages).firstOrNull,
         reasonCode: problem?.code,
+        toolsInvolved: toolsInvolved,
       );
       _emit(report);
       if (status == AttestationStatus.green) _gpu.after(model);
@@ -426,6 +471,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           model: model,
         ),
         status: AttestationStatus.red,
+        toolsInvolved: toolsInvolved,
       );
       _emit(report);
       return report;

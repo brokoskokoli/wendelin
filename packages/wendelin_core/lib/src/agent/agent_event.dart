@@ -395,6 +395,7 @@ final class AttestationStatusChanged extends AgentEvent {
     required this.logId,
     this.detail,
     this.reasonCode,
+    this.toolsInvolved = false,
   });
 
   /// The conversation step (model call) the status belongs to.
@@ -413,6 +414,10 @@ final class AttestationStatusChanged extends AgentEvent {
   /// `upstream_tcb_out_of_date`, `tcb_relaunch_advised`, `gpu_failed`
   /// (see `AttestationReport.reasonCode`).
   final String? reasonCode;
+
+  /// Tools were sent or tool calls received in this model call (their
+  /// arguments are protected by the pinned TLS connection only).
+  final bool toolsInvolved;
 
   @override
   String toString() => 'AttestationStatusChanged($stepId, ${status.name})';

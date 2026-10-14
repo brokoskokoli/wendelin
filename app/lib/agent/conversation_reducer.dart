@@ -202,6 +202,7 @@ final class ConversationReducer {
                         logId: report.logId,
                         detail: report.detail,
                         reasonCode: report.reasonCode,
+                        toolsInvolved: e.attestation!.toolsInvolved,
                       ),
                     )
                   : x,
@@ -266,6 +267,7 @@ final class ConversationReducer {
       logId: event.logId.isEmpty ? old?.logId ?? '' : event.logId,
       detail: event.detail,
       reasonCode: event.reasonCode,
+      toolsInvolved: event.toolsInvolved,
     );
 
     String? target;

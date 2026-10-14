@@ -19,6 +19,8 @@ Future<void> _pump(WidgetTester tester, {required bool attested}) =>
               warn: 0.8,
               onWarn: (_) {},
               attested: attested,
+              noTools: false,
+              onNoTools: (_) {},
               onSave: () {},
             ),
           ),
@@ -30,6 +32,7 @@ void main() {
   testWidgets('Stufe TEE nur für geprüfte Profile', (tester) async {
     await _pump(tester, attested: false);
     expect(find.text(PrivacyLevel.tee.label), findsNothing);
+    expect(find.text('Ohne Tools (alles verschlüsselt)'), findsNothing);
     expect(find.text(PrivacyLevel.standard.label), findsWidgets);
     await _pump(tester, attested: true);
     expect(find.text(PrivacyLevel.tee.label), findsWidgets);

@@ -12,8 +12,14 @@ AnswerAttestation _a(
   AttestationStatus s, {
   String? reason,
   String log = 'l1',
-}) =>
-    AnswerAttestation(stepId: 's:1', status: s, logId: log, reasonCode: reason);
+  bool tools = false,
+}) => AnswerAttestation(
+  stepId: 's:1',
+  status: s,
+  logId: log,
+  reasonCode: reason,
+  toolsInvolved: tools,
+);
 
 Widget _answer(
   AnswerAttestation a, {
@@ -162,6 +168,48 @@ void main() {
       expect(stageResultStatus('info'), isNull);
       expect(stageResultStatus('fail'), CheckStatus.failed);
     });
+  });
+
+  group('Tool-Hinweis (WP63)', () {
+    testWidgets('nur an Antworten mit Tools', (tester) async {
+      await tester.pumpWidget(
+        themed(
+          Scaffold(
+            body: Column(
+              children: [
+                _answer(_a(AttestationStatus.green)),
+                _answer(_a(AttestationStatus.green, tools: true)),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(find.text(ToolTlsHint.text), findsOneWidget);
+      expect(
+        find.text('Tool-Argumente nur über gepinntes TLS geschützt'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Golden Schild mit und ohne Tool-Hinweis', tags: ['golden'], (
+      tester,
+    ) async {
+      await pumpComponent(tester, [
+        _answer(_a(AttestationStatus.green)),
+        _answer(_a(AttestationStatus.green, tools: true)),
+      ]);
+      await expectLater(
+        find.byKey(goldenKey),
+        matchesGoldenFile('goldens/components/tool_tls_hint.png'),
+      );
+    });
+  });
+
+  test('Stufentexte: E2EE und TLS', () {
+    expect(stageLabel('e2ee.key'), 'Ende-zu-Ende-verschlüsselt');
+    expect(stageLabel('tls.spki'), 'TLS-Verbindung geprüft');
+    expect(stageExplanation('e2ee.key'), contains('nicht im Modell selbst'));
+    expect(stageExplanation('quote'), isNull);
   });
 
   testWidgets(

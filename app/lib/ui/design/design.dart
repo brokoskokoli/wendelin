@@ -25,6 +25,7 @@ export 'sheet_parts.dart';
 export 'status_card.dart';
 export 'tool_chip.dart';
 export 'tool_result_card.dart';
+export 'tool_tls_hint.dart';
 export 'user_bubble.dart';
 export 'w_switch.dart';
 export 'waveform.dart';

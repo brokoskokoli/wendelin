@@ -148,6 +148,7 @@ final class ProviderSetupSession {
     PrivacyLevel? privacy,
     int? budgetMicros,
     double? warnThreshold,
+    bool? noTools,
   }) {
     final base = template.toProfile(
       id: profileId,
@@ -172,7 +173,12 @@ final class ProviderSetupSession {
       budgetMonthly: budgetMicros,
       warnThreshold: budgetMicros == null ? null : warnThreshold,
       extraHeaders: existing?.extraHeaders ?? const {},
-      options: {...existing?.options ?? base.options},
+      options: {
+        for (final e in (existing?.options ?? base.options).entries)
+          if (!(noTools != null && e.key == noToolsOption)) e.key: e.value,
+        // Off is the default: the key is only stored when switched on.
+        if (noTools ?? false) noToolsOption: true,
+      },
     );
   }
 

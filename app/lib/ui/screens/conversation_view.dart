@@ -302,6 +302,7 @@ class AttestedAnswer extends StatelessWidget {
           label: message.label,
           onTap: onTap == null ? null : () => onTap!(attestation),
         ),
+        if (attestation.toolsInvolved) const ToolTlsHint(),
         if (message.title case final title?)
           Padding(
             padding: const EdgeInsets.only(top: WSpace.xs),
