@@ -24,9 +24,35 @@ object RecognizerSwitch {
     private const val PREFS = "app.wendelin.recognizer"
     private const val KEY_OFFERED = "offered"
 
-    fun sync(context: Context, holdsRole: Boolean = holdsAssistantRole(context)) {
+    /** Why [sync] runs; decides how far the role query is trusted. */
+    enum class Trigger {
+        /** Assistant service was bound: the role is ours, even if the query lags behind. */
+        READY,
+
+        /**
+         * Assistant service is shut down: the role is gone or about to go. `isRoleHeld` may still
+         * report the old holder at this moment (race), so the query must not be used.
+         */
+        SHUTDOWN,
+
+        /** App start, setting changed: ask the role manager. */
+        QUERY,
+    }
+
+    /** Pure decision: target component state for [trigger], the role query result and the setting. */
+    fun targetState(trigger: Trigger, queriedRole: Boolean, offered: Boolean): Int {
+        val holdsRole = when (trigger) {
+            Trigger.READY -> true
+            Trigger.SHUTDOWN -> false
+            Trigger.QUERY -> queriedRole
+        }
+        return stateFor(holdsRole && offered)
+    }
+
+    fun sync(context: Context, trigger: Trigger = Trigger.QUERY) {
         val component = ComponentName(context, WendelinRecognitionService::class.java)
-        val wanted = stateFor(holdsRole && isOffered(context))
+        val queried = trigger == Trigger.QUERY && holdsAssistantRole(context)
+        val wanted = targetState(trigger, queried, isOffered(context))
         val pm = context.packageManager
         if (pm.getComponentEnabledSetting(component) == wanted) return
         pm.setComponentEnabledSetting(component, wanted, PackageManager.DONT_KILL_APP)
