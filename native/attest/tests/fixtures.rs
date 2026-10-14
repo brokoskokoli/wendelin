@@ -694,3 +694,20 @@ fn documented_unauthenticated_quote_bytes_do_not_change_the_verdict() {
         );
     }
 }
+
+/// WP61: Testvektor aus dem echten Zertifikat von api.redpill.ai (öffentlich,
+/// Stand 2026-10-14); der Hash ist der `tls_public_keys`-Eintrag der
+/// Live-Attestierung vom selben Tag.
+#[test]
+fn spki_hash_of_the_real_gateway_certificate() {
+    let pem_text = fx("redpill_api_cert.pem");
+    let der = pem::parse(pem_text).expect("PEM").into_contents();
+    let hash = api::spki_sha256(der.clone()).expect("SPKI");
+    assert_eq!(
+        hex::encode(hash),
+        "e52fdca52c039def33e51cd2b5eded43eae1949030e47866f5f09e90b6940a88"
+    );
+    // kaputte DER-Daten werden abgelehnt, nicht gehasht
+    assert!(api::spki_sha256(der[..40].to_vec()).is_err());
+    assert!(api::spki_sha256(vec![]).is_err());
+}

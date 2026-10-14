@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/fakes.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 // Live-Tests gegen echte APIs, sparsam: kleinste Modelle, max. 200 Tokens,
@@ -156,4 +157,50 @@ void main() {
       label: 'Phala',
     ),
   );
+
+  test('Phala: Anfrage geht nur über die gegen die Attestierung geprüfte '
+      'TLS-Verbindung (WP61)', () async {
+    if (_skipWithout(phalaKey, 'PHALA_API_KEY')) return;
+    final provider = ProviderFactory.create(
+      ProviderProfile(
+        id: 'phala',
+        name: 'Phala',
+        type: ProviderType.openaiCompatible,
+        baseUrl: 'https://api.redpill.ai/v1',
+        defaultModel: 'qwen/qwen-2.5-7b-instruct',
+        privacy: PrivacyLevel.tee,
+        authMethod: const ApiKeyAuth('ref'),
+        options: const {'attestation': 'phala'},
+      ),
+      (_) async => phalaKey!,
+      // Quote signature chain is not checked here (fake crypto); the SPKI
+      // hashing is the real one for X.509 DER.
+      attestation: AttestationWiring(crypto: FakeAttestationCrypto()),
+    ) as AttestedProvider;
+    final events = await provider
+        .chat(
+          ChatRequest(
+            systemPrompt: 'Antworte mit einem Wort.',
+            messages: [Message.user('Sag Hallo.')],
+            model: 'qwen/qwen-2.5-7b-instruct',
+            maxTokens: 10,
+          ),
+        )
+        .toList();
+    _report('Phala (TLS-Pin)', 'qwen/qwen-2.5-7b-instruct', events);
+    // The pin let the request through: Done, or HTTP 402 (the Phala key has
+    // no credit at the moment; the factory maps 401/402/403 to
+    // AuthException). Any other error, in particular a refused connection
+    // (AttestationFailedException), fails.
+    final last = events.last;
+    expect(
+      last is Done || (last is ErrorEvent && last.error is AuthException),
+      isTrue,
+      reason: '$last',
+    );
+    final tls = provider.lastSessionStages.firstWhere(
+      (s) => s.stage == AttestationStage.tlsSpki,
+    );
+    expect(tls.outcome, StageOutcome.pass, reason: tls.detail);
+  });
 }

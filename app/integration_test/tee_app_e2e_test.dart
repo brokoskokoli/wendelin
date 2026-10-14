@@ -12,6 +12,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -60,8 +61,17 @@ final class _ReceiptSignatureSubstitute implements AttestationCrypto {
   Uint8List sha384(Uint8List data) => _rust.sha384(data);
 
   @override
-  Uint8List spkiSha256(Uint8List certificateDer) =>
-      _rust.spkiSha256(certificateDer);
+  Uint8List spkiSha256(Uint8List certificateDer) {
+    // The recording's gateway certificate no longer exists; its stand-in
+    // maps to the recorded pin, every other certificate is hashed for real.
+    if (listEquals(certificateDer, fixtureGatewayCertificate)) {
+      return Uint8List.fromList([
+        for (var i = 0; i < fixtureGatewayPin.length; i += 2)
+          int.parse(fixtureGatewayPin.substring(i, i + 2), radix: 16),
+      ]);
+    }
+    return _rust.spkiSha256(certificateDer);
+  }
 }
 
 void main() {
@@ -82,6 +92,7 @@ void main() {
         attestationTransportProvider.overrideWithValue(
           AttestationTransport(
             client: gateway.client,
+            pinnedClient: gateway.pinned,
             settings: HttpSettings(clock: FixedClock(probeNow)),
             nonceSource: () => probeNonce,
           ),
@@ -106,7 +117,7 @@ void main() {
         id: 'phala',
         name: 'Phala · GLM klein',
         type: ProviderType.openaiCompatible,
-        baseUrl: 'https://gateway.test/v1',
+        baseUrl: 'https://api.redpill.ai/v1',
         defaultModel: 'z-ai/glm-5.3-flash',
         privacy: PrivacyLevel.tee,
         authMethod: const ApiKeyAuth('provider.phala.apiKey'),

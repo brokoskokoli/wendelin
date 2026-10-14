@@ -28,3 +28,5 @@ export 'src/tee/attestation_types.dart';
 export 'src/tee/attested_provider.dart' show AttestedProvider;
 export 'src/tee/gpu_attestation.dart';
 export 'src/tee/phala_verifier.dart' show PhalaVerifier;
+export 'src/tee/tls_pin_gate.dart' show TlsPinGate;
+export 'src/tee/tls_pinned_client.dart' show PinnedHttpClient, TlsConnect;

@@ -184,15 +184,31 @@ final class AttestationChecks {
           );
   }
 
+  /// Hex SPKI hash the attestation binds to [host] (`tls_public_keys`, or
+  /// `downstream_tls_binding` if it names [host]); `null` if there is none.
+  String? pinFor(GatewayAttestation doc, String host) {
+    final wanted = host.toLowerCase();
+    final listed = doc.keyset.tlsSpkiByDomain.entries
+        .where((e) => e.key.toLowerCase() == wanted)
+        .map((e) => e.value)
+        .firstOrNull;
+    if (listed != null) return listed.toLowerCase();
+    if (doc.downstreamTlsDomain?.toLowerCase() == wanted) {
+      return doc.downstreamTlsSpki?.toLowerCase();
+    }
+    return null;
+  }
+
   /// Consistency of `downstream_tls_binding` with the keyset's
-  /// `tls_public_keys`, and – if [observedSpki] (hex) is given – the
-  /// certificate seen on the connection. A mismatch of the connection is a
-  /// failure only if [enforce]; otherwise it is logged (open finding, see
-  /// ADR 0014).
+  /// `tls_public_keys`, and the certificate seen on the connection
+  /// ([observedSpki], hex). With [enforce] a missing, unreadable or
+  /// deviating certificate is a failure (WP61); otherwise it is only
+  /// logged. With [host] the pin is the one listed for that host.
   StageResult tlsSpki(
     GatewayAttestation doc, {
     String? observedSpki,
     bool enforce = false,
+    String? host,
   }) {
     final domain = doc.downstreamTlsDomain;
     final bound = doc.downstreamTlsSpki;
@@ -204,21 +220,28 @@ final class AttestationChecks {
       );
     }
     if (observedSpki == null) {
-      return const StageResult(
-        AttestationStage.tlsSpki,
-        StageOutcome.info,
-        'Zertifikat der Verbindung nicht geprüft',
-      );
-    }
-    final expected = listed ?? bound;
-    if (expected == null || expected != observedSpki) {
       return StageResult(
         AttestationStage.tlsSpki,
         enforce ? StageOutcome.fail : StageOutcome.info,
-        'SPKI der Verbindung weicht vom Keyset ab'
-        '${enforce ? '' : ' (nicht erzwungen)'}',
+        enforce
+            ? 'Zertifikat der Verbindung nicht messbar'
+            : 'Zertifikat der Verbindung nicht geprüft',
       );
     }
-    return const StageResult.pass(AttestationStage.tlsSpki);
+    final expected = host != null ? pinFor(doc, host) : listed ?? bound;
+    if (expected == null || expected != observedSpki.toLowerCase()) {
+      return StageResult(
+        AttestationStage.tlsSpki,
+        enforce ? StageOutcome.fail : StageOutcome.info,
+        expected == null
+            ? 'Attestierung nennt keinen Schlüssel für den Host'
+            : 'SPKI der Verbindung weicht vom Keyset ab'
+                  '${enforce ? '' : ' (nicht erzwungen)'}',
+      );
+    }
+    return const StageResult.pass(
+      AttestationStage.tlsSpki,
+      'Verbindung geprüft',
+    );
   }
 }

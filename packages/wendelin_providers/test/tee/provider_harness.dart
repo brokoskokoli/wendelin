@@ -21,6 +21,9 @@ final class TeeHarness {
     this.gpu,
     GpuCheckMode gpuMode = GpuCheckMode.off,
     http.Client? chatClient,
+    this.tlsPin,
+    http.Client Function(http.Client base, {required bool enforce})? pinWrap,
+    Uri? baseUrl,
   }) : crypto = crypto ?? FakeAttestationCrypto(ed25519Result: true) {
     server = TeeServer({
       'aci/attestation': (_) async {
@@ -65,24 +68,30 @@ final class TeeHarness {
       },
     });
     final client = chatClient ?? server.client;
+    final url = baseUrl ?? Uri.parse('https://gateway.test/v1');
+    final tee = pinWrap == null
+        ? server.client
+        : pinWrap(server.client, enforce: false);
+    final content = pinWrap == null ? client : pinWrap(client, enforce: true);
     final settings = HttpSettings(clock: clock, log: diagnostics.add);
     verifier = PhalaVerifier(
       crypto: this.crypto,
-      baseUrl: Uri.parse('https://gateway.test/v1'),
+      baseUrl: url,
       profileId: 'phala',
-      client: client is _Split ? client : _Split(client, server.client),
+      client: client is _Split ? client : _Split(client, tee),
+      tlsPin: tlsPin,
       settings: settings,
       nonceSource: () => probeNonce,
     );
     provider = AttestedProvider(
       inner: OpenAiChatAdapter(
-        baseUrl: Uri.parse('https://gateway.test/v1'),
+        baseUrl: url,
         credentials: Credentials.apiKey(
           'test-key-attest',
           style: ApiKeyStyle.bearer,
         ),
         defaultModel: 'm',
-        client: client is _Split ? client : _Split(client, server.client),
+        client: client is _Split ? client : _Split(content, tee),
         settings: settings,
         options: const OpenAiOptions(
           extraBody: {
@@ -97,8 +106,12 @@ final class TeeHarness {
       logSink: log,
       settings: settings,
       retryDelay: Duration.zero,
+      tlsPin: tlsPin,
     );
   }
+
+  /// Pin state shared by verifier and provider (WP61).
+  final TlsPinGate? tlsPin;
 
   /// Crypto under test.
   final FakeAttestationCrypto crypto;

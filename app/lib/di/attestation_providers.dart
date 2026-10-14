@@ -119,10 +119,17 @@ final class AttestationTransport {
     required this.client,
     required this.settings,
     this.nonceSource,
+    this.pinnedClient,
   });
 
   /// HTTP client of the adapter and the checks.
   final http.Client client;
+
+  /// Client of the pinned connections on top of the pin gate (like
+  /// `PinnedHttpClient`: judges the certificate of each request against the
+  /// attestation); `null` = [client] as is (no TLS connection to pin).
+  final http.Client Function(TlsPinGate gate, {required bool enforce})?
+  pinnedClient;
 
   /// Clock and log of the HTTP side.
   final HttpSettings settings;
@@ -141,11 +148,19 @@ final attestationTransportProvider = Provider<AttestationTransport?>(
 AttestationWiring? attestationWiringOf(Ref ref) {
   final crypto = ref.read(attestationCryptoProvider).asData?.value;
   if (crypto == null) return null;
+  final transport = ref.read(attestationTransportProvider);
   return AttestationWiring(
     crypto: crypto,
     logSink: ref.read(attestationLogWriterProvider),
     pins: ref.read(attestationPinStoreProvider),
     gpuMode: ref.read(gpuCheckModeProvider),
-    nonceSource: ref.read(attestationTransportProvider)?.nonceSource,
+    nonceSource: transport?.nonceSource,
+    // Production: the pinned TLS clients of the package. The device test
+    // replays recorded fixtures through its own client and therefore has no
+    // TLS connection to pin.
+    pinnedClient: transport == null
+        ? null
+        : transport.pinnedClient ??
+              (gate, {required enforce}) => transport.client,
   );
 }
