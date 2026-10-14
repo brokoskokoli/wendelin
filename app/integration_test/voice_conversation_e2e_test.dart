@@ -1,10 +1,11 @@
 // Gerätetest WP54: Gesprächsmodus im Overlay. Das Overlay hört nacheinander
 // drei WAVs (Frage, Folgefrage im Folgefenster, gesprochenes Stoppwort („Halt.“)). Der
 // Skript-Provider hätte drei Antworten; nach dem Stoppwort darf die dritte nie
-// fallen und die Sitzung endet. Kein Live-Modell.
+// fallen und die Sitzung endet. Kein Live-Modell. Liegt alphabetisch hinter
+// den Tests, die einen leeren Audit-Log/Verlauf erwarten (Sammellauf).
 //
 //   WENDELIN_MODELS=~/wendelin-models \
-//     tool/e2e_android.sh integration_test/conversation_e2e_test.dart
+//     tool/e2e_android.sh integration_test/voice_conversation_e2e_test.dart
 
 import 'dart:convert';
 import 'dart:io';
