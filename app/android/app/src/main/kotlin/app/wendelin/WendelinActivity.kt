@@ -19,6 +19,7 @@ abstract class WendelinActivity : FlutterActivity() {
     private var apps: AppsChannel? = null
     private var network: NetworkChannel? = null
     private var auth: AuthChannel? = null
+    private var torch: TorchChannel? = null
     protected var assistant: AssistantChannel? = null
         private set
 
@@ -38,6 +39,7 @@ abstract class WendelinActivity : FlutterActivity() {
         apps = AppsChannel(this, messenger)
         network = NetworkChannel(this, messenger)
         auth = AuthChannel(this, messenger)
+        torch = TorchChannel(this, messenger)
         assistant = AssistantChannel(this, messenger)
     }
 
@@ -56,6 +58,8 @@ abstract class WendelinActivity : FlutterActivity() {
         network = null
         auth?.dispose()
         auth = null
+        torch?.dispose()
+        torch = null
         assistant?.dispose()
         assistant = null
         super.cleanUpFlutterEngine(flutterEngine)

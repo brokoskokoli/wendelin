@@ -16,6 +16,7 @@ List<Override> withIntegrations(TestEnv env) => [
       alarms: env.alarms,
       memory: env.memory,
       apps: env.apps,
+      torch: env.torch,
       requestCalendarPermission: env.ports.requestCalendarPermission,
       lists: ListsPorts(
         port: env.listFiles,

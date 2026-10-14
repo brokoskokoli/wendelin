@@ -47,6 +47,9 @@ const _trusted = <String, bool>{
   // Confirmations of what the user just asked for.
   'calendar__create_event': true,
   'clipboard__write': true,
+  'flashlight__on': true, // own state only
+  'flashlight__off': true,
+  'flashlight__toggle': true,
   'alarms__set_alarm': true,
   'alarms__set_timer': true,
   'memory__save': true,
@@ -58,6 +61,7 @@ void main() {
   final integrations = <Integration>[
     CalendarIntegration(FakeCalendarPort()),
     ClipboardIntegration(FakeClipboardPort()),
+    FlashlightIntegration(FakeTorchPort()),
     AlarmsIntegration(FakeAlarmPort()),
     MemoryIntegration(FakeMemoryStore()),
     ListsIntegration(FakeListFilePort(), definitions: () => []),

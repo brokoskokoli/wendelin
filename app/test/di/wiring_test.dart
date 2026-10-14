@@ -4,6 +4,8 @@ import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/audit_recorder.dart';
 import 'package:wendelin/di/demo_provider.dart';
 import 'package:wendelin/di/integration_specs.dart';
+import 'package:wendelin/di/integrations/clipboard_spec.dart';
+import 'package:wendelin/di/integrations/flashlight_spec.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
@@ -305,6 +307,7 @@ void main() {
         'bring',
         'calendar',
         'clipboard',
+        'flashlight',
         'lists',
         'memory',
         'obsidian',
@@ -314,6 +317,31 @@ void main() {
       expect(registry.status('calendar'), IntegrationStatus.available);
       // Obsidian: registriert; eingeschaltet ohne Vault „Einrichtung nötig“.
       expect(registry.status('obsidian'), IntegrationStatus.available);
+    });
+
+    test('Taschenlampe: Tools laufen über den Torch-Port, Sperrflag', () async {
+      final env = TestEnv(enabled: const {'flashlight'});
+      final c = env.container();
+      addTearDown(c.dispose);
+      final registry = c.read(toolRegistryProvider);
+      await registry.refresh();
+      expect(registry.status('flashlight'), IntegrationStatus.active);
+      final catalog = registry.catalogFor(PrivacyLevel.local, sessionId: 's');
+      final ctx = ToolContext(
+        sessionId: 's',
+        clock: FixedClock(testNow),
+        locale: 'de-DE',
+        timeZone: 'Europe/Berlin',
+      );
+      final o = await catalog.lookup('flashlight__on')!.execute({}, ctx);
+      expect(o.isError, isFalse, reason: o.text);
+      expect(env.torch.on, isTrue);
+      env.torch.available = false;
+      final err = await catalog.lookup('flashlight__off')!.execute({}, ctx);
+      expect(err.isError, isTrue);
+      expect(err.text, contains('keine Taschenlampe'));
+      expect(flashlightSpec.allowedWhileLocked, isTrue);
+      expect(clipboardSpec.allowedWhileLocked, isFalse);
     });
 
     test('Demo-Modus: In-Memory-Ports, alles aktiv, Demo-Provider', () async {
@@ -330,6 +358,7 @@ void main() {
           'alarms': IntegrationStatus.active,
           'calendar': IntegrationStatus.active,
           'clipboard': IntegrationStatus.active,
+          'flashlight': IntegrationStatus.active,
           'memory': IntegrationStatus.active,
           // Ohne Suchdienst ist web aktiv (nur web__fetch); der optionale
           // Einrichtungsschritt bleibt offen (WP14).

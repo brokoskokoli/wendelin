@@ -19,6 +19,7 @@ export 'bring.dart';
 export 'calendar.dart';
 export 'clipboard.dart';
 export 'common.dart';
+export 'flashlight.dart';
 export 'http_tools.dart';
 export 'lists.dart';
 export 'memory.dart';

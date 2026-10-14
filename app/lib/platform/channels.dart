@@ -28,6 +28,9 @@ const networkChannelName = 'app.wendelin/network';
 /// `RecognizerEngine.kt`: speech recognizer service.
 const recognizerChannelName = 'app.wendelin/recognizer';
 
+/// `TorchChannel.kt`: flash LED as a flashlight.
+const torchChannelName = 'app.wendelin/torch';
+
 /// `VaultChannel.kt`: Obsidian vault tree.
 const vaultChannelName = 'app.wendelin/vault';
 

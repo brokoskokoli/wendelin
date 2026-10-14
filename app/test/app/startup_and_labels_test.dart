@@ -91,6 +91,7 @@ void main() {
       expect(integrationIcon('lists'), WIcons.cart);
       expect(integrationIcon('web'), WIcons.globe);
       expect(integrationIcon('clipboard'), WIcons.clipboard);
+      expect(integrationIcon('flashlight'), WIcons.flashlight);
       expect(integrationIcon('alarms'), WIcons.alarm);
       expect(integrationIcon('irgendwas'), WIcons.task);
     });
@@ -172,6 +173,7 @@ void main() {
           alarms: FakeAlarmPort(),
           memory: FakeMemoryStore(),
           apps: FakeAppPresencePort(),
+          torch: FakeTorchPort(),
         ),
         device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
         httpClient: http.Client(),

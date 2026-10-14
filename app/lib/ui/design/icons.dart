@@ -123,6 +123,12 @@ abstract final class WIcons {
     '<path d="M9 3 L15 3 L15 6 L9 6 Z M8.5 11 L15.5 11 M8.5 15 L13.5 15" $_sj/>',
   );
 
+  /// Taschenlampe.
+  static const flashlight = WIconData._(
+    '<path d="M8 3 L16 3 L16 7 L14 9 L14 20 L10 20 L10 9 L8 7 Z" $_sj/>'
+    '<path d="M12 12 L12 14" $_sj/>',
+  );
+
   /// Globus (Web).
   static const globe = WIconData._(
     '<circle cx="12" cy="12" r="8.5" $_s/>'

@@ -126,6 +126,17 @@ final class _TrimmingClipboard implements ClipboardPort {
   Future<void> write(String text) => inner.write(text.trim());
 }
 
+final class _DeafTorch implements TorchPort {
+  @override
+  Future<bool> isAvailable() async => true;
+
+  @override
+  Future<bool> state() async => false;
+
+  @override
+  Future<void> set(bool on) async {}
+}
+
 final class _BadAlarms implements AlarmPort {
   _BadAlarms({
     this.noValidation = false,
@@ -356,6 +367,11 @@ void main() {
     final checks = clipboardPortContractChecks(_TrimmingClipboard.new);
     await checks[ClipboardPortChecks.roundTrip]!();
     await expectLater(checks[ClipboardPortChecks.unicode]!(), _fails);
+  });
+
+  test('torchPortContract erkennt einen Port, der set ignoriert', () async {
+    final checks = torchPortContractChecks(_DeafTorch.new);
+    await expectLater(checks[TorchPortChecks.roundTrip]!(), _fails);
   });
 
   group('alarmPortContract erkennt', () {

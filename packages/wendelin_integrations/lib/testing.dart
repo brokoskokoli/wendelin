@@ -3,7 +3,7 @@
 /// (`calendarPortContract`, `clipboardPortContract`, `alarmPortContract`,
 /// `memoryStoreContract`, `webSearchBackendContract`, `listFilePortContract`,
 /// `vaultPortContract`, `noteIndexPortContract`, `bringApiContract`,
-/// `httpToolSecretsContract`, `appPresencePortContract`).
+/// `httpToolSecretsContract`, `appPresencePortContract`, `torchPortContract`).
 ///
 /// Depends on `package:test`; import it only from tests.
 library;
@@ -18,5 +18,6 @@ export 'testing/http_tool_secrets_contract.dart';
 export 'testing/list_file_port_contract.dart';
 export 'testing/memory_store_contract.dart';
 export 'testing/note_index_port_contract.dart';
+export 'testing/torch_port_contract.dart';
 export 'testing/vault_port_contract.dart';
 export 'testing/web_search_backend_contract.dart';
