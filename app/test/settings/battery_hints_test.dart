@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/platform/battery_platform.dart';
+import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/assistant_screen.dart';
 import 'package:wendelin/ui/settings/battery_hints.dart';
+import 'package:wendelin/ui/settings/settings_page.dart';
 
 import '../overlay/assistant_overlay_test.dart' show FakeAssistantPlatform;
 import '../support/test_env.dart';
@@ -135,24 +137,41 @@ void main() {
     expect(find.byKey(const ValueKey('vendorChecklist')), findsNothing);
   });
 
-  testWidgets('Golden Assistent: Akku-Hinweise (HyperOS)', tags: ['golden'], (
-    tester,
-  ) async {
-    await pumpHints(
-      tester,
-      FakeBatteryPlatform()
-        ..current = const BatteryStatus(
-          ignoringOptimizations: false,
-          bucket: StandbyBucket.rare,
-          vendor: 'xiaomi',
-          vendorSettings: true,
-        ),
-    );
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -500));
-    await tester.pump();
-    await expectLater(
-      find.byType(AssistantScreen),
-      matchesGoldenFile('goldens/assistent_akku_hinweise.png'),
-    );
-  });
+  // Drei kleine Goldens (je eine Karte) statt des ganzen Screens: jedes bleibt
+  // weit unter den CI-Toleranzen (Glyphen-Antialiasing, `golden_tolerance.dart`).
+  // Das Zusammenspiel im Screen prüfen die Widget-Tests oben.
+  final cards = <(String, SettingsRow)>[
+    (
+      'akku_optimierung',
+      const SettingsRow(
+        title: batteryOptimizedTitle,
+        detail: batteryOptimizedDetail,
+      ),
+    ),
+    (
+      'akku_standby',
+      SettingsRow(
+        title: standbyBucketTitle(StandbyBucket.rare),
+        detail: standbyBucketDetail,
+      ),
+    ),
+    (
+      'akku_hersteller',
+      SettingsRow(
+        title: vendorChecklists['xiaomi']!.$1,
+        detail: vendorChecklists['xiaomi']!.$2,
+      ),
+    ),
+  ];
+  for (final (name, row) in cards) {
+    testWidgets('Golden Assistent: $name', tags: ['golden'], (tester) async {
+      await pumpComponent(tester, [
+        SectionCard(children: [row]),
+      ]);
+      await expectLater(
+        find.byKey(goldenKey),
+        matchesGoldenFile('goldens/assistent_$name.png'),
+      );
+    });
+  }
 }
