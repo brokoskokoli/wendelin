@@ -14,6 +14,26 @@ void main() {
       expect(followUpUseful(lastSentence: 'Wer? Egal.'), isFalse);
     });
 
+    test(
+      'genau 2:00 zwischen den Antwortenden: noch sinnvoll, danach nicht',
+      () {
+        expect(
+          followUpUseful(
+            lastSentence: 'Fertig.',
+            sinceLastAnswer: const Duration(minutes: 2),
+          ),
+          isTrue,
+        );
+        expect(
+          followUpUseful(
+            lastSentence: 'Fertig.',
+            sinceLastAnswer: const Duration(minutes: 2, microseconds: 1),
+          ),
+          isFalse,
+        );
+      },
+    );
+
     test('zweite Sprachanfrage kurz nach der Antwort: sinnvoll', () {
       expect(
         followUpUseful(

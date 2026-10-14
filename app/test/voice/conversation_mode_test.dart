@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/voice/conversation_offer.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
@@ -103,6 +104,33 @@ void main() {
         expect(log.any((l) => l.contains('reason=maxfollowups')), isFalse);
       },
     );
+
+    test('Folgefenster offen, App in den Hintergrund: Mikrofon aus', () async {
+      final audio = FakeAudioInput(frames: utterance());
+      open(
+        [ScriptedTurn.text('Erste.')],
+        _components(
+          audio: audio,
+          tts: FakeTextToSpeech(),
+          config: const VoicePipelineConfig(
+            conversationMode: true,
+            followUpWindow: Duration(seconds: 30),
+          ),
+        ),
+      );
+      expect(await voice().start(TriggerKind.pushToTalk), isTrue);
+      await waitVoice(c, (v) => v.phase == VoiceState.thinking);
+      audio.script(AudioFrames.pattern('.' * 2000));
+      await waitVoice(c, (v) => v.followUp);
+      await waitUntilTrue(() => audio.isRunning);
+      expect(audio.isRunning, isTrue, reason: 'Fenster offen');
+
+      await voice().suspend(); // paused / hidden
+      await voice().whenIdle;
+      expect(c.read(voiceControllerProvider).followUp, isFalse);
+      expect(c.read(voiceControllerProvider).active, isFalse);
+      expect(audio.isRunning, isFalse, reason: 'Mikrofon aus');
+    });
 
     test('Fenster abgelaufen: Mikrofon aus, Gespräch endet leise', () async {
       final audio = FakeAudioInput(frames: utterance());
@@ -270,6 +298,39 @@ void main() {
       expect(s.conversationAsked, isTrue);
       expect(c.read(conversationOfferProvider), isFalse);
     });
+
+    test(
+      'Overlay-Engine setzt, Hauptbildschirm (zweiter Container) zeigt',
+      () async {
+        final env = TestEnv(
+          providerConfig: scripted(
+            FakeLlmProvider([ScriptedTurn.text('Soll ich das eintragen?')]),
+          ),
+          extraOverrides: [
+            activeVoiceProvider.overrideWith(
+              (ref) async => parts(FakeAudioInput(frames: utterance())),
+            ),
+          ],
+        );
+        final overlay = c = env.container();
+        await ask('x');
+        final stored = await env.storage.settings.get(voiceSettingsKey);
+        expect(stored?.conversationOfferPending, isTrue);
+        overlay.dispose();
+
+        // Main engine: same storage, own memory.
+        final main = c = env.container();
+        main.listen(conversationOfferProvider, (_, _) {});
+        await main.read(voiceSettingsProvider.future);
+        expect(main.read(conversationOfferProvider), isTrue);
+
+        await main.read(conversationOfferProvider.notifier).answer(yes: true);
+        expect(main.read(conversationOfferProvider), isFalse);
+        final done = await env.storage.settings.get(voiceSettingsKey);
+        expect(done?.conversationAsked, isTrue);
+        expect(done?.conversationOfferPending, isFalse);
+      },
+    );
 
     test('„Nein“ speichert, die Frage kommt nie wieder', () async {
       open([

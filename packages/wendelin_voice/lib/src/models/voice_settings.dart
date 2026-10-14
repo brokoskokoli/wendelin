@@ -22,6 +22,7 @@ final class VoiceSettings {
     this.twoVersions = false,
     this.conversationMode = false,
     this.conversationAsked = false,
+    this.conversationOfferPending = false,
     this.bargeIn = BargeInMode.keywords,
   });
 
@@ -78,6 +79,12 @@ final class VoiceSettings {
   /// It is never asked again.
   final bool conversationAsked;
 
+  /// The question is due: a request (possibly in the short-lived overlay
+  /// engine) ended with an answer a follow-up would have suited. The main
+  /// screen shows the card until it is answered. Persisted, because the
+  /// overlay runs in its own engine.
+  final bool conversationOfferPending;
+
   /// Barge-in during the speech output (K23 c). Only effective where a
   /// detector exists (WP58); default: keywords.
   final BargeInMode bargeIn;
@@ -107,6 +114,7 @@ final class VoiceSettings {
     bool? twoVersions,
     bool? conversationMode,
     bool? conversationAsked,
+    bool? conversationOfferPending,
     BargeInMode? bargeIn,
   }) => VoiceSettings(
     sttModel: sttModel ?? this.sttModel,
@@ -120,6 +128,8 @@ final class VoiceSettings {
     twoVersions: twoVersions ?? this.twoVersions,
     conversationMode: conversationMode ?? this.conversationMode,
     conversationAsked: conversationAsked ?? this.conversationAsked,
+    conversationOfferPending:
+        conversationOfferPending ?? this.conversationOfferPending,
     bargeIn: bargeIn ?? this.bargeIn,
   );
 
@@ -136,6 +146,7 @@ final class VoiceSettings {
     'twoVersions': twoVersions,
     'conversationMode': conversationMode,
     'conversationAsked': conversationAsked,
+    'conversationOfferPending': conversationOfferPending,
     'bargeIn': bargeIn.name,
   };
 
@@ -175,6 +186,9 @@ final class VoiceSettings {
           pick<bool>('conversationMode', (_) => true) ?? d.conversationMode,
       conversationAsked:
           pick<bool>('conversationAsked', (_) => true) ?? d.conversationAsked,
+      conversationOfferPending:
+          pick<bool>('conversationOfferPending', (_) => true) ??
+          d.conversationOfferPending,
       bargeIn: BargeInMode.values.asNameMap()[json['bargeIn']] ?? d.bargeIn,
     );
   }
@@ -193,6 +207,7 @@ final class VoiceSettings {
       other.twoVersions == twoVersions &&
       other.conversationMode == conversationMode &&
       other.conversationAsked == conversationAsked &&
+      other.conversationOfferPending == conversationOfferPending &&
       other.bargeIn == bargeIn;
 
   @override
@@ -208,6 +223,7 @@ final class VoiceSettings {
     twoVersions,
     conversationMode,
     conversationAsked,
+    conversationOfferPending,
     bargeIn,
   );
 }

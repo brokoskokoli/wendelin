@@ -13,6 +13,7 @@ import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
+import '../../di/voice_settings_providers.dart';
 import '../../voice/conversation_offer.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
@@ -62,6 +63,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           // Also frees the speech models after a while (B14).
           unawaited(voice.background());
         } else if (state == AppLifecycleState.resumed) {
+          // The overlay (own engine) may have marked the question as due.
+          ref.invalidate(voiceSettingsProvider);
           voice.prewarm(onlyIfUsed: true);
           // Back from the Android settings: allowed there meanwhile?
           unawaited(_recheckMicrophone());

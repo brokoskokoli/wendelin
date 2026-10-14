@@ -17,33 +17,39 @@ final conversationOfferProvider = NotifierProvider<ConversationOffer, bool>(
 );
 
 /// The one-time question after the first spoken answer that a follow-up
-/// would have suited. The answer is stored (`conversationMode`,
-/// `conversationAsked`); once answered – or once the setting was chosen
-/// in the settings or the onboarding – the question never comes again.
+/// would have suited. „Due“ is stored (`conversationOfferPending`), because
+/// the overlay runs in its own engine and the main screen shows the card
+/// later. The answer is stored too (`conversationMode`, `conversationAsked`);
+/// once answered – or once the setting was chosen in the settings or the
+/// onboarding – the question never comes again.
 final class ConversationOffer extends Notifier<bool> {
   @override
   bool build() {
-    // The setting was decided elsewhere: the question goes away.
-    ref.listen(voiceSettingsProvider, (_, next) {
-      if (next.value?.conversationAsked ?? false) state = false;
-    });
-    return false;
+    final s = ref.watch(voiceSettingsProvider).value;
+    return s != null && s.conversationOfferPending && !s.conversationAsked;
   }
 
-  /// Shows the question, unless it was answered before.
+  /// Marks the question as due, unless it was answered before.
   Future<void> offer() async {
     final s = await ref.read(voiceSettingsProvider.future);
-    if (!ref.mounted || s.conversationAsked) return;
-    state = true;
+    if (!ref.mounted || s.conversationAsked || s.conversationOfferPending) {
+      return;
+    }
+    await ref
+        .read(voiceSettingsProvider.notifier)
+        .change((s) => s.copyWith(conversationOfferPending: true));
   }
 
   /// Stores the answer and never asks again.
   Future<void> answer({required bool yes}) async {
-    state = false;
     await ref
         .read(voiceSettingsProvider.notifier)
         .change(
-          (s) => s.copyWith(conversationMode: yes, conversationAsked: true),
+          (s) => s.copyWith(
+            conversationMode: yes,
+            conversationAsked: true,
+            conversationOfferPending: false,
+          ),
         );
   }
 }

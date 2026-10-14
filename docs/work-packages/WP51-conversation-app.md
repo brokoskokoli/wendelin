@@ -20,3 +20,7 @@ Abhängig von: WP45 (Pipeline), WP50 (KWS-Engine in der App), WP42 (AEC-Ergebnis
 - [ ] „Wendelin“ während der Ausgabe → Ausgabe endet, neue Frage wird verstanden.
 - [ ] Gesprächsmodus: drei Folgefragen ohne Tipp. „Danke“ beendet.
 - [ ] Mit Bluetooth-Kopfhörer: Barge-in und Folgefenster funktionieren, Audio bleibt auf dem Kopfhörer.
+
+## Offen (übergeben an WP44/WP58)
+- WER-Messung `VOICE_COMMUNICATION` gegen `VOICE_RECOGNITION` auf dem Emulator (`tool/stt_measure.sh`) und die Emulator-Kriterien (Barge-in, „Stopp“, Bluetooth, drei Folgefragen) sind nicht erledigt: WP44/WP58.
+- Vorgabe für WP58: Läuft der Detektor in `speaking` auf derselben Aufnahme, muss beim Übergang ins Folgefenster `VOICE_RECOGNITION` erzwungen werden (`capture_profile_follower.dart:105`).
