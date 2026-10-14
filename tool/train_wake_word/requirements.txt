@@ -1,0 +1,10 @@
+# venv ausserhalb des Repos (Python 3.12): uv venv --python 3.12 $K/venv && uv pip install --python $K/venv/bin/python -r requirements.txt
+openwakeword==0.6.0
+onnxruntime
+numpy
+scipy
+soundfile
+torch
+piper-tts==1.8.0
+onnx
+sherpa-onnx   # nur wegen tool/kws_measure.py (Messhelfer)
