@@ -25,7 +25,7 @@ Kurzfassung der Abhängigkeiten (geprüft von `tool/check_deps.dart`): `core` h�
 | `app/lib/main.dart`, `app/lib/app.dart`, `app/lib/bootstrap/` | Drei Einstiege: `main` (App), `assistantMain` (Overlay-Engine), `recognizerMain` (Spracherkennung für andere Apps, ADR 0008); Start in Schritten unter `bootstrap/` (Storage öffnen, Geräteinfo, `ProviderScope` mit Overrides) |
 | `app/lib/agent/` | `AgentController` (Anfragen, Bestätigungen, Undo), `ConversationReducer` und `ConversationState` (Events → UI-Zustand). Dazu fachfremd `bring_share.dart` und `money.dart` (N7) |
 | `app/lib/di/` | Nur Verdrahtung: `Provider`-Definitionen, dünne Notifier, die an Paket-Logik delegieren, und Adapter auf Flutter-Plugins oder die Einstellungen (`SettingsHttpToolStore`, `SecretStoreHttpToolVault`, `SettingsMcpConfigStore`, `ToolRegistryUserIntegrations`). Logik liegt in Paketen: HTTP-Tool-Entwurf, -Repository und -Quelle in `packages/wendelin_integrations/lib/src/http_tools/`, `UserIntegrationSync` in `packages/wendelin_integrations/lib/src/user/`, MCP-Quelle in `packages/wendelin_mcp/lib/src/app/`, `VoiceSettings` und `ModelInstallStates` in `packages/wendelin_voice/lib/src/models/`, `ScopedSecretStore` in `wendelin_storage`. Neue Logik gehört in ein Paket, nicht hierher (Regel und Abdeckungsschwelle in `docs/ENGINEERING.md`) |
-| `app/lib/platform/` | Implementierungen der Ports (Kanäle, Plugins, sherpa-onnx in `app/lib/platform/voice/`, Spracherkennung in `app/lib/platform/recognizer/`) |
+| `app/lib/platform/` | Implementierungen der Ports (Kanäle, Plugins, sherpa-onnx in `app/lib/platform/voice/`, Spracherkennung in `app/lib/platform/recognizer/`, TEE-Prüfung über Rust in `app/lib/platform/attest/`) |
 | `app/lib/ui/` | `design/` (Bausteine, Galerie), `screens/` (Hauptbildschirm, Texte in `labels.dart`), `settings/`, `onboarding/`, `overlay/`, `theme/`, Routen in `app/lib/ui/routes.dart` (setzt `general_routes.dart` und `integration_routes.dart` zusammen) |
 | `app/lib/voice/` | `VoiceController` (Mikrofon, Pipeline, Sprachbestätigung), `voice_components.dart` |
 | `app/lib/debug/` | Überschreibungen für Gerätetests (nur Debug-Builds) |
@@ -52,6 +52,7 @@ Ports liegen in dem Paket, das sie braucht; die Flutter-Implementierung liegt in
 | `AudioInput`, `VoiceActivityDetector`, `SpeechToText`, `TextToSpeech`, `TriggerSource`, `BargeInDetector` (WP45, App-Adapter mit WP51/WP58) | `packages/wendelin_voice/lib/src/io/` | `app/lib/platform/voice/` (`record_audio_input.dart`, `silero_vad.dart`, `whisper_stt.dart`, `system_tts.dart`, `sherpa_tts.dart`), `app/lib/platform/assistant_platform.dart` |
 | `ModelStore` | `packages/wendelin_voice/lib/src/models/model_store.dart` | `app/lib/platform/voice/file_model_store.dart` |
 | `SecretStore` | `packages/wendelin_storage/lib/src/secret_store.dart` | `app/lib/platform/secure_secret_store.dart` |
+| `AttestationCrypto` (WP46/WP47) | Spiegel bis zum Merge von WP46: `app/lib/platform/attest/attestation_port.dart` | `RustAttestationCrypto` in `app/lib/platform/attest/rust_attestation_crypto.dart` über das Rust-Crate `native/attest` (`flutter_rust_bridge`, ADR 0015); Kollateral von Intel PCS (`pcs_collateral_client.dart`) mit Dateicache bis `nextUpdate` (`collateral_cache.dart`); Provider `attestationCryptoProvider` in `app/lib/di/attestation_providers.dart` |
 
 ## App-Verdrahtung
 

@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
+import 'src/gate_rust.dart';
 import 'src/kotlin_unit.dart';
 
 /// Mindestabdeckung je Paket unter `packages/` (und `evals`).
@@ -23,6 +24,7 @@ Gate: muss vor jedem Commit grün sein.
   dart run tool/gate.dart                  alles (Pakete, evals, App, Prüfungen)
   dart run tool/gate.dart --no-app         ohne Flutter-App (wie der Ubuntu-Job in CI)
   dart run tool/gate.dart wendelin_core    nur diese Pakete (+ globale Prüfungen, Selbsttests)
+  dart run tool/gate.dart native/attest    nur das Rust-Crate (fmt, clippy, test, deny, frb aktuell)
   dart run tool/gate.dart --changed        nur geänderte Pakete und ihre Abhängigen
 
 Schalter:
@@ -77,6 +79,7 @@ Future<void> main(List<String> args) async {
   };
   final hasApp = File('app/pubspec.yaml').existsSync() && wants(appTarget);
   await _codeSteps(gate, packages, tooling: tooling, app: hasApp);
+  if (wants(rustTarget)) await _rustSteps(gate);
   for (final MapEntry(key: name, value: dir) in packages.entries) {
     await _testPackage(gate, name, dir);
   }
@@ -85,6 +88,22 @@ Future<void> main(List<String> args) async {
   await _globalSteps(gate, tooling: tooling);
   exitCode = gate.finish(total.elapsed, notes: notes);
   _reports.deleteSync(recursive: true);
+}
+
+/// Rust-Crate `native/attest`; ohne Toolchain lokal übersprungen, in CI Pflicht.
+Future<void> _rustSteps(Gate gate) async {
+  final env = Platform.environment;
+  final path = (env['PATH'] ?? '').split(':').where((d) => d.isNotEmpty);
+  await rustSteps(
+    gate,
+    ci: env['CI'] == 'true',
+    toolDir: (t) => findToolDir(
+      t.binary,
+      path: path,
+      home: env['HOME'] ?? '',
+      exists: (f) => File(f).existsSync(),
+    ),
+  );
 }
 
 /// Ordner der App, die Format, Analyse und Tests betreffen.

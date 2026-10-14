@@ -1,0 +1,7 @@
+rust_input: crate::api
+rust_root: ../native/attest/
+dart_output: lib/platform/attest/generated
+dart_entrypoint_class_name: AttestNative
+build_runner: false
+deps_check: false
+web: false
