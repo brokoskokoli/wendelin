@@ -40,6 +40,15 @@ enum AttestationStage {
   /// The attested keyset has an E2EE key of the suite we speak (WP62).
   e2eeKey('e2ee.key'),
 
+  /// Encrypting the request failed (only logged on failure).
+  e2eeRequest('e2ee.request'),
+
+  /// Decrypting the response failed (only logged on failure).
+  e2eeResponse('e2ee.response'),
+
+  /// The keyset of the response did not match (only logged on failure).
+  e2eeKeyset('e2ee.keyset'),
+
   /// NVIDIA NRAS check of the GPU evidence.
   gpu('gpu'),
 

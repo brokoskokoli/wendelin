@@ -106,5 +106,43 @@ void main() {
       await h.provider.chat(request).toList();
       expect((await h.provider.reportFor(request))!.toolsInvolved, isFalse);
     });
+
+    test(
+      'Tool-Verlauf im gesendeten Request zählt als Tool-Beteiligung',
+      () async {
+        final h = TeeHarness();
+        final request = _request(
+          history: [
+            Message.user('Licht an'),
+            Message.assistant([
+              const ToolCallBlock(
+                id: 'c1',
+                name: 'torch__on',
+                argumentsJson: '{}',
+              ),
+            ]),
+            Message.toolResults([
+              ToolResultBlock(callId: 'c1', content: const [TextBlock('ok')]),
+            ]),
+            Message.user('Danke'),
+          ],
+        );
+        await h.provider.chat(request).toList();
+        expect((await h.provider.reportFor(request))!.toolsInvolved, isTrue);
+      },
+    );
+
+    test('gelber Zwischenbericht trägt toolsInvolved mit', () async {
+      final h = TeeHarness()..receiptFailures = 1;
+      final seen = <AttestationReport>[];
+      h.provider.reports.listen(seen.add);
+      await h.provider.chat(_request(tools: [_tool])).toList();
+      await h.provider.pendingReport();
+      await pumpEventQueue();
+      final yellow = seen.firstWhere(
+        (r) => r.status == AttestationStatus.yellow,
+      );
+      expect(yellow.toolsInvolved, isTrue);
+    });
   });
 }

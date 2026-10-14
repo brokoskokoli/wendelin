@@ -154,7 +154,7 @@ String stageLabel(String stage) => switch (stage) {
   'compose' => 'Compose-Hash',
   'provenance' => 'Herkunft (Commit)',
   'tls.spki' => 'TLS-Verbindung geprüft',
-  'e2ee.key' => 'Ende-zu-Ende-verschlüsselt',
+  'e2ee.key' => 'E2EE-Schlüssel geprüft',
   'e2ee.request' => 'Verschlüsselung der Anfrage',
   'e2ee.response' => 'Entschlüsselung der Antwort',
   'e2ee.keyset' => 'Schlüsselsatz der Antwort',
@@ -192,7 +192,8 @@ CheckStatus? stageResultStatus(String result) => switch (result) {
 /// encryption ends (ADR 0018). `null` for other stages.
 String? stageExplanation(String stage) => switch (stage) {
   'e2ee.key' =>
-    'Die Verschlüsselung endet im Gateway des Anbieters (geprüfte '
+    'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. '
+        'Die Verschlüsselung endet im Gateway des Anbieters (geprüfte '
         'Enklave), nicht im Modell selbst.',
   _ => null,
 };

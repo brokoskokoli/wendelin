@@ -241,7 +241,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       }
       final session = _session!;
       final sent = noTools ? _withoutTools(req) : req;
-      var toolsInvolved = sent.tools.isNotEmpty;
+      var toolsInvolved = sent.tools.isNotEmpty || _hasToolTraffic(sent);
       ExchangeRecord? record;
       var rotated = false;
       await for (final event in inner.chatObserved(
@@ -276,6 +276,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           if (_isE2eeFailure(event.error)) {
             // Keys may have rotated: attest again before the next request.
             _audit.log('Wendelin/attest: E2EE-Fehler (${_stageOf(event)})');
+            _recordE2eeFailure(event.error as AttestationFailedException, req);
             _session = null;
           }
         }
@@ -306,6 +307,32 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     final rest = m.content.where((b) => b is! ToolCallBlock).toList();
     return rest.isEmpty ? null : Message(m.role, rest);
   }
+
+  /// Writes a log entry with the failed E2EE stage (visible in the log).
+  void _recordE2eeFailure(AttestationFailedException e, ChatRequest req) {
+    final stage = AttestationStage.values
+        .where((s) => s.id == e.stage)
+        .firstOrNull;
+    _emit(
+      AttestationReport(
+        logId: _audit.record(
+          AttestationLogKind.receipt,
+          AttestationStatus.red,
+          [StageResult.fail(stage ?? AttestationStage.e2eeRequest, e.message)],
+          model: req.model,
+          session: _session,
+        ),
+        status: AttestationStatus.red,
+        detail: e.message,
+      ),
+    );
+  }
+
+  static bool _hasToolTraffic(ChatRequest r) => r.messages.any(
+    (m) =>
+        m.role == Role.tool ||
+        m.content.any((b) => b is ToolCallBlock || b is ToolResultBlock),
+  );
 
   static bool _isE2eeFailure(Object? error) =>
       error is AttestationFailedException && error.stage.startsWith('e2ee.');
@@ -421,7 +448,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
               status: AttestationStatus.red,
               pinChanged: false,
             )
-          : await _receiptAttempts(id, record, session, model);
+          : await _receiptAttempts(id, record, session, model, toolsInvolved);
       final logId = _audit.record(
         AttestationLogKind.receipt,
         status,
@@ -488,6 +515,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     ExchangeRecord record,
     AttestedSession session,
     String model,
+    bool toolsInvolved,
   ) async {
     for (var attempt = 1; ; attempt++) {
       final result = await verifier.verifyReceipt(
@@ -514,6 +542,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           ),
           status: status,
           detail: 'Quittung nicht abrufbar, neuer Versuch',
+          toolsInvolved: toolsInvolved,
         ),
       );
       await Future<void>.delayed(retryDelay);

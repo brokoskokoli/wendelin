@@ -206,7 +206,7 @@ void main() {
   });
 
   test('Stufentexte: E2EE und TLS', () {
-    expect(stageLabel('e2ee.key'), 'Ende-zu-Ende-verschlüsselt');
+    expect(stageLabel('e2ee.key'), 'E2EE-Schlüssel geprüft');
     expect(stageLabel('tls.spki'), 'TLS-Verbindung geprüft');
     expect(stageExplanation('e2ee.key'), contains('nicht im Modell selbst'));
     expect(stageExplanation('quote'), isNull);

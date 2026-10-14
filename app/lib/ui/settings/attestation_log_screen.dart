@@ -97,6 +97,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             record: r,
             name: config?.nameOf(r.profileId) ?? r.profileId,
             locked: ref.watch(attestationHubProvider).isLocked(r.profileId),
+            noTools: config?.noToolsFor(r.profileId) ?? false,
             now: now,
             onReattest: () => unawaited(_reattest(r.profileId)),
           ),
@@ -193,6 +194,7 @@ class _SessionCard extends StatelessWidget {
     required this.record,
     required this.name,
     required this.locked,
+    required this.noTools,
     required this.now,
     required this.onReattest,
   });
@@ -200,6 +202,7 @@ class _SessionCard extends StatelessWidget {
   final AttestationRecord record;
   final String name;
   final bool locked;
+  final bool noTools;
   final DateTime now;
   final VoidCallback onReattest;
 
@@ -255,7 +258,7 @@ class _SessionCard extends StatelessWidget {
                     ),
                 ],
               ),
-              const ToolTlsHint(),
+              if (!noTools) const ToolTlsHint(),
               PrimaryButton(
                 'Neu attestieren',
                 key: ValueKey('reattest-${record.profileId}'),

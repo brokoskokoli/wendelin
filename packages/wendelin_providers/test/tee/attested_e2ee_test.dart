@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/fakes.dart';
-import 'package:wendelin_providers/src/tee/e2ee_v2.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 import '../support/fake_server.dart' show fixture;
@@ -186,6 +185,19 @@ void main() {
       expect(_error(events).stage, 'e2ee.response');
       expect(h.provider.locked, isFalse);
     });
+
+    test(
+      'E2EE-Fehler schreibt einen Prüfprotokoll-Eintrag mit der Stufe',
+      () async {
+        final h = TeeHarness();
+        h.responseHeaders = (_) => {};
+        await h.chat();
+        final added = h.log.entries.last;
+        expect(added.kind, AttestationLogKind.receipt);
+        expect(added.status, AttestationStatus.red);
+        expect(added.stages.map((s) => s.stage.id), contains('e2ee.response'));
+      },
+    );
 
     test('Header fehlen ganz', () async {
       final h = TeeHarness();
