@@ -19,7 +19,8 @@ class TorchChannel(context: Context, messenger: BinaryMessenger) :
     MethodChannel.MethodCallHandler {
 
     private val channel = MethodChannel(messenger, CHANNEL)
-    private val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+    private val manager =
+        context.applicationContext.getSystemService(Context.CAMERA_SERVICE) as CameraManager
     private val cameraId: String? = findFlashCamera()
     private var on = false
 
@@ -60,6 +61,8 @@ class TorchChannel(context: Context, messenger: BinaryMessenger) :
             else ->
                 try {
                     manager.setTorchMode(id, enabled)
+                    // The callback follows later; report the new state right away.
+                    on = enabled
                     result.success(null)
                 } catch (e: CameraAccessException) {
                     val code = when (e.reason) {
