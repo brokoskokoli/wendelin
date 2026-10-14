@@ -81,7 +81,12 @@ void main() {
       final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
       unawaited(nav.pushNamed(AppRoutes.wakeWord));
       await pumpUntil(tester, find.text('Aktivierungswort'));
-      await pumpUntil(tester, find.text('Stimme einlernen'));
+      // Seit WP50b steht der Dienst oben, die Schaltfläche liegt weiter unten.
+      await tester.scrollUntilVisible(
+        find.text('Stimme einlernen'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pump(const Duration(seconds: 1));
 
       // Einlernen: 15 Aufnahmen, vierfache Geschwindigkeit.
