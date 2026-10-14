@@ -23,7 +23,6 @@ final class TlsPinGate {
 
   String? _expected;
   String? _observed;
-  bool _mismatch = false;
   int _generation = 0;
 
   /// Hex SPKI hash from the latest successful attestation; `null` = none
@@ -56,7 +55,7 @@ final class TlsPinGate {
 
   /// Judges the certificate of a connection; throws
   /// [AttestationFailedException] (stage `tls.spki`) unless it matches
-  /// [expected]. A failure is remembered for [takeMismatch].
+  /// [expected].
   void enforce(Uint8List? certificateDer) {
     final seen = _hash(certificateDer);
     final String? reason;
@@ -70,18 +69,10 @@ final class TlsPinGate {
       reason = null;
     }
     if (reason == null) return;
-    _mismatch = true;
     throw AttestationFailedException(
       'TLS-Verbindung nicht verifiziert: $reason',
       stage: AttestationStage.tlsSpki.id,
     );
-  }
-
-  /// Whether [enforce] failed since the last call (resets the flag).
-  bool takeMismatch() {
-    final was = _mismatch;
-    _mismatch = false;
-    return was;
   }
 
   String? _hash(Uint8List? der) {

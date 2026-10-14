@@ -32,6 +32,7 @@ final class AttestationWiring {
     this.trustedCommits = const {},
     this.nonceSource,
     this.pinnedClient,
+    this.tlsConnect,
   });
 
   /// Builds the HTTP client of a TEE profile on top of the pin [TlsPinGate]:
@@ -41,6 +42,10 @@ final class AttestationWiring {
   /// enforced by the transport.
   final http.Client Function(TlsPinGate gate, {required bool enforce})?
   pinnedClient;
+
+  /// Opens the TLS connections of the default [PinnedHttpClient]s; `null` =
+  /// system sockets (production). Tests record or stub it.
+  final TlsConnect? tlsConnect;
 
   /// Nonce for the session attestation; `null` = random (production). Only
   /// device tests with recorded fixtures set it.
@@ -147,10 +152,12 @@ abstract final class ProviderFactory {
         final gate = attested
             ? TlsPinGate(spkiSha256: attestation.crypto.spkiSha256)
             : null;
+        final connect = attestation?.tlsConnect;
         final build =
             attestation?.pinnedClient ??
-            (TlsPinGate g, {required bool enforce}) =>
-                PinnedHttpClient(gate: g, enforce: enforce);
+            (TlsPinGate g, {required bool enforce}) => connect == null
+                ? PinnedHttpClient(gate: g, enforce: enforce)
+                : PinnedHttpClient(gate: g, enforce: enforce, connect: connect);
         final adapter = OpenAiChatAdapter(
           baseUrl: Uri.parse(baseUrl),
           credentials: Credentials(

@@ -210,14 +210,13 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       }
       final session = _session!;
       ExchangeRecord? record;
-      tlsPin?.takeMismatch();
       var rotated = false;
       await for (final event in inner.chatObserved(
         req,
         cancel: cancel,
         observer: (r) => record = r,
       )) {
-        if (event is ErrorEvent && (tlsPin?.takeMismatch() ?? false)) {
+        if (event is ErrorEvent && _isTlsMismatch(event.error)) {
           // The connection was refused before any byte of the request.
           if (attempt == 0) {
             _audit.log('Wendelin/attest: TLS-Schlüssel weicht ab, neu prüfen');
@@ -242,6 +241,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       if (!rotated) return;
     }
   }
+
+  static bool _isTlsMismatch(Object? error) =>
+      error is AttestationFailedException &&
+      error.stage == AttestationStage.tlsSpki.id;
 
   // --- Session ----------------------------------------------------------
 

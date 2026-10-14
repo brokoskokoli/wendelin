@@ -84,6 +84,15 @@ void main() {
       expect((error as AttestationFailedException).stage, 'tls.spki');
       expect(h.chatRequests, 0);
       expect(h.provider.locked, isTrue);
+      // The mismatch was found in the attestation itself: exactly one
+      // attestation, stage tls.spki is red.
+      expect(h.server.count('aci/attestation'), 1);
+      expect(
+        h.provider.lastSessionStages
+            .firstWhere((s) => s.stage == AttestationStage.tlsSpki)
+            .outcome,
+        StageOutcome.fail,
+      );
     });
 
     test('Zertifikat nicht messbar: keine Anfrage (fail-closed)', () async {

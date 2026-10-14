@@ -72,12 +72,9 @@ final class _Server {
           s.bytes += data.length;
           s.requestPorts.add(client.remotePort);
           client.add(
-            utf8.encode(
-              'HTTP/1.1 200 OK\r\ncontent-length: 2\r\n'
-              'connection: close\r\n\r\nok',
-            ),
+            utf8.encode('HTTP/1.1 200 OK\r\ncontent-length: 2\r\n\r\nok'),
           );
-          client.close();
+          // Keep-alive: the connection stays open for the next request.
         },
         onError: (_) {},
         onDone: () => client.destroy(),
@@ -143,7 +140,7 @@ void main() {
     test(
       'passender Pin: Anfrage geht über genau die geprüfte Verbindung',
       () async {
-        if (server == null) markTestSkipped('openssl fehlt');
+        if (server == null) return markTestSkipped('openssl fehlt');
         gate.expect(_pinOf(server!.der));
         final c = client();
         final response = await post(c);
@@ -153,22 +150,20 @@ void main() {
         expect(server!.requestPorts, [sockets.single]);
         c.close();
       },
-      skip: false,
     );
 
     test('falscher Pin: Fehler, kein Byte des Bodys gesendet', () async {
-      if (server == null) markTestSkipped('openssl fehlt');
+      if (server == null) return markTestSkipped('openssl fehlt');
       gate.expect('ab' * 32);
       final c = client();
       await expectLater(post(c), throwsA(isA<AttestationFailedException>()));
       await Future<void>.delayed(const Duration(milliseconds: 100));
       expect(server!.bytes, 0);
-      expect(gate.takeMismatch(), isTrue);
       c.close();
     });
 
     test('kein Pin aus der Attestierung: Fehler, nichts gesendet', () async {
-      if (server == null) markTestSkipped('openssl fehlt');
+      if (server == null) return markTestSkipped('openssl fehlt');
       final c = client();
       await expectLater(post(c), throwsA(isA<AttestationFailedException>()));
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -177,14 +172,22 @@ void main() {
     });
 
     test(
-      'Pinwechsel: alte Verbindungen werden nicht weiterverwendet',
+      'Pinwechsel: gleiche Verbindung bei gleichem Pin, danach neu geprüft',
       () async {
-        if (server == null) markTestSkipped('openssl fehlt');
-        gate.expect(_pinOf(server!.der));
+        if (server == null) return markTestSkipped('openssl fehlt');
+        final pin = _pinOf(server!.der);
+        gate.expect(pin);
         final c = client();
         await post(c);
+        await post(c);
+        // Same pin: the kept-alive connection is reused.
+        expect(sockets, hasLength(1));
         gate.expect('cd' * 32);
         await expectLater(post(c), throwsA(isA<AttestationFailedException>()));
+        gate.expect(pin);
+        expect((await post(c)).body, 'ok');
+        // Not the old connection: a new one was opened and checked.
+        expect(sockets, hasLength(3));
         c.close();
       },
     );
@@ -192,7 +195,7 @@ void main() {
     test(
       'Messmodus: misst, blockiert nie, neue Verbindung je Anfrage',
       () async {
-        if (server == null) markTestSkipped('openssl fehlt');
+        if (server == null) return markTestSkipped('openssl fehlt');
         final c = client(enforce: false);
         expect((await post(c)).statusCode, 200);
         expect(gate.observed, _pinOf(server!.der));
@@ -206,7 +209,7 @@ void main() {
       final c = PinnedHttpClient(gate: gate, enforce: true);
       await expectLater(
         c.get(Uri.parse('http://localhost:1/')),
-        throwsA(anything),
+        throwsA(isA<SocketException>()),
       );
       c.close();
     });
@@ -221,14 +224,11 @@ void main() {
         () => g.enforce(Uint8List.fromList([1])),
         throwsA(isA<AttestationFailedException>()),
       );
-      expect(g.takeMismatch(), isTrue);
-      expect(g.takeMismatch(), isFalse);
       g.expect('01' * 32);
       expect(g.generation, 1);
       g.expect('01' * 32);
       expect(g.generation, 1);
       g.enforce(Uint8List.fromList([1]));
-      expect(g.takeMismatch(), isFalse);
       expect(() => g.enforce(null), throwsA(isA<AttestationFailedException>()));
       expect(
         () => g.enforce(Uint8List(0)),

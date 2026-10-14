@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:wendelin_providers/fakes.dart';
+import 'package:wendelin_providers/wendelin_providers.dart';
 
 import 'tee_fixtures.g.dart';
 
@@ -49,6 +50,48 @@ const _sse =
     '"delta":{},"finish_reason":"stop"}]}\n\n'
     'data: [DONE]\n\n';
 
+/// Stand-in certificate of the recorded gateway. The recording lists the pin
+/// [fixtureGatewayPin] for `api.redpill.ai`; no real certificate with that
+/// key exists any more, so the device test's crypto maps exactly these bytes
+/// to the pin (see `_ReceiptSignatureSubstitute`). Any other certificate is
+/// hashed by the real Rust module.
+final Uint8List fixtureGatewayCertificate = Uint8List.fromList(
+  utf8.encode('wendelin-fixture-gateway-certificate'),
+);
+
+/// `tls_public_keys` entry of `api.redpill.ai` in the recorded attestation.
+const fixtureGatewayPin =
+    'c68585e7dc00a55d3082a9c860cb916e1788c5daec51505e413d27ab94f7d4c7';
+
+/// Stand-in for `PinnedHttpClient` in the device test: there is no TLS
+/// connection to the recorded gateway, so each request is judged against the
+/// pin with the fixture certificate, exactly like the real client does per
+/// connection (enforcing: refuse before [_inner] sees the request;
+/// measuring: record the certificate).
+final class FixturePinnedClient extends http.BaseClient {
+  /// Creates the client.
+  FixturePinnedClient(this._inner, this.gate, {required this.enforce});
+
+  final http.Client _inner;
+
+  /// Pin state shared with the verifier.
+  final TlsPinGate gate;
+
+  /// Whether a mismatch stops the request.
+  final bool enforce;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    if (enforce) {
+      gate.enforce(fixtureGatewayCertificate);
+    } else {
+      gate.resetObserved();
+      gate.observe(fixtureGatewayCertificate);
+    }
+    return _inner.send(request);
+  }
+}
+
 /// Fixture transport of the gateway: attestation, session, receipts (built
 /// from the bytes of the exchange, like the real gateway would sign them),
 /// chat and model list. [tamper] changes the receipt before it is served
@@ -65,6 +108,10 @@ final class FixtureGateway {
 
   Uint8List _request = Uint8List(0);
   Uint8List _response = Uint8List(0);
+
+  /// The pinned client (see [FixturePinnedClient]).
+  http.Client pinned(TlsPinGate gate, {required bool enforce}) =>
+      FixturePinnedClient(client, gate, enforce: enforce);
 
   /// The HTTP client.
   late final http.Client client = MockClient((request) async {

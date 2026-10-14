@@ -70,16 +70,7 @@ void _liveSuite({
           .toList();
       _report('$name Text', model, events);
       expectWellFormedChatStream(events);
-      // The pin let the request through: the answer is Done, or a provider
-      // error such as an exhausted key budget (HTTP 402), never a refusal of
-      // the connection.
-      final last = events.last;
-      expect(
-        last is Done ||
-            (last is ErrorEvent && last.error is! AttestationFailedException),
-        isTrue,
-        reason: '$last',
-      );
+      expect(events.last, isA<Done>(), reason: '${events.last}');
       expect(
         events.whereType<TextDelta>().map((e) => e.text).join(),
         isNotEmpty,
@@ -197,13 +188,13 @@ void main() {
         )
         .toList();
     _report('Phala (TLS-Pin)', 'qwen/qwen-2.5-7b-instruct', events);
-    // The pin let the request through: the answer is Done, or a provider
-    // error such as an exhausted key budget (HTTP 402), never a refusal of
-    // the connection.
+    // The pin let the request through: Done, or HTTP 402 (the Phala key has
+    // no credit at the moment; the factory maps 401/402/403 to
+    // AuthException). Any other error, in particular a refused connection
+    // (AttestationFailedException), fails.
     final last = events.last;
     expect(
-      last is Done ||
-          (last is ErrorEvent && last.error is! AttestationFailedException),
+      last is Done || (last is ErrorEvent && last.error is AuthException),
       isTrue,
       reason: '$last',
     );

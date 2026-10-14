@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/fakes.dart';
@@ -129,6 +131,31 @@ void main() {
         final extra = attested.inner.options.extraBody;
         expect((extra['provider']! as Map)['aci_verified'], isTrue);
       });
+
+      test(
+        'ohne pinnedClient: Adapter und Prüfung nutzen PinnedHttpClient',
+        () async {
+          final connected = <Uri>[];
+          final p = ProviderFactory.create(
+            phala(),
+            (_) async => 'k',
+            attestation: AttestationWiring(
+              crypto: FakeAttestationCrypto(),
+              tlsConnect: (url) async {
+                connected.add(url);
+                throw const SocketException('stub');
+              },
+            ),
+          ) as AttestedProvider;
+          // Content client: must open its connection through the pinned
+          // client (a plain http.Client would never call the hook).
+          await expectLater(p.inner.listModels(), throwsA(anything));
+          expect(connected.map((u) => u.host), ['api.redpill.ai']);
+          // Attestation client likewise.
+          await p.verifier.attest().then((_) {}, onError: (_) {});
+          expect(connected, hasLength(2));
+        },
+      );
 
       test('Host mit Punkt am Ende oder Großbuchstaben wird geprüft', () {
         for (final url in [
