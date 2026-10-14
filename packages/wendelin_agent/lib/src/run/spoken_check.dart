@@ -6,11 +6,13 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
 /// Outcome of a check: [match] only if the spoken text may be read out.
-/// [reason] is one short line without answer content (audit log).
+/// [reason] is a fixed code, never model text or answer content (audit
+/// log): one of [SpokenCheck.codes].
 typedef CheckVerdict = ({bool match, String reason, Usage? usage});
 
 /// Local pre-check: every number, phone number, e-mail address and web
@@ -41,14 +43,14 @@ abstract final class SpokenPrecheck {
       final ok =
           writtenNumbers.contains(_digits(text)) ||
           groups.every(writtenGroups.contains);
-      if (!ok) return 'lokal: Zahl nicht in der geschriebenen Antwort';
+      if (!ok) return 'local_mismatch';
     }
     final lower = written.toLowerCase();
     for (final m in _address.allMatches(spoken)) {
       final address = _normalize(m.group(0)!);
       // A number like „3.5“ is no address (no letters in the last label).
       if (address.isEmpty || !lower.contains(address)) {
-        return 'lokal: Adresse nicht in der geschriebenen Antwort';
+        return 'local_mismatch';
       }
     }
     return null;
@@ -80,6 +82,16 @@ final class SpokenCheck {
   /// Time limit of the model call.
   final Duration timeout;
 
+  /// The only reasons a verdict carries.
+  static const codes = {
+    'local_mismatch',
+    'model_no',
+    'timeout',
+    'unreadable',
+    'error',
+    'match',
+  };
+
   /// Instruction of the checker.
   static const instruction =
       'Du prüfst, ob ein Sprechtext zu einer geschriebenen Antwort passt. '
@@ -90,14 +102,29 @@ final class SpokenCheck {
       '(gleiche Fakten, Zahlen, Namen, Handlungsaufforderungen; nichts '
       'hinzugefügt, nichts Wichtiges weggelassen) und ist er für die '
       'Aussprache in der angegebenen Sprache geeignet? Antworte nur mit '
-      'einem JSON-Objekt: {"match": true oder false, "reason": "ein kurzer '
-      'Satz"}. Im Zweifel false.';
+      'einem JSON-Objekt: {"match": true oder false, "reason": "Grund in '
+      'höchstens 10 Wörtern"}. Im Zweifel false.';
 
-  /// The user message for the check.
-  static String prompt(String spoken, String written, String? language) =>
-      'Sprache: ${language ?? 'wie die geschriebene Antwort'}\n\n'
-      '<geschriebene_antwort>\n$written\n</geschriebene_antwort>\n\n'
-      '<sprechtext>\n$spoken\n</sprechtext>';
+  static final _random = Random.secure();
+
+  /// The user message for the check. The markers carry a random suffix per
+  /// call and `<`/`>` in the data are replaced, so the texts cannot close
+  /// their own marker.
+  static String prompt(
+    String spoken,
+    String written,
+    String? language, {
+    String? nonce,
+  }) {
+    final n =
+        nonce ??
+        List.generate(8, (_) => _random.nextInt(16).toRadixString(16)).join();
+    String safe(String t) =>
+        t.replaceAll('<', '\u2039').replaceAll('>', '\u203a');
+    return 'Sprache: ${language == null ? 'wie die geschriebene Antwort' : safe(language)}\n\n'
+        '<geschriebene_antwort-$n>\n${safe(written)}\n</geschriebene_antwort-$n>\n\n'
+        '<sprechtext-$n>\n${safe(spoken)}\n</sprechtext-$n>';
+  }
 
   /// Checks [spoken] against [written]: local pre-check first (no model
   /// call on mismatch; [precheck] `false` skips it, for evals only), then
@@ -113,31 +140,35 @@ final class SpokenCheck {
     bool precheck = true,
   }) async {
     if (written.trim().isEmpty) {
-      return (match: false, reason: 'keine geschriebene Antwort', usage: null);
+      return (match: false, reason: 'error', usage: null);
     }
     final local = precheck ? SpokenPrecheck.mismatch(spoken, written) : null;
     if (local != null) return (match: false, reason: local, usage: null);
     final token = CancelToken();
     unawaited(parent.whenCancelled.then((_) => token.cancel()));
-    final timer = Timer(timeout, token.cancel);
     final text = StringBuffer();
     Usage? usage;
     var failed = false;
-    try {
+    var done = false;
+    var timedOut = false;
+    Future<void> consume() async {
       final request = ChatRequest(
         messages: [Message.user(prompt(spoken, written, language))],
         model: model,
-        maxTokens: 150,
+        maxTokens: 300,
         temperature: 0,
         systemPrompt: instruction,
         metadata: {'sessionId': ?sessionId},
       );
       await for (final e in provider.chat(request, cancel: token)) {
+        if (timedOut) return;
         switch (e) {
           case TextDelta(text: final t):
             text.write(t);
           case UsageEvent(usage: final u):
             usage = (usage ?? Usage.zero) + u;
+          case Done():
+            done = true;
           case ErrorEvent():
             failed = true;
           case _:
@@ -145,14 +176,24 @@ final class SpokenCheck {
         }
         if (e.isTerminal) break;
       }
+    }
+
+    try {
+      // The limit holds without an error event too: a stream that hangs
+      // or ends silently must not block the answer.
+      await consume().timeout(
+        timeout,
+        onTimeout: () {
+          timedOut = true;
+          token.cancel();
+        },
+      );
     } on Object {
       failed = true;
-    } finally {
-      timer.cancel();
     }
-    if (failed || token.isCancelled) {
-      final why = token.isCancelled ? 'Zeitüberschreitung' : 'Prüfaufruf';
-      return (match: false, reason: '$why fehlgeschlagen', usage: usage);
+    if (timedOut) return (match: false, reason: 'timeout', usage: usage);
+    if (failed || token.isCancelled || !done) {
+      return (match: false, reason: 'error', usage: usage);
     }
     return _parse(text.toString(), usage);
   }
@@ -167,20 +208,12 @@ final class SpokenCheck {
     try {
       final json = jsonDecode(s);
       if (json is Map<String, Object?> && json['match'] is bool) {
-        final reason = json['reason'];
-        final line = reason is String
-            ? reason.replaceAll(RegExp(r'\s+'), ' ').trim()
-            : '';
-        final short = line.length > 200 ? line.substring(0, 200) : line;
-        return (
-          match: json['match'] == true,
-          reason: short.isEmpty ? 'ohne Grund' : short,
-          usage: usage,
-        );
+        final ok = json['match'] == true;
+        return (match: ok, reason: ok ? 'match' : 'model_no', usage: usage);
       }
     } on FormatException {
       // falls through: not a verdict
     }
-    return (match: false, reason: 'Urteil nicht lesbar', usage: usage);
+    return (match: false, reason: 'unreadable', usage: usage);
   }
 }

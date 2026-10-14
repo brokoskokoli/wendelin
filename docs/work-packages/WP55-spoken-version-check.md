@@ -31,3 +31,6 @@ Ohne fremde Inhalte verhalten sich „immer“, „geschützt“ und „geprüft
 - [ ] Prüfaufruf: ohne Verlauf/Tools/Gedächtnis (Test prüft den Request), gleiches Ziel und gleiche Datenschutz-Untergrenze, keine Eskalation; Kosten im Budget.
 - [ ] Lokale Vorprüfung (Zahlen, Nummern, URLs) mit Tabellentests (de/fr/en).
 - [ ] Eval: 10 Fälle (5 passend, 5 manipuliert, z. B. andere Nummer, zusätzliche Aufforderung) mit Haiku und dem Phala-Standardmodell; Trefferquote und Zusatzlatenz im Bericht.
+
+## Ergebnis
+Umbenennungen gegenüber K20/K21: Einstellung `spokenVersion` (statt `twoVersions`), Enum `SpokenVersion` (`off/always/protected/checked`), Ereignisse `AgentSpokenHold` (Halten) und `AgentSpokenVerdict` (Urteil). Das Urteil trägt nur feste Gründe (`local_mismatch`, `model_no`, `timeout`, `unreadable`, `error`, `match`), nie Modelltext; das Audit-Log schreibt nur diese. Ausgewertet wird nur ein Prüfstrom, der mit `Done` endet; die Zeitgrenze gilt auch ohne Fehlerereignis.

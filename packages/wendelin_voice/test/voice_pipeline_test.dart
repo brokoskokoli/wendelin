@@ -434,6 +434,35 @@ void main() {
       );
     });
 
+    test(
+      'Halten, Text, Ende ohne Tool und ohne Urteil: Antwort gesprochen',
+      () {
+        expect(
+          spokenFor([
+            const AgentSpokenHold(),
+            const AgentTextDelta('Termin um 10:00 Uhr.'),
+            done,
+          ]),
+          ['Termin um 10 Uhr.'],
+        );
+      },
+    );
+
+    test('Freigabe vor dem Tool-Aufruf: Reihenfolge bleibt erhalten', () {
+      expect(
+        spokenFor([
+          const AgentSpokenHold(),
+          const AgentTextDelta('Ich schaue nach.'),
+          const ToolCallStarted(
+            ToolCallBlock(id: 'c', name: 't', argumentsJson: '{}'),
+          ),
+          const AgentTextDelta('Fertig.'),
+          done,
+        ]),
+        ['Ich schaue nach.', 'Fertig.'],
+      );
+    });
+
     test('Reset beendet das Halten: neuer Text wird gesprochen', () {
       expect(
         spokenFor([

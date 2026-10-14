@@ -142,7 +142,7 @@ final class ModelCall {
     }
     if (splitter != null) split(splitter.finish());
     if (usage case final used?) _reportUsage(target, used);
-    if (held case final spoken? when error == null) {
+    if (held case final spoken? when error == null && stopReason != null) {
       await _checkSpoken(target, spoken, _writtenText(blocks));
     }
     if (error == null && stopReason == null) {
