@@ -30,7 +30,7 @@ class WendelinVoiceInteractionService : VoiceInteractionService() {
     override fun onReady() {
         super.onReady()
         current = this
-        RecognizerSwitch.sync(this, holdsRole = true)
+        RecognizerSwitch.sync(this, RecognizerSwitch.Trigger.READY)
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_POWER_DISCONNECTED)
@@ -50,7 +50,8 @@ class WendelinVoiceInteractionService : VoiceInteractionService() {
             powerRegistered = false
             unregisterReceiver(power)
         }
-        RecognizerSwitch.sync(this)
+        // isRoleHeld can still report the old holder here (race): disable without asking.
+        RecognizerSwitch.sync(this, RecognizerSwitch.Trigger.SHUTDOWN)
         // The role may be gone: the wake word needs it (decision 5).
         WakeStarter.sync(this, "vis-shutdown")
         super.onShutdown()

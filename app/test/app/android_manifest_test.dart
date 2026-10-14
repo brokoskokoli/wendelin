@@ -235,7 +235,9 @@ void main() {
             .readAsStringSync();
         expect(
           service,
-          contains('RecognizerSwitch.sync(this, holdsRole = true)'),
+          contains(
+            'RecognizerSwitch.sync(this, RecognizerSwitch.Trigger.READY)',
+          ),
         );
         final activity = File('$kotlin/WendelinActivity.kt').readAsStringSync();
         expect(activity, contains('RecognizerSwitch.sync(this)'));
@@ -253,7 +255,7 @@ void main() {
       const kotlin = 'android/app/src/main/kotlin/app/wendelin';
       final switcher = File('$kotlin/RecognizerSwitch.kt').readAsStringSync();
       // Enabled only with the role and while offered (default on).
-      expect(switcher, contains('holdsRole && isOffered(context)'));
+      expect(switcher, contains('stateFor(holdsRole && offered)'));
       expect(switcher, contains('getBoolean(KEY_OFFERED, true)'));
       final recognizer = File('$kotlin/WendelinRecognitionService.kt')
           .readAsStringSync();
