@@ -44,12 +44,12 @@ final attestationCryptoProvider = FutureProvider<AttestationCrypto>((
   );
 });
 
-/// Waits until the Rust check module is loaded so the (synchronous) provider
+/// Waits until the Rust check module ([crypto]) is loaded so the (synchronous) provider
 /// factory finds it. Without it (tests, unsupported platform) the factory
 /// refuses TEE profiles, it never builds them unchecked.
-Future<void> ensureAttestationCrypto(Ref ref) async {
+Future<void> awaitCheckModule(Future<AttestationCrypto> crypto) async {
   try {
-    await ref.read(attestationCryptoProvider.future);
+    await crypto;
   } on Object {
     // Reported when a TEE profile is built.
   }

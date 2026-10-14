@@ -7,10 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
+import '../../di/attestation_providers.dart';
 import '../../di/profiles.dart';
 import '../../di/provider_setup.dart';
 import '../../di/providers.dart';
 import '../design/design.dart';
+import 'provider_setup/attestation_stages_card.dart';
 import 'provider_setup/credentials_step.dart';
 import 'provider_setup/finish_step.dart';
 import 'provider_setup/model_step.dart';
@@ -77,8 +79,12 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   PrivacyLevel _privacy = PrivacyLevel.standard;
   double _warn = 0.8;
   String? _budgetError;
+  bool _attestationFallback = false;
 
   bool get _editing => widget.existing != null;
+
+  /// Whether the profile is a TEE provider whose answers are attested.
+  bool get _attested => _session?.attested ?? false;
 
   @override
   void initState() {
@@ -92,6 +98,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     _privacy = p.privacy;
     _budget.text = budgetText(p.budgetMonthly);
     _warn = p.warnThreshold ?? 0.8;
+    _attestationFallback = p.options['attestationFallback'] == true;
   }
 
   @override
@@ -127,10 +134,21 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     _privacy = t.privacy;
   });
 
+  /// TEE profiles need the Rust check module before the adapter is built.
+  Future<void> _loadCheckModule() async {
+    if (!_attested) return;
+    try {
+      await ref.read(attestationCryptoProvider.future);
+    } on Object {
+      // The factory reports the missing module with a clear message.
+    }
+  }
+
   /// Step 1: store the key, connect and load the models.
   Future<void> _connect() async {
     final session = _session!;
     setState(() => _busy = true);
+    await _loadCheckModule();
     await session.storeKey(_key.text);
     _key.clear();
     final result = await session.loadModels(baseUrl: _baseUrl.text);
@@ -154,6 +172,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     final model = _model.text.trim();
     if (model.isEmpty) return;
     setState(() => _busy = true);
+    await _loadCheckModule();
     final result = await _session!.probe(baseUrl: _baseUrl.text, model: model);
     if (!mounted) return;
     setState(() {
@@ -181,6 +200,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       privacy: _privacy,
       budgetMicros: budget,
       warnThreshold: _warn,
+      attestationFallback: _attested ? _attestationFallback : null,
     );
     await ref.read(profilesProvider.notifier).save(profile);
     await session.commit();
@@ -213,14 +233,19 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
 
   Widget? _failure(String title) {
     final r = _result;
-    return r != null && !r.ok
-        ? StatusCard(
-            key: const ValueKey('setupFailure'),
-            status: CheckStatus.failed,
-            title: title,
-            detail: r.message,
-          )
-        : null;
+    if (r == null || r.ok) return null;
+    final card = StatusCard(
+      key: const ValueKey('setupFailure'),
+      status: CheckStatus.failed,
+      title: title,
+      detail: r.message,
+    );
+    if (r.stages.isEmpty) return card;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: WSpace.s,
+      children: [card, AttestationStagesCard(r.stages)],
+    );
   }
 
   List<Widget> _credentials() => credentialsStep(
@@ -256,6 +281,9 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     budgetError: _budgetError,
     warn: _warn,
     onWarn: (w) => setState(() => _warn = w),
+    attested: _attested,
+    attestationFallback: _attestationFallback,
+    onAttestationFallback: (on) => setState(() => _attestationFallback = on),
     onSave: () => unawaited(_save()),
   );
 

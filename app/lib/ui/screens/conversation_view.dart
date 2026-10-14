@@ -313,6 +313,10 @@ class AttestedAnswer extends StatelessWidget {
               action: message.canRecheck && onReattest != null
                   ? TextButton(
                       onPressed: onReattest,
+                      style: TextButton.styleFrom(
+                        foregroundColor: WColors.link,
+                        minimumSize: const Size(WSize.touchMin, WSize.touchMin),
+                      ),
                       child: const Text('Neu prüfen'),
                     )
                   : null,

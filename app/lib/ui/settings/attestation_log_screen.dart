@@ -8,6 +8,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import '../../di/attestation_log_view.dart';
 import '../../di/providers.dart';
 import '../attestation/attestation_texts.dart';
+import '../attestation/stage_line.dart';
 import '../design/design.dart';
 import '../screens/labels.dart';
 import 'attestation_log_detail.dart';
@@ -203,52 +204,10 @@ class _LogRow extends StatelessWidget {
 /// The stage rows of a record, shared by the detail page and tests.
 List<Widget> stageRows(AttestationRecord r) => [
   for (final s in r.stages)
-    _StageLine(
+    StageLine(
       label: stageLabel(s.stage),
       result: stageResultLabel(s.result),
       detail: s.detail,
       status: stageResultStatus(s.result),
     ),
 ];
-
-class _StageLine extends StatelessWidget {
-  const _StageLine({
-    required this.label,
-    required this.result,
-    required this.status,
-    this.detail,
-  });
-
-  final String label;
-  final String result;
-  final String? detail;
-  final CheckStatus? status;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(
-      horizontal: WSpace.l,
-      vertical: WSpace.s,
-    ),
-    child: Row(
-      spacing: WSpace.m,
-      children: [
-        if (status != null)
-          CheckStatusIcon(status!, size: WSize.statusIconSmall)
-        else
-          const SizedBox.square(dimension: WSize.statusIconSmall),
-        Expanded(
-          child: MergeSemantics(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('$label · $result', style: WText.body),
-                if (detail != null) Text(detail!, style: WText.caption),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}

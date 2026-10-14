@@ -13,7 +13,9 @@ final class SetupTestResult {
     List<ModelInfo> models = const [],
     this.detected,
     bool? verified,
+    List<StageResult> stages = const [],
   }) : models = List.unmodifiable(models),
+       stages = List.unmodifiable(stages),
        verified = verified ?? ok;
 
   /// Whether the step worked.
@@ -31,6 +33,9 @@ final class SetupTestResult {
 
   /// Capabilities verified by the probe with the chosen model.
   final ProviderCapabilities? detected;
+
+  /// Result per stage of the first attestation (TEE profiles).
+  final List<StageResult> stages;
 }
 
 /// One run of the provider setup dialog (concept: „Einrichtung (Dialog pro
@@ -84,6 +89,22 @@ final class ProviderSetupSession {
   /// Whether a key is available (stored now or kept from [existing]).
   bool get keyStored => secretRef != null;
 
+  /// Whether the profile is a TEE provider whose answers are attested (the
+  /// first attestation then runs with the connection test).
+  bool get attested => needsAttestation(
+    existing ??
+        ProviderProfile(
+          id: profileId,
+          name: template.name,
+          type: template.type,
+          baseUrl: template.baseUrl,
+          defaultModel: '-',
+          privacy: template.privacy,
+          authMethod: const NoAuth(),
+          options: template.options,
+        ),
+  );
+
   /// Whether the template needs a base URL from the user.
   bool get needsBaseUrl =>
       template.type == ProviderType.openaiCompatible &&
@@ -110,6 +131,7 @@ final class ProviderSetupSession {
     PrivacyLevel? privacy,
     int? budgetMicros,
     double? warnThreshold,
+    bool? attestationFallback,
   }) {
     final base = template.toProfile(
       id: profileId,
@@ -134,7 +156,10 @@ final class ProviderSetupSession {
       budgetMonthly: budgetMicros,
       warnThreshold: budgetMicros == null ? null : warnThreshold,
       extraHeaders: existing?.extraHeaders ?? const {},
-      options: existing?.options ?? base.options,
+      options: {
+        ...existing?.options ?? base.options,
+        'attestationFallback': ?attestationFallback,
+      },
     );
   }
 
@@ -191,6 +216,10 @@ final class ProviderSetupSession {
       message: health.message,
       models: health.models ?? const [],
       detected: health.detected,
+      // The probe attested a TEE profile first: show the result per stage.
+      stages: provider is AttestedProvider
+          ? provider.lastSessionStages
+          : const [],
     );
   }
 

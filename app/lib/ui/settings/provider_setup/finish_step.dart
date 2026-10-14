@@ -4,6 +4,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../../../di/provider_setup.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
+import 'attestation_stages_card.dart';
 
 /// Step 4: privacy level, monthly budget and warning threshold.
 List<Widget> finishStep({
@@ -15,6 +16,9 @@ List<Widget> finishStep({
   required String? budgetError,
   required double warn,
   required void Function(double w) onWarn,
+  required bool attested,
+  required bool attestationFallback,
+  required void Function(bool on) onAttestationFallback,
   required VoidCallback onSave,
 }) {
   return [
@@ -23,6 +27,8 @@ List<Widget> finishStep({
       title: 'Modell geprüft',
       detail: result?.message,
     ),
+    if (result != null && result.stages.isNotEmpty)
+      AttestationStagesCard(result.stages),
     if (detected != null)
       Text(
         [
@@ -48,6 +54,23 @@ List<Widget> finishStep({
           ),
       ],
     ),
+    if (attested)
+      SectionCard(
+        children: [
+          SettingsRow(
+            title: 'Bei fehlgeschlagener Prüfung ausweichen',
+            detail:
+                'Besteht die TEE-Prüfung nicht, darf Wendelin die Anfrage an '
+                'den nächsten Anbieter der Kette übergeben. Bei privaten '
+                'Anfragen nur nach deiner Bestätigung. Standard: aus.',
+            trailing: WSwitch(
+              value: attestationFallback,
+              semanticLabel: 'Bei fehlgeschlagener Prüfung ausweichen',
+              onChanged: onAttestationFallback,
+            ),
+          ),
+        ],
+      ),
     TextField(
       controller: budget,
       style: WText.body,
