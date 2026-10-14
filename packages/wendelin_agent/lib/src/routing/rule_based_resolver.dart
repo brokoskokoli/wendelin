@@ -74,7 +74,7 @@ final class RuleBasedProviderResolver implements ProviderResolver {
   /// Warnings about [rules] (skipped rules, weak private targets …).
   late final List<RuleSetIssue> issues;
 
-  late final List<(String, RouteTarget)> _aliases;
+  late final List<_Alias> _aliases;
 
   /// The routing context for [input] right now.
   RoutingContext contextFor(UserInput input) => RoutingContext(
@@ -93,16 +93,29 @@ final class RuleBasedProviderResolver implements ProviderResolver {
       profiles: profiles,
       needProvider: true,
     );
-    final requested = _requested(ctx.text);
+    final named = _requested(ctx.text);
     final routed = _build(decision.target)!;
     final floor = _floorOf(decision.privateMatches);
+    final unavailable = named != null && named.built == null
+        ? _unavailable(named.target)
+        : _prefixUnavailable(decision, ctx);
+    if (unavailable != null) {
+      // The user named a target we cannot use: no silent normal routing.
+      return Resolution(
+        target: routed,
+        reason: decision.reason,
+        privacyFloor: floor,
+        unavailable: unavailable,
+      );
+    }
+    final requested = named?.built;
     if (floor == null || routed.privacy.isAtLeast(floor)) {
       return Resolution(
         target: routed,
         reason: decision.reason,
         privacyFloor: floor,
         effectiveText: decision.effectiveText,
-        requestedTarget: requested == null ? null : _build(requested),
+        requestedTarget: requested,
       );
     }
     // Private, but the winning rule's target is too weak (or the private
@@ -113,8 +126,37 @@ final class RuleBasedProviderResolver implements ProviderResolver {
       target: target,
       reason: reason,
       privacyFloor: floor,
-      requestedTarget: requested == null ? null : _build(requested),
+      requestedTarget: requested,
     );
+  }
+
+  UnavailableTarget _unavailable(RouteTarget t) {
+    final p = profiles[t.profileId];
+    final reason = switch (profileProblem(p, needProvider: true)) {
+      SkipReason.profileMissing => 'missing',
+      SkipReason.profileDisabled => 'disabled',
+      _ => 'incomplete',
+    };
+    return UnavailableTarget(p?.name ?? t.profileId, reason);
+  }
+
+  /// A rule whose trigger words matched (prefix „X, …“) but whose target
+  /// profile is disabled or incomplete, before the winning rule.
+  UnavailableTarget? _prefixUnavailable(RouteDecision d, RoutingContext ctx) {
+    for (final s in d.skipped) {
+      if (s.reason != SkipReason.profileMissing &&
+          s.reason != SkipReason.profileDisabled &&
+          s.reason != SkipReason.profileUnavailable) {
+        continue;
+      }
+      // A privacy keyword is no choice of a target.
+      if (s.rule.isPrivate) continue;
+      final match = s.rule.condition.evaluate(ctx);
+      if (match != null && match.triggers.isNotEmpty) {
+        return _unavailable(s.rule.target);
+      }
+    }
+    return null;
   }
 
   /// The floor of the matched private rules: the highest level of their
@@ -182,11 +224,13 @@ final class RuleBasedProviderResolver implements ProviderResolver {
 
   /// Names for „nochmal mit …“: rules first (they carry a specific
   /// model), then profiles.
-  List<(String, RouteTarget)> _collectAliases() {
-    final out = <(String, RouteTarget)>[];
+  List<_Alias> _collectAliases() {
+    final out = <_Alias>[];
+    // Unavailable profiles are recognized too: naming them is an explicit
+    // choice that must fail with a reason, not route elsewhere.
     void add(String name, RouteTarget t) {
       final n = RoutingText.normalize(name);
-      if (n.isNotEmpty && _build(t) != null) out.add((n, t));
+      if (n.isNotEmpty) out.add(_Alias(n, t, _build(t)));
     }
 
     for (final rule in rules.rules) {
@@ -224,7 +268,7 @@ final class RuleBasedProviderResolver implements ProviderResolver {
   /// sentences („Schreib Anna: ich gehe nochmal mit Claude ins Kino“) do
   /// not count. The longest matching name wins; on a tie the earlier source
   /// (rules before profiles).
-  RouteTarget? _requested(RoutingText text) {
+  _Alias? _requested(RoutingText text) {
     final words = text.normalized.isEmpty
         ? const <String>[]
         : text.normalized.split(' ');
@@ -239,14 +283,16 @@ final class RuleBasedProviderResolver implements ProviderResolver {
         final p = phrase.split(' ');
         if (!_wordsAt(words, at, p)) continue;
         final rest = words.sublist(at + p.length);
-        (String, RouteTarget)? best;
+        _Alias? best;
         for (final alias in _aliases) {
-          final a = alias.$1.split(' ');
+          final a = alias.name.split(' ');
           if (!_wordsAt(rest, 0, a)) continue;
           if (rest.length - a.length > maxTrailingWords) continue;
-          if (best == null || alias.$1.length > best.$1.length) best = alias;
+          if (best == null || alias.name.length > best.name.length) {
+            best = alias;
+          }
         }
-        if (best != null) return best.$2;
+        if (best != null) return best;
       }
     }
     return null;
@@ -259,4 +305,13 @@ final class RuleBasedProviderResolver implements ProviderResolver {
     }
     return true;
   }
+}
+
+/// A name for „nochmal mit …“; [built] is `null` if the target is unusable.
+final class _Alias {
+  const _Alias(this.name, this.target, this.built);
+
+  final String name;
+  final RouteTarget target;
+  final ProviderTarget? built;
 }

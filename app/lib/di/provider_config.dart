@@ -42,14 +42,14 @@ final class ProviderConfig {
   /// Creates a configuration. With [routing] requests are routed by rules
   /// (`RuleBasedProviderResolver`); without, everything goes to [primary]
   /// and nothing else (`DefaultProviderResolver`, demo mode and device
-  /// tests); [chain] only widens the tool catalog and memory checks.
+  /// tests); [others] only widens the tool catalog and memory checks.
   ProviderConfig({
     required this.primary,
-    List<ProviderTarget> chain = const [],
+    List<ProviderTarget> others = const [],
     Map<String, String> names = const {},
     this.isPrivate,
     this.routing,
-  }) : chain = List.unmodifiable(chain),
+  }) : others = List.unmodifiable(others),
        names = Map.unmodifiable(names);
 
   /// Demo mode: everything goes to the scripted [DemoLlmProvider].
@@ -71,7 +71,7 @@ final class ProviderConfig {
 
   /// Further targets: with [routing] every other available profile (with
   /// its default model). Never used automatically (K28).
-  final List<ProviderTarget> chain;
+  final List<ProviderTarget> others;
 
   /// Display name per profile id.
   final Map<String, String> names;
@@ -89,7 +89,7 @@ final class ProviderConfig {
   /// The target of profile [id] (the one answering right now), else the
   /// primary target.
   ProviderTarget targetFor(String? id) {
-    for (final t in [primary, ...chain]) {
+    for (final t in [primary, ...others]) {
       if (t.profileId == id) return t;
     }
     return primary;
@@ -100,7 +100,7 @@ final class ProviderConfig {
   /// sends sensitive tools to a provider that may not see them.
   PrivacyLevel get lowestPrivacy => [
     primary,
-    ...chain,
+    ...others,
   ].map((t) => t.privacy).reduce((a, b) => a.isAtLeast(b) ? b : a);
 
   /// The resolver for the agent.
@@ -173,7 +173,7 @@ Future<ProviderConfig?> loadProviderConfig({
   }
   return ProviderConfig(
     primary: primary,
-    chain: others,
+    others: others,
     names: names,
     routing: RoutingSetup(
       rules: rules,

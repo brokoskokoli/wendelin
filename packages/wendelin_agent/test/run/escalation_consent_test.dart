@@ -25,7 +25,7 @@ void main() {
           if (e is EscalationConfirmationRequired) e.respond(false);
         },
       );
-      expect(pt.requests, hasLength(1));
+      expect(pt.requests, isEmpty);
       expect(ps.requests, isEmpty);
       final question = events
           .whereType<EscalationConfirmationRequired>()
@@ -35,7 +35,8 @@ void main() {
         ('phala', 'claude', EscalationReason.userRequested),
       );
       expect(events.whereType<Escalated>(), isEmpty);
-      expect((terminal(events) as AgentDone).finalText, 'Phala bleibt.');
+      // K28: the user declined; the first target does not answer instead.
+      expect((terminal(events) as AgentFailed).message, startsWith('Nicht'));
       expect((events.first as Routed).reason, 'Privat');
     });
 
@@ -77,7 +78,7 @@ void main() {
       expect(ps.requests, hasLength(1));
     });
 
-    test('an error after a declined hand-over does not switch', () async {
+    test('a declined hand-over sends nothing, no error follows', () async {
       final (tee, pt) = scripted('phala', [
         ScriptedTurn.error(const NetworkException('weg')),
         ScriptedTurn.error(const NetworkException('weg')),
@@ -92,9 +93,9 @@ void main() {
         },
       );
       expect(events.whereType<EscalationConfirmationRequired>(), hasLength(1));
-      expect(pt.requests, hasLength(2));
+      expect(pt.requests, isEmpty);
       expect(ps.requests, isEmpty);
-      expect((terminal(events) as AgentFailed).error, AgentErrorKind.provider);
+      expect((terminal(events) as AgentFailed).message, startsWith('Nicht'));
     });
 
     test('cancel while the question is pending', () async {

@@ -35,6 +35,22 @@ final class ProviderTarget {
   String toString() => 'ProviderTarget($profileId, $modelId, ${privacy.name})';
 }
 
+/// A target the user named that cannot be used.
+@immutable
+final class UnavailableTarget {
+  /// Creates the marker.
+  const UnavailableTarget(this.name, this.reason);
+
+  /// Name of the profile for messages.
+  final String name;
+
+  /// `missing`, `disabled` or `incomplete` (no adapter).
+  final String reason;
+
+  @override
+  String toString() => 'UnavailableTarget($name, $reason)';
+}
+
 /// Where a request goes: the chosen [target] plus why, and the privacy floor
 /// of the request.
 @immutable
@@ -46,6 +62,7 @@ final class Resolution {
     this.privacyFloor,
     this.effectiveText,
     this.requestedTarget,
+    this.unavailable,
   });
 
   /// Chosen provider and model.
@@ -69,6 +86,11 @@ final class Resolution {
   /// provider of a run (K28).
   final ProviderTarget? requestedTarget;
 
+  /// The user named a target („nochmal mit X“, prefix „X, …“) that is
+  /// disabled or incomplete: the run ends with the reason; [target] is not
+  /// used and nothing else answers instead (K28).
+  final UnavailableTarget? unavailable;
+
   /// This resolution with [floor] as [privacyFloor].
   Resolution withPrivacyFloor(PrivacyLevel? floor) => Resolution(
     target: target,
@@ -76,6 +98,7 @@ final class Resolution {
     privacyFloor: floor,
     effectiveText: effectiveText,
     requestedTarget: requestedTarget,
+    unavailable: unavailable,
   );
 
   /// Provider profile id.

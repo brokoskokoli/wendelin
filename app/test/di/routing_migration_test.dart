@@ -84,7 +84,7 @@ void main() {
       expect(rules.defaultTarget.profileId, 'local');
       expect(rules.rules.map((r) => r.id), [privateRuleId]);
       expect(config.primary.profileId, 'local');
-      expect(config.chain.map((t) => t.profileId), ['cloud']);
+      expect(config.others.map((t) => t.profileId), ['cloud']);
       expect(config.nameOf('cloud'), 'Profil cloud');
       expect(config.lowestPrivacy, PrivacyLevel.standard);
 

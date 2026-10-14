@@ -11,8 +11,8 @@ import '../context_builder.dart';
 import '../ports.dart';
 import '../provider_resolver.dart';
 
-/// An executed tool call; [epoch] counts escalations before it.
-typedef Executed = ({ToolCallBlock call, ToolOutcome outcome, int epoch});
+/// An executed tool call.
+typedef Executed = ({ToolCallBlock call, ToolOutcome outcome});
 
 /// Whether [o] is the user's „no“ to a confirmation (the tool did not run).
 bool isDeclined(ToolOutcome o) =>
@@ -97,8 +97,9 @@ final class RunState {
       ? SpeechStyle.hint
       : context.speech;
 
-  /// Number of hand-overs to another target so far.
-  int epoch = 0;
+  /// Whether the first model call of the run has started. A target change
+  /// („nochmal mit X“) only happens before it (K28).
+  bool modelCalled = false;
 
   /// Raises the run's privacy floor to [floor]; never lowers it.
   void raiseFloor(PrivacyLevel floor) {

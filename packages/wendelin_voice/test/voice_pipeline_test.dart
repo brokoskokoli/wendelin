@@ -326,7 +326,9 @@ void main() {
       );
       h.pipeline.start();
       settle(async);
-      expect(h.tts.spoken, [VoiceTexts.fr.failed]);
+      // The translated reason is spoken, never the raw exception text.
+      expect(h.tts.spoken.single, contains('refusé'));
+      expect(h.tts.spoken.single, isNot(contains('Schlüssel')));
     });
   });
 

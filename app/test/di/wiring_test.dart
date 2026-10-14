@@ -102,7 +102,7 @@ void main() {
       expect(config.primary.profileId, 'local');
       expect(config.primary.modelId, 'claude-haiku-4-5');
       expect(config.primary.provider, isA<LlmProvider>());
-      expect(config.chain.map((t) => t.profileId), ['cloud']);
+      expect(config.others.map((t) => t.profileId), ['cloud']);
       final rules = (await storage.settings.get(RoutingSettings.rules))!;
       expect(rules.rules.map((r) => r.id), [privateRuleId]);
       expect(config.nameOf('cloud'), 'Profil cloud');
@@ -146,7 +146,7 @@ void main() {
     expect(
       ProviderConfig(
         primary: t('a', PrivacyLevel.tee),
-        chain: [t('b', PrivacyLevel.local), t('c', PrivacyLevel.eu)],
+        others: [t('b', PrivacyLevel.local), t('c', PrivacyLevel.eu)],
       ).lowestPrivacy,
       PrivacyLevel.eu,
     );

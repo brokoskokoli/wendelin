@@ -387,7 +387,7 @@ void main() {
         id: 'local',
         name: 'Ollama',
         privacy: PrivacyLevel.local,
-        chain: [
+        others: [
           ProviderTarget(
             profileId: 'sonnet',
             modelId: 'claude-sonnet',
@@ -628,7 +628,7 @@ void main() {
           providerConfig: scripted(
             provider,
             privacy: PrivacyLevel.tee,
-            chain: [
+            others: [
               if (mixed)
                 ProviderTarget(
                   profileId: 'cloud',
@@ -677,7 +677,7 @@ void main() {
         providerConfig: scripted(
           tee,
           privacy: PrivacyLevel.tee,
-          chain: [
+          others: [
             ProviderTarget(
               profileId: 'cloud',
               modelId: 'm',
@@ -723,7 +723,7 @@ void main() {
         providerConfig: scripted(
           provider,
           privacy: PrivacyLevel.tee,
-          chain: [
+          others: [
             ProviderTarget(
               profileId: 'cloud',
               modelId: 'm',

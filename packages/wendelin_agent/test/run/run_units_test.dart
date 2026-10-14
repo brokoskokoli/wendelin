@@ -2,6 +2,7 @@
 // PrivacyScope (src-internal, see `lib/src/run/`).
 
 import 'package:test/test.dart';
+import 'package:wendelin_agent/src/run/escalation.dart';
 import 'package:wendelin_agent/src/run/privacy_scope.dart';
 import 'package:wendelin_agent/src/run/run_budget.dart';
 import 'package:wendelin_agent/src/run/run_state.dart';
@@ -107,4 +108,33 @@ void main() {
       expect(state.current.privacyFloor, isNull);
     });
   });
+
+  group('Escalation', () {
+    test('a target change after the first model call is a bug (K28)', () {
+      final (primary, _) = scripted('p', const []);
+      final state = _state(PrivacyLevel.standard)..modelCalled = true;
+      final control = _NoControl();
+      final escalation = Escalation(
+        DefaultProviderResolver(primary),
+        state,
+        PrivacyScope(Harness(primary: primary).runner, state),
+        control,
+      );
+      expect(
+        () => escalation.escalate(EscalationReason.userRequested),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+  });
+}
+
+final class _NoControl implements RunControl {
+  @override
+  final token = CancelToken();
+  @override
+  bool get segmentStreamed => false;
+  @override
+  void emit(AgentEvent e) {}
+  @override
+  void throwIfAborted() {}
 }

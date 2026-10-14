@@ -86,8 +86,10 @@ void main() {
       expect(asked.single.toProfile, 'claude');
       expect(claude.requests, isEmpty);
       expect(events.whereType<Escalated>(), isEmpty);
-      expect(terminal(events), isA<AgentDone>());
-      expect(sentText(phala), contains(secret));
+      // K28: „Nicht gesendet“; the first target does not answer instead.
+      expect(terminal(events), isA<AgentFailed>());
+      expect((terminal(events) as AgentFailed).message, contains('Nicht'));
+      expect(phala.requests, hasLength(1)); // only the private first turn
       // The retry turn inherits the floor.
       expect(h.conversation.messages[2].privacyFloor, PrivacyLevel.tee);
     });
@@ -227,7 +229,7 @@ void main() {
           },
         );
         expect(asked.single.toProfile, 'claude');
-        expect(sentText(phala), contains(secret));
+        expect(phala.requests, isEmpty);
         expect(claude.requests, isEmpty);
         expect(
           h.conversation.messages
@@ -564,8 +566,8 @@ void main() {
           }
         },
       );
-      expect(phala.requests.first.systemPrompt, contains('Mag Tee'));
       expect(asked.single.toProfile, 'claude');
+      expect(phala.requests, isEmpty);
       expect(claude.requests, isEmpty);
       expect(h.conversation.messages.first.privacyFloor, PrivacyLevel.tee);
     });
@@ -677,5 +679,104 @@ void main() {
       UserInput(text: 'bitte kannst du das nochmal mit Claude'),
     );
     expect(four.requestedTarget, isNotNull);
+  });
+
+  group('taint over several turns (K13 d, K28)', () {
+    const answerSecret = 'Diabetes ist notiert.';
+    late FakeLlmProvider phala;
+    late FakeLlmProvider claude;
+    late Harness h;
+
+    Harness build({required List<ScriptedTurn> phalaTurns}) {
+      phala = FakeLlmProvider(phalaTurns);
+      claude = FakeLlmProvider([
+        ScriptedTurn.text('Claude 1.'),
+        ScriptedTurn.text('Claude 2.'),
+        ScriptedTurn.text('Claude 3.'),
+      ]);
+      final (primary, _) = scripted('x', const []);
+      return Harness(
+        primary: primary,
+        resolver: conceptResolver(
+          rules: RuleSet(
+            rules: [
+              RoutingRule(
+                id: 'private',
+                name: 'Privat',
+                condition: PrivacyCondition(),
+                target: phalaSmall,
+              ),
+            ],
+            defaultTarget: claudeSonnet,
+          ),
+          profiles: [
+            for (final p in withProviders({'phala': phala, 'claude': claude}))
+              RoutingProfile(
+                id: p.id,
+                name: p.name,
+                privacy: p.privacy,
+                defaultModel: p.defaultModel,
+                provider: p.provider,
+                aliases: [
+                  ...p.aliases,
+                  if (p.id == 'phala') 'Phala',
+                  if (p.id == 'claude') 'Claude',
+                ],
+              ),
+          ],
+        ),
+      );
+    }
+
+    test('Claude → private at Phala → Claude → „nochmal mit Phala“ → Claude: '
+        'the secret never reaches Claude, answers carry the floor', () async {
+      h = build(
+        phalaTurns: [
+          ScriptedTurn.text(answerSecret),
+          ScriptedTurn.text('Phala: $answerSecret'),
+        ],
+      );
+      await h.run('privat: $secret'); // Phala
+      await h.run('Wie spät ist es?'); // Claude, private turn hidden
+      expect(sentText(claude), isNot(contains(secret)));
+      final before = h.conversation.messages.length;
+
+      final retry = await h.run('nochmal mit Phala');
+      expect(terminal(retry), isA<AgentDone>());
+      expect(phala.requests.last.model, 'glm-small');
+      // Phala saw the secret: the retry run is tainted, its messages carry
+      // the floor so that weaker targets never see them again.
+      expect(
+        h.conversation.messages
+            .skip(before)
+            .where((m) => m.role == Role.assistant)
+            .map((m) => m.privacyFloor),
+        [PrivacyLevel.tee],
+      );
+
+      await h.run('Und weiter?'); // Claude again
+      expect(claude.requests, hasLength(2));
+      expect(sentText(claude), isNot(contains(secret)));
+      expect(sentText(claude), isNot(contains(answerSecret)));
+    });
+
+    test('„nochmal mit Claude“ after a private turn inherits its floor and '
+        'asks, even if Claude is the routed default', () async {
+      h = build(phalaTurns: [ScriptedTurn.text(answerSecret)]);
+      await h.run('privat: $secret');
+      final asked = <EscalationConfirmationRequired>[];
+      final events = await h.run(
+        'nochmal mit Claude',
+        onEvent: (e) {
+          if (e is EscalationConfirmationRequired) {
+            asked.add(e);
+            e.respond(false);
+          }
+        },
+      );
+      expect(asked.single.toProfile, 'claude');
+      expect(claude.requests, isEmpty);
+      expect(terminal(events), isA<AgentFailed>());
+    });
   });
 }

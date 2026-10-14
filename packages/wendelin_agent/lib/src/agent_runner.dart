@@ -173,7 +173,7 @@ final class _Run implements RunControl {
   /// tool event or text reset (the scope of `AgentTextReset`).
   bool _segmentStreamed = false;
 
-  /// Target, context, messages, paused answer, executed calls, epoch.
+  /// Target, context, messages, paused answer, executed calls.
   final RunState _state;
 
   // ------------------------------------------------------------------ units
@@ -256,8 +256,20 @@ final class _Run implements RunControl {
     _start = runner.clock.now();
     _timer = Timer(config.maxDuration, () => abort(AgentErrorKind.timeout));
     final retry = await startRun(runner, input, _state, _privacy, this);
-    if (retry) {
-      await _escalation.escalate(EscalationReason.userRequested);
+    if (retry &&
+        !await _escalation.escalate(EscalationReason.userRequested) &&
+        _privacy.consentDeclined) {
+      // K28: the user declined the target they asked for; the target routed
+      // first does not answer instead.
+      throw RunStop(
+        AgentFailed(
+          error: AgentErrorKind.provider,
+          message: AgentRunnerTexts.notSent(
+            _escalation.declinedName ?? _state.current.target.displayName,
+            language: input.language,
+          ),
+        ),
+      );
     }
 
     var retried = false;
@@ -312,6 +324,7 @@ final class _Run implements RunControl {
         message: AgentRunnerTexts.providerFailure(
           _state.current.target.displayName,
           error,
+          language: input.language,
         ),
         cause: error,
       ),
@@ -340,6 +353,7 @@ final class _Run implements RunControl {
         message: AgentRunnerTexts.providerFailure(
           _state.current.target.displayName,
           error,
+          language: input.language,
         ),
         cause: error,
       ),

@@ -39,7 +39,7 @@ void main() {
         'unknown model',
         const InvalidRequestException('model x'),
         1,
-        'Claude kennt das Modell oder die Anfrage nicht: model x',
+        'Claude kennt das Modell oder die Anfrage nicht.',
       ),
       (
         '401',
@@ -51,7 +51,7 @@ void main() {
         'check red',
         const AttestationFailedException('rot', stage: 'receipt.signature'),
         1,
-        'Die Prüfung von Claude ist fehlgeschlagen: rot',
+        'Die Prüfung von Claude ist fehlgeschlagen.',
       ),
       (
         'check not completed',
@@ -61,7 +61,7 @@ void main() {
           unavailable: true,
         ),
         2,
-        'Die Prüfung von Claude ist fehlgeschlagen: offen',
+        'Die Prüfung von Claude ist fehlgeschlagen.',
       ),
     ];
 

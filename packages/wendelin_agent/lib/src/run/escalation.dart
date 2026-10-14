@@ -15,8 +15,8 @@ import 'run_state.dart';
 /// Hands a run to the target the user asked for.
 ///
 /// Invariants:
-/// - Below the privacy floor the user is asked first. A „no“ stands for the
-///   whole run (no second question).
+/// - Below the privacy floor the user is asked first; the run only ever
+///   asks once, because the hand-over happens before the first model call.
 /// - A hand-over drops the previous provider's paused answer, streamed text
 ///   (`AgentTextReset`), signed thinking and foreign provider blocks.
 final class Escalation {
@@ -28,9 +28,14 @@ final class Escalation {
   final PrivacyScope _privacy;
   final RunControl _control;
 
+  /// Name of the target the user declined, if any.
+  String? declinedName;
+
   /// Tries to hand the request to the requested provider; returns whether
   /// it happened.
   Future<bool> escalate(EscalationReason reason) async {
+    // Invariant (K28): the target only changes before the first model call.
+    assert(!_state.modelCalled, 'target change after the first model call');
     final current = _state.current;
     final next = _resolver.escalate(current, reason);
     if (next == null) return false;
@@ -54,8 +59,6 @@ final class Escalation {
 
   /// Asks the user whether [next] may get this run.
   Future<bool> _consent(Resolution next, EscalationReason reason) async {
-    // Ask at most once per run; a „no“ stands.
-    if (_privacy.consentDeclined) return false;
     final answer = Completer<bool>();
     final question = EscalationConfirmationRequired(
       fromProfile: _state.current.profileId,
@@ -76,6 +79,7 @@ final class Escalation {
       return true;
     }
     _privacy.declined();
+    declinedName = next.target.displayName;
     return false;
   }
 
@@ -97,7 +101,6 @@ final class Escalation {
       _control.emit(const AgentTextReset('An anderes Modell übergeben'));
     }
     _state.current = next;
-    _state.epoch++;
     _dropForeignBlocks();
   }
 

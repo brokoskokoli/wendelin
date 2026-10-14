@@ -85,7 +85,7 @@ final class AgentFactory implements AgentRunFactory {
     final conversation = StorageConversation(storage.conversations, sessionId);
     final memoryAllowed = [
       providers.primary,
-      ...providers.chain,
+      ...providers.others,
     ].any((t) => catalogFor(t.privacy).lookup('memory__search') != null);
     final memoryFloor = memoryFloorOf(catalogFor);
     return AgentRunner(

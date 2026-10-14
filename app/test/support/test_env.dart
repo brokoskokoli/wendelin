@@ -198,7 +198,7 @@ ProviderConfig scripted(
   String id = 'claude',
   String name = 'Claude Haiku',
   PrivacyLevel privacy = PrivacyLevel.standard,
-  List<ProviderTarget> chain = const [],
+  List<ProviderTarget> others = const [],
   Map<String, String> names = const {},
   bool Function(UserInput)? isPrivate,
 }) => ProviderConfig(
@@ -209,7 +209,7 @@ ProviderConfig scripted(
     privacy: privacy,
     name: name,
   ),
-  chain: chain,
+  others: others,
   names: {id: name, ...names},
   isPrivate: isPrivate,
 );

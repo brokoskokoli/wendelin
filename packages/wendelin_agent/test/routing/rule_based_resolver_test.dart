@@ -412,4 +412,102 @@ void main() {
     final r = resolve('Claude, hallo');
     expect(r.toString(), contains('Starkes Modell'));
   });
+
+  group('named but unavailable targets fail, never route elsewhere (K28)', () {
+    final cases = <(String, RoutingProfile Function(RoutingProfile), String)>[
+      (
+        'disabled',
+        (p) => RoutingProfile(
+          id: p.id,
+          name: p.name,
+          privacy: p.privacy,
+          defaultModel: p.defaultModel,
+          enabled: false,
+          provider: p.provider,
+          aliases: p.aliases,
+        ),
+        'disabled',
+      ),
+      (
+        'incomplete',
+        (p) => RoutingProfile(
+          id: p.id,
+          name: p.name,
+          privacy: p.privacy,
+          defaultModel: p.defaultModel,
+          aliases: p.aliases,
+        ),
+        'incomplete',
+      ),
+    ];
+    for (final (name, change, reason) in cases) {
+      RuleBasedProviderResolver without() => conceptResolver(
+        profiles: [
+          for (final p in conceptProfiles())
+            if (p.id == 'claude') change(p) else p,
+        ],
+      );
+
+      test('$name: „nochmal mit Claude API“', () {
+        final r = resolve('nochmal mit Claude API', r: without());
+        expect(r.unavailable?.name, 'Claude API');
+        expect(r.unavailable?.reason, reason);
+        expect(r.requestedTarget, isNull);
+      });
+
+      test('$name: alias „nochmal mit Sonnet“', () {
+        final r = resolve('nochmal mit Sonnet', r: without());
+        expect(r.unavailable?.reason, reason);
+      });
+
+      test('$name: prefix „Claude, …“', () {
+        final r = resolve('Claude, trag den Termin ein', r: without());
+        expect(r.unavailable?.reason, reason);
+      });
+    }
+
+    test('available targets and plain text stay unaffected', () {
+      expect(resolve('nochmal mit Claude API').unavailable, isNull);
+      expect(resolve('Claude, hallo').unavailable, isNull);
+      expect(resolve('Wie ist das Wetter?').unavailable, isNull);
+    });
+
+    test('a privacy keyword with an unavailable target is no choice', () {
+      final r = conceptResolver(
+        rules: conceptRules().copyWith(defaultTarget: claudeSonnet),
+        profiles: conceptProfiles(disabled: {'phala'}),
+      ).resolve(UserInput(text: 'privat: x'));
+      expect(r.unavailable, isNull);
+    });
+
+    test('the run ends with the reason and sends nothing', () async {
+      final claude = FakeLlmProvider(const []);
+      final phala = FakeLlmProvider([ScriptedTurn.text('nie')]);
+      final (primary, _) = scripted('x', const []);
+      final h = Harness(
+        primary: primary,
+        resolver: conceptResolver(
+          profiles: [
+            for (final p in conceptProfiles())
+              RoutingProfile(
+                id: p.id,
+                name: p.name,
+                privacy: p.privacy,
+                defaultModel: p.defaultModel,
+                enabled: p.id != 'claude',
+                provider: p.id == 'phala' ? phala : p.provider,
+                aliases: p.aliases,
+              ),
+          ],
+        ),
+      );
+      final events = await h.run('nochmal mit Claude API', language: 'en');
+      final end = terminal(events) as AgentFailed;
+      expect(end.message, contains('Claude API is not available'));
+      expect(end.message, contains('switched off'));
+      expect(events.whereType<Routed>(), isEmpty);
+      expect(phala.requests, isEmpty);
+      expect(claude.requests, isEmpty);
+    });
+  });
 }

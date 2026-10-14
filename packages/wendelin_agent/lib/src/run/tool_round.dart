@@ -235,11 +235,7 @@ final class ToolRound {
           )) {
             _state.untrustedSeen = true;
           }
-          _state.executed.add((
-            call: call,
-            outcome: outcome,
-            epoch: _state.epoch,
-          ));
+          _state.executed.add((call: call, outcome: outcome));
           _control.emit(
             ToolCallFinished(call: call, outcome: outcome, duration: duration),
           );
@@ -249,17 +245,15 @@ final class ToolRound {
   }
 
   /// The earlier execution [call] would repeat, if any: a call with the
-  /// same id from the model *and* the same tool and arguments, or – after an
-  /// escalation – the same tool and arguments as a call of a previous
-  /// provider that was not declined. Equal ids with other content are an id
-  /// collision, not a repetition (see [assignCallIds]).
+  /// same id from the model *and* the same tool and arguments. Equal ids
+  /// with other content are an id collision, not a repetition (see
+  /// [assignCallIds]).
   Executed? _earlierExecution(ToolCallBlock call) {
     final sourceId = _sourceIds[call.id] ?? call.id;
     for (final e in _state.executed) {
       if (!_sameContent(e.call, call)) continue;
       final earlierId = _sourceIds[e.call.id] ?? e.call.id;
       if (sourceId.isNotEmpty && earlierId == sourceId) return e;
-      if (e.epoch < _state.epoch && !isDeclined(e.outcome)) return e;
     }
     return null;
   }
