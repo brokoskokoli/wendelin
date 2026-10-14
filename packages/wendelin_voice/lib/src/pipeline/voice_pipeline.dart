@@ -366,6 +366,10 @@ final class VoicePipeline {
     bool preRollIsSpeech,
   ) async {
     await previous;
+    // The barge-in detector shares the microphone: it must have released
+    // it (stop is queued with the state change) before this recording
+    // starts, else the device says "already running" (WP64).
+    await _bargeOps;
     if (gen != _gen) return null;
     final endpointer = Endpointer(limits);
     final done = Completer<Endpoint?>();

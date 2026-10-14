@@ -25,9 +25,12 @@ final class CaptureProfileFollower {
     final wanted = state == VoiceState.speaking
         ? CaptureProfile.speechOutput
         : CaptureProfile.recognition;
-    if (input.profile == wanted) return;
-    if (input.useProfile(wanted)) {
-      voiceLog('audio-source', {'profile': wanted});
+    // Always asked: a running recording remembers the choice for its
+    // successor (see `ProfiledAudioInput.useProfile`).
+    final before = input.profile;
+    final applied = input.useProfile(wanted);
+    if (before != wanted) {
+      voiceLog('audio-source', {'profile': wanted, 'applied': applied});
     }
   }
 

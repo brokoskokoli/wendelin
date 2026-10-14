@@ -51,8 +51,9 @@ final class H {
     this.withDetector = true,
     Duration agentStep = Duration.zero,
     Duration detectorStartDelay = Duration.zero,
+    Duration detectorStopDelay = Duration.zero,
+    bool detectorUsesMic = false,
   }) : agent = ScriptedAgent(answers ?? [say('Antwort.')], step: agentStep),
-       detector = FakeBargeInDetector(startDelay: detectorStartDelay),
        tts = FakeTextToSpeech(
          utteranceDuration: const Duration(milliseconds: 200),
          manual: manualTts,
@@ -61,6 +62,11 @@ final class H {
          for (final t in transcripts) Transcript(text: t),
        ]),
        audio = FakeAudioInput(frames: utterance(), frameInterval: frame) {
+    detector = FakeBargeInDetector(
+      startDelay: detectorStartDelay,
+      stopDelay: detectorStopDelay,
+      audio: detectorUsesMic ? audio : null,
+    );
     pipeline = VoicePipeline(
       audio: audio,
       vad: FakeVoiceActivityDetector(),
@@ -80,7 +86,7 @@ final class H {
   final FakeTextToSpeech tts;
   final FakeSpeechToText stt;
   final FakeAudioInput audio;
-  final FakeBargeInDetector detector;
+  late final FakeBargeInDetector detector;
   late final VoicePipeline pipeline;
   final events = <VoiceEvent>[];
   final states = <VoiceState>[];
@@ -502,6 +508,75 @@ void main() {
         expect(h.events.whereType<VoiceBargeIn>(), hasLength(1));
         expect(h.pipeline.state, VoiceState.idle);
         expect(h.detector.isRunning, isFalse);
+      });
+    });
+
+    // WP64: on the device the detector holds the microphone while the answer
+    // is spoken. The follow-up recording must wait until it is released
+    // (before: "Bad state: Die Aufnahme läuft bereits.").
+    for (final stopDelay in [Duration.zero, const Duration(milliseconds: 80)]) {
+      test('Folgefenster nach der Ausgabe: Mikrofon frei '
+          '(Detektor stoppt in ${stopDelay.inMilliseconds} ms)', () {
+        fakeAsync((async) {
+          final h = H(
+            transcripts: ['Eins', 'Zwei'],
+            config: const VoicePipelineConfig(
+              bargeIn: BargeInMode.keywords,
+              conversationMode: true,
+            ),
+            detectorUsesMic: true,
+            detectorStopDelay: stopDelay,
+          )..pipeline.start();
+          // The first recording starts once the detector is out of the way.
+          async.elapse(const Duration(milliseconds: 100));
+          h.audio.script(AudioFrames.pattern('.' * 400, frame: frame));
+          async.elapse(const Duration(seconds: 30));
+          expect(h.events.whereType<VoiceError>(), isEmpty);
+          expect(h.ends, [ConversationEndReason.silence]);
+          expect(h.audio.isRunning, isFalse);
+        });
+      });
+    }
+
+    test('Wake-Signal mit belegtem Mikrofon: Zuhören startet ohne Fehler', () {
+      fakeAsync((async) {
+        final h = H(
+          manualTts: true,
+          transcripts: ['Eins', 'Zwei'],
+          config: const VoicePipelineConfig(
+            bargeIn: BargeInMode.keywords,
+            conversationMode: true,
+          ),
+          detectorUsesMic: true,
+          detectorStopDelay: const Duration(milliseconds: 80),
+        )..pipeline.start();
+        h.until(async, () => h.pipeline.state == VoiceState.speaking);
+        h.detector.emit(const BargeInSignal.keyword(BargeInKeyword.wake));
+        async.elapse(const Duration(seconds: 3));
+        expect(h.events.whereType<VoiceError>(), isEmpty);
+        expect(h.stt.calls, hasLength(2));
+      });
+    });
+
+    test('„Wendelin, stopp“ während der Ausgabe: Ausgabe aus, Sitzung zu', () {
+      fakeAsync((async) {
+        final h = H(
+          manualTts: true,
+          transcripts: ['Eins', 'Wendelin, stopp'],
+          config: const VoicePipelineConfig(
+            bargeIn: BargeInMode.keywords,
+            conversationMode: true,
+          ),
+          detectorUsesMic: true,
+        )..pipeline.start();
+        h.until(async, () => h.pipeline.state == VoiceState.speaking);
+        h.detector.emit(const BargeInSignal.keyword(BargeInKeyword.wake));
+        expect(h.tts.stops, 1);
+        async.elapse(const Duration(seconds: 3));
+        expect(h.events.whereType<VoiceError>(), isEmpty);
+        expect(h.ends, [ConversationEndReason.stopWord]);
+        expect(h.pipeline.state, VoiceState.idle);
+        expect(h.agent.inputs, ['Eins']);
       });
     });
 

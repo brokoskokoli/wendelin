@@ -101,6 +101,55 @@ void main() {
     );
   });
 
+  group('Quelle bei laufender Aufnahme (WP64)', () {
+    // The barge-in listener records with speechOutput; when the answer ends
+    // the pipeline asks for `recognition` while it still runs. The next
+    // recording (follow-up window) must get recognition.
+    test('Wunsch während der Aufnahme gilt beim nächsten Start', () async {
+      final rec = FakePcmRecorder();
+      final input = RecordAudioInput(rec)
+        ..useProfile(CaptureProfile.speechOutput);
+      final states = StreamController<VoiceState>.broadcast(sync: true);
+      final follower = CaptureProfileFollower(input, states.stream);
+      final sub = input.start().listen((_) {});
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      states.add(VoiceState.listening);
+      expect(input.profile, CaptureProfile.speechOutput, reason: 'läuft noch');
+      await input.stop();
+      await sub.cancel();
+      final sub2 = input.start().listen((_) {});
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await input.stop();
+      await sub2.cancel();
+      expect(rec.profiles, [
+        CaptureProfile.speechOutput,
+        CaptureProfile.recognition,
+      ]);
+      await follower.dispose();
+      await states.close();
+    });
+
+    test('ein späterer Wunsch nimmt den früheren zurück', () async {
+      final rec = FakePcmRecorder();
+      final input = RecordAudioInput(rec);
+      final sub = input.start().listen((_) {});
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      input
+        ..useProfile(CaptureProfile.speechOutput)
+        ..useProfile(CaptureProfile.recognition);
+      await input.stop();
+      await sub.cancel();
+      final sub2 = input.start().listen((_) {});
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await input.stop();
+      await sub2.cancel();
+      expect(rec.profiles, [
+        CaptureProfile.recognition,
+        CaptureProfile.recognition,
+      ]);
+    });
+  });
+
   group('CaptureProfileFollower', () {
     late StreamController<VoiceState> states;
     late RecordAudioInput input;
@@ -153,6 +202,7 @@ void main() {
       final sub = input.start().listen((_) {});
       states.add(VoiceState.speaking);
       expect(input.profile, CaptureProfile.recognition);
+      expect(log.where((l) => l.contains('applied')), hasLength(1));
       await input.stop();
       await sub.cancel();
       await follower.dispose();

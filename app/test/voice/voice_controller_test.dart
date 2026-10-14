@@ -697,7 +697,10 @@ void main() {
     );
     expect(repeatPrompt('fr'), contains('oui ou non'));
     expect(repeatPrompt('en'), 'Please say yes or no.');
-    expect(voiceErrorText(StateError('x')), contains('Sprache'));
+    expect(voiceErrorText(StateError('x')), isNot(contains('Bad state')));
+    expect(voiceErrorText(StateError('x')), contains('Mikrofon'));
+    expect(voiceErrorText(ArgumentError('geheim')), isNot(contains('geheim')));
+    expect(voiceErrorText(ArgumentError('x')), contains('Sprache'));
   });
 
   test('Pegel: Stille 0, Sprache deutlich, höchstens 6 Balken', () async {

@@ -74,6 +74,8 @@ final class VoicePipelineConfig {
   static const defaultFillerWords = {
     // de
     'bitte', 'nein', 'jetzt', 'sofort', 'mal', 'doch', 'ok', 'okay', 'danke',
+    // the name: „Wendelin, stopp“ after a wake barge-in is a stop command
+    'wendelin',
     // fr
     'non', 'maintenant', 's', 'il', 'te', 'vous', 'plaît', 'plait', 'toi',
     'merci', 'ça', 'ca', 'tout', 'de', 'suite',
