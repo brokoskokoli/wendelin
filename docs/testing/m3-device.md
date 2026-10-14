@@ -1,5 +1,7 @@
 # M3 auf dem eigenen Telefon testen (Geräte-Testanleitung)
 
+> **Ersetzt durch `docs/testing/m4-device.md`.** Die gemeinsame Prüfliste für M3 und M4 enthält alle Punkte dieser Anleitung, angepasst an den Stand nach M4 (kein automatischer Anbieterwechsel, Sprechfassung mit vier Stufen). Dieses Dokument bleibt als Quelle erhalten.
+
 Diese Anleitung prüft Meilenstein M3 und die Nachbesserungen M2.1 (Sprach-UX, vorlesefreundliche Antworten, Power-Taste nach Pause) auf einem echten Android-Telefon. Auf dem Emulator ist vieles automatisch geprüft (`docs/notes/m3-e2e-2026-10-14.md`). Hier steht, was nur das Telefon zeigt: Tailscale zum Homeserver, echte Dienste (Bring!, Home Assistant, Claude), echte Stimme, Laufzeit, Speicher, Herstellerverhalten der Power-Taste.
 
 **So wird sie benutzt:** Die Punkte sind fortlaufend nummeriert (1.1, 1.2 …). Jeder Schritt sagt, was zu tun ist und was erscheinen muss („Erwartet“). Wer die Anleitung mit dir abarbeitet (Test-Agent oder du allein), hakt die Kästchen ab und schreibt bei Abweichungen auf, was stattdessen passiert ist. Es ist kein Vorwissen nötig. Wo ein Befehl auf dem Rechner nötig ist, steht er im Wortlaut da. **Alle `adb`-Befehle und Skripte am Telefon führt nur der Maintainer selbst aus; ein Test-Agent leitet nur an und führt sie nicht aus.**
