@@ -64,7 +64,11 @@ final class SecretStoreBringSecrets implements BringSecrets {
 
   /// Deletes login and session.
   Future<void> clear() async {
-    await store.deleteAll();
+    // Delete the three keys directly: deleteAll() would read (decrypt) every
+    // stored secret just to list keys.
+    await store.delete(emailKey);
+    await store.delete(passwordKey);
+    await store.delete(sessionKey);
   }
 
   @override

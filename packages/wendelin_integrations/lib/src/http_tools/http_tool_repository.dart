@@ -116,7 +116,8 @@ final class HttpToolRepository {
   String newId() => ids.next();
 
   /// Whether the secret [ref] is stored.
-  Future<bool> hasSecret(String ref) async => await secrets.read(ref) != null;
+  Future<bool> hasSecret(String ref) async =>
+      ref.isNotEmpty && await secrets.read(ref) != null;
 
   /// Adds or replaces [definition] (by id). [secretValues] maps secret
   /// references to new values (`null` deletes). Secrets the definition no
