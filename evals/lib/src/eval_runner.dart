@@ -84,6 +84,7 @@ final class EvalRunner {
     required this.time,
     this.config = const AgentConfig(),
     this.voice = false,
+    this.onlyIntegrations,
     GiveUpClassifier? giveUpClassifier,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier(),
        scorer = Scorer(time);
@@ -96,6 +97,9 @@ final class EvalRunner {
 
   /// Agent limits.
   final AgentConfig config;
+
+  /// Integration ids to register (reduced catalog, WP57); `null` = all.
+  final Set<String>? onlyIntegrations;
 
   /// Whether the request counts as spoken (WP41: speech hint, stage 2).
   final bool voice;
@@ -156,6 +160,10 @@ final class EvalRunner {
     final registry = ToolRegistry();
     final (integrations, memory) = await _integrations(c, clock);
     for (final integration in integrations) {
+      if (onlyIntegrations != null &&
+          !onlyIntegrations!.contains(integration.id)) {
+        continue;
+      }
       await registry.registerIntegration(integration, enabled: true);
     }
     final catalog = registry.catalogFor(target.privacy, sessionId: sessionId);
