@@ -72,6 +72,8 @@ void main() {
       'Send a message to Anna',
       'Neues Thema',
       'Licht an Anna schreiben',
+      'Licht an aus',
+      'Taschenlampe aus an',
     ];
     for (final text in negative) {
       test('"$text" -> null', () {

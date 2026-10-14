@@ -135,10 +135,12 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   }
 
   /// Every trigger (power button now, wake word with WP50) takes this
-  /// path. Locked: it listens without showing anything; the voice
-  /// pipeline only lets flashlight commands through ([LockGateAgentRun],
-  /// K16), the rest gets „Bitte entsperre das Telefon“ and the unlock
-  /// button. Nothing asks for the unlock by itself.
+  /// path. Locked: it listens without showing anything (Whisper, up to
+  /// ~375 MB, is loaded for that and freed when the overlay closes); the
+  /// voice pipeline only lets local flashlight commands through
+  /// ([LockGateAgentRun], K16), the rest gets the fixed sentence „Bitte
+  /// entsperre das Telefon“, the utterance is dropped, and the unlock
+  /// button shows. Nothing asks for the unlock by itself.
   Future<void> _onTrigger(TriggerEvent e) async {
     final locked = await _checkLock();
     if (!mounted) return;
@@ -196,8 +198,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
-    ref.read(lockedModeProvider.notifier).set(false);
     await _voice.suspend();
+    ref.read(lockedModeProvider.notifier).set(false);
     _agent.cancel();
     // The engine ends with the overlay: free an own Whisper model now, so
     // none stays behind in the process (B14).

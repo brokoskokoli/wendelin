@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/integrations/integration_spec.dart';
 import 'package:wendelin/di/integrations/registry.dart';
+import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/overlay_sheet.dart';
 import 'package:wendelin/voice/voice_controller.dart';
@@ -147,6 +149,32 @@ void main() {
     final (_, _, tts) = await run(tester, 'Taschenlampe an');
     expect(env.torch.on, isFalse);
     expect(llm.requests, isEmpty);
+    expect(tts.spoken.join(' '), 'Das hat nicht geklappt.');
+  });
+
+  testWidgets('einzeln abgeschaltetes Taschenlampen-Tool läuft nicht', (
+    tester,
+  ) async {
+    env = TestEnv(
+      providerConfig: scripted(llm),
+      enabled: _all,
+      startup: StartupSettings(
+        enabledIntegrations: _all,
+        toolPrefs: const ToolPrefs(disabled: {'flashlight__on'}),
+      ),
+    );
+    final (_, _, tts) = await run(tester, 'Taschenlampe an');
+    expect(env.torch.on, isFalse);
+    expect(llm.requests, isEmpty);
+    expect(tts.spoken.join(' '), 'Das hat nicht geklappt.');
+  });
+
+  testWidgets('Tool-Ergebnis mit Fehler: „Das hat nicht geklappt.“', (
+    tester,
+  ) async {
+    env.torch.available = false;
+    final (_, _, tts) = await run(tester, 'Taschenlampe an');
+    expect(env.torch.on, isFalse);
     expect(tts.spoken.join(' '), 'Das hat nicht geklappt.');
   });
 

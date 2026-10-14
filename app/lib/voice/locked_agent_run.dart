@@ -178,6 +178,7 @@ final class LockGateAgentRun implements AgentRun {
 
   @override
   void cancel() {
-    if (!locked()) inner.cancel();
+    // Always: the lock state may have changed since the run started.
+    inner.cancel();
   }
 }
