@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 /// Prefix of the voice diagnostics in the log (`adb logcat | grep
 /// Wendelin/voice`). The Kotlin side logs under the same tag.
@@ -52,4 +53,17 @@ String errorCode(Object error) {
   final type = error.runtimeType.toString().toLowerCase();
   final code = type.replaceAll(RegExp('[^a-z0-9_]'), '');
   return code.isEmpty ? 'error' : code;
+}
+
+/// Diagnostics of the conversation events (no contents): `barge-in kind=…`
+/// and `conv-exit reason=…`; other pipeline events are not logged here.
+void voiceLogPipelineEvent(VoiceEvent e) {
+  switch (e) {
+    case VoiceBargeIn(:final signal):
+      voiceLog('barge-in', {'kind': signal.code});
+    case VoiceConversationEnded(:final reason):
+      voiceLog('conv-exit', {'reason': reason});
+    default:
+      break;
+  }
 }

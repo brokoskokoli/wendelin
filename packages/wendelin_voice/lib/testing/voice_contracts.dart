@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:test/test.dart';
 
 import '../src/io/audio_input.dart';
+import '../src/io/barge_in_detector.dart';
 import '../src/io/speech_to_text.dart';
 import '../src/io/text_to_speech.dart';
 import '../src/io/voice_activity_detector.dart';
@@ -263,6 +264,59 @@ void textToSpeechContract(
     test('rate <= 0 wirft ArgumentError', () async {
       final tts = await create();
       expect(() => tts.speak(utterance, rate: 0), throwsArgumentError);
+    });
+  });
+}
+
+/// Contract of every [BargeInDetector].
+///
+/// [fire] makes the detector under test deliver [signal] (for a fake: its
+/// `emit`; on a device: a played keyword). A detector is idle until
+/// [BargeInDetector.start], start and stop are idempotent, and nothing is
+/// delivered while stopped.
+void bargeInDetectorContract(
+  VoiceFactory<BargeInDetector> create, {
+  required FutureOr<void> Function(BargeInDetector detector, BargeInSignal s)
+  fire,
+  String name = 'BargeInDetector',
+}) {
+  group('$name erfüllt den BargeInDetector-Vertrag', () {
+    test('ist zunächst aus; start und stop sind idempotent', () async {
+      final d = await create();
+      expect(d.isRunning, isFalse);
+      await d.start();
+      await d.start();
+      expect(d.isRunning, isTrue);
+      await d.stop();
+      await d.stop();
+      expect(d.isRunning, isFalse);
+    });
+
+    test('stop während start aussteht: danach aus', () async {
+      final d = await create();
+      final starting = d.start();
+      await d.stop();
+      await starting;
+      await d.stop();
+      expect(d.isRunning, isFalse);
+    });
+
+    test('liefert Signale nur während des Laufs', () async {
+      final d = await create();
+      final got = <BargeInSignal>[];
+      final sub = d.signals.listen(got.add);
+      await fire(d, const BargeInSignal.keyword(BargeInKeyword.stop));
+      await Future<void>.delayed(Duration.zero);
+      expect(got, isEmpty);
+      await d.start();
+      await fire(d, const BargeInSignal.keyword(BargeInKeyword.wake));
+      await Future<void>.delayed(Duration.zero);
+      expect(got.map((s) => s.code), ['keyword-wake']);
+      await d.stop();
+      await fire(d, const BargeInSignal.speech());
+      await Future<void>.delayed(Duration.zero);
+      expect(got, hasLength(1));
+      await sub.cancel();
     });
   });
 }
