@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:meta/meta.dart';
 
 /// What started a voice request (concept: Sprach-Pipeline, stage 1).
@@ -20,13 +22,17 @@ enum TriggerKind {
 @immutable
 final class TriggerEvent {
   /// Creates the event.
-  const TriggerEvent({required this.source, required this.at});
+  const TriggerEvent({required this.source, required this.at, this.preRoll});
 
   /// What fired.
   final TriggerKind source;
 
   /// When it fired (from the injected `Clock`).
   final DateTime at;
+
+  /// 16 kHz mono PCM captured before and up to the trigger (wake word:
+  /// pre-roll, gap-free); `null` for the other sources. Not part of equality.
+  final Int16List? preRoll;
 
   @override
   bool operator ==(Object other) =>

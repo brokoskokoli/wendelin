@@ -6,6 +6,8 @@ const _hfBase =
 const _hfSmall =
     'https://huggingface.co/csukuangfj/sherpa-onnx-whisper-small/resolve/'
     '8f3c18b358db4d1f2fc1eae49d75cd20989e4309';
+const _oww =
+    'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1';
 const _gh = 'https://github.com/k2-fsa/sherpa-onnx/releases/download';
 
 /// Whisper tokens (identical file for base and small).
@@ -44,6 +46,7 @@ final class SpeechModelCatalog {
     voiceDe,
     voiceFr,
     voiceEn,
+    wakeFeatures,
   ]);
 
   /// Whisper base, multilingual, int8 (fast; for weak devices).
@@ -196,6 +199,40 @@ final class SpeechModelCatalog {
         sha256:
             '24dc3bd77dd48c291e52c297878d3437c9492f245d823d7f6a06c4bbb67f4b6b',
         archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// openWakeWord feature models (mel spectrogram and speech embedding) for
+  /// the wake word „Wendelin“ (WP44). The WP58 classifier is added as
+  /// `wake-classifier-wendelin` once it passes its acceptance and is hosted.
+  static const wakeFeatures = SpeechModel(
+    id: 'wake-features',
+    kind: SpeechModelKind.wake,
+    displayName: 'Aktivierungswort – Merkmalsmodelle',
+    languages: {},
+    license: 'Apache-2.0 (openWakeWord, Google speech_embedding)',
+    source:
+        'GitHub-Release dscripka/openWakeWord v0.5.1; SHA-256 selbst '
+        'gehasht (2026-10-14)',
+    note: _ghNote,
+    attribution:
+        'Merkmalsmodelle aus openWakeWord (David Scripka, Apache-2.0); das '
+        'Embedding-Modell basiert auf Google speech_embedding (Apache-2.0).',
+    files: [
+      ModelFile(
+        name: 'melspectrogram.onnx',
+        url: '$_oww/melspectrogram.onnx',
+        sizeBytes: 1087958,
+        sha256:
+            'ba2b0e0f8b7b875369a2c89cb13360ff53bac436f2895cced9f479fa65eb176f',
+      ),
+      ModelFile(
+        name: 'embedding_model.onnx',
+        url: '$_oww/embedding_model.onnx',
+        sizeBytes: 1326578,
+        sha256:
+            '70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f',
       ),
     ],
   );
