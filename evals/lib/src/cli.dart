@@ -12,6 +12,7 @@ import 'eval_runner.dart';
 import 'eval_time.dart';
 import 'fake_script.dart';
 import 'report.dart';
+import 'routing_table.dart';
 
 /// Default „now“ of a run: Wednesday, 18 November 2026, 09:00. Chosen so
 /// that relative dates („morgen“ = 2026-11-19) differ from the example dates
@@ -43,6 +44,11 @@ ArgParser _parser() => ArgParser()
     negatable: false,
     help: 'Auch Fälle mit pending: true laufen lassen.',
   )
+  ..addFlag(
+    'routing-table',
+    negatable: false,
+    help: 'Routing-Tabelle (Satz → greifende Regel) ausgeben, kein Modell.',
+  )
   ..addFlag('help', abbr: 'h', negatable: false, help: 'Hilfe anzeigen.');
 
 /// Runs the eval CLI; returns the exit code (0 = ran, 64 = usage error,
@@ -72,6 +78,11 @@ Future<int> runCli(
       '${parser.usage}',
     );
     return 0;
+  }
+  if (args.flag('routing-table')) {
+    final outcomes = runRoutingTable();
+    out.write(formatRoutingTable(outcomes));
+    return outcomes.every((o) => o.ok) ? 0 : 1;
   }
   final profilePath = args.option('profile');
   if (profilePath == null) {

@@ -1,0 +1,43 @@
+# M3-Fälle (WP29): Bring!, HTTP-Tool (Home-Assistant-ähnlich) und MCP-Server
+# mit Fake-Backends (`setup.backends`, siehe lib/src/case_backends.dart).
+# Aufruf: dart run wendelin_evals:run -p profiles/claude-haiku.json --cases-dir cases-m3
+language: de
+cases:
+  - id: m3-de-bring-add
+    category: bring
+    prompt: Setz 2 Liter Milch auf die Bring-Liste.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__add_items
+          args:
+            items: {contains: [Milch]}
+
+  - id: m3-de-bring-get
+    category: bring
+    prompt: Was steht auf der Einkaufsliste bei Bring?
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__get_items
+      text: {contains: Milch}
+
+  - id: m3-de-http-state
+    category: http
+    prompt: Ist das Licht im Wohnzimmer an?
+    setup: {backends: [http]}
+    expect:
+      calls:
+        - tool: http__ha_get_state
+          args:
+            entity_id: light.wohnzimmer
+
+  - id: m3-de-mcp-state
+    category: mcp
+    prompt: Frag den Home-Server, in welchem Zustand das Licht ist.
+    setup: {backends: [mcp]}
+    expect:
+      calls:
+        - tool: mcp_home__get_state
+          args:
+            entity: {contains: licht}

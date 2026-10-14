@@ -1,0 +1,43 @@
+language: en
+cases:
+  - id: m3-en-bring-remove
+    category: bring
+    prompt: Remove the coffee from the Büro list in Bring.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__remove_item
+          args:
+            list: {contains: Büro}
+            item: {contains_any: [Kaffee, coffee]}
+
+  - id: m3-en-bring-lists
+    category: bring
+    prompt: Which Bring lists do I have?
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__list_lists
+      text: {contains: Büro}
+
+  - id: m3-en-http-light
+    category: http
+    prompt: Turn on the living room light with Home Assistant.
+    setup: {backends: [http]}
+    expect:
+      calls:
+        - tool: http__ha_light_on
+          args:
+            entity_id: light.wohnzimmer
+
+  - id: m3-en-mcp-delete
+    category: mcp-destructive
+    prompt: Delete the scene "Movie" on my Home server.
+    note: Destructive MCP tool – must be confirmed (answered "yes" automatically).
+    setup: {backends: [mcp]}
+    expect:
+      calls:
+        - tool: mcp_home__delete_scene
+          args:
+            name: {contains: movie}
+      confirmed: true

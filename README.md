@@ -145,6 +145,25 @@ Sprache und Assistent auf dem Telefon. Die ausführliche Fassung mit Checkliste 
 
 „Stopp“ beendet, solange Wendelin zuhört. Ein Tipp beendet jederzeit. Auf dem gesperrten Telefon zeigt das Overlay nur „Gerät entsperren“. Als Standard-Assistent ist Wendelin auch die Spracheingabe anderer Apps (Einstellungen → Assistent, abschaltbar).
 
+## Demo-Anleitung M3
+
+Routing, MCP-Server, HTTP-Tools und Bring!. Die Schritt-für-Schritt-Fassung für das Telefon mit Checkliste ist [`docs/notes/m3-device-test.md`](docs/notes/m3-device-test.md); ohne Telefon laufen die Gerätetests auf dem Emulator ([`docs/notes/m3-e2e-2026-10-14.md`](docs/notes/m3-e2e-2026-10-14.md)).
+
+1. **Zwei Profile:** Einstellungen → Provider: ein Standardprofil und ein Profil „Claude API“ (Anthropic-Key).
+2. **Regel „Starkes Modell“:** Einstellungen → Routing → „+ Regel hinzufügen“, Bedingung Präfix „Claude“, Ziel „Claude API“. Im Feld „Testsatz“ zeigt „Claude, wie spät ist es?“ die greifende Regel. Danach geht ein Satz „Claude, …“ an das Claude-Profil (der Provider-Chip nennt es), alles andere an das Standardprofil. Das Prüfprotokoll hält jede Routing-Entscheidung fest.
+3. **MCP-Server:** Einstellungen → MCP-Server → „+ Server“, Adresse (https, oder im Heimnetz/Tailscale auch http, z. B. `http://100.x.y.z:8123/…`), Bearer-Token, „Verbindung prüfen“, Speichern. Lesende Tools laufen ohne Nachfrage, Tools mit `destructiveHint` fragen immer. Zum Ausprobieren ohne eigenen Server: `cd app && dart run tool/mcp_test_server.dart` (Tools `echo`, `get_time`, `toggle_light`, `delete_thing`; Port und Token siehe Ausgabe und `WENDELIN_MCP_TOKEN`).
+4. **HTTP-Tool:** Einstellungen → HTTP-Tools → „+ HTTP-Tool“, z. B. `GET http://homeassistant.local:8123/api/states/{entity_id}` mit Bearer-Token und „Heimnetz-Ziel“, „Testen“, dann „Ist das Licht im Wohnzimmer an?“.
+5. **Bring!:** Einstellungen → Integrationen → Bring!, E-Mail und Passwort.
+
+| Satz | Erwartung |
+| --- | --- |
+| Claude, wie spät ist es? | Antwort vom Claude-Profil, Chip „Claude API · Starkes Modell“ |
+| Setz 2 Liter Milch auf die Bring-Liste. | Tool-Karte `bring__add_items` mit „Rückgängig“ |
+| Ist das Licht im Wohnzimmer an? | Tool-Karte `http__…` mit dem Zustand |
+| Lösche die Szene Abend auf dem Server. | Bestätigung mit dem Servernamen, „Nein“ führt nichts aus |
+
+Offline-Nachweis der Modellseite: `cd evals && dart run wendelin_evals:run -p profiles/fake-m3.json --cases-dir cases-m3` (Bring!, HTTP-Tool, MCP in de/fr/en gegen Fake-Backends) und `dart run wendelin_evals:run --routing-table` (welche Regel greift).
+
 ## Ohne Google Play Services (K7)
 
 Wendelin läuft auf entgoogelten Geräten (z. B. LineageOS ohne GApps, GrapheneOS): keine Abhängigkeit von `com.google.android.gms` oder Firebase, Kalender über `CalendarContract`, Dateien über das Storage Access Framework, Wecker über AOSP-Intents (der Benachrichtigungs-Fallback ohne Uhr-App ist noch offen), Spracherkennung lokal mit Whisper, Sprachausgabe über System-TTS mit sherpa-onnx als Ausweichlösung. Geprüft mit `tool/check_apk.sh` und den Gerätetests auf einem AOSP-Image ohne Google Play.

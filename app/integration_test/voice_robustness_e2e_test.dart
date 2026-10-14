@@ -227,12 +227,13 @@ void main() {
     'B11/B14: erster Tipp nach dem Start (small), App und Overlay, Speicher',
     (tester) async {
       await _overlaySettings('whisper-small');
-      final loadsBefore = lines
-          .where((l) => l.contains(' model-load ') && l.contains('small'))
-          .length;
       // App: first tap right after the start (no time to prewarm).
       final exit = await d3(tester, 'whisper-small', 'nein');
       expect(exit, contains('answered(no)'));
+      final startLine = lines.length;
+      final loadsBefore = lines
+          .where((l) => l.contains(' model-load ') && l.contains('small'))
+          .length;
       final ready = lines.lastWhere((l) => l.contains(' mic-ready '));
       // ignore: avoid_print
       print('WP30-Messung B11 erster Tipp nach dem Start: $ready');
@@ -253,6 +254,21 @@ void main() {
               .where((l) => l.contains(' model-load ') && l.contains('small'))
               .length -
           loadsBefore;
+      // At most one model at a time: every model-load after the app tap
+      // shows live=1, and a load never follows a load without a model-free.
+      var open = 0;
+      for (final l in lines.skip(startLine)) {
+        if (l.contains(' model-load ') && l.contains('whisper')) {
+          open++;
+          expect(open, lessThanOrEqualTo(1), reason: 'zwei Modelle live: $l');
+          final live = RegExp(r'live=(\d+)').firstMatch(l);
+          if (live != null) {
+            expect(int.parse(live[1]!), lessThanOrEqualTo(1), reason: l);
+          }
+        } else if (l.contains(' model-free ') && l.contains('whisper')) {
+          open = open > 0 ? open - 1 : 0;
+        }
+      }
       // ignore: avoid_print
       print(
         'WP30-Messung B14 (Debug-Build, small, App + Overlay): '

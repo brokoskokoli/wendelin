@@ -1,0 +1,53 @@
+# Skript für die M3-Fälle (cases-m3/) mit dem FakeLlmProvider
+# (profiles/fake-m3.json): jeder Fall wird richtig beantwortet.
+default:
+  - text: Das weiß ich leider nicht.
+cases:
+  m3-de-bring-add:
+    - tool: bring__add_items
+      args: {items: [{name: Milch, spec: 2 Liter}]}
+    - text: Milch steht auf der Liste.
+  m3-de-bring-get:
+    - tool: bring__get_items
+      args: {}
+    - text: Auf der Liste stehen Milch (1 Liter) und Äpfel.
+  m3-de-http-state:
+    - tool: http__ha_get_state
+      args: {entity_id: light.wohnzimmer}
+    - text: Das Licht im Wohnzimmer ist an.
+  m3-de-mcp-state:
+    - tool: mcp_home__get_state
+      args: {entity: licht}
+    - text: Das Licht ist an.
+  m3-fr-bring-add:
+    - tool: bring__add_items
+      args: {items: [{name: Eier}, {name: Butter}]}
+    - text: Les œufs et le beurre sont sur la liste.
+  m3-fr-bring-complete:
+    - tool: bring__complete_item
+      args: {item: Brot}
+    - text: Le pain est coché.
+  m3-fr-http-light:
+    - tool: http__ha_light_on
+      args: {entity_id: light.wohnzimmer}
+    - text: La lumière du salon est allumée.
+  m3-fr-mcp-toggle:
+    - tool: mcp_home__toggle_light
+      args: {room: salon}
+    - text: C'est fait.
+  m3-en-bring-remove:
+    - tool: bring__remove_item
+      args: {list: Büro, item: Kaffee}
+    - text: Coffee is off the list.
+  m3-en-bring-lists:
+    - tool: bring__list_lists
+      args: {}
+    - text: You have Zuhause and Büro.
+  m3-en-http-light:
+    - tool: http__ha_light_on
+      args: {entity_id: light.wohnzimmer}
+    - text: The living room light is on.
+  m3-en-mcp-delete:
+    - tool: mcp_home__delete_scene
+      args: {name: Movie}
+    - text: The scene Movie is deleted.

@@ -4,7 +4,7 @@ Wo liegt was, und welche Dateien gehören zu einer Änderung? Regeln und Abhäng
 
 ## Pakete (reines Dart, `packages/`)
 
-Kurzfassung der Abhängigkeiten (geprüft von `tool/check_deps.dart`): `core` hängt von nichts ab; `providers`, `tools`, `agent`, `storage`, `integrations` nur von `core`; `voice` von `core` und `agent`; `mcp` von `core` und `integrations`; `evals` von `core`, `providers`, `tools`, `agent`, `integrations`; die App von allen. Pakete mit Schnittstellen (alle außer `providers` und `tools`) haben `fakes.dart` (Fakes ohne `package:test`) und `testing.dart` (Fakes plus Contract-Suites).
+Kurzfassung der Abhängigkeiten (geprüft von `tool/check_deps.dart`): `core` hängt von nichts ab; `providers`, `tools`, `agent`, `storage`, `integrations` nur von `core`; `voice` von `core` und `agent`; `mcp` von `core` und `integrations`; `evals` von `core`, `providers`, `tools`, `agent`, `integrations`, `mcp`; die App von allen. Pakete mit Schnittstellen (alle außer `providers` und `tools`) haben `fakes.dart` (Fakes ohne `package:test`) und `testing.dart` (Fakes plus Contract-Suites).
 
 | Paket | Einstieg | Wichtige Typen und Dateien |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ Kurzfassung der Abhängigkeiten (geprüft von `tool/check_deps.dart`): `core` h�
 | `wendelin_integrations` | `packages/wendelin_integrations/lib/wendelin_integrations.dart` | Je Integration ein Ordner unter `src/`: `calendar/`, `clipboard/`, `alarms/`, `memory/`, `web/` (Abruf, Suche), `lists/`, `obsidian/`, `bring/`, `http_tools/`; gemeinsame Bausteine in `src/common/` (`base_tool.dart`, `tool_args.dart`, `matching.dart`, `app_presence.dart`, `net_scope.dart`) |
 | `wendelin_voice` | `packages/wendelin_voice/lib/wendelin_voice.dart` | `VoicePipeline` (`src/pipeline/voice_pipeline.dart`), `Endpointer`, Schnittstellen in `src/io/`, `SpokenAnswer` (`src/text/spoken_answer.dart`), `TtsSelector`, Modellkatalog und Download in `src/models/` |
 | `wendelin_mcp` | `packages/wendelin_mcp/lib/wendelin_mcp.dart` | `McpClient` (`src/client.dart`), Transporte in `src/transport/`, OAuth in `src/oauth/oauth_flow.dart`, Abbildung auf Tools in `src/tools/mcp_integration.dart`, Netzregeln `src/net_policy.dart` |
-| `evals` | `evals/lib/src/cli.dart` | Modell-Evals und Live-Tests (`evals/README.md`) |
+| `evals` | `evals/lib/src/cli.dart` | Modell-Evals, M3-Fälle mit Fake-Backends (`evals/lib/src/case_backends.dart`), Routing-Tabelle (`routing_table.dart`), Live-Tests (`evals/README.md`) |
 
 ## App (`app/lib`)
 

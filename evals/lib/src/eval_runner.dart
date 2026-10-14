@@ -8,6 +8,7 @@ import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import 'case_backends.dart';
 import 'case_result.dart';
 import 'eval_case.dart';
 import 'eval_time.dart';
@@ -159,6 +160,25 @@ final class EvalRunner {
     final sessionId = 'eval-${c.id}';
     final registry = ToolRegistry();
     final (integrations, memory) = await _integrations(c, clock);
+    final backends = await CaseBackends.start(c.setup.backends, clock);
+    try {
+      return await _observe(c, clock, sessionId, registry, memory, [
+        ...integrations,
+        ...backends.integrations,
+      ]);
+    } finally {
+      await backends.close();
+    }
+  }
+
+  Future<RunObservation> _observe(
+    EvalCase c,
+    Clock clock,
+    String sessionId,
+    ToolRegistry registry,
+    MemoryStorePort memory,
+    List<Integration> integrations,
+  ) async {
     for (final integration in integrations) {
       if (onlyIntegrations != null &&
           !onlyIntegrations!.contains(integration.id)) {

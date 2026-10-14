@@ -4,6 +4,7 @@
 /// the CLI behind `dart run wendelin_evals:run`.
 library;
 
+export 'src/case_backends.dart';
 export 'src/case_result.dart';
 export 'src/cli.dart' show buildProvider, defaultNow, defaultTimeZone, runCli;
 export 'src/eval_case.dart';
@@ -13,6 +14,7 @@ export 'src/eval_time.dart';
 export 'src/fake_script.dart';
 export 'src/predicates.dart';
 export 'src/report.dart';
+export 'src/routing_table.dart';
 export 'src/scorer.dart';
 export 'src/speech_check.dart';
 export 'src/speech_eval.dart';
