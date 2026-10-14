@@ -6,6 +6,8 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../di/providers.dart';
 import '../di/startup.dart';
+import '../di/voice_providers.dart';
+import '../di/wake_providers.dart';
 import 'device_info.dart';
 
 /// Runs [app] in a `ProviderScope` with the overrides every engine needs
@@ -36,4 +38,8 @@ List<Override> engineOverrides(
   storageProvider.overrideWithValue(storage),
   startupProvider.overrideWithValue(startup),
   deviceInfoProvider.overrideWithValue(device),
+  // Barge-in on the wake word chain (WP50); null without conversation mode.
+  bargeInDetectorProvider.overrideWith(
+    (ref) => ref.watch(wakeBargeInDetectorProvider),
+  ),
 ];

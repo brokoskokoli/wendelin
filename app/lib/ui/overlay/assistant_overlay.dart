@@ -14,6 +14,7 @@ import '../../di/voice_providers.dart';
 import '../../platform/assistant_platform.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
+import '../../voice/voice_log.dart';
 import '../design/design.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/private_banner.dart';
@@ -96,8 +97,20 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
     unawaited(_checkLock());
     if (widget.autoStart) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _triggers.fire());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => unawaited(_fireFirst()),
+      );
     }
+  }
+
+  // The first trigger: the wake word service leaves its hit with the
+  // platform before it opens the overlay (WP50).
+  Future<void> _fireFirst() async {
+    final preRoll = await _platform.takeWakeHandoff();
+    if (preRoll != null) {
+      voiceLog('wake-handoff', {'ms': samplesToDuration(preRoll.length)});
+    }
+    if (mounted) _triggers.fire(preRoll: preRoll);
   }
 
   void _onLifecycle(AppLifecycleState state) {
@@ -134,8 +147,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     return locked;
   }
 
-  /// Every trigger (power button now, wake word with WP50) takes this
-  /// path. Locked: it listens without showing anything (Whisper, up to
+  /// Every trigger (power button, wake word) takes this path. Locked: it listens without showing anything (Whisper, up to
   /// ~375 MB, is loaded for that and freed when the overlay closes); the
   /// voice pipeline only lets local flashlight commands through
   /// ([LockGateAgentRun], K16), the rest gets the fixed sentence „Bitte
@@ -152,6 +164,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (ref.read(agentControllerProvider).running) return;
     await _voice.start(
       e.source,
+      preRoll: e.preRoll,
       // No permission dialog on the lock screen.
       prepare: locked ? _microphoneGranted : _microphoneAccess,
     );

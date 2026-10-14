@@ -10,6 +10,7 @@ import '../platform/voice/audio_playback.dart';
 import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
+import '../voice/wake/wake_barge_in.dart';
 import '../voice/wake/wake_storage.dart';
 import 'core_providers.dart';
 import 'voice_providers.dart';
@@ -146,3 +147,24 @@ final wakePromptToneProvider = Provider<Future<void> Function()>((ref) {
 final wakeEnrollPauseProvider = Provider<Duration>(
   (ref) => const Duration(milliseconds: 900),
 );
+
+/// Barge-in on the wake word chain (WP50): „Wendelin“ interrupts the
+/// spoken answer in the conversation mode. `null` while the conversation
+/// mode is off. `bootstrap/run_app.dart` puts it in place of the empty
+/// [bargeInDetectorProvider]; tests keep that one.
+final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
+  final conversation = ref.watch(
+    voiceSettingsProvider.select((s) => s.value?.conversationMode ?? false),
+  );
+  if (!conversation) return null;
+  final store = ref.read(wakeStoreProvider);
+  final detector = LazyWakeBargeInDetector(
+    audio: ref.watch(audioInputProvider),
+    features: () => ref.read(wakeFeaturesFactoryProvider)(),
+    templates: () async => [
+      for (final s in await store.speakers()) ?await store.load(s.id),
+    ],
+  );
+  ref.onDispose(() => unawaited(detector.dispose()));
+  return detector;
+});

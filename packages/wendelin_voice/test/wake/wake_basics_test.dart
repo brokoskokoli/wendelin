@@ -169,6 +169,45 @@ void main() {
       expect(e.maxModelScore, 0.7);
     });
 
+    test('mehrere Sprecher: jede Vorlage mit eigener Schwelle', () async {
+      final strict = WakeTemplates(
+        speakerId: 'a',
+        featureVersion: 'fake-1',
+        threshold: 0.99,
+        embeddings: [
+          v([1, 0]),
+        ],
+      );
+      final loose = WakeTemplates(
+        speakerId: 'b',
+        featureVersion: 'fake-1',
+        threshold: 0.5,
+        embeddings: [
+          v([1, 1]),
+        ],
+      );
+      CandidateWakeEngine twoSpeakers(Float32List embedding) =>
+          CandidateWakeEngine(
+            features: FakeWakeFeatureExtractor(
+              windowEvery: 100,
+              windowFor: (end, _) =>
+                  WakeWindow(endSample: end, embedding: embedding),
+            ),
+            templates: strict,
+            moreTemplates: [loose],
+            modelThreshold: null,
+          );
+      // [1, 0.3] is below the strict threshold of speaker a but above the
+      // loose one of speaker b.
+      final e = twoSpeakers(v([1, 0.3]));
+      await e.open([KeywordSpec.wendelin]);
+      expect(await e.accept(Int16List(100)), hasLength(1));
+      // [0, 1] fits nobody.
+      final other = twoSpeakers(v([-1, 0]));
+      await other.open([KeywordSpec.wendelin]);
+      expect(await other.accept(Int16List(100)), isEmpty);
+    });
+
     test('Vorlagen anderer Merkmalsversion werden ignoriert', () async {
       final e = make(
         templates: WakeTemplates(

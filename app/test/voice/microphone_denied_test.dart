@@ -178,7 +178,8 @@ void main() {
       await pumpUntil(tester, find.text(_noAccess));
       expect(env.microphone.requests, everyElement(isFalse));
       expect(env.microphone.starts, 0);
-      expect(audio.startCount, 0);
+      // Das Mikrofon wird früh geöffnet (B11); die echte Eingabe prüft die
+      // Berechtigung und nimmt ohne sie nichts auf (env.microphone.starts).
       expect(c.read(voiceControllerProvider).active, isFalse);
       // Das Overlay bleibt offen (Tippen oder Tastatur gehen weiter).
       expect(platform.finished, 0);

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,9 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   bool unlockSucceeds = true;
   Future<void> Function()? closeHandler;
   bool isDefault = false;
+
+  /// Audio of a wake word hit that opened the overlay (WP50), taken once.
+  Int16List? wakeHandoff;
   int unlockRequests = 0;
   int finished = 0;
   int settingsOpened = 0;
@@ -54,6 +58,13 @@ final class FakeAssistantPlatform extends AssistantPlatform {
     unlockRequests++;
     if (unlockSucceeds) locked = false;
     return unlockSucceeds;
+  }
+
+  @override
+  Future<Int16List?> takeWakeHandoff() async {
+    final audio = wakeHandoff;
+    wakeHandoff = null;
+    return audio;
   }
 
   @override
@@ -288,6 +299,52 @@ void main() {
       );
       expect(request.payload['trigger'], 'assistant');
       expect(request.payload['source'], 'voice');
+    },
+  );
+
+  testWidgets(
+    'Wake Word (WP50): TriggerKind.wakeWord, der Pre-Roll geht an die '
+    'Erkennung',
+    (tester) async {
+      final platform = FakeAssistantPlatform()
+        ..wakeHandoff = Int16List.fromList(List.filled(8000, 300));
+      final stt = FakeSpeechToText(const [
+        Transcript(text: 'Wie spät ist es?'),
+      ]);
+      final env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider([ScriptedTurn.text('Es ist 8 Uhr 12.')]),
+        ),
+      );
+      final c = await pumpOverlay(
+        tester,
+        env,
+        platform,
+        voice: VoiceComponents(
+          audio: FakeAudioInput(
+            frames: utterance(),
+            frameInterval: const Duration(milliseconds: 30),
+          ),
+          vad: FakeVoiceActivityDetector(),
+          stt: stt,
+          textToSpeech: (_) async => FakeTextToSpeech(),
+          config: const VoicePipelineConfig(),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(c.read(voiceControllerProvider).trigger, TriggerKind.wakeWord);
+      await pumpUntil(tester, find.text('Es ist 8 Uhr 12.'));
+      // The pre-roll (0.5 s) is part of what Whisper hears.
+      expect(
+        stt.calls.single.samples,
+        greaterThan(durationToSamples(const Duration(milliseconds: 700))),
+      );
+      expect(platform.wakeHandoff, isNull);
+      await c.read(auditRecorderProvider).flush();
+      final request = (await env.storage.audit.query()).firstWhere(
+        (e) => e.kind == AuditKind.request,
+      );
+      expect(request.payload['trigger'], 'wakeWord');
     },
   );
 

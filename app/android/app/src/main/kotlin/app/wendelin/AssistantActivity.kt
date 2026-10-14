@@ -29,6 +29,12 @@ class AssistantActivity : WendelinActivity() {
         super.onCreate(savedInstanceState)
         showPlaceholder()
         frameWatchdog.start()
+        // Called by the wake word with the screen off: it has to come on (the device stays locked).
+        if (intent?.getBooleanExtra(WendelinVoiceInteractionService.EXTRA_WAKE, false) == true &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1
+        ) {
+            setTurnScreenOn(true)
+        }
         // Personal content: no screenshots, not visible in the app switcher.
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -118,6 +124,8 @@ class AssistantActivity : WendelinActivity() {
         frameWatchdog.stop()
         hidePlaceholder()
         VoiceLog.i("overlay-destroy finishing=$isFinishing")
+        // The wake-word service listens again once the overlay is gone (WP50).
+        if (isFinishing) WakeWordService.onOverlayClosed()
         super.onDestroy()
     }
 

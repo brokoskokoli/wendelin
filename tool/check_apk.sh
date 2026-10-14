@@ -56,6 +56,8 @@ STUB
     <service android:name="app.wendelin.WendelinVoiceSessionService"
         android:permission="android.permission.BIND_VOICE_INTERACTION"
         android:exported="true" />
+    <service android:name="app.wendelin.WakeWordService"
+        android:foregroundServiceType="microphone" android:exported="false" />
     <service android:name="app.wendelin.WendelinRecognitionService"
         android:enabled="false" android:exported="true" />
     <receiver android:name="androidx.profileinstaller.ProfileInstallReceiver"
@@ -100,6 +102,12 @@ STUB
   # Nur beim ersten Service (VoiceInteractionService) die Berechtigung weglassen.
   echo "$good_manifest" | awk '!done && /BIND_VOICE_INTERACTION/ { sub(/android:permission="android.permission.BIND_VOICE_INTERACTION"/, ""); done = 1 } { print }' >"$dir/manifest.xml"
   expect "Assistenten-Service ohne BIND_VOICE_INTERACTION erkannt" 1 "WendelinVoiceInteractionService ohne"
+  echo "$good_manifest" | sed 's/android:foregroundServiceType="microphone"/android:foregroundServiceType="location"/' >"$dir/manifest.xml"
+  expect "WakeWordService mit falschem Dienst-Typ erkannt" 1 "WakeWordService nicht vom Typ microphone"
+  echo "$good_manifest" | sed 's/android:foregroundServiceType="microphone" android:exported="false"/android:foregroundServiceType="microphone" android:exported="true"/' >"$dir/manifest.xml"
+  expect "exportierter WakeWordService erkannt" 1 "WakeWordService darf nicht exportiert sein"
+  echo "$good_manifest" | grep -v WakeWordService | grep -v 'foregroundServiceType="microphone" android:exported' >"$dir/manifest.xml"
+  expect "fehlender WakeWordService erkannt" 1 "WakeWordService fehlt im Manifest"
   echo "$good_manifest" | sed 's/android:enabled="false"/android:enabled="true"/' >"$dir/manifest.xml"
   expect "RecognitionService ab Werk aktiv erkannt" 1 "WendelinRecognitionService nicht ab Werk deaktiviert"
   echo "$good_manifest" | sed 's# android:permission="android.permission.DUMP"##' >"$dir/manifest.xml"
@@ -216,6 +224,25 @@ while IFS= read -r tag; do
     fail=1
   fi
 done <<<"$(echo "$components" | sed 's/> </>\n</g')"
+# Wake-Word-Dienst (WP50, ADR 0013): Typ microphone, nicht exportiert.
+wake_tag="$(echo "$components" | sed 's/> </>\n</g' | grep -F 'app.wendelin.WakeWordService' | head -1 || true)"
+if [ -z "$wake_tag" ]; then
+  echo "FEHLER: WakeWordService fehlt im Manifest" >&2
+  fail=1
+else
+  case "$(attr "$wake_tag" foregroundServiceType)" in
+    microphone | 0x80 | 128) echo 'ok: WakeWordService vom Typ microphone' ;;
+    *) echo "FEHLER: WakeWordService nicht vom Typ microphone" >&2; fail=1 ;;
+  esac
+  if [ "$(attr "$wake_tag" exported)" = "true" ]; then
+    echo "FEHLER: WakeWordService darf nicht exportiert sein" >&2
+    fail=1
+  fi
+fi
+if echo "$components" | grep -qi 'BOOT_COMPLETED'; then
+  echo "FEHLER: Boot-Empfänger im Manifest (WP50: kein BOOT_COMPLETED)" >&2
+  fail=1
+fi
 if [ -z "$components" ]; then
   echo "FEHLER: keine Komponenten im Manifest gefunden" >&2
   fail=1
@@ -223,7 +250,7 @@ elif [ "$exported_ok" = 1 ]; then
   echo "ok: exportierte Komponenten wie erwartet"
 fi
 
-ALLOWED='^(android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.RECORD_AUDIO|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
+ALLOWED='^(android\.permission\.FOREGROUND_SERVICE|android\.permission\.FOREGROUND_SERVICE_MICROPHONE|android\.permission\.WAKE_LOCK|android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.RECORD_AUDIO|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
 perms="$("$APKANALYZER" manifest permissions "$APK")"
 if extra="$(echo "$perms" | grep -vE "$ALLOWED")"; then
   echo "FEHLER: unerwartete Berechtigungen:" >&2

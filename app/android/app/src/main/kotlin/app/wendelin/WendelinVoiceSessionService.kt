@@ -25,6 +25,8 @@ class WendelinVoiceSessionService : VoiceInteractionSessionService() {
  */
 class WendelinVoiceSession(context: Context) : VoiceInteractionSession(context) {
     private val main = Handler(Looper.getMainLooper())
+    // Called by the wake word (WP50): the overlay turns the screen on.
+    private var wake = false
     private val arrived: () -> Unit = { launcher.onArrived() }
 
     private val launcher = AssistantLauncher(
@@ -34,7 +36,8 @@ class WendelinVoiceSession(context: Context) : VoiceInteractionSession(context) 
             startAssistantActivity(
                 Intent(context, AssistantActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    .putExtra(AssistantActivity.EXTRA_RETRY, retry),
+                    .putExtra(AssistantActivity.EXTRA_RETRY, retry)
+                    .putExtra(WendelinVoiceInteractionService.EXTRA_WAKE, wake),
             )
         },
         schedule = { delayMs, block ->
@@ -55,6 +58,7 @@ class WendelinVoiceSession(context: Context) : VoiceInteractionSession(context) 
 
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
+        wake = args?.getBoolean(WendelinVoiceInteractionService.EXTRA_WAKE) == true
         launcher.onShow(showFlags)
     }
 

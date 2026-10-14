@@ -45,6 +45,10 @@
 #   8. räumt danach auf: Rolle entzogen, Test-Vault gelöscht, App-Daten
 #      gelöscht (`pm clear`, auch die Modell-Kopien).
 #
+# Wake-Word-Dienst (WP50): integration_test/wake_service_e2e_test.dart nutzt die
+# Aufträge `role` und `wake-loop` (WAKE_RUNS, WAKE_LOG=<datei> für das Log).
+# WENDELIN_KEEP=1 lässt Rolle und App-Daten stehen (Neustart-Test von Hand).
+#
 # Sprach-Robustheit (WP30): WENDELIN_REPEAT=<n> wiederholt die Runden von
 # voice_robustness_e2e_test.dart (je Runde D3 ohne und nach Overlay-Nutzung),
 # E2E_VOICE_LOG=<datei> sammelt danach alle `Wendelin/voice`-Zeilen.
@@ -164,6 +168,44 @@ tap_text() { # <abzug> <text-regex>
 }
 resumed() { adb shell dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity'; }
 LOCK_PIN=4711
+wake_loop() { # <Durchläufe>
+  local n="$1" i ok=0 answered=0 found log
+  log="${WAKE_LOG:-/dev/null}"
+  for i in $(seq 1 "$n"); do
+    adb shell input keyevent KEYCODE_SLEEP
+    sleep 2
+    found=0
+    for _ in $(seq 1 120); do
+      resumed | grep -q AssistantActivity && { found=1; break; }
+      sleep 0.5
+    done
+    if [ "$found" = 1 ]; then
+      # Der Satz im Overlay: erkannt, wenn die Antwort des Skripts („Alles klar.“)
+      # im Abzug steht (uiautomator liest content-desc).
+      for _ in $(seq 1 60); do
+        ui_dump | grep -q 'Alles klar' && { answered=$((answered + 1)); break; }
+        sleep 1
+      done
+      adb logcat -d | grep 'Wendelin/voice' >>"$log" || true
+      if adb logcat -d | grep -q 'mic-ready.*trigger=wakeWord'; then ok=$((ok + 1)); fi
+      adb logcat -c
+      adb shell input keyevent KEYCODE_BACK
+      for _ in $(seq 1 40); do
+        adb shell dumpsys activity activities | grep -q 'app.wendelin/.AssistantActivity' || break
+        sleep 0.5
+      done
+      sleep 3
+    fi
+    if [ "$found" = 0 ]; then
+      adb logcat -d | grep -E 'Wendelin/voice|wake' >>"$log" || true
+      adb logcat -c
+    fi
+    echo "Durchlauf $i: overlay=$found" >>"$log"
+  done
+  adb shell input keyevent KEYCODE_WAKEUP
+  echo "wakeWord=$ok/$n answered=$answered/$n" |
+    adb shell run-as "$PKG" sh -c "'cat > files/e2e/wake-result.txt'"
+}
 host_request() {
   local action
   action="$(in_app cat files/e2e/host-request 2>/dev/null | tr -d '\r' || true)"
@@ -211,6 +253,22 @@ host_request() {
         adb shell dumpsys activity activities | grep -q 'app.wendelin/.AssistantActivity' || break
         sleep 0.5
       done
+      ;;
+    role)
+      # Nur die Assistenten-Rolle (WP50: der Wake-Word-Dienst braucht sie). Neu
+      # vergeben, damit das System den VoiceInteractionService der frisch
+      # installierten App bindet.
+      adb shell cmd role remove-role-holder --user 0 android.app.role.ASSISTANT "$PKG" || true
+      sleep 1
+      adb shell cmd role add-role-holder --user 0 android.app.role.ASSISTANT "$PKG"
+      sleep 3
+      ;;
+    wake-loop)
+      # WP50: je Durchlauf Bildschirm aus, warten bis die eingespeiste WAV das
+      # Overlay öffnet, prüfen (trigger=wakeWord, Antwort im Overlay), mit
+      # BACK schließen. Ergebnis nach files/e2e/wake-result.txt, das ganze
+      # Log (nur Wendelin-Zeilen, ohne Inhalte) nach $WAKE_LOG, falls gesetzt.
+      wake_loop "${WAKE_RUNS:-10}"
       ;;
     meminfo)
       # Speicher der App (B14, WP30): TOTAL PSS/RSS und Native Heap.
@@ -288,7 +346,7 @@ cleanup() {
   fi
   # Testdateien der Dateiauswahl und den uiautomator-Abzug entfernen.
   adb shell 'rm -f /sdcard/Download/wendelin-e2e-*.md /sdcard/wendelin_ui.xml' 2>/dev/null || true
-  if [ -n "$MODELS" ]; then
+  if [ -n "$MODELS" ] && [ -z "${WENDELIN_KEEP:-}" ]; then
     adb shell cmd role remove-role-holder --user 0 android.app.role.ASSISTANT "$PKG" 2>/dev/null || true
     adb shell rm -rf "$VAULT_DIR" "$TMP" 2>/dev/null || true
     if installed; then adb shell pm clear "$PKG" >/dev/null || true; fi

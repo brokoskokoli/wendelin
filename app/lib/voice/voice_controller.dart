@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart';
@@ -164,6 +165,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Future<bool> start(
     TriggerKind kind, {
     Future<bool> Function()? prepare,
+    Int16List? preRoll,
   }) async {
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
@@ -180,7 +182,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       // look at the two needed ones only (the full check runs anyway).
       ready = await _modelsInstalled();
     }
-    if (!ready) return _startAfterLoading(kind, prepare);
+    if (!ready) return _startAfterLoading(kind, prepare, preRoll);
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
@@ -246,7 +248,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     if (!identical(components.audio, primed.inner)) await primed.stop();
     final pipeline = _pipelineFor(components);
     state = state.copyWith(preparing: false);
-    return _run(pipeline, kind);
+    return _run(pipeline, kind, preRoll);
   }
 
   /// Whether the installed state of the chosen Whisper and Silero is
@@ -278,6 +280,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Future<bool> _startAfterLoading(
     TriggerKind kind,
     Future<bool> Function()? prepare,
+    Int16List? preRoll,
   ) async {
     // Models first: without speech recognition there is nothing to ask the
     // microphone permission for (WP18 review, WP19).
@@ -303,12 +306,16 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     final pipeline = _pipelineFor(components);
     state = state.copyWith(trigger: kind, clearHint: true, clearError: true);
-    return _run(pipeline, kind);
+    return _run(pipeline, kind, preRoll);
   }
 
-  bool _run(VoicePipeline pipeline, TriggerKind kind) {
+  bool _run(VoicePipeline pipeline, TriggerKind kind, [Int16List? preRoll]) {
     final started = pipeline.start(
-      trigger: TriggerEvent(source: kind, at: ref.read(clockProvider).now()),
+      trigger: TriggerEvent(
+        source: kind,
+        at: ref.read(clockProvider).now(),
+        preRoll: preRoll,
+      ),
     );
     if (!started) voiceLog('start-failed', {'reason': 'busy'});
     if (started) unawaited(noteVoiceUse(ref));

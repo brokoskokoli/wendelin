@@ -191,6 +191,32 @@ void main() {
     });
   });
 
+  test('Wake-Word-Auslöser: der Pre-Roll geht zuerst an die Erkennung', () {
+    runFake((async) {
+      final h = Harness(turns: [ScriptedTurn.text('Es ist Montag.')]);
+      final preRoll = AudioFrames.speech(const Duration(milliseconds: 600));
+      expect(
+        h.pipeline.start(
+          trigger: TriggerEvent(
+            source: TriggerKind.wakeWord,
+            at: DateTime.utc(2026, 10, 14),
+            preRoll: preRoll,
+          ),
+        ),
+        isTrue,
+      );
+      settle(async);
+      expect(
+        h.stt.calls.single.samples,
+        greaterThan(durationToSamples(frame) * 20 + preRoll.length ~/ 2),
+      );
+      expect(
+        h.eventsOf<VoiceListening>().single.trigger?.source,
+        TriggerKind.wakeWord,
+      );
+    });
+  });
+
   test('erster Satz wird gesprochen, bevor die Antwort fertig ist', () {
     runFake((async) {
       final h = Harness(

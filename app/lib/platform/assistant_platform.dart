@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'channels.dart';
+import 'voice/pcm.dart';
 
 export 'channels.dart' show assistantChannelName;
 
@@ -102,6 +104,15 @@ class AssistantPlatform {
   /// database access, ADR 0008).
   Future<void> setRecognizerConfig(RecognizerConfig config) async {
     await _invoke<void>('setRecognizerConfig', config.toArgs());
+  }
+
+  /// The audio of the wake word hit that opened the overlay (16 kHz mono
+  /// PCM, the word and what followed until it was confirmed), once; `null`
+  /// if the overlay was opened by a button (WP50).
+  Future<Int16List?> takeWakeHandoff() async {
+    final bytes = await _invoke<Uint8List>('takeWakeHandoff');
+    if (bytes == null) return null;
+    return PcmBytesDecoder().convert(bytes);
   }
 
   /// Closes the overlay activity.
@@ -242,7 +253,8 @@ final class RecognizerConfig {
 
 /// [TriggerSource] of the system assistant: fires
 /// `TriggerKind.assistant` when the overlay starts ([fire]) and whenever
-/// the assistant is invoked again while it is open.
+/// the assistant is invoked again while it is open. A start by the wake
+/// word service fires `TriggerKind.wakeWord` with its pre-roll.
 final class AssistantTriggerSource implements TriggerSource {
   /// Creates the source on [platform].
   AssistantTriggerSource(this.platform, {required this.clock}) {
@@ -261,9 +273,14 @@ final class AssistantTriggerSource implements TriggerSource {
   @override
   Stream<TriggerEvent> get triggers => _controller.stream;
 
-  /// Reports an invocation of the assistant now.
-  void fire() => _controller.add(
-    TriggerEvent(source: TriggerKind.assistant, at: clock.now()),
+  /// Reports an invocation of the assistant now; with [preRoll] it was the
+  /// wake word.
+  void fire({Int16List? preRoll}) => _controller.add(
+    TriggerEvent(
+      source: preRoll == null ? TriggerKind.assistant : TriggerKind.wakeWord,
+      at: clock.now(),
+      preRoll: preRoll,
+    ),
   );
 
   /// Stops listening.

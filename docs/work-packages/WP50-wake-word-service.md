@@ -45,3 +45,6 @@ Dieser Nachtrag geht dem Text oben vor, wo sie sich widersprechen.
 - **Diagnose:** zusätzlich `wake-cand` und `wake-verify ok|no|skip` (ohne Text), Zähler Kandidaten/h und bestätigt/h in `wake-alive`.
 - **Schnitt:** Teil a (Dienst, Engine-Verdrahtung, Kotlin, Emulator-Kriterien) und Teil b (Einstellungsseite, Erklärdialog, Onboarding-Schritt) als zwei Review-Einheiten auf eigenen Branches (`wp/50a-wake-service`, danach `wp/50b-wake-settings`). Die Seite „Wake Word“ aus WP60 (`app/lib/ui/settings/wake/wake_word_screen.dart`) wird in b erweitert, nicht ersetzt.
 - **Emulator-Kriterium angepasst:** eingespeiste WAV mit synthetischer Stimme, vorher mit derselben Stimme eingelernt (wie `wake_enroll_e2e_test.dart`); 10/10 gilt für Stufe 1, Stufe 2 bei synthetischen Stimmen nur berichten (WP44: 42 %).
+
+## Umsetzung Teil a (2026-10-14, Branch `wp/50a-wake-service`)
+Dienst, Engine-Verdrahtung, Startwege, Konflikte, Barge-in, Kotlin-Hilfsklassen mit JVM-Test, Manifest-Prüfung und ADR 0013 sind umgesetzt (`docs/adr/0013-wake-word-dienst.md`, Karte in `docs/ARCHITECTURE.md`). Gerätetest: `app/integration_test/wake_service_e2e_test.dart` (Aufträge `role` und `wake-loop` in `tool/e2e_android.sh`). Offen für Teil b: Einstellungsseite, Erklärdialog, Onboarding-Schritt auf `wakeServiceProvider` (`app/lib/di/wake_service.dart`) und `WakePlatform.status()`.

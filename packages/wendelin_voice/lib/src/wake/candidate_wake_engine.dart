@@ -17,6 +17,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
   CandidateWakeEngine({
     required this.features,
     this.templates,
+    this.moreTemplates = const [],
     this.modelThreshold = 0.5,
     this.refractory = const Duration(milliseconds: 1500),
     this.keywordId = 'wake',
@@ -27,6 +28,10 @@ final class CandidateWakeEngine implements WakeWordEngine {
 
   /// Personal templates.
   final WakeTemplates? templates;
+
+  /// Templates of further speakers (WP50: all learned voices); each set
+  /// keeps its own threshold.
+  final List<WakeTemplates> moreTemplates;
 
   /// Low classifier threshold (rule a).
   final double? modelThreshold;
@@ -57,24 +62,33 @@ final class CandidateWakeEngine implements WakeWordEngine {
   @override
   Future<List<WakeWordHit>> accept(Int16List frame) async {
     if (!_open) throw StateError('Engine nicht offen');
-    final t = templates;
-    final usable = t != null && t.isCompatible(features.featureVersion)
-        ? t
-        : null;
+    final usable = [
+      for (final t in [?templates, ...moreTemplates])
+        if (t.isCompatible(features.featureVersion)) t,
+    ];
     final hits = <WakeWordHit>[];
     for (final w in await features.accept(frame)) {
-      final sim = usable == null
-          ? null
-          : bestSimilarity(w.embedding, usable.embeddings);
       if (w.modelScore != null && w.modelScore! > maxModelScore) {
         maxModelScore = w.modelScore!;
       }
-      if (sim != null && sim > maxSimilarity) maxSimilarity = sim;
+      // The speaker whose similarity is closest above the own threshold
+      // decides (no speaker: only the classifier rule).
+      double? sim, threshold;
+      var margin = double.negativeInfinity;
+      for (final t in usable) {
+        final s = bestSimilarity(w.embedding, t.embeddings);
+        if (s > maxSimilarity) maxSimilarity = s;
+        if (s - t.threshold > margin) {
+          margin = s - t.threshold;
+          sim = s;
+          threshold = t.threshold;
+        }
+      }
       final d = decideCandidate(
         modelScore: w.modelScore,
         templateSimilarity: sim,
         modelThreshold: modelThreshold,
-        templateThreshold: usable?.threshold,
+        templateThreshold: threshold,
       );
       final gap = (refractory.inMicroseconds * 16000) ~/ 1000000;
       if (d == null || w.endSample - _lastHit < gap) continue;
