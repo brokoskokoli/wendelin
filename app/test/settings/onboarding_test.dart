@@ -81,7 +81,11 @@ void main() {
     await settle(tester);
     expect(c.read(enabledIntegrationsProvider), contains('clipboard'));
 
-    await tester.tap(find.text('Fertig'));
+    // Letzter Schritt (WP50 b): Aktivierungswort, überspringbar.
+    await tester.tap(find.text('Weiter'));
+    await settle(tester);
+    expect(find.text('Aktivierungswort'), findsOneWidget);
+    await tester.tap(find.text('Überspringen'));
     await settle(tester);
     expect(find.byType(MainScreen), findsOneWidget);
     expect(await env.storage.settings.get(AppSettings.onboardingDone), isTrue);

@@ -11,6 +11,7 @@ import '../../agent/conversation_state.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/voice_providers.dart';
+import '../../di/wake_settings.dart';
 import '../../platform/assistant_platform.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
@@ -162,6 +163,12 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) await _voice.cancel();
     if (ref.read(agentControllerProvider).running) return;
+    // Wake word hit: a short tone (setting „Bestätigungston“), not awaited.
+    final tone =
+        e.source == TriggerKind.wakeWord &&
+        await ref.read(wakeToneProvider.future);
+    if (!mounted) return;
+    if (tone) unawaited(ref.read(wakeConfirmToneProvider)());
     await _voice.start(
       e.source,
       preRoll: e.preRoll,

@@ -48,3 +48,11 @@ Dieser Nachtrag geht dem Text oben vor, wo sie sich widersprechen.
 
 ## Umsetzung Teil a (2026-10-14, Branch `wp/50a-wake-service`)
 Dienst, Engine-Verdrahtung, Startwege, Konflikte, Barge-in, Kotlin-Hilfsklassen mit JVM-Test, Manifest-Prüfung und ADR 0013 sind umgesetzt (`docs/adr/0013-wake-word-dienst.md`, Karte in `docs/ARCHITECTURE.md`). Gerätetest: `app/integration_test/wake_service_e2e_test.dart` (Aufträge `role` und `wake-loop` in `tool/e2e_android.sh`). Offen für Teil b: Einstellungsseite, Erklärdialog, Onboarding-Schritt auf `wakeServiceProvider` (`app/lib/di/wake_service.dart`) und `WakePlatform.status()`.
+
+## Umsetzung Teil b (2026-10-14, Branch `wp/50b-wake-settings`)
+- Seite „Aktivierungswort“ erweitert um `WakeServiceSection` (`app/lib/ui/settings/wake/wake_service_section.dart`): Status (aus / läuft / pausiert / vom System beendet mit letztem Grund), Schalter (gesperrt ohne Rolle oder ohne eingelernte Stimme, mit Weg zu Rollenwahl bzw. Einlernen), Bedingung „Nur beim Laden“/„Immer“, Bestätigungston, Nachprüfung, `BatteryHints` aus WP56 (Akku-Ausnahme, Xiaomi/HyperOS-Checkliste).
+- Erklärdialog und Einschaltweg: `wake_explain.dart` (`enableWakeWord`): Erklärung einmalig (`wake.explained`), Mikrofon, Benachrichtigung, Dienst an, dann Angebot der Akku-Ausnahme.
+- Bestätigungston: Einstellung `wake.tone` (`app/lib/di/wake_settings.dart`), gespielt vom Overlay bei `TriggerKind.wakeWord`.
+- Onboarding: sechster, überspringbarer Schritt „Aktivierungswort“.
+- Keine „Empfindlichkeit“: die Engine kennt nur die Schwelle je Stimme (Einlernen/Kalibrieren, WP60) und keinen globalen Offset. Die UI ist wie im Rest der App deutsch (Onboarding: „Die Oberfläche ist vorerst deutsch“). Keine neuen Kanalmethoden.
+- Rückspiegeln: `WakeServiceStatus.enabled` (Kotlin) → `WakeServiceNotifier.sync/adoptStatus`: „Aus“ aus der Benachrichtigung setzt `wake.enabled` zurück (App-Start in `StartGate`, Seite bei Statuswechsel). `StartGate` liest damit `wakeServiceProvider` beim Start (Nachprüfung wird gesendet).
