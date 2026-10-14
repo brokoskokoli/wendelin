@@ -87,6 +87,8 @@ void main() {
           (TcbStatus.outOfDate, AttestationStatus.red),
           (TcbStatus.outOfDateConfigurationNeeded, AttestationStatus.red),
           (TcbStatus.revoked, AttestationStatus.red),
+          (TcbStatus.relaunchAdvised, AttestationStatus.red),
+          (TcbStatus.relaunchAdvisedConfigurationNeeded, AttestationStatus.red),
         ]) {
           final r = await probeVerifier(
             attestationServer(),
@@ -109,6 +111,25 @@ void main() {
         }
       },
     );
+
+    test('TDRelaunchAdvised: rot mit eigenem Code und Text', () async {
+      for (final status in [
+        TcbStatus.relaunchAdvised,
+        TcbStatus.relaunchAdvisedConfigurationNeeded,
+      ]) {
+        final r = await probeVerifier(
+          attestationServer(),
+          FakeAttestationCrypto(tcbStatus: status),
+        ).attest();
+        expect(r.status, AttestationStatus.red);
+        expect(r.firstProblem?.stage, AttestationStage.tcb);
+        expect(r.firstProblem?.code, StageResult.tcbRelaunchAdvised);
+        expect(
+          r.firstProblem?.detail,
+          contains('Neustart der TEE beim Betreiber empfohlen'),
+        );
+      }
+    });
 
     test(
       'Provenance: leere Liste nur protokolliert, sonst gegen Liste',

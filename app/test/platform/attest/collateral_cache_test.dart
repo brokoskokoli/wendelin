@@ -3,8 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/platform/attest/attestation_port.dart';
 import 'package:wendelin/platform/attest/collateral_cache.dart';
+import 'package:wendelin_providers/wendelin_providers.dart';
 
 void main() {
   late Directory dir;

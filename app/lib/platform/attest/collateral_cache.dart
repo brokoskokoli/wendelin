@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'attestation_port.dart';
+import 'package:wendelin_providers/wendelin_providers.dart';
 
 /// Dateicache für Quote-Kollateral, gültig bis `nextUpdate` (je FMSPC/CA/TEE eine Datei).
 final class CollateralCache {

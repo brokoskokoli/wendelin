@@ -7,11 +7,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:wendelin/platform/attest/attestation_port.dart';
 import 'package:wendelin/platform/attest/collateral_cache.dart';
 import 'package:wendelin/platform/attest/generated/quote.dart';
 import 'package:wendelin/platform/attest/pcs_collateral_client.dart';
 import 'package:wendelin/platform/attest/rust_attestation_crypto.dart';
+import 'package:wendelin_providers/wendelin_providers.dart';
 
 import '../../support/fake_attest_backend.dart';
 
@@ -191,22 +191,18 @@ void main() {
     );
   });
 
-  test('TDRelaunchAdvised ist rot wie OutOfDate und nennt den Grund', () async {
+  test('TDRelaunchAdvised wird auf eigene Statuswerte abgebildet', () async {
     final c = build();
     final col = QuoteCollateral(Uint8List(0));
     const names = {
-      'TDRelaunchAdvised': TcbStatus.outOfDate,
+      'TDRelaunchAdvised': TcbStatus.relaunchAdvised,
       'TDRelaunchAdvisedConfigurationNeeded':
-          TcbStatus.outOfDateConfigurationNeeded,
+          TcbStatus.relaunchAdvisedConfigurationNeeded,
     };
     for (final e in names.entries) {
       backend.quoteResult = _info(backend, status: e.key);
       final v = await c.verifyQuote(quote, col, now);
       expect(v.tcbStatus, e.value);
-      expect(
-        v.advisoryIds,
-        contains(RustAttestationCrypto.relaunchAdvisedReason),
-      );
       expect(v.advisoryIds, contains('INTEL-SA-1'));
     }
   });

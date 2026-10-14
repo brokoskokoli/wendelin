@@ -16,10 +16,11 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wendelin/platform/attest/attest_backend.dart';
-import 'package:wendelin/platform/attest/attestation_port.dart';
 import 'package:wendelin/platform/attest/collateral_cache.dart';
 import 'package:wendelin/platform/attest/pcs_collateral_client.dart';
 import 'package:wendelin/platform/attest/rust_attestation_crypto.dart';
+import 'package:wendelin_providers/testing.dart';
+import 'package:wendelin_providers/wendelin_providers.dart';
 
 import 'support/tee_fixtures.g.dart';
 
@@ -117,6 +118,28 @@ void main() {
       clock: () => _now,
     );
   });
+
+  // Vertragssuite des Ports (WP46) gegen die echte Rust-Prüfung.
+  String hexOf(List<int> b) =>
+      b.map((e) => e.toRadixString(16).padLeft(2, '0')).join();
+  final spkiPem = RegExp(
+    r'-----BEGIN CERTIFICATE-----([^-]+)-----END CERTIFICATE-----',
+  ).allMatches(collateral['tcb_info_issuer_chain'] as String).last.group(1)!;
+  attestationCryptoContract(
+    () => crypto,
+    name: 'RustAttestationCrypto',
+    quoteCase: QuoteCase(
+      quote: quote,
+      collateral: _fixtureCollateral,
+      now: _now,
+      reportDataHex: evidence['quote_report_data'] as String,
+      rtmr3Hex: hexOf(quote.sublist(48 + 472, 48 + 472 + 48)),
+    ),
+    spkiCase: SpkiCase(
+      base64.decode(spkiPem.replaceAll(RegExp(r'\s'), '')),
+      'a0af031289f5d5d4132f9186068a7fc13628633ba235777472e29b6b6c67a49e',
+    ),
+  );
 
   test('Fixture-Quote ist grün, TCB UpToDate, report_data gebunden', () async {
     final c = _fixtureCollateral;

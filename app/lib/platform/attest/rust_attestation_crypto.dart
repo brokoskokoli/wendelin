@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:wendelin_providers/wendelin_providers.dart';
+
 import 'attest_backend.dart';
-import 'attestation_port.dart';
 import 'collateral_cache.dart';
 import 'generated/collateral.dart';
 import 'generated/quote.dart';
@@ -20,10 +21,6 @@ final class RustAttestationCrypto implements AttestationCrypto {
     required this.clock,
     this.renewBefore = const Duration(days: 3),
   });
-
-  /// Grund, der bei `TDRelaunchAdvised*` zusätzlich in `advisoryIds` steht.
-  static const relaunchAdvisedReason =
-      'Neustart der TEE beim Betreiber empfohlen';
 
   /// Rust-Funktionen.
   final AttestBackend backend;
@@ -61,10 +58,7 @@ final class RustAttestationCrypto implements AttestationCrypto {
       tcbStatus: _tcb(r.tcbStatus),
       reportData: r.reportData,
       rtmr3: r.rtMr3,
-      advisoryIds: [
-        ...r.advisoryIds,
-        if (r.tcbStatus.startsWith('TDRelaunchAdvised')) relaunchAdvisedReason,
-      ],
+      advisoryIds: r.advisoryIds,
     );
   }
 
@@ -77,10 +71,10 @@ final class RustAttestationCrypto implements AttestationCrypto {
     'OutOfDate' => TcbStatus.outOfDate,
     'OutOfDateConfigurationNeeded' => TcbStatus.outOfDateConfigurationNeeded,
     'Revoked' => TcbStatus.revoked,
-    // Intel empfiehlt einen Neustart der TEE (neuer TCB-Stand verfügbar): wie "veraltet" rot.
-    'TDRelaunchAdvised' => TcbStatus.outOfDate,
+    // Intel empfiehlt einen Neustart der TEE (neuer TCB-Stand verfügbar): rot mit eigenem Grund.
+    'TDRelaunchAdvised' => TcbStatus.relaunchAdvised,
     'TDRelaunchAdvisedConfigurationNeeded' =>
-      TcbStatus.outOfDateConfigurationNeeded,
+      TcbStatus.relaunchAdvisedConfigurationNeeded,
     _ => throw QuoteVerificationException('unbekannter TCB-Status: $s'),
   };
 

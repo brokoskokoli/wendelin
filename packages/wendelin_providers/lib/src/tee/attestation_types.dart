@@ -120,6 +120,10 @@ final class StageResult {
   /// security update is pending); not a forgery.
   static const upstreamTcbOutOfDate = 'upstream_tcb_out_of_date';
 
+  /// Code: Intel advises relaunching the platform TEE (`TDRelaunchAdvised*`);
+  /// the operator has to act, not a forgery.
+  static const tcbRelaunchAdvised = 'tcb_relaunch_advised';
+
   /// Code: the upstream session document does not hash to the `session_id`
   /// the signed receipt names (manipulated or swapped document).
   static const upstreamSessionMismatch = 'upstream_session_mismatch';
