@@ -27,7 +27,7 @@ Future<Uint8List> _png(int dark) async {
 }
 
 void main() {
-  testWidgets('CI-Toleranz: bis 0,6 % und 2000 Pixel ok, darüber Fehler', (
+  testWidgets('CI-Toleranz: bis 1,0 % und 2000 Pixel ok, darüber Fehler', (
     tester,
   ) async {
     await tester.runAsync(() async {
@@ -47,10 +47,15 @@ void main() {
         isTrue,
         reason: '0,56 % wie auf dem macOS-Runner',
       );
+      expect(
+        await comparator.compare(await _png(89), golden),
+        isTrue,
+        reason: '0,89 % wie kleine Textkarten auf dem macOS-Runner',
+      );
       await expectLater(
-        comparator.compare(await _png(70), golden),
+        comparator.compare(await _png(110), golden),
         throwsA(isA<FlutterError>()),
-        reason: '0,7 % liegt über dem Anteil',
+        reason: '1,1 % liegt über dem Anteil',
       );
       final strict = TolerantGoldenComparator(
         Uri.file('${dir.path}/x_test.dart'),
