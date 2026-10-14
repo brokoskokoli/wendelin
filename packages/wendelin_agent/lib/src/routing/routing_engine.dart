@@ -206,10 +206,6 @@ enum RuleSetIssueKind {
 
   /// The default target's profile is missing or disabled.
   defaultTargetUnavailable,
-
-  /// A chain entry (or the profile owning the chain) is missing or
-  /// disabled; it is left out when escalating.
-  chainTargetUnavailable,
 }
 
 /// A warning about a [RuleSet] (shown in the editor; routing goes on).
@@ -314,20 +310,6 @@ List<RuleSetIssue> validateRuleSet(
         profileId: rules.defaultTarget.profileId,
       ),
     );
-  }
-  for (final MapEntry(key: owner, value: chain) in rules.chains.entries) {
-    for (final id in [owner, ...chain.map((t) => t.profileId)]) {
-      if (profileProblem(profiles[id]) != null) {
-        issues.add(
-          RuleSetIssue(
-            RuleSetIssueKind.chainTargetUnavailable,
-            'Eskalationskette: Profil „$id“ ist nicht verfügbar und wird '
-            'übersprungen.',
-            profileId: id,
-          ),
-        );
-      }
-    }
   }
   return issues;
 }

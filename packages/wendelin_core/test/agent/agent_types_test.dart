@@ -73,7 +73,7 @@ void main() {
       final e = EscalationConfirmationRequired(
         fromProfile: 'phala',
         toProfile: 'claude',
-        reason: EscalationReason.modelGaveUp,
+        reason: EscalationReason.userRequested,
         respond: answers.add,
       );
       expect(e.answered, isFalse);
@@ -85,7 +85,7 @@ void main() {
       expect(e.answered, isTrue);
       expect(e.fromProfile, 'phala');
       expect(e.toProfile, 'claude');
-      expect(e.reason, EscalationReason.modelGaveUp);
+      expect(e.reason, EscalationReason.userRequested);
       expect(e.toString(), contains('phala → claude'));
     });
 
@@ -111,8 +111,8 @@ void main() {
         const Escalated(
           fromProfile: 'a',
           toProfile: 'b',
-          reason: EscalationReason.providerError,
-        ): 'providerError',
+          reason: EscalationReason.userRequested,
+        ): 'userRequested',
         const UsageReported(
           profileId: 'p',
           modelId: 'm',

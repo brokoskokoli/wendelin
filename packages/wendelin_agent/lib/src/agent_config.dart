@@ -16,8 +16,6 @@ final class AgentConfig {
     this.assistantName = 'Wendelin',
     this.userName,
     this.personaAddon,
-    this.escalateAfterInvalidToolCalls = 2,
-    this.escalateAfterRoundsWithoutResult = 4,
     this.temperature,
     this.spokenVersion = SpokenVersion.off,
     this.spokenCheckTimeout = const Duration(seconds: 5),
@@ -53,14 +51,6 @@ final class AgentConfig {
 
   /// Free-form personality addition from the settings.
   final String? personaAddon;
-
-  /// Escalate after this many invalid tool calls (invalid JSON or unknown
-  /// tool) of one provider.
-  final int escalateAfterInvalidToolCalls;
-
-  /// Escalate when one provider wants more than this many tool rounds
-  /// without producing a final answer.
-  final int escalateAfterRoundsWithoutResult;
 
   /// Sampling temperature; `null` = provider default.
   final double? temperature;

@@ -680,7 +680,7 @@ void main() {
       EscalationConfirmationRequired(
         fromProfile: 'a',
         toProfile: 'b',
-        reason: EscalationReason.providerError,
+        reason: EscalationReason.userRequested,
         respond: (_) {},
       ),
       fromName: 'Phala',

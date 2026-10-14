@@ -61,13 +61,13 @@ final class AgentFactory implements AgentRunFactory {
   /// [providers].
   ///
   /// Every model call gets the tool catalog of the current target's privacy
-  /// level (`AgentRunner.catalogFor`), also after an escalation: TEE or
+  /// level (`AgentRunner.catalogFor`), also after „nochmal mit …“: TEE or
   /// local targets may use sensitive tools, standard targets never see them,
   /// their calls to such tools are refused and audited, and arguments,
   /// results and the answers built from them are hidden from them. The
   /// executor looks tools up in the catalog of the level the call comes from
   /// (`ToolContext.privacyLevel`), so also `tools__search` only lists tools
-  /// of that level; without a level it uses the lowest level of the chain.
+  /// of that level; without a level it uses the lowest level of all targets.
   ///
   /// Memory per target: the retriever is passed if any reachable target
   /// may see the memory integration, and the runner gets the lowest level

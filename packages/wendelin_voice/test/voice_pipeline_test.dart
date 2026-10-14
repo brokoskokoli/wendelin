@@ -96,7 +96,6 @@ final class Harness {
           provider: provider,
           privacy: PrivacyLevel.standard,
         ),
-        const [],
       ),
       contextBuilder: ContextBuilder(
         config: const AgentConfig(),
@@ -1320,7 +1319,6 @@ AgentRun _runnerFor(FakeLlmProvider provider) {
         provider: provider,
         privacy: PrivacyLevel.standard,
       ),
-      const [],
     ),
     contextBuilder: ContextBuilder(
       config: const AgentConfig(),

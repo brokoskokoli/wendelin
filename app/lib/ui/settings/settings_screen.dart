@@ -17,8 +17,8 @@ class SettingsScreen extends ConsumerWidget {
 
   /// Areas in display order: title, detail, route.
   static const areas = [
-    ('Provider', 'Profile, Standard, Eskalation, Budget', AppRoutes.providers),
-    ('Routing', 'Regeln, Testfeld, Eskalationsketten', AppRoutes.routing),
+    ('Provider', 'Profile, Standard, Budget', AppRoutes.providers),
+    ('Routing', 'Regeln, Testfeld, Import und Export', AppRoutes.routing),
     (
       'Integrationen',
       'Was Wendelin darf, Tools, Risikostufen',

@@ -8,13 +8,21 @@ import 'routing_texts.dart';
 /// What an import of [imported] would do to [current].
 final class ImportPreview {
   /// Creates the preview.
-  ImportPreview({required this.current, required this.imported});
+  ImportPreview({
+    required this.current,
+    required this.imported,
+    this.skippedChains = 0,
+  });
 
   /// The rules and profiles now.
   final RoutingState current;
 
   /// The rules from the file.
   final RuleSet imported;
+
+  /// Number of escalation chains in the file (older exports). They are
+  /// skipped: Wendelin never switches the model on its own (K28).
+  final int skippedChains;
 
   /// Whether the imported default target's profile exists here.
   bool get defaultKnown =>
@@ -90,11 +98,12 @@ class _ImportDialog extends StatelessWidget {
                 'gibt es hier nicht; der bisherige Standard bleibt.',
                 style: WText.detail.copyWith(color: WColors.warn),
               ),
-            Text(
-              'Eskalationsketten für ${result.chains.length} Profil'
-              '${result.chains.length == 1 ? '' : 'e'}.',
-              style: WText.detail,
-            ),
+            if (preview.skippedChains > 0)
+              Text(
+                'Die Datei enthält Eskalationsketten. Sie wurden übersprungen: '
+                'Wendelin wechselt nie von selbst das Modell.',
+                style: WText.detail,
+              ),
             for (final i in issues)
               Text(
                 i.message,

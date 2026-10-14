@@ -14,7 +14,6 @@ import '../../design/design.dart';
 import '../../routes.dart';
 import '../export.dart';
 import '../settings_page.dart';
-import 'chain_editor_screen.dart';
 import 'import_preview.dart';
 import 'routing_texts.dart';
 import 'rule_editor_screen.dart';
@@ -33,8 +32,7 @@ final toolCategoryMatcherProvider = Provider<ToolCategoryMatcher>(
 
 /// Settings → Routing (docs/design/screens/routing): test field with the
 /// rule that takes a sentence, the rule list (drag to reorder, first match
-/// wins), the fixed default, the escalation chain of the default profile,
-/// import/export and „+ Regel hinzufügen“.
+/// wins), the fixed default, import/export and „+ Regel hinzufügen“.
 class RoutingScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const RoutingScreen({super.key});
@@ -178,7 +176,6 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
           ),
         ],
       ),
-      _ChainCard(state: state, rules: rules, onTap: _openChains),
       Row(
         spacing: WSpace.s,
         children: [
@@ -202,8 +199,6 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
   void _open(Widget screen) => unawaited(
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen)),
   );
-
-  void _openChains() => _open(const ChainEditorScreen());
 
   Future<void> _editDefault(RoutingState state, RuleSet rules) async {
     final target = await pickTarget(
@@ -232,14 +227,24 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
     }
     if (text == null || !mounted) return;
     final RuleSet imported;
+    var skippedChains = 0;
     try {
-      imported = RuleSetJson().decode(jsonDecode(text));
+      final json = jsonDecode(text);
+      imported = RuleSetJson().decode(json);
+      // Older exports: chains are skipped (K28), the preview says so.
+      if (json is Map && json['chains'] is Map) {
+        skippedChains = (json['chains'] as Map).length;
+      }
     } on FormatException catch (e) {
       // Also RuleSetFormatException (German text with the JSON path).
       showHint(context, 'Import nicht möglich: ${e.message}');
       return;
     }
-    final preview = ImportPreview(current: state, imported: imported);
+    final preview = ImportPreview(
+      current: state,
+      imported: imported,
+      skippedChains: skippedChains,
+    );
     final ok = await showImportPreview(context, preview);
     if (ok && mounted) await _notifier.save(preview.result);
   }
@@ -333,55 +338,6 @@ class _TestCard extends StatelessWidget {
         ),
         for (final s in skipped) Text(s, style: WText.caption),
       ],
-    );
-  }
-}
-
-class _ChainCard extends StatelessWidget {
-  const _ChainCard({
-    required this.state,
-    required this.rules,
-    required this.onTap,
-  });
-
-  final RoutingState state;
-  final RuleSet rules;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final owner = rules.defaultTarget;
-    final chain = [owner, ...rules.chainOf(owner.profileId)];
-    final others = rules.chains.keys.where((k) => k != owner.profileId).length;
-    return Material(
-      color: WColors.surface,
-      borderRadius: BorderRadius.circular(WRadius.buttonLarge),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(WSpace.m14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: WSpace.xs6,
-            children: [
-              Text('Eskalation bei Fehlschlag', style: WText.sectionLabel),
-              Text(
-                chain.length == 1
-                    ? '${targetLabel(state, owner)} → keine Kette'
-                    : chain.map((t) => targetLabel(state, t)).join(' → '),
-                style: WText.mono.copyWith(color: WColors.text),
-              ),
-              if (others > 0)
-                Text(
-                  '+ Ketten für $others weitere${others == 1 ? 's' : ''} '
-                  'Profil${others == 1 ? '' : 'e'}',
-                  style: WText.caption,
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

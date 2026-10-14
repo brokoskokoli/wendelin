@@ -71,7 +71,7 @@ void main() {
   });
 
   group('Provider', () {
-    testWidgets('Profile, Standard wechseln, Link zu Ketten, Löschen', (
+    testWidgets('Profile, Standard wechseln, Link zum Routing, Löschen', (
       tester,
     ) async {
       final env = TestEnv(
@@ -89,8 +89,9 @@ void main() {
         findsOneWidget,
       );
 
-      // Die Ketten stehen seit M3 unter Routing (je Profil).
-      expect(find.text('Eskalationsketten'), findsOneWidget);
+      // Keine Eskalationsketten mehr (K28); die Anbieterwahl steht im Routing.
+      expect(find.textContaining('Eskalation'), findsNothing);
+      expect(find.text('Anbieterwahl'), findsOneWidget);
       await tester.tap(find.text('Routing'));
       await settle(tester);
       expect(find.byType(RoutingScreen), findsOneWidget);

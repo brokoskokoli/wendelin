@@ -25,12 +25,7 @@ RunState _state(PrivacyLevel privacy, {PrivacyLevel? floor}) => RunState(null)
 
 void main() {
   group('RunBudget', () {
-    const config = AgentConfig(
-      maxToolRounds: 2,
-      maxTokensPerRequest: 100,
-      escalateAfterRoundsWithoutResult: 1,
-      escalateAfterInvalidToolCalls: 2,
-    );
+    const config = AgentConfig(maxToolRounds: 2, maxTokensPerRequest: 100);
 
     test('round limit after maxToolRounds rounds', () {
       final budget = RunBudget(config);
@@ -53,19 +48,6 @@ void main() {
       expect(budget.tokensExhausted, isFalse);
       budget.onTokens(const Usage(inputTokens: 1, outputTokens: 0));
       expect(budget.tokensExhausted, isTrue);
-    });
-
-    test('a hand-over resets only the per-provider counters', () {
-      final budget = RunBudget(config)
-        ..onRound()
-        ..onRound()
-        ..onInvalidCalls(2);
-      expect(budget.noProgress, isTrue);
-      expect(budget.tooManyInvalid, isTrue);
-      budget.onEscalated();
-      expect(budget.noProgress, isFalse);
-      expect(budget.tooManyInvalid, isFalse);
-      expect(budget.roundLimitReached, isTrue);
     });
   });
 

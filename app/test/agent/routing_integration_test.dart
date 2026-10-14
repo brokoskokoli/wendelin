@@ -49,9 +49,6 @@ RuleSet _rules() => RuleSet(
     ),
   ],
   defaultTarget: const RouteTarget(profileId: 'phala', modelId: 'glm-klein'),
-  chains: {
-    'phala': [const RouteTarget(profileId: 'claude', modelId: 'claude-sonnet')],
-  },
 );
 
 void main() {
@@ -150,23 +147,24 @@ void main() {
     expect(s.privateSince, isNull);
   });
 
-  test('„privat“ setzt die Untergrenze: Eskalation darunter fragt nach, '
-      'die Unterhaltung bleibt privat', () async {
+  test('„privat“ setzt die Untergrenze: „nochmal mit Claude“ darunter fragt '
+      'nach, die Unterhaltung bleibt privat', () async {
     await setUpEnv(
       phala: [
-        ScriptedTurn.error(const RateLimitException('voll')),
-        ScriptedTurn.error(const RateLimitException('voll')),
+        ScriptedTurn.text('Ich erinnere dich.'),
+        ScriptedTurn.text('Ok.'),
       ],
       claude: [ScriptedTurn.text('Erledigt.')],
     );
     final controller = c.read(agentControllerProvider.notifier);
-    await controller.send('Privat: erinnere mich an den Arzttermin');
+    await send('Privat: erinnere mich an den Arzttermin');
+    expect(c.read(agentControllerProvider).privateSince, testNow);
+    await controller.send('nochmal mit Claude');
     final asking = await waitFor(c, (s) => s.pending != null);
     final q = asking.pending! as EscalationQuestion;
     expect(q.fromName, 'Phala GLM');
     expect(q.toName, 'Claude API');
     expect(llm['claude']!.requests, isEmpty, reason: 'erst nach Zustimmung');
-    // Die Anfrage ist schon mit Untergrenze gespeichert: Hinweis „privat“.
     final private = await waitFor(c, (s) => s.privateSince != null);
     expect(private.privateSince, testNow);
     expect(private.privateByRequest, isTrue);
@@ -179,6 +177,55 @@ void main() {
     // „Neues Gespräch“ beendet den privaten Zustand.
     await controller.newTopic();
     expect(c.read(agentControllerProvider).privateSince, isNull);
+  });
+
+  test('„nochmal mit Claude“ mit Zustimmung: Übergabe, Audit-Log', () async {
+    await setUpEnv(
+      phala: [ScriptedTurn.text('Ich erinnere dich.')],
+      claude: [ScriptedTurn.text('Erledigt.')],
+    );
+    final controller = c.read(agentControllerProvider.notifier);
+    await send('Privat: erinnere mich an den Arzttermin');
+    await controller.send('nochmal mit Claude');
+    await waitFor(c, (s) => s.pending != null);
+    controller.answer(approved: true);
+    await controller.idle;
+    await c.read(auditRecorderProvider).flush();
+    expect(llm['claude']!.requests, hasLength(1));
+    final s = c.read(agentControllerProvider);
+    expect(
+      s.entries.whereType<EscalationEntry>().single.label,
+      'an Claude API übergeben',
+    );
+    final audit = await env.storage.audit.query(
+      const AuditFilter(kinds: {AuditKind.confirmation, AuditKind.escalation}),
+    );
+    expect(audit.map((e) => e.kind).toSet(), {
+      AuditKind.confirmation,
+      AuditKind.escalation,
+    });
+  });
+
+  test('Anbieter nicht erreichbar: klare Meldung, Claude wird nie gefragt '
+      '(K28)', () async {
+    await setUpEnv(
+      phala: [
+        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.error(const NetworkException('weg')),
+      ],
+      claude: [ScriptedTurn.text('nie')],
+    );
+    final s = await send('Wie spät ist es?');
+    expect(llm['phala']!.requests, hasLength(2), reason: 'ein Retry');
+    expect(llm['claude']!.requests, isEmpty);
+    expect(s.pending, isNull);
+    final notice = s.entries.whereType<NoticeEntry>().single;
+    expect(notice.kind, NoticeKind.error);
+    expect(notice.text, 'Phala GLM ist gerade nicht erreichbar.');
+    final audit = await env.storage.audit.query(
+      const AuditFilter(kinds: {AuditKind.escalation, AuditKind.confirmation}),
+    );
+    expect(audit, isEmpty);
   });
 
   group('Gedächtnis je Ziel (Review WP26)', () {

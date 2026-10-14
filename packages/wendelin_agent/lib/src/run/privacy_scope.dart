@@ -70,17 +70,6 @@ final class PrivacyScope {
   /// Marks call [callId] as refused (the target may not see its tool).
   void refuse(String callId) => _refused.add(callId);
 
-  /// Whether this run holds results of tools [next] may not see: it gets
-  /// them redacted, but the user decides whether to hand over at all.
-  bool holdsProtectedFor(Resolution next) {
-    final nextCatalog = runner.catalogFor?.call(next.privacy);
-    return nextCatalog != null &&
-        _state.executed.any(
-          (e) =>
-              !isDeclined(e.outcome) && nextCatalog.lookup(e.call.name) == null,
-        );
-  }
-
   /// The memory entries the current target may see in the system prompt.
   List<MemoryItem> visibleMemories() {
     // Memory entries of private runs only for targets of their level.

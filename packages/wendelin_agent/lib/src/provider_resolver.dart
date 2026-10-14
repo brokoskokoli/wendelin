@@ -10,6 +10,7 @@ final class ProviderTarget {
     required this.modelId,
     required this.provider,
     required this.privacy,
+    this.name,
   });
 
   /// Provider profile id.
@@ -23,6 +24,12 @@ final class ProviderTarget {
 
   /// Data-protection level of the profile.
   final PrivacyLevel privacy;
+
+  /// Name of the profile for messages; `null` = [profileId].
+  final String? name;
+
+  /// The name shown in messages („Claude ist gerade nicht erreichbar.“).
+  String get displayName => name ?? profileId;
 
   @override
   String toString() => 'ProviderTarget($profileId, $modelId, ${privacy.name})';
@@ -39,7 +46,6 @@ final class Resolution {
     this.privacyFloor,
     this.effectiveText,
     this.requestedTarget,
-    this.routeProfileId,
   });
 
   /// Chosen provider and model.
@@ -48,8 +54,9 @@ final class Resolution {
   /// Why (rule name, „Standard“, „Eskalation“ …).
   final String reason;
 
-  /// Set when the request was routed privately: escalation targets must
-  /// offer at least this level unless the user consents.
+  /// Set when the request was routed privately: a target the user asks for
+  /// („nochmal mit …“) must offer at least this level unless the user
+  /// consents.
   final PrivacyLevel? privacyFloor;
 
   /// The user text to send to the model instead of `UserInput.text`, e.g.
@@ -57,14 +64,10 @@ final class Resolution {
   /// The stored and displayed text always stays the original.
   final String? effectiveText;
 
-  /// The user named an escalation target („nochmal mit Claude“): the agent
-  /// escalates right away, and the resolver goes to this target instead of
-  /// the next chain link (same privacy check).
+  /// The user named another target („nochmal mit Claude“): the agent hands
+  /// over right away (same privacy check). Only this ever changes the
+  /// provider of a run (K28).
   final ProviderTarget? requestedTarget;
-
-  /// Profile whose escalation chain applies; `null` = the target's profile.
-  /// Stays the same across escalations.
-  final String? routeProfileId;
 
   /// This resolution with [floor] as [privacyFloor].
   Resolution withPrivacyFloor(PrivacyLevel? floor) => Resolution(
@@ -73,7 +76,6 @@ final class Resolution {
     privacyFloor: floor,
     effectiveText: effectiveText,
     requestedTarget: requestedTarget,
-    routeProfileId: routeProfileId,
   );
 
   /// Provider profile id.
@@ -98,39 +100,31 @@ final class Resolution {
   String toString() => 'Resolution($target, $reason, floor: $privacyFloor)';
 }
 
-/// Chooses the provider for a request and the next one when escalating
-/// (concept: „Routing und Eskalation“).
+/// Chooses the provider for a request (concept: „Routing“, K28). The
+/// provider of a run only changes when the user asks for it.
 abstract interface class ProviderResolver {
   /// The provider for [input] before the run starts.
   Resolution resolve(UserInput input);
 
-  /// The next link of the escalation chain after [current], or `null` if
-  /// there is none.
+  /// The target the user asked for in [current] ([Resolution.requestedTarget],
+  /// „nochmal mit Claude“), or `null` if there is none. Never called for
+  /// errors: Wendelin does not switch providers on its own.
   ///
-  /// Privacy boundary: for a privately routed request ([Resolution.
-  /// privacyFloor] set) targets with at least that level are preferred. A
-  /// target below it is only returned if no compliant one is left, and then
+  /// Privacy boundary: a target below [Resolution.privacyFloor] is returned
   /// with [Resolution.belowPrivacyFloor] true so the agent asks the user.
   Resolution? escalate(Resolution current, EscalationReason reason);
 }
 
-/// M1 resolver: everything goes to [defaultTarget]; escalation walks
-/// [chain] in order. The rule engine follows in M3.
+/// M1 resolver: everything goes to [defaultTarget]; it has no „nochmal mit“
+/// targets. The rule engine ([RuleBasedResolver]) is the real one.
 final class DefaultProviderResolver implements ProviderResolver {
   /// Creates the resolver. [isPrivate] marks requests as privately routed
   /// (e.g. keyword „privat“); their privacy floor is the level of
   /// [defaultTarget].
-  DefaultProviderResolver(
-    this.defaultTarget,
-    List<ProviderTarget> chain, {
-    this.isPrivate,
-  }) : chain = List.unmodifiable(chain);
+  DefaultProviderResolver(this.defaultTarget, {this.isPrivate});
 
   /// Target of every request.
   final ProviderTarget defaultTarget;
-
-  /// Escalation chain after [defaultTarget], weakest first.
-  final List<ProviderTarget> chain;
 
   /// Whether a request is private; `null` = never.
   final bool Function(UserInput input)? isPrivate;
@@ -146,30 +140,5 @@ final class DefaultProviderResolver implements ProviderResolver {
   }
 
   @override
-  Resolution? escalate(Resolution current, EscalationReason reason) {
-    final all = [defaultTarget, ...chain];
-    final index = all.indexWhere(
-      (t) => t.profileId == current.profileId && t.modelId == current.modelId,
-    );
-    final remaining = all
-        .skip(index + 1)
-        .where(
-          (t) =>
-              t.profileId != current.profileId || t.modelId != current.modelId,
-        )
-        .toList();
-    if (remaining.isEmpty) return null;
-    final floor = current.privacyFloor;
-    final next = floor == null
-        ? remaining.first
-        : remaining.firstWhere(
-            (t) => t.privacy.isAtLeast(floor),
-            orElse: () => remaining.first,
-          );
-    return Resolution(
-      target: next,
-      reason: 'Eskalation: ${reason.name}',
-      privacyFloor: floor,
-    );
-  }
+  Resolution? escalate(Resolution current, EscalationReason reason) => null;
 }

@@ -13,11 +13,10 @@ import 'tool_category_matcher.dart';
 ///   whose target profile is available wins, else the default target.
 ///   `Resolution.reason` is the rule name. A `privacy` match sets the
 ///   privacy floor to the level of the rule's target (K8 d).
-/// - `escalate`: walks the chain **of the routed profile**
-///   (`RuleSet.chains`), skipping unavailable profiles; the floor stays.
-/// - „nochmal mit Name“ (de/fr/en) with a profile name, a profile alias,
-///   a rule alias or a rule's prefix/keyword word escalates directly to
-///   that target.
+/// - `escalate`: only for „nochmal mit Name“ (de/fr/en) with a profile name,
+///   a profile alias, a rule alias or a rule's prefix/keyword word: goes
+///   directly to that target; the floor stays. There is no automatic
+///   switch after errors (K28).
 final class RuleBasedProviderResolver implements ProviderResolver {
   /// Creates the resolver. Throws [ArgumentError] if the default target's
   /// profile is missing, disabled or has no adapter.
@@ -104,7 +103,6 @@ final class RuleBasedProviderResolver implements ProviderResolver {
         privacyFloor: floor,
         effectiveText: decision.effectiveText,
         requestedTarget: requested == null ? null : _build(requested),
-        routeProfileId: routed.profileId,
       );
     }
     // Private, but the winning rule's target is too weak (or the private
@@ -116,7 +114,6 @@ final class RuleBasedProviderResolver implements ProviderResolver {
       reason: reason,
       privacyFloor: floor,
       requestedTarget: requested == null ? null : _build(requested),
-      routeProfileId: target.profileId,
     );
   }
 
@@ -132,7 +129,7 @@ final class RuleBasedProviderResolver implements ProviderResolver {
   }
 
   /// The first available target with at least [floor]: the private rules'
-  /// targets, then the default target and its chain.
+  /// targets, then the default target.
   (ProviderTarget, String)? _compliant(
     List<RoutingRule> privateRules,
     PrivacyLevel floor,
@@ -140,8 +137,6 @@ final class RuleBasedProviderResolver implements ProviderResolver {
     final candidates = [
       for (final rule in privateRules) (rule.target, rule.name),
       (rules.defaultTarget, RuleSet.defaultReason),
-      for (final t in rules.chainOf(rules.defaultTarget.profileId))
-        (t, RuleSet.defaultReason),
     ];
     for (final (t, reason) in candidates) {
       final built = _build(t);
@@ -155,7 +150,6 @@ final class RuleBasedProviderResolver implements ProviderResolver {
   @override
   Resolution? escalate(Resolution current, EscalationReason reason) {
     final floor = current.privacyFloor;
-    final route = current.routeProfileId ?? current.profileId;
     final requested = current.requestedTarget;
     if (reason == EscalationReason.userRequested && requested != null) {
       // „nochmal mit <aktuelles Ziel>“ retries on the same target.
@@ -166,28 +160,9 @@ final class RuleBasedProviderResolver implements ProviderResolver {
             ? 'Nutzerwunsch: erneut'
             : 'Nutzerwunsch: ${profiles[requested.profileId]?.name}',
         privacyFloor: floor,
-        routeProfileId: route,
       );
     }
-    final chain = [for (final t in rules.chainOf(route)) ?_build(t)];
-    final index = chain.indexWhere((t) => _same(t, current.target));
-    final remaining = chain
-        .skip(index + 1)
-        .where((t) => !_same(t, current.target))
-        .toList();
-    if (remaining.isEmpty) return null;
-    final next = floor == null
-        ? remaining.first
-        : remaining.firstWhere(
-            (t) => t.privacy.isAtLeast(floor),
-            orElse: () => remaining.first,
-          );
-    return Resolution(
-      target: next,
-      reason: 'Eskalation: ${reason.name}',
-      privacyFloor: floor,
-      routeProfileId: route,
-    );
+    return null;
   }
 
   static bool _same(ProviderTarget a, ProviderTarget b) =>
@@ -201,6 +176,7 @@ final class RuleBasedProviderResolver implements ProviderResolver {
       modelId: t.modelId,
       provider: p!.provider!,
       privacy: p.privacy,
+      name: p.name,
     );
   }
 

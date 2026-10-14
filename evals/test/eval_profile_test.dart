@@ -30,7 +30,6 @@ void main() {
       }),
     );
     expect(p.profile.id, 'p');
-    expect(p.escalationModels, ['gpt-5']);
     expect(p.script, 's.yaml');
     expect(p.apiKeyVariable, 'OPENAI_API_KEY');
     final cost = p.costEstimator.estimateMicros(
@@ -41,7 +40,6 @@ void main() {
     expect(cost, 3000000);
     final other = p.withModel('gpt-5-nano');
     expect(other.profile.defaultModel, 'gpt-5-nano');
-    expect(other.escalationModels, ['gpt-5']);
   });
 
   test('Key-Variable je nach Typ', () {
@@ -86,10 +84,6 @@ void main() {
     for (final bad in [
       'kein json',
       '[]',
-      _json({'escalationModels': 'gpt-5'}),
-      _json({
-        'escalationModels': [1],
-      }),
       _json({'script': 3}),
       _json({
         'catalog': {'models': 1},

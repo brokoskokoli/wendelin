@@ -235,11 +235,11 @@ final Map<String, List<Widget>> gallerySections = {
   ],
   'SectionCard': [
     SectionCard(
-      title: 'Eskalation bei Fehlschlag',
+      title: 'Standardziel',
       dividers: false,
       padding: EdgeInsets.all(WSpace.m14),
       spacing: WSpace.xs6,
-      children: [Text('GLM klein → Sonnet → Fable', style: WText.mono)],
+      children: [Text('GLM klein', style: WText.mono)],
     ),
   ],
   'Sheet': const [

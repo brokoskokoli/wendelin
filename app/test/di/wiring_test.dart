@@ -81,7 +81,8 @@ void main() {
       expect(rule.enabled, isFalse, reason: 'kein TEE-Ziel für „Privat“');
     });
 
-    test('Standardprofil und Eskalationskette aus den Einstellungen', () async {
+    test('Standardprofil aus den Einstellungen; eine alte Eskalationskette '
+        'bleibt ohne Wirkung', () async {
       final storage = openInMemoryStorage();
       await storage.providerProfiles.save(
         _profile('local', privacy: PrivacyLevel.local),
@@ -91,7 +92,7 @@ void main() {
         _profile('kaputt', type: ProviderType.openaiCompatible),
       );
       await storage.providerProfiles.setDefault('local');
-      await storage.settings.set(AppSettings.escalationChain, [
+      await storage.settings.set(legacyEscalationChain, [
         'local',
         'weg',
         'kaputt',
@@ -102,6 +103,8 @@ void main() {
       expect(config.primary.modelId, 'claude-haiku-4-5');
       expect(config.primary.provider, isA<LlmProvider>());
       expect(config.chain.map((t) => t.profileId), ['cloud']);
+      final rules = (await storage.settings.get(RoutingSettings.rules))!;
+      expect(rules.rules.map((r) => r.id), [privateRuleId]);
       expect(config.nameOf('cloud'), 'Profil cloud');
       expect(config.nameOf('unbekannt'), 'unbekannt');
       expect(config.lowestPrivacy, PrivacyLevel.standard);
@@ -116,14 +119,17 @@ void main() {
       await expectLater(load(storage), throwsArgumentError);
     });
 
-    test('Eskalationskette: ungültiger Wert wird abgelehnt', () {
-      expect(
-        () => AppSettings.escalationChain.decode([1, 2]),
-        throwsFormatException,
-      );
-      expect(AppSettings.escalationChain.decode(['a']), ['a']);
-      expect(AppSettings.escalationChain.encode(['a']), ['a']);
-    });
+    test(
+      'ein ungültiger alter Eskalationswert stört das Laden nicht',
+      () async {
+        final storage = openInMemoryStorage();
+        await storage.providerProfiles.save(_profile('cloud'));
+        await storage.providerProfiles.setDefault('cloud');
+        await storage.settings.set(legacyEscalationChain, [1, 2, 'kaputt']);
+        final config = (await load(storage))!;
+        expect(config.primary.profileId, 'cloud');
+      },
+    );
   });
 
   test('ProviderConfig.lowestPrivacy ist die schwächste Stufe der Kette', () {

@@ -375,13 +375,13 @@ void main() {
   });
 
   test(
-    'Eskalation unter die Datenschutzstufe: Zustimmung wird weitergegeben',
+    'Anbieter fällt aus: Meldung mit Grund, nie ein Wechsel (K28)',
     () async {
       final private = FakeLlmProvider([
         ScriptedTurn.error(const RateLimitException('voll')),
         ScriptedTurn.error(const RateLimitException('voll')),
       ]);
-      final cloud = FakeLlmProvider([ScriptedTurn.text('Hier bin ich.')]);
+      final cloud = FakeLlmProvider([ScriptedTurn.text('nie')]);
       final config = scripted(
         private,
         id: 'local',
@@ -402,28 +402,25 @@ void main() {
       c = env.container();
       final controller = c.read(agentControllerProvider.notifier);
       await controller.send('privat: wie spät ist es');
-      final asking = await waitFor(c, (s) => s.pending != null);
-      final q = asking.pending! as EscalationQuestion;
-      expect(q.toName, 'Claude Sonnet');
-      expect(cloud.requests, isEmpty);
-      controller.answer(approved: true);
       await controller.idle;
       await c.read(auditRecorderProvider).flush();
-      expect(cloud.requests, hasLength(1));
+      expect(private.requests, hasLength(2));
+      expect(cloud.requests, isEmpty);
       final s = c.read(agentControllerProvider);
+      expect(s.pending, isNull);
+      expect(s.entries.whereType<EscalationEntry>(), isEmpty);
+      final notice = s.entries.whereType<NoticeEntry>().single;
+      expect(notice.kind, NoticeKind.error);
       expect(
-        s.entries.whereType<EscalationEntry>().single.label,
-        'an Claude Sonnet übergeben',
+        notice.text,
+        'Ollama hat das Kontingent erreicht (zu viele Anfragen).',
       );
       final audit = await env.storage.audit.query(
         const AuditFilter(
           kinds: {AuditKind.confirmation, AuditKind.escalation},
         ),
       );
-      expect(audit.map((e) => e.kind).toSet(), {
-        AuditKind.confirmation,
-        AuditKind.escalation,
-      });
+      expect(audit, isEmpty);
     },
   );
 
@@ -720,11 +717,8 @@ void main() {
     });
 
     test('Werkzeuge nach der Stufe des aktuellen Ziels (WP14)', () async {
-      final provider = FakeLlmProvider([
-        ScriptedTurn.error(const NetworkException('weg')),
-        ScriptedTurn.error(const NetworkException('weg')),
-      ]);
-      final cloud = FakeLlmProvider([ScriptedTurn.text('ok')]);
+      final provider = FakeLlmProvider([ScriptedTurn.text('ok')]);
+      final cloud = FakeLlmProvider(const []);
       env = TestEnv(
         providerConfig: scripted(
           provider,
@@ -749,10 +743,8 @@ void main() {
       final teeTools = provider.requests.first.tools.map((t) => t.name);
       expect(teeTools, contains('calendar__create_event'));
       expect(teeTools, contains('alarms__set_timer'));
-      // … das Standard-Ziel nach der Eskalation nicht.
-      final cloudTools = cloud.requests.single.tools.map((t) => t.name);
-      expect(cloudTools.where((n) => n.startsWith('calendar__')), isEmpty);
-      expect(cloudTools, contains('alarms__set_timer'));
+      // … und das Standard-Ziel wird nie angefragt (kein Wechsel, K28).
+      expect(cloud.requests, isEmpty);
     });
   });
 

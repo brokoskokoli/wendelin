@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/export.dart';
-import 'package:wendelin/ui/settings/routing/chain_editor_screen.dart';
 import 'package:wendelin/ui/settings/routing/condition_builder.dart';
 import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin/ui/settings/routing/rule_editor_screen.dart';
@@ -76,12 +75,6 @@ RuleSet designRules() => RuleSet(
     ),
   ],
   defaultTarget: const RouteTarget(profileId: 'phala', modelId: 'GLM klein'),
-  chains: {
-    'phala': [
-      const RouteTarget(profileId: 'claude', modelId: 'Sonnet'),
-      const RouteTarget(profileId: 'claude', modelId: 'Fable'),
-    ],
-  },
 );
 
 /// Environment with the design's profiles and [rules].
@@ -196,7 +189,6 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Phala GLM → Claude API → Fable'), findsOneWidget);
   });
 
   testWidgets('Regel „offline“ greift bei Fake-Netz offline', (tester) async {
@@ -458,6 +450,35 @@ void main() {
     expect(ruleTile('Nur Neues'), findsOneWidget);
   });
 
+  testWidgets('Import eines alten Exports: Ketten werden übersprungen, mit '
+      'Hinweis (K28)', (tester) async {
+    final old = {
+      ...RuleSetJson().encode(designRules()),
+      'chains': {
+        'phala': [
+          {'profileId': 'claude', 'modelId': 'Sonnet'},
+        ],
+        'claude': <Object?>[],
+      },
+    };
+    final env = await routingEnv(importer: () async => jsonEncode(old));
+    await pumpRouting(tester, env);
+    await tester.tap(find.text('Importieren'));
+    await tester.pumpAndSettle();
+    expect(find.text('Regeln importieren?'), findsOneWidget);
+    expect(
+      find.textContaining('Die Datei enthält Eskalationsketten. Sie wurden '),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Ersetzen'));
+    await settle(tester);
+    expect(await stored(env), designRules());
+    expect(
+      RuleSetJson().encode(await stored(env)).containsKey('chains'),
+      isFalse,
+    );
+  });
+
   testWidgets('Import: kaputte Datei zeigt den Fehler mit Pfad', (
     tester,
   ) async {
@@ -525,44 +546,14 @@ void main() {
     expect((await env.storage.providerProfiles.defaultProfile())!.id, 'ollama');
   });
 
-  testWidgets('Eskalationsketten je Profil: Stufe, Hinweis, entfernen, '
-      'hinzufügen', (tester) async {
+  testWidgets('keine Eskalationsketten mehr: weder Karte noch Seite (K28)', (
+    tester,
+  ) async {
     final env = await routingEnv();
     await pumpRouting(tester, env);
-    await tester.tap(find.text('Eskalation bei Fehlschlag'));
-    await settle(tester);
-    expect(find.byType(ChainEditorScreen), findsOneWidget);
-    expect(find.text('1. Claude API · Sonnet'), findsOneWidget);
-    expect(find.text('2. Claude API · Fable'), findsOneWidget);
-    expect(find.byType(PrivacyChip), findsNWidgets(2));
-    expect(find.text(belowLevelHint(PrivacyLevel.tee)), findsNWidgets(2));
-
-    await tester.tap(find.byTooltip('Glied 1 entfernen'));
-    await settle(tester);
-    expect((await stored(env)).chainOf('phala'), [
-      const RouteTarget(profileId: 'claude', modelId: 'Fable'),
-    ]);
-
-    await tester.tap(find.text('+ Glied'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Claude API · Standard').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Ollama Homeserver · lokal').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Übernehmen'));
-    await settle(tester);
-    expect((await stored(env)).chainOf('phala'), [
-      const RouteTarget(profileId: 'claude', modelId: 'Fable'),
-      const RouteTarget(profileId: 'ollama', modelId: 'qwen'),
-    ]);
-    expect(find.text(belowLevelHint(PrivacyLevel.tee)), findsOneWidget);
-
-    // Kette eines anderen Profils: leer.
-    await tester.tap(find.text('Phala GLM · TEE'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Claude API · Standard').last);
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Keine Kette'), findsOneWidget);
+    expect(find.text('Eskalation bei Fehlschlag'), findsNothing);
+    expect(find.textContaining('Eskalationsketten'), findsNothing);
+    expect(find.textContaining('Kette'), findsNothing);
   });
 
   testWidgets('tiefer verschachtelte Bedingung aus Import bleibt erhalten', (

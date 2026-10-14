@@ -104,34 +104,30 @@ void main() {
       expect(sentText(claude), contains(secret));
     });
 
-    test('retry without a name keeps the floor too', () async {
-      final (primary, _) = scripted('x', const []);
-      final h2 = Harness(
-        primary: primary,
-        resolver: conceptResolver(
-          rules: conceptRules(
-            chains: {
-              'phala': [claudeSonnet],
-            },
+    test(
+      'retry without a name stays at the target (no automatic switch)',
+      () async {
+        final (primary, _) = scripted('x', const []);
+        final h2 = Harness(
+          primary: primary,
+          resolver: conceptResolver(
+            profiles: withProviders({'phala': phala, 'claude': claude}),
           ),
-          profiles: withProviders({'phala': phala, 'claude': claude}),
-        ),
-      );
-      await h2.run('privat: $secret');
-      final asked = <EscalationConfirmationRequired>[];
-      await h2.run(
-        'das war falsch',
-        requestEscalation: true,
-        onEvent: (e) {
-          if (e is EscalationConfirmationRequired) {
-            asked.add(e);
-            e.respond(false);
-          }
-        },
-      );
-      expect(asked.single.toProfile, 'claude');
-      expect(claude.requests, isEmpty);
-    });
+        );
+        await h2.run('privat: $secret');
+        final asked = <EscalationConfirmationRequired>[];
+        final events = await h2.run(
+          'das war falsch',
+          requestEscalation: true,
+          onEvent: (e) {
+            if (e is EscalationConfirmationRequired) asked.add(e);
+          },
+        );
+        expect(asked, isEmpty);
+        expect(events.whereType<Escalated>(), isEmpty);
+        expect(claude.requests, isEmpty);
+      },
+    );
   });
 
   group('earlier private turns are hidden from weaker targets (2)', () {
@@ -205,37 +201,42 @@ void main() {
       expect(sentText(provider), contains(secret));
     });
 
-    test('a run that saw them is tainted: escalation below asks', () async {
-      final (primary, phala) = scripted('phala', [
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-      ], privacy: PrivacyLevel.tee);
-      final (claudeTarget, claude) = scripted('claude', [
-        ScriptedTurn.text('Hier.'),
-      ]);
-      final h = Harness(
-        primary: primary,
-        chain: [claudeTarget],
-        history: history,
-      );
-      final asked = <EscalationConfirmationRequired>[];
-      await h.run(
-        'Wetter?',
-        onEvent: (e) {
-          if (e is EscalationConfirmationRequired) {
-            asked.add(e);
-            e.respond(false);
-          }
-        },
-      );
-      expect(asked.single.toProfile, 'claude');
-      expect(sentText(phala), contains(secret));
-      expect(claude.requests, isEmpty);
-      expect(
-        h.conversation.messages.skip(history.length).map((m) => m.privacyFloor),
-        everyElement(PrivacyLevel.tee),
-      );
-    });
+    test(
+      'a run that saw them is tainted: a request to go below asks',
+      () async {
+        final (primary, phala) = scripted('phala', [
+          ScriptedTurn.text('Phala bleibt.'),
+        ], privacy: PrivacyLevel.tee);
+        final (claudeTarget, claude) = scripted('claude', [
+          ScriptedTurn.text('Hier.'),
+        ]);
+        final h = Harness(
+          primary: primary,
+          chain: [claudeTarget],
+          history: history,
+        );
+        final asked = <EscalationConfirmationRequired>[];
+        await h.run(
+          'Wetter?',
+          requestEscalation: true,
+          onEvent: (e) {
+            if (e is EscalationConfirmationRequired) {
+              asked.add(e);
+              e.respond(false);
+            }
+          },
+        );
+        expect(asked.single.toProfile, 'claude');
+        expect(sentText(phala), contains(secret));
+        expect(claude.requests, isEmpty);
+        expect(
+          h.conversation.messages
+              .skip(history.length)
+              .map((m) => m.privacyFloor),
+          everyElement(PrivacyLevel.tee),
+        );
+      },
+    );
 
     test('a hidden turn without answer gives only the user placeholder', () {
       final hist = [
@@ -257,7 +258,7 @@ void main() {
   });
 
   group('privacy does not fail open (3) and ignores rule order (6)', () {
-    RuleSet weakDefault({List<RouteTarget> chain = const []}) => RuleSet(
+    RuleSet weakDefault() => RuleSet(
       rules: [
         RoutingRule(
           id: 'private',
@@ -267,12 +268,11 @@ void main() {
         ),
       ],
       defaultTarget: claudeSonnet,
-      chains: {'claude': chain},
     );
 
     test('private rule target disabled: floor tee, compliant fallback', () {
       final resolver = conceptResolver(
-        rules: weakDefault(chain: [claudeOpus, ollama]),
+        rules: weakDefault().copyWith(defaultTarget: ollama),
         profiles: conceptProfiles(disabled: {'phala'}),
       );
       final r = resolver.resolve(UserInput(text: 'privat: $secret'));
@@ -450,26 +450,20 @@ void main() {
     test('tainted run escalating to Claude asks first', () async {
       final phala = FakeLlmProvider([
         ScriptedTurn.text('Notiert.'),
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
+        ScriptedTurn.text('Kurz.'),
       ]);
       final claude = FakeLlmProvider([ScriptedTurn.text('Zusammenfassung')]);
       final (primary, _) = scripted('x', const []);
       final h = Harness(
         primary: primary,
         resolver: conceptResolver(
-          rules: conceptRules(
-            chains: {
-              'phala': [claudeSonnet],
-            },
-          ),
           profiles: withProviders({'phala': phala, 'claude': claude}),
         ),
       );
       await h.run('privat: $geheim');
       final asked = <EscalationConfirmationRequired>[];
       await h.run(
-        'fasse das kurz zusammen',
+        'nochmal mit Claude',
         onEvent: (e) {
           if (e is EscalationConfirmationRequired) {
             asked.add(e);
@@ -480,44 +474,6 @@ void main() {
       expect(asked.single.toProfile, 'claude');
       expect(claude.requests, isEmpty);
     });
-
-    test(
-      'escalation from Claude to Phala taints the rest of the run',
-      () async {
-        final phala = FakeLlmProvider([
-          ScriptedTurn.text('Notiert.'),
-          ScriptedTurn.text('Kurz: $geheim.'),
-        ]);
-        final claude = FakeLlmProvider([
-          ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-          ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-          ScriptedTurn.text('Meinung.'),
-        ]);
-        final (primary, _) = scripted('x', const []);
-        final h = Harness(
-          primary: primary,
-          resolver: conceptResolver(
-            rules: conceptRules(
-              chains: {
-                'claude': [phalaLarge],
-              },
-            ),
-            profiles: withProviders({'phala': phala, 'claude': claude}),
-          ),
-        );
-        await h.run('privat: $geheim');
-        final events = await h.run('Claude, fasse das kurz zusammen');
-        expect(events.whereType<Escalated>().single.toProfile, 'phala');
-        // Claude's failed attempts saw placeholders only.
-        expect(sentText(claude), isNot(contains('GEHEIM')));
-        final turn2 = h.conversation.messages.skip(2).toList();
-        expect(turn2.first.privacyFloor, isNull, reason: 'user text');
-        expect(turn2.last.text, contains('GEHEIM'));
-        expect(turn2.last.privacyFloor, PrivacyLevel.tee);
-        await h.run('Claude, was meinst du dazu?');
-        expect(sentText(claude), isNot(contains('GEHEIM')));
-      },
-    );
   });
 
   group('memory of private runs (re-review 2)', () {
@@ -575,10 +531,7 @@ void main() {
 
     test('memoryFloor: a TEE run with memory is tainted, escalation to '
         'standard asks first', () async {
-      final phala = FakeLlmProvider([
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-      ]);
+      final phala = FakeLlmProvider([ScriptedTurn.text('Ok.')]);
       final claude = FakeLlmProvider([ScriptedTurn.text('Tee.')]);
       final h = Harness(
         primary: ProviderTarget(
@@ -603,6 +556,7 @@ void main() {
       final asked = <EscalationConfirmationRequired>[];
       await h.run(
         'Was trinke ich gern?',
+        requestEscalation: true,
         onEvent: (e) {
           if (e is EscalationConfirmationRequired) {
             asked.add(e);
@@ -618,10 +572,7 @@ void main() {
 
     test('memoryFloor: „Ja“ zur Eskalation gibt dem Standard-Ziel kein '
         'Gedächtnis (K10 c)', () async {
-      final phala = FakeLlmProvider([
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-      ]);
+      final phala = FakeLlmProvider(const []);
       final claude = FakeLlmProvider([ScriptedTurn.text('Tee.')]);
       final h = Harness(
         primary: ProviderTarget(
@@ -650,11 +601,12 @@ void main() {
       );
       await h.run(
         'Was trinke ich gern?',
+        requestEscalation: true,
         onEvent: (e) {
           if (e is EscalationConfirmationRequired) e.respond(true);
         },
       );
-      expect(phala.requests.first.systemPrompt, contains('Mag Tee'));
+      expect(phala.requests, isEmpty);
       final prompt = claude.requests.single.systemPrompt!;
       expect(prompt, isNot(contains('Mag Tee')));
       expect(prompt, isNot(contains('Knie-OP')));
@@ -663,10 +615,7 @@ void main() {
 
     test('ohne memoryFloor hebt „Ja“ nur die Untergrenze des Eintrags auf '
         '(K13 e)', () async {
-      final phala = FakeLlmProvider([
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-        ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
-      ]);
+      final phala = FakeLlmProvider(const []);
       final claude = FakeLlmProvider([ScriptedTurn.text('ok')]);
       final h = Harness(
         primary: ProviderTarget(
@@ -693,6 +642,7 @@ void main() {
       );
       await h.run(
         'Wie geht es dem Knie?',
+        requestEscalation: true,
         onEvent: (e) {
           if (e is EscalationConfirmationRequired) e.respond(true);
         },

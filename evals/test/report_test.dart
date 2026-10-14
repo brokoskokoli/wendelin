@@ -29,7 +29,7 @@ void main() {
       reasons: ['x' * 150],
       observation: const RunObservation(
         gaveUp: true,
-        escalations: [(to: 's', reason: EscalationReason.modelGaveUp)],
+        escalations: [(to: 's', reason: EscalationReason.userRequested)],
       ),
     ),
     CaseResult(
@@ -89,7 +89,7 @@ void main() {
     expect(t, contains('FEHL'));
     expect(t, contains('ABBRUCH'));
     expect(t, contains('skip'));
-    expect(t, contains('aufgegeben; eskaliert(modelGaveUp)'));
+    expect(t, contains('aufgegeben; eskaliert(userRequested)'));
     expect(t, contains('...'));
     expect(t, contains('gesamt'));
     expect(t, contains('0.0000+?'));

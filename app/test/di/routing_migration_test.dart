@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/agent_factory.dart';
-import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/routing.dart';
 import 'package:wendelin_agent/fakes.dart';
@@ -32,7 +31,7 @@ ProviderProfile _profile(
 );
 
 /// Storage as M2 left it: profiles, a default profile and the global
-/// escalation chain (`routing.escalationChain`), no rules yet.
+/// escalation chain (`routing.escalationChain`, ignored now), no rules yet.
 Future<WendelinStorage> _m2Storage({
   required List<ProviderProfile> profiles,
   required String defaultId,
@@ -43,7 +42,7 @@ Future<WendelinStorage> _m2Storage({
     await storage.providerProfiles.save(p);
   }
   await storage.providerProfiles.setDefault(defaultId);
-  await storage.settings.set(AppSettings.escalationChain, chain);
+  await storage.settings.set(legacyEscalationChain, chain);
   return storage;
 }
 
@@ -67,8 +66,8 @@ void main() {
   );
 
   group('Migration der M2-Einstellungen', () {
-    test('globale Kette wird die Kette des Standardprofils, Verhalten wie '
-        'DefaultProviderResolver', () async {
+    test('die alte globale Kette hat keine Wirkung (K28), Verhalten wie '
+        'DefaultProviderResolver ohne Kette', () async {
       final storage = await _m2Storage(
         profiles: [
           _profile('local', privacy: PrivacyLevel.local),
@@ -83,10 +82,7 @@ void main() {
       final rules = (await storage.settings.get(RoutingSettings.rules))!;
       expect(rules, config.routing!.rules, reason: 'einmalig gespeichert');
       expect(rules.defaultTarget.profileId, 'local');
-      expect(rules.chainOf('local').map((t) => t.profileId), [
-        'kaputt',
-        'cloud',
-      ]);
+      expect(rules.rules.map((r) => r.id), [privateRuleId]);
       expect(config.primary.profileId, 'local');
       expect(config.chain.map((t) => t.profileId), ['cloud']);
       expect(config.nameOf('cloud'), 'Profil cloud');
@@ -95,7 +91,6 @@ void main() {
       // Vergleich mit dem M2-Resolver (privat = Schlüsselwort „privat“).
       final m2 = DefaultProviderResolver(
         config.primary,
-        config.chain,
         isPrivate: (i) => i.text.toLowerCase().contains('privat'),
       );
       final m3 = config.resolver();
@@ -111,12 +106,9 @@ void main() {
         expect(b.profileId, a.profileId, reason: text);
         expect(b.modelId, a.modelId, reason: text);
         expect(b.privacyFloor, a.privacyFloor, reason: text);
-        final ea = m2.escalate(a, EscalationReason.providerError)!;
-        final eb = m3.escalate(b, EscalationReason.providerError)!;
-        expect(eb.profileId, ea.profileId, reason: text);
-        expect(eb.modelId, ea.modelId, reason: text);
-        expect(eb.belowPrivacyFloor, ea.belowPrivacyFloor, reason: text);
-        expect(m3.escalate(eb, EscalationReason.providerError), isNull);
+        // Nothing follows on its own, whatever the old chain said.
+        expect(m2.escalate(a, EscalationReason.userRequested), isNull);
+        expect(m3.escalate(b, EscalationReason.userRequested), isNull);
       }
     });
 
@@ -186,7 +178,7 @@ void main() {
         chain: ['b'],
       );
       final first = (await loadRuleSet(storage))!;
-      await storage.settings.set(AppSettings.escalationChain, ['x']);
+      await storage.settings.set(legacyEscalationChain, ['x']);
       expect(await loadRuleSet(storage), first, reason: 'keine 2. Migration');
 
       await storage.providerProfiles.setDefault('b');
@@ -195,7 +187,6 @@ void main() {
         moved.defaultTarget,
         const RouteTarget(profileId: 'b', modelId: 'model-b'),
       );
-      expect(moved.chains, first.chains, reason: 'Ketten bleiben');
       expect(await storage.settings.get(RoutingSettings.rules), moved);
     });
 
@@ -263,7 +254,6 @@ void main() {
       final now = (await storage.settings.get(RoutingSettings.rules))!;
       expect(now.defaultTarget.modelId, 'neu');
       expect(now.rules.map((r) => r.target.modelId), ['neu', 'gewaehlt']);
-      expect(now.chainOf('a').single.modelId, 'model-b');
     },
   );
 

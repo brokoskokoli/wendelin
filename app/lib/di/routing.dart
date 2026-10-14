@@ -8,19 +8,18 @@ import 'package:wendelin_providers/wendelin_providers.dart'
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../platform/channel_network_status.dart';
-import 'app_settings.dart';
 import 'profiles.dart';
 import 'providers.dart';
 
 // Routing rules of the app (WP26, ADR 0009): stored as JSON in the
-// settings, migrated once from the M2 escalation chain, edited on the
+// settings, created once with the preset rule „Privat“, edited on the
 // routing page and turned into a `RuleBasedProviderResolver` by
 // `loadProviderConfig`.
 
 /// Settings keys of the routing.
 abstract final class RoutingSettings {
   /// The rule set (`RuleSetJson`, schema version 1). Absent until the first
-  /// load with a default profile migrates the M2 settings.
+  /// load with a default profile creates the preset.
   static final rules = SettingKey<RuleSet>(
     'routing.rules',
     encode: (r) => RuleSetJson().encode(r),
@@ -61,33 +60,24 @@ RoutingRule privatePresetRule(
   );
 }
 
-/// Migration of the M2 settings (ADR 0009 §5): the global escalation chain
-/// becomes the chain of the default profile, plus the preset rule
-/// „Privat“. Unknown profile ids in [legacyChain] are dropped.
+/// The first rule set (ADR 0009 §5): the default target and the preset rule
+/// „Privat“. A stored M2 escalation chain (`routing.escalationChain`) is
+/// ignored since K28: Wendelin never switches providers on its own.
 RuleSet migrateRuleSet({
   required List<ProviderProfile> profiles,
   required ProviderProfile defaultProfile,
-  required List<String> legacyChain,
-}) {
-  final byId = {for (final p in profiles) p.id: p};
-  return RuleSet.fromGlobalChain(
-    defaultTarget: RouteTarget(
-      profileId: defaultProfile.id,
-      modelId: defaultProfile.defaultModel,
-    ),
-    globalChain: [
-      for (final id in legacyChain)
-        if (byId[id] case final p?)
-          RouteTarget(profileId: p.id, modelId: p.defaultModel),
-    ],
-    rules: [privatePresetRule(profiles, defaultProfile)],
-  );
-}
+}) => RuleSet(
+  defaultTarget: RouteTarget(
+    profileId: defaultProfile.id,
+    modelId: defaultProfile.defaultModel,
+  ),
+  rules: [privatePresetRule(profiles, defaultProfile)],
+);
 
 /// The stored rule set, `null` without a default profile.
 ///
-/// The first call with a default profile migrates the M2 settings
-/// ([migrateRuleSet]) and stores the result. The default profile of the
+/// The first call with a default profile creates the rule set
+/// ([migrateRuleSet]) and stores it. The default profile of the
 /// profile list stays the source of truth for the default target's
 /// profile: if it changed (set or deleted in „Provider“), the rule set
 /// follows with that profile's default model.
@@ -102,7 +92,6 @@ Future<RuleSet?> loadRuleSet(WendelinStorage storage) async {
     rules = migrateRuleSet(
       profiles: await storage.providerProfiles.list(),
       defaultProfile: defaultProfile,
-      legacyChain: await settings.get(AppSettings.escalationChain) ?? const [],
     );
     await settings.set(RoutingSettings.rules, rules);
     final privat = rules.rules.where((r) => r.id == privateRuleId).first;
@@ -129,7 +118,7 @@ Future<RuleSet?> loadRuleSet(WendelinStorage storage) async {
 
 /// The default model of profile [profileId] changed from [from] to [to]
 /// (provider settings): every routing target that used the old default
-/// model of that profile (default target, rules, chain links) follows.
+/// model of that profile (default target, rules) follows.
 /// Targets with another model were chosen on purpose and stay.
 Future<void> followDefaultModel(
   WendelinStorage storage, {
@@ -146,10 +135,6 @@ Future<void> followDefaultModel(
   final updated = rules.copyWith(
     defaultTarget: follow(rules.defaultTarget),
     rules: [for (final r in rules.rules) r.copyWith(target: follow(r.target))],
-    chains: {
-      for (final MapEntry(:key, :value) in rules.chains.entries)
-        key: value.map(follow).toList(),
-    },
   );
   if (updated != rules) {
     await storage.settings.set(RoutingSettings.rules, updated);
@@ -179,7 +164,7 @@ Future<void> dismissPrivateRuleNotice(WidgetRef ref) async {
 /// Text of the hint about the rule „Privat“ for [target].
 String privateRuleNoticeText(String target) =>
     'Neu: Regel „Privat“ – Anfragen mit „privat“, „vertraulich“ … gehen an '
-    '$target und bleiben bei Eskalationen auf dessen Datenschutzstufe.';
+    '$target.';
 
 /// [profile] as the router sees it (no adapter: for the editor).
 RoutingProfile routingProfileOf(

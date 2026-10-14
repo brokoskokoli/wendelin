@@ -117,83 +117,36 @@ void main() {
     });
   });
 
-  group('escalation', () {
-    test('walks the chain of the routed profile', () {
+  group('no automatic escalation (K28)', () {
+    test('without a named target there is nothing to escalate to', () {
       final resolver = conceptResolver();
-      final r0 = resolve('hallo', r: resolver);
-      final r1 = resolver.escalate(r0, EscalationReason.providerError)!;
-      expect((r1.profileId, r1.modelId), ('phala', 'glm-large'));
-      expect(r1.reason, 'Eskalation: providerError');
-      final r2 = resolver.escalate(r1, EscalationReason.noProgress)!;
-      expect(r2.modelId, 'claude-sonnet');
-      expect(r2.routeProfileId, 'phala');
-      final r3 = resolver.escalate(r2, EscalationReason.noProgress)!;
-      expect(r3.modelId, 'claude-opus');
-      expect(resolver.escalate(r3, EscalationReason.noProgress), isNull);
-    });
-
-    test('a rule route uses its own profile chain', () {
-      final resolver = conceptResolver();
-      final r0 = resolve('Schreib die Notiz um', r: resolver);
-      expect(r0.modelId, 'claude-sonnet');
-      final r1 = resolver.escalate(r0, EscalationReason.modelGaveUp)!;
-      expect(r1.modelId, 'claude-opus');
-      expect(resolver.escalate(r1, EscalationReason.modelGaveUp), isNull);
-    });
-
-    test('a route without a chain cannot escalate', () {
-      final resolver = conceptResolver();
-      final r0 = resolve(
-        'Wie spät?',
-        r: conceptResolver(network: FixedNetworkStatus(NetworkState.offline)),
+      for (final text in ['hallo', 'Schreib die Notiz um', 'privat: x']) {
+        final r0 = resolve(text, r: resolver);
+        expect(
+          resolver.escalate(r0, EscalationReason.userRequested),
+          isNull,
+          reason: text,
+        );
+      }
+      final offline = conceptResolver(
+        network: FixedNetworkStatus(NetworkState.offline),
       );
-      expect(r0.profileId, 'ollama');
-      expect(resolver.escalate(r0, EscalationReason.providerError), isNull);
-    });
-
-    test('unavailable chain entries are skipped', () {
-      final resolver = conceptResolver(
-        profiles: conceptProfiles(disabled: {'claude'}),
+      expect(
+        offline.escalate(
+          resolve('Wie spät?', r: offline),
+          EscalationReason.userRequested,
+        ),
+        isNull,
       );
-      final r1 = resolver.escalate(
-        resolve('hallo', r: resolver),
-        EscalationReason.providerError,
-      )!;
-      expect(r1.modelId, 'glm-large');
-      expect(resolver.escalate(r1, EscalationReason.providerError), isNull);
     });
 
-    test('privacy floor stays the same over several escalations', () {
-      final rules = conceptRules(
-        chains: {
-          'phala': [claudeSonnet, ollama, mistral, claudeOpus],
-        },
-      );
-      final resolver = conceptResolver(rules: rules);
-      final r0 = resolve('privat: mein Kontostand', r: resolver);
-      expect(r0.privacyFloor, PrivacyLevel.tee);
-      // Claude (standard) is skipped in favour of Ollama (local).
-      final r1 = resolver.escalate(r0, EscalationReason.providerError)!;
-      expect(r1.profileId, 'ollama');
-      expect(r1.privacyFloor, PrivacyLevel.tee);
-      expect(r1.belowPrivacyFloor, isFalse);
-      // Nothing compliant is left: the next target needs consent.
-      final r2 = resolver.escalate(r1, EscalationReason.providerError)!;
-      expect(r2.profileId, 'mistral');
-      expect(r2.privacyFloor, PrivacyLevel.tee);
-      expect(r2.belowPrivacyFloor, isTrue);
-      final r3 = resolver.escalate(r2, EscalationReason.providerError)!;
-      expect(r3.modelId, 'claude-opus');
-      expect(r3.privacyFloor, PrivacyLevel.tee);
-      expect(r3.belowPrivacyFloor, isTrue);
-    });
-
-    test('target below the floor needs confirmation in the agent', () async {
+    test('an error of the routed target never reaches another one', () async {
       final (_, phala) = scripted('phala', [
         ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
         ScriptedTurn.error(const ServerException('kaputt', statusCode: 500)),
       ]);
-      final (_, claude) = scripted('claude', [ScriptedTurn.text('Hier.')]);
+      final (_, claude) = scripted('claude', [ScriptedTurn.text('nie')]);
+      final (_, ollama) = scripted('ollama', [ScriptedTurn.text('nie')]);
       final profiles = [
         for (final p in conceptProfiles())
           RoutingProfile(
@@ -204,33 +157,36 @@ void main() {
             provider: switch (p.id) {
               'phala' => phala,
               'claude' => claude,
+              'ollama' => ollama,
               _ => p.provider,
             },
           ),
       ];
-      final rules = conceptRules(
-        chains: {
-          'phala': [claudeSonnet],
-        },
-      );
       final (primary, _) = scripted('x', const []);
       final h = Harness(
         primary: primary,
-        resolver: conceptResolver(rules: rules, profiles: profiles),
+        resolver: conceptResolver(profiles: profiles),
       );
-      final asked = <EscalationConfirmationRequired>[];
-      final events = await h.run(
-        'privat: Kontostand',
-        onEvent: (e) {
-          if (e is EscalationConfirmationRequired) {
-            asked.add(e);
-            e.respond(true);
-          }
-        },
-      );
-      expect(asked.single.toProfile, 'claude');
-      expect(events.whereType<Escalated>().single.toProfile, 'claude');
-      expect(terminal(events), isA<AgentDone>());
+      for (final text in ['hallo', 'privat: Kontostand']) {
+        final events = await h.run(text);
+        expect(events.whereType<Escalated>(), isEmpty, reason: text);
+        expect(
+          events.whereType<EscalationConfirmationRequired>(),
+          isEmpty,
+          reason: text,
+        );
+        expect(
+          (terminal(events) as AgentFailed).error,
+          AgentErrorKind.provider,
+        );
+        expect(
+          (terminal(events) as AgentFailed).message,
+          startsWith('Phala'),
+          reason: text,
+        );
+      }
+      expect(claude.requests, isEmpty);
+      expect(ollama.requests, isEmpty);
     });
   });
 
@@ -274,7 +230,7 @@ void main() {
       });
     }
 
-    test('jumps to the named target instead of the next chain link', () {
+    test('jumps to the named target', () {
       final resolver = conceptResolver();
       final r0 = resolve('nochmal mit Claude', r: resolver);
       expect(r0.profileId, 'phala');
@@ -282,28 +238,11 @@ void main() {
       expect(r1.modelId, 'claude-opus');
       expect(r1.reason, 'Nutzerwunsch: Claude API');
       expect(r1.requestedTarget, isNull);
-      // Further escalations continue on the routed profile's chain after
-      // the named target: Opus is its last link.
-      expect(resolver.escalate(r1, EscalationReason.providerError), isNull);
+      // Nothing follows on its own: no further target.
+      expect(resolver.escalate(r1, EscalationReason.userRequested), isNull);
     });
 
-    test('a named target outside the chain continues with the chain', () {
-      final resolver = conceptResolver();
-      final r0 = resolve('nochmal mit Ollama Homeserver', r: resolver);
-      final r1 = resolver.escalate(r0, EscalationReason.userRequested)!;
-      expect(r1.profileId, 'ollama');
-      final r2 = resolver.escalate(r1, EscalationReason.providerError)!;
-      expect(r2.modelId, 'glm-large');
-    });
-
-    test('other reasons ignore the named target', () {
-      final resolver = conceptResolver();
-      final r0 = resolve('nochmal mit Claude', r: resolver);
-      final r1 = resolver.escalate(r0, EscalationReason.providerError)!;
-      expect(r1.modelId, 'glm-large');
-    });
-
-    test('naming the current target retries on it (no next link)', () {
+    test('naming the current target retries on it', () {
       final resolver = conceptResolver();
       final r0 = resolve('nochmal mit Phala GLM klein', r: resolver);
       final r1 = resolver.escalate(r0, EscalationReason.userRequested)!;
@@ -450,67 +389,6 @@ void main() {
         resolver.contextFor(UserInput(text: 'x')).network,
         NetworkState.offline,
       );
-    });
-  });
-
-  group('migration of the global chain', () {
-    test('becomes the chain of the default profile', () {
-      final set = RuleSet.fromGlobalChain(
-        defaultTarget: phalaSmall,
-        globalChain: [claudeSonnet, phalaLarge, ollama, claudeOpus],
-      );
-      expect(set.rules, isEmpty);
-      expect(set.defaultTarget, phalaSmall);
-      expect(set.chains.keys, ['phala']);
-      // The default profile itself and repeated profiles are dropped.
-      expect(set.chainOf('phala'), [claudeSonnet, ollama]);
-      expect(set.chainOf('claude'), isEmpty);
-    });
-
-    test('empty global chain gives no chains', () {
-      final set = RuleSet.fromGlobalChain(
-        defaultTarget: phalaSmall,
-        globalChain: const [],
-      );
-      expect(set.chains, isEmpty);
-    });
-
-    test('behaves like the DefaultProviderResolver', () {
-      final legacyChain = [claudeSonnet, ollama];
-      final profiles = conceptProfiles();
-      ProviderTarget build(RouteTarget t) {
-        final p = profiles.firstWhere((p) => p.id == t.profileId);
-        return ProviderTarget(
-          profileId: t.profileId,
-          modelId: t.modelId,
-          provider: p.provider!,
-          privacy: p.privacy,
-        );
-      }
-
-      final old = DefaultProviderResolver(
-        build(phalaSmall),
-        legacyChain.map(build).toList(),
-      );
-      final migrated = conceptResolver(
-        rules: RuleSet.fromGlobalChain(
-          defaultTarget: phalaSmall,
-          globalChain: legacyChain,
-        ),
-        profiles: profiles,
-      );
-      final input = UserInput(text: 'hallo');
-      var a = old.resolve(input);
-      var b = migrated.resolve(input);
-      while (true) {
-        expect((b.profileId, b.modelId), (a.profileId, a.modelId));
-        final na = old.escalate(a, EscalationReason.providerError);
-        final nb = migrated.escalate(b, EscalationReason.providerError);
-        expect(nb == null, na == null);
-        if (na == null || nb == null) break;
-        a = na;
-        b = nb;
-      }
     });
   });
 

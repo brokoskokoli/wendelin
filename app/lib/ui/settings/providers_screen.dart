@@ -12,7 +12,7 @@ import 'provider_setup_screen.dart';
 import 'settings_page.dart';
 
 /// Settings → Provider: profiles with privacy chip and the default
-/// profile; the escalation chains per profile are on the routing page.
+/// profile.
 class ProvidersScreen extends ConsumerWidget {
   /// Creates the screen.
   const ProvidersScreen({super.key});
@@ -26,8 +26,8 @@ class ProvidersScreen extends ConsumerWidget {
       title: 'Provider',
       intro:
           'Der Standard bekommt jede Anfrage, für die keine Routing-Regel '
-          'greift. Scheitert ein Provider, übergibt Wendelin an seine '
-          'Eskalationskette.',
+          'greift. Scheitert er, sagt Wendelin das klar und wechselt nie von '
+          'selbst zu einem anderen Anbieter.',
       children: [
         if (data == null)
           Text(
@@ -57,11 +57,11 @@ class ProvidersScreen extends ConsumerWidget {
             ),
           if (data.profiles.length > 1)
             SettingsSection(
-              title: 'Eskalationsketten',
+              title: 'Anbieterwahl',
               children: [
                 SettingsRow(
                   title: 'Routing',
-                  detail: 'Regeln und Ketten je Profil',
+                  detail: 'Regeln für die Wahl des Anbieters',
                   onTap: () =>
                       Navigator.of(context).pushNamed(AppRoutes.routing),
                 ),

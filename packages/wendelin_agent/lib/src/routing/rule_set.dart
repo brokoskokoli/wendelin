@@ -118,40 +118,13 @@ final class RoutingRule {
 }
 
 /// The complete routing configuration: ordered [rules] (first match wins),
-/// the fixed default at the end, and one escalation chain per profile.
+/// and the fixed default at the end. Escalation chains no longer exist (K28);
+/// saved ones are ignored on load.
 @immutable
 final class RuleSet {
   /// Creates a rule set; collections are copied.
-  RuleSet({
-    List<RoutingRule> rules = const [],
-    required this.defaultTarget,
-    Map<String, List<RouteTarget>> chains = const {},
-  }) : rules = List.unmodifiable(rules),
-       chains = Map.unmodifiable({
-         for (final MapEntry(:key, :value) in chains.entries)
-           key: List<RouteTarget>.unmodifiable(value),
-       });
-
-  /// Migration from M1/M2 settings: one global chain (profile ids after
-  /// the default profile, each with its default model) becomes the chain of
-  /// the default profile. Entries equal to the default profile and
-  /// duplicates are dropped, the order is kept.
-  factory RuleSet.fromGlobalChain({
-    required RouteTarget defaultTarget,
-    required List<RouteTarget> globalChain,
-    List<RoutingRule> rules = const [],
-  }) {
-    final seen = <String>{defaultTarget.profileId};
-    final chain = [
-      for (final t in globalChain)
-        if (seen.add(t.profileId)) t,
-    ];
-    return RuleSet(
-      rules: rules,
-      defaultTarget: defaultTarget,
-      chains: {if (chain.isNotEmpty) defaultTarget.profileId: chain},
-    );
-  }
+  RuleSet({List<RoutingRule> rules = const [], required this.defaultTarget})
+    : rules = List.unmodifiable(rules);
 
   /// Reason of a request no rule matched.
   static const defaultReason = 'Standard';
@@ -162,41 +135,22 @@ final class RuleSet {
   /// Target when no rule matches.
   final RouteTarget defaultTarget;
 
-  /// Escalation chain per profile id: the targets after that profile,
-  /// weakest first.
-  final Map<String, List<RouteTarget>> chains;
-
-  /// The chain after [profileId] (empty if none).
-  List<RouteTarget> chainOf(String profileId) => chains[profileId] ?? const [];
-
   /// Copy with changes.
-  RuleSet copyWith({
-    List<RoutingRule>? rules,
-    RouteTarget? defaultTarget,
-    Map<String, List<RouteTarget>>? chains,
-  }) => RuleSet(
-    rules: rules ?? this.rules,
-    defaultTarget: defaultTarget ?? this.defaultTarget,
-    chains: chains ?? this.chains,
-  );
+  RuleSet copyWith({List<RoutingRule>? rules, RouteTarget? defaultTarget}) =>
+      RuleSet(
+        rules: rules ?? this.rules,
+        defaultTarget: defaultTarget ?? this.defaultTarget,
+      );
 
   @override
   bool operator ==(Object other) =>
       other is RuleSet &&
       const ListEquality<RoutingRule>().equals(other.rules, rules) &&
-      other.defaultTarget == defaultTarget &&
-      const MapEquality<String, List<RouteTarget>>(
-        values: ListEquality<RouteTarget>(),
-      ).equals(other.chains, chains);
+      other.defaultTarget == defaultTarget;
 
   @override
-  int get hashCode => Object.hash(
-    const ListEquality<RoutingRule>().hash(rules),
-    defaultTarget,
-    const MapEquality<String, List<RouteTarget>>(
-      values: ListEquality<RouteTarget>(),
-    ).hash(chains),
-  );
+  int get hashCode =>
+      Object.hash(const ListEquality<RoutingRule>().hash(rules), defaultTarget);
 }
 
 /// A provider profile as the router knows it: for availability, privacy

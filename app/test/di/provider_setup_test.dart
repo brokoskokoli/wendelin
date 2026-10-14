@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/maintenance.dart';
 import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/di/provider_setup.dart';
@@ -364,7 +363,7 @@ void main() {
         reason: 'erstes = Standard',
       );
       expect(await env.secrets.read('provider.claude-1.apiKey'), _key);
-      await storage.settings.set(AppSettings.escalationChain, ['claude-1']);
+      await storage.settings.set(legacyEscalationChain, ['claude-1']);
       await storage.close();
       final text = String.fromCharCodes(await file.readAsBytes());
       expect(text.contains(_key), isFalse, reason: 'Key nicht in SQLite');

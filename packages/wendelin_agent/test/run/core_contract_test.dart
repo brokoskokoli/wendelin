@@ -124,7 +124,7 @@ void main() {
       final failed = terminal(events) as AgentFailed;
       expect(failed.error, AgentErrorKind.provider);
       expect(failed.cause, const AuthException('Schlüssel ungültig'));
-      expect(failed.message, contains('Schlüssel ungültig'));
+      expect(failed.message, contains('Zugang abgelehnt'));
       expect(tool.callCount, 0);
       expect(events.whereType<ToolCallStarted>(), isEmpty);
     });
@@ -242,36 +242,6 @@ void main() {
       expect(h.conversation.messages, hasLength(3));
     });
 
-    test('escalation after a pause drops it everywhere', () async {
-      final (a, _) = scripted('a', [
-        ScriptedTurn.text('Moment.', stopReason: StopReason.pauseTurn),
-        ScriptedTurn.error(const NetworkException('weg')),
-        ScriptedTurn.error(const NetworkException('weg')),
-      ]);
-      final (b, pb) = scripted('b', [ScriptedTurn.text('B.')]);
-      final h = Harness(primary: a, chain: [b]);
-      final events = await h.run('x');
-      // No assistant prefill at the new provider.
-      expect(pb.requests.single.messages, [Message.user('x')]);
-      expect(
-        [
-          for (final e in events)
-            if (e is AgentTextDelta)
-              e.text
-            else if (e is AgentTextReset)
-              'RESET'
-            else if (e is Escalated)
-              'ESC',
-        ],
-        ['Mome', 'nt.', 'RESET', 'Moment.', 'ESC', 'RESET', 'B.'],
-      );
-      expect((terminal(events) as AgentDone).finalText, 'B.');
-      expect(h.conversation.messages, [
-        Message.user('x'),
-        Message.assistantText('B.'),
-      ]);
-    });
-
     test('tool calls in a paused answer are executed as a round', () async {
       final tool = FakeTool(name: 'web__search');
       final c1 = call('c1', 'web__search');
@@ -359,61 +329,28 @@ void main() {
       expect(kinds(events), ['T:Moment.', 'T:Fertig.']);
     });
 
-    test('escalation after provider error resets partial text', () async {
-      final (a, _) = scripted('a', [
-        ScriptedTurn.error(
-          const NetworkException('weg'),
-          partialText: 'A1',
-          chunkSize: 10,
-        ),
-        ScriptedTurn.error(
-          const NetworkException('weg'),
-          partialText: 'A2',
-          chunkSize: 10,
-        ),
-      ]);
-      final (b, _) = scripted('b', [ScriptedTurn.text('B.', chunkSize: 10)]);
-      final events = await Harness(primary: a, chain: [b]).run('x');
-      expect(kinds(events), ['T:A1', 'RESET', 'T:A2', 'ESC', 'RESET', 'T:B.']);
-    });
-
-    test('escalation after "kann ich nicht" resets the answer', () async {
-      final (a, _) = scripted('a', [
-        ScriptedTurn.text('Das kann ich leider nicht.', chunkSize: 100),
-      ]);
-      final (b, _) = scripted('b', [ScriptedTurn.text('B.', chunkSize: 10)]);
-      final events = await Harness(primary: a, chain: [b]).run('x');
-      expect(kinds(events), [
-        'T:Das kann ich leider nicht.',
-        'ESC',
-        'RESET',
-        'T:B.',
-      ]);
-    });
-
-    test('escalation after noProgress resets the dropped text', () async {
-      final (a, _) = scripted('a', [
-        ScriptedTurn.toolCalls(
-          [call('a1', 'web__search')],
-          text: 'Eins.',
-          chunkSize: 10,
-        ),
-        ScriptedTurn.toolCalls(
-          [call('a2', 'web__search', '{"n":2}')],
-          text: 'Zwei.',
-          chunkSize: 10,
-        ),
-      ]);
-      final (b, _) = scripted('b', [ScriptedTurn.text('B.', chunkSize: 10)]);
-      final h = Harness(
-        primary: a,
-        chain: [b],
-        tools: [FakeTool(name: 'web__search')],
-        config: const AgentConfig(escalateAfterRoundsWithoutResult: 1),
-      );
-      final events = await h.run('x');
-      expect(kinds(events), ['T:Eins.', 'T:Zwei.', 'ESC', 'RESET', 'T:B.']);
-    });
+    test(
+      'provider error: partial text is reset for the retry, then the run fails',
+      () async {
+        final (a, _) = scripted('a', [
+          ScriptedTurn.error(
+            const NetworkException('weg'),
+            partialText: 'A1',
+            chunkSize: 10,
+          ),
+          ScriptedTurn.error(
+            const NetworkException('weg'),
+            partialText: 'A2',
+            chunkSize: 10,
+          ),
+        ]);
+        final (b, pb) = scripted('b', [ScriptedTurn.text('B.', chunkSize: 10)]);
+        final events = await Harness(primary: a, chain: [b]).run('x');
+        expect(pb.requests, isEmpty);
+        expect(kinds(events), ['T:A1', 'RESET', 'T:A2']);
+        expect(terminal(events), isA<AgentFailed>());
+      },
+    );
 
     test('thinking deltas are passed on', () async {
       final (a, _) = scripted('a', [
@@ -437,8 +374,7 @@ void main() {
     test('budget warning once per run and profile', () async {
       final (a, _) = scripted('a', [
         ScriptedTurn.toolCalls([call('c1', 'web__search')]),
-        ScriptedTurn.error(const NetworkException('weg')),
-        ScriptedTurn.error(const NetworkException('weg')),
+        ScriptedTurn.text('A.'),
       ]);
       final (b, _) = scripted('b', [ScriptedTurn.text('B.')]);
       final guard = FixedBudgetGuard(
@@ -446,16 +382,15 @@ void main() {
       );
       final h = Harness(
         primary: a,
-        chain: [b],
         tools: [FakeTool(name: 'web__search')],
         budget: guard,
       );
       final events = await h.run('x');
       final warnings = events.whereType<BudgetWarning>().toList();
-      expect(warnings.map((w) => w.profileId), ['a', 'b']);
+      expect(warnings.map((w) => w.profileId), ['a']);
       expect(warnings.first.spentMicros, 8000000);
       expect(warnings.first.budgetMicros, 10000000);
-      expect(guard.checked, ['a', 'a', 'a', 'b']);
+      expect(guard.checked, ['a', 'a']);
       expect(terminal(events), isA<AgentDone>());
       // A new run warns again.
       (b.provider as FakeLlmProvider).enqueue(ScriptedTurn.text('nochmal'));

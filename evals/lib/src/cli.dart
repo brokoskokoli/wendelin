@@ -117,7 +117,7 @@ Future<int> runCli(
 
     final provider = buildProvider(profile, profileFile, time, env, client);
     final p = profile.profile;
-    for (final model in [p.defaultModel, ...profile.escalationModels]) {
+    for (final model in [p.defaultModel]) {
       if (profile.catalog.lookup(model) == null) {
         err.writeln(
           'Warnung: kein Preis für Modell $model im Katalog – Kosten '
@@ -131,7 +131,6 @@ Future<int> runCli(
         modelId: p.defaultModel,
         privacy: p.privacy,
         provider: provider,
-        escalationModels: profile.escalationModels,
         costEstimator: profile.costEstimator,
       ),
       time: time,
@@ -164,7 +163,6 @@ Future<int> runCli(
         'profileId': p.id,
         'providerType': p.type.name,
         'model': p.defaultModel,
-        'escalationModels': profile.escalationModels,
         'privacy': p.privacy.name,
         'now': time.now.toIso(),
         'timeZone': time.timeZone,

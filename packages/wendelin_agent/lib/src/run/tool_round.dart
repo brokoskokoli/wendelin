@@ -95,12 +95,6 @@ final class ToolRound {
     return (Message.assistant(out), calls);
   }
 
-  /// Whether [call] names no tool of the current target or has arguments
-  /// that are not valid JSON.
-  bool isInvalid(ToolCallBlock call) =>
-      _privacy.catalog.lookup(call.name) == null ||
-      call.tryDecodeArguments() == null;
-
   /// Executes [calls]; returns one result per call, in call order.
   Future<List<ToolResultBlock>> run(List<ToolCallBlock> calls) async {
     final results = <String, ToolResultBlock>{};

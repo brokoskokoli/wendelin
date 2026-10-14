@@ -78,138 +78,6 @@ void main() {
       );
     }
 
-    test('each target gets the catalog of its privacy level', () async {
-      final (tee, pt) = scripted('phala', [
-        ScriptedTurn.toolCalls([call('c1', 'contacts__find', '{"q":"Anna"}')]),
-        ScriptedTurn.error(const NetworkException('weg')),
-        ScriptedTurn.error(const NetworkException('weg')),
-      ], privacy: PrivacyLevel.tee);
-      final (std, ps) = scripted('claude', [ScriptedTurn.text('Fertig.')]);
-      final h = harness(tee, [std]);
-      final events = await h.run(
-        'Ruf Anna an',
-        onEvent: (e) {
-          if (e is EscalationConfirmationRequired) e.respond(true);
-        },
-      );
-
-      // Protected results in the run: the hand-over needs consent.
-      expect(
-        events.whereType<EscalationConfirmationRequired>().single.toProfile,
-        'claude',
-      );
-      expect(pt.requests.first.tools.map((t) => t.name), [
-        'contacts__find',
-        'web__search',
-      ]);
-      expect(contacts.callCount, 1);
-      final req = ps.requests.single;
-      expect(req.tools.map((t) => t.name), ['web__search']);
-      // Arguments and result of the sensitive call are hidden from claude.
-      final hiddenCall = req.messages[1].toolCalls.single;
-      expect(hiddenCall.argumentsJson, '{}');
-      final hiddenResult = req.messages[2].content.single as ToolResultBlock;
-      expect(
-        (hiddenResult.content.single as TextBlock).text,
-        contains('ausgeblendet'),
-      );
-      expect(req.messages.toString(), isNot(contains('0171')));
-      expect(req.messages.toString(), isNot(contains('Anna"')));
-      // The stored history keeps everything.
-      expect(h.conversation.messages.toString(), contains('0171'));
-      expect(terminal(events), isA<AgentDone>());
-    });
-
-    List<ScriptedTurn> teeTurns() => [
-      ScriptedTurn.toolCalls([call('c1', 'contacts__find', '{"q":"Anna"}')]),
-      ScriptedTurn.toolCalls([
-        call('c2', 'web__search', '{"q":"Vorwahl"}'),
-      ], text: 'Annas Nummer ist 0171 1234567. '),
-      ScriptedTurn.error(const NetworkException('weg')),
-      ScriptedTurn.error(const NetworkException('weg')),
-    ];
-
-    test(
-      '(a) text built from protected results is hidden after escalation',
-      () async {
-        final (tee, _) = scripted(
-          'phala',
-          teeTurns(),
-          privacy: PrivacyLevel.tee,
-        );
-        final (std, ps) = scripted('claude', [ScriptedTurn.text('Fertig.')]);
-        final h = harness(tee, [std]);
-        final events = await h.run(
-          'Wie ist Annas Nummer?',
-          onEvent: (e) {
-            if (e is EscalationConfirmationRequired) e.respond(true);
-          },
-        );
-        expect(terminal(events), isA<AgentDone>());
-        final sent = ps.requests.single.messages.toString();
-        expect(sent, isNot(contains('0171')));
-        expect(sent, contains(AgentRunnerTexts.placeholder));
-        // The user's own words stay.
-        expect(sent, contains('Wie ist Annas Nummer?'));
-        // In the protected section also the visible web call is hidden.
-        expect(sent, isNot(contains('Vorwahl')));
-        expect(sent, contains('web__search'));
-      },
-    );
-
-    test('(a) declined hand-over of protected data ends the run', () async {
-      final (tee, _) = scripted('phala', teeTurns(), privacy: PrivacyLevel.tee);
-      final (std, ps) = scripted('claude', [ScriptedTurn.text('nie')]);
-      final h = harness(tee, [std]);
-      final events = await h.run(
-        'Wie ist Annas Nummer?',
-        onEvent: (e) {
-          if (e is EscalationConfirmationRequired) e.respond(false);
-        },
-      );
-      final failed = terminal(events) as AgentFailed;
-      expect(failed.message, contains('geschützten Quellen'));
-      expect(ps.requests, isEmpty);
-      expect(events.whereType<Escalated>(), isEmpty);
-    });
-
-    test('a declined protected call needs no consent', () async {
-      final sms = FakeTool(name: 'contacts__sms', risk: RiskLevel.external);
-      final (tee, _) = scripted('phala', [
-        ScriptedTurn.toolCalls([call('c1', 'contacts__sms')]),
-        ScriptedTurn.error(const NetworkException('weg')),
-        ScriptedTurn.error(const NetworkException('weg')),
-      ], privacy: PrivacyLevel.tee);
-      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
-      final h = Harness(
-        primary: tee,
-        chain: [std],
-        invoker: FakeToolInvoker(FakeToolCatalog([sms])),
-        catalogFor: (level) =>
-            FakeToolCatalog([if (level.isAtLeast(PrivacyLevel.tee)) sms]),
-      );
-      final events = await h.run(
-        'x',
-        onEvent: (e) {
-          if (e is ConfirmationRequired) e.respond(false);
-        },
-      );
-      expect(events.whereType<EscalationConfirmationRequired>(), isEmpty);
-      expect(ps.requests, hasLength(1));
-    });
-
-    test('no consent question without protected results', () async {
-      final (tee, _) = scripted('phala', [
-        ScriptedTurn.toolCalls([call('c1', 'web__search')]),
-        ScriptedTurn.error(const NetworkException('weg')),
-        ScriptedTurn.error(const NetworkException('weg')),
-      ], privacy: PrivacyLevel.tee);
-      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
-      final events = await harness(tee, [std]).run('x');
-      expect(events.whereType<EscalationConfirmationRequired>(), isEmpty);
-      expect(ps.requests, hasLength(1));
-    });
-
     test('(b) protected answers from earlier runs are hidden', () async {
       final history = [
         Message.user('Wie ist Annas Nummer?'),
@@ -256,15 +124,15 @@ void main() {
             call('c2', 'web__search', '{"q":"0171 1234567 Anna"}'),
           ]),
           ScriptedTurn.text('Gefunden.'),
-          // Run 2 fails on TEE and escalates.
-          ScriptedTurn.error(const NetworkException('weg')),
-          ScriptedTurn.error(const NetworkException('weg')),
         ], privacy: PrivacyLevel.tee);
         final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
         final h = harness(tee, [std]);
         await h.run('Such Annas Nummer im Web');
         expect(web.calls.single['q'], '0171 1234567 Anna');
-        final events = await h.run('Und nochmal?');
+        final events = await h.run(
+          'nochmal mit Claude',
+          requestEscalation: true,
+        );
         // Earlier protected sections are hidden, so no question is needed.
         expect(events.whereType<EscalationConfirmationRequired>(), isEmpty);
         final sent = ps.requests.single.messages;
@@ -327,27 +195,6 @@ void main() {
         expect(sent[3], Message.assistantText(AgentRunnerTexts.placeholder));
       },
     );
-
-    test('escalation note leaves out hidden calls', () async {
-      final (tee, _) = scripted('phala', [
-        ScriptedTurn.toolCalls([
-          call('c1', 'contacts__find', '{"q":"Anna"}'),
-          call('c2', 'web__search', '{"q":"x"}'),
-        ]),
-        ScriptedTurn.error(const NetworkException('weg')),
-        ScriptedTurn.error(const NetworkException('weg')),
-      ], privacy: PrivacyLevel.tee);
-      final (std, ps) = scripted('claude', [ScriptedTurn.text('ok')]);
-      await harness(tee, [std]).run(
-        'x',
-        onEvent: (e) {
-          if (e is EscalationConfirmationRequired) e.respond(true);
-        },
-      );
-      final prompt = ps.requests.single.systemPrompt!;
-      expect(prompt, contains('web__search'));
-      expect(prompt, isNot(contains('contacts__find')));
-    });
 
     test('tools get the privacy level of the current target', () async {
       final (tee, _) = scripted('phala', [

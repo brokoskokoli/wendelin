@@ -1,7 +1,7 @@
 # Skript für den Offline-Probelauf mit dem FakeLlmProvider
 # (profiles/fake-demo.json). Beantwortet einige Fälle richtig, einige
 # absichtlich falsch, und gibt einmal auf („kann ich nicht“), damit
-# Bewertung, Eskalation und Report sichtbar werden. {{…}} = relative Zeit.
+# Bewertung und Report sichtbar werden. {{…}} = relative Zeit.
 default:
   - text: Das weiß ich leider nicht.
 cases:
@@ -24,9 +24,8 @@ cases:
   de-timer-nudeln:
     - tool: alarms__set_timer
       args: {duration_seconds: 720, label: Nudeln}
-  de-mem-tochter:               # gibt auf, die Eskalation löst es
+  de-mem-tochter:               # gibt auf und bleibt dabei (kein Wechsel, K28)
     - text: Dabei kann ich dir leider nicht helfen.
-    - text: Die Tochter von Jonas heißt Mila.
   de-text-rechnen:
     - text: 17 mal 23 ist 391.
   de-smalltalk-danke:           # falsch: Tool bei Smalltalk

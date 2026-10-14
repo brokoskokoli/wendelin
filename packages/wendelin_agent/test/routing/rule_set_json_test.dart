@@ -70,11 +70,6 @@ final class _Gen {
         ),
     ],
     defaultTarget: target(),
-    chains: {
-      for (final id in ['phala', 'claude'])
-        if (_r.nextBool())
-          id: [for (var i = _r.nextInt(3); i >= 0; i--) target()],
-    },
   );
 }
 
@@ -160,7 +155,21 @@ void main() {
     expect(a.condition, PrivacyCondition());
     expect(set.rules[1].condition, TimeWindowCondition(start: 60, end: 120));
     expect(set.rules[1].enabled, isFalse);
-    expect(set.chains, isEmpty);
+  });
+
+  test('old exports with escalation chains load; the chains are ignored', () {
+    final set = codec.decode({
+      'schemaVersion': 1,
+      'defaultTarget': {'profileId': 'p', 'modelId': 'm'},
+      'chains': {
+        'p': [
+          {'profileId': 'q', 'modelId': 'n'},
+        ],
+        'kaputt': 'egal',
+      },
+    });
+    expect(set.defaultTarget.profileId, 'p');
+    expect(codec.encode(set).containsKey('chains'), isFalse);
   });
 
   test('a broken regex is kept and reported, not a format error', () {
@@ -310,26 +319,6 @@ void main() {
           ],
         },
         r'$.rules[0].enabled: true/false erwartet.',
-      ),
-      (
-        'chains not an object',
-        {
-          'schemaVersion': 1,
-          'defaultTarget': {'profileId': 'p', 'modelId': 'm'},
-          'chains': <Object?>[],
-        },
-        r'$.chains: Objekt erwartet.',
-      ),
-      (
-        'chain entry not an object',
-        {
-          'schemaVersion': 1,
-          'defaultTarget': {'profileId': 'p', 'modelId': 'm'},
-          'chains': {
-            'p': ['claude'],
-          },
-        },
-        r'$.chains.p[0]: Objekt erwartet.',
       ),
     ];
     for (final (name, json, message) in cases) {

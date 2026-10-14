@@ -17,6 +17,7 @@ ToolCallBlock call(String id, String name, [String args = '{}']) =>
   List<ScriptedTurn> turns, {
   PrivacyLevel privacy = PrivacyLevel.standard,
   Duration eventDelay = Duration.zero,
+  String? name,
 }) {
   final provider = FakeLlmProvider(turns, eventDelay: eventDelay);
   return (
@@ -25,9 +26,51 @@ ToolCallBlock call(String id, String name, [String args = '{}']) =>
       modelId: '$profileId-model',
       provider: provider,
       privacy: privacy,
+      name: name,
     ),
     provider,
   );
+}
+
+/// Test resolver: everything goes to [primary]. The runner may only change
+/// the provider on an explicit user request (`requestEscalation`), then to
+/// the first of [others] (with the privacy floor of the request). [others]
+/// are otherwise present but must never be called (K28).
+final class UserSwitchResolver implements ProviderResolver {
+  UserSwitchResolver(this.primary, this.others, {this.isPrivate});
+
+  final ProviderTarget primary;
+  final List<ProviderTarget> others;
+  final bool Function(UserInput)? isPrivate;
+
+  @override
+  Resolution resolve(UserInput input) {
+    final private = isPrivate?.call(input) ?? false;
+    return Resolution(
+      target: primary,
+      reason: private ? 'Privat' : 'Standard',
+      privacyFloor: private ? primary.privacy : null,
+    );
+  }
+
+  @override
+  Resolution? escalate(Resolution current, EscalationReason reason) {
+    if (reason != EscalationReason.userRequested) return null;
+    final remaining = others.where((t) => t.profileId != current.profileId);
+    if (remaining.isEmpty) return null;
+    final floor = current.privacyFloor;
+    final next = floor == null
+        ? remaining.first
+        : remaining.firstWhere(
+            (t) => t.privacy.isAtLeast(floor),
+            orElse: () => remaining.first,
+          );
+    return Resolution(
+      target: next,
+      reason: 'Nutzerwunsch',
+      privacyFloor: floor,
+    );
+  }
 }
 
 /// Agent runner wired with fakes.
@@ -54,8 +97,7 @@ final class Harness {
     this.invoker = invoker ?? FakeToolInvoker(catalog);
     runner = AgentRunner(
       resolver:
-          resolver ??
-          DefaultProviderResolver(primary, chain, isPrivate: isPrivate),
+          resolver ?? UserSwitchResolver(primary, chain, isPrivate: isPrivate),
       contextBuilder: ContextBuilder(
         config: config,
         clock: clock,
