@@ -23,6 +23,7 @@ import 'package:wendelin/platform/attest/pcs_collateral_client.dart';
 import 'package:wendelin/platform/attest/rust_attestation_crypto.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/fakes.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
@@ -30,11 +31,34 @@ import 'support/e2e.dart';
 import 'support/tee_gateway.dart';
 
 /// Rust check module, but the receipt's Ed25519 signature counts as valid
-/// (the recorded receipts are rebuilt with the real hashes, see above).
+/// (the recorded receipts are rebuilt with the real hashes, see above) and
+/// the E2EE key of the recording (whose secret nobody has) is swapped for the
+/// fixture gateway's key. The cipher itself is the real Rust code.
 final class _ReceiptSignatureSubstitute implements AttestationCrypto {
-  _ReceiptSignatureSubstitute(this._rust);
+  _ReceiptSignatureSubstitute(this._rust, this._service);
 
   final AttestationCrypto _rust;
+  final FakeE2eeService _service;
+
+  @override
+  E2eeKeypair e2eeGenerateKeypair() => _rust.e2eeGenerateKeypair();
+
+  @override
+  String e2eeEncrypt(
+    Uint8List recipientPublic,
+    Uint8List plaintext,
+    Uint8List aad,
+  ) => _rust.e2eeEncrypt(
+    _hex(recipientPublic) == fixtureServiceKeyHex
+        ? _service.key.public
+        : recipientPublic,
+    plaintext,
+    aad,
+  );
+
+  @override
+  Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad) =>
+      _rust.e2eeDecrypt(secret, wireHex, aad);
 
   @override
   Future<QuoteVerdict> verifyQuote(
@@ -74,6 +98,9 @@ final class _ReceiptSignatureSubstitute implements AttestationCrypto {
   }
 }
 
+String _hex(List<int> bytes) =>
+    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -108,6 +135,7 @@ void main() {
               cache: CollateralCache(dir: tmp, now: () => probeNow),
               clock: () => probeNow,
             ),
+            gateway.e2ee,
           ),
         ),
       ],
@@ -158,6 +186,27 @@ void main() {
       containsAll(['quote', 'nonce', 'keyset.digest', 'freshness']),
     );
     expect(session.stages.every((s) => s.result != 'fail'), isTrue);
+    // End-to-end encryption (WP62): the gateway decrypted the real Rust
+    // cipher text, and the key came from the attested keyset.
+    expect(session.stages.map((s) => s.stage), contains('e2ee.key'));
+    final messages = gateway.lastPlainBody!['messages']! as List<Object?>;
+    expect(
+      messages.map((m) => (m! as Map)['content']),
+      contains('Wie wird das Meer morgen?'),
+    );
+  });
+
+  testWidgets('Gateway antwortet unverschlüsselt: Antwort wird nie angezeigt', (
+    tester,
+  ) async {
+    final (_, gateway, _) = await start(tester);
+    gateway.plainAnswer = true;
+    await send(tester, 'Wie wird das Meer morgen?');
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    expect(gateway.chats, 1);
+    expect(find.textContaining('Ruhig: 0,4 m Welle.'), findsNothing);
   });
 
   testWidgets('Manipulierte Quittung: rotes Schild mit Warnkarte, Anbieter '

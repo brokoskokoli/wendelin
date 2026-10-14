@@ -34,16 +34,24 @@ final class E2eeRejection implements Exception {
 /// service would answer.
 final class FakeE2eeService {
   /// Creates a service with its own key (fixed by default).
-  FakeE2eeService({E2eeKeypair? key, DateTime Function()? now})
-    : key =
-          key ??
-          E2eeReference.keypairFromSeed(
-            Uint8List.fromList(List.filled(32, 0x42)),
-          ),
-      _now = now ?? DateTime.now;
+  FakeE2eeService({
+    E2eeKeypair? key,
+    DateTime Function()? now,
+    this.alsoAcceptModelKeys = const {},
+  }) : key =
+           key ??
+           E2eeReference.keypairFromSeed(
+             Uint8List.fromList(List.filled(32, 0x42)),
+           ),
+       _now = now ?? DateTime.now;
 
   /// The service key pair (the public part goes into the keyset).
   final E2eeKeypair key;
+
+  /// Further hex keys accepted in `X-Model-Pub-Key`: device tests with a
+  /// recorded attestation advertise the recorded key and let the test crypto
+  /// encrypt to [key] instead.
+  final Set<String> alsoAcceptModelKeys;
 
   final DateTime Function() _now;
   final Set<String> _seen = {};
@@ -87,7 +95,8 @@ final class FakeE2eeService {
     if (client.length != 32) {
       throw const E2eeRejection('e2ee_invalid_public_key', 'Client-Key');
     }
-    if (need('x-model-pub-key').toLowerCase() != publicKeyHex) {
+    final modelKey = need('x-model-pub-key').toLowerCase();
+    if (modelKey != publicKeyHex && !alsoAcceptModelKeys.contains(modelKey)) {
       throw const E2eeRejection('e2ee_model_key_mismatch', 'Modell-Key');
     }
     if (!_seen.add('${AttestCodec.hex(client)}:$nonce')) {

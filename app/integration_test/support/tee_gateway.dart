@@ -92,6 +92,13 @@ final class FixturePinnedClient extends http.BaseClient {
   }
 }
 
+/// `e2ee_public_keys` entry (x25519) of the recorded attestation. Nobody has
+/// its secret, so the device test's crypto encrypts to [FixtureGateway.e2ee]
+/// instead (see `_ReceiptSignatureSubstitute`); the request still names this
+/// key in `X-Model-Pub-Key`.
+const fixtureServiceKeyHex =
+    '408e82d159832cfae15007781bcade0badee7d50e9f76d50eaa1777464006537';
+
 /// Fixture transport of the gateway: attestation, session, receipts (built
 /// from the bytes of the exchange, like the real gateway would sign them),
 /// chat and model list. [tamper] changes the receipt before it is served
@@ -105,6 +112,19 @@ final class FixtureGateway {
 
   /// Chat requests received.
   int chats = 0;
+
+  /// The service side of the end-to-end encryption (WP62): decrypts the
+  /// requests and encrypts the answers with the real protocol.
+  final FakeE2eeService e2ee = FakeE2eeService(
+    now: () => probeNow,
+    alsoAcceptModelKeys: {fixtureServiceKeyHex},
+  );
+
+  /// Answers without encryption (a gateway that ignores E2EE).
+  bool plainAnswer = false;
+
+  /// The decrypted body of the last chat request.
+  Map<String, Object?>? lastPlainBody;
 
   Uint8List _request = Uint8List(0);
   Uint8List _response = Uint8List(0);
@@ -164,13 +184,19 @@ final class FixtureGateway {
       });
     }
     chats++;
-    _request = request.bodyBytes;
-    _response = Uint8List.fromList(utf8.encode(_sse));
+    final exchange = e2ee.open(request.headers, request.bodyBytes);
+    lastPlainBody = exchange.plainBody;
+    // The receipt covers the decrypted request and the encrypted answer.
+    _request = exchange.plainBytes;
+    _response = Uint8List.fromList(
+      utf8.encode(plainAnswer ? _sse : exchange.sealSse(_sse)),
+    );
     return http.Response.bytes(
       _response,
       200,
       headers: {
         'content-type': 'text/event-stream',
+        if (!plainAnswer) ...exchange.responseHeaders,
         'x-receipt-id': 'rcpt-fixture',
       },
     );

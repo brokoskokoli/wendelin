@@ -5,9 +5,13 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/fakes.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 import 'test_env.dart';
+
+/// The service side of the end-to-end encryption of the scripted gateway.
+final scriptedE2ee = FakeE2eeService(now: () => testNow);
 
 /// [AttestationVerifier] with scripted results (no network, no crypto).
 final class ScriptedVerifier implements AttestationVerifier {
@@ -49,6 +53,11 @@ final class ScriptedVerifier implements AttestationVerifier {
               repoCommit: 'abc',
               composeHash: 'c0ffee',
               attestedAt: testNow,
+              e2eeKey: E2eeKey(
+                keyId: 'test',
+                algo: E2eeProtocolV2.algo,
+                publicKey: scriptedE2ee.key.public,
+              ),
             ),
     );
   }
@@ -101,11 +110,13 @@ final class ScriptedGateway {
       );
     }
     requests++;
+    final exchange = scriptedE2ee.open(request.headers, request.bodyBytes);
     return http.Response.bytes(
-      utf8.encode(_sse),
+      utf8.encode(exchange.sealSse(_sse)),
       200,
       headers: {
         'content-type': 'text/event-stream',
+        ...exchange.responseHeaders,
         'x-receipt-id': 'rcpt-$requests',
       },
     );
@@ -125,6 +136,7 @@ AttestedProvider scriptedTee({
     credentials: Credentials.apiKey('test-key', style: ApiKeyStyle.bearer),
     defaultModel: 'z-ai/glm-5.3-flash',
     client: gateway.client,
+    wireCodec: PhalaE2eeChannel(crypto: FakeAttestationCrypto()),
     options: const OpenAiOptions(
       teeModelsOnly: true,
       extraBody: {
