@@ -14,6 +14,7 @@ export 'src/anthropic/anthropic_options.dart';
 export 'src/catalog/cost_calculator.dart';
 export 'src/catalog/model_catalog.dart';
 export 'src/catalog/provider_template.dart';
+export 'src/common/chat_wire.dart' show ChatWire, ChatWireCodec, SealedBody;
 export 'src/common/credentials.dart';
 export 'src/common/exchange_tap.dart' show ExchangeObserver, ExchangeRecord;
 export 'src/common/http_settings.dart' show HttpSettings, ProviderLog;

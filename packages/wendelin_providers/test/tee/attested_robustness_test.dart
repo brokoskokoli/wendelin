@@ -183,6 +183,30 @@ void main() {
     );
   });
 
+  test('Decorator verlangt einen freien PhalaE2eeChannel (Verschlüsselung Pflicht)', () {
+    const aci = OpenAiOptions(
+      extraBody: {
+        'provider': {'aci_verified': true},
+      },
+    );
+    AttestedProvider build(ChatWireCodec? codec) => AttestedProvider(
+      inner: OpenAiChatAdapter(
+        baseUrl: Uri.parse('https://gateway.test/v1'),
+        credentials: Credentials.apiKey('k', style: ApiKeyStyle.bearer),
+        defaultModel: 'm',
+        client: TeeServer({}).client,
+        wireCodec: codec,
+        options: aci,
+      ),
+      verifier: ScriptedVerifier(),
+      profileId: 'p',
+    );
+    expect(() => build(null), throwsArgumentError);
+    final channel = PhalaE2eeChannel(crypto: FakeAttestationCrypto());
+    expect(() => build(channel), returnsNormally);
+    expect(() => build(channel), throwsArgumentError, reason: 'schon gebunden');
+  });
+
   group('Grenzwerte', () {
     int notAfter() =>
         ((teeJson('gateway_attestation')['attestation']!
