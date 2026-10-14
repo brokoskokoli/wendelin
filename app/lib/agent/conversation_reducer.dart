@@ -82,7 +82,7 @@ final class ConversationReducer {
         // WP55: the check rejected the spoken text.
         return notice(s, NoticeKind.info, spokenFallbackNotice);
       case AttestationStatusChanged():
-        return s; // shown per answer from WP52 on
+        return _attestation(s, event);
       case AgentThinkingDelta(:final text):
         return _appendThinking(s, text);
       case AgentTextReset():
@@ -181,6 +181,37 @@ final class ConversationReducer {
     }
   }
 
+  /// A result for an answer that arrived after the answer: the asynchronous
+  /// GPU check of mode „Nachher“ (`reasonCode` `gpu_failed`/`gpu_unavailable`).
+  /// It turns the most recent verified answer red; without such an answer
+  /// the hint is a notice. [text] is that hint.
+  ConversationState lateFailure(
+    ConversationState s,
+    AttestationReport report, {
+    required String text,
+  }) {
+    for (final e in s.entries.reversed) {
+      if (e is AssistantTextEntry && e.attestation != null) {
+        return s.copyWith(
+          entries: [
+            for (final x in s.entries)
+              x.id == e.id
+                  ? e.withAttestation(
+                      e.attestation!.withResult(
+                        status: report.status,
+                        logId: report.logId,
+                        detail: report.detail,
+                        reasonCode: report.reasonCode,
+                      ),
+                    )
+                  : x,
+          ],
+        );
+      }
+    }
+    return notice(s, NoticeKind.error, text);
+  }
+
   /// Applies a countdown/undo/expiry update of the undo manager.
   ConversationState undo(ConversationState s, UndoUpdate u) =>
       _updateTool(s, u.callId, (t) {
@@ -218,6 +249,54 @@ final class ConversationReducer {
     return outcome.text == ToolOutcome.declinedText
         ? ToolPhase.declined
         : ToolPhase.done;
+  }
+
+  /// Puts the status on the answer of the model call [event].stepId: the
+  /// entry that already carries this step (interim yellow → final), else the
+  /// latest answer text of this request that has no step yet. A model call
+  /// without text (only tool calls) has no entry; a red result is then shown
+  /// as a notice so it is never lost.
+  ConversationState _attestation(
+    ConversationState s,
+    AttestationStatusChanged event,
+  ) {
+    AnswerAttestation result(AnswerAttestation? old) => AnswerAttestation(
+      stepId: event.stepId,
+      status: event.status,
+      logId: event.logId.isEmpty ? old?.logId ?? '' : event.logId,
+      detail: event.detail,
+      reasonCode: event.reasonCode,
+    );
+
+    String? target;
+    String? unassigned;
+    for (final e in s.entries.reversed) {
+      if (e is UserEntry) break;
+      if (e is! AssistantTextEntry) continue;
+      if (e.attestation?.stepId == event.stepId) {
+        target = e.id;
+        break;
+      }
+      if (e.attestation == null) unassigned ??= e.id;
+    }
+    target ??= unassigned;
+    if (target == null) {
+      return event.status == AttestationStatus.red
+          ? notice(
+              s,
+              NoticeKind.error,
+              'Die Antwort des Anbieters konnte nicht geprüft werden.',
+            )
+          : s;
+    }
+    return s.copyWith(
+      entries: [
+        for (final e in s.entries)
+          e.id == target && e is AssistantTextEntry
+              ? e.withAttestation(result(e.attestation))
+              : e,
+      ],
+    );
   }
 
   ConversationState _appendText(ConversationState s, String text) {

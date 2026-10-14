@@ -6,6 +6,7 @@ import 'package:wendelin/di/app_requirements.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/platform/channel_notifier.dart';
 import 'package:wendelin/platform/platform_ports.dart';
 import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
@@ -33,6 +34,7 @@ final class TestEnv {
   TestEnv({
     this.providerConfig,
     this.providerConfigError,
+    this.attestationCryptoError,
     this.demo = false,
     this.realDemoPorts = false,
     this.llmFactory,
@@ -119,6 +121,9 @@ final class TestEnv {
   /// Connectivity for the routing condition `network`.
   final network = FixedNetworkStatus();
 
+  /// System notifications (failed GPU check): the texts shown.
+  final notifier = RecordingNotifier();
+
   /// Builds the adapter for stored profiles; `null` = real adapters.
   final LlmProviderFactory? llmFactory;
 
@@ -130,6 +135,9 @@ final class TestEnv {
 
   /// Provider configuration (`null` = none set up, unless [demo]).
   final ProviderConfig? providerConfig;
+
+  /// Loading the TEE check module fails with this, if set.
+  final Object? attestationCryptoError;
 
   /// Loading the provider configuration fails with this, if set.
   final Object? providerConfigError;
@@ -209,3 +217,41 @@ CalendarEventDraft zahnarztDraft() => CalendarEventDraft(
 /// Tool call block with JSON arguments.
 ToolCallBlock call(String id, String name, String argumentsJson) =>
     ToolCallBlock(id: id, name: name, argumentsJson: argumentsJson);
+
+/// [AttestationNotifier] that records the notifications.
+final class RecordingNotifier implements AttestationNotifier {
+  /// Notifications shown, as (title, text).
+  final shown = <(String, String)>[];
+
+  /// Whether the permission is granted.
+  bool granted = true;
+
+  /// Number of permission requests.
+  int permissionRequests = 0;
+
+  @override
+  Future<bool> hasPermission() async => granted;
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return granted = true;
+  }
+
+  /// What the next [takeLaunchTarget] returns (once).
+  String? launchTarget;
+
+  @override
+  Future<String?> takeLaunchTarget() async {
+    final t = launchTarget;
+    launchTarget = null;
+    return t;
+  }
+
+  @override
+  Future<bool> show({required String title, required String text}) async {
+    if (!granted) return false;
+    shown.add((title, text));
+    return true;
+  }
+}

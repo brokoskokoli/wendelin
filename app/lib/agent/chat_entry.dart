@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 
 /// One item of the conversation shown on the main screen.
 @immutable
@@ -27,17 +28,80 @@ final class UserEntry extends ChatEntry {
   final String text;
 }
 
+/// TEE verification result of one answer (WP52): the status shield and, if
+/// red, the warning card.
+@immutable
+final class AnswerAttestation {
+  /// Creates the result.
+  const AnswerAttestation({
+    required this.stepId,
+    required this.status,
+    this.logId = '',
+    this.detail,
+    this.reasonCode,
+  });
+
+  /// Conversation step (model call) the result belongs to.
+  final String stepId;
+
+  /// Traffic light; yellow = being checked.
+  final AttestationStatus status;
+
+  /// Id of the audit-log entry (empty while the check is pending).
+  final String logId;
+
+  /// Short hint of the check, secret-free.
+  final String? detail;
+
+  /// Stable reason of a non-green result (`upstream_tcb_out_of_date`, …).
+  final String? reasonCode;
+
+  /// A copy with another result for the same answer.
+  AnswerAttestation withResult({
+    required AttestationStatus status,
+    String? logId,
+    String? detail,
+    String? reasonCode,
+  }) => AnswerAttestation(
+    stepId: stepId,
+    status: status,
+    logId: logId ?? this.logId,
+    detail: detail,
+    reasonCode: reasonCode,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is AnswerAttestation &&
+      other.stepId == stepId &&
+      other.status == status &&
+      other.logId == logId &&
+      other.detail == detail &&
+      other.reasonCode == reasonCode;
+
+  @override
+  int get hashCode => Object.hash(stepId, status, logId, detail, reasonCode);
+}
+
 /// Answer text of one model call (streamed; may be discarded by
 /// `AgentTextReset`).
 final class AssistantTextEntry extends ChatEntry {
   /// Creates the entry.
-  const AssistantTextEntry(super.id, this.text);
+  const AssistantTextEntry(super.id, this.text, {this.attestation});
 
   /// Text so far.
   final String text;
 
+  /// TEE verification of this answer, if its provider verifies.
+  final AnswerAttestation? attestation;
+
   /// A copy with [more] appended.
-  AssistantTextEntry append(String more) => AssistantTextEntry(id, text + more);
+  AssistantTextEntry append(String more) =>
+      AssistantTextEntry(id, text + more, attestation: attestation);
+
+  /// A copy with [value] as verification result.
+  AssistantTextEntry withAttestation(AnswerAttestation value) =>
+      AssistantTextEntry(id, text, attestation: value);
 }
 
 /// Reasoning text of the model (display only, hidden unless enabled).

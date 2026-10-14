@@ -1,5 +1,6 @@
 package app.wendelin
 
+import android.content.Intent
 import io.flutter.embedding.engine.FlutterEngine
 
 /**
@@ -12,6 +13,11 @@ class MainActivity : WendelinActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         battery = BatteryChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        notify?.handleIntent(intent)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {

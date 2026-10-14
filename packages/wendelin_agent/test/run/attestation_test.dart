@@ -51,8 +51,12 @@ final class AssessingInvoker implements ToolInvoker, ToolRiskAssessor {
   ) => inner.invokeAll(calls, ctx);
 }
 
-AttestationReport _report(AttestationStatus s) =>
-    AttestationReport(logId: 'att-1', status: s, detail: 'Hinweis');
+AttestationReport _report(AttestationStatus s) => AttestationReport(
+  logId: 'att-1',
+  status: s,
+  detail: 'Hinweis',
+  reasonCode: s == AttestationStatus.red ? 'upstream_session_mismatch' : null,
+);
 
 void main() {
   group('Agent-Schleife: Prüfstatus und externe Tools bei TEE-Antworten', () {
@@ -80,10 +84,20 @@ void main() {
           ..complete(_report(AttestationStatus.green));
         final h = build([ScriptedTurn.text('Hallo')], report, []);
         final events = await h.run('Hi');
-        final status = events.whereType<AttestationStatusChanged>().single;
+        final all = events.whereType<AttestationStatusChanged>().toList();
+        expect(
+          all.first.status,
+          AttestationStatus.yellow,
+          reason: 'zuerst „wird geprüft“ (ohne Protokoll-Id)',
+        );
+        expect(all.first.logId, isEmpty);
+        expect(all.first.stepId, 's1:1');
+        final status = all.last;
+        expect(all, hasLength(2));
         expect(status.status, AttestationStatus.green);
         expect(status.logId, 'att-1');
         expect(status.detail, 'Hinweis');
+        expect(status.reasonCode, isNull);
         expect(status.stepId, 's1:1');
         expect(
           events.indexOf(status),
@@ -121,10 +135,14 @@ void main() {
       report.complete(_report(AttestationStatus.green));
       final all = await done;
       expect(sms.callCount, 1);
-      expect(all.whereType<AttestationStatusChanged>().map((e) => e.status), [
-        AttestationStatus.green,
-        AttestationStatus.green,
-      ], reason: 'ein Ereignis je Modellaufruf (Tool-Runde und Antwort)');
+      expect(
+        all
+            .whereType<AttestationStatusChanged>()
+            .where((e) => e.logId.isNotEmpty)
+            .map((e) => e.status),
+        [AttestationStatus.green, AttestationStatus.green],
+        reason: 'ein Endergebnis je Modellaufruf (Tool-Runde und Antwort)',
+      );
       expect(terminal(all), isA<AgentDone>());
     });
 
@@ -162,12 +180,25 @@ void main() {
       final finished = events.whereType<ToolCallFinished>().single;
       expect(finished.outcome.isError, isTrue);
       expect(
-        events.whereType<AttestationStatusChanged>().map((e) => e.stepId),
+        events
+            .whereType<AttestationStatusChanged>()
+            .where((e) => e.logId.isNotEmpty)
+            .map((e) => e.stepId),
         ['s1:1', 's1:2'],
       );
       expect(
-        events.whereType<AttestationStatusChanged>().first.status,
+        events
+            .whereType<AttestationStatusChanged>()
+            .firstWhere((e) => e.logId.isNotEmpty)
+            .status,
         AttestationStatus.red,
+      );
+      expect(
+        events
+            .whereType<AttestationStatusChanged>()
+            .firstWhere((e) => e.logId.isNotEmpty)
+            .reasonCode,
+        'upstream_session_mismatch',
       );
       expect(
         provider.inner.requests,

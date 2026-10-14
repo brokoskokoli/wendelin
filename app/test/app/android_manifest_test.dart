@@ -57,6 +57,7 @@ void main() {
       'android.permission.READ_CALENDAR',
       'android.permission.WRITE_CALENDAR',
       'com.android.alarm.permission.SET_ALARM',
+      'android.permission.POST_NOTIFICATIONS',
       'android.permission.RECORD_AUDIO',
       'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
     });

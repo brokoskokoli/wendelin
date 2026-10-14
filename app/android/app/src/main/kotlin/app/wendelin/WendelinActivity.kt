@@ -20,6 +20,8 @@ abstract class WendelinActivity : FlutterActivity() {
     private var network: NetworkChannel? = null
     private var auth: AuthChannel? = null
     private var torch: TorchChannel? = null
+    protected var notify: NotifyChannel? = null
+        private set
     protected var assistant: AssistantChannel? = null
         private set
 
@@ -40,6 +42,8 @@ abstract class WendelinActivity : FlutterActivity() {
         network = NetworkChannel(this, messenger)
         auth = AuthChannel(this, messenger)
         torch = TorchChannel(this, messenger)
+        notify = NotifyChannel(this, messenger)
+        notify?.handleIntent(intent)
         assistant = AssistantChannel(this, messenger)
     }
 
@@ -60,6 +64,8 @@ abstract class WendelinActivity : FlutterActivity() {
         auth = null
         torch?.dispose()
         torch = null
+        notify?.dispose()
+        notify = null
         assistant?.dispose()
         assistant = null
         super.cleanUpFlutterEngine(flutterEngine)
@@ -82,6 +88,7 @@ abstract class WendelinActivity : FlutterActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         calendar?.onPermissionResult(requestCode, grantResults)
+        notify?.onPermissionResult(requestCode, grantResults)
     }
 
     @Deprecated("Activity result API of FlutterActivity")

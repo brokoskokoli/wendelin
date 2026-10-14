@@ -62,6 +62,17 @@ abstract final class AppSettings {
     defaultValue: false,
   );
 
+  /// GPU check of TEE models at NVIDIA: `off` (default), `before`, `after`
+  /// (name of `GpuCheckMode`).
+  static final gpuCheck = SettingKey.string(
+    'tee.gpuCheck',
+    defaultValue: 'off',
+  );
+
+  /// Pin of the attested TEE provider [profileId] (JSON of `AttestationPin`).
+  static SettingKey<Map<String, Object?>> attestationPin(String profileId) =>
+      SettingKey.json('tee.pin.$profileId');
+
   /// Retention of audit log and conversations in days (concept: 30).
   static final retentionDays = SettingKey.integer(
     'privacy.retentionDays',

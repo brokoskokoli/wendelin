@@ -51,6 +51,7 @@ Ports liegen in dem Paket, das sie braucht; die Flutter-Implementierung liegt in
 | `NetworkStatus` | `packages/wendelin_agent/lib/src/routing/routing_context.dart` | `app/lib/platform/channel_network_status.dart` |
 | `AudioInput`, `VoiceActivityDetector`, `SpeechToText`, `TextToSpeech`, `TriggerSource`, `BargeInDetector` (WP45, App-Adapter mit WP51/WP58) | `packages/wendelin_voice/lib/src/io/` | `app/lib/platform/voice/` (`record_audio_input.dart`, `silero_vad.dart`, `whisper_stt.dart`, `system_tts.dart`, `sherpa_tts.dart`), `app/lib/platform/assistant_platform.dart` |
 | `ModelStore` | `packages/wendelin_voice/lib/src/models/model_store.dart` | `app/lib/platform/voice/file_model_store.dart` |
+| `AttestationNotifier` (WP52) | `app/lib/platform/channel_notifier.dart` | `ChannelAttestationNotifier` über `NotifyChannel.kt`; Aufrufer ist `AttestationHub` (`app/lib/di/attestation_hub.dart`) |
 | `SecretStore` | `packages/wendelin_storage/lib/src/secret_store.dart` | `app/lib/platform/secure_secret_store.dart` |
 | `AttestationCrypto` (WP46/WP47) | `packages/wendelin_providers/lib/src/tee/attestation_crypto.dart` | `RustAttestationCrypto` in `app/lib/platform/attest/rust_attestation_crypto.dart` über das Rust-Crate `native/attest` (`flutter_rust_bridge`, ADR 0017); Kollateral von Intel PCS (`pcs_collateral_client.dart`) mit Dateicache bis `nextUpdate` (`collateral_cache.dart`); Provider `attestationCryptoProvider` in `app/lib/di/attestation_providers.dart` |
 
@@ -72,6 +73,17 @@ Ports liegen in dem Paket, das sie braucht; die Flutter-Implementierung liegt in
 6. **Tools:** `ToolExecutor` (`packages/wendelin_tools/lib/src/executor/tool_executor.dart`) prüft Argumente und Risiko (`RiskPolicy`), holt Bestätigungen und schreibt das Audit.
 7. **Integration → Port → Plattform:** z. B. `calendar_write_tools.dart` → `CalendarPort` → `app/lib/platform/device_calendar_port.dart` → `CalendarChannel.kt`.
 8. **Zurück:** `AgentEvent` (`packages/wendelin_core/lib/src/agent/agent_event.dart`) → `ConversationReducer` (`app/lib/agent/conversation_reducer.dart`) → Anzeige in `app/lib/ui/screens/conversation_view.dart` mit Tool-Karte (`app/lib/ui/design/tool_result_card.dart`), Bestätigung (`app/lib/ui/screens/confirmation_sheet.dart`, per Sprache `yes_no.dart`), Undo (`UndoManager`), Audit (`app/lib/di/audit_recorder.dart` → `packages/wendelin_storage/lib/src/db/audit_log_repository_impl.dart`).
+
+## TEE-Anbieter in der App (WP52, ADR 0014)
+
+- **Bau:** `ProviderFactory.create(..., attestation: AttestationWiring)` macht aus einem Phala-Profil (`needsAttestation`: Option `attestation: phala` oder Host `api.redpill.ai`, unabhängig von der Datenschutzstufe; Stufe „TEE“ bietet die Einrichtung nur für solche Profile an) einen `AttestedProvider` mit `PhalaVerifier` und `NrasGpuVerifier`. Die App gibt in `llmProviderFactoryProvider` (`app/lib/di/agent_providers.dart`) `RustAttestationCrypto` (`attestationCryptoProvider`), den `AttestationLogWriter` als `logSink` und den Pin-Speicher `SettingsAttestationPinStore` mit (`app/lib/di/attestation_providers.dart`). Ohne Verdrahtung baut `ProviderFactory.create` ein Profil mit Prüfung nicht (ArgumentError), nie ungeprüft. `attestationTransportProvider` ist null; nur der Gerätetest setzt dort Transport, Uhr und Nonce der Aufzeichnung. `storedProviderConfigProvider` wartet vorher auf das Modul.
+- **Hub:** `AttestationHub` (`app/lib/di/attestation_hub.dart`) kennt die lebenden `AttestedProvider`, setzt den GPU-Modus (Einstellung `tee.gpuCheck`: aus/vorher/nachher) auf alle, bietet „neu prüfen“, „ohne GPU-Prüfung senden“ (einmalig) und das Vorwärmen beim App-Start (`warmUpAttestation`, `main_screen.dart`), und warnt per `AttestationNotifier` bei einem fehlgeschlagenen „Nachher“-Check.
+- **Status je Antwort:** `AttestationGate` (`packages/wendelin_agent/lib/src/run/attestation_gate.dart`) meldet je Modellaufruf `AttestationStatusChanged` zuerst gelb (`logId` leer), dann das Endergebnis mit `reasonCode`. `ConversationReducer` hängt es an den `AssistantTextEntry` des Schritts (`AnswerAttestation`); ein spätes GPU-Ergebnis („Nachher“) kommt über `AgentController` (`lateFailure`). Anzeige: `AttestedAnswer` in `app/lib/ui/screens/conversation_view.dart` (Schild `AttestationShield`, Warnkarte, Texte in `app/lib/ui/attestation/attestation_texts.dart`).
+- **GPU „Vorher“:** schlägt die Prüfung fehl, endet der Lauf mit `AgentFailed(cause: AttestationFailedException(stage: 'gpu'))`; der Controller setzt `ConversationState.gpuBlock`, der Hauptbildschirm fragt „Ohne GPU-Prüfung senden“ oder „Abbrechen“.
+- **Keine Übergabe bei fehlgeschlagener Prüfung (Maintainer-Entscheidung):** Eine fehlgeschlagene oder nicht durchführbare Prüfung (Sitzung, Quittung, GPU) schickt die Anfrage nie an einen anderen Anbieter, weder still noch nach Rückfrage; es gibt keine Option „Ausweichen“. `AgentRunner._onAttestationError`: nur `unavailable` wird einmal beim selben Anbieter wiederholt, sonst endet der Lauf mit Grund. Der Nutzer fragt selbst neu (z. B. „nochmal mit Claude“ = neue Anfrage mit normaler Regel). Der GPU-Dialog „Ohne GPU-Prüfung senden“ bleibt beim selben Anbieter.
+- **Prüfprotokoll:** Seite `app/lib/ui/settings/attestation_log_screen.dart` (Route `AppRoutes.attestationLog`, aus Einstellungen → Datenschutz) mit Detail `attestation_log_detail.dart`, Sitzungskarte je Anbieter und „Neu attestieren“, GPU-Einstellung `gpu_check_section.dart`, Export `AttestationLogRepository.exportJson` (nur Ids, Hashes, Stufen). Daten: `app/lib/di/attestation_log_view.dart`.
+- **Einrichtung:** `ProviderSetupSession.probe` liefert `SetupTestResult.stages` (erste Attestierung je Stufe), Anzeige `app/lib/ui/settings/provider_setup/attestation_stages_card.dart`.
+- **Gerätetest:** `app/integration_test/tee_app_e2e_test.dart` mit Fixture-Transport `app/integration_test/support/tee_gateway.dart` (überschreibt `llmProviderFactoryProvider`).
 
 ## Datenschutz und Taint (K9, K10)
 
@@ -103,6 +115,7 @@ Die Logik ohne Android-Abhängigkeit liegt in reinen Kotlin-Klassen mit JVM-Unit
 | assistant | `app/lib/platform/assistant_platform.dart` | `AssistantChannel.kt` |
 | window | `app/lib/platform/screen_protection.dart` | `WindowChannel.kt` |
 | auth | `app/lib/platform/channel_authorization_browser.dart` | `AuthChannel.kt` (mit `OAuthRedirectActivity.kt`) |
+| notify (WP52) | `app/lib/platform/channel_notifier.dart` | `NotifyChannel.kt` |
 | recognizer | `app/lib/platform/recognizer/recognizer_host.dart` | `RecognizerEngine.kt` (mit `WendelinRecognitionService.kt`, `RecognizerSwitch.kt`) |
 
 ## HTTP-Stacks (N3)

@@ -10,6 +10,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../agent/agent_controller.dart';
 import 'agent_factory.dart';
 import 'attestation_log_writer.dart';
+import 'attestation_providers.dart';
 import 'audit_recorder.dart';
 import 'core_providers.dart';
 import 'costs.dart';
@@ -88,25 +89,31 @@ final sessionManagerProvider = Provider<SessionManager>((ref) {
 
 /// Where requests go; `null` = no provider set up yet. In demo mode the
 /// scripted demo provider, otherwise [storedProviderConfigProvider].
-final providerConfigProvider = FutureProvider<ProviderConfig?>((ref) {
-  if (ref.watch(demoModeProvider)) {
-    return ProviderConfig.demo(ref.watch(clockProvider));
-  }
-  return ref.watch(storedProviderConfigProvider.future);
-});
+final FutureProvider<ProviderConfig?> providerConfigProvider =
+    FutureProvider<ProviderConfig?>((ref) {
+      if (ref.watch(demoModeProvider)) {
+        return ProviderConfig.demo(ref.watch(clockProvider));
+      }
+      return ref.watch(storedProviderConfigProvider.future);
+    });
 
 /// The configuration from the stored profiles and routing rules.
 /// Invalidate after profiles or rules changed (WP09, WP26).
-final storedProviderConfigProvider = FutureProvider<ProviderConfig?>(
-  (ref) => loadProviderConfig(
-    storage: ref.watch(storageProvider),
-    secrets: ref.watch(secretStoreProvider),
-    catalog: ref.watch(modelCatalogProvider),
-    create: ref.watch(llmProviderFactoryProvider),
-    clock: ref.watch(clockProvider),
-    network: ref.watch(networkStatusProvider),
-  ),
-);
+final FutureProvider<ProviderConfig?> storedProviderConfigProvider =
+    FutureProvider<ProviderConfig?>((ref) async {
+      final profiles = await ref.watch(storageProvider).providerProfiles.list();
+      if (anyNeedsAttestation(profiles)) {
+        await awaitCheckModule(ref.read(attestationCryptoProvider.future));
+      }
+      return loadProviderConfig(
+        storage: ref.watch(storageProvider),
+        secrets: ref.watch(secretStoreProvider),
+        catalog: ref.watch(modelCatalogProvider),
+        create: ref.watch(llmProviderFactoryProvider),
+        clock: ref.watch(clockProvider),
+        network: ref.watch(networkStatusProvider),
+      );
+    });
 
 /// Builds the adapter for a profile (fake in tests).
 typedef LlmProviderFactory = LlmProvider Function(
@@ -115,11 +122,35 @@ typedef LlmProviderFactory = LlmProvider Function(
 );
 
 /// Adapter factory used by the provider setup and the configuration.
-final llmProviderFactoryProvider = Provider<LlmProviderFactory>((ref) {
-  final catalog = ref.watch(modelCatalogProvider);
-  return (profile, secrets) =>
-      ProviderFactory.create(profile, secrets, catalog: catalog);
-});
+final Provider<LlmProviderFactory> llmProviderFactoryProvider =
+    Provider<LlmProviderFactory>((ref) {
+      final catalog = ref.watch(modelCatalogProvider);
+      final transport = ref.watch(attestationTransportProvider);
+      return (profile, secrets) {
+        final wiring = needsAttestation(profile)
+            ? attestationWiringOf(ref)
+            : null;
+        if (needsAttestation(profile) && wiring == null) {
+          throw ArgumentError.value(
+            profile.id,
+            'profile',
+            'Das Prüfmodul für TEE-Anbieter ist nicht verfügbar',
+          );
+        }
+        final provider = ProviderFactory.create(
+          profile,
+          secrets,
+          catalog: catalog,
+          attestation: wiring,
+          client: transport?.client,
+          settings: transport?.settings ?? const HttpSettings(),
+        );
+        if (provider is AttestedProvider) {
+          ref.read(attestationHubProvider).register(profile.id, provider);
+        }
+        return provider;
+      };
+    });
 
 /// Builds the agent for each request.
 final agentFactoryProvider = Provider<AgentRunFactory>((ref) {

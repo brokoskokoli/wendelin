@@ -67,7 +67,12 @@ void main() {
     env = TestEnv(storedProfiles: true, llmFactory: (p, _) => llm[p.id]!);
     await env.secrets.write('provider.claude.apiKey', _secret);
     await env.storage.providerProfiles.save(
-      _profile('phala', 'Phala GLM', PrivacyLevel.tee),
+      // A real, checked Phala profile (WP52: TEE only with attestation).
+      _profile('phala', 'Phala GLM', PrivacyLevel.tee).copyWith(
+        type: ProviderType.openaiCompatible,
+        baseUrl: 'https://api.redpill.ai/v1',
+        options: const {'attestation': 'phala'},
+      ),
     );
     await env.storage.providerProfiles.save(
       _profile('claude', 'Claude API', PrivacyLevel.standard),

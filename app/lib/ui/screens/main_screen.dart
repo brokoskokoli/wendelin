@@ -8,15 +8,21 @@ import '../../agent/agent_controller.dart';
 import '../../agent/chat_entry.dart';
 import '../../agent/conversation_state.dart';
 import '../../agent/money.dart';
+import '../../di/attestation_hub.dart';
+import '../../di/attestation_providers.dart';
 import '../../di/obsidian_index.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
+import '../../platform/channel_notifier.dart' show attestationLogTarget;
 import '../../voice/conversation_offer.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
 import '../routes.dart';
+import '../settings/attestation_log_detail.dart';
+import '../settings/attestation_log_screen.dart';
+import '../settings/settings_page.dart' show confirm;
 import '../voice/microphone_access.dart';
 import 'conversation_offer_card.dart';
 import 'conversation_view.dart';
@@ -67,6 +73,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           voice.prewarm(onlyIfUsed: true);
           // Back from the Android settings: allowed there meanwhile?
           unawaited(_recheckMicrophone());
+          unawaited(_openFromNotification());
         }
       },
     );
@@ -76,8 +83,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       if (!mounted) return;
       ref.read(voiceControllerProvider.notifier).prewarm(onlyIfUsed: true);
     });
+    Future(() => unawaited(_openFromNotification()));
     if (widget.restoreSession) {
       unawaited(ref.read(agentControllerProvider.notifier).restore());
+      // A TEE default provider is attested in the background (WP52).
+      unawaited(
+        Future(
+          () => warmUpAttestation(
+            config: ref.read(providerConfigProvider.future),
+            network: ref.read(networkStatusProvider),
+            hub: ref.read(attestationHubProvider),
+          ),
+        ),
+      );
       // A large vault needs several index runs: continue in the background.
       if (ref.read(enabledIntegrationsProvider).contains('obsidian') ||
           ref.read(demoModeProvider)) {
@@ -93,6 +111,62 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     }
   }
 
+  void _openAttestation(AnswerAttestation a) {
+    if (a.logId.isEmpty) return;
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => AttestationLogDetailScreen(logId: a.logId),
+        ),
+      ),
+    );
+  }
+
+  /// The app was opened from the notification of a failed GPU check: shows
+  /// the Prüfprotokoll.
+  Future<void> _openFromNotification() async {
+    final target = await ref
+        .read(attestationNotifierProvider)
+        .takeLaunchTarget();
+    if (!mounted || target != attestationLogTarget) return;
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => const AttestationLogScreen()),
+      ),
+    );
+  }
+
+  /// „Neu prüfen“ on a red answer: checks the provider that gave this answer
+  /// (from its log entry), not the one that is active now.
+  Future<void> _reattest(AnswerAttestation a, ConversationState c) async {
+    final record = a.logId.isEmpty
+        ? null
+        : await ref.read(storageProvider).attestations.byLogId(a.logId);
+    final profile = record?.profileId ?? c.activeProfileId;
+    if (profile == null) return;
+    await _controller.reattest(profile);
+  }
+
+  /// The GPU check before the request failed: nothing was sent. Asks
+  /// whether to send once without the check.
+  Future<void> _askGpuBlock(GpuBlock block) async {
+    final name =
+        ref.read(providerConfigProvider).value?.nameOf(block.profileId) ??
+        block.profileId;
+    final send = await confirm(
+      context,
+      title: 'GPU-Prüfung nicht bestanden',
+      message:
+          'Die GPU-Prüfung von $name über NVIDIA ist fehlgeschlagen oder '
+          'nicht möglich. Deine Anfrage wurde nicht gesendet. Du kannst sie '
+          'einmalig ohne GPU-Prüfung senden. Die übrigen Prüfungen bleiben '
+          'aktiv.',
+      yes: 'Ohne GPU-Prüfung senden',
+      no: 'Abbrechen',
+    );
+    await _controller.resolveGpuBlock(sendWithout: send);
+  }
+
   AgentController get _controller => ref.read(agentControllerProvider.notifier);
 
   @override
@@ -101,6 +175,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       agentControllerProvider.select((s) => s.pending),
       (previous, next) => _onPending(next),
     );
+    ref.listen(agentControllerProvider.select((s) => s.gpuBlock), (
+      previous,
+      next,
+    ) {
+      if (next != null) unawaited(_askGpuBlock(next));
+    });
     final conversation = ref.watch(agentControllerProvider);
     final config = ref.watch(providerConfigProvider);
     final cost = ref.watch(todayCostProvider).value ?? 0;
@@ -153,6 +233,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               showThinking: ref.watch(showThinkingProvider),
               onUndo: (id) => unawaited(_undo(id)),
               header: setupHint,
+              onAttestationTap: _openAttestation,
+              onReattest: (a) => unawaited(_reattest(a, conversation)),
             ),
           ),
           MainComposer(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../agent/chat_entry.dart';
+import '../attestation/attestation_texts.dart';
 import '../design/design.dart';
 import 'bring_share_card.dart';
 import 'labels.dart';
@@ -20,6 +21,8 @@ class ConversationView extends StatefulWidget {
     required this.onUndo,
     this.showThinking = false,
     this.header,
+    this.onAttestationTap,
+    this.onReattest,
   });
 
   /// Entries in order.
@@ -36,6 +39,12 @@ class ConversationView extends StatefulWidget {
 
   /// Shown above the entries (e.g. the provider setup hint).
   final Widget? header;
+
+  /// Opens the log entry of a TEE answer (tap on its shield).
+  final ValueChanged<AnswerAttestation>? onAttestationTap;
+
+  /// „Neu prüfen“ of the warning card of a failed answer.
+  final ValueChanged<AnswerAttestation>? onReattest;
 
   @override
   State<ConversationView> createState() => _ConversationViewState();
@@ -103,8 +112,18 @@ class _ConversationViewState extends State<ConversationView> {
           );
         case ToolEntry():
           chips.add(e);
-        case AssistantTextEntry(:final text):
-          flushChips(AssistantText(text, key: ValueKey(e.id)));
+        case AssistantTextEntry(:final text, :final attestation):
+          final answer = AssistantText(text, key: ValueKey(e.id));
+          flushChips(
+            attestation == null
+                ? answer
+                : AttestedAnswer(
+                    answer: answer,
+                    attestation: attestation,
+                    onTap: widget.onAttestationTap,
+                    onReattest: widget.onReattest,
+                  ),
+          );
         case ThinkingEntry(:final text):
           if (widget.showThinking) {
             flushChips();
@@ -239,6 +258,70 @@ class _Notice extends StatelessWidget {
                 : WText.caption,
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// An answer with the shield of its TEE check and, if the check failed, the
+/// warning card with the reason and „Neu prüfen“.
+class AttestedAnswer extends StatelessWidget {
+  /// Creates the block.
+  const AttestedAnswer({
+    super.key,
+    required this.answer,
+    required this.attestation,
+    this.onTap,
+    this.onReattest,
+  });
+
+  /// The answer text.
+  final Widget answer;
+
+  /// Result of the check.
+  final AnswerAttestation attestation;
+
+  /// Opens the log entry.
+  final ValueChanged<AnswerAttestation>? onTap;
+
+  /// Checks the provider again.
+  final ValueChanged<AnswerAttestation>? onReattest;
+
+  @override
+  Widget build(BuildContext context) {
+    final message = attestationMessage(
+      attestation.status,
+      reasonCode: attestation.reasonCode,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        answer,
+        AttestationShield(
+          status: message.status,
+          label: message.label,
+          onTap: onTap == null ? null : () => onTap!(attestation),
+        ),
+        if (message.title case final title?)
+          Padding(
+            padding: const EdgeInsets.only(top: WSpace.xs),
+            child: StatusCard(
+              status: message.status,
+              title: title,
+              detail: message.text,
+              actionBelow: true,
+              action: message.canRecheck && onReattest != null
+                  ? TextButton(
+                      onPressed: () => onReattest!(attestation),
+                      style: TextButton.styleFrom(
+                        foregroundColor: WColors.link,
+                        minimumSize: const Size(WSize.touchMin, WSize.touchMin),
+                      ),
+                      child: const Text('Neu prüfen'),
+                    )
+                  : null,
+            ),
+          ),
       ],
     );
   }

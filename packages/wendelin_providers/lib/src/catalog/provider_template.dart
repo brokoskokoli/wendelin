@@ -144,7 +144,7 @@ const providerTemplates = <ProviderTemplate>[
     keyPageUrl: 'https://redpill.ai',
     privacy: PrivacyLevel.tee,
     suggestedModel: 'z-ai/glm-5.3-flash',
-    options: {'teeModelsOnly': true},
+    options: {'teeModelsOnly': true, 'attestation': 'phala'},
   ),
   ProviderTemplate(
     id: 'tinfoil',
@@ -153,7 +153,8 @@ const providerTemplates = <ProviderTemplate>[
     baseUrl: 'https://inference.tinfoil.sh/v1',
     auth: TemplateAuth.apiKey,
     keyPageUrl: 'https://tinfoil.sh',
-    privacy: PrivacyLevel.tee,
+    // Not „TEE“ in the app's sense until its attestation is checked.
+    privacy: PrivacyLevel.standard,
   ),
   ProviderTemplate(
     id: 'ollama',

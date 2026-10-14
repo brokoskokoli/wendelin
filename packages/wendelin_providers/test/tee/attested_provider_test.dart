@@ -149,6 +149,33 @@ void main() {
       expect(h.chatRequests, 1);
     });
 
+    test(
+      'warmUp prüft vorab; die erste Anfrage attestiert nicht noch einmal',
+      () async {
+        final h = TeeHarness();
+        await h.provider.warmUp();
+        expect(h.provider.session, isNotNull);
+        expect(h.server.count('aci/attestation'), 1);
+        await h.provider.warmUp(); // gültige Sitzung: nichts zu tun
+        expect((await h.chat()).last, isA<Done>());
+        expect(h.server.count('aci/attestation'), 1);
+      },
+    );
+
+    test('warmUp hebt eine Sperre nicht auf und wirft nicht', () async {
+      final crypto = FakeAttestationCrypto(
+        ed25519Result: true,
+        quoteError: const QuoteVerificationException('x'),
+      );
+      final h = TeeHarness(crypto: crypto);
+      await h.provider.warmUp();
+      expect(h.provider.locked, isTrue);
+      crypto.quoteError = null;
+      await h.provider.warmUp();
+      expect(h.provider.locked, isTrue, reason: 'nur „neu prüfen“ entsperrt');
+      expect(h.server.count('aci/attestation'), 1);
+    });
+
     test('Attestierung nicht erreichbar → retryable, nicht gesperrt, später möglich', () async {
       final h = TeeHarness()..attestationStatus = 503;
       final error = _error(await h.chat());

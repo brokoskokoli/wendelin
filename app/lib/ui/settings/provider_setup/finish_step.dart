@@ -4,6 +4,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../../../di/provider_setup.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
+import 'attestation_stages_card.dart';
 
 /// Step 4: privacy level, monthly budget and warning threshold.
 List<Widget> finishStep({
@@ -15,6 +16,7 @@ List<Widget> finishStep({
   required String? budgetError,
   required double warn,
   required void Function(double w) onWarn,
+  required bool attested,
   required VoidCallback onSave,
 }) {
   return [
@@ -23,6 +25,8 @@ List<Widget> finishStep({
       title: 'Modell geprüft',
       detail: result?.message,
     ),
+    if (result != null && result.stages.isNotEmpty)
+      AttestationStagesCard(result.stages),
     if (detected != null)
       Text(
         [
@@ -35,17 +39,19 @@ List<Widget> finishStep({
     SettingsSection(
       title: 'Datenschutzstufe',
       children: [
+        // „TEE“ only for profiles whose attestation the app really checks.
         for (final level in PrivacyLevel.values)
-          SettingsRow(
-            title: level.label,
-            trailing: privacy == level
-                ? const CheckStatusIcon(
-                    CheckStatus.ok,
-                    semanticLabel: 'gewählt',
-                  )
-                : PrivacyChip(level),
-            onTap: () => onPrivacy(level),
-          ),
+          if (level != PrivacyLevel.tee || attested)
+            SettingsRow(
+              title: level.label,
+              trailing: privacy == level
+                  ? const CheckStatusIcon(
+                      CheckStatus.ok,
+                      semanticLabel: 'gewählt',
+                    )
+                  : PrivacyChip(level),
+              onTap: () => onPrivacy(level),
+            ),
       ],
     ),
     TextField(

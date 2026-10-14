@@ -25,6 +25,9 @@ const filesChannelName = 'app.wendelin/files';
 /// `NetworkChannel.kt`: connectivity state.
 const networkChannelName = 'app.wendelin/network';
 
+/// `NotifyChannel.kt`: system notification for a failed TEE check.
+const notifyChannelName = 'app.wendelin/notify';
+
 /// `RecognizerEngine.kt`: speech recognizer service.
 const recognizerChannelName = 'app.wendelin/recognizer';
 

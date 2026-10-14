@@ -131,7 +131,7 @@ final class MalformedResponseException extends ProviderException {
 /// Nothing was sent to the provider when this is raised before a request;
 /// [stage] names the failed check (`quote`, `receipt.signature`, `gpu`, …).
 /// Retryable only when the check could not be completed (network), not when
-/// it failed.
+/// it failed. Never a reason to hand the request to another provider.
 final class AttestationFailedException extends ProviderException {
   /// Creates the exception.
   const AttestationFailedException(

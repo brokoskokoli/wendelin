@@ -19,8 +19,8 @@ import 'gpu_gate.dart';
 /// - Before the first request, after `not_after` and after a pin change the
 ///   provider is attested. If that fails, **no request is sent**; the call
 ///   ends with `ErrorEvent(AttestationFailedException)` and the provider is
-///   locked until [reattest] succeeds. (A fallback to another provider is
-///   the agent's escalation with user confirmation.)
+///   locked until [reattest] succeeds. The request never goes to another
+///   provider because of it.
 /// - After the stream ended it fetches the receipt, checks it against the
 ///   exact bytes of the exchange (up to 3 attempts for a network error) and
 ///   reports the result through [pendingReport] and [reports]. A red receipt
@@ -90,6 +90,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   final Duration retryDelay;
 
   AttestedSession? _session;
+  List<StageResult> _lastStages = const [];
   AttestationFailedException? _lock;
   Future<AttestationFailedException?>? _attesting;
   Future<AttestationReport?>? _latest;
@@ -122,6 +123,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   /// The provider refuses requests until [reattest] succeeds.
   bool get locked => _lock != null;
+
+  /// Result per stage of the latest session attestation (setup dialog:
+  /// „Ergebnis je Stufe“); empty before the first one.
+  List<StageResult> get lastSessionStages => _lastStages;
 
   /// The attested session, if there is a valid one.
   AttestedSession? get session => _session;
@@ -159,6 +164,19 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           : AttestationStatus.red,
       detail: stage,
     );
+  }
+
+  /// Attests in the background (app start) so the first request does not
+  /// wait for it; does nothing if the provider is locked or has a valid
+  /// session. A failed attestation locks it like on a request and is
+  /// reported through [reports].
+  Future<void> warmUp() async {
+    final session = _session;
+    if (_lock != null ||
+        (session != null && settings.clock.now().isBefore(session.notAfter))) {
+      return;
+    }
+    await _attest();
   }
 
   /// Lets the next request through although the GPU check failed or was not
@@ -218,6 +236,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         stage: 'internal',
       );
     }
+    _lastStages = List.unmodifiable(result.stages);
     final session = result.session;
     final green = result.status == AttestationStatus.green && session != null;
     final changed = result.pinChange == PinChange.changed;

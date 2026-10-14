@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/wendelin_providers.dart' show GpuCheckMode;
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import '../di/attestation_hub.dart';
+import '../di/attestation_providers.dart';
 import '../di/audit_recorder.dart';
 import '../di/provider_config.dart';
 import '../di/providers.dart';
@@ -49,12 +52,59 @@ final class AgentController extends Notifier<ConversationState> {
         .watch(undoManagerProvider)
         .updates
         .listen((u) => state = _reducer.undo(state, u));
+    final late = ref.watch(attestationHubProvider).reports.listen(_lateReport);
     ref.onDispose(() {
+      unawaited(late.cancel());
       unawaited(_undo?.cancel());
       unawaited(_events?.cancel());
       _run?.cancel();
     });
     return ConversationState.empty;
+  }
+
+  /// Result of a TEE check that arrives without an agent event: the GPU
+  /// check after the answer (mode „Nachher“) marks the latest verified
+  /// answer.
+  void _lateReport(ProfileReport r) {
+    final code = r.report.reasonCode;
+    if (r.report.status != AttestationStatus.red ||
+        (code != 'gpu_failed' && code != 'gpu_unavailable') ||
+        ref.read(attestationHubProvider).gpuMode != GpuCheckMode.after) {
+      return;
+    }
+    state = _reducer.lateFailure(
+      state,
+      r.report,
+      text: 'GPU-Prüfung fehlgeschlagen. Details im Prüfprotokoll.',
+    );
+  }
+
+  /// The user chose in the dialog of a request stopped by the GPU check:
+  /// [sendWithout] sends it again, once without the check; otherwise it is
+  /// dropped.
+  Future<void> resolveGpuBlock({required bool sendWithout}) async {
+    final block = state.gpuBlock;
+    if (block == null) return;
+    state = state.copyWith(clearGpuBlock: true);
+    if (!sendWithout) return;
+    ref.read(attestationHubProvider).allowWithoutGpuCheck(block.profileId);
+    await send(block.request);
+  }
+
+  /// „Neu prüfen“ of a locked TEE provider: attests again and reports the
+  /// result as a hint.
+  Future<void> reattest(String profileId) async {
+    final report = await ref.read(attestationHubProvider).reattest(profileId);
+    if (report == null) return;
+    state = _reducer.notice(
+      state,
+      report.status == AttestationStatus.green
+          ? NoticeKind.info
+          : NoticeKind.error,
+      report.status == AttestationStatus.green
+          ? 'Anbieter neu geprüft, die Sperre ist aufgehoben.'
+          : 'Die neue Prüfung ist nicht bestanden. Details im Prüfprotokoll.',
+    );
   }
 
   /// Completes when the running request (if any) has finished.
@@ -391,6 +441,23 @@ final class AgentController extends Notifier<ConversationState> {
         }
       case UsageReported(:final profileId, :final modelId, :final usage):
         unawaited(_recordUsage(sessionId, event, profileId, modelId, usage));
+      case AgentFailed(:final cause, :final message)
+          when cause is AttestationFailedException && cause.stage == 'gpu':
+        unawaited(_refreshPrivacy(sessionId));
+        final profile = state.activeProfileId;
+        final request = state.lastRequest;
+        if (profile != null && request != null) {
+          state = _reducer
+              .apply(state, event)
+              .copyWith(
+                gpuBlock: GpuBlock(
+                  profileId: profile,
+                  request: request,
+                  reason: message,
+                ),
+              );
+          return;
+        }
       case EscalationConfirmationRequired() || AgentDone() || AgentFailed():
         // The answers and the request are stored by now (with their floor).
         unawaited(_refreshPrivacy(sessionId));

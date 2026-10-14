@@ -3,6 +3,7 @@ library;
 
 export '../theme/app_theme.dart';
 export 'assistant_text.dart';
+export 'attestation_shield.dart';
 export 'check_status.dart';
 export 'confirmation_card.dart';
 export 'dashed_border.dart';

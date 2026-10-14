@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Routing condition „network“ (offline → local model), ConnectivityManager. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Warning about a failed TEE check after the answer (WP52, GPU mode „Nachher“): asked when
+         the user chooses that mode. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.READ_CALENDAR"/>
     <uses-permission android:name="android.permission.WRITE_CALENDAR"/>
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>

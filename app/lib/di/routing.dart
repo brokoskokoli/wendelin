@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/wendelin_providers.dart'
+    show effectivePrivacy;
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../platform/channel_network_status.dart';
@@ -44,7 +46,8 @@ RoutingRule privatePresetRule(
   List<ProviderProfile> profiles,
   ProviderProfile defaultProfile,
 ) {
-  bool strong(ProviderProfile p) => p.privacy.isAtLeast(PrivacyLevel.tee);
+  bool strong(ProviderProfile p) =>
+      effectivePrivacy(p).isAtLeast(PrivacyLevel.tee);
   final target = strong(defaultProfile)
       ? defaultProfile
       : profiles.where(strong).firstOrNull;
@@ -185,7 +188,7 @@ RoutingProfile routingProfileOf(
 }) => RoutingProfile(
   id: profile.id,
   name: profile.name,
-  privacy: profile.privacy,
+  privacy: effectivePrivacy(profile),
   defaultModel: profile.defaultModel,
   provider: provider,
 );
