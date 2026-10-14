@@ -18,3 +18,6 @@ Abhängig von: WP42 (Modell, Varianten, Schwellen). Port und Puffer können vorh
 - [ ] Contract-Suite `wakeWordEngineContract` in `testing.dart`, Fake besteht sie.
 - [ ] Katalogeintrag mit Prüfsumme, Download-Test mit `FakeModelStore`.
 - [ ] Keine Flutter-Imports (`tool/check_deps.dart`), Gate grün.
+
+## Nachtrag (2026-10-14)
+- Nach WP42 ist Plan B ausgelöst: Das Modell kommt aus **WP58** (openWakeWord, eigenes Modell). WP44 startet erst nach WP58 bzw. baut die Engine-Schnittstelle so, dass das Modell austauschbar ist (Fake-Detektor in Tests).
