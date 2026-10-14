@@ -15,6 +15,7 @@ void main() {
     // M4, Entscheidung 2: Gesprächsmodus aus, Frage noch nicht gestellt.
     expect(s.conversationMode, isFalse);
     expect(s.conversationAsked, isFalse);
+    expect(s.conversationOfferPending, isFalse);
     expect(s.bargeIn, BargeInMode.keywords);
     expect(s.endpoint.minSpeech, const Duration(milliseconds: 200));
   });
@@ -71,6 +72,7 @@ void main() {
       'twoVersions': false,
       'conversationMode': false,
       'conversationAsked': false,
+      'conversationOfferPending': false,
       'bargeIn': 'keywords',
     });
   });
