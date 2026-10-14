@@ -291,34 +291,38 @@ void main() {
     },
   );
 
-  testWidgets('Sperrbildschirm: nichts zeigen, erst entsperren, dann zuhören', (
-    tester,
-  ) async {
-    final platform = FakeAssistantPlatform()
-      ..locked = true
-      ..unlockSucceeds = false;
-    final env = TestEnv(
-      providerConfig: scripted(FakeLlmProvider([ScriptedTurn.text('x')])),
-    );
-    final c = await pumpOverlay(tester, env, platform);
-    await tester.pump();
-    expect(find.text(OverlaySheet.lockedTitle), findsOneWidget);
-    expect(platform.unlockRequests, 1);
-    expect(c.read(voiceControllerProvider).active, isFalse);
-    expect(
-      tester.widget<MicButton>(find.byType(MicButton)).state,
-      MicState.disabled,
-    );
-    expect(find.byTooltip('Texteingabe'), findsOneWidget);
+  testWidgets(
+    'Sperrbildschirm: nichts zeigen, nur Taschenlampe, dann entsperren',
+    (tester) async {
+      final platform = FakeAssistantPlatform()
+        ..locked = true
+        ..unlockSucceeds = false;
+      final env = TestEnv(
+        providerConfig: scripted(FakeLlmProvider([ScriptedTurn.text('x')])),
+      );
+      final c = await pumpOverlay(tester, env, platform);
+      await tester.pump();
+      expect(find.text(OverlaySheet.lockedTitle), findsOneWidget);
+      // WP53: kein automatisches Entsperren; Wendelin hört gesperrt zu.
+      expect(platform.unlockRequests, 0);
+      expect(c.read(voiceControllerProvider).trigger, TriggerKind.assistant);
+      await c.read(voiceControllerProvider.notifier).cancel();
+      await tester.pump();
+      expect(
+        tester.widget<MicButton>(find.byType(MicButton)).state,
+        MicState.disabled,
+      );
+      expect(find.byTooltip('Texteingabe'), findsOneWidget);
 
-    // Zweiter Versuch über den Button gelingt: jetzt hört Wendelin zu.
-    platform.unlockSucceeds = true;
-    await tester.tap(find.text('Entsperren'));
-    await tester.pump(const Duration(milliseconds: 10));
-    expect(find.text(OverlaySheet.lockedTitle), findsNothing);
-    expect(c.read(voiceControllerProvider).trigger, TriggerKind.assistant);
-    await c.read(voiceControllerProvider.notifier).cancel();
-  });
+      // Zweiter Versuch über den Button gelingt: jetzt hört Wendelin zu.
+      platform.unlockSucceeds = true;
+      await tester.tap(find.text('Entsperren'));
+      await tester.pump(const Duration(milliseconds: 10));
+      expect(find.text(OverlaySheet.lockedTitle), findsNothing);
+      expect(c.read(voiceControllerProvider).trigger, TriggerKind.assistant);
+      await c.read(voiceControllerProvider.notifier).cancel();
+    },
+  );
 
   testWidgets('gesperrt: keine Inhalte aus dem Verlauf', (tester) async {
     final platform = FakeAssistantPlatform()
@@ -560,7 +564,9 @@ void main() {
       expect(platform.finished, 1);
     });
 
-    testWidgets('gesperrt: kein Vorwärmen vor dem Entsperren', (tester) async {
+    testWidgets('gesperrt: Modell nur für das Zuhören geladen (WP53)', (
+      tester,
+    ) async {
       final platform = FakeAssistantPlatform()
         ..locked = true
         ..unlockSucceeds = false;
@@ -568,7 +574,7 @@ void main() {
       final c = await pumpOverlay(tester, env, platform, voice: counting());
       await tester.pump(const Duration(milliseconds: 10));
       expect(find.text(OverlaySheet.lockedTitle), findsOneWidget);
-      expect(warm, 0, reason: 'nicht vor dem Entsperren');
+      expect(warm, 1, reason: 'einmal, beim Zuhören (Whisper lokal)');
 
       platform.unlockSucceeds = true;
       await tester.tap(find.text('Entsperren'));

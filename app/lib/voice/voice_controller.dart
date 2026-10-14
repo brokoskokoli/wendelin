@@ -18,6 +18,7 @@ import 'confirm_prompts.dart';
 import 'controller_agent_run.dart';
 import 'conversation_offer.dart';
 import 'level_meter.dart';
+import 'locked_agent_run.dart';
 import 'primed_audio_input.dart';
 import 'voice_components.dart';
 import 'voice_log.dart';
@@ -26,6 +27,7 @@ import 'voice_usage.dart';
 
 export 'confirm_prompts.dart';
 export 'controller_agent_run.dart';
+export 'locked_agent_run.dart';
 export 'voice_ui_state.dart';
 
 part 'voice_confirmation.dart';
@@ -482,7 +484,17 @@ final class VoiceController extends Notifier<VoiceUiState> {
       audio: audio,
       vad: components.vad,
       stt: components.stt,
-      agent: ControllerAgentRun(_agent, trigger: () => state.trigger?.name),
+      agent: LockGateAgentRun(
+        inner: ControllerAgentRun(_agent, trigger: () => state.trigger?.name),
+        locked: () => ref.read(lockedModeProvider),
+        runCommand: (c, trigger) =>
+            ref.read(lockedCommandRunnerProvider)(c, trigger),
+        onRefused: (trigger) {
+          ref.read(auditRecorderProvider).lockedRefused(trigger: trigger);
+          ref.read(lockedRefusalsProvider.notifier).bump();
+        },
+        trigger: () => state.trigger?.name ?? 'assistant',
+      ),
       textToSpeech: components.textToSpeech,
       bargeInDetector: components.bargeInDetector,
       config: components.config,

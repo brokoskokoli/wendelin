@@ -119,6 +119,7 @@ final class IntegrationSpec {
 
   /// Whether the tools may run while the device is locked, without
   /// unlocking first (harmless own-state actions such as the flashlight).
-  /// Evaluated by the lock-screen handling (WP53); nothing reads it yet.
+  /// Read by `lockedCommandRunnerProvider` (WP53): only tools of such
+  /// integrations run from a locally recognized command while locked.
   final bool allowedWhileLocked;
 }

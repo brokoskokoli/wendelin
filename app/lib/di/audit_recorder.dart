@@ -177,6 +177,27 @@ final class AuditRecorder implements ToolAuditSink {
     }
   }
 
+  /// A command that ran while the device was locked (WP53, K16): only the
+  /// tool name and the result, never the spoken text.
+  void lockedToolCall({
+    required String tool,
+    required String trigger,
+    required bool ok,
+  }) => _write(AuditKind.toolCall, null, {
+    'tool': tool,
+    'trigger': trigger,
+    'whileLocked': true,
+    'status': ok ? 'ok' : 'failed',
+  });
+
+  /// A request that was refused because the device was locked; no text,
+  /// nothing went to a model.
+  void lockedRefused({required String trigger}) => _write(
+    AuditKind.request,
+    null,
+    {'trigger': trigger, 'whileLocked': true, 'refused': true},
+  );
+
   @override
   void record(ToolAuditEntry entry) =>
       _write(AuditKind.toolCall, entry.sessionId, {
