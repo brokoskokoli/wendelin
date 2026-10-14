@@ -37,7 +37,12 @@ ProviderProfile _profile(
 
 final _profiles = [
   _profile('claude', 'Claude API', PrivacyLevel.standard, 'Sonnet'),
-  _profile('phala', 'Phala GLM', PrivacyLevel.tee, 'GLM klein'),
+  // A real, checked Phala profile (WP52: TEE only with attestation).
+  _profile('phala', 'Phala GLM', PrivacyLevel.tee, 'GLM klein').copyWith(
+    type: ProviderType.openaiCompatible,
+    baseUrl: 'https://api.redpill.ai/v1',
+    options: const {'attestation': 'phala'},
+  ),
   _profile('ollama', 'Ollama Homeserver', PrivacyLevel.local, 'qwen'),
 ];
 
