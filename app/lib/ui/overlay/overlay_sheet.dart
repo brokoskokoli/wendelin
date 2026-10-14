@@ -186,7 +186,8 @@ class OverlaySheet extends StatelessWidget {
   /// Explanation on the lock screen.
   static const lockedText =
       'Auf dem Sperrbildschirm zeigt und sagt Wendelin nichts aus deinen '
-      'Daten. Nach dem Entsperren hört Wendelin zu.';
+      'Daten. Nur die Taschenlampe geht auch gesperrt. Alles andere erst '
+      'nach dem Entsperren.';
 
   @override
   Widget build(BuildContext context) => Column(

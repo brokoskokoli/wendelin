@@ -7,10 +7,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/flashlight.dart' show TorchPort;
 
 import '../di/provider_config.dart';
 import '../di/providers.dart';
 import '../di/voice_providers.dart';
+import '../platform/platform_ports.dart';
 import '../platform/voice/wav_audio_input.dart';
 
 /// Name of the folder in the app data (`files/e2e/`) the device tests fill.
@@ -32,6 +34,9 @@ const deviceTestFolder = 'e2e';
 /// - `audio`: WAV (16 kHz mono) in `files/e2e/` instead of the microphone
 ///   ([WavAudioInput]); a list plays one file per recording (command, then
 ///   the spoken answer to a confirmation),
+/// - `torch`: `"file"` = the flashlight port writes `on`/`off` into
+///   `files/e2e/torch-state` instead of using the LED (WP53, an emulator
+///   has none, and the test engine cannot see the overlay engine's port),
 /// - `turns`: a scripted provider (`FakeLlmProvider`) instead of the stored
 ///   profiles: a tool call or a text answer per turn.
 ///
@@ -67,6 +72,20 @@ List<Override> parseDeviceTestOverrides(String json, String dir) {
     if (audio is String) audioInputProvider.overrideWithValue(_wav(dir, audio)),
     if (audio is List<Object?>)
       audioInputProvider.overrideWithValue(_wavs(dir, audio)),
+    if (spec['torch'] == 'file')
+      platformPortsProvider.overrideWith((ref) {
+        final demo = ref.watch(demoPortsProvider);
+        return PlatformPorts(
+          calendar: demo.calendar,
+          clipboard: demo.clipboard,
+          alarms: demo.alarms,
+          memory: demo.memory,
+          apps: demo.apps,
+          torch: FileTorchPort('$dir/torch-state'),
+          lists: demo.lists,
+          obsidian: demo.obsidian,
+        );
+      }),
     if (turns != null)
       storedProviderConfigProvider.overrideWith(
         (ref) async => deviceTestProviderConfig(FakeLlmProvider(turns)),
@@ -86,6 +105,28 @@ String _wavPath(String dir, Object? name) {
 
 WavAudioInput _wav(String dir, String name) =>
     WavAudioInput.file(_wavPath(dir, name));
+
+/// [TorchPort] of the device tests: the state lives in a file.
+final class FileTorchPort implements TorchPort {
+  /// Creates the port on [path].
+  FileTorchPort(this.path);
+
+  /// File holding `on` or `off`.
+  final String path;
+
+  @override
+  Future<bool> isAvailable() async => true;
+
+  @override
+  Future<bool> state() async {
+    final f = File(path);
+    return f.existsSync() && f.readAsStringSync().trim() == 'on';
+  }
+
+  @override
+  Future<void> set(bool on) async =>
+      File(path).writeAsStringSync(on ? 'on' : 'off');
+}
 
 /// One WAV per recording (command, then the spoken answer, WP30).
 WavAudioInput _wavs(String dir, List<Object?> names) {

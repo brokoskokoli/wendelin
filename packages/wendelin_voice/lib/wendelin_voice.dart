@@ -27,6 +27,7 @@ export 'src/pipeline/endpointer.dart';
 export 'src/pipeline/voice_events.dart';
 export 'src/pipeline/voice_pipeline.dart';
 export 'src/recognizer/recognition_session.dart';
+export 'src/text/locked_command.dart';
 export 'src/text/spoken_answer.dart';
 export 'src/text/vocabulary.dart';
 export 'src/text/voice_texts.dart';

@@ -14,4 +14,4 @@ Keine Nachfrage, nicht sensibel, alle Datenschutzstufen, kein Netz. Undo stellt 
 
 **Berechtigung**: keine (`CAMERA` wird für `setTorchMode` nicht gebraucht). **Plattformen**: Android.
 
-**Gesperrtes Gerät (WP53)**: `IntegrationSpec.allowedWhileLocked` (App) ist hier `true` gesetzt; WP53 wertet das Flag aus.
+**Gesperrtes Gerät (WP53)**: `IntegrationSpec.allowedWhileLocked` (App) ist hier `true` gesetzt; `LockGateAgentRun` (WP53) führt „Taschenlampe an/aus“ bei Sperre lokal aus, ohne Modell (`matchLockedCommand`).

@@ -159,6 +159,24 @@ void main() {
       expect(input.recordings.map((r) => r.length), [8, 4]);
     });
 
+    test(
+      'torch: file – Taschenlampe schreibt ihren Zustand in eine Datei',
+      () async {
+        final c = ProviderContainer(
+          overrides: parseDeviceTestOverrides('{"torch": "file"}', dir.path),
+        );
+        addTearDown(c.dispose);
+        final torch = c.read(platformPortsProvider).torch;
+        expect(await torch.state(), isFalse);
+        await torch.set(true);
+        expect(File('${dir.path}/torch-state').readAsStringSync(), 'on');
+        expect(await torch.state(), isTrue);
+        await torch.set(false);
+        expect(await torch.state(), isFalse);
+        expect(await torch.isAvailable(), isTrue);
+      },
+    );
+
     test('nur Dateinamen, bekannte Züge', () {
       for (final json in [
         '{"audio": "../x.wav"}',

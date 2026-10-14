@@ -46,9 +46,9 @@ class AssistantOverlayApp extends StatelessWidget {
 ///
 /// Every invocation of the assistant is a `TriggerKind.assistant`
 /// ([AssistantTriggerSource]) and starts listening. **Lock screen:** if the
-/// device is locked, the overlay asks to unlock first and shows nothing
-/// else; no request runs, nothing is shown or spoken until the device is
-/// unlocked (see ADR 0006).
+/// device is locked, the overlay still listens but shows nothing; only a
+/// local flashlight command runs (no model, K16, WP53), anything else gets
+/// „Bitte entsperre das Telefon“, then the unlock prompt (see ADR 0006).
 class AssistantOverlayScreen extends ConsumerStatefulWidget {
   /// Creates the overlay.
   const AssistantOverlayScreen({super.key, this.autoStart = true});
@@ -134,19 +134,32 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     return locked;
   }
 
+  /// Every trigger (power button now, wake word with WP50) takes this
+  /// path. Locked: it listens without showing anything (Whisper, up to
+  /// ~375 MB, is loaded for that and freed when the overlay closes); the
+  /// voice pipeline only lets local flashlight commands through
+  /// ([LockGateAgentRun], K16), the rest gets the fixed sentence „Bitte
+  /// entsperre das Telefon“, the utterance is dropped, and the unlock
+  /// button shows. Nothing asks for the unlock by itself.
   Future<void> _onTrigger(TriggerEvent e) async {
-    if (await _checkLock()) {
-      if (!await _platform.requestUnlock() || !mounted) return;
-      setState(() => _locked = false);
-    }
+    final locked = await _checkLock();
     if (!mounted) return;
+    ref.read(lockedModeProvider.notifier).set(locked);
     _closeTimer?.cancel();
     setState(() => _typing = false);
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) await _voice.cancel();
     if (ref.read(agentControllerProvider).running) return;
-    await _voice.start(e.source, prepare: _microphoneAccess);
+    await _voice.start(
+      e.source,
+      // No permission dialog on the lock screen.
+      prepare: locked ? _microphoneGranted : _microphoneAccess,
+    );
   }
+
+  Future<bool> _microphoneGranted() async =>
+      ref.read(demoModeProvider) ||
+      await ref.read(microphoneProvider).hasPermission(request: false);
 
   /// Microphone permission with explanation (WP17); not in the demo.
   Future<bool> _microphoneAccess() async {
@@ -167,9 +180,17 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     }
   }
 
+  // A request was refused while locked: after the spoken hint the system
+  // unlock opens (the utterance itself is dropped).
+  Future<void> _offerUnlock() async {
+    await _voice.whenIdle;
+    if (mounted && _locked && !_closing) await _unlock();
+  }
+
   Future<void> _unlock() async {
     if (await _platform.requestUnlock() && mounted) {
       setState(() => _locked = false);
+      ref.read(lockedModeProvider.notifier).set(false);
       _triggers.fire();
     }
   }
@@ -178,6 +199,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (_closing) return;
     _closing = true;
     await _voice.suspend();
+    ref.read(lockedModeProvider.notifier).set(false);
     _agent.cancel();
     // The engine ends with the overlay: free an own Whisper model now, so
     // none stays behind in the process (B14).
@@ -284,15 +306,17 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(voiceControllerProvider.select((v) => v.stopCount), (_, _) {
-      _onStop();
-    });
+    ref
+      ..listen(voiceControllerProvider.select((v) => v.stopCount), (_, _) {
+        _onStop();
+      })
+      ..listen(lockedRefusalsProvider, (_, _) => unawaited(_offerUnlock()));
     final conversation = ref.watch(agentControllerProvider);
     final voice = ref.watch(voiceControllerProvider);
     final config = ref.watch(providerConfigProvider).value;
     final target = config?.targetFor(conversation.activeProfileId);
     final available = ref.watch(voiceReadyProvider);
-    final mic = _locked
+    final mic = _locked && !voice.active
         ? MicState.disabled
         : micStateFor(
             voice,
