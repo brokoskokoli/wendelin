@@ -1,5 +1,6 @@
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../model/attestation_record.dart';
 import '../model/audit_entry.dart';
 import '../model/conversation.dart';
 import '../model/note_search_hit.dart';
@@ -122,6 +123,43 @@ abstract interface class AuditLogRepository {
 
   /// Deletes all entries.
   Future<void> clear();
+}
+
+/// Verification log (Prüfprotokoll) of the TEE attestation. Holds ids,
+/// hashes and stage results only. Removed by „Alles löschen“ and by the
+/// retention period.
+abstract interface class AttestationLogRepository {
+  /// Default retention (30 days, like the audit log).
+  static const defaultRetention = Duration(days: 30);
+
+  /// Stores [record]; a record with the same `logId` is replaced.
+  Future<void> add(AttestationRecord record);
+
+  /// Sets session and step of the record [logId] (they come with the agent
+  /// event, after the record was written). `false` if there is no such
+  /// record.
+  Future<bool> attachStep(String logId, String sessionId, String stepId);
+
+  /// The record with [logId], or `null`.
+  Future<AttestationRecord?> byLogId(String logId);
+
+  /// Records of [sessionId], oldest first.
+  Future<List<AttestationRecord>> forSession(String sessionId);
+
+  /// Records of the conversation step [stepId], oldest first.
+  Future<List<AttestationRecord>> forStep(String stepId);
+
+  /// The newest [limit] records, newest first.
+  Future<List<AttestationRecord>> latest({int limit = 50});
+
+  /// Deletes records older than [maxAge]; returns the number deleted.
+  Future<int> purgeOlderThan([Duration maxAge = defaultRetention]);
+
+  /// Deletes all records.
+  Future<void> deleteAll();
+
+  /// `{"version": 1, "entries": [...]}`, oldest first.
+  Future<String> exportJson();
 }
 
 /// Provider profiles (stored without secrets) and the default profile.

@@ -4,6 +4,8 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import 'attestation_log_writer.dart';
+
 /// Reports a failed audit write (default: the zone's error handler).
 typedef AuditErrorHandler = void Function(Object error, StackTrace stack);
 
@@ -17,7 +19,12 @@ typedef AuditErrorHandler = void Function(Object error, StackTrace stack);
 /// redacts secret-looking fields.
 final class AuditRecorder implements ToolAuditSink {
   /// Creates the recorder.
-  AuditRecorder(this.repository, {required this.clock, this.onError});
+  AuditRecorder(
+    this.repository, {
+    required this.clock,
+    this.onError,
+    this.attestation,
+  });
 
   /// Audit log.
   final AuditLogRepository repository;
@@ -27,6 +34,9 @@ final class AuditRecorder implements ToolAuditSink {
 
   /// Receives write failures; `null` = current zone.
   final AuditErrorHandler? onError;
+
+  /// Verification log; receives the conversation step of each result.
+  final AttestationLogWriter? attestation;
 
   Future<void> _tail = Future.value();
 
@@ -146,11 +156,14 @@ final class AuditRecorder implements ToolAuditSink {
           ConfirmationRequired() ||
           EscalationConfirmationRequired() ||
           ToolCallFinished() ||
-          AttestationStatusChanged() ||
           AgentDone():
-      // Tool calls come from the executor (record), answers to
-      // confirmations from the controller; text is not logged here.
-      // Attestation results get their own log (WP49).
+        // Tool calls come from the executor (record), answers to
+        // confirmations from the controller; text is not logged here.
+        break;
+      case AttestationStatusChanged(:final logId, :final stepId):
+        // The result itself is written by the provider's log sink; here it
+        // only gets its place in the conversation.
+        attestation?.attach(logId, sessionId, stepId);
     }
   }
 

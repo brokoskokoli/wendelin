@@ -134,3 +134,39 @@ class NoteFiles extends Table {
   @override
   Set<Column<Object>> get primaryKey => {path};
 }
+
+/// Verification log (Prüfprotokoll, v4): one row per session attestation or
+/// receipt check. Only ids, hashes and stage results; never prompt, answer
+/// or receipt content.
+@TableIndex(name: 'attestation_log_at', columns: {#at})
+@TableIndex(name: 'attestation_log_session', columns: {#sessionId})
+@DataClassName('AttestationRow')
+class AttestationLog extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Id the agent event `AttestationStatusChanged.logId` refers to.
+  TextColumn get logId => text().unique()();
+  IntColumn get at => integer().map(epochMicros)();
+  TextColumn get profileId => text()();
+  TextColumn get model => text().nullable()();
+
+  /// `session`, `receipt` or `gpu`.
+  TextColumn get kind => text()();
+  TextColumn get sessionId => text().nullable()();
+  TextColumn get stepId => text().nullable()();
+  TextColumn get receiptId => text().nullable()();
+  TextColumn get workloadKeysetDigest => text().nullable()();
+  TextColumn get workloadId => text().nullable()();
+  TextColumn get repoCommit => text().nullable()();
+
+  /// Compose hash or image digest.
+  TextColumn get composeHash => text().nullable()();
+
+  /// `AttestationStatus.name`.
+  TextColumn get status => text()();
+
+  /// JSON list of `{stage, result, detail?, code?}`.
+  TextColumn get stagesJson => text()();
+  TextColumn get tcbStatus => text().nullable()();
+  TextColumn get reasonCode => text().nullable()();
+}

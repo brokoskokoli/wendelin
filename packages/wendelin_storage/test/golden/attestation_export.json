@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "logId": "l1",
+      "at": "2026-10-14T09:00:00.000Z",
+      "profileId": "near",
+      "model": "m1",
+      "kind": "session",
+      "receiptId": "r-l1",
+      "workloadKeysetDigest": "sha256:abc",
+      "workloadId": "w1",
+      "repoCommit": "c0ffee",
+      "composeHash": "sha256:def",
+      "status": "green",
+      "stages": [
+        {"stage": "quote", "result": "pass"},
+        {"stage": "receipt.upstream.tcb", "result": "fail", "detail": "TCB veraltet", "code": "upstream_tcb_out_of_date"}
+      ],
+      "tcbStatus": "fail",
+      "reasonCode": "upstream_tcb_out_of_date"
+    },
+    {
+      "logId": "l2",
+      "at": "2026-10-14T10:00:00.000Z",
+      "profileId": "near",
+      "model": "m1",
+      "kind": "receipt",
+      "sessionId": "s1",
+      "stepId": "st2",
+      "receiptId": "r-l2",
+      "workloadKeysetDigest": "sha256:abc",
+      "workloadId": "w1",
+      "repoCommit": "c0ffee",
+      "composeHash": "sha256:def",
+      "status": "red",
+      "stages": [
+        {"stage": "quote", "result": "pass"},
+        {"stage": "receipt.upstream.tcb", "result": "fail", "detail": "TCB veraltet", "code": "upstream_tcb_out_of_date"}
+      ],
+      "tcbStatus": "fail",
+      "reasonCode": "upstream_tcb_out_of_date"
+    }
+  ]
+}

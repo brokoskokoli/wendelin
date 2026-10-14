@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show QueryExecutor;
 import 'package:wendelin_core/wendelin_core.dart';
 
+import 'db/attestation_log_repository_impl.dart';
 import 'db/audit_log_repository_impl.dart';
 import 'db/conversation_repository_impl.dart';
 import 'db/database.dart';
@@ -37,6 +38,7 @@ final class WendelinStorage {
       DriftUsageRepository(db, clock),
       DriftSettingsRepository(db),
       DriftNoteIndexRepository(db),
+      DriftAttestationLogRepository(db, clock),
     );
   }
 
@@ -49,6 +51,7 @@ final class WendelinStorage {
     this.usage,
     this.settings,
     this.notes,
+    this.attestations,
   );
 
   /// Current schema version of the database.
@@ -76,6 +79,9 @@ final class WendelinStorage {
 
   /// Search index over the Obsidian vault notes.
   final NoteIndexRepository notes;
+
+  /// Verification log (Prüfprotokoll).
+  final AttestationLogRepository attestations;
 
   /// Closes the database.
   Future<void> close() => _db.close();

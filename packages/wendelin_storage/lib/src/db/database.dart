@@ -19,6 +19,7 @@ part 'database.g.dart';
     UsageRecords,
     Settings,
     NoteFiles,
+    AttestationLog,
   ],
   include: {'memory_fts.drift', 'note_fts.drift'},
 )
@@ -28,7 +29,7 @@ final class WendelinDatabase extends _$WendelinDatabase {
 
   /// Current schema version. Bump it together with a migration step and a
   /// new schema dump (`dart run drift_dev make-migrations`).
-  static const version = 3;
+  static const version = 4;
 
   @override
   int get schemaVersion => version;
@@ -50,6 +51,12 @@ final class WendelinDatabase extends _$WendelinDatabase {
           schema.memoryEntries,
           schema.memoryEntries.privacyFloor,
         );
+      },
+      // v4 (WP49): Prüfprotokoll der TEE-Attestierung.
+      from3To4: (m, schema) async {
+        await m.createTable(schema.attestationLog);
+        await m.createIndex(schema.attestationLogAt);
+        await m.createIndex(schema.attestationLogSession);
       },
     ),
     beforeOpen: (details) async {

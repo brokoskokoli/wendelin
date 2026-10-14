@@ -149,6 +149,7 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
     if (!ok) return;
     final storage = ref.read(storageProvider);
     await storage.audit.clear();
+    await storage.attestations.deleteAll();
     for (final s in await storage.conversations.sessions()) {
       await storage.conversations.deleteSession(s.id);
     }
