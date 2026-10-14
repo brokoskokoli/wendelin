@@ -61,6 +61,15 @@ flutter test integration_test/mcp_e2e_test.dart -d "$DEVICE" \
   --dart-define=MCP_TOKEN="$TOKEN" \
   --dart-define=HTTP_URL="http://10.0.2.2:$HTTP_PORT" 3>&- || status=$?
 
+# „Nein“ auf die Rückfrage: delete_thing darf den Server nie erreicht haben,
+# das lesende get_state schon (der Server schreibt je tools/call eine Zeile).
+grep -q '^tools/call get_state$' "$WORK/err" ||
+  { echo "Server sah keinen get_state-Aufruf" >&2; status=1; }
+if grep -q '^tools/call delete_thing$' "$WORK/err"; then
+  echo "delete_thing erreichte den Server trotz „Nein“" >&2
+  status=1
+fi
+
 # Rückleitung über die Intent-Filter-Activity: während der Test auf die
 # Anmeldung wartet, erst ein falscher, dann der richtige state.
 redirects() {

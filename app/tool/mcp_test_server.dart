@@ -16,6 +16,24 @@ import 'dart:io';
 
 import 'package:wendelin_mcp/testing.dart';
 
+/// One stderr line per `tools/call` (name only, no arguments or token); the
+/// script `tool/e2e_mcp.sh` checks that `delete_thing` was never called.
+FakeMcpTool _logged(FakeMcpTool t) => FakeMcpTool(
+  t.name,
+  description: t.description,
+  inputSchema: t.inputSchema,
+  annotations: t.annotations,
+  handler: (args) {
+    stderr.writeln('tools/call ${t.name}');
+    return t.handler?.call(args) ??
+        {
+          'content': [
+            {'type': 'text', 'text': 'ok'},
+          ],
+        };
+  },
+);
+
 Future<void> main(List<String> args) async {
   final i = args.indexOf('--token');
   final token = i >= 0 && i + 1 < args.length
@@ -26,60 +44,63 @@ Future<void> main(List<String> args) async {
           publicHost: '10.0.2.2',
           auth: FakeAuthMode.bearer,
           tools: [
-            FakeMcpTool(
-              'get_state',
-              description: 'Zustand eines Geräts lesen',
-              annotations: const {'readOnlyHint': true},
-              handler: (args) => {
-                'content': [
-                  {'type': 'text', 'text': '${args['entity']}: an'},
-                ],
-              },
-            ),
-            FakeMcpTool('delete_scene', description: 'Szene löschen'),
-            FakeMcpTool(
-              'echo',
-              description: 'Text zurückgeben',
-              annotations: const {'readOnlyHint': true},
-              handler: (args) => {
-                'content': [
-                  {'type': 'text', 'text': '${args['text']}'},
-                ],
-              },
-            ),
-            FakeMcpTool(
-              'get_time',
-              description: 'Uhrzeit des Rechners lesen',
-              annotations: const {'readOnlyHint': true},
-              handler: (_) => {
-                'content': [
-                  {'type': 'text', 'text': DateTime.now().toIso8601String()},
-                ],
-              },
-            ),
-            FakeMcpTool(
-              'toggle_light',
-              description: 'Licht umschalten',
-              annotations: const {
-                'readOnlyHint': false,
-                'destructiveHint': false,
-              },
-              handler: (_) => {
-                'content': [
-                  {'type': 'text', 'text': 'Licht umgeschaltet'},
-                ],
-              },
-            ),
-            FakeMcpTool(
-              'delete_thing',
-              description: 'Etwas löschen',
-              annotations: const {'destructiveHint': true},
-              handler: (_) => {
-                'content': [
-                  {'type': 'text', 'text': 'gelöscht'},
-                ],
-              },
-            ),
+            for (final t in <FakeMcpTool>[
+              FakeMcpTool(
+                'get_state',
+                description: 'Zustand eines Geräts lesen',
+                annotations: const {'readOnlyHint': true},
+                handler: (args) => {
+                  'content': [
+                    {'type': 'text', 'text': '${args['entity']}: an'},
+                  ],
+                },
+              ),
+              FakeMcpTool('delete_scene', description: 'Szene löschen'),
+              FakeMcpTool(
+                'echo',
+                description: 'Text zurückgeben',
+                annotations: const {'readOnlyHint': true},
+                handler: (args) => {
+                  'content': [
+                    {'type': 'text', 'text': '${args['text']}'},
+                  ],
+                },
+              ),
+              FakeMcpTool(
+                'get_time',
+                description: 'Uhrzeit des Rechners lesen',
+                annotations: const {'readOnlyHint': true},
+                handler: (_) => {
+                  'content': [
+                    {'type': 'text', 'text': DateTime.now().toIso8601String()},
+                  ],
+                },
+              ),
+              FakeMcpTool(
+                'toggle_light',
+                description: 'Licht umschalten',
+                annotations: const {
+                  'readOnlyHint': false,
+                  'destructiveHint': false,
+                },
+                handler: (_) => {
+                  'content': [
+                    {'type': 'text', 'text': 'Licht umgeschaltet'},
+                  ],
+                },
+              ),
+              FakeMcpTool(
+                'delete_thing',
+                description: 'Etwas löschen',
+                annotations: const {'destructiveHint': true},
+                handler: (_) => {
+                  'content': [
+                    {'type': 'text', 'text': 'gelöscht'},
+                  ],
+                },
+              ),
+            ])
+              _logged(t),
           ],
         )
         ..bearerToken = token;

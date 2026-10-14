@@ -52,4 +52,14 @@ void main() {
       completion(0),
     );
   });
+
+  test('Routing-Tabelle: eine falsche Zeile wird als FALSCH gemeldet', () {
+    final outcomes = runRoutingTable(const [
+      RoutingRow('Wie spät ist es?', 'Starkes Modell'),
+      RoutingRow('Claude, wie spät ist es?', 'Starkes Modell'),
+    ]);
+    expect(outcomes.map((o) => o.ok), [false, true]);
+    expect(formatRoutingTable(outcomes), contains('FALSCH'));
+    expect(formatRoutingTable(outcomes), contains('1/2 wie erwartet'));
+  });
 }
