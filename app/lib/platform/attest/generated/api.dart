@@ -6,6 +6,7 @@
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'collateral.dart';
+import 'e2ee.dart';
 import 'frb_generated.dart';
 import 'quote.dart';
 import 'report.dart';
@@ -95,3 +96,30 @@ Uint8List spkiSha256({required List<int> certificateDer}) => AttestNative
     .instance
     .api
     .crateApiSpkiSha256(certificateDer: certificateDer);
+
+/// Frisches X25519-Schlüsselpaar für eine E2EE-Anfrage (Phala, Protokoll v2); der private Teil
+/// bleibt im Speicher des Aufrufers und dient nur dem Entschlüsseln der Antwort.
+E2eeKeypair e2EeGenerateKeypair() =>
+    AttestNative.instance.api.crateApiE2EeGenerateKeypair();
+
+/// Verschlüsselt ein Feld (Suite `x25519-aes-256-gcm-hkdf-sha256`); liefert das Hex-Wire-Format.
+String e2EeEncrypt({
+  required List<int> recipientPublic,
+  required List<int> plaintext,
+  required List<int> aad,
+}) => AttestNative.instance.api.crateApiE2EeEncrypt(
+  recipientPublic: recipientPublic,
+  plaintext: plaintext,
+  aad: aad,
+);
+
+/// Entschlüsselt ein Feld im Hex-Wire-Format; jeder Fehler (Hex, Länge, Tag, AAD) ist ein `Err`.
+Uint8List e2EeDecrypt({
+  required List<int> secret,
+  required String wireHex,
+  required List<int> aad,
+}) => AttestNative.instance.api.crateApiE2EeDecrypt(
+  secret: secret,
+  wireHex: wireHex,
+  aad: aad,
+);

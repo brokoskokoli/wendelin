@@ -5,6 +5,7 @@
 //! `api` ist die Schnittstelle für `flutter_rust_bridge`; `frb_generated.rs` ist erzeugt und eingecheckt.
 pub mod api;
 pub mod collateral;
+pub mod e2ee;
 mod frb_generated;
 pub mod jcs;
 pub mod quote;

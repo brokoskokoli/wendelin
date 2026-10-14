@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'generated/api.dart' as api;
 import 'generated/collateral.dart';
+import 'generated/e2ee.dart';
 import 'generated/frb_generated.dart';
 import 'generated/quote.dart';
 import 'generated/report.dart';
@@ -49,6 +50,19 @@ abstract interface class AttestBackend {
 
   /// SPKI-Hash eines Zertifikats.
   Uint8List spkiSha256(Uint8List der);
+
+  /// Frisches X25519-Paar (E2EE).
+  E2eeKeypair e2eeGenerateKeypair();
+
+  /// Feldverschlüsselung (Hex-Wire-Format); wirft bei Fehlern.
+  String e2eeEncrypt(
+    Uint8List recipientPublic,
+    Uint8List plaintext,
+    Uint8List aad,
+  );
+
+  /// Feldentschlüsselung; wirft bei Fehlern.
+  Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad);
 }
 
 /// Echte Anbindung über `flutter_rust_bridge`; [init] lädt `libwendelin_attest.so`.
@@ -117,4 +131,22 @@ final class FrbAttestBackend implements AttestBackend {
 
   @override
   Uint8List spkiSha256(Uint8List der) => api.spkiSha256(certificateDer: der);
+
+  @override
+  E2eeKeypair e2eeGenerateKeypair() => api.e2EeGenerateKeypair();
+
+  @override
+  String e2eeEncrypt(
+    Uint8List recipientPublic,
+    Uint8List plaintext,
+    Uint8List aad,
+  ) => api.e2EeEncrypt(
+    recipientPublic: recipientPublic,
+    plaintext: plaintext,
+    aad: aad,
+  );
+
+  @override
+  Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad) =>
+      api.e2EeDecrypt(secret: secret, wireHex: wireHex, aad: aad);
 }

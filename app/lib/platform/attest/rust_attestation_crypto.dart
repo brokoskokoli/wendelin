@@ -137,4 +137,37 @@ final class RustAttestationCrypto implements AttestationCrypto {
       throw const FormatException('Zertifikat nicht lesbar');
     }
   }
+
+  @override
+  E2eeKeypair e2eeGenerateKeypair() {
+    try {
+      final pair = backend.e2eeGenerateKeypair();
+      return E2eeKeypair(secret: pair.secret, public: pair.public);
+    } on Object {
+      throw const E2eeCryptoException('Schlüsselerzeugung fehlgeschlagen');
+    }
+  }
+
+  @override
+  String e2eeEncrypt(
+    Uint8List recipientPublic,
+    Uint8List plaintext,
+    Uint8List aad,
+  ) {
+    try {
+      return backend.e2eeEncrypt(recipientPublic, plaintext, aad);
+    } on Object {
+      // No details of the Rust error: it must not carry key material.
+      throw const E2eeCryptoException('Verschlüsselung fehlgeschlagen');
+    }
+  }
+
+  @override
+  Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad) {
+    try {
+      return backend.e2eeDecrypt(secret, wireHex, aad);
+    } on Object {
+      throw const E2eeCryptoException('Entschlüsselung fehlgeschlagen');
+    }
+  }
 }

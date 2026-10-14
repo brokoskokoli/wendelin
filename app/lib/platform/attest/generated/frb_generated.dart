@@ -10,6 +10,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'api.dart';
 import 'collateral.dart';
+import 'e2ee.dart';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
@@ -71,7 +72,7 @@ class AttestNative
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1438843132;
+  int get rustContentHash => -1979237243;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -90,6 +91,20 @@ abstract class AttestNativeApi extends BaseApi {
   Future<CollateralRequest> crateApiCollateralRequest({
     required List<int> quote,
   });
+
+  Uint8List crateApiE2EeDecrypt({
+    required List<int> secret,
+    required String wireHex,
+    required List<int> aad,
+  });
+
+  String crateApiE2EeEncrypt({
+    required List<int> recipientPublic,
+    required List<int> plaintext,
+    required List<int> aad,
+  });
+
+  E2eeKeypair crateApiE2EeGenerateKeypair();
 
   Future<String> crateApiRootCrlUrl({required String qeIdentityIssuerChain});
 
@@ -231,6 +246,90 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       const TaskConstMeta(debugName: 'collateral_request', argNames: ['quote']);
 
   @override
+  Uint8List crateApiE2EeDecrypt({
+    required List<int> secret,
+    required String wireHex,
+    required List<int> aad,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(secret, serializer);
+          sse_encode_String(wireHex, serializer);
+          sse_encode_list_prim_u_8_loose(aad, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiE2EeDecryptConstMeta,
+        argValues: [secret, wireHex, aad],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiE2EeDecryptConstMeta => const TaskConstMeta(
+    debugName: 'e2ee_decrypt',
+    argNames: ['secret', 'wireHex', 'aad'],
+  );
+
+  @override
+  String crateApiE2EeEncrypt({
+    required List<int> recipientPublic,
+    required List<int> plaintext,
+    required List<int> aad,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(recipientPublic, serializer);
+          sse_encode_list_prim_u_8_loose(plaintext, serializer);
+          sse_encode_list_prim_u_8_loose(aad, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiE2EeEncryptConstMeta,
+        argValues: [recipientPublic, plaintext, aad],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiE2EeEncryptConstMeta => const TaskConstMeta(
+    debugName: 'e2ee_encrypt',
+    argNames: ['recipientPublic', 'plaintext', 'aad'],
+  );
+
+  @override
+  E2eeKeypair crateApiE2EeGenerateKeypair() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_e_2_ee_keypair,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiE2EeGenerateKeypairConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiE2EeGenerateKeypairConstMeta =>
+      const TaskConstMeta(debugName: 'e2ee_generate_keypair', argNames: []);
+
+  @override
   Future<String> crateApiRootCrlUrl({required String qeIdentityIssuerChain}) {
     return handler.executeNormal(
       NormalTask(
@@ -240,7 +339,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 7,
             port: port_,
           );
         },
@@ -267,7 +366,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(data, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -290,7 +389,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(data, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -313,7 +412,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(certificateDer, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -344,7 +443,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_String(reportJson, serializer);
           sse_encode_String(observedSpkiHex, serializer);
           sse_encode_String(host, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -376,7 +475,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 12,
             port: port_,
           );
         },
@@ -414,7 +513,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 13,
             port: port_,
           );
         },
@@ -447,7 +546,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_list_prim_u_8_loose(publicKey, serializer);
           sse_encode_list_prim_u_8_loose(message, serializer);
           sse_encode_list_prim_u_8_loose(signature, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -481,7 +580,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 15,
             port: port_,
           );
         },
@@ -546,6 +645,18 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       tee: dco_decode_String(arr[0]),
       fmspc: dco_decode_String(arr[1]),
       ca: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  E2eeKeypair dco_decode_e_2_ee_keypair(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return E2eeKeypair(
+      secret: dco_decode_list_prim_u_8_strict(arr[0]),
+      public: dco_decode_list_prim_u_8_strict(arr[1]),
     );
   }
 
@@ -699,6 +810,14 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     final var_fmspc = sse_decode_String(deserializer);
     final var_ca = sse_decode_String(deserializer);
     return CollateralRequest(tee: var_tee, fmspc: var_fmspc, ca: var_ca);
+  }
+
+  @protected
+  E2eeKeypair sse_decode_e_2_ee_keypair(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_secret = sse_decode_list_prim_u_8_strict(deserializer);
+    final var_public = sse_decode_list_prim_u_8_strict(deserializer);
+    return E2eeKeypair(secret: var_secret, public: var_public);
   }
 
   @protected
@@ -881,6 +1000,13 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     sse_encode_String(self.tee, serializer);
     sse_encode_String(self.fmspc, serializer);
     sse_encode_String(self.ca, serializer);
+  }
+
+  @protected
+  void sse_encode_e_2_ee_keypair(E2eeKeypair self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.secret, serializer);
+    sse_encode_list_prim_u_8_strict(self.public, serializer);
   }
 
   @protected

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:wendelin/platform/attest/attest_backend.dart';
 import 'package:wendelin/platform/attest/generated/collateral.dart';
+import 'package:wendelin/platform/attest/generated/e2ee.dart';
 import 'package:wendelin/platform/attest/generated/quote.dart';
 import 'package:wendelin/platform/attest/generated/report.dart';
 
@@ -97,5 +98,27 @@ final class FakeAttestBackend implements AttestBackend {
   Uint8List spkiSha256(Uint8List der) {
     if (throwOnSpki) throw StateError('x');
     return Uint8List.fromList([der.length, 1]);
+  }
+
+  @override
+  E2eeKeypair e2eeGenerateKeypair() {
+    if (panic != null) throw panic!;
+    return E2eeKeypair(
+      secret: Uint8List.fromList(List.filled(32, 1)),
+      public: Uint8List.fromList(List.filled(32, 2)),
+    );
+  }
+
+  @override
+  String e2eeEncrypt(Uint8List pub, Uint8List plain, Uint8List aad) {
+    if (panic != null) throw panic!;
+    return 'ab' * (30 + plain.length);
+  }
+
+  @override
+  Uint8List e2eeDecrypt(Uint8List secret, String wire, Uint8List aad) {
+    if (panic != null) throw panic!;
+    if (wire.isEmpty) throw StateError('x');
+    return Uint8List.fromList([wire.length]);
   }
 }

@@ -3,10 +3,11 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as crypto;
 
 import 'attestation_crypto.dart';
+import 'e2ee_reference.dart';
 import 'ed25519_verify.dart';
 
 /// [AttestationCrypto] for tests and demo mode: real hash functions and a
-/// real (slow) Ed25519 verification, but **no** check of the quote's
+/// real (slow) Ed25519 verification and E2EE ([E2eeReference]), but **no** check of the quote's
 /// signature chain: [verifyQuote] only reads the TD report fields of a
 /// TDX v4 quote and returns the configured [tcbStatus].
 final class FakeAttestationCrypto implements AttestationCrypto {
@@ -87,6 +88,20 @@ final class FakeAttestationCrypto implements AttestationCrypto {
   @override
   Uint8List sha384(Uint8List data) =>
       Uint8List.fromList(crypto.sha384.convert(data).bytes);
+
+  @override
+  E2eeKeypair e2eeGenerateKeypair() => E2eeReference.generateKeypair();
+
+  @override
+  String e2eeEncrypt(
+    Uint8List recipientPublic,
+    Uint8List plaintext,
+    Uint8List aad,
+  ) => E2eeReference.encrypt(recipientPublic, plaintext, aad);
+
+  @override
+  Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad) =>
+      E2eeReference.decrypt(secret, wireHex, aad);
 
   @override
   Uint8List spkiSha256(Uint8List certificateDer) {

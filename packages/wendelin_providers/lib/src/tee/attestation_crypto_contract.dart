@@ -1,10 +1,24 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
 
 import 'attestation_crypto.dart';
 import 'codec.dart';
+
+/// Request AAD of the published test vector (`spec/e2ee-v2-test-vectors.md`).
+const e2eeFrozenAad =
+    '{"algo":"x25519-aes-256-gcm-hkdf-sha256","field":"messages.0.content",'
+    '"model":"demo-model","nonce":"000102030405060708090a0b0c0d0e0f1011121314'
+    '15161718191a1b1c1d1e1f","purpose":"aci.e2ee.request.v2","ts":1750000000}';
+
+/// Ciphertext of "Hallo Wendelin" under [e2eeFrozenAad] for the service key
+/// of seed 32 x 0x03, made with Node.js `crypto` (independent of Rust).
+const e2eeFrozenWire =
+    '13be4feaeaf204c7fd3358fc9c00721881d174278128227ec674f37f7fe97b6d'
+    '090909090909090909090909'
+    '1e69f266bbbdd6899f377027147350819b3b31b348825eba8685be0c516c';
 
 /// A real quote with its collateral for [attestationCryptoContract].
 final class QuoteCase {
@@ -91,6 +105,51 @@ void attestationCryptoContract(
       expect(c.verifyEd25519(pk, msg, sig.sublist(0, 63)), isFalse);
       expect(c.verifyEd25519(pk.sublist(0, 31), msg, sig), isFalse);
     });
+
+    test('E2EE: Rundlauf, AAD-Bindung und Fehlerfälle', () async {
+      final c = await create();
+      final service = c.e2eeGenerateKeypair();
+      expect(service.public, hasLength(32));
+      expect(service.secret, hasLength(32));
+      final aad = text('{"field":"messages.0.content"}');
+      for (final plain in ['', 'Hallo Wörld', 'x' * 300]) {
+        final data = Uint8List.fromList(utf8.encode(plain));
+        final wire = c.e2eeEncrypt(service.public, data, aad);
+        expect(wire, matches(RegExp(r'^[0-9a-f]+$')));
+        expect(wire.length, 2 * (60 + data.length));
+        expect(c.e2eeDecrypt(service.secret, wire, aad), data);
+        expect(c.e2eeDecrypt(service.secret, '0x$wire', aad), data);
+      }
+      final one = c.e2eeEncrypt(service.public, text('a'), aad);
+      expect(c.e2eeEncrypt(service.public, text('a'), aad), isNot(one));
+      throwsE2ee(void Function() f) =>
+          expect(f, throwsA(isA<E2eeCryptoException>()));
+      throwsE2ee(() => c.e2eeDecrypt(service.secret, one, text('andere AAD')));
+      throwsE2ee(() => c.e2eeDecrypt(c.e2eeGenerateKeypair().secret, one, aad));
+      final flipped =
+          '${one.substring(0, one.length - 1)}'
+          '${one.endsWith('0') ? '1' : '0'}';
+      throwsE2ee(() => c.e2eeDecrypt(service.secret, flipped, aad));
+      throwsE2ee(() => c.e2eeDecrypt(service.secret, 'zz', aad));
+      throwsE2ee(() => c.e2eeDecrypt(service.secret, 'abcd', aad));
+      throwsE2ee(() => c.e2eeEncrypt(Uint8List(32), text('x'), aad));
+      throwsE2ee(() => c.e2eeEncrypt(Uint8List(5), text('x'), aad));
+    });
+
+    test(
+      'E2EE: eingefrorener Vektor einer unabhängigen Implementierung',
+      () async {
+        // Node.js crypto: Service-Seed 32 x 0x03, Ephemeral-Seed 32 x 0x07,
+        // GCM-Nonce 12 x 0x09, AAD = Request-AAD des Spec-Vektors.
+        final c = await create();
+        final plain = c.e2eeDecrypt(
+          Uint8List.fromList(List.filled(32, 3)),
+          e2eeFrozenWire,
+          text(e2eeFrozenAad),
+        );
+        expect(utf8.decode(plain), 'Hallo Wendelin');
+      },
+    );
 
     if (spkiCase != null) {
       test('spkiSha256 passt zu openssl; Müll wirft FormatException', () async {

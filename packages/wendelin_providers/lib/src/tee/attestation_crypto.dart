@@ -94,6 +94,33 @@ final class CollateralUnavailableException implements Exception {
   String toString() => 'CollateralUnavailableException: $reason';
 }
 
+/// An X25519 key pair for E2EE (raw 32-byte keys).
+final class E2eeKeypair {
+  /// Creates a key pair.
+  const E2eeKeypair({required this.secret, required this.public});
+
+  /// Private key. Stays in memory for the duration of one request and is
+  /// never logged.
+  final Uint8List secret;
+
+  /// Public key (goes into `X-Client-Pub-Key`).
+  final Uint8List public;
+}
+
+/// Encrypting or decrypting an E2EE field failed (bad key, tag or AAD
+/// mismatch, malformed ciphertext). [reason] never contains key material or
+/// plaintext.
+final class E2eeCryptoException implements Exception {
+  /// Creates the exception.
+  const E2eeCryptoException(this.reason);
+
+  /// What went wrong.
+  final String reason;
+
+  @override
+  String toString() => 'E2eeCryptoException: $reason';
+}
+
 /// Cryptographic primitives of the attestation, implemented in Rust by WP47
 /// (`flutter_rust_bridge`) and by `FakeAttestationCrypto` in tests.
 ///
@@ -107,6 +134,11 @@ final class CollateralUnavailableException implements Exception {
 ///   network nor cache can provide it.
 /// - The hash functions and [verifyEd25519] are pure; [verifyEd25519]
 ///   returns `false` (never throws) for malformed keys or signatures.
+/// - The E2EE primitives implement exactly suite
+///   `x25519-aes-256-gcm-hkdf-sha256` of Phala E2EE v2 (one field per call,
+///   ephemeral key and GCM nonce fresh per encryption, wire format = lower
+///   case hex of `ephemeral_public || nonce || ciphertext || tag`); every
+///   failure of [e2eeEncrypt] and [e2eeDecrypt] is an [E2eeCryptoException].
 /// - [spkiSha256] hashes the DER `SubjectPublicKeyInfo` of the X.509
 ///   certificate [certificateDer]; throws [FormatException] if unparsable.
 abstract interface class AttestationCrypto {
@@ -135,4 +167,19 @@ abstract interface class AttestationCrypto {
 
   /// SHA-256 of the SubjectPublicKeyInfo of a DER certificate.
   Uint8List spkiSha256(Uint8List certificateDer);
+
+  /// A fresh X25519 key pair.
+  E2eeKeypair e2eeGenerateKeypair();
+
+  /// Encrypts [plaintext] to the X25519 key [recipientPublic] with
+  /// authenticated data [aad]; returns the hex wire format.
+  String e2eeEncrypt(
+    Uint8List recipientPublic,
+    Uint8List plaintext,
+    Uint8List aad,
+  );
+
+  /// Decrypts a hex wire value with the private key [secret]; wrong key,
+  /// wrong [aad] or modified bytes throw [E2eeCryptoException].
+  Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad);
 }
