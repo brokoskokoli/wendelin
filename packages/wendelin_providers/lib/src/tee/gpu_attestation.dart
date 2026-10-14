@@ -52,6 +52,11 @@ final class GpuAttestationResult {
 
 /// Checks the GPU attestation of a TEE model (NVIDIA NRAS). Never throws.
 abstract interface class GpuAttestationVerifier {
+  /// Local part only, **no call to NVIDIA**: fetches the gateway's GPU
+  /// evidence with a fresh nonce and checks that it binds that nonce. Runs
+  /// in every [GpuCheckMode], also `off`.
+  Future<GpuAttestationResult> verifyLocal({required String model});
+
   /// Checks the GPU evidence of [model] with a fresh nonce.
   Future<GpuAttestationResult> verify({required String model});
 }
@@ -91,40 +96,16 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       Uint8List.fromList(List.generate(32, (_) => _random.nextInt(256)));
 
   @override
+  Future<GpuAttestationResult> verifyLocal({required String model}) async {
+    final (:result, payload: _, nonce: _) = await _evidence(model);
+    return result ?? const GpuAttestationResult(GpuVerdict.verified);
+  }
+
+  @override
   Future<GpuAttestationResult> verify({required String model}) async {
-    final nonce = AttestCodec.hex(_nonce());
+    final (:result, :payload, :nonce) = await _evidence(model);
+    if (result != null) return result;
     try {
-      final report = await _client
-          .get(
-            baseUrl.replace(
-              pathSegments: [
-                ...baseUrl.pathSegments.where((s) => s.isNotEmpty),
-                'attestation',
-                'report',
-              ],
-              queryParameters: {'model': model, 'nonce': nonce},
-            ),
-          )
-          .timeout(timeout);
-      if (report.statusCode != 200) {
-        return const GpuAttestationResult(
-          GpuVerdict.unreachable,
-          'GPU-Evidenz nicht abrufbar',
-        );
-      }
-      final payload = _payload(report.bodyBytes);
-      if (payload == null) {
-        return const GpuAttestationResult(
-          GpuVerdict.failed,
-          'GPU-Evidenz fehlt',
-        );
-      }
-      if ((payload['nonce'] as String?)?.toLowerCase() != nonce) {
-        return const GpuAttestationResult(
-          GpuVerdict.failed,
-          'GPU-Evidenz bindet die Nonce nicht',
-        );
-      }
       final nras = await _client
           .post(
             Uri.parse(nrasUrl),
@@ -154,6 +135,70 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       return const GpuAttestationResult(
         GpuVerdict.unreachable,
         'NRAS nicht erreichbar',
+      );
+    }
+  }
+
+  /// Fetches the evidence and checks our nonce in it; [result] is the
+  /// failure, or `null` if the evidence binds the nonce.
+  Future<
+    ({
+      GpuAttestationResult? result,
+      Map<String, Object?>? payload,
+      String nonce,
+    })
+  >
+  _evidence(String model) async {
+    final nonce = AttestCodec.hex(_nonce());
+    GpuAttestationResult? fail(GpuVerdict v, String detail) =>
+        GpuAttestationResult(v, detail);
+    try {
+      final report = await _client
+          .get(
+            baseUrl.replace(
+              pathSegments: [
+                ...baseUrl.pathSegments.where((s) => s.isNotEmpty),
+                'attestation',
+                'report',
+              ],
+              queryParameters: {'model': model, 'nonce': nonce},
+            ),
+          )
+          .timeout(timeout);
+      if (report.statusCode != 200) {
+        return (
+          result: fail(GpuVerdict.unreachable, 'GPU-Evidenz nicht abrufbar'),
+          payload: null,
+          nonce: nonce,
+        );
+      }
+      final payload = _payload(report.bodyBytes);
+      if (payload == null) {
+        return (
+          result: fail(GpuVerdict.failed, 'GPU-Evidenz fehlt'),
+          payload: null,
+          nonce: nonce,
+        );
+      }
+      if ((payload['nonce'] as String?)?.toLowerCase() != nonce) {
+        return (
+          result: fail(GpuVerdict.failed, 'GPU-Evidenz bindet die Nonce nicht'),
+          payload: null,
+          nonce: nonce,
+        );
+      }
+      return (result: null, payload: payload, nonce: nonce);
+    } on TimeoutException {
+      return (
+        result: fail(GpuVerdict.timeout, 'NRAS Zeitüberschreitung'),
+        payload: null,
+        nonce: nonce,
+      );
+    } on Object {
+      return (
+        result: fail(GpuVerdict.unreachable, 'NRAS nicht erreichbar'),
+        payload: null,
+        nonce: nonce,
       );
     }
   }

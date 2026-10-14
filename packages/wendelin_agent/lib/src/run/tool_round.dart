@@ -166,8 +166,7 @@ final class ToolRound {
   ) async {
     final external = [
       for (final call in pending)
-        if (_privacy.catalog.lookup(call.name)?.risk == RiskLevel.external)
-          call,
+        if (_isExternal(call)) call,
     ];
     if (!_attest.expectsReport || external.isEmpty) {
       return _invoke(pending, results);
@@ -187,6 +186,19 @@ final class ToolRound {
       _control.emit(ToolCallFinished(call: call, outcome: outcome));
       results[call.id] = outcome.toResultBlock(call.id);
     }
+  }
+
+  /// Whether [call] is effectively `external` for the invoker's policy (own
+  /// level or made confirm-only by the user or an integration). Without a
+  /// [ToolRiskAssessor] the static [Tool.risk] counts.
+  bool _isExternal(ToolCallBlock call) {
+    final tool = _privacy.catalog.lookup(call.name);
+    if (tool == null) return false;
+    final invoker = runner.invoker;
+    final risk = invoker is ToolRiskAssessor
+        ? (invoker as ToolRiskAssessor).effectiveRisk(tool, runner.sessionId)
+        : tool.risk;
+    return risk == RiskLevel.external;
   }
 
   /// Runs [pending] through the invoker and collects their [results].

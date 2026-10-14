@@ -20,6 +20,7 @@ void main() {
     final chat = FakeServer([openAiResponseFor(scenario)]);
     final tee = TeeServer({
       'aci/attestation': jsonBody(teeJson('gateway_attestation')),
+      'aci/sessions/': jsonBody(upToDateSession()),
     });
     return AttestedProvider(
       inner: OpenAiChatAdapter(
@@ -30,6 +31,11 @@ void main() {
         ),
         defaultModel: 'contract-model',
         client: splitClient(chat.client, tee.client),
+        options: const OpenAiOptions(
+          extraBody: {
+            'provider': {'aci_verified': true},
+          },
+        ),
       ),
       verifier: PhalaVerifier(
         crypto: FakeAttestationCrypto(),

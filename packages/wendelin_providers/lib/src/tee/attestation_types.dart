@@ -58,6 +58,9 @@ enum AttestationStage {
   /// `upstream.verified` with result `verified`.
   upstream('receipt.upstream'),
 
+  /// TCB status of the upstream's TEE session (`/aci/sessions/{id}`).
+  upstreamTcb('receipt.upstream.tcb'),
+
   /// The receipt contains the required events.
   receiptEvents('receipt.events');
 
@@ -89,14 +92,16 @@ enum StageOutcome {
 @immutable
 final class StageResult {
   /// Creates a result.
-  const StageResult(this.stage, this.outcome, [this.detail]);
+  const StageResult(this.stage, this.outcome, [this.detail, this.code]);
 
   /// A passed stage.
   const StageResult.pass(this.stage, [this.detail])
-    : outcome = StageOutcome.pass;
+    : outcome = StageOutcome.pass,
+      code = null;
 
-  /// A failed stage.
-  const StageResult.fail(this.stage, this.detail) : outcome = StageOutcome.fail;
+  /// A failed stage; [code] marks a special reason (see [code]).
+  const StageResult.fail(this.stage, this.detail, {this.code})
+    : outcome = StageOutcome.fail;
 
   /// The stage.
   final AttestationStage stage;
@@ -107,11 +112,23 @@ final class StageResult {
   /// Reason or note (never prompt or receipt content).
   final String? detail;
 
+  /// Stable reason code for failures that are not manipulation, e.g.
+  /// [upstreamTcbOutOfDate]; `null` for ordinary failures.
+  final String? code;
+
+  /// Code: the upstream's platform TCB is out of date (the operator's
+  /// security update is pending); not a forgery.
+  static const upstreamTcbOutOfDate = 'upstream_tcb_out_of_date';
+
+  /// Code: the upstream's platform TCB is revoked.
+  static const upstreamTcbRevoked = 'upstream_tcb_revoked';
+
   /// JSON for the audit log.
   Map<String, Object?> toJson() => {
     'stage': stage.id,
     'result': outcome.name,
     if (detail != null) 'detail': detail,
+    if (code != null) 'code': code,
   };
 
   @override

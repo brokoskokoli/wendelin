@@ -23,11 +23,13 @@ Future<ReceiptResult> _verify(
   Uint8List? req,
   Uint8List? resp,
   int status = 200,
+  Map<String, Object?>? session,
 }) async {
   final fake = crypto ?? FakeAttestationCrypto(ed25519Result: true);
   final server = TeeServer({
     'aci/attestation': jsonBody(teeJson('gateway_attestation')),
     'aci/receipts/': jsonBody(receipt, status: status),
+    'aci/sessions/': jsonBody(session ?? upToDateSession()),
   });
   final v = probeVerifier(server, fake);
   final s = (await v.attest()).session!;

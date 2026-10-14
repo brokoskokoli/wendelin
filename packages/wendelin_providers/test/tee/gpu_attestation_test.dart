@@ -113,6 +113,37 @@ void main() {
     );
   });
 
+  group('NrasGpuVerifier.verifyLocal (ohne NVIDIA)', () {
+    test('Nonce passt: verified, NRAS wird nie gefragt', () async {
+      final hosts = <String>[];
+      final v = _verifier((r) {
+        hosts.add(r.url.host);
+        return _ok(_report);
+      });
+      expect((await v.verifyLocal(model: 'm')).verdict, GpuVerdict.verified);
+      expect(hosts, ['gateway.test']);
+    });
+
+    test('fremde Nonce in der Evidenz: failed', () async {
+      final report = jsonDecode(_report) as Map<String, Object?>;
+      final raw = report['nvidia_payload'];
+      final payload = raw is String
+          ? jsonDecode(raw) as Map<String, Object?>
+          : raw! as Map<String, Object?>;
+      payload['nonce'] = 'ab' * 32;
+      report['nvidia_payload'] = payload;
+      final v = _verifier((r) => _ok(jsonEncode(report)));
+      final r = await v.verifyLocal(model: 'm');
+      expect(r.verdict, GpuVerdict.failed);
+      expect(r.detail, contains('Nonce'));
+    });
+
+    test('Bericht nicht abrufbar: unreachable', () async {
+      final v = _verifier((r) => http.Response('x', 503));
+      expect((await v.verifyLocal(model: 'm')).verdict, GpuVerdict.unreachable);
+    });
+  });
+
   group('AttestedProvider: GPU-Modus', () {
     const bad = GpuAttestationResult(GpuVerdict.failed, 'abgelehnt');
 
@@ -225,6 +256,7 @@ void main() {
         await pumpEventQueue();
         final red = reports.lastWhere((r) => r.status == AttestationStatus.red);
         expect(red.detail, contains('GPU'));
+        expect(red.reasonCode, 'gpu_failed');
         expect(h.log.entries.last.kind, AttestationLogKind.gpu);
         // The next request asks first and is blocked while NRAS says no.
         final before = h.chatRequests;
@@ -238,6 +270,111 @@ void main() {
         gpu.result = const GpuAttestationResult(GpuVerdict.verified);
         expect((await h.chat()).last, isA<Done>());
       });
+    });
+
+    group('lokale Nonce-Bindung und Protokoll', () {
+      test('off: lokale Bindung läuft einmal je Modell, NRAS nie', () async {
+        final gpu = FakeGpuAttestationVerifier();
+        final h = TeeHarness(gpu: gpu);
+        await h.chat();
+        await h.chat();
+        expect(gpu.localCalls, ['m']);
+        expect(gpu.calls, isEmpty);
+      });
+
+      test('off: Bindung schlägt fehl → rot, nichts gesendet', () async {
+        final gpu = FakeGpuAttestationVerifier()
+          ..localResult = const GpuAttestationResult(
+            GpuVerdict.failed,
+            'GPU-Evidenz bindet die Nonce nicht',
+          );
+        final h = TeeHarness(gpu: gpu);
+        final reports = <AttestationReport>[];
+        h.provider.reports.listen(reports.add);
+        final events = await h.chat();
+        final error =
+            (events.last as ErrorEvent).error as AttestationFailedException;
+        expect(error.stage, 'gpu');
+        expect(error.unavailable, isFalse);
+        expect(h.chatRequests, 0);
+        await pumpEventQueue();
+        expect(reports.last.status, AttestationStatus.red);
+        expect(reports.last.reasonCode, 'gpu_failed');
+      });
+
+      test(
+        'off: Session-Protokoll nennt „nicht über NVIDIA geprüft“',
+        () async {
+          final h = TeeHarness(gpu: FakeGpuAttestationVerifier());
+          await h.chat();
+          final session = h.log.entries.firstWhere(
+            (e) => e.kind == AttestationLogKind.session,
+          );
+          final gpuStage = session.stages.singleWhere(
+            (s) => s.stage == AttestationStage.gpu,
+          );
+          expect(gpuStage.outcome, StageOutcome.info);
+          expect(gpuStage.detail, 'GPU: nicht über NVIDIA geprüft');
+        },
+      );
+
+      test('before: Session-Protokoll hat keine Info-Stufe', () async {
+        final h = TeeHarness(
+          gpu: FakeGpuAttestationVerifier(),
+          gpuMode: GpuCheckMode.before,
+        );
+        await h.chat();
+        final session = h.log.entries.firstWhere(
+          (e) => e.kind == AttestationLogKind.session,
+        );
+        expect(
+          session.stages.where((s) => s.stage == AttestationStage.gpu),
+          isEmpty,
+        );
+      });
+
+      test('NRAS grün: Text „geprüft (NRAS, Signatur ungeprüft)“', () async {
+        final h = TeeHarness(
+          gpu: FakeGpuAttestationVerifier(),
+          gpuMode: GpuCheckMode.before,
+        );
+        await h.chat();
+        final entry = h.log.entries.firstWhere(
+          (e) => e.kind == AttestationLogKind.gpu,
+        );
+        expect(entry.status, AttestationStatus.green);
+        expect(
+          entry.stages.single.detail,
+          'geprüft (NRAS, Signatur ungeprüft)',
+        );
+      });
+
+      test('nachher: lokale Bindung vor der ersten Anfrage', () async {
+        final gpu = FakeGpuAttestationVerifier()
+          ..localResult = const GpuAttestationResult(GpuVerdict.failed, 'x');
+        final h = TeeHarness(gpu: gpu, gpuMode: GpuCheckMode.after);
+        expect((await h.chat()).last, isA<ErrorEvent>());
+        expect(h.chatRequests, 0);
+      });
+    });
+
+    test('nachher: Fehlschlag sperrt nur das betroffene Modell', () async {
+      final gpu = FakeGpuAttestationVerifier(bad);
+      final h = TeeHarness(gpu: gpu, gpuMode: GpuCheckMode.after);
+      await h.chat();
+      await h.provider.pendingReport();
+      await pumpEventQueue();
+      final other = await h.provider
+          .chat(
+            ChatRequest(
+              messages: [Message.user('Hi')],
+              model: 'n',
+              maxTokens: 5,
+            ),
+          )
+          .toList();
+      expect(other.last, isA<Done>(), reason: 'Modell n war nie auffällig');
+      expect((await h.chat()).last, isA<ErrorEvent>(), reason: 'Modell m ja');
     });
   });
 }

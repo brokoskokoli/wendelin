@@ -125,3 +125,18 @@ Map<String, Object?> syntheticReceipt(
   edit?.call(r);
   return r;
 }
+
+/// The probe's upstream session (`OutOfDate`, `tcb_up_to_date` refuted).
+Map<String, Object?> outOfDateSession() => copyJson(teeJson('session'));
+
+/// The probe's session manipulated to an up-to-date TCB.
+Map<String, Object?> upToDateSession() {
+  final s = outOfDateSession();
+  final claims = s['claims']! as Map<String, Object?>;
+  (claims['extra']! as Map<String, Object?>)['tcb_status'] = 'UpToDate';
+  claims['tcb_up_to_date'] = {
+    'status': 'asserted',
+    'source': 'hardware_proven',
+  };
+  return s;
+}

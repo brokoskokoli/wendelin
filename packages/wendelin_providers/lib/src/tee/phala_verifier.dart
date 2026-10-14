@@ -249,9 +249,12 @@ final class PhalaVerifier implements AttestationVerifier {
       crypto,
       expectUpstreamEnforced: expectUpstreamEnforced,
     );
+    final run = checks.run(receipt, ref.session, requestBytes, responseBytes);
     final stages = [
       const StageResult.pass(AttestationStage.receiptFetch),
-      ...checks.run(receipt, ref.session, requestBytes, responseBytes),
+      ...run,
+      if (run.last.outcome == StageOutcome.pass)
+        await _upstreamTcb(receipt.event('upstream.verified')),
     ];
     return ReceiptResult(
       stages: stages,
@@ -259,6 +262,32 @@ final class PhalaVerifier implements AttestationVerifier {
       pinChanged: receipt.keysetDigest != ref.session.keysetDigest,
       receiptId: ref.id,
     );
+  }
+
+  /// Loads the upstream session named in `upstream.verified` and judges its
+  /// TCB; a session that cannot be loaded is `unavailable` (retried like
+  /// the receipt).
+  Future<StageResult> _upstreamTcb(ReceiptEvent? event) async {
+    const s = AttestationStage.upstreamTcb;
+    final id = event?.raw['session_id'];
+    if (id is! String || id.isEmpty) {
+      return const StageResult.fail(s, 'session_id fehlt');
+    }
+    try {
+      return upstreamTcbStage(
+        GatewaySession.parse(await _get(_url('aci/sessions/$id'))),
+      );
+    } on AttestationFormatException catch (e) {
+      return StageResult.fail(s, e.message);
+    } on MalformedResponseException {
+      return const StageResult.fail(s, 'Upstream-Session unlesbar');
+    } on ProviderException {
+      return const StageResult(
+        s,
+        StageOutcome.unavailable,
+        'Upstream-Session nicht abrufbar',
+      );
+    }
   }
 
   ReceiptResult _receiptFailed(List<StageResult> stages, ReceiptRef ref) =>

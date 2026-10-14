@@ -44,6 +44,15 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.retryDelay = const Duration(seconds: 2),
     Duration gpuTimeout = const Duration(seconds: 15),
   }) {
+    final provider = inner.options.extraBody['provider'];
+    if (provider is! Map || provider['aci_verified'] != true) {
+      throw ArgumentError.value(
+        inner.options.extraBody,
+        'inner',
+        'OpenAiOptions.extraBody must contain provider.aci_verified: true '
+            '(the gateway must enforce the upstream check)',
+      );
+    }
     _gpu = GpuGate(
       mode: gpuMode,
       verifier: gpuVerifier,
@@ -83,7 +92,9 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   AttestedSession? _session;
   AttestationFailedException? _lock;
   Future<AttestationFailedException?>? _attesting;
-  Future<AttestationReport?>? _pending;
+  Future<AttestationReport?>? _latest;
+  final Expando<Future<AttestationReport?>> _byRequest =
+      Expando<Future<AttestationReport?>>('receipt report per chat call');
   late final AttestationAudit _audit = AttestationAudit(
     profileId,
     logSink,
@@ -92,11 +103,22 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   final StreamController<AttestationReport> _reports =
       StreamController<AttestationReport>.broadcast();
 
+  /// Every result of the provider as it becomes final: session attestation,
+  /// receipt checks (also interim yellow ones) and GPU checks. A **failed
+  /// GPU check** (also the asynchronous one of mode `after`) arrives here as
+  /// a red report with `reasonCode` `gpu_failed` (evidence rejected or nonce
+  /// not bound) or `gpu_unavailable` (NRAS not reachable, timeout), and
+  /// `detail` „GPU-Prüfung: …“; WP52 subscribes to show the warning.
   @override
   Stream<AttestationReport> get reports => _reports.stream;
 
   @override
-  Future<AttestationReport?> pendingReport() async => _pending;
+  Future<AttestationReport?> reportFor(ChatRequest request) =>
+      _byRequest[request] ?? Future.value();
+
+  /// Report of the most recently started `chat` call (convenience for tests
+  /// and single-run callers; the agent uses [reportFor]).
+  Future<AttestationReport?> pendingReport() async => _latest;
 
   /// The provider refuses requests until [reattest] succeeds.
   bool get locked => _lock != null;
@@ -145,7 +167,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   @override
   Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) async* {
-    _pending = null;
+    _latest = null;
     final error = await _prepare(req.model);
     if (error != null) {
       _audit.log('Wendelin/attest: Anfrage nicht gesendet (${error.stage})');
@@ -164,9 +186,9 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       observer: (r) => record = r,
     )) {
       if (event is Done && record != null) {
-        _pending = _checkReceipt(record!, session, req.model);
+        _latest = _byRequest[req] = _checkReceipt(record!, session, req.model);
       } else if (event is ErrorEvent) {
-        _pending = Future.value();
+        _latest = _byRequest[req] = Future.value();
       }
       yield event;
     }
@@ -202,7 +224,15 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     final id = _audit.record(
       AttestationLogKind.session,
       result.status,
-      result.stages,
+      [
+        ...result.stages,
+        if (_gpu.mode == GpuCheckMode.off)
+          const StageResult(
+            AttestationStage.gpu,
+            StageOutcome.info,
+            'GPU: nicht über NVIDIA geprüft',
+          ),
+      ],
       session: session,
       notes: [
         ...result.notes,
@@ -279,12 +309,16 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           );
         }
       }
+      final problem = status == AttestationStatus.red
+          ? stages.where((s) => s.code != null).firstOrNull
+          : null;
       final report = AttestationReport(
         logId: logId,
         status: status,
         detail: pinChanged
             ? 'Anbieter hat ein Update ausgerollt, neu geprüft'
-            : policy.notes(stages).firstOrNull,
+            : problem?.detail ?? policy.notes(stages).firstOrNull,
+        reasonCode: problem?.code,
       );
       _emit(report);
       if (status == AttestationStatus.green) _gpu.after(model);
@@ -364,15 +398,23 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           .id ??
       'receipt';
 
-  void _onGpuResult(String model, GpuAttestationResult result) {
+  void _onGpuResult(String model, GpuAttestationResult result, bool nras) {
     final status = result.ok ? AttestationStatus.green : AttestationStatus.red;
     final id = _audit.record(AttestationLogKind.gpu, status, [
       StageResult(
         AttestationStage.gpu,
         result.ok ? StageOutcome.pass : StageOutcome.fail,
-        'gpu: ${result.verdict.name}',
+        result.ok
+            ? (nras
+                  ? 'geprüft (NRAS, Signatur ungeprüft)'
+                  : 'Nonce-Bindung lokal geprüft, nicht über NVIDIA geprüft')
+            : 'gpu: ${result.verdict.name}',
       ),
     ], model: model);
+    if (result.ok && !nras) return; // routine local check: no report
+    final unavailable =
+        result.verdict == GpuVerdict.unreachable ||
+        result.verdict == GpuVerdict.timeout;
     _emit(
       AttestationReport(
         logId: id,
@@ -380,6 +422,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         detail: result.ok
             ? null
             : 'GPU-Prüfung: ${result.detail ?? result.verdict.name}',
+        reasonCode: result.ok
+            ? null
+            : unavailable
+            ? 'gpu_unavailable'
+            : 'gpu_failed',
       ),
     );
   }

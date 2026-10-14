@@ -326,3 +326,31 @@ final class GatewayReceipt {
       if (e.key != 'signature') e.key: e.value,
   });
 }
+
+/// Parsed upstream session (`GET /v1/aci/sessions/{session_id}`): only the
+/// TCB claims. Unknown fields ignored.
+final class GatewaySession {
+  /// Parses the session; throws [AttestationFormatException].
+  factory GatewaySession.parse(Map<String, Object?> json) {
+    const s = AttestationStage.upstreamTcb;
+    final claims = _req<Map<String, Object?>>(json, 'claims', s);
+    final extra = claims['extra'];
+    final upToDate = claims['tcb_up_to_date'];
+    return GatewaySession._(
+      upToDateStatus: upToDate is Map<String, Object?>
+          ? upToDate['status'] as String?
+          : null,
+      tcbStatus: extra is Map<String, Object?>
+          ? extra['tcb_status'] as String?
+          : null,
+    );
+  }
+
+  const GatewaySession._({this.upToDateStatus, this.tcbStatus});
+
+  /// `claims.tcb_up_to_date.status` (`refuted`, `asserted`, …).
+  final String? upToDateStatus;
+
+  /// `claims.extra.tcb_status` (`UpToDate`, `OutOfDate`, …).
+  final String? tcbStatus;
+}

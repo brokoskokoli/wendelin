@@ -30,6 +30,13 @@ final class TeeHarness {
           status,
         );
       },
+      'aci/sessions/': (_) async {
+        if (sessionFailures > 0) {
+          sessionFailures--;
+          return _json('{}', 500);
+        }
+        return _json(jsonEncode(sessionDoc ?? upToDateSession()), 200);
+      },
       'aci/receipts/': (_) async {
         await receiptGate?.future;
         if (receiptFailures > 0) {
@@ -118,6 +125,12 @@ final class TeeHarness {
 
   /// Number of receipt requests answered with 500 before success.
   int receiptFailures = 0;
+
+  /// Upstream session served; `null` = up-to-date variant of the probe.
+  Map<String, Object?>? sessionDoc;
+
+  /// Number of session requests answered with 500 before success.
+  int sessionFailures = 0;
 
   /// Edit applied to every receipt.
   void Function(Map<String, Object?>)? receiptEdit;

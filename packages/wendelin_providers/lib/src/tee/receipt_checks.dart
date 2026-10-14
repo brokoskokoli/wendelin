@@ -140,3 +140,35 @@ final class ReceiptChecks {
     return const StageResult.pass(s);
   }
 }
+
+/// The stage `receipt.upstream.tcb` from the upstream's [session] claims
+/// (decision 3 of M4): `OutOfDate` is red, but with its own code
+/// ([StageResult.upstreamTcbOutOfDate]) and text, so the UI can say „security
+/// update pending at the operator“ instead of „manipulated“.
+StageResult upstreamTcbStage(GatewaySession session) {
+  const s = AttestationStage.upstreamTcb;
+  final status = session.tcbStatus;
+  if (status == 'Revoked') {
+    return const StageResult.fail(
+      s,
+      'Upstream-TCB Revoked',
+      code: StageResult.upstreamTcbRevoked,
+    );
+  }
+  if (session.upToDateStatus == 'refuted' ||
+      (status != null && status.startsWith('OutOfDate'))) {
+    return StageResult.fail(
+      s,
+      'Sicherheits-Update beim Betreiber ausstehend '
+      '(Upstream-TCB ${status ?? 'OutOfDate'})',
+      code: StageResult.upstreamTcbOutOfDate,
+    );
+  }
+  if (status != null && status != 'UpToDate') {
+    return StageResult(s, StageOutcome.warn, 'Hinweis: Upstream-TCB $status');
+  }
+  if (session.upToDateStatus == null && status == null) {
+    return const StageResult(s, StageOutcome.warn, 'Upstream-TCB unbekannt');
+  }
+  return const StageResult.pass(s);
+}

@@ -29,10 +29,10 @@ final class AttestationGate {
   bool _emitted = true;
 
   /// A model call on [provider] has ended: remember its pending check.
-  void begin(LlmProvider provider) {
+  void begin(LlmProvider provider, ChatRequest request) {
     _stepId = '$_sessionId:${++_steps}';
     _report = provider is AttestationAware
-        ? (provider as AttestationAware).pendingReport()
+        ? (provider as AttestationAware).reportFor(request)
         : null;
     _emitted = _report == null;
   }

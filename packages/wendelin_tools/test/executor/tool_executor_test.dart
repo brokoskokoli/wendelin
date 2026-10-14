@@ -242,6 +242,18 @@ void main() {
       }
     });
 
+    test('ToolRiskAssessor: Nutzer-Verschärfung hebt read auf external', () {
+      final read = FakeTool(name: 'cal__list');
+      final executor = ToolExecutor(
+        catalog: FakeToolCatalog([read]),
+        policy: RiskPolicy(overrides: {'cal__list': PolicyAction.confirm}),
+      );
+      expect(executor.effectiveRisk(read, 's'), RiskLevel.external);
+      final plain = ToolExecutor(catalog: FakeToolCatalog([read]));
+      expect(plain.effectiveRisk(read, 's'), RiskLevel.read);
+      expect(plain, isA<ToolRiskAssessor>());
+    });
+
     test('Text aus prepareConfirmation, erst wenn der Zug dran ist', () async {
       final prepared = <String>[];
       FakeTool tool(String name) => FakeTool(

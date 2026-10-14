@@ -135,7 +135,12 @@ final class ModelCall {
         'Antwortstrom ohne Abschluss beendet',
       );
     }
-    await _reportAttestation(target.provider, blocks, failed: error != null);
+    await _reportAttestation(
+      target.provider,
+      request,
+      blocks,
+      failed: error != null,
+    );
     // Incomplete tool calls of a failed stream are never executed: the
     // whole reply is discarded on error.
     return ModelReply(error == null ? blocks : const [], stopReason, error);
@@ -146,10 +151,11 @@ final class ModelCall {
   /// reports it (external tools wait for it).
   Future<void> _reportAttestation(
     LlmProvider provider,
+    ChatRequest request,
     List<ContentBlock> blocks, {
     required bool failed,
   }) async {
-    _attest.begin(provider);
+    _attest.begin(provider, request);
     if (failed || !blocks.any((b) => b is ToolCallBlock)) {
       await _attest.settle();
     }

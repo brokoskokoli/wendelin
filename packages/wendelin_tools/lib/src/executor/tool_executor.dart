@@ -26,7 +26,7 @@ import 'tool_audit.dart';
 /// Everything a tool produced reaches the model inside the data envelope,
 /// including the text of exceptions it threw (sanitised, see
 /// [sanitizeErrorText]).
-final class ToolExecutor implements ToolInvoker {
+final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
   /// Creates an executor over [catalog].
   ToolExecutor({
     required this.catalog,
@@ -55,6 +55,13 @@ final class ToolExecutor implements ToolInvoker {
 
   /// Decides allow / confirm / deny.
   final RiskPolicy policy;
+
+  @override
+  RiskLevel effectiveRisk(Tool tool, String sessionId) =>
+      RiskPolicy.effectiveRisk(
+        tool.risk,
+        policy.decide(tool, sessionId).action,
+      );
 
   /// Checks arguments against the tool's input schema.
   final ArgumentValidator validator;

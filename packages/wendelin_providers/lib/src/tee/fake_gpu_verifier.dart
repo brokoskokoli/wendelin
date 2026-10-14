@@ -16,8 +16,22 @@ final class FakeGpuAttestationVerifier implements GpuAttestationVerifier {
   /// If set, calls wait for it.
   Completer<void>? gate;
 
-  /// Models asked for, in order.
+  /// Answer of the local nonce check ([verifyLocal]); default verified.
+  GpuAttestationResult localResult = const GpuAttestationResult(
+    GpuVerdict.verified,
+  );
+
+  /// Models asked for, in order (full checks).
   final List<String> calls = [];
+
+  /// Models of the local nonce checks, in order.
+  final List<String> localCalls = [];
+
+  @override
+  Future<GpuAttestationResult> verifyLocal({required String model}) async {
+    localCalls.add(model);
+    return localResult;
+  }
 
   @override
   Future<GpuAttestationResult> verify({required String model}) async {

@@ -29,7 +29,26 @@ final class VerifyingFake implements LlmProvider, AttestationAware {
   @override
   Stream<AttestationReport> get reports => const Stream.empty();
   @override
-  Future<AttestationReport?> pendingReport() => report.future;
+  Future<AttestationReport?> reportFor(ChatRequest request) => report.future;
+}
+
+/// Invoker whose policy makes some tools confirm-only (effective
+/// `external`), like `ToolExecutor` with user overrides.
+final class AssessingInvoker implements ToolInvoker, ToolRiskAssessor {
+  AssessingInvoker(this.inner, this.stricter);
+
+  final FakeToolInvoker inner;
+  final Set<String> stricter;
+
+  @override
+  RiskLevel effectiveRisk(Tool tool, String sessionId) =>
+      stricter.contains(tool.name) ? RiskLevel.external : tool.risk;
+
+  @override
+  Stream<ToolInvocationEvent> invokeAll(
+    List<ToolCallBlock> calls,
+    ToolContext ctx,
+  ) => inner.invokeAll(calls, ctx);
 }
 
 AttestationReport _report(AttestationStatus s) =>
@@ -209,6 +228,110 @@ void main() {
       );
       expect(sms.callCount, 1);
       expect(events.whereType<AttestationStatusChanged>(), isEmpty);
+    });
+
+    test(
+      'kein Bericht (null): external-Tool erreicht den Invoker nie',
+      () async {
+        final sms = FakeTool(
+          name: 'sms__send',
+          risk: RiskLevel.external,
+          confirmation: (_) => 'SMS',
+        );
+        final report = Completer<AttestationReport?>()..complete(null);
+        final h = build(
+          [
+            ScriptedTurn.toolCalls([call('c1', 'sms__send')]),
+            ScriptedTurn.text('Nicht gesendet.'),
+          ],
+          report,
+          [sms],
+        );
+        final events = await h.run(
+          'Hi',
+          onEvent: (e) {
+            if (e is ConfirmationRequired) {
+              fail('keine Bestätigung ohne Bericht');
+            }
+          },
+        );
+        expect(sms.callCount, 0);
+        expect(h.invoker is FakeToolInvoker, isTrue);
+        expect((h.invoker as FakeToolInvoker).received, isEmpty);
+        expect(
+          events.whereType<ToolCallFinished>().single.outcome.isError,
+          isTrue,
+        );
+      },
+    );
+
+    Future<(FakeTool, Completer<AttestationReport?>, Future<List<AgentEvent>>)>
+    startWithStricter(FakeTool tool, Set<String> stricter) async {
+      final report = Completer<AttestationReport?>();
+      final provider = VerifyingFake(
+        FakeLlmProvider([
+          ScriptedTurn.toolCalls([call('c1', tool.name)]),
+          ScriptedTurn.text('Fertig.'),
+        ]),
+        report,
+      );
+      final catalog = FakeToolCatalog([tool]);
+      final h = Harness(
+        primary: ProviderTarget(
+          profileId: 'tee',
+          modelId: 'm',
+          provider: provider,
+          privacy: PrivacyLevel.tee,
+        ),
+        tools: [tool],
+        invoker: AssessingInvoker(FakeToolInvoker(catalog), stricter),
+      );
+      final done = h.run('Hi');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      return (tool, report, done);
+    }
+
+    test(
+      'Nutzer-Verschärfung read zu confirm wartet auf die Quittung',
+      () async {
+        final read = FakeTool(
+          name: 'cal__list',
+          outcome: ToolOutcome.text('2'),
+        );
+        final (_, report, done) = await startWithStricter(read, {'cal__list'});
+        expect(read.callCount, 0, reason: 'effektiv external: wartet');
+        report.complete(_report(AttestationStatus.green));
+        await done;
+        expect(read.callCount, 1);
+      },
+    );
+
+    test(
+      'MCP-write ohne autoRun (effektiv external) wartet, bei Rot nie',
+      () async {
+        final write = FakeTool(
+          name: 'mcp__notes__add',
+          risk: RiskLevel.write,
+          outcome: ToolOutcome.text('ok'),
+        );
+        final (_, report, done) = await startWithStricter(write, {write.name});
+        expect(write.callCount, 0);
+        report.complete(_report(AttestationStatus.red));
+        await done;
+        expect(write.callCount, 0);
+      },
+    );
+
+    test('ohne Verschärfung läuft ein write-Tool sofort', () async {
+      final write = FakeTool(
+        name: 'notes__add',
+        risk: RiskLevel.write,
+        outcome: ToolOutcome.text('ok'),
+      );
+      final (_, report, done) = await startWithStricter(write, {});
+      expect(write.callCount, 1);
+      report.complete(_report(AttestationStatus.green));
+      await done;
     });
   });
 }
