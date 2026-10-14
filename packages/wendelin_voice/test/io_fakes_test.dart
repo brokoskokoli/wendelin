@@ -23,6 +23,11 @@ void main() {
     expectedText: 'hallo',
   );
   modelStoreContract(FakeModelStore.new, name: 'FakeModelStore');
+  bargeInDetectorContract(
+    FakeBargeInDetector.new,
+    name: 'FakeBargeInDetector',
+    fire: (d, s) => (d as FakeBargeInDetector).emit(s),
+  );
 
   group('FakeAudioInput', () {
     test('push, fail und selbst endender Stream', () async {

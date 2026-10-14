@@ -542,8 +542,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
       case VoiceCancelled(:final reason, :final during):
         voiceLog('voice-cancelled', {'reason': reason, 'phase': during});
         _onCancelled(reason, during);
-      case VoiceAgentEvent():
-        break;
+      default:
+        voiceLogPipelineEvent(e); // agent, follow-up window, barge-in, exit
     }
   }
 

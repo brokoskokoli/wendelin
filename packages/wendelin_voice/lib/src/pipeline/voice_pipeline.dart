@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:meta/meta.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../io/audio_input.dart';
+import '../io/barge_in_detector.dart';
 import '../io/speech_to_text.dart';
 import '../io/text_to_speech.dart';
 import '../io/trigger.dart';
@@ -12,106 +12,13 @@ import '../io/voice_activity_detector.dart';
 import '../text/spoken_answer.dart';
 import '../text/voice_texts.dart';
 import '../tts/speech_queue.dart';
+import 'conversation.dart';
 import 'endpointer.dart';
 import 'voice_events.dart';
+import 'voice_pipeline_config.dart';
 
-/// Settings of the [VoicePipeline].
-@immutable
-final class VoicePipelineConfig {
-  /// Creates a configuration.
-  const VoicePipelineConfig({
-    this.endpoint = const EndpointConfig(),
-    this.language,
-    this.shortening = const SpeechShortening(),
-    this.stopWords = defaultStopWords,
-    this.fillerWords = defaultFillerWords,
-    this.stopPhrases = defaultStopPhrases,
-    this.conversationMode = false,
-    this.followUpWindow = const Duration(seconds: 5),
-    this.voice,
-    this.rate = 1.0,
-    this.listenGrace = const Duration(seconds: 3),
-    this.speakNothingUnderstood = true,
-    this.speakErrors = true,
-  });
-
-  /// Stop words (lower case) in de/fr/en.
-  static const defaultStopWords = {
-    // de
-    'stopp', 'stop', 'halt', 'abbrechen', 'abbruch', 'aufhören', 'ruhe',
-    // fr
-    'arrête', 'arrêtez', 'annule', 'annuler', 'stoppe',
-    // en
-    'cancel', 'quiet', 'enough',
-  };
-
-  /// Words that may accompany a stop word („Stopp bitte“, „Nein, stopp“).
-  /// Multi-word stop commands (lower case, words separated by spaces).
-  static const defaultStopPhrases = {
-    // de
-    'hör auf', 'hört auf', 'hören sie auf', 'sei still', 'sei ruhig',
-    // fr
-    'arrête ça', 'arrête ca', 'tais toi', 'taisez vous', 'ça suffit',
-    'ca suffit',
-    // en
-    'stop it', 'stop that', 'be quiet', 'that is enough',
-  };
-
-  static const defaultFillerWords = {
-    // de
-    'bitte', 'nein', 'jetzt', 'sofort', 'mal', 'doch', 'ok', 'okay', 'danke',
-    // fr
-    'non', 'maintenant', 's', 'il', 'te', 'vous', 'plaît', 'plait', 'toi',
-    'merci', 'ça', 'ca', 'tout', 'de', 'suite',
-    // en
-    'please', 'no', 'now', 'it', 'that', 'thanks',
-  };
-
-  /// Endpointing limits (pre-roll, end silence, maximum, minimum speech).
-  final EndpointConfig endpoint;
-
-  /// Fixed STT language (`de`, `fr`, `en`); `null` = detect automatically.
-  final String? language;
-
-  /// Limits of the spoken answer.
-  final SpeechShortening shortening;
-
-  /// A transcript that consists only of these words and [fillerWords]
-  /// (with at least one stop word, repetitions allowed) aborts the request.
-  /// While the answer is spoken there is no barge-in yet (v0.4), so then
-  /// only tapping ([VoicePipeline.cancel]) stops it.
-  final Set<String> stopWords;
-
-  /// Words allowed next to a stop word.
-  final Set<String> fillerWords;
-
-  /// Phrases that count like a stop word („Hör auf!“, „arrête ça“,
-  /// „stop it“).
-  final Set<String> stopPhrases;
-
-  /// Conversation mode (from M4, off by default): after an answer, keep
-  /// listening for [followUpWindow] for a follow-up question.
-  final bool conversationMode;
-
-  /// Follow-up window of the conversation mode (concept: 5 s).
-  final Duration followUpWindow;
-
-  /// TTS voice id; `null` = engine default for the answer language.
-  final String? voice;
-
-  /// TTS speech rate.
-  final double rate;
-
-  /// Wall-clock safety margin on top of [EndpointConfig.maxDuration] in
-  /// case the microphone stops delivering frames.
-  final Duration listenGrace;
-
-  /// Whether „Ich habe nichts verstanden“ is spoken.
-  final bool speakNothingUnderstood;
-
-  /// Whether the message of a failed agent run is spoken.
-  final bool speakErrors;
-}
+export 'conversation.dart';
+export 'voice_pipeline_config.dart';
 
 /// The voice pipeline (concept: Auslöser → Aufnahme mit VAD → STT → Agent →
 /// TTS) as a state machine:
@@ -127,7 +34,11 @@ final class VoicePipelineConfig {
 ///   provider blocks are never spoken (they never appear as
 ///   `AgentTextDelta`, and thinking deltas are ignored).
 /// - With [VoicePipelineConfig.conversationMode] it listens again after
-///   the answer for [VoicePipelineConfig.followUpWindow].
+///   the answer for [VoicePipelineConfig.followUpWindow]; every
+///   conversation ends once with a [ConversationEndReason].
+/// - With a [BargeInDetector] and [VoicePipelineConfig.bargeIn] a signal
+///   during [VoiceState.speaking] stops the speech at once: „Stopp“ ends the
+///   request, „Wendelin“ (or speech) starts a new utterance.
 final class VoicePipeline {
   /// Creates a pipeline. [textToSpeech] is asked for the engine before
   /// every answer with the answer language (see `TtsSelector.current`);
@@ -141,8 +52,10 @@ final class VoicePipeline {
     this.config = const VoicePipelineConfig(),
     this.clock = const SystemClock(),
     TriggerSource? triggers,
+    this.bargeInDetector,
   }) {
     _triggerSub = triggers?.triggers.listen(_onTrigger);
+    _bargeSub = bargeInDetector?.signals.listen(_onBargeIn);
   }
 
   /// Microphone.
@@ -160,6 +73,9 @@ final class VoicePipeline {
   /// Settings.
   final VoicePipelineConfig config;
 
+  /// Detects barge-in while the answer is spoken (`null` = none).
+  final BargeInDetector? bargeInDetector;
+
   /// Time source for trigger timestamps.
   final Clock clock;
 
@@ -167,6 +83,7 @@ final class VoicePipeline {
   /// before every answer (`null` = text only).
   final Future<TextToSpeech?> Function(String? language) textToSpeech;
   StreamSubscription<TriggerEvent>? _triggerSub;
+  StreamSubscription<BargeInSignal>? _bargeSub;
 
   final _states = StreamController<VoiceState>.broadcast(sync: true);
   final _events = StreamController<VoiceEvent>.broadcast(sync: true);
@@ -174,6 +91,9 @@ final class VoicePipeline {
   VoiceState _state = VoiceState.idle;
   int _gen = 0;
   bool _disposed = false;
+  bool _convOpen = false;
+  int _rounds = 0; // answered requests of the conversation
+  bool _speechFailed = false;
 
   void Function(Endpoint?)? _endListening;
   Endpointer? _endpointer;
@@ -196,13 +116,26 @@ final class VoicePipeline {
   Future<void> get whenIdle => _session;
 
   /// Starts listening. Returns `false` if a request is already running.
-  bool start({TriggerEvent? trigger}) {
+  bool start({TriggerEvent? trigger}) => _begin(trigger);
+
+  bool _begin(
+    TriggerEvent? trigger, {
+    Int16List? preRoll,
+    bool preRollIsSpeech = false,
+    bool continued = false,
+  }) {
     if (_disposed || _state != VoiceState.idle) return false;
     final t =
         trigger ??
         TriggerEvent(source: TriggerKind.pushToTalk, at: clock.now());
     final gen = ++_gen;
-    _session = _run(gen, trigger: t);
+    _session = _run(
+      gen,
+      trigger: t,
+      preRoll: preRoll,
+      preRollIsSpeech: preRollIsSpeech,
+      continued: continued,
+    );
     return true;
   }
 
@@ -221,6 +154,13 @@ final class VoicePipeline {
     final during = _state;
     _gen++;
     _abortActivities();
+    if (reason != VoiceCancelReason.bargeIn) {
+      _endConversation(switch (reason) {
+        VoiceCancelReason.tap => ConversationEndReason.tap,
+        VoiceCancelReason.stopWord => ConversationEndReason.stopWord,
+        _ => ConversationEndReason.cancelled,
+      });
+    }
     _setState(VoiceState.idle);
     _emit(VoiceCancelled(reason, during: during));
     return _agentDrained;
@@ -232,6 +172,7 @@ final class VoicePipeline {
     final drained = cancel(VoiceCancelReason.disposed);
     _disposed = true;
     unawaited(_triggerSub?.cancel());
+    unawaited(_bargeSub?.cancel());
     unawaited(_states.close());
     unawaited(_events.close());
     await drained;
@@ -253,87 +194,144 @@ final class VoicePipeline {
     if (q != null) unawaited(q.stop());
   }
 
-  Future<void> _run(int gen, {TriggerEvent? trigger}) async {
+  Future<void> _run(
+    int gen, {
+    TriggerEvent? trigger,
+    Int16List? preRoll,
+    bool preRollIsSpeech = false,
+    bool continued = false,
+  }) async {
     var followUp = false;
+    if (config.conversationMode) {
+      _convOpen = true;
+      if (continued) {
+        _rounds++; // the interrupted request counts as a round
+      } else {
+        _rounds = 0;
+      }
+    }
     while (true) {
       _setState(VoiceState.listening);
       _emit(
         VoiceListening(trigger: followUp ? null : trigger, followUp: followUp),
       );
+      if (followUp) {
+        _emit(
+          VoiceFollowUpListening(
+            window: config.followUpWindow,
+            until: clock.now().add(config.followUpWindow),
+          ),
+        );
+      }
       final endpoint = await _listen(
         gen,
         followUp
             ? config.endpoint.withNoSpeechTimeout(config.followUpWindow)
             : config.endpoint,
+        preRoll: followUp ? null : preRoll,
+        preRollIsSpeech: preRollIsSpeech,
       );
       if (gen != _gen) return;
-      if (endpoint == null) return _finish(gen); // microphone error
+      if (endpoint == null) return _finish(gen, ConversationEndReason.error);
       if (endpoint.kind == EndpointKind.nothing) {
         // The follow-up window just closes quietly.
         if (!followUp) await _nothingUnderstood(gen, endpoint.reason);
-        return _finish(gen);
+        return _finish(gen, ConversationEndReason.silence);
       }
       final transcript = await _transcribe(gen, endpoint.pcm);
-      if (gen != _gen || transcript == null) return _finish(gen);
+      if (gen != _gen) return;
+      if (transcript == null) return _finish(gen, ConversationEndReason.error);
       if (transcript.text.trim().isEmpty) {
         if (!followUp) {
           await _nothingUnderstood(gen, null, language: transcript.language);
         }
-        return _finish(gen);
+        return _finish(gen, ConversationEndReason.silence);
       }
       if (isStopWord(transcript.text)) {
         await cancel(VoiceCancelReason.stopWord);
         return;
       }
+      if (followUp && isClosingPhrase(transcript.text, config.closingPhrases)) {
+        return _finish(gen, ConversationEndReason.closingPhrase);
+      }
       _setState(VoiceState.thinking);
-      await _answer(gen, transcript);
+      final problem = await _answer(gen, transcript);
       if (gen != _gen) return;
       if (!config.conversationMode) return _finish(gen);
+      if (problem != null) return _finish(gen, problem);
+      _rounds++;
+      if (_rounds - 1 >= config.maxFollowUps) {
+        return _finish(gen, ConversationEndReason.maxFollowUps);
+      }
       followUp = true;
     }
   }
 
-  void _finish(int gen) {
-    if (gen == _gen) _setState(VoiceState.idle);
+  void _finish(int gen, [ConversationEndReason? reason]) {
+    if (gen != _gen) return;
+    if (reason != null) _endConversation(reason);
+    _setState(VoiceState.idle);
+  }
+
+  /// Emits the end of the conversation once (`conv-exit reason=…`).
+  void _endConversation(ConversationEndReason reason) {
+    if (!_convOpen) return;
+    _convOpen = false;
+    _emit(
+      VoiceConversationEnded(reason, followUps: _rounds > 0 ? _rounds - 1 : 0),
+    );
+  }
+
+  void _onBargeIn(BargeInSignal s) {
+    final mode = config.bargeIn;
+    if (_disposed || _state != VoiceState.speaking || mode == BargeInMode.off) {
+      return;
+    }
+    if (s.kind == BargeInKind.speech && mode != BargeInMode.speech) return;
+    _emit(VoiceBargeIn(s));
+    if (s.keyword == BargeInKeyword.stop) {
+      unawaited(cancel(VoiceCancelReason.stopWord));
+      return;
+    }
+    unawaited(cancel(VoiceCancelReason.bargeIn)); // stops the queue at once
+    _begin(
+      TriggerEvent(source: TriggerKind.wakeWord, at: clock.now()),
+      preRoll: s.preRoll,
+      preRollIsSpeech: s.kind == BargeInKind.speech,
+      continued: true,
+    );
+  }
+
+  void _syncBargeDetector(VoiceState s) {
+    final d = bargeInDetector;
+    if (d == null || config.bargeIn == BargeInMode.off) return;
+    if (s == VoiceState.speaking) {
+      d.start().catchError((Object e) => _emit(VoiceError(s, e)));
+    } else if (s != VoiceState.thinking) {
+      unawaited(d.stop().catchError((Object _) {}));
+    }
   }
 
   /// Whether [text] is a stop command: only stop words and filler words,
   /// at least one stop word („Stopp, stopp.“, „Nein, stopp bitte“).
-  bool isStopWord(String text) {
-    final words = text
-        .toLowerCase()
-        .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
-        .where((w) => w.isNotEmpty)
-        .toList();
-    // Words covered by a stop phrase count as stop words.
-    final stop = [for (final w in words) config.stopWords.contains(w)];
-    for (final phrase in config.stopPhrases) {
-      final p = phrase.split(' ');
-      for (var i = 0; i + p.length <= words.length; i++) {
-        var match = true;
-        for (var k = 0; k < p.length && match; k++) {
-          match = words[i + k] == p[k];
-        }
-        if (match) stop.fillRange(i, i + p.length, true);
-      }
-    }
-    var any = false;
-    for (var i = 0; i < words.length; i++) {
-      if (stop[i]) {
-        any = true;
-      } else if (!config.fillerWords.contains(words[i])) {
-        return false;
-      }
-    }
-    return any;
-  }
+  bool isStopWord(String text) => isStopCommand(
+    text,
+    stopWords: config.stopWords,
+    fillerWords: config.fillerWords,
+    stopPhrases: config.stopPhrases,
+  );
 
   /// Records one utterance. Recordings are serialized: a new one waits
   /// until the previous (e.g. just cancelled) one has stopped the
   /// microphone, and each only clears its own hooks.
-  Future<Endpoint?> _listen(int gen, EndpointConfig limits) {
+  Future<Endpoint?> _listen(
+    int gen,
+    EndpointConfig limits, {
+    Int16List? preRoll,
+    bool preRollIsSpeech = false,
+  }) {
     final previous = _listening;
-    final run = _listenAfter(previous, gen, limits);
+    final run = _listenAfter(previous, gen, limits, preRoll, preRollIsSpeech);
     _listening = run.then((_) {});
     return run;
   }
@@ -342,6 +340,8 @@ final class VoicePipeline {
     Future<void> previous,
     int gen,
     EndpointConfig limits,
+    Int16List? preRoll,
+    bool preRollIsSpeech,
   ) async {
     await previous;
     if (gen != _gen) return null;
@@ -363,6 +363,17 @@ final class VoicePipeline {
     _endpointer = endpointer;
     try {
       vad.reset();
+      if (preRoll != null) {
+        // Audio before the trigger (barge-in): chunks of 30 ms.
+        const chunk = 480;
+        for (var i = 0; i < preRoll.length; i += chunk) {
+          final end = i + chunk < preRoll.length ? i + chunk : preRoll.length;
+          endpointer.add(
+            Int16List.sublistView(preRoll, i, end),
+            speech: preRollIsSpeech,
+          );
+        }
+      }
       sub = audio.start().listen(
         (frame) {
           if (done.isCompleted || frame.isEmpty) return;
@@ -470,12 +481,19 @@ final class VoicePipeline {
         if (gen == _gen && _agentRunning) _setState(VoiceState.thinking);
       },
       onError: (error) {
-        if (gen == _gen) _emit(VoiceError(VoiceState.speaking, error));
+        if (gen != _gen) return;
+        _speechFailed = true;
+        _emit(VoiceError(VoiceState.speaking, error));
       },
     );
   }
 
-  Future<void> _answer(int gen, Transcript transcript) async {
+  /// Runs the agent and speaks the answer. Returns why the conversation
+  /// must not continue (`null` = it may).
+  Future<ConversationEndReason?> _answer(int gen, Transcript transcript) async {
+    _speechFailed = false;
+    var failed = false;
+    final confirmations = <AgentEvent>[];
     final language = transcript.language ?? config.language;
     final input = UserInput(
       text: transcript.text.trim(),
@@ -484,9 +502,9 @@ final class VoicePipeline {
       language: language,
     );
     await _agentDrained; // a cancelled earlier run must be finished
-    if (gen != _gen) return;
+    if (gen != _gen) return null;
     final queue = await _newQueue(gen, language);
-    if (gen != _gen) return;
+    if (gen != _gen) return null;
     final spoken = SpokenAnswer(config: config.shortening, language: language);
     var segment = 0;
     // The `<spoken>` block of this segment was spoken (WP41, stage 2): the
@@ -524,7 +542,10 @@ final class VoicePipeline {
             hasBlock = false;
           case AgentDone():
             say(spoken.finish());
+          case ConfirmationRequired() || EscalationConfirmationRequired():
+            confirmations.add(e);
           case AgentFailed(:final error, :final message):
+            if (error != AgentErrorKind.cancelled) failed = true;
             // Buffered, incomplete text of the failed answer is dropped on
             // purpose (it may stop mid-sentence); sentences already queued
             // are still spoken, then the failure in the answer language.
@@ -537,19 +558,33 @@ final class VoicePipeline {
         }
       }
     } on Object catch (error) {
+      failed = true;
       if (gen == _gen) _emit(VoiceError(VoiceState.thinking, error));
     } finally {
       _agentRunning = false;
       drained.complete();
     }
-    if (gen != _gen || queue == null) return;
-    await queue.whenIdle;
-    if (_queue == queue) _queue = null;
+    if (gen != _gen) return null;
+    if (queue != null) {
+      await queue.whenIdle;
+      if (_queue == queue) _queue = null;
+    }
+    if (gen != _gen) return null;
+    final open = confirmations.any(
+      (e) => switch (e) {
+        ConfirmationRequired(:final answered) => !answered,
+        EscalationConfirmationRequired(:final answered) => !answered,
+        _ => false,
+      },
+    );
+    if (open) return ConversationEndReason.confirmation;
+    return failed || _speechFailed ? ConversationEndReason.error : null;
   }
 
   void _setState(VoiceState s) {
     if (_state == s) return;
     _state = s;
+    _syncBargeDetector(s);
     if (!_states.isClosed) _states.add(s);
   }
 

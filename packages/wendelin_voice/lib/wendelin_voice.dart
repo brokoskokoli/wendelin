@@ -9,6 +9,7 @@
 library;
 
 export 'src/io/audio_input.dart';
+export 'src/io/barge_in_detector.dart';
 export 'src/io/speech_to_text.dart';
 export 'src/io/text_to_speech.dart';
 export 'src/io/trigger.dart';

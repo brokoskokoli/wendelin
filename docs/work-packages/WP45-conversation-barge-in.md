@@ -9,9 +9,9 @@ Abhängig von: – (sofort startbar). Andockpunkte: `VoicePipeline` und `VoicePi
 - Konfiguration: `conversationMode`, `followUpWindow`, `maxFollowUps`, `bargeIn` (`off|keywords|speech`).
 
 ## Abnahmekriterien
-- [ ] Tabellentest der Endebedingungen (Stille, Stopp, Danke, Tipp, Bestätigungskarte, Höchstzahl, Fehler) mit Fake-Uhr. Jede endet mit genau einem Grundcode.
-- [ ] Folgefrage innerhalb des Fensters landet als neue Anfrage im selben Gespräch. Nach dem Fenster wird nicht mehr zugehört (`FakeAudioInput.isRunning == false`).
-- [ ] Barge-in: Signal während der Ausgabe stoppt die Queue in ≤ 1 Frame (Test mit `FakeTextToSpeech`). Ein Stopp-Signal beendet die Anfrage, ein Wake-Signal hört neu zu. Signale außerhalb von `speaking` werden ignoriert.
-- [ ] Bestehende Pipeline-Tests unverändert grün (Modus aus = altes Verhalten).
-- [ ] Contract/Fake für `BargeInDetector` in `fakes.dart`/`testing.dart`.
-- [ ] Gate grün.
+- [x] Tabellentest der Endebedingungen (Stille, Stopp, Danke, Tipp, Bestätigungskarte, Höchstzahl, Fehler) mit Fake-Uhr. Jede endet mit genau einem Grundcode.
+- [x] Folgefrage innerhalb des Fensters landet als neue Anfrage im selben Gespräch. Nach dem Fenster wird nicht mehr zugehört (`FakeAudioInput.isRunning == false`).
+- [x] Barge-in: Signal während der Ausgabe stoppt die Queue in ≤ 1 Frame (Test mit `FakeTextToSpeech`). Ein Stopp-Signal beendet die Anfrage, ein Wake-Signal hört neu zu. Signale außerhalb von `speaking` werden ignoriert.
+- [x] Bestehende Pipeline-Tests unverändert grün (Modus aus = altes Verhalten).
+- [x] Contract/Fake für `BargeInDetector` in `fakes.dart`/`testing.dart`.
+- [x] Gate grün.

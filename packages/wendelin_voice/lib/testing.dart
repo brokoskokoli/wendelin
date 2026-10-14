@@ -1,7 +1,8 @@
 /// Test support for the voice interfaces: everything from `fakes.dart`
 /// plus the contract suites every implementation must pass
 /// (`audioInputContract`, `voiceActivityDetectorContract`,
-/// `speechToTextContract`, `textToSpeechContract`, `modelStoreContract`).
+/// `speechToTextContract`, `textToSpeechContract`, `modelStoreContract`,
+/// `bargeInDetectorContract`).
 ///
 /// Depends on `package:test`; import it only from tests.
 library;
