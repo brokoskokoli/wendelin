@@ -81,6 +81,8 @@ void main() {
         'wendemann': true,
         'Wendelen': true,
         'Fendelien': true,
+        'Wändelein': true,
+        'Fandelin': true,
         'Wendelmann, wie spät': true,
         'Wendel': false,
         'Windel': false,
