@@ -20,6 +20,7 @@ WIconData integrationIcon(String integrationId) => switch (integrationId) {
   'memory' => WIcons.note,
   'clipboard' => WIcons.clipboard,
   'alarms' => WIcons.alarm,
+  'flashlight' => WIcons.flashlight,
   'lists' => WIcons.cart,
   'web' => WIcons.globe,
   'obsidian' => WIcons.note,

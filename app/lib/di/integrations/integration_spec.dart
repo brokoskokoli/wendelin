@@ -81,6 +81,7 @@ final class IntegrationSpec {
     this.requiredApp,
     this.retry,
     this.prepare,
+    this.allowedWhileLocked = false,
   });
 
   /// Integration id (must match `Integration.id`).
@@ -115,4 +116,9 @@ final class IntegrationSpec {
   /// service). Runs inside `integrationDepsProvider`, so a change rebuilds
   /// the integrations; the result is [IntegrationDeps.extra].
   final Object? Function(Ref ref)? prepare;
+
+  /// Whether the tools may run while the device is locked, without
+  /// unlocking first (harmless own-state actions such as the flashlight).
+  /// Evaluated by the lock-screen handling (WP53); nothing reads it yet.
+  final bool allowedWhileLocked;
 }

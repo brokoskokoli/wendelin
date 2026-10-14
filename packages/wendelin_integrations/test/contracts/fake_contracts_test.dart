@@ -14,6 +14,11 @@ void main() {
     name: 'FakeCalendarPort mit schreibgeschütztem Kalender',
   );
   clipboardPortContract(FakeClipboardPort.new, name: 'FakeClipboardPort');
+  torchPortContract(FakeTorchPort.new, name: 'FakeTorchPort');
+  torchPortContract(
+    () => FakeTorchPort(available: false),
+    name: 'FakeTorchPort ohne LED',
+  );
   alarmPortContract(FakeAlarmPort.new, name: 'FakeAlarmPort');
   alarmPortContract(
     () => FakeAlarmPort(returnsIds: false, canList: false),

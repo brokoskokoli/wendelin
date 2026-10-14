@@ -75,6 +75,9 @@ final class TestEnv {
   /// Clipboard.
   final clipboard = FakeClipboardPort();
 
+  /// Flashlight.
+  final torch = FakeTorchPort();
+
   /// Alarms.
   final alarms = FakeAlarmPort();
 
@@ -144,6 +147,7 @@ final class TestEnv {
     alarms: alarms,
     memory: memory,
     apps: apps,
+    torch: torch,
     requestCalendarPermission: () async {
       permissionRequests++;
       return calendar.permissionGranted = true;

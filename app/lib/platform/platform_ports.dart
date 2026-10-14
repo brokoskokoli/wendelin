@@ -9,6 +9,7 @@ import '../di/app_settings.dart';
 import '../di/preference_models.dart';
 import 'android_alarm_port.dart';
 import 'channel_app_presence_port.dart';
+import 'channel_torch_port.dart';
 import 'device_calendar_port.dart';
 import 'flutter_clipboard_port.dart';
 import 'repository_memory_port.dart';
@@ -29,6 +30,7 @@ final class PlatformPorts {
     required this.alarms,
     required this.memory,
     required this.apps,
+    required this.torch,
     this.requestCalendarPermission,
     this.lists,
     this.obsidian,
@@ -52,6 +54,7 @@ final class PlatformPorts {
       alarms: const AndroidAlarmPort(),
       memory: RepositoryMemoryPort(storage.memory),
       apps: const ChannelAppPresencePort(),
+      torch: const ChannelTorchPort(),
       requestCalendarPermission: calendar.requestPermission,
       lists: ListsPorts(port: SafListFilePort(), definitions: listDefinitions),
       obsidian: ObsidianPorts(
@@ -77,6 +80,7 @@ final class PlatformPorts {
     apps: FakeAppPresencePort(
       installed: [for (final app in KnownApps.all) app.androidPackage],
     ),
+    torch: FakeTorchPort(),
     lists: ListsPorts.demo(),
     obsidian: ObsidianPorts.demo(),
   );
@@ -95,6 +99,9 @@ final class PlatformPorts {
 
   /// Which other apps are installed (app detection, WP25).
   final AppPresencePort apps;
+
+  /// Flash LED as a flashlight.
+  final TorchPort torch;
 
   /// Asks for calendar access; `null` if the port needs none.
   final Future<bool> Function()? requestCalendarPermission;

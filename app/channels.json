@@ -138,6 +138,16 @@
         "shutdown": {"args": [], "returns": "none"}
       }
     },
+    "app.wendelin/torch": {
+      "dart": ["app/lib/platform/channel_torch_port.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/TorchChannel.kt"],
+      "toKotlin": {
+        "isAvailable": {"args": [], "returns": "value"},
+        "state": {"args": [], "returns": "value"},
+        "set": {"args": ["on"], "returns": "none"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/vault": {
       "dart": ["app/lib/platform/saf_vault_port.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/VaultChannel.kt"],

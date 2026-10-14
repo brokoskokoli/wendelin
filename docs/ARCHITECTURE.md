@@ -96,6 +96,7 @@ Die Logik ohne Android-Abhängigkeit liegt in reinen Kotlin-Klassen mit JVM-Unit
 | files | `app/lib/platform/saf_list_file_port.dart`, `app/lib/platform/document_text_import.dart` | `FilesChannel.kt` |
 | vault | `app/lib/platform/saf_vault_port.dart` | `VaultChannel.kt` |
 | apps | `app/lib/platform/channel_app_presence_port.dart` | `AppsChannel.kt` |
+| torch | `app/lib/platform/channel_torch_port.dart` | `TorchChannel.kt` |
 | network | `app/lib/platform/channel_network_status.dart` | `NetworkChannel.kt` |
 | assistant | `app/lib/platform/assistant_platform.dart` | `AssistantChannel.kt` |
 | window | `app/lib/platform/screen_protection.dart` | `WindowChannel.kt` |

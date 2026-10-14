@@ -34,6 +34,7 @@ void main() {
         alarms: FakeAlarmPort(),
         memory: FakeMemoryStore(),
         apps: FakeAppPresencePort(),
+        torch: FakeTorchPort(),
       ),
       device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
       httpClient: http.Client(),
