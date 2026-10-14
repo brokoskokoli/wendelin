@@ -105,6 +105,8 @@ class WakeWordService : Service() {
         e.send("run", mapOf("verify" to settings.verify))
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
             VoiceLog.i("wake-conflict reason=${reason ?: "none"}")
+            // Do not depend on Dart alone: a call or foreign recording closes the microphone here.
+            if (WakePolicy.closesMicFor(reason)) stopMic()
             engine?.send("conflict", mapOf("reason" to reason))
         }.also { it.start() }
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)

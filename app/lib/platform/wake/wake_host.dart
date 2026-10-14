@@ -61,6 +61,7 @@ final class WakeHost {
 
   WakeWordListener? _listener;
   bool _verify = true;
+  bool _started = false;
   final _holds = <String>{};
   final _subs = <StreamSubscription<Object?>>[];
   Timer? _alive;
@@ -116,6 +117,7 @@ final class WakeHost {
     if (_listener != null && _verify == verify) return;
     await _stopListener();
     _verify = verify;
+    _started = false;
     final engine = await parts.engine();
     if (engine == null) return _fail('no-templates');
     final listener = WakeWordListener(
@@ -134,12 +136,19 @@ final class WakeHost {
         }),
       );
     try {
-      _holds.clear();
-      await listener.start();
+      // Holds (call, other recording, overlay) survive a new `run`: the
+      // microphone stays closed until the last one is released.
+      if (_holds.isNotEmpty) return;
+      await _begin(listener);
     } on Object {
       return; // reported through the state change
     }
-    voiceLog('wake-listening', {'verify': verify});
+  }
+
+  Future<void> _begin(WakeWordListener listener) async {
+    _started = true;
+    await listener.start();
+    voiceLog('wake-listening', {'verify': _verify});
     _alive = Timer.periodic(aliveEvery, (_) => _logAlive());
   }
 
@@ -170,14 +179,19 @@ final class WakeHost {
   Future<void> _hold(String key, String reason) async {
     if (!_holds.add(key) || _holds.length > 1) return;
     voiceLog('wake-pause', {'reason': reason});
-    await _listener?.pause();
+    if (_started) await _listener?.pause();
   }
 
   Future<void> _release(String key) async {
     if (!_holds.remove(key) || _holds.isNotEmpty) return;
     voiceLog('wake-resume');
     try {
-      await _listener?.resume();
+      final listener = _listener;
+      if (listener != null && !_started) {
+        await _begin(listener);
+      } else {
+        await listener?.resume();
+      }
     } on Object {
       // A failure shows as a state change.
     }

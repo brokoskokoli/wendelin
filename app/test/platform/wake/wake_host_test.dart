@@ -166,6 +166,21 @@ void main() {
   });
 
   test(
+    'Konflikt bleibt bei erneutem run bestehen: kein Mikrofon bis zum Ende',
+    () async {
+      await start();
+      await fromKotlin('conflict', {'reason': 'call'});
+      await until(() => calls().contains('stopMic'));
+      final starts = calls().where((c) => c == 'startMic').length;
+      await fromKotlin('run', {'verify': true});
+      await pumpEventQueue();
+      expect(calls().where((c) => c == 'startMic').length, starts);
+      await fromKotlin('conflict', {'reason': null});
+      await until(() => calls().where((c) => c == 'startMic').length > starts);
+    },
+  );
+
+  test(
     'Stufe 2: ohne Bestätigung kein Treffer; Fehler zählt als nein',
     () async {
       await start(verify: true, p: _Parts(verdict: false));

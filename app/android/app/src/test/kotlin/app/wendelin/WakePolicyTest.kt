@@ -36,6 +36,13 @@ class WakePolicyTest {
     }
 
     @Test
+    fun callAndForeignRecordingCloseTheMicrophoneInTheService() {
+        assertTrue(WakePolicy.closesMicFor("call"))
+        assertTrue(WakePolicy.closesMicFor("recording"))
+        assertFalse(WakePolicy.closesMicFor(null))
+    }
+
+    @Test
     fun alwaysModeIgnoresCharging() {
         assertEquals(WakeDecision.Start, decide(on.copy(mode = WakeMode.ALWAYS), charging = false))
     }

@@ -206,10 +206,9 @@ void main() {
         isTrue,
       );
       settle(async);
-      expect(
-        h.stt.calls.single.samples,
-        greaterThan(durationToSamples(frame) * 20 + preRoll.length ~/ 2),
-      );
+      // Without a pre-roll the same run gives 24960 samples (measured); the
+      // pre-roll adds exactly 2400.
+      expect(h.stt.calls.single.samples, 24960 + 2400);
       expect(
         h.eventsOf<VoiceListening>().single.trigger?.source,
         TriggerKind.wakeWord,

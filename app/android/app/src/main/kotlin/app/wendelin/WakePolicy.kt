@@ -84,6 +84,9 @@ object WakePolicy {
         else -> null
     }
 
+    /** Whether the microphone is closed by the service itself, not only by Dart: any conflict. */
+    fun closesMicFor(conflict: String?): Boolean = conflict == "call" || conflict == "recording"
+
     /** Whether a service that runs for [mode] has to stop when charging changes to [charging]. */
     fun stopsOnUnplug(mode: WakeMode, charging: Boolean): Boolean =
         mode == WakeMode.CHARGING && !charging
