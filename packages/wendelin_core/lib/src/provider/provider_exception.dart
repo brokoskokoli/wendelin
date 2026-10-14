@@ -130,14 +130,15 @@ final class MalformedResponseException extends ProviderException {
 ///
 /// Nothing was sent to the provider when this is raised before a request;
 /// [stage] names the failed check (`quote`, `receipt.signature`, `gpu`, …).
-/// Retryable only when the check could not be completed (network), not when
-/// it failed.
+/// Retryable only when the check could not be completed (network) or the
+/// user allowed a fallback, not when it failed.
 final class AttestationFailedException extends ProviderException {
   /// Creates the exception.
   const AttestationFailedException(
     super.message, {
     required this.stage,
     this.unavailable = false,
+    this.fallback = false,
   });
 
   /// Stable name of the failed check stage (secret-free).
@@ -146,6 +147,12 @@ final class AttestationFailedException extends ProviderException {
   /// The check could not be completed (e.g. network), as opposed to failed.
   final bool unavailable;
 
+  /// The user allowed another provider to answer when this check fails
+  /// (profile option „Bei fehlgeschlagener Prüfung ausweichen“): the agent
+  /// then hands the request over (with the usual consent below the privacy
+  /// floor) instead of ending the run.
+  final bool fallback;
+
   @override
-  bool get retryable => unavailable;
+  bool get retryable => unavailable || fallback;
 }

@@ -1,14 +1,19 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 import '../platform/attest/attest_backend.dart';
 import '../platform/attest/collateral_cache.dart';
 import '../platform/attest/pcs_collateral_client.dart';
 import '../platform/attest/rust_attestation_crypto.dart';
-import 'core_providers.dart';
+import '../platform/channel_notifier.dart';
+import 'app_settings.dart';
+import 'attestation_hub.dart';
+import 'providers.dart';
 
 /// Rust-Prüfmodul (lädt `libwendelin_attest.so` beim ersten Zugriff). Tests überschreiben es mit einem Fake.
 final attestBackendProvider = FutureProvider<AttestBackend>(
@@ -38,3 +43,80 @@ final attestationCryptoProvider = FutureProvider<AttestationCrypto>((
     clock: () => clock.now(),
   );
 });
+
+/// Waits until the Rust check module is loaded so the (synchronous) provider
+/// factory finds it. Without it (tests, unsupported platform) the factory
+/// refuses TEE profiles, it never builds them unchecked.
+Future<void> ensureAttestationCrypto(Ref ref) async {
+  try {
+    await ref.read(attestationCryptoProvider.future);
+  } on Object {
+    // Reported when a TEE profile is built.
+  }
+}
+
+/// Whether any of [profiles] must be attested.
+bool anyNeedsAttestation(Iterable<ProviderProfile> profiles) =>
+    profiles.any(needsAttestation);
+
+/// System notifications (failed GPU check after the answer).
+final attestationNotifierProvider = Provider<AttestationNotifier>(
+  (ref) => const ChannelAttestationNotifier(),
+);
+
+/// Pin store of the attested providers.
+final attestationPinStoreProvider = Provider<AttestationPinStore>(
+  (ref) => SettingsAttestationPinStore(ref.watch(storageProvider).settings),
+);
+
+/// GPU check of TEE models at NVIDIA: off, before or after the request.
+final gpuCheckModeProvider = NotifierProvider<GpuCheckModePref, GpuCheckMode>(
+  GpuCheckModePref.new,
+);
+
+/// GPU mode preference; applies the change to the live providers.
+final class GpuCheckModePref extends Notifier<GpuCheckMode> {
+  @override
+  GpuCheckMode build() => ref.watch(startupProvider).gpuCheck;
+
+  /// Stores [mode]; for „nachher“ it first asks for the notification
+  /// permission (the warning is a system notification).
+  Future<void> set(GpuCheckMode mode) async {
+    if (mode == GpuCheckMode.after) {
+      final notifier = ref.read(attestationNotifierProvider);
+      if (!await notifier.hasPermission()) await notifier.requestPermission();
+    }
+    state = mode;
+    ref.read(attestationHubProvider).gpuMode = mode;
+    await ref
+        .read(storageProvider)
+        .settings
+        .set(AppSettings.gpuCheck, mode.name);
+  }
+}
+
+/// The live TEE providers, their results and actions.
+final Provider<AttestationHub> attestationHubProvider =
+    Provider<AttestationHub>((ref) {
+      final hub = AttestationHub(
+        notifier: ref.watch(attestationNotifierProvider),
+        gpuMode: ref.read(gpuCheckModeProvider),
+        nameOf: (id) =>
+            ref.read(providerConfigProvider).asData?.value?.nameOf(id) ?? id,
+      );
+      ref.onDispose(() => unawaited(hub.dispose()));
+      return hub;
+    });
+
+/// Wiring the provider factory gives to TEE profiles; `null` while the
+/// check module is not loaded.
+AttestationWiring? attestationWiringOf(Ref ref) {
+  final crypto = ref.read(attestationCryptoProvider).asData?.value;
+  if (crypto == null) return null;
+  return AttestationWiring(
+    crypto: crypto,
+    logSink: ref.read(attestationLogWriterProvider),
+    pins: ref.read(attestationPinStoreProvider),
+    gpuMode: ref.read(gpuCheckModeProvider),
+  );
+}

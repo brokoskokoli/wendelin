@@ -42,6 +42,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.logSink,
     this.settings = const HttpSettings(),
     this.retryDelay = const Duration(seconds: 2),
+    this.fallbackOnFailure = false,
     Duration gpuTimeout = const Duration(seconds: 15),
   }) {
     final provider = inner.options.extraBody['provider'];
@@ -89,7 +90,12 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// Wait between receipt attempts.
   final Duration retryDelay;
 
+  /// A failed check lets the agent hand the request to another provider
+  /// (`AttestationFailedException.fallback`); the lock stays.
+  final bool fallbackOnFailure;
+
   AttestedSession? _session;
+  List<StageResult> _lastStages = const [];
   AttestationFailedException? _lock;
   Future<AttestationFailedException?>? _attesting;
   Future<AttestationReport?>? _latest;
@@ -122,6 +128,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   /// The provider refuses requests until [reattest] succeeds.
   bool get locked => _lock != null;
+
+  /// Result per stage of the latest session attestation (setup dialog:
+  /// „Ergebnis je Stufe“); empty before the first one.
+  List<StageResult> get lastSessionStages => _lastStages;
 
   /// The attested session, if there is a valid one.
   AttestedSession? get session => _session;
@@ -159,6 +169,19 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           : AttestationStatus.red,
       detail: stage,
     );
+  }
+
+  /// Attests in the background (app start) so the first request does not
+  /// wait for it; does nothing if the provider is locked or has a valid
+  /// session. A failed attestation locks it like on a request and is
+  /// reported through [reports].
+  Future<void> warmUp() async {
+    final session = _session;
+    if (_lock != null ||
+        (session != null && settings.clock.now().isBefore(session.notAfter))) {
+      return;
+    }
+    await _attest();
   }
 
   /// Lets the next request through although the GPU check failed or was not
@@ -213,11 +236,13 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     try {
       result = await verifier.attest();
     } on Object {
-      return _lock = const AttestationFailedException(
+      return _lock = AttestationFailedException(
         'TEE-Anbieter nicht verifiziert: interner Fehler',
         stage: 'internal',
+        fallback: fallbackOnFailure,
       );
     }
+    _lastStages = List.unmodifiable(result.stages);
     final session = result.session;
     final green = result.status == AttestationStatus.green && session != null;
     final changed = result.pinChange == PinChange.changed;
@@ -266,6 +291,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     return _lock = AttestationFailedException(
       'TEE-Anbieter nicht verifiziert ($stage): ${problem?.detail ?? 'Prüfung fehlgeschlagen'}',
       stage: stage,
+      fallback: fallbackOnFailure,
     );
   }
 
@@ -306,6 +332,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
             'Antwort nicht verifiziert (${_problem(stages)}); '
             'Anbieter gesperrt bis zur neuen Prüfung',
             stage: _problem(stages),
+            fallback: fallbackOnFailure,
           );
         }
       }
@@ -324,9 +351,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       if (status == AttestationStatus.green) _gpu.after(model);
       return report;
     } on Object {
-      _lock = const AttestationFailedException(
+      _lock = AttestationFailedException(
         'Antwort nicht verifiziert (internal)',
         stage: 'internal',
+        fallback: fallbackOnFailure,
       );
       final report = AttestationReport(
         logId: _audit.record(

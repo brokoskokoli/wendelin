@@ -10,7 +10,8 @@
 #     com.google.android.play, com.android.vending (apkanalyzer dex packages)
 #   - <application> mit android:allowBackup="false" und
 #     android:dataExtractionRules; keine Berechtigungen außer der Liste
-#     (M2: RECORD_AUDIO für Push-to-talk, Assistent und Spracherkennung)
+#     (M2: RECORD_AUDIO für Push-to-talk, Assistent und Spracherkennung;
+#     M4: POST_NOTIFICATIONS für die Warnung bei fehlgeschlagener TEE-Prüfung)
 #   - exportierte Komponenten nur aus der Liste: MainActivity,
 #     OAuthRedirectActivity (OAuth-Rückleitung, WP27), die
 #     Assistenten-Services nur mit BIND_VOICE_INTERACTION, der
@@ -222,7 +223,7 @@ elif [ "$exported_ok" = 1 ]; then
   echo "ok: exportierte Komponenten wie erwartet"
 fi
 
-ALLOWED='^(android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.RECORD_AUDIO|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
+ALLOWED='^(android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.RECORD_AUDIO|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
 perms="$("$APKANALYZER" manifest permissions "$APK")"
 if extra="$(echo "$perms" | grep -vE "$ALLOWED")"; then
   echo "FEHLER: unerwartete Berechtigungen:" >&2

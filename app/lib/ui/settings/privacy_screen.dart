@@ -7,6 +7,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
 import '../design/design.dart';
+import '../routes.dart';
 import '../screens/labels.dart';
 import 'export.dart';
 import 'settings_page.dart';
@@ -88,6 +89,19 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
                 onChanged: (on) => unawaited(
                   ref.read(secureScreenProvider.notifier).set(secure: on),
                 ),
+              ),
+            ),
+          ],
+        ),
+        SectionCard(
+          children: [
+            SettingsRow(
+              title: 'TEE-Prüfprotokoll',
+              detail:
+                  'Prüfung der Anbieter mit geschützter Umgebung, GPU-Prüfung '
+                  'über NVIDIA',
+              onTap: () => unawaited(
+                Navigator.of(context).pushNamed(AppRoutes.attestationLog),
               ),
             ),
           ],

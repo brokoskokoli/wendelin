@@ -134,6 +134,27 @@ void main() {
       },
     );
 
+    test(
+      'Ausweichen erlaubt: rote Prüfung ist für den Agenten weiterreichbar',
+      () async {
+        final crypto = FakeAttestationCrypto(
+          ed25519Result: true,
+          quoteError: const QuoteVerificationException('x'),
+        );
+        final off = TeeHarness(crypto: crypto);
+        final blocked = _error(await off.chat());
+        expect(blocked.fallback, isFalse);
+        expect(blocked.retryable, isFalse);
+        final on = TeeHarness(crypto: crypto, fallbackOnFailure: true);
+        final first = _error(await on.chat());
+        expect(first.fallback, isTrue);
+        expect(first.retryable, isTrue);
+        expect(on.chatRequests, 0, reason: 'nichts gesendet');
+        final locked = _error(await on.chat());
+        expect(locked.fallback, isTrue, reason: 'auch die Sperre');
+      },
+    );
+
     test('reattest hebt die Sperre auf, wenn die Prüfung besteht', () async {
       final crypto = FakeAttestationCrypto(
         ed25519Result: true,
@@ -147,6 +168,33 @@ void main() {
       expect(h.provider.locked, isFalse);
       expect((await h.chat()).last, isA<Done>());
       expect(h.chatRequests, 1);
+    });
+
+    test(
+      'warmUp prüft vorab; die erste Anfrage attestiert nicht noch einmal',
+      () async {
+        final h = TeeHarness();
+        await h.provider.warmUp();
+        expect(h.provider.session, isNotNull);
+        expect(h.server.count('aci/attestation'), 1);
+        await h.provider.warmUp(); // gültige Sitzung: nichts zu tun
+        expect((await h.chat()).last, isA<Done>());
+        expect(h.server.count('aci/attestation'), 1);
+      },
+    );
+
+    test('warmUp hebt eine Sperre nicht auf und wirft nicht', () async {
+      final crypto = FakeAttestationCrypto(
+        ed25519Result: true,
+        quoteError: const QuoteVerificationException('x'),
+      );
+      final h = TeeHarness(crypto: crypto);
+      await h.provider.warmUp();
+      expect(h.provider.locked, isTrue);
+      crypto.quoteError = null;
+      await h.provider.warmUp();
+      expect(h.provider.locked, isTrue, reason: 'nur „neu prüfen“ entsperrt');
+      expect(h.server.count('aci/attestation'), 1);
     });
 
     test('Attestierung nicht erreichbar → retryable, nicht gesperrt, später möglich', () async {

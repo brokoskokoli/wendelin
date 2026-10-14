@@ -111,6 +111,16 @@
         "changed": {"args": [], "returns": "none"}
       }
     },
+    "app.wendelin/notify": {
+      "dart": ["app/lib/platform/channel_notifier.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/NotifyChannel.kt"],
+      "toKotlin": {
+        "hasPermission": {"args": [], "returns": "value"},
+        "requestPermission": {"args": [], "returns": "value"},
+        "show": {"args": ["title", "text"], "returns": "value"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/recognizer": {
       "dart": ["app/lib/platform/recognizer/recognizer_host.dart"],
       "kotlin": [

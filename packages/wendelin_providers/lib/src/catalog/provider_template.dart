@@ -144,7 +144,7 @@ const providerTemplates = <ProviderTemplate>[
     keyPageUrl: 'https://redpill.ai',
     privacy: PrivacyLevel.tee,
     suggestedModel: 'z-ai/glm-5.3-flash',
-    options: {'teeModelsOnly': true},
+    options: {'teeModelsOnly': true, 'attestation': 'phala'},
   ),
   ProviderTemplate(
     id: 'tinfoil',

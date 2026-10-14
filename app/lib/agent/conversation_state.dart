@@ -49,6 +49,27 @@ final class EscalationQuestion extends PendingQuestion {
   bool get answered => event.answered;
 }
 
+/// The request was not sent because the GPU check before the request failed
+/// (GPU mode „Vorher“, WP52): the user may send it once without the check.
+@immutable
+final class GpuBlock {
+  /// Creates the block.
+  const GpuBlock({
+    required this.profileId,
+    required this.request,
+    required this.reason,
+  });
+
+  /// Provider that was not reached.
+  final String profileId;
+
+  /// The request text to send again.
+  final String request;
+
+  /// Short German reason (secret-free).
+  final String reason;
+}
+
 /// Everything the main screen shows about the conversation.
 @immutable
 final class ConversationState {
@@ -66,6 +87,7 @@ final class ConversationState {
     this.activeRule,
     this.privateSince,
     this.privateByRequest = false,
+    this.gpuBlock,
   }) : entries = List.unmodifiable(entries);
 
   /// The empty conversation.
@@ -112,6 +134,10 @@ final class ConversationState {
   /// memory (or other content with a privacy floor).
   final bool privateByRequest;
 
+  /// Request stopped by the GPU check before sending (dialog „Ohne
+  /// GPU-Prüfung senden“), or `null`.
+  final GpuBlock? gpuBlock;
+
   /// A copy with the given fields replaced; `clear…` resets nullable
   /// fields to `null`.
   ConversationState copyWith({
@@ -132,6 +158,8 @@ final class ConversationState {
     DateTime? privateSince,
     bool? privateByRequest,
     bool clearPrivate = false,
+    GpuBlock? gpuBlock,
+    bool clearGpuBlock = false,
   }) => ConversationState(
     entries: entries ?? this.entries,
     running: running ?? this.running,
@@ -147,6 +175,7 @@ final class ConversationState {
     privateByRequest: clearPrivate
         ? false
         : privateByRequest ?? this.privateByRequest,
+    gpuBlock: clearGpuBlock ? null : gpuBlock ?? this.gpuBlock,
   );
 
   /// The tool entry of [callId], if any.

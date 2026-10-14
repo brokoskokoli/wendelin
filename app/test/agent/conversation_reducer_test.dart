@@ -446,4 +446,121 @@ void main() {
     final s = reducer.notice(ConversationState.empty, NoticeKind.info, 'Hi');
     expect((s.entries.single as NoticeEntry).text, 'Hi');
   });
+
+  group('AttestationStatusChanged (WP52)', () {
+    AttestationStatusChanged status(
+      AttestationStatus st, {
+      String step = 's:1',
+      String logId = 'l1',
+      String? reason,
+    }) => AttestationStatusChanged(
+      stepId: step,
+      status: st,
+      logId: logId,
+      detail: 'Hinweis',
+      reasonCode: reason,
+    );
+
+    AnswerAttestation? shield(ConversationState s, [int i = 0]) =>
+        s.entries.whereType<AssistantTextEntry>().elementAt(i).attestation;
+
+    test('setzt den Status an der Antwort dieses Schritts', () {
+      final s = _apply([
+        const AgentTextDelta('Antwort'),
+        status(AttestationStatus.green, reason: null),
+      ]);
+      expect(shield(s)?.status, AttestationStatus.green);
+      expect(shield(s)?.logId, 'l1');
+      expect(shield(s)?.stepId, 's:1');
+    });
+
+    test('Zwischenstand gelb wird zu grün oder rot (gleicher Schritt)', () {
+      final yellow = _apply([
+        const AgentTextDelta('Antwort'),
+        status(AttestationStatus.yellow, logId: ''),
+      ]);
+      expect(shield(yellow)?.status, AttestationStatus.yellow);
+      expect(shield(yellow)?.logId, isEmpty);
+      final green = _apply([status(AttestationStatus.green)], yellow);
+      expect(shield(green)?.status, AttestationStatus.green);
+      final red = _apply([
+        status(AttestationStatus.red, reason: 'upstream_tcb_out_of_date'),
+      ], yellow);
+      expect(shield(red)?.status, AttestationStatus.red);
+      expect(shield(red)?.reasonCode, 'upstream_tcb_out_of_date');
+      expect(
+        red.entries.whereType<AssistantTextEntry>(),
+        hasLength(1),
+        reason: 'kein zweiter Eintrag',
+      );
+    });
+
+    test('kommt nach dem Ende der Antwort (AgentDone), landet er richtig', () {
+      final s = _apply([
+        const AgentTextDelta('Antwort'),
+        const AgentDone(finalText: 'Antwort', stopReason: StopReason.endTurn),
+        status(AttestationStatus.red),
+      ]);
+      expect(s.running, isFalse);
+      expect(shield(s)?.status, AttestationStatus.red);
+      expect(s.entries.whereType<AssistantTextEntry>(), hasLength(1));
+    });
+
+    test('zwei Modellaufrufe: jeder Status an seinem Text', () {
+      final s = _apply([
+        const AgentTextDelta('Ich schaue nach.'),
+        status(AttestationStatus.green, step: 's:1', logId: 'l1'),
+        ToolCallStarted(_call),
+        const AgentTextDelta('Fertig.'),
+        status(AttestationStatus.red, step: 's:2', logId: 'l2'),
+      ]);
+      final texts = s.entries.whereType<AssistantTextEntry>().toList();
+      expect(texts, hasLength(2));
+      expect(texts[0].attestation?.status, AttestationStatus.green);
+      expect(texts[0].attestation?.stepId, 's:1');
+      expect(texts[1].attestation?.status, AttestationStatus.red);
+      expect(texts[1].attestation?.stepId, 's:2');
+    });
+
+    test('Aufruf ohne Text: Status geht nicht an die vorige Antwort', () {
+      final s = _apply([
+        const AgentTextDelta('Erste Antwort'),
+        status(AttestationStatus.green, step: 's:1'),
+        status(AttestationStatus.green, step: 's:2', logId: 'l2'),
+      ]);
+      expect(shield(s)?.stepId, 's:1');
+    });
+
+    test('rotes Ergebnis ohne Antworttext bleibt als Hinweis sichtbar', () {
+      final s = _apply([status(AttestationStatus.red)]);
+      final notice = s.entries.whereType<NoticeEntry>().single;
+      expect(notice.kind, NoticeKind.error);
+    });
+
+    test('spätes GPU-Ergebnis färbt die letzte geprüfte Antwort rot', () {
+      final s = _apply([
+        const AgentTextDelta('Antwort'),
+        status(AttestationStatus.green),
+      ]);
+      final late = reducer.lateFailure(
+        s,
+        const AttestationReport(
+          logId: 'g1',
+          status: AttestationStatus.red,
+          detail: 'GPU-Prüfung: abgelehnt',
+          reasonCode: 'gpu_failed',
+        ),
+        text: 'GPU-Prüfung fehlgeschlagen',
+      );
+      expect(shield(late)?.status, AttestationStatus.red);
+      expect(shield(late)?.reasonCode, 'gpu_failed');
+      expect(shield(late)?.logId, 'g1');
+      final none = reducer.lateFailure(
+        ConversationState.empty,
+        const AttestationReport(logId: 'g', status: AttestationStatus.red),
+        text: 'Hinweis',
+      );
+      expect(none.entries.single, isA<NoticeEntry>());
+    });
+  });
 }
