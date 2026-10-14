@@ -17,3 +17,7 @@ coverage/
 .claude/worktrees/
 # Golden-Test-Fehlerbilder (flutter test erzeugt sie bei Abweichungen)
 app/test/**/failures/
+
+# Python
+__pycache__/
+*.pyc
