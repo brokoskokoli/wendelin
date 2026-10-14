@@ -90,7 +90,6 @@ void main() {
         'Wandelnd': false,
         'Wettelin': false,
         'Handelmann': false,
-        'Mendelin': false,
         '': false,
         'Danke schön': false,
       };
