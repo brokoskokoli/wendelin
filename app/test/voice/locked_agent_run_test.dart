@@ -2,7 +2,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/voice/locked_agent_run.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_voice/wendelin_voice.dart';
 
 final class _Inner implements AgentRun {
   int cancels = 0;
