@@ -3,13 +3,16 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Pixel share up to which a golden still passes on CI (0.6 %).
+/// Pixel share up to which a golden still passes on CI (1.0 %).
 ///
 /// The goldens are recorded on a local Mac; the macOS runner of GitHub
 /// Actions rasterises anti-aliased edges and glyphs slightly differently
-/// (up to 0.56 % and 618 pixels in run 38331145273). Shapes and colours are
-/// additionally checked platform-independently (`test/ui/shapes_test.dart`).
-const ciGoldenTolerance = 0.006;
+/// (up to 0.56 % and 618 pixels in run 38331145273; small text-dense cards
+/// up to 0.89 % at under 600 pixels in run 38504882500, diff images showed
+/// only glyph edges). The absolute limit below keeps large goldens strict;
+/// texts are asserted by the widget tests, shapes and colours additionally
+/// platform-independently (`test/ui/shapes_test.dart`).
+const ciGoldenTolerance = 0.010;
 
 /// Absolute limit of differing pixels on CI, so large goldens cannot hide a
 /// real change inside the share.
