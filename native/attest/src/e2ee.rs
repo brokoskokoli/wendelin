@@ -15,6 +15,7 @@ use hkdf::Hkdf;
 use rand_core::{OsRng, RngCore};
 use sha2::Sha256;
 use x25519_dalek::{PublicKey, StaticSecret};
+use zeroize::Zeroizing;
 
 const INFO: &[u8] = b"aci.e2ee.v2.x25519";
 const NONCE_LEN: usize = 12;
@@ -51,16 +52,17 @@ fn array32(b: &[u8], what: &str) -> Result<[u8; KEY_LEN], String> {
 }
 
 fn cipher(secret: &StaticSecret, peer: &PublicKey) -> Result<Aes256Gcm, String> {
-    let shared = secret.diffie_hellman(peer);
+    let shared = Zeroizing::new(secret.diffie_hellman(peer).to_bytes());
+    let contributory = !shared.iter().all(|b| *b == 0);
     // Low-Order-Punkt: gemeinsames Geheimnis wäre konstant null, nicht vertrauenswürdig.
-    if !shared.was_contributory() {
+    if !contributory {
         return Err("Schlüsselvereinbarung ungültig".into());
     }
-    let mut key = [0u8; KEY_LEN];
-    Hkdf::<Sha256>::new(None, shared.as_bytes())
-        .expand(INFO, &mut key)
+    let mut key = Zeroizing::new([0u8; KEY_LEN]);
+    Hkdf::<Sha256>::new(None, &shared[..])
+        .expand(INFO, &mut key[..])
         .map_err(|_| "Schlüsselableitung fehlgeschlagen".to_string())?;
-    Aes256Gcm::new_from_slice(&key).map_err(|_| "Schlüssel ungültig".to_string())
+    Aes256Gcm::new_from_slice(&key[..]).map_err(|_| "Schlüssel ungültig".to_string())
 }
 
 /// Verschlüsselt mit festem Ephemeral-Seed und fester Nonce. Nur für Tests und Testvektoren.

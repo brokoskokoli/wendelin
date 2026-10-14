@@ -375,7 +375,15 @@ final class E2eeV2Wire implements ChatWire {
     if (json is! Map<String, Object?>) {
       throw _fail('e2ee.response', 'Antwortereignis unlesbar');
     }
-    if (json['error'] != null) return event; // plain error object
+    if (json['error'] != null) {
+      // Fehlerobjekt im Klartext; nie ungeprüfte choices durchreichen.
+      if (!json.containsKey('choices')) return event;
+      return SseEvent(
+        data: jsonEncode({...json}..remove('choices')),
+        event: event.event,
+        id: event.id,
+      );
+    }
     final choices = json['choices'];
     if (choices is! List<Object?>) return event; // e.g. usage chunk
     final id = json['id'] is String ? json['id']! as String : '';

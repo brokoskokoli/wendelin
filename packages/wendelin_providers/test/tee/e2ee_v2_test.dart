@@ -144,6 +144,10 @@ void main() {
                 'type': 'image_url',
                 'image_url': {'url': 'data:image/png;base64,GEHEIMBILD'},
               },
+              {
+                'type': 'input_audio',
+                'input_audio': {'data': 'GEHEIMAUDIO', 'format': 'wav'},
+              },
             ],
           },
           {
@@ -176,6 +180,7 @@ void main() {
         'Geheimer Systemprompt',
         'Geheimer Text',
         'GEHEIMBILD',
+        'GEHEIMAUDIO',
         'Geheimes Ergebnis',
       ]) {
         expect(wireText, isNot(contains(secret)));
@@ -359,6 +364,26 @@ void main() {
         }
       },
     );
+
+    test('Fehlerobjekt: choices werden nie im Klartext durchgereicht', () {
+      final w = wire();
+      final out = w.open(
+        SseEvent(
+          data: jsonEncode({
+            'error': {'message': 'boom'},
+            'choices': [
+              {
+                'delta': {'content': 'KLARTEXT'},
+              },
+            ],
+          }),
+        ),
+      );
+      final json = jsonDecode(out.data) as Map;
+      expect(json.containsKey('choices'), isFalse);
+      expect(out.data, isNot(contains('KLARTEXT')));
+      expect((json['error']! as Map)['message'], 'boom');
+    });
 
     test('Klartext, falscher Feldpfad, falsche id, fremder Schlüssel, Nicht-String: Fehler', () {
       final w = wire();
