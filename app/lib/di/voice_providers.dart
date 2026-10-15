@@ -14,6 +14,8 @@ import '../platform/voice/system_tts.dart';
 import '../platform/voice/whisper_sherpa.dart';
 import '../platform/voice/whisper_stt.dart';
 import '../voice/voice_log.dart';
+import 'app_settings.dart';
+import 'core_providers.dart';
 import 'preferences.dart';
 import 'vocabulary_provider.dart';
 import 'voice_settings_providers.dart';
@@ -29,7 +31,15 @@ export 'voice_settings_providers.dart';
 // from [voiceComponentsProvider].
 
 /// Microphone access of the `record` plugin.
-final microphoneProvider = Provider<PcmRecorder>((ref) => RecordPcmRecorder());
+final microphoneProvider = Provider<PcmRecorder>(
+  (ref) => RecordPcmRecorder(
+    null,
+    // Developer setting (WP72): capture variant during the speech output.
+    () async => SpeechCapture.parse(
+      await ref.read(storageProvider).settings.get(AppSettings.bargeSource),
+    ),
+  ),
+);
 
 /// Microphone as [AudioInput] (16 kHz mono PCM).
 final audioInputProvider = Provider<AudioInput>(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../design/design.dart';
+import 'barge_debug_sheet.dart';
 import 'settings_page.dart';
 
 /// Hint while no barge-in detector exists (wake word model: WP44/WP58).
@@ -65,7 +66,15 @@ class ConversationSettingsSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: WSpace.s,
           children: [
-            Text('Unterbrechen während der Antwort', style: WText.label),
+            // Long press: hidden developer variants (WP72).
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onLongPress: () => showBargeDebugSheet(context),
+              child: Text(
+                'Unterbrechen während der Antwort',
+                style: WText.label,
+              ),
+            ),
             Text(
               bargeInAvailable
                   ? 'Mit „Wendelin“ oder „Stopp“ unterbrichst du die '

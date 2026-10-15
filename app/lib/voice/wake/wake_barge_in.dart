@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../voice_log.dart';
+import 'barge_meter.dart';
 
 /// Barge-in detector of the conversation mode (WP50, WP44 Nachtrag 2):
 /// while the answer is spoken it listens for „Wendelin“ with the same
@@ -23,6 +24,8 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     required this.features,
     this.stopTemplates = _none,
     this.extraMargin = 0.05,
+    this.marginOverride,
+    this.diagInterval = const Duration(seconds: 1),
   });
 
   /// Microphone shared with the pipeline.
@@ -42,6 +45,16 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
 
   /// Added to every template threshold.
   final double extraMargin;
+
+  /// Developer setting (WP72, `debug.bargeMargin`): replaces [extraMargin]
+  /// when it returns a value. Read once, when the engine is built.
+  final Future<double?> Function()? marginOverride;
+
+  /// Interval of the `barge-diag` lines while listening.
+  final Duration diagInterval;
+
+  BargeMeter? _meter;
+  Timer? _diag;
 
   WakeWordBargeInDetector? _inner;
   bool _empty = false;
@@ -69,19 +82,37 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
         voiceLog('barge-in-off', {'reason': 'no-templates'});
       } else {
         voiceLog('barge-stop-word', {'learned': stops.isNotEmpty});
+        final margin = await marginOverride?.call() ?? extraMargin;
         List<WakeTemplates> strictly(List<WakeTemplates> l) => [
           for (final t in l)
-            t.withThreshold((t.threshold + extraMargin).clamp(0.0, 0.99)),
+            t.withThreshold((t.threshold + margin).clamp(0.0, 0.99)),
         ];
         final strict = strictly(sets);
+        final strictStops = strictly(stops);
+        double? lowest(List<WakeTemplates> l) => l.isEmpty
+            ? null
+            : l.map((t) => t.threshold).reduce((a, b) => a < b ? a : b);
+        final meter = _meter = BargeMeter(
+          threshold: lowest(strict),
+          stopThreshold: lowest(strictStops),
+        );
+        voiceLog('barge-config', {
+          'margin': margin,
+          'thr': meter.threshold,
+          'sthr': meter.stopThreshold,
+        });
         final inner = WakeWordBargeInDetector(
-          audio: audio,
-          engine: CandidateWakeEngine(
-            features: features(),
-            templates: strict.first,
-            moreTemplates: strict.skip(1).toList(),
-            stopTemplates: strictly(stops),
-            modelThreshold: null,
+          audio: MeteredAudioInput(audio, meter),
+          engine: MeteredEngine(
+            CandidateWakeEngine(
+              features: features(),
+              templates: strict.first,
+              moreTemplates: strict.skip(1).toList(),
+              stopTemplates: strictStops,
+              modelThreshold: null,
+              onWindow: (main, stop, _) => meter.onWindow(main, stop),
+            ),
+            meter,
           ),
         );
         _sub = inner.signals.listen((signal) {
@@ -93,15 +124,23 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     }
     // A stop during the loading wins.
     if (_running) {
+      _meter?.reset();
       await _inner?.start();
       voiceLog('barge-listen', {'on': _inner != null});
+      if (_inner != null && _running) {
+        _diag?.cancel();
+        _diag = Timer.periodic(diagInterval, (_) => _meter?.flush());
+      }
     }
   }
 
   @override
   Future<void> stop() async {
     _running = false;
+    _diag?.cancel();
+    _diag = null;
     await _inner?.stop();
+    if (_inner != null) _meter?.summary();
     voiceLog('barge-listen', {'on': false});
     if (_disposeWhenIdle) await dispose();
   }
@@ -122,6 +161,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     if (_disposed) return;
     _disposed = true;
     _running = false;
+    _diag?.cancel();
     await _sub?.cancel();
     await _inner?.dispose();
     await _signals.close();

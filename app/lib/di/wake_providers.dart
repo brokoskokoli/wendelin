@@ -12,6 +12,7 @@ import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
 import '../voice/wake/wake_barge_in.dart';
 import '../voice/wake/wake_storage.dart';
+import 'app_settings.dart';
 import 'core_providers.dart';
 import 'voice_providers.dart';
 
@@ -185,6 +186,11 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   final makeFeatures = ref.read(wakeFeaturesFactoryProvider);
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
+    // Developer setting (WP72): other margin than +0.05.
+    marginOverride: () async => double.tryParse(
+      await ref.read(storageProvider).settings.get(AppSettings.bargeMargin) ??
+          '',
+    ),
     features: () => makeFeatures(),
     templates: () async => [
       for (final s in await store.speakers()) ?await store.load(s.id),

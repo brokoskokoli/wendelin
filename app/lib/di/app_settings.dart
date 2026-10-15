@@ -13,6 +13,14 @@ abstract final class AppSettings {
     defaultValue: false,
   );
 
+  /// Developer setting (WP72, hidden): capture variant during the speech
+  /// output (`SpeechCapture` name; default `communication`).
+  static final bargeSource = SettingKey.string('debug.bargeSource');
+
+  /// Developer setting (WP72, hidden): extra barge-in threshold margin as
+  /// text (`0.05` default, `0.00`, `-0.05`).
+  static final bargeMargin = SettingKey.string('debug.bargeMargin');
+
   /// Show reasoning text of the model in the conversation (off by default).
   static final showThinking = SettingKey.boolean(
     'chat.showThinking',

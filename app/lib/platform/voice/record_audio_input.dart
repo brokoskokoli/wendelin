@@ -19,6 +19,58 @@ enum CaptureProfile {
   speechOutput,
 }
 
+/// Which capture the profile [CaptureProfile.speechOutput] uses (WP72).
+///
+/// The default is the concept's choice (K23 c). The other two are device
+/// experiments, chosen by the hidden developer setting „Barge-in-Variante“
+/// (`debug.bargeSource`): which one lets „Stopp“/„Wendelin“ through on the
+/// Xiaomi can only be decided on the device.
+enum SpeechCapture {
+  /// `VOICE_COMMUNICATION` with the plugin's `AcousticEchoCanceler`.
+  communication,
+
+  /// `VOICE_RECOGNITION` (the source of the enrollment) with the echo
+  /// canceler.
+  recognitionAec,
+
+  /// `VOICE_RECOGNITION` without any effect (reference: the own voice is not
+  /// suppressed, but the speaker may trigger).
+  recognition;
+
+  /// The variant with [name], else the default.
+  static SpeechCapture parse(String? name) => values.firstWhere(
+    (v) => v.name == name,
+    orElse: () => SpeechCapture.communication,
+  );
+}
+
+/// The `RecordConfig` of [profile] (WP72: the interruption mode is `none`).
+///
+/// The plugin's default `pause` requests audio focus with every recording
+/// and pauses the PCM engine on any focus loss, without resuming. The own
+/// speech output (system TTS per chunk, `audioplayers`) takes the focus, so
+/// the barge-in recording stood still while the answer was spoken.
+RecordConfig buildRecordConfig(
+  CaptureProfile profile, [
+  SpeechCapture speech = SpeechCapture.communication,
+]) {
+  final out = profile == CaptureProfile.speechOutput;
+  final aec = out && speech != SpeechCapture.recognition;
+  final communication = out && speech == SpeechCapture.communication;
+  return RecordConfig(
+    encoder: AudioEncoder.pcm16bits,
+    sampleRate: AudioInput.sampleRate,
+    numChannels: 1,
+    echoCancel: aec,
+    audioInterruption: AudioInterruptionMode.none,
+    androidConfig: AndroidRecordConfig(
+      audioSource: communication
+          ? AndroidAudioSource.voiceCommunication
+          : AndroidAudioSource.voiceRecognition,
+    ),
+  );
+}
+
 /// A microphone whose source can be chosen before it starts.
 abstract interface class ProfiledAudioInput implements AudioInput {
   /// Source of the next [start] (a running recording keeps its source).
@@ -49,11 +101,21 @@ abstract interface class PcmRecorder {
 
 /// [PcmRecorder] on `package:record` (Android `AudioRecord`, no GMS).
 final class RecordPcmRecorder implements PcmRecorder {
-  /// Creates the recorder; [recorder] is created lazily.
-  RecordPcmRecorder([AudioRecorder? recorder]) : _given = recorder;
+  /// Creates the recorder; [recorder] is created lazily. [speechCapture]
+  /// returns the variant for [CaptureProfile.speechOutput] (WP72, developer
+  /// setting; default [SpeechCapture.communication]).
+  RecordPcmRecorder([
+    AudioRecorder? recorder,
+    Future<SpeechCapture> Function()? speechCapture,
+  ]) : _given = recorder,
+       _speechCapture = speechCapture;
 
   final AudioRecorder? _given;
+  final Future<SpeechCapture> Function()? _speechCapture;
   late final AudioRecorder _recorder = _given ?? AudioRecorder();
+  // Lives as long as the recorder.
+  // ignore: cancel_subscriptions
+  StreamSubscription<RecordState>? _states;
 
   @override
   Future<bool> hasPermission({bool request = true}) =>
@@ -62,22 +124,28 @@ final class RecordPcmRecorder implements PcmRecorder {
   @override
   Future<Stream<Uint8List>> startStream([
     CaptureProfile profile = CaptureProfile.recognition,
-  ]) => _recorder.startStream(
-    RecordConfig(
-      encoder: AudioEncoder.pcm16bits,
-      sampleRate: AudioInput.sampleRate,
-      numChannels: 1,
-      // Recognition: no automatic gain on most devices. Speech output:
-      // communication source plus the plugin's AcousticEchoCanceler
-      // (created with the recording, released with it).
-      echoCancel: profile == CaptureProfile.speechOutput,
-      androidConfig: AndroidRecordConfig(
-        audioSource: profile == CaptureProfile.speechOutput
-            ? AndroidAudioSource.voiceCommunication
-            : AndroidAudioSource.voiceRecognition,
-      ),
-    ),
-  );
+  ]) async {
+    var speech = SpeechCapture.communication;
+    if (profile == CaptureProfile.speechOutput) {
+      try {
+        speech = await (_speechCapture?.call() ?? Future.value(speech));
+      } on Object {
+        // Settings unreadable: the default.
+      }
+    }
+    // A pause by the platform would silence the barge-in unnoticed: log it.
+    _states ??= _recorder.onStateChanged().listen(
+      (s) => voiceLog('mic-state', {'state': s}),
+    );
+    final stream = await _recorder.startStream(
+      buildRecordConfig(profile, speech),
+    );
+    voiceLog('mic-config', {
+      'profile': profile,
+      'variant': profile == CaptureProfile.speechOutput ? speech : null,
+    });
+    return stream;
+  }
 
   @override
   Future<void> stop() async {
