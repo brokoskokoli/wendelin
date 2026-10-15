@@ -63,9 +63,24 @@ bool matchesWakeWord(String transcript, {int maxDistance = 1}) {
 bool _nearWakeWord(String s, int maxDistance) {
   if (soundsLikeWakeWord(s)) return true;
   for (final spelling in wakeWordSpellings) {
-    if (_distance(s, spelling) <= maxDistance) return true;
+    final d = _distance(s, spelling);
+    if (d <= 1 && d <= maxDistance) return true;
+    // Two edits only for a word that starts like „Wendelin“ (w/v/f) and is
+    // long enough: „Wandelin“, „Wendli“ (WP73).
+    if (d <= maxDistance && s.length >= 6 && 'wvf'.contains(s[0])) return true;
   }
   return false;
+}
+
+/// How a transcript relates to the wake word, for the log of the
+/// verification (WP73): `empty`, `exact` („Wendelin“), `variant` (another
+/// spelling or sound) or `other` (some other text). Never the text itself.
+String wakeTranscriptCategory(String transcript, {int maxDistance = 1}) {
+  if (transcript.trim().isEmpty) return 'empty';
+  if (!matchesWakeWord(transcript, maxDistance: maxDistance)) return 'other';
+  return foldForMatch(transcript).split(' ').contains('wendelin')
+      ? 'exact'
+      : 'variant';
 }
 
 /// Words that follow a name in a sentence, not the second half of a split
@@ -155,7 +170,8 @@ final class TranscriptWakeVerifier implements WakeVerifier {
     this.stt, {
     this.maxSamples = 48000,
     this.language = 'de',
-    this.maxDistance = 1,
+    this.maxDistance = 2,
+    this.onCategory,
   });
 
   /// The recognizer.
@@ -167,8 +183,13 @@ final class TranscriptWakeVerifier implements WakeVerifier {
   /// Recognition language.
   final String language;
 
-  /// Edit distance tolerance.
+  /// Edit distance tolerance (up to two for a word that starts like the wake
+  /// word, WP73: Whisper often writes a near miss).
   final int maxDistance;
+
+  /// Called with [wakeTranscriptCategory] and the audio length in ms of every
+  /// verdict (diagnostics, no text).
+  final void Function(String category, int ms)? onCategory;
 
   @override
   Future<bool> confirm(Int16List pcm) async {
@@ -176,6 +197,10 @@ final class TranscriptWakeVerifier implements WakeVerifier {
         ? Int16List.sublistView(pcm, pcm.length - maxSamples)
         : pcm;
     final t = await stt.transcribe(audio, language: language);
+    onCategory?.call(
+      wakeTranscriptCategory(t.text, maxDistance: maxDistance),
+      audio.length ~/ 16,
+    );
     return matchesWakeWord(t.text, maxDistance: maxDistance);
   }
 }

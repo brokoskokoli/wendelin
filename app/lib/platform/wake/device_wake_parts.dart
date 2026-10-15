@@ -10,6 +10,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../../debug/wake_test_audio.dart';
 import '../../di/voice_settings_providers.dart';
 import '../../di/wake_providers.dart';
+import '../../voice/voice_log.dart';
 import '../recognizer/device_recognizer_engines.dart';
 import '../recognizer/recognizer_host.dart';
 import 'service_audio_input.dart';
@@ -42,7 +43,12 @@ final class LazyWhisperVerifier implements WakeVerifier {
     // while loading).
     try {
       final stt = await models.speechToText(id);
-      return await TranscriptWakeVerifier(stt, language: language).confirm(pcm);
+      return await TranscriptWakeVerifier(
+        stt,
+        language: language,
+        onCategory: (category, ms) =>
+            voiceLog('wake-verify-text', {'cat': category, 'ms': ms}),
+      ).confirm(pcm);
     } finally {
       models.idle();
     }

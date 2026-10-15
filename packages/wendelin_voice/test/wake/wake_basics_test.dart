@@ -101,6 +101,31 @@ void main() {
       expect(matchesWakeWord('Wendel', maxDistance: 2), isTrue);
     });
 
+    test('Nachprüfung toleriert zwei Tippfehler nur nahe am Wort (WP73)', () {
+      // Verifier-Standard: zwei Änderungen, wenn w/v/f vorn und ≥ 6 Zeichen.
+      expect(matchesWakeWord('Wandeln', maxDistance: 2), isTrue);
+      expect(matchesWakeWord('Wendli', maxDistance: 2), isTrue);
+      expect(matchesWakeWord('Mandelin', maxDistance: 2), isFalse);
+      expect(matchesWakeWord('Welle', maxDistance: 2), isFalse);
+      expect(matchesWakeWord('Wandern', maxDistance: 2), isFalse);
+      // Der Standard (eine Änderung) bleibt streng.
+      expect(matchesWakeWord('Wendelxyz'), isFalse);
+    });
+
+    test('Kategorie der Nachprüfung ohne Text (WP73)', () async {
+      expect(wakeTranscriptCategory(''), 'empty');
+      expect(wakeTranscriptCategory('Hey Wendelin'), 'exact');
+      expect(wakeTranscriptCategory('Vendelin'), 'variant');
+      expect(wakeTranscriptCategory('Guten Tag'), 'other');
+      final seen = <String>[];
+      final v = TranscriptWakeVerifier(
+        FixedTranscriptStt('Wandeln'),
+        onCategory: (c, ms) => seen.add('$c $ms'),
+      );
+      expect(await v.confirm(Int16List(32000)), isTrue);
+      expect(seen, ['variant 2000']);
+    });
+
     test('TranscriptWakeVerifier kürzt auf die letzten 3 s', () async {
       final stt = FixedTranscriptStt('Hey Wendelin');
       final v = TranscriptWakeVerifier(stt);

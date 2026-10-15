@@ -476,6 +476,52 @@ void main() {
   );
 
   testWidgets(
+    'Wake Word ohne Pause, Gerätepegel (WP73): Pre-Roll nur das Wort, '
+    'Sprache mit normalem Pegel: kein Ton',
+    (tester) async {
+      var plays = 0;
+      Int16List level(int ms, int amp) =>
+          Int16List.fromList(List.filled(ms * 16, amp));
+      final platform = FakeAssistantPlatform()
+        // As on the device: only 300 ms of the loud word in front of the end,
+        // then the request at a normal level (not 3x the word).
+        ..wakeHandoff = Int16List.fromList([
+          ...level(300, 1500),
+          ...level(1200, 1200),
+          ...level(600, 40),
+        ])
+        ..wakeEnd = 300 * 16;
+      final stt = FakeSpeechToText(const [
+        Transcript(text: 'Wendelin, wie spät ist es?'),
+      ]);
+      final env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider([ScriptedTurn.text('Es ist 8 Uhr 12.')]),
+        ),
+      );
+      await pumpOverlay(
+        tester,
+        env,
+        platform,
+        extra: [wakeConfirmToneProvider.overrideWithValue(() async => plays++)],
+        voice: VoiceComponents(
+          audio: FakeAudioInput(
+            frames: AudioFrames.pattern('.' * 30),
+            frameInterval: const Duration(milliseconds: 30),
+          ),
+          vad: FakeVoiceActivityDetector(),
+          stt: stt,
+          textToSpeech: (_) async => FakeTextToSpeech(),
+          config: const VoicePipelineConfig(),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 60));
+      await pumpUntil(tester, find.text('Es ist 8 Uhr 12.'));
+      expect(plays, 0);
+    },
+  );
+
+  testWidgets(
     'Wake Word ohne Pause (WP68): Anfrage steckt im Handoff, kein Ton, '
     'Wake Word nicht im Audio',
     (tester) async {

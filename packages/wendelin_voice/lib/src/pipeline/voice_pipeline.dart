@@ -290,6 +290,10 @@ final class VoicePipeline {
         return _finish(gen, ConversationEndReason.silence);
       }
       if (isStopWord(transcript.text)) {
+        // Where the stop came from (WP73), never the text.
+        diagnostics?.call(
+          'stop-word source=transcript first=${!followUp && trigger != null}',
+        );
         await cancel(VoiceCancelReason.stopWord);
         return;
       }
@@ -332,6 +336,7 @@ final class VoicePipeline {
     if (s.kind == BargeInKind.speech && mode != BargeInMode.speech) return;
     _emit(VoiceBargeIn(s));
     if (s.keyword == BargeInKeyword.stop) {
+      diagnostics?.call('stop-word source=barge-in');
       unawaited(cancel(VoiceCancelReason.stopWord));
       return;
     }
