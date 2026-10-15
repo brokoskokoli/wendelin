@@ -51,7 +51,8 @@ final class AttestationAudit {
     final id = 'att-${now.microsecondsSinceEpoch}-${_counter++}-$nonce';
     lastLogId = id;
     for (final s in stages) {
-      log('Wendelin/attest: ${kind.name} ${s.stage.id}=${s.outcome.name}');
+      final code = s.code == null ? '' : ' code=${s.code}';
+      log('Wendelin/attest: ${kind.name} ${s.stage.id}=${s.outcome.name}$code');
     }
     log('Wendelin/attest: ${kind.name} ${status.name}');
     sink?.record(

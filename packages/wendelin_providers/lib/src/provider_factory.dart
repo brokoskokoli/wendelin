@@ -8,6 +8,7 @@ import 'anthropic/anthropic_options.dart';
 import 'catalog/model_catalog.dart';
 import 'common/credentials.dart';
 import 'common/http_settings.dart';
+import 'common/redactor.dart';
 import 'openai/openai_adapter.dart';
 import 'openai/openai_options.dart';
 import 'tee/attestation_crypto.dart';
@@ -158,16 +159,17 @@ abstract final class ProviderFactory {
             attestation?.pinnedClient ??
             (TlsPinGate g, {required bool enforce}) =>
                 PinnedHttpClient(gate: g, enforce: enforce, connect: connect);
+        final credentials = Credentials(
+          profile.authMethod,
+          secrets,
+          style: ApiKeyStyle.bearer,
+        );
         final adapter = OpenAiChatAdapter(
           wireCodec: attested
               ? PhalaE2eeChannel(crypto: attestation.crypto)
               : null,
           baseUrl: Uri.parse(baseUrl),
-          credentials: Credentials(
-            profile.authMethod,
-            secrets,
-            style: ApiKeyStyle.bearer,
-          ),
+          credentials: credentials,
           defaultModel: profile.defaultModel,
           label: profile.name,
           client: gate == null ? client : build(gate, enforce: true),
@@ -192,6 +194,11 @@ abstract final class ProviderFactory {
             baseUrl: root,
             profileId: profile.id,
             client: build(gate!, enforce: false),
+            // The receipt belongs to the key's owner: the request carries the
+            // key, so it goes over the connection pinned to the attested
+            // session.
+            receiptClient: build(gate, enforce: true),
+            receiptHeaders: () => credentials.headers(Redactor()),
             tlsPin: gate,
             settings: settings,
             pins: attestation.pins,

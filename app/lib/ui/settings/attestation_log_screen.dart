@@ -25,6 +25,7 @@ String recordSummary(AttestationRecord r, DateTime now) {
       AttestationStatus.green => 'geprüft',
       AttestationStatus.yellow => 'ausstehend',
       AttestationStatus.red => 'fehlgeschlagen',
+      AttestationStatus.unconfirmed => 'nicht bestätigt',
     },
     ?r.receiptId,
   ];
@@ -45,6 +46,7 @@ CheckStatus recordStatus(AttestationRecord r) => switch (r.status) {
   AttestationStatus.green => CheckStatus.ok,
   AttestationStatus.yellow => CheckStatus.pending,
   AttestationStatus.red => CheckStatus.failed,
+  AttestationStatus.unconfirmed => CheckStatus.neutral,
 };
 
 /// Settings → Datenschutz → Prüfprotokoll (TEE): GPU check setting, the list
@@ -66,6 +68,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
     AttestationStatus.green => 'Geprüft',
     AttestationStatus.yellow => 'Wird geprüft',
     AttestationStatus.red => 'Fehlgeschlagen',
+    AttestationStatus.unconfirmed => 'Nicht bestätigt',
   };
 
   @override
@@ -212,6 +215,7 @@ class _SessionCard extends StatelessWidget {
             AttestationStatus.green => 'Sitzung geprüft',
             AttestationStatus.yellow => 'Sitzung nicht prüfbar',
             AttestationStatus.red => 'Sitzung fehlgeschlagen',
+            AttestationStatus.unconfirmed => 'Sitzung nicht bestätigt',
           };
     final color = locked ? CheckStatus.failed.color : status.color;
     return SectionCard(

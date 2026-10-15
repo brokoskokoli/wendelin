@@ -222,6 +222,58 @@ void main() {
     },
   );
 
+  // WP70: the whole way of an answer on the device: E2EE chat (streaming),
+  // receipt fetched (retried for up to ~24 s), every receipt stage green.
+  // Costs one tiny request. Prints only status and reason codes.
+  test(
+    'Phala: E2EE-Antwort (Stream) → Quittung abgerufen und grün (WP70)',
+    () async {
+      if (_skipWithout(phalaKey, 'PHALA_API_KEY')) return;
+      final log = InMemoryAttestationLog();
+      final provider =
+          _phalaProvider(phalaKey!, logSink: log) as AttestedProvider;
+      final seen = <String>[];
+      final clock = Stopwatch()..start();
+      provider.reports.listen(
+        (r) => seen.add(
+          '${clock.elapsed.inSeconds}s '
+          '${r.status.name}:${r.reasonCode ?? '-'}:${r.detail ?? '-'}',
+        ),
+      );
+      final events = await provider
+          .chat(
+            ChatRequest(
+              systemPrompt: 'Antworte mit einem Wort.',
+              messages: [Message.user('Sag Hallo.')],
+              model: _phalaModel,
+              maxTokens: 10,
+            ),
+          )
+          .toList();
+      if (_noCredit(events, tolerateNoCredit: true)) return;
+      expect(events.last, isA<Done>(), reason: '${events.last}');
+      final report = await provider.pendingReport();
+      // ignore: avoid_print
+      print('Phala Quittung: $seen');
+      for (final e in log.entries.where(
+        (e) => e.kind == AttestationLogKind.receipt,
+      )) {
+        // ignore: avoid_print
+        print(
+          'Eintrag ${e.status.name} Quittungs-ID=${e.receiptId} '
+          '${[for (final s in e.stages) '${s.stage.id}=${s.outcome.name}'
+                '${s.code == null ? '' : ':${s.code}'}'].join(' ')}',
+        );
+      }
+      expect(
+        report?.status,
+        AttestationStatus.green,
+        reason: '${report?.reasonCode} ${report?.detail}',
+      );
+    },
+    timeout: const Timeout(Duration(seconds: 90)),
+  );
+
   // Evidence that the gateway really expects encrypted requests, in spite of
   // the missing credit: a correctly encrypted request and two broken ones
   // (cipher bound to another nonce, plain text) are told apart by the error
@@ -303,19 +355,23 @@ void main() {
 
 const _phalaModel = 'google/gemma-4-31b-it';
 
-LlmProvider _phalaProvider(String key) => ProviderFactory.create(
-  ProviderProfile(
-    id: 'phala',
-    name: 'Phala',
-    type: ProviderType.openaiCompatible,
-    baseUrl: 'https://api.redpill.ai/v1',
-    defaultModel: _phalaModel,
-    privacy: PrivacyLevel.tee,
-    authMethod: const ApiKeyAuth('ref'),
-    options: const {'attestation': 'phala'},
-  ),
-  (_) async => key,
-  // Quote signature chain is not checked here (fake crypto); the SPKI
-  // hashing is the real one for X.509 DER.
-  attestation: AttestationWiring(crypto: FakeAttestationCrypto()),
-);
+LlmProvider _phalaProvider(String key, {AttestationLogSink? logSink}) =>
+    ProviderFactory.create(
+      ProviderProfile(
+        id: 'phala',
+        name: 'Phala',
+        type: ProviderType.openaiCompatible,
+        baseUrl: 'https://api.redpill.ai/v1',
+        defaultModel: _phalaModel,
+        privacy: PrivacyLevel.tee,
+        authMethod: const ApiKeyAuth('ref'),
+        options: const {'attestation': 'phala'},
+      ),
+      (_) async => key,
+      // Quote signature chain is not checked here (fake crypto); the SPKI
+      // hashing is the real one for X.509 DER.
+      attestation: AttestationWiring(
+        crypto: FakeAttestationCrypto(),
+        logSink: logSink,
+      ),
+    );

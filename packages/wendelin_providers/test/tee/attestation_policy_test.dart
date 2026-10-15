@@ -35,18 +35,18 @@ void main() {
         [StageOutcome.unavailable, StageOutcome.fail],
         [red, red, red, red],
       ),
-      // session, receipt attempt 1, 2, 3
+      // session, then receipt attempt 1, 2, ...
       (
-        'Netzfehler: gelb, nach 3 Versuchen rot',
+        'Netzfehler: gelb, nach 6 Versuchen rot',
         [StageOutcome.unavailable],
-        [yellow, yellow, yellow, red],
+        [yellow, yellow, yellow, yellow, yellow, yellow, red],
       ),
     ];
     for (final (name, outcomes, expected) in table) {
       test(name, () {
         final stages = [for (final o in outcomes) _s(o)];
         expect(policy.sessionStatus(stages), expected[0], reason: 'Sitzung');
-        for (var attempt = 1; attempt <= 3; attempt++) {
+        for (var attempt = 1; attempt < expected.length; attempt++) {
           expect(
             policy.receiptStatus(stages, attempt: attempt),
             expected[attempt],
@@ -67,6 +67,43 @@ void main() {
           _s(StageOutcome.pass),
         ]),
         ['Hinweis A'],
+      );
+    });
+
+    test('Standard: sechs Quittungsversuche', () {
+      expect(const AttestationPolicy().maxReceiptAttempts, 6);
+    });
+
+    test('nur nicht abrufbar → unconfirmed, sonst rot', () {
+      StageResult u(String? code) => StageResult(
+        AttestationStage.receiptFetch,
+        StageOutcome.unavailable,
+        'x',
+        code,
+      );
+      for (final code in [
+        StageResult.receiptNotFound,
+        StageResult.receiptUnreachable,
+        StageResult.receiptMissing,
+      ]) {
+        expect(
+          policy.receiptStatus([u(code)], attempt: 6),
+          AttestationStatus.unconfirmed,
+          reason: code,
+        );
+        expect(policy.receiptStatus([u(code)], attempt: 5), yellow);
+      }
+      expect(
+        policy.receiptStatus([u(StageResult.receiptRejected)], attempt: 6),
+        red,
+      );
+      expect(policy.receiptStatus([u(null)], attempt: 6), red);
+      expect(
+        policy.receiptStatus([
+          u(StageResult.receiptNotFound),
+          _s(StageOutcome.fail),
+        ], attempt: 6),
+        red,
       );
     });
 
