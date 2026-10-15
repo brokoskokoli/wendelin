@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1979237243;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1423650251;
 
 // Section: executor
 
@@ -234,6 +234,97 @@ fn wire__crate__api__e2ee_generate_keypair_impl(
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
                 let output_ok = Result::<_, ()>::Ok(crate::api::e2ee_generate_keypair())?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__near_decrypt_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_decrypt",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_secret = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_wire_hex = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::near_decrypt(api_secret, api_wire_hex)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__near_encrypt_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_encrypt",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_recipient_ed_public = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_plaintext = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::near_encrypt(api_recipient_ed_public, api_plaintext)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__near_generate_identity_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_generate_identity",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::near_generate_identity())?;
                 Ok(output_ok)
             })())
         },
@@ -641,6 +732,18 @@ impl SseDecode for Vec<u8> {
     }
 }
 
+impl SseDecode for crate::near_e2ee::NearIdentity {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_secret = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_public = <Vec<u8>>::sse_decode(deserializer);
+        return crate::near_e2ee::NearIdentity {
+            secret: var_secret,
+            public: var_public,
+        };
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -768,10 +871,10 @@ fn pde_ffi_dispatcher_primary_impl(
         1 => wire__crate__api__build_collateral_impl(port, ptr, rust_vec_len, data_len),
         2 => wire__crate__api__collateral_next_update_impl(port, ptr, rust_vec_len, data_len),
         3 => wire__crate__api__collateral_request_impl(port, ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__root_crl_url_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__verify_aci_receipt_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__verify_aci_report_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__verify_quote_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__root_crl_url_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__verify_aci_receipt_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__verify_aci_report_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__verify_quote_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -787,11 +890,14 @@ fn pde_ffi_dispatcher_sync_impl(
         4 => wire__crate__api__e2ee_decrypt_impl(ptr, rust_vec_len, data_len),
         5 => wire__crate__api__e2ee_encrypt_impl(ptr, rust_vec_len, data_len),
         6 => wire__crate__api__e2ee_generate_keypair_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__sha256_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__sha384_impl(ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__spki_sha256_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__tls_spki_listed_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__verify_ed25519_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__near_decrypt_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__near_encrypt_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__near_generate_identity_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__sha256_impl(ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__sha384_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__spki_sha256_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__tls_spki_listed_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__verify_ed25519_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -859,6 +965,27 @@ impl flutter_rust_bridge::IntoDart for crate::e2ee::E2eeKeypair {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::e2ee::E2eeKeypair {}
 impl flutter_rust_bridge::IntoIntoDart<crate::e2ee::E2eeKeypair> for crate::e2ee::E2eeKeypair {
     fn into_into_dart(self) -> crate::e2ee::E2eeKeypair {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_e2ee::NearIdentity {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.secret.into_into_dart().into_dart(),
+            self.public.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_e2ee::NearIdentity
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_e2ee::NearIdentity>
+    for crate::near_e2ee::NearIdentity
+{
+    fn into_into_dart(self) -> crate::near_e2ee::NearIdentity {
         self
     }
 }
@@ -995,6 +1122,14 @@ impl SseEncode for Vec<u8> {
         for item in self {
             <u8>::sse_encode(item, serializer);
         }
+    }
+}
+
+impl SseEncode for crate::near_e2ee::NearIdentity {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<u8>>::sse_encode(self.secret, serializer);
+        <Vec<u8>>::sse_encode(self.public, serializer);
     }
 }
 

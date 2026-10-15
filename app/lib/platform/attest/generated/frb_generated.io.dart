@@ -13,6 +13,7 @@ import 'api.dart';
 import 'collateral.dart';
 import 'e2ee.dart';
 import 'frb_generated.dart';
+import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
 
@@ -51,6 +52,9 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  NearIdentity dco_decode_near_identity(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -101,6 +105,9 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  NearIdentity sse_decode_near_identity(SseDeserializer deserializer);
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -164,6 +171,9 @@ abstract class AttestNativeApiImplPlatform
     Uint8List self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_near_identity(NearIdentity self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);

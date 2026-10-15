@@ -97,3 +97,23 @@ pub fn e2ee_encrypt(
 pub fn e2ee_decrypt(secret: Vec<u8>, wire_hex: String, aad: Vec<u8>) -> Result<Vec<u8>, String> {
     crate::e2ee::decrypt(&secret, &wire_hex, &aad)
 }
+
+pub use crate::near_e2ee::NearIdentity;
+
+/// Frische Client-Identität für eine NEAR-E2EE-Anfrage (Ed25519 öffentlich, X25519 geheim).
+#[flutter_rust_bridge::frb(sync)]
+pub fn near_generate_identity() -> NearIdentity {
+    crate::near_e2ee::generate_identity()
+}
+
+/// Verschlüsselt ein Feld an den Ed25519-Schlüssel des Modells (NEAR AI, XChaCha20-Poly1305).
+#[flutter_rust_bridge::frb(sync)]
+pub fn near_encrypt(recipient_ed_public: Vec<u8>, plaintext: Vec<u8>) -> Result<String, String> {
+    crate::near_e2ee::encrypt(&recipient_ed_public, &plaintext)
+}
+
+/// Entschlüsselt ein NEAR-Feld im Hex-Wire-Format; jeder Fehler ist ein `Err`.
+#[flutter_rust_bridge::frb(sync)]
+pub fn near_decrypt(secret: Vec<u8>, wire_hex: String) -> Result<Vec<u8>, String> {
+    crate::near_e2ee::decrypt(&secret, &wire_hex)
+}
