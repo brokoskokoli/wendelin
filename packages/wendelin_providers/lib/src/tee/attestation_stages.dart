@@ -137,13 +137,16 @@ final class AttestationChecks {
           ...e.payload,
         ]),
       );
-      if (AttestCodec.hex(recomputed) != AttestCodec.hex(e.digest)) {
+      // NEAR AI logs runtime events without a digest: it is recomputed. A
+      // digest that is present must match.
+      if (e.digest.isNotEmpty &&
+          AttestCodec.hex(recomputed) != AttestCodec.hex(e.digest)) {
         return StageResult.fail(
           AttestationStage.eventLog,
           'Digest von "${e.event}" passt nicht',
         );
       }
-      rtmr = crypto.sha384(Uint8List.fromList([...rtmr, ...e.digest]));
+      rtmr = crypto.sha384(Uint8List.fromList([...rtmr, ...recomputed]));
     }
     return AttestCodec.hex(rtmr) == AttestCodec.hex(verdict.rtmr3)
         ? const StageResult.pass(AttestationStage.eventLog)

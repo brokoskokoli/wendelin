@@ -181,7 +181,7 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
     final stages = <StageResult>[
       ...entry.stages,
       if (entry.model != model)
-        StageResult.fail(
+        const StageResult.fail(
           AttestationStage.quote,
           'Bericht gilt für ein anderes Modell',
         ),
