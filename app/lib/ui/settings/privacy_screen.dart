@@ -9,8 +9,6 @@ import '../../di/providers.dart';
 import '../../di/wake_providers.dart';
 import '../design/design.dart';
 import '../routes.dart';
-import '../screens/labels.dart';
-import 'export.dart';
 import 'settings_page.dart';
 
 /// Audit entries shown (newest first), filtered by kind.
@@ -45,8 +43,6 @@ class PrivacyScreen extends ConsumerStatefulWidget {
 }
 
 class _PrivacyState extends ConsumerState<PrivacyScreen> {
-  AuditKind? _filter;
-
   Widget _retention(int days) => SettingsSection(
     title: 'Aufbewahrung',
     children: [
@@ -69,8 +65,7 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
   @override
   Widget build(BuildContext context) {
     final days = ref.watch(retentionDaysProvider);
-    final entries = ref.watch(auditViewProvider(_filter)).value ?? const [];
-    final now = ref.watch(clockProvider).now();
+    final entries = ref.watch(auditViewProvider(null)).value ?? const [];
     return SettingsPage(
       title: 'Datenschutz und Logs',
       intro:
@@ -108,40 +103,25 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
           ],
         ),
         _retention(days),
-        Text('Prüfprotokoll', style: WText.sectionLabel),
-        Wrap(
-          spacing: WSpace.s,
-          runSpacing: WSpace.s,
+        SectionCard(
           children: [
-            for (final k in <AuditKind?>[null, ...AuditKind.values])
-              ChoiceChip(
-                label: Text(k == null ? 'Alle' : auditKindLabel(k)),
-                selected: _filter == k,
-                onSelected: (_) => setState(() => _filter = k),
-              ),
+            SettingsRow(
+              key: const ValueKey('auditLogRow'),
+              title: 'Prüfprotokoll',
+              detail: entries.isEmpty
+                  ? 'Keine Einträge.'
+                  : switch (entries.length) {
+                      1 => '1 Eintrag',
+                      >= 200 => '200+ Einträge',
+                      final n => '$n Einträge',
+                    },
+            ),
           ],
         ),
-        if (entries.isEmpty)
-          Text('Keine Einträge.', style: WText.caption)
-        else
-          SectionCard(
-            children: [
-              for (final e in entries.take(100))
-                SettingsRow(
-                  title:
-                      '${auditKindLabel(e.kind)} · '
-                      '${sessionLabel(e.at, now)}',
-                  detail: auditSummary(e),
-                ),
-            ],
-          ),
         WideButton(
-          'Als JSON exportieren',
-          onPressed: () async => ref.read(exporterProvider)(
-            'wendelin-pruefprotokoll.json',
-            'application/json',
-            await ref.read(storageProvider).audit.exportJson(),
-          ),
+          'Prüfprotokoll ansehen',
+          onPressed: () =>
+              unawaited(Navigator.of(context).pushNamed(AppRoutes.auditLog)),
         ),
         WideButton(
           'Verläufe und Protokoll löschen',

@@ -208,6 +208,7 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
       }
       return;
     }
+    SecretField.finishAutofill();
     if (mounted) Navigator.of(context).pop();
   }
 

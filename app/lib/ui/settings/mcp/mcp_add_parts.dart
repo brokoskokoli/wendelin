@@ -15,17 +15,13 @@ List<Widget> mcpAuthFields({
 }) => switch (auth) {
   McpAuthKind.none => const [],
   McpAuthKind.bearer => [
-    TextField(
-      key: const ValueKey('mcpToken'),
-      controller: token,
-      style: WText.body,
-      obscureText: true,
-      autocorrect: false,
-      enableSuggestions: false,
-      decoration: InputDecoration(
-        labelText: 'Token',
+    AutofillGroup(
+      onDisposeAction: AutofillContextAction.cancel,
+      child: SecretField(
+        key: const ValueKey('mcpToken'),
+        controller: token,
+        label: 'Token',
         helperText: template.authHint ?? 'Wird nie wieder angezeigt',
-        helperMaxLines: 2,
       ),
     ),
   ],
@@ -37,15 +33,12 @@ List<Widget> mcpAuthFields({
       autocorrect: false,
       decoration: const InputDecoration(labelText: 'Header, z. B. X-Api-Key'),
     ),
-    TextField(
-      key: const ValueKey('mcpHeaderValue'),
-      controller: headerValue,
-      style: WText.body,
-      obscureText: true,
-      autocorrect: false,
-      enableSuggestions: false,
-      decoration: const InputDecoration(
-        labelText: 'Wert',
+    AutofillGroup(
+      onDisposeAction: AutofillContextAction.cancel,
+      child: SecretField(
+        key: const ValueKey('mcpHeaderValue'),
+        controller: headerValue,
+        label: 'Wert',
         helperText: 'Wird nie wieder angezeigt',
       ),
     ),

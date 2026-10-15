@@ -89,7 +89,10 @@ class _BringScreenState extends ConsumerState<BringScreen> {
       integration: _integration,
       login: BringCredentials(email: email, password: password),
     );
-    if (error == null) await _refresh(registry);
+    if (error == null) {
+      SecretField.finishAutofill();
+      await _refresh(registry);
+    }
     if (!mounted) return;
     setState(() {
       _busy = false;

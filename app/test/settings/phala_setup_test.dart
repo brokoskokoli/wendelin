@@ -44,8 +44,14 @@ void main() {
 
     expect(find.byType(AttestationStagesCard), findsOneWidget);
     expect(find.text('Erste Attestierung'), findsOneWidget);
+    // WP65: only a summary here, the stages on their own page.
+    expect(find.textContaining('TDX-Quote (DCAP)'), findsNothing);
+    await tester.tap(find.text('Prüfprotokoll ansehen'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('TDX-Quote (DCAP) · bestanden'), findsOneWidget);
     expect(find.textContaining('Nonce gebunden · bestanden'), findsOneWidget);
+    await tester.tap(find.byTooltip('Zurück'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('ausweichen'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('Speichern'),
@@ -77,10 +83,18 @@ void main() {
     expect(find.byKey(const ValueKey('setupFailure')), findsOneWidget);
     expect(find.text('Erste Attestierung'), findsOneWidget);
     expect(
+      find.text('1 von 2 Stufen nicht bestanden: Schlüsselsatz-Signatur'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Prüfprotokoll ansehen'));
+    await tester.pumpAndSettle();
+    expect(
       find.textContaining('Schlüsselsatz-Signatur · fehlgeschlagen'),
       findsOneWidget,
     );
     expect(find.text('Signatur ungültig'), findsOneWidget);
+    await tester.tap(find.byTooltip('Zurück'));
+    await tester.pumpAndSettle();
     expect(find.text('Speichern'), findsNothing, reason: 'bleibt bei der Wahl');
   });
 
