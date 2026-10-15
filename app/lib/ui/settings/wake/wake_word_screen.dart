@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
-import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
 import '../../../voice/wake/wake_storage.dart';
 import '../../design/design.dart';
@@ -12,6 +11,7 @@ import '../model_download_row.dart';
 import '../settings_page.dart';
 import 'wake_calibrate_screen.dart';
 import 'wake_enroll_screen.dart';
+import 'wake_models.dart';
 import 'wake_service_section.dart';
 import 'wake_test_screen.dart';
 
@@ -26,13 +26,7 @@ class WakeWordScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
-    final installed =
-        ref.watch(
-          modelStatesProvider.select(
-            (s) => s[SpeechModelCatalog.wakeFeatures.id]?.phase,
-          ),
-        ) ==
-        ModelPhase.installed;
+    final installed = ref.watch(wakeMissingModelsProvider).isEmpty;
     return SettingsPage(
       title: 'Aktivierungswort',
       intro:
@@ -42,7 +36,12 @@ class WakeWordScreen extends ConsumerWidget {
           'gespeichert.',
       children: [
         WakeServiceSection(
-          onEnroll: () => unawaited(_enroll(context, ref, speakers, null)),
+          onEnroll: installed
+              ? () => unawaited(_enroll(context, ref, speakers, null))
+              : () => showHint(
+                  context,
+                  'Dafür muss zuerst das Sprachmodell geladen werden.',
+                ),
         ),
         SettingsSection(
           title: 'Merkmalsmodelle',
@@ -73,11 +72,7 @@ class WakeWordScreen extends ConsumerWidget {
         ),
         if (speakers.isNotEmpty)
           _StopWordSection(speakers: speakers, installed: installed),
-        if (!installed)
-          Text(
-            'Dafür müssen zuerst die Merkmalsmodelle geladen sein.',
-            style: WText.caption,
-          ),
+        if (!installed) const WakeModelsNotice(),
         WideButton(
           'Kalibrieren (30 min, empfohlen)',
           onPressed: installed && speakers.isNotEmpty
@@ -90,6 +85,7 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_test(context, ref, speakers))
               : null,
         ),
+        if (installed) const WakeModelsNotice(optional: true),
         if (speakers.isNotEmpty)
           WideButton(
             'Alle Stimmen löschen',
@@ -247,12 +243,14 @@ class _SpeakerRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final templates = ref.watch(wakeTemplatesProvider(speaker.id)).value;
     final all = ref.read(wakeSpeakersProvider).value ?? const [];
+    final stop = ref.watch(stopLearnedForProvider(speaker.id)).value ?? false;
     return SettingsRow(
       title: speakerLabel(speaker, number),
       detail: templates == null
           ? 'Vorlagen fehlen. Bitte neu einlernen.'
           : '${templates.embeddings.length} Aufnahmen · Schwelle '
-                '${templates.threshold.toStringAsFixed(2)}',
+                '${templates.threshold.toStringAsFixed(2)}'
+                '${stop ? ' · Stopp ✓' : ''}',
       trailing: PopupMenuButton<String>(
         tooltip: 'Aktionen für ${speakerLabel(speaker, number)}',
         onSelected: (v) async {
@@ -283,9 +281,10 @@ class _StopWordSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final learned = ref.watch(stopLearnedProvider).value ?? false;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.s,
       children: [
+        Text('Unterbrechen mit „Stopp“', style: WText.sectionLabel),
         Text(
           learned
               ? '„Stopp“ ist gelernt: Du kannst die Ansage mit „Stopp“ allein '
@@ -293,6 +292,11 @@ class _StopWordSection extends ConsumerWidget {
               : 'Ohne gelerntes „Stopp“ unterbricht nur „Wendelin, stopp“ die '
                     'Ansage. Lerne „Stopp“ ein, damit du die Ansage mit dem '
                     'einen Wort unterbrechen kannst.',
+          style: WText.caption,
+        ),
+        Text(
+          '„Stopp“ wirkt nur, während Wendelin spricht und Unterbrechen auf '
+          '„Schlüsselwörter“ steht. Im Hintergrund löst „Stopp“ nichts aus.',
           style: WText.caption,
         ),
         WideButton(

@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../routes.dart';
 import 'assistant_screen.dart';
 import 'attestation_log_screen.dart';
+import 'audit_log_screen.dart';
 import 'costs_screen.dart';
 import 'integrations_screen.dart';
 import 'memory_screen.dart';
@@ -12,6 +13,7 @@ import 'providers_screen.dart';
 import 'routing/routing_screen.dart';
 import 'settings_screen.dart';
 import 'voice_screen.dart';
+import 'voice_voices_screen.dart';
 import 'wake/wake_word_screen.dart';
 
 /// Routes of the general settings pages (overview, providers, routing,
@@ -24,9 +26,11 @@ Map<String, WidgetBuilder> generalRoutes() => {
   AppRoutes.routing: (_) => const RoutingScreen(),
   AppRoutes.memory: (_) => const MemoryScreen(),
   AppRoutes.privacy: (_) => const PrivacyScreen(),
+  AppRoutes.auditLog: (_) => const AuditLogScreen(),
   AppRoutes.attestationLog: (_) => const AttestationLogScreen(),
   AppRoutes.costs: (_) => const CostsScreen(),
   AppRoutes.assistant: (_) => const AssistantScreen(),
   AppRoutes.voice: (_) => const VoiceScreen(),
+  AppRoutes.voices: (_) => const VoiceVoicesScreen(),
   AppRoutes.wakeWord: (_) => const WakeWordScreen(),
 };

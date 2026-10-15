@@ -98,24 +98,37 @@ Future<String?> askText(
       builder: (context) => AlertDialog(
         backgroundColor: WColors.surface,
         title: Text(title, style: WText.label),
-        content: TextField(
-          key: const ValueKey('mcpDialogField'),
-          controller: controller,
-          autofocus: true,
-          obscureText: obscure,
-          autocorrect: false,
-          enableSuggestions: false,
-          maxLines: obscure ? 1 : maxLines,
-          style: WText.body,
-          decoration: InputDecoration(labelText: label),
-        ),
+        content: obscure
+            ? AutofillGroup(
+                onDisposeAction: AutofillContextAction.cancel,
+                child: SecretField(
+                  key: const ValueKey('mcpDialogField'),
+                  controller: controller,
+                  label: label,
+                  autofocus: true,
+                ),
+              )
+            : TextField(
+                key: const ValueKey('mcpDialogField'),
+                controller: controller,
+                autofocus: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                maxLines: maxLines,
+                style: WText.body,
+                decoration: InputDecoration(labelText: label),
+              ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Abbrechen'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
+            onPressed: () {
+              // Commit only on save, not on cancel.
+              if (obscure) SecretField.finishAutofill();
+              Navigator.of(context).pop(controller.text);
+            },
             child: Text(action),
           ),
         ],

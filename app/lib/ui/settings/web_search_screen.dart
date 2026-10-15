@@ -71,6 +71,8 @@ class _WebSearchState extends ConsumerState<WebSearchScreen> {
         apiKey: _key.text,
       );
     }
+    // Commit while the field still holds the value, then clear it.
+    SecretField.finishAutofill();
     _key.clear();
     if (mounted) Navigator.of(context).pop();
   }

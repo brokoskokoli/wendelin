@@ -175,19 +175,33 @@ final sherpaSynthesizerProvider = Provider<SpeechSynthesizer>((ref) {
 });
 
 /// Offline voices (sherpa-onnx), K7 fallback.
-final sherpaTtsProvider = Provider<TextToSpeech>((ref) {
-  Future<List<SherpaVoice>> voices() async => installedSherpaVoices(
-    await ref.read(speechModelServiceProvider.future),
-    ref.read(speechModelCatalogProvider),
-  );
-  final playback = AudioplayersPlayback();
-  ref.onDispose(() => unawaited(playback.dispose()));
+final sherpaTtsProvider = Provider<TextToSpeech>(createSherpaTts);
+
+/// Builds the offline speech output with the voice chosen in the settings
+/// (WP66); the body of [sherpaTtsProvider], also used by tests.
+@visibleForTesting
+TextToSpeech createSherpaTts(
+  Ref ref, {
+  AudioPlayback? playback,
+  Future<List<SherpaVoice>> Function()? installed,
+}) {
+  Future<List<SherpaVoice>> voices() async => installed != null
+      ? installed()
+      : installedSherpaVoices(
+          await ref.read(speechModelServiceProvider.future),
+          ref.read(speechModelCatalogProvider),
+        );
+  final own = playback == null ? AudioplayersPlayback() : null;
+  if (own != null) ref.onDispose(() => unawaited(own.dispose()));
+  final out = playback ?? own!;
   return SherpaTextToSpeech(
     installed: voices,
     synthesizer: ref.watch(sherpaSynthesizerProvider),
-    playback: playback,
+    playback: out,
+    preferred: () =>
+        ref.read(voiceSettingsProvider).value?.sherpaVoices ?? const {},
   );
-});
+}
 
 /// Chooses system or offline voice per answer (K7).
 final ttsSelectorProvider = Provider<TtsSelector>(

@@ -76,4 +76,11 @@ void main() {
     expect(await store.load('a'), isNull);
     expect(await store.load('b'), isNotNull);
   });
+
+  test('delete einer Person entfernt auch ihr „Stopp“', () async {
+    await store.save(templates('a'));
+    await store.stop.save(templates('a'));
+    await store.delete('a');
+    expect(await secrets.listKeys(), isEmpty);
+  });
 }

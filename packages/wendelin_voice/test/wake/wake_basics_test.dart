@@ -232,7 +232,7 @@ void main() {
             modelThreshold: null,
           );
           await e.open([KeywordSpec.wendelin]);
-          return [for (final h in await e.accept(Int16List(100))) h.keywordId];
+          return [for (final h in await e.accept(Int16List(200))) h.keywordId];
         }
 
         expect(await run([1, 0.05]), ['wake']);
@@ -250,7 +250,82 @@ void main() {
           modelThreshold: null,
         );
         await plain.open([KeywordSpec.wendelin]);
-        expect(await plain.accept(Int16List(100)), isEmpty);
+        expect(await plain.accept(Int16List(200)), isEmpty);
+      },
+    );
+
+    test('Konflikt: das Wort weiter über der Schwelle gewinnt', () async {
+      WakeTemplates one(List<double> e) => WakeTemplates(
+        speakerId: 'a',
+        featureVersion: 'fake-1',
+        threshold: 0.3,
+        embeddings: [v(e)],
+      );
+      Future<List<String>> run(List<double> embedding) async {
+        final e = CandidateWakeEngine(
+          features: FakeWakeFeatureExtractor(
+            windowEvery: 100,
+            windowFor: (end, _) =>
+                WakeWindow(endSample: end, embedding: v(embedding)),
+          ),
+          templates: one([1, 0]),
+          stopTemplates: [
+            one([0, 1]),
+          ],
+          modelThreshold: null,
+        );
+        await e.open([KeywordSpec.wendelin]);
+        return [for (final h in await e.accept(Int16List(200))) h.keywordId];
+      }
+
+      // Both templates are over the threshold in each case.
+      expect(await run([1, 0.5]), ['wake']);
+      expect(await run([0.5, 1]), ['stop']);
+    });
+
+    test(
+      '„Stopp“ zählt erst ab zwei Fenstern in Folge über der Schwelle',
+      () async {
+        WakeTemplates one(String id, List<double> e) => WakeTemplates(
+          speakerId: id,
+          featureVersion: 'fake-1',
+          threshold: 0.9,
+          embeddings: [v(e)],
+        );
+        final seq = [
+          [0.05, 1.0], // stop
+          [-1.0, -1.0], // nothing
+          [0.05, 1.0], // stop
+          [-1.0, -1.0], // nothing
+        ];
+        var i = 0;
+        final e = CandidateWakeEngine(
+          features: FakeWakeFeatureExtractor(
+            windowEvery: 100,
+            windowFor: (end, _) =>
+                WakeWindow(endSample: end, embedding: v(seq[i++ % seq.length])),
+          ),
+          templates: one('a', [1, 0]),
+          stopTemplates: [
+            one('a', [0, 1]),
+          ],
+          modelThreshold: null,
+        );
+        await e.open([KeywordSpec.wendelin]);
+        // Alternating windows: never two in a row.
+        expect(await e.accept(Int16List(400)), isEmpty);
+        // Two stop windows in a row: hit.
+        seq
+          ..clear()
+          ..addAll([
+            [0.05, 1.0],
+            [0.05, 1.0],
+          ]);
+        i = 0;
+        expect(
+          [for (final h in await e.accept(Int16List(200))) h.keywordId],
+          ['stop'],
+        );
       },
     );
 

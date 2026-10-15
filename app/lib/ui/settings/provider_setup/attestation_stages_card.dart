@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:wendelin_providers/wendelin_providers.dart'
     show StageOutcome, StageResult;
@@ -5,9 +7,13 @@ import 'package:wendelin_providers/wendelin_providers.dart'
 import '../../attestation/attestation_texts.dart';
 import '../../attestation/stage_line.dart';
 import '../../design/design.dart';
+import '../settings_page.dart';
 
 /// „Erste Attestierung“ of a TEE profile: result per stage (quote, nonce,
 /// keyset, freshness, …) as the connection test found it.
+///
+/// WP65: only a status line and a button here; the stages are on their own
+/// page ([AttestationStagesScreen]).
 class AttestationStagesCard extends StatelessWidget {
   /// Creates the card.
   const AttestationStagesCard(this.stages, {super.key});
@@ -16,11 +22,59 @@ class AttestationStagesCard extends StatelessWidget {
   final List<StageResult> stages;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    spacing: WSpace.s,
+  Widget build(BuildContext context) {
+    final failedStages = [
+      for (final s in stages)
+        if (s.outcome != StageOutcome.pass) stageLabel(s.stage.id),
+    ];
+    final failed = failedStages.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: WSpace.s,
+      children: [
+        Text('Erste Attestierung', style: WText.sectionLabel),
+        SectionCard(
+          children: [
+            SettingsRow(
+              key: const ValueKey('attestationSummary'),
+              title: failed == 0
+                  ? 'Alle ${stages.length} Stufen bestanden'
+                  : '$failed von ${stages.length} Stufen nicht bestanden: '
+                        '${failedStages.join(', ')}',
+              trailing: CheckStatusIcon(
+                failed == 0 ? CheckStatus.ok : CheckStatus.failed,
+                semanticLabel: failed == 0 ? 'bestanden' : 'nicht bestanden',
+              ),
+            ),
+          ],
+        ),
+        WideButton(
+          'Prüfprotokoll ansehen',
+          onPressed: () => unawaited(
+            Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => AttestationStagesScreen(stages),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Own page with the result per stage of the first attestation.
+class AttestationStagesScreen extends StatelessWidget {
+  /// Creates the page.
+  const AttestationStagesScreen(this.stages, {super.key});
+
+  /// Result per stage.
+  final List<StageResult> stages;
+
+  @override
+  Widget build(BuildContext context) => SettingsPage(
+    title: 'Prüfprotokoll',
     children: [
-      Text('Erste Attestierung', style: WText.sectionLabel),
       SectionCard(
         children: [
           for (final s in stages)

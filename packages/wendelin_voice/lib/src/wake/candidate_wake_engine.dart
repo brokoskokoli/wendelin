@@ -53,7 +53,11 @@ final class CandidateWakeEngine implements WakeWordEngine {
   /// Id reported for a „Stopp“ hit.
   final String stopKeywordId;
 
+  /// Consecutive windows over the „Stopp“ threshold needed for a hit.
+  static const stopWindows = 2;
+
   bool _open = false;
+  int _stopRun = 0;
   int _lastHit = -1 << 40;
 
   /// Largest classifier score and template similarity seen so far
@@ -100,10 +104,17 @@ final class CandidateWakeEngine implements WakeWordEngine {
         modelThreshold: null,
         templateThreshold: stop.threshold,
       );
+      // „Stopp“ is short: it counts only after [stopWindows] consecutive
+      // windows above its threshold (a single spike is no hit).
+      _stopRun = stopDecision == null ? 0 : _stopRun + 1;
       // Both words match: the one further above its threshold wins.
       if (stopDecision != null && (d == null || stop.margin > main.margin)) {
-        d = stopDecision;
-        id = stopKeywordId;
+        if (_stopRun >= stopWindows) {
+          d = stopDecision;
+          id = stopKeywordId;
+        } else {
+          d = null; // wait for the confirming window
+        }
       }
       final gap = (refractory.inMicroseconds * 16000) ~/ 1000000;
       if (d == null || w.endSample - _lastHit < gap) continue;
@@ -146,6 +157,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
   @override
   void reset() {
     features.reset();
+    _stopRun = 0;
     _lastHit = -1 << 40;
   }
 

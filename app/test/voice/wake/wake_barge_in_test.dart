@@ -156,5 +156,31 @@ void main() {
       await c2.read(voiceSettingsProvider.future);
       expect(c2.read(wakeBargeInDetectorProvider), isA<BargeInDetector>());
     });
+
+    test(
+      'neu eingelerntes oder gelöschtes „Stopp“ baut den Detektor neu',
+      () async {
+        final env = TestEnv();
+        await env.storage.settings.set(
+          voiceSettingsKey,
+          const VoiceSettings(conversationMode: true),
+        );
+        final c = env.container();
+        addTearDown(c.dispose);
+        await c.read(voiceSettingsProvider.future);
+        await c.read(stopLearnedProvider.future);
+        final first = c.read(wakeBargeInDetectorProvider);
+        expect(c.read(wakeBargeInDetectorProvider), same(first));
+        // Enrolling and deleting invalidate stopLearnedProvider.
+        c.invalidate(stopLearnedProvider);
+        await c.read(stopLearnedProvider.future);
+        final second = c.read(wakeBargeInDetectorProvider);
+        expect(second, isNotNull);
+        expect(second, isNot(same(first)));
+        await c.read(wakeSpeakersProvider.notifier).remove('x');
+        await c.read(stopLearnedProvider.future);
+        expect(c.read(wakeBargeInDetectorProvider), isNot(same(second)));
+      },
+    );
   });
 }

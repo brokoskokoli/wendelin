@@ -56,6 +56,9 @@ abstract final class AppRoutes {
   /// Privacy and logs.
   static const privacy = '/settings/privacy';
 
+  /// Audit log page (Prüfprotokoll, WP65).
+  static const auditLog = '/settings/privacy/audit';
+
   /// TEE verification log (Prüfprotokoll) and GPU check setting (WP52).
   static const attestationLog = '/settings/privacy/tee';
 
@@ -67,6 +70,9 @@ abstract final class AppRoutes {
 
   /// Voice: Whisper model, language, speech output.
   static const voice = '/settings/voice';
+
+  /// Voice → Stimmen: offline voices per language (WP66).
+  static const voices = '/settings/voice/voices';
 
   /// Wake word: learn the voice, calibrate, try (WP60).
   static const wakeWord = '/settings/voice/wake';

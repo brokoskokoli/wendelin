@@ -6,13 +6,15 @@ import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
-import 'package:wendelin/ui/design/design.dart' show WSwitch;
+import 'package:wendelin/ui/design/design.dart' show CheckStatusIcon, WSwitch;
 import 'package:wendelin/ui/onboarding/voice_download_step.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/settings/model_download_row.dart';
+import 'package:wendelin/ui/settings/settings_page.dart' show WideButton;
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin/ui/settings/voice_screen.dart';
 import 'package:wendelin/ui/settings/voice_spoken_section.dart';
+import 'package:wendelin/ui/settings/voice_voices_screen.dart';
 import 'package:wendelin_agent/wendelin_agent.dart' show AgentConfig;
 import 'package:wendelin_core/wendelin_core.dart' show SpokenVersion;
 import 'package:wendelin_voice/fakes.dart';
@@ -307,17 +309,20 @@ void main() {
 
     testWidgets('Entpacken zeigt unbestimmten Fortschritt', (tester) async {
       final env = TestEnv();
-      await pumpScreen(tester, env, const VoiceScreen());
-      await tester.tap(action('Deutsch – Thorsten', 'Laden'));
+      await pumpScreen(tester, env, const VoiceVoicesScreen());
+      await tester.tap(action('Deutsch – Thorsten (männlich)', 'Laden'));
       await tester.pump();
       env.speechModels.unpack('tts-de-thorsten');
       await tester.pump();
       expect(find.text('Wird entpackt …'), findsOneWidget);
       final bar = tester.widget<LinearProgressIndicator>(
-        progressOf('Deutsch – Thorsten'),
+        progressOf('Deutsch – Thorsten (männlich)'),
       );
       expect(bar.value, isNull);
-      expect(action('Deutsch – Thorsten', 'Abbrechen'), findsNothing);
+      expect(
+        action('Deutsch – Thorsten (männlich)', 'Abbrechen'),
+        findsNothing,
+      );
       env.speechModels.finish('tts-de-thorsten');
       await settle(tester);
     });
@@ -400,9 +405,10 @@ void main() {
       );
     });
 
-    testWidgets('Stimme wählen, Probe hören', (tester) async {
+    testWidgets('Systemstimme wählen, Probe hören', (tester) async {
       final env = env0();
-      final sherpa = env.sherpaTts;
+      env.systemTts.available = true;
+      final system = env.systemTts;
       final c = await pumpScreen(tester, env, const VoiceScreen());
       await tester.tap(find.text('Standard der Sprache'));
       await settle(tester);
@@ -411,8 +417,8 @@ void main() {
       expect(c.read(voiceSettingsProvider).value!.ttsVoice, 'fake-fr');
       await tester.tap(find.text('Probe hören'));
       await settle(tester);
-      expect(sherpa.calls.single.voice, 'fake-fr');
-      expect(sherpa.calls.single.language, 'fr');
+      expect(system.calls.single.voice, 'fake-fr');
+      expect(system.calls.single.language, 'fr');
 
       await tester.tap(find.text('fake-fr'));
       await settle(tester);
@@ -711,6 +717,131 @@ void main() {
     });
   });
 
+  group('Einstellungen → Sprache → Stimmen (WP66)', () {
+    Finder probe(String lang) => find.byKey(Key('probe-$lang'));
+
+    testWidgets('Stimmen je Sprache wählen, löschen, Probe hören', (
+      tester,
+    ) async {
+      final env = TestEnv();
+      env.speechModels.installed.addAll(['tts-de-thorsten', 'tts-de-kerstin']);
+      final c = await pumpScreen(tester, env, const VoiceVoicesScreen());
+      for (final name in [
+        'Deutsch – Thorsten (männlich)',
+        'Deutsch – Kerstin (weiblich)',
+        'Français – Siwis (weiblich)',
+        'Français – Gilles (männlich)',
+        'English – LJSpeech (weiblich)',
+        'English – Joe (männlich)',
+      ]) {
+        expect(find.text(name), findsOneWidget);
+      }
+      expect(find.byType(ModelDownloadRow), findsNWidgets(6));
+      // Default: first voice of the language; no voice loaded -> no sample.
+      expect(
+        c.read(voiceSettingsProvider).value!.sherpaVoiceFor('de'),
+        'tts-de-thorsten',
+      );
+      expect(tester.widget<WideButton>(probe('fr')).onPressed, isNull);
+      expect(tester.widget<WideButton>(probe('de')).onPressed, isNotNull);
+
+      await tester.tap(find.text('Deutsch – Kerstin (weiblich)'));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.sherpaVoices, {
+        'de': 'tts-de-kerstin',
+      });
+      await tester.tap(probe('de'));
+      await settle(tester);
+      final call = env.sherpaTts.calls.single;
+      expect((call.voice, call.language), ('tts-de-kerstin', 'de'));
+      expect(call.text, 'Hallo, ich bin Wendelin.');
+
+      // Not loaded voices are not selectable; loading is offered.
+      await tester.tap(find.text('English – Joe (männlich)'));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.sherpaVoices.keys, ['de']);
+      expect(action('English – Joe (männlich)', 'Laden'), findsOneWidget);
+      expect(
+        action('Deutsch – Thorsten (männlich)', 'Löschen'),
+        findsOneWidget,
+      );
+    });
+
+    /// Whether the row titled [model] shows the check mark.
+    bool checked(String model) => find
+        .descendant(
+          of: find.ancestor(
+            of: find.text(model),
+            matching: find.byType(ModelDownloadRow),
+          ),
+          matching: find.byType(CheckStatusIcon),
+        )
+        .evaluate()
+        .isNotEmpty;
+
+    const thorsten = 'Deutsch – Thorsten (männlich)';
+    const kerstin = 'Deutsch – Kerstin (weiblich)';
+
+    testWidgets('gewählte Stimme nicht geladen: Haken und Probe bei der '
+        'wirksamen Stimme, mit Hinweis', (tester) async {
+      final env = TestEnv();
+      env.speechModels.installed.add('tts-de-thorsten');
+      final c = await pumpScreen(tester, env, const VoiceVoicesScreen());
+      await c
+          .read(voiceSettingsProvider.notifier)
+          .change((s) => s.copyWith(sherpaVoices: {'de': 'tts-de-kerstin'}));
+      await settle(tester);
+      expect(checked(thorsten), isTrue);
+      expect(checked(kerstin), isFalse);
+      expect(
+        find.text('Gewählte Stimme nicht geladen – es spricht $thorsten.'),
+        findsOneWidget,
+      );
+      await tester.tap(probe('de'));
+      await settle(tester);
+      expect(env.sherpaTts.calls.single.voice, 'tts-de-thorsten');
+    });
+
+    testWidgets('Standardstimme nicht geladen: erste geladene wirkt, ohne '
+        'Hinweis', (tester) async {
+      final env = TestEnv();
+      env.speechModels.installed.add('tts-de-kerstin');
+      await pumpScreen(tester, env, const VoiceVoicesScreen());
+      expect(checked(kerstin), isTrue);
+      expect(checked(thorsten), isFalse);
+      expect(find.byKey(const Key('hint-de')), findsNothing);
+      await tester.tap(probe('de'));
+      await settle(tester);
+      expect(env.sherpaTts.calls.single.voice, 'tts-de-kerstin');
+    });
+
+    testWidgets('gewählte Stimme löschen entfernt die Wahl', (tester) async {
+      final env = TestEnv();
+      env.speechModels.installed.addAll(['tts-de-thorsten', 'tts-de-kerstin']);
+      final c = await pumpScreen(tester, env, const VoiceVoicesScreen());
+      await tester.tap(find.text(kerstin));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.sherpaVoices, {
+        'de': 'tts-de-kerstin',
+      });
+      await tester.tap(action(kerstin, 'Löschen'));
+      await settle(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Löschen'));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.sherpaVoices, isEmpty);
+      expect(checked(thorsten), isTrue);
+      expect(find.byKey(const Key('hint-de')), findsNothing);
+    });
+
+    testWidgets('Sprache-Seite führt zu „Stimmen“', (tester) async {
+      final env = TestEnv();
+      await pumpScreen(tester, env, const VoiceScreen());
+      await tester.tap(find.text('Stimmen'));
+      await settle(tester);
+      expect(find.byType(VoiceVoicesScreen), findsOneWidget);
+    });
+  });
+
   group('VoiceSettings und Bausteine', () {
     test('JSON hin und zurück, ungültige Werte fallen auf Standard', () {
       const s = VoiceSettings(
@@ -747,6 +878,46 @@ void main() {
       expect(s.copyWith(clearVoice: true).ttsVoice, isNull);
       expect(s.copyWith(ttsRate: 1.0).ttsVoice, 'v');
       expect(() => voiceSettingsKey.decode('x'), throwsFormatException);
+    });
+
+    test('WP66: Offline-Stimmen je Sprache, Migration der alten Wahl', () {
+      const s = VoiceSettings(
+        sherpaVoices: {'de': 'tts-de-kerstin', 'fr': 'tts-fr-gilles'},
+      );
+      expect(VoiceSettings.fromJson(s.toJson()), s);
+      expect(VoiceSettings.fromJson(s.toJson()).hashCode, s.hashCode);
+      expect(s, isNot(const VoiceSettings()));
+      expect(const VoiceSettings().toJson().containsKey('sherpaVoices'), false);
+      expect(s.sherpaVoiceFor('de-DE'), 'tts-de-kerstin');
+      expect(s.sherpaVoiceFor('en'), 'tts-en-ljspeech', reason: 'Standard');
+      expect(s.sherpaVoiceFor('it'), isNull);
+      expect(s.copyWith(sherpaVoices: {'en': 'tts-en-joe'}).sherpaVoices, {
+        'en': 'tts-en-joe',
+      });
+      // Old settings: the one voice id was an offline voice -> its language.
+      final old = VoiceSettings.fromJson({'ttsVoice': 'tts-fr-siwis'});
+      expect(old.sherpaVoices, {'fr': 'tts-fr-siwis'});
+      expect(old.ttsVoice, isNull);
+      // A system voice stays where it was.
+      final system = VoiceSettings.fromJson({'ttsVoice': 'de-de-x-abc'});
+      expect(system.ttsVoice, 'de-de-x-abc');
+      expect(system.sherpaVoices, isEmpty);
+      // The new choice wins over the migrated one; invalid entries drop.
+      final mixed = VoiceSettings.fromJson({
+        'ttsVoice': 'tts-de-thorsten',
+        'sherpaVoices': {
+          'de': 'tts-de-kerstin',
+          'fr': 'tts-de-kerstin', // wrong language
+          'en': 'whisper-base', // not a voice
+          'it': 'tts-it-x',
+          'x': 5,
+        },
+      });
+      expect(mixed.sherpaVoices, {'de': 'tts-de-kerstin'});
+      expect(
+        VoiceSettings.fromJson({'sherpaVoices': 'x'}).sherpaVoices,
+        <String, String>{},
+      );
     });
 
     test('ohne Modelle: Bausteine melden modelMissing', () async {
