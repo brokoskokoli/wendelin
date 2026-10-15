@@ -16,6 +16,7 @@ List<Widget> mcpAuthFields({
   McpAuthKind.none => const [],
   McpAuthKind.bearer => [
     AutofillGroup(
+      onDisposeAction: AutofillContextAction.cancel,
       child: SecretField(
         key: const ValueKey('mcpToken'),
         controller: token,
@@ -33,6 +34,7 @@ List<Widget> mcpAuthFields({
       decoration: const InputDecoration(labelText: 'Header, z. B. X-Api-Key'),
     ),
     AutofillGroup(
+      onDisposeAction: AutofillContextAction.cancel,
       child: SecretField(
         key: const ValueKey('mcpHeaderValue'),
         controller: headerValue,

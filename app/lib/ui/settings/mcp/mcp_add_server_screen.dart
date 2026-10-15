@@ -125,9 +125,10 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
       }
       return;
     }
+    // Commit while the fields still hold the values, then clear them.
+    SecretField.finishAutofill();
     _token.clear();
     _headerValue.clear();
-    SecretField.finishAutofill();
     // Set up explicitly by the user: switch it on (connects the server).
     await sync.settled();
     await activator.setEnabled(server.integrationId, enabled: true);

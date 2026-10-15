@@ -135,7 +135,7 @@ void main() {
     });
 
     testWidgets('ohne Modell: Kalibrieren und Ausprobieren gesperrt, '
-        'Laden-Button lädt beide Modelle', (tester) async {
+        'Laden-Button lädt das Merkmalsmodell', (tester) async {
       final env = wakeEnv(installed: false);
       final c = await pumpWake(tester, env, const WakeWordScreen());
       for (final label in [
@@ -154,27 +154,39 @@ void main() {
       }
       expect(c.read(wakeMissingModelsProvider).map((m) => m.id), [
         'wake-features',
-        'whisper-small',
       ]);
       await tester.tap(find.text('Sprachmodell laden'));
       await tester.pump();
-      expect(
-        env.speechModels.running.keys,
-        containsAll(['wake-features', 'whisper-small']),
-      );
+      expect(env.speechModels.running.keys, contains('wake-features'));
     });
 
-    testWidgets('Whisper fehlt nur bei eingeschalteter Nachprüfung', (
+    testWidgets('ohne Whisper bleiben alle Abläufe offen, nur Hinweis '
+        'beim Ausprobieren, nur bei eingeschalteter Nachprüfung', (
       tester,
     ) async {
       final env = wakeEnv(installed: false);
       env.speechModels.installed.add('wake-features');
       final c = await pumpWake(tester, env, const WakeWordScreen());
-      expect(c.read(wakeMissingModelsProvider).map((m) => m.id), [
+      expect(c.read(wakeMissingModelsProvider), isEmpty);
+      expect(c.read(wakeVerifyMissingProvider).map((m) => m.id), [
         'whisper-small',
       ]);
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.widgetWithText(OutlinedButton, 'Stimme einlernen'),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      expect(find.byKey(const ValueKey('wakeModelsMissing')), findsNothing);
+      expect(find.byKey(const ValueKey('wakeVerifyMissing')), findsOneWidget);
+      expect(find.textContaining('Für die Nachprüfung'), findsOneWidget);
+      await tester.tap(find.text('Sprachmodell laden'));
+      await tester.pump();
+      expect(env.speechModels.running.keys, contains('whisper-small'));
       await c.read(wakeVerifyProvider.notifier).set(enabled: false);
-      expect(c.read(wakeMissingModelsProvider), isEmpty);
+      expect(c.read(wakeVerifyMissingProvider), isEmpty);
     });
 
     testWidgets('Nachprüfung ist standardmäßig an und lässt sich abschalten', (

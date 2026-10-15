@@ -117,5 +117,34 @@ void main() {
     await tester.tap(find.text('Home Assistant'));
     await tester.pumpAndSettle();
     expectSecret(tester, const ValueKey('mcpToken'));
+    expect(
+      tester
+          .widget<AutofillGroup>(
+            find.ancestor(
+              of: find.byKey(const ValueKey('mcpToken')),
+              matching: find.byType(AutofillGroup),
+            ),
+          )
+          .onDisposeAction,
+      AutofillContextAction.cancel,
+      reason: 'Commit nur beim Speichern',
+    );
+  });
+
+  testWidgets('Websuche: Autofill-Commit läuft vor dem Leeren des Feldes', (
+    tester,
+  ) async {
+    final seen = <String>[];
+    final original = SecretField.autofillFinisher;
+    SecretField.autofillFinisher = () =>
+        seen.add(fieldOf(tester, const ValueKey('searchKey')).controller!.text);
+    addTearDown(() => SecretField.autofillFinisher = original);
+    await pumpPage(tester, TestEnv(), const WebSearchScreen());
+    await tester.tap(find.text('Brave Search'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('searchKey')), 'geheim');
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    expect(seen, ['geheim'], reason: 'erst committen, dann leeren');
   });
 }

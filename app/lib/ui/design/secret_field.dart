@@ -10,9 +10,12 @@ import '../theme/app_theme.dart';
 /// no suggestions).
 ///
 /// Deliberately neither `enableSuggestions: false` nor
-/// `TextInputType.visiblePassword`: both make Android classify the field as
-/// no real password field, so password managers offered nothing above the
-/// keyboard (WP65). [finishAutofill] after saving lets the manager store it.
+/// `TextInputType.visiblePassword`: with `obscureText` the engine ignores
+/// `enableSuggestions` anyway, and `visiblePassword` only picks a keyboard
+/// variant. Password managers most likely offered nothing because nothing
+/// was ever saved: without the autofill commit ([finishAutofill] after
+/// saving, [AutofillGroup] with `onDisposeAction: cancel` elsewhere) the
+/// manager has nothing to offer (WP65).
 ///
 /// A stored secret is never shown again: the screen says that one is
 /// stored ([helperText]) and the field only replaces it. Several fields of
@@ -27,10 +30,15 @@ class SecretField extends StatelessWidget {
     this.helperText,
     this.autofillHints = passwordHints,
     this.mono = false,
+    this.autofocus = false,
   });
 
   /// Tells the password manager that the login is done (save prompt).
-  static void finishAutofill() => TextInput.finishAutofillContext();
+  static void finishAutofill() => autofillFinisher();
+
+  /// What [finishAutofill] calls; tests replace it to observe the order.
+  @visibleForTesting
+  static void Function() autofillFinisher = TextInput.finishAutofillContext;
 
   /// Autofill hint of a password, key or token.
   static const passwordHints = [AutofillHints.password];
@@ -53,11 +61,15 @@ class SecretField extends StatelessWidget {
   /// Text in mono (technical values such as header values).
   final bool mono;
 
+  /// Whether the field takes the focus when it appears (dialogs).
+  final bool autofocus;
+
   @override
   Widget build(BuildContext context) => TextField(
     controller: controller,
     onChanged: onChanged,
     style: mono ? WText.mono : WText.body,
+    autofocus: autofocus,
     obscureText: true,
     autocorrect: false,
     enableIMEPersonalizedLearning: false,

@@ -23,7 +23,11 @@ class AttestationStagesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final failed = stages.where((s) => s.outcome != StageOutcome.pass).length;
+    final failedStages = [
+      for (final s in stages)
+        if (s.outcome != StageOutcome.pass) stageLabel(s.stage.id),
+    ];
+    final failed = failedStages.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.s,
@@ -35,7 +39,8 @@ class AttestationStagesCard extends StatelessWidget {
               key: const ValueKey('attestationSummary'),
               title: failed == 0
                   ? 'Alle ${stages.length} Stufen bestanden'
-                  : '$failed von ${stages.length} Stufen nicht bestanden',
+                  : '$failed von ${stages.length} Stufen nicht bestanden: '
+                        '${failedStages.join(', ')}',
               trailing: CheckStatusIcon(
                 failed == 0 ? CheckStatus.ok : CheckStatus.failed,
                 semanticLabel: failed == 0 ? 'bestanden' : 'nicht bestanden',

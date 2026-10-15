@@ -82,7 +82,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('setupFailure')), findsOneWidget);
     expect(find.text('Erste Attestierung'), findsOneWidget);
-    expect(find.text('1 von 2 Stufen nicht bestanden'), findsOneWidget);
+    expect(
+      find.text('1 von 2 Stufen nicht bestanden: Schlüsselsatz-Signatur'),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Prüfprotokoll ansehen'));
     await tester.pumpAndSettle();
     expect(

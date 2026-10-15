@@ -83,6 +83,7 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_test(context, ref, speakers))
               : null,
         ),
+        if (installed) const WakeModelsNotice(optional: true),
         if (speakers.isNotEmpty)
           WideButton(
             'Alle Stimmen löschen',

@@ -100,10 +100,12 @@ Future<String?> askText(
         title: Text(title, style: WText.label),
         content: obscure
             ? AutofillGroup(
+                onDisposeAction: AutofillContextAction.cancel,
                 child: SecretField(
                   key: const ValueKey('mcpDialogField'),
                   controller: controller,
                   label: label,
+                  autofocus: true,
                 ),
               )
             : TextField(
@@ -122,7 +124,11 @@ Future<String?> askText(
             child: const Text('Abbrechen'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
+            onPressed: () {
+              // Commit only on save, not on cancel.
+              if (obscure) SecretField.finishAutofill();
+              Navigator.of(context).pop(controller.text);
+            },
             child: Text(action),
           ),
         ],
