@@ -113,6 +113,35 @@ void main() {
   });
 
   group('CandidateWakeEngine', () {
+    test('onWindow meldet beste Ähnlichkeit je Fenster (WP72)', () async {
+      Float32List v(List<double> e) => Float32List.fromList(e);
+      WakeTemplates one(List<double> e) => WakeTemplates(
+        speakerId: 'a',
+        featureVersion: 'fake-1',
+        threshold: 0.9,
+        embeddings: [v(e)],
+      );
+      final seen = <(double, double)>[];
+      final e = CandidateWakeEngine(
+        features: FakeWakeFeatureExtractor(
+          windowEvery: 100,
+          windowFor: (end, _) =>
+              WakeWindow(endSample: end, embedding: v([1, 0])),
+        ),
+        templates: one([1, 0]),
+        stopTemplates: [
+          one([0, 1]),
+        ],
+        modelThreshold: null,
+        onWindow: (m, s, _) => seen.add((m, s)),
+      );
+      await e.open([KeywordSpec.wendelin]);
+      await e.accept(Int16List(200));
+      expect(seen, hasLength(2));
+      expect(seen.first.$1, closeTo(1, 1e-6));
+      expect(seen.first.$2, closeTo(0, 1e-6));
+    });
+
     Float32List v(List<double> x) => Float32List.fromList(x);
 
     CandidateWakeEngine make({

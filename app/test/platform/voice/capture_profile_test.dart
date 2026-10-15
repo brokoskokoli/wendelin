@@ -25,6 +25,9 @@ final class _ConfigRecorder implements AudioRecorder {
   }
 
   @override
+  Stream<RecordState> onStateChanged() => const Stream<RecordState>.empty();
+
+  @override
   Future<String?> stop() async {
     stops++;
     return null;
@@ -50,6 +53,74 @@ void main() {
         expect(c.sampleRate, 16000);
       },
     );
+
+    test('WP72: Ausgabe ignoriert Audiofokus (none), alle Varianten', () {
+      for (final v in SpeechCapture.values) {
+        expect(
+          buildRecordConfig(CaptureProfile.speechOutput, v).audioInterruption,
+          AudioInterruptionMode.none,
+          reason: '$v',
+        );
+      }
+    });
+
+    test('WP72: Erkennung pausiert bei Fokusverlust und läuft weiter', () {
+      for (final p in CaptureProfile.values) {
+        if (p == CaptureProfile.speechOutput) continue;
+        expect(
+          buildRecordConfig(p).audioInterruption,
+          AudioInterruptionMode.pauseResume,
+          reason: '$p',
+        );
+      }
+    });
+
+    test('WP72: Varianten der Sprachausgabe', () {
+      final c = buildRecordConfig(CaptureProfile.speechOutput);
+      expect(c.echoCancel, isTrue);
+      final r = buildRecordConfig(
+        CaptureProfile.speechOutput,
+        SpeechCapture.recognitionAec,
+      );
+      expect(r.echoCancel, isTrue);
+      expect(r.androidConfig.audioSource, AndroidAudioSource.voiceRecognition);
+      final p = buildRecordConfig(
+        CaptureProfile.speechOutput,
+        SpeechCapture.recognition,
+      );
+      expect(p.echoCancel, isFalse);
+      expect(p.androidConfig.audioSource, AndroidAudioSource.voiceRecognition);
+      // The variant never touches the recognition profile.
+      expect(
+        buildRecordConfig(
+          CaptureProfile.recognition,
+          SpeechCapture.communication,
+        ).echoCancel,
+        isFalse,
+      );
+      expect(
+        SpeechCapture.parse('recognitionAec'),
+        SpeechCapture.recognitionAec,
+      );
+      expect(SpeechCapture.parse('x'), SpeechCapture.communication);
+      expect(SpeechCapture.parse(null), SpeechCapture.communication);
+    });
+
+    test('WP72: gewählte Variante kommt beim Start an', () async {
+      final rec = _ConfigRecorder();
+      await RecordPcmRecorder(
+        rec,
+        () async => SpeechCapture.recognition,
+      ).startStream(CaptureProfile.speechOutput);
+      expect(rec.configs.single.echoCancel, isFalse);
+      // Unreadable setting: default.
+      final rec2 = _ConfigRecorder();
+      await RecordPcmRecorder(
+        rec2,
+        () async => throw StateError('x'),
+      ).startStream(CaptureProfile.speechOutput);
+      expect(rec2.configs.single.echoCancel, isTrue);
+    });
 
     test('Sprachausgabe: VOICE_COMMUNICATION mit Echo-Unterdrückung', () async {
       final rec = _ConfigRecorder();
