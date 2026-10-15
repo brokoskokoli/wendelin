@@ -56,6 +56,12 @@ sealed interface WakeDecision {
 /** Start/stop logic of the wake-word service without Android types (JVM test). */
 object WakePolicy {
     /**
+     * Whether the engine's `startMic`/`stopMic` are ignored: only while a hit's audio is collected
+     * from a microphone that is really open (a stale flag must not make the wake word deaf).
+     */
+    fun ignoresMicCalls(capturing: Boolean, micOpen: Boolean): Boolean = capturing && micOpen
+
+    /**
      * Order of the reasons: off, no assistant role (decision 5), no microphone permission,
      * paused, not charging (only in mode [WakeMode.CHARGING]).
      */
@@ -119,12 +125,13 @@ object WakeHandoff {
     const val MAX_CAPTURE_BYTES = 15 * 16_000 * 2
 
     /** What the overlay gets: PCM16 LE, the sample where the wake word ends, how much was collected. */
-    class Taken(val pcm: ByteArray, val wakeEnd: Int, val capturedMs: Long)
+    class Taken(val pcm: ByteArray, val wakeEnd: Int, val capturedMs: Long, val lastSampleAtMs: Long = 0)
 
     private var pcm: ByteArray? = null
     private var wakeEnd = 0
     private var at = 0L
     private var capturing = false
+    private var lastSampleAt = 0L
     private var tail = java.io.ByteArrayOutputStream()
 
     @Synchronized
@@ -133,6 +140,7 @@ object WakeHandoff {
         this.wakeEnd = wakeEnd
         at = nowMs
         capturing = false
+        lastSampleAt = 0L
         tail = java.io.ByteArrayOutputStream()
     }
 
@@ -148,8 +156,9 @@ object WakeHandoff {
 
     /** One chunk from the microphone while capturing (whole samples only). */
     @Synchronized
-    fun append(chunk: ByteArray) {
+    fun append(chunk: ByteArray, atMs: Long = 0) {
         if (!capturing) return
+        if (atMs > 0) lastSampleAt = atMs
         val room = MAX_CAPTURE_BYTES - tail.size()
         val n = minOf(chunk.size, room) and 1.inv()
         if (n > 0) tail.write(chunk, 0, n)
@@ -164,7 +173,7 @@ object WakeHandoff {
         val extra = tail.toByteArray()
         tail = java.io.ByteArrayOutputStream()
         return if (p != null && nowMs - at <= MAX_AGE_MS) {
-            Taken(p + extra, wakeEnd, extra.size / 2 * 1000L / 16_000)
+            Taken(p + extra, wakeEnd, extra.size / 2 * 1000L / 16_000, lastSampleAt)
         } else {
             null
         }
@@ -178,6 +187,7 @@ object WakeHandoff {
     fun clear() {
         pcm = null
         capturing = false
+        lastSampleAt = 0L
         tail = java.io.ByteArrayOutputStream()
     }
 }

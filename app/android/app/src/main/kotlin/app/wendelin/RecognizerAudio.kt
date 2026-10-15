@@ -112,6 +112,20 @@ class MicAudioSource(private val context: Context) : RecognizerAudioSource {
         running = false
         thread = null
     }
+
+    /**
+     * Stops and waits until the reading thread has released the `AudioRecord` (at most
+     * [timeoutMs]), so a following recording never runs next to this one (WP51, WP68).
+     */
+    fun stopAndWait(timeoutMs: Long) {
+        val t = thread
+        stop()
+        try {
+            t?.join(timeoutMs)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+    }
 }
 
 /**

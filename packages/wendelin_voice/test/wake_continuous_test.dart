@@ -136,6 +136,12 @@ void main() {
       expect(stripWakeWord('Wendelmann. Wetter?'), 'Wetter?');
     });
 
+    test('Wendel in den Keller bleibt, getrenntes Wake Word wird gekürzt', () {
+      expect(stripWakeWord('Wendel in den Keller'), 'Wendel in den Keller');
+      expect(stripWakeWord('Wendelin, mach das Licht an'), 'mach das Licht an');
+      expect(stripWakeWord('Wende Lin mach Licht'), 'mach Licht');
+    });
+
     test('nur das Wake Word → leer; mitten im Satz bleibt es', () {
       expect(stripWakeWord('Wendelin.'), '');
       expect(
@@ -165,6 +171,27 @@ void main() {
         isFalse,
       );
       expect(speechAfterWakeWord(Int16List(0), null), isFalse);
+    });
+
+    Int16List level(int ms, int amp) {
+      final f = Int16List(ms * 16);
+      for (var i = 0; i < f.length; i++) {
+        f[i] = (i ~/ 20).isEven ? amp : -amp;
+      }
+      return f;
+    }
+
+    test('leise Sprache in ruhigem Raum zählt (relativ zum Grundrauschen)', () {
+      final pcm = cat([level(400, 40), level(600, 3000), level(900, 500)]);
+      expect(speechAfterWakeWord(pcm, 1000 * 16), isTrue);
+    });
+
+    test('gleichmäßiges Rauschen nach dem Wake Word ist keine Sprache', () {
+      final pcm = cat([level(400, 400), level(600, 3000), level(900, 450)]);
+      expect(speechAfterWakeWord(pcm, 1000 * 16), isFalse);
+      // aber deutlich lauter als der Raum: Sprache
+      final louder = cat([level(400, 400), level(600, 3000), level(900, 2000)]);
+      expect(speechAfterWakeWord(louder, 1000 * 16), isTrue);
     });
   });
 }

@@ -124,7 +124,7 @@ class AssistantPlatform {
       pcm: PcmBytesDecoder().convert(bytes),
       wakeEnd: (raw['wakeEnd'] as num?)?.toInt(),
       capturedMs: (raw['capturedMs'] as num?)?.toInt() ?? 0,
-      takenAtMs: (raw['takenAt'] as num?)?.toInt(),
+      lastSampleAtMs: (raw['lastSampleAt'] as num?)?.toInt(),
     );
   }
 
@@ -157,7 +157,7 @@ final class WakeHandoffAudio {
     required this.pcm,
     this.wakeEnd,
     this.capturedMs = 0,
-    this.takenAtMs,
+    this.lastSampleAtMs,
   });
 
   /// 16 kHz mono PCM: pre-roll up to the confirmation and what the service
@@ -170,8 +170,8 @@ final class WakeHandoffAudio {
   /// How much of [pcm] the service recorded after the confirmation.
   final int capturedMs;
 
-  /// Wall clock (ms since epoch) when the service stopped recording.
-  final int? takenAtMs;
+  /// Wall clock (ms since epoch) of the last sample the service recorded.
+  final int? lastSampleAtMs;
 }
 
 /// Whom Android asks when another app wants speech recognition.

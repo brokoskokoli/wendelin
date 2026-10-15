@@ -140,7 +140,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       pcm: pcm,
       wakeEnd: taken.wakeEnd,
       muteMicSamples: play ? wakeToneMuteSamples : 0,
-      takenAtMs: taken.takenAtMs,
+      lastSampleAtMs: taken.lastSampleAtMs,
     );
   }
 

@@ -63,7 +63,13 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   }
 
   @override
-  Future<bool> hasWakeHandoff() async => wakeHandoff != null;
+  Future<bool> hasWakeHandoff() async {
+    await wakeGate?.future;
+    return wakeHandoff != null;
+  }
+
+  /// Holds [hasWakeHandoff] back (the first trigger waits for it).
+  Completer<void>? wakeGate;
 
   /// Moment ([hasWakeHandoff] .. take) for tests: how often it was taken.
   int wakeTakes = 0;
@@ -521,6 +527,26 @@ void main() {
       );
     },
   );
+
+  testWidgets('Wake Word bei laufendem Agenten: Übergabe wird abgenommen und '
+      'verworfen (Dienst-Mikrofon schließt)', (tester) async {
+    final platform = FakeAssistantPlatform()
+      ..wakeHandoff = AudioFrames.speech(const Duration(milliseconds: 600))
+      ..wakeEnd = 600 * 16
+      ..wakeGate = Completer<void>();
+    final env = TestEnv(
+      providerConfig: scripted(FakeLlmProvider([ScriptedTurn.text('x')])),
+    );
+    final c = await pumpOverlay(tester, env, platform);
+    c
+        .read(agentControllerProvider.notifier)
+        .seed(ConversationState(running: true));
+    platform.wakeGate!.complete();
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(platform.wakeTakes, 1);
+    expect(platform.wakeHandoff, isNull);
+    expect(c.read(voiceControllerProvider).active, isFalse);
+  });
 
   testWidgets(
     'Sperrbildschirm: nichts zeigen, nur Taschenlampe, dann entsperren',

@@ -68,11 +68,38 @@ bool _nearWakeWord(String s, int maxDistance) {
   return false;
 }
 
+/// Words that follow a name in a sentence, not the second half of a split
+/// wake word: „Wendel in den Keller“ is not „Wendelin“ (WP68).
+const _notSplitTail = {
+  'in',
+  'im',
+  'ins',
+  'an',
+  'am',
+  'auf',
+  'aus',
+  'bei',
+  'mit',
+  'von',
+  'vor',
+  'zu',
+  'zum',
+  'zur',
+  'den',
+  'dem',
+  'der',
+  'die',
+  'das',
+  'ein',
+  'und',
+};
+
 const _greetings = {'hey', 'hallo', 'hi', 'he', 'ok', 'okay', 'ey'};
 
 /// [transcript] without the leading wake word (WP68): „Wendelin, schalte die
 /// Taschenlampe an“ becomes „schalte die Taschenlampe an“. Spellings as in
-/// [matchesWakeWord] (also split: „Wende Lin“), a greeting before it
+/// [matchesWakeWord] (also split: „Wende Lin“, but not in front of a function word:
+/// „Wendel in den Keller“ stays), a greeting before it
 /// („Hey Wendelin“) goes too. The word counts only at the start (the first
 /// three words); otherwise the text stays as it is. May return an empty
 /// string (only the wake word was said).
@@ -86,6 +113,7 @@ String stripWakeWord(String transcript, {int maxDistance = 1}) {
     if (_nearWakeWord(folded[i], maxDistance)) {
       consumed = 1;
     } else if (i + 1 < tokens.length &&
+        !_notSplitTail.contains(folded[i + 1]) &&
         _nearWakeWord(folded[i] + folded[i + 1], maxDistance)) {
       consumed = 2;
     }

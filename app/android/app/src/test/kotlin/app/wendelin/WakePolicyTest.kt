@@ -149,6 +149,32 @@ class WakePolicyTest {
     }
 
     @Test
+    fun aStaleCaptureFlagDoesNotMakeTheWakeWordDeaf() {
+        // Service ended during a handover: release() clears the hit, the flag is gone.
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(2), 0)
+        WakeHandoff.beginCapture(ByteArray(0))
+        assertTrue(WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), micOpen = true))
+        WakeHandoff.clear()
+        assertFalse(WakeHandoff.capturing())
+        assertFalse(WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), micOpen = true))
+        // A flag without an open microphone does not block the restart either.
+        assertFalse(WakePolicy.ignoresMicCalls(capturing = true, micOpen = false))
+    }
+
+    @Test
+    fun theTimeOfTheLastCollectedChunkIsHandedOver() {
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(2), 0)
+        WakeHandoff.beginCapture(ByteArray(0))
+        WakeHandoff.append(ByteArray(960), 1000)
+        WakeHandoff.append(ByteArray(960), 1060)
+        assertEquals(1060, WakeHandoff.take(1).let { it!!.lastSampleAtMs })
+        WakeHandoff.put(ByteArray(2), 0)
+        assertEquals(0, WakeHandoff.take(1)!!.lastSampleAtMs)
+    }
+
+    @Test
     fun captureStopsAtTheLimit() {
         WakeHandoff.clear()
         WakeHandoff.put(ByteArray(2), 0)

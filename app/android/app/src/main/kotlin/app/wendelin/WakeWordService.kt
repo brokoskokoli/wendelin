@@ -26,6 +26,7 @@ class WakeWordService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private var engine: RecognizerEngine? = null
     private var mic: MicAudioSource? = null
+    private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
     private val tap = WakeMicTap()
     private var watcher: WakeConflictWatcher? = null
     private var wakeLock: PowerManager.WakeLock? = null
@@ -122,8 +123,8 @@ class WakeWordService : Service() {
     private fun onEngineCall(call: MethodCall) {
         when (call.method) {
             // While the hit's audio is collected, the microphone stays as it is (WP68).
-            "startMic" -> if (!WakeHandoff.capturing()) startMic()
-            "stopMic" -> if (!WakeHandoff.capturing()) stopMic()
+            "startMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) startMic()
+            "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) stopMic()
             "hit" -> onHit(call)
             "failed" -> {
                 VoiceLog.i("wake-failed reason=${call.argument<String>("reason") ?: "?"}")
@@ -142,7 +143,11 @@ class WakeWordService : Service() {
         tap.reset()
         try {
             source.start(
-                onChunk = { pcm -> main.post { onMicChunk(pcm) } },
+                onChunk = { pcm ->
+                    // Stamped on the reading thread; handled in order on the main thread.
+                    inbox.add(pcm to System.currentTimeMillis())
+                    main.post { drainInbox() }
+                },
                 onError = { error ->
                     main.post {
                         stopMic()
@@ -159,9 +164,18 @@ class WakeWordService : Service() {
     }
 
     /** Chunks go to Dart, or, after a hit, to the audio kept for the overlay (WP68). */
-    private fun onMicChunk(pcm: ByteArray) {
+    private fun drainInbox() {
+        while (true) {
+            val (pcm, atMs) = inbox.poll() ?: break
+            // Closed meanwhile: late chunks are dropped, they must not reach the paused Dart engine.
+            if (mic == null && !WakeHandoff.capturing()) continue
+            onMicChunk(pcm, atMs)
+        }
+    }
+
+    private fun onMicChunk(pcm: ByteArray, atMs: Long) {
         if (WakeHandoff.capturing()) {
-            WakeHandoff.append(pcm)
+            WakeHandoff.append(pcm, atMs)
             return
         }
         tap.onChunk(pcm)
@@ -171,6 +185,19 @@ class WakeWordService : Service() {
     private fun stopMic() {
         mic?.stop()
         mic = null
+        inbox.clear()
+    }
+
+    /**
+     * The overlay is about to take the hit's audio (main thread): the microphone is closed for
+     * good, the reading thread has ended (no second `AudioRecord` next to the overlay's, WP51) and
+     * every chunk it delivered is in the collected audio before [WakeHandoff.take].
+     */
+    private fun closeMicForHandoff() {
+        val m = mic ?: return
+        m.stopAndWait(MIC_JOIN_MS)
+        drainInbox()
+        stopMic()
     }
 
     /**
@@ -262,6 +289,8 @@ class WakeWordService : Service() {
         watcher = null
         lastConflict = null
         stopMic()
+        // A hit that was being handed over dies with the service (else `capturing` stays set).
+        WakeHandoff.clear()
         engine?.destroy()
         engine = null
         wakeLock?.takeIf { it.isHeld }?.release()
@@ -294,6 +323,7 @@ class WakeWordService : Service() {
     }
 
     companion object {
+        const val MIC_JOIN_MS = 300L
         const val ENGINE_CHANNEL = "app.wendelin/wake-engine"
         const val ACTION_START = "app.wendelin.wake.START"
         const val ACTION_STOP = "app.wendelin.wake.STOP"
@@ -318,6 +348,10 @@ class WakeWordService : Service() {
          * The overlay took the hit's audio (main thread): the service closes its microphone at
          * once, so the overlay can open its own with the shortest possible hole in between.
          */
+        fun beforeHandoffTake() {
+            instance?.closeMicForHandoff()
+        }
+
         fun onHandoffTaken() {
             instance?.handoffTaken()
         }
