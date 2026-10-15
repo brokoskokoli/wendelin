@@ -48,6 +48,7 @@ class VoiceVoicesScreen extends ConsumerWidget {
                       selected: effective(lang) == m.id,
                       extra: _ProbeButton(
                         key: Key('probe-$lang'),
+                        tts: ref.read(sherpaTtsProvider),
                         onProbe: () => ref
                             .read(sherpaTtsProvider)
                             .speak(
@@ -123,50 +124,86 @@ class VoiceVoicesScreen extends ConsumerWidget {
   }
 }
 
-/// Play button „Probe hören“ on the chosen voice. It shows a spinner right
-/// after the tap (synthesis takes 1–2 s) until the sample has ended.
+/// Play button „Probe hören“ on the chosen voice. Right after the tap a
+/// spinner („wird vorbereitet“) shows while the sample is synthesised
+/// (1–2 s); once it plays the button is a stop button. A failed sample
+/// shows a short note.
 class _ProbeButton extends StatefulWidget {
-  const _ProbeButton({super.key, required this.onProbe});
+  const _ProbeButton({super.key, required this.tts, required this.onProbe});
 
+  final TextToSpeech tts;
   final Future<void> Function() onProbe;
 
   @override
   State<_ProbeButton> createState() => _ProbeButtonState();
 }
 
+enum _ProbePhase { idle, preparing, playing }
+
 class _ProbeButtonState extends State<_ProbeButton> {
-  bool _busy = false;
+  _ProbePhase _phase = _ProbePhase.idle;
+  StreamSubscription<TtsState>? _states;
+
+  @override
+  void dispose() {
+    unawaited(_states?.cancel());
+    super.dispose();
+  }
 
   Future<void> _start() async {
-    setState(() => _busy = true);
+    setState(() => _phase = _ProbePhase.preparing);
+    await _states?.cancel();
+    _states = widget.tts.states.listen((s) {
+      if (s == TtsState.speaking && mounted) {
+        setState(() => _phase = _ProbePhase.playing);
+      }
+    });
     try {
       await widget.onProbe();
     } on Object {
-      // A failed sample only ends the spinner.
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Probe nicht möglich – die Stimme hat nicht '
+                'gesprochen.',
+              ),
+            ),
+          );
+      }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      await _states?.cancel();
+      _states = null;
+      if (mounted) setState(() => _phase = _ProbePhase.idle);
     }
   }
 
   @override
-  Widget build(BuildContext context) => _busy
-      ? const SizedBox.square(
-          dimension: WSize.touchMin,
-          child: Center(
-            child: SizedBox.square(
-              dimension: WSize.spinner,
-              child: CircularProgressIndicator(
-                strokeWidth: WSize.spinnerStroke,
-                color: WColors.accent,
-                semanticsLabel: 'Probe wird vorbereitet …',
-              ),
-            ),
+  Widget build(BuildContext context) => switch (_phase) {
+    _ProbePhase.preparing => const SizedBox.square(
+      dimension: WSize.touchMin,
+      child: Center(
+        child: SizedBox.square(
+          dimension: WSize.spinner,
+          child: CircularProgressIndicator(
+            strokeWidth: WSize.spinnerStroke,
+            color: WColors.accent,
+            semanticsLabel: 'Probe wird vorbereitet …',
           ),
-        )
-      : IconButton(
-          onPressed: () => unawaited(_start()),
-          tooltip: 'Probe hören',
-          color: WColors.accent,
-          icon: const Icon(Icons.play_arrow_rounded),
-        );
+        ),
+      ),
+    ),
+    _ProbePhase.playing => WIconButton(
+      icon: WIcons.stop,
+      tooltip: 'Probe beenden',
+      onPressed: () => unawaited(widget.tts.stop()),
+    ),
+    _ProbePhase.idle => WIconButton(
+      icon: WIcons.play,
+      tooltip: 'Probe hören',
+      onPressed: () => unawaited(_start()),
+    ),
+  };
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -744,7 +746,7 @@ void main() {
       expect(probe('fr'), findsNothing);
       expect(probe('de'), findsOneWidget);
       // One play button per language, on the chosen voice only.
-      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+      expect(find.byTooltip('Probe hören'), findsOneWidget);
       expect(find.text('Probe hören'), findsNothing);
 
       await tester.tap(find.text('Deutsch – Kerstin (weiblich)'));
@@ -804,21 +806,61 @@ void main() {
       expect(env.sherpaTts.calls.single.voice, 'tts-de-thorsten');
     });
 
-    testWidgets('Probe zeigt sofort ein Ladezeichen bis zum Ende', (
+    testWidgets('Probe: Ladezeichen beim Vorbereiten, Stopp beim Sprechen', (
       tester,
     ) async {
-      final env = TestEnv()..sherpaTts = FakeTextToSpeech(manual: true);
+      final inner = FakeTextToSpeech(manual: true)..synthesis = Completer();
+      final env = TestEnv()..sherpaTts = inner;
       env.speechModels.installed.add('tts-de-thorsten');
       await pumpScreen(tester, env, const VoiceVoicesScreen());
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await tester.tap(probe('de'));
       await tester.pump();
+      // Preparing: spinner, no stop yet.
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+      expect(find.byTooltip('Probe beenden'), findsNothing);
+      expect(find.byTooltip('Probe hören'), findsNothing);
+      // Playing: stop button instead of the spinner.
+      inner.synthesis!.complete();
+      await settle(tester);
+      expect(inner.state, TtsState.speaking);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byTooltip('Probe beenden'), findsOneWidget);
+      await tester.tap(find.byTooltip('Probe beenden'));
+      await settle(tester);
+      expect(inner.stops, 1);
+      expect(find.byTooltip('Probe hören'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets('Probe ohne Stopp: nach dem Ende wieder Abspielknopf', (
+      tester,
+    ) async {
+      final env = TestEnv()..sherpaTts = FakeTextToSpeech(manual: true);
+      env.speechModels.installed.add('tts-de-thorsten');
+      await pumpScreen(tester, env, const VoiceVoicesScreen());
+      await tester.tap(probe('de'));
+      await settle(tester);
       env.sherpaTts.completeCurrent();
       await settle(tester);
+      expect(find.byTooltip('Probe hören'), findsOneWidget);
+    });
+
+    testWidgets('fehlgeschlagene Probe zeigt eine kurze Meldung', (
+      tester,
+    ) async {
+      final env = TestEnv();
+      env.sherpaTts.nextError = StateError('kaputt');
+      env.speechModels.installed.add('tts-de-thorsten');
+      await pumpScreen(tester, env, const VoiceVoicesScreen());
+      await tester.tap(probe('de'));
+      await settle(tester);
+      expect(
+        find.text('Probe nicht möglich – die Stimme hat nicht gesprochen.'),
+        findsOneWidget,
+      );
       expect(find.byType(CircularProgressIndicator), findsNothing);
-      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+      expect(find.byTooltip('Probe hören'), findsOneWidget);
     });
 
     testWidgets('Standardstimme nicht geladen: erste geladene wirkt, ohne '

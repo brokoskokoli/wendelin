@@ -343,17 +343,7 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
             loadedId = null;
           }
           final tts = loaded ??= so.OfflineTts(
-            so.OfflineTtsConfig(
-              model: so.OfflineTtsModelConfig(
-                vits: so.OfflineTtsVitsModelConfig(
-                  model: model,
-                  tokens: tokens,
-                  dataDir: dataDir,
-                ),
-                numThreads: 2,
-                debug: false,
-              ),
-            ),
+            sherpaTtsConfig(model: model, tokens: tokens, dataDir: dataDir),
           );
           loadedId = id;
           final audio = tts.generate(text: text, speed: speed);
@@ -374,3 +364,23 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     });
   }
 }
+
+/// Config of a Piper (VITS) voice. The noise parameters stay at the sherpa
+/// defaults on purpose (WP74: measured, they change the pause noise by
+/// at most 1.5 dB; the noise comes from the int8 models).
+@visibleForTesting
+so.OfflineTtsConfig sherpaTtsConfig({
+  required String model,
+  required String tokens,
+  required String dataDir,
+}) => so.OfflineTtsConfig(
+  model: so.OfflineTtsModelConfig(
+    vits: so.OfflineTtsVitsModelConfig(
+      model: model,
+      tokens: tokens,
+      dataDir: dataDir,
+    ),
+    numThreads: 2,
+    debug: false,
+  ),
+);
