@@ -116,7 +116,8 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
           ),
         );
         _sub = inner.signals.listen((signal) {
-          voiceLog('barge-hit', {'kind': signal.code});
+          // Every hit leaves a line, with the best similarities so far.
+          voiceLog('barge-hit', {'kind': signal.code, ...?_meter?.maxima});
           _signals.add(signal);
         });
         _inner = inner;
@@ -160,8 +161,11 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    final wasRunning = _running;
     _running = false;
     _diag?.cancel();
+    // Ended without stop(): the summary still belongs in the log.
+    if (wasRunning && _inner != null) _meter?.summary();
     await _sub?.cancel();
     await _inner?.dispose();
     await _signals.close();

@@ -54,20 +54,26 @@ void main() {
       },
     );
 
-    test(
-      'WP72: nie Audiofokus-Pause (Fokus geht an Ausgabe), alle Varianten',
-      () {
-        for (final p in CaptureProfile.values) {
-          for (final v in SpeechCapture.values) {
-            expect(
-              buildRecordConfig(p, v).audioInterruption,
-              AudioInterruptionMode.none,
-              reason: '$p $v',
-            );
-          }
-        }
-      },
-    );
+    test('WP72: Ausgabe ignoriert Audiofokus (none), alle Varianten', () {
+      for (final v in SpeechCapture.values) {
+        expect(
+          buildRecordConfig(CaptureProfile.speechOutput, v).audioInterruption,
+          AudioInterruptionMode.none,
+          reason: '$v',
+        );
+      }
+    });
+
+    test('WP72: Erkennung pausiert bei Fokusverlust und läuft weiter', () {
+      for (final p in CaptureProfile.values) {
+        if (p == CaptureProfile.speechOutput) continue;
+        expect(
+          buildRecordConfig(p).audioInterruption,
+          AudioInterruptionMode.pauseResume,
+          reason: '$p',
+        );
+      }
+    });
 
     test('WP72: Varianten der Sprachausgabe', () {
       final c = buildRecordConfig(CaptureProfile.speechOutput);

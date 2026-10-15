@@ -128,6 +128,47 @@ void main() {
         expect(end, contains('sim=1.00'));
       });
 
+      test('Treffer erzeugt barge-hit mit Maxima; barge-end meldet das Maximum '
+          'der ganzen Ausgabe', () async {
+        // The first window hits (sim 1.00); later windows score low.
+        audio = FakeAudioInput(
+          frames: [Int16List(480), Int16List(480), Int16List(480)],
+          frameInterval: const Duration(milliseconds: 5),
+        );
+        final d = LazyWakeBargeInDetector(
+          audio: audio,
+          templates: () async => [tpl(0.9)],
+          features: () => FakeWakeFeatureExtractor(
+            windowEvery: 480,
+            windowFor: (end, _) => WakeWindow(
+              endSample: end,
+              embedding: Float32List.fromList(end <= 480 ? [1, 0] : [0, 1]),
+            ),
+          ),
+        );
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 90));
+        await d.stop();
+        await d.dispose();
+        final hit = lines.singleWhere((l) => l.contains('barge-hit'));
+        expect(hit, contains('kind=keyword-wake'));
+        expect(hit, contains('sim=1.00'));
+        final end = lines.singleWhere((l) => l.contains('barge-end'));
+        expect(
+          end,
+          contains('sim=1.00'),
+          reason: 'nicht nur das letzte Fenster',
+        );
+      });
+
+      test('Ende ohne stop(): barge-end steht trotzdem im Log', () async {
+        final d = make([tpl(0.8)], Float32List.fromList([1, 0]));
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        await d.dispose();
+        expect(lines.where((l) => l.contains('barge-end')), hasLength(1));
+      });
+
       test('Mikrofon liefert nichts: frames=0 wird geloggt', () async {
         audio = FakeAudioInput(frames: const []);
         final d = LazyWakeBargeInDetector(

@@ -89,6 +89,15 @@ final class BargeMeter {
     _sim = _stop = -1;
   }
 
+  /// Best similarities of the whole session so far (for `barge-hit`).
+  Map<String, Object?> get maxima => {
+    't': _seconds,
+    'sim': _allSim,
+    'stop': _allStop,
+    'thr': threshold,
+    'sthr': stopThreshold,
+  };
+
   /// Writes the `barge-end` line (maxima of the whole listening session).
   void summary() => voiceLog('barge-end', {
     't': _seconds,

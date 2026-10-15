@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../design/design.dart';
@@ -22,7 +23,7 @@ const bargeInLabels = {
 ///
 /// Choosing the conversation mode counts as the answer to the one-time
 /// question: it is never asked again.
-class ConversationSettingsSection extends StatelessWidget {
+class ConversationSettingsSection extends ConsumerWidget {
   /// Creates the section.
   const ConversationSettingsSection({
     super.key,
@@ -41,64 +42,79 @@ class ConversationSettingsSection extends StatelessWidget {
   final bool bargeInAvailable;
 
   @override
-  Widget build(BuildContext context) => SettingsSection(
-    title: 'Gespräch',
-    children: [
-      SettingsRow(
-        title: 'Weiter zuhören nach der Antwort',
-        detail:
-            'Nach der gesprochenen Antwort bleibt das Mikrofon kurz offen, '
-            'du kannst ohne Tippen nachfragen. „Danke“ oder „Stopp“ beendet.',
-        trailing: WSwitch(
-          value: settings.conversationMode,
-          semanticLabel: 'Weiter zuhören nach der Antwort',
-          onChanged: (v) => change(
-            (s) => s.copyWith(conversationMode: v, conversationAsked: true),
-          ),
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: WSpace.l,
-          vertical: WSpace.m,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: WSpace.s,
-          children: [
-            // Long press: hidden developer variants (WP72).
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onLongPress: () => showBargeDebugSheet(context),
-              child: Text(
-                'Unterbrechen während der Antwort',
-                style: WText.label,
-              ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final variant = ref.watch(bargeVariantActiveProvider).value ?? false;
+    return SettingsSection(
+      title: 'Gespräch',
+      children: [
+        if (variant)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: WSpace.l,
+              vertical: WSpace.s,
             ),
-            Text(
-              bargeInAvailable
-                  ? 'Mit „Wendelin“ oder „Stopp“ unterbrichst du die '
-                        'Sprachausgabe.'
-                  : bargeInUnavailableText,
+            child: Text(
+              'Entwickler-Variante für „Unterbrechen“ aktiv (lange auf '
+              '„Unterbrechen während der Antwort“ drücken zum Zurücksetzen).',
               style: WText.detail,
             ),
-            Wrap(
-              spacing: WSpace.s,
-              runSpacing: WSpace.s,
-              children: [
-                for (final mode in BargeInMode.values)
-                  ChoiceChip(
-                    label: Text(bargeInLabels[mode]!),
-                    selected: settings.bargeIn == mode,
-                    onSelected: bargeInAvailable
-                        ? (_) => change((s) => s.copyWith(bargeIn: mode))
-                        : null,
-                  ),
-              ],
+          ),
+        SettingsRow(
+          title: 'Weiter zuhören nach der Antwort',
+          detail:
+              'Nach der gesprochenen Antwort bleibt das Mikrofon kurz offen, '
+              'du kannst ohne Tippen nachfragen. „Danke“ oder „Stopp“ beendet.',
+          trailing: WSwitch(
+            value: settings.conversationMode,
+            semanticLabel: 'Weiter zuhören nach der Antwort',
+            onChanged: (v) => change(
+              (s) => s.copyWith(conversationMode: v, conversationAsked: true),
             ),
-          ],
+          ),
         ),
-      ),
-    ],
-  );
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: WSpace.l,
+            vertical: WSpace.m,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: WSpace.s,
+            children: [
+              // Long press: hidden developer variants (WP72).
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onLongPress: () => showBargeDebugSheet(context),
+                child: Text(
+                  'Unterbrechen während der Antwort',
+                  style: WText.label,
+                ),
+              ),
+              Text(
+                bargeInAvailable
+                    ? 'Mit „Wendelin“ oder „Stopp“ unterbrichst du die '
+                          'Sprachausgabe.'
+                    : bargeInUnavailableText,
+                style: WText.detail,
+              ),
+              Wrap(
+                spacing: WSpace.s,
+                runSpacing: WSpace.s,
+                children: [
+                  for (final mode in BargeInMode.values)
+                    ChoiceChip(
+                      label: Text(bargeInLabels[mode]!),
+                      selected: settings.bargeIn == mode,
+                      onSelected: bargeInAvailable
+                          ? (_) => change((s) => s.copyWith(bargeIn: mode))
+                          : null,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

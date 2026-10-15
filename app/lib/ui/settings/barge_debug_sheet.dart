@@ -10,6 +10,19 @@ import '../design/design.dart';
 /// Margin choices of the developer setting (text as stored).
 const bargeMarginChoices = ['0.05', '0.00', '-0.05'];
 
+/// Whether a developer variant (source or margin) other than the default is
+/// active; the conversation settings show a hint then. The sheet invalidates
+/// it with every change.
+final bargeVariantActiveProvider = FutureProvider<bool>((ref) async {
+  final s = ref.read(storageProvider).settings;
+  final source = SpeechCapture.parse(await s.get(AppSettings.bargeSource));
+  final margin = await s.get(AppSettings.bargeMargin);
+  return source != SpeechCapture.communication ||
+      (margin != null &&
+          bargeMarginChoices.contains(margin) &&
+          margin != bargeMarginChoices.first);
+});
+
 /// Opens the hidden developer sheet „Barge-in-Variante“ (WP72): long press
 /// on „Unterbrechen während der Antwort“. Both choices apply to the next
 /// spoken answer; `docs/testing/m4-device.md` 11.6 explains how to read the
@@ -56,12 +69,16 @@ class _State extends ConsumerState<BargeDebugSheet> {
     if (margin != null) await s.set(AppSettings.bargeMargin, margin);
     // The detector reads the margin when it is built.
     ref.invalidate(wakeBargeInDetectorProvider);
+    ref.invalidate(bargeVariantActiveProvider);
     if (!mounted) return;
     setState(() {
       if (source != null) _source = source;
       if (margin != null) _margin = margin;
     });
   }
+
+  Future<void> _reset() =>
+      _set(SpeechCapture.communication, bargeMarginChoices.first);
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -79,7 +96,8 @@ class _State extends ConsumerState<BargeDebugSheet> {
             for (final v in SpeechCapture.values)
               ChoiceChip(
                 label: Text(switch (v) {
-                  SpeechCapture.communication => 'Kommunikation + AEC',
+                  SpeechCapture.communication =>
+                    'Kommunikation + AEC (Standard)',
                   SpeechCapture.recognitionAec => 'Erkennung + AEC',
                   SpeechCapture.recognition => 'Erkennung, ohne AEC',
                 }),
@@ -94,11 +112,21 @@ class _State extends ConsumerState<BargeDebugSheet> {
           children: [
             for (final m in bargeMarginChoices)
               ChoiceChip(
-                label: Text(m),
+                label: Text(
+                  m == bargeMarginChoices.first ? '$m (Standard)' : m,
+                ),
                 selected: _margin == m,
                 onSelected: (_) => _set(null, m),
               ),
           ],
+        ),
+        TextButton(
+          onPressed:
+              _source == SpeechCapture.communication &&
+                  _margin == bargeMarginChoices.first
+              ? null
+              : _reset,
+          child: const Text('Zurücksetzen'),
         ),
       ],
     ),

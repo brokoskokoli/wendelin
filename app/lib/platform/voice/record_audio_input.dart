@@ -44,12 +44,15 @@ enum SpeechCapture {
   );
 }
 
-/// The `RecordConfig` of [profile] (WP72: the interruption mode is `none`).
+/// The `RecordConfig` of [profile] (WP72).
 ///
 /// The plugin's default `pause` requests audio focus with every recording
 /// and pauses the PCM engine on any focus loss, without resuming. The own
 /// speech output (system TTS per chunk, `audioplayers`) takes the focus, so
-/// the barge-in recording stood still while the answer was spoken.
+/// the barge-in recording ([CaptureProfile.speechOutput]) must ignore focus
+/// changes (`none`). All other profiles use `pauseResume`: a call or a
+/// navigation prompt pauses the recording, afterwards it continues
+/// (record_android 2.2.0, `AudioInterruptionPolicy`).
 RecordConfig buildRecordConfig(
   CaptureProfile profile, [
   SpeechCapture speech = SpeechCapture.communication,
@@ -62,7 +65,9 @@ RecordConfig buildRecordConfig(
     sampleRate: AudioInput.sampleRate,
     numChannels: 1,
     echoCancel: aec,
-    audioInterruption: AudioInterruptionMode.none,
+    audioInterruption: out
+        ? AudioInterruptionMode.none
+        : AudioInterruptionMode.pauseResume,
     androidConfig: AndroidRecordConfig(
       audioSource: communication
           ? AndroidAudioSource.voiceCommunication
@@ -140,6 +145,7 @@ final class RecordPcmRecorder implements PcmRecorder {
     final stream = await _recorder.startStream(
       buildRecordConfig(profile, speech),
     );
+    voiceLog('mic-state', {'state': 'started'});
     voiceLog('mic-config', {
       'profile': profile,
       'variant': profile == CaptureProfile.speechOutput ? speech : null,
