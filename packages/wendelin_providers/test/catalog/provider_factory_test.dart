@@ -189,6 +189,15 @@ void main() {
         );
       });
 
+      test('alte Option noTools wirkt nicht mehr: Tools bleiben an', () {
+        final p = ProviderFactory.create(
+          phala(options: const {'attestation': 'phala', 'noTools': true}),
+          (_) async => 'k',
+          attestation: wiring,
+        );
+        expect(p.caps.tools, isTrue);
+      });
+
       test('älteres Profil auf dem RedPill-Host ohne Option wird geprüft', () {
         final p = ProviderFactory.create(
           phala(options: const {'teeModelsOnly': true}),

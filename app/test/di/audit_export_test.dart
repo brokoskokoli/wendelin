@@ -31,4 +31,36 @@ void main() {
     expect((rows[0]! as Map)['payload'], {'source': 'voice', 'language': 'de'});
     expect((rows[1]! as Map)['payload'], {'tool': 't', 'status': 'ok'});
   });
+
+  test('Export: nur Positivliste, unbekannte Felder und Freitexte fehlen', () {
+    final json = jsonEncode([
+      {
+        'kind': 'error',
+        'payload': {
+          'error': 'network',
+          'message': 'geheim',
+          'zusatz': 'geheim',
+        },
+      },
+      {
+        'kind': 'verification',
+        'payload': {'profileId': 'p', 'status': 'red', 'detail': 'geheim'},
+      },
+      {
+        'kind': 'routing',
+        'payload': {'profileId': 'p', 'modelId': 'm', 'reason': 'geheim'},
+      },
+      {
+        'kind': 'neueArt',
+        'payload': {'x': 'geheim'},
+      },
+    ]);
+    final out = auditExportWithoutContent(json);
+    expect(out, isNot(contains('geheim')));
+    final rows = jsonDecode(out) as List<Object?>;
+    expect((rows[0]! as Map)['payload'], {'error': 'network'});
+    expect((rows[1]! as Map)['payload'], {'profileId': 'p', 'status': 'red'});
+    expect((rows[2]! as Map)['payload'], {'profileId': 'p', 'modelId': 'm'});
+    expect((rows[3]! as Map)['payload'], isEmpty);
+  });
 }

@@ -14,3 +14,10 @@ final attestationRecordProvider = FutureProvider.autoDispose
     .family<AttestationRecord?, String>(
       (ref, logId) => ref.watch(storageProvider).attestations.byLogId(logId),
     );
+
+/// The checks of one conversation, oldest first (audit entry detail).
+final attestationSessionProvider = FutureProvider.autoDispose
+    .family<List<AttestationRecord>, String>(
+      (ref, sessionId) =>
+          ref.watch(storageProvider).attestations.forSession(sessionId),
+    );

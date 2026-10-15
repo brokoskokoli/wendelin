@@ -1,14 +1,66 @@
 import 'dart:convert';
 
-/// Payload keys that can hold content (what was said or written, tool
-/// arguments, free texts). They stay in the local audit log but never leave
-/// the device through the export (WP71).
-const auditContentKeys = {'text', 'arguments', 'description'};
+/// Payload keys the export keeps, per entry kind (positive list, WP71).
+/// Only ids, codes, numbers and flags; free texts (what was said or written,
+/// tool arguments, descriptions, messages, details) never leave the device,
+/// and a key that is not listed here is dropped, also in old entries.
+const auditExportKeys = <String, Set<String>>{
+  'request': {
+    'source',
+    'trigger',
+    'language',
+    'sttConfidence',
+    'requestEscalation',
+    'whileLocked',
+    'refused',
+  },
+  'routing': {'profileId', 'modelId'},
+  'toolCall': {
+    'callId',
+    'tool',
+    'decision',
+    'status',
+    'durationMs',
+    'undo',
+    'trigger',
+    'whileLocked',
+  },
+  'confirmation': {
+    'type',
+    'callId',
+    'tool',
+    'fromProfile',
+    'toProfile',
+    'reason',
+    'approved',
+  },
+  'escalation': {'fromProfile', 'toProfile', 'reason'},
+  'usage': {
+    'profileId',
+    'modelId',
+    'inputTokens',
+    'outputTokens',
+    'cacheReadTokens',
+    'cacheWriteTokens',
+    'costMicros',
+    'budgetWarning',
+    'spentMicros',
+    'budgetMicros',
+  },
+  'verification': {
+    'source',
+    'profileId',
+    'status',
+    'latencyMs',
+    'spokenCheck',
+    'accepted',
+    'reason',
+  },
+  'error': {'source', 'error'},
+};
 
-/// The audit export [json] (as written by the repository) without contents:
-/// recognized speech, request texts, tool arguments and confirmation
-/// descriptions are dropped from every entry, including old entries that
-/// were stored with them. Ids, times, kinds and results stay.
+/// The audit export [json] (as written by the repository) reduced to the
+/// keys of [auditExportKeys]. Entries of an unknown kind keep no payload.
 String auditExportWithoutContent(String json) {
   final rows = jsonDecode(json) as List<Object?>;
   return const JsonEncoder.withIndent('  ').convert([
@@ -19,7 +71,8 @@ String auditExportWithoutContent(String json) {
           if (r['payload'] case final Map<String, Object?> p)
             'payload': {
               for (final e in p.entries)
-                if (!auditContentKeys.contains(e.key)) e.key: e.value,
+                if (auditExportKeys[r['kind']]?.contains(e.key) ?? false)
+                  e.key: e.value,
             },
         }
       else
