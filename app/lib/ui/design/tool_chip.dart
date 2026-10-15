@@ -23,6 +23,7 @@ class ToolChip extends StatelessWidget {
       CheckStatus.pending => (GlyphShape.triangle, WColors.warn),
       CheckStatus.failed => (GlyphShape.cross, WColors.error),
       CheckStatus.neutral => (GlyphShape.ring, WColors.textMuted),
+      CheckStatus.info => (GlyphShape.check, WColors.textMuted),
     };
     return Semantics(
       container: true,

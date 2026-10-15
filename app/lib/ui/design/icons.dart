@@ -143,6 +143,14 @@ abstract final class WIcons {
     '$_sj/>',
   );
 
+  /// Abspielen (Dreieck).
+  static const play = WIconData._('<path d="M8 5.5 L18 12 L8 18.5 Z" $_sj/>');
+
+  /// Stopp (Quadrat).
+  static const stop = WIconData._(
+    '<rect x="6.5" y="6.5" width="11" height="11" rx="2" $_sj/>',
+  );
+
   /// Ziehgriff (sechs Punkte), viewBox 16 × 22.
   static const dragHandle = WIconData._(
     '<circle cx="5" cy="5" r="1.6"/><circle cx="11" cy="5" r="1.6"/>'

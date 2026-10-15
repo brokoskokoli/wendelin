@@ -292,7 +292,13 @@ void main() {
       expect(find.byType(ChoiceChip), findsNothing);
       expect(find.text('Als JSON exportieren'), findsNothing);
       expect(find.text('2 Einträge'), findsOneWidget);
-      expect(find.text('Prüfprotokoll ansehen'), findsOneWidget);
+      expect(find.text('Prüfprotokoll ansehen'), findsNothing);
+      // The row itself opens the log.
+      await tester.tap(find.byKey(const ValueKey('auditLogRow')));
+      await settle(tester);
+      expect(find.text('Wie wird das Meer?'), findsOneWidget);
+      await tester.tap(find.byTooltip('Zurück'));
+      await settle(tester);
 
       await tester.tap(find.text('90 Tage'));
       await settle(tester);
@@ -312,10 +318,30 @@ void main() {
       expect(find.text('Wie wird das Meer?'), findsNothing);
       expect(find.text('calendar__create_event · ok'), findsOneWidget);
 
+      // Above the list, not below it.
+      expect(
+        tester.getTopLeft(find.text('Als JSON exportieren')).dy,
+        lessThan(
+          tester.getTopLeft(find.text('calendar__create_event · ok')).dy,
+        ),
+      );
       await tester.tap(find.text('Als JSON exportieren'));
       await settle(tester);
       expect(exports.files.single.$2, 'application/json');
-      expect(exports.files.single.$3, contains('calendar__create_event'));
+      final json = exports.files.single.$3;
+      expect(json, contains('calendar__create_event'));
+      // No contents, also not from old entries stored with a text.
+      expect(json, isNot(contains('Wie wird das Meer?')));
+      expect(json, isNot(contains('"text"')));
+    });
+
+    testWidgets('Tipp auf einen Eintrag öffnet seine Felder', (tester) async {
+      final env = await withAudit();
+      await pumpPage(tester, env, const AuditLogScreen());
+      await tester.tap(find.text('calendar__create_event · ok'));
+      await settle(tester);
+      expect(find.text('tool'), findsOneWidget);
+      expect(find.text('calendar__create_event'), findsOneWidget);
     });
 
     testWidgets('alles löschen nur nach Bestätigung', (tester) async {

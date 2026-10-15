@@ -160,6 +160,10 @@ abstract final class WSize {
   static const statusIcon = 20.0;
   static const statusIconSmall = 14.0;
 
+  /// Kleines Ladezeichen (Strichstärke) in Zeilen, z. B. „Probe hören“.
+  static const spinner = 20.0;
+  static const spinnerStroke = 2.0;
+
   /// Warn-Dreieck im Kopf der Bestätigungskarte.
   static const statusIconHeader = 16.0;
 

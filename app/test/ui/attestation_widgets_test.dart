@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/ui/attestation/attestation_texts.dart';
+import 'package:wendelin/ui/attestation/stage_line.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/screens/conversation_view.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -239,7 +240,7 @@ void main() {
       expect(stageLabel('quote'), 'TDX-Quote (DCAP)');
       expect(stageLabel('unbekannt'), 'unbekannt');
       expect(stageResultLabel('pass'), 'bestanden');
-      expect(stageResultStatus('info'), isNull);
+      expect(stageResultStatus('info'), CheckStatus.info);
       expect(stageResultStatus('fail'), CheckStatus.failed);
     });
   });
@@ -260,7 +261,9 @@ void main() {
       );
       expect(find.text(ToolTlsHint.text), findsOneWidget);
       expect(
-        find.text('Tool-Argumente nur über gepinntes TLS geschützt'),
+        find.text(
+          'Tool-Aufrufe sind über die geprüfte Verbindung bis in die Enklave geschützt, aber nicht zusätzlich verschlüsselt.',
+        ),
         findsOneWidget,
       );
     });
@@ -339,4 +342,28 @@ void main() {
       expect(tapped?.stepId, 's:1');
     },
   );
+
+  testWidgets('jede Stufe hat ein Symbol, auch „nur protokolliert“', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    expect(stageResultStatus('pass'), CheckStatus.ok);
+    expect(stageResultStatus('fail'), CheckStatus.failed);
+    expect(stageResultStatus('warn'), CheckStatus.pending);
+    expect(stageResultStatus('info'), CheckStatus.info);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StageLine(
+            label: 'Frische',
+            result: stageResultLabel('info'),
+            status: stageResultStatus('info'),
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(CheckStatusIcon), findsOneWidget);
+    expect(find.bySemanticsLabel('nur protokolliert'), findsOneWidget);
+    handle.dispose();
+  });
 }

@@ -112,7 +112,7 @@ final class TestEnv {
   final systemTts = FakeTextToSpeech();
 
   /// Offline speech output (sherpa-onnx).
-  final sherpaTts = FakeTextToSpeech();
+  var sherpaTts = FakeTextToSpeech();
 
   /// Obsidian vault (used once a vault is chosen in the settings).
   final vault = FakeVaultPort();

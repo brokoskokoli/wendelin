@@ -133,6 +133,7 @@ const _voiceFr = SherpaVoice(
 );
 
 void main() {
+  sherpaParameterTests();
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('SystemTextToSpeech', () {
@@ -421,5 +422,21 @@ void main() {
         .change((s) => s.copyWith(sherpaVoices: {'de': 'tts-de-kerstin'}));
     await c.read(real).speak('Hallo', language: 'de');
     expect(synth.calls.map((x) => x.$2), ['tts-de-kerstin']);
+  });
+}
+
+void sherpaParameterTests() {
+  // WP74: the voice parameters stay at the sherpa defaults on purpose. Measured
+  // on the Piper voices: pause noise int8 about -65 dBFS vs. fp32 about
+  // -80 dBFS; noise_scale/noise_scale_w/length_scale change it by <= 1.5 dB.
+  test('Piper-Parameter bleiben bewusst unverändert (WP74)', () {
+    final vits = sherpaTtsConfig(
+      model: 'm.onnx',
+      tokens: 't.txt',
+      dataDir: 'd',
+    ).model.vits;
+    expect(vits.noiseScale, 0.667);
+    expect(vits.noiseScaleW, 0.8);
+    expect(vits.lengthScale, 1.0);
   });
 }

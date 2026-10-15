@@ -78,7 +78,6 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   bool _busy = false;
   PrivacyLevel _privacy = PrivacyLevel.standard;
   double _warn = 0.8;
-  bool _noTools = false;
   String? _budgetError;
 
   bool get _editing => widget.existing != null;
@@ -98,7 +97,6 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     _privacy = effectivePrivacy(p);
     _budget.text = budgetText(p.budgetMonthly);
     _warn = p.warnThreshold ?? 0.8;
-    _noTools = p.options[noToolsOption] == true;
   }
 
   @override
@@ -201,7 +199,6 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       privacy: _privacy,
       budgetMicros: budget,
       warnThreshold: _warn,
-      noTools: _attested ? _noTools : null,
     );
     await ref.read(profilesProvider.notifier).save(profile);
     await session.commit();
@@ -283,8 +280,6 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     warn: _warn,
     onWarn: (w) => setState(() => _warn = w),
     attested: _attested,
-    noTools: _noTools,
-    onNoTools: (on) => setState(() => _noTools = on),
     onSave: () => unawaited(_save()),
   );
 

@@ -251,6 +251,7 @@ void main() {
       expect(CheckStatus.ok.color, WColors.ok);
       expect(CheckStatus.pending.color, WColors.warn);
       expect(CheckStatus.failed.color, WColors.error);
+      expect(CheckStatus.info.color, WColors.textMuted);
       handle.dispose();
     });
   });
