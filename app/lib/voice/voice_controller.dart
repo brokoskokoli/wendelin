@@ -62,6 +62,32 @@ final voiceReleaseDelayProvider = Provider<Duration>(
 /// the VAD load ([PrimedAudioInput], B11). In the background the models are
 /// freed after [voiceReleaseDelayProvider] ([background], B14).
 ///
+/// What a wake word hit leaves for the recording (WP68): the audio from the
+/// end of the wake word on, gap-free up to [takenAtMs], and how much of the
+/// first samples of the new microphone to silence (confirmation tone).
+final class WakePreRoll {
+  /// Creates the pre-roll.
+  const WakePreRoll({
+    required this.pcm,
+    this.wakeEnd,
+    this.muteMicSamples = 0,
+    this.takenAtMs,
+  });
+
+  /// 16 kHz mono PCM.
+  final Int16List pcm;
+
+  /// Sample in [pcm] where the wake word ends.
+  final int? wakeEnd;
+
+  /// Samples of the new microphone to zero (tone).
+  final int muteMicSamples;
+
+  /// Wall clock (ms since epoch) when the earlier recording stopped; the
+  /// difference to the first frame of the new microphone is the hole.
+  final int? takenAtMs;
+}
+
 /// Diagnostics without content go to the log ([voiceLog]).
 final class VoiceController extends Notifier<VoiceUiState> {
   VoicePipeline? _pipeline;
@@ -93,6 +119,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   // Tap → first frame / models ready, for `mic-ready` (B11).
   Stopwatch? _micWatch;
   Duration? _firstFrame;
+  int? _wakeTakenAt;
   Duration? _loaded;
   String _micEngineModel = '';
 
@@ -166,10 +193,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Future<bool> start(
     TriggerKind kind, {
     Future<bool> Function()? prepare,
-    Int16List? preRoll,
+    Future<WakePreRoll?> Function()? takePreRoll,
     int muteMicSamples = 0,
   }) async {
     _muteMicSamples = muteMicSamples;
+    _wakeTakenAt = null;
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
@@ -185,7 +213,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       // look at the two needed ones only (the full check runs anyway).
       ready = await _modelsInstalled();
     }
-    if (!ready) return _startAfterLoading(kind, prepare, preRoll);
+    if (!ready) return _startAfterLoading(kind, prepare, takePreRoll);
     if (state.active || ref.read(agentControllerProvider).running) {
       return false;
     }
@@ -207,6 +235,10 @@ final class VoiceController extends Notifier<VoiceUiState> {
       clearHint: true,
       clearError: true,
     );
+    // The hit's earlier recording ends right before this microphone opens
+    // (WP68): nothing in between is lost.
+    // (No await without a pre-roll: the order of the other starts stays.)
+    final preRoll = takePreRoll == null ? null : await takePreRoll();
     primed.prime();
     if (!(await prepare?.call() ?? true)) {
       await primed.stop();
@@ -283,7 +315,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Future<bool> _startAfterLoading(
     TriggerKind kind,
     Future<bool> Function()? prepare,
-    Int16List? preRoll,
+    Future<WakePreRoll?> Function()? takePreRoll,
   ) async {
     // Models first: without speech recognition there is nothing to ask the
     // microphone permission for (WP18 review, WP19).
@@ -309,17 +341,23 @@ final class VoiceController extends Notifier<VoiceUiState> {
     }
     final pipeline = _pipelineFor(components);
     state = state.copyWith(trigger: kind, clearHint: true, clearError: true);
-    return _run(pipeline, kind, preRoll);
+    return _run(
+      pipeline,
+      kind,
+      takePreRoll == null ? null : await takePreRoll(),
+    );
   }
 
-  bool _run(VoicePipeline pipeline, TriggerKind kind, [Int16List? preRoll]) {
-    _audio?.muteNextStart(_muteMicSamples);
+  bool _run(VoicePipeline pipeline, TriggerKind kind, [WakePreRoll? preRoll]) {
+    _audio?.muteNextStart(preRoll?.muteMicSamples ?? _muteMicSamples);
     _muteMicSamples = 0;
+    _wakeTakenAt = preRoll?.takenAtMs;
     final started = pipeline.start(
       trigger: TriggerEvent(
         source: kind,
         at: ref.read(clockProvider).now(),
-        preRoll: preRoll,
+        preRoll: preRoll?.pcm,
+        wakeEnd: preRoll?.wakeEnd,
       ),
     );
     if (!started) voiceLog('start-failed', {'reason': 'busy'});
@@ -340,6 +378,15 @@ final class VoiceController extends Notifier<VoiceUiState> {
   void _onFirstFrame() {
     if (_micWatch == null || _firstFrame != null) return;
     _firstFrame = _micWatch!.elapsed;
+    final taken = _wakeTakenAt;
+    if (taken != null) {
+      // Wake word: time between the end of the service's recording and the
+      // first frame of this microphone (WP68).
+      voiceLog('wake-gap', {
+        'ms': DateTime.now().millisecondsSinceEpoch - taken,
+      });
+      _wakeTakenAt = null;
+    }
     _logMicReady();
   }
 

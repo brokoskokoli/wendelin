@@ -166,14 +166,22 @@ final class WakeHost {
 
   Future<void> _onDetection(WakeWordDetection d) => _serial(() async {
     if (!_verify) voiceLog('wake-verify', {'result': 'skip'});
-    // The microphone is free before the overlay records (WP51).
-    await _hold('overlay', 'overlay');
     final pcm = d.preRoll;
+    // The service keeps the microphone open from the end of `pcm` on until
+    // the overlay takes the audio and opens its own (WP68, WP51: never two
+    // recordings at once). So `hit` goes first: the `stopMic` of the pause
+    // below then arrives at a service that is already collecting and is
+    // ignored.
     await _call('hit', {
       'pcm': pcm.buffer.asUint8List(pcm.offsetInBytes, pcm.lengthInBytes),
+      // Where the wake word ends in `pcm` and where the stream stands at its
+      // end: the service keeps recording from there (WP68).
+      'end': d.wakeEnd ?? 0,
+      'pos': d.position,
       'kw': d.hit.keywordId,
       'score': (d.hit.confidence ?? 0).toStringAsFixed(2),
     });
+    await _hold('overlay', 'overlay');
   });
 
   Future<void> _hold(String key, String reason) async {

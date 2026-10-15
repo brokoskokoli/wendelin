@@ -46,21 +46,59 @@ bool soundsLikeWakeWord(String word) =>
 /// („Wende Lin“) must be within [maxDistance] edits of a spelling or sound
 /// like it ([soundsLikeWakeWord]).
 bool matchesWakeWord(String transcript, {int maxDistance = 1}) {
-  final words = foldForMatch(transcript).split(' ').where((w) => w.isNotEmpty);
-  final list = words.toList();
-  bool near(String s) {
-    if (soundsLikeWakeWord(s)) return true;
-    for (final spelling in wakeWordSpellings) {
-      if (_distance(s, spelling) <= maxDistance) return true;
-    }
-    return false;
-  }
-
+  final list = foldForMatch(transcript)
+      .split(' ')
+      .where((w) => w.isNotEmpty)
+      .toList();
   for (var i = 0; i < list.length; i++) {
-    if (near(list[i])) return true;
-    if (i + 1 < list.length && near(list[i] + list[i + 1])) return true;
+    if (_nearWakeWord(list[i], maxDistance)) return true;
+    if (i + 1 < list.length &&
+        _nearWakeWord(list[i] + list[i + 1], maxDistance)) {
+      return true;
+    }
   }
   return false;
+}
+
+bool _nearWakeWord(String s, int maxDistance) {
+  if (soundsLikeWakeWord(s)) return true;
+  for (final spelling in wakeWordSpellings) {
+    if (_distance(s, spelling) <= maxDistance) return true;
+  }
+  return false;
+}
+
+const _greetings = {'hey', 'hallo', 'hi', 'he', 'ok', 'okay', 'ey'};
+
+/// [transcript] without the leading wake word (WP68): „Wendelin, schalte die
+/// Taschenlampe an“ becomes „schalte die Taschenlampe an“. Spellings as in
+/// [matchesWakeWord] (also split: „Wende Lin“), a greeting before it
+/// („Hey Wendelin“) goes too. The word counts only at the start (the first
+/// three words); otherwise the text stays as it is. May return an empty
+/// string (only the wake word was said).
+String stripWakeWord(String transcript, {int maxDistance = 1}) {
+  final tokens = transcript.trim().split(RegExp(r'\s+'));
+  final folded = [for (final t in tokens) foldForMatch(t).replaceAll(' ', '')];
+  final limit = tokens.length < 3 ? tokens.length : 3;
+  for (var i = 0; i < limit; i++) {
+    if (folded[i].isEmpty) continue;
+    var consumed = 0;
+    if (_nearWakeWord(folded[i], maxDistance)) {
+      consumed = 1;
+    } else if (i + 1 < tokens.length &&
+        _nearWakeWord(folded[i] + folded[i + 1], maxDistance)) {
+      consumed = 2;
+    }
+    if (consumed > 0) {
+      final before = folded.sublist(0, i);
+      if (before.any((w) => w.isNotEmpty && !_greetings.contains(w))) break;
+      return tokens
+          .sublist(i + consumed)
+          .join(' ')
+          .replaceFirst(RegExp(r'^[\s,.:;!?\-–—]+'), '');
+    }
+  }
+  return transcript.trim();
 }
 
 int _distance(String a, String b) {

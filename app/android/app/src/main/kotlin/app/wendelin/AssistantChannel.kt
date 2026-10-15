@@ -83,7 +83,24 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
                 RecognizerConfig.fromArgs(call.arguments as? Map<*, *>).save(activity)
                 result.success(null)
             }
-            "takeWakeHandoff" -> result.success(WakeHandoff.take(System.currentTimeMillis()))
+            "hasWakeHandoff" -> result.success(WakeHandoff.pending())
+            "takeWakeHandoff" -> {
+                val taken = WakeHandoff.take(System.currentTimeMillis())
+                if (taken != null) {
+                    WakeWordService.onHandoffTaken()
+                    VoiceLog.i("wake-handoff-take captured=${taken.capturedMs}ms")
+                }
+                result.success(
+                    taken?.let {
+                        mapOf(
+                            "pcm" to it.pcm,
+                            "wakeEnd" to it.wakeEnd,
+                            "capturedMs" to it.capturedMs,
+                            "takenAt" to System.currentTimeMillis(),
+                        )
+                    },
+                )
+            }
             "finish" -> {
                 VoiceLog.i("overlay-finish finishing=${activity.isFinishing}")
                 activity.finish()

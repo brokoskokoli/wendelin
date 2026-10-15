@@ -63,11 +63,23 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   }
 
   @override
-  Future<Int16List?> takeWakeHandoff() async {
+  Future<bool> hasWakeHandoff() async => wakeHandoff != null;
+
+  /// Moment ([hasWakeHandoff] .. take) for tests: how often it was taken.
+  int wakeTakes = 0;
+
+  @override
+  Future<WakeHandoffAudio?> takeWakeHandoff() async {
+    wakeTakes++;
     final audio = wakeHandoff;
     wakeHandoff = null;
-    return audio;
+    return audio == null
+        ? null
+        : WakeHandoffAudio(pcm: audio, wakeEnd: wakeEnd, capturedMs: 120);
   }
+
+  /// Where the wake word ends in [wakeHandoff].
+  int? wakeEnd;
 
   @override
   Future<void> finish() async => finished++;
@@ -454,6 +466,59 @@ void main() {
         (e) => e.kind == AuditKind.request,
       );
       expect(request.payload['trigger'], 'wakeWord');
+    },
+  );
+
+  testWidgets(
+    'Wake Word ohne Pause (WP68): Anfrage steckt im Handoff, kein Ton, '
+    'Wake Word nicht im Audio',
+    (tester) async {
+      var plays = 0;
+      Int16List cat(List<Int16List> parts) =>
+          Int16List.fromList([for (final p in parts) ...p]);
+      final platform = FakeAssistantPlatform()
+        // Wake word 600 ms, then 900 ms of request, then 900 ms of silence.
+        ..wakeHandoff = cat([
+          AudioFrames.speech(const Duration(milliseconds: 600)),
+          AudioFrames.speech(const Duration(milliseconds: 900)),
+          AudioFrames.silence(const Duration(milliseconds: 900)),
+        ])
+        ..wakeEnd = 600 * 16;
+      final stt = FakeSpeechToText(const [
+        Transcript(text: 'Wendelin, wie spät ist es?'),
+      ]);
+      final env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider([ScriptedTurn.text('Es ist 8 Uhr 12.')]),
+        ),
+      );
+      final c = await pumpOverlay(
+        tester,
+        env,
+        platform,
+        extra: [wakeConfirmToneProvider.overrideWithValue(() async => plays++)],
+        voice: VoiceComponents(
+          audio: FakeAudioInput(
+            frames: AudioFrames.pattern('.' * 30),
+            frameInterval: const Duration(milliseconds: 30),
+          ),
+          vad: FakeVoiceActivityDetector(),
+          stt: stt,
+          textToSpeech: (_) async => FakeTextToSpeech(),
+          config: const VoicePipelineConfig(),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 60));
+      await pumpUntil(tester, find.text('Es ist 8 Uhr 12.'));
+      expect(platform.wakeTakes, 1);
+      expect(plays, 0); // the speaker is already talking: no tone
+      // 4 margin chunks + 26 speech + 27 silence; the wake word is not in it.
+      expect(stt.calls.single.samples, 57 * 480);
+      final input = c.read(agentControllerProvider).entries;
+      expect(
+        input.map((e) => '$e').join(' '),
+        isNot(contains('Wendelin, wie')),
+      );
     },
   );
 
