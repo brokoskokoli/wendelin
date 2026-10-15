@@ -775,6 +775,7 @@ void main() {
     expect(p.isStopWord('  ABBRECHEN '), isTrue);
     expect(p.isStopWord('Arrête-toi !'), isTrue);
     expect(p.isStopWord('Cancel'), isTrue);
+    expect(p.isStopWord('Wendelin, stopp!'), isTrue);
     expect(p.isStopWord('Stopp die Musik'), isFalse);
     expect(p.isStopWord('Bushaltestelle'), isFalse);
   });

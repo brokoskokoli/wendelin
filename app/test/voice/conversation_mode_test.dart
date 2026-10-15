@@ -185,9 +185,13 @@ void main() {
     Future<(FakeBargeInDetector, FakeTextToSpeech, FakeAudioInput)> speaking(
       BargeInMode mode,
     ) async {
-      final detector = FakeBargeInDetector();
       final tts = FakeTextToSpeech(manual: true);
       final audio = FakeAudioInput(frames: utterance());
+      // Like the real detector it holds the shared microphone (WP64).
+      final detector = FakeBargeInDetector(
+        audio: audio,
+        stopDelay: const Duration(milliseconds: 80),
+      );
       open(
         [ScriptedTurn.text('Ein langer Satz. Noch einer.')],
         _components(
@@ -227,7 +231,9 @@ void main() {
       detector.emit(const BargeInSignal.keyword(BargeInKeyword.wake));
       expect(tts.stops, greaterThan(0));
       await waitVoice(c, (v) => v.phase == VoiceState.listening);
-      expect(audio.startCount, greaterThan(starts));
+      // The recording starts once the detector has released the microphone.
+      await waitUntilTrue(() => audio.startCount > starts);
+      expect(c.read(voiceControllerProvider).error, isNull);
       await voice().cancel();
     });
 

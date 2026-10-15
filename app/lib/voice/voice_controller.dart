@@ -509,6 +509,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       ),
       textToSpeech: components.textToSpeech,
       bargeInDetector: components.bargeInDetector,
+      diagnostics: voiceLog,
       config: components.config,
       clock: ref.read(clockProvider),
     );
@@ -608,5 +609,6 @@ final class VoiceController extends Notifier<VoiceUiState> {
 /// German text for a failure of a voice component.
 String voiceErrorText(Object error) => switch (error) {
   VoiceException(:final message) => message,
-  _ => 'Sprache hat nicht geklappt: $error',
+  // Never the raw message („Bad state: …“, WP64); the log has the type.
+  _ => 'Sprache hat nicht geklappt. Bitte versuche es noch einmal.',
 };

@@ -35,6 +35,14 @@ void main() {
     },
   );
 
+  test('zweiter Start während der Aufnahme: VoiceException busy', () async {
+    final input = RecordAudioInput(FakePcmRecorder());
+    final sub = input.start().listen((_) {});
+    expect(input.start, throwsA(_kind(VoiceErrorKind.busy)));
+    await sub.cancel();
+    await input.stop();
+  });
+
   test('ohne Berechtigung: permissionDenied auf dem Stream', () async {
     final input = RecordAudioInput(FakePcmRecorder(granted: false));
     await expectLater(

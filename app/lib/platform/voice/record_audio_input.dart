@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:record/record.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/voice_log.dart';
 import 'pcm.dart';
 
 /// Which source the microphone records from.
@@ -23,8 +24,9 @@ abstract interface class ProfiledAudioInput implements AudioInput {
   /// Source of the next [start] (a running recording keeps its source).
   CaptureProfile get profile;
 
-  /// Chooses the source of the next [start]; ignored while [isRunning].
-  /// Returns whether it was applied.
+  /// Chooses the source of the next [start]. While [isRunning] the running
+  /// recording keeps its source and the choice waits for the next start
+  /// (returns `false`); otherwise it is applied at once (returns `true`).
   bool useProfile(CaptureProfile profile);
 }
 
@@ -102,6 +104,10 @@ final class RecordAudioInput implements ProfiledAudioInput {
   Future<void> _stopping = Future.value();
 
   CaptureProfile _profile = CaptureProfile.recognition;
+  // Chosen while recording; applies at the next start (WP64: the barge-in
+  // listener still holds the microphone when the pipeline leaves
+  // `speaking`, the follow-up recording must still get `recognition`).
+  CaptureProfile? _pending;
 
   @override
   bool get isRunning => _out != null;
@@ -111,14 +117,26 @@ final class RecordAudioInput implements ProfiledAudioInput {
 
   @override
   bool useProfile(CaptureProfile profile) {
-    if (isRunning) return false;
+    if (isRunning) {
+      _pending = profile == _profile ? null : profile;
+      return false;
+    }
     _profile = profile;
+    _pending = null;
     return true;
   }
 
   @override
   Stream<Int16List> start() {
-    if (_out != null) throw StateError('Die Aufnahme läuft bereits.');
+    if (_out != null) {
+      voiceLog('mic-busy', {'profile': _profile});
+      throw const VoiceException(
+        VoiceErrorKind.busy,
+        'Das Mikrofon war noch belegt. Bitte sprich noch einmal.',
+      );
+    }
+    _profile = _pending ?? _profile;
+    _pending = null;
     final out = StreamController<Int16List>();
     _out = out;
     unawaited(_begin(out));
@@ -135,6 +153,7 @@ final class RecordAudioInput implements ProfiledAudioInput {
         );
       }
       final bytes = await _recorder.startStream(_profile);
+      voiceLog('mic-start', {'profile': _profile});
       if (!identical(_out, out)) {
         // stop() came first.
         await _recorder.stop();
@@ -196,6 +215,7 @@ final class RecordAudioInput implements ProfiledAudioInput {
     final out = _out;
     if (out == null) return _stopping;
     _out = null;
+    voiceLog('mic-stop');
     return _stopping = () async {
       final sub = _sub;
       _sub = null;

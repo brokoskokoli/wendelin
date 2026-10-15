@@ -4,8 +4,31 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/voice/primed_audio_input.dart';
 import 'package:wendelin_voice/testing.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 void main() {
+  test('zweiter Start während der Aufnahme: VoiceException busy', () async {
+    final inner = FakeAudioInput(
+      frames: AudioFrames.pattern('S' * 5),
+      frameInterval: const Duration(milliseconds: 1),
+    );
+    final primed = PrimedAudioInput(inner)..prime();
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    final sub = primed.start().listen((_) {});
+    expect(
+      primed.start,
+      throwsA(
+        isA<VoiceException>().having(
+          (e) => e.kind,
+          'kind',
+          VoiceErrorKind.busy,
+        ),
+      ),
+    );
+    await sub.cancel();
+    await primed.stop();
+  });
+
   test('stop leert den Puffer, der nächste Start ist live', () async {
     final inner = FakeAudioInput(
       frames: AudioFrames.pattern('S' * 5),

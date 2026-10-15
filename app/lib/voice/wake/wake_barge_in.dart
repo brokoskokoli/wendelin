@@ -71,18 +71,25 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
             modelThreshold: null,
           ),
         );
-        _sub = inner.signals.listen(_signals.add);
+        _sub = inner.signals.listen((signal) {
+          voiceLog('barge-hit', {'kind': signal.code});
+          _signals.add(signal);
+        });
         _inner = inner;
       }
     }
     // A stop during the loading wins.
-    if (_running) await _inner?.start();
+    if (_running) {
+      await _inner?.start();
+      voiceLog('barge-listen', {'on': _inner != null});
+    }
   }
 
   @override
   Future<void> stop() async {
     _running = false;
     await _inner?.stop();
+    voiceLog('barge-listen', {'on': false});
   }
 
   /// Ends the detector for good.

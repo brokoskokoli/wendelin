@@ -51,10 +51,22 @@ void audioInputContract(
       },
     );
 
-    test('start während der Aufnahme wirft StateError', () async {
+    test('start während der Aufnahme wirft StateError oder busy', () async {
       final input = await create();
       final sub = input.start().listen((_) {});
-      expect(input.start, throwsStateError);
+      expect(
+        input.start,
+        throwsA(
+          anyOf(
+            isA<StateError>(),
+            isA<VoiceException>().having(
+              (e) => e.kind,
+              'kind',
+              VoiceErrorKind.busy,
+            ),
+          ),
+        ),
+      );
       await input.stop();
       await sub.cancel();
     });
