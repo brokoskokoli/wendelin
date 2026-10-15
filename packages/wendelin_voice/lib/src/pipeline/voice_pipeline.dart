@@ -12,6 +12,7 @@ import '../io/voice_activity_detector.dart';
 import '../text/spoken_answer.dart';
 import '../text/voice_texts.dart';
 import '../tts/speech_queue.dart';
+import '../wake/wake_verifier.dart' show stripWakeWord;
 import 'conversation.dart';
 import 'endpointer.dart';
 import 'speech_hold.dart';
@@ -110,6 +111,10 @@ final class VoicePipeline {
   Future<void> _listening = Future.value();
   Future<void> _bargeOps = Future.value();
 
+  /// Silence forced after the end of the wake word, so that its tail (the
+  /// engine position is an estimate) is not mistaken for the request.
+  static const wakeEndMargin = Duration(milliseconds: 100);
+
   /// How long a recording waits for the barge-in detector to release the
   /// microphone.
   static const bargeReleaseTimeout = Duration(seconds: 2);
@@ -129,13 +134,14 @@ final class VoicePipeline {
   /// Starts listening. Returns `false` if a request is already running. The
   /// pre-roll of [trigger] (wake word) is fed to the endpointer first.
   bool start({TriggerEvent? trigger}) =>
-      _begin(trigger, preRoll: trigger?.preRoll);
+      _begin(trigger, preRoll: trigger?.preRoll, wakeEnd: trigger?.wakeEnd);
 
   bool _begin(
     TriggerEvent? trigger, {
     Int16List? preRoll,
     bool preRollIsSpeech = false,
     bool continued = false,
+    int? wakeEnd,
   }) {
     if (_disposed || _state != VoiceState.idle) return false;
     final t =
@@ -148,6 +154,7 @@ final class VoicePipeline {
       preRoll: preRoll,
       preRollIsSpeech: preRollIsSpeech,
       continued: continued,
+      wakeEnd: wakeEnd,
     );
     return true;
   }
@@ -213,8 +220,13 @@ final class VoicePipeline {
     Int16List? preRoll,
     bool preRollIsSpeech = false,
     bool continued = false,
+    int? wakeEnd,
   }) async {
     var followUp = false;
+    // The wake word is cut from the first transcript (WP68).
+    var stripWake = trigger?.source == TriggerKind.wakeWord;
+    var pre = preRoll;
+    var preWakeEnd = wakeEnd;
     if (config.conversationMode) {
       _convOpen = true;
       if (continued) {
@@ -241,8 +253,9 @@ final class VoicePipeline {
         followUp
             ? config.endpoint.withNoSpeechTimeout(config.followUpWindow)
             : config.endpoint,
-        preRoll: followUp ? null : preRoll,
+        preRoll: followUp ? null : pre,
         preRollIsSpeech: preRollIsSpeech,
+        wakeEnd: preWakeEnd,
       );
       if (gen != _gen) return;
       if (endpoint == null) return _finish(gen, ConversationEndReason.error);
@@ -251,9 +264,25 @@ final class VoicePipeline {
         if (!followUp) await _nothingUnderstood(gen, endpoint.reason);
         return _finish(gen, ConversationEndReason.silence);
       }
-      final transcript = await _transcribe(gen, endpoint.pcm);
+      var transcript = await _transcribe(gen, endpoint.pcm);
       if (gen != _gen) return;
       if (transcript == null) return _finish(gen, ConversationEndReason.error);
+      if (stripWake && !followUp) {
+        stripWake = false;
+        final rest = stripWakeWord(transcript.text);
+        if (rest.isEmpty && transcript.text.trim().isNotEmpty) {
+          // Only the wake word: wait for the request (live microphone, the
+          // pre-roll is used up).
+          pre = null;
+          preWakeEnd = null;
+          continue;
+        }
+        transcript = Transcript(
+          text: rest,
+          language: transcript.language,
+          confidence: transcript.confidence,
+        );
+      }
       if (transcript.text.trim().isEmpty) {
         if (!followUp) {
           await _nothingUnderstood(gen, null, language: transcript.language);
@@ -360,9 +389,17 @@ final class VoicePipeline {
     EndpointConfig limits, {
     Int16List? preRoll,
     bool preRollIsSpeech = false,
+    int? wakeEnd,
   }) {
     final previous = _listening;
-    final run = _listenAfter(previous, gen, limits, preRoll, preRollIsSpeech);
+    final run = _listenAfter(
+      previous,
+      gen,
+      limits,
+      preRoll,
+      preRollIsSpeech,
+      wakeEnd,
+    );
     _listening = run.then((_) {});
     return run;
   }
@@ -373,6 +410,7 @@ final class VoicePipeline {
     EndpointConfig limits,
     Int16List? preRoll,
     bool preRollIsSpeech,
+    int? wakeEnd,
   ) async {
     await previous;
     // The barge-in detector shares the microphone: it must have released
@@ -404,15 +442,7 @@ final class VoicePipeline {
     try {
       vad.reset();
       if (preRoll != null) {
-        // Audio before the trigger (barge-in): chunks of 30 ms.
-        const chunk = 480;
-        for (var i = 0; i < preRoll.length; i += chunk) {
-          final end = i + chunk < preRoll.length ? i + chunk : preRoll.length;
-          endpointer.add(
-            Int16List.sublistView(preRoll, i, end),
-            speech: preRollIsSpeech,
-          );
-        }
+        _feedPreRoll(endpointer, preRoll, preRollIsSpeech, wakeEnd);
       }
       sub = audio.start().listen(
         (frame) {
@@ -464,6 +494,30 @@ final class VoicePipeline {
     // future, and there is nothing left to wait for.
     unawaited(sub?.cancel());
     return result;
+  }
+
+  /// Feeds the audio before the trigger in chunks of 30 ms. Without
+  /// [wakeEnd] all of it counts as [isSpeech]. With it (wake word, WP68) the
+  /// wake word itself is skipped, a short margin counts as silence and
+  /// everything after it goes through the VAD: the request may already be
+  /// in it, and the end-of-speech silence only counts from there.
+  void _feedPreRoll(
+    Endpointer endpointer,
+    Int16List preRoll,
+    bool isSpeech,
+    int? wakeEnd,
+  ) {
+    const chunk = 480;
+    final from = wakeEnd == null ? 0 : wakeEnd.clamp(0, preRoll.length);
+    final margin = from + durationToSamples(wakeEndMargin);
+    for (var i = from; i < preRoll.length; i += chunk) {
+      final end = i + chunk < preRoll.length ? i + chunk : preRoll.length;
+      final frame = Int16List.sublistView(preRoll, i, end);
+      final speech = wakeEnd == null
+          ? isSpeech
+          : i >= margin && frame.length == chunk && vad.isSpeech(frame);
+      endpointer.add(frame, speech: speech);
+    }
   }
 
   Future<Transcript?> _transcribe(int gen, Int16List pcm) async {

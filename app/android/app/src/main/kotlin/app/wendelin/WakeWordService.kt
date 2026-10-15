@@ -26,6 +26,8 @@ class WakeWordService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private var engine: RecognizerEngine? = null
     private var mic: MicAudioSource? = null
+    private val inbox = java.util.concurrent.ConcurrentLinkedQueue<Pair<ByteArray, Long>>()
+    private val tap = WakeMicTap()
     private var watcher: WakeConflictWatcher? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var resume: Runnable? = null
@@ -120,8 +122,9 @@ class WakeWordService : Service() {
     /** Calls from the Dart side of the engine (main thread). */
     private fun onEngineCall(call: MethodCall) {
         when (call.method) {
-            "startMic" -> startMic()
-            "stopMic" -> stopMic()
+            // While the hit's audio is collected, the microphone stays as it is (WP68).
+            "startMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) startMic()
+            "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) stopMic()
             "hit" -> onHit(call)
             "failed" -> {
                 VoiceLog.i("wake-failed reason=${call.argument<String>("reason") ?: "?"}")
@@ -137,9 +140,14 @@ class WakeWordService : Service() {
             return
         }
         val source = MicAudioSource(this)
+        tap.reset()
         try {
             source.start(
-                onChunk = { pcm -> main.post { engine?.send("audio", mapOf("pcm" to pcm)) } },
+                onChunk = { pcm ->
+                    // Stamped on the reading thread; handled in order on the main thread.
+                    inbox.add(pcm to System.currentTimeMillis())
+                    main.post { drainInbox() }
+                },
                 onError = { error ->
                     main.post {
                         stopMic()
@@ -155,20 +163,62 @@ class WakeWordService : Service() {
         }
     }
 
+    /** Chunks go to Dart, or, after a hit, to the audio kept for the overlay (WP68). */
+    private fun drainInbox() {
+        while (true) {
+            val (pcm, atMs) = inbox.poll() ?: break
+            // Closed meanwhile: late chunks are dropped, they must not reach the paused Dart engine.
+            if (mic == null && !WakeHandoff.capturing()) continue
+            onMicChunk(pcm, atMs)
+        }
+    }
+
+    private fun onMicChunk(pcm: ByteArray, atMs: Long) {
+        if (WakeHandoff.capturing()) {
+            WakeHandoff.append(pcm, atMs)
+            return
+        }
+        tap.onChunk(pcm)
+        engine?.send("audio", mapOf("pcm" to pcm))
+    }
+
     private fun stopMic() {
         mic?.stop()
         mic = null
+        inbox.clear()
     }
 
-    /** A confirmed wake word: the microphone is free (Dart stopped it), the overlay takes over. */
-    private fun onHit(call: MethodCall) {
+    /**
+     * The overlay is about to take the hit's audio (main thread): the microphone is closed for
+     * good, the reading thread has ended (no second `AudioRecord` next to the overlay's, WP51) and
+     * every chunk it delivered is in the collected audio before [WakeHandoff.take].
+     */
+    private fun closeMicForHandoff() {
+        val m = mic ?: return
+        m.stopAndWait(MIC_JOIN_MS)
+        drainInbox()
         stopMic()
+    }
+
+    /**
+     * A confirmed wake word. The microphone stays open (WP68): what is said while the overlay
+     * starts is kept next to the pre-roll, and [onHandoffTaken] closes the microphone when the
+     * overlay takes the audio and opens its own right after.
+     */
+    private fun onHit(call: MethodCall) {
         VoiceLog.i("wake-hit kw=${call.argument<String>("kw") ?: "wake"} score=${call.argument<String>("score") ?: "?"}")
-        WakeHandoff.put(call.argument<ByteArray>("pcm") ?: ByteArray(0), System.currentTimeMillis())
+        WakeHandoff.put(
+            call.argument<ByteArray>("pcm") ?: ByteArray(0),
+            System.currentTimeMillis(),
+            call.argument<Number>("end")?.toInt() ?: 0,
+        )
+        val pos = call.argument<Number>("pos")?.toLong()
+        if (mic != null) WakeHandoff.beginCapture(if (pos != null) tap.tailAfter(pos) else ByteArray(0))
         wakeScreen()
         if (!WendelinVoiceInteractionService.show()) {
             VoiceLog.i("wake-hit show=failed")
             WakeHandoff.clear()
+            stopMic()
             engine?.send("overlayClosed", null)
             return
         }
@@ -177,6 +227,7 @@ class WakeWordService : Service() {
             if (WakeHandoff.pending()) {
                 VoiceLog.i("wake-hit overlay=missing")
                 WakeHandoff.clear()
+                stopMic()
                 engine?.send("overlayClosed", null)
             }
         }
@@ -238,14 +289,28 @@ class WakeWordService : Service() {
         watcher = null
         lastConflict = null
         stopMic()
+        // A hit that was being handed over dies with the service (else `capturing` stays set).
+        WakeHandoff.clear()
         engine?.destroy()
         engine = null
         wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = null
     }
 
+    /** The overlay took the hit's audio: it opens the microphone now. */
+    private fun handoffTaken() {
+        handoffCheck?.let { main.removeCallbacks(it) }
+        handoffCheck = null
+        stopMic()
+    }
+
     /** The overlay is gone (or never came): Dart may listen again. */
     private fun overlayClosed() {
+        if (WakeHandoff.pending()) {
+            // Never taken: the kept microphone closes, Dart opens it again.
+            WakeHandoff.clear()
+            stopMic()
+        }
         handoffCheck?.let { main.removeCallbacks(it) }
         handoffCheck = null
         engine?.send("overlayClosed", null)
@@ -258,6 +323,7 @@ class WakeWordService : Service() {
     }
 
     companion object {
+        const val MIC_JOIN_MS = 300L
         const val ENGINE_CHANNEL = "app.wendelin/wake-engine"
         const val ACTION_START = "app.wendelin.wake.START"
         const val ACTION_STOP = "app.wendelin.wake.STOP"
@@ -277,6 +343,18 @@ class WakeWordService : Service() {
 
         /** Whether the service is alive in this process. */
         val running: Boolean get() = instance != null
+
+        /**
+         * The overlay took the hit's audio (main thread): the service closes its microphone at
+         * once, so the overlay can open its own with the shortest possible hole in between.
+         */
+        fun beforeHandoffTake() {
+            instance?.closeMicForHandoff()
+        }
+
+        fun onHandoffTaken() {
+            instance?.handoffTaken()
+        }
 
         /** The assistant overlay was closed: the service listens again. */
         fun onOverlayClosed() {

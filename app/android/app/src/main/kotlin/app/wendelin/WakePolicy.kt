@@ -56,6 +56,12 @@ sealed interface WakeDecision {
 /** Start/stop logic of the wake-word service without Android types (JVM test). */
 object WakePolicy {
     /**
+     * Whether the engine's `startMic`/`stopMic` are ignored: only while a hit's audio is collected
+     * from a microphone that is really open (a stale flag must not make the wake word deaf).
+     */
+    fun ignoresMicCalls(capturing: Boolean, micOpen: Boolean): Boolean = capturing && micOpen
+
+    /**
      * Order of the reasons: off, no assistant role (decision 5), no microphone permission,
      * paused, not charging (only in mode [WakeMode.CHARGING]).
      */
@@ -106,25 +112,71 @@ object WakePolicy {
  * The audio of a wake word hit between the service and the overlay (both live in this process):
  * the service puts it down before `showSession`, the overlay's Dart side takes it once. A hit
  * nobody took within [MAX_AGE_MS] is stale.
+ *
+ * WP68: the microphone of the service stays open after the hit and [append] collects what is said
+ * while the overlay starts ([beginCapture] .. [take]); [take] returns the pre-roll and that audio
+ * in one piece and ends the capture, so the overlay opens its microphone right after it with no
+ * hole in between.
  */
 object WakeHandoff {
     const val MAX_AGE_MS = 30_000L
 
+    /** At most 15 s of audio (16 kHz, 16 bit) are collected; more is dropped. */
+    const val MAX_CAPTURE_BYTES = 15 * 16_000 * 2
+
+    /** What the overlay gets: PCM16 LE, the sample where the wake word ends, how much was collected. */
+    class Taken(val pcm: ByteArray, val wakeEnd: Int, val capturedMs: Long, val lastSampleAtMs: Long = 0)
+
     private var pcm: ByteArray? = null
+    private var wakeEnd = 0
     private var at = 0L
+    private var capturing = false
+    private var lastSampleAt = 0L
+    private var tail = java.io.ByteArrayOutputStream()
 
     @Synchronized
-    fun put(pcm: ByteArray, nowMs: Long) {
+    fun put(pcm: ByteArray, nowMs: Long, wakeEnd: Int = 0) {
         this.pcm = pcm
+        this.wakeEnd = wakeEnd
         at = nowMs
+        capturing = false
+        lastSampleAt = 0L
+        tail = java.io.ByteArrayOutputStream()
     }
 
-    /** The waiting pre-roll (16 kHz PCM16), once; `null` if none or stale. */
+    /** From now on [append] collects; [prefix] is audio the Dart side did not see yet. */
     @Synchronized
-    fun take(nowMs: Long): ByteArray? {
+    fun beginCapture(prefix: ByteArray) {
+        tail = java.io.ByteArrayOutputStream().also { it.write(prefix) }
+        capturing = pcm != null
+    }
+
+    @Synchronized
+    fun capturing(): Boolean = capturing
+
+    /** One chunk from the microphone while capturing (whole samples only). */
+    @Synchronized
+    fun append(chunk: ByteArray, atMs: Long = 0) {
+        if (!capturing) return
+        if (atMs > 0) lastSampleAt = atMs
+        val room = MAX_CAPTURE_BYTES - tail.size()
+        val n = minOf(chunk.size, room) and 1.inv()
+        if (n > 0) tail.write(chunk, 0, n)
+    }
+
+    /** The waiting pre-roll (16 kHz PCM16) with the collected audio, once; `null` if none or stale. */
+    @Synchronized
+    fun take(nowMs: Long): Taken? {
         val p = pcm
         pcm = null
-        return if (p != null && nowMs - at <= MAX_AGE_MS) p else null
+        capturing = false
+        val extra = tail.toByteArray()
+        tail = java.io.ByteArrayOutputStream()
+        return if (p != null && nowMs - at <= MAX_AGE_MS) {
+            Taken(p + extra, wakeEnd, extra.size / 2 * 1000L / 16_000, lastSampleAt)
+        } else {
+            null
+        }
     }
 
     /** Whether a hit waits for the overlay. */
@@ -134,5 +186,43 @@ object WakeHandoff {
     @Synchronized
     fun clear() {
         pcm = null
+        capturing = false
+        lastSampleAt = 0L
+        tail = java.io.ByteArrayOutputStream()
+    }
+}
+
+/**
+ * The most recent microphone chunks the service sent to Dart (WP68). Dart confirms a wake word at
+ * a stream position; frames that were already on their way meanwhile are not in its pre-roll, so
+ * [tailAfter] hands them to the capture.
+ */
+class WakeMicTap(private val keepBytes: Int = 3 * 16_000 * 2) {
+    private val recent = ArrayDeque<ByteArray>()
+    private var bytes = 0
+
+    /** Samples sent since the microphone was opened. */
+    var sent = 0L
+        private set
+
+    fun reset() {
+        recent.clear()
+        bytes = 0
+        sent = 0
+    }
+
+    fun onChunk(chunk: ByteArray) {
+        sent += chunk.size / 2
+        recent.addLast(chunk)
+        bytes += chunk.size
+        while (bytes - recent.first().size >= keepBytes) bytes -= recent.removeFirst().size
+    }
+
+    /** The samples after stream position [pos] (as far as they are still held). */
+    fun tailAfter(pos: Long): ByteArray {
+        val missing = (sent - pos).coerceAtLeast(0L) * 2
+        val all = java.io.ByteArrayOutputStream().also { out -> recent.forEach { out.write(it) } }.toByteArray()
+        val n = minOf(missing, all.size.toLong()).toInt()
+        return all.copyOfRange(all.size - n, all.size)
     }
 }

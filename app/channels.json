@@ -27,7 +27,8 @@
           "args": ["model", "language", "vadThreshold", "minSpeechMs"],
           "returns": "none"
         },
-        "takeWakeHandoff": {"args": [], "returns": "value"},
+        "hasWakeHandoff": {"args": [], "returns": "value"},
+        "takeWakeHandoff": {"args": [], "returns": "map"},
         "finish": {"args": [], "returns": "none"}
       },
       "toDart": {
@@ -201,7 +202,7 @@
         "ready": {"args": [], "returns": "none"},
         "startMic": {"args": [], "returns": "none"},
         "stopMic": {"args": [], "returns": "none"},
-        "hit": {"args": ["pcm", "kw", "score"], "returns": "none"},
+        "hit": {"args": ["pcm", "end", "pos", "kw", "score"], "returns": "none"},
         "failed": {"args": ["reason"], "returns": "none"}
       },
       "toDart": {

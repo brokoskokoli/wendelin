@@ -18,6 +18,8 @@ final class WakeWordDetection {
     required this.hit,
     required this.preRoll,
     required this.latency,
+    this.wakeEnd,
+    this.position = 0,
   });
 
   /// The stage-1 hit.
@@ -28,6 +30,14 @@ final class WakeWordDetection {
   /// the moment of confirmation, gap-free (the next utterance may start in
   /// it).
   final Int16List preRoll;
+
+  /// Sample position in [preRoll] where the wake word ends (engine
+  /// estimate; `null` if unknown).
+  final int? wakeEnd;
+
+  /// Stream position (samples since the microphone was opened) at the end of
+  /// [preRoll]: the owner continues the recording there without a gap.
+  final int position;
 
   /// Time between hit and confirmation (stage 2 duration, in audio time).
   final Duration latency;
@@ -295,10 +305,8 @@ final class WakeWordListener {
     _since.clear();
     if (!ok) return;
     _confirmed++;
-    final pre = Int16List.sublistView(
-      snap,
-      rel(end - durationToSamples(preRoll)),
-    );
+    final preStart = rel(end - durationToSamples(preRoll));
+    final pre = Int16List.sublistView(snap, preStart);
     final total = pre.length + since.fold<int>(0, (n, f) => n + f.length);
     final out = Int16List(total)..setAll(0, pre);
     var at = pre.length;
@@ -311,6 +319,8 @@ final class WakeWordListener {
         hit: hit,
         preRoll: out,
         latency: samplesToDuration(_position - end),
+        wakeEnd: (end - (snapStart + preStart)).clamp(0, out.length),
+        position: snapStart + snap.length + (total - pre.length),
       ),
     );
   }

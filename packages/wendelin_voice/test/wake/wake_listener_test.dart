@@ -67,6 +67,10 @@ void main() {
     }
     expect(pre.length, 4800 + 5 * 480);
     expect(pre.last, 9600 + 5 * 480 - 1);
+    // WP68: the wake word ends 300 ms into the pre-roll, and the stream
+    // position at its end is where the owner continues without a gap.
+    expect(found.single.wakeEnd, 4800);
+    expect(found.single.position, 9600 + 5 * 480);
     // Die Prüfung bekommt höchstens 2 s Audio, die letzten vor dem Treffer.
     expect(verifier.calls.single.length, 9600);
     expect(verifier.calls.single.last, 9599);

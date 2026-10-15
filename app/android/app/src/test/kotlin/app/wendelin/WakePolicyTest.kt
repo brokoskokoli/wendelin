@@ -114,10 +114,83 @@ class WakePolicyTest {
         val pcm = byteArrayOf(1, 2, 3, 4)
         WakeHandoff.put(pcm, 100)
         assertTrue(WakeHandoff.pending())
-        assertEquals(pcm, WakeHandoff.take(200))
+        assertEquals(pcm.toList(), WakeHandoff.take(200)!!.pcm.toList())
         assertFalse(WakeHandoff.pending())
         assertNull(WakeHandoff.take(300))
         WakeHandoff.put(pcm, 100)
         assertNull(WakeHandoff.take(100 + WakeHandoff.MAX_AGE_MS + 1))
+    }
+
+    @Test
+    fun theCaptureIsAttachedWithoutGapOrOverlap() {
+        WakeHandoff.clear()
+        val tap = WakeMicTap()
+        // Chunks 0..9 of 480 samples go to Dart (sample value = running index); Dart confirms the
+        // hit at position 7 * 480 and its pre-roll ends there; chunks 7..9 were already on the way.
+        fun chunk(i: Int) = ByteArray(960) { n -> if (n % 2 == 0) (i * 10).toByte() else 0 }
+        for (i in 0 until 10) tap.onChunk(chunk(i))
+        val pre = chunk(99)
+        WakeHandoff.put(pre, 100, 400)
+        WakeHandoff.beginCapture(tap.tailAfter(7L * 480))
+        assertTrue(WakeHandoff.capturing())
+        WakeHandoff.append(chunk(10))
+        WakeHandoff.append(chunk(11))
+        val taken = WakeHandoff.take(200)!!
+        assertFalse(WakeHandoff.capturing())
+        assertEquals(400, taken.wakeEnd)
+        // pre-roll + chunks 7..11, each exactly once and in order
+        assertEquals(960 * 6, taken.pcm.size)
+        val order = (1 until 6).map { taken.pcm[it * 960].toInt() }
+        assertEquals(listOf(70, 80, 90, 100, 110), order)
+        assertEquals(5 * 480 * 1000L / 16_000, taken.capturedMs)
+        // after the take nothing is collected any more
+        WakeHandoff.append(chunk(12))
+        assertNull(WakeHandoff.take(300))
+    }
+
+    @Test
+    fun aStaleCaptureFlagDoesNotMakeTheWakeWordDeaf() {
+        // Service ended during a handover: release() clears the hit, the flag is gone.
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(2), 0)
+        WakeHandoff.beginCapture(ByteArray(0))
+        assertTrue(WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), micOpen = true))
+        WakeHandoff.clear()
+        assertFalse(WakeHandoff.capturing())
+        assertFalse(WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), micOpen = true))
+        // A flag without an open microphone does not block the restart either.
+        assertFalse(WakePolicy.ignoresMicCalls(capturing = true, micOpen = false))
+    }
+
+    @Test
+    fun theTimeOfTheLastCollectedChunkIsHandedOver() {
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(2), 0)
+        WakeHandoff.beginCapture(ByteArray(0))
+        WakeHandoff.append(ByteArray(960), 1000)
+        WakeHandoff.append(ByteArray(960), 1060)
+        assertEquals(1060, WakeHandoff.take(1).let { it!!.lastSampleAtMs })
+        WakeHandoff.put(ByteArray(2), 0)
+        assertEquals(0, WakeHandoff.take(1)!!.lastSampleAtMs)
+    }
+
+    @Test
+    fun captureStopsAtTheLimit() {
+        WakeHandoff.clear()
+        WakeHandoff.put(ByteArray(2), 0)
+        WakeHandoff.beginCapture(ByteArray(0))
+        repeat(20) { WakeHandoff.append(ByteArray(WakeHandoff.MAX_CAPTURE_BYTES / 10)) }
+        assertEquals(2 + WakeHandoff.MAX_CAPTURE_BYTES, WakeHandoff.take(1)!!.pcm.size)
+    }
+
+    @Test
+    fun theTapKeepsOnlyTheRecentChunks() {
+        val tap = WakeMicTap(keepBytes = 2000)
+        repeat(10) { tap.onChunk(ByteArray(960)) }
+        assertEquals(4800L, tap.sent)
+        assertEquals(0, tap.tailAfter(4800).size)
+        assertEquals(960, tap.tailAfter(4320).size)
+        // older than kept: only what is still there
+        assertTrue(tap.tailAfter(0).size <= 3 * 960)
     }
 }
