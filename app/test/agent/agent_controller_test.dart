@@ -452,6 +452,21 @@ void main() {
     expect(fresh.read(agentControllerProvider).entries, isEmpty);
   });
 
+  test('restore zeigt keine Overlay-Sitzung (WP67)', () async {
+    final s = await env.storage.conversations.startNew(
+      env.clock.now(),
+      origin: SessionOrigin.overlay,
+    );
+    await env.storage.conversations.append(s.id, Message.user('Glocken'));
+    final fresh = ProviderContainer(
+      overrides: env.overrides,
+      retry: (_, _) => null,
+    );
+    addTearDown(fresh.dispose);
+    await fresh.read(agentControllerProvider.notifier).restore();
+    expect(fresh.read(agentControllerProvider).entries, isEmpty);
+  });
+
   group('Review WP08', () {
     test(
       'Sitzungsende vergisst per tools__search freigeschaltete Tools',
@@ -786,6 +801,7 @@ final class _BrokenConversations implements ConversationRepository {
   Future<Session> currentOrNew(
     DateTime now, {
     Duration inactivity = ConversationRepository.defaultInactivity,
+    SessionOrigin origin = SessionOrigin.app,
   }) => Future.error(StateError('Datenbank gesperrt'));
 
   @override

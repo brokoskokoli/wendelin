@@ -16,6 +16,7 @@ final class SessionManager {
     required this.clock,
     required this.onSessionEnd,
     this.inactivity = ConversationRepository.defaultInactivity,
+    this.origin = SessionOrigin.app,
   });
 
   /// Sessions in the database.
@@ -30,12 +31,19 @@ final class SessionManager {
   /// Inactivity after which a session ends.
   final Duration inactivity;
 
+  /// Engine this manager belongs to; it only picks up and starts sessions of
+  /// this origin, so the overlay never leaks into the app chat (WP67).
+  final SessionOrigin origin;
+
   String? _current;
   Timer? _timer;
   bool _fresh = false;
 
-  Future<Session> _currentOrNew() =>
-      conversations.currentOrNew(clock.now(), inactivity: inactivity);
+  Future<Session> _currentOrNew() => conversations.currentOrNew(
+    clock.now(),
+    inactivity: inactivity,
+    origin: origin,
+  );
 
   // This manager's own session while it is still active: another engine
   // (overlay) may have opened a newer one in the shared database, which
@@ -68,7 +76,7 @@ final class SessionManager {
     final Session session;
     if (_fresh) {
       _fresh = false;
-      session = await conversations.startNew(clock.now());
+      session = await conversations.startNew(clock.now(), origin: origin);
     } else {
       session = await _own() ?? await _currentOrNew();
     }
@@ -79,7 +87,7 @@ final class SessionManager {
 
   /// Starts a new session („neues Thema“).
   Future<String> startNew() async {
-    final session = await conversations.startNew(clock.now());
+    final session = await conversations.startNew(clock.now(), origin: origin);
     _switchTo(session.id);
     touch();
     return session.id;

@@ -28,14 +28,39 @@ void main() {
 
   test('aktuelle Schema-Version ist eingecheckt', () {
     expect(GeneratedHelper.versions.last, WendelinDatabase.version);
-    expect(WendelinDatabase.version, 4);
+    expect(WendelinDatabase.version, 5);
   });
 
-  test('neue Datenbank entspricht dem Schema-Dump v4', () async {
-    final schema = await verifier.schemaAt(4);
+  test('neue Datenbank entspricht dem Schema-Dump v5', () async {
+    final schema = await verifier.schemaAt(5);
     final db = WendelinDatabase(schema.newConnection());
     addTearDown(db.close);
-    await verifier.migrateAndValidate(db, 4);
+    await verifier.migrateAndValidate(db, 5);
+  });
+
+  test('Upgrade v4 → v5: alte Sitzungen gelten als App-Sitzungen', () async {
+    final schema = await verifier.schemaAt(4);
+    schema.rawDatabase.execute(
+      'INSERT INTO sessions (id, started_at, last_activity_at, title) '
+      "VALUES ('s1', 1, 2, 'Alt')",
+    );
+    final db = WendelinDatabase(schema.newConnection());
+    await verifier.migrateAndValidate(db, 5);
+    await db.close();
+
+    final storage = WendelinStorage(schema.newConnection());
+    addTearDown(storage.close);
+    final old = await storage.conversations.session('s1');
+    expect(old?.origin, SessionOrigin.app);
+    final overlay = await storage.conversations.startNew(
+      DateTime.utc(2026),
+      origin: SessionOrigin.overlay,
+    );
+    expect(
+      (await storage.conversations.sessions(origin: SessionOrigin.overlay))
+          .map((s) => s.id),
+      [overlay.id],
+    );
   });
 
   test('Upgrade v3 → v4 legt das Prüfprotokoll an, Daten bleiben', () async {

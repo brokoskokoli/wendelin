@@ -120,7 +120,10 @@ final class AgentController extends Notifier<ConversationState> {
   Future<void> restore() async {
     final storage = ref.read(storageProvider);
     final now = ref.read(clockProvider).now();
-    final last = (await storage.conversations.sessions(limit: 1)).firstOrNull;
+    final last = (await storage.conversations.sessions(
+      limit: 1,
+      origin: SessionOrigin.app,
+    )).firstOrNull;
     if (last == null ||
         now.difference(last.lastActivityAt) >=
             ConversationRepository.defaultInactivity ||
