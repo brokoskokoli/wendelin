@@ -68,10 +68,6 @@ final class AttestationWiring {
   final Set<String> trustedCommits;
 }
 
-/// Profile option „Ohne Tools (alles verschlüsselt)“ (WP63, `true`): no tool
-/// definitions go to a Phala profile.
-const noToolsOption = 'noTools';
-
 /// Whether [profile] is a Phala/RedPill profile whose answers must be
 /// attested: bound to the template option `attestation: phala` (or an older
 /// profile on the RedPill host), not to the privacy level, so a profile is
@@ -209,7 +205,6 @@ abstract final class ProviderFactory {
             client: client ?? defaultHttpClient(),
           ),
           gpuMode: attestation.gpuMode,
-          noTools: profile.options[noToolsOption] == true,
           logSink: attestation.logSink,
           settings: settings,
         );

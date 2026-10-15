@@ -97,11 +97,18 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             record: r,
             name: config?.nameOf(r.profileId) ?? r.profileId,
             locked: ref.watch(attestationHubProvider).isLocked(r.profileId),
-            noTools: config?.noToolsFor(r.profileId) ?? false,
             now: now,
             onReattest: () => unawaited(_reattest(r.profileId)),
           ),
         const GpuCheckSection(),
+        WideButton(
+          'Als JSON exportieren',
+          onPressed: () async => ref.read(exporterProvider)(
+            'wendelin-tee-pruefprotokoll.json',
+            'application/json',
+            await ref.read(storageProvider).attestations.exportJson(),
+          ),
+        ),
         Wrap(
           spacing: WSpace.s,
           runSpacing: WSpace.s,
@@ -123,7 +130,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
           SectionCard(
             children: [
               for (final r in shown)
-                _LogRow(
+                AttestationLogRow(
                   key: ValueKey(r.logId),
                   title: recordTitle(
                     r,
@@ -142,14 +149,6 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
                 ),
             ],
           ),
-        WideButton(
-          'Als JSON exportieren',
-          onPressed: () async => ref.read(exporterProvider)(
-            'wendelin-tee-pruefprotokoll.json',
-            'application/json',
-            await ref.read(storageProvider).attestations.exportJson(),
-          ),
-        ),
         WideButton(
           'Prüfprotokoll löschen',
           onPressed: () => unawaited(_delete()),
@@ -194,7 +193,6 @@ class _SessionCard extends StatelessWidget {
     required this.record,
     required this.name,
     required this.locked,
-    required this.noTools,
     required this.now,
     required this.onReattest,
   });
@@ -202,7 +200,6 @@ class _SessionCard extends StatelessWidget {
   final AttestationRecord record;
   final String name;
   final bool locked;
-  final bool noTools;
   final DateTime now;
   final VoidCallback onReattest;
 
@@ -250,7 +247,7 @@ class _SessionCard extends StatelessWidget {
                       spacing: WSpace.xs,
                       children: [
                         CheckStatusIcon(
-                          stageResultStatus(st.result) ?? CheckStatus.pending,
+                          stageResultStatus(st.result),
                           size: WSize.statusIconSmall,
                         ),
                         Text(stageLabel(st.stage), style: WText.caption),
@@ -258,7 +255,7 @@ class _SessionCard extends StatelessWidget {
                     ),
                 ],
               ),
-              if (!noTools) const ToolTlsHint(),
+              const ToolTlsHint(),
               PrimaryButton(
                 'Neu attestieren',
                 key: ValueKey('reattest-${record.profileId}'),
@@ -272,8 +269,10 @@ class _SessionCard extends StatelessWidget {
   }
 }
 
-class _LogRow extends StatelessWidget {
-  const _LogRow({
+/// One row of the verification log: result symbol, title and summary.
+class AttestationLogRow extends StatelessWidget {
+  /// Creates a row.
+  const AttestationLogRow({
     super.key,
     required this.title,
     required this.detail,

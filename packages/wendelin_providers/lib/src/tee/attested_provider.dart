@@ -51,7 +51,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.settings = const HttpSettings(),
     this.retryDelay = const Duration(seconds: 2),
     this.tlsPin,
-    this.noTools = false,
     Duration gpuTimeout = const Duration(seconds: 15),
   }) {
     final provider = inner.options.extraBody['provider'];
@@ -115,11 +114,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// request; a second mismatch locks the provider.
   final TlsPinGate? tlsPin;
 
-  /// „Ohne Tools (alles verschlüsselt)“ (WP63): no tool definitions and no
-  /// tool calls or results from the history are sent, so nothing of the
-  /// request is left outside the end-to-end encryption.
-  final bool noTools;
-
   AttestedSession? _session;
   List<StageResult> _lastStages = const [];
   AttestationFailedException? _lock;
@@ -166,15 +160,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   ProviderType get type => inner.type;
 
   @override
-  ProviderCapabilities get caps => noTools
-      ? ProviderCapabilities(
-          tools: false,
-          streaming: inner.caps.streaming,
-          vision: inner.caps.vision,
-          promptCaching: inner.caps.promptCaching,
-          tee: inner.caps.tee,
-        )
-      : inner.caps;
+  ProviderCapabilities get caps => inner.caps;
 
   @override
   Future<List<ModelInfo>> listModels() async {
@@ -240,12 +226,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         return;
       }
       final session = _session!;
-      final sent = noTools ? _withoutTools(req) : req;
-      var toolsInvolved = sent.tools.isNotEmpty || _hasToolTraffic(sent);
+      var toolsInvolved = req.tools.isNotEmpty || _hasToolTraffic(req);
       ExchangeRecord? record;
       var rotated = false;
       await for (final event in inner.chatObserved(
-        sent,
+        req,
         cancel: cancel,
         observer: (r) => record = r,
       )) {
@@ -284,28 +269,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       }
       if (!rotated) return;
     }
-  }
-
-  /// [req] without tool definitions, tool calls and tool results.
-  static ChatRequest _withoutTools(ChatRequest req) => ChatRequest(
-    messages: [
-      for (final m in req.messages)
-        if (m.role != Role.tool)
-          if (m.content.any((b) => b is ToolCallBlock))
-            ?_dropToolCalls(m)
-          else
-            m,
-    ],
-    model: req.model,
-    maxTokens: req.maxTokens,
-    temperature: req.temperature,
-    metadata: req.metadata,
-    systemPrompt: req.systemPrompt,
-  );
-
-  static Message? _dropToolCalls(Message m) {
-    final rest = m.content.where((b) => b is! ToolCallBlock).toList();
-    return rest.isEmpty ? null : Message(m.role, rest);
   }
 
   /// Writes a log entry with the failed E2EE stage (visible in the log).

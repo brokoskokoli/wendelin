@@ -180,12 +180,12 @@ String stageResultLabel(String result) => switch (result) {
   _ => result,
 };
 
-/// Symbol of a stage result name; `null` for `info`.
-CheckStatus? stageResultStatus(String result) => switch (result) {
+/// Symbol of a stage result name; every result has one (`info` → grey).
+CheckStatus stageResultStatus(String result) => switch (result) {
   'pass' => CheckStatus.ok,
   'fail' => CheckStatus.failed,
   'warn' || 'unavailable' => CheckStatus.pending,
-  _ => null,
+  _ => CheckStatus.info,
 };
 
 /// Short note on the stage „Ende-zu-Ende-verschlüsselt“: where the

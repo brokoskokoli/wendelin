@@ -79,6 +79,7 @@ final Map<String, List<Widget>> gallerySections = {
             CheckStatus.ok => 'Quittung geprüft',
             CheckStatus.pending => 'Quittung ausstehend',
             CheckStatus.failed => 'Prüfung fehlgeschlagen',
+            CheckStatus.info => 'Nur protokolliert',
           }, style: WText.body),
         ],
       ),

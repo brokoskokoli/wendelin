@@ -2,15 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/di/agent_providers.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_providers.dart';
-import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/ui/design/design.dart' show ToolTlsHint;
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
 import 'package:wendelin/ui/settings/attestation_log_screen.dart';
-import 'package:wendelin_agent/wendelin_agent.dart' show ProviderTarget;
-import 'package:wendelin_core/fakes.dart';
+import 'package:wendelin/ui/settings/audit_entry_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart' show GpuCheckMode;
 import 'package:wendelin_storage/wendelin_storage.dart';
@@ -29,8 +26,10 @@ AttestationRecord _record(
   int minute = 0,
   String profileId = 'phala',
   bool e2eeFailed = false,
+  String? sessionId,
 }) => AttestationRecord(
   logId: id,
+  sessionId: sessionId,
   at: testNow.add(Duration(minutes: minute)),
   profileId: profileId,
   model: 'z-ai/glm-5.3-flash',
@@ -81,6 +80,50 @@ Future<void> _seed(TestEnv env) async {
 }
 
 void main() {
+  testWidgets('Export-Button steht über der Liste', (tester) async {
+    final env = TestEnv();
+    await _seed(env);
+    await pumpPage(tester, env, const AttestationLogScreen());
+    expect(
+      tester.getTopLeft(find.text('Als JSON exportieren')).dy,
+      lessThan(
+        tester.getTopLeft(find.textContaining('rcpt_01J9X4QF').first).dy,
+      ),
+    );
+  });
+
+  testWidgets('Prüfprotokoll-Eintrag zeigt Prüfungen, Tipp öffnet TEE-Detail', (
+    tester,
+  ) async {
+    final env = TestEnv();
+    await env.storage.attestations.add(
+      _record(
+        'l1',
+        AttestationStatus.red,
+        reason: 'x',
+        e2eeFailed: true,
+        sessionId: 's1',
+      ),
+    );
+    await pumpPage(
+      tester,
+      env,
+      AuditEntryScreen(
+        entry: AuditEntry(
+          at: testNow,
+          kind: AuditKind.verification,
+          sessionId: 's1',
+          payload: const {'profileId': 'phala', 'status': 'red'},
+        ),
+      ),
+    );
+    expect(find.text('Prüfungen dieser Sitzung'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('check-l1')));
+    await settle(tester);
+    expect(find.byType(AttestationLogDetailScreen), findsOneWidget);
+    expect(find.text('Ergebnis je Stufe'), findsOneWidget);
+  });
+
   testWidgets('Liste: Einträge mit Ergebnis, Filter nach Status', (
     tester,
   ) async {
@@ -219,31 +262,12 @@ void main() {
     expect(find.textContaining('Schlüssel fehlt'), findsOneWidget);
   });
 
-  testWidgets('Profil ohne Tools: kein Tool-Hinweis in Detail und Karte', (
-    tester,
-  ) async {
-    final config = ProviderConfig(
-      primary: ProviderTarget(
-        profileId: 'phala',
-        modelId: 'm',
-        provider: FakeLlmProvider(
-          const [],
-          caps: const ProviderCapabilities(tools: false, streaming: true),
-        ),
-        privacy: PrivacyLevel.standard,
-      ),
-    );
-    final env = TestEnv(
-      extraOverrides: [
-        providerConfigProvider.overrideWith((ref) async => config),
-      ],
-    );
+  testWidgets('Detail zeigt den Tool-Hinweis (WP71)', (tester) async {
+    final env = TestEnv();
     await _seed(env);
     await pumpPage(tester, env, const AttestationLogDetailScreen(logId: 'l1'));
     await settle(tester);
-    expect(find.text(ToolTlsHint.text), findsNothing);
-    await pumpPage(tester, env, const AttestationLogScreen());
-    expect(find.text(ToolTlsHint.text), findsNothing);
+    expect(find.text(ToolTlsHint.text), findsOneWidget);
   });
 
   testWidgets('Sitzungskarte zeigt den Tool-Hinweis immer', (tester) async {

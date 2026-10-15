@@ -115,13 +115,11 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
                       >= 200 => '200+ Einträge',
                       final n => '$n Einträge',
                     },
+              onTap: () => unawaited(
+                Navigator.of(context).pushNamed(AppRoutes.auditLog),
+              ),
             ),
           ],
-        ),
-        WideButton(
-          'Prüfprotokoll ansehen',
-          onPressed: () =>
-              unawaited(Navigator.of(context).pushNamed(AppRoutes.auditLog)),
         ),
         WideButton(
           'Verläufe und Protokoll löschen',
