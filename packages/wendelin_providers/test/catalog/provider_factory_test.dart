@@ -17,6 +17,7 @@ void main() {
         'openrouter',
         'mistral',
         'phala',
+        'near',
         'tinfoil',
         'ollama',
         'custom',

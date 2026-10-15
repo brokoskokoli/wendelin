@@ -8,6 +8,7 @@ import 'anthropic/anthropic_options.dart';
 import 'catalog/model_catalog.dart';
 import 'common/credentials.dart';
 import 'common/http_settings.dart';
+import 'common/redactor.dart';
 import 'openai/openai_adapter.dart';
 import 'openai/openai_options.dart';
 import 'tee/attestation_crypto.dart';
@@ -16,6 +17,9 @@ import 'tee/attestation_pin_store.dart';
 import 'tee/attested_provider.dart';
 import 'tee/e2ee_v2.dart';
 import 'tee/gpu_attestation.dart';
+import 'tee/near/near_crypto.dart';
+import 'tee/near/near_e2ee.dart';
+import 'tee/near/near_verifier.dart';
 import 'tee/phala_verifier.dart';
 import 'tee/tls_pin_gate.dart';
 import 'tee/tls_pinned_client.dart';
@@ -34,7 +38,12 @@ final class AttestationWiring {
     this.nonceSource,
     this.pinnedClient,
     this.tlsConnect,
+    this.nearCrypto,
   });
+
+  /// Field encryption of NEAR AI profiles (Rust in the app). Without it a
+  /// NEAR profile is not built (fail-closed).
+  final NearCrypto? nearCrypto;
 
   /// Builds the HTTP client of a TEE profile on top of the pin [TlsPinGate]:
   /// `enforce: true` for everything that carries content, `false` for the
@@ -72,15 +81,39 @@ final class AttestationWiring {
 /// definitions go to a Phala profile.
 const noToolsOption = 'noTools';
 
-/// Whether [profile] is a Phala/RedPill profile whose answers must be
-/// attested: bound to the template option `attestation: phala` (or an older
-/// profile on the RedPill host), not to the privacy level, so a profile is
-/// only „TEE“ when the app really checks it.
-bool needsAttestation(ProviderProfile profile) {
-  if (profile.type != ProviderType.openaiCompatible) return false;
-  if (profile.options['attestation'] == 'phala') return true;
-  return _normalizedHost(profile.baseUrl) == 'api.redpill.ai';
+/// Which checked TEE protocol a profile speaks.
+enum AttestationKind {
+  /// Not attested.
+  none,
+
+  /// Phala/RedPill gateway (ACI, E2EE v2; ADR 0014, 0018).
+  phala,
+
+  /// NEAR AI Cloud (TDX report per model, E2EE with tools; ADR 0019).
+  near,
 }
+
+/// The protocol [profile] must be attested with: bound to the template
+/// option `attestation: phala|near` (or an older profile on the RedPill
+/// host), not to the privacy level, so a profile is only „TEE“ when the app
+/// really checks it.
+AttestationKind attestationKind(ProviderProfile profile) {
+  if (profile.type != ProviderType.openaiCompatible) {
+    return AttestationKind.none;
+  }
+  return switch (profile.options['attestation']) {
+    'phala' => AttestationKind.phala,
+    'near' => AttestationKind.near,
+    _ =>
+      _normalizedHost(profile.baseUrl) == 'api.redpill.ai'
+          ? AttestationKind.phala
+          : AttestationKind.none,
+  };
+}
+
+/// Whether the answers of [profile] must be attested ([attestationKind]).
+bool needsAttestation(ProviderProfile profile) =>
+    attestationKind(profile) != AttestationKind.none;
 
 /// Host of [url] in lower case and without a trailing dot, so
 /// `API.RedPill.ai.` counts as `api.redpill.ai`.
@@ -153,6 +186,18 @@ abstract final class ProviderFactory {
             'Profile mit TEE-Prüfung brauchen die Prüf-Verdrahtung',
           );
         }
+        if (attestation != null &&
+            attestationKind(profile) == AttestationKind.near) {
+          return _near(
+            profile,
+            baseUrl,
+            secrets,
+            attestation,
+            settings: settings,
+            client: client,
+            vision: model?.supportsVision ?? false,
+          );
+        }
         final attested = attestation != null && needsAttestation(profile);
         final gate = attested
             ? TlsPinGate(spkiSha256: attestation.crypto.spkiSha256)
@@ -220,6 +265,86 @@ abstract final class ProviderFactory {
           'Für Fake-Profile gibt es keinen HTTP-Adapter',
         );
     }
+  }
+
+  /// NEAR AI Cloud: E2EE with tools to the attested model key, one report
+  /// per model (the profile's `defaultModel`), TLS pin of the gateway.
+  static LlmProvider _near(
+    ProviderProfile profile,
+    String baseUrl,
+    SecretReader secrets,
+    AttestationWiring attestation, {
+    required HttpSettings settings,
+    required http.Client? client,
+    required bool vision,
+  }) {
+    final cipher = attestation.nearCrypto;
+    if (cipher == null) {
+      throw ArgumentError.value(
+        profile.id,
+        'attestation.nearCrypto',
+        'NEAR-Profile brauchen die Verschlüsselung des Prüfmoduls',
+      );
+    }
+    final gate = TlsPinGate(spkiSha256: attestation.crypto.spkiSha256);
+    final build =
+        attestation.pinnedClient ??
+        (TlsPinGate g, {required bool enforce}) => PinnedHttpClient(
+          gate: g,
+          enforce: enforce,
+          connect: attestation.tlsConnect,
+        );
+    final credentials = Credentials(
+      profile.authMethod,
+      secrets,
+      style: ApiKeyStyle.bearer,
+    );
+    final root = Uri.parse(baseUrl);
+    final adapter = OpenAiChatAdapter(
+      wireCodec: NearE2eeChannel(crypto: cipher),
+      baseUrl: root,
+      credentials: credentials,
+      defaultModel: profile.defaultModel,
+      label: profile.name,
+      client: build(gate, enforce: true),
+      extraHeaders: profile.extraHeaders,
+      options: OpenAiOptions.fromMap(profile.options),
+      capabilities: ProviderCapabilities(
+        tools: true,
+        streaming: true,
+        vision: vision,
+        tee: true,
+      ),
+      settings: settings,
+    );
+    Future<Map<String, String>> auth() => credentials.headers(Redactor());
+    return AttestedProvider(
+      inner: adapter,
+      verifier: NearVerifier(
+        crypto: attestation.crypto,
+        baseUrl: root,
+        model: profile.defaultModel,
+        profileId: profile.id,
+        headers: auth,
+        client: build(gate, enforce: false),
+        tlsPin: gate,
+        settings: settings,
+        pins: attestation.pins,
+        nonceSource: attestation.nonceSource,
+      ),
+      profileId: profile.id,
+      tlsPin: gate,
+      requireUpstreamEnforced: false,
+      gpuVerifier: NrasGpuVerifier(
+        baseUrl: root,
+        client: client ?? defaultHttpClient(),
+        reportQuery: const {'provider': 'near', 'signing_algo': 'ed25519'},
+        reportHeaders: () async => {...await auth(), 'x-no-aliasing': 'true'},
+      ),
+      gpuMode: attestation.gpuMode,
+      logSink: attestation.logSink,
+      settings: settings,
+    );
   }
 
   /// The gateway must enforce the upstream check: the request carries
