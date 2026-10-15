@@ -187,6 +187,7 @@ wake_loop() { # <Durchläufe>
         ui_dump | grep -q 'Alles klar' && { answered=$((answered + 1)); break; }
         sleep 1
       done
+      echo "UI: $(ui_dump | grep -oE '(text|content-desc)="[^"]+"' | tr '\n' '|')" >>"$log"
       adb logcat -d | grep 'Wendelin/voice' >>"$log" || true
       if adb logcat -d | grep -q 'mic-ready.*trigger=wakeWord'; then ok=$((ok + 1)); fi
       adb logcat -c
@@ -201,7 +202,7 @@ wake_loop() { # <Durchläufe>
       adb logcat -d | grep -E 'Wendelin/voice|wake' >>"$log" || true
       adb logcat -c
     fi
-    echo "Durchlauf $i: overlay=$found" >>"$log"
+    echo "Durchlauf $i: overlay=$found scenario=$(in_app cat files/e2e/scenario 2>/dev/null)" >>"$log"
   done
   adb shell input keyevent KEYCODE_WAKEUP
   echo "wakeWord=$ok/$n answered=$answered/$n" |
