@@ -36,7 +36,12 @@ String generate() {
     }
     b
       ..writeln('/// `$value`.')
-      ..writeln("const String $key =\n    r'''$text''';")
+      // dart format lässt mehrzeilige Literale hinter dem `=` stehen.
+      ..writeln(
+        text.contains('\n')
+            ? "const String $key = r'''$text''';"
+            : "const String $key =\n    r'''$text''';",
+      )
       ..writeln();
   }
   return '${b.toString().trimRight()}\n';
