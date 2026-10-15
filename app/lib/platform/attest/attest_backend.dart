@@ -4,6 +4,7 @@ import 'generated/api.dart' as api;
 import 'generated/collateral.dart';
 import 'generated/e2ee.dart';
 import 'generated/frb_generated.dart';
+import 'generated/near_e2ee.dart';
 import 'generated/quote.dart';
 import 'generated/report.dart';
 
@@ -63,6 +64,15 @@ abstract interface class AttestBackend {
 
   /// Feldentschlüsselung; wirft bei Fehlern.
   Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad);
+
+  /// Frische Client-Identität (NEAR AI, WP75).
+  NearIdentity nearGenerateIdentity();
+
+  /// Feldverschlüsselung an einen Ed25519-Schlüssel (NEAR AI); wirft bei Fehlern.
+  String nearEncrypt(Uint8List recipientEd25519, Uint8List plaintext);
+
+  /// Feldentschlüsselung (NEAR AI); wirft bei Fehlern.
+  Uint8List nearDecrypt(Uint8List secret, String wireHex);
 }
 
 /// Echte Anbindung über `flutter_rust_bridge`; [init] lädt `libwendelin_attest.so`.
@@ -149,4 +159,15 @@ final class FrbAttestBackend implements AttestBackend {
   @override
   Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad) =>
       api.e2EeDecrypt(secret: secret, wireHex: wireHex, aad: aad);
+
+  @override
+  NearIdentity nearGenerateIdentity() => api.nearGenerateIdentity();
+
+  @override
+  String nearEncrypt(Uint8List recipientEd25519, Uint8List plaintext) => api
+      .nearEncrypt(recipientEdPublic: recipientEd25519, plaintext: plaintext);
+
+  @override
+  Uint8List nearDecrypt(Uint8List secret, String wireHex) =>
+      api.nearDecrypt(secret: secret, wireHex: wireHex);
 }

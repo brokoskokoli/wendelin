@@ -54,7 +54,10 @@ class AttestationLogDetailScreen extends ConsumerWidget {
           detail: message.text ?? recordSummary(r, now),
         ),
         SettingsSection(title: 'Ergebnis je Stufe', children: stageRows(r)),
-        if (!(config?.noToolsFor(r.profileId) ?? false)) const ToolTlsHint(),
+        if (!(config?.noToolsFor(r.profileId) ?? false))
+          ToolTlsHint(
+            encrypted: config?.toolsEncryptedFor(r.profileId) ?? false,
+          ),
         SettingsSection(
           title: 'Angaben',
           children: [

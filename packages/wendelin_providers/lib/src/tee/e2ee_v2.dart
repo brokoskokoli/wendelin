@@ -123,6 +123,9 @@ final class PhalaE2eeChannel implements SessionBoundChannel {
   bool get bound => _session != null;
 
   @override
+  bool get encryptsTools => false;
+
+  @override
   void bind(AttestedSession? Function() session, Clock clock) {
     if (_session != null) {
       throw StateError('PhalaE2eeChannel ist schon an einen Anbieter gebunden');

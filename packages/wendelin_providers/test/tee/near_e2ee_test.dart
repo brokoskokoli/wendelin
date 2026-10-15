@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -123,12 +122,12 @@ void main() {
         final bodies = (ex['stream']! as Map)['response_body']! as String;
         final events = sseEvents(bodies);
         // Klartext in einem verschlüsselten Feld
-        final plain = SseEvent(
+        final plain = const SseEvent(
           data: '{"id":"x","choices":[{"index":0,"delta":{"content":"Hallo im Klartext"}}]}',
         );
         expect(() => wire().open(plain), failsAt('e2ee.response'));
         // Tool-Aufruf im Klartext (Downgrade der Werkzeugfelder)
-        final plainTool = SseEvent(
+        final plainTool = const SseEvent(
           data: '{"id":"x","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"name":"timer_set","arguments":"{}"}}]}}]}',
         );
         expect(() => wire().open(plainTool), failsAt('e2ee.response'));
@@ -171,16 +170,16 @@ void main() {
 
     test('Fehlerobjekt im Klartext, Nutzungsstück und [DONE] gehen durch', () {
       final w = wire();
-      final usage = SseEvent(
+      final usage = const SseEvent(
         data: '{"id":"x","choices":[],"usage":{"total_tokens":3}}',
       );
       expect(identical(w.open(usage), usage), isTrue);
-      final error = SseEvent(data: '{"error":{"message":"kaputt"}}');
+      final error = const SseEvent(data: '{"error":{"message":"kaputt"}}');
       expect(w.open(error).data, contains('kaputt'));
       const done = SseEvent(data: '[DONE]');
       expect(w.open(done), done);
       // choices neben error werden nie durchgereicht
-      final mixed = SseEvent(
+      final mixed = const SseEvent(
         data: '{"error":{"message":"x"},"choices":[{"delta":{"content":"geheim"}}]}',
       );
       expect(w.open(mixed).data, isNot(contains('geheim')));
@@ -357,7 +356,9 @@ void main() {
     test('der strenge Fake-Dienst weist unverschlüsselte Felder zurück', () {
       final w = wire();
       final sealed = jsonDecode(w.seal(body()).wire) as Map<String, Object?>;
-      (sealed['tools']! as List).first['function']['parameters'] = {
+      final tool =
+          (sealed['tools']! as List<Object?>).first! as Map<String, Object?>;
+      (tool['function']! as Map<String, Object?>)['parameters'] = {
         'type': 'object',
       };
       expect(
@@ -480,7 +481,7 @@ void main() {
         final call = events.whereType<ToolCallComplete>().single.call;
         expect(call.name, 'contract__echo');
         expect(call.id, 'call_EchoA');
-        expect(jsonDecode(call.argumentsJson), isA<Map>());
+        expect(jsonDecode(call.argumentsJson), isA<Map<String, Object?>>());
         final wire = utf8.decode(lastRequest!);
         for (final secret in [
           'Geheimer Nutzertext',

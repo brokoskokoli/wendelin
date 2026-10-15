@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/fakes.dart';
-import 'package:wendelin_providers/src/common/exchange_tap.dart';
 import 'package:wendelin_providers/src/tee/codec.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 

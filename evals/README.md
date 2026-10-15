@@ -52,6 +52,7 @@ Der API-Key kommt ausschließlich aus einer Umgebungsvariable:
 | `profiles/claude-haiku.json` | Anthropic, `claude-haiku-5-5` | `ANTHROPIC_API_KEY` |
 | `profiles/openai-mini.json` | OpenAI, `gpt-5-mini` | `OPENAI_API_KEY` |
 | `profiles/phala-tee-small.json` | Phala/RedPill (TEE), `qwen/qwen-2.5-7b-instruct` (Preise weiterer TEE-Modelle im Profil) | `PHALA_API_KEY` |
+| `profiles/near-tee.json` | NEAR AI Cloud (TEE), `z-ai/glm-5.3-flash` (ohne Verschlüsselung und Prüfung gemessen, wie bei Phala) | `NEAR_AI_API_KEY` |
 | `profiles/fake-demo.json` | Fake-Provider mit Skript | – |
 
 Ist `authMethod.secretRef` ein Variablenname (`ANTHROPIC_API_KEY`), gilt

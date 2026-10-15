@@ -85,6 +85,9 @@ final class NearE2eeChannel implements SessionBoundChannel {
   bool get bound => _session != null;
 
   @override
+  bool get encryptsTools => true;
+
+  @override
   void bind(AttestedSession? Function() session, Clock clock) {
     if (_session != null) {
       throw StateError('NearE2eeChannel ist schon an einen Anbieter gebunden');

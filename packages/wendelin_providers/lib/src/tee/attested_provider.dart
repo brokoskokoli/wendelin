@@ -154,6 +154,13 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// and single-run callers; the agent uses [reportFor]).
   Future<AttestationReport?> pendingReport() async => _latest;
 
+  /// Whether tool definitions, calls and results are end-to-end encrypted
+  /// too (NEAR AI). The UI then shows no „tools only via TLS“ hint.
+  bool get toolsEncrypted {
+    final channel = inner.wireCodec;
+    return channel is SessionBoundChannel && channel.encryptsTools;
+  }
+
   /// The provider refuses requests until [reattest] succeeds.
   bool get locked => _lock != null;
 
@@ -266,7 +273,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           toolsInvolved = true;
         }
         if (event is Done && record != null) {
-          final involved = toolsInvolved;
+          final involved = toolsInvolved && !toolsEncrypted;
           _latest = _byRequest[req] = _checkReceipt(
             record!,
             session,

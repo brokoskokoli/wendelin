@@ -90,6 +90,15 @@ final class ProviderConfig {
     ...others,
   ].any((t) => t.profileId == profileId && !t.provider.caps.tools);
 
+  /// Whether profile [profileId] encrypts tool definitions, calls and
+  /// results end to end too (NEAR AI, WP75); `false` if unknown.
+  bool toolsEncryptedFor(String profileId) => [primary, ...others].any(
+    (t) =>
+        t.profileId == profileId &&
+        t.provider is AttestedProvider &&
+        (t.provider as AttestedProvider).toolsEncrypted,
+  );
+
   /// Display name of [profileId] (the id if unknown).
   String nameOf(String profileId) => names[profileId] ?? profileId;
 
