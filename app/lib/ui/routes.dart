@@ -68,6 +68,9 @@ abstract final class AppRoutes {
   /// Voice: Whisper model, language, speech output.
   static const voice = '/settings/voice';
 
+  /// Voice → Stimmen: offline voices per language (WP66).
+  static const voices = '/settings/voice/voices';
+
   /// Wake word: learn the voice, calibrate, try (WP60).
   static const wakeWord = '/settings/voice/wake';
 

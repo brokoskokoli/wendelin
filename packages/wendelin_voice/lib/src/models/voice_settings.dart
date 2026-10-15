@@ -4,6 +4,8 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../pipeline/endpointer.dart';
 import '../pipeline/voice_pipeline_config.dart';
 import '../tts/tts_selector.dart';
+import 'speech_model.dart';
+import 'speech_model_catalog.dart';
 
 /// Settings of Einstellungen → Sprache.
 @immutable
@@ -16,6 +18,7 @@ final class VoiceSettings {
     this.sttLanguage = followApp,
     this.tts = TtsPreference.automatic,
     this.ttsVoice,
+    this.sherpaVoices = const {},
     this.ttsRate = 1.0,
     this.minSpeechMs = 200,
     this.vadThreshold = 0.5,
@@ -51,8 +54,22 @@ final class VoiceSettings {
   /// Speech output engine preference (K7 fallback in [TtsSelector]).
   final TtsPreference tts;
 
-  /// Voice id (system or sherpa); `null` = default voice of the language.
+  /// Voice id of the system TTS; `null` = default voice of the language.
   final String? ttsVoice;
+
+  /// Chosen offline voice per language (primary subtag → catalog id, WP66);
+  /// a language without an entry uses the default voice of the catalog.
+  final Map<String, String> sherpaVoices;
+
+  /// Catalog id of the offline voice for [language] (primary subtag): the
+  /// chosen one, else the catalog default; `null` for an unknown language.
+  String? sherpaVoiceFor(
+    String language, [
+    SpeechModelCatalog catalog = SpeechModelCatalog.standard,
+  ]) {
+    final lang = language.split(RegExp('[-_]')).first.toLowerCase();
+    return sherpaVoices[lang] ?? catalog.voiceFor(lang)?.id;
+  }
 
   /// Speech rate (1.0 = normal).
   final double ttsRate;
@@ -109,6 +126,7 @@ final class VoiceSettings {
     TtsPreference? tts,
     String? ttsVoice,
     bool clearVoice = false,
+    Map<String, String>? sherpaVoices,
     double? ttsRate,
     int? minSpeechMs,
     double? vadThreshold,
@@ -123,6 +141,7 @@ final class VoiceSettings {
     sttLanguage: sttLanguage ?? this.sttLanguage,
     tts: tts ?? this.tts,
     ttsVoice: clearVoice ? null : ttsVoice ?? this.ttsVoice,
+    sherpaVoices: sherpaVoices ?? this.sherpaVoices,
     ttsRate: ttsRate ?? this.ttsRate,
     minSpeechMs: minSpeechMs ?? this.minSpeechMs,
     vadThreshold: vadThreshold ?? this.vadThreshold,
@@ -141,6 +160,7 @@ final class VoiceSettings {
     'sttLanguage': sttLanguage,
     'tts': tts.name,
     'ttsVoice': ?ttsVoice,
+    if (sherpaVoices.isNotEmpty) 'sherpaVoices': sherpaVoices,
     'ttsRate': ttsRate,
     'minSpeechMs': minSpeechMs,
     'vadThreshold': vadThreshold,
@@ -160,6 +180,34 @@ final class VoiceSettings {
       return v is T && valid(v) ? v : null;
     }
 
+    // Migration (WP66): before, the one voice id could also be an offline
+    // voice; it now belongs to the voice of its language.
+    final legacy = pick<String>('ttsVoice', (v) => v.isNotEmpty);
+    final legacyModel = legacy == null
+        ? null
+        : SpeechModelCatalog.standard.byId(legacy);
+    final legacyOffline = legacyModel?.kind == SpeechModelKind.tts
+        ? legacyModel
+        : null;
+    final voices = <String, String>{};
+    final raw = json['sherpaVoices'];
+    if (raw is Map) {
+      for (final MapEntry(:key, :value) in raw.entries) {
+        final model = value is String
+            ? SpeechModelCatalog.standard.byId(value)
+            : null;
+        if (key is String &&
+            model != null &&
+            model.kind == SpeechModelKind.tts &&
+            model.languages.contains(key)) {
+          voices[key] = model.id;
+        }
+      }
+    }
+    if (legacyOffline != null) {
+      voices.putIfAbsent(legacyOffline.languages.first, () => legacyOffline.id);
+    }
+
     return VoiceSettings(
       sttModel:
           pick<String>('sttModel', (v) => v.startsWith('whisper-')) ??
@@ -171,7 +219,8 @@ final class VoiceSettings {
           ) ??
           d.sttLanguage,
       tts: TtsPreference.values.asNameMap()[json['tts']] ?? d.tts,
-      ttsVoice: pick<String>('ttsVoice', (v) => v.isNotEmpty),
+      ttsVoice: legacyOffline == null ? legacy : null,
+      sherpaVoices: Map.unmodifiable(voices),
       ttsRate:
           pick<num>('ttsRate', (v) => v >= 0.5 && v <= 2)?.toDouble() ??
           d.ttsRate,
@@ -208,6 +257,7 @@ final class VoiceSettings {
       other.sttLanguage == sttLanguage &&
       other.tts == tts &&
       other.ttsVoice == ttsVoice &&
+      _sameVoices(other.sherpaVoices, sherpaVoices) &&
       other.ttsRate == ttsRate &&
       other.minSpeechMs == minSpeechMs &&
       other.vadThreshold == vadThreshold &&
@@ -224,6 +274,9 @@ final class VoiceSettings {
     sttLanguage,
     tts,
     ttsVoice,
+    Object.hashAllUnordered([
+      for (final e in sherpaVoices.entries) Object.hash(e.key, e.value),
+    ]),
     ttsRate,
     minSpeechMs,
     vadThreshold,
@@ -234,4 +287,18 @@ final class VoiceSettings {
     conversationOfferPending,
     bargeIn,
   );
+}
+
+bool _sameVoices(Map<String, String> a, Map<String, String> b) =>
+    a.length == b.length && a.entries.every((e) => b[e.key] == e.value);
+
+/// The offline voice that really speaks (WP66), shared by the settings and
+/// the speech output: [chosen] if it is among [available] (loaded voices of
+/// the language, in catalog order), else the first loaded one, else `null`.
+String? effectiveSherpaVoice({
+  required String? chosen,
+  required Iterable<String> available,
+}) {
+  if (chosen != null && available.contains(chosen)) return chosen;
+  return available.isEmpty ? null : available.first;
 }

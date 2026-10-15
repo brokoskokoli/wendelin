@@ -15,6 +15,15 @@ enum SpeechModelKind {
   wake,
 }
 
+/// Gender of a voice (for the choice of offline voices, WP66).
+enum VoiceGender {
+  /// Female voice.
+  female,
+
+  /// Male voice.
+  male,
+}
+
 /// How a downloaded file must be unpacked by the platform.
 enum ModelArchive {
   /// Used as is.
@@ -69,6 +78,7 @@ final class SpeechModel {
     required this.source,
     this.note,
     this.attribution,
+    this.gender,
   });
 
   /// Stable id, also the directory name in the `ModelStore`.
@@ -98,6 +108,9 @@ final class SpeechModel {
   /// Mandatory attribution (license requirement) that the app must show
   /// on its license page when the model is offered; `null` = none needed.
   final String? attribution;
+
+  /// Gender of a [SpeechModelKind.tts] voice; `null` for other models.
+  final VoiceGender? gender;
 
   /// Total download size.
   int get sizeBytes => files.fold(0, (n, f) => n + f.sizeBytes);

@@ -20,6 +20,7 @@ class ModelDownloadRow extends ConsumerWidget {
     this.selected = false,
     this.onSelect,
     this.deletable = true,
+    this.onDeleted,
   });
 
   /// Catalog entry.
@@ -30,6 +31,9 @@ class ModelDownloadRow extends ConsumerWidget {
 
   /// Chooses the model (only offered once it is installed).
   final VoidCallback? onSelect;
+
+  /// Called after the model was deleted.
+  final VoidCallback? onDeleted;
 
   /// Whether „Löschen“ is offered for an installed model.
   final bool deletable;
@@ -124,7 +128,9 @@ class ModelDownloadRow extends ConsumerWidget {
           'Nutzung neu geladen werden.',
       yes: 'Löschen',
     );
-    if (ok) await ref.read(modelStatesProvider.notifier).delete(model.id);
+    if (!ok) return;
+    await ref.read(modelStatesProvider.notifier).delete(model.id);
+    onDeleted?.call();
   }
 }
 
