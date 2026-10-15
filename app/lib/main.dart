@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:wendelin_storage/wendelin_storage.dart' show SessionOrigin;
 
 import 'app.dart';
 import 'bootstrap/run_app.dart';
 import 'bootstrap/storage.dart';
 import 'debug/device_test_overrides.dart';
+import 'di/agent_providers.dart';
 import 'di/maintenance.dart';
 import 'platform/recognizer/device_recognizer_engines.dart';
 import 'platform/screen_protection.dart';
@@ -47,7 +49,10 @@ Future<void> assistantMain() async {
     const AssistantOverlayApp(),
     // Debug builds only: WAV instead of the microphone and a scripted
     // provider for the device tests (WP19); release builds skip this.
-    extra: kDebugMode ? await deviceTestOverrides() : const [],
+    extra: [
+      sessionOriginProvider.overrideWithValue(SessionOrigin.overlay),
+      if (kDebugMode) ...await deviceTestOverrides(),
+    ],
   );
 }
 

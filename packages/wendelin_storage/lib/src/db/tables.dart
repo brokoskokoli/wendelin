@@ -16,6 +16,9 @@ class Sessions extends Table {
   IntColumn get lastActivityAt => integer().map(epochMicros)();
   TextColumn get title => text().nullable()();
 
+  /// Which engine opened the session (`app` or `overlay`, WP67).
+  TextColumn get origin => text().withDefault(const Constant('app'))();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }

@@ -29,7 +29,7 @@ final class WendelinDatabase extends _$WendelinDatabase {
 
   /// Current schema version. Bump it together with a migration step and a
   /// new schema dump (`dart run drift_dev make-migrations`).
-  static const version = 4;
+  static const version = 5;
 
   @override
   int get schemaVersion => version;
@@ -57,6 +57,10 @@ final class WendelinDatabase extends _$WendelinDatabase {
         await m.createTable(schema.attestationLog);
         await m.createIndex(schema.attestationLogAt);
         await m.createIndex(schema.attestationLogSession);
+      },
+      // v5 (WP67): Herkunft der Sitzung (App oder Overlay).
+      from4To5: (m, schema) async {
+        await m.addColumn(schema.sessions, schema.sessions.origin);
       },
     ),
     beforeOpen: (details) async {
