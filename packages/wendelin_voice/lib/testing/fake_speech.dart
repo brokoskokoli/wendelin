@@ -131,6 +131,10 @@ final class FakeTextToSpeech implements TextToSpeech {
   /// Thrown by the next [speak] call (then cleared).
   Object? nextError;
 
+  /// When set, [speak] waits for it before the utterance starts (models the
+  /// synthesis time before a sample plays); [state] stays idle meanwhile.
+  Completer<void>? synthesis;
+
   @override
   Future<bool> get isAvailable async => available;
 
@@ -162,6 +166,14 @@ final class FakeTextToSpeech implements TextToSpeech {
     calls.add((text: text, voice: voice, language: language, rate: rate));
     if (text.trim().isEmpty) return Future.value();
     final done = Completer<void>();
+    final wait = synthesis;
+    if (wait != null && !wait.isCompleted) {
+      return wait.future.then((_) {
+        _queue.add((text: text, done: done));
+        _startNext();
+        return done.future;
+      });
+    }
     _queue.add((text: text, done: done));
     _startNext();
     return done.future;
