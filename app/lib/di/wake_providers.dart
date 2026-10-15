@@ -75,6 +75,7 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
     await store.delete(id);
     ref.invalidate(stopLearnedProvider);
     ref.invalidate(stopLearnedForProvider(id));
+    ref.invalidate(wakeBargeInDetectorProvider);
     final list = [
       for (final s in await future)
         if (s.id != id) s,
@@ -87,6 +88,7 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   Future<void> removeAll() async {
     await ref.read(wakeStoreProvider).deleteAll();
     ref.invalidate(stopLearnedProvider);
+    ref.invalidate(wakeBargeInDetectorProvider);
     state = const AsyncData([]);
   }
 }
@@ -175,13 +177,15 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     voiceSettingsProvider.select((s) => s.value?.conversationMode ?? false),
   );
   if (!conversation) return null;
-  // Newly learned or deleted „Stopp“ (the callers invalidate this) builds a
-  // new detector; otherwise the templates stay cached until the next start.
-  ref.watch(stopLearnedProvider);
+  // Newly learned or deleted „Stopp“: the callers invalidate this provider
+  // (`invalidateBargeInDetector`); the old detector ends only when idle, so
+  // a running answer is never cut off. No `watch` of stopLearnedProvider: it
+  // would rebuild in the middle of the output.
   final store = ref.read(wakeStoreProvider);
+  final makeFeatures = ref.read(wakeFeaturesFactoryProvider);
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
-    features: () => ref.read(wakeFeaturesFactoryProvider)(),
+    features: () => makeFeatures(),
     templates: () async => [
       for (final s in await store.speakers()) ?await store.load(s.id),
     ],
@@ -189,6 +193,6 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
       for (final s in await store.speakers()) ?await store.stop.load(s.id),
     ],
   );
-  ref.onDispose(() => unawaited(detector.dispose()));
+  ref.onDispose(() => unawaited(detector.disposeWhenIdle()));
   return detector;
 });

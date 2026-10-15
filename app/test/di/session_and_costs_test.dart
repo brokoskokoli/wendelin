@@ -6,6 +6,7 @@ import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/fakes.dart';
+import 'package:wendelin_storage/wendelin_storage.dart' show SessionOrigin;
 
 ProviderProfile _profile({int? budget, double? warn}) => ProviderProfile(
   id: 'claude',
@@ -80,6 +81,69 @@ void main() {
       expect(ended, [a]);
       expect(m.currentId, b);
     });
+  });
+
+  group('SessionManager frischer Aufruf (WP67)', () {
+    test(
+      'beginFresh: nächste Sitzung neu, Overlay verdrängt App nicht',
+      () async {
+        final clock = FixedClock(DateTime(2026, 10, 15, 8));
+        final storage = openInMemoryStorage(clock: clock);
+        SessionManager make() => SessionManager(
+          conversations: storage.conversations,
+          clock: clock,
+          onSessionEnd: (_) {},
+        );
+        final app = make();
+        final overlay = make();
+        addTearDown(app.dispose);
+        addTearDown(overlay.dispose);
+        final a = await app.ensure();
+        await storage.conversations.append(a, Message.user('Glocken'));
+        overlay.beginFresh();
+        final o = await overlay.ensure();
+        expect(o, isNot(a), reason: 'Overlay startet leer');
+        expect(
+          await overlay.ensure(),
+          o,
+          reason: 'Folgefrage: gleiche Sitzung',
+        );
+        await storage.conversations.append(o, Message.user('Wetter'));
+        expect(await app.ensure(), a, reason: 'App-Chat bleibt in seiner');
+      },
+    );
+
+    test(
+      'App-ensure nach frischer Overlay-Sitzung landet nicht darin',
+      () async {
+        final clock = FixedClock(DateTime(2026, 10, 15, 8));
+        final storage = openInMemoryStorage(clock: clock);
+        SessionManager make(SessionOrigin origin) => SessionManager(
+          conversations: storage.conversations,
+          clock: clock,
+          onSessionEnd: (_) {},
+          origin: origin,
+        );
+        final overlay = make(SessionOrigin.overlay);
+        addTearDown(overlay.dispose);
+        overlay.beginFresh();
+        final o = await overlay.ensure();
+        await storage.conversations.append(o, Message.user('Glocken'));
+        // App-Kaltstart: neuer Manager ohne eigene Sitzung.
+        final app = make(SessionOrigin.app);
+        addTearDown(app.dispose);
+        final a = await app.ensure();
+        expect(a, isNot(o));
+        expect(
+          (await storage.conversations.session(a))?.origin,
+          SessionOrigin.app,
+        );
+        expect(
+          (await storage.conversations.session(o))?.origin,
+          SessionOrigin.overlay,
+        );
+      },
+    );
   });
 
   group('RepositoryBudgetGuard', () {

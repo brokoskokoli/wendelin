@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
+import 'package:wendelin_storage/wendelin_storage.dart' show SessionOrigin;
 import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../agent/agent_controller.dart';
@@ -63,12 +64,19 @@ final auditRecorderProvider = Provider<AuditRecorder>(
   ),
 );
 
+/// Which engine this is; the overlay overrides it with
+/// [SessionOrigin.overlay] so it keeps its own sessions (WP67).
+final sessionOriginProvider = Provider<SessionOrigin>(
+  (ref) => SessionOrigin.app,
+);
+
 /// Current conversation session; ending one forgets unlocked tools and
 /// cached calendar data.
 final sessionManagerProvider = Provider<SessionManager>((ref) {
   final manager = SessionManager(
     conversations: ref.watch(storageProvider).conversations,
     clock: ref.watch(clockProvider),
+    origin: ref.watch(sessionOriginProvider),
     onSessionEnd: (id) {
       // „Unterhaltung privat“ ends with its session.
       ref.read(agentControllerProvider.notifier).sessionEnded(id);

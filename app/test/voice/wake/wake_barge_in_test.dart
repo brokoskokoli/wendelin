@@ -58,6 +58,30 @@ void main() {
       await d.dispose();
     });
 
+    test(
+      'Neubau während der Ausgabe: laufender Detektor bleibt aktiv',
+      () async {
+        final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
+        final signals = <BargeInSignal>[];
+        d.signals.listen(signals.add);
+        await d.start();
+        await d.disposeWhenIdle();
+        expect(d.isRunning, isTrue);
+        expect(audio.isRunning, isTrue);
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        expect(signals, isNotEmpty);
+        await d.stop();
+        expect(audio.isRunning, isFalse);
+        await d.dispose(); // idempotent
+      },
+    );
+
+    test('Neubau im Leerlauf beendet den Detektor sofort', () async {
+      final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
+      await d.disposeWhenIdle();
+      expect(d.isRunning, isFalse);
+    });
+
     WakeTemplates stopTpl(double threshold) => WakeTemplates(
       speakerId: 'a',
       featureVersion: 'fake-1',
@@ -171,14 +195,16 @@ void main() {
         await c.read(stopLearnedProvider.future);
         final first = c.read(wakeBargeInDetectorProvider);
         expect(c.read(wakeBargeInDetectorProvider), same(first));
-        // Enrolling and deleting invalidate stopLearnedProvider.
+        // Learning „Stopp“ alone does not rebuild in the middle of a session.
         c.invalidate(stopLearnedProvider);
         await c.read(stopLearnedProvider.future);
+        expect(c.read(wakeBargeInDetectorProvider), same(first));
+        // Enrolling and deleting invalidate the detector provider.
+        c.invalidate(wakeBargeInDetectorProvider);
         final second = c.read(wakeBargeInDetectorProvider);
         expect(second, isNotNull);
         expect(second, isNot(same(first)));
         await c.read(wakeSpeakersProvider.notifier).remove('x');
-        await c.read(stopLearnedProvider.future);
         expect(c.read(wakeBargeInDetectorProvider), isNot(same(second)));
       },
     );

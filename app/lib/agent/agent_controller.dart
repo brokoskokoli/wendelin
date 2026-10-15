@@ -120,7 +120,10 @@ final class AgentController extends Notifier<ConversationState> {
   Future<void> restore() async {
     final storage = ref.read(storageProvider);
     final now = ref.read(clockProvider).now();
-    final last = (await storage.conversations.sessions(limit: 1)).firstOrNull;
+    final last = (await storage.conversations.sessions(
+      limit: 1,
+      origin: SessionOrigin.app,
+    )).firstOrNull;
     if (last == null ||
         now.difference(last.lastActivityAt) >=
             ConversationRepository.defaultInactivity ||
@@ -418,6 +421,17 @@ final class AgentController extends Notifier<ConversationState> {
       entries: [SessionStartEntry('s1', ref.read(clockProvider).now())],
       nextSeq: 2,
     );
+  }
+
+  /// A new assistant overlay invocation: the next request starts a new
+  /// session without history and the shown conversation and its privacy
+  /// floor are cleared (WP67). Does nothing while a request runs.
+  void beginFreshConversation() {
+    if (state.running) return;
+    ref.read(sessionManagerProvider).beginFresh();
+    _sessionId = null;
+    _shownSessionId = null;
+    state = ConversationState.empty;
   }
 
   /// Replaces the state (golden tests with sample data).

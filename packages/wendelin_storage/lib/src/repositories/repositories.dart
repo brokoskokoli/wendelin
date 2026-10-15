@@ -15,19 +15,25 @@ abstract interface class ConversationRepository {
 
   /// The most recently active session if its last activity is less than
   /// [inactivity] before [now]; otherwise a new session started at [now].
+  /// Only sessions of the same [origin] count (WP67).
   Future<Session> currentOrNew(
     DateTime now, {
     Duration inactivity = defaultInactivity,
+    SessionOrigin origin = SessionOrigin.app,
   });
 
   /// Starts a new session at [now] ("neues Thema").
-  Future<Session> startNew(DateTime now, {String? title});
+  Future<Session> startNew(
+    DateTime now, {
+    String? title,
+    SessionOrigin origin = SessionOrigin.app,
+  });
 
   /// The session with [id], or `null`.
   Future<Session?> session(String id);
 
-  /// Sessions, most recently active first.
-  Future<List<Session>> sessions({int? limit});
+  /// Sessions, most recently active first; only those of [origin] if given.
+  Future<List<Session>> sessions({int? limit, SessionOrigin? origin});
 
   /// Sets or clears the title of session [id].
   Future<void> setTitle(String id, String? title);

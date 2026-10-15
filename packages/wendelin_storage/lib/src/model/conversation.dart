@@ -1,6 +1,16 @@
 import 'package:meta/meta.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+/// Which engine opened a session. The app chat and the assistant overlay
+/// keep separate sessions (WP67).
+enum SessionOrigin {
+  /// The main app.
+  app,
+
+  /// The assistant overlay.
+  overlay,
+}
+
 /// A conversation session (ends after inactivity or on "neues Thema").
 @immutable
 final class Session {
@@ -10,6 +20,7 @@ final class Session {
     required this.startedAt,
     required this.lastActivityAt,
     this.title,
+    this.origin = SessionOrigin.app,
   });
 
   /// Stable id.
@@ -24,16 +35,20 @@ final class Session {
   /// Optional display title.
   final String? title;
 
+  /// The engine that opened the session.
+  final SessionOrigin origin;
+
   @override
   bool operator ==(Object other) =>
       other is Session &&
+      other.origin == origin &&
       other.id == id &&
       other.startedAt == startedAt &&
       other.lastActivityAt == lastActivityAt &&
       other.title == title;
 
   @override
-  int get hashCode => Object.hash(id, startedAt, lastActivityAt, title);
+  int get hashCode => Object.hash(id, startedAt, lastActivityAt, title, origin);
 
   @override
   String toString() => 'Session($id, $startedAt–$lastActivityAt)';

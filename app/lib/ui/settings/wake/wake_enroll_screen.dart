@@ -111,6 +111,7 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
     if (widget.stop) {
       ref.invalidate(stopLearnedProvider);
       ref.invalidate(stopLearnedForProvider(widget.speakerId));
+      ref.invalidate(wakeBargeInDetectorProvider);
     } else {
       await ref
           .read(wakeSpeakersProvider.notifier)

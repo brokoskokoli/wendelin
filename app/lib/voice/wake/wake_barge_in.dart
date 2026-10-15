@@ -46,6 +46,8 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
   WakeWordBargeInDetector? _inner;
   bool _empty = false;
   bool _running = false;
+  bool _disposeWhenIdle = false;
+  bool _disposed = false;
   StreamSubscription<BargeInSignal>? _sub;
   final _signals = StreamController<BargeInSignal>.broadcast(sync: true);
 
@@ -101,10 +103,24 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     _running = false;
     await _inner?.stop();
     voiceLog('barge-listen', {'on': false});
+    if (_disposeWhenIdle) await dispose();
+  }
+
+  /// Ends the detector as soon as it is idle: a running listening session
+  /// (the spoken answer) is not cut off by a rebuild of the provider
+  /// (WP64b, new or deleted „Stopp“ takes effect at the next start).
+  Future<void> disposeWhenIdle() async {
+    if (_running) {
+      _disposeWhenIdle = true;
+      return;
+    }
+    await dispose();
   }
 
   /// Ends the detector for good.
   Future<void> dispose() async {
+    if (_disposed) return;
+    _disposed = true;
     _running = false;
     await _sub?.cancel();
     await _inner?.dispose();
