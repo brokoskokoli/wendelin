@@ -32,6 +32,32 @@ final class SessionManager {
 
   String? _current;
   Timer? _timer;
+  bool _fresh = false;
+
+  Future<Session> _currentOrNew() =>
+      conversations.currentOrNew(clock.now(), inactivity: inactivity);
+
+  // This manager's own session while it is still active: another engine
+  // (overlay) may have opened a newer one in the shared database, which
+  // must not take over this conversation (WP67).
+  Future<Session?> _own() async {
+    final id = _current;
+    if (id == null) return null;
+    final own = await conversations.session(id);
+    if (own == null ||
+        clock.now().difference(own.lastActivityAt) >= inactivity) {
+      return null;
+    }
+    return own;
+  }
+
+  /// The next request starts a new session, whatever the database holds
+  /// (every assistant overlay invocation starts a fresh conversation, WP67).
+  /// Ends the current session now.
+  void beginFresh() {
+    end();
+    _fresh = true;
+  }
 
   /// Id of the current session, if one is open.
   String? get currentId => _current;
@@ -39,10 +65,13 @@ final class SessionManager {
   /// The session for a new request: the open one, or a new one if the last
   /// one ended. Restarts the inactivity timer.
   Future<String> ensure() async {
-    final session = await conversations.currentOrNew(
-      clock.now(),
-      inactivity: inactivity,
-    );
+    final Session session;
+    if (_fresh) {
+      _fresh = false;
+      session = await conversations.startNew(clock.now());
+    } else {
+      session = await _own() ?? await _currentOrNew();
+    }
     _switchTo(session.id);
     touch();
     return session.id;

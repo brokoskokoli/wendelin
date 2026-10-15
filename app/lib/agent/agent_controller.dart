@@ -420,6 +420,17 @@ final class AgentController extends Notifier<ConversationState> {
     );
   }
 
+  /// A new assistant overlay invocation: the next request starts a new
+  /// session without history and the shown conversation and its privacy
+  /// floor are cleared (WP67). Does nothing while a request runs.
+  void beginFreshConversation() {
+    if (state.running) return;
+    ref.read(sessionManagerProvider).beginFresh();
+    _sessionId = null;
+    _shownSessionId = null;
+    state = ConversationState.empty;
+  }
+
   /// Replaces the state (golden tests with sample data).
   @visibleForTesting
   void seed(ConversationState value) => state = value;

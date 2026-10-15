@@ -111,6 +111,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   // The first trigger: the wake word service leaves its hit with the
   // platform before it opens the overlay (WP50).
   Future<void> _fireFirst() async {
+    // Every invocation of the assistant starts a new conversation (WP67).
+    _agent.beginFreshConversation();
     final preRoll = await _platform.takeWakeHandoff();
     if (preRoll != null) {
       voiceLog('wake-handoff', {'ms': samplesToDuration(preRoll.length)});

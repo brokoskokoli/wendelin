@@ -82,6 +82,37 @@ void main() {
     });
   });
 
+  group('SessionManager frischer Aufruf (WP67)', () {
+    test(
+      'beginFresh: nächste Sitzung neu, Overlay verdrängt App nicht',
+      () async {
+        final clock = FixedClock(DateTime(2026, 10, 15, 8));
+        final storage = openInMemoryStorage(clock: clock);
+        SessionManager make() => SessionManager(
+          conversations: storage.conversations,
+          clock: clock,
+          onSessionEnd: (_) {},
+        );
+        final app = make();
+        final overlay = make();
+        addTearDown(app.dispose);
+        addTearDown(overlay.dispose);
+        final a = await app.ensure();
+        await storage.conversations.append(a, Message.user('Glocken'));
+        overlay.beginFresh();
+        final o = await overlay.ensure();
+        expect(o, isNot(a), reason: 'Overlay startet leer');
+        expect(
+          await overlay.ensure(),
+          o,
+          reason: 'Folgefrage: gleiche Sitzung',
+        );
+        await storage.conversations.append(o, Message.user('Wetter'));
+        expect(await app.ensure(), a, reason: 'App-Chat bleibt in seiner');
+      },
+    );
+  });
+
   group('RepositoryBudgetGuard', () {
     Future<BudgetCheck> check({
       int? budget,

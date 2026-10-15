@@ -507,6 +507,32 @@ void main() {
       },
     );
 
+    test(
+      'beginFreshConversation: zweiter Aufruf ohne Verlauf (WP67)',
+      () async {
+        final provider = FakeLlmProvider([
+          ScriptedTurn.text('Glocken sind schön.'),
+          ScriptedTurn.text('Folge.'),
+          ScriptedTurn.text('Neu.'),
+        ]);
+        start([], custom: TestEnv(providerConfig: scripted(provider)));
+        final controller = c.read(agentControllerProvider.notifier);
+        await sendAndWait(c, 'Erzähl mir von Glocken');
+        await sendAndWait(c, 'Und größere?');
+        expect(provider.requests[1].messages.length, greaterThan(1));
+        controller.beginFreshConversation();
+        expect(c.read(agentControllerProvider).entries, isEmpty);
+        await sendAndWait(c, 'Wie wird das Wetter?');
+        final texts = provider.requests[2].messages.toString();
+        expect(texts, isNot(contains('Glocken')));
+        expect(texts, contains('Wetter'));
+        expect(
+          provider.requests[2].messages.where((m) => m.role == Role.user),
+          hasLength(1),
+        );
+      },
+    );
+
     test('Sitzung lässt sich nicht öffnen: Lauf endet sauber', () async {
       final provider = FakeLlmProvider([ScriptedTurn.text('nie')]);
       env = TestEnv(providerConfig: scripted(provider));
