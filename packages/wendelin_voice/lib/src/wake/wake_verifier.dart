@@ -41,33 +41,60 @@ bool soundsLikeWakeWord(String word) =>
     'wvf'.contains(word[0]) &&
     colognePhonetic(word) == _wakeKey;
 
+/// Edit distance tolerance of the wake word check and of stripping the wake
+/// word from the transcript (WP73): the same for both, so what is
+/// recognized is also removed. Two edits count only for a single word
+/// (see [wakeWordMatchLength]).
+const wakeVerifyMaxDistance = 2;
+
+/// How many words from [words] (folded, from index [i]) form the wake word:
+/// 0 (none), 1 (one word) or 2 (a split word, „Wende Lin“; never in front
+/// of a function word: „Wendel in den Keller“, WP68). One edit counts for
+/// both, two edits only for a single word of at least seven characters that
+/// starts like „Wendelin“ (w/v/f): „Wandolin“ (WP73). Shared by
+/// [matchesWakeWord] and [stripWakeWord].
+int wakeWordMatchLength(
+  List<String> words,
+  int i, {
+  int maxDistance = wakeVerifyMaxDistance,
+}) {
+  if (_nearWakeWord(words[i], maxDistance, single: true)) return 1;
+  if (i + 1 < words.length &&
+      !_notSplitTail.contains(words[i + 1]) &&
+      _nearWakeWord(words[i] + words[i + 1], maxDistance, single: false)) {
+    return 2;
+  }
+  return 0;
+}
+
 /// Whether [transcript] contains „Wendelin“ fuzzily: after folding (case,
 /// diacritics, punctuation) a word or a pair of neighbouring words
 /// („Wende Lin“) must be within [maxDistance] edits of a spelling or sound
 /// like it ([soundsLikeWakeWord]).
-bool matchesWakeWord(String transcript, {int maxDistance = 1}) {
+bool matchesWakeWord(
+  String transcript, {
+  int maxDistance = wakeVerifyMaxDistance,
+}) {
   final list = foldForMatch(transcript)
       .split(' ')
       .where((w) => w.isNotEmpty)
       .toList();
   for (var i = 0; i < list.length; i++) {
-    if (_nearWakeWord(list[i], maxDistance)) return true;
-    if (i + 1 < list.length &&
-        _nearWakeWord(list[i] + list[i + 1], maxDistance)) {
+    if (wakeWordMatchLength(list, i, maxDistance: maxDistance) > 0) {
       return true;
     }
   }
   return false;
 }
 
-bool _nearWakeWord(String s, int maxDistance) {
+bool _nearWakeWord(String s, int maxDistance, {required bool single}) {
   if (soundsLikeWakeWord(s)) return true;
+  final twoEdits =
+      single && maxDistance >= 2 && s.length >= 7 && 'wvf'.contains(s[0]);
   for (final spelling in wakeWordSpellings) {
     final d = _distance(s, spelling);
     if (d <= 1 && d <= maxDistance) return true;
-    // Two edits only for a word that starts like „Wendelin“ (w/v/f) and is
-    // long enough: „Wandelin“, „Wendli“ (WP73).
-    if (d <= maxDistance && s.length >= 6 && 'wvf'.contains(s[0])) return true;
+    if (twoEdits && d <= 2 && spelling == 'wendelin') return true;
   }
   return false;
 }
@@ -75,7 +102,10 @@ bool _nearWakeWord(String s, int maxDistance) {
 /// How a transcript relates to the wake word, for the log of the
 /// verification (WP73): `empty`, `exact` („Wendelin“), `variant` (another
 /// spelling or sound) or `other` (some other text). Never the text itself.
-String wakeTranscriptCategory(String transcript, {int maxDistance = 1}) {
+String wakeTranscriptCategory(
+  String transcript, {
+  int maxDistance = wakeVerifyMaxDistance,
+}) {
   if (transcript.trim().isEmpty) return 'empty';
   if (!matchesWakeWord(transcript, maxDistance: maxDistance)) return 'other';
   return foldForMatch(transcript).split(' ').contains('wendelin')
@@ -118,20 +148,16 @@ const _greetings = {'hey', 'hallo', 'hi', 'he', 'ok', 'okay', 'ey'};
 /// („Hey Wendelin“) goes too. The word counts only at the start (the first
 /// three words); otherwise the text stays as it is. May return an empty
 /// string (only the wake word was said).
-String stripWakeWord(String transcript, {int maxDistance = 1}) {
+String stripWakeWord(
+  String transcript, {
+  int maxDistance = wakeVerifyMaxDistance,
+}) {
   final tokens = transcript.trim().split(RegExp(r'\s+'));
   final folded = [for (final t in tokens) foldForMatch(t).replaceAll(' ', '')];
   final limit = tokens.length < 3 ? tokens.length : 3;
   for (var i = 0; i < limit; i++) {
     if (folded[i].isEmpty) continue;
-    var consumed = 0;
-    if (_nearWakeWord(folded[i], maxDistance)) {
-      consumed = 1;
-    } else if (i + 1 < tokens.length &&
-        !_notSplitTail.contains(folded[i + 1]) &&
-        _nearWakeWord(folded[i] + folded[i + 1], maxDistance)) {
-      consumed = 2;
-    }
+    final consumed = wakeWordMatchLength(folded, i, maxDistance: maxDistance);
     if (consumed > 0) {
       final before = folded.sublist(0, i);
       if (before.any((w) => w.isNotEmpty && !_greetings.contains(w))) break;
@@ -170,7 +196,7 @@ final class TranscriptWakeVerifier implements WakeVerifier {
     this.stt, {
     this.maxSamples = 48000,
     this.language = 'de',
-    this.maxDistance = 2,
+    this.maxDistance = wakeVerifyMaxDistance,
     this.onCategory,
   });
 
@@ -183,8 +209,8 @@ final class TranscriptWakeVerifier implements WakeVerifier {
   /// Recognition language.
   final String language;
 
-  /// Edit distance tolerance (up to two for a word that starts like the wake
-  /// word, WP73: Whisper often writes a near miss).
+  /// Edit distance tolerance ([wakeVerifyMaxDistance], WP73: Whisper often
+  /// writes a near miss).
   final int maxDistance;
 
   /// Called with [wakeTranscriptCategory] and the audio length in ms of every

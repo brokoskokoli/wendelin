@@ -96,20 +96,52 @@ void main() {
         'Danke schön': false,
       };
       cases.forEach((text, want) {
-        expect(matchesWakeWord(text), want, reason: text);
+        expect(matchesWakeWord(text, maxDistance: 1), want, reason: text);
       });
-      expect(matchesWakeWord('Wendel', maxDistance: 2), isTrue);
+      expect(matchesWakeWord('Wendel'), isFalse);
     });
 
-    test('Nachprüfung toleriert zwei Tippfehler nur nahe am Wort (WP73)', () {
-      // Verifier-Standard: zwei Änderungen, wenn w/v/f vorn und ≥ 6 Zeichen.
-      expect(matchesWakeWord('Wandeln', maxDistance: 2), isTrue);
-      expect(matchesWakeWord('Wendli', maxDistance: 2), isTrue);
-      expect(matchesWakeWord('Mandelin', maxDistance: 2), isFalse);
-      expect(matchesWakeWord('Welle', maxDistance: 2), isFalse);
-      expect(matchesWakeWord('Wandern', maxDistance: 2), isFalse);
-      // Der Standard (eine Änderung) bleibt streng.
-      expect(matchesWakeWord('Wendelxyz'), isFalse);
+    test(
+      'Nachprüfung toleriert zwei Änderungen nur bei Einzelwörtern (WP73)',
+      () {
+        const cases = {
+          // Echte Varianten.
+          'Wendelin': true,
+          'Wendolin': true,
+          'Wändelin': true,
+          'Vendelin': true,
+          // Nur mit zwei Änderungen (nicht phonetisch gleich): Einzelwort ≥ 7.
+          'Wengelion': true,
+          'Hey Wengelion': true,
+          // Satzfetzen und ähnliche Wörter.
+          'Weil in': false,
+          'Wand in': false,
+          'Wenden': false,
+          'Wedeln': false,
+          'Wendland': false,
+          'Wendel': false,
+          'Mandelin': false,
+          'Welle': false,
+          'Wandern': false,
+        };
+        cases.forEach((text, want) {
+          expect(matchesWakeWord(text), want, reason: text);
+        });
+        // Eine Änderung genügt weiter, zwei nur bei der Nachprüfung.
+        expect(matchesWakeWord('Wengelion', maxDistance: 1), isFalse);
+        expect(matchesWakeWord('Wendelxyz', maxDistance: 1), isFalse);
+      },
+    );
+
+    test('Erkennen und Entfernen nutzen dieselbe Toleranz (WP73)', () {
+      for (final w in ['Wendelin', 'Wengelion', 'Vendelin', 'Wende Lin']) {
+        expect(matchesWakeWord('$w mach Licht'), isTrue, reason: w);
+        expect(stripWakeWord('$w, mach Licht'), 'mach Licht', reason: w);
+      }
+      for (final w in ['Weil in', 'Wand in', 'Wenden', 'Wedeln']) {
+        expect(matchesWakeWord('$w den Keller'), isFalse, reason: w);
+        expect(stripWakeWord('$w den Keller'), '$w den Keller', reason: w);
+      }
     });
 
     test('Kategorie der Nachprüfung ohne Text (WP73)', () async {
