@@ -295,4 +295,30 @@ void main() {
       );
     },
   );
+
+  test(
+    'NEAR-Aufrufe gehen an Rust, Fehler und Panics werden E2eeCryptoException',
+    () {
+      final c = build();
+      final id = c.nearGenerateIdentity();
+      expect(id.public, hasLength(32));
+      expect(id.secret, hasLength(32));
+      expect(c.nearEncrypt(id.public, Uint8List(3)), hasLength(150));
+      expect(c.nearDecrypt(id.secret, 'abcd'), [4]);
+      expect(
+        () => c.nearDecrypt(id.secret, ''),
+        throwsA(isA<E2eeCryptoException>()),
+      );
+      backend.panic = PanicException('boom');
+      expect(c.nearGenerateIdentity, throwsA(isA<E2eeCryptoException>()));
+      expect(
+        () => c.nearEncrypt(id.public, Uint8List(1)),
+        throwsA(isA<E2eeCryptoException>()),
+      );
+      expect(
+        () => c.nearDecrypt(id.secret, 'ab'),
+        throwsA(isA<E2eeCryptoException>()),
+      );
+    },
+  );
 }

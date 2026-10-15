@@ -100,6 +100,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             record: r,
             name: config?.nameOf(r.profileId) ?? r.profileId,
             locked: ref.watch(attestationHubProvider).isLocked(r.profileId),
+            toolsEncrypted: config?.toolsEncryptedFor(r.profileId) ?? false,
             now: now,
             onReattest: () => unawaited(_reattest(r.profileId)),
           ),
@@ -196,6 +197,7 @@ class _SessionCard extends StatelessWidget {
     required this.record,
     required this.name,
     required this.locked,
+    this.toolsEncrypted = false,
     required this.now,
     required this.onReattest,
   });
@@ -203,6 +205,9 @@ class _SessionCard extends StatelessWidget {
   final AttestationRecord record;
   final String name;
   final bool locked;
+
+  /// Tools sind Ende-zu-Ende-verschlüsselt (NEAR AI).
+  final bool toolsEncrypted;
   final DateTime now;
   final VoidCallback onReattest;
 
@@ -259,7 +264,7 @@ class _SessionCard extends StatelessWidget {
                     ),
                 ],
               ),
-              const ToolTlsHint(),
+              ToolTlsHint(encrypted: toolsEncrypted),
               PrimaryButton(
                 'Neu attestieren',
                 key: ValueKey('reattest-${record.profileId}'),

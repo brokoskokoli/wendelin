@@ -252,7 +252,8 @@ ProviderForCase buildProvider(
         ...p.options,
         'extraBody': {
           ...body,
-          'provider': {'aci_verified': true},
+          if (attestationKind(p) == AttestationKind.phala)
+            'provider': {'aci_verified': true},
         },
       }),
     );

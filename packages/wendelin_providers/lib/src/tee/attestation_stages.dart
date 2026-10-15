@@ -122,9 +122,13 @@ final class AttestationChecks {
   /// Replays RTMR3 from the runtime events (`digest = sha384(type_le32 ":"
   /// event ":" payload)`, `rtmr = sha384(rtmr ‖ digest)`) and compares it
   /// with the verified quote.
-  StageResult eventLog(GatewayAttestation doc, QuoteVerdict verdict) {
+  StageResult eventLog(GatewayAttestation doc, QuoteVerdict verdict) =>
+      eventLogOf(doc.eventLog, verdict);
+
+  /// [eventLog] for a bare list of events.
+  StageResult eventLogOf(List<TdxEvent> events, QuoteVerdict verdict) {
     var rtmr = Uint8List(48);
-    for (final e in doc.eventLog.where((e) => e.imr == 3)) {
+    for (final e in events.where((e) => e.imr == 3)) {
       final typeLe = ByteData(4)..setUint32(0, e.eventType, Endian.little);
       final recomputed = crypto.sha384(
         Uint8List.fromList([
@@ -133,13 +137,16 @@ final class AttestationChecks {
           ...e.payload,
         ]),
       );
-      if (AttestCodec.hex(recomputed) != AttestCodec.hex(e.digest)) {
+      // NEAR AI logs runtime events without a digest: it is recomputed. A
+      // digest that is present must match.
+      if (e.digest.isNotEmpty &&
+          AttestCodec.hex(recomputed) != AttestCodec.hex(e.digest)) {
         return StageResult.fail(
           AttestationStage.eventLog,
           'Digest von "${e.event}" passt nicht',
         );
       }
-      rtmr = crypto.sha384(Uint8List.fromList([...rtmr, ...e.digest]));
+      rtmr = crypto.sha384(Uint8List.fromList([...rtmr, ...recomputed]));
     }
     return AttestCodec.hex(rtmr) == AttestCodec.hex(verdict.rtmr3)
         ? const StageResult.pass(AttestationStage.eventLog)
@@ -150,9 +157,13 @@ final class AttestationChecks {
   }
 
   /// `sha256(app_compose)` equals the payload of the `compose-hash` event.
-  StageResult composeHash(GatewayAttestation doc) {
-    final hash = AttestCodec.hex(crypto.sha256(_utf8(doc.appCompose)));
-    final measured = doc.eventLog.where((e) => e.event == 'compose-hash');
+  StageResult composeHash(GatewayAttestation doc) =>
+      composeHashOf(doc.appCompose, doc.eventLog);
+
+  /// [composeHash] for a bare `app_compose` and event list.
+  StageResult composeHashOf(String appCompose, List<TdxEvent> events) {
+    final hash = AttestCodec.hex(crypto.sha256(_utf8(appCompose)));
+    final measured = events.where((e) => e.event == 'compose-hash');
     if (measured.isEmpty) {
       return const StageResult.fail(
         AttestationStage.composeHash,

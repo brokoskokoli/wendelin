@@ -200,19 +200,24 @@ final class OpenAiChatAdapter implements LlmProvider {
         if (asMap(entry) case final m?)
           if (asString(m['id']) case final id?)
             if (!options.teeModelsOnly || m['is_tee'] == true)
-              ModelInfo(
-                id: id,
-                displayName: asString(m['name']),
-                contextWindow:
-                    asInt(m['context_length']) ?? asInt(m['context_window']),
-                supportsTools: _supportsTools(m),
-              ),
+              if (options.ownedBy == null || m['owned_by'] == options.ownedBy)
+                if (!options.toolsOnly || _supportsTools(m) == true)
+                  ModelInfo(
+                    id: id,
+                    displayName: asString(m['name']),
+                    contextWindow:
+                        asInt(m['context_length']) ??
+                        asInt(m['context_window']),
+                    supportsTools: _supportsTools(m),
+                  ),
     ];
   }
 
   static bool? _supportsTools(Map<String, Object?> model) {
     final params = model['supported_parameters'];
-    return params is List<Object?> ? params.contains('tools') : null;
+    if (params is List<Object?>) return params.contains('tools');
+    final features = model['supported_features']; // NEAR AI
+    return features is List<Object?> ? features.contains('tools') : null;
   }
 
   @override

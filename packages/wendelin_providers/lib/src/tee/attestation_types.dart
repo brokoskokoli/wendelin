@@ -49,6 +49,10 @@ enum AttestationStage {
   /// The keyset of the response did not match (only logged on failure).
   e2eeKeyset('e2ee.keyset'),
 
+  /// The gateway's own TDX quote (NEAR AI, WP75): bound to the nonce, TCB
+  /// shown; it only sees ciphertext, so an old TCB is a hint, not a block.
+  gateway('gateway'),
+
   /// NVIDIA NRAS check of the GPU evidence.
   gpu('gpu'),
 

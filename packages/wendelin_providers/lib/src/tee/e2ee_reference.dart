@@ -102,6 +102,10 @@ abstract final class E2eeReference {
     return r;
   }
 
+  /// X25519 (RFC 7748) for the other reference implementations of this package.
+  static Uint8List x25519(Uint8List scalar, Uint8List point) =>
+      _x25519(scalar, point);
+
   static Uint8List _x25519(Uint8List scalar, Uint8List point) {
     if (scalar.length != 32 || point.length != 32) {
       throw const E2eeCryptoException('X25519: 32 Byte erwartet');

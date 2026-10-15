@@ -210,6 +210,7 @@ String stageLabel(String stage) => switch (stage) {
   'e2ee.request' => 'Verschlüsselung der Anfrage',
   'e2ee.response' => 'Entschlüsselung der Antwort',
   'e2ee.keyset' => 'Schlüsselsatz der Antwort',
+  'gateway' => 'Gateway des Anbieters',
   'gpu' => 'GPU-Evidenz',
   'receipt.fetch' => 'Quittung abgerufen',
   'receipt.signature' => 'Quittungs-Signatur',
@@ -246,6 +247,7 @@ String? stageExplanation(String stage) => switch (stage) {
   'e2ee.key' =>
     'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. '
         'Die Verschlüsselung endet im Gateway des Anbieters (geprüfte '
-        'Enklave), nicht im Modell selbst.',
+        'Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im '
+        'geprüften Modell.',
   _ => null,
 };

@@ -147,6 +147,17 @@ const providerTemplates = <ProviderTemplate>[
     options: {'teeModelsOnly': true, 'attestation': 'phala'},
   ),
   ProviderTemplate(
+    id: 'near',
+    name: 'NEAR AI (TEE)',
+    type: ProviderType.openaiCompatible,
+    baseUrl: 'https://cloud-api.near.ai/v1',
+    auth: TemplateAuth.apiKey,
+    keyPageUrl: 'https://cloud.near.ai',
+    privacy: PrivacyLevel.tee,
+    suggestedModel: 'z-ai/glm-5.3-flash',
+    options: {'attestation': 'near', 'ownedBy': 'nearai', 'toolsOnly': true},
+  ),
+  ProviderTemplate(
     id: 'tinfoil',
     name: 'Tinfoil',
     type: ProviderType.openaiCompatible,

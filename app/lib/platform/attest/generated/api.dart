@@ -8,6 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'collateral.dart';
 import 'e2ee.dart';
 import 'frb_generated.dart';
+import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
 
@@ -123,3 +124,23 @@ Uint8List e2EeDecrypt({
   wireHex: wireHex,
   aad: aad,
 );
+
+/// Frische Client-Identität für eine NEAR-E2EE-Anfrage (Ed25519 öffentlich, X25519 geheim).
+NearIdentity nearGenerateIdentity() =>
+    AttestNative.instance.api.crateApiNearGenerateIdentity();
+
+/// Verschlüsselt ein Feld an den Ed25519-Schlüssel des Modells (NEAR AI, XChaCha20-Poly1305).
+String nearEncrypt({
+  required List<int> recipientEdPublic,
+  required List<int> plaintext,
+}) => AttestNative.instance.api.crateApiNearEncrypt(
+  recipientEdPublic: recipientEdPublic,
+  plaintext: plaintext,
+);
+
+/// Entschlüsselt ein NEAR-Feld im Hex-Wire-Format; jeder Fehler ist ein `Err`.
+Uint8List nearDecrypt({required List<int> secret, required String wireHex}) =>
+    AttestNative.instance.api.crateApiNearDecrypt(
+      secret: secret,
+      wireHex: wireHex,
+    );

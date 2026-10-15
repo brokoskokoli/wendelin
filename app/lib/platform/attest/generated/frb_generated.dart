@@ -14,6 +14,7 @@ import 'e2ee.dart';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
 
@@ -72,7 +73,7 @@ class AttestNative
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1979237243;
+  int get rustContentHash => 1423650251;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -105,6 +106,18 @@ abstract class AttestNativeApi extends BaseApi {
   });
 
   E2eeKeypair crateApiE2EeGenerateKeypair();
+
+  Uint8List crateApiNearDecrypt({
+    required List<int> secret,
+    required String wireHex,
+  });
+
+  String crateApiNearEncrypt({
+    required List<int> recipientEdPublic,
+    required List<int> plaintext,
+  });
+
+  NearIdentity crateApiNearGenerateIdentity();
 
   Future<String> crateApiRootCrlUrl({required String qeIdentityIssuerChain});
 
@@ -330,6 +343,86 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       const TaskConstMeta(debugName: 'e2ee_generate_keypair', argNames: []);
 
   @override
+  Uint8List crateApiNearDecrypt({
+    required List<int> secret,
+    required String wireHex,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(secret, serializer);
+          sse_encode_String(wireHex, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiNearDecryptConstMeta,
+        argValues: [secret, wireHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiNearDecryptConstMeta => const TaskConstMeta(
+    debugName: 'near_decrypt',
+    argNames: ['secret', 'wireHex'],
+  );
+
+  @override
+  String crateApiNearEncrypt({
+    required List<int> recipientEdPublic,
+    required List<int> plaintext,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(recipientEdPublic, serializer);
+          sse_encode_list_prim_u_8_loose(plaintext, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiNearEncryptConstMeta,
+        argValues: [recipientEdPublic, plaintext],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiNearEncryptConstMeta => const TaskConstMeta(
+    debugName: 'near_encrypt',
+    argNames: ['recipientEdPublic', 'plaintext'],
+  );
+
+  @override
+  NearIdentity crateApiNearGenerateIdentity() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_near_identity,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiNearGenerateIdentityConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiNearGenerateIdentityConstMeta =>
+      const TaskConstMeta(debugName: 'near_generate_identity', argNames: []);
+
+  @override
   Future<String> crateApiRootCrlUrl({required String qeIdentityIssuerChain}) {
     return handler.executeNormal(
       NormalTask(
@@ -339,7 +432,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 10,
             port: port_,
           );
         },
@@ -366,7 +459,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(data, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -389,7 +482,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(data, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -412,7 +505,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(certificateDer, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -443,7 +536,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_String(reportJson, serializer);
           sse_encode_String(observedSpkiHex, serializer);
           sse_encode_String(host, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -475,7 +568,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 15,
             port: port_,
           );
         },
@@ -513,7 +606,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 16,
             port: port_,
           );
         },
@@ -546,7 +639,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_list_prim_u_8_loose(publicKey, serializer);
           sse_encode_list_prim_u_8_loose(message, serializer);
           sse_encode_list_prim_u_8_loose(signature, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -580,7 +673,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 18,
             port: port_,
           );
         },
@@ -676,6 +769,18 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  NearIdentity dco_decode_near_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NearIdentity(
+      secret: dco_decode_list_prim_u_8_strict(arr[0]),
+      public: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
   }
 
   @protected
@@ -844,6 +949,14 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     final len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  NearIdentity sse_decode_near_identity(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_secret = sse_decode_list_prim_u_8_strict(deserializer);
+    final var_public = sse_decode_list_prim_u_8_strict(deserializer);
+    return NearIdentity(secret: var_secret, public: var_public);
   }
 
   @protected
@@ -1038,6 +1151,13 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_near_identity(NearIdentity self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.secret, serializer);
+    sse_encode_list_prim_u_8_strict(self.public, serializer);
   }
 
   @protected

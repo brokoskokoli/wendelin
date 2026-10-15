@@ -151,6 +151,7 @@ AttestationWiring? attestationWiringOf(Ref ref) {
   final transport = ref.read(attestationTransportProvider);
   return AttestationWiring(
     crypto: crypto,
+    nearCrypto: crypto is NearCrypto ? crypto as NearCrypto : null,
     logSink: ref.read(attestationLogWriterProvider),
     pins: ref.read(attestationPinStoreProvider),
     gpuMode: ref.read(gpuCheckModeProvider),

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:wendelin/platform/attest/attest_backend.dart';
 import 'package:wendelin/platform/attest/generated/collateral.dart';
 import 'package:wendelin/platform/attest/generated/e2ee.dart';
+import 'package:wendelin/platform/attest/generated/near_e2ee.dart';
 import 'package:wendelin/platform/attest/generated/quote.dart';
 import 'package:wendelin/platform/attest/generated/report.dart';
 
@@ -117,6 +118,28 @@ final class FakeAttestBackend implements AttestBackend {
 
   @override
   Uint8List e2eeDecrypt(Uint8List secret, String wire, Uint8List aad) {
+    if (panic != null) throw panic!;
+    if (wire.isEmpty) throw StateError('x');
+    return Uint8List.fromList([wire.length]);
+  }
+
+  @override
+  NearIdentity nearGenerateIdentity() {
+    if (panic != null) throw panic!;
+    return NearIdentity(
+      secret: Uint8List.fromList(List.filled(32, 3)),
+      public: Uint8List.fromList(List.filled(32, 4)),
+    );
+  }
+
+  @override
+  String nearEncrypt(Uint8List pub, Uint8List plain) {
+    if (panic != null) throw panic!;
+    return 'cd' * (72 + plain.length);
+  }
+
+  @override
+  Uint8List nearDecrypt(Uint8List secret, String wire) {
     if (panic != null) throw panic!;
     if (wire.isEmpty) throw StateError('x');
     return Uint8List.fromList([wire.length]);

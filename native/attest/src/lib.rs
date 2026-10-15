@@ -8,6 +8,7 @@ pub mod collateral;
 pub mod e2ee;
 mod frb_generated;
 pub mod jcs;
+pub mod near_e2ee;
 pub mod quote;
 pub mod report;
 pub mod spki;

@@ -18,6 +18,9 @@ import 'package:meta/meta.dart';
 ///   retries once without and remembers that.
 /// - `teeModelsOnly` (bool): `listModels` keeps only models with
 ///   `is_tee: true` (Phala).
+/// - `ownedBy` (string): `listModels` keeps only models whose `owned_by`
+///   equals it (NEAR AI: `nearai`, the own E2EE fleet, not routed models).
+/// - `toolsOnly` (bool): `listModels` keeps only models that support tools.
 /// - `extraBody` (object): merged into the request body (escape hatch for
 ///   server-specific parameters).
 @immutable
@@ -30,6 +33,8 @@ final class OpenAiOptions {
     this.maxTokensField,
     this.includeUsage = true,
     this.teeModelsOnly = false,
+    this.ownedBy,
+    this.toolsOnly = false,
     this.extraBody = const {},
   });
 
@@ -48,6 +53,8 @@ final class OpenAiOptions {
       maxTokensField: read<String>('maxTokensField'),
       includeUsage: read<bool>('includeUsage') ?? true,
       teeModelsOnly: read<bool>('teeModelsOnly') ?? false,
+      ownedBy: read<String>('ownedBy'),
+      toolsOnly: read<bool>('toolsOnly') ?? false,
       extraBody: read<Map<String, Object?>>('extraBody') ?? const {},
     );
   }
@@ -71,6 +78,12 @@ final class OpenAiOptions {
 
   /// See class docs.
   final bool teeModelsOnly;
+
+  /// See class docs.
+  final String? ownedBy;
+
+  /// See class docs.
+  final bool toolsOnly;
 
   /// See class docs.
   final Map<String, Object?> extraBody;

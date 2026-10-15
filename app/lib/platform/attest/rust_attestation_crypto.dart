@@ -12,7 +12,7 @@ import 'pcs_collateral_client.dart';
 /// `AttestationCrypto` über das Rust-Modul `native/attest` (WP47). Kollateral kommt aus dem Dateicache
 /// (bis `nextUpdate`) oder von Intel PCS; ab weniger als [renewBefore] Restlaufzeit wird erneuert,
 /// bei Netzfehler gilt der noch gültige Cache weiter.
-final class RustAttestationCrypto implements AttestationCrypto {
+final class RustAttestationCrypto implements AttestationCrypto, NearCrypto {
   /// Erstellt die Implementierung.
   RustAttestationCrypto({
     required this.backend,
@@ -166,6 +166,37 @@ final class RustAttestationCrypto implements AttestationCrypto {
   Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad) {
     try {
       return backend.e2eeDecrypt(secret, wireHex, aad);
+    } on Object {
+      throw const E2eeCryptoException('Entschlüsselung fehlgeschlagen');
+    }
+  }
+
+  // --- NEAR AI (WP75) -----------------------------------------------------
+
+  @override
+  NearIdentity nearGenerateIdentity() {
+    try {
+      final id = backend.nearGenerateIdentity();
+      return NearIdentity(secret: id.secret, public: id.public);
+    } on Object {
+      throw const E2eeCryptoException('Schlüsselerzeugung fehlgeschlagen');
+    }
+  }
+
+  @override
+  String nearEncrypt(Uint8List recipientEd25519, Uint8List plaintext) {
+    try {
+      return backend.nearEncrypt(recipientEd25519, plaintext);
+    } on Object {
+      // No details of the Rust error: it must not carry key material.
+      throw const E2eeCryptoException('Verschlüsselung fehlgeschlagen');
+    }
+  }
+
+  @override
+  Uint8List nearDecrypt(Uint8List secret, String wireHex) {
+    try {
+      return backend.nearDecrypt(secret, wireHex);
     } on Object {
       throw const E2eeCryptoException('Entschlüsselung fehlgeschlagen');
     }
