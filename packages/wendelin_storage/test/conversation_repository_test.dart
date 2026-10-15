@@ -64,6 +64,38 @@ void main() {
     );
   });
 
+  group('origin (WP67)', () {
+    test('currentOrNew übernimmt nie eine Sitzung anderer Herkunft', () async {
+      final overlay = await repo.startNew(t0, origin: SessionOrigin.overlay);
+      expect(overlay.origin, SessionOrigin.overlay);
+      final app = await repo.currentOrNew(t0.add(const Duration(minutes: 1)));
+      expect(app.id, isNot(overlay.id));
+      expect(app.origin, SessionOrigin.app);
+      final again = await repo.currentOrNew(
+        t0.add(const Duration(minutes: 2)),
+        origin: SessionOrigin.overlay,
+      );
+      expect(again.id, overlay.id);
+    });
+
+    test('sessions filtert nach Herkunft, ohne Filter alle', () async {
+      final a = await repo.startNew(t0);
+      final o = await repo.startNew(t0, origin: SessionOrigin.overlay);
+      expect(
+        [for (final s in await repo.sessions(origin: SessionOrigin.app)) s.id],
+        [a.id],
+      );
+      expect(
+        [
+          for (final s in await repo.sessions(origin: SessionOrigin.overlay))
+            s.id,
+        ],
+        [o.id],
+      );
+      expect(await repo.sessions(), hasLength(2));
+    });
+  });
+
   test('startNew, session, setTitle, sessions(limit)', () async {
     final a = await repo.startNew(t0, title: 'Tauchen');
     final b = await repo.startNew(t0.add(const Duration(hours: 1)));

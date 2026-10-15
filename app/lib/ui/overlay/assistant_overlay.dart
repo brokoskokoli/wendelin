@@ -113,6 +113,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   // taken right before the microphone opens here (WP68), the service records
   // until then.
   Future<void> _fireFirst() async {
+    // Every invocation of the assistant starts a new conversation (WP67).
+    _agent.beginFreshConversation();
     final wake = await _platform.hasWakeHandoff();
     if (mounted) _triggers.fire(wake: wake);
   }
@@ -190,7 +192,11 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     setState(() => _typing = false);
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) await _voice.cancel();
-    if (ref.read(agentControllerProvider).running) return;
+    if (ref.read(agentControllerProvider).running) {
+      // Nobody takes the hit over: release the service microphone (WP68).
+      if (e.source == TriggerKind.wakeWord) await _platform.takeWakeHandoff();
+      return;
+    }
     // Wake word hit: a short tone (setting „Bestätigungston“), not awaited.
     // Setting and tone are loaded in initState; the tone is cut from the
     // recording (the microphone hears the speaker otherwise).

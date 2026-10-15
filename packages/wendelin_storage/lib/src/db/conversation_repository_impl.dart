@@ -20,25 +20,32 @@ final class DriftConversationRepository implements ConversationRepository {
   Future<Session> currentOrNew(
     DateTime now, {
     Duration inactivity = ConversationRepository.defaultInactivity,
+    SessionOrigin origin = SessionOrigin.app,
   }) => _db.transaction(() async {
     final latest =
         await (_db.select(_db.sessions)
+              ..where((s) => s.origin.equals(origin.name))
               ..orderBy([(s) => OrderingTerm.desc(s.lastActivityAt)])
               ..limit(1))
             .getSingleOrNull();
     if (latest != null && now.difference(latest.lastActivityAt) < inactivity) {
       return _session(latest);
     }
-    return startNew(now);
+    return startNew(now, origin: origin);
   });
 
   @override
-  Future<Session> startNew(DateTime now, {String? title}) async {
+  Future<Session> startNew(
+    DateTime now, {
+    String? title,
+    SessionOrigin origin = SessionOrigin.app,
+  }) async {
     final row = SessionRow(
       id: _ids.next(),
       startedAt: now,
       lastActivityAt: now,
       title: title,
+      origin: origin.name,
     );
     await _db.into(_db.sessions).insert(row);
     return _session(row);
@@ -53,8 +60,13 @@ final class DriftConversationRepository implements ConversationRepository {
   }
 
   @override
-  Future<List<Session>> sessions({int? limit}) async {
+  Future<List<Session>> sessions({int? limit, SessionOrigin? origin}) async {
     final q = _db.select(_db.sessions)
+      ..where(
+        (s) => origin == null
+            ? const Constant(true)
+            : s.origin.equals(origin.name),
+      )
       ..orderBy([
         (s) => OrderingTerm.desc(s.lastActivityAt),
         (s) => OrderingTerm.desc(s.startedAt),
@@ -158,6 +170,7 @@ final class DriftConversationRepository implements ConversationRepository {
     startedAt: r.startedAt,
     lastActivityAt: r.lastActivityAt,
     title: r.title,
+    origin: SessionOrigin.values.byName(r.origin),
   );
 
   static StoredMessage _message(MessageRow r) => StoredMessage(

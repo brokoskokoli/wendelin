@@ -61,6 +61,9 @@ Das Overlay setzt immer `FLAG_SECURE`: keine Screenshots, verdeckt im App-Wechsl
 ### 13. Hintergrund-Index nur in der Haupt-Engine
 Den Index-Aufbau in Schleifen (`ObsidianIndexController`) startet nur die Haupt-App. Im Overlay synchronisiert allein die Suche der Integration (ein Lauf, falls nötig).
 
+### 14. Sitzungen tragen ihre Herkunft (WP67)
+`sessions.origin` (`app` oder `overlay`, Schema v5) trennt die Gespräche der beiden Engines. Jede Engine setzt und übernimmt nur Sitzungen ihrer Herkunft, damit eine Overlay-Sitzung nie im App-Chat auftaucht. Datenschutzansicht (Export, Löschen) und Aufbewahrung betrachten alle Sitzungen.
+
 ## Folgen
 - WP19 setzt den Assistenten per `cmd role add-role-holder android.app.role.ASSISTANT app.wendelin` und öffnet das Overlay mit `input keyevent KEYCODE_ASSIST`. `cmd voiceinteraction show` braucht eine Berechtigung, die die Shell nicht hat.
 - **WP19-Prüfpunkt (zwei Engines), auf dem Emulator bestanden** (`app/integration_test/overlay_e2e_test.dart`): Das Overlay startet kalt und öffnet die Datenbank zuerst, startet also den gemeinsamen drift-Isolate. Die App verbindet sich danach, das Overlay wird geschlossen (Engine beendet), und die App schreibt weiter: Anfrage, Verlauf, Audit-Log, Index. Nach dem Entzug der Rolle ist `WendelinRecognitionService` wieder aus.

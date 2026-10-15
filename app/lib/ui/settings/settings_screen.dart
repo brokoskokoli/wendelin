@@ -26,10 +26,6 @@ class SettingsScreen extends ConsumerWidget {
     ),
     ('MCP-Server', 'Server, Anmeldung, Status, Tools', AppRoutes.mcpServers),
     ('HTTP-Tools', 'Eigene Tools definieren und testen', AppRoutes.httpTools),
-    ('Obsidian', 'Vault, Tagesnotizen, Suchindex', AppRoutes.obsidian),
-    ('Listen', 'Einkaufen, Projekte … als Markdown-Dateien', AppRoutes.lists),
-    ('Web-Suche', 'Suchdienst und Key', AppRoutes.webSearch),
-    ('Gedächtnis', 'Einträge ansehen, ändern, exportieren', AppRoutes.memory),
     (
       'Datenschutz und Logs',
       'Aufbewahrung, Prüfprotokoll, Export',

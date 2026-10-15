@@ -77,7 +77,10 @@ void main() {
       'http://homeassistant.local:8123/api/mcp',
     );
     expect(shows('Unverschlüsselt (http)'), isTrue);
-    final token = find.byKey(const ValueKey('mcpToken'));
+    final token = find.descendant(
+      of: find.byKey(const ValueKey('mcpToken')),
+      matching: find.byType(TextField),
+    );
     expect(tester.widget<TextField>(token).obscureText, isTrue);
 
     // Klartext ins Internet wird abgelehnt.

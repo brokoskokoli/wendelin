@@ -452,6 +452,21 @@ void main() {
     expect(fresh.read(agentControllerProvider).entries, isEmpty);
   });
 
+  test('restore zeigt keine Overlay-Sitzung (WP67)', () async {
+    final s = await env.storage.conversations.startNew(
+      env.clock.now(),
+      origin: SessionOrigin.overlay,
+    );
+    await env.storage.conversations.append(s.id, Message.user('Glocken'));
+    final fresh = ProviderContainer(
+      overrides: env.overrides,
+      retry: (_, _) => null,
+    );
+    addTearDown(fresh.dispose);
+    await fresh.read(agentControllerProvider.notifier).restore();
+    expect(fresh.read(agentControllerProvider).entries, isEmpty);
+  });
+
   group('Review WP08', () {
     test(
       'Sitzungsende vergisst per tools__search freigeschaltete Tools',
@@ -504,6 +519,32 @@ void main() {
         await c.read(agentControllerProvider.notifier).newTopic();
         expect(registry.unlockedTools(old), isEmpty);
         expect(c.read(sessionManagerProvider).currentId, isNot(old));
+      },
+    );
+
+    test(
+      'beginFreshConversation: zweiter Aufruf ohne Verlauf (WP67)',
+      () async {
+        final provider = FakeLlmProvider([
+          ScriptedTurn.text('Glocken sind schön.'),
+          ScriptedTurn.text('Folge.'),
+          ScriptedTurn.text('Neu.'),
+        ]);
+        start([], custom: TestEnv(providerConfig: scripted(provider)));
+        final controller = c.read(agentControllerProvider.notifier);
+        await sendAndWait(c, 'Erzähl mir von Glocken');
+        await sendAndWait(c, 'Und größere?');
+        expect(provider.requests[1].messages.length, greaterThan(1));
+        controller.beginFreshConversation();
+        expect(c.read(agentControllerProvider).entries, isEmpty);
+        await sendAndWait(c, 'Wie wird das Wetter?');
+        final texts = provider.requests[2].messages.toString();
+        expect(texts, isNot(contains('Glocken')));
+        expect(texts, contains('Wetter'));
+        expect(
+          provider.requests[2].messages.where((m) => m.role == Role.user),
+          hasLength(1),
+        );
       },
     );
 
@@ -760,6 +801,7 @@ final class _BrokenConversations implements ConversationRepository {
   Future<Session> currentOrNew(
     DateTime now, {
     Duration inactivity = ConversationRepository.defaultInactivity,
+    SessionOrigin origin = SessionOrigin.app,
   }) => Future.error(StateError('Datenbank gesperrt'));
 
   @override

@@ -650,6 +650,33 @@ void main() {
     expect(env.calendar.events, isEmpty);
   });
 
+  testWidgets('jeder Aufruf beginnt ein neues Gespräch (WP67)', (tester) async {
+    final provider = FakeLlmProvider([
+      ScriptedTurn.text('Eins'),
+      ScriptedTurn.text('Zwei'),
+    ]);
+    final env = TestEnv(providerConfig: scripted(provider));
+    final platform = FakeAssistantPlatform();
+    final first = await pumpOverlay(tester, env, platform);
+    unawaited(first.read(agentControllerProvider.notifier).send('Glocken'));
+    await pumpUntil(tester, find.text('Eins'));
+    // Overlay schließen und innerhalb der Inaktivitätsfrist neu auslösen.
+    await tester.pumpWidget(const SizedBox());
+    final second = await pumpOverlay(tester, env, platform);
+    unawaited(second.read(agentControllerProvider.notifier).send('Wetter'));
+    await pumpUntil(tester, find.text('Zwei'));
+    final users = [
+      for (final m in provider.requests.last.messages)
+        if (m.role == Role.user) m,
+    ];
+    expect(users, hasLength(1));
+    expect(users.single.toJson().toString(), contains('Wetter'));
+    expect(
+      provider.requests.last.messages.toString(),
+      isNot(contains('Glocken')),
+    );
+  });
+
   test('Ausschnitt: nur die letzte Anfrage, ohne Denken', () {
     final x = OverlayExchange.of([
       const UserEntry('u1', 'alt'),

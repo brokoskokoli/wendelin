@@ -44,8 +44,11 @@ final class SpeechModelCatalog {
     whisperSmall,
     sileroVad,
     voiceDe,
+    voiceDeKerstin,
     voiceFr,
+    voiceFrGilles,
     voiceEn,
+    voiceEnJoe,
     wakeFeatures,
   ]);
 
@@ -140,7 +143,8 @@ final class SpeechModelCatalog {
   static const voiceDe = SpeechModel(
     id: 'tts-de-thorsten',
     kind: SpeechModelKind.tts,
-    displayName: 'Deutsch – Thorsten',
+    displayName: 'Deutsch – Thorsten (männlich)',
+    gender: VoiceGender.male,
     languages: {'de'},
     license: 'CC0 (Thorsten-Voice), Piper MIT',
     source: _ghSource,
@@ -161,7 +165,8 @@ final class SpeechModelCatalog {
   static const voiceFr = SpeechModel(
     id: 'tts-fr-siwis',
     kind: SpeechModelKind.tts,
-    displayName: 'Français – Siwis',
+    displayName: 'Français – Siwis (weiblich)',
+    gender: VoiceGender.female,
     languages: {'fr'},
     license: 'CC BY 4.0 (SIWIS-Datenbank), Piper MIT',
     source: _ghSource,
@@ -186,7 +191,8 @@ final class SpeechModelCatalog {
   static const voiceEn = SpeechModel(
     id: 'tts-en-ljspeech',
     kind: SpeechModelKind.tts,
-    displayName: 'English – LJSpeech',
+    displayName: 'English – LJSpeech (weiblich)',
+    gender: VoiceGender.female,
     languages: {'en'},
     license: 'Public Domain (LJ Speech Dataset), Piper MIT',
     source: _ghSource,
@@ -198,6 +204,75 @@ final class SpeechModelCatalog {
         sizeBytes: 21090429,
         sha256:
             '24dc3bd77dd48c291e52c297878d3437c9492f245d823d7f6a06c4bbb67f4b6b',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// German voice: Piper „Kerstin“ (low, int8; CC0 dataset of the Rhasspy
+  /// project).
+  static const voiceDeKerstin = SpeechModel(
+    id: 'tts-de-kerstin',
+    kind: SpeechModelKind.tts,
+    displayName: 'Deutsch – Kerstin (weiblich)',
+    gender: VoiceGender.female,
+    languages: {'de'},
+    license: 'CC0 (Rhasspy dataset-voice-kerstin), Piper MIT',
+    source: _ghSource,
+    note: '$_ghNote $_int8Note SHA-256 selbst gehasht (2026-10-15).',
+    files: [
+      ModelFile(
+        name: 'vits-piper-de_DE-kerstin-low-int8.tar.bz2',
+        url: '$_gh/tts-models/vits-piper-de_DE-kerstin-low-int8.tar.bz2',
+        sizeBytes: 21174728,
+        sha256:
+            'bcd8039667940cf2efc939b844f4b33d0823096572fcc1a8caaa2faa77f3379c',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// French voice: Piper „Gilles“ (low, int8; CC0 dataset). The gender
+  /// is taken from the voice's description, not checked by ear.
+  static const voiceFrGilles = SpeechModel(
+    id: 'tts-fr-gilles',
+    kind: SpeechModelKind.tts,
+    displayName: 'Français – Gilles (männlich)',
+    gender: VoiceGender.male,
+    languages: {'fr'},
+    license: 'CC0 (Daten: French Single Speaker Speech Dataset), Piper MIT',
+    source: _ghSource,
+    note: '$_ghNote $_int8Note SHA-256 selbst gehasht (2026-10-15).',
+    files: [
+      ModelFile(
+        name: 'vits-piper-fr_FR-gilles-low-int8.tar.bz2',
+        url: '$_gh/tts-models/vits-piper-fr_FR-gilles-low-int8.tar.bz2',
+        sizeBytes: 21248965,
+        sha256:
+            '92d2bfd9b6b32b9787557c466b15620e453aecc10ec521762660e034941b3c43',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// English voice: Piper „Joe“ (medium, int8; CC0 dataset of the Open Home
+  /// Foundation).
+  static const voiceEnJoe = SpeechModel(
+    id: 'tts-en-joe',
+    kind: SpeechModelKind.tts,
+    displayName: 'English – Joe (männlich)',
+    gender: VoiceGender.male,
+    languages: {'en'},
+    license: 'CC0 (OHF-Voice voice-datasets), Piper MIT',
+    source: _ghSource,
+    note: '$_ghNote $_int8Note SHA-256 selbst gehasht (2026-10-15).',
+    files: [
+      ModelFile(
+        name: 'vits-piper-en_US-joe-medium-int8.tar.bz2',
+        url: '$_gh/tts-models/vits-piper-en_US-joe-medium-int8.tar.bz2',
+        sizeBytes: 21230019,
+        sha256:
+            '644527f29eca0ada5595d7b6e4daf6388f5ac0c4870b4d42996a6687fcefeb37',
         archive: ModelArchive.tarBz2,
       ),
     ],
@@ -261,5 +336,15 @@ final class SpeechModelCatalog {
       if (m.languages.contains(lang)) return m;
     }
     return null;
+  }
+
+  /// All voices for [language] (primary subtag), in catalog order; the
+  /// first one is the default of [voiceFor].
+  List<SpeechModel> voicesFor(String language) {
+    final lang = language.split(RegExp('[-_]')).first.toLowerCase();
+    return [
+      for (final m in ofKind(SpeechModelKind.tts))
+        if (m.languages.contains(lang)) m,
+    ];
   }
 }

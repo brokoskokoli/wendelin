@@ -16,6 +16,7 @@ final class SessionManager {
     required this.clock,
     required this.onSessionEnd,
     this.inactivity = ConversationRepository.defaultInactivity,
+    this.origin = SessionOrigin.app,
   });
 
   /// Sessions in the database.
@@ -30,8 +31,41 @@ final class SessionManager {
   /// Inactivity after which a session ends.
   final Duration inactivity;
 
+  /// Engine this manager belongs to; it only picks up and starts sessions of
+  /// this origin, so the overlay never leaks into the app chat (WP67).
+  final SessionOrigin origin;
+
   String? _current;
   Timer? _timer;
+  bool _fresh = false;
+
+  Future<Session> _currentOrNew() => conversations.currentOrNew(
+    clock.now(),
+    inactivity: inactivity,
+    origin: origin,
+  );
+
+  // This manager's own session while it is still active: another engine
+  // (overlay) may have opened a newer one in the shared database, which
+  // must not take over this conversation (WP67).
+  Future<Session?> _own() async {
+    final id = _current;
+    if (id == null) return null;
+    final own = await conversations.session(id);
+    if (own == null ||
+        clock.now().difference(own.lastActivityAt) >= inactivity) {
+      return null;
+    }
+    return own;
+  }
+
+  /// The next request starts a new session, whatever the database holds
+  /// (every assistant overlay invocation starts a fresh conversation, WP67).
+  /// Ends the current session now.
+  void beginFresh() {
+    end();
+    _fresh = true;
+  }
 
   /// Id of the current session, if one is open.
   String? get currentId => _current;
@@ -39,10 +73,13 @@ final class SessionManager {
   /// The session for a new request: the open one, or a new one if the last
   /// one ended. Restarts the inactivity timer.
   Future<String> ensure() async {
-    final session = await conversations.currentOrNew(
-      clock.now(),
-      inactivity: inactivity,
-    );
+    final Session session;
+    if (_fresh) {
+      _fresh = false;
+      session = await conversations.startNew(clock.now(), origin: origin);
+    } else {
+      session = await _own() ?? await _currentOrNew();
+    }
     _switchTo(session.id);
     touch();
     return session.id;
@@ -50,7 +87,7 @@ final class SessionManager {
 
   /// Starts a new session („neues Thema“).
   Future<String> startNew() async {
-    final session = await conversations.startNew(clock.now());
+    final session = await conversations.startNew(clock.now(), origin: origin);
     _switchTo(session.id);
     touch();
     return session.id;
