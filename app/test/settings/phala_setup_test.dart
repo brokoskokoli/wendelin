@@ -98,39 +98,21 @@ void main() {
     expect(find.text('Speichern'), findsNothing, reason: 'bleibt bei der Wahl');
   });
 
-  testWidgets(
-    '„Ohne Tools (alles verschlüsselt)\u201c: Standard aus, Erklärtext, '
-    'wird gespeichert und beim Bearbeiten wieder angezeigt',
-    (tester) async {
-      final env = await _openPhala(tester, ScriptedVerifier());
-      await tester.tap(find.text('Modell prüfen'));
-      await tester.pumpAndSettle();
-      final row = find.text('Ohne Tools (alles verschlüsselt)');
-      await tester.scrollUntilVisible(
-        row,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.textContaining('keine Aktionen ausführen'), findsOneWidget);
-      expect(find.textContaining('Kalender, Taschenlampe'), findsOneWidget);
-      expect(tester.widget<WSwitch>(find.byType(WSwitch)).value, isFalse);
-      await tester.tap(find.byType(WSwitch));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text('Speichern'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(find.text('Speichern'));
-      await tester.pumpAndSettle();
-      final saved = (await env.storage.providerProfiles.list()).single;
-      expect(saved.options['noTools'], isTrue);
-      expect(saved.options['attestation'], 'phala');
-    },
-  );
+  testWidgets('kein Schalter „Ohne Tools“ mehr (WP71)', (tester) async {
+    await _openPhala(tester, ScriptedVerifier());
+    await tester.tap(find.text('Modell prüfen'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Speichern'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Ohne Tools (alles verschlüsselt)'), findsNothing);
+    expect(find.byType(WSwitch), findsNothing);
+  });
 
-  testWidgets('Bearbeiten: der Schalter zeigt den gespeicherten Wert und '
-      'Ausschalten entfernt die Option', (tester) async {
+  testWidgets('Migration: ein Profil mit altem noTools lädt ohne Fehler, die '
+      'Option fällt beim Speichern weg', (tester) async {
     final gateway = ScriptedGateway();
     final env = TestEnv(
       storedProfiles: true,
@@ -157,14 +139,6 @@ void main() {
     await tester.tap(find.text('Verbindung testen'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Modell prüfen'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.byType(WSwitch),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(tester.widget<WSwitch>(find.byType(WSwitch)).value, isTrue);
-    await tester.tap(find.byType(WSwitch));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Speichern'),

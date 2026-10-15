@@ -22,8 +22,8 @@ class StageLine extends StatelessWidget {
   /// Short reason.
   final String? detail;
 
-  /// Symbol; `null` for stages that are only logged.
-  final CheckStatus? status;
+  /// Symbol (every stage has one; „nur protokolliert“ is grey).
+  final CheckStatus status;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -34,10 +34,7 @@ class StageLine extends StatelessWidget {
     child: Row(
       spacing: WSpace.m,
       children: [
-        if (status != null)
-          CheckStatusIcon(status!, size: WSize.statusIconSmall)
-        else
-          const SizedBox.square(dimension: WSize.statusIconSmall),
+        CheckStatusIcon(status, size: WSize.statusIconSmall),
         Expanded(
           child: MergeSemantics(
             child: Column(

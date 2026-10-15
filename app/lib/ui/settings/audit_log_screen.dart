@@ -1,16 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../../di/audit_export.dart';
 import '../../di/providers.dart';
 import '../design/design.dart';
 import '../screens/labels.dart';
+import 'audit_entry_screen.dart';
 import 'export.dart';
 import 'privacy_screen.dart';
 import 'settings_page.dart';
 
-/// Settings → Datenschutz und Logs → Prüfprotokoll ansehen: the audit log
-/// with filter by kind and export as JSON (WP65: own page instead of inline).
+/// Settings → Datenschutz und Logs → Prüfprotokoll: the audit log with
+/// export as JSON (above the list, without contents) and filter by kind;
+/// a tap opens the entry.
 class AuditLogScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const AuditLogScreen({super.key});
@@ -28,8 +33,20 @@ class _AuditLogState extends ConsumerState<AuditLogScreen> {
     final now = ref.watch(clockProvider).now();
     return SettingsPage(
       title: 'Prüfprotokoll',
-      intro: 'Was Wendelin getan hat. Nie Schlüssel, nur Ids und Ergebnisse.',
+      intro:
+          'Was Wendelin getan hat. Nie Schlüssel. Der Export enthält keine '
+          'Texte, nur Zeiten, Arten und Ergebnisse.',
       children: [
+        WideButton(
+          'Als JSON exportieren',
+          onPressed: () async => ref.read(exporterProvider)(
+            'wendelin-pruefprotokoll.json',
+            'application/json',
+            auditExportWithoutContent(
+              await ref.read(storageProvider).audit.exportJson(),
+            ),
+          ),
+        ),
         Wrap(
           spacing: WSpace.s,
           runSpacing: WSpace.s,
@@ -53,17 +70,16 @@ class _AuditLogState extends ConsumerState<AuditLogScreen> {
                       '${auditKindLabel(e.kind)} · '
                       '${sessionLabel(e.at, now)}',
                   detail: auditSummary(e),
+                  onTap: () => unawaited(
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => AuditEntryScreen(entry: e),
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),
-        WideButton(
-          'Als JSON exportieren',
-          onPressed: () async => ref.read(exporterProvider)(
-            'wendelin-pruefprotokoll.json',
-            'application/json',
-            await ref.read(storageProvider).audit.exportJson(),
-          ),
-        ),
       ],
     );
   }

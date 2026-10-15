@@ -83,13 +83,6 @@ final class ProviderConfig {
   /// Routing rules; `null` = default target only.
   final RoutingSetup? routing;
 
-  /// Whether profile [profileId] offers no tools (Phala without tools,
-  /// WP63); `false` if unknown.
-  bool noToolsFor(String profileId) => [
-    primary,
-    ...others,
-  ].any((t) => t.profileId == profileId && !t.provider.caps.tools);
-
   /// Display name of [profileId] (the id if unknown).
   String nameOf(String profileId) => names[profileId] ?? profileId;
 

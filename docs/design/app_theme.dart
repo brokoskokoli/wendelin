@@ -36,19 +36,38 @@ abstract final class WRadius {
 }
 
 abstract final class WText {
-  static TextStyle _ui(double size, FontWeight w, {double? height, double ls = 0}) =>
-      GoogleFonts.instrumentSans(
-          fontSize: size, fontWeight: w, height: height, letterSpacing: ls * size, color: WColors.text);
+  static TextStyle _ui(
+    double size,
+    FontWeight w, {
+    double? height,
+    double ls = 0,
+  }) => GoogleFonts.instrumentSans(
+    fontSize: size,
+    fontWeight: w,
+    height: height,
+    letterSpacing: ls * size,
+    color: WColors.text,
+  );
 
   static final transcript = _ui(26, FontWeight.w600, height: 1.2, ls: -0.01);
   static final screenTitle = _ui(26, FontWeight.w600, ls: -0.01);
   static final cardTitle = _ui(24, FontWeight.w600, height: 1.25);
-  static final answer = _ui(18, FontWeight.w400, height: 1.45).copyWith(color: WColors.textSecondary);
+  static final answer = _ui(
+    18,
+    FontWeight.w400,
+    height: 1.45,
+  ).copyWith(color: WColors.textSecondary);
   static final body = _ui(16, FontWeight.w400, height: 1.5);
   static final label = _ui(16, FontWeight.w600);
   static final button = _ui(15, FontWeight.w600);
-  static final caption = _ui(13, FontWeight.w400).copyWith(color: WColors.textMuted);
-  static final mono = GoogleFonts.ibmPlexMono(fontSize: 12, color: WColors.textMuted);
+  static final caption = _ui(
+    13,
+    FontWeight.w400,
+  ).copyWith(color: WColors.textMuted);
+  static final mono = GoogleFonts.ibmPlexMono(
+    fontSize: 12,
+    color: WColors.textMuted,
+  );
 }
 
 enum PrivacyLevel { local, tee, eu, standard }
@@ -70,7 +89,11 @@ ThemeData buildWendelinTheme() {
     error: WColors.error,
     onError: WColors.ink,
   );
-  final base = ThemeData(useMaterial3: true, colorScheme: scheme, scaffoldBackgroundColor: WColors.ink);
+  final base = ThemeData(
+    useMaterial3: true,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: WColors.ink,
+  );
   return base.copyWith(
     textTheme: GoogleFonts.instrumentSansTextTheme(base.textTheme)
         .apply(bodyColor: WColors.text, displayColor: WColors.text),
@@ -80,7 +103,9 @@ ThemeData buildWendelinTheme() {
         foregroundColor: WColors.ink,
         minimumSize: const Size(44, 52),
         textStyle: WText.button,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(WRadius.buttonLarge)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(WRadius.buttonLarge),
+        ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -89,14 +114,19 @@ ThemeData buildWendelinTheme() {
         minimumSize: const Size(44, 44),
         side: const BorderSide(color: WColors.line, width: 1.5),
         textStyle: WText.button,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(WRadius.button)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(WRadius.button),
+        ),
       ),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? Colors.white : WColors.textMuted),
+        (s) =>
+            s.contains(WidgetState.selected) ? Colors.white : WColors.textMuted,
+      ),
       trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? WColors.accent : WColors.line),
+        (s) => s.contains(WidgetState.selected) ? WColors.accent : WColors.line,
+      ),
       trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -105,16 +135,28 @@ ThemeData buildWendelinTheme() {
       hintStyle: WText.body.copyWith(color: WColors.textMuted),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: WColors.line, width: 1.5)),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: WColors.line, width: 1.5),
+      ),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: WColors.accent, width: 1.5)),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: WColors.accent, width: 1.5),
+      ),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: WColors.ink,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(WRadius.sheet))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(WRadius.sheet),
+        ),
+      ),
       showDragHandle: true,
       dragHandleColor: WColors.line,
     ),
-    dividerTheme: const DividerThemeData(color: WColors.surfaceRaised, thickness: 1, space: 1),
+    dividerTheme: const DividerThemeData(
+      color: WColors.surfaceRaised,
+      thickness: 1,
+      space: 1,
+    ),
   );
 }

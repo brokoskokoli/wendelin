@@ -25,7 +25,6 @@ final class TeeHarness {
     this.tlsPin,
     http.Client Function(http.Client base, {required bool enforce})? pinWrap,
     Uri? baseUrl,
-    bool noTools = false,
   }) : crypto = crypto ?? FakeAttestationCrypto(ed25519Result: true) {
     server = TeeServer({
       'aci/attestation': (_) async {
@@ -124,7 +123,6 @@ final class TeeHarness {
       settings: settings,
       retryDelay: Duration.zero,
       tlsPin: tlsPin,
-      noTools: noTools,
     );
   }
 

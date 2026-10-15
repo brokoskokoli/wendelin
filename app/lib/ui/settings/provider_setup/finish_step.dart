@@ -17,8 +17,6 @@ List<Widget> finishStep({
   required double warn,
   required void Function(double w) onWarn,
   required bool attested,
-  required bool noTools,
-  required void Function(bool on) onNoTools,
   required VoidCallback onSave,
 }) {
   return [
@@ -56,24 +54,6 @@ List<Widget> finishStep({
             ),
       ],
     ),
-    if (attested)
-      SectionCard(
-        children: [
-          SettingsRow(
-            title: 'Ohne Tools (alles verschlüsselt)',
-            detail:
-                'An: Wendelin sendet an dieses Profil keine Tool-Definitionen. '
-                'Dann ist die ganze Anfrage Ende-zu-Ende-verschlüsselt, aber '
-                'Wendelin kann über dieses Profil keine Aktionen ausführen '
-                '(Kalender, Taschenlampe …).',
-            trailing: WSwitch(
-              value: noTools,
-              semanticLabel: 'Ohne Tools (alles verschlüsselt)',
-              onChanged: onNoTools,
-            ),
-          ),
-        ],
-      ),
     TextField(
       controller: budget,
       style: WText.body,
