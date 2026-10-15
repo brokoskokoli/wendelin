@@ -34,9 +34,19 @@ final class SecretWakeTemplateStore implements WakeTemplateStore {
   /// Prefix of the template keys (`wake.templates.<speakerId>`).
   static const templatePrefix = 'wake.templates.';
 
+  /// Prefix of the „Stopp“ template keys (`wake.stop.<speakerId>`, WP64b).
+  static const stopPrefix = 'wake.stop.';
+
+  /// The same store for the keyword „Stopp“ (only listened for while an
+  /// answer is spoken): embeddings under [stopPrefix], same encryption.
+  late final WakeTemplateStore stop = _PrefixedStore(this, stopPrefix);
+
   @override
-  Future<WakeTemplates?> load(String speakerId) async {
-    final raw = await secrets.read('$templatePrefix$speakerId');
+  Future<WakeTemplates?> load(String speakerId) =>
+      _load(templatePrefix, speakerId);
+
+  Future<WakeTemplates?> _load(String prefix, String speakerId) async {
+    final raw = await secrets.read('$prefix$speakerId');
     if (raw == null) return null;
     try {
       return WakeTemplates.fromJson(jsonDecode(raw) as Map<String, Object?>);
@@ -46,14 +56,19 @@ final class SecretWakeTemplateStore implements WakeTemplateStore {
   }
 
   @override
-  Future<void> save(WakeTemplates templates) => secrets.write(
-    '$templatePrefix${templates.speakerId}',
+  Future<void> save(WakeTemplates templates) =>
+      _save(templatePrefix, templates);
+
+  Future<void> _save(String prefix, WakeTemplates templates) => secrets.write(
+    '$prefix${templates.speakerId}',
     jsonEncode(templates.toJson()),
   );
 
   @override
-  Future<void> delete(String speakerId) =>
-      secrets.delete('$templatePrefix$speakerId');
+  Future<void> delete(String speakerId) async {
+    await secrets.delete('$templatePrefix$speakerId');
+    await secrets.delete('$stopPrefix$speakerId');
+  }
 
   /// The learned speakers.
   Future<List<WakeSpeaker>> speakers() async {
@@ -79,9 +94,30 @@ final class SecretWakeTemplateStore implements WakeTemplateStore {
   /// Forgets every speaker and all templates („Alles löschen“).
   Future<void> deleteAll() async {
     for (final key in await secrets.listKeys()) {
-      if (key == speakersKey || key.startsWith(templatePrefix)) {
+      if (key == speakersKey ||
+          key.startsWith(templatePrefix) ||
+          key.startsWith(stopPrefix)) {
         await secrets.delete(key);
       }
     }
   }
+}
+
+final class _PrefixedStore implements WakeTemplateStore {
+  _PrefixedStore(this._store, this._prefix);
+
+  final SecretWakeTemplateStore _store;
+  final String _prefix;
+
+  @override
+  Future<WakeTemplates?> load(String speakerId) =>
+      _store._load(_prefix, speakerId);
+
+  @override
+  Future<void> save(WakeTemplates templates) =>
+      _store._save(_prefix, templates);
+
+  @override
+  Future<void> delete(String speakerId) =>
+      _store.secrets.delete('$_prefix$speakerId');
 }

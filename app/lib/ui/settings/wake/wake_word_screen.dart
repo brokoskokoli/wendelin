@@ -70,6 +70,8 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_enroll(context, ref, speakers, null))
               : null,
         ),
+        if (speakers.isNotEmpty)
+          _StopWordSection(speakers: speakers, installed: installed),
         if (!installed) const WakeModelsNotice(),
         WideButton(
           'Kalibrieren (30 min, empfohlen)',
@@ -241,12 +243,14 @@ class _SpeakerRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final templates = ref.watch(wakeTemplatesProvider(speaker.id)).value;
     final all = ref.read(wakeSpeakersProvider).value ?? const [];
+    final stop = ref.watch(stopLearnedForProvider(speaker.id)).value ?? false;
     return SettingsRow(
       title: speakerLabel(speaker, number),
       detail: templates == null
           ? 'Vorlagen fehlen. Bitte neu einlernen.'
           : '${templates.embeddings.length} Aufnahmen · Schwelle '
-                '${templates.threshold.toStringAsFixed(2)}',
+                '${templates.threshold.toStringAsFixed(2)}'
+                '${stop ? ' · Stopp ✓' : ''}',
       trailing: PopupMenuButton<String>(
         tooltip: 'Aktionen für ${speakerLabel(speaker, number)}',
         onSelected: (v) async {
@@ -263,4 +267,63 @@ class _SpeakerRow extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// „Stopp“ allein unterbricht die Sprachausgabe (WP64b): learned like
+/// „Wendelin“, only embeddings. Without it only „Wendelin, stopp“ works.
+class _StopWordSection extends ConsumerWidget {
+  const _StopWordSection({required this.speakers, required this.installed});
+
+  final List<WakeSpeaker> speakers;
+  final bool installed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final learned = ref.watch(stopLearnedProvider).value ?? false;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: WSpace.s,
+      children: [
+        Text('Unterbrechen mit „Stopp“', style: WText.sectionLabel),
+        Text(
+          learned
+              ? '„Stopp“ ist gelernt: Du kannst die Ansage mit „Stopp“ allein '
+                    'unterbrechen.'
+              : 'Ohne gelerntes „Stopp“ unterbricht nur „Wendelin, stopp“ die '
+                    'Ansage. Lerne „Stopp“ ein, damit du die Ansage mit dem '
+                    'einen Wort unterbrechen kannst.',
+          style: WText.caption,
+        ),
+        Text(
+          '„Stopp“ wirkt nur, während Wendelin spricht und Unterbrechen auf '
+          '„Schlüsselwörter“ steht. Im Hintergrund löst „Stopp“ nichts aus.',
+          style: WText.caption,
+        ),
+        WideButton(
+          learned ? '„Stopp“ neu einlernen' : '„Stopp“ einlernen',
+          onPressed: installed
+              ? () => unawaited(_enrollStop(context, ref, speakers))
+              : null,
+        ),
+      ],
+    );
+  }
+}
+
+Future<void> _enrollStop(
+  BuildContext context,
+  WidgetRef ref,
+  List<WakeSpeaker> speakers,
+) async {
+  final speaker = await _pick(context, speakers, 'Wer lernt „Stopp“?');
+  if (speaker == null || !context.mounted) return;
+  await Navigator.of(context).push<bool>(
+    MaterialPageRoute(
+      builder: (_) => WakeEnrollScreen(
+        speakerId: speaker.id,
+        name: speaker.name,
+        stop: true,
+      ),
+    ),
+  );
 }

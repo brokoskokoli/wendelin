@@ -13,7 +13,7 @@ import '../settings_page.dart';
 import 'wake_lifecycle.dart';
 
 /// Hint for recording [index] (0-based): near, far, quiet, normal.
-String enrollHint(int index) => switch (index ~/ 4) {
+String enrollHint(int index, {int perStep = 4}) => switch (index ~/ perStep) {
   0 => 'Sprich normal, das Handy nah vor dir.',
   1 => 'Jetzt aus ein bis zwei Metern Abstand.',
   2 => 'Jetzt leise, wie abends im Zimmer.',
@@ -21,13 +21,15 @@ String enrollHint(int index) => switch (index ~/ 4) {
 };
 
 /// Text for the verdict on the latest recording.
-String verdictText(UtteranceVerdict v) => switch (v) {
-  UtteranceVerdict.accepted => 'Gehört.',
-  UtteranceVerdict.noSpeech => 'Nichts gehört. Noch einmal bitte.',
-  UtteranceVerdict.tooQuiet => 'Zu leise. Bitte etwas lauter.',
-  UtteranceVerdict.cutOff => 'Zu früh angefangen. Warte kurz und sprich dann.',
-  UtteranceVerdict.tooLong => 'Zu lang. Nur „Wendelin“, bitte.',
-};
+String verdictText(UtteranceVerdict v, {String word = 'Wendelin'}) =>
+    switch (v) {
+      UtteranceVerdict.accepted => 'Gehört.',
+      UtteranceVerdict.noSpeech => 'Nichts gehört. Noch einmal bitte.',
+      UtteranceVerdict.tooQuiet => 'Zu leise. Bitte etwas lauter.',
+      UtteranceVerdict.cutOff =>
+        'Zu früh angefangen. Warte kurz und sprich dann.',
+      UtteranceVerdict.tooLong => 'Zu lang. Nur „$word“, bitte.',
+    };
 
 /// Einstellungen → Sprache → Aktivierungswort → „Stimme einlernen“:
 /// Wendelin bittet etwa 15 Mal um „Wendelin“ (WP60). Aus jeder Aufnahme
@@ -38,6 +40,7 @@ class WakeEnrollScreen extends ConsumerStatefulWidget {
     super.key,
     required this.speakerId,
     required this.name,
+    this.stop = false,
   });
 
   /// Speaker to learn (existing ones are re-learned).
@@ -45,6 +48,10 @@ class WakeEnrollScreen extends ConsumerStatefulWidget {
 
   /// Display name (may be empty).
   final String name;
+
+  /// Learn „Stopp“ for [speakerId] instead of „Wendelin“ (WP64b): ten
+  /// recordings, stored apart from the wake word templates.
+  final bool stop;
 
   @override
   ConsumerState<WakeEnrollScreen> createState() => _WakeEnrollScreenState();
@@ -71,8 +78,15 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
     final e = WakeEnroller(
       audio: ref.read(wakeAudioProvider),
       features: ref.read(wakeFeaturesFactoryProvider)(),
-      store: ref.read(wakeStoreProvider),
+      store: widget.stop
+          ? ref.read(wakeStoreProvider).stop
+          : ref.read(wakeStoreProvider),
       speakerId: widget.speakerId,
+      target: widget.stop ? 10 : 15,
+      minimum: widget.stop ? 6 : 8,
+      threshold: widget.stop
+          ? stopProvisionalThreshold
+          : wakeProvisionalThreshold,
       pause: ref.read(wakeEnrollPauseProvider),
     );
     setState(() => _enroller = e);
@@ -94,10 +108,16 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
 
   Future<void> _finish(WakeEnroller e) async {
     await e.finish();
-    await ref
-        .read(wakeSpeakersProvider.notifier)
-        .upsert(widget.speakerId, widget.name);
-    ref.invalidate(wakeTemplatesProvider(widget.speakerId));
+    if (widget.stop) {
+      ref.invalidate(stopLearnedProvider);
+      ref.invalidate(stopLearnedForProvider(widget.speakerId));
+      ref.invalidate(wakeBargeInDetectorProvider);
+    } else {
+      await ref
+          .read(wakeSpeakersProvider.notifier)
+          .upsert(widget.speakerId, widget.name);
+      ref.invalidate(wakeTemplatesProvider(widget.speakerId));
+    }
     if (mounted) Navigator.of(context).pop(true);
   }
 
@@ -123,10 +143,11 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
   Widget _body(WakeEnroller e) {
     final done = e.phase == EnrollPhase.complete;
     final failed = e.error != null;
+    final word = widget.stop ? 'Stopp' : 'Wendelin';
     return SettingsPage(
-      title: 'Stimme einlernen',
+      title: widget.stop ? '„Stopp“ einlernen' : 'Stimme einlernen',
       intro:
-          'Sag „Wendelin“, wenn du dran bist. Aus jeder Aufnahme behält '
+          'Sag „$word“, wenn du dran bist. Aus jeder Aufnahme behält '
           'Wendelin nur Zahlenwerte; das Audio wird sofort verworfen.',
       children: [
         SectionCard(
@@ -149,16 +170,22 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
                     Text(
                       e.phase == EnrollPhase.processing
                           ? 'Wird verarbeitet …'
-                          : 'Sag jetzt: „Wendelin“',
+                          : 'Sag jetzt: „$word“',
                       style: WText.label,
                     ),
-                    Text(enrollHint(e.accepted), style: WText.detail),
+                    Text(
+                      enrollHint(e.accepted, perStep: widget.stop ? 3 : 4),
+                      style: WText.detail,
+                    ),
                     Waveform(
                       amplitudes: [for (var i = 0; i < 24; i++) _bar(e, i)],
                     ),
                   ],
                   if (e.lastVerdict != null && !done)
-                    Text(verdictText(e.lastVerdict!), style: WText.caption),
+                    Text(
+                      verdictText(e.lastVerdict!, word: word),
+                      style: WText.caption,
+                    ),
                   if (done) Text('Alle Aufnahmen sind da.', style: WText.label),
                   if (failed)
                     Text(

@@ -150,6 +150,10 @@ prepare_voice() {
     for f in "$MODELS"/wake-e2e/*.wav; do
       copy_in "$f" "e2e/wake/$(basename "$f")"
     done
+    # „Stopp“ (WP64b), falls vorhanden.
+    for f in "$MODELS"/wake-e2e-stop/*.wav; do
+      [ -f "$f" ] && copy_in "$f" "e2e/wake/$(basename "$f")"
+    done
   fi
   in_app touch files/e2e/ready
   echo "Modelle und WAVs bereit"

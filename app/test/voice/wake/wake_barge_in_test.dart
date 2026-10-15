@@ -24,7 +24,11 @@ void main() {
   group('LazyWakeBargeInDetector', () {
     late FakeAudioInput audio;
 
-    LazyWakeBargeInDetector make(List<WakeTemplates> sets, Float32List e) {
+    LazyWakeBargeInDetector make(
+      List<WakeTemplates> sets,
+      Float32List e, {
+      List<WakeTemplates> stops = const [],
+    }) {
       audio = FakeAudioInput(
         frames: [Int16List(480), Int16List(480)],
         frameInterval: const Duration(milliseconds: 5),
@@ -32,6 +36,7 @@ void main() {
       return LazyWakeBargeInDetector(
         audio: audio,
         templates: () async => sets,
+        stopTemplates: () async => stops,
         features: () => FakeWakeFeatureExtractor(
           windowEvery: 480,
           windowFor: (end, _) => WakeWindow(endSample: end, embedding: e),
@@ -50,6 +55,86 @@ void main() {
       await d.stop();
       expect(d.isRunning, isFalse);
       expect(audio.isRunning, isFalse);
+      await d.dispose();
+    });
+
+    test(
+      'Neubau während der Ausgabe: laufender Detektor bleibt aktiv',
+      () async {
+        final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
+        final signals = <BargeInSignal>[];
+        d.signals.listen(signals.add);
+        await d.start();
+        await d.disposeWhenIdle();
+        expect(d.isRunning, isTrue);
+        expect(audio.isRunning, isTrue);
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        expect(signals, isNotEmpty);
+        await d.stop();
+        expect(audio.isRunning, isFalse);
+        await d.dispose(); // idempotent
+      },
+    );
+
+    test('Neubau im Leerlauf beendet den Detektor sofort', () async {
+      final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
+      await d.disposeWhenIdle();
+      expect(d.isRunning, isFalse);
+    });
+
+    WakeTemplates stopTpl(double threshold) => WakeTemplates(
+      speakerId: 'a',
+      featureVersion: 'fake-1',
+      threshold: threshold,
+      embeddings: [
+        Float32List.fromList([0, 1]),
+      ],
+    );
+
+    test('„Stopp“ allein: Signal stop, ohne Vorlage still', () async {
+      final spoken = Float32List.fromList([0, 1]);
+      final d = make([tpl(0.9)], spoken, stops: [stopTpl(0.9)]);
+      final signals = <BargeInSignal>[];
+      d.signals.listen(signals.add);
+      await d.start();
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      expect(signals.first.keyword, BargeInKeyword.stop);
+      await d.dispose();
+
+      final without = make([tpl(0.9)], spoken);
+      final none = <BargeInSignal>[];
+      without.signals.listen(none.add);
+      await without.start();
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      expect(none, isEmpty);
+      await without.dispose();
+    });
+
+    test(
+      'Echo der eigenen Ausgabe (fremde Merkmale) löst nichts aus',
+      () async {
+        final echo = Float32List.fromList([-0.7, -0.7]);
+        final d = make([tpl(0.9)], echo, stops: [stopTpl(0.9)]);
+        final signals = <BargeInSignal>[];
+        d.signals.listen(signals.add);
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        expect(signals, isEmpty);
+        await d.dispose();
+      },
+    );
+
+    test('„Stopp“-Schwelle ebenfalls + 0,05', () async {
+      final d = make(
+        [tpl(0.9)],
+        Float32List.fromList([0.3676, 0.93]),
+        stops: [stopTpl(0.9)],
+      );
+      final signals = <BargeInSignal>[];
+      d.signals.listen(signals.add);
+      await d.start();
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      expect(signals, isEmpty);
       await d.dispose();
     });
 
@@ -95,5 +180,33 @@ void main() {
       await c2.read(voiceSettingsProvider.future);
       expect(c2.read(wakeBargeInDetectorProvider), isA<BargeInDetector>());
     });
+
+    test(
+      'neu eingelerntes oder gelöschtes „Stopp“ baut den Detektor neu',
+      () async {
+        final env = TestEnv();
+        await env.storage.settings.set(
+          voiceSettingsKey,
+          const VoiceSettings(conversationMode: true),
+        );
+        final c = env.container();
+        addTearDown(c.dispose);
+        await c.read(voiceSettingsProvider.future);
+        await c.read(stopLearnedProvider.future);
+        final first = c.read(wakeBargeInDetectorProvider);
+        expect(c.read(wakeBargeInDetectorProvider), same(first));
+        // Learning „Stopp“ alone does not rebuild in the middle of a session.
+        c.invalidate(stopLearnedProvider);
+        await c.read(stopLearnedProvider.future);
+        expect(c.read(wakeBargeInDetectorProvider), same(first));
+        // Enrolling and deleting invalidate the detector provider.
+        c.invalidate(wakeBargeInDetectorProvider);
+        final second = c.read(wakeBargeInDetectorProvider);
+        expect(second, isNotNull);
+        expect(second, isNot(same(first)));
+        await c.read(wakeSpeakersProvider.notifier).remove('x');
+        expect(c.read(wakeBargeInDetectorProvider), isNot(same(second)));
+      },
+    );
   });
 }
