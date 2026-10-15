@@ -74,6 +74,39 @@ void main() {
       expect(const AttestationPolicy().maxReceiptAttempts, 6);
     });
 
+    test('nur nicht abrufbar → unconfirmed, sonst rot', () {
+      StageResult u(String? code) => StageResult(
+        AttestationStage.receiptFetch,
+        StageOutcome.unavailable,
+        'x',
+        code,
+      );
+      for (final code in [
+        StageResult.receiptNotFound,
+        StageResult.receiptUnreachable,
+        StageResult.receiptMissing,
+      ]) {
+        expect(
+          policy.receiptStatus([u(code)], attempt: 6),
+          AttestationStatus.unconfirmed,
+          reason: code,
+        );
+        expect(policy.receiptStatus([u(code)], attempt: 5), yellow);
+      }
+      expect(
+        policy.receiptStatus([u(StageResult.receiptRejected)], attempt: 6),
+        red,
+      );
+      expect(policy.receiptStatus([u(null)], attempt: 6), red);
+      expect(
+        policy.receiptStatus([
+          u(StageResult.receiptNotFound),
+          _s(StageOutcome.fail),
+        ], attempt: 6),
+        red,
+      );
+    });
+
     test('maxReceiptAttempts ist einstellbar', () {
       const p = AttestationPolicy(maxReceiptAttempts: 1);
       expect(p.receiptStatus([_s(StageOutcome.unavailable)], attempt: 1), red);

@@ -55,10 +55,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.logSink,
     this.settings = const HttpSettings(),
     this.retryDelay = const Duration(seconds: 2),
+    Future<void> Function(Duration) sleep = _sleep,
     this.tlsPin,
     this.noTools = false,
     Duration gpuTimeout = const Duration(seconds: 15),
-  }) {
+  }) : _sleepFn = sleep {
     final provider = inner.options.extraBody['provider'];
     if (provider is! Map || provider['aci_verified'] != true) {
       throw ArgumentError.value(
@@ -113,6 +114,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   /// Base wait between receipt attempts (grows to three times this).
   final Duration retryDelay;
+
+  /// Waits between receipt attempts (replaceable in tests).
+  final Future<void> Function(Duration) _sleepFn;
+
+  static Future<void> _sleep(Duration d) => Future<void>.delayed(d);
 
   /// Pin state of the enforcing client of [inner] (WP61). If a connection
   /// is refused because its certificate does not match the attestation, the
@@ -445,13 +451,14 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       final (:stages, :status, :pinChanged) = id == null || id.isEmpty
           ? (
               stages: const [
-                StageResult.fail(
+                StageResult(
                   AttestationStage.receiptFetch,
+                  StageOutcome.unavailable,
                   'Antwort ohne x-receipt-id',
-                  code: StageResult.receiptMissing,
+                  StageResult.receiptMissing,
                 ),
               ],
-              status: AttestationStatus.red,
+              status: AttestationStatus.unconfirmed,
               pinChanged: false,
             )
           : await _receiptAttempts(id, record, session, model, toolsInvolved);
@@ -474,7 +481,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           );
         }
       }
-      final problem = status == AttestationStatus.red
+      final problem = status != AttestationStatus.green
           ? stages.where((s) => s.code != null).firstOrNull
           : null;
       final report = AttestationReport(
@@ -557,7 +564,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       );
       // 2 s, 4 s, 6 s, 6 s, 6 s: about 24 s in all for a receipt the
       // gateway has not written yet.
-      await Future<void>.delayed(retryDelay * min(attempt, 3));
+      await _sleepFn(retryDelay * min(attempt, 3));
     }
   }
 
@@ -572,6 +579,8 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     final id = RegExp(r'"id"\s*:\s*"([A-Za-z0-9_.:-]{1,128})"')
         .firstMatch(head)
         ?.group(1);
+    // Not a path segment like `.` or `..`, and not only punctuation.
+    if (id == null || !id.contains(RegExp(r'[A-Za-z0-9]'))) return null;
     return id;
   }
 

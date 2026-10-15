@@ -229,10 +229,14 @@ void main() {
     'Phala: E2EE-Antwort (Stream) → Quittung abgerufen und grün (WP70)',
     () async {
       if (_skipWithout(phalaKey, 'PHALA_API_KEY')) return;
-      final provider = _phalaProvider(phalaKey!) as AttestedProvider;
+      final log = InMemoryAttestationLog();
+      final provider =
+          _phalaProvider(phalaKey!, logSink: log) as AttestedProvider;
       final seen = <String>[];
+      final clock = Stopwatch()..start();
       provider.reports.listen(
         (r) => seen.add(
+          '${clock.elapsed.inSeconds}s '
           '${r.status.name}:${r.reasonCode ?? '-'}:${r.detail ?? '-'}',
         ),
       );
@@ -251,6 +255,16 @@ void main() {
       final report = await provider.pendingReport();
       // ignore: avoid_print
       print('Phala Quittung: $seen');
+      for (final e in log.entries.where(
+        (e) => e.kind == AttestationLogKind.receipt,
+      )) {
+        // ignore: avoid_print
+        print(
+          'Eintrag ${e.status.name} Quittungs-ID=${e.receiptId} '
+          '${[for (final s in e.stages) '${s.stage.id}=${s.outcome.name}'
+                '${s.code == null ? '' : ':${s.code}'}'].join(' ')}',
+        );
+      }
       expect(
         report?.status,
         AttestationStatus.green,
@@ -341,19 +355,23 @@ void main() {
 
 const _phalaModel = 'google/gemma-4-31b-it';
 
-LlmProvider _phalaProvider(String key) => ProviderFactory.create(
-  ProviderProfile(
-    id: 'phala',
-    name: 'Phala',
-    type: ProviderType.openaiCompatible,
-    baseUrl: 'https://api.redpill.ai/v1',
-    defaultModel: _phalaModel,
-    privacy: PrivacyLevel.tee,
-    authMethod: const ApiKeyAuth('ref'),
-    options: const {'attestation': 'phala'},
-  ),
-  (_) async => key,
-  // Quote signature chain is not checked here (fake crypto); the SPKI
-  // hashing is the real one for X.509 DER.
-  attestation: AttestationWiring(crypto: FakeAttestationCrypto()),
-);
+LlmProvider _phalaProvider(String key, {AttestationLogSink? logSink}) =>
+    ProviderFactory.create(
+      ProviderProfile(
+        id: 'phala',
+        name: 'Phala',
+        type: ProviderType.openaiCompatible,
+        baseUrl: 'https://api.redpill.ai/v1',
+        defaultModel: _phalaModel,
+        privacy: PrivacyLevel.tee,
+        authMethod: const ApiKeyAuth('ref'),
+        options: const {'attestation': 'phala'},
+      ),
+      (_) async => key,
+      // Quote signature chain is not checked here (fake crypto); the SPKI
+      // hashing is the real one for X.509 DER.
+      attestation: AttestationWiring(
+        crypto: FakeAttestationCrypto(),
+        logSink: logSink,
+      ),
+    );

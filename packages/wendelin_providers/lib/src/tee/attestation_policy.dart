@@ -7,7 +7,9 @@ import 'attestation_types.dart';
 /// - any `fail` is red;
 /// - `unavailable` (network) is yellow while retries remain; the session
 ///   attestation is yellow (nothing is sent, the next request retries), a
-///   receipt is retried up to [maxReceiptAttempts] times and then red;
+///   receipt is retried up to [maxReceiptAttempts] times and then
+///   `unconfirmed` (neutral, no lock) if it was only not retrievable
+///   (not found, unreachable, no id), else red;
 /// - `warn` and `info` do not change the status (final green with a hint).
 final class AttestationPolicy {
   /// Creates the policy.
@@ -36,8 +38,22 @@ final class AttestationPolicy {
       if (s.outcome == StageOutcome.unavailable) unavailable = true;
     }
     if (!unavailable) return AttestationStatus.green;
-    return retriesLeft ? AttestationStatus.yellow : AttestationStatus.red;
+    if (retriesLeft) return AttestationStatus.yellow;
+    // Out of attempts: a receipt that is only not retrievable is
+    // unconfirmed (neutral, no lock); any other gap stays red.
+    final onlyUnretrievable = stages
+        .where((s) => s.outcome == StageOutcome.unavailable)
+        .every((s) => _unretrievable.contains(s.code));
+    return onlyUnretrievable
+        ? AttestationStatus.unconfirmed
+        : AttestationStatus.red;
   }
+
+  static const _unretrievable = {
+    StageResult.receiptNotFound,
+    StageResult.receiptUnreachable,
+    StageResult.receiptMissing,
+  };
 
   /// The hints of [stages] (`warn` details) for the user.
   List<String> notes(Iterable<StageResult> stages) => [

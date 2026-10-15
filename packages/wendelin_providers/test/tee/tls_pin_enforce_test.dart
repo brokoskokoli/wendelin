@@ -201,6 +201,7 @@ void main() {
     );
     expect(provider, isA<AttestedProvider>());
     expect(built.toSet(), {true, false});
-    expect(built.length, 2);
+    // adapter (enforcing), attestation (open), receipts (enforcing, with key)
+    expect(built, [true, false, true]);
   });
 }

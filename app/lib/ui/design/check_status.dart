@@ -12,13 +12,18 @@ enum CheckStatus {
   pending,
 
   /// Fehlgeschlagen: rotes Quadrat mit Kreuz.
-  failed;
+  failed,
+
+  /// Nicht bestätigt (nichts ist fehlgeschlagen, es fehlt nur der Beleg):
+  /// grauer Ring mit Strich.
+  neutral;
 
   /// Statusfarbe.
   Color get color => switch (this) {
     ok => WColors.ok,
     pending => WColors.warn,
     failed => WColors.error,
+    neutral => WColors.textMuted,
   };
 
   /// Deutsches Semantics-Label.
@@ -26,6 +31,7 @@ enum CheckStatus {
     ok => 'geprüft',
     pending => 'ausstehend',
     failed => 'fehlgeschlagen',
+    neutral => 'nicht bestätigt',
   };
 }
 
@@ -129,6 +135,17 @@ class _CheckStatusPainter extends CustomPainter {
           )
           ..drawLine(const Offset(6.5, 6.5), const Offset(13.5, 13.5), mark)
           ..drawLine(const Offset(13.5, 6.5), const Offset(6.5, 13.5), mark);
+      case CheckStatus.neutral:
+        canvas
+          ..drawCircle(
+            const Offset(10, 10),
+            8,
+            Paint()
+              ..color = status.color
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2,
+          )
+          ..drawLine(const Offset(6.5, 10), const Offset(13.5, 10), mark);
     }
   }
 

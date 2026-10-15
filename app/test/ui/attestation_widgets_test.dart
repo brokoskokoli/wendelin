@@ -92,6 +92,34 @@ void main() {
       expect(find.byType(StatusCard), findsNothing);
     });
 
+    testWidgets('Nicht bestätigt: graues Schild und neutrale Karte', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        themed(
+          Scaffold(
+            body: SingleChildScrollView(
+              child: _answer(
+                _a(
+                  AttestationStatus.unconfirmed,
+                  reason: AttestationReason.receiptNotFound,
+                ),
+                onReattest: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('TEE-Prüfung: nicht bestätigt')),
+        findsOneWidget,
+      );
+      expect(find.text('Quittung nicht gefunden'), findsOneWidget);
+      expect(find.textContaining('Signaturfehler'), findsNothing);
+      handle.dispose();
+    });
+
     testWidgets('Sonderfälle haben eigene Texte', (tester) async {
       Future<void> show(String? reason) => tester.pumpWidget(
         themed(
@@ -139,22 +167,34 @@ void main() {
   });
 
   group('Texte', () {
-    test('Quittungsgründe: Grund genannt, kein Signaturfehler, keine '
-        'Manipulationsbehauptung', () {
+    test('Quittungsgründe: Grund genannt, neutral, keine Manipulation, '
+        'nichts verharmlost', () {
       final texts = {
         for (final code in [
           AttestationReason.receiptNotFound,
           AttestationReason.receiptUnreachable,
-          AttestationReason.receiptRejected,
           AttestationReason.receiptMissing,
         ])
-          code: attestationMessage(AttestationStatus.red, reasonCode: code),
+          code: attestationMessage(
+            AttestationStatus.unconfirmed,
+            reasonCode: code,
+          ),
       };
-      expect(texts.values.map((m) => m.title).toSet(), hasLength(4));
+      expect(texts.values.map((m) => m.title).toSet(), hasLength(3));
       for (final m in texts.values) {
+        expect(m.status, CheckStatus.neutral);
+        expect(m.label, 'nicht bestätigt');
         expect(m.text, isNot(contains('Signaturfehlers')));
-        expect(m.text, isNot(contains('abweichender Prüfsummen')));
         expect(m.text, isNot(contains('Das kann auf eine Manipulation')));
+        expect(m.text, isNot(contains('Schlüssel')));
+        expect(
+          m.text,
+          contains(
+            'Ob die Antwort aus der geprüften Umgebung stammt, ist '
+            'unbestätigt.',
+          ),
+        );
+        expect(m.text, contains('Aktionen'));
       }
       expect(
         texts[AttestationReason.receiptNotFound]!.text,
@@ -164,6 +204,12 @@ void main() {
         texts[AttestationReason.receiptUnreachable]!.text,
         contains('Netz- oder Serverfehler'),
       );
+      final rejected = attestationMessage(
+        AttestationStatus.red,
+        reasonCode: AttestationReason.receiptRejected,
+      );
+      expect(rejected.status, CheckStatus.failed);
+      expect(rejected.text, isNot(contains('Schlüssel')));
     });
 
     test('jeder Code hat Titel und Text, Grün und Gelb nicht', () {
@@ -174,10 +220,7 @@ void main() {
         AttestationReason.sessionMismatch,
         AttestationReason.gpuFailed,
         AttestationReason.gpuUnavailable,
-        AttestationReason.receiptNotFound,
-        AttestationReason.receiptUnreachable,
         AttestationReason.receiptRejected,
-        AttestationReason.receiptMissing,
         null,
       ]) {
         final m = attestationMessage(AttestationStatus.red, reasonCode: code);

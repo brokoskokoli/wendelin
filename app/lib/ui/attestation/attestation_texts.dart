@@ -79,6 +79,24 @@ AttestationMessage attestationMessage(
         status: CheckStatus.pending,
         label: 'wird geprüft',
       );
+    case AttestationStatus.unconfirmed:
+      return switch (reasonCode) {
+        AttestationReason.receiptNotFound => _unconfirmed(
+          'Quittung nicht gefunden',
+          'Der Anbieter kennt die Quittung dieser Antwort nicht (noch nicht '
+              'geschrieben oder abgelaufen).',
+        ),
+        AttestationReason.receiptMissing => _unconfirmed(
+          'Quittung fehlt',
+          'Der Anbieter hat zu dieser Antwort keine Quittungs-Kennung '
+              'geliefert.',
+        ),
+        _ => _unconfirmed(
+          'Quittung nicht erreichbar',
+          'Die Quittung dieser Antwort konnte wegen eines Netz- oder '
+              'Serverfehlers nicht abgerufen werden.',
+        ),
+      };
     case AttestationStatus.red:
       return switch (reasonCode) {
         AttestationReason.tcbOutOfDate => const AttestationMessage(
@@ -120,45 +138,15 @@ AttestationMessage attestationMessage(
               'dieser Antwort. Vertraue der Antwort nicht. Der Anbieter ist '
               'gesperrt, bis du ihn neu prüfst.',
         ),
-        AttestationReason.receiptNotFound => const AttestationMessage(
-          status: CheckStatus.failed,
-          label: 'Quittung nicht gefunden',
-          title: 'Quittung beim Anbieter nicht gefunden',
-          text:
-              'Der Anbieter kennt die Quittung dieser Antwort nicht '
-              '(noch nicht geschrieben oder abgelaufen). Die Antwort ist '
-              'nicht bestätigt, es gibt aber keinen Hinweis auf eine '
-              'Manipulation. Sende nichts Vertrauliches und prüfe den '
-              'Anbieter neu.',
-        ),
-        AttestationReason.receiptUnreachable => const AttestationMessage(
-          status: CheckStatus.failed,
-          label: 'Quittung nicht erreichbar',
-          title: 'Quittung nicht erreichbar',
-          text:
-              'Die Quittung dieser Antwort konnte wegen eines Netz- oder '
-              'Serverfehlers nicht abgerufen werden. Die Antwort ist nicht '
-              'bestätigt, es gibt aber keinen Hinweis auf eine '
-              'Manipulation. Prüfe die Verbindung und den Anbieter neu.',
-        ),
         AttestationReason.receiptRejected => const AttestationMessage(
           status: CheckStatus.failed,
           label: 'Quittung abgelehnt',
           title: 'Quittungsabruf vom Anbieter abgelehnt',
           text:
               'Der Anbieter hat den Abruf der Quittung abgelehnt (zum '
-              'Beispiel wegen des Schlüssels oder zu vieler Anfragen). Die '
+              'Beispiel wegen zu vieler Anfragen). Die '
               'Antwort ist nicht bestätigt, es gibt aber keinen Hinweis auf '
-              'eine Manipulation. Prüfe den Schlüssel und den Anbieter neu.',
-        ),
-        AttestationReason.receiptMissing => const AttestationMessage(
-          status: CheckStatus.failed,
-          label: 'Quittung fehlt',
-          title: 'Antwort ohne Quittung',
-          text:
-              'Der Anbieter hat zu dieser Antwort keine Quittungs-Kennung '
-              'geliefert, daher lässt sie sich nicht bestätigen. Vertraue '
-              'ihr nicht für Vertrauliches und prüfe den Anbieter neu.',
+              'eine Manipulation. Prüfe den Anbieter neu.',
         ),
         AttestationReason.gpuFailed => const AttestationMessage(
           status: CheckStatus.failed,
@@ -193,6 +181,18 @@ AttestationMessage attestationMessage(
       };
   }
 }
+
+AttestationMessage _unconfirmed(String title, String cause) =>
+    AttestationMessage(
+      status: CheckStatus.neutral,
+      label: 'nicht bestätigt',
+      title: title,
+      text:
+          '$cause Ob die Antwort aus der geprüften Umgebung stammt, ist '
+          'unbestätigt. Es wurde aber auch kein Fehler festgestellt, der '
+          'Anbieter bleibt nutzbar. Aktionen, die auf die geprüfte Antwort '
+          'warten, laufen nicht. Prüfe den Anbieter neu.',
+    );
 
 /// German name of a check stage id for the log (`quote` → „TDX-Quote“).
 String stageLabel(String stage) => switch (stage) {

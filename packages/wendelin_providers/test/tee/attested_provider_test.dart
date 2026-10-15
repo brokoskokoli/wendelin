@@ -254,12 +254,49 @@ void main() {
       },
     );
 
-    test('Netzfehler: nach 6 Versuchen rot und gesperrt', () async {
-      final h = TeeHarness()..receiptFailures = 10;
+    test(
+      'Netzfehler: nach 6 Versuchen nicht bestätigt, nicht gesperrt',
+      () async {
+        final h = TeeHarness()..receiptFailures = 10;
+        await h.chat();
+        final report = await h.provider.pendingReport();
+        expect(report?.status, AttestationStatus.unconfirmed);
+        expect(h.server.count('aci/receipts'), 6);
+        expect(h.provider.locked, isFalse);
+        // The next request goes through.
+        final next = await h.chat();
+        expect(next.last, isA<Done>());
+      },
+    );
+
+    test('Wartezeiten 2/4/6/6/6 s zwischen den 6 Versuchen (Mutation: fester Wert)', () async {
+      final h = TeeHarness(retryDelay: const Duration(seconds: 2))
+        ..receiptFailures = 10;
+      await h.chat();
+      await h.provider.pendingReport();
+      expect(h.sleeps, [
+        for (final s in [2, 4, 6, 6, 6]) Duration(seconds: s),
+      ]);
+    });
+
+    test('Fallback-Abruf: Netzfehler dort ist nicht "404"', () async {
+      // First request: 404; fallback request (chat id): server error.
+      final h = TeeHarness()
+        ..knownReceiptIds = {}
+        ..failFallbackWith = 0;
+      await h.chat();
+      final report = await h.provider.pendingReport();
+      expect(report?.status, AttestationStatus.unconfirmed);
+      expect(report?.reasonCode, StageResult.receiptUnreachable);
+    });
+
+    test('Quittung einer fremden Antwort über die Chat-ID → rot', () async {
+      final h = TeeHarness()
+        ..knownReceiptIds = {'chatcmpl-Text1'}
+        ..foreignReceiptIds = {'chatcmpl-Text1'};
       await h.chat();
       final report = await h.provider.pendingReport();
       expect(report?.status, AttestationStatus.red);
-      expect(h.server.count('aci/receipts'), 6);
       expect(h.provider.locked, isTrue);
     });
 
@@ -271,7 +308,7 @@ void main() {
           ..receiptFailureStatus = 404;
         await h.chat();
         final report = await h.provider.pendingReport();
-        expect(report?.status, AttestationStatus.red);
+        expect(report?.status, AttestationStatus.unconfirmed);
         expect(report?.reasonCode, StageResult.receiptNotFound);
         expect(report?.detail, contains('404'));
         expect(
@@ -281,7 +318,7 @@ void main() {
             'code=receipt_not_found',
           ),
         );
-        expect(h.diagnostics, contains('Wendelin/attest: receipt red'));
+        expect(h.diagnostics, contains('Wendelin/attest: receipt unconfirmed'));
       },
     );
 
@@ -338,13 +375,16 @@ void main() {
       },
     );
 
-    test('kein bekannter Receipt-Id: rot mit receipt_not_found', () async {
-      final h = TeeHarness()..knownReceiptIds = {};
-      await h.chat();
-      final report = await h.provider.pendingReport();
-      expect(report?.status, AttestationStatus.red);
-      expect(report?.reasonCode, StageResult.receiptNotFound);
-    });
+    test(
+      'kein bekannter Receipt-Id: nicht bestätigt, receipt_not_found',
+      () async {
+        final h = TeeHarness()..knownReceiptIds = {};
+        await h.chat();
+        final report = await h.provider.pendingReport();
+        expect(report?.status, AttestationStatus.unconfirmed);
+        expect(report?.reasonCode, StageResult.receiptNotFound);
+      },
+    );
 
     test('chatIdOf liest die erste id, auch aus SSE', () {
       Uint8List b(String s) => Uint8List.fromList(utf8.encode(s));
@@ -355,12 +395,22 @@ void main() {
       );
       expect(AttestedProvider.chatIdOf(b('{}')), isNull);
       expect(AttestedProvider.chatIdOf(b('')), isNull);
+      for (final odd in ['', '.', '..', '...', ':', '-_']) {
+        expect(
+          AttestedProvider.chatIdOf(b('{"id":"$odd"}')),
+          isNull,
+          reason: '"$odd"',
+        );
+      }
     });
 
-    test('Antwort ohne x-receipt-id → rot', () async {
+    test('Antwort ohne x-receipt-id → nicht bestätigt', () async {
       final h = TeeHarness()..sendReceiptId = false;
       await h.chat();
-      expect((await h.provider.pendingReport())?.status, AttestationStatus.red);
+      final report = await h.provider.pendingReport();
+      expect(report?.status, AttestationStatus.unconfirmed);
+      expect(report?.reasonCode, StageResult.receiptMissing);
+      expect(h.provider.locked, isFalse);
       expect(h.server.count('aci/receipts'), 0);
     });
 

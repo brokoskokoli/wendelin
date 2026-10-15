@@ -365,6 +365,21 @@ void main() {
       },
     );
 
+    test(
+      'Quittung nicht bestätigt (grau): external-Tool läuft nicht',
+      () async {
+        final write = FakeTool(
+          name: 'mcp__notes__add',
+          risk: RiskLevel.write,
+          outcome: ToolOutcome.text('ok'),
+        );
+        final (_, report, done) = await startWithStricter(write, {write.name});
+        report.complete(_report(AttestationStatus.unconfirmed));
+        await done;
+        expect(write.callCount, 0);
+      },
+    );
+
     test('ohne Verschärfung läuft ein write-Tool sofort', () async {
       final write = FakeTool(
         name: 'notes__add',

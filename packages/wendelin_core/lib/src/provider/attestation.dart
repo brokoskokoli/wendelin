@@ -13,6 +13,12 @@ enum AttestationStatus {
 
   /// A check failed.
   red,
+
+  /// The answer could not be confirmed because its receipt was not
+  /// retrievable (not found, unreachable, no id). Neutral: no check failed,
+  /// the provider is not locked, but actions that wait for a verified
+  /// answer do not run.
+  unconfirmed,
 }
 
 /// Result of verifying one answer (or the session) of a TEE provider.
