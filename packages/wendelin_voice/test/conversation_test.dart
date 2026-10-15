@@ -53,6 +53,7 @@ final class H {
     Duration detectorStartDelay = Duration.zero,
     Duration detectorStopDelay = Duration.zero,
     bool detectorUsesMic = false,
+    bool detectorHangs = false,
   }) : agent = ScriptedAgent(answers ?? [say('Antwort.')], step: agentStep),
        tts = FakeTextToSpeech(
          utteranceDuration: const Duration(milliseconds: 200),
@@ -66,6 +67,7 @@ final class H {
       startDelay: detectorStartDelay,
       stopDelay: detectorStopDelay,
       audio: detectorUsesMic ? audio : null,
+      hangOnStop: detectorHangs,
     );
     pipeline = VoicePipeline(
       audio: audio,
@@ -76,6 +78,7 @@ final class H {
       config: config,
       clock: FixedClock(DateTime.utc(2026, 10, 14, 9)),
       bargeInDetector: withDetector ? detector : null,
+      diagnostics: diag.add,
     );
     pipeline.events.listen(events.add);
     pipeline.states.listen(states.add);
@@ -88,6 +91,7 @@ final class H {
   final FakeAudioInput audio;
   late final FakeBargeInDetector detector;
   late final VoicePipeline pipeline;
+  final diag = <String>[];
   final events = <VoiceEvent>[];
   final states = <VoiceState>[];
 
@@ -537,6 +541,27 @@ void main() {
         });
       });
     }
+
+    test('hängender Detektor: Zuhören startet nach 2 s trotzdem', () {
+      fakeAsync((async) {
+        final h = H(
+          transcripts: ['Eins', 'Zwei'],
+          config: const VoicePipelineConfig(
+            bargeIn: BargeInMode.keywords,
+            conversationMode: true,
+          ),
+          detectorUsesMic: true,
+          detectorHangs: true,
+        )..pipeline.start();
+        async.elapse(const Duration(seconds: 1));
+        h.audio.script(AudioFrames.pattern('.' * 400, frame: frame));
+        async.elapse(const Duration(seconds: 30));
+        expect(h.diag, contains('barge-wait-timeout'));
+        // The microphone stayed busy: a clear error, not a hang.
+        expect(h.events.whereType<VoiceError>(), isNotEmpty);
+        expect(h.pipeline.state, VoiceState.idle);
+      });
+    });
 
     test('Wake-Signal mit belegtem Mikrofon: Zuhören startet ohne Fehler', () {
       fakeAsync((async) {

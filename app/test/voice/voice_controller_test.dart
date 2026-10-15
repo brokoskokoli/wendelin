@@ -698,7 +698,16 @@ void main() {
     expect(repeatPrompt('fr'), contains('oui ou non'));
     expect(repeatPrompt('en'), 'Please say yes or no.');
     expect(voiceErrorText(StateError('x')), isNot(contains('Bad state')));
-    expect(voiceErrorText(StateError('x')), contains('Mikrofon'));
+    expect(voiceErrorText(StateError('x')), isNot(contains('belegt')));
+    expect(
+      voiceErrorText(
+        const VoiceException(
+          VoiceErrorKind.busy,
+          'Das Mikrofon war noch belegt.',
+        ),
+      ),
+      contains('belegt'),
+    );
     expect(voiceErrorText(ArgumentError('geheim')), isNot(contains('geheim')));
     expect(voiceErrorText(ArgumentError('x')), contains('Sprache'));
   });

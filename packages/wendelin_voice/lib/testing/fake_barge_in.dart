@@ -20,10 +20,14 @@ final class FakeBargeInDetector implements BargeInDetector {
     this.startDelay = Duration.zero,
     this.audio,
     this.stopDelay = Duration.zero,
+    this.hangOnStop = false,
   });
 
   /// Shared microphone held while running (`null`: not used).
   final AudioInput? audio;
+
+  /// [stop] never completes (a hanging device).
+  final bool hangOnStop;
 
   /// How long [stop] takes to release [audio].
   final Duration stopDelay;
@@ -73,6 +77,7 @@ final class FakeBargeInDetector implements BargeInDetector {
     if (!_running) return;
     _running = false;
     stopCount++;
+    if (hangOnStop) await Completer<void>().future;
     final mic = audio;
     if (mic == null) return;
     if (stopDelay > Duration.zero) await Future<void>.delayed(stopDelay);

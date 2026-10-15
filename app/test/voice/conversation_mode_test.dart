@@ -188,7 +188,10 @@ void main() {
       final tts = FakeTextToSpeech(manual: true);
       final audio = FakeAudioInput(frames: utterance());
       // Like the real detector it holds the shared microphone (WP64).
-      final detector = FakeBargeInDetector(audio: audio);
+      final detector = FakeBargeInDetector(
+        audio: audio,
+        stopDelay: const Duration(milliseconds: 80),
+      );
       open(
         [ScriptedTurn.text('Ein langer Satz. Noch einer.')],
         _components(

@@ -130,7 +130,10 @@ final class RecordAudioInput implements ProfiledAudioInput {
   Stream<Int16List> start() {
     if (_out != null) {
       voiceLog('mic-busy', {'profile': _profile});
-      throw StateError('Die Aufnahme läuft bereits.');
+      throw const VoiceException(
+        VoiceErrorKind.busy,
+        'Das Mikrofon war noch belegt. Bitte sprich noch einmal.',
+      );
     }
     _profile = _pending ?? _profile;
     _pending = null;

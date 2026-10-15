@@ -12,6 +12,9 @@ enum VoiceErrorKind {
   /// The requested language is not supported by the engine.
   unsupportedLanguage,
 
+  /// The microphone is still in use (a recording is already running).
+  busy,
+
   /// Anything else (engine crash, I/O error).
   failed,
 }

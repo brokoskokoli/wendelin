@@ -127,7 +127,12 @@ final class PrimedAudioInput implements AudioInput {
         return frame;
       });
     }
-    if (_out != null) throw StateError('Die Aufnahme läuft bereits.');
+    if (_out != null) {
+      throw const VoiceException(
+        VoiceErrorKind.busy,
+        'Das Mikrofon war noch belegt. Bitte sprich noch einmal.',
+      );
+    }
     final out = StreamController<Int16List>();
     _out = out;
     out.onListen = () {

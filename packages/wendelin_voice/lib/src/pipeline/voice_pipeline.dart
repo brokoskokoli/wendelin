@@ -54,6 +54,7 @@ final class VoicePipeline {
     this.clock = const SystemClock(),
     TriggerSource? triggers,
     this.bargeInDetector,
+    this.diagnostics,
   }) {
     _triggerSub = triggers?.triggers.listen(_onTrigger);
     _bargeSub = bargeInDetector?.signals.listen(_onBargeIn);
@@ -76,6 +77,10 @@ final class VoicePipeline {
 
   /// Detects barge-in while the answer is spoken (`null` = none).
   final BargeInDetector? bargeInDetector;
+
+  /// Receives secret-free diagnostic event names (`barge-wait-timeout`);
+  /// the app writes them to its voice log.
+  final void Function(String event)? diagnostics;
 
   /// Time source for trigger timestamps.
   final Clock clock;
@@ -104,6 +109,10 @@ final class VoicePipeline {
   Future<void> _session = Future.value();
   Future<void> _listening = Future.value();
   Future<void> _bargeOps = Future.value();
+
+  /// How long a recording waits for the barge-in detector to release the
+  /// microphone.
+  static const bargeReleaseTimeout = Duration(seconds: 2);
 
   /// Current state.
   VoiceState get state => _state;
@@ -369,7 +378,12 @@ final class VoicePipeline {
     // The barge-in detector shares the microphone: it must have released
     // it (stop is queued with the state change) before this recording
     // starts, else the device says "already running" (WP64).
-    await _bargeOps;
+    // A hanging detector must not block the recording for ever: after the
+    // timeout we start anyway (a still busy microphone gives a clear error).
+    await _bargeOps.timeout(
+      bargeReleaseTimeout,
+      onTimeout: () => diagnostics?.call('barge-wait-timeout'),
+    );
     if (gen != _gen) return null;
     final endpointer = Endpointer(limits);
     final done = Completer<Endpoint?>();

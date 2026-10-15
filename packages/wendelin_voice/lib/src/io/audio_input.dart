@@ -4,8 +4,9 @@ import 'dart:typed_data';
 ///
 /// Contract (`audioInputContract`):
 /// - [start] returns a single-subscription stream of non-empty frames; it
-///   throws `StateError` while already running and `VoiceException`
-///   (e.g. `permissionDenied`) when recording is impossible.
+///   throws `VoiceException` (`busy`, or a `StateError` in simple fakes)
+///   while already running and `VoiceException` (e.g. `permissionDenied`)
+///   when recording is impossible.
 /// - [stop] ends recording and closes the stream returned by [start]; it is
 ///   a no-op when not running. After [stop], [start] may be called again.
 /// - Frame length is arbitrary (implementations typically use 10–32 ms);
