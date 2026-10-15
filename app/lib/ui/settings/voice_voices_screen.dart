@@ -26,6 +26,8 @@ class VoiceVoicesScreen extends ConsumerWidget {
     final catalog = ref.watch(speechModelCatalogProvider);
     final states = ref.watch(modelStatesProvider);
     final notifier = ref.read(voiceSettingsProvider.notifier);
+    String? effective(String lang) =>
+        _effective(states, settings, catalog, lang);
     return SettingsPage(
       title: 'Stimmen',
       intro:
@@ -43,7 +45,7 @@ class VoiceVoicesScreen extends ConsumerWidget {
                   for (final m in catalog.voicesFor(lang))
                     ModelDownloadRow(
                       model: m,
-                      selected: settings.sherpaVoiceFor(lang, catalog) == m.id,
+                      selected: effective(lang) == m.id,
                       onSelect: () => unawaited(
                         notifier.change(
                           (s) => s.copyWith(
@@ -51,19 +53,41 @@ class VoiceVoicesScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      // Deleting the chosen voice drops the choice.
+                      onDeleted: () {
+                        if (settings.sherpaVoices[lang] != m.id) return;
+                        unawaited(
+                          notifier.change(
+                            (s) => s.copyWith(
+                              sherpaVoices: {...s.sherpaVoices}..remove(lang),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  if (_missingChoice(settings, catalog, lang, effective(lang))
+                      case final speaking?)
+                    Padding(
+                      padding: const EdgeInsets.all(WSpace.l),
+                      child: Text(
+                        'Gewählte Stimme nicht geladen – es spricht '
+                        '${catalog.byId(speaking)!.displayName}.',
+                        key: Key('hint-$lang'),
+                        style: WText.detail,
+                      ),
                     ),
                 ],
               ),
               WideButton(
                 'Probe hören',
                 key: Key('probe-$lang'),
-                onPressed: _installed(states, settings, catalog, lang)
+                onPressed: effective(lang) != null
                     ? () => unawaited(
                         ref
                             .read(sherpaTtsProvider)
                             .speak(
                               sampleText(lang),
-                              voice: settings.sherpaVoiceFor(lang, catalog),
+                              voice: effective(lang),
                               language: lang,
                               rate: settings.ttsRate,
                             ),
@@ -76,13 +100,30 @@ class VoiceVoicesScreen extends ConsumerWidget {
     );
   }
 
-  static bool _installed(
+  /// The voice that speaks for [language] (same rule as the speech output).
+  static String? _effective(
     Map<String, ModelState> states,
     VoiceSettings settings,
     SpeechModelCatalog catalog,
-    String lang,
+    String language,
+  ) => effectiveSherpaVoice(
+    chosen: settings.sherpaVoiceFor(language, catalog),
+    available: [
+      for (final m in catalog.voicesFor(language))
+        if (states[m.id]?.phase == ModelPhase.installed) m.id,
+    ],
+  );
+
+  /// The speaking voice if a voice was chosen explicitly but is not loaded.
+  static String? _missingChoice(
+    VoiceSettings settings,
+    SpeechModelCatalog catalog,
+    String language,
+    String? speaking,
   ) {
-    final id = settings.sherpaVoiceFor(lang, catalog);
-    return id != null && states[id]?.phase == ModelPhase.installed;
+    final chosen = settings.sherpaVoices[language];
+    return chosen != null && speaking != null && chosen != speaking
+        ? speaking
+        : null;
   }
 }

@@ -120,4 +120,11 @@ void main() {
       contains('base'),
     );
   });
+
+  test('effectiveSherpaVoice: gewählte, sonst erste geladene (WP66)', () {
+    expect(effectiveSherpaVoice(chosen: 'b', available: ['a', 'b']), 'b');
+    expect(effectiveSherpaVoice(chosen: 'c', available: ['a', 'b']), 'a');
+    expect(effectiveSherpaVoice(chosen: null, available: ['b']), 'b');
+    expect(effectiveSherpaVoice(chosen: 'a', available: <String>[]), isNull);
+  });
 }

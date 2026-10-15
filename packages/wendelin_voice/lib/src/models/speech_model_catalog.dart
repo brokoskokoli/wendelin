@@ -237,7 +237,7 @@ final class SpeechModelCatalog {
   static const voiceFrGilles = SpeechModel(
     id: 'tts-fr-gilles',
     kind: SpeechModelKind.tts,
-    displayName: 'Français – Gilles (masculin)',
+    displayName: 'Français – Gilles (männlich)',
     gender: VoiceGender.male,
     languages: {'fr'},
     license: 'CC0 (Daten: French Single Speaker Speech Dataset), Piper MIT',
@@ -260,7 +260,7 @@ final class SpeechModelCatalog {
   static const voiceEnJoe = SpeechModel(
     id: 'tts-en-joe',
     kind: SpeechModelKind.tts,
-    displayName: 'English – Joe (male)',
+    displayName: 'English – Joe (männlich)',
     gender: VoiceGender.male,
     languages: {'en'},
     license: 'CC0 (OHF-Voice voice-datasets), Piper MIT',

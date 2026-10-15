@@ -3,13 +3,17 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/voice/sherpa_tts.dart';
 import 'package:wendelin/platform/voice/system_tts.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
+
+import '../../support/test_env.dart';
 
 /// Emulates the Android side of `flutter_tts` (channel `flutter_tts`) with
 /// `awaitSpeakCompletion(true)`: `speak` answers when the utterance is over
@@ -113,6 +117,12 @@ const _voice = SherpaVoice(
   id: 'tts-de-thorsten',
   language: 'de',
   name: 'Deutsch – Thorsten',
+  files: PiperVoiceFiles(model: 'm', tokens: 't', dataDir: 'd'),
+);
+const _kerstin = SherpaVoice(
+  id: 'tts-de-kerstin',
+  language: 'de',
+  name: 'Kerstin',
   files: PiperVoiceFiles(model: 'm', tokens: 't', dataDir: 'd'),
 );
 const _voiceFr = SherpaVoice(
@@ -388,5 +398,28 @@ void main() {
     final files = PiperVoiceFiles.find(tmp)!;
     expect(files.model, '${v.path}/de.onnx');
     expect(files.dataDir, '${v.path}/espeak-ng-data');
+  });
+
+  test('Verdrahtung (WP66): sherpaVoices aus den Einstellungen bestimmen die Stimme', () async {
+    final synth = FakeSynthesizer();
+    final env = TestEnv(
+      extraOverrides: [sherpaSynthesizerProvider.overrideWithValue(synth)],
+    );
+    // TestEnv replaces sherpaTtsProvider with a fake: build the real one.
+    final real = Provider<TextToSpeech>(
+      (ref) => createSherpaTts(
+        ref,
+        playback: FakePlayback(time: Duration.zero),
+        installed: () async => const [_voice, _kerstin],
+      ),
+    );
+    final c = env.container();
+    addTearDown(c.dispose);
+    await c.read(voiceSettingsProvider.future);
+    await c
+        .read(voiceSettingsProvider.notifier)
+        .change((s) => s.copyWith(sherpaVoices: {'de': 'tts-de-kerstin'}));
+    await c.read(real).speak('Hallo', language: 'de');
+    expect(synth.calls.map((x) => x.$2), ['tts-de-kerstin']);
   });
 }

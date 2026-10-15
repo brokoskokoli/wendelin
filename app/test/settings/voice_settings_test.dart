@@ -6,7 +6,7 @@ import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
-import 'package:wendelin/ui/design/design.dart' show WSwitch;
+import 'package:wendelin/ui/design/design.dart' show CheckStatusIcon, WSwitch;
 import 'package:wendelin/ui/onboarding/voice_download_step.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/settings/model_download_row.dart';
@@ -730,9 +730,9 @@ void main() {
         'Deutsch – Thorsten (männlich)',
         'Deutsch – Kerstin (weiblich)',
         'Français – Siwis (weiblich)',
-        'Français – Gilles (masculin)',
+        'Français – Gilles (männlich)',
         'English – LJSpeech (weiblich)',
-        'English – Joe (male)',
+        'English – Joe (männlich)',
       ]) {
         expect(find.text(name), findsOneWidget);
       }
@@ -757,14 +757,80 @@ void main() {
       expect(call.text, 'Hallo, ich bin Wendelin.');
 
       // Not loaded voices are not selectable; loading is offered.
-      await tester.tap(find.text('English – Joe (male)'));
+      await tester.tap(find.text('English – Joe (männlich)'));
       await settle(tester);
       expect(c.read(voiceSettingsProvider).value!.sherpaVoices.keys, ['de']);
-      expect(action('English – Joe (male)', 'Laden'), findsOneWidget);
+      expect(action('English – Joe (männlich)', 'Laden'), findsOneWidget);
       expect(
         action('Deutsch – Thorsten (männlich)', 'Löschen'),
         findsOneWidget,
       );
+    });
+
+    /// Whether the row titled [model] shows the check mark.
+    bool checked(String model) => find
+        .descendant(
+          of: find.ancestor(
+            of: find.text(model),
+            matching: find.byType(ModelDownloadRow),
+          ),
+          matching: find.byType(CheckStatusIcon),
+        )
+        .evaluate()
+        .isNotEmpty;
+
+    const thorsten = 'Deutsch – Thorsten (männlich)';
+    const kerstin = 'Deutsch – Kerstin (weiblich)';
+
+    testWidgets('gewählte Stimme nicht geladen: Haken und Probe bei der '
+        'wirksamen Stimme, mit Hinweis', (tester) async {
+      final env = TestEnv();
+      env.speechModels.installed.add('tts-de-thorsten');
+      final c = await pumpScreen(tester, env, const VoiceVoicesScreen());
+      await c
+          .read(voiceSettingsProvider.notifier)
+          .change((s) => s.copyWith(sherpaVoices: {'de': 'tts-de-kerstin'}));
+      await settle(tester);
+      expect(checked(thorsten), isTrue);
+      expect(checked(kerstin), isFalse);
+      expect(
+        find.text('Gewählte Stimme nicht geladen – es spricht $thorsten.'),
+        findsOneWidget,
+      );
+      await tester.tap(probe('de'));
+      await settle(tester);
+      expect(env.sherpaTts.calls.single.voice, 'tts-de-thorsten');
+    });
+
+    testWidgets('Standardstimme nicht geladen: erste geladene wirkt, ohne '
+        'Hinweis', (tester) async {
+      final env = TestEnv();
+      env.speechModels.installed.add('tts-de-kerstin');
+      await pumpScreen(tester, env, const VoiceVoicesScreen());
+      expect(checked(kerstin), isTrue);
+      expect(checked(thorsten), isFalse);
+      expect(find.byKey(const Key('hint-de')), findsNothing);
+      await tester.tap(probe('de'));
+      await settle(tester);
+      expect(env.sherpaTts.calls.single.voice, 'tts-de-kerstin');
+    });
+
+    testWidgets('gewählte Stimme löschen entfernt die Wahl', (tester) async {
+      final env = TestEnv();
+      env.speechModels.installed.addAll(['tts-de-thorsten', 'tts-de-kerstin']);
+      final c = await pumpScreen(tester, env, const VoiceVoicesScreen());
+      await tester.tap(find.text(kerstin));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.sherpaVoices, {
+        'de': 'tts-de-kerstin',
+      });
+      await tester.tap(action(kerstin, 'Löschen'));
+      await settle(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Löschen'));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.sherpaVoices, isEmpty);
+      expect(checked(thorsten), isTrue);
+      expect(find.byKey(const Key('hint-de')), findsNothing);
     });
 
     testWidgets('Sprache-Seite führt zu „Stimmen“', (tester) async {

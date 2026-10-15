@@ -291,3 +291,14 @@ final class VoiceSettings {
 
 bool _sameVoices(Map<String, String> a, Map<String, String> b) =>
     a.length == b.length && a.entries.every((e) => b[e.key] == e.value);
+
+/// The offline voice that really speaks (WP66), shared by the settings and
+/// the speech output: [chosen] if it is among [available] (loaded voices of
+/// the language, in catalog order), else the first loaded one, else `null`.
+String? effectiveSherpaVoice({
+  required String? chosen,
+  required Iterable<String> available,
+}) {
+  if (chosen != null && available.contains(chosen)) return chosen;
+  return available.isEmpty ? null : available.first;
+}

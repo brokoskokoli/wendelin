@@ -210,12 +210,16 @@ final class SherpaTextToSpeech implements TextToSpeech {
     }
     if (language != null) {
       final lang = language.split(RegExp('[-_]')).first.toLowerCase();
-      final want = preferred[lang];
-      for (final v in voices) {
-        if (v.id == want && v.language == lang) return v;
-      }
-      for (final v in voices) {
-        if (v.language == lang) return v;
+      final inLanguage = [
+        for (final v in voices)
+          if (v.language == lang) v,
+      ];
+      final effective = effectiveSherpaVoice(
+        chosen: preferred[lang],
+        available: [for (final v in inLanguage) v.id],
+      );
+      for (final v in inLanguage) {
+        if (v.id == effective) return v;
       }
     }
     return voices.first;
