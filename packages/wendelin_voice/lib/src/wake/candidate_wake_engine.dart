@@ -23,6 +23,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
     this.keywordId = 'wake',
     this.stopTemplates = const [],
     this.stopKeywordId = 'stop',
+    this.onWindow,
   });
 
   /// The feature chain.
@@ -52,6 +53,11 @@ final class CandidateWakeEngine implements WakeWordEngine {
 
   /// Id reported for a „Stopp“ hit.
   final String stopKeywordId;
+
+  /// Diagnostics (WP72): called for every window with the best similarity to
+  /// the main and to the „Stopp“ templates (`-1` without templates) and the
+  /// classifier score.
+  final void Function(double main, double stop, double? model)? onWindow;
 
   /// Consecutive windows over the „Stopp“ threshold needed for a hit.
   static const stopWindows = 2;
@@ -98,6 +104,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
       );
       var id = keywordId;
       final stop = _closest(w.embedding, stops);
+      onWindow?.call(main.top, stop.top, w.modelScore);
       final stopDecision = decideCandidate(
         modelScore: null,
         templateSimilarity: stop.similarity,

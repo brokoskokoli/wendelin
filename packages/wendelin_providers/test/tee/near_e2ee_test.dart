@@ -168,6 +168,46 @@ void main() {
       },
     );
 
+    test('Klartext in reasoning, reasoning_content, refusal oder fremdem Feld '
+        'wird nie angezeigt (e2ee.response)', () {
+      for (final field in ['reasoning', 'reasoning_content', 'refusal']) {
+        final plain = SseEvent(
+          data:
+              '{"id":"x","choices":[{"index":0,"delta":{"$field":"Klartext"}}]}',
+        );
+        expect(
+          () => wire().open(plain),
+          failsAt('e2ee.response'),
+          reason: field,
+        );
+        final broken = SseEvent(
+          data: '{"id":"x","choices":[{"index":0,"delta":{"$field":"abcd"}}]}',
+        );
+        expect(
+          () => wire().open(broken),
+          failsAt('e2ee.response'),
+          reason: field,
+        );
+      }
+      // unbekanntes Textfeld, und Träger unter dem anderen Schlüssel
+      for (final data in [
+        '{"id":"x","choices":[{"delta":{"thinking":"Klartext"}}]}',
+        '{"id":"x","choices":[{"delta":{},"message":{"content":"Klartext"}}]}',
+      ]) {
+        expect(
+          () => wire().open(SseEvent(data: data)),
+          failsAt('e2ee.response'),
+          reason: data,
+        );
+      }
+      expect(
+        () => wire().openJson(
+          '{"id":"x","choices":[{"message":{"reasoning":"Klartext"}}]}',
+        ),
+        throwsA(isA<AttestationFailedException>()),
+      );
+    });
+
     test('Fehlerobjekt im Klartext, Nutzungsstück und [DONE] gehen durch', () {
       final w = wire();
       final usage = const SseEvent(
@@ -253,6 +293,22 @@ void main() {
       'stream': true,
       'stream_options': {'include_usage': true},
     };
+
+    test('unbekanntes Feld auf Nachrichtenebene bricht ab', () {
+      for (final extra in <Map<String, Object?>>[
+        {'cache_control': 'ephemeral'},
+        {'function_call': {}},
+        {'audio': {}},
+      ]) {
+        final b = body();
+        (b['messages']! as List<Object?>).add({
+          'role': 'user',
+          'content': 'x',
+          ...extra,
+        });
+        expect(() => wire().seal(b), failsAt('e2ee.request'), reason: '$extra');
+      }
+    });
 
     test('kein Klartext im Wire, auch nicht bei Werkzeugen', () {
       final w = wire();

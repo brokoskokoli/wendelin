@@ -124,6 +124,10 @@ final class WakeHost {
       audio: audio,
       engine: _LoggingEngine(engine),
       verifier: verify ? _LoggingVerifier(parts.verifier()) : null,
+      // Room noise before the word (WP73): `speechAfterWakeWord` measures
+      // its threshold there. The overlay skips everything up to the end of
+      // the word, so the longer lead costs nothing but a few KB.
+      preRoll: wakePreRoll,
     );
     _listener = listener;
     _subs
@@ -241,6 +245,10 @@ final class WakeHost {
     }
   }
 }
+
+/// Audio before the wake word end handed to the overlay: the word (up to
+/// about a second) and room noise before it.
+const wakePreRoll = Duration(milliseconds: 2500);
 
 /// Logs every stage 1 candidate: score and rule, nothing else.
 final class _LoggingEngine implements WakeWordEngine {

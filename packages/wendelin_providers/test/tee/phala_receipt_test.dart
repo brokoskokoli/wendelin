@@ -41,6 +41,59 @@ Future<ReceiptResult> _verify(
 }
 
 void main() {
+  test('Quittungsabruf trägt den Schlüssel, nur über den Quittungs-Client '
+      '(HTTP 401 ohne Schlüssel war die Ursache auf dem Gerät)', () async {
+    final open = TeeServer({
+      'aci/attestation': jsonBody(teeJson('gateway_attestation')),
+      'aci/sessions/': jsonBody(upToDateSession()),
+    });
+    final pinned = TeeServer({
+      'aci/receipts/': (r) => r.headers['Authorization'] == 'Bearer k-1'
+          ? jsonBody(_receipt())(r)
+          : jsonBody({'error': 'unauthorized'}, status: 401)(r),
+    });
+    final v = PhalaVerifier(
+      crypto: FakeAttestationCrypto(ed25519Result: true),
+      baseUrl: Uri.parse('https://gateway.test/v1'),
+      profileId: 'phala',
+      client: open.client,
+      receiptClient: pinned.client,
+      receiptHeaders: () async => {'Authorization': 'Bearer k-1'},
+      settings: HttpSettings(clock: FixedClock(probeNow)),
+      nonceSource: () => probeNonce,
+    );
+    final s = (await v.attest()).session!;
+    final r = await v.verifyReceipt(
+      ReceiptRef(id: 'rcpt-1', session: s),
+      _req,
+      _resp,
+    );
+    expect(r.status, AttestationStatus.green);
+    expect(open.count('aci/receipts'), 0);
+    expect(
+      open.requests.every((q) => !q.headers.containsKey('Authorization')),
+      isTrue,
+      reason: 'der Schlüssel geht nie über den offenen Attestierungs-Client',
+    );
+    // Without the key the gateway says 401: rejected, not "manipulated".
+    final noKey = PhalaVerifier(
+      crypto: FakeAttestationCrypto(ed25519Result: true),
+      baseUrl: Uri.parse('https://gateway.test/v1'),
+      profileId: 'phala',
+      client: open.client,
+      receiptClient: pinned.client,
+      settings: HttpSettings(clock: FixedClock(probeNow)),
+      nonceSource: () => probeNonce,
+    );
+    final s2 = (await noKey.attest()).session!;
+    final r2 = await noKey.verifyReceipt(
+      ReceiptRef(id: 'rcpt-1', session: s2),
+      _req,
+      _resp,
+    );
+    expect(r2.stages.single.code, StageResult.receiptRejected);
+  });
+
   group('PhalaVerifier.verifyReceipt (Probe-Quittung, Hashes angepasst)', () {
     test('grüner Pfad: alle Quittungsstufen bestehen', () async {
       final r = await _verify(_receipt());

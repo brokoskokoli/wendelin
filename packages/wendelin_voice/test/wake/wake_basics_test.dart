@@ -96,9 +96,66 @@ void main() {
         'Danke schön': false,
       };
       cases.forEach((text, want) {
-        expect(matchesWakeWord(text), want, reason: text);
+        expect(matchesWakeWord(text, maxDistance: 1), want, reason: text);
       });
-      expect(matchesWakeWord('Wendel', maxDistance: 2), isTrue);
+      expect(matchesWakeWord('Wendel'), isFalse);
+    });
+
+    test(
+      'Nachprüfung toleriert zwei Änderungen nur bei Einzelwörtern (WP73)',
+      () {
+        const cases = {
+          // Echte Varianten.
+          'Wendelin': true,
+          'Wendolin': true,
+          'Wändelin': true,
+          'Vendelin': true,
+          // Nur mit zwei Änderungen (nicht phonetisch gleich): Einzelwort ≥ 7.
+          'Wengelion': true,
+          'Hey Wengelion': true,
+          // Satzfetzen und ähnliche Wörter.
+          'Weil in': false,
+          'Wand in': false,
+          'Wenden': false,
+          'Wedeln': false,
+          'Wendland': false,
+          'Wendel': false,
+          'Mandelin': false,
+          'Welle': false,
+          'Wandern': false,
+        };
+        cases.forEach((text, want) {
+          expect(matchesWakeWord(text), want, reason: text);
+        });
+        // Eine Änderung genügt weiter, zwei nur bei der Nachprüfung.
+        expect(matchesWakeWord('Wengelion', maxDistance: 1), isFalse);
+        expect(matchesWakeWord('Wendelxyz', maxDistance: 1), isFalse);
+      },
+    );
+
+    test('Erkennen und Entfernen nutzen dieselbe Toleranz (WP73)', () {
+      for (final w in ['Wendelin', 'Wengelion', 'Vendelin', 'Wende Lin']) {
+        expect(matchesWakeWord('$w mach Licht'), isTrue, reason: w);
+        expect(stripWakeWord('$w, mach Licht'), 'mach Licht', reason: w);
+      }
+      for (final w in ['Weil in', 'Wand in', 'Wenden', 'Wedeln']) {
+        expect(matchesWakeWord('$w den Keller'), isFalse, reason: w);
+        expect(stripWakeWord('$w den Keller'), '$w den Keller', reason: w);
+      }
+    });
+
+    test('Kategorie der Nachprüfung ohne Text (WP73)', () async {
+      expect(wakeTranscriptCategory(''), 'empty');
+      expect(wakeTranscriptCategory('Hey Wendelin'), 'exact');
+      expect(wakeTranscriptCategory('Vendelin'), 'variant');
+      expect(wakeTranscriptCategory('Guten Tag'), 'other');
+      final seen = <String>[];
+      final v = TranscriptWakeVerifier(
+        FixedTranscriptStt('Wandeln'),
+        onCategory: (c, ms) => seen.add('$c $ms'),
+      );
+      expect(await v.confirm(Int16List(32000)), isTrue);
+      expect(seen, ['variant 2000']);
     });
 
     test('TranscriptWakeVerifier kürzt auf die letzten 3 s', () async {
@@ -113,6 +170,35 @@ void main() {
   });
 
   group('CandidateWakeEngine', () {
+    test('onWindow meldet beste Ähnlichkeit je Fenster (WP72)', () async {
+      Float32List v(List<double> e) => Float32List.fromList(e);
+      WakeTemplates one(List<double> e) => WakeTemplates(
+        speakerId: 'a',
+        featureVersion: 'fake-1',
+        threshold: 0.9,
+        embeddings: [v(e)],
+      );
+      final seen = <(double, double)>[];
+      final e = CandidateWakeEngine(
+        features: FakeWakeFeatureExtractor(
+          windowEvery: 100,
+          windowFor: (end, _) =>
+              WakeWindow(endSample: end, embedding: v([1, 0])),
+        ),
+        templates: one([1, 0]),
+        stopTemplates: [
+          one([0, 1]),
+        ],
+        modelThreshold: null,
+        onWindow: (m, s, _) => seen.add((m, s)),
+      );
+      await e.open([KeywordSpec.wendelin]);
+      await e.accept(Int16List(200));
+      expect(seen, hasLength(2));
+      expect(seen.first.$1, closeTo(1, 1e-6));
+      expect(seen.first.$2, closeTo(0, 1e-6));
+    });
+
     Float32List v(List<double> x) => Float32List.fromList(x);
 
     CandidateWakeEngine make({

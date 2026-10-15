@@ -38,6 +38,8 @@ final class PhalaVerifier implements AttestationVerifier {
     this.policy = const AttestationPolicy(),
     this.pins,
     this.headers,
+    http.Client? receiptClient,
+    this.receiptHeaders,
     this.observedSpki,
     this.enforceTlsPin = false,
     this.tlsPin,
@@ -50,7 +52,15 @@ final class PhalaVerifier implements AttestationVerifier {
          settings: settings,
          label: 'Attestierung',
          redactor: Redactor(),
-       );
+       ),
+       _receiptTransport = receiptClient == null
+           ? null
+           : HttpTransport(
+               client: receiptClient,
+               settings: settings,
+               label: 'Attestierung',
+               redactor: Redactor(),
+             );
 
   /// Cryptographic primitives (Rust in the app, fake in tests).
   final AttestationCrypto crypto;
@@ -97,6 +107,14 @@ final class PhalaVerifier implements AttestationVerifier {
   final AttestationChecks _checks;
   final HttpTransport _transport;
 
+  /// Transport of the receipt requests; `null` = [_transport].
+  final HttpTransport? _receiptTransport;
+
+  /// Headers of the receipt requests only (the API key): the gateway hands
+  /// a receipt to its owner. They go over [receiptClient], the connection
+  /// pinned to the attested session, never over the open attestation client.
+  final Future<Map<String, String>> Function()? receiptHeaders;
+
   static final _random = Random.secure();
 
   static Uint8List _secureNonce() =>
@@ -110,12 +128,46 @@ final class PhalaVerifier implements AttestationVerifier {
     queryParameters: query,
   );
 
-  Future<Map<String, Object?>> _get(Uri url) async => _transport.getJson(
+  Future<Map<String, Object?>> _get(
+    Uri url, {
+    void Function(int?)? seen,
+    bool receipt = false,
+  }) async => (receipt ? _receiptTransport ?? _transport : _transport).getJson(
     url,
-    await headers?.call() ?? const {},
-    onHttpError: (status, body, retry) =>
-        exceptionForStatus(status, label: 'Attestierung', retryAfter: retry),
+    await (receipt ? receiptHeaders ?? headers : headers)?.call() ?? const {},
+    onHttpError: (status, body, retry) {
+      seen?.call(status);
+      return exceptionForStatus(
+        status,
+        label: 'Attestierung',
+        retryAfter: retry,
+      );
+    },
   );
+
+  /// Loads the receipt [id]; the gateway also accepts the chat id.
+  Future<Map<String, Object?>> _getReceipt(
+    ReceiptRef ref,
+    void Function(int?) seen,
+  ) async {
+    int? status;
+    try {
+      return await _get(
+        _url('aci/receipts/${ref.id}'),
+        seen: (s) => seen(status = s),
+        receipt: true,
+      );
+    } on ProviderException {
+      final alt = ref.alternateId;
+      if (status != 404 || alt == null || alt.isEmpty || alt == ref.id) {
+        rethrow;
+      }
+      // The fallback is a new request: a 404 of the first one must not
+      // describe a network failure of this one.
+      seen(null);
+      return _get(_url('aci/receipts/$alt'), seen: seen, receipt: true);
+    }
+  }
 
   @override
   Future<AttestationResult> attest() async {
@@ -242,9 +294,10 @@ final class PhalaVerifier implements AttestationVerifier {
     Uint8List responseBytes,
   ) async {
     final GatewayReceipt receipt;
+    int? httpStatus;
     try {
       receipt = GatewayReceipt.parse(
-        await _get(_url('aci/receipts/${ref.id}')),
+        await _getReceipt(ref, (s) => httpStatus = s),
       );
     } on AttestationFormatException catch (e) {
       return _receiptFailed([StageResult.fail(e.stage, e.message)], ref);
@@ -253,13 +306,7 @@ final class PhalaVerifier implements AttestationVerifier {
         StageResult.fail(AttestationStage.receiptFetch, 'Quittung unlesbar'),
       ], ref);
     } on ProviderException {
-      return _receiptFailed(const [
-        StageResult(
-          AttestationStage.receiptFetch,
-          StageOutcome.unavailable,
-          'Quittung nicht abrufbar',
-        ),
-      ], ref);
+      return _receiptFailed([_fetchProblem(httpStatus)], ref);
     }
     final checks = ReceiptChecks(
       crypto,
@@ -315,6 +362,37 @@ final class PhalaVerifier implements AttestationVerifier {
         'Upstream-Session nicht abrufbar',
       );
     }
+  }
+
+  /// The `receipt.fetch` result for a failed request: [status] is the HTTP
+  /// status, `null` if there was none (network, timeout).
+  static StageResult _fetchProblem(int? status) {
+    const s = AttestationStage.receiptFetch;
+    const u = StageOutcome.unavailable;
+    if (status == null) {
+      return const StageResult(
+        s,
+        u,
+        'Quittung nicht abrufbar (keine Verbindung)',
+        StageResult.receiptUnreachable,
+      );
+    }
+    if (status == 404) {
+      return const StageResult(
+        s,
+        u,
+        'Quittung nicht abrufbar (HTTP 404, unbekannt oder abgelaufen)',
+        StageResult.receiptNotFound,
+      );
+    }
+    return StageResult(
+      s,
+      u,
+      'Quittung nicht abrufbar (HTTP $status)',
+      status >= 500 || status == 408
+          ? StageResult.receiptUnreachable
+          : StageResult.receiptRejected,
+    );
   }
 
   ReceiptResult _receiptFailed(List<StageResult> stages, ReceiptRef ref) =>

@@ -17,6 +17,7 @@ import '../attestation_stages.dart';
 import '../attestation_types.dart';
 import '../codec.dart';
 import '../gateway_documents.dart';
+import '../gpu_attestation.dart';
 import '../session_channel.dart';
 import '../tls_pin_gate.dart';
 import 'near_e2ee.dart';
@@ -50,6 +51,7 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
     required this.profileId,
     required this.headers,
     http.Client? client,
+    http.Client? receiptClient,
     this.settings = const HttpSettings(),
     this.policy = const AttestationPolicy(),
     this.pins,
@@ -64,7 +66,15 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
          settings: settings,
          label: 'Attestierung',
          redactor: Redactor(),
-       );
+       ),
+       _receiptTransport = receiptClient == null
+           ? null
+           : HttpTransport(
+               client: receiptClient,
+               settings: settings,
+               label: 'Attestierung',
+               redactor: Redactor(),
+             );
 
   /// Cryptographic primitives.
   final AttestationCrypto crypto;
@@ -100,9 +110,24 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
   /// How long an attested session is used (the report has no expiry).
   final Duration sessionTtl;
 
+  ({Map<String, Object?> payload, String nonce})? _gpuEvidence;
+
+  /// GPU evidence (`nvidia_payload`) of the candidate chosen in the last
+  /// green [attest], with the nonce that also binds its TDX quote; `null`
+  /// if there was none. Feeds `NrasGpuVerifier.evidenceSource`, so the GPU
+  /// check judges the same machine as the quote.
+  Future<({Map<String, Object?> payload, String nonce})?> gpuEvidence() async =>
+      _gpuEvidence;
+
   final Uint8List Function() _nonce;
   final AttestationChecks _checks;
   final HttpTransport _transport;
+
+  /// Transport of the receipt requests; `null` = [_transport]. The receipt
+  /// belongs to the owner of the API key, so it goes over the connection
+  /// pinned to the attested session (the first report cannot: the pin comes
+  /// out of it).
+  final HttpTransport? _receiptTransport;
 
   static final _random = Random.secure();
 
@@ -117,16 +142,21 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
     queryParameters: query,
   );
 
-  Future<Map<String, Object?>> _get(Uri url) async => _transport.getJson(
-    url,
-    {...await headers(), 'x-no-aliasing': 'true'},
-    onHttpError: (status, body, retry) =>
-        exceptionForStatus(status, label: 'Attestierung', retryAfter: retry),
-  );
+  Future<Map<String, Object?>> _get(Uri url, {bool receipt = false}) async =>
+      (receipt ? _receiptTransport ?? _transport : _transport).getJson(
+        url,
+        {...await headers(), 'x-no-aliasing': 'true'},
+        onHttpError: (status, body, retry) => exceptionForStatus(
+          status,
+          label: 'Attestierung',
+          retryAfter: retry,
+        ),
+      );
 
   @override
   Future<AttestationResult> attest() async {
     final gate = tlsPin?..expect(null);
+    _gpuEvidence = null;
     final nonce = _nonce();
     final now = settings.clock.now();
     final Map<String, Object?> doc;
@@ -205,6 +235,10 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
       return _failed(stages);
     }
     gate?.expect(gateway.tlsSpkiHex);
+    final gpu = chosen.gpuPayload;
+    _gpuEvidence = gpu == null
+        ? null
+        : (payload: gpu, nonce: AttestCodec.hex(nonce));
     final session = _session(chosen, gateway, now);
     return AttestationResult(
       status: status,
@@ -283,6 +317,7 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
       );
       return e;
     }
+    e.gpuPayload = NrasGpuVerifier.decodePayload(json['nvidia_payload']);
     e.composeHash = AttestCodec.hex(
       crypto.sha256(utf8.encode(appCompose).toU8),
     );
@@ -469,6 +504,7 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
           'model': model,
           'signing_algo': 'ed25519',
         }),
+        receipt: true,
       );
     } on MalformedResponseException {
       return failed(const [
@@ -588,6 +624,7 @@ final class _Entry {
   Uint8List? key;
   Uint8List? tlsSpki;
   String? composeHash;
+  Map<String, Object?>? gpuPayload;
   StageResult? tcb;
   final List<StageResult> stages = [];
 

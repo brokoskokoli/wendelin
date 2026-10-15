@@ -76,8 +76,7 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
     required this._client,
     this.nrasUrl = 'https://nras.attestation.nvidia.com/v3/attest/gpu',
     this.timeout = const Duration(seconds: 10),
-    this.reportQuery = const {},
-    this.reportHeaders,
+    this.evidenceSource,
     Uint8List Function()? nonceSource,
   }) : _nonce = nonceSource ?? _secureNonce;
 
@@ -90,12 +89,12 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
   /// Timeout for each of the two requests.
   final Duration timeout;
 
-  /// Extra query parameters of the report request (NEAR AI: `provider`,
-  /// `signing_algo`).
-  final Map<String, String> reportQuery;
-
-  /// Extra headers of the report request (NEAR AI: API key).
-  final Future<Map<String, String>> Function()? reportHeaders;
+  /// Evidence of an already verified attestation instead of an own report
+  /// request (NEAR AI: the `nvidia_payload` of the chosen candidate, same
+  /// nonce as the TDX quote; no gateway call, no API key). `null` result =
+  /// no evidence.
+  final Future<({Map<String, Object?> payload, String nonce})?> Function()?
+  evidenceSource;
 
   final http.Client _client;
   final Uint8List Function() _nonce;
@@ -158,6 +157,47 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
     })
   >
   _evidence(String model) async {
+    final source = evidenceSource;
+    if (source != null) {
+      try {
+        final given = await source();
+        if (given == null) {
+          return (
+            result: const GpuAttestationResult(
+              GpuVerdict.failed,
+              'GPU-Evidenz fehlt',
+            ),
+            payload: null,
+            nonce: '',
+          );
+        }
+        if ((given.payload['nonce'] as String?)?.toLowerCase() !=
+            given.nonce.toLowerCase()) {
+          return (
+            result: const GpuAttestationResult(
+              GpuVerdict.failed,
+              'GPU-Evidenz bindet die Nonce nicht',
+            ),
+            payload: null,
+            nonce: given.nonce,
+          );
+        }
+        return (
+          result: null,
+          payload: given.payload,
+          nonce: given.nonce.toLowerCase(),
+        );
+      } on Object {
+        return (
+          result: const GpuAttestationResult(
+            GpuVerdict.failed,
+            'GPU-Evidenz unlesbar',
+          ),
+          payload: null,
+          nonce: '',
+        );
+      }
+    }
     final nonce = AttestCodec.hex(_nonce());
     GpuAttestationResult? fail(GpuVerdict v, String detail) =>
         GpuAttestationResult(v, detail);
@@ -170,9 +210,8 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
                 'attestation',
                 'report',
               ],
-              queryParameters: {...reportQuery, 'model': model, 'nonce': nonce},
+              queryParameters: {'model': model, 'nonce': nonce},
             ),
-            headers: await reportHeaders?.call(),
           )
           .timeout(timeout);
       if (report.statusCode != 200) {
@@ -213,20 +252,22 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
     }
   }
 
+  /// Decodes an `nvidia_payload` (JSON text or object); `null` if unreadable.
+  static Map<String, Object?>? decodePayload(Object? raw) {
+    try {
+      final decoded = raw is String ? jsonDecode(raw) : raw;
+      return decoded is Map<String, Object?> ? decoded : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
   static Map<String, Object?>? _payload(List<int> body) {
     try {
       final report = jsonDecode(utf8.decode(body));
-      var raw = report is Map<String, Object?>
+      final raw = report is Map<String, Object?>
           ? report['nvidia_payload']
           : null;
-      if (raw == null && report is Map<String, Object?>) {
-        // NEAR AI: one report per candidate under `model_attestations`.
-        final candidates = report['model_attestations'];
-        if (candidates is List<Object?> &&
-            candidates.firstOrNull is Map<String, Object?>) {
-          raw = (candidates.first! as Map<String, Object?>)['nvidia_payload'];
-        }
-      }
       final decoded = raw is String ? jsonDecode(raw) : raw;
       return decoded is Map<String, Object?> ? decoded : null;
     } on FormatException {

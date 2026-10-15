@@ -83,13 +83,6 @@ final class ProviderConfig {
   /// Routing rules; `null` = default target only.
   final RoutingSetup? routing;
 
-  /// Whether profile [profileId] offers no tools (Phala without tools,
-  /// WP63); `false` if unknown.
-  bool noToolsFor(String profileId) => [
-    primary,
-    ...others,
-  ].any((t) => t.profileId == profileId && !t.provider.caps.tools);
-
   /// Whether profile [profileId] encrypts tool definitions, calls and
   /// results end to end too (NEAR AI, WP75); `false` if unknown.
   bool toolsEncryptedFor(String profileId) => [primary, ...others].any(

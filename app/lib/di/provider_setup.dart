@@ -148,7 +148,6 @@ final class ProviderSetupSession {
     PrivacyLevel? privacy,
     int? budgetMicros,
     double? warnThreshold,
-    bool? noTools,
   }) {
     final base = template.toProfile(
       id: profileId,
@@ -175,9 +174,8 @@ final class ProviderSetupSession {
       extraHeaders: existing?.extraHeaders ?? const {},
       options: {
         for (final e in (existing?.options ?? base.options).entries)
-          if (!(noTools != null && e.key == noToolsOption)) e.key: e.value,
-        // Off is the default: the key is only stored when switched on.
-        if (noTools ?? false) noToolsOption: true,
+          // Retired option „Ohne Tools“ (WP71): dropped when saving.
+          if (e.key != 'noTools') e.key: e.value,
       },
     );
   }

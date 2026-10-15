@@ -11,8 +11,8 @@ import 'settings_page.dart';
 import 'voice_screen.dart' show languageNames, sampleText;
 
 /// Settings → Sprache → Stimmen (WP66): per language the offline voices
-/// (female and male) to load, delete and choose, and „Probe hören“ for the
-/// chosen one. Only voices that are loaded take up space on the device.
+/// (female and male) to load, delete and choose, and a play button
+/// („Probe hören“) on the chosen one. Only voices that are loaded take up space on the device.
 class VoiceVoicesScreen extends ConsumerWidget {
   /// Creates the screen.
   const VoiceVoicesScreen({super.key});
@@ -46,6 +46,18 @@ class VoiceVoicesScreen extends ConsumerWidget {
                     ModelDownloadRow(
                       model: m,
                       selected: effective(lang) == m.id,
+                      extra: _ProbeButton(
+                        key: Key('probe-$lang'),
+                        tts: ref.read(sherpaTtsProvider),
+                        onProbe: () => ref
+                            .read(sherpaTtsProvider)
+                            .speak(
+                              sampleText(lang),
+                              voice: m.id,
+                              language: lang,
+                              rate: settings.ttsRate,
+                            ),
+                      ),
                       onSelect: () => unawaited(
                         notifier.change(
                           (s) => s.copyWith(
@@ -77,22 +89,6 @@ class VoiceVoicesScreen extends ConsumerWidget {
                       ),
                     ),
                 ],
-              ),
-              WideButton(
-                'Probe hören',
-                key: Key('probe-$lang'),
-                onPressed: effective(lang) != null
-                    ? () => unawaited(
-                        ref
-                            .read(sherpaTtsProvider)
-                            .speak(
-                              sampleText(lang),
-                              voice: effective(lang),
-                              language: lang,
-                              rate: settings.ttsRate,
-                            ),
-                      )
-                    : null,
               ),
             ],
           ),
@@ -126,4 +122,88 @@ class VoiceVoicesScreen extends ConsumerWidget {
         ? speaking
         : null;
   }
+}
+
+/// Play button „Probe hören“ on the chosen voice. Right after the tap a
+/// spinner („wird vorbereitet“) shows while the sample is synthesised
+/// (1–2 s); once it plays the button is a stop button. A failed sample
+/// shows a short note.
+class _ProbeButton extends StatefulWidget {
+  const _ProbeButton({super.key, required this.tts, required this.onProbe});
+
+  final TextToSpeech tts;
+  final Future<void> Function() onProbe;
+
+  @override
+  State<_ProbeButton> createState() => _ProbeButtonState();
+}
+
+enum _ProbePhase { idle, preparing, playing }
+
+class _ProbeButtonState extends State<_ProbeButton> {
+  _ProbePhase _phase = _ProbePhase.idle;
+  StreamSubscription<TtsState>? _states;
+
+  @override
+  void dispose() {
+    unawaited(_states?.cancel());
+    super.dispose();
+  }
+
+  Future<void> _start() async {
+    setState(() => _phase = _ProbePhase.preparing);
+    await _states?.cancel();
+    _states = widget.tts.states.listen((s) {
+      if (s == TtsState.speaking && mounted) {
+        setState(() => _phase = _ProbePhase.playing);
+      }
+    });
+    try {
+      await widget.onProbe();
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Probe nicht möglich – die Stimme hat nicht '
+                'gesprochen.',
+              ),
+            ),
+          );
+      }
+    } finally {
+      await _states?.cancel();
+      _states = null;
+      if (mounted) setState(() => _phase = _ProbePhase.idle);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => switch (_phase) {
+    _ProbePhase.preparing => const SizedBox.square(
+      dimension: WSize.touchMin,
+      child: Center(
+        child: SizedBox.square(
+          dimension: WSize.spinner,
+          child: CircularProgressIndicator(
+            strokeWidth: WSize.spinnerStroke,
+            color: WColors.accent,
+            semanticsLabel: 'Probe wird vorbereitet …',
+          ),
+        ),
+      ),
+    ),
+    _ProbePhase.playing => WIconButton(
+      icon: WIcons.stop,
+      tooltip: 'Probe beenden',
+      onPressed: () => unawaited(widget.tts.stop()),
+    ),
+    _ProbePhase.idle => WIconButton(
+      icon: WIcons.play,
+      tooltip: 'Probe hören',
+      onPressed: () => unawaited(_start()),
+    ),
+  };
 }

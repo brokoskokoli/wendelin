@@ -282,6 +282,36 @@ void main() {
       );
     });
 
+    test('GPU-Evidenz stammt vom gewählten Kandidaten, mit der Nonce des '
+        'Quotes', () async {
+      final doc = nearReport();
+      final list = doc['model_attestations']! as List<Object?>;
+      final good = copyJson(list.first! as Map<String, Object?>)
+        ..['nvidia_payload'] = jsonEncode({
+          'arch': 'GUT',
+          'nonce': AttestCodec.hex(nearNonce),
+        });
+      final bad = copyJson(good)
+        ..['signing_public_key'] = flipHex(
+          good['signing_public_key']! as String,
+          5,
+        )
+        ..['nvidia_payload'] = jsonEncode({'arch': 'SCHLECHT'});
+      doc['model_attestations'] = [bad, good];
+      final v = nearVerifier(serverFor(doc), crypto);
+      expect(await v.gpuEvidence(), isNull, reason: 'vor der Prüfung');
+      final r = await v.attest();
+      expect(r.status, AttestationStatus.green, reason: '${r.stages}');
+      final e = (await v.gpuEvidence())!;
+      expect(e.payload['arch'], 'GUT');
+      expect(e.nonce, AttestCodec.hex(nearNonce));
+      // rot: keine Evidenz übrig
+      doc['model_attestations'] = [bad];
+      final v2 = nearVerifier(serverFor(doc), crypto);
+      await v2.attest();
+      expect(await v2.gpuEvidence(), isNull);
+    });
+
     test('TLS-Pin: Fingerabdruck des Gateways wird zur Erwartung', () async {
       final gate = TlsPinGate(spkiSha256: (_) => Uint8List(32));
       final doc = nearReport();

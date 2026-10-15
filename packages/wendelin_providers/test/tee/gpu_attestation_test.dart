@@ -73,6 +73,43 @@ void main() {
       },
     );
 
+    test(
+      'evidenceSource: kein Aufruf am Gateway, Nonce der Quelle zählt',
+      () async {
+        final seen = <Uri>[];
+        NrasGpuVerifier make(String nonce, {String? payloadNonce}) =>
+            NrasGpuVerifier(
+              baseUrl: Uri.parse('https://gateway.test/v1'),
+              client: MockClient((r) async {
+                seen.add(r.url);
+                return _ok(_nras);
+              }),
+              evidenceSource: () async => (
+                payload: <String, Object?>{'nonce': payloadNonce ?? nonce},
+                nonce: nonce,
+              ),
+            );
+        final ok = await make('cd' * 32).verify(model: 'm');
+        expect(ok.verdict, GpuVerdict.verified);
+        expect(seen.map((u) => u.host), ['nras.attestation.nvidia.com']);
+        // Evidenz bindet die Nonce der Quelle nicht → NRAS wird nicht gefragt
+        seen.clear();
+        final bad = await make(
+          'cd' * 32,
+          payloadNonce: '01' * 32,
+        ).verify(model: 'm');
+        expect(bad.verdict, GpuVerdict.failed);
+        expect(seen, isEmpty);
+        // keine Evidenz
+        final none = NrasGpuVerifier(
+          baseUrl: Uri.parse('https://gateway.test/v1'),
+          client: MockClient((r) async => _ok(_nras)),
+          evidenceSource: () async => null,
+        );
+        expect((await none.verifyLocal(model: 'm')).verdict, GpuVerdict.failed);
+      },
+    );
+
     test('NRAS-Gesamtergebnis false → failed', () async {
       // Rebuild the overall JWT payload with a negative result.
       final decoded = jsonDecode(_nras) as List;

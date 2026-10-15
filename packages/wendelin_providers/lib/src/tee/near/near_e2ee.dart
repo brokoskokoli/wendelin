@@ -185,6 +185,14 @@ final class NearE2eeWire implements ChatWire {
     if (m is! Map<String, Object?>) {
       throw _fail('e2ee.request', 'Nachricht unlesbar');
     }
+    for (final k in m.keys) {
+      if (!_knownMessageKeys.contains(k)) {
+        throw _fail(
+          'e2ee.request',
+          'Nachrichtenfeld "$k" nicht verschlüsselbar',
+        );
+      }
+    }
     final out = <String, Object?>{...m};
     final content = m['content'];
     switch (content) {
@@ -226,11 +234,33 @@ final class NearE2eeWire implements ChatWire {
     } else if (calls != null) {
       throw _fail('e2ee.request', 'Werkzeugaufrufe unlesbar');
     }
-    if (m.containsKey('function_call') || m.containsKey('audio')) {
-      throw _fail('e2ee.request', 'Nachrichtenfeld nicht verschlüsselbar');
-    }
     return out;
   }
+
+  /// Message fields the request sealing knows (anything else would go out in
+  /// plaintext, so it aborts the request): `function_call` and `audio` are
+  /// deliberately missing.
+  static const _knownMessageKeys = {
+    'role',
+    'content',
+    'name',
+    'refusal',
+    'reasoning',
+    'reasoning_content',
+    'tool_calls',
+    'tool_call_id',
+  };
+
+  /// Answer message fields that may stay plain (no text); everything else
+  /// with a value must have been opened.
+  static const _plainAnswerKeys = {
+    'role',
+    'content',
+    'reasoning',
+    'reasoning_content',
+    'refusal',
+    'tool_calls',
+  };
 
   Map<String, Object?> _sealFunction(Map<String, Object?> f) => {
     ...f,
@@ -340,6 +370,11 @@ final class NearE2eeWire implements ChatWire {
       if (choice is! Map<String, Object?>) {
         throw _fail('e2ee.response', 'Antwort unlesbar');
       }
+      // A carrier under the other key would bypass opening.
+      final other = streaming ? 'message' : 'delta';
+      if (choice[other] != null) {
+        throw _fail('e2ee.response', 'Antwortfeld nicht verschlüsselt');
+      }
       final msg = choice[key];
       if (msg == null) {
         out.add(choice);
@@ -347,6 +382,11 @@ final class NearE2eeWire implements ChatWire {
       }
       if (msg is! Map<String, Object?>) {
         throw _fail('e2ee.response', 'Antwort unlesbar');
+      }
+      for (final e in msg.entries) {
+        if (!_plainAnswerKeys.contains(e.key) && !_isEmpty(e.value)) {
+          throw _fail('e2ee.response', 'Antwortfeld nicht verschlüsselt');
+        }
       }
       final opened = <String, Object?>{...msg};
       for (final name in [
@@ -378,6 +418,12 @@ final class NearE2eeWire implements ChatWire {
     }
     return changed ? jsonEncode({...parsed, 'choices': out}) : json;
   }
+
+  static bool _isEmpty(Object? v) =>
+      v == null ||
+      v == '' ||
+      (v is List && v.isEmpty) ||
+      (v is Map && v.isEmpty);
 
   Map<String, Object?> _openCall(Map<String, Object?> c) {
     final f = c['function'];

@@ -79,8 +79,12 @@ void main() {
     final p = file.path;
     if (p.contains('/wendelin_providers/lib/src/anthropic/') ||
         p.contains('/wendelin_providers/lib/src/openai/') ||
-        // NEAR AI spricht das OpenAI-Wire (verschlüsselt, WP75): Adapter-Code.
-        p.contains('/wendelin_providers/lib/src/tee/near/') ||
+        // NEAR AI spricht das OpenAI-Wire (verschlüsselt, WP75): nur Kanal
+        // und Fake-Dienst, nicht das ganze Verzeichnis.
+        p.endsWith('/wendelin_providers/lib/src/tee/near/near_e2ee.dart') ||
+        p.endsWith(
+          '/wendelin_providers/lib/src/tee/near/fake_near_service.dart',
+        ) ||
         p.contains('/test/')) {
       continue;
     }

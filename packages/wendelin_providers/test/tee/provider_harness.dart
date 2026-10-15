@@ -23,9 +23,9 @@ final class TeeHarness {
     GpuCheckMode gpuMode = GpuCheckMode.off,
     http.Client? chatClient,
     this.tlsPin,
+    this.retryDelay = Duration.zero,
     http.Client Function(http.Client base, {required bool enforce})? pinWrap,
     Uri? baseUrl,
-    bool noTools = false,
   }) : crypto = crypto ?? FakeAttestationCrypto(ed25519Result: true) {
     server = TeeServer({
       'aci/attestation': (_) async {
@@ -39,15 +39,26 @@ final class TeeHarness {
         }
         return _json(jsonEncode(sessionDoc ?? upToDateSession()), 200);
       },
-      'aci/receipts/': (_) async {
+      'aci/receipts/': (request) async {
         await receiptGate?.future;
         if (receiptFailures > 0) {
           receiptFailures--;
-          return _json('{}', 500);
+          return _json('{}', receiptFailureStatus);
         }
+        final asked = request.url.pathSegments.last;
+        final fallbackStatus = failFallbackWith;
+        if (fallbackStatus != null && asked != 'rcpt-test') {
+          if (fallbackStatus == 0) throw http.ClientException('offline');
+          return _json('{}', fallbackStatus);
+        }
+        final known = knownReceiptIds;
+        if (known != null && !known.contains(asked)) {
+          return _json('{}', 404);
+        }
+        final foreign = foreignReceiptIds.contains(asked);
         final receipt = syntheticReceipt(
-          lastRequest ?? Uint8List(0),
-          lastResponse ?? Uint8List(0),
+          foreign ? Uint8List.fromList([1, 2, 3]) : lastRequest ?? Uint8List(0),
+          foreign ? Uint8List.fromList([4, 5]) : lastResponse ?? Uint8List(0),
           (r) {
             r['workload_keyset_digest'] = attestation['workload_keyset_digest'];
             receiptEdit?.call(r);
@@ -122,9 +133,9 @@ final class TeeHarness {
       gpuMode: gpuMode,
       logSink: log,
       settings: settings,
-      retryDelay: Duration.zero,
+      retryDelay: retryDelay,
+      sleep: (d) async => sleeps.add(d),
       tlsPin: tlsPin,
-      noTools: noTools,
     );
   }
 
@@ -146,6 +157,9 @@ final class TeeHarness {
 
   /// Pin state shared by verifier and provider (WP61).
   final TlsPinGate? tlsPin;
+
+  /// Base wait between receipt attempts.
+  final Duration retryDelay;
 
   /// Crypto under test.
   final FakeAttestationCrypto crypto;
@@ -173,6 +187,22 @@ final class TeeHarness {
 
   /// Number of receipt requests answered with 500 before success.
   int receiptFailures = 0;
+
+  /// HTTP status of the failing receipt requests.
+  int receiptFailureStatus = 500;
+
+  /// Receipt ids whose receipt belongs to another exchange (other hashes).
+  Set<String> foreignReceiptIds = {};
+
+  /// If set, every receipt request by an id other than `x-receipt-id`
+  /// answers with this status (0: connection error).
+  int? failFallbackWith;
+
+  /// Waits requested between receipt attempts.
+  final List<Duration> sleeps = [];
+
+  /// If set, receipt ids not in it answer 404.
+  Set<String>? knownReceiptIds;
 
   /// Upstream session served; `null` = up-to-date variant of the probe.
   Map<String, Object?>? sessionDoc;

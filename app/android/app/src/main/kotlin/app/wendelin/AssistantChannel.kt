@@ -85,11 +85,13 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
             }
             "hasWakeHandoff" -> result.success(WakeHandoff.pending())
             "takeWakeHandoff" -> {
+                val closeAt = System.currentTimeMillis()
                 if (WakeHandoff.pending()) WakeWordService.beforeHandoffTake()
+                val closeMs = System.currentTimeMillis() - closeAt
                 val taken = WakeHandoff.take(System.currentTimeMillis())
                 if (taken != null) {
                     WakeWordService.onHandoffTaken()
-                    VoiceLog.i("wake-handoff-take captured=${taken.capturedMs}ms")
+                    VoiceLog.i("wake-handoff-take captured=${taken.capturedMs}ms close=${closeMs}ms")
                 }
                 result.success(
                     taken?.let {

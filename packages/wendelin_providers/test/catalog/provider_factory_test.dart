@@ -133,18 +133,6 @@ void main() {
         expect((extra['provider']! as Map)['aci_verified'], isTrue);
       });
 
-      test('Option noTools schaltet „ohne Tools“ am AttestedProvider ein', () {
-        AttestedProvider build(Map<String, Object?> o) =>
-            ProviderFactory.create(
-              phala(options: {'attestation': 'phala', ...o}),
-              (_) async => 'k',
-              attestation: wiring,
-            ) as AttestedProvider;
-        expect(build({}).noTools, isFalse);
-        expect(build({'noTools': true}).noTools, isTrue);
-        expect(build({'noTools': true}).caps.tools, isFalse);
-      });
-
       test(
         'ohne pinnedClient: Adapter und Prüfung nutzen PinnedHttpClient',
         () async {
@@ -200,6 +188,15 @@ void main() {
           effectivePrivacy(phala(privacy: PrivacyLevel.local)),
           PrivacyLevel.local,
         );
+      });
+
+      test('alte Option noTools wirkt nicht mehr: Tools bleiben an', () {
+        final p = ProviderFactory.create(
+          phala(options: const {'attestation': 'phala', 'noTools': true}),
+          (_) async => 'k',
+          attestation: wiring,
+        );
+        expect(p.caps.tools, isTrue);
       });
 
       test('älteres Profil auf dem RedPill-Host ohne Option wird geprüft', () {

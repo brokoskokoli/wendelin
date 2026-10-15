@@ -19,8 +19,6 @@ Future<void> _pump(WidgetTester tester, {required bool attested}) =>
               warn: 0.8,
               onWarn: (_) {},
               attested: attested,
-              noTools: false,
-              onNoTools: (_) {},
               onSave: () {},
             ),
           ),

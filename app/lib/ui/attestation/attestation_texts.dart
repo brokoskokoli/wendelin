@@ -47,6 +47,18 @@ abstract final class AttestationReason {
   /// The upstream session document does not match the receipt.
   static const sessionMismatch = 'upstream_session_mismatch';
 
+  /// The gateway does not know the receipt (not written yet, expired).
+  static const receiptNotFound = 'receipt_not_found';
+
+  /// The receipt endpoint could not be reached (network, server error).
+  static const receiptUnreachable = 'receipt_unreachable';
+
+  /// The gateway refused the receipt request (key, rate limit).
+  static const receiptRejected = 'receipt_rejected';
+
+  /// The answer carried no receipt id.
+  static const receiptMissing = 'receipt_missing';
+
   /// NVIDIA rejected the GPU evidence.
   static const gpuFailed = 'gpu_failed';
 
@@ -67,6 +79,24 @@ AttestationMessage attestationMessage(
         status: CheckStatus.pending,
         label: 'wird geprüft',
       );
+    case AttestationStatus.unconfirmed:
+      return switch (reasonCode) {
+        AttestationReason.receiptNotFound => _unconfirmed(
+          'Quittung nicht gefunden',
+          'Der Anbieter kennt die Quittung dieser Antwort nicht (noch nicht '
+              'geschrieben oder abgelaufen).',
+        ),
+        AttestationReason.receiptMissing => _unconfirmed(
+          'Quittung fehlt',
+          'Der Anbieter hat zu dieser Antwort keine Quittungs-Kennung '
+              'geliefert.',
+        ),
+        _ => _unconfirmed(
+          'Quittung nicht erreichbar',
+          'Die Quittung dieser Antwort konnte wegen eines Netz- oder '
+              'Serverfehlers nicht abgerufen werden.',
+        ),
+      };
     case AttestationStatus.red:
       return switch (reasonCode) {
         AttestationReason.tcbOutOfDate => const AttestationMessage(
@@ -108,6 +138,16 @@ AttestationMessage attestationMessage(
               'dieser Antwort. Vertraue der Antwort nicht. Der Anbieter ist '
               'gesperrt, bis du ihn neu prüfst.',
         ),
+        AttestationReason.receiptRejected => const AttestationMessage(
+          status: CheckStatus.failed,
+          label: 'Quittung abgelehnt',
+          title: 'Quittungsabruf vom Anbieter abgelehnt',
+          text:
+              'Der Anbieter hat den Abruf der Quittung abgelehnt (zum '
+              'Beispiel wegen zu vieler Anfragen). Die '
+              'Antwort ist nicht bestätigt, es gibt aber keinen Hinweis auf '
+              'eine Manipulation. Prüfe den Anbieter neu.',
+        ),
         AttestationReason.gpuFailed => const AttestationMessage(
           status: CheckStatus.failed,
           label: 'GPU-Prüfung fehlgeschlagen',
@@ -141,6 +181,18 @@ AttestationMessage attestationMessage(
       };
   }
 }
+
+AttestationMessage _unconfirmed(String title, String cause) =>
+    AttestationMessage(
+      status: CheckStatus.neutral,
+      label: 'nicht bestätigt',
+      title: title,
+      text:
+          '$cause Ob die Antwort aus der geprüften Umgebung stammt, ist '
+          'unbestätigt. Es wurde aber auch kein Fehler festgestellt, der '
+          'Anbieter bleibt nutzbar. Aktionen, die auf die geprüfte Antwort '
+          'warten, laufen nicht. Prüfe den Anbieter neu.',
+    );
 
 /// German name of a check stage id for the log (`quote` → „TDX-Quote“).
 String stageLabel(String stage) => switch (stage) {
@@ -181,12 +233,12 @@ String stageResultLabel(String result) => switch (result) {
   _ => result,
 };
 
-/// Symbol of a stage result name; `null` for `info`.
-CheckStatus? stageResultStatus(String result) => switch (result) {
+/// Symbol of a stage result name; every result has one (`info` → grey).
+CheckStatus stageResultStatus(String result) => switch (result) {
   'pass' => CheckStatus.ok,
   'fail' => CheckStatus.failed,
   'warn' || 'unavailable' => CheckStatus.pending,
-  _ => null,
+  _ => CheckStatus.info,
 };
 
 /// Short note on the stage „Ende-zu-Ende-verschlüsselt“: where the

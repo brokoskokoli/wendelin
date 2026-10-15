@@ -77,10 +77,6 @@ final class AttestationWiring {
   final Set<String> trustedCommits;
 }
 
-/// Profile option „Ohne Tools (alles verschlüsselt)“ (WP63, `true`): no tool
-/// definitions go to a Phala profile.
-const noToolsOption = 'noTools';
-
 /// Which checked TEE protocol a profile speaks.
 enum AttestationKind {
   /// Not attested.
@@ -207,16 +203,17 @@ abstract final class ProviderFactory {
             attestation?.pinnedClient ??
             (TlsPinGate g, {required bool enforce}) =>
                 PinnedHttpClient(gate: g, enforce: enforce, connect: connect);
+        final credentials = Credentials(
+          profile.authMethod,
+          secrets,
+          style: ApiKeyStyle.bearer,
+        );
         final adapter = OpenAiChatAdapter(
           wireCodec: attested
               ? PhalaE2eeChannel(crypto: attestation.crypto)
               : null,
           baseUrl: Uri.parse(baseUrl),
-          credentials: Credentials(
-            profile.authMethod,
-            secrets,
-            style: ApiKeyStyle.bearer,
-          ),
+          credentials: credentials,
           defaultModel: profile.defaultModel,
           label: profile.name,
           client: gate == null ? client : build(gate, enforce: true),
@@ -241,6 +238,11 @@ abstract final class ProviderFactory {
             baseUrl: root,
             profileId: profile.id,
             client: build(gate!, enforce: false),
+            // The receipt belongs to the key's owner: the request carries the
+            // key, so it goes over the connection pinned to the attested
+            // session.
+            receiptClient: build(gate, enforce: true),
+            receiptHeaders: () => credentials.headers(Redactor()),
             tlsPin: gate,
             settings: settings,
             pins: attestation.pins,
@@ -254,7 +256,6 @@ abstract final class ProviderFactory {
             client: client ?? defaultHttpClient(),
           ),
           gpuMode: attestation.gpuMode,
-          noTools: profile.options[noToolsOption] == true,
           logSink: attestation.logSink,
           settings: settings,
         );
@@ -318,28 +319,35 @@ abstract final class ProviderFactory {
       settings: settings,
     );
     Future<Map<String, String>> auth() => credentials.headers(Redactor());
+    final verifier = NearVerifier(
+      crypto: attestation.crypto,
+      baseUrl: root,
+      model: profile.defaultModel,
+      profileId: profile.id,
+      headers: auth,
+      // The report endpoint needs the key and the pin comes out of the
+      // report, so only this first request carries the key over a
+      // connection that is not yet pinned (TLS validated by the system).
+      client: build(gate, enforce: false),
+      // Receipts go over the pinned connection.
+      receiptClient: build(gate, enforce: true),
+      tlsPin: gate,
+      settings: settings,
+      pins: attestation.pins,
+      nonceSource: attestation.nonceSource,
+    );
     return AttestedProvider(
       inner: adapter,
-      verifier: NearVerifier(
-        crypto: attestation.crypto,
-        baseUrl: root,
-        model: profile.defaultModel,
-        profileId: profile.id,
-        headers: auth,
-        client: build(gate, enforce: false),
-        tlsPin: gate,
-        settings: settings,
-        pins: attestation.pins,
-        nonceSource: attestation.nonceSource,
-      ),
+      verifier: verifier,
       profileId: profile.id,
       tlsPin: gate,
       requireUpstreamEnforced: false,
+      // GPU evidence comes from the verified report (same nonce as the
+      // quote); NRAS gets no key. [client] is only for NRAS.
       gpuVerifier: NrasGpuVerifier(
         baseUrl: root,
         client: client ?? defaultHttpClient(),
-        reportQuery: const {'provider': 'near', 'signing_algo': 'ed25519'},
-        reportHeaders: () async => {...await auth(), 'x-no-aliasing': 'true'},
+        evidenceSource: verifier.gpuEvidence,
       ),
       gpuMode: attestation.gpuMode,
       logSink: attestation.logSink,

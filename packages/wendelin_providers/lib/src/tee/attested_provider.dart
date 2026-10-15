@@ -1,4 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:meta/meta.dart';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -50,11 +55,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.logSink,
     this.settings = const HttpSettings(),
     this.retryDelay = const Duration(seconds: 2),
+    Future<void> Function(Duration) sleep = _sleep,
     this.tlsPin,
-    this.noTools = false,
     bool requireUpstreamEnforced = true,
     Duration gpuTimeout = const Duration(seconds: 15),
-  }) {
+  }) : _sleepFn = sleep {
     final provider = inner.options.extraBody['provider'];
     if (requireUpstreamEnforced &&
         (provider is! Map || provider['aci_verified'] != true)) {
@@ -108,19 +113,19 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// Clock and diagnostic log.
   final HttpSettings settings;
 
-  /// Wait between receipt attempts.
+  /// Base wait between receipt attempts (grows to three times this).
   final Duration retryDelay;
+
+  /// Waits between receipt attempts (replaceable in tests).
+  final Future<void> Function(Duration) _sleepFn;
+
+  static Future<void> _sleep(Duration d) => Future<void>.delayed(d);
 
   /// Pin state of the enforcing client of [inner] (WP61). If a connection
   /// is refused because its certificate does not match the attestation, the
   /// provider attests once more (certificate rotation) and retries the
   /// request; a second mismatch locks the provider.
   final TlsPinGate? tlsPin;
-
-  /// „Ohne Tools (alles verschlüsselt)“ (WP63): no tool definitions and no
-  /// tool calls or results from the history are sent, so nothing of the
-  /// request is left outside the end-to-end encryption.
-  final bool noTools;
 
   AttestedSession? _session;
   List<StageResult> _lastStages = const [];
@@ -175,15 +180,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   ProviderType get type => inner.type;
 
   @override
-  ProviderCapabilities get caps => noTools
-      ? ProviderCapabilities(
-          tools: false,
-          streaming: inner.caps.streaming,
-          vision: inner.caps.vision,
-          promptCaching: inner.caps.promptCaching,
-          tee: inner.caps.tee,
-        )
-      : inner.caps;
+  ProviderCapabilities get caps => inner.caps;
 
   @override
   Future<List<ModelInfo>> listModels() async {
@@ -249,12 +246,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         return;
       }
       final session = _session!;
-      final sent = noTools ? _withoutTools(req) : req;
-      var toolsInvolved = sent.tools.isNotEmpty || _hasToolTraffic(sent);
+      var toolsInvolved = req.tools.isNotEmpty || _hasToolTraffic(req);
       ExchangeRecord? record;
       var rotated = false;
       await for (final event in inner.chatObserved(
-        sent,
+        req,
         cancel: cancel,
         observer: (r) => record = r,
       )) {
@@ -293,28 +289,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       }
       if (!rotated) return;
     }
-  }
-
-  /// [req] without tool definitions, tool calls and tool results.
-  static ChatRequest _withoutTools(ChatRequest req) => ChatRequest(
-    messages: [
-      for (final m in req.messages)
-        if (m.role != Role.tool)
-          if (m.content.any((b) => b is ToolCallBlock))
-            ?_dropToolCalls(m)
-          else
-            m,
-    ],
-    model: req.model,
-    maxTokens: req.maxTokens,
-    temperature: req.temperature,
-    metadata: req.metadata,
-    systemPrompt: req.systemPrompt,
-  );
-
-  static Message? _dropToolCalls(Message m) {
-    final rest = m.content.where((b) => b is! ToolCallBlock).toList();
-    return rest.isEmpty ? null : Message(m.role, rest);
   }
 
   /// Writes a log entry with the failed E2EE stage (visible in the log).
@@ -452,12 +426,14 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       final (:stages, :status, :pinChanged) = id == null || id.isEmpty
           ? (
               stages: const [
-                StageResult.fail(
+                StageResult(
                   AttestationStage.receiptFetch,
+                  StageOutcome.unavailable,
                   'Antwort ohne x-receipt-id',
+                  StageResult.receiptMissing,
                 ),
               ],
-              status: AttestationStatus.red,
+              status: AttestationStatus.unconfirmed,
               pinChanged: false,
             )
           : await _receiptAttempts(id, record, session, model, toolsInvolved);
@@ -480,7 +456,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           );
         }
       }
-      final problem = status == AttestationStatus.red
+      final problem = status != AttestationStatus.green
           ? stages.where((s) => s.code != null).firstOrNull
           : null;
       final report = AttestationReport(
@@ -531,7 +507,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   ) async {
     for (var attempt = 1; ; attempt++) {
       final result = await verifier.verifyReceipt(
-        ReceiptRef(id: id, session: session),
+        ReceiptRef(
+          id: id,
+          session: session,
+          alternateId: chatIdOf(record.responseBytes),
+        ),
         record.requestBytes,
         record.responseBytes,
       );
@@ -557,8 +537,26 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           toolsInvolved: toolsInvolved,
         ),
       );
-      await Future<void>.delayed(retryDelay);
+      // 2 s, 4 s, 6 s, 6 s, 6 s: about 24 s in all for a receipt the
+      // gateway has not written yet.
+      await _sleepFn(retryDelay * min(attempt, 3));
     }
+  }
+
+  /// The first `"id":"…"` of a response (plain JSON or the first SSE chunk),
+  /// the chat id; `null` if there is none or it is odd.
+  @visibleForTesting
+  static String? chatIdOf(Uint8List response) {
+    final head = utf8.decode(
+      response.length > 4096 ? response.sublist(0, 4096) : response,
+      allowMalformed: true,
+    );
+    final id = RegExp(r'"id"\s*:\s*"([A-Za-z0-9_.:-]{1,128})"')
+        .firstMatch(head)
+        ?.group(1);
+    // Not a path segment like `.` or `..`, and not only punctuation.
+    if (id == null || !id.contains(RegExp(r'[A-Za-z0-9]'))) return null;
+    return id;
   }
 
   String _problem(List<StageResult> stages) =>

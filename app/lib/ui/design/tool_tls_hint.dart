@@ -15,7 +15,8 @@ class ToolTlsHint extends StatelessWidget {
   final bool encrypted;
 
   /// Der Text des Hinweises.
-  static const text = 'Tool-Argumente nur über gepinntes TLS geschützt';
+  static const text =
+      'Tool-Aufrufe sind über die geprüfte Verbindung bis in die Enklave geschützt, aber nicht zusätzlich verschlüsselt.';
 
   /// Der Text bei Ende-zu-Ende-verschlüsselten Tools.
   static const encryptedText = 'Tools Ende-zu-Ende-verschlüsselt';

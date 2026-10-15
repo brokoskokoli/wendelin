@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -86,6 +87,65 @@ void main() {
         attestation: AttestationWiring(crypto: FakeAttestationCrypto()),
       ),
       throwsArgumentError,
+    );
+  });
+
+  test('API-Schlüssel nie über einen Client außerhalb des Pin-Gates', () async {
+    final viaGate = <String>[]; // 'enforce|path'
+    final viaOther = <http.BaseRequest>[];
+    http.Client record(bool enforce) => MockClient((r) async {
+      viaGate.add('$enforce|${r.url.path}|${r.headers['authorization']}');
+      return http.Response('{}', 500);
+    });
+    final wiring = AttestationWiring(
+      crypto: FakeAttestationCrypto(),
+      nearCrypto: NearReferenceCrypto(),
+      gpuMode: GpuCheckMode.before,
+      pinnedClient: (gate, {required enforce}) => record(enforce),
+    );
+    final p = ProviderFactory.create(
+      near(),
+      (_) async => 'geheim',
+      attestation: wiring,
+      client: MockClient((r) async {
+        viaOther.add(r);
+        return http.Response('{}', 500);
+      }),
+    ) as AttestedProvider;
+    final v = p.verifier as NearVerifier;
+    await v.attest();
+    await v.verifyReceipt(
+      ReceiptRef(
+        id: 'chatcmpl-1',
+        session: AttestedSession(
+          keysetDigest: 'a',
+          notAfter: DateTime(2100),
+          receiptKeys: const {},
+          repoCommit: null,
+          composeHash: '',
+          attestedAt: DateTime(2026),
+          workloadId: 'm',
+        ),
+      ),
+      Uint8List(1),
+      Uint8List(1),
+    );
+    // der Bericht (noch ungeprüft) darf den Schlüssel tragen, die Quittung
+    // nur über die erzwungene, gepinnte Verbindung
+    expect(
+      viaGate.where((e) => e.contains('/signature/')),
+      everyElement(startsWith('true|')),
+    );
+    expect(viaGate.any((e) => e.contains('/signature/')), isTrue);
+    expect(viaGate.where((e) => e.startsWith('false|')), hasLength(1));
+    expect(
+      viaGate.firstWhere((e) => e.startsWith('false|')),
+      contains('/attestation/report'),
+    );
+    // nichts mit dem Schlüssel über den fremden Client (NRAS)
+    expect(
+      viaOther.where((r) => r.headers.containsKey('authorization')),
+      isEmpty,
     );
   });
 

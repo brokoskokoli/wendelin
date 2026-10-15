@@ -10,6 +10,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../agent/agent_controller.dart';
 import 'agent_factory.dart';
+import 'attest_log.dart';
 import 'attestation_log_writer.dart';
 import 'attestation_providers.dart';
 import 'audit_recorder.dart';
@@ -151,7 +152,7 @@ final Provider<LlmProviderFactory> llmProviderFactoryProvider =
           catalog: catalog,
           attestation: wiring,
           client: transport?.client,
-          settings: transport?.settings ?? const HttpSettings(),
+          settings: attestSettings(transport?.settings),
         );
         if (provider is AttestedProvider) {
           ref.read(attestationHubProvider).register(profile.id, provider);

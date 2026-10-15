@@ -28,6 +28,7 @@ void main() {
       List<WakeTemplates> sets,
       Float32List e, {
       List<WakeTemplates> stops = const [],
+      Future<double?> Function()? margin,
     }) {
       audio = FakeAudioInput(
         frames: [Int16List(480), Int16List(480)],
@@ -37,6 +38,8 @@ void main() {
         audio: audio,
         templates: () async => sets,
         stopTemplates: () async => stops,
+        marginOverride: margin,
+        diagInterval: const Duration(milliseconds: 20),
         features: () => FakeWakeFeatureExtractor(
           windowEvery: 480,
           windowFor: (end, _) => WakeWindow(endSample: end, embedding: e),
@@ -76,12 +79,6 @@ void main() {
       },
     );
 
-    test('Neubau im Leerlauf beendet den Detektor sofort', () async {
-      final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
-      await d.disposeWhenIdle();
-      expect(d.isRunning, isFalse);
-    });
-
     WakeTemplates stopTpl(double threshold) => WakeTemplates(
       speakerId: 'a',
       featureVersion: 'fake-1',
@@ -90,6 +87,133 @@ void main() {
         Float32List.fromList([0, 1]),
       ],
     );
+
+    group('Diagnose (WP72)', () {
+      late List<String> lines;
+      late void Function(String) saved;
+      setUp(() {
+        saved = voiceLogSink;
+        lines = [];
+        voiceLogSink = lines.add;
+      });
+      tearDown(() => voiceLogSink = saved);
+
+      test('barge-config, barge-diag je Intervall und barge-end', () async {
+        final d = make(
+          [tpl(0.8)],
+          Float32List.fromList([1, 0]),
+          stops: [stopTpl(0.7)],
+        );
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 90));
+        await d.stop();
+        await d.dispose();
+        expect(
+          lines.any(
+            (l) =>
+                l.contains('barge-config') &&
+                l.contains('margin=0.05') &&
+                l.contains('thr=0.85') &&
+                l.contains('sthr=0.75'),
+          ),
+          isTrue,
+          reason: lines.join('\n'),
+        );
+        final diag = lines.where((l) => l.contains('barge-diag')).toList();
+        expect(diag, isNotEmpty);
+        expect(diag.first, contains('t=1'));
+        expect(diag.any((l) => l.contains('sim=1.00')), isTrue);
+        final end = lines.singleWhere((l) => l.contains('barge-end'));
+        expect(end, contains('frames=2'));
+        expect(end, contains('sim=1.00'));
+      });
+
+      test('Treffer erzeugt barge-hit mit Maxima; barge-end meldet das Maximum '
+          'der ganzen Ausgabe', () async {
+        // The first window hits (sim 1.00); later windows score low.
+        audio = FakeAudioInput(
+          frames: [Int16List(480), Int16List(480), Int16List(480)],
+          frameInterval: const Duration(milliseconds: 5),
+        );
+        final d = LazyWakeBargeInDetector(
+          audio: audio,
+          templates: () async => [tpl(0.9)],
+          features: () => FakeWakeFeatureExtractor(
+            windowEvery: 480,
+            windowFor: (end, _) => WakeWindow(
+              endSample: end,
+              embedding: Float32List.fromList(end <= 480 ? [1, 0] : [0, 1]),
+            ),
+          ),
+        );
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 90));
+        await d.stop();
+        await d.dispose();
+        final hit = lines.singleWhere((l) => l.contains('barge-hit'));
+        expect(hit, contains('kind=keyword-wake'));
+        expect(hit, contains('sim=1.00'));
+        final end = lines.singleWhere((l) => l.contains('barge-end'));
+        expect(
+          end,
+          contains('sim=1.00'),
+          reason: 'nicht nur das letzte Fenster',
+        );
+      });
+
+      test('Ende ohne stop(): barge-end steht trotzdem im Log', () async {
+        final d = make([tpl(0.8)], Float32List.fromList([1, 0]));
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        await d.dispose();
+        expect(lines.where((l) => l.contains('barge-end')), hasLength(1));
+      });
+
+      test('Mikrofon liefert nichts: frames=0 wird geloggt', () async {
+        audio = FakeAudioInput(frames: const []);
+        final d = LazyWakeBargeInDetector(
+          audio: audio,
+          templates: () async => [tpl(0.9)],
+          diagInterval: const Duration(milliseconds: 10),
+          features: () => FakeWakeFeatureExtractor(
+            windowEvery: 480,
+            windowFor: (end, _) => WakeWindow(
+              endSample: end,
+              embedding: Float32List.fromList([1, 0]),
+            ),
+          ),
+        );
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 45));
+        await d.dispose();
+        expect(
+          lines.where(
+            (l) => l.contains('barge-diag') && l.contains('frames=0'),
+          ),
+          isNotEmpty,
+        );
+      });
+
+      test('Entwickler-Schwelle ersetzt +0,05', () async {
+        final d = make(
+          [tpl(0.8)],
+          Float32List.fromList([1, 0]),
+          margin: () async => -0.05,
+        );
+        await d.start();
+        await d.dispose();
+        expect(
+          lines.singleWhere((l) => l.contains('barge-config')),
+          allOf(contains('margin=-0.05'), contains('thr=0.75')),
+        );
+      });
+    });
+
+    test('Neubau im Leerlauf beendet den Detektor sofort', () async {
+      final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
+      await d.disposeWhenIdle();
+      expect(d.isRunning, isFalse);
+    });
 
     test('„Stopp“ allein: Signal stop, ohne Vorlage still', () async {
       final spoken = Float32List.fromList([0, 1]);

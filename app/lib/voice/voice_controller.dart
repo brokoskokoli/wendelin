@@ -130,6 +130,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   Stopwatch? _micWatch;
   Duration? _firstFrame;
   int? _wakeLastSampleAt;
+  Stopwatch? _wakeTake;
   Duration? _loaded;
   String _micEngineModel = '';
 
@@ -251,6 +252,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
     final preRoll = takePreRoll == null ? null : await takePreRoll();
     // Before the microphone opens: its first frame is measured against it.
     _wakeLastSampleAt = preRoll?.lastSampleAtMs;
+    // Splits the hole (WP73): service close / hand-over (`ms` minus
+    // `afterTake`) and the opening of this microphone (`afterTake`).
+    _wakeTake = preRoll == null ? null : (Stopwatch()..start());
     primed.prime();
     if (!(await prepare?.call() ?? true)) {
       await primed.stop();
@@ -401,9 +405,11 @@ final class VoiceController extends Notifier<VoiceUiState> {
           frameSamples: samples,
           lastSampleAtMs: last,
         ),
+        if (_wakeTake != null) 'afterTake': _wakeTake!.elapsedMilliseconds,
       });
     }
     _wakeLastSampleAt = null;
+    _wakeTake = null;
     _logMicReady();
   }
 

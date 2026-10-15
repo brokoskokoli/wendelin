@@ -121,7 +121,8 @@ void main() {
       expect(find.text(OverlaySheet.followUpComingHint), findsOneWidget);
 
       await tester.pumpWidget(themed(Scaffold(body: sheet(mode: true))));
-      expect(find.text(OverlaySheet.followUpHint), findsOneWidget);
+      expect(find.textContaining('Hört noch'), findsNothing);
+      expect(find.text(OverlaySheet.followUpComingHint), findsNothing);
 
       await tester.pumpWidget(
         themed(

@@ -25,6 +25,7 @@ String recordSummary(AttestationRecord r, DateTime now) {
       AttestationStatus.green => 'geprüft',
       AttestationStatus.yellow => 'ausstehend',
       AttestationStatus.red => 'fehlgeschlagen',
+      AttestationStatus.unconfirmed => 'nicht bestätigt',
     },
     ?r.receiptId,
   ];
@@ -45,6 +46,7 @@ CheckStatus recordStatus(AttestationRecord r) => switch (r.status) {
   AttestationStatus.green => CheckStatus.ok,
   AttestationStatus.yellow => CheckStatus.pending,
   AttestationStatus.red => CheckStatus.failed,
+  AttestationStatus.unconfirmed => CheckStatus.neutral,
 };
 
 /// Settings → Datenschutz → Prüfprotokoll (TEE): GPU check setting, the list
@@ -66,6 +68,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
     AttestationStatus.green => 'Geprüft',
     AttestationStatus.yellow => 'Wird geprüft',
     AttestationStatus.red => 'Fehlgeschlagen',
+    AttestationStatus.unconfirmed => 'Nicht bestätigt',
   };
 
   @override
@@ -97,12 +100,19 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             record: r,
             name: config?.nameOf(r.profileId) ?? r.profileId,
             locked: ref.watch(attestationHubProvider).isLocked(r.profileId),
-            noTools: config?.noToolsFor(r.profileId) ?? false,
             toolsEncrypted: config?.toolsEncryptedFor(r.profileId) ?? false,
             now: now,
             onReattest: () => unawaited(_reattest(r.profileId)),
           ),
         const GpuCheckSection(),
+        WideButton(
+          'Als JSON exportieren',
+          onPressed: () async => ref.read(exporterProvider)(
+            'wendelin-tee-pruefprotokoll.json',
+            'application/json',
+            await ref.read(storageProvider).attestations.exportJson(),
+          ),
+        ),
         Wrap(
           spacing: WSpace.s,
           runSpacing: WSpace.s,
@@ -124,7 +134,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
           SectionCard(
             children: [
               for (final r in shown)
-                _LogRow(
+                AttestationLogRow(
                   key: ValueKey(r.logId),
                   title: recordTitle(
                     r,
@@ -143,14 +153,6 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
                 ),
             ],
           ),
-        WideButton(
-          'Als JSON exportieren',
-          onPressed: () async => ref.read(exporterProvider)(
-            'wendelin-tee-pruefprotokoll.json',
-            'application/json',
-            await ref.read(storageProvider).attestations.exportJson(),
-          ),
-        ),
         WideButton(
           'Prüfprotokoll löschen',
           onPressed: () => unawaited(_delete()),
@@ -195,7 +197,6 @@ class _SessionCard extends StatelessWidget {
     required this.record,
     required this.name,
     required this.locked,
-    required this.noTools,
     this.toolsEncrypted = false,
     required this.now,
     required this.onReattest,
@@ -204,7 +205,6 @@ class _SessionCard extends StatelessWidget {
   final AttestationRecord record;
   final String name;
   final bool locked;
-  final bool noTools;
 
   /// Tools sind Ende-zu-Ende-verschlüsselt (NEAR AI).
   final bool toolsEncrypted;
@@ -220,6 +220,7 @@ class _SessionCard extends StatelessWidget {
             AttestationStatus.green => 'Sitzung geprüft',
             AttestationStatus.yellow => 'Sitzung nicht prüfbar',
             AttestationStatus.red => 'Sitzung fehlgeschlagen',
+            AttestationStatus.unconfirmed => 'Sitzung nicht bestätigt',
           };
     final color = locked ? CheckStatus.failed.color : status.color;
     return SectionCard(
@@ -255,7 +256,7 @@ class _SessionCard extends StatelessWidget {
                       spacing: WSpace.xs,
                       children: [
                         CheckStatusIcon(
-                          stageResultStatus(st.result) ?? CheckStatus.pending,
+                          stageResultStatus(st.result),
                           size: WSize.statusIconSmall,
                         ),
                         Text(stageLabel(st.stage), style: WText.caption),
@@ -263,7 +264,7 @@ class _SessionCard extends StatelessWidget {
                     ),
                 ],
               ),
-              if (!noTools) ToolTlsHint(encrypted: toolsEncrypted),
+              ToolTlsHint(encrypted: toolsEncrypted),
               PrimaryButton(
                 'Neu attestieren',
                 key: ValueKey('reattest-${record.profileId}'),
@@ -277,8 +278,10 @@ class _SessionCard extends StatelessWidget {
   }
 }
 
-class _LogRow extends StatelessWidget {
-  const _LogRow({
+/// One row of the verification log: result symbol, title and summary.
+class AttestationLogRow extends StatelessWidget {
+  /// Creates a row.
+  const AttestationLogRow({
     super.key,
     required this.title,
     required this.detail,
