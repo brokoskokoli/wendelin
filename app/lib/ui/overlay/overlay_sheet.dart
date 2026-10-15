@@ -169,9 +169,6 @@ class OverlaySheet extends StatelessWidget {
   /// Current time for the countdown of the window.
   final DateTime Function() now;
 
-  /// Hint of the conversation mode (design text).
-  static const followUpHint = 'Hört noch 5 s zu · „Stopp“ beendet';
-
   /// Hint while the conversation mode does not exist yet.
   static const followUpComingHint =
       'Gesprächsmodus aus · in den Einstellungen einschaltbar';
@@ -237,7 +234,11 @@ class OverlaySheet extends StatelessWidget {
         builder: (_, seconds) => text(followUpWindowHint(seconds)),
       );
     }
-    return text(conversationMode ? followUpHint : followUpComingHint);
+    // The countdown only shows while the window is really open (WP74); with
+    // the mode on but no window there is nothing to announce.
+    return conversationMode
+        ? const SizedBox.shrink()
+        : text(followUpComingHint);
   }
 
   bool get _asking {

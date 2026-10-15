@@ -10,7 +10,6 @@ import 'package:wendelin/ui/design/design.dart' show CheckStatusIcon, WSwitch;
 import 'package:wendelin/ui/onboarding/voice_download_step.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/settings/model_download_row.dart';
-import 'package:wendelin/ui/settings/settings_page.dart' show WideButton;
 import 'package:wendelin/ui/settings/settings_screen.dart';
 import 'package:wendelin/ui/settings/voice_screen.dart';
 import 'package:wendelin/ui/settings/voice_spoken_section.dart';
@@ -742,8 +741,11 @@ void main() {
         c.read(voiceSettingsProvider).value!.sherpaVoiceFor('de'),
         'tts-de-thorsten',
       );
-      expect(tester.widget<WideButton>(probe('fr')).onPressed, isNull);
-      expect(tester.widget<WideButton>(probe('de')).onPressed, isNotNull);
+      expect(probe('fr'), findsNothing);
+      expect(probe('de'), findsOneWidget);
+      // One play button per language, on the chosen voice only.
+      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+      expect(find.text('Probe hören'), findsNothing);
 
       await tester.tap(find.text('Deutsch – Kerstin (weiblich)'));
       await settle(tester);
@@ -800,6 +802,23 @@ void main() {
       await tester.tap(probe('de'));
       await settle(tester);
       expect(env.sherpaTts.calls.single.voice, 'tts-de-thorsten');
+    });
+
+    testWidgets('Probe zeigt sofort ein Ladezeichen bis zum Ende', (
+      tester,
+    ) async {
+      final env = TestEnv()..sherpaTts = FakeTextToSpeech(manual: true);
+      env.speechModels.installed.add('tts-de-thorsten');
+      await pumpScreen(tester, env, const VoiceVoicesScreen());
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.tap(probe('de'));
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+      env.sherpaTts.completeCurrent();
+      await settle(tester);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
     });
 
     testWidgets('Standardstimme nicht geladen: erste geladene wirkt, ohne '

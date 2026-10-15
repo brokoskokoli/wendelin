@@ -21,7 +21,12 @@ class ModelDownloadRow extends ConsumerWidget {
     this.onSelect,
     this.deletable = true,
     this.onDeleted,
+    this.extra,
   });
+
+  /// Small action next to the check mark of the chosen model (WP74: the
+  /// play button of „Probe hören“).
+  final Widget? extra;
 
   /// Catalog entry.
   final SpeechModel model;
@@ -83,6 +88,7 @@ class ModelDownloadRow extends ConsumerWidget {
             children: [
               if (selected && installed)
                 const CheckStatusIcon(CheckStatus.ok, semanticLabel: 'gewählt'),
+              if (selected && installed && extra != null) extra!,
               if (action != null)
                 _SmallButton(label: action.$1, onPressed: action.$2),
             ],
