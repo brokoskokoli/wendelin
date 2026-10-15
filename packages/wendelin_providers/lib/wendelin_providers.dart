@@ -29,6 +29,11 @@ export 'src/tee/attestation_types.dart';
 export 'src/tee/attested_provider.dart' show AttestedProvider;
 export 'src/tee/e2ee_v2.dart' show E2eeProtocolV2, E2eeV2Wire, PhalaE2eeChannel;
 export 'src/tee/gpu_attestation.dart';
+export 'src/tee/near/near_crypto.dart';
+export 'src/tee/near/near_e2ee.dart'
+    show NearE2eeChannel, NearE2eeProtocol, NearE2eeWire;
+export 'src/tee/near/near_verifier.dart' show NearVerifier;
 export 'src/tee/phala_verifier.dart' show PhalaVerifier;
+export 'src/tee/session_channel.dart' show ReceiptIdSource, SessionBoundChannel;
 export 'src/tee/tls_pin_gate.dart' show TlsPinGate;
 export 'src/tee/tls_pinned_client.dart' show PinnedHttpClient, TlsConnect;

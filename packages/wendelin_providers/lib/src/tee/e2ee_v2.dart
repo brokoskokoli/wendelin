@@ -9,6 +9,7 @@ import 'attestation_crypto.dart';
 import 'attestation_types.dart';
 import 'codec.dart';
 import 'gateway_documents.dart';
+import 'session_channel.dart';
 
 /// Phala/RedPill end-to-end encryption, protocol **v2** (frozen by Phala,
 /// retirement planned for 2027-02-10; v3 replaces it). Everything that is
@@ -102,7 +103,7 @@ abstract final class E2eeProtocolV2 {
 /// Hands out [E2eeV2Wire]s for the attested session of an `AttestedProvider`
 /// (WP62): every request gets fresh keys, nonce and timestamp. Without a
 /// valid session or with an expired keyset nothing is sent (fail-closed).
-final class PhalaE2eeChannel implements ChatWireCodec {
+final class PhalaE2eeChannel implements SessionBoundChannel {
   /// Creates the channel; [randomBytes] only for tests.
   PhalaE2eeChannel({required this.crypto, Uint8List Function(int)? randomBytes})
     : _random = randomBytes ?? _secureRandom;
@@ -118,10 +119,10 @@ final class PhalaE2eeChannel implements ChatWireCodec {
   static Uint8List _secureRandom(int n) =>
       Uint8List.fromList(List.generate(n, (_) => _secure.nextInt(256)));
 
-  /// Whether an `AttestedProvider` has taken this channel.
+  @override
   bool get bound => _session != null;
 
-  /// Called by the `AttestedProvider`: where the current session comes from.
+  @override
   void bind(AttestedSession? Function() session, Clock clock) {
     if (_session != null) {
       throw StateError('PhalaE2eeChannel ist schon an einen Anbieter gebunden');

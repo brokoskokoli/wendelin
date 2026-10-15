@@ -119,6 +119,23 @@ final class TdxEvent {
     required this.payload,
   });
 
+  /// Parses an event log given as JSON text or as a decoded list; throws on
+  /// malformed entries.
+  static List<TdxEvent> parseLog(Object? raw) {
+    final list = raw is String ? jsonDecode(raw) : raw;
+    return [
+      for (final e in list! as List<Object?>)
+        if (e is Map<String, Object?>)
+          TdxEvent(
+            imr: e['imr']! as int,
+            eventType: e['event_type']! as int,
+            digest: AttestCodec.unhex(e['digest']! as String),
+            event: (e['event'] as String?) ?? '',
+            payload: AttestCodec.unhex((e['event_payload'] as String?) ?? ''),
+          ),
+    ];
+  }
+
   /// Measurement register index.
   final int imr;
 
@@ -145,21 +162,9 @@ final class GatewayAttestation {
     final prov = att['source_provenance'];
     final fresh = json['freshness'] ?? att['freshness'];
     final binding = ev['downstream_tls_binding'];
-    List<TdxEvent> events;
+    final List<TdxEvent> events;
     try {
-      final raw = ev['event_log'];
-      final list = raw is String ? jsonDecode(raw) : raw;
-      events = [
-        for (final e in list as List<Object?>)
-          if (e is Map<String, Object?>)
-            TdxEvent(
-              imr: e['imr']! as int,
-              eventType: e['event_type']! as int,
-              digest: AttestCodec.unhex(e['digest']! as String),
-              event: (e['event'] as String?) ?? '',
-              payload: AttestCodec.unhex((e['event_payload'] as String?) ?? ''),
-            ),
-      ];
+      events = TdxEvent.parseLog(ev['event_log']);
     } on Object {
       throw const AttestationFormatException(
         AttestationStage.eventLog,

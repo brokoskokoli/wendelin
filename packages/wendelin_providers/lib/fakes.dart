@@ -5,3 +5,5 @@ library;
 export 'src/tee/fake_attestation_crypto.dart';
 export 'src/tee/fake_e2ee_service.dart';
 export 'src/tee/fake_gpu_verifier.dart';
+export 'src/tee/near/fake_near_service.dart';
+export 'src/tee/near/near_reference.dart';

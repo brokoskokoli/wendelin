@@ -10,9 +10,9 @@ import 'attestation_audit.dart';
 import 'attestation_log.dart';
 import 'attestation_policy.dart';
 import 'attestation_types.dart';
-import 'e2ee_v2.dart';
 import 'gpu_attestation.dart';
 import 'gpu_gate.dart';
+import 'session_channel.dart';
 import 'tls_pin_gate.dart';
 
 /// Decorator that makes an OpenAI-compatible TEE provider verifiable
@@ -52,10 +52,12 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.retryDelay = const Duration(seconds: 2),
     this.tlsPin,
     this.noTools = false,
+    bool requireUpstreamEnforced = true,
     Duration gpuTimeout = const Duration(seconds: 15),
   }) {
     final provider = inner.options.extraBody['provider'];
-    if (provider is! Map || provider['aci_verified'] != true) {
+    if (requireUpstreamEnforced &&
+        (provider is! Map || provider['aci_verified'] != true)) {
       throw ArgumentError.value(
         inner.options.extraBody,
         'inner',
@@ -64,11 +66,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       );
     }
     final channel = inner.wireCodec;
-    if (channel is! PhalaE2eeChannel || channel.bound) {
+    if (channel is! SessionBoundChannel || channel.bound) {
       throw ArgumentError.value(
         channel,
         'inner',
-        'The adapter needs an unbound PhalaE2eeChannel as wireCodec '
+        'The adapter needs an unbound SessionBoundChannel as wireCodec '
             '(every request to the gateway must be end-to-end encrypted)',
       );
     }
@@ -436,7 +438,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     bool toolsInvolved = false,
   }) async {
     try {
-      final id = record.responseHeaders['x-receipt-id'];
+      final Object v = verifier;
+      final id =
+          record.responseHeaders['x-receipt-id'] ??
+          (v is ReceiptIdSource ? v.receiptIdOf(record) : null);
       final (:stages, :status, :pinChanged) = id == null || id.isEmpty
           ? (
               stages: const [
