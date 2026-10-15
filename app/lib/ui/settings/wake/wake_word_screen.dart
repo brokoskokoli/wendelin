@@ -71,6 +71,8 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_enroll(context, ref, speakers, null))
               : null,
         ),
+        if (speakers.isNotEmpty)
+          _StopWordSection(speakers: speakers, installed: installed),
         if (!installed)
           Text(
             'Dafür müssen zuerst die Merkmalsmodelle geladen sein.',
@@ -267,4 +269,57 @@ class _SpeakerRow extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// „Stopp“ allein unterbricht die Sprachausgabe (WP64b): learned like
+/// „Wendelin“, only embeddings. Without it only „Wendelin, stopp“ works.
+class _StopWordSection extends ConsumerWidget {
+  const _StopWordSection({required this.speakers, required this.installed});
+
+  final List<WakeSpeaker> speakers;
+  final bool installed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final learned = ref.watch(stopLearnedProvider).value ?? false;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: WSpace.s,
+      children: [
+        Text(
+          learned
+              ? '„Stopp“ ist gelernt: Du kannst die Ansage mit „Stopp“ allein '
+                    'unterbrechen.'
+              : 'Ohne gelerntes „Stopp“ unterbricht nur „Wendelin, stopp“ die '
+                    'Ansage. Lerne „Stopp“ ein, damit du die Ansage mit dem '
+                    'einen Wort unterbrechen kannst.',
+          style: WText.caption,
+        ),
+        WideButton(
+          learned ? '„Stopp“ neu einlernen' : '„Stopp“ einlernen',
+          onPressed: installed
+              ? () => unawaited(_enrollStop(context, ref, speakers))
+              : null,
+        ),
+      ],
+    );
+  }
+}
+
+Future<void> _enrollStop(
+  BuildContext context,
+  WidgetRef ref,
+  List<WakeSpeaker> speakers,
+) async {
+  final speaker = await _pick(context, speakers, 'Wer lernt „Stopp“?');
+  if (speaker == null || !context.mounted) return;
+  await Navigator.of(context).push<bool>(
+    MaterialPageRoute(
+      builder: (_) => WakeEnrollScreen(
+        speakerId: speaker.id,
+        name: speaker.name,
+        stop: true,
+      ),
+    ),
+  );
 }

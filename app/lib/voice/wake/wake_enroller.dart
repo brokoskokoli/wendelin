@@ -59,6 +59,10 @@ final class MicrophoneEnded implements Exception {
 /// utterance.
 const wakeProvisionalThreshold = wakeMinThreshold;
 
+/// Provisional threshold of „Stopp“ (WP64b): a short word is confused with
+/// other speech more easily, so it starts stricter than „Wendelin“.
+const stopProvisionalThreshold = 0.9;
+
 /// Phase of an enrollment.
 enum EnrollPhase {
   /// Not started.
@@ -92,6 +96,7 @@ class WakeEnroller extends ChangeNotifier {
     required this.speakerId,
     this.target = 15,
     this.minimum = 8,
+    this.threshold = wakeProvisionalThreshold,
     this.pause = const Duration(milliseconds: 900),
     UtteranceCapture Function()? newCapture,
   }) : _newCapture = newCapture ?? UtteranceCapture.new;
@@ -113,6 +118,9 @@ class WakeEnroller extends ChangeNotifier {
 
   /// Fewest recordings [finish] accepts.
   final int minimum;
+
+  /// Threshold stored with the templates (until a calibration refines it).
+  final double threshold;
 
   /// Pause after each recording (time to read the result).
   final Duration pause;
@@ -237,7 +245,7 @@ class WakeEnroller extends ChangeNotifier {
     final templates = WakeTemplates(
       speakerId: speakerId,
       featureVersion: features.featureVersion,
-      threshold: wakeProvisionalThreshold,
+      threshold: threshold,
       embeddings: List.unmodifiable(_embeddings),
     );
     await store.save(templates);

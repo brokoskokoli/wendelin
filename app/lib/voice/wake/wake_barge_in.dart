@@ -21,6 +21,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     required this.audio,
     required this.templates,
     required this.features,
+    this.stopTemplates = _none,
     this.extraMargin = 0.05,
   });
 
@@ -29,6 +30,12 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
 
   /// Templates of all learned voices.
   final Future<List<WakeTemplates>> Function() templates;
+
+  /// Templates of „Stopp“ for all learned voices (WP64b); without them only
+  /// „Wendelin“ (and „Wendelin, stopp“) interrupts.
+  final Future<List<WakeTemplates>> Function() stopTemplates;
+
+  static Future<List<WakeTemplates>> _none() async => const [];
 
   /// A new feature chain.
   final WakeFeatureExtractor Function() features;
@@ -54,20 +61,24 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     _running = true;
     if (_inner == null && !_empty) {
       final sets = await templates();
+      final stops = await stopTemplates();
       if (sets.isEmpty) {
         _empty = true;
         voiceLog('barge-in-off', {'reason': 'no-templates'});
       } else {
-        final strict = [
-          for (final t in sets)
+        voiceLog('barge-stop-word', {'learned': stops.isNotEmpty});
+        List<WakeTemplates> strictly(List<WakeTemplates> l) => [
+          for (final t in l)
             t.withThreshold((t.threshold + extraMargin).clamp(0.0, 0.99)),
         ];
+        final strict = strictly(sets);
         final inner = WakeWordBargeInDetector(
           audio: audio,
           engine: CandidateWakeEngine(
             features: features(),
             templates: strict.first,
             moreTemplates: strict.skip(1).toList(),
+            stopTemplates: strictly(stops),
             modelThreshold: null,
           ),
         );

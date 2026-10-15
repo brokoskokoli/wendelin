@@ -73,6 +73,7 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   Future<void> remove(String id) async {
     final store = ref.read(wakeStoreProvider);
     await store.delete(id);
+    ref.invalidate(stopLearnedProvider);
     final list = [
       for (final s in await future)
         if (s.id != id) s,
@@ -84,6 +85,7 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   /// Forgets everyone („Alles löschen“).
   Future<void> removeAll() async {
     await ref.read(wakeStoreProvider).deleteAll();
+    ref.invalidate(stopLearnedProvider);
     state = const AsyncData([]);
   }
 }
@@ -148,8 +150,18 @@ final wakeEnrollPauseProvider = Provider<Duration>(
   (ref) => const Duration(milliseconds: 900),
 );
 
-/// Barge-in on the wake word chain (WP50): „Wendelin“ interrupts the
-/// spoken answer in the conversation mode. `null` while the conversation
+/// Whether „Stopp“ is learned for at least one voice (WP64b); the wake word
+/// page shows a hint if not. Invalidate after enrolling.
+final stopLearnedProvider = FutureProvider<bool>((ref) async {
+  final store = ref.watch(wakeStoreProvider);
+  for (final s in await store.speakers()) {
+    if (await store.stop.load(s.id) != null) return true;
+  }
+  return false;
+});
+
+/// Barge-in on the wake word chain (WP50): „Wendelin“ (and, if learned,
+/// „Stopp“ alone, WP64b) interrupts the spoken answer in the conversation mode. `null` while the conversation
 /// mode is off. `bootstrap/run_app.dart` puts it in place of the empty
 /// [bargeInDetectorProvider]; tests keep that one.
 final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
@@ -163,6 +175,9 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     features: () => ref.read(wakeFeaturesFactoryProvider)(),
     templates: () async => [
       for (final s in await store.speakers()) ?await store.load(s.id),
+    ],
+    stopTemplates: () async => [
+      for (final s in await store.speakers()) ?await store.stop.load(s.id),
     ],
   );
   ref.onDispose(() => unawaited(detector.dispose()));
