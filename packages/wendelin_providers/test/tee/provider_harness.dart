@@ -39,11 +39,15 @@ final class TeeHarness {
         }
         return _json(jsonEncode(sessionDoc ?? upToDateSession()), 200);
       },
-      'aci/receipts/': (_) async {
+      'aci/receipts/': (request) async {
         await receiptGate?.future;
         if (receiptFailures > 0) {
           receiptFailures--;
-          return _json('{}', 500);
+          return _json('{}', receiptFailureStatus);
+        }
+        final known = knownReceiptIds;
+        if (known != null && !known.contains(request.url.pathSegments.last)) {
+          return _json('{}', 404);
         }
         final receipt = syntheticReceipt(
           lastRequest ?? Uint8List(0),
@@ -173,6 +177,12 @@ final class TeeHarness {
 
   /// Number of receipt requests answered with 500 before success.
   int receiptFailures = 0;
+
+  /// HTTP status of the failing receipt requests.
+  int receiptFailureStatus = 500;
+
+  /// If set, receipt ids not in it answer 404.
+  Set<String>? knownReceiptIds;
 
   /// Upstream session served; `null` = up-to-date variant of the probe.
   Map<String, Object?>? sessionDoc;

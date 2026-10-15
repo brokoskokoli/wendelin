@@ -11,7 +11,7 @@ import 'attestation_types.dart';
 /// - `warn` and `info` do not change the status (final green with a hint).
 final class AttestationPolicy {
   /// Creates the policy.
-  const AttestationPolicy({this.maxReceiptAttempts = 3});
+  const AttestationPolicy({this.maxReceiptAttempts = 6});
 
   /// Receipt fetch attempts before an unavailable receipt counts as invalid.
   final int maxReceiptAttempts;

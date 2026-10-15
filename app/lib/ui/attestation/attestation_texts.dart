@@ -47,6 +47,18 @@ abstract final class AttestationReason {
   /// The upstream session document does not match the receipt.
   static const sessionMismatch = 'upstream_session_mismatch';
 
+  /// The gateway does not know the receipt (not written yet, expired).
+  static const receiptNotFound = 'receipt_not_found';
+
+  /// The receipt endpoint could not be reached (network, server error).
+  static const receiptUnreachable = 'receipt_unreachable';
+
+  /// The gateway refused the receipt request (key, rate limit).
+  static const receiptRejected = 'receipt_rejected';
+
+  /// The answer carried no receipt id.
+  static const receiptMissing = 'receipt_missing';
+
   /// NVIDIA rejected the GPU evidence.
   static const gpuFailed = 'gpu_failed';
 
@@ -107,6 +119,46 @@ AttestationMessage attestationMessage(
               'Der Nachweis der Sitzung passt nicht zur signierten Quittung '
               'dieser Antwort. Vertraue der Antwort nicht. Der Anbieter ist '
               'gesperrt, bis du ihn neu prüfst.',
+        ),
+        AttestationReason.receiptNotFound => const AttestationMessage(
+          status: CheckStatus.failed,
+          label: 'Quittung nicht gefunden',
+          title: 'Quittung beim Anbieter nicht gefunden',
+          text:
+              'Der Anbieter kennt die Quittung dieser Antwort nicht '
+              '(noch nicht geschrieben oder abgelaufen). Die Antwort ist '
+              'nicht bestätigt, es gibt aber keinen Hinweis auf eine '
+              'Manipulation. Sende nichts Vertrauliches und prüfe den '
+              'Anbieter neu.',
+        ),
+        AttestationReason.receiptUnreachable => const AttestationMessage(
+          status: CheckStatus.failed,
+          label: 'Quittung nicht erreichbar',
+          title: 'Quittung nicht erreichbar',
+          text:
+              'Die Quittung dieser Antwort konnte wegen eines Netz- oder '
+              'Serverfehlers nicht abgerufen werden. Die Antwort ist nicht '
+              'bestätigt, es gibt aber keinen Hinweis auf eine '
+              'Manipulation. Prüfe die Verbindung und den Anbieter neu.',
+        ),
+        AttestationReason.receiptRejected => const AttestationMessage(
+          status: CheckStatus.failed,
+          label: 'Quittung abgelehnt',
+          title: 'Quittungsabruf vom Anbieter abgelehnt',
+          text:
+              'Der Anbieter hat den Abruf der Quittung abgelehnt (zum '
+              'Beispiel wegen des Schlüssels oder zu vieler Anfragen). Die '
+              'Antwort ist nicht bestätigt, es gibt aber keinen Hinweis auf '
+              'eine Manipulation. Prüfe den Schlüssel und den Anbieter neu.',
+        ),
+        AttestationReason.receiptMissing => const AttestationMessage(
+          status: CheckStatus.failed,
+          label: 'Quittung fehlt',
+          title: 'Antwort ohne Quittung',
+          text:
+              'Der Anbieter hat zu dieser Antwort keine Quittungs-Kennung '
+              'geliefert, daher lässt sie sich nicht bestätigen. Vertraue '
+              'ihr nicht für Vertrauliches und prüfe den Anbieter neu.',
         ),
         AttestationReason.gpuFailed => const AttestationMessage(
           status: CheckStatus.failed,

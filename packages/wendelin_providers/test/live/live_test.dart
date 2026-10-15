@@ -222,6 +222,44 @@ void main() {
     },
   );
 
+  // WP70: the whole way of an answer on the device: E2EE chat (streaming),
+  // receipt fetched (retried for up to ~24 s), every receipt stage green.
+  // Costs one tiny request. Prints only status and reason codes.
+  test(
+    'Phala: E2EE-Antwort (Stream) → Quittung abgerufen und grün (WP70)',
+    () async {
+      if (_skipWithout(phalaKey, 'PHALA_API_KEY')) return;
+      final provider = _phalaProvider(phalaKey!) as AttestedProvider;
+      final seen = <String>[];
+      provider.reports.listen(
+        (r) => seen.add(
+          '${r.status.name}:${r.reasonCode ?? '-'}:${r.detail ?? '-'}',
+        ),
+      );
+      final events = await provider
+          .chat(
+            ChatRequest(
+              systemPrompt: 'Antworte mit einem Wort.',
+              messages: [Message.user('Sag Hallo.')],
+              model: _phalaModel,
+              maxTokens: 10,
+            ),
+          )
+          .toList();
+      if (_noCredit(events, tolerateNoCredit: true)) return;
+      expect(events.last, isA<Done>(), reason: '${events.last}');
+      final report = await provider.pendingReport();
+      // ignore: avoid_print
+      print('Phala Quittung: $seen');
+      expect(
+        report?.status,
+        AttestationStatus.green,
+        reason: '${report?.reasonCode} ${report?.detail}',
+      );
+    },
+    timeout: const Timeout(Duration(seconds: 90)),
+  );
+
   // Evidence that the gateway really expects encrypted requests, in spite of
   // the missing credit: a correctly encrypted request and two broken ones
   // (cipher bound to another nonce, plain text) are told apart by the error

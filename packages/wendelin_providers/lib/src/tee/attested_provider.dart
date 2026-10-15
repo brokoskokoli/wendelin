@@ -1,4 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:meta/meta.dart';
 
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -106,7 +111,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// Clock and diagnostic log.
   final HttpSettings settings;
 
-  /// Wait between receipt attempts.
+  /// Base wait between receipt attempts (grows to three times this).
   final Duration retryDelay;
 
   /// Pin state of the enforcing client of [inner] (WP61). If a connection
@@ -443,6 +448,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
                 StageResult.fail(
                   AttestationStage.receiptFetch,
                   'Antwort ohne x-receipt-id',
+                  code: StageResult.receiptMissing,
                 ),
               ],
               status: AttestationStatus.red,
@@ -519,7 +525,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   ) async {
     for (var attempt = 1; ; attempt++) {
       final result = await verifier.verifyReceipt(
-        ReceiptRef(id: id, session: session),
+        ReceiptRef(
+          id: id,
+          session: session,
+          alternateId: chatIdOf(record.responseBytes),
+        ),
         record.requestBytes,
         record.responseBytes,
       );
@@ -545,8 +555,24 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           toolsInvolved: toolsInvolved,
         ),
       );
-      await Future<void>.delayed(retryDelay);
+      // 2 s, 4 s, 6 s, 6 s, 6 s: about 24 s in all for a receipt the
+      // gateway has not written yet.
+      await Future<void>.delayed(retryDelay * min(attempt, 3));
     }
+  }
+
+  /// The first `"id":"…"` of a response (plain JSON or the first SSE chunk),
+  /// the chat id; `null` if there is none or it is odd.
+  @visibleForTesting
+  static String? chatIdOf(Uint8List response) {
+    final head = utf8.decode(
+      response.length > 4096 ? response.sublist(0, 4096) : response,
+      allowMalformed: true,
+    );
+    final id = RegExp(r'"id"\s*:\s*"([A-Za-z0-9_.:-]{1,128})"')
+        .firstMatch(head)
+        ?.group(1);
+    return id;
   }
 
   String _problem(List<StageResult> stages) =>

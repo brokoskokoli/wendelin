@@ -143,6 +143,21 @@ final class StageResult {
   /// Code: the upstream's platform TCB is revoked.
   static const upstreamTcbRevoked = 'upstream_tcb_revoked';
 
+  /// Code: the gateway does not know the receipt (HTTP 404: not yet written,
+  /// expired or held by another instance); not a forgery.
+  static const receiptNotFound = 'receipt_not_found';
+
+  /// Code: the receipt endpoint could not be reached (network, timeout or a
+  /// server error); not a forgery.
+  static const receiptUnreachable = 'receipt_unreachable';
+
+  /// Code: the gateway refused the receipt request (HTTP 400/401/403/429);
+  /// not a forgery.
+  static const receiptRejected = 'receipt_rejected';
+
+  /// Code: the answer carried no receipt id.
+  static const receiptMissing = 'receipt_missing';
+
   /// JSON for the audit log.
   Map<String, Object?> toJson() => {
     'stage': stage.id,
@@ -270,10 +285,14 @@ final class AttestationResult {
 @immutable
 final class ReceiptRef {
   /// Creates a reference.
-  const ReceiptRef({required this.id, required this.session});
+  const ReceiptRef({required this.id, required this.session, this.alternateId});
 
   /// Value of the `x-receipt-id` header.
   final String id;
+
+  /// The `id` (chat id) of the response body; the gateway accepts it as a
+  /// receipt id as well, so it is tried when [id] is not found.
+  final String? alternateId;
 
   /// The attested session that served the answer.
   final AttestedSession session;

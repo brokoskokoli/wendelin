@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:test/test.dart';
 import 'package:wendelin_core/testing.dart';
@@ -253,13 +254,107 @@ void main() {
       },
     );
 
-    test('Netzfehler: nach 3 Versuchen rot und gesperrt', () async {
+    test('Netzfehler: nach 6 Versuchen rot und gesperrt', () async {
       final h = TeeHarness()..receiptFailures = 10;
       await h.chat();
       final report = await h.provider.pendingReport();
       expect(report?.status, AttestationStatus.red);
-      expect(h.server.count('aci/receipts'), 3);
+      expect(h.server.count('aci/receipts'), 6);
       expect(h.provider.locked, isTrue);
+    });
+
+    test(
+      '404 nennt den Grund: receipt_not_found, kein Signaturfehler',
+      () async {
+        final h = TeeHarness()
+          ..receiptFailures = 100
+          ..receiptFailureStatus = 404;
+        await h.chat();
+        final report = await h.provider.pendingReport();
+        expect(report?.status, AttestationStatus.red);
+        expect(report?.reasonCode, StageResult.receiptNotFound);
+        expect(report?.detail, contains('404'));
+        expect(
+          h.diagnostics,
+          contains(
+            'Wendelin/attest: receipt receipt.fetch=unavailable '
+            'code=receipt_not_found',
+          ),
+        );
+        expect(h.diagnostics, contains('Wendelin/attest: receipt red'));
+      },
+    );
+
+    test(
+      'Netz-/Serverfehler: receipt_unreachable, 403: receipt_rejected',
+      () async {
+        final a = TeeHarness()..receiptFailures = 10;
+        await a.chat();
+        expect(
+          (await a.provider.pendingReport())?.reasonCode,
+          StageResult.receiptUnreachable,
+        );
+        final b = TeeHarness()
+          ..receiptFailures = 10
+          ..receiptFailureStatus = 403;
+        await b.chat();
+        expect(
+          (await b.provider.pendingReport())?.reasonCode,
+          StageResult.receiptRejected,
+        );
+      },
+    );
+
+    test(
+      'Quittung erst nach einigen Sekunden: gelb, dann grün (5. Versuch)',
+      () async {
+        final h = TeeHarness()
+          // two requests per attempt (receipt id and chat id)
+          ..receiptFailures = 8
+          ..receiptFailureStatus = 404;
+        final seen = <AttestationStatus>[];
+        h.provider.reports.listen((r) => seen.add(r.status));
+        await h.chat();
+        expect(
+          (await h.provider.pendingReport())?.status,
+          AttestationStatus.green,
+        );
+        await pumpEventQueue();
+        expect(seen.where((s) => s == AttestationStatus.yellow), hasLength(4));
+        expect(h.server.count('aci/receipts'), 9);
+      },
+    );
+
+    test(
+      'x-receipt-id unbekannt: die Chat-ID der Antwort wird versucht',
+      () async {
+        final h = TeeHarness()..knownReceiptIds = {'chatcmpl-Text1'};
+        await h.chat();
+        expect(
+          (await h.provider.pendingReport())?.status,
+          AttestationStatus.green,
+        );
+        expect(h.server.count('aci/receipts'), 2);
+      },
+    );
+
+    test('kein bekannter Receipt-Id: rot mit receipt_not_found', () async {
+      final h = TeeHarness()..knownReceiptIds = {};
+      await h.chat();
+      final report = await h.provider.pendingReport();
+      expect(report?.status, AttestationStatus.red);
+      expect(report?.reasonCode, StageResult.receiptNotFound);
+    });
+
+    test('chatIdOf liest die erste id, auch aus SSE', () {
+      Uint8List b(String s) => Uint8List.fromList(utf8.encode(s));
+      expect(AttestedProvider.chatIdOf(b('{"id":"req_1","x":1}')), 'req_1');
+      expect(
+        AttestedProvider.chatIdOf(b('data: {"id": "chatcmpl-A","c":[]}\n')),
+        'chatcmpl-A',
+      );
+      expect(AttestedProvider.chatIdOf(b('{}')), isNull);
+      expect(AttestedProvider.chatIdOf(b('')), isNull);
     });
 
     test('Antwort ohne x-receipt-id → rot', () async {

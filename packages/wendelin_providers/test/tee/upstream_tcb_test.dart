@@ -171,7 +171,7 @@ void main() {
         expect(h.server.count('aci/sessions'), 3);
       });
 
-      test('Session ohne TCB-Felder: nach 3 Versuchen rot', () async {
+      test('Session ohne TCB-Felder: nach 6 Versuchen rot', () async {
         final s = upToDateSession();
         (s['claims']! as Map)
           ..remove('tcb_up_to_date')
@@ -180,20 +180,20 @@ void main() {
         await h.chat();
         final report = await h.provider.pendingReport();
         expect(report?.status, AttestationStatus.red);
-        expect(h.server.count('aci/sessions'), 3);
+        expect(h.server.count('aci/sessions'), 6);
       });
 
-      test('Netzfehler bei der Session: nach 3 Versuchen rot', () async {
+      test('Netzfehler bei der Session: nach 6 Versuchen rot', () async {
         final h = TeeHarness()..sessionFailures = 10;
         final reports = <AttestationReport>[];
         h.provider.reports.listen(reports.add);
         await h.chat();
         final report = await h.provider.pendingReport();
         expect(report?.status, AttestationStatus.red);
-        expect(h.server.count('aci/sessions'), 3);
+        expect(h.server.count('aci/sessions'), 6);
         expect(
           reports.where((r) => r.status == AttestationStatus.yellow),
-          hasLength(2),
+          hasLength(5),
         );
       });
     });

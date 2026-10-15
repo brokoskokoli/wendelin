@@ -139,6 +139,33 @@ void main() {
   });
 
   group('Texte', () {
+    test('Quittungsgründe: Grund genannt, kein Signaturfehler, keine '
+        'Manipulationsbehauptung', () {
+      final texts = {
+        for (final code in [
+          AttestationReason.receiptNotFound,
+          AttestationReason.receiptUnreachable,
+          AttestationReason.receiptRejected,
+          AttestationReason.receiptMissing,
+        ])
+          code: attestationMessage(AttestationStatus.red, reasonCode: code),
+      };
+      expect(texts.values.map((m) => m.title).toSet(), hasLength(4));
+      for (final m in texts.values) {
+        expect(m.text, isNot(contains('Signaturfehlers')));
+        expect(m.text, isNot(contains('abweichender Prüfsummen')));
+        expect(m.text, isNot(contains('Das kann auf eine Manipulation')));
+      }
+      expect(
+        texts[AttestationReason.receiptNotFound]!.text,
+        contains('kennt die Quittung'),
+      );
+      expect(
+        texts[AttestationReason.receiptUnreachable]!.text,
+        contains('Netz- oder Serverfehler'),
+      );
+    });
+
     test('jeder Code hat Titel und Text, Grün und Gelb nicht', () {
       for (final code in [
         AttestationReason.tcbOutOfDate,
@@ -147,6 +174,10 @@ void main() {
         AttestationReason.sessionMismatch,
         AttestationReason.gpuFailed,
         AttestationReason.gpuUnavailable,
+        AttestationReason.receiptNotFound,
+        AttestationReason.receiptUnreachable,
+        AttestationReason.receiptRejected,
+        AttestationReason.receiptMissing,
         null,
       ]) {
         final m = attestationMessage(AttestationStatus.red, reasonCode: code);

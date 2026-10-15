@@ -35,18 +35,18 @@ void main() {
         [StageOutcome.unavailable, StageOutcome.fail],
         [red, red, red, red],
       ),
-      // session, receipt attempt 1, 2, 3
+      // session, then receipt attempt 1, 2, ...
       (
-        'Netzfehler: gelb, nach 3 Versuchen rot',
+        'Netzfehler: gelb, nach 6 Versuchen rot',
         [StageOutcome.unavailable],
-        [yellow, yellow, yellow, red],
+        [yellow, yellow, yellow, yellow, yellow, yellow, red],
       ),
     ];
     for (final (name, outcomes, expected) in table) {
       test(name, () {
         final stages = [for (final o in outcomes) _s(o)];
         expect(policy.sessionStatus(stages), expected[0], reason: 'Sitzung');
-        for (var attempt = 1; attempt <= 3; attempt++) {
+        for (var attempt = 1; attempt < expected.length; attempt++) {
           expect(
             policy.receiptStatus(stages, attempt: attempt),
             expected[attempt],
@@ -68,6 +68,10 @@ void main() {
         ]),
         ['Hinweis A'],
       );
+    });
+
+    test('Standard: sechs Quittungsversuche', () {
+      expect(const AttestationPolicy().maxReceiptAttempts, 6);
     });
 
     test('maxReceiptAttempts ist einstellbar', () {
