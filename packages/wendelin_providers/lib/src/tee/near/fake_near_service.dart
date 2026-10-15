@@ -30,10 +30,14 @@ final class NearRejection implements Exception {
 /// client bug shows up as a test failure.
 final class FakeNearService {
   /// Creates a service with its own Ed25519 identity (fixed by default).
-  FakeNearService({Uint8List? seed})
+  FakeNearService({Uint8List? seed, this.alsoAcceptModelKeys = const {}})
     : identity = NearReferenceCrypto.identityFromSeed(
         seed ?? Uint8List.fromList(List.filled(32, 0x03)),
       );
+
+  /// Further `X-Model-Pub-Key` values the service accepts (device-test
+  /// fixtures: the recorded model key, whose secret nobody has).
+  final Set<String> alsoAcceptModelKeys;
 
   /// The service identity (`public` = Ed25519 key of the attestation).
   final NearIdentity identity;
@@ -52,7 +56,8 @@ final class FakeNearService {
     if (h('X-Signing-Algo') != 'ed25519' ||
         h('X-Encryption-Version') != '2' ||
         h('X-Encrypt-All-Fields') != 'true' ||
-        h('X-Model-Pub-Key') != publicKeyHex) {
+        (h('X-Model-Pub-Key') != publicKeyHex &&
+            !alsoAcceptModelKeys.contains(h('X-Model-Pub-Key')))) {
       throw const NearRejection('Encryption headers missing or wrong');
     }
     final client = h('X-Client-Pub-Key');

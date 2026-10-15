@@ -125,6 +125,7 @@ void main() {
   final spkiPem = RegExp(
     r'-----BEGIN CERTIFICATE-----([^-]+)-----END CERTIFICATE-----',
   ).allMatches(collateral['tcb_info_issuer_chain'] as String).last.group(1)!;
+  nearCryptoContract(() => crypto, name: 'RustAttestationCrypto (NEAR)');
   attestationCryptoContract(
     () => crypto,
     name: 'RustAttestationCrypto',
