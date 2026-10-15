@@ -152,6 +152,21 @@ void main() {
     });
   });
 
+  test(
+    'Stoppwort nur als ganze Äußerung: „Licht an“ ist kein Stopp (WP73)',
+    () {
+      bool stop(String t) => isStopCommand(
+        stripWakeWord(t),
+        stopWords: VoicePipelineConfig.defaultStopWords,
+        fillerWords: VoicePipelineConfig.defaultFillerWords,
+        stopPhrases: VoicePipelineConfig.defaultStopPhrases,
+      );
+      expect(stop('Wendelin, Licht an'), isFalse);
+      expect(stop('Wendelin, mach das Licht an, halt nein stopp'), isFalse);
+      expect(stop('Wendelin, stopp'), isTrue);
+    },
+  );
+
   group('speechAfterWakeWord', () {
     test('Sprache nach dem Wake Word, aber nicht das Wake Word selbst', () {
       expect(
@@ -185,6 +200,36 @@ void main() {
       final pcm = cat([level(400, 40), level(600, 3000), level(900, 500)]);
       expect(speechAfterWakeWord(pcm, 1000 * 16), isTrue);
     });
+
+    test(
+      'Gerät: Pre-Roll nur aus dem Wake Word, Anfrage ohne Pause (WP73)',
+      () {
+        // 300 ms Wake Word (laut), danach normal laute Sprache. Das Wake Word
+        // darf nicht das „Grundrauschen“ sein: ohne Raum davor gibt es keinen
+        // Grundpegel, nur die Mindestschwelle.
+        final onlyWord = cat([
+          level(300, 1500),
+          level(200, 60),
+          level(1200, 1200),
+        ]);
+        expect(speechAfterWakeWord(onlyWord, 300 * 16), isTrue);
+        // Mit Raum davor (2,5 s Pre-Roll): Raum bestimmt die Schwelle.
+        final withRoom = cat([
+          level(1700, 50),
+          level(800, 1500),
+          level(200, 60),
+          level(1200, 1200),
+        ]);
+        expect(speechAfterWakeWord(withRoom, 2500 * 16), isTrue);
+        // Stille nach dem Wake Word bleibt Stille (Ton wird gespielt).
+        final silent = cat([
+          level(1700, 50),
+          level(800, 1500),
+          level(1500, 50),
+        ]);
+        expect(speechAfterWakeWord(silent, 2500 * 16), isFalse);
+      },
+    );
 
     test('gleichmäßiges Rauschen nach dem Wake Word ist keine Sprache', () {
       final pcm = cat([level(400, 400), level(600, 3000), level(900, 450)]);

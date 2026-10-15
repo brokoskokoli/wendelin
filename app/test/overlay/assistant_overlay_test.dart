@@ -429,8 +429,8 @@ void main() {
   );
 
   testWidgets(
-    'Wake Word (WP50): TriggerKind.wakeWord, der Pre-Roll geht an die '
-    'Erkennung',
+    'Wake Word (WP50): TriggerKind.wakeWord; ohne wakeEnd wird der Pre-Roll '
+    'verworfen (WP73)',
     (tester) async {
       final platform = FakeAssistantPlatform()
         ..wakeHandoff = Int16List.fromList(List.filled(8000, 300));
@@ -462,16 +462,61 @@ void main() {
       await tester.pump(const Duration(milliseconds: 60));
       expect(c.read(voiceControllerProvider).trigger, TriggerKind.wakeWord);
       await pumpUntil(tester, find.text('Es ist 8 Uhr 12.'));
-      // The pre-roll (0.5 s) is part of what Whisper hears.
-      // Without the pre-roll Whisper gets 17760 samples (measured with the
-      // mutation "preRoll not passed on"); with it exactly 4800 more.
-      expect(stt.calls.single.samples, 17760 + 4800);
+      // Without wakeEnd nothing of the pre-roll (0.5 s) reaches Whisper
+      // (privacy): the same 17760 samples as without a pre-roll.
+      expect(stt.calls.single.samples, 17760);
       expect(platform.wakeHandoff, isNull);
       await c.read(auditRecorderProvider).flush();
       final request = (await env.storage.audit.query()).firstWhere(
         (e) => e.kind == AuditKind.request,
       );
       expect(request.payload['trigger'], 'wakeWord');
+    },
+  );
+
+  testWidgets(
+    'Wake Word ohne Pause, Gerätepegel (WP73): Pre-Roll nur das Wort, '
+    'Sprache mit normalem Pegel: kein Ton',
+    (tester) async {
+      var plays = 0;
+      Int16List level(int ms, int amp) =>
+          Int16List.fromList(List.filled(ms * 16, amp));
+      final platform = FakeAssistantPlatform()
+        // As on the device: only 300 ms of the loud word in front of the end,
+        // then the request at a normal level (not 3x the word).
+        ..wakeHandoff = Int16List.fromList([
+          ...level(300, 1500),
+          ...level(1200, 1200),
+          ...level(600, 40),
+        ])
+        ..wakeEnd = 300 * 16;
+      final stt = FakeSpeechToText(const [
+        Transcript(text: 'Wendelin, wie spät ist es?'),
+      ]);
+      final env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider([ScriptedTurn.text('Es ist 8 Uhr 12.')]),
+        ),
+      );
+      await pumpOverlay(
+        tester,
+        env,
+        platform,
+        extra: [wakeConfirmToneProvider.overrideWithValue(() async => plays++)],
+        voice: VoiceComponents(
+          audio: FakeAudioInput(
+            frames: AudioFrames.pattern('.' * 30),
+            frameInterval: const Duration(milliseconds: 30),
+          ),
+          vad: FakeVoiceActivityDetector(),
+          stt: stt,
+          textToSpeech: (_) async => FakeTextToSpeech(),
+          config: const VoicePipelineConfig(),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 60));
+      await pumpUntil(tester, find.text('Es ist 8 Uhr 12.'));
+      expect(plays, 0);
     },
   );
 

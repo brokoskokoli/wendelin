@@ -191,7 +191,7 @@ void main() {
     });
   });
 
-  test('Wake-Word-Auslöser: der Pre-Roll geht zuerst an die Erkennung', () {
+  test('Wake-Word-Auslöser ohne wakeEnd: Pre-Roll wird verworfen (WP73)', () {
     runFake((async) {
       final h = Harness(turns: [ScriptedTurn.text('Es ist Montag.')]);
       final preRoll = AudioFrames.speech(const Duration(milliseconds: 600));
@@ -206,9 +206,9 @@ void main() {
         isTrue,
       );
       settle(async);
-      // Without a pre-roll the same run gives 24960 samples (measured); the
-      // pre-roll adds exactly 2400.
-      expect(h.stt.calls.single.samples, 24960 + 2400);
+      // Same as without a pre-roll (24960 samples, measured): nothing from
+      // before the wake word reaches the recognition.
+      expect(h.stt.calls.single.samples, 24960);
       expect(
         h.eventsOf<VoiceListening>().single.trigger?.source,
         TriggerKind.wakeWord,

@@ -132,9 +132,18 @@ final class VoicePipeline {
   Future<void> get whenIdle => _session;
 
   /// Starts listening. Returns `false` if a request is already running. The
-  /// pre-roll of [trigger] (wake word) is fed to the endpointer first.
-  bool start({TriggerEvent? trigger}) =>
-      _begin(trigger, preRoll: trigger?.preRoll, wakeEnd: trigger?.wakeEnd);
+  /// pre-roll of [trigger] (wake word) is fed to the endpointer first. A wake
+  /// word pre-roll without [TriggerEvent.wakeEnd] is dropped: nothing from
+  /// before the wake word may reach the recognition (privacy, WP73).
+  bool start({TriggerEvent? trigger}) {
+    final dropPreRoll =
+        trigger?.source == TriggerKind.wakeWord && trigger?.wakeEnd == null;
+    return _begin(
+      trigger,
+      preRoll: dropPreRoll ? null : trigger?.preRoll,
+      wakeEnd: trigger?.wakeEnd,
+    );
+  }
 
   bool _begin(
     TriggerEvent? trigger, {
@@ -290,6 +299,10 @@ final class VoicePipeline {
         return _finish(gen, ConversationEndReason.silence);
       }
       if (isStopWord(transcript.text)) {
+        // Where the stop came from (WP73), never the text.
+        diagnostics?.call(
+          'stop-word source=transcript first=${!followUp && trigger != null}',
+        );
         await cancel(VoiceCancelReason.stopWord);
         return;
       }
@@ -332,6 +345,7 @@ final class VoicePipeline {
     if (s.kind == BargeInKind.speech && mode != BargeInMode.speech) return;
     _emit(VoiceBargeIn(s));
     if (s.keyword == BargeInKeyword.stop) {
+      diagnostics?.call('stop-word source=barge-in');
       unawaited(cancel(VoiceCancelReason.stopWord));
       return;
     }
