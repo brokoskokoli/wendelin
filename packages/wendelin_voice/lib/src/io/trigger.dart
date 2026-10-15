@@ -22,7 +22,12 @@ enum TriggerKind {
 @immutable
 final class TriggerEvent {
   /// Creates the event.
-  const TriggerEvent({required this.source, required this.at, this.preRoll});
+  const TriggerEvent({
+    required this.source,
+    required this.at,
+    this.preRoll,
+    this.wakeEnd,
+  });
 
   /// What fired.
   final TriggerKind source;
@@ -33,6 +38,12 @@ final class TriggerEvent {
   /// 16 kHz mono PCM captured before and up to the trigger (wake word:
   /// pre-roll, gap-free); `null` for the other sources. Not part of equality.
   final Int16List? preRoll;
+
+  /// Sample position in [preRoll] where the wake word ends (WP68): what
+  /// follows may already be the request and is judged by the VAD, the
+  /// wake word itself is not. `null`: unknown, the whole pre-roll counts as
+  /// silence.
+  final int? wakeEnd;
 
   @override
   bool operator ==(Object other) =>

@@ -109,15 +109,39 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   }
 
   // The first trigger: the wake word service leaves its hit with the
-  // platform before it opens the overlay (WP50).
+  // platform before it opens the overlay (WP50). Only a look: the audio is
+  // taken right before the microphone opens here (WP68), the service records
+  // until then.
   Future<void> _fireFirst() async {
     // Every invocation of the assistant starts a new conversation (WP67).
     _agent.beginFreshConversation();
-    final preRoll = await _platform.takeWakeHandoff();
-    if (preRoll != null) {
-      voiceLog('wake-handoff', {'ms': samplesToDuration(preRoll.length)});
-    }
-    if (mounted) _triggers.fire(preRoll: preRoll);
+    final wake = await _platform.hasWakeHandoff();
+    if (mounted) _triggers.fire(wake: wake);
+  }
+
+  /// Takes the audio of the wake word hit and, if set, plays the tone
+  /// (WP68). The tone follows the take: the service no longer records, the
+  /// new microphone silences the first [wakeToneMuteSamples] samples.
+  /// Without a tone (setting) or if the speaker is evidently continuing
+  /// already, nothing is played and nothing silenced.
+  Future<WakePreRoll?> _takeWake({required bool tone}) async {
+    final taken = await _platform.takeWakeHandoff();
+    if (taken == null) return null;
+    final pcm = taken.pcm;
+    final continues = speechAfterWakeWord(pcm, taken.wakeEnd);
+    voiceLog('wake-handoff', {
+      'ms': samplesToDuration(pcm.length),
+      'captured': Duration(milliseconds: taken.capturedMs),
+      'continues': continues,
+    });
+    final play = tone && !continues;
+    if (play) unawaited(ref.read(wakeConfirmToneProvider)());
+    return WakePreRoll(
+      pcm: pcm,
+      wakeEnd: taken.wakeEnd,
+      muteMicSamples: play ? wakeToneMuteSamples : 0,
+      lastSampleAtMs: taken.lastSampleAtMs,
+    );
   }
 
   void _onLifecycle(AppLifecycleState state) {
@@ -168,7 +192,11 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     setState(() => _typing = false);
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) await _voice.cancel();
-    if (ref.read(agentControllerProvider).running) return;
+    if (ref.read(agentControllerProvider).running) {
+      // Nobody takes the hit over: release the service microphone (WP68).
+      if (e.source == TriggerKind.wakeWord) await _platform.takeWakeHandoff();
+      return;
+    }
     // Wake word hit: a short tone (setting „Bestätigungston“), not awaited.
     // Setting and tone are loaded in initState; the tone is cut from the
     // recording (the microphone hears the speaker otherwise).
@@ -179,14 +207,21 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
           await ref.read(wakeToneProvider.future);
     }
     if (!mounted) return;
-    if (tone) unawaited(ref.read(wakeConfirmToneProvider)());
+    var taken = false;
+    final wake = e.source == TriggerKind.wakeWord;
     await _voice.start(
       e.source,
-      preRoll: e.preRoll,
-      muteMicSamples: tone ? wakeToneMuteSamples : 0,
+      takePreRoll: wake
+          ? () {
+              taken = true;
+              return _takeWake(tone: tone);
+            }
+          : null,
       // No permission dialog on the lock screen.
       prepare: locked ? _microphoneGranted : _microphoneAccess,
     );
+    // Not started (busy, refused): the service must not keep recording.
+    if (wake && !taken) await _platform.takeWakeHandoff();
   }
 
   Future<bool> _microphoneGranted() async =>

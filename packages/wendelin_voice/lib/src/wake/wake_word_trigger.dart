@@ -23,6 +23,7 @@ final class WakeWordTrigger implements TriggerSource {
       source: TriggerKind.wakeWord,
       at: clock.now(),
       preRoll: d.preRoll,
+      wakeEnd: d.wakeEnd,
     ),
   );
 }

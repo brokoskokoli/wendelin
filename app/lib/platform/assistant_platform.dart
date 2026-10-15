@@ -106,13 +106,26 @@ class AssistantPlatform {
     await _invoke<void>('setRecognizerConfig', config.toArgs());
   }
 
+  /// Whether a wake word hit waits for the overlay (WP50). Does not take it.
+  Future<bool> hasWakeHandoff() async =>
+      await _invoke<bool>('hasWakeHandoff') ?? false;
+
   /// The audio of the wake word hit that opened the overlay (16 kHz mono
-  /// PCM, the word and what followed until it was confirmed), once; `null`
-  /// if the overlay was opened by a button (WP50).
-  Future<Int16List?> takeWakeHandoff() async {
-    final bytes = await _invoke<Uint8List>('takeWakeHandoff');
-    if (bytes == null) return null;
-    return PcmBytesDecoder().convert(bytes);
+  /// PCM, from the end of the wake word on whatever was said until now,
+  /// gap-free), once; `null` if the overlay was opened by a button (WP50,
+  /// WP68). Taking it ends the service's recording: the caller opens its own
+  /// microphone right after.
+  Future<WakeHandoffAudio?> takeWakeHandoff() async {
+    final raw = await _invoke<Map<Object?, Object?>>('takeWakeHandoff');
+    if (raw == null) return null;
+    final bytes = raw['pcm'];
+    if (bytes is! Uint8List) return null;
+    return WakeHandoffAudio(
+      pcm: PcmBytesDecoder().convert(bytes),
+      wakeEnd: (raw['wakeEnd'] as num?)?.toInt(),
+      capturedMs: (raw['capturedMs'] as num?)?.toInt() ?? 0,
+      lastSampleAtMs: (raw['lastSampleAt'] as num?)?.toInt(),
+    );
   }
 
   /// Closes the overlay activity.
@@ -135,6 +148,30 @@ class AssistantPlatform {
     if (_listening) _channel.setMethodCallHandler(null);
     unawaited(_triggers.close());
   }
+}
+
+/// The audio a wake word hit leaves for the overlay (WP50, WP68).
+final class WakeHandoffAudio {
+  /// Creates the handoff.
+  const WakeHandoffAudio({
+    required this.pcm,
+    this.wakeEnd,
+    this.capturedMs = 0,
+    this.lastSampleAtMs,
+  });
+
+  /// 16 kHz mono PCM: pre-roll up to the confirmation and what the service
+  /// recorded until it was taken, without gap or overlap.
+  final Int16List pcm;
+
+  /// Sample in [pcm] where the wake word ends; `null` if unknown.
+  final int? wakeEnd;
+
+  /// How much of [pcm] the service recorded after the confirmation.
+  final int capturedMs;
+
+  /// Wall clock (ms since epoch) of the last sample the service recorded.
+  final int? lastSampleAtMs;
 }
 
 /// Whom Android asks when another app wants speech recognition.
@@ -254,7 +291,7 @@ final class RecognizerConfig {
 /// [TriggerSource] of the system assistant: fires
 /// `TriggerKind.assistant` when the overlay starts ([fire]) and whenever
 /// the assistant is invoked again while it is open. A start by the wake
-/// word service fires `TriggerKind.wakeWord` with its pre-roll.
+/// word service fires `TriggerKind.wakeWord`.
 final class AssistantTriggerSource implements TriggerSource {
   /// Creates the source on [platform].
   AssistantTriggerSource(this.platform, {required this.clock}) {
@@ -273,13 +310,12 @@ final class AssistantTriggerSource implements TriggerSource {
   @override
   Stream<TriggerEvent> get triggers => _controller.stream;
 
-  /// Reports an invocation of the assistant now; with [preRoll] it was the
-  /// wake word.
-  void fire({Int16List? preRoll}) => _controller.add(
+  /// Reports an invocation of the assistant now; with [wake] it was the wake
+  /// word (its audio is taken by the recording, WP68).
+  void fire({bool wake = false}) => _controller.add(
     TriggerEvent(
-      source: preRoll == null ? TriggerKind.assistant : TriggerKind.wakeWord,
+      source: wake ? TriggerKind.wakeWord : TriggerKind.assistant,
       at: clock.now(),
-      preRoll: preRoll,
     ),
   );
 

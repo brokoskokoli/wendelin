@@ -129,11 +129,18 @@ void main() {
     await hear(Int16List(1600));
     await hear(FakeWakeWordEngine.markerFrame(1600));
     await until(() => calls().contains('hit'));
-    // stopMic comes before hit: the overlay records after the service.
-    expect(calls().indexOf('stopMic'), lessThan(calls().indexOf('hit')));
+    await until(() => calls().contains('stopMic'));
+    // WP68: hit first, the service keeps the microphone (it ignores the
+    // later stopMic while it collects) until the overlay takes the audio.
+    expect(calls().indexOf('hit'), lessThan(calls().indexOf('stopMic')));
     final hit = toKotlin.firstWhere((c) => c.$1 == 'hit').$2! as Map;
     expect(hit['kw'], 'wake');
     expect(hit['score'], '0.90');
+    // Wake word end in the pcm and the stream position at its end: the
+    // marker frame ends at sample 3200 of the stream, the pre-roll holds
+    // all of it.
+    expect(hit['pos'], 3200);
+    expect(hit['end'], 3200);
     expect((hit['pcm'] as Uint8List).length, greaterThanOrEqualTo(3200));
     expect(logs.join('\n'), contains('wake-pause engine=wake reason=overlay'));
     // The overlay is gone: listening again.

@@ -37,6 +37,7 @@ export 'src/tts/tts_selector.dart';
 export 'src/wake/candidate_wake_engine.dart';
 export 'src/wake/keyword_spec.dart';
 export 'src/wake/pre_roll_buffer.dart';
+export 'src/wake/pre_roll_speech.dart';
 export 'src/wake/wake_calibration.dart';
 export 'src/wake/wake_feature_extractor.dart';
 export 'src/wake/wake_math.dart';

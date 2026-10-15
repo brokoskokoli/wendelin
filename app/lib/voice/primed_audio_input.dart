@@ -25,8 +25,9 @@ final class PrimedAudioInput implements AudioInput {
   /// Longest buffered audio.
   final Duration maxBuffered;
 
-  /// Called with the first frame of every recording (primed or not).
-  final void Function()? onFirstFrame;
+  /// Called with the length (samples) of the first frame of every recording
+  /// (primed or not).
+  final void Function(int samples)? onFirstFrame;
 
   final _buffer = Queue<Int16List>();
   int _bufferedSamples = 0;
@@ -99,7 +100,7 @@ final class PrimedAudioInput implements AudioInput {
   void _onFrame(Int16List frame) {
     if (!_first) {
       _first = true;
-      onFirstFrame?.call();
+      onFirstFrame?.call(frame.length);
     }
     final out = _out;
     if (out != null) {
@@ -122,7 +123,7 @@ final class PrimedAudioInput implements AudioInput {
       return inner.start().map((frame) {
         if (!_first) {
           _first = true;
-          onFirstFrame?.call();
+          onFirstFrame?.call(frame.length);
         }
         return frame;
       });
