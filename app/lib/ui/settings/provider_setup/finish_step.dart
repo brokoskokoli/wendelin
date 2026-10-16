@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../../di/provider_setup.dart';
+import '../../../di/tee_restrictions.dart';
+import '../../attestation/attestation_texts.dart';
+import '../../attestation/stage_explanations.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'attestation_stages_card.dart';
@@ -27,6 +30,8 @@ List<Widget> finishStep({
     ),
     if (result != null && result.stages.isNotEmpty)
       AttestationStagesCard(result.stages),
+    if (result != null && attested)
+      ..._restrictionNote(restrictedStages(stageViews(result.stages))),
     if (detected != null)
       Text(
         [
@@ -82,3 +87,20 @@ List<Widget> finishStep({
     PrimaryButton('Speichern', onPressed: onSave),
   ];
 }
+
+/// Setup note (WP78): what this provider does not deliver. Saving the
+/// profile accepts it; the chat then shows a plain green check.
+List<Widget> _restrictionNote(List<StageView> restricted) => [
+  if (restricted.isNotEmpty)
+    StatusCard(
+      key: const ValueKey('restrictionSetupNote'),
+      status: CheckStatus.info,
+      title: 'Einschränkungen dieses Anbieters',
+      detail:
+          '${[for (final s in restricted) '${stageLabel(s.stage)}${s.detail == null ? '' : ' (${s.detail})'}'].join('; ')}. '
+          'Das liefert der Anbieter nicht oder Wendelin prüft es nicht, es '
+          'wird nur protokolliert. Mit „Speichern“ akzeptierst du das. Sobald '
+          'etwas Neues dazukommt, weist Wendelin erneut darauf hin. Mehr '
+          'unter „Details“.',
+    ),
+];

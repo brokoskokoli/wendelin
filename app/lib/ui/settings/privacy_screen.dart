@@ -89,25 +89,13 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
             ),
           ],
         ),
-        SectionCard(
-          children: [
-            SettingsRow(
-              title: 'TEE-Prüfprotokoll',
-              detail:
-                  'Prüfung der Anbieter mit geschützter Umgebung, GPU-Prüfung '
-                  'über NVIDIA',
-              onTap: () => unawaited(
-                Navigator.of(context).pushNamed(AppRoutes.attestationLog),
-              ),
-            ),
-          ],
-        ),
         _retention(days),
-        SectionCard(
+        SettingsSection(
+          title: 'Prüfprotokoll',
           children: [
             SettingsRow(
               key: const ValueKey('auditLogRow'),
-              title: 'Prüfprotokoll',
+              title: 'Allgemeines Prüfprotokoll',
               detail: entries.isEmpty
                   ? 'Keine Einträge.'
                   : switch (entries.length) {
@@ -117,6 +105,15 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
                     },
               onTap: () => unawaited(
                 Navigator.of(context).pushNamed(AppRoutes.auditLog),
+              ),
+            ),
+            SettingsRow(
+              title: 'TEE-Prüfprotokoll',
+              detail:
+                  'Prüfung der Anbieter mit geschützter Umgebung, GPU-Prüfung '
+                  'über NVIDIA',
+              onTap: () => unawaited(
+                Navigator.of(context).pushNamed(AppRoutes.attestationLog),
               ),
             ),
           ],

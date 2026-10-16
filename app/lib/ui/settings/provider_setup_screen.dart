@@ -11,6 +11,8 @@ import '../../di/attestation_providers.dart';
 import '../../di/profiles.dart';
 import '../../di/provider_setup.dart';
 import '../../di/providers.dart';
+import '../../di/tee_restrictions.dart';
+import '../attestation/stage_explanations.dart';
 import '../design/design.dart';
 import 'provider_setup/attestation_stages_card.dart';
 import 'provider_setup/credentials_step.dart';
@@ -18,6 +20,7 @@ import 'provider_setup/finish_step.dart';
 import 'provider_setup/model_step.dart';
 import 'provider_setup/template_step.dart';
 import 'settings_page.dart';
+import 'switch_topic.dart';
 
 /// Settings → Provider: the setup dialog in steps (concept: „Einrichtung
 /// (Dialog pro Provider)“): template, credentials, connection test with
@@ -183,6 +186,20 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     });
   }
 
+  /// Saving accepts the restrictions the setup note showed (WP78).
+  Future<void> _acceptRestrictions(String profileId) async {
+    final result = _result;
+    if (!_attested || result == null) return;
+    final shown = {
+      for (final s in restrictedStages(stageViews(result.stages))) s.stage,
+    };
+    await acceptRestrictions(
+      ref.read(storageProvider).settings,
+      profileId,
+      shown,
+    );
+  }
+
   Future<void> _save() async {
     final session = _session!;
     final int? budget;
@@ -200,7 +217,16 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       budgetMicros: budget,
       warnThreshold: _warn,
     );
+    // Another model for the active default profile: new conversation (WP78).
+    final before = widget.existing;
+    if (before != null &&
+        before.defaultModel != profile.defaultModel &&
+        before.id == ref.read(profilesProvider).value?.defaultId) {
+      if (!await confirmManualModelSwitch(context, ref)) return;
+      if (!mounted) return;
+    }
     await ref.read(profilesProvider.notifier).save(profile);
+    await _acceptRestrictions(profile.id);
     await session.commit();
     if (!mounted) return;
     if (widget.onSaved != null) {

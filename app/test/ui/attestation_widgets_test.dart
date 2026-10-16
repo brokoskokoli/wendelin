@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/chat_entry.dart';
+import 'package:wendelin/di/tee_restrictions.dart';
 import 'package:wendelin/ui/attestation/attestation_texts.dart';
 import 'package:wendelin/ui/attestation/stage_line.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -8,6 +10,12 @@ import 'package:wendelin/ui/screens/conversation_view.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import 'helpers.dart';
+
+/// [themed] with the open (not accepted) restrictions of every log entry.
+Widget scoped(Widget child, {Set<String> open = const {}}) => ProviderScope(
+  overrides: [openRestrictionsProvider.overrideWith((ref, id) async => open)],
+  child: themed(child),
+);
 
 AnswerAttestation _a(
   AttestationStatus s, {
@@ -26,13 +34,17 @@ Widget _answer(
   AnswerAttestation a, {
   ValueChanged<AnswerAttestation>? onTap,
   ValueChanged<AnswerAttestation>? onReattest,
-}) => SizedBox(
-  width: 350,
-  child: AttestedAnswer(
-    answer: const Text('Ruhig: 0,4 m Welle.'),
-    attestation: a,
-    onTap: onTap,
-    onReattest: onReattest,
+  Set<String> open = const {},
+}) => ProviderScope(
+  overrides: [openRestrictionsProvider.overrideWith((ref, id) async => open)],
+  child: SizedBox(
+    width: 350,
+    child: AttestedAnswer(
+      answer: const Text('Ruhig: 0,4 m Welle.'),
+      attestation: a,
+      onTap: onTap,
+      onReattest: onReattest,
+    ),
   ),
 );
 
@@ -49,7 +61,7 @@ void main() {
         final handle = tester.ensureSemantics();
         AnswerAttestation? tapped;
         await tester.pumpWidget(
-          themed(Scaffold(body: _answer(_a(status), onTap: (a) => tapped = a))),
+          scoped(Scaffold(body: _answer(_a(status), onTap: (a) => tapped = a))),
         );
         expect(
           find.descendant(
@@ -75,7 +87,7 @@ void main() {
     ) async {
       var rechecks = 0;
       await tester.pumpWidget(
-        themed(
+        scoped(
           Scaffold(
             body: _answer(
               _a(AttestationStatus.red),
@@ -88,7 +100,7 @@ void main() {
       await tester.tap(find.text('Neu prüfen'));
       expect(rechecks, 1);
       await tester.pumpWidget(
-        themed(Scaffold(body: _answer(_a(AttestationStatus.green)))),
+        scoped(Scaffold(body: _answer(_a(AttestationStatus.green)))),
       );
       expect(find.byType(StatusCard), findsNothing);
     });
@@ -98,7 +110,7 @@ void main() {
     ) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(
-        themed(
+        scoped(
           Scaffold(
             body: SingleChildScrollView(
               child: _answer(
@@ -123,7 +135,7 @@ void main() {
 
     testWidgets('Sonderfälle haben eigene Texte', (tester) async {
       Future<void> show(String? reason) => tester.pumpWidget(
-        themed(
+        scoped(
           Scaffold(
             body: SingleChildScrollView(
               child: _answer(
@@ -245,10 +257,12 @@ void main() {
     });
   });
 
-  group('Tool-Hinweis (WP63)', () {
-    testWidgets('nur an Antworten mit Tools', (tester) async {
+  group('Chat nur mit Haken (WP78)', () {
+    testWidgets('kein Tool-Hinweis mehr im Chat, auch mit Tools', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        themed(
+        scoped(
           Scaffold(
             body: Column(
               children: [
@@ -259,16 +273,65 @@ void main() {
           ),
         ),
       );
-      expect(find.text(ToolTlsHint.text), findsOneWidget);
-      expect(
-        find.text(
-          'Tool-Aufrufe sind über die geprüfte Verbindung bis in die Enklave geschützt, aber nicht zusätzlich verschlüsselt.',
-        ),
-        findsOneWidget,
-      );
+      await tester.pump();
+      expect(find.text(ToolTlsHint.text), findsNothing);
+      expect(find.text('geprüft'), findsNWidgets(2));
     });
 
-    testWidgets('Golden Schild mit und ohne Tool-Hinweis', tags: ['golden'], (
+    testWidgets('akzeptierte Einschränkung: schlichtes grünes Schild', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        scoped(Scaffold(body: _answer(_a(AttestationStatus.green)))),
+      );
+      await tester.pump();
+      expect(find.text('geprüft'), findsOneWidget);
+      expect(find.text(restrictionOpenLabel), findsNothing);
+    });
+
+    testWidgets('neue Einschränkung: graues Schild mit Hinweis', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        scoped(
+          Scaffold(
+            body: _answer(_a(AttestationStatus.green), open: {'provenance'}),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text(restrictionOpenLabel), findsOneWidget);
+      expect(find.text('geprüft'), findsNothing);
+    });
+
+    testWidgets('Rot und Grau bleiben von Einschränkungen unberührt', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        scoped(
+          Scaffold(
+            body: Column(
+              children: [
+                _answer(_a(AttestationStatus.red), open: {'provenance'}),
+                _answer(
+                  _a(
+                    AttestationStatus.unconfirmed,
+                    reason: AttestationReason.receiptNotFound,
+                  ),
+                  open: {'provenance'},
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Prüfung fehlgeschlagen'), findsWidgets);
+      expect(find.text('nicht bestätigt'), findsOneWidget);
+      expect(find.text(restrictionOpenLabel), findsNothing);
+    });
+
+    testWidgets('Golden Schild, Tools ohne Hinweis', tags: ['golden'], (
       tester,
     ) async {
       await pumpComponent(tester, [
@@ -318,7 +381,7 @@ void main() {
     (tester) async {
       AnswerAttestation? tapped;
       await tester.pumpWidget(
-        themed(
+        scoped(
           Scaffold(
             body: ConversationView(
               entries: [

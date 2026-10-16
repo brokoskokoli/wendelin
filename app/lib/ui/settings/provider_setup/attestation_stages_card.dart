@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:wendelin_providers/wendelin_providers.dart'
     show StageOutcome, StageResult;
 
+import '../../../di/tee_restrictions.dart';
 import '../../attestation/attestation_texts.dart';
 import '../../attestation/stage_line.dart';
 import '../../design/design.dart';
+import '../attestation_explain_screen.dart';
 import '../settings_page.dart';
 
 /// „Erste Attestierung“ of a TEE profile: result per stage (quote, nonce,
@@ -49,6 +51,17 @@ class AttestationStagesCard extends StatelessWidget {
           ],
         ),
         WideButton(
+          'Details',
+          onPressed: () => unawaited(
+            Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) =>
+                    AttestationExplainScreen(stages: stageViews(stages)),
+              ),
+            ),
+          ),
+        ),
+        WideButton(
           'Prüfprotokoll ansehen',
           onPressed: () => unawaited(
             Navigator.of(context).push<void>(
@@ -89,3 +102,9 @@ class AttestationStagesScreen extends StatelessWidget {
     ],
   );
 }
+
+/// [stages] in the form the restriction logic and the Details page use.
+List<StageView> stageViews(List<StageResult> stages) => [
+  for (final s in stages)
+    (stage: s.stage.id, result: s.outcome.name, detail: s.detail),
+];

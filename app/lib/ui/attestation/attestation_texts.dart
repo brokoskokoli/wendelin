@@ -33,6 +33,10 @@ final class AttestationMessage {
   final bool canRecheck;
 }
 
+/// Shield label of a green answer with a restriction the user has not
+/// accepted yet (WP78).
+const restrictionOpenLabel = 'geprüft, neue Einschränkung';
+
 /// Reason codes of a failed check (`StageResult` codes, WP46).
 abstract final class AttestationReason {
   /// The operator's platform security update is pending.
