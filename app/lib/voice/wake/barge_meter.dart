@@ -25,6 +25,8 @@ final class BargeMeter {
   double _sumSq = 0, _sim = -1, _stop = -1;
   double _allSim = -1, _allStop = -1;
   int _allFrames = 0;
+  // WP80: background of „Stopp“ and level of the stream.
+  double _floor = -1, _gap = -1, _quiet = 0, _peakRms = 0;
 
   /// Starts a new listening session.
   void reset() {
@@ -33,6 +35,8 @@ final class BargeMeter {
     _frames = _samples = _peak = _processed = _micros = 0;
     _sumSq = 0;
     _sim = _stop = -1;
+    _floor = _gap = -1;
+    _quiet = _peakRms = 0;
   }
 
   /// Called for every frame the microphone delivers.
@@ -54,7 +58,22 @@ final class BargeMeter {
   }
 
   /// Called for every feature window.
-  void onWindow(double main, double stop) {
+  ///
+  /// [floor]: sliding background similarity of „Stopp“ (silence or echo),
+  /// [quiet] / [peak]: noise floor and recent peak level (RMS) of the stream.
+  void onWindow(
+    double main,
+    double stop, {
+    double? floor,
+    double quiet = 0,
+    double peak = 0,
+  }) {
+    if (floor != null) {
+      _floor = floor;
+      if (stop - floor > _gap) _gap = stop - floor;
+    }
+    _quiet = quiet;
+    _peakRms = peak;
     if (main > _sim) _sim = main;
     if (stop > _stop) _stop = stop;
     if (main > _allSim) _allSim = main;
@@ -83,7 +102,14 @@ final class BargeMeter {
       'stop': _stop,
       'thr': threshold,
       'sthr': stopThreshold,
+      // WP80: `sfloor` = background similarity of „Stopp“, `sgap` = largest
+      // distance of `stop` above it, `quiet` = noise floor, `lvl` = peak level.
+      'sfloor': _floor,
+      'sgap': _gap,
+      'quiet': _quiet.round(),
+      'lvl': _peakRms.round(),
     });
+    _gap = -1;
     _frames = _samples = _peak = _processed = _micros = 0;
     _sumSq = 0;
     _sim = _stop = -1;

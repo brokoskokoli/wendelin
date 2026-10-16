@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'keyword_spec.dart';
+import 'speech_gate.dart';
 import 'wake_feature_extractor.dart';
 import 'wake_math.dart';
 import 'wake_templates.dart';
@@ -23,6 +24,9 @@ final class CandidateWakeEngine implements WakeWordEngine {
     this.keywordId = 'wake',
     this.stopTemplates = const [],
     this.stopKeywordId = 'stop',
+    this.stopTailShare,
+    this.stopGate,
+    this.stopFloorGap = 0,
     this.onWindow,
   });
 
@@ -54,6 +58,30 @@ final class CandidateWakeEngine implements WakeWordEngine {
   /// Id reported for a „Stopp“ hit.
   final String stopKeywordId;
 
+  /// WP80: share (0..1] of the window, counted from its end, that decides the
+  /// „Stopp“ similarity. A window spans about 1.3 s, the word only a quarter
+  /// of it; the rest is background whose embeddings look alike in every
+  /// recording, so the full-window cosine sits at 0.9 even in silence. The
+  /// tail holds the word and its trailing sound. `null`: whole window.
+  final double? stopTailShare;
+
+  /// WP80: a „Stopp“ hit needs speech-level sound in the stream (see
+  /// [SpeechGate]); `null`: no level check.
+  final SpeechGate? stopGate;
+
+  /// WP80: a „Stopp“ hit must also be at least this far above the sliding
+  /// background similarity (the stop similarity of the recent windows,
+  /// silence or echo). `0`: no check. Applies after a warm-up of
+  /// [stopFloorWarmup] windows.
+  final double stopFloorGap;
+
+  /// Windows before the background similarity is trusted.
+  static const stopFloorWarmup = 10;
+
+  /// Sliding background similarity of „Stopp“ (`null` before the first
+  /// window), for diagnostics.
+  double? get stopFloor => _stopFloor;
+
   /// Diagnostics (WP72): called for every window with the best similarity to
   /// the main and to the „Stopp“ templates (`-1` without templates) and the
   /// classifier score.
@@ -64,6 +92,8 @@ final class CandidateWakeEngine implements WakeWordEngine {
 
   bool _open = false;
   int _stopRun = 0;
+  double? _stopFloor;
+  int _stopSeen = 0;
   int _lastHit = -1 << 40;
 
   /// Largest classifier score and template similarity seen so far
@@ -88,6 +118,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
     );
     final stops = _usable(stopTemplates);
     final hits = <WakeWordHit>[];
+    stopGate?.feed(frame);
     for (final w in await features.accept(frame)) {
       if (w.modelScore != null && w.modelScore! > maxModelScore) {
         maxModelScore = w.modelScore!;
@@ -103,14 +134,32 @@ final class CandidateWakeEngine implements WakeWordEngine {
         templateThreshold: main.threshold,
       );
       var id = keywordId;
-      final stop = _closest(w.embedding, stops);
+      final stop = _closest(w.embedding, stops, tail: stopTailShare);
       onWindow?.call(main.top, stop.top, w.modelScore);
-      final stopDecision = decideCandidate(
+      var stopDecision = decideCandidate(
         modelScore: null,
         templateSimilarity: stop.similarity,
         modelThreshold: null,
         templateThreshold: stop.threshold,
       );
+      // WP80: no „Stopp“ without speech-level sound and without a clear rise
+      // over the background similarity.
+      final floor = _stopFloor;
+      if (stopDecision != null) {
+        final quiet = stopGate != null && !stopGate!.active;
+        final flat =
+            stopFloorGap > 0 &&
+            floor != null &&
+            _stopSeen >= stopFloorWarmup &&
+            stop.top < floor + stopFloorGap;
+        if (quiet || flat) stopDecision = null;
+      }
+      if (stops.isNotEmpty) {
+        _stopSeen++;
+        _stopFloor = floor == null
+            ? stop.top
+            : floor + (stop.top - floor) * 0.05;
+      }
       // „Stopp“ is short: it counts only after [stopWindows] consecutive
       // windows above its threshold (a single spike is no hit).
       _stopRun = stopDecision == null ? 0 : _stopRun + 1;
@@ -145,12 +194,23 @@ final class CandidateWakeEngine implements WakeWordEngine {
 
   ({double? similarity, double? threshold, double margin, double top}) _closest(
     Float32List embedding,
-    List<WakeTemplates> sets,
-  ) {
+    List<WakeTemplates> sets, {
+    double? tail,
+  }) {
+    // Tail of the window (WP80): both sides cut at the same offset.
+    final from = tail == null
+        ? 0
+        : embedding.length - (embedding.length * tail).round();
+    final probe = from == 0
+        ? embedding
+        : Float32List.sublistView(embedding, from);
     double? sim, threshold;
     var margin = double.negativeInfinity, top = -1.0;
     for (final t in sets) {
-      final s = bestSimilarity(embedding, t.embeddings);
+      final s = bestSimilarity(probe, [
+        for (final e in t.embeddings)
+          from == 0 ? e : Float32List.sublistView(e, from),
+      ]);
       if (s > top) top = s;
       if (s - t.threshold > margin) {
         margin = s - t.threshold;
@@ -165,6 +225,9 @@ final class CandidateWakeEngine implements WakeWordEngine {
   void reset() {
     features.reset();
     _stopRun = 0;
+    stopGate?.reset();
+    _stopFloor = null;
+    _stopSeen = 0;
     _lastHit = -1 << 40;
   }
 

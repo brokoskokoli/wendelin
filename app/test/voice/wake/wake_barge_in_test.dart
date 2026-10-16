@@ -31,7 +31,14 @@ void main() {
       Future<double?> Function()? margin,
     }) {
       audio = FakeAudioInput(
-        frames: [Int16List(480), Int16List(480)],
+        // WP80: „Stopp“ needs speech-level sound after a quiet start.
+        frames: [
+          Int16List(480),
+          for (var i = 0; i < 3; i++)
+            Int16List.fromList([
+              for (var j = 0; j < 480; j++) j.isEven ? 2000 : -2000,
+            ]),
+        ],
         frameInterval: const Duration(milliseconds: 5),
       );
       return LazyWakeBargeInDetector(
@@ -39,6 +46,7 @@ void main() {
         templates: () async => sets,
         stopTemplates: () async => stops,
         marginOverride: margin,
+        stopTail: null, // two-value fake embeddings have no time axis
         diagInterval: const Duration(milliseconds: 20),
         features: () => FakeWakeFeatureExtractor(
           windowEvery: 480,
@@ -122,9 +130,12 @@ void main() {
         final diag = lines.where((l) => l.contains('barge-diag')).toList();
         expect(diag, isNotEmpty);
         expect(diag.first, contains('t=1'));
+        // WP80: background of „Stopp“ and level.
+        expect(diag.first, contains('sfloor='));
+        expect(diag.first, contains('quiet='));
         expect(diag.any((l) => l.contains('sim=1.00')), isTrue);
         final end = lines.singleWhere((l) => l.contains('barge-end'));
-        expect(end, contains('frames=2'));
+        expect(end, contains('frames=4'));
         expect(end, contains('sim=1.00'));
       });
 

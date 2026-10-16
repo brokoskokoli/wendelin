@@ -9,7 +9,7 @@ Bezug: Gerätetest 2026-10-16 (Xiaomi, `ergebnisse.md` 11.6): Mit Kommunikation 
 4. **Diagnose:** `barge-diag` zusätzlich mit Stille-Niveau und Abstand.
 
 ## Abnahmekriterien
-- [ ] Tests für Ursache/Fix (Stille löst nicht aus, Sprache „Stopp“ über dem Hintergrund löst aus; Echo-Fall).
-- [ ] Widget-Tests/Goldens für „Erweitert“.
+- [x] Tests für Ursache/Fix (Stille löst nicht aus, Sprache „Stopp“ über dem Hintergrund löst aus; Echo-Fall).
+- [x] Widget-Tests/Goldens für „Erweitert“.
 - [ ] Emulator (separater E2E-Agent): `voice_stop_word_e2e_test.dart` und `voice_barge_in_e2e_test.dart` grün.
 - [ ] Prüfpunkte 11.6 aktualisiert. Gate grün.
