@@ -15,6 +15,13 @@ import 'barge_meter.dart';
 /// The engine is built at the first [start]: the templates are read then,
 /// not when the overlay opens. Without a learned voice the detector stays
 /// silent (barge-in by a tap on the microphone still works).
+/// WP80: share of the window (counted from its end) that decides „Stopp“:
+/// 9 of 16 embeddings, the word plus its trailing sound.
+const stopTailShare = 9 / 16;
+
+/// WP80: how far „Stopp“ must lie above the sliding background similarity.
+const stopFloorGap = 0.02;
+
 final class LazyWakeBargeInDetector implements BargeInDetector {
   /// Creates the detector on [audio] (the capture profile follows the
   /// pipeline state, see `CaptureProfileFollower`).
@@ -25,6 +32,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     this.stopTemplates = _none,
     this.extraMargin = 0.05,
     this.marginOverride,
+    this.stopTail = stopTailShare,
     this.diagInterval = const Duration(seconds: 1),
   });
 
@@ -49,6 +57,9 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
   /// Developer setting (WP72, `debug.bargeMargin`): replaces [extraMargin]
   /// when it returns a value. Read once, when the engine is built.
   final Future<double?> Function()? marginOverride;
+
+  /// Share of the window that decides „Stopp“ (WP80); `null`: whole window.
+  final double? stopTail;
 
   /// Interval of the `barge-diag` lines while listening.
   final Duration diagInterval;
@@ -99,21 +110,33 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
         voiceLog('barge-config', {
           'margin': margin,
           'thr': meter.threshold,
-          'sthr': meter.stopThreshold,
+          'sthr': meter.stopThreshold ?? -1,
         });
+        final gate = SpeechGate();
+        late final CandidateWakeEngine engine;
+        engine = CandidateWakeEngine(
+          features: features(),
+          templates: strict.first,
+          moreTemplates: strict.skip(1).toList(),
+          stopTemplates: strictStops,
+          modelThreshold: null,
+          // WP80: „Stopp“ is judged on the tail of the window (the word, not
+          // the background), only with speech-level sound and clearly above
+          // the sliding background similarity.
+          stopTailShare: stopTail,
+          stopGate: gate,
+          stopFloorGap: stopFloorGap,
+          onWindow: (main, stop, _) => meter.onWindow(
+            main,
+            stop,
+            floor: engine.stopFloor,
+            quiet: gate.floor,
+            peak: gate.peak,
+          ),
+        );
         final inner = WakeWordBargeInDetector(
           audio: MeteredAudioInput(audio, meter),
-          engine: MeteredEngine(
-            CandidateWakeEngine(
-              features: features(),
-              templates: strict.first,
-              moreTemplates: strict.skip(1).toList(),
-              stopTemplates: strictStops,
-              modelThreshold: null,
-              onWindow: (main, stop, _) => meter.onWindow(main, stop),
-            ),
-            meter,
-          ),
+          engine: MeteredEngine(engine, meter),
         );
         _sub = inner.signals.listen((signal) {
           // Every hit leaves a line, with the best similarities so far.

@@ -1,4 +1,4 @@
-// WP72: Entwickler-Varianten für Barge-in – Markierung „Standard“, Zurücksetzen
+// WP72/WP80: Entwickler-Varianten („Erweitert“) für Barge-in – Markierung „Standard“, Zurücksetzen
 // und Hinweis in der Gesprächs-Sektion.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +14,7 @@ import '../support/test_env.dart';
 import '../ui/helpers.dart';
 
 void main() {
-  const hint = 'Entwickler-Variante für „Unterbrechen“ aktiv';
+  const hint = 'Eigene Einstellung für das Unterbrechen aktiv';
 
   testWidgets('Standard markiert, Hinweis erst bei Abweichung, Zurücksetzen', (
     tester,
@@ -25,14 +25,15 @@ void main() {
     await settle(tester);
     expect(find.textContaining(hint), findsNothing);
 
-    await tester.scrollUntilVisible(
-      find.text('Unterbrechen während der Antwort'),
-      300,
-    );
-    await tester.longPress(find.text('Unterbrechen während der Antwort'));
+    await tester.scrollUntilVisible(find.text('Erweitert'), 300);
+    await tester.tap(find.text('Erweitert'));
     await settle(tester);
+    // WP80: every option is explained.
+    expect(find.textContaining('rechnet die eigene Ausgabe'), findsOneWidget);
+    expect(find.textContaining('Echo-Unterdrückung'), findsOneWidget);
+    expect(find.textContaining('mehr Fehlalarme'), findsOneWidget);
     expect(find.text('Kommunikation + AEC (Standard)'), findsOneWidget);
-    expect(find.text('0.05 (Standard)'), findsOneWidget);
+    expect(find.text('0,05 (Standard)'), findsOneWidget);
 
     await tester.tap(find.text('Erkennung, ohne AEC'));
     await settle(tester);

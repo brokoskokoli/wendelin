@@ -54,8 +54,8 @@ class ConversationSettingsSection extends ConsumerWidget {
               vertical: WSpace.s,
             ),
             child: Text(
-              'Entwickler-Variante für „Unterbrechen“ aktiv (lange auf '
-              '„Unterbrechen während der Antwort“ drücken zum Zurücksetzen).',
+              'Eigene Einstellung für das Unterbrechen aktiv (unter „Erweitert“ '
+              'zurücksetzbar).',
               style: WText.detail,
             ),
           ),
@@ -81,14 +81,20 @@ class ConversationSettingsSection extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: WSpace.s,
             children: [
-              // Long press: hidden developer variants (WP72).
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onLongPress: () => showBargeDebugSheet(context),
-                child: Text(
-                  'Unterbrechen während der Antwort',
-                  style: WText.label,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Unterbrechen während der Antwort',
+                      style: WText.label,
+                    ),
+                  ),
+                  // WP80: the options are visible (formerly a long press).
+                  TextButton(
+                    onPressed: () => showBargeDebugSheet(context),
+                    child: const Text('Erweitert'),
+                  ),
+                ],
               ),
               Text(
                 bargeInAvailable
