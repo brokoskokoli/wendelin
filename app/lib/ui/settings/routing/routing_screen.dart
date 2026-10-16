@@ -14,6 +14,7 @@ import '../../design/design.dart';
 import '../../routes.dart';
 import '../export.dart';
 import '../settings_page.dart';
+import '../switch_topic.dart';
 import 'import_preview.dart';
 import 'routing_texts.dart';
 import 'rule_editor_screen.dart';
@@ -208,6 +209,7 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
       initial: rules.defaultTarget,
     );
     if (target == null || target == rules.defaultTarget) return;
+    if (!mounted || !await confirmManualModelSwitch(context, ref)) return;
     await _notifier.save(rules.copyWith(defaultTarget: target));
   }
 

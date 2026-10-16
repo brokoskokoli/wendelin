@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/chat_entry.dart';
+import '../../di/tee_restrictions.dart';
 import '../attestation/attestation_texts.dart';
 import '../design/design.dart';
 import 'bring_share_card.dart';
@@ -265,7 +268,12 @@ class _Notice extends StatelessWidget {
 
 /// An answer with the shield of its TEE check and, if the check failed, the
 /// warning card with the reason and „Neu prüfen“.
-class AttestedAnswer extends StatelessWidget {
+///
+/// WP78: a green answer carries only the shield. The provider's „nur
+/// protokolliert“ restrictions are shown once at setup and accepted there; a
+/// restriction that is not accepted (new or changed) turns the shield grey
+/// with a short note until it is accepted in the Prüfprotokoll.
+class AttestedAnswer extends ConsumerWidget {
   /// Creates the block.
   const AttestedAnswer({
     super.key,
@@ -288,22 +296,26 @@ class AttestedAnswer extends StatelessWidget {
   final ValueChanged<AnswerAttestation>? onReattest;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final message = attestationMessage(
       attestation.status,
       reasonCode: attestation.reasonCode,
       detail: attestation.detail,
     );
+    final open = attestation.status == AttestationStatus.green
+        ? ref.watch(openRestrictionsProvider(attestation.logId)).value
+        : null;
+    final restricted = open != null && open.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         answer,
         AttestationShield(
-          status: message.status,
-          label: message.label,
+          key: const ValueKey('answerShield'),
+          status: restricted ? CheckStatus.info : message.status,
+          label: restricted ? restrictionOpenLabel : message.label,
           onTap: onTap == null ? null : () => onTap!(attestation),
         ),
-        if (attestation.toolsInvolved) const ToolTlsHint(),
         if (message.title case final title?)
           Padding(
             padding: const EdgeInsets.only(top: WSpace.xs),

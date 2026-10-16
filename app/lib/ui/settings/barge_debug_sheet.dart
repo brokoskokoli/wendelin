@@ -10,6 +10,29 @@ import '../design/design.dart';
 /// Margin choices of the developer setting (text as stored).
 const bargeMarginChoices = ['0.05', '0.00', '-0.05'];
 
+/// What each microphone source means (WP80), shown below the choices.
+const bargeSourceHelp = {
+  SpeechCapture.communication:
+      'Kommunikation + AEC (Standard): Das Handy rechnet die eigene Ausgabe '
+      'aus dem Mikrofon heraus. Wendelin hört sich selbst kaum, dein Wort '
+      'kommt aber etwas leiser an.',
+  SpeechCapture.recognitionAec:
+      'Erkennung + AEC: wie Standard, aber mit dem Mikrofon der '
+      'Spracherkennung. Hilft auf Geräten, bei denen das Standard-Mikrofon '
+      'dein Wort zu stark dämpft.',
+  SpeechCapture.recognition:
+      'Erkennung, ohne AEC: keine Echo-Unterdrückung. Dein Wort kommt klar '
+      'an, aber die laufende Ansage übertönt es oft, und Wendelin kann sich '
+      'selbst hören.',
+};
+
+/// What the additional threshold does (WP80).
+const bargeMarginHelp =
+    'Die Schwelle legt fest, wie genau ein Wort passen muss. Höher (0,05, '
+    'Standard): weniger Fehlalarme, dafür wird dein Wort öfter überhört. '
+    'Niedriger (0,00 oder -0,05): das Wort wird leichter erkannt, dafür '
+    'gibt es mehr Fehlalarme.';
+
 /// Whether a developer variant (source or margin) other than the default is
 /// active; the conversation settings show a hint then. The sheet invalidates
 /// it with every change.
@@ -23,13 +46,14 @@ final bargeVariantActiveProvider = FutureProvider<bool>((ref) async {
           margin != bargeMarginChoices.first);
 });
 
-/// Opens the hidden developer sheet „Barge-in-Variante“ (WP72): long press
-/// on „Unterbrechen während der Antwort“. Both choices apply to the next
-/// spoken answer; `docs/testing/m4-device.md` 11.6 explains how to read the
-/// `barge-diag` lines for each variant.
+/// Opens the sheet „Erweitert“ (WP80, was hidden behind a long press in
+/// WP72): button next to „Unterbrechen während der Antwort“. Both choices
+/// apply to the next spoken answer; `docs/testing/m4-device.md` 11.6
+/// explains how to read the `barge-diag` lines for each variant.
 Future<void> showBargeDebugSheet(BuildContext context) =>
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (_) => const BargeDebugSheet(),
     );
 
@@ -81,54 +105,67 @@ class _State extends ConsumerState<BargeDebugSheet> {
       _set(SpeechCapture.communication, bargeMarginChoices.first);
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(WSpace.l),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: WSpace.s,
-      children: [
-        Text('Barge-in-Variante (Entwickler)', style: WText.label),
-        Text('Quelle des Mikrofons während der Antwort:', style: WText.detail),
-        Wrap(
-          spacing: WSpace.s,
-          children: [
-            for (final v in SpeechCapture.values)
-              ChoiceChip(
-                label: Text(switch (v) {
-                  SpeechCapture.communication =>
-                    'Kommunikation + AEC (Standard)',
-                  SpeechCapture.recognitionAec => 'Erkennung + AEC',
-                  SpeechCapture.recognition => 'Erkennung, ohne AEC',
-                }),
-                selected: _source == v,
-                onSelected: (_) => _set(v, null),
-              ),
-          ],
-        ),
-        Text('Zusätzliche Schwelle (Standard +0,05):', style: WText.detail),
-        Wrap(
-          spacing: WSpace.s,
-          children: [
-            for (final m in bargeMarginChoices)
-              ChoiceChip(
-                label: Text(
-                  m == bargeMarginChoices.first ? '$m (Standard)' : m,
+  Widget build(BuildContext context) => SafeArea(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.all(WSpace.l),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: WSpace.s,
+        children: [
+          Text('Erweitert: Unterbrechen', style: WText.label),
+          Text(
+            'Damit stellst du ein, wie empfindlich „Wendelin“ und „Stopp“ '
+            'während der Antwort erkannt werden. Die Änderung gilt ab der '
+            'nächsten gesprochenen Antwort.',
+            style: WText.detail,
+          ),
+          Text('Mikrofon während der Antwort', style: WText.label),
+          Wrap(
+            spacing: WSpace.s,
+            children: [
+              for (final v in SpeechCapture.values)
+                ChoiceChip(
+                  label: Text(switch (v) {
+                    SpeechCapture.communication =>
+                      'Kommunikation + AEC (Standard)',
+                    SpeechCapture.recognitionAec => 'Erkennung + AEC',
+                    SpeechCapture.recognition => 'Erkennung, ohne AEC',
+                  }),
+                  selected: _source == v,
+                  onSelected: (_) => _set(v, null),
                 ),
-                selected: _margin == m,
-                onSelected: (_) => _set(null, m),
-              ),
-          ],
-        ),
-        TextButton(
-          onPressed:
-              _source == SpeechCapture.communication &&
-                  _margin == bargeMarginChoices.first
-              ? null
-              : _reset,
-          child: const Text('Zurücksetzen'),
-        ),
-      ],
+            ],
+          ),
+          for (final v in SpeechCapture.values)
+            Text(bargeSourceHelp[v]!, style: WText.detail),
+          Text('Zusätzliche Schwelle', style: WText.label),
+          Wrap(
+            spacing: WSpace.s,
+            children: [
+              for (final m in bargeMarginChoices)
+                ChoiceChip(
+                  label: Text(
+                    m == bargeMarginChoices.first
+                        ? '${m.replaceAll('.', ',')} (Standard)'
+                        : m.replaceAll('.', ','),
+                  ),
+                  selected: _margin == m,
+                  onSelected: (_) => _set(null, m),
+                ),
+            ],
+          ),
+          Text(bargeMarginHelp, style: WText.detail),
+          TextButton(
+            onPressed:
+                _source == SpeechCapture.communication &&
+                    _margin == bargeMarginChoices.first
+                ? null
+                : _reset,
+            child: const Text('Zurücksetzen'),
+          ),
+        ],
+      ),
     ),
   );
 }

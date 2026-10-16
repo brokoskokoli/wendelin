@@ -7,9 +7,11 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../../di/attestation_log_view.dart';
 import '../../di/attestation_providers.dart';
 import '../../di/providers.dart';
+import '../../di/tee_restrictions.dart';
 import '../attestation/attestation_texts.dart';
 import '../design/design.dart';
 import '../screens/labels.dart';
+import 'attestation_explain_screen.dart';
 import 'attestation_log_screen.dart';
 import 'settings_page.dart';
 
@@ -60,7 +62,35 @@ class AttestationLogDetailScreen extends ConsumerWidget {
               recordTitle(r, config?.nameOf(r.profileId) ?? r.profileId),
           detail: message.text ?? recordSummary(r, now),
         ),
+        if (ref.watch(openRestrictionsProvider(logId)).value case final open?
+            when open.isNotEmpty)
+          StatusCard(
+            key: const ValueKey('openRestrictions'),
+            status: CheckStatus.info,
+            title: 'Neue Einschränkung',
+            detail:
+                '${open.map(stageLabel).join(', ')}: nur protokolliert und '
+                'noch nicht von dir akzeptiert. Unter „Details“ kannst du das '
+                'ansehen und akzeptieren.',
+          ),
         SettingsSection(title: 'Ergebnis je Stufe', children: stageRows(r)),
+        WideButton(
+          'Details',
+          onPressed: () => unawaited(
+            Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => AttestationExplainScreen(
+                  profileId: r.profileId,
+                  model: r.model,
+                  stages: [
+                    for (final s in r.stages)
+                      (stage: s.stage, result: s.result, detail: s.detail),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
         ToolTlsHint(encrypted: config?.toolsEncryptedFor(r.profileId) ?? false),
         SettingsSection(
           title: 'Angaben',
