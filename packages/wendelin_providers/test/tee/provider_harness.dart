@@ -28,7 +28,9 @@ final class TeeHarness {
     Uri? baseUrl,
   }) : crypto = crypto ?? FakeAttestationCrypto(ed25519Result: true) {
     server = TeeServer({
+      'models': (_) async => _json('{"data":[]}', 200),
       'aci/attestation': (_) async {
+        await attestationGate?.future;
         final status = attestationStatus;
         return _json(status == 200 ? jsonEncode(attestation) : '{}', status);
       },
@@ -181,6 +183,9 @@ final class TeeHarness {
 
   /// `Wendelin/attest:` and transport log lines.
   final List<String> diagnostics = [];
+
+  /// If set, the attestation route waits for it (to model a slow gateway).
+  Completer<void>? attestationGate;
 
   /// Status of the attestation route.
   int attestationStatus = 200;

@@ -85,7 +85,10 @@ void main() {
                 return _ok(_nras);
               }),
               evidenceSource: () async => (
-                payload: <String, Object?>{'nonce': payloadNonce ?? nonce},
+                payload: <String, Object?>{
+                  'nonce': payloadNonce ?? nonce,
+                  'evidence_list': [<String, Object?>{}],
+                },
                 nonce: nonce,
               ),
             );
@@ -310,22 +313,31 @@ void main() {
     });
 
     group('lokale Nonce-Bindung und Protokoll', () {
-      test('off: lokale Bindung läuft einmal je Modell, NRAS nie', () async {
+      test('off: gar kein GPU-Abruf, weder Evidenz noch NRAS (WP77)', () async {
         final gpu = FakeGpuAttestationVerifier();
         final h = TeeHarness(gpu: gpu);
         await h.chat();
         await h.chat();
-        expect(gpu.localCalls, ['m']);
+        expect(gpu.localCalls, isEmpty);
         expect(gpu.calls, isEmpty);
       });
 
-      test('off: Bindung schlägt fehl → rot, nichts gesendet', () async {
+      test('nachher: lokale Bindung läuft einmal je Modell vorher', () async {
+        final gpu = FakeGpuAttestationVerifier();
+        final h = TeeHarness(gpu: gpu, gpuMode: GpuCheckMode.after);
+        await h.chat();
+        await h.chat();
+        expect(gpu.localCalls, ['m']);
+      });
+
+      test('nachher: Bindung schlägt fehl → rot, nichts gesendet', () async {
         final gpu = FakeGpuAttestationVerifier()
           ..localResult = const GpuAttestationResult(
             GpuVerdict.failed,
             'GPU-Evidenz bindet die Nonce nicht',
+            GpuReason.nonceMismatch,
           );
-        final h = TeeHarness(gpu: gpu);
+        final h = TeeHarness(gpu: gpu, gpuMode: GpuCheckMode.after);
         final reports = <AttestationReport>[];
         h.provider.reports.listen(reports.add);
         final events = await h.chat();
@@ -335,8 +347,9 @@ void main() {
         expect(error.unavailable, isFalse);
         expect(h.chatRequests, 0);
         await pumpEventQueue();
-        expect(reports.last.status, AttestationStatus.red);
-        expect(reports.last.reasonCode, 'gpu_failed');
+        final red = reports.lastWhere((r) => r.status == AttestationStatus.red);
+        expect(red.status, AttestationStatus.red);
+        expect(red.reasonCode, 'gpu_failed');
       });
 
       test(

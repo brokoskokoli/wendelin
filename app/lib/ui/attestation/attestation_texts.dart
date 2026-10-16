@@ -67,9 +67,13 @@ abstract final class AttestationReason {
 }
 
 /// The wording for [status] with [reasonCode].
+///
+/// [detail] is the secret-free reason of the check; for a failed GPU check
+/// it is shown as „Grund“ (HTTP status, timeout, no evidence, …; WP77).
 AttestationMessage attestationMessage(
   AttestationStatus status, {
   String? reasonCode,
+  String? detail,
 }) {
   switch (status) {
     case AttestationStatus.green:
@@ -148,23 +152,24 @@ AttestationMessage attestationMessage(
               'Antwort ist nicht bestätigt, es gibt aber keinen Hinweis auf '
               'eine Manipulation. Prüfe den Anbieter neu.',
         ),
-        AttestationReason.gpuFailed => const AttestationMessage(
+        AttestationReason.gpuFailed => AttestationMessage(
           status: CheckStatus.failed,
           label: 'GPU-Prüfung fehlgeschlagen',
           title: 'GPU-Prüfung fehlgeschlagen',
           text:
-              'NVIDIA hat die GPU-Nachweise nicht bestätigt, oder sie '
-              'passen nicht zu unserer Anfrage. Die nächste Anfrage an '
-              'dieses Modell wird vorher geprüft.',
+              'Die GPU-Prüfung über NVIDIA ist fehlgeschlagen.'
+              '${_gpuReason(detail)} Die nächste Anfrage an dieses Modell '
+              'wird vorher geprüft.',
           canRecheck: false,
         ),
-        AttestationReason.gpuUnavailable => const AttestationMessage(
+        AttestationReason.gpuUnavailable => AttestationMessage(
           status: CheckStatus.failed,
           label: 'GPU-Prüfung nicht möglich',
           title: 'GPU-Prüfung nicht möglich',
           text:
-              'NVIDIA war nicht erreichbar. Die nächste Anfrage an dieses '
-              'Modell wird vorher geprüft.',
+              'Die GPU-Prüfung über NVIDIA war nicht möglich.'
+              '${_gpuReason(detail)} Die nächste Anfrage an dieses Modell '
+              'wird vorher geprüft.',
           canRecheck: false,
         ),
         _ => const AttestationMessage(
@@ -180,6 +185,24 @@ AttestationMessage attestationMessage(
         ),
       };
   }
+}
+
+/// „ Grund: …“ from the message of a request stopped by the GPU check
+/// (`GPU-Prüfung nicht bestanden (<Grund> [<Kategorie>]); Anfrage nicht
+/// gesendet`); empty if there is none.
+String gpuBlockReason(String message) {
+  final m = RegExp(r'\((.*?)(?: \[[a-z0-9_]+\])?\); Anfrage')
+      .firstMatch(message);
+  final reason = m?.group(1);
+  if (reason == null || reason.isEmpty) return '';
+  return ' Grund: $reason${reason.endsWith('.') ? '' : '.'}';
+}
+
+/// „ Grund: …“ from the stored detail (`GPU-Prüfung: …` / `gpu: …`).
+String _gpuReason(String? detail) {
+  if (detail == null || detail.trim().isEmpty) return '';
+  final text = detail.replaceFirst(RegExp(r'^(GPU-Prüfung|gpu): '), '');
+  return ' Grund: $text${text.endsWith('.') ? '' : '.'}';
 }
 
 AttestationMessage _unconfirmed(String title, String cause) =>

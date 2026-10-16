@@ -132,18 +132,21 @@ final class PhalaVerifier implements AttestationVerifier {
     Uri url, {
     void Function(int?)? seen,
     bool receipt = false,
-  }) async => (receipt ? _receiptTransport ?? _transport : _transport).getJson(
-    url,
-    await (receipt ? receiptHeaders ?? headers : headers)?.call() ?? const {},
-    onHttpError: (status, body, retry) {
-      seen?.call(status);
-      return exceptionForStatus(
-        status,
-        label: 'Attestierung',
-        retryAfter: retry,
+    bool pinned = false,
+  }) async => (receipt || pinned ? _receiptTransport ?? _transport : _transport)
+      .getJson(
+        url,
+        await (receipt ? receiptHeaders ?? headers : headers)?.call() ??
+            const {},
+        onHttpError: (status, body, retry) {
+          seen?.call(status);
+          return exceptionForStatus(
+            status,
+            label: 'Attestierung',
+            retryAfter: retry,
+          );
+        },
       );
-    },
-  );
 
   /// Loads the receipt [id]; the gateway also accepts the chat id.
   Future<Map<String, Object?>> _getReceipt(
@@ -338,7 +341,10 @@ final class PhalaVerifier implements AttestationVerifier {
     }
     try {
       final session = GatewaySession.parse(
-        await _get(_url('aci/sessions/$id')),
+        // Public document, checked against the signed `session_id` by its
+        // hash; it goes over the kept-open connection pinned to the attested
+        // session (no new handshake, no key sent).
+        await _get(_url('aci/sessions/$id'), pinned: true),
       );
       final actual = AttestCodec.hex(
         crypto.sha256(AttestCodec.jcsBytes(session.raw)),

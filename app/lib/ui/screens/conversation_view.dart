@@ -292,6 +292,7 @@ class AttestedAnswer extends StatelessWidget {
     final message = attestationMessage(
       attestation.status,
       reasonCode: attestation.reasonCode,
+      detail: attestation.detail,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

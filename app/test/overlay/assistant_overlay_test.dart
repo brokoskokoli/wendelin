@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/di/attestation_hub.dart';
+import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_settings.dart';
@@ -24,6 +26,7 @@ import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../screens/main_screen_test.dart' show pumpUntil;
+import '../support/tee_app_support.dart';
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
 import '../voice/voice_controller_test.dart' show fakeVoice, utterance;
@@ -637,6 +640,41 @@ void main() {
     expect(find.textContaining('Tauchen'), findsNothing);
     expect(find.byType(ToolResultCard), findsNothing);
   });
+
+  testWidgets(
+    'Overlay-Start wärmt die Attestierung des TEE-Profils vor (WP77)',
+    (tester) async {
+      final platform = FakeAssistantPlatform();
+      final verifier = ScriptedVerifier();
+      final hub = AttestationHub(notifier: RecordingNotifier())
+        ..register(
+          'phala',
+          scriptedTee(verifier: verifier, gateway: ScriptedGateway()),
+        );
+      addTearDown(hub.dispose);
+      final env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider(const []),
+          id: 'phala',
+          privacy: PrivacyLevel.tee,
+        ),
+      );
+      await pumpOverlay(
+        tester,
+        env,
+        platform,
+        autoStart: false,
+        extra: [attestationHubProvider.overrideWithValue(hub)],
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+    await tester.pump(const Duration(milliseconds: 50));
+      expect(verifier.attests, 1, reason: 'läuft, während der Nutzer spricht');
+      // Another hit later: the session is valid, nothing is checked again.
+      platform.trigger();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(verifier.attests, 1);
+    },
+  );
 
   testWidgets('Beenden schließt das Overlay', (tester) async {
     final platform = FakeAssistantPlatform();

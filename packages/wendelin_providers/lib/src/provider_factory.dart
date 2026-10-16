@@ -341,6 +341,8 @@ abstract final class ProviderFactory {
       verifier: verifier,
       profileId: profile.id,
       tlsPin: gate,
+      // NEAR attests per model.
+      sessionScope: '$root|${profile.defaultModel}',
       requireUpstreamEnforced: false,
       // GPU evidence comes from the verified report (same nonce as the
       // quote); NRAS gets no key. [client] is only for NRAS.

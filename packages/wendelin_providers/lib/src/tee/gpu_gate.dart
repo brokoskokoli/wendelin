@@ -7,9 +7,13 @@ import 'gpu_attestation.dart';
 /// The GPU check of an `AttestedProvider` (M4 decision 4): when it runs,
 /// what it blocks and what it remembers for the session.
 ///
-/// - The **local nonce binding** of the GPU evidence ([GpuAttestationVerifier.verifyLocal],
-///   no call to NVIDIA) runs in every mode, once per model and session
-///   before the first request; a failure blocks the request.
+/// - `off`: no GPU check at all, no fetch of the evidence and no call to
+///   NVIDIA (WP77; the session attestation is what protects the request).
+/// - In `before` and `after` the **local nonce binding** of the GPU evidence
+///   ([GpuAttestationVerifier.verifyLocal], no call to NVIDIA) runs once per
+///   model and session before the first request, **in parallel to the
+///   session attestation** ([AttestedProvider] starts both); a failure
+///   blocks the request.
 /// - `before`: the request content leaves the device only after a green
 ///   NRAS check of the model (fail-closed); green is cached per model until
 ///   [reset] (new attestation).
@@ -17,7 +21,6 @@ import 'gpu_attestation.dart';
 ///   failure makes the next request of **that model** check first, like
 ///   `before`, until it is green. The failure also reaches subscribers of
 ///   `AttestedProvider.reports` (see there).
-/// - `off`: no call to NVIDIA.
 final class GpuGate {
   /// Creates the gate; [onResult] receives every finished check (log and
   /// report).
@@ -42,6 +45,7 @@ final class GpuGate {
   final void Function(String model, GpuAttestationResult result, bool nras)
   onResult;
 
+  final Map<String, Future<GpuAttestationResult>> _inflight = {};
   final Map<String, bool> _ok = {};
   final Set<String> _localOk = {};
   final Set<String> _needsCheck = {};
@@ -50,6 +54,13 @@ final class GpuGate {
   /// The next [before] lets the request through (user chose „ohne
   /// GPU-Prüfung senden“).
   void allowOnce() => _skipOnce = true;
+
+  /// Takes over the results of [other] (same session, rebuilt provider).
+  void adopt(GpuGate other) {
+    _ok.addAll(other._ok);
+    _localOk.addAll(other._localOk);
+    _needsCheck.addAll(other._needsCheck);
+  }
 
   /// New attestation: earlier results no longer count.
   void reset() {
@@ -60,27 +71,50 @@ final class GpuGate {
   /// Runs before a request; returns the error that blocks it, or `null`.
   Future<AttestationFailedException?> before(String model) async {
     final v = verifier;
-    if (v == null) return null;
+    if (v == null || mode == GpuCheckMode.off) return null;
     if (_skipOnce) {
       _skipOnce = false;
       return null;
     }
-    final full = switch (mode) {
-      GpuCheckMode.before => _ok[model] != true,
-      GpuCheckMode.after => _needsCheck.contains(model),
-      GpuCheckMode.off => false,
-    };
-    if (!full && _localOk.contains(model)) return null;
-    final result = full ? await _check(v, model) : await _checkLocal(v, model);
-    if (result.ok) return null;
+    final result = await _ensure(v, model);
+    if (result == null || result.ok) return null;
     return AttestationFailedException(
-      'GPU-Prüfung nicht bestanden (${result.detail ?? result.verdict.name}); '
+      'GPU-Prüfung nicht bestanden (${result.detail ?? result.verdict.name}'
+      '${result.category == null ? '' : ' [${result.category}]'}); '
       'Anfrage nicht gesendet',
       stage: 'gpu',
       unavailable:
           result.verdict == GpuVerdict.unreachable ||
           result.verdict == GpuVerdict.timeout,
     );
+  }
+
+  /// Warm-up: does the check [before] would do, without consuming
+  /// [allowOnce] and without a result (a failure is remembered and reported
+  /// like on a request, the request itself then fails the same way).
+  Future<void> warm(String model) async {
+    final v = verifier;
+    if (v == null || mode == GpuCheckMode.off) return;
+    await _ensure(v, model);
+  }
+
+  /// The check [mode] demands for [model] now (shared by concurrent callers
+  /// of the same kind); `null` if nothing is due.
+  Future<GpuAttestationResult>? _ensure(
+    GpuAttestationVerifier v,
+    String model,
+  ) {
+    final full = switch (mode) {
+      GpuCheckMode.before => _ok[model] != true,
+      GpuCheckMode.after => _needsCheck.contains(model),
+      GpuCheckMode.off => false,
+    };
+    if (!full && _localOk.contains(model)) return null;
+    final key = '${full ? 'full' : 'local'}:$model';
+    return _inflight[key] ??= (full ? _check(v, model) : _checkLocal(v, model))
+        .whenComplete(() {
+          unawaited(_inflight.remove(key)); // not awaited: it is this future
+        });
   }
 
   /// Runs after a verified answer (mode `after`), without waiting.
@@ -103,6 +137,7 @@ final class GpuGate {
             onTimeout: () => const GpuAttestationResult(
               GpuVerdict.timeout,
               'Zeitüberschreitung',
+              GpuReason.timeout,
             ),
           );
     } on Object {
@@ -135,6 +170,7 @@ final class GpuGate {
             onTimeout: () => const GpuAttestationResult(
               GpuVerdict.timeout,
               'Zeitüberschreitung',
+              GpuReason.timeout,
             ),
           );
     } on Object {

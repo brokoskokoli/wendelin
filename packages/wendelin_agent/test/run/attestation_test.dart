@@ -380,6 +380,72 @@ void main() {
       },
     );
 
+    test(
+      'write-Tool mit Undo läuft sofort, Rot nimmt es zurück (WP77)',
+      () async {
+        final cal = FakeTool(
+          name: 'calendar__create_event',
+          risk: RiskLevel.write,
+          withUndo: true,
+        );
+        final (_, report, done) = await startWithStricter(cal, {});
+        expect(cal.callCount, 1, reason: 'läuft vor der Quittung');
+        expect(cal.undoCount, 0, reason: 'noch nicht zurückgenommen');
+        report.complete(_report(AttestationStatus.red));
+        final all = await done;
+        expect(cal.undoCount, 1, reason: 'Rot nimmt die Aktion zurück');
+        final finished = all.whereType<ToolCallFinished>().toList();
+        expect(finished, hasLength(2));
+        expect(finished.first.outcome.undo, isNotNull);
+        expect(finished.last.outcome.isError, isTrue);
+        expect(finished.last.outcome.undo, isNull);
+        expect(finished.last.outcome.summary, contains('Rückgängig gemacht'));
+      },
+    );
+
+    test('write-Tool mit Undo bleibt bei grüner Quittung bestehen', () async {
+      final cal = FakeTool(
+        name: 'calendar__create_event',
+        risk: RiskLevel.write,
+        withUndo: true,
+      );
+      final (_, report, done) = await startWithStricter(cal, {});
+      report.complete(_report(AttestationStatus.green));
+      final all = await done;
+      expect(cal.callCount, 1);
+      expect(cal.undoCount, 0);
+      expect(all.whereType<ToolCallFinished>(), hasLength(1));
+    });
+
+    test('Undo schlägt fehl: Hinweis statt stillem Verschlucken', () async {
+      final cal = FakeTool(
+        name: 'calendar__create_event',
+        risk: RiskLevel.write,
+        outcome: ToolOutcome.text(
+          'ok',
+          undo: UndoAction(label: 'x', run: () async => throw StateError('x')),
+        ),
+      );
+      final (_, report, done) = await startWithStricter(cal, {});
+      report.complete(_report(AttestationStatus.red));
+      final all = await done;
+      final last = all.whereType<ToolCallFinished>().last;
+      expect(last.outcome.isError, isTrue);
+      expect(last.outcome.summary, contains('fehlgeschlagen'));
+    });
+
+    test('write-Tool ohne Undo bleibt bei Rot unberührt', () async {
+      final write = FakeTool(
+        name: 'notes__add',
+        risk: RiskLevel.write,
+        outcome: ToolOutcome.text('ok'),
+      );
+      final (_, report, done) = await startWithStricter(write, {});
+      report.complete(_report(AttestationStatus.red));
+      final all = await done;
+      expect(all.whereType<ToolCallFinished>(), hasLength(1));
+    });
+
     test('ohne Verschärfung läuft ein write-Tool sofort', () async {
       final write = FakeTool(
         name: 'notes__add',

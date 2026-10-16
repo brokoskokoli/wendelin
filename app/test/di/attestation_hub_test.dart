@@ -54,6 +54,42 @@ void main() {
       expect(provider.gpuMode, GpuCheckMode.before);
     });
 
+    test('neu aufgebauter Provider desselben Profils übernimmt die geprüfte '
+        'Sitzung (WP77)', () async {
+      hub.register('phala', provider);
+      await hub.warmUp('phala');
+      expect(verifier.attests, 1);
+      // Profile list or rules changed: the configuration builds anew.
+      final verifier2 = ScriptedVerifier();
+      final rebuilt = scriptedTee(
+        verifier: verifier2,
+        gateway: ScriptedGateway(),
+      );
+      hub.register('phala', rebuilt);
+      expect(rebuilt.session, isNotNull);
+      await hub.warmUp('phala');
+      expect(verifier2.attests, 0, reason: 'keine zweite Sitzungsprüfung');
+      expect(identical(hub.provider('phala'), rebuilt), isTrue);
+    });
+
+    test('gesperrter Vorgänger: der neue Provider prüft selbst', () async {
+      verifier.sessionStages = const [
+        StageResult.fail(AttestationStage.quote, 'x'),
+      ];
+      hub.register('phala', provider);
+      await hub.warmUp('phala');
+      expect(hub.isLocked('phala'), isTrue);
+      final verifier2 = ScriptedVerifier();
+      final rebuilt = scriptedTee(
+        verifier: verifier2,
+        gateway: ScriptedGateway(),
+      );
+      hub.register('phala', rebuilt);
+      expect(rebuilt.session, isNull);
+      await hub.warmUp('phala');
+      expect(verifier2.attests, 1);
+    });
+
     test('Ergebnisse tragen die Profil-Id', () async {
       hub.register('phala', provider);
       final seen = hub.reports.first;
