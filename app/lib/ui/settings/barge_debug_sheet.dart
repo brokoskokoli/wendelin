@@ -28,9 +28,9 @@ const bargeSourceHelp = {
 
 /// What the additional threshold does (WP80).
 const bargeMarginHelp =
-    'Die Schwelle legt fest, wie genau ein Wort passen muss. Höher (0.05, '
+    'Die Schwelle legt fest, wie genau ein Wort passen muss. Höher (0,05, '
     'Standard): weniger Fehlalarme, dafür wird dein Wort öfter überhört. '
-    'Niedriger (0.00 oder -0.05): das Wort wird leichter erkannt, dafür '
+    'Niedriger (0,00 oder -0,05): das Wort wird leichter erkannt, dafür '
     'gibt es mehr Fehlalarme.';
 
 /// Whether a developer variant (source or margin) other than the default is
@@ -146,7 +146,9 @@ class _State extends ConsumerState<BargeDebugSheet> {
               for (final m in bargeMarginChoices)
                 ChoiceChip(
                   label: Text(
-                    m == bargeMarginChoices.first ? '$m (Standard)' : m,
+                    m == bargeMarginChoices.first
+                        ? '${m.replaceAll('.', ',')} (Standard)'
+                        : m.replaceAll('.', ','),
                   ),
                   selected: _margin == m,
                   onSelected: (_) => _set(null, m),

@@ -101,7 +101,7 @@ final class BargeMeter {
       'sim': _sim,
       'stop': _stop,
       'thr': threshold,
-      'sthr': stopThreshold,
+      'sthr': stopThreshold ?? -1,
       // WP80: `sfloor` = background similarity of „Stopp“, `sgap` = largest
       // distance of `stop` above it, `quiet` = noise floor, `lvl` = peak level.
       'sfloor': _floor,
@@ -121,7 +121,7 @@ final class BargeMeter {
     'sim': _allSim,
     'stop': _allStop,
     'thr': threshold,
-    'sthr': stopThreshold,
+    'sthr': stopThreshold ?? -1,
   };
 
   /// Writes the `barge-end` line (maxima of the whole listening session).
@@ -131,7 +131,7 @@ final class BargeMeter {
     'sim': _allSim,
     'stop': _allStop,
     'thr': threshold,
-    'sthr': stopThreshold,
+    'sthr': stopThreshold ?? -1,
   });
 }
 

@@ -14,7 +14,7 @@ import '../support/test_env.dart';
 import '../ui/helpers.dart';
 
 void main() {
-  const hint = 'Entwickler-Variante für „Unterbrechen“ aktiv';
+  const hint = 'Eigene Einstellung für das Unterbrechen aktiv';
 
   testWidgets('Standard markiert, Hinweis erst bei Abweichung, Zurücksetzen', (
     tester,
@@ -33,7 +33,7 @@ void main() {
     expect(find.textContaining('Echo-Unterdrückung'), findsOneWidget);
     expect(find.textContaining('mehr Fehlalarme'), findsOneWidget);
     expect(find.text('Kommunikation + AEC (Standard)'), findsOneWidget);
-    expect(find.text('0.05 (Standard)'), findsOneWidget);
+    expect(find.text('0,05 (Standard)'), findsOneWidget);
 
     await tester.tap(find.text('Erkennung, ohne AEC'));
     await settle(tester);

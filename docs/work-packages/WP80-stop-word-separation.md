@@ -8,6 +8,11 @@ Bezug: Gerätetest 2026-10-16 (Xiaomi, `ergebnisse.md` 11.6): Mit Kommunikation 
 3. **„Erweitert“ sichtbar:** Unter „Unterbrechen während der Antwort“ ein Button „Erweitert“ mit den Optionen (Quelle, Aufschlag) und je einer verständlichen Erklärung (Echo-Unterdrückung an/aus und Folgen; höher = weniger Fehlalarme, öfter überhört; niedriger = erkennt leichter, mehr Fehlalarme), „Standard“-Markierung und Zurücksetzen. Langes Drücken entfällt. Texte de/en/fr.
 4. **Diagnose:** `barge-diag` zusätzlich mit Stille-Niveau und Abstand.
 
+## Umsetzung
+- Texte nur deutsch (App-Sprache ist WP79/M5), abweichend von „de/en/fr“ oben.
+- Risiko: Die Stopp-Schwelle stammt aus dem Einlernen (ganzes Fenster) und gilt jetzt für das Fensterende (`stopTailShare`). Schlägt das am Gerät fehl, „Stopp“ neu kalibrieren.
+- Ohne AEC schützt nur die niedrige Ähnlichkeit vor Echo.
+
 ## Abnahmekriterien
 - [x] Tests für Ursache/Fix (Stille löst nicht aus, Sprache „Stopp“ über dem Hintergrund löst aus; Echo-Fall).
 - [x] Widget-Tests/Goldens für „Erweitert“.

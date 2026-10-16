@@ -96,6 +96,87 @@ void main() {
       ],
     );
 
+    group('„Stopp“ am Fensterende (WP80)', () {
+      // 16 values: the first 7 equal the template, the last 9 (the word's
+      // tail) differ completely. Whole window: similarity ~0.99, tail: 0.
+      Float32List vec(List<double> head, List<double> tail) =>
+          Float32List.fromList([...head, ...tail]);
+      final head = List<double>.filled(7, 10);
+      final stopTemplate = WakeTemplates(
+        speakerId: 'a',
+        featureVersion: 'fake-1',
+        threshold: 0.7,
+        embeddings: [
+          vec(head, [1, 0, 1, 0, 1, 0, 1, 0, 1]),
+        ],
+      );
+      final mainTemplate = WakeTemplates(
+        speakerId: 'a',
+        featureVersion: 'fake-1',
+        threshold: 0.9,
+        embeddings: [Float32List(16)..[15] = 1],
+      );
+
+      Future<List<BargeInSignal>> run({
+        double? tail,
+        bool defaultTail = false,
+      }) async {
+        final a = FakeAudioInput(
+          frames: [
+            Int16List(480),
+            for (var i = 0; i < 6; i++)
+              Int16List.fromList([
+                for (var j = 0; j < 480; j++) j.isEven ? 2000 : -2000,
+              ]),
+          ],
+          frameInterval: const Duration(milliseconds: 5),
+        );
+        FakeWakeFeatureExtractor features() => FakeWakeFeatureExtractor(
+          windowEvery: 480,
+          windowFor: (end, _) => WakeWindow(
+            endSample: end,
+            embedding: vec(head, [0, 1, 0, 1, 0, 1, 0, 1, 0]),
+          ),
+        );
+        final d = defaultTail
+            ? LazyWakeBargeInDetector(
+                audio: a,
+                templates: () async => [mainTemplate],
+                stopTemplates: () async => [stopTemplate],
+                features: features,
+              )
+            : LazyWakeBargeInDetector(
+                audio: a,
+                templates: () async => [mainTemplate],
+                stopTemplates: () async => [stopTemplate],
+                stopTail: tail,
+                features: features,
+              );
+        final signals = <BargeInSignal>[];
+        d.signals.listen(signals.add);
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await d.dispose();
+        return signals;
+      }
+
+      test(
+        'Kontrolle: ohne Fensterende löst die Ganzfenster-Ähnlichkeit aus',
+        () async {
+          final signals = await run(tail: null);
+          expect(signals.map((s) => s.keyword), contains(BargeInKeyword.stop));
+        },
+      );
+
+      test(
+        'Standard: die App schließt das Fensterende an, Echo löst nicht aus',
+        () async {
+          final signals = await run(defaultTail: true);
+          expect(signals, isEmpty);
+        },
+      );
+    });
+
     group('Diagnose (WP72)', () {
       late List<String> lines;
       late void Function(String) saved;
@@ -170,6 +251,16 @@ void main() {
           contains('sim=1.00'),
           reason: 'nicht nur das letzte Fenster',
         );
+      });
+
+      test('barge-diag ohne „Stopp“-Vorlagen: sthr=-1', () async {
+        final d = make([tpl(0.8)], Float32List.fromList([1, 0]));
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 90));
+        await d.dispose();
+        final diag = lines.where((l) => l.contains('barge-diag'));
+        expect(diag, isNotEmpty);
+        expect(diag.every((l) => l.contains('sthr=-1')), isTrue);
       });
 
       test('Ende ohne stop(): barge-end steht trotzdem im Log', () async {

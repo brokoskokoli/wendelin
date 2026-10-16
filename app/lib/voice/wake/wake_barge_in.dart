@@ -110,7 +110,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
         voiceLog('barge-config', {
           'margin': margin,
           'thr': meter.threshold,
-          'sthr': meter.stopThreshold,
+          'sthr': meter.stopThreshold ?? -1,
         });
         final gate = SpeechGate();
         late final CandidateWakeEngine engine;

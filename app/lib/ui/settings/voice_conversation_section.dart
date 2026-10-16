@@ -54,7 +54,7 @@ class ConversationSettingsSection extends ConsumerWidget {
               vertical: WSpace.s,
             ),
             child: Text(
-              'Entwickler-Variante für „Unterbrechen“ aktiv (unter „Erweitert“ '
+              'Eigene Einstellung für das Unterbrechen aktiv (unter „Erweitert“ '
               'zurücksetzbar).',
               style: WText.detail,
             ),
