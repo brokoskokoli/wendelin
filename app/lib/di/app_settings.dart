@@ -66,6 +66,13 @@ abstract final class AppSettings {
   static SettingKey<Map<String, Object?>> attestationPin(String profileId) =>
       SettingKey.json('tee.pin.$profileId');
 
+  /// Restrictions of the TEE provider [profileId] with [model] the user saw
+  /// and accepted (JSON `{"stages": [stage ids]}`, WP78). Bound to the model.
+  static SettingKey<Map<String, Object?>> teeAccepted(
+    String profileId,
+    String model,
+  ) => SettingKey.json('tee.accepted.$profileId.$model');
+
   /// Retention of audit log and conversations in days (concept: 30).
   static final retentionDays = SettingKey.integer(
     'privacy.retentionDays',

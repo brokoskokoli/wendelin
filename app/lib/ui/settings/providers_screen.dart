@@ -10,6 +10,7 @@ import '../design/design.dart';
 import '../routes.dart';
 import 'provider_setup_screen.dart';
 import 'settings_page.dart';
+import 'switch_topic.dart';
 
 /// Settings → Provider: profiles with privacy chip and the default
 /// profile.
@@ -45,7 +46,15 @@ class ProvidersScreen extends ConsumerWidget {
                   _ProfileRow(
                     profile: p,
                     isDefault: p.id == data.defaultId,
-                    onDefault: () => unawaited(notifier.setDefault(p.id)),
+                    onDefault: () => unawaited(
+                      _makeDefault(
+                        context,
+                        ref,
+                        notifier,
+                        p.id,
+                        data.defaultId,
+                      ),
+                    ),
                     onEdit: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => ProviderSetupScreen(existing: p),
@@ -75,6 +84,20 @@ class ProvidersScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  /// Manual change of the default: starts a new conversation (WP78).
+  Future<void> _makeDefault(
+    BuildContext context,
+    WidgetRef ref,
+    ProfilesNotifier notifier,
+    String id,
+    String? currentDefault,
+  ) async {
+    if (id != currentDefault && !await confirmManualModelSwitch(context, ref)) {
+      return;
+    }
+    await notifier.setDefault(id);
   }
 
   Future<void> _delete(

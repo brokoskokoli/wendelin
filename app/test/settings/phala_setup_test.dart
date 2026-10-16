@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/ui/design/design.dart' show WSwitch;
+import 'package:wendelin/ui/settings/attestation_explain_screen.dart';
 import 'package:wendelin/ui/settings/provider_setup/attestation_stages_card.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -34,6 +36,54 @@ Future<TestEnv> _openPhala(
 }
 
 void main() {
+  testWidgets('WP78: Einschränkung beim Einrichten gezeigt, mit Speichern '
+      'akzeptiert; Details-Seite erklärt die Stufen', (tester) async {
+    final env = await _openPhala(
+      tester,
+      ScriptedVerifier()
+        ..sessionStages = const [
+          StageResult.pass(AttestationStage.quote),
+          StageResult(
+            AttestationStage.provenance,
+            StageOutcome.info,
+            'keine Liste hinterlegt',
+          ),
+        ],
+    );
+    await tester.tap(find.text('Modell prüfen'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('restrictionSetupNote')), findsOneWidget);
+    expect(find.textContaining('Herkunft (Commit)'), findsWidgets);
+
+    await tester.scrollUntilVisible(
+      find.text('Details'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Details'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AttestationExplainScreen), findsOneWidget);
+    expect(find.textContaining('Geprüft wird:'), findsNWidgets(2));
+    expect(find.textContaining('Bedeutung:'), findsNWidgets(2));
+    await tester.tap(find.byTooltip('Zurück'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Speichern'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    final p = (await env.storage.providerProfiles.list()).single;
+    expect(
+      (await env.storage.settings.get(
+        AppSettings.teeAccepted(p.id, p.defaultModel),
+      ))?['stages'],
+      ['provenance'],
+    );
+  });
+
   testWidgets('nur TEE-Modelle wählbar; erste Attestierung mit Ergebnis je '
       'Stufe; „ausweichen“ standardmäßig aus', (tester) async {
     final env = await _openPhala(tester, ScriptedVerifier());
