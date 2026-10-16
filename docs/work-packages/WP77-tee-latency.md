@@ -16,7 +16,7 @@ Bezug: Messung 2026-10-16 (`docs/notes/phala-latency.md`): erste Frage kalt ~4,0
 Vor dem Senden bleiben zwingend: geprüfte Attestierung, TLS-Pin, E2EE-Schlüssel aus der geprüften Attestierung. Nichts davon wird nachgelagert.
 
 ## Abnahmekriterien
-- [ ] Tests je Punkt (Vorwärmen, Wiederverwendung, GPU-Modi, Gründe, Auto-Undo bei roter Quittung, `external` wartet weiter).
-- [ ] Live-Messung vorher/nachher (TTFT kalt und warm, sparsam) im Bericht; NRAS live.
+- [x] Tests je Punkt (Vorwärmen, Wiederverwendung, GPU-Modi, Gründe, Auto-Undo bei roter Quittung, `external` wartet weiter).
+- [x] Live-Messung vorher/nachher (TTFT kalt und warm, sparsam) im Bericht; NRAS live.
 - [ ] Emulator (separater E2E-Agent): Phala- und NEAR-Fixture grün.
 - [ ] Gate grün.

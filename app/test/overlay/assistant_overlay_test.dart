@@ -667,7 +667,7 @@ void main() {
         extra: [attestationHubProvider.overrideWithValue(hub)],
       );
       await tester.pump(const Duration(milliseconds: 50));
-    await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 50));
       expect(verifier.attests, 1, reason: 'läuft, während der Nutzer spricht');
       // Another hit later: the session is valid, nothing is checked again.
       platform.trigger();

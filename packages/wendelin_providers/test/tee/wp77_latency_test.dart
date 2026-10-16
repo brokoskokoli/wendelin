@@ -7,7 +7,6 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/fakes.dart';
-import 'package:wendelin_providers/src/tee/tls_pinned_client.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 import 'provider_harness.dart';

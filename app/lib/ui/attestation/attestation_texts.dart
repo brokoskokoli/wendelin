@@ -188,7 +188,7 @@ AttestationMessage attestationMessage(
 }
 
 /// „ Grund: …“ from the message of a request stopped by the GPU check
-/// (`GPU-Prüfung nicht bestanden (<Grund> [<Kategorie>]); Anfrage nicht
+/// (`GPU-Prüfung nicht bestanden (Grund [Kategorie]); Anfrage nicht
 /// gesendet`); empty if there is none.
 String gpuBlockReason(String message) {
   final m = RegExp(r'\((.*?)(?: \[[a-z0-9_]+\])?\); Anfrage')
