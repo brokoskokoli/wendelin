@@ -36,6 +36,9 @@ abstract interface class RunConfig {
   /// Called for every call refused because the target may not see the tool.
   void Function(String sessionId, ToolCallBlock call)? get onToolRefused;
 
+  /// Called when taking back an unverified answer's action failed.
+  void Function(String sessionId, ToolCallBlock call)? get onUndoFailed;
+
   /// Privacy floor of every memory entry.
   PrivacyLevel? get memoryFloor;
 }

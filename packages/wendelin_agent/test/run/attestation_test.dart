@@ -307,7 +307,11 @@ void main() {
     );
 
     Future<(FakeTool, Completer<AttestationReport?>, Future<List<AgentEvent>>)>
-    startWithStricter(FakeTool tool, Set<String>? stricter) async {
+    startWithStricter(
+      FakeTool tool,
+      Set<String>? stricter, {
+      void Function(String, ToolCallBlock)? onUndoFailed,
+    }) async {
       final report = Completer<AttestationReport?>();
       final provider = VerifyingFake(
         FakeLlmProvider([
@@ -328,6 +332,7 @@ void main() {
         invoker: stricter == null
             ? FakeToolInvoker(catalog)
             : AssessingInvoker(FakeToolInvoker(catalog), stricter),
+        onUndoFailed: onUndoFailed,
       );
       final done = h.run('Hi');
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -403,6 +408,21 @@ void main() {
       },
     );
 
+    test(
+      'Quittung nicht bestätigt (grau): Undo-Tool wird zurückgenommen',
+      () async {
+        final cal = FakeTool(
+          name: 'calendar__create_event',
+          risk: RiskLevel.write,
+          withUndo: true,
+        );
+        final (_, report, done) = await startWithStricter(cal, {});
+        report.complete(_report(AttestationStatus.unconfirmed));
+        await done;
+        expect(cal.undoCount, 1, reason: 'alles außer Grün nimmt zurück');
+      },
+    );
+
     test('write-Tool mit Undo bleibt bei grüner Quittung bestehen', () async {
       final cal = FakeTool(
         name: 'calendar__create_event',
@@ -415,6 +435,30 @@ void main() {
       expect(cal.callCount, 1);
       expect(cal.undoCount, 0);
       expect(all.whereType<ToolCallFinished>(), hasLength(1));
+    });
+
+    test('Undo schlägt fehl: Audit-Rückruf und gesprochener Hinweis', () async {
+      final failed = <String>[];
+      final cal = FakeTool(
+        name: 'calendar__create_event',
+        risk: RiskLevel.write,
+        outcome: ToolOutcome.text(
+          'ok',
+          undo: UndoAction(label: 'x', run: () async => throw StateError('x')),
+        ),
+      );
+      final (_, report, done) = await startWithStricter(
+        cal,
+        {},
+        onUndoFailed: (session, call) => failed.add(call.name),
+      );
+      report.complete(_report(AttestationStatus.red));
+      final all = await done;
+      expect(failed, ['calendar__create_event']);
+      expect(
+        all.whereType<AgentTextDelta>().map((e) => e.text),
+        contains(AgentRunnerTexts.undoFailedNotice),
+      );
     });
 
     test('Undo schlägt fehl: Hinweis statt stillem Verschlucken', () async {

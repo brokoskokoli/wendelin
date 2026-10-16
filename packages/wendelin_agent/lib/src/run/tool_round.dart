@@ -114,9 +114,10 @@ final class ToolRound {
     if (pending.isNotEmpty) await _invokeGated(pending, results);
     // Status of the answer that caused this round (once per model call).
     final report = await _attest.settle();
-    // Tools with an undo ran at once, before the receipt was known. A red
-    // receipt takes them back (WP77).
-    if (report?.status == AttestationStatus.red) {
+    // Tools with an undo ran at once, before the receipt was known. Anything
+    // but a green receipt (red, not confirmed, missing) takes them back,
+    // like `external` calls never run without green (WP77).
+    if (_attest.expectsReport && report?.status != AttestationStatus.green) {
       await _undoUnverified(pending, results);
     }
 
@@ -148,6 +149,7 @@ final class ToolRound {
         continue;
       }
       ToolOutcome outcome;
+      var failed = false;
       try {
         await undo.run();
         outcome = ToolOutcome.error(
@@ -159,8 +161,14 @@ final class ToolRound {
           AgentRunnerTexts.undoFailedUnverified,
           summary: 'Rückgängig machen fehlgeschlagen',
         );
+        failed = true;
+        runner.onUndoFailed?.call(runner.sessionId, e.call);
       }
       _control.emit(ToolCallFinished(call: e.call, outcome: outcome));
+      // Also on the voice path: the card alone is not seen by voice users.
+      if (failed) {
+        _control.emit(const AgentTextDelta(AgentRunnerTexts.undoFailedNotice));
+      }
       results[e.call.id] = outcome.toResultBlock(e.call.id);
     }
   }

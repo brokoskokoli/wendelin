@@ -17,6 +17,7 @@ import 'attestation_policy.dart';
 import 'attestation_types.dart';
 import 'gpu_attestation.dart';
 import 'gpu_gate.dart';
+import 'near/near_verifier.dart';
 import 'session_channel.dart';
 import 'tls_pin_gate.dart';
 
@@ -292,6 +293,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     _session = taken;
     _lastStages = previous._lastStages;
     _gpu.adopt(previous._gpu);
+    final mine = verifier;
+    final theirs = previous.verifier;
+    if (mine is NearVerifier && theirs is NearVerifier) {
+      mine.adoptGpuEvidence(theirs);
+    }
     _audit.log('Wendelin/attest: Sitzung übernommen (Profil neu aufgebaut)');
     return true;
   }

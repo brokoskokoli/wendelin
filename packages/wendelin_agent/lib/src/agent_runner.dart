@@ -38,6 +38,7 @@ final class AgentRunner implements AgentRun, RunConfig {
     this.budgetGuard,
     this.catalogFor,
     this.onToolRefused,
+    this.onUndoFailed,
     this.memoryFloor,
   });
 
@@ -86,6 +87,11 @@ final class AgentRunner implements AgentRun, RunConfig {
   /// the tool (it never reaches the [invoker], so the app audits it here).
   @override
   final void Function(String sessionId, ToolCallBlock call)? onToolRefused;
+
+  /// Called when an action had to be taken back because its answer was not
+  /// verified (TEE) and the undo failed (the app audits it here).
+  @override
+  final void Function(String sessionId, ToolCallBlock call)? onUndoFailed;
 
   /// Privacy floor of every memory entry: the lowest level allowed to see
   /// the memory at all (e.g. `tee` for the sensitive memory integration).

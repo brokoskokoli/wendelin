@@ -115,6 +115,15 @@ final class NearFixtureGateway {
       tamper?.call(doc);
       return json(doc);
     }
+    if (path.endsWith('/models')) {
+      // Warm-up of the pinned connection (WP77): model list, not a chat.
+      return json({
+        'object': 'list',
+        'data': [
+          {'id': nearModelId, 'object': 'model'},
+        ],
+      });
+    }
     chats++;
     lastWire = request.body;
     final exchange = service.open(request.headers, request.bodyBytes);
