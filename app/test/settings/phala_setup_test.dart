@@ -78,7 +78,7 @@ void main() {
     final p = (await env.storage.providerProfiles.list()).single;
     expect(
       (await env.storage.settings.get(
-        AppSettings.teeAccepted(p.id),
+        AppSettings.teeAccepted(p.id, p.defaultModel),
       ))?['stages'],
       ['provenance'],
     );

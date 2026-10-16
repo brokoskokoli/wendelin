@@ -48,6 +48,10 @@ Widget _answer(
   ),
 );
 
+CheckStatus _shieldStatus(WidgetTester tester) => tester
+    .widget<AttestationShield>(find.byKey(const ValueKey('answerShield')))
+    .status;
+
 void main() {
   group('Schild', () {
     for (final (status, label) in [
@@ -287,6 +291,7 @@ void main() {
       await tester.pump();
       expect(find.text('geprüft'), findsOneWidget);
       expect(find.text(restrictionOpenLabel), findsNothing);
+      expect(_shieldStatus(tester), CheckStatus.ok);
     });
 
     testWidgets('neue Einschränkung: graues Schild mit Hinweis', (
@@ -302,6 +307,8 @@ void main() {
       await tester.pump();
       expect(find.text(restrictionOpenLabel), findsOneWidget);
       expect(find.text('geprüft'), findsNothing);
+      // Grey info symbol, not the green check.
+      expect(_shieldStatus(tester), CheckStatus.info);
     });
 
     testWidgets('Rot und Grau bleiben von Einschränkungen unberührt', (

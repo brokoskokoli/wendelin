@@ -11,6 +11,7 @@ typedef StageView = ({String stage, String result, String? detail});
 /// deliver (no endorsement, no commit list, GPU not checked, …). Warnings
 /// (`warn`), failures and unavailable stages are never restrictions: they
 /// stay visible in the Prüfprotokoll and are not covered by an acceptance.
+/// The one place that decides what counts as a restriction.
 Set<String> restrictionStages(Iterable<StageView> stages) => {
   for (final s in stages)
     // The GPU line is the user's own setting (check off), not a property of
@@ -18,13 +19,16 @@ Set<String> restrictionStages(Iterable<StageView> stages) => {
     if (s.result == 'info' && s.stage != 'gpu') s.stage,
 };
 
-/// The restrictions of [profileId] the user accepted.
+/// The restrictions of [profileId] with [model] the user accepted. Bound to
+/// the model: a restriction accepted for another model does not count (the
+/// old profile-only value is ignored, the user sees the note once more).
 Future<Set<String>> loadAcceptedRestrictions(
   SettingsRepository settings,
   String profileId,
+  String model,
 ) async {
   try {
-    final json = await settings.get(AppSettings.teeAccepted(profileId));
+    final json = await settings.get(AppSettings.teeAccepted(profileId, model));
     final list = json?['stages'];
     return {if (list is List) ...list.whereType<String>()};
   } on FormatException {
@@ -32,12 +36,13 @@ Future<Set<String>> loadAcceptedRestrictions(
   }
 }
 
-/// Stores [stages] as the accepted restrictions of [profileId].
+/// Stores [stages] as the accepted restrictions of [profileId] and [model].
 Future<void> acceptRestrictions(
   SettingsRepository settings,
   String profileId,
+  String model,
   Set<String> stages,
-) => settings.set(AppSettings.teeAccepted(profileId), {
+) => settings.set(AppSettings.teeAccepted(profileId, model), {
   'stages': (stages.toList()..sort()),
 });
 
@@ -59,6 +64,7 @@ final openRestrictionsProvider = FutureProvider.autoDispose
       final accepted = await loadAcceptedRestrictions(
         storage.settings,
         record.profileId,
+        record.model ?? '',
       );
       return now.difference(accepted);
     });

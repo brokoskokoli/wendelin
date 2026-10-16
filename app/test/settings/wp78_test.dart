@@ -4,6 +4,7 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/di/tee_restrictions.dart';
+import 'package:wendelin/ui/attestation/stage_explanations.dart';
 import 'package:wendelin/ui/settings/attestation_explain_screen.dart';
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
 import 'package:wendelin/ui/settings/privacy_screen.dart';
@@ -15,8 +16,9 @@ import '../support/test_env.dart';
 import 'integrations_screen_test.dart' show settle;
 import 'other_screens_test.dart' show pumpPage, profile;
 
-AttestationRecord _rec(String id, List<StageRecord> stages) =>
+AttestationRecord _rec(String id, List<StageRecord> stages, {String? model}) =>
     AttestationRecord(
+      model: model,
       logId: id,
       at: testNow,
       profileId: 'phala',
@@ -55,6 +57,52 @@ void main() {
         {'provenance'},
       );
     });
+
+    testWidgets('Akzeptanz gilt nur für das akzeptierte Modell', (
+      tester,
+    ) async {
+      final env = TestEnv();
+      await env.storage.attestations.add(
+        _rec('m1', const [
+          StageRecord('keyset.endorsement', 'info'),
+        ], model: 'modell-a'),
+      );
+      await env.storage.attestations.add(
+        _rec('m2', const [
+          StageRecord('keyset.endorsement', 'info'),
+        ], model: 'modell-b'),
+      );
+      await acceptRestrictions(env.storage.settings, 'phala', 'modell-a', {
+        'keyset.endorsement',
+      });
+      // The old profile-only value does not count for any model.
+      await env.storage.settings.set(SettingKey.json('tee.accepted.phala'), {
+        'stages': ['keyset.endorsement'],
+      });
+      final c = await pumpPage(
+        tester,
+        env,
+        const AttestationLogDetailScreen(logId: 'm1'),
+      );
+      expect(await c.read(openRestrictionsProvider('m1').future), isEmpty);
+      expect(await c.read(openRestrictionsProvider('m2').future), {
+        'keyset.endorsement',
+      });
+    });
+
+    test(
+      'Bedeutung von „Anfrage nicht verschlüsselt“ hängt von tls.spki ab',
+      () {
+        expect(
+          stageMeaning('e2ee.request', 'info', tlsResult: 'pass'),
+          contains('geprüfte Verbindung'),
+        );
+        expect(
+          stageMeaning('e2ee.request', 'info', tlsResult: 'info'),
+          contains('nicht an den Nachweis gebunden'),
+        );
+      },
+    );
 
     testWidgets('Details, Akzeptieren, geänderte Einschränkung erneut', (
       tester,
@@ -143,6 +191,36 @@ void main() {
     await tester.tap(find.text('Als Standard'));
     await settle(tester);
     await tester.tap(find.text('Wechseln'));
+    await settle(tester);
+    expect((await c.read(profilesProvider.future)).defaultId, 'b');
+    expect(
+      c.read(agentControllerProvider).entries.whereType<NoticeEntry>(),
+      isEmpty,
+    );
+  });
+
+  testWidgets('laufende Antwort: Wechsel bricht ab und beginnt neu', (
+    tester,
+  ) async {
+    final env = TestEnv(storedProfiles: true);
+    for (final id in ['a', 'b']) {
+      await env.storage.providerProfiles.save(profile(id));
+    }
+    await env.storage.providerProfiles.setDefault('a');
+    final c = await pumpPage(tester, env, const ProvidersScreen());
+    final agent = c.read(agentControllerProvider.notifier)
+      ..addNotice('Hinweis');
+    agent.seed(c.read(agentControllerProvider).copyWith(running: true));
+
+    await tester.tap(find.text('Als Standard'));
+    await settle(tester);
+    expect(find.textContaining('laufende'), findsOneWidget);
+    await tester.tap(find.text('Wechseln'));
+    await settle(tester);
+    // Not switched while the answer still runs, history untouched.
+    expect((await c.read(profilesProvider.future)).defaultId, 'a');
+    // The run ends: now the new conversation begins and the model switches.
+    agent.seed(c.read(agentControllerProvider).copyWith(running: false));
     await settle(tester);
     expect((await c.read(profilesProvider.future)).defaultId, 'b');
     expect(

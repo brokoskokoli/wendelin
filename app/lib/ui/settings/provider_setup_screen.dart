@@ -12,7 +12,6 @@ import '../../di/profiles.dart';
 import '../../di/provider_setup.dart';
 import '../../di/providers.dart';
 import '../../di/tee_restrictions.dart';
-import '../attestation/stage_explanations.dart';
 import '../design/design.dart';
 import 'provider_setup/attestation_stages_card.dart';
 import 'provider_setup/credentials_step.dart';
@@ -187,15 +186,14 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   }
 
   /// Saving accepts the restrictions the setup note showed (WP78).
-  Future<void> _acceptRestrictions(String profileId) async {
+  Future<void> _acceptRestrictions(String profileId, String model) async {
     final result = _result;
     if (!_attested || result == null) return;
-    final shown = {
-      for (final s in restrictedStages(stageViews(result.stages))) s.stage,
-    };
+    final shown = restrictionStages(stageViews(result.stages));
     await acceptRestrictions(
       ref.read(storageProvider).settings,
       profileId,
+      model,
       shown,
     );
   }
@@ -226,7 +224,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       if (!mounted) return;
     }
     await ref.read(profilesProvider.notifier).save(profile);
-    await _acceptRestrictions(profile.id);
+    await _acceptRestrictions(profile.id, profile.defaultModel);
     await session.commit();
     if (!mounted) return;
     if (widget.onSaved != null) {

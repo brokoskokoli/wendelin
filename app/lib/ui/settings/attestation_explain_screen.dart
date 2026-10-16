@@ -20,6 +20,7 @@ class AttestationExplainScreen extends ConsumerWidget {
     super.key,
     required this.stages,
     this.profileId,
+    this.model,
   });
 
   /// Results of the check, one per stage.
@@ -29,13 +30,17 @@ class AttestationExplainScreen extends ConsumerWidget {
   /// acceptance happens elsewhere (setup: with „Speichern“).
   final String? profileId;
 
+  /// Model of the check; the acceptance is bound to profile and model.
+  final String? model;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final id = profileId;
-    final accepted = id == null
+    final key = id == null ? null : (id, model ?? '');
+    final accepted = key == null
         ? null
-        : ref.watch(_acceptedProvider(id)).value ?? const <String>{};
-    final restricted = {for (final s in restrictedStages(stages)) s.stage};
+        : ref.watch(_acceptedProvider(key)).value ?? const <String>{};
+    final restricted = restrictionStages(stages);
     final open = accepted == null
         ? <String>{}
         : restricted.difference(accepted);
@@ -45,7 +50,7 @@ class AttestationExplainScreen extends ConsumerWidget {
           'Was Wendelin prüft, was dabei herauskam und was das für deine '
           'Sicherheit heißt.',
       children: [
-        if (open.isNotEmpty && id != null)
+        if (open.isNotEmpty && key != null)
           StatusCard(
             key: const ValueKey('restrictionNotice'),
             status: CheckStatus.info,
@@ -57,35 +62,51 @@ class AttestationExplainScreen extends ConsumerWidget {
             actionBelow: true,
             action: TextButton(
               key: const ValueKey('acceptRestrictions'),
-              onPressed: () => unawaited(_accept(ref, id, restricted)),
+              onPressed: () => unawaited(_accept(ref, key, restricted)),
               child: const Text('Akzeptieren'),
             ),
           ),
-        for (final s in stages) _StageBlock(s),
+        for (final s in stages)
+          _StageBlock(
+            s,
+            tlsResult: [
+              for (final t in stages)
+                if (t.stage == 'tls.spki') t.result,
+            ].firstOrNull,
+          ),
       ],
     );
   }
 
-  Future<void> _accept(WidgetRef ref, String id, Set<String> all) async {
+  Future<void> _accept(
+    WidgetRef ref,
+    (String, String) key,
+    Set<String> all,
+  ) async {
     final settings = ref.read(storageProvider).settings;
-    final now = await loadAcceptedRestrictions(settings, id);
-    await acceptRestrictions(settings, id, {...now, ...all});
+    final (id, model) = key;
+    final now = await loadAcceptedRestrictions(settings, id, model);
+    await acceptRestrictions(settings, id, model, {...now, ...all});
     ref
-      ..invalidate(_acceptedProvider(id))
+      ..invalidate(_acceptedProvider(key))
       ..invalidate(openRestrictionsProvider);
   }
 }
 
 final _acceptedProvider = FutureProvider.autoDispose
-    .family<Set<String>, String>(
-      (ref, id) =>
-          loadAcceptedRestrictions(ref.watch(storageProvider).settings, id),
+    .family<Set<String>, (String, String)>(
+      (ref, key) => loadAcceptedRestrictions(
+        ref.watch(storageProvider).settings,
+        key.$1,
+        key.$2,
+      ),
     );
 
 class _StageBlock extends StatelessWidget {
-  const _StageBlock(this.s);
+  const _StageBlock(this.s, {this.tlsResult});
 
   final StageView s;
+  final String? tlsResult;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +121,7 @@ class _StageBlock extends StatelessWidget {
           paragraphs: [
             if (e != null) 'Geprüft wird: ${e.what}',
             if (s.detail != null) 'Ergebnis: ${s.detail}',
-            'Bedeutung: ${stageMeaning(s.stage, s.result)}',
+            'Bedeutung: ${stageMeaning(s.stage, s.result, tlsResult: tlsResult)}',
           ],
         ),
       ],

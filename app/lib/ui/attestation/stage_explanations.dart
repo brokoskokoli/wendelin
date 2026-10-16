@@ -1,5 +1,3 @@
-import '../../di/tee_restrictions.dart' show StageView;
-
 /// What one check stage does and what its outcome means (WP78). Plain
 /// words for the „Details“ page; the result of the check itself comes from
 /// the log, not from here.
@@ -42,8 +40,20 @@ StageExplanation? stageExplanationFor(String stage) => _explanations[stage];
 
 /// What a result of [stage] means: [result] is `pass`, `info`, `warn`,
 /// `fail` or `unavailable`.
-String stageMeaning(String stage, String result) {
+///
+/// [tlsResult] is the result of the `tls.spki` stage of the same check: the
+/// meaning of an unencrypted request depends on whether the connection is
+/// pinned to the attestation.
+String stageMeaning(String stage, String result, {String? tlsResult}) {
   final e = _explanations[stage];
+  if (stage == 'e2ee.request' && result == 'info') {
+    return tlsResult == 'pass'
+        ? 'Die Anfrage (oder Teile wie Tool-Aufrufe) sind nicht zusätzlich '
+              'verschlüsselt, nur über die geprüfte Verbindung geschützt.'
+        : 'Die Anfrage (oder Teile wie Tool-Aufrufe) sind nicht zusätzlich '
+              'verschlüsselt, und die Verbindung ist nicht an den Nachweis '
+              'gebunden. Der Schutz ist dadurch schwächer.';
+  }
   return switch (result) {
     'pass' => e?.ifPass ?? 'Die Stufe wurde bestanden.',
     'info' =>
@@ -55,12 +65,6 @@ String stageMeaning(String stage, String result) {
   };
 }
 
-/// The stages of [stages] only logged (`info`), for the note at setup.
-List<StageView> restrictedStages(Iterable<StageView> stages) => [
-  for (final s in stages)
-    if (s.result == 'info' && s.stage != 'gpu') s,
-];
-
 const _explanations = <String, StageExplanation>{
   'quote': StageExplanation(
     what:
@@ -68,7 +72,7 @@ const _explanations = <String, StageExplanation>{
         'von der CPU signiert und wird gegen die Zertifikate von Intel '
         'geprüft.',
     ifPass:
-        'Das Modell läuft nachweislich in einer echten, abgeschotteten '
+        'Der Dienst läuft nachweislich in einer echten, abgeschotteten '
         'Intel-TDX-Umgebung. Der Betreiber kann den Speicher nicht mitlesen.',
     ifInfo: 'Der Nachweis wurde nur protokolliert, nicht bewertet.',
   ),

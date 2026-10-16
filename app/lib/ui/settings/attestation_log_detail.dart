@@ -74,6 +74,7 @@ class AttestationLogDetailScreen extends ConsumerWidget {
               MaterialPageRoute(
                 builder: (_) => AttestationExplainScreen(
                   profileId: r.profileId,
+                  model: r.model,
                   stages: [
                     for (final s in r.stages)
                       (stage: s.stage, result: s.result, detail: s.detail),
