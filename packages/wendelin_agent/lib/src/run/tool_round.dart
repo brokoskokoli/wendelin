@@ -113,7 +113,13 @@ final class ToolRound {
 
     if (pending.isNotEmpty) await _invokeGated(pending, results);
     // Status of the answer that caused this round (once per model call).
-    await _attest.settle();
+    final report = await _attest.settle();
+    // Tools with an undo ran at once, before the receipt was known. Anything
+    // but a green receipt (red, not confirmed, missing) takes them back,
+    // like `external` calls never run without green (WP77).
+    if (_attest.expectsReport && report?.status != AttestationStatus.green) {
+      await _undoUnverified(pending, results);
+    }
 
     // Every tool_use needs a tool_result, even if an invoker broke its
     // contract.
@@ -123,6 +129,48 @@ final class ToolRound {
             ToolOutcome.error('Kein Ergebnis vom Tool erhalten')
                 .toResultBlock(call.id),
     ];
+  }
+
+  /// Undoes the calls of [pending] that ran with an [UndoAction] before the
+  /// answer that asked for them turned out red: the user did not get a
+  /// verified answer and must not be left with its effects. Each call gets
+  /// an error result for the model and a second [ToolCallFinished] (the
+  /// card turns from done to failed with the reason); a failing undo says
+  /// so. Calls without undo (`external` ones never run before a green
+  /// receipt) are not touched.
+  Future<void> _undoUnverified(
+    List<ToolCallBlock> pending,
+    Map<String, ToolResultBlock> results,
+  ) async {
+    final ids = {for (final c in pending) c.id};
+    for (final e in List.of(_state.executed)) {
+      final undo = e.outcome.undo;
+      if (undo == null || e.outcome.isError || !ids.contains(e.call.id)) {
+        continue;
+      }
+      ToolOutcome outcome;
+      var failed = false;
+      try {
+        await undo.run();
+        outcome = ToolOutcome.error(
+          AgentRunnerTexts.undoneUnverified,
+          summary: 'Rückgängig gemacht (Antwort nicht verifiziert)',
+        );
+      } on Object {
+        outcome = ToolOutcome.error(
+          AgentRunnerTexts.undoFailedUnverified,
+          summary: 'Rückgängig machen fehlgeschlagen',
+        );
+        failed = true;
+        runner.onUndoFailed?.call(runner.sessionId, e.call);
+      }
+      _control.emit(ToolCallFinished(call: e.call, outcome: outcome));
+      // Also on the voice path: the card alone is not seen by voice users.
+      if (failed) {
+        _control.emit(const AgentTextDelta(AgentRunnerTexts.undoFailedNotice));
+      }
+      results[e.call.id] = outcome.toResultBlock(e.call.id);
+    }
   }
 
   /// The outcome of [call] if it must not reach the invoker: refused (not

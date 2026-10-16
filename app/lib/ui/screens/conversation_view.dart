@@ -300,6 +300,7 @@ class AttestedAnswer extends ConsumerWidget {
     final message = attestationMessage(
       attestation.status,
       reasonCode: attestation.reasonCode,
+      detail: attestation.detail,
     );
     final open = attestation.status == AttestationStatus.green
         ? ref.watch(openRestrictionsProvider(attestation.logId)).value

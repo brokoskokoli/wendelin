@@ -35,16 +35,47 @@ enum GpuVerdict {
   timeout,
 }
 
+/// Categories of a failed GPU check ([GpuAttestationResult.category]): they
+/// reach the log line (`Wendelin/attest: gpu …`), the audit entry and the
+/// warning, so the user sees *why* (WP77).
+abstract final class GpuReason {
+  /// The gateway delivers no GPU evidence for the model (`evidence_list`
+  /// empty or no `nvidia_payload`); NVIDIA cannot check what is not there.
+  static const noEvidence = 'no_evidence';
+
+  /// The evidence does not bind our nonce (local or NRAS `eat_nonce`).
+  static const nonceMismatch = 'nonce_mismatch';
+
+  /// NRAS says the overall result is negative (claim rejected).
+  static const claimRejected = 'claim_rejected';
+
+  /// No answer in time.
+  static const timeout = 'timeout';
+
+  /// Network failure.
+  static const unreachable = 'unreachable';
+
+  /// The NRAS answer could not be read.
+  static const unreadable = 'unreadable';
+
+  /// Unexpected internal error.
+  static const internal = 'internal';
+}
+
 /// Result of [GpuAttestationVerifier.verify].
 final class GpuAttestationResult {
   /// Creates a result.
-  const GpuAttestationResult(this.verdict, [this.detail]);
+  const GpuAttestationResult(this.verdict, [this.detail, this.category]);
 
   /// Outcome.
   final GpuVerdict verdict;
 
   /// Secret-free reason.
   final String? detail;
+
+  /// Machine-readable reason of a failure, a [GpuReason] value or
+  /// `nras_http_<status>` / `report_http_<status>`; `null` when verified.
+  final String? category;
 
   /// Whether the GPU evidence is confirmed.
   bool get ok => verdict == GpuVerdict.verified;
@@ -122,15 +153,19 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
           )
           .timeout(timeout);
       if (nras.statusCode >= 500 || nras.statusCode == 429) {
-        return const GpuAttestationResult(
+        return GpuAttestationResult(
           GpuVerdict.unreachable,
-          'NRAS nicht verfügbar',
+          'NRAS nicht verfügbar (HTTP ${nras.statusCode})',
+          'nras_http_${nras.statusCode}',
         );
       }
       if (nras.statusCode != 200) {
-        return const GpuAttestationResult(
+        final code = _nrasCode(nras.bodyBytes);
+        return GpuAttestationResult(
           GpuVerdict.failed,
-          'NRAS lehnt die Evidenz ab',
+          'NRAS lehnt die Evidenz ab (HTTP ${nras.statusCode}'
+              '${code == null ? '' : ', $code'})',
+          'nras_http_${nras.statusCode}',
         );
       }
       return _judge(nras.bodyBytes, nonce);
@@ -138,12 +173,29 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       return const GpuAttestationResult(
         GpuVerdict.timeout,
         'NRAS Zeitüberschreitung',
+        GpuReason.timeout,
       );
     } on Object {
       return const GpuAttestationResult(
         GpuVerdict.unreachable,
         'NRAS nicht erreichbar',
+        GpuReason.unreachable,
       );
+    }
+  }
+
+  /// The short error name of an NRAS error body (`message`, e.g.
+  /// `INVALID_EVIDENCE`); `null` unless it is a plain upper-case code, so no
+  /// free text ends up in the log.
+  static String? _nrasCode(List<int> body) {
+    try {
+      final json = jsonDecode(utf8.decode(body));
+      final m = json is Map<String, Object?> ? json['message'] : null;
+      return m is String && RegExp(r'^[A-Z][A-Z0-9_]{2,47}$').hasMatch(m)
+          ? m
+          : null;
+    } on Object {
+      return null;
     }
   }
 
@@ -165,10 +217,22 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
           return (
             result: const GpuAttestationResult(
               GpuVerdict.failed,
-              'GPU-Evidenz fehlt',
+              'Keine GPU-Evidenz im Bericht des Anbieters',
+              GpuReason.noEvidence,
             ),
             payload: null,
             nonce: '',
+          );
+        }
+        if (_noEntries(given.payload)) {
+          return (
+            result: const GpuAttestationResult(
+              GpuVerdict.failed,
+              _emptyEvidence,
+              GpuReason.noEvidence,
+            ),
+            payload: null,
+            nonce: given.nonce,
           );
         }
         if ((given.payload['nonce'] as String?)?.toLowerCase() !=
@@ -177,6 +241,7 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
             result: const GpuAttestationResult(
               GpuVerdict.failed,
               'GPU-Evidenz bindet die Nonce nicht',
+              GpuReason.nonceMismatch,
             ),
             payload: null,
             nonce: given.nonce,
@@ -192,6 +257,7 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
           result: const GpuAttestationResult(
             GpuVerdict.failed,
             'GPU-Evidenz unlesbar',
+            GpuReason.unreadable,
           ),
           payload: null,
           nonce: '',
@@ -199,8 +265,8 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       }
     }
     final nonce = AttestCodec.hex(_nonce());
-    GpuAttestationResult? fail(GpuVerdict v, String detail) =>
-        GpuAttestationResult(v, detail);
+    GpuAttestationResult? fail(GpuVerdict v, String detail, String category) =>
+        GpuAttestationResult(v, detail, category);
     try {
       final report = await _client
           .get(
@@ -216,7 +282,11 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
           .timeout(timeout);
       if (report.statusCode != 200) {
         return (
-          result: fail(GpuVerdict.unreachable, 'GPU-Evidenz nicht abrufbar'),
+          result: fail(
+            GpuVerdict.unreachable,
+            'GPU-Evidenz nicht abrufbar (HTTP ${report.statusCode})',
+            'report_http_${report.statusCode}',
+          ),
           payload: null,
           nonce: nonce,
         );
@@ -224,14 +294,29 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       final payload = _payload(report.bodyBytes);
       if (payload == null) {
         return (
-          result: fail(GpuVerdict.failed, 'GPU-Evidenz fehlt'),
+          result: fail(
+            GpuVerdict.failed,
+            'Keine GPU-Evidenz im Bericht des Anbieters',
+            GpuReason.noEvidence,
+          ),
+          payload: null,
+          nonce: nonce,
+        );
+      }
+      if (_noEntries(payload)) {
+        return (
+          result: fail(GpuVerdict.failed, _emptyEvidence, GpuReason.noEvidence),
           payload: null,
           nonce: nonce,
         );
       }
       if ((payload['nonce'] as String?)?.toLowerCase() != nonce) {
         return (
-          result: fail(GpuVerdict.failed, 'GPU-Evidenz bindet die Nonce nicht'),
+          result: fail(
+            GpuVerdict.failed,
+            'GPU-Evidenz bindet die Nonce nicht',
+            GpuReason.nonceMismatch,
+          ),
           payload: null,
           nonce: nonce,
         );
@@ -239,17 +324,36 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       return (result: null, payload: payload, nonce: nonce);
     } on TimeoutException {
       return (
-        result: fail(GpuVerdict.timeout, 'NRAS Zeitüberschreitung'),
+        result: fail(
+          GpuVerdict.timeout,
+          'Zeitüberschreitung beim Abruf der GPU-Evidenz',
+          GpuReason.timeout,
+        ),
         payload: null,
         nonce: nonce,
       );
     } on Object {
       return (
-        result: fail(GpuVerdict.unreachable, 'NRAS nicht erreichbar'),
+        result: fail(
+          GpuVerdict.unreachable,
+          'GPU-Evidenz nicht erreichbar',
+          GpuReason.unreachable,
+        ),
         payload: null,
         nonce: nonce,
       );
     }
+  }
+
+  static const _emptyEvidence =
+      'Der Anbieter liefert für dieses Modell keine GPU-Evidenz '
+      '(evidence_list leer), NVIDIA kann nichts prüfen';
+
+  /// Whether the payload lists no GPU at all (NRAS would answer 400
+  /// `INVALID_EVIDENCE`).
+  static bool _noEntries(Map<String, Object?> payload) {
+    final list = payload['evidence_list'];
+    return list is! List || list.isEmpty;
   }
 
   /// Decodes an `nvidia_payload` (JSON text or object); `null` if unreadable.
@@ -287,13 +391,15 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       if (claims['x-nvidia-overall-att-result'] != true) {
         return const GpuAttestationResult(
           GpuVerdict.failed,
-          'NRAS: Gesamtergebnis negativ',
+          'NRAS: Gesamtergebnis negativ (Nachweis abgelehnt)',
+          GpuReason.claimRejected,
         );
       }
       if ((claims['eat_nonce'] as String?)?.toLowerCase() != nonce) {
         return const GpuAttestationResult(
           GpuVerdict.failed,
           'NRAS: Nonce stimmt nicht',
+          GpuReason.nonceMismatch,
         );
       }
       return const GpuAttestationResult(GpuVerdict.verified);
@@ -301,6 +407,7 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       return const GpuAttestationResult(
         GpuVerdict.failed,
         'NRAS-Antwort unlesbar',
+        GpuReason.unreadable,
       );
     }
   }

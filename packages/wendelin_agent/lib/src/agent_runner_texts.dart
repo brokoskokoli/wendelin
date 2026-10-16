@@ -29,6 +29,22 @@ abstract final class AgentRunnerTexts {
       'Nicht ausgeführt: Die Antwort des Modells konnte nicht verifiziert '
       'werden (TEE-Prüfung).';
 
+  /// Result text of a tool call that was undone because the answer asking
+  /// for it ended with a red receipt.
+  static const undoneUnverified =
+      'Rückgängig gemacht: Die Antwort des Modells konnte nicht verifiziert '
+      'werden (TEE-Prüfung), die Aktion wurde zurückgenommen.';
+
+  /// Result text when that undo failed (the user must check).
+  static const undoFailedUnverified =
+      'Die Antwort des Modells konnte nicht verifiziert werden (TEE-Prüfung); '
+      'die Aktion ließ sich nicht automatisch rückgängig machen. Bitte '
+      'prüfen.';
+
+  /// Short notice (written and spoken) when an undo failed.
+  static const undoFailedNotice =
+      'Hinweis: Eine Aktion ließ sich nicht zurücknehmen, bitte prüfen.';
+
   /// Message when a private request has no target with enough privacy.
   static const noPrivateTarget =
       'Die Anfrage ist privat, aber kein ausreichend geschütztes Modell ist '

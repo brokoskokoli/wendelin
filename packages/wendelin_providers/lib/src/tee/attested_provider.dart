@@ -17,6 +17,7 @@ import 'attestation_policy.dart';
 import 'attestation_types.dart';
 import 'gpu_attestation.dart';
 import 'gpu_gate.dart';
+import 'near/near_verifier.dart';
 import 'session_channel.dart';
 import 'tls_pin_gate.dart';
 
@@ -59,7 +60,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     this.tlsPin,
     bool requireUpstreamEnforced = true,
     Duration gpuTimeout = const Duration(seconds: 15),
-  }) : _sleepFn = sleep {
+    String? sessionScope,
+    this.connectionIdle = const Duration(minutes: 4),
+  }) : sessionScope = sessionScope ?? inner.baseUrl.toString(),
+       _sleepFn = sleep {
     final provider = inner.options.extraBody['provider'];
     if (requireUpstreamEnforced &&
         (provider is! Map || provider['aci_verified'] != true)) {
@@ -99,6 +103,17 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   final String profileId;
 
   late final GpuGate _gpu;
+
+  /// What a session of this provider is valid for (gateway URL, for NEAR
+  /// also the model). A rebuilt provider takes over the verified session of
+  /// its predecessor only for the same scope ([adoptSessionOf]).
+  final String sessionScope;
+
+  /// How long the pre-opened connection counts as alive (below the idle
+  /// timeout of the pinned client).
+  final Duration connectionIdle;
+  DateTime? _connectedAt;
+  String _nextReason = 'no-session';
 
   /// When the GPU evidence is checked (changeable at runtime).
   GpuCheckMode get gpuMode => _gpu.mode;
@@ -201,7 +216,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   Future<AttestationReport> reattest() async {
     _lock = null;
     _session = null;
-    final error = await _attest();
+    final error = await _attest('reattest');
     final stage = error?.stage;
     return AttestationReport(
       logId: _audit.lastLogId,
@@ -214,17 +229,77 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     );
   }
 
-  /// Attests in the background (app start) so the first request does not
-  /// wait for it; does nothing if the provider is locked or has a valid
-  /// session. A failed attestation locks it like on a request and is
-  /// reported through [reports].
-  Future<void> warmUp() async {
+  /// Prepares the first request in the background (app start, overlay
+  /// start): attests (unless the session is valid), fetches the GPU
+  /// evidence of the default model **in parallel** (modes `before`/`after`)
+  /// and opens the pinned connection, so the first request waits for none
+  /// of it. Does nothing if the provider is locked. A failed attestation
+  /// locks it like on a request and is reported through [reports]. Never
+  /// weakens a check: everything that blocks a request still blocks it.
+  Future<void> warmUp({String? model}) async {
+    if (_lock != null) return;
     final session = _session;
-    if (_lock != null ||
-        (session != null && settings.clock.now().isBefore(session.notAfter))) {
-      return;
+    final valid =
+        session != null && settings.clock.now().isBefore(session.notAfter);
+    // Attestation first: it resets the GPU results of the old session.
+    final attesting = valid ? null : _attest();
+    final gpu = _gpu.warm(model ?? inner.defaultModel);
+    final error = await attesting;
+    await gpu;
+    if (error == null && _lock == null && _session != null) {
+      await _preconnect();
     }
-    await _attest();
+  }
+
+  /// Opens the pinned connection to the gateway ahead of the first request
+  /// (TLS handshake and pin check; a light `GET /models`). The result is
+  /// ignored: a refused connection fails the real request the same way.
+  Future<void> _preconnect() async {
+    final at = _connectedAt;
+    final now = settings.clock.now();
+    if (at != null && now.difference(at) < connectionIdle) return;
+    _connectedAt = now;
+    try {
+      await inner.listModels().timeout(const Duration(seconds: 10));
+    } on Object {
+      _connectedAt = null;
+    }
+  }
+
+  /// Takes over the verified session of [previous], the provider this one
+  /// replaces (profile rebuilt, nothing changed): the session, its pin for
+  /// the enforcing client and the GPU results. Only for the same
+  /// [sessionScope], only while the session is valid, neither provider is
+  /// locked and the pin of [previous] is still set (not while it re-attests).
+  /// Returns whether it was taken. Nothing is verified less: the session is
+  /// exactly one this process verified completely; it ends at the same
+  /// `not_after` as there.
+  bool adoptSessionOf(AttestedProvider previous) {
+    final taken = previous._session;
+    final pin = previous.tlsPin?.expected;
+    final gate = tlsPin;
+    if (identical(previous, this) ||
+        _session != null ||
+        _lock != null ||
+        previous._lock != null ||
+        previous.sessionScope != sessionScope ||
+        taken == null ||
+        (previous.tlsPin == null) != (gate == null) ||
+        (gate != null && pin == null) ||
+        !settings.clock.now().isBefore(taken.notAfter)) {
+      return false;
+    }
+    if (gate != null) gate.expect(pin);
+    _session = taken;
+    _lastStages = previous._lastStages;
+    _gpu.adopt(previous._gpu);
+    final mine = verifier;
+    final theirs = previous.verifier;
+    if (mine is NearVerifier && theirs is NearVerifier) {
+      mine.adoptGpuEvidence(theirs);
+    }
+    _audit.log('Wendelin/attest: Sitzung übernommen (Profil neu aufgebaut)');
+    return true;
   }
 
   /// Lets the next request through although the GPU check failed or was not
@@ -259,6 +334,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
           if (attempt == 0) {
             _audit.log('Wendelin/attest: TLS-Schlüssel weicht ab, neu prüfen');
             _session = null;
+            _nextReason = 'tls-mismatch';
             rotated = true;
             break;
           }
@@ -283,6 +359,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
             _audit.log('Wendelin/attest: E2EE-Fehler (${_stageOf(event)})');
             _recordE2eeFailure(event.error as AttestationFailedException, req);
             _session = null;
+            _nextReason = 'e2ee-failure';
           }
         }
         yield event;
@@ -331,24 +408,37 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   // --- Session ----------------------------------------------------------
 
+  /// Session and GPU check run in parallel (the evidence does not depend on
+  /// the session); the request waits for both. The session error wins and
+  /// does not wait for the GPU check.
   Future<AttestationFailedException?> _prepare(String model) async {
-    if (await _prepareSession() case final error?) return error;
-    return _gpu.before(model);
+    // The attestation starts first: it resets the GPU results of the old
+    // session before the GPU check looks at them.
+    final session = _prepareSession();
+    final gpu = _gpu.before(model);
+    if (await session case final error?) return error;
+    return gpu;
   }
 
   Future<AttestationFailedException?> _prepareSession() async {
     if (_lock != null) return _lock;
     final session = _session;
     if (session == null || !settings.clock.now().isBefore(session.notAfter)) {
-      return _attest();
+      final why = session == null ? _nextReason : 'expired';
+      _nextReason = 'no-session';
+      return _attest(why);
     }
     return null;
   }
 
-  Future<AttestationFailedException?> _attest() =>
-      _attesting ??= _doAttest().whenComplete(() => _attesting = null);
+  Future<AttestationFailedException?> _attest([String reason = 'requested']) =>
+      _attesting ??= _doAttest(reason).whenComplete(() => _attesting = null);
 
-  Future<AttestationFailedException?> _doAttest() async {
+  Future<AttestationFailedException?> _doAttest(String reason) async {
+    // Why this check runs at all (the log showed 5 checks in 4 minutes).
+    _audit.log('Wendelin/attest: Sitzungsprüfung startet (Grund=$reason)');
+    _connectedAt = null;
+    _gpu.reset();
     final AttestationResult result;
     try {
       result = await verifier.attest();
@@ -392,7 +482,6 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     if (green) {
       _session = session;
       _lock = null;
-      _gpu.reset();
       return null;
     }
     final problem = result.firstProblem;
@@ -448,6 +537,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
       if (status == AttestationStatus.red) {
         if (pinChanged) {
           _session = null; // new attestation with notice on the next request
+          _nextReason = 'keyset-changed';
         } else {
           _lock = AttestationFailedException(
             'Antwort nicht verifiziert (${_problem(stages)}); '
@@ -573,6 +663,21 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
 
   void _onGpuResult(String model, GpuAttestationResult result, bool nras) {
     final status = result.ok ? AttestationStatus.green : AttestationStatus.red;
+    final unavailable =
+        result.verdict == GpuVerdict.unreachable ||
+        result.verdict == GpuVerdict.timeout;
+    final code = result.ok
+        ? null
+        : unavailable
+        ? 'gpu_unavailable'
+        : 'gpu_failed';
+    if (!result.ok) {
+      // Category only (HTTP status, timeout, no evidence, …), no content.
+      _audit.log(
+        'Wendelin/attest: gpu ${result.verdict.name} '
+        'category=${result.category ?? 'unknown'}',
+      );
+    }
     final id = _audit.record(AttestationLogKind.gpu, status, [
       StageResult(
         AttestationStage.gpu,
@@ -581,13 +686,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
             ? (nras
                   ? 'geprüft (NRAS, Signatur ungeprüft)'
                   : 'Nonce-Bindung lokal geprüft, nicht über NVIDIA geprüft')
-            : 'gpu: ${result.verdict.name}',
+            : 'gpu: ${result.detail ?? result.verdict.name}',
+        code,
       ),
     ], model: model);
     if (result.ok && !nras) return; // routine local check: no report
-    final unavailable =
-        result.verdict == GpuVerdict.unreachable ||
-        result.verdict == GpuVerdict.timeout;
     _emit(
       AttestationReport(
         logId: id,
@@ -595,11 +698,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         detail: result.ok
             ? null
             : 'GPU-Prüfung: ${result.detail ?? result.verdict.name}',
-        reasonCode: result.ok
-            ? null
-            : unavailable
-            ? 'gpu_unavailable'
-            : 'gpu_failed',
+        reasonCode: code,
       ),
     );
   }

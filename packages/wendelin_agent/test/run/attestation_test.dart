@@ -307,7 +307,11 @@ void main() {
     );
 
     Future<(FakeTool, Completer<AttestationReport?>, Future<List<AgentEvent>>)>
-    startWithStricter(FakeTool tool, Set<String>? stricter) async {
+    startWithStricter(
+      FakeTool tool,
+      Set<String>? stricter, {
+      void Function(String, ToolCallBlock)? onUndoFailed,
+    }) async {
       final report = Completer<AttestationReport?>();
       final provider = VerifyingFake(
         FakeLlmProvider([
@@ -328,6 +332,7 @@ void main() {
         invoker: stricter == null
             ? FakeToolInvoker(catalog)
             : AssessingInvoker(FakeToolInvoker(catalog), stricter),
+        onUndoFailed: onUndoFailed,
       );
       final done = h.run('Hi');
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -379,6 +384,111 @@ void main() {
         expect(write.callCount, 0);
       },
     );
+
+    test(
+      'write-Tool mit Undo läuft sofort, Rot nimmt es zurück (WP77)',
+      () async {
+        final cal = FakeTool(
+          name: 'calendar__create_event',
+          risk: RiskLevel.write,
+          withUndo: true,
+        );
+        final (_, report, done) = await startWithStricter(cal, {});
+        expect(cal.callCount, 1, reason: 'läuft vor der Quittung');
+        expect(cal.undoCount, 0, reason: 'noch nicht zurückgenommen');
+        report.complete(_report(AttestationStatus.red));
+        final all = await done;
+        expect(cal.undoCount, 1, reason: 'Rot nimmt die Aktion zurück');
+        final finished = all.whereType<ToolCallFinished>().toList();
+        expect(finished, hasLength(2));
+        expect(finished.first.outcome.undo, isNotNull);
+        expect(finished.last.outcome.isError, isTrue);
+        expect(finished.last.outcome.undo, isNull);
+        expect(finished.last.outcome.summary, contains('Rückgängig gemacht'));
+      },
+    );
+
+    test(
+      'Quittung nicht bestätigt (grau): Undo-Tool wird zurückgenommen',
+      () async {
+        final cal = FakeTool(
+          name: 'calendar__create_event',
+          risk: RiskLevel.write,
+          withUndo: true,
+        );
+        final (_, report, done) = await startWithStricter(cal, {});
+        report.complete(_report(AttestationStatus.unconfirmed));
+        await done;
+        expect(cal.undoCount, 1, reason: 'alles außer Grün nimmt zurück');
+      },
+    );
+
+    test('write-Tool mit Undo bleibt bei grüner Quittung bestehen', () async {
+      final cal = FakeTool(
+        name: 'calendar__create_event',
+        risk: RiskLevel.write,
+        withUndo: true,
+      );
+      final (_, report, done) = await startWithStricter(cal, {});
+      report.complete(_report(AttestationStatus.green));
+      final all = await done;
+      expect(cal.callCount, 1);
+      expect(cal.undoCount, 0);
+      expect(all.whereType<ToolCallFinished>(), hasLength(1));
+    });
+
+    test('Undo schlägt fehl: Audit-Rückruf und gesprochener Hinweis', () async {
+      final failed = <String>[];
+      final cal = FakeTool(
+        name: 'calendar__create_event',
+        risk: RiskLevel.write,
+        outcome: ToolOutcome.text(
+          'ok',
+          undo: UndoAction(label: 'x', run: () async => throw StateError('x')),
+        ),
+      );
+      final (_, report, done) = await startWithStricter(
+        cal,
+        {},
+        onUndoFailed: (session, call) => failed.add(call.name),
+      );
+      report.complete(_report(AttestationStatus.red));
+      final all = await done;
+      expect(failed, ['calendar__create_event']);
+      expect(
+        all.whereType<AgentTextDelta>().map((e) => e.text),
+        contains(AgentRunnerTexts.undoFailedNotice),
+      );
+    });
+
+    test('Undo schlägt fehl: Hinweis statt stillem Verschlucken', () async {
+      final cal = FakeTool(
+        name: 'calendar__create_event',
+        risk: RiskLevel.write,
+        outcome: ToolOutcome.text(
+          'ok',
+          undo: UndoAction(label: 'x', run: () async => throw StateError('x')),
+        ),
+      );
+      final (_, report, done) = await startWithStricter(cal, {});
+      report.complete(_report(AttestationStatus.red));
+      final all = await done;
+      final last = all.whereType<ToolCallFinished>().last;
+      expect(last.outcome.isError, isTrue);
+      expect(last.outcome.summary, contains('fehlgeschlagen'));
+    });
+
+    test('write-Tool ohne Undo bleibt bei Rot unberührt', () async {
+      final write = FakeTool(
+        name: 'notes__add',
+        risk: RiskLevel.write,
+        outcome: ToolOutcome.text('ok'),
+      );
+      final (_, report, done) = await startWithStricter(write, {});
+      report.complete(_report(AttestationStatus.red));
+      final all = await done;
+      expect(all.whereType<ToolCallFinished>(), hasLength(1));
+    });
 
     test('ohne Verschärfung läuft ein write-Tool sofort', () async {
       final write = FakeTool(

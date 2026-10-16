@@ -74,6 +74,11 @@ final class AttestationHub {
   /// Takes over [provider] of [profileId]; an earlier one is dropped.
   void register(String profileId, AttestedProvider provider) {
     unawaited(_subs.remove(profileId)?.cancel());
+    // A rebuilt provider of the same profile (profile list or rules changed)
+    // takes over the session its predecessor verified completely instead of
+    // attesting again (WP77); only for an unchanged endpoint.
+    final previous = _providers[profileId];
+    if (previous != null) provider.adoptSessionOf(previous);
     provider.gpuMode = _mode;
     _providers[profileId] = provider;
     _subs[profileId] = provider.reports.listen((r) => _onReport(profileId, r));
@@ -94,11 +99,12 @@ final class AttestationHub {
   void allowWithoutGpuCheck(String profileId) =>
       _providers[profileId]?.allowNextRequestWithoutGpuCheck();
 
-  /// Attests [profileId] in the background (app start), unless it is locked
-  /// or has a valid session. Never throws.
+  /// Prepares [profileId] in the background (app start, overlay start):
+  /// attests unless it is locked or has a valid session, fetches the GPU
+  /// evidence and opens the connection. Never throws.
   Future<void> warmUp(String profileId) async {
     final p = _providers[profileId];
-    if (p == null || p.locked || p.session != null) return;
+    if (p == null || p.locked) return;
     try {
       await p.warmUp();
     } on Object {

@@ -252,6 +252,29 @@ void main() {
       );
     });
 
+    test('GPU-Fehler nennt den Grund (WP77)', () {
+      final m = attestationMessage(
+        AttestationStatus.red,
+        reasonCode: AttestationReason.gpuFailed,
+        detail: 'GPU-Prüfung: NRAS lehnt die Evidenz ab (HTTP 400, INVALID_EVIDENCE)',
+      );
+      expect(m.text, contains('Grund: NRAS lehnt die Evidenz ab'));
+      expect(m.text, contains('INVALID_EVIDENCE'));
+      final none = attestationMessage(
+        AttestationStatus.red,
+        reasonCode: AttestationReason.gpuUnavailable,
+      );
+      expect(none.text, isNot(contains('Grund')));
+      expect(
+        gpuBlockReason(
+          'GPU-Prüfung nicht bestanden (Zeitüberschreitung [timeout]); '
+          'Anfrage nicht gesendet',
+        ),
+        ' Grund: Zeitüberschreitung.',
+      );
+      expect(gpuBlockReason('anderer Text'), isEmpty);
+    });
+
     test('Stufen und Ergebnisse haben deutsche Namen', () {
       expect(stageLabel('quote'), 'TDX-Quote (DCAP)');
       expect(stageLabel('unbekannt'), 'unbekannt');

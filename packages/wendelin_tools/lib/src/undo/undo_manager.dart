@@ -98,6 +98,10 @@ final class UndoManager {
     _emit(callId, p);
   }
 
+  /// Withdraws the offer for [callId] without running it (the action was
+  /// undone elsewhere, e.g. automatically after a red TEE receipt).
+  void discard(String callId) => _pending.remove(callId)?.cancel();
+
   /// Whether [callId] can still be undone.
   bool canUndo(String callId) => remaining(callId) != null;
 

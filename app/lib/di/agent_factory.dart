@@ -116,6 +116,19 @@ final class AgentFactory implements AgentRunFactory {
           duration: Duration.zero,
         ),
       ),
+      onUndoFailed: (session, call) => audit.record(
+        // The action ran, its answer was not verified and the undo failed:
+        // the user must check it (WP77).
+        ToolAuditEntry(
+          sessionId: session,
+          callId: call.id,
+          tool: call.name,
+          argumentsJson: call.argumentsJson,
+          decision: AuditDecision.allowed,
+          status: AuditStatus.error,
+          duration: Duration.zero,
+        ),
+      ),
       clock: clock,
       sessionId: sessionId,
       recorder: conversation,

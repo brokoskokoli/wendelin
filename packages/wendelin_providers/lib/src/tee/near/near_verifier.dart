@@ -116,8 +116,22 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
   /// green [attest], with the nonce that also binds its TDX quote; `null`
   /// if there was none. Feeds `NrasGpuVerifier.evidenceSource`, so the GPU
   /// check judges the same machine as the quote.
-  Future<({Map<String, Object?> payload, String nonce})?> gpuEvidence() async =>
-      _gpuEvidence;
+  ///
+  /// Waits for an attestation that is running: the GPU check starts in
+  /// parallel to it and must not see the evidence of the previous session
+  /// (or none yet).
+  Future<({Map<String, Object?> payload, String nonce})?> gpuEvidence() async {
+    final running = _running;
+    if (running != null) await running;
+    return _gpuEvidence;
+  }
+
+  /// Takes over the GPU evidence of [other] (provider rebuilt, session
+  /// adopted), so the GPU check of the adopted session finds it.
+  void adoptGpuEvidence(NearVerifier other) =>
+      _gpuEvidence = other._gpuEvidence;
+
+  Future<void>? _running;
 
   final Uint8List Function() _nonce;
   final AttestationChecks _checks;
@@ -154,9 +168,18 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
       );
 
   @override
-  Future<AttestationResult> attest() async {
-    final gate = tlsPin?..expect(null);
+  Future<AttestationResult> attest() {
     _gpuEvidence = null;
+    final run = _attest();
+    final done = run.then<void>((_) {}, onError: (Object _) {});
+    _running = done;
+    return run.whenComplete(() {
+      if (identical(_running, done)) _running = null;
+    });
+  }
+
+  Future<AttestationResult> _attest() async {
+    final gate = tlsPin?..expect(null);
     final nonce = _nonce();
     final now = settings.clock.now();
     final Map<String, Object?> doc;

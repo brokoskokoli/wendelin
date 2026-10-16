@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
+import 'package:meta/meta.dart';
 
 import 'tls_pin_gate.dart';
 
@@ -30,6 +31,7 @@ final class PinnedHttpClient extends http.BaseClient {
     required this.gate,
     required this.enforce,
     TlsConnect? connect,
+    this.idleTimeout = const Duration(minutes: 5),
   }) : connect = connect ?? _systemConnect {
     _fresh();
   }
@@ -42,13 +44,23 @@ final class PinnedHttpClient extends http.BaseClient {
 
   /// Opens the TLS connection.
   final TlsConnect connect;
+
+  /// How long an idle connection of the enforcing client stays open (the
+  /// Dart default of 15 s costs a new handshake and pin check after every
+  /// short pause). The pin is judged once per connection, as before.
+  final Duration idleTimeout;
   late HttpClient _http;
+
+  /// The current platform client (tests: idle timeout).
+  @visibleForTesting
+  HttpClient get debugHttpClient => _http;
   late IOClient _io;
   late int _generation;
 
   void _fresh() {
     _generation = gate.generation;
     _http = HttpClient()
+      ..idleTimeout = enforce ? idleTimeout : const Duration(seconds: 15)
       ..findProxy = ((_) => 'DIRECT')
       ..connectionFactory = _factory;
     _io = IOClient(_http);

@@ -45,9 +45,10 @@ void main() {
       '(HTTP 401 ohne Schlüssel war die Ursache auf dem Gerät)', () async {
     final open = TeeServer({
       'aci/attestation': jsonBody(teeJson('gateway_attestation')),
-      'aci/sessions/': jsonBody(upToDateSession()),
     });
     final pinned = TeeServer({
+      // Public document, but over the pinned connection (WP77), no key.
+      'aci/sessions/': jsonBody(upToDateSession()),
       'aci/receipts/': (r) => r.headers['Authorization'] == 'Bearer k-1'
           ? jsonBody(_receipt())(r)
           : jsonBody({'error': 'unauthorized'}, status: 401)(r),
@@ -70,6 +71,15 @@ void main() {
     );
     expect(r.status, AttestationStatus.green);
     expect(open.count('aci/receipts'), 0);
+    expect(open.count('aci/sessions'), 0);
+    expect(pinned.count('aci/sessions'), 1);
+    expect(
+      pinned.requests
+          .where((q) => q.url.path.contains('aci/sessions'))
+          .every((q) => !q.headers.containsKey('Authorization')),
+      isTrue,
+      reason: 'die Session-Abfrage braucht keinen Schlüssel',
+    );
     expect(
       open.requests.every((q) => !q.headers.containsKey('Authorization')),
       isTrue,

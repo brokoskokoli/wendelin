@@ -19,6 +19,7 @@ import '../../platform/channel_notifier.dart' show attestationLogTarget;
 import '../../voice/conversation_offer.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
+import '../attestation/attestation_texts.dart';
 import '../routes.dart';
 import '../settings/attestation_log_detail.dart';
 import '../settings/attestation_log_screen.dart';
@@ -158,9 +159,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       title: 'GPU-Prüfung nicht bestanden',
       message:
           'Die GPU-Prüfung von $name über NVIDIA ist fehlgeschlagen oder '
-          'nicht möglich. Deine Anfrage wurde nicht gesendet. Du kannst sie '
-          'einmalig ohne GPU-Prüfung senden. Die übrigen Prüfungen bleiben '
-          'aktiv.',
+          'nicht möglich.${gpuBlockReason(block.reason)} Deine Anfrage wurde '
+          'nicht gesendet. Du kannst sie einmalig ohne GPU-Prüfung senden. '
+          'Die übrigen Prüfungen bleiben aktiv.',
       yes: 'Ohne GPU-Prüfung senden',
       no: 'Abbrechen',
     );

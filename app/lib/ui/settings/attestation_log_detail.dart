@@ -43,7 +43,14 @@ class AttestationLogDetailScreen extends ConsumerWidget {
     }
     final config = ref.watch(providerConfigProvider).value;
     final now = ref.watch(clockProvider).now();
-    final message = attestationMessage(r.status, reasonCode: r.reasonCode);
+    final message = attestationMessage(
+      r.status,
+      reasonCode: r.reasonCode,
+      detail: r.stages
+          .where((s) => s.stage == 'gpu' && s.result == 'fail')
+          .map((s) => s.detail)
+          .firstOrNull,
+    );
     final locked = ref.watch(attestationHubProvider).isLocked(r.profileId);
     return SettingsPage(
       title: 'Prüfprotokoll',

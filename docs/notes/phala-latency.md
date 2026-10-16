@@ -122,3 +122,17 @@ Empfohlene Reihenfolge: A + B (zusammen ~2,3 s kalt, kleinste Änderung, ein WP)
 - Attestierung mit `FakeAttestationCrypto` (kein Quote-Check in der App-Kette), die echte Quote-Prüfung separat mit dem Rust-Crate gemessen (3 ms). E2EE mit Dart-Referenzkrypto (4 ms je Feld), echte Rust-Zeit 0,07 ms je Feld; die Differenz ist in den TTFT-Werten enthalten und höchstens ~50 ms.
 - Rohmessung (b) per curl mit Klartext (Gateway akzeptierte es), nur Messprompt, keine sensiblen Inhalte.
 - Anzahl Chat-Requests: 16 (Claude 3, Phala roh 3, Phala E2EE warm 4, kalt 6), plus Attestierungs-/GPU-/Quittungs-/PCS-/NRAS-GETs ohne Modellkosten.
+
+## 8. Nachher-Messung (WP77, 2026-10-16, gleicher Mac, gleiches Skript `m2.dart`)
+
+| Variante | TTFT (ms) | Quittung grün (ms nach Start) |
+|---|---|---|
+| Kalt, Modus Aus (Provider neu, Attestierung + Chat; GPU-Abruf entfällt) | 2251 / 1834 / 1930 (vorher ~4000) | 3130 / 2774 / 2772 |
+| Vorgewärmt (`warmUp` fertig, dann Chat), Modus Aus | 412 / 427 / 358 (vorher kalt ~4000, warm ~1700) | 1322 / 1293 / 1225 (vorher TTFT + 2,5 bis 3 s) |
+| Vorgewärmt, Modus Vorher (glm-5.3, NRAS grün) | 1177 | 2838 |
+| `warmUp` selbst (Attestierung + Verbindung, im Hintergrund) | 1930 bis 2060 | |
+
+- Quittung: Upstream-Session-GET jetzt 0,16 s (vorher ~1,9 s) über die offene gepinnte Verbindung.
+- Vorgewärmt liegt die TTFT unter der Claude-Messung; die Werte schwanken mit dem Gateway (Stichprobe 3, Cache-Effekte möglich).
+- NRAS (Ursache Befund 6): das Gateway liefert für `google/gemma-4-31b-it`, `z-ai/glm-5.2` und `deepseek/deepseek-v4-flash-0731` eine **leere** `evidence_list` (nur Nonce, `arch`); NVIDIA antwortet darauf mit 400 `INVALID_EVIDENCE` (errorCode 4005). Mit echter Evidenz (`z-ai/glm-5.3`: 8 × Hopper, `qwen/qwen3.8-27b`: 1) antwortet NRAS 200 und `x-nvidia-overall-att-result` ist true. `qwen/qwen3.6-27b` liefert `nvidia_payload: null` (Evidenz nur in `all_attestations`, 8 Einträge, Abruf 14 s). Es liegt am Anbieter/Modell, nicht an unserem Format. Offen: Auswertung von `all_attestations` (WP-Kandidat).
+

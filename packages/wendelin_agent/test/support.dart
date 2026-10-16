@@ -87,6 +87,7 @@ final class Harness {
     ConversationRecorder? recorder,
     ToolCatalog Function(PrivacyLevel)? catalogFor,
     void Function(String, ToolCallBlock)? onToolRefused,
+    void Function(String, ToolCallBlock)? onUndoFailed,
     List<Message> history = const [],
     ProviderResolver? resolver,
     MemoryRetriever? memory,
@@ -114,6 +115,7 @@ final class Harness {
       budgetGuard: budget,
       catalogFor: catalogFor,
       onToolRefused: onToolRefused,
+      onUndoFailed: onUndoFailed,
       memoryFloor: memoryFloor,
     );
   }

@@ -40,6 +40,20 @@ void main() {
     });
   });
 
+  test('discard nimmt das Angebot zurück, ohne es auszuführen (WP77)', () {
+    fakeAsync((async) {
+      final m = UndoManager(clock: _FakeClock(async))..register('c1', action());
+      m.discard('c1');
+      expect(m.canUndo('c1'), isFalse);
+      bool? result;
+      m.undo('c1').then((r) => result = r);
+      async.flushMicrotasks();
+      expect(result, isFalse);
+      expect(runs, 0);
+      m.discard('unbekannt'); // kein Fehler
+    });
+  });
+
   test('nach 10 s verfallen', () {
     fakeAsync((async) {
       final m = UndoManager(clock: _FakeClock(async))..register('c1', action());

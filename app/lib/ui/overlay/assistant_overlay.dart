@@ -8,8 +8,11 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
+import '../../di/attestation_hub.dart';
+import '../../di/attestation_providers.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
+import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
 import '../../di/wake_settings.dart';
 import '../../platform/assistant_platform.dart';
@@ -97,6 +100,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     ref.read(assistantPlatformProvider).onCloseRequested = _close;
     _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
     unawaited(_checkLock());
+    _warmUpAttestation();
     if (widget.autoStart) {
       // Load the tone setting and the tone itself before the first hit.
       ref
@@ -184,7 +188,23 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   /// ([LockGateAgentRun], K16), the rest gets the fixed sentence „Bitte
   /// entsperre das Telefon“, the utterance is dropped, and the unlock
   /// button shows. Nothing asks for the unlock by itself.
+  /// A TEE default provider is checked and connected in the background
+  /// while the user is still speaking (WP77): this engine has its own
+  /// providers and the main app's warm-up does not reach it. A valid
+  /// session is kept, the call is cheap then.
+  void _warmUpAttestation() => scheduleMicrotask(() {
+    if (!mounted) return;
+    unawaited(
+      warmUpAttestation(
+        config: ref.read(providerConfigProvider.future),
+        network: ref.read(networkStatusProvider),
+        hub: ref.read(attestationHubProvider),
+      ),
+    );
+  });
+
   Future<void> _onTrigger(TriggerEvent e) async {
+    _warmUpAttestation();
     final locked = await _checkLock();
     if (!mounted) return;
     ref.read(lockedModeProvider.notifier).set(locked);

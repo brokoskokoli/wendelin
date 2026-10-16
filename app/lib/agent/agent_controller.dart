@@ -453,6 +453,10 @@ final class AgentController extends Notifier<ConversationState> {
           ref.read(undoManagerProvider).register(call.id, undo);
           return;
         }
+        if (undo == null) {
+          // Undone by the agent (red TEE receipt, WP77): no second undo.
+          ref.read(undoManagerProvider).discard(call.id);
+        }
       case UsageReported(:final profileId, :final modelId, :final usage):
         unawaited(_recordUsage(sessionId, event, profileId, modelId, usage));
       case AgentFailed(:final cause, :final message)
