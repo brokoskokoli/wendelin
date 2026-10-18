@@ -41,7 +41,7 @@ Stand: 2026-10-18, main `3f77d58`
 | WP88 | Aufgaben | wartet | Review steht aus (HEAD 38e09e9) |
 | WP89 | Todoist/Google Tasks | geplant | nach WP88 |
 | WP90 | Mediensteuerung | wartet | Review und E2E (Player-App auf Emulator) stehen aus |
-| WP91 | Home Assistant | Review | – |
+| WP91 | Home Assistant | wartet | Review: nachbessern (Muss: Token per WebSocket-Redirect an fremden Host; Szene mit Schloss/Cover ohne Bestätigung; 4 Soll); dann Merge main, CI, E2E; HEAD a1aa104, Übergabe `handoff/wp91-session.md` |
 | WP92a–c | Sprechererkennung | geplant | WP92c nach WP91 |
 | WP93 | Wake Word im Chat | geplant | – |
 | WP94 | Schnellwechsel Agent | geplant | – |
