@@ -52,6 +52,7 @@ final class BrightSkyWeather implements WeatherService {
       ),
       service: displayName,
       cancel: request.cancel,
+      statusMessages: const {404: 'nur Orte in Deutschland'},
     );
     final hourly = <ForecastHour>[];
     try {

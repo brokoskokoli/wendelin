@@ -121,6 +121,20 @@ void main() {
       expect(q['units'], 'dwd');
     });
 
+    test('404 außerhalb Deutschlands: klare Meldung', () async {
+      final s = BrightSkyWeather(client: mock([], '{}', status: 404));
+      await expectLater(
+        s.forecast(request()),
+        throwsA(
+          isA<PortException>().having(
+            (e) => e.message,
+            'message',
+            contains('nur Orte in Deutschland'),
+          ),
+        ),
+      );
+    });
+
     test('jetzt = Stunde 13 Uhr, Tage aus Stunden zusammengesetzt', () async {
       final r = await make().forecast(request());
       expect(r.current!.condition, isNot('unbekannt'));
@@ -156,6 +170,33 @@ void main() {
       expect(r.hourly.first.time.hour, 12);
       expect(r.hourly.first.windKmh, closeTo(22.68, 0.01));
       expect(r.current!.condition, 'bedeckt');
+    });
+
+    test('heute nur Rest des Tages, spätere Tage vollständig', () async {
+      final r = await make().forecast(request(days: 3));
+      expect(r.daily.first.remainingOnly, isTrue);
+      expect(r.daily.skip(1).every((d) => !d.remainingOnly), isTrue);
+    });
+
+    test('403 nennt die App-Kennung, nicht den API-Schlüssel', () async {
+      final s = MetNorwayWeather(
+        client: mock([], '{}', status: 403),
+        userAgent: 'x',
+      );
+      await expectLater(
+        s.forecast(request()),
+        throwsA(
+          isA<PortException>().having(
+            (e) => e.message,
+            'message',
+            allOf(
+              contains('MET Norway'),
+              contains('Kennung'),
+              isNot(contains('Schlüssel')),
+            ),
+          ),
+        ),
+      );
     });
 
     test('Stunden nur mit 1-Stunden-Schritten, Tage nutzen auch 6-Stunden-Schritte', () async {

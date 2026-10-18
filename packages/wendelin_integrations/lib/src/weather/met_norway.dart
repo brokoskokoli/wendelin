@@ -47,6 +47,9 @@ final class MetNorwayWeather implements WeatherService {
         },
       ),
       service: displayName,
+      statusMessages: const {
+        403: 'Anfrage abgelehnt (Kennung der App nicht akzeptiert)',
+      },
       headers: {'User-Agent': userAgent},
       cancel: request.cancel,
     );
@@ -101,7 +104,7 @@ final class MetNorwayWeather implements WeatherService {
       source: displayName,
       current: currentFromHours(hourly, request.now),
       hourly: hourly,
-      daily: aggregateDays(all),
+      daily: aggregateDays(all, partialDay: dateOf(request.today)),
     );
   }
 }

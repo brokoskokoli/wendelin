@@ -6,7 +6,10 @@ import 'weather_model.dart';
 /// Builds days from [samples] (ascending): min/max temperature, precipitation
 /// sum, highest chance and wind, and the condition at the sample nearest to
 /// noon. Used by services that only deliver hourly data.
-List<ForecastDay> aggregateDays(List<ForecastHour> samples) {
+List<ForecastDay> aggregateDays(
+  List<ForecastHour> samples, {
+  DateTime? partialDay,
+}) {
   final byDay = <DateTime, List<ForecastHour>>{};
   for (final s in samples) {
     byDay.putIfAbsent(dateOf(s.time), () => []).add(s);
@@ -34,6 +37,7 @@ List<ForecastDay> aggregateDays(List<ForecastHour> samples) {
           precipProbability: prob.isEmpty ? null : prob.reduce(math.max),
           windMaxKmh: maxOf(hours.map((h) => h.windKmh)),
           gustMaxKmh: maxOf(hours.map((h) => h.gustKmh)),
+          remainingOnly: date == partialDay,
         );
       }(),
   ];

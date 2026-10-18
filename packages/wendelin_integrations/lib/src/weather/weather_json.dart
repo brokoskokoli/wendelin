@@ -17,6 +17,7 @@ Future<Map<String, Object?>> getJsonObject(
   required String service,
   Map<String, String> headers = const {},
   CancelToken? cancel,
+  Map<int, String> statusMessages = const {},
 }) async {
   final request = http.Request('GET', url)
     ..headers.addAll({'Accept': 'application/json', ...headers});
@@ -25,6 +26,7 @@ Future<Map<String, Object?>> getJsonObject(
     request,
     service: service,
     cancel: cancel,
+    statusMessages: statusMessages,
   );
   if (json is! Map<String, Object?>) throw badAnswer(service);
   return json;

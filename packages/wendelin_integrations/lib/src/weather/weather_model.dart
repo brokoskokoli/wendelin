@@ -178,6 +178,7 @@ final class ForecastDay {
     this.precipProbability,
     this.windMaxKmh,
     this.gustMaxKmh,
+    this.remainingOnly = false,
   });
 
   /// The calendar day.
@@ -203,6 +204,10 @@ final class ForecastDay {
 
   /// Highest gusts in km/h.
   final double? gustMaxKmh;
+
+  /// The values cover only the rest of the day (the source has no past
+  /// hours), so the minimum is not the day's minimum.
+  final bool remainingOnly;
 }
 
 /// What a forecast request asks for.

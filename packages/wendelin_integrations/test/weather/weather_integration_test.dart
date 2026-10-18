@@ -102,6 +102,18 @@ void main() {
       expect(service.requests.single.place, home);
     });
 
+    test('Standort-Port wirft (Berechtigung entzogen): Heimatort', () async {
+      final loc = FakeWeatherLocationPort(palma)
+        ..error = const PortException(
+          PortErrorKind.permissionDenied,
+          'keine Berechtigung',
+        );
+      integration = make(home: home, location: loc);
+      final o = await tool('weather__forecast').execute({}, at());
+      expect(o.isError, isFalse);
+      expect(service.requests.single.place, home);
+    });
+
     test('ohne alles: Fehler mit Hinweis auf Einstellungen', () async {
       integration = make();
       final o = await tool('weather__forecast').execute({}, at());

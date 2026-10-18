@@ -1,5 +1,6 @@
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../src/common/port_exception.dart';
 import '../src/weather/weather_model.dart';
 import '../src/weather/weather_service.dart';
 
@@ -87,6 +88,13 @@ final class FakeWeatherLocationPort implements WeatherLocationPort {
   /// The current place, `null` = unknown.
   Place? place;
 
+  /// Thrown instead of answering (e.g. permission revoked).
+  PortException? error;
+
   @override
-  Future<Place?> currentPlace({CancelToken? cancel}) async => place;
+  Future<Place?> currentPlace({CancelToken? cancel}) async {
+    final e = error;
+    if (e != null) throw e;
+    return place;
+  }
 }

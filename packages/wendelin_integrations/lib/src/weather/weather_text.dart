@@ -52,7 +52,7 @@ String _wind(double? speed, double? gust, double? from) {
 }
 
 String _join(Iterable<String> parts) =>
-    parts.where((p) => p.isNotEmpty).join(', ');
+    parts.where((p) => p.isNotEmpty && p != 'unbekannt').join(', ');
 
 String _dayLabel(DateTime date, WeatherRequest r) {
   final today = LocalDate(r.today.year, r.today.month, r.today.day);
@@ -111,7 +111,7 @@ String describeForecast(WeatherReport report, WeatherRequest r) {
   if (days.isNotEmpty) lines.add('Tage:');
   for (final d in days) {
     lines.add(
-      '${_dayLabel(d.date, r)}: ${_join(['${d.minC.round()} bis ${degrees(d.maxC)}', d.condition, if (d.precipMm != null) precipitation(d.precipMm!), if (d.precipProbability != null && d.precipProbability! >= 20) 'Regenrisiko ${d.precipProbability} %', if (d.windMaxKmh != null) 'Wind bis ${windSpeed(d.windMaxKmh!)}', if (d.gustMaxKmh != null && d.windMaxKmh != null && d.gustMaxKmh! >= d.windMaxKmh! + 15) 'Böen bis ${windSpeed(d.gustMaxKmh!)}'])}',
+      '${_dayLabel(d.date, r)}: ${_join([d.remainingOnly ? 'noch bis ${degrees(d.maxC)}' : '${d.minC.round()} bis ${degrees(d.maxC)}', d.condition, if (d.precipMm != null) precipitation(d.precipMm!), if (d.precipProbability != null && d.precipProbability! >= 20) 'Regenrisiko ${d.precipProbability} %', if (d.windMaxKmh != null) 'Wind bis ${windSpeed(d.windMaxKmh!)}', if (d.gustMaxKmh != null && d.windMaxKmh != null && d.gustMaxKmh! >= d.windMaxKmh! + 15) 'Böen bis ${windSpeed(d.gustMaxKmh!)}'])}',
     );
   }
   lines.add(_close());
