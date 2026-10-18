@@ -71,6 +71,7 @@ void main() {
       profileId: 'near',
       sessionScope: 'near|$nearModel',
       gpuVerifier: NrasGpuVerifier(
+        tokenChecker: FakeNrasTokenChecker(),
         baseUrl: base,
         // NRAS is down: a found evidence ends in nras_http_503, a missing
         // one in no_evidence.
