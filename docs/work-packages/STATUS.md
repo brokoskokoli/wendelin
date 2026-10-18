@@ -29,7 +29,8 @@ Stand: 2026-10-18, main `3f77d58`
 | WP76c | Tinfoil EHBP/HPKE | geplant | – |
 | WP76d | Tinfoil in der App | geplant | min_tcb setzen |
 | WP79 | App-Sprache | wartet | wartet auf Merge WP82; danach Provider-Screens, Goldens je Sprache |
-| WP81 | Sofort vorlesen, Haken danach | gemergt | WP81b (paralleler nächster Modellaufruf) wartet auf Entscheidung Stefan |
+| WP81 | Sofort vorlesen, Haken danach | gemergt | – |
+| WP81b | Nächster Modellaufruf parallel zur Quittung | geplant | freigegeben Stefan 2026-10-18 |
 | WP82 | GPU-Prüfung je Profil | Review | Fix fertig, Merge steht aus |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
 | WP84 | Spotify | Review | – |
