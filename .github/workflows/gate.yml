@@ -9,35 +9,44 @@ on:
 concurrency:
   group: gate-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+permissions:
+  contents: read
 env:
   FLUTTER_VERSION: 3.47.7
   CI: 'true'
 jobs:
+  # Paketliste aus dem Repo (wie tool/gate.dart: packages/* plus evals), damit
+  # kein Paket an der Matrix vorbei neu hinzukommt.
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pkgs: ${{ steps.m.outputs.pkgs }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - id: m
+        run: |
+          pkgs=$( { ls packages; [ -f evals/pubspec.yaml ] && [ -d evals/lib ] && echo evals; } | sort | jq -R . | jq -sc .)
+          echo "pkgs=$pkgs" >> "$GITHUB_OUTPUT"
+          echo "Pakete: $pkgs"
+
   packages:
     name: ${{ matrix.pkg }}
+    needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        pkg:
-          - wendelin_agent
-          - wendelin_core
-          - wendelin_integrations
-          - wendelin_mcp
-          - wendelin_providers
-          - wendelin_storage
-          - wendelin_tools
-          - wendelin_voice
-          - evals
+        pkg: ${{ fromJSON(needs.setup.outputs.pkgs) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
@@ -58,33 +67,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter pub get
       # Version = native/attest/rust-toolchain.toml.
-      - uses: dtolnay/rust-toolchain@1.99.0
+      - uses: dtolnay/rust-toolchain@ff7f6a3374ce205788da40198ec918bd5d67aea7 # 1.99.0
         with:
           components: rustfmt, clippy
       # rust-cache sichert auch ~/.cargo/bin; installiert wird nur, was fehlt.
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: native/attest
       - name: Rust-Werkzeuge (cargo-deny, flutter_rust_bridge_codegen)
         run: |
-          command -v cargo-deny >/dev/null || cargo install cargo-deny --version '~0.19' --locked
-          command -v flutter_rust_bridge_codegen >/dev/null || cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
+          cargo deny --version 2>/dev/null | grep -q ' 0\.19\.' || cargo install cargo-deny --version '~0.19' --locked --force
+          flutter_rust_bridge_codegen --version 2>/dev/null | grep -q '2\.12\.0' || cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked --force
       - run: dart run tool/gate.dart native/attest
 
   app-analyze:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -105,8 +114,8 @@ jobs:
       matrix:
         shard: [1, 2, 3]
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -116,7 +125,7 @@ jobs:
           flutter test --coverage --exclude-tags golden,platform-sensitive
           --total-shards 3 --shard-index $(( ${{ matrix.shard }} - 1 ))
         working-directory: app
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: app-lcov-${{ matrix.shard }}
           path: app/coverage/lcov.info
@@ -128,9 +137,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: app-lcov-*
           path: lcov
@@ -141,8 +150,8 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -152,7 +161,7 @@ jobs:
         working-directory: app
       # Bei roten Goldens die Vergleichsbilder sichern (nur Test-Widgets, keine Daten).
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: golden-failures
           path: app/test/**/failures/
@@ -163,13 +172,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -181,36 +190,62 @@ jobs:
       - run: ./gradlew :app:testDebugUnitTest -q
         working-directory: app/android
 
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      android: ${{ steps.f.outputs.android }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - id: f
+        run: |
+          base="${{ github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ] || ! git cat-file -e "$base" 2>/dev/null; then
+            base=$(git merge-base origin/main HEAD)
+          fi
+          if git diff --name-only "$base" HEAD | grep -qE '^(app/android/|pubspec|.*/pubspec[^/]*$)'; then
+            echo "android=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "android=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # K7 am fertigen APK: keine GMS-/Firebase-Klassen, Manifest (exportierte
   # Komponenten, Berechtigungen, Backup) und Gradle-Baum ohne GMS und ohne
   # nicht aufgelöste Abhängigkeiten. arm64 reicht für die Prüfung.
   apk:
-    # Release-APK nur für main und PRs, nicht bei jedem Branch-Push (teuer).
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    # Release-APK nur für main und PRs; auf wp/** nur, wenn Android oder
+    # pubspec* betroffen sind (K7, GMS-Prüfung), sonst zu teuer.
+    needs: changes
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' ||
+      needs.changes.outputs.android == 'true'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter pub get
       # Rust-Prüfmodul (WP47): cargo-ndk baut die .so für arm64-v8a, Gradle packt sie ins APK.
-      - uses: dtolnay/rust-toolchain@1.99.0
+      - uses: dtolnay/rust-toolchain@ff7f6a3374ce205788da40198ec918bd5d67aea7 # 1.99.0
         with:
           targets: aarch64-linux-android
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: native/attest
       - name: cargo-ndk
-        run: command -v cargo-ndk >/dev/null || cargo install cargo-ndk --version 4.1.2 --locked
+        run: cargo ndk --version 2>/dev/null | grep -q '4\.1\.2' || cargo install cargo-ndk --version 4.1.2 --locked --force
       - run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358"
       - run: flutter build apk --release --target-platform android-arm64
         working-directory: app

@@ -32,6 +32,10 @@ List<String> mergeLcov(Iterable<Iterable<String>> reports) {
   ];
 }
 
+/// Ob [lcov] mindestens eine Datei enthält, deren Pfad [under] enthält.
+bool hasFilesUnder(Iterable<String> lcov, String under) =>
+    lcov.any((l) => l.startsWith('SF:') && l.contains(under));
+
 void main(List<String> args) {
   if (args.isEmpty) {
     stderr.writeln('Aufruf: check_app_coverage.dart <lcov.info>...');
@@ -39,6 +43,14 @@ void main(List<String> args) {
     return;
   }
   final merged = mergeLcov([for (final f in args) File(f).readAsLinesSync()]);
+  if (!hasFilesUnder(merged, 'lib/di/')) {
+    stderr.writeln(
+      'Keine Dateien unter lib/di/ in den lcov-Berichten (leere oder '
+      'fehlende Shards?). Abdeckung nicht prüfbar.',
+    );
+    exitCode = 1;
+    return;
+  }
   final cov = lcovCoverage(merged, under: 'lib/di/');
   stdout.writeln(
     'app/lib/di: ${cov.toStringAsFixed(1)} % (min $minAppDiCoverage %)',
