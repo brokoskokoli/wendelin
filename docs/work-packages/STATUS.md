@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, WP96 und WP88 laufen; WP91, WP76b, WP84, WP79 gemergt
+Stand: 2026-10-19, WP88 und WP90 laufen; WP91, WP76b, WP84, WP79, WP96 gemergt
 
 ## Meilensteine
 
@@ -40,13 +40,13 @@ Stand: 2026-10-18 abends, WP96 und WP88 laufen; WP91, WP76b, WP84, WP79 gemergt
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | in Arbeit | Review steht aus (HEAD 38e09e9) |
 | WP89 | Todoist/Google Tasks | geplant | nach WP88 |
-| WP90 | Mediensteuerung | wartet | Review und E2E (Player-App auf Emulator) stehen aus |
+| WP90 | Mediensteuerung | in Arbeit | Review und E2E (Player-App auf Emulator) stehen aus |
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
 | WP92a–c | Sprechererkennung | geplant | WP92c nach WP91 |
 | WP93 | Wake Word im Chat | geplant | – |
 | WP94 | Schnellwechsel Agent | geplant | – |
 | WP95 | CI als Gate | gemergt | – |
-| WP96 | Gate schlank/stabil | in Arbeit | Teil 1 14e406e CI grün; Teil 2 WIP 036f497 (Gate ungeprüft); Übergabe `handoff/wp96-session.md` |
+| WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
 | WP97 | Lastbremse/Cache | geplant | – |
 | WP98 | Konfliktarm | geplant | kann starten (WP79 gemergt) |
 
@@ -54,11 +54,11 @@ Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
 ## Nächste Schritte
 
-Für eine neue Orchestrator-Sitzung (Stand 2026-10-18 abends, vor dem Neustart des Rechners):
+Stand 2026-10-19 (Orchestrator „Wendelin coding“):
 
-1. **Pausierte Pakete fortsetzen:** WP76b, WP96 und ggf. WP84/WP91 aus `../james-wt/handoff/wpNN-session.md`, je in einer neuen Paket-Sitzung (`start-wp-session.sh`). Gleichzeitig höchstens 2.
-2. **WP79** fortsetzen (Übergabe `../james-wt/handoff/wp79.md`), danach WP98 (l10n-Fragmente).
-3. **WP88** und **WP90** ins Review (HEAD in der Tabelle).
-4. Danach WP81b, WP97, WP76c/d und die M5-Wellen 2 und 3.
+1. **WP88** (Aufgaben) läuft als Paket-Sitzung (Review, Nachbesserung, E2E).
+2. **WP90** (Mediensteuerung) läuft als Paket-Sitzung.
+3. Danach WP98 (l10n-Fragmente), WP81b, WP97, WP76c/d (Downgrade-Schutz K59) und die M5-Wellen 2 und 3.
+4. Pakete mit alten Commits („Stefan Richter“, Claude-Session-Zeile) per Squash mergen.
 
 Wartet auf Stefan: K47 nach Stopp-Test 11.6, Test 11.7a.
