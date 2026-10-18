@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/saf_vault_port.dart';
@@ -174,29 +175,38 @@ void main() {
     },
   );
 
-  test(
-    'Zeitlimit: hängender Provider → unavailable (Schreiben länger)',
-    () async {
-      native.hang = true;
-      final slow = SafVaultPort(
-        tree: () => _tree,
-        timeout: const Duration(milliseconds: 20),
-        writeTimeout: const Duration(milliseconds: 200),
-      );
-      await expectLater(slow.read('x.md'), fails(PortErrorKind.unavailable));
-      final watch = Stopwatch()..start();
-      await expectLater(
-        slow.write('x.md', 'y'),
-        fails(PortErrorKind.unavailable),
-      );
-      expect(watch.elapsedMilliseconds, greaterThanOrEqualTo(150));
-      await expectLater(
-        slow.create('n.md', 'y'),
-        fails(PortErrorKind.unavailable),
-      );
-      expect(SafVaultPort(tree: () => _tree).writeTimeout.inSeconds, 30);
-    },
-  );
+  test('Zeitlimit: hängender Provider → unavailable (Schreiben länger)', () {
+    native.hang = true;
+    final slow = SafVaultPort(
+      tree: () => _tree,
+      timeout: const Duration(milliseconds: 20),
+      writeTimeout: const Duration(milliseconds: 200),
+    );
+    fakeAsync((fake) {
+      Object? readErr;
+      Object? writeErr;
+      Object? createErr;
+      slow.read('x.md').then<void>((_) {}, onError: (Object e) => readErr = e);
+      slow
+          .write('x.md', 'y')
+          .then<void>((_) {}, onError: (Object e) => writeErr = e);
+      slow
+          .create('n.md', 'y')
+          .then<void>((_) {}, onError: (Object e) => createErr = e);
+      fake.elapse(const Duration(milliseconds: 25));
+      expect(readErr, isNotNull, reason: 'read: 20 ms');
+      expect(writeErr, isNull, reason: 'write: writeTimeout 200 ms');
+      expect(createErr, isNull, reason: 'create: ebenfalls writeTimeout');
+      fake.elapse(const Duration(milliseconds: 150));
+      expect(writeErr, isNull);
+      fake.elapse(const Duration(milliseconds: 30));
+      expect(writeErr, isNotNull);
+      for (final e in [readErr, writeErr, createErr]) {
+        expect((e as PortException).kind, PortErrorKind.unavailable);
+      }
+    });
+    expect(SafVaultPort(tree: () => _tree).writeTimeout.inSeconds, 30);
+  });
 
   test('ohne gewählten Vault: unavailable, kein Kanalaufruf', () async {
     final none = SafVaultPort(tree: () => null);

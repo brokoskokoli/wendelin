@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:test/test.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -128,17 +129,21 @@ void main() {
       expect(await p.chat(req('a')).toList(), [const Done(StopReason.endTurn)]);
     });
 
-    test('cancel during delay ends with CancelledException quickly', () async {
-      final p = FakeLlmProvider([
-        ScriptedTurn.text('a' * 100, chunkSize: 1),
-      ], eventDelay: const Duration(seconds: 1));
-      final cancel = CancelToken();
-      final watch = Stopwatch()..start();
-      final future = p.chat(req('a'), cancel: cancel).toList();
-      Timer(const Duration(milliseconds: 20), cancel.cancel);
-      final events = await future;
-      expect(watch.elapsed, lessThan(const Duration(milliseconds: 900)));
-      expect(events.single, const ErrorEvent(CancelledException()));
+    test('cancel during delay ends with CancelledException quickly', () {
+      fakeAsync((async) {
+        final p = FakeLlmProvider([
+          ScriptedTurn.text('a' * 100, chunkSize: 1),
+        ], eventDelay: const Duration(seconds: 1));
+        final cancel = CancelToken();
+        List<ChatEvent>? events;
+        p.chat(req('a'), cancel: cancel).toList().then((e) => events = e);
+        async.elapse(const Duration(milliseconds: 1));
+        cancel.cancel();
+        // Ohne den Abbruch der Pause bräuchte der Strom 100 s virtuell.
+        async.elapse(const Duration(milliseconds: 10));
+        expect(events, isNotNull);
+        expect(events!.single, const ErrorEvent(CancelledException()));
+      });
     });
 
     test('metadata: type, caps, models, test()', () async {

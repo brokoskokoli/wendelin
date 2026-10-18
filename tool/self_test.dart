@@ -2,6 +2,7 @@
 // Läuft im Gate als Schritt „tool self-test“:
 //
 //   dart run tool/self_test.dart
+import 'dart:convert';
 import 'dart:io';
 
 import 'check_app_coverage.dart' show hasFilesUnder, mergeLcov;
@@ -9,6 +10,7 @@ import 'check_deps.dart' show pubspecWorkspaceDeps;
 import 'gen_attest_fixtures.dart' as fixtures;
 import 'src/channel_self_test.dart';
 import 'src/doc_paths.dart';
+import 'src/flaky_scan.dart';
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
 import 'src/gate_rust.dart';
@@ -21,6 +23,7 @@ Future<void> main() async {
   _changedSelection(t);
   await _gateRun(t);
   await _gateRust(t);
+  _flakyScan(t);
   _sizeScan(t);
   _sizeRules(t);
   _docPaths(t);
@@ -289,6 +292,8 @@ Future<void> _gateRun(SelfCheck t) async {
   ], const Duration(seconds: 2));
   t.isTrue(summary.contains('test a   ok              1.3 s  x'), summary);
   t.isTrue(summary.endsWith('GATE GRÜN'), 'GATE GRÜN am Ende');
+
+  await _gateRunRed(t);
 
   final dir = Directory.systemTemp.createTempSync('gate_selftest_');
   final json = File('${dir.path}/r.json')
@@ -622,4 +627,143 @@ Future<void> _exitCodes(SelfCheck t) async {
   } finally {
     dir.deleteSync(recursive: true);
   }
+}
+
+void _flakyScan(SelfCheck t) {
+  t.group('Flaky-Check');
+  final d = Directory.systemTemp.createTempSync('flaky_selftest_');
+  Directory('${d.path}/packages/p/test').createSync(recursive: true);
+  Directory('${d.path}/app/integration_test').createSync(recursive: true);
+  File('${d.path}/packages/p/test/a_test.dart').writeAsStringSync(
+    'void main() {\n  final sw = Stopwatch()..start();\n'
+    '  expect(sw.elapsed, lessThan(x));\n'
+    '  await tester.runAsync(() => Future<void>.delayed(d));\n'
+    '  await tester.runAsync(() async {\n    await Future.delayed(d);\n  });\n'
+    '  await tester.runAsync(() async {\n    final x = 1;\n'
+    '    await Future<void>.delayed(d);\n  });\n'
+    '  // Stopwatch im Kommentar\n}\n',
+  );
+  File('${d.path}/packages/p/test/ok_test.dart').writeAsStringSync(
+    'void main() { await tester.runAsync(() => db.close()); '
+    'await Future.delayed(d); '
+    'expect(a, b); final n = DateTime.now(); }\n',
+  );
+  Directory('${d.path}/packages/p/test/live').createSync();
+  File('${d.path}/packages/p/test/live/x_test.dart')
+      .writeAsStringSync('final sw = Stopwatch();\n');
+  File('${d.path}/app/integration_test/i_test.dart')
+      .writeAsStringSync('final sw = Stopwatch();\n');
+  final found = scanFlaky(testFiles(root: d.path), root: d.path);
+  t.eq(found, {'packages/p/test/a_test.dart': 5}, 'Treffer nur in a_test');
+  final allowed = parseFlakyAllowlist('packages/p/test/a_test.dart: 5  # x\n');
+  t.eq(compareFlaky(found, allowed), <String>[], 'Ausnahmeliste deckt ab');
+  t.isTrue(
+    compareFlaky(found, {'packages/p/test/a_test.dart': 4}).length == 1,
+    '5 gefunden bei 4 erlaubt ist rot',
+  );
+  t.isTrue(
+    compareFlaky(found, const {}).length == 1,
+    'neuer Treffer ist ein Fehler',
+  );
+  t.isTrue(
+    compareFlaky(const {}, allowed).single.contains('entfernen'),
+    'veralteter Eintrag wird gemeldet',
+  );
+  d.deleteSync(recursive: true);
+}
+
+Future<void> _gateRunRed(SelfCheck t) async {
+  t.isTrue(
+    utf8.encode(capBytes('ä' * 5000)).length < 4200 &&
+        capBytes('kurz') == 'kurz',
+    'capBytes deckelt die Rot-Ausgabe auf 4 KB',
+  );
+  // Rot-Ausgabe aus dem JSON-Bericht: Name, Datei:Zeile, Fehler, gekürzt.
+  final rdir = Directory.systemTemp.createTempSync('gate_red_');
+  String ev(Map<String, Object?> m) => jsonEncode(m);
+  final bigStack = [
+    for (var i = 0; i < 300; i++) '#$i      frame$i (package:app/x.dart:$i:1)',
+    'MallocStackLogging: can\'t turn off malloc stack logging',
+  ].join('\n');
+  File('${rdir.path}/red.json').writeAsStringSync(
+    [
+      ev({
+        'type': 'testStart',
+        'test': {
+          'id': 1,
+          'name': 'Beispiel schlaegt absichtlich fehl',
+          'url': 'file:///w/app/test/beispiel_test.dart',
+          'line': 12,
+        },
+      }),
+      ev({
+        'type': 'error',
+        'testID': 1,
+        'error': [
+          "MallocStackLogging: can't turn off malloc stack logging",
+          'Expected: <1>',
+          '  Actual: <2>',
+          for (var i = 0; i < 100; i++) 'Zusatzzeile $i ${'x' * 400}',
+        ].join('\n'),
+        'stackTrace': bigStack,
+      }),
+      ev({
+        'type': 'testStart',
+        'test': {'id': 2, 'name': 'loading test/kaputt_test.dart'},
+      }),
+      ev({
+        'type': 'error',
+        'testID': 2,
+        'error': 'Error: Compilation failed',
+        'stackTrace': '',
+      }),
+      for (var i = 10; i < 30; i++) ...[
+        ev({
+          'type': 'testStart',
+          'test': {'id': i, 'name': 'weiterer roter Test $i'},
+        }),
+        ev({
+          'type': 'error',
+          'testID': i,
+          'error': 'Fehler $i',
+          'stackTrace': bigStack,
+        }),
+      ],
+    ].join('\n'),
+  );
+  final redOut = StringBuffer();
+  final red = Gate(
+    verbose: false,
+    out: redOut,
+    runner: (exe, args, {cwd, required verbose}) async =>
+        const ProcResult(1, ['viel Rauschen', 'MallocStackLogging: noise']),
+  );
+  await red.step('test r', 'dart', [], report: '${rdir.path}/red.json');
+  final redText = redOut.toString();
+  t.isTrue(
+    redText.contains('Beispiel schlaegt absichtlich fehl') &&
+        redText.contains('test/beispiel_test.dart:12') &&
+        redText.contains('Expected: <1>'),
+    'Rot-Ausgabe nennt Testname, Datei:Zeile und Fehler',
+  );
+  t.isTrue(
+    redText.contains('loading test/kaputt_test.dart') &&
+        redText.contains('Compilation failed'),
+    'Ladefehler bleibt sichtbar',
+  );
+  t.isTrue(
+    redText.contains('weitere Zeilen') &&
+        redText.split('\n').where((l) => l.startsWith('  ')).length <= 62,
+    'Zeilenbegrenzung je Schritt',
+  );
+  t.isTrue(
+    utf8.encode(redText).length <= 4096,
+    'Rot-Ausgabe höchstens 4 KB (${utf8.encode(redText).length})',
+  );
+  t.isTrue(
+    !redText.contains('MallocStackLogging') && !redText.contains('frame20 '),
+    'Rauschen und lange Stacks gefiltert',
+  );
+  t.eq(renderFailures('${rdir.path}/fehlt.json'), '', 'ohne Bericht leer');
+  rdir.deleteSync(recursive: true);
 }

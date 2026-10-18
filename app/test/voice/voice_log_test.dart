@@ -60,6 +60,8 @@ void main() {
     final savedPrint = debugPrint;
     debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
     addTearDown(() => debugPrint = savedPrint);
+    // flutter_test_config.dart puffert die Senke; hier soll sie drucken.
+    voiceLogSink = (l) => debugPrint(l);
 
     const secrets = [
       'Xylophon', // transcript

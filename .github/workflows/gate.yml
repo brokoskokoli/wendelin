@@ -13,6 +13,7 @@ permissions:
   contents: read
 env:
   FLUTTER_VERSION: 3.47.7
+  NDK_VERSION: 28.2.13676358
   CI: 'true'
 jobs:
   # Paketliste aus dem Repo (wie tool/gate.dart: packages/* plus evals), damit
@@ -183,6 +184,12 @@ jobs:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
+      # NDK aus dem Cache bzw. mit Wiederholung installieren (tool/ci_install_ndk.sh).
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: /usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}
+          key: ndk-${{ runner.os }}-${{ env.NDK_VERSION }}
+      - run: tool/ci_install_ndk.sh "$NDK_VERSION"
       - run: flutter pub get
       # Erzeugt Gradle-Wrapper und local.properties ohne vollen Build.
       - run: flutter build apk --config-only
@@ -200,12 +207,19 @@ jobs:
         with:
           fetch-depth: 0
       - id: f
+        env:
+          REF: ${{ github.ref }}
         run: |
-          base="${{ github.event.before }}"
+          # Branches und PRs: gegen die Merge-Basis mit main (alle Aenderungen
+          # des Branches, nicht nur der letzte Push). main: gegen den vorigen Push.
+          base=""
+          if [ "$REF" = refs/heads/main ]; then
+            base="${{ github.event.before }}"
+          fi
           if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ] || ! git cat-file -e "$base" 2>/dev/null; then
             base=$(git merge-base origin/main HEAD)
           fi
-          if git diff --name-only "$base" HEAD | grep -qE '^(app/android/|pubspec|.*/pubspec[^/]*$)'; then
+          if git diff --name-only "$base" HEAD | grep -qE '^(app/android/|native/|\.github/workflows/gate\.yml|tool/check_apk|pubspec|.*/pubspec[^/]*$)'; then
             echo "android=true" >> "$GITHUB_OUTPUT"
           else
             echo "android=false" >> "$GITHUB_OUTPUT"
@@ -246,7 +260,12 @@ jobs:
           workspaces: native/attest
       - name: cargo-ndk
         run: cargo ndk --version 2>/dev/null | grep -q '4\.1\.2' || cargo install cargo-ndk --version 4.1.2 --locked --force
-      - run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358"
+      # NDK aus dem Cache bzw. mit Wiederholung installieren (tool/ci_install_ndk.sh).
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: /usr/local/lib/android/sdk/ndk/${{ env.NDK_VERSION }}
+          key: ndk-${{ runner.os }}-${{ env.NDK_VERSION }}
+      - run: tool/ci_install_ndk.sh "$NDK_VERSION"
       - run: flutter build apk --release --target-platform android-arm64
         working-directory: app
       - run: tool/check_apk.sh app/build/app/outputs/flutter-apk/app-release.apk

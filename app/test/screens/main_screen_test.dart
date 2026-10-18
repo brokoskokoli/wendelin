@@ -18,14 +18,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
 
-/// Pumps in steps until [finder] finds something (streamed demo answers
-/// arrive with small delays).
-Future<void> pumpUntil(WidgetTester tester, Finder finder) async {
-  for (var i = 0; i < 200 && finder.evaluate().isEmpty; i++) {
-    await tester.pump(const Duration(milliseconds: 50));
-  }
-  expect(finder, findsWidgets);
-}
+export '../ui/helpers.dart' show pumpUntil;
 
 Future<void> send(WidgetTester tester, String text) async {
   await tester.enterText(find.byType(TextField), text);

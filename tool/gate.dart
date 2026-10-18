@@ -156,6 +156,7 @@ Future<void> _appSteps(Gate gate) async {
     'flutter',
     ['test', '--coverage', ..._testFlags(gate.verbose, json)],
     cwd: 'app',
+    report: json,
     check: (r) async {
       final tests = testDetail(countTests(json));
       if (r.exitCode != 0) return (detail: tests, failure: null);
@@ -223,6 +224,7 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
       failure: null,
     ),
   );
+  await gate.step('check_flaky', 'dart', ['run', 'tool/check_flaky.dart']);
   await gate.step('check_docs', 'dart', ['run', 'tool/check_docs.dart']);
   await gate.step('check_channels', 'dart', [
     'run',
@@ -355,6 +357,7 @@ Future<void> _testPackage(Gate gate, String name, String dir) async {
     'dart',
     ['test', '--coverage=coverage', ..._testFlags(gate.verbose, json)],
     cwd: dir,
+    report: json,
     check: (r) async {
       final tests = testDetail(countTests(json));
       if (r.exitCode != 0) return (detail: tests, failure: null);

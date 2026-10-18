@@ -35,10 +35,12 @@ Future<ProviderContainer> pumpIntegrations(
 }
 
 /// Lets database work finish (it runs outside the fake clock) and pumps.
-Future<void> settle(WidgetTester tester) async {
-  await tester.runAsync(
-    () => Future<void>.delayed(const Duration(milliseconds: 20)),
-  );
+Future<void> settle(WidgetTester tester, {bool Function()? until}) async {
+  if (until != null) {
+    await pumpUntil(tester, until);
+  } else {
+    await pumpReal(tester, rounds: 1, step: const Duration(milliseconds: 20));
+  }
   await tester.pumpAndSettle();
 }
 
@@ -83,7 +85,11 @@ void main() {
     await tester.tap(switchOf('Kalender'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Weiter'));
-    await settle(tester);
+    await settle(
+      tester,
+      until: () =>
+          tileWidget(tester, 'Kalender').status == IntegrationStatus.active,
+    );
     expect(env.permissionRequests, 1);
     expect(tileWidget(tester, 'Kalender').status, IntegrationStatus.active);
   });
@@ -95,7 +101,12 @@ void main() {
     await pumpIntegrations(tester, env);
     await tester.tap(switchOf('Zwischenablage'));
     await tester.pumpAndSettle();
-    await settle(tester);
+    await settle(
+      tester,
+      until: () =>
+          tileWidget(tester, 'Zwischenablage').status ==
+          IntegrationStatus.active,
+    );
     expect(find.byType(AlertDialog), findsNothing);
     expect(
       tileWidget(tester, 'Zwischenablage').status,

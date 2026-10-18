@@ -3,7 +3,11 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/wake_providers.dart';
+import 'package:wendelin/di/wake_service.dart';
+import 'package:wendelin/di/wake_settings.dart';
 import 'package:wendelin/ui/settings/wake/wake_calibrate_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_enroll_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_test_screen.dart';
@@ -49,6 +53,21 @@ void main() {
       ]);
     });
     await pumpGoldenScreen(tester, env, const WakeWordScreen());
+    // Settings, status and voices load asynchronously (secret store).
+    final c = ProviderScope.containerOf(
+      tester.element(find.byType(WakeWordScreen)),
+    );
+    await pumpUntil(
+      tester,
+      () => [
+        c.read(wakeServiceProvider),
+        c.read(wakeStatusProvider),
+        c.read(wakeSpeakersProvider),
+        c.read(wakeVerifyProvider),
+        c.read(wakeToneProvider),
+      ].every((v) => v.hasValue),
+    );
+    await tester.pumpAndSettle();
     await golden(tester, 'wake_uebersicht');
   });
 

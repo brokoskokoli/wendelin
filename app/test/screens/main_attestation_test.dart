@@ -20,14 +20,11 @@ import '../support/tee_app_support.dart';
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
 
-/// Pumps until the run ended (the send button is back), then a little more
-/// for the receipt check and dialogs.
-Future<void> _settle(WidgetTester tester) async {
-  for (var i = 0; i < 20; i++) {
-    // The database runs on real time, the widgets on fake time.
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
+/// Pumps until [cond] holds (the database runs on real time, the widgets on
+/// fake time), then a few more frames for the receipt check and dialogs.
+Future<void> _settle(WidgetTester tester, bool Function() cond) async {
+  await pumpUntil(tester, cond);
+  for (var i = 0; i < 3; i++) {
     await tester.pump(const Duration(milliseconds: 50));
   }
 }
@@ -74,17 +71,25 @@ void main() {
     return c;
   }
 
-  Future<void> sendText(WidgetTester tester, String text) async {
+  Future<void> sendText(
+    WidgetTester tester,
+    String text,
+    bool Function() until,
+  ) async {
     await tester.enterText(find.byType(TextField), text);
     await tester.testTextInput.receiveAction(TextInputAction.send);
-    await _settle(tester);
+    await _settle(tester, until);
   }
 
   testWidgets('Antwort mit grünem Schild; Tippen öffnet den Protokolleintrag', (
     tester,
   ) async {
     await pumpTee(tester);
-    await sendText(tester, 'Wie wird das Meer morgen?');
+    await sendText(
+      tester,
+      'Wie wird das Meer morgen?',
+      () => find.text('geprüft').evaluate().isNotEmpty,
+    );
     expect(find.text('Ruhig: 0,4 m Welle.'), findsOneWidget);
     expect(find.text('geprüft'), findsOneWidget);
     await tester.tap(find.byType(AttestationShield));
@@ -97,7 +102,11 @@ void main() {
   ) async {
     final c = await pumpTee(tester);
     verifier.receipts = [failedReceipt(AttestationStage.receiptSignature)];
-    await sendText(tester, 'Frage');
+    await sendText(
+      tester,
+      'Frage',
+      () => c.read(attestationHubProvider).isLocked('phala'),
+    );
     expect(find.text('Prüfung fehlgeschlagen'), findsNWidgets(2));
     expect(find.textContaining('Anbieter ist gesperrt'), findsOneWidget);
     expect(c.read(attestationHubProvider).isLocked('phala'), isTrue);
@@ -105,7 +114,10 @@ void main() {
       const ReceiptResult(stages: [], status: AttestationStatus.green),
     ];
     await tester.tap(find.text('Neu prüfen'));
-    await _settle(tester);
+    await _settle(
+      tester,
+      () => !c.read(attestationHubProvider).isLocked('phala'),
+    );
     expect(c.read(attestationHubProvider).isLocked('phala'), isFalse);
     expect(find.textContaining('Sperre ist aufgehoben'), findsOneWidget);
   });
@@ -114,7 +126,10 @@ void main() {
     tester,
   ) async {
     await pumpTee(tester, launchTarget: 'attestation_log');
-    await _settle(tester);
+    await _settle(
+      tester,
+      () => find.byType(AttestationLogScreen).evaluate().isNotEmpty,
+    );
     expect(find.byType(AttestationLogScreen), findsOneWidget);
   });
 
@@ -122,7 +137,10 @@ void main() {
     tester,
   ) async {
     await pumpTee(tester);
-    await _settle(tester);
+    // Absence cannot be awaited: the start is done once the main screen
+    // stands; give the (empty) launch handling about 1 s real time.
+    await _settle(tester, () => find.byType(MainScreen).evaluate().isNotEmpty);
+    await pumpReal(tester, rounds: 100);
     expect(find.byType(AttestationLogScreen), findsNothing);
   });
 
@@ -130,7 +148,11 @@ void main() {
       'aktiven', (tester) async {
     final c = await pumpTee(tester);
     verifier.receipts = [failedReceipt(AttestationStage.receiptSignature)];
-    await sendText(tester, 'Frage');
+    await sendText(
+      tester,
+      'Frage',
+      () => c.read(attestationHubProvider).isLocked('phala'),
+    );
     expect(c.read(attestationHubProvider).isLocked('phala'), isTrue);
     final controller = c.read(agentControllerProvider.notifier);
     // ignore: invalid_use_of_protected_member
@@ -157,7 +179,10 @@ void main() {
       const ReceiptResult(stages: [], status: AttestationStatus.green),
     ];
     await tester.tap(find.text('Neu prüfen'));
-    await _settle(tester);
+    await _settle(
+      tester,
+      () => !c.read(attestationHubProvider).isLocked('phala'),
+    );
     expect(c.read(attestationHubProvider).isLocked('phala'), isFalse);
   });
 
@@ -165,11 +190,20 @@ void main() {
       'sendet nur diese Anfrage', (tester) async {
     await pumpTee(tester, mode: GpuCheckMode.before);
     gpu.result = const GpuAttestationResult(GpuVerdict.failed, 'abgelehnt');
-    await sendText(tester, 'Vertrauliche Frage');
+    await sendText(
+      tester,
+      'Vertrauliche Frage',
+      () => find.text('GPU-Prüfung nicht bestanden').evaluate().isNotEmpty,
+    );
     expect(find.text('GPU-Prüfung nicht bestanden'), findsOneWidget);
     expect(gateway.requests, 0);
     await tester.tap(find.text('Ohne GPU-Prüfung senden'));
-    await _settle(tester);
+    await _settle(
+      tester,
+      () =>
+          find.text('Ruhig: 0,4 m Welle.').evaluate().isNotEmpty &&
+          find.text('GPU-Prüfung nicht bestanden').evaluate().isEmpty,
+    );
     expect(gateway.requests, 1);
     expect(find.text('Ruhig: 0,4 m Welle.'), findsOneWidget);
     expect(find.text('GPU-Prüfung nicht bestanden'), findsNothing);
@@ -180,10 +214,17 @@ void main() {
   ) async {
     await pumpTee(tester, mode: GpuCheckMode.before);
     gpu.result = const GpuAttestationResult(GpuVerdict.unreachable);
-    await sendText(tester, 'Frage');
+    await sendText(
+      tester,
+      'Frage',
+      () => find.text('GPU-Prüfung nicht bestanden').evaluate().isNotEmpty,
+    );
     expect(find.text('GPU-Prüfung nicht bestanden'), findsOneWidget);
     await tester.tap(find.text('Abbrechen'));
-    await _settle(tester);
+    await _settle(
+      tester,
+      () => find.text('GPU-Prüfung nicht bestanden').evaluate().isEmpty,
+    );
     expect(gateway.requests, 0);
     expect(find.text('Ruhig: 0,4 m Welle.'), findsNothing);
   });
@@ -199,7 +240,11 @@ void main() {
     gpu
       ..result = none
       ..localResult = none;
-    await sendText(tester, 'Vertrauliche Frage');
+    await sendText(
+      tester,
+      'Vertrauliche Frage',
+      () => find.text('Kein GPU-Nachweis').evaluate().isNotEmpty,
+    );
     expect(find.text('Kein GPU-Nachweis'), findsOneWidget);
     expect(
       find.text(AppLocalizationsDe().gpuNoEvidenceMessage('Phala · GLM klein')),
@@ -207,10 +252,14 @@ void main() {
     );
     expect(gateway.requests, 0);
     await tester.tap(find.text('Ohne GPU-Prüfung senden'));
-    await _settle(tester);
+    await _settle(tester, () => gateway.requests >= 1);
     expect(gateway.requests, 1);
     // Only this request: the next one is held back again.
-    await sendText(tester, 'Noch eine Frage');
+    await sendText(
+      tester,
+      'Noch eine Frage',
+      () => find.text('Kein GPU-Nachweis').evaluate().isNotEmpty,
+    );
     expect(find.text('Kein GPU-Nachweis'), findsOneWidget);
     expect(gateway.requests, 1);
   });
@@ -227,8 +276,9 @@ void main() {
     gpu
       ..result = none
       ..localResult = none;
-    await sendText(tester, 'Frage');
-    await _settle(tester);
+    await sendText(tester, 'Frage', () => gateway.requests >= 1);
+    await _settle(tester, () => gateway.requests >= 1);
+    await pumpReal(tester, rounds: 100);
     expect(gateway.requests, 1);
     expect(find.text('Kein GPU-Nachweis'), findsNothing);
     expect(env.notifier.shown, isEmpty);

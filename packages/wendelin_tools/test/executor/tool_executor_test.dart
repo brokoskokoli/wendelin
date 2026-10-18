@@ -82,26 +82,36 @@ void main() {
       },
     );
 
-    test('Laufzeitfenster zweier Tools überlappen (echte Zeit)', () async {
-      final windows = <String, (int, int)>{};
-      final watch = Stopwatch()..start();
-      FakeTool timed(String name) => FakeTool(
-        name: name,
-        handler: (args, ctx) async {
-          final from = watch.elapsedMicroseconds;
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-          windows[name] = (from, watch.elapsedMicroseconds);
-          return ToolOutcome.text('ok');
-        },
-      );
-      final executor = ToolExecutor(
-        catalog: FakeToolCatalog([timed('p__a'), timed('p__b')]),
-      );
-      await _run(executor, [_call('1', 'p__a'), _call('2', 'p__b')]);
-      final (aFrom, aTo) = windows['p__a']!;
-      final (bFrom, bTo) = windows['p__b']!;
-      expect(bFrom < aTo && aFrom < bTo, isTrue, reason: '$windows');
-    });
+    test(
+      'zwei Tools laufen gleichzeitig (Start vor dem ersten Ende)',
+      () async {
+        // Sequentiell würde das zweite Tool nie starten; das erste gibt dann
+        // nach kurzer Wartezeit auf und liefert einen Fehler.
+        final gate = Completer<void>();
+        var started = 0;
+        FakeTool gated(String name) => FakeTool(
+          name: name,
+          handler: (args, ctx) async {
+            if (++started == 2) gate.complete();
+            final both = await gate.future
+                .timeout(const Duration(seconds: 2))
+                .then((_) => true, onError: (_) => false);
+            return both
+                ? ToolOutcome.text('ok')
+                : ToolOutcome.error('zweites Tool nie gestartet');
+          },
+        );
+        final executor = ToolExecutor(
+          catalog: FakeToolCatalog([gated('p__a'), gated('p__b')]),
+        );
+        final events = await _run(executor, [
+          _call('1', 'p__a'),
+          _call('2', 'p__b'),
+        ]);
+        expect(started, 2);
+        expect(_outcomes(events).values.every((o) => !o.isError), isTrue);
+      },
+    );
 
     test('ToolFinished sofort bei Fertigstellung, ToolStarted vorab in '
         'Call-Reihenfolge', () async {

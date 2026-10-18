@@ -46,6 +46,7 @@ dependencies:
 
 dev_dependencies:
   fake_async: any
+  test_api: any
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0

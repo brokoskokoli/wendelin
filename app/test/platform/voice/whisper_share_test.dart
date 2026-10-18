@@ -1,6 +1,7 @@
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/voice/whisper_registry.dart';
 import 'package:wendelin/platform/voice/whisper_share.dart';
@@ -80,30 +81,36 @@ void main() {
     reply.close();
   });
 
-  test('Besitzer weg: nach der Ping-Frist unavailable statt 60 s', () async {
-    final dead = ReceivePort()..close();
-    expect(
-      await RemoteWhisperBackend.alive(
+  test('Besitzer weg: nach der Ping-Frist unavailable statt 60 s', () {
+    // Virtuelle Zeit: der Aufruf muss nach der Ping-Frist (50 ms) enden, nicht
+    // erst nach der Antwortfrist von 60 s.
+    fakeAsync((async) {
+      final dead = ReceivePort()..close();
+      bool? alive;
+      RemoteWhisperBackend.alive(
         dead.sendPort,
         within: const Duration(milliseconds: 50),
-      ),
-      isFalse,
-    );
-    final watch = Stopwatch()..start();
-    await expectLater(
+      ).then((v) => alive = v);
+      Object? error;
       RemoteWhisperBackend(
-        dead.sendPort,
-        pingTimeout: const Duration(milliseconds: 50),
-      ).transcribe(Float32List(16)),
-      throwsA(
-        isA<VoiceException>().having(
-          (e) => e.kind,
-          'kind',
-          VoiceErrorKind.unavailable,
-        ),
-      ),
-    );
-    expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
+            dead.sendPort,
+            pingTimeout: const Duration(milliseconds: 50),
+          )
+          .transcribe(Float32List(16))
+          .then<void>(
+            (_) {},
+            onError: (Object e) {
+              error = e;
+            },
+          );
+      async.elapse(const Duration(milliseconds: 49));
+      expect(alive, isNull);
+      expect(error, isNull);
+      async.elapse(const Duration(milliseconds: 11));
+      expect(alive, isFalse);
+      expect(error, isA<VoiceException>());
+      expect((error! as VoiceException).kind, VoiceErrorKind.unavailable);
+    });
   });
 
   /// A port that answers pings and then [onTranscribe].

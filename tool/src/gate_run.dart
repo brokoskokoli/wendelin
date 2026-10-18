@@ -129,6 +129,7 @@ final class Gate {
     List<String> args, {
     String? cwd,
     Future<StepCheck> Function(ProcResult r)? check,
+    String? report,
   }) async {
     if (verbose) out.writeln('\n== $name');
     final sw = Stopwatch()..start();
@@ -144,7 +145,15 @@ final class Gate {
     final outcome = failure == null ? Outcome.ok : Outcome.red;
     record(StepResult(name, outcome, sw.elapsed, detail));
     if (failure != null && !verbose) {
-      out.writeln(tail(r.lines, tailLines).map((l) => '  | $l').join('\n'));
+      final failed = report == null ? '' : renderFailures(report);
+      if (failed.isNotEmpty && r.exitCode != 0) {
+        out.writeln(capBytes(failed));
+      } else {
+        final lines = r.lines.where((l) => !isNoiseLine(l)).toList();
+        out.writeln(
+          capBytes(tail(lines, tailLines).map((l) => '  | $l').join('\n')),
+        );
+      }
       if (r.exitCode == 0) out.writeln('  | $failure');
     } else if (failure != null) {
       out.writeln('$name: $failure');
@@ -166,6 +175,122 @@ final class Gate {
     out.writeln(renderSummary(results, total, notes: notes));
     return results.any((r) => r.outcome == Outcome.red) ? 1 : 0;
   }
+}
+
+/// Kürzt [text] auf höchstens [max] Bytes (UTF-8), mit Hinweis am Ende.
+String capBytes(String text, [int max = 4096]) {
+  final bytes = utf8.encode(text);
+  if (bytes.length <= max) return text;
+  final cut = utf8.decode(bytes.sublist(0, max), allowMalformed: true);
+  return '${cut.replaceAll('\uFFFD', '')}\n  … (gekürzt, --verbose für alles)';
+}
+
+/// Zeilen, die in der Rot-Ausgabe nur stören (macOS-Malloc-Hinweise).
+bool isNoiseLine(String l) =>
+    l.contains('MallocStackLogging') || l.contains('malloc: ');
+
+/// Rot-Ausgabe aus einer JSON-Reporter-Datei: je fehlgeschlagenem Test
+/// Name, Datei:Zeile, Fehler und höchstens [maxStack] Stack-Zeilen, in
+/// Summe höchstens [maxLines] Zeilen. Ladefehler (Kompilierfehler)
+/// erscheinen als Test `loading …` mit ihrem Fehlertext. Leer, wenn die
+/// Datei fehlt oder keinen Fehler enthält (dann gilt die Rohausgabe).
+String renderFailures(
+  String jsonPath, {
+  int maxLines = 60,
+  int maxStack = 15,
+  int maxErrorLines = 12,
+  int maxWidth = 160,
+  int maxLog = 8,
+}) {
+  final f = File(jsonPath);
+  if (!f.existsSync()) return '';
+  final tests = <int, ({String name, String where})>{};
+  final errors = <int, List<({String error, String stack})>>{};
+  final prints = <int, List<String>>{};
+  for (final line in f.readAsLinesSync()) {
+    if (!line.startsWith('{')) continue;
+    final Object? e;
+    try {
+      e = jsonDecode(line);
+    } on FormatException {
+      continue;
+    }
+    if (e is! Map<String, Object?>) continue;
+    final test = e['test'];
+    if (e['type'] == 'testStart' && test is Map<String, Object?>) {
+      final url = '${test['root_url'] ?? test['url'] ?? ''}';
+      final ln = test['root_line'] ?? test['line'];
+      final file = url.replaceFirst(RegExp(r'^file://'), '');
+      final rel = file.contains('/test/')
+          ? file.substring(file.lastIndexOf('/test/') + 1)
+          : file;
+      tests[test['id'] as int] = (
+        name: '${test['name']}',
+        where: rel.isEmpty ? '' : (ln == null ? rel : '$rel:$ln'),
+      );
+    } else if (e['type'] == 'print' && e['testID'] is int) {
+      prints
+          .putIfAbsent(e['testID'] as int, () => [])
+          .addAll(const LineSplitter().convert('${e['message']}'));
+    } else if (e['type'] == 'error') {
+      errors.putIfAbsent(e['testID'] as int, () => []).add((
+        error: '${e['error']}',
+        stack: '${e['stackTrace']}',
+      ));
+    }
+  }
+  if (errors.isEmpty) return '';
+  String cut(String l) =>
+      l.length <= maxWidth ? l : '${l.substring(0, maxWidth)}…';
+  final all = <String>[];
+  for (final MapEntry(:key, :value) in errors.entries) {
+    final t = tests[key];
+    all.add('  FAIL ${t?.name ?? 'Test $key'}');
+    if (t != null && t.where.isNotEmpty) all.add('    ${t.where}');
+    for (final err in value) {
+      final el = const LineSplitter()
+          .convert(err.error)
+          .where((l) => !isNoiseLine(l))
+          .toList();
+      for (final l in el.take(maxErrorLines)) {
+        all.add('    ${cut(l)}');
+      }
+      if (el.length > maxErrorLines) {
+        all.add('    … ${el.length - maxErrorLines} Fehlerzeilen');
+      }
+      final frames = const LineSplitter()
+          .convert(err.stack)
+          .where((l) => l.trim().isNotEmpty && !isNoiseLine(l))
+          .where(
+            (l) =>
+                !l.contains('package:test_api/') &&
+                !l.contains('package:test/') &&
+                !l.contains('package:stack_trace/') &&
+                !l.contains('=====') &&
+                !l.contains('dart:async') &&
+                !l.contains('dart:isolate'),
+          )
+          .toList();
+      for (final l in frames.take(maxStack)) {
+        all.add('      ${cut(l.trim())}');
+      }
+    }
+    final log = (prints[key] ?? const <String>[])
+        .where((l) => !isNoiseLine(l))
+        .toList();
+    if (log.isNotEmpty) {
+      all.add('    Log (letzte ${log.length > maxLog ? maxLog : log.length}):');
+      for (final l in log.skip(log.length > maxLog ? log.length - maxLog : 0)) {
+        all.add('      ${cut(l)}');
+      }
+    }
+  }
+  if (all.length <= maxLines) return all.join('\n');
+  return [
+    ...all.take(maxLines - 1),
+    '  … ${all.length - maxLines + 1} weitere Zeilen, ${errors.length} rote '
+        'Tests (vollständig mit --verbose)',
+  ].join('\n');
 }
 
 /// Die letzten [n] Zeilen von [lines], mit Hinweis auf die Gesamtlänge.

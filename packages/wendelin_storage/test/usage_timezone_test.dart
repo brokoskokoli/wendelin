@@ -1,3 +1,5 @@
+// Hinweis WP96: Die Probe läuft bewusst per `dart run` (Native-Assets-Hook von
+// sqlite3); eine vorkompilierte .dill findet die Bibliothek nicht (CI: 255).
 // Each probe compiles and starts a helper process (`dart run`); under load
 // that takes longer than the default 30 s.
 @Timeout(Duration(minutes: 3))

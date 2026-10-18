@@ -300,12 +300,11 @@ void main() {
       test('„$p“ is allowed', () => expect(RegexCondition(p).problem, isNull));
     }
 
-    test('allowed patterns stay fast on the longest input', () {
-      final watch = Stopwatch()..start();
+    // Kein Wanduhr-Assert: Backtracking-Explosion würde am Test-Timeout hängen.
+    test('allowed patterns finish on the longest input', () {
       for (final p in safe) {
         RegexCondition(p).evaluate(ctxFor('a' * 5000));
       }
-      expect(watch.elapsed, lessThan(const Duration(seconds: 1)));
     });
 
     test('an empty match has no trigger', () {

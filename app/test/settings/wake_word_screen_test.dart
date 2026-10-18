@@ -80,17 +80,15 @@ Future<void> seconds(WidgetTester tester, int n) async {
 
 /// Pumps (with a little real time, the fakes use real streams) until [f]
 /// is on screen.
-Future<void> until(
-  WidgetTester tester,
-  Finder f, {
-  int max = 400,
-  bool many = false,
-}) async {
-  for (var i = 0; i < max && f.evaluate().isEmpty; i++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+Future<void> until(WidgetTester tester, Finder f, {bool many = false}) async {
+  try {
+    await pumpUntil(
+      tester,
+      () => f.evaluate().isNotEmpty,
+      pump: const Duration(milliseconds: 100),
     );
-    await tester.pump(const Duration(milliseconds: 100));
+  } on TestFailure {
+    // Falls through to the diagnostic below.
   }
   if (f.evaluate().isEmpty) {
     final texts = find

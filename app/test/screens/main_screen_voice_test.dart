@@ -13,6 +13,7 @@ import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../support/test_env.dart';
+import '../ui/helpers.dart';
 import 'main_screen_test.dart' show pumpApp;
 
 /// Counts what the screen asks of the speech models.
@@ -53,13 +54,12 @@ void main() {
     ],
   );
 
-  Future<void> settle(WidgetTester tester) async {
+  Future<void> settle(WidgetTester tester, {bool Function()? until}) async {
     await tester.pump(const Duration(milliseconds: 1));
-    for (var i = 0; i < 5; i++) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 10)),
-      );
-      await tester.pump();
+    if (until != null) {
+      await pumpUntil(tester, until);
+    } else {
+      await pumpReal(tester);
     }
   }
 
@@ -126,18 +126,18 @@ void main() {
       ),
     );
     await pumpApp(tester, e);
-    await settle(tester);
+    await settle(tester, until: () => models.warm >= 1);
     expect(models.warm, 1);
 
     lifecycle(tester, toBackground);
     await settle(tester);
     expect(models.released, 0, reason: 'erst nach der Frist');
     await tester.pump(const Duration(seconds: 2));
-    await settle(tester);
+    await settle(tester, until: () => models.released >= 1);
     expect(models.released, 1);
 
     lifecycle(tester, toForeground);
-    await settle(tester);
+    await settle(tester, until: () => models.warm >= 2);
     expect(models.warm, 2);
   });
 }

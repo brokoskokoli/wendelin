@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/ui/settings/voice_voices_screen.dart';
 
 import '../support/test_env.dart';
-import '../ui/helpers.dart' show goldenKey;
+import '../ui/helpers.dart' show goldenKey, pumpUntil;
 import 'onboarding_settings_goldens_test.dart' show pumpGoldenScreen;
 
 void main() {
@@ -16,6 +16,9 @@ void main() {
       'tts-fr-siwis',
     ]);
     await pumpGoldenScreen(tester, env, const VoiceVoicesScreen());
+    // Settings and model states load asynchronously.
+    await pumpUntil(tester, find.text('Löschen'));
+    await tester.pumpAndSettle();
     await expectLater(
       find.byKey(goldenKey),
       matchesGoldenFile('goldens/stimmen.png'),

@@ -4,7 +4,12 @@ import 'package:drift/drift.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+// ignore: implementation_imports
+import 'package:test_api/src/backend/invoker.dart' show Invoker;
+// ignore: implementation_imports
+import 'package:test_api/src/backend/state.dart' show Result;
 import 'package:wendelin/ui/theme/app_theme.dart';
+import 'package:wendelin/voice/voice_log.dart';
 
 import 'support/golden_tolerance.dart';
 
@@ -29,5 +34,26 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
       const Locale('de', 'DE'),
     ];
   });
+  _bufferVoiceLog();
   await testMain();
+}
+
+/// Puffert `Wendelin/voice:`-Zeilen je Test und gibt sie nur aus, wenn
+/// dieser Test rot ist (sonst füllen sie die Fehlerausgabe). Tests, die
+/// `voiceLogSink` selbst setzen, behalten ihre Senke.
+void _bufferVoiceLog() {
+  final buffer = <String>[];
+  setUp(() {
+    buffer.clear();
+    voiceLogSink = buffer.add;
+  });
+  tearDown(() {
+    final result = Invoker.current?.liveTest.state.result;
+    if (result == Result.failure || result == Result.error) {
+      for (final l in buffer) {
+        debugPrint(l);
+      }
+    }
+    buffer.clear();
+  });
 }

@@ -1,0 +1,11 @@
+# Bestandstreffer des Flaky-Checks (tool/check_flaky.dart, WP96):
+# Wanduhr-Asserts (Stopwatch, DateTime.now/elapsed in expect) und
+# runAsync(Future.delayed) als Wartezeit in Tests.
+#
+# Format: <pfad>: <anzahl>  # Grund
+# Die Liste schrumpft nur. Ein Eintrag über der Anzahl ist verboten, ein
+# Eintrag unter der Anzahl wird vom Check zum Senken/Entfernen gemeldet.
+# Abbau: Flake-Fixes (pumpUntil, fakeAsync), siehe
+# docs/notes/dev-speedup-analysis.md §2.
+
+app/test/platform/voice/isolate_exit_test.dart: 2  # echtes Isolat, Untergrenze 100 ms (kein fakeAsync möglich, nicht lastflaky)

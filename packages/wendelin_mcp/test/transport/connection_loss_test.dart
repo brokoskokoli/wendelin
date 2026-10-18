@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_mcp/testing.dart';
@@ -312,29 +315,85 @@ void main() {
       },
     );
 
-    test('ping läuft in den Timeout: Fehler, kein tools/call', () async {
-      var hang = false;
-      final (server, counts) = await serve((req, method, n) async {
-        // Antwortet nie; der Socket bleibt offen.
-        return hang && method == 'ping';
-      });
-      final c = client(
-        rawUrl(server),
-        timeouts: const McpTimeouts(
-          idleCheck: Duration.zero,
-          pingTimeout: Duration(milliseconds: 200),
-        ),
-      );
-      await c.callTool('t', const {});
+    test('ping läuft in den Timeout: Fehler, kein tools/call', () {
+      // Virtuelle Zeit: der Abbruch muss nach der Ping-Frist (200 ms) kommen,
+      // lange vor dem Antwort-Timeout (10 min).
+      fakeAsync((async) {
+        var hang = false;
+        final calls = <String>[];
+        final mock = MockClient((req) async {
+          final m = rpc(req.body);
+          final method = m['method'] as String?;
+          if (method != null) calls.add(method);
+          const json = {'content-type': 'application/json'};
+          if (method == 'initialize') {
+            return http.Response(
+              jsonEncode(initResult(m['id'])),
+              200,
+              headers: {...json, 'mcp-session-id': 's'},
+            );
+          }
+          if (m['id'] == null) return http.Response('', 202);
+          if (hang && method == 'ping') {
+            return Completer<http.Response>().future;
+          }
+          return http.Response(
+            jsonEncode({
+              'jsonrpc': '2.0',
+              'id': m['id'],
+              'result': method == 'tools/call'
+                  ? {
+                      'content': [
+                        {'type': 'text', 'text': 'ok'},
+                      ],
+                    }
+                  : <String, Object?>{},
+            }),
+            200,
+            headers: json,
+          );
+        });
+        final c = McpClient(
+          config: McpServerConfig(
+            id: 'srv',
+            name: 'Server',
+            slug: 'server',
+            url: Uri.parse('https://mcp.example.org/mcp'),
+            transport: McpTransportKind.streamable,
+            auth: const McpNoAuth(),
+          ),
+          httpClient: mock,
+          secrets: FakeMcpSecrets(),
+          timeouts: const McpTimeouts(
+            idleCheck: Duration.zero,
+            pingTimeout: Duration(milliseconds: 200),
+            response: Duration(minutes: 10),
+          ),
+        );
+        c.callTool('t', const {});
+        async.flushMicrotasks();
 
-      hang = true;
-      final watch = Stopwatch()..start();
-      await expectLater(
-        c.callTool('t', const {}),
-        failsWith(McpErrorKind.timeout),
-      );
-      expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
-      expect(counts['tools/call'], 1);
+        hang = true;
+        Object? error;
+        c
+            .callTool('t', const {})
+            .then<void>(
+              (_) {},
+              onError: (Object e) {
+                error = e;
+              },
+            );
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 199));
+        expect(error, isNull);
+        async.elapse(const Duration(milliseconds: 1));
+        async.flushMicrotasks();
+
+        expect(error, isA<McpException>());
+        expect((error! as McpException).kind, McpErrorKind.timeout);
+        expect(calls.where((m) => m == 'tools/call'), hasLength(1));
+        c.dispose();
+      });
     });
   });
 

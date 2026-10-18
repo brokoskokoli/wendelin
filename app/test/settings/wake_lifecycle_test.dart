@@ -12,6 +12,7 @@ import 'package:wendelin/ui/settings/wake/wake_test_screen.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../ui/helpers.dart';
 import 'integrations_screen_test.dart' show settle;
 import 'wake_word_screen_test.dart' hide main;
 
@@ -118,10 +119,7 @@ void main() {
     final audio = OpenAudio();
     final env = wakeEnv(audio: audio);
     await pumpWake(tester, env, WakeTestScreen(speakers: [templates('a')]));
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
+    await pumpUntil(tester, () => audio.isRunning);
     expect(audio.isRunning, isTrue);
     await background(tester);
     expect(audio.isRunning, isFalse);

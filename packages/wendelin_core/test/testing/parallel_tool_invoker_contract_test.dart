@@ -87,11 +87,22 @@ void main() {
   toolInvokerContract(ParallelToolInvoker.new, name: 'ParallelToolInvoker');
 
   test('reference invoker really runs calls in parallel', () async {
-    final a = FakeTool(name: 'p__a', delay: const Duration(milliseconds: 100));
-    final b = FakeTool(name: 'p__b', delay: const Duration(milliseconds: 100));
-    final invoker = ParallelToolInvoker(FakeToolCatalog([a, b]));
-    final watch = Stopwatch()..start();
-    await invoker.invokeAll(
+    // Beide Tools laufen gleichzeitig, wenn jedes erst endet, nachdem beide
+    // gestartet sind (sequentiell: Deadlock bis zum Test-Timeout).
+    final gate = Completer<void>();
+    var started = 0;
+    FakeTool gated(String name) => FakeTool(
+      name: name,
+      handler: (args, ctx) async {
+        if (++started == 2) gate.complete();
+        await gate.future;
+        return ToolOutcome.text('ok');
+      },
+    );
+    final invoker = ParallelToolInvoker(
+      FakeToolCatalog([gated('p__a'), gated('p__b')]),
+    );
+    final events = await invoker.invokeAll(
       const [
         ToolCallBlock(id: '1', name: 'p__a', argumentsJson: '{}'),
         ToolCallBlock(id: '2', name: 'p__b', argumentsJson: '{}'),
@@ -103,6 +114,7 @@ void main() {
         timeZone: 'UTC',
       ),
     ).toList();
-    expect(watch.elapsed, lessThan(const Duration(milliseconds: 180)));
+    expect(started, 2);
+    expect(events, isNotEmpty);
   });
 }

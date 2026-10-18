@@ -17,6 +17,7 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 import '../screens/main_screen_test.dart' show pumpUntil;
 import '../support/tee_app_support.dart';
 import '../support/test_env.dart';
+import '../ui/helpers.dart' show pumpReal;
 import 'assistant_overlay_test.dart' show FakeAssistantPlatform, pumpOverlay;
 
 const _none = GpuAttestationResult(
@@ -25,14 +26,7 @@ const _none = GpuAttestationResult(
   GpuReason.noEvidence,
 );
 
-Future<void> settle(WidgetTester tester) async {
-  for (var i = 0; i < 10; i++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump(const Duration(milliseconds: 50));
-  }
-}
+Future<void> settle(WidgetTester tester) => pumpReal(tester, rounds: 10);
 
 void main() {
   late ScriptedGateway gateway;
