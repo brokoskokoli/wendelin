@@ -2,6 +2,8 @@
 
 Einzige Stelle für den Stand der Meilensteine und Arbeitspakete. Gepflegt vom Orchestrator auf `main`, bei jedem Start, Merge oder Verwerfen eines Pakets (Paket-Branches ändern diese Datei nicht).
 
+Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
+
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
 Stand: 2026-10-18, main `3f77d58`
@@ -23,7 +25,7 @@ Stand: 2026-10-18, main `3f77d58`
 | Paket | Titel | Status | Offen |
 | --- | --- | --- | --- |
 | WP76a | Tinfoil SEV-SNP (Rust) | gemergt | Folge: rsa-Upgrade; min_tcb in WP76d |
-| WP76b | Tinfoil Sigstore | Review | – |
+| WP76b | Tinfoil Sigstore | wartet | pausiert (Rechnerlast, max. 2 Pakete), Review läuft weiter, sobald frei |
 | WP76c | Tinfoil EHBP/HPKE | geplant | – |
 | WP76d | Tinfoil in der App | geplant | min_tcb setzen |
 | WP79 | App-Sprache | wartet | wartet auf Merge WP82; danach Provider-Screens, Goldens je Sprache |
@@ -42,7 +44,7 @@ Stand: 2026-10-18, main `3f77d58`
 | WP93 | Wake Word im Chat | geplant | – |
 | WP94 | Schnellwechsel Agent | geplant | – |
 | WP95 | CI als Gate | gemergt | – |
-| WP96 | Gate schlank/stabil | in Arbeit | – |
+| WP96 | Gate schlank/stabil | wartet | pausiert (Rechnerlast, max. 2 Pakete) |
 | WP97 | Lastbremse/Cache | geplant | – |
 | WP98 | Konfliktarm | geplant | nach WP79 |
 
