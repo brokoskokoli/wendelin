@@ -25,7 +25,7 @@ Stand: 2026-10-18, main `3f77d58`
 | Paket | Titel | Status | Offen |
 | --- | --- | --- | --- |
 | WP76a | Tinfoil SEV-SNP (Rust) | gemergt | Folge: rsa-Upgrade; min_tcb in WP76d |
-| WP76b | Tinfoil Sigstore | wartet | pausiert (Rechnerlast, max. 2 Pakete), Review läuft weiter, sobald frei |
+| WP76b | Tinfoil Sigstore | wartet | Review: nachbessern (2 major, 4 minor, 9/20 Mutationen überlebt); HEAD 7e2e8d4, Übergabe `handoff/wp76b-session.md` |
 | WP76c | Tinfoil EHBP/HPKE | geplant | – |
 | WP76d | Tinfoil in der App | geplant | min_tcb setzen |
 | WP79 | App-Sprache | wartet | wartet auf Merge WP82; danach Provider-Screens, Goldens je Sprache |
@@ -45,7 +45,7 @@ Stand: 2026-10-18, main `3f77d58`
 | WP93 | Wake Word im Chat | geplant | – |
 | WP94 | Schnellwechsel Agent | geplant | – |
 | WP95 | CI als Gate | gemergt | – |
-| WP96 | Gate schlank/stabil | wartet | pausiert (Rechnerlast, max. 2 Pakete) |
+| WP96 | Gate schlank/stabil | wartet | Teil 1 14e406e CI grün; Teil 2 WIP 036f497 (Gate ungeprüft); Übergabe `handoff/wp96-session.md` |
 | WP97 | Lastbremse/Cache | geplant | – |
 | WP98 | Konfliktarm | geplant | nach WP79 |
 
