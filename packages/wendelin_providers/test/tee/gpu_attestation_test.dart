@@ -173,6 +173,17 @@ void main() {
       },
     );
 
+    test('zusätzliches abgetrenntes GPU-Token ohne signierten Digest → failed',
+        () async {
+      final body = tamper(_Signed.response, (d) {
+        final gpus = d[1]! as Map<String, Object?>;
+        gpus['GPU-9'] = gpus['GPU-0'];
+      });
+      final r = await _Signed.verifier(nras: body).verify(model: 'm');
+      expect(r.verdict, GpuVerdict.failed);
+      expect(r.category, GpuReason.signature);
+    });
+
     test('Nonce der Evidenz ≠ Nonce im geprüften Token → failed', () async {
       final client = MockClient(
         (r) async => r.url.path.endsWith('jwks.json')
