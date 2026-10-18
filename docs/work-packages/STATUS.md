@@ -50,3 +50,14 @@ Stand: 2026-10-18, main `3f77d58`
 | WP98 | Konfliktarm | geplant | nach WP79 |
 
 Danach: Empfehlung von Modellen (gemeinsam mit Stefan besprechen).
+
+## Nächste Schritte
+
+Für eine neue Orchestrator-Sitzung (Stand 2026-10-18 abends, vor dem Neustart des Rechners):
+
+1. **Pausierte Pakete fortsetzen:** WP76b, WP96 und ggf. WP84/WP91 aus `../james-wt/handoff/wpNN-session.md`, je in einer neuen Paket-Sitzung (`start-wp-session.sh`). Gleichzeitig höchstens 2.
+2. **WP79** fortsetzen (Übergabe `../james-wt/handoff/wp79.md`), danach WP98 (l10n-Fragmente).
+3. **WP88** und **WP90** ins Review (HEAD in der Tabelle).
+4. Danach WP81b, WP97, WP76c/d und die M5-Wellen 2 und 3.
+
+Wartet auf Stefan: K48–K56 bestätigen (Liste am 2026-10-18 geschickt), K47 nach Stopp-Test 11.6, Test 11.7a.
