@@ -117,3 +117,33 @@ pub fn near_encrypt(recipient_ed_public: Vec<u8>, plaintext: Vec<u8>) -> Result<
 pub fn near_decrypt(secret: Vec<u8>, wire_hex: String) -> Result<Vec<u8>, String> {
     crate::near_e2ee::decrypt(&secret, &wire_hex)
 }
+
+pub use crate::snp::{SnpPolicy, SnpReportInfo, SnpTcb, SnpVerdict};
+
+/// Felder eines SEV-SNP-Reports (Chip-ID, TCB, Messwert) für KDS-Abruf und Anzeige; ohne Prüfung.
+#[flutter_rust_bridge::frb(sync)]
+pub fn snp_report_info(report: Vec<u8>) -> Result<SnpReportInfo, String> {
+    crate::snp::report_info(&report)
+}
+
+/// Prüft einen SEV-SNP-Report (Tinfoil) vollständig: Kette ARK (gepinnt) → ASK → VCEK, Signatur,
+/// Richtlinie und Bindung von `report_data` an TLS-SPKI-Hash und HPKE-Schlüssel.
+pub fn verify_snp_report(
+    report: Vec<u8>,
+    vcek_der: Vec<u8>,
+    chain_pem: String,
+    now_unix: u64,
+    policy: SnpPolicy,
+    expected_tls_spki_sha256: Vec<u8>,
+    expected_hpke_key: Vec<u8>,
+) -> SnpVerdict {
+    crate::snp::verify(
+        &report,
+        &vcek_der,
+        &chain_pem,
+        now_unix,
+        &policy,
+        &expected_tls_spki_sha256,
+        &expected_hpke_key,
+    )
+}

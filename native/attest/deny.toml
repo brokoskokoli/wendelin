@@ -29,3 +29,12 @@ wildcards = "deny"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+[advisories]
+# Marvin-Angriff trifft nur private RSA-Schlüsseloperationen (Entschlüsseln/Signieren). `rsa` dient hier
+# ausschließlich der Prüfung öffentlicher AMD-Zertifikatssignaturen (WP76a, `src/snp.rs`); es gibt
+# keinen privaten RSA-Schlüssel und keine Operation, die von Angreifern beobachtbar ist. Wegfall, sobald
+# ein gepatchtes `rsa` erscheint.
+ignore = [
+    { id = "RUSTSEC-2023-0071", reason = "rsa nur zum Verifizieren öffentlicher Signaturen (AMD-Kette), nie mit privatem Schlüssel" },
+]

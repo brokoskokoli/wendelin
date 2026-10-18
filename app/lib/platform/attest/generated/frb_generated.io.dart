@@ -16,6 +16,7 @@ import 'frb_generated.dart';
 import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
+import 'snp.dart';
 
 abstract class AttestNativeApiImplPlatform
     extends BaseApiImpl<AttestNativeWire> {
@@ -34,6 +35,12 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   CollateralParts dco_decode_box_autoadd_collateral_parts(dynamic raw);
+
+  @protected
+  SnpPolicy dco_decode_box_autoadd_snp_policy(dynamic raw);
+
+  @protected
+  SnpReportInfo dco_decode_box_autoadd_snp_report_info(dynamic raw);
 
   @protected
   CollateralParts dco_decode_collateral_parts(dynamic raw);
@@ -60,10 +67,28 @@ abstract class AttestNativeApiImplPlatform
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
+  SnpReportInfo? dco_decode_opt_box_autoadd_snp_report_info(dynamic raw);
+
+  @protected
   QuoteInfo dco_decode_quote_info(dynamic raw);
 
   @protected
   ReceiptVerdict dco_decode_receipt_verdict(dynamic raw);
+
+  @protected
+  SnpPolicy dco_decode_snp_policy(dynamic raw);
+
+  @protected
+  SnpReportInfo dco_decode_snp_report_info(dynamic raw);
+
+  @protected
+  SnpTcb dco_decode_snp_tcb(dynamic raw);
+
+  @protected
+  SnpVerdict dco_decode_snp_verdict(dynamic raw);
+
+  @protected
+  int dco_decode_u_32(dynamic raw);
 
   @protected
   BigInt dco_decode_u_64(dynamic raw);
@@ -85,6 +110,14 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   CollateralParts sse_decode_box_autoadd_collateral_parts(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SnpPolicy sse_decode_box_autoadd_snp_policy(SseDeserializer deserializer);
+
+  @protected
+  SnpReportInfo sse_decode_box_autoadd_snp_report_info(
     SseDeserializer deserializer,
   );
 
@@ -113,10 +146,30 @@ abstract class AttestNativeApiImplPlatform
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
+  SnpReportInfo? sse_decode_opt_box_autoadd_snp_report_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   QuoteInfo sse_decode_quote_info(SseDeserializer deserializer);
 
   @protected
   ReceiptVerdict sse_decode_receipt_verdict(SseDeserializer deserializer);
+
+  @protected
+  SnpPolicy sse_decode_snp_policy(SseDeserializer deserializer);
+
+  @protected
+  SnpReportInfo sse_decode_snp_report_info(SseDeserializer deserializer);
+
+  @protected
+  SnpTcb sse_decode_snp_tcb(SseDeserializer deserializer);
+
+  @protected
+  SnpVerdict sse_decode_snp_verdict(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
 
   @protected
   BigInt sse_decode_u_64(SseDeserializer deserializer);
@@ -142,6 +195,18 @@ abstract class AttestNativeApiImplPlatform
   @protected
   void sse_encode_box_autoadd_collateral_parts(
     CollateralParts self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_snp_policy(
+    SnpPolicy self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_snp_report_info(
+    SnpReportInfo self,
     SseSerializer serializer,
   );
 
@@ -179,6 +244,12 @@ abstract class AttestNativeApiImplPlatform
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_snp_report_info(
+    SnpReportInfo? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_quote_info(QuoteInfo self, SseSerializer serializer);
 
   @protected
@@ -186,6 +257,21 @@ abstract class AttestNativeApiImplPlatform
     ReceiptVerdict self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_snp_policy(SnpPolicy self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_snp_report_info(SnpReportInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_snp_tcb(SnpTcb self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_snp_verdict(SnpVerdict self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_64(BigInt self, SseSerializer serializer);
