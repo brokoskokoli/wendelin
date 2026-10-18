@@ -14,6 +14,7 @@ import 'src/flaky_scan.dart';
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
 import 'src/gate_rust.dart';
+import 'src/merge_wp_self_test.dart';
 import 'src/self_check.dart';
 import 'src/size_rules.dart';
 import 'src/size_scan.dart';
@@ -29,6 +30,7 @@ Future<void> main() async {
   _docPaths(t);
   _depsAndGit(t);
   channelChecks(t);
+  mergeWpChecks(t);
   kotlinUnitChecks(t);
   kotlinReportsClearChecks(t);
   await _exitCodes(t);
