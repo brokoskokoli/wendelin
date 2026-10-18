@@ -4,6 +4,7 @@
 //   dart run tool/self_test.dart
 import 'dart:io';
 
+import 'check_app_coverage.dart' show hasFilesUnder, mergeLcov;
 import 'check_deps.dart' show pubspecWorkspaceDeps;
 import 'gen_attest_fixtures.dart' as fixtures;
 import 'src/channel_self_test.dart';
@@ -550,6 +551,27 @@ environment:
   ];
   t.eq(lcovCoverage(appLcov, under: 'lib/di/'), 70.0, 'nur lib/di/');
   t.eq(lcovCoverage(appLcov), 140 * 100 / 300, 'ohne Filter alles');
+  final merged = mergeLcov([
+    ['SF:lib/di/a.dart', 'DA:1,1', 'DA:2,0', 'end_of_record'],
+    ['SF:lib/di/a.dart', 'DA:1,0', 'DA:2,3', 'DA:3,0', 'end_of_record'],
+    ['SF:lib/ui/b.dart', 'DA:1,0', 'end_of_record'],
+  ]);
+  t.eq(
+    lcovCoverage(merged, under: 'lib/di/'),
+    200 / 3,
+    'mergeLcov: Treffer mehrerer Shards je Zeile vereinigt',
+  );
+  t.isTrue(hasFilesUnder(merged, 'lib/di/'), 'lib/di/ in Berichten gefunden');
+  t.isTrue(
+    !hasFilesUnder(mergeLcov([const <String>[]]), 'lib/di/') &&
+        !hasFilesUnder(
+          mergeLcov([
+            ['SF:lib/ui/b.dart', 'DA:1,1'],
+          ]),
+          'lib/di/',
+        ),
+    'leere Berichte ohne lib/di/ sind nicht prüfbar (kein stilles 100 %)',
+  );
   final pkg = Directory.systemTemp.createTempSync('gate_cov_');
   try {
     File('${pkg.path}/coverage/test/alt.dart.vm.json')

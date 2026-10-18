@@ -34,41 +34,43 @@ Widget _composer(DateTime? until, DateTime Function() now) => Composer(
 
 void main() {
   group('Zuhör-Leiste im Folgefenster', () {
-    testWidgets('„Ich höre noch zu …“ mit Restzeit, die abläuft', (
-      tester,
-    ) async {
-      setView(tester, const Size(390, 300));
-      var now = _t0;
-      await tester.pumpWidget(
-        themed(
-          RepaintBoundary(
-            key: goldenKey,
-            child: Scaffold(
-              body: Align(
-                alignment: Alignment.bottomCenter,
-                child: _composer(
-                  _t0.add(const Duration(seconds: 5)),
-                  () => now,
+    testWidgets(
+      '„Ich höre noch zu …“ mit Restzeit, die abläuft',
+      tags: ['golden'],
+      (tester) async {
+        setView(tester, const Size(390, 300));
+        var now = _t0;
+        await tester.pumpWidget(
+          themed(
+            RepaintBoundary(
+              key: goldenKey,
+              child: Scaffold(
+                body: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _composer(
+                    _t0.add(const Duration(seconds: 5)),
+                    () => now,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      expect(find.text('Ich höre noch zu … 5 s'), findsOneWidget);
-      expect(find.text('Ich höre zu …'), findsNothing);
-      await expectLater(
-        find.byKey(goldenKey),
-        matchesGoldenFile('goldens/composer_follow_up.png'),
-      );
+        );
+        expect(find.text('Ich höre noch zu … 5 s'), findsOneWidget);
+        expect(find.text('Ich höre zu …'), findsNothing);
+        await expectLater(
+          find.byKey(goldenKey),
+          matchesGoldenFile('goldens/composer_follow_up.png'),
+        );
 
-      now = _t0.add(const Duration(milliseconds: 3200));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Ich höre noch zu … 2 s'), findsOneWidget);
-      now = _t0.add(const Duration(seconds: 6));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Ich höre noch zu … 0 s'), findsOneWidget);
-    });
+        now = _t0.add(const Duration(milliseconds: 3200));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Ich höre noch zu … 2 s'), findsOneWidget);
+        now = _t0.add(const Duration(seconds: 6));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Ich höre noch zu … 0 s'), findsOneWidget);
+      },
+    );
 
     testWidgets('ohne Fenster: unverändert „Ich höre zu …“', (tester) async {
       setView(tester, const Size(390, 300));

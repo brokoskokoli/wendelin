@@ -299,7 +299,9 @@ void toneTests() {
 
 void main() {
   toneTests();
-  testWidgets('Golden: Overlay laut Entwurf (390 × 844)', (tester) async {
+  testWidgets('Golden: Overlay laut Entwurf (390 × 844)', tags: ['golden'], (
+    tester,
+  ) async {
     final env = TestEnv(
       providerConfig: scripted(
         FakeLlmProvider(const []),
@@ -335,65 +337,73 @@ void main() {
     );
   });
 
-  testWidgets('Golden: Bestätigung im selben Sheet, Antwort per Stimme', (
-    tester,
-  ) async {
-    final env = TestEnv(
-      providerConfig: scripted(FakeLlmProvider(const []), name: 'Claude Haiku'),
-    );
-    final c = await pumpOverlay(
-      tester,
-      env,
-      FakeAssistantPlatform(),
-      autoStart: false,
-    );
-    c
-        .read(agentControllerProvider.notifier)
-        .seed(
-          ConversationState(
-            entries: [
-              SessionStartEntry('s', testNow),
-              const UserEntry('u', 'Lösch den Zahnarzttermin am Donnerstag.'),
-              const ToolEntry(
-                'c1',
-                toolName: 'calendar__delete_event',
-                phase: ToolPhase.awaitingConfirmation,
+  testWidgets(
+    'Golden: Bestätigung im selben Sheet, Antwort per Stimme',
+    tags: ['golden'],
+    (tester) async {
+      final env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider(const []),
+          name: 'Claude Haiku',
+        ),
+      );
+      final c = await pumpOverlay(
+        tester,
+        env,
+        FakeAssistantPlatform(),
+        autoStart: false,
+      );
+      c
+          .read(agentControllerProvider.notifier)
+          .seed(
+            ConversationState(
+              entries: [
+                SessionStartEntry('s', testNow),
+                const UserEntry('u', 'Lösch den Zahnarzttermin am Donnerstag.'),
+                const ToolEntry(
+                  'c1',
+                  toolName: 'calendar__delete_event',
+                  phase: ToolPhase.awaitingConfirmation,
+                ),
+              ],
+              running: true,
+              activeProfileId: 'claude',
+              pending: ToolQuestion(
+                ConfirmationRequired(
+                  call: call(
+                    'c1',
+                    'calendar__delete_event',
+                    '{"event_id":"e1"}',
+                  ),
+                  description: 'Termin ‚Zahnarzt Dr. Weber‘ Do 15.10. 08:30–09:15 löschen',
+                  respond: (_) {},
+                ),
+                request: 'Lösch den Zahnarzttermin am Donnerstag.',
               ),
-            ],
-            running: true,
-            activeProfileId: 'claude',
-            pending: ToolQuestion(
-              ConfirmationRequired(
-                call: call('c1', 'calendar__delete_event', '{"event_id":"e1"}'),
-                description:
-                    'Termin ‚Zahnarzt Dr. Weber‘ Do 15.10. 08:30–09:15 löschen',
-                respond: (_) {},
-              ),
-              request: 'Lösch den Zahnarzttermin am Donnerstag.',
             ),
-          ),
-        );
-    c
-        .read(voiceControllerProvider.notifier)
-        .seed(
-          const VoiceUiState(
-            phase: VoiceState.thinking,
-            awaitingAnswer: true,
-            levels: [0.2, 0.4, 0.3, 0.1, 0.0, 0.0],
-          ),
-        );
-    await tester.pumpAndSettle();
-    expect(find.text('Sag einfach „ja“ oder „nein“'), findsOneWidget);
-    expect(find.text('Termin löschen?'), findsOneWidget);
-    expect(
-      tester.widget<MicButton>(find.byType(MicButton)).state,
-      MicState.listening,
-    );
-    await expectLater(
-      find.byKey(goldenKey),
-      matchesGoldenFile('goldens/overlay_bestaetigung.png'),
-    );
-  });
+          );
+      c
+          .read(voiceControllerProvider.notifier)
+          .seed(
+            const VoiceUiState(
+              phase: VoiceState.thinking,
+              awaitingAnswer: true,
+              levels: [0.2, 0.4, 0.3, 0.1, 0.0, 0.0],
+            ),
+          );
+      await tester.pumpAndSettle();
+      expect(find.text('Sag einfach „ja“ oder „nein“'), findsOneWidget);
+      expect(find.text('Termin löschen?'), findsOneWidget);
+      expect(
+        tester.widget<MicButton>(find.byType(MicButton)).state,
+        MicState.listening,
+      );
+      await expectLater(
+        find.byKey(goldenKey),
+        matchesGoldenFile('goldens/overlay_bestaetigung.png'),
+      );
+    },
+  );
 
   testWidgets(
     'Assistent ausgelöst: hört zu (TriggerKind.assistant), Antwort im Sheet',
