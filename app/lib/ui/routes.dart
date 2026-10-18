@@ -47,6 +47,9 @@ abstract final class AppRoutes {
   /// Home Assistant address, token and devices (WP91).
   static const homeAssistant = '/settings/home_assistant';
 
+  /// Spotify login and state (WP84).
+  static const spotify = '/settings/spotify';
+
   /// Lists (K6).
   static const lists = '/settings/lists';
 

@@ -61,7 +61,7 @@ abstract final class KnownApps {
     storeUrl: 'https://obsidian.md/download',
   );
 
-  /// Spotify (later).
+  /// Spotify (WP84: optional, wakes the phone's own player).
   static const spotify = AppRequirement(
     androidPackage: 'com.spotify.music',
     appName: 'Spotify',

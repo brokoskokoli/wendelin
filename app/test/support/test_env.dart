@@ -129,6 +129,15 @@ final class TestEnv {
   /// Instances the mDNS search finds.
   final haDiscovery = FakeHaDiscovery();
 
+  /// Spotify account, login browser and app launcher (WP84).
+  final spotify = FakeSpotifyApi();
+
+  /// Login page of Spotify: answers the redirect at once.
+  final spotifyBrowser = FakeSpotifyAuthBrowser();
+
+  /// Wakes the Spotify app.
+  final spotifyLauncher = FakeSpotifyLauncher();
+
   /// Texts shared with other apps (package, text).
   final shared = <(String, String)>[];
 

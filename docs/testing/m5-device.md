@@ -26,3 +26,18 @@ Voraussetzung: eine eigene Home-Assistant-Instanz im selben WLAN (oder über Tai
 - [ ] **Datenschutz**: Im Datenschutz-Log/Export stehen weder Token noch Adresse.
 
 Emulator (E2E-Agent): Adresse `http://10.0.2.2:<Port>` auf einen lokalen Fake-HA (Dart-Testserver `packages/wendelin_integrations/test/home_assistant/ha_server.dart`); die mDNS-Suche liefert im Emulator nichts (kein WLAN-Multicast).
+
+## WP84 Spotify
+
+Voraussetzung: Spotify Premium, Spotify-App auf dem Telefon installiert und mindestens einmal angemeldet.
+
+- [ ] **S.1 Entwickler-App.** Nach der Anleitung unter Einstellungen → Integrationen → Spotify → „Spotify-Konto“ auf developer.spotify.com/dashboard eine App anlegen (Redirect URI genau wie in der App angezeigt, „Web API“ angekreuzt), das eigene Konto unter „User Management“ eintragen. *Erwartet:* Die Seite zeigt die Redirect-Adresse `app.wendelin://oauth/spotify`; „Adresse kopieren“ legt sie in die Zwischenablage.
+- [ ] **S.2 Anmelden.** Client-ID eintragen, „Bei Spotify anmelden“. *Erwartet:* Der Browser (Custom Tab) zeigt die Spotify-Zustimmung mit den Rechten „Wiedergabestatus lesen“ und „Wiedergabe steuern“; nach „Zustimmen“ kehrt die App zurück, die Seite zeigt „Angemeldet · Aktiv“, die Kachel ist „Aktiv“. Eine falsche Client-ID bzw. fehlende Redirect-Adresse zeigt Spotifys Fehlerseite, in der App einen abgebrochenen Login (kein Absturz).
+- [ ] **S.3 „Spiel Bohemian Rhapsody von Queen.“** Spotify-App ist **geschlossen** (aus den Zuletzt-Apps gewischt). *Erwartet:* Wendelin startet die Spotify-App, nach wenigen Sekunden läuft der Titel; die Antwort nennt „Bohemian Rhapsody – Queen“. Notiere die Dauer bis zum ersten Ton: ______. (Prüft den Intent `spotify:` zum Aufwecken; klappt er nicht, steht „Kein aktives Spotify-Gerät …“.)
+- [ ] **S.4 „Pause.“ / Rückgängig.** *Erwartet:* Musik pausiert, die Karte bietet „Weiter abspielen“; Tippen setzt fort.
+- [ ] **S.5 „Was läuft gerade?“** *Erwartet:* Titel, Künstler und Gerät werden genannt, bei Pause auch „pausiert“.
+- [ ] **S.6 „Nächster Titel“, „Vorheriger Titel“.** *Erwartet:* Wechsel hörbar, Antwort kurz.
+- [ ] **S.7 „Spiel die Playlist …“ / „Spiel das Album …“ / „Spiel etwas von …“** (je eins aus der eigenen Bibliothek bzw. bekannt). *Erwartet:* Passender Kontext läuft; das Rückgängig der Karte spielt das vorherige Stück an derselben Stelle (falls vorher etwas lief) bzw. pausiert.
+- [ ] **S.8 „Leg … in die Warteschlange.“** *Erwartet:* Der Titel erscheint in Spotifys Warteschlange (Spotify-App öffnen); ein Rückgängig gibt es nicht (Spotify kann die Warteschlange nicht per API ändern).
+- [ ] **S.9 Fehlertexte.** (a) Spotify-App beenden und Telefon im Flugmodus: „… nicht erreichbar“, keine Dauerschleife. (b) In der Spotify-App unter „Apps mit Zugriff“ den Zugriff von Wendelin entfernen, dann „Pause“: Die Kachel zeigt „Fehler … pausiert“, „Erneut versuchen“ bzw. neu anmelden führt zurück. (c) Mit einem Free-Konto (falls zur Hand): „Die Wiedergabe steuern kann Spotify nur mit einem Premium-Konto.“
+- [ ] **S.10 Abmelden.** Spotify-Seite → „Abmelden“. *Erwartet:* Rückfrage, danach die Anmeldemaske; Kachel „Login fehlt“.

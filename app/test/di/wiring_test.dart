@@ -348,6 +348,7 @@ void main() {
         'lists',
         'memory',
         'obsidian',
+        'spotify',
         'weather',
         'web',
       ]);

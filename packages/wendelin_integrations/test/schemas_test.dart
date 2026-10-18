@@ -27,6 +27,7 @@ void main() {
     ),
     BringIntegration(FakeBringApi(), FakeBringSecrets()),
     HaIntegration(FakeHaApi(), FakeHaSecrets(), FakeHaEntityStore()),
+    SpotifyIntegration(FakeSpotifyApi(), FakeSpotifySecrets()),
     WeatherIntegration(
       service: FakeWeatherService(),
       marine: FakeMarineService(),
@@ -76,6 +77,13 @@ void main() {
       'ha__state',
       'ha__call',
       'ha__call_secure',
+      'spotify__search',
+      'spotify__play',
+      'spotify__pause',
+      'spotify__next',
+      'spotify__previous',
+      'spotify__now_playing',
+      'spotify__queue_add',
       'weather__forecast',
       'weather__marine',
     });

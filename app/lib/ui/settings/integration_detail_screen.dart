@@ -74,6 +74,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
           'obsidian' => 'Vault und Tagesnotizen',
           'bring' => 'Bring!-Konto',
           'ha' => 'Adresse, Token und Geräte',
+          'spotify' => 'Spotify-Konto',
           'memory' => 'Gedächtnis ansehen',
           _ => 'Einrichten',
         },

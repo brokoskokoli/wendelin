@@ -51,7 +51,15 @@ const _trusted = <String, bool>{
   'bring__add_items': false,
   'bring__remove_item': false,
   'bring__complete_item': false,
+  'spotify__search': false,
+  'spotify__now_playing': false,
+  // Writes that echo titles from Spotify.
+  'spotify__play': false,
+  'spotify__pause': false,
+  'spotify__queue_add': false,
   // Confirmations of what the user just asked for.
+  'spotify__next': true,
+  'spotify__previous': true,
   'calendar__create_event': true,
   'clipboard__write': true,
   'flashlight__on': true, // own state only
@@ -85,6 +93,7 @@ void main() {
     ),
     BringIntegration(FakeBringApi(), FakeBringSecrets()),
     HaIntegration(FakeHaApi(), FakeHaSecrets(), FakeHaEntityStore()),
+    SpotifyIntegration(FakeSpotifyApi(), FakeSpotifySecrets()),
     WeatherIntegration(
       service: FakeWeatherService(),
       marine: FakeMarineService(),

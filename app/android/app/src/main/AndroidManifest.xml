@@ -104,7 +104,7 @@
                 android:name="android.speech"
                 android:resource="@xml/recognition_service" />
         </service>
-        <!-- OAuth redirect of MCP servers (WP27): app.wendelin://oauth/mcp. Exported so the browser
+        <!-- OAuth redirect of MCP servers (WP27): app.wendelin://oauth/mcp, and of Spotify (WP84): app.wendelin://oauth/spotify. Exported so the browser
              can open it; it only hands the address to a running login, which checks state. -->
         <activity
             android:name=".OAuthRedirectActivity"
@@ -117,6 +117,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="app.wendelin" android:host="oauth" android:path="/mcp" />
+                <data android:scheme="app.wendelin" android:host="oauth" android:path="/spotify" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

@@ -13,7 +13,7 @@ Kurzfassung der Abh채ngigkeiten (gepr체ft von `tool/check_deps.dart`): `core` h�
 | `wendelin_tools` | `packages/wendelin_tools/lib/wendelin_tools.dart` | `ToolRegistry` (`src/registry/tool_registry.dart`), `ToolExecutor` (`src/executor/tool_executor.dart`), `RiskPolicy` (`src/policy/risk_policy.dart`), `UndoManager` (`src/undo/undo_manager.dart`), `ArgumentValidator`, `ToolAuditSink` |
 | `wendelin_agent` | `packages/wendelin_agent/lib/wendelin_agent.dart` | `AgentRunner` (`src/agent_runner.dart`), `ContextBuilder`, `ProviderResolver`, Routing-Regeln in `src/routing/` (`RuleBasedProviderResolver`, `routing_engine.dart`, `conditions.dart`), `SentenceChunker`, Ports in `src/ports.dart` |
 | `wendelin_storage` | `packages/wendelin_storage/lib/wendelin_storage.dart` | drift-Datenbank `src/db/database.dart` und Tabellen `src/db/tables.dart`, Repositories (`src/repositories/repositories.dart`, Umsetzung `src/db/*_impl.dart`), `SecretStore` (`src/secret_store.dart`), Schema-Tests unter `test/drift/` |
-| `wendelin_integrations` | `packages/wendelin_integrations/lib/wendelin_integrations.dart` | Je Integration ein Ordner unter `src/`: `calendar/`, `clipboard/`, `alarms/`, `memory/`, `web/` (Abruf, Suche), `weather/` (Wetter, Meer), `lists/`, `obsidian/`, `bring/`, `home_assistant/`, `http_tools/`; gemeinsame Bausteine in `src/common/` (`base_tool.dart`, `tool_args.dart`, `matching.dart`, `app_presence.dart`, `net_scope.dart`) |
+| `wendelin_integrations` | `packages/wendelin_integrations/lib/wendelin_integrations.dart` | Je Integration ein Ordner unter `src/`: `calendar/`, `clipboard/`, `alarms/`, `memory/`, `web/` (Abruf, Suche), `weather/` (Wetter, Meer), `lists/`, `obsidian/`, `bring/`, `home_assistant/`, `spotify/`, `http_tools/`; gemeinsame Bausteine in `src/common/` (`base_tool.dart`, `tool_args.dart`, `matching.dart`, `app_presence.dart`, `net_scope.dart`) |
 | `wendelin_voice` | `packages/wendelin_voice/lib/wendelin_voice.dart` | `VoicePipeline` (`src/pipeline/voice_pipeline.dart`), `Endpointer`, Schnittstellen in `src/io/`, `SpokenAnswer` (`src/text/spoken_answer.dart`), `TtsSelector`, Modellkatalog und Download in `src/models/` |
 | `wendelin_mcp` | `packages/wendelin_mcp/lib/wendelin_mcp.dart` | `McpClient` (`src/client.dart`), Transporte in `src/transport/`, OAuth in `src/oauth/oauth_flow.dart`, Abbildung auf Tools in `src/tools/mcp_integration.dart`, Netzregeln `src/net_policy.dart` |
 | `evals` | `evals/lib/src/cli.dart` | Modell-Evals, M3-F채lle mit Fake-Backends (`evals/lib/src/case_backends.dart`), Routing-Tabelle (`routing_table.dart`), Live-Tests (`evals/README.md`) |
@@ -45,6 +45,7 @@ Ports liegen in dem Paket, das sie braucht; die Flutter-Implementierung liegt in
 | `AppPresencePort` | `packages/wendelin_integrations/lib/src/common/app_presence.dart` | `app/lib/platform/channel_app_presence_port.dart` |
 | `HaApi`, `HaSecrets`, `HaEntityStore`, `HaDiscovery` | `packages/wendelin_integrations/lib/src/home_assistant/ha_ports.dart` | `HttpHaApi` im Paket, Secrets und Ger채teauswahl in `app/lib/di/home_assistant.dart`, mDNS in `app/lib/platform/ha_discovery.dart` |
 | `BringApi`, `BringSecrets` | `packages/wendelin_integrations/lib/src/bring/bring_api.dart` | `HttpBringApi` im Paket, Secrets in `app/lib/di/bring.dart` |
+| `SpotifyApi`, `SpotifySecrets`, `SpotifyAppLauncher`, `SpotifyAuthBrowser` | `packages/wendelin_integrations/lib/src/spotify/spotify_api.dart` | `HttpSpotifyApi` im Paket, Secrets in `app/lib/di/spotify.dart`, Launcher und Login-Browser in `app/lib/platform/spotify_platform.dart` |
 | `WebSearchBackend` | `packages/wendelin_integrations/lib/src/web/web_search_backend.dart` | Brave, Tavily, SearXNG im Paket, Auswahl in `app/lib/di/web_search.dart` |
 | `HttpToolSecrets`, `HttpToolTransport` | `packages/wendelin_integrations/lib/src/http_tools/http_transport.dart` | Transporte und Repository im Paket, Secret-Adapter (`ScopedSecretStore`, Namensraum `http_tool.`) in `app/lib/di/http_tools.dart` |
 | `McpSecrets`, `AuthorizationBrowser`, `McpCacheStore` | `packages/wendelin_mcp/lib/src/ports.dart` | folgt mit WP27 |
@@ -135,6 +136,7 @@ Bewusst getrennt, je mit eigenen Timeouts und Fehlerabbildung. **Keinen neuen St
 - MCP: `packages/wendelin_mcp/lib/src/transport/http_call.dart`
 - Web-Abruf mit Zielpr체fung: `packages/wendelin_integrations/lib/src/web/web_fetcher.dart` (`fetch_guard.dart`)
 - Bring!: `packages/wendelin_integrations/lib/src/bring/http_bring_api.dart`
+- Spotify: `packages/wendelin_integrations/lib/src/spotify/http_spotify_api.dart`
 - HTTP-Tools: `packages/wendelin_integrations/lib/src/http_tools/http_transport.dart` (`http_target.dart`, ADR 0011)
 - Modell-Download: `packages/wendelin_voice/lib/src/models/model_downloader.dart`
 
