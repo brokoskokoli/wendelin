@@ -31,6 +31,11 @@ const _trusted = <String, bool>{
   'obsidian__open_note': false,
   'bring__list_lists': false,
   'bring__get_items': false,
+  'ha__list_entities': false,
+  'ha__state': false,
+  // Echoes the device name from Home Assistant: fail-closed.
+  'ha__call': false,
+  'ha__call_secure': false,
   // Writes that echo stored or foreign text.
   'calendar__update_event': false,
   'calendar__delete_event': false,
@@ -77,6 +82,7 @@ void main() {
       ),
     ),
     BringIntegration(FakeBringApi(), FakeBringSecrets()),
+    HaIntegration(FakeHaApi(), FakeHaSecrets(), FakeHaEntityStore()),
   ];
   final tools = [for (final i in integrations) ...i.tools];
 

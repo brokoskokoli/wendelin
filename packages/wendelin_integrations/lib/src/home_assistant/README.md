@@ -1,0 +1,42 @@
+# Home Assistant (`ha`)
+
+Eigene Home-Assistant-Integration (WP91, K53) zusätzlich zum MCP-Weg: Wendelin spricht die REST-API der eigenen Instanz an. **Nur Heimnetz oder Tailscale** (gleiche Adresse bzw. MagicDNS-Name); Tailscale leitet kein mDNS weiter, dort wird die Adresse von Hand eingegeben.
+
+| Tool | Risiko | Zweck |
+| --- | --- | --- |
+| `ha__list_entities` | read | freigegebene Geräte mit Name, Raum (Area) und Typ (`domain`); Filter `area`, `domain`; Typen ohne Steuerung als `read_only` |
+| `ha__state` | read | Zustand eines Geräts (`entity`) mit gekürzten Attributen (Helligkeit in %, Temperaturen, Lautstärke, …) oder aller freigegebenen, gefiltert |
+| `ha__call` | write | `light`, `switch`, `scene`, `media_player`, `climate`: läuft ohne Rückfrage, **Undo** stellt den vorherigen Zustand her |
+| `ha__call_secure` | external | `lock`, `alarm_control_panel`, `cover` (Garage, Tor, Tür, auch Rollläden): **immer Bestätigung** („Haustür (Flur): aufschließen“), kein Undo |
+
+**Risiko je Domain**: Die Risikostufe hängt am Tool, nie an den Argumenten des Modells. `ha__call` kennt nur die offenen Domains, `ha__call_secure` nur die sicherheitsrelevanten; jedes Tool lehnt die Domains des anderen ab (Verweis auf das richtige Tool), bevor etwas an Home Assistant geht (`ha_policy.dart`: `haOpenServices`, `haSecureServices`, `haRiskForDomain`). Nur Dienste aus diesen Tabellen mit den dort erlaubten Werten sind möglich (kein `script`, `automation`, `shell_command`, `homeassistant.*`). Alarm: Scharfschalten und Deaktivieren **ohne Code** (Codes laufen nicht durch das Modell). Rollläden zählen mit zu `cover`, weil die Geräteklasse zur Unterscheidung von Garage/Tor nicht zuverlässig genug ist (Abweichung von K53: dort „Garage/Tor“).
+
+**Freigegebene Entitäten**: Nur die in den Einstellungen gewählten Geräte (`HaEntityStore`, Name und Raum als Momentaufnahme) sind für Modell und Tools sichtbar; alles andere gibt es nicht (`notFound`). Auflösung wie bei den Listen (`common/matching.dart`, Name, „Raum Name“ oder Entity-Id); mehrere Treffer → „Mehrdeutig … Bitte nachfragen.“. Inhalte aus Home Assistant (Namen, Titel) sind Daten: Ergebnis mit `haDataNotice`, Texte auf 100 Zeichen gekürzt. Die Ergebnisse gelten nicht als vertrauenswürdig (`TrustedContentSource` fehlt bewusst).
+
+**Undo** (`ha_undo.dart`, geplant aus dem Zustand vor dem Aufruf): Licht (an mit Helligkeit/Farbe oder aus), Schalter, Medien (Ein/Aus, Play/Pause, Lautstärke, Stumm; nächster/vorheriger Titel ohne Undo), Klima (Temperatur, Modus, Preset), Szene (Snapshot per `scene.create` mit `snapshot_entities`, Undo aktiviert den Snapshot und löscht ihn). Nicht erreichbare Geräte (`unavailable`) werden nicht angefasst. Scheitert der Snapshot, läuft die Szene ohne Undo.
+
+**Haken für WP92** (Sprechererkennung): `HaIntegration.allowedWhileLocked(tool, args)` antwortet, ob ein Aufruf bei gesperrtem Gerät erlaubt wäre: nur `ha__call` auf Licht, Szene, Medien (`haLockSafeDomains`). Die Sperrlogik selbst ist nicht Teil von WP91; `IntegrationSpec.allowedWhileLocked` bleibt `false`.
+
+## Zugang
+- `HaSecrets` (App: `SecretStore`, Schlüssel `ha.url`, `ha.token`) hält Adresse und Long-Lived Access Token. Nie SQLite, Einstellungs-JSON, Audit-Log, Debug-Log oder Export; `HaEndpoint.toString` zeigt `<verborgen>`.
+- **Adresse** (`HaUrl.parse`): `http` nur für RFC 1918, Tailscale (`100.64.0.0/10`, `fd7a:…`), Loopback, `localhost`, `*.local`, `*.ts.net`; alles andere nur `https`. Ohne Schema: privat → `http`, sonst `https`. Host-Namen, die nur auf eine private Adresse auflösen, zählen nicht. Die Prüfung läuft bei jedem Aufruf erneut (`HttpHaApi`), ein gespeicherter unzulässiger Wert sendet das Token nie.
+- Das Token geht nur als `Authorization: Bearer` an die gespeicherte Adresse, **Weiterleitungen werden nicht gefolgt**. Keine Wiederholungen (Aufrufe ändern Geräte). Antworten höchstens 8 MB, Zeitüberschreitung 10 s.
+- `HaDiscovery` (App: mDNS `_home-assistant._tcp`, nur im WLAN) schlägt Adressen vor; die Einrichtung bleibt Adresse + Token.
+- Fehlerzustand: abgelehntes Token pausiert die Integration (`onError`, nächster Erfolg hebt auf, `onRecovered`); Offline/5xx pausieren nicht. Setup-Schritte `ha_connect` (Verbindung) und `ha_entities` (Geräte freigeben). **Sensibel**: nein.
+
+## HTTP-Client (`HttpHaApi`)
+REST: `GET /api/config` (Version), `GET /api/states`, `GET /api/states/<id>`, `POST /api/services/<domain>/<service>`. WebSocket `/api/websocket` (Auth-Nachricht, nicht in der URL) für Räume: `config/area_registry/list`, `config/device_registry/list`, `config/entity_registry/list` (Raum der Entität, sonst ihres Geräts). Ohne Admin-Recht oder bei WebSocket-Fehler kommen Namen ohne Räume. Fehlerabbildung auf `PortException`: 401/403 → `permissionDenied`, 404 → `notFound`, 5xx/Timeout/offline → `unavailable`, Weiterleitung/HTML/falsche Form → `failed`.
+
+## Testhilfen
+- `FakeHaApi` (Standardhaus: Licht Küche/Schlafzimmer/Wohnzimmer, `light.secret`, Schalter, Szene, Fernseher, Heizung, Schloss, Garage, Alarm, Sensor; Dienstsemantik inkl. Szenen-Snapshot), `FakeHaSecrets`, `FakeHaEntityStore`, `FakeHaDiscovery` aus `fakes.dart`.
+- `haApiContract` aus `testing.dart`: Fake und `HttpHaApi` gegen ein nachgebautes Home Assistant (`test/home_assistant/ha_server.dart`: REST und WebSocket auf einem lokalen Port, Zustand aus `FakeHaApi`).
+- Live-Test `test/home_assistant/ha_live_test.dart` (`@Tags(['live'])`), nur mit `HA_URL`/`HA_TOKEN` (optional `HA_TEST_SWITCH`: wird einmal umgeschaltet und per Undo zurückgesetzt).
+
+## Eval-Fälle für WP29
+- de: „Mach das Licht in der Küche aus“ → `ha__call(entity: "Küche Deckenlicht", service: "turn_off")`
+- de: „Dimm das Wohnzimmerlicht auf 30 Prozent“ → `ha__call(entity: "Wohnzimmer Licht", service: "turn_on", brightness_pct: 30)`
+- de: „Schließ die Haustür ab“ → `ha__call_secure(entity: "Haustür", service: "lock")`
+- en: “Is the garage door closed?” → `ha__state(entity: "Garagentor")`
+- fr: « Mets la température du salon à 21 » → `ha__call(entity: "Heizung Wohnzimmer", service: "set_temperature", temperature: "21")`
+
+**Berechtigung**: Internet/WLAN (keine Laufzeitberechtigung; mDNS braucht `CHANGE_WIFI_MULTICAST_STATE`). **Plattformen**: Android, iOS.

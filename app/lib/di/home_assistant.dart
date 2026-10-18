@@ -1,0 +1,143 @@
+import 'dart:convert';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
+
+import '../platform/ha_discovery.dart';
+import 'providers.dart';
+
+/// [HaSecrets] and [HaEntityStore] on the app's [SecretStore]: address and
+/// token of the Home Assistant instance (`ha.url`, `ha.token`) and the
+/// approved entities (`ha.entities`, JSON). Never settings JSON, SQLite,
+/// logs or exports.
+final class SecretStoreHa implements HaSecrets, HaEntityStore {
+  /// Creates the adapter.
+  SecretStoreHa(SecretStore store)
+    : store = ScopedSecretStore(store, namespace);
+
+  /// The Home Assistant part of the device secret store (keys `ha.*`).
+  final ScopedSecretStore store;
+
+  /// Prefix of all Home Assistant keys in the device secret store.
+  static const namespace = 'ha.';
+
+  /// Key of the address (`ha.url` on the device).
+  static const urlKey = 'url';
+
+  /// Key of the token (`ha.token` on the device).
+  static const tokenKey = 'token';
+
+  /// Key of the approved entities (`ha.entities` on the device).
+  static const entitiesKey = 'entities';
+
+  @override
+  Future<HaEndpoint?> endpoint() async {
+    final url = await store.read(urlKey);
+    final token = await store.read(tokenKey);
+    if (url == null || token == null) return null;
+    return HaEndpoint(url: url, token: token);
+  }
+
+  @override
+  Future<void> saveEndpoint(HaEndpoint? endpoint) async {
+    if (endpoint == null) {
+      await store.delete(urlKey);
+      await store.delete(tokenKey);
+      return;
+    }
+    await store.write(urlKey, endpoint.url);
+    await store.write(tokenKey, endpoint.token);
+  }
+
+  @override
+  Future<List<HaEntity>> load() async {
+    final raw = await store.read(entitiesKey);
+    if (raw == null) return const [];
+    try {
+      final json = jsonDecode(raw);
+      if (json is! List<Object?>) return const [];
+      return [for (final j in json) ?HaEntity.fromJson(j)];
+    } on FormatException {
+      return const [];
+    }
+  }
+
+  @override
+  Future<void> save(List<HaEntity> entities) => entities.isEmpty
+      ? store.delete(entitiesKey)
+      : store.write(
+          entitiesKey,
+          jsonEncode([for (final e in entities) e.toJson()]),
+        );
+
+  /// Deletes address, token and approved entities.
+  Future<void> clear() async {
+    await store.delete(urlKey);
+    await store.delete(tokenKey);
+    await store.delete(entitiesKey);
+  }
+
+  @override
+  String toString() => 'SecretStoreHa(<verborgen>)';
+}
+
+/// Address, token and approved entities of Home Assistant.
+final haStoreProvider = Provider<SecretStoreHa>(
+  (ref) => SecretStoreHa(ref.watch(secretStoreProvider)),
+);
+
+/// Client of the Home Assistant API; tests override it with `FakeHaApi`.
+final haApiProvider = Provider<HaApi>(
+  (ref) => HttpHaApi(
+    ref.watch(haStoreProvider),
+    client: ref.watch(httpClientProvider),
+  ),
+);
+
+/// mDNS search for Home Assistant in the Wi-Fi; tests override it.
+final haDiscoveryProvider = Provider<HaDiscovery>((ref) => MdnsHaDiscovery());
+
+/// The built Home Assistant integration, if it is registered (not in the
+/// demo mode).
+HaIntegration? haIntegrationOf(Map<String, Integration> integrations) =>
+    switch (integrations['ha']) {
+      final i? => switch (unwrapIntegration(i)) {
+        final HaIntegration h => h,
+        _ => null,
+      },
+      null => null,
+    };
+
+/// Connects to Home Assistant: checks [address] ([HaUrl.parse], `http` only
+/// for private hosts) and [token] against the API first, then keeps them.
+/// Returns `null` on success, else a German message (nothing is kept then).
+Future<String?> haConnect({
+  required HaApi api,
+  required SecretStoreHa store,
+  required String address,
+  required String token,
+}) async {
+  final HaEndpoint endpoint;
+  try {
+    endpoint = HaEndpoint(url: HaUrl.parse(address), token: token.trim());
+  } on PortException catch (e) {
+    return e.message;
+  }
+  if (endpoint.token.isEmpty) return 'Bitte das Token eingeben.';
+  final previous = await store.endpoint();
+  await store.saveEndpoint(endpoint);
+  try {
+    await api.check();
+  } on PortException catch (e) {
+    await store.saveEndpoint(previous);
+    return e.message;
+  }
+  // A different instance has different entities.
+  if (previous?.url != endpoint.url) await store.save(const []);
+  return null;
+}
+
+/// Disconnects: deletes address, token and approved entities.
+Future<void> haDisconnect(SecretStoreHa store) => store.clear();

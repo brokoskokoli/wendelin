@@ -1,0 +1,326 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart';
+import 'package:wendelin_tools/wendelin_tools.dart';
+
+import '../../di/home_assistant.dart';
+import '../../di/providers.dart';
+import '../design/design.dart';
+import 'ha_texts.dart';
+import 'settings_page.dart';
+
+/// Settings → Home Assistant: address and token (search in the Wi-Fi via
+/// mDNS, otherwise by hand), connection state, choice of the devices that
+/// go to the model, disconnect.
+class HaScreen extends ConsumerStatefulWidget {
+  /// Creates the screen.
+  const HaScreen({super.key});
+
+  @override
+  ConsumerState<HaScreen> createState() => _HaScreenState();
+}
+
+class _HaScreenState extends ConsumerState<HaScreen> {
+  final _address = TextEditingController();
+  final _token = TextEditingController();
+  final _filter = TextEditingController();
+  HaEndpoint? _endpoint;
+  bool _loaded = false;
+  bool _busy = false;
+  bool _searching = false;
+  String? _error;
+  List<HaServer>? _servers;
+  List<HaEntity>? _all;
+  Set<String> _approved = {};
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  @override
+  void dispose() {
+    _address.dispose();
+    _token.dispose();
+    _filter.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final store = ref.read(haStoreProvider);
+    final endpoint = await store.endpoint();
+    final approved = await store.load();
+    if (!mounted) return;
+    setState(() {
+      _endpoint = endpoint;
+      _approved = {for (final e in approved) e.entityId};
+      _loaded = true;
+    });
+    if (endpoint != null) await _loadDevices();
+  }
+
+  Future<void> _loadDevices() async {
+    try {
+      final all = await ref.read(haApiProvider).entities();
+      if (mounted) setState(() => _all = all);
+    } on PortException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    }
+  }
+
+  Future<void> _refresh() async {
+    final registry = ref.read(toolRegistryProvider);
+    registry.clearError('ha');
+    await registry.refresh('ha');
+  }
+
+  Future<void> _search() async {
+    setState(() {
+      _searching = true;
+      _servers = null;
+    });
+    final found = await ref.read(haDiscoveryProvider).discover();
+    if (mounted) {
+      setState(() {
+        _searching = false;
+        _servers = found;
+      });
+    }
+  }
+
+  Future<void> _connect() async {
+    if (_address.text.trim().isEmpty || _token.text.trim().isEmpty) {
+      setState(() => _error = HaTexts.inputMissing);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final error = await haConnect(
+      api: ref.read(haApiProvider),
+      store: ref.read(haStoreProvider),
+      address: _address.text,
+      token: _token.text,
+    );
+    if (error == null) {
+      SecretField.finishAutofill();
+      _token.clear();
+      await _load();
+      await _refresh();
+    }
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _error = error;
+    });
+  }
+
+  Future<void> _disconnect() async {
+    final store = ref.read(haStoreProvider);
+    final ok = await confirm(
+      context,
+      title: HaTexts.disconnectTitle,
+      message: HaTexts.disconnectMessage,
+      yes: HaTexts.disconnect,
+    );
+    if (!ok) return;
+    await haDisconnect(store);
+    await _refresh();
+    if (!mounted) return;
+    setState(() {
+      _endpoint = null;
+      _all = null;
+      _approved = {};
+      _error = null;
+    });
+  }
+
+  Future<void> _toggle(HaEntity e, bool on) async {
+    final next = {..._approved};
+    on ? next.add(e.entityId) : next.remove(e.entityId);
+    setState(() => _approved = next);
+    final byId = {for (final x in _all ?? const <HaEntity>[]) x.entityId: x};
+    final store = ref.read(haStoreProvider);
+    // Keep approved entities Home Assistant no longer lists: the user
+    // removes them by switching them off, not by a flaky answer.
+    final old = {for (final x in await store.load()) x.entityId: x};
+    await store.save([for (final id in next) ?(byId[id] ?? old[id])]);
+    await _refresh();
+  }
+
+  Future<void> _retry() async {
+    final integration = haIntegrationOf(ref.read(integrationsProvider));
+    if (integration == null) return;
+    setState(() => _busy = true);
+    final error = await integration.reconnect();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    showHint(context, error ?? HaTexts.reachable);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final registry = ref.watch(toolRegistryProvider);
+    return SettingsPage(
+      title: HaTexts.title,
+      intro: HaTexts.intro,
+      children: [
+        if (!_loaded)
+          const SizedBox.shrink()
+        else if (_endpoint == null)
+          ..._connectForm()
+        else ...[
+          StreamBuilder<void>(
+            stream: registry.changes,
+            builder: (context, _) => _stateCard(registry),
+          ),
+          ..._deviceList(),
+        ],
+      ],
+    );
+  }
+
+  List<Widget> _connectForm() => [
+    TextField(
+      key: const ValueKey('haAddress'),
+      controller: _address,
+      style: WText.body,
+      keyboardType: TextInputType.url,
+      autocorrect: false,
+      decoration: const InputDecoration(
+        labelText: HaTexts.addressLabel,
+        hintText: HaTexts.addressHint,
+      ),
+    ),
+    SecretField(
+      key: const ValueKey('haToken'),
+      controller: _token,
+      label: HaTexts.tokenLabel,
+      helperText: HaTexts.tokenHelp,
+      mono: true,
+    ),
+    Text(HaTexts.httpNote, style: WText.caption),
+    if (_error != null)
+      Text(
+        _error!,
+        key: const ValueKey('haError'),
+        style: WText.caption.copyWith(color: WColors.error),
+      ),
+    PrimaryButton(
+      _busy ? HaTexts.connecting : HaTexts.connect,
+      onPressed: _busy ? null : () => unawaited(_connect()),
+    ),
+    WideButton(
+      _searching ? HaTexts.searching : HaTexts.search,
+      onPressed: _searching ? null : () => unawaited(_search()),
+    ),
+    if (_servers != null)
+      _servers!.isEmpty
+          ? Text(HaTexts.nothingFound, style: WText.caption)
+          : SettingsSection(
+              title: HaTexts.found,
+              children: [
+                for (final s in _servers!)
+                  SettingsRow(
+                    title: s.name,
+                    detail: s.url,
+                    onTap: () => setState(() => _address.text = s.url),
+                  ),
+              ],
+            ),
+  ];
+
+  Widget _stateCard(ToolRegistry registry) {
+    final info = registry.integrations.where((i) => i.id == 'ha').firstOrNull;
+    final failed = info?.status == IntegrationStatus.error;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: WSpace.l18,
+      children: [
+        SectionCard(
+          children: [
+            SettingsRow(
+              title: failed ? HaTexts.errorTitle : HaTexts.connected,
+              detail: failed ? info?.error : _endpoint?.url,
+              trailing: CheckStatusIcon(
+                failed ? CheckStatus.failed : CheckStatus.ok,
+                size: WSize.statusIconSmall,
+                semanticLabel: failed ? 'Fehler' : 'in Ordnung',
+              ),
+            ),
+            SettingsRow(title: HaTexts.approved(_approved.length)),
+          ],
+        ),
+        if (failed)
+          PrimaryButton(
+            _busy ? HaTexts.connecting : HaTexts.retry,
+            onPressed: _busy ? null : () => unawaited(_retry()),
+          ),
+        WideButton(
+          HaTexts.disconnect,
+          onPressed: () => unawaited(_disconnect()),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _deviceList() {
+    final all = _all;
+    if (all == null) {
+      return [if (_error != null) Text(_error!, style: WText.caption)];
+    }
+    final query = _filter.text.trim().toLowerCase();
+    final shown = [
+      for (final e in all)
+        if (query.isEmpty ||
+            e.name.toLowerCase().contains(query) ||
+            (e.area ?? '').toLowerCase().contains(query) ||
+            e.entityId.contains(query))
+          e,
+    ];
+    final byArea = <String, List<HaEntity>>{};
+    for (final e in shown) {
+      (byArea[e.area ?? HaTexts.noRoom] ??= []).add(e);
+    }
+    return [
+      Text(HaTexts.devices, style: WText.sectionLabel),
+      Text(HaTexts.devicesHelp, style: WText.caption),
+      TextField(
+        key: const ValueKey('haFilter'),
+        controller: _filter,
+        style: WText.body,
+        onChanged: (_) => setState(() {}),
+        decoration: const InputDecoration(labelText: HaTexts.filter),
+      ),
+      if (all.isEmpty) Text(HaTexts.noDevices, style: WText.caption),
+      for (final MapEntry(:key, :value) in byArea.entries)
+        SettingsSection(
+          title: key,
+          children: [
+            for (final e in value)
+              SettingsRow(
+                title: e.name,
+                detail: _secure(e)
+                    ? '${e.entityId} · fragt immer nach'
+                    : e.entityId,
+                trailing: WSwitch(
+                  key: ValueKey('haEntity_${e.entityId}'),
+                  value: _approved.contains(e.entityId),
+                  semanticLabel: e.name,
+                  onChanged: (on) => unawaited(_toggle(e, on)),
+                ),
+              ),
+          ],
+        ),
+      WideButton(HaTexts.reload, onPressed: () => unawaited(_loadDevices())),
+    ];
+  }
+
+  static bool _secure(HaEntity e) =>
+      haRiskForDomain(e.domain) == RiskLevel.external;
+}

@@ -44,6 +44,9 @@ abstract final class AppRoutes {
   /// Bring! login and state (WP28).
   static const bring = '/settings/bring';
 
+  /// Home Assistant address, token and devices (WP91).
+  static const homeAssistant = '/settings/home_assistant';
+
   /// Lists (K6).
   static const lists = '/settings/lists';
 
