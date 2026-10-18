@@ -55,7 +55,10 @@ final class E2eApp {
   final InMemorySecretStore secrets = InMemorySecretStore();
 
   /// Pumps the app and returns its container.
-  Future<ProviderContainer> pump(WidgetTester tester) async {
+  Future<ProviderContainer> pump(
+    WidgetTester tester, {
+    Widget child = const WendelinApp(),
+  }) async {
     if (_storage == null) addTearDown(storage.close);
     final device = await loadDeviceInfo();
     await tester.pumpWidget(
@@ -73,11 +76,13 @@ final class E2eApp {
             ),
           ...extraOverrides,
         ],
-        child: const WendelinApp(),
+        child: child,
       ),
     );
     await tester.pump();
-    return ProviderScope.containerOf(tester.element(find.byType(WendelinApp)));
+    return ProviderScope.containerOf(
+      tester.element(find.byType(child.runtimeType)),
+    );
   }
 }
 

@@ -123,6 +123,12 @@ final class TestEnv {
   /// Bring! account (no request ever goes to the real API in tests).
   final bring = FakeBringApi();
 
+  /// Home Assistant (no request ever goes to a real instance in tests).
+  final ha = FakeHaApi();
+
+  /// Instances the mDNS search finds.
+  final haDiscovery = FakeHaDiscovery();
+
   /// Texts shared with other apps (package, text).
   final shared = <(String, String)>[];
 

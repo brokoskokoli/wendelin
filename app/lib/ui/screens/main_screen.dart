@@ -156,12 +156,19 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         block.profileId;
     final send = await confirm(
       context,
-      title: 'GPU-Prüfung nicht bestanden',
-      message:
-          'Die GPU-Prüfung von $name über NVIDIA ist fehlgeschlagen oder '
-          'nicht möglich.${gpuBlockReason(block.reason)} Deine Anfrage wurde '
-          'nicht gesendet. Du kannst sie einmalig ohne GPU-Prüfung senden. '
-          'Die übrigen Prüfungen bleiben aktiv.',
+      title: block.noEvidence
+          ? 'Kein GPU-Nachweis'
+          : 'GPU-Prüfung nicht bestanden',
+      message: block.noEvidence
+          ? '$name liefert für dieses Modell keinen GPU-Nachweis, NVIDIA '
+                'kann nichts prüfen. Weil die GPU-Prüfung auf „Vorher“ steht, '
+                'wurde deine Anfrage nicht gesendet. Du kannst sie einmalig '
+                'ohne GPU-Prüfung senden. Die übrigen Prüfungen bleiben '
+                'aktiv.'
+          : 'Die GPU-Prüfung von $name über NVIDIA ist fehlgeschlagen oder '
+                'nicht möglich.${gpuBlockReason(block.reason)} Deine Anfrage '
+                'wurde nicht gesendet. Du kannst sie einmalig ohne '
+                'GPU-Prüfung senden. Die übrigen Prüfungen bleiben aktiv.',
       yes: 'Ohne GPU-Prüfung senden',
       no: 'Abbrechen',
     );

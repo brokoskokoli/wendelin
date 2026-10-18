@@ -12,3 +12,7 @@ Bezug: Nachtest APK 11193bb (2026-10-16, Xiaomi, `ergebnisse.md`): Tools wirken 
 - [ ] Unit-/Widget-Tests: Ausgabe startet vor `receipt green` (Fake-Provider mit verzögerter Quittung); roter Fall bricht ab und meldet.
 - [ ] Test für ausbleibenden Profil-Neuaufbau bei gleichbleibenden Einstellungen.
 - [ ] Emulator (separater E2E-Agent): Overlay-/Sprach-E2E mit TEE-Fixture grün. Gate grün.
+
+## WP81b (freigegeben 2026-10-18)
+
+In Tool-Runden startet der nächste Modellaufruf parallel zum Abruf der Quittung der vorigen Antwort (spart ca. 1–2 s je Runde). `external`-Tools warten weiter auf die geprüfte Quittung; eine rote Quittung bricht die laufende Runde ab, verwirft ihr Ergebnis und endet wie in WP81. Entscheidung Maintainer 2026-10-18.

@@ -2,6 +2,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'preference_models.dart';
+import 'weather_config.dart';
 
 /// Settings keys of the app (stored in `SettingsRepository`).
 ///
@@ -55,12 +56,10 @@ abstract final class AppSettings {
     defaultValue: false,
   );
 
-  /// GPU check of TEE models at NVIDIA: `off` (default), `before`, `after`
-  /// (name of `GpuCheckMode`).
-  static final gpuCheck = SettingKey.string(
-    'tee.gpuCheck',
-    defaultValue: 'off',
-  );
+  /// Former global GPU check mode (name of `GpuCheckMode`). Since WP82 the
+  /// mode belongs to each TEE profile (`options.gpuCheck`); this key is only
+  /// read once by `migrateGlobalGpuCheck` and then removed.
+  static final legacyGpuCheck = SettingKey.string('tee.gpuCheck');
 
   /// Pin of the attested TEE provider [profileId] (JSON of `AttestationPin`).
   static SettingKey<Map<String, Object?>> attestationPin(String profileId) =>
@@ -97,6 +96,16 @@ abstract final class AppSettings {
     decode: (json) {
       if (json is Map<String, Object?>) return WebSearchConfig.fromJson(json);
       throw const FormatException('web.search: Objekt erwartet');
+    },
+  );
+
+  /// Weather service and home place.
+  static final weather = SettingKey<WeatherConfig>(
+    'weather.config',
+    encode: (c) => c.toJson(),
+    decode: (json) {
+      if (json is Map<String, Object?>) return WeatherConfig.fromJson(json);
+      throw const FormatException('weather.config: Objekt erwartet');
     },
   );
 

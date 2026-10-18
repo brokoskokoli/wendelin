@@ -14,6 +14,7 @@ final class VoiceTexts {
     required this.tooSlow,
     required this.noBudget,
     required this.failed,
+    required this.unverified,
   });
 
   /// German.
@@ -26,6 +27,7 @@ final class VoiceTexts {
     tooSlow: 'Das hat zu lange gedauert.',
     noBudget: 'Das Budget ist aufgebraucht.',
     failed: 'Das hat leider nicht geklappt.',
+    unverified: 'Achtung, diese Antwort konnte nicht verifiziert werden.',
   );
 
   /// French.
@@ -38,6 +40,7 @@ final class VoiceTexts {
     tooSlow: 'Cela a pris trop de temps.',
     noBudget: 'Le budget est épuisé.',
     failed: 'Je n’ai pas pu répondre.',
+    unverified: 'Attention, cette réponse n’a pas pu être vérifiée.',
   );
 
   /// English.
@@ -50,6 +53,7 @@ final class VoiceTexts {
     tooSlow: 'That took too long.',
     noBudget: 'The budget is used up.',
     failed: 'Sorry, that did not work.',
+    unverified: 'Careful, this answer could not be verified.',
   );
 
   /// Texts for [language] (BCP 47; `null` = German).
@@ -83,6 +87,10 @@ final class VoiceTexts {
 
   /// Said for other failures.
   final String failed;
+
+  /// Said after the speech was stopped because the receipt of the answer
+  /// turned out red (WP81).
+  final String unverified;
 
   /// Spoken text for a failed agent run. In German the agent's own (German,
   /// more specific) [message] is used. A provider failure carries the

@@ -58,9 +58,7 @@ void main() {
       storage: base.storage,
     );
     c = env.container();
-    c.read(attestationHubProvider)
-      ..gpuMode = mode
-      ..register('phala', provider);
+    c.read(attestationHubProvider).register('phala', provider);
   }
 
   tearDown(() => c.dispose());

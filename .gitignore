@@ -21,3 +21,6 @@ app/test/**/failures/
 # Python
 __pycache__/
 *.pyc
+
+# Lokales Startskript der Orchestrator-Sitzung
+start-wendelin-coding.sh

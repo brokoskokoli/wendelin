@@ -49,6 +49,12 @@ final class EscalationQuestion extends PendingQuestion {
   bool get answered => event.answered;
 }
 
+/// Notice and spoken hint when a request is stopped because the provider
+/// delivers no GPU evidence (mode „Vorher“, WP82).
+const gpuNoEvidenceSpoken =
+    'Dieses Modell liefert keinen GPU-Nachweis. '
+    'Tippe auf Ohne GPU-Prüfung senden.';
+
 /// The request was not sent because the GPU check before the request failed
 /// (GPU mode „Vorher“, WP52): the user may send it once without the check.
 @immutable
@@ -58,7 +64,12 @@ final class GpuBlock {
     required this.profileId,
     required this.request,
     required this.reason,
+    this.noEvidence = false,
   });
+
+  /// The provider delivers no GPU evidence for the model (WP82): nothing to
+  /// check, as opposed to a failed check.
+  final bool noEvidence;
 
   /// Provider that was not reached.
   final String profileId;

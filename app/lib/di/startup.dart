@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
-import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'app_settings.dart';
 import 'preference_models.dart';
+import 'weather_config.dart';
 
 /// Settings read once before the first frame.
 @immutable
@@ -20,10 +20,10 @@ final class StartupSettings {
     this.retentionDays = 30,
     this.toolPrefs = const ToolPrefs(),
     this.webSearch,
+    this.weather = const WeatherConfig(),
     this.lists = const [],
     this.obsidian = const ObsidianPrefs(),
     this.secureScreen = false,
-    this.gpuCheck = GpuCheckMode.off,
   });
 
   /// Integrations the user switched on.
@@ -54,6 +54,9 @@ final class StartupSettings {
   /// Web search service.
   final WebSearchConfig? webSearch;
 
+  /// Weather service and home place.
+  final WeatherConfig weather;
+
   /// The user's lists.
   final List<ListDefinition> lists;
 
@@ -62,9 +65,6 @@ final class StartupSettings {
 
   /// Protect the main app's screen content.
   final bool secureScreen;
-
-  /// When the GPU evidence of TEE models is checked at NVIDIA.
-  final GpuCheckMode gpuCheck;
 
   /// Reads the settings for the integrations [integrationIds].
   static Future<StartupSettings> load(
@@ -90,15 +90,11 @@ final class StartupSettings {
       retentionDays: await settings.get(AppSettings.retentionDays) ?? 30,
       toolPrefs: await settings.get(AppSettings.toolPrefs) ?? const ToolPrefs(),
       webSearch: await settings.get(AppSettings.webSearch),
+      weather: await settings.get(AppSettings.weather) ?? const WeatherConfig(),
       lists: await settings.get(AppSettings.lists) ?? const [],
       obsidian:
           await settings.get(AppSettings.obsidian) ?? const ObsidianPrefs(),
       secureScreen: await settings.get(AppSettings.secureScreen) ?? false,
-      gpuCheck:
-          GpuCheckMode.values.asNameMap()[await settings.get(
-            AppSettings.gpuCheck,
-          )] ??
-          GpuCheckMode.off,
     );
   }
 }

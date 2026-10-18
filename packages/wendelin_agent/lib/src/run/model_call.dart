@@ -154,6 +154,14 @@ final class ModelCall {
         'Antwortstrom ohne Abschluss beendet',
       );
     }
+    // The text is complete: speech reads the last sentence now, not after the
+    // receipt (WP81). Tool calls continue the answer after the round.
+    if (error == null &&
+        stopReason != null &&
+        stopReason != StopReason.pauseTurn &&
+        !blocks.any((b) => b is ToolCallBlock)) {
+      _control.emit(const AgentTextComplete());
+    }
     await _reportAttestation(
       target.provider,
       request,

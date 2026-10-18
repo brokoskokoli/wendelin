@@ -37,6 +37,8 @@ void main() {
         'obsidian',
         'bring',
         'lists',
+        'ha',
+        'weather',
       ],
     );
   });

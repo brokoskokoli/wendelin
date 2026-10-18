@@ -344,9 +344,11 @@ void main() {
         'calendar',
         'clipboard',
         'flashlight',
+        'ha',
         'lists',
         'memory',
         'obsidian',
+        'weather',
         'web',
       ]);
       expect(registry.status('memory'), IntegrationStatus.active);
@@ -396,6 +398,7 @@ void main() {
           'clipboard': IntegrationStatus.active,
           'flashlight': IntegrationStatus.active,
           'memory': IntegrationStatus.active,
+          'weather': IntegrationStatus.active,
           // Ohne Suchdienst ist web aktiv (nur web__fetch); der optionale
           // Einrichtungsschritt bleibt offen (WP14).
           'web': IntegrationStatus.active,

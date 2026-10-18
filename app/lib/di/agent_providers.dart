@@ -11,6 +11,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../agent/agent_controller.dart';
 import 'agent_factory.dart';
 import 'attest_log.dart';
+import 'attestation_hub.dart' show AttestationHub;
 import 'attestation_log_writer.dart';
 import 'attestation_providers.dart';
 import 'audit_recorder.dart';
@@ -118,11 +119,41 @@ final FutureProvider<ProviderConfig?> storedProviderConfigProvider =
         storage: ref.watch(storageProvider),
         secrets: ref.watch(secretStoreProvider),
         catalog: ref.watch(modelCatalogProvider),
-        create: ref.watch(llmProviderFactoryProvider),
+        create: hubRegistering(
+          ref.read(attestationHubProvider),
+          ref.watch(llmProviderFactoryProvider),
+        ),
         clock: ref.watch(clockProvider),
         network: ref.watch(networkStatusProvider),
       );
     });
+
+/// Wraps [create] so the live providers (and only those) are registered in
+/// the hub. The setup probe instances are not: a probe provider must not
+/// replace the live one (mode, locks, reports; WP82).
+LlmProviderFactory hubRegistering(
+  AttestationHub hub,
+  LlmProviderFactory create,
+) => (profile, secrets) {
+  final provider = create(profile, secrets);
+  if (provider is AttestedProvider && hub.provider(profile.id) != provider) {
+    final seen = _registeredIds[hub] ??= <String>{};
+    hub.register(
+      profile.id,
+      provider,
+      // Registered by this wiring before: the profile changed (WP81).
+      reason: seen.contains(profile.id)
+          ? 'Profil geändert'
+          : hub.provider(profile.id) != null
+          ? 'Sitzung übernommen'
+          : 'erster Aufbau',
+    );
+    seen.add(profile.id);
+  }
+  return provider;
+};
+
+final Expando<Set<String>> _registeredIds = Expando<Set<String>>();
 
 /// Builds the adapter for a profile (fake in tests).
 typedef LlmProviderFactory = LlmProvider Function(
@@ -135,7 +166,13 @@ final Provider<LlmProviderFactory> llmProviderFactoryProvider =
     Provider<LlmProviderFactory>((ref) {
       final catalog = ref.watch(modelCatalogProvider);
       final transport = ref.watch(attestationTransportProvider);
+      // Live TEE providers by profile (WP81): a config reload (any profile
+      // or rule edit rebuilds all profiles) keeps the instance of a profile
+      // that did not change, with its session, lock and connection.
+      final live = <String, ({ProviderProfile profile, AttestedProvider p})>{};
       return (profile, secrets) {
+        final kept = live[profile.id];
+        if (kept != null && kept.profile == profile) return kept.p;
         final wiring = needsAttestation(profile)
             ? attestationWiringOf(ref)
             : null;
@@ -155,7 +192,7 @@ final Provider<LlmProviderFactory> llmProviderFactoryProvider =
           settings: attestSettings(transport?.settings),
         );
         if (provider is AttestedProvider) {
-          ref.read(attestationHubProvider).register(profile.id, provider);
+          live[profile.id] = (profile: profile, p: provider);
         }
         return provider;
       };

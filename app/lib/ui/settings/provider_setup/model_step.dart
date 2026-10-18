@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../../di/provider_setup.dart';
 import '../../design/design.dart';
+import '../gpu_check_section.dart' show noGpuEvidenceHint;
 import '../provider_setup_screen.dart' show ConnectionStatus;
 import '../settings_page.dart';
 
@@ -11,6 +12,7 @@ List<Widget> modelStep({
   required SetupTestResult? connection,
   required List<ModelInfo> models,
   required TextEditingController model,
+  required Set<String> noGpuEvidence,
   required Widget? failure,
   required bool busy,
   required VoidCallback onChanged,
@@ -26,6 +28,7 @@ List<Widget> modelStep({
           SettingsRow(
             title: m.displayName,
             mono: true,
+            detail: noGpuEvidence.contains(m.id) ? noGpuEvidenceHint : null,
             onTap: () => onPick(m.id),
             trailing: model.text == m.id
                 ? const CheckStatusIcon(

@@ -70,7 +70,8 @@ final class AttestationWiring {
   /// Pin store per profile.
   final AttestationPinStore? pins;
 
-  /// Initial GPU check mode.
+  /// GPU check mode of profiles without their own setting
+  /// (`options['gpuCheck']`).
   final GpuCheckMode gpuMode;
 
   /// Trusted `repo_commit`s of the gateway; empty = only logged.
@@ -255,7 +256,7 @@ abstract final class ProviderFactory {
             baseUrl: root,
             client: client ?? defaultHttpClient(),
           ),
-          gpuMode: attestation.gpuMode,
+          gpuMode: gpuModeOf(profile) ?? attestation.gpuMode,
           logSink: attestation.logSink,
           settings: settings,
         );
@@ -351,7 +352,7 @@ abstract final class ProviderFactory {
         client: client ?? defaultHttpClient(),
         evidenceSource: verifier.gpuEvidence,
       ),
-      gpuMode: attestation.gpuMode,
+      gpuMode: gpuModeOf(profile) ?? attestation.gpuMode,
       logSink: attestation.logSink,
       settings: settings,
     );
