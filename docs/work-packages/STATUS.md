@@ -26,10 +26,10 @@ Stand: 2026-10-18 abends, WP96 und WP88 laufen; WP91, WP76b, WP84, WP79 gemergt
 | Paket | Titel | Status | Offen |
 | --- | --- | --- | --- |
 | WP76a | Tinfoil SEV-SNP (Rust) | gemergt | Folge: rsa-Upgrade; min_tcb in WP76d |
-| WP76b | Tinfoil Sigstore | gemergt cc12c9f | K59 offen; Downgrade-Schutz in WP76d |
+| WP76b | Tinfoil Sigstore | gemergt cc12c9f | K59 bestätigt; Downgrade-Schutz in WP76d |
 | WP76c | Tinfoil EHBP/HPKE | geplant | – |
 | WP76d | Tinfoil in der App | geplant | min_tcb setzen; Downgrade-Schutz „neuestes Release“ (K59) |
-| WP79 | App-Sprache | gemergt 604ff80 | K60 offen; Folge: Stoppwort-Hinweis im Overlay folgt UI- statt Sprech-Sprache; Scan-Test erkennt deutsche Ein-Wort-Texte ohne Umlaut nicht |
+| WP79 | App-Sprache | gemergt 604ff80 | K60 bestätigt; Folge: Stoppwort-Hinweis im Overlay folgt UI- statt Sprech-Sprache; Scan-Test erkennt deutsche Ein-Wort-Texte ohne Umlaut nicht |
 | WP81 | Sofort vorlesen, Haken danach | gemergt | – |
 | WP81b | Nächster Modellaufruf parallel zur Quittung | geplant | freigegeben Stefan 2026-10-18 |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
@@ -41,7 +41,7 @@ Stand: 2026-10-18 abends, WP96 und WP88 laufen; WP91, WP76b, WP84, WP79 gemergt
 | WP88 | Aufgaben | in Arbeit | Review steht aus (HEAD 38e09e9) |
 | WP89 | Todoist/Google Tasks | geplant | nach WP88 |
 | WP90 | Mediensteuerung | wartet | Review und E2E (Player-App auf Emulator) stehen aus |
-| WP91 | Home Assistant | gemergt 8caa7cb | K58 offen; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
+| WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
 | WP92a–c | Sprechererkennung | geplant | WP92c nach WP91 |
 | WP93 | Wake Word im Chat | geplant | – |
 | WP94 | Schnellwechsel Agent | geplant | – |
