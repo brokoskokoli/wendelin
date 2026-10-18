@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18, main `3f77d58`
+Stand: 2026-10-18 abends, alle Sitzungen pausiert
 
 ## Meilensteine
 
@@ -29,10 +29,10 @@ Stand: 2026-10-18, main `3f77d58`
 | WP76b | Tinfoil Sigstore | wartet | Review: nachbessern (2 major, 4 minor, 9/20 Mutationen überlebt); HEAD 7e2e8d4, Übergabe `handoff/wp76b-session.md` |
 | WP76c | Tinfoil EHBP/HPKE | geplant | – |
 | WP76d | Tinfoil in der App | geplant | min_tcb setzen |
-| WP79 | App-Sprache | wartet | wartet auf Merge WP82; danach Provider-Screens, Goldens je Sprache |
+| WP79 | App-Sprache | wartet | WP82 gemergt, kann weiter; danach Provider-Screens, Goldens je Sprache |
 | WP81 | Sofort vorlesen, Haken danach | gemergt | – |
 | WP81b | Nächster Modellaufruf parallel zur Quittung | geplant | freigegeben Stefan 2026-10-18 |
-| WP82 | GPU-Prüfung je Profil | Review | Fix fertig, Merge steht aus |
+| WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
 | WP84 | Spotify | wartet | Review: nachbessern (Muss: Refresh-Token-Rotation testen; 2 Soll; 2 rote App-Tests nach Merge main); HEAD cadb487, Übergabe `handoff/wp84-session.md` |
 | WP85 | Kontakte/SMS/Anrufe | geplant | – |
