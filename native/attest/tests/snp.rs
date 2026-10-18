@@ -147,10 +147,13 @@ fn falscher_chip_oder_tcb_passt_nicht_zum_vcek() {
 
 #[test]
 fn kette_anderer_produkte_wird_abgelehnt() {
-    for p in ["milan", "turin"] {
-        let v = run(&report(), &fx("tinfoil_vcek_genoa.der"), &chain(p), NOW);
-        only_red(&v, &["chain"]);
-    }
+    let v = run(
+        &report(),
+        &fx("tinfoil_vcek_genoa.der"),
+        &chain("milan"),
+        NOW,
+    );
+    only_red(&v, &["chain"]);
 }
 
 #[test]
@@ -347,7 +350,7 @@ fn unlesbare_reports_werden_abgelehnt() {
 fn gepinnte_arks_und_asks_aller_produkte_verifizieren() {
     // Fremder VCEK: Pin, ARK-Selbstsignatur und ASK-Signatur der Kette sind in Ordnung,
     // erst die VCEK-Signatur scheitert.
-    for p in ["genoa", "milan", "turin"] {
+    for p in ["genoa", "milan"] {
         let v = run(&report(), &fx("tinfoil_vcek_genoa.der"), &chain(p), NOW);
         let e = v.errors.join(";");
         assert_eq!(
@@ -360,4 +363,84 @@ fn gepinnte_arks_und_asks_aller_produkte_verifizieren() {
             "{p}: {e}"
         );
     }
+}
+
+// --- Synthetische Kette (ARK/ASK/VCEK mit AMD-artigen Erweiterungen, Schlüssel verworfen) ---
+// Erzeugung: tests/snp/synth/README.md. Die Kette ist nicht gepinnt; die Tests übergeben ihren
+// eigenen Pin (`verify_with_pins`) oder den echten (dann muss "nicht gepinnt" rot werden).
+
+const SYN_PIN: [(&str, &str); 1] = [(
+    "Synth",
+    "27c9568c3519f9c15bc8e3628b6de4d878f8f897c00eb84654e42f0bcab020fa",
+)];
+
+fn syn(rep: &str, vcek: &str) -> SnpVerdict {
+    syn_pins(rep, vcek, &SYN_PIN)
+}
+
+fn syn_pins(rep: &str, vcek: &str, pins: &[(&'static str, &'static str)]) -> SnpVerdict {
+    let r = fx(&format!("synth_report_{rep}.bin"));
+    let tls = r[0x50..0x70].to_vec();
+    let hpke = r[0x70..0x90].to_vec();
+    let chain = String::from_utf8(fx("synth_chain.pem")).unwrap();
+    snp::verify_with_pins(&r, &fx(vcek), &chain, NOW, &policy(), &tls, &hpke, pins)
+}
+
+#[test]
+fn synthetische_kette_besteht_mit_eigenem_pin() {
+    let v = syn("ok", "synth_vcek.der");
+    assert!(v.all_ok(), "{:?}", v.errors);
+    assert_eq!(v.product.as_deref(), Some("Synth"));
+}
+
+#[test]
+fn ark_pin_ist_die_einzige_huerde_der_kette() {
+    // Gleiche, sonst gültige Kette mit den echten AMD-Pins: nur "nicht gepinnt".
+    let v = syn_pins("ok", "synth_vcek.der", &snp::PINNED_ARKS);
+    only_red(&v, &["chain"]);
+    assert!(
+        v.errors.iter().any(|e| e.contains("nicht gepinnt")),
+        "{:?}",
+        v.errors
+    );
+    assert!(v.product.is_none());
+}
+
+#[test]
+fn abweichende_pss_parameter_werden_abgelehnt() {
+    // VCEK mit Salt 32 statt 48 vom (echten) ASK signiert: Signatur wäre gültig, Parameter nicht.
+    let v = syn("ok", "synth_vcek_salt32.der");
+    only_red(&v, &["chain"]);
+    assert!(
+        v.errors.iter().any(|e| e.contains("PSS-Parameter")),
+        "{:?}",
+        v.errors
+    );
+}
+
+#[test]
+fn richtlinie_einzeln_bei_gueltiger_signatur() {
+    for (name, msg) in [
+        ("debug", "Debug"),
+        ("migrate", "MIGRATE_MA"),
+        ("vlek", "VCEK"),
+        ("vmpl1", "VMPL"),
+        ("provisional", "vorläufig"),
+    ] {
+        let v = syn(name, "synth_vcek.der");
+        assert!(v.signature_ok && v.chain_ok, "{name}: {:?}", v.errors);
+        only_red(&v, &["policy"]);
+        assert!(
+            v.errors.iter().any(|e| e.contains(msg)),
+            "{name}: {:?}",
+            v.errors
+        );
+    }
+}
+
+#[test]
+fn tee_byte_abweichend_vom_vcek_ist_nur_vcek_rot() {
+    let v = syn("tee1", "synth_vcek.der");
+    only_red(&v, &["vcek"]);
+    assert!(v.signature_ok && v.chain_ok);
 }

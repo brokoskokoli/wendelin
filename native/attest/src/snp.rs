@@ -3,7 +3,7 @@
 //!
 //! Reine, netzfreie Funktionen: VCEK und Zertifikatskette holt Dart vom AMD-KDS
 //! (`kdsintf.amd.com`) und reicht sie hinein. Die ARK-Schlüssel sind per SPKI-SHA-256 gepinnt
-//! (Milan, Genoa, Turin); alles andere wird per Signatur geprüft.
+//! (Milan, Genoa; Turin folgt, siehe WP76: anderes TCB-Layout); alles andere wird per Signatur geprüft.
 //!
 //! Layout des Reports: SEV-SNP ABI Spec 56860, Tabelle "ATTESTATION_REPORT" (Version 2/3, 1184 Byte).
 //! VCEK-Erweiterungen: AMD "VCEK Certificate and KDS Interface Spec" 57230, Tabelle 8.
@@ -20,7 +20,7 @@ pub const REPORT_LEN: usize = 0x4A0;
 const SIGNED_LEN: usize = 0x2A0;
 
 /// SHA-256 über das SPKI der AMD-Root-Schlüssel (ARK), aus `kdsintf.amd.com/vcek/v1/<Produkt>/cert_chain`.
-const PINNED_ARKS: [(&str, &str); 3] = [
+pub const PINNED_ARKS: [(&str, &str); 2] = [
     (
         "Milan",
         "9f056bee44377e29308cb5ffa895bdfb62d18881fa6bed8d6f075b0204089cb9",
@@ -28,10 +28,6 @@ const PINNED_ARKS: [(&str, &str); 3] = [
     (
         "Genoa",
         "429a69c9422aa258ee4d8db5fcda9c6470ef15f8cd5a9cebd6cbc7d90b863831",
-    ),
-    (
-        "Turin",
-        "4f125410563a2ab9a50356f9243f6fe0b6f73de98603f53f90339c70e9d7ad08",
     ),
 ];
 
@@ -96,7 +92,7 @@ pub struct SnpReportInfo {
     pub chip_id_hex: String,
 }
 
-/// Mindestanforderungen an das Ziel. Debug-Gäste und VMPL ≠ 0 lehnt die Prüfung immer ab.
+/// Mindestanforderungen an das Ziel. Debug-Gäste, MIGRATE_MA, vorläufige TCBs und VMPL ≠ 0 lehnt die Prüfung immer ab.
 #[derive(Debug, Clone, Default)]
 pub struct SnpPolicy {
     pub min_tcb: SnpTcb,
@@ -118,13 +114,14 @@ pub struct SnpVerdict {
     pub tls_bound: bool,
     /// `report_data[32..64]` = erwarteter HPKE-Schlüssel.
     pub hpke_bound: bool,
-    /// AMD-Produkt der gepinnten Wurzel (`Milan`, `Genoa`, `Turin`).
+    /// AMD-Produkt der gepinnten Wurzel (`Milan`, `Genoa`).
     pub product: Option<String>,
     pub info: Option<SnpReportInfo>,
     pub errors: Vec<String>,
 }
 
 impl SnpVerdict {
+    /// Alle Stufen grün. Sagt nichts über die Code-Identität (Messwert prüft der Aufrufer).
     pub fn all_ok(&self) -> bool {
         self.errors.is_empty()
             && self.report_ok
@@ -141,6 +138,8 @@ struct Parsed<'a> {
     raw: &'a [u8],
     info: SnpReportInfo,
     reported_tcb_raw: u64,
+    current_tcb_raw: u64,
+    committed_tcb_raw: u64,
     chip_id: &'a [u8],
     report_data: &'a [u8],
 }
@@ -179,6 +178,8 @@ fn parse(report: &[u8]) -> Result<Parsed<'_>, String> {
         raw: report,
         info,
         reported_tcb_raw: reported,
+        current_tcb_raw: le64(report, 0x38),
+        committed_tcb_raw: le64(report, 0x1E0),
         chip_id: &report[0x1A0..0x1E0],
         report_data: &report[0x50..0x90],
     })
@@ -244,6 +245,7 @@ fn verify_chain(
     vcek: &Certificate,
     chain: &[Certificate],
     now: u64,
+    pins: &[(&'static str, &'static str)],
 ) -> Result<&'static str, String> {
     let ark = chain
         .iter()
@@ -254,7 +256,7 @@ fn verify_chain(
         .find(|c| c.tbs_certificate().issuer() == ark.tbs_certificate().subject() && *c != ark)
         .ok_or("ASK fehlt in der Kette")?;
     let ark_hash = hex::encode(Sha256::digest(spki_der(ark)?));
-    let product = PINNED_ARKS
+    let product = pins
         .iter()
         .find(|(_, h)| *h == ark_hash)
         .map(|(p, _)| *p)
@@ -335,6 +337,12 @@ fn check_policy(p: &Parsed, pol: &SnpPolicy) -> Result<(), String> {
     if p.info.policy & (1 << 19) != 0 {
         return Err("Debug-Gast".into());
     }
+    if p.info.policy & (1 << 18) != 0 {
+        return Err("Migrationsagent erlaubt (MIGRATE_MA)".into());
+    }
+    if p.committed_tcb_raw != p.current_tcb_raw {
+        return Err("TCB nur vorläufig (committed_tcb ≠ current_tcb)".into());
+    }
     if p.info.vmpl != 0 {
         return Err(format!("VMPL {} statt 0", p.info.vmpl));
     }
@@ -352,6 +360,10 @@ fn check_policy(p: &Parsed, pol: &SnpPolicy) -> Result<(), String> {
 }
 
 /// Prüft einen SNP-Report vollständig. `vcek_der` und `chain_pem` (ASK + ARK) kommen vom KDS.
+///
+/// `all_ok` sagt nichts über die Code-Identität: der Messwert (`info.measurement_hex`) wird vom
+/// Aufrufer gegen das signierte Release geprüft (WP76b/d). `policy.min_tcb` ist standardmäßig 0;
+/// die Untergrenze setzt der Aufrufer (WP76d).
 pub fn verify(
     report: &[u8],
     vcek_der: &[u8],
@@ -360,6 +372,30 @@ pub fn verify(
     policy: &SnpPolicy,
     expected_tls_spki_sha256: &[u8],
     expected_hpke_key: &[u8],
+) -> SnpVerdict {
+    verify_with_pins(
+        report,
+        vcek_der,
+        chain_pem,
+        now_unix,
+        policy,
+        expected_tls_spki_sha256,
+        expected_hpke_key,
+        &PINNED_ARKS,
+    )
+}
+
+/// Wie [`verify`] mit austauschbaren ARK-Pins (für Tests mit synthetischer Kette).
+#[allow(clippy::too_many_arguments)]
+pub fn verify_with_pins(
+    report: &[u8],
+    vcek_der: &[u8],
+    chain_pem: &str,
+    now_unix: u64,
+    policy: &SnpPolicy,
+    expected_tls_spki_sha256: &[u8],
+    expected_hpke_key: &[u8],
+    pins: &[(&'static str, &'static str)],
 ) -> SnpVerdict {
     let mut v = SnpVerdict::default();
     let p = match parse(report) {
@@ -385,7 +421,7 @@ pub fn verify(
             return v;
         }
     };
-    match certs_from_pem(chain_pem).and_then(|c| verify_chain(&vcek, &c, now_unix)) {
+    match certs_from_pem(chain_pem).and_then(|c| verify_chain(&vcek, &c, now_unix, pins)) {
         Ok(prod) => {
             v.chain_ok = true;
             v.product = Some(prod.to_string());

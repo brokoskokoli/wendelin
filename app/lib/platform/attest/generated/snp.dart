@@ -7,7 +7,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'frb_generated.dart';
 
-/// Mindestanforderungen an das Ziel. Debug-Gäste und VMPL ≠ 0 lehnt die Prüfung immer ab.
+/// Mindestanforderungen an das Ziel. Debug-Gäste, MIGRATE_MA, vorläufige TCBs und VMPL ≠ 0 lehnt die Prüfung immer ab.
 class SnpPolicy {
   final SnpTcb minTcb;
 
@@ -131,7 +131,7 @@ class SnpVerdict {
   /// `report_data[32..64]` = erwarteter HPKE-Schlüssel.
   final bool hpkeBound;
 
-  /// AMD-Produkt der gepinnten Wurzel (`Milan`, `Genoa`, `Turin`).
+  /// AMD-Produkt der gepinnten Wurzel (`Milan`, `Genoa`).
   final String? product;
   final SnpReportInfo? info;
   final List<String> errors;

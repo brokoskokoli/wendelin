@@ -8,5 +8,12 @@ Aufteilung (Spike: ~27–38 Agenten-Stunden):
 - **WP76c – EHBP/HPKE:** Anfrage und Antwort (inkl. SSE-Strom) verschlüsseln/entschlüsseln, 25 Antwort-Vektoren aus der Referenz als Tests, TLS-Pin (SPKI aus dem Report) wie WP61, fail-closed.
 - **WP76d – Anbieter-Profil „Tinfoil (TEE)“:** Einrichtung, Modelle (Standard gpt-oss-120b oder gemma4-31b nach Eval), Prüfprotokoll-Stufen (SNP, Sigstore, TLS, E2EE), Hinweis „keine Quittung je Antwort“, Live-Test (Tools, Streaming, zweiter Zug mit Tool-Ergebnis), Emulator-Fixture, ADR 0020.
 
+Hinweise aus dem Review von WP76a (für b/d und später):
+- **`allOk` sagt nichts über die Code-Identität.** Der Messwert (`info.measurementHex`) wird von WP76b/d gegen das signierte Release geprüft; ohne diesen Abgleich ist die Attestierung nur „irgendein echter SNP-Gast“.
+- **`min_tcb` ist standardmäßig 0.** WP76d setzt die Untergrenze (Stand Aufzeichnung: Bootloader 9, SNP 22, Microcode 80) bewusst.
+- **Turin ist vorerst nicht gepinnt**: anderes TCB-Layout (FMC/BL/TEE/SNP/…/Microcode, `fmcSPL`, 8-Byte-hwID). Folgeaufgabe, mit Produktlayout und Tests.
+- **Abhängigkeit `rsa 0.10.0-rc.19`** auf die stabile 0.10 heben, sobald sie erscheint.
+- Die Richtlinie lehnt zusätzlich MIGRATE_MA (Policy-Bit 18) und `committed_tcb ≠ current_tcb` ab. Synthetische Testkette: `native/attest/tests/snp/synth/README.md`.
+
 ## Abnahmekriterien
 - [ ] je Teil Unit-/Rust-Tests mit Vektoren; Live-Test (`TINFOIL_API_KEY`, sparsam) grün; Emulator-Fixture (E2E-Agent); Gate grün.

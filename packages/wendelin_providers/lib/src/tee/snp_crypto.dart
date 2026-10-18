@@ -125,7 +125,8 @@ final class SnpVerdict {
   /// Hard failures (German, no key material).
   final List<String> errors;
 
-  /// All stages green and no errors.
+  /// All stages green and no errors. Says nothing about code identity: the caller
+  /// checks [SnpReportInfo.measurementHex] against the signed release (WP76b/d).
   bool get allOk =>
       errors.isEmpty &&
       reportOk &&
