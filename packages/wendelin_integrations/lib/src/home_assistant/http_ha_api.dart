@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart' show sha1;
 import 'package:http/http.dart' as http;
 
 import '../common/port_exception.dart';
@@ -245,70 +246,10 @@ final class HttpHaApi implements HaApi {
 
   /// `Sec-WebSocket-Accept` the server must answer to [key] (RFC 6455).
   static String _acceptFor(String key) => base64.encode(
-    _sha1(utf8.encode('${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11')),
+    sha1
+        .convert(utf8.encode('${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11'))
+        .bytes,
   );
-
-  static List<int> _sha1(List<int> data) {
-    int rotl(int x, int n) => ((x << n) | (x >> (32 - n))) & 0xffffffff;
-    final bytes = [...data, 0x80];
-    while (bytes.length % 64 != 56) {
-      bytes.add(0);
-    }
-    final bits = data.length * 8;
-    for (var i = 7; i >= 0; i--) {
-      bytes.add((bits >> (i * 8)) & 0xff);
-    }
-    var h0 = 0x67452301;
-    var h1 = 0xEFCDAB89;
-    var h2 = 0x98BADCFE;
-    var h3 = 0x10325476;
-    var h4 = 0xC3D2E1F0;
-    for (var c = 0; c < bytes.length; c += 64) {
-      final w = List<int>.filled(80, 0);
-      for (var i = 0; i < 16; i++) {
-        w[i] =
-            (bytes[c + i * 4] << 24) |
-            (bytes[c + i * 4 + 1] << 16) |
-            (bytes[c + i * 4 + 2] << 8) |
-            bytes[c + i * 4 + 3];
-      }
-      for (var i = 16; i < 80; i++) {
-        w[i] = rotl(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
-      }
-      var a = h0, b = h1, cc = h2, d = h3, e = h4;
-      for (var i = 0; i < 80; i++) {
-        final int f, k;
-        if (i < 20) {
-          f = (b & cc) | ((~b & 0xffffffff) & d);
-          k = 0x5A827999;
-        } else if (i < 40) {
-          f = b ^ cc ^ d;
-          k = 0x6ED9EBA1;
-        } else if (i < 60) {
-          f = (b & cc) | (b & d) | (cc & d);
-          k = 0x8F1BBCDC;
-        } else {
-          f = b ^ cc ^ d;
-          k = 0xCA62C1D6;
-        }
-        final t = (rotl(a, 5) + f + e + k + w[i]) & 0xffffffff;
-        e = d;
-        d = cc;
-        cc = rotl(b, 30);
-        b = a;
-        a = t;
-      }
-      h0 = (h0 + a) & 0xffffffff;
-      h1 = (h1 + b) & 0xffffffff;
-      h2 = (h2 + cc) & 0xffffffff;
-      h3 = (h3 + d) & 0xffffffff;
-      h4 = (h4 + e) & 0xffffffff;
-    }
-    return [
-      for (final h in [h0, h1, h2, h3, h4])
-        for (var i = 3; i >= 0; i--) (h >> (i * 8)) & 0xff,
-    ];
-  }
 
   PortException _unexpected() => const PortException(
     PortErrorKind.failed,
