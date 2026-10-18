@@ -262,6 +262,45 @@ void main() {
       },
     );
 
+    test('Rotation: Neuladen ohne die alte kid → alte kid unbekannt', () async {
+      final jwks = _Jwks();
+      var now = _iat.add(const Duration(minutes: 1));
+      final v = NrasTokenVerifier(
+        jwks: NrasJwks(client: jwks.client, clock: () => now),
+        clock: () => now,
+      );
+      expect(await _reason(v.verify(_token)), 'accepted');
+      jwks.body = _jwks.replaceAll('01a45dc1', 'deadbeef');
+      now = now.add(const Duration(hours: 2));
+      // Der Abruf kommt vor der Ablaufprüfung: der alte Schlüssel ist weg.
+      expect(await _reason(v.verify(_token)), NrasJwtReason.unknownKey);
+      expect(jwks.calls, 2);
+    });
+
+    test('Fehlversuche zählen für minRefetch (kein Dauerabruf)', () async {
+      final jwks = _Jwks('x', 500);
+      var now = _iat;
+      final v = NrasTokenVerifier(
+        jwks: NrasJwks(
+          client: jwks.client,
+          clock: () => now,
+          minRefetch: const Duration(seconds: 30),
+        ),
+        clock: () => now,
+      );
+      for (var i = 0; i < 3; i++) {
+        expect(await _reason(v.verify(_token)), NrasJwtReason.jwksUnavailable);
+      }
+      expect(jwks.calls, 1);
+      // Nach minRefetch wird wieder gefragt und der Erfolg gilt sofort.
+      now = now.add(const Duration(seconds: 31));
+      jwks
+        ..body = null
+        ..status = 200;
+      expect(await _reason(v.verify(_token)), 'accepted');
+      expect(jwks.calls, 2);
+    });
+
     test(
       'JWKS nicht abrufbar (HTTP 500, kein JSON, Netz) → jwks_unavailable',
       () async {

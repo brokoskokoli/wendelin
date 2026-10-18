@@ -132,6 +132,7 @@ abstract final class P384 {
     if (signature.length != 96 || !onCurve(x, y)) return false;
     final r = _int(signature.sublist(0, 48));
     final s = _int(signature.sublist(48));
+    // r >= n would also fail the final comparison; kept as an explicit guard.
     if (r <= BigInt.zero || r >= _n || s <= BigInt.zero || s >= _n) {
       return false;
     }
@@ -167,7 +168,8 @@ BigInt _b64Int(Object? v) {
 
 /// The public keys NVIDIA signs NRAS tokens with (JWKS) with a cache:
 /// refetched when older than [maxAge] or when a `kid` is unknown (NVIDIA
-/// rotates keys every few hours; at most once per [minRefetch], so a forged
+/// rotates keys every few hours; at most once per [minRefetch], failed
+/// attempts included, so a forged
 /// `kid` cannot turn into a flood). The JWKS comes over TLS from NVIDIA; a
 /// failed fetch is [NrasJwtReason.jwksUnavailable] (fail-closed).
 final class NrasJwks {
@@ -199,6 +201,8 @@ final class NrasJwks {
   final DateTime Function() _clock;
   final Map<String, NrasKey> _keys;
   DateTime? _fetchedAt;
+  DateTime? _attemptedAt;
+  bool _lastFailed = false;
   Future<void>? _inflight;
 
   /// The key for [kid]; fetches the set when it is unknown or stale.
@@ -208,9 +212,13 @@ final class NrasJwks {
     final at = _fetchedAt;
     final fresh = at != null && _clock().difference(at) < maxAge;
     if (known != null && (fresh || at == null)) return known;
-    final recent = at != null && _clock().difference(at) < minRefetch;
+    final tried = _attemptedAt;
+    final recent = tried != null && _clock().difference(tried) < minRefetch;
     if (!recent) {
       await (_inflight ??= _fetch().whenComplete(() => _inflight = null));
+    } else if (_lastFailed) {
+      // The last attempt failed moments ago: do not hammer, stay fail-closed.
+      throw const NrasJwtException(NrasJwtReason.jwksUnavailable);
     }
     final key = _keys[kid];
     if (key == null) throw const NrasJwtException(NrasJwtReason.unknownKey);
@@ -218,6 +226,8 @@ final class NrasJwks {
   }
 
   Future<void> _fetch() async {
+    _attemptedAt = _clock();
+    _lastFailed = true;
     try {
       final response = await _client.get(Uri.parse(url)).timeout(timeout);
       if (response.statusCode != 200) {
@@ -238,6 +248,7 @@ final class NrasJwks {
         ..clear()
         ..addAll(keys);
       _fetchedAt = _clock();
+      _lastFailed = false;
     } on NrasJwtException {
       rethrow;
     } on Object {
