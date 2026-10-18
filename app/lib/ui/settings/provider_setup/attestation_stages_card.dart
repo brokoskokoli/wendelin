@@ -27,7 +27,10 @@ class AttestationStagesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final failedStages = [
       for (final s in stages)
-        if (s.outcome != StageOutcome.pass) stageLabel(s.stage.id),
+        // A restriction of the provider (info, e.g. no GPU evidence, WP82)
+        // is no failure.
+        if (s.outcome != StageOutcome.pass && s.outcome != StageOutcome.info)
+          stageLabel(s.stage.id),
     ];
     final failed = failedStages.length;
     return Column(

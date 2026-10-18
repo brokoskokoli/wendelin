@@ -1,10 +1,11 @@
 # M5 – Plan (Android, Ausbau)
 
-Festgelegt mit dem Maintainer 2026-10-18. iOS ist nach M6 verschoben. Kamera/Bild ist vorerst gestrichen. Stationsmodus und der Vergleich alternativer Wake Words kommen später. Die Empfehlung von Modellen (Evals live) wird nach diesen Paketen gemeinsam besprochen.
+Festgelegt mit dem Maintainer 2026-10-18 (K48). M5 ist nur Android. Kamera/Bild, Stationsmodus, Vergleich alternativer Wake Words und die Empfehlung von Modellen kommen in M6, iOS in M7.
 
 | Welle | Pakete | Hinweis |
 | --- | --- | --- |
 | 0 (läuft, M4-Rest) | WP81, WP82, WP83, WP76a–d (Tinfoil) | Korrekturen aus dem Gerätetest |
+| S (Beschleunigung, vorrangig) | WP95 CI als Gate, WP96 Gate schlank/stabil, WP97 Lastbremse/Cache, WP98 konfliktarm (l10n-Fragmente mit WP79) | Analyse `docs/notes/dev-speedup-analysis.md`; Coder pushen `wp/*` (Maintainer 2026-10-18) |
 | 1 | WP79 App-Sprache, WP87 Wetter/Meer, WP84 Spotify, WP90 Mediensteuerung | WP79 früh, damit neue Texte gleich lokalisiert werden |
 | 2 | WP85 Kontakte/SMS/Anrufe, WP86 Standort/Maps, WP88 Aufgaben, WP91 Home Assistant | |
 | 3 | WP89a/b Todoist/Google Tasks, WP92a–c Sprechererkennung, WP93 Wake Word im Chat, WP94 Schnellwechsel | WP92c nach WP91 (gesperrt: Licht) |

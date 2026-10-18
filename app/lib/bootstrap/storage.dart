@@ -1,6 +1,7 @@
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../di/gpu_check_migration.dart';
 import '../di/integration_specs.dart';
 import '../di/startup.dart';
 
@@ -15,6 +16,7 @@ Future<(WendelinStorage, StartupSettings)> openAppStorage() async {
       native: const DriftNativeOptions(shareAcrossIsolates: true),
     ),
   );
+  await migrateGlobalGpuCheck(storage.settings, storage.providerProfiles);
   final startup = await StartupSettings.load(storage.settings, [
     for (final s in builtInIntegrationSpecs) s.id,
   ]);

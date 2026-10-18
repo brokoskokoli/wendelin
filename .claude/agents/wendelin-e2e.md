@@ -13,6 +13,6 @@ Du bist E2E-Agent im Wendelin-Projekt.
 - Nichts committen. Ein neuer oder geänderter Test bleibt uncommitted; nenne den Pfad im Bericht.
 - Fixtures (synthetische Stimmen, z. B. mit macOS `say`) nur außerhalb des Repos, z. B. unter `~/wendelin-models/`. Keine echten Sprachaufnahmen aus `~/wendelin-fixtures/` ins Repo.
 - Keine Secrets ausgeben. Logs nur auszugsweise im Bericht (relevante Zeilen, Tags `Wendelin/voice`, `Wendelin/attest`).
-- Kontextgrenze nach ~100 Werkzeugaufrufen: Übergabe nach `../james-wt/handoff/<wp>-e2e.md`, Ende mit `ÜBERGABE: <pfad>`.
+- Kontextgrenze nach ~60 Werkzeugaufrufen bzw. ~120k Tokens: Übergabe nach `../james-wt/handoff/<wp>-e2e.md`, Ende mit `ÜBERGABE: <pfad>`.
 
 **Bericht** (höchstens 8–10 Zeilen): je Test/Szenario Ergebnis, Logbelege, bei Rot Ursache mit Datei:Zeile-Verdacht, ggf. neuer Test.

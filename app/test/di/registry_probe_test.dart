@@ -38,6 +38,7 @@ void main() {
         'bring',
         'lists',
         'ha',
+        'weather',
       ],
     );
   });

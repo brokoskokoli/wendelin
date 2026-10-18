@@ -8,6 +8,7 @@ import 'integration_spec.dart';
 import 'lists_spec.dart';
 import 'memory_spec.dart';
 import 'obsidian_spec.dart';
+import 'weather_spec.dart';
 import 'web_spec.dart';
 
 /// The built-in integrations, in display order: one line per integration.
@@ -22,4 +23,5 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
   bringSpec,
   listsSpec,
   haSpec,
+  weatherSpec,
 ];

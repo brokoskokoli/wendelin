@@ -12,7 +12,8 @@ Bezug: Konzept (Kontakte, Nachrichten und Anrufe), Entscheidung Maintainer 2026-
 5. Audit-Eintrag mit Empfängername, ohne Nachrichtentext.
 
 ## Abnahmekriterien
-- [ ] Unit-Tests (Kontaktsuche, Mehrdeutigkeit), Widget-Tests Popup, Test „kein Senden ohne Tipp“.
+- [ ] Unit-Tests (Kontaktsuche, Mehrdeutigkeit), Widget-Tests Popup, Test „kein Senden ohne Tipp oder gesprochene Bestätigung“.
+- [ ] Sprachbestätigung (Nachtrag 2026-10-18, K49): Nach dem Vorlesen fragt Wendelin „Soll ich anrufen?“ bzw. „Soll ich sie absenden?“. „ja“/„anrufen“/„absenden“ führt aus, „nein“/„abbrechen“ bricht ab. Bei unklarer Antwort führt Wendelin nichts aus und fragt erneut. Gilt auch im Gesprächsmodus, bei gesperrtem Gerät nie. Tests für jede dieser Antworten.
 - [ ] Emulator: Popup erscheint, Senden an Emulator-Nummer (E2E-Agent).
 
 ## Gemeinsam für M5

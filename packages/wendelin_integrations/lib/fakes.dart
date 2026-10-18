@@ -41,4 +41,5 @@ export 'testing/fake_note_index.dart';
 export 'testing/fake_torch_port.dart';
 export 'testing/fake_user_integrations.dart';
 export 'testing/fake_vault_port.dart';
+export 'testing/fake_weather.dart';
 export 'testing/fake_web_search_backend.dart';

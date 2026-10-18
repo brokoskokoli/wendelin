@@ -34,18 +34,16 @@ final class SettingsAttestationPinStore implements AttestationPinStore {
       _settings.set(AppSettings.attestationPin(profileId), pin.toJson());
 }
 
-/// Keeps the live TEE providers of the app (one per profile): applies the
-/// GPU mode to all of them, merges their results, warns about a failed
+/// Keeps the live TEE providers of the app (one per profile): merges their
+/// results (the GPU mode belongs to the profile, WP82), warns about a failed
 /// asynchronous GPU check and offers „neu prüfen“, „ohne GPU-Prüfung
 /// senden“ and the warm-up at app start.
 final class AttestationHub {
-  /// Creates the hub with the GPU mode [gpuMode] at start.
+  /// Creates the hub.
   AttestationHub({
     required this.notifier,
-    GpuCheckMode gpuMode = GpuCheckMode.off,
     String Function(String profileId)? nameOf,
-  }) : _mode = gpuMode,
-       _nameOf = nameOf ?? ((id) => id);
+  }) : _nameOf = nameOf ?? ((id) => id);
 
   /// System notifications.
   final AttestationNotifier notifier;
@@ -55,31 +53,24 @@ final class AttestationHub {
   final Map<String, StreamSubscription<AttestationReport>> _subs = {};
   final StreamController<ProfileReport> _reports =
       StreamController<ProfileReport>.broadcast();
-  GpuCheckMode _mode;
 
   /// All results of all TEE providers.
   Stream<ProfileReport> get reports => _reports.stream;
 
-  /// Current GPU mode.
-  GpuCheckMode get gpuMode => _mode;
-
-  /// Changes the GPU mode of all providers (and of those created later).
-  set gpuMode(GpuCheckMode mode) {
-    _mode = mode;
-    for (final p in _providers.values) {
-      p.gpuMode = mode;
-    }
-  }
+  /// GPU mode of the live provider of [profileId] (`off` if there is none).
+  GpuCheckMode modeOf(String profileId) =>
+      _providers[profileId]?.gpuMode ?? GpuCheckMode.off;
 
   /// Takes over [provider] of [profileId]; an earlier one is dropped.
-  void register(String profileId, AttestedProvider provider) {
+  ///
+  /// [reason] says why it was built (goes to the log line of the adoption).
+  void register(String profileId, AttestedProvider provider, {String? reason}) {
     unawaited(_subs.remove(profileId)?.cancel());
     // A rebuilt provider of the same profile (profile list or rules changed)
     // takes over the session its predecessor verified completely instead of
     // attesting again (WP77); only for an unchanged endpoint.
     final previous = _providers[profileId];
-    if (previous != null) provider.adoptSessionOf(previous);
-    provider.gpuMode = _mode;
+    if (previous != null) provider.adoptSessionOf(previous, reason: reason);
     _providers[profileId] = provider;
     _subs[profileId] = provider.reports.listen((r) => _onReport(profileId, r));
   }
@@ -117,7 +108,7 @@ final class AttestationHub {
     final gpu =
         report.reasonCode == 'gpu_failed' ||
         report.reasonCode == 'gpu_unavailable';
-    if (gpu && _mode == GpuCheckMode.after) {
+    if (gpu && modeOf(profileId) == GpuCheckMode.after) {
       unawaited(
         notifier.show(
           title: 'GPU-Prüfung fehlgeschlagen',

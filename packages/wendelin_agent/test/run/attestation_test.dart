@@ -106,6 +106,96 @@ void main() {
       },
     );
 
+    test(
+      'WP81: AgentTextComplete kommt vor der Quittung, nicht danach',
+      () async {
+        final report = Completer<AttestationReport?>();
+        final h = build([ScriptedTurn.text('Hallo.')], report, []);
+        var receiptPending = false;
+        final events = await h
+            .run(
+              'Hi',
+              onEvent: (e) {
+                // The receipt is only released after the text is complete.
+                if (e is AgentTextComplete) {
+                  receiptPending = !report.isCompleted;
+                  report.complete(_report(AttestationStatus.green));
+                }
+              },
+            )
+            .timeout(const Duration(seconds: 5));
+        expect(receiptPending, isTrue, reason: 'Quittung noch offen');
+        final complete = events.indexWhere((e) => e is AgentTextComplete);
+        final green = events.indexWhere(
+          (e) =>
+              e is AttestationStatusChanged &&
+              e.status == AttestationStatus.green,
+        );
+        expect(complete, isNonNegative);
+        expect(complete, lessThan(green));
+      },
+    );
+
+    test(
+      'WP81: mit Tool-Aufruf kein AgentTextComplete im Zwischenschritt',
+      () async {
+        final report = Completer<AttestationReport?>()
+          ..complete(_report(AttestationStatus.green));
+        final tool = FakeTool(name: 'light', risk: RiskLevel.read);
+        final h = build(
+          [
+            ScriptedTurn.toolCalls([call('c1', 'light')]),
+            ScriptedTurn.text('Fertig.'),
+          ],
+          report,
+          [tool],
+        );
+        final events = await h.run('Licht');
+        expect(events.whereType<AgentTextComplete>(), hasLength(1));
+        expect(
+          events.indexWhere((e) => e is AgentTextComplete),
+          greaterThan(events.indexWhere((e) => e is ToolCallFinished)),
+        );
+      },
+    );
+
+    test('WP81: pauseTurn → kein AgentTextComplete', () async {
+      final report = Completer<AttestationReport?>()
+        ..complete(_report(AttestationStatus.green));
+      final h = build(
+        [
+          ScriptedTurn.text('Teil eins.', stopReason: StopReason.pauseTurn),
+          ScriptedTurn.text('Teil zwei.'),
+        ],
+        report,
+        [],
+      );
+      final events = await h.run('Hi');
+      expect(events.whereType<AgentTextComplete>(), hasLength(1));
+      final lastText = events.lastIndexWhere((e) => e is AgentTextDelta);
+      expect(
+        events.indexWhere((e) => e is AgentTextComplete),
+        greaterThan(lastText),
+      );
+    });
+
+    test('WP81: Fehler nach Text → kein AgentTextComplete', () async {
+      final report = Completer<AttestationReport?>()
+        ..complete(_report(AttestationStatus.green));
+      final h = build(
+        [
+          ScriptedTurn.error(
+            const NetworkException('weg'),
+            partialText: 'Halber Satz',
+          ),
+        ],
+        report,
+        [],
+      );
+      final events = await h.run('Hi');
+      expect(events.whereType<AgentTextComplete>(), isEmpty);
+    });
+
     test('toolsInvolved der Quittung gelangt ins Ereignis (WP63)', () async {
       final report = Completer<AttestationReport?>()
         ..complete(_report(AttestationStatus.green).withToolsInvolved(true));

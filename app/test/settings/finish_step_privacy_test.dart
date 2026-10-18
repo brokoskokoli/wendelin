@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/ui/design/privacy_chip.dart';
 import 'package:wendelin/ui/settings/provider_setup/finish_step.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/wendelin_providers.dart' show GpuCheckMode;
 
 Future<void> _pump(WidgetTester tester, {required bool attested}) =>
     tester.pumpWidget(
@@ -19,6 +20,9 @@ Future<void> _pump(WidgetTester tester, {required bool attested}) =>
               warn: 0.8,
               onWarn: (_) {},
               attested: attested,
+              gpuMode: GpuCheckMode.off,
+              onGpuMode: (_) {},
+              noGpuEvidence: false,
               onSave: () {},
             ),
           ),

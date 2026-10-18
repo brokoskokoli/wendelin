@@ -210,6 +210,36 @@ void main() {
       during: (h, async) {},
     );
     table(
+      'Rote Quittung',
+      ConversationEndReason.error,
+      () => H(
+        answers: [
+          [
+            const AgentTextDelta('Antwort.'),
+            const AttestationStatusChanged(
+              stepId: 's:1',
+              status: AttestationStatus.red,
+              logId: 'att-1',
+            ),
+            const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+          ],
+        ],
+      ),
+      during: (h, async) {},
+    );
+    test('AgentTextComplete wird als answer-complete protokolliert', () {
+      fakeAsync((async) {
+        final h = H(
+          answers: [
+            [const AgentTextDelta('Antwort.'), const AgentTextComplete()],
+          ],
+        );
+        h.pipeline.start();
+        async.elapse(const Duration(seconds: 5));
+        expect(h.diag, contains('answer-complete'));
+      });
+    });
+    table(
       'TTS-Fehler',
       ConversationEndReason.error,
       () => H()..tts.nextError = StateError('tts'),

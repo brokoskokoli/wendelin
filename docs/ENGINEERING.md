@@ -53,7 +53,11 @@ evals                  -> core, providers, tools, agent, integrations, mcp
 - Öffentliche APIs mit kurzem Doc-Kommentar. Code-Bezeichner Englisch, Nutzertexte Deutsch (UI später via Lokalisierung).
 - Fehler: keine verschluckten Exceptions; Provider-Fehler als `ProviderException`-Unterklassen.
 
-## Tests (Gate – muss vor jedem Commit grün sein)
+## Tests (Gate)
+
+**Lokal** läuft während der Arbeit und vor dem Commit `--changed`; das **volle Gate läuft in CI** (`.github/workflows/gate.yml`, Auslöser: Push auf `main` und `wp/**`, Pull Requests) und muss vor dem Merge grün sein. Agenten pushen ihren `wp/*`-Branch (nie `main`) und warten im Hintergrund mit `tool/ci_wait.sh <branch>` (ein `gh run watch`, kompakte Zusammenfassung). CI-Jobs: ein Ubuntu-Job je Paket (`dart run tool/gate.dart <paket>`), `rust-checks` (Rust und Prüfungen über das Repo), `app-analyze`, `app-test` in 3 Shards ohne Goldens und `platform-sensitive` (Abdeckung von `app/lib/di` über alle Shards in `app-coverage`, `tool/check_app_coverage.dart`), `goldens` auf dem gepinnten `macos-15` (nur dort; Referenzbilder neu erzeugen mit dem Workflow `update-goldens`, Artefakt `goldens`), `kotlin-unit` und `apk` (main/PR, auf `wp/**` nur bei Änderungen an `app/android/**` oder `pubspec*`; K7-GMS-Prüfung). Die Paketmatrix entsteht im Job `setup` aus `packages/` (plus `evals`). Alle Fremd-Actions sind per Commit-SHA gepinnt (Version im Kommentar), der Workflow hat nur `contents: read`. **Golden-Schutz:** pixelgenau ist er nur im lokalen macOS-Lauf (`--changed`, Goldens sind dort aufgenommen); in CI gilt die Toleranz 1 % Pixelanteil und höchstens 6000 Pixel (`app/test/support/golden_tolerance.dart`), dort fallen nur größere Änderungen auf. Caches: Flutter/pub, Cargo (`rust-cache`), Gradle. Keine Secrets, Live-Tests bleiben übersprungen.
+
+Das vollständige Gate lokal bleibt möglich:
 
 ```
 dart run tool/gate.dart              # alles, kompakte Ausgabe
@@ -78,7 +82,7 @@ dart run tool/gate.dart --verbose    # bisherige, ausführliche Ausgabe
 
 Ausgabe: Standard ist eine Zeile je Schritt. Bei einem Fehler erscheinen die letzten 200 Zeilen dieses Schritts (Testname, Fehlermeldung, Datei). Am Ende steht eine Tabelle mit Ergebnis, Dauer, Testanzahl und Abdeckung je Schritt, die Gesamtdauer und `GATE GRÜN` bzw. `GATE ROT: <Schritte>`. Der Exit-Code ist bei Rot ungleich 0.
 
-`--changed` vergleicht mit dem Merge-Base von origin/main (bzw. `--base=<ref>`) und nimmt nicht committete und neue Dateien dazu. Geprüft werden die geänderten Pakete und transitiv alle abhängigen (Erlaubnisliste aus `tool/check_deps.dart` plus die echten Kanten der pubspecs inklusive `dev_dependencies`; die App hängt von allen ab). Änderungen an `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, `tool/gate.dart` oder `tool/check_deps.dart` lösen das ganze Gate aus, reine Doku (Markdown) nur die globalen Prüfungen. Andere Dateien unter `docs/` gelten nicht als Doku: `docs/design/` prüft die App (Tokens), alles andere das ganze Gate. Die Ausgabe nennt den Grund je Paket. `--changed` ist für Zwischenstände; vor Commit und Merge gilt das volle Gate. CI prüft immer alles.
+`--changed` vergleicht mit dem Merge-Base von origin/main (bzw. `--base=<ref>`) und nimmt nicht committete und neue Dateien dazu. Geprüft werden die geänderten Pakete und transitiv alle abhängigen (Erlaubnisliste aus `tool/check_deps.dart` plus die echten Kanten der pubspecs inklusive `dev_dependencies`; die App hängt von allen ab). Änderungen an `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, `tool/gate.dart` oder `tool/check_deps.dart` lösen das ganze Gate aus, reine Doku (Markdown) nur die globalen Prüfungen. Andere Dateien unter `docs/` gelten nicht als Doku: `docs/design/` prüft die App (Tokens), alles andere das ganze Gate. Die Ausgabe nennt den Grund je Paket. `--changed` ist der lokale Lauf (auch vor dem Commit); das volle Gate läuft in CI und gilt vor dem Merge. CI prüft immer alles.
 
 ## Größen
 
@@ -133,6 +137,6 @@ Testarten:
 
 ## Git
 
-- Commit-Identität ausschließlich `Stefan Richter <16724498+brokoskokoli@users.noreply.github.com>` (repo-lokal konfiguriert; Hook prüft das). Erlaubte Co-Author-Zeile: `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine anderen Namen oder Mail-Adressen (insbesondere keine Arbeitgeber-Domains).
+- Commit-Identität ausschließlich `brokoskokoli <16724498+brokoskokoli@users.noreply.github.com>` (aus `~/.gitconfig-smart-ssh` für `~/ai`; Hook prüft das). Einziger erlaubter Trailer, keine `Claude-Session`-Zeile: `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine anderen Namen oder Mail-Adressen (insbesondere keine Arbeitgeber-Domains).
 - Ein Arbeitspaket = ein Branch `wp/<nr>-<slug>`, Merge nach `main` erst nach bestandenem Review.
 - Commit-Nachrichten: `WP<nr>: <was>` auf Deutsch oder Englisch, knapp.

@@ -27,6 +27,11 @@ void main() {
     ),
     BringIntegration(FakeBringApi(), FakeBringSecrets()),
     HaIntegration(FakeHaApi(), FakeHaSecrets(), FakeHaEntityStore()),
+    WeatherIntegration(
+      service: FakeWeatherService(),
+      marine: FakeMarineService(),
+      geocoder: FakeGeocoder(const []),
+    ),
   ];
   final tools = [for (final i in integrations) ...i.tools];
 
@@ -71,6 +76,8 @@ void main() {
       'ha__state',
       'ha__call',
       'ha__call_secure',
+      'weather__forecast',
+      'weather__marine',
     });
     expect(tools.map((t) => t.name).toSet(), hasLength(tools.length));
   });

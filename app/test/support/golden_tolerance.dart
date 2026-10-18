@@ -15,8 +15,11 @@ import 'package:flutter_test/flutter_test.dart';
 const ciGoldenTolerance = 0.010;
 
 /// Absolute limit of differing pixels on CI, so large goldens cannot hide a
-/// real change inside the share.
-const ciGoldenMaxPixels = 2000;
+/// real change inside the share. Raised from 2000 to 6000 (WP95): even the
+/// pinned `macos-15` runner differs from the local Mac by 2044 to 4515 pixels
+/// (0.37 to 0.72 %, run 39143117837, glyph edges only). Goldens stay recorded
+/// locally so the local gate stays pixel-exact; the 1 % share still applies.
+const ciGoldenMaxPixels = 6000;
 
 /// [LocalFileComparator] that accepts differences up to [tolerance] (share
 /// of differing pixels, 0..1) and at most [maxPixels] differing pixels.

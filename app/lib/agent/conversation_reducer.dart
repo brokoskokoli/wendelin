@@ -74,7 +74,7 @@ final class ConversationReducer {
         );
       case AgentTextDelta(:final text):
         return _appendText(s, text);
-      case AgentSpokenText() || AgentSpokenHold():
+      case AgentSpokenText() || AgentSpokenHold() || AgentTextComplete():
         return s; // speech output only, never shown (WP41)
       case AgentSpokenVerdict(accepted: true):
         return s;
@@ -261,14 +261,25 @@ final class ConversationReducer {
     ConversationState s,
     AttestationStatusChanged event,
   ) {
-    AnswerAttestation result(AnswerAttestation? old) => AnswerAttestation(
-      stepId: event.stepId,
-      status: event.status,
-      logId: event.logId.isEmpty ? old?.logId ?? '' : event.logId,
-      detail: event.detail,
-      reasonCode: event.reasonCode,
-      toolsInvolved: event.toolsInvolved,
-    );
+    // The asynchronous GPU check (mode „Nachher“) may fail before the final
+    // receipt event of the same step is applied: it keeps its red result
+    // (the target entry below always carries this step or none).
+    bool gpuFailed(AnswerAttestation? a) =>
+        a != null &&
+        a.status == AttestationStatus.red &&
+        (a.reasonCode == 'gpu_failed' || a.reasonCode == 'gpu_unavailable');
+
+    AnswerAttestation result(AnswerAttestation? old) =>
+        gpuFailed(old) && event.status != AttestationStatus.red
+        ? old!
+        : AnswerAttestation(
+            stepId: event.stepId,
+            status: event.status,
+            logId: event.logId.isEmpty ? old?.logId ?? '' : event.logId,
+            detail: event.detail,
+            reasonCode: event.reasonCode,
+            toolsInvolved: event.toolsInvolved,
+          );
 
     String? target;
     String? unassigned;

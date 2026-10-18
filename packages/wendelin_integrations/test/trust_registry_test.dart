@@ -36,6 +36,8 @@ const _trusted = <String, bool>{
   // Echoes the device name from Home Assistant: fail-closed.
   'ha__call': false,
   'ha__call_secure': false,
+  'weather__forecast': false, // place names come from a geocoding service
+  'weather__marine': false,
   // Writes that echo stored or foreign text.
   'calendar__update_event': false,
   'calendar__delete_event': false,
@@ -83,6 +85,11 @@ void main() {
     ),
     BringIntegration(FakeBringApi(), FakeBringSecrets()),
     HaIntegration(FakeHaApi(), FakeHaSecrets(), FakeHaEntityStore()),
+    WeatherIntegration(
+      service: FakeWeatherService(),
+      marine: FakeMarineService(),
+      geocoder: FakeGeocoder(const []),
+    ),
   ];
   final tools = [for (final i in integrations) ...i.tools];
 

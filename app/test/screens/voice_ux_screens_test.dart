@@ -45,7 +45,9 @@ List<double> _amplitudes(WidgetTester tester) =>
 
 void main() {
   group('Zuhör-Leiste', () {
-    testWidgets('nur beim Zuhören, folgt den Pegeln', (tester) async {
+    testWidgets('nur beim Zuhören, folgt den Pegeln', tags: ['golden'], (
+      tester,
+    ) async {
       await _pumpComposer(tester, _composer());
       expect(find.byType(ListeningBar), findsNothing);
 
@@ -76,7 +78,9 @@ void main() {
   });
 
   group('Senden-Knopf', () {
-    testWidgets('erscheint nur mit Text und sendet', (tester) async {
+    testWidgets('erscheint nur mit Text und sendet', tags: ['golden'], (
+      tester,
+    ) async {
       final sent = <String>[];
       await _pumpComposer(
         tester,

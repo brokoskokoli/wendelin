@@ -7,7 +7,6 @@ import 'package:wendelin/di/attestation_hub.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
-import 'package:wendelin/di/startup.dart';
 import 'package:wendelin_agent/testing.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
@@ -46,12 +45,18 @@ void main() {
 
     tearDown(() => hub.dispose());
 
-    test('Modus gilt für registrierte und später registrierte Provider', () {
-      hub.gpuMode = GpuCheckMode.after;
-      hub.register('phala', provider);
-      expect(provider.gpuMode, GpuCheckMode.after);
-      hub.gpuMode = GpuCheckMode.before;
-      expect(provider.gpuMode, GpuCheckMode.before);
+    test('GPU-Modus gilt je Profil, nicht für alle (WP82)', () {
+      final other = scriptedTee(
+        verifier: verifier,
+        gateway: ScriptedGateway(),
+        gpuMode: GpuCheckMode.before,
+      );
+      hub
+        ..register('phala', provider)
+        ..register('near', other);
+      expect(hub.modeOf('phala'), GpuCheckMode.off);
+      expect(hub.modeOf('near'), GpuCheckMode.before);
+      expect(hub.modeOf('unbekannt'), GpuCheckMode.off);
     });
 
     test('neu aufgebauter Provider desselben Profils übernimmt die geprüfte '
@@ -120,10 +125,9 @@ void main() {
             verifier: verifier,
             gateway: ScriptedGateway(),
             gpu: gpu,
+            gpuMode: mode,
           );
-          hub
-            ..gpuMode = mode
-            ..register('phala', p);
+          hub.register('phala', p);
           await p
               .chat(
                 ChatRequest(
@@ -233,26 +237,97 @@ void main() {
       final c = env.container();
       addTearDown(c.dispose);
       await awaitCheckModule(c.read(attestationCryptoProvider.future));
-      final create = c.read(llmProviderFactoryProvider);
-      final p = create(_phala(), env.secrets.read);
-      expect(p, isA<AttestedProvider>());
-      expect(c.read(attestationHubProvider).provider('phala'), same(p));
+      final raw = c.read(llmProviderFactoryProvider);
+      final hub = c.read(attestationHubProvider);
+      // The factory alone (setup probes) leaves the hub alone ...
+      final probe = raw(_phala(), env.secrets.read);
+      expect(probe, isA<AttestedProvider>());
+      expect(hub.provider('phala'), isNull);
+      // ... the live path registers.
+      final p = hubRegistering(hub, raw)(_phala(), env.secrets.read);
+      expect(hub.provider('phala'), same(p));
+      // A later probe does not replace the live provider.
+      raw(_phala(), env.secrets.read);
+      expect(hub.provider('phala'), same(p));
     });
 
-    test('GPU-Modus aus den Einstellungen', () async {
-      final env = TestEnv(
-        storedProfiles: true,
-        startup: const StartupSettings(gpuCheck: GpuCheckMode.before),
-      );
+    test(
+      'WP81: gleiches Profil gibt dieselbe Instanz zurück (kein Neuaufbau)',
+      () async {
+        final env = TestEnv(storedProfiles: true);
+        final c = env.container();
+        addTearDown(c.dispose);
+        await awaitCheckModule(c.read(attestationCryptoProvider.future));
+        final create = hubRegistering(
+          c.read(attestationHubProvider),
+          c.read(llmProviderFactoryProvider),
+        );
+        final first = create(_phala(), env.secrets.read);
+        final again = create(_phala(), env.secrets.read);
+        expect(again, same(first));
+        expect(c.read(attestationHubProvider).provider('phala'), same(first));
+      },
+    );
+
+    test('WP81: geändertes Profil baut neu auf', () async {
+      final env = TestEnv(storedProfiles: true);
       final c = env.container();
       addTearDown(c.dispose);
       await awaitCheckModule(c.read(attestationCryptoProvider.future));
-      final p = c.read(llmProviderFactoryProvider)(
-        _phala(),
+      final create = hubRegistering(
+        c.read(attestationHubProvider),
+        c.read(llmProviderFactoryProvider),
+      );
+      final first = create(_phala(), env.secrets.read);
+      final changed = create(
+        _phala(options: const {'noTools': true}),
+        env.secrets.read,
+      );
+      expect(changed, isNot(same(first)));
+      expect(c.read(attestationHubProvider).provider('phala'), same(changed));
+    });
+
+    test('GPU-Modus aus dem Profil, ohne Angabe aus', () async {
+      final env = TestEnv(storedProfiles: true);
+      final c = env.container();
+      addTearDown(c.dispose);
+      await awaitCheckModule(c.read(attestationCryptoProvider.future));
+      final create = c.read(llmProviderFactoryProvider);
+      final before = create(
+        _phala().copyWith(
+          options: {..._phala().options, gpuCheckOption: 'before'},
+        ),
         env.secrets.read,
       ) as AttestedProvider;
-      expect(p.gpuMode, GpuCheckMode.before);
+      expect(before.gpuMode, GpuCheckMode.before);
+      final none = create(_phala(), env.secrets.read) as AttestedProvider;
+      expect(none.gpuMode, GpuCheckMode.off);
     });
+
+    test(
+      'Einstellung eines Profils wirkt nur auf dieses Profil (WP82)',
+      () async {
+        final env = TestEnv(storedProfiles: true);
+        final c = env.container();
+        addTearDown(c.dispose);
+        await awaitCheckModule(c.read(attestationCryptoProvider.future));
+        final create = hubRegistering(
+          c.read(attestationHubProvider),
+          c.read(llmProviderFactoryProvider),
+        );
+        create(
+          _phala().copyWith(
+            id: 'a',
+            options: {'attestation': 'phala', gpuCheckOption: 'before'},
+          ),
+          env.secrets.read,
+        );
+        create(_phala().copyWith(id: 'b'), env.secrets.read);
+        final hub = c.read(attestationHubProvider);
+        expect(hub.modeOf('a'), GpuCheckMode.before);
+        expect(hub.modeOf('b'), GpuCheckMode.off);
+      },
+    );
 
     test('ohne geladenes Prüfmodul: kein ungeprüfter Provider', () async {
       final env = TestEnv(

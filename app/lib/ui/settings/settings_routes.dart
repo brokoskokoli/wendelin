@@ -6,6 +6,7 @@ String? setupPageFor(String id) => switch (id) {
   'lists' => AppRoutes.lists,
   'obsidian' => AppRoutes.obsidian,
   'web' => AppRoutes.webSearch,
+  'weather' => AppRoutes.weather,
   'bring' => AppRoutes.bring,
   'ha' => AppRoutes.homeAssistant,
   // MCP servers: login or token on the server list (WP27).

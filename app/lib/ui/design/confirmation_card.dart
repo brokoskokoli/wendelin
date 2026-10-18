@@ -20,6 +20,7 @@ class ConfirmationCard extends StatelessWidget {
     this.yesLabel = 'Ja',
     this.noLabel = 'Nein',
     this.expand = false,
+    this.compact = false,
   });
 
   /// Frage („Termin löschen?“).
@@ -52,6 +53,9 @@ class ConfirmationCard extends StatelessWidget {
   /// Füllt die verfügbare Höhe; die Buttons rutschen nach unten
   /// (im Sheet). Braucht eine begrenzte Höhe.
   final bool expand;
+
+  /// Kompakt (kleines Sheet): ohne Tool-/Stufenzeile.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +104,8 @@ class ConfirmationCard extends StatelessWidget {
                 ),
               ),
             ),
-            Text('$toolName · Stufe ${risk.name}', style: WText.mono),
+            if (!compact)
+              Text('$toolName · Stufe ${risk.name}', style: WText.mono),
           ],
         ),
       ),

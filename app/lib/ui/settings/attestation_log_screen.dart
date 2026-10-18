@@ -14,7 +14,6 @@ import '../design/design.dart';
 import '../screens/labels.dart';
 import 'attestation_log_detail.dart';
 import 'export.dart';
-import 'gpu_check_section.dart';
 import 'settings_page.dart';
 
 /// Short line of a log entry: time, result and receipt id.
@@ -104,7 +103,6 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             now: now,
             onReattest: () => unawaited(_reattest(r.profileId)),
           ),
-        const GpuCheckSection(),
         WideButton(
           'Als JSON exportieren',
           onPressed: () async => ref.read(exporterProvider)(
