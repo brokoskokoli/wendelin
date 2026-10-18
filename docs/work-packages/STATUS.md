@@ -33,7 +33,7 @@ Stand: 2026-10-18, main `3f77d58`
 | WP81b | Nächster Modellaufruf parallel zur Quittung | geplant | freigegeben Stefan 2026-10-18 |
 | WP82 | GPU-Prüfung je Profil | Review | Fix fertig, Merge steht aus |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
-| WP84 | Spotify | Review | – |
+| WP84 | Spotify | wartet | Review: nachbessern (Muss: Refresh-Token-Rotation testen; 2 Soll; 2 rote App-Tests nach Merge main); HEAD cadb487, Übergabe `handoff/wp84-session.md` |
 | WP85 | Kontakte/SMS/Anrufe | geplant | – |
 | WP86 | Standort/Maps | geplant | – |
 | WP87 | Wetter/Meer | gemergt | – |
