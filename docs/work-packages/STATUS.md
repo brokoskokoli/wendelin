@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, WP96 läuft; WP91, WP76b, WP84 gemergt
+Stand: 2026-10-18 abends, WP96 und WP79 laufen; WP91, WP76b, WP84 gemergt
 
 ## Meilensteine
 
@@ -29,7 +29,7 @@ Stand: 2026-10-18 abends, WP96 läuft; WP91, WP76b, WP84 gemergt
 | WP76b | Tinfoil Sigstore | gemergt cc12c9f | K59 offen; Downgrade-Schutz in WP76d |
 | WP76c | Tinfoil EHBP/HPKE | geplant | – |
 | WP76d | Tinfoil in der App | geplant | min_tcb setzen; Downgrade-Schutz „neuestes Release“ (K59) |
-| WP79 | App-Sprache | wartet | WP82 gemergt, kann weiter; danach Provider-Screens, Goldens je Sprache |
+| WP79 | App-Sprache | in Arbeit | WP82 gemergt, kann weiter; danach Provider-Screens, Goldens je Sprache |
 | WP81 | Sofort vorlesen, Haken danach | gemergt | – |
 | WP81b | Nächster Modellaufruf parallel zur Quittung | geplant | freigegeben Stefan 2026-10-18 |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
