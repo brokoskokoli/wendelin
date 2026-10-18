@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, WP96 läuft; WP91, WP76b, WP84, WP79 gemergt
+Stand: 2026-10-18 abends, WP96 und WP88 laufen; WP91, WP76b, WP84, WP79 gemergt
 
 ## Meilensteine
 
@@ -38,7 +38,7 @@ Stand: 2026-10-18 abends, WP96 läuft; WP91, WP76b, WP84, WP79 gemergt
 | WP85 | Kontakte/SMS/Anrufe | geplant | – |
 | WP86 | Standort/Maps | geplant | – |
 | WP87 | Wetter/Meer | gemergt | – |
-| WP88 | Aufgaben | wartet | Review steht aus (HEAD 38e09e9) |
+| WP88 | Aufgaben | in Arbeit | Review steht aus (HEAD 38e09e9) |
 | WP89 | Todoist/Google Tasks | geplant | nach WP88 |
 | WP90 | Mediensteuerung | wartet | Review und E2E (Player-App auf Emulator) stehen aus |
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 offen; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
