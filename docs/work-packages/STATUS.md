@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, WP84 merged main nach, WP96 läuft; WP91 und WP76b gemergt
+Stand: 2026-10-18 abends, WP96 läuft; WP91, WP76b, WP84 gemergt
 
 ## Meilensteine
 
@@ -34,7 +34,7 @@ Stand: 2026-10-18 abends, WP84 merged main nach, WP96 läuft; WP91 und WP76b gem
 | WP81b | Nächster Modellaufruf parallel zur Quittung | geplant | freigegeben Stefan 2026-10-18 |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
-| WP84 | Spotify | in Arbeit | Review: nachbessern (Muss: Refresh-Token-Rotation testen; 2 Soll; 2 rote App-Tests nach Merge main); HEAD cadb487, Übergabe `handoff/wp84-session.md` |
+| WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
 | WP85 | Kontakte/SMS/Anrufe | geplant | – |
 | WP86 | Standort/Maps | geplant | – |
 | WP87 | Wetter/Meer | gemergt | – |
