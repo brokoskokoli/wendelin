@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, WP84 läuft, WP91 gemergt
+Stand: 2026-10-18 abends, WP84 und WP76b laufen, WP91 gemergt
 
 ## Meilensteine
 
@@ -26,7 +26,7 @@ Stand: 2026-10-18 abends, WP84 läuft, WP91 gemergt
 | Paket | Titel | Status | Offen |
 | --- | --- | --- | --- |
 | WP76a | Tinfoil SEV-SNP (Rust) | gemergt | Folge: rsa-Upgrade; min_tcb in WP76d |
-| WP76b | Tinfoil Sigstore | wartet | Review: nachbessern (2 major, 4 minor, 9/20 Mutationen überlebt); HEAD 7e2e8d4, Übergabe `handoff/wp76b-session.md` |
+| WP76b | Tinfoil Sigstore | in Arbeit | Review: nachbessern (2 major, 4 minor, 9/20 Mutationen überlebt); HEAD 7e2e8d4, Übergabe `handoff/wp76b-session.md` |
 | WP76c | Tinfoil EHBP/HPKE | geplant | – |
 | WP76d | Tinfoil in der App | geplant | min_tcb setzen |
 | WP79 | App-Sprache | wartet | WP82 gemergt, kann weiter; danach Provider-Screens, Goldens je Sprache |
