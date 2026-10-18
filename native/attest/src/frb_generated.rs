@@ -746,7 +746,6 @@ fn wire__crate__api__verify_tinfoil_release_impl(
             let api_tag = <String>::sse_decode(&mut deserializer);
             let api_digest_hex = <String>::sse_decode(&mut deserializer);
             let api_report_measurement_hex = <String>::sse_decode(&mut deserializer);
-            let api_trusted_root_json = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
@@ -756,7 +755,6 @@ fn wire__crate__api__verify_tinfoil_release_impl(
                         api_tag,
                         api_digest_hex,
                         api_report_measurement_hex,
-                        api_trusted_root_json,
                     ))?;
                     Ok(output_ok)
                 })())

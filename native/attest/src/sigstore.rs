@@ -34,6 +34,9 @@ const PAYLOAD_TYPE: &str = "application/vnd.in-toto+json";
 const OID_OIDC_ISSUER_V1: &str = "1.3.6.1.4.1.57264.1.1";
 const OID_OIDC_ISSUER_V2: &str = "1.3.6.1.4.1.57264.1.8";
 const OID_GITHUB_REPOSITORY: &str = "1.3.6.1.4.1.57264.1.5";
+const OID_GITHUB_REF: &str = "1.3.6.1.4.1.57264.1.6";
+const OID_SOURCE_REPOSITORY_URI: &str = "1.3.6.1.4.1.57264.1.12";
+const OID_SOURCE_REPOSITORY_REF: &str = "1.3.6.1.4.1.57264.1.14";
 const OID_BUILD_SIGNER_URI: &str = "1.3.6.1.4.1.57264.1.9";
 const OID_KEY_USAGE: &str = "2.5.29.15";
 const OID_EXT_KEY_USAGE: &str = "2.5.29.37";
@@ -166,6 +169,8 @@ impl Window {
 }
 
 struct RekorKey {
+    /// Host aus `baseUrl` (Checkpoint-Ursprung und Schlüsselname der Notiz).
+    host: String,
     key_id: Vec<u8>,
     spki_der: Vec<u8>,
     key_details: String,
@@ -191,7 +196,15 @@ fn load_root(json: &str) -> R<TrustRoot> {
         .and_then(|t| t.as_array())
         .ok_or("Trust-Root ohne tlogs")?
     {
+        let base = jstr(t, &["baseUrl"])?;
+        let host = base
+            .strip_prefix("https://")
+            .and_then(|h| h.split('/').next())
+            .filter(|h| !h.is_empty())
+            .ok_or("Rekor-baseUrl ohne https-Host")?
+            .to_string();
         rekor.push(RekorKey {
+            host,
             key_id: b64(jstr(t, &["logId", "keyId"])?)?,
             spki_der: b64(jstr(t, &["publicKey", "rawBytes"])?)?,
             key_details: jstr(t, &["publicKey", "keyDetails"])?.to_string(),
@@ -451,9 +464,30 @@ fn check_identity(cert: &Certificate, repo: &str, tag: &str) -> R<()> {
     if issuer != OIDC_ISSUER_GITHUB {
         return Err(format!("OIDC-Aussteller nicht GitHub Actions: {issuer}"));
     }
-    let got_repo = ext_string(cert, OID_GITHUB_REPOSITORY).ok_or("Repository fehlt")?;
-    if got_repo != repo {
-        return Err(format!("Repository {got_repo} statt {repo}"));
+    // Repository: v2-Erweiterung (.12, volle URL) und/oder die veraltete .5 (`owner/repo`);
+    // mindestens eine muss da sein, jede vorhandene muss passen.
+    let uri = ext_string(cert, OID_SOURCE_REPOSITORY_URI);
+    let legacy = ext_string(cert, OID_GITHUB_REPOSITORY);
+    if uri.is_none() && legacy.is_none() {
+        return Err("Repository fehlt".into());
+    }
+    if let Some(u) = &uri {
+        if *u != format!("https://github.com/{repo}") {
+            return Err(format!("Repository {u} statt {repo}"));
+        }
+    }
+    if let Some(l) = &legacy {
+        if l != repo {
+            return Err(format!("Repository {l} statt {repo}"));
+        }
+    }
+    let git_ref = format!("refs/tags/{tag}");
+    for oid in [OID_SOURCE_REPOSITORY_REF, OID_GITHUB_REF] {
+        if let Some(r) = ext_string(cert, oid) {
+            if r != git_ref {
+                return Err(format!("Referenz {r} statt {git_ref}"));
+            }
+        }
     }
     let wf = ext_string(cert, OID_BUILD_SIGNER_URI).ok_or("Workflow-Identität fehlt")?;
     let prefix = format!("https://github.com/{repo}/.github/workflows/");
@@ -514,6 +548,13 @@ fn check_checkpoint(env: &str, key: &RekorKey, root_hash: &[u8], size: u64) -> R
     if lines.len() < 4 || lines[0].is_empty() {
         return Err("Checkpoint-Format ungültig".into());
     }
+    // Ursprung `<host> - <Baum-ID>` (Rekor v1), Host = baseUrl der vertrauten Log-Instanz.
+    let tree_id = lines[0]
+        .strip_prefix(key.host.as_str())
+        .and_then(|r| r.strip_prefix(" - "));
+    if !tree_id.is_some_and(|t| !t.is_empty() && t.bytes().all(|c| c.is_ascii_digit())) {
+        return Err("Checkpoint-Ursprung gehört nicht zum Rekor-Log".into());
+    }
     if lines[1].parse::<u64>().ok() != Some(size) {
         return Err("Checkpoint-Größe ≠ treeSize".into());
     }
@@ -529,10 +570,10 @@ fn check_checkpoint(env: &str, key: &RekorKey, root_hash: &[u8], size: u64) -> R
     }
     for line in sigs.lines().filter(|l| !l.trim().is_empty()) {
         let mut parts = line.splitn(3, ' ');
-        if parts.next() != Some("\u{2014}") {
+        if parts.next() != Some("\u{2014}") || parts.next() != Some(key.host.as_str()) {
             continue;
         }
-        let Some(raw) = parts.nth(1).and_then(|s| b64(s.trim()).ok()) else {
+        let Some(raw) = parts.next().and_then(|s| b64(s.trim()).ok()) else {
             continue;
         };
         if raw.len() > 4
@@ -746,4 +787,28 @@ pub fn verify_release(
         }
     }
     v
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn leaf(n: u8) -> [u8; 32] {
+        Sha256::digest([0, n]).into()
+    }
+
+    #[test]
+    fn inclusion_rejects_index_at_or_beyond_size() {
+        // Ein Blatt: Wurzel = Blatthash, leerer Pfad. Index 0 gilt, Index 1 (= size) nicht.
+        let l = leaf(1);
+        assert!(verify_inclusion(0, 1, l, &[], &l));
+        assert!(!verify_inclusion(1, 1, l, &[], &l));
+        // Zwei Blätter, Index 2 (= size) mit dem Pfad von Index 0.
+        let (a, b) = (leaf(1), leaf(2));
+        let root = node_hash(&a, &b);
+        assert!(verify_inclusion(0, 2, a, &[b.to_vec()], &root));
+        assert!(verify_inclusion(1, 2, b, &[a.to_vec()], &root));
+        assert!(!verify_inclusion(2, 2, a, &[b.to_vec()], &root));
+        assert!(!verify_inclusion(u64::MAX, 2, a, &[b.to_vec()], &root));
+    }
 }

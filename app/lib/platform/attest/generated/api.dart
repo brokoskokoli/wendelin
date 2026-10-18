@@ -173,19 +173,17 @@ Future<SnpVerdict> verifySnpReport({
 
 /// Prüft das Sigstore-Bundle des Tinfoil-Releases `repo`@`tag` (`digest_hex` = `tinfoil.hash`) und
 /// vergleicht den signierten SNP-Messwert mit `report_measurement_hex` (aus `snp_report_info`).
-/// `trusted_root_json` leer = eingebettete Trust-Root.
+/// Die Trust-Root ist immer die eingebettete; eine andere gibt es nur Rust-intern (Tests).
 Future<SigstoreVerdict> verifyTinfoilRelease({
   required String bundleJson,
   required String repo,
   required String tag,
   required String digestHex,
   required String reportMeasurementHex,
-  String? trustedRootJson,
 }) => AttestNative.instance.api.crateApiVerifyTinfoilRelease(
   bundleJson: bundleJson,
   repo: repo,
   tag: tag,
   digestHex: digestHex,
   reportMeasurementHex: reportMeasurementHex,
-  trustedRootJson: trustedRootJson,
 );

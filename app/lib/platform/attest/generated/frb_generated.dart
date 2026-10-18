@@ -177,7 +177,6 @@ abstract class AttestNativeApi extends BaseApi {
     required String tag,
     required String digestHex,
     required String reportMeasurementHex,
-    String? trustedRootJson,
   });
 }
 
@@ -806,7 +805,6 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     required String tag,
     required String digestHex,
     required String reportMeasurementHex,
-    String? trustedRootJson,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -817,7 +815,6 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_String(tag, serializer);
           sse_encode_String(digestHex, serializer);
           sse_encode_String(reportMeasurementHex, serializer);
-          sse_encode_opt_String(trustedRootJson, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -830,14 +827,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           decodeErrorData: null,
         ),
         constMeta: kCrateApiVerifyTinfoilReleaseConstMeta,
-        argValues: [
-          bundleJson,
-          repo,
-          tag,
-          digestHex,
-          reportMeasurementHex,
-          trustedRootJson,
-        ],
+        argValues: [bundleJson, repo, tag, digestHex, reportMeasurementHex],
         apiImpl: this,
       ),
     );
@@ -852,7 +842,6 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           'tag',
           'digestHex',
           'reportMeasurementHex',
-          'trustedRootJson',
         ],
       );
 
