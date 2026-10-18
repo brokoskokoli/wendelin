@@ -482,7 +482,7 @@ wendelin/
   docs/                        # Design, ADRs, Arbeitspakete, Notizen
 ```
 
-**Meilensteine**
+**Meilensteine** (Umsetzungsstand: `docs/work-packages/STATUS.md`; Stand 2026-10-18: M0–M4 erledigt, M5 in Arbeit, M6 geplant)
 
 1. **M0 Gerüst**: Flutter-Projekt, Riverpod, drift, Secure Storage, Kern-Interfaces (`LlmProvider`, `Integration`, `Tool`, `AgentRun`) mit Fake-Implementierungen; Text-Chat-UI. *Fertig, wenn* ein Fake-Provider einen Fake-Tool-Call auslöst und das Ergebnis angezeigt wird.
 2. **M1 Text-Agent (Android)**: Anthropic- und OpenAI-kompatibler Adapter, Provider-Einrichtung mit Test, Agent-Schleife mit Bestätigungen, Integrationen Kalender, Zwischenablage, Wecker/Timer, Gedächtnis, Web-Suche; Audit-Log. *Fertig, wenn* "Trag mir morgen um 10 Tauchen ein" per Text mit Claude Haiku und einem OpenAI-kompatiblen Modell funktioniert.
