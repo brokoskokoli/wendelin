@@ -1,6 +1,6 @@
 # M5 – Plan (Android, Ausbau)
 
-Festgelegt mit dem Maintainer 2026-10-18. iOS ist nach M6 verschoben. Kamera/Bild ist vorerst gestrichen. Stationsmodus und der Vergleich alternativer Wake Words kommen später. Die Empfehlung von Modellen (Evals live) wird nach diesen Paketen gemeinsam besprochen.
+Festgelegt mit dem Maintainer 2026-10-18 (K48). M5 ist nur Android. Kamera/Bild, Stationsmodus, Vergleich alternativer Wake Words und die Empfehlung von Modellen kommen in M6, iOS in M7.
 
 | Welle | Pakete | Hinweis |
 | --- | --- | --- |

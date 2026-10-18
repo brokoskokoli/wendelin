@@ -18,7 +18,8 @@ Stand: 2026-10-18, main `3f77d58`
 | Refactoring R1–R6 | WP35–WP40 | erledigt |
 | M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Stefan) |
 | M5 Ausbau Android | WP76b–d, WP79, WP81–WP98 | in Arbeit (Plan `M5-PLAN.md`) |
-| M6 iOS, Stationsmodus, Kamera | – | geplant |
+| M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | – | geplant |
+| M7 iOS | – | geplant |
 
 ## M5 im Detail
 
@@ -49,7 +50,7 @@ Stand: 2026-10-18, main `3f77d58`
 | WP97 | Lastbremse/Cache | geplant | – |
 | WP98 | Konfliktarm | geplant | nach WP79 |
 
-Danach: Empfehlung von Modellen (gemeinsam mit Stefan besprechen).
+Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
 ## Nächste Schritte
 
@@ -60,4 +61,4 @@ Für eine neue Orchestrator-Sitzung (Stand 2026-10-18 abends, vor dem Neustart d
 3. **WP88** und **WP90** ins Review (HEAD in der Tabelle).
 4. Danach WP81b, WP97, WP76c/d und die M5-Wellen 2 und 3.
 
-Wartet auf Stefan: K48–K56 bestätigen (Liste am 2026-10-18 geschickt), K47 nach Stopp-Test 11.6, Test 11.7a.
+Wartet auf Stefan: K47 nach Stopp-Test 11.6, Test 11.7a.
