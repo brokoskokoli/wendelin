@@ -147,3 +147,25 @@ pub fn verify_snp_report(
         &expected_hpke_key,
     )
 }
+
+pub use crate::sigstore::SigstoreVerdict;
+
+/// Prüft das Sigstore-Bundle des Tinfoil-Releases `repo`@`tag` (`digest_hex` = `tinfoil.hash`) und
+/// vergleicht den signierten SNP-Messwert mit `report_measurement_hex` (aus `snp_report_info`).
+/// Die Trust-Root ist immer die eingebettete; eine andere gibt es nur Rust-intern (Tests).
+pub fn verify_tinfoil_release(
+    bundle_json: String,
+    repo: String,
+    tag: String,
+    digest_hex: String,
+    report_measurement_hex: String,
+) -> SigstoreVerdict {
+    crate::sigstore::verify_release(
+        &bundle_json,
+        &repo,
+        &tag,
+        &digest_hex,
+        &report_measurement_hex,
+        None,
+    )
+}

@@ -36,6 +36,7 @@ export 'src/tee/near/near_verifier.dart' show NearVerifier;
 export 'src/tee/nras_jwt.dart';
 export 'src/tee/phala_verifier.dart' show PhalaVerifier;
 export 'src/tee/session_channel.dart' show ReceiptIdSource, SessionBoundChannel;
+export 'src/tee/sigstore_crypto.dart';
 export 'src/tee/snp_crypto.dart';
 export 'src/tee/tls_pin_gate.dart' show TlsPinGate;
 export 'src/tee/tls_pinned_client.dart' show PinnedHttpClient, TlsConnect;

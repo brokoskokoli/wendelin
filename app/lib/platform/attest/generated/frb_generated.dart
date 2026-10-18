@@ -17,6 +17,7 @@ import 'frb_generated.io.dart'
 import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
+import 'sigstore.dart';
 import 'snp.dart';
 
 /// Main entrypoint of the Rust API
@@ -74,7 +75,7 @@ class AttestNative
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 2089063827;
+  int get rustContentHash => -1185482357;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -168,6 +169,14 @@ abstract class AttestNativeApi extends BaseApi {
     required SnpPolicy policy,
     required List<int> expectedTlsSpkiSha256,
     required List<int> expectedHpkeKey,
+  });
+
+  Future<SigstoreVerdict> crateApiVerifyTinfoilRelease({
+    required String bundleJson,
+    required String repo,
+    required String tag,
+    required String digestHex,
+    required String reportMeasurementHex,
   });
 }
 
@@ -789,6 +798,53 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     ],
   );
 
+  @override
+  Future<SigstoreVerdict> crateApiVerifyTinfoilRelease({
+    required String bundleJson,
+    required String repo,
+    required String tag,
+    required String digestHex,
+    required String reportMeasurementHex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(bundleJson, serializer);
+          sse_encode_String(repo, serializer);
+          sse_encode_String(tag, serializer);
+          sse_encode_String(digestHex, serializer);
+          sse_encode_String(reportMeasurementHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 21,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_sigstore_verdict,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiVerifyTinfoilReleaseConstMeta,
+        argValues: [bundleJson, repo, tag, digestHex, reportMeasurementHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVerifyTinfoilReleaseConstMeta =>
+      const TaskConstMeta(
+        debugName: 'verify_tinfoil_release',
+        argNames: [
+          'bundleJson',
+          'repo',
+          'tag',
+          'digestHex',
+          'reportMeasurementHex',
+        ],
+      );
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -933,6 +989,25 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       signatureOk: dco_decode_bool(arr[0]),
       keysetMatches: dco_decode_bool(arr[1]),
       error: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  SigstoreVerdict dco_decode_sigstore_verdict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return SigstoreVerdict(
+      dsseOk: dco_decode_bool(arr[0]),
+      chainOk: dco_decode_bool(arr[1]),
+      identityOk: dco_decode_bool(arr[2]),
+      rekorOk: dco_decode_bool(arr[3]),
+      measurementOk: dco_decode_bool(arr[4]),
+      snpMeasurementHex: dco_decode_String(arr[5]),
+      releaseTag: dco_decode_String(arr[6]),
+      integratedTime: dco_decode_u_64(arr[7]),
+      errors: dco_decode_list_String(arr[8]),
     );
   }
 
@@ -1215,6 +1290,31 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       signatureOk: var_signatureOk,
       keysetMatches: var_keysetMatches,
       error: var_error,
+    );
+  }
+
+  @protected
+  SigstoreVerdict sse_decode_sigstore_verdict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_dsseOk = sse_decode_bool(deserializer);
+    final var_chainOk = sse_decode_bool(deserializer);
+    final var_identityOk = sse_decode_bool(deserializer);
+    final var_rekorOk = sse_decode_bool(deserializer);
+    final var_measurementOk = sse_decode_bool(deserializer);
+    final var_snpMeasurementHex = sse_decode_String(deserializer);
+    final var_releaseTag = sse_decode_String(deserializer);
+    final var_integratedTime = sse_decode_u_64(deserializer);
+    final var_errors = sse_decode_list_String(deserializer);
+    return SigstoreVerdict(
+      dsseOk: var_dsseOk,
+      chainOk: var_chainOk,
+      identityOk: var_identityOk,
+      rekorOk: var_rekorOk,
+      measurementOk: var_measurementOk,
+      snpMeasurementHex: var_snpMeasurementHex,
+      releaseTag: var_releaseTag,
+      integratedTime: var_integratedTime,
+      errors: var_errors,
     );
   }
 
@@ -1511,6 +1611,23 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     sse_encode_bool(self.signatureOk, serializer);
     sse_encode_bool(self.keysetMatches, serializer);
     sse_encode_opt_String(self.error, serializer);
+  }
+
+  @protected
+  void sse_encode_sigstore_verdict(
+    SigstoreVerdict self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.dsseOk, serializer);
+    sse_encode_bool(self.chainOk, serializer);
+    sse_encode_bool(self.identityOk, serializer);
+    sse_encode_bool(self.rekorOk, serializer);
+    sse_encode_bool(self.measurementOk, serializer);
+    sse_encode_String(self.snpMeasurementHex, serializer);
+    sse_encode_String(self.releaseTag, serializer);
+    sse_encode_u_64(self.integratedTime, serializer);
+    sse_encode_list_String(self.errors, serializer);
   }
 
   @protected

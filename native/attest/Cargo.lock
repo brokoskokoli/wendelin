@@ -1969,6 +1969,7 @@ name = "wendelin_attest"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
+ "base64 0.23.1",
  "chacha20poly1305",
  "dcap-qvl",
  "der 0.8.2",
@@ -1976,6 +1977,7 @@ dependencies = [
  "flutter_rust_bridge",
  "hex",
  "hkdf",
+ "p256",
  "p384",
  "pem",
  "rand_core 0.6.4",
