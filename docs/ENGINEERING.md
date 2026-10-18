@@ -53,7 +53,11 @@ evals                  -> core, providers, tools, agent, integrations, mcp
 - Öffentliche APIs mit kurzem Doc-Kommentar. Code-Bezeichner Englisch, Nutzertexte Deutsch (UI später via Lokalisierung).
 - Fehler: keine verschluckten Exceptions; Provider-Fehler als `ProviderException`-Unterklassen.
 
-## Tests (Gate – muss vor jedem Commit grün sein)
+## Tests (Gate)
+
+**Lokal** läuft während der Arbeit und vor dem Commit `--changed`; das **volle Gate läuft in CI** (`.github/workflows/gate.yml`, Auslöser: Push auf `main` und `wp/**`, Pull Requests) und muss vor dem Merge grün sein. Agenten pushen ihren `wp/*`-Branch (nie `main`) und warten im Hintergrund mit `tool/ci_wait.sh <branch>` (ein `gh run watch`, kompakte Zusammenfassung). CI-Jobs: ein Ubuntu-Job je Paket (`dart run tool/gate.dart <paket>`), `rust-checks` (Rust und Prüfungen über das Repo), `app-analyze`, `app-test` in 3 Shards ohne Goldens und `platform-sensitive` (Abdeckung von `app/lib/di` über alle Shards in `app-coverage`, `tool/check_app_coverage.dart`), `goldens` auf dem gepinnten `macos-15` (nur dort; Referenzbilder neu erzeugen mit dem Workflow `update-goldens`, Artefakt `goldens`), `kotlin-unit` und `apk` (nur main/PR). Caches: Flutter/pub, Cargo (`rust-cache`), Gradle. Keine Secrets, Live-Tests bleiben übersprungen.
+
+Das vollständige Gate lokal bleibt möglich:
 
 ```
 dart run tool/gate.dart              # alles, kompakte Ausgabe

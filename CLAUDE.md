@@ -15,7 +15,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 
 ## Arbeiten
 - Toolchain: Flutter 3.47 / Dart 3.13 (`/opt/homebrew/bin`), Android SDK unter `~/Library/Android/sdk`, AVD `Wendelin_AOSP_35` (AOSP-Image ohne Google Play, K7). Gerätetests: `tool/e2e_android.sh` (nur auf Emulatoren).
-- `flutter pub get` im Repo-Root (Pub-Workspace). Das Gate läuft mit `dart run tool/gate.dart [--no-app] [paket…]` und muss vor jedem Commit grün sein.
+- `flutter pub get` im Repo-Root (Pub-Workspace). Das Gate läuft mit `dart run tool/gate.dart [--no-app] [paket…]`. Lokal läuft nur `--changed`, das volle Gate übernimmt CI (`.github/workflows/gate.yml`) vor dem Merge.
 - Gate-Ausgabe ist kompakt (Tabelle am Ende, bei Rot das Ende der Fehlerausgabe); `--verbose` nur bei Bedarf. Für Zwischenstände `--changed` (geänderte Pakete und ihre Abhängigen), vor dem Commit das volle Gate.
 - Einzelne Tests: `dart test test/<pfad>` im Paket, App-Tests mit `flutter test test/<pfad>` in `app/`.
 - Goldens nur auf macOS aktualisieren (`flutter test --update-goldens`); auf Linux `flutter test --exclude-tags golden`.
@@ -26,7 +26,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 ## Agenten und Tokenverbrauch
 - Lies gezielt: erst `grep -n`, dann den Ausschnitt mit `sed -n` oder Read mit Bereich. Ganze große Dateien liest du nicht.
 - Bestehende Dateien änderst du mit Edit. Komplett neu schreibst du nur neue Dateien.
-- Während der Arbeit läuft `dart run tool/gate.dart --changed`. Das volle Gate läuft einmal vor dem Abschluss-Commit.
+- Während der Arbeit und vor dem Commit läuft `dart run tool/gate.dart --changed`. Das volle Gate läuft in CI: Branch `wp/*` pushen (`git push -u origin wp/<nr>-<slug>`, nie `main`), dann im Hintergrund **einmal** `tool/ci_wait.sh <branch>` (kompakte Zusammenfassung, bei Rot die letzten Zeilen). Gemergt wird erst bei grünem CI und nach Review.
 - Abschlussberichte sind kurz, höchstens etwa 10 bis 15 Zeilen. Belege nennst du als Datei:Zeile statt als langes Zitat.
 - Nachbesserungen und Re-Reviews übernimmt ein frischer Agent mit Befundliste und Diff, statt einen großen Kontext fortzusetzen.
 - Modelle: Coder nutzen Sonnet, Reviewer das Standardmodell (Entscheidung Maintainer 2026-10-13).
