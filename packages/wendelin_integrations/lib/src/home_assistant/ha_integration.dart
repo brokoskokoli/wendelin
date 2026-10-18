@@ -127,7 +127,12 @@ final class HaIntegration implements Integration {
       }
       if (e.domain != 'scene') return true;
       // A scene with a lock, alarm or cover is as critical as the member.
-      return !haSceneHasSecureMember(await context.api.state(e.entityId));
+      final scene = await context.api.state(e.entityId);
+      return haSceneHasMembers(scene) &&
+          !haSceneHasSecureMember(
+            scene,
+            confirmIds: await context.confirmIds(),
+          );
     } on PortException {
       return false;
     }

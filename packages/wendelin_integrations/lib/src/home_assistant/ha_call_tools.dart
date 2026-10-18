@@ -199,7 +199,9 @@ abstract base class HaCallTool extends IntegrationTool {
     HaState? prior;
     if (e.domain == 'scene') prior = await read();
     final confirmed =
-        e.alwaysConfirm || (prior != null && haSceneHasSecureMember(prior));
+        e.alwaysConfirm ||
+        (prior != null &&
+            haSceneHasSecureMember(prior, confirmIds: await ctx.confirmIds()));
     final services = servicesFor(e, confirmed: confirmed);
     if (services == null) {
       return ToolOutcome.error(

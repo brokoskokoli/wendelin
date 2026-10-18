@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -109,6 +110,55 @@ void main() {
       expect(foreign, isEmpty);
     },
   );
+
+  group('WebSocket-Upgrade wird geprüft, bevor das Token fließt', () {
+    // Raw server: REST answers `[]`, the WebSocket path answers [reply]
+    // (given the request key) and records everything the client then sends.
+    Future<List<int>> attempt(String Function(String key) reply) async {
+      final received = <int>[];
+      final raw = await HttpServer.bind('127.0.0.1', 0);
+      addTearDown(() => raw.close(force: true));
+      raw.listen((r) async {
+        if (r.uri.path == '/api/websocket') {
+          final key = r.headers.value('sec-websocket-key') ?? '';
+          // ignore: close_sinks
+          final sock = await r.response.detachSocket(writeHeaders: false);
+          sock.listen(received.addAll, onError: (Object _) {});
+          sock.add(utf8.encode(reply(key)));
+          await sock.flush();
+          sock.add(utf8.encode('{"type":"auth_required"}'));
+        } else {
+          r.response
+            ..headers.contentType = ContentType.json
+            ..write('[]');
+          await r.response.close();
+        }
+      });
+      secrets.saved = HaEndpoint(
+        url: 'http://127.0.0.1:${raw.port}',
+        token: 'geheim',
+      );
+      expect(await api.entities(), isEmpty);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      return received;
+    }
+
+    test('200 statt 101: kein Token', () async {
+      final got = await attempt(
+        (_) => 'HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n',
+      );
+      expect(got, isEmpty);
+    });
+
+    test('101 mit falschem Sec-WebSocket-Accept: kein Token', () async {
+      final got = await attempt(
+        (_) =>
+            'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\n'
+            'Connection: Upgrade\r\nSec-WebSocket-Accept: AAAAAAAAAAAAAAAAAAAAAAAAAAA=\r\n\r\n',
+      );
+      expect(got, isEmpty);
+    });
+  });
 
   test('HTML statt JSON und falsche Form: failed', () async {
     server.rawBody = '<html>Login</html>';

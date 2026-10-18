@@ -521,6 +521,50 @@ void main() {
       expect(api.calls, isEmpty);
     });
 
+    test('entity_id keine Liste: kritisch (fail closed)', () async {
+      api.set('scene.leaving', 'scening', {'entity_id': 'lock.front'});
+      final o = await call({'entity': 'Gehen', 'service': 'turn_on'});
+      expect(o.isError, isTrue);
+      expect(o.text, contains('ha__call_secure'));
+      expect(api.calls, isEmpty);
+      expect(
+        (await run('ha__call_secure', {
+          'entity': 'Gehen',
+          'service': 'turn_on',
+        })).isError,
+        isFalse,
+      );
+      expect(await _locked(ha, 'Gehen'), isFalse);
+    });
+
+    test('ohne entity_id (Hue): offen, aber gesperrt nicht erlaubt', () async {
+      store.entities = [
+        ...store.entities,
+        const HaEntity(entityId: 'scene.hue', name: 'Hue Abend'),
+      ];
+      api.set('scene.hue', 'scening', {'friendly_name': 'Hue Abend'});
+      final o = await call({'entity': 'Hue Abend', 'service': 'turn_on'});
+      expect(o.isError, isFalse);
+      expect(await _locked(ha, 'Hue Abend'), isFalse);
+      expect(await _locked(ha, 'Filmabend'), isTrue);
+    });
+
+    test('Mitglied group.* oder Schalter mit Bestätigung: kritisch', () async {
+      store.entities = [
+        for (final e in store.entities)
+          e.entityId == 'switch.coffee' ? e.withConfirm(true) : e,
+      ];
+      for (final member in ['group.alle_lichter', 'switch.coffee']) {
+        api.set('scene.leaving', 'scening', {
+          'entity_id': ['light.living', member],
+        });
+        final o = await call({'entity': 'Gehen', 'service': 'turn_on'});
+        expect(o.isError, isTrue, reason: member);
+        expect(await _locked(ha, 'Gehen'), isFalse, reason: member);
+      }
+      expect(api.calls, isEmpty);
+    });
+
     test('nicht erlaubt, solange gesperrt', () async {
       expect(
         await ha.allowedWhileLocked('ha__call', {
@@ -578,6 +622,14 @@ void main() {
       expect(api.calls, isEmpty);
     });
 
+    test('Licht mit „Immer bestätigen“: gesperrt nicht erlaubt', () async {
+      store.entities = [
+        for (final e in store.entities)
+          e.entityId.startsWith('light.') ? e.withConfirm(true) : e,
+      ];
+      expect(await _locked(ha, 'Küche Deckenlicht'), isFalse);
+    });
+
     test('Haken für WP92: nicht erlaubt, solange gesperrt', () async {
       expect(
         await ha.allowedWhileLocked('ha__call', {'entity': 'Kaffeemaschine'}),
@@ -628,3 +680,6 @@ void main() {
     });
   });
 }
+
+Future<bool> _locked(HaIntegration ha, String entity) =>
+    ha.allowedWhileLocked('ha__call', {'entity': entity, 'service': 'turn_on'});

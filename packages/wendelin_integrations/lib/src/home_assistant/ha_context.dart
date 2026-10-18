@@ -43,6 +43,12 @@ final class HaContext {
     }
   }
 
+  /// Ids of the approved entities with "always confirm".
+  Future<Set<String>> confirmIds() async => {
+    for (final e in await store.load())
+      if (e.alwaysConfirm) e.entityId,
+  };
+
   /// The entity that [query] (name, "room name" or entity id) names among
   /// the approved ones. Throws `notFound` for none and `rejected` for
   /// several candidates ("Mehrdeutig").

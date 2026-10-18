@@ -62,17 +62,29 @@ RiskLevel? haRiskForDomain(String domain) {
   return null;
 }
 
-/// Whether the scene [s] switches a lock, alarm panel or cover (its
-/// `entity_id` attribute lists the members). Activating it is as critical
-/// as controlling the member directly (K57): confirmation, never while
-/// locked.
-bool haSceneHasSecureMember(HaState s) {
+/// Whether the scene [s] is critical (K57): its `entity_id` attribute lists
+/// a lock, alarm panel, cover, a group (members unknown) or an entity in
+/// [confirmIds] (switches with "always confirm"), or it is not a list at
+/// all (fail closed). Activating it needs confirmation, never while locked.
+/// A scene without `entity_id` (e.g. Hue) is not critical here, but see
+/// [haSceneHasMembers].
+bool haSceneHasSecureMember(HaState s, {Set<String> confirmIds = const {}}) {
   final members = s.attributes['entity_id'];
-  if (members is! List<Object?>) return false;
+  if (members == null) return false;
+  if (members is! List<Object?>) return true;
   return members.any(
-    (m) => m is String && haSecureServices.containsKey(haDomainOf(m)),
+    (m) =>
+        m is! String ||
+        haSecureServices.containsKey(haDomainOf(m)) ||
+        haDomainOf(m) == 'group' ||
+        confirmIds.contains(m),
   );
 }
+
+/// Whether the members of the scene [s] are known (`entity_id` present).
+/// Without them nothing can be said about its safety: not allowed while
+/// the device is locked.
+bool haSceneHasMembers(HaState s) => s.attributes['entity_id'] != null;
 
 /// Domains a recognized speaker may control while the device is locked
 /// (WP92: light, scenes, media). Hook only: WP91 does not apply a lock
