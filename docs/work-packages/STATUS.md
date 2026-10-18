@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, WP91 und WP84 laufen wieder
+Stand: 2026-10-18 abends, WP84 läuft, WP91 gemergt
 
 ## Meilensteine
 
@@ -41,7 +41,7 @@ Stand: 2026-10-18 abends, WP91 und WP84 laufen wieder
 | WP88 | Aufgaben | wartet | Review steht aus (HEAD 38e09e9) |
 | WP89 | Todoist/Google Tasks | geplant | nach WP88 |
 | WP90 | Mediensteuerung | wartet | Review und E2E (Player-App auf Emulator) stehen aus |
-| WP91 | Home Assistant | in Arbeit | K57 (switch: „immer bestätigen“ je Entität); Review: nachbessern (Muss: Token per WebSocket-Redirect an fremden Host; Szene mit Schloss/Cover ohne Bestätigung; 4 Soll); dann Merge main, CI, E2E; HEAD a1aa104, Übergabe `handoff/wp91-session.md` |
+| WP91 | Home Assistant | gemergt 8caa7cb | K58 offen; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
 | WP92a–c | Sprechererkennung | geplant | WP92c nach WP91 |
 | WP93 | Wake Word im Chat | geplant | – |
 | WP94 | Schnellwechsel Agent | geplant | – |
