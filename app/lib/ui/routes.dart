@@ -50,6 +50,9 @@ abstract final class AppRoutes {
   /// Web search service.
   static const webSearch = '/settings/web';
 
+  /// Weather service and home place.
+  static const weather = '/settings/weather';
+
   /// Memory entries.
   static const memory = '/settings/memory';
 

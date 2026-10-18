@@ -1,3 +1,8 @@
+// Each probe compiles and starts a helper process (`dart run`); under load
+// that takes longer than the default 30 s.
+@Timeout(Duration(minutes: 3))
+library;
+
 import 'dart:convert';
 import 'dart:io';
 

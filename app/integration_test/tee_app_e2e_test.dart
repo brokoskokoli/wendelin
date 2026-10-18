@@ -25,6 +25,7 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'support/e2e.dart';
+import 'support/receipt_substitute.dart';
 import 'support/tee_gateway.dart';
 import 'support/tee_substitute.dart';
 

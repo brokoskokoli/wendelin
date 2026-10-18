@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart' show ProviderProfile;
 
 import 'codec.dart';
+import 'nras_jwt.dart';
 
 /// When the GPU evidence is checked at NVIDIA NRAS (M4, decision 4).
 enum GpuCheckMode {
@@ -69,12 +71,25 @@ abstract final class GpuReason {
 
   /// Unexpected internal error.
   static const internal = 'internal';
+
+  /// The NRAS token is not trustworthy: wrong signature, unknown key, wrong
+  /// algorithm or issuer, expired, or the detached GPU tokens do not match
+  /// their digests (WP83). Detail category: `nras_signature`.
+  static const signature = 'nras_signature';
+
+  /// The NVIDIA JWKS could not be fetched; handled like NRAS unreachable.
+  static const jwks = 'jwks_unavailable';
 }
 
 /// Result of [GpuAttestationVerifier.verify].
 final class GpuAttestationResult {
   /// Creates a result.
-  const GpuAttestationResult(this.verdict, [this.detail, this.category]);
+  const GpuAttestationResult(
+    this.verdict, [
+    this.detail,
+    this.category,
+    this.signatureChecked = false,
+  ]);
 
   /// Outcome.
   final GpuVerdict verdict;
@@ -85,6 +100,10 @@ final class GpuAttestationResult {
   /// Machine-readable reason of a failure, a [GpuReason] value or
   /// `nras_http_<status>` / `report_http_<status>`; `null` when verified.
   final String? category;
+
+  /// Whether the NRAS token's signature was verified against NVIDIA's JWKS
+  /// and the claims were read from that verified token (WP83).
+  final bool signatureChecked;
 
   /// Whether the GPU evidence is confirmed.
   bool get ok => verdict == GpuVerdict.verified;
@@ -107,8 +126,10 @@ abstract interface class GpuAttestationVerifier {
 /// Steps: fetch `GET {baseUrl}/attestation/report?model=&nonce=`, check
 /// locally that `nvidia_payload.nonce` is our nonce, send the payload to
 /// NRAS, read the overall JWT: `x-nvidia-overall-att-result` is `true` and
-/// `eat_nonce` is our nonce. The JWT signature is **not** verified (NVIDIA
-/// JWKS), see ADR 0014.
+/// `eat_nonce` is our nonce. The JWT signature (ES384) is verified against
+/// NVIDIA's JWKS ([NrasTokenVerifier]) and the claims are read only from the
+/// verified token; a wrong signature or an unknown key is red, an
+/// unreachable JWKS counts as NRAS unreachable (WP83, ADR 0014).
 final class NrasGpuVerifier implements GpuAttestationVerifier {
   /// Creates the verifier. [baseUrl] includes the version path.
   NrasGpuVerifier({
@@ -118,7 +139,10 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
     this.timeout = const Duration(seconds: 10),
     this.evidenceSource,
     Uint8List Function()? nonceSource,
-  }) : _nonce = nonceSource ?? _secureNonce;
+    NrasTokenChecker? tokenChecker,
+  }) : _nonce = nonceSource ?? _secureNonce,
+       _tokens =
+           tokenChecker ?? NrasTokenVerifier(jwks: NrasJwks(client: _client));
 
   /// Gateway API root including `/v1`.
   final Uri baseUrl;
@@ -137,6 +161,7 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
   evidenceSource;
 
   final http.Client _client;
+  final NrasTokenChecker _tokens;
   final Uint8List Function() _nonce;
   static final _random = Random.secure();
 
@@ -177,7 +202,7 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
           'nras_http_${nras.statusCode}',
         );
       }
-      return _judge(nras.bodyBytes, nonce);
+      return await _judge(nras.bodyBytes, nonce);
     } on TimeoutException {
       return const GpuAttestationResult(
         GpuVerdict.timeout,
@@ -405,15 +430,34 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
     }
   }
 
-  static GpuAttestationResult _judge(List<int> body, String nonce) {
+  Future<GpuAttestationResult> _judge(List<int> body, String nonce) async {
+    final List<Object?> decoded;
+    final String overall;
     try {
-      final decoded = jsonDecode(utf8.decode(body)) as List<Object?>;
-      final overall = (decoded.first as List<Object?>)[1]! as String;
-      final claims = jsonDecode(
-        utf8.decode(
-          base64Url.decode(base64Url.normalize(overall.split('.')[1])),
-        ),
-      ) as Map<String, Object?>;
+      decoded = jsonDecode(utf8.decode(body)) as List<Object?>;
+      overall = (decoded.first as List<Object?>)[1]! as String;
+    } on Object {
+      return _unreadable;
+    }
+    final Map<String, Object?> claims;
+    try {
+      claims = await _tokens.verify(overall);
+    } on NrasJwtException catch (e) {
+      return e.unavailable
+          ? const GpuAttestationResult(
+              GpuVerdict.unreachable,
+              'NVIDIA-Schlüssel (JWKS) nicht abrufbar',
+              GpuReason.jwks,
+            )
+          : GpuAttestationResult(
+              GpuVerdict.failed,
+              'NRAS-Token nicht vertrauenswürdig (${e.reason})',
+              GpuReason.signature,
+            );
+    } on Object {
+      return _unreadable;
+    }
+    try {
       if (claims['x-nvidia-overall-att-result'] != true) {
         return const GpuAttestationResult(
           GpuVerdict.failed,
@@ -428,14 +472,45 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
           GpuReason.nonceMismatch,
         );
       }
-      return const GpuAttestationResult(GpuVerdict.verified);
+      if (!_detachedMatch(claims, decoded.length > 1 ? decoded[1] : null)) {
+        return const GpuAttestationResult(
+          GpuVerdict.failed,
+          'NRAS: GPU-Tokens passen nicht zum signierten Gesamttoken',
+          GpuReason.signature,
+        );
+      }
+      return const GpuAttestationResult(GpuVerdict.verified, null, null, true);
     } on Object {
-      return const GpuAttestationResult(
-        GpuVerdict.failed,
-        'NRAS-Antwort unlesbar',
-        GpuReason.unreadable,
-      );
+      return _unreadable;
     }
+  }
+
+  static const _unreadable = GpuAttestationResult(
+    GpuVerdict.failed,
+    'NRAS-Antwort unlesbar',
+    GpuReason.unreadable,
+  );
+
+  /// Every GPU of the signed `submods` has a detached token whose SHA-256
+  /// equals the signed digest (and vice versa); without detached tokens in
+  /// the answer there is nothing to bind.
+  static bool _detachedMatch(Map<String, Object?> claims, Object? detached) {
+    if (detached is! Map<String, Object?>) return true;
+    final submods = claims['submods'];
+    if (submods is! Map<String, Object?>) return false;
+    if (submods.length != detached.length) return false;
+    for (final e in submods.entries) {
+      final digest = e.value;
+      final token = detached[e.key];
+      if (digest is! List || token is! String) return false;
+      final inner = digest.length > 1 ? digest[1] : null;
+      if (inner is! List || inner.length < 2 || inner[0] != 'SHA-256') {
+        return false;
+      }
+      final actual = crypto.sha256.convert(utf8.encode(token)).toString();
+      if (actual != inner[1]) return false;
+    }
+    return true;
   }
 }
 

@@ -2,6 +2,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'preference_models.dart';
+import 'weather_config.dart';
 
 /// Settings keys of the app (stored in `SettingsRepository`).
 ///
@@ -95,6 +96,16 @@ abstract final class AppSettings {
     decode: (json) {
       if (json is Map<String, Object?>) return WebSearchConfig.fromJson(json);
       throw const FormatException('web.search: Objekt erwartet');
+    },
+  );
+
+  /// Weather service and home place.
+  static final weather = SettingKey<WeatherConfig>(
+    'weather.config',
+    encode: (c) => c.toJson(),
+    decode: (json) {
+      if (json is Map<String, Object?>) return WeatherConfig.fromJson(json);
+      throw const FormatException('weather.config: Objekt erwartet');
     },
   );
 

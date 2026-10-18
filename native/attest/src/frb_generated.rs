@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1423650251;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2089063827;
 
 // Section: executor
 
@@ -423,6 +423,36 @@ fn wire__crate__api__sha384_impl(
         },
     )
 }
+fn wire__crate__api__snp_report_info_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "snp_report_info",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_report = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::snp_report_info(api_report)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__spki_sha256_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -642,6 +672,53 @@ fn wire__crate__api__verify_quote_impl(
         },
     )
 }
+fn wire__crate__api__verify_snp_report_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "verify_snp_report",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_report = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_vcek_der = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_chain_pem = <String>::sse_decode(&mut deserializer);
+            let api_now_unix = <u64>::sse_decode(&mut deserializer);
+            let api_policy = <crate::snp::SnpPolicy>::sse_decode(&mut deserializer);
+            let api_expected_tls_spki_sha256 = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_expected_hpke_key = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(crate::api::verify_snp_report(
+                        api_report,
+                        api_vcek_der,
+                        api_chain_pem,
+                        api_now_unix,
+                        api_policy,
+                        api_expected_tls_spki_sha256,
+                        api_expected_hpke_key,
+                    ))?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 
 // Section: dart2rust
 
@@ -755,6 +832,17 @@ impl SseDecode for Option<String> {
     }
 }
 
+impl SseDecode for Option<crate::snp::SnpReportInfo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::snp::SnpReportInfo>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for crate::quote::QuoteInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -794,6 +882,91 @@ impl SseDecode for crate::report::ReceiptVerdict {
             keyset_matches: var_keysetMatches,
             error: var_error,
         };
+    }
+}
+
+impl SseDecode for crate::snp::SnpPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_minTcb = <crate::snp::SnpTcb>::sse_decode(deserializer);
+        return crate::snp::SnpPolicy {
+            min_tcb: var_minTcb,
+        };
+    }
+}
+
+impl SseDecode for crate::snp::SnpReportInfo {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_version = <u32>::sse_decode(deserializer);
+        let mut var_policy = <u64>::sse_decode(deserializer);
+        let mut var_vmpl = <u32>::sse_decode(deserializer);
+        let mut var_reportedTcb = <crate::snp::SnpTcb>::sse_decode(deserializer);
+        let mut var_signedWithVlek = <bool>::sse_decode(deserializer);
+        let mut var_measurementHex = <String>::sse_decode(deserializer);
+        let mut var_reportDataHex = <String>::sse_decode(deserializer);
+        let mut var_chipIdHex = <String>::sse_decode(deserializer);
+        return crate::snp::SnpReportInfo {
+            version: var_version,
+            policy: var_policy,
+            vmpl: var_vmpl,
+            reported_tcb: var_reportedTcb,
+            signed_with_vlek: var_signedWithVlek,
+            measurement_hex: var_measurementHex,
+            report_data_hex: var_reportDataHex,
+            chip_id_hex: var_chipIdHex,
+        };
+    }
+}
+
+impl SseDecode for crate::snp::SnpTcb {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_bootloader = <u8>::sse_decode(deserializer);
+        let mut var_tee = <u8>::sse_decode(deserializer);
+        let mut var_snp = <u8>::sse_decode(deserializer);
+        let mut var_microcode = <u8>::sse_decode(deserializer);
+        return crate::snp::SnpTcb {
+            bootloader: var_bootloader,
+            tee: var_tee,
+            snp: var_snp,
+            microcode: var_microcode,
+        };
+    }
+}
+
+impl SseDecode for crate::snp::SnpVerdict {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_reportOk = <bool>::sse_decode(deserializer);
+        let mut var_chainOk = <bool>::sse_decode(deserializer);
+        let mut var_vcekMatchesReport = <bool>::sse_decode(deserializer);
+        let mut var_signatureOk = <bool>::sse_decode(deserializer);
+        let mut var_policyOk = <bool>::sse_decode(deserializer);
+        let mut var_tlsBound = <bool>::sse_decode(deserializer);
+        let mut var_hpkeBound = <bool>::sse_decode(deserializer);
+        let mut var_product = <Option<String>>::sse_decode(deserializer);
+        let mut var_info = <Option<crate::snp::SnpReportInfo>>::sse_decode(deserializer);
+        let mut var_errors = <Vec<String>>::sse_decode(deserializer);
+        return crate::snp::SnpVerdict {
+            report_ok: var_reportOk,
+            chain_ok: var_chainOk,
+            vcek_matches_report: var_vcekMatchesReport,
+            signature_ok: var_signatureOk,
+            policy_ok: var_policyOk,
+            tls_bound: var_tlsBound,
+            hpke_bound: var_hpkeBound,
+            product: var_product,
+            info: var_info,
+            errors: var_errors,
+        };
+    }
+}
+
+impl SseDecode for u32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u32::<NativeEndian>().unwrap()
     }
 }
 
@@ -872,9 +1045,10 @@ fn pde_ffi_dispatcher_primary_impl(
         2 => wire__crate__api__collateral_next_update_impl(port, ptr, rust_vec_len, data_len),
         3 => wire__crate__api__collateral_request_impl(port, ptr, rust_vec_len, data_len),
         10 => wire__crate__api__root_crl_url_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__verify_aci_receipt_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__verify_aci_report_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__verify_quote_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__verify_aci_receipt_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__verify_aci_report_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__verify_quote_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__verify_snp_report_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -895,9 +1069,10 @@ fn pde_ffi_dispatcher_sync_impl(
         9 => wire__crate__api__near_generate_identity_impl(ptr, rust_vec_len, data_len),
         11 => wire__crate__api__sha256_impl(ptr, rust_vec_len, data_len),
         12 => wire__crate__api__sha384_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__spki_sha256_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__tls_spki_listed_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__verify_ed25519_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__snp_report_info_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__spki_sha256_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__tls_spki_listed_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__verify_ed25519_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1033,6 +1208,82 @@ impl flutter_rust_bridge::IntoIntoDart<crate::report::ReceiptVerdict>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::snp::SnpPolicy {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [self.min_tcb.into_into_dart().into_dart()].into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::snp::SnpPolicy {}
+impl flutter_rust_bridge::IntoIntoDart<crate::snp::SnpPolicy> for crate::snp::SnpPolicy {
+    fn into_into_dart(self) -> crate::snp::SnpPolicy {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::snp::SnpReportInfo {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.version.into_into_dart().into_dart(),
+            self.policy.into_into_dart().into_dart(),
+            self.vmpl.into_into_dart().into_dart(),
+            self.reported_tcb.into_into_dart().into_dart(),
+            self.signed_with_vlek.into_into_dart().into_dart(),
+            self.measurement_hex.into_into_dart().into_dart(),
+            self.report_data_hex.into_into_dart().into_dart(),
+            self.chip_id_hex.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::snp::SnpReportInfo {}
+impl flutter_rust_bridge::IntoIntoDart<crate::snp::SnpReportInfo> for crate::snp::SnpReportInfo {
+    fn into_into_dart(self) -> crate::snp::SnpReportInfo {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::snp::SnpTcb {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.bootloader.into_into_dart().into_dart(),
+            self.tee.into_into_dart().into_dart(),
+            self.snp.into_into_dart().into_dart(),
+            self.microcode.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::snp::SnpTcb {}
+impl flutter_rust_bridge::IntoIntoDart<crate::snp::SnpTcb> for crate::snp::SnpTcb {
+    fn into_into_dart(self) -> crate::snp::SnpTcb {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::snp::SnpVerdict {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.report_ok.into_into_dart().into_dart(),
+            self.chain_ok.into_into_dart().into_dart(),
+            self.vcek_matches_report.into_into_dart().into_dart(),
+            self.signature_ok.into_into_dart().into_dart(),
+            self.policy_ok.into_into_dart().into_dart(),
+            self.tls_bound.into_into_dart().into_dart(),
+            self.hpke_bound.into_into_dart().into_dart(),
+            self.product.into_into_dart().into_dart(),
+            self.info.into_into_dart().into_dart(),
+            self.errors.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::snp::SnpVerdict {}
+impl flutter_rust_bridge::IntoIntoDart<crate::snp::SnpVerdict> for crate::snp::SnpVerdict {
+    fn into_into_dart(self) -> crate::snp::SnpVerdict {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::report::Verdict {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -1143,6 +1394,16 @@ impl SseEncode for Option<String> {
     }
 }
 
+impl SseEncode for Option<crate::snp::SnpReportInfo> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::snp::SnpReportInfo>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for crate::quote::QuoteInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1165,6 +1426,60 @@ impl SseEncode for crate::report::ReceiptVerdict {
         <bool>::sse_encode(self.signature_ok, serializer);
         <bool>::sse_encode(self.keyset_matches, serializer);
         <Option<String>>::sse_encode(self.error, serializer);
+    }
+}
+
+impl SseEncode for crate::snp::SnpPolicy {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::snp::SnpTcb>::sse_encode(self.min_tcb, serializer);
+    }
+}
+
+impl SseEncode for crate::snp::SnpReportInfo {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.version, serializer);
+        <u64>::sse_encode(self.policy, serializer);
+        <u32>::sse_encode(self.vmpl, serializer);
+        <crate::snp::SnpTcb>::sse_encode(self.reported_tcb, serializer);
+        <bool>::sse_encode(self.signed_with_vlek, serializer);
+        <String>::sse_encode(self.measurement_hex, serializer);
+        <String>::sse_encode(self.report_data_hex, serializer);
+        <String>::sse_encode(self.chip_id_hex, serializer);
+    }
+}
+
+impl SseEncode for crate::snp::SnpTcb {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u8>::sse_encode(self.bootloader, serializer);
+        <u8>::sse_encode(self.tee, serializer);
+        <u8>::sse_encode(self.snp, serializer);
+        <u8>::sse_encode(self.microcode, serializer);
+    }
+}
+
+impl SseEncode for crate::snp::SnpVerdict {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.report_ok, serializer);
+        <bool>::sse_encode(self.chain_ok, serializer);
+        <bool>::sse_encode(self.vcek_matches_report, serializer);
+        <bool>::sse_encode(self.signature_ok, serializer);
+        <bool>::sse_encode(self.policy_ok, serializer);
+        <bool>::sse_encode(self.tls_bound, serializer);
+        <bool>::sse_encode(self.hpke_bound, serializer);
+        <Option<String>>::sse_encode(self.product, serializer);
+        <Option<crate::snp::SnpReportInfo>>::sse_encode(self.info, serializer);
+        <Vec<String>>::sse_encode(self.errors, serializer);
+    }
+}
+
+impl SseEncode for u32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_u32::<NativeEndian>(self).unwrap();
     }
 }
 

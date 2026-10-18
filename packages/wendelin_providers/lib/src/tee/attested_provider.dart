@@ -274,7 +274,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// Returns whether it was taken. Nothing is verified less: the session is
   /// exactly one this process verified completely; it ends at the same
   /// `not_after` as there.
-  bool adoptSessionOf(AttestedProvider previous) {
+  bool adoptSessionOf(AttestedProvider previous, {String? reason}) {
     final taken = previous._session;
     final pin = previous.tlsPin?.expected;
     final gate = tlsPin;
@@ -298,7 +298,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     if (mine is NearVerifier && theirs is NearVerifier) {
       mine.adoptGpuEvidence(theirs);
     }
-    _audit.log('Wendelin/attest: Sitzung übernommen (Profil neu aufgebaut)');
+    _audit.log(
+      'Wendelin/attest: Sitzung übernommen (Profil neu aufgebaut'
+      '${reason == null ? '' : ': $reason'})',
+    );
     return true;
   }
 
@@ -680,13 +683,16 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         : unavailable
         ? 'gpu_unavailable'
         : 'gpu_failed';
-    if (!result.ok) {
-      // Category only (HTTP status, timeout, no evidence, …), no content.
-      _audit.log(
-        'Wendelin/attest: gpu ${result.verdict.name} '
-        'category=${result.category ?? 'unknown'}',
-      );
-    }
+    // Verdict, source and category only (HTTP status, timeout, no evidence,
+    // …), no content. `via` tells whether NVIDIA's signed answer or only the
+    // local nonce binding was checked.
+    final via = nras ? 'nras' : 'local';
+    _audit.log(
+      result.ok
+          ? 'Wendelin/attest: gpu gpu=pass via=$via'
+          : 'Wendelin/attest: gpu gpu=fail '
+                'reason=${result.category ?? 'unknown'} via=$via',
+    );
     if (result.category == GpuReason.noEvidence &&
         _gpu.mode != GpuCheckMode.before) {
       // Mode „Nachher“: only a hint, the request is not blocked and the
@@ -706,7 +712,8 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         result.ok ? StageOutcome.pass : StageOutcome.fail,
         result.ok
             ? (nras
-                  ? 'geprüft (NRAS, Signatur ungeprüft)'
+                  ? 'geprüft (NRAS, Signatur '
+                        '${result.signatureChecked ? '' : 'un'}geprüft)'
                   : 'Nonce-Bindung lokal geprüft, nicht über NVIDIA geprüft')
             : 'gpu: ${result.detail ?? result.verdict.name}',
         code,

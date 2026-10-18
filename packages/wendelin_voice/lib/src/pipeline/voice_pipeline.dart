@@ -663,9 +663,23 @@ final class VoicePipeline {
             say(spoken.endSegment());
             segment++;
             hasBlock = false;
+          case AgentTextComplete():
+            // The answer text is complete: read the last sentence now, the
+            // receipt may still be pending (WP81).
+            diagnostics?.call('answer-complete');
+            releaseHeld();
+            say(spoken.finish());
           case AgentDone():
             releaseHeld();
             say(spoken.finish());
+          case AttestationStatusChanged(status: AttestationStatus.red):
+            // The answer turned out unverified: stop what is being read and
+            // say so (the warning card and the undo are shown elsewhere).
+            hold.drop();
+            spoken.reset();
+            failed = true; // no follow-up listening after an unverified answer
+            unawaited(queue?.interrupt());
+            say([VoiceTexts.of(language).unverified]);
           case ConfirmationRequired() || EscalationConfirmationRequired():
             confirmations.add(e);
           case AgentFailed(:final error, :final message):

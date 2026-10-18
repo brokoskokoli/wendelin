@@ -136,7 +136,15 @@ LlmProviderFactory hubRegistering(
   LlmProviderFactory create,
 ) => (profile, secrets) {
   final provider = create(profile, secrets);
-  if (provider is AttestedProvider) hub.register(profile.id, provider);
+  if (provider is AttestedProvider && hub.provider(profile.id) != provider) {
+    hub.register(
+      profile.id,
+      provider,
+      reason: hub.provider(profile.id) != null
+          ? 'Sitzung übernommen'
+          : 'erster Aufbau',
+    );
+  }
   return provider;
 };
 
@@ -151,7 +159,13 @@ final Provider<LlmProviderFactory> llmProviderFactoryProvider =
     Provider<LlmProviderFactory>((ref) {
       final catalog = ref.watch(modelCatalogProvider);
       final transport = ref.watch(attestationTransportProvider);
+      // Live TEE providers by profile (WP81): a config reload (any profile
+      // or rule edit rebuilds all profiles) keeps the instance of a profile
+      // that did not change, with its session, lock and connection.
+      final live = <String, ({ProviderProfile profile, AttestedProvider p})>{};
       return (profile, secrets) {
+        final kept = live[profile.id];
+        if (kept != null && kept.profile == profile) return kept.p;
         final wiring = needsAttestation(profile)
             ? attestationWiringOf(ref)
             : null;
@@ -170,6 +184,9 @@ final Provider<LlmProviderFactory> llmProviderFactoryProvider =
           client: transport?.client,
           settings: attestSettings(transport?.settings),
         );
+        if (provider is AttestedProvider) {
+          live[profile.id] = (profile: profile, p: provider);
+        }
         return provider;
       };
     });

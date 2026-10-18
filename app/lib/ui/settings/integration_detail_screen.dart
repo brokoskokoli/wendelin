@@ -12,6 +12,7 @@ import '../design/design.dart';
 import '../routes.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
+import 'weather_texts.dart';
 
 /// Tools of one integration: each on/off, and `read`/`write` tools can be
 /// set to „Immer nachfragen“. Levels can only be made stricter (K8 b):
@@ -68,6 +69,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
       SettingsRow(
         title: switch (id) {
           'web' => 'Suchdienst einrichten',
+          'weather' => WeatherTexts.setupTitle,
           'lists' => 'Listen verwalten',
           'obsidian' => 'Vault und Tagesnotizen',
           'bring' => 'Bring!-Konto',
@@ -76,6 +78,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
         },
         detail: switch (id) {
           'web' => 'Ohne Suchdienst liest Wendelin nur Seiten',
+          'weather' => WeatherTexts.setupDetail,
           'memory' => 'Einträge ansehen, ändern, exportieren',
           _ => null,
         },

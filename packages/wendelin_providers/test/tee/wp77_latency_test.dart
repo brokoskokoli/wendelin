@@ -68,6 +68,7 @@ String _payload({List<Object?>? evidence, String nonce = 'cd'}) => jsonEncode({
 
 NrasGpuVerifier _nras(FutureOr<http.Response> Function(http.Request) handler) =>
     NrasGpuVerifier(
+      tokenChecker: FakeNrasTokenChecker(),
       baseUrl: Uri.parse('https://gateway.test/v1'),
       client: MockClient((r) async => handler(r)),
       nonceSource: () => Uint8List.fromList(List.filled(32, 0xcd)),
@@ -356,6 +357,7 @@ void main() {
         v = _nras((r) => http.Response('x', 404));
         expect((await v.verify(model: 'm')).category, 'report_http_404');
         v = NrasGpuVerifier(
+          tokenChecker: FakeNrasTokenChecker(),
           baseUrl: Uri.parse('https://gateway.test/v1'),
           client: MockClient((r) => Completer<http.Response>().future),
           timeout: const Duration(milliseconds: 20),
@@ -386,7 +388,9 @@ void main() {
         expect(error.message, contains('[nras_http_400]'));
         expect(
           h.diagnostics,
-          contains('Wendelin/attest: gpu failed category=nras_http_400'),
+          contains(
+            'Wendelin/attest: gpu gpu=fail reason=nras_http_400 via=nras',
+          ),
         );
         final entry = h.log.entries.lastWhere(
           (e) => e.kind == AttestationLogKind.gpu,
@@ -416,7 +420,7 @@ void main() {
       expect(entry.stages.single.code, 'gpu_unavailable');
       expect(
         h.diagnostics,
-        contains('Wendelin/attest: gpu timeout category=timeout'),
+        contains('Wendelin/attest: gpu gpu=fail reason=timeout via=nras'),
       );
     });
   });

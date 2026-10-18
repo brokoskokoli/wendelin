@@ -62,13 +62,15 @@ final class AttestationHub {
       _providers[profileId]?.gpuMode ?? GpuCheckMode.off;
 
   /// Takes over [provider] of [profileId]; an earlier one is dropped.
-  void register(String profileId, AttestedProvider provider) {
+  ///
+  /// [reason] says why it was built (goes to the log line of the adoption).
+  void register(String profileId, AttestedProvider provider, {String? reason}) {
     unawaited(_subs.remove(profileId)?.cancel());
     // A rebuilt provider of the same profile (profile list or rules changed)
     // takes over the session its predecessor verified completely instead of
     // attesting again (WP77); only for an unchanged endpoint.
     final previous = _providers[profileId];
-    if (previous != null) provider.adoptSessionOf(previous);
+    if (previous != null) provider.adoptSessionOf(previous, reason: reason);
     _providers[profileId] = provider;
     _subs[profileId] = provider.reports.listen((r) => _onReport(profileId, r));
   }

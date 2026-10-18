@@ -106,6 +106,7 @@ Future<Object?> sendForJson(
   required String service,
   CancelToken? cancel,
   Duration timeout = const Duration(seconds: 15),
+  Map<int, String> statusMessages = const {},
 }) async {
   final http.Response response;
   try {
@@ -130,6 +131,10 @@ Future<Object?> sendForJson(
     );
   }
   final status = response.statusCode;
+  final custom = statusMessages[status];
+  if (custom != null) {
+    throw PortException(PortErrorKind.unavailable, '$service: $custom');
+  }
   if (status == 401 || status == 403) {
     throw PortException(
       PortErrorKind.unavailable,

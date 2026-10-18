@@ -1,0 +1,13 @@
+# M5 auf dem Telefon testen (Geräte-Prüfliste)
+
+Jedes M5-Arbeitspaket ergänzt hier seinen Block. Befehle am Telefon führt nur der Maintainer aus.
+
+## WP87 Wetter und Meer
+
+- [ ] **Einschalten.** Einstellungen → Integrationen → „Wetter und Meer“ einschalten. Erwartet: aktiv ohne Berechtigungsfrage; „Heimatort“ als optionaler offener Schritt.
+- [ ] **Dienst und Heimatort.** In „Wetterdienst und Heimatort“ Open-Meteo gewählt, Heimatort „Kiel“ eingetragen, Speichern. Erwartet: Seite schließt; erneut öffnen zeigt Kiel; unbekannter Name („Xyzzy“) zeigt „Ort … nicht gefunden“ und speichert nichts.
+- [ ] **Frage mit Ort.** „Wie wird das Wetter morgen in Hamburg?“ Erwartet: kurze, gerundete Antwort (Grad, Regen, Wind), Tool-Karte „Wetter: Hamburg“.
+- [ ] **Frage ohne Ort.** „Brauche ich heute Abend eine Regenjacke?“ Erwartet: Wetter für den Heimatort (WP86 aktiv: für den aktuellen Standort).
+- [ ] **Stunden.** „Wie wird es in den nächsten sechs Stunden?“ Erwartet: Stundenliste in der Antwort.
+- [ ] **Meer.** „Wie hoch sind die Wellen bei Palma?“ Erwartet: Wellenhöhe, Dünung, Periode, Wassertemperatur; für einen Ort im Landesinneren: Hinweis „keine Meeresdaten“.
+- [ ] **Dienstwechsel.** Bright Sky (DWD) wählen, nach Berlin fragen; dann MET Norway. Erwartet: jeweils Antwort, Quelle im Datenblock des Tools; Flugmodus an: Meldung „nicht erreichbar“, kein Absturz.
