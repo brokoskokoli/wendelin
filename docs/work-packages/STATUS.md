@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19, WP90 läuft; WP91, WP76b, WP84, WP79, WP96, WP88 gemergt
+Stand: 2026-10-19, WP90 und WP98 laufen; WP91, WP76b, WP84, WP79, WP96, WP88 gemergt
 
 ## Meilensteine
 
@@ -38,7 +38,7 @@ Stand: 2026-10-19, WP90 läuft; WP91, WP76b, WP84, WP79, WP96, WP88 gemergt
 | WP85 | Kontakte/SMS/Anrufe | geplant | – |
 | WP86 | Standort/Maps | geplant | – |
 | WP87 | Wetter/Meer | gemergt | – |
-| WP88 | Aufgaben | gemergt bb776da | K61 offen; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
+| WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
 | WP89 | Todoist/Google Tasks | geplant | kann starten (WP88 gemergt) |
 | WP90 | Mediensteuerung | in Arbeit | Review und E2E (Player-App auf Emulator) stehen aus |
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
@@ -48,7 +48,7 @@ Stand: 2026-10-19, WP90 läuft; WP91, WP76b, WP84, WP79, WP96, WP88 gemergt
 | WP95 | CI als Gate | gemergt | – |
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
 | WP97 | Lastbremse/Cache | geplant | – |
-| WP98 | Konfliktarm | geplant | kann starten (WP79 gemergt) |
+| WP98 | Konfliktarm | in Arbeit | – |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
