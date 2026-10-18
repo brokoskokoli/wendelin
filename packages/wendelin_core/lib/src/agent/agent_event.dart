@@ -93,6 +93,18 @@ final class AgentTextDelta extends AgentEvent {
   String toString() => 'AgentTextDelta($text)';
 }
 
+/// The model call that streamed the text so far has ended without tool calls:
+/// no more text of this answer follows from the model (WP81). Speech output
+/// reads the rest at once; the verification of the answer (receipt) may still
+/// be pending and arrives later as [AttestationStatusChanged].
+final class AgentTextComplete extends AgentEvent {
+  /// Creates the event.
+  const AgentTextComplete();
+
+  @override
+  String toString() => 'AgentTextComplete()';
+}
+
 /// The separate spoken version of the answer (WP41, stage 2): the
 /// `<spoken>` block at the start of the model's text, complete. It is only
 /// for speech output: never shown, not part of the history and not part of

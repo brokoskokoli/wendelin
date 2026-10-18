@@ -239,6 +239,36 @@ void main() {
       expect(c.read(attestationHubProvider).provider('phala'), same(p));
     });
 
+    test(
+      'WP81: gleiches Profil gibt dieselbe Instanz zurück (kein Neuaufbau)',
+      () async {
+        final env = TestEnv(storedProfiles: true);
+        final c = env.container();
+        addTearDown(c.dispose);
+        await awaitCheckModule(c.read(attestationCryptoProvider.future));
+        final create = c.read(llmProviderFactoryProvider);
+        final first = create(_phala(), env.secrets.read);
+        final again = create(_phala(), env.secrets.read);
+        expect(again, same(first));
+        expect(c.read(attestationHubProvider).provider('phala'), same(first));
+      },
+    );
+
+    test('WP81: geändertes Profil baut neu auf', () async {
+      final env = TestEnv(storedProfiles: true);
+      final c = env.container();
+      addTearDown(c.dispose);
+      await awaitCheckModule(c.read(attestationCryptoProvider.future));
+      final create = c.read(llmProviderFactoryProvider);
+      final first = create(_phala(), env.secrets.read);
+      final changed = create(
+        _phala(options: const {'noTools': true}),
+        env.secrets.read,
+      );
+      expect(changed, isNot(same(first)));
+      expect(c.read(attestationHubProvider).provider('phala'), same(changed));
+    });
+
     test('GPU-Modus aus den Einstellungen', () async {
       final env = TestEnv(
         storedProfiles: true,
