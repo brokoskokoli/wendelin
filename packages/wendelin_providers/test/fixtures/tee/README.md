@@ -19,3 +19,4 @@ Zweiter Satz mit einer Anfrage, die `"provider":{"aci_verified":true}` setzt (`u
 - `response_headers.txt`: `x-receipt-id`, `x-aci-version`, `x-aci-keyset-digest` der Antwort.
 - `receipt.json`: `GET /v1/aci/receipts/{x-receipt-id}`; `attestation.json`: `GET /v1/aci/attestation?nonce=abab…ab`.
 
+- `nras_signed.json`: echte NRAS-Antwort (2026-10-18, 1 GPU, Nonce `75b040ac…1eab`), Gesamt-JWT mit ES384-Signatur samt abgetrenntem GPU-Token. `nras_jwks_subset.json`: der zugehörige öffentliche NVIDIA-Schlüssel (Auszug aus `https://nras.attestation.nvidia.com/.well-known/jwks.json`, nur `kty/crv/kid/x/y`). Beides öffentlich, keine Geheimnisse. Das Token läuft ab (`exp` 1792322298), Tests setzen die Uhr.

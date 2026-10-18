@@ -24,6 +24,7 @@ NrasGpuVerifier _verifier(
   FutureOr<http.Response> Function(http.Request) handler, {
   Duration timeout = const Duration(seconds: 1),
 }) => NrasGpuVerifier(
+  tokenChecker: FakeNrasTokenChecker(),
   baseUrl: Uri.parse('https://gateway.test/v1'),
   client: MockClient((r) async => handler(r)),
   nonceSource: () => _nonce,
@@ -36,7 +37,181 @@ http.Response _ok(String body) => http.Response.bytes(
   headers: {'content-type': 'application/json'},
 );
 
+/// Real NRAS answer (2026-10-18) for the real nonce; evidence stand-in.
+class _Signed {
+  static final nonce =
+      '75b040ace9638a02cde08c76511c28c7f4ed40af4d97b6afed837805df831eab';
+  static String get response =>
+      File('test/fixtures/tee/nras_signed.json').readAsStringSync();
+  static String get jwks =>
+      File('test/fixtures/tee/nras_jwks_subset.json').readAsStringSync();
+  static final now = DateTime.fromMillisecondsSinceEpoch(
+    1792318698 * 1000 + 60000,
+    isUtc: true,
+  );
+
+  static NrasGpuVerifier verifier({
+    String? nras,
+    String? keys,
+    int jwksStatus = 200,
+    DateTime? at,
+  }) {
+    final clock = at ?? now;
+    final client = MockClient(
+      (r) async => r.url.path.endsWith('jwks.json')
+          ? http.Response(keys ?? jwks, jwksStatus)
+          : _ok(nras ?? response),
+    );
+    return NrasGpuVerifier(
+      baseUrl: Uri.parse('https://gateway.test/v1'),
+      evidenceSource: () async => (
+        payload: <String, Object?>{
+          'nonce': nonce,
+          'evidence_list': [<String, Object?>{}],
+        },
+        nonce: nonce,
+      ),
+      client: client,
+      tokenChecker: NrasTokenVerifier(
+        jwks: NrasJwks(client: client, clock: () => clock),
+        clock: () => clock,
+      ),
+    );
+  }
+}
+
 void main() {
+  group('NrasGpuVerifier mit echtem signiertem NRAS-Token (WP83)', () {
+    String tamper(String body, void Function(List<Object?>) f) {
+      final d = jsonDecode(body) as List<Object?>;
+      f(d);
+      return jsonEncode(d);
+    }
+
+    test('Signatur geprüft → verified mit signatureChecked', () async {
+      final r = await _Signed.verifier().verify(model: 'm');
+      expect(r.verdict, GpuVerdict.verified);
+      expect(r.signatureChecked, isTrue);
+    });
+
+    test(
+      'Signatur verändert → failed nras_signature (kein verified)',
+      () async {
+        final body = tamper(_Signed.response, (d) {
+          final t = ((d[0]! as List)[1]! as String).split('.');
+          t[2] =
+              t[2].substring(0, 20) +
+              (t[2][20] == 'A' ? 'B' : 'A') +
+              t[2].substring(21);
+          (d[0]! as List)[1] = t.join('.');
+        });
+        final r = await _Signed.verifier(nras: body).verify(model: 'm');
+        expect(r.verdict, GpuVerdict.failed);
+        expect(r.category, GpuReason.signature);
+        expect(r.signatureChecked, isFalse);
+      },
+    );
+
+    test(
+      'Claims verändert → failed (Claims kommen nur aus geprüftem Token)',
+      () async {
+        final body = tamper(_Signed.response, (d) {
+          final t = ((d[0]! as List)[1]! as String).split('.');
+          final claims = jsonDecode(
+            utf8.decode(base64Url.decode(base64Url.normalize(t[1]))),
+          ) as Map<String, Object?>;
+          claims['x-nvidia-overall-att-result'] = true;
+          claims['eat_nonce'] = 'cd' * 32;
+          t[1] = base64Url
+              .encode(utf8.encode(jsonEncode(claims)))
+              .replaceAll('=', '');
+          (d[0]! as List)[1] = t.join('.');
+        });
+        final r = await _Signed.verifier(nras: body).verify(model: 'm');
+        expect(r.verdict, GpuVerdict.failed);
+        expect(r.category, GpuReason.signature);
+      },
+    );
+
+    test('abgelaufenes Token → failed nras_signature', () async {
+      final r = await _Signed.verifier(
+        at: _Signed.now.add(const Duration(hours: 3)),
+      ).verify(model: 'm');
+      expect(r.verdict, GpuVerdict.failed);
+      expect(r.category, GpuReason.signature);
+      expect(r.detail, contains('jwt_expired'));
+    });
+
+    test('unbekannte kid → failed', () async {
+      final r = await _Signed.verifier(
+        keys: _Signed.jwks.replaceAll('01a45dc1', 'deadbeef'),
+      ).verify(model: 'm');
+      expect(r.verdict, GpuVerdict.failed);
+      expect(r.detail, contains('jwt_unknown_kid'));
+    });
+
+    test(
+      'JWKS nicht abrufbar → unreachable (wie „NRAS nicht erreichbar“)',
+      () async {
+        final r = await _Signed.verifier(jwksStatus: 503).verify(model: 'm');
+        expect(r.verdict, GpuVerdict.unreachable);
+        expect(r.category, GpuReason.jwks);
+        expect(r.ok, isFalse);
+      },
+    );
+
+    test(
+      'abgetrenntes GPU-Token passt nicht zum signierten Digest → failed',
+      () async {
+        final body = tamper(_Signed.response, (d) {
+          final gpus = d[1]! as Map<String, Object?>;
+          gpus['GPU-0'] = '${gpus['GPU-0']}x';
+        });
+        final r = await _Signed.verifier(nras: body).verify(model: 'm');
+        expect(r.verdict, GpuVerdict.failed);
+        expect(r.category, GpuReason.signature);
+      },
+    );
+
+    test(
+      'zusätzliches abgetrenntes GPU-Token ohne signierten Digest → failed',
+      () async {
+        final body = tamper(_Signed.response, (d) {
+          final gpus = d[1]! as Map<String, Object?>;
+          gpus['GPU-9'] = gpus['GPU-0'];
+        });
+        final r = await _Signed.verifier(nras: body).verify(model: 'm');
+        expect(r.verdict, GpuVerdict.failed);
+        expect(r.category, GpuReason.signature);
+      },
+    );
+
+    test('Nonce der Evidenz ≠ Nonce im geprüften Token → failed', () async {
+      final client = MockClient(
+        (r) async => r.url.path.endsWith('jwks.json')
+            ? http.Response(_Signed.jwks, 200)
+            : _ok(_Signed.response),
+      );
+      final v = NrasGpuVerifier(
+        baseUrl: Uri.parse('https://gateway.test/v1'),
+        evidenceSource: () async => (
+          payload: <String, Object?>{
+            'nonce': 'ab' * 32,
+            'evidence_list': [<String, Object?>{}],
+          },
+          nonce: 'ab' * 32,
+        ),
+        client: client,
+        tokenChecker: NrasTokenVerifier(
+          jwks: NrasJwks(client: client, clock: () => _Signed.now),
+          clock: () => _Signed.now,
+        ),
+      );
+      final r = await v.verify(model: 'm');
+      expect(r.category, GpuReason.nonceMismatch);
+    });
+  });
+
   group('NrasGpuVerifier mit den Probe-Antworten', () {
     test(
       'Bericht und NRAS-Antwort bestätigt, Nonce passt → verified',
@@ -61,6 +236,7 @@ void main() {
       () async {
         var nrasCalls = 0;
         final v = NrasGpuVerifier(
+          tokenChecker: FakeNrasTokenChecker(),
           baseUrl: Uri.parse('https://gateway.test/v1'),
           client: MockClient((r) async {
             if (r.url.host == 'nras.attestation.nvidia.com') nrasCalls++;
@@ -79,6 +255,7 @@ void main() {
         final seen = <Uri>[];
         NrasGpuVerifier make(String nonce, {String? payloadNonce}) =>
             NrasGpuVerifier(
+              tokenChecker: FakeNrasTokenChecker(),
               baseUrl: Uri.parse('https://gateway.test/v1'),
               client: MockClient((r) async {
                 seen.add(r.url);
@@ -105,6 +282,7 @@ void main() {
         expect(seen, isEmpty);
         // keine Evidenz
         final none = NrasGpuVerifier(
+          tokenChecker: FakeNrasTokenChecker(),
           baseUrl: Uri.parse('https://gateway.test/v1'),
           client: MockClient((r) async => _ok(_nras)),
           evidenceSource: () async => null,
@@ -383,7 +561,7 @@ void main() {
         );
       });
 
-      test('NRAS grün: Text „geprüft (NRAS, Signatur ungeprüft)“', () async {
+      test('NRAS grün: Text „geprüft (NRAS, Signatur geprüft)“', () async {
         final h = TeeHarness(
           gpu: FakeGpuAttestationVerifier(),
           gpuMode: GpuCheckMode.before,
@@ -393,8 +571,57 @@ void main() {
           (e) => e.kind == AttestationLogKind.gpu,
         );
         expect(entry.status, AttestationStatus.green);
+        expect(entry.stages.single.detail, 'geprüft (NRAS, Signatur geprüft)');
+      });
+
+      test(
+        'Log nennt die Quelle: via=nras (vorher), via=local (nachher)',
+        () async {
+          final before = TeeHarness(
+            gpu: FakeGpuAttestationVerifier(),
+            gpuMode: GpuCheckMode.before,
+          );
+          await before.chat();
+          expect(
+            before.diagnostics,
+            contains('Wendelin/attest: gpu gpu=pass via=nras'),
+          );
+          final after = TeeHarness(
+            gpu: FakeGpuAttestationVerifier(),
+            gpuMode: GpuCheckMode.after,
+          );
+          await after.chat();
+          expect(
+            after.diagnostics,
+            contains('Wendelin/attest: gpu gpu=pass via=local'),
+          );
+          expect(
+            after.log.entries
+                .where((e) => e.kind == AttestationLogKind.gpu)
+                .map((e) => e.stages.single.detail),
+            contains('Nonce-Bindung lokal geprüft, nicht über NVIDIA geprüft'),
+          );
+        },
+      );
+
+      test('ohne verifizierte Signatur steht „Signatur ungeprüft“', () async {
+        final h = TeeHarness(
+          gpu: FakeGpuAttestationVerifier(
+            const GpuAttestationResult(GpuVerdict.verified),
+          ),
+          gpuMode: GpuCheckMode.before,
+        );
+        await h.chat();
         expect(
-          entry.stages.single.detail,
+          h.log.entries
+              .firstWhere(
+                (e) =>
+                    e.kind == AttestationLogKind.gpu &&
+                    e.stages.single.detail!.startsWith('geprüft'),
+              )
+              .stages
+              .single
+              .detail,
           'geprüft (NRAS, Signatur ungeprüft)',
         );
       });

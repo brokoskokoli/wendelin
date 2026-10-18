@@ -11,6 +11,7 @@ import 'frb_generated.dart';
 import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
+import 'snp.dart';
 
 /// Prüft einen TDX-Quote gegen `collateral_json` zum Zeitpunkt `now_unix`.
 Future<QuoteInfo> verifyQuote({
@@ -144,3 +145,27 @@ Uint8List nearDecrypt({required List<int> secret, required String wireHex}) =>
       secret: secret,
       wireHex: wireHex,
     );
+
+/// Felder eines SEV-SNP-Reports (Chip-ID, TCB, Messwert) für KDS-Abruf und Anzeige; ohne Prüfung.
+SnpReportInfo snpReportInfo({required List<int> report}) =>
+    AttestNative.instance.api.crateApiSnpReportInfo(report: report);
+
+/// Prüft einen SEV-SNP-Report (Tinfoil) vollständig: Kette ARK (gepinnt) → ASK → VCEK, Signatur,
+/// Richtlinie und Bindung von `report_data` an TLS-SPKI-Hash und HPKE-Schlüssel.
+Future<SnpVerdict> verifySnpReport({
+  required List<int> report,
+  required List<int> vcekDer,
+  required String chainPem,
+  required BigInt nowUnix,
+  required SnpPolicy policy,
+  required List<int> expectedTlsSpkiSha256,
+  required List<int> expectedHpkeKey,
+}) => AttestNative.instance.api.crateApiVerifySnpReport(
+  report: report,
+  vcekDer: vcekDer,
+  chainPem: chainPem,
+  nowUnix: nowUnix,
+  policy: policy,
+  expectedTlsSpkiSha256: expectedTlsSpkiSha256,
+  expectedHpkeKey: expectedHpkeKey,
+);

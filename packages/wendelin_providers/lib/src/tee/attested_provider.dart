@@ -674,20 +674,24 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         : unavailable
         ? 'gpu_unavailable'
         : 'gpu_failed';
-    if (!result.ok) {
-      // Category only (HTTP status, timeout, no evidence, …), no content.
-      _audit.log(
-        'Wendelin/attest: gpu ${result.verdict.name} '
-        'category=${result.category ?? 'unknown'}',
-      );
-    }
+    // Verdict, source and category only (HTTP status, timeout, no evidence,
+    // …), no content. `via` tells whether NVIDIA's signed answer or only the
+    // local nonce binding was checked.
+    final via = nras ? 'nras' : 'local';
+    _audit.log(
+      result.ok
+          ? 'Wendelin/attest: gpu gpu=pass via=$via'
+          : 'Wendelin/attest: gpu gpu=fail '
+                'reason=${result.category ?? 'unknown'} via=$via',
+    );
     final id = _audit.record(AttestationLogKind.gpu, status, [
       StageResult(
         AttestationStage.gpu,
         result.ok ? StageOutcome.pass : StageOutcome.fail,
         result.ok
             ? (nras
-                  ? 'geprüft (NRAS, Signatur ungeprüft)'
+                  ? 'geprüft (NRAS, Signatur '
+                        '${result.signatureChecked ? '' : 'un'}geprüft)'
                   : 'Nonce-Bindung lokal geprüft, nicht über NVIDIA geprüft')
             : 'gpu: ${result.detail ?? result.verdict.name}',
         code,

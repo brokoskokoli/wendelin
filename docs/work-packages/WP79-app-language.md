@@ -1,6 +1,6 @@
 # WP79 – App-Sprache einstellbar, Übersetzungen de/en/fr prüfen (`app/`, ggf. Pakete mit Texten)
 
-**Zuordnung:** M5 (Entscheidung Maintainer 2026-10-16), nicht vorher starten.
+**Zuordnung:** M5 (Entscheidung Maintainer 2026-10-16). Läuft früh in M5, damit die neuen Integrationen gleich lokalisiert werden.
 
 Bezug: Gerätetest 2026-10-16 (Wunsch Prio 2: App-Sprache in der App, unabhängig vom System; Prio 3: Texte wirken teils seltsam übersetzt, z. B. Stufennamen).
 

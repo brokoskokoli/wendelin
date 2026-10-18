@@ -33,7 +33,9 @@ export 'src/tee/near/near_crypto.dart';
 export 'src/tee/near/near_e2ee.dart'
     show NearE2eeChannel, NearE2eeProtocol, NearE2eeWire;
 export 'src/tee/near/near_verifier.dart' show NearVerifier;
+export 'src/tee/nras_jwt.dart';
 export 'src/tee/phala_verifier.dart' show PhalaVerifier;
 export 'src/tee/session_channel.dart' show ReceiptIdSource, SessionBoundChannel;
+export 'src/tee/snp_crypto.dart';
 export 'src/tee/tls_pin_gate.dart' show TlsPinGate;
 export 'src/tee/tls_pinned_client.dart' show PinnedHttpClient, TlsConnect;

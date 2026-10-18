@@ -6,6 +6,7 @@ import 'package:wendelin/platform/attest/generated/e2ee.dart';
 import 'package:wendelin/platform/attest/generated/near_e2ee.dart';
 import 'package:wendelin/platform/attest/generated/quote.dart';
 import 'package:wendelin/platform/attest/generated/report.dart';
+import 'package:wendelin/platform/attest/generated/snp.dart';
 
 /// Rust-Ersatz für Tests ohne native Bibliothek: feste Antworten, zählt Aufrufe.
 final class FakeAttestBackend implements AttestBackend {
@@ -143,5 +144,51 @@ final class FakeAttestBackend implements AttestBackend {
     if (panic != null) throw panic!;
     if (wire.isEmpty) throw StateError('x');
     return Uint8List.fromList([wire.length]);
+  }
+
+  SnpReportInfo snpInfo = SnpReportInfo(
+    version: 3,
+    policy: BigInt.zero,
+    vmpl: 0,
+    reportedTcb: const SnpTcb(bootloader: 10, tee: 0, snp: 23, microcode: 84),
+    signedWithVlek: false,
+    measurementHex: 'aa',
+    reportDataHex: 'bb',
+    chipIdHex: 'cc',
+  );
+  SnpVerdict snpVerdict = const SnpVerdict(
+    reportOk: true,
+    chainOk: true,
+    vcekMatchesReport: true,
+    signatureOk: true,
+    policyOk: true,
+    tlsBound: true,
+    hpkeBound: true,
+    product: 'Genoa',
+    errors: [],
+  );
+  SnpPolicy? lastSnpPolicy;
+  int? lastSnpNow;
+
+  @override
+  SnpReportInfo snpReportInfo(Uint8List report) {
+    if (panic != null) throw panic!;
+    return snpInfo;
+  }
+
+  @override
+  Future<SnpVerdict> verifySnp({
+    required Uint8List report,
+    required Uint8List vcekDer,
+    required String chainPem,
+    required int nowUnix,
+    required SnpPolicy policy,
+    required Uint8List tlsSpkiSha256,
+    required Uint8List hpkeKey,
+  }) async {
+    if (panic != null) throw panic!;
+    lastSnpPolicy = policy;
+    lastSnpNow = nowUnix;
+    return snpVerdict;
   }
 }
