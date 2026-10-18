@@ -577,6 +577,25 @@ void main() {
       },
     );
 
+    test('WP81: spätes gpu_unavailable bleibt, wenn die grüne Quittung danach kommt', () {
+      var s = _apply([
+        const AgentTextDelta('Antwort'),
+        status(AttestationStatus.yellow, logId: ''),
+      ]);
+      s = reducer.lateFailure(
+        s,
+        const AttestationReport(
+          logId: 'g1',
+          status: AttestationStatus.red,
+          reasonCode: 'gpu_unavailable',
+        ),
+        text: 'x',
+      );
+      s = reducer.apply(s, status(AttestationStatus.green));
+      expect(shield(s)?.status, AttestationStatus.red);
+      expect(shield(s)?.reasonCode, 'gpu_unavailable');
+    });
+
     test('spätes GPU-Ergebnis färbt die letzte geprüfte Antwort rot', () {
       final s = _apply([
         const AgentTextDelta('Antwort'),

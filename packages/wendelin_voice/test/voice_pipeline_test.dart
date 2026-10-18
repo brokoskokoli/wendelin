@@ -464,6 +464,39 @@ void main() {
       });
     });
 
+    test('pauseTurn: die Fortsetzung wird gesprochen', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [
+            ScriptedTurn.text('Teil eins.', stopReason: StopReason.pauseTurn),
+            ScriptedTurn.text('Teil zwei.'),
+          ],
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(
+          h.tts.spoken.join(' '),
+          allOf(contains('Teil eins.'), contains('Teil zwei.')),
+        );
+      });
+    });
+
+    test('Fehler nach Text: halber Satz wird nicht gesprochen', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [
+            ScriptedTurn.error(
+              const NetworkException('weg'),
+              partialText: 'Halber Satz ohne Ende',
+            ),
+          ],
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.tts.spoken.join(' '), isNot(contains('Halber')));
+      });
+    });
+
     test('rote Quittung: Ausgabe wird abgebrochen, Hinweis gesprochen', () {
       runFake((async) {
         final receipt = Completer<void>();

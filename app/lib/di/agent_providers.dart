@@ -161,14 +161,14 @@ final Provider<LlmProviderFactory> llmProviderFactoryProvider =
           settings: attestSettings(transport?.settings),
         );
         if (provider is AttestedProvider) {
+          final hub = ref.read(attestationHubProvider);
+          final reason = kept != null
+              ? 'Profil geändert'
+              : hub.provider(profile.id) != null
+              ? 'Sitzung übernommen'
+              : 'erster Aufbau';
           live[profile.id] = (profile: profile, p: provider);
-          ref
-              .read(attestationHubProvider)
-              .register(
-                profile.id,
-                provider,
-                reason: kept == null ? 'erster Aufbau' : 'Profil geändert',
-              );
+          hub.register(profile.id, provider, reason: reason);
         }
         return provider;
       };

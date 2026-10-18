@@ -262,10 +262,10 @@ final class ConversationReducer {
     AttestationStatusChanged event,
   ) {
     // The asynchronous GPU check (mode „Nachher“) may fail before the final
-    // receipt event of the same step is applied: it keeps its red result.
+    // receipt event of the same step is applied: it keeps its red result
+    // (the target entry below always carries this step or none).
     bool gpuFailed(AnswerAttestation? a) =>
         a != null &&
-        a.stepId == event.stepId &&
         a.status == AttestationStatus.red &&
         (a.reasonCode == 'gpu_failed' || a.reasonCode == 'gpu_unavailable');
 

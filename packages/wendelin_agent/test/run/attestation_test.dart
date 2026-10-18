@@ -159,6 +159,43 @@ void main() {
       },
     );
 
+    test('WP81: pauseTurn → kein AgentTextComplete', () async {
+      final report = Completer<AttestationReport?>()
+        ..complete(_report(AttestationStatus.green));
+      final h = build(
+        [
+          ScriptedTurn.text('Teil eins.', stopReason: StopReason.pauseTurn),
+          ScriptedTurn.text('Teil zwei.'),
+        ],
+        report,
+        [],
+      );
+      final events = await h.run('Hi');
+      expect(events.whereType<AgentTextComplete>(), hasLength(1));
+      final lastText = events.lastIndexWhere((e) => e is AgentTextDelta);
+      expect(
+        events.indexWhere((e) => e is AgentTextComplete),
+        greaterThan(lastText),
+      );
+    });
+
+    test('WP81: Fehler nach Text → kein AgentTextComplete', () async {
+      final report = Completer<AttestationReport?>()
+        ..complete(_report(AttestationStatus.green));
+      final h = build(
+        [
+          ScriptedTurn.error(
+            const NetworkException('weg'),
+            partialText: 'Halber Satz',
+          ),
+        ],
+        report,
+        [],
+      );
+      final events = await h.run('Hi');
+      expect(events.whereType<AgentTextComplete>(), isEmpty);
+    });
+
     test('toolsInvolved der Quittung gelangt ins Ereignis (WP63)', () async {
       final report = Completer<AttestationReport?>()
         ..complete(_report(AttestationStatus.green).withToolsInvolved(true));
