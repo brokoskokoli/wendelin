@@ -44,6 +44,9 @@ const _trusted = <String, bool>{
   'lists__complete_item': false,
   'lists__remove_item': false,
   'lists__clear_completed': false,
+  'tasks__add': true,
+  'tasks__list': false,
+  'tasks__complete': false,
   'obsidian__create_note': false,
   'obsidian__append_to_note': false,
   'obsidian__append_daily_note': false,
@@ -80,6 +83,7 @@ void main() {
     AlarmsIntegration(FakeAlarmPort()),
     MemoryIntegration(FakeMemoryStore()),
     ListsIntegration(FakeListFilePort(), definitions: () => []),
+    TasksIntegration(FakeListFilePort(), definitions: () => []),
     ObsidianIntegration(
       FakeVaultPort(),
       FakeNoteIndex(),

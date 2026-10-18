@@ -14,6 +14,7 @@ void main() {
     AlarmsIntegration(FakeAlarmPort()),
     MemoryIntegration(FakeMemoryStore()),
     ListsIntegration(FakeListFilePort(), definitions: () => []),
+    TasksIntegration(FakeListFilePort(), definitions: () => []),
     ObsidianIntegration(
       FakeVaultPort(),
       FakeNoteIndex(),
@@ -60,6 +61,9 @@ void main() {
       'lists__complete_item',
       'lists__remove_item',
       'lists__clear_completed',
+      'tasks__add',
+      'tasks__list',
+      'tasks__complete',
       'obsidian__search_notes',
       'obsidian__read_note',
       'obsidian__list_folder',

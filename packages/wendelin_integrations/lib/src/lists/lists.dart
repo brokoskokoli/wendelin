@@ -36,6 +36,7 @@ final class ListDefinition {
     required this.target,
     List<String> aliases = const [],
     this.section,
+    this.taskDefault = false,
   }) : aliases = List.unmodifiable(aliases);
 
   /// Stable id.
@@ -53,10 +54,15 @@ final class ListDefinition {
   /// Heading below which items live, or `null` for the whole file.
   final String? section;
 
+  /// Whether `tasks__add` and `tasks__complete` use this list when no list
+  /// is named (at most one list should have it).
+  final bool taskDefault;
+
   @override
   bool operator ==(Object other) =>
       other is ListDefinition &&
       other.id == id &&
+      other.taskDefault == taskDefault &&
       other.name == name &&
       other.target == target &&
       other.section == section &&
@@ -68,6 +74,7 @@ final class ListDefinition {
     name,
     target,
     section,
+    taskDefault,
     const ListEquality<String>().hash(aliases),
   );
 
@@ -220,6 +227,23 @@ final class ListsEnv {
     return m.best.single;
   }
 
+  /// The list for a task tool: [query] if given (fuzzy, like [resolve]),
+  /// else the list marked [ListDefinition.taskDefault], else the only
+  /// list. Several lists and no default → ask back.
+  ListDefinition resolveTaskList(String? query, {required bool write}) {
+    if (query != null && query.isNotEmpty) return resolve(query, write: write);
+    final defs = definitions();
+    final marked = defs.where((d) => d.taskDefault);
+    if (marked.isNotEmpty) return marked.first;
+    if (defs.length == 1) return defs.single;
+    if (defs.isEmpty) return resolve('', write: write);
+    throw PortException(
+      PortErrorKind.rejected,
+      'Keine Standard-Aufgabenliste eingestellt. Bitte nachfragen, welche '
+      'Liste gemeint ist: ${defs.map((d) => d.name).join(', ')}',
+    );
+  }
+
   /// Reads the file of [def] fresh from the port (empty if missing).
   Future<LoadedList> load(ListDefinition def) async {
     final existed = await port.exists(def.target);
@@ -251,8 +275,10 @@ ListItem pickItem(
   List<ListItem> items,
   String listName, {
   required bool write,
+  String Function(ListItem)? textOf,
 }) {
-  final m = bestMatches(query, items, (i) => [i.text]);
+  String text(ListItem i) => textOf == null ? i.text : textOf(i);
+  final m = bestMatches(query, items, (i) => [text(i)]);
   if (m.best.isEmpty) {
     throw PortException(
       PortErrorKind.notFound,
@@ -267,13 +293,13 @@ ListItem pickItem(
     throw PortException(
       PortErrorKind.rejected,
       'Mehrdeutig: „$query“ passt zu '
-      '${best.map((i) => '„${i.text}“').join(', ')}. Bitte nachfragen.',
+      '${best.map((i) => '„${text(i)}“').join(', ')}. Bitte nachfragen.',
     );
   }
   if (write && m.score == 1) {
     throw PortException(
       PortErrorKind.rejected,
-      'Meintest du „${best.first.text}“? Bitte nachfragen.',
+      'Meintest du „${text(best.first)}“? Bitte nachfragen.',
     );
   }
   return best.first;

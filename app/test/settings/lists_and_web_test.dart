@@ -8,6 +8,7 @@ import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/platform/saf_list_file_port.dart';
+import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/lists_screen.dart';
 import 'package:wendelin/ui/settings/web_search_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -137,6 +138,33 @@ void main() {
       expect(l.section, 'Todo');
     });
 
+    testWidgets('Standard-Aufgabenliste: höchstens eine', (tester) async {
+      final a = ListDefinition(
+        id: 'a',
+        name: 'Aufgaben',
+        target: 'content://vault/A.md',
+        taskDefault: true,
+      );
+      final b = ListDefinition(
+        id: 'b',
+        name: 'Projekte',
+        target: 'content://vault/B.md',
+      );
+      native.docs[a.target] = Uint8List(0);
+      native.docs[b.target] = Uint8List(0);
+      final env = TestEnv(startup: StartupSettings(lists: [a, b]));
+      final c = await pumpPage(tester, env, const ListsScreen());
+      await tester.tap(find.text('Projekte'));
+      await settle(tester);
+      await tester.tap(find.byType(WSwitch));
+      await tester.pump();
+      await tester.tap(find.text('Speichern'));
+      await settle(tester);
+      final lists = {for (final l in c.read(listDefinitionsProvider)) l.id: l};
+      expect(lists['b']!.taskDefault, isTrue);
+      expect(lists['a']!.taskDefault, isFalse);
+    });
+
     testWidgets('bearbeiten und löschen gibt die Datei frei', (tester) async {
       final list = ListDefinition(
         id: 'l1',
@@ -174,8 +202,16 @@ void main() {
         target: 'content://x',
         aliases: const ['E'],
         section: 'Todo',
+        taskDefault: true,
       );
       final back = listDefinitionFromJson(listDefinitionToJson(l));
+      expect(back.taskDefault, isTrue);
+      expect(
+        listDefinitionFromJson(
+          listDefinitionToJson(ListDefinition(id: 'b', name: 'B', target: 't')),
+        ).taskDefault,
+        isFalse,
+      );
       expect(back.id, 'a');
       expect(back.aliases, ['E']);
       expect(back.section, 'Todo');

@@ -88,6 +88,7 @@ class _ListEditState extends ConsumerState<ListEditScreen> {
   );
   late final _section = TextEditingController(text: widget.existing?.section);
   late String? _target = widget.existing?.target;
+  late bool _taskDefault = widget.existing?.taskDefault ?? false;
   String? _fileName;
   String? _error;
   bool _saved = false;
@@ -183,6 +184,7 @@ class _ListEditState extends ConsumerState<ListEditScreen> {
           if (a.trim().isNotEmpty) a.trim(),
       ],
       section: section.isEmpty ? null : section,
+      taskDefault: _taskDefault,
     );
     await ref.read(listDefinitionsProvider.notifier).save(list);
     _saved = true;
@@ -246,6 +248,15 @@ class _ListEditState extends ConsumerState<ListEditScreen> {
         controller: _section,
         style: WText.body,
         decoration: InputDecoration(labelText: context.l10n.listsSectionLabel),
+      ),
+      SettingsRow(
+        title: context.l10n.listsTaskDefault,
+        detail: context.l10n.listsTaskDefaultDetail,
+        trailing: WSwitch(
+          value: _taskDefault,
+          semanticLabel: context.l10n.listsTaskDefault,
+          onChanged: (on) => setState(() => _taskDefault = on),
+        ),
       ),
       SettingsSection(
         title: context.l10n.listsFile,

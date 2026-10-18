@@ -3315,6 +3315,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Section dans le fichier, p. ex. Todo (facultatif)';
 
   @override
+  String get listsTaskDefault => 'Liste de tâches par défaut';
+
+  @override
+  String get listsTaskDefaultDetail =>
+      'Les tâches avec échéance arrivent ici si aucune liste n’est indiquée.';
+
+  @override
   String get listsFile => 'Fichier';
 
   @override

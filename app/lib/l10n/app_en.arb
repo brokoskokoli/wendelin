@@ -940,6 +940,8 @@
   "listsNameHint": "Name, e.g. Shopping",
   "listsAliases": "Other names, separated by commas (optional)",
   "listsSectionLabel": "Section in the file, e.g. Todo (optional)",
+  "listsTaskDefault": "Default task list",
+  "listsTaskDefaultDetail": "Tasks with a due date go here when no list is named.",
   "listsFile": "File",
   "listsNoFile": "No file yet",
   "listsChooseFile": "Choose file",

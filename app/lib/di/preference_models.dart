@@ -194,6 +194,7 @@ Map<String, Object?> listDefinitionToJson(ListDefinition d) => {
   'target': d.target,
   if (d.aliases.isNotEmpty) 'aliases': d.aliases,
   'section': ?d.section,
+  if (d.taskDefault) 'taskDefault': true,
 };
 
 /// A [ListDefinition] from [listDefinitionToJson]; throws [FormatException].
@@ -218,6 +219,7 @@ ListDefinition listDefinitionFromJson(Object? json) {
         if (a is String) a,
     ],
     section: section as String?,
+    taskDefault: json['taskDefault'] == true,
   );
 }
 

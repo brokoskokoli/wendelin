@@ -11,6 +11,18 @@ Vom Nutzer definierte Listen (Konzept K6), jede mit eigener Markdown-Datei, z. B
 | `lists__remove_item` | write | Eintrag samt eingerückter Unterzeilen löschen. Undo fügt die Zeilen an derselben Stelle wieder ein: hinter der früheren nicht leeren Vorgängerzeile (mit denselben Leerzeilen dazwischen), sonst vor der früheren Nachfolgezeile; gesucht wird nur im Abschnitt der Liste |
 | `lists__clear_completed` | external | Erledigte Einträge samt Unterzeilen löschen, immer mit Bestätigung. Erledigte Einträge mit noch offenen Unteraufgaben bleiben stehen und werden im Ergebnis als `kept` genannt |
 
+## Aufgaben (`tasks__…`, WP88)
+Eigene Integration `tasks` (`TasksIntegration` in `tasks_tools.dart`, Registry-Zeile `tasksSpec`), weil Toolnamen das Präfix der Integration tragen müssen. Sie nutzt dieselben Dateien, Definitionen und dieselbe Schreibwarteschlange wie `lists` und wird in Einstellungen → Integrationen separat eingeschaltet.
+Aufgaben sind normale Listeneinträge mit Obsidian-Tasks-Markierungen am Zeilenende: `- [ ] Steuer abgeben ⏰ 14:30 ⏫ 📅 2026-10-20`. Priorität `🔺 ⏫ 🔼 🔽 ⏬` (highest … lowest), Fälligkeit `📅 JJJJ-MM-TT`, Uhrzeit `⏰ HH:MM` (eigene Erweiterung, nur mit Fälligkeit; steht vor den Tasks-Marken, weil Obsidian Tasks Marken nur vom Zeilenende her liest, und bleibt dort im Beschreibungstext; der Parser liest auch die alte Reihenfolge mit `⏰` hinter `📅`; `due` ohne Zeitzone; Titel mit Marken werden abgelehnt), erledigt `✅ JJJJ-MM-TT`. Unbekannte Marken (`🔁`, `⏳`, `#tags`) bleiben unangetastet: der Parser (`task_format.dart`, `TaskInfo`) liest nur, die Tools hängen höchstens Marken an. Eine Liste kann `taskDefault` sein (Schalter „Standard-Aufgabenliste“ in der Listenbearbeitung, höchstens eine); ohne Angabe nehmen `tasks__add`/`tasks__complete` sie, sonst die einzige Liste, sonst Rückfrage.
+
+| Tool | Risiko | Zweck |
+| --- | --- | --- |
+| `tasks__add` | write | `title`, optional `list`, `due` (`2026-10-20` oder `2026-10-20T14:30`), `priority`. Nutzt `AddItemsTool.add` (Duplikate übersprungen, Undo entfernt die Zeile) |
+| `tasks__list` | read | `filter` `today` (heute fällig) / `overdue` (vor heute, offen) / `all` (Standard), optional `list` (sonst alle Listen), `include_done`. Sortiert nach Fälligkeit, Uhrzeit, Priorität; Ausgabe als Daten markiert, `overdue: true` je Aufgabe |
+| `tasks__complete` | write | Aufgabe über den Titel (ohne Marken) finden, abhaken und `✅ <heute>` anhängen; Undo stellt die Zeile genau wieder her |
+
+Nicht enthalten: Erinnerung per Wecker (Folgepunkt; `alarms__…` hat keinen Datum-Bezug zu Listen) und wiederkehrende Aufgaben (`🔁` wird beim Abhaken nicht fortgeschrieben).
+
 ## Definition und Auflösung
 `ListDefinition(id, name, aliases, target, section?)` kommt aus den Einstellungen (WP09); die Integration fragt sie bei jedem Aufruf über `definitions()` ab.
 

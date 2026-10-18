@@ -5740,6 +5740,18 @@ abstract class AppLocalizations {
   /// **'Abschnitt in der Datei, z. B. Todo (optional)'**
   String get listsSectionLabel;
 
+  /// No description provided for @listsTaskDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-Aufgabenliste'**
+  String get listsTaskDefault;
+
+  /// No description provided for @listsTaskDefaultDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Aufgaben mit Fälligkeit landen hier, wenn keine Liste genannt wird.'**
+  String get listsTaskDefaultDetail;
+
   /// No description provided for @listsFile.
   ///
   /// In de, this message translates to:

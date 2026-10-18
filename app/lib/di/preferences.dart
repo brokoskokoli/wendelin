@@ -213,12 +213,23 @@ final class ListDefinitionsNotifier extends Notifier<List<ListDefinition>> {
   @override
   List<ListDefinition> build() => ref.watch(startupProvider).lists;
 
-  /// Adds [list] or replaces the one with the same id.
+  /// Adds [list] or replaces the one with the same id. At most one list is
+  /// the default task list: setting it clears the flag on the others.
   Future<void> save(ListDefinition list) => _store([
     for (final l in state)
-      if (l.id != list.id) l,
+      if (l.id != list.id) list.taskDefault ? _asPlain(l) : l,
     list,
   ]);
+
+  static ListDefinition _asPlain(ListDefinition l) => !l.taskDefault
+      ? l
+      : ListDefinition(
+          id: l.id,
+          name: l.name,
+          target: l.target,
+          aliases: l.aliases,
+          section: l.section,
+        );
 
   /// Removes the list [id].
   Future<void> remove(String id) => _store([
@@ -231,8 +242,10 @@ final class ListDefinitionsNotifier extends Notifier<List<ListDefinition>> {
     await _settings(ref).set(AppSettings.lists, lists);
     // The integration needs at least one list (setup step).
     final registry = ref.read(toolRegistryProvider);
-    if (registry.integrations.any((i) => i.id == 'lists')) {
-      await registry.refresh('lists');
+    for (final id in const ['lists', 'tasks']) {
+      if (registry.integrations.any((i) => i.id == id)) {
+        await registry.refresh(id);
+      }
     }
   }
 }

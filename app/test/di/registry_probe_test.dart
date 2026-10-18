@@ -40,6 +40,7 @@ void main() {
         'ha',
         'spotify',
         'weather',
+        'tasks',
       ],
     );
   });

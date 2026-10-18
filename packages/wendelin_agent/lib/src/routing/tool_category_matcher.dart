@@ -56,6 +56,10 @@ final class KeywordToolCategoryMatcher implements ToolCategoryMatcher {
       'einkaufsliste', 'liste', 'todo', 'aufgabe', //
       'shopping list', 'list', 'to do', 'task', 'courses',
     ],
+    'tasks': [
+      'aufgabe', 'faellig', 'uberfaellig', 'todo', 'erinner', //
+      'task', 'due', 'overdue', 'tache', 'echeance',
+    ],
   };
 
   /// Verb stems per access kind.

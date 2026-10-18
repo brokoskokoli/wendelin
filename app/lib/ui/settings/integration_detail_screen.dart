@@ -75,7 +75,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
         title: switch (id) {
           'web' => context.l10n.integrationDetailSetUpSearch,
           'weather' => context.l10n.weatherSetupTitle,
-          'lists' => context.l10n.integrationDetailManageLists,
+          'lists' || 'tasks' => context.l10n.integrationDetailManageLists,
           'obsidian' => context.l10n.integrationDetailVaultDaily,
           'bring' => context.l10n.integrationDetailBringAccount,
           'ha' => context.l10n.integrationDetailIntegrationDetailHaSetup,

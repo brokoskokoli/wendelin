@@ -41,3 +41,9 @@ Voraussetzung: Spotify Premium, Spotify-App auf dem Telefon installiert und mind
 - [ ] **S.8 „Leg … in die Warteschlange.“** *Erwartet:* Der Titel erscheint in Spotifys Warteschlange (Spotify-App öffnen); ein Rückgängig gibt es nicht (Spotify kann die Warteschlange nicht per API ändern).
 - [ ] **S.9 Fehlertexte.** (a) Spotify-App beenden und Telefon im Flugmodus: „… nicht erreichbar“, keine Dauerschleife. (b) In der Spotify-App unter „Apps mit Zugriff“ den Zugriff von Wendelin entfernen, dann „Pause“: Die Kachel zeigt „Fehler … pausiert“, „Erneut versuchen“ bzw. neu anmelden führt zurück. (c) Mit einem Free-Konto (falls zur Hand): „Die Wiedergabe steuern kann Spotify nur mit einem Premium-Konto.“
 - [ ] **S.10 Abmelden.** Spotify-Seite → „Abmelden“. *Erwartet:* Rückfrage, danach die Anmeldemaske; Kachel „Login fehlt“.
+
+## WP88 Aufgaben (Listen mit Fälligkeit)
+- [ ] Einstellungen → Listen: Liste „Aufgaben“ anlegen, Schalter „Standard-Aufgabenliste“ an. Eine zweite Liste mit dem Schalter macht die erste wieder aus.
+- [ ] Sagen: „Erinnere mich an die Steuer, fällig am 20. Oktober, hohe Priorität“ → Datei in Obsidian zeigt `- [ ] Steuer ⏫ 📅 2026-10-20` und das Tasks-Plugin (falls installiert) listet sie mit Datum. Mit Uhrzeit („um 14:30“) steht `⏰ 14:30` vor `⏫ 📅 …`, das Plugin findet die Fälligkeit trotzdem.
+- [ ] „Welche Aufgaben sind heute fällig?“ / „Was ist überfällig?“ nennt nur passende Aufgaben, überfällige zuerst.
+- [ ] „Hak die Steuer ab“ → Zeile `- [x] … ✅ <heute>`; Rückgängig stellt die Zeile ohne `✅` her.

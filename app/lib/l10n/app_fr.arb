@@ -940,6 +940,8 @@
   "listsNameHint": "Nom, p. ex. Courses",
   "listsAliases": "Autres noms, séparés par des virgules (facultatif)",
   "listsSectionLabel": "Section dans le fichier, p. ex. Todo (facultatif)",
+  "listsTaskDefault": "Liste de tâches par défaut",
+  "listsTaskDefaultDetail": "Les tâches avec échéance arrivent ici si aucune liste n’est indiquée.",
   "listsFile": "Fichier",
   "listsNoFile": "Pas encore de fichier",
   "listsChooseFile": "Choisir un fichier",

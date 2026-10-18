@@ -3284,6 +3284,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Abschnitt in der Datei, z. B. Todo (optional)';
 
   @override
+  String get listsTaskDefault => 'Standard-Aufgabenliste';
+
+  @override
+  String get listsTaskDefaultDetail =>
+      'Aufgaben mit Fälligkeit landen hier, wenn keine Liste genannt wird.';
+
+  @override
   String get listsFile => 'Datei';
 
   @override

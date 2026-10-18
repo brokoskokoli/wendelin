@@ -66,10 +66,11 @@ final class AddItemsTool extends IntegrationTool
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final def = env.resolve(args.requireString('list'), write: true);
     final wanted = _items(args);
-    return env.exclusive(def.target, () => _add(def, wanted));
+    return env.exclusive(def.target, () => add(def, wanted));
   }
 
-  Future<ToolOutcome> _add(ListDefinition def, List<String> wanted) async {
+  /// Adds the item texts [wanted] to [def] (caller holds the file queue).
+  Future<ToolOutcome> add(ListDefinition def, List<String> wanted) async {
     final l = await env.load(def);
     final doc = l.doc;
     final present = {

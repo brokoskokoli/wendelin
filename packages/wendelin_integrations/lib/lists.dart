@@ -8,3 +8,7 @@ export 'src/lists/lists.dart'
 export 'src/lists/lists_read_tools.dart' show GetItemsTool, ListListsTool;
 export 'src/lists/lists_write_tools.dart'
     show AddItemsTool, ClearCompletedTool, CompleteItemTool, RemoveItemTool;
+export 'src/lists/task_format.dart'
+    show TaskInfo, TaskPriority, composeTask, formatMinutes;
+export 'src/lists/tasks_tools.dart'
+    show TasksAddTool, TasksCompleteTool, TasksIntegration, TasksListTool;

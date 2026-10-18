@@ -3273,6 +3273,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listsSectionLabel => 'Section in the file, e.g. Todo (optional)';
 
   @override
+  String get listsTaskDefault => 'Default task list';
+
+  @override
+  String get listsTaskDefaultDetail =>
+      'Tasks with a due date go here when no list is named.';
+
+  @override
   String get listsFile => 'File';
 
   @override
