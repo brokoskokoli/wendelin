@@ -21,15 +21,13 @@ import 'package:wendelin/platform/attest/collateral_cache.dart';
 import 'package:wendelin/platform/attest/pcs_collateral_client.dart';
 import 'package:wendelin/platform/attest/rust_attestation_crypto.dart';
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
-import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/fakes.dart';
-import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'support/e2e.dart';
+import 'support/receipt_substitute.dart';
 import 'support/tee_gateway.dart';
-import 'support/tee_substitute.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

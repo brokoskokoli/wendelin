@@ -137,16 +137,23 @@ LlmProviderFactory hubRegistering(
 ) => (profile, secrets) {
   final provider = create(profile, secrets);
   if (provider is AttestedProvider && hub.provider(profile.id) != provider) {
+    final seen = _registeredIds[hub] ??= <String>{};
     hub.register(
       profile.id,
       provider,
-      reason: hub.provider(profile.id) != null
+      // Registered by this wiring before: the profile changed (WP81).
+      reason: seen.contains(profile.id)
+          ? 'Profil geändert'
+          : hub.provider(profile.id) != null
           ? 'Sitzung übernommen'
           : 'erster Aufbau',
     );
+    seen.add(profile.id);
   }
   return provider;
 };
+
+final Expando<Set<String>> _registeredIds = Expando<Set<String>>();
 
 /// Builds the adapter for a profile (fake in tests).
 typedef LlmProviderFactory = LlmProvider Function(
