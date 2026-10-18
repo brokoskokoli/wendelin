@@ -18,7 +18,7 @@ Stand: 2026-10-19, WP90 und WP98 laufen; WP91, WP76b, WP84, WP79, WP96, WP88 gem
 | Refactoring R1–R6 | WP35–WP40 | erledigt |
 | M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Stefan) |
 | M5 Ausbau Android | WP76b–d, WP79, WP81–WP98 | in Arbeit (Plan `M5-PLAN.md`) |
-| M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | – | geplant |
+| M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | geplant (Plan `M6-PLAN.md`, Start nach M5 mit Go) |
 | M7 iOS | – | geplant |
 
 ## M5 im Detail
