@@ -9,6 +9,10 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - `docs/work-packages/`: Arbeitspakete mit Abnahmekriterien. `REVIEW.md` beschreibt das Prüfprotokoll.
 - `docs/adr/`: Architekturentscheidungen. Neue grundlegende Entscheidungen bekommen eine eigene ADR.
 
+## Neue Orchestrator-Sitzung
+- Sitzung mit `claude --name "Wendelin coding"` starten. Unter diesem Namen schicken die Paket-Sitzungen ihre Fertigmeldungen.
+- Auf „mach weiter“ gilt der Skill `development-supervisor`, Abschnitt 0 „Fortsetzen“. Der Stand kommt aus `docs/work-packages/STATUS.md` (Abschnitt „Nächste Schritte“), aus `git worktree list` und aus den Übergabedateien in `../james-wt/handoff/`.
+
 ## Konzeptänderungen
 - **Wenn sich bei der Umsetzung herausstellt, dass etwas vom Konzept abweicht oder abweichen muss, wird das im Gesamtkonzept nachgetragen. Der Maintainer (Stefan) bekommt dazu eine kurze Liste der Änderungen und bestätigt sie.**
 - Unbestätigte Änderungen stehen im Abschnitt „Änderungsprotokoll“ am Ende des Konzepts mit dem Status `offen`. Nach der Bestätigung wird der Status auf `bestätigt` gesetzt.
