@@ -14,6 +14,7 @@ final class SetupTestResult {
     this.detected,
     bool? verified,
     List<StageResult> stages = const [],
+    this.gpuEvidence,
   }) : models = List.unmodifiable(models),
        stages = List.unmodifiable(stages),
        verified = verified ?? ok;
@@ -36,6 +37,11 @@ final class SetupTestResult {
 
   /// Result per stage of the first attestation (TEE profiles).
   final List<StageResult> stages;
+
+  /// Whether the provider delivers GPU evidence for the chosen model
+  /// (`false`: no GPU check possible, WP82); `null` = not a TEE profile or
+  /// unknown.
+  final bool? gpuEvidence;
 }
 
 /// One run of the provider setup dialog (concept: „Einrichtung (Dialog pro
@@ -148,6 +154,7 @@ final class ProviderSetupSession {
     PrivacyLevel? privacy,
     int? budgetMicros,
     double? warnThreshold,
+    GpuCheckMode? gpuMode,
   }) {
     final base = template.toProfile(
       id: profileId,
@@ -176,6 +183,8 @@ final class ProviderSetupSession {
         for (final e in (existing?.options ?? base.options).entries)
           // Retired option „Ohne Tools“ (WP71): dropped when saving.
           if (e.key != 'noTools') e.key: e.value,
+        // GPU check of a TEE profile (WP82); other profiles have none.
+        if (gpuMode != null && attested) gpuCheckOption: gpuMode.name,
       },
     );
   }
@@ -223,20 +232,36 @@ final class ProviderSetupSession {
   }) async {
     final LlmProvider provider;
     try {
-      provider = create(draft(baseUrl: baseUrl, model: model), secrets.read);
+      // The probe is about the connection; the GPU check is judged at the
+      // request, so a model without evidence stays selectable (WP82).
+      provider = create(
+        draft(baseUrl: baseUrl, model: model, gpuMode: GpuCheckMode.off),
+        secrets.read,
+      );
     } on ArgumentError catch (e) {
       return SetupTestResult(ok: false, message: '${e.message}');
     }
     final health = await provider.test();
+    final evidence = health.ok && provider is AttestedProvider
+        ? await provider.hasGpuEvidence(model)
+        : null;
     return SetupTestResult(
       ok: health.ok,
       message: health.message,
       models: health.models ?? const [],
       detected: health.detected,
       // The probe attested a TEE profile first: show the result per stage.
-      stages: provider is AttestedProvider
-          ? provider.lastSessionStages
-          : const [],
+      stages: [
+        if (provider is AttestedProvider) ...provider.lastSessionStages,
+        // A restriction of the provider (WP78 acceptance names it).
+        if (evidence == false)
+          const StageResult(
+            AttestationStage.gpuEvidence,
+            StageOutcome.info,
+            'Anbieter liefert keinen GPU-Nachweis',
+          ),
+      ],
+      gpuEvidence: evidence,
     );
   }
 

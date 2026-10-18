@@ -138,6 +138,7 @@ final class AttestationFailedException extends ProviderException {
     super.message, {
     required this.stage,
     this.unavailable = false,
+    this.category,
   });
 
   /// Stable name of the failed check stage (secret-free).
@@ -145,6 +146,10 @@ final class AttestationFailedException extends ProviderException {
 
   /// The check could not be completed (e.g. network), as opposed to failed.
   final bool unavailable;
+
+  /// Machine-readable reason inside [stage] (secret-free), e.g. `no_evidence`
+  /// for a GPU check without evidence; `null` if there is none.
+  final String? category;
 
   @override
   bool get retryable => unavailable;

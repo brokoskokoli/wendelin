@@ -49,6 +49,10 @@ final class GpuGate {
   final Map<String, bool> _ok = {};
   final Set<String> _localOk = {};
   final Set<String> _needsCheck = {};
+
+  /// Models whose provider delivers no GPU evidence at all (this session):
+  /// NVIDIA cannot check what is not there, so there is nothing to retry.
+  final Map<String, GpuAttestationResult> _noEvidence = {};
   bool _skipOnce = false;
 
   /// The next [before] lets the request through (user chose „ohne
@@ -60,12 +64,25 @@ final class GpuGate {
     _ok.addAll(other._ok);
     _localOk.addAll(other._localOk);
     _needsCheck.addAll(other._needsCheck);
+    _noEvidence.addAll(other._noEvidence);
   }
 
   /// New attestation: earlier results no longer count.
   void reset() {
     _ok.clear();
     _localOk.clear();
+    _noEvidence.clear();
+  }
+
+  /// Whether the provider delivers GPU evidence for [model]: `true`/`false`,
+  /// `null` if that could not be found out (no verifier, network). Local
+  /// part only, independent of [mode]; used by the setup.
+  Future<bool?> hasEvidence(String model) async {
+    final v = verifier;
+    if (v == null) return null;
+    final r = await v.verifyLocal(model: model);
+    if (r.ok) return true;
+    return r.category == GpuReason.noEvidence ? false : null;
   }
 
   /// Runs before a request; returns the error that blocks it, or `null`.
@@ -76,13 +93,20 @@ final class GpuGate {
       _skipOnce = false;
       return null;
     }
-    final result = await _ensure(v, model);
+    final missing = _noEvidence[model];
+    if (missing != null && mode == GpuCheckMode.after) return null;
+    final result = missing ?? await _ensure(v, model);
     if (result == null || result.ok) return null;
+    // After: a model without evidence only gets a hint, nothing to block.
+    if (result.category == GpuReason.noEvidence && mode == GpuCheckMode.after) {
+      return null;
+    }
     return AttestationFailedException(
       'GPU-Prüfung nicht bestanden (${result.detail ?? result.verdict.name}'
       '${result.category == null ? '' : ' [${result.category}]'}); '
       'Anfrage nicht gesendet',
       stage: 'gpu',
+      category: result.category,
       unavailable:
           result.verdict == GpuVerdict.unreachable ||
           result.verdict == GpuVerdict.timeout,
@@ -110,6 +134,7 @@ final class GpuGate {
       GpuCheckMode.off => false,
     };
     if (!full && _localOk.contains(model)) return null;
+    if (_noEvidence.containsKey(model)) return null;
     final key = '${full ? 'full' : 'local'}:$model';
     return _inflight[key] ??= (full ? _check(v, model) : _checkLocal(v, model))
         .whenComplete(() {
@@ -120,7 +145,12 @@ final class GpuGate {
   /// Runs after a verified answer (mode `after`), without waiting.
   void after(String model) {
     final v = verifier;
-    if (mode != GpuCheckMode.after || v == null || _ok[model] == true) return;
+    if (mode != GpuCheckMode.after ||
+        v == null ||
+        _ok[model] == true ||
+        _noEvidence.containsKey(model)) {
+      return;
+    }
     unawaited(_check(v, model));
   }
 
@@ -147,7 +177,9 @@ final class GpuGate {
       );
     }
     _ok[model] = result.ok;
-    if (result.ok) {
+    if (result.category == GpuReason.noEvidence) {
+      _noEvidence[model] = result;
+    } else if (result.ok) {
       _localOk.add(model);
       _needsCheck.remove(model);
     } else {
@@ -180,6 +212,7 @@ final class GpuGate {
       );
     }
     if (result.ok) _localOk.add(model);
+    if (result.category == GpuReason.noEvidence) _noEvidence[model] = result;
     onResult(model, result, false);
     return result;
   }

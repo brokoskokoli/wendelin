@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_providers/wendelin_providers.dart' show GpuCheckMode;
+import 'package:wendelin_providers/wendelin_providers.dart'
+    show GpuCheckMode, GpuReason;
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
@@ -69,7 +70,8 @@ final class AgentController extends Notifier<ConversationState> {
     final code = r.report.reasonCode;
     if (r.report.status != AttestationStatus.red ||
         (code != 'gpu_failed' && code != 'gpu_unavailable') ||
-        ref.read(attestationHubProvider).gpuMode != GpuCheckMode.after) {
+        ref.read(attestationHubProvider).modeOf(r.profileId) !=
+            GpuCheckMode.after) {
       return;
     }
     state = _reducer.lateFailure(
@@ -472,6 +474,7 @@ final class AgentController extends Notifier<ConversationState> {
                   profileId: profile,
                   request: request,
                   reason: message,
+                  noEvidence: cause.category == GpuReason.noEvidence,
                 ),
               );
           return;

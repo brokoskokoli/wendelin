@@ -133,6 +133,20 @@ void main() {
         expect((extra['provider']! as Map)['aci_verified'], isTrue);
       });
 
+      test('options.gpuCheck des Profils geht vor dem Wiring-Modus (WP82)', () {
+        for (final (option, expected) in [
+          ('before', GpuCheckMode.before),
+          ('off', GpuCheckMode.off),
+        ]) {
+          final p = ProviderFactory.create(
+            phala(options: {'attestation': 'phala', gpuCheckOption: option}),
+            (_) async => 'k',
+            attestation: wiring,
+          );
+          expect((p as AttestedProvider).gpuMode, expected);
+        }
+      });
+
       test(
         'ohne pinnedClient: Adapter und Prüfung nutzen PinnedHttpClient',
         () async {

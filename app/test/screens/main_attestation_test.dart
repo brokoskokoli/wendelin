@@ -69,9 +69,7 @@ void main() {
     final c = ProviderScope.containerOf(
       tester.element(find.byType(MainScreen, skipOffstage: false)),
     );
-    c.read(attestationHubProvider)
-      ..gpuMode = mode
-      ..register('phala', provider);
+    c.read(attestationHubProvider).register('phala', provider);
     return c;
   }
 
@@ -187,5 +185,48 @@ void main() {
     await _settle(tester);
     expect(gateway.requests, 0);
     expect(find.text('Ruhig: 0,4 m Welle.'), findsNothing);
+  });
+
+  testWidgets('GPU „Vorher“ ohne Nachweis (WP82): Grund „kein Nachweis“, '
+      '„Ohne GPU-Prüfung senden“ nur für diese Anfrage', (tester) async {
+    await pumpTee(tester, mode: GpuCheckMode.before);
+    const none = GpuAttestationResult(
+      GpuVerdict.failed,
+      'Keine GPU-Evidenz im Bericht des Anbieters',
+      GpuReason.noEvidence,
+    );
+    gpu
+      ..result = none
+      ..localResult = none;
+    await sendText(tester, 'Vertrauliche Frage');
+    expect(find.text('Kein GPU-Nachweis'), findsOneWidget);
+    expect(find.textContaining('keinen GPU-Nachweis'), findsOneWidget);
+    expect(gateway.requests, 0);
+    await tester.tap(find.text('Ohne GPU-Prüfung senden'));
+    await _settle(tester);
+    expect(gateway.requests, 1);
+    // Only this request: the next one is held back again.
+    await sendText(tester, 'Noch eine Frage');
+    expect(find.text('Kein GPU-Nachweis'), findsOneWidget);
+    expect(gateway.requests, 1);
+  });
+
+  testWidgets('GPU „Nachher“ ohne Nachweis: nicht blockierend, kein Alarm', (
+    tester,
+  ) async {
+    await pumpTee(tester, mode: GpuCheckMode.after);
+    const none = GpuAttestationResult(
+      GpuVerdict.failed,
+      'Keine GPU-Evidenz im Bericht des Anbieters',
+      GpuReason.noEvidence,
+    );
+    gpu
+      ..result = none
+      ..localResult = none;
+    await sendText(tester, 'Frage');
+    await _settle(tester);
+    expect(gateway.requests, 1);
+    expect(find.text('Kein GPU-Nachweis'), findsNothing);
+    expect(env.notifier.shown, isEmpty);
   });
 }

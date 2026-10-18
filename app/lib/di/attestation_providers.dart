@@ -13,7 +13,6 @@ import '../platform/attest/collateral_cache.dart';
 import '../platform/attest/pcs_collateral_client.dart';
 import '../platform/attest/rust_attestation_crypto.dart';
 import '../platform/channel_notifier.dart';
-import 'app_settings.dart';
 import 'attestation_hub.dart';
 import 'providers.dart';
 
@@ -71,38 +70,11 @@ final attestationPinStoreProvider = Provider<AttestationPinStore>(
   (ref) => SettingsAttestationPinStore(ref.watch(storageProvider).settings),
 );
 
-/// GPU check of TEE models at NVIDIA: off, before or after the request.
-final gpuCheckModeProvider = NotifierProvider<GpuCheckModePref, GpuCheckMode>(
-  GpuCheckModePref.new,
-);
-
-/// GPU mode preference; applies the change to the live providers.
-final class GpuCheckModePref extends Notifier<GpuCheckMode> {
-  @override
-  GpuCheckMode build() => ref.watch(startupProvider).gpuCheck;
-
-  /// Stores [mode]; for „nachher“ it first asks for the notification
-  /// permission (the warning is a system notification).
-  Future<void> set(GpuCheckMode mode) async {
-    if (mode == GpuCheckMode.after) {
-      final notifier = ref.read(attestationNotifierProvider);
-      if (!await notifier.hasPermission()) await notifier.requestPermission();
-    }
-    state = mode;
-    ref.read(attestationHubProvider).gpuMode = mode;
-    await ref
-        .read(storageProvider)
-        .settings
-        .set(AppSettings.gpuCheck, mode.name);
-  }
-}
-
 /// The live TEE providers, their results and actions.
 final Provider<AttestationHub> attestationHubProvider =
     Provider<AttestationHub>((ref) {
       final hub = AttestationHub(
         notifier: ref.watch(attestationNotifierProvider),
-        gpuMode: ref.read(gpuCheckModeProvider),
         nameOf: (id) =>
             ref.read(providerConfigProvider).asData?.value?.nameOf(id) ?? id,
       );
@@ -154,7 +126,6 @@ AttestationWiring? attestationWiringOf(Ref ref) {
     nearCrypto: crypto is NearCrypto ? crypto as NearCrypto : null,
     logSink: ref.read(attestationLogWriterProvider),
     pins: ref.read(attestationPinStoreProvider),
-    gpuMode: ref.read(gpuCheckModeProvider),
     nonceSource: transport?.nonceSource,
     // Production: the pinned TLS clients of the package. The device test
     // replays recorded fixtures through its own client and therefore has no

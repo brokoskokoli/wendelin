@@ -82,6 +82,12 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   double _warn = 0.8;
   String? _budgetError;
 
+  /// GPU check of this (TEE) profile (WP82).
+  GpuCheckMode _gpuMode = GpuCheckMode.off;
+
+  /// Models the probe found without GPU evidence.
+  final Set<String> _noGpu = {};
+
   bool get _editing => widget.existing != null;
 
   /// Whether the profile is a TEE provider whose answers are attested.
@@ -99,6 +105,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     _privacy = effectivePrivacy(p);
     _budget.text = budgetText(p.budgetMonthly);
     _warn = p.warnThreshold ?? 0.8;
+    _gpuMode = gpuModeOf(p) ?? GpuCheckMode.off;
   }
 
   @override
@@ -132,6 +139,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     _baseUrl.text = t.baseUrl ?? '';
     _model.text = t.suggestedModel ?? '';
     _privacy = t.privacy;
+    _gpuMode = GpuCheckMode.off;
   });
 
   /// TEE profiles need the Rust check module before the adapter is built.
@@ -180,6 +188,13 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       _busy = false;
       _result = result;
       if (!result.ok) return;
+      switch (result.gpuEvidence) {
+        case false:
+          _noGpu.add(model);
+        case true:
+          _noGpu.remove(model);
+        case null:
+      }
       _detected = result.detected;
       _step = _Step.finish;
     });
@@ -207,7 +222,14 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       setState(() => _budgetError = e.message);
       return;
     }
+    if (_attested && _gpuMode == GpuCheckMode.after) {
+      // The warning of „Nachher“ is a system notification.
+      final notifier = ref.read(attestationNotifierProvider);
+      if (!await notifier.hasPermission()) await notifier.requestPermission();
+      if (!mounted) return;
+    }
     final profile = session.draft(
+      gpuMode: _attested ? _gpuMode : null,
       name: _name.text,
       baseUrl: _baseUrl.text,
       model: _model.text,
@@ -287,6 +309,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     connection: _connection,
     models: _models,
     model: _model,
+    noGpuEvidence: _noGpu,
     failure: _failure('Modell nicht nutzbar'),
     busy: _busy,
     onChanged: () => setState(() {}),
@@ -304,6 +327,9 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     warn: _warn,
     onWarn: (w) => setState(() => _warn = w),
     attested: _attested,
+    gpuMode: _gpuMode,
+    onGpuMode: (m) => setState(() => _gpuMode = m),
+    noGpuEvidence: _result?.gpuEvidence == false,
     onSave: () => unawaited(_save()),
   );
 

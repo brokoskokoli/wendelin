@@ -306,6 +306,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// reachable (the user chose „ohne GPU-Prüfung senden“). Valid once.
   void allowNextRequestWithoutGpuCheck() => _gpu.allowOnce();
 
+  /// Whether the provider delivers GPU evidence for [model] (`false`: no
+  /// evidence, so no GPU check is possible); `null` if unknown.
+  Future<bool?> hasGpuEvidence(String model) => _gpu.hasEvidence(model);
+
   @override
   Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) async* {
     _latest = null;
@@ -677,6 +681,19 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         'Wendelin/attest: gpu ${result.verdict.name} '
         'category=${result.category ?? 'unknown'}',
       );
+    }
+    if (result.category == GpuReason.noEvidence &&
+        _gpu.mode != GpuCheckMode.before) {
+      // Mode „Nachher“: only a hint, the request is not blocked and the
+      // answer is not marked (the provider just has no evidence).
+      _audit.record(AttestationLogKind.gpu, AttestationStatus.yellow, [
+        const StageResult(
+          AttestationStage.gpuEvidence,
+          StageOutcome.info,
+          'GPU: kein Nachweis des Anbieters, nicht prüfbar',
+        ),
+      ], model: model);
+      return;
     }
     final id = _audit.record(AttestationLogKind.gpu, status, [
       StageResult(

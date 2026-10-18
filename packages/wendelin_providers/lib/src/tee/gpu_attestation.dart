@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:wendelin_core/wendelin_core.dart' show ProviderProfile;
 
 import 'codec.dart';
 
@@ -19,6 +20,14 @@ enum GpuCheckMode {
   /// request check first.
   after,
 }
+
+/// Key of the GPU mode in `ProviderProfile.options` (name of
+/// [GpuCheckMode]); the setting belongs to the profile (WP82).
+const gpuCheckOption = 'gpuCheck';
+
+/// The GPU mode stored in [profile]; `null` if it has none.
+GpuCheckMode? gpuModeOf(ProviderProfile profile) =>
+    GpuCheckMode.values.asNameMap()[profile.options[gpuCheckOption]];
 
 /// Outcome of a GPU check.
 enum GpuVerdict {

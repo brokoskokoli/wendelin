@@ -239,6 +239,7 @@ String stageLabel(String stage) => switch (stage) {
   'e2ee.keyset' => 'Schlüsselsatz der Antwort',
   'gateway' => 'Gateway des Anbieters',
   'gpu' => 'GPU-Evidenz',
+  'gpu.evidence' => 'GPU-Nachweis des Anbieters',
   'receipt.fetch' => 'Quittung abgerufen',
   'receipt.signature' => 'Quittungs-Signatur',
   'receipt.binding' => 'Quittung an Sitzung gebunden',

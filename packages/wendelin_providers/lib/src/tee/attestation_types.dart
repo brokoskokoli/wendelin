@@ -56,6 +56,10 @@ enum AttestationStage {
   /// NVIDIA NRAS check of the GPU evidence.
   gpu('gpu'),
 
+  /// The provider delivers no GPU evidence for the model (WP82): NVIDIA
+  /// cannot check it; a restriction of the provider, not a failure.
+  gpuEvidence('gpu.evidence'),
+
   /// Receipt could be fetched.
   receiptFetch('receipt.fetch'),
 

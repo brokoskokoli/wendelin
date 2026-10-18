@@ -2,14 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/ui/design/design.dart' show ToolTlsHint;
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
 import 'package:wendelin/ui/settings/attestation_log_screen.dart';
 import 'package:wendelin/ui/settings/audit_entry_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_providers/wendelin_providers.dart' show GpuCheckMode;
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../support/tee_app_support.dart';
@@ -340,48 +338,12 @@ void main() {
     expect(find.text('Keine Einträge.'), findsOneWidget);
   });
 
-  group('GPU-Prüfung über NVIDIA', () {
-    testWidgets('Standard aus; Erklärung nennt NVIDIA und keine Inhalte', (
-      tester,
-    ) async {
-      final env = TestEnv();
-      final c = await pumpPage(tester, env, const AttestationLogScreen());
-      expect(c.read(gpuCheckModeProvider), GpuCheckMode.off);
-      expect(find.text('GPU-Prüfung über NVIDIA'), findsOneWidget);
-      expect(
-        find.textContaining('keine Inhalte deiner Anfragen'),
-        findsOneWidget,
-      );
-      expect(find.text('Aus'), findsOneWidget);
-      expect(find.text('Vorher'), findsOneWidget);
-      expect(find.text('Nachher'), findsOneWidget);
-    });
-
-    testWidgets('Wahl wird gespeichert und an die Provider weitergegeben', (
-      tester,
-    ) async {
-      final env = TestEnv();
-      final c = await pumpPage(tester, env, const AttestationLogScreen());
-      await tester.tap(find.text('Vorher'));
-      await settle(tester);
-      expect(c.read(gpuCheckModeProvider), GpuCheckMode.before);
-      expect(c.read(attestationHubProvider).gpuMode, GpuCheckMode.before);
-      expect(await env.storage.settings.get(AppSettings.gpuCheck), 'before');
-      expect(env.notifier.permissionRequests, 0);
-    });
-
-    testWidgets('„Nachher“ bittet um die Benachrichtigungs-Berechtigung', (
-      tester,
-    ) async {
-      final env = TestEnv();
-      env.notifier.granted = false;
-      final c = await pumpPage(tester, env, const AttestationLogScreen());
-      await tester.tap(find.text('Nachher'));
-      await settle(tester);
-      expect(env.notifier.permissionRequests, 1);
-      expect(c.read(gpuCheckModeProvider), GpuCheckMode.after);
-      expect(await env.storage.settings.get(AppSettings.gpuCheck), 'after');
-    });
+  testWidgets('GPU-Prüfung steht nicht mehr hier, sondern im Profil (WP82)', (
+    tester,
+  ) async {
+    final env = TestEnv();
+    await pumpPage(tester, env, const AttestationLogScreen());
+    expect(find.text('GPU-Prüfung über NVIDIA'), findsNothing);
   });
 
   testWidgets('Golden Prüfprotokoll-Liste und Detail', tags: ['golden'], (
