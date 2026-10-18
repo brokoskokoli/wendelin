@@ -273,18 +273,22 @@ class OverlaySheet extends StatelessWidget {
     final block = gpuBlock;
     if (!locked && block != null && onGpuBlock != null) {
       return [
-        if (request != null) Text('„$request“', style: WText.quote),
+        if (request != null)
+          Text(
+            '„$request“',
+            style: WText.quote,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ConfirmationCard(
           key: const ValueKey('gpuBlockCard'),
           title: block.noEvidence
               ? 'Kein GPU-Nachweis'
               : 'GPU-Prüfung nicht bestanden',
           detail: block.noEvidence
-              ? 'Dieses Modell liefert keinen GPU-Nachweis. Die Anfrage '
-                    'wurde nicht gesendet.'
-              : 'Die GPU-Prüfung ist fehlgeschlagen.'
-                    '${gpuBlockReason(block.reason)} Die Anfrage wurde '
-                    'nicht gesendet.',
+              ? 'Die Anfrage wurde nicht gesendet.'
+              : 'Nicht gesendet.${gpuBlockReason(block.reason)}',
+          compact: true,
           toolName: 'GPU-Prüfung',
           risk: RiskLevel.external,
           onYes: () => onGpuBlock!(sendWithout: true),

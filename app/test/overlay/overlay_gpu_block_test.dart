@@ -1,6 +1,7 @@
 // WP82: the overlay shows a card for a request stopped by the GPU check
 // (no evidence) instead of the technical error; the block is cleared after
 // use, dismissal and a new turn.
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
@@ -115,6 +116,35 @@ void main() {
     await pumpUntil(tester, find.text('Ruhig: 0,4 m Welle.'));
     expect(c.read(agentControllerProvider).gpuBlock, isNull);
     expect(find.text('Kein GPU-Nachweis'), findsNothing);
+    await settle(tester);
+    await tester.pump(const Duration(seconds: 30));
+  });
+
+  testWidgets('Phone 411x914: Button der Karte erreichbar und tippbar', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(411 * 3, 914 * 3);
+    tester.view.devicePixelRatio = 3;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    addTearDown(tester.view.reset);
+    final c = await pump(tester);
+    final agent = c.read(agentControllerProvider.notifier);
+    agent
+        .submit(UserInput(text: 'Wie wird das Wetter morgen am Meer?'))
+        .listen((_) {});
+    await pumpUntil(tester, find.text('Kein GPU-Nachweis'));
+    final button = find.text('Ohne GPU-Prüfung senden');
+    final rect = tester.getRect(button);
+    final viewport = tester.getRect(find.byType(SingleChildScrollView).first);
+    expect(
+      viewport.contains(rect.center),
+      isTrue,
+      reason: 'Button liegt im sichtbaren Bereich ($rect in $viewport)',
+    );
+    await tester.tap(button);
+    await pumpUntil(tester, find.text('Ruhig: 0,4 m Welle.'));
+    expect(gateway.requests, 1);
     await settle(tester);
     await tester.pump(const Duration(seconds: 30));
   });
