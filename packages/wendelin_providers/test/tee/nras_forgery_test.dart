@@ -50,7 +50,6 @@ NrasTokenVerifier _verifierFor(
   DateTime? now,
   Duration maxAge = const Duration(hours: 1),
   Duration minRefetch = Duration.zero,
-  int Function()? calls,
 }) {
   final clock = now ?? _iat.add(const Duration(minutes: 1));
   return NrasTokenVerifier(
