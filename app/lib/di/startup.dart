@@ -5,6 +5,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'app_settings.dart';
 import 'preference_models.dart';
+import 'weather_config.dart';
 
 /// Settings read once before the first frame.
 @immutable
@@ -20,6 +21,7 @@ final class StartupSettings {
     this.retentionDays = 30,
     this.toolPrefs = const ToolPrefs(),
     this.webSearch,
+    this.weather = const WeatherConfig(),
     this.lists = const [],
     this.obsidian = const ObsidianPrefs(),
     this.secureScreen = false,
@@ -53,6 +55,9 @@ final class StartupSettings {
 
   /// Web search service.
   final WebSearchConfig? webSearch;
+
+  /// Weather service and home place.
+  final WeatherConfig weather;
 
   /// The user's lists.
   final List<ListDefinition> lists;
@@ -90,6 +95,7 @@ final class StartupSettings {
       retentionDays: await settings.get(AppSettings.retentionDays) ?? 30,
       toolPrefs: await settings.get(AppSettings.toolPrefs) ?? const ToolPrefs(),
       webSearch: await settings.get(AppSettings.webSearch),
+      weather: await settings.get(AppSettings.weather) ?? const WeatherConfig(),
       lists: await settings.get(AppSettings.lists) ?? const [],
       obsidian:
           await settings.get(AppSettings.obsidian) ?? const ObsidianPrefs(),

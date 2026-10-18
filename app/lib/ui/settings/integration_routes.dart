@@ -7,6 +7,7 @@ import 'http_tools_screen.dart';
 import 'lists_screen.dart';
 import 'mcp/mcp_servers_screen.dart';
 import 'obsidian_screen.dart';
+import 'weather_screen.dart';
 import 'web_search_screen.dart';
 
 /// Routes of the settings pages of single integrations. A new integration
@@ -17,6 +18,7 @@ Map<String, WidgetBuilder> integrationRoutes() => {
   AppRoutes.httpToolNew: (_) => const HttpToolEditorScreen(),
   AppRoutes.bring: (_) => const BringScreen(),
   AppRoutes.lists: (_) => const ListsScreen(),
+  AppRoutes.weather: (_) => const WeatherScreen(),
   AppRoutes.webSearch: (_) => const WebSearchScreen(),
   AppRoutes.obsidian: (_) => const ObsidianScreen(),
 };
