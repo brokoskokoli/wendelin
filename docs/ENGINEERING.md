@@ -137,6 +137,6 @@ Testarten:
 
 ## Git
 
-- Commit-Identität ausschließlich `Stefan Richter <16724498+brokoskokoli@users.noreply.github.com>` (repo-lokal konfiguriert; Hook prüft das). Erlaubte Co-Author-Zeile: `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine anderen Namen oder Mail-Adressen (insbesondere keine Arbeitgeber-Domains).
+- Commit-Identität ausschließlich `brokoskokoli <16724498+brokoskokoli@users.noreply.github.com>` (aus `~/.gitconfig-smart-ssh` für `~/ai`; Hook prüft das). Einziger erlaubter Trailer, keine `Claude-Session`-Zeile: `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine anderen Namen oder Mail-Adressen (insbesondere keine Arbeitgeber-Domains).
 - Ein Arbeitspaket = ein Branch `wp/<nr>-<slug>`, Merge nach `main` erst nach bestandenem Review.
 - Commit-Nachrichten: `WP<nr>: <was>` auf Deutsch oder Englisch, knapp.

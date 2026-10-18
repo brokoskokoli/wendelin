@@ -35,8 +35,8 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - Kurze Rollen-Briefings für Agenten liegen in `docs/agents/` (`coder.md`, `reviewer.md`, `integrator.md`, `common.md`).
 
 ## Git und Identität (wichtig)
-- Erlaubt sind nur `Stefan Richter <16724498+brokoskokoli@users.noreply.github.com>` und der Trailer `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine anderen Namen oder Mailadressen, insbesondere keine Arbeitgeber-Domains.
-- Die Identität ist repo-lokal gesetzt, Hooks in `tool/hooks/` prüfen sie. Niemals `--no-verify` oder Identitäts-Overrides verwenden.
+- Erlaubt ist nur die Identität für `~/ai` (`~/.gitconfig-smart-ssh` per includeIf): `brokoskokoli <16724498+brokoskokoli@users.noreply.github.com>`, dazu als einziger Trailer `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`. Keine weiteren Trailer (insbesondere keine `Claude-Session`-Zeile), keine anderen Namen oder Mailadressen, insbesondere keine Arbeitgeber-Domains.
+- Die Identität kommt aus der globalen `~/ai`-Konfiguration (kein repo-lokaler Override), Hooks in `tool/hooks/` prüfen sie. Niemals `--no-verify` oder Identitäts-Overrides verwenden.
 - Das Repo ist öffentlich (`github.com/brokoskokoli/wendelin`). Keine Secrets, keine privaten Daten.
 
 ## Secrets und Live-Tests

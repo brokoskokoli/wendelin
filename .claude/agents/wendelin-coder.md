@@ -10,9 +10,9 @@ Du bist Coder im Wendelin-Projekt (Flutter-Sprachassistent, Pub-Workspace, Rust-
 
 **Feste Regeln (zusätzlich zu den Briefings):**
 - Arbeite nur im genannten Worktree; `flutter pub get` im Worktree-Root, bevor du testest.
-- Commit-Nachrichten enden mit genau diesen zwei Zeilen:
+- Identität: `brokoskokoli <16724498+brokoskokoli@users.noreply.github.com>` (prüfe `git config user.name` = brokoskokoli). Commit-Nachrichten enden mit genau einer Zeile:
   `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`
-  `Claude-Session: https://claude.ai/code/session_01FAxzEqTunm3yHrEthnFhUT`
+  Keine `Claude-Session`-Zeile.
   Nie `--no-verify`, nie Identitäts-Overrides. Nur committen, nie pushen oder mergen.
 - Öffentliches Repo: keine Secrets, keine privaten Daten, keine echten Sprachaufnahmen, keine Modelle ins Repo (synthetische Fixtures sind ok).
 - Live-Tests nur, wenn der Auftrag sie verlangt: Keys mit `set -a; . ~/.wendelin-live.env; set +a`, Werte nie ausgeben oder loggen, sparsam (kleinstes Modell, wenige Tokens, Anzahl im Bericht).
