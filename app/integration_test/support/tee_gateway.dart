@@ -113,6 +113,9 @@ final class FixtureGateway {
   /// Chat requests received.
   int chats = 0;
 
+  /// Delay before a receipt is served (WP81: the answer must not wait).
+  Duration receiptDelay = Duration.zero;
+
   /// The service side of the end-to-end encryption (WP62): decrypts the
   /// requests and encrypts the answers with the real protocol.
   final FakeE2eeService e2ee = FakeE2eeService(
@@ -157,6 +160,9 @@ final class FixtureGateway {
     }
     if (path.contains('aci/sessions/')) return json(upToDateSession());
     if (path.contains('aci/receipts/')) {
+      if (receiptDelay > Duration.zero) {
+        await Future<void>.delayed(receiptDelay);
+      }
       final r = _copy(jsonDecode(receipt));
       final id = _sha(Uint8List.fromList(utf8.encode(_jcs(upToDateSession()))))
           .substring('sha256:'.length);
