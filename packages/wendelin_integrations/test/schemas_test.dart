@@ -26,6 +26,11 @@ void main() {
       ),
     ),
     BringIntegration(FakeBringApi(), FakeBringSecrets()),
+    WeatherIntegration(
+      service: FakeWeatherService(),
+      marine: FakeMarineService(),
+      geocoder: FakeGeocoder(const []),
+    ),
   ];
   final tools = [for (final i in integrations) ...i.tools];
 
@@ -66,6 +71,8 @@ void main() {
       'bring__add_items',
       'bring__remove_item',
       'bring__complete_item',
+      'weather__forecast',
+      'weather__marine',
     });
     expect(tools.map((t) => t.name).toSet(), hasLength(tools.length));
   });

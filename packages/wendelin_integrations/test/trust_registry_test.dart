@@ -31,6 +31,8 @@ const _trusted = <String, bool>{
   'obsidian__open_note': false,
   'bring__list_lists': false,
   'bring__get_items': false,
+  'weather__forecast': false, // place names come from a geocoding service
+  'weather__marine': false,
   // Writes that echo stored or foreign text.
   'calendar__update_event': false,
   'calendar__delete_event': false,
@@ -77,6 +79,11 @@ void main() {
       ),
     ),
     BringIntegration(FakeBringApi(), FakeBringSecrets()),
+    WeatherIntegration(
+      service: FakeWeatherService(),
+      marine: FakeMarineService(),
+      geocoder: FakeGeocoder(const []),
+    ),
   ];
   final tools = [for (final i in integrations) ...i.tools];
 
