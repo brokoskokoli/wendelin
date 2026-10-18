@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, alle Sitzungen pausiert
+Stand: 2026-10-18 abends, WP91 und WP84 laufen wieder
 
 ## Meilensteine
 
@@ -34,14 +34,14 @@ Stand: 2026-10-18 abends, alle Sitzungen pausiert
 | WP81b | Nächster Modellaufruf parallel zur Quittung | geplant | freigegeben Stefan 2026-10-18 |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
-| WP84 | Spotify | wartet | Review: nachbessern (Muss: Refresh-Token-Rotation testen; 2 Soll; 2 rote App-Tests nach Merge main); HEAD cadb487, Übergabe `handoff/wp84-session.md` |
+| WP84 | Spotify | in Arbeit | Review: nachbessern (Muss: Refresh-Token-Rotation testen; 2 Soll; 2 rote App-Tests nach Merge main); HEAD cadb487, Übergabe `handoff/wp84-session.md` |
 | WP85 | Kontakte/SMS/Anrufe | geplant | – |
 | WP86 | Standort/Maps | geplant | – |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | wartet | Review steht aus (HEAD 38e09e9) |
 | WP89 | Todoist/Google Tasks | geplant | nach WP88 |
 | WP90 | Mediensteuerung | wartet | Review und E2E (Player-App auf Emulator) stehen aus |
-| WP91 | Home Assistant | wartet | Review: nachbessern (Muss: Token per WebSocket-Redirect an fremden Host; Szene mit Schloss/Cover ohne Bestätigung; 4 Soll); dann Merge main, CI, E2E; HEAD a1aa104, Übergabe `handoff/wp91-session.md` |
+| WP91 | Home Assistant | in Arbeit | K57 (switch: „immer bestätigen“ je Entität); Review: nachbessern (Muss: Token per WebSocket-Redirect an fremden Host; Szene mit Schloss/Cover ohne Bestätigung; 4 Soll); dann Merge main, CI, E2E; HEAD a1aa104, Übergabe `handoff/wp91-session.md` |
 | WP92a–c | Sprechererkennung | geplant | WP92c nach WP91 |
 | WP93 | Wake Word im Chat | geplant | – |
 | WP94 | Schnellwechsel Agent | geplant | – |
