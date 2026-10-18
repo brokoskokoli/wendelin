@@ -55,6 +55,31 @@ final class ScriptedAgent implements AgentRun {
   void cancel() {}
 }
 
+/// Plays [before], then waits for [gate] (a pending receipt), then [after].
+/// Emits `AgentTextComplete` after [before] like the agent loop does.
+final class GatedAgent implements AgentRun {
+  GatedAgent({required this.before, required this.gate, required this.after});
+
+  final List<AgentEvent> before;
+  final Future<void> gate;
+  final List<AgentEvent> after;
+
+  @override
+  Stream<AgentEvent> run(UserInput input) async* {
+    for (final e in before) {
+      yield e;
+    }
+    yield const AgentTextComplete();
+    await gate;
+    for (final e in after) {
+      yield e;
+    }
+  }
+
+  @override
+  void cancel() {}
+}
+
 /// Agent whose stream fails (contract violation).
 final class BrokenAgent implements AgentRun {
   @override
@@ -404,6 +429,66 @@ void main() {
       h.pipeline.start();
       settle(async);
       expect(h.tts.spoken, ['Du hast heute zwei Termine.']);
+    });
+  });
+
+  group('Sprechen vor der Quittung (WP81)', () {
+    const red = AttestationStatusChanged(
+      stepId: 's:1',
+      status: AttestationStatus.red,
+      logId: 'att-1',
+    );
+
+    test('letzter Satz wird vor Quittung und Ende gesprochen', () {
+      runFake((async) {
+        final receipt = Completer<void>();
+        final h = Harness(
+          agent: GatedAgent(
+            before: [const AgentTextDelta('Das Licht ist an.')],
+            gate: receipt.future,
+            after: [
+              const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+            ],
+          ),
+        );
+        h.pipeline.start();
+        settle(async);
+        // Receipt still open: the sentence is spoken already.
+        expect(receipt.isCompleted, isFalse);
+        expect(h.tts.spoken, ['Das Licht ist an.']);
+        expect(h.agentEvents.whereType<AgentDone>(), isEmpty);
+        receipt.complete();
+        settle(async);
+        expect(h.agentEvents.whereType<AgentDone>(), hasLength(1));
+        expect(h.tts.spoken, ['Das Licht ist an.']);
+      });
+    });
+
+    test('rote Quittung: Ausgabe wird abgebrochen, Hinweis gesprochen', () {
+      runFake((async) {
+        final receipt = Completer<void>();
+        final h = Harness(
+          utteranceDuration: const Duration(seconds: 5),
+          agent: GatedAgent(
+            before: [const AgentTextDelta('Erster langer Satz. Zweiter Satz.')],
+            gate: receipt.future,
+            after: [
+              red,
+              const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+            ],
+          ),
+        );
+        h.pipeline.start();
+        async.elapse(
+          const Duration(seconds: 3),
+        ); // listening, STT, 1st sentence
+        expect(h.tts.spoken, ['Erster langer Satz.']);
+        receipt.complete(); // red arrives while the first sentence plays
+        settle(async);
+        expect(h.tts.stops, greaterThan(0));
+        expect(h.tts.spoken, ['Erster langer Satz.', VoiceTexts.de.unverified]);
+        expect(h.tts.spoken, isNot(contains('Zweiter Satz.')));
+      });
     });
   });
 

@@ -274,7 +274,7 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// Returns whether it was taken. Nothing is verified less: the session is
   /// exactly one this process verified completely; it ends at the same
   /// `not_after` as there.
-  bool adoptSessionOf(AttestedProvider previous) {
+  bool adoptSessionOf(AttestedProvider previous, {String? reason}) {
     final taken = previous._session;
     final pin = previous.tlsPin?.expected;
     final gate = tlsPin;
@@ -298,7 +298,10 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
     if (mine is NearVerifier && theirs is NearVerifier) {
       mine.adoptGpuEvidence(theirs);
     }
-    _audit.log('Wendelin/attest: Sitzung übernommen (Profil neu aufgebaut)');
+    _audit.log(
+      'Wendelin/attest: Sitzung übernommen (Profil neu aufgebaut'
+      '${reason == null ? '' : ': $reason'})',
+    );
     return true;
   }
 

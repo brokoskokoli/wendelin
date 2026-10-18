@@ -82,6 +82,14 @@ final class SpeechQueue {
     return dropped;
   }
 
+  /// Drops everything waiting and stops the sentence being spoken; the
+  /// queue stays usable (unlike [stop]).
+  Future<void> interrupt() async {
+    if (_stopped) return;
+    _pending.clear();
+    if (_current != null) await tts.stop();
+  }
+
   /// Clears the queue and stops the engine. The queue accepts nothing
   /// afterwards.
   Future<void> stop() async {
