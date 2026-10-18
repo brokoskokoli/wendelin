@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/chat_entry.dart';
 import '../../agent/conversation_state.dart';
+import '../attestation/attestation_texts.dart' show gpuBlockReason;
 import '../design/design.dart';
 import '../screens/bring_share_card.dart';
 import '../screens/confirmation_sheet.dart';
@@ -90,7 +91,16 @@ class OverlaySheet extends StatelessWidget {
     this.privateSince,
     this.privateByRequest = true,
     this.onNewConversation,
+    this.gpuBlock,
+    this.onGpuBlock,
   });
+
+  /// A request stopped by the GPU check (WP82): shown as a card with the
+  /// offer to send it once without the check.
+  final GpuBlock? gpuBlock;
+
+  /// Answers [gpuBlock]: `true` sends the request once without GPU check.
+  final void Function({required bool sendWithout})? onGpuBlock;
 
   /// Whether the private state comes from a „privat“ request.
   final bool privateByRequest;
@@ -260,6 +270,30 @@ class OverlaySheet extends StatelessWidget {
     final request = exchange.request;
     final q = question;
     final statusText = status ?? exchange.notice;
+    final block = gpuBlock;
+    if (!locked && block != null && onGpuBlock != null) {
+      return [
+        if (request != null) Text('„$request“', style: WText.quote),
+        ConfirmationCard(
+          key: const ValueKey('gpuBlockCard'),
+          title: block.noEvidence
+              ? 'Kein GPU-Nachweis'
+              : 'GPU-Prüfung nicht bestanden',
+          detail: block.noEvidence
+              ? 'Dieses Modell liefert keinen GPU-Nachweis. Die Anfrage '
+                    'wurde nicht gesendet.'
+              : 'Die GPU-Prüfung ist fehlgeschlagen.'
+                    '${gpuBlockReason(block.reason)} Die Anfrage wurde '
+                    'nicht gesendet.',
+          toolName: 'GPU-Prüfung',
+          risk: RiskLevel.external,
+          onYes: () => onGpuBlock!(sendWithout: true),
+          onNo: () => onGpuBlock!(sendWithout: false),
+          yesLabel: 'Ohne GPU-Prüfung senden',
+          noLabel: 'Abbrechen',
+        ),
+      ];
+    }
     // Open confirmation: the same sheet as in docs/design/screens/
     // bestaetigung (quote, card, hint), nothing else.
     if (q != null && _asking) {

@@ -78,11 +78,17 @@ final class GpuGate {
   /// `null` if that could not be found out (no verifier, network). Local
   /// part only, independent of [mode]; used by the setup.
   Future<bool?> hasEvidence(String model) async {
-    final v = verifier;
-    if (v == null) return null;
-    final r = await v.verifyLocal(model: model);
+    final r = await localCheck(model);
+    if (r == null) return null;
     if (r.ok) return true;
     return r.category == GpuReason.noEvidence ? false : null;
+  }
+
+  /// The local part of the GPU check (evidence present, our nonce in it);
+  /// `null` without verifier. A real failure (e.g. nonce mismatch) is not
+  /// „no evidence“ and must stay visible (setup).
+  Future<GpuAttestationResult?> localCheck(String model) async {
+    return verifier?.verifyLocal(model: model);
   }
 
   /// Runs before a request; returns the error that blocks it, or `null`.

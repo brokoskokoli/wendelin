@@ -233,13 +233,10 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
             nonce: '',
           );
         }
-        if (_noEntries(given.payload)) {
+        final shape = _shape(given.payload);
+        if (shape != _Shape.listed) {
           return (
-            result: const GpuAttestationResult(
-              GpuVerdict.failed,
-              _emptyEvidence,
-              GpuReason.noEvidence,
-            ),
+            result: _shapeFailure(shape),
             payload: null,
             nonce: given.nonce,
           );
@@ -300,24 +297,20 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
           nonce: nonce,
         );
       }
-      final payload = _payload(report.bodyBytes);
+      final parsed = _payload(report.bodyBytes);
+      final payload = parsed.payload;
       if (payload == null) {
         return (
-          result: fail(
-            GpuVerdict.failed,
-            'Keine GPU-Evidenz im Bericht des Anbieters',
-            GpuReason.noEvidence,
+          result: _shapeFailure(
+            parsed.unreadable ? _Shape.unreadable : _Shape.none,
           ),
           payload: null,
           nonce: nonce,
         );
       }
-      if (_noEntries(payload)) {
-        return (
-          result: fail(GpuVerdict.failed, _emptyEvidence, GpuReason.noEvidence),
-          payload: null,
-          nonce: nonce,
-        );
+      final shape = _shape(payload);
+      if (shape != _Shape.listed) {
+        return (result: _shapeFailure(shape), payload: null, nonce: nonce);
       }
       if ((payload['nonce'] as String?)?.toLowerCase() != nonce) {
         return (
@@ -358,12 +351,30 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
       'Der Anbieter liefert für dieses Modell keine GPU-Evidenz '
       '(evidence_list leer), NVIDIA kann nichts prüfen';
 
-  /// Whether the payload lists no GPU at all (NRAS would answer 400
-  /// `INVALID_EVIDENCE`).
-  static bool _noEntries(Map<String, Object?> payload) {
+  /// Payload with a marker the verifier judges as unreadable (a payload the
+  /// provider sent, but that could not be decoded).
+  static const unreadableMarker = <String, Object?>{'evidence_list': false};
+
+  /// Missing/empty `evidence_list` is "no evidence" (the provider has none);
+  /// anything that is not a list is unreadable and stays red.
+  static _Shape _shape(Map<String, Object?> payload) {
     final list = payload['evidence_list'];
-    return list is! List || list.isEmpty;
+    if (list == null || (list is List && list.isEmpty)) return _Shape.none;
+    return list is List ? _Shape.listed : _Shape.unreadable;
   }
+
+  static GpuAttestationResult _shapeFailure(_Shape shape) =>
+      shape == _Shape.unreadable
+      ? const GpuAttestationResult(
+          GpuVerdict.failed,
+          'GPU-Evidenz des Anbieters unlesbar',
+          GpuReason.unreadable,
+        )
+      : const GpuAttestationResult(
+          GpuVerdict.failed,
+          _emptyEvidence,
+          GpuReason.noEvidence,
+        );
 
   /// Decodes an `nvidia_payload` (JSON text or object); `null` if unreadable.
   static Map<String, Object?>? decodePayload(Object? raw) {
@@ -375,16 +386,22 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
     }
   }
 
-  static Map<String, Object?>? _payload(List<int> body) {
+  static ({Map<String, Object?>? payload, bool unreadable}) _payload(
+    List<int> body,
+  ) {
     try {
       final report = jsonDecode(utf8.decode(body));
-      final raw = report is Map<String, Object?>
-          ? report['nvidia_payload']
-          : null;
+      if (report is! Map<String, Object?>) {
+        return (payload: null, unreadable: true);
+      }
+      final raw = report['nvidia_payload'];
+      if (raw == null) return (payload: null, unreadable: false);
       final decoded = raw is String ? jsonDecode(raw) : raw;
-      return decoded is Map<String, Object?> ? decoded : null;
+      return decoded is Map<String, Object?>
+          ? (payload: decoded, unreadable: false)
+          : (payload: null, unreadable: true);
     } on FormatException {
-      return null;
+      return (payload: null, unreadable: true);
     }
   }
 
@@ -421,3 +438,5 @@ final class NrasGpuVerifier implements GpuAttestationVerifier {
     }
   }
 }
+
+enum _Shape { none, unreadable, listed }

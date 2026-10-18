@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/gpu_check_migration.dart';
+import 'package:wendelin/di/provider_setup.dart';
 import 'package:wendelin/ui/settings/gpu_check_section.dart';
 import 'package:wendelin/ui/settings/provider_setup/model_step.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
@@ -114,6 +115,44 @@ void main() {
     );
   });
 
+  testWidgets(
+    'Golden Abschlussschritt: GPU-Abschnitt und Hinweiskarte',
+    tags: ['golden'],
+    (tester) async {
+      final gpu = FakeGpuAttestationVerifier(_none)..localResult = _none;
+      final env = TestEnv(
+        storedProfiles: true,
+        llmFactory: (profile, _) => scriptedTee(
+          verifier: ScriptedVerifier(),
+          gateway: ScriptedGateway(),
+          gpu: gpu,
+        ),
+      );
+      setView(tester, const Size(390, 1500));
+      await tester.pumpWidget(
+        env.app(
+          home: RepaintBoundary(
+            key: goldenKey,
+            child: const ProviderSetupScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Phala (RedPill)'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('apiKey')), 'k');
+      await tester.tap(find.text('Verbindung testen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Modell prüfen'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('noGpuEvidence')), findsOneWidget);
+      await expectLater(
+        find.byKey(goldenKey),
+        matchesGoldenFile('goldens/provider_abschluss_gpu.png'),
+      );
+    },
+  );
+
   testWidgets('Nicht-TEE-Profil zeigt den Abschnitt nicht', (tester) async {
     final env = TestEnv(storedProfiles: true);
     setView(tester, const Size(390, 2400));
@@ -218,6 +257,92 @@ void main() {
         await migrateGlobalGpuCheck(storage.settings, storage.providerProfiles);
         await storage.providerProfiles.save(tee('neu'));
         expect(gpuModeOf((await storage.providerProfiles.get('neu'))!), isNull);
+      },
+    );
+  });
+
+  group('Einrichtung: Probe eines bestehenden Profils', () {
+    ProviderProfile editing(GpuCheckMode mode) => ProviderProfile(
+      id: 'phala-1',
+      name: 'Phala',
+      type: ProviderType.openaiCompatible,
+      baseUrl: 'https://api.redpill.ai/v1',
+      defaultModel: 'm',
+      privacy: PrivacyLevel.tee,
+      authMethod: const ApiKeyAuth('provider.phala-1.apiKey'),
+      options: {'attestation': 'phala', gpuCheckOption: mode.name},
+    );
+
+    Future<SetupTestResult> probe(
+      FakeGpuAttestationVerifier gpu,
+      GpuCheckMode mode,
+    ) async {
+      final secrets = InMemorySecretStore();
+      await secrets.write('provider.phala-1.apiKey', 'k-geheim');
+      final session = ProviderSetupSession(
+        template: providerTemplateById('phala')!,
+        profileId: 'phala-1',
+        secrets: secrets,
+        existing: editing(mode),
+        ids: SequentialIdGenerator(prefix: 'k'),
+        // The profile's own mode applies to the provider, as in the app.
+        create: (profile, _) => scriptedTee(
+          verifier: ScriptedVerifier(),
+          gateway: ScriptedGateway(),
+          gpu: gpu,
+          gpuMode: gpuModeOf(profile) ?? GpuCheckMode.off,
+        ),
+      );
+      return session.probe(model: 'm');
+    }
+
+    test('„Vorher“ im Profil: Modell ohne Nachweis bleibt wählbar, Hinweis '
+        'statt „Modell nicht nutzbar“', () async {
+      final gpu = FakeGpuAttestationVerifier(_none)..localResult = _none;
+      final r = await probe(gpu, GpuCheckMode.before);
+      expect(r.ok, isTrue, reason: r.message);
+      expect(r.gpuEvidence, isFalse);
+      expect(
+        r.stages.map((s) => s.stage),
+        contains(AttestationStage.gpuEvidence),
+      );
+    });
+
+    test('echter lokaler GPU-Fehler (Nonce) erscheint als fehlgeschlagene '
+        'Stufe, nicht als fehlender Nachweis', () async {
+      const mismatch = GpuAttestationResult(
+        GpuVerdict.failed,
+        'GPU-Evidenz bindet die Nonce nicht',
+        GpuReason.nonceMismatch,
+      );
+      final gpu = FakeGpuAttestationVerifier()..localResult = mismatch;
+      final r = await probe(gpu, GpuCheckMode.off);
+      expect(r.gpuEvidence, isNull);
+      final gpuStage = r.stages.singleWhere(
+        (s) => s.stage == AttestationStage.gpu,
+      );
+      expect(gpuStage.outcome, StageOutcome.fail);
+      expect(gpuStage.detail, contains('Nonce'));
+      expect(
+        r.stages.map((s) => s.stage),
+        isNot(contains(AttestationStage.gpuEvidence)),
+      );
+    });
+
+    test(
+      'Netzfehler bei der GPU-Evidenz ist keine fehlgeschlagene Stufe',
+      () async {
+        final gpu = FakeGpuAttestationVerifier()
+          ..localResult = const GpuAttestationResult(
+            GpuVerdict.unreachable,
+            'x',
+            GpuReason.unreachable,
+          );
+        final r = await probe(gpu, GpuCheckMode.off);
+        expect(
+          r.stages.map((s) => s.stage),
+          isNot(contains(AttestationStage.gpu)),
+        );
       },
     );
   });

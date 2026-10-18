@@ -242,8 +242,15 @@ final class ProviderSetupSession {
       return SetupTestResult(ok: false, message: '${e.message}');
     }
     final health = await provider.test();
-    final evidence = health.ok && provider is AttestedProvider
-        ? await provider.hasGpuEvidence(model)
+    final gpu = health.ok && provider is AttestedProvider
+        ? await provider.checkGpuEvidence(model)
+        : null;
+    final evidence = gpu == null
+        ? null
+        : gpu.ok
+        ? true
+        : gpu.category == GpuReason.noEvidence
+        ? false
         : null;
     return SetupTestResult(
       ok: health.ok,
@@ -259,6 +266,13 @@ final class ProviderSetupSession {
             AttestationStage.gpuEvidence,
             StageOutcome.info,
             'Anbieter liefert keinen GPU-Nachweis',
+          ),
+        // A real local GPU failure (nonce mismatch, unreadable evidence) is
+        // a failed stage, not a missing proof.
+        if (gpu != null && gpu.verdict == GpuVerdict.failed && evidence == null)
+          StageResult.fail(
+            AttestationStage.gpu,
+            'GPU-Evidenz fehlgeschlagen: ${gpu.detail ?? gpu.verdict.name}',
           ),
       ],
       gpuEvidence: evidence,

@@ -237,10 +237,18 @@ void main() {
       final c = env.container();
       addTearDown(c.dispose);
       await awaitCheckModule(c.read(attestationCryptoProvider.future));
-      final create = c.read(llmProviderFactoryProvider);
-      final p = create(_phala(), env.secrets.read);
-      expect(p, isA<AttestedProvider>());
-      expect(c.read(attestationHubProvider).provider('phala'), same(p));
+      final raw = c.read(llmProviderFactoryProvider);
+      final hub = c.read(attestationHubProvider);
+      // The factory alone (setup probes) leaves the hub alone ...
+      final probe = raw(_phala(), env.secrets.read);
+      expect(probe, isA<AttestedProvider>());
+      expect(hub.provider('phala'), isNull);
+      // ... the live path registers.
+      final p = hubRegistering(hub, raw)(_phala(), env.secrets.read);
+      expect(hub.provider('phala'), same(p));
+      // A later probe does not replace the live provider.
+      raw(_phala(), env.secrets.read);
+      expect(hub.provider('phala'), same(p));
     });
 
     test('GPU-Modus aus dem Profil, ohne Angabe aus', () async {
@@ -267,7 +275,10 @@ void main() {
         final c = env.container();
         addTearDown(c.dispose);
         await awaitCheckModule(c.read(attestationCryptoProvider.future));
-        final create = c.read(llmProviderFactoryProvider);
+        final create = hubRegistering(
+          c.read(attestationHubProvider),
+          c.read(llmProviderFactoryProvider),
+        );
         create(
           _phala().copyWith(
             id: 'a',

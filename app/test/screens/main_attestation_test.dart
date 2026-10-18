@@ -200,7 +200,7 @@ void main() {
       ..localResult = none;
     await sendText(tester, 'Vertrauliche Frage');
     expect(find.text('Kein GPU-Nachweis'), findsOneWidget);
-    expect(find.textContaining('keinen GPU-Nachweis'), findsOneWidget);
+    expect(find.textContaining('keinen GPU-Nachweis'), findsWidgets);
     expect(gateway.requests, 0);
     await tester.tap(find.text('Ohne GPU-Prüfung senden'));
     await _settle(tester);

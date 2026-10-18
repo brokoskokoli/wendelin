@@ -259,7 +259,7 @@ final class AgentController extends Notifier<ConversationState> {
       ref.read(correctedTitlesProvider).record(const []);
     }
     // Mark as running right away, so a second tap cannot start another run.
-    state = state.copyWith(running: true);
+    state = state.copyWith(running: true, clearGpuBlock: true);
     _out = out;
     _cancelRequested = false;
     final ProviderConfig? providers;
@@ -443,8 +443,22 @@ final class AgentController extends Notifier<ConversationState> {
   /// Whether [text] asks for a new topic (see [isNewTopicCommand]).
   static bool isNewTopicCommand(String text) => isNewTopicPhrase(text);
 
-  void _onEvent(String sessionId, AgentEvent event) {
-    _audit.agentEvent(sessionId, event);
+  void _onEvent(String sessionId, AgentEvent original) {
+    _audit.agentEvent(sessionId, original);
+    // A request stopped for lack of GPU evidence is shown and spoken with a
+    // plain hint instead of the technical message (WP82).
+    final event =
+        original is AgentFailed &&
+            original.cause is AttestationFailedException &&
+            (original.cause! as AttestationFailedException).stage == 'gpu' &&
+            (original.cause! as AttestationFailedException).category ==
+                GpuReason.noEvidence
+        ? AgentFailed(
+            error: original.error,
+            message: gpuNoEvidenceSpoken,
+            cause: original.cause,
+          )
+        : original;
     _out?.add(event);
     switch (event) {
       case ToolCallFinished(:final call, :final outcome):

@@ -178,6 +178,54 @@ void main() {
       expect(r.detail, contains('Nonce'));
     });
 
+    Future<GpuAttestationResult> withPayload(Object? payload) {
+      final report = jsonDecode(_report) as Map<String, Object?>;
+      report['nvidia_payload'] = payload;
+      return _verifier((r) => _ok(jsonEncode(report))).verifyLocal(model: 'm');
+    }
+
+    test('Nachweis fehlt oder leer: no_evidence', () async {
+      expect(
+        (await withPayload({'nonce': 'x', 'evidence_list': <Object?>[]}))
+            .category,
+        GpuReason.noEvidence,
+      );
+      expect(
+        (await withPayload({'nonce': 'x'})).category,
+        GpuReason.noEvidence,
+      );
+      expect((await withPayload(null)).category, GpuReason.noEvidence);
+    });
+
+    test(
+      'Nachweis unlesbar (kein JSON, keine Liste, kein Objekt): rot',
+      () async {
+        for (final bad in <Object>[
+          '{kaputt',
+          {'nonce': 'x', 'evidence_list': 'quatsch'},
+          {
+            'nonce': 'x',
+            'evidence_list': {'a': 1},
+          },
+          '[1,2]',
+        ]) {
+          final r = await withPayload(bad);
+          expect(r.category, GpuReason.unreadable, reason: '$bad');
+          expect(r.verdict, GpuVerdict.failed);
+        }
+      },
+    );
+
+    test('evidenceSource: unlesbare Evidenz ist nicht no_evidence', () async {
+      final v = NrasGpuVerifier(
+        baseUrl: Uri.parse('https://gateway.test/v1'),
+        client: MockClient((r) async => http.Response('x', 500)),
+        evidenceSource: () async =>
+            (payload: NrasGpuVerifier.unreadableMarker, nonce: 'ab'),
+      );
+      expect((await v.verifyLocal(model: 'm')).category, GpuReason.unreadable);
+    });
+
     test('Bericht nicht abrufbar: unreachable', () async {
       final v = _verifier((r) => http.Response('x', 503));
       expect((await v.verifyLocal(model: 'm')).verdict, GpuVerdict.unreachable);

@@ -310,6 +310,11 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   /// evidence, so no GPU check is possible); `null` if unknown.
   Future<bool?> hasGpuEvidence(String model) => _gpu.hasEvidence(model);
 
+  /// Local GPU evidence check for [model] (setup); `null` without verifier.
+  /// Unlike [hasGpuEvidence] it also tells a real failure.
+  Future<GpuAttestationResult?> checkGpuEvidence(String model) =>
+      _gpu.localCheck(model);
+
   @override
   Stream<ChatEvent> chat(ChatRequest req, {CancelToken? cancel}) async* {
     _latest = null;
