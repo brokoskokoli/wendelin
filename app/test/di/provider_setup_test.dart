@@ -8,6 +8,7 @@ import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/di/provider_setup.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/routing.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
@@ -153,7 +154,7 @@ void main() {
       final s = session(f, secrets);
       await s.storeKey('  $_key  ');
       expect(await secrets.read('provider.p-1.apiKey'), _key);
-      final loaded = await s.loadModels();
+      final loaded = await s.loadModels(AppLocalizationsDe());
       expect(loaded.ok, isTrue);
       expect(loaded.models.map((m) => m.id), ['a', 'b']);
       expect(f.probedModels, isEmpty, reason: 'noch keine Probe');
@@ -171,7 +172,10 @@ void main() {
         final f = RecordingFactory(models: const [ModelInfo(id: 'qwen-7b')]);
         final s = session(f, InMemorySecretStore(), template: template);
         await s.storeKey(_key);
-        final loaded = await s.loadModels(baseUrl: 'http://nas:11434/v1');
+        final loaded = await s.loadModels(
+          AppLocalizationsDe(),
+          baseUrl: 'http://nas:11434/v1',
+        );
         expect(loaded.ok, isTrue, reason: template);
         expect(loaded.models.single.id, 'qwen-7b');
         // Der Server kennt keinen Platzhalter: geprüft wird erst das gewählte.
@@ -196,7 +200,10 @@ void main() {
       ]) {
         final f = RecordingFactory(listError: error);
         final s = session(f, InMemorySecretStore(), template: 'custom');
-        final r = await s.loadModels(baseUrl: 'http://nas/v1');
+        final r = await s.loadModels(
+          AppLocalizationsDe(),
+          baseUrl: 'http://nas/v1',
+        );
         expect(r.ok, isTrue, reason: '$error');
         expect(r.models, isEmpty);
         expect(r.message, contains('Bitte die Modell-ID eingeben'));
@@ -210,7 +217,7 @@ void main() {
     test('falscher Key: Modelle laden scheitert mit Meldung', () async {
       final s = session(RecordingFactory(ok: false), InMemorySecretStore());
       await s.storeKey(_key);
-      final r = await s.loadModels();
+      final r = await s.loadModels(AppLocalizationsDe());
       expect(r.ok, isFalse);
       expect(r.message, contains('401'));
     });
@@ -219,7 +226,7 @@ void main() {
       final r = await session(
         RecordingFactory(),
         InMemorySecretStore(),
-      ).loadModels();
+      ).loadModels(AppLocalizationsDe());
       expect(r.ok, isFalse);
       expect(r.message, contains('API-Key'));
       final custom = session(
@@ -227,7 +234,10 @@ void main() {
         InMemorySecretStore(),
         template: 'custom',
       );
-      expect((await custom.loadModels()).message, contains('Base-URL'));
+      expect(
+        (await custom.loadModels(AppLocalizationsDe())).message,
+        contains('Base-URL'),
+      );
       expect((await custom.probe(model: 'x')).ok, isFalse);
     });
 
@@ -314,11 +324,17 @@ void main() {
     });
 
     test('Budget: Text ↔ Mikro-USD', () {
-      expect(parseBudgetMicros(''), isNull);
-      expect(parseBudgetMicros('5'), 5000000);
-      expect(parseBudgetMicros(r'2,50 $'), 2500000);
-      expect(() => parseBudgetMicros('viel'), throwsFormatException);
-      expect(() => parseBudgetMicros('-1'), throwsFormatException);
+      expect(parseBudgetMicros(AppLocalizationsDe(), ''), isNull);
+      expect(parseBudgetMicros(AppLocalizationsDe(), '5'), 5000000);
+      expect(parseBudgetMicros(AppLocalizationsDe(), r'2,50 $'), 2500000);
+      expect(
+        () => parseBudgetMicros(AppLocalizationsDe(), 'viel'),
+        throwsFormatException,
+      );
+      expect(
+        () => parseBudgetMicros(AppLocalizationsDe(), '-1'),
+        throwsFormatException,
+      );
       expect(budgetText(null), '');
       expect(budgetText(5000000), '5');
       expect(budgetText(2500000), '2,50');
@@ -350,7 +366,7 @@ void main() {
         ids: c.read(idGeneratorProvider),
       );
       await s.storeKey(_key);
-      expect((await s.loadModels()).ok, isTrue);
+      expect((await s.loadModels(AppLocalizationsDe())).ok, isTrue);
       expect((await s.probe(model: 'claude-x')).ok, isTrue);
       final profile = s.draft(model: 'claude-x', budgetMicros: 1000000);
       await c.read(profilesProvider.notifier).save(profile);

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../voice/wake/utterance_capture.dart';
 import '../../../voice/wake/wake_enroller.dart';
 import '../../design/design.dart';
@@ -13,22 +14,22 @@ import '../settings_page.dart';
 import 'wake_lifecycle.dart';
 
 /// Hint for recording [index] (0-based): near, far, quiet, normal.
-String enrollHint(int index, {int perStep = 4}) => switch (index ~/ perStep) {
-  0 => 'Sprich normal, das Handy nah vor dir.',
-  1 => 'Jetzt aus ein bis zwei Metern Abstand.',
-  2 => 'Jetzt leise, wie abends im Zimmer.',
-  _ => 'Wie du es im Alltag sagst, gern aus einer anderen Ecke.',
-};
+String enrollHint(AppLocalizations l, int index, {int perStep = 4}) =>
+    switch (index ~/ perStep) {
+      0 => l.wakeEnrollPrompt0,
+      1 => l.wakeEnrollPrompt1,
+      2 => l.wakeEnrollPrompt2,
+      _ => l.wakeEnrollPrompt3,
+    };
 
 /// Text for the verdict on the latest recording.
-String verdictText(UtteranceVerdict v, {String word = 'Wendelin'}) =>
+String verdictText(AppLocalizations l, UtteranceVerdict v, {String? word}) =>
     switch (v) {
-      UtteranceVerdict.accepted => 'Gehört.',
-      UtteranceVerdict.noSpeech => 'Nichts gehört. Noch einmal bitte.',
-      UtteranceVerdict.tooQuiet => 'Zu leise. Bitte etwas lauter.',
-      UtteranceVerdict.cutOff =>
-        'Zu früh angefangen. Warte kurz und sprich dann.',
-      UtteranceVerdict.tooLong => 'Zu lang. Nur „$word“, bitte.',
+      UtteranceVerdict.accepted => l.wakeEnrollHeard,
+      UtteranceVerdict.noSpeech => l.wakeEnrollNoSpeech,
+      UtteranceVerdict.tooQuiet => l.wakeEnrollTooQuiet,
+      UtteranceVerdict.cutOff => l.wakeEnrollTooEarly,
+      UtteranceVerdict.tooLong => l.wakeEnrollTooLong(word ?? l.appName),
     };
 
 /// Einstellungen → Sprache → Aktivierungswort → „Stimme einlernen“:
@@ -126,12 +127,12 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
     final e = _enroller;
     if (_denied || e == null) {
       return SettingsPage(
-        title: 'Stimme einlernen',
+        title: context.l10n.wakeEnrollTitle,
         children: [
           Text(
             _denied
-                ? 'Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.'
-                : 'Mikrofon wird vorbereitet …',
+                ? context.l10n.wakeEnrollNoMic
+                : context.l10n.wakeEnrollMicPreparing,
             style: WText.intro,
           ),
         ],
@@ -143,12 +144,12 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
   Widget _body(WakeEnroller e) {
     final done = e.phase == EnrollPhase.complete;
     final failed = e.error != null;
-    final word = widget.stop ? 'Stopp' : 'Wendelin';
+    final word = widget.stop ? context.l10n.stop : context.l10n.appName;
     return SettingsPage(
-      title: widget.stop ? '„Stopp“ einlernen' : 'Stimme einlernen',
-      intro:
-          'Sag „$word“, wenn du dran bist. Aus jeder Aufnahme behält '
-          'Wendelin nur Zahlenwerte; das Audio wird sofort verworfen.',
+      title: widget.stop
+          ? context.l10n.wakeEnrollTitleStop
+          : context.l10n.wakeWordEnroll,
+      intro: context.l10n.wakeEnrollIntro(word),
       children: [
         SectionCard(
           children: [
@@ -159,22 +160,26 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
                 spacing: WSpace.m,
                 children: [
                   Text(
-                    '${e.accepted} von ${e.target}',
+                    context.l10n.wakeEnrollProgress(e.accepted, e.target),
                     style: WText.screenTitle,
                   ),
                   LinearProgressIndicator(
                     value: e.accepted / e.target,
-                    semanticsLabel: 'Fortschritt Einlernen',
+                    semanticsLabel: context.l10n.wakeEnrollProgressLabel,
                   ),
                   if (!done && !failed) ...[
                     Text(
                       e.phase == EnrollPhase.processing
-                          ? 'Wird verarbeitet …'
-                          : 'Sag jetzt: „$word“',
+                          ? context.l10n.wakeEnrollProcessing
+                          : context.l10n.wakeEnrollSayNow(word),
                       style: WText.label,
                     ),
                     Text(
-                      enrollHint(e.accepted, perStep: widget.stop ? 3 : 4),
+                      enrollHint(
+                        context.l10n,
+                        e.accepted,
+                        perStep: widget.stop ? 3 : 4,
+                      ),
                       style: WText.detail,
                     ),
                     Waveform(
@@ -183,13 +188,14 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
                   ],
                   if (e.lastVerdict != null && !done)
                     Text(
-                      verdictText(e.lastVerdict!, word: word),
+                      verdictText(context.l10n, e.lastVerdict!, word: word),
                       style: WText.caption,
                     ),
-                  if (done) Text('Alle Aufnahmen sind da.', style: WText.label),
+                  if (done)
+                    Text(context.l10n.wakeEnrollAllThere, style: WText.label),
                   if (failed)
                     Text(
-                      'Das Einlernen ist gescheitert: ${e.error}',
+                      context.l10n.wakeEnrollFailed(e.error!),
                       style: WText.caption,
                     ),
                 ],
@@ -199,11 +205,13 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
         ),
         if (done || e.canFinish)
           PrimaryButton(
-            done ? 'Speichern' : 'Mit ${e.accepted} Aufnahmen speichern',
+            done
+                ? context.l10n.save
+                : context.l10n.wakeEnrollSaveWith(e.accepted),
             onPressed: () => unawaited(_finish(e)),
           ),
         WideButton(
-          'Abbrechen',
+          context.l10n.cancel,
           onPressed: () async {
             await e.cancel();
             if (mounted) Navigator.of(context).pop(false);

@@ -7,10 +7,11 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../di/providers.dart';
 import '../di/voice_providers.dart';
+import '../l10n/l10n.dart';
 
 /// The voice parts the app uses for push-to-talk and the overlay, or
 /// `null` while speech is not available on the device (Whisper or Silero
-/// not downloaded – the microphone then shows [voiceUnavailableHint]).
+/// not downloaded – the microphone then shows [voiceUnavailableError]).
 ///
 /// Device: [voiceComponentsProvider] of WP17 (`di/voice_providers.dart`:
 /// `record`, Silero VAD, Whisper, system/sherpa TTS). Demo mode:
@@ -39,8 +40,13 @@ final voiceReadyProvider = Provider<bool>((ref) {
   return installed(stt) && installed(SpeechModelCatalog.sileroVad.id);
 });
 
-/// Hint of the disabled microphone while speech recognition is missing.
-const voiceUnavailableHint = 'Spracherkennung laden: Einstellungen → Sprache';
+/// Marker in `VoiceUiState.error` while speech recognition is missing; the
+/// UI shows `AppLocalizations.voiceUnavailableHint` for it ([voiceStatusText]).
+const voiceUnavailableError = 'voice-unavailable';
+
+/// Visible text for the voice status/error [text] in the UI language.
+String voiceStatusText(AppLocalizations l, String text) =>
+    text == voiceUnavailableError ? l.voiceUnavailableHint : text;
 
 /// Voice error after the microphone permission was not given; the main
 /// screen shows it as a card with „Erlauben“ above the input row.

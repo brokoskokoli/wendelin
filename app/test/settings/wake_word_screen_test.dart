@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/wake_providers.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart' show WSwitch;
 import 'package:wendelin/ui/settings/wake/wake_calibrate_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_enroll_screen.dart';
@@ -257,7 +258,7 @@ void main() {
       await startEnroll(tester);
       await until(tester, find.text('1 von 15'));
       expect(find.text('Sag jetzt: „Wendelin“'), findsOneWidget);
-      expect(find.text(enrollHint(1)), findsOneWidget);
+      expect(find.text(enrollHint(AppLocalizationsDe(), 1)), findsOneWidget);
       await until(tester, find.text('Speichern'));
       expect(find.text('15 von 15'), findsOneWidget);
       expect(find.text('Alle Aufnahmen sind da.'), findsOneWidget);
@@ -319,7 +320,10 @@ void main() {
       final env = wakeEnv(audio: audio);
       await pumpWake(tester, env, const WakeWordScreen());
       await startEnroll(tester);
-      await until(tester, find.text(verdictText(UtteranceVerdict.tooQuiet)));
+      await until(
+        tester,
+        find.text(verdictText(AppLocalizationsDe(), UtteranceVerdict.tooQuiet)),
+      );
       expect(find.text('0 von 15'), findsOneWidget);
       await until(tester, find.text('2 von 15'));
       expect(find.text('Mit 2 Aufnahmen speichern'), findsNothing);

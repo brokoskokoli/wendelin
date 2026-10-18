@@ -6,8 +6,10 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/preferences.dart';
 import '../../di/voice_providers.dart';
+import '../../l10n/l10n.dart';
 import '../../platform/device_memory.dart';
 import '../design/design.dart';
+import '../onboarding/voice_download_step.dart';
 import '../routes.dart';
 import '../voice/microphone_access.dart';
 import 'model_download_row.dart';
@@ -34,7 +36,7 @@ class VoiceScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(voiceSettingsProvider).value;
     if (settings == null) {
-      return const SettingsPage(title: 'Sprache', children: []);
+      return SettingsPage(title: context.l10n.areaSpeech, children: []);
     }
     final catalog = ref.watch(speechModelCatalogProvider);
     final notifier = ref.read(voiceSettingsProvider.notifier);
@@ -47,26 +49,29 @@ class VoiceScreen extends ConsumerWidget {
         states[SpeechModelCatalog.sileroVad.id]?.phase == ModelPhase.installed;
 
     return SettingsPage(
-      title: 'Sprache',
-      intro:
-          'Wendelin erkennt Sprache auf dem Gerät (Whisper). Die Modelle '
-          'werden einmal geladen und bleiben auf dem Gerät.',
+      title: context.l10n.areaSpeech,
+      intro: context.l10n.voiceScreenIntro,
       children: [
-        ..._recognition(ref, settings, catalog, change, sttReady: sttReady),
-        ..._language(settings, appLanguage, change),
+        ..._recognition(
+          context.l10n,
+          ref,
+          settings,
+          catalog,
+          change,
+          sttReady: sttReady,
+        ),
+        ..._language(context.l10n, settings, appLanguage, change),
         _SpeechOutput(settings: settings, change: change),
-        ..._tuning(settings, change),
+        ..._tuning(context.l10n, settings, change),
         SettingsSection(
-          title: 'Assistent-Overlay',
+          title: context.l10n.voiceScreenOverlay,
           children: [
             SettingsRow(
-              title: 'Stopp schließt das Overlay',
-              detail:
-                  'Sagst du „Stopp“, zeigt Wendelin kurz „Abgebrochen“ '
-                  'und schließt das Overlay.',
+              title: context.l10n.voiceScreenStopClosesOverlay,
+              detail: context.l10n.voiceScreenStopClosesOverlayHint,
               trailing: WSwitch(
                 value: settings.stopClosesOverlay,
-                semanticLabel: 'Stopp schließt das Overlay',
+                semanticLabel: context.l10n.voiceScreenStopClosesOverlayLabel,
                 onChanged: (v) =>
                     change((s) => s.copyWith(stopClosesOverlay: v)),
               ),
@@ -74,11 +79,11 @@ class VoiceScreen extends ConsumerWidget {
           ],
         ),
         SettingsSection(
-          title: 'Aktivierungswort',
+          title: context.l10n.onboardingWakeWord,
           children: [
             SettingsRow(
-              title: 'Wendelin lernt deine Stimme',
-              detail: 'Einlernen, kalibrieren und ausprobieren',
+              title: context.l10n.voiceScreenLearnsVoice,
+              detail: context.l10n.voiceScreenLearnsVoiceDetail,
               onTap: () => Navigator.of(context).pushNamed(AppRoutes.wakeWord),
             ),
           ],
@@ -91,7 +96,7 @@ class VoiceScreen extends ConsumerWidget {
           bargeInAvailable: ref.watch(bargeInAvailableProvider),
         ),
         SettingsSection(
-          title: 'Lizenzen der Sprachmodelle',
+          title: context.l10n.voiceScreenModelLicenses,
           children: [
             for (final m in catalog.models)
               SettingsRow(
@@ -109,6 +114,7 @@ typedef _Change = void Function(VoiceSettings Function(VoiceSettings));
 
 /// Whisper models, voice activity model and the hints below them.
 List<Widget> _recognition(
+  AppLocalizations l,
   WidgetRef ref,
   VoiceSettings settings,
   SpeechModelCatalog catalog,
@@ -116,7 +122,7 @@ List<Widget> _recognition(
   required bool sttReady,
 }) => [
   SettingsSection(
-    title: 'Spracherkennung',
+    title: l.voiceScreenRecognition,
     children: [
       for (final m in catalog.ofKind(SpeechModelKind.stt))
         ModelDownloadRow(
@@ -127,35 +133,32 @@ List<Widget> _recognition(
       ModelDownloadRow(model: SpeechModelCatalog.sileroVad),
     ],
   ),
-  if (!sttReady)
-    Text(
-      'Für die Spracheingabe braucht Wendelin das gewählte '
-      'Whisper-Modell und die Sprachaktivitätserkennung.',
-      style: WText.caption,
-    ),
+  if (!sttReady) Text(l.voiceScreenRecognitionHint, style: WText.caption),
   if (_recommendSmall(ref, settings))
     Text(
-      'Empfohlen: small (genauer), '
-      '${megabytes(SpeechModelCatalog.whisperSmall.sizeBytes)} laden.',
+      l.voiceScreenRecommendSmall(
+        sizeLabel(l, SpeechModelCatalog.whisperSmall.sizeBytes),
+      ),
       style: WText.caption,
     ),
 ];
 
 /// Language of the spoken input.
 List<Widget> _language(
+  AppLocalizations l,
   VoiceSettings settings,
   String appLanguage,
   _Change change,
 ) => [
   SettingsSection(
-    title: 'Gesprochene Sprache',
+    title: l.voiceScreenSpokenLanguage,
     children: [
       for (final (value, title) in [
         (
           VoiceSettings.followApp,
-          'Wie die App (${languageNames[appLanguage] ?? appLanguage})',
+          l.voiceScreenLikeApp(languageNames[appLanguage] ?? appLanguage),
         ),
-        (VoiceSettings.detect, 'Automatisch erkennen'),
+        (VoiceSettings.detect, l.voiceScreenDetectAuto),
         for (final e in languageNames.entries) (e.key, e.value),
       ])
         _ChoiceRow(
@@ -165,30 +168,29 @@ List<Widget> _language(
         ),
     ],
   ),
-  Text(
-    'Mit fester Sprache erkennt Whisper kurze Sätze zuverlässiger.',
-    style: WText.caption,
-  ),
+  Text(l.voiceScreenFixedLanguageHint, style: WText.caption),
 ];
 
 /// Minimum speech duration and VAD sensitivity.
-List<Widget> _tuning(VoiceSettings settings, _Change change) => [
+List<Widget> _tuning(
+  AppLocalizations l,
+  VoiceSettings settings,
+  _Change change,
+) => [
   SettingsSection(
-    title: 'Feinabstimmung',
+    title: l.voiceScreenFineTuning,
     children: [
       _ChipsRow(
-        title: 'Mindestsprechdauer',
-        detail: 'Kürzere Geräusche (Klicks, Atmer) werden ignoriert.',
+        title: l.voiceScreenMinSpeech,
+        detail: l.voiceScreenMinSpeechDetail,
         values: VoiceSettings.minSpeechChoices,
         selected: settings.minSpeechMs,
-        label: (v) => '$v ms',
+        label: (v) => l.voiceScreenMs(v),
         onSelected: (v) => change((s) => s.copyWith(minSpeechMs: v)),
       ),
       _ChipsRow(
-        title: 'Empfindlichkeit der Spracherkennung',
-        detail:
-            'Schwelle von Silero VAD: niedriger hört leiser, höher '
-            'ignoriert mehr Geräusche.',
+        title: l.voiceScreenSensitivity,
+        detail: l.voiceScreenSensitivityDetail,
         values: VoiceSettings.thresholds,
         selected: settings.vadThreshold,
         label: (v) => v.toStringAsFixed(1).replaceAll('.', ','),
@@ -222,16 +224,20 @@ class _SpeechOutput extends ConsumerWidget {
       spacing: WSpace.l18,
       children: [
         SettingsSection(
-          title: 'Sprachausgabe',
+          title: context.l10n.voiceScreenSpeechOutput,
           children: [
             for (final (value, title, detail) in [
               (
                 TtsPreference.automatic,
-                'Automatisch',
-                'Systemstimme, sonst Offline-Stimme',
+                context.l10n.voiceScreenAutomatic,
+                context.l10n.voiceScreenAutomaticDetail,
               ),
-              (TtsPreference.system, 'Systemstimme', null),
-              (TtsPreference.sherpa, 'Offline-Stimme', 'sherpa-onnx'),
+              (TtsPreference.system, context.l10n.voiceScreenSystemVoice, null),
+              (
+                TtsPreference.sherpa,
+                context.l10n.voiceScreenOfflineVoice,
+                'sherpa-onnx',
+              ),
             ])
               _ChoiceRow(
                 title: title,
@@ -242,29 +248,30 @@ class _SpeechOutput extends ConsumerWidget {
           ],
         ),
         if (selection != null)
-          Text(ttsSelectionText(selection), style: WText.caption),
+          Text(ttsSelectionText(context.l10n, selection), style: WText.caption),
         SettingsSection(
-          title: 'Offline-Stimmen',
+          title: context.l10n.voiceScreenOfflineVoices,
           children: [
             SettingsRow(
-              title: 'Stimmen',
-              detail: 'Je Sprache eine weibliche und eine männliche Stimme',
+              title: context.l10n.voiceScreenVoices,
+              detail: context.l10n.voiceScreenVoicesDetail,
               onTap: () => Navigator.of(context).pushNamed(AppRoutes.voices),
             ),
           ],
         ),
         SettingsSection(
-          title: 'Stimme und Tempo',
+          title: context.l10n.voiceScreenVoiceAndTempo,
           children: [
             SettingsRow(
-              title: 'Systemstimme',
-              detail: settings.ttsVoice ?? 'Standard der Sprache',
+              title: context.l10n.voiceScreenSystemVoiceTitle,
+              detail:
+                  settings.ttsVoice ?? context.l10n.voiceScreenLanguageDefault,
               onTap: selection?.engine != TtsEngine.system
                   ? null
                   : () => unawaited(_chooseVoice(context, selection!.tts!)),
             ),
             _ChipsRow(
-              title: 'Tempo',
+              title: context.l10n.voiceScreenTempo,
               values: VoiceSettings.rates,
               selected: settings.ttsRate,
               label: (v) => '${v.toStringAsFixed(1).replaceAll('.', ',')}×',
@@ -273,7 +280,7 @@ class _SpeechOutput extends ConsumerWidget {
           ],
         ),
         WideButton(
-          'Probe hören',
+          context.l10n.voiceScreenListen,
           onPressed: selection?.tts == null
               ? null
               : () => unawaited(
@@ -300,17 +307,23 @@ class _SpeechOutput extends ConsumerWidget {
       context: context,
       builder: (context) => SimpleDialog(
         backgroundColor: WColors.surface,
-        title: Text('Stimme', style: WText.label),
+        title: Text(context.l10n.voiceScreenVoice, style: WText.label),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(''),
-            child: Text('Standard der Sprache', style: WText.body),
+            child: Text(
+              context.l10n.voiceScreenLanguageDefaultChip,
+              style: WText.body,
+            ),
           ),
           for (final v in voices)
             SimpleDialogOption(
               onPressed: () => Navigator.of(context).pop(v.id),
               child: Text(
-                '${v.name ?? v.id} (${v.language})',
+                context.l10n.voiceScreenVoiceLanguage(
+                  v.name ?? v.id,
+                  v.language,
+                ),
                 style: WText.body,
               ),
             ),
@@ -339,20 +352,15 @@ String sampleText(String language) =>
       _ => 'Hallo, ich bin Wendelin.',
     };
 
-/// German status line for the chosen speech output.
-String ttsSelectionText(TtsSelection s) => switch (s.engine) {
-  TtsEngine.system when s.fallback =>
-    'Keine Offline-Stimme für diese Sprache geladen – Wendelin spricht mit '
-        'der Systemstimme.',
-  TtsEngine.system => 'Wendelin spricht mit der Systemstimme.',
-  TtsEngine.sherpa when s.fallback =>
-    'Keine Systemstimme installiert – Wendelin spricht mit der '
-        'Offline-Stimme.',
-  TtsEngine.sherpa => 'Wendelin spricht mit der Offline-Stimme.',
-  TtsEngine.none =>
-    'Keine Sprachausgabe verfügbar: Antworten erscheinen nur auf dem '
-        'Bildschirm. Lade eine Offline-Stimme.',
-};
+/// Status line for the chosen speech output.
+String ttsSelectionText(AppLocalizations l, TtsSelection s) =>
+    switch (s.engine) {
+      TtsEngine.system when s.fallback => l.voiceScreenNoOfflineVoice,
+      TtsEngine.system => l.voiceScreenSpeaksSystem,
+      TtsEngine.sherpa when s.fallback => l.voiceScreenNoSystemVoice,
+      TtsEngine.sherpa => l.voiceScreenSpeaksOffline,
+      TtsEngine.none => l.voiceScreenNoSpeech,
+    };
 
 class _Microphone extends ConsumerWidget {
   const _Microphone();
@@ -361,13 +369,13 @@ class _Microphone extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final granted = ref.watch(microphoneGrantedProvider).value;
     return SettingsSection(
-      title: 'Mikrofon',
+      title: context.l10n.voiceScreenMicrophone,
       children: [
         SettingsRow(
-          title: 'Mikrofon',
+          title: context.l10n.voiceScreenMicrophoneTitle,
           detail: switch (granted) {
             true => 'erlaubt',
-            false => 'nicht erlaubt',
+            false => context.l10n.voiceScreenNotAllowed,
             null => '…',
           },
           trailing: granted == false
@@ -379,7 +387,7 @@ class _Microphone extends ConsumerWidget {
                     );
                     ref.invalidate(microphoneGrantedProvider);
                   },
-                  child: const Text('Erlauben'),
+                  child: Text(context.l10n.allow),
                 )
               : null,
         ),
@@ -407,7 +415,7 @@ class _ChoiceRow extends StatelessWidget {
     detail: detail,
     onTap: onTap,
     trailing: selected
-        ? const CheckStatusIcon(CheckStatus.ok, semanticLabel: 'gewählt')
+        ? CheckStatusIcon(CheckStatus.ok, semanticLabel: context.l10n.selected)
         : null,
   );
 }

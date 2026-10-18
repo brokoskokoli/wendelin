@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/ui/design/design.dart';
-import 'package:wendelin/ui/screens/main_parts.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_voice/testing.dart';
@@ -45,7 +44,7 @@ void main() {
       await tester.tap(find.byType(MicButton));
       await tester.pump(const Duration(milliseconds: 60));
       expect(micState(tester), MicState.listening);
-      expect(find.byTooltip(Composer.listeningLabel), findsOneWidget);
+      expect(find.byTooltip('Zuhören abbrechen'), findsOneWidget);
       expect(find.text('Ich höre zu …'), findsOneWidget);
 
       await pumpUntil(tester, find.text('Wie wird das Wetter?'));

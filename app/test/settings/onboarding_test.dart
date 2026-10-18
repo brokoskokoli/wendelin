@@ -34,6 +34,22 @@ Future<ProviderContainer> pumpApp(WidgetTester tester, TestEnv env) async {
 }
 
 void main() {
+  testWidgets(
+    'Schritt 0: App-Sprache wählbar, wirkt sofort, Sprechsprache bleibt',
+    (tester) async {
+      final env = firstStart();
+      final c = await pumpApp(tester, env);
+      expect(find.text('App-Sprache der Oberfläche'), findsOneWidget);
+      await tester.tap(find.text('English').last);
+      await settle(tester);
+      expect(c.read(uiLanguageProvider), 'en');
+      expect(c.read(languageProvider), isNot('en'));
+      expect(find.text('Welcome'), findsOneWidget);
+      expect(find.text('Next'), findsOneWidget);
+      expect(await env.storage.settings.get(AppSettings.uiLanguage), 'en');
+    },
+  );
+
   testWidgets('erster Start: Sprache, später Provider, Integrationen, Fertig', (
     tester,
   ) async {
@@ -43,7 +59,7 @@ void main() {
     expect(find.text('Willkommen'), findsOneWidget);
     expect(find.textContaining('Whisper'), findsNothing);
 
-    await tester.tap(find.text('Français'));
+    await tester.tap(find.text('Français').first);
     await settle(tester);
     expect(c.read(languageProvider), 'fr');
     expect(await env.storage.settings.get(AppSettings.language), 'fr');

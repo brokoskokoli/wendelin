@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'glyphs.dart';
 import 'icons.dart';
@@ -81,7 +82,7 @@ class IntegrationTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: WSpace.xxs,
-              children: [_title(), _subtitle()],
+              children: [_title(context), _subtitle(context)],
             ),
           ),
         ),
@@ -108,16 +109,16 @@ class IntegrationTile extends StatelessWidget {
                     )
                   : info,
             ),
-            ?_trailing(),
+            ?_trailing(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _title() {
+  Widget _title(BuildContext context) {
     final title = Text(name, style: WText.label);
-    final badges = [?kind, if (sensitive) 'sensibel'];
+    final badges = [?kind, if (sensitive) context.l10n.httpToolsSensitiveShort];
     if (badges.isEmpty) return title;
     // Badges als Teil des Titels vorlesen („Kontakte, sensibel“). Wrap statt
     // Row: Reicht der Platz nicht, rücken die Badges in die nächste Zeile,
@@ -137,32 +138,38 @@ class IntegrationTile extends StatelessWidget {
     );
   }
 
-  Widget _subtitle() {
+  Widget _subtitle(BuildContext context) {
+    final l = context.l10n;
     final (GlyphShape? shape, Color color, String text) = switch (status) {
       IntegrationStatus.active => (
         GlyphShape.dot,
         WColors.ok,
-        detail == null ? 'Aktiv' : 'Aktiv · $detail',
+        detail == null
+            ? l.ruleEditorActive
+            : l.integrationTileActiveDetail(detail!),
       ),
       IntegrationStatus.available => (
         null,
         WColors.textMuted,
-        detail ?? (minPrivacy == null ? 'Verfügbar' : 'Nur an Provider ab'),
+        detail ??
+            (minPrivacy == null
+                ? l.integrationTileAvailable
+                : l.integrationTileOnlyFrom),
       ),
       IntegrationStatus.setupRequired => (
         GlyphShape.triangle,
         WColors.warn,
-        detail ?? 'Einrichtung nötig',
+        detail ?? l.integrationTileSetupNeeded,
       ),
       IntegrationStatus.error => (
         GlyphShape.square,
         WColors.error,
-        detail ?? 'Fehler',
+        detail ?? l.error,
       ),
       IntegrationStatus.unavailable => (
         null,
         WColors.textSecondary,
-        detail ?? 'Nicht verfügbar',
+        detail ?? l.bringStatusUnavailable,
       ),
     };
     final level = minPrivacy;
@@ -188,14 +195,14 @@ class IntegrationTile extends StatelessWidget {
               alignment: PlaceholderAlignment.middle,
               child: Glyph(GlyphShape.forPrivacy(level), color: color),
             ),
-            TextSpan(text: ' ${level.label}'),
+            TextSpan(text: ' ${level.labelOf(l)}'),
           ],
         ],
       ),
     );
   }
 
-  Widget? _trailing() {
+  Widget? _trailing(BuildContext context) {
     switch (status) {
       case IntegrationStatus.active:
       case IntegrationStatus.available:
@@ -206,13 +213,13 @@ class IntegrationTile extends StatelessWidget {
         );
       case IntegrationStatus.setupRequired:
         return _ActionButton(
-          label: actionLabel ?? 'Einrichten',
+          label: actionLabel ?? context.l10n.mcpLabelsSetUp,
           color: WColors.warn,
           onPressed: onAction,
         );
       case IntegrationStatus.error:
         return _ActionButton(
-          label: actionLabel ?? 'Neu anmelden',
+          label: actionLabel ?? context.l10n.mcpLabelsSignInAgain,
           color: WColors.error,
           onPressed: onAction,
         );
@@ -229,7 +236,7 @@ class IntegrationTile extends StatelessWidget {
             padding: EdgeInsets.zero,
             minimumSize: const Size(WSize.touchMin, WSize.touchMin),
           ),
-          child: const Text('Im Store'),
+          child: Text(context.l10n.integrationTileInStore),
         );
     }
   }

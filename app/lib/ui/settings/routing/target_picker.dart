@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 
 /// Profile and model of a routing target: a dropdown of the profiles (with
@@ -50,11 +51,10 @@ class _TargetPickerState extends State<TargetPicker> {
           isExpanded: true,
           dropdownColor: WColors.surfaceRaised,
           decoration: InputDecoration(
-            labelText: 'Profil',
+            labelText: context.l10n.targetPickerProfile,
             errorText: known
                 ? null
-                : 'Profil „${widget.value.profileId}“ '
-                      'gibt es nicht mehr.',
+                : context.l10n.targetPickerProfileGone(widget.value.profileId),
           ),
           items: [
             for (final p in widget.profiles)
@@ -69,7 +69,7 @@ class _TargetPickerState extends State<TargetPicker> {
                     ),
                     Flexible(
                       child: Text(
-                        '${p.name} · ${p.privacy.label}',
+                        '${p.name} · ${p.privacy.labelOf(context.l10n)}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -89,7 +89,7 @@ class _TargetPickerState extends State<TargetPicker> {
         TextField(
           controller: _model,
           style: WText.mono.copyWith(color: WColors.text),
-          decoration: const InputDecoration(labelText: 'Modell'),
+          decoration: InputDecoration(labelText: context.l10n.attLogModel),
           onChanged: (m) => widget.onChanged(
             RouteTarget(profileId: widget.value.profileId, modelId: m.trim()),
           ),
@@ -121,7 +121,7 @@ Future<RouteTarget?> pickTarget(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed:
@@ -129,7 +129,7 @@ Future<RouteTarget?> pickTarget(
                     !profiles.any((p) => p.id == target.profileId)
                 ? null
                 : () => Navigator.of(context).pop(target),
-            child: const Text('Übernehmen'),
+            child: Text(context.l10n.targetPickerApply),
           ),
         ],
       ),

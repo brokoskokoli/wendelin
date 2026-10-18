@@ -6,6 +6,7 @@ import 'package:wendelin_mcp/wendelin_mcp.dart';
 
 import '../../../di/mcp/mcp_providers.dart';
 import '../../../di/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'mcp_add_check.dart';
@@ -70,6 +71,7 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
     final name = _name.text.trim();
     final text = _url.text.trim();
     final error = mcpAddError(
+      context.l10n,
       name: name,
       urlText: text,
       auth: _auth,
@@ -102,7 +104,11 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
     setState(() {
       _busy = false;
       _probeOk = probe.status == McpReachability.reachable;
-      _probe = mcpProbeText(probe, oauth: _auth == McpAuthKind.oauth);
+      _probe = mcpProbeText(
+        context.l10n,
+        probe,
+        oauth: _auth == McpAuthKind.oauth,
+      );
     });
   }
 
@@ -149,10 +155,8 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
     final template = _template;
     if (template == null) {
       return SettingsPage(
-        title: 'Server hinzufügen',
-        intro:
-            'Wähle eine Vorlage oder trage einen eigenen Server ein. '
-            'Erreichbar über https oder im Heimnetz (Tailscale, WireGuard).',
+        title: context.l10n.mcpAddServerTitle,
+        intro: context.l10n.mcpAddServerIntro,
         children: [McpTemplateList(onChoose: _choose)],
       );
     }
@@ -160,14 +164,16 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
     final plain =
         url != null && url.isScheme('http') && isHomeNetworkHost(url.host);
     return SettingsPage(
-      title: template == McpTemplate.custom ? 'Eigener Server' : template.name,
+      title: template == McpTemplate.custom
+          ? context.l10n.mcpAddCustom
+          : template.name,
       intro: template.description,
       children: [
         TextField(
           key: const ValueKey('mcpName'),
           controller: _name,
           style: WText.body,
-          decoration: const InputDecoration(labelText: 'Name'),
+          decoration: InputDecoration(labelText: context.l10n.name),
         ),
         TextField(
           key: const ValueKey('mcpUrl'),
@@ -177,11 +183,8 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
           autocorrect: false,
           onChanged: (_) => setState(() => _probe = null),
           decoration: InputDecoration(
-            labelText: 'Adresse',
-            helperText: plain
-                ? 'Unverschlüsselt (http): nur im Heimnetz oder über '
-                      'Tailscale erlaubt'
-                : null,
+            labelText: context.l10n.mcpAddServerAddress,
+            helperText: plain ? context.l10n.mcpAddServerInsecure : null,
             helperMaxLines: 2,
           ),
         ),
@@ -193,6 +196,7 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
           }),
         ),
         ...mcpAuthFields(
+          l: context.l10n,
           auth: _auth,
           template: template,
           token: _token,
@@ -209,11 +213,11 @@ class _AddState extends ConsumerState<McpAddServerScreen> {
         if (_error != null) Text(_error!, style: WText.caption),
         if (_probe != null) McpProbeRow(text: _probe!, ok: _probeOk),
         WideButton(
-          'Verbindung prüfen',
+          context.l10n.mcpAddServerTestConnection,
           onPressed: _busy ? null : () => unawaited(_check()),
         ),
         PrimaryButton(
-          'Speichern',
+          context.l10n.save,
           onPressed: _busy ? null : () => unawaited(_save()),
         ),
       ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'dashed_border.dart';
 import 'glyphs.dart';
@@ -79,7 +80,7 @@ class RuleTile extends StatelessWidget {
         index: index,
         child: Semantics(
           container: true,
-          label: handleLabel ?? 'Verschieben',
+          label: handleLabel ?? context.l10n.ruleTileMove,
           child: handle,
         ),
       );
@@ -103,7 +104,7 @@ class RuleTile extends StatelessWidget {
                 spacing: WSpace.xxs3,
                 children: [
                   Text(name, style: WText.label),
-                  _conditionText(),
+                  _conditionText(context),
                 ],
               ),
             ),
@@ -131,7 +132,7 @@ class RuleTile extends StatelessWidget {
     );
   }
 
-  Widget _conditionText() {
+  Widget _conditionText(BuildContext context) {
     final t = target;
     final level = targetLevel;
     if (t == null) return Text(condition, style: WText.mono);
@@ -156,7 +157,8 @@ class RuleTile extends StatelessWidget {
       semanticsLabel: [
         condition,
         '→',
-        if (level != null) 'Datenschutzstufe ${level.label},',
+        if (level != null)
+          context.l10n.ruleTileSemanticsLevel(level.labelOf(context.l10n)),
         t,
       ].join(' '),
     );

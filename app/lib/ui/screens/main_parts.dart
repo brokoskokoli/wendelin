@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../l10n/l10n.dart';
 import '../../voice/voice_ui_state.dart';
 import '../design/design.dart';
 
@@ -25,9 +26,6 @@ class MainHeader extends StatelessWidget {
   /// Whether „Neues Gespräch“ can be tapped (not while a request runs).
   final bool newConversationEnabled;
 
-  /// Label of the button.
-  static const newConversationLabel = 'Neues Gespräch';
-
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(
@@ -45,14 +43,14 @@ class MainHeader extends StatelessWidget {
         if (onNewConversation case final onNew?) ...[
           WIconButton(
             icon: WIcons.newChat,
-            tooltip: newConversationLabel,
+            tooltip: context.l10n.mainNewConversation,
             onPressed: newConversationEnabled ? onNew : null,
           ),
           const SizedBox(width: WSpace.s),
         ],
         WIconButton(
           icon: WIcons.settings,
-          tooltip: 'Einstellungen',
+          tooltip: context.l10n.settingsTitle,
           onPressed: onSettings,
         ),
       ],
@@ -95,7 +93,10 @@ class MainChips extends StatelessWidget {
         children: [
           if (providerName != null && privacy != null)
             ProviderChip(name: providerName!, level: privacy!),
-          MetaChip(costLabel, semanticLabel: 'Kosten $costLabel'),
+          MetaChip(
+            costLabel,
+            semanticLabel: context.l10n.mainCostLabel(costLabel),
+          ),
         ],
       ),
     ),
@@ -155,12 +156,6 @@ class Composer extends StatefulWidget {
 
   /// Current time for the follow-up countdown.
   final DateTime Function() now;
-
-  /// Label of the microphone while listening (a tap aborts).
-  static const listeningLabel = 'Zuhören abbrechen';
-
-  /// Text of the listening bar.
-  static const listeningText = 'Ich höre zu …';
 
   @override
   State<Composer> createState() => _ComposerState();
@@ -231,8 +226,8 @@ class _ComposerState extends State<Composer> {
                     onSubmitted: _submit,
                     decoration: InputDecoration(
                       hintText: preparing
-                          ? MicButton.preparingLabel
-                          : 'Schreiben statt sprechen',
+                          ? context.l10n.momentPlease
+                          : context.l10n.mainTypeInstead,
                       semanticCounterText: '',
                     ),
                   ),
@@ -249,7 +244,8 @@ class _ComposerState extends State<Composer> {
                           compact: true,
                           semanticLabel: switch (widget.mic) {
                             MicState.disabled => widget.micHint,
-                            MicState.listening => Composer.listeningLabel,
+                            MicState.listening =>
+                              context.l10n.mainCancelListening,
                             _ => null,
                           },
                         )
@@ -290,11 +286,16 @@ class ListeningBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final until = followUpUntil;
     return until == null
-        ? _bar(Composer.listeningText)
+        ? _bar(context.l10n.mainListening)
         : FollowUpCountdown(
             until: until,
             now: now,
-            builder: (_, seconds) => _bar('$followUpListeningText $seconds s'),
+            builder: (_, seconds) => _bar(
+              context.l10n.mainFollowUpCountdown(
+                context.l10n.followUpListening,
+                seconds,
+              ),
+            ),
           );
   }
 
@@ -347,13 +348,13 @@ class PrivateRuleNoticeCard extends StatelessWidget {
           Expanded(
             child: OutlinedButton(
               onPressed: onDismiss,
-              child: const Text('Verstanden'),
+              child: Text(context.l10n.understood),
             ),
           ),
           Expanded(
             child: FilledButton(
               onPressed: onOpen,
-              child: const Text('Routing ansehen'),
+              child: Text(context.l10n.mainViewRouting),
             ),
           ),
         ],
@@ -388,23 +389,20 @@ class ProviderSetupCard extends StatelessWidget {
     padding: const EdgeInsets.all(WSpace.l18),
     children: [
       Text(
-        error == null ? 'Noch kein Provider eingerichtet' : 'Provider prüfen',
+        error == null
+            ? context.l10n.mainNoProviderYet
+            : context.l10n.mainCheckProvider,
         style: WText.label,
       ),
-      Text(
-        error ??
-            'Wendelin braucht ein Sprachmodell. Richte einen Provider mit '
-                'deinem API-Key ein, danach kannst du loslegen.',
-        style: WText.intro,
-      ),
+      Text(error ?? context.l10n.mainNeedsModel, style: WText.intro),
       FilledButton(
         onPressed: onSetup,
-        child: const Text('Provider einrichten'),
+        child: Text(context.l10n.mainSetUpProvider),
       ),
       if (onDemo != null && kDebugMode)
         OutlinedButton(
           onPressed: onDemo,
-          child: const Text('Demo ohne Provider starten'),
+          child: Text(context.l10n.mainStartDemo),
         ),
     ],
   );

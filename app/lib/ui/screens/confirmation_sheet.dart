@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/conversation_state.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'labels.dart';
 import 'private_banner.dart';
@@ -53,6 +54,7 @@ class ConfirmationSheet extends StatelessWidget {
       EscalationQuestion() => null,
     };
     final card = confirmationCardFor(
+      context.l10n,
       question,
       (yes) => Navigator.of(context).pop(yes),
       toolRisk: toolRisk,
@@ -87,7 +89,7 @@ class ConfirmationSheet extends StatelessWidget {
                     if (quote != null && quote.isNotEmpty)
                       Text('„$quote“', style: WText.quote),
                     card,
-                    hint.widget,
+                    hint.widget(context.l10n),
                   ],
                 ),
               ),
@@ -102,27 +104,29 @@ class ConfirmationSheet extends StatelessWidget {
 /// Hint under a confirmation card.
 enum ConfirmationHint {
   /// Only a tap answers (typed request).
-  tap('Antworte per Tipp', listens: false),
+  tap(listens: false),
 
   /// A voice request listens for „ja“/„nein“ (or a tap).
-  voice('Sag einfach „ja“ oder „nein“', listens: true);
+  voice(listens: true);
 
-  const ConfirmationHint(this.text, {required this.listens});
+  const ConfirmationHint({required this.listens});
 
   /// Hint text.
-  final String text;
+  String text(AppLocalizations l) =>
+      this == tap ? l.confHintTap : l.confHintVoice;
 
   /// Whether the microphone listens (cobalt dot).
   final bool listens;
 
   /// The hint as widget.
-  Widget get widget => VoiceHint(text, dot: listens);
+  Widget widget(AppLocalizations l) => VoiceHint(text(l), dot: listens);
 }
 
 /// The confirmation card for [question]; [answer] gets `true` for yes. In
 /// a private conversation ([privateSince]) the escalation question says
 /// that the target would also see its private parts.
 Widget confirmationCardFor(
+  AppLocalizations l,
   PendingQuestion question,
   void Function(bool yes) answer, {
   RiskLevel toolRisk = RiskLevel.external,
@@ -130,10 +134,10 @@ Widget confirmationCardFor(
   bool privateByRequest = true,
 }) => switch (question) {
   ToolQuestion(:final event) => () {
-    final texts = confirmationTexts(event.call.name);
+    final texts = confirmationTexts(l, event.call.name);
     return ConfirmationCard(
       title: texts.title,
-      detail: clampConfirmationDetail(event.description),
+      detail: clampConfirmationDetail(l, event.description),
       toolName: event.call.name,
       risk: toolRisk,
       onYes: () => answer(true),
@@ -143,12 +147,12 @@ Widget confirmationCardFor(
     );
   }(),
   EscalationQuestion(:final fromName, :final toName) => ConfirmationCard(
-    title: 'An $toName übergeben?',
+    title: l.confHandOverTitle(toName),
     detail: [
-      '$toName hat eine niedrigere Datenschutzstufe als $fromName. '
-          'Deine Anfrage und der bisherige Verlauf gehen dann dorthin.',
+      l.confHandOverDetail(toName, fromName),
       if (privateSince != null)
         privateEscalationHint(
+          l,
           privateSince,
           toName,
           byRequest: privateByRequest,
@@ -158,8 +162,8 @@ Widget confirmationCardFor(
     risk: RiskLevel.external,
     onYes: () => answer(true),
     onNo: () => answer(false),
-    yesLabel: 'Ja, übergeben',
-    noLabel: 'Nein',
+    yesLabel: l.confYesHandOver,
+    noLabel: l.no,
   ),
 };
 
@@ -172,7 +176,7 @@ const maxDetailLineChars = 80;
 /// Shortens a long confirmation [detail] (e.g. a diff) so the card and its
 /// buttons fit on a phone: at most [maxDetailLines] lines of at most
 /// [maxDetailLineChars] characters, the rest counted in a last line.
-String clampConfirmationDetail(String detail) {
+String clampConfirmationDetail(AppLocalizations l, String detail) {
   final lines = [
     for (final l in detail.split('\n'))
       l.length <= maxDetailLineChars
@@ -181,8 +185,5 @@ String clampConfirmationDetail(String detail) {
   ];
   if (lines.length <= maxDetailLines) return lines.join('\n');
   final rest = lines.length - (maxDetailLines - 1);
-  return [
-    ...lines.take(maxDetailLines - 1),
-    '… $rest weitere Zeilen',
-  ].join('\n');
+  return [...lines.take(maxDetailLines - 1), l.confMoreLines(rest)].join('\n');
 }

@@ -2,13 +2,16 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
-/// Hint when a server cannot be reached (concept: „Netzwerk“).
-const mcpUnreachableHint = 'Tailscale/WireGuard aktiv?';
+import '../../../l10n/l10n.dart';
 
 /// Effective level of tool [info] of [config] and whether it asks, e.g.
 /// „ändert · fragt nach · kein Rückgängig“. MCP tools have no undo, so a
 /// `write` tool asks unless the user allowed „ohne Nachfrage“.
-String mcpToolRiskText(McpToolInfo info, McpServerConfig config) {
+String mcpToolRiskText(
+  AppLocalizations l,
+  McpToolInfo info,
+  McpServerConfig config,
+) {
   final override = config.toolOverrides[info.name];
   final base = mcpBaseRisk(info.annotations);
   final effective = mcpRisk(
@@ -18,28 +21,27 @@ String mcpToolRiskText(McpToolInfo info, McpServerConfig config) {
     override: override?.risk,
   );
   final kind = switch (base) {
-    RiskLevel.read => 'liest',
-    RiskLevel.write => 'ändert',
-    RiskLevel.external => 'Außenwirkung',
+    RiskLevel.read => l.mcpLabelsReads,
+    RiskLevel.write => l.mcpLabelsChanges,
+    RiskLevel.external => l.mcpLabelsExternal,
   };
   final asks = switch (effective) {
-    RiskLevel.read => 'ohne Nachfrage',
-    RiskLevel.write => 'ohne Nachfrage · kein Rückgängig',
-    RiskLevel.external when base == RiskLevel.write =>
-      'fragt nach · kein Rückgängig',
-    RiskLevel.external => 'fragt immer nach',
+    RiskLevel.read => l.mcpLabelsNoAsk,
+    RiskLevel.write => l.mcpLabelsNoAskNoUndo,
+    RiskLevel.external when base == RiskLevel.write => l.mcpLabelsAsksNoUndo,
+    RiskLevel.external => l.mcpLabelsAlwaysAsks,
   };
   return '$kind · $asks';
 }
 
 /// What the server says about tool [info] (its annotations are only a
 /// hint, ADR 0010 §4).
-String mcpAnnotationText(McpToolAnnotations a) {
-  if (a.readOnlyHint ?? false) return 'Server: nur lesend (readOnlyHint)';
+String mcpAnnotationText(AppLocalizations l, McpToolAnnotations a) {
+  if (a.readOnlyHint ?? false) return l.mcpLabelsHintReadOnly;
   return switch (a.destructiveHint) {
-    false => 'Server: ändert, nicht destruktiv (destructiveHint: false)',
-    true => 'Server: destruktiv (destructiveHint)',
-    null => 'Server: keine Angabe – gilt als Außenwirkung',
+    false => l.mcpLabelsHintNonDestructive,
+    true => l.mcpLabelsHintDestructive,
+    null => l.mcpLabelsHintNone,
   };
 }
 
@@ -51,13 +53,13 @@ String mcpTime(DateTime at) {
 }
 
 /// One line about the last check, e.g. „erreichbar · 13.10. 08:12 · 42 ms“.
-String mcpCheckText(McpCheck? check) {
-  if (check == null) return 'Noch nicht geprüft';
+String mcpCheckText(AppLocalizations l, McpCheck? check) {
+  if (check == null) return l.mcpLabelsNotChecked;
   final what = switch (check.status) {
     McpReachability.reachable => 'erreichbar',
-    McpReachability.authRequired => 'Anmeldung nötig',
-    McpReachability.unreachable => 'nicht erreichbar',
-    McpReachability.protocolError => 'kein gültiger MCP-Server',
+    McpReachability.authRequired => l.mcpLabelsAuthRequired,
+    McpReachability.unreachable => l.mcpLabelsUnreachable,
+    McpReachability.protocolError => l.mcpLabelsProtocolError,
   };
   return [
     what,
@@ -67,34 +69,39 @@ String mcpCheckText(McpCheck? check) {
 }
 
 /// Result of a probe before saving, as one German line.
-String mcpProbeText(McpProbeResult probe, {required bool oauth}) =>
-    switch (probe.status) {
-      McpReachability.reachable => [
-        'Erreichbar',
-        if (probe.server case final s?) [s.name, ?s.version].join(' '),
-        '${probe.latency.inMilliseconds} ms',
-      ].join(' · '),
-      McpReachability.authRequired =>
-        oauth
-            ? 'Anmeldung nötig – nach dem Speichern anmelden'
-            : 'Anmeldung nötig – Token oder Header prüfen',
-      McpReachability.unreachable =>
-        'Nicht erreichbar: ${probe.detail ?? ''}. $mcpUnreachableHint',
-      McpReachability.protocolError =>
-        'Kein gültiger MCP-Server: ${probe.detail ?? ''}',
-    };
+String mcpProbeText(
+  AppLocalizations l,
+  McpProbeResult probe, {
+  required bool oauth,
+}) => switch (probe.status) {
+  McpReachability.reachable => [
+    l.mcpLabelsReachable,
+    if (probe.server case final s?) [s.name, ?s.version].join(' '),
+    '${probe.latency.inMilliseconds} ms',
+  ].join(' · '),
+  McpReachability.authRequired =>
+    oauth ? l.mcpLabelsAuthAfterSave : l.mcpLabelsAuthCheck,
+  McpReachability.unreachable => l.mcpLabelsUnreachableDetail(
+    probe.detail ?? '',
+    l.mcpLabelsNetworkHint,
+  ),
+  McpReachability.protocolError => l.mcpLabelsProtocolErrorDetail(
+    probe.detail ?? '',
+  ),
+};
 
 /// How a server is shown in a list: the registry state, made more precise
 /// by the last check (not reachable or not an MCP server count as error
 /// with the reason; the tools stay offered, each call tries again).
 ({IntegrationStatus status, String? detail, String? action}) mcpTileState(
+  AppLocalizations l,
   McpServerView server,
   IntegrationInfo? info,
 ) {
   final check = server.check;
   final oauth = server.config.auth is McpOAuth;
   final tools = server.integration.tools.length;
-  final toolText = tools == 1 ? '1 Tool' : '$tools Tools';
+  final toolText = tools == 1 ? l.mcpLabelsOneTool : l.mcpLabelsTools(tools);
   if (info == null) {
     return (
       status: IntegrationStatus.available,
@@ -107,13 +114,15 @@ String mcpProbeText(McpProbeResult probe, {required bool oauth}) =>
       return (
         status: IntegrationStatus.error,
         detail: info.error,
-        action: oauth ? 'Neu anmelden' : 'Token ersetzen',
+        action: oauth ? l.mcpLabelsSignInAgain : l.mcpLabelsReplaceToken,
       );
     case IntegrationStatus.setupRequired:
       return (
         status: IntegrationStatus.setupRequired,
-        detail: oauth ? 'Anmeldung fehlt' : 'Zugangsdaten fehlen',
-        action: oauth ? 'Anmelden' : 'Einrichten',
+        detail: oauth
+            ? l.mcpLabelsSignInMissing
+            : l.mcpLabelsCredentialsMissing,
+        action: oauth ? l.mcpLabelsSignIn : l.mcpLabelsSetUp,
       );
     case IntegrationStatus.active
         when check != null &&
@@ -122,9 +131,9 @@ String mcpProbeText(McpProbeResult probe, {required bool oauth}) =>
       return (
         status: IntegrationStatus.error,
         detail: check.status == McpReachability.unreachable
-            ? 'Nicht erreichbar · $mcpUnreachableHint'
-            : 'Kein gültiger MCP-Server',
-        action: 'Neu laden',
+            ? l.mcpLabelsUnreachableShort(l.mcpLabelsNetworkHint)
+            : l.mcpLabelsProtocolErrorShort,
+        action: l.mcpLabelsReload,
       );
     case IntegrationStatus.active:
       return (status: IntegrationStatus.active, detail: toolText, action: null);

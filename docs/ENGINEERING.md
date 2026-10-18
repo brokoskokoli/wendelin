@@ -84,6 +84,11 @@ Ausgabe: Standard ist eine Zeile je Schritt. Bei einem Fehler erscheinen die let
 
 `--changed` vergleicht mit dem Merge-Base von origin/main (bzw. `--base=<ref>`) und nimmt nicht committete und neue Dateien dazu. Geprüft werden die geänderten Pakete und transitiv alle abhängigen (Erlaubnisliste aus `tool/check_deps.dart` plus die echten Kanten der pubspecs inklusive `dev_dependencies`; die App hängt von allen ab). Änderungen an `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, `tool/gate.dart` oder `tool/check_deps.dart` lösen das ganze Gate aus, reine Doku (Markdown) nur die globalen Prüfungen. Andere Dateien unter `docs/` gelten nicht als Doku: `docs/design/` prüft die App (Tokens), alles andere das ganze Gate. Die Ausgabe nennt den Grund je Paket. `--changed` ist der lokale Lauf (auch vor dem Commit); das volle Gate läuft in CI und gilt vor dem Merge. CI prüft immer alles.
 
+## Texte (WP79)
+- Alle sichtbaren UI-Texte stehen in `app/lib/l10n/app_{de,en,fr}.arb` (de = Vorlage) und werden per `context.l10n.<schluessel>` benutzt; generierte Dateien liegen in `app/lib/l10n/gen/` (werden committet, `flutter gen-l10n`).
+- Neuer Text: Schlüssel in allen drei ARB-Dateien anlegen, Begriffe nach `docs/GLOSSARY-l10n.md`. `app/test/l10n/l10n_test.dart` prüft Schlüssel, Platzhalter und fehlende Übersetzungen.
+- Gesprochene Texte und Tool-Ergebnisse für das Modell folgen der Sprech-Sprache, nicht der UI-Sprache.
+
 ## Größen
 
 Richtwerte, geprüft von `tool/check_sizes.dart` (Dart und Kotlin gleich):

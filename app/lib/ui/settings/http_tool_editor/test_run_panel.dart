@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'editor_parts.dart';
@@ -45,7 +46,7 @@ class TestRunPanel extends StatelessWidget {
     final error = this.error;
     final result = this.result;
     return SettingsSection(
-      title: 'Testen',
+      title: context.l10n.test,
       children: [
         for (final MapEntry(key: name, value: type) in argTypes.entries)
           EditorField(
@@ -54,12 +55,14 @@ class TestRunPanel extends StatelessWidget {
               key: ValueKey('testArg$name'),
               controller: controllers[name],
               style: WText.mono,
-              decoration: InputDecoration(labelText: '$name ($type)'),
+              decoration: InputDecoration(
+                labelText: context.l10n.httpTestArgLabel(name, type),
+              ),
             ),
           ),
         EditorField(
           child: WideButton(
-            testing ? 'Läuft …' : 'Testen',
+            testing ? context.l10n.httpTestRunning : context.l10n.test,
             onPressed: canTest ? onTest : null,
           ),
         ),
@@ -90,9 +93,12 @@ class HttpTestResultView extends StatelessWidget {
     final r = result;
     final ms = r.duration.inMilliseconds;
     final status = [
-      if (r.status != null) 'HTTP ${r.status}' else 'Keine Antwort',
-      '$ms ms',
-      if (r.truncated) 'gekürzt',
+      if (r.status != null)
+        context.l10n.httpTestHttpStatus(r.status!)
+      else
+        context.l10n.httpTestNoResponse,
+      context.l10n.httpTestMs(ms),
+      if (r.truncated) context.l10n.httpTestTruncated,
     ].join(' · ');
     final request = r.request;
     return Padding(
@@ -107,7 +113,9 @@ class HttpTestResultView extends StatelessWidget {
               CheckStatusIcon(
                 r.ok ? CheckStatus.ok : CheckStatus.failed,
                 size: WSize.statusIconSmall,
-                semanticLabel: r.ok ? 'erfolgreich' : 'fehlgeschlagen',
+                semanticLabel: r.ok
+                    ? context.l10n.httpTestSucceeded
+                    : context.l10n.httpTestFailed,
               ),
               Expanded(child: Text(status, style: WText.label)),
             ],
@@ -115,18 +123,19 @@ class HttpTestResultView extends StatelessWidget {
           if (r.error != null)
             Text(r.error!, style: WText.caption.copyWith(color: WColors.error)),
           if (request != null) ...[
-            Text('Gesendet', style: WText.sectionLabel),
+            Text(context.l10n.httpTestSent, style: WText.sectionLabel),
             SelectableText(
               [
-                '${request.method} ${request.url}',
-                for (final e in request.headers.entries) '${e.key}: ${e.value}',
+                context.l10n.httpTestSentLine(request.method, request.url),
+                for (final e in request.headers.entries)
+                  context.l10n.httpTestHeaderLine(e.key, e.value),
                 if (request.body != null) ...['', request.body!],
               ].join('\n'),
               style: WText.mono,
             ),
           ],
           if (r.preview.isNotEmpty) ...[
-            Text('Antwort', style: WText.sectionLabel),
+            Text(context.l10n.attResponseWord, style: WText.sectionLabel),
             SelectableText(r.preview, style: WText.mono),
           ],
         ],

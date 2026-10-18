@@ -7,6 +7,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import '../../di/list_access.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../platform/saf_list_file_port.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
@@ -22,9 +23,7 @@ class ListsScreen extends ConsumerWidget {
     final noAccess = ref.watch(listsWithoutAccessProvider).value ?? const {};
     return SettingsPage(
       title: 'Listen',
-      intro:
-          'Jede Liste ist eine Markdown-Datei auf dem Gerät (z. B. im '
-          'Obsidian-Vault). Einträge stehen dort als „- [ ] …“.',
+      intro: context.l10n.listsIntro,
       children: [
         if (lists.isNotEmpty)
           SectionCard(
@@ -33,16 +32,17 @@ class ListsScreen extends ConsumerWidget {
                 SettingsRow(
                   title: l.name,
                   detail: noAccess.contains(l.id)
-                      ? 'Kein Zugriff mehr – Datei neu auswählen'
+                      ? context.l10n.listsAccessLost
                       : [
                           if (l.aliases.isNotEmpty)
-                            'auch: ${l.aliases.join(', ')}',
-                          if (l.section != null) 'Abschnitt „${l.section}“',
-                        ].join(' · ').ifEmpty('Ohne Aliase'),
+                            context.l10n.listsAlso(l.aliases.join(', ')),
+                          if (l.section != null)
+                            context.l10n.listsSection(l.section!),
+                        ].join(' · ').ifEmpty(context.l10n.listsNoAliases),
                   trailing: noAccess.contains(l.id)
-                      ? const CheckStatusIcon(
+                      ? CheckStatusIcon(
                           CheckStatus.failed,
-                          semanticLabel: 'kein Zugriff',
+                          semanticLabel: context.l10n.obsidianNoAccess,
                         )
                       : null,
                   onTap: () => Navigator.of(context).push(
@@ -54,7 +54,7 @@ class ListsScreen extends ConsumerWidget {
             ],
           ),
         WideButton(
-          '+ Liste',
+          context.l10n.listsAdd,
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const ListEditScreen()),
           ),
@@ -144,7 +144,9 @@ class _ListEditState extends ConsumerState<ListEditScreen> {
   Future<void> _pick({required bool create}) async {
     final picker = ref.read(documentPickerProvider);
     try {
-      final name = _name.text.trim().isEmpty ? 'Liste' : _name.text.trim();
+      final name = _name.text.trim().isEmpty
+          ? context.l10n.listsListFallback
+          : _name.text.trim();
       final uri = create
           ? await picker.create('$name.md')
           : await picker.open();
@@ -168,7 +170,7 @@ class _ListEditState extends ConsumerState<ListEditScreen> {
     final name = _name.text.trim();
     final target = _target;
     if (name.isEmpty || target == null) {
-      setState(() => _error = 'Name und Datei sind nötig.');
+      setState(() => _error = context.l10n.listsNeedNameFile);
       return;
     }
     final section = _section.text.trim();
@@ -203,10 +205,9 @@ class _ListEditState extends ConsumerState<ListEditScreen> {
     final existing = widget.existing!;
     final ok = await confirm(
       context,
-      title: '„${existing.name}“ löschen?',
-      message:
-          'Die Liste verschwindet aus Wendelin. Die Datei bleibt erhalten.',
-      yes: 'Löschen',
+      title: context.l10n.listsDeleteTitle(existing.name),
+      message: context.l10n.listsDeleteBody,
+      yes: context.l10n.delete,
     );
     if (!ok) return;
     await ref.read(listDefinitionsProvider.notifier).remove(existing.id);
@@ -227,32 +228,32 @@ class _ListEditState extends ConsumerState<ListEditScreen> {
   }
 
   Widget _page() => SettingsPage(
-    title: widget.existing == null ? 'Neue Liste' : 'Liste bearbeiten',
+    title: widget.existing == null
+        ? context.l10n.listsNewList
+        : context.l10n.listsEditList,
     children: [
       TextField(
         controller: _name,
         style: WText.body,
-        decoration: const InputDecoration(labelText: 'Name, z. B. Einkaufen'),
+        decoration: InputDecoration(labelText: context.l10n.listsNameHint),
       ),
       TextField(
         controller: _aliases,
         style: WText.body,
-        decoration: const InputDecoration(
-          labelText: 'Andere Namen, mit Komma getrennt (optional)',
-        ),
+        decoration: InputDecoration(labelText: context.l10n.listsAliases),
       ),
       TextField(
         controller: _section,
         style: WText.body,
-        decoration: const InputDecoration(
-          labelText: 'Abschnitt in der Datei, z. B. Todo (optional)',
-        ),
+        decoration: InputDecoration(labelText: context.l10n.listsSectionLabel),
       ),
       SettingsSection(
-        title: 'Datei',
+        title: context.l10n.listsFile,
         children: [
           SettingsRow(
-            title: _target == null ? 'Noch keine Datei' : (_fileName ?? '…'),
+            title: _target == null
+                ? context.l10n.listsNoFile
+                : (_fileName ?? '…'),
             detail: _target,
           ),
         ],
@@ -262,22 +263,25 @@ class _ListEditState extends ConsumerState<ListEditScreen> {
         children: [
           Expanded(
             child: WideButton(
-              'Datei wählen',
+              context.l10n.listsChooseFile,
               onPressed: () => unawaited(_pick(create: false)),
             ),
           ),
           Expanded(
             child: WideButton(
-              'Neue Datei',
+              context.l10n.listsNewFile,
               onPressed: () => unawaited(_pick(create: true)),
             ),
           ),
         ],
       ),
       if (_error != null) Text(_error!, style: WText.caption),
-      PrimaryButton('Speichern', onPressed: () => unawaited(_save())),
+      PrimaryButton(context.l10n.save, onPressed: () => unawaited(_save())),
       if (widget.existing != null)
-        WideButton('Liste löschen', onPressed: () => unawaited(_delete())),
+        WideButton(
+          context.l10n.listsDeleteList,
+          onPressed: () => unawaited(_delete()),
+        ),
     ],
   );
 }

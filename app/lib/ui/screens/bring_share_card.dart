@@ -7,6 +7,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import '../../agent/chat_entry.dart';
 import '../../di/bring.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 
 /// Fallback card of a failed `bring__add_items` call (concept: „Offene
@@ -82,7 +83,7 @@ class _BringShareCardState extends ConsumerState<BringShareCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: WSpace.xxs,
                 children: [
-                  Text('Bring! nicht erreichbar', style: WText.label),
+                  Text(context.l10n.bringShareUnreachable, style: WText.label),
                   Text(text.split('\n').join(', '), style: WText.detail),
                 ],
               ),
@@ -93,7 +94,9 @@ class _BringShareCardState extends ConsumerState<BringShareCard> {
           alignment: AlignmentDirectional.centerEnd,
           child: OutlinedButton(
             onPressed: _sent ? null : () => unawaited(_share()),
-            child: Text(_sent ? 'An Bring! gesendet' : 'An Bring! senden'),
+            child: Text(
+              _sent ? context.l10n.bringShareSent : context.l10n.bringShareSend,
+            ),
           ),
         ),
       ],

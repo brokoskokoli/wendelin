@@ -4,6 +4,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/chat_entry.dart';
 import '../../di/tee_restrictions.dart';
+import '../../l10n/l10n.dart';
 import '../attestation/attestation_texts.dart';
 import '../design/design.dart';
 import 'bring_share_card.dart';
@@ -136,7 +137,7 @@ class _ConversationViewState extends State<ConversationView> {
           flushChips();
           out.add(
             Text(
-              sessionLabel(at, widget.now),
+              sessionLabel(context.l10n, at, widget.now),
               style: WText.mono,
               textAlign: TextAlign.center,
             ),
@@ -298,6 +299,7 @@ class AttestedAnswer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final message = attestationMessage(
+      context.l10n,
       attestation.status,
       reasonCode: attestation.reasonCode,
       detail: attestation.detail,
@@ -313,7 +315,9 @@ class AttestedAnswer extends ConsumerWidget {
         AttestationShield(
           key: const ValueKey('answerShield'),
           status: restricted ? CheckStatus.info : message.status,
-          label: restricted ? restrictionOpenLabel : message.label,
+          label: restricted
+              ? restrictionOpenLabel(context.l10n)
+              : message.label,
           onTap: onTap == null ? null : () => onTap!(attestation),
         ),
         if (message.title case final title?)
@@ -331,7 +335,7 @@ class AttestedAnswer extends ConsumerWidget {
                         foregroundColor: WColors.link,
                         minimumSize: const Size(WSize.touchMin, WSize.touchMin),
                       ),
-                      child: const Text('Neu prüfen'),
+                      child: Text(context.l10n.attLogRecheck),
                     )
                   : null,
             ),

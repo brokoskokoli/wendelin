@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/http_tools.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/export.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
@@ -337,11 +338,11 @@ void main() {
     );
     expect(find.textContaining('10 s rückgängig'), findsNothing);
     expect(
-      riskText(RiskLevel.write, false),
+      riskText(AppLocalizationsDe(), RiskLevel.write, false),
       'ändert · ohne Nachfrage, 10 s rückgängig',
     );
     expect(
-      riskText(RiskLevel.write, true, hasUndo: false),
+      riskText(AppLocalizationsDe(), RiskLevel.write, true, hasUndo: false),
       'ändert · fragt immer nach',
     );
   });

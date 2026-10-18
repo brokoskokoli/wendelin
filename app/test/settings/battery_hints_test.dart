@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/platform/battery_platform.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -67,7 +68,7 @@ void main() {
         ..current = const BatteryStatus(bucket: StandbyBucket.active),
     );
     expect(find.text('Zuverlässig öffnen'), findsNothing);
-    expect(find.text(batteryOptimizedTitle), findsNothing);
+    expect(find.text(AppLocalizationsDe().batteryOptimizedTitle), findsNothing);
   });
 
   testWidgets('Optimierung aktiv: Hinweis und Knopf fragt die Ausnahme an', (
@@ -76,7 +77,10 @@ void main() {
     final battery = FakeBatteryPlatform()
       ..current = const BatteryStatus(ignoringOptimizations: false);
     await pumpHints(tester, battery);
-    expect(find.text(batteryOptimizedTitle), findsOneWidget);
+    expect(
+      find.text(AppLocalizationsDe().batteryOptimizedTitle),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Keine Einschränkung erlauben'));
     await tester.pump();
     expect(battery.requested, 1);
@@ -86,7 +90,7 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     await tester.pump();
-    expect(find.text(batteryOptimizedTitle), findsNothing);
+    expect(find.text(AppLocalizationsDe().batteryOptimizedTitle), findsNothing);
   });
 
   testWidgets('Bucket rare und restricted werden angezeigt', (tester) async {
@@ -143,23 +147,23 @@ void main() {
   final cards = <(String, SettingsRow)>[
     (
       'akku_optimierung',
-      const SettingsRow(
-        title: batteryOptimizedTitle,
-        detail: batteryOptimizedDetail,
+      SettingsRow(
+        title: AppLocalizationsDe().batteryOptimizedTitle,
+        detail: AppLocalizationsDe().batteryOptimizedDetail,
       ),
     ),
     (
       'akku_standby',
       SettingsRow(
-        title: standbyBucketTitle(StandbyBucket.rare),
-        detail: standbyBucketDetail,
+        title: standbyBucketTitle(AppLocalizationsDe(), StandbyBucket.rare),
+        detail: AppLocalizationsDe().batteryStandbyDetail,
       ),
     ),
     (
       'akku_hersteller',
       SettingsRow(
-        title: vendorChecklists['xiaomi']!.$1,
-        detail: vendorChecklists['xiaomi']!.$2,
+        title: vendorChecklists(AppLocalizationsDe())['xiaomi']!.$1,
+        detail: vendorChecklists(AppLocalizationsDe())['xiaomi']!.$2,
       ),
     ),
   ];

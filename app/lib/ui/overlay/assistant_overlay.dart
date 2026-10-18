@@ -10,11 +10,13 @@ import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
 import '../../di/attestation_hub.dart';
 import '../../di/attestation_providers.dart';
+import '../../di/preferences.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
 import '../../di/wake_settings.dart';
+import '../../l10n/l10n.dart';
 import '../../platform/assistant_platform.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
@@ -28,7 +30,7 @@ import 'overlay_sheet.dart';
 
 /// Root widget of the assistant overlay (Dart entrypoint `assistantMain`,
 /// started by `AssistantActivity` with a transparent window).
-class AssistantOverlayApp extends StatelessWidget {
+class AssistantOverlayApp extends ConsumerWidget {
   /// Creates the overlay app.
   const AssistantOverlayApp({super.key, this.autoStart = true});
 
@@ -36,8 +38,12 @@ class AssistantOverlayApp extends StatelessWidget {
   final bool autoStart;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp(
     title: 'Wendelin',
+    locale: uiLocaleFor(ref.watch(uiLanguageProvider)),
+    localizationsDelegates: wendelinLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localeListResolutionCallback: (l, s) => resolveUiLocale(l, s),
     debugShowCheckedModeBanner: false,
     theme: buildWendelinTheme(),
     color: WColors.transparent,
@@ -356,9 +362,12 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     onUnlock: _lockKnown ? () => unawaited(_unlock()) : null,
     status: _locked
         ? null
-        : voice.error ??
+        : switch (voice.error ??
               voice.hint ??
-              (available ? null : voiceUnavailableHint),
+              (available ? null : voiceUnavailableError)) {
+            final String s => voiceStatusText(context.l10n, s),
+            _ => null,
+          },
     question: _locked ? null : conversation.pending,
     gpuBlock: conversation.gpuBlock,
     onGpuBlock: ({required sendWithout}) =>
@@ -390,8 +399,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     style: WText.body,
     textInputAction: TextInputAction.send,
     onSubmitted: _send,
-    decoration: const InputDecoration(
-      hintText: 'Schreiben statt sprechen',
+    decoration: InputDecoration(
+      hintText: context.l10n.mainTypeInstead,
       semanticCounterText: '',
     ),
   );

@@ -27,7 +27,7 @@ extension _VoiceEventHandler on VoiceController {
         );
       case VoiceError(:final during, :final error):
         voiceLog('voice-error', {'phase': during, 'error': errorCode(error)});
-        state = state.copyWith(error: voiceErrorText(error));
+        state = state.copyWith(error: voiceErrorText(uiTexts(ref), error));
       case VoiceSpeaking(:final sentence):
         _answers.spoke(sentence);
         // Source of what is heard: the answer (not the confirmation).

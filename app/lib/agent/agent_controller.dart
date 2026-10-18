@@ -11,6 +11,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../di/attestation_hub.dart';
 import '../di/attestation_providers.dart';
 import '../di/audit_recorder.dart';
+import '../di/preferences.dart';
 import '../di/provider_config.dart';
 import '../di/providers.dart';
 import '../di/vocabulary_provider.dart';
@@ -42,6 +43,7 @@ final class AgentController extends Notifier<ConversationState> {
 
   ConversationReducer get _reducer => ConversationReducer(
     nameOf: (id) => _providers?.nameOf(id) ?? id,
+    texts: () => uiTexts(ref),
     undoWindow: ref.read(undoManagerProvider).window,
   );
 
@@ -77,7 +79,7 @@ final class AgentController extends Notifier<ConversationState> {
     state = _reducer.lateFailure(
       state,
       r.report,
-      text: 'GPU-Prüfung fehlgeschlagen. Details im Prüfprotokoll.',
+      text: uiTexts(ref).agentNoticeGpuFailed,
     );
   }
 
@@ -104,8 +106,8 @@ final class AgentController extends Notifier<ConversationState> {
           ? NoticeKind.info
           : NoticeKind.error,
       report.status == AttestationStatus.green
-          ? 'Anbieter neu geprüft, die Sperre ist aufgehoben.'
-          : 'Die neue Prüfung ist nicht bestanden. Details im Prüfprotokoll.',
+          ? uiTexts(ref).attLogRechecked
+          : uiTexts(ref).agentNoticeRecheckFailed,
     );
   }
 
@@ -228,8 +230,8 @@ final class AgentController extends Notifier<ConversationState> {
           AgentFailed(
             error: AgentErrorKind.internal,
             message: text.isEmpty
-                ? 'Die Anfrage ist leer.'
-                : 'Es läuft schon eine Anfrage.',
+                ? uiTexts(ref).agentNoticeRequestEmpty
+                : uiTexts(ref).agentNoticeRequestRunning,
           ),
         )
         ..close();
@@ -266,14 +268,14 @@ final class AgentController extends Notifier<ConversationState> {
     try {
       providers = await ref.read(providerConfigProvider.future);
     } on Object catch (e) {
-      _finishWithNotice(NoticeKind.error, 'Provider-Profil fehlerhaft: $e');
+      _finishWithNotice(
+        NoticeKind.error,
+        uiTexts(ref).agentNoticeProfileBroken(e),
+      );
       return;
     }
     if (providers == null) {
-      _finishWithNotice(
-        NoticeKind.info,
-        'Bitte zuerst einen Provider einrichten.',
-      );
+      _finishWithNotice(NoticeKind.info, uiTexts(ref).agentNoticeSetupFirst);
       return;
     }
     _providers = providers;
@@ -286,14 +288,14 @@ final class AgentController extends Notifier<ConversationState> {
       sessionId = await ref.read(sessionManagerProvider).ensure();
     } on Object catch (e, stack) {
       _report(e, stack);
-      _finishWithNotice(NoticeKind.error, 'Die Anfrage konnte nicht starten.');
+      _finishWithNotice(NoticeKind.error, uiTexts(ref).agentNoticeStartFailed);
       return;
     }
     if (_cancelRequested) {
       // Cancelled while starting (e.g. tap in the overlay): nothing runs.
       _finishWithNotice(
         NoticeKind.info,
-        'Abgebrochen.',
+        uiTexts(ref).agentNoticeCancelled,
         error: AgentErrorKind.cancelled,
       );
       return;
@@ -401,7 +403,7 @@ final class AgentController extends Notifier<ConversationState> {
       state = _reducer.notice(
         state,
         NoticeKind.error,
-        'Rückgängig hat nicht geklappt: $e',
+        uiTexts(ref).agentNoticeUndoFailed(e),
       );
       return false;
     }

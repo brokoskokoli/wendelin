@@ -5,6 +5,7 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/provider_config.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
@@ -200,7 +201,10 @@ void main() {
       ..localResult = none;
     await sendText(tester, 'Vertrauliche Frage');
     expect(find.text('Kein GPU-Nachweis'), findsOneWidget);
-    expect(find.textContaining('keinen GPU-Nachweis'), findsWidgets);
+    expect(
+      find.text(AppLocalizationsDe().gpuNoEvidenceMessage('Phala · GLM klein')),
+      findsWidgets,
+    );
     expect(gateway.requests, 0);
     await tester.tap(find.text('Ohne GPU-Prüfung senden'));
     await _settle(tester);

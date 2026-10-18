@@ -3,28 +3,36 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 import '../../../di/provider_setup.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 
 /// Profile name; with [login] the password manager's user name.
-Widget _nameField(TextEditingController name, {required bool login}) =>
-    TextField(
-      key: const ValueKey('providerName'),
-      controller: name,
-      style: WText.body,
-      autofillHints: login ? const [AutofillHints.username] : null,
-      decoration: const InputDecoration(labelText: 'Name'),
-    );
-
-Widget _baseUrlField(TextEditingController baseUrl) => TextField(
-  controller: baseUrl,
+Widget _nameField(
+  AppLocalizations l,
+  TextEditingController name, {
+  required bool login,
+}) => TextField(
+  key: const ValueKey('providerName'),
+  controller: name,
   style: WText.body,
-  keyboardType: TextInputType.url,
-  decoration: const InputDecoration(labelText: 'Base-URL'),
+  autofillHints: login ? const [AutofillHints.username] : null,
+  decoration: InputDecoration(labelText: l.name),
 );
+
+Widget _baseUrlField(AppLocalizations l, TextEditingController baseUrl) =>
+    TextField(
+      controller: baseUrl,
+      style: WText.body,
+      keyboardType: TextInputType.url,
+      decoration: InputDecoration(
+        labelText: l.providerSetupProviderSetupBaseUrl,
+      ),
+    );
 
 /// Step 2: name, base URL and key of the provider, connection test.
 List<Widget> credentialsStep({
+  required AppLocalizations l,
   required ProviderSetupSession session,
   required TextEditingController name,
   required TextEditingController baseUrl,
@@ -42,45 +50,50 @@ List<Widget> credentialsStep({
     // („Claude“) tells its entries apart, so a provider key is not
     // offered for Bring! or other secrets of the app.
     if (t.auth == TemplateAuth.none)
-      _nameField(name, login: false)
+      _nameField(l, name, login: false)
     else
       AutofillGroup(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: WSpace.l18,
           children: [
-            _nameField(name, login: true),
-            if (t.type == ProviderType.openaiCompatible) _baseUrlField(baseUrl),
+            _nameField(l, name, login: true),
+            if (t.type == ProviderType.openaiCompatible)
+              _baseUrlField(l, baseUrl),
             SecretField(
               key: const ValueKey('apiKey'),
               controller: apiKey,
               label: t.auth == TemplateAuth.apiKey
-                  ? 'API-Key'
-                  : 'API-Key (optional)',
-              helperText: session.keyStored
-                  ? 'Key gespeichert – leer lassen behält ihn'
-                  : null,
+                  ? l.webSearchApiKey
+                  : l.providerSetupProviderSetupApiKeyOptional,
+              helperText: session.keyStored ? l.webSearchKeySaved : null,
             ),
           ],
         ),
       ),
     if (t.auth == TemplateAuth.none && t.type == ProviderType.openaiCompatible)
-      _baseUrlField(baseUrl),
+      _baseUrlField(l, baseUrl),
     if (t.auth != TemplateAuth.none) ...[
       if (t.keyPageUrl case final url?)
         Align(
           alignment: AlignmentDirectional.centerStart,
           child: TextButton(
             onPressed: () => onOpenUrl(url),
-            child: const Text('Key beim Anbieter erstellen'),
+            child: Text(l.providerSetupProviderSetupCreateKey),
           ),
         ),
     ],
     ?failure,
     PrimaryButton(
-      busy ? 'Teste …' : 'Verbindung testen',
+      busy
+          ? l.providerSetupProviderSetupTesting
+          : l.providerSetupProviderSetupTestConnection,
       onPressed: busy ? null : onConnect,
     ),
-    if (!editing) WideButton('Andere Vorlage', onPressed: onOtherTemplate),
+    if (!editing)
+      WideButton(
+        l.providerSetupProviderSetupOtherTemplate,
+        onPressed: onOtherTemplate,
+      ),
   ];
 }

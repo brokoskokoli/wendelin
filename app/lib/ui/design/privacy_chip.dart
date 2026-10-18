@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'dashed_border.dart';
 import 'glyphs.dart';
@@ -8,11 +9,11 @@ import 'glyphs.dart';
 /// Darstellung einer [PrivacyLevel]: über Form/Füllung, nicht nur Farbe.
 extension PrivacyLevelStyle on PrivacyLevel {
   /// Kurzname im Chip.
-  String get label => switch (this) {
-    PrivacyLevel.local => 'lokal',
-    PrivacyLevel.tee => 'TEE',
-    PrivacyLevel.eu => 'EU',
-    PrivacyLevel.standard => 'Standard',
+  String labelOf(AppLocalizations l) => switch (this) {
+    PrivacyLevel.local => l.privacyLevelLocal,
+    PrivacyLevel.tee => l.privacyLevelTee,
+    PrivacyLevel.eu => l.privacyLevelEu,
+    PrivacyLevel.standard => l.privacyLevelStandard,
   };
 
   /// Textfarbe im Chip.
@@ -46,7 +47,7 @@ class PrivacyChip extends StatelessWidget {
   /// Datenschutzstufe.
   final PrivacyLevel level;
 
-  /// Text im Chip (Standard: [PrivacyLevelStyle.label]).
+  /// Text im Chip (Standard: [PrivacyLevelStyle.labelOf]).
   final String? label;
 
   /// Optionales Element rechts (z. B. Prüfstatus).
@@ -58,7 +59,7 @@ class PrivacyChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = level.chipForeground;
-    final text = label ?? level.label;
+    final text = label ?? level.labelOf(context.l10n);
     final content = Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: WSpace.s10,
@@ -101,7 +102,9 @@ class PrivacyChip extends StatelessWidget {
     };
     return Semantics(
       container: true,
-      label: semanticLabel ?? '$text, Datenschutzstufe ${level.label}',
+      label:
+          semanticLabel ??
+          context.l10n.privacyLevelSemantics(text, level.labelOf(context.l10n)),
       child: ExcludeSemantics(child: chip),
     );
   }

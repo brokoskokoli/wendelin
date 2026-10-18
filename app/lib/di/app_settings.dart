@@ -41,8 +41,15 @@ abstract final class AppSettings {
     defaultValue: false,
   );
 
-  /// Preferred language (`de`, `fr`, `en`); the UI is German for now.
+  /// Language of speech in/out and prompts (`de`, `fr`, `en`).
   static final language = SettingKey.string('app.language', defaultValue: 'de');
+
+  /// Language of the app UI: `system`, `de`, `en` or `fr` (WP79); independent
+  /// of [language].
+  static final uiLanguage = SettingKey.string(
+    'app.uiLanguage',
+    defaultValue: 'system',
+  );
 
   /// How the assistant addresses the user.
   static final userName = SettingKey.string('assistant.userName');

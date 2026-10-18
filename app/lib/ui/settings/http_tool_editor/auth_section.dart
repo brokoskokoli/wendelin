@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'editor_parts.dart';
@@ -33,7 +34,7 @@ class AuthSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = draft;
     return SettingsSection(
-      title: 'Anmeldung',
+      title: context.l10n.mcpAddSignIn,
       children: [
         EditorField(
           child: Wrap(
@@ -50,15 +51,17 @@ class AuthSection extends StatelessWidget {
         ),
         if (d.auth == HttpAuthKind.bearer)
           _secretRow(
+            context,
             owner: d,
-            label: 'Bearer-Token',
+            label: context.l10n.mcpDetailBearer,
             stored: d.bearerStored,
             onChanged: (v) => d.bearerNew = v,
           ),
         if (d.auth == HttpAuthKind.headers) ...[
-          for (final (i, h) in d.secretHeaders.indexed) _secretHeader(d, h, i),
+          for (final (i, h) in d.secretHeaders.indexed)
+            _secretHeader(context, d, h, i),
           SettingsRow(
-            title: '+ Geheimer Header',
+            title: context.l10n.httpAuthAddSecretHeader,
             onTap: () =>
                 onEdit(() => d.secretHeaders.add(HttpSecretHeaderDraft())),
           ),
@@ -67,10 +70,15 @@ class AuthSection extends StatelessWidget {
     );
   }
 
-  Widget _secretHeader(HttpToolDraft d, HttpSecretHeaderDraft h, int i) {
+  Widget _secretHeader(
+    BuildContext context,
+    HttpToolDraft d,
+    HttpSecretHeaderDraft h,
+    int i,
+  ) {
     final remove = WIconButton(
       icon: WIcons.close,
-      tooltip: 'Geheimen Header entfernen',
+      tooltip: context.l10n.httpAuthRemoveSecretHeader,
       iconSize: WSize.iconSmall,
       onPressed: () => onEdit(() => d.secretHeaders.remove(h)),
     );
@@ -89,8 +97,8 @@ class AuthSection extends StatelessWidget {
                     key: ValueKey('secretHeaderName$i'),
                     initialValue: h.name,
                     style: WText.mono,
-                    decoration: const InputDecoration(
-                      labelText: 'Geheimer Header, z. B. X-Api-Key',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.httpAuthSecretHeader,
                     ),
                     onChanged: (v) => onEdit(() => h.name = v),
                   ),
@@ -100,8 +108,9 @@ class AuthSection extends StatelessWidget {
             ),
           ),
         _secretRow(
+          context,
           owner: h,
-          label: 'Wert',
+          label: context.l10n.mcpAddValue,
           stored: h.stored,
           onChanged: (v) => h.newValue = v,
           fieldKey: ValueKey('secretHeaderValue$i'),
@@ -111,7 +120,8 @@ class AuthSection extends StatelessWidget {
   }
 
   /// A secret value: stored ones are masked and can only be replaced.
-  Widget _secretRow({
+  Widget _secretRow(
+    BuildContext context, {
     required Object owner,
     required String label,
     required bool stored,
@@ -121,10 +131,10 @@ class AuthSection extends StatelessWidget {
     if (stored && !replacing.contains(owner)) {
       return SettingsRow(
         title: label,
-        detail: '$redactedSecret gespeichert',
+        detail: context.l10n.httpAuthStored(redactedSecret),
         trailing: TextButton(
           onPressed: () => onReplace(owner),
-          child: const Text('Ersetzen'),
+          child: Text(context.l10n.routingImportReplace),
         ),
       );
     }
@@ -134,7 +144,7 @@ class AuthSection extends StatelessWidget {
           key: fieldKey,
           label: label,
           mono: true,
-          helperText: stored ? 'Leer lassen behält den gespeicherten' : null,
+          helperText: stored ? context.l10n.httpAuthKeepStored : null,
           onChanged: (v) => onEdit(() => onChanged(v)),
         ),
       ),

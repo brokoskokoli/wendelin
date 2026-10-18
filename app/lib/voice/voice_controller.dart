@@ -12,6 +12,7 @@ import '../agent/conversation_state.dart';
 import '../di/preferences.dart';
 import '../di/providers.dart';
 import '../di/voice_providers.dart';
+import '../l10n/l10n.dart';
 import '../platform/voice/capture_profile_follower.dart';
 import '../platform/voice/record_audio_input.dart';
 import 'answer_capture.dart';
@@ -197,7 +198,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// runs once the speech models are there, e.g. asking for the microphone
   /// permission with an explanation (`ensureMicrophoneAccess`); `false`
   /// stops. Without models it is never called (hint
-  /// [voiceUnavailableHint] instead of a permission dialog).
+  /// [voiceUnavailableError] instead of a permission dialog).
   ///
   /// With installed models the microphone opens right after [prepare] and
   /// buffers while Whisper and the VAD load (B11).
@@ -278,7 +279,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       voiceLog('start-failed', {'reason': 'load', 'error': errorCode(e)});
       state = state.copyWith(
         preparing: false,
-        error: voiceErrorText(e),
+        error: voiceErrorText(uiTexts(ref), e),
         clearHint: true,
       );
       return false;
@@ -290,7 +291,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       });
       state = state.copyWith(
         preparing: false,
-        error: components == null ? voiceUnavailableHint : null,
+        error: components == null ? voiceUnavailableError : null,
       );
       return false;
     }
@@ -340,12 +341,15 @@ final class VoiceController extends Notifier<VoiceUiState> {
       components = await _loadComponents();
     } on Object catch (e) {
       voiceLog('start-failed', {'reason': 'load', 'error': errorCode(e)});
-      state = state.copyWith(error: voiceErrorText(e), clearHint: true);
+      state = state.copyWith(
+        error: voiceErrorText(uiTexts(ref), e),
+        clearHint: true,
+      );
       return false;
     }
     if (components == null) {
       voiceLog('start-failed', {'reason': 'no-models'});
-      state = state.copyWith(error: voiceUnavailableHint, clearHint: true);
+      state = state.copyWith(error: voiceUnavailableError, clearHint: true);
       return false;
     }
     if (!(await prepare?.call() ?? true)) {
@@ -677,8 +681,10 @@ final class VoiceController extends Notifier<VoiceUiState> {
 }
 
 /// German text for a failure of a voice component.
-String voiceErrorText(Object error) => switch (error) {
+String voiceErrorText(AppLocalizations l, Object error) => switch (error) {
+  VoiceException(kind: VoiceErrorKind.modelMissing) => l.voiceErrorModelMissing,
+  VoiceException(kind: VoiceErrorKind.busy) => l.voiceErrorMicBusy,
   VoiceException(:final message) => message,
   // Never the raw message („Bad state: …“, WP64); the log has the type.
-  _ => 'Sprache hat nicht geklappt. Bitte versuche es noch einmal.',
+  _ => l.voiceErrorGeneric,
 };

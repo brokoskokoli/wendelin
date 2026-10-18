@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -16,8 +17,14 @@ void main() {
   ].join('\n');
 
   test('clampConfirmationDetail kürzt Zeilen und Länge', () {
-    expect(clampConfirmationDetail('kurz\nzwei'), 'kurz\nzwei');
-    final out = clampConfirmationDetail(longDiff(60)).split('\n');
+    expect(
+      clampConfirmationDetail(AppLocalizationsDe(), 'kurz\nzwei'),
+      'kurz\nzwei',
+    );
+    final out = clampConfirmationDetail(
+      AppLocalizationsDe(),
+      longDiff(60),
+    ).split('\n');
     expect(out, hasLength(maxDetailLines));
     expect(out.last, '… 52 weitere Zeilen');
     expect(out.every((l) => l.length <= maxDetailLineChars), isTrue);

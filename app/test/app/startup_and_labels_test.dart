@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/integration_specs.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/main.dart';
 import 'package:wendelin/platform/platform_ports.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -51,29 +52,41 @@ void main() {
   group('Texte', () {
     test('Sitzungsmarke: heute, gestern, Datum', () {
       final now = DateTime(2026, 10, 13, 20);
-      expect(sessionLabel(DateTime(2026, 10, 13, 8, 5), now), 'Heute · 08:05');
       expect(
-        sessionLabel(DateTime(2026, 10, 12, 23, 59), now),
+        sessionLabel(AppLocalizationsDe(), DateTime(2026, 10, 13, 8, 5), now),
+        'Heute · 08:05',
+      );
+      expect(
+        sessionLabel(AppLocalizationsDe(), DateTime(2026, 10, 12, 23, 59), now),
         'Gestern · 23:59',
       );
-      expect(sessionLabel(DateTime(2026, 10, 2, 7), now), '02.10. · 07:00');
+      expect(
+        sessionLabel(AppLocalizationsDe(), DateTime(2026, 10, 2, 7), now),
+        '02.10. · 07:00',
+      );
     });
 
     test('Bestätigungstexte je Tool', () {
       expect(
-        confirmationTexts('calendar__delete_event').title,
+        confirmationTexts(AppLocalizationsDe(), 'calendar__delete_event').title,
         'Termin löschen?',
       );
-      final clear = confirmationTexts('lists__clear_completed');
+      final clear = confirmationTexts(
+        AppLocalizationsDe(),
+        'lists__clear_completed',
+      );
       expect(clear.title, 'Wirklich löschen?');
       expect(clear.yes, 'Ja, löschen');
       expect(clear.no, 'Nein, behalten');
-      final other = confirmationTexts('sms__send');
+      final other = confirmationTexts(AppLocalizationsDe(), 'sms__send');
       expect(other.title, 'Soll ich das tun?');
       expect(other.yes, 'Ja, ausführen');
       expect(other.no, 'Nein');
       // „delete“ im Integrationsnamen zählt nicht.
-      expect(confirmationTexts('delete__send').title, 'Soll ich das tun?');
+      expect(
+        confirmationTexts(AppLocalizationsDe(), 'delete__send').title,
+        'Soll ich das tun?',
+      );
     });
 
     test('Kurztext wird am ersten „: “ geteilt', () {

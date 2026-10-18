@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/http_tool_editor_screen.dart';
 import 'package:wendelin/ui/settings/http_tools_screen.dart';
@@ -20,7 +21,9 @@ void main() {
   testWidgets('Übersicht: Routing öffnet den Editor, MCP-Server die '
       'Serverliste (WP27), HTTP-Tools die Liste', (tester) async {
     await pumpPage(tester, TestEnv(), const SettingsScreen());
-    final titles = [for (final (t, _, _) in SettingsScreen.areas) t];
+    final titles = [
+      for (final (t, _, _) in SettingsScreen.areas(AppLocalizationsDe())) t,
+    ];
     expect(titles.take(5), [
       'Provider',
       'Routing',

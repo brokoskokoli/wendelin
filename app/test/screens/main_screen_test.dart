@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/design/gallery.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
@@ -10,7 +11,6 @@ import 'package:wendelin/ui/screens/main_parts.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
-import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
@@ -297,7 +297,10 @@ void main() {
       await pumpApp(tester, env);
       final mic = tester.widget<MicButton>(find.byType(MicButton));
       expect(mic.state, MicState.disabled);
-      expect(find.byTooltip(voiceUnavailableHint), findsOneWidget);
+      expect(
+        find.byTooltip(AppLocalizationsDe().voiceUnavailableHint),
+        findsOneWidget,
+      );
 
       await send(tester, 'Hallo');
       await pumpUntil(tester, find.text('Moment'));

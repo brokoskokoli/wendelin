@@ -6,6 +6,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 
@@ -63,14 +64,18 @@ class WakeModelsNotice extends ConsumerWidget {
       children: [
         Text(
           optional
-              ? 'Für die Nachprüfung Sprachmodell laden '
-                    '(${missing.map((m) => m.displayName).join(', ')}).'
-              : 'Dafür muss zuerst das Sprachmodell geladen werden '
-                    '(${missing.map((m) => m.displayName).join(', ')}).',
+              ? context.l10n.wakeModelsVerifyNeeds(
+                  missing.map((m) => m.displayName).join(', '),
+                )
+              : context.l10n.wakeModelsNeedsModel(
+                  missing.map((m) => m.displayName).join(', '),
+                ),
           style: WText.caption,
         ),
         WideButton(
-          loading ? 'Lädt …' : 'Sprachmodell laden',
+          loading
+              ? context.l10n.voiceDownloadLoading
+              : context.l10n.wakeModelsLoadModel,
           onPressed: loading
               ? null
               : () {

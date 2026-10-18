@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 
 /// Page frame of the settings: back button, title, optional intro, content.
@@ -45,7 +46,7 @@ class SettingsPage extends StatelessWidget {
         if (showBack)
           WIconButton(
             icon: WIcons.back,
-            tooltip: 'Zurück',
+            tooltip: context.l10n.back,
             onPressed: () => Navigator.of(context).maybePop(),
             iconSize: WSize.iconSmall,
           ),
@@ -227,8 +228,8 @@ Future<bool> confirm(
   BuildContext context, {
   required String title,
   required String message,
-  String yes = 'Ja',
-  String no = 'Abbrechen',
+  String? yes,
+  String? no,
 }) async =>
     await showDialog<bool>(
       context: context,
@@ -239,11 +240,11 @@ Future<bool> confirm(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(no),
+            child: Text(no ?? context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(yes),
+            child: Text(yes ?? context.l10n.yes),
           ),
         ],
       ),

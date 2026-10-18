@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 
@@ -12,6 +13,7 @@ List<Widget> mcpAuthFields({
   required TextEditingController headerName,
   required TextEditingController headerValue,
   required TextEditingController clientId,
+  required AppLocalizations l,
 }) => switch (auth) {
   McpAuthKind.none => const [],
   McpAuthKind.bearer => [
@@ -21,7 +23,7 @@ List<Widget> mcpAuthFields({
         key: const ValueKey('mcpToken'),
         controller: token,
         label: 'Token',
-        helperText: template.authHint ?? 'Wird nie wieder angezeigt',
+        helperText: template.authHint ?? l.mcpAddTokenHint,
       ),
     ),
   ],
@@ -31,27 +33,27 @@ List<Widget> mcpAuthFields({
       controller: headerName,
       style: WText.body,
       autocorrect: false,
-      decoration: const InputDecoration(labelText: 'Header, z. B. X-Api-Key'),
+      decoration: InputDecoration(labelText: l.mcpAddHeaderLabel),
     ),
     AutofillGroup(
       onDisposeAction: AutofillContextAction.cancel,
       child: SecretField(
         key: const ValueKey('mcpHeaderValue'),
         controller: headerValue,
-        label: 'Wert',
-        helperText: 'Wird nie wieder angezeigt',
+        label: l.mcpAddValue,
+        helperText: l.mcpAddValueHint,
       ),
     ),
   ],
   McpAuthKind.oauth => [
     TextField(
-      key: const ValueKey('mcpClientId'),
+      key: ValueKey('mcpClientId'),
       controller: clientId,
       style: WText.body,
       autocorrect: false,
-      decoration: const InputDecoration(
-        labelText: 'Client-ID (optional)',
-        helperText: 'Leer lassen: Wendelin registriert sich selbst beim Server',
+      decoration: InputDecoration(
+        labelText: l.mcpAddClientId,
+        helperText: l.mcpAddClientIdHint,
         helperMaxLines: 2,
       ),
     ),
@@ -71,7 +73,7 @@ class McpTemplateList extends StatelessWidget {
     children: [
       for (final t in McpTemplate.all)
         SettingsRow(
-          title: t == McpTemplate.custom ? 'Eigener Server' : t.name,
+          title: t == McpTemplate.custom ? context.l10n.mcpAddCustom : t.name,
           detail: t.description,
           onTap: () => onChoose(t),
         ),
@@ -92,14 +94,17 @@ class McpAuthChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SettingsSection(
-    title: 'Anmeldung',
+    title: context.l10n.mcpAddSignIn,
     children: [
       for (final kind in McpAuthKind.values)
         SettingsRow(
           title: kind.label,
           onTap: () => onPick(kind),
           trailing: auth == kind
-              ? const CheckStatusIcon(CheckStatus.ok, semanticLabel: 'gewählt')
+              ? CheckStatusIcon(
+                  CheckStatus.ok,
+                  semanticLabel: context.l10n.selected,
+                )
               : null,
         ),
     ],
@@ -130,20 +135,20 @@ class McpAddOptions extends StatelessWidget {
   Widget build(BuildContext context) => SectionCard(
     children: [
       SettingsRow(
-        title: 'Alle Tools bestätigen',
-        detail: 'Jeder Aufruf fragt nach',
+        title: context.l10n.mcpAddConfirmAll,
+        detail: context.l10n.mcpAddConfirmAllHint,
         trailing: WSwitch(
           value: confirmAll,
-          semanticLabel: 'Alle Tools bestätigen',
+          semanticLabel: context.l10n.mcpAddConfirmAll,
           onChanged: onConfirmAll,
         ),
       ),
       SettingsRow(
-        title: 'Sensibel',
-        detail: 'Tools nur an Provider ab der eingestellten Stufe',
+        title: context.l10n.mcpAddSensitive,
+        detail: context.l10n.mcpAddSensitiveHint,
         trailing: WSwitch(
           value: sensitive,
-          semanticLabel: 'Sensibel',
+          semanticLabel: context.l10n.mcpAddSensitive,
           onChanged: onSensitive,
         ),
       ),
@@ -168,7 +173,9 @@ class McpProbeRow extends StatelessWidget {
     children: [
       CheckStatusIcon(
         ok ? CheckStatus.ok : CheckStatus.failed,
-        semanticLabel: ok ? 'erreichbar' : 'Problem',
+        semanticLabel: ok
+            ? context.l10n.mcpLabelsReachable
+            : context.l10n.mcpAddProblem,
       ),
       Expanded(child: Text(text, style: WText.detail)),
     ],

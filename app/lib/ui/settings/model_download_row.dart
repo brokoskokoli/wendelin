@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/voice_providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import '../onboarding/voice_download_step.dart';
 import 'settings_page.dart';
 
 /// One downloadable speech model: name, size and state, a progress bar
@@ -52,26 +54,36 @@ class ModelDownloadRow extends ConsumerWidget {
     );
     final notifier = ref.read(modelStatesProvider.notifier);
     final installed = state.phase == ModelPhase.installed;
-    final size = megabytes(model.sizeBytes);
+    final size = sizeLabel(context.l10n, model.sizeBytes);
     final detail = switch (state.phase) {
-      ModelPhase.downloading =>
-        'Lädt … ${(state.progress * 100).floor()} % von $size',
-      ModelPhase.unpacking => 'Wird entpackt …',
-      ModelPhase.installed => '$size · geladen',
-      ModelPhase.partial => '$size · angefangen',
-      ModelPhase.absent || ModelPhase.unknown => '$size · nicht geladen',
+      ModelPhase.downloading => context.l10n.voiceDownloadLoadingPercentOf(
+        '${(state.progress * 100).floor()}',
+        size,
+      ),
+      ModelPhase.unpacking => context.l10n.voiceDownloadUnpacking,
+      ModelPhase.installed => context.l10n.modelRowLoaded(size),
+      ModelPhase.partial => context.l10n.modelRowStarted(size),
+      ModelPhase.absent ||
+      ModelPhase.unknown => context.l10n.modelRowNotLoaded(size),
     };
     final action = switch (state.phase) {
-      ModelPhase.downloading => ('Abbrechen', () => notifier.cancel(model.id)),
+      ModelPhase.downloading => (
+        context.l10n.cancel,
+        () => notifier.cancel(model.id),
+      ),
       ModelPhase.unpacking || ModelPhase.unknown => null,
       ModelPhase.installed =>
-        deletable ? ('Löschen', () => unawaited(_delete(context, ref))) : null,
+        deletable
+            ? (context.l10n.delete, () => unawaited(_delete(context, ref)))
+            : null,
       ModelPhase.partial => (
-        'Fortsetzen',
+        context.l10n.modelRowResume,
         () => unawaited(notifier.download(model.id)),
       ),
       ModelPhase.absent => (
-        state.error == null ? 'Laden' : 'Erneut laden',
+        state.error == null
+            ? context.l10n.voiceDownloadLoad
+            : context.l10n.voiceDownloadLoadAgain,
         () => unawaited(notifier.download(model.id)),
       ),
     };
@@ -87,7 +99,10 @@ class ModelDownloadRow extends ConsumerWidget {
             spacing: WSpace.s,
             children: [
               if (selected && installed)
-                const CheckStatusIcon(CheckStatus.ok, semanticLabel: 'gewählt'),
+                CheckStatusIcon(
+                  CheckStatus.ok,
+                  semanticLabel: context.l10n.selected,
+                ),
               if (selected && installed && extra != null) extra!,
               if (action != null)
                 _SmallButton(label: action.$1, onPressed: action.$2),
@@ -103,7 +118,9 @@ class ModelDownloadRow extends ConsumerWidget {
                   : state.progress,
               color: WColors.accent,
               backgroundColor: WColors.surfaceRaised,
-              semanticsLabel: 'Fortschritt ${model.displayName}',
+              semanticsLabel: context.l10n.modelRowProgressOf(
+                model.displayName,
+              ),
             ),
           ),
         if (state.error case final error?)
@@ -113,9 +130,9 @@ class ModelDownloadRow extends ConsumerWidget {
               spacing: WSpace.s,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CheckStatusIcon(
+                CheckStatusIcon(
                   CheckStatus.failed,
-                  semanticLabel: 'Fehler',
+                  semanticLabel: context.l10n.error,
                 ),
                 Expanded(child: Text(error, style: WText.detail)),
               ],
@@ -128,11 +145,9 @@ class ModelDownloadRow extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final ok = await confirm(
       context,
-      title: '${model.displayName} löschen?',
-      message:
-          'Das Modell wird vom Gerät entfernt und muss vor der nächsten '
-          'Nutzung neu geladen werden.',
-      yes: 'Löschen',
+      title: context.l10n.modelRowDeleteTitle(model.displayName),
+      message: context.l10n.modelRowDeleteBody,
+      yes: context.l10n.delete,
     );
     if (!ok) return;
     await ref.read(modelStatesProvider.notifier).delete(model.id);

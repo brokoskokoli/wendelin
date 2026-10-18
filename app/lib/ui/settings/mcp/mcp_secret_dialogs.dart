@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
 import '../../../di/mcp/mcp_providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'mcp_labels.dart';
@@ -22,14 +23,16 @@ Future<void> signInMcp(
     if (context.mounted) {
       showHint(
         context,
-        check.ok ? 'Angemeldet' : 'Prüfung: ${mcpCheckText(check)}',
+        check.ok
+            ? context.l10n.mcpSecretSignedIn
+            : context.l10n.mcpSecretCheck(mcpCheckText(context.l10n, check)),
       );
     }
   } on McpSignInException catch (e) {
     if (context.mounted) showHint(context, e.message);
   } on McpException catch (e) {
     if (context.mounted) {
-      showHint(context, 'Anmeldung fehlgeschlagen: ${e.message}');
+      showHint(context, context.l10n.mcpSecretSignInFailed(e.message));
     }
   }
 }
@@ -47,15 +50,27 @@ Future<void> askSecrets(
     case McpOAuth():
       showHint(
         context,
-        '„${server.config.name}“: auf der Serverseite anmelden',
+        context.l10n.mcpSecretSignInOnServer(server.config.name),
       );
     case McpBearerAuth(:final secretRef):
-      await askSecret(context, ref, server, secretRef, 'Bearer-Token');
+      await askSecret(
+        context,
+        ref,
+        server,
+        secretRef,
+        context.l10n.mcpDetailBearer,
+      );
     case McpHeadersAuth(:final secretRefsByHeader):
       for (final MapEntry(key: header, value: secretRef)
           in secretRefsByHeader.entries) {
         if (!context.mounted) return;
-        await askSecret(context, ref, server, secretRef, 'Wert für $header');
+        await askSecret(
+          context,
+          ref,
+          server,
+          secretRef,
+          context.l10n.mcpDetailValueFor(header),
+        );
       }
   }
 }
@@ -74,12 +89,12 @@ Future<void> askSecret(
     context,
     title: server.config.name,
     label: label,
-    action: 'Speichern',
+    action: context.l10n.save,
     obscure: true,
   );
   if (value == null || value.isEmpty) return;
   await source.setSecret(server.config.id, secretRef, value);
-  if (context.mounted) showHint(context, 'Gespeichert');
+  if (context.mounted) showHint(context, context.l10n.mcpSecretSaved);
 }
 
 /// Dialog with one text field; `null` if cancelled.
@@ -121,7 +136,7 @@ Future<String?> askText(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () {

@@ -9,6 +9,7 @@ import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/settings/assistant_screen.dart';
 import 'package:wendelin/ui/settings/audit_log_screen.dart';
 import 'package:wendelin/ui/settings/costs_screen.dart';
@@ -68,7 +69,7 @@ void main() {
     tester,
   ) async {
     await pumpPage(tester, TestEnv(), const SettingsScreen());
-    for (final (title, _, _) in SettingsScreen.areas) {
+    for (final (title, _, _) in SettingsScreen.areas(AppLocalizationsDe())) {
       expect(find.text(title), findsOneWidget);
     }
     await tester.tap(find.text('Integrationen'));
@@ -233,11 +234,15 @@ void main() {
       AuditEntry tool(Map<String, Object?> p) =>
           AuditEntry(at: testNow, kind: AuditKind.toolCall, payload: p);
       expect(
-        auditSummary(tool({'tool': 'calendar__create_event', 'status': 'ok'})),
+        auditSummary(
+          AppLocalizationsDe(),
+          tool({'tool': 'calendar__create_event', 'status': 'ok'}),
+        ),
         'calendar__create_event · ok',
       );
       expect(
         auditSummary(
+          AppLocalizationsDe(),
           tool({
             'callId': 'c1',
             'tool': 'calendar__create_event',
@@ -249,6 +254,7 @@ void main() {
       );
       expect(
         auditSummary(
+          AppLocalizationsDe(),
           tool({
             'tool': 'calendar__create_event',
             'undo': true,

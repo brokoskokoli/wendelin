@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 
 import '../../../di/routing.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import 'routing_texts.dart';
 
@@ -63,7 +64,7 @@ class _ImportDialog extends StatelessWidget {
     final before = current.rules!.rules.length;
     return AlertDialog(
       backgroundColor: WColors.surface,
-      title: Text('Regeln importieren?', style: WText.label),
+      title: Text(context.l10n.routingImportTitle, style: WText.label),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -71,8 +72,7 @@ class _ImportDialog extends StatelessWidget {
           spacing: WSpace.m,
           children: [
             Text(
-              '${result.rules.length} Regeln ersetzen die bisherigen '
-              '$before. Erst mit „Ersetzen“ wird etwas geändert.',
+              context.l10n.routingImportBody(result.rules.length, before),
               style: WText.intro,
             ),
             for (final (i, r) in result.rules.indexed)
@@ -82,7 +82,7 @@ class _ImportDialog extends StatelessWidget {
                 children: [
                   Text('${i + 1}. ${r.name}', style: WText.label),
                   Text(
-                    '${describeCondition(r.condition)} → '
+                    '${describeCondition(context.l10n, r.condition)} → '
                     '${fullTargetLabel(current, r.target)}',
                     style: WText.mono,
                   ),
@@ -94,16 +94,13 @@ class _ImportDialog extends StatelessWidget {
             ),
             if (!preview.defaultKnown)
               Text(
-                'Das Standardprofil „${preview.imported.defaultTarget.profileId}“ '
-                'gibt es hier nicht; der bisherige Standard bleibt.',
+                context.l10n.routingImportDefaultMissing(
+                  preview.imported.defaultTarget.profileId,
+                ),
                 style: WText.detail.copyWith(color: WColors.warn),
               ),
             if (preview.skippedChains > 0)
-              Text(
-                'Die Datei enthält Eskalationsketten. Sie wurden übersprungen: '
-                'Wendelin wechselt nie von selbst das Modell.',
-                style: WText.detail,
-              ),
+              Text(context.l10n.routingImportEscalations, style: WText.detail),
             for (final i in issues)
               Text(
                 i.message,
@@ -115,11 +112,11 @@ class _ImportDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Abbrechen'),
+          child: Text(context.l10n.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Ersetzen'),
+          child: Text(context.l10n.routingImportReplace),
         ),
       ],
     );

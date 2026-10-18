@@ -2,6 +2,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../agent/conversation_state.dart';
+import '../l10n/gen/app_localizations_de.dart';
 import '../ui/screens/labels.dart';
 
 /// Whether a spoken „yes“ to [question] must be strict (1–2 yes words):
@@ -28,7 +29,8 @@ String confirmationPrompt(PendingQuestion question, String? language) {
     ToolQuestion(:final event) => switch (lang) {
       'fr' => '${_actionFr(event.call.name)} Oui ou non ?',
       'en' => '${_actionEn(event.call.name)} Yes or no?',
-      _ => '${confirmationTexts(event.call.name).title} Ja oder nein?',
+      _ =>
+        '${confirmationTexts(AppLocalizationsDe(), event.call.name).title} Ja oder nein?',
     },
     EscalationQuestion(:final toName) => switch (lang) {
       'fr' => 'Transmettre à $toName ? Oui ou non ?',

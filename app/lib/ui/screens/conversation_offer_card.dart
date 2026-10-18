@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../voice/conversation_offer.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 
 /// The one-time question after the first spoken answer: „Soll ich nach
@@ -19,21 +19,21 @@ class ConversationOfferCard extends StatelessWidget {
     spacing: WSpace.m,
     padding: const EdgeInsets.all(WSpace.l18),
     children: [
-      Text(conversationOfferQuestion, style: WText.label),
-      Text(conversationOfferHint, style: WText.intro),
+      Text(context.l10n.conversationOfferQuestion, style: WText.label),
+      Text(context.l10n.conversationOfferHint, style: WText.intro),
       Row(
         spacing: WSpace.s,
         children: [
           Expanded(
             child: OutlinedButton(
               onPressed: () => onAnswer(false),
-              child: const Text('Nein'),
+              child: Text(context.l10n.no),
             ),
           ),
           Expanded(
             child: FilledButton(
               onPressed: () => onAnswer(true),
-              child: const Text('Ja'),
+              child: Text(context.l10n.yes),
             ),
           ),
         ],

@@ -2,10 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-/// Text of the listening display while the follow-up window is open
-/// (conversation mode, K23 d): nothing is spoken, the microphone is open.
-const followUpListeningText = 'Ich höre noch zu …';
-
 /// Remaining whole seconds until [until] (rounded up, never negative).
 int followUpSeconds(DateTime until, DateTime now) {
   final ms = until.difference(now).inMilliseconds;

@@ -6,9 +6,11 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import '../../di/app_requirements.dart';
 import '../../di/integration_specs.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../routes.dart';
 import '../screens/labels.dart';
@@ -30,10 +32,8 @@ class IntegrationsScreen extends ConsumerWidget {
     final registry = ref.watch(toolRegistryProvider);
     final sync = ref.watch(userIntegrationSyncProvider);
     return SettingsPage(
-      title: 'Integrationen',
-      intro:
-          'Nur aktive Integrationen gehen ans Modell. Ausgeschaltete kosten '
-          'keine Tokens.',
+      title: context.l10n.areaIntegrations,
+      intro: context.l10n.integrationsIntro,
       children: [
         _OnChanges(
           streams: [registry.changes, sync.changes],
@@ -60,7 +60,7 @@ class IntegrationsScreen extends ConsumerWidget {
                 ),
                 if (own.isNotEmpty || rejected.isNotEmpty)
                   SettingsSection(
-                    title: 'Eigene Integrationen',
+                    title: context.l10n.integrationsOwn,
                     children: [
                       for (final info in displayOrder(own))
                         IntegrationRow(
@@ -70,7 +70,10 @@ class IntegrationsScreen extends ConsumerWidget {
                         ),
                       for (final MapEntry(key: id, value: reason)
                           in rejected.entries)
-                        SettingsRow(title: id, detail: 'Abgewiesen: $reason'),
+                        SettingsRow(
+                          title: id,
+                          detail: context.l10n.integrationsRejected(reason),
+                        ),
                     ],
                   ),
               ],
@@ -81,8 +84,8 @@ class IntegrationsScreen extends ConsumerWidget {
           spacing: WSpace.m,
           children: [
             for (final (label, route) in [
-              ('+ MCP-Server', AppRoutes.mcpServers),
-              ('+ HTTP-Tool', AppRoutes.httpToolNew),
+              (context.l10n.integrationsAddMcp, AppRoutes.mcpServers),
+              (context.l10n.integrationsAddHttp, AppRoutes.httpToolNew),
             ])
               Expanded(
                 child: WideButton(
@@ -148,14 +151,18 @@ class IntegrationRow extends ConsumerWidget {
       name: info.integration.displayName,
       icon: kind == null ? integrationIcon(info.id) : WIcons.globe,
       status: info.status,
-      detail: integrationDetail(info, appHint: _appHint(ref)),
+      detail: integrationDetail(
+        context.l10n,
+        info,
+        appHint: _appHint(context, ref),
+      ),
       sensitive: info.integration.sensitive,
       kind: kind?.badge,
       minPrivacy: info.integration.sensitive
           ? ref.watch(toolPrefsProvider).sensitiveMinimum
           : null,
       onToggle: (on) => unawaited(switchIntegration(context, ref, info.id, on)),
-      actionLabel: retry?.label,
+      actionLabel: retry == null ? null : context.l10n.retry,
       onAction: retry == null
           ? () => unawaited(setUpIntegration(context, ref, info.id))
           : () => unawaited(_retry(context, retry)),
@@ -185,17 +192,25 @@ class IntegrationRow extends ConsumerWidget {
     if (context.mounted) {
       showHint(
         context,
-        error ?? '${info.integration.displayName} ist wieder erreichbar.',
+        error ??
+            context.l10n.integrationsReachable(info.integration.displayName),
       );
     }
   }
 
   /// Hint of an optional app that is missing (e.g. Obsidian links).
-  String? _appHint(WidgetRef ref) {
+  String? _appHint(BuildContext context, WidgetRef ref) {
     final app = _spec(ref, info.id)?.requiredApp;
     if (app == null || app.needed) return null;
     final installed = ref.read(installedAppsProvider)[app.androidPackage];
-    return installed == false ? app.missingHint : null;
+    if (installed != false) return null;
+    final l = context.l10n;
+    return switch (app.androidPackage) {
+      'ch.publisheria.bring' => l.integrationsHintBring,
+      'md.obsidian' => l.integrationsHintObsidian,
+      'com.spotify.music' => l.integrationsHintSpotify,
+      _ => app.missingHint,
+    };
   }
 }
 
@@ -220,24 +235,36 @@ List<IntegrationInfo> displayOrder(List<IntegrationInfo> infos) => [
     if (i.status == IntegrationStatus.unavailable) i,
 ];
 
+/// Reason of an unavailable integration in the app language (the reason of
+/// a missing app is translated; others come as they are).
+String? availabilityReason(AppLocalizations l, String? reason) =>
+    reason == appMissingReason ? l.integrationsAppMissing : reason;
+
 /// Second line of an integration tile. [appHint] is the hint of a missing
 /// optional app.
-String? integrationDetail(IntegrationInfo info, {String? appHint}) {
+String? integrationDetail(
+  AppLocalizations l,
+  IntegrationInfo info, {
+  String? appHint,
+}) {
   final tools = info.integration.tools.length;
   return switch (info.status) {
     // Switched on but the app is gone: paused, the switch stays.
     IntegrationStatus.unavailable when info.enabled => [
-      ?info.availability.reason,
-      'pausiert',
+      ?availabilityReason(l, info.availability.reason),
+      l.integrationsPaused,
     ].join(' · '),
-    IntegrationStatus.unavailable => info.availability.reason,
+    IntegrationStatus.unavailable => availabilityReason(
+      l,
+      info.availability.reason,
+    ),
     IntegrationStatus.error => info.error,
     IntegrationStatus.setupRequired => [
       for (final step in info.integration.setup)
         if (info.setup.missingSteps.contains(step.id)) step.label,
     ].join(' · '),
     IntegrationStatus.active => [
-      if (tools == 1) '1 Tool' else '$tools Tools',
+      if (tools == 1) l.mcpLabelsOneTool else l.integrationsTools(tools),
       ?appHint,
     ].join(' · '),
     // „Verfügbar“ or „Nur an Provider ab …“ (design).
@@ -269,13 +296,13 @@ Future<void> switchIntegration(
 ) async {
   // Read everything before awaiting: the page may be gone afterwards.
   final activator = ref.read(integrationActivatorProvider);
-  final rationale = _spec(ref, id)?.permissionRationale;
+  final rationale = _rationale(context, ref, id);
   if (on && rationale != null) {
     final ok = await confirm(
       context,
-      title: 'Berechtigung',
+      title: context.l10n.integrationsPermission,
       message: rationale,
-      yes: 'Weiter',
+      yes: context.l10n.next,
     );
     if (!ok) return;
   }
@@ -297,15 +324,23 @@ Future<void> setUpIntegration(
     await registry.refresh(id);
     return;
   }
-  final rationale = _spec(ref, id)?.permissionRationale;
+  final rationale = _rationale(context, ref, id);
   if (rationale != null) {
     final ok = await confirm(
       context,
-      title: 'Berechtigung',
+      title: context.l10n.integrationsPermission2,
       message: rationale,
-      yes: 'Weiter',
+      yes: context.l10n.next,
     );
     if (!ok) return;
   }
   await activator.setUp(id);
 }
+
+/// Permission explanation of integration [id]: the translated text where
+/// there is one, else the spec's own.
+String? _rationale(BuildContext context, WidgetRef ref, String id) =>
+    switch (id) {
+      'calendar' => context.l10n.integrationsCalendarRationale,
+      _ => _spec(ref, id)?.permissionRationale,
+    };

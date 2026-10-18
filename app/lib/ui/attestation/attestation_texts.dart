@@ -1,5 +1,6 @@
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 
 /// What the user reads about the TEE check of one answer (WP52): a short
@@ -35,7 +36,7 @@ final class AttestationMessage {
 
 /// Shield label of a green answer with a restriction the user has not
 /// accepted yet (WP78).
-const restrictionOpenLabel = 'geprüft, neue Einschränkung';
+String restrictionOpenLabel(AppLocalizations l) => l.attRestrictionOpen;
 
 /// Reason codes of a failed check (`StageResult` codes, WP46).
 abstract final class AttestationReason {
@@ -75,117 +76,88 @@ abstract final class AttestationReason {
 /// [detail] is the secret-free reason of the check; for a failed GPU check
 /// it is shown as „Grund“ (HTTP status, timeout, no evidence, …; WP77).
 AttestationMessage attestationMessage(
+  AppLocalizations l,
   AttestationStatus status, {
   String? reasonCode,
   String? detail,
 }) {
   switch (status) {
     case AttestationStatus.green:
-      return const AttestationMessage(status: CheckStatus.ok, label: 'geprüft');
+      return AttestationMessage(status: CheckStatus.ok, label: l.checkStatusOk);
     case AttestationStatus.yellow:
-      return const AttestationMessage(
+      return AttestationMessage(
         status: CheckStatus.pending,
-        label: 'wird geprüft',
+        label: l.attChecking,
       );
     case AttestationStatus.unconfirmed:
       return switch (reasonCode) {
         AttestationReason.receiptNotFound => _unconfirmed(
-          'Quittung nicht gefunden',
-          'Der Anbieter kennt die Quittung dieser Antwort nicht (noch nicht '
-              'geschrieben oder abgelaufen).',
+          l,
+          l.attReceiptNotFound,
+          l.attReceiptNotFoundText,
         ),
         AttestationReason.receiptMissing => _unconfirmed(
-          'Quittung fehlt',
-          'Der Anbieter hat zu dieser Antwort keine Quittungs-Kennung '
-              'geliefert.',
+          l,
+          l.attReceiptMissing,
+          l.attReceiptMissingText,
         ),
         _ => _unconfirmed(
-          'Quittung nicht erreichbar',
-          'Die Quittung dieser Antwort konnte wegen eines Netz- oder '
-              'Serverfehlers nicht abgerufen werden.',
+          l,
+          l.attReceiptUnreachable,
+          l.attReceiptUnreachableText,
         ),
       };
     case AttestationStatus.red:
       return switch (reasonCode) {
-        AttestationReason.tcbOutOfDate => const AttestationMessage(
+        AttestationReason.tcbOutOfDate => AttestationMessage(
           status: CheckStatus.failed,
-          label: 'Prüfung fehlgeschlagen',
-          title: 'Sicherheits-Update beim Betreiber ausstehend',
-          text:
-              'Die Hardware, auf der das Modell läuft, hat ein '
-              'Sicherheits-Update des Herstellers noch nicht eingespielt. '
-              'Das ist kein Hinweis auf eine Manipulation, schwächt aber '
-              'den Schutz. Der Betreiber muss aktualisieren. Prüfe später '
-              'erneut und sende bis dahin nichts Vertrauliches.',
+          label: l.attCheckFailed,
+          title: l.attTcbTitle,
+          text: l.attTcbText,
         ),
-        AttestationReason.relaunchAdvised => const AttestationMessage(
+        AttestationReason.relaunchAdvised => AttestationMessage(
           status: CheckStatus.failed,
-          label: 'Prüfung fehlgeschlagen',
-          title: 'Neustart der TEE beim Betreiber empfohlen',
-          text:
-              'Der Hersteller empfiehlt dem Betreiber, die geschützte '
-              'Umgebung neu zu starten, damit ein Sicherheits-Update '
-              'wirksam wird. Das ist kein Hinweis auf eine Manipulation. '
-              'Prüfe später erneut.',
+          label: l.attCheckFailed,
+          title: l.attRelaunchTitle,
+          text: l.attRelaunchText,
         ),
-        AttestationReason.tcbRevoked => const AttestationMessage(
+        AttestationReason.tcbRevoked => AttestationMessage(
           status: CheckStatus.failed,
-          label: 'Prüfung fehlgeschlagen',
-          title: 'Plattform des Betreibers zurückgezogen',
-          text:
-              'Der Hersteller hat die Hardware-Plattform des Betreibers als '
-              'unsicher zurückgezogen. Sende nichts Vertrauliches, bis der '
-              'Betreiber sie ersetzt hat.',
+          label: l.attCheckFailed,
+          title: l.attRevokedTitle,
+          text: l.attRevokedText,
         ),
-        AttestationReason.sessionMismatch => const AttestationMessage(
+        AttestationReason.sessionMismatch => AttestationMessage(
           status: CheckStatus.failed,
-          label: 'Prüfung fehlgeschlagen',
-          title: 'Möglicher Manipulationsversuch',
-          text:
-              'Der Nachweis der Sitzung passt nicht zur signierten Quittung '
-              'dieser Antwort. Vertraue der Antwort nicht. Der Anbieter ist '
-              'gesperrt, bis du ihn neu prüfst.',
+          label: l.attCheckFailed,
+          title: l.attMismatchTitle,
+          text: l.attMismatchText,
         ),
-        AttestationReason.receiptRejected => const AttestationMessage(
+        AttestationReason.receiptRejected => AttestationMessage(
           status: CheckStatus.failed,
-          label: 'Quittung abgelehnt',
-          title: 'Quittungsabruf vom Anbieter abgelehnt',
-          text:
-              'Der Anbieter hat den Abruf der Quittung abgelehnt (zum '
-              'Beispiel wegen zu vieler Anfragen). Die '
-              'Antwort ist nicht bestätigt, es gibt aber keinen Hinweis auf '
-              'eine Manipulation. Prüfe den Anbieter neu.',
+          label: l.attReceiptRejectedLabel,
+          title: l.attReceiptRejectedTitle,
+          text: l.attReceiptRejectedText,
         ),
         AttestationReason.gpuFailed => AttestationMessage(
           status: CheckStatus.failed,
-          label: 'GPU-Prüfung fehlgeschlagen',
-          title: 'GPU-Prüfung fehlgeschlagen',
-          text:
-              'Die GPU-Prüfung über NVIDIA ist fehlgeschlagen.'
-              '${_gpuReason(detail)} Die nächste Anfrage an dieses Modell '
-              'wird vorher geprüft.',
+          label: l.attGpuFailedLabel,
+          title: l.attGpuFailedTitle,
+          text: l.attGpuFailedText(_gpuReason(l, detail)),
           canRecheck: false,
         ),
         AttestationReason.gpuUnavailable => AttestationMessage(
           status: CheckStatus.failed,
-          label: 'GPU-Prüfung nicht möglich',
-          title: 'GPU-Prüfung nicht möglich',
-          text:
-              'Die GPU-Prüfung über NVIDIA war nicht möglich.'
-              '${_gpuReason(detail)} Die nächste Anfrage an dieses Modell '
-              'wird vorher geprüft.',
+          label: l.attGpuUnavailableLabel,
+          title: l.attGpuUnavailableTitle,
+          text: l.attGpuUnavailableText(_gpuReason(l, detail)),
           canRecheck: false,
         ),
-        _ => const AttestationMessage(
+        _ => AttestationMessage(
           status: CheckStatus.failed,
-          label: 'Prüfung fehlgeschlagen',
-          title: 'Prüfung fehlgeschlagen',
-          text:
-              'Die Antwort konnte nicht als unverändert aus der geprüften '
-              'Umgebung bestätigt werden, zum Beispiel wegen eines '
-              'Signaturfehlers oder abweichender Prüfsummen. Das kann auf '
-              'eine Manipulation hindeuten. Vertraue der Antwort nicht. Der '
-              'Anbieter ist gesperrt, bis du ihn neu prüfst.',
+          label: l.attCheckFailed,
+          title: l.attCheckFailed,
+          text: l.attFailedText,
         ),
       };
   }
@@ -194,70 +166,69 @@ AttestationMessage attestationMessage(
 /// „ Grund: …“ from the message of a request stopped by the GPU check
 /// (`GPU-Prüfung nicht bestanden (Grund [Kategorie]); Anfrage nicht
 /// gesendet`); empty if there is none.
-String gpuBlockReason(String message) {
+String gpuBlockReason(AppLocalizations l, String message) {
   final m = RegExp(r'\((.*?)(?: \[[a-z0-9_]+\])?\); Anfrage')
       .firstMatch(message);
   final reason = m?.group(1);
   if (reason == null || reason.isEmpty) return '';
-  return ' Grund: $reason${reason.endsWith('.') ? '' : '.'}';
+  return l.attReasonLead(reason, reason.endsWith('.') ? '' : '.');
 }
 
 /// „ Grund: …“ from the stored detail (`GPU-Prüfung: …` / `gpu: …`).
-String _gpuReason(String? detail) {
+String _gpuReason(AppLocalizations l, String? detail) {
   if (detail == null || detail.trim().isEmpty) return '';
   final text = detail.replaceFirst(RegExp(r'^(GPU-Prüfung|gpu): '), '');
-  return ' Grund: $text${text.endsWith('.') ? '' : '.'}';
+  return l.attStoredReason(text, text.endsWith('.') ? '' : '.');
 }
 
-AttestationMessage _unconfirmed(String title, String cause) =>
-    AttestationMessage(
-      status: CheckStatus.neutral,
-      label: 'nicht bestätigt',
-      title: title,
-      text:
-          '$cause Ob die Antwort aus der geprüften Umgebung stammt, ist '
-          'unbestätigt. Es wurde aber auch kein Fehler festgestellt, der '
-          'Anbieter bleibt nutzbar. Aktionen, die auf die geprüfte Antwort '
-          'warten, laufen nicht. Prüfe den Anbieter neu.',
-    );
+AttestationMessage _unconfirmed(
+  AppLocalizations l,
+  String title,
+  String cause,
+) => AttestationMessage(
+  status: CheckStatus.neutral,
+  label: l.attUnconfirmed,
+  title: title,
+  text: l.attUnconfirmedText(cause),
+);
 
 /// German name of a check stage id for the log (`quote` → „TDX-Quote“).
-String stageLabel(String stage) => switch (stage) {
-  'quote' => 'TDX-Quote (DCAP)',
-  'tcb' => 'Plattform-Sicherheitsstand (TCB)',
-  'nonce' => 'Nonce gebunden',
-  'keyset.digest' => 'Schlüsselsatz (Digest)',
-  'keyset.endorsement' => 'Schlüsselsatz-Signatur',
-  'freshness' => 'Frische',
-  'eventlog' => 'Ereignisprotokoll',
-  'compose' => 'Compose-Hash',
-  'provenance' => 'Herkunft (Commit)',
-  'tls.spki' => 'TLS-Verbindung geprüft',
-  'e2ee.key' => 'E2EE-Schlüssel geprüft',
-  'e2ee.request' => 'Verschlüsselung der Anfrage',
-  'e2ee.response' => 'Entschlüsselung der Antwort',
-  'e2ee.keyset' => 'Schlüsselsatz der Antwort',
-  'gateway' => 'Gateway des Anbieters',
-  'gpu' => 'GPU-Evidenz',
-  'gpu.evidence' => 'GPU-Nachweis des Anbieters',
-  'receipt.fetch' => 'Quittung abgerufen',
-  'receipt.signature' => 'Quittungs-Signatur',
-  'receipt.binding' => 'Quittung an Sitzung gebunden',
-  'receipt.request' => 'Hash der Anfrage',
-  'receipt.response' => 'Hash der Antwort',
-  'receipt.upstream' => 'Upstream-Prüfung',
-  'receipt.upstream.tcb' => 'Upstream-Sicherheitsstand',
-  'receipt.events' => 'Quittungs-Ereignisse',
+String stageLabel(AppLocalizations l, String stage) => switch (stage) {
+  'quote' => l.attSQuote,
+  'tcb' => l.attSTcb,
+  'nonce' => l.attSNonce,
+  'keyset.digest' => l.attSKeysetDigest,
+  'keyset.endorsement' => l.attSKeysetSignature,
+  'freshness' => l.attSFreshness,
+  'eventlog' => l.attSEventLog,
+  'compose' => l.attSCompose,
+  'provenance' => l.attSProvenance,
+  'tls.spki' => l.attSTls,
+  'e2ee.key' => l.attSE2eeKey,
+  'e2ee.request' => l.attSE2eeRequest,
+  'e2ee.response' => l.attSE2eeResponse,
+  'e2ee.keyset' => l.attSE2eeKeyset,
+  'gateway' => l.attSGateway,
+  'gpu' => l.attSGpu,
+  'gpu.evidence' => l.attSGpuEvidence,
+  'receipt.fetch' => l.attSReceiptFetch,
+  'receipt.signature' => l.attSReceiptSignature,
+  'receipt.binding' => l.attSReceiptBinding,
+  'receipt.request' => l.attSReceiptRequest,
+  'receipt.response' => l.attSReceiptResponse,
+  'receipt.upstream' => l.attSUpstream,
+  'receipt.upstream.tcb' => l.attSUpstreamTcb,
+  'receipt.events' => l.attSReceiptEvents,
   _ => stage,
 };
 
 /// German text of a stage result name (`pass` → „bestanden“).
-String stageResultLabel(String result) => switch (result) {
-  'pass' => 'bestanden',
-  'fail' => 'fehlgeschlagen',
-  'warn' => 'Hinweis',
-  'unavailable' => 'nicht abrufbar',
-  'info' => 'nur protokolliert',
+String stageResultLabel(AppLocalizations l, String result) => switch (result) {
+  'pass' => l.stageResultPass,
+  'fail' => l.stageResultFail,
+  'warn' => l.attResultWarn,
+  'unavailable' => l.attResultUnavailable,
+  'info' => l.attResultInfo,
   _ => result,
 };
 
@@ -271,11 +242,7 @@ CheckStatus stageResultStatus(String result) => switch (result) {
 
 /// Short note on the stage „Ende-zu-Ende-verschlüsselt“: where the
 /// encryption ends (ADR 0018). `null` for other stages.
-String? stageExplanation(String stage) => switch (stage) {
-  'e2ee.key' =>
-    'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. '
-        'Die Verschlüsselung endet im Gateway des Anbieters (geprüfte '
-        'Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im '
-        'geprüften Modell.',
+String? stageExplanation(AppLocalizations l, String stage) => switch (stage) {
+  'e2ee.key' => l.attE2eeKeyNote,
   _ => null,
 };

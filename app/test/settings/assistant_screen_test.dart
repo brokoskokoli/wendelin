@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/assistant_screen.dart';
@@ -64,8 +65,11 @@ void main() {
     );
     expect(tester.widget<WSwitch>(find.byType(WSwitch)).value, isTrue);
     // Hinweis: nach einem Assistentenwechsel die Spracheingabe neu wählen.
-    expect(find.text(assistantSwitchHint), findsOneWidget);
-    expect(assistantSwitchHint, contains('Digitaler Assistent'));
+    expect(find.text(AppLocalizationsDe().assistantSwitchHint), findsOneWidget);
+    expect(
+      AppLocalizationsDe().assistantSwitchHint,
+      contains('Digitaler Assistent'),
+    );
     await tester.tap(find.byType(WSwitch));
     await tester.pump();
     expect(platform.recognizerOffered, isFalse);
@@ -139,7 +143,10 @@ void main() {
           appName: 'Google',
         );
       await pumpAssistant(tester, platform);
-      expect(find.textContaining(notAvailableOnDevice), findsOneWidget);
+      expect(
+        find.textContaining(AppLocalizationsDe().assistantNotAvailable),
+        findsOneWidget,
+      );
       expect(
         find.textContaining(
           'Android nutzt für andere Apps Google. Das lässt sich auf diesem '
@@ -150,7 +157,10 @@ void main() {
       final s = recognizerSwitch(tester);
       expect(s.onChanged, isNull);
       expect(s.value, isTrue, reason: 'gespeicherte Einstellung bleibt');
-      expect(s.semanticLabel, contains(notAvailableOnDevice));
+      expect(
+        s.semanticLabel,
+        contains(AppLocalizationsDe().assistantNotAvailable),
+      );
       expect(
         tester
             .widget<Opacity>(
@@ -165,7 +175,7 @@ void main() {
       await tester.tap(find.byType(WSwitch));
       await tester.pump();
       expect(platform.recognizerOffered, isTrue);
-      expect(find.text(assistantSwitchHint), findsNothing);
+      expect(find.text(AppLocalizationsDe().assistantSwitchHint), findsNothing);
     });
 
     testWidgets('ohne App-Namen: „einen anderen Dienst“', (tester) async {
@@ -192,7 +202,10 @@ void main() {
           appName: 'Google',
         );
       await pumpAssistant(tester, platform);
-      expect(find.textContaining(notAvailableOnDevice), findsNothing);
+      expect(
+        find.textContaining(AppLocalizationsDe().assistantNotAvailable),
+        findsNothing,
+      );
       expect(
         find.textContaining(
           'Android nutzt für andere Apps derzeit Google. Das kann sich '
@@ -225,7 +238,10 @@ void main() {
       expect(platform.recognitionChecks, greaterThan(checks), reason: 'neu');
       // Android stays with Google: now locked and marked.
       expect(recognizerSwitch(tester).onChanged, isNull);
-      expect(find.textContaining(notAvailableOnDevice), findsOneWidget);
+      expect(
+        find.textContaining(AppLocalizationsDe().assistantNotAvailable),
+        findsOneWidget,
+      );
     });
 
     for (final isDefault in [true, false]) {
@@ -240,10 +256,19 @@ void main() {
           );
         await pumpAssistant(tester, platform);
         expect(
-          find.textContaining(inactiveRecognizerHint(isDefault: isDefault)),
+          find.textContaining(
+            (isDefault
+                ? AppLocalizationsDe().assistantInactiveDefault
+                : AppLocalizationsDe().assistantInactiveNotDefault),
+          ),
           findsOneWidget,
         );
-        expect(find.textContaining(recognizerActiveHint), findsNothing);
+        expect(
+          find.textContaining(
+            AppLocalizationsDe().assistantRecognizerActiveHint,
+          ),
+          findsNothing,
+        );
         expect(recognizerSwitch(tester).onChanged, isNotNull);
       });
     }
@@ -256,10 +281,15 @@ void main() {
         final platform = FakeAssistantPlatform()
           ..recognition = RecognitionServiceStatus(state);
         await pumpAssistant(tester, platform);
-        expect(find.textContaining(notAvailableOnDevice), findsNothing);
+        expect(
+          find.textContaining(AppLocalizationsDe().assistantNotAvailable),
+          findsNothing,
+        );
         expect(recognizerSwitch(tester).onChanged, isNotNull);
         expect(
-          find.textContaining(recognizerActiveHint),
+          find.textContaining(
+            AppLocalizationsDe().assistantRecognizerActiveHint,
+          ),
           state == RecognitionServiceState.active
               ? findsOneWidget
               : findsNothing,

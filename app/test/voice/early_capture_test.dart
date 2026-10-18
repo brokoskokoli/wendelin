@@ -180,7 +180,7 @@ void main() {
     container(audio: audio, ready: false, load: () async => null);
     expect(await voice().start(TriggerKind.pushToTalk), isFalse);
     expect(audio.startCount, 0);
-    expect(c.read(voiceControllerProvider).error, voiceUnavailableHint);
+    expect(c.read(voiceControllerProvider).error, voiceUnavailableError);
     expect(c.read(voiceControllerProvider).active, isFalse);
   });
 

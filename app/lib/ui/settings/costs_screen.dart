@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../agent/money.dart';
 import '../../di/profiles.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
 
@@ -72,11 +73,11 @@ class CostsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final costs = ref.watch(costsProvider).value ?? const <ProfileCosts>[];
     return SettingsPage(
-      title: 'Kosten',
-      intro: 'Nach den Preisen im Modellkatalog, in US-Dollar.',
+      title: context.l10n.areaCosts,
+      intro: context.l10n.costsIntro,
       children: [
         if (costs.isEmpty)
-          Text('Noch keine Provider.', style: WText.intro)
+          Text(context.l10n.costsNoProviders, style: WText.intro)
         else
           SectionCard(
             children: [
@@ -84,9 +85,16 @@ class CostsScreen extends ConsumerWidget {
                 SettingsRow(
                   title: c.name,
                   detail: [
-                    'heute ${formatUsd(c.today)}',
-                    'Monat ${formatUsd(c.month)}',
-                    if (c.budget != null) 'von ${formatUsd(c.budget!)}',
+                    context.l10n.costsToday(
+                      formatUsdFor(context.l10n, c.today),
+                    ),
+                    context.l10n.costsMonth(
+                      formatUsdFor(context.l10n, c.month),
+                    ),
+                    if (c.budget != null)
+                      context.l10n.costsOfBudget(
+                        formatUsdFor(context.l10n, c.budget!),
+                      ),
                   ].join(' · '),
                 ),
             ],

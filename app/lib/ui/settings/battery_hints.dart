@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../platform/battery_platform.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
@@ -14,52 +15,19 @@ final batteryStatusProvider = FutureProvider<BatteryStatus>(
 
 /// Checklist per manufacturer: Android cannot read these settings, so the
 /// text is a to-do list, not a status. Extend the table for more vendors.
-const vendorChecklists = <String, (String, String)>{
-  'xiaomi': (
-    'Xiaomi / HyperOS / MIUI',
-    'Schalte für Wendelin „Autostart“ ein und stelle den Akkusparer für '
-        'Wendelin auf „Keine Einschränkungen“ '
-        '(Einstellungen → Apps → Berechtigungen → Autostart; '
-        'Einstellungen → Apps → Wendelin → Akkusparer).',
-  ),
-  'samsung': (
-    'Samsung',
-    'Nimm Wendelin aus „Schlafende Apps“ heraus und stelle den Akku für '
-        'Wendelin auf „Nicht eingeschränkt“ '
-        '(Einstellungen → Akku → Hintergrundnutzungsgrenzen).',
-  ),
-  'oneplus': (
-    'OnePlus',
-    'Erlaube Wendelin den Autostart und stelle die Akku-Optimierung für '
-        'Wendelin auf „Nicht optimieren“ '
-        '(Einstellungen → Apps → Wendelin → Akku).',
-  ),
-  'huawei': (
-    'Huawei / Honor',
-    'Stelle „App-Start“ für Wendelin auf „Manuell verwalten“ und erlaube '
-        'Autostart, Zweitstart und Hintergrundaktivität.',
-  ),
+Map<String, (String, String)> vendorChecklists(AppLocalizations l) => {
+  'xiaomi': (l.batteryXiaomiTitle, l.batteryXiaomiBody),
+  'samsung': (l.batterySamsungTitle, l.batterySamsungBody),
+  'oneplus': (l.batteryOnePlusTitle, l.batteryOnePlusBody),
+  'huawei': (l.batteryHuaweiTitle, l.batteryHuaweiBody),
 };
-
-/// Hint when Android optimizes the battery use of Wendelin.
-const batteryOptimizedTitle = 'Akku-Optimierung aktiv';
-
-/// Explains why the optimization matters for the assistant.
-const batteryOptimizedDetail =
-    'Android kann Wendelin im Hintergrund beenden. Nach längerer Pause '
-    'öffnet die Power-Taste den Assistenten dann womöglich nicht, bis du '
-    'die App einmal geöffnet hast.';
 
 /// Title when the standby bucket limits background starts.
-String standbyBucketTitle(StandbyBucket bucket) => switch (bucket) {
-  StandbyBucket.restricted => 'App-Standby: eingeschränkt',
-  _ => 'App-Standby: selten genutzt',
-};
-
-/// Detail when the standby bucket limits background starts.
-const standbyBucketDetail =
-    'Android verzögert Starts im Hintergrund für selten genutzte Apps. '
-    'Öffne Wendelin ab und zu oder erlaube „Keine Einschränkung“.';
+String standbyBucketTitle(AppLocalizations l, StandbyBucket bucket) =>
+    switch (bucket) {
+      StandbyBucket.restricted => l.batteryStandbyRestricted,
+      _ => l.batteryStandbyRare,
+    };
 
 /// Battery hints for the assistant: optimization status with a button for
 /// the exemption, the standby bucket when it limits starts, and the
@@ -94,7 +62,7 @@ class _BatteryHintsState extends ConsumerState<BatteryHints> {
   Future<void> _open(Future<bool> Function() action) async {
     final opened = await action();
     if (!opened && mounted) {
-      showHint(context, 'Die Systemeinstellungen ließen sich nicht öffnen.');
+      showHint(context, context.l10n.batterySettingsNotOpened);
     }
   }
 
@@ -115,23 +83,23 @@ class _BatteryHintsState extends ConsumerState<BatteryHints> {
     final status = ref.watch(batteryStatusProvider).value;
     if (status == null || !status.hasHints) return const SizedBox.shrink();
     final platform = ref.read(batteryPlatformProvider);
-    final checklist = vendorChecklists[status.vendor];
+    final checklist = vendorChecklists(context.l10n)[status.vendor];
     final bucket = status.bucket;
     return SettingsSection(
-      title: 'Zuverlässig öffnen',
+      title: context.l10n.batteryReliable,
       children: [
         if (!status.ignoringOptimizations) ...[
-          const SectionCard(
+          SectionCard(
             children: [
               SettingsRow(
-                key: ValueKey('batteryOptimized'),
-                title: batteryOptimizedTitle,
-                detail: batteryOptimizedDetail,
+                key: const ValueKey('batteryOptimized'),
+                title: context.l10n.batteryOptimizedTitle,
+                detail: context.l10n.batteryOptimizedDetail,
               ),
             ],
           ),
           _action(
-            'Keine Einschränkung erlauben',
+            context.l10n.batteryAllow,
             platform.requestIgnoreOptimizations,
           ),
         ],
@@ -140,8 +108,8 @@ class _BatteryHintsState extends ConsumerState<BatteryHints> {
             children: [
               SettingsRow(
                 key: const ValueKey('standbyBucket'),
-                title: standbyBucketTitle(bucket),
-                detail: standbyBucketDetail,
+                title: standbyBucketTitle(context.l10n, bucket),
+                detail: context.l10n.batteryStandbyDetail,
               ),
             ],
           ),
@@ -157,16 +125,15 @@ class _BatteryHintsState extends ConsumerState<BatteryHints> {
           ),
           if (status.vendorSettings)
             _action(
-              'Einstellungen des Herstellers öffnen',
+              context.l10n.batteryVendorSettings,
               platform.openVendorSettings,
             )
           else
-            _action('Akku-Einstellungen öffnen', platform.openBatterySettings),
-          Text(
-            'Android lässt diese Einstellungen nicht auslesen. '
-            'Das ist eine Checkliste, kein Status.',
-            style: WText.caption,
-          ),
+            _action(
+              context.l10n.batteryOpenSettings,
+              platform.openBatterySettings,
+            ),
+          Text(context.l10n.batteryChecklistNote, style: WText.caption),
         ],
       ],
     );

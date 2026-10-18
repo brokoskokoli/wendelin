@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'export.dart';
 import 'settings_page.dart';
@@ -15,20 +16,23 @@ final memoryEntriesProvider = FutureProvider.autoDispose<List<StoredMemory>>(
 );
 
 /// German name of a memory category.
-String categoryLabel(StoredMemoryCategory c) => switch (c) {
-  StoredMemoryCategory.person => 'Person',
-  StoredMemoryCategory.preference => 'Vorliebe',
-  StoredMemoryCategory.fact => 'Fakt',
-  StoredMemoryCategory.project => 'Projekt',
+String categoryLabel(AppLocalizations l, StoredMemoryCategory c) => switch (c) {
+  StoredMemoryCategory.person => l.memoryCatPerson,
+  StoredMemoryCategory.preference => l.memoryCatPreference,
+  StoredMemoryCategory.fact => l.memoryCatFact,
+  StoredMemoryCategory.project => l.memoryCatProject,
 };
 
 /// Second line of a memory entry: category and, for entries of private
 /// runs, their privacy floor („Fakt · privat, nur ab TEE“).
-String memoryDetail(StoredMemory e) => switch (e.privacyFloor) {
-  final floor? =>
-    '${categoryLabel(e.category)} · privat, nur ab ${floor.label}',
-  null => categoryLabel(e.category),
-};
+String memoryDetail(AppLocalizations l, StoredMemory e) =>
+    switch (e.privacyFloor) {
+      final floor? => l.memoryPrivateFrom(
+        categoryLabel(l, e.category),
+        floor.labelOf(l),
+      ),
+      null => categoryLabel(l, e.category),
+    };
 
 /// Settings → Gedächtnis: read, edit, delete entries; export as Markdown.
 /// Entries saved by private runs show their privacy floor; the user can
@@ -42,26 +46,24 @@ class MemoryScreen extends ConsumerWidget {
     final entries = ref.watch(memoryEntriesProvider);
     final list = entries.value ?? const <StoredMemory>[];
     return SettingsPage(
-      title: 'Gedächtnis',
-      intro:
-          'Wendelin merkt sich nur, worum du ausdrücklich bittest. Passwörter, '
-          'PINs, Karten- und Kontonummern werden nie gespeichert.',
+      title: context.l10n.memoryTitle,
+      intro: context.l10n.memoryIntro,
       children: [
         if (entries.isLoading && list.isEmpty)
           Text('…', style: WText.caption)
         else if (list.isEmpty)
-          Text('Noch keine Einträge.', style: WText.intro)
+          Text(context.l10n.memoryNone, style: WText.intro)
         else
           SectionCard(
             children: [
               for (final e in list)
                 SettingsRow(
                   title: e.text,
-                  detail: memoryDetail(e),
+                  detail: memoryDetail(context.l10n, e),
                   onTap: () => unawaited(_edit(context, ref, e)),
                   trailing: WIconButton(
                     icon: WIcons.close,
-                    tooltip: 'Löschen: ${e.text}',
+                    tooltip: context.l10n.memoryDeleteTooltip(e.text),
                     shape: WIconButtonShape.round,
                     iconSize: WSize.iconSmall,
                     onPressed: () => unawaited(_delete(context, ref, e)),
@@ -70,7 +72,7 @@ class MemoryScreen extends ConsumerWidget {
             ],
           ),
         WideButton(
-          'Als Markdown exportieren',
+          context.l10n.memoryExportMd,
           onPressed: list.isEmpty
               ? null
               : () async => ref.read(exporterProvider)(
@@ -90,9 +92,9 @@ class MemoryScreen extends ConsumerWidget {
   ) async {
     final ok = await confirm(
       context,
-      title: 'Eintrag vergessen?',
+      title: context.l10n.memoryForgetTitle,
       message: '„${e.text}“',
-      yes: 'Vergessen',
+      yes: context.l10n.memoryForget,
     );
     if (!ok) return;
     await ref.read(storageProvider).memory.forget(e.id);
@@ -129,15 +131,12 @@ class MemoryScreen extends ConsumerWidget {
     WidgetRef ref,
     StoredMemory e,
   ) async {
-    final level = e.privacyFloor?.label ?? '';
+    final level = e.privacyFloor?.labelOf(context.l10n) ?? '';
     final ok = await confirm(
       context,
-      title: 'Untergrenze aufheben?',
-      message:
-          '„${e.text}“ stammt aus einer privaten Anfrage und geht bisher nur '
-          'an Provider ab $level. Danach können ihn alle Provider sehen, die '
-          'das Gedächtnis sehen dürfen.',
-      yes: 'Aufheben',
+      title: context.l10n.memoryLiftTitle,
+      message: context.l10n.memoryLiftBody(e.text, level),
+      yes: context.l10n.memoryLift,
     );
     if (!ok) return;
     await ref.read(storageProvider).memory.clearPrivacyFloor(e.id);
@@ -179,7 +178,7 @@ class _EditDialogState extends State<_EditDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     backgroundColor: WColors.surface,
-    title: Text('Eintrag ändern', style: WText.label),
+    title: Text(context.l10n.memoryEditTitle, style: WText.label),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       spacing: WSpace.m,
@@ -191,7 +190,7 @@ class _EditDialogState extends State<_EditDialog> {
           children: [
             for (final c in StoredMemoryCategory.values)
               ChoiceChip(
-                label: Text(categoryLabel(c)),
+                label: Text(categoryLabel(context.l10n, c)),
                 selected: _category == c,
                 onSelected: (_) => setState(() => _category = c),
               ),
@@ -199,15 +198,14 @@ class _EditDialogState extends State<_EditDialog> {
         ),
         if (widget.entry.privacyFloor case final floor?) ...[
           Text(
-            'Aus einer privaten Anfrage: geht nur an Provider ab '
-            '${floor.label}.',
+            context.l10n.memoryFromPrivate(floor.labelOf(context.l10n)),
             style: WText.detail,
           ),
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TextButton(
               onPressed: () => Navigator.of(context).pop(_EditResult.liftFloor),
-              child: const Text('Untergrenze aufheben'),
+              child: Text(context.l10n.memoryLiftLimit),
             ),
           ),
         ],
@@ -216,7 +214,7 @@ class _EditDialogState extends State<_EditDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Abbrechen'),
+        child: Text(context.l10n.cancel),
       ),
       FilledButton(
         onPressed: _text.text.trim().isEmpty
@@ -224,7 +222,7 @@ class _EditDialogState extends State<_EditDialog> {
             : () =>
                   Navigator.of(context)
                       .pop(_EditResult(_text.text.trim(), _category)),
-        child: const Text('Speichern'),
+        child: Text(context.l10n.save),
       ),
     ],
   );

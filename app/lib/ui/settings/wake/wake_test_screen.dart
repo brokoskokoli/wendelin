@@ -6,6 +6,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../voice/wake/wake_tester.dart';
 import '../../design/design.dart';
 import '../../voice/microphone_access.dart';
@@ -13,11 +14,11 @@ import '../settings_page.dart';
 import 'wake_lifecycle.dart';
 
 /// Text for the second stage of a test hit.
-String confirmationText(WakeConfirmation c) => switch (c) {
-  WakeConfirmation.pending => 'Nachprüfung läuft …',
-  WakeConfirmation.confirmed => 'Nachprüfung: bestätigt',
-  WakeConfirmation.rejected => 'Nachprüfung: nicht bestätigt',
-  WakeConfirmation.unavailable => 'Nachprüfung: nicht möglich (kein Whisper)',
+String confirmationText(AppLocalizations l, WakeConfirmation c) => switch (c) {
+  WakeConfirmation.pending => l.wakeTestVerifying,
+  WakeConfirmation.confirmed => l.wakeTestConfirmed,
+  WakeConfirmation.rejected => l.wakeTestRejected,
+  WakeConfirmation.unavailable => l.wakeTestUnavailable,
 };
 
 /// „Jetzt ausprobieren“ (WP60): shows every candidate and, apart from it,
@@ -76,12 +77,12 @@ class _WakeTestScreenState extends ConsumerState<WakeTestScreen>
     final t = _tester;
     if (_denied || t == null) {
       return SettingsPage(
-        title: 'Ausprobieren',
+        title: context.l10n.wakeTestTitle,
         children: [
           Text(
             _denied
-                ? 'Ohne Mikrofon geht der Test nicht.'
-                : 'Mikrofon wird vorbereitet …',
+                ? context.l10n.wakeTestNoMic
+                : context.l10n.wakeTestMicPreparing,
             style: WText.intro,
           ),
         ],
@@ -94,35 +95,37 @@ class _WakeTestScreenState extends ConsumerState<WakeTestScreen>
     final events = t.events.reversed.toList();
     return SettingsPage(
       title: 'Ausprobieren',
-      intro:
-          'Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay '
-          'aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung '
-          'mit Whisper.',
+      intro: context.l10n.wakeTestIntro,
       children: [
         if (t.error != null)
-          Text('Gescheitert: ${t.error}', style: WText.label)
+          Text(context.l10n.wakeTestFailed(t.error!), style: WText.label)
         else
           Text(
-            '${t.running ? 'Hört zu' : 'Angehalten'} · höchste Ähnlichkeit '
-            '${_fmt(t.maxSimilarity)}',
+            context.l10n.wakeTestBest(
+              t.running
+                  ? context.l10n.wakeTestListening
+                  : context.l10n.wakeTestStopped,
+              _fmt(t.maxSimilarity),
+            ),
             style: WText.detail,
           ),
         if (events.isEmpty)
-          Text('Noch kein Treffer.', style: WText.caption)
+          Text(context.l10n.wakeTestNoHit, style: WText.caption)
         else
           SectionCard(
             children: [
               for (final e in events)
                 SettingsRow(
-                  title: 'Kandidat · Ähnlichkeit ${_fmt(e.similarity)}',
-                  detail:
-                      '${confirmationText(e.confirmation)} · '
-                      '${e.at.inSeconds} s',
+                  title: context.l10n.wakeTestCandidate(_fmt(e.similarity)),
+                  detail: context.l10n.wakeTestAgo(
+                    confirmationText(context.l10n, e.confirmation),
+                    e.at.inSeconds,
+                  ),
                 ),
             ],
           ),
         WideButton(
-          'Fertig',
+          context.l10n.done,
           onPressed: () async {
             await t.stop();
             if (mounted) Navigator.of(context).pop();

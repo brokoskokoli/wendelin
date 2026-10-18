@@ -9,6 +9,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../../../di/providers.dart';
 import '../../../di/routing.dart';
+import '../../../l10n/l10n.dart';
 import '../../../platform/document_text_import.dart';
 import '../../design/design.dart';
 import '../../routes.dart';
@@ -62,21 +63,21 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
   List<Widget> _unavailable(AsyncValue<RoutingState?> async) => [
     if (async.hasError) ...[
       Text(
-        'Die Regeln lassen sich nicht lesen: ${async.error}',
+        context.l10n.routingScreenReadError('${async.error}'),
         style: WText.intro,
       ),
-      WideButton('Regeln zurücksetzen', onPressed: () => unawaited(_reset())),
+      WideButton(
+        context.l10n.routingScreenResetRules,
+        onPressed: () => unawaited(_reset()),
+      ),
     ] else
       Text('…', style: WText.caption),
   ];
 
   List<Widget> _needsProvider() => [
-    Text(
-      'Routing braucht einen Provider. Richte zuerst einen ein.',
-      style: WText.intro,
-    ),
+    Text(context.l10n.routingScreenNeedsProvider, style: WText.intro),
     WideButton(
-      'Provider einrichten',
+      context.l10n.mainSetUpProvider,
       onPressed: () => Navigator.of(context).pushNamed(AppRoutes.providerSetup),
     ),
   ];
@@ -124,7 +125,7 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
                   WSpace.xl24,
                 ),
                 child: PrimaryButton(
-                  '+ Regel hinzufügen',
+                  context.l10n.routingScreenAddRule,
                   onPressed: () => _open(const RuleEditorScreen()),
                 ),
               ),
@@ -157,7 +158,7 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Erste passende Regel gewinnt', style: WText.sectionLabel),
+          Text(context.l10n.routingScreenFirstWins, style: WText.sectionLabel),
           const SizedBox(height: WSpace.s),
           _RuleList(
             state: state,
@@ -169,7 +170,7 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
           RuleTile(
             name: 'Default',
             condition: 'immer',
-            target: targetLabel(state, rules.defaultTarget),
+            target: targetLabel(context.l10n, state, rules.defaultTarget),
             targetLevel: targetLevel(state, rules.defaultTarget),
             isDefault: true,
             active: decision != null && decision.rule == null,
@@ -183,13 +184,13 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
           Expanded(
             child: OutlinedButton(
               onPressed: () => unawaited(_export(rules)),
-              child: const Text('Exportieren'),
+              child: Text(context.l10n.export),
             ),
           ),
           Expanded(
             child: OutlinedButton(
               onPressed: () => unawaited(_import(state)),
-              child: const Text('Importieren'),
+              child: Text(context.l10n.import),
             ),
           ),
         ],
@@ -204,7 +205,7 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
   Future<void> _editDefault(RoutingState state, RuleSet rules) async {
     final target = await pickTarget(
       context,
-      title: 'Standardziel',
+      title: context.l10n.routingScreenDefaultTarget,
       profiles: state.profiles,
       initial: rules.defaultTarget,
     );
@@ -239,7 +240,7 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
       }
     } on FormatException catch (e) {
       // Also RuleSetFormatException (German text with the JSON path).
-      showHint(context, 'Import nicht möglich: ${e.message}');
+      showHint(context, context.l10n.routingScreenImportFailed(e.message));
       return;
     }
     final preview = ImportPreview(
@@ -254,11 +255,9 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
   Future<void> _reset() async {
     final ok = await confirm(
       context,
-      title: 'Regeln zurücksetzen?',
-      message:
-          'Die gespeicherten Regeln werden verworfen und aus den '
-          'Provider-Einstellungen neu angelegt.',
-      yes: 'Zurücksetzen',
+      title: context.l10n.routingScreenResetTitle,
+      message: context.l10n.routingScreenResetBody,
+      yes: context.l10n.reset,
     );
     if (ok) await _notifier.reset();
   }
@@ -288,26 +287,32 @@ class _TestCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: WSpace.m,
         children: [
-          Text('Testsatz', style: WText.sectionLabel),
+          Text(
+            context.l10n.routingScreenTestSentence,
+            style: WText.sectionLabel,
+          ),
           TextField(
             controller: controller,
             style: WText.body,
-            decoration: const InputDecoration(
-              hintText: 'Welche Regel greift für diesen Satz?',
+            decoration: InputDecoration(
+              hintText: context.l10n.routingScreenTestHint,
             ),
           ),
-          if (d != null) _result(d),
+          if (d != null) _result(context, d),
         ],
       ),
     );
   }
 
-  Widget _result(RouteDecision d) {
-    final (badge, text) = explainLabel(state, d);
+  Widget _result(BuildContext context, RouteDecision d) {
+    final (badge, text) = explainLabel(context.l10n, state, d);
     final skipped = [
       for (final s in d.skipped)
         if (s.reason != SkipReason.noMatch)
-          '„${s.rule.name}“ übersprungen: ${skipLabel(s.reason)}',
+          context.l10n.routingScreenSkipped(
+            s.rule.name,
+            skipLabel(context.l10n, s.reason),
+          ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,11 +359,11 @@ class _RoutingHeader extends StatelessWidget {
     children: [
       WIconButton(
         icon: WIcons.back,
-        tooltip: 'Zurück',
+        tooltip: context.l10n.back,
         onPressed: () => Navigator.of(context).maybePop(),
         iconSize: WSize.iconSmall,
       ),
-      Expanded(child: Text('Routing', style: WText.screenTitle)),
+      Expanded(child: Text(context.l10n.areaRouting, style: WText.screenTitle)),
     ],
   );
 }
@@ -398,13 +403,15 @@ class _RuleList extends StatelessWidget {
           child: Opacity(
             opacity: rule.enabled ? 1 : WOpacity.inactive,
             child: RuleTile(
-              name: rule.enabled ? rule.name : '${rule.name} (aus)',
-              condition: describeCondition(rule.condition),
-              target: targetLabel(state, rule.target),
+              name: rule.enabled
+                  ? rule.name
+                  : context.l10n.routingScreenRuleOff(rule.name),
+              condition: describeCondition(context.l10n, rule.condition),
+              target: targetLabel(context.l10n, state, rule.target),
               targetLevel: targetLevel(state, rule.target),
               active: decision?.rule?.id == rule.id,
               reorderIndex: i,
-              handleLabel: 'Regel „${rule.name}“ verschieben',
+              handleLabel: context.l10n.routingScreenMoveRule(rule.name),
               onTap: () => onOpen(rule),
             ),
           ),

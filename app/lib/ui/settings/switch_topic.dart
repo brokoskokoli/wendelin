@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/agent_controller.dart';
 import '../../agent/chat_entry.dart';
+import '../../l10n/l10n.dart';
 import 'settings_page.dart';
 
 /// Whether the visible conversation holds more than the session marker.
@@ -26,15 +27,12 @@ Future<bool> confirmManualModelSwitch(
   final running = ref.read(agentControllerProvider).running;
   final ok = await confirm(
     context,
-    title: 'Neues Gespräch beginnen?',
+    title: context.l10n.switchTopicTitle,
     message: running
-        ? 'Beim Wechsel des Modells beginnt ein neues Gespräch. Die laufende '
-              'Antwort wird abgebrochen und der aktuelle Verlauf beendet (im '
-              'Verlauf bleibt er abrufbar).'
-        : 'Beim Wechsel des Modells beginnt ein neues Gespräch. Der aktuelle '
-              'Verlauf wird beendet (im Verlauf bleibt er abrufbar).',
-    yes: 'Wechseln',
-    no: 'Abbrechen',
+        ? context.l10n.switchTopicBodyRunning
+        : context.l10n.switchTopicBody,
+    yes: context.l10n.switchTopicSwitch,
+    no: context.l10n.cancel,
   );
   if (!ok) return false;
   if (ref.read(agentControllerProvider).running) {

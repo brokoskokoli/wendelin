@@ -106,5 +106,7 @@ void main() {
     expect(formatUsd(4105000), '4,11 \$');
     expect(formatUsd(123456789), '123,46 \$');
     expect(formatUsd(-50000), '-0,05 \$');
+    expect(formatUsd(4105000, english: true), '\$4.11');
+    expect(formatUsd(-50000, english: true), '-\$0.05');
   });
 }

@@ -1,24 +1,30 @@
 import 'package:flutter/foundation.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../l10n/gen/app_localizations.dart';
+
 /// Weather services the user can choose (all without key).
 enum WeatherServiceKind {
   /// Open-Meteo (default, worldwide).
-  openMeteo('Open-Meteo', 'Standard, weltweit'),
+  openMeteo('Open-Meteo'),
 
   /// Bright Sky, data of the Deutscher Wetterdienst.
-  brightSky('Bright Sky (DWD)', 'Daten des Deutschen Wetterdienstes'),
+  brightSky('Bright Sky (DWD)'),
 
   /// MET Norway (yr.no).
-  metNorway('MET Norway (yr.no)', 'Norwegischer Wetterdienst, weltweit');
+  metNorway('MET Norway (yr.no)');
 
-  const WeatherServiceKind(this.label, this.detail);
+  const WeatherServiceKind(this.label);
 
   /// Display name.
   final String label;
 
   /// One line for the settings list.
-  final String detail;
+  String detailOf(AppLocalizations l) => switch (this) {
+    openMeteo => l.weatherKindOpenMeteoDetail,
+    brightSky => l.weatherKindBrightSkyDetail,
+    metNorway => l.weatherKindMetNorwayDetail,
+  };
 }
 
 /// Choice of weather service and the home place (no secrets).

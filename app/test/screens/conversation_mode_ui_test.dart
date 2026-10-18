@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/overlay_sheet.dart';
 import 'package:wendelin/ui/screens/conversation_offer_card.dart';
@@ -120,11 +121,17 @@ void main() {
     testWidgets('Hinweis je Zustand des Gesprächsmodus', (tester) async {
       setView(tester, screenSize);
       await tester.pumpWidget(themed(Scaffold(body: sheet())));
-      expect(find.text(OverlaySheet.followUpComingHint), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsDe().overlayFollowUpComing),
+        findsOneWidget,
+      );
 
       await tester.pumpWidget(themed(Scaffold(body: sheet(mode: true))));
       expect(find.textContaining('Hört noch'), findsNothing);
-      expect(find.text(OverlaySheet.followUpComingHint), findsNothing);
+      expect(
+        find.text(AppLocalizationsDe().overlayFollowUpComing),
+        findsNothing,
+      );
 
       await tester.pumpWidget(
         themed(
@@ -133,7 +140,10 @@ void main() {
           ),
         ),
       );
-      expect(find.text(OverlaySheet.followUpWindowHint(4)), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsDe().overlayFollowUpWindow(4)),
+        findsOneWidget,
+      );
       expect(find.text('Ich höre noch zu …'), findsOneWidget);
     });
   });
@@ -149,8 +159,14 @@ void main() {
 
       await c.read(conversationOfferProvider.notifier).offer();
       await tester.pump();
-      expect(find.text(conversationOfferQuestion), findsOneWidget);
-      expect(find.text(conversationOfferHint), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsDe().conversationOfferQuestion),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizationsDe().conversationOfferHint),
+        findsOneWidget,
+      );
       expect(find.textContaining('Einstellungen'), findsWidgets);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Ja'));
@@ -231,8 +247,11 @@ void main() {
       tester,
     ) async {
       await open(tester);
-      await tester.scrollUntilVisible(find.text(bargeInUnavailableText), 300);
-      for (final label in bargeInLabels.values) {
+      await tester.scrollUntilVisible(
+        find.text(bargeInUnavailableText(AppLocalizationsDe())),
+        300,
+      );
+      for (final label in bargeInLabels(AppLocalizationsDe()).values) {
         expect(
           tester
               .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, label))
@@ -247,10 +266,13 @@ void main() {
     ) async {
       final c = await open(tester, detector: true);
       await tester.scrollUntilVisible(
-        find.text(bargeInLabels[BargeInMode.speech]!),
+        find.text(bargeInLabels(AppLocalizationsDe())[BargeInMode.speech]!),
         300,
       );
-      expect(find.text(bargeInUnavailableText), findsNothing);
+      expect(
+        find.text(bargeInUnavailableText(AppLocalizationsDe())),
+        findsNothing,
+      );
       expect(
         tester
             .widget<ChoiceChip>(
@@ -261,7 +283,7 @@ void main() {
       );
       final off = find.widgetWithText(
         ChoiceChip,
-        bargeInLabels[BargeInMode.off]!,
+        bargeInLabels(AppLocalizationsDe())[BargeInMode.off]!,
       );
       await tester.ensureVisible(off);
       await tester.tap(off);

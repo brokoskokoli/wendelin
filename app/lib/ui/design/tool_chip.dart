@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'check_status.dart';
 import 'glyphs.dart';
@@ -27,7 +28,10 @@ class ToolChip extends StatelessWidget {
     };
     return Semantics(
       container: true,
-      label: 'Tool $toolName, ${status.label}',
+      label: context.l10n.toolChipSemantics(
+        toolName,
+        status.labelOf(context.l10n),
+      ),
       child: ExcludeSemantics(
         child: DecoratedBox(
           decoration: BoxDecoration(

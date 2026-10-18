@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'editor_parts.dart';
@@ -17,7 +18,7 @@ class RunSection extends StatelessWidget {
   /// Edit callback.
   final DraftEdit onEdit;
 
-  Widget _levelChoice() {
+  Widget _levelChoice(BuildContext context) {
     final d = draft;
     return EditorField(
       child: Column(
@@ -25,8 +26,10 @@ class RunSection extends StatelessWidget {
         spacing: WSpace.s,
         children: [
           Text(
-            'Stufe (Vorschlag für ${d.method.verb}: '
-            '${d.method.suggestedRisk.name})',
+            context.l10n.httpRunLevel(
+              d.method.verb,
+              d.method.suggestedRisk.name,
+            ),
             style: WText.detail,
           ),
           Wrap(
@@ -49,45 +52,45 @@ class RunSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = draft;
     return SettingsSection(
-      title: 'Ausführung',
+      title: context.l10n.httpRunExecution,
       children: [
-        _levelChoice(),
+        _levelChoice(context),
         SettingsRow(
-          title: 'Ohne Nachfrage ausführen (kein Rückgängig)',
+          title: context.l10n.httpRunNoAsk,
           detail: d.autoRunAvailable
-              ? 'Sonst fragt Wendelin vor jedem Aufruf nach'
-              : 'Nur bei POST/PUT/PATCH mit Stufe write',
+              ? context.l10n.httpRunAskElse
+              : context.l10n.httpRunOnlyWrite,
           trailing: WSwitch(
             value: d.autoRun && d.autoRunAvailable,
-            semanticLabel: 'Ohne Nachfrage ausführen',
+            semanticLabel: context.l10n.httpRunNoAskSem,
             onChanged: d.autoRunAvailable
                 ? (on) => onEdit(() => d.autoRun = on)
                 : null,
           ),
         ),
         SettingsRow(
-          title: 'Sensibel',
-          detail: 'Nur an Provider ab der Stufe für sensible Integrationen',
+          title: context.l10n.mcpAddSensitive,
+          detail: context.l10n.httpRunSensitiveDetail,
           trailing: WSwitch(
             value: d.sensitive,
-            semanticLabel: 'Sensibel',
+            semanticLabel: context.l10n.mcpAddSensitive,
             onChanged: (on) => onEdit(() => d.sensitive = on),
           ),
         ),
         SettingsRow(
-          title: 'Heimnetz-Ziel',
-          detail: 'Darf auf private Adressen zeigen, dann auch http',
+          title: context.l10n.httpRunHomeTarget,
+          detail: context.l10n.httpRunHomeTargetDetail,
           trailing: WSwitch(
             value: d.homeNetwork,
-            semanticLabel: 'Heimnetz-Ziel',
+            semanticLabel: context.l10n.httpRunHomeTargetSem,
             onChanged: (on) => onEdit(() => d.homeNetwork = on),
           ),
         ),
         SettingsRow(
-          title: 'Aktiv',
+          title: context.l10n.ruleEditorActive,
           trailing: WSwitch(
             value: d.enabled,
-            semanticLabel: 'Aktiv',
+            semanticLabel: context.l10n.ruleEditorActive,
             onChanged: (on) => onEdit(() => d.enabled = on),
           ),
         ),
@@ -98,7 +101,7 @@ class RunSection extends StatelessWidget {
             style: WText.body,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
-              labelText: 'Zeitlimit in Sekunden',
+              labelText: context.l10n.httpRunTimeout,
               helperText: '1–${httpToolMaxTimeout.inSeconds}',
             ),
             onChanged: (v) => onEdit(() => d.timeoutSeconds = v),

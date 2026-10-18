@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/attestation_providers.dart';
-import 'package:wendelin/ui/design/design.dart' show ToolTlsHint;
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
 import 'package:wendelin/ui/settings/attestation_log_screen.dart';
 import 'package:wendelin/ui/settings/audit_entry_screen.dart';
@@ -241,7 +241,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('nicht im Modell selbst'), findsOneWidget);
-    expect(find.text(ToolTlsHint.text), findsOneWidget);
+    expect(find.text(AppLocalizationsDe().toolTlsHint), findsOneWidget);
   });
 
   testWidgets('Detail: fehlgeschlagene Verschlüsselung ist rot benannt', (
@@ -265,14 +265,14 @@ void main() {
     await _seed(env);
     await pumpPage(tester, env, const AttestationLogDetailScreen(logId: 'l1'));
     await settle(tester);
-    expect(find.text(ToolTlsHint.text), findsOneWidget);
+    expect(find.text(AppLocalizationsDe().toolTlsHint), findsOneWidget);
   });
 
   testWidgets('Sitzungskarte zeigt den Tool-Hinweis immer', (tester) async {
     final env = TestEnv();
     await _seed(env);
     await pumpPage(tester, env, const AttestationLogScreen());
-    expect(find.text(ToolTlsHint.text), findsOneWidget);
+    expect(find.text(AppLocalizationsDe().toolTlsHint), findsOneWidget);
   });
 
   testWidgets('Detail: unbekannte Id zeigt einen Hinweis', (tester) async {

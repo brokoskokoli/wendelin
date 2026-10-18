@@ -7,6 +7,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../../../di/preferences.dart';
 import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../voice/wake/wake_calibrator.dart';
 import '../../design/design.dart';
 import '../../voice/microphone_access.dart';
@@ -96,12 +97,12 @@ class _State extends ConsumerState<WakeCalibrateScreen>
     final c = _cal;
     if (_denied || c == null) {
       return SettingsPage(
-        title: 'Kalibrieren',
+        title: context.l10n.wakeCalibrateTitle,
         children: [
           Text(
             _denied
-                ? 'Ohne Mikrofon kann Wendelin nicht kalibrieren.'
-                : 'Mikrofon wird vorbereitet …',
+                ? context.l10n.wakeCalibrateNoMic
+                : context.l10n.wakeCalibrateMicPreparing,
             style: WText.intro,
           ),
         ],
@@ -116,10 +117,7 @@ class _State extends ConsumerState<WakeCalibrateScreen>
     final left = total - c.elapsed;
     return SettingsPage(
       title: 'Kalibrieren',
-      intro:
-          'Leg das Handy hin und red normal weiter. Wendelin hört mit '
-          '(Mikrofonanzeige an), merkt sich aber nur Zahlenwerte, kein Audio '
-          'und keinen Text. Ab und zu piept es: Sag dann „Wendelin“.',
+      intro: context.l10n.wakeCalibrateIntro,
       children: [
         SectionCard(
           children: [
@@ -131,7 +129,9 @@ class _State extends ConsumerState<WakeCalibrateScreen>
                 children: [
                   if (c.phase == CalibrationPhase.listening) ...[
                     Text(
-                      'Noch ${left.inMinutes + (left.inSeconds % 60 > 0 ? 1 : 0)} min',
+                      context.l10n.wakeCalibrateMinutesLeft(
+                        left.inMinutes + (left.inSeconds % 60 > 0 ? 1 : 0),
+                      ),
                       style: WText.screenTitle,
                     ),
                     LinearProgressIndicator(
@@ -139,11 +139,10 @@ class _State extends ConsumerState<WakeCalibrateScreen>
                         0.0,
                         1.0,
                       ),
-                      semanticsLabel: 'Fortschritt Kalibrieren',
+                      semanticsLabel: context.l10n.wakeCalibrateProgressLabel,
                     ),
                     Text(
-                      'Aufforderungen: ${c.answered} von ${c.prompts} '
-                      'beantwortet',
+                      context.l10n.wakeCalibratePrompts(c.answered, c.prompts),
                       style: WText.detail,
                     ),
                   ],
@@ -151,8 +150,8 @@ class _State extends ConsumerState<WakeCalibrateScreen>
                   if (c.phase == CalibrationPhase.cancelled)
                     Text(
                       c.error != null
-                          ? 'Gescheitert: ${c.error}'
-                          : 'Abgebrochen. Es wurde nichts geändert.',
+                          ? context.l10n.wakeCalibrateFailed(c.error!)
+                          : context.l10n.wakeCalibrateCancelled,
                       style: WText.label,
                     ),
                 ],
@@ -160,34 +159,40 @@ class _State extends ConsumerState<WakeCalibrateScreen>
             ),
           ],
         ),
-        if (c.canFinishEarly) WideButton('Jetzt beenden', onPressed: c.finish),
+        if (c.canFinishEarly)
+          WideButton(context.l10n.wakeCalibrateFinishNow, onPressed: c.finish),
         if (c.phase == CalibrationPhase.listening)
           WideButton(
-            'Abbrechen',
+            context.l10n.cancel,
             onPressed: () async {
               await c.cancel();
               if (mounted) Navigator.of(context).pop();
             },
           )
         else
-          PrimaryButton('Fertig', onPressed: () => Navigator.of(context).pop()),
+          PrimaryButton(
+            context.l10n.done,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
       ],
     );
   }
 
   List<Widget> _result(WakeCalibrator c, WakeCalibration r) => [
     Text(
-      r.meetsTarget ? 'Kalibriert.' : 'Nicht verwertbar.',
+      r.meetsTarget
+          ? context.l10n.wakeCalibrateDone
+          : context.l10n.wakeCalibrateUnusable,
       style: WText.screenTitle,
     ),
     Text(
       r.meetsTarget
-          ? 'Schwelle ${r.threshold.toStringAsFixed(2)} · geschätzt '
-                '${r.falseAlarmsPerHour.toStringAsFixed(1)} Fehlalarme pro '
-                'Stunde (vor der Nachprüfung) · ${(r.recall * 100).round()} % '
-                'deiner Aufnahmen erkannt.'
-          : 'Deine Aufnahmen heben sich nicht vom Hintergrund ab. Lerne '
-                'deine Stimme bitte noch einmal ein. Die alte Schwelle bleibt.',
+          ? context.l10n.wakeCalibrateResult(
+              r.threshold.toStringAsFixed(2),
+              r.falseAlarmsPerHour.toStringAsFixed(1),
+              (r.recall * 100).round(),
+            )
+          : context.l10n.wakeCalibrateNotDistinct,
       style: WText.detail,
     ),
   ];

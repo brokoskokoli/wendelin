@@ -11,9 +11,11 @@ import '../../di/profiles.dart';
 import '../../di/providers.dart';
 import '../../di/voice_settings_providers.dart';
 import '../../di/wake_service.dart';
+import '../../l10n/l10n.dart';
 import '../../voice/recognizer_config.dart';
 import '../design/design.dart';
 import '../routes.dart';
+import '../settings/app_language_screen.dart';
 import '../settings/integrations_screen.dart';
 import '../settings/provider_setup_screen.dart';
 import '../settings/settings_page.dart';
@@ -27,7 +29,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
   /// Creates the onboarding.
   const OnboardingScreen({super.key});
 
-  /// Languages offered (the UI is German for now).
+  /// Languages offered for speech.
   static const languages = [
     ('de', 'Deutsch'),
     ('fr', 'Français'),
@@ -69,15 +71,24 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
     },
   );
 
+  String _uiLanguageName(String code) {
+    final l = context.l10n;
+    return switch (code) {
+      'de' => l.languageGerman,
+      'en' => l.languageEnglish,
+      'fr' => l.languageFrench,
+      _ => l.appLanguageSystem,
+    };
+  }
+
   Widget _language() {
     final current = ref.watch(languageProvider);
+    final uiCurrent = ref.watch(uiLanguageProvider);
     return SettingsPage(
-      title: 'Willkommen',
+      title: context.l10n.onboardingWelcome,
       showBack: false,
       centered: true,
-      intro:
-          'Wendelin ist dein Sprachassistent. In sechs Schritten ist er '
-          'eingerichtet. Welche Sprache sprichst du mit ihm?',
+      intro: context.l10n.onboardingWelcomeIntro,
       children: [
         const Center(child: WendelinLockup()),
         SectionCard(
@@ -88,16 +99,32 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
                 onTap: () =>
                     unawaited(ref.read(languageProvider.notifier).set(code)),
                 trailing: current == code
-                    ? const CheckStatusIcon(
+                    ? CheckStatusIcon(
                         CheckStatus.ok,
-                        semanticLabel: 'gewählt',
+                        semanticLabel: context.l10n.selected,
                       )
                     : null,
               ),
           ],
         ),
-        Text('Die Oberfläche ist vorerst deutsch.', style: WText.caption),
-        PrimaryButton('Weiter', onPressed: _next),
+        Text(context.l10n.onboardingInterfaceLanguage, style: WText.caption),
+        SectionCard(
+          children: [
+            for (final code in AppLanguageScreen.codes)
+              SettingsRow(
+                title: _uiLanguageName(code),
+                onTap: () =>
+                    unawaited(ref.read(uiLanguageProvider.notifier).set(code)),
+                trailing: uiCurrent == code
+                    ? CheckStatusIcon(
+                        CheckStatus.ok,
+                        semanticLabel: context.l10n.selected,
+                      )
+                    : null,
+              ),
+          ],
+        ),
+        PrimaryButton(context.l10n.next, onPressed: _next),
       ],
     );
   }
@@ -105,11 +132,9 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
   Widget _provider() {
     final profiles = ref.watch(profilesProvider).value?.profiles ?? const [];
     return SettingsPage(
-      title: 'Sprachmodell',
+      title: context.l10n.onboardingLanguageModel,
       centered: true,
-      intro:
-          'Wendelin braucht einen Provider, z. B. Claude mit deinem API-Key '
-          'oder ein eigenes Modell auf dem Homeserver.',
+      intro: context.l10n.onboardingProviderIntro,
       children: [
         if (profiles.isNotEmpty)
           SectionCard(
@@ -119,20 +144,22 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
             ],
           ),
         PrimaryButton(
-          profiles.isEmpty ? 'Provider einrichten' : 'Weiter',
+          profiles.isEmpty ? context.l10n.mainSetUpProvider : context.l10n.next,
           onPressed: profiles.isEmpty
               ? () => unawaited(_setUpProvider())
               : _next,
         ),
         WideButton(
-          profiles.isEmpty ? 'Später' : 'Weiteren Provider einrichten',
+          profiles.isEmpty
+              ? context.l10n.later
+              : context.l10n.onboardingSetUpAnotherProvider,
           onPressed: profiles.isEmpty
               ? _next
               : () => unawaited(_setUpProvider()),
         ),
         if (kDebugMode && profiles.isEmpty)
           WideButton(
-            'Demo ohne Provider',
+            context.l10n.onboardingDemoNoProvider,
             onPressed: () async {
               await ref.read(demoModeProvider.notifier).set(enabled: true);
               await _finish();
@@ -152,19 +179,16 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _conversation() => SettingsPage(
-    title: 'Gespräch',
+    title: context.l10n.onboardingConversation,
     centered: true,
-    intro:
-        'Soll Wendelin nach seinen Antworten kurz weiter zuhören, damit du '
-        'ohne Tippen nachfragen kannst? Das lässt sich jederzeit unter '
-        'Einstellungen → Sprache ändern.',
+    intro: context.l10n.onboardingConversationIntro,
     children: [
       PrimaryButton(
-        'Ja, weiter zuhören',
+        context.l10n.onboardingKeepListening,
         onPressed: () => unawaited(_setConversation(on: true)),
       ),
       WideButton(
-        'Nein, nur nach Tippen',
+        context.l10n.onboardingTapOnly,
         onPressed: () => unawaited(_setConversation(on: false)),
       ),
     ],
@@ -173,10 +197,8 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
   Widget _integrations() {
     final registry = ref.watch(toolRegistryProvider);
     return SettingsPage(
-      title: 'Was darf Wendelin?',
-      intro:
-          'Schalte nur ein, was du brauchst. Berechtigungen fragt Android '
-          'erst jetzt beim Einschalten.',
+      title: context.l10n.onboardingWhatMayWendelinDo,
+      intro: context.l10n.onboardingPermissionsIntro,
       children: [
         StreamBuilder<void>(
           stream: registry.changes,
@@ -189,7 +211,7 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
             ],
           ),
         ),
-        PrimaryButton('Weiter', onPressed: _next),
+        PrimaryButton(context.l10n.next, onPressed: _next),
       ],
     );
   }
@@ -197,21 +219,21 @@ class _OnboardingState extends ConsumerState<OnboardingScreen> {
   /// Optional last step: the wake word (ADR 0005). Leads to enrolling and
   /// switching on; can be skipped.
   Widget _wake() => SettingsPage(
-    title: 'Aktivierungswort',
-    intro:
-        'Wendelin kann auf „Wendelin“ hören, auch wenn das Telefon liegt. '
-        'Dafür lernt er zuerst deine Stimme (etwa 3 Minuten). Das geht '
-        'auch später in den Einstellungen.',
+    title: context.l10n.onboardingWakeWord,
+    intro: context.l10n.onboardingWakeIntro,
     children: [
       PrimaryButton(
-        'Einlernen und einschalten',
+        context.l10n.onboardingLearnAndEnable,
         onPressed: () => unawaited(
           Navigator.of(context)
               .pushNamed<void>(AppRoutes.wakeWord)
               .then((_) => _finish()),
         ),
       ),
-      WideButton('Überspringen', onPressed: () => unawaited(_finish())),
+      WideButton(
+        context.l10n.onboardingSkip,
+        onPressed: () => unawaited(_finish()),
+      ),
     ],
   );
 }

@@ -1,14 +1,15 @@
+import '../../l10n/l10n.dart';
 import '../design/icons.dart';
 
 /// „Heute · 08:12“, „Gestern · 21:05“ or „12.10. · 08:12“.
-String sessionLabel(DateTime at, DateTime now) {
+String sessionLabel(AppLocalizations l, DateTime at, DateTime now) {
   String two(int v) => v.toString().padLeft(2, '0');
   final day = DateTime(at.year, at.month, at.day);
   final today = DateTime(now.year, now.month, now.day);
   final diff = today.difference(day).inDays;
   final date = switch (diff) {
-    0 => 'Heute',
-    1 => 'Gestern',
+    0 => l.mainToday,
+    1 => l.mainYesterday,
     _ => '${two(at.day)}.${two(at.month)}.',
   };
   return '$date · ${two(at.hour)}:${two(at.minute)}';
@@ -41,19 +42,26 @@ WIconData integrationIcon(String integrationId) => switch (integrationId) {
 }
 
 /// Texts of the confirmation card for [toolName].
-({String title, String yes, String no}) confirmationTexts(String toolName) {
+({String title, String yes, String no}) confirmationTexts(
+  AppLocalizations l,
+  String toolName,
+) {
   final action = toolName.contains('__')
       ? toolName.substring(toolName.indexOf('__') + 2)
       : toolName;
   if (toolName == 'calendar__delete_event') {
-    return (title: 'Termin löschen?', yes: 'Ja, löschen', no: 'Nein, behalten');
+    return (
+      title: l.mainDeleteEventTitle,
+      yes: l.mainYesDelete,
+      no: l.mainNoKeep,
+    );
   }
   if (RegExp('delete|remove|clear|forget').hasMatch(action)) {
     return (
-      title: 'Wirklich löschen?',
-      yes: 'Ja, löschen',
-      no: 'Nein, behalten',
+      title: l.mainReallyDeleteTitle,
+      yes: l.mainYesDelete,
+      no: l.mainNoKeep,
     );
   }
-  return (title: 'Soll ich das tun?', yes: 'Ja, ausführen', no: 'Nein');
+  return (title: l.mainShouldIDoThat, yes: l.mainYesDoIt, no: l.no);
 }

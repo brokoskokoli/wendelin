@@ -5,15 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/voice_providers.dart';
+import '../../l10n/l10n.dart';
 import '../../platform/device_memory.dart';
 import '../design/design.dart';
 import '../settings/settings_page.dart';
 
 /// [bytes] for the user: below 10 MB with one decimal („0,6 MB“), above
 /// rounded like [megabytes].
-String sizeLabel(int bytes) => bytes >= 10000000
-    ? megabytes(bytes)
-    : '${(bytes / 1000000).toStringAsFixed(1).replaceAll('.', ',')} MB';
+String sizeLabel(AppLocalizations l, int bytes) => bytes >= 10000000
+    ? l.voiceDownloadSizeMb('${(bytes / 1000000).round()}')
+    : l.voiceDownloadSizeMb(decimal1(l, bytes / 1000000));
 
 /// Name of [model] without the note after the dash or in brackets
 /// („Whisper small“).
@@ -88,19 +89,24 @@ final class DownloadPlan {
   bool get canLoad => !ready && !busy && !checking;
 
   /// „Bereit“ or „Noch nötig: …“ with the missing models and sizes.
-  String get status => ready
-      ? 'Bereit'
-      : 'Noch nötig: ${[for (final m in missing) '${shortModelName(m)} '
-              '(${sizeLabel(m.sizeBytes)})'].join(' und ')}';
+  String status(AppLocalizations l) => ready
+      ? l.voiceDownloadReady
+      : l.voiceDownloadStillNeeded(
+          [
+            for (final m in missing)
+              '${shortModelName(m)} '
+                  '(${sizeLabel(l, m.sizeBytes)})',
+          ].join(l.voiceDownloadAnd),
+        );
 
   /// Label of the load button.
-  String get loadLabel => busy
-      ? 'Lädt …'
+  String loadLabel(AppLocalizations l) => busy
+      ? l.voiceDownloadLoading
       : error != null
-      ? 'Erneut laden'
+      ? l.voiceDownloadLoadAgain
       : resumable
-      ? 'Weiterladen'
-      : 'Laden';
+      ? l.voiceDownloadContinueLoading
+      : l.voiceDownloadLoad;
 }
 
 /// Onboarding step „Spracherkennung laden“ (concept: Onboarding): the
@@ -148,11 +154,13 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
             : plan.error != null && !plan.busy
             ? CheckStatus.failed
             : CheckStatus.pending,
-        title: plan.status,
+        title: plan.status(context.l10n),
         detail: plan.ready
             ? null
             : plan.busy
-            ? 'Lädt … ${(plan.progress * 100).floor()} %'
+            ? context.l10n.voiceDownloadLoadingPercent(
+                '${(plan.progress * 100).floor()}',
+              )
             : plan.error,
       ),
       if (plan.busy)
@@ -160,7 +168,7 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
           value: plan.progress,
           color: WColors.accent,
           backgroundColor: WColors.surfaceRaised,
-          semanticsLabel: 'Fortschritt Spracherkennung',
+          semanticsLabel: context.l10n.voiceDownloadProgressLabel,
         ),
     ],
   );
@@ -178,10 +186,8 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
     final plan = DownloadPlan.of([whisper, vad], states);
 
     return SettingsPage(
-      title: 'Spracherkennung laden',
-      intro:
-          'Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne '
-          'Google. Wähle das Modell und lade es einmal, am besten im WLAN.',
+      title: context.l10n.voiceDownloadTitle,
+      intro: context.l10n.voiceDownloadIntro,
       children: [
         SectionCard(
           children: [
@@ -201,27 +207,32 @@ class _VoiceDownloadState extends ConsumerState<VoiceDownloadStep> {
           ],
         ),
         Text(
-          '${vad.displayName} gehört dazu (${sizeLabel(vad.sizeBytes)}) und '
-          'wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen '
-          'deutlich besser und ist empfohlen. „base“ ist schnell und für '
-          'schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.',
+          context.l10n.voiceDownloadBundled(
+            vad.displayName,
+            sizeLabel(context.l10n, vad.sizeBytes),
+          ),
           style: WText.caption,
         ),
         if (lowMemory && whisper.id == SpeechModelCatalog.whisperBase.id)
           Text(
-            lowMemoryReason(ref.watch(deviceMemoryProvider).value!),
+            lowMemoryReason(
+              context.l10n,
+              ref.watch(deviceMemoryProvider).value!,
+            ),
             style: WText.caption,
           ),
         _status(plan),
         if (plan.ready)
-          PrimaryButton('Weiter', onPressed: widget.onNext)
+          PrimaryButton(context.l10n.next, onPressed: widget.onNext)
         else ...[
           PrimaryButton(
-            plan.loadLabel,
+            plan.loadLabel(context.l10n),
             onPressed: plan.canLoad ? () => _load(plan) : null,
           ),
           WideButton(
-            plan.busy ? 'Im Hintergrund weiterladen' : 'Später',
+            plan.busy
+                ? context.l10n.voiceDownloadContinueInBackground
+                : context.l10n.later,
             onPressed: widget.onNext,
           ),
         ],
@@ -247,23 +258,28 @@ class _ModelChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = sizeLabel(model.sizeBytes);
+    final size = sizeLabel(context.l10n, model.sizeBytes);
     return Semantics(
       selected: selected,
       button: true,
       child: SettingsRow(
         title: model.displayName,
         detail: switch (state.phase) {
-          ModelPhase.downloading =>
-            'Lädt … ${(state.progress * 100).floor()} % von $size',
-          ModelPhase.unpacking => 'Wird entpackt …',
-          ModelPhase.installed => '$size · geladen',
-          ModelPhase.partial => '$size · angefangen',
+          ModelPhase.downloading => context.l10n.voiceDownloadLoadingPercentOf(
+            '${(state.progress * 100).floor()}',
+            size,
+          ),
+          ModelPhase.unpacking => context.l10n.voiceDownloadUnpacking,
+          ModelPhase.installed => context.l10n.voiceDownloadSizeLoaded(size),
+          ModelPhase.partial => context.l10n.voiceDownloadSizePartial(size),
           ModelPhase.absent || ModelPhase.unknown => size,
         },
         onTap: onSelect,
         trailing: selected
-            ? const CheckStatusIcon(CheckStatus.ok, semanticLabel: 'gewählt')
+            ? CheckStatusIcon(
+                CheckStatus.ok,
+                semanticLabel: context.l10n.selected,
+              )
             : null,
       ),
     );
@@ -271,9 +287,7 @@ class _ModelChoice extends StatelessWidget {
 }
 
 /// Why the onboarding suggests base on a device with [totalBytes] RAM.
-String lowMemoryReason(int totalBytes) {
-  final gb = (totalBytes / (1024 * 1024 * 1024)).toStringAsFixed(1);
-  return 'Vorausgewählt ist „base“, weil das Gerät wenig Arbeitsspeicher '
-      'hat (${gb.replaceAll('.', ',')} GB). „small“ braucht beim Erkennen '
-      'deutlich mehr Speicher.';
+String lowMemoryReason(AppLocalizations l, int totalBytes) {
+  final gb = decimal1(l, totalBytes / (1024 * 1024 * 1024));
+  return l.voiceDownloadPreselectedBase(gb);
 }

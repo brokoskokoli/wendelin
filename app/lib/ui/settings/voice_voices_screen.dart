@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../di/voice_providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'model_download_row.dart';
 import 'settings_page.dart';
@@ -21,7 +22,7 @@ class VoiceVoicesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(voiceSettingsProvider).value;
     if (settings == null) {
-      return const SettingsPage(title: 'Stimmen', children: []);
+      return SettingsPage(title: context.l10n.voiceScreenVoices, children: []);
     }
     final catalog = ref.watch(speechModelCatalogProvider);
     final states = ref.watch(modelStatesProvider);
@@ -29,10 +30,8 @@ class VoiceVoicesScreen extends ConsumerWidget {
     String? effective(String lang) =>
         _effective(states, settings, catalog, lang);
     return SettingsPage(
-      title: 'Stimmen',
-      intro:
-          'Wähle je Sprache die Offline-Stimme. Nur geladene Stimmen '
-          'belegen Speicher; nicht gebrauchte kannst du löschen.',
+      title: context.l10n.voiceScreenVoices,
+      intro: context.l10n.voiceVoicesIntro,
       children: [
         for (final lang in languageNames.keys)
           Column(
@@ -82,8 +81,9 @@ class VoiceVoicesScreen extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.all(WSpace.l),
                       child: Text(
-                        'Gewählte Stimme nicht geladen – es spricht '
-                        '${catalog.byId(speaking)!.displayName}.',
+                        context.l10n.voiceVoicesNotLoaded(
+                          catalog.byId(speaking)!.displayName,
+                        ),
                         key: Key('hint-$lang'),
                         style: WText.detail,
                       ),
@@ -165,12 +165,7 @@ class _ProbeButtonState extends State<_ProbeButton> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Probe nicht möglich – die Stimme hat nicht '
-                'gesprochen.',
-              ),
-            ),
+            SnackBar(content: Text(context.l10n.voiceVoicesSampleFailed)),
           );
       }
     } finally {
@@ -182,7 +177,7 @@ class _ProbeButtonState extends State<_ProbeButton> {
 
   @override
   Widget build(BuildContext context) => switch (_phase) {
-    _ProbePhase.preparing => const SizedBox.square(
+    _ProbePhase.preparing => SizedBox.square(
       dimension: WSize.touchMin,
       child: Center(
         child: SizedBox.square(
@@ -190,19 +185,19 @@ class _ProbeButtonState extends State<_ProbeButton> {
           child: CircularProgressIndicator(
             strokeWidth: WSize.spinnerStroke,
             color: WColors.accent,
-            semanticsLabel: 'Probe wird vorbereitet …',
+            semanticsLabel: context.l10n.voiceVoicesPreparing,
           ),
         ),
       ),
     ),
     _ProbePhase.playing => WIconButton(
       icon: WIcons.stop,
-      tooltip: 'Probe beenden',
+      tooltip: context.l10n.voiceVoicesStopSample,
       onPressed: () => unawaited(widget.tts.stop()),
     ),
     _ProbePhase.idle => WIconButton(
       icon: WIcons.play,
-      tooltip: 'Probe hören',
+      tooltip: context.l10n.voiceScreenListen,
       onPressed: () => unawaited(_start()),
     ),
   };

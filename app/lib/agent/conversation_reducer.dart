@@ -2,13 +2,14 @@ import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import '../l10n/gen/app_localizations_de.dart';
+import '../l10n/l10n.dart';
 import 'bring_share.dart';
 import 'chat_entry.dart';
 import 'conversation_state.dart';
 import 'money.dart';
 
-/// Notice when the spoken text was rejected by the check (WP55).
-const spokenFallbackNotice = 'Vorgelesen wurde die angezeigte Fassung.';
+AppLocalizations _germanTexts() => AppLocalizationsDe();
 
 /// Pure state transitions of the conversation (no I/O, no widgets): what a
 /// user message, an [AgentEvent] or an undo update does to the
@@ -24,11 +25,15 @@ final class ConversationReducer {
   /// Creates the reducer; [nameOf] gives the display name of a profile.
   const ConversationReducer({
     required this.nameOf,
+    this.texts = _germanTexts,
     this.undoWindow = const Duration(seconds: 10),
   });
 
   /// Display name of a provider profile.
   final String Function(String profileId) nameOf;
+
+  /// The texts of hints in the current app language (German by default).
+  final AppLocalizations Function() texts;
 
   /// Initial time of an undo offer (the undo manager's window).
   final Duration undoWindow;
@@ -80,7 +85,7 @@ final class ConversationReducer {
         return s;
       case AgentSpokenVerdict():
         // WP55: the check rejected the spoken text.
-        return notice(s, NoticeKind.info, spokenFallbackNotice);
+        return notice(s, NoticeKind.info, texts().reducerSpokenFallback);
       case AttestationStatusChanged():
         return _attestation(s, event);
       case AgentThinkingDelta(:final text):
@@ -95,8 +100,11 @@ final class ConversationReducer {
         return notice(
           s,
           NoticeKind.warning,
-          'Budget von ${nameOf(profileId)}: ${formatUsd(spentMicros)} von '
-          '${formatUsd(budgetMicros)} verbraucht.',
+          texts().reducerBudgetUsed(
+            nameOf(profileId),
+            formatUsdFor(texts(), spentMicros),
+            formatUsdFor(texts(), budgetMicros),
+          ),
         );
       case ToolCallStarted(:final call):
         final closed = s.copyWith(clearOpen: true);
@@ -150,7 +158,8 @@ final class ConversationReducer {
             clearVerification: true,
             clearRule: true,
           ),
-          (id) => EscalationEntry(id, 'an ${nameOf(toProfile)} übergeben'),
+          (id) =>
+              EscalationEntry(id, texts().reducerHandedOver(nameOf(toProfile))),
         );
       case Verification(:final profileId, :final status):
         // Receipt check of the answering provider (head of the overlay).
@@ -176,8 +185,14 @@ final class ConversationReducer {
           clearPending: true,
         );
         return error == AgentErrorKind.cancelled
-            ? notice(done, NoticeKind.info, 'Abgebrochen.')
-            : notice(done, NoticeKind.error, message);
+            ? notice(done, NoticeKind.info, texts().agentNoticeCancelled)
+            : notice(
+                done,
+                NoticeKind.error,
+                message == gpuNoEvidenceSpoken
+                    ? texts().agentNoticeGpuNoEvidence
+                    : message,
+              );
     }
   }
 
@@ -295,11 +310,7 @@ final class ConversationReducer {
     target ??= unassigned;
     if (target == null) {
       return event.status == AttestationStatus.red
-          ? notice(
-              s,
-              NoticeKind.error,
-              'Die Antwort des Anbieters konnte nicht geprüft werden.',
-            )
+          ? notice(s, NoticeKind.error, texts().reducerVerificationFailed)
           : s;
     }
     return s.copyWith(

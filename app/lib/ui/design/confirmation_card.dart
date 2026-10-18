@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'check_status.dart';
 
@@ -17,8 +18,8 @@ class ConfirmationCard extends StatelessWidget {
     required this.onYes,
     required this.onNo,
     this.subject,
-    this.yesLabel = 'Ja',
-    this.noLabel = 'Nein',
+    this.yesLabel,
+    this.noLabel,
     this.expand = false,
     this.compact = false,
   });
@@ -45,10 +46,10 @@ class ConfirmationCard extends StatelessWidget {
   final VoidCallback? onNo;
 
   /// Beschriftung „Ja“-Button.
-  final String yesLabel;
+  final String? yesLabel;
 
   /// Beschriftung „Nein“-Button.
-  final String noLabel;
+  final String? noLabel;
 
   /// Füllt die verfügbare Höhe; die Buttons rutschen nach unten
   /// (im Sheet). Braucht eine begrenzte Höhe.
@@ -73,14 +74,14 @@ class ConfirmationCard extends StatelessWidget {
             Row(
               spacing: WSpace.s,
               children: [
-                const CheckStatusIcon(
+                CheckStatusIcon(
                   CheckStatus.pending,
                   size: WSize.statusIconHeader,
-                  semanticLabel: 'Warnung',
+                  semanticLabel: context.l10n.confirmCardWarning,
                 ),
                 Expanded(
                   child: Text(
-                    'Braucht deine Bestätigung'.toUpperCase(),
+                    context.l10n.confirmCardNeedsConfirm.toUpperCase(),
                     style: WText.monoCaps,
                   ),
                 ),
@@ -105,7 +106,10 @@ class ConfirmationCard extends StatelessWidget {
               ),
             ),
             if (!compact)
-              Text('$toolName · Stufe ${risk.name}', style: WText.mono),
+              Text(
+                context.l10n.confirmCardToolLevel(toolName, risk.name),
+                style: WText.mono,
+              ),
           ],
         ),
       ),
@@ -116,12 +120,12 @@ class ConfirmationCard extends StatelessWidget {
       children: [
         card,
         if (expand) const Spacer() else const SizedBox(height: WSpace.l18),
-        _buttons(),
+        _buttons(context),
       ],
     );
   }
 
-  Widget _buttons() => Row(
+  Widget _buttons(BuildContext context) => Row(
     spacing: WSpace.m,
     children: [
       Expanded(
@@ -134,7 +138,7 @@ class ConfirmationCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(WRadius.buttonLarge),
             ),
           ),
-          child: Text(noLabel),
+          child: Text(noLabel ?? context.l10n.no),
         ),
       ),
       Expanded(
@@ -144,7 +148,7 @@ class ConfirmationCard extends StatelessWidget {
             minimumSize: const Size.fromHeight(WSize.buttonHeightLarge),
             textStyle: WText.buttonLarge,
           ),
-          child: Text(yesLabel),
+          child: Text(yesLabel ?? context.l10n.yes),
         ),
       ),
     ],

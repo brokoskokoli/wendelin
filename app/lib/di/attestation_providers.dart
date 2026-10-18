@@ -14,6 +14,7 @@ import '../platform/attest/pcs_collateral_client.dart';
 import '../platform/attest/rust_attestation_crypto.dart';
 import '../platform/channel_notifier.dart';
 import 'attestation_hub.dart';
+import 'preferences.dart';
 import 'providers.dart';
 
 /// Rust-Prüfmodul (lädt `libwendelin_attest.so` beim ersten Zugriff). Tests überschreiben es mit einem Fake.
@@ -77,6 +78,7 @@ final Provider<AttestationHub> attestationHubProvider =
         notifier: ref.watch(attestationNotifierProvider),
         nameOf: (id) =>
             ref.read(providerConfigProvider).asData?.value?.nameOf(id) ?? id,
+        texts: () => uiTexts(ref),
       );
       ref.onDispose(() => unawaited(hub.dispose()));
       return hub;

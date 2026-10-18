@@ -8,6 +8,7 @@ import '../../di/attestation_log_view.dart';
 import '../../di/attestation_providers.dart';
 import '../../di/providers.dart';
 import '../../di/tee_restrictions.dart';
+import '../../l10n/l10n.dart';
 import '../attestation/attestation_texts.dart';
 import '../design/design.dart';
 import '../screens/labels.dart';
@@ -30,12 +31,12 @@ class AttestationLogDetailScreen extends ConsumerWidget {
     final r = record.value;
     if (r == null) {
       return SettingsPage(
-        title: 'Prüfprotokoll',
+        title: context.l10n.attLogTitle,
         children: [
           Text(
             record.isLoading
-                ? 'Lädt …'
-                : 'Zu dieser Antwort gibt es noch keinen Eintrag.',
+                ? context.l10n.voiceDownloadLoading
+                : context.l10n.attLogNoEntry,
             style: WText.caption,
           ),
         ],
@@ -44,6 +45,7 @@ class AttestationLogDetailScreen extends ConsumerWidget {
     final config = ref.watch(providerConfigProvider).value;
     final now = ref.watch(clockProvider).now();
     final message = attestationMessage(
+      context.l10n,
       r.status,
       reasonCode: r.reasonCode,
       detail: r.stages
@@ -53,29 +55,35 @@ class AttestationLogDetailScreen extends ConsumerWidget {
     );
     final locked = ref.watch(attestationHubProvider).isLocked(r.profileId);
     return SettingsPage(
-      title: 'Prüfprotokoll',
+      title: context.l10n.attLogTitle2,
       children: [
         StatusCard(
           status: message.status,
           title:
               message.title ??
-              recordTitle(r, config?.nameOf(r.profileId) ?? r.profileId),
-          detail: message.text ?? recordSummary(r, now),
+              recordTitle(
+                context.l10n,
+                r,
+                config?.nameOf(r.profileId) ?? r.profileId,
+              ),
+          detail: message.text ?? recordSummary(context.l10n, r, now),
         ),
         if (ref.watch(openRestrictionsProvider(logId)).value case final open?
             when open.isNotEmpty)
           StatusCard(
             key: const ValueKey('openRestrictions'),
             status: CheckStatus.info,
-            title: 'Neue Einschränkung',
-            detail:
-                '${open.map(stageLabel).join(', ')}: nur protokolliert und '
-                'noch nicht von dir akzeptiert. Unter „Details“ kannst du das '
-                'ansehen und akzeptieren.',
+            title: context.l10n.attLogNewRestriction,
+            detail: context.l10n.attLogNewRestrictionDetail(
+              open.map((st) => stageLabel(context.l10n, st)).join(', '),
+            ),
           ),
-        SettingsSection(title: 'Ergebnis je Stufe', children: stageRows(r)),
+        SettingsSection(
+          title: context.l10n.attLogResultPerStep,
+          children: stageRows(context.l10n, r),
+        ),
         WideButton(
-          'Details',
+          context.l10n.details,
           onPressed: () => unawaited(
             Navigator.of(context).push<void>(
               MaterialPageRoute(
@@ -93,24 +101,27 @@ class AttestationLogDetailScreen extends ConsumerWidget {
         ),
         ToolTlsHint(encrypted: config?.toolsEncryptedFor(r.profileId) ?? false),
         SettingsSection(
-          title: 'Angaben',
+          title: context.l10n.attLogParticulars,
           children: [
             for (final (k, v) in [
-              ('Zeit', sessionLabel(r.at, now)),
-              ('Anbieter', config?.nameOf(r.profileId) ?? r.profileId),
-              ('Modell', r.model),
-              ('Quittungs-ID', r.receiptId),
-              ('Keyset-Digest', r.workloadKeysetDigest),
-              ('Commit', r.repoCommit),
-              ('Compose-Hash', r.composeHash),
-              ('Grundcode', r.reasonCode),
+              (context.l10n.attLogTime, sessionLabel(context.l10n, r.at, now)),
+              (
+                context.l10n.attLogProvider,
+                config?.nameOf(r.profileId) ?? r.profileId,
+              ),
+              (context.l10n.attLogModel, r.model),
+              (context.l10n.attLogReceiptId, r.receiptId),
+              (context.l10n.attLogKeysetDigest, r.workloadKeysetDigest),
+              (context.l10n.attLogCommit, r.repoCommit),
+              (context.l10n.attSCompose, r.composeHash),
+              (context.l10n.attLogReasonCode, r.reasonCode),
             ])
               if (v != null) SettingsRow(title: k, detail: v, mono: false),
           ],
         ),
         if (locked)
           PrimaryButton(
-            'Neu prüfen',
+            context.l10n.attLogRecheck,
             onPressed: () => unawaited(_recheck(context, ref, r.profileId)),
           ),
       ],
@@ -130,8 +141,8 @@ class AttestationLogDetailScreen extends ConsumerWidget {
     showHint(
       context,
       report?.status == AttestationStatus.green
-          ? 'Anbieter neu geprüft, die Sperre ist aufgehoben.'
-          : 'Die neue Prüfung ist nicht bestanden.',
+          ? context.l10n.attLogRechecked
+          : context.l10n.attLogRecheckFailed,
     );
   }
 }

@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/voice/microphone_access.dart';
 import 'package:wendelin/voice/voice_components.dart';
@@ -43,7 +44,10 @@ void main() {
 
       await tester.tap(find.byType(MicButton));
       await pumpUntil(tester, find.text('Mikrofon erlauben?'));
-      expect(find.text(microphoneExplanation), findsOneWidget);
+      expect(
+        find.text(microphoneExplanation(AppLocalizationsDe())),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Nicht jetzt'));
       await pumpUntil(tester, find.text(_noAccess));
 
@@ -141,7 +145,10 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(find.byType(MicrophoneNotice), findsOneWidget);
-      expect(find.text(microphoneSettingsHint), findsOneWidget);
+      expect(
+        find.text(microphoneSettingsHint(AppLocalizationsDe())),
+        findsOneWidget,
+      );
       await tester.tap(
         find.widgetWithText(OutlinedButton, 'Android-Einstellungen'),
       );
@@ -173,7 +180,10 @@ void main() {
       );
 
       await pumpUntil(tester, find.text('Mikrofon erlauben?'));
-      expect(find.text(microphoneExplanation), findsOneWidget);
+      expect(
+        find.text(microphoneExplanation(AppLocalizationsDe())),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Nicht jetzt'));
       await pumpUntil(tester, find.text(_noAccess));
       expect(env.microphone.requests, everyElement(isFalse));

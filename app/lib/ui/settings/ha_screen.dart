@@ -8,8 +8,8 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../di/home_assistant.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
-import 'ha_texts.dart';
 import 'settings_page.dart';
 
 /// Settings → Home Assistant: address and token (search in the Wi-Fi via
@@ -99,7 +99,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
 
   Future<void> _connect() async {
     if (_address.text.trim().isEmpty || _token.text.trim().isEmpty) {
-      setState(() => _error = HaTexts.inputMissing);
+      setState(() => _error = context.l10n.haInputMissing);
       return;
     }
     setState(() {
@@ -129,9 +129,9 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     final store = ref.read(haStoreProvider);
     final ok = await confirm(
       context,
-      title: HaTexts.disconnectTitle,
-      message: HaTexts.disconnectMessage,
-      yes: HaTexts.disconnect,
+      title: context.l10n.haDisconnectTitle,
+      message: context.l10n.haDisconnectMessage,
+      yes: context.l10n.haDisconnect,
     );
     if (!ok) return;
     await haDisconnect(store);
@@ -183,15 +183,15 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     final error = await integration.reconnect();
     if (!mounted) return;
     setState(() => _busy = false);
-    showHint(context, error ?? HaTexts.reachable);
+    showHint(context, error ?? context.l10n.haReachable);
   }
 
   @override
   Widget build(BuildContext context) {
     final registry = ref.watch(toolRegistryProvider);
     return SettingsPage(
-      title: HaTexts.title,
-      intro: HaTexts.intro,
+      title: context.l10n.haTitle,
+      intro: context.l10n.haIntro,
       children: [
         if (!_loaded)
           const SizedBox.shrink()
@@ -215,19 +215,19 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       style: WText.body,
       keyboardType: TextInputType.url,
       autocorrect: false,
-      decoration: const InputDecoration(
-        labelText: HaTexts.addressLabel,
-        hintText: HaTexts.addressHint,
+      decoration: InputDecoration(
+        labelText: context.l10n.haAddressLabel,
+        hintText: 'http://homeassistant.local:8123',
       ),
     ),
     SecretField(
       key: const ValueKey('haToken'),
       controller: _token,
-      label: HaTexts.tokenLabel,
-      helperText: HaTexts.tokenHelp,
+      label: context.l10n.haTokenLabel,
+      helperText: context.l10n.haTokenHelp,
       mono: true,
     ),
-    Text(HaTexts.httpNote, style: WText.caption),
+    Text(context.l10n.haHttpNote, style: WText.caption),
     if (_error != null)
       Text(
         _error!,
@@ -235,18 +235,18 @@ class _HaScreenState extends ConsumerState<HaScreen> {
         style: WText.caption.copyWith(color: WColors.error),
       ),
     PrimaryButton(
-      _busy ? HaTexts.connecting : HaTexts.connect,
+      _busy ? context.l10n.haConnecting : context.l10n.haConnect,
       onPressed: _busy ? null : () => unawaited(_connect()),
     ),
     WideButton(
-      _searching ? HaTexts.searching : HaTexts.search,
+      _searching ? context.l10n.haSearching : context.l10n.haSearch,
       onPressed: _searching ? null : () => unawaited(_search()),
     ),
     if (_servers != null)
       _servers!.isEmpty
-          ? Text(HaTexts.nothingFound, style: WText.caption)
+          ? Text(context.l10n.haNothingFound, style: WText.caption)
           : SettingsSection(
-              title: HaTexts.found,
+              title: context.l10n.haFound,
               children: [
                 for (final s in _servers!)
                   SettingsRow(
@@ -268,24 +268,28 @@ class _HaScreenState extends ConsumerState<HaScreen> {
         SectionCard(
           children: [
             SettingsRow(
-              title: failed ? HaTexts.errorTitle : HaTexts.connected,
+              title: failed
+                  ? context.l10n.haErrorTitle
+                  : context.l10n.haConnected,
               detail: failed ? info?.error : _endpoint?.url,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,
-                semanticLabel: failed ? 'Fehler' : 'in Ordnung',
+                semanticLabel: failed
+                    ? context.l10n.error
+                    : context.l10n.bringFine,
               ),
             ),
-            SettingsRow(title: HaTexts.approved(_approved.length)),
+            SettingsRow(title: context.l10n.haApproved(_approved.length)),
           ],
         ),
         if (failed)
           PrimaryButton(
-            _busy ? HaTexts.connecting : HaTexts.retry,
+            _busy ? context.l10n.haConnecting : context.l10n.retry,
             onPressed: _busy ? null : () => unawaited(_retry()),
           ),
         WideButton(
-          HaTexts.disconnect,
+          context.l10n.haDisconnect,
           onPressed: () => unawaited(_disconnect()),
         ),
       ],
@@ -308,19 +312,19 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     ];
     final byArea = <String, List<HaEntity>>{};
     for (final e in shown) {
-      (byArea[e.area ?? HaTexts.noRoom] ??= []).add(e);
+      (byArea[e.area ?? context.l10n.haNoRoom] ??= []).add(e);
     }
     return [
-      Text(HaTexts.devices, style: WText.sectionLabel),
-      Text(HaTexts.devicesHelp, style: WText.caption),
+      Text(context.l10n.haDevices, style: WText.sectionLabel),
+      Text(context.l10n.haDevicesHelp, style: WText.caption),
       TextField(
         key: const ValueKey('haFilter'),
         controller: _filter,
         style: WText.body,
         onChanged: (_) => setState(() {}),
-        decoration: const InputDecoration(labelText: HaTexts.filter),
+        decoration: InputDecoration(labelText: context.l10n.haFilter),
       ),
-      if (all.isEmpty) Text(HaTexts.noDevices, style: WText.caption),
+      if (all.isEmpty) Text(context.l10n.haNoDevices, style: WText.caption),
       for (final MapEntry(:key, :value) in byArea.entries)
         SettingsSection(
           title: key,
@@ -329,7 +333,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
               SettingsRow(
                 title: e.name,
                 detail: _secure(e)
-                    ? '${e.entityId} · fragt immer nach'
+                    ? context.l10n.haEntityAlwaysAsks(e.entityId)
                     : e.entityId,
                 trailing: WSwitch(
                   key: ValueKey('haEntity_${e.entityId}'),
@@ -340,19 +344,25 @@ class _HaScreenState extends ConsumerState<HaScreen> {
               ),
               if (e.domain == 'switch' && _approved.contains(e.entityId))
                 SettingsRow(
-                  title: HaTexts.alwaysConfirm,
-                  detail: HaTexts.alwaysConfirmHelp,
+                  title: context.l10n.haAlwaysConfirm,
+                  detail: context.l10n.haAlwaysConfirmHelp,
                   trailing: WSwitch(
                     key: ValueKey('haConfirm_${e.entityId}'),
                     value: _confirm.contains(e.entityId),
-                    semanticLabel: '${e.name}: ${HaTexts.alwaysConfirm}',
+                    semanticLabel: context.l10n.haAlwaysConfirmSemantics(
+                      e.name,
+                      context.l10n.haAlwaysConfirm,
+                    ),
                     onChanged: (on) => unawaited(_toggleConfirm(e, on)),
                   ),
                 ),
             ],
           ],
         ),
-      WideButton(HaTexts.reload, onPressed: () => unawaited(_loadDevices())),
+      WideButton(
+        context.l10n.haReload,
+        onPressed: () => unawaited(_loadDevices()),
+      ),
     ];
   }
 

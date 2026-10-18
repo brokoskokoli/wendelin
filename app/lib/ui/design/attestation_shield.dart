@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'check_status.dart';
 
@@ -28,8 +29,8 @@ class AttestationShield extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     button: onTap != null,
     label: onTap == null
-        ? 'TEE-Prüfung: $label'
-        : 'TEE-Prüfung: $label. Tippen für das Prüfprotokoll.',
+        ? context.l10n.shieldSemantics(label)
+        : context.l10n.shieldSemanticsTap(label),
     excludeSemantics: true,
     child: InkWell(
       onTap: onTap,

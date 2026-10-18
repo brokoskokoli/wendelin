@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'icons.dart';
 
@@ -35,11 +36,8 @@ class ToolResultCard extends StatelessWidget {
   final Duration? undoRemaining;
 
   /// Zustand „rückgängig“: Inhalt gedämpft und durchgestrichen, statt des
-  /// Buttons der Hinweis [undoneLabel].
+  /// Buttons der Hinweis [ToolResultCard.undone].
   final bool undone;
-
-  /// Hinweis im Zustand [undone].
-  static const undoneLabel = 'Rückgängig gemacht';
 
   /// Icon der Integration.
   final WIconData icon;
@@ -106,9 +104,9 @@ class ToolResultCard extends StatelessWidget {
                 ),
                 if (undone)
                   Text(
-                    undoneLabel,
+                    context.l10n.toolResultUndone,
                     style: WText.caption,
-                    semanticsLabel: undoneLabel,
+                    semanticsLabel: context.l10n.toolResultUndone,
                   )
                 else if (canUndo)
                   OutlinedButton(
@@ -117,8 +115,10 @@ class ToolResultCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: WSpace.l),
                     ),
                     child: Text(
-                      'Rückgängig · $seconds s',
-                      semanticsLabel: 'Rückgängig, noch $seconds Sekunden',
+                      context.l10n.toolResultUndoCountdown(seconds),
+                      semanticsLabel: context.l10n.toolResultUndoSemantics(
+                        seconds,
+                      ),
                     ),
                   ),
               ],

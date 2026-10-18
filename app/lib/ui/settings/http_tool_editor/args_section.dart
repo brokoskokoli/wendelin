@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'editor_parts.dart';
@@ -21,14 +22,14 @@ class ArgsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = draft;
     return SettingsSection(
-      title: 'Argumente',
+      title: context.l10n.httpArgsArgs,
       children: [
         SettingsRow(
-          title: 'Eigenes JSON-Schema',
-          detail: 'Statt der einfachen Liste',
+          title: context.l10n.httpArgsCustomSchema,
+          detail: context.l10n.httpArgsCustomSchemaDetail,
           trailing: WSwitch(
             value: d.rawSchema,
-            semanticLabel: 'Eigenes JSON-Schema',
+            semanticLabel: context.l10n.httpArgsCustomSchemaSem,
             onChanged: (on) => onEdit(() {
               if (on) {
                 try {
@@ -49,7 +50,9 @@ class ArgsSection extends StatelessWidget {
               style: WText.mono,
               minLines: 4,
               maxLines: 14,
-              decoration: const InputDecoration(labelText: 'JSON-Schema'),
+              decoration: InputDecoration(
+                labelText: context.l10n.httpArgsSchema,
+              ),
               onChanged: (v) => onEdit(() => d.schemaText = v),
             ),
           )
@@ -57,7 +60,7 @@ class ArgsSection extends StatelessWidget {
           for (final (i, a) in d.args.indexed)
             _ArgEditor(draft: d, arg: a, index: i, onEdit: onEdit),
           SettingsRow(
-            title: '+ Argument',
+            title: context.l10n.httpArgsAddArg,
             onTap: () => onEdit(() => d.args.add(HttpArgDraft())),
           ),
         ],
@@ -95,13 +98,13 @@ class _ArgEditor extends StatelessWidget {
                   key: ValueKey('argName$i'),
                   initialValue: a.name,
                   style: WText.mono,
-                  decoration: const InputDecoration(labelText: 'Name'),
+                  decoration: InputDecoration(labelText: context.l10n.name),
                   onChanged: (v) => onEdit(() => a.name = v),
                 ),
               ),
               WIconButton(
                 icon: WIcons.close,
-                tooltip: 'Argument entfernen',
+                tooltip: context.l10n.httpArgsRemoveArg,
                 iconSize: WSize.iconSmall,
                 onPressed: () => onEdit(() => draft.args.remove(a)),
               ),
@@ -123,15 +126,19 @@ class _ArgEditor extends StatelessWidget {
             key: ValueKey('argDescription$i'),
             initialValue: a.description,
             style: WText.body,
-            decoration: const InputDecoration(labelText: 'Beschreibung'),
+            decoration: InputDecoration(
+              labelText: context.l10n.httpArgsDescription,
+            ),
             onChanged: (v) => onEdit(() => a.description = v),
           ),
           Row(
             children: [
-              Expanded(child: Text('Pflicht', style: WText.detail)),
+              Expanded(
+                child: Text(context.l10n.httpArgsRequired, style: WText.detail),
+              ),
               WSwitch(
                 value: a.required,
-                semanticLabel: 'Pflicht ${a.name}',
+                semanticLabel: context.l10n.httpArgsRequiredNamed(a.name),
                 onChanged: (on) => onEdit(() => a.required = on),
               ),
             ],

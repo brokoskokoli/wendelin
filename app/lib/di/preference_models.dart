@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../l10n/l10n.dart';
+
 /// Search services the web integration can use.
 enum WebSearchKind {
   /// Brave Search API (key).
@@ -15,8 +17,13 @@ enum WebSearchKind {
 
   const WebSearchKind(this.label, {required this.needsKey});
 
-  /// Display name.
+  /// Display name (brand names; the own instance has a translated name,
+  /// see [labelOf]).
   final String label;
+
+  /// Display name in the app language.
+  String labelOf(AppLocalizations l) =>
+      this == searxng ? l.webSearchOwnInstance : label;
 
   /// Whether an API key is required.
   final bool needsKey;

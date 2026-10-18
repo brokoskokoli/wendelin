@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../../di/wake_providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../../voice/wake/wake_storage.dart';
 import '../../design/design.dart';
 import '../model_download_row.dart';
@@ -28,23 +29,16 @@ class WakeWordScreen extends ConsumerWidget {
     final speakers = ref.watch(wakeSpeakersProvider).value ?? const [];
     final installed = ref.watch(wakeMissingModelsProvider).isEmpty;
     return SettingsPage(
-      title: 'Aktivierungswort',
-      intro:
-          'Wendelin lernt deine Stimme: Du sagst „Wendelin“ etwa 15 Mal, '
-          'danach erkennt er es auch im Alltag. Gespeichert werden nur '
-          'Zahlenwerte, verschlüsselt auf dem Gerät. Audio wird nie '
-          'gespeichert.',
+      title: context.l10n.onboardingWakeWord,
+      intro: context.l10n.wakeWordIntro,
       children: [
         WakeServiceSection(
           onEnroll: installed
               ? () => unawaited(_enroll(context, ref, speakers, null))
-              : () => showHint(
-                  context,
-                  'Dafür muss zuerst das Sprachmodell geladen werden.',
-                ),
+              : () => showHint(context, context.l10n.wakeWordNeedsModel),
         ),
         SettingsSection(
-          title: 'Merkmalsmodelle',
+          title: context.l10n.wakeWordFeatureModels,
           children: [
             ModelDownloadRow(
               model: SpeechModelCatalog.wakeFeatures,
@@ -53,19 +47,21 @@ class WakeWordScreen extends ConsumerWidget {
           ],
         ),
         SettingsSection(
-          title: 'Gelernte Stimmen',
+          title: context.l10n.wakeWordLearned,
           children: [
             if (speakers.isEmpty)
-              const SettingsRow(
-                title: 'Noch keine Stimme',
-                detail: 'Lerne mit „Stimme einlernen“ deine Stimme ein.',
+              SettingsRow(
+                title: context.l10n.wakeWordNoVoice,
+                detail: context.l10n.wakeWordNoVoiceHint,
               ),
             for (final (i, s) in speakers.indexed)
               _SpeakerRow(speaker: s, number: i + 1),
           ],
         ),
         WideButton(
-          speakers.isEmpty ? 'Stimme einlernen' : 'Weitere Person einlernen',
+          speakers.isEmpty
+              ? context.l10n.wakeWordEnroll
+              : context.l10n.wakeWordEnrollMore,
           onPressed: installed
               ? () => unawaited(_enroll(context, ref, speakers, null))
               : null,
@@ -74,13 +70,13 @@ class WakeWordScreen extends ConsumerWidget {
           _StopWordSection(speakers: speakers, installed: installed),
         if (!installed) const WakeModelsNotice(),
         WideButton(
-          'Kalibrieren (30 min, empfohlen)',
+          context.l10n.wakeWordCalibrate,
           onPressed: installed && speakers.isNotEmpty
               ? () => unawaited(_calibrate(context, ref, speakers))
               : null,
         ),
         WideButton(
-          'Jetzt ausprobieren',
+          context.l10n.wakeWordTryNow,
           onPressed: installed && speakers.isNotEmpty
               ? () => unawaited(_test(context, ref, speakers))
               : null,
@@ -88,7 +84,7 @@ class WakeWordScreen extends ConsumerWidget {
         if (installed) const WakeModelsNotice(optional: true),
         if (speakers.isNotEmpty)
           WideButton(
-            'Alle Stimmen löschen',
+            context.l10n.wakeWordDeleteAll,
             onPressed: () => unawaited(_deleteAll(context, ref)),
           ),
       ],
@@ -96,8 +92,8 @@ class WakeWordScreen extends ConsumerWidget {
   }
 }
 
-String speakerLabel(WakeSpeaker s, int number) =>
-    s.name.isEmpty ? 'Person $number' : s.name;
+String speakerLabel(AppLocalizations l, WakeSpeaker s, int number) =>
+    s.name.isEmpty ? l.wakeWordPerson(number) : s.name;
 
 Future<void> _enroll(
   BuildContext context,
@@ -147,21 +143,23 @@ class _NameDialogState extends State<_NameDialog> {
   Widget build(BuildContext context) => AlertDialog(
     backgroundColor: WColors.surface,
     title: Text(
-      widget.first ? 'Wer spricht?' : 'Wer kommt dazu?',
+      widget.first
+          ? context.l10n.wakeWordWhoSpeaks
+          : context.l10n.wakeWordWhoJoins,
       style: WText.label,
     ),
     content: TextField(
       controller: _controller,
-      decoration: const InputDecoration(hintText: 'Name (optional)'),
+      decoration: InputDecoration(hintText: context.l10n.wakeWordNameOptional),
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Abbrechen'),
+        child: Text(context.l10n.cancel),
       ),
       FilledButton(
         onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-        child: const Text('Weiter'),
+        child: Text(context.l10n.next),
       ),
     ],
   );
@@ -172,7 +170,11 @@ Future<void> _calibrate(
   WidgetRef ref,
   List<WakeSpeaker> speakers,
 ) async {
-  final speaker = await _pick(context, speakers, 'Wen kalibrieren?');
+  final speaker = await _pick(
+    context,
+    speakers,
+    context.l10n.wakeWordWhoCalibrate,
+  );
   if (speaker == null || !context.mounted) return;
   final templates = await ref.read(wakeStoreProvider).load(speaker.id);
   if (templates == null || !context.mounted) return;
@@ -213,7 +215,7 @@ Future<WakeSpeaker?> _pick(
         for (final (i, s) in speakers.indexed)
           SimpleDialogOption(
             onPressed: () => Navigator.of(context).pop(s),
-            child: Text(speakerLabel(s, i + 1)),
+            child: Text(speakerLabel(context.l10n, s, i + 1)),
           ),
       ],
     ),
@@ -223,11 +225,9 @@ Future<WakeSpeaker?> _pick(
 Future<void> _deleteAll(BuildContext context, WidgetRef ref) async {
   final ok = await confirm(
     context,
-    title: 'Alle Stimmen löschen?',
-    message:
-        'Wendelin vergisst alle eingelernten Stimmen. Du kannst sie später '
-        'neu einlernen.',
-    yes: 'Löschen',
+    title: context.l10n.wakeWordDeleteAllTitle,
+    message: context.l10n.wakeWordDeleteAllBody,
+    yes: context.l10n.delete,
   );
   if (!ok) return;
   await ref.read(wakeSpeakersProvider.notifier).removeAll();
@@ -242,17 +242,21 @@ class _SpeakerRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final templates = ref.watch(wakeTemplatesProvider(speaker.id)).value;
-    final all = ref.read(wakeSpeakersProvider).value ?? const [];
+    final all = ref.read(wakeSpeakersProvider).value ?? [];
     final stop = ref.watch(stopLearnedForProvider(speaker.id)).value ?? false;
     return SettingsRow(
-      title: speakerLabel(speaker, number),
+      title: speakerLabel(context.l10n, speaker, number),
       detail: templates == null
-          ? 'Vorlagen fehlen. Bitte neu einlernen.'
-          : '${templates.embeddings.length} Aufnahmen · Schwelle '
-                '${templates.threshold.toStringAsFixed(2)}'
-                '${stop ? ' · Stopp ✓' : ''}',
+          ? context.l10n.wakeWordTemplatesMissing
+          : context.l10n.wakeWordRecordingsThreshold(
+              templates.embeddings.length,
+              templates.threshold.toStringAsFixed(2),
+              stop ? ' · ${context.l10n.stop} ✓' : '',
+            ),
       trailing: PopupMenuButton<String>(
-        tooltip: 'Aktionen für ${speakerLabel(speaker, number)}',
+        tooltip: context.l10n.wakeWordActionsFor(
+          speakerLabel(context.l10n, speaker, number),
+        ),
         onSelected: (v) async {
           if (v == 'again') {
             await _enroll(context, ref, all, speaker);
@@ -260,9 +264,12 @@ class _SpeakerRow extends ConsumerWidget {
             await ref.read(wakeSpeakersProvider.notifier).remove(speaker.id);
           }
         },
-        itemBuilder: (_) => const [
-          PopupMenuItem(value: 'again', child: Text('Neu einlernen')),
-          PopupMenuItem(value: 'delete', child: Text('Löschen')),
+        itemBuilder: (_) => [
+          PopupMenuItem(
+            value: 'again',
+            child: Text(context.l10n.wakeWordRetrain),
+          ),
+          PopupMenuItem(value: 'delete', child: Text(context.l10n.delete)),
         ],
       ),
     );
@@ -284,23 +291,18 @@ class _StopWordSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.s,
       children: [
-        Text('Unterbrechen mit „Stopp“', style: WText.sectionLabel),
+        Text(context.l10n.wakeWordInterrupt, style: WText.sectionLabel),
         Text(
           learned
-              ? '„Stopp“ ist gelernt: Du kannst die Ansage mit „Stopp“ allein '
-                    'unterbrechen.'
-              : 'Ohne gelerntes „Stopp“ unterbricht nur „Wendelin, stopp“ die '
-                    'Ansage. Lerne „Stopp“ ein, damit du die Ansage mit dem '
-                    'einen Wort unterbrechen kannst.',
+              ? context.l10n.wakeWordStopLearned
+              : context.l10n.wakeWordStopNotLearned,
           style: WText.caption,
         ),
-        Text(
-          '„Stopp“ wirkt nur, während Wendelin spricht und Unterbrechen auf '
-          '„Schlüsselwörter“ steht. Im Hintergrund löst „Stopp“ nichts aus.',
-          style: WText.caption,
-        ),
+        Text(context.l10n.wakeWordStopOnlySpeaking, style: WText.caption),
         WideButton(
-          learned ? '„Stopp“ neu einlernen' : '„Stopp“ einlernen',
+          learned
+              ? context.l10n.wakeWordRetrainStop
+              : context.l10n.wakeWordTrainStop,
           onPressed: installed
               ? () => unawaited(_enrollStop(context, ref, speakers))
               : null,
@@ -315,7 +317,7 @@ Future<void> _enrollStop(
   WidgetRef ref,
   List<WakeSpeaker> speakers,
 ) async {
-  final speaker = await _pick(context, speakers, 'Wer lernt „Stopp“?');
+  final speaker = await _pick(context, speakers, context.l10n.wakeWordWhoStop);
   if (speaker == null || !context.mounted) return;
   await Navigator.of(context).push<bool>(
     MaterialPageRoute(

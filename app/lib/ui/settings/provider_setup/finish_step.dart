@@ -4,6 +4,7 @@ import 'package:wendelin_providers/wendelin_providers.dart' show GpuCheckMode;
 
 import '../../../di/provider_setup.dart';
 import '../../../di/tee_restrictions.dart';
+import '../../../l10n/l10n.dart';
 import '../../attestation/attestation_texts.dart';
 import '../../design/design.dart';
 import '../gpu_check_section.dart';
@@ -12,6 +13,7 @@ import 'attestation_stages_card.dart';
 
 /// Step 4: privacy level, monthly budget and warning threshold.
 List<Widget> finishStep({
+  required AppLocalizations l,
   required SetupTestResult? result,
   required ProviderCapabilities? detected,
   required PrivacyLevel privacy,
@@ -29,47 +31,40 @@ List<Widget> finishStep({
   return [
     StatusCard(
       status: CheckStatus.ok,
-      title: 'Modell geprüft',
+      title: l.attFinishModelChecked,
       detail: result?.message,
     ),
     if (result != null && result.stages.isNotEmpty)
       AttestationStagesCard(result.stages),
     if (result != null && attested)
-      ..._restrictionNote(stageViews(result.stages)),
+      ..._restrictionNote(l, stageViews(result.stages)),
     if (attested && noGpuEvidence)
-      const StatusCard(
-        key: ValueKey('noGpuEvidence'),
+      StatusCard(
+        key: const ValueKey('noGpuEvidence'),
         status: CheckStatus.info,
-        title: 'Keine GPU-Prüfung möglich',
-        detail:
-            '$noGpuEvidenceHint. Das Modell bleibt nutzbar. Was Wendelin '
-            'dann tut, bestimmt die GPU-Prüfung unten: „Aus“ nichts, '
-            '„Nachher“ nur ein Hinweis, „Vorher“ sendet nichts, du kannst '
-            'aber einmalig ohne GPU-Prüfung senden.',
+        title: l.gpuNoEvidenceFinishTitle,
+        detail: l.gpuNoEvidenceFinishText(l.gpuNoEvidenceHint),
       ),
     if (attested) GpuCheckSection(mode: gpuMode, onChanged: onGpuMode),
     if (detected != null)
       Text(
         [
-          detected.tools ? '✓ Tools' : '✕ Tools',
-          detected.vision ? '✓ Bilder' : '✕ Bilder',
-          if (detected.tee) '✓ TEE',
+          detected.tools ? l.attFinishToolsYes : l.attFinishToolsNo,
+          detected.vision ? l.attFinishImagesYes : l.attFinishImagesNo,
+          if (detected.tee) l.attFinishTeeYes,
         ].join(' · '),
         style: WText.mono,
       ),
     SettingsSection(
-      title: 'Datenschutzstufe',
+      title: l.attFinishPrivacyLevel,
       children: [
         // „TEE“ only for profiles whose attestation the app really checks.
         for (final level in PrivacyLevel.values)
           if (level != PrivacyLevel.tee || attested)
             SettingsRow(
-              title: level.label,
+              title: level.labelOf(l),
               trailing: privacy == level
-                  ? const CheckStatusIcon(
-                      CheckStatus.ok,
-                      semanticLabel: 'gewählt',
-                    )
+                  ? CheckStatusIcon(CheckStatus.ok, semanticLabel: l.selected)
                   : PrivacyChip(level),
               onTap: () => onPrivacy(level),
             ),
@@ -80,52 +75,52 @@ List<Widget> finishStep({
       style: WText.body,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
-        labelText: r'Budget pro Monat in $ (optional)',
+        labelText: l.attFinishBudgetLabel,
         errorText: budgetError,
       ),
     ),
     SettingsSection(
-      title: 'Warnen ab',
+      title: l.attFinishWarnFrom,
       children: [
         for (final w in const [0.5, 0.8, 0.9])
           SettingsRow(
-            title: '${(w * 100).round()} % des Budgets',
+            title: l.attFinishPercentOfBudget((w * 100).round()),
             onTap: () => onWarn(w),
             trailing: warn == w
-                ? const CheckStatusIcon(
-                    CheckStatus.ok,
-                    semanticLabel: 'gewählt',
-                  )
+                ? CheckStatusIcon(CheckStatus.ok, semanticLabel: l.selected)
                 : null,
           ),
       ],
     ),
-    PrimaryButton('Speichern', onPressed: onSave),
+    PrimaryButton(l.save, onPressed: onSave),
   ];
 }
 
 /// Setup note (WP78): what this provider does not deliver. Saving the
 /// profile accepts it; the chat then shows a plain green check.
-List<Widget> _restrictionNote(List<StageView> stages) {
+List<Widget> _restrictionNote(AppLocalizations l, List<StageView> stages) {
   final ids = restrictionStages(stages);
   final restricted = [
     for (final s in stages)
       if (ids.contains(s.stage)) s,
   ];
-  return _restrictionCard(restricted);
+  return _restrictionCard(l, restricted);
 }
 
-List<Widget> _restrictionCard(List<StageView> restricted) => [
+List<Widget> _restrictionCard(
+  AppLocalizations l,
+  List<StageView> restricted,
+) => [
   if (restricted.isNotEmpty)
     StatusCard(
       key: const ValueKey('restrictionSetupNote'),
       status: CheckStatus.info,
-      title: 'Einschränkungen dieses Anbieters',
-      detail:
-          '${[for (final s in restricted) '${stageLabel(s.stage)}${s.detail == null ? '' : ' (${s.detail})'}'].join('; ')}. '
-          'Das liefert der Anbieter nicht oder Wendelin prüft es nicht, es '
-          'wird nur protokolliert. Mit „Speichern“ akzeptierst du das. Sobald '
-          'etwas Neues dazukommt, weist Wendelin erneut darauf hin. Mehr '
-          'unter „Details“.',
+      title: l.attExplainRestrictionsTitle,
+      detail: l.attFinishRestrictionNote(
+        [
+          for (final s in restricted)
+            '${stageLabel(l, s.stage)}${s.detail == null ? '' : ' (${s.detail})'}',
+        ].join('; '),
+      ),
     ),
 ];

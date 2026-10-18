@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../di/app_settings.dart';
 import '../../di/core_providers.dart';
 import '../../di/wake_providers.dart';
+import '../../l10n/l10n.dart';
 import '../../platform/voice/record_audio_input.dart';
 import '../design/design.dart';
 
@@ -11,27 +12,14 @@ import '../design/design.dart';
 const bargeMarginChoices = ['0.05', '0.00', '-0.05'];
 
 /// What each microphone source means (WP80), shown below the choices.
-const bargeSourceHelp = {
-  SpeechCapture.communication:
-      'Kommunikation + AEC (Standard): Das Handy rechnet die eigene Ausgabe '
-      'aus dem Mikrofon heraus. Wendelin hört sich selbst kaum, dein Wort '
-      'kommt aber etwas leiser an.',
-  SpeechCapture.recognitionAec:
-      'Erkennung + AEC: wie Standard, aber mit dem Mikrofon der '
-      'Spracherkennung. Hilft auf Geräten, bei denen das Standard-Mikrofon '
-      'dein Wort zu stark dämpft.',
-  SpeechCapture.recognition:
-      'Erkennung, ohne AEC: keine Echo-Unterdrückung. Dein Wort kommt klar '
-      'an, aber die laufende Ansage übertönt es oft, und Wendelin kann sich '
-      'selbst hören.',
+Map<SpeechCapture, String> bargeSourceHelp(AppLocalizations l) => {
+  SpeechCapture.communication: l.bargeDebugHelpCommunication,
+  SpeechCapture.recognitionAec: l.bargeDebugHelpRecognitionAec,
+  SpeechCapture.recognition: l.bargeDebugHelpRecognition,
 };
 
 /// What the additional threshold does (WP80).
-const bargeMarginHelp =
-    'Die Schwelle legt fest, wie genau ein Wort passen muss. Höher (0,05, '
-    'Standard): weniger Fehlalarme, dafür wird dein Wort öfter überhört. '
-    'Niedriger (0,00 oder -0,05): das Wort wird leichter erkannt, dafür '
-    'gibt es mehr Fehlalarme.';
+String bargeMarginHelp(AppLocalizations l) => l.bargeDebugHelpMargin;
 
 /// Whether a developer variant (source or margin) other than the default is
 /// active; the conversation settings show a hint then. The sheet invalidates
@@ -113,14 +101,9 @@ class _State extends ConsumerState<BargeDebugSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: WSpace.s,
         children: [
-          Text('Erweitert: Unterbrechen', style: WText.label),
-          Text(
-            'Damit stellst du ein, wie empfindlich „Wendelin“ und „Stopp“ '
-            'während der Antwort erkannt werden. Die Änderung gilt ab der '
-            'nächsten gesprochenen Antwort.',
-            style: WText.detail,
-          ),
-          Text('Mikrofon während der Antwort', style: WText.label),
+          Text(context.l10n.bargeDebugTitle, style: WText.label),
+          Text(context.l10n.bargeDebugIntro, style: WText.detail),
+          Text(context.l10n.bargeDebugMicDuring, style: WText.label),
           Wrap(
             spacing: WSpace.s,
             children: [
@@ -128,9 +111,11 @@ class _State extends ConsumerState<BargeDebugSheet> {
                 ChoiceChip(
                   label: Text(switch (v) {
                     SpeechCapture.communication =>
-                      'Kommunikation + AEC (Standard)',
-                    SpeechCapture.recognitionAec => 'Erkennung + AEC',
-                    SpeechCapture.recognition => 'Erkennung, ohne AEC',
+                      context.l10n.bargeDebugMicCommunication,
+                    SpeechCapture.recognitionAec =>
+                      context.l10n.bargeDebugMicRecognitionAec,
+                    SpeechCapture.recognition =>
+                      context.l10n.bargeDebugMicRecognition,
                   }),
                   selected: _source == v,
                   onSelected: (_) => _set(v, null),
@@ -138,8 +123,8 @@ class _State extends ConsumerState<BargeDebugSheet> {
             ],
           ),
           for (final v in SpeechCapture.values)
-            Text(bargeSourceHelp[v]!, style: WText.detail),
-          Text('Zusätzliche Schwelle', style: WText.label),
+            Text(bargeSourceHelp(context.l10n)[v]!, style: WText.detail),
+          Text(context.l10n.bargeDebugExtraThreshold, style: WText.label),
           Wrap(
             spacing: WSpace.s,
             children: [
@@ -147,7 +132,9 @@ class _State extends ConsumerState<BargeDebugSheet> {
                 ChoiceChip(
                   label: Text(
                     m == bargeMarginChoices.first
-                        ? '${m.replaceAll('.', ',')} (Standard)'
+                        ? context.l10n.bargeDebugDefaultSuffix(
+                            m.replaceAll('.', ','),
+                          )
                         : m.replaceAll('.', ','),
                   ),
                   selected: _margin == m,
@@ -155,14 +142,14 @@ class _State extends ConsumerState<BargeDebugSheet> {
                 ),
             ],
           ),
-          Text(bargeMarginHelp, style: WText.detail),
+          Text(bargeMarginHelp(context.l10n), style: WText.detail),
           TextButton(
             onPressed:
                 _source == SpeechCapture.communication &&
                     _margin == bargeMarginChoices.first
                 ? null
                 : _reset,
-            child: const Text('Zurücksetzen'),
+            child: Text(context.l10n.reset),
           ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../l10n/l10n.dart';
 import 'providers.dart';
 
 /// State of the Obsidian search index build.
@@ -36,27 +37,27 @@ final class IndexProgress {
   /// Notes in the index after the build.
   final int? total;
 
-  /// Why the build stopped (German).
+  /// Why the build stopped.
   final String? error;
 
   /// Share done while running (`null` = unknown).
   double? get fraction =>
       indexed + pending == 0 ? null : indexed / (indexed + pending);
 
-  /// German status line for the settings.
-  String get label {
-    if (error case final e?) return 'Index unvollständig: $e';
+  /// Status line for the settings.
+  String labelOf(AppLocalizations l) {
+    if (error case final e?) return l.obsIndexIncomplete(e);
     if (running) {
       return pending == 0
-          ? 'Index wird aufgebaut …'
-          : 'Index wird aufgebaut: $indexed Notizen, noch $pending';
+          ? l.obsIndexBuilding
+          : l.obsIndexBuildingProgress(indexed, pending);
     }
     final t = total;
-    if (t == null) return 'Noch nicht aufgebaut';
-    final notes = t == 1 ? '1 Notiz' : '$t Notizen';
-    if (!complete) return '$notes im Index · Vault zu groß, nur teilweise';
-    if (failed > 0) return '$notes im Index · $failed nicht lesbar';
-    return '$notes im Index · aktuell';
+    if (t == null) return l.obsIndexNotBuilt;
+    final notes = l.obsIndexNotes(t);
+    if (!complete) return l.obsIndexPartial(notes);
+    if (failed > 0) return l.obsIndexUnreadable(notes, failed);
+    return l.obsIndexCurrent(notes);
   }
 }
 

@@ -2,38 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
 
 /// Label and one-sentence explanation of each level of „Sprechfassung“.
-const spokenVersionTexts = {
-  SpokenVersion.off: (
-    'Aus',
-    'Wendelin liest die angezeigte Antwort vor, nur für die Aussprache '
-        'aufbereitet.',
-  ),
-  SpokenVersion.always: (
-    'Immer eigene Sprechfassung',
-    'Wendelin schreibt zuerst einen kurzen Sprechtext und liest ihn immer '
-        'vor, auch nach Inhalten aus dem Web oder von Dritten.',
-  ),
+Map<SpokenVersion, (String, String)> spokenVersionTexts(AppLocalizations l) => {
+  SpokenVersion.off: (l.off, l.voiceSpokenOffDetail),
+  SpokenVersion.always: (l.voiceSpokenAlwaysTitle, l.voiceSpokenAlwaysDetail),
   SpokenVersion.protected: (
-    'Geschützt',
-    'Eigener Sprechtext, aber nach Inhalten aus dem Web oder von Dritten '
-        'liest Wendelin die angezeigte Antwort vor.',
+    l.voiceSpokenProtectedTitle,
+    l.voiceSpokenProtectedDetail,
   ),
   SpokenVersion.checked: (
-    'Mit KI-Prüfung',
-    'Nach Inhalten aus dem Web oder von Dritten prüft ein weiterer '
-        'Modellaufruf, ob Sprechtext und Antwort übereinstimmen. Die '
-        'Sprachausgabe beginnt dann etwas später und kostet etwas mehr.',
+    l.voiceSpokenCheckedTitle,
+    l.voiceSpokenCheckedDetail,
   ),
 };
 
 /// Warning shown with [SpokenVersion.always].
-const spokenVersionAlwaysWarning =
-    'Was vorgelesen wird, kann von dem abweichen, was auf dem Bildschirm '
-    'steht.';
+String spokenVersionAlwaysWarning(AppLocalizations l) =>
+    l.voiceSpokenAlwaysWarning;
 
 /// Settings → Sprache → „Antworten“: the level of the separate spoken text
 /// (K21, WP55).
@@ -53,9 +42,9 @@ class SpokenVersionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SettingsSection(
-    title: 'Sprechfassung',
+    title: context.l10n.voiceSpokenTitle,
     children: [
-      for (final entry in spokenVersionTexts.entries)
+      for (final entry in spokenVersionTexts(context.l10n).entries)
         _Option(
           level: entry.key,
           label: entry.value.$1,
@@ -69,7 +58,10 @@ class SpokenVersionSection extends StatelessWidget {
             horizontal: WSpace.l,
             vertical: WSpace.m,
           ),
-          child: Text(spokenVersionAlwaysWarning, style: WText.detail),
+          child: Text(
+            spokenVersionAlwaysWarning(context.l10n),
+            style: WText.detail,
+          ),
         ),
     ],
   );
@@ -94,7 +86,7 @@ class _Option extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     button: true,
     selected: selected,
-    label: 'Sprechfassung $label',
+    label: context.l10n.voiceSpokenSemantic(label),
     excludeSemantics: true,
     child: InkWell(
       key: ValueKey('spoken-${level.name}'),

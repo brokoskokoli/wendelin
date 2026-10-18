@@ -8,6 +8,7 @@ import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart' show CheckStatusIcon, WSwitch;
 import 'package:wendelin/ui/onboarding/voice_download_step.dart';
 import 'package:wendelin/ui/routes.dart';
@@ -213,9 +214,9 @@ void main() {
     });
 
     test('Größen: unter 10 MB mit Komma', () {
-      expect(sizeLabel(643854), '0,6 MB');
-      expect(sizeLabel(9949999), '9,9 MB');
-      expect(sizeLabel(160609290), '161 MB');
+      expect(sizeLabel(AppLocalizationsDe(), 643854), '0,6 MB');
+      expect(sizeLabel(AppLocalizationsDe(), 9949999), '9,9 MB');
+      expect(sizeLabel(AppLocalizationsDe(), 160609290), '161 MB');
     });
 
     testWidgets('angefangener Download wird beim Öffnen fortgesetzt', (
@@ -498,18 +499,21 @@ void main() {
           (c.read(agentFactoryProvider) as AgentFactory).config;
       expect(config().spokenVersion, SpokenVersion.off);
       await tester.ensureVisible(find.text('Mit KI-Prüfung'));
-      for (final t in spokenVersionTexts.values) {
+      for (final t in spokenVersionTexts(AppLocalizationsDe()).values) {
         expect(find.text(t.$1), findsOneWidget);
         expect(find.text(t.$2), findsOneWidget);
       }
-      expect(find.text(spokenVersionAlwaysWarning), findsNothing);
+      expect(
+        find.text(spokenVersionAlwaysWarning(AppLocalizationsDe())),
+        findsNothing,
+      );
       for (final level in SpokenVersion.values) {
         await tester.tap(find.byKey(ValueKey('spoken-${level.name}')));
         await settle(tester);
         expect(c.read(voiceSettingsProvider).value!.spokenVersion, level);
         expect(config().spokenVersion, level);
         expect(
-          find.text(spokenVersionAlwaysWarning),
+          find.text(spokenVersionAlwaysWarning(AppLocalizationsDe())),
           level == SpokenVersion.always ? findsOneWidget : findsNothing,
         );
       }
@@ -1007,24 +1011,32 @@ void main() {
 
     test('Statusmeldungen der Sprachausgabe', () {
       expect(
-        ttsSelectionText(const TtsSelection(engine: TtsEngine.none, tts: null)),
+        ttsSelectionText(
+          AppLocalizationsDe(),
+          const TtsSelection(engine: TtsEngine.none, tts: null),
+        ),
         contains('nur auf dem Bildschirm'),
       );
       final fake = FakeTextToSpeech();
       expect(
         ttsSelectionText(
+          AppLocalizationsDe(),
           TtsSelection(engine: TtsEngine.system, tts: fake, fallback: true),
         ),
         contains('Keine Offline-Stimme'),
       );
       expect(
         ttsSelectionText(
+          AppLocalizationsDe(),
           TtsSelection(engine: TtsEngine.sherpa, tts: fake, fallback: true),
         ),
         contains('Keine Systemstimme installiert'),
       );
       expect(
-        ttsSelectionText(TtsSelection(engine: TtsEngine.system, tts: fake)),
+        ttsSelectionText(
+          AppLocalizationsDe(),
+          TtsSelection(engine: TtsEngine.system, tts: fake),
+        ),
         'Wendelin spricht mit der Systemstimme.',
       );
     });

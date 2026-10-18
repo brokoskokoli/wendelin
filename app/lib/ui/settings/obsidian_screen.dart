@@ -8,6 +8,7 @@ import '../../di/obsidian_index.dart';
 import '../../di/preference_models.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../platform/saf_vault_port.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
@@ -26,11 +27,6 @@ final vaultAccessOkProvider = FutureProvider<bool>((ref) async {
     return e.kind == PortErrorKind.unsupported;
   }
 });
-
-/// Hint below the search index: it updates itself.
-const obsidianIndexHint =
-    'Wird automatisch aktualisiert (beim Start und vor jeder Suche). Der '
-    'Knopf ist nur für den ersten Aufbau nötig.';
 
 /// Settings → Obsidian: vault folder (SAF), daily notes (folder, date
 /// format, template) and the search index (build with progress).
@@ -86,11 +82,11 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
       );
       final template = _daily.template;
       if (template != null) VaultPath.note(template);
-      return 'Heute: $path';
+      return context.l10n.obsidianToday(path);
     } on PortException catch (e) {
-      return 'Nicht verwendbar: ${e.message}';
+      return context.l10n.obsidianUnusable(e.message);
     } on FormatException catch (e) {
-      return 'Nicht verwendbar: ${e.message}';
+      return context.l10n.obsidianUnusable2(e.message);
     }
   }
 
@@ -126,11 +122,9 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
   Future<void> _remove() async {
     final ok = await confirm(
       context,
-      title: 'Vault entfernen?',
-      message:
-          'Wendelin verliert den Zugriff auf den Ordner. Die Notizen selbst '
-          'bleiben unverändert.',
-      yes: 'Entfernen',
+      title: context.l10n.obsidianRemoveTitle,
+      message: context.l10n.obsidianRemoveBody,
+      yes: context.l10n.remove,
     );
     if (!ok) return;
     final prefs = ref.read(obsidianPrefsProvider);
@@ -157,75 +151,78 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
     await ref
         .read(obsidianPrefsProvider.notifier)
         .set(prefs.withDailyNotes(_daily));
-    if (mounted) showHint(context, 'Tagesnotizen gespeichert.');
+    if (mounted) showHint(context, context.l10n.obsidianDailySaved);
   }
 
   Widget _vaultSection(ObsidianPrefs prefs, bool accessOk) => SettingsSection(
-    title: 'Vault',
+    title: context.l10n.obsidianVault,
     children: [
       SectionCard(
         children: [
           SettingsRow(
-            title: prefs.vaultName ?? 'Kein Vault gewählt',
+            title: prefs.vaultName ?? context.l10n.obsidianNoVault,
             detail: !prefs.hasVault
-                ? 'Wähle den Ordner deines Obsidian-Vaults'
+                ? context.l10n.obsidianChooseFolder
                 : accessOk
-                ? 'Zugriff erteilt'
-                : 'Kein Zugriff mehr – Ordner neu wählen',
+                ? context.l10n.obsidianAccessGranted
+                : context.l10n.obsidianAccessLost,
             trailing: prefs.hasVault
                 ? CheckStatusIcon(
                     accessOk ? CheckStatus.ok : CheckStatus.failed,
                     semanticLabel: accessOk
-                        ? 'Zugriff erteilt'
-                        : 'kein Zugriff',
+                        ? context.l10n.obsidianAccessGranted2
+                        : context.l10n.obsidianNoAccess,
                   )
                 : null,
           ),
         ],
       ),
       PrimaryButton(
-        prefs.hasVault ? 'Anderen Ordner wählen' : 'Vault-Ordner wählen',
+        prefs.hasVault
+            ? context.l10n.obsidianChooseOther
+            : context.l10n.obsidianChooseVaultFolder,
         onPressed: () => unawaited(_pick()),
       ),
       if (prefs.hasVault)
-        WideButton('Vault entfernen', onPressed: () => unawaited(_remove())),
+        WideButton(
+          context.l10n.obsidianRemoveVault,
+          onPressed: () => unawaited(_remove()),
+        ),
     ],
   );
 
   Widget _dailySection() => SettingsSection(
-    title: 'Tagesnotizen',
+    title: context.l10n.obsidianDailyNotes,
     children: [
       TextField(
         controller: _folder,
         style: WText.body,
-        decoration: const InputDecoration(
-          labelText: 'Ordner',
+        decoration: InputDecoration(
+          labelText: context.l10n.obsidianFolder,
           hintText: ObsidianPrefs.defaultDailyFolder,
-          helperText:
-              'Leer lassen = Vault-Wurzel. Neue Tagesnotizen landen '
-              'in diesem Ordner.',
+          helperText: context.l10n.obsidianFolderHint,
           helperMaxLines: 2,
         ),
       ),
       TextField(
         controller: _format,
         style: WText.body,
-        decoration: const InputDecoration(
-          labelText: 'Datumsformat wie in Obsidian',
+        decoration: InputDecoration(
+          labelText: context.l10n.obsidianDateFormat,
           hintText: 'YYYY-MM-DD',
         ),
       ),
       TextField(
         controller: _template,
         style: WText.body,
-        decoration: const InputDecoration(
-          labelText: 'Vorlage (optional)',
-          hintText: 'Vorlagen/Tagesnotiz',
+        decoration: InputDecoration(
+          labelText: context.l10n.obsidianTemplate,
+          hintText: context.l10n.obsidianTemplateHint,
         ),
       ),
       Text(_preview(), style: WText.mono),
       WideButton(
-        'Tagesnotizen speichern',
+        context.l10n.obsidianSaveDaily,
         onPressed: () => unawaited(_saveDaily()),
       ),
     ],
@@ -233,17 +230,17 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
 
   Widget _indexSection(ObsidianPrefs prefs, IndexProgress index) =>
       SettingsSection(
-        title: 'Suchindex',
+        title: context.l10n.obsidianSearchIndex,
         children: [
-          Text(index.label, style: WText.detail),
+          Text(index.labelOf(context.l10n), style: WText.detail),
           if (index.running)
             LinearProgressIndicator(
               value: index.fraction,
-              semanticsLabel: 'Index wird aufgebaut',
+              semanticsLabel: context.l10n.obsidianIndexBuilding,
             ),
-          Text(obsidianIndexHint, style: WText.caption),
+          Text(context.l10n.obsidianIndexHint, style: WText.caption),
           WideButton(
-            'Index aufbauen',
+            context.l10n.obsidianBuildIndex,
             onPressed: !prefs.hasVault || index.running
                 ? null
                 : () => unawaited(
@@ -260,9 +257,7 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
     final index = ref.watch(obsidianIndexProvider);
     return SettingsPage(
       title: 'Obsidian',
-      intro:
-          'Wendelin liest und ergänzt Notizen direkt im Vault-Ordner. Sync '
-          'bleibt bei Obsidian Sync, Syncthing oder Git.',
+      intro: context.l10n.obsidianIntro,
       children: [
         _vaultSection(prefs, accessOk),
         _dailySection(),

@@ -6,6 +6,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../../di/audit_export.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../screens/labels.dart';
 import 'audit_entry_screen.dart';
@@ -32,13 +33,11 @@ class _AuditLogState extends ConsumerState<AuditLogScreen> {
     final entries = ref.watch(auditViewProvider(_filter)).value ?? const [];
     final now = ref.watch(clockProvider).now();
     return SettingsPage(
-      title: 'Prüfprotokoll',
-      intro:
-          'Was Wendelin getan hat. Nie Schlüssel. Der Export enthält keine '
-          'Texte, nur Zeiten, Arten und Ergebnisse.',
+      title: context.l10n.auditLogTitle,
+      intro: context.l10n.auditLogIntro,
       children: [
         WideButton(
-          'Als JSON exportieren',
+          context.l10n.attLogScreenExportJson,
           onPressed: () async => ref.read(exporterProvider)(
             'wendelin-pruefprotokoll.json',
             'application/json',
@@ -53,23 +52,27 @@ class _AuditLogState extends ConsumerState<AuditLogScreen> {
           children: [
             for (final k in <AuditKind?>[null, ...AuditKind.values])
               ChoiceChip(
-                label: Text(k == null ? 'Alle' : auditKindLabel(k)),
+                label: Text(
+                  k == null
+                      ? context.l10n.attLogScreenFilterAll
+                      : auditKindLabel(context.l10n, k),
+                ),
                 selected: _filter == k,
                 onSelected: (_) => setState(() => _filter = k),
               ),
           ],
         ),
         if (entries.isEmpty)
-          Text('Keine Einträge.', style: WText.caption)
+          Text(context.l10n.attLogScreenNoEntries, style: WText.caption)
         else
           SectionCard(
             children: [
               for (final e in entries.take(100))
                 SettingsRow(
                   title:
-                      '${auditKindLabel(e.kind)} · '
-                      '${sessionLabel(e.at, now)}',
-                  detail: auditSummary(e),
+                      '${auditKindLabel(context.l10n, e.kind)} · '
+                      '${sessionLabel(context.l10n, e.at, now)}',
+                  detail: auditSummary(context.l10n, e),
                   onTap: () => unawaited(
                     Navigator.of(context).push<void>(
                       MaterialPageRoute(

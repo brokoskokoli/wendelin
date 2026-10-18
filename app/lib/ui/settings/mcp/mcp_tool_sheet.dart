@@ -6,6 +6,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
 import '../../../di/mcp/mcp_providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'mcp_labels.dart';
@@ -45,28 +46,28 @@ typedef _Choice = (String, String, McpToolOverride Function(McpToolOverride));
 
 /// Level choices of one tool: only stricter than the server's (K8 b);
 /// „ohne Nachfrage“ only for `write` tools (no undo).
-List<_Choice> _choices(RiskLevel base) => [
+List<_Choice> _choices(AppLocalizations l, RiskLevel base) => [
   if (base == RiskLevel.read) ...[
     (
-      'Ohne Nachfrage',
-      'liest nur',
+      l.mcpToolNoAsk,
+      l.mcpToolReadsOnly,
       (o) => mcpCopyOverride(o, risk: () => null),
     ),
     (
-      'Immer nachfragen',
-      'jeder Aufruf wird bestätigt',
+      l.mcpToolAlwaysAsk,
+      l.mcpToolAlwaysAskHint,
       (o) => mcpCopyOverride(o, risk: () => RiskLevel.external),
     ),
   ],
   if (base == RiskLevel.write) ...[
     (
-      'Immer nachfragen',
-      'Standard: kein Rückgängig möglich',
+      l.mcpToolAlwaysAsk2,
+      l.mcpToolDefaultNoUndo,
       (o) => mcpCopyOverride(o, autoRun: false),
     ),
     (
-      'Ohne Nachfrage',
-      'Kein Rückgängig: die Änderung passiert sofort auf dem Server',
+      l.mcpToolNoAsk2,
+      l.mcpToolNoUndoNow,
       (o) => mcpCopyOverride(o, autoRun: true, risk: () => null),
     ),
   ],
@@ -105,7 +106,7 @@ Future<void> showMcpToolSheet(
       tool: tool,
       config: config,
       mcpTool: server.offered[tool.name],
-      choices: _choices(base),
+      choices: _choices(context.l10n, base),
       selected: (i) => mcpChoiceSelected(base, override, i),
       onPick: (change) {
         Navigator.of(sheet).pop();
@@ -149,19 +150,20 @@ class _ToolSheet extends StatelessWidget {
           Text(tool.name, style: WText.mono),
           if (tool.description.isNotEmpty)
             Text(tool.description, style: WText.detail),
-          Text(mcpAnnotationText(tool.annotations), style: WText.caption),
-          Text('Wirksam: ${mcpToolRiskText(tool, config)}', style: WText.label),
+          Text(
+            mcpAnnotationText(context.l10n, tool.annotations),
+            style: WText.caption,
+          ),
+          Text(
+            context.l10n.mcpToolEffective(
+              mcpToolRiskText(context.l10n, tool, config),
+            ),
+            style: WText.label,
+          ),
           if (config.confirmAll)
-            Text(
-              '„Alle Tools bestätigen“ ist an: jeder Aufruf fragt nach.',
-              style: WText.caption,
-            )
+            Text(context.l10n.mcpToolConfirmAllOn, style: WText.caption)
           else if (choices.isEmpty)
-            Text(
-              'Außenwirkung: fragt immer nach, das lässt sich nicht '
-              'lockern.',
-              style: WText.caption,
-            )
+            Text(context.l10n.mcpToolExternalAsks, style: WText.caption)
           else
             SectionCard(
               children: [
@@ -171,9 +173,9 @@ class _ToolSheet extends StatelessWidget {
                     detail: detail,
                     onTap: () => onPick(change),
                     trailing: selected(i)
-                        ? const CheckStatusIcon(
+                        ? CheckStatusIcon(
                             CheckStatus.ok,
-                            semanticLabel: 'gewählt',
+                            semanticLabel: context.l10n.selected,
                           )
                         : null,
                   ),
@@ -181,8 +183,9 @@ class _ToolSheet extends StatelessWidget {
             ),
           if (mcpTool != null && mcpTool!.unsupportedSchemaParts.isNotEmpty)
             Text(
-              'Nur vom Server geprüft: '
-              '${mcpTool!.unsupportedSchemaParts.join(', ')}',
+              context.l10n.mcpToolServerChecked(
+                mcpTool!.unsupportedSchemaParts.join(', '),
+              ),
               style: WText.caption,
             ),
         ],

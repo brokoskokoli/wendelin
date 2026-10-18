@@ -8,14 +8,9 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../di/bring.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
-
-/// Hint shown before the Bring! login.
-const bringUnofficialHint =
-    'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps '
-    'freigegeben, sie kann jederzeit brechen. E-Mail und Passwort bleiben '
-    'im sicheren Speicher des Geräts.';
 
 /// Settings → Bring!: login (e-mail, password, hint on the unofficial
 /// API), state with „Erneut versuchen“ in the error state, sign-out
@@ -75,7 +70,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Bitte E-Mail und Passwort eingeben.');
+      setState(() => _error = context.l10n.bringNeedCredentials);
       return;
     }
     final registry = ref.read(toolRegistryProvider);
@@ -110,9 +105,9 @@ class _BringScreenState extends ConsumerState<BringScreen> {
     final integration = _integration;
     final ok = await confirm(
       context,
-      title: 'Bei Bring! abmelden?',
-      message: 'E-Mail, Passwort und Sitzung werden vom Gerät gelöscht.',
-      yes: 'Abmelden',
+      title: context.l10n.bringSignOutTitle,
+      message: context.l10n.bringSignOutBody,
+      yes: context.l10n.mcpDetailSignOut,
     );
     if (!ok) return;
     await bringSignOut(secrets: secrets, integration: integration);
@@ -127,7 +122,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
     final error = await integration.reconnect();
     if (!mounted) return;
     setState(() => _busy = false);
-    showHint(context, error ?? 'Bring! ist wieder erreichbar.');
+    showHint(context, error ?? context.l10n.bringReachable);
   }
 
   /// New login or none: the old error is void, the setup state changed.
@@ -145,7 +140,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
     final registry = ref.watch(toolRegistryProvider);
     return SettingsPage(
       title: 'Bring!',
-      intro: bringUnofficialHint,
+      intro: context.l10n.bringIntro,
       children: [
         if (!_loaded)
           const SizedBox.shrink()
@@ -157,13 +152,13 @@ class _BringScreenState extends ConsumerState<BringScreen> {
             builder: (context, _) => _accountCard(registry),
           ),
         SettingsSection(
-          title: 'Bring!-App',
+          title: context.l10n.bringApp,
           children: [
             SettingsRow(
               title: switch (_appInstalled) {
-                true => 'Installiert',
-                false => 'Nicht installiert',
-                null => 'Unbekannt',
+                true => context.l10n.bringInstalled,
+                false => context.l10n.bringNotInstalled,
+                null => context.l10n.bringUnknown,
               },
               detail: BringAppFallback.note,
             ),
@@ -187,12 +182,12 @@ class _BringScreenState extends ConsumerState<BringScreen> {
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
             autofillHints: const [AutofillHints.username, AutofillHints.email],
-            decoration: const InputDecoration(labelText: 'E-Mail'),
+            decoration: InputDecoration(labelText: context.l10n.bringEmail),
           ),
           SecretField(
             key: const ValueKey('bringPassword'),
             controller: _password,
-            label: 'Passwort',
+            label: context.l10n.bringPassword,
           ),
         ],
       ),
@@ -204,7 +199,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
         style: WText.caption.copyWith(color: WColors.error),
       ),
     PrimaryButton(
-      _busy ? 'Anmelden …' : 'Anmelden',
+      _busy ? context.l10n.bringSigningIn : context.l10n.mcpLabelsSignIn,
       onPressed: _busy ? null : () => unawaited(_signIn()),
     ),
   ];
@@ -218,36 +213,45 @@ class _BringScreenState extends ConsumerState<BringScreen> {
       children: [
         SectionCard(
           children: [
-            SettingsRow(title: 'Angemeldet', detail: _account),
+            SettingsRow(
+              title: context.l10n.mcpSecretSignedIn,
+              detail: _account,
+            ),
             SettingsRow(
               title: failed
-                  ? 'Fehler – Schnittstelle nicht erreichbar'
-                  : bringStateText(info?.status),
+                  ? context.l10n.bringApiError
+                  : bringStateText(context.l10n, info?.status),
               detail: failed ? info?.error : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,
-                semanticLabel: failed ? 'Fehler' : 'in Ordnung',
+                semanticLabel: failed
+                    ? context.l10n.error
+                    : context.l10n.bringFine,
               ),
             ),
           ],
         ),
         if (failed)
           PrimaryButton(
-            _busy ? 'Prüfe …' : 'Erneut versuchen',
+            _busy ? context.l10n.bringChecking : context.l10n.retry,
             onPressed: _busy ? null : () => unawaited(_retry()),
           ),
-        WideButton('Abmelden', onPressed: () => unawaited(_signOut())),
+        WideButton(
+          context.l10n.mcpDetailSignOut,
+          onPressed: () => unawaited(_signOut()),
+        ),
       ],
     );
   }
 }
 
 /// Text of the Bring! state when it is not failed.
-String bringStateText(IntegrationStatus? status) => switch (status) {
-  IntegrationStatus.active => 'Aktiv',
-  IntegrationStatus.available => 'Angemeldet, Integration ausgeschaltet',
-  IntegrationStatus.setupRequired => 'Login fehlt',
-  IntegrationStatus.unavailable => 'Nicht verfügbar',
-  IntegrationStatus.error || null => 'Unbekannt',
-};
+String bringStateText(AppLocalizations l, IntegrationStatus? status) =>
+    switch (status) {
+      IntegrationStatus.active => l.ruleEditorActive,
+      IntegrationStatus.available => l.bringStatusAvailable,
+      IntegrationStatus.setupRequired => l.bringStatusSetup,
+      IntegrationStatus.unavailable => l.bringStatusUnavailable,
+      IntegrationStatus.error || null => l.bringStatusUnknown,
+    };

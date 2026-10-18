@@ -3,6 +3,8 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../l10n/l10n.dart';
+
 /// Result of a step of the connection test in the setup dialog.
 @immutable
 final class SetupTestResult {
@@ -193,7 +195,10 @@ final class ProviderSetupSession {
   /// is needed yet). Only a rejected key ([AuthException]) fails; any other
   /// problem with the model list continues with an empty list, and the user
   /// types the model id (the probe then decides). Never throws.
-  Future<SetupTestResult> loadModels({String? baseUrl}) async {
+  Future<SetupTestResult> loadModels(
+    AppLocalizations l, {
+    String? baseUrl,
+  }) async {
     final LlmProvider provider;
     try {
       provider = create(draft(baseUrl: baseUrl), secrets.read);
@@ -205,8 +210,8 @@ final class ProviderSetupSession {
       return SetupTestResult(
         ok: true,
         message: models.isEmpty
-            ? 'Verbindung steht. Bitte die Modell-ID eingeben.'
-            : 'Verbindung steht, ${models.length} Modelle gefunden.',
+            ? l.providerSetupConnectedEnterModel
+            : l.providerSetupConnectedModels(models.length),
         models: models,
       );
     } on AuthException catch (e) {
@@ -217,9 +222,7 @@ final class ProviderSetupSession {
       return SetupTestResult(
         ok: true,
         verified: false,
-        message:
-            'Modellliste nicht verfügbar (${e.message}). Bitte die '
-            'Modell-ID eingeben.',
+        message: l.providerSetupModelListFailed(e.message),
       );
     }
   }
@@ -297,12 +300,12 @@ final class ProviderSetupSession {
 
 /// Parses a monthly budget in dollars („5“, „2,50“) into micro-USD;
 /// `null` for blank input, [FormatException] for anything else.
-int? parseBudgetMicros(String text) {
+int? parseBudgetMicros(AppLocalizations l, String text) {
   final t = text.trim().replaceAll(',', '.').replaceAll(r'$', '').trim();
   if (t.isEmpty) return null;
   final value = double.tryParse(t);
   if (value == null || value < 0) {
-    throw const FormatException('Budget: Betrag in Dollar, z. B. 5 oder 2,50');
+    throw FormatException(l.providerSetupBudgetFormat);
   }
   return (value * 1000000).round();
 }

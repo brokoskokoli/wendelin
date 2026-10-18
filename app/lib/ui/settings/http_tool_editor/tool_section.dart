@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'editor_parts.dart';
@@ -28,7 +29,7 @@ class ToolSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = draft;
     return SettingsSection(
-      title: 'Tool',
+      title: context.l10n.privacyScreenKindTool,
       children: [
         EditorField(
           child: TextFormField(
@@ -37,7 +38,7 @@ class ToolSection extends StatelessWidget {
             style: WText.mono,
             autocorrect: false,
             decoration: InputDecoration(
-              labelText: 'Name',
+              labelText: context.l10n.name,
               prefixText: 'http__',
               errorText: d.name.isEmpty ? null : d.nameError(otherNames),
             ),
@@ -51,9 +52,9 @@ class ToolSection extends StatelessWidget {
             style: WText.body,
             minLines: 2,
             maxLines: 5,
-            decoration: const InputDecoration(
-              labelText: 'Beschreibung fürs Modell',
-              helperText: 'Wann und wofür das Modell das Tool nutzen soll',
+            decoration: InputDecoration(
+              labelText: context.l10n.httpToolSecModelDescription,
+              helperText: context.l10n.httpToolSecModelDescriptionHelp,
             ),
             onChanged: (v) => onEdit(() => d.description = v),
           ),

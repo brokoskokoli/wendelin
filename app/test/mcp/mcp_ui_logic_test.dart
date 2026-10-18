@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/settings/mcp/mcp_add_check.dart';
 import 'package:wendelin/ui/settings/mcp/mcp_tool_sheet.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -11,7 +12,13 @@ void main() {
       String url = 'https://example.org/mcp',
       McpAuthKind auth = McpAuthKind.none,
       String header = '',
-    }) => mcpAddError(name: name, urlText: url, auth: auth, headerName: header);
+    }) => mcpAddError(
+      AppLocalizationsDe(),
+      name: name,
+      urlText: url,
+      auth: auth,
+      headerName: header,
+    );
 
     test('gültige Eingaben ergeben keinen Fehler', () {
       expect(error(), isNull);

@@ -7,6 +7,7 @@ import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/platform/platform_ports.dart';
 import 'package:wendelin/platform/saf_vault_port.dart';
 import 'package:wendelin/ui/settings/obsidian_screen.dart';
@@ -215,18 +216,24 @@ void main() {
     final done = await c.read(obsidianIndexProvider.notifier).sync();
     expect(done.total, 450);
     expect(done.running, isFalse);
-    expect(done.label, '450 Notizen im Index · aktuell');
+    expect(
+      done.labelOf(AppLocalizationsDe()),
+      '450 Notizen im Index · aktuell',
+    );
     final running = seen.where((p) => p.running && p.indexed > 0).toList();
     expect(running.map((p) => p.pending), [250, 50, 0]);
     expect(running.first.fraction, closeTo(200 / 450, 1e-9));
-    expect(running.first.label, 'Index wird aufgebaut: 200 Notizen, noch 250');
+    expect(
+      running.first.labelOf(AppLocalizationsDe()),
+      'Index wird aufgebaut: 200 Notizen, noch 250',
+    );
   });
 
   test('Index: ohne Vault nichts, Fehler werden angezeigt', () async {
     final none = TestEnv().container();
     addTearDown(none.dispose);
     final idle = await none.read(obsidianIndexProvider.notifier).sync();
-    expect(idle.label, 'Noch nicht aufgebaut');
+    expect(idle.labelOf(AppLocalizationsDe()), 'Noch nicht aufgebaut');
 
     final env = TestEnv(
       startup: const StartupSettings(
@@ -240,7 +247,10 @@ void main() {
     final c = env.container();
     addTearDown(c.dispose);
     final p = await c.read(obsidianIndexProvider.notifier).sync();
-    expect(p.label, 'Index unvollständig: Kein Zugriff');
+    expect(
+      p.labelOf(AppLocalizationsDe()),
+      'Index unvollständig: Kein Zugriff',
+    );
   });
 
   test('ObsidianPrefs: JSON hin und zurück, Kaputtes wird Standard', () {
@@ -312,8 +322,11 @@ void main() {
         ),
       );
       await pumpObsidian(tester, env, FakeVaultAccess());
-      expect(find.text(obsidianIndexHint), findsOneWidget);
-      expect(obsidianIndexHint, contains('nur für den ersten Aufbau'));
+      expect(find.text(AppLocalizationsDe().obsidianIndexHint), findsOneWidget);
+      expect(
+        AppLocalizationsDe().obsidianIndexHint,
+        contains('nur für den ersten Aufbau'),
+      );
     });
   });
 

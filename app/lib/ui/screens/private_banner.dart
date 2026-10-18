@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 
 /// „08:12“ (local time).
@@ -16,10 +17,13 @@ String providerLabel(String name, String? rule) =>
 
 /// Text of the hint while a conversation is private ([byRequest]: a
 /// „privat“ request) or only confidential (a run used the memory).
-String privateConversationText(DateTime since, {bool byRequest = true}) =>
-    byRequest
-    ? 'Unterhaltung privat (seit ${clockLabel(since)})'
-    : 'Vertraulich: Gedächtnis genutzt (seit ${clockLabel(since)})';
+String privateConversationText(
+  AppLocalizations l,
+  DateTime since, {
+  bool byRequest = true,
+}) => byRequest
+    ? l.privateBannerPrivate(clockLabel(since))
+    : l.privateBannerConfidential(clockLabel(since));
 
 /// Shown while the conversation is private (ADR 0009 §4, taint
 /// propagation): after a private request every later answer of the
@@ -57,7 +61,7 @@ class PrivateConversationBanner extends StatelessWidget {
         ),
         Expanded(
           child: Text(
-            privateConversationText(since, byRequest: byRequest),
+            privateConversationText(context.l10n, since, byRequest: byRequest),
             style: WText.detail.copyWith(color: WColors.text),
           ),
         ),
@@ -66,7 +70,7 @@ class PrivateConversationBanner extends StatelessWidget {
           style: TextButton.styleFrom(
             minimumSize: const Size(WSize.touchMin, WSize.touchMin),
           ),
-          child: const Text('Neues Gespräch'),
+          child: Text(context.l10n.mainNewConversation),
         ),
       ],
     ),
@@ -75,12 +79,10 @@ class PrivateConversationBanner extends StatelessWidget {
 
 /// Extra sentence of the escalation question in a private conversation.
 String privateEscalationHint(
+  AppLocalizations l,
   DateTime since,
   String toName, {
   bool byRequest = true,
 }) => byRequest
-    ? 'Die Unterhaltung ist privat (seit ${clockLabel(since)}). Mit „Ja“ '
-          'sieht $toName auch ihre privaten Teile.'
-    : 'Die Unterhaltung nutzt dein Gedächtnis (seit ${clockLabel(since)}). '
-          'Mit „Ja“ sieht $toName den bisherigen Verlauf, aber nicht das '
-          'Gedächtnis selbst.';
+    ? l.privateEscalationPrivate(clockLabel(since), toName)
+    : l.privateEscalationMemory(clockLabel(since), toName);

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/wake_service.dart';
 import 'package:wendelin/di/wake_settings.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/platform/battery_platform.dart';
 import 'package:wendelin/platform/wake/wake_platform.dart';
@@ -221,15 +222,21 @@ void main() {
       null: 'Vom System beendet',
     };
     table.forEach((reason, text) {
-      expect(wakeStopText(reason), text, reason: '$reason');
+      expect(
+        wakeStopText(AppLocalizationsDe(), reason),
+        text,
+        reason: '$reason',
+      );
     });
     for (final r in ['no-role', 'engine-failed']) {
-      expect(wakeStopText(r), isNot(contains('System')));
+      expect(wakeStopText(AppLocalizationsDe(), r), isNot(contains('System')));
     }
   });
 
   test('Erklärtexte: ehrlich zu Benachrichtigung und Anbieter', () {
-    final all = wakeExplainPoints.map((p) => '${p.$1} ${p.$2}').join(' ');
+    final all = wakeExplainPoints(AppLocalizationsDe())
+        .map((p) => '${p.$1} ${p.$2}')
+        .join(' ');
     expect(all, isNot(contains('nicht ausblenden')));
     expect(all, contains('wegwischen'));
     expect(all, contains('als Text an den gewählten KI-Anbieter'));
@@ -335,7 +342,7 @@ void main() {
     );
     await settle(tester);
     expect(find.textContaining('Xiaomi / HyperOS'), findsWidgets);
-    expect(wakeExplainPoints.length, 4);
+    expect(wakeExplainPoints(AppLocalizationsDe()).length, 4);
   });
 
   testWidgets('Erklärdialog abbrechen lässt den Dienst aus', (tester) async {

@@ -3,12 +3,12 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/chat_entry.dart';
 import '../../agent/conversation_state.dart';
+import '../../l10n/l10n.dart';
 import '../attestation/attestation_texts.dart' show gpuBlockReason;
 import '../design/design.dart';
 import '../screens/bring_share_card.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/conversation_view.dart';
-import '../screens/main_parts.dart';
 import '../screens/private_banner.dart';
 
 /// What the assistant overlay shows of the current request: the latest
@@ -179,23 +179,6 @@ class OverlaySheet extends StatelessWidget {
   /// Current time for the countdown of the window.
   final DateTime Function() now;
 
-  /// Hint while the conversation mode does not exist yet.
-  static const followUpComingHint =
-      'Gesprächsmodus aus · in den Einstellungen einschaltbar';
-
-  /// Hint with the remaining time of the open follow-up window.
-  static String followUpWindowHint(int seconds) =>
-      'Hört noch $seconds s zu · „Stopp“ beendet';
-
-  /// Shown on the lock screen instead of any content.
-  static const lockedTitle = 'Gerät entsperren';
-
-  /// Explanation on the lock screen.
-  static const lockedText =
-      'Auf dem Sperrbildschirm zeigt und sagt Wendelin nichts aus deinen '
-      'Daten. Nur die Taschenlampe geht auch gesperrt. Alles andere erst '
-      'nach dem Entsperren.';
-
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -216,24 +199,24 @@ class OverlaySheet extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: WSpace.l18,
-            children: locked ? _lockedContent() : _content(),
+            children: locked ? _lockedContent(context) : _content(context),
           ),
         ),
       ),
-      _controls(),
+      _controls(context),
       // An open confirmation replaces the conversation-mode hint with how
       // to answer (always visible, below the scrolling content).
       if (_asking)
-        hint.widget
+        hint.widget(context.l10n)
       else
         Opacity(
           opacity: conversationMode ? 1 : WOpacity.inactive,
-          child: _modeHint(),
+          child: _modeHint(context),
         ),
     ],
   );
 
-  Widget _modeHint() {
+  Widget _modeHint(BuildContext context) {
     Text text(String t) =>
         Text(t, style: WText.caption, textAlign: TextAlign.center);
     final until = followUpUntil;
@@ -241,14 +224,15 @@ class OverlaySheet extends StatelessWidget {
       return FollowUpCountdown(
         until: until,
         now: now,
-        builder: (_, seconds) => text(followUpWindowHint(seconds)),
+        builder: (_, seconds) =>
+            text(context.l10n.overlayFollowUpWindow(seconds)),
       );
     }
     // The countdown only shows while the window is really open (WP74); with
     // the mode on but no window there is nothing to announce.
     return conversationMode
         ? const SizedBox.shrink()
-        : text(followUpComingHint);
+        : text(context.l10n.overlayFollowUpComing);
   }
 
   bool get _asking {
@@ -258,15 +242,18 @@ class OverlaySheet extends StatelessWidget {
 
   /// While the lock state is still unknown ([onUnlock] `null`) the sheet
   /// stays empty.
-  List<Widget> _lockedContent() => [
+  List<Widget> _lockedContent(BuildContext context) => [
     if (onUnlock != null) ...[
-      Text(lockedTitle, style: WText.transcript),
-      Text(lockedText, style: WText.answer),
-      FilledButton(onPressed: onUnlock, child: const Text('Entsperren')),
+      Text(context.l10n.overlayLockedTitle, style: WText.transcript),
+      Text(context.l10n.overlayLockedText, style: WText.answer),
+      FilledButton(
+        onPressed: onUnlock,
+        child: Text(context.l10n.overlayUnlock),
+      ),
     ],
   ];
 
-  List<Widget> _content() {
+  List<Widget> _content(BuildContext context) {
     final request = exchange.request;
     final q = question;
     final statusText = status ?? exchange.notice;
@@ -284,18 +271,20 @@ class OverlaySheet extends StatelessWidget {
           child: ConfirmationCard(
             key: const ValueKey('gpuBlockCard'),
             title: block.noEvidence
-                ? 'Kein GPU-Nachweis'
-                : 'GPU-Prüfung nicht bestanden',
+                ? context.l10n.gpuNoEvidenceTitle
+                : context.l10n.mainGpuCheckFailedTitle,
             detail: block.noEvidence
-                ? 'Die Anfrage wurde nicht gesendet.'
-                : 'Nicht gesendet.${gpuBlockReason(block.reason)}',
+                ? context.l10n.gpuBlockNoEvidenceDetail
+                : context.l10n.gpuBlockNotSent(
+                    gpuBlockReason(context.l10n, block.reason),
+                  ),
             compact: true,
-            toolName: 'GPU-Prüfung',
+            toolName: context.l10n.gpuToolName,
             risk: RiskLevel.external,
             onYes: () => onGpuBlock!(sendWithout: true),
             onNo: () => onGpuBlock!(sendWithout: false),
-            yesLabel: 'Ohne GPU-Prüfung senden',
-            noLabel: 'Abbrechen',
+            yesLabel: context.l10n.mainSendWithoutGpuCheck,
+            noLabel: context.l10n.cancel,
           ),
         ),
       ];
@@ -307,6 +296,7 @@ class OverlaySheet extends StatelessWidget {
         if (request != null) Text('„$request“', style: WText.quote),
         _ScrollIntoView(
           child: confirmationCardFor(
+            context.l10n,
             q,
             onAnswer!,
             toolRisk: q is ToolQuestion ? q.event.risk : RiskLevel.external,
@@ -332,10 +322,10 @@ class OverlaySheet extends StatelessWidget {
                 mic == MicState.preparing))
           Text(
             preparing
-                ? MicButton.preparingLabel
+                ? context.l10n.momentPlease
                 : followUpUntil != null
-                ? followUpListeningText
-                : Composer.listeningText,
+                ? context.l10n.followUpListening
+                : context.l10n.mainListening,
             style: WText.transcript.copyWith(color: WColors.textMuted),
           )
         else if (request != null)
@@ -356,12 +346,12 @@ class OverlaySheet extends StatelessWidget {
     ];
   }
 
-  Widget _controls() => Row(
+  Widget _controls(BuildContext context) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       WIconButton(
         icon: WIcons.keyboard,
-        tooltip: 'Texteingabe',
+        tooltip: context.l10n.overlayTextInput,
         shape: WIconButtonShape.round,
         onPressed: locked ? null : onKeyboard,
       ),
@@ -379,8 +369,8 @@ class OverlaySheet extends StatelessWidget {
             state: mic,
             onPressed: mic == MicState.disabled ? null : onMic,
             semanticLabel: switch (mic) {
-              MicState.idle => 'Weiter sprechen',
-              MicState.listening => 'Zuhören abbrechen',
+              MicState.idle => context.l10n.overlayKeepTalking,
+              MicState.listening => context.l10n.mainCancelListening,
               _ => null,
             },
           ),
@@ -388,7 +378,7 @@ class OverlaySheet extends StatelessWidget {
       ),
       WIconButton(
         icon: WIcons.close,
-        tooltip: 'Beenden',
+        tooltip: context.l10n.overlayEnd,
         shape: WIconButtonShape.round,
         iconSize: WSize.iconSmall,
         onPressed: onClose,

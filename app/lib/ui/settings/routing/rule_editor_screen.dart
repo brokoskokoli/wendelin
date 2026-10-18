@@ -6,6 +6,7 @@ import 'package:wendelin_agent/wendelin_agent.dart';
 
 import '../../../di/providers.dart';
 import '../../../di/routing.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'condition_builder.dart';
@@ -52,11 +53,13 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
   /// The rule as edited, or a German error.
   (RoutingRule?, String?) _draft() {
     final name = _name.text.trim();
-    if (name.isEmpty) return (null, 'Bitte einen Namen eingeben.');
-    if (_target.modelId.isEmpty) return (null, 'Bitte ein Modell eingeben.');
+    if (name.isEmpty) return (null, context.l10n.ruleEditorNeedName);
+    if (_target.modelId.isEmpty) {
+      return (null, context.l10n.ruleEditorNeedModel);
+    }
     final Condition condition;
     if (_tree case final tree?) {
-      final (c, error) = tree.build();
+      final (c, error) = tree.build(context.l10n);
       if (error != null) return (null, error);
       condition = c!;
     } else {
@@ -97,11 +100,9 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
   Future<void> _delete() async {
     final ok = await confirm(
       context,
-      title: 'Regel „${_existing!.name}“ löschen?',
-      message:
-          'Anfragen, die bisher diese Regel genommen haben, prüfen die '
-          'nächsten Regeln bzw. gehen an den Standard.',
-      yes: 'Löschen',
+      title: context.l10n.ruleEditorDeleteTitle(_existing!.name),
+      message: context.l10n.ruleEditorDeleteBody,
+      yes: context.l10n.delete,
     );
     if (!ok || !mounted) return;
     final rules = _state.rules!;
@@ -119,33 +120,31 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
   }
 
   Widget _ruleSection() => SettingsSection(
-    title: 'Regel',
+    title: context.l10n.ruleEditorRule,
     children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(WSpace.l, WSpace.s, WSpace.l, 0),
         child: TextField(
           controller: _name,
           style: WText.body,
-          decoration: const InputDecoration(labelText: 'Name'),
+          decoration: InputDecoration(labelText: context.l10n.name),
           onChanged: (_) => setState(() {}),
         ),
       ),
       SettingsRow(
-        title: 'Aktiv',
+        title: context.l10n.ruleEditorActive,
         trailing: WSwitch(
           value: _enabled,
-          semanticLabel: 'Regel aktiv',
+          semanticLabel: context.l10n.ruleEditorActiveLabel,
           onChanged: (v) => setState(() => _enabled = v),
         ),
       ),
       SettingsRow(
-        title: 'Auslöser entfernen',
-        detail:
-            'Präfix, Schlüsselwort oder Treffer gehen nicht ans '
-            'Modell; im Verlauf bleibt der Satz vollständig.',
+        title: context.l10n.ruleEditorStripTrigger,
+        detail: context.l10n.ruleEditorStripTriggerHint,
         trailing: WSwitch(
           value: _strip,
-          semanticLabel: 'Auslöser entfernen',
+          semanticLabel: context.l10n.ruleEditorStripTriggerLabel,
           onChanged: (v) => setState(() => _strip = v),
         ),
       ),
@@ -162,11 +161,13 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
             _state.routingProfiles,
           ).where((i) => i.ruleId == _id).toList();
     return SettingsPage(
-      title: _existing == null ? 'Neue Regel' : 'Regel bearbeiten',
+      title: _existing == null
+          ? context.l10n.ruleEditorNewRule
+          : context.l10n.ruleEditorEditRule,
       children: [
         _ruleSection(),
         SettingsSection(
-          title: 'Ziel',
+          title: context.l10n.ruleEditorTarget,
           children: [
             Padding(
               padding: const EdgeInsets.all(WSpace.l),
@@ -179,7 +180,7 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
           ],
         ),
         SettingsSection(
-          title: 'Bedingung',
+          title: context.l10n.ruleEditorCondition,
           children: [
             Padding(
               padding: const EdgeInsets.all(WSpace.l),
@@ -200,14 +201,14 @@ class _RuleEditorScreenState extends ConsumerState<RuleEditorScreen> {
         if (issues.isNotEmpty || error != null)
           IssueList([?error, for (final i in issues) i.message]),
         PrimaryButton(
-          'Speichern',
+          context.l10n.save,
           onPressed: draft == null || _saving
               ? null
               : () => unawaited(_save(draft)),
         ),
         if (_existing != null)
           WideButton(
-            'Regel löschen',
+            context.l10n.ruleEditorDeleteRule,
             onPressed: _saving ? null : () => unawaited(_delete()),
           ),
       ],
@@ -228,17 +229,13 @@ class _DeepCondition extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     spacing: WSpace.s,
     children: [
-      Text(describeCondition(condition), style: WText.mono),
-      Text(
-        'Diese Bedingung ist tiefer verschachtelt, als der Editor sie '
-        'bearbeiten kann. Sie bleibt unverändert erhalten.',
-        style: WText.detail,
-      ),
+      Text(describeCondition(context.l10n, condition), style: WText.mono),
+      Text(context.l10n.ruleEditorTooDeep, style: WText.detail),
       Align(
         alignment: AlignmentDirectional.centerStart,
         child: TextButton(
           onPressed: onRebuild,
-          child: const Text('Neu aufbauen'),
+          child: Text(context.l10n.ruleEditorRebuild),
         ),
       ),
     ],

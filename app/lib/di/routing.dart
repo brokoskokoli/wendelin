@@ -7,6 +7,7 @@ import 'package:wendelin_providers/wendelin_providers.dart'
     show effectivePrivacy;
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../l10n/l10n.dart';
 import '../platform/channel_network_status.dart';
 import 'profiles.dart';
 import 'providers.dart';
@@ -162,9 +163,8 @@ Future<void> dismissPrivateRuleNotice(WidgetRef ref) async {
 }
 
 /// Text of the hint about the rule „Privat“ for [target].
-String privateRuleNoticeText(String target) =>
-    'Neu: Regel „Privat“ – Anfragen mit „privat“, „vertraulich“ … gehen an '
-    '$target.';
+String privateRuleNoticeText(AppLocalizations l, String target) =>
+    l.routingPrivateRuleNotice(target);
 
 /// [profile] as the router sees it (no adapter: for the editor).
 RoutingProfile routingProfileOf(

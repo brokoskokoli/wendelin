@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../settings_page.dart';
 import 'editor_parts.dart';
@@ -28,7 +29,7 @@ class RequestSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = draft;
     return SettingsSection(
-      title: 'Anfrage',
+      title: context.l10n.privacyScreenKindRequest,
       children: [
         EditorField(
           child: Wrap(
@@ -52,9 +53,8 @@ class RequestSection extends StatelessWidget {
             keyboardType: TextInputType.url,
             autocorrect: false,
             decoration: InputDecoration(
-              labelText: 'URL-Vorlage',
-              helperText:
-                  'Platzhalter wie {entity} nur in Pfad und Query, Host fest',
+              labelText: context.l10n.httpSrcUrlTemplate,
+              helperText: context.l10n.httpSrcUrlHelp('{entity}'),
               helperMaxLines: 2,
             ),
             onChanged: (v) => onEdit(() => d.url = v),
@@ -63,23 +63,23 @@ class RequestSection extends StatelessWidget {
         for (final (i, h) in d.headers.indexed)
           _HeaderRow(draft: d, header: h, index: i, onEdit: onEdit),
         SettingsRow(
-          title: '+ Header',
-          detail: 'Nicht geheim; Tokens gehören in die Anmeldung',
+          title: context.l10n.httpSrcAddHeader,
+          detail: context.l10n.httpSrcHeaderDetail,
           onTap: () => onEdit(() => d.headers.add(HttpHeaderDraft())),
         ),
-        if (d.method.allowsBody) ..._body(d),
+        if (d.method.allowsBody) ..._body(context, d),
       ],
     );
   }
 
-  List<Widget> _body(HttpToolDraft d) => [
+  List<Widget> _body(BuildContext context, HttpToolDraft d) => [
     EditorField(
       child: Wrap(
         spacing: WSpace.s,
         children: [
           for (final (f, label) in [
-            (HttpBodyFormat.json, 'JSON'),
-            (HttpBodyFormat.form, 'Formular'),
+            (HttpBodyFormat.json, context.l10n.httpSrcJson),
+            (HttpBodyFormat.form, context.l10n.httpSrcForm),
           ])
             ChoiceChip(
               label: Text(label),
@@ -96,9 +96,9 @@ class RequestSection extends StatelessWidget {
         style: WText.mono,
         minLines: 2,
         maxLines: 8,
-        decoration: const InputDecoration(
-          labelText: 'Body-Vorlage (JSON)',
-          helperText: '"{name}" wird typgerecht ersetzt; leer = kein Body',
+        decoration: InputDecoration(
+          labelText: context.l10n.httpSrcBodyTemplate,
+          helperText: context.l10n.httpSrcBodyHelp('"{name}"'),
         ),
         onChanged: (v) => onEdit(() => d.body = v),
       ),
@@ -131,7 +131,9 @@ class _HeaderRow extends StatelessWidget {
               key: ValueKey('headerName$index'),
               initialValue: h.name,
               style: WText.mono,
-              decoration: const InputDecoration(labelText: 'Header'),
+              decoration: InputDecoration(
+                labelText: context.l10n.httpSrcHeader,
+              ),
               onChanged: (v) => onEdit(() => h.name = v),
             ),
           ),
@@ -140,13 +142,13 @@ class _HeaderRow extends StatelessWidget {
               key: ValueKey('headerValue$index'),
               initialValue: h.value,
               style: WText.mono,
-              decoration: const InputDecoration(labelText: 'Wert'),
+              decoration: InputDecoration(labelText: context.l10n.mcpAddValue),
               onChanged: (v) => onEdit(() => h.value = v),
             ),
           ),
           WIconButton(
             icon: WIcons.close,
-            tooltip: 'Header entfernen',
+            tooltip: context.l10n.httpSrcRemoveHeader,
             iconSize: WSize.iconSmall,
             onPressed: () => onEdit(() => draft.headers.remove(h)),
           ),

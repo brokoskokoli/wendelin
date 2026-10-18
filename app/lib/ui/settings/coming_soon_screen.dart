@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
 
@@ -23,7 +24,10 @@ class ComingSoonScreen extends StatelessWidget {
     children: [
       SectionCard(
         children: [
-          const SettingsRow(title: 'Kommt in M3', detail: 'In Arbeit'),
+          SettingsRow(
+            title: context.l10n.comingSoonM3,
+            detail: context.l10n.comingSoonInProgress,
+          ),
         ],
       ),
     ],

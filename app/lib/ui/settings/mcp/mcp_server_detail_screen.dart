@@ -7,6 +7,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../../di/mcp/mcp_providers.dart';
 import '../../../di/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../integration_detail_screen.dart'
     show IntegrationDetailScreen, SensitiveLevelSection;
@@ -57,7 +58,7 @@ class McpServerDetailScreen extends ConsumerWidget {
           // Not (or no longer) a configured server: the generic page.
           return switch (integrationId) {
             final id? => IntegrationDetailScreen(id),
-            null => const SettingsPage(title: 'MCP-Server', children: []),
+            null => SettingsPage(title: context.l10n.areaMcp, children: []),
           };
         }
         return _Page(server: server, info: _info(registry, server));
@@ -86,22 +87,18 @@ class _Page extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return SettingsPage(
       title: config.name,
-      intro: 'Tool-Argumente gehen an diesen Server: ${config.url}',
+      intro: context.l10n.mcpDetailIntro('${config.url}'),
       children: [
         _serverCard(context, ref),
         _toolsSection(context, ref),
-        Text(
-          'Tippe auf ein Tool für Nachfrage und Risikostufe. MCP-Tools haben '
-          'kein Rückgängig: Änderungen passieren auf dem Server.',
-          style: WText.caption,
-        ),
+        Text(context.l10n.mcpDetailIntroHint, style: WText.caption),
         _optionsCard(context, ref),
         if (config.sensitive) const SensitiveLevelSection(),
         SectionCard(
           children: [
             SettingsRow(
-              title: 'Server löschen',
-              detail: 'Entfernt Konfiguration, Tool-Liste und Zugangsdaten',
+              title: context.l10n.mcpDetailDelete,
+              detail: context.l10n.mcpDetailDeleteHint,
               onTap: () => unawaited(_delete(context, ref)),
             ),
           ],
@@ -116,15 +113,15 @@ class _Page extends ConsumerWidget {
   }
 
   Widget _serverCard(BuildContext context, WidgetRef ref) {
-    final state = mcpTileState(server, info);
+    final state = mcpTileState(context.l10n, server, info);
     return SectionCard(
       children: [
         SettingsRow(
-          title: 'Server aktiv',
+          title: context.l10n.mcpDetailActive,
           detail: state.detail,
           trailing: WSwitch(
             value: info?.enabled ?? false,
-            semanticLabel: '${config.name} aktiv',
+            semanticLabel: context.l10n.mcpDetailActiveLabel(config.name),
             onChanged: info == null
                 ? null
                 : (on) => unawaited(
@@ -133,10 +130,12 @@ class _Page extends ConsumerWidget {
           ),
         ),
         SettingsRow(
-          title: 'Neu laden',
-          detail: 'Letzte Prüfung: ${mcpCheckText(server.check)}',
+          title: context.l10n.mcpLabelsReload,
+          detail: context.l10n.mcpDetailLastCheck(
+            mcpCheckText(context.l10n, server.check),
+          ),
           onTap: () => unawaited(_reload(context, ref)),
-          trailing: _checkIcon(),
+          trailing: _checkIcon(context),
         ),
         ..._authRows(context, ref),
       ],
@@ -147,12 +146,12 @@ class _Page extends ConsumerWidget {
     final offered = server.offered;
     final skipped = {for (final s in server.skipped) s.name: s.reason};
     return SettingsSection(
-      title: 'Tools',
+      title: context.l10n.mcpDetailTools,
       children: [
         if (server.toolInfos.isEmpty)
-          const SettingsRow(
-            title: 'Noch keine Tools',
-            detail: 'Server einschalten oder neu laden',
+          SettingsRow(
+            title: context.l10n.mcpDetailNoTools,
+            detail: context.l10n.mcpDetailNoToolsHint,
           ),
         for (final tool in server.toolInfos)
           SettingsRow(
@@ -163,7 +162,7 @@ class _Page extends ConsumerWidget {
                   when offered[tool.name] == null)
                 reason
               else
-                mcpToolRiskText(tool, config),
+                mcpToolRiskText(context.l10n, tool, config),
             ].join(),
             onTap: () =>
                 unawaited(showMcpToolSheet(context, ref, server, tool)),
@@ -188,23 +187,21 @@ class _Page extends ConsumerWidget {
   Widget _optionsCard(BuildContext context, WidgetRef ref) => SectionCard(
     children: [
       SettingsRow(
-        title: 'Alle Tools bestätigen',
-        detail: 'Jeder Aufruf fragt nach, egal was der Server angibt',
+        title: context.l10n.mcpDetailConfirmAll,
+        detail: context.l10n.mcpDetailConfirmAllHint,
         trailing: WSwitch(
           value: config.confirmAll,
-          semanticLabel: 'Alle Tools bestätigen',
+          semanticLabel: context.l10n.mcpDetailConfirmAll,
           onChanged: (on) =>
               _update(context, ref, config.copyWith(confirmAll: on)),
         ),
       ),
       SettingsRow(
-        title: 'Sensibel',
-        detail:
-            'Persönliche Daten: Tools nur an Provider ab der '
-            'eingestellten Stufe',
+        title: context.l10n.mcpDetailSensitive,
+        detail: context.l10n.mcpDetailSensitiveHint,
         trailing: WSwitch(
           value: config.sensitive,
-          semanticLabel: '${config.name} sensibel',
+          semanticLabel: context.l10n.mcpDetailSensitiveLabel(config.name),
           onChanged: (on) =>
               _update(context, ref, config.copyWith(sensitive: on)),
         ),
@@ -212,19 +209,19 @@ class _Page extends ConsumerWidget {
     ],
   );
 
-  Widget? _checkIcon() => switch (server.check?.status) {
+  Widget? _checkIcon(BuildContext context) => switch (server.check?.status) {
     null => null,
     McpReachability.reachable => const CheckStatusIcon(
       CheckStatus.ok,
       semanticLabel: 'erreichbar',
     ),
-    McpReachability.authRequired => const CheckStatusIcon(
+    McpReachability.authRequired => CheckStatusIcon(
       CheckStatus.pending,
-      semanticLabel: 'Anmeldung nötig',
+      semanticLabel: context.l10n.mcpDetailAuthLabel,
     ),
-    _ => const CheckStatusIcon(
+    _ => CheckStatusIcon(
       CheckStatus.failed,
-      semanticLabel: 'nicht erreichbar',
+      semanticLabel: context.l10n.mcpDetailUnreachableLabel,
     ),
   };
 
@@ -235,24 +232,30 @@ class _Page extends ConsumerWidget {
       McpOAuth() => [
         SettingsRow(
           title: info?.setup.missingSteps.isEmpty ?? false
-              ? 'Neu anmelden'
-              : 'Anmelden',
-          detail: 'OAuth-Anmeldung im Browser',
+              ? context.l10n.mcpDetailSignInAgain
+              : context.l10n.mcpDetailSignIn,
+          detail: context.l10n.mcpDetailOauthHint,
           onTap: () => unawaited(signInMcp(context, ref, server)),
         ),
         SettingsRow(
-          title: 'Abmelden',
-          detail: 'Vergisst die Tokens auf diesem Gerät',
+          title: context.l10n.mcpDetailSignOut,
+          detail: context.l10n.mcpDetailSignOutHint,
           onTap: () =>
               unawaited(guardMcp(context, () => source.signOut(config.id))),
         ),
       ],
       McpBearerAuth(:final secretRef) => [
         SettingsRow(
-          title: 'Token ersetzen',
-          detail: 'Wird nie wieder angezeigt',
+          title: context.l10n.mcpDetailReplaceToken,
+          detail: context.l10n.mcpDetailNeverShown,
           onTap: () => unawaited(
-            askSecret(context, ref, server, secretRef, 'Bearer-Token'),
+            askSecret(
+              context,
+              ref,
+              server,
+              secretRef,
+              context.l10n.mcpDetailBearer,
+            ),
           ),
         ),
       ],
@@ -260,11 +263,17 @@ class _Page extends ConsumerWidget {
         for (final MapEntry(key: header, value: ref_)
             in secretRefsByHeader.entries)
           SettingsRow(
-            title: 'Header $header ersetzen',
+            title: context.l10n.mcpDetailReplaceHeader(header),
             mono: false,
-            detail: 'Wert wird nie wieder angezeigt',
+            detail: context.l10n.mcpDetailValueNeverShown,
             onTap: () => unawaited(
-              askSecret(context, ref, server, ref_, 'Wert für $header'),
+              askSecret(
+                context,
+                ref,
+                server,
+                ref_,
+                context.l10n.mcpDetailValueFor(header),
+              ),
             ),
           ),
       ],
@@ -274,18 +283,21 @@ class _Page extends ConsumerWidget {
   Future<void> _reload(BuildContext context, WidgetRef ref) async {
     final source = ref.read(mcpServerSourceProvider);
     final check = await source.reload(config.id);
-    if (context.mounted) showHint(context, 'Prüfung: ${mcpCheckText(check)}');
+    if (context.mounted) {
+      showHint(
+        context,
+        context.l10n.mcpDetailCheck(mcpCheckText(context.l10n, check)),
+      );
+    }
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final source = ref.read(mcpServerSourceProvider);
     final ok = await confirm(
       context,
-      title: '„${config.name}“ löschen?',
-      message:
-          'Konfiguration, Tool-Liste und alle Zugangsdaten dieses Servers '
-          'werden entfernt.',
-      yes: 'Löschen',
+      title: context.l10n.mcpDetailDeleteTitle(config.name),
+      message: context.l10n.mcpDetailDeleteBody,
+      yes: context.l10n.delete,
     );
     if (!ok) return;
     await source.remove(config.id);
@@ -308,7 +320,12 @@ Future<void> mcpAction(
   if (check == McpReachability.unreachable ||
       check == McpReachability.protocolError) {
     final next = await source.reload(server.config.id);
-    if (context.mounted) showHint(context, 'Prüfung: ${mcpCheckText(next)}');
+    if (context.mounted) {
+      showHint(
+        context,
+        context.l10n.mcpDetailCheck2(mcpCheckText(context.l10n, next)),
+      );
+    }
     return;
   }
   await Navigator.of(context).push(

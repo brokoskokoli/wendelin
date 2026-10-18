@@ -6,6 +6,7 @@ import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_reducer.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/routing.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/overlay_sheet.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
@@ -128,18 +129,26 @@ void main() {
         toName: 'Claude API',
       );
       Future<void> pump(DateTime? since) => pumpComponent(tester, [
-        confirmationCardFor(question, (_) {}, privateSince: since),
+        confirmationCardFor(
+          AppLocalizationsDe(),
+          question,
+          (_) {},
+          privateSince: since,
+        ),
       ]);
       await pump(null);
       expect(find.textContaining('privaten Teile'), findsNothing);
       await pump(testNow);
       expect(
-        find.textContaining(privateEscalationHint(testNow, 'Claude API')),
+        find.textContaining(
+          privateEscalationHint(AppLocalizationsDe(), testNow, 'Claude API'),
+        ),
         findsOneWidget,
       );
       expect(find.textContaining('(seit 08:12)'), findsOneWidget);
       await pumpComponent(tester, [
         confirmationCardFor(
+          AppLocalizationsDe(),
           question,
           (_) {},
           privateSince: testNow,
@@ -168,7 +177,10 @@ void main() {
           'Phala GLM',
         );
         await _pumpMain(tester, env);
-        expect(find.text(privateRuleNoticeText('Phala GLM')), findsOneWidget);
+        expect(
+          find.text(privateRuleNoticeText(AppLocalizationsDe(), 'Phala GLM')),
+          findsOneWidget,
+        );
         await tester.tap(find.text(open ? 'Routing ansehen' : 'Verstanden'));
         await settle(tester);
         expect(
@@ -184,7 +196,10 @@ void main() {
           tester.state<NavigatorState>(find.byType(Navigator)).pop();
           await settle(tester);
         }
-        expect(find.text(privateRuleNoticeText('Phala GLM')), findsNothing);
+        expect(
+          find.text(privateRuleNoticeText(AppLocalizationsDe(), 'Phala GLM')),
+          findsNothing,
+        );
       });
     }
   });

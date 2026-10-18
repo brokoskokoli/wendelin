@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import 'routing_texts.dart';
 
@@ -20,7 +21,7 @@ sealed class ConditionNode {
   bool negated;
 
   /// The condition, or a German error text.
-  (Condition?, String?) build();
+  (Condition?, String?) build(AppLocalizations l);
 }
 
 /// Types offered in the builder (JSON names, no `and`/`or`/`not`).
@@ -115,37 +116,37 @@ final class LeafNode extends ConditionNode {
   ];
 
   @override
-  (Condition?, String?) build() {
-    final label = conditionTypeLabel(type);
-    (Condition?, String?) fail(String m) => (null, '$label: $m');
+  (Condition?, String?) build(AppLocalizations l) {
+    final label = conditionTypeLabel(l, type);
+    (Condition?, String?) fail(String m) => (null, l.condBuilderFail(label, m));
     final Condition c;
     switch (type) {
       case 'keyword' || 'prefix' || 'privacy':
         final words = _list;
-        if (words.isEmpty) return fail('mindestens ein Wort eingeben.');
+        if (words.isEmpty) return fail(l.condBuilderNeedWord);
         c = switch (type) {
           'keyword' => KeywordCondition(words),
           'prefix' => PrefixCondition(words),
           _ => PrivacyCondition(words),
         };
       case 'regex':
-        if (text.trim().isEmpty) return fail('Muster eingeben.');
+        if (text.trim().isEmpty) return fail(l.condBuilderNeedPattern);
         c = RegexCondition(text.trim());
       case 'language':
-        if (_list.isEmpty) return fail('Sprachkürzel eingeben (de, fr …).');
+        if (_list.isEmpty) return fail(l.condBuilderNeedLang);
         c = LanguageCondition(_list);
       case 'sttConfidence':
         final v = double.tryParse(text.trim().replaceAll(',', '.'));
         if (v == null || v <= 0 || v > 1) {
-          return fail('Schwelle zwischen 0 und 1 eingeben.');
+          return fail(l.condBuilderNeedThreshold);
         }
         c = SttConfidenceCondition(v);
       case 'inputLength':
         final v = int.tryParse(text.trim());
-        if (v == null || v < 0) return fail('Zeichenzahl eingeben.');
+        if (v == null || v < 0) return fail(l.condBuilderNeedLength);
         c = InputLengthCondition(v);
       case 'needsTool':
-        if (text.trim().isEmpty) return fail('Kategorie eingeben.');
+        if (text.trim().isEmpty) return fail(l.condBuilderNeedCategory);
         c = NeedsToolCondition(text.trim());
       case 'network':
         c = NetworkCondition(network);
@@ -154,10 +155,10 @@ final class LeafNode extends ConditionNode {
       case 'timeWindow':
         final s = _minutes(start);
         final e = _minutes(end);
-        if (s == null || e == null) return fail('Uhrzeit als HH:MM eingeben.');
+        if (s == null || e == null) return fail(l.condBuilderNeedTime);
         c = TimeWindowCondition(days: days, start: s, end: e);
       default:
-        return fail('unbekannter Typ.');
+        return fail(l.condBuilderUnknownType);
     }
     return (negated ? NotCondition(c) : c, null);
   }
@@ -185,11 +186,11 @@ final class GroupNode extends ConditionNode {
   final List<ConditionNode> children;
 
   @override
-  (Condition?, String?) build() {
-    if (children.isEmpty) return (null, 'Eine Gruppe ist leer.');
+  (Condition?, String?) build(AppLocalizations l) {
+    if (children.isEmpty) return (null, l.condBuilderEmptyGroup);
     final parts = <Condition>[];
     for (final child in children) {
-      final (c, error) = child.build();
+      final (c, error) = child.build(l);
       if (error != null) return (null, error);
       parts.add(c!);
     }
@@ -279,14 +280,19 @@ class _GroupEditor extends StatelessWidget {
   final VoidCallback onChanged;
   final VoidCallback? onRemove;
 
-  Widget _head() => Wrap(
+  Widget _head(BuildContext context) => Wrap(
     spacing: WSpace.s,
     runSpacing: WSpace.s,
     crossAxisAlignment: WrapCrossAlignment.center,
     children: [
-      Text(isRoot ? 'Es gilt' : 'Gruppe', style: WText.detail),
+      Text(
+        isRoot
+            ? context.l10n.condBuilderApplies
+            : context.l10n.condBuilderGroup,
+        style: WText.detail,
+      ),
       ChoiceChip(
-        label: const Text('alle (und)'),
+        label: Text(context.l10n.condBuilderAll),
         selected: !group.any,
         onSelected: (_) {
           group.any = false;
@@ -294,7 +300,7 @@ class _GroupEditor extends StatelessWidget {
         },
       ),
       ChoiceChip(
-        label: const Text('eine (oder)'),
+        label: Text(context.l10n.condBuilderAny),
         selected: group.any,
         onSelected: (_) {
           group.any = true;
@@ -303,7 +309,7 @@ class _GroupEditor extends StatelessWidget {
       ),
       if (!isRoot)
         FilterChip(
-          label: const Text('nicht'),
+          label: Text(context.l10n.routingCondNot),
           selected: group.negated,
           onSelected: (v) {
             group.negated = v;
@@ -313,7 +319,7 @@ class _GroupEditor extends StatelessWidget {
     ],
   );
 
-  Widget _addButtons() => Wrap(
+  Widget _addButtons(BuildContext context) => Wrap(
     spacing: WSpace.s,
     children: [
       TextButton(
@@ -321,7 +327,11 @@ class _GroupEditor extends StatelessWidget {
           group.children.add(LeafNode());
           onChanged();
         },
-        child: Text(isRoot ? '+ Bedingung' : '+ Bedingung in Gruppe'),
+        child: Text(
+          isRoot
+              ? context.l10n.condBuilderAddCondition
+              : context.l10n.condBuilderAddConditionInGroup,
+        ),
       ),
       if (isRoot)
         TextButton(
@@ -331,7 +341,7 @@ class _GroupEditor extends StatelessWidget {
             );
             onChanged();
           },
-          child: const Text('+ Gruppe'),
+          child: Text(context.l10n.condBuilderAddGroup),
         ),
     ],
   );
@@ -344,11 +354,11 @@ class _GroupEditor extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: _head()),
+            Expanded(child: _head(context)),
             if (onRemove != null)
               WIconButton(
                 icon: WIcons.close,
-                tooltip: 'Gruppe entfernen',
+                tooltip: context.l10n.condBuilderRemoveGroup,
                 shape: WIconButtonShape.round,
                 iconSize: WSize.iconSmall,
                 onPressed: onRemove,
@@ -377,7 +387,7 @@ class _GroupEditor extends StatelessWidget {
               },
             ),
           },
-        _addButtons(),
+        _addButtons(context),
       ],
     );
     if (isRoot) return body;
@@ -406,7 +416,7 @@ class _LeafEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (_, error) = node.build();
+    final (_, error) = node.build(context.l10n);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         WSpace.m,
@@ -436,7 +446,7 @@ class _LeafEditor extends StatelessWidget {
                     for (final t in leafTypes)
                       DropdownMenuItem(
                         value: t,
-                        child: Text(conditionTypeLabel(t)),
+                        child: Text(conditionTypeLabel(context.l10n, t)),
                       ),
                   ],
                   onChanged: (t) {
@@ -447,7 +457,7 @@ class _LeafEditor extends StatelessWidget {
                 ),
               ),
               FilterChip(
-                label: const Text('nicht'),
+                label: Text(context.l10n.routingCondNot),
                 selected: node.negated,
                 onSelected: (v) {
                   node.negated = v;
@@ -456,14 +466,14 @@ class _LeafEditor extends StatelessWidget {
               ),
               WIconButton(
                 icon: WIcons.close,
-                tooltip: 'Bedingung entfernen',
+                tooltip: context.l10n.condBuilderRemoveCondition,
                 shape: WIconButtonShape.round,
                 iconSize: WSize.iconSmall,
                 onPressed: onRemove,
               ),
             ],
           ),
-          ..._input(),
+          ..._input(context),
           if (error != null)
             Text(error, style: WText.detail.copyWith(color: WColors.warn)),
         ],
@@ -471,7 +481,7 @@ class _LeafEditor extends StatelessWidget {
     );
   }
 
-  Widget _networkChips() => Wrap(
+  Widget _networkChips(BuildContext context) => Wrap(
     spacing: WSpace.s,
     children: [
       for (final s in NetworkState.values)
@@ -479,7 +489,7 @@ class _LeafEditor extends StatelessWidget {
           label: Text(switch (s) {
             NetworkState.offline => 'offline',
             NetworkState.online => 'online',
-            NetworkState.metered => 'mobile Daten',
+            NetworkState.metered => context.l10n.condBuilderMetered,
           }),
           selected: node.network == s,
           onSelected: (_) {
@@ -490,14 +500,14 @@ class _LeafEditor extends StatelessWidget {
     ],
   );
 
-  List<Widget> _timeWindow() => [
+  List<Widget> _timeWindow(BuildContext context) => [
     Wrap(
       spacing: WSpace.xs,
       runSpacing: WSpace.xs,
       children: [
         for (var d = DateTime.monday; d <= DateTime.sunday; d++)
           FilterChip(
-            label: Text(weekdayLabels[d - 1]),
+            label: Text(weekdayLabels(context.l10n)[d - 1]),
             selected: node.days.contains(d),
             onSelected: (on) {
               on ? node.days.add(d) : node.days.remove(d);
@@ -513,7 +523,9 @@ class _LeafEditor extends StatelessWidget {
           child: TextFormField(
             key: ValueKey('${node.key}-start'),
             initialValue: node.start,
-            decoration: const InputDecoration(labelText: 'von (HH:MM)'),
+            decoration: InputDecoration(
+              labelText: context.l10n.condBuilderFrom,
+            ),
             onChanged: (v) {
               node.start = v;
               onChanged();
@@ -524,7 +536,7 @@ class _LeafEditor extends StatelessWidget {
           child: TextFormField(
             key: ValueKey('${node.key}-end'),
             initialValue: node.end,
-            decoration: const InputDecoration(labelText: 'bis (HH:MM)'),
+            decoration: InputDecoration(labelText: context.l10n.condBuilderTo),
             onChanged: (v) {
               node.end = v;
               onChanged();
@@ -535,7 +547,7 @@ class _LeafEditor extends StatelessWidget {
     ),
   ];
 
-  List<Widget> _input() {
+  List<Widget> _input(BuildContext context) {
     Widget field(String label, {String? hint, TextInputType? keyboard}) =>
         TextFormField(
           key: ValueKey('${node.key}-${node.type}'),
@@ -550,26 +562,43 @@ class _LeafEditor extends StatelessWidget {
         );
     return switch (node.type) {
       'keyword' || 'privacy' => [
-        field('Wörter, durch Komma getrennt', hint: 'privat, vertraulich'),
+        field(
+          context.l10n.condBuilderWords,
+          hint: context.l10n.condBuilderWordsHint,
+        ),
       ],
       'prefix' => [
-        field('Wörter am Satzanfang, durch Komma getrennt', hint: 'Claude'),
+        field(
+          context.l10n.condBuilderSentenceStart,
+          hint: context.l10n.condBuilderSentenceStartHint,
+        ),
       ],
-      'regex' => [field('Muster (auf normalisiertem Text)', hint: r'\bdenk\b')],
-      'language' => [field('Sprachen', hint: 'de, fr')],
+      'regex' => [field(context.l10n.condBuilderPattern, hint: r'\bdenk\b')],
+      'language' => [
+        field(
+          context.l10n.condBuilderLanguages,
+          hint: context.l10n.condBuilderLanguagesHint,
+        ),
+      ],
       'sttConfidence' => [
         field(
-          'Sicherheit unter',
+          context.l10n.condBuilderConfidenceBelow,
           hint: '0.6',
           keyboard: const TextInputType.numberWithOptions(decimal: true),
         ),
       ],
       'inputLength' => [
-        field('Mehr Zeichen als', hint: '280', keyboard: TextInputType.number),
+        field(
+          context.l10n.condBuilderMoreChars,
+          hint: '280',
+          keyboard: TextInputType.number,
+        ),
       ],
-      'needsTool' => [field('Kategorie', hint: 'obsidian.edit')],
-      'network' => [_networkChips()],
-      'timeWindow' => _timeWindow(),
+      'needsTool' => [
+        field(context.l10n.condBuilderCategory, hint: 'obsidian.edit'),
+      ],
+      'network' => [_networkChips(context)],
+      'timeWindow' => _timeWindow(context),
       _ => const [],
     };
   }

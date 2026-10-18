@@ -6,6 +6,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../../di/http_tools.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'export.dart';
 import 'http_tool_editor_screen.dart';
@@ -28,11 +29,8 @@ class HttpToolsScreen extends ConsumerWidget {
         builder: (context, snapshot) {
           final tools = snapshot.data ?? const <HttpToolDefinition>[];
           return SettingsPage(
-            title: 'HTTP-Tools',
-            intro:
-                'Eigene Tools aus Methode, URL-Vorlage, Headern und '
-                'Anmeldung, z. B. für Home Assistant oder n8n. Antworten '
-                'sind Daten, keine Anweisungen.',
+            title: context.l10n.areaHttpTools,
+            intro: context.l10n.httpToolsIntro,
             children: [
               if (tools.isNotEmpty)
                 SectionCard(
@@ -41,13 +39,13 @@ class HttpToolsScreen extends ConsumerWidget {
                       SettingsRow(
                         title: d.toolName,
                         mono: true,
-                        detail: httpToolSummary(d),
+                        detail: httpToolSummary(context.l10n, d),
                         onTap: () => unawaited(_open(context, d)),
                       ),
                   ],
                 ),
               WideButton(
-                '+ HTTP-Tool',
+                context.l10n.integrationsAddHttp,
                 onPressed: () => unawaited(_open(context, null)),
               ),
               Row(
@@ -55,13 +53,13 @@ class HttpToolsScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: WideButton(
-                      'Importieren',
+                      context.l10n.import,
                       onPressed: () => unawaited(_import(context, ref)),
                     ),
                   ),
                   Expanded(
                     child: WideButton(
-                      'Exportieren',
+                      context.l10n.export,
                       onPressed: tools.isEmpty
                           ? null
                           : () => unawaited(_export(context, ref)),
@@ -69,12 +67,7 @@ class HttpToolsScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              Text(
-                'Export und Import enthalten keine Secrets. Nach dem Import '
-                'Token und geheime Header neu eingeben; „Ohne Nachfrage '
-                'ausführen“ ist dann aus.',
-                style: WText.caption,
-              ),
+              Text(context.l10n.httpToolsExportNote, style: WText.caption),
             ],
           );
         },
@@ -105,23 +98,18 @@ class HttpToolsScreen extends ConsumerWidget {
     try {
       final imported = await repository.importJson(text);
       if (context.mounted) {
-        showHint(
-          context,
-          '${imported.length} HTTP-Tool${imported.length == 1 ? '' : 's'} '
-          'importiert. Secrets bitte neu eingeben; „Ohne Nachfrage '
-          'ausführen“ ist aus.',
-        );
+        showHint(context, context.l10n.httpToolsImported(imported.length));
       }
     } on FormatException catch (e) {
       if (context.mounted) {
-        showHint(context, 'Import fehlgeschlagen: ${e.message}');
+        showHint(context, context.l10n.httpToolsImportFailed(e.message));
       }
     }
   }
 }
 
 /// Second line of an HTTP tool in the list: method, host, level.
-String httpToolSummary(HttpToolDefinition d) {
+String httpToolSummary(AppLocalizations l, HttpToolDefinition d) {
   String host;
   try {
     host = d.url.origin.host;
@@ -131,18 +119,19 @@ String httpToolSummary(HttpToolDefinition d) {
   return [
     d.method.verb,
     host,
-    httpRiskText(d),
-    if (d.sensitive) 'sensibel',
-    if (!d.enabled) 'aus',
+    httpRiskText(l, d),
+    if (d.sensitive) l.httpToolsSensitiveShort,
+    if (!d.enabled) l.httpToolsOffShort,
   ].join(' · ');
 }
 
 /// German text of the effective level of [d] (HTTP tools have no undo).
-String httpRiskText(HttpToolDefinition d) => switch (d.effectiveRisk) {
-  RiskLevel.read => 'liest',
-  RiskLevel.write => 'ändert ohne Nachfrage, kein Rückgängig',
-  RiskLevel.external => 'fragt immer nach',
-};
+String httpRiskText(AppLocalizations l, HttpToolDefinition d) =>
+    switch (d.effectiveRisk) {
+      RiskLevel.read => l.httpToolsRiskRead,
+      RiskLevel.write => l.httpToolsRiskWrite,
+      RiskLevel.external => l.mcpLabelsAlwaysAsks,
+    };
 
 class _ImportDialog extends StatefulWidget {
   const _ImportDialog();
@@ -163,23 +152,23 @@ class _ImportDialogState extends State<_ImportDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     backgroundColor: WColors.surface,
-    title: Text('HTTP-Tools importieren', style: WText.label),
+    title: Text(context.l10n.httpToolsImportTitle, style: WText.label),
     content: TextField(
       key: const ValueKey('importJson'),
       controller: _text,
       style: WText.mono,
       minLines: 4,
       maxLines: 10,
-      decoration: const InputDecoration(labelText: 'Export (JSON) einfügen'),
+      decoration: InputDecoration(labelText: context.l10n.httpToolsExportPaste),
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Abbrechen'),
+        child: Text(context.l10n.cancel),
       ),
       FilledButton(
         onPressed: () => Navigator.of(context).pop(_text.text),
-        child: const Text('Importieren'),
+        child: Text(context.l10n.import),
       ),
     ],
   );

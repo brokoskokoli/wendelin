@@ -5,6 +5,7 @@ import 'package:wendelin_providers/wendelin_providers.dart'
     show StageOutcome, StageResult;
 
 import '../../../di/tee_restrictions.dart';
+import '../../../l10n/l10n.dart';
 import '../../attestation/attestation_texts.dart';
 import '../../attestation/stage_line.dart';
 import '../../design/design.dart';
@@ -30,31 +31,36 @@ class AttestationStagesCard extends StatelessWidget {
         // A restriction of the provider (info, e.g. no GPU evidence, WP82)
         // is no failure.
         if (s.outcome != StageOutcome.pass && s.outcome != StageOutcome.info)
-          stageLabel(s.stage.id),
+          stageLabel(context.l10n, s.stage.id),
     ];
     final failed = failedStages.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.s,
       children: [
-        Text('Erste Attestierung', style: WText.sectionLabel),
+        Text(context.l10n.attStagesCardFirst, style: WText.sectionLabel),
         SectionCard(
           children: [
             SettingsRow(
               key: const ValueKey('attestationSummary'),
               title: failed == 0
-                  ? 'Alle ${stages.length} Stufen bestanden'
-                  : '$failed von ${stages.length} Stufen nicht bestanden: '
-                        '${failedStages.join(', ')}',
+                  ? context.l10n.attStagesCardAllPassed(stages.length)
+                  : context.l10n.attStagesCardSomePassed(
+                      failed,
+                      stages.length,
+                      failedStages.join(', '),
+                    ),
               trailing: CheckStatusIcon(
                 failed == 0 ? CheckStatus.ok : CheckStatus.failed,
-                semanticLabel: failed == 0 ? 'bestanden' : 'nicht bestanden',
+                semanticLabel: failed == 0
+                    ? context.l10n.stageResultPass
+                    : context.l10n.attStagesCardNotPassed,
               ),
             ),
           ],
         ),
         WideButton(
-          'Details',
+          context.l10n.details,
           onPressed: () => unawaited(
             Navigator.of(context).push<void>(
               MaterialPageRoute(
@@ -65,7 +71,7 @@ class AttestationStagesCard extends StatelessWidget {
           ),
         ),
         WideButton(
-          'Prüfprotokoll ansehen',
+          context.l10n.attStagesCardViewLog,
           onPressed: () => unawaited(
             Navigator.of(context).push<void>(
               MaterialPageRoute(
@@ -89,14 +95,14 @@ class AttestationStagesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SettingsPage(
-    title: 'Prüfprotokoll',
+    title: context.l10n.attLogTitle,
     children: [
       SectionCard(
         children: [
           for (final s in stages)
             StageLine(
-              label: stageLabel(s.stage.id),
-              result: stageResultLabel(s.outcome.name),
+              label: stageLabel(context.l10n, s.stage.id),
+              result: stageResultLabel(context.l10n, s.outcome.name),
               detail: s.outcome == StageOutcome.pass ? null : s.detail,
               status: stageResultStatus(s.outcome.name),
             ),

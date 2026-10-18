@@ -7,8 +7,8 @@ import 'package:wendelin/di/integrations/registry.dart';
 import 'package:wendelin/di/preference_models.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
-import 'package:wendelin/ui/overlay/overlay_sheet.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
@@ -113,7 +113,7 @@ void main() {
     tester,
   ) async {
     await run(tester, 'Was steht morgen im Kalender?');
-    expect(find.text(OverlaySheet.lockedTitle), findsOneWidget);
+    expect(find.text(AppLocalizationsDe().overlayLockedTitle), findsOneWidget);
     expect(find.textContaining('Tauchen'), findsNothing);
     expect(find.textContaining('Kalender'), findsNothing);
     expect(find.byType(ToolResultCard), findsNothing);

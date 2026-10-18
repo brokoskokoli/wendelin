@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_reducer.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/l10n/gen/app_localizations_en.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
@@ -107,7 +109,7 @@ void main() {
       const AgentSpokenVerdict(accepted: false, reason: 'anders'),
     );
     final notice = after.entries.last as NoticeEntry;
-    expect(notice.text, spokenFallbackNotice);
+    expect(notice.text, AppLocalizationsDe().reducerSpokenFallback);
     expect(notice.text, isNot(contains('anders')));
   });
 
@@ -165,9 +167,7 @@ void main() {
     ]);
     final n = s.entries.whereType<NoticeEntry>().single;
     expect(n.kind, NoticeKind.warning);
-    expect(n.text, contains('Claude Sonnet'));
-    expect(n.text, contains('4,10 \$'));
-    expect(n.text, contains('5,00 \$'));
+    expect(n.text, 'Budget von Claude Sonnet: 4,10 \$ von 5,00 \$ verbraucht.');
     expect(s.running, isTrue);
   });
 
@@ -384,6 +384,28 @@ void main() {
       expect(n.kind, NoticeKind.error);
       expect(n.text, 'Zu langsam');
       expect(s.running, isFalse);
+    });
+
+    test('GPU ohne Nachweis: Hinweis in der UI-Sprache (en)', () {
+      final en = ConversationReducer(
+        nameOf: _name,
+        texts: AppLocalizationsEn.new,
+      );
+      final s = en.apply(
+        ConversationState.empty,
+        const AgentFailed(
+          error: AgentErrorKind.internal,
+          message: gpuNoEvidenceSpoken,
+        ),
+      );
+      expect(
+        s.entries.whereType<NoticeEntry>().single.text,
+        AppLocalizationsEn().agentNoticeGpuNoEvidence,
+      );
+      expect(
+        s.entries.whereType<NoticeEntry>().single.text,
+        startsWith('This model provides no GPU evidence'),
+      );
     });
 
     test('Abbruch ist ein neutraler Hinweis', () {

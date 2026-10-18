@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/preference_models.dart';
 import '../../di/preferences.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
 
@@ -57,10 +58,10 @@ class _WebSearchState extends ConsumerState<WebSearchScreen> {
       await notifier.set(null);
     } else if (kind == WebSearchKind.searxng &&
         !(Uri.tryParse(_url.text.trim())?.hasScheme ?? false)) {
-      setState(() => _error = 'Bitte die Adresse der Instanz angeben.');
+      setState(() => _error = context.l10n.webSearchAddressMissing);
       return;
     } else if (kind.needsKey && !_hasKey && _key.text.trim().isEmpty) {
-      setState(() => _error = 'Bitte den API-Key eingeben.');
+      setState(() => _error = context.l10n.webSearchKeyMissing);
       return;
     } else {
       await notifier.set(
@@ -81,16 +82,15 @@ class _WebSearchState extends ConsumerState<WebSearchScreen> {
   Widget build(BuildContext context) {
     final kind = _kind;
     return SettingsPage(
-      title: 'Web-Suche',
-      intro:
-          'Ohne Suchdienst kann Wendelin nur Seiten lesen, deren Adresse du '
-          'nennst.',
+      title: context.l10n.webSearchTitle,
+      intro: context.l10n.webSearchIntro,
       children: [
         SectionCard(
           children: [
             for (final (k, label) in <(WebSearchKind?, String)>[
-              (null, 'Kein Suchdienst'),
-              for (final k in WebSearchKind.values) (k, k.label),
+              (null, context.l10n.webSearchNone),
+              for (final k in WebSearchKind.values)
+                (k, k.labelOf(context.l10n)),
             ])
               SettingsRow(
                 title: label,
@@ -102,9 +102,9 @@ class _WebSearchState extends ConsumerState<WebSearchScreen> {
                   unawaited(_checkKey());
                 },
                 trailing: _kind == k
-                    ? const CheckStatusIcon(
+                    ? CheckStatusIcon(
                         CheckStatus.ok,
-                        semanticLabel: 'gewählt',
+                        semanticLabel: context.l10n.selected,
                       )
                     : null,
               ),
@@ -115,8 +115,8 @@ class _WebSearchState extends ConsumerState<WebSearchScreen> {
             controller: _url,
             style: WText.body,
             keyboardType: TextInputType.url,
-            decoration: const InputDecoration(
-              labelText: 'Adresse, z. B. https://search.example.org',
+            decoration: InputDecoration(
+              labelText: context.l10n.webSearchAddress,
             ),
           ),
         if (kind != null && kind.needsKey)
@@ -124,14 +124,12 @@ class _WebSearchState extends ConsumerState<WebSearchScreen> {
             child: SecretField(
               key: const ValueKey('searchKey'),
               controller: _key,
-              label: 'API-Key',
-              helperText: _hasKey
-                  ? 'Key gespeichert – leer lassen behält ihn'
-                  : null,
+              label: context.l10n.webSearchApiKey,
+              helperText: _hasKey ? context.l10n.webSearchKeySaved : null,
             ),
           ),
         if (_error != null) Text(_error!, style: WText.caption),
-        PrimaryButton('Speichern', onPressed: () => unawaited(_save())),
+        PrimaryButton(context.l10n.save, onPressed: () => unawaited(_save())),
       ],
     );
   }

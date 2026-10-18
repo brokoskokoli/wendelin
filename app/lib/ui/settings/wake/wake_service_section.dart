@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../di/wake_providers.dart';
 import '../../../di/wake_service.dart';
 import '../../../di/wake_settings.dart';
+import '../../../l10n/l10n.dart';
 import '../../../platform/assistant_platform.dart';
 import '../../../platform/wake/wake_platform.dart';
 import '../../design/design.dart';
@@ -49,28 +50,31 @@ String _clock(DateTime t) =>
     '${t.minute.toString().padLeft(2, '0')}';
 
 /// Text of the status row.
-String wakeStatusText(WakeServiceSettings settings, WakeServiceStatus status) =>
-    switch (wakeStateKind(settings, status)) {
-      WakeStateKind.off => 'Aus',
-      WakeStateKind.running => 'Läuft',
-      WakeStateKind.paused =>
-        status.pausedUntil != null
-            ? 'Pausiert bis ${_clock(status.pausedUntil!)}'
-            : 'Pausiert: wartet auf das Laden',
-      WakeStateKind.killed => wakeStopText(status.lastStop),
-    };
+String wakeStatusText(
+  AppLocalizations l,
+  WakeServiceSettings settings,
+  WakeServiceStatus status,
+) => switch (wakeStateKind(settings, status)) {
+  WakeStateKind.off => l.off,
+  WakeStateKind.running => l.wakeServiceSectionRunning,
+  WakeStateKind.paused =>
+    status.pausedUntil != null
+        ? l.wakeServiceSectionPausedUntil(_clock(status.pausedUntil!))
+        : l.wakeServiceSectionPausedLoading,
+  WakeStateKind.killed => wakeStopText(l, status.lastStop),
+};
 
 /// Plain German for the log code of the last stop (the status row when the
 /// switch is on but the service does not run).
-String wakeStopText(String? reason) => switch (reason) {
-  'timeout' => 'Vom System beendet (Zeitlimit von Android)',
-  'no-role' => 'Beendet: Wendelin ist nicht mehr dein Assistent',
-  'no-permission' => 'Beendet: Mikrofon-Berechtigung fehlt',
-  'engine-failed' => 'Beendet: Die Erkennung ist ausgefallen',
-  'not-charging' || 'unplug' => 'Beendet: Das Gerät lädt nicht mehr',
-  'paused' => 'Beendet: pausiert',
-  'user-off' || 'disabled' => 'Aus',
-  _ => 'Vom System beendet',
+String wakeStopText(AppLocalizations l, String? reason) => switch (reason) {
+  'timeout' => l.wakeServiceSectionEndedTimeout,
+  'no-role' => l.wakeServiceSectionEndedNoRole,
+  'no-permission' => l.wakeServiceSectionEndedNoPermission,
+  'engine-failed' => l.wakeServiceSectionEndedEngine,
+  'not-charging' || 'unplug' => l.wakeServiceSectionEndedNotCharging,
+  'paused' => l.wakeServiceSectionEndedPaused,
+  'user-off' || 'disabled' => l.off,
+  _ => l.wakeServiceSectionEndedSystem,
 };
 
 /// Settings → Aktivierungswort, top part (WP50 b): switch (locked without
@@ -124,7 +128,7 @@ class _State extends ConsumerState<WakeServiceSection> {
         .read(assistantPlatformProvider)
         .openAssistantSettings();
     if (!opened && mounted) {
-      showHint(context, 'Die Systemeinstellungen ließen sich nicht öffnen.');
+      showHint(context, context.l10n.wakeServiceSectionSettingsFail);
     }
   }
 
@@ -152,7 +156,7 @@ class _State extends ConsumerState<WakeServiceSection> {
     onTap: () =>
         unawaited(ref.read(wakeServiceProvider.notifier).setCondition(value)),
     trailing: settings.condition == value
-        ? const CheckStatusIcon(CheckStatus.ok, semanticLabel: 'gewählt')
+        ? CheckStatusIcon(CheckStatus.ok, semanticLabel: context.l10n.selected)
         : null,
   );
 
@@ -179,85 +183,81 @@ class _State extends ConsumerState<WakeServiceSection> {
       spacing: WSpace.l18,
       children: [
         SettingsSection(
-          title: 'Zuhören im Hintergrund',
+          title: context.l10n.wakeServiceSectionBackground,
           children: [
             SettingsRow(
               key: const ValueKey('wakeStatus'),
-              title: 'Status',
-              detail: wakeStatusText(settings, status),
+              title: context.l10n.wakeServiceSectionStatus,
+              detail: wakeStatusText(context.l10n, settings, status),
             ),
             SettingsRow(
               key: const ValueKey('wakeSwitch'),
-              title: 'Aktivierungswort einschalten',
-              detail: 'Wendelin hört im Hintergrund auf „Wendelin“.',
+              title: context.l10n.wakeServiceSectionEnable,
+              detail: context.l10n.wakeServiceSectionEnableDetail,
               trailing: WSwitch(
                 value: settings.enabled,
-                semanticLabel: 'Aktivierungswort einschalten',
+                semanticLabel: context.l10n.wakeServiceSectionEnable,
                 onChanged: locked ? null : (v) => unawaited(_toggle(on: v)),
               ),
             ),
             if (noRole) ...[
-              const SettingsRow(
+              SettingsRow(
                 key: ValueKey('wakeNeedRole'),
-                title: 'Wendelin ist nicht dein Assistent',
-                detail:
-                    'Android erlaubt das Zuhören im Hintergrund nur dem '
-                    'Standard-Assistenten. Wähle Wendelin als Assistenten.',
+                title: context.l10n.wakeServiceSectionNotAssistant,
+                detail: context.l10n.wakeServiceSectionNotAssistantBody,
               ),
-              _action('Assistenten wählen', () => unawaited(_chooseRole())),
+              _action(
+                context.l10n.wakeServiceSectionChooseAssistant,
+                () => unawaited(_chooseRole()),
+              ),
             ],
             if (noVoice) ...[
-              const SettingsRow(
+              SettingsRow(
                 key: ValueKey('wakeNeedVoice'),
-                title: 'Erst Stimme einlernen',
-                detail:
-                    'Ohne eingelernte Stimme erkennt Wendelin das '
-                    'Aktivierungswort nicht.',
+                title: context.l10n.wakeServiceSectionEnrollFirst,
+                detail: context.l10n.wakeServiceSectionEnrollFirstBody,
               ),
-              _action('Zum Einlernen', widget.onEnroll),
+              _action(context.l10n.wakeServiceSectionToEnroll, widget.onEnroll),
             ],
           ],
         ),
         SettingsSection(
-          title: 'Wann zuhören?',
+          title: context.l10n.wakeServiceSectionWhen,
           children: [
             _condition(
               settings,
               WakeCondition.charging,
-              'Nur beim Laden',
-              'Schont den Akku (Standard).',
+              context.l10n.wakeServiceSectionOnlyCharging,
+              context.l10n.wakeServiceSectionOnlyChargingHint,
             ),
             _condition(
               settings,
               WakeCondition.always,
-              'Immer',
-              'Kostet spürbar Akku.',
+              context.l10n.wakeServiceSectionAlways,
+              context.l10n.wakeServiceSectionAlwaysHint,
             ),
           ],
         ),
         SettingsSection(
-          title: 'Ton und Prüfung',
+          title: context.l10n.wakeServiceSectionSoundCheck,
           children: [
             SettingsRow(
-              title: 'Bestätigungston',
-              detail: 'Ein kurzer Ton, wenn Wendelin das Wort erkannt hat.',
+              title: context.l10n.wakeServiceSectionChime,
+              detail: context.l10n.wakeServiceSectionChimeDetail,
               trailing: WSwitch(
                 value: tone,
-                semanticLabel: 'Bestätigungston',
+                semanticLabel: context.l10n.wakeServiceSectionChime,
                 onChanged: (v) => unawaited(
                   ref.read(wakeToneProvider.notifier).set(enabled: v),
                 ),
               ),
             ),
             SettingsRow(
-              title: 'Nachprüfung mit Whisper',
-              detail:
-                  'Wendelin hört nur zu, wenn Whisper „Wendelin“ bestätigt. '
-                  'Schalte es aus, wenn es mit deiner Stimme zu streng ist; '
-                  'dann gibt es mehr Fehlauslösungen.',
+              title: context.l10n.wakeServiceSectionWhisper,
+              detail: context.l10n.wakeServiceSectionWhisperDetail,
               trailing: WSwitch(
                 value: verify,
-                semanticLabel: 'Nachprüfung mit Whisper',
+                semanticLabel: context.l10n.wakeServiceSectionWhisper,
                 onChanged: (v) => unawaited(
                   ref.read(wakeVerifyProvider.notifier).set(enabled: v),
                 ),

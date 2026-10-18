@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'assistant_overlay.dart' show OverlayPanel;
 
@@ -41,7 +42,7 @@ class OverlayFrame extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     button: true,
-                    label: 'Assistent schließen',
+                    label: context.l10n.overlayCloseAssistant,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: onClose,

@@ -8,6 +8,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import '../../di/attestation_log_view.dart';
 import '../../di/attestation_providers.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../attestation/attestation_texts.dart';
 import '../attestation/stage_line.dart';
 import '../design/design.dart';
@@ -17,14 +18,14 @@ import 'export.dart';
 import 'settings_page.dart';
 
 /// Short line of a log entry: time, result and receipt id.
-String recordSummary(AttestationRecord r, DateTime now) {
+String recordSummary(AppLocalizations l, AttestationRecord r, DateTime now) {
   final parts = [
-    sessionLabel(r.at, now),
+    sessionLabel(l, r.at, now),
     switch (r.status) {
-      AttestationStatus.green => 'geprüft',
-      AttestationStatus.yellow => 'ausstehend',
+      AttestationStatus.green => l.attSummaryGreen,
+      AttestationStatus.yellow => l.attSummaryYellow,
       AttestationStatus.red => 'fehlgeschlagen',
-      AttestationStatus.unconfirmed => 'nicht bestätigt',
+      AttestationStatus.unconfirmed => l.attUnconfirmed,
     },
     ?r.receiptId,
   ];
@@ -32,13 +33,18 @@ String recordSummary(AttestationRecord r, DateTime now) {
 }
 
 /// Title of a log entry: what was checked.
-String recordTitle(AttestationRecord r, String providerName) =>
-    switch (r.kind) {
-      AttestationRecordKind.session => 'Sitzung · $providerName',
-      AttestationRecordKind.receipt =>
-        '${r.model ?? 'Antwort'} · $providerName',
-      AttestationRecordKind.gpu => 'GPU · ${r.model ?? providerName}',
-    };
+String recordTitle(
+  AppLocalizations l,
+  AttestationRecord r,
+  String providerName,
+) => switch (r.kind) {
+  AttestationRecordKind.session => l.attLogScreenSessionTitle(providerName),
+  AttestationRecordKind.receipt => l.attLogScreenReceiptTitle(
+    r.model ?? l.attResponseWord,
+    providerName,
+  ),
+  AttestationRecordKind.gpu => l.attLogScreenGpuTitle(r.model ?? providerName),
+};
 
 /// Symbol of an entry's overall result.
 CheckStatus recordStatus(AttestationRecord r) => switch (r.status) {
@@ -62,13 +68,14 @@ class AttestationLogScreen extends ConsumerStatefulWidget {
 class _LogState extends ConsumerState<AttestationLogScreen> {
   AttestationStatus? _filter;
 
-  static String _filterLabel(AttestationStatus? s) => switch (s) {
-    null => 'Alle',
-    AttestationStatus.green => 'Geprüft',
-    AttestationStatus.yellow => 'Wird geprüft',
-    AttestationStatus.red => 'Fehlgeschlagen',
-    AttestationStatus.unconfirmed => 'Nicht bestätigt',
-  };
+  static String _filterLabel(AppLocalizations l, AttestationStatus? s) =>
+      switch (s) {
+        null => l.attLogScreenFilterAll,
+        AttestationStatus.green => l.attLogScreenFilterGreen,
+        AttestationStatus.yellow => l.attLogScreenFilterYellow,
+        AttestationStatus.red => l.attLogScreenFilterRed,
+        AttestationStatus.unconfirmed => l.attLogScreenFilterUnconfirmed,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -88,11 +95,8 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
     final sessions = latest.values.toList();
     final config = ref.watch(providerConfigProvider).value;
     return SettingsPage(
-      title: 'Prüfprotokoll',
-      intro:
-          'Wendelin prüft Anbieter mit geschützter Umgebung (TEE) und jede '
-          'Antwort. Hier steht, was geprüft wurde. Nie Inhalte, nur Ids, '
-          'Prüfsummen und Ergebnisse.',
+      title: context.l10n.attLogTitle,
+      intro: context.l10n.attLogScreenIntro,
       children: [
         for (final r in sessions)
           _SessionCard(
@@ -104,7 +108,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             onReattest: () => unawaited(_reattest(r.profileId)),
           ),
         WideButton(
-          'Als JSON exportieren',
+          context.l10n.attLogScreenExportJson,
           onPressed: () async => ref.read(exporterProvider)(
             'wendelin-tee-pruefprotokoll.json',
             'application/json',
@@ -120,14 +124,14 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
               ...AttestationStatus.values,
             ])
               ChoiceChip(
-                label: Text(_filterLabel(s)),
+                label: Text(_filterLabel(context.l10n, s)),
                 selected: _filter == s,
                 onSelected: (_) => setState(() => _filter = s),
               ),
           ],
         ),
         if (shown.isEmpty)
-          Text('Keine Einträge.', style: WText.caption)
+          Text(context.l10n.attLogScreenNoEntries, style: WText.caption)
         else
           SectionCard(
             children: [
@@ -135,10 +139,11 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
                 AttestationLogRow(
                   key: ValueKey(r.logId),
                   title: recordTitle(
+                    context.l10n,
                     r,
                     config?.nameOf(r.profileId) ?? r.profileId,
                   ),
-                  detail: recordSummary(r, now),
+                  detail: recordSummary(context.l10n, r, now),
                   status: recordStatus(r),
                   onTap: () => unawaited(
                     Navigator.of(context).push<void>(
@@ -152,7 +157,7 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
             ],
           ),
         WideButton(
-          'Prüfprotokoll löschen',
+          context.l10n.attLogScreenDeleteLog,
           onPressed: () => unawaited(_delete()),
         ),
       ],
@@ -167,24 +172,22 @@ class _LogState extends ConsumerState<AttestationLogScreen> {
     showHint(
       context,
       report?.status == AttestationStatus.green
-          ? 'Neu attestiert, eine Sperre ist aufgehoben.'
-          : 'Die neue Prüfung ist nicht bestanden.',
+          ? context.l10n.attLogScreenRechecked
+          : context.l10n.attLogRecheckFailed,
     );
   }
 
   Future<void> _delete() async {
     final ok = await confirm(
       context,
-      title: 'Prüfprotokoll löschen?',
-      message:
-          'Alle Einträge des Prüfprotokolls werden gelöscht. Das lässt sich '
-          'nicht rückgängig machen.',
-      yes: 'Löschen',
+      title: context.l10n.attLogScreenDeleteTitle,
+      message: context.l10n.attLogScreenDeleteBody,
+      yes: context.l10n.delete,
     );
     if (!ok) return;
     await ref.read(storageProvider).attestations.deleteAll();
     ref.invalidate(attestationRecordsProvider);
-    if (mounted) showHint(context, 'Gelöscht.');
+    if (mounted) showHint(context, context.l10n.attLogScreenDeleted);
   }
 }
 
@@ -215,10 +218,11 @@ class _SessionCard extends StatelessWidget {
     final label = locked
         ? 'gesperrt'
         : switch (record.status) {
-            AttestationStatus.green => 'Sitzung geprüft',
-            AttestationStatus.yellow => 'Sitzung nicht prüfbar',
-            AttestationStatus.red => 'Sitzung fehlgeschlagen',
-            AttestationStatus.unconfirmed => 'Sitzung nicht bestätigt',
+            AttestationStatus.green => context.l10n.attLogScreenSessionGreen,
+            AttestationStatus.yellow => context.l10n.attLogScreenSessionYellow,
+            AttestationStatus.red => context.l10n.attLogScreenSessionRed,
+            AttestationStatus.unconfirmed =>
+              context.l10n.attLogScreenSessionUnconfirmed,
           };
     final color = locked ? CheckStatus.failed.color : status.color;
     return SectionCard(
@@ -239,8 +243,9 @@ class _SessionCard extends StatelessWidget {
               Text(
                 [
                   ?record.workloadKeysetDigest,
-                  if (record.repoCommit != null) 'Commit ${record.repoCommit}',
-                  sessionLabel(record.at, now),
+                  if (record.repoCommit != null)
+                    context.l10n.attLogScreenCommitLine(record.repoCommit!),
+                  sessionLabel(context.l10n, record.at, now),
                 ].join('\n'),
                 style: WText.mono.copyWith(color: WColors.textMuted),
               ),
@@ -257,14 +262,17 @@ class _SessionCard extends StatelessWidget {
                           stageResultStatus(st.result),
                           size: WSize.statusIconSmall,
                         ),
-                        Text(stageLabel(st.stage), style: WText.caption),
+                        Text(
+                          stageLabel(context.l10n, st.stage),
+                          style: WText.caption,
+                        ),
                       ],
                     ),
                 ],
               ),
               ToolTlsHint(encrypted: toolsEncrypted),
               PrimaryButton(
-                'Neu attestieren',
+                context.l10n.attLogScreenRecheckAttest,
                 key: ValueKey('reattest-${record.profileId}'),
                 onPressed: onReattest,
               ),
@@ -324,17 +332,17 @@ class AttestationLogRow extends StatelessWidget {
 }
 
 /// The stage rows of a record, shared by the detail page and tests.
-List<Widget> stageRows(AttestationRecord r) => [
+List<Widget> stageRows(AppLocalizations l, AttestationRecord r) => [
   for (final s in r.stages)
     StageLine(
-      label: stageLabel(s.stage),
-      result: stageResultLabel(s.result),
-      detail: _stageDetail(s),
+      label: stageLabel(l, s.stage),
+      result: stageResultLabel(l, s.result),
+      detail: _stageDetail(l, s),
       status: stageResultStatus(s.result),
     ),
 ];
 
-String? _stageDetail(StageRecord s) {
-  final parts = [?s.detail, ?stageExplanation(s.stage)];
+String? _stageDetail(AppLocalizations l, StageRecord s) {
+  final parts = [?s.detail, ?stageExplanation(l, s.stage)];
   return parts.isEmpty ? null : parts.join('\n');
 }

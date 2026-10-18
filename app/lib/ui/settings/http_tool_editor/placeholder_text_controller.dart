@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 
 /// Text field that highlights `{placeholder}`s: known arguments in the
@@ -34,7 +35,7 @@ class PlaceholderTextController extends TextEditingController {
             color: ok ? WColors.accentLight : WColors.error,
             fontWeight: FontWeight.w600,
           ),
-          semanticsLabel: ok ? null : '${m[0]} unbekannt',
+          semanticsLabel: ok ? null : context.l10n.httpPhUnknown(m[0]!),
         ),
       );
       last = m.end;

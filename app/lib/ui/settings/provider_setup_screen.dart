@@ -12,6 +12,7 @@ import '../../di/profiles.dart';
 import '../../di/provider_setup.dart';
 import '../../di/providers.dart';
 import '../../di/tee_restrictions.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'provider_setup/attestation_stages_card.dart';
 import 'provider_setup/credentials_step.dart';
@@ -155,11 +156,12 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   /// Step 1: store the key, connect and load the models.
   Future<void> _connect() async {
     final session = _session!;
+    final l = context.l10n;
     setState(() => _busy = true);
     await _loadCheckModule();
     await session.storeKey(_key.text);
     _key.clear();
-    final result = await session.loadModels(baseUrl: _baseUrl.text);
+    final result = await session.loadModels(l, baseUrl: _baseUrl.text);
     if (!mounted) return;
     setState(() {
       _busy = false;
@@ -217,7 +219,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     final session = _session!;
     final int? budget;
     try {
-      budget = parseBudgetMicros(_budget.text);
+      budget = parseBudgetMicros(context.l10n, _budget.text);
     } on FormatException catch (e) {
       setState(() => _budgetError = e.message);
       return;
@@ -258,14 +260,15 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
 
   @override
   Widget build(BuildContext context) => SettingsPage(
-    title: _editing ? 'Provider bearbeiten' : 'Provider einrichten',
+    title: _editing
+        ? context.l10n.providerSetupEditTitle
+        : context.l10n.mainSetUpProvider,
     showBack: widget.showBack,
     intro: switch (_step) {
-      _Step.template => 'Wähle, mit wem Wendelin sprechen soll.',
-      _Step.credentials =>
-        'Der Key wird nur im sicheren Speicher des Geräts abgelegt.',
-      _Step.model => 'Wähle das Standardmodell.',
-      _Step.finish => 'Datenschutzstufe und optional ein Monatsbudget.',
+      _Step.template => context.l10n.providerSetupIntroTemplate,
+      _Step.credentials => context.l10n.providerSetupIntroCredentials,
+      _Step.model => context.l10n.providerSetupIntroModel,
+      _Step.finish => context.l10n.providerSetupIntroFinish,
     },
     children: switch (_step) {
       _Step.template => templateStep(onChoose: _choose),
@@ -293,24 +296,26 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   }
 
   List<Widget> _credentials() => credentialsStep(
+    l: context.l10n,
     session: _session!,
     name: _name,
     baseUrl: _baseUrl,
     apiKey: _key,
     busy: _busy,
     editing: _editing,
-    failure: _failure('Verbindung fehlgeschlagen'),
+    failure: _failure(context.l10n.providerSetupConnectionFailed),
     onConnect: () => unawaited(_connect()),
     onOtherTemplate: () => setState(() => _step = _Step.template),
     onOpenUrl: (url) => unawaited(_openUrl(url)),
   );
 
   List<Widget> _modelStep() => modelStep(
+    l: context.l10n,
     connection: _connection,
     models: _models,
     model: _model,
     noGpuEvidence: _noGpu,
-    failure: _failure('Modell nicht nutzbar'),
+    failure: _failure(context.l10n.providerSetupModelUnusable),
     busy: _busy,
     onChanged: () => setState(() {}),
     onPick: (id) => setState(() => _model.text = id),
@@ -318,6 +323,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
   );
 
   List<Widget> _finish() => finishStep(
+    l: context.l10n,
     result: _result,
     detected: _detected,
     privacy: _privacy,
@@ -360,17 +366,15 @@ class ConnectionStatus extends StatelessWidget {
         ? StatusCard(
             key: const ValueKey('connectionStatus'),
             status: CheckStatus.ok,
-            title: 'Verbindung steht',
+            title: context.l10n.providerSetupConnected,
             detail: n == 0
-                ? 'Keine Modellliste. Bitte die Modell-ID eingeben.'
-                : n == 1
-                ? '1 Modell gefunden'
-                : '$n Modelle gefunden',
+                ? context.l10n.providerSetupNoModelList
+                : context.l10n.providerSetupModelsFound(n),
           )
         : StatusCard(
             key: const ValueKey('connectionStatus'),
             status: CheckStatus.pending,
-            title: 'Modellliste nicht verfügbar',
+            title: context.l10n.providerSetupModelListUnavailable,
             detail: result.message,
           );
   }

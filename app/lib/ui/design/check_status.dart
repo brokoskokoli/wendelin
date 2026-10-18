@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 
 /// Prüfstatus (Quittung, Attestierung, Tool-Lauf). Immer Farbe + Form.
@@ -30,13 +31,13 @@ enum CheckStatus {
     info => WColors.textMuted,
   };
 
-  /// Deutsches Semantics-Label.
-  String get label => switch (this) {
-    ok => 'geprüft',
-    pending => 'ausstehend',
-    failed => 'fehlgeschlagen',
-    neutral => 'nicht bestätigt',
-    info => 'nur protokolliert',
+  /// Semantics-Label in der UI-Sprache.
+  String labelOf(AppLocalizations l) => switch (this) {
+    ok => l.checkStatusOk,
+    pending => l.checkStatusPending,
+    failed => l.checkStatusFailed,
+    neutral => l.checkStatusNeutral,
+    info => l.checkStatusInfo,
   };
 }
 
@@ -74,13 +75,13 @@ class CheckStatusIcon extends StatelessWidget {
   /// Kantenlänge.
   final double size;
 
-  /// Überschreibt das Semantics-Label (Standard: [CheckStatus.label]).
+  /// Überschreibt das Semantics-Label (Standard: [CheckStatus.labelOf]).
   final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: semanticLabel ?? status.label,
+      label: semanticLabel ?? status.labelOf(context.l10n),
       image: true,
       child: CustomPaint(
         size: Size.square(size),

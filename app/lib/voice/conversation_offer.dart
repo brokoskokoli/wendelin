@@ -3,14 +3,6 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../di/voice_settings_providers.dart';
 
-/// Question text of the one-time offer (K23 d, M4 decision 2).
-const conversationOfferQuestion =
-    'Soll ich nach meinen Antworten standardmäßig weiter zuhören?';
-
-/// Note below the question.
-const conversationOfferHint =
-    'Das lässt sich jederzeit unter Einstellungen → Sprache ändern.';
-
 /// Whether the one-time question „Weiter zuhören?“ is shown now.
 final conversationOfferProvider = NotifierProvider<ConversationOffer, bool>(
   ConversationOffer.new,

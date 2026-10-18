@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/tee_restrictions.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/attestation/attestation_texts.dart';
 import 'package:wendelin/ui/attestation/stage_line.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -193,6 +194,7 @@ void main() {
           AttestationReason.receiptMissing,
         ])
           code: attestationMessage(
+            AppLocalizationsDe(),
             AttestationStatus.unconfirmed,
             reasonCode: code,
           ),
@@ -222,6 +224,7 @@ void main() {
         contains('Netz- oder Serverfehler'),
       );
       final rejected = attestationMessage(
+        AppLocalizationsDe(),
         AttestationStatus.red,
         reasonCode: AttestationReason.receiptRejected,
       );
@@ -240,20 +243,31 @@ void main() {
         AttestationReason.receiptRejected,
         null,
       ]) {
-        final m = attestationMessage(AttestationStatus.red, reasonCode: code);
+        final m = attestationMessage(
+          AppLocalizationsDe(),
+          AttestationStatus.red,
+          reasonCode: code,
+        );
         expect(m.status, CheckStatus.failed);
         expect(m.title, isNotEmpty);
         expect(m.text, isNotEmpty);
       }
-      expect(attestationMessage(AttestationStatus.green).title, isNull);
       expect(
-        attestationMessage(AttestationStatus.yellow).status,
+        attestationMessage(AppLocalizationsDe(), AttestationStatus.green).title,
+        isNull,
+      );
+      expect(
+        attestationMessage(
+          AppLocalizationsDe(),
+          AttestationStatus.yellow,
+        ).status,
         CheckStatus.pending,
       );
     });
 
     test('GPU-Fehler nennt den Grund (WP77)', () {
       final m = attestationMessage(
+        AppLocalizationsDe(),
         AttestationStatus.red,
         reasonCode: AttestationReason.gpuFailed,
         detail: 'GPU-Prüfung: NRAS lehnt die Evidenz ab (HTTP 400, INVALID_EVIDENCE)',
@@ -261,24 +275,26 @@ void main() {
       expect(m.text, contains('Grund: NRAS lehnt die Evidenz ab'));
       expect(m.text, contains('INVALID_EVIDENCE'));
       final none = attestationMessage(
+        AppLocalizationsDe(),
         AttestationStatus.red,
         reasonCode: AttestationReason.gpuUnavailable,
       );
       expect(none.text, isNot(contains('Grund')));
       expect(
         gpuBlockReason(
+          AppLocalizationsDe(),
           'GPU-Prüfung nicht bestanden (Zeitüberschreitung [timeout]); '
           'Anfrage nicht gesendet',
         ),
         ' Grund: Zeitüberschreitung.',
       );
-      expect(gpuBlockReason('anderer Text'), isEmpty);
+      expect(gpuBlockReason(AppLocalizationsDe(), 'anderer Text'), isEmpty);
     });
 
     test('Stufen und Ergebnisse haben deutsche Namen', () {
-      expect(stageLabel('quote'), 'TDX-Quote (DCAP)');
-      expect(stageLabel('unbekannt'), 'unbekannt');
-      expect(stageResultLabel('pass'), 'bestanden');
+      expect(stageLabel(AppLocalizationsDe(), 'quote'), 'TDX-Quote (DCAP)');
+      expect(stageLabel(AppLocalizationsDe(), 'unbekannt'), 'unbekannt');
+      expect(stageResultLabel(AppLocalizationsDe(), 'pass'), 'bestanden');
       expect(stageResultStatus('info'), CheckStatus.info);
       expect(stageResultStatus('fail'), CheckStatus.failed);
     });
@@ -301,7 +317,7 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text(ToolTlsHint.text), findsNothing);
+      expect(find.text(AppLocalizationsDe().toolTlsHint), findsNothing);
       expect(find.text('geprüft'), findsNWidgets(2));
     });
 
@@ -313,7 +329,10 @@ void main() {
       );
       await tester.pump();
       expect(find.text('geprüft'), findsOneWidget);
-      expect(find.text(restrictionOpenLabel), findsNothing);
+      expect(
+        find.text(restrictionOpenLabel(AppLocalizationsDe())),
+        findsNothing,
+      );
       expect(_shieldStatus(tester), CheckStatus.ok);
     });
 
@@ -328,7 +347,10 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text(restrictionOpenLabel), findsOneWidget);
+      expect(
+        find.text(restrictionOpenLabel(AppLocalizationsDe())),
+        findsOneWidget,
+      );
       expect(find.text('geprüft'), findsNothing);
       // Grey info symbol, not the green check.
       expect(_shieldStatus(tester), CheckStatus.info);
@@ -358,7 +380,10 @@ void main() {
       await tester.pump();
       expect(find.text('Prüfung fehlgeschlagen'), findsWidgets);
       expect(find.text('nicht bestätigt'), findsOneWidget);
-      expect(find.text(restrictionOpenLabel), findsNothing);
+      expect(
+        find.text(restrictionOpenLabel(AppLocalizationsDe())),
+        findsNothing,
+      );
     });
 
     testWidgets('Golden Schild, Tools ohne Hinweis', tags: ['golden'], (
@@ -376,10 +401,19 @@ void main() {
   });
 
   test('Stufentexte: E2EE und TLS', () {
-    expect(stageLabel('e2ee.key'), 'E2EE-Schlüssel geprüft');
-    expect(stageLabel('tls.spki'), 'TLS-Verbindung geprüft');
-    expect(stageExplanation('e2ee.key'), contains('nicht im Modell selbst'));
-    expect(stageExplanation('quote'), isNull);
+    expect(
+      stageLabel(AppLocalizationsDe(), 'e2ee.key'),
+      'E2EE-Schlüssel geprüft',
+    );
+    expect(
+      stageLabel(AppLocalizationsDe(), 'tls.spki'),
+      'TLS-Verbindung geprüft',
+    );
+    expect(
+      stageExplanation(AppLocalizationsDe(), 'e2ee.key'),
+      contains('nicht im Modell selbst'),
+    );
+    expect(stageExplanation(AppLocalizationsDe(), 'quote'), isNull);
   });
 
   testWidgets(
@@ -449,7 +483,7 @@ void main() {
         home: Scaffold(
           body: StageLine(
             label: 'Frische',
-            result: stageResultLabel('info'),
+            result: stageResultLabel(AppLocalizationsDe(), 'info'),
             status: stageResultStatus('info'),
           ),
         ),

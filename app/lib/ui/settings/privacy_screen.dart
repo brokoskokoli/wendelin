@@ -7,6 +7,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
 import '../../di/wake_providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../routes.dart';
 import 'settings_page.dart';
@@ -21,15 +22,15 @@ final auditViewProvider = FutureProvider.autoDispose
     );
 
 /// German name of an audit kind.
-String auditKindLabel(AuditKind k) => switch (k) {
-  AuditKind.request => 'Anfrage',
-  AuditKind.routing => 'Routing',
-  AuditKind.toolCall => 'Tool',
-  AuditKind.confirmation => 'Bestätigung',
-  AuditKind.escalation => 'Eskalation',
-  AuditKind.usage => 'Kosten',
-  AuditKind.verification => 'Prüfung',
-  AuditKind.error => 'Fehler',
+String auditKindLabel(AppLocalizations l, AuditKind k) => switch (k) {
+  AuditKind.request => l.privacyScreenKindRequest,
+  AuditKind.routing => l.areaRouting,
+  AuditKind.toolCall => l.privacyScreenKindTool,
+  AuditKind.confirmation => l.privacyScreenKindConfirmation,
+  AuditKind.escalation => l.privacyScreenKindEscalation,
+  AuditKind.usage => l.areaCosts,
+  AuditKind.verification => l.privacyScreenKindVerification,
+  AuditKind.error => l.error,
 };
 
 /// Settings → Datenschutz und Logs: retention, audit log with filter,
@@ -44,11 +45,13 @@ class PrivacyScreen extends ConsumerStatefulWidget {
 
 class _PrivacyState extends ConsumerState<PrivacyScreen> {
   Widget _retention(int days) => SettingsSection(
-    title: 'Aufbewahrung',
+    title: context.l10n.privacyScreenRetention,
     children: [
       for (final d in RetentionDays.choices)
         SettingsRow(
-          title: d == 365 ? '1 Jahr' : '$d Tage',
+          title: d == 365
+              ? context.l10n.privacyScreenOneYear
+              : context.l10n.privacyScreenDays(d),
           onTap: () => unawaited(
             ref
                 .read(retentionDaysProvider.notifier)
@@ -56,7 +59,10 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
                 .then((_) => ref.invalidate(auditViewProvider)),
           ),
           trailing: d == days
-              ? const CheckStatusIcon(CheckStatus.ok, semanticLabel: 'gewählt')
+              ? CheckStatusIcon(
+                  CheckStatus.ok,
+                  semanticLabel: context.l10n.selected,
+                )
               : null,
         ),
     ],
@@ -67,21 +73,17 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
     final days = ref.watch(retentionDaysProvider);
     final entries = ref.watch(auditViewProvider(null)).value ?? const [];
     return SettingsPage(
-      title: 'Datenschutz und Logs',
-      intro:
-          'Verläufe und Prüfprotokoll bleiben auf dem Gerät. Ältere Einträge '
-          'löscht Wendelin automatisch.',
+      title: context.l10n.areaPrivacy,
+      intro: context.l10n.privacyScreenIntro,
       children: [
         SectionCard(
           children: [
             SettingsRow(
-              title: 'Bildschirminhalt schützen',
-              detail:
-                  'Keine Screenshots, im App-Wechsler verdeckt. Das '
-                  'Assistenten-Overlay ist immer geschützt.',
+              title: context.l10n.privacyScreenProtectScreen,
+              detail: context.l10n.privacyScreenProtectScreenHint,
               trailing: WSwitch(
                 value: ref.watch(secureScreenProvider),
-                semanticLabel: 'Bildschirminhalt schützen',
+                semanticLabel: context.l10n.privacyScreenProtectScreen,
                 onChanged: (on) => unawaited(
                   ref.read(secureScreenProvider.notifier).set(secure: on),
                 ),
@@ -91,27 +93,25 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
         ),
         _retention(days),
         SettingsSection(
-          title: 'Prüfprotokoll',
+          title: context.l10n.attLogTitle,
           children: [
             SettingsRow(
               key: const ValueKey('auditLogRow'),
-              title: 'Allgemeines Prüfprotokoll',
+              title: context.l10n.privacyScreenGeneralLog,
               detail: entries.isEmpty
-                  ? 'Keine Einträge.'
+                  ? context.l10n.attLogScreenNoEntries
                   : switch (entries.length) {
-                      1 => '1 Eintrag',
-                      >= 200 => '200+ Einträge',
-                      final n => '$n Einträge',
+                      1 => context.l10n.privacyScreenOneEntry,
+                      >= 200 => context.l10n.privacyScreenManyEntries,
+                      final n => context.l10n.privacyScreenEntries(n),
                     },
               onTap: () => unawaited(
                 Navigator.of(context).pushNamed(AppRoutes.auditLog),
               ),
             ),
             SettingsRow(
-              title: 'TEE-Prüfprotokoll',
-              detail:
-                  'Prüfung der Anbieter mit geschützter Umgebung, GPU-Prüfung '
-                  'über NVIDIA',
+              title: context.l10n.privacyScreenTeeLog,
+              detail: context.l10n.privacyScreenTeeLogHint,
               onTap: () => unawaited(
                 Navigator.of(context).pushNamed(AppRoutes.attestationLog),
               ),
@@ -119,7 +119,7 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
           ],
         ),
         WideButton(
-          'Verläufe und Protokoll löschen',
+          context.l10n.privacyScreenDeleteHistory,
           onPressed: () => unawaited(_deleteAll()),
         ),
       ],
@@ -129,12 +129,9 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
   Future<void> _deleteAll() async {
     final ok = await confirm(
       context,
-      title: 'Alles löschen?',
-      message:
-          'Alle Gesprächsverläufe, das Prüfprotokoll und die eingelernten '
-          'Stimmen (Aktivierungswort) werden gelöscht. Das lässt sich nicht '
-          'rückgängig machen. Gedächtnis und Einstellungen bleiben.',
-      yes: 'Alles löschen',
+      title: context.l10n.privacyScreenDeleteAllTitle,
+      message: context.l10n.privacyScreenDeleteAllBody,
+      yes: context.l10n.privacyScreenDeleteAll,
     );
     if (!ok) return;
     final storage = ref.read(storageProvider);
@@ -146,20 +143,22 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
     }
     ref.read(sessionManagerProvider).end();
     ref.invalidate(auditViewProvider);
-    if (mounted) showHint(context, 'Gelöscht.');
+    if (mounted) showHint(context, context.l10n.attLogScreenDeleted);
   }
 }
 
 /// One line about an audit entry (no secrets: the repository redacts).
-String auditSummary(AuditEntry e) {
+String auditSummary(AppLocalizations l, AuditEntry e) {
   final p = e.payload;
   return switch (e.kind) {
     AuditKind.request => '${p['text'] ?? ''}',
     AuditKind.routing => '${p['profileId']} · ${p['modelId']}',
     // Undo is logged as its own tool entry; without the marker it would
     // read like a second call.
-    AuditKind.toolCall when p['undo'] == true =>
-      '${p['tool']} · rückgängig · ${p['status']}',
+    AuditKind.toolCall when p['undo'] == true => l.privacyScreenUndone(
+      '${p['tool']}',
+      '${p['status']}',
+    ),
     AuditKind.toolCall => '${p['tool']} · ${p['status']}',
     AuditKind.confirmation =>
       '${p['tool'] ?? p['toProfile']} · '

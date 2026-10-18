@@ -11,8 +11,10 @@ import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/attestation_hub.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_settings.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/platform/assistant_platform.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/overlay/assistant_overlay.dart';
@@ -299,6 +301,16 @@ void toneTests() {
 
 void main() {
   toneTests();
+  testWidgets('App-Sprache gilt auch im Overlay (Einstellung English)', (
+    tester,
+  ) async {
+    final env = TestEnv(startup: const StartupSettings(uiLanguage: 'en'));
+    await pumpOverlay(tester, env, FakeAssistantPlatform(), autoStart: false);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Text input'), findsOneWidget);
+    expect(find.byTooltip('Texteingabe'), findsNothing);
+  });
+
   testWidgets('Golden: Overlay laut Entwurf (390 × 844)', tags: ['golden'], (
     tester,
   ) async {
@@ -617,7 +629,10 @@ void main() {
       );
       final c = await pumpOverlay(tester, env, platform);
       await tester.pump();
-      expect(find.text(OverlaySheet.lockedTitle), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsDe().overlayLockedTitle),
+        findsOneWidget,
+      );
       // WP53: kein automatisches Entsperren; Wendelin hört gesperrt zu.
       expect(platform.unlockRequests, 0);
       expect(c.read(voiceControllerProvider).trigger, TriggerKind.assistant);
@@ -633,7 +648,7 @@ void main() {
       platform.unlockSucceeds = true;
       await tester.tap(find.text('Entsperren'));
       await tester.pump(const Duration(milliseconds: 10));
-      expect(find.text(OverlaySheet.lockedTitle), findsNothing);
+      expect(find.text(AppLocalizationsDe().overlayLockedTitle), findsNothing);
       expect(c.read(voiceControllerProvider).trigger, TriggerKind.assistant);
       await c.read(voiceControllerProvider.notifier).cancel();
     },
@@ -823,7 +838,7 @@ void main() {
     c.read(agentControllerProvider.notifier).seed(overlaySample());
     await tester.pump();
     expect(find.textContaining('Tauchen'), findsNothing);
-    expect(find.text(OverlaySheet.lockedTitle), findsNothing);
+    expect(find.text(AppLocalizationsDe().overlayLockedTitle), findsNothing);
     expect(
       tester.widget<MicButton>(find.byType(MicButton)).state,
       MicState.disabled,
@@ -950,7 +965,10 @@ void main() {
       final env = TestEnv(providerConfig: scripted(FakeLlmProvider(const [])));
       final c = await pumpOverlay(tester, env, platform, voice: counting());
       await tester.pump(const Duration(milliseconds: 10));
-      expect(find.text(OverlaySheet.lockedTitle), findsOneWidget);
+      expect(
+        find.text(AppLocalizationsDe().overlayLockedTitle),
+        findsOneWidget,
+      );
       expect(warm, 1, reason: 'einmal, beim Zuhören (Whisper lokal)');
 
       platform.unlockSucceeds = true;

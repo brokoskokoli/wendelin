@@ -4,6 +4,7 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/di/tee_restrictions.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/attestation/stage_explanations.dart';
 import 'package:wendelin/ui/settings/attestation_explain_screen.dart';
 import 'package:wendelin/ui/settings/attestation_log_detail.dart';
@@ -94,11 +95,21 @@ void main() {
       'Bedeutung von „Anfrage nicht verschlüsselt“ hängt von tls.spki ab',
       () {
         expect(
-          stageMeaning('e2ee.request', 'info', tlsResult: 'pass'),
+          stageMeaning(
+            AppLocalizationsDe(),
+            'e2ee.request',
+            'info',
+            tlsResult: 'pass',
+          ),
           contains('geprüfte Verbindung'),
         );
         expect(
-          stageMeaning('e2ee.request', 'info', tlsResult: 'info'),
+          stageMeaning(
+            AppLocalizationsDe(),
+            'e2ee.request',
+            'info',
+            tlsResult: 'info',
+          ),
           contains('nicht an den Nachweis gebunden'),
         );
       },

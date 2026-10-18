@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/gpu_check_migration.dart';
 import 'package:wendelin/di/provider_setup.dart';
-import 'package:wendelin/ui/settings/gpu_check_section.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/settings/provider_setup/model_step.dart';
 import 'package:wendelin/ui/settings/provider_setup_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -101,7 +101,10 @@ void main() {
     expect(find.text('Modell nicht nutzbar'), findsNothing);
     expect(find.byKey(const ValueKey('setupFailure')), findsNothing);
     expect(find.byKey(const ValueKey('noGpuEvidence')), findsOneWidget);
-    expect(find.textContaining(noGpuEvidenceHint), findsWidgets);
+    expect(
+      find.textContaining(AppLocalizationsDe().gpuNoEvidenceHint),
+      findsWidgets,
+    );
     // WP78: the acceptance names the restriction.
     expect(find.byKey(const ValueKey('restrictionSetupNote')), findsOneWidget);
     expect(find.textContaining('GPU-Nachweis des Anbieters'), findsWidgets);
@@ -169,6 +172,7 @@ void main() {
         home: Scaffold(
           body: ListView(
             children: modelStep(
+              l: AppLocalizationsDe(),
               connection: null,
               models: const [
                 ModelInfo(id: 'glm-5.2', displayName: 'glm-5.2'),
@@ -186,7 +190,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text(noGpuEvidenceHint), findsOneWidget);
+    expect(find.text(AppLocalizationsDe().gpuNoEvidenceHint), findsOneWidget);
     await tester.tap(find.text('glm-5.2'));
     expect(picked, ['glm-5.2']);
   });

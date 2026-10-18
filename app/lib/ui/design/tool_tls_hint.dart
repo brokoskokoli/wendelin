@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 
 /// Kleiner, unaufdringlicher Hinweis: Tool-Argumente sind bei Phala nicht
@@ -14,16 +15,12 @@ class ToolTlsHint extends StatelessWidget {
   /// Tools sind Ende-zu-Ende-verschlüsselt.
   final bool encrypted;
 
-  /// Der Text des Hinweises.
-  static const text =
-      'Tool-Aufrufe sind über die geprüfte Verbindung bis in die Enklave geschützt, aber nicht zusätzlich verschlüsselt.';
-
-  /// Der Text bei Ende-zu-Ende-verschlüsselten Tools.
-  static const encryptedText = 'Tools Ende-zu-Ende-verschlüsselt';
-
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: WSpace.xs),
-    child: Text(encrypted ? encryptedText : text, style: WText.caption),
+    child: Text(
+      encrypted ? context.l10n.toolTlsEncrypted : context.l10n.toolTlsHint,
+      style: WText.caption,
+    ),
   );
 }

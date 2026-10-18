@@ -7,6 +7,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../../di/mcp/mcp_providers.dart';
 import '../../../di/providers.dart';
+import '../../../l10n/l10n.dart';
 import '../../design/design.dart';
 import '../export.dart';
 import '../integrations_screen.dart' show switchIntegration;
@@ -28,34 +29,32 @@ class McpServersScreen extends ConsumerWidget {
     final registry = ref.watch(toolRegistryProvider);
     final sync = ref.watch(userIntegrationSyncProvider);
     return SettingsPage(
-      title: 'MCP-Server',
-      intro:
-          'Tools von MCP-Servern, z. B. auf dem Homeserver über Tailscale. '
-          'Tool-Argumente gehen an den jeweiligen Server.',
+      title: context.l10n.areaMcp,
+      intro: context.l10n.mcpServersIntro,
       children: [
         McpChanges(
           streams: [source.changes, registry.changes, sync.changes],
           builder: (context) => FutureBuilder<void>(
             future: source.ready(),
-            builder: (context, _) => _list(registry, source.servers),
+            builder: (context, _) => _list(context, registry, source.servers),
           ),
         ),
         WideButton(
-          '+ Server',
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const McpAddServerScreen()),
-          ),
+          context.l10n.mcpServersAdd,
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => McpAddServerScreen())),
         ),
         SectionCard(
           children: [
             SettingsRow(
-              title: 'Exportieren',
-              detail: 'Serverliste ohne Tokens und Passwörter',
+              title: context.l10n.export,
+              detail: context.l10n.mcpServersExportHint,
               onTap: () => unawaited(_export(ref)),
             ),
             SettingsRow(
-              title: 'Importieren',
-              detail: 'Zugangsdaten werden neu abgefragt',
+              title: context.l10n.import,
+              detail: context.l10n.mcpServersImportHint,
               onTap: () => unawaited(_import(context, ref)),
             ),
           ],
@@ -64,13 +63,17 @@ class McpServersScreen extends ConsumerWidget {
     );
   }
 
-  static Widget _list(ToolRegistry registry, List<McpServerView> servers) {
+  static Widget _list(
+    BuildContext context,
+    ToolRegistry registry,
+    List<McpServerView> servers,
+  ) {
     if (servers.isEmpty) {
-      return const SectionCard(
+      return SectionCard(
         children: [
           SettingsRow(
-            title: 'Noch kein Server',
-            detail: 'Vorlage wählen oder eigene Adresse eintragen',
+            title: context.l10n.mcpServersNone,
+            detail: context.l10n.mcpServersNoneHint,
           ),
         ],
       );
@@ -114,9 +117,9 @@ class McpServersScreen extends ConsumerWidget {
     final source = ref.read(mcpServerSourceProvider);
     final json = await askText(
       context,
-      title: 'Serverliste importieren',
-      label: 'Inhalt der Exportdatei',
-      action: 'Importieren',
+      title: context.l10n.mcpServersImportTitle,
+      label: context.l10n.mcpServersContent,
+      action: context.l10n.import,
       maxLines: 6,
     );
     if (json == null || json.trim().isEmpty || !context.mounted) return;
@@ -139,8 +142,8 @@ class McpServersScreen extends ConsumerWidget {
       showHint(
         context,
         added.length == 1
-            ? '1 Server importiert (ausgeschaltet)'
-            : '${added.length} Server importiert (ausgeschaltet)',
+            ? context.l10n.mcpServersImportedOne
+            : context.l10n.mcpServersImported(added.length),
       );
     }
   }
@@ -159,7 +162,7 @@ class McpServerTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = mcpTileState(server, info);
+    final state = mcpTileState(context.l10n, server, info);
     return InkWell(
       onTap: () => openMcpServer(context, server.config.id),
       child: IntegrationTile(

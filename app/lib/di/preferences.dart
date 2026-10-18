@@ -1,7 +1,9 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../l10n/l10n.dart';
 import '../platform/screen_protection.dart';
 import 'app_settings.dart';
 import 'preference_models.dart';
@@ -44,6 +46,43 @@ final class LanguagePref extends Notifier<String> {
     state = code;
     await _settings(ref).set(AppSettings.language, code);
   }
+}
+
+/// Language of the app UI (`system`, `de`, `en`, `fr`), independent of
+/// [languageProvider] (speech and prompts).
+final uiLanguageProvider = NotifierProvider<UiLanguagePref, String>(
+  UiLanguagePref.new,
+);
+
+/// UI language preference.
+final class UiLanguagePref extends Notifier<String> {
+  @override
+  String build() => ref.watch(startupProvider).uiLanguage;
+
+  /// Stores [code] (`system` or a supported language code).
+  Future<void> set(String code) async {
+    state = code;
+    await _settings(ref).set(AppSettings.uiLanguage, code);
+  }
+}
+
+/// The UI texts in the current app language, for places without a
+/// `BuildContext` (hints the agent adds to the conversation). Evaluated at
+/// call time: a changed language applies to the next hint.
+AppLocalizations uiTexts(Ref ref) {
+  var code = uiLanguageSystem;
+  try {
+    code = ref.read(uiLanguageProvider);
+  } on Object {
+    // No settings yet (plain provider tests): follow the system.
+  }
+  final locale =
+      uiLocaleFor(code) ??
+      resolveUiLocale(
+        WidgetsBinding.instance.platformDispatcher.locales,
+        AppLocalizations.supportedLocales,
+      );
+  return lookupAppLocalizations(locale);
 }
 
 /// User name and persona addition.

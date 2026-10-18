@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_hub.dart';
 import 'package:wendelin/di/attestation_providers.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin_agent/testing.dart';
@@ -366,5 +367,34 @@ void main() {
         reason: 'beschädigt = kein Pin',
       );
     });
+  });
+
+  test('Hub der App: GPU-Benachrichtigung in der App-Sprache (fr)', () async {
+    final env = TestEnv();
+    final notifier = env.notifier;
+    final container = env.container();
+    addTearDown(container.dispose);
+    await container.read(uiLanguageProvider.notifier).set('fr');
+    final hub = container.read(attestationHubProvider);
+    hub.register(
+      'phala',
+      scriptedTee(
+        verifier: ScriptedVerifier(),
+        gateway: ScriptedGateway(),
+        gpu: FakeGpuAttestationVerifier(
+          const GpuAttestationResult(GpuVerdict.failed),
+        ),
+        gpuMode: GpuCheckMode.after,
+      ),
+    );
+    await hub
+        .provider('phala')!
+        .chat(
+          ChatRequest(model: 'm', maxTokens: 10, messages: [Message.user('x')]),
+        )
+        .toList();
+    await pumpEventQueue(times: 50);
+    expect(notifier.shown.single.$1, 'Échec de la vérification du GPU');
+    expect(notifier.shown.single.$2, contains('La vérification du GPU'));
   });
 }

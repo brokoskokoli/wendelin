@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
 import '../design/design.dart';
@@ -55,8 +56,11 @@ class MainComposer extends ConsumerWidget {
       levels: voice.levels,
       followUpUntil: voice.followUpUntil,
       now: ref.read(clockProvider).now,
-      micHint: voiceUnavailableHint,
-      status: voice.error ?? voice.hint,
+      micHint: context.l10n.voiceUnavailableHint,
+      status: switch (voice.error ?? voice.hint) {
+        final String s => voiceStatusText(context.l10n, s),
+        _ => null,
+      },
       notice: voice.error == microphoneDeniedHint
           ? MicrophoneNotice(
               deniedByAndroid: micDeniedByAndroid,

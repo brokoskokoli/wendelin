@@ -5,6 +5,8 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../l10n/gen/app_localizations.dart';
+import '../l10n/gen/app_localizations_de.dart';
 import '../platform/channel_notifier.dart';
 import 'app_settings.dart';
 import 'provider_config.dart';
@@ -43,12 +45,17 @@ final class AttestationHub {
   AttestationHub({
     required this.notifier,
     String Function(String profileId)? nameOf,
-  }) : _nameOf = nameOf ?? ((id) => id);
+    AppLocalizations Function()? texts,
+  }) : _nameOf = nameOf ?? ((id) => id),
+       _texts = texts ?? AppLocalizationsDe.new;
 
   /// System notifications.
   final AttestationNotifier notifier;
 
   final String Function(String profileId) _nameOf;
+
+  /// Texts in the current app language (read when a notification is shown).
+  final AppLocalizations Function() _texts;
   final Map<String, AttestedProvider> _providers = {};
   final Map<String, StreamSubscription<AttestationReport>> _subs = {};
   final StreamController<ProfileReport> _reports =
@@ -111,11 +118,8 @@ final class AttestationHub {
     if (gpu && modeOf(profileId) == GpuCheckMode.after) {
       unawaited(
         notifier.show(
-          title: 'GPU-Prüfung fehlgeschlagen',
-          text:
-              'Die GPU-Prüfung der letzten Antwort von ${_nameOf(profileId)} '
-              'ist fehlgeschlagen. Die nächste Anfrage prüft vorher. '
-              'Details im Prüfprotokoll.',
+          title: _texts().gpuNotifyFailedTitle,
+          text: _texts().gpuNotifyFailedText(_nameOf(profileId)),
         ),
       );
     }

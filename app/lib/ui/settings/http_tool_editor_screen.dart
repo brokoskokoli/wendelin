@@ -6,6 +6,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../../di/http_tools.dart';
 import '../../di/providers.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'http_tool_editor/args_section.dart';
 import 'http_tool_editor/auth_section.dart';
@@ -112,7 +113,9 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
       _testArgs.putIfAbsent(name, TextEditingController.new);
     }
     return SettingsPage(
-      title: draft.isNew ? 'Neues HTTP-Tool' : 'HTTP-Tool',
+      title: draft.isNew
+          ? context.l10n.httpEditorNewTool
+          : context.l10n.httpEditorTool,
       children: [
         ToolSection(draft: draft, otherNames: _otherNames, onEdit: _edit),
         RequestSection(draft: draft, url: _url, onEdit: _edit),
@@ -140,13 +143,16 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
           result: _result,
         ),
         PrimaryButton(
-          'Speichern',
+          context.l10n.save,
           onPressed: problem == null && !_saving
               ? () => unawaited(_save())
               : null,
         ),
         if (!draft.isNew)
-          WideButton('Löschen', onPressed: () => unawaited(_delete())),
+          WideButton(
+            context.l10n.delete,
+            onPressed: () => unawaited(_delete()),
+          ),
       ],
     );
   }
@@ -216,11 +222,9 @@ class _EditorState extends ConsumerState<HttpToolEditorScreen> {
     final repository = ref.read(httpToolRepositoryProvider);
     final ok = await confirm(
       context,
-      title: 'HTTP-Tool löschen?',
-      message:
-          '„http__${widget.definition!.name}“ und seine gespeicherten '
-          'Secrets werden gelöscht.',
-      yes: 'Löschen',
+      title: context.l10n.httpEditorDeleteTitle,
+      message: context.l10n.httpEditorDeleteBody(widget.definition!.name),
+      yes: context.l10n.delete,
     );
     if (!ok) return;
     await repository.delete(_draft.id);

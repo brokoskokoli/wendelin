@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'check_status.dart';
 import 'privacy_chip.dart';
@@ -35,9 +36,10 @@ class ProviderChip extends StatelessWidget {
           ? null
           : CheckStatusIcon(s, size: WSize.statusIconSmall),
       semanticLabel: [
-        'Provider $name',
-        'Datenschutzstufe ${level.label}',
-        if (s != null) 'Quittung ${s.label}',
+        context.l10n.providerChipSemantics(name),
+        context.l10n.providerChipLevel(level.labelOf(context.l10n)),
+        if (s != null)
+          context.l10n.providerChipReceipt(s.labelOf(context.l10n)),
       ].join(', '),
     );
   }

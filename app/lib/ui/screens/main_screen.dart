@@ -15,6 +15,7 @@ import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/routing.dart';
 import '../../di/voice_providers.dart';
+import '../../l10n/l10n.dart';
 import '../../platform/channel_notifier.dart' show attestationLogTarget;
 import '../../voice/conversation_offer.dart';
 import '../../voice/voice_components.dart';
@@ -157,20 +158,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final send = await confirm(
       context,
       title: block.noEvidence
-          ? 'Kein GPU-Nachweis'
-          : 'GPU-Prüfung nicht bestanden',
+          ? context.l10n.gpuNoEvidenceTitle
+          : context.l10n.mainGpuCheckFailedTitle,
       message: block.noEvidence
-          ? '$name liefert für dieses Modell keinen GPU-Nachweis, NVIDIA '
-                'kann nichts prüfen. Weil die GPU-Prüfung auf „Vorher“ steht, '
-                'wurde deine Anfrage nicht gesendet. Du kannst sie einmalig '
-                'ohne GPU-Prüfung senden. Die übrigen Prüfungen bleiben '
-                'aktiv.'
-          : 'Die GPU-Prüfung von $name über NVIDIA ist fehlgeschlagen oder '
-                'nicht möglich.${gpuBlockReason(block.reason)} Deine Anfrage '
-                'wurde nicht gesendet. Du kannst sie einmalig ohne '
-                'GPU-Prüfung senden. Die übrigen Prüfungen bleiben aktiv.',
-      yes: 'Ohne GPU-Prüfung senden',
-      no: 'Abbrechen',
+          ? context.l10n.gpuNoEvidenceMessage(name)
+          : context.l10n.mainGpuBlockMessage(
+              name,
+              gpuBlockReason(context.l10n, block.reason),
+            ),
+      yes: context.l10n.mainSendWithoutGpuCheck,
+      no: context.l10n.cancel,
     );
     await _controller.resolveGpuBlock(sendWithout: send);
   }
@@ -224,7 +221,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     conversation.activeRule,
                   ),
             privacy: active?.privacy,
-            costLabel: 'heute ${formatUsd(cost)}',
+            costLabel: context.l10n.mainCostToday(
+              formatUsdFor(context.l10n, cost),
+            ),
           ),
           if (conversation.privateSince case final since?)
             MainPrivateBanner(
@@ -266,9 +265,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     if (config.hasError) {
       return ProviderSetupCard(
         onSetup: _openProviderSetup,
-        error:
-            'Das Provider-Profil lässt sich nicht verwenden: '
-            '${config.error}',
+        error: context.l10n.mainProviderProfileUnusable('${config.error}'),
       );
     } else if (config.hasValue && providers == null) {
       return ProviderSetupCard(
@@ -283,7 +280,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       );
     } else if (notice != null) {
       return PrivateRuleNoticeCard(
-        text: privateRuleNoticeText(notice),
+        text: privateRuleNoticeText(context.l10n, notice),
         onOpen: () {
           unawaited(dismissPrivateRuleNotice(ref));
           unawaited(Navigator.of(context).pushNamed(AppRoutes.routing));

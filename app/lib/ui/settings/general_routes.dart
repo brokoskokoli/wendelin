@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../routes.dart';
+import 'app_language_screen.dart';
 import 'assistant_screen.dart';
 import 'attestation_log_screen.dart';
 import 'audit_log_screen.dart';
@@ -30,6 +31,7 @@ Map<String, WidgetBuilder> generalRoutes() => {
   AppRoutes.attestationLog: (_) => const AttestationLogScreen(),
   AppRoutes.costs: (_) => const CostsScreen(),
   AppRoutes.assistant: (_) => const AssistantScreen(),
+  AppRoutes.appLanguage: (_) => const AppLanguageScreen(),
   AppRoutes.voice: (_) => const VoiceScreen(),
   AppRoutes.voices: (_) => const VoiceVoicesScreen(),
   AppRoutes.wakeWord: (_) => const WakeWordScreen(),

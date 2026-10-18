@@ -7,6 +7,7 @@ import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/onboarding/onboarding_screen.dart';
 import 'package:wendelin/ui/settings/integrations_screen.dart';
@@ -237,8 +238,11 @@ void main() {
       availability: Availability.yes,
       setup: SetupState(),
     );
-    expect(integrationDetail(info), '1 Tool');
-    expect(integrationDetail(info, appHint: 'App fehlt'), '1 Tool · App fehlt');
+    expect(integrationDetail(AppLocalizationsDe(), info), '1 Tool');
+    expect(
+      integrationDetail(AppLocalizationsDe(), info, appHint: 'App fehlt'),
+      '1 Tool · App fehlt',
+    );
   });
 
   testWidgets('Onboarding: nur Integrationen der Plattform, fehlende Apps '

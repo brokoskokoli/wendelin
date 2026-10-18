@@ -114,7 +114,8 @@ extension _VoiceConfirmation on VoiceController {
           limits: VoiceController.answerEndpoint,
           micStartTimeout: VoiceController.micStartTimeout,
           onAbort: (abort) => _abortCapture = abort,
-          onError: (e) => state = state.copyWith(error: voiceErrorText(e)),
+          onError: (e) =>
+              state = state.copyWith(error: voiceErrorText(uiTexts(ref), e)),
         );
         state = state.copyWith(awaitingAnswer: false);
         if (closed() case final r?) {
@@ -135,7 +136,7 @@ extension _VoiceConfirmation on VoiceController {
           );
         } on Object catch (e) {
           voiceLog('confirm-stt-error', {'error': errorCode(e)});
-          state = state.copyWith(error: voiceErrorText(e));
+          state = state.copyWith(error: voiceErrorText(uiTexts(ref), e));
           reason = 'stt-error';
           byTap = true;
           return;
@@ -160,7 +161,7 @@ extension _VoiceConfirmation on VoiceController {
     } on Object catch (e) {
       reason = 'error(${errorCode(e)})';
       byTap = true;
-      state = state.copyWith(error: voiceErrorText(e));
+      state = state.copyWith(error: voiceErrorText(uiTexts(ref), e));
     } finally {
       _confirming = null;
       _abortCapture = null;

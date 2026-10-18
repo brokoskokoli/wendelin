@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/routing.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/l10n/gen/app_localizations_en.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/export.dart';
 import 'package:wendelin/ui/settings/routing/condition_builder.dart';
 import 'package:wendelin/ui/settings/routing/routing_screen.dart';
+import 'package:wendelin/ui/settings/routing/routing_texts.dart';
 import 'package:wendelin/ui/settings/routing/rule_editor_screen.dart';
 import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
@@ -610,14 +613,14 @@ void main() {
     expect(tree.any, isTrue);
     expect(tree.children[1], isA<GroupNode>());
     expect(tree.children[1].negated, isTrue);
-    expect(tree.build(), (c, null));
+    expect(tree.build(AppLocalizationsDe()), (c, null));
     expect(
       editableTree(const NotCondition(NotCondition(HasImageCondition()))),
       isNull,
     );
     // Ein einzelnes Blatt bleibt ein Blatt.
     expect(
-      editableTree(KeywordCondition(['z']))!.build().$1,
+      editableTree(KeywordCondition(['z']))!.build(AppLocalizationsDe()).$1,
       KeywordCondition(['z']),
     );
     // Alle Typen überleben die Hin- und Rückrichtung.
@@ -631,12 +634,27 @@ void main() {
       PrivacyCondition(),
       const NetworkCondition(NetworkState.metered),
     ]) {
-      expect(editableTree(leaf)!.build().$1, leaf, reason: leaf.type);
+      expect(
+        editableTree(leaf)!.build(AppLocalizationsDe()).$1,
+        leaf,
+        reason: leaf.type,
+      );
     }
     final bad = LeafNode(type: 'sttConfidence', text: '2');
-    expect(bad.build().$2, contains('zwischen 0 und 1'));
-    expect(LeafNode(type: 'timeWindow', start: '25:00').build().$2, isNotNull);
-    expect(GroupNode().build().$2, 'Eine Gruppe ist leer.');
+    expect(bad.build(AppLocalizationsDe()).$2, contains('zwischen 0 und 1'));
+    expect(
+      LeafNode(
+        type: 'timeWindow',
+        start: '25:00',
+      ).build(AppLocalizationsDe()).$2,
+      isNotNull,
+    );
+    expect(GroupNode().build(AppLocalizationsDe()).$2, 'Eine Gruppe ist leer.');
+  });
+
+  test('Bedingungstyp Sprache: Beschriftung folgt der UI-Sprache', () {
+    expect(conditionTypeLabel(AppLocalizationsEn(), 'language'), 'Language');
+    expect(conditionTypeLabel(AppLocalizationsDe(), 'language'), 'Sprache');
   });
 
   testWidgets('Touch-Ziele ≥ 44 und Semantics-Labels', (tester) async {

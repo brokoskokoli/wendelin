@@ -9,9 +9,9 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../di/providers.dart';
 import '../../di/spotify.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
-import 'spotify_texts.dart';
 
 /// Settings → Spotify: short guide for the developer app, the redirect
 /// address, Client-ID field, login (Custom Tab), state with „Erneut
@@ -69,7 +69,7 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
   Future<void> _signIn() async {
     final id = _clientId.text.trim();
     if (id.isEmpty) {
-      setState(() => _error = SpotifyTexts.clientIdMissing);
+      setState(() => _error = context.l10n.spotifyClientIdMissing);
       return;
     }
     final registry = ref.read(toolRegistryProvider);
@@ -101,9 +101,9 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
     final integration = _integration;
     final ok = await confirm(
       context,
-      title: SpotifyTexts.signOutTitle,
-      message: SpotifyTexts.signOutMessage,
-      yes: SpotifyTexts.signOut,
+      title: context.l10n.spotifySignOutTitle,
+      message: context.l10n.spotifySignOutMessage,
+      yes: context.l10n.spotifySignOut,
     );
     if (!ok) return;
     await login.signOut();
@@ -119,7 +119,7 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
     final error = await integration.reconnect();
     if (!mounted) return;
     setState(() => _busy = false);
-    showHint(context, error ?? SpotifyTexts.reconnected);
+    showHint(context, error ?? context.l10n.spotifyReconnected);
   }
 
   /// New login or none: the old error is void, the setup state changed.
@@ -136,8 +136,8 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
   Widget build(BuildContext context) {
     final registry = ref.watch(toolRegistryProvider);
     return SettingsPage(
-      title: SpotifyTexts.title,
-      intro: SpotifyTexts.intro,
+      title: context.l10n.spotifyTitle,
+      intro: context.l10n.spotifyIntro,
       children: [
         if (!_loaded)
           const SizedBox.shrink()
@@ -150,15 +150,15 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
             builder: (context, _) => _accountCard(registry),
           ),
         SettingsSection(
-          title: SpotifyTexts.appTitle,
+          title: context.l10n.spotifyAppTitle,
           children: [
             SettingsRow(
               title: switch (_appInstalled) {
-                true => 'Installiert',
-                false => 'Nicht installiert',
-                null => 'Unbekannt',
+                true => context.l10n.bringInstalled,
+                false => context.l10n.bringNotInstalled,
+                null => context.l10n.bringUnknown,
               },
-              detail: SpotifyTexts.appNote,
+              detail: context.l10n.spotifyAppNote,
             ),
           ],
         ),
@@ -169,15 +169,17 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
   Widget _guide() {
     final redirect = spotifyRedirect.toString();
     return SettingsSection(
-      title: SpotifyTexts.guideTitle,
+      title: context.l10n.spotifyGuideTitle,
       children: [
-        for (final step in SpotifyTexts.guideSteps)
-          SettingsRow(title: step.replaceAll('{redirect}', redirect)),
+        SettingsRow(title: context.l10n.spotifyGuideStep1),
+        SettingsRow(title: context.l10n.spotifyGuideStep2(redirect)),
+        SettingsRow(title: context.l10n.spotifyGuideStep3),
+        SettingsRow(title: context.l10n.spotifyGuideStep4),
         WideButton(
-          SpotifyTexts.copyRedirect,
+          context.l10n.spotifyCopyRedirect,
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: redirect));
-            if (mounted) showHint(context, SpotifyTexts.copied);
+            if (mounted) showHint(context, context.l10n.spotifyCopied);
           },
         ),
       ],
@@ -191,7 +193,7 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
       style: WText.body,
       autocorrect: false,
       enableSuggestions: false,
-      decoration: const InputDecoration(labelText: SpotifyTexts.clientIdLabel),
+      decoration: InputDecoration(labelText: context.l10n.spotifyClientIdLabel),
     ),
     if (_error != null)
       Text(
@@ -200,7 +202,7 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
         style: WText.caption.copyWith(color: WColors.error),
       ),
     PrimaryButton(
-      _busy ? SpotifyTexts.signingIn : SpotifyTexts.signIn,
+      _busy ? context.l10n.spotifySigningIn : context.l10n.spotifySignIn,
       onPressed: _busy ? null : () => unawaited(_signIn()),
     ),
   ];
@@ -216,24 +218,26 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
           children: [
             SettingsRow(
               title: failed
-                  ? SpotifyTexts.failed
-                  : spotifyStateText(info?.status),
+                  ? context.l10n.spotifyFailed
+                  : spotifyStateText(context.l10n, info?.status),
               detail: failed ? info?.error : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,
-                semanticLabel: failed ? 'Fehler' : 'in Ordnung',
+                semanticLabel: failed
+                    ? context.l10n.error
+                    : context.l10n.bringFine,
               ),
             ),
           ],
         ),
         if (failed)
           PrimaryButton(
-            _busy ? SpotifyTexts.retrying : SpotifyTexts.retry,
+            _busy ? context.l10n.spotifyRetrying : context.l10n.retry,
             onPressed: _busy ? null : () => unawaited(_retry()),
           ),
         WideButton(
-          SpotifyTexts.signOut,
+          context.l10n.spotifySignOut,
           onPressed: () => unawaited(_signOut()),
         ),
       ],
@@ -242,10 +246,11 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
 }
 
 /// Text of the Spotify state when it is not failed.
-String spotifyStateText(IntegrationStatus? status) => switch (status) {
-  IntegrationStatus.active => 'Angemeldet · Aktiv',
-  IntegrationStatus.available => 'Angemeldet, Integration ausgeschaltet',
-  IntegrationStatus.setupRequired => 'Login fehlt',
-  IntegrationStatus.unavailable => 'Nicht verfügbar',
-  IntegrationStatus.error || null => SpotifyTexts.signedIn,
-};
+String spotifyStateText(AppLocalizations l, IntegrationStatus? status) =>
+    switch (status) {
+      IntegrationStatus.active => l.spotifyStateActive,
+      IntegrationStatus.available => l.spotifyStateOff,
+      IntegrationStatus.setupRequired => l.spotifyStateLoginMissing,
+      IntegrationStatus.unavailable => l.spotifyStateUnavailable,
+      IntegrationStatus.error || null => l.spotifySignedIn,
+    };

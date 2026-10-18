@@ -5,20 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../platform/voice/record_audio_input.dart';
 import '../../voice/voice_components.dart';
 import '../design/design.dart';
 import '../settings/settings_page.dart';
 
 /// Explanation shown before Android asks for the microphone.
-const microphoneExplanation =
-    'Wendelin hört nur zu, nachdem du ihn ausgelöst hast (Mikrofontaste '
-    'oder Assistent). Die Aufnahme wird auf dem Gerät in Text umgewandelt '
-    'und verlässt es nicht; nur der erkannte Text geht an deinen Provider.';
+String microphoneExplanation(AppLocalizations l) => l.micExplanation;
 
 /// Where the microphone permission is given once Android stops asking.
-const microphoneSettingsHint =
-    'In den Android-Einstellungen unter Apps → Wendelin erlauben.';
+String microphoneSettingsHint(AppLocalizations l) => l.micSettingsHint;
 
 /// Outcome of [requestMicrophoneAccess].
 enum MicrophoneAccess {
@@ -61,15 +58,18 @@ Future<MicrophoneAccess> requestMicrophoneAccess(
   if (!context.mounted) return MicrophoneAccess.notNow;
   final ok = await confirm(
     context,
-    title: 'Mikrofon erlauben?',
-    message: microphoneExplanation,
-    yes: 'Erlauben',
-    no: 'Nicht jetzt',
+    title: context.l10n.micAllowTitle,
+    message: microphoneExplanation(context.l10n),
+    yes: context.l10n.allow,
+    no: context.l10n.micNotNow,
   );
   if (!ok) return MicrophoneAccess.notNow;
   final granted = await microphone.hasPermission();
   if (!granted && context.mounted) {
-    showHint(context, 'Ohne Mikrofon geht nur Text. $microphoneSettingsHint');
+    showHint(
+      context,
+      context.l10n.micOnlyText(microphoneSettingsHint(context.l10n)),
+    );
   }
   return granted ? MicrophoneAccess.granted : MicrophoneAccess.denied;
 }
@@ -107,7 +107,7 @@ class MicrophoneNotice extends StatelessWidget {
   Widget build(BuildContext context) => StatusCard(
     status: CheckStatus.pending,
     title: microphoneDeniedHint,
-    detail: deniedByAndroid ? microphoneSettingsHint : null,
+    detail: deniedByAndroid ? microphoneSettingsHint(context.l10n) : null,
     actionBelow: deniedByAndroid,
     action: OutlinedButton(
       onPressed: deniedByAndroid ? onOpenSettings : onAllow,
@@ -121,7 +121,9 @@ class MicrophoneNotice extends StatelessWidget {
           borderRadius: BorderRadius.circular(WRadius.tile),
         ),
       ),
-      child: Text(deniedByAndroid ? 'Android-Einstellungen' : 'Erlauben'),
+      child: Text(
+        deniedByAndroid ? context.l10n.micAndroidSettings : context.l10n.allow,
+      ),
     ),
   );
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -17,7 +18,7 @@ void main() {
         final handle = tester.ensureSemantics();
         var taps = 0;
         await _pump(tester, MicButton(state: state, onPressed: () => taps++));
-        final label = MicButton.labelFor(state);
+        final label = MicButton.labelFor(AppLocalizationsDe(), state);
         expect(find.byTooltip(label), findsOneWidget);
         // Genau eine Ansage: Tooltip, kein zusätzliches Label.
         final data = tester
@@ -141,8 +142,14 @@ void main() {
     testWidgets('Label „Sprachausgabe stoppen“, vorbereiten „Moment …“', (
       tester,
     ) async {
-      expect(MicButton.labelFor(MicState.speaking), 'Sprachausgabe stoppen');
-      expect(MicButton.labelFor(MicState.preparing), 'Moment …');
+      expect(
+        MicButton.labelFor(AppLocalizationsDe(), MicState.speaking),
+        'Sprachausgabe stoppen',
+      );
+      expect(
+        MicButton.labelFor(AppLocalizationsDe(), MicState.preparing),
+        'Moment …',
+      );
     });
   });
 
@@ -160,9 +167,11 @@ void main() {
       final handle = tester.ensureSemantics();
       for (final l in PrivacyLevel.values) {
         await _pump(tester, PrivacyChip(l));
-        expect(find.text(l.label), findsOneWidget);
+        expect(find.text(l.labelOf(AppLocalizationsDe())), findsOneWidget);
         expect(
-          find.bySemanticsLabel('${l.label}, Datenschutzstufe ${l.label}'),
+          find.bySemanticsLabel(
+            '${l.labelOf(AppLocalizationsDe())}, Datenschutzstufe ${l.labelOf(AppLocalizationsDe())}',
+          ),
           findsOneWidget,
         );
       }
@@ -246,7 +255,10 @@ void main() {
       final handle = tester.ensureSemantics();
       for (final s in CheckStatus.values) {
         await _pump(tester, CheckStatusIcon(s));
-        expect(find.bySemanticsLabel(s.label), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(s.labelOf(AppLocalizationsDe())),
+          findsOneWidget,
+        );
       }
       expect(CheckStatus.ok.color, WColors.ok);
       expect(CheckStatus.pending.color, WColors.warn);

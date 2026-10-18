@@ -6,9 +6,9 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../../di/weather.dart';
 import '../../di/weather_config.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'settings_page.dart';
-import 'weather_texts.dart';
 
 /// Settings → Wetter und Meer: choose the weather service and the home
 /// place (looked up with the Open-Meteo geocoder).
@@ -58,12 +58,14 @@ class _WeatherState extends ConsumerState<WeatherScreen> {
               .find(text, language: 'de');
         } on PortException {
           home = null;
-          if (mounted) setState(() => _error = WeatherTexts.searchFailed);
+          if (mounted) {
+            setState(() => _error = context.l10n.weatherSearchFailed);
+          }
         }
         if (!mounted) return;
         setState(() => _busy = false);
         if (home == null) {
-          setState(() => _error ??= WeatherTexts.notFound(text));
+          setState(() => _error ??= context.l10n.weatherNotFound(text));
           return;
         }
       }
@@ -77,20 +79,20 @@ class _WeatherState extends ConsumerState<WeatherScreen> {
   @override
   Widget build(BuildContext context) {
     return SettingsPage(
-      title: WeatherTexts.title,
-      intro: WeatherTexts.intro,
+      title: context.l10n.weatherTitle,
+      intro: context.l10n.weatherIntro,
       children: [
         SectionCard(
           children: [
             for (final k in WeatherServiceKind.values)
               SettingsRow(
                 title: k.label,
-                detail: k.detail,
+                detail: k.detailOf(context.l10n),
                 onTap: () => setState(() => _kind = k),
                 trailing: _kind == k
-                    ? const CheckStatusIcon(
+                    ? CheckStatusIcon(
                         CheckStatus.ok,
-                        semanticLabel: WeatherTexts.selected,
+                        semanticLabel: context.l10n.selected,
                       )
                     : null,
               ),
@@ -100,12 +102,12 @@ class _WeatherState extends ConsumerState<WeatherScreen> {
           key: const ValueKey('weatherHome'),
           controller: _home,
           style: WText.body,
-          decoration: const InputDecoration(labelText: WeatherTexts.homeLabel),
+          decoration: InputDecoration(labelText: context.l10n.weatherHomeLabel),
         ),
-        Text(WeatherTexts.homeHelp, style: WText.caption),
+        Text(context.l10n.weatherHomeHelp, style: WText.caption),
         if (_error != null) Text(_error!, style: WText.caption),
         PrimaryButton(
-          WeatherTexts.save,
+          context.l10n.save,
           onPressed: _busy ? null : () => unawaited(_save()),
         ),
       ],

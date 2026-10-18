@@ -8,11 +8,11 @@ import '../../di/preference_models.dart';
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
 import '../../di/sensitivity.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../routes.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
-import 'weather_texts.dart';
 
 /// Tools of one integration: each on/off, and `read`/`write` tools can be
 /// set to „Immer nachfragen“. Levels can only be made stricter (K8 b):
@@ -40,25 +40,30 @@ class IntegrationDetailScreen extends ConsumerWidget {
     // User-defined integrations (MCP, HTTP) have no undo (K12 c).
     final hasUndo = ref.watch(userIntegrationSyncProvider).kindOf(id) == null;
     if (integration == null) {
-      return const SettingsPage(title: 'Integration', children: []);
+      return SettingsPage(
+        title: context.l10n.integrationDetailTitle,
+        children: [],
+      );
     }
     void update(ToolPrefs next) =>
         unawaited(ref.read(toolPrefsProvider.notifier).set(next));
     return SettingsPage(
       title: integration.displayName,
       intro: integration.sensitive
-          ? 'Sensibel: Die Tools gehen nur an Provider ab der Stufe, die du '
-                'für sensible Integrationen festlegst.'
+          ? context.l10n.integrationDetailSensitiveNote
           : null,
       children: [
         if (setupPageFor(id) case final page?) _setupRow(context, page),
         if (id == 'memory') _setupRow(context, AppRoutes.memory),
-        _toolsCard(integration, prefs, hasUndo: hasUndo, update: update),
-        Text(
-          'Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.',
-          style: WText.caption,
+        _toolsCard(
+          context,
+          integration,
+          prefs,
+          hasUndo: hasUndo,
+          update: update,
         ),
-        _sensitiveCard(integration, prefs, update),
+        Text(context.l10n.integrationDetailTapTool, style: WText.caption),
+        _sensitiveCard(context, integration, prefs, update),
         if (integration.sensitive) const SensitiveLevelSection(),
       ],
     );
@@ -68,20 +73,21 @@ class IntegrationDetailScreen extends ConsumerWidget {
     children: [
       SettingsRow(
         title: switch (id) {
-          'web' => 'Suchdienst einrichten',
-          'weather' => WeatherTexts.setupTitle,
-          'lists' => 'Listen verwalten',
-          'obsidian' => 'Vault und Tagesnotizen',
-          'bring' => 'Bring!-Konto',
-          'ha' => 'Adresse, Token und Geräte',
-          'spotify' => 'Spotify-Konto',
-          'memory' => 'Gedächtnis ansehen',
-          _ => 'Einrichten',
+          'web' => context.l10n.integrationDetailSetUpSearch,
+          'weather' => context.l10n.weatherSetupTitle,
+          'lists' => context.l10n.integrationDetailManageLists,
+          'obsidian' => context.l10n.integrationDetailVaultDaily,
+          'bring' => context.l10n.integrationDetailBringAccount,
+          'ha' => context.l10n.integrationDetailIntegrationDetailHaSetup,
+          'spotify' =>
+            context.l10n.integrationDetailIntegrationDetailSpotifyAccount,
+          'memory' => context.l10n.integrationDetailViewMemory,
+          _ => context.l10n.mcpLabelsSetUp,
         },
         detail: switch (id) {
-          'web' => 'Ohne Suchdienst liest Wendelin nur Seiten',
-          'weather' => WeatherTexts.setupDetail,
-          'memory' => 'Einträge ansehen, ändern, exportieren',
+          'web' => context.l10n.integrationDetailNoSearch,
+          'weather' => context.l10n.weatherSetupDetail,
+          'memory' => context.l10n.integrationDetailMemoryHint,
           _ => null,
         },
         onTap: () => Navigator.of(context).pushNamed(page),
@@ -90,6 +96,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
   );
 
   Widget _toolsCard(
+    BuildContext context,
     Integration integration,
     ToolPrefs prefs, {
     required bool hasUndo,
@@ -101,6 +108,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
           title: tool.name,
           mono: true,
           detail: riskText(
+            context.l10n,
             tool.risk,
             prefs.alwaysConfirm.contains(tool.name),
             hasUndo: hasUndo,
@@ -124,19 +132,20 @@ class IntegrationDetailScreen extends ConsumerWidget {
   );
 
   Widget _sensitiveCard(
+    BuildContext context,
     Integration integration,
     ToolPrefs prefs,
     void Function(ToolPrefs next) update,
   ) => SectionCard(
     children: [
       SettingsRow(
-        title: 'Sensibel',
-        detail:
-            'Persönliche Daten: Tools nur an Provider ab der '
-            'eingestellten Stufe',
+        title: context.l10n.mcpAddSensitive,
+        detail: context.l10n.mcpDetailSensitiveHint,
         trailing: WSwitch(
           value: integration.sensitive,
-          semanticLabel: '${integration.displayName} sensibel',
+          semanticLabel: context.l10n.integrationDetailSensitiveLabel(
+            integration.displayName,
+          ),
           onChanged: (on) => update(
             prefs.withSensitive(
               id,
@@ -152,18 +161,24 @@ class IntegrationDetailScreen extends ConsumerWidget {
 
 /// German description of a tool's level and whether it asks.
 /// [hasUndo] is false for tools without undo (MCP and HTTP tools).
-String riskText(RiskLevel risk, bool alwaysConfirm, {bool hasUndo = true}) =>
-    switch (risk) {
-      RiskLevel.read =>
-        alwaysConfirm ? 'liest · fragt immer nach' : 'liest · ohne Nachfrage',
-      RiskLevel.write =>
-        alwaysConfirm
-            ? 'ändert · fragt immer nach'
-            : hasUndo
-            ? 'ändert · ohne Nachfrage, 10 s rückgängig'
-            : 'ändert · ohne Nachfrage, kein Rückgängig',
-      RiskLevel.external => 'Außenwirkung · fragt immer nach',
-    };
+String riskText(
+  AppLocalizations l,
+  RiskLevel risk,
+  bool alwaysConfirm, {
+  bool hasUndo = true,
+}) => switch (risk) {
+  RiskLevel.read =>
+    alwaysConfirm
+        ? l.integrationDetailReadsAsks
+        : l.integrationDetailReadsNoAsk,
+  RiskLevel.write =>
+    alwaysConfirm
+        ? l.integrationDetailWritesAsks
+        : hasUndo
+        ? l.integrationDetailWritesUndo
+        : l.integrationDetailWritesNoUndo,
+  RiskLevel.external => l.integrationDetailExternalAsks,
+};
 
 /// Minimum privacy level for tools of sensitive integrations.
 class SensitiveLevelSection extends ConsumerWidget {
@@ -174,13 +189,13 @@ class SensitiveLevelSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(toolPrefsProvider);
     final options = <(PrivacyLevel?, String)>[
-      (null, 'An alle Provider'),
-      (PrivacyLevel.eu, 'Ab EU'),
-      (PrivacyLevel.tee, 'Ab TEE'),
-      (PrivacyLevel.local, 'Nur lokal'),
+      (null, context.l10n.integrationDetailLevelAll),
+      (PrivacyLevel.eu, context.l10n.integrationDetailLevelEu),
+      (PrivacyLevel.tee, context.l10n.integrationDetailLevelTee),
+      (PrivacyLevel.local, context.l10n.integrationDetailLevelLocal),
     ];
     return SettingsSection(
-      title: 'Sensible Integrationen',
+      title: context.l10n.integrationDetailSensitiveTitle,
       children: [
         for (final (level, label) in options)
           SettingsRow(
@@ -191,9 +206,9 @@ class SensitiveLevelSection extends ConsumerWidget {
                   .set(prefs.withSensitiveMinimum(level)),
             ),
             trailing: prefs.sensitiveMinimum == level
-                ? const CheckStatusIcon(
+                ? CheckStatusIcon(
                     CheckStatus.ok,
-                    semanticLabel: 'gewählt',
+                    semanticLabel: context.l10n.selected,
                   )
                 : null,
           ),

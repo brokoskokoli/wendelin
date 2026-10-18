@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../di/providers.dart';
 import '../../di/tee_restrictions.dart';
+import '../../l10n/l10n.dart';
 import '../attestation/attestation_texts.dart';
 import '../attestation/stage_explanations.dart';
 import '../design/design.dart';
@@ -45,25 +46,22 @@ class AttestationExplainScreen extends ConsumerWidget {
         ? <String>{}
         : restricted.difference(accepted);
     return SettingsPage(
-      title: 'Details zur Prüfung',
-      intro:
-          'Was Wendelin prüft, was dabei herauskam und was das für deine '
-          'Sicherheit heißt.',
+      title: context.l10n.attExplainTitle,
+      intro: context.l10n.attExplainIntro,
       children: [
         if (open.isNotEmpty && key != null)
           StatusCard(
             key: const ValueKey('restrictionNotice'),
             status: CheckStatus.info,
-            title: 'Einschränkungen dieses Anbieters',
-            detail:
-                '${open.map(stageLabel).join(', ')}: nur protokolliert. '
-                'Wenn du das akzeptierst, zeigt der Chat dafür keinen '
-                'Hinweis mehr.',
+            title: context.l10n.attExplainRestrictionsTitle,
+            detail: context.l10n.attExplainRestrictionsDetail(
+              open.map((st) => stageLabel(context.l10n, st)).join(', '),
+            ),
             actionBelow: true,
             action: TextButton(
               key: const ValueKey('acceptRestrictions'),
               onPressed: () => unawaited(_accept(ref, key, restricted)),
-              child: const Text('Akzeptieren'),
+              child: Text(context.l10n.attExplainAccept),
             ),
           ),
         for (final s in stages)
@@ -110,18 +108,25 @@ class _StageBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final e = stageExplanationFor(s.stage);
+    final e = stageExplanationFor(context.l10n, s.stage);
     return SectionCard(
       key: ValueKey('stage-${s.stage}'),
       children: [
         StageLineWithText(
-          label: stageLabel(s.stage),
-          result: stageResultLabel(s.result),
+          label: stageLabel(context.l10n, s.stage),
+          result: stageResultLabel(context.l10n, s.result),
           status: stageResultStatus(s.result),
           paragraphs: [
-            if (e != null) 'Geprüft wird: ${e.what}',
-            if (s.detail != null) 'Ergebnis: ${s.detail}',
-            'Bedeutung: ${stageMeaning(s.stage, s.result, tlsResult: tlsResult)}',
+            if (e != null) context.l10n.attExplainChecked(e.what),
+            if (s.detail != null) context.l10n.attExplainResult(s.detail!),
+            context.l10n.attExplainMeaning(
+              stageMeaning(
+                context.l10n,
+                s.stage,
+                s.result,
+                tlsResult: tlsResult,
+              ),
+            ),
           ],
         ),
       ],
@@ -168,7 +173,10 @@ class StageLineWithText extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: WSpace.xs,
             children: [
-              Text('$label · $result', style: WText.body),
+              Text(
+                context.l10n.attExplainStageLine(label, result),
+                style: WText.body,
+              ),
               for (final p in paragraphs) Text(p, style: WText.caption),
             ],
           ),

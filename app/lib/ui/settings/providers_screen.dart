@@ -6,6 +6,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/money.dart';
 import '../../di/profiles.dart';
+import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import '../routes.dart';
 import 'provider_setup_screen.dart';
@@ -24,23 +25,22 @@ class ProvidersScreen extends ConsumerWidget {
     final notifier = ref.read(profilesProvider.notifier);
     final data = state.value;
     return SettingsPage(
-      title: 'Provider',
-      intro:
-          'Der Standard bekommt jede Anfrage, für die keine Routing-Regel '
-          'greift. Scheitert er, sagt Wendelin das klar und wechselt nie von '
-          'selbst zu einem anderen Anbieter.',
+      title: context.l10n.areaProvider,
+      intro: context.l10n.providersIntro,
       children: [
         if (data == null)
           Text(
-            state.hasError ? 'Fehler: ${state.error}' : '…',
+            state.hasError
+                ? context.l10n.providersError('${state.error}')
+                : '…',
             style: WText.caption,
           )
         else ...[
           if (data.profiles.isEmpty)
-            Text('Noch kein Provider eingerichtet.', style: WText.intro)
+            Text(context.l10n.providersNone, style: WText.intro)
           else
             SettingsSection(
-              title: 'Profile',
+              title: context.l10n.providersProfiles,
               children: [
                 for (final p in data.profiles)
                   _ProfileRow(
@@ -66,11 +66,11 @@ class ProvidersScreen extends ConsumerWidget {
             ),
           if (data.profiles.length > 1)
             SettingsSection(
-              title: 'Anbieterwahl',
+              title: context.l10n.providersChoice,
               children: [
                 SettingsRow(
-                  title: 'Routing',
-                  detail: 'Regeln für die Wahl des Anbieters',
+                  title: context.l10n.areaRouting,
+                  detail: context.l10n.providersRoutingHint,
                   onTap: () =>
                       Navigator.of(context).pushNamed(AppRoutes.routing),
                 ),
@@ -78,7 +78,7 @@ class ProvidersScreen extends ConsumerWidget {
             ),
         ],
         WideButton(
-          '+ Provider',
+          context.l10n.providersAdd,
           onPressed: () =>
               Navigator.of(context).pushNamed(AppRoutes.providerSetup),
         ),
@@ -107,9 +107,9 @@ class ProvidersScreen extends ConsumerWidget {
   ) async {
     final ok = await confirm(
       context,
-      title: '„${p.name}“ löschen?',
-      message: 'Profil und gespeicherter Key werden entfernt.',
-      yes: 'Löschen',
+      title: context.l10n.providersDeleteTitle(p.name),
+      message: context.l10n.providersDeleteBody,
+      yes: context.l10n.delete,
     );
     if (ok) await notifier.delete(p.id);
   }
@@ -143,8 +143,11 @@ class _ProfileRow extends StatelessWidget {
           Text(
             [
               profile.defaultModel,
-              if (budget != null) 'Budget ${formatUsd(budget)}/Monat',
-              if (isDefault) 'Standard',
+              if (budget != null)
+                context.l10n.providersBudget(
+                  formatUsdFor(context.l10n, budget),
+                ),
+              if (isDefault) context.l10n.routingDefault,
             ].join(' · '),
             style: WText.mono,
           ),
@@ -152,16 +155,16 @@ class _ProfileRow extends StatelessWidget {
             spacing: WSpace.s,
             runSpacing: WSpace.s,
             children: [
-              OutlinedButton(
-                onPressed: onEdit,
-                child: const Text('Bearbeiten'),
-              ),
+              OutlinedButton(onPressed: onEdit, child: Text(context.l10n.edit)),
               if (!isDefault)
                 OutlinedButton(
                   onPressed: onDefault,
-                  child: const Text('Als Standard'),
+                  child: Text(context.l10n.providersMakeDefault),
                 ),
-              OutlinedButton(onPressed: onDelete, child: const Text('Löschen')),
+              OutlinedButton(
+                onPressed: onDelete,
+                child: Text(context.l10n.delete),
+              ),
             ],
           ),
         ],

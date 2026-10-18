@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'icons.dart';
 
@@ -51,17 +52,14 @@ class MicButton extends StatelessWidget {
   /// Überschreibt das Standard-Label des Zustands.
   final String? semanticLabel;
 
-  /// Text beim Vorbereiten.
-  static const preparingLabel = 'Moment …';
-
   /// Standard-Label je Zustand.
-  static String labelFor(MicState state) => switch (state) {
-    MicState.idle => 'Sprechen',
-    MicState.listening => 'Zuhören beenden',
-    MicState.thinking => 'Antwort abbrechen',
-    MicState.speaking => 'Sprachausgabe stoppen',
-    MicState.preparing => preparingLabel,
-    MicState.disabled => 'Mikrofon nicht verfügbar',
+  static String labelFor(AppLocalizations l, MicState state) => switch (state) {
+    MicState.idle => l.mainMicSpeak,
+    MicState.listening => l.mainMicStopListening,
+    MicState.thinking => l.mainMicCancelAnswer,
+    MicState.speaking => l.mainMicStopSpeech,
+    MicState.preparing => l.momentPlease,
+    MicState.disabled => l.mainMicUnavailable,
   };
 
   @override
@@ -93,7 +91,7 @@ class MicButton extends StatelessWidget {
       child: IconButton(
         // Nur Tooltip: wird auch als Semantics-Tooltip vorgelesen; ein
         // zusätzliches Label würde doppelt angesagt.
-        tooltip: semanticLabel ?? labelFor(state),
+        tooltip: semanticLabel ?? labelFor(context.l10n, state),
         onPressed: disabled ? null : onPressed,
         icon: content,
         style: IconButton.styleFrom(

@@ -9,6 +9,8 @@ import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/l10n/gen/app_localizations_fr.dart';
 import 'package:wendelin/ui/design/mic_button.dart';
 import 'package:wendelin/voice/level_meter.dart';
 import 'package:wendelin/voice/voice_components.dart';
@@ -496,7 +498,7 @@ void main() {
   test('ohne Spracherkennung: kein Start, Hinweis', () async {
     start(const [], voice: null);
     expect(await voice().start(TriggerKind.pushToTalk), isFalse);
-    expect(c.read(voiceControllerProvider).error, voiceUnavailableHint);
+    expect(c.read(voiceControllerProvider).error, voiceUnavailableError);
   });
 
   test(
@@ -515,7 +517,7 @@ void main() {
         isFalse,
       );
       expect(asked, 0);
-      expect(c.read(voiceControllerProvider).error, voiceUnavailableHint);
+      expect(c.read(voiceControllerProvider).error, voiceUnavailableError);
     },
   );
 
@@ -697,10 +699,17 @@ void main() {
     );
     expect(repeatPrompt('fr'), contains('oui ou non'));
     expect(repeatPrompt('en'), 'Please say yes or no.');
-    expect(voiceErrorText(StateError('x')), isNot(contains('Bad state')));
-    expect(voiceErrorText(StateError('x')), isNot(contains('belegt')));
+    expect(
+      voiceErrorText(AppLocalizationsDe(), StateError('x')),
+      isNot(contains('Bad state')),
+    );
+    expect(
+      voiceErrorText(AppLocalizationsDe(), StateError('x')),
+      isNot(contains('belegt')),
+    );
     expect(
       voiceErrorText(
+        AppLocalizationsDe(),
         const VoiceException(
           VoiceErrorKind.busy,
           'Das Mikrofon war noch belegt.',
@@ -708,8 +717,28 @@ void main() {
       ),
       contains('belegt'),
     );
-    expect(voiceErrorText(ArgumentError('geheim')), isNot(contains('geheim')));
-    expect(voiceErrorText(ArgumentError('x')), contains('Sprache'));
+    expect(
+      voiceErrorText(
+        AppLocalizationsDe(),
+        const VoiceException(VoiceErrorKind.modelMissing, 'egal'),
+      ),
+      AppLocalizationsDe().voiceErrorModelMissing,
+    );
+    expect(
+      voiceErrorText(
+        AppLocalizationsFr(),
+        const VoiceException(VoiceErrorKind.busy, 'egal'),
+      ),
+      AppLocalizationsFr().voiceErrorMicBusy,
+    );
+    expect(
+      voiceErrorText(AppLocalizationsDe(), ArgumentError('geheim')),
+      isNot(contains('geheim')),
+    );
+    expect(
+      voiceErrorText(AppLocalizationsDe(), ArgumentError('x')),
+      contains('Sprache'),
+    );
   });
 
   test('Pegel: Stille 0, Sprache deutlich, höchstens 6 Balken', () async {

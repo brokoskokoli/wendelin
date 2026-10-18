@@ -8,6 +8,7 @@ import '../../../di/core_providers.dart';
 import '../../../di/voice_providers.dart';
 import '../../../di/wake_service.dart';
 import '../../../di/wake_settings.dart';
+import '../../../l10n/l10n.dart';
 import '../../../platform/battery_platform.dart';
 import '../../design/design.dart';
 import '../../voice/microphone_access.dart';
@@ -15,30 +16,11 @@ import '../battery_hints.dart';
 import '../settings_page.dart';
 
 /// Points the user has to know before the wake word listens permanently.
-const wakeExplainPoints = [
-  (
-    'Dauerhafte Benachrichtigung',
-    'Solange Wendelin zuhört, zeigt Android eine Benachrichtigung. Ab '
-        'Android 14 kannst du sie wegwischen, der Dienst läuft dann weiter. '
-        'Ohne die Berechtigung für Benachrichtigungen zeigt Android keine; '
-        'Wendelin hört trotzdem zu.',
-  ),
-  (
-    'Mikrofon-Punkt',
-    'Android zeigt den grünen Punkt für das Mikrofon, solange der Dienst '
-        'zuhört.',
-  ),
-  (
-    'Zuhören bleibt auf dem Gerät',
-    'Die Erkennung des Wortes läuft auf dem Gerät. Was du nach „Wendelin“ '
-        'sagst, wird als Text an den gewählten KI-Anbieter geschickt. Audio '
-        'wird weder gesendet noch gespeichert.',
-  ),
-  (
-    'Akku',
-    'Das ständige Zuhören kostet Akku. Standard ist deshalb „Nur beim '
-        'Laden“.',
-  ),
+List<(String, String)> wakeExplainPoints(AppLocalizations l) => [
+  (l.wakeExplainPersistentTitle, l.wakeExplainPersistentBody),
+  (l.wakeExplainMicDotTitle, l.wakeExplainMicDotBody),
+  (l.wakeExplainLocalTitle, l.wakeExplainLocalBody),
+  (l.wakeExplainBatteryTitle, l.wakeExplainBatteryBody),
 ];
 
 /// Explanation before the first switch-on. `true` = the user agrees.
@@ -50,14 +32,14 @@ Future<bool> showWakeExplanation(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: WColors.surface,
-        title: Text('Aktivierungswort einschalten?', style: WText.label),
+        title: Text(context.l10n.wakeExplainEnableTitle, style: WText.label),
         content: SingleChildScrollView(
           child: Column(
             key: const ValueKey('wakeExplain'),
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final (title, text) in wakeExplainPoints) ...[
+              for (final (title, text) in wakeExplainPoints(context.l10n)) ...[
                 Text(title, style: WText.label),
                 Text(text, style: WText.intro),
                 const SizedBox(height: WSpace.s),
@@ -69,11 +51,11 @@ Future<bool> showWakeExplanation(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Abbrechen'),
+            child: Text(context.l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Einschalten'),
+            child: Text(context.l10n.wakeExplainEnable),
           ),
         ],
       ),
@@ -89,10 +71,12 @@ Future<bool> enableWakeWord(BuildContext context, WidgetRef ref) async {
   final battery = await ref.read(batteryStatusProvider.future);
   if (!context.mounted) return false;
   if (!explained) {
-    final checklist = vendorChecklists[battery.vendor];
+    final checklist = vendorChecklists(context.l10n)[battery.vendor];
     final ok = await showWakeExplanation(
       context,
-      vendorHint: checklist == null ? null : '${checklist.$1}: ${checklist.$2}',
+      vendorHint: checklist == null
+          ? null
+          : context.l10n.wakeExplainChecklist(checklist.$1, checklist.$2),
     );
     if (!ok || !context.mounted) return false;
   }
@@ -110,12 +94,10 @@ Future<bool> enableWakeWord(BuildContext context, WidgetRef ref) async {
   if (!battery.ignoringOptimizations && context.mounted) {
     final yes = await confirm(
       context,
-      title: 'Akku-Optimierung ausnehmen?',
-      message:
-          'Damit Android den Dienst nicht beendet, sollte Wendelin von der '
-          'Akku-Optimierung ausgenommen sein.',
-      yes: 'Ausnehmen',
-      no: 'Später',
+      title: context.l10n.wakeExplainBatteryExemptTitle,
+      message: context.l10n.wakeExplainBatteryExemptBody,
+      yes: context.l10n.wakeExplainExempt,
+      no: context.l10n.later,
     );
     if (yes) {
       unawaited(ref.read(batteryPlatformProvider).requestIgnoreOptimizations());

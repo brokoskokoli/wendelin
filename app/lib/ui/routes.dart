@@ -77,6 +77,9 @@ abstract final class AppRoutes {
   /// Assistant (default assistant, name, persona).
   static const assistant = '/settings/assistant';
 
+  /// App language (WP79).
+  static const appLanguage = '/settings/app-language';
+
   /// Voice: Whisper model, language, speech output.
   static const voice = '/settings/voice';
 
