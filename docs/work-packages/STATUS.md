@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, WP84 merged main nach; WP91 und WP76b gemergt
+Stand: 2026-10-18 abends, WP84 merged main nach, WP96 läuft; WP91 und WP76b gemergt
 
 ## Meilensteine
 
@@ -46,7 +46,7 @@ Stand: 2026-10-18 abends, WP84 merged main nach; WP91 und WP76b gemergt
 | WP93 | Wake Word im Chat | geplant | – |
 | WP94 | Schnellwechsel Agent | geplant | – |
 | WP95 | CI als Gate | gemergt | – |
-| WP96 | Gate schlank/stabil | wartet | Teil 1 14e406e CI grün; Teil 2 WIP 036f497 (Gate ungeprüft); Übergabe `handoff/wp96-session.md` |
+| WP96 | Gate schlank/stabil | in Arbeit | Teil 1 14e406e CI grün; Teil 2 WIP 036f497 (Gate ungeprüft); Übergabe `handoff/wp96-session.md` |
 | WP97 | Lastbremse/Cache | geplant | – |
 | WP98 | Konfliktarm | geplant | nach WP79 |
 
