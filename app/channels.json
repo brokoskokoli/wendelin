@@ -151,6 +151,15 @@
         "shutdown": {"args": [], "returns": "none"}
       }
     },
+    "app.wendelin/multicast": {
+      "dart": ["app/lib/platform/ha_discovery.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/MulticastChannel.kt"],
+      "toKotlin": {
+        "acquire": {"args": [], "returns": "none"},
+        "release": {"args": [], "returns": "none"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/torch": {
       "dart": ["app/lib/platform/channel_torch_port.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/TorchChannel.kt"],

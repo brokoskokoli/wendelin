@@ -344,6 +344,7 @@ void main() {
         'calendar',
         'clipboard',
         'flashlight',
+        'ha',
         'lists',
         'memory',
         'obsidian',

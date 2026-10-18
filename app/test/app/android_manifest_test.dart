@@ -53,6 +53,7 @@ void main() {
         .toSet();
     expect(permissions, {
       'android.permission.INTERNET',
+      'android.permission.CHANGE_WIFI_MULTICAST_STATE',
       'android.permission.ACCESS_NETWORK_STATE',
       'android.permission.READ_CALENDAR',
       'android.permission.WRITE_CALENDAR',

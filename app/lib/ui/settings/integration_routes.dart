@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../routes.dart';
 import 'bring_screen.dart';
+import 'ha_screen.dart';
 import 'http_tool_editor_screen.dart';
 import 'http_tools_screen.dart';
 import 'lists_screen.dart';
@@ -17,6 +18,7 @@ Map<String, WidgetBuilder> integrationRoutes() => {
   AppRoutes.httpTools: (_) => const HttpToolsScreen(),
   AppRoutes.httpToolNew: (_) => const HttpToolEditorScreen(),
   AppRoutes.bring: (_) => const BringScreen(),
+  AppRoutes.homeAssistant: (_) => const HaScreen(),
   AppRoutes.lists: (_) => const ListsScreen(),
   AppRoutes.weather: (_) => const WeatherScreen(),
   AppRoutes.webSearch: (_) => const WebSearchScreen(),

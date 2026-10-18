@@ -3,6 +3,7 @@ import 'bring_spec.dart';
 import 'calendar_spec.dart';
 import 'clipboard_spec.dart';
 import 'flashlight_spec.dart';
+import 'ha_spec.dart';
 import 'integration_spec.dart';
 import 'lists_spec.dart';
 import 'memory_spec.dart';
@@ -21,5 +22,6 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
   obsidianSpec,
   bringSpec,
   listsSpec,
+  haSpec,
   weatherSpec,
 ];

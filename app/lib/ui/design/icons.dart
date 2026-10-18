@@ -143,6 +143,12 @@ abstract final class WIcons {
     '$_sj/>',
   );
 
+  /// Haus (Smart Home).
+  static const home = WIconData._(
+    '<path d="M4 11 L12 4 L20 11 M6.5 9.5 L6.5 20 L17.5 20 L17.5 9.5 '
+    'M10 20 L10 14 L14 14 L14 20" $_sj/>',
+  );
+
   /// Abspielen (Dreieck).
   static const play = WIconData._('<path d="M8 5.5 L18 12 L8 18.5 Z" $_sj/>');
 

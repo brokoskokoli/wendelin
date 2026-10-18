@@ -2,6 +2,8 @@
     <!-- Only what the M1 integrations need; requested at runtime only when the
          user enables the integration (calendar). -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- mDNS search for Home Assistant in the Wi-Fi (MulticastLock, WP91) -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
     <!-- Routing condition „network“ (offline → local model), ConnectivityManager. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <!-- Warning about a failed TEE check after the answer (WP52, GPU mode „Nachher“): asked when

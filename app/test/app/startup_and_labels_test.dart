@@ -93,6 +93,7 @@ void main() {
       expect(integrationIcon('clipboard'), WIcons.clipboard);
       expect(integrationIcon('flashlight'), WIcons.flashlight);
       expect(integrationIcon('alarms'), WIcons.alarm);
+      expect(integrationIcon('ha'), WIcons.home);
       expect(integrationIcon('irgendwas'), WIcons.task);
     });
   });

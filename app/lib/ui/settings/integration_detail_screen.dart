@@ -73,6 +73,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
           'lists' => 'Listen verwalten',
           'obsidian' => 'Vault und Tagesnotizen',
           'bring' => 'Bring!-Konto',
+          'ha' => 'Adresse, Token und Geräte',
           'memory' => 'Gedächtnis ansehen',
           _ => 'Einrichten',
         },

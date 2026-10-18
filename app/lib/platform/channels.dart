@@ -25,6 +25,9 @@ const filesChannelName = 'app.wendelin/files';
 /// `NetworkChannel.kt`: connectivity state.
 const networkChannelName = 'app.wendelin/network';
 
+/// `MulticastChannel.kt`: Wi-Fi multicast lock for mDNS (Home Assistant search).
+const multicastChannelName = 'app.wendelin/multicast';
+
 /// `NotifyChannel.kt`: system notification for a failed TEE check.
 const notifyChannelName = 'app.wendelin/notify';
 
