@@ -11,7 +11,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 
 ## Neue Orchestrator-Sitzung
 - Sitzung mit `claude --name "Wendelin coding"` starten. Unter diesem Namen schicken die Paket-Sitzungen ihre Fertigmeldungen.
-- Mit `/development-supervisor mach weiter` setzt sie nach Abschnitt 0 „Fortsetzen“ fort. Der Stand kommt aus `docs/work-packages/STATUS.md` (Abschnitt „Nächste Schritte“), aus `git worktree list` und aus den Übergabedateien in `../james-wt/handoff/`.
+- Mit `/development-supervisor mach weiter` setzt sie nach Abschnitt 0 „Fortsetzen“ fort. Der Stand kommt aus `docs/work-packages/STATUS.md` (Abschnitt „Nächste Schritte“), aus `git worktree list` und aus den Übergabedateien im Ordner james-wt/handoff neben dem Repo.
 
 ## Konzeptänderungen
 - **Wenn sich bei der Umsetzung herausstellt, dass etwas vom Konzept abweicht oder abweichen muss, wird das im Gesamtkonzept nachgetragen. Der Maintainer (Stefan) bekommt dazu eine kurze Liste der Änderungen und bestätigt sie.**
