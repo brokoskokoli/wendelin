@@ -25,6 +25,9 @@ echo "CI $1  $2"
 gh run view "$id" --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"' | sort | sed 's/^/  /'
 if [ "$1" != "success" ]; then
   echo "--- Ende der Fehlerprotokolle ---"
-  gh run view "$id" --log-failed 2>/dev/null | tail -n 40 | cut -c1-200
+  # Nur Fehlerzeilen (rote Tests, ##[error], Exceptions), je Job gekürzt.
+  gh run view "$id" --log-failed 2>/dev/null \
+    | grep -aE '❌|##\[error\]|Error:|Exception|Expected:|Actual:|Golden "|error •|failed' \
+    | grep -av '✅' | sed -E 's/\t[^\t]*\t[0-9T:.-]+Z / /' | cut -c1-200 | tail -n 30
   exit 1
 fi
