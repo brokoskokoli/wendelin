@@ -7,6 +7,7 @@ import 'generated/frb_generated.dart';
 import 'generated/near_e2ee.dart';
 import 'generated/quote.dart';
 import 'generated/report.dart';
+import 'generated/sigstore.dart';
 import 'generated/snp.dart';
 
 /// Die Rust-Funktionen aus `native/attest`, als Schnittstelle für Tests ohne native Bibliothek.
@@ -78,6 +79,15 @@ abstract interface class AttestBackend {
     required SnpPolicy policy,
     required Uint8List tlsSpkiSha256,
     required Uint8List hpkeKey,
+  });
+
+  /// Prüft das Sigstore-Bundle eines Tinfoil-Releases und vergleicht den Messwert (WP76b).
+  Future<SigstoreVerdict> verifyTinfoilRelease({
+    required String bundleJson,
+    required String repo,
+    required String tag,
+    required String digestHex,
+    required String reportMeasurementHex,
   });
 
   /// Frische Client-Identität (NEAR AI, WP75).
@@ -207,5 +217,20 @@ final class FrbAttestBackend implements AttestBackend {
     policy: policy,
     expectedTlsSpkiSha256: tlsSpkiSha256,
     expectedHpkeKey: hpkeKey,
+  );
+
+  @override
+  Future<SigstoreVerdict> verifyTinfoilRelease({
+    required String bundleJson,
+    required String repo,
+    required String tag,
+    required String digestHex,
+    required String reportMeasurementHex,
+  }) => api.verifyTinfoilRelease(
+    bundleJson: bundleJson,
+    repo: repo,
+    tag: tag,
+    digestHex: digestHex,
+    reportMeasurementHex: reportMeasurementHex,
   );
 }

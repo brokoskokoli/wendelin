@@ -11,6 +11,7 @@ import 'frb_generated.dart';
 import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
+import 'sigstore.dart';
 import 'snp.dart';
 
 /// Prüft einen TDX-Quote gegen `collateral_json` zum Zeitpunkt `now_unix`.
@@ -168,4 +169,23 @@ Future<SnpVerdict> verifySnpReport({
   policy: policy,
   expectedTlsSpkiSha256: expectedTlsSpkiSha256,
   expectedHpkeKey: expectedHpkeKey,
+);
+
+/// Prüft das Sigstore-Bundle des Tinfoil-Releases `repo`@`tag` (`digest_hex` = `tinfoil.hash`) und
+/// vergleicht den signierten SNP-Messwert mit `report_measurement_hex` (aus `snp_report_info`).
+/// `trusted_root_json` leer = eingebettete Trust-Root.
+Future<SigstoreVerdict> verifyTinfoilRelease({
+  required String bundleJson,
+  required String repo,
+  required String tag,
+  required String digestHex,
+  required String reportMeasurementHex,
+  String? trustedRootJson,
+}) => AttestNative.instance.api.crateApiVerifyTinfoilRelease(
+  bundleJson: bundleJson,
+  repo: repo,
+  tag: tag,
+  digestHex: digestHex,
+  reportMeasurementHex: reportMeasurementHex,
+  trustedRootJson: trustedRootJson,
 );

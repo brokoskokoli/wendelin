@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2089063827;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1185482357;
 
 // Section: executor
 
@@ -719,6 +719,51 @@ fn wire__crate__api__verify_snp_report_impl(
         },
     )
 }
+fn wire__crate__api__verify_tinfoil_release_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "verify_tinfoil_release",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_bundle_json = <String>::sse_decode(&mut deserializer);
+            let api_repo = <String>::sse_decode(&mut deserializer);
+            let api_tag = <String>::sse_decode(&mut deserializer);
+            let api_digest_hex = <String>::sse_decode(&mut deserializer);
+            let api_report_measurement_hex = <String>::sse_decode(&mut deserializer);
+            let api_trusted_root_json = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(crate::api::verify_tinfoil_release(
+                        api_bundle_json,
+                        api_repo,
+                        api_tag,
+                        api_digest_hex,
+                        api_report_measurement_hex,
+                        api_trusted_root_json,
+                    ))?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 
 // Section: dart2rust
 
@@ -881,6 +926,32 @@ impl SseDecode for crate::report::ReceiptVerdict {
             signature_ok: var_signatureOk,
             keyset_matches: var_keysetMatches,
             error: var_error,
+        };
+    }
+}
+
+impl SseDecode for crate::sigstore::SigstoreVerdict {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_dsseOk = <bool>::sse_decode(deserializer);
+        let mut var_chainOk = <bool>::sse_decode(deserializer);
+        let mut var_identityOk = <bool>::sse_decode(deserializer);
+        let mut var_rekorOk = <bool>::sse_decode(deserializer);
+        let mut var_measurementOk = <bool>::sse_decode(deserializer);
+        let mut var_snpMeasurementHex = <String>::sse_decode(deserializer);
+        let mut var_releaseTag = <String>::sse_decode(deserializer);
+        let mut var_integratedTime = <u64>::sse_decode(deserializer);
+        let mut var_errors = <Vec<String>>::sse_decode(deserializer);
+        return crate::sigstore::SigstoreVerdict {
+            dsse_ok: var_dsseOk,
+            chain_ok: var_chainOk,
+            identity_ok: var_identityOk,
+            rekor_ok: var_rekorOk,
+            measurement_ok: var_measurementOk,
+            snp_measurement_hex: var_snpMeasurementHex,
+            release_tag: var_releaseTag,
+            integrated_time: var_integratedTime,
+            errors: var_errors,
         };
     }
 }
@@ -1049,6 +1120,7 @@ fn pde_ffi_dispatcher_primary_impl(
         17 => wire__crate__api__verify_aci_report_impl(port, ptr, rust_vec_len, data_len),
         19 => wire__crate__api__verify_quote_impl(port, ptr, rust_vec_len, data_len),
         20 => wire__crate__api__verify_snp_report_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__verify_tinfoil_release_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1204,6 +1276,34 @@ impl flutter_rust_bridge::IntoIntoDart<crate::report::ReceiptVerdict>
     for crate::report::ReceiptVerdict
 {
     fn into_into_dart(self) -> crate::report::ReceiptVerdict {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::sigstore::SigstoreVerdict {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.dsse_ok.into_into_dart().into_dart(),
+            self.chain_ok.into_into_dart().into_dart(),
+            self.identity_ok.into_into_dart().into_dart(),
+            self.rekor_ok.into_into_dart().into_dart(),
+            self.measurement_ok.into_into_dart().into_dart(),
+            self.snp_measurement_hex.into_into_dart().into_dart(),
+            self.release_tag.into_into_dart().into_dart(),
+            self.integrated_time.into_into_dart().into_dart(),
+            self.errors.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::sigstore::SigstoreVerdict
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::sigstore::SigstoreVerdict>
+    for crate::sigstore::SigstoreVerdict
+{
+    fn into_into_dart(self) -> crate::sigstore::SigstoreVerdict {
         self
     }
 }
@@ -1426,6 +1526,21 @@ impl SseEncode for crate::report::ReceiptVerdict {
         <bool>::sse_encode(self.signature_ok, serializer);
         <bool>::sse_encode(self.keyset_matches, serializer);
         <Option<String>>::sse_encode(self.error, serializer);
+    }
+}
+
+impl SseEncode for crate::sigstore::SigstoreVerdict {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.dsse_ok, serializer);
+        <bool>::sse_encode(self.chain_ok, serializer);
+        <bool>::sse_encode(self.identity_ok, serializer);
+        <bool>::sse_encode(self.rekor_ok, serializer);
+        <bool>::sse_encode(self.measurement_ok, serializer);
+        <String>::sse_encode(self.snp_measurement_hex, serializer);
+        <String>::sse_encode(self.release_tag, serializer);
+        <u64>::sse_encode(self.integrated_time, serializer);
+        <Vec<String>>::sse_encode(self.errors, serializer);
     }
 }
 

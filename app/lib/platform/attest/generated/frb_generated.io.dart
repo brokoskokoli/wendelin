@@ -16,6 +16,7 @@ import 'frb_generated.dart';
 import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
+import 'sigstore.dart';
 import 'snp.dart';
 
 abstract class AttestNativeApiImplPlatform
@@ -74,6 +75,9 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   ReceiptVerdict dco_decode_receipt_verdict(dynamic raw);
+
+  @protected
+  SigstoreVerdict dco_decode_sigstore_verdict(dynamic raw);
 
   @protected
   SnpPolicy dco_decode_snp_policy(dynamic raw);
@@ -155,6 +159,9 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   ReceiptVerdict sse_decode_receipt_verdict(SseDeserializer deserializer);
+
+  @protected
+  SigstoreVerdict sse_decode_sigstore_verdict(SseDeserializer deserializer);
 
   @protected
   SnpPolicy sse_decode_snp_policy(SseDeserializer deserializer);
@@ -255,6 +262,12 @@ abstract class AttestNativeApiImplPlatform
   @protected
   void sse_encode_receipt_verdict(
     ReceiptVerdict self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_sigstore_verdict(
+    SigstoreVerdict self,
     SseSerializer serializer,
   );
 

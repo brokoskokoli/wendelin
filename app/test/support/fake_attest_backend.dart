@@ -6,6 +6,7 @@ import 'package:wendelin/platform/attest/generated/e2ee.dart';
 import 'package:wendelin/platform/attest/generated/near_e2ee.dart';
 import 'package:wendelin/platform/attest/generated/quote.dart';
 import 'package:wendelin/platform/attest/generated/report.dart';
+import 'package:wendelin/platform/attest/generated/sigstore.dart';
 import 'package:wendelin/platform/attest/generated/snp.dart';
 
 /// Rust-Ersatz für Tests ohne native Bibliothek: feste Antworten, zählt Aufrufe.
@@ -190,5 +191,31 @@ final class FakeAttestBackend implements AttestBackend {
     lastSnpPolicy = policy;
     lastSnpNow = nowUnix;
     return snpVerdict;
+  }
+
+  SigstoreVerdict sigstoreVerdict = SigstoreVerdict(
+    dsseOk: true,
+    chainOk: true,
+    identityOk: true,
+    rekorOk: true,
+    measurementOk: true,
+    snpMeasurementHex: 'cd',
+    releaseTag: 'v1',
+    integratedTime: BigInt.from(1792024828),
+    errors: const [],
+  );
+  (String, String, String, String)? lastRelease;
+
+  @override
+  Future<SigstoreVerdict> verifyTinfoilRelease({
+    required String bundleJson,
+    required String repo,
+    required String tag,
+    required String digestHex,
+    required String reportMeasurementHex,
+  }) async {
+    if (panic != null) throw panic!;
+    lastRelease = (repo, tag, digestHex, reportMeasurementHex);
+    return sigstoreVerdict;
   }
 }

@@ -29,6 +29,9 @@ flutter_rust_bridge = "=2.12.0"
 # SEV-SNP (WP76a): RSA-PSS der AMD-Kette, ECDSA P-384 des Reports
 rsa = { version = "=0.10.0-rc.19", default-features = false, features = ["std", "encoding", "sha2"] }
 p384 = { version = "0.14", default-features = false, features = ["ecdsa", "std"] }
+# Sigstore (WP76b): ECDSA P-256 für DSSE/Rekor, Base64 für Bundles
+p256 = { version = "0.14", default-features = false, features = ["ecdsa", "std"] }
+base64 = { version = "0.23", default-features = false, features = ["std"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
