@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_providers/wendelin_providers.dart' show GpuCheckMode;
 
 import '../../../di/provider_setup.dart';
 import '../../../di/tee_restrictions.dart';
 import '../../attestation/attestation_texts.dart';
 import '../../design/design.dart';
+import '../gpu_check_section.dart';
 import '../settings_page.dart';
 import 'attestation_stages_card.dart';
 
@@ -19,6 +21,9 @@ List<Widget> finishStep({
   required double warn,
   required void Function(double w) onWarn,
   required bool attested,
+  required GpuCheckMode gpuMode,
+  required void Function(GpuCheckMode mode) onGpuMode,
+  required bool noGpuEvidence,
   required VoidCallback onSave,
 }) {
   return [
@@ -31,6 +36,18 @@ List<Widget> finishStep({
       AttestationStagesCard(result.stages),
     if (result != null && attested)
       ..._restrictionNote(stageViews(result.stages)),
+    if (attested && noGpuEvidence)
+      const StatusCard(
+        key: ValueKey('noGpuEvidence'),
+        status: CheckStatus.info,
+        title: 'Keine GPU-Prüfung möglich',
+        detail:
+            '$noGpuEvidenceHint. Das Modell bleibt nutzbar. Was Wendelin '
+            'dann tut, bestimmt die GPU-Prüfung unten: „Aus“ nichts, '
+            '„Nachher“ nur ein Hinweis, „Vorher“ sendet nichts, du kannst '
+            'aber einmalig ohne GPU-Prüfung senden.',
+      ),
+    if (attested) GpuCheckSection(mode: gpuMode, onChanged: onGpuMode),
     if (detected != null)
       Text(
         [

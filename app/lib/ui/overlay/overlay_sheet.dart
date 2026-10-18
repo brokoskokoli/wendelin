@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/chat_entry.dart';
 import '../../agent/conversation_state.dart';
+import '../attestation/attestation_texts.dart' show gpuBlockReason;
 import '../design/design.dart';
 import '../screens/bring_share_card.dart';
 import '../screens/confirmation_sheet.dart';
@@ -90,7 +91,16 @@ class OverlaySheet extends StatelessWidget {
     this.privateSince,
     this.privateByRequest = true,
     this.onNewConversation,
+    this.gpuBlock,
+    this.onGpuBlock,
   });
+
+  /// A request stopped by the GPU check (WP82): shown as a card with the
+  /// offer to send it once without the check.
+  final GpuBlock? gpuBlock;
+
+  /// Answers [gpuBlock]: `true` sends the request once without GPU check.
+  final void Function({required bool sendWithout})? onGpuBlock;
 
   /// Whether the private state comes from a „privat“ request.
   final bool privateByRequest;
@@ -260,17 +270,49 @@ class OverlaySheet extends StatelessWidget {
     final request = exchange.request;
     final q = question;
     final statusText = status ?? exchange.notice;
+    final block = gpuBlock;
+    if (!locked && block != null && onGpuBlock != null) {
+      return [
+        if (request != null)
+          Text(
+            '„$request“',
+            style: WText.quote,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        _ScrollIntoView(
+          child: ConfirmationCard(
+            key: const ValueKey('gpuBlockCard'),
+            title: block.noEvidence
+                ? 'Kein GPU-Nachweis'
+                : 'GPU-Prüfung nicht bestanden',
+            detail: block.noEvidence
+                ? 'Die Anfrage wurde nicht gesendet.'
+                : 'Nicht gesendet.${gpuBlockReason(block.reason)}',
+            compact: true,
+            toolName: 'GPU-Prüfung',
+            risk: RiskLevel.external,
+            onYes: () => onGpuBlock!(sendWithout: true),
+            onNo: () => onGpuBlock!(sendWithout: false),
+            yesLabel: 'Ohne GPU-Prüfung senden',
+            noLabel: 'Abbrechen',
+          ),
+        ),
+      ];
+    }
     // Open confirmation: the same sheet as in docs/design/screens/
     // bestaetigung (quote, card, hint), nothing else.
     if (q != null && _asking) {
       return [
         if (request != null) Text('„$request“', style: WText.quote),
-        confirmationCardFor(
-          q,
-          onAnswer!,
-          toolRisk: q is ToolQuestion ? q.event.risk : RiskLevel.external,
-          privateSince: privateSince,
-          privateByRequest: privateByRequest,
+        _ScrollIntoView(
+          child: confirmationCardFor(
+            q,
+            onAnswer!,
+            toolRisk: q is ToolQuestion ? q.event.risk : RiskLevel.external,
+            privateSince: privateSince,
+            privateByRequest: privateByRequest,
+          ),
         ),
         if (statusText != null) Text(statusText, style: WText.caption),
       ];
@@ -372,4 +414,29 @@ class OverlaySheet extends StatelessWidget {
     ToolPhase.declined ||
     ToolPhase.cancelled => CheckStatus.failed,
   };
+}
+
+/// Scrolls its child to the end of the visible area once shown, so the
+/// buttons of a tall card stay reachable with wide fonts or large text.
+class _ScrollIntoView extends StatefulWidget {
+  const _ScrollIntoView({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_ScrollIntoView> createState() => _ScrollIntoViewState();
+}
+
+class _ScrollIntoViewState extends State<_ScrollIntoView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(context, alignment: 1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

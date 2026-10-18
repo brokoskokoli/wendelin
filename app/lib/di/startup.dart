@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
-import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
 import 'app_settings.dart';
@@ -25,7 +24,6 @@ final class StartupSettings {
     this.lists = const [],
     this.obsidian = const ObsidianPrefs(),
     this.secureScreen = false,
-    this.gpuCheck = GpuCheckMode.off,
   });
 
   /// Integrations the user switched on.
@@ -68,9 +66,6 @@ final class StartupSettings {
   /// Protect the main app's screen content.
   final bool secureScreen;
 
-  /// When the GPU evidence of TEE models is checked at NVIDIA.
-  final GpuCheckMode gpuCheck;
-
   /// Reads the settings for the integrations [integrationIds].
   static Future<StartupSettings> load(
     SettingsRepository settings,
@@ -100,11 +95,6 @@ final class StartupSettings {
       obsidian:
           await settings.get(AppSettings.obsidian) ?? const ObsidianPrefs(),
       secureScreen: await settings.get(AppSettings.secureScreen) ?? false,
-      gpuCheck:
-          GpuCheckMode.values.asNameMap()[await settings.get(
-            AppSettings.gpuCheck,
-          )] ??
-          GpuCheckMode.off,
     );
   }
 }

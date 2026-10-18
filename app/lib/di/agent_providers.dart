@@ -11,6 +11,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 import '../agent/agent_controller.dart';
 import 'agent_factory.dart';
 import 'attest_log.dart';
+import 'attestation_hub.dart' show AttestationHub;
 import 'attestation_log_writer.dart';
 import 'attestation_providers.dart';
 import 'audit_recorder.dart';
@@ -118,11 +119,41 @@ final FutureProvider<ProviderConfig?> storedProviderConfigProvider =
         storage: ref.watch(storageProvider),
         secrets: ref.watch(secretStoreProvider),
         catalog: ref.watch(modelCatalogProvider),
-        create: ref.watch(llmProviderFactoryProvider),
+        create: hubRegistering(
+          ref.read(attestationHubProvider),
+          ref.watch(llmProviderFactoryProvider),
+        ),
         clock: ref.watch(clockProvider),
         network: ref.watch(networkStatusProvider),
       );
     });
+
+/// Wraps [create] so the live providers (and only those) are registered in
+/// the hub. The setup probe instances are not: a probe provider must not
+/// replace the live one (mode, locks, reports; WP82).
+LlmProviderFactory hubRegistering(
+  AttestationHub hub,
+  LlmProviderFactory create,
+) => (profile, secrets) {
+  final provider = create(profile, secrets);
+  if (provider is AttestedProvider && hub.provider(profile.id) != provider) {
+    final seen = _registeredIds[hub] ??= <String>{};
+    hub.register(
+      profile.id,
+      provider,
+      // Registered by this wiring before: the profile changed (WP81).
+      reason: seen.contains(profile.id)
+          ? 'Profil geändert'
+          : hub.provider(profile.id) != null
+          ? 'Sitzung übernommen'
+          : 'erster Aufbau',
+    );
+    seen.add(profile.id);
+  }
+  return provider;
+};
+
+final Expando<Set<String>> _registeredIds = Expando<Set<String>>();
 
 /// Builds the adapter for a profile (fake in tests).
 typedef LlmProviderFactory = LlmProvider Function(
@@ -161,14 +192,7 @@ final Provider<LlmProviderFactory> llmProviderFactoryProvider =
           settings: attestSettings(transport?.settings),
         );
         if (provider is AttestedProvider) {
-          final hub = ref.read(attestationHubProvider);
-          final reason = kept != null
-              ? 'Profil geändert'
-              : hub.provider(profile.id) != null
-              ? 'Sitzung übernommen'
-              : 'erster Aufbau';
           live[profile.id] = (profile: profile, p: provider);
-          hub.register(profile.id, provider, reason: reason);
         }
         return provider;
       };

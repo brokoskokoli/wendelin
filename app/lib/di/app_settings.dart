@@ -56,12 +56,10 @@ abstract final class AppSettings {
     defaultValue: false,
   );
 
-  /// GPU check of TEE models at NVIDIA: `off` (default), `before`, `after`
-  /// (name of `GpuCheckMode`).
-  static final gpuCheck = SettingKey.string(
-    'tee.gpuCheck',
-    defaultValue: 'off',
-  );
+  /// Former global GPU check mode (name of `GpuCheckMode`). Since WP82 the
+  /// mode belongs to each TEE profile (`options.gpuCheck`); this key is only
+  /// read once by `migrateGlobalGpuCheck` and then removed.
+  static final legacyGpuCheck = SettingKey.string('tee.gpuCheck');
 
   /// Pin of the attested TEE provider [profileId] (JSON of `AttestationPin`).
   static SettingKey<Map<String, Object?>> attestationPin(String profileId) =>

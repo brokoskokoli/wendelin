@@ -340,7 +340,10 @@ final class NearVerifier implements AttestationVerifier, ReceiptIdSource {
       );
       return e;
     }
-    e.gpuPayload = NrasGpuVerifier.decodePayload(json['nvidia_payload']);
+    final rawGpu = json['nvidia_payload'];
+    e.gpuPayload =
+        NrasGpuVerifier.decodePayload(rawGpu) ??
+        (rawGpu == null ? null : NrasGpuVerifier.unreadableMarker);
     e.composeHash = AttestCodec.hex(
       crypto.sha256(utf8.encode(appCompose).toU8),
     );

@@ -285,6 +285,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
+    // An open GPU block is dropped with the overlay (WP82).
+    unawaited(_agent.resolveGpuBlock(sendWithout: false));
     await _voice.suspend();
     ref.read(lockedModeProvider.notifier).set(false);
     _agent.cancel();
@@ -358,6 +360,9 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
               voice.hint ??
               (available ? null : voiceUnavailableHint),
     question: _locked ? null : conversation.pending,
+    gpuBlock: conversation.gpuBlock,
+    onGpuBlock: ({required sendWithout}) =>
+        unawaited(_agent.resolveGpuBlock(sendWithout: sendWithout)),
     onAnswer: (yes) => _agent.answer(approved: yes),
     hint: voice.answersByVoice ? ConfirmationHint.voice : ConfirmationHint.tap,
     onMic: () => _onMic(voice, conversation),
