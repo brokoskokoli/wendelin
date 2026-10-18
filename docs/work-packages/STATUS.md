@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-18 abends, WP96 und WP79 laufen; WP91, WP76b, WP84 gemergt
+Stand: 2026-10-18 abends, WP96 läuft; WP91, WP76b, WP84, WP79 gemergt
 
 ## Meilensteine
 
@@ -29,7 +29,7 @@ Stand: 2026-10-18 abends, WP96 und WP79 laufen; WP91, WP76b, WP84 gemergt
 | WP76b | Tinfoil Sigstore | gemergt cc12c9f | K59 offen; Downgrade-Schutz in WP76d |
 | WP76c | Tinfoil EHBP/HPKE | geplant | – |
 | WP76d | Tinfoil in der App | geplant | min_tcb setzen; Downgrade-Schutz „neuestes Release“ (K59) |
-| WP79 | App-Sprache | in Arbeit | WP82 gemergt, kann weiter; danach Provider-Screens, Goldens je Sprache |
+| WP79 | App-Sprache | gemergt 604ff80 | K60 offen; Folge: Stoppwort-Hinweis im Overlay folgt UI- statt Sprech-Sprache; Scan-Test erkennt deutsche Ein-Wort-Texte ohne Umlaut nicht |
 | WP81 | Sofort vorlesen, Haken danach | gemergt | – |
 | WP81b | Nächster Modellaufruf parallel zur Quittung | geplant | freigegeben Stefan 2026-10-18 |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
@@ -48,7 +48,7 @@ Stand: 2026-10-18 abends, WP96 und WP79 laufen; WP91, WP76b, WP84 gemergt
 | WP95 | CI als Gate | gemergt | – |
 | WP96 | Gate schlank/stabil | in Arbeit | Teil 1 14e406e CI grün; Teil 2 WIP 036f497 (Gate ungeprüft); Übergabe `handoff/wp96-session.md` |
 | WP97 | Lastbremse/Cache | geplant | – |
-| WP98 | Konfliktarm | geplant | nach WP79 |
+| WP98 | Konfliktarm | geplant | kann starten (WP79 gemergt) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
