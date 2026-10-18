@@ -85,7 +85,31 @@ void main() {
       ),
     );
 
+    // Schalter: „Immer bestätigen“ erscheint erst nach der Freigabe und
+    // bleibt gespeichert, auch wenn danach andere Geräte geändert werden.
+    const confirmKey = ValueKey('haConfirm_switch.coffee');
+    expect(find.byKey(confirmKey), findsNothing);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('haEntity_switch.coffee')),
+    );
+    await tester.tap(find.byKey(const ValueKey('haEntity_switch.coffee')));
+    await settle(tester);
+    await tester.ensureVisible(find.byKey(confirmKey));
+    await tester.tap(find.byKey(confirmKey));
+    await settle(tester);
+    Future<bool?> confirmed(String id) async => (await store.load())
+        .where((e) => e.entityId == id)
+        .map((e) => e.alwaysConfirm)
+        .firstOrNull;
+    expect(await confirmed('switch.coffee'), isTrue);
+    expect(await confirmed('light.kitchen'), isFalse);
+    await tester.tap(find.byKey(const ValueKey('haEntity_light.kitchen')));
+    await settle(tester);
+    expect(await confirmed('switch.coffee'), isTrue);
+
     // Trennen löscht alles.
+    await tester.drag(find.byType(ListView), const Offset(0, 3000));
+    await settle(tester);
     await tester.tap(find.text('Trennen'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Trennen'));

@@ -3,6 +3,8 @@ import 'dart:io';
 import '../common/net_scope.dart';
 import '../common/port_exception.dart';
 
+final _leadingZeroOctet = RegExp(r'(^|\.)0[0-9]+(\.|$)');
+
 /// Whether [host] may be reached over plain `http`: a private address
 /// (RFC 1918, Tailscale `100.64.0.0/10` and `fd7a:…`, loopback), `localhost`,
 /// `*.local` (mDNS) or `*.ts.net` (Tailscale MagicDNS). Everything else,
@@ -10,9 +12,19 @@ import '../common/port_exception.dart';
 bool isPrivateHaHost(String host) {
   var h = normalizeHostName(host);
   if (h.startsWith('[') && h.endsWith(']')) h = h.substring(1, h.length - 1);
+  // `010.0.0.1` is 8.0.0.1 for some resolvers (octal) and 10.0.0.1 for
+  // others: never private.
+  if (_leadingZeroOctet.hasMatch(h)) return false;
   final ip = InternetAddress.tryParse(h);
   if (ip != null) {
-    return switch (classifyNet(ip).scope) {
+    final net = classifyNet(ip);
+    // Only plain addresses and IPv4-mapped ones: 6to4 (`2002::/16`), NAT64
+    // (`64:ff9b::/96`) and `::a.b.c.d` reach a different, routable host.
+    if (net.embedding != Ipv4Embedding.none &&
+        net.embedding != Ipv4Embedding.mapped) {
+      return false;
+    }
+    return switch (net.scope) {
       NetScope.privateNetwork ||
       NetScope.carrierNat ||
       NetScope.uniqueLocal ||

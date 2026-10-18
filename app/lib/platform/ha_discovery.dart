@@ -10,7 +10,8 @@ import 'channels.dart';
 const haServiceType = '_home-assistant._tcp.local';
 
 /// The server announced by one mDNS service: the TXT address
-/// (`internal_url`, then `base_url`) if it is allowed (`HaUrl.parse`),
+/// (`internal_url`, then `base_url`) if it is allowed (`HaUrl.parse`) and
+/// private (`isPrivateHaHost`),
 /// else the IPv4 address or the host name from SRV with [port]. `null` if
 /// no allowed address results. [txt] holds `key=value` lines.
 HaServer? haServerFrom({
@@ -28,17 +29,22 @@ HaServer? haServerFrom({
   final host = target.endsWith('.')
       ? target.substring(0, target.length - 1)
       : target;
+  // TXT records come from anyone in the Wi-Fi: their addresses only count
+  // if they point into the home network or Tailscale, so a stranger cannot
+  // steer the token to a public host with `https://…`.
   final candidates = [
-    values['internal_url'],
-    values['base_url'],
-    if (ipv4 != null) 'http://$ipv4:$port',
-    if (host.isNotEmpty) 'http://$host:$port',
+    (values['internal_url'], true),
+    (values['base_url'], true),
+    if (ipv4 != null) ('http://$ipv4:$port', false),
+    if (host.isNotEmpty) ('http://$host:$port', false),
   ];
-  for (final c in candidates) {
+  for (final (c, fromTxt) in candidates) {
     if (c == null || c.isEmpty) continue;
     try {
+      final url = HaUrl.parse(c);
+      if (fromTxt && !isPrivateHaHost(Uri.parse(url).host)) continue;
       final name = values['location_name'] ?? instance.split('._').first;
-      return HaServer(name: name, url: HaUrl.parse(c));
+      return HaServer(name: name, url: url);
     } on PortException {
       continue;
     }

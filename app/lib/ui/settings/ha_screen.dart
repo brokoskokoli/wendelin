@@ -35,6 +35,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
   List<HaServer>? _servers;
   List<HaEntity>? _all;
   Set<String> _approved = {};
+  Set<String> _confirm = {};
 
   @override
   void initState() {
@@ -58,6 +59,10 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     setState(() {
       _endpoint = endpoint;
       _approved = {for (final e in approved) e.entityId};
+      _confirm = {
+        for (final e in approved)
+          if (e.alwaysConfirm) e.entityId,
+      };
       _loaded = true;
     });
     if (endpoint != null) await _loadDevices();
@@ -136,6 +141,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       _endpoint = null;
       _all = null;
       _approved = {};
+      _confirm = {};
       _error = null;
     });
   }
@@ -144,12 +150,29 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     final next = {..._approved};
     on ? next.add(e.entityId) : next.remove(e.entityId);
     setState(() => _approved = next);
+    await _save();
+  }
+
+  /// „Immer bestätigen“ of a switch: its calls then go through the
+  /// confirmation (`ha__call_secure`).
+  Future<void> _toggleConfirm(HaEntity e, bool on) async {
+    final next = {..._confirm};
+    on ? next.add(e.entityId) : next.remove(e.entityId);
+    setState(() => _confirm = next);
+    await _save();
+  }
+
+  Future<void> _save() async {
     final byId = {for (final x in _all ?? const <HaEntity>[]) x.entityId: x};
     final store = ref.read(haStoreProvider);
     // Keep approved entities Home Assistant no longer lists: the user
     // removes them by switching them off, not by a flaky answer.
     final old = {for (final x in await store.load()) x.entityId: x};
-    await store.save([for (final id in next) ?(byId[id] ?? old[id])]);
+    await store.save([
+      for (final id in _approved)
+        if (byId[id] ?? old[id] case final e?)
+          e.withConfirm(_confirm.contains(id)),
+    ]);
     await _refresh();
   }
 
@@ -302,7 +325,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
         SettingsSection(
           title: key,
           children: [
-            for (final e in value)
+            for (final e in value) ...[
               SettingsRow(
                 title: e.name,
                 detail: _secure(e)
@@ -315,6 +338,18 @@ class _HaScreenState extends ConsumerState<HaScreen> {
                   onChanged: (on) => unawaited(_toggle(e, on)),
                 ),
               ),
+              if (e.domain == 'switch' && _approved.contains(e.entityId))
+                SettingsRow(
+                  title: HaTexts.alwaysConfirm,
+                  detail: HaTexts.alwaysConfirmHelp,
+                  trailing: WSwitch(
+                    key: ValueKey('haConfirm_${e.entityId}'),
+                    value: _confirm.contains(e.entityId),
+                    semanticLabel: '${e.name}: ${HaTexts.alwaysConfirm}',
+                    onChanged: (on) => unawaited(_toggleConfirm(e, on)),
+                  ),
+                ),
+            ],
           ],
         ),
       WideButton(HaTexts.reload, onPressed: () => unawaited(_loadDevices())),

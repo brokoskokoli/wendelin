@@ -81,6 +81,13 @@ abstract final class HaTexts {
   /// Room name for devices without a room.
   static const noRoom = 'Ohne Raum';
 
+  /// Switch option: ask before every call.
+  static const alwaysConfirm = 'Immer bestätigen';
+
+  /// Help for [alwaysConfirm].
+  static const alwaysConfirmHelp =
+      'Wendelin fragt vor jedem Schalten nach (z. B. Herd, Ofen).';
+
   /// Hint when the device list is empty.
   static const noDevices = 'Keine Geräte gefunden.';
 

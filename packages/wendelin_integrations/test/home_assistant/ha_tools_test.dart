@@ -270,6 +270,26 @@ void main() {
       expect(s.attributes['brightness'], 200);
     });
 
+    test('Licht mit Farbtemperatur: Undo stellt Kelvin wieder her', () async {
+      api.set('light.kitchen', 'on', {
+        'color_mode': 'color_temp',
+        'color_temp_kelvin': 2700,
+        'rgb_color': [255, 169, 87],
+      });
+      final o = await call({
+        'entity': 'Küche Deckenlicht',
+        'service': 'turn_on',
+        'rgb_color': [0, 0, 255],
+      });
+      expect(api.at('light.kitchen')!.attributes['rgb_color'], [0, 0, 255]);
+      await o.undo!();
+      final restore = api.calls.last;
+      expect(restore.data['color_temp_kelvin'], 2700);
+      expect(restore.data.containsKey('rgb_color'), isFalse);
+      expect(api.at('light.kitchen')!.attributes['color_temp_kelvin'], 2700);
+      expect(api.at('light.kitchen')!.attributes['color_mode'], 'color_temp');
+    });
+
     test('Licht aus: Undo schaltet wieder ein', () async {
       final o = await call({
         'entity': 'Küche Deckenlicht',
@@ -439,6 +459,146 @@ void main() {
         HaIntegration.entitiesStep,
       ]);
     });
+  });
+
+  group('Szene mit Schloss, Alarm oder Rollo (K57)', () {
+    const gehen = HaEntity(entityId: 'scene.leaving', name: 'Gehen');
+    setUp(() {
+      store.entities = [...store.entities, gehen];
+      api.set('scene.leaving', 'scening', {
+        'friendly_name': 'Gehen',
+        'entity_id': ['light.living', 'lock.front'],
+      });
+    });
+
+    test('ha__call lehnt die Szene ab, nichts wird aufgerufen', () async {
+      final o = await call({'entity': 'Gehen', 'service': 'turn_on'});
+      expect(o.isError, isTrue);
+      expect(o.text, contains('ha__call_secure'));
+      expect(api.calls, isEmpty);
+    });
+
+    test('ha__call_secure fragt nach und führt sie ohne Undo aus', () async {
+      final t = tool('ha__call_secure');
+      expect(t.risk, RiskLevel.external);
+      expect(
+        await t.confirmationText({
+          'entity': 'Gehen',
+          'service': 'turn_on',
+        }, ctx()),
+        'Gehen: einschalten',
+      );
+      final o = await run('ha__call_secure', {
+        'entity': 'Gehen',
+        'service': 'turn_on',
+      });
+      expect(o.isError, isFalse);
+      expect(o.undo, isNull);
+      expect(api.calls.single.domain, 'scene');
+    });
+
+    test('Szene ohne kritische Mitglieder bleibt offen (Filmabend)', () async {
+      final o = await run('ha__call_secure', {
+        'entity': 'Filmabend',
+        'service': 'turn_on',
+      });
+      expect(o.isError, isTrue);
+      expect(api.calls, isEmpty);
+      expect(
+        (await call({'entity': 'Filmabend', 'service': 'turn_on'})).isError,
+        isFalse,
+      );
+    });
+
+    test('Szene mit Rollo oder Alarm zählt ebenso', () async {
+      for (final member in ['cover.garage', 'alarm_control_panel.home']) {
+        api.set('scene.leaving', 'scening', {
+          'entity_id': ['light.living', member],
+        });
+        final o = await call({'entity': 'Gehen', 'service': 'turn_on'});
+        expect(o.isError, isTrue, reason: member);
+      }
+      expect(api.calls, isEmpty);
+    });
+
+    test('nicht erlaubt, solange gesperrt', () async {
+      expect(
+        await ha.allowedWhileLocked('ha__call', {
+          'entity': 'Gehen',
+          'service': 'turn_on',
+        }),
+        isFalse,
+      );
+      expect(
+        await ha.allowedWhileLocked('ha__call', {
+          'entity': 'Filmabend',
+          'service': 'turn_on',
+        }),
+        isTrue,
+      );
+    });
+  });
+
+  group('Schalter „immer bestätigen“ (K57)', () {
+    setUp(() {
+      store.entities = [
+        for (final e in store.entities)
+          e.entityId == 'switch.coffee' ? e.withConfirm(true) : e,
+      ];
+    });
+
+    test('ha__call lehnt ab, ha__call_secure fragt und führt aus', () async {
+      final o = await call({'entity': 'Kaffeemaschine', 'service': 'turn_on'});
+      expect(o.isError, isTrue);
+      expect(o.text, contains('ha__call_secure'));
+      expect(api.calls, isEmpty);
+      final t = tool('ha__call_secure');
+      expect(
+        await t.confirmationText({
+          'entity': 'Kaffeemaschine',
+          'service': 'turn_on',
+        }, ctx()),
+        'Kaffeemaschine (Küche): einschalten',
+      );
+      final r = await run('ha__call_secure', {
+        'entity': 'Kaffeemaschine',
+        'service': 'turn_on',
+      });
+      expect(r.isError, isFalse);
+      expect(api.at('switch.coffee')!.state, 'on');
+    });
+
+    test('ohne die Option bleibt ha__call_secure für Schalter zu', () async {
+      store.entities = [for (final e in store.entities) e.withConfirm(false)];
+      final o = await run('ha__call_secure', {
+        'entity': 'Kaffeemaschine',
+        'service': 'turn_on',
+      });
+      expect(o.isError, isTrue);
+      expect(api.calls, isEmpty);
+    });
+
+    test('Haken für WP92: nicht erlaubt, solange gesperrt', () async {
+      expect(
+        await ha.allowedWhileLocked('ha__call', {'entity': 'Kaffeemaschine'}),
+        isFalse,
+      );
+    });
+
+    test('Option überlebt JSON', () {
+      const e = HaEntity(entityId: 'switch.a', name: 'A', alwaysConfirm: true);
+      expect(HaEntity.fromJson(e.toJson()), e);
+      expect(
+        HaEntity.fromJson(
+          const HaEntity(entityId: 'switch.a', name: 'A').toJson(),
+        )!.alwaysConfirm,
+        isFalse,
+      );
+    });
+  });
+
+  test('Integration ist sensibel (Schloss-, Alarm-, Anwesenheitsdaten)', () {
+    expect(ha.sensitive, isTrue);
   });
 
   group('Haken für WP92 (gesperrt erlaubt)', () {

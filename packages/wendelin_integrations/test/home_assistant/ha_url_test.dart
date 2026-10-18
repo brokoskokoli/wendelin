@@ -13,6 +13,7 @@ void main() {
       'homeassistant.local',
       'ha.tailnet-name.ts.net',
       '[fd7a:115c:a1e0::1]',
+      '[::ffff:192.168.1.20]',
       '127.0.0.1',
       'localhost',
     ]) {
@@ -35,6 +36,16 @@ void main() {
       '0x7f.1',
       '169.254.1.1',
       '[2001:db8::1]',
+      // IPv4 inside IPv6 that is not a mapped address (WP91 Befund 4).
+      '[2002:c0a8:0101::1]', // 6to4 of 192.168.1.1
+      '[2002:0a00:0001::]', // 6to4 of 10.0.0.1
+      '[64:ff9b::192.168.1.1]', // NAT64
+      '[::192.168.1.1]', // IPv4-compatible
+      '[::10.0.0.1]',
+      // Leading zeros read as octal by some resolvers.
+      '010.0.0.1',
+      '192.168.001.1',
+      '127.0.0.01',
     ]) {
       test('$host: http abgelehnt', () {
         expect(

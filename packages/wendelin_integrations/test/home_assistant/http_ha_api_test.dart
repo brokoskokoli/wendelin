@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:wendelin_integrations/testing.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
@@ -77,6 +79,34 @@ void main() {
       server.failWith.add(302);
       await expectLater(api.states(), _kind(PortErrorKind.failed));
       expect(server.paths, ['GET /api/states']);
+    },
+  );
+
+  test(
+    'WebSocket folgt keiner Weiterleitung: kein Token an fremden Host',
+    () async {
+      final foreign = <String>[];
+      final other = await HttpServer.bind('127.0.0.1', 0);
+      addTearDown(() => other.close(force: true));
+      other.listen((r) async {
+        foreign.add(r.uri.path);
+        if (WebSocketTransformer.isUpgradeRequest(r)) {
+          // ignore: close_sinks
+          final ws = await WebSocketTransformer.upgrade(r);
+          ws.add('{"type":"auth_required"}');
+          ws.listen((m) => foreign.add('msg:$m'));
+        } else {
+          await r.response.close();
+        }
+      });
+      server.socketRedirect = 'http://127.0.0.1:${other.port}/api/websocket';
+      final list = await api.entities();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(
+        list.singleWhere((e) => e.entityId == 'light.kitchen').area,
+        isNull,
+      );
+      expect(foreign, isEmpty);
     },
   );
 

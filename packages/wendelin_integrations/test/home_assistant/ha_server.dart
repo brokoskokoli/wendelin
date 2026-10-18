@@ -38,6 +38,9 @@ final class HaTestServer {
   /// Body returned for the next REST call instead of JSON (e.g. HTML).
   String? rawBody;
 
+  /// When set, `/api/websocket` answers `302` to this address.
+  String? socketRedirect;
+
   /// Registry answer mode: `false` makes registry calls fail (non-admin).
   bool registriesAllowed = true;
 
@@ -49,6 +52,13 @@ final class HaTestServer {
   Future<void> _handle(HttpRequest r) async {
     paths.add('${r.method} ${r.uri.path}');
     if (r.uri.path == '/api/websocket') {
+      if (socketRedirect != null) {
+        r.response
+          ..statusCode = 302
+          ..headers.set('location', socketRedirect!);
+        await r.response.close();
+        return;
+      }
       await _socket(await WebSocketTransformer.upgrade(r));
       return;
     }

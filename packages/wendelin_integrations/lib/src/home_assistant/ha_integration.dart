@@ -57,8 +57,11 @@ final class HaIntegration implements Integration {
     AppPlatform.ios,
   };
 
+  /// Smart-home data is house data: lock and alarm states, who is home,
+  /// when rooms are empty. Its tools only go to providers that meet the
+  /// configured privacy minimum.
   @override
-  bool get sensitive => false;
+  bool get sensitive => true;
 
   @override
   Future<Availability> checkAvailability() async => Availability.yes;
@@ -118,7 +121,13 @@ final class HaIntegration implements Integration {
     final query = args['entity'];
     if (query is! String || query.trim().isEmpty) return false;
     try {
-      return haLockSafeDomains.contains((await context.resolve(query)).domain);
+      final e = await context.resolve(query);
+      if (e.alwaysConfirm || !haLockSafeDomains.contains(e.domain)) {
+        return false;
+      }
+      if (e.domain != 'scene') return true;
+      // A scene with a lock, alarm or cover is as critical as the member.
+      return !haSceneHasSecureMember(await context.api.state(e.entityId));
     } on PortException {
       return false;
     }

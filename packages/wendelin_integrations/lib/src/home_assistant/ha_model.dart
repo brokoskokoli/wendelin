@@ -86,7 +86,12 @@ String haDomainOf(String entityId) {
 @immutable
 final class HaEntity {
   /// Creates an entity.
-  const HaEntity({required this.entityId, required this.name, this.area});
+  const HaEntity({
+    required this.entityId,
+    required this.name,
+    this.area,
+    this.alwaysConfirm = false,
+  });
 
   /// Reads [toJson] output; `null` if malformed.
   static HaEntity? fromJson(Object? json) {
@@ -99,6 +104,7 @@ final class HaEntity {
       entityId: id,
       name: name,
       area: area is String && area.isNotEmpty ? area : null,
+      alwaysConfirm: json['confirm'] == true,
     );
   }
 
@@ -111,14 +117,28 @@ final class HaEntity {
   /// Room (Home Assistant area), if assigned.
   final String? area;
 
+  /// The user wants a confirmation for every call of this entity (K57:
+  /// switches that power something critical). Such calls go through
+  /// `ha__call_secure`.
+  final bool alwaysConfirm;
+
   /// Domain part of [entityId].
   String get domain => haDomainOf(entityId);
+
+  /// Copy with a different [alwaysConfirm].
+  HaEntity withConfirm(bool value) => HaEntity(
+    entityId: entityId,
+    name: name,
+    area: area,
+    alwaysConfirm: value,
+  );
 
   /// JSON for the entity store.
   Map<String, Object?> toJson() => {
     'id': entityId,
     'name': name,
     if (area != null) 'area': area,
+    if (alwaysConfirm) 'confirm': true,
   };
 
   @override
@@ -126,13 +146,15 @@ final class HaEntity {
       other is HaEntity &&
       other.entityId == entityId &&
       other.name == name &&
-      other.area == area;
+      other.area == area &&
+      other.alwaysConfirm == alwaysConfirm;
 
   @override
-  int get hashCode => Object.hash(entityId, name, area);
+  int get hashCode => Object.hash(entityId, name, area, alwaysConfirm);
 
   @override
-  String toString() => 'HaEntity($entityId, $name, $area)';
+  String toString() =>
+      'HaEntity($entityId, $name, $area${alwaysConfirm ? ', confirm' : ''})';
 }
 
 /// A Home Assistant instance found in the local network.

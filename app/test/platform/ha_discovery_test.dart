@@ -70,6 +70,28 @@ void main() {
         isNull,
       );
     });
+
+    test('TXT mit öffentlichem https-Host wird nicht übernommen', () {
+      for (final key in ['internal_url', 'base_url']) {
+        final s = haServerFrom(
+          instance: 'X._home-assistant._tcp.local',
+          target: 'ha.local.',
+          port: 8123,
+          txt: ['$key=https://evil.example.com'],
+          ipv4: '192.168.1.5',
+        );
+        expect(s!.url, 'http://192.168.1.5:8123', reason: key);
+      }
+      expect(
+        haServerFrom(
+          instance: 'X._home-assistant._tcp.local',
+          target: 'ha.local.',
+          port: 8123,
+          txt: ['internal_url=https://100.64.0.1:8123'],
+        )!.url,
+        'https://100.64.0.1:8123',
+      );
+    });
   });
 
   test(

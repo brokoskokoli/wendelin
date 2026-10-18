@@ -1,5 +1,7 @@
 import 'package:wendelin_core/wendelin_core.dart';
 
+import 'ha_model.dart';
+
 /// Services Wendelin may call per domain, with the data keys each accepts.
 /// Anything else is refused before it reaches Home Assistant.
 typedef HaServices = Map<String, Map<String, Set<String>>>;
@@ -58,6 +60,18 @@ RiskLevel? haRiskForDomain(String domain) {
   if (haOpenServices.containsKey(domain)) return RiskLevel.write;
   if (haSecureServices.containsKey(domain)) return RiskLevel.external;
   return null;
+}
+
+/// Whether the scene [s] switches a lock, alarm panel or cover (its
+/// `entity_id` attribute lists the members). Activating it is as critical
+/// as controlling the member directly (K57): confirmation, never while
+/// locked.
+bool haSceneHasSecureMember(HaState s) {
+  final members = s.attributes['entity_id'];
+  if (members is! List<Object?>) return false;
+  return members.any(
+    (m) => m is String && haSecureServices.containsKey(haDomainOf(m)),
+  );
 }
 
 /// Domains a recognized speaker may control while the device is locked

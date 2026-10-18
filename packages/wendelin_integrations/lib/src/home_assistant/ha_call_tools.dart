@@ -4,6 +4,7 @@ import '../common/base_tool.dart';
 import '../common/port_exception.dart';
 import '../common/tool_args.dart';
 import 'ha_context.dart';
+import 'ha_model.dart';
 import 'ha_policy.dart';
 import 'ha_undo.dart';
 
@@ -120,6 +121,15 @@ abstract base class HaCallTool extends IntegrationTool {
   /// Domains and services this tool may call.
   HaServices get table;
 
+  /// The services of [e] this tool may call, `null` if [e] belongs to the
+  /// other tool. [confirmed]: the entity needs a confirmation (the user
+  /// marked it „immer bestätigen“, or it is a scene with a lock, alarm or
+  /// cover among its members).
+  Map<String, Set<String>>? servicesFor(HaEntity e, {required bool confirmed});
+
+  /// Service names offered in the tool schema.
+  Set<String> get serviceNames => {for (final s in table.values) ...s.keys};
+
   /// Name of the tool for the other class of domains.
   String get otherTool;
 
@@ -138,9 +148,7 @@ abstract base class HaCallTool extends IntegrationTool {
       },
       'service': {
         'type': 'string',
-        'enum': [
-          ...{for (final s in table.values) ...s.keys},
-        ],
+        'enum': [...serviceNames],
         'description': 'What to do (valid for the type of the device).',
       },
       'brightness_pct': {
@@ -185,7 +193,14 @@ abstract base class HaCallTool extends IntegrationTool {
     final query = args.requireString('entity');
     final service = args.requireString('service');
     final e = await ctx.resolve(query);
-    final services = table[e.domain];
+    // A scene is as critical as its members: look at them before choosing
+    // the tool (K57).
+    Future<HaState> read() => ctx.guard(() => ctx.api.state(e.entityId));
+    HaState? prior;
+    if (e.domain == 'scene') prior = await read();
+    final confirmed =
+        e.alwaysConfirm || (prior != null && haSceneHasSecureMember(prior));
+    final services = servicesFor(e, confirmed: confirmed);
     if (services == null) {
       return ToolOutcome.error(
         haRiskForDomain(e.domain) == null
@@ -203,14 +218,14 @@ abstract base class HaCallTool extends IntegrationTool {
       );
     }
     final data = checkHaData(args, allowed);
-    final prior = await ctx.guard(() => ctx.api.state(e.entityId));
-    if (prior.isUnavailable) {
+    final state = prior ?? await read();
+    if (state.isUnavailable) {
       return ToolOutcome.error(
         '„${e.name}“ ist gerade nicht erreichbar.',
         summary: 'Nicht erreichbar',
       );
     }
-    final plan = withUndo ? planHaUndo(prior, service, c.clock.now()) : null;
+    final plan = withUndo ? planHaUndo(state, service, c.clock.now()) : null;
     final ready = await _prepare(plan);
     await ctx.guard(
       () => ctx.api.callService((
@@ -224,7 +239,7 @@ abstract base class HaCallTool extends IntegrationTool {
         'ok': true,
         'device': ellipsize(e.name, maxHaText),
         'service': service,
-        'state_before': ellipsize(prior.state, 30),
+        'state_before': ellipsize(state.state, 30),
       },
       summary: '${ellipsize(e.name, 40)}: ${haServiceText(service, data)}',
       undo: ready == null ? null : _undo(e.name, ready),
@@ -284,6 +299,12 @@ final class HaCallDeviceTool extends HaCallTool {
   HaServices get table => haOpenServices;
 
   @override
+  Map<String, Set<String>>? servicesFor(
+    HaEntity e, {
+    required bool confirmed,
+  }) => confirmed ? null : haOpenServices[e.domain];
+
+  @override
   String get otherTool => 'ha__call_secure';
 
   @override
@@ -302,14 +323,36 @@ final class HaCallSecureTool extends HaCallTool
 
   @override
   String get description =>
-      'Control a lock, alarm panel, garage door, gate or other cover. The '
-      'user is always asked first.';
+      'Control a lock, alarm panel, garage door, gate or other cover, a '
+      'scene that switches one of them, or a device the user marked as '
+      '"always confirm". The user is always asked first.';
 
   @override
   RiskLevel get risk => RiskLevel.external;
 
   @override
   HaServices get table => haSecureServices;
+
+  @override
+  Set<String> get serviceNames => {
+    ...super.serviceNames,
+    // Switches and scenes the user or the scene's members make critical.
+    ...?haOpenServices['switch']?.keys,
+    ...?haOpenServices['scene']?.keys,
+  };
+
+  @override
+  Map<String, Set<String>>? servicesFor(
+    HaEntity e, {
+    required bool confirmed,
+  }) =>
+      haSecureServices[e.domain] ??
+      (confirmed &&
+              (e.alwaysConfirm
+                  ? haOpenServices.containsKey(e.domain)
+                  : e.domain == 'scene')
+          ? haOpenServices[e.domain]
+          : null);
 
   @override
   String get otherTool => 'ha__call';

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
@@ -186,10 +187,9 @@ final class HttpHaApi implements HaApi {
   /// is no admin or the WebSocket fails (names then come without rooms).
   Future<Map<String, String>> _areasByEntity() async {
     final e = await _endpoint();
-    final url = Uri.parse('${e.url.replaceFirst('http', 'ws')}/api/websocket');
     WebSocket? socket;
     try {
-      socket = await WebSocket.connect(url.toString()).timeout(timeout);
+      socket = await _openSocket(Uri.parse('${e.url}/api/websocket'));
       return await haFetchAreas(socket, socket.add, e.token).timeout(timeout);
     } on Object {
       return const {};
@@ -197,6 +197,39 @@ final class HttpHaApi implements HaApi {
       unawaited(
         socket?.close().catchError((Object _) {}) ?? Future<void>.value(),
       );
+    }
+  }
+
+  /// Opens the WebSocket by hand: `WebSocket.connect` follows redirects,
+  /// which would send the token to a foreign host. Only a direct `101`
+  /// answer from the saved address counts.
+  Future<WebSocket> _openSocket(Uri url) async {
+    final client = HttpClient()..connectionTimeout = timeout;
+    try {
+      final request = await client.openUrl('GET', url).timeout(timeout);
+      request.followRedirects = false;
+      final key = base64.encode(
+        List<int>.generate(16, (_) => Random.secure().nextInt(256)),
+      );
+      request.headers
+        ..set(HttpHeaders.connectionHeader, 'Upgrade')
+        ..set(HttpHeaders.upgradeHeader, 'websocket')
+        ..set('Sec-WebSocket-Key', key)
+        ..set('Sec-WebSocket-Version', '13');
+      final response = await request.close().timeout(timeout);
+      if (response.statusCode != HttpStatus.switchingProtocols) {
+        await response.drain<void>().catchError((Object _) {});
+        throw const PortException(
+          PortErrorKind.failed,
+          'Home Assistant hat die WebSocket-Verbindung nicht angenommen.',
+        );
+      }
+      // The caller closes the returned WebSocket.
+      // ignore: close_sinks
+      final socket = await response.detachSocket();
+      return WebSocket.fromUpgradedSocket(socket, serverSide: false);
+    } finally {
+      client.close();
     }
   }
 
