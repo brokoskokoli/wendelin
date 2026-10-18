@@ -17,7 +17,7 @@ Stand: 2026-10-19, WP90 und WP98 laufen; WP91, WP76b, WP84, WP79, WP96, WP88 gem
 | M3 Routing, MCP, Erweiterung | WP21–WP29 | erledigt (Telefontest in M4 aufgegangen) |
 | Refactoring R1–R6 | WP35–WP40 | erledigt |
 | M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Stefan) |
-| M5 Ausbau Android | WP76b–d, WP79, WP81–WP98 | in Arbeit (Plan `M5-PLAN.md`) |
+| M5 Ausbau Android | WP76b–d, WP79, WP81–WP98, WP102–WP103 | in Arbeit (Plan `M5-PLAN.md`) |
 | M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | geplant (Plan `M6-PLAN.md`, Start nach M5 mit Go) |
 | M7 iOS | – | geplant |
 
@@ -49,6 +49,8 @@ Stand: 2026-10-19, WP90 und WP98 laufen; WP91, WP76b, WP84, WP79, WP96, WP88 gem
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
 | WP97 | Lastbremse/Cache | geplant | – |
 | WP98 | Konfliktarm | in Arbeit | – |
+| WP102 | Spike bessere Sprache (Messung) | geplant | K64; nächste freie Sitzung |
+| WP103 | Bessere Sprache einbauen | geplant | nach WP102 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
@@ -57,7 +59,7 @@ Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 Stand 2026-10-19 (Orchestrator „Wendelin coding“):
 
 2. **WP90** (Mediensteuerung) läuft als Paket-Sitzung.
-3. Danach WP98 (l10n-Fragmente), WP81b, WP97, WP76c/d (Downgrade-Schutz K59) und die M5-Wellen 2 und 3.
+3. Als nächste Sitzung WP102 (Messvergleich Sprache), dann WP103; außerdem WP81b, WP97, WP76c/d (Downgrade-Schutz K59) und die M5-Wellen 2 und 3.
 4. Pakete mit alten Commits („Stefan Richter“, Claude-Session-Zeile) per Squash mergen.
 
 Wartet auf Stefan: K47 nach Stopp-Test 11.6, Test 11.7a.
