@@ -11,4 +11,5 @@ pub mod jcs;
 pub mod near_e2ee;
 pub mod quote;
 pub mod report;
+pub mod snp;
 pub mod spki;

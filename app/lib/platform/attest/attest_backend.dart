@@ -7,6 +7,7 @@ import 'generated/frb_generated.dart';
 import 'generated/near_e2ee.dart';
 import 'generated/quote.dart';
 import 'generated/report.dart';
+import 'generated/snp.dart';
 
 /// Die Rust-Funktionen aus `native/attest`, als Schnittstelle für Tests ohne native Bibliothek.
 abstract interface class AttestBackend {
@@ -64,6 +65,20 @@ abstract interface class AttestBackend {
 
   /// Feldentschlüsselung; wirft bei Fehlern.
   Uint8List e2eeDecrypt(Uint8List secret, String wireHex, Uint8List aad);
+
+  /// Felder eines SEV-SNP-Reports (WP76a); wirft bei unlesbarem Report.
+  SnpReportInfo snpReportInfo(Uint8List report);
+
+  /// Prüft einen SEV-SNP-Report vollständig (WP76a).
+  Future<SnpVerdict> verifySnp({
+    required Uint8List report,
+    required Uint8List vcekDer,
+    required String chainPem,
+    required int nowUnix,
+    required SnpPolicy policy,
+    required Uint8List tlsSpkiSha256,
+    required Uint8List hpkeKey,
+  });
 
   /// Frische Client-Identität (NEAR AI, WP75).
   NearIdentity nearGenerateIdentity();
@@ -170,4 +185,27 @@ final class FrbAttestBackend implements AttestBackend {
   @override
   Uint8List nearDecrypt(Uint8List secret, String wireHex) =>
       api.nearDecrypt(secret: secret, wireHex: wireHex);
+
+  @override
+  SnpReportInfo snpReportInfo(Uint8List report) =>
+      api.snpReportInfo(report: report);
+
+  @override
+  Future<SnpVerdict> verifySnp({
+    required Uint8List report,
+    required Uint8List vcekDer,
+    required String chainPem,
+    required int nowUnix,
+    required SnpPolicy policy,
+    required Uint8List tlsSpkiSha256,
+    required Uint8List hpkeKey,
+  }) => api.verifySnpReport(
+    report: report,
+    vcekDer: vcekDer,
+    chainPem: chainPem,
+    nowUnix: BigInt.from(nowUnix),
+    policy: policy,
+    expectedTlsSpkiSha256: tlsSpkiSha256,
+    expectedHpkeKey: hpkeKey,
+  );
 }

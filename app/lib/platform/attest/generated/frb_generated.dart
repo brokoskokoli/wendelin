@@ -17,6 +17,7 @@ import 'frb_generated.io.dart'
 import 'near_e2ee.dart';
 import 'quote.dart';
 import 'report.dart';
+import 'snp.dart';
 
 /// Main entrypoint of the Rust API
 class AttestNative
@@ -73,7 +74,7 @@ class AttestNative
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1423650251;
+  int get rustContentHash => 2089063827;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -125,6 +126,8 @@ abstract class AttestNativeApi extends BaseApi {
 
   Uint8List crateApiSha384({required List<int> data});
 
+  SnpReportInfo crateApiSnpReportInfo({required List<int> report});
+
   Uint8List crateApiSpkiSha256({required List<int> certificateDer});
 
   bool crateApiTlsSpkiListed({
@@ -155,6 +158,16 @@ abstract class AttestNativeApi extends BaseApi {
     required List<int> quote,
     required String collateralJson,
     required BigInt nowUnix,
+  });
+
+  Future<SnpVerdict> crateApiVerifySnpReport({
+    required List<int> report,
+    required List<int> vcekDer,
+    required String chainPem,
+    required BigInt nowUnix,
+    required SnpPolicy policy,
+    required List<int> expectedTlsSpkiSha256,
+    required List<int> expectedHpkeKey,
   });
 }
 
@@ -499,13 +512,36 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       const TaskConstMeta(debugName: 'sha384', argNames: ['data']);
 
   @override
+  SnpReportInfo crateApiSnpReportInfo({required List<int> report}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(report, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_snp_report_info,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSnpReportInfoConstMeta,
+        argValues: [report],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSnpReportInfoConstMeta =>
+      const TaskConstMeta(debugName: 'snp_report_info', argNames: ['report']);
+
+  @override
   Uint8List crateApiSpkiSha256({required List<int> certificateDer}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(certificateDer, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -536,7 +572,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_String(reportJson, serializer);
           sse_encode_String(observedSpkiHex, serializer);
           sse_encode_String(host, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -568,7 +604,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 16,
             port: port_,
           );
         },
@@ -606,7 +642,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 17,
             port: port_,
           );
         },
@@ -639,7 +675,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_list_prim_u_8_loose(publicKey, serializer);
           sse_encode_list_prim_u_8_loose(message, serializer);
           sse_encode_list_prim_u_8_loose(signature, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -673,7 +709,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -693,6 +729,66 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     argNames: ['quote', 'collateralJson', 'nowUnix'],
   );
 
+  @override
+  Future<SnpVerdict> crateApiVerifySnpReport({
+    required List<int> report,
+    required List<int> vcekDer,
+    required String chainPem,
+    required BigInt nowUnix,
+    required SnpPolicy policy,
+    required List<int> expectedTlsSpkiSha256,
+    required List<int> expectedHpkeKey,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(report, serializer);
+          sse_encode_list_prim_u_8_loose(vcekDer, serializer);
+          sse_encode_String(chainPem, serializer);
+          sse_encode_u_64(nowUnix, serializer);
+          sse_encode_box_autoadd_snp_policy(policy, serializer);
+          sse_encode_list_prim_u_8_loose(expectedTlsSpkiSha256, serializer);
+          sse_encode_list_prim_u_8_loose(expectedHpkeKey, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_snp_verdict,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiVerifySnpReportConstMeta,
+        argValues: [
+          report,
+          vcekDer,
+          chainPem,
+          nowUnix,
+          policy,
+          expectedTlsSpkiSha256,
+          expectedHpkeKey,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVerifySnpReportConstMeta => const TaskConstMeta(
+    debugName: 'verify_snp_report',
+    argNames: [
+      'report',
+      'vcekDer',
+      'chainPem',
+      'nowUnix',
+      'policy',
+      'expectedTlsSpkiSha256',
+      'expectedHpkeKey',
+    ],
+  );
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -709,6 +805,18 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   CollateralParts dco_decode_box_autoadd_collateral_parts(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_collateral_parts(raw);
+  }
+
+  @protected
+  SnpPolicy dco_decode_box_autoadd_snp_policy(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_snp_policy(raw);
+  }
+
+  @protected
+  SnpReportInfo dco_decode_box_autoadd_snp_report_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_snp_report_info(raw);
   }
 
   @protected
@@ -790,6 +898,12 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  SnpReportInfo? dco_decode_opt_box_autoadd_snp_report_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_snp_report_info(raw);
+  }
+
+  @protected
   QuoteInfo dco_decode_quote_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -820,6 +934,73 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       keysetMatches: dco_decode_bool(arr[1]),
       error: dco_decode_opt_String(arr[2]),
     );
+  }
+
+  @protected
+  SnpPolicy dco_decode_snp_policy(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return SnpPolicy(minTcb: dco_decode_snp_tcb(arr[0]));
+  }
+
+  @protected
+  SnpReportInfo dco_decode_snp_report_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return SnpReportInfo(
+      version: dco_decode_u_32(arr[0]),
+      policy: dco_decode_u_64(arr[1]),
+      vmpl: dco_decode_u_32(arr[2]),
+      reportedTcb: dco_decode_snp_tcb(arr[3]),
+      signedWithVlek: dco_decode_bool(arr[4]),
+      measurementHex: dco_decode_String(arr[5]),
+      reportDataHex: dco_decode_String(arr[6]),
+      chipIdHex: dco_decode_String(arr[7]),
+    );
+  }
+
+  @protected
+  SnpTcb dco_decode_snp_tcb(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return SnpTcb(
+      bootloader: dco_decode_u_8(arr[0]),
+      tee: dco_decode_u_8(arr[1]),
+      snp: dco_decode_u_8(arr[2]),
+      microcode: dco_decode_u_8(arr[3]),
+    );
+  }
+
+  @protected
+  SnpVerdict dco_decode_snp_verdict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return SnpVerdict(
+      reportOk: dco_decode_bool(arr[0]),
+      chainOk: dco_decode_bool(arr[1]),
+      vcekMatchesReport: dco_decode_bool(arr[2]),
+      signatureOk: dco_decode_bool(arr[3]),
+      policyOk: dco_decode_bool(arr[4]),
+      tlsBound: dco_decode_bool(arr[5]),
+      hpkeBound: dco_decode_bool(arr[6]),
+      product: dco_decode_opt_String(arr[7]),
+      info: dco_decode_opt_box_autoadd_snp_report_info(arr[8]),
+      errors: dco_decode_list_String(arr[9]),
+    );
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -883,6 +1064,20 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_collateral_parts(deserializer));
+  }
+
+  @protected
+  SnpPolicy sse_decode_box_autoadd_snp_policy(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_snp_policy(deserializer));
+  }
+
+  @protected
+  SnpReportInfo sse_decode_box_autoadd_snp_report_info(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_snp_report_info(deserializer));
   }
 
   @protected
@@ -971,6 +1166,19 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  SnpReportInfo? sse_decode_opt_box_autoadd_snp_report_info(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_snp_report_info(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   QuoteInfo sse_decode_quote_info(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     final var_ok = sse_decode_bool(deserializer);
@@ -1008,6 +1216,84 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       keysetMatches: var_keysetMatches,
       error: var_error,
     );
+  }
+
+  @protected
+  SnpPolicy sse_decode_snp_policy(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_minTcb = sse_decode_snp_tcb(deserializer);
+    return SnpPolicy(minTcb: var_minTcb);
+  }
+
+  @protected
+  SnpReportInfo sse_decode_snp_report_info(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_version = sse_decode_u_32(deserializer);
+    final var_policy = sse_decode_u_64(deserializer);
+    final var_vmpl = sse_decode_u_32(deserializer);
+    final var_reportedTcb = sse_decode_snp_tcb(deserializer);
+    final var_signedWithVlek = sse_decode_bool(deserializer);
+    final var_measurementHex = sse_decode_String(deserializer);
+    final var_reportDataHex = sse_decode_String(deserializer);
+    final var_chipIdHex = sse_decode_String(deserializer);
+    return SnpReportInfo(
+      version: var_version,
+      policy: var_policy,
+      vmpl: var_vmpl,
+      reportedTcb: var_reportedTcb,
+      signedWithVlek: var_signedWithVlek,
+      measurementHex: var_measurementHex,
+      reportDataHex: var_reportDataHex,
+      chipIdHex: var_chipIdHex,
+    );
+  }
+
+  @protected
+  SnpTcb sse_decode_snp_tcb(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_bootloader = sse_decode_u_8(deserializer);
+    final var_tee = sse_decode_u_8(deserializer);
+    final var_snp = sse_decode_u_8(deserializer);
+    final var_microcode = sse_decode_u_8(deserializer);
+    return SnpTcb(
+      bootloader: var_bootloader,
+      tee: var_tee,
+      snp: var_snp,
+      microcode: var_microcode,
+    );
+  }
+
+  @protected
+  SnpVerdict sse_decode_snp_verdict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    final var_reportOk = sse_decode_bool(deserializer);
+    final var_chainOk = sse_decode_bool(deserializer);
+    final var_vcekMatchesReport = sse_decode_bool(deserializer);
+    final var_signatureOk = sse_decode_bool(deserializer);
+    final var_policyOk = sse_decode_bool(deserializer);
+    final var_tlsBound = sse_decode_bool(deserializer);
+    final var_hpkeBound = sse_decode_bool(deserializer);
+    final var_product = sse_decode_opt_String(deserializer);
+    final var_info = sse_decode_opt_box_autoadd_snp_report_info(deserializer);
+    final var_errors = sse_decode_list_String(deserializer);
+    return SnpVerdict(
+      reportOk: var_reportOk,
+      chainOk: var_chainOk,
+      vcekMatchesReport: var_vcekMatchesReport,
+      signatureOk: var_signatureOk,
+      policyOk: var_policyOk,
+      tlsBound: var_tlsBound,
+      hpkeBound: var_hpkeBound,
+      product: var_product,
+      info: var_info,
+      errors: var_errors,
+    );
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
   }
 
   @protected
@@ -1087,6 +1373,24 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_collateral_parts(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_snp_policy(
+    SnpPolicy self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_snp_policy(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_snp_report_info(
+    SnpReportInfo self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_snp_report_info(self, serializer);
   }
 
   @protected
@@ -1171,6 +1475,19 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_snp_report_info(
+    SnpReportInfo? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_snp_report_info(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_quote_info(QuoteInfo self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_bool(self.ok, serializer);
@@ -1194,6 +1511,58 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     sse_encode_bool(self.signatureOk, serializer);
     sse_encode_bool(self.keysetMatches, serializer);
     sse_encode_opt_String(self.error, serializer);
+  }
+
+  @protected
+  void sse_encode_snp_policy(SnpPolicy self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_snp_tcb(self.minTcb, serializer);
+  }
+
+  @protected
+  void sse_encode_snp_report_info(
+    SnpReportInfo self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.version, serializer);
+    sse_encode_u_64(self.policy, serializer);
+    sse_encode_u_32(self.vmpl, serializer);
+    sse_encode_snp_tcb(self.reportedTcb, serializer);
+    sse_encode_bool(self.signedWithVlek, serializer);
+    sse_encode_String(self.measurementHex, serializer);
+    sse_encode_String(self.reportDataHex, serializer);
+    sse_encode_String(self.chipIdHex, serializer);
+  }
+
+  @protected
+  void sse_encode_snp_tcb(SnpTcb self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_8(self.bootloader, serializer);
+    sse_encode_u_8(self.tee, serializer);
+    sse_encode_u_8(self.snp, serializer);
+    sse_encode_u_8(self.microcode, serializer);
+  }
+
+  @protected
+  void sse_encode_snp_verdict(SnpVerdict self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.reportOk, serializer);
+    sse_encode_bool(self.chainOk, serializer);
+    sse_encode_bool(self.vcekMatchesReport, serializer);
+    sse_encode_bool(self.signatureOk, serializer);
+    sse_encode_bool(self.policyOk, serializer);
+    sse_encode_bool(self.tlsBound, serializer);
+    sse_encode_bool(self.hpkeBound, serializer);
+    sse_encode_opt_String(self.product, serializer);
+    sse_encode_opt_box_autoadd_snp_report_info(self.info, serializer);
+    sse_encode_list_String(self.errors, serializer);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
   }
 
   @protected
