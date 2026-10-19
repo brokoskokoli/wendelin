@@ -3,8 +3,7 @@
 /// (`calendarPortContract`, `clipboardPortContract`, `alarmPortContract`,
 /// `memoryStoreContract`, `webSearchBackendContract`, `listFilePortContract`,
 /// `vaultPortContract`, `noteIndexPortContract`, `bringApiContract`, `haApiContract`,
-/// `httpToolSecretsContract`, `appPresencePortContract`, `torchPortContract`),
-/// and `builtInIntegrationsWithFakes()` (all built-in integrations with fakes and trust table).
+/// `httpToolSecretsContract`, `appPresencePortContract`, `torchPortContract`).
 ///
 /// Depends on `package:test`; import it only from tests.
 library;
@@ -13,7 +12,6 @@ export 'fakes.dart';
 export 'testing/alarm_port_contract.dart';
 export 'testing/app_presence_port_contract.dart';
 export 'testing/bring_api_contract.dart';
-export 'testing/builtin_integrations.dart';
 export 'testing/calendar_port_contract.dart';
 export 'testing/clipboard_port_contract.dart';
 export 'testing/ha_api_contract.dart';
