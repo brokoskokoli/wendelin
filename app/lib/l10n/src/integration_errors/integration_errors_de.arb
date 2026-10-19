@@ -1,0 +1,26 @@
+{
+  "integrationsErrDenied": "{service}: Zugang abgelehnt oder abgelaufen · pausiert",
+  "@integrationsErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsErrUnavailable": "{service} ist nicht erreichbar · pausiert",
+  "@integrationsErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsErrFailed": "{service}: unerwartete Antwort · pausiert",
+  "@integrationsErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  }
+}

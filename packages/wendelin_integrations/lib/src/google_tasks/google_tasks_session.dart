@@ -46,7 +46,7 @@ final class GoogleTasksSession {
   final GoogleTasksSecrets secrets;
 
   /// Called with a German message when the integration must show „Fehler“.
-  final void Function(String message)? onError;
+  final void Function(String message, PortErrorKind kind)? onError;
 
   /// Called when a call succeeds after [onError].
   final void Function()? onRecovered;
@@ -119,7 +119,7 @@ final class GoogleTasksSession {
               ? 'Google-Anmeldung abgelaufen oder widerrufen (im '
                     'Testnutzer-Modus endet sie nach 7 Tagen)'
               : e.message;
-          onError?.call(msg);
+          onError?.call(msg, e.kind);
           throw PortException(e.kind, '$msg. $googleTasksPausedHint');
         default:
           rethrow;

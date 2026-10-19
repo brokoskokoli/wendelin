@@ -1,0 +1,26 @@
+{
+  "integrationsErrDenied": "{service} : accès refusé ou expiré · en pause",
+  "@integrationsErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsErrUnavailable": "{service} est injoignable · en pause",
+  "@integrationsErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsErrFailed": "{service} : réponse inattendue · en pause",
+  "@integrationsErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  }
+}

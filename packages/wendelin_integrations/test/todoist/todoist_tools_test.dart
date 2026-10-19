@@ -29,6 +29,7 @@ void main() {
   late FakeTodoistApi api;
   late TodoistIntegration todoist;
   late List<String> errors;
+  late List<PortErrorKind> kinds;
   late int recovered;
 
   setUp(() {
@@ -47,11 +48,15 @@ void main() {
       ],
     );
     errors = [];
+    kinds = [];
     recovered = 0;
     todoist = TodoistIntegration(
       api,
       api,
-      onError: errors.add,
+      onError: (m, k) {
+        errors.add(m);
+        kinds.add(k);
+      },
       onRecovered: () => recovered++,
     );
   });
@@ -275,6 +280,7 @@ void main() {
       expect(o.text, contains(todoistPausedHint));
       expect(o.text, isNot(contains('falsch')));
       expect(errors, hasLength(1));
+      expect(kinds, [PortErrorKind.permissionDenied]);
       api.storedToken = FakeTodoistApi.validToken;
       expect(await todoist.reconnect(), isNull);
       expect(recovered, 1);

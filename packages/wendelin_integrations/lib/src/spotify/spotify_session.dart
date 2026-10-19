@@ -43,7 +43,7 @@ final class SpotifySession {
   final SpotifyAppLauncher? launcher;
 
   /// Called with a German message when the integration must show „Fehler“.
-  final void Function(String message)? onError;
+  final void Function(String message, PortErrorKind kind)? onError;
 
   /// Called when a call succeeds after [onError].
   final void Function()? onRecovered;
@@ -102,7 +102,7 @@ final class SpotifySession {
         final msg = refreshRejected
             ? 'Spotify-Anmeldung abgelaufen'
             : 'Spotify verweigert den Zugriff';
-        onError?.call(msg);
+        onError?.call(msg, e.kind);
         throw PortException(
           e.kind,
           '$msg. Bitte unter Einstellungen → Integrationen → Spotify neu '

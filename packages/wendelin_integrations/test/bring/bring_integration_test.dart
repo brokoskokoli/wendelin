@@ -66,6 +66,7 @@ void main() {
     late FakeBringApi api;
     late FakeBringSecrets secrets;
     late List<String> errors;
+    late List<PortErrorKind> kinds;
     late int recovered;
     late BringIntegration bring;
 
@@ -76,11 +77,15 @@ void main() {
         ..logins = 0
         ..methodCalls.clear();
       errors = [];
+      kinds = [];
       recovered = 0;
       bring = BringIntegration(
         api,
         secrets,
-        onError: errors.add,
+        onError: (m, k) {
+          errors.add(m);
+          kinds.add(k);
+        },
         onRecovered: () => recovered++,
       );
     });
@@ -127,6 +132,7 @@ void main() {
       expect(api.methodCalls, isNot(contains('login')));
       expect(secrets.session, isNull);
       expect(errors.single, BringSession.reauthRequired.message);
+      expect(kinds, [BringSession.reauthRequired.kind]);
       expect(bring.session.failed, isTrue);
       // Ohne Sitzung geht es nur über die Anmeldung weiter.
       expect((await lists()).text, BringSession.notSetUp.message);
@@ -291,7 +297,11 @@ void main() {
       secrets = FakeBringSecrets(
         session: await server.api().login(_email, _password),
       );
-      bring = BringIntegration(server.api(), secrets, onError: errors.add);
+      bring = BringIntegration(
+        server.api(),
+        secrets,
+        onError: (m, _) => errors.add(m),
+      );
     });
 
     Future<ToolOutcome> call(String name, Map<String, Object?> args) =>
@@ -394,7 +404,7 @@ void main() {
         bring = BringIntegration(
           HttpBringApi(client: server.client, clock: clock),
           secrets,
-          onError: errors.add,
+          onError: (m, _) => errors.add(m),
         );
         await call('bring__list_lists', {});
         server.next.add(canned(429, '', {'retry-after': '60'}));

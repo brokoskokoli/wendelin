@@ -1448,6 +1448,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get devSection => 'Development';
 
   @override
+  String integrationsErrDenied(String service) {
+    return '$service: access refused or expired · paused';
+  }
+
+  @override
+  String integrationsErrFailed(String service) {
+    return '$service: unexpected answer · paused';
+  }
+
+  @override
+  String integrationsErrUnavailable(String service) {
+    return '$service is not reachable · paused';
+  }
+
+  @override
   String get haAddressLabel => 'Address';
 
   @override

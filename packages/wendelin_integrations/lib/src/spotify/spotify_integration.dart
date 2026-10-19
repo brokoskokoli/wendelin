@@ -18,7 +18,7 @@ final class SpotifyIntegration implements Integration {
     SpotifyApi api,
     this.secrets, {
     SpotifyAppLauncher? launcher,
-    void Function(String message)? onError,
+    void Function(String message, PortErrorKind kind)? onError,
     void Function()? onRecovered,
     SpotifyDelay? delay,
   }) : session = SpotifySession(

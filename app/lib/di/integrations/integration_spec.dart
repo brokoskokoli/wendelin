@@ -37,7 +37,8 @@ final class IntegrationDeps {
   final http.Client httpClient;
 
   /// Puts the integration `id` into the error state (tools paused).
-  final void Function(String id, String message)? reportError;
+  final void Function(String id, String message, PortErrorKind kind)?
+  reportError;
 
   /// Clears the error state of the integration `id`.
   final void Function(String id)? clearError;
