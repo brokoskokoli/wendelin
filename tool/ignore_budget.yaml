@@ -7,7 +7,7 @@ ignore/cancel_subscriptions: 7
 ignore/close_sinks: 16
 ignore/deprecated_member_use: 4
 ignore/implementation_imports: 2
-ignore/invalid_use_of_protected_member: 2
+ignore/invalid_use_of_protected_member: 4
 ignore/use_setters_to_change_properties: 1
 ignore_for_file/curly_braces_in_flow_control_structures: 1
 ignore_for_file/invalid_use_of_protected_member: 2

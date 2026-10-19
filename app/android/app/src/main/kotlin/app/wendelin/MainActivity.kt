@@ -24,6 +24,12 @@ class MainActivity : WendelinActivity() {
         wake = WakeChannel(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 
+    // The chat is not visible any more (WP93); Dart reports it again when it is.
+    override fun onPause() {
+        ChatState.paused()
+        super.onPause()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         notify?.handleIntent(intent)

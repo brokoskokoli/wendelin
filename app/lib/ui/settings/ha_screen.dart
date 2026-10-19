@@ -281,7 +281,12 @@ class _HaScreenState extends ConsumerState<HaScreen> {
                   ? context.l10n.haErrorTitle
                   : context.l10n.haConnected,
               detail: failed
-                  ? integrationErrorText(context.l10n, 'ha', info?.error)
+                  ? integrationErrorText(
+                      context.l10n,
+                      'ha',
+                      info?.error,
+                      info?.errorKind,
+                    )
                   : _endpoint?.url,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,

@@ -19,6 +19,7 @@ void main() {
   late FakeSpotifySecrets secrets;
   late FakeSpotifyLauncher launcher;
   late List<String> errors;
+  late List<PortErrorKind> kinds;
   late int recovered;
   late List<Duration> waits;
   late SpotifySession session;
@@ -36,6 +37,7 @@ void main() {
     api.methodCalls.clear();
     launcher = FakeSpotifyLauncher();
     errors = [];
+    kinds = [];
     recovered = 0;
     waits = [];
     session = SpotifySession(
@@ -43,7 +45,10 @@ void main() {
       secrets,
       launcher: launcher,
       clock: clock,
-      onError: errors.add,
+      onError: (m, k) {
+        errors.add(m);
+        kinds.add(k);
+      },
       onRecovered: () => recovered++,
       delay: (d) async {
         waits.add(d);
@@ -89,6 +94,7 @@ void main() {
         _port(PortErrorKind.permissionDenied, contains('neu anmelden')),
       );
       expect(errors, ['Spotify-Anmeldung abgelaufen']);
+      expect(kinds, [PortErrorKind.permissionDenied]);
       expect(session.failed, isTrue);
       expect(await secrets.auth(), isNull);
       // Danach: nicht angemeldet, ohne weiteren Fehlerzustand.
@@ -150,7 +156,11 @@ void main() {
       'Fehler ohne Anmeldedaten: nicht angemeldet, kein Fehlerzustand',
       () async {
         secrets.storedAuth = null;
-        session = SpotifySession(api, secrets, onError: errors.add);
+        session = SpotifySession(
+          api,
+          secrets,
+          onError: (m, _) => errors.add(m),
+        );
         await expectLater(
           session.run(api.playback),
           throwsA(same(spotifyNotLoggedIn)),

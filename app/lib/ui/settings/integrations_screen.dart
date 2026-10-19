@@ -266,6 +266,7 @@ String? integrationDetail(
       l,
       info.integration.id,
       info.error,
+      info.errorKind,
     ),
     IntegrationStatus.setupRequired => [
       for (final step in info.integration.setup)

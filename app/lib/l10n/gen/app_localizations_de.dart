@@ -1466,6 +1466,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get devSection => 'Entwicklung';
 
   @override
+  String integrationsErrDenied(String service) {
+    return '$service: Zugang abgelehnt oder abgelaufen · pausiert';
+  }
+
+  @override
+  String integrationsErrFailed(String service) {
+    return '$service: unerwartete Antwort · pausiert';
+  }
+
+  @override
+  String integrationsErrUnavailable(String service) {
+    return '$service ist nicht erreichbar · pausiert';
+  }
+
+  @override
   String get haAddressLabel => 'Adresse';
 
   @override

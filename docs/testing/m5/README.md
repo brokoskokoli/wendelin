@@ -8,6 +8,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP104 Liegengebliebene Gerätetests (Standort, Aufgaben, Home Assistant, Sprachen)](wp104.md)
 - [WP105 Folgepunkte Audit und Texte](wp105.md)
 - [WP107 Bring! speichert nur Tokens](wp107.md)
+- [WP108 Fehlerart bis zur Integrationskachel](wp108.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)
@@ -19,4 +20,5 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP91 Home Assistant](wp91.md)
 - [WP92a Sprechererkennung](wp92a.md)
 - [WP92b Personen: Anrede, Gedächtnis, Agent](wp92b.md)
+- [WP93 Wake Word im sichtbaren Chat](wp93.md)
 - [WP94 Schnellwechsel des Standard-Agenten (langer Druck auf den Provider-Chip)](wp94.md)

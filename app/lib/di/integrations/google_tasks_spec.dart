@@ -31,7 +31,7 @@ final googleTasksSpec = IntegrationSpec(
       deps.api,
       deps.oauth,
       deps.secrets,
-      onError: (_) => d.reportError?.call('gtasks', pausedError),
+      onError: (_, kind) => d.reportError?.call('gtasks', pausedError, kind),
       onRecovered: () => d.clearError?.call('gtasks'),
     );
   },

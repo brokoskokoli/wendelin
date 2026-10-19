@@ -40,8 +40,8 @@ final integrationDepsProvider = Provider<IntegrationDeps>((ref) {
 
   final specs = ref.watch(integrationSpecsProvider);
   return IntegrationDeps(
-    reportError: (id, message) =>
-        onRegistry(id, (r) => r.reportError(id, message)),
+    reportError: (id, message, kind) =>
+        onRegistry(id, (r) => r.reportError(id, message, kind: kind)),
     clearError: (id) => onRegistry(id, (r) => r.clearError(id)),
     ports: ref.watch(platformPortsProvider),
     device: ref.watch(deviceInfoProvider),

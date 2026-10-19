@@ -257,6 +257,12 @@ final class VoiceController extends Notifier<VoiceUiState> {
     // (WP68): nothing in between is lost.
     // (No await without a pre-roll: the order of the other starts stays.)
     final preRoll = takePreRoll == null ? null : await takePreRoll();
+    if (cancels != _cancels) {
+      // Cancelled while taking the hit (WP93: the audio went elsewhere):
+      // the microphone does not open.
+      state = state.copyWith(preparing: false);
+      return false;
+    }
     // Before the microphone opens: its first frame is measured against it.
     _wakeLastSampleAt = preRoll?.lastSampleAtMs;
     // Splits the hole (WP73): service close / hand-over (`ms` minus
@@ -366,12 +372,12 @@ final class VoiceController extends Notifier<VoiceUiState> {
       return false;
     }
     final pipeline = _pipelineFor(components);
+    final cancels = _cancels;
     state = state.copyWith(trigger: kind, clearHint: true, clearError: true);
-    return _run(
-      pipeline,
-      kind,
-      takePreRoll == null ? null : await takePreRoll(),
-    );
+    final preRoll = takePreRoll == null ? null : await takePreRoll();
+    // Cancelled while taking the hit (WP93): nothing starts.
+    if (cancels != _cancels) return false;
+    return _run(pipeline, kind, preRoll);
   }
 
   bool _run(VoicePipeline pipeline, TriggerKind kind, [WakePreRoll? preRoll]) {

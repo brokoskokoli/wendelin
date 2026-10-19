@@ -251,9 +251,14 @@
       ],
       "toKotlin": {
         "configure": {"args": ["enabled", "mode", "verify"], "returns": "none"},
-        "status": {"args": [], "returns": "map"}
+        "status": {"args": [], "returns": "map"},
+        "chatVisible": {"args": ["visible"], "returns": "none"},
+        "chatDone": {"args": [], "returns": "none"},
+        "debugHit": {"args": [], "returns": "value"}
       },
-      "toDart": {}
+      "toDart": {
+        "wakeHit": {"args": [], "returns": "value"}
+      }
     },
     "app.wendelin/wake-engine": {
       "dart": [

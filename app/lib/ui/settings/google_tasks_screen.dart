@@ -236,7 +236,12 @@ class _GoogleTasksScreenState extends ConsumerState<GoogleTasksScreen> {
                   ? context.l10n.googleTasksApiError
                   : googleTasksStateText(context.l10n, info?.status),
               detail: failed
-                  ? integrationErrorText(context.l10n, 'gtasks', info?.error)
+                  ? integrationErrorText(
+                      context.l10n,
+                      'gtasks',
+                      info?.error,
+                      info?.errorKind,
+                    )
                   : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,

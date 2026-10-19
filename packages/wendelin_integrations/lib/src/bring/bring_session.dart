@@ -39,7 +39,7 @@ final class BringSession {
   final BringSecrets secrets;
 
   /// Called with a German message when the integration must show „Fehler“.
-  final void Function(String message)? onError;
+  final void Function(String message, PortErrorKind kind)? onError;
 
   /// Called when a call succeeds after [onError].
   final void Function()? onRecovered;
@@ -92,7 +92,7 @@ final class BringSession {
       }
       if (identical(e, reauthRequired)) await _drop();
       _failed = true;
-      onError?.call(e.message);
+      onError?.call(e.message, e.kind);
       throw PortException(e.kind, '${e.message}. $bringFallbackHint');
     }
   }

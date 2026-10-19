@@ -214,6 +214,34 @@ class WakeWordService : Service() {
         )
         val pos = call.argument<Number>("pos")?.toLong()
         if (mic != null) WakeHandoff.beginCapture(if (pos != null) tap.tailAfter(pos) else ByteArray(0))
+        val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        val route = WakePolicy.routeHit(ChatState.visible, keyguard.isKeyguardLocked, WakeChannel.available)
+        VoiceLog.i("wake-hit route=${route.name.lowercase()}")
+        if (route == HitRoute.CHAT) askChat() else openOverlay()
+    }
+
+    /** WP93: the main engine decides (it checks again); no answer in time means the overlay. */
+    private fun askChat() {
+        ChatHitArbiter(
+            scheduler = object : HitScheduler {
+                override fun postDelayed(delayMs: Long, task: Runnable) {
+                    main.postDelayed(task, delayMs)
+                }
+
+                override fun cancel(task: Runnable) = main.removeCallbacks(task)
+            },
+            openOverlay = {
+                VoiceLog.i("wake-hit chat=refused-or-timeout")
+                openOverlay()
+            },
+            chatAccepted = {
+                VoiceLog.i("wake-hit chat=accepted")
+                armHandoffCheck()
+            },
+        ).begin { done -> WakeChannel.askHit(done) }
+    }
+
+    private fun openOverlay() {
         wakeScreen()
         if (!WendelinVoiceInteractionService.show()) {
             VoiceLog.i("wake-hit show=failed")
@@ -222,12 +250,18 @@ class WakeWordService : Service() {
             engine?.send("overlayClosed", null)
             return
         }
-        // The overlay takes the audio when it starts; if it never does, listen again.
+        armHandoffCheck()
+    }
+
+    /** The overlay (or chat) takes the audio when it starts; if it never does, listen again. */
+    private fun armHandoffCheck() {
+        handoffCheck?.let { main.removeCallbacks(it) }
         val check = Runnable {
             if (WakeHandoff.pending()) {
                 VoiceLog.i("wake-hit overlay=missing")
                 WakeHandoff.clear()
                 stopMic()
+                ChatState.owned = false
                 engine?.send("overlayClosed", null)
             }
         }
@@ -354,6 +388,19 @@ class WakeWordService : Service() {
 
         fun onHandoffTaken() {
             instance?.handoffTaken()
+        }
+
+        /**
+         * Debug builds only (WP93, device tests): a hit with a second of silence as pre-roll, as
+         * if the engine had confirmed the wake word. `false` if the service is not running.
+         */
+        fun debugHit(context: Context): Boolean {
+            val s = instance ?: return false
+            if (!WakePolicy.allowsDebugHit(context.applicationInfo.flags)) return false
+            s.main.post {
+                s.onHit(MethodCall("hit", mapOf("kw" to "debug", "pcm" to ByteArray(32_000), "end" to 16_000)))
+            }
+            return true
         }
 
         /** The assistant overlay was closed: the service listens again. */

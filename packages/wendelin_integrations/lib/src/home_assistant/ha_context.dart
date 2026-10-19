@@ -17,7 +17,7 @@ final class HaContext {
   final HaEntityStore store;
 
   /// Called when the token is rejected (permanent until the setup changes).
-  final void Function(String message)? onError;
+  final void Function(String message, PortErrorKind kind)? onError;
 
   /// Called after the first success following [onError].
   final void Function()? onRecovered;
@@ -37,7 +37,7 @@ final class HaContext {
     } on PortException catch (e) {
       if (e.kind == PortErrorKind.permissionDenied && !_failed) {
         _failed = true;
-        onError?.call(e.message);
+        onError?.call(e.message, e.kind);
       }
       rethrow;
     }

@@ -229,7 +229,12 @@ class _BringScreenState extends ConsumerState<BringScreen> {
                   ? context.l10n.bringApiError
                   : bringStateText(context.l10n, info?.status),
               detail: failed
-                  ? integrationErrorText(context.l10n, 'bring', info?.error)
+                  ? integrationErrorText(
+                      context.l10n,
+                      'bring',
+                      info?.error,
+                      info?.errorKind,
+                    )
                   : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,

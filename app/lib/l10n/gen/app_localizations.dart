@@ -2596,6 +2596,24 @@ abstract class AppLocalizations {
   /// **'Entwicklung'**
   String get devSection;
 
+  /// No description provided for @integrationsErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Zugang abgelehnt oder abgelaufen · pausiert'**
+  String integrationsErrDenied(String service);
+
+  /// No description provided for @integrationsErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: unerwartete Antwort · pausiert'**
+  String integrationsErrFailed(String service);
+
+  /// No description provided for @integrationsErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'{service} ist nicht erreichbar · pausiert'**
+  String integrationsErrUnavailable(String service);
+
   /// No description provided for @haAddressLabel.
   ///
   /// In de, this message translates to:
