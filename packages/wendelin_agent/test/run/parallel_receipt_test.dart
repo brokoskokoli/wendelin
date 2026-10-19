@@ -302,6 +302,60 @@ void main() {
       });
     });
 
+    for (final second in [AttestationStatus.green, AttestationStatus.red]) {
+      test('Quittung von Schritt 2 vor roter von Schritt 1 ($second): '
+          'nur Schritt 1 sichtbar, Hinweis 1x', () {
+        fakeAsync((async) {
+          start(async, [
+            toolTurn,
+            ScriptedTurn.text('Verworfen'),
+            ScriptedTurn.text('Neu.'),
+          ]);
+          provider.settle(1, second);
+          async.flushMicrotasks();
+          expect(
+            events.whereType<AttestationStatusChanged>().where(
+              (e) => e.status != AttestationStatus.yellow,
+            ),
+            isEmpty,
+            reason: 'Quittung 2 wartet auf Schritt 1',
+          );
+          provider.settle(0, AttestationStatus.red);
+          async.flushMicrotasks();
+          final final_ = events.whereType<AttestationStatusChanged>().where(
+            (e) => e.status != AttestationStatus.yellow,
+          );
+          expect(final_.map((e) => e.stepId), ['s1:1']);
+          expect(final_.single.status, AttestationStatus.red);
+          expect(
+            events.whereType<AttestationStatusChanged>().where(
+              (e) => e.status == AttestationStatus.red,
+            ),
+            hasLength(1),
+          );
+          expect(undoable.undoCount, 1);
+        });
+      });
+    }
+
+    test('Rot nach AgentTextComplete der parallelen Runde: Undo 1x, '
+        'nur neuer Text, Neuaufruf', () {
+      fakeAsync((async) {
+        start(async, [
+          toolTurn,
+          ScriptedTurn.text('Verworfen'),
+          ScriptedTurn.text('Neu.'),
+        ]);
+        expect(events.whereType<AgentTextComplete>(), hasLength(1));
+        provider.settle(0, AttestationStatus.red);
+        async.flushMicrotasks();
+        expect(undoable.undoCount, 1);
+        expect(shownText(events), 'Neu.');
+        expect(events.whereType<AgentTextReset>(), hasLength(1));
+        expect(provider.inner.requests, hasLength(3));
+      });
+    });
+
     const used = Usage(inputTokens: 40);
 
     test('Token-Budget gilt über die parallele Runde', () {
@@ -591,6 +645,57 @@ void main() {
         );
         expect(out, hasLength(3), reason: 'nur Usage nach dem Verwerfen');
         expect(b.token.isCancelled, isTrue);
+      },
+    );
+
+    for (final shown in <AgentEvent>[
+      const AgentThinkingDelta('denke'),
+      const AgentSpokenText('Satz.'),
+      const AgentTextDelta('Text'),
+    ]) {
+      test(
+        'OverlapControl: nur ${shown.runtimeType} gezeigt, genau ein Reset',
+        () {
+          final out = <AgentEvent>[];
+          final b = OverlapControl(_Recorder(out))..emit(shown);
+          b.discard();
+          b.discard();
+          expect(out.whereType<AgentTextReset>(), hasLength(1));
+        },
+      );
+    }
+
+    test('OverlapControl: nichts gezeigt, kein Reset', () {
+      final out = <AgentEvent>[];
+      OverlapControl(_Recorder(out)).discard();
+      expect(out, isEmpty);
+    });
+
+    test(
+      'OverlapControl: Quittungen warten auf verified, discard verwirft',
+      () {
+        const green = AttestationStatusChanged(
+          stepId: 'a',
+          status: AttestationStatus.green,
+          logId: 'l',
+        );
+        const yellow = AttestationStatusChanged(
+          stepId: 'a',
+          status: AttestationStatus.yellow,
+          logId: '',
+        );
+        final out = <AgentEvent>[];
+        final b = OverlapControl(_Recorder(out))
+          ..emit(yellow)
+          ..emit(green);
+        expect(out, [yellow]);
+        b.verified();
+        expect(out, [yellow, green]);
+        final out2 = <AgentEvent>[];
+        final d = OverlapControl(_Recorder(out2))..emit(green);
+        d.discard();
+        d.verified();
+        expect(out2, isEmpty);
       },
     );
 

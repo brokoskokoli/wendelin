@@ -43,6 +43,32 @@ void main() {
       });
     });
 
+    test('Reset ohne Rot: Satzwarteschlange leer, nichts mehr gesprochen', () {
+      runFake((async) {
+        final receipt = Completer<void>();
+        final h = Harness(
+          utteranceDuration: const Duration(seconds: 5),
+          agent: GatedAgent(
+            before: [const AgentTextDelta('Erster langer Satz. Zweiter Satz.')],
+            gate: receipt.future,
+            after: [
+              const AgentTextReset('Vorherige Antwort nicht bestätigt'),
+              const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+            ],
+          ),
+        );
+        h.pipeline.start();
+        async.elapse(const Duration(seconds: 3));
+        expect(h.tts.spoken, ['Erster langer Satz.']);
+        receipt.complete();
+        settle(async);
+        async.elapse(const Duration(seconds: 30));
+        settle(async);
+
+        expect(h.tts.spoken, ['Erster langer Satz.']);
+      });
+    });
+
     test('Abbruch während der Ausgabe vor der Quittung stoppt alles', () {
       runFake((async) {
         final receipt = Completer<void>();

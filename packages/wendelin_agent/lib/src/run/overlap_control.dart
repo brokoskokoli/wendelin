@@ -16,9 +16,12 @@ import 'run_state.dart';
 /// - [discard] (the receipt is not green) cancels the call's own [token],
 ///   emits one `AgentTextReset` if the call showed anything (the listener
 ///   removes the section and clears the speech queue) and drops everything
-///   that follows, except [UsageReported] (paid tokens are always reported).
+///   that follows, including receipt events held back, except [UsageReported] (paid tokens are always reported).
 /// - [abandon] (abort, error) stops the call like [discard] but emits no
 ///   reset: the run ends anyway.
+/// - Final (not yellow) [AttestationStatusChanged] of the call are held back
+///   until [verified]: the receipt of the previous step comes first, and a
+///   discarded call never shows or audits a receipt.
 /// - An abort of the run is still thrown by [throwIfAborted].
 final class OverlapControl implements RunControl {
   /// Passes events of a call of the run behind [_parent] on.
@@ -30,6 +33,7 @@ final class OverlapControl implements RunControl {
   bool _stopped = false;
   bool _shown = false;
   bool _verified = false;
+  final List<AgentEvent> _held = [];
 
   @override
   final CancelToken token = CancelToken();
@@ -52,11 +56,23 @@ final class OverlapControl implements RunControl {
         e is AgentThinkingDelta) {
       _shown = true;
     }
+    if (!_verified &&
+        e is AttestationStatusChanged &&
+        e.status != AttestationStatus.yellow) {
+      _held.add(e);
+      return;
+    }
     _parent.emit(e);
   }
 
-  /// The previous answer is verified: the call goes on.
-  void verified() => _verified = true;
+  /// The previous answer is verified: the call goes on, held receipts go out.
+  void verified() {
+    if (_stopped || _verified) return;
+    _verified = true;
+    final held = List.of(_held);
+    _held.clear();
+    held.forEach(_parent.emit);
+  }
 
   /// The previous answer is not verified: takes back what the call showed
   /// and cancels it. Idempotent.
