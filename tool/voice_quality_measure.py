@@ -11,6 +11,7 @@ MODELS/VOICES unten. Aufrufe (immer nacheinander, ein Modell je Prozess, damit
 die RAM-Spitze stimmt):
 
   voice_quality_measure.py stt  --models DIR [--only a,b] [--threads 4] [--out stt.json]
+                                [--hotwords DIR]   # DIR: hotwords.txt + bpe.vocab, nur Parakeet
   voice_quality_measure.py tts  --models DIR --samples DIR [--only a,b] [--out tts.json]
   voice_quality_measure.py selftest
   voice_quality_measure.py table --stt stt.json [--tts tts.json]   # Markdown
@@ -47,6 +48,7 @@ STT = {
                               f=("encoder.int8.onnx", "decoder.int8.onnx", "tokens.txt")),
 }
 GTCRN = "gtcrn_simple.onnx"
+HOTWORDS_SCORE = 3.0
 
 LONG = {
     "de": ("Anna", "Bitte lege morgen früh um halb acht einen Termin mit dem Zahnarzt in meinem Kalender an, erinnere mich "
@@ -165,7 +167,7 @@ def add_noise(sig, snr_db, seed):
     return np.clip(sig + make_noise(len(sig), rng, rms / (10 ** (snr_db / 20))), -1, 1).astype("float32")
 
 
-def build_recognizer(name, models, threads):
+def build_recognizer(name, models):
     import sherpa_onnx as so
     c = STT[name]
     d = Path(models) / c.get("d", name)
@@ -173,13 +175,20 @@ def build_recognizer(name, models, threads):
     return c, d, f, so
 
 
-def make_rec(name, models, threads, lang):
-    c, d, f, so = build_recognizer(name, models, threads)
+def make_rec(name, models, threads, lang, hotwords=None):
+    c, d, f, so = build_recognizer(name, models)
     R = so.OfflineRecognizer
     if c["kind"] == "whisper":
         return R.from_whisper(f[0], f[1], f[2], language=lang, task="transcribe", num_threads=threads, tail_paddings=-1)
     if c["kind"] == "canary":
         return R.from_nemo_canary(f[0], f[1], f[2], src_lang=lang, tgt_lang=lang, num_threads=threads)
+    if hotwords:
+        # Parakeet (BPE): modified_beam_search + Hotwords-Datei, bpe_vocab = SentencePiece-Vocab
+        # des Tokenizers (steckt in der .nemo-Datei des Originals, nicht im sherpa-Paket).
+        hw = Path(hotwords)
+        return R.from_transducer(f[0], f[1], f[2], f[3], num_threads=threads, model_type="nemo_transducer",
+                                 decoding_method="modified_beam_search", hotwords_file=str(hw / "hotwords.txt"),
+                                 hotwords_score=HOTWORDS_SCORE, modeling_unit="bpe", bpe_vocab=str(hw / "bpe.vocab"))
     return R.from_transducer(f[0], f[1], f[2], f[3], num_threads=threads, model_type="nemo_transducer")
 
 
@@ -204,7 +213,7 @@ def cmd_stt_one(a):
     audio = {r["id"]: pad(read_wav(r["wav"])) for r in rows}
     base_mb = cur_rss_mb()
     t0 = time.perf_counter()
-    rec = make_rec(name, a.models, a.threads, lang)
+    rec = make_rec(name, a.models, a.threads, lang, a.hotwords)
     load = time.perf_counter() - t0
     after_load = cur_rss_mb()
     den = so.OfflineSpeechDenoiser(so.OfflineSpeechDenoiserConfig(
@@ -273,7 +282,8 @@ def cmd_stt(a):
         for lang in ("de", "fr", "en"):
             print(f"[stt] {n} {lang}", file=sys.stderr, flush=True)
             p = subprocess.run([sys.executable, "-I", __file__, "stt-one", "--one", n, "--lang", lang, "--models", a.models,
-                                "--threads", str(a.threads), "--cache", a.cache], capture_output=True, text=True)
+                                "--threads", str(a.threads), "--cache", a.cache]
+                               + (["--hotwords", a.hotwords] if a.hotwords else []), capture_output=True, text=True)
             if p.returncode != 0:
                 print(p.stderr[-1500:], file=sys.stderr); parts = []; break
             parts.append(json.loads(p.stdout.strip().splitlines()[-1]))
@@ -298,6 +308,7 @@ SHORT = {"de": "Okay, erledigt.", "fr": "D'accord, c'est fait.", "en": "Okay, do
 VOICES = {
     "piper-de-thorsten-medium": ("vits-piper-de_DE-thorsten-medium-int8", "de", "vits"),
     "piper-de-thorsten-high": ("vits-piper-de_DE-thorsten-high-int8", "de", "vits"),
+    "piper-de-thorsten-high-fp32": ("vits-piper-de_DE-thorsten-high", "de", "vits"),
     "piper-de-kerstin-low": ("vits-piper-de_DE-kerstin-low-int8", "de", "vits"),
     "piper-de-miro-high": ("vits-piper-de_DE-miro-high-int8", "de", "vits"),
     "piper-fr-siwis-medium": ("vits-piper-fr_FR-siwis-medium-int8", "fr", "vits"),
@@ -308,8 +319,10 @@ VOICES = {
     "kokoro-en-heart": ("kokoro-int8-multi-lang-v1_0", "en", "kokoro"),
     "kokoro-en-emma": ("kokoro-int8-multi-lang-v1_0", "en", "kokoro"),
 }
-KOKORO_SID = {"kokoro-fr-siwis": "ff_siwis", "kokoro-en-heart": "af_heart", "kokoro-en-emma": "bf_emma"}
-KOKORO_LANG = {"fr": "fr", "en": "en-us"}
+# Sprecher-IDs von kokoro-multi-lang-v1_0 (54 Stimmen, IDs 0-52 laut README des Modells,
+# gegen speaker2id der Modell-Metadaten geprueft) und Sprachcode je Stimme.
+KOKORO_SID = {"kokoro-fr-siwis": 30, "kokoro-en-heart": 3, "kokoro-en-emma": 21}  # ff_siwis, af_heart, bf_emma
+KOKORO_LANG = {"kokoro-fr-siwis": "fr", "kokoro-en-heart": "en-us", "kokoro-en-emma": "en"}  # britisch; "en-gb" kennt die espeak-Datei des Modells nicht
 
 
 def make_tts(name, models, threads):
@@ -328,9 +341,8 @@ def make_tts(name, models, threads):
             model=str(p / "model.int8.onnx") if (p / "model.int8.onnx").exists() else str(p / "model.onnx"),
             voices=str(p / "voices.bin"), tokens=str(p / "tokens.txt"), data_dir=str(p / "espeak-ng-data"),
             dict_dir=str(p / "dict"), lexicon=",".join(str(x) for x in sorted(p.glob("lexicon-*.txt"))),
-            lang=KOKORO_LANG[lang]), num_threads=threads)
-        spk = (p / "speakers.txt").read_text() if (p / "speakers.txt").exists() else ""
-        sid = 0
+            lang=KOKORO_LANG[name]), num_threads=threads)
+        sid = KOKORO_SID[name]
     cfg = so.OfflineTtsConfig(model=mc, max_num_sentences=1)
     return so.OfflineTts(cfg), sid
 
@@ -342,8 +354,6 @@ def cmd_tts_one(a):
     t0 = time.perf_counter()
     tts, sid = make_tts(name, a.models, a.threads)
     load = time.perf_counter() - t0
-    if kind == "kokoro":
-        sid = kokoro_sid(Path(a.models) / d, KOKORO_SID[name])
     tts.generate(SHORT[lang], sid=sid)  # Warmup
     res = dict(voice=name, lang=lang, load_s=round(load, 2), base_mb=round(base), after_load_mb=round(cur_rss_mb()), runs={})
     for key, text in (("short", SHORT[lang]), ("long", TEXT[lang])):
@@ -364,13 +374,6 @@ def cmd_tts_one(a):
             write_wav(Path(a.samples) / name / f"{name}-{lang}.wav", np.asarray(audio.samples, "float32"), audio.sample_rate)
     res["peak_mb"] = round(rss_mb())
     print(json.dumps(res))
-
-
-def kokoro_sid(p, voice):
-    """Sprecher-ID aus den Modell-Metadaten (speaker2id)."""
-    b = (p / "model.int8.onnx").read_bytes() if (p / "model.int8.onnx").exists() else (p / "model.onnx").read_bytes()
-    m = re.search(rb"[,>(]?%s->(\d+)" % re.escape(voice.encode()), b)
-    return int(m.group(1))
 
 
 def cmd_tts(a):
@@ -432,6 +435,7 @@ def main():
         p.add_argument("--models", required=True)
         p.add_argument("--only")
         p.add_argument("--one")
+        p.add_argument("--hotwords", help="Ordner mit hotwords.txt und bpe.vocab (nur Parakeet)")
         p.add_argument("--lang")
         p.add_argument("--threads", type=int, default=4)
         p.add_argument("--cache", default=os.path.join(os.environ.get("TMPDIR", "/tmp"), "wp102-long"))
