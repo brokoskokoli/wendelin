@@ -10,12 +10,14 @@
 //
 // Läuft über `tool/e2e_android.sh` (nur Emulator).
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/l10n/l10n.dart';
 import 'package:wendelin/platform/attest/attest_backend.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -101,7 +103,9 @@ void main() {
     final (app, gateway, _, _) = await start(tester);
     await send(tester, 'Wie wird das Meer morgen?');
     await pumpUntil(tester, find.textContaining(tinfoilAnswer));
-    await pumpUntil(tester, find.text('geprüft'));
+    // Sprachneutral: die Emulator-Sprache entscheidet (en: „verified, …“).
+    final l = tester.element(find.byType(Scaffold).first).l10n;
+    await pumpUntil(tester, find.textContaining(l.attSummaryGreen));
     expect(find.byType(StatusCard), findsNothing);
     // Zug 1 (Werkzeugaufruf) und Zug 2 (mit Werkzeugergebnis), beide EHBP.
     expect(gateway.chats, 2);
