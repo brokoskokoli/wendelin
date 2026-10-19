@@ -119,12 +119,25 @@ typedef WhisperModelLoader = Future<WhisperBackend> Function(
   String directory,
 );
 
+/// Starts the recognizer backend (isolate); tests replace it.
+@visibleForTesting
+final sttBackendStarterProvider =
+    Provider<
+      Future<WhisperBackend> Function(
+        SpeechModel model,
+        String directory, {
+        List<String> hintTerms,
+        double hotwordsScore,
+        String fallbackLanguage,
+      })
+    >((ref) => startSttBackend);
+
 /// How this engine loads a recognizer (background isolate): the engine
 /// comes from the catalog entry ([SpeechModel.engine], WP103); names for
 /// hotwords go to the models that take them.
 final whisperLoaderProvider = Provider<WhisperModelLoader>(
   (ref) =>
-      (model, dir) async => startSttBackend(
+      (model, dir) async => ref.read(sttBackendStarterProvider)(
         model,
         dir,
         hintTerms: model.supportsHotwords

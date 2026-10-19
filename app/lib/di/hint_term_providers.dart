@@ -65,9 +65,16 @@ final class ContactNameHintSource implements HintTermSource {
 /// The approved Home Assistant entities (local store, no network). The
 /// settings screen invalidates it when the approval changes, so the hint
 /// names follow (Befund 7).
-final haApprovedEntitiesProvider = FutureProvider<List<HaEntity>>(
-  (ref) => ref.watch(haStoreProvider).load(),
-);
+///
+/// A failing store (platform channel) yields an empty list: the hint names
+/// then go without Home Assistant, the recognizer still starts.
+final haApprovedEntitiesProvider = FutureProvider<List<HaEntity>>((ref) async {
+  try {
+    return await ref.watch(haStoreProvider).load();
+  } on Object {
+    return const [];
+  }
+});
 
 /// The sources of the recognizer hint (names only, nothing leaves the
 /// device): the assistant, lists, approved Home Assistant rooms and
