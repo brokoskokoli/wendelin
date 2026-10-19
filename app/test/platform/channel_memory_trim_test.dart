@@ -21,9 +21,9 @@ void main() {
           );
     }
 
-    await push('trim', 15);
-    await push('trim', 'x');
-    await push('other', 40);
+    await push('trim', {'level': 15});
+    await push('trim', {'level': 'x'});
+    await push('other', {'level': 40});
     await pumpEventQueue();
     expect(levels, [15]);
   });

@@ -13,7 +13,7 @@ class MemoryChannel(messenger: BinaryMessenger) {
 
     /** [level] is one of the `ComponentCallbacks2.TRIM_MEMORY_*` constants. */
     fun trim(level: Int) {
-        channel.invokeMethod("trim", level)
+        channel.invokeMethod("trim", mapOf("level" to level))
     }
 
     fun dispose() {

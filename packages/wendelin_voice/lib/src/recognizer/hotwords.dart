@@ -28,7 +28,7 @@ String buildHotwordsFile(Iterable<String> terms, BpeEncoder encoder) {
 }
 
 /// The `bpe_vocab` file sherpa-onnx needs next to `tokens.txt` for hotwords
-/// ("piece<TAB>score" per line; the sherpa package ships none). Derived
+/// ("piece, tab, score" per line; the sherpa package ships none). Derived
 /// from `tokens.txt`: control tokens score 0, the others the negated
 /// distance of their id from the first regular piece (the SentencePiece
 /// merge order of the NeMo tokenizer, equal to the `tokenizer.vocab` of the

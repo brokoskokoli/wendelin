@@ -30,7 +30,8 @@ final class ChannelMemoryTrim implements MemoryTrimSource {
       _listening = true;
       try {
         _channel.setMethodCallHandler((call) async {
-          final level = call.arguments;
+          final args = call.arguments;
+          final level = args is Map ? args['level'] : null;
           if (call.method == 'trim' && level is int) _levels.add(level);
         });
       } on Object {
