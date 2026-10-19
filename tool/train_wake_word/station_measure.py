@@ -29,6 +29,7 @@ import kws_measure as K                 # noqa: E402
 SR = C.SR
 KWS = os.path.expanduser("~/wendelin-models/kws")
 # Modelle (Whisper/Parakeet/BPE) liegen im Handoff-Ordner neben dem Repo; Env WENDELIN_HANDOFF ueberschreibt
+MODELS = os.environ.get("WENDELIN_MODELS") or os.path.expanduser("~/wendelin-fixtures/models")
 H = os.environ.get("WENDELIN_HANDOFF") or os.path.abspath(os.path.join(HERE, "..", "..", "..", "handoff"))
 WORK = f"{KWS}/wp106/work"
 SPEAKER = f"{KWS}/wp106/models/3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx"
@@ -40,7 +41,7 @@ RULES = {"T": "Vorlage", "M": "Modell v7", "TM": "Modell v7 ODER Vorlage"}
 # ---------- Recognizer ----------
 def make_rec(name, threads=4):
     import sherpa_onnx as so
-    M = f"{H}/wp102-models"
+    M = MODELS
     if name == "whisper-small":
         d = f"{M}/whisper-small"
         return so.OfflineRecognizer.from_whisper(
