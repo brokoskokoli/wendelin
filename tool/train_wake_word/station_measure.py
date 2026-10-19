@@ -12,7 +12,9 @@ je Stimme/Bedingung, (3) Stufe 2 je Variante (Whisper small, Parakeet v3 ohne/mi
 (Unterprozess, --probe). Bedingungen: clean; both = Rauschen 10 dB + Hall 0,5 s; station = Abstand 2-3 m
 (Hall RT60 0,7, Pegel -10..-15 dB, Fernsehton = FLEURS-Sprache + synthetische Musik bei SNR 5..10 dB,
 Mikrofonrauschen 25 dB). Negativ-Mengen: "neg" (Systemstimmen-Sprache) und "tv" (FLEURS-Sprache allein).
-Stufe 2 spiegelt matchesWakeWord (Abstand 1) aus kws_measure.py. Zwischendaten nur unter
+Stufe 2 spiegelt matchesWakeWord aus kws_measure.py in zwei Regeln: "d1" (Abstand 1) und "app" (App: Abstand 2,
+Zwei-Aenderungs-Regel nur fuer ein Wort, Zweiwort-Treffer nie vor Funktionswort); Spalte "match" in den Tabellen.
+Basis des Boosts ist "parakeet-bs" (modified_beam_search ohne Hotwords), nicht das greedy-"parakeet". Zwischendaten nur unter
 ~/wendelin-models/kws/wp106/work. Voraussetzung: FLEURS-dev entpackt nach work/fleurs, CAM++ nach wp106/models.
 """
 import argparse, csv, glob, json, os, re, resource, subprocess, sys, time
@@ -26,11 +28,12 @@ import kws_measure as K                 # noqa: E402
 
 SR = C.SR
 KWS = os.path.expanduser("~/wendelin-models/kws")
-H = "/Users/stefanrichter/ai/james-wt/handoff"
+# Modelle (Whisper/Parakeet/BPE) liegen im Handoff-Ordner neben dem Repo; Env WENDELIN_HANDOFF ueberschreibt
+H = os.environ.get("WENDELIN_HANDOFF") or os.path.abspath(os.path.join(HERE, "..", "..", "..", "handoff"))
 WORK = f"{KWS}/wp106/work"
 SPEAKER = f"{KWS}/wp106/models/3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx"
 TAIL = 0.9
-VARIANTS = ["whisper-small", "parakeet", "parakeet-hw1", "parakeet-hw2", "parakeet-hw3", "parakeet-hw5"]
+VARIANTS = ["whisper-small", "parakeet", "parakeet-bs", "parakeet-hw1", "parakeet-hw2", "parakeet-hw3", "parakeet-hw5"]
 RULES = {"T": "Vorlage", "M": "Modell v7", "TM": "Modell v7 ODER Vorlage"}
 
 
@@ -46,8 +49,10 @@ def make_rec(name, threads=4):
     d = f"{M}/parakeet-v3"
     kw = dict(encoder=f"{d}/encoder.int8.onnx", decoder=f"{d}/decoder.int8.onnx", joiner=f"{d}/joiner.int8.onnx",
               tokens=f"{d}/tokens.txt", num_threads=threads, model_type="nemo_transducer")
-    if name == "parakeet":
+    if name == "parakeet":                 # greedy (nur zur Information; NICHT die Basis fuer den Boost)
         return so.OfflineRecognizer.from_transducer(**kw)
+    if name == "parakeet-bs":              # Basis des Boosts: gleiche Suche (modified_beam_search), aber ohne Hotwords
+        return so.OfflineRecognizer.from_transducer(**kw, decoding_method="modified_beam_search")
     score = float(name.removeprefix("parakeet-hw"))
     os.makedirs(WORK, exist_ok=True)
     hw = f"{WORK}/hotwords-{score}.txt"
@@ -292,7 +297,13 @@ def main():
     keys = list(segs)
     text, tstat = {}, {}
     sec = sum(len(segs[k]) for k in keys) / SR
+    tcache = f"{WORK}/station_texts.json"
+    old = json.load(open(tcache)) if os.path.exists(tcache) else {}
+    kj = lambda k: "|".join(map(str, k))
     for var in variants:
+        if var in old and all(kj(k) in old[var] for k in keys):
+            text[var] = {k: old[var][kj(k)] for k in keys}
+            log(f"{var}: Transkripte aus Cache"); continue
         rec = make_rec(var)
         t0 = time.time()
         text[var] = {k: decode(rec, segs[k]) for k in keys}
@@ -301,15 +312,15 @@ def main():
         del rec
         log(f"{var}: {len(keys)} Segmente, RTF {tstat[var]['rtf']:.3f}, {tstat[var]['ms_per_seg']:.0f} ms/Segment")
     sanity = {}          # Beleg, dass der Boost wirkt (Text mit/ohne Hotword unterscheidet sich)
-    if "parakeet" in text:
+    base = "parakeet-bs" if "parakeet-bs" in text else "parakeet"
+    if base in text:
         for var in text:
             if var.startswith("parakeet-hw"):
-                diff = [k for k in keys if text[var][k].lower() != text["parakeet"][k].lower()]
-                gain = [k for k in diff if K.matches_wake_word(text[var][k]) and not K.matches_wake_word(text["parakeet"][k])]
+                diff = [k for k in keys if text[var][k].lower() != text[base][k].lower()]
+                gain = [k for k in diff if K.matches_wake_word(text[var][k], 1) and not K.matches_wake_word(text[base][k], 1)]
                 sanity[var] = {"differ": len(diff), "of": len(keys), "newly_matching": len(gain),
-                               "examples": [(text["parakeet"][k], text[var][k]) for k in gain[:3]]}
-                log(f"SANITY {var}: Text weicht auf {len(diff)}/{len(keys)} Segmenten ab, {len(gain)} neu als Wendelin; "
-                    f"{sanity[var]['examples']}")
+                               "base": base}
+                log(f"SANITY {var} gegen {base}: Text weicht auf {len(diff)}/{len(keys)} Segmenten ab, {len(gain)} neu als Wendelin")
                 if not diff:
                     log(f"WARNUNG: {var} unveraendert, Boost wirkt NICHT (Messfehler wie WP102)")
 
@@ -331,7 +342,8 @@ def main():
     # --- Aggregation ---
     spk_thrs = [None] + [float(s) for s in a.spk_thr.split(",")]
     rows = []
-    for cond in a.cond.split(","):
+    for mdist, mname in ((1, "d1"), (2, "app")):
+      for cond in a.cond.split(","):
         R = [r for r in recs if r["cond"] == cond]
         pos = [r for r in R if r["set"] == "pos"]
         hours = lambda sel: sum(r["h"] for r in R if sel(r)) or 1e-9
@@ -341,14 +353,14 @@ def main():
             for var in [None] + variants:
                 for st in spk_thrs:
                     def ok(r, k):
-                        if var and not K.matches_wake_word(text[var][k], 1): return False
+                        if var and not K.matches_wake_word(text[var][k], mdist): return False
                         return st is None or float(emb[k] @ prof[r["voice"]]) >= st
                     cnt = lambda sel: sum(ok(r, k) for r in R if sel(r) for k in r["ev"][rule])
                     hit = sum(any(ok(r, k) for k in r["ev"][rule]) for r in pos)
                     hit1 = sum(bool(r["ev"][rule]) for r in pos)
                     fa_neg = cnt(lambda r: r["set"] == "neg")
                     rows.append({
-                        "cond": cond, "stage1": rule, "stage2": var or "-", "spk_thr": st if st is not None else "-",
+                        "match": mname, "cond": cond, "stage1": rule, "stage2": var or "-", "spk_thr": st if st is not None else "-",
                         "hit_pct": round(100 * hit / len(pos), 1), "hit_stage1_pct": round(100 * hit1 / len(pos), 1),
                         "fa_h_neg": round(fa_neg / h_neg, 2),
                         "fa_h_neg_foreign": round(cnt(lambda r: r["set"] == "neg" and not r["own"]) / h_for, 2),
@@ -357,10 +369,10 @@ def main():
     with open(f"{a.out}/station_table.csv", "w", newline="") as f:
         w = csv.DictWriter(f, list(rows[0])); w.writeheader(); w.writerows(rows)
     with open(f"{a.out}/station_table.md", "w") as f:
-        f.write("| Bedingung | Stufe 1 | Stufe 2 | Sprecher >= | Treffer % (nur S1) | FA/h neg | FA/h neg fremde Stimme | FA/h Fernseher |\n"
-                "|---|---|---|---|---|---|---|---|\n")
+        f.write("| Match | Bedingung | Stufe 1 | Stufe 2 | Sprecher >= | Treffer % (nur S1) | FA/h neg | FA/h neg fremde Stimme | FA/h Fernseher |\n"
+                "|---|---|---|---|---|---|---|---|---|\n")
         for r in rows:
-            f.write(f"| {r['cond']} | {r['stage1']} | {r['stage2']} | {r['spk_thr']} | {r['hit_pct']} ({r['hit_stage1_pct']}) | "
+            f.write(f"| {r['match']} | {r['cond']} | {r['stage1']} | {r['stage2']} | {r['spk_thr']} | {r['hit_pct']} ({r['hit_stage1_pct']}) | "
                     f"{r['fa_h_neg']} | {r['fa_h_neg_foreign']} | {r['fa_h_tv']} |\n")
     ram = []
     if not a.no_probe:
@@ -373,8 +385,9 @@ def main():
             "sanity": sanity, "stage1_cpu_rtf": stage1_rtf, "spk_ms_per_seg": spk_ms, "stage2": tstat, "ram_mb": ram,
             "cos_dist": dist, "params": vars(a), "voices": len(tmpl), "tail_s": TAIL}
     json.dump(meta, open(f"{a.out}/station_meta.json", "w"), indent=1, default=str)
-    json.dump({v: {"|".join(map(str, k)): t for k, t in d.items()} for v, d in text.items()},
-              open(f"{WORK}/station_texts.json", "w"))
+    merged = dict(old)
+    merged.update({v: {"|".join(map(str, k)): t for k, t in d.items()} for v, d in text.items()})
+    json.dump(merged, open(tcache, "w"))
     log("fertig ->", a.out)
 
 

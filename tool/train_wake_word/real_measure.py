@@ -155,7 +155,9 @@ def main():
     ap.add_argument("--s2-thr", default="0.85,0.90,M0.5,auto", help="Regeln fuer Stufe 2/3 (Zahl = Vorlagenschwelle, M0.5 = Modellregel); auto = niedrigste Vorlagenschwelle mit <= --cand-limit Kandidaten/h (falls es eine gibt)")
     ap.add_argument("--cand-limit", type=float, default=60.0)
     ap.add_argument("--spk-thr", default="0.45,0.52,0.60")
-    ap.add_argument("--variants", default="whisper-small,parakeet,parakeet-hw1,parakeet-hw2,parakeet-hw3")
+    ap.add_argument("--variants", default="whisper-small,parakeet-bs,parakeet-hw1,parakeet-hw2,parakeet-hw3",
+                    help="parakeet-bs = modified_beam_search ohne Hotwords (Basis des Boosts); parakeet = greedy")
+    ap.add_argument("--match-dist", type=int, default=2, help="2 = App-Regel (wake_verifier.dart), 1 = nur Abstand 1")
     ap.add_argument("--model", help="openWakeWord-ONNX (Standard: wendelin_v7)")
     ap.add_argument("--mww", help="microWakeWord-tflite fuer die Modellregeln M*")
     ap.add_argument("--scan-only", action="store_true")
@@ -309,7 +311,7 @@ def main():
         for k in miss: text[v][kstr(k)] = S.decode(r, audio(k))
         log(v, "neu transkribiert", len(miss)); del r
     T_ = lambda v, k: text[v][kstr(k)]
-    mk = [k for k in keys if k[0] == "neg" and any(K.matches_wake_word(T_(v, k), 1) for v in variants) and kstr(k) not in text["medium"]]
+    mk = [k for k in keys if k[0] == "neg" and any(K.matches_wake_word(T_(v, k), 2) for v in variants) and kstr(k) not in text["medium"]]
     for k in mk: text["medium"][kstr(k)] = S.decode(med, audio(k))
     log("medium neu auf", len(mk), "Negativ-Ereignissen")
     json.dump(text, open(tf, "w"))
@@ -342,7 +344,7 @@ def main():
             for var in ([None] + variants if r in s2rules else [None]):
                 for st in (spks if var or r in s2rules else [None]):
                     def ok(k):
-                        if var and not K.matches_wake_word(T_(var, k), 1): return False
+                        if var and not K.matches_wake_word(T_(var, k), a.match_dist): return False
                         return st is None or cos(k) >= st
                     row = {"device": d, "stage1": r, "stage2": var or "-", "spk": st if st is not None else "-"}
                     for g in gnames:
@@ -365,12 +367,12 @@ def main():
     with open(f"{a.out}/real_table.csv", "w", newline="") as f:
         w = csv.DictWriter(f, list(rows[0])); w.writeheader(); w.writerows(rows)
     with open(f"{a.out}/real_table.md", "w") as f:
-        f.write(f"Positiv: Treffer = IRGENDEIN Stufe-1-Ereignis im Segment (+-{POS_TOL} s) besteht alle Stufen. Mitnahme-Datei (Negativ): Station-Zeit = Mobil-Zeit + {lag_n / SR:.2f} s (Ausrichtung per Energiehuellen, Drift {(lag_n1 - lag_n0) / SR:+.3f} s), Positiv-Versatz {lag_p / SR:.2f} s. Fundstellen {CONFIRMED_CONFUSER_S} s: Verwechsler (bestaetigt).\n\n")
+        f.write(f"Stufe-2-Regel: matchesWakeWord Abstand {a.match_dist} ({"App-Regel" if a.match_dist == 2 else "Abstand 1"}). Positiv: Treffer = IRGENDEIN Stufe-1-Ereignis im Segment (+-{POS_TOL} s) besteht alle Stufen. Mitnahme-Datei (Negativ): Station-Zeit = Mobil-Zeit + {lag_n / SR:.2f} s (Ausrichtung per Energiehuellen, Drift {(lag_n1 - lag_n0) / SR:+.3f} s), Positiv-Versatz {lag_p / SR:.2f} s. Fundstellen {CONFIRMED_CONFUSER_S} s: Verwechsler (bestaetigt).\n\n")
         f.write("### Stufe 1: Kandidaten/h (Negativ-Datei) und Positiv-Quote nur Stufe 1\n\n| Geraet | Regel | Kandidaten/h | sicher % | Rest % |\n|---|---|---|---|---|\n")
         for r in rows:
             if r["stage2"] == "-" and r["spk"] == "-": f.write(f"| {r['device']} | {r['stage1']} | {r['cand_h']} | {r['hit_sicher']} | {r['hit_rest']} |\n")
         f.write("\n### Kerntabelle (je Geraet, Stufe-1-Regel in Klammern)\n\n| Geraet | Regel | Stufe 2 | CAM++ | sicher % (n=10) | ev 3m/TV/leise % | FA/h | Verwechsler/h | echt n |\n|---|---|---|---|---|---|---|---|---|\n")
-        core = {"-", "whisper-small", "parakeet", "parakeet-hw1", "parakeet-hw2", "parakeet-hw3"}
+        core = {"-", "whisper-small", "parakeet", "parakeet-bs", "parakeet-hw1", "parakeet-hw2", "parakeet-hw3"}
         for r in rows:
             if r["stage1"] in s2rules and r["stage2"] in core and r["spk"] in ("-", 0.45, 0.52):
                 f.write(f"| {r['device']} | {r['stage1']} | {r['stage2']} | {r['spk']} | {r['hit_sicher']} | {r['ev_rest3m']}/{r['ev_restTV']}/{r['ev_restLeise']} | {r['fa_h']} | {r['verwechsler_h']} | {r['echt_n']} |\n")
