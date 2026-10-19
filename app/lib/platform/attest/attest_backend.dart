@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'generated/api.dart' as api;
 import 'generated/collateral.dart';
 import 'generated/e2ee.dart';
+import 'generated/ehbp.dart';
 import 'generated/frb_generated.dart';
 import 'generated/near_e2ee.dart';
 import 'generated/quote.dart';
@@ -98,6 +99,28 @@ abstract interface class AttestBackend {
 
   /// Feldentschlüsselung (NEAR AI); wirft bei Fehlern.
   Uint8List nearDecrypt(Uint8List secret, String wireHex);
+
+  /// Schlüsselbindung der KeyConfig an `report_data` (Tinfoil EHBP, WP76c); wirft bei Fehlern.
+  EhbpBinding ehbpBindKeyConfig(Uint8List keyConfig, Uint8List reportData);
+
+  /// Verschlüsselt den Anfrage-Body an den attestierten Schlüssel; wirft bei Fehlern.
+  (EhbpSealed, EhbpSession) ehbpBeginRequest(
+    Uint8List keyConfig,
+    Uint8List reportData,
+    Uint8List plaintext,
+  );
+
+  /// Antwort-Decoder aus `Ehbp-Response-Nonce`; wirft bei Fehlern.
+  EhbpResponseDecoder ehbpResponseDecoder(
+    EhbpSession session,
+    Uint8List responseNonce,
+  );
+
+  /// Schiebt Antwortbytes in den Decoder; wirft bei jeder Verletzung (endgültig).
+  Uint8List ehbpDecoderPush(EhbpResponseDecoder decoder, Uint8List data);
+
+  /// Ende der Antwort; wirft bei abgeschnittenem Frame.
+  void ehbpDecoderFinish(EhbpResponseDecoder decoder);
 }
 
 /// Echte Anbindung über `flutter_rust_bridge`; [init] lädt `libwendelin_attest.so`.
@@ -195,6 +218,35 @@ final class FrbAttestBackend implements AttestBackend {
   @override
   Uint8List nearDecrypt(Uint8List secret, String wireHex) =>
       api.nearDecrypt(secret: secret, wireHex: wireHex);
+
+  @override
+  EhbpBinding ehbpBindKeyConfig(Uint8List keyConfig, Uint8List reportData) =>
+      api.ehbpBindKeyConfig(keyConfig: keyConfig, reportData: reportData);
+
+  @override
+  (EhbpSealed, EhbpSession) ehbpBeginRequest(
+    Uint8List keyConfig,
+    Uint8List reportData,
+    Uint8List plaintext,
+  ) => api.ehbpBeginRequest(
+    keyConfig: keyConfig,
+    reportData: reportData,
+    plaintext: plaintext,
+  );
+
+  @override
+  EhbpResponseDecoder ehbpResponseDecoder(
+    EhbpSession session,
+    Uint8List responseNonce,
+  ) => api.ehbpResponseDecoder(session: session, responseNonce: responseNonce);
+
+  @override
+  Uint8List ehbpDecoderPush(EhbpResponseDecoder decoder, Uint8List data) =>
+      api.ehbpDecoderPush(decoder: decoder, data: data);
+
+  @override
+  void ehbpDecoderFinish(EhbpResponseDecoder decoder) =>
+      api.ehbpDecoderFinish(decoder: decoder);
 
   @override
   SnpReportInfo snpReportInfo(Uint8List report) =>

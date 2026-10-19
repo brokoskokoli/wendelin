@@ -7,3 +7,4 @@ library;
 export 'fakes.dart';
 export 'src/tee/attestation_crypto_contract.dart';
 export 'src/tee/near/near_crypto_contract.dart';
+export 'src/tee/tinfoil/ehbp_crypto_contract.dart';

@@ -9,3 +9,5 @@ export 'src/tee/fake_sigstore_crypto.dart';
 export 'src/tee/fake_snp_crypto.dart';
 export 'src/tee/near/fake_near_service.dart';
 export 'src/tee/near/near_reference.dart';
+export 'src/tee/tinfoil/ehbp_reference.dart';
+export 'src/tee/tinfoil/fake_ehbp_service.dart';

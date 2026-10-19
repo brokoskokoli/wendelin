@@ -6,6 +6,7 @@
 pub mod api;
 pub mod collateral;
 pub mod e2ee;
+pub mod ehbp;
 mod frb_generated;
 pub mod jcs;
 pub mod near_e2ee;

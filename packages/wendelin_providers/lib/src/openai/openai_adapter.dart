@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
@@ -133,9 +134,21 @@ final class OpenAiChatAdapter implements LlmProvider {
     final tap = observer == null ? null : ExchangeTap(observer);
     ChatWire? wire;
     return _transport.stream(
+      onEnd: () {
+        final w = wire;
+        if (w is BytesChatWire) w.dispose();
+      },
       cancel: cancel,
       tap: tap,
       checkHead: (headers) => wire?.checkHead(headers),
+      openBody: (raw) {
+        final w = wire;
+        return w is BytesChatWire ? w.openBody(raw) : raw;
+      },
+      openErrorBody: (headers, raw) {
+        final w = wire;
+        return w is BytesChatWire ? w.openErrorBody(headers, raw) : raw;
+      },
       decoder: () {
         final decoder = OpenAiStreamDecoder(
           label: label,
@@ -147,6 +160,7 @@ final class OpenAiChatAdapter implements LlmProvider {
       onHttpError: _httpError,
       retry: (status, body, attempt) {
         if (attempt == 0 &&
+            !body.startsWith(unauthenticatedBodyPrefix) &&
             options.includeUsage &&
             !_usageOptionRejected &&
             rejectsStreamOptions(status, body)) {
@@ -166,24 +180,35 @@ final class OpenAiChatAdapter implements LlmProvider {
         final w = wire = codec == null
             ? null
             : await codec.begin(model: req.model);
-        String text;
+        String? text;
+        Uint8List? bytes;
         if (w == null) {
           text = jsonEncode(body);
+        } else if (w is BytesChatWire) {
+          final sealed = w.sealBytes(body);
+          bytes = sealed.wire;
+          tap?.plainRequest(sealed.plain);
         } else {
           final sealed = w.seal(body);
           text = sealed.wire;
           tap?.plainRequest(sealed.plain);
         }
-        return http.AbortableRequest(
-            'POST',
-            Uri.parse('$_base/chat/completions'),
-            abortTrigger: abortTrigger,
-          )
-          ..headers.addAll(await _headers())
-          ..headers.addAll(w?.headers ?? const {})
-          ..headers['content-type'] = 'application/json'
-          ..headers['accept'] = 'text/event-stream'
-          ..body = text;
+        final request =
+            http.AbortableRequest(
+                'POST',
+                Uri.parse('$_base/chat/completions'),
+                abortTrigger: abortTrigger,
+              )
+              ..headers.addAll(await _headers())
+              ..headers.addAll(w?.headers ?? const {})
+              ..headers['content-type'] = 'application/json'
+              ..headers['accept'] = 'text/event-stream';
+        if (bytes != null) {
+          request.bodyBytes = bytes;
+        } else {
+          request.body = text!;
+        }
+        return request;
       },
     );
   }

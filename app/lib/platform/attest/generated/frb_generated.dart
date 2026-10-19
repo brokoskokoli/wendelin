@@ -3,18 +3,21 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api.dart';
+import 'collateral.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-
-import 'api.dart';
-import 'collateral.dart';
 import 'e2ee.dart';
+import 'ehbp.dart';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
 import 'near_e2ee.dart';
+
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
 import 'quote.dart';
 import 'report.dart';
 import 'sigstore.dart';
@@ -75,7 +78,7 @@ class AttestNative
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1185482357;
+  int get rustContentHash => -1037282534;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -108,6 +111,29 @@ abstract class AttestNativeApi extends BaseApi {
   });
 
   E2eeKeypair crateApiE2EeGenerateKeypair();
+
+  (EhbpSealed, EhbpSession) crateApiEhbpBeginRequest({
+    required List<int> keyConfig,
+    required List<int> reportData,
+    required List<int> plaintext,
+  });
+
+  EhbpBinding crateApiEhbpBindKeyConfig({
+    required List<int> keyConfig,
+    required List<int> reportData,
+  });
+
+  void crateApiEhbpDecoderFinish({required EhbpResponseDecoder decoder});
+
+  Uint8List crateApiEhbpDecoderPush({
+    required EhbpResponseDecoder decoder,
+    required List<int> data,
+  });
+
+  EhbpResponseDecoder crateApiEhbpResponseDecoder({
+    required EhbpSession session,
+    required List<int> responseNonce,
+  });
 
   Uint8List crateApiNearDecrypt({
     required List<int> secret,
@@ -178,6 +204,23 @@ abstract class AttestNativeApi extends BaseApi {
     required String digestHex,
     required String reportMeasurementHex,
   });
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_EhbpResponseDecoder;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_EhbpResponseDecoder;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_EhbpResponseDecoderPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_EhbpSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_EhbpSession;
+
+  CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_EhbpSessionPtr;
 }
 
 class AttestNativeApiImpl extends AttestNativeApiImplPlatform
@@ -215,7 +258,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiBuildCollateralConstMeta =>
-      const TaskConstMeta(debugName: 'build_collateral', argNames: ['parts']);
+      const TaskConstMeta(debugName: "build_collateral", argNames: ["parts"]);
 
   @override
   Future<String> crateApiCollateralNextUpdate({
@@ -246,8 +289,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
 
   TaskConstMeta get kCrateApiCollateralNextUpdateConstMeta =>
       const TaskConstMeta(
-        debugName: 'collateral_next_update',
-        argNames: ['collateralJson'],
+        debugName: "collateral_next_update",
+        argNames: ["collateralJson"],
       );
 
   @override
@@ -278,7 +321,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiCollateralRequestConstMeta =>
-      const TaskConstMeta(debugName: 'collateral_request', argNames: ['quote']);
+      const TaskConstMeta(debugName: "collateral_request", argNames: ["quote"]);
 
   @override
   Uint8List crateApiE2EeDecrypt({
@@ -307,8 +350,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiE2EeDecryptConstMeta => const TaskConstMeta(
-    debugName: 'e2ee_decrypt',
-    argNames: ['secret', 'wireHex', 'aad'],
+    debugName: "e2ee_decrypt",
+    argNames: ["secret", "wireHex", "aad"],
   );
 
   @override
@@ -338,8 +381,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiE2EeEncryptConstMeta => const TaskConstMeta(
-    debugName: 'e2ee_encrypt',
-    argNames: ['recipientPublic', 'plaintext', 'aad'],
+    debugName: "e2ee_encrypt",
+    argNames: ["recipientPublic", "plaintext", "aad"],
   );
 
   @override
@@ -362,7 +405,162 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiE2EeGenerateKeypairConstMeta =>
-      const TaskConstMeta(debugName: 'e2ee_generate_keypair', argNames: []);
+      const TaskConstMeta(debugName: "e2ee_generate_keypair", argNames: []);
+
+  @override
+  (EhbpSealed, EhbpSession) crateApiEhbpBeginRequest({
+    required List<int> keyConfig,
+    required List<int> reportData,
+    required List<int> plaintext,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(keyConfig, serializer);
+          sse_encode_list_prim_u_8_loose(reportData, serializer);
+          sse_encode_list_prim_u_8_loose(plaintext, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_record_ehbp_sealed_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_ehbp_session,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEhbpBeginRequestConstMeta,
+        argValues: [keyConfig, reportData, plaintext],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEhbpBeginRequestConstMeta => const TaskConstMeta(
+    debugName: "ehbp_begin_request",
+    argNames: ["keyConfig", "reportData", "plaintext"],
+  );
+
+  @override
+  EhbpBinding crateApiEhbpBindKeyConfig({
+    required List<int> keyConfig,
+    required List<int> reportData,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(keyConfig, serializer);
+          sse_encode_list_prim_u_8_loose(reportData, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ehbp_binding,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEhbpBindKeyConfigConstMeta,
+        argValues: [keyConfig, reportData],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEhbpBindKeyConfigConstMeta => const TaskConstMeta(
+    debugName: "ehbp_bind_key_config",
+    argNames: ["keyConfig", "reportData"],
+  );
+
+  @override
+  void crateApiEhbpDecoderFinish({required EhbpResponseDecoder decoder}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+            decoder,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEhbpDecoderFinishConstMeta,
+        argValues: [decoder],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEhbpDecoderFinishConstMeta => const TaskConstMeta(
+    debugName: "ehbp_decoder_finish",
+    argNames: ["decoder"],
+  );
+
+  @override
+  Uint8List crateApiEhbpDecoderPush({
+    required EhbpResponseDecoder decoder,
+    required List<int> data,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+            decoder,
+            serializer,
+          );
+          sse_encode_list_prim_u_8_loose(data, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEhbpDecoderPushConstMeta,
+        argValues: [decoder, data],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEhbpDecoderPushConstMeta => const TaskConstMeta(
+    debugName: "ehbp_decoder_push",
+    argNames: ["decoder", "data"],
+  );
+
+  @override
+  EhbpResponseDecoder crateApiEhbpResponseDecoder({
+    required EhbpSession session,
+    required List<int> responseNonce,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+            session,
+            serializer,
+          );
+          sse_encode_list_prim_u_8_loose(responseNonce, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEhbpResponseDecoderConstMeta,
+        argValues: [session, responseNonce],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEhbpResponseDecoderConstMeta =>
+      const TaskConstMeta(
+        debugName: "ehbp_response_decoder",
+        argNames: ["session", "responseNonce"],
+      );
 
   @override
   Uint8List crateApiNearDecrypt({
@@ -375,7 +573,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(secret, serializer);
           sse_encode_String(wireHex, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -389,8 +587,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiNearDecryptConstMeta => const TaskConstMeta(
-    debugName: 'near_decrypt',
-    argNames: ['secret', 'wireHex'],
+    debugName: "near_decrypt",
+    argNames: ["secret", "wireHex"],
   );
 
   @override
@@ -404,7 +602,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(recipientEdPublic, serializer);
           sse_encode_list_prim_u_8_loose(plaintext, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -418,8 +616,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiNearEncryptConstMeta => const TaskConstMeta(
-    debugName: 'near_encrypt',
-    argNames: ['recipientEdPublic', 'plaintext'],
+    debugName: "near_encrypt",
+    argNames: ["recipientEdPublic", "plaintext"],
   );
 
   @override
@@ -428,7 +626,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_near_identity,
@@ -442,7 +640,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiNearGenerateIdentityConstMeta =>
-      const TaskConstMeta(debugName: 'near_generate_identity', argNames: []);
+      const TaskConstMeta(debugName: "near_generate_identity", argNames: []);
 
   @override
   Future<String> crateApiRootCrlUrl({required String qeIdentityIssuerChain}) {
@@ -454,7 +652,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 15,
             port: port_,
           );
         },
@@ -470,8 +668,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiRootCrlUrlConstMeta => const TaskConstMeta(
-    debugName: 'root_crl_url',
-    argNames: ['qeIdentityIssuerChain'],
+    debugName: "root_crl_url",
+    argNames: ["qeIdentityIssuerChain"],
   );
 
   @override
@@ -481,7 +679,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(data, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -495,7 +693,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiSha256ConstMeta =>
-      const TaskConstMeta(debugName: 'sha256', argNames: ['data']);
+      const TaskConstMeta(debugName: "sha256", argNames: ["data"]);
 
   @override
   Uint8List crateApiSha384({required List<int> data}) {
@@ -504,7 +702,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(data, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -518,7 +716,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiSha384ConstMeta =>
-      const TaskConstMeta(debugName: 'sha384', argNames: ['data']);
+      const TaskConstMeta(debugName: "sha384", argNames: ["data"]);
 
   @override
   SnpReportInfo crateApiSnpReportInfo({required List<int> report}) {
@@ -527,7 +725,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(report, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_snp_report_info,
@@ -541,7 +739,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiSnpReportInfoConstMeta =>
-      const TaskConstMeta(debugName: 'snp_report_info', argNames: ['report']);
+      const TaskConstMeta(debugName: "snp_report_info", argNames: ["report"]);
 
   @override
   Uint8List crateApiSpkiSha256({required List<int> certificateDer}) {
@@ -550,7 +748,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(certificateDer, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -564,8 +762,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiSpkiSha256ConstMeta => const TaskConstMeta(
-    debugName: 'spki_sha256',
-    argNames: ['certificateDer'],
+    debugName: "spki_sha256",
+    argNames: ["certificateDer"],
   );
 
   @override
@@ -581,7 +779,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_String(reportJson, serializer);
           sse_encode_String(observedSpkiHex, serializer);
           sse_encode_String(host, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -595,8 +793,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiTlsSpkiListedConstMeta => const TaskConstMeta(
-    debugName: 'tls_spki_listed',
-    argNames: ['reportJson', 'observedSpkiHex', 'host'],
+    debugName: "tls_spki_listed",
+    argNames: ["reportJson", "observedSpkiHex", "host"],
   );
 
   @override
@@ -613,7 +811,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 21,
             port: port_,
           );
         },
@@ -629,8 +827,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiVerifyAciReceiptConstMeta => const TaskConstMeta(
-    debugName: 'verify_aci_receipt',
-    argNames: ['receiptJson', 'reportJson'],
+    debugName: "verify_aci_receipt",
+    argNames: ["receiptJson", "reportJson"],
   );
 
   @override
@@ -651,7 +849,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 22,
             port: port_,
           );
         },
@@ -667,8 +865,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiVerifyAciReportConstMeta => const TaskConstMeta(
-    debugName: 'verify_aci_report',
-    argNames: ['reportJson', 'nonceHex', 'collateralJson', 'nowUnix'],
+    debugName: "verify_aci_report",
+    argNames: ["reportJson", "nonceHex", "collateralJson", "nowUnix"],
   );
 
   @override
@@ -684,7 +882,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           sse_encode_list_prim_u_8_loose(publicKey, serializer);
           sse_encode_list_prim_u_8_loose(message, serializer);
           sse_encode_list_prim_u_8_loose(signature, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -698,8 +896,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiVerifyEd25519ConstMeta => const TaskConstMeta(
-    debugName: 'verify_ed25519',
-    argNames: ['publicKey', 'message', 'signature'],
+    debugName: "verify_ed25519",
+    argNames: ["publicKey", "message", "signature"],
   );
 
   @override
@@ -718,7 +916,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 24,
             port: port_,
           );
         },
@@ -734,8 +932,8 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiVerifyQuoteConstMeta => const TaskConstMeta(
-    debugName: 'verify_quote',
-    argNames: ['quote', 'collateralJson', 'nowUnix'],
+    debugName: "verify_quote",
+    argNames: ["quote", "collateralJson", "nowUnix"],
   );
 
   @override
@@ -762,7 +960,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 25,
             port: port_,
           );
         },
@@ -786,15 +984,15 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   TaskConstMeta get kCrateApiVerifySnpReportConstMeta => const TaskConstMeta(
-    debugName: 'verify_snp_report',
+    debugName: "verify_snp_report",
     argNames: [
-      'report',
-      'vcekDer',
-      'chainPem',
-      'nowUnix',
-      'policy',
-      'expectedTlsSpkiSha256',
-      'expectedHpkeKey',
+      "report",
+      "vcekDer",
+      "chainPem",
+      "nowUnix",
+      "policy",
+      "expectedTlsSpkiSha256",
+      "expectedHpkeKey",
     ],
   );
 
@@ -818,7 +1016,7 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 26,
             port: port_,
           );
         },
@@ -835,15 +1033,85 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
 
   TaskConstMeta get kCrateApiVerifyTinfoilReleaseConstMeta =>
       const TaskConstMeta(
-        debugName: 'verify_tinfoil_release',
+        debugName: "verify_tinfoil_release",
         argNames: [
-          'bundleJson',
-          'repo',
-          'tag',
-          'digestHex',
-          'reportMeasurementHex',
+          "bundleJson",
+          "repo",
+          "tag",
+          "digestHex",
+          "reportMeasurementHex",
         ],
       );
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_EhbpResponseDecoder => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_EhbpResponseDecoder => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_EhbpSession => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_EhbpSession => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession;
+
+  @protected
+  EhbpResponseDecoder
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return EhbpResponseDecoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  EhbpSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return EhbpSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  EhbpResponseDecoder
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return EhbpResponseDecoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  EhbpSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return EhbpSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  EhbpResponseDecoder
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return EhbpResponseDecoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  EhbpSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return EhbpSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
 
   @protected
   String dco_decode_String(dynamic raw) {
@@ -914,6 +1182,27 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     return E2eeKeypair(
       secret: dco_decode_list_prim_u_8_strict(arr[0]),
       public: dco_decode_list_prim_u_8_strict(arr[1]),
+    );
+  }
+
+  @protected
+  EhbpBinding dco_decode_ehbp_binding(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return EhbpBinding(tlsSpkiSha256: dco_decode_list_prim_u_8_strict(arr[0]));
+  }
+
+  @protected
+  EhbpSealed dco_decode_ehbp_sealed(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return EhbpSealed(
+      encapsulatedKey: dco_decode_list_prim_u_8_strict(arr[0]),
+      body: dco_decode_list_prim_u_8_strict(arr[1]),
     );
   }
 
@@ -989,6 +1278,24 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
       signatureOk: dco_decode_bool(arr[0]),
       keysetMatches: dco_decode_bool(arr[1]),
       error: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  (EhbpSealed, EhbpSession)
+  dco_decode_record_ehbp_sealed_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_ehbp_session(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2) {
+      throw Exception('Expected 2 elements, got ${arr.length}');
+    }
+    return (
+      dco_decode_ehbp_sealed(arr[0]),
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+        arr[1],
+      ),
     );
   }
 
@@ -1097,6 +1404,12 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   Verdict dco_decode_verdict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1121,9 +1434,81 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  EhbpResponseDecoder
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return EhbpResponseDecoderImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  EhbpSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return EhbpSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  EhbpResponseDecoder
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return EhbpResponseDecoderImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  EhbpSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return EhbpSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  EhbpResponseDecoder
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return EhbpResponseDecoderImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  EhbpSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return EhbpSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final inner = sse_decode_list_prim_u_8_strict(deserializer);
+    var inner = sse_decode_list_prim_u_8_strict(deserializer);
     return utf8.decoder.convert(inner);
   }
 
@@ -1158,13 +1543,13 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   @protected
   CollateralParts sse_decode_collateral_parts(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_pckCrl = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_pckCrlIssuerChain = sse_decode_String(deserializer);
-    final var_rootCaCrl = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_tcbInfoBody = sse_decode_String(deserializer);
-    final var_tcbInfoIssuerChain = sse_decode_String(deserializer);
-    final var_qeIdentityBody = sse_decode_String(deserializer);
-    final var_qeIdentityIssuerChain = sse_decode_String(deserializer);
+    var var_pckCrl = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_pckCrlIssuerChain = sse_decode_String(deserializer);
+    var var_rootCaCrl = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_tcbInfoBody = sse_decode_String(deserializer);
+    var var_tcbInfoIssuerChain = sse_decode_String(deserializer);
+    var var_qeIdentityBody = sse_decode_String(deserializer);
+    var var_qeIdentityIssuerChain = sse_decode_String(deserializer);
     return CollateralParts(
       pckCrl: var_pckCrl,
       pckCrlIssuerChain: var_pckCrlIssuerChain,
@@ -1181,26 +1566,41 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_tee = sse_decode_String(deserializer);
-    final var_fmspc = sse_decode_String(deserializer);
-    final var_ca = sse_decode_String(deserializer);
+    var var_tee = sse_decode_String(deserializer);
+    var var_fmspc = sse_decode_String(deserializer);
+    var var_ca = sse_decode_String(deserializer);
     return CollateralRequest(tee: var_tee, fmspc: var_fmspc, ca: var_ca);
   }
 
   @protected
   E2eeKeypair sse_decode_e_2_ee_keypair(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_secret = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_public = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_secret = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_public = sse_decode_list_prim_u_8_strict(deserializer);
     return E2eeKeypair(secret: var_secret, public: var_public);
+  }
+
+  @protected
+  EhbpBinding sse_decode_ehbp_binding(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_tlsSpkiSha256 = sse_decode_list_prim_u_8_strict(deserializer);
+    return EhbpBinding(tlsSpkiSha256: var_tlsSpkiSha256);
+  }
+
+  @protected
+  EhbpSealed sse_decode_ehbp_sealed(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_encapsulatedKey = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_body = sse_decode_list_prim_u_8_strict(deserializer);
+    return EhbpSealed(encapsulatedKey: var_encapsulatedKey, body: var_body);
   }
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
-    final len_ = sse_decode_i_32(deserializer);
-    final ans_ = <String>[];
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
     }
@@ -1210,22 +1610,22 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final len_ = sse_decode_i_32(deserializer);
+    var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
   }
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final len_ = sse_decode_i_32(deserializer);
+    var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
   }
 
   @protected
   NearIdentity sse_decode_near_identity(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_secret = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_public = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_secret = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_public = sse_decode_list_prim_u_8_strict(deserializer);
     return NearIdentity(secret: var_secret, public: var_public);
   }
 
@@ -1256,16 +1656,16 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   @protected
   QuoteInfo sse_decode_quote_info(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_ok = sse_decode_bool(deserializer);
-    final var_error = sse_decode_opt_String(deserializer);
-    final var_tcbStatus = sse_decode_String(deserializer);
-    final var_advisoryIds = sse_decode_list_String(deserializer);
-    final var_mrTd = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_rtMr0 = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_rtMr1 = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_rtMr2 = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_rtMr3 = sse_decode_list_prim_u_8_strict(deserializer);
-    final var_reportData = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_ok = sse_decode_bool(deserializer);
+    var var_error = sse_decode_opt_String(deserializer);
+    var var_tcbStatus = sse_decode_String(deserializer);
+    var var_advisoryIds = sse_decode_list_String(deserializer);
+    var var_mrTd = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_rtMr0 = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_rtMr1 = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_rtMr2 = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_rtMr3 = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_reportData = sse_decode_list_prim_u_8_strict(deserializer);
     return QuoteInfo(
       ok: var_ok,
       error: var_error,
@@ -1283,9 +1683,9 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   @protected
   ReceiptVerdict sse_decode_receipt_verdict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_signatureOk = sse_decode_bool(deserializer);
-    final var_keysetMatches = sse_decode_bool(deserializer);
-    final var_error = sse_decode_opt_String(deserializer);
+    var var_signatureOk = sse_decode_bool(deserializer);
+    var var_keysetMatches = sse_decode_bool(deserializer);
+    var var_error = sse_decode_opt_String(deserializer);
     return ReceiptVerdict(
       signatureOk: var_signatureOk,
       keysetMatches: var_keysetMatches,
@@ -1294,17 +1694,31 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  (EhbpSealed, EhbpSession)
+  sse_decode_record_ehbp_sealed_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_ehbp_session(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_ehbp_sealed(deserializer);
+    var var_field1 =
+        sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+          deserializer,
+        );
+    return (var_field0, var_field1);
+  }
+
+  @protected
   SigstoreVerdict sse_decode_sigstore_verdict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_dsseOk = sse_decode_bool(deserializer);
-    final var_chainOk = sse_decode_bool(deserializer);
-    final var_identityOk = sse_decode_bool(deserializer);
-    final var_rekorOk = sse_decode_bool(deserializer);
-    final var_measurementOk = sse_decode_bool(deserializer);
-    final var_snpMeasurementHex = sse_decode_String(deserializer);
-    final var_releaseTag = sse_decode_String(deserializer);
-    final var_integratedTime = sse_decode_u_64(deserializer);
-    final var_errors = sse_decode_list_String(deserializer);
+    var var_dsseOk = sse_decode_bool(deserializer);
+    var var_chainOk = sse_decode_bool(deserializer);
+    var var_identityOk = sse_decode_bool(deserializer);
+    var var_rekorOk = sse_decode_bool(deserializer);
+    var var_measurementOk = sse_decode_bool(deserializer);
+    var var_snpMeasurementHex = sse_decode_String(deserializer);
+    var var_releaseTag = sse_decode_String(deserializer);
+    var var_integratedTime = sse_decode_u_64(deserializer);
+    var var_errors = sse_decode_list_String(deserializer);
     return SigstoreVerdict(
       dsseOk: var_dsseOk,
       chainOk: var_chainOk,
@@ -1321,21 +1735,21 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   @protected
   SnpPolicy sse_decode_snp_policy(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_minTcb = sse_decode_snp_tcb(deserializer);
+    var var_minTcb = sse_decode_snp_tcb(deserializer);
     return SnpPolicy(minTcb: var_minTcb);
   }
 
   @protected
   SnpReportInfo sse_decode_snp_report_info(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_version = sse_decode_u_32(deserializer);
-    final var_policy = sse_decode_u_64(deserializer);
-    final var_vmpl = sse_decode_u_32(deserializer);
-    final var_reportedTcb = sse_decode_snp_tcb(deserializer);
-    final var_signedWithVlek = sse_decode_bool(deserializer);
-    final var_measurementHex = sse_decode_String(deserializer);
-    final var_reportDataHex = sse_decode_String(deserializer);
-    final var_chipIdHex = sse_decode_String(deserializer);
+    var var_version = sse_decode_u_32(deserializer);
+    var var_policy = sse_decode_u_64(deserializer);
+    var var_vmpl = sse_decode_u_32(deserializer);
+    var var_reportedTcb = sse_decode_snp_tcb(deserializer);
+    var var_signedWithVlek = sse_decode_bool(deserializer);
+    var var_measurementHex = sse_decode_String(deserializer);
+    var var_reportDataHex = sse_decode_String(deserializer);
+    var var_chipIdHex = sse_decode_String(deserializer);
     return SnpReportInfo(
       version: var_version,
       policy: var_policy,
@@ -1351,10 +1765,10 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   @protected
   SnpTcb sse_decode_snp_tcb(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_bootloader = sse_decode_u_8(deserializer);
-    final var_tee = sse_decode_u_8(deserializer);
-    final var_snp = sse_decode_u_8(deserializer);
-    final var_microcode = sse_decode_u_8(deserializer);
+    var var_bootloader = sse_decode_u_8(deserializer);
+    var var_tee = sse_decode_u_8(deserializer);
+    var var_snp = sse_decode_u_8(deserializer);
+    var var_microcode = sse_decode_u_8(deserializer);
     return SnpTcb(
       bootloader: var_bootloader,
       tee: var_tee,
@@ -1366,16 +1780,16 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   @protected
   SnpVerdict sse_decode_snp_verdict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_reportOk = sse_decode_bool(deserializer);
-    final var_chainOk = sse_decode_bool(deserializer);
-    final var_vcekMatchesReport = sse_decode_bool(deserializer);
-    final var_signatureOk = sse_decode_bool(deserializer);
-    final var_policyOk = sse_decode_bool(deserializer);
-    final var_tlsBound = sse_decode_bool(deserializer);
-    final var_hpkeBound = sse_decode_bool(deserializer);
-    final var_product = sse_decode_opt_String(deserializer);
-    final var_info = sse_decode_opt_box_autoadd_snp_report_info(deserializer);
-    final var_errors = sse_decode_list_String(deserializer);
+    var var_reportOk = sse_decode_bool(deserializer);
+    var var_chainOk = sse_decode_bool(deserializer);
+    var var_vcekMatchesReport = sse_decode_bool(deserializer);
+    var var_signatureOk = sse_decode_bool(deserializer);
+    var var_policyOk = sse_decode_bool(deserializer);
+    var var_tlsBound = sse_decode_bool(deserializer);
+    var var_hpkeBound = sse_decode_bool(deserializer);
+    var var_product = sse_decode_opt_String(deserializer);
+    var var_info = sse_decode_opt_box_autoadd_snp_report_info(deserializer);
+    var var_errors = sse_decode_list_String(deserializer);
     return SnpVerdict(
       reportOk: var_reportOk,
       chainOk: var_chainOk,
@@ -1414,22 +1828,28 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
   Verdict sse_decode_verdict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    final var_keysetDigestOk = sse_decode_bool(deserializer);
-    final var_reportDataOk = sse_decode_bool(deserializer);
-    final var_quoteReportDataOk = sse_decode_bool(deserializer);
-    final var_quoteOk = sse_decode_bool(deserializer);
-    final var_tcbStatus = sse_decode_String(deserializer);
-    final var_advisoryIds = sse_decode_list_String(deserializer);
-    final var_rtmr3ReplayOk = sse_decode_bool(deserializer);
-    final var_composeHashOk = sse_decode_bool(deserializer);
-    final var_keysetNotExpired = sse_decode_bool(deserializer);
-    final var_tlsBindingListed = sse_decode_bool(deserializer);
-    final var_tlsBindingSpki = sse_decode_opt_String(deserializer);
-    final var_composeHash = sse_decode_opt_String(deserializer);
-    final var_repoCommit = sse_decode_opt_String(deserializer);
-    final var_errors = sse_decode_list_String(deserializer);
+    var var_keysetDigestOk = sse_decode_bool(deserializer);
+    var var_reportDataOk = sse_decode_bool(deserializer);
+    var var_quoteReportDataOk = sse_decode_bool(deserializer);
+    var var_quoteOk = sse_decode_bool(deserializer);
+    var var_tcbStatus = sse_decode_String(deserializer);
+    var var_advisoryIds = sse_decode_list_String(deserializer);
+    var var_rtmr3ReplayOk = sse_decode_bool(deserializer);
+    var var_composeHashOk = sse_decode_bool(deserializer);
+    var var_keysetNotExpired = sse_decode_bool(deserializer);
+    var var_tlsBindingListed = sse_decode_bool(deserializer);
+    var var_tlsBindingSpki = sse_decode_opt_String(deserializer);
+    var var_composeHash = sse_decode_opt_String(deserializer);
+    var var_repoCommit = sse_decode_opt_String(deserializer);
+    var var_errors = sse_decode_list_String(deserializer);
     return Verdict(
       keysetDigestOk: var_keysetDigestOk,
       reportDataOk: var_reportDataOk,
@@ -1452,6 +1872,84 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    EhbpResponseDecoder self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as EhbpResponseDecoderImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    EhbpSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as EhbpSessionImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    EhbpResponseDecoder self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as EhbpResponseDecoderImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    EhbpSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as EhbpSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    EhbpResponseDecoder self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as EhbpResponseDecoderImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    EhbpSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as EhbpSessionImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
   }
 
   @protected
@@ -1524,6 +2022,19 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(self.secret, serializer);
     sse_encode_list_prim_u_8_strict(self.public, serializer);
+  }
+
+  @protected
+  void sse_encode_ehbp_binding(EhbpBinding self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.tlsSpkiSha256, serializer);
+  }
+
+  @protected
+  void sse_encode_ehbp_sealed(EhbpSealed self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.encapsulatedKey, serializer);
+    sse_encode_list_prim_u_8_strict(self.body, serializer);
   }
 
   @protected
@@ -1614,6 +2125,20 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  void
+  sse_encode_record_ehbp_sealed_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_ehbp_session(
+    (EhbpSealed, EhbpSession) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_ehbp_sealed(self.$1, serializer);
+    sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+      self.$2,
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_sigstore_verdict(
     SigstoreVerdict self,
     SseSerializer serializer,
@@ -1700,6 +2225,12 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
   }
 
   @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
   void sse_encode_verdict(Verdict self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_bool(self.keysetDigestOk, serializer);
@@ -1723,4 +2254,55 @@ class AttestNativeApiImpl extends AttestNativeApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
   }
+}
+
+@sealed
+class EhbpResponseDecoderImpl extends RustOpaque
+    implements EhbpResponseDecoder {
+  // Not to be used by end users
+  EhbpResponseDecoderImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  EhbpResponseDecoderImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: AttestNative
+        .instance
+        .api
+        .rust_arc_increment_strong_count_EhbpResponseDecoder,
+    rustArcDecrementStrongCount: AttestNative
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_EhbpResponseDecoder,
+    rustArcDecrementStrongCountPtr: AttestNative
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_EhbpResponseDecoderPtr,
+  );
+}
+
+@sealed
+class EhbpSessionImpl extends RustOpaque implements EhbpSession {
+  // Not to be used by end users
+  EhbpSessionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  EhbpSessionImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        AttestNative.instance.api.rust_arc_increment_strong_count_EhbpSession,
+    rustArcDecrementStrongCount:
+        AttestNative.instance.api.rust_arc_decrement_strong_count_EhbpSession,
+    rustArcDecrementStrongCountPtr: AttestNative
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_EhbpSessionPtr,
+  );
 }
