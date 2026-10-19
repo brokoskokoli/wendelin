@@ -260,8 +260,7 @@ Future<void> _kotlinStep(Gate gate) async {
     name,
     home == null ? 'bash' : 'env',
     [
-      if (home != null) 'JAVA_HOME=$home',
-      'bash',
+      if (home != null) ...['JAVA_HOME=$home', 'bash'],
       'gradlew',
       ':app:testDebugUnitTest',
       '-q',
