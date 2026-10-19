@@ -19,6 +19,8 @@ void main(List<String> args) {
   }
   final changed = writeGenerated();
   stdout.writeln(
-    changed.isEmpty ? 'gen_docs: nichts zu tun' : 'gen_docs: ${changed.join(', ')}',
+    changed.isEmpty
+        ? 'gen_docs: nichts zu tun'
+        : 'gen_docs: ${changed.join(', ')}',
   );
 }

@@ -14,7 +14,8 @@ Map<String, String> generateDocs([String root = '.']) => {
   'docs/testing/m5/README.md': _m5Index(root),
 };
 
-String _read(String root, String path) => File('$root/$path').readAsStringSync();
+String _read(String root, String path) =>
+    File('$root/$path').readAsStringSync();
 
 String _packages(String root) {
   final names = [
@@ -36,16 +37,19 @@ String _packages(String root) {
     ..writeln('| --- | --- | --- |');
   for (final n in names) {
     final y = _read(root, 'packages/$n/pubspec.yaml');
-    final desc = RegExp(r'^description:\s*(.+)$', multiLine: true)
-            .firstMatch(y)
-            ?.group(1)
-            ?.trim() ??
+    final desc =
+        RegExp(
+          r'^description:\s*(.+)$',
+          multiLine: true,
+        ).firstMatch(y)?.group(1)?.trim() ??
         '';
     final deps = <String>{};
-    final sec = RegExp(
-      r'^dependencies:\n((?:[ \t].*\n?|\n)*)',
-      multiLine: true,
-    ).firstMatch(y)?.group(1) ?? '';
+    final sec =
+        RegExp(
+          r'^dependencies:\n((?:[ \t].*\n?|\n)*)',
+          multiLine: true,
+        ).firstMatch(y)?.group(1) ??
+        '';
     for (final m in RegExp(r'^  (\w+):', multiLine: true).allMatches(sec)) {
       if (all.contains(m.group(1)) && m.group(1) != n) deps.add(m.group(1)!);
     }
@@ -63,8 +67,10 @@ String _integrations(String root) {
   }
   // Spec-Variable → Datei über den Import `<name>_spec.dart`.
   final files = {
-    for (final m in RegExp(r"^import '(\w+)_spec\.dart';", multiLine: true)
-        .allMatches(reg))
+    for (final m in RegExp(
+      r"^import '(\w+)_spec\.dart';",
+      multiLine: true,
+    ).allMatches(reg))
       m.group(1)!: '${m.group(1)}_spec.dart',
   };
   final b = StringBuffer(_head)
@@ -84,13 +90,12 @@ String _integrations(String root) {
     if (file == null) continue;
     final spec = _read(root, 'app/lib/di/integrations/$file');
     final id = RegExp("id:\\s*'([^']+)'").firstMatch(spec)?.group(1) ?? key;
-    final pkg = Directory(
-      '$root/packages/wendelin_integrations/lib/src/$key',
-    ).existsSync()
+    final pkg =
+        Directory('$root/packages/wendelin_integrations/lib/src/$key')
+            .existsSync()
         ? '`packages/wendelin_integrations/lib/src/$key/`'
         : '–';
-    final doc = File('$root/docs/architecture/integrations/$id.md')
-            .existsSync()
+    final doc = File('$root/docs/architecture/integrations/$id.md').existsSync()
         ? '[$id.md](../integrations/$id.md)'
         : '–';
     b.writeln('| `$id` | `app/lib/di/integrations/$file` | $pkg | $doc |');
@@ -102,9 +107,7 @@ String _m5Index(String root) {
   final dir = Directory('$root/docs/testing/m5');
   final files = [
     for (final f in dir.listSync())
-      if (f is File &&
-          f.path.endsWith('.md') &&
-          !f.path.endsWith('/README.md'))
+      if (f is File && f.path.endsWith('.md') && !f.path.endsWith('/README.md'))
         f.path.split('/').last,
   ]..sort();
   final b = StringBuffer(_head)
@@ -118,9 +121,11 @@ String _m5Index(String root) {
     )
     ..writeln();
   for (final f in files) {
-    final title = RegExp(r'^# (.+)$', multiLine: true)
-            .firstMatch(_read(root, 'docs/testing/m5/$f'))
-            ?.group(1) ??
+    final title =
+        RegExp(
+          r'^# (.+)$',
+          multiLine: true,
+        ).firstMatch(_read(root, 'docs/testing/m5/$f'))?.group(1) ??
         f;
     b.writeln('- [$title]($f)');
   }
