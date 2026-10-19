@@ -3,7 +3,9 @@
 // Geräte-Skripte. Aufruf und Schalter: `dart run tool/gate.dart --help`.
 import 'dart:io';
 
+import 'src/gate_cache.dart';
 import 'src/gate_changed.dart';
+import 'src/gate_lock.dart';
 import 'src/gate_run.dart';
 import 'src/gate_rust.dart';
 import 'src/kotlin_unit.dart';
@@ -36,6 +38,10 @@ Schalter:
                   Commit und Merge gilt das volle Gate (siehe CLAUDE.md).
   --base=<ref>    Vergleichsbasis für --changed (Standard: origin/main).
   --no-app        Ohne Flutter-App (Analyse und Tests der App entfallen).
+  --no-cache      Ohne Gate-Cache: alle Schritte laufen. Der Cache (grüne
+                  Schritte, Schlüssel = Inhalt der Dateien + Lockfiles +
+                  Toolchain + tool/) ist auch aus mit WENDELIN_GATE_CACHE=0
+                  und in CI (CI=true). Treffer stehen als „cached“.
   --verbose, -v   Bisherige Ausgabe: Unterprozesse schreiben direkt,
                   Standard-Reporter der Tests, Größen-Warnungen als Liste.
   --help, -h      Diese Hilfe.
@@ -44,7 +50,15 @@ Standard ist die kompakte Ausgabe: eine Zeile je Schritt, bei Fehlern die
 letzten 200 Zeilen des Schritts, am Ende eine Tabelle mit Ergebnis und
 Dauer und die Zeile GATE GRÜN bzw. GATE ROT: <Schritte>.''';
 
-const _flags = {'--changed', '--no-app', '--verbose', '-v', '--help', '-h'};
+const _flags = {
+  '--changed',
+  '--no-app',
+  '--no-cache',
+  '--verbose',
+  '-v',
+  '--help',
+  '-h',
+};
 
 Future<void> main(List<String> args) async {
   if (args.contains('--help') || args.contains('-h')) {
@@ -61,7 +75,10 @@ Future<void> main(List<String> args) async {
   }
   final total = Stopwatch()..start();
   final verbose = args.contains('--verbose') || args.contains('-v');
-  final gate = Gate(verbose: verbose);
+  final gate = Gate(
+    verbose: verbose,
+    cache: GateCache.fromEnvironment(Platform.environment, args),
+  );
   final notes = <String>[];
   final scope = _scope(args, notes);
   if (scope == null) {
@@ -71,23 +88,32 @@ Future<void> main(List<String> args) async {
   for (final n in notes) {
     stdout.writeln(n);
   }
-  final (:targets, :tooling, :kotlin) = scope;
-  bool wants(String t) => targets == null || targets.contains(t);
-  final packages = {
-    for (final MapEntry(:key, :value) in _packageDirs().entries)
-      if (wants(key)) key: value,
-  };
-  final hasApp = File('app/pubspec.yaml').existsSync() && wants(appTarget);
-  await _codeSteps(gate, packages, tooling: tooling, app: hasApp);
-  if (wants(rustTarget)) await _rustSteps(gate);
-  for (final MapEntry(key: name, value: dir) in packages.entries) {
-    await _testPackage(gate, name, dir);
-  }
-  if (hasApp && !args.contains('--no-app')) await _appSteps(gate);
-  if (kotlin && hasApp && !args.contains('--no-app')) await _kotlinStep(gate);
-  await _globalSteps(gate, tooling: tooling);
-  exitCode = gate.finish(total.elapsed, notes: notes);
-  _reports.deleteSync(recursive: true);
+  // Rechnerweit höchstens 2 Läufe gleichzeitig (WP97); der Slot wird auch bei
+  // Fehlern und bei SIGINT/SIGTERM freigegeben.
+  await withGateSlot(gateSlotsFromEnvironment(Platform.environment), () async {
+    final (:targets, :tooling, :kotlin) = scope;
+    bool wants(String t) => targets == null || targets.contains(t);
+    final packages = {
+      for (final MapEntry(:key, :value) in _packageDirs().entries)
+        if (wants(key)) key: value,
+    };
+    final hasApp = File('app/pubspec.yaml').existsSync() && wants(appTarget);
+    final deps = workspaceDeps();
+    await _codeSteps(gate, packages, tooling: tooling, app: hasApp);
+    if (wants(rustTarget)) await _rustSteps(gate);
+    for (final MapEntry(key: name, value: dir) in packages.entries) {
+      await _testPackage(gate, name, dir, cacheRoots(name, deps));
+    }
+    if (hasApp && !args.contains('--no-app')) {
+      await _appSteps(gate, cacheRoots(appTarget, deps));
+    }
+    if (kotlin && hasApp && !args.contains('--no-app')) {
+      await _kotlinStep(gate);
+    }
+    await _globalSteps(gate, tooling: tooling);
+    exitCode = gate.finish(total.elapsed, notes: notes);
+  });
+  if (_reports.existsSync()) _reports.deleteSync(recursive: true);
 }
 
 /// Rust-Crate `native/attest`; ohne Toolchain lokal übersprungen, in CI Pflicht.
@@ -97,6 +123,7 @@ Future<void> _rustSteps(Gate gate) async {
   await rustSteps(
     gate,
     ci: env['CI'] == 'true',
+    env: env,
     toolDir: (t) => findToolDir(
       t.binary,
       path: path,
@@ -127,27 +154,30 @@ Future<void> _codeSteps(
       '--output=none',
       '--set-exit-if-changed',
       ...formatDirs,
-    ]);
+    ], cacheSpec: CacheSpec(formatDirs));
   }
   if (dartDirs.isNotEmpty) {
     await gate.step('analyze', 'dart', [
       'analyze',
       '--fatal-infos',
       ...dartDirs,
-    ]);
+    ], cacheSpec: analyzeSpec(dartDirs));
   }
 }
 
 /// Analyse und Tests der Flutter-App.
-Future<void> _appSteps(Gate gate) async {
+Future<void> _appSteps(Gate gate, List<String> roots) async {
+  final spec = appSpec(roots);
   final appDirs = _appDirs();
   // Explizite Pfade: Ohne sie analysiert `flutter analyze` im Workspace
   // nichts, weil die Root-analysis_options `app/**` ausschließt.
-  await gate.step('analyze app', 'flutter', [
-    'analyze',
-    '--fatal-infos',
-    ...appDirs,
-  ], cwd: 'app');
+  await gate.step(
+    'analyze app',
+    'flutter',
+    ['analyze', '--fatal-infos', ...appDirs],
+    cwd: 'app',
+    cacheSpec: spec,
+  );
   if (!appDirs.contains('test')) return;
   final json = _reportFile('app');
   clearCoverage('app');
@@ -157,6 +187,7 @@ Future<void> _appSteps(Gate gate) async {
     ['test', '--coverage', ..._testFlags(gate.verbose, json)],
     cwd: 'app',
     report: json,
+    cacheSpec: spec,
     check: (r) async {
       final tests = testDetail(countTests(json));
       if (r.exitCode != 0) return (detail: tests, failure: null);
@@ -201,6 +232,7 @@ Future<void> _kotlinStep(Gate gate) async {
     'bash',
     ['gradlew', ':app:testDebugUnitTest', '-q'],
     cwd: 'app/android',
+    cacheSpec: kotlinSpec(sdk ?? '', jdk: jdkVersion(Platform.environment)),
     check: (_) async {
       final c = countJUnit(readReports(kotlinReportDir));
       return (
@@ -213,44 +245,61 @@ Future<void> _kotlinStep(Gate gate) async {
 
 /// Prüfungen über das ganze Repo und Selbsttests der Werkzeuge.
 Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
-  await gate.step('check_deps', 'dart', ['run', 'tool/check_deps.dart']);
-  await gate.step('check_secrets', 'dart', ['run', 'tool/check_secrets.dart']);
+  const all = CacheSpec(['.']);
+  await gate.step('check_deps', 'dart', [
+    'run',
+    'tool/check_deps.dart',
+  ], cacheSpec: all);
+  await gate.step('check_secrets', 'dart', [
+    'run',
+    'tool/check_secrets.dart',
+  ], cacheSpec: all);
   await gate.step(
     'check_sizes',
     'dart',
     ['run', 'tool/check_sizes.dart', if (gate.verbose) '--verbose'],
+    cacheSpec: all,
     check: (r) async => (
       detail: RegExp(r'\d+ Warnungen').stringMatch(r.lines.join('\n')) ?? '',
       failure: null,
     ),
   );
-  await gate.step('check_flaky', 'dart', ['run', 'tool/check_flaky.dart']);
-  await gate.step('check_docs', 'dart', ['run', 'tool/check_docs.dart']);
+  await gate.step('check_flaky', 'dart', [
+    'run',
+    'tool/check_flaky.dart',
+  ], cacheSpec: all);
+  await gate.step('check_docs', 'dart', [
+    'run',
+    'tool/check_docs.dart',
+  ], cacheSpec: all);
   await gate.step('l10n aktuell', 'dart', [
     'run',
     'tool/l10n_merge.dart',
     '--check',
-  ]);
+  ], cacheSpec: all);
   await gate.step('check_registry', 'dart', [
     'run',
     'tool/check_registry.dart',
-  ]);
+  ], cacheSpec: all);
   await gate.step('check_channels', 'dart', [
     'run',
     'tool/check_channels.dart',
-  ]);
+  ], cacheSpec: all);
   if (!tooling) return;
   // Selbsttests der Werkzeuge (gate, check_sizes, check_docs) und der
   // Geräte-Skripte (nur bash, kein Android-SDK nötig).
-  await gate.step('tool self-test', 'dart', ['run', 'tool/self_test.dart']);
+  await gate.step('tool self-test', 'dart', [
+    'run',
+    'tool/self_test.dart',
+  ], cacheSpec: all);
   await gate.step('android_device self-test', 'bash', [
     'tool/android_device.sh',
     '--self-test',
-  ]);
+  ], cacheSpec: const CacheSpec(['tool'], tools: []));
   await gate.step('check_apk self-test', 'bash', [
     'tool/check_apk.sh',
     '--self-test',
-  ]);
+  ], cacheSpec: const CacheSpec(['tool'], tools: []));
 }
 
 /// Prüfumfang: `targets == null` heißt alle Pakete. `null` bei einem
@@ -337,7 +386,12 @@ final _reports = Directory.systemTemp.createTempSync('wendelin_gate_');
 
 String _reportFile(String name) => '${_reports.path}/$name.json';
 
-Future<void> _testPackage(Gate gate, String name, String dir) async {
+Future<void> _testPackage(
+  Gate gate,
+  String name,
+  String dir,
+  List<String> roots,
+) async {
   // Noch leeres Paket (nur Gerüst, kein Code unter lib/src): überspringen.
   final src = Directory('$dir/lib/src');
   final hasCode =
@@ -367,6 +421,7 @@ Future<void> _testPackage(Gate gate, String name, String dir) async {
     ['test', '--coverage=coverage', ..._testFlags(gate.verbose, json)],
     cwd: dir,
     report: json,
+    cacheSpec: CacheSpec(roots),
     check: (r) async {
       final tests = testDetail(countTests(json));
       if (r.exitCode != 0) return (detail: tests, failure: null);
