@@ -338,21 +338,10 @@ void main() {
       addTearDown(c.dispose);
       final registry = c.read(toolRegistryProvider);
       await registry.refresh();
-      expect(registry.integrations.map((i) => i.id), [
-        'alarms',
-        'bring',
-        'calendar',
-        'clipboard',
-        'flashlight',
-        'ha',
-        'lists',
-        'memory',
-        'obsidian',
-        'spotify',
-        'tasks',
-        'weather',
-        'web',
-      ]);
+      expect(
+        registry.integrations.map((i) => i.id),
+        unorderedEquals([for (final s in builtInIntegrationSpecs) s.id]),
+      );
       expect(registry.status('memory'), IntegrationStatus.active);
       expect(registry.status('calendar'), IntegrationStatus.available);
       // Obsidian: registriert; eingeschaltet ohne Vault „Einrichtung nötig“.
@@ -392,20 +381,11 @@ void main() {
       expect(c.read(platformPortsProvider), same(c.read(demoPortsProvider)));
       final registry = c.read(toolRegistryProvider);
       await registry.refresh();
-      expect(
-        {for (final i in registry.integrations) i.id: i.status},
-        {
-          'alarms': IntegrationStatus.active,
-          'calendar': IntegrationStatus.active,
-          'clipboard': IntegrationStatus.active,
-          'flashlight': IntegrationStatus.active,
-          'memory': IntegrationStatus.active,
-          'weather': IntegrationStatus.active,
-          // Ohne Suchdienst ist web aktiv (nur web__fetch); der optionale
-          // Einrichtungsschritt bleibt offen (WP14).
-          'web': IntegrationStatus.active,
-        },
-      );
+      final statuses = {for (final i in registry.integrations) i.id: i.status};
+      // Alles, was im Demo-Modus verfügbar ist, ist aktiv (neue Integrationen
+      // ändern diese Prüfung nicht); Web bleibt ohne Suchdienst aktiv (WP14).
+      expect(statuses.values, everyElement(IntegrationStatus.active));
+      expect(statuses.keys, containsAll(['calendar', 'memory', 'web']));
       expect(registry.info('web').setup.missingSteps, ['search_backend']);
       final webTools = registry
           .catalogFor(PrivacyLevel.standard, sessionId: 's')

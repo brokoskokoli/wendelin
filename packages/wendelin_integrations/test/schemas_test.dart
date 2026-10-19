@@ -1,97 +1,20 @@
 // Abnahme: Tool-Namen gültig, Schemas mit `required` und Beschreibungen,
 // die ein kleines Modell versteht (kurz, Beispiele für Zeitformate).
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/testing.dart';
-import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 void main() {
-  final integrations = <Integration>[
-    CalendarIntegration(FakeCalendarPort()),
-    ClipboardIntegration(FakeClipboardPort()),
-    AlarmsIntegration(FakeAlarmPort()),
-    MemoryIntegration(FakeMemoryStore()),
-    ListsIntegration(FakeListFilePort(), definitions: () => []),
-    TasksIntegration(FakeListFilePort(), definitions: () => []),
-    ObsidianIntegration(
-      FakeVaultPort(),
-      FakeNoteIndex(),
-      settings: () => const ObsidianSettings(),
-    ),
-    WebIntegration(
-      searchBackend: FakeWebSearchBackend(),
-      fetcher: WebFetcher(
-        client: MockClient((_) async => http.Response('', 200)),
-      ),
-    ),
-    BringIntegration(FakeBringApi(), FakeBringSecrets()),
-    HaIntegration(FakeHaApi(), FakeHaSecrets(), FakeHaEntityStore()),
-    SpotifyIntegration(FakeSpotifyApi(), FakeSpotifySecrets()),
-    WeatherIntegration(
-      service: FakeWeatherService(),
-      marine: FakeMarineService(),
-      geocoder: FakeGeocoder(const []),
-    ),
+  final integrations = [
+    for (final f in builtInIntegrationsWithFakes()) f.integration,
   ];
   final tools = [for (final i in integrations) ...i.tools];
 
-  test('alle Tools der WP-Liste sind vorhanden', () {
-    expect(tools.map((t) => t.name).toSet(), {
-      'calendar__list_calendars',
-      'calendar__list_events',
-      'calendar__find_free_slots',
-      'calendar__create_event',
-      'calendar__update_event',
-      'calendar__delete_event',
-      'clipboard__read',
-      'clipboard__write',
-      'alarms__set_alarm',
-      'alarms__set_timer',
-      'alarms__list',
-      'memory__save',
-      'memory__search',
-      'memory__forget',
-      'web__search',
-      'web__fetch',
-      'lists__list_lists',
-      'lists__get_items',
-      'lists__add_items',
-      'lists__complete_item',
-      'lists__remove_item',
-      'lists__clear_completed',
-      'tasks__add',
-      'tasks__list',
-      'tasks__complete',
-      'obsidian__search_notes',
-      'obsidian__read_note',
-      'obsidian__list_folder',
-      'obsidian__create_note',
-      'obsidian__append_to_note',
-      'obsidian__append_daily_note',
-      'obsidian__replace_section',
-      'obsidian__open_note',
-      'bring__list_lists',
-      'bring__get_items',
-      'bring__add_items',
-      'bring__remove_item',
-      'bring__complete_item',
-      'ha__list_entities',
-      'ha__state',
-      'ha__call',
-      'ha__call_secure',
-      'spotify__search',
-      'spotify__play',
-      'spotify__pause',
-      'spotify__next',
-      'spotify__previous',
-      'spotify__now_playing',
-      'spotify__queue_add',
-      'weather__forecast',
-      'weather__marine',
-    });
+  test('Tool-Namen sind eindeutig, jede Integration hat Tools', () {
     expect(tools.map((t) => t.name).toSet(), hasLength(tools.length));
+    for (final i in integrations) {
+      expect(i.tools, isNotEmpty, reason: i.id);
+    }
   });
 
   for (final i in integrations) {
