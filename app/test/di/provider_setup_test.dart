@@ -453,6 +453,26 @@ void main() {
         expect(await secrets.listKeys(), isEmpty);
       },
     );
+
+    test('startupMaintenance: alte Bring!-Zugangsdaten weg, Sitzung bleibt, '
+        'Fehler nicht fatal aber geloggt', () async {
+      final storage = openInMemoryStorage();
+      final secrets = InMemorySecretStore();
+      await secrets.write('bring.email', 'a@example.org');
+      await secrets.write('bring.password', 'pw');
+      await secrets.write('bring.session', '{}');
+      await startupMaintenance(
+        storage: storage,
+        secrets: secrets,
+        retentionDays: 30,
+      );
+      expect(await secrets.listKeys(), {'bring.session'});
+
+      final lines = <String>[];
+      await removeLegacyBringLogin(_ThrowingSecrets(), log: lines.add);
+      expect(lines.single, contains('StateError'));
+      expect(lines.single, isNot(contains('geheim')));
+    });
   });
 
   group('ProfilesNotifier', () {
@@ -544,4 +564,18 @@ void main() {
       await n.delete('unbekannt');
     });
   });
+}
+
+final class _ThrowingSecrets implements SecretStore {
+  @override
+  Future<String?> read(String key) async => null;
+
+  @override
+  Future<void> write(String key, String value) async {}
+
+  @override
+  Future<void> delete(String key) async => throw StateError('geheim');
+
+  @override
+  Future<Set<String>> listKeys() async => {};
 }

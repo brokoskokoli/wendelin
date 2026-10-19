@@ -7,15 +7,18 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../di/bring.dart';
+import '../../di/integrations/integration_spec.dart' show reauthError;
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'reconnect_text.dart';
 import 'settings_page.dart';
 
-/// Settings → Bring!: login (e-mail, password, hint on the unofficial
-/// API), state with „Erneut versuchen“ in the error state, sign-out
-/// (deletes login and tokens) and the share fallback to the Bring! app.
+/// Settings → Bring!: one-time login (e-mail, password, hint on the
+/// unofficial API; only the tokens are kept, the account shows as
+/// „verbunden“), state with „Erneut versuchen“ in the error state and
+/// „Erneut verbinden“ when the session expired, sign-out (deletes the tokens)
+/// and the share fallback to the Bring! app.
 class BringScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const BringScreen({super.key});
@@ -27,7 +30,7 @@ class BringScreen extends ConsumerStatefulWidget {
 class _BringScreenState extends ConsumerState<BringScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
-  String? _account;
+  bool _connected = false;
   bool _loaded = false;
   bool _busy = false;
   String? _error;
@@ -49,7 +52,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
   Future<void> _load() async {
     final secrets = ref.read(bringSecretsProvider);
     final apps = ref.read(installedAppsProvider);
-    final login = await secrets.credentials();
+    final session = await secrets.auth();
     bool? installed;
     try {
       installed = await apps.check(BringAppFallback.androidPackage);
@@ -58,7 +61,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
     }
     if (!mounted) return;
     setState(() {
-      _account = login?.email;
+      _connected = session != null;
       _loaded = true;
       _appInstalled = installed;
     });
@@ -83,7 +86,8 @@ class _BringScreenState extends ConsumerState<BringScreen> {
       api: ref.read(bringApiProvider),
       secrets: ref.read(bringSecretsProvider),
       integration: _integration,
-      login: BringCredentials(email: email, password: password),
+      email: email,
+      password: password,
     );
     if (error == null) {
       SecretField.finishAutofill();
@@ -94,8 +98,9 @@ class _BringScreenState extends ConsumerState<BringScreen> {
       _busy = false;
       _error = error;
       if (error == null) {
-        _account = email;
+        _connected = true;
         _password.clear();
+        _email.clear();
       }
     });
   }
@@ -113,7 +118,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
     if (!ok) return;
     await bringSignOut(secrets: secrets, integration: integration);
     await _refresh(registry);
-    if (mounted) setState(() => _account = null);
+    if (mounted) setState(() => _connected = false);
   }
 
   Future<void> _retry() async {
@@ -148,7 +153,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
       children: [
         if (!_loaded)
           const SizedBox.shrink()
-        else if (_account == null)
+        else if (!_connected)
           ..._loginForm()
         else
           StreamBuilder<void>(
@@ -211,16 +216,14 @@ class _BringScreenState extends ConsumerState<BringScreen> {
   Widget _accountCard(ToolRegistry registry) {
     final info = _info(registry);
     final failed = info?.status == IntegrationStatus.error;
+    final reauth = failed && info?.error == reauthError;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.l18,
       children: [
         SectionCard(
           children: [
-            SettingsRow(
-              title: context.l10n.mcpSecretSignedIn,
-              detail: _account,
-            ),
+            SettingsRow(title: context.l10n.bringConnected),
             SettingsRow(
               title: failed
                   ? context.l10n.bringApiError
@@ -238,7 +241,13 @@ class _BringScreenState extends ConsumerState<BringScreen> {
             ),
           ],
         ),
-        if (failed)
+        if (reauth)
+          // The session is gone: only a new sign-in helps.
+          PrimaryButton(
+            context.l10n.bringReconnect,
+            onPressed: () => setState(() => _connected = false),
+          )
+        else if (failed)
           PrimaryButton(
             _busy ? context.l10n.bringChecking : context.l10n.retry,
             onPressed: _busy ? null : () => unawaited(_retry()),

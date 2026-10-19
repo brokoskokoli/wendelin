@@ -11,6 +11,10 @@ import '../app_requirements.dart';
 /// service in the app language (the model never sees registry errors).
 const pausedError = 'paused';
 
+/// Registry error text of an integration whose session is gone and needs a
+/// new sign-in (Bring!: refresh token refused); the UI words it per service.
+const reauthError = 'reauth';
+
 /// What an integration needs to be built.
 final class IntegrationDeps {
   /// Creates the dependencies.

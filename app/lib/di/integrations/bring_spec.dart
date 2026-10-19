@@ -30,7 +30,12 @@ final bringSpec = IntegrationSpec(
     return BringIntegration(
       deps.api,
       deps.secrets,
-      onError: (_) => d.reportError?.call('bring', pausedError),
+      onError: (message) => d.reportError?.call(
+        'bring',
+        message == BringSession.reauthRequired.message
+            ? reauthError
+            : pausedError,
+      ),
       onRecovered: () => d.clearError?.call('bring'),
     );
   },

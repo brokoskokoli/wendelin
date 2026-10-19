@@ -1116,6 +1116,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bringChecking => 'Checking …';
 
   @override
+  String get bringConnected => 'Connected';
+
+  @override
   String get bringEmail => 'Email';
 
   @override
@@ -1126,7 +1129,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bringIntro =>
-      'Unofficial interface: Bring! has not released it for other apps, it can break at any time. Email and password stay in the device’s secure storage.';
+      'Unofficial interface: Bring! has not released it for other apps, it can break at any time. You sign in once; email and password are not stored, only the session (tokens) stays in the device’s secure storage.';
 
   @override
   String get bringNeedCredentials => 'Please enter email and password.';
@@ -1141,6 +1144,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bringReachable => 'Bring! is reachable again.';
 
   @override
+  String get bringReauthError =>
+      'Bring!: sign-in expired. Please sign in again.';
+
+  @override
+  String get bringReconnect => 'Reconnect';
+
+  @override
   String get bringShareSend => 'Send to Bring!';
 
   @override
@@ -1150,8 +1160,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bringShareUnreachable => 'Bring! unreachable';
 
   @override
-  String get bringSignOutBody =>
-      'Email, password and session are deleted from the device.';
+  String get bringSignOutBody => 'The session is deleted from the device.';
 
   @override
   String get bringSignOutTitle => 'Sign out of Bring!?';

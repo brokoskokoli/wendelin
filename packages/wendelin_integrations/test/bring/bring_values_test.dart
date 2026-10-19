@@ -40,15 +40,6 @@ void main() {
   });
 
   test('Wertgleichheit und toString', () {
-    const c = BringCredentials(email: 'e', password: 'geheim');
-    expect(c, const BringCredentials(email: 'e', password: 'geheim'));
-    expect(
-      c.hashCode,
-      const BringCredentials(email: 'e', password: 'geheim').hashCode,
-    );
-    expect(c == const BringCredentials(email: 'e', password: 'x'), isFalse);
-    expect('$c', isNot(contains('geheim')));
-
     const l = BringList(uuid: 'u', name: 'Zuhause');
     expect(l, const BringList(uuid: 'u', name: 'Zuhause'));
     expect(l.hashCode, const BringList(uuid: 'u', name: 'Zuhause').hashCode);
