@@ -232,7 +232,7 @@ Future<void> _kotlinStep(Gate gate) async {
     'bash',
     ['gradlew', ':app:testDebugUnitTest', '-q'],
     cwd: 'app/android',
-    cacheSpec: kotlinSpec(sdk ?? ''),
+    cacheSpec: kotlinSpec(sdk ?? '', jdk: jdkVersion(Platform.environment)),
     check: (_) async {
       final c = countJUnit(readReports(kotlinReportDir));
       return (

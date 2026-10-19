@@ -19,7 +19,9 @@ fi
 # Vorn, damit ein Homebrew-cargo ohne Android-Targets nicht gewinnt.
 # WENDELIN_RUST_BIN_DIRS (Doppelpunkt-Liste) ersetzt die Standardorte (für Tests).
 IFS=':' read -ra rust_dirs <<<"${WENDELIN_RUST_BIN_DIRS-$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:/usr/local/opt/rustup/bin}"
-for d in ${rust_dirs[@]+"${rust_dirs[@]}"}; do
+# Rückwärts voranstellen: der erste Standardort (~/.cargo/bin) steht am Ende vorn.
+for ((i = ${#rust_dirs[@]} - 1; i >= 0; i--)); do
+  d="${rust_dirs[i]}"
   [ -n "$d" ] && [ -d "$d" ] && PATH="$d:$PATH"
 done
 export PATH

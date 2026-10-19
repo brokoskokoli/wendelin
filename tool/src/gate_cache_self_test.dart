@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'gate_cache.dart';
-import 'gate_lock.dart';
+import 'gate_lock_self_test.dart';
 import 'gate_run.dart';
 import 'gate_rust.dart';
 import 'self_check.dart';
@@ -14,8 +14,7 @@ Future<void> gateCacheChecks(SelfCheck t) async {
   _keys(t);
   await _gateWithCache(t);
   await _rust(t);
-  _slotsSync(t);
-  await _slots(t);
+  await gateLockChecks(t);
   await _attestScript(t);
 }
 
@@ -185,6 +184,25 @@ void _keys(SelfCheck t) {
       'kotlin-unit: Wurzeln und SDK im Schlüssel',
     );
 
+    t.isTrue(
+      _cache(tmp, base, tools: ft).keyFor('k', kotlinSpec('/a', jdk: '17')) !=
+          _cache(tmp, base, tools: ft).keyFor('k', kotlinSpec('/a', jdk: '21')),
+      'kotlin-unit: JDK-Version im Schlüssel',
+    );
+    t.eq(
+      jdkVersion({
+        'JAVA_HOME': '/jh',
+      }, probe: (e) => e == '/jh/bin/java' ? 'openjdk 21\n' : null),
+      'openjdk 21',
+      'jdkVersion: JAVA_HOME zuerst',
+    );
+    t.eq(
+      jdkVersion({}, probe: (e) => e == 'java' ? 'v17' : null),
+      'v17',
+      'jdkVersion: java im PATH',
+    );
+    t.eq(jdkVersion({}, probe: (_) => null), '', 'jdkVersion: fail-open');
+
     _storeAndEnv(t, tmp, base);
   } finally {
     tmp.deleteSync(recursive: true);
@@ -342,159 +360,6 @@ Future<void> _gateWithCache(SelfCheck t) async {
   }
 }
 
-void _slotsSync(SelfCheck t) {
-  t.group('Gate-Semaphor: Umgebung');
-  t.eq(gateSlotsFromEnvironment({'HOME': '/h', 'CI': 'true'}), null, 'CI: aus');
-  t.eq(
-    gateSlotsFromEnvironment({'HOME': '/h', 'WENDELIN_GATE_SLOTS': '0'}),
-    null,
-    'WENDELIN_GATE_SLOTS=0: aus',
-  );
-  t.eq(gateSlotsFromEnvironment({'HOME': '/h'})?.max, 2, 'Standard: 2 Läufe');
-}
-
-Future<void> _slots(SelfCheck t) async {
-  t.group('Gate-Semaphor');
-  final tmp = Directory.systemTemp.createTempSync('gate_slots_');
-  try {
-    final alive = <int>{111, 222, 333};
-    final msgs = <String>[];
-    GateSlots slots(int own, {Future<void> Function(Duration)? sleep}) =>
-        GateSlots(
-          dir: Directory('${tmp.path}/s'),
-          ownPid: own,
-          isAlive: alive.contains,
-          sleep: sleep ?? (_) async => fail('unerwartetes Warten'),
-          log: msgs.add,
-          staleEmpty: Duration.zero,
-        );
-
-    final a = await slots(111).acquire();
-    final b = await slots(222).acquire();
-    t.isTrue(
-      a.file != null && b.file != null && a.file!.path != b.file!.path,
-      'zwei Läufe belegen zwei Slots',
-    );
-    t.isTrue(msgs.isEmpty, 'keine Meldung ohne Warten');
-
-    var waits = 0;
-    final third = await slots(
-      333,
-      sleep: (_) async {
-        waits++;
-        if (waits == 2) a.release();
-      },
-    ).acquire();
-    t.eq(waits, 2, 'dritter Lauf wartet, bis ein Slot frei wird');
-    t.isTrue(
-      msgs.length == 1 && msgs.single.contains('Gate wartet'),
-      'Wartemeldung genau einmal',
-    );
-    t.isTrue(
-      third.file!.readAsStringSync() == '333',
-      'Slot trägt die PID des Laufs',
-    );
-
-    alive.remove(222);
-    msgs.clear();
-    final fourth = await slots(444).acquire();
-    t.eq(
-      fourth.file!.path,
-      b.file!.path,
-      'Slot eines toten Prozesses wird übernommen',
-    );
-    t.eq(fourth.file!.readAsStringSync(), '444', 'neue PID im Slot');
-    t.isTrue(msgs.isEmpty, 'tote PID: kein Warten');
-
-    third.release();
-    fourth.release();
-    t.isTrue(
-      Directory('${tmp.path}/s').listSync().isEmpty,
-      'release räumt die Slot-Dateien auf',
-    );
-    fourth.release();
-
-    // Leere Slot-Datei (Absturz zwischen Anlegen und Schreiben) ist verwaist.
-    Directory('${tmp.path}/s/').createSync(recursive: true);
-    File('${tmp.path}/s/slot-0.lock').createSync();
-    File('${tmp.path}/s/slot-1.lock').writeAsStringSync('111');
-    final e = await slots(555).acquire();
-    t.eq(
-      e.file!.path,
-      '${tmp.path}/s/slot-0.lock',
-      'leere Datei wird aufgeräumt',
-    );
-    e.release();
-    File('${tmp.path}/s/slot-1.lock').deleteSync();
-
-    // Rennen: zwischen Lesen und Löschen übernimmt ein anderer Lauf den Slot.
-    File('${tmp.path}/s/slot-0.lock').writeAsStringSync('999');
-    File('${tmp.path}/s/slot-1.lock').writeAsStringSync('111');
-    var swapped = false;
-    final racer = GateSlots(
-      dir: Directory('${tmp.path}/s'),
-      ownPid: 777,
-      isAlive: (p) {
-        if (p == 999 && !swapped) {
-          swapped = true;
-          File('${tmp.path}/s/slot-0.lock').writeAsStringSync('222');
-        }
-        return alive.contains(p);
-      },
-      sleep: (_) async => throw StateError('wartet'),
-      log: msgs.add,
-    );
-    try {
-      await racer.acquire();
-      t.isTrue(false, 'alle Slots belegt: acquire muss warten');
-    } on StateError {
-      t.eq(
-        File('${tmp.path}/s/slot-0.lock').readAsStringSync(),
-        '222',
-        'übernommener Slot wird nicht gelöscht',
-      );
-    }
-    t.isTrue(
-      !File('${tmp.path}/s/slot-0.lock.reap').existsSync(),
-      'Aufräum-Wächter wird entfernt',
-    );
-    File('${tmp.path}/s/slot-0.lock').deleteSync();
-    File('${tmp.path}/s/slot-1.lock').deleteSync();
-
-    // withGateSlot gibt auch bei einer Ausnahme frei.
-    try {
-      await withGateSlot(slots(888), () async => throw StateError('boom'));
-    } on StateError {
-      // erwartet
-    }
-    t.isTrue(
-      Directory('${tmp.path}/s').listSync().isEmpty,
-      'Slot nach Ausnahme freigegeben',
-    );
-    var inside = false;
-    await withGateSlot(slots(888), () async {
-      inside = Directory('${tmp.path}/s').listSync().length == 1;
-    });
-    t.isTrue(inside, 'Slot während des Laufs belegt');
-    t.isTrue(
-      Directory('${tmp.path}/s').listSync().isEmpty,
-      'Slot nach dem Lauf freigegeben',
-    );
-    await withGateSlot(null, () async {});
-
-    // Ordner nicht anlegbar: fail-open.
-    File('${tmp.path}/datei').writeAsStringSync('x');
-    final open = await GateSlots(
-      dir: Directory('${tmp.path}/datei/s'),
-      log: msgs.add,
-    ).acquire();
-    t.isTrue(open.file == null, 'unbenutzbarer Ordner: Lauf ohne Sperre');
-    open.release();
-  } finally {
-    tmp.deleteSync(recursive: true);
-  }
-}
-
 Never fail(String m) => throw StateError(m);
 
 /// `.so`-Cache von `tool/build_attest_android.sh` mit Attrappen für cargo.
@@ -610,19 +475,7 @@ Future<void> _attestScript(SelfCheck t) async {
       'CI: kein sccache',
     );
 
-    // PATH-Reihenfolge: Rust-Ordner stehen vor dem übrigen PATH.
-    File('${pre.path}/cargo').writeAsStringSync(_fakeCargo('pre', log, envLog));
-    Process.runSync('chmod', ['+x', '${pre.path}/cargo']);
-    envLog.writeAsStringSync('');
-    await run(
-      'x86_64',
-      env: {'WENDELIN_ATTEST_CACHE': '0', 'WENDELIN_RUST_BIN_DIRS': pre.path},
-    );
-    t.isTrue(
-      envLog.readAsStringSync().contains('pre') &&
-          !envLog.readAsStringSync().contains('bin'),
-      'cargo aus den Rust-Ordnern gewinnt gegen den übrigen PATH',
-    );
+    await _rustDirOrder(t, tmp, pre, log, envLog, run);
     t.isTrue(
       Directory('${tmp.path}/cache')
           .listSync()
@@ -632,6 +485,47 @@ Future<void> _attestScript(SelfCheck t) async {
   } finally {
     tmp.deleteSync(recursive: true);
   }
+}
+
+/// Reihenfolge der vorangestellten Rust-Ordner in `build_attest_android.sh`.
+Future<void> _rustDirOrder(
+  SelfCheck t,
+  Directory tmp,
+  Directory pre,
+  File log,
+  File envLog,
+  Future<void> Function(String, {Map<String, String> env}) run,
+) async {
+  // PATH-Reihenfolge: Rust-Ordner stehen vor dem übrigen PATH.
+  File('${pre.path}/cargo').writeAsStringSync(_fakeCargo('pre', log, envLog));
+  Process.runSync('chmod', ['+x', '${pre.path}/cargo']);
+  envLog.writeAsStringSync('');
+  await run(
+    'x86_64',
+    env: {'WENDELIN_ATTEST_CACHE': '0', 'WENDELIN_RUST_BIN_DIRS': pre.path},
+  );
+  t.isTrue(
+    envLog.readAsStringSync().contains('pre') &&
+        !envLog.readAsStringSync().contains('bin'),
+    'cargo aus den Rust-Ordnern gewinnt gegen den übrigen PATH',
+  );
+  // Reihenfolge der Liste: der erste Ordner gewinnt.
+  final pre2 = Directory('${tmp.path}/pre2')..createSync();
+  File('${pre2.path}/cargo').writeAsStringSync(_fakeCargo('pre2', log, envLog));
+  Process.runSync('chmod', ['+x', '${pre2.path}/cargo']);
+  envLog.writeAsStringSync('');
+  await run(
+    'x86_64',
+    env: {
+      'WENDELIN_ATTEST_CACHE': '0',
+      'WENDELIN_RUST_BIN_DIRS': '${pre.path}:${pre2.path}',
+    },
+  );
+  t.isTrue(
+    envLog.readAsStringSync().contains('pre') &&
+        !envLog.readAsStringSync().contains('pre2'),
+    'erster Rust-Ordner der Liste gewinnt',
+  );
 }
 
 String _fakeCargo(String tag, File log, File envLog) =>

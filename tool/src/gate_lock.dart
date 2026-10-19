@@ -9,15 +9,21 @@ import 'dart:io';
 /// Belegter Slot; [release] gibt ihn frei (mehrfach aufrufbar).
 final class SlotLease {
   /// Erstellt eine Belegung für [file] (`null` = ohne Sperre).
-  SlotLease(this.file);
+  SlotLease(this.file, [this.ownPid]);
 
   /// Slot-Datei.
   final File? file;
 
+  /// PID des Besitzers; [release] löscht nur, solange die Datei sie trägt.
+  final int? ownPid;
+
   /// Gibt den Slot frei.
   void release() {
     try {
-      file?.deleteSync();
+      final f = file;
+      if (f == null) return;
+      if (ownPid != null && f.readAsStringSync().trim() != '$ownPid') return;
+      f.deleteSync();
     } on Object {
       // schon weg
     }
@@ -97,14 +103,14 @@ final class GateSlots {
       try {
         f.createSync(exclusive: true);
         f.writeAsStringSync('$ownPid');
-        return SlotLease(f);
+        return SlotLease(f, ownPid);
       } on FileSystemException {
         _reapIfDead(f);
         // Nach dem Aufräumen gleich noch einmal versuchen.
         try {
           f.createSync(exclusive: true);
           f.writeAsStringSync('$ownPid');
-          return SlotLease(f);
+          return SlotLease(f, ownPid);
         } on FileSystemException {
           continue;
         }

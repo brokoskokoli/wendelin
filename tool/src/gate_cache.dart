@@ -67,8 +67,9 @@ CacheSpec appSpec(List<String> roots) =>
     CacheSpec([...roots, 'docs/design'], tools: const ['dart', 'flutter']);
 
 /// Beschreibung von `kotlin-unit`: Android-Projekt, Testdaten, das Rust-Modul
-/// (Gradle-Task `buildRustAttest`), das App-Manifest und das SDK.
-CacheSpec kotlinSpec(String sdk) => CacheSpec(
+/// (Gradle-Task `buildRustAttest`), das App-Manifest, das SDK und das JDK
+/// ([jdk], siehe [jdkVersion]; leer = unbekannt, fail-open).
+CacheSpec kotlinSpec(String sdk, {String jdk = ''}) => CacheSpec(
   const [
     'app/android',
     'app/test/fixtures/stt',
@@ -76,8 +77,34 @@ CacheSpec kotlinSpec(String sdk) => CacheSpec(
     'native/attest',
   ],
   tools: const ['dart', 'flutter'],
-  extra: ['sdk:$sdk'],
+  extra: ['sdk:$sdk', 'jdk:$jdk'],
 );
+
+/// Ausgabe von `java -version` (`JAVA_HOME/bin/java`, sonst `java` im PATH).
+/// [probe] liefert die Ausgabe zu einer Programmdatei oder `null`; ohne
+/// Ergebnis ist die Version leer (fail-open, der Schritt läuft dann trotzdem).
+String jdkVersion(
+  Map<String, String> env, {
+  String? Function(String exe)? probe,
+}) {
+  final run = probe ?? _javaVersionOutput;
+  final home = env['JAVA_HOME'] ?? '';
+  final exes = [if (home.isNotEmpty) '$home/bin/java', 'java'];
+  for (final e in exes) {
+    final out = run(e);
+    if (out != null && out.trim().isNotEmpty) return out.trim();
+  }
+  return '';
+}
+
+String? _javaVersionOutput(String exe) {
+  try {
+    final r = Process.runSync(exe, ['-version']);
+    return r.exitCode == 0 ? '${r.stderr}${r.stdout}' : null;
+  } on Object {
+    return null;
+  }
+}
 
 /// Liste aller Repo-Dateien (getrackt, neu, nicht ignoriert); wirft bei Fehler.
 typedef FileLister = List<String> Function();
