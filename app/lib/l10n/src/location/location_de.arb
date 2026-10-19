@@ -1,0 +1,3 @@
+{
+  "integrationsLocationRationale": "Damit Wendelin sagen kann, wo du bist, und Entfernungen und Navigation vorbereiten kann, braucht es den Standortzugriff. Android fragt dich gleich danach. Wendelin fragt den Standort nur, wenn du danach fragst (nie im Hintergrund), schickt ihn nicht an Cloud-Modelle unterhalb deiner Datenschutzstufe und schreibt ihn nicht ins Prüfprotokoll. „Ungefähr“ reicht für Ortsnamen und Luftlinie."
+}

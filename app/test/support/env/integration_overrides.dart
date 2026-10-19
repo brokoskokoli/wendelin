@@ -20,6 +20,8 @@ List<Override> withIntegrations(TestEnv env) => [
       apps: env.apps,
       torch: env.torch,
       media: env.media,
+      location: env.location,
+      mapsLauncher: env.mapsLauncher,
       requestCalendarPermission: env.ports.requestCalendarPermission,
       lists: ListsPorts(
         port: env.listFiles,

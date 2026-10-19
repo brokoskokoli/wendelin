@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import 'app_settings.dart';
-import 'core_providers.dart';
 import 'providers.dart';
 import 'weather_config.dart';
 
@@ -33,9 +32,12 @@ final weatherGeocoderProvider = Provider<Geocoder>(
   (ref) => OpenMeteoGeocoder(client: ref.watch(httpClientProvider)),
 );
 
-/// The current location for the weather. `null` until the location
-/// integration (WP86) overrides this provider; the weather then uses the
-/// home place.
-final weatherLocationPortProvider = Provider<WeatherLocationPort?>(
-  (ref) => null,
-);
+/// The current location for the weather: the device position while the
+/// `location` integration is on (WP86); the port itself answers `null`
+/// without the permission or a fix, and the weather then uses the home
+/// place. `null` while the integration is off.
+final weatherLocationPortProvider = Provider<WeatherLocationPort?>((ref) {
+  if (!ref.watch(enabledIntegrationsProvider).contains('location')) return null;
+  final port = ref.watch(platformPortsProvider).location;
+  return port == null ? null : LocationWeatherPort(port);
+});
