@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
@@ -10,19 +11,33 @@ import 'package:wendelin/di/profiles.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/screens/main_screen.dart';
 import 'package:wendelin/ui/screens/quick_switch.dart';
+import 'package:wendelin/voice/voice_components.dart';
+import 'package:wendelin/voice/voice_controller.dart';
+import 'package:wendelin_voice/testing.dart';
+import 'package:wendelin_voice/wendelin_voice.dart'
+    show TriggerKind, VoiceState;
 
 import '../settings/integrations_screen_test.dart' show settle;
 import '../settings/other_screens_test.dart' show profile;
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
+import '../voice/voice_controller_test.dart' show fakeVoice, utterance;
 
 const _sheetTitle = 'Agent wechseln';
+
+Future<void> _openSheet(WidgetTester tester) async {
+  final g = await tester.startGesture(tester.getCenter(_chip));
+  await tester.pump(quickSwitchHold);
+  await settle(tester);
+  await g.up();
+}
 
 Future<(ProviderContainer, List<String>)> _pump(
   WidgetTester tester, {
   int profiles = 2,
+  List<Override> overrides = const [],
 }) async {
-  final env = TestEnv(storedProfiles: true);
+  final env = TestEnv(storedProfiles: true, extraOverrides: overrides);
   for (final id in ['a', 'b', 'c'].take(profiles)) {
     await env.storage.providerProfiles.save(profile(id));
   }
@@ -78,9 +93,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(haptics, ['HapticFeedbackType.mediumImpact']);
     expect(_markColor(tester), isNot(Colors.transparent));
-    await tester.pump(const Duration(milliseconds: 1000));
-    expect(find.text(_sheetTitle), findsNothing);
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 1399));
+    expect(find.text(_sheetTitle), findsNothing, reason: '1999 ms');
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump();
+    expect(find.text(_sheetTitle), findsOneWidget, reason: '2000 ms');
     await settle(tester);
     expect(find.text(_sheetTitle), findsOneWidget);
     expect(find.text('Profil a'), findsWidgets);
@@ -169,11 +186,20 @@ void main() {
   });
 
   testWidgets('mit nur einem Profil nicht möglich', (tester) async {
-    await _pump(tester, profiles: 1);
+    final handle = tester.ensureSemantics();
+    final (_, haptics) = await _pump(tester, profiles: 1);
     final g = await tester.startGesture(tester.getCenter(_chip));
     await tester.pump(const Duration(seconds: 3));
+    expect(haptics, isEmpty);
+    expect(_markColor(tester), Colors.transparent);
     expect(find.text(_sheetTitle), findsNothing);
     await g.up();
+    final data = tester
+        .getSemantics(find.byKey(const ValueKey('quickSwitchMark')))
+        .getSemanticsData();
+    expect(data.customSemanticsActionIds, anyOf(isNull, isEmpty));
+    expect(data.hasAction(SemanticsAction.longPress), isFalse);
+    handle.dispose();
   });
 
   testWidgets('Semantics-Aktion öffnet das Popup direkt', (tester) async {
@@ -182,12 +208,74 @@ void main() {
     final node = tester.getSemantics(
       find.byKey(const ValueKey('quickSwitchMark')),
     );
-    expect(node.getSemanticsData().customSemanticsActionIds, isNotNull);
-    tester.semantics.longPress(
-      find.semantics.byAction(SemanticsAction.longPress),
+    final ids = node.getSemanticsData().customSemanticsActionIds!;
+    final id = ids.firstWhere(
+      (i) => CustomSemanticsAction.getAction(i)?.label == _sheetTitle,
+    );
+    tester.semantics.performAction(
+      find.semantics.byAction(SemanticsAction.customAction),
+      SemanticsAction.customAction,
+      args: id,
     );
     await settle(tester);
     expect(find.text(_sheetTitle), findsOneWidget);
     handle.dispose();
+  });
+
+  testWidgets('Auswahl beendet zuerst die laufende Sprachaufnahme', (
+    tester,
+  ) async {
+    final (c, _) = await _pump(
+      tester,
+      overrides: [
+        activeVoiceProvider.overrideWith(
+          (ref) async => fakeVoice(
+            audio: FakeAudioInput(
+              frames: utterance(),
+              frameInterval: const Duration(seconds: 1),
+            ),
+            script: const [],
+          ),
+        ),
+      ],
+    );
+    await c
+        .read(voiceControllerProvider.notifier)
+        .start(TriggerKind.pushToTalk);
+    await tester.pump();
+    expect(c.read(voiceControllerProvider).phase, VoiceState.listening);
+    await _openSheet(tester);
+    expect(c.read(voiceControllerProvider).phase, VoiceState.listening);
+    await tester.tap(find.text('Profil b'));
+    await settle(tester);
+    expect(c.read(voiceControllerProvider).phase, VoiceState.idle);
+    expect((await c.read(profilesProvider.future)).defaultId, 'b');
+  });
+
+  testWidgets('Läuft nach dem Öffnen eine Anfrage, bleibt alles', (
+    tester,
+  ) async {
+    final (c, _) = await _pump(tester);
+    await _openSheet(tester);
+    c
+        .read(agentControllerProvider.notifier)
+        .seed(ConversationState(running: true));
+    await tester.pump();
+    await tester.tap(find.text('Profil b'));
+    await settle(tester);
+    expect((await c.read(profilesProvider.future)).defaultId, 'a');
+    expect(c.read(agentControllerProvider).running, isTrue);
+  });
+
+  testWidgets('Entfernen während des Haltens lässt keinen Timer zurück', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await tester.startGesture(tester.getCenter(_chip));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
+    expect(tester.takeException(), isNull);
+    expect(find.text(_sheetTitle), findsNothing);
   });
 }

@@ -226,6 +226,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final active = _activeTarget(providers, conversation.activeProfileId);
 
     final setupHint = _setupHint(config, providers);
+    final profileCount =
+        ref.watch(profilesProvider).value?.profiles.length ?? 0;
 
     return Scaffold(
       body: Column(
@@ -241,7 +243,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             newConversationEnabled: !conversation.running,
           ),
           MainChips(
-            onQuickSwitch: conversation.running
+            onQuickSwitch: conversation.running || profileCount < 2
                 ? null
                 : () => unawaited(_quickSwitch(providers)),
             providerName: active == null
