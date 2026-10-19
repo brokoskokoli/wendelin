@@ -37,6 +37,8 @@ ENROLL = [1, 2, 3, 4, 5]
 EXPECT_CLIPS = {"rest3m": 5, "restTV": 4, "restLeise": 6}   # laut ANLEITUNG (06-10, 15-18, 23-28)
 NEG_REFR = 38                            # Sperrzeit Negativ-Ereignisse (Fenster a 80 ms, ~3 s); Positiv 19 (~1,5 s)
 EXPECT_SEGS = 47
+POS_TOL = 0.5                            # Ereignis zaehlt zum Segment, wenn es im Wortbereich +-0,5 s liegt
+CONFIRMED_CONFUSER_S = (1680, 1700)      # Stefan bestaetigt: kein echtes Wendelin (Station-Zeit), Verwechsler
 WENDELIN = re.compile(r"w[eiu]nd[eao]l[iyu]n|wendeline|vendelin|gwendolin")
 CONFUSER = re.compile(r"wendel|windel|berlin|vanill|linie|wendolin|gwendol|wenn die")
 
@@ -141,8 +143,10 @@ def events(ok, refr=19):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=f"{S.KWS}/wp106/results/real")
-    ap.add_argument("--thr", default="0.85,0.90", help="Vorlagen-Schwellen")
+    ap.add_argument("--thr", default="0.85,0.90,0.93,0.95", help="Vorlagen-Schwellen")
     ap.add_argument("--model-thr", default="0.3,0.5")
+    ap.add_argument("--s2-thr", default="0.85,0.90,M0.5,auto", help="Regeln fuer Stufe 2/3 (Zahl = Vorlagenschwelle, M0.5 = Modellregel); auto = niedrigste Vorlagenschwelle mit <= --cand-limit Kandidaten/h (falls es eine gibt)")
+    ap.add_argument("--cand-limit", type=float, default=60.0)
     ap.add_argument("--spk-thr", default="0.45,0.52,0.60")
     ap.add_argument("--variants", default="whisper-small,parakeet,parakeet-hw1,parakeet-hw2,parakeet-hw3")
     ap.add_argument("--scan-only", action="store_true")
@@ -254,46 +258,68 @@ def main():
             out[r] = [int(we[j]) for j in events(ok, refr)]
         return out
 
-    segs_audio, EV = {}, {}      # EV[(set, dev, id, rule)] = Segment-Schluessel; Audio je Ereignis nur einmal (Cache ueber Regeln)
+    # Ereignisse je Regel. Positiv: ALLE Ereignisse im Segment (+-POS_TOL s um das Wort); Treffer = irgendein Ereignis besteht alle Stufen.
+    EV = {}
     for d in DEV:
         for (dd, i), win in PW.items():
             if dd != d: continue
-            x = clip(d, i)[0]
+            end = clip(d, i)[1]
+            lo_e, hi_e = (CTX - POS_TOL) * SR, end + POS_TOL * SR
             for r, es in cand(d, win).items():
-                EV[("pos", d, i, r)] = []
-                for e in es[:3]:
-                    key = ("pos", d, i, e); segs_audio.setdefault(key, cut(x, e)); EV[("pos", d, i, r)].append(key)
+                EV[("pos", d, i, r)] = [("pos", d, i, e) for e in es if lo_e <= e <= hi_e]
         for r, es in cand(d, NW[d], NEG_REFR).items():
-            EV[("neg", d, 0, r)] = []
-            for e in es:
-                key = ("neg", d, 0, e); segs_audio.setdefault(key, cut(neg[d], e)); EV[("neg", d, 0, r)].append(key)
-    keys = list(segs_audio)
-    log("Segmente fuer Stufe 2/3:", len(keys), {d: sum(k[0] == "neg" and k[1] == d for k in keys) for d in DEV}, "Ereignisse je Regel", {r: sum(len(v) for kk, v in EV.items() if kk[0] == "neg" and kk[3] == r) for r in rules})
+            EV[("neg", d, 0, r)] = [("neg", d, 0, e) for e in es]
+    hn_of = {d: len(neg[d]) / SR / 3600 for d in DEV}
+    cand_h = {(d, r): len(EV[("neg", d, 0, r)]) / hn_of[d] for d in DEV for r in rules}
+    meta["stage1_cand_per_h"] = {f"{d}|{r}": round(v, 1) for (d, r), v in cand_h.items()}
+    log("Stufe-1-Kandidaten/h", json.dumps(meta["stage1_cand_per_h"]))
+    # Stufe 2/3 laufen fuer die T-Regeln in --s2-thr; "auto" = niedrigste Schwelle mit <= LIMIT Kandidaten/h auf beiden Geraeten, plus die frueheren 0.85/0.90
+    s2t = [t if t[0] == "M" else f"T{float(t)}" for t in a.s2_thr.split(",") if t != "auto"]
+    if "auto" in a.s2_thr.split(","):
+        ok_ = [t for t in thrs if max(cand_h[d, f"T{t}"] for d in DEV) <= a.cand_limit]
+        if ok_: s2t.append(f"T{min(ok_)}")
+    s2rules = [r for r in dict.fromkeys(s2t) if r in rules]
+    meta["s2_rules"] = s2rules
+    log("Stufe 2/3 fuer", s2rules)
 
-    # Stufe 2 (+ whisper-medium zur Einordnung der Negativ-Ereignisse) und Stufe 3
+    def audio(k):
+        _, d, i, e = k
+        return cut(clip(d, i)[0], e) if k[0] == "pos" else cut(neg[d], e)
+    keys = sorted({k for kk, v in EV.items() if kk[3] in s2rules for k in v}, key=str)
+    # Cache (frueherer Lauf): Transkripte je Variante und Ereignis; nur Fehlendes wird neu transkribiert
+    kstr = lambda k: "|".join(map(str, k))
+    tf = f"{S.WORK}/real_texts.json"
+    old = json.load(open(tf)) if os.path.exists(tf) else {}
     variants = a.variants.split(",")
-    text = {}
+    text = {v: dict(old.get(v, {})) for v in variants + ["medium"]}
+    log("Ereignisse", len(keys), "Cache", {v: sum(kstr(k) in text[v] for k in keys) for v in variants})
     for v in variants:
+        miss = [k for k in keys if kstr(k) not in text[v]]
+        if not miss: continue
         r = S.make_rec(v)
-        text[v] = {k: S.decode(r, segs_audio[k]) for k in keys}
-        log(v, "fertig", len(keys)); del r
-    # whisper-medium nur auf Negativ-Ereignissen, die irgendeine Stufe-2-Variante durchlaesst (Zeitbudget)
-    mk = [k for k in keys if k[0] == "neg" and any(K.matches_wake_word(text[v][k], 1) for v in variants)]
-    text["medium"] = {k: S.decode(med, segs_audio[k]) for k in mk}
-    log("medium auf", len(mk), "Negativ-Ereignissen")
-    emb = {k: S.embed(spk, segs_audio[k]) for k in keys}
+        for k in miss: text[v][kstr(k)] = S.decode(r, audio(k))
+        log(v, "neu transkribiert", len(miss)); del r
+    T_ = lambda v, k: text[v][kstr(k)]
+    mk = [k for k in keys if k[0] == "neg" and any(K.matches_wake_word(T_(v, k), 1) for v in variants) and kstr(k) not in text["medium"]]
+    for k in mk: text["medium"][kstr(k)] = S.decode(med, audio(k))
+    log("medium neu auf", len(mk), "Negativ-Ereignissen")
+    json.dump(text, open(tf, "w"))
+    emb = {k: S.embed(spk, audio(k)) for k in keys}
     cls = {}
     for k in keys:
         if k[0] != "neg": continue
-        if k not in text["medium"]: cls[k] = "fa"; continue          # von keiner Variante durchgelassen: nur Stufe-1-Zeilen betroffen
-        f = fold(text["medium"][k])
-        cls[k] = "echt" if WENDELIN.search(f) else "verwechsler" if CONFUSER.search(f) else "fa"
+        if kstr(k) not in text["medium"]: cls[k] = "fa"; continue
+        f = fold(text["medium"][kstr(k)])
+        tst = k[3] / SR + shift[k[1]]
+        # Befund 3 (Stefan bestaetigt): "Wendelin"-Fundstellen bei ~1680/1700 s waren Verwechsler -> Verwechsler-FA, nicht ausschliessen
+        cls[k] = "verwechsler" if (WENDELIN.search(f) and any(abs(tst - t0) <= 25 for t0 in CONFIRMED_CONFUSER_S)) else \
+                 "echt" if WENDELIN.search(f) else "verwechsler" if CONFUSER.search(f) else "fa"
     cos = lambda k: float(emb[k] @ prof[k[1]])
-    log("Stufe-2-Modelle laden/decodieren beginnt")
     pct = lambda L: {p: round(float(np.percentile(L, p)), 2) for p in (5, 25, 50, 75, 95)} if L else {}
-    lowr = f"T{thrs[0]}"        # weiteste Stufe-1-Regel
-    meta["cos_dist"] = {d: {"eigene Stimme (Positiv-Kandidaten, Stufe 1 weit)": pct([cos(k) for k in EV.get(("pos", d, i, lowr), []) for i in groups["sicher"] + groups["rest"]]),
-                            "Negativ-Ereignisse (TV/Gespraech, kein echtes Wendelin)": pct([cos(k) for k in EV[("neg", d, 0, lowr)] if cls[k] != "echt"]),
+    lowr = s2rules[0]
+    pk = lambda d, r: [k for i in groups["sicher"] + groups["rest"] for k in EV.get(("pos", d, i, r), [])]
+    meta["cos_dist"] = {d: {"eigene Stimme (Positiv-Ereignisse)": pct([cos(k) for k in pk(d, lowr)]),
+                            "Negativ-Ereignisse (kein echtes Wendelin)": pct([cos(k) for k in EV[("neg", d, 0, lowr)] if cls[k] != "echt"]),
                             "Negativ-Ereignisse echtes Wendelin (laut medium)": pct([cos(k) for k in EV[("neg", d, 0, lowr)] if cls[k] == "echt"])} for d in DEV}
     log("Cosinus", json.dumps(meta["cos_dist"]))
 
@@ -302,34 +328,47 @@ def main():
     gnames = ["sicher", "satz2m", "kueche", "schnell", "rest", "rest3m", "restTV", "restLeise"]
     rows = []
     for d in DEV:
-        hn = len(neg[d]) / SR / 3600
+        hn = hn_of[d]
         for r in rules:
-            for var in [None] + variants:
-                for st in spks:
+            for var in ([None] + variants if r in s2rules else [None]):
+                for st in (spks if var or r in s2rules else [None]):
                     def ok(k):
-                        if var and not K.matches_wake_word(text[var][k], 1): return False
+                        if var and not K.matches_wake_word(T_(var, k), 1): return False
                         return st is None or cos(k) >= st
                     row = {"device": d, "stage1": r, "stage2": var or "-", "spk": st if st is not None else "-"}
                     for g in gnames:
                         ids = groups[g]
                         hits = sum(any(ok(k) for k in EV.get(("pos", d, i, r), [])) for i in ids)
                         row[f"hit_{g}"] = round(100 * hits / max(len(ids), 1), 1); row[f"n_{g}"] = len(ids)
-                    for g, nexp in EXPECT_CLIPS.items():      # bestaetigte Ereignisse im Block / erwartete Clips (max. 100 %)
+                    for g, nexp in EXPECT_CLIPS.items():
                         nev = sum(1 for i in groups[g] for k in EV.get(("pos", d, i, r), []) if ok(k))
                         row[f"ev_{g}"] = round(min(100.0, 100 * nev / nexp), 1)
                     nk = [k for k in EV[("neg", d, 0, r)] if ok(k)]
-                    for c in ("fa", "verwechsler", "echt"):
-                        row[f"{c}_h" if c != "echt" else "echt_n"] = round(sum(cls[k] == c for k in nk) / hn, 2) if c != "echt" else sum(cls[k] == c for k in nk)
+                    if r in s2rules:
+                        row["cand_h"] = round(len(nk) / hn, 2)
+                        row["fa_h"] = round(sum(cls[k] == "fa" for k in nk) / hn, 2)
+                        row["verwechsler_h"] = round(sum(cls[k] == "verwechsler" for k in nk) / hn, 2)
+                        row["echt_n"] = sum(cls[k] == "echt" for k in nk)
+                    else:      # nur Stufe 1: Klassen unbekannt (nicht transkribiert)
+                        row["cand_h"] = round(len(nk) / hn, 2); row["fa_h"] = row["verwechsler_h"] = row["echt_n"] = ""
                     row["neg_h"] = round(hn, 3)
                     rows.append(row)
     with open(f"{a.out}/real_table.csv", "w", newline="") as f:
         w = csv.DictWriter(f, list(rows[0])); w.writeheader(); w.writerows(rows)
     with open(f"{a.out}/real_table.md", "w") as f:
-        f.write("| Geraet | Stufe 1 | Stufe 2 | Sprecher | sicher % (n=10) | Satz2m | Kueche | schnell | Rest % (unsicher) | Ereign./Clips 3m, TV, leise % | FA/h | Verwechsler/h | echt n |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n")
+        f.write(f"Positiv: Treffer = IRGENDEIN Stufe-1-Ereignis im Segment (+-{POS_TOL} s) besteht alle Stufen. Mitnahme-Datei (Negativ): Station-Zeit = Mobil-Zeit + {lag_n / SR:.2f} s (Ausrichtung per Energiehuellen, Drift {(lag_n1 - lag_n0) / SR:+.3f} s), Positiv-Versatz {lag_p / SR:.2f} s. Fundstellen {CONFIRMED_CONFUSER_S} s: Verwechsler (bestaetigt).\n\n")
+        f.write("### Stufe 1: Kandidaten/h (Negativ-Datei) und Positiv-Quote nur Stufe 1\n\n| Geraet | Regel | Kandidaten/h | sicher % | Rest % |\n|---|---|---|---|---|\n")
         for r in rows:
-            f.write(f"| {r['device']} | {r['stage1']} | {r['stage2']} | {r['spk']} | {r['hit_sicher']} | {r['hit_satz2m']} | {r['hit_kueche']} | {r['hit_schnell']} | {r['hit_rest']} | {r['ev_rest3m']}/{r['ev_restTV']}/{r['ev_restLeise']} | {r['fa_h']} | {r['verwechsler_h']} | {r['echt_n']} |\n")
+            if r["stage2"] == "-" and r["spk"] == "-": f.write(f"| {r['device']} | {r['stage1']} | {r['cand_h']} | {r['hit_sicher']} | {r['hit_rest']} |\n")
+        f.write("\n### Kerntabelle (je Geraet, Stufe-1-Regel in Klammern)\n\n| Geraet | Regel | Stufe 2 | CAM++ | sicher % (n=10) | ev 3m/TV/leise % | FA/h | Verwechsler/h | echt n |\n|---|---|---|---|---|---|---|---|---|\n")
+        core = {"-", "whisper-small", "parakeet", "parakeet-hw1", "parakeet-hw2", "parakeet-hw3"}
+        for r in rows:
+            if r["stage1"] in s2rules and r["stage2"] in core and r["spk"] in ("-", 0.45, 0.52):
+                f.write(f"| {r['device']} | {r['stage1']} | {r['stage2']} | {r['spk']} | {r['hit_sicher']} | {r['ev_rest3m']}/{r['ev_restTV']}/{r['ev_restLeise']} | {r['fa_h']} | {r['verwechsler_h']} | {r['echt_n']} |\n")
+        f.write("\n### Alle Zeilen\n\n| Geraet | Stufe 1 | Stufe 2 | Sprecher | sicher % (n=10) | Satz2m | Kueche | schnell | Rest % (unsicher) | Ereign./Clips 3m, TV, leise % | Kand./h | FA/h | Verwechsler/h | echt n |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n")
+        for r in rows:
+            f.write(f"| {r['device']} | {r['stage1']} | {r['stage2']} | {r['spk']} | {r['hit_sicher']} | {r['hit_satz2m']} | {r['hit_kueche']} | {r['hit_schnell']} | {r['hit_rest']} | {r['ev_rest3m']}/{r['ev_restTV']}/{r['ev_restLeise']} | {r['cand_h']} | {r['fa_h']} | {r['verwechsler_h']} | {r['echt_n']} |\n")
     json.dump(meta, open(f"{a.out}/real_meta.json", "w"), indent=1, default=str)
-    json.dump({v: {"|".join(map(str, k)): t for k, t in dct.items()} for v, dct in text.items()}, open(f"{S.WORK}/real_texts.json", "w"))
     log("fertig ->", a.out)
 
 
