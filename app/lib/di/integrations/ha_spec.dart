@@ -1,6 +1,6 @@
-import 'package:wendelin_integrations/home_assistant.dart';
 import 'package:wendelin_integrations/common.dart'
     show PortErrorKind, ReconnectFailure;
+import 'package:wendelin_integrations/home_assistant.dart';
 
 import '../core_providers.dart';
 import '../home_assistant.dart';

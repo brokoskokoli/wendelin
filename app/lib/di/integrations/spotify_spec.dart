@@ -1,6 +1,6 @@
-import 'package:wendelin_integrations/spotify.dart';
 import 'package:wendelin_integrations/common.dart'
     show PortErrorKind, ReconnectFailure;
+import 'package:wendelin_integrations/spotify.dart';
 
 import '../app_requirements.dart';
 import '../core_providers.dart';

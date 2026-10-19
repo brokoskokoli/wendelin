@@ -1,6 +1,6 @@
-import 'package:wendelin_integrations/todoist.dart';
 import 'package:wendelin_integrations/common.dart'
     show PortErrorKind, ReconnectFailure;
+import 'package:wendelin_integrations/todoist.dart';
 
 import '../core_providers.dart';
 import '../todoist.dart';
