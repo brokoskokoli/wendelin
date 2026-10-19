@@ -24,6 +24,12 @@ Future<int> _get(Uri uri, {String? host}) async {
   }
 }
 
+/// Calls the redirect of the login address [login] with [query].
+Future<int> _status(Uri login, Map<String, String> query) => _get(
+  Uri.parse(login.queryParameters['redirect_uri']!)
+      .replace(queryParameters: query),
+);
+
 void main() {
   late FakeGoogleTasksApi store;
   late FakeGoogleBrowser browser;
@@ -34,8 +40,7 @@ void main() {
   /// redirect with the query [answer] builds from the login address.
   void answer(Map<String, String> Function(Uri login) build) {
     browser.onOpen = (url) async {
-      final redirect = Uri.parse(url.queryParameters['redirect_uri']!);
-      await _get(redirect.replace(queryParameters: build(url)));
+      await _status(url, build(url));
     };
   }
 
@@ -54,7 +59,7 @@ void main() {
     );
   });
 
-  Future<String?> signIn() => login.signIn(_id, _secret);
+  Future<GoogleLoginError?> signIn() => login.signIn(_id, _secret);
 
   test(
     'Erfolg: PKCE S256, state, Loopback; speichert Client und Token',
@@ -85,41 +90,55 @@ void main() {
     },
   );
 
+  test('falscher oder fehlender state: 400, Login wartet weiter', () async {
+    final statuses = <int>[];
+    browser.onOpen = (u) async {
+      final q = u.queryParameters['state']!;
+      statuses
+        ..add(await _status(u, {'state': 'fremd', 'code': 'böse'}))
+        ..add(await _status(u, {'code': 'böse'}))
+        ..add(await _status(u, {'state': q, 'code': 'fake-code'}));
+    };
+    expect(await signIn(), isNull);
+    expect(statuses, [400, 400, 200]);
+    expect(store.storedRefresh, FakeGoogleTasksApi.validRefresh);
+  });
+
   test(
-    'falscher state: eigene Meldung, kein Tausch, nichts gespeichert',
+    'nur falscher state: bis zur Zeitüberschreitung, nichts getauscht',
     () async {
-      answer((u) => {'state': 'fremd', 'code': 'fake-code'});
-      final m = await signIn();
-      expect(m, contains('state stimmt nicht'));
-      expect(m, isNot(contains('abgebrochen: Zugriff')));
+      login = GoogleTasksLogin(
+        oauth,
+        store,
+        browser,
+        timeout: const Duration(milliseconds: 300),
+      );
+      browser.onOpen = (u) async {
+        await _status(u, {'state': 'fremd', 'code': 'x'});
+      };
+      expect(await signIn(), GoogleLoginError.timeout);
       expect(oauth.exchanged, isFalse);
       expect(store.storedRefresh, isNull);
       expect(store.storedClient, isNull);
     },
   );
 
-  test('fehlender state zählt wie falscher state', () async {
-    answer((u) => {'code': 'fake-code'});
-    expect(await signIn(), contains('state stimmt nicht'));
-    expect(oauth.exchanged, isFalse);
-  });
-
   test('access_denied, anderer Fehler, kein Code: je eigene Meldung', () async {
     answer(
       (u) => {'state': u.queryParameters['state']!, 'error': 'access_denied'},
     );
     final denied = await signIn();
-    expect(denied, contains('Zugriff nicht erlaubt'));
+    expect(denied, GoogleLoginError.accessDenied);
     answer(
       (u) => {'state': u.queryParameters['state']!, 'error': 'server_error'},
     );
     final other = await signIn();
-    expect(other, contains('abgelehnt (server_error)'));
+    expect(other, GoogleLoginError.denied);
     answer((u) => {'state': u.queryParameters['state']!, 'error': '<b>x</b>'});
-    expect(await signIn(), isNot(contains('<b>')));
+    expect(await signIn(), GoogleLoginError.denied);
     answer((u) => {'state': u.queryParameters['state']!});
     final none = await signIn();
-    expect(none, contains('keinen Code'));
+    expect(none, GoogleLoginError.noCode);
     expect({denied, other, none}, hasLength(3));
     expect(oauth.exchanged, isFalse);
   });
@@ -135,20 +154,19 @@ void main() {
     browser.onOpen = (u) async =>
         redirect = Uri.parse(u.queryParameters['redirect_uri']!);
     final m = await login.signIn(_id, _secret);
-    expect(m, contains('Zeitüberschreitung'));
-    expect(m, isNot(contains('state')));
+    expect(m, GoogleLoginError.timeout);
     await expectLater(_get(redirect!), throwsA(isA<SocketException>()));
   });
 
   test('Abbruch durch cancel()', () async {
     browser.onOpen = (u) async => unawaited(login.cancel());
-    expect(await signIn(), 'Anmeldung abgebrochen.');
+    expect(await signIn(), GoogleLoginError.cancelled);
     expect(store.storedRefresh, isNull);
   });
 
   test('kein Browser', () async {
     browser.available = false;
-    expect(await signIn(), contains('kein Browser'));
+    expect(await signIn(), GoogleLoginError.noBrowser);
   });
 
   test(
@@ -156,9 +174,9 @@ void main() {
     () async {
       expect(
         await login.signIn('abc', _secret),
-        contains('apps.googleusercontent.com'),
+        GoogleLoginError.invalidClientId,
       );
-      expect(await login.signIn(_id, '  '), contains('Client-Secret'));
+      expect(await login.signIn(_id, '  '), GoogleLoginError.missingSecret);
       expect(browser.opened, isEmpty);
     },
   );
@@ -168,11 +186,20 @@ void main() {
     final redirect = r.redirect;
     expect(r.redirect.host, '127.0.0.1');
     expect(r.address, InternetAddress.loopbackIPv4);
-    final wait = r.wait(const Duration(seconds: 5));
+    final wait = r.wait(
+      const Duration(seconds: 5),
+      accept: (q) => q['state'] == 's',
+    );
     expect(await _get(redirect.replace(path: '/favicon.ico')), 404);
     expect(await _get(redirect, host: 'evil.example'), 404);
-    expect(await _get(redirect.replace(queryParameters: {'code': 'c'})), 200);
-    expect((await wait).queryParameters, {'code': 'c'});
+    expect(await _get(redirect.replace(queryParameters: {'code': 'c'})), 400);
+    expect(
+      await _get(
+        redirect.replace(queryParameters: {'code': 'c', 'state': 's'}),
+      ),
+      200,
+    );
+    expect((await wait).queryParameters, {'code': 'c', 'state': 's'});
     await expectLater(_get(redirect), throwsA(isA<SocketException>()));
   });
 
@@ -181,8 +208,7 @@ void main() {
     () async {
       answer((u) => {'state': u.queryParameters['state']!, 'code': 'falsch'});
       final m = await signIn();
-      expect(m, contains('abgelehnt'));
-      expect(m, isNot(anyOf(contains(_secret), contains('falsch'))));
+      expect(m, GoogleLoginError.clientRejected);
       expect(store.storedRefresh, isNull);
       expect(store.storedClient, isNull);
     },

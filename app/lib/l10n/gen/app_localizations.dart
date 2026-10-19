@@ -6184,6 +6184,84 @@ abstract class AppLocalizations {
   /// **'Client-Secret'**
   String get googleTasksClientSecret;
 
+  /// No description provided for @googleTasksErrAccessDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgebrochen: Zugriff nicht erlaubt (Ist dein Konto im Cloud-Projekt als Testnutzer eingetragen?).'**
+  String get googleTasksErrAccessDenied;
+
+  /// No description provided for @googleTasksErrCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgebrochen.'**
+  String get googleTasksErrCancelled;
+
+  /// No description provided for @googleTasksErrClientRejected.
+  ///
+  /// In de, this message translates to:
+  /// **'Google lehnt Client-ID oder Client-Secret ab. Bitte beides prüfen.'**
+  String get googleTasksErrClientRejected;
+
+  /// No description provided for @googleTasksErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Google hat die Anmeldung abgelehnt.'**
+  String get googleTasksErrDenied;
+
+  /// No description provided for @googleTasksErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Anmeldung ist fehlgeschlagen.'**
+  String get googleTasksErrFailed;
+
+  /// No description provided for @googleTasksErrInvalidClientId.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Client-ID endet auf „.apps.googleusercontent.com“. Bitte aus der Google Cloud Console kopieren (OAuth-Client Typ „Desktop“).'**
+  String get googleTasksErrInvalidClientId;
+
+  /// No description provided for @googleTasksErrMissingSecret.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte das Client-Secret des OAuth-Clients eintragen (ohne Leerzeichen).'**
+  String get googleTasksErrMissingSecret;
+
+  /// No description provided for @googleTasksErrNoBrowser.
+  ///
+  /// In de, this message translates to:
+  /// **'Es ist kein Browser installiert.'**
+  String get googleTasksErrNoBrowser;
+
+  /// No description provided for @googleTasksErrNoCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Google hat keinen Code geschickt.'**
+  String get googleTasksErrNoCode;
+
+  /// No description provided for @googleTasksErrNoRefreshToken.
+  ///
+  /// In de, this message translates to:
+  /// **'Google hat kein Refresh-Token geschickt. Bitte den Zugriff von Wendelin unter myaccount.google.com/permissions entfernen und neu anmelden.'**
+  String get googleTasksErrNoRefreshToken;
+
+  /// No description provided for @googleTasksErrReceiver.
+  ///
+  /// In de, this message translates to:
+  /// **'Der lokale Empfänger für die Anmeldung lässt sich nicht starten.'**
+  String get googleTasksErrReceiver;
+
+  /// No description provided for @googleTasksErrTimeout.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeitüberschreitung: Im Browser kam keine Antwort von Google an. Bitte erneut anmelden.'**
+  String get googleTasksErrTimeout;
+
+  /// No description provided for @googleTasksErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Google ist nicht erreichbar. Bitte später erneut versuchen.'**
+  String get googleTasksErrUnavailable;
+
   /// No description provided for @googleTasksFine.
   ///
   /// In de, this message translates to:
@@ -6327,6 +6405,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Verbinde …'**
   String get todoistConnecting;
+
+  /// No description provided for @todoistErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist hat den Token abgelehnt (ungültig oder widerrufen).'**
+  String get todoistErrDenied;
+
+  /// No description provided for @todoistErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Verbindung zu Todoist ist fehlgeschlagen.'**
+  String get todoistErrFailed;
+
+  /// No description provided for @todoistErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist ist nicht erreichbar. Bitte später erneut versuchen.'**
+  String get todoistErrUnavailable;
 
   /// No description provided for @todoistFine.
   ///

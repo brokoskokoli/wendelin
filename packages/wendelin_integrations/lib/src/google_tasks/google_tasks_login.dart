@@ -20,9 +20,14 @@ abstract interface class RedirectReceiver {
   /// The redirect address for the login.
   Uri get redirect;
 
-  /// The redirect request as a full address. Fails with [TimeoutException]
-  /// after [timeout] and with [StateError] after [close].
-  Future<Uri> wait(Duration timeout);
+  /// The first redirect request for which [accept] is true, as a full
+  /// address; other requests on the path get 400 and the wait goes on (so
+  /// foreign local requests cannot end the login). Fails with
+  /// [TimeoutException] after [timeout] and with [StateError] after [close].
+  Future<Uri> wait(
+    Duration timeout, {
+    bool Function(Map<String, String> query)? accept,
+  });
 
   /// Stops the receiver; a pending [wait] fails with [StateError].
   Future<void> close();
@@ -33,9 +38,11 @@ abstract interface class RedirectReceiver {
 /// „Desktop“ OAuth client accepts `http://127.0.0.1:<any port>`).
 ///
 /// Bound to the IPv4 loopback address only (never reachable from the
-/// network), on a random port. Takes **one** request on [googleLoopbackPath]
-/// with the right host header; anything else gets 404. Closes itself after
-/// that request, on timeout and on [close].
+/// network), on a random port. Takes **one** accepted request on
+/// [googleLoopbackPath] with the right host header; anything else gets 404,
+/// a request the `accept` predicate refuses (wrong or missing `state`) gets
+/// 400 and the server keeps waiting. Closes itself after the accepted
+/// request, on timeout and on [close].
 final class LoopbackReceiver implements RedirectReceiver {
   LoopbackReceiver._(this._server)
     : _port = _server.port,
@@ -54,6 +61,7 @@ final class LoopbackReceiver implements RedirectReceiver {
   final InternetAddress address;
   final int _port;
   final _done = Completer<Uri>();
+  bool Function(Map<String, String> query)? _accept;
 
   @override
   Uri get redirect => Uri(
@@ -66,8 +74,13 @@ final class LoopbackReceiver implements RedirectReceiver {
   /// The first request on the redirect path. The server is closed
   /// afterwards in every case.
   @override
-  Future<Uri> wait(Duration timeout) =>
-      _done.future.timeout(timeout).whenComplete(close);
+  Future<Uri> wait(
+    Duration timeout, {
+    bool Function(Map<String, String> query)? accept,
+  }) {
+    _accept = accept ?? (_) => true;
+    return _done.future.timeout(timeout).whenComplete(close);
+  }
 
   @override
   Future<void> close() async {
@@ -91,6 +104,13 @@ final class LoopbackReceiver implements RedirectReceiver {
       await request.response.close();
       return;
     }
+    final accept = _accept;
+    // Nothing is accepted before wait() names the rule.
+    if (accept == null || !accept(request.uri.queryParameters)) {
+      request.response.statusCode = HttpStatus.badRequest;
+      await request.response.close();
+      return;
+    }
     final uri = redirect.replace(query: request.uri.query);
     request.response
       ..statusCode = HttpStatus.ok
@@ -102,17 +122,60 @@ final class LoopbackReceiver implements RedirectReceiver {
   }
 
   static const _page =
-      '<!doctype html><html lang="de"><head><meta charset="utf-8">'
+      '<!doctype html><html lang="en"><head><meta charset="utf-8">'
       '<meta name="viewport" content="width=device-width,initial-scale=1">'
       '<title>Wendelin</title></head><body style="font-family:sans-serif;'
-      'margin:2em"><h1>Fertig</h1><p>Du kannst dieses Fenster schließen und '
-      'zu Wendelin zurückkehren.</p></body></html>';
+      'margin:2em"><h1>Done / Fertig / Terminé</h1><p>You can close this window and '
+      'return to Wendelin.</p></body></html>';
 }
 
 /// Whether [id] looks like a Google OAuth client ID.
 bool isGoogleClientId(String id) =>
     RegExp(r'^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.apps\.googleusercontent\.com$')
         .hasMatch(id);
+
+/// Why [GoogleTasksLogin.signIn] failed; the UI shows a text per kind. Never
+/// carries a secret.
+enum GoogleLoginError {
+  /// The client ID does not look like a Google OAuth client ID.
+  invalidClientId,
+
+  /// The client secret is empty or has blanks.
+  missingSecret,
+
+  /// No browser can show the login page.
+  noBrowser,
+
+  /// No answer from Google in time.
+  timeout,
+
+  /// The login was cancelled (cancel button, screen left).
+  cancelled,
+
+  /// The user or Google denied access (test user missing?).
+  accessDenied,
+
+  /// Google refused the login with another error.
+  denied,
+
+  /// The answer holds no code.
+  noCode,
+
+  /// The local receiver could not be started.
+  receiverUnavailable,
+
+  /// Google rejects the client ID or secret.
+  clientRejected,
+
+  /// Google sent no refresh token.
+  noRefreshToken,
+
+  /// Google is not reachable.
+  unavailable,
+
+  /// Any other failure.
+  failed,
+}
 
 /// Login with the user's own Google Cloud OAuth client (Authorization Code
 /// with PKCE S256 and a loopback redirect).
@@ -169,57 +232,49 @@ final class GoogleTasksLogin {
   Future<void> cancel() async => _active?.close();
 
   /// Logs in with the user's client. Returns `null` on success (client and
-  /// refresh token are stored then), else a German message; nothing is
-  /// stored on a failure. The message never contains secrets.
-  Future<String?> signIn(String clientId, String clientSecret) async {
+  /// refresh token are stored then), else the reason; nothing is stored on a
+  /// failure.
+  Future<GoogleLoginError?> signIn(String clientId, String clientSecret) async {
     final id = clientId.trim();
     final secret = clientSecret.trim();
-    if (!isGoogleClientId(id)) {
-      return 'Die Client-ID endet auf „.apps.googleusercontent.com“. Bitte '
-          'aus der Google Cloud Console kopieren (OAuth-Client Typ '
-          '„Desktop“).';
-    }
+    if (!isGoogleClientId(id)) return GoogleLoginError.invalidClientId;
     if (secret.isEmpty || secret.contains(RegExp(r'\s'))) {
-      return 'Bitte das Client-Secret des OAuth-Clients eintragen.';
+      return GoogleLoginError.missingSecret;
     }
     final verifier = randomUnreserved(_random, 64);
     final state = randomUnreserved(_random, 32);
     RedirectReceiver? receiver;
     try {
       receiver = _active = await _receiver();
+      // Listening starts before the browser opens, so no early answer is
+      // refused; an unused answer must not end in an unhandled error.
+      final answer = receiver.wait(
+        timeout,
+        accept: (query) => query['state'] == state,
+      );
+      unawaited(answer.then<void>((_) {}, onError: (Object _) {}));
       final opened = await browser.open(
         authorizationUrl(id, receiver.redirect, state, verifier),
       );
-      if (!opened) return 'Es ist kein Browser installiert.';
+      if (!opened) return GoogleLoginError.noBrowser;
       final Uri back;
       try {
-        back = await receiver.wait(timeout);
+        back = await answer;
       } on TimeoutException {
-        return 'Zeitüberschreitung: Im Browser kam keine Antwort von '
-            'Google an. Bitte erneut anmelden.';
+        return GoogleLoginError.timeout;
       } on StateError {
-        return 'Anmeldung abgebrochen.';
+        return GoogleLoginError.cancelled;
       }
       final params = back.queryParameters;
-      if (params['state'] != state) {
-        return 'Anmeldung verworfen: Die Antwort gehört nicht zu dieser '
-            'Anmeldung (state stimmt nicht). Bitte erneut anmelden.';
-      }
+      // The receiver only hands over answers with the right `state`.
       final error = params['error'];
       if (error != null) {
-        if (error == 'access_denied') {
-          return 'Anmeldung abgebrochen: Zugriff nicht erlaubt (Ist dein '
-              'Konto im Cloud-Projekt als Testnutzer eingetragen?).';
-        }
-        final safe = RegExp(r'^[a-z_]{1,40}$').hasMatch(error)
-            ? ' ($error)'
-            : '';
-        return 'Google hat die Anmeldung abgelehnt$safe.';
+        return error == 'access_denied'
+            ? GoogleLoginError.accessDenied
+            : GoogleLoginError.denied;
       }
       final code = params['code'];
-      if (code == null || code.isEmpty) {
-        return 'Google hat keinen Code geschickt.';
-      }
+      if (code == null || code.isEmpty) return GoogleLoginError.noCode;
       final client = GoogleClient(id: id, secret: secret);
       final tokens = await oauth.exchangeCode(
         client: client,
@@ -231,9 +286,14 @@ final class GoogleTasksLogin {
       await secrets.saveRefreshToken(tokens.refreshToken);
       return null;
     } on PortException catch (e) {
-      return e.message;
+      return switch (e.kind) {
+        PortErrorKind.permissionDenied => GoogleLoginError.clientRejected,
+        PortErrorKind.rejected => GoogleLoginError.noRefreshToken,
+        PortErrorKind.unavailable => GoogleLoginError.unavailable,
+        _ => GoogleLoginError.failed,
+      };
     } on SocketException {
-      return 'Lokaler Empfänger für die Anmeldung nicht startbar.';
+      return GoogleLoginError.receiverUnavailable;
     } finally {
       _active = null;
       await receiver?.close();

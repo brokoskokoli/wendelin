@@ -22,7 +22,7 @@ LocalDate _today(ToolContext ctx) =>
 
 /// `gtasks__add` (write; undo deletes the created task).
 final class GoogleTasksAddTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, AuditArgumentsRedactor {
   /// Creates the tool.
   const GoogleTasksAddTool(this.session);
 
@@ -98,17 +98,21 @@ final class GoogleTasksAddTool extends IntegrationTool
       ),
     );
     final id = task.id;
+    // Only what the user said comes back: list and task names from the
+    // server are untrusted text (this tool is a TrustedContentSource).
+    final listName = args.optString('list');
+    final named = listName == null || listName.isEmpty ? null : listName;
     return jsonOutcome(
       {
-        'list': list.title,
-        'added': task.title,
+        'list': ?named,
+        'added': title,
         if (task.due != null) 'due': task.due,
         if (due?.timeDropped ?? false)
           'note':
               'Google Tasks speichert nur das Datum, die Uhrzeit wurde '
               'weggelassen.',
       },
-      summary: '${list.title}: ${task.title} angelegt',
+      summary: '${named ?? 'Google Tasks'}: $title angelegt',
       undo: UndoAction(
         label: 'Entfernen',
         run: () =>
@@ -116,6 +120,12 @@ final class GoogleTasksAddTool extends IntegrationTool
       ),
     );
   }
+
+  @override
+  Future<String> redactedArguments(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => redactTaskTitle(args);
 
   @override
   String describe(ToolArgs args) => 'Google-Aufgabe „${_title(args)}“ anlegen';
@@ -220,7 +230,8 @@ final class GoogleTasksListTool extends IntegrationTool {
 }
 
 /// `gtasks__complete` (write; undo sets the task open again).
-final class GoogleTasksCompleteTool extends IntegrationTool {
+final class GoogleTasksCompleteTool extends IntegrationTool
+    implements AuditArgumentsRedactor {
   /// Creates the tool.
   const GoogleTasksCompleteTool(this.session);
 
@@ -310,6 +321,12 @@ final class GoogleTasksCompleteTool extends IntegrationTool {
       ),
     );
   }
+
+  @override
+  Future<String> redactedArguments(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => redactTaskTitle(args);
 
   @override
   String describe(ToolArgs args) =>

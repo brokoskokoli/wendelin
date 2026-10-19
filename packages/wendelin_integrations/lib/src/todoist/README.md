@@ -4,9 +4,9 @@ Aufgaben in Todoist mit dem **persönlichen API-Token** des Nutzers. Gleiche Too
 
 | Tool | Risiko | Zweck |
 | --- | --- | --- |
-| `todoist__add` | write | `title`, `list` (Projekt, sonst Eingang), `due` (`2026-10-20`, `2026-10-20T14:30` oder natürliche Sprache wie „morgen 9 Uhr“), `priority` (`highest`…`lowest`). Undo löscht die Aufgabe |
+| `todoist__add` | write | `title`, `list` (Projekt, sonst Eingang), `due` (`2026-10-20`, `2026-10-20T14:30` oder natürliche Sprache wie „morgen 9 Uhr“), `priority` (`highest`…`lowest`). Undo löscht die Aufgabe. Das Ergebnis nennt nur Titel und Liste, wie der Nutzer sie sagte, nie Servernamen. Der Audit-Eintrag enthält den Titel nicht |
 | `todoist__list` | read | `filter` today/overdue/all, `list`, `include_done` (von Todoist nicht unterstützt, ignoriert). Antwort wie `tasks__list`, als Daten markiert |
-| `todoist__complete` | write | `title` (unscharf), `list` (sonst alle Projekte). Wiederkehrende Aufgaben rücken zum nächsten Termin (`recurring: true`). Undo öffnet wieder (`reopen`) |
+| `todoist__complete` | write | `title` (unscharf), `list` (sonst alle Projekte). Wiederkehrende Aufgaben rücken zum nächsten Termin (`recurring: true`); dafür kein Undo (Reopen stellt den Termin nicht her, das Ergebnis sagt „Rückgängig nicht möglich“). Sonst öffnet Undo wieder (`reopen`) |
 
 Auflösung wie bei den Listen (`common/matching.dart`): mehrere Treffer → „Mehrdeutig … Bitte nachfragen“; Projektnamen schreibender Tools, die nur über ganze Wörter passen, werden zurückgefragt.
 

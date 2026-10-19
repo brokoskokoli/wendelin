@@ -141,7 +141,6 @@ void main() {
         expect(added.dueTime, '14:30');
         expect(added.priority, 3);
         expect(data(o), {
-          'list': 'Eingang',
           'added': 'Steuer 2',
           'due': '2026-10-20',
           'time': '14:30',
@@ -175,6 +174,24 @@ void main() {
       },
     );
 
+    test('Ergebnis nennt nur eigene Namen, keine Servernamen', () async {
+      final o = await call('todoist__add', {'title': 'X'});
+      expect(o.text, isNot(contains('Eingang')));
+      expect(o.summary, isNot(contains('Eingang')));
+      final w = await call('todoist__add', {'title': 'Y', 'list': 'arbeit'});
+      expect(data(w)['list'], 'arbeit');
+      expect(w.summary, 'arbeit: Y angelegt');
+    });
+
+    test('Audit enthält den Titel nicht', () async {
+      for (final n in ['todoist__add', 'todoist__complete']) {
+        final raw = {'title': 'Geheimtitel-77', 'list': 'Arbeit'};
+        final a = await tool(n).auditArguments(jsonEncode(raw), raw, ctx());
+        expect(a, isNot(contains('Geheimtitel')));
+        expect(jsonDecode(a), {'list': 'Arbeit'});
+      }
+    });
+
     test('Ungültiges: Zeilenumbruch, Offset, Priorität', () async {
       for (final a in [
         {'title': 'a\nb'},
@@ -198,9 +215,12 @@ void main() {
       expect(api.open.any((t) => t.id == '2'), isTrue);
     });
 
-    test('wiederkehrend wird gemeldet', () async {
+    test('wiederkehrend: gemeldet, kein Undo, Hinweis', () async {
       final o = await call('todoist__complete', {'title': 'Wäsche'});
       expect(data(o)['recurring'], isTrue);
+      expect(o.undo, isNull);
+      expect(data(o)['note'], contains('Rückgängig'));
+      expect(o.summary, contains('Rückgängig nicht möglich'));
     });
 
     test('nicht gefunden, mehrdeutig', () async {

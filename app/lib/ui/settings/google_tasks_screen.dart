@@ -31,15 +31,19 @@ class _GoogleTasksScreenState extends ConsumerState<GoogleTasksScreen> {
   bool _signedIn = false;
   bool _busy = false;
   String? _error;
+  late final GoogleTasksLogin _login;
 
   @override
   void initState() {
     super.initState();
+    _login = ref.read(googleTasksLoginProvider);
     unawaited(_load());
   }
 
   @override
   void dispose() {
+    // Leaving the screen ends a running login and closes its local server.
+    unawaited(_login.cancel());
     _clientId.dispose();
     _clientSecret.dispose();
     super.dispose();
@@ -65,27 +69,45 @@ class _GoogleTasksScreenState extends ConsumerState<GoogleTasksScreen> {
       return;
     }
     final registry = ref.read(toolRegistryProvider);
-    final login = ref.read(googleTasksLoginProvider);
     final integration = _integration;
     setState(() {
       _busy = true;
       _error = null;
     });
-    final error = await login.signIn(id, secret);
-    if (error == null) {
+    final failure = await _login.signIn(id, secret);
+    if (failure == null) {
       integration?.session.reset();
       await _refresh(registry);
     }
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _error = error;
-      if (error == null) {
+      _error = failure == null ? null : _words(failure);
+      if (failure == null) {
         _signedIn = true;
         _clientId.clear();
         _clientSecret.clear();
       }
     });
+  }
+
+  String _words(GoogleLoginError e) {
+    final l = context.l10n;
+    return switch (e) {
+      GoogleLoginError.invalidClientId => l.googleTasksErrInvalidClientId,
+      GoogleLoginError.missingSecret => l.googleTasksErrMissingSecret,
+      GoogleLoginError.noBrowser => l.googleTasksErrNoBrowser,
+      GoogleLoginError.timeout => l.googleTasksErrTimeout,
+      GoogleLoginError.cancelled => l.googleTasksErrCancelled,
+      GoogleLoginError.accessDenied => l.googleTasksErrAccessDenied,
+      GoogleLoginError.denied => l.googleTasksErrDenied,
+      GoogleLoginError.noCode => l.googleTasksErrNoCode,
+      GoogleLoginError.receiverUnavailable => l.googleTasksErrReceiver,
+      GoogleLoginError.clientRejected => l.googleTasksErrClientRejected,
+      GoogleLoginError.noRefreshToken => l.googleTasksErrNoRefreshToken,
+      GoogleLoginError.unavailable => l.googleTasksErrUnavailable,
+      GoogleLoginError.failed => l.googleTasksErrFailed,
+    };
   }
 
   Future<void> _signOut() async {

@@ -26,6 +26,7 @@ final class HttpTodoistApi implements TodoistApi {
     this.timeout = const Duration(seconds: 15),
     this._clock = const SystemClock(),
     this._log,
+    this._language,
   }) : _client = client ?? http.Client(),
        _base = baseUrl ?? todoistApiBaseUrl;
 
@@ -49,6 +50,7 @@ final class HttpTodoistApi implements TodoistApi {
   final Uri _base;
   final Clock _clock;
   final void Function(String line)? _log;
+  final String Function()? _language;
   DateTime? _blockedUntil;
 
   static const _service = 'Todoist';
@@ -91,11 +93,19 @@ final class HttpTodoistApi implements TodoistApi {
         'content': content,
         'project_id': ?projectId,
         'due_string': ?dueString,
+        // Todoist parses the natural-language due text in this language.
+        'due_lang': ?(dueString == null ? null : _dueLang()),
         'priority': ?priority,
       },
       notFound: '$_service-Projekt nicht gefunden',
     );
     return _task(_object(json));
+  }
+
+  /// `de`, `en` or `fr` from the app language, else `null` (Todoist default).
+  String? _dueLang() {
+    final code = _language?.call().toLowerCase();
+    return const {'de', 'en', 'fr'}.contains(code) ? code : null;
   }
 
   @override

@@ -65,22 +65,29 @@ class _TodoistScreenState extends ConsumerState<TodoistScreen> {
       _busy = true;
       _error = null;
     });
-    final error = await todoistConnect(
+    final failure = await todoistConnect(
       api: ref.read(todoistApiProvider),
       secrets: ref.read(todoistSecretsProvider),
       token: token,
     );
-    if (error == null) await _refresh(registry);
+    final error = failure == null ? null : _words(failure);
+    if (failure == null) await _refresh(registry);
     if (!mounted) return;
     setState(() {
       _busy = false;
       _error = error;
-      if (error == null) {
+      if (failure == null) {
         _connected = true;
         _token.clear();
       }
     });
   }
+
+  String _words(PortErrorKind kind) => switch (kind) {
+    PortErrorKind.permissionDenied => context.l10n.todoistErrDenied,
+    PortErrorKind.unavailable => context.l10n.todoistErrUnavailable,
+    _ => context.l10n.todoistErrFailed,
+  };
 
   Future<void> _disconnect() async {
     final registry = ref.read(toolRegistryProvider);

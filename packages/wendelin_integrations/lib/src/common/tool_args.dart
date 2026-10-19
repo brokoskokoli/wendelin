@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Raised by [ToolArgs] when an argument is missing or malformed; tools
 /// report it as an error outcome.
 final class InvalidArgumentsException implements Exception {
@@ -100,3 +102,10 @@ extension type const ToolArgs(Map<String, Object?> raw) {
     ];
   }
 }
+
+/// Audit arguments of the task tools: everything but the task title (private
+/// text), see `AuditArgumentsRedactor`.
+String redactTaskTitle(Map<String, Object?> args) => jsonEncode({
+  for (final e in args.entries)
+    if (e.key != 'title') e.key: e.value,
+});

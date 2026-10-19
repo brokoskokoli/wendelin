@@ -37,10 +37,12 @@ void main() {
     await tester.tap(find.text('Verbinden'));
     await settle(tester);
     expect(find.byKey(const ValueKey('todoistError')), findsOneWidget);
-    expect(
-      (tester.widget(find.byKey(const ValueKey('todoistError'))) as Text).data,
-      isNot(contains('falsch')),
-    );
+    final text = (tester.widget(
+      find.byKey(const ValueKey('todoistError')),
+    ) as Text).data;
+    expect(text, isNot(contains('falsch')));
+    // Wording comes from the ARB file for the failure kind.
+    expect(text, 'Todoist hat den Token abgelehnt (ungültig oder widerrufen).');
     expect(await env.secrets.listKeys(), isEmpty);
 
     await tester.enterText(

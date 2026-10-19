@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import 'preferences.dart';
 import 'providers.dart';
 
 /// [TodoistSecrets] on the app's [SecretStore]: the personal API token only.
@@ -36,7 +37,10 @@ final class SecretStoreTodoistSecrets implements TodoistSecrets {
 
 /// Client of the Todoist API v1; tests override it with `FakeTodoistApi`.
 final todoistApiProvider = Provider<TodoistApi>(
-  (ref) => HttpTodoistApi(client: ref.watch(httpClientProvider)),
+  (ref) => HttpTodoistApi(
+    client: ref.watch(httpClientProvider),
+    language: () => ref.read(languageProvider),
+  ),
 );
 
 /// Where the Todoist token lives.
@@ -57,9 +61,9 @@ TodoistIntegration? todoistIntegrationOf(
 };
 
 /// Connects with [token]: checks it against the API first, then stores it.
-/// Returns `null` on success, else a German message (nothing is stored
-/// then; the message never contains the token).
-Future<String?> todoistConnect({
+/// Returns `null` on success, else the kind of failure (nothing is stored
+/// then); the UI words it, no text carries the token.
+Future<PortErrorKind?> todoistConnect({
   required TodoistApi api,
   required SecretStoreTodoistSecrets secrets,
   required String token,
@@ -67,7 +71,7 @@ Future<String?> todoistConnect({
   try {
     await api.projects(token);
   } on PortException catch (e) {
-    return e.message;
+    return e.kind;
   }
   await secrets.saveToken(token);
   return null;

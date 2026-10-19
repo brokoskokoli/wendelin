@@ -3567,6 +3567,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get googleTasksClientSecret => 'Client secret';
 
   @override
+  String get googleTasksErrAccessDenied =>
+      'Sign-in cancelled: access not allowed (is your account listed as a test user in the Cloud project?).';
+
+  @override
+  String get googleTasksErrCancelled => 'Sign-in cancelled.';
+
+  @override
+  String get googleTasksErrClientRejected =>
+      'Google rejects the client ID or client secret. Please check both.';
+
+  @override
+  String get googleTasksErrDenied => 'Google refused the sign-in.';
+
+  @override
+  String get googleTasksErrFailed => 'Sign-in failed.';
+
+  @override
+  String get googleTasksErrInvalidClientId =>
+      'The client ID ends in “.apps.googleusercontent.com”. Please copy it from the Google Cloud console (OAuth client type “Desktop”).';
+
+  @override
+  String get googleTasksErrMissingSecret =>
+      'Please enter the OAuth client secret (no spaces).';
+
+  @override
+  String get googleTasksErrNoBrowser => 'No browser is installed.';
+
+  @override
+  String get googleTasksErrNoCode => 'Google sent no code.';
+
+  @override
+  String get googleTasksErrNoRefreshToken =>
+      'Google sent no refresh token. Please remove Wendelin’s access at myaccount.google.com/permissions and sign in again.';
+
+  @override
+  String get googleTasksErrReceiver =>
+      'The local receiver for the sign-in could not be started.';
+
+  @override
+  String get googleTasksErrTimeout =>
+      'Timed out: no answer from Google arrived in the browser. Please sign in again.';
+
+  @override
+  String get googleTasksErrUnavailable =>
+      'Google is not reachable. Please try again later.';
+
+  @override
   String get googleTasksFine => 'OK';
 
   @override
@@ -3645,6 +3692,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todoistConnecting => 'Connecting …';
+
+  @override
+  String get todoistErrDenied =>
+      'Todoist rejected the token (invalid or revoked).';
+
+  @override
+  String get todoistErrFailed => 'Connecting to Todoist failed.';
+
+  @override
+  String get todoistErrUnavailable =>
+      'Todoist is not reachable. Please try again later.';
 
   @override
   String get todoistFine => 'OK';

@@ -1,8 +1,12 @@
 {
+  "integrationDetailTodoistAccount": "Todoist-Konto",
   "todoistApiError": "Fehler – Todoist nicht erreichbar oder Token abgelehnt",
   "todoistChecking": "Prüfe …",
   "todoistConnect": "Verbinden",
   "todoistConnecting": "Verbinde …",
+  "todoistErrDenied": "Todoist hat den Token abgelehnt (ungültig oder widerrufen).",
+  "todoistErrFailed": "Die Verbindung zu Todoist ist fehlgeschlagen.",
+  "todoistErrUnavailable": "Todoist ist nicht erreichbar. Bitte später erneut versuchen.",
   "todoistFine": "in Ordnung",
   "todoistIntro": "Todoist-Aufgaben per persönlichem API-Token. Den Token findest du in Todoist unter Einstellungen → Integrationen → Entwickler. Er bleibt im sicheren Speicher des Geräts und wird nie angezeigt oder protokolliert. Projekte dienen als Listen.",
   "todoistNeedToken": "Bitte den API-Token eintragen.",
@@ -13,6 +17,5 @@
   "todoistStatusSetup": "Token fehlt",
   "todoistStatusUnavailable": "Nicht verfügbar",
   "todoistStatusUnknown": "Unbekannt",
-  "todoistToken": "API-Token",
-  "integrationDetailTodoistAccount": "Todoist-Konto"
+  "todoistToken": "API-Token"
 }

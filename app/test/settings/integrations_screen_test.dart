@@ -21,7 +21,7 @@ import '../ui/helpers.dart';
 Future<ProviderContainer> pumpIntegrations(
   WidgetTester tester,
   TestEnv env, {
-  Size size = const Size(390, 1400),
+  Size size = const Size(390, 1800),
 }) async {
   setView(tester, size);
   await tester.pumpWidget(env.app(home: const IntegrationsScreen()));

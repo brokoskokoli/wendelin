@@ -234,22 +234,36 @@ final class FakeGoogleBrowser implements GoogleBrowserOpener {
 /// [FakeGoogleBrowser.onOpen]) calls [deliver] with the redirect query.
 final class FakeRedirectReceiver implements RedirectReceiver {
   final _answer = Completer<Uri>();
+  bool Function(Map<String, String> query)? _accept;
 
   @override
   final Uri redirect = Uri.parse('http://127.0.0.1:4711/oauth2/callback');
 
-  /// Completes [wait] with the redirect plus [query].
+  /// Completes [wait] with the redirect plus [query]; like the real server a
+  /// query the wait refuses (wrong `state`) is ignored.
   void deliver(Map<String, String> query) {
+    final accept = _accept;
+    if (accept != null && !accept(query)) return;
     if (!_answer.isCompleted) {
       _answer.complete(redirect.replace(queryParameters: query));
     }
   }
 
   @override
-  Future<Uri> wait(Duration timeout) => _answer.future;
+  Future<Uri> wait(
+    Duration timeout, {
+    bool Function(Map<String, String> query)? accept,
+  }) {
+    _accept = accept;
+    return _answer.future;
+  }
+
+  /// Whether [close] was called.
+  bool closed = false;
 
   @override
   Future<void> close() async {
+    closed = true;
     if (!_answer.isCompleted) {
       _answer.completeError(StateError('Anmeldung abgebrochen'));
       unawaited(_answer.future.then<void>((_) {}, onError: (Object _) {}));

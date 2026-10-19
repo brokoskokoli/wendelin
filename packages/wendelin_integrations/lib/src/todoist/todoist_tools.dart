@@ -46,7 +46,7 @@ LocalDate _today(ToolContext ctx) =>
 
 /// `todoist__add` (write; undo deletes the created task).
 final class TodoistAddTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, AuditArgumentsRedactor {
   /// Creates the tool.
   const TodoistAddTool(this.session);
 
@@ -149,22 +149,32 @@ final class TodoistAddTool extends IntegrationTool
       ),
     );
     final id = task.id;
+    // Only what the user said comes back: project and task names from the
+    // server are untrusted text (this tool is a TrustedContentSource).
+    final listName = args.optString('list');
+    final named = listName == null || listName.isEmpty ? null : listName;
     return jsonOutcome(
       {
-        'list': project.name,
-        'added': task.content,
+        'list': ?named,
+        'added': a.title,
         if (task.dueDate != null) 'due': task.dueDate,
         if (task.dueTime != null) 'time': task.dueTime,
         if (_priorityName(task.priority) != null)
           'priority': _priorityName(task.priority),
       },
-      summary: '${project.name}: ${task.content} angelegt',
+      summary: '${named ?? 'Todoist'}: ${a.title} angelegt',
       undo: UndoAction(
         label: 'Entfernen',
         run: () => session.run((token) => session.api.deleteTask(token, id)),
       ),
     );
   }
+
+  @override
+  Future<String> redactedArguments(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => redactTaskTitle(args);
 
   @override
   String describe(ToolArgs args) =>
@@ -277,7 +287,8 @@ final class TodoistListTool extends IntegrationTool {
 }
 
 /// `todoist__complete` (write; undo reopens the task).
-final class TodoistCompleteTool extends IntegrationTool {
+final class TodoistCompleteTool extends IntegrationTool
+    implements AuditArgumentsRedactor {
   /// Creates the tool.
   const TodoistCompleteTool(this.session);
 
@@ -345,16 +356,34 @@ final class TodoistCompleteTool extends IntegrationTool {
       {
         'list': project?.name,
         'completed': task.content,
-        if (task.recurring) 'recurring': true,
+        if (task.recurring) ...{
+          'recurring': true,
+          'note':
+              'Wiederkehrende Aufgabe: der Termin rückt vor, Rückgängig ist '
+              'nicht möglich.',
+        },
       },
-      summary: 'Todoist: ${task.content} erledigt',
-      undo: UndoAction(
-        label: 'Wieder offen',
-        run: () =>
-            session.run((token) => session.api.reopenTask(token, task.id)),
-      ),
+      summary: task.recurring
+          ? 'Todoist: ${task.content} erledigt (Rückgängig nicht möglich)'
+          : 'Todoist: ${task.content} erledigt',
+      // Closing a recurring task moves its due date; reopening would not
+      // restore it.
+      undo: task.recurring
+          ? null
+          : UndoAction(
+              label: 'Wieder offen',
+              run: () => session.run(
+                (token) => session.api.reopenTask(token, task.id),
+              ),
+            ),
     );
   }
+
+  @override
+  Future<String> redactedArguments(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => redactTaskTitle(args);
 
   @override
   String describe(ToolArgs args) =>

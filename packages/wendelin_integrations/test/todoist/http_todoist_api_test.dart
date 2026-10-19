@@ -34,7 +34,10 @@ void main() {
   late List<String> log;
   late DateTime now;
 
-  HttpTodoistApi api(http.Response Function(http.Request r) handler) {
+  HttpTodoistApi api(
+    http.Response Function(http.Request r) handler, {
+    String Function()? language,
+  }) {
     requests = [];
     log = [];
     return HttpTodoistApi(
@@ -44,6 +47,7 @@ void main() {
       }),
       clock: _Clock(() => now),
       log: log.add,
+      language: language,
     );
   }
 
@@ -177,6 +181,29 @@ void main() {
     });
     expect(log.join(), isNot(contains('Steuer')));
   });
+
+  test(
+    'due_lang kommt aus der App-Sprache (de/en/fr), sonst fehlt er',
+    () async {
+      for (final (lang, sent) in [
+        ('de', 'de'),
+        ('FR', 'fr'),
+        ('en', 'en'),
+        ('es', null),
+      ]) {
+        final a = api((r) => json(_task('9', 'x')), language: () => lang);
+        await a.addTask(_canary, content: 'x', dueString: 'morgen 9 Uhr');
+        final body = jsonDecode((requests.single as http.Request).body) as Map;
+        expect(body['due_lang'], sent, reason: lang);
+      }
+      final a = api((r) => json(_task('9', 'x')), language: () => 'de');
+      await a.addTask(_canary, content: 'x');
+      expect(
+        (jsonDecode((requests.single as http.Request).body) as Map).keys,
+        isNot(contains('due_lang')),
+      );
+    },
+  );
 
   test('close, reopen, delete: Pfade und Methoden', () async {
     final a = api((r) => http.Response('', 204));

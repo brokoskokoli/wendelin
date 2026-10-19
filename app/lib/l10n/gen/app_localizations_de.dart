@@ -3581,6 +3581,53 @@ class AppLocalizationsDe extends AppLocalizations {
   String get googleTasksClientSecret => 'Client-Secret';
 
   @override
+  String get googleTasksErrAccessDenied =>
+      'Anmeldung abgebrochen: Zugriff nicht erlaubt (Ist dein Konto im Cloud-Projekt als Testnutzer eingetragen?).';
+
+  @override
+  String get googleTasksErrCancelled => 'Anmeldung abgebrochen.';
+
+  @override
+  String get googleTasksErrClientRejected =>
+      'Google lehnt Client-ID oder Client-Secret ab. Bitte beides prüfen.';
+
+  @override
+  String get googleTasksErrDenied => 'Google hat die Anmeldung abgelehnt.';
+
+  @override
+  String get googleTasksErrFailed => 'Die Anmeldung ist fehlgeschlagen.';
+
+  @override
+  String get googleTasksErrInvalidClientId =>
+      'Die Client-ID endet auf „.apps.googleusercontent.com“. Bitte aus der Google Cloud Console kopieren (OAuth-Client Typ „Desktop“).';
+
+  @override
+  String get googleTasksErrMissingSecret =>
+      'Bitte das Client-Secret des OAuth-Clients eintragen (ohne Leerzeichen).';
+
+  @override
+  String get googleTasksErrNoBrowser => 'Es ist kein Browser installiert.';
+
+  @override
+  String get googleTasksErrNoCode => 'Google hat keinen Code geschickt.';
+
+  @override
+  String get googleTasksErrNoRefreshToken =>
+      'Google hat kein Refresh-Token geschickt. Bitte den Zugriff von Wendelin unter myaccount.google.com/permissions entfernen und neu anmelden.';
+
+  @override
+  String get googleTasksErrReceiver =>
+      'Der lokale Empfänger für die Anmeldung lässt sich nicht starten.';
+
+  @override
+  String get googleTasksErrTimeout =>
+      'Zeitüberschreitung: Im Browser kam keine Antwort von Google an. Bitte erneut anmelden.';
+
+  @override
+  String get googleTasksErrUnavailable =>
+      'Google ist nicht erreichbar. Bitte später erneut versuchen.';
+
+  @override
   String get googleTasksFine => 'in Ordnung';
 
   @override
@@ -3661,6 +3708,18 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get todoistConnecting => 'Verbinde …';
+
+  @override
+  String get todoistErrDenied =>
+      'Todoist hat den Token abgelehnt (ungültig oder widerrufen).';
+
+  @override
+  String get todoistErrFailed =>
+      'Die Verbindung zu Todoist ist fehlgeschlagen.';
+
+  @override
+  String get todoistErrUnavailable =>
+      'Todoist ist nicht erreichbar. Bitte später erneut versuchen.';
 
   @override
   String get todoistFine => 'in Ordnung';

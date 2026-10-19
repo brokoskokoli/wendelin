@@ -128,11 +128,58 @@ void main() {
           'title': 'Y',
           'due': '2026-10-20',
         });
-        expect(data(o), {
-          'list': 'Meine Aufgaben',
-          'added': 'Y',
-          'due': '2026-10-20',
+        expect(data(o), {'added': 'Y', 'due': '2026-10-20'});
+      },
+    );
+
+    test('Ergebnis nennt nur eigene Namen, keine Servernamen', () async {
+      final o = await call('gtasks__add', {'title': 'X'});
+      expect(o.text, isNot(contains('Meine Aufgaben')));
+      expect(o.summary, isNot(contains('Meine Aufgaben')));
+      final w = await call('gtasks__add', {'title': 'Y', 'list': 'arbeit'});
+      expect(data(w)['list'], 'arbeit');
+      expect(w.summary, 'arbeit: Y angelegt');
+    });
+
+    test('Audit enthält den Titel nicht', () async {
+      for (final n in ['gtasks__add', 'gtasks__complete']) {
+        final raw = {'title': 'Geheimtitel-77', 'list': 'Arbeit'};
+        final a = await tool(n).auditArguments(jsonEncode(raw), raw, ctx());
+        expect(a, isNot(contains('Geheimtitel')));
+        expect(jsonDecode(a), {'list': 'Arbeit'});
+      }
+    });
+
+    test(
+      'Listenname nur über ganzes Wort: Rückfrage statt Schreiben',
+      () async {
+        final multi = FakeGoogleTasksApi(
+          listRows: const [
+            GoogleTaskList(id: 'l-1', title: 'Meine Aufgaben'),
+            GoogleTaskList(id: 'l-2', title: 'Urlaub Italien'),
+          ],
+          tasks: [_t('9', 'Koffer packen', list: 'l-2')],
+        );
+        final m = GoogleTasksIntegration(
+          multi,
+          multi,
+          multi,
+          onError: (_) {},
+          onRecovered: () {},
+          clock: _Clock(() => now),
+        );
+        Future<ToolOutcome> run(String n, Map<String, Object?> a) =>
+            m.tools.singleWhere((t) => t.name == n).execute(a, ctx());
+        final add = await run('gtasks__add', {'title': 'Z', 'list': 'Urlaub'});
+        expect(add.isError, isTrue);
+        expect(add.text, contains('Urlaub Italien'));
+        expect(multi.open.any((t) => t.title == 'Z'), isFalse);
+        final done = await run('gtasks__complete', {
+          'title': 'Koffer',
+          'list': 'Urlaub',
         });
+        expect(done.isError, isTrue);
+        expect(multi.done, isEmpty);
       },
     );
 

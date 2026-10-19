@@ -3609,6 +3609,53 @@ class AppLocalizationsFr extends AppLocalizations {
   String get googleTasksClientSecret => 'Secret client';
 
   @override
+  String get googleTasksErrAccessDenied =>
+      'Connexion annulée : accès non autorisé (votre compte est-il enregistré comme utilisateur test dans le projet Cloud ?).';
+
+  @override
+  String get googleTasksErrCancelled => 'Connexion annulée.';
+
+  @override
+  String get googleTasksErrClientRejected =>
+      'Google refuse l’ID client ou le secret client. Veuillez vérifier les deux.';
+
+  @override
+  String get googleTasksErrDenied => 'Google a refusé la connexion.';
+
+  @override
+  String get googleTasksErrFailed => 'La connexion a échoué.';
+
+  @override
+  String get googleTasksErrInvalidClientId =>
+      'L’ID client se termine par « .apps.googleusercontent.com ». Copiez-le depuis la console Google Cloud (client OAuth de type « Application de bureau »).';
+
+  @override
+  String get googleTasksErrMissingSecret =>
+      'Veuillez saisir le secret client OAuth (sans espaces).';
+
+  @override
+  String get googleTasksErrNoBrowser => 'Aucun navigateur n’est installé.';
+
+  @override
+  String get googleTasksErrNoCode => 'Google n’a envoyé aucun code.';
+
+  @override
+  String get googleTasksErrNoRefreshToken =>
+      'Google n’a pas envoyé de jeton d’actualisation. Retirez l’accès de Wendelin sur myaccount.google.com/permissions et reconnectez-vous.';
+
+  @override
+  String get googleTasksErrReceiver =>
+      'Le récepteur local pour la connexion n’a pas pu démarrer.';
+
+  @override
+  String get googleTasksErrTimeout =>
+      'Délai dépassé : aucune réponse de Google n’est arrivée dans le navigateur. Veuillez vous reconnecter.';
+
+  @override
+  String get googleTasksErrUnavailable =>
+      'Google est inaccessible. Veuillez réessayer plus tard.';
+
+  @override
   String get googleTasksFine => 'OK';
 
   @override
@@ -3687,6 +3734,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get todoistConnecting => 'Connexion …';
+
+  @override
+  String get todoistErrDenied =>
+      'Todoist a refusé le jeton (invalide ou révoqué).';
+
+  @override
+  String get todoistErrFailed => 'La connexion à Todoist a échoué.';
+
+  @override
+  String get todoistErrUnavailable =>
+      'Todoist est inaccessible. Veuillez réessayer plus tard.';
 
   @override
   String get todoistFine => 'OK';

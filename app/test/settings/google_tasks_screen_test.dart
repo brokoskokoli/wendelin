@@ -48,14 +48,42 @@ void main() {
     expect(_error(tester), contains('Client-ID und Client-Secret'));
 
     await _fill(tester);
-    env.googleBrowser.onOpen = (url) async =>
-        env.googleReceiver.deliver({'state': 'fremd', 'code': 'fake-code'});
+    // An answer with a foreign state is ignored; the denial that follows
+    // ends the login with the German text of its kind.
+    env.googleBrowser.onOpen = (url) async {
+      env.googleReceiver
+        ..deliver({'state': 'fremd', 'code': 'fake-code'})
+        ..deliver({
+          'state': url.queryParameters['state']!,
+          'error': 'access_denied',
+        });
+    };
     await tester.tap(find.text('Bei Google anmelden'));
     await settle(tester);
-    expect(_error(tester), contains('state stimmt nicht'));
+    expect(_error(tester), contains('Testnutzer'));
     expect(_error(tester), isNot(contains('geheim')));
     expect(await env.secrets.listKeys(), isEmpty);
     expect(env.googleBrowser.opened.single.host, 'accounts.google.com');
+  });
+
+  testWidgets('Seite verlassen bricht die laufende Anmeldung ab', (
+    tester,
+  ) async {
+    final env = TestEnv(enabled: const {'gtasks'});
+    await _openPage(tester, env);
+    await _fill(tester);
+    await tester.tap(find.text('Bei Google anmelden'));
+    await tester.pump();
+    await tester.pump();
+    expect(env.googleBrowser.opened, hasLength(1));
+    expect(env.googleReceiver.closed, isFalse);
+    // Back out of the page while the browser login is pending.
+    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    nav.pop();
+    await settle(tester);
+    expect(find.byType(GoogleTasksScreen), findsNothing);
+    expect(env.googleReceiver.closed, isTrue);
+    expect(await env.secrets.listKeys(), isEmpty);
   });
 
   testWidgets('Anmeldung speichert Client und Token, zeigt sie nie wieder; '
