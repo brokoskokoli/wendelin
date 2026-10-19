@@ -41,6 +41,7 @@ final class AgentRunner implements AgentRun, RunConfig {
     this.onToolRefused,
     this.onUndoFailed,
     this.memoryFloor,
+    this.memoryOwner = '',
   });
 
   /// Chooses providers and escalation targets.
@@ -102,6 +103,11 @@ final class AgentRunner implements AgentRun, RunConfig {
   /// floor besides the entries' own.
   @override
   final PrivacyLevel? memoryFloor;
+
+  /// Memory namespace of the person this run belongs to (WP92b); passed to
+  /// the tools as `ToolContext.memoryOwner`. `''` = the default memory.
+  @override
+  final String memoryOwner;
 
   AgentConfig get _config => contextBuilder.config;
 

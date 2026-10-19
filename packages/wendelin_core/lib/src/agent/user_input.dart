@@ -22,6 +22,7 @@ final class UserInput {
     this.sttConfidence,
     this.language,
     this.requestEscalation = false,
+    this.speakerId,
   }) : images = List.unmodifiable(images);
 
   /// The request text (transcript for voice input).
@@ -42,6 +43,10 @@ final class UserInput {
   /// The user explicitly asked for a stronger model ("nochmal mit Claude",
   /// "das war falsch"); the agent escalates (concept: Routing → Eskalation).
   final bool requestEscalation;
+
+  /// Id of the recognized person (WP92b), `null` = unknown speaker or typed.
+  /// Only an opaque key: it never reaches logs, audit or exports.
+  final String? speakerId;
 
   @override
   String toString() =>

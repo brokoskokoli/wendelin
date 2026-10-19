@@ -3668,7 +3668,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String speakerDeleteBody(String name) {
-    return '$name wird mit allen gespeicherten Stimmmerkmalen gelöscht.';
+    return '$name wird mit allen gespeicherten Stimmmerkmalen und ihren Unterhaltungen gelöscht.';
+  }
+
+  @override
+  String speakerDeleteBodyMemory(String name, int count) {
+    return '$name wird mit allen gespeicherten Stimmmerkmalen, ihren Unterhaltungen und $count Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.';
   }
 
   @override
@@ -3729,6 +3734,52 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get speakerPeople => 'Personen';
+
+  @override
+  String get speakerPersonAddress => 'Anrede';
+
+  @override
+  String get speakerPersonAddressHint =>
+      'So spricht Wendelin dich an. Leer: der eingelernte Name.';
+
+  @override
+  String get speakerPersonAgent => 'Agent';
+
+  @override
+  String get speakerPersonAgentDefault => 'Standard-Agent';
+
+  @override
+  String get speakerPersonAgentDetail =>
+      'Nur ein anderes Ziel statt des Standards. Regeln und Datenschutz gelten weiter.';
+
+  @override
+  String get speakerPersonDelete => 'Person löschen';
+
+  @override
+  String get speakerPersonMemory => 'Gedächtnis';
+
+  @override
+  String get speakerPersonMemoryOpen => 'Einträge ansehen';
+
+  @override
+  String get speakerPersonMemoryOwn => 'Eigenes Gedächtnis';
+
+  @override
+  String get speakerPersonMemoryOwnDetail =>
+      'Merkt sich Dinge nur für diese Person.';
+
+  @override
+  String get speakerPersonMemoryShared => 'Standard-Gedächtnis';
+
+  @override
+  String get speakerPersonMemorySharedDetail =>
+      'Nutzt die bisherigen Einträge gemeinsam mit allen, die nicht erkannt werden.';
+
+  @override
+  String get speakerPersonRetrain => 'Neu einlernen';
+
+  @override
+  String get speakerPersonRetrainDetail => 'Fünf Sätze noch einmal vorlesen.';
 
   @override
   String get speakerProcessing => 'Wird ausgewertet …';

@@ -6301,8 +6301,14 @@ abstract class AppLocalizations {
   /// No description provided for @speakerDeleteBody.
   ///
   /// In de, this message translates to:
-  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen gelöscht.'**
+  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen und ihren Unterhaltungen gelöscht.'**
   String speakerDeleteBody(String name);
+
+  /// No description provided for @speakerDeleteBodyMemory.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen, ihren Unterhaltungen und {count} Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.'**
+  String speakerDeleteBodyMemory(String name, int count);
 
   /// No description provided for @speakerDeleteConfirm.
   ///
@@ -6405,6 +6411,90 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Personen'**
   String get speakerPeople;
+
+  /// No description provided for @speakerPersonAddress.
+  ///
+  /// In de, this message translates to:
+  /// **'Anrede'**
+  String get speakerPersonAddress;
+
+  /// No description provided for @speakerPersonAddressHint.
+  ///
+  /// In de, this message translates to:
+  /// **'So spricht Wendelin dich an. Leer: der eingelernte Name.'**
+  String get speakerPersonAddressHint;
+
+  /// No description provided for @speakerPersonAgent.
+  ///
+  /// In de, this message translates to:
+  /// **'Agent'**
+  String get speakerPersonAgent;
+
+  /// No description provided for @speakerPersonAgentDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-Agent'**
+  String get speakerPersonAgentDefault;
+
+  /// No description provided for @speakerPersonAgentDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur ein anderes Ziel statt des Standards. Regeln und Datenschutz gelten weiter.'**
+  String get speakerPersonAgentDetail;
+
+  /// No description provided for @speakerPersonDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Person löschen'**
+  String get speakerPersonDelete;
+
+  /// No description provided for @speakerPersonMemory.
+  ///
+  /// In de, this message translates to:
+  /// **'Gedächtnis'**
+  String get speakerPersonMemory;
+
+  /// No description provided for @speakerPersonMemoryOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Einträge ansehen'**
+  String get speakerPersonMemoryOpen;
+
+  /// No description provided for @speakerPersonMemoryOwn.
+  ///
+  /// In de, this message translates to:
+  /// **'Eigenes Gedächtnis'**
+  String get speakerPersonMemoryOwn;
+
+  /// No description provided for @speakerPersonMemoryOwnDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Merkt sich Dinge nur für diese Person.'**
+  String get speakerPersonMemoryOwnDetail;
+
+  /// No description provided for @speakerPersonMemoryShared.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-Gedächtnis'**
+  String get speakerPersonMemoryShared;
+
+  /// No description provided for @speakerPersonMemorySharedDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Nutzt die bisherigen Einträge gemeinsam mit allen, die nicht erkannt werden.'**
+  String get speakerPersonMemorySharedDetail;
+
+  /// No description provided for @speakerPersonRetrain.
+  ///
+  /// In de, this message translates to:
+  /// **'Neu einlernen'**
+  String get speakerPersonRetrain;
+
+  /// No description provided for @speakerPersonRetrainDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Fünf Sätze noch einmal vorlesen.'**
+  String get speakerPersonRetrainDetail;
 
   /// No description provided for @speakerProcessing.
   ///
