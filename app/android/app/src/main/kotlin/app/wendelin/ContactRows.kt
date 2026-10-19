@@ -16,6 +16,12 @@ object ContactRows {
 
     private val NUMBER = Regex("^\\+?[0-9]{3,20}$")
 
+    /**
+     * The value handed to `Result.success`: Kotlin's `Unit` (a block without a result, e.g. sending
+     * an SMS) is not encodable by the standard message codec and becomes `null`.
+     */
+    fun channelValue(value: Any?): Any? = if (value is Unit) null else value
+
     /** Whether [number] is a plain phone number (digits, optional leading `+`), as Dart sends it. */
     fun validNumber(number: String?): Boolean = number != null && NUMBER.matches(number)
 

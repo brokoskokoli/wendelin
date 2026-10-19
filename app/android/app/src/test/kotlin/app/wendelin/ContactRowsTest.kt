@@ -61,4 +61,12 @@ class ContactRowsTest {
         assertFalse(ContactRows.validNumber("*#06#"))
         assertFalse(ContactRows.validNumber("+" + "1".repeat(21)))
     }
+
+    @Test
+    fun unitBecomesNullForTheChannel() {
+        assertEquals(null, ContactRows.channelValue(Unit))
+        assertEquals(null, ContactRows.channelValue(null))
+        assertEquals("x", ContactRows.channelValue("x"))
+        assertEquals(emptyList<Any>(), ContactRows.channelValue(emptyList<Any>()))
+    }
 }

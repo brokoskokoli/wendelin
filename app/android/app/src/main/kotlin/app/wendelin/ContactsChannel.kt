@@ -82,7 +82,7 @@ class ContactsChannel(private val activity: Activity, messenger: BinaryMessenger
 
     private fun reply(result: MethodChannel.Result, body: () -> Any?) {
         val answer: () -> Unit = try {
-            val value = body()
+            val value = ContactRows.channelValue(body())
             ({ result.success(value) })
         } catch (e: ArgumentException) {
             ({ result.error("bad_args", e.message, null) })
