@@ -31,6 +31,12 @@ void main() {
     expect(sanitizeHintTerms(content), isEmpty);
   });
 
+  test('Komma und Schrägstrich im kurzen Text: kein Name', () {
+    expect(sanitizeHintTerms([room('Müller, Hans')]), isEmpty);
+    expect(sanitizeHintTerms([room('Ein/Aus')]), isEmpty);
+    expect(sanitizeHintTerms([room('Hans Müller')]), ['Hans Müller']);
+  });
+
   test('Begrenzung: Anzahl, Länge, Wörter einstellbar', () {
     final many = [for (var i = 0; i < 100; i++) room('Raum $i a')];
     expect(sanitizeHintTerms(many).length, 64);

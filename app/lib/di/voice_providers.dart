@@ -130,6 +130,8 @@ final whisperLoaderProvider = Provider<WhisperModelLoader>(
         hintTerms: model.supportsHotwords
             ? await ref.read(hintTermsProvider.future)
             : const [],
+        // Canary cannot detect the language: it falls back to the app's.
+        fallbackLanguage: ref.read(languageProvider),
       ),
 );
 
@@ -216,6 +218,7 @@ Future<List<SherpaVoice>> installedSherpaVoices(
     final base = m.files.first.name.replaceFirst(RegExp(r'\.tar\.bz2$'), '');
     final files = PiperVoiceFiles.find(
       Directory('${service.directoryOf(m).path}/$base'),
+      kokoro: m.synth == TtsSynth.kokoro,
     );
     if (files == null) continue;
     // A multi-language model (Kokoro) is listed once per language.

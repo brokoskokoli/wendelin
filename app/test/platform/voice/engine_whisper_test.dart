@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/channel_memory_trim.dart';
@@ -503,6 +504,41 @@ void main() {
             isTrue,
           );
           expect(app.read(voiceControllerProvider).active, isFalse);
+        },
+      );
+
+      test(
+        'Speicherdruck während einer laufenden Anfrage gibt nichts frei',
+        () async {
+          final (app, synth) = await loaded(keep: true);
+          final agent = app.read(agentControllerProvider.notifier);
+          agent.seed(app.read(agentControllerProvider).copyWith(running: true));
+          trim.add(15);
+          await pumpEventQueue();
+          expect(process.live, hasLength(1));
+          expect(synth.disposed, 0);
+          // Die Anfrage endet, der nächste Druck gibt frei.
+          agent.seed(
+            app.read(agentControllerProvider).copyWith(running: false),
+          );
+          trim.add(15);
+          await untilTrue(() => process.live.isEmpty);
+          expect(process.live, isEmpty);
+        },
+      );
+
+      test(
+        'Speicherdruck bei laufender Sprachsitzung gibt nichts frei',
+        () async {
+          final (app, synth) = await loaded(keep: true);
+          final voice = app.read(voiceControllerProvider.notifier);
+          voice.seed(
+            app.read(voiceControllerProvider).copyWith(awaitingAnswer: true),
+          );
+          trim.add(15);
+          await pumpEventQueue();
+          expect(process.live, hasLength(1));
+          expect(synth.disposed, 0);
         },
       );
 

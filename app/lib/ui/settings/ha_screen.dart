@@ -6,6 +6,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import '../../di/hint_term_providers.dart';
 import '../../di/home_assistant.dart';
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
@@ -115,6 +116,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     if (error == null) {
       SecretField.finishAutofill();
       _token.clear();
+      ref.invalidate(haApprovedEntitiesProvider);
       await _load();
       await _refresh();
     }
@@ -135,6 +137,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     );
     if (!ok) return;
     await haDisconnect(store);
+    ref.invalidate(haApprovedEntitiesProvider);
     await _refresh();
     if (!mounted) return;
     setState(() {
@@ -173,6 +176,8 @@ class _HaScreenState extends ConsumerState<HaScreen> {
         if (byId[id] ?? old[id] case final e?)
           e.withConfirm(_confirm.contains(id)),
     ]);
+    // The hint names of the recognizer follow the approval.
+    ref.invalidate(haApprovedEntitiesProvider);
     await _refresh();
   }
 

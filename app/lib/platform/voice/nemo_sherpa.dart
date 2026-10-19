@@ -45,13 +45,25 @@ NemoHotwords? writeNemoHotwords({
 }) {
   final tokensText = File(tokens).readAsStringSync();
   final content = buildHotwordsFile(terms, BpeEncoder.fromTokens(tokensText));
-  if (content.isEmpty) return null;
+  if (content.isEmpty) {
+    // No name can be spelled: an old file with earlier names must not stay.
+    clearNemoHotwords(directory);
+    return null;
+  }
   directory.createSync(recursive: true);
   final file = File('${directory.path}/hotwords.txt')
     ..writeAsStringSync(content);
   final vocab = File('${directory.path}/bpe.vocab')
     ..writeAsStringSync(buildBpeVocab(tokensText));
   return NemoHotwords(file: file.path, bpeVocab: vocab.path, score: score);
+}
+
+/// Deletes the hotwords files (names of the user) in [directory].
+void clearNemoHotwords(Directory directory) {
+  for (final name in const ['hotwords.txt', 'bpe.vocab']) {
+    final f = File('${directory.path}/$name');
+    if (f.existsSync()) f.deleteSync();
+  }
 }
 
 /// Paths of an unpacked NeMo model (sherpa-onnx export): Parakeet
@@ -75,6 +87,7 @@ final class NemoFiles implements SttSpec {
     SpeechModel model,
     String directory, {
     NemoHotwords? hotwords,
+    String fallbackLanguage = 'de',
   }) {
     if (model.engine == SttEngine.whisper) return null;
     final base = model.files.first.name.replaceFirst(
@@ -111,6 +124,7 @@ final class NemoFiles implements SttSpec {
       joiner: joiner ?? '',
       tokens: tokens,
       hotwords: transducer ? hotwords : null,
+      fallbackLanguage: fallbackLanguage,
     );
   }
 
@@ -155,6 +169,17 @@ final class NemoFiles implements SttSpec {
 /// Languages Canary 180M flash knows.
 const canaryLanguages = {'en', 'es', 'de', 'fr'};
 
+/// The language Canary runs in: [requested] (primary subtag) if the model
+/// knows it, else [fallback] (the app language), else German.
+String pickCanaryLanguage(String? requested, String fallback) {
+  String primary(String? l) =>
+      (l ?? '').split(RegExp('[-_]')).first.toLowerCase();
+  for (final l in [primary(requested), primary(fallback)]) {
+    if (canaryLanguages.contains(l)) return l;
+  }
+  return 'de';
+}
+
 /// NeMo recognizer on the current isolate (blocking FFI calls).
 final class SherpaNemoEngine implements BlockingStt {
   /// Loads the model.
@@ -183,7 +208,7 @@ final class SherpaNemoEngine implements BlockingStt {
   WhisperResult transcribe(Float32List samples, {String? language}) {
     var lang = language ?? files.fallbackLanguage;
     if (files.engine == SttEngine.canary) {
-      if (!canaryLanguages.contains(lang)) lang = files.fallbackLanguage;
+      lang = pickCanaryLanguage(language, files.fallbackLanguage);
       if (lang != _language) {
         _recognizer.setConfig(config(lang));
         _language = lang;

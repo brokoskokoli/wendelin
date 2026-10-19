@@ -62,6 +62,13 @@ final class ContactNameHintSource implements HintTermSource {
   ];
 }
 
+/// The approved Home Assistant entities (local store, no network). The
+/// settings screen invalidates it when the approval changes, so the hint
+/// names follow (Befund 7).
+final haApprovedEntitiesProvider = FutureProvider<List<HaEntity>>(
+  (ref) => ref.watch(haStoreProvider).load(),
+);
+
 /// The sources of the recognizer hint (names only, nothing leaves the
 /// device): the assistant, lists, approved Home Assistant rooms and
 /// entities, and contacts through the port of WP85 (empty until then). The
@@ -77,7 +84,7 @@ final hintTermSourcesProvider = Provider<List<HintTermSource>>(
         ],
       ],
     ),
-    HaNameHintSource(() => ref.read(haStoreProvider).load()),
+    HaNameHintSource(() => ref.read(haApprovedEntitiesProvider.future)),
     ContactNameHintSource(() => ref.read(contactNamesProvider)()),
   ],
 );
@@ -94,7 +101,10 @@ final class _Fixed implements HintTermSource {
 /// The cleaned hint names (limited, deduplicated); a change rebuilds the
 /// recognizer of a model that takes hotwords.
 final hintTermsProvider = FutureProvider<List<String>>((ref) async {
-  // Rebuild when the list settings change.
+  // Rebuild when the list settings, the approved Home Assistant entities or
+  // the contact source change (a new [ContactNames] from WP85 = new names).
   ref.watch(listDefinitionsProvider);
+  await ref.watch(haApprovedEntitiesProvider.future);
+  ref.watch(contactNamesProvider);
   return collectHintTerms(ref.watch(hintTermSourcesProvider));
 });

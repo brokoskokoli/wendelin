@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:meta/meta.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'nemo_sherpa.dart';
@@ -18,27 +19,64 @@ Future<WhisperBackend> startSttBackend(
   String directory, {
   List<String> hintTerms = const [],
   double hotwordsScore = defaultHotwordsScore,
+  String fallbackLanguage = 'de',
 }) async {
   if (model.engine == SttEngine.whisper) {
     return IsolateWhisperBackend.start(WhisperFiles.of(model, directory));
   }
-  var files = NemoFiles.find(model, directory);
+  final files = resolveNemoFiles(
+    model,
+    directory,
+    hintTerms: hintTerms,
+    hotwordsScore: hotwordsScore,
+    fallbackLanguage: fallbackLanguage,
+  );
   if (files == null) {
     throw const VoiceException(
       VoiceErrorKind.modelMissing,
       'Das Spracherkennungsmodell ist nicht (vollständig) geladen.',
     );
   }
-  if (model.supportsHotwords && hintTerms.isNotEmpty) {
-    final hotwords = writeNemoHotwords(
-      tokens: files.tokens,
-      terms: hintTerms,
-      directory: Directory('$directory/hotwords'),
-      score: hotwordsScore,
-    );
-    files = NemoFiles.find(model, directory, hotwords: hotwords);
+  return IsolateWhisperBackend.start(files);
+}
+
+/// The files of the NeMo [model] under [directory], with hotwords for
+/// [hintTerms] if the model takes them and a name can be spelled (`null`
+/// if a model file is missing). Without usable names an old hotwords file
+/// is deleted. [fallbackLanguage] is the app language (Canary).
+@visibleForTesting
+NemoFiles? resolveNemoFiles(
+  SpeechModel model,
+  String directory, {
+  List<String> hintTerms = const [],
+  double hotwordsScore = defaultHotwordsScore,
+  String fallbackLanguage = 'de',
+}) {
+  final files = NemoFiles.find(
+    model,
+    directory,
+    fallbackLanguage: fallbackLanguage,
+  );
+  if (files == null) return null;
+  final dir = Directory('$directory/hotwords');
+  if (!model.supportsHotwords || hintTerms.isEmpty) {
+    clearNemoHotwords(dir);
+    return files;
   }
-  return IsolateWhisperBackend.start(files!);
+  final hotwords = writeNemoHotwords(
+    tokens: files.tokens,
+    terms: hintTerms,
+    directory: dir,
+    score: hotwordsScore,
+  );
+  return hotwords == null
+      ? files
+      : NemoFiles.find(
+          model,
+          directory,
+          hotwords: hotwords,
+          fallbackLanguage: fallbackLanguage,
+        );
 }
 
 /// Engine name for `SpeechToTextEngineInfo` and logs.

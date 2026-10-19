@@ -28,7 +28,12 @@ final class PiperVoiceFiles {
   /// `*.onnx`, `tokens.txt` and `espeak-ng-data/` (Kokoro: also
   /// `voices.bin`, and `dict/` and `lexicon-*-en.txt` if present).
   /// Returns `null` if something is missing.
-  static PiperVoiceFiles? find(Directory directory) {
+  ///
+  /// [kokoro] (from the catalog entry, [TtsSynth.kokoro]) says what the
+  /// model is: a Kokoro model without `voices.bin` is not usable (`null`,
+  /// never loaded as Piper), a Piper voice ignores a stray `voices.bin`.
+  /// `null` = decide by the files.
+  static PiperVoiceFiles? find(Directory directory, {bool? kokoro}) {
     if (!directory.existsSync()) return null;
     final dirs = [directory, ...directory.listSync().whereType<Directory>()];
     for (final d in dirs) {
@@ -40,11 +45,15 @@ final class PiperVoiceFiles {
       final tokens = File('${d.path}/tokens.txt');
       final data = Directory('${d.path}/espeak-ng-data');
       if (onnx.length == 1 && tokens.existsSync() && data.existsSync()) {
+        final hasVoices = File('${d.path}/voices.bin').existsSync();
+        if (kokoro ?? false) {
+          if (!hasVoices) continue;
+        }
         return PiperVoiceFiles(
           model: onnx.single.path,
           tokens: tokens.path,
           dataDir: data.path,
-          voicesBin: File('${d.path}/voices.bin').existsSync()
+          voicesBin: hasVoices && kokoro != false
               ? '${d.path}/voices.bin'
               : null,
           dictDir: Directory('${d.path}/dict').existsSync()
@@ -335,13 +344,6 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     return (worker, events.current! as SendPort, events);
   }
 
-  static (String, String?) _split(String voiceId) {
-    final i = voiceId.indexOf('/');
-    return i < 0
-        ? (voiceId, null)
-        : (voiceId.substring(0, i), voiceId.substring(i + 1));
-  }
-
   /// The background isolate; `null` before the first synthesis.
   @visibleForTesting
   Future<WorkerIsolate>? get worker => _worker?.then((w) => w.$1);
@@ -353,7 +355,8 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     double speed = 1.0,
   }) {
     final result = _queue.then((_) async {
-      final (modelId, speakerId) = _split(voiceId);
+      final plan = planTtsVoice(voiceId);
+      final modelId = plan.modelId;
       final files = (await voices())[modelId];
       if (files == null) {
         throw VoiceException(
@@ -362,15 +365,8 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
         );
       }
       final (_, port, replies) = await (_worker ??= _start());
-      final speaker = speakerId == null
-          ? null
-          : SpeechModelCatalog.standard
-                .byId(modelId)
-                ?.speakers
-                .where((s) => s.id == speakerId)
-                .firstOrNull;
       port.send((
-        voiceId,
+        plan.loadKey,
         files.model,
         files.tokens,
         files.dataDir,
@@ -379,8 +375,8 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
         files.voicesBin,
         files.dictDir,
         files.lexicon,
-        speaker?.espeakLang,
-        speaker?.sid ?? 0,
+        plan.espeakLang,
+        plan.sid,
       ));
       await replies.moveNext();
       final reply = replies.current;
@@ -451,9 +447,9 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
         ) = message;
         try {
           ensureSherpaBindings();
-          // Kokoro binds the phonemizer language at load time: one load per
-          // language (the speaker id is a per-call argument).
-          final loadKey = voicesBin == null ? id : '$id@$lang';
+          // [id] is the load key ([planTtsVoice]): one load per Kokoro
+          // language, the speaker id is a per-call argument.
+          final loadKey = id;
           if (loadedId != loadKey) {
             loaded?.free();
             loaded = null;
@@ -488,6 +484,41 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
       }
     });
   }
+}
+
+/// How a synthesizer voice id is used (Befund 2, WP103).
+typedef TtsVoicePlan = ({
+  String modelId,
+  String loadKey,
+  int sid,
+  String? espeakLang,
+});
+
+/// Splits [voiceId] (`<model id>` or `<model id>/<speaker id>`) into what
+/// the isolate needs: [TtsVoicePlan.loadKey] decides when the loaded model
+/// is replaced (a Kokoro model binds its phonemizer language at load time:
+/// one load per language, not per speaker), [TtsVoicePlan.sid] and
+/// [TtsVoicePlan.espeakLang] come from the catalog speaker (Piper and an
+/// unknown speaker: 0 and `null`).
+@visibleForTesting
+TtsVoicePlan planTtsVoice(String voiceId, {SpeechModelCatalog? catalog}) {
+  final i = voiceId.indexOf('/');
+  final modelId = i < 0 ? voiceId : voiceId.substring(0, i);
+  final speakerId = i < 0 ? null : voiceId.substring(i + 1);
+  final speaker = speakerId == null
+      ? null
+      : (catalog ?? SpeechModelCatalog.standard)
+            .byId(modelId)
+            ?.speakers
+            .where((s) => s.id == speakerId)
+            .firstOrNull;
+  final lang = speaker?.espeakLang;
+  return (
+    modelId: modelId,
+    loadKey: speakerId == null ? modelId : '$modelId@$lang',
+    sid: speaker?.sid ?? 0,
+    espeakLang: lang,
+  );
 }
 
 /// Config of a Piper (VITS) voice, or of a Kokoro voice when [voicesBin] is

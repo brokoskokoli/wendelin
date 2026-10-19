@@ -172,6 +172,82 @@ void main() {
     });
   });
 
+  group('resolveNemoFiles', () {
+    const tokensText =
+        '<unk> 0\n<|pnc|> 1\n▁W 2\nend 3\nel 4\nin 5\n▁K 6\nü 7\nche 8\n'
+        'e 9\nn 10\nd 11\nl 12\ni 13\nc 14\nh 15\n<blk> 16\n';
+
+    String parakeetDir() {
+      final d = unpacked(parakeet, parakeetFiles);
+      File('$d/tokens.txt').writeAsStringSync(tokensText);
+      return d;
+    }
+
+    test('Parakeet: die Namen kommen als Hotwords im Erkenner an', () {
+      parakeetDir();
+      final f = resolveNemoFiles(
+        parakeet,
+        dir.path,
+        hintTerms: ['Wendelin', 'Küche'],
+        hotwordsScore: 4.5,
+      )!;
+      final hw = f.hotwords!;
+      expect(File(hw.file).readAsStringSync(), 'Wendelin\nKüche\n');
+      expect(hw.score, 4.5);
+      final c = nemoRecognizerConfig(f, language: 'de', threads: 2);
+      expect(c.decodingMethod, 'modified_beam_search');
+      expect(c.hotwordsFile, hw.file);
+      expect(c.hotwordsScore, 4.5);
+    });
+
+    test('Canary bekommt keine Hotwords, aber die App-Sprache', () {
+      unpacked(canary, [
+        'encoder.int8.onnx',
+        'decoder.int8.onnx',
+        'tokens.txt',
+      ]);
+      final f = resolveNemoFiles(
+        canary,
+        dir.path,
+        hintTerms: ['Wendelin'],
+        fallbackLanguage: 'fr',
+      )!;
+      expect(f.hotwords, isNull);
+      expect(f.fallbackLanguage, 'fr');
+    });
+
+    test('keine Namen: alte hotwords.txt wird gelöscht, Modell läuft', () {
+      parakeetDir();
+      expect(
+        resolveNemoFiles(parakeet, dir.path, hintTerms: ['Wendelin'])!.hotwords,
+        isNotNull,
+      );
+      final old = File('${dir.path}/hotwords/hotwords.txt');
+      expect(old.existsSync(), isTrue);
+      final f = resolveNemoFiles(parakeet, dir.path, hintTerms: ['Zorro'])!;
+      expect(f.hotwords, isNull);
+      expect(old.existsSync(), isFalse);
+      // Auch ohne jeden Begriff.
+      resolveNemoFiles(parakeet, dir.path, hintTerms: ['Wendelin']);
+      expect(resolveNemoFiles(parakeet, dir.path)!.hotwords, isNull);
+      expect(old.existsSync(), isFalse);
+    });
+
+    test('fehlendes Modell: null', () {
+      expect(resolveNemoFiles(parakeet, dir.path), isNull);
+    });
+  });
+
+  group('pickCanaryLanguage', () {
+    test('bekannte Sprache gewinnt, sonst die App-Sprache, sonst de', () {
+      expect(pickCanaryLanguage('fr', 'de'), 'fr');
+      expect(pickCanaryLanguage('en-US', 'de'), 'en');
+      expect(pickCanaryLanguage(null, 'fr'), 'fr');
+      expect(pickCanaryLanguage('ja', 'es'), 'es');
+      expect(pickCanaryLanguage('ja', 'ko'), 'de');
+    });
+  });
+
   group('startSttBackend', () {
     test('fehlendes NeMo-Modell: modelMissing', () {
       expect(
