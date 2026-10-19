@@ -189,4 +189,22 @@ void main() {
     expect(effectiveSherpaVoice(chosen: null, available: ['b']), 'b');
     expect(effectiveSherpaVoice(chosen: 'a', available: <String>[]), isNull);
   });
+
+  test('Sprechermodell (WP92a): Apache-2.0, Prüfsumme, Quelle, Hinweis', () {
+    final m = SpeechModelCatalog.speakerCamPlus;
+    expect(catalog.byId('speaker-campplus'), m);
+    expect(catalog.ofKind(SpeechModelKind.speaker), [m]);
+    expect(m.license, startsWith('Apache-2.0'));
+    expect(m.attribution, contains('3D-Speaker'));
+    expect(m.note, contains('Trainingsdaten'));
+    expect(m.source, contains('selbst gehasht'));
+    expect(m.files.single.sizeBytes, 28281164);
+    expect(
+      m.files.single.sha256,
+      'aa3cfc16963a10586a9393f5035d6d6b57e98d358b347f80c2a30bf4f00ceba2',
+    );
+    expect(m.files.single.url, contains('speaker-recongition-models'));
+    expect(m.files.single.archive, ModelArchive.none);
+    expect(m.sizeBytes, lessThan(40000000));
+  });
 }

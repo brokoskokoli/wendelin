@@ -54,6 +54,7 @@ final class SpeechModelCatalog {
     voiceDeThorstenHigh,
     voiceKokoro,
     wakeFeatures,
+    speakerCamPlus,
   ]);
 
   /// Whisper base, multilingual, int8 (fast; for weak devices).
@@ -460,6 +461,43 @@ final class SpeechModelCatalog {
         sizeBytes: 1326578,
         sha256:
             '70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f',
+      ),
+    ],
+  );
+
+  /// Speaker embedding for the speaker recognition (WP92a): 3D-Speaker
+  /// CAM++ trained on Chinese and English speaker data, 192-dimensional
+  /// embeddings, 16 kHz. Also usable for German (verified with synthetic
+  /// voices only, check on the device).
+  static const speakerCamPlus = SpeechModel(
+    id: 'speaker-campplus',
+    kind: SpeechModelKind.speaker,
+    displayName: 'Sprechererkennung (CAM++)',
+    languages: {},
+    license: 'Apache-2.0 (3D-Speaker/ModelScope iic/speech_campplus_sv_zh_en_16k-common_advanced)',
+    source:
+        'GitHub-Release k2-fsa/sherpa-onnx „speaker-recongition-models“; '
+        'SHA-256 selbst gehasht (2026-10-19)',
+    note:
+        '$_ghNote Trainingsdaten laut Model-Card: großer chinesischer und '
+        'englischer Sprecherdatensatz (u. a. CN-Celeb, VoxCeleb), ohne '
+        'eigene Lizenzangabe der Daten; die Modelldatei steht unter '
+        'Apache-2.0. Erkennung kommt nicht von der Stimme allein: keine '
+        'starke Authentifizierung.',
+    attribution:
+        'Sprechermodell CAM++ aus 3D-Speaker (Alibaba DAMO Academy, '
+        'Apache-2.0), ONNX-Export von k2-fsa/sherpa-onnx.',
+    ramBytes: 60 * 1024 * 1024,
+    hint: 'erkennt, wer spricht (nur auf dem Gerät)',
+    files: [
+      ModelFile(
+        name: '3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx',
+        url:
+            '$_gh/speaker-recongition-models/'
+            '3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx',
+        sizeBytes: 28281164,
+        sha256:
+            'aa3cfc16963a10586a9393f5035d6d6b57e98d358b347f80c2a30bf4f00ceba2',
       ),
     ],
   );

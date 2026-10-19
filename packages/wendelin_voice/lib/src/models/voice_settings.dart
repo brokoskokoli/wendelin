@@ -30,6 +30,7 @@ final class VoiceSettings {
     this.conversationOfferPending = false,
     this.bargeIn = BargeInMode.keywords,
     this.keepModelLoaded = false,
+    this.speakerRecognition = false,
   });
 
   /// [sttLanguage]: use the language chosen in the onboarding.
@@ -122,6 +123,10 @@ final class VoiceSettings {
   /// station mode (WP99) turns it on through [withStationDefaults].
   final bool keepModelLoaded;
 
+  /// Speaker recognition (WP92a). Default off: without it (and without the
+  /// model and an enrolled person) the pipeline does no extra work.
+  final bool speakerRecognition;
+
   /// Copy for the station mode (WP99, not built yet): the models stay
   /// loaded (hook for WP99).
   VoiceSettings withStationDefaults() => copyWith(keepModelLoaded: true);
@@ -156,6 +161,7 @@ final class VoiceSettings {
     bool? conversationOfferPending,
     BargeInMode? bargeIn,
     bool? keepModelLoaded,
+    bool? speakerRecognition,
   }) => VoiceSettings(
     sttModel: sttModel ?? this.sttModel,
     sttLanguage: sttLanguage ?? this.sttLanguage,
@@ -174,6 +180,7 @@ final class VoiceSettings {
         conversationOfferPending ?? this.conversationOfferPending,
     bargeIn: bargeIn ?? this.bargeIn,
     keepModelLoaded: keepModelLoaded ?? this.keepModelLoaded,
+    speakerRecognition: speakerRecognition ?? this.speakerRecognition,
   );
 
   /// JSON for the settings store.
@@ -194,6 +201,7 @@ final class VoiceSettings {
     'conversationOfferPending': conversationOfferPending,
     'bargeIn': bargeIn.name,
     'keepModelLoaded': keepModelLoaded,
+    if (speakerRecognition) 'speakerRecognition': true,
   };
 
   /// Reads [json]; unknown or invalid values fall back to the defaults.
@@ -290,6 +298,8 @@ final class VoiceSettings {
       bargeIn: BargeInMode.values.asNameMap()[json['bargeIn']] ?? d.bargeIn,
       keepModelLoaded:
           pick<bool>('keepModelLoaded', (_) => true) ?? d.keepModelLoaded,
+      speakerRecognition:
+          pick<bool>('speakerRecognition', (_) => true) ?? d.speakerRecognition,
     );
   }
 
@@ -311,7 +321,8 @@ final class VoiceSettings {
       other.conversationAsked == conversationAsked &&
       other.conversationOfferPending == conversationOfferPending &&
       other.bargeIn == bargeIn &&
-      other.keepModelLoaded == keepModelLoaded;
+      other.keepModelLoaded == keepModelLoaded &&
+      other.speakerRecognition == speakerRecognition;
 
   @override
   int get hashCode => Object.hash(
@@ -335,6 +346,7 @@ final class VoiceSettings {
     conversationOfferPending,
     bargeIn,
     keepModelLoaded,
+    speakerRecognition,
   );
 }
 

@@ -2,11 +2,18 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
+import '../speaker/speaker_match.dart';
+
 /// Result of a transcription.
 @immutable
 final class Transcript {
   /// Creates a transcript.
-  const Transcript({required this.text, this.language, this.confidence});
+  const Transcript({
+    required this.text,
+    this.language,
+    this.confidence,
+    this.speaker,
+  });
 
   /// Recognized text (trimmed; empty if nothing was recognized).
   final String text;
@@ -17,15 +24,28 @@ final class Transcript {
   /// Confidence 0.0–1.0, if the engine reports one.
   final double? confidence;
 
+  /// Who spoke, if speaker recognition ran in parallel (WP92a); `null` =
+  /// recognition off. Set by the pipeline, never by the engine.
+  final SpeakerMatch? speaker;
+
+  /// Copy with [speaker] set.
+  Transcript withSpeaker(SpeakerMatch? speaker) => Transcript(
+    text: text,
+    language: language,
+    confidence: confidence,
+    speaker: speaker,
+  );
+
   @override
   bool operator ==(Object other) =>
       other is Transcript &&
       other.text == text &&
       other.language == language &&
-      other.confidence == confidence;
+      other.confidence == confidence &&
+      other.speaker == speaker;
 
   @override
-  int get hashCode => Object.hash(text, language, confidence);
+  int get hashCode => Object.hash(text, language, confidence, speaker);
 
   @override
   String toString() => 'Transcript("$text", $language, $confidence)';

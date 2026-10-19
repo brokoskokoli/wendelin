@@ -98,6 +98,9 @@ abstract final class AppRoutes {
   /// Wake word: learn the voice, calibrate, try (WP60).
   static const wakeWord = '/settings/voice/wake';
 
+  /// Speaker recognition: switch, model, people (WP92a).
+  static const speaker = '/settings/voice/speaker';
+
   /// Obsidian vault, daily notes, search index.
   static const obsidian = '/settings/obsidian';
 

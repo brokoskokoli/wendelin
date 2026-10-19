@@ -3657,6 +3657,160 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get speakerAdd => 'Person einlernen';
+
+  @override
+  String get speakerAddDetail =>
+      'Fünf kurze Sätze vorlesen, die Aufnahmen werden nicht gespeichert.';
+
+  @override
+  String get speakerAddNeedsModel => 'Lade zuerst das Modell.';
+
+  @override
+  String speakerDeleteBody(String name) {
+    return '$name wird mit allen gespeicherten Stimmmerkmalen gelöscht.';
+  }
+
+  @override
+  String get speakerDeleteConfirm => 'Löschen';
+
+  @override
+  String speakerDeleteSemantic(String name) {
+    return '$name löschen';
+  }
+
+  @override
+  String get speakerDeleteTitle => 'Person löschen?';
+
+  @override
+  String get speakerDone => 'Fertig';
+
+  @override
+  String get speakerEnrollIntro =>
+      'Lies jeden Satz in normaler Lautstärke vor. Aus der Aufnahme wird nur ein Stimmmerkmal berechnet, das Audio wird verworfen.';
+
+  @override
+  String get speakerEnrollTitle => 'Person einlernen';
+
+  @override
+  String get speakerErrFailed =>
+      'Das Modell konnte die Aufnahmen nicht auswerten. Ist es vollständig geladen?';
+
+  @override
+  String get speakerErrInconsistent =>
+      'Die Sätze klangen nicht nach derselben Person oder es war zu laut. Nichts wurde gespeichert, bitte noch einmal in ruhiger Umgebung.';
+
+  @override
+  String get speakerErrTooFew => 'Es fehlen Aufnahmen.';
+
+  @override
+  String get speakerErrTooShort =>
+      'Eine Aufnahme war zu kurz. Bitte noch einmal.';
+
+  @override
+  String get speakerIntro =>
+      'Wendelin kann erkennen, wer spricht. Das Ergebnis steht dem Assistenten als Information zur Verfügung.';
+
+  @override
+  String get speakerModelSection => 'Modell';
+
+  @override
+  String get speakerNameLabel => 'Name';
+
+  @override
+  String get speakerNext => 'Weiter';
+
+  @override
+  String get speakerNoMic =>
+      'Ohne Mikrofon-Zugriff kann keine Person eingelernt werden.';
+
+  @override
+  String get speakerNobody => 'Noch niemand eingelernt.';
+
+  @override
+  String get speakerPeople => 'Personen';
+
+  @override
+  String get speakerProcessing => 'Wird ausgewertet …';
+
+  @override
+  String get speakerRecordCutOff =>
+      'Zu früh angefangen, bitte den Satz noch einmal.';
+
+  @override
+  String get speakerRecordNoSpeech => 'Nichts gehört, bitte noch einmal.';
+
+  @override
+  String get speakerRecordTooLong =>
+      'Zu lang oder zu laut im Hintergrund, bitte noch einmal.';
+
+  @override
+  String get speakerRecordTooQuiet => 'Zu leise, bitte lauter.';
+
+  @override
+  String get speakerResultClamped =>
+      'Die Schwelle wurde auf einen sicheren Wert begrenzt.';
+
+  @override
+  String speakerResultScores(String mean, String min, String threshold) {
+    return 'Gleichmäßigkeit $mean, schwächster Satz $min, Schwelle $threshold.';
+  }
+
+  @override
+  String get speakerResultTitle => 'Eingelernt';
+
+  @override
+  String get speakerRetry => 'Noch einmal';
+
+  @override
+  String get speakerRowDetail =>
+      'Erkennt, wer spricht (Name, Modell, Personen).';
+
+  @override
+  String get speakerRowTitle => 'Sprechererkennung';
+
+  @override
+  String get speakerSayNow => 'Lies den Satz jetzt laut vor:';
+
+  @override
+  String get speakerSentence1 =>
+      'Heute Morgen habe ich einen Spaziergang durch den Park gemacht.';
+
+  @override
+  String get speakerSentence2 =>
+      'Bitte erinnere mich morgen um neun Uhr an den Termin beim Arzt.';
+
+  @override
+  String get speakerSentence3 =>
+      'Im Garten blühen die ersten Blumen, und die Sonne scheint warm.';
+
+  @override
+  String get speakerSentence4 =>
+      'Kannst du mir sagen, wie das Wetter am Wochenende wird?';
+
+  @override
+  String get speakerSentence5 =>
+      'Zum Abendessen gibt es heute Suppe mit frischem Brot.';
+
+  @override
+  String speakerSentenceOf(int n, int total) {
+    return 'Satz $n von $total';
+  }
+
+  @override
+  String get speakerSwitch => 'Sprechererkennung';
+
+  @override
+  String get speakerSwitchHint =>
+      'Die Stimme ist keine sichere Anmeldung: Ähnliche oder nachgemachte Stimmen können verwechselt werden. Gespeichert werden nur verschlüsselte Stimmmerkmale, keine Aufnahmen.';
+
+  @override
+  String get speakerSwitchLabel => 'Sprechererkennung ein oder aus';
+
+  @override
+  String get speakerTitle => 'Sprechererkennung';
+
+  @override
   String get spotifyAppNote =>
       'Die Spotify-App wird gebraucht, damit Wendelin auf diesem Handy abspielen kann: Läuft sie nicht, startet Wendelin sie. Auf anderen Geräten (Lautsprecher, Computer) spielt Wendelin auch ohne sie.';
 

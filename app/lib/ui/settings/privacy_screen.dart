@@ -6,6 +6,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 
 import '../../di/preferences.dart';
 import '../../di/providers.dart';
+import '../../di/speaker_providers.dart';
 import '../../di/wake_providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
@@ -138,6 +139,7 @@ class _PrivacyState extends ConsumerState<PrivacyScreen> {
     await storage.audit.clear();
     await storage.attestations.deleteAll();
     await ref.read(wakeSpeakersProvider.notifier).removeAll();
+    await ref.read(speakerProfilesProvider.notifier).removeAll();
     for (final s in await storage.conversations.sessions()) {
       await storage.conversations.deleteSession(s.id);
     }
