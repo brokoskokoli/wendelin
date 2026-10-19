@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP92a, WP76d, WP104, WP105
+Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP92a, WP76d, WP104, WP106
 
 ## Meilensteine
 
@@ -53,7 +53,8 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 offen (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
 | WP103 | Bessere Sprache einbauen | gemergt ff07cbd | K66/K68 offen (Stefans Modell-/Stimmenwahl, Katalog anpassbar); Gerätetest `docs/testing/m5/wp103.md` (RAM/RTF/Akku/Wärme); Kontaktnamen als Hinweis-Begriffe brauchen Neubau des contactNamesProvider durch WP85; Wake-Dienst ohne Hinweis-Begriffe |
 | WP104 | Liegengebliebene Gerätetests übernehmen | in Arbeit | Standort/Aufgaben/HA-E2E, sprachneutrale Texte, overlay-Reihenfolge-Flake |
-| WP105 | Folgepunkte Audit und Texte | in Arbeit | tasks__ ohne Titel im Audit, Spotify-state-Meldung, deutsche Resttexte |
+| WP105 | Folgepunkte Audit und Texte | gemergt f02332ef | Kachel-Fehlerzeile/Retry-Hinweise nur generisch (Fehlerart+Dienst), Meldungen ans Modell deutsch; Folge: Fehlerart durch onError/Registry durchreichen; Gerätetest `docs/testing/m5/wp105.md` |
+| WP106 | Spike Wake Word Stationsmodus | in Arbeit | Freigabe Stefan 2026-10-19; echte Aufnahmen: Anleitung `~/wendelin-fixtures/wake/station/ANLEITUNG.md` |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
