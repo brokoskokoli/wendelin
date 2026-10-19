@@ -28,7 +28,7 @@ final class FakeBackend implements WhisperBackend {
 
 void main() {
   late FakeSpeechModelService models;
-  late List<WhisperFiles> started;
+  late List<SttSpec> started;
   late List<FakeBackend> own;
   late List<String> lookups;
   FakeBackend? shared;
@@ -155,7 +155,10 @@ void main() {
   test('sonst eigenes Modell, wird wiederverwendet', () async {
     final e = engines();
     expect(await text(await e.speechToText('whisper-base')), 'eigen');
-    expect(started.single.encoder, '/fake/whisper-base/base-encoder.int8.onnx');
+    expect(
+      (started.single as WhisperFiles).encoder,
+      '/fake/whisper-base/base-encoder.int8.onnx',
+    );
     expect(await text(await e.speechToText('whisper-base')), 'eigen');
     expect(started, hasLength(1));
     expect(e.holdsOwnModel, isTrue);

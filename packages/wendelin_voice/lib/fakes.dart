@@ -1,6 +1,6 @@
 /// Fakes for the voice interfaces: [FakeAudioInput], [AudioFrames],
 /// [FakeVoiceActivityDetector], [FakeSpeechToText], [FakeTextToSpeech],
-/// [FakeTriggerSource], [FakeBargeInDetector], [FakeModelStore], [FakeSpeechModelService],
+/// [FakeTriggerSource], [FakeHintTermSource], [FakeBargeInDetector], [FakeModelStore], [FakeSpeechModelService],
 /// [FakeWakeWordEngine], [FakeWakeFeatureExtractor], [FakeWakeVerifier],
 /// [FakeWakeTemplateStore]. Does not
 /// depend on `package:test` (usable in the app's demo mode).

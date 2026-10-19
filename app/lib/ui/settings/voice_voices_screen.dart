@@ -76,6 +76,32 @@ class VoiceVoicesScreen extends ConsumerWidget {
                         );
                       },
                     ),
+                  if (catalog.byId(effective(lang) ?? '') case final m?
+                      when m.speakersFor(lang).length > 1)
+                    for (final sp in m.speakersFor(lang))
+                      SettingsRow(
+                        key: Key('speaker-$lang-${sp.id}'),
+                        title: '${context.l10n.voiceVoicesSpeaker}: ${sp.name}',
+                        onTap: () => unawaited(
+                          notifier.change(
+                            (s) => s.copyWith(
+                              sherpaSpeakers: {
+                                ...s.sherpaSpeakers,
+                                lang: sp.id,
+                              },
+                            ),
+                          ),
+                        ),
+                        trailing:
+                            (settings.sherpaSpeakers[lang] ??
+                                    m.speakersFor(lang).first.id) ==
+                                sp.id
+                            ? CheckStatusIcon(
+                                CheckStatus.ok,
+                                semanticLabel: context.l10n.selected,
+                              )
+                            : null,
+                      ),
                   if (_missingChoice(settings, catalog, lang, effective(lang))
                       case final speaking?)
                     Padding(

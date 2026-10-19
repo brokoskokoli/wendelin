@@ -6130,6 +6130,12 @@ abstract class AppLocalizations {
   /// **'Fortschritt {displayName}'**
   String modelRowProgressOf(String displayName);
 
+  /// No description provided for @modelRowRam.
+  ///
+  /// In de, this message translates to:
+  /// **'Arbeitsspeicher ca. {ram}'**
+  String modelRowRam(String ram);
+
   /// No description provided for @modelRowResume.
   ///
   /// In de, this message translates to:
@@ -6334,6 +6340,42 @@ abstract class AppLocalizations {
   /// **'Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).'**
   String get voiceErrorModelMissing;
 
+  /// No description provided for @voiceMetricsClear.
+  ///
+  /// In de, this message translates to:
+  /// **'Liste leeren'**
+  String get voiceMetricsClear;
+
+  /// No description provided for @voiceMetricsEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Messwerte. Sprich einen Befehl oder spiele eine Stimmprobe ab.'**
+  String get voiceMetricsEmpty;
+
+  /// No description provided for @voiceMetricsIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Die letzten Äußerungen dieser Sitzung: Rechenzeit (Latenz), Echtzeitfaktor (Rechenzeit je Audiozeit, kleiner ist schneller) und Speicher der App. Nur Zahlen, keine Inhalte.'**
+  String get voiceMetricsIntro;
+
+  /// No description provided for @voiceMetricsRow.
+  ///
+  /// In de, this message translates to:
+  /// **'{latency} ms für {audio} ms Audio · RTF {rtf} · RAM {ram}'**
+  String voiceMetricsRow(String latency, String audio, String rtf, String ram);
+
+  /// No description provided for @voiceMetricsStt.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennung'**
+  String get voiceMetricsStt;
+
+  /// No description provided for @voiceMetricsTts.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprachausgabe'**
+  String get voiceMetricsTts;
+
   /// No description provided for @voiceScreenAutomatic.
   ///
   /// In de, this message translates to:
@@ -6370,6 +6412,24 @@ abstract class AppLocalizations {
   /// **'Wendelin erkennt Sprache auf dem Gerät (Whisper). Die Modelle werden einmal geladen und bleiben auf dem Gerät.'**
   String get voiceScreenIntro;
 
+  /// No description provided for @voiceScreenKeepModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell im Speicher halten'**
+  String get voiceScreenKeepModel;
+
+  /// No description provided for @voiceScreenKeepModelHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennung und Stimme bleiben geladen: schnellere Antworten, aber dauerhaft mehr Arbeitsspeicher. Bei Speicherknappheit gibt Wendelin sie frei.'**
+  String get voiceScreenKeepModelHint;
+
+  /// No description provided for @voiceScreenKeepModelLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell im Speicher halten'**
+  String get voiceScreenKeepModelLabel;
+
   /// No description provided for @voiceScreenLanguageDefault.
   ///
   /// In de, this message translates to:
@@ -6405,6 +6465,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Probe hören'**
   String get voiceScreenListen;
+
+  /// No description provided for @voiceScreenMetrics.
+  ///
+  /// In de, this message translates to:
+  /// **'Messwerte'**
+  String get voiceScreenMetrics;
+
+  /// No description provided for @voiceScreenMetricsDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeit, Echtzeitfaktor und Speicher je Äußerung'**
+  String get voiceScreenMetricsDetail;
 
   /// No description provided for @voiceScreenMicrophone.
   ///
@@ -6693,6 +6765,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Probe nicht möglich – die Stimme hat nicht gesprochen.'**
   String get voiceVoicesSampleFailed;
+
+  /// No description provided for @voiceVoicesSpeaker.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprecher'**
+  String get voiceVoicesSpeaker;
 
   /// No description provided for @voiceVoicesStopSample.
   ///
