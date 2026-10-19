@@ -1,7 +1,7 @@
 // Gerätetest WP91 (Home Assistant): Fake-HA auf dem Rechner, erreicht über
 // http://10.0.2.2:<port> (Klartext erlaubt: Heimnetz-Ziel des Emulators).
 //
-// Läuft über `tool/e2e_ha.sh` (nur Emulator), das `app/tool/ha_test_server.dart`
+// Läuft über `tool/e2e_android.sh` (nur Emulator, run_ha), das `app/tool/ha_test_server.dart`
 // startet und HA_URL und HA_TOKEN übergibt.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';

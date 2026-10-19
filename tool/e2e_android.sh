@@ -388,8 +388,14 @@ helper() {
 }
 helper &
 HELPER=$!
+HA_SERVER=
 cleanup() {
   kill "$HELPER" 2>/dev/null || true
+  # Fake-HA (run_ha) nach Abbruch nicht verwaist lassen.
+  if [ -n "$HA_SERVER" ]; then
+    # shellcheck disable=SC2046
+    kill $(pgrep -P "$HA_SERVER" 2>/dev/null) "$HA_SERVER" 2>/dev/null || true
+  fi
   # Sperre aus WP53 sicher entfernen (nur Emulator).
   if is_emulator; then
     adb shell locksettings clear --old "$LOCK_PIN" >/dev/null 2>&1 || true
@@ -494,11 +500,15 @@ run_instrumented() { # <test.dart>
   fi
   echo "$out" | grep -E 'INSTRUMENTATION_STATUS: (test|stack)=|^OK|FAILURES|Tests run|INSTRUMENTATION_FAILED' | head -20 || true
   adb uninstall "$PKG.test" >/dev/null 2>&1 || true
-  echo "$out" | grep -q '^OK (' || return 1
+  if ! echo "$out" | grep -q '^OK ('; then
+    echo "Instrumentierung nicht OK; Ende der Rohausgabe:" >&2
+    echo "$out" | tail -8 | cut -c 1-300 >&2
+    return 1
+  fi
 }
 # WP91/WP104: Fake-Home-Assistant auf dem Rechner (nur 127.0.0.1, der Emulator
 # erreicht ihn als 10.0.2.2), dann der Test mit HA_URL/HA_TOKEN; danach darf
-# das Server-Log nichts Unerwartetes enthalten.
+# das Server-Log keine `unexpected`-Zeile (401/404, unbekannter Aufruf) enthalten.
 run_ha() { # <test.dart>
   local token work server port st=0
   token="e2e-$(date +%s)"
@@ -506,6 +516,7 @@ run_ha() { # <test.dart>
   mkfifo "$work/in"
   (dart run tool/ha_test_server.dart --token "$token" <"$work/in" >"$work/out" 2>"$work/err") &
   server=$!
+  HA_SERVER=$server
   exec 3>"$work/in"
   for _ in $(seq 1 120); do grep -q 'port=[0-9]' "$work/out" 2>/dev/null && break; sleep 0.5; done
   port="$(grep -oE '(^|[^_])port=[0-9]+' "$work/out" | head -1 | cut -d= -f2)"
@@ -526,6 +537,7 @@ run_ha() { # <test.dart>
   # `wait` endlos blockiert (WP104: Lauf hing nach dem grünen HA-Test).
   kill "$server" 2>/dev/null || true
   wait "$server" 2>/dev/null || true
+  HA_SERVER=
   echo "--- Fake-HA-Anfragen (Zusammenfassung)"
   sort "$work/err" | uniq -c
   if grep -q 'unexpected' "$work/err"; then
@@ -541,15 +553,7 @@ fi
 for f in ${HA[@]+"${HA[@]}"}; do
   run_ha "$f" || status=1
 done
-first_instrumented=1
 for f in ${INSTRUMENTED[@]+"${INSTRUMENTED[@]}"}; do
-  if [ -z "$first_instrumented" ]; then
-    # WP104: Die App-Datenbank der vorigen Testdatei zurücksetzen (Profile,
-    # Routing-Regeln und -Hinweis); Modelle und WAVs bleiben (kein pm clear).
-    adb shell "run-as $PKG sh -c 'find . -name \"wendelin.sqlite*\" -delete'" \
-      >/dev/null 2>&1 || true
-  fi
-  first_instrumented=
   run_instrumented "$f" || status=1
 done
 if [ -n "$LIVE" ] && installed; then

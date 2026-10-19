@@ -32,6 +32,9 @@ final class HaTestServer {
   /// Paths of every request in order.
   final List<String> paths = [];
 
+  /// Paths answered with 401 or 404 (unknown call, missing token).
+  final List<String> unexpected = [];
+
   /// Next answers: status codes returned instead of handling (FIFO).
   final List<int> failWith = [];
 
@@ -75,6 +78,7 @@ final class HaTestServer {
       return;
     }
     if (r.headers.value('authorization') != 'Bearer $token') {
+      unexpected.add(r.uri.path);
       res.statusCode = 401;
       await res.close();
       return;
@@ -107,6 +111,7 @@ final class HaTestServer {
         ));
         out = <Object?>[];
       } else {
+        unexpected.add(path);
         res.statusCode = 404;
         await res.close();
         return;
@@ -114,6 +119,7 @@ final class HaTestServer {
       res.headers.contentType = ContentType.json;
       res.write(jsonEncode(out));
     } on Object {
+      unexpected.add(path);
       res.statusCode = 404;
     }
     await res.close();

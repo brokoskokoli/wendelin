@@ -242,7 +242,7 @@ void main() {
       doc['text'] = parts.join(':');
     };
     await send(tester, 'Wie wird das Meer morgen?');
-    await pumpUntil(tester, find.text('Neu prüfen'));
+    await pumpUntil(tester, find.text(l10n(tester).attLogRecheck));
     expect(find.text('Prüfung fehlgeschlagen'), findsWidgets);
     expect(c.read(attestationHubProvider).isLocked('near'), isTrue);
 
