@@ -127,11 +127,12 @@ class WakeChatSession {
   }
 
   Future<void> _listen() async {
-    final assistant = container.read(assistantPlatformProvider);
-    final voice = container.read(voiceControllerProvider.notifier);
     _starting = true;
     try {
+      // First: a disposed screen must not touch the container any more.
       if (_disposed) return;
+      final assistant = container.read(assistantPlatformProvider);
+      final voice = container.read(voiceControllerProvider.notifier);
       // Like the overlay: a hit while listening starts over.
       if (container.read(voiceControllerProvider).active) await voice.cancel();
       if (container.read(agentControllerProvider).running) {

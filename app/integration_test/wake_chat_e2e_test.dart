@@ -8,19 +8,40 @@
 //     tool/e2e_android.sh integration_test/wake_chat_e2e_test.dart
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/agent/chat_entry.dart';
+import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/di/wake_service.dart';
+import 'package:wendelin/platform/secure_secret_store.dart';
+import 'package:wendelin/platform/voice/wav_audio_input.dart';
 import 'package:wendelin/platform/wake/wake_platform.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/voice/voice_controller.dart';
+import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'support/e2e.dart';
 import 'support/voice_e2e.dart';
+
+final class _SwitchableAudio implements AudioInput {
+  AudioInput? inner;
+
+  @override
+  bool get isRunning => inner?.isRunning ?? false;
+
+  @override
+  Stream<Int16List> start() => inner!.start();
+
+  @override
+  Future<void> stop() async => inner?.stop();
+}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -32,8 +53,52 @@ void main() {
   testWidgets(
     'Chat sichtbar: Zuhören im Chat; Einstellungen offen: Overlay',
     (tester) async {
-      final app = E2eApp();
+      final dir = await e2eDirectory();
+      final audio = _SwitchableAudio();
+      final app = E2eApp(
+        extraOverrides: [wakeAudioProvider.overrideWithValue(audio)],
+      );
+      await app.storage.settings.set(
+        voiceSettingsKey,
+        VoiceSettings(sttModel: 'whisper-base'),
+      );
       final c = await app.pump(tester);
+      {
+        final nav0 = tester.state<NavigatorState>(find.byType(Navigator).first);
+        unawaited(nav0.pushNamed(AppRoutes.wakeWord));
+        await pumpUntil(tester, find.text('Aktivierungswort'));
+        await tester.scrollUntilVisible(
+          find.text('Stimme einlernen'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pump(const Duration(seconds: 1));
+        audio.inner = WavAudioInput.sequence([
+          for (var i = 1; i <= 15; i++)
+            WavAudioInput.file(
+              '${dir.path}/wake/Anna_${i.toString().padLeft(2, '0')}.wav',
+            ).samples,
+        ], speed: 4);
+        await tester.tap(find.text('Stimme einlernen'));
+        await pumpUntil(tester, find.text('Weiter'));
+        await tester.enterText(find.byType(TextField), 'Anna');
+        await tester.tap(find.text('Weiter'));
+        await pumpUntil(
+          tester,
+          find.text('Speichern'),
+          timeout: const Duration(minutes: 3),
+        );
+        await tester.tap(find.text('Speichern'));
+        await pumpUntil(tester, find.textContaining('15 Aufnahmen'));
+        final speakers = await c.read(wakeSpeakersProvider.future);
+        final real = SecretWakeTemplateStore(SecureSecretStore());
+        await real.saveSpeakers(speakers);
+        await real.save(
+          (await c.read(wakeTemplatesProvider(speakers.single.id).future))!,
+        );
+        nav0.pop();
+        await tester.pumpAndSettle();
+      }
       await askHost('role');
       final service = c.read(wakeServiceProvider.notifier);
       await service.setCondition(WakeCondition.always);
@@ -43,6 +108,17 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
       }
       expect((await platform.status()).running, isTrue);
+
+      // Ein Gespräch besteht schon: der Wake-Zug setzt es fort.
+      final agent = c.read(agentControllerProvider.notifier);
+      await agent.send('Hallo vor dem Wake');
+      List<ChatEntry> entries() => c.read(agentControllerProvider).entries;
+      int starts() => entries().whereType<SessionStartEntry>().length;
+      bool hasMessage() => entries().whereType<UserEntry>().any(
+        (e) => e.text == 'Hallo vor dem Wake',
+      );
+      expect(hasMessage(), isTrue);
+      final startsBefore = starts();
 
       // Chat sichtbar: der Treffer startet das Zuhören im Chat.
       final triggers = <TriggerKind?>[];
@@ -57,6 +133,20 @@ void main() {
       // Ende des Zuges: der Dienst hört wieder (Status läuft weiter).
       await c.read(voiceControllerProvider.notifier).whenIdle;
       expect((await platform.status()).running, isTrue);
+      // Dieselbe Sitzung: kein session-new, die Nachricht bleibt sichtbar.
+      expect(starts(), startsBefore);
+      expect(hasMessage(), isTrue);
+
+      // Zweiter Treffer: wieder im Chat (der Dienst hörte wieder zu).
+      triggers.clear();
+      expect(await platform.debugHit(), isTrue);
+      for (var i = 0; i < 40 && !triggers.contains(TriggerKind.wakeWord); i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      expect(triggers, contains(TriggerKind.wakeWord));
+      await c.read(voiceControllerProvider.notifier).whenIdle;
+      expect((await platform.status()).running, isTrue);
+      expect(starts(), startsBefore);
 
       // Einstellungen offen: kein Zuhören im Chat (das Overlay öffnet).
       triggers.clear();

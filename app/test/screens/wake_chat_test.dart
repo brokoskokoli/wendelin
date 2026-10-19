@@ -414,6 +414,8 @@ void main() {
               Transcript(text: 'Wie wird das Wetter?', language: 'de'),
             ], audio: audio),
           );
+          // The fake microphone is the one the start would open.
+          await containerOf(tester).read(activeVoiceProvider.future);
           var everActive = false;
           containerOf(tester).listen(voiceControllerProvider, (_, v) {
             everActive = everActive || v.phase != VoiceState.idle;
@@ -448,6 +450,28 @@ void main() {
       await pump(tester);
       await tester.pumpWidget(const SizedBox());
       expect(wake.done, 0);
+    });
+
+    testWidgets('Treffer angenommen, Bildschirm sofort weg: kein Start', (
+      tester,
+    ) async {
+      final audio = FakeAudioInput(frames: speech());
+      await pump(tester, voice: speaking(const [], audio: audio));
+      final c = containerOf(tester);
+      await c.read(activeVoiceProvider.future);
+      var everActive = false;
+      c.listen(voiceControllerProvider, (_, v) {
+        everActive = everActive || v.phase != VoiceState.idle || v.preparing;
+      });
+      expect(await wake.hit(), isTrue);
+      // Before the start timer runs (the container outlives the screen).
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: c, child: const SizedBox()),
+      );
+      await tester.pump(const Duration(seconds: 1));
+      expect(everActive, isFalse);
+      expect(audio.startCount, 0);
+      expect(assistant.wakeTakes, 0);
     });
 
     testWidgets('Bildschirm weg zwischen Frage und Antwort: keine Annahme', (
