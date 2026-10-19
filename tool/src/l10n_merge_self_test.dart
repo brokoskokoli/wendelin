@@ -78,7 +78,90 @@ void l10nMergeChecks(SelfCheck t) {
     '@weatherNew',
   ], 'adopt in Präfix-Bereich');
 
+  // Mutation: Metadaten ohne Schlüssel, @@ im Fragment.
+  final meta = {
+    'a': {
+      for (final l in langs) l: <String, Object?>{'aX': 'x'},
+    },
+  };
+  for (final l in langs) {
+    meta['a']![l]!['@aOrphan'] = {'description': 'd'};
+  }
+  meta['a']!['de']!['@@locale'] = 'de';
+  final bad = problems(meta);
+  t.isTrue(
+    bad.contains('a/de: Metadaten @aOrphan ohne Schlüssel'),
+    'Metadaten ohne Schlüssel werden gemeldet',
+  );
+  t.isTrue(
+    bad.contains('a/de: @@locale gehört nicht in ein Fragment'),
+    '@@ im Fragment wird gemeldet',
+  );
+
   _cli(t);
+  _genCheck(t);
+}
+
+/// `--check` prüft gen/ gegen eine frische Erzeugung. Ein `flutter`-Stub im
+/// PATH schreibt je nach Datei `mode` andere Ergebnisse nach gen/.
+void _genCheck(SelfCheck t) {
+  t.group('l10n_merge --check gen/');
+  final tmp = Directory.systemTemp.createTempSync('l10n_gen_');
+  try {
+    final script = File('tool/l10n_merge.dart').absolute.path;
+    String p(String rel) => '${tmp.path}/$rel';
+    void put(String rel, String text) {
+      File(p(rel))
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync(text);
+    }
+
+    for (final l in langs) {
+      put('app/lib/l10n/src/weather/weather_$l.arb', '{"weatherA": "$l"}\n');
+      put('app/lib/l10n/app_$l.arb', render({'@@locale': l, 'weatherA': l}));
+    }
+    put('app/lib/l10n/gen/a.dart', 'v1');
+    // Stub: cwd ist app/; Inhalt je nach Modus aus ../mode.
+    put('bin/flutter', r'''#!/bin/sh
+mode=$(cat ../mode)
+case "$mode" in
+  same) printf v1 > lib/l10n/gen/a.dart ;;
+  changed) printf v2 > lib/l10n/gen/a.dart ;;
+  extra) printf v1 > lib/l10n/gen/a.dart; printf n > lib/l10n/gen/new.dart ;;
+esac
+''');
+    Process.runSync('chmod', ['+x', p('bin/flutter')]);
+
+    ProcessResult run(String mode) {
+      put('mode', mode);
+      return Process.runSync(
+        'dart',
+        ['run', script, '--check'],
+        workingDirectory: tmp.path,
+        environment: {'PATH': '${p('bin')}:${Platform.environment['PATH']}'},
+      );
+    }
+
+    var r = run('same');
+    t.eq(r.exitCode, 0, 'gen/ aktuell → grün (${r.stderr})');
+    r = run('changed');
+    t.eq(r.exitCode, 1, 'gen/ weicht ab → rot');
+    t.isTrue('${r.stderr}'.contains('a.dart ist veraltet'), 'nennt die Datei');
+    t.eq(
+      File(p('app/lib/l10n/gen/a.dart')).readAsStringSync(),
+      'v1',
+      'veraltete Datei wird wiederhergestellt',
+    );
+    r = run('extra');
+    t.eq(r.exitCode, 1, 'neu erzeugte Datei in gen/ → rot');
+    t.isTrue('${r.stderr}'.contains('new.dart'), 'nennt die neue Datei');
+    t.isTrue(
+      !File(p('app/lib/l10n/gen/new.dart')).existsSync(),
+      'neue Datei wird wieder entfernt',
+    );
+  } finally {
+    tmp.deleteSync(recursive: true);
+  }
 }
 
 /// CLI im temporären Projekt: --check ist rot bei veralteter Gesamt-ARB und

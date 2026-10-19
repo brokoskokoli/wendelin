@@ -9,6 +9,7 @@ import 'check_app_coverage.dart' show hasFilesUnder, mergeLcov;
 import 'check_deps.dart' show pubspecWorkspaceDeps;
 import 'gen_attest_fixtures.dart' as fixtures;
 import 'src/channel_self_test.dart';
+import 'src/doc_check_self_test.dart';
 import 'src/doc_paths.dart';
 import 'src/flaky_scan.dart';
 import 'src/gate_changed.dart';
@@ -32,6 +33,7 @@ Future<void> main() async {
   _docPaths(t);
   _depsAndGit(t);
   channelChecks(t);
+  docCheckChecks(t);
   mergeWpChecks(t);
   l10nMergeChecks(t);
   registryLintChecks(t);

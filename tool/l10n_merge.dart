@@ -90,11 +90,22 @@ Future<int> _check(Fragments fr) async {
   if (bad.isEmpty) {
     // gen/ gegen eine frische Erzeugung prüfen (danach Zustand wiederherstellen,
     // gen-l10n ignoriert --output-dir, wenn l10n.yaml existiert).
-    final before = {
-      for (final f in _gen.listSync().whereType<File>())
-        f.path: f.readAsStringSync(),
+    Map<String, String> snapshot() => {
+      if (_gen.existsSync())
+        for (final f in _gen.listSync(recursive: true).whereType<File>())
+          f.path: f.readAsStringSync(),
     };
+    final before = snapshot();
     final rc = await _genL10n();
+    for (final f
+        in _gen.existsSync()
+            ? _gen.listSync(recursive: true).whereType<File>().toList()
+            : <File>[]) {
+      if (!before.containsKey(f.path)) {
+        bad.add('${f.path} fehlt im Repo (dart run tool/l10n_merge.dart)');
+        f.deleteSync();
+      }
+    }
     for (final e in before.entries) {
       final f = File(e.key);
       if (!f.existsSync() || f.readAsStringSync() != e.value) {
