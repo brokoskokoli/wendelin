@@ -1,6 +1,6 @@
 # Briefing Reviewer
 
-Lies zuerst `common.md`, dann `docs/work-packages/REVIEW.md` (verbindlich) und das Arbeitspaket.
+Lies zuerst `common.md`, dann `docs/work-packages/REVIEW.md` (verbindlich) und das Arbeitspaket. Architektur: nur der Index `docs/ARCHITECTURE.md` und der nötige Bereich unter `docs/architecture/`, nie alle Bereichsdateien.
 
 - **Eigener Prüf-Worktree:** `git worktree add --detach ../james-wt/rev-<wp> <branch>`. Mutationen und Probetests machst du nur dort, am Ende entfernst du ihn mit `git worktree remove --force`. Den Worktree des Coders änderst du nicht.
 - **Gate:** lokal **kein** Gate und keine volle App-Suite (Rechnerlast). Nur gezielte Testdateien und Mutationsproben, mit `--concurrency=2`. Das volle Gate steht als CI-Lauf des `wp/*`-Branches (`gh run list -b <branch>`); ein roter Lauf ist ein Befund.

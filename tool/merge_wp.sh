@@ -83,6 +83,12 @@ if [ -f tool/check_registry.dart ]; then
   git add -- app/lib/di/integrations/registry.dart packages/wendelin_integrations/lib/wendelin_integrations.dart 2>/dev/null
 fi
 
+# 2c. Erzeugte Doku (auch nach glattem Merge neu ableiten).
+if [ -f tool/gen_docs.dart ]; then
+  dart run tool/gen_docs.dart >/dev/null 2>&1
+  git add -- docs/architecture/generated docs/testing/m5/README.md 2>/dev/null
+fi
+
 # 3. Commit mit Nachricht (ohne Session-Zeile).
 if [ $squash -eq 1 ]; then
   full="$msg

@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'src/doc_paths.dart';
+import 'src/gen_docs.dart';
 
 /// Dokumente, deren Pfadangaben aufgelöst werden müssen.
 const checkedDocs = [
@@ -30,22 +31,44 @@ void main() {
   final index = RepoIndex(files);
   final errors = <String>[];
   var count = 0;
-  for (final doc in checkedDocs) {
+  // Bereichsdateien der Architekturkarte und Gerätetests werden mitgeprüft.
+  final docsToCheck = [
+    ...checkedDocs,
+    for (final f in files)
+      if (f.endsWith('.md') &&
+          (f.startsWith('docs/architecture/') ||
+              f.startsWith('docs/testing/m5/')))
+        f,
+  ];
+  for (final doc in docsToCheck) {
     final f = File(doc);
     if (!f.existsSync()) {
       errors.add('$doc: fehlt');
       continue;
     }
-    for (final ref in pathRefs(f.readAsStringSync())) {
+    final text = f.readAsStringSync();
+    for (final ref in pathRefs(text)) {
       count++;
       if (!index.resolves(ref.path, docDir: _dirOf(doc))) {
         errors.add('$doc:${ref.line}: Pfad `${ref.path}` existiert nicht');
       }
     }
+    for (final ref in linkRefs(text)) {
+      count++;
+      if (!index.resolvesLink(ref.path, docDir: _dirOf(doc))) {
+        errors.add('$doc:${ref.line}: Link `${ref.path}` ist tot');
+      }
+    }
+  }
+  // Erzeugte Dateien (tool/gen_docs.dart) müssen aktuell sein.
+  if (File('app/lib/di/integrations/registry.dart').existsSync()) {
+    for (final p in staleGenerated()) {
+      errors.add('$p: veraltet, `dart run tool/gen_docs.dart` ausführen');
+    }
   }
   if (errors.isEmpty) {
     stdout.writeln(
-      'check_docs: ok ($count Pfade in ${checkedDocs.length} Dokumenten)',
+      'check_docs: ok ($count Pfade in ${docsToCheck.length} Dokumenten)',
     );
   } else {
     errors.forEach(stderr.writeln);

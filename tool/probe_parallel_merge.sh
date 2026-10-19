@@ -5,10 +5,10 @@
 # Arbeitet in einem temporären `git clone --local` (aus dem aktuellen HEAD,
 # auch ohne Commit-Stand von main), das Repo selbst bleibt unberührt. Je Branch:
 # Spec-Datei, Registry-Import und -Zeile, Barrel-Export, l10n-Fragment (de/en/fr),
-# Trust-JSON und eine Zeile in docs/ARCHITECTURE.md. Gemergt wird mit
-# tool/merge_wp.sh; danach l10n_merge --check und check_registry.
-# Die Doku-Zeile darf kollidieren (erwartet offen bis WP98 D2): Die Probe meldet
-# das, lässt den Doku-Commit des zweiten Branches weg und prüft den Rest.
+# Trust-JSON, Integrationsdoku (docs/architecture/integrations/<id>.md), Gerätetest-
+# Datei (docs/testing/m5/<id>.md) und die erzeugten Tabellen (gen_docs). Gemergt wird
+# mit tool/merge_wp.sh; danach l10n_merge --check, check_registry und check_docs.
+# Es darf kein manueller Konflikt entstehen (erzeugte Dateien löst regen_generated.sh).
 # Voraussetzung: dart und flutter (gen-l10n, ohne Build); Dauer rund eine Minute.
 set -u
 keep=0; [ "${1:-}" = "--keep" ] && keep=1
@@ -57,12 +57,14 @@ DART
   git commit -q -m "probe: Integration $n (Code, Texte, Trust)
 
 $TRAILER" || fail "commit code $n"
-  # Doku-Zeile: neue Tabellenzeile direkt unter der letzten Zeile der Tabelle mit `evals`.
-  awk -v row="| \`$n\` | Probe-Integration $n |" '
-    { print } /^\| `evals` \|/ { print row }' docs/ARCHITECTURE.md > docs/ARCHITECTURE.md.new \
-    && mv docs/ARCHITECTURE.md.new docs/ARCHITECTURE.md
+  # Doku auf dem neuen Weg: eigene Datei je Integration, eigener Gerätetest-Block,
+  # erzeugte Tabellen/Index per tool/gen_docs.dart (keine gemeinsame Zeile).
+  mkdir -p docs/architecture/integrations docs/testing/m5
+  printf '# Probe-Integration %s\n\nBesonderheiten von %s.\n' "$n" "$n" > "docs/architecture/integrations/${n}.md"
+  printf '# WP%s Probe %s\n\n- [ ] **Einschalten.** Erwartet: aktiv.\n' "$N" "$n" > "docs/testing/m5/${n}.md"
+  dart run tool/gen_docs.dart >/dev/null 2>&1 || fail "gen_docs ($n)"
   git add -A
-  git commit -q -m "probe: Doku-Zeile $n
+  git commit -q -m "probe: Doku $n
 
 $TRAILER" || fail "commit doku $n"
 }
@@ -72,7 +74,7 @@ add_integration probetwo
 git checkout -q main
 
 # Wirkungsprüfung der Gate-Schritte in der Probe (ohne die Tool-Self-Tests).
-export MERGE_WP_GATE='dart run tool/l10n_merge.dart --check && dart run tool/check_registry.dart'
+export MERGE_WP_GATE='dart run tool/l10n_merge.dart --check && dart run tool/check_registry.dart && dart run tool/gen_docs.dart --check'
 export MERGE_WP_BASE=main
 
 bash tool/merge_wp.sh probe/probetwo --keep || fail "Merge probetwo"
@@ -82,19 +84,13 @@ echo "probe: merge probe/probeone"
 git merge --no-commit --no-ff probe/probeone >/dev/null 2>&1
 conflicts=$(git diff --name-only --diff-filter=U)
 git merge --abort 2>/dev/null; git reset -q --hard HEAD
-open_doc=0; manual=""
+manual=""
 for f in $conflicts; do
   if git check-attr linguist-generated -- "$f" | grep -q ': set$'; then continue; fi
-  if [ "$f" = docs/ARCHITECTURE.md ]; then open_doc=1; else manual="$manual $f"; fi
+  manual="$manual $f"
 done
 [ -z "$manual" ] || fail "manueller Konflikt in:$manual"
-target=probe/probeone
-if [ $open_doc -eq 1 ]; then
-  echo "probe: erwartet offen (WP98 D2): Doku-Zeile in docs/ARCHITECTURE.md kollidiert; Probe lässt den Doku-Commit weg."
-  git branch -q -f probe/probeone-nodoc probe/probeone~1
-  target=probe/probeone-nodoc
-fi
-bash tool/merge_wp.sh "$target" --keep || fail "Merge $target"
+bash tool/merge_wp.sh probe/probeone --keep || fail "Merge probeone"
 
 # Ergebnis: beide Integrationen vollständig vorhanden, Prüfungen grün.
 for n in probeone probetwo; do
@@ -106,5 +102,12 @@ for n in probeone probetwo; do
 done
 dart run tool/l10n_merge.dart --check || fail "l10n_merge --check rot"
 dart run tool/check_registry.dart || fail "check_registry rot"
+dart run tool/gen_docs.dart --check || fail "gen_docs --check rot"
+dart run tool/check_docs.dart || fail "check_docs rot"
+for n in probeone probetwo; do
+  grep -q "\`$n\`" docs/architecture/generated/integrations.md || fail "Tabelle ohne $n"
+  [ -f "docs/architecture/integrations/$n.md" ] && [ -f "docs/testing/m5/$n.md" ] || fail "Doku-Dateien $n fehlen"
+  grep -q "($n.md)" docs/testing/m5/README.md || fail "m5-Index ohne $n"
+done
 [ -z "$(git status --porcelain)" ] || fail "Arbeitsverzeichnis nach dem Merge nicht sauber"
-echo "probe: OK (kein manueller Konflikt$([ $open_doc -eq 1 ] && echo "; Doku-Zeile erwartet offen bis D2"))"
+echo "probe: OK (kein manueller Konflikt, Doku konfliktfrei)"

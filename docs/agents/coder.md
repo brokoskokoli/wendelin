@@ -1,6 +1,6 @@
 # Briefing Coder
 
-Lies zuerst `common.md`, dann dein Arbeitspaket (`docs/work-packages/WPnn-*.md`) und die dort genannten Andockpunkte.
+Lies zuerst `common.md`, dann dein Arbeitspaket (`docs/work-packages/WPnn-*.md`) und die dort genannten Andockpunkte. Architektur: nur der Index `docs/ARCHITECTURE.md` und der nötige Bereich unter `docs/architecture/`, nie alle Bereichsdateien.
 
 - **Struktur:** reine Dart-Pakete unter `packages/` importieren kein Flutter. Gerätezugriff geht über Ports, Fakes liegen in `package:<pkg>/fakes.dart`, Contract-Suites in `package:<pkg>/testing.dart`. Die Abhängigkeitsregeln prüft `tool/check_deps.dart`.
 - **Tests:** Jede Abnahme braucht einen Test. Bei Fehlerbehebungen gilt: erst ein Test, der rot ist, dann der Fix. Die Abdeckung je Paket liegt bei mindestens 85 %, gehalten werden heute etwa 98 %. Die Größengrenzen (`tool/check_sizes.dart`) stehen in `docs/ENGINEERING.md` unter „Größen“.
