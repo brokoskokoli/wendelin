@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP97, WP85, WP103
+Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP85, WP103, WP86
 
 ## Meilensteine
 
@@ -36,7 +36,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
 | WP85 | Kontakte/SMS/Anrufe | in Arbeit | – |
-| WP86 | Standort/Maps | geplant | – |
+| WP86 | Standort/Maps | in Arbeit | – |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
 | WP89 | Todoist/Google Tasks | geplant | kann starten (WP88 gemergt) |
@@ -47,7 +47,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP94 | Schnellwechsel Agent | geplant | – |
 | WP95 | CI als Gate | gemergt | – |
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
-| WP97 | Lastbremse/Cache | in Arbeit | – |
+| WP97 | Lastbremse/Cache | gemergt fd1b53b | zweites Gate 3,5 s, APK ohne cargo 47 s; Folge: SIGINT-Freigabe ungetestet, kein actions/cache in CI; 1 App-Test-Flake unter Last beim Merge (Wiederholung grün) |
 | WP98 | Konfliktarm | gemergt 2c14825 | Folge: id-Switches in labels.dart, settings_routes.dart, integration_detail_screen.dart; `--adopt` holt von main gelöschte Schlüssel zurück; Statustabelle aus Frontmatter |
 | WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 offen (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
 | WP103 | Bessere Sprache einbauen | in Arbeit | nach Empfehlung K66, Katalog an Stefans Wahl anpassbar |

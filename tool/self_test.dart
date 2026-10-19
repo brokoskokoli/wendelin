@@ -12,6 +12,7 @@ import 'src/channel_self_test.dart';
 import 'src/doc_check_self_test.dart';
 import 'src/doc_paths.dart';
 import 'src/flaky_scan.dart';
+import 'src/gate_cache_self_test.dart';
 import 'src/gate_changed.dart';
 import 'src/gate_run.dart';
 import 'src/gate_rust.dart';
@@ -28,6 +29,7 @@ Future<void> main() async {
   _changedSelection(t);
   await _gateRun(t);
   await _gateRust(t);
+  await gateCacheChecks(t);
   _flakyScan(t);
   _sizeScan(t);
   _sizeRules(t);
