@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: WP104, WP106, WP92b; als Nächstes WP81c (nach WP92a), WP92b→c, WP93
+Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: WP104, WP106, WP92b, WP107; als Nächstes WP81c (nach WP92a), WP92b→c, WP93
 
 ## Meilensteine
 
@@ -17,7 +17,7 @@ Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: 
 | M3 Routing, MCP, Erweiterung | WP21–WP29 | erledigt (Telefontest in M4 aufgegangen) |
 | Refactoring R1–R6 | WP35–WP40 | erledigt |
 | M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Stefan) |
-| M5 Ausbau Android | WP76b–d, WP79, WP81–WP98, WP102–WP105 | in Arbeit (Plan `M5-PLAN.md`) |
+| M5 Ausbau Android | WP76b–d, WP79, WP81–WP98, WP102–WP105, WP107 | in Arbeit (Plan `M5-PLAN.md`) |
 | M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | geplant (Plan `M6-PLAN.md`, Start nach M5 mit Go) |
 | M7 iOS | – | geplant |
 
@@ -55,6 +55,7 @@ Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: 
 | WP104 | Liegengebliebene Gerätetests übernehmen | in Arbeit | Standort/Aufgaben/HA-E2E, sprachneutrale Texte, overlay-Reihenfolge-Flake |
 | WP105 | Folgepunkte Audit und Texte | gemergt f02332ef | Kachel-Fehlerzeile/Retry-Hinweise nur generisch (Fehlerart+Dienst), Meldungen ans Modell deutsch; Folge: Fehlerart durch onError/Registry durchreichen; Gerätetest `docs/testing/m5/wp105.md` |
 | WP106 | Spike Wake Word Stationsmodus | in Arbeit | Freigabe Stefan 2026-10-19; echte Aufnahmen: Anleitung `~/wendelin-fixtures/wake/station/ANLEITUNG.md` |
+| WP107 | Bring! nur Tokens | in Arbeit | Wunsch Stefan 2026-10-19, K75 offen |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
