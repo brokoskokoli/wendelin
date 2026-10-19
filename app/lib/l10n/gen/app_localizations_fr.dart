@@ -1952,6 +1952,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get integrationsPaused => 'en pause';
 
   @override
+  String integrationsPausedError(String service) {
+    return '$service : accès refusé ou réponse inattendue · en pause';
+  }
+
+  @override
   String get integrationsPermission => 'Autorisation';
 
   @override
@@ -1970,6 +1975,30 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String integrationsTools(int tools) {
     return '$tools outils';
+  }
+
+  @override
+  String get reconnectBringShare =>
+      'Solution : envoyer les articles à l\'appli Bring! via Partager.';
+
+  @override
+  String reconnectErrDenied(String service) {
+    return '$service : accès refusé ou non configuré. Vérifiez les identifiants.';
+  }
+
+  @override
+  String reconnectErrFailed(String service) {
+    return '$service : la connexion a échoué (réponse inattendue).';
+  }
+
+  @override
+  String reconnectErrOther(String service) {
+    return '$service : la connexion a échoué.';
+  }
+
+  @override
+  String reconnectErrUnavailable(String service) {
+    return '$service est injoignable ou ne répond pas. Réessayez plus tard.';
   }
 
   @override
@@ -3674,6 +3703,42 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get spotifyCopyRedirect => 'Copier l’adresse';
+
+  @override
+  String get spotifyErrAccessDenied =>
+      'Connexion annulée : accès non autorisé.';
+
+  @override
+  String get spotifyErrCancelled => 'Connexion annulée.';
+
+  @override
+  String get spotifyErrDenied => 'Spotify a refusé la connexion.';
+
+  @override
+  String get spotifyErrFailed => 'Connexion à Spotify impossible.';
+
+  @override
+  String get spotifyErrInvalidClientId =>
+      'L’ID client comporte 32 caractères (chiffres et lettres a–f). Copiez-le depuis le tableau de bord développeur.';
+
+  @override
+  String get spotifyErrNoBrowser =>
+      'Aucun navigateur n’est installé pour effectuer la connexion.';
+
+  @override
+  String get spotifyErrNoCode => 'Spotify n’a pas envoyé de code.';
+
+  @override
+  String get spotifyErrRejected =>
+      'Spotify a refusé la connexion. Vérifiez l’ID client et que votre compte figure sous « User Management ».';
+
+  @override
+  String get spotifyErrStateMismatch =>
+      'Connexion refusée : la réponse de Spotify ne correspond pas à cette connexion (p. ex. un ancien onglet du navigateur). Relancez la connexion et terminez-la dans le nouvel onglet.';
+
+  @override
+  String get spotifyErrUnavailable =>
+      'Spotify est injoignable. Réessayez plus tard.';
 
   @override
   String get spotifyFailed =>

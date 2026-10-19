@@ -1,3 +1,5 @@
+import 'package:wendelin_integrations/common.dart'
+    show PortErrorKind, ReconnectFailure;
 import 'package:wendelin_integrations/google_tasks.dart';
 
 import '../core_providers.dart';
@@ -29,14 +31,17 @@ final googleTasksSpec = IntegrationSpec(
       deps.api,
       deps.oauth,
       deps.secrets,
-      onError: (m) => d.reportError?.call('gtasks', '$m · pausiert'),
+      onError: (_) => d.reportError?.call('gtasks', pausedError),
       onRecovered: () => d.clearError?.call('gtasks'),
     );
   },
   retry: (
-    label: 'Erneut versuchen',
     run: (i) async => i is GoogleTasksIntegration
         ? i.reconnect()
-        : 'Google Tasks ist nicht eingerichtet.',
+        : const ReconnectFailure(
+            'gtasks',
+            PortErrorKind.permissionDenied,
+            'Google Tasks ist nicht eingerichtet.',
+          ),
   ),
 );

@@ -73,24 +73,35 @@ void main() {
       expect(back.queryParameters['code'], 'c');
     });
 
-    test('Fehler des Browsers werden zu deutschen Port-Fehlern', () async {
-      messenger.setMockMethodCallHandler(
-        auth,
-        (_) async => throw PlatformException(code: 'no_browser'),
-      );
-      await expectLater(
-        const ChannelSpotifyAuthBrowser().authorize(
-          Uri.parse('https://accounts.spotify.com/authorize?state=s'),
-          spotifyRedirect,
-        ),
-        throwsA(
-          isA<PortException>().having(
-            (e) => e.message,
-            'message',
-            'Kein Browser installiert.',
-          ),
-        ),
-      );
-    });
+    test(
+      'Fehler des Browsers werden zu typisierten Fehlern ohne Text',
+      () async {
+        for (final (code, expected) in [
+          ('no_browser', SpotifyBrowserFailure.noBrowser),
+          ('cancelled', SpotifyBrowserFailure.cancelled),
+          ('state_mismatch', SpotifyBrowserFailure.stateMismatch),
+          ('bad_args', SpotifyBrowserFailure.failed),
+        ]) {
+          messenger.setMockMethodCallHandler(
+            auth,
+            (_) async => throw PlatformException(code: code),
+          );
+          await expectLater(
+            const ChannelSpotifyAuthBrowser().authorize(
+              Uri.parse('https://accounts.spotify.com/authorize?state=s'),
+              spotifyRedirect,
+            ),
+            throwsA(
+              isA<SpotifyBrowserException>().having(
+                (e) => e.failure,
+                'failure',
+                expected,
+              ),
+            ),
+            reason: code,
+          );
+        }
+      },
+    );
   });
 }

@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP92a, WP76d, WP104, WP105
+Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: WP92a, WP76d, WP104, WP106; als Nächstes WP81c (nach WP92a), WP92b→c, WP93
 
 ## Meilensteine
 
@@ -32,6 +32,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP79 | App-Sprache | gemergt 604ff80 | K60 bestätigt; Folge: Stoppwort-Hinweis im Overlay folgt UI- statt Sprech-Sprache; Scan-Test erkennt deutsche Ein-Wort-Texte ohne Umlaut nicht |
 | WP81 | Sofort vorlesen, Haken danach | gemergt | – |
 | WP81b | Nächster Modellaufruf parallel zur Quittung | gemergt 135dbbd | K70 offen; Ersparnis am Emulator ~0,4 s bis erster Text, ~0,9 s bis fertig; Tool-Runden gegen echtes TEE-Gateway ungetestet (Fixture ohne Tool-Calls); overlay_e2e rot direkt nach overlay_tee_speak in derselben Skript-Sitzung (Restzustand?) beobachten |
+| WP81c | Parallele Runde sofort vorlesen | geplant | Entscheidung Stefan 2026-10-19 (statt Puffern bis grün); nächstes freies Paket, Sprach-Controller-Regel beachten (nach WP92a oder ohne Überschneidung) |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
@@ -52,7 +53,8 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 offen (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
 | WP103 | Bessere Sprache einbauen | gemergt ff07cbd | K66/K68 offen (Stefans Modell-/Stimmenwahl, Katalog anpassbar); Gerätetest `docs/testing/m5/wp103.md` (RAM/RTF/Akku/Wärme); Kontaktnamen als Hinweis-Begriffe brauchen Neubau des contactNamesProvider durch WP85; Wake-Dienst ohne Hinweis-Begriffe |
 | WP104 | Liegengebliebene Gerätetests übernehmen | in Arbeit | Standort/Aufgaben/HA-E2E, sprachneutrale Texte, overlay-Reihenfolge-Flake |
-| WP105 | Folgepunkte Audit und Texte | in Arbeit | tasks__ ohne Titel im Audit, Spotify-state-Meldung, deutsche Resttexte |
+| WP105 | Folgepunkte Audit und Texte | gemergt f02332ef | Kachel-Fehlerzeile/Retry-Hinweise nur generisch (Fehlerart+Dienst), Meldungen ans Modell deutsch; Folge: Fehlerart durch onError/Registry durchreichen; Gerätetest `docs/testing/m5/wp105.md` |
+| WP106 | Spike Wake Word Stationsmodus | in Arbeit | Freigabe Stefan 2026-10-19; echte Aufnahmen: Anleitung `~/wendelin-fixtures/wake/station/ANLEITUNG.md` |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 

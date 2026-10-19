@@ -417,7 +417,10 @@ void main() {
           'Spotify nicht erreichbar',
         ),
       );
-      expect(await spotify.reconnect(), 'Spotify nicht erreichbar');
+      final f = await spotify.reconnect();
+      expect(f!.service, 'spotify');
+      expect(f.kind, PortErrorKind.unavailable);
+      expect(f.message, 'Spotify nicht erreichbar');
     });
 
     test('abgelaufene Anmeldung pausiert die Integration', () async {

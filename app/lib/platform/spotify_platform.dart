@@ -54,7 +54,8 @@ final class IntentSpotifyLauncher implements SpotifyAppLauncher {
 }
 
 /// [SpotifyAuthBrowser] over the existing OAuth channel (Custom Tab,
-/// `OAuthRedirectActivity`): turns its failures into German port errors.
+/// `OAuthRedirectActivity`): turns its failures into [SpotifyBrowserException]s
+/// (the settings screen words them).
 final class ChannelSpotifyAuthBrowser implements SpotifyAuthBrowser {
   /// Creates the adapter over [browser].
   const ChannelSpotifyAuthBrowser([
@@ -69,7 +70,13 @@ final class ChannelSpotifyAuthBrowser implements SpotifyAuthBrowser {
     try {
       return await browser.authorize(url, redirect);
     } on AuthorizationBrowserException catch (e) {
-      throw PortException(PortErrorKind.unavailable, e.message);
+      throw SpotifyBrowserException(switch (e.failure) {
+        AuthorizationFailure.noBrowser => SpotifyBrowserFailure.noBrowser,
+        AuthorizationFailure.cancelled => SpotifyBrowserFailure.cancelled,
+        AuthorizationFailure.stateMismatch =>
+          SpotifyBrowserFailure.stateMismatch,
+        AuthorizationFailure.failed => SpotifyBrowserFailure.failed,
+      });
     }
   }
 }

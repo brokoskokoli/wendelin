@@ -11,6 +11,7 @@ import '../../di/home_assistant.dart';
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import 'reconnect_text.dart';
 import 'settings_page.dart';
 
 /// Settings → Home Assistant: address and token (search in the Wi-Fi via
@@ -188,7 +189,10 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     final error = await integration.reconnect();
     if (!mounted) return;
     setState(() => _busy = false);
-    showHint(context, error ?? context.l10n.haReachable);
+    showHint(
+      context,
+      reconnectHint(context.l10n, error, context.l10n.haReachable),
+    );
   }
 
   @override
@@ -276,7 +280,9 @@ class _HaScreenState extends ConsumerState<HaScreen> {
               title: failed
                   ? context.l10n.haErrorTitle
                   : context.l10n.haConnected,
-              detail: failed ? info?.error : _endpoint?.url,
+              detail: failed
+                  ? integrationErrorText(context.l10n, 'ha', info?.error)
+                  : _endpoint?.url,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,

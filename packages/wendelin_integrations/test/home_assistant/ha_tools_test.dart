@@ -444,7 +444,10 @@ void main() {
         'check',
         const PortException(PortErrorKind.unavailable, 'offline'),
       );
-      expect(await ha.reconnect(), 'offline');
+      final f = await ha.reconnect();
+      expect(f!.service, 'ha');
+      expect(f.kind, PortErrorKind.unavailable);
+      expect(f.message, 'offline');
     });
 
     test('Einrichtung: Verbindung und Geräte', () async {

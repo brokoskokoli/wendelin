@@ -80,13 +80,13 @@ final class TodoistIntegration implements Integration {
 
   /// Tests the token (reads the projects), e.g. after the setup or from
   /// „Erneut versuchen“. Returns `null` on success (error state cleared via
-  /// `onRecovered`), else a German message.
-  Future<String?> reconnect() async {
+  /// `onRecovered`), else the failure (the app words it).
+  Future<ReconnectFailure?> reconnect() async {
     try {
       await session.projects();
       return null;
     } on PortException catch (e) {
-      return e.message;
+      return ReconnectFailure.of('todoist', e);
     }
   }
 }
