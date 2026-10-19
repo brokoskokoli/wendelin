@@ -167,6 +167,11 @@ final class DriftMemoryRepository implements MemoryRepository {
     )..where((m) => m.owner.equals(owner))).go();
   }
 
+  @override
+  Future<int> deleteAllPersons() => (_db.delete(
+    _db.memoryEntries,
+  )..where((m) => m.owner.equals('').not())).go();
+
   /// Row [id] of the namespace [owner] only.
   static Expression<bool> _mine(
     $MemoryEntriesTable m,

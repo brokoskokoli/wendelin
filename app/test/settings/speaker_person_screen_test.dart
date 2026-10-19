@@ -167,10 +167,15 @@ void main() {
     expect(await env.secrets.listKeys(), isEmpty);
   });
 
-  testWidgets('Löschen mit Standard-Gedächtnis: keine Zahl im Dialog', (
-    tester,
-  ) async {
+  testWidgets('Löschen mit Standard-Gedächtnis: der Dialog zählt trotzdem '
+      'die Einträge des eigenen Namespace', (tester) async {
     final env = speakerEnv();
+    await env.storage.memory.save(
+      'Anna alt',
+      category: StoredMemoryCategory.fact,
+      source: 'user',
+      owner: 'p:pa',
+    );
     await pump(
       tester,
       env,
@@ -178,7 +183,7 @@ void main() {
     );
     await tester.tap(find.text('Person löschen'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Einträgen'), findsNothing);
+    expect(find.textContaining('1 Einträgen'), findsOneWidget);
     await tester.tap(
       find.descendant(
         of: find.byType(AlertDialog),

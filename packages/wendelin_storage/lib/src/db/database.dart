@@ -65,6 +65,7 @@ final class WendelinDatabase extends _$WendelinDatabase {
       // v6 (WP92b): Gedächtnis-Namespace je Person ('' = Standard).
       from5To6: (m, schema) async {
         await m.addColumn(schema.memoryEntries, schema.memoryEntries.owner);
+        await m.addColumn(schema.sessions, schema.sessions.person);
       },
     ),
     beforeOpen: (details) async {

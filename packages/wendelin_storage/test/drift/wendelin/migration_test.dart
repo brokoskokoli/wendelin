@@ -46,6 +46,10 @@ void main() {
         'INSERT INTO memory_entries (id, body, category, source, created_at, '
         "last_used_at) VALUES ('m1', 'Mag Tee', 'preference', 'user', 1, 1)",
       );
+      schema.rawDatabase.execute(
+        'INSERT INTO sessions (id, started_at, last_activity_at) '
+        "VALUES ('s1', 1, 1)",
+      );
       final db = WendelinDatabase(schema.newConnection());
       await verifier.migrateAndValidate(db, 6);
       await db.close();
@@ -56,6 +60,8 @@ void main() {
       expect((await storage.memory.search('Tee')).single.id, 'm1');
       expect(await storage.memory.list(owner: 'p:a'), isEmpty);
       expect(await storage.memory.count(), 1);
+      // Alte Sitzungen gehören keiner Person.
+      expect(await storage.conversations.sessionPerson('s1'), isNull);
     },
   );
 

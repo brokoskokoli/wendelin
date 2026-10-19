@@ -316,6 +316,15 @@ class $SessionsTable extends Sessions
     requiredDuringInsert: false,
     defaultValue: const Constant('app'),
   );
+  static const VerificationMeta _personMeta = const VerificationMeta('person');
+  @override
+  late final GeneratedColumn<String> person = GeneratedColumn<String>(
+    'person',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -323,6 +332,7 @@ class $SessionsTable extends Sessions
     lastActivityAt,
     title,
     origin,
+    person,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -351,6 +361,12 @@ class $SessionsTable extends Sessions
       context.handle(
         _originMeta,
         origin.isAcceptableOrUnknown(data['origin']!, _originMeta),
+      );
+    }
+    if (data.containsKey('person')) {
+      context.handle(
+        _personMeta,
+        person.isAcceptableOrUnknown(data['person']!, _personMeta),
       );
     }
     return context;
@@ -386,6 +402,10 @@ class $SessionsTable extends Sessions
         DriftSqlType.string,
         data['${effectivePrefix}origin'],
       )!,
+      person: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}person'],
+      ),
     );
   }
 
@@ -406,12 +426,17 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
 
   /// Which engine opened the session (`app` or `overlay`, WP67).
   final String origin;
+
+  /// Opaque id of the person whose conversation this is (v6, WP92b), `null`
+  /// for the default. Never exported or logged.
+  final String? person;
   const SessionRow({
     required this.id,
     required this.startedAt,
     required this.lastActivityAt,
     this.title,
     required this.origin,
+    this.person,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -431,6 +456,9 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       map['title'] = Variable<String>(title);
     }
     map['origin'] = Variable<String>(origin);
+    if (!nullToAbsent || person != null) {
+      map['person'] = Variable<String>(person);
+    }
     return map;
   }
 
@@ -443,6 +471,9 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
           ? const Value.absent()
           : Value(title),
       origin: Value(origin),
+      person: person == null && nullToAbsent
+          ? const Value.absent()
+          : Value(person),
     );
   }
 
@@ -457,6 +488,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       lastActivityAt: serializer.fromJson<DateTime>(json['lastActivityAt']),
       title: serializer.fromJson<String?>(json['title']),
       origin: serializer.fromJson<String>(json['origin']),
+      person: serializer.fromJson<String?>(json['person']),
     );
   }
   @override
@@ -468,6 +500,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
       'lastActivityAt': serializer.toJson<DateTime>(lastActivityAt),
       'title': serializer.toJson<String?>(title),
       'origin': serializer.toJson<String>(origin),
+      'person': serializer.toJson<String?>(person),
     };
   }
 
@@ -477,12 +510,14 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
     DateTime? lastActivityAt,
     Value<String?> title = const Value.absent(),
     String? origin,
+    Value<String?> person = const Value.absent(),
   }) => SessionRow(
     id: id ?? this.id,
     startedAt: startedAt ?? this.startedAt,
     lastActivityAt: lastActivityAt ?? this.lastActivityAt,
     title: title.present ? title.value : this.title,
     origin: origin ?? this.origin,
+    person: person.present ? person.value : this.person,
   );
   SessionRow copyWithCompanion(SessionsCompanion data) {
     return SessionRow(
@@ -493,6 +528,7 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
           : this.lastActivityAt,
       title: data.title.present ? data.title.value : this.title,
       origin: data.origin.present ? data.origin.value : this.origin,
+      person: data.person.present ? data.person.value : this.person,
     );
   }
 
@@ -503,13 +539,15 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
           ..write('startedAt: $startedAt, ')
           ..write('lastActivityAt: $lastActivityAt, ')
           ..write('title: $title, ')
-          ..write('origin: $origin')
+          ..write('origin: $origin, ')
+          ..write('person: $person')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, startedAt, lastActivityAt, title, origin);
+  int get hashCode =>
+      Object.hash(id, startedAt, lastActivityAt, title, origin, person);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -518,7 +556,8 @@ class SessionRow extends DataClass implements Insertable<SessionRow> {
           other.startedAt == this.startedAt &&
           other.lastActivityAt == this.lastActivityAt &&
           other.title == this.title &&
-          other.origin == this.origin);
+          other.origin == this.origin &&
+          other.person == this.person);
 }
 
 class SessionsCompanion extends UpdateCompanion<SessionRow> {
@@ -527,6 +566,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
   final Value<DateTime> lastActivityAt;
   final Value<String?> title;
   final Value<String> origin;
+  final Value<String?> person;
   final Value<int> rowid;
   const SessionsCompanion({
     this.id = const Value.absent(),
@@ -534,6 +574,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     this.lastActivityAt = const Value.absent(),
     this.title = const Value.absent(),
     this.origin = const Value.absent(),
+    this.person = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SessionsCompanion.insert({
@@ -542,6 +583,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     required DateTime lastActivityAt,
     this.title = const Value.absent(),
     this.origin = const Value.absent(),
+    this.person = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        startedAt = Value(startedAt),
@@ -552,6 +594,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     Expression<int>? lastActivityAt,
     Expression<String>? title,
     Expression<String>? origin,
+    Expression<String>? person,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -560,6 +603,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
       if (lastActivityAt != null) 'last_activity_at': lastActivityAt,
       if (title != null) 'title': title,
       if (origin != null) 'origin': origin,
+      if (person != null) 'person': person,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -570,6 +614,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     Value<DateTime>? lastActivityAt,
     Value<String?>? title,
     Value<String>? origin,
+    Value<String?>? person,
     Value<int>? rowid,
   }) {
     return SessionsCompanion(
@@ -578,6 +623,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
       lastActivityAt: lastActivityAt ?? this.lastActivityAt,
       title: title ?? this.title,
       origin: origin ?? this.origin,
+      person: person ?? this.person,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -604,6 +650,9 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
     if (origin.present) {
       map['origin'] = Variable<String>(origin.value);
     }
+    if (person.present) {
+      map['person'] = Variable<String>(person.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -618,6 +667,7 @@ class SessionsCompanion extends UpdateCompanion<SessionRow> {
           ..write('lastActivityAt: $lastActivityAt, ')
           ..write('title: $title, ')
           ..write('origin: $origin, ')
+          ..write('person: $person, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();

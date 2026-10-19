@@ -117,6 +117,16 @@
             "default_dart": "const CustomExpression('\\'app\\'')",
             "default_client_dart": null,
             "dsl_features": []
+          },
+          {
+            "name": "person",
+            "getter_name": "person",
+            "moor_type": "string",
+            "nullable": true,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
           }
         ],
         "is_virtual": false,
@@ -1135,7 +1145,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"sessions\" (\"id\" TEXT NOT NULL, \"started_at\" INTEGER NOT NULL, \"last_activity_at\" INTEGER NOT NULL, \"title\" TEXT NULL, \"origin\" TEXT NOT NULL DEFAULT 'app', PRIMARY KEY (\"id\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"sessions\" (\"id\" TEXT NOT NULL, \"started_at\" INTEGER NOT NULL, \"last_activity_at\" INTEGER NOT NULL, \"title\" TEXT NULL, \"origin\" TEXT NOT NULL DEFAULT 'app', \"person\" TEXT NULL, PRIMARY KEY (\"id\"));"
         }
       ]
     },

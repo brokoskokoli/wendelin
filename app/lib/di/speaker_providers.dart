@@ -95,25 +95,26 @@ final class SpeakerProfilesNotifier
   /// when the person used it.
   Future<void> remove(String id) async {
     final identifier = ref.read(speakerIdentifierProvider);
-    await identifier.remove(id);
+    final storage = ref.read(storageProvider);
+    // Data first, the voice last: if one step fails the person stays
+    // enrolled and the deletion can be repeated.
+    await storage.memory.deleteOwner(PersonSettings.ownerOf(id));
+    await storage.conversations.deletePersonSessions(person: id);
     await ref.read(personSettingsStoreProvider).delete(id);
-    await ref
-        .read(storageProvider)
-        .memory
-        .deleteOwner(PersonSettings.ownerOf(id));
+    await identifier.remove(id);
     ref.invalidate(personSettingsProvider);
     state = AsyncData(await identifier.profiles());
   }
 
-  /// Deletes everyone („Alles löschen“), also their memory namespaces.
+  /// Deletes everyone („Alles löschen“), also their memory namespaces and
+  /// conversations (also those of persons that are no longer enrolled).
   Future<void> removeAll() async {
     final identifier = ref.read(speakerIdentifierProvider);
-    final memory = ref.read(storageProvider).memory;
-    for (final p in await identifier.profiles()) {
-      await memory.deleteOwner(PersonSettings.ownerOf(p.id));
-    }
-    await identifier.removeAll();
+    final storage = ref.read(storageProvider);
+    await storage.memory.deleteAllPersons();
+    await storage.conversations.deletePersonSessions();
     await ref.read(personSettingsStoreProvider).clear();
+    await identifier.removeAll();
     ref.invalidate(personSettingsProvider);
     state = const AsyncData([]);
   }

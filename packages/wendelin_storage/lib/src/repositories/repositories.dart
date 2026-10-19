@@ -60,6 +60,18 @@ abstract interface class ConversationRepository {
   /// Deletes session [id] with its messages.
   Future<void> deleteSession(String id);
 
+  /// The opaque id of the person whose conversation [sessionId] is (WP92b),
+  /// `null` for the default or an unknown session. Never exported or logged.
+  Future<String?> sessionPerson(String sessionId);
+
+  /// Marks session [sessionId] as the conversation of [person] (`null` =
+  /// default).
+  Future<void> setSessionPerson(String sessionId, String? person);
+
+  /// Deletes the sessions (with messages) of [person], or of every person
+  /// if `null`; sessions of the default are never touched. Returns how many.
+  Future<int> deletePersonSessions({String? person});
+
   /// Deletes sessions whose last activity is older than [maxAge]; returns
   /// the number of deleted sessions.
   Future<int> purgeOlderThan(Duration maxAge);
@@ -129,6 +141,11 @@ abstract interface class MemoryRepository {
   /// With `''` (the default memory) it deletes nothing and returns 0: the
   /// default memory is never removed this way.
   Future<int> deleteOwner(String owner);
+
+  /// Deletes the entries of every person namespace (`owner <> ''`), also
+  /// those of persons that are no longer known; returns how many. The
+  /// default memory is never touched.
+  Future<int> deleteAllPersons();
 }
 
 /// Audit log (concept: Logging). Entries are redacted before storing.

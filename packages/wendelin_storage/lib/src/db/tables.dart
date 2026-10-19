@@ -19,6 +19,10 @@ class Sessions extends Table {
   /// Which engine opened the session (`app` or `overlay`, WP67).
   TextColumn get origin => text().withDefault(const Constant('app'))();
 
+  /// Opaque id of the person whose conversation this is (v6, WP92b), `null`
+  /// for the default. Never exported or logged.
+  TextColumn get person => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }

@@ -203,6 +203,68 @@ void main() {
     );
   });
 
+  // Neustart: ein neuer Container (neuer SessionManager und Controller) auf
+  // derselben Datenbank, die Unterhaltung ist noch innerhalb der 5 Minuten.
+  ProviderContainer restart() {
+    c = env.container();
+    addTearDown(c.dispose);
+    return c;
+  }
+
+  test('Neustart, Person B, neuer Controller: neue Unterhaltung ohne den '
+      'Verlauf von A', () async {
+    await setUp0();
+    await ask('Anna-Geheimnis', speaker: 'pa');
+    final annaSession = sessionId();
+    restart();
+    await ask('Ich bin Ben', speaker: 'pb');
+    expect(sessionId(), isNot(annaSession));
+    final ben = main_.requests.last;
+    expect(
+      [for (final m in ben.messages) m.text].join(' '),
+      isNot(contains('Anna-Geheimnis')),
+    );
+    expect(ben.systemPrompt, contains('Ben mag Kaffee'));
+    expect(ben.systemPrompt, isNot(contains('Anna mag')));
+    // Auch der Standard (bekannte Person ohne Eintrag) übernimmt nichts von A.
+  });
+
+  test('Neustart, unbekannt: Scope von A (Namespace, Agent), nicht der '
+      'Standard-Agent', () async {
+    await setUp0();
+    await ask('Anna-Geheimnis', speaker: 'pa');
+    final annaSession = sessionId();
+    restart();
+    await ask(_all);
+    expect(sessionId(), annaSession);
+    final req = cloud.requests.last;
+    expect(req.systemPrompt, contains('Du sprichst mit Anni.'));
+    expect(req.systemPrompt, contains('Anna mag Koriander'));
+    expect(req.systemPrompt, isNot(contains('Standard mag Tee')));
+    expect(main_.requests, isEmpty);
+  });
+
+  test(
+    'Neustart nach Löschen der Person: neue Unterhaltung im Standard',
+    () async {
+      await setUp0();
+      await ask('Anna-Geheimnis', speaker: 'pa');
+      final annaSession = sessionId();
+      // Nur die Einstellungen weg (z. B. gelöscht in einer anderen Sitzung):
+      // das Profil fehlt, die Sitzung verweist auf eine unbekannte Person.
+      await SecretSpeakerProfileStore(env.secrets).save(testProfile('pc', 'C'));
+      await SecretSpeakerProfileStore(env.secrets).delete('pa');
+      restart();
+      await ask(_all);
+      expect(sessionId(), isNot(annaSession));
+      expect(
+        main_.requests.last.messages.map((m) => m.text).join(' '),
+        isNot(contains('Anna-Geheimnis')),
+      );
+      expect(main_.requests.last.systemPrompt, contains('Standard mag Tee'));
+    },
+  );
+
   test('memory__save und Undo wirken nur im Namespace der Person', () async {
     await setUp0(
       cloudTurns: (_) => [
@@ -251,6 +313,7 @@ void main() {
       'Namespace-Einträge, nicht das Standard-Gedächtnis', () async {
     await setUp0();
     expect(await env.storage.memory.count(owner: 'p:pa'), 1);
+    await ask('Anna-Geheimnis', speaker: 'pa');
     await c.read(speakerProfilesProvider.future);
     await c.read(speakerProfilesProvider.notifier).remove('pa');
     expect(await env.storage.memory.count(owner: 'p:pa'), 0);
@@ -261,6 +324,7 @@ void main() {
       ['pb'],
     );
     expect((await SecretPersonSettingsStore(env.secrets).load()).keys, ['pb']);
+    expect(await env.storage.conversations.sessions(), isEmpty);
     // Eine gelöschte Person ist unbekannt.
     await ask(_all, speaker: 'pa');
     expect(main_.requests.single.systemPrompt, contains('Standard mag Tee'));
@@ -270,8 +334,18 @@ void main() {
     '„Alles löschen“ der Personen entfernt alle Personen-Namespaces',
     () async {
       await setUp0();
+      // Namespace einer nicht mehr eingelernten Person (verwaist).
+      await env.storage.memory.save(
+        'Verwaist',
+        category: StoredMemoryCategory.fact,
+        source: 'user',
+        owner: 'p:pz',
+      );
+      await ask('Anna-Geheimnis', speaker: 'pa');
       await c.read(speakerProfilesProvider.future);
       await c.read(speakerProfilesProvider.notifier).removeAll();
+      expect(await env.storage.memory.count(owner: 'p:pz'), 0);
+      expect(await env.storage.conversations.sessions(), isEmpty);
       expect(await env.storage.memory.count(owner: 'p:pa'), 0);
       expect(await env.storage.memory.count(owner: 'p:pb'), 0);
       expect(await env.storage.memory.count(), 1);

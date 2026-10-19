@@ -1539,13 +1539,20 @@ final class Schema6 extends i0.VersionedSchema {
     ),
     alias: null,
   );
-  late final Shape13 sessions = Shape13(
+  late final Shape14 sessions = Shape14(
     source: i0.VersionedTable(
       entityName: 'sessions',
       withoutRowId: false,
       isStrict: false,
       tableConstraints: ['PRIMARY KEY(id)'],
-      columns: [_column_3, _column_4, _column_5, _column_6, _column_51],
+      columns: [
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_51,
+        _column_52,
+      ],
       attachedDatabase: database,
     ),
     alias: null,
@@ -1571,7 +1578,7 @@ final class Schema6 extends i0.VersionedSchema {
     ),
     alias: null,
   );
-  late final Shape14 memoryEntries = Shape14(
+  late final Shape15 memoryEntries = Shape15(
     source: i0.VersionedTable(
       entityName: 'memory_entries',
       withoutRowId: false,
@@ -1585,7 +1592,7 @@ final class Schema6 extends i0.VersionedSchema {
         _column_11,
         _column_17,
         _column_38,
-        _column_52,
+        _column_53,
       ],
       attachedDatabase: database,
     ),
@@ -1741,6 +1748,31 @@ class Shape14 extends i0.VersionedTable {
   Shape14({required super.source, required super.alias}) : super.aliased();
   i1.GeneratedColumn<String> get id =>
       columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get startedAt =>
+      columnsByName['started_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get lastActivityAt =>
+      columnsByName['last_activity_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get title =>
+      columnsByName['title']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get origin =>
+      columnsByName['origin']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get person =>
+      columnsByName['person']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<String> _column_52(String aliasedName) =>
+    i1.GeneratedColumn<String>(
+      'person',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.string,
+      $customConstraints: 'NULL',
+    );
+
+class Shape15 extends i0.VersionedTable {
+  Shape15({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<String> get body =>
       columnsByName['body']! as i1.GeneratedColumn<String>;
   i1.GeneratedColumn<String> get category =>
@@ -1757,7 +1789,7 @@ class Shape14 extends i0.VersionedTable {
       columnsByName['owner']! as i1.GeneratedColumn<String>;
 }
 
-i1.GeneratedColumn<String> _column_52(String aliasedName) =>
+i1.GeneratedColumn<String> _column_53(String aliasedName) =>
     i1.GeneratedColumn<String>(
       'owner',
       aliasedName,

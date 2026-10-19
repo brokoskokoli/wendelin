@@ -202,12 +202,12 @@ class _PersonState extends ConsumerState<SpeakerPersonScreen> {
 
   Future<void> _delete(SpeakerProfile person, PersonSettings settings) async {
     final l = context.l10n;
-    final count = settings.sharedMemory
-        ? 0
-        : await ref
-              .read(storageProvider)
-              .memory
-              .count(owner: settings.memoryOwner);
+    // Always the own namespace: it is deleted also if the person switched to
+    // the default memory later.
+    final count = await ref
+        .read(storageProvider)
+        .memory
+        .count(owner: PersonSettings.ownerOf(person.id));
     if (!mounted) return;
     final ok = await confirm(
       context,

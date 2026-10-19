@@ -428,6 +428,29 @@ void main() {
       expect(seen, 'p:a');
     });
 
+    test('Privatsphäre-Boden des Laufs kommt beim Tool an (K13)', () async {
+      PrivacyLevel? seen;
+      final tool = FakeTool(
+        name: 'p__read',
+        handler: (args, ctx) {
+          seen = ctx.privacyFloor;
+          return ToolOutcome.text('ok');
+        },
+      );
+      await _run(
+        ToolExecutor(catalog: FakeToolCatalog([tool])),
+        [_call('1', 'p__read')],
+        ctx: ToolContext(
+          sessionId: 's1',
+          clock: const SystemClock(),
+          locale: 'de-DE',
+          timeZone: 'Europe/Berlin',
+          privacyFloor: PrivacyLevel.local,
+        ),
+      );
+      expect(seen, PrivacyLevel.local);
+    });
+
     test('sensibles Tool vom Standard-Ziel ist unbekannt', () async {
       final r = await registry();
       final audit = _Audit();

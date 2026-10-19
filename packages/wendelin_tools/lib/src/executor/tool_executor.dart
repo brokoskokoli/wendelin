@@ -249,6 +249,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
       timeZone: ctx.timeZone,
       cancel: token,
       privacyLevel: ctx.privacyLevel,
+      privacyFloor: ctx.privacyFloor,
       memoryOwner: ctx.memoryOwner,
     );
 

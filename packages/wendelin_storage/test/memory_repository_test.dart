@@ -326,5 +326,15 @@ void main() {
         expect((await repo.get(b.id, owner: 'p:b'))!.text, 'Ben');
       },
     );
+
+    test('deleteAllPersons löscht jeden Personen-Namespace, auch '
+        'verwaiste, nie den Standard', () async {
+      await saveFor('', 'Standard');
+      await saveFor('p:a', 'Anna');
+      await saveFor('p:zz', 'Verwaist');
+      expect(await repo.deleteAllPersons(), 2);
+      expect(await repo.count(), 1);
+      expect(await repo.count(owner: 'p:zz'), 0);
+    });
   });
 }
