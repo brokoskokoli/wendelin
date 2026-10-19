@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP85, WP76c, WP89, WP81b
+Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP76c, WP89, WP81b, WP94
 
 ## Meilensteine
 
@@ -35,7 +35,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
-| WP85 | Kontakte/SMS/Anrufe | in Arbeit | – |
+| WP85 | Kontakte/SMS/Anrufe | gemergt 314deb6 | K69 offen (3 Fragen an Stefan, u. a. diktierter Text im Anfrage-Audit → evtl. eigenes Paket); Sprachbestätigung nur per Unit-/Widget-Test, Gerätetest `docs/testing/m5/wp85.md`; Kontaktänderungen erreichen den Erkenner erst bei Resume/Aktivierung |
 | WP86 | Standort/Maps | gemergt f595fa0 | K67 offen (Wetter-Position bei „keine Mindeststufe“, Frage an Stefan); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
@@ -44,7 +44,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
 | WP92a–c | Sprechererkennung | geplant | WP92c nach WP91 |
 | WP93 | Wake Word im Chat | geplant | – |
-| WP94 | Schnellwechsel Agent | geplant | – |
+| WP94 | Schnellwechsel Agent | in Arbeit | – |
 | WP95 | CI als Gate | gemergt | – |
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
 | WP97 | Lastbremse/Cache | gemergt fd1b53b | zweites Gate 3,5 s, APK ohne cargo 47 s; Folge: SIGINT-Freigabe ungetestet, kein actions/cache in CI; 1 App-Test-Flake unter Last beim Merge (Wiederholung grün) |
