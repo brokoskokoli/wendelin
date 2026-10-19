@@ -203,7 +203,10 @@ void main() {
     await settle(tester);
     final failed = tileWidget(tester, 'Home Assistant (direkt)');
     expect(failed.status, IntegrationStatus.error);
-    expect(failed.detail, contains('Token abgelehnt'));
+    expect(
+      failed.detail,
+      allOf(contains('Home Assistant'), endsWith('pausiert')),
+    );
     expect(failed.actionLabel, 'Erneut versuchen');
 
     await tester.tap(find.text('Home Assistant (direkt)'));

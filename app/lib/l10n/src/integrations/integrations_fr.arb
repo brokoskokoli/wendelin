@@ -68,5 +68,22 @@
         "type": "String"
       }
     }
+  },
+  "reconnectErrOther": "{service} : la connexion a échoué.",
+  "@reconnectErrOther": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectBringShare": "Solution : envoyer les articles à l'appli Bring! via Partager.",
+  "integrationsPausedError": "{service} : accès refusé ou réponse inattendue · en pause",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
   }
 }

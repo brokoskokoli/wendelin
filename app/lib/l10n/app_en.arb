@@ -519,11 +519,20 @@
   "integrationsIntro": "Only active integrations go to the model. Turned-off ones cost no tokens.",
   "integrationsOwn": "Own integrations",
   "integrationsPaused": "paused",
+  "integrationsPausedError": "{service}: access refused or unexpected answer · paused",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "integrationsPermission": "Permission",
   "integrationsPermission2": "Permission",
   "integrationsReachable": "{displayName} is reachable again.",
   "integrationsRejected": "Rejected: {reason}",
   "integrationsTools": "{tools} tools",
+  "reconnectBringShare": "Workaround: send the items to the Bring! app via Share.",
   "reconnectErrDenied": "{service}: access refused or not set up. Please check the credentials.",
   "@reconnectErrDenied": {
     "placeholders": {
@@ -534,6 +543,14 @@
   },
   "reconnectErrFailed": "{service}: the connection failed (unexpected answer).",
   "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrOther": "{service}: the connection failed.",
+  "@reconnectErrOther": {
     "placeholders": {
       "service": {
         "type": "String"

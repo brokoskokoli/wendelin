@@ -240,7 +240,9 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
               title: failed
                   ? context.l10n.spotifyFailed
                   : spotifyStateText(context.l10n, info?.status),
-              detail: failed ? info?.error : null,
+              detail: failed
+                  ? integrationErrorText(context.l10n, 'spotify', info?.error)
+                  : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,

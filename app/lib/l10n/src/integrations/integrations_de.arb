@@ -103,5 +103,22 @@
         "type": "String"
       }
     }
+  },
+  "reconnectErrOther": "{service}: Die Verbindung ist fehlgeschlagen.",
+  "@reconnectErrOther": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectBringShare": "Ausweg: Artikel über „Teilen“ an die Bring!-App schicken.",
+  "integrationsPausedError": "{service}: Zugang abgelehnt oder unerwartete Antwort · pausiert",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
   }
 }

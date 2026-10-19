@@ -935,6 +935,14 @@
   "integrationsIntro": "Nur aktive Integrationen gehen ans Modell. Ausgeschaltete kosten keine Tokens.",
   "integrationsOwn": "Eigene Integrationen",
   "integrationsPaused": "pausiert",
+  "integrationsPausedError": "{service}: Zugang abgelehnt oder unerwartete Antwort · pausiert",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "integrationsPermission": "Berechtigung",
   "integrationsPermission2": "Berechtigung",
   "integrationsReachable": "{displayName} ist wieder erreichbar.",
@@ -961,6 +969,7 @@
       }
     }
   },
+  "reconnectBringShare": "Ausweg: Artikel über „Teilen“ an die Bring!-App schicken.",
   "reconnectErrDenied": "{service}: Zugang abgelehnt oder nicht eingerichtet. Bitte die Zugangsdaten prüfen.",
   "@reconnectErrDenied": {
     "placeholders": {
@@ -971,6 +980,14 @@
   },
   "reconnectErrFailed": "{service}: Die Verbindung ist fehlgeschlagen (unerwartete Antwort).",
   "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrOther": "{service}: Die Verbindung ist fehlgeschlagen.",
+  "@reconnectErrOther": {
     "placeholders": {
       "service": {
         "type": "String"

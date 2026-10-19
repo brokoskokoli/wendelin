@@ -1793,6 +1793,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get integrationsPaused => 'paused';
 
   @override
+  String integrationsPausedError(String service) {
+    return '$service: access refused or unexpected answer · paused';
+  }
+
+  @override
   String get integrationsPermission => 'Permission';
 
   @override
@@ -1814,6 +1819,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get reconnectBringShare =>
+      'Workaround: send the items to the Bring! app via Share.';
+
+  @override
   String reconnectErrDenied(String service) {
     return '$service: access refused or not set up. Please check the credentials.';
   }
@@ -1821,6 +1830,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String reconnectErrFailed(String service) {
     return '$service: the connection failed (unexpected answer).';
+  }
+
+  @override
+  String reconnectErrOther(String service) {
+    return '$service: the connection failed.';
   }
 
   @override

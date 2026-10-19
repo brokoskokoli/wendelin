@@ -1819,6 +1819,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get integrationsPaused => 'en pause';
 
   @override
+  String integrationsPausedError(String service) {
+    return '$service : accès refusé ou réponse inattendue · en pause';
+  }
+
+  @override
   String get integrationsPermission => 'Autorisation';
 
   @override
@@ -1840,6 +1845,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get reconnectBringShare =>
+      'Solution : envoyer les articles à l\'appli Bring! via Partager.';
+
+  @override
   String reconnectErrDenied(String service) {
     return '$service : accès refusé ou non configuré. Vérifiez les identifiants.';
   }
@@ -1847,6 +1856,11 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String reconnectErrFailed(String service) {
     return '$service : la connexion a échoué (réponse inattendue).';
+  }
+
+  @override
+  String reconnectErrOther(String service) {
+    return '$service : la connexion a échoué.';
   }
 
   @override

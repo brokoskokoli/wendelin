@@ -3172,6 +3172,12 @@ abstract class AppLocalizations {
   /// **'pausiert'**
   String get integrationsPaused;
 
+  /// No description provided for @integrationsPausedError.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Zugang abgelehnt oder unerwartete Antwort · pausiert'**
+  String integrationsPausedError(String service);
+
   /// No description provided for @integrationsPermission.
   ///
   /// In de, this message translates to:
@@ -3202,6 +3208,12 @@ abstract class AppLocalizations {
   /// **'{tools} Tools'**
   String integrationsTools(int tools);
 
+  /// No description provided for @reconnectBringShare.
+  ///
+  /// In de, this message translates to:
+  /// **'Ausweg: Artikel über „Teilen“ an die Bring!-App schicken.'**
+  String get reconnectBringShare;
+
   /// No description provided for @reconnectErrDenied.
   ///
   /// In de, this message translates to:
@@ -3213,6 +3225,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{service}: Die Verbindung ist fehlgeschlagen (unerwartete Antwort).'**
   String reconnectErrFailed(String service);
+
+  /// No description provided for @reconnectErrOther.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Die Verbindung ist fehlgeschlagen.'**
+  String reconnectErrOther(String service);
 
   /// No description provided for @reconnectErrUnavailable.
   ///

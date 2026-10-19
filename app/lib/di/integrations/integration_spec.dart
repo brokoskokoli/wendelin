@@ -7,6 +7,10 @@ import 'package:wendelin_integrations/common.dart' show ReconnectFailure;
 import '../../platform/platform_ports.dart';
 import '../app_requirements.dart';
 
+/// Registry error text of a paused integration; the UI words it per
+/// service in the app language (the model never sees registry errors).
+const pausedError = 'paused';
+
 /// What an integration needs to be built.
 final class IntegrationDeps {
   /// Creates the dependencies.

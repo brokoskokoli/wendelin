@@ -125,7 +125,7 @@ class _BringScreenState extends ConsumerState<BringScreen> {
     setState(() => _busy = false);
     showHint(
       context,
-      reconnectHint(context.l10n, error, context.l10n.bringReachable),
+      bringReconnectHint(context.l10n, error, context.l10n.bringReachable),
     );
   }
 
@@ -225,7 +225,9 @@ class _BringScreenState extends ConsumerState<BringScreen> {
               title: failed
                   ? context.l10n.bringApiError
                   : bringStateText(context.l10n, info?.status),
-              detail: failed ? info?.error : null,
+              detail: failed
+                  ? integrationErrorText(context.l10n, 'bring', info?.error)
+                  : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,

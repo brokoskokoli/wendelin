@@ -36,8 +36,7 @@ final spotifySpec = IntegrationSpec(
       deps.api,
       deps.secrets,
       launcher: deps.launcher,
-      onError: (message) =>
-          d.reportError?.call('spotify', '$message · pausiert'),
+      onError: (message) => d.reportError?.call('spotify', pausedError),
       onRecovered: () => d.clearError?.call('spotify'),
     );
   },

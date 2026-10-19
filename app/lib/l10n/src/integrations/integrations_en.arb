@@ -68,5 +68,22 @@
         "type": "String"
       }
     }
+  },
+  "reconnectErrOther": "{service}: the connection failed.",
+  "@reconnectErrOther": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectBringShare": "Workaround: send the items to the Bring! app via Share.",
+  "integrationsPausedError": "{service}: access refused or unexpected answer · paused",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
   }
 }

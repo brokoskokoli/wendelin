@@ -262,7 +262,11 @@ String? integrationDetail(
       l,
       info.availability.reason,
     ),
-    IntegrationStatus.error => info.error,
+    IntegrationStatus.error => integrationErrorText(
+      l,
+      info.integration.id,
+      info.error,
+    ),
     IntegrationStatus.setupRequired => [
       for (final step in info.integration.setup)
         if (info.setup.missingSteps.contains(step.id)) step.label,

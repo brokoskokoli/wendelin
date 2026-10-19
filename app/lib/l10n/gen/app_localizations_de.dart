@@ -1808,6 +1808,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get integrationsPaused => 'pausiert';
 
   @override
+  String integrationsPausedError(String service) {
+    return '$service: Zugang abgelehnt oder unerwartete Antwort · pausiert';
+  }
+
+  @override
   String get integrationsPermission => 'Berechtigung';
 
   @override
@@ -1829,6 +1834,10 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get reconnectBringShare =>
+      'Ausweg: Artikel über „Teilen“ an die Bring!-App schicken.';
+
+  @override
   String reconnectErrDenied(String service) {
     return '$service: Zugang abgelehnt oder nicht eingerichtet. Bitte die Zugangsdaten prüfen.';
   }
@@ -1836,6 +1845,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String reconnectErrFailed(String service) {
     return '$service: Die Verbindung ist fehlgeschlagen (unerwartete Antwort).';
+  }
+
+  @override
+  String reconnectErrOther(String service) {
+    return '$service: Die Verbindung ist fehlgeschlagen.';
   }
 
   @override

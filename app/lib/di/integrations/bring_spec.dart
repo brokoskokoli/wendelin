@@ -30,7 +30,7 @@ final bringSpec = IntegrationSpec(
     return BringIntegration(
       deps.api,
       deps.secrets,
-      onError: (message) => d.reportError?.call('bring', '$message · pausiert'),
+      onError: (_) => d.reportError?.call('bring', pausedError),
       onRecovered: () => d.clearError?.call('bring'),
     );
   },

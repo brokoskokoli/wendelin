@@ -58,10 +58,10 @@ final _german = RegExp(
 // braucht ein Leerzeichen, deshalb gilt für ein ganzes Literal diese Liste.
 final _germanWord = RegExp(
   '^(Abbrechen|Abmelden|Anmelden|Aktiv|Aktualisieren|Antwort|Aufnahme|'
-  'Bearbeiten|Beenden|Bestätigen|Details|Einstellungen|Entfernen|Fehler|'
+  'Bearbeiten|Beenden|Bestätigen|Einstellungen|Entfernen|Fehler|'
   'Fertig|Hinweis|Hinzufügen|Inaktiv|Konto|Laden|Nachricht|Nein|Prüfen|'
   'Schließen|Senden|Speichern|Sprache|Starten|Stoppen|Suchen|Titel|Verbinden|'
-  'Verbindung|Warten|Weiter|Wiederholen|Zurück|Zugang|Ja|Okay|Alle|Keine|'
+  'Verbindung|Warten|Weiter|Wiederholen|Zurück|Zugang|Okay|Alle|Keine|'
   'Löschen|Öffnen|Erledigt|Offen|Fortfahren|Ablehnen|Erlauben|Zulassen)\$',
 );
 
@@ -131,8 +131,10 @@ void main() {
       "final b = 'Fehler';\n"
       "final c = 'save';\n"
       "final d = 'Spotify';\n"
-      "final e = 'Speichern.dart';\n",
+      "final e = 'Speichern.dart';\n"
+      "final f = 'Details';\n",
     );
+    // „Details“ ist auch englisch: kein Treffer.
     expect(scan(dir.path), hasLength(2));
   });
 }

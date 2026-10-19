@@ -181,7 +181,9 @@ class _TodoistScreenState extends ConsumerState<TodoistScreen> {
               title: failed
                   ? context.l10n.todoistApiError
                   : todoistStateText(context.l10n, info?.status),
-              detail: failed ? info?.error : null,
+              detail: failed
+                  ? integrationErrorText(context.l10n, 'todoist', info?.error)
+                  : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,

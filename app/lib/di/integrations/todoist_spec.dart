@@ -24,7 +24,7 @@ final todoistSpec = IntegrationSpec(
     return TodoistIntegration(
       deps.api,
       deps.secrets,
-      onError: (m) => d.reportError?.call('todoist', '$m · pausiert'),
+      onError: (_) => d.reportError?.call('todoist', pausedError),
       onRecovered: () => d.clearError?.call('todoist'),
     );
   },

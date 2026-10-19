@@ -519,11 +519,20 @@
   "integrationsIntro": "Seules les intégrations actives vont au modèle. Les intégrations désactivées ne coûtent aucun jeton.",
   "integrationsOwn": "Intégrations personnelles",
   "integrationsPaused": "en pause",
+  "integrationsPausedError": "{service} : accès refusé ou réponse inattendue · en pause",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "integrationsPermission": "Autorisation",
   "integrationsPermission2": "Autorisation",
   "integrationsReachable": "{displayName} est de nouveau joignable.",
   "integrationsRejected": "Refusée : {reason}",
   "integrationsTools": "{tools} outils",
+  "reconnectBringShare": "Solution : envoyer les articles à l'appli Bring! via Partager.",
   "reconnectErrDenied": "{service} : accès refusé ou non configuré. Vérifiez les identifiants.",
   "@reconnectErrDenied": {
     "placeholders": {
@@ -534,6 +543,14 @@
   },
   "reconnectErrFailed": "{service} : la connexion a échoué (réponse inattendue).",
   "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrOther": "{service} : la connexion a échoué.",
+  "@reconnectErrOther": {
     "placeholders": {
       "service": {
         "type": "String"

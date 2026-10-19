@@ -156,7 +156,7 @@ void main() {
     await settle(tester);
     final failed = tileWidget(tester, 'Spotify');
     expect(failed.status, IntegrationStatus.error);
-    expect(failed.detail, contains('Anmeldung abgelaufen'));
+    expect(failed.detail, contains('Spotify: Zugang abgelehnt'));
     expect(failed.detail, endsWith('pausiert'));
     expect(failed.actionLabel, 'Erneut versuchen');
     // Abgelaufene Anmeldung: Tokens sind gelöscht, Einrichtung nötig.
