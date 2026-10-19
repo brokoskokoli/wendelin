@@ -249,6 +249,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get attFinishWarnFrom => 'Avertir à partir de';
 
   @override
+  String get attFloorCorruptText =>
+      'La limite inférieure enregistrée pour la version du logiciel de ce fournisseur est endommagée. Sans elle, un retour à un logiciel plus ancien et non sûr ne peut pas être exclu ; la vérification reste donc bloquée et une nouvelle vérification n’y change rien. N’envoyez rien de confidentiel. Réinitialisez les données de l’app ou les réglages de ce fournisseur pour reconstruire la vérification.';
+
+  @override
+  String get attFloorCorruptTitle =>
+      'Protection enregistrée contre le retour en arrière endommagée';
+
+  @override
   String get attGpuFailedLabel => 'Vérification du GPU échouée';
 
   @override
@@ -474,6 +482,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get attRevokedTitle => 'Plateforme de l’exploitant révoquée';
+
+  @override
+  String get attRollbackText =>
+      'Le fournisseur signale une version du logiciel plus ancienne que celle déjà vérifiée ici. Il peut s’agir d’un logiciel ancien et vulnérable ou de données anciennes rejouées. La requête n’a pas été envoyée. N’envoyez rien de confidentiel et revérifiez plus tard.';
+
+  @override
+  String get attRollbackTitle =>
+      'Version du logiciel plus ancienne que celle vérifiée';
 
   @override
   String get attSBindHpke => 'Clé de chiffrement liée';

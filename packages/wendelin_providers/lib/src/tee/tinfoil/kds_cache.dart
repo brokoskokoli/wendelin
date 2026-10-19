@@ -32,6 +32,9 @@ abstract interface class KdsCache {
 
   /// Stores [entry] under [key].
   Future<void> save(String key, KdsEntry entry);
+
+  /// Drops the entry of [key] (it failed the chain check).
+  Future<void> remove(String key);
 }
 
 /// In-memory [KdsCache] (default and tests).
@@ -43,4 +46,7 @@ final class InMemoryKdsCache implements KdsCache {
 
   @override
   Future<void> save(String key, KdsEntry entry) async => _entries[key] = entry;
+
+  @override
+  Future<void> remove(String key) async => _entries.remove(key);
 }

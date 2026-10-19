@@ -478,6 +478,18 @@ abstract class AppLocalizations {
   /// **'Warnen ab'**
   String get attFinishWarnFrom;
 
+  /// No description provided for @attFloorCorruptText.
+  ///
+  /// In de, this message translates to:
+  /// **'Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Setze die App-Daten oder die Einstellungen dieses Anbieters zurück, um die Prüfung neu aufzubauen.'**
+  String get attFloorCorruptText;
+
+  /// No description provided for @attFloorCorruptTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Gespeicherter Rückschrittschutz beschädigt'**
+  String get attFloorCorruptTitle;
+
   /// No description provided for @attGpuFailedLabel.
   ///
   /// In de, this message translates to:
@@ -873,6 +885,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Plattform des Betreibers zurückgezogen'**
   String get attRevokedTitle;
+
+  /// No description provided for @attRollbackText.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Anbieter meldet eine ältere Software-Version als die, die hier schon einmal geprüft wurde. Das kann ein Zurückspielen alter, verwundbarer Software oder alter Daten sein. Die Anfrage wurde nicht gesendet. Sende nichts Vertrauliches und prüfe später erneut.'**
+  String get attRollbackText;
+
+  /// No description provided for @attRollbackTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Ältere Software-Version als zuvor geprüft'**
+  String get attRollbackTitle;
 
   /// No description provided for @attSBindHpke.
   ///

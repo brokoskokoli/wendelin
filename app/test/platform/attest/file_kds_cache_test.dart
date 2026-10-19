@@ -46,4 +46,14 @@ void main() {
     }
     expect(await cache.load('k'), isNull);
   });
+  test('remove löscht den Eintrag auch im Ordner', () async {
+    await cache.save(
+      'k',
+      KdsEntry(vcek: Uint8List(1), chain: 'c', product: 'p'),
+    );
+    await cache.remove('k');
+    expect(await cache.load('k'), isNull);
+    expect(dir.listSync().whereType<File>(), isEmpty);
+    await cache.remove('k'); // no error
+  });
 }

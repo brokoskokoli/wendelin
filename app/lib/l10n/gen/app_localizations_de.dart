@@ -249,6 +249,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get attFinishWarnFrom => 'Warnen ab';
 
   @override
+  String get attFloorCorruptText =>
+      'Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Setze die App-Daten oder die Einstellungen dieses Anbieters zurück, um die Prüfung neu aufzubauen.';
+
+  @override
+  String get attFloorCorruptTitle =>
+      'Gespeicherter Rückschrittschutz beschädigt';
+
+  @override
   String get attGpuFailedLabel => 'GPU-Prüfung fehlgeschlagen';
 
   @override
@@ -472,6 +480,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get attRevokedTitle => 'Plattform des Betreibers zurückgezogen';
+
+  @override
+  String get attRollbackText =>
+      'Der Anbieter meldet eine ältere Software-Version als die, die hier schon einmal geprüft wurde. Das kann ein Zurückspielen alter, verwundbarer Software oder alter Daten sein. Die Anfrage wurde nicht gesendet. Sende nichts Vertrauliches und prüfe später erneut.';
+
+  @override
+  String get attRollbackTitle => 'Ältere Software-Version als zuvor geprüft';
 
   @override
   String get attSBindHpke => 'Verschlüsselungsschlüssel gebunden';

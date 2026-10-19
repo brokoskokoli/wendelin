@@ -484,6 +484,52 @@ void main() {
       );
     });
 
+    test('Host und Altwert vorhanden: die höhere Version zählt (Rückschritt '
+        'gegen den Altwert)', () async {
+      final f = TinfoilFixture(tag: 'v0.0.160');
+      await f.floors.save(
+        floorKey,
+        ReleaseFloor(
+          version: ReleaseVersion.tryParse('v0.0.150')!,
+          integratedTime: 1,
+        ),
+      );
+      await f.floors.save(
+        'altprofil',
+        ReleaseFloor(
+          version: ReleaseVersion.tryParse('v0.0.170')!,
+          integratedTime: 1,
+        ),
+      );
+      final r = await f.verifier(profileId: 'altprofil').attest();
+      expect(r.status, AttestationStatus.red);
+      final stage = stageOf(r, AttestationStage.releaseFloor);
+      expect(stage.outcome, StageOutcome.fail);
+      expect(stage.code, StageResult.releaseRollback);
+    });
+
+    test(
+      'Host und Altwert, gleiche Version: die spätere Signierzeit zählt',
+      () async {
+        final f = TinfoilFixture(tag: 'v0.0.158');
+        final v = ReleaseVersion.tryParse('v0.0.158')!;
+        await f.floors.save(
+          floorKey,
+          ReleaseFloor(version: v, integratedTime: 1),
+        );
+        await f.floors.save(
+          'altprofil',
+          ReleaseFloor(version: v, integratedTime: 4000000000),
+        );
+        final r = await f.verifier(profileId: 'altprofil').attest();
+        expect(r.status, AttestationStatus.red);
+        expect(
+          stageOf(r, AttestationStage.releaseFloor).code,
+          StageResult.releaseRollback,
+        );
+      },
+    );
+
     test('mehrere gültige Bundles: die späteste Signierzeit zählt, nicht die '
         'Reihenfolge', () async {
       final f = TinfoilFixture(tag: 'v0.0.158', integratedTime: 1789000500)
@@ -530,6 +576,7 @@ void main() {
         final stage = stageOf(r, AttestationStage.releaseFloor);
         expect(stage.outcome, StageOutcome.fail);
         expect(stage.detail, contains('beschädigt'));
+        expect(stage.code, StageResult.releaseFloorCorrupt);
         expect(r.session, isNull);
       },
     );
@@ -551,6 +598,25 @@ void main() {
       final r = await f.verifier(kdsCache: cache).attest();
       expect(r.status, AttestationStatus.green);
       expect(kdsRequests(f), first);
+    });
+
+    test('ein Eintrag, der die Kette nicht besteht, wird verworfen; danach '
+        'frisch von AMD', () async {
+      final f = TinfoilFixture();
+      final cache = InMemoryKdsCache();
+      expect(
+        (await f.verifier(kdsCache: cache).attest()).status,
+        AttestationStatus.green,
+      );
+      final first = kdsRequests(f);
+      f.snp.verdict = _verdict(chainOk: false);
+      final bad = await f.verifier(kdsCache: cache).attest();
+      expect(bad.status, AttestationStatus.red);
+      expect(kdsRequests(f), first, reason: 'der Eintrag kam aus dem Cache');
+      f.snp.verdict = _verdict();
+      final again = await f.verifier(kdsCache: cache).attest();
+      expect(again.status, AttestationStatus.green);
+      expect(kdsRequests(f), greaterThan(first), reason: 'neu von AMD geholt');
     });
 
     test('ein Cache, der wirft, ist nur ein Fehlschlag', () async {
@@ -603,4 +669,7 @@ final class _ThrowingCache implements KdsCache {
 
   @override
   Future<void> save(String key, KdsEntry entry) => throw StateError('x');
+
+  @override
+  Future<void> remove(String key) => throw StateError('x');
 }

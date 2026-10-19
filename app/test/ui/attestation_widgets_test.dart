@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/tee_restrictions.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/l10n/gen/app_localizations_en.dart';
+import 'package:wendelin/l10n/gen/app_localizations_fr.dart';
 import 'package:wendelin/ui/attestation/attestation_texts.dart';
 import 'package:wendelin/ui/attestation/stage_line.dart';
 import 'package:wendelin/ui/design/design.dart';
@@ -185,6 +187,47 @@ void main() {
   });
 
   group('Texte', () {
+    test('Untergrenze: eigene Texte in de/en/fr, beschädigt nennt den '
+        'Ausweg, keinen Ein-Klick-Weg', () {
+      final general = attestationMessage(
+        AppLocalizationsDe(),
+        AttestationStatus.red,
+      );
+      for (final l in [
+        AppLocalizationsDe(),
+        AppLocalizationsEn(),
+        AppLocalizationsFr(),
+      ]) {
+        final rollback = attestationMessage(
+          l,
+          AttestationStatus.red,
+          reasonCode: AttestationReason.releaseRollback,
+        );
+        final corrupt = attestationMessage(
+          l,
+          AttestationStatus.red,
+          reasonCode: AttestationReason.releaseFloorCorrupt,
+        );
+        expect(rollback.text, isNotEmpty);
+        expect(corrupt.text, isNot(rollback.text));
+        expect(corrupt.canRecheck, isFalse);
+      }
+      final rollback = attestationMessage(
+        AppLocalizationsDe(),
+        AttestationStatus.red,
+        reasonCode: AttestationReason.releaseRollback,
+      );
+      final corrupt = attestationMessage(
+        AppLocalizationsDe(),
+        AttestationStatus.red,
+        reasonCode: AttestationReason.releaseFloorCorrupt,
+      );
+      expect(rollback.text, isNot(general.text));
+      expect(corrupt.text, isNot(general.text));
+      expect(corrupt.text, contains('gesperrt'));
+      expect(corrupt.text, contains('zurück'));
+    });
+
     test('Quittungsgründe: Grund genannt, neutral, keine Manipulation, '
         'nichts verharmlost', () {
       final texts = {
@@ -241,6 +284,8 @@ void main() {
         AttestationReason.gpuFailed,
         AttestationReason.gpuUnavailable,
         AttestationReason.receiptRejected,
+        AttestationReason.releaseRollback,
+        AttestationReason.releaseFloorCorrupt,
         null,
       ]) {
         final m = attestationMessage(

@@ -248,6 +248,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attFinishWarnFrom => 'Warn at';
 
   @override
+  String get attFloorCorruptText =>
+      'The stored lower bound for this provider’s release version is damaged. Without it a rollback to older, insecure software cannot be ruled out, so the check stays blocked and checking again does not change that. Send nothing confidential. Reset the app data or this provider’s settings to rebuild the check.';
+
+  @override
+  String get attFloorCorruptTitle => 'Stored rollback protection damaged';
+
+  @override
   String get attGpuFailedLabel => 'GPU check failed';
 
   @override
@@ -470,6 +477,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attRevokedTitle => 'Operator platform revoked';
+
+  @override
+  String get attRollbackText =>
+      'The provider reports an older software version than the one verified here before. This can be old, vulnerable software or old data being replayed. The request was not sent. Send nothing confidential and check again later.';
+
+  @override
+  String get attRollbackTitle => 'Older software version than verified before';
 
   @override
   String get attSBindHpke => 'Encryption key bound';

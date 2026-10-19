@@ -53,4 +53,7 @@ final class FileKdsCache implements KdsCache {
       ),
     );
   }
+
+  @override
+  Future<void> remove(String key) async => _files.delete(_name(key));
 }

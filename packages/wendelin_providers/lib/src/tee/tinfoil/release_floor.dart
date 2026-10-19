@@ -153,6 +153,7 @@ Future<(StageResult, ReleaseFloor?)> checkReleaseFloor(
         s,
         'Gespeicherte Untergrenze des Releases beschädigt '
         '(Rückschrittschutz nicht prüfbar)',
+        code: StageResult.releaseFloorCorrupt,
       ),
       null,
     );
@@ -163,6 +164,7 @@ Future<(StageResult, ReleaseFloor?)> checkReleaseFloor(
         s,
         'Release $version ist älter als das bereits gesehene '
         '${floor.version} (Rückschritt abgelehnt)',
+        code: StageResult.releaseRollback,
       ),
       null,
     );

@@ -195,6 +195,12 @@ final class StageResult {
   /// Code: the answer carried no receipt id.
   static const receiptMissing = 'receipt_missing';
 
+  /// Code: the release is older than the highest one ever verified (K59).
+  static const releaseRollback = 'release_rollback';
+
+  /// Code: the stored release floor is damaged; the check stays locked.
+  static const releaseFloorCorrupt = 'release_floor_corrupt';
+
   /// JSON for the audit log.
   Map<String, Object?> toJson() => {
     'stage': stage.id,

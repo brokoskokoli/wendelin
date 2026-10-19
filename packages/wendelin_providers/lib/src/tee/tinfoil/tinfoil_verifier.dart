@@ -215,6 +215,7 @@ final class TinfoilVerifier
           hpkeKey: hpkeKey,
         );
       } on Object {
+        await _dropCached(kds);
         return _failed(const [
           StageResult.fail(
             AttestationStage.snpReport,
@@ -223,6 +224,9 @@ final class TinfoilVerifier
         ]);
       }
       snpOk = verdict.allOk;
+      // A cached VCEK or chain that fails is dropped: the next attempt asks
+      // AMD again. The cache can only ever lose, never turn a check green.
+      if (!verdict.chainOk) await _dropCached(kds);
       stages.addAll(_snpStages(verdict, info, observed));
     }
     stages.add(
@@ -413,6 +417,16 @@ final class TinfoilVerifier
     return out.takeBytes();
   }
 
+  Future<void> _dropCached(_Kds kds) async {
+    final key = kds.cacheKey;
+    if (key == null) return;
+    try {
+      await kdsCache.remove(key);
+    } on Object {
+      // Only a cache.
+    }
+  }
+
   // --- AMD KDS --------------------------------------------------------
 
   Future<_Kds> _collateral(SnpReportInfo info) async {
@@ -438,7 +452,7 @@ final class TinfoilVerifier
     }
     if (cached != null) {
       _product = cached.product;
-      return _Kds(cached.vcek, cached.chain);
+      return _Kds(cached.vcek, cached.chain, cacheKey: key);
     }
     final products = [
       ?_product,
@@ -750,8 +764,11 @@ final class _CappedSink implements Sink<List<int>> {
 }
 
 final class _Kds {
-  _Kds(this.vcek, this.chain) : problem = null;
-  _Kds.problem(this.problem) : vcek = null, chain = null;
+  _Kds(this.vcek, this.chain, {this.cacheKey}) : problem = null;
+  _Kds.problem(this.problem) : vcek = null, chain = null, cacheKey = null;
+
+  /// Cache key if the entry came from the cache.
+  final String? cacheKey;
 
   final Uint8List? vcek;
   final String? chain;
