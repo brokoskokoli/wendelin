@@ -1,0 +1,17 @@
+{
+  "quickSwitchCurrent": "aktuell",
+  "quickSwitchHint": "Die Auswahl beendet das Gespräch und startet ein neues.",
+  "quickSwitchItemSemantics": "{name}, {level}",
+  "@quickSwitchItemSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "quickSwitchSemanticsAction": "Agent wechseln",
+  "quickSwitchTitle": "Agent wechseln"
+}
