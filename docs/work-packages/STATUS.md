@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP98, WP97, WP85, WP103
+Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP97, WP85, WP103
 
 ## Meilensteine
 
@@ -48,7 +48,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP95 | CI als Gate | gemergt | – |
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
 | WP97 | Lastbremse/Cache | in Arbeit | – |
-| WP98 | Konfliktarm | in Arbeit | – |
+| WP98 | Konfliktarm | gemergt 2c14825 | Folge: id-Switches in labels.dart, settings_routes.dart, integration_detail_screen.dart; `--adopt` holt von main gelöschte Schlüssel zurück; Statustabelle aus Frontmatter |
 | WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 offen (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
 | WP103 | Bessere Sprache einbauen | in Arbeit | nach Empfehlung K66, Katalog an Stefans Wahl anpassbar |
 
@@ -58,7 +58,7 @@ Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
 Reihenfolge M5 (bestätigt Stefan 2026-10-19), je Schritt höchstens 2 Paket-Sitzungen; Pakete am Sprach-Controller (WP81b, WP92, WP93, WP103) nie gleichzeitig:
 
-0. läuft: WP98 Konfliktarm, WP102 Messvergleich Sprache
+0. erledigt: WP98, WP102; Merge ab jetzt mit `tool/merge_wp.sh <branch> [--squash]`, Paket-Anleitung `docs/work-packages/WP98-migration.md`
 1. WP97 Lastbremse/Cache, WP85 Kontakte/SMS/Anrufe
 2. WP103 Bessere Sprache einbauen, WP86 Standort/Maps
 3. WP81b Modellaufruf parallel zur Quittung, WP76c Tinfoil EHBP/HPKE
