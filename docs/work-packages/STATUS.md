@@ -2,11 +2,11 @@
 
 Einzige Stelle für den Stand der Meilensteine und Arbeitspakete. Gepflegt vom Orchestrator auf `main`, bei jedem Start, Merge oder Verwerfen eines Pakets (Paket-Branches ändern diese Datei nicht).
 
-Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
+Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); bei Abwesenheit mit Freigabe mehr (2026-10-19: bis 4, je 1 Sub-Agent).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19, WP98 und WP102 laufen; WP91, WP76b, WP84, WP79, WP96, WP88, WP90 gemergt
+Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP98, WP97, WP85, WP103
 
 ## Meilensteine
 
@@ -35,7 +35,7 @@ Stand: 2026-10-19, WP98 und WP102 laufen; WP91, WP76b, WP84, WP79, WP96, WP88, W
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
-| WP85 | Kontakte/SMS/Anrufe | geplant | – |
+| WP85 | Kontakte/SMS/Anrufe | in Arbeit | – |
 | WP86 | Standort/Maps | geplant | – |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
@@ -47,18 +47,25 @@ Stand: 2026-10-19, WP98 und WP102 laufen; WP91, WP76b, WP84, WP79, WP96, WP88, W
 | WP94 | Schnellwechsel Agent | geplant | – |
 | WP95 | CI als Gate | gemergt | – |
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
-| WP97 | Lastbremse/Cache | geplant | – |
+| WP97 | Lastbremse/Cache | in Arbeit | – |
 | WP98 | Konfliktarm | in Arbeit | – |
-| WP102 | Spike bessere Sprache (Messung) | in Arbeit | K64 |
-| WP103 | Bessere Sprache einbauen | geplant | nach WP102 |
+| WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 offen (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
+| WP103 | Bessere Sprache einbauen | in Arbeit | nach Empfehlung K66, Katalog an Stefans Wahl anpassbar |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
 ## Nächste Schritte
 
-Stand 2026-10-19 (Orchestrator „Wendelin coding“):
+Reihenfolge M5 (bestätigt Stefan 2026-10-19), je Schritt höchstens 2 Paket-Sitzungen; Pakete am Sprach-Controller (WP81b, WP92, WP93, WP103) nie gleichzeitig:
 
-3. Als nächste Sitzung WP102 (Messvergleich Sprache), dann WP103; außerdem WP81b, WP97, WP76c/d (Downgrade-Schutz K59) und die M5-Wellen 2 und 3.
-4. Pakete mit alten Commits („Stefan Richter“, Claude-Session-Zeile) per Squash mergen.
+0. läuft: WP98 Konfliktarm, WP102 Messvergleich Sprache
+1. WP97 Lastbremse/Cache, WP85 Kontakte/SMS/Anrufe
+2. WP103 Bessere Sprache einbauen, WP86 Standort/Maps
+3. WP81b Modellaufruf parallel zur Quittung, WP76c Tinfoil EHBP/HPKE
+4. WP76d Tinfoil in der App (Downgrade-Schutz K59), WP89 Todoist/Google Tasks
+5. WP92a→b→c Sprechererkennung, WP94 Schnellwechsel
+6. WP93 Wake Word im Chat
 
-Wartet auf Stefan: K47 nach Stopp-Test 11.6, Test 11.7a.
+Danach M6 (nur mit Go): WP99, dann WP100/WP101 (`M6-PLAN.md`). Pakete mit Alt-Commits per Squash mergen.
+
+Wartet auf Stefan: K47 nach Stopp-Test 11.6, Test 11.7a, Gerätetests WP90.1–7 und WP91.
