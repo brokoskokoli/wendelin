@@ -1,0 +1,428 @@
+{
+  "attCheckFailed": "Prüfung fehlgeschlagen",
+  "attChecking": "wird geprüft",
+  "attE2eeKeyNote": "Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell.",
+  "attExplainAccept": "Akzeptieren",
+  "attExplainChecked": "Geprüft wird: {what}",
+  "@attExplainChecked": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "attExplainIntro": "Was Wendelin prüft, was dabei herauskam und was das für deine Sicherheit heißt.",
+  "attExplainMeaning": "Bedeutung: {v}",
+  "@attExplainMeaning": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attExplainRestrictionsDetail": "{v}: nur protokolliert. Wenn du das akzeptierst, zeigt der Chat dafür keinen Hinweis mehr.",
+  "@attExplainRestrictionsDetail": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attExplainRestrictionsTitle": "Einschränkungen dieses Anbieters",
+  "attExplainResult": "Ergebnis: {detail}",
+  "@attExplainResult": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "attExplainStageLine": "{label} · {result}",
+  "@attExplainStageLine": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "attExplainTitle": "Details zur Prüfung",
+  "attFailedText": "Die Antwort konnte nicht als unverändert aus der geprüften Umgebung bestätigt werden, zum Beispiel wegen eines Signaturfehlers oder abweichender Prüfsummen. Das kann auf eine Manipulation hindeuten. Vertraue der Antwort nicht. Der Anbieter ist gesperrt, bis du ihn neu prüfst.",
+  "attFinishBudgetLabel": "Budget pro Monat in $ (optional)",
+  "attFinishImagesNo": "✕ Bilder",
+  "attFinishImagesYes": "✓ Bilder",
+  "attFinishModelChecked": "Modell geprüft",
+  "attFinishPercentOfBudget": "{v} % des Budgets",
+  "@attFinishPercentOfBudget": {
+    "placeholders": {
+      "v": {
+        "type": "int"
+      }
+    }
+  },
+  "attFinishPrivacyLevel": "Datenschutzstufe",
+  "attFinishRestrictionNote": "{v}. Das liefert der Anbieter nicht oder Wendelin prüft es nicht, es wird nur protokolliert. Mit „Speichern“ akzeptierst du das. Sobald etwas Neues dazukommt, weist Wendelin erneut darauf hin. Mehr unter „Details“.",
+  "@attFinishRestrictionNote": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attFinishTeeYes": "✓ TEE",
+  "attFinishToolsNo": "✕ Tools",
+  "attFinishToolsYes": "✓ Tools",
+  "attFinishWarnFrom": "Warnen ab",
+  "attGpuFailedLabel": "GPU-Prüfung fehlgeschlagen",
+  "attGpuFailedText": "Die GPU-Prüfung über NVIDIA ist fehlgeschlagen.{v} Die nächste Anfrage an dieses Modell wird vorher geprüft.",
+  "@attGpuFailedText": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attGpuFailedTitle": "GPU-Prüfung fehlgeschlagen",
+  "attGpuUnavailableLabel": "GPU-Prüfung nicht möglich",
+  "attGpuUnavailableText": "Die GPU-Prüfung über NVIDIA war nicht möglich.{v} Die nächste Anfrage an dieses Modell wird vorher geprüft.",
+  "@attGpuUnavailableText": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attGpuUnavailableTitle": "GPU-Prüfung nicht möglich",
+  "attLogCommit": "Commit",
+  "attLogKeysetDigest": "Keyset-Digest",
+  "attLogModel": "Modell",
+  "attLogNewRestriction": "Neue Einschränkung",
+  "attLogNewRestrictionDetail": "{v}: nur protokolliert und noch nicht von dir akzeptiert. Unter „Details“ kannst du das ansehen und akzeptieren.",
+  "@attLogNewRestrictionDetail": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attLogNoEntry": "Zu dieser Antwort gibt es noch keinen Eintrag.",
+  "attLogParticulars": "Angaben",
+  "attLogProvider": "Anbieter",
+  "attLogReasonCode": "Grundcode",
+  "attLogReceiptId": "Quittungs-ID",
+  "attLogRecheck": "Neu prüfen",
+  "attLogRecheckFailed": "Die neue Prüfung ist nicht bestanden.",
+  "attLogRechecked": "Anbieter neu geprüft, die Sperre ist aufgehoben.",
+  "attLogResultPerStep": "Ergebnis je Stufe",
+  "attLogScreenCommitLine": "Commit {repoCommit}",
+  "@attLogScreenCommitLine": {
+    "placeholders": {
+      "repoCommit": {
+        "type": "String"
+      }
+    }
+  },
+  "attLogScreenDeleteBody": "Alle Einträge des Prüfprotokolls werden gelöscht. Das lässt sich nicht rückgängig machen.",
+  "attLogScreenDeleteLog": "Prüfprotokoll löschen",
+  "attLogScreenDeleteTitle": "Prüfprotokoll löschen?",
+  "attLogScreenDeleted": "Gelöscht.",
+  "attLogScreenExportJson": "Als JSON exportieren",
+  "attLogScreenFilterAll": "Alle",
+  "attLogScreenFilterGreen": "Geprüft",
+  "attLogScreenFilterRed": "Fehlgeschlagen",
+  "attLogScreenFilterUnconfirmed": "Nicht bestätigt",
+  "attLogScreenFilterYellow": "Wird geprüft",
+  "attLogScreenGpuTitle": "GPU · {v}",
+  "@attLogScreenGpuTitle": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attLogScreenIntro": "Wendelin prüft Anbieter mit geschützter Umgebung (TEE) und jede Antwort. Hier steht, was geprüft wurde. Nie Inhalte, nur Ids, Prüfsummen und Ergebnisse.",
+  "attLogScreenNoEntries": "Keine Einträge.",
+  "attLogScreenReceiptTitle": "{v} · {providerName}",
+  "@attLogScreenReceiptTitle": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "attLogScreenRecheckAttest": "Neu attestieren",
+  "attLogScreenRechecked": "Neu attestiert, eine Sperre ist aufgehoben.",
+  "attLogScreenSessionGreen": "Sitzung geprüft",
+  "attLogScreenSessionRed": "Sitzung fehlgeschlagen",
+  "attLogScreenSessionTitle": "Sitzung · {providerName}",
+  "@attLogScreenSessionTitle": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "attLogScreenSessionUnconfirmed": "Sitzung nicht bestätigt",
+  "attLogScreenSessionYellow": "Sitzung nicht prüfbar",
+  "attLogTime": "Zeit",
+  "attLogTitle": "Prüfprotokoll",
+  "attLogTitle2": "Prüfprotokoll",
+  "attMismatchText": "Der Nachweis der Sitzung passt nicht zur signierten Quittung dieser Antwort. Vertraue der Antwort nicht. Der Anbieter ist gesperrt, bis du ihn neu prüfst.",
+  "attMismatchTitle": "Möglicher Manipulationsversuch",
+  "attReasonLead": " Grund: {reason}{v}",
+  "@attReasonLead": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      },
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attReceiptMissing": "Quittung fehlt",
+  "attReceiptMissingText": "Der Anbieter hat zu dieser Antwort keine Quittungs-Kennung geliefert.",
+  "attReceiptNotFound": "Quittung nicht gefunden",
+  "attReceiptNotFoundText": "Der Anbieter kennt die Quittung dieser Antwort nicht (noch nicht geschrieben oder abgelaufen).",
+  "attReceiptRejectedLabel": "Quittung abgelehnt",
+  "attReceiptRejectedText": "Der Anbieter hat den Abruf der Quittung abgelehnt (zum Beispiel wegen zu vieler Anfragen). Die Antwort ist nicht bestätigt, es gibt aber keinen Hinweis auf eine Manipulation. Prüfe den Anbieter neu.",
+  "attReceiptRejectedTitle": "Quittungsabruf vom Anbieter abgelehnt",
+  "attReceiptUnreachable": "Quittung nicht erreichbar",
+  "attReceiptUnreachableText": "Die Quittung dieser Antwort konnte wegen eines Netz- oder Serverfehlers nicht abgerufen werden.",
+  "attRelaunchText": "Der Hersteller empfiehlt dem Betreiber, die geschützte Umgebung neu zu starten, damit ein Sicherheits-Update wirksam wird. Das ist kein Hinweis auf eine Manipulation. Prüfe später erneut.",
+  "attRelaunchTitle": "Neustart der TEE beim Betreiber empfohlen",
+  "attResponseWord": "Antwort",
+  "attRestrictionOpen": "geprüft, neue Einschränkung",
+  "attResultInfo": "nur protokolliert",
+  "attResultUnavailable": "nicht abrufbar",
+  "attResultWarn": "Hinweis",
+  "attRevokedText": "Der Hersteller hat die Hardware-Plattform des Betreibers als unsicher zurückgezogen. Sende nichts Vertrauliches, bis der Betreiber sie ersetzt hat.",
+  "attRevokedTitle": "Plattform des Betreibers zurückgezogen",
+  "attSCompose": "Compose-Hash",
+  "attSE2eeKey": "E2EE-Schlüssel geprüft",
+  "attSE2eeKeyset": "Schlüsselsatz der Antwort",
+  "attSE2eeRequest": "Verschlüsselung der Anfrage",
+  "attSE2eeResponse": "Entschlüsselung der Antwort",
+  "attSEventLog": "Ereignisprotokoll",
+  "attSFreshness": "Frische",
+  "attSGateway": "Gateway des Anbieters",
+  "attSGpu": "GPU-Evidenz",
+  "attSGpuEvidence": "GPU-Nachweis des Anbieters",
+  "attSKeysetDigest": "Schlüsselsatz (Digest)",
+  "attSKeysetSignature": "Schlüsselsatz-Signatur",
+  "attSNonce": "Nonce gebunden",
+  "attSProvenance": "Herkunft (Commit)",
+  "attSQuote": "TDX-Quote (DCAP)",
+  "attSReceiptBinding": "Quittung an Sitzung gebunden",
+  "attSReceiptEvents": "Quittungs-Ereignisse",
+  "attSReceiptFetch": "Quittung abgerufen",
+  "attSReceiptRequest": "Hash der Anfrage",
+  "attSReceiptResponse": "Hash der Antwort",
+  "attSReceiptSignature": "Quittungs-Signatur",
+  "attSTcb": "Plattform-Sicherheitsstand (TCB)",
+  "attSTls": "TLS-Verbindung geprüft",
+  "attSUpstream": "Upstream-Prüfung",
+  "attSUpstreamTcb": "Upstream-Sicherheitsstand",
+  "attStagesCardAllPassed": "Alle {length} Stufen bestanden",
+  "@attStagesCardAllPassed": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "attStagesCardFirst": "Erste Attestierung",
+  "attStagesCardNotPassed": "nicht bestanden",
+  "attStagesCardSomePassed": "{failed} von {length} Stufen nicht bestanden: {v}",
+  "@attStagesCardSomePassed": {
+    "placeholders": {
+      "failed": {
+        "type": "int"
+      },
+      "length": {
+        "type": "int"
+      },
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attStagesCardViewLog": "Prüfprotokoll ansehen",
+  "attStoredReason": " Grund: {text}{v}",
+  "@attStoredReason": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      },
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "attSummaryGreen": "geprüft",
+  "attSummaryYellow": "ausstehend",
+  "attTcbText": "Die Hardware, auf der das Modell läuft, hat ein Sicherheits-Update des Herstellers noch nicht eingespielt. Das ist kein Hinweis auf eine Manipulation, schwächt aber den Schutz. Der Betreiber muss aktualisieren. Prüfe später erneut und sende bis dahin nichts Vertrauliches.",
+  "attTcbTitle": "Sicherheits-Update beim Betreiber ausstehend",
+  "attUnconfirmed": "nicht bestätigt",
+  "attUnconfirmedText": "{cause} Ob die Antwort aus der geprüften Umgebung stammt, ist unbestätigt. Es wurde aber auch kein Fehler festgestellt, der Anbieter bleibt nutzbar. Aktionen, die auf die geprüfte Antwort warten, laufen nicht. Prüfe den Anbieter neu.",
+  "@attUnconfirmedText": {
+    "placeholders": {
+      "cause": {
+        "type": "String"
+      }
+    }
+  },
+  "checkStatusFailed": "fehlgeschlagen",
+  "checkStatusInfo": "nur protokolliert",
+  "checkStatusNeutral": "nicht bestätigt",
+  "checkStatusOk": "geprüft",
+  "checkStatusPending": "ausstehend",
+  "gpuBlockNoEvidenceDetail": "Die Anfrage wurde nicht gesendet.",
+  "gpuBlockNotSent": "Nicht gesendet.{v}",
+  "@gpuBlockNotSent": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "gpuModeAfter": "Nachher",
+  "gpuModeAfterText": "Die Prüfung läuft nach der Antwort. Schlägt sie fehl, warnt dich eine Benachrichtigung, die Antwort wird rot markiert, und die nächsten Anfragen an dieses Modell prüfen vorher. Modelle ohne Nachweis bekommen nur einen Hinweis.",
+  "gpuModeBefore": "Vorher",
+  "gpuModeBeforeText": "NVIDIA prüft die GPU-Nachweise, bevor deine Anfrage den Anbieter erreicht. Schlägt die Prüfung fehl oder liefert der Anbieter keinen Nachweis, wird nichts gesendet. Du kannst dann einmalig ohne GPU-Prüfung senden.",
+  "gpuModeOff": "Aus",
+  "gpuModeOffText": "Standard. Wendelin prüft nur lokal, ob die GPU-Nachweise zu deiner Anfrage gehören. Kein Aufruf an NVIDIA.",
+  "gpuNoEvidenceFinishText": "{hint}. Das Modell bleibt nutzbar. Was Wendelin dann tut, bestimmt die GPU-Prüfung unten: „Aus“ nichts, „Nachher“ nur ein Hinweis, „Vorher“ sendet nichts, du kannst aber einmalig ohne GPU-Prüfung senden.",
+  "@gpuNoEvidenceFinishText": {
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "gpuNoEvidenceFinishTitle": "Keine GPU-Prüfung möglich",
+  "gpuNoEvidenceHint": "Keine GPU-Prüfung möglich (Anbieter liefert keinen Nachweis)",
+  "gpuNoEvidenceMessage": "{name} liefert für dieses Modell keinen GPU-Nachweis, NVIDIA kann nichts prüfen. Weil die GPU-Prüfung auf „Vorher“ steht, wurde deine Anfrage nicht gesendet. Du kannst sie einmalig ohne GPU-Prüfung senden. Die übrigen Prüfungen bleiben aktiv.",
+  "@gpuNoEvidenceMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gpuNoEvidenceTitle": "Kein GPU-Nachweis",
+  "gpuNotifyFailedText": "Die GPU-Prüfung der letzten Antwort von {name} ist fehlgeschlagen. Die nächste Anfrage prüft vorher. Details im Prüfprotokoll.",
+  "@gpuNotifyFailedText": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gpuNotifyFailedTitle": "GPU-Prüfung fehlgeschlagen",
+  "gpuSectionNote": "Für „Vorher“ und „Nachher“ ruft Wendelin den Dienst von NVIDIA (nras.attestation.nvidia.com) auf. Gesendet werden nur die Nachweise der GPU, keine Inhalte deiner Anfragen oder Antworten.",
+  "gpuSectionTitle": "GPU-Prüfung über NVIDIA",
+  "gpuToolName": "GPU-Prüfung",
+  "shieldSemantics": "TEE-Prüfung: {label}",
+  "@shieldSemantics": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "shieldSemanticsTap": "TEE-Prüfung: {label}. Tippen für das Prüfprotokoll.",
+  "@shieldSemanticsTap": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "stageAgeInfo": "Das Alter wurde nur protokolliert.",
+  "stageAgePass": "Der Nachweis ist aktuell und kein alter Mitschnitt.",
+  "stageAgeWhat": "Wie alt der Nachweis ist.",
+  "stageComposeInfo": "Der Hash wurde protokolliert, aber nicht gegen eine Liste vertrauenswürdiger Werte verglichen.",
+  "stageComposePass": "Genau die erwarteten Programme laufen im Dienst.",
+  "stageComposeWhat": "Der Compose-Hash: eine Prüfsumme der Container-Beschreibung, also welche Programme im Dienst laufen.",
+  "stageE2eeKeyInfo": "Der Schlüssel wurde nur protokolliert.",
+  "stageE2eeKeyPass": "Nur die geprüfte Umgebung kann die Anfrage entschlüsseln. Bei manchen Anbietern endet die Verschlüsselung im Gateway, nicht im Modell selbst.",
+  "stageE2eeKeyWhat": "Der Schlüssel, mit dem Wendelin deine Anfrage Ende-zu-Ende verschlüsselt, stammt aus dem Hardware-Nachweis.",
+  "stageE2eeRequestInfo": "Die Anfrage (oder Teile wie Tool-Aufrufe) sind nicht zusätzlich verschlüsselt, nur über die geprüfte Verbindung geschützt.",
+  "stageE2eeRequestPass": "Deine Anfrage ist unterwegs für Dritte unlesbar.",
+  "stageE2eeRequestPinned": "Die Anfrage (oder Teile wie Tool-Aufrufe) sind nicht zusätzlich verschlüsselt, nur über die geprüfte Verbindung geschützt.",
+  "stageE2eeRequestUnpinned": "Die Anfrage (oder Teile wie Tool-Aufrufe) sind nicht zusätzlich verschlüsselt, und die Verbindung ist nicht an den Nachweis gebunden. Der Schutz ist dadurch schwächer.",
+  "stageE2eeRequestWhat": "Ob die Anfrage tatsächlich verschlüsselt gesendet wurde.",
+  "stageE2eeResponseInfo": "Die Entschlüsselung wurde nur protokolliert.",
+  "stageE2eeResponsePass": "Die Antwort kam unverändert aus der geprüften Umgebung.",
+  "stageE2eeResponseWhat": "Ob die Antwort verschlüsselt ankam und entschlüsselt werden konnte.",
+  "stageEventLogInfo": "Das Ereignisprotokoll wurde nur protokolliert.",
+  "stageEventLogPass": "Die gestartete Software ist lückenlos nachvollziehbar.",
+  "stageEventLogWhat": "Das Ereignisprotokoll des Starts: welche Software beim Hochfahren geladen wurde. Es muss zur Hardware-Messung passen.",
+  "stageFailMeaning": "Die Prüfung ist fehlgeschlagen. Das kann ein Hinweis auf eine Manipulation oder einen Fehler beim Anbieter sein. Wendelin sendet dann nichts mehr an diesen Anbieter, bis du ihn neu prüfst.",
+  "stageGatewayInfo": "Der Gateway-Zustand wurde nur protokolliert.",
+  "stageGatewayPass": "Das Gateway läuft mit aktuellem Sicherheitsstand.",
+  "stageGatewayWhat": "Der Zustand des Gateways des Anbieters (Vermittler vor dem Modell).",
+  "stageGpuInfo": "Die GPU wurde nicht über NVIDIA geprüft, weil die Prüfung in den Einstellungen aus ist.",
+  "stageGpuPass": "NVIDIA bestätigt die geschützte GPU.",
+  "stageGpuWhat": "Der Nachweis der Grafikkarte (NVIDIA), auf der das Modell rechnet. Optional, in den Einstellungen zuschaltbar.",
+  "stageInfoDefault": "Die Stufe wird nur protokolliert, nicht als Bedingung geprüft.",
+  "stageKeyBindingInfo": "Die Prüfsumme wurde nur protokolliert.",
+  "stageKeyBindingPass": "Die Schlüssel stammen aus der geprüften Umgebung, nicht von jemandem dazwischen.",
+  "stageKeyBindingWhat": "Die Prüfsumme des Schlüsselsatzes (Schlüssel, mit denen Wendelin verschlüsselt) muss im Hardware-Nachweis stehen.",
+  "stageNonceInfo": "Die Zahl wurde nur protokolliert.",
+  "stageNoncePass": "Der Nachweis ist frisch für diese Anfrage und kein aufgezeichneter alter Nachweis.",
+  "stageNonceWhat": "Eine zufällige Zahl, die Wendelin mitschickt und die im Nachweis wieder auftauchen muss.",
+  "stagePassDefault": "Die Stufe wurde bestanden.",
+  "stageProvenanceInfo": "Es gibt keine Vertrauensliste für diesen Anbieter. Wendelin protokolliert den Stand, kann aber nicht sagen, ob er vertrauenswürdig ist. Wer den Quellcode prüfen will, kann den Commit im Prüfprotokoll nachsehen.",
+  "stageProvenancePass": "Die Software stammt aus einem bekannten, geprüften Stand.",
+  "stageProvenanceWhat": "Die Herkunft: aus welchem Quellcode-Stand (Commit) die laufende Software gebaut wurde und ob er auf der Vertrauensliste steht.",
+  "stageQuoteInfo": "Der Nachweis wurde nur protokolliert, nicht bewertet.",
+  "stageQuotePass": "Der Dienst läuft nachweislich in einer echten, abgeschotteten Intel-TDX-Umgebung. Der Betreiber kann den Speicher nicht mitlesen.",
+  "stageQuoteWhat": "Der Hardware-Nachweis (TDX-Quote) der geschützten Umgebung. Er ist von der CPU signiert und wird gegen die Zertifikate von Intel geprüft.",
+  "stageReceiptBindingInfo": "Die Bindung wurde nur protokolliert.",
+  "stageReceiptBindingPass": "Quittung und Sitzung passen zusammen.",
+  "stageReceiptBindingWhat": "Ob die Quittung zur geprüften Sitzung gehört.",
+  "stageReceiptCompleteInfo": "Die Ereignisse wurden nur protokolliert.",
+  "stageReceiptCompletePass": "Die Quittung ist vollständig.",
+  "stageReceiptCompleteWhat": "Ob die Quittung alle erforderlichen Ereignisse enthält.",
+  "stageReceiptFetchInfo": "Der Abruf wurde nur protokolliert.",
+  "stageReceiptFetchPass": "Der Anbieter hat die Quittung geliefert.",
+  "stageReceiptFetchWhat": "Der Abruf der signierten Quittung zu dieser Antwort.",
+  "stageReceiptRequestHashInfo": "Die Prüfsumme wurde nur protokolliert.",
+  "stageReceiptRequestHashPass": "Der Anbieter hat genau deine Anfrage erhalten.",
+  "stageReceiptRequestHashWhat": "Die Prüfsumme der Anfrage in der Quittung gegen das, was gesendet wurde.",
+  "stageReceiptResponseHashInfo": "Die Prüfsumme wurde nur protokolliert.",
+  "stageReceiptResponseHashPass": "Die Antwort wurde unterwegs nicht verändert.",
+  "stageReceiptResponseHashWhat": "Die Prüfsumme der Antwort in der Quittung gegen das Empfangene.",
+  "stageReceiptSigInfo": "Die Signatur wurde nur protokolliert.",
+  "stageReceiptSigPass": "Die Quittung stammt aus der geprüften Umgebung.",
+  "stageReceiptSigWhat": "Die Signatur der Quittung.",
+  "stageResponseKeyInfo": "Der Schlüsselsatz wurde nur protokolliert.",
+  "stageResponseKeyPass": "Die Antwort gehört zur geprüften Sitzung.",
+  "stageResponseKeyWhat": "Ob der Schlüsselsatz der Antwort zum geprüften Satz passt.",
+  "stageResultFail": "fehlgeschlagen",
+  "stageResultPass": "bestanden",
+  "stageSignatureInfo": "Dieser Anbieter liefert keine solche Signatur. Die Bindung der Schlüssel läuft stattdessen über den Hardware-Nachweis (Prüfsumme des Schlüsselsatzes). Das ist ein etwas schwächerer Beleg, aber kein Fehler.",
+  "stageSignaturePass": "Der Schlüsselsatz ist zusätzlich vom Anbieter signiert.",
+  "stageSignatureWhat": "Eine zusätzliche Signatur über den Schlüsselsatz, die manche Anbieter liefern.",
+  "stageTcbInfo": "Der Sicherheitsstand wurde nur protokolliert.",
+  "stageTcbPass": "Die Plattform hat alle bekannten Sicherheits-Updates.",
+  "stageTcbWhat": "Der Sicherheitsstand der Plattform (TCB): ob Firmware und Mikrocode auf dem aktuellen Stand sind.",
+  "stageTlsInfo": "Das Zertifikat der Verbindung wurde nicht mit dem Nachweis verglichen. Dann hängt der Schutz allein an der Ende-zu-Ende-Verschlüsselung.",
+  "stageTlsPass": "Die Verbindung endet in der geprüften Umgebung, niemand kann sich dazwischenschalten.",
+  "stageTlsWhat": "Ob die Netzwerkverbindung genau zu dem Schlüssel führt, der im Hardware-Nachweis steht (Pinning).",
+  "stageUnavailableMeaning": "Die Prüfung konnte nicht abgeschlossen werden (zum Beispiel wegen des Netzes). Sie wird später wiederholt. Bis dahin ist die Stufe unbestätigt.",
+  "stageUpstreamInfo": "Die Upstream-Prüfung wurde nur protokolliert.",
+  "stageUpstreamPass": "Auch das Modell hinter dem Gateway wurde nachweislich geprüft.",
+  "stageUpstreamTcbInfo": "Der Stand wurde nur protokolliert.",
+  "stageUpstreamTcbPass": "Auch diese Plattform ist auf aktuellem Stand.",
+  "stageUpstreamTcbWhat": "Der Sicherheitsstand der Plattform hinter dem Gateway.",
+  "stageUpstreamWhat": "Ob das Gateway bestätigt, dass das Modell dahinter in einer geprüften Umgebung lief.",
+  "stageWarnMeaning": "Die Prüfung ist bestanden, aber mit einem Hinweis (zum Beispiel ein ausstehendes Sicherheits-Update des Betreibers). Das schwächt den Schutz etwas. Es bleibt im Prüfprotokoll sichtbar."
+}

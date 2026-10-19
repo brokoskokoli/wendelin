@@ -1,0 +1,35 @@
+{
+  "spotifyAppNote": "Die Spotify-App wird gebraucht, damit Wendelin auf diesem Handy abspielen kann: Läuft sie nicht, startet Wendelin sie. Auf anderen Geräten (Lautsprecher, Computer) spielt Wendelin auch ohne sie.",
+  "spotifyAppTitle": "Spotify-App",
+  "spotifyClientIdLabel": "Client-ID",
+  "spotifyClientIdMissing": "Bitte die Client-ID eintragen.",
+  "spotifyCopied": "Adresse kopiert.",
+  "spotifyCopyRedirect": "Adresse kopieren",
+  "spotifyFailed": "Fehler – Anmeldung abgelaufen oder Spotify nicht erreichbar",
+  "spotifyGuideStep1": "1. Auf developer.spotify.com/dashboard mit dem Spotify-Konto anmelden und „Create app“ wählen.",
+  "spotifyGuideStep2": "2. Name und Beschreibung frei wählen. Als „Redirect URI“ genau diese Adresse eintragen: {redirect}",
+  "@spotifyGuideStep2": {
+    "placeholders": {
+      "redirect": {
+        "type": "String"
+      }
+    }
+  },
+  "spotifyGuideStep3": "3. Bei „Which API/SDKs are you planning to use?“ „Web API“ ankreuzen und speichern.",
+  "spotifyGuideStep4": "4. Unter „Settings“ die „Client ID“ kopieren und unten eintragen. Im Entwicklungsmodus muss das eigene Konto unter „User Management“ stehen.",
+  "spotifyGuideTitle": "Entwickler-App anlegen",
+  "spotifyIntro": "Wendelin steuert Spotify über die offizielle Schnittstelle. Dafür braucht es ein Spotify-Premium-Konto und eine eigene (kostenlose) Entwickler-App von dir. Client-ID und Anmeldung bleiben im sicheren Speicher des Geräts.",
+  "spotifyReconnected": "Spotify ist wieder erreichbar.",
+  "spotifyRetrying": "Prüfe …",
+  "spotifySignIn": "Bei Spotify anmelden",
+  "spotifySignOut": "Abmelden",
+  "spotifySignOutMessage": "Client-ID und Anmeldung werden vom Gerät gelöscht.",
+  "spotifySignOutTitle": "Von Spotify abmelden?",
+  "spotifySignedIn": "Angemeldet",
+  "spotifySigningIn": "Anmelden …",
+  "spotifyStateActive": "Angemeldet · Aktiv",
+  "spotifyStateLoginMissing": "Login fehlt",
+  "spotifyStateOff": "Angemeldet, Integration ausgeschaltet",
+  "spotifyStateUnavailable": "Nicht verfügbar",
+  "spotifyTitle": "Spotify"
+}

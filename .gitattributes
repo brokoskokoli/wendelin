@@ -1,0 +1,4 @@
+# Erzeugte Dateien: GitHub blendet sie im Diff aus, tool/merge_wp.sh löst
+# Konflikte darin per tool/regen_generated.sh (l10n: tool/l10n_merge.dart).
+app/lib/l10n/app_*.arb linguist-generated
+app/lib/l10n/gen/** linguist-generated

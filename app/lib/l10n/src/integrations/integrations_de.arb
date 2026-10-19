@@ -1,0 +1,83 @@
+{
+  "comingSoonInProgress": "In Arbeit",
+  "comingSoonM3": "Kommt in M3",
+  "integrationDetailBringAccount": "Bring!-Konto",
+  "integrationDetailExternalAsks": "Außenwirkung · fragt immer nach",
+  "integrationDetailIntegrationDetailHaSetup": "Adresse, Token und Geräte",
+  "integrationDetailIntegrationDetailSpotifyAccount": "Spotify-Konto",
+  "integrationDetailLevelAll": "An alle Provider",
+  "integrationDetailLevelEu": "Ab EU",
+  "integrationDetailLevelLocal": "Nur lokal",
+  "integrationDetailLevelTee": "Ab TEE",
+  "integrationDetailManageLists": "Listen verwalten",
+  "integrationDetailMemoryHint": "Einträge ansehen, ändern, exportieren",
+  "integrationDetailNoSearch": "Ohne Suchdienst liest Wendelin nur Seiten",
+  "integrationDetailReadsAsks": "liest · fragt immer nach",
+  "integrationDetailReadsNoAsk": "liest · ohne Nachfrage",
+  "integrationDetailSensitiveLabel": "{displayName} sensibel",
+  "@integrationDetailSensitiveLabel": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationDetailSensitiveNote": "Sensibel: Die Tools gehen nur an Provider ab der Stufe, die du für sensible Integrationen festlegst.",
+  "integrationDetailSensitiveTitle": "Sensible Integrationen",
+  "integrationDetailSetUpSearch": "Suchdienst einrichten",
+  "integrationDetailTapTool": "Tippe auf ein Tool, um „Immer nachfragen“ ein- oder auszuschalten.",
+  "integrationDetailTitle": "Integration",
+  "integrationDetailVaultDaily": "Vault und Tagesnotizen",
+  "integrationDetailViewMemory": "Gedächtnis ansehen",
+  "integrationDetailWritesAsks": "ändert · fragt immer nach",
+  "integrationDetailWritesNoUndo": "ändert · ohne Nachfrage, kein Rückgängig",
+  "integrationDetailWritesUndo": "ändert · ohne Nachfrage, 10 s rückgängig",
+  "integrationTileActiveDetail": "Aktiv · {detail}",
+  "@integrationTileActiveDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationTileAvailable": "Verfügbar",
+  "integrationTileInStore": "Im Store",
+  "integrationTileOnlyFrom": "Nur an Provider ab",
+  "integrationTileSetupNeeded": "Einrichtung nötig",
+  "integrationsAddHttp": "+ HTTP-Tool",
+  "integrationsAddMcp": "+ MCP-Server",
+  "integrationsAppMissing": "App nicht installiert",
+  "integrationsCalendarRationale": "Wendelin braucht Zugriff auf deine Kalender, um Termine zu lesen, anzulegen und zu ändern. Android fragt dich gleich danach. Löschen fragt Wendelin immer vorher nach.",
+  "integrationsHintBring": "Bring!-App fehlt: kein Ausweg über „Teilen“",
+  "integrationsHintObsidian": "Obsidian-App fehlt: Öffnen in Obsidian geht nicht",
+  "integrationsHintSpotify": "Spotify-App fehlt: Wiedergabe nur auf anderen Geräten",
+  "integrationsIntro": "Nur aktive Integrationen gehen ans Modell. Ausgeschaltete kosten keine Tokens.",
+  "integrationsOwn": "Eigene Integrationen",
+  "integrationsPaused": "pausiert",
+  "integrationsPermission": "Berechtigung",
+  "integrationsPermission2": "Berechtigung",
+  "integrationsReachable": "{displayName} ist wieder erreichbar.",
+  "@integrationsReachable": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsRejected": "Abgewiesen: {reason}",
+  "@integrationsRejected": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsTools": "{tools} Tools",
+  "@integrationsTools": {
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      }
+    }
+  }
+}

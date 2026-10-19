@@ -1,0 +1,13 @@
+{
+  "weatherHomeHelp": "Used when you name no place and the location is not known. Leave empty = no home place.",
+  "weatherHomeLabel": "Home place, e.g. Kiel",
+  "weatherIntro": "All weather services are free and need no key. Sea data (waves, water temperature) always comes from Open-Meteo.",
+  "weatherKindBrightSkyDetail": "Data of the German Weather Service",
+  "weatherKindMetNorwayDetail": "Norwegian weather service, worldwide",
+  "weatherKindOpenMeteoDetail": "Default, worldwide",
+  "weatherNotFound": "Place “{name}” not found.",
+  "weatherSearchFailed": "Place search not reachable, try again later.",
+  "weatherSetupDetail": "Choose a service, set the place for “weather here”",
+  "weatherSetupTitle": "Weather service and home place",
+  "weatherTitle": "Weather and sea"
+}

@@ -1,0 +1,216 @@
+{
+  "condBuilderAddCondition": "+ Bedingung",
+  "condBuilderAddConditionInGroup": "+ Bedingung in Gruppe",
+  "condBuilderAddGroup": "+ Gruppe",
+  "condBuilderAll": "alle (und)",
+  "condBuilderAny": "eine (oder)",
+  "condBuilderApplies": "Es gilt",
+  "condBuilderCategory": "Kategorie",
+  "condBuilderConfidenceBelow": "Sicherheit unter",
+  "condBuilderEmptyGroup": "Eine Gruppe ist leer.",
+  "condBuilderFail": "{label}: {m}",
+  "@condBuilderFail": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "m": {
+        "type": "String"
+      }
+    }
+  },
+  "condBuilderFrom": "von (HH:MM)",
+  "condBuilderGroup": "Gruppe",
+  "condBuilderLanguages": "Sprachen",
+  "condBuilderLanguagesHint": "de, fr",
+  "condBuilderMetered": "mobile Daten",
+  "condBuilderMoreChars": "Mehr Zeichen als",
+  "condBuilderNeedCategory": "Kategorie eingeben.",
+  "condBuilderNeedLang": "Sprachkürzel eingeben (de, fr …).",
+  "condBuilderNeedLength": "Zeichenzahl eingeben.",
+  "condBuilderNeedPattern": "Muster eingeben.",
+  "condBuilderNeedThreshold": "Schwelle zwischen 0 und 1 eingeben.",
+  "condBuilderNeedTime": "Uhrzeit als HH:MM eingeben.",
+  "condBuilderNeedWord": "mindestens ein Wort eingeben.",
+  "condBuilderPattern": "Muster (auf normalisiertem Text)",
+  "condBuilderRemoveCondition": "Bedingung entfernen",
+  "condBuilderRemoveGroup": "Gruppe entfernen",
+  "condBuilderSentenceStart": "Wörter am Satzanfang, durch Komma getrennt",
+  "condBuilderSentenceStartHint": "Claude",
+  "condBuilderTo": "bis (HH:MM)",
+  "condBuilderUnknownType": "unbekannter Typ.",
+  "condBuilderWords": "Wörter, durch Komma getrennt",
+  "condBuilderWordsHint": "privat, vertraulich",
+  "routingAllDay": "ganztags",
+  "routingApplies": "greift → {target}{private}",
+  "@routingApplies": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      },
+      "private": {
+        "type": "String"
+      }
+    }
+  },
+  "routingCondAnd": "und",
+  "routingCondImage": "Mit Bild",
+  "routingCondKeyword": "Schlüsselwort",
+  "routingCondLanguage": "Sprache",
+  "routingCondLong": "Lange Eingabe",
+  "routingCondNetwork": "Netz",
+  "routingCondNot": "nicht",
+  "routingCondOr": "oder",
+  "routingCondPrefix": "Präfix",
+  "routingCondPrivate": "Privat",
+  "routingCondRegex": "Regulärer Ausdruck",
+  "routingCondTime": "Zeitfenster",
+  "routingCondTool": "Braucht Tool",
+  "routingCondUncertain": "Unsichere Erkennung",
+  "routingDefault": "Standard",
+  "routingDeleted": "{profileId} (gelöscht)",
+  "@routingDeleted": {
+    "placeholders": {
+      "profileId": {
+        "type": "String"
+      }
+    }
+  },
+  "routingImportBody": "{length} Regeln ersetzen die bisherigen {before}. Erst mit „Ersetzen“ wird etwas geändert.",
+  "@routingImportBody": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      },
+      "before": {
+        "type": "int"
+      }
+    }
+  },
+  "routingImportDefaultMissing": "Das Standardprofil „{profileId}“ gibt es hier nicht; der bisherige Standard bleibt.",
+  "@routingImportDefaultMissing": {
+    "placeholders": {
+      "profileId": {
+        "type": "String"
+      }
+    }
+  },
+  "routingImportEscalations": "Die Datei enthält Eskalationsketten. Sie wurden übersprungen: Wendelin wechselt nie von selbst das Modell.",
+  "routingImportReplace": "Ersetzen",
+  "routingImportTitle": "Regeln importieren?",
+  "routingPrivateRuleNotice": "Neu: Regel „Privat“ – Anfragen mit „privat“, „vertraulich“ … gehen an {target}.",
+  "@routingPrivateRuleNotice": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "routingPrivateSuffix": " · privat",
+  "routingRuleN": "Regel {n}",
+  "@routingRuleN": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "routingScreenAddRule": "+ Regel hinzufügen",
+  "routingScreenDefaultTarget": "Standardziel",
+  "routingScreenFirstWins": "Erste passende Regel gewinnt",
+  "routingScreenImportFailed": "Import nicht möglich: {message}",
+  "@routingScreenImportFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "routingScreenMoveRule": "Regel „{name}“ verschieben",
+  "@routingScreenMoveRule": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "routingScreenNeedsProvider": "Routing braucht einen Provider. Richte zuerst einen ein.",
+  "routingScreenReadError": "Die Regeln lassen sich nicht lesen: {error}",
+  "@routingScreenReadError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "routingScreenResetBody": "Die gespeicherten Regeln werden verworfen und aus den Provider-Einstellungen neu angelegt.",
+  "routingScreenResetRules": "Regeln zurücksetzen",
+  "routingScreenResetTitle": "Regeln zurücksetzen?",
+  "routingScreenRuleOff": "{name} (aus)",
+  "@routingScreenRuleOff": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "routingScreenSkipped": "„{name}“ übersprungen: {v}",
+  "@routingScreenSkipped": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "routingScreenTestHint": "Welche Regel greift für diesen Satz?",
+  "routingScreenTestSentence": "Testsatz",
+  "routingSkipDisabled": "ausgeschaltet",
+  "routingSkipInvalid": "ungültig",
+  "routingSkipNoMatch": "passt nicht",
+  "routingSkipProfileDisabled": "Profil deaktiviert",
+  "routingSkipProfileMissing": "Profil gelöscht",
+  "routingSkipProfileUnavailable": "Profil nicht verfügbar",
+  "routingWeekdayFri": "Fr",
+  "routingWeekdayMon": "Mo",
+  "routingWeekdaySat": "Sa",
+  "routingWeekdaySun": "So",
+  "routingWeekdayThu": "Do",
+  "routingWeekdayTue": "Di",
+  "routingWeekdayWed": "Mi",
+  "ruleEditorActive": "Aktiv",
+  "ruleEditorActiveLabel": "Regel aktiv",
+  "ruleEditorCondition": "Bedingung",
+  "ruleEditorDeleteBody": "Anfragen, die bisher diese Regel genommen haben, prüfen die nächsten Regeln bzw. gehen an den Standard.",
+  "ruleEditorDeleteRule": "Regel löschen",
+  "ruleEditorDeleteTitle": "Regel „{v}“ löschen?",
+  "@ruleEditorDeleteTitle": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "ruleEditorEditRule": "Regel bearbeiten",
+  "ruleEditorNeedModel": "Bitte ein Modell eingeben.",
+  "ruleEditorNeedName": "Bitte einen Namen eingeben.",
+  "ruleEditorNewRule": "Neue Regel",
+  "ruleEditorRebuild": "Neu aufbauen",
+  "ruleEditorRule": "Regel",
+  "ruleEditorStripTrigger": "Auslöser entfernen",
+  "ruleEditorStripTriggerHint": "Präfix, Schlüsselwort oder Treffer gehen nicht ans Modell; im Verlauf bleibt der Satz vollständig.",
+  "ruleEditorStripTriggerLabel": "Auslöser entfernen",
+  "ruleEditorTarget": "Ziel",
+  "ruleEditorTooDeep": "Diese Bedingung ist tiefer verschachtelt, als der Editor sie bearbeiten kann. Sie bleibt unverändert erhalten.",
+  "ruleTileMove": "Verschieben",
+  "ruleTileSemanticsLevel": "Datenschutzstufe {level},",
+  "@ruleTileSemanticsLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  }
+}

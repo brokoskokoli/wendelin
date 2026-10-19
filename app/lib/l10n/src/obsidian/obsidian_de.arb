@@ -1,0 +1,107 @@
+{
+  "obsIndexBuilding": "Index wird aufgebaut …",
+  "obsIndexBuildingProgress": "Index wird aufgebaut: {indexed} Notizen, noch {pending}",
+  "@obsIndexBuildingProgress": {
+    "placeholders": {
+      "indexed": {
+        "type": "int"
+      },
+      "pending": {
+        "type": "int"
+      }
+    }
+  },
+  "obsIndexCurrent": "{notes} im Index · aktuell",
+  "@obsIndexCurrent": {
+    "placeholders": {
+      "notes": {
+        "type": "String"
+      }
+    }
+  },
+  "obsIndexIncomplete": "Index unvollständig: {error}",
+  "@obsIndexIncomplete": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "obsIndexNotBuilt": "Noch nicht aufgebaut",
+  "obsIndexNotes": "{n, plural, one{1 Notiz} other{{n} Notizen}}",
+  "@obsIndexNotes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "obsIndexPartial": "{notes} im Index · Vault zu groß, nur teilweise",
+  "@obsIndexPartial": {
+    "placeholders": {
+      "notes": {
+        "type": "String"
+      }
+    }
+  },
+  "obsIndexUnreadable": "{notes} im Index · {failed} nicht lesbar",
+  "@obsIndexUnreadable": {
+    "placeholders": {
+      "notes": {
+        "type": "String"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "obsidianAccessGranted": "Zugriff erteilt",
+  "obsidianAccessGranted2": "Zugriff erteilt",
+  "obsidianAccessLost": "Kein Zugriff mehr – Ordner neu wählen",
+  "obsidianBuildIndex": "Index aufbauen",
+  "obsidianChooseFolder": "Wähle den Ordner deines Obsidian-Vaults",
+  "obsidianChooseOther": "Anderen Ordner wählen",
+  "obsidianChooseVaultFolder": "Vault-Ordner wählen",
+  "obsidianDailyNotes": "Tagesnotizen",
+  "obsidianDailySaved": "Tagesnotizen gespeichert.",
+  "obsidianDateFormat": "Datumsformat wie in Obsidian",
+  "obsidianFolder": "Ordner",
+  "obsidianFolderHint": "Leer lassen = Vault-Wurzel. Neue Tagesnotizen landen in diesem Ordner.",
+  "obsidianIndexBuilding": "Index wird aufgebaut",
+  "obsidianIndexHint": "Wird automatisch aktualisiert (beim Start und vor jeder Suche). Der Knopf ist nur für den ersten Aufbau nötig.",
+  "obsidianIntro": "Wendelin liest und ergänzt Notizen direkt im Vault-Ordner. Sync bleibt bei Obsidian Sync, Syncthing oder Git.",
+  "obsidianNoAccess": "kein Zugriff",
+  "obsidianNoVault": "Kein Vault gewählt",
+  "obsidianRemoveBody": "Wendelin verliert den Zugriff auf den Ordner. Die Notizen selbst bleiben unverändert.",
+  "obsidianRemoveTitle": "Vault entfernen?",
+  "obsidianRemoveVault": "Vault entfernen",
+  "obsidianSaveDaily": "Tagesnotizen speichern",
+  "obsidianSearchIndex": "Suchindex",
+  "obsidianTemplate": "Vorlage (optional)",
+  "obsidianTemplateHint": "Vorlagen/Tagesnotiz",
+  "obsidianToday": "Heute: {path}",
+  "@obsidianToday": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "obsidianUnusable": "Nicht verwendbar: {message}",
+  "@obsidianUnusable": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "obsidianUnusable2": "Nicht verwendbar: {message}",
+  "@obsidianUnusable2": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "obsidianVault": "Vault"
+}
