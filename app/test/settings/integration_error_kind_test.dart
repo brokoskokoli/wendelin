@@ -10,6 +10,8 @@ import 'package:wendelin/l10n/gen/app_localizations_fr.dart';
 import 'package:wendelin/ui/settings/integrations_screen.dart';
 import 'package:wendelin/ui/settings/reconnect_text.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/testing.dart' show FakeTodoistApi;
+import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../support/test_env.dart';
 import 'bring_screen_test.dart' show loginBring;
@@ -141,6 +143,70 @@ void main() {
     expect(info.errorKind, failure!.kind);
     expect(info.errorKind, PortErrorKind.permissionDenied);
   });
+
+  // Ein erfolgreicher Aufruf (ohne UI, ohne clearError) hebt Fehler und Art
+  // über onRecovered auf.
+  for (final (id, toolName, arm, heal)
+      in <
+        (String, String, void Function(TestEnv), Future<void> Function(TestEnv))
+      >[
+        (
+          'todoist',
+          'todoist__list',
+          (e) => e.todoist.failWith = const PortException(
+            PortErrorKind.permissionDenied,
+            'Todoist-Zugang abgelehnt',
+          ),
+          (e) async {
+            e.todoist.failWith = null;
+            await e.secrets.write('todoist.token', FakeTodoistApi.validToken);
+          },
+        ),
+        (
+          'spotify',
+          'spotify__now_playing',
+          (e) {
+            // Aufruf und Token-Erneuerung abgelehnt: pausiert.
+            const denied = PortException(
+              PortErrorKind.permissionDenied,
+              'nein',
+            );
+            e.spotify.failNext('playback', denied);
+            e.spotify.failNext('refresh', denied);
+          },
+          loginSpotify,
+        ),
+      ]) {
+    testWidgets('$id: erfolgreicher Aufruf setzt die Fehlerart zurück', (
+      tester,
+    ) async {
+      final env = TestEnv(enabled: {id});
+      await _cases.firstWhere((x) => x.$1 == id).$4(env);
+      await env.secrets.write('todoist.token', FakeTodoistApi.validToken);
+      final c = await pumpIntegrations(tester, env);
+      final registry = c.read(toolRegistryProvider);
+      final integration = unwrapIntegration(c.read(integrationsProvider)[id]!);
+      Tool tool() => integration.tools.firstWhere((t) => t.name == toolName);
+      final ctx = ToolContext(
+        sessionId: 's',
+        clock: FixedClock(testNow),
+        locale: 'de-DE',
+        timeZone: 'Europe/Berlin',
+      );
+      arm(env);
+      final bad = await tester.runAsync(() => tool().execute({}, ctx));
+      expect(bad!.isError, isTrue, reason: bad.text);
+      expect(registry.info(id).status, IntegrationStatus.error);
+      expect(registry.info(id).errorKind, PortErrorKind.permissionDenied);
+
+      await heal(env);
+      final ok = await tester.runAsync(() => tool().execute({}, ctx));
+      expect(ok!.isError, isFalse, reason: ok.text);
+      expect(registry.info(id).error, isNull);
+      expect(registry.info(id).errorKind, isNull);
+      expect(registry.info(id).status, IntegrationStatus.active);
+    });
+  }
 
   test('Texte je Art in de, en und fr; Bring!-Anmeldung bleibt', () {
     final de = AppLocalizationsDe();
