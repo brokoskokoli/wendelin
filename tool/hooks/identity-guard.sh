@@ -6,7 +6,7 @@ an=$(git var GIT_AUTHOR_IDENT | sed 's/ <.*//'); ae=$(git var GIT_AUTHOR_IDENT |
 cn=$(git var GIT_COMMITTER_IDENT | sed 's/ <.*//'); ce=$(git var GIT_COMMITTER_IDENT | sed 's/.*<\(.*\)>.*/\1/')
 for pair in "$an|$ae" "$cn|$ce"; do
   n=${pair%%|*}; e=${pair#*|}
-  if [ "$e" != "$ALLOWED_EMAIL" ] || { [ "$n" != "$ALLOWED_NAME" ] && [ "$n" != "Stefan Richter" ]; }; then
+  if [ "$e" != "$ALLOWED_EMAIL" ] || [ "$n" != "$ALLOWED_NAME" ]; then
     echo "identity-guard: Commit-Identität '$n <$e>' nicht erlaubt. Erlaubt: $ALLOWED_NAME <$ALLOWED_EMAIL>" >&2
     exit 1
   fi

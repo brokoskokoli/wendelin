@@ -7,9 +7,11 @@ import 'gen_docs.dart';
 
 /// Dokumente, deren Pfadangaben aufgelöst werden müssen.
 const checkedDocs = [
+  'AGENTS.md',
   'CLAUDE.md',
   'docs/ARCHITECTURE.md',
   'docs/ENGINEERING.md',
+  'docs/work-packages/REVIEW.md',
   'packages/wendelin_core/README.md',
   'packages/wendelin_providers/README.md',
   'packages/wendelin_tools/README.md',
@@ -24,13 +26,16 @@ DocCheck checkDocs(List<String> files, {String root = '.'}) {
   final index = RepoIndex(files);
   final errors = <String>[];
   var count = 0;
-  // Bereichsdateien der Architekturkarte und Gerätetests werden mitgeprüft.
+  // Bereichsdateien der Architekturkarte, Gerätetests und Rollen-Briefings
+  // (docs/agents/, .claude/agents/) werden mitgeprüft.
   final docsToCheck = [
     ...checkedDocs,
     for (final f in files)
       if (f.endsWith('.md') &&
           (f.startsWith('docs/architecture/') ||
-              f.startsWith('docs/testing/m5/')))
+              f.startsWith('docs/testing/m5/') ||
+              f.startsWith('docs/agents/') ||
+              f.startsWith('.claude/agents/')))
         f,
   ];
   for (final doc in docsToCheck) {

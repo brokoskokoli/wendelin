@@ -70,7 +70,7 @@ void docCheckChecks(SelfCheck t) {
     ], 'toter Link in docs/testing/m5 wird gemeldet');
     put('docs/testing/m5/wp1.md', '# WP1 Eins\n');
     t.eq(errors(), <String>[], 'm5-Datei nach Korrektur ohne Befund');
-
+    _deadPathInRuleDocs(t, put, errors);
     // Mutation: veraltete erzeugte Datei.
     File('$root/docs/architecture/generated/packages.md')
         .writeAsStringSync('x');
@@ -130,4 +130,25 @@ void docCheckChecks(SelfCheck t) {
     !idx.resolvesLink('b.md', docDir: 'docs'),
     'kein Suffix-Treffer wie bei Pfadangaben',
   );
+}
+
+/// Ein toter Pfad in Regelquelle, Briefing, Agent-Definition und Review-Protokoll wird rot.
+void _deadPathInRuleDocs(
+  SelfCheck t,
+  void Function(String, String) put,
+  List<String> Function() errors,
+) {
+  for (final d in [
+    'AGENTS.md',
+    'docs/work-packages/REVIEW.md',
+    'docs/agents/coder.md',
+    '.claude/agents/wendelin-coder.md',
+  ]) {
+    put(d, '# $d\n\nSiehe `tool/gone.sh`.\n');
+    t.eq(errors(), [
+      '$d:3: Pfad `tool/gone.sh` existiert nicht',
+    ], 'toter Pfad in $d wird gemeldet');
+    put(d, '# $d\n');
+    t.eq(errors(), <String>[], '$d nach Korrektur ohne Befund');
+  }
 }
