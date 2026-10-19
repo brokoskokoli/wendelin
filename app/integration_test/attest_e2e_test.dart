@@ -19,6 +19,7 @@ import 'package:wendelin/platform/attest/attest_backend.dart';
 import 'package:wendelin/platform/attest/collateral_cache.dart';
 import 'package:wendelin/platform/attest/pcs_collateral_client.dart';
 import 'package:wendelin/platform/attest/rust_attestation_crypto.dart';
+import 'package:wendelin/platform/attest/rust_ehbp_crypto.dart';
 import 'package:wendelin_providers/testing.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
@@ -126,6 +127,10 @@ void main() {
     r'-----BEGIN CERTIFICATE-----([^-]+)-----END CERTIFICATE-----',
   ).allMatches(collateral['tcb_info_issuer_chain'] as String).last.group(1)!;
   nearCryptoContract(() => crypto, name: 'RustAttestationCrypto (NEAR)');
+  ehbpCryptoContract(
+    () => RustEhbpCrypto(backend),
+    name: 'RustEhbpCrypto (Tinfoil EHBP)',
+  );
   attestationCryptoContract(
     () => crypto,
     name: 'RustAttestationCrypto',

@@ -9,7 +9,7 @@
 # Integrations-Tools: Abbau in WP36 Teil d.
 
 # Erzeugter flutter_rust_bridge-Code (WP47), nicht von Hand änderbar.
-app/lib/platform/attest/generated/frb_generated.dart: 1760  # WP47/WP62/WP75/WP76a/WP76b (erzeugt, kein Abbau; NEAR-, SNP- und Sigstore-Funktionen)
+app/lib/platform/attest/generated/frb_generated.dart: 2310  # WP47/WP62/WP75/WP76a/WP76b/WP76c (erzeugt, kein Abbau; NEAR-, SNP-, Sigstore- und EHBP-Funktionen)
 
 # Erzeugter gen-l10n-Code (WP79), nicht von Hand änderbar; wächst mit jedem Text.
 app/lib/l10n/gen/app_localizations.dart: 9000  # WP79 (erzeugt, kein Abbau)

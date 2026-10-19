@@ -79,6 +79,17 @@ abstract final class E2eeReference {
     );
   }
 
+  /// AES-256-GCM (sealed = `ciphertext ‖ tag`) for the other reference
+  /// implementations of this package (HPKE/EHBP). Throws
+  /// [E2eeCryptoException] if the tag does not verify.
+  static Uint8List aesGcm(
+    Uint8List key,
+    Uint8List nonce,
+    Uint8List input,
+    Uint8List aad, {
+    required bool encrypt,
+  }) => _gcm(key, nonce, input, aad, encrypt: encrypt);
+
   static Uint8List _key(Uint8List secret, Uint8List peer) {
     final shared = _x25519(secret, peer);
     if (shared.every((b) => b == 0)) {
@@ -169,10 +180,10 @@ abstract final class E2eeReference {
   }) {
     final aes = _Aes(key);
     final h = aes.block(Uint8List(16));
-    final ct = encrypt ? null : input.sublist(0, input.length - 16);
     if (!encrypt && input.length < 16) {
       throw const E2eeCryptoException('Entschlüsselung fehlgeschlagen');
     }
+    final ct = encrypt ? null : input.sublist(0, input.length - 16);
     final data = encrypt ? input : ct!;
     final j0 = Uint8List(16)
       ..setRange(0, 12, nonce)
