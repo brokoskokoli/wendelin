@@ -78,6 +78,7 @@ final class HttpTransport {
     CancelToken? cancel,
     ExchangeTap? tap,
     void Function(Map<String, String> headers)? checkHead,
+    Stream<List<int>> Function(Stream<List<int>> raw)? openBody,
   }) {
     final token = cancel ?? CancelToken();
     final abort = Completer<void>();
@@ -164,9 +165,18 @@ final class HttpTransport {
                 rethrow;
               }
             }
-            _listen(response, decoder(), emitAll, fail, (s) => sub = s, () {
-              if (!finished) abortRequest();
-            }, tap);
+            _listen(
+              response,
+              decoder(),
+              emitAll,
+              fail,
+              (s) => sub = s,
+              () {
+                if (!finished) abortRequest();
+              },
+              tap,
+              openBody,
+            );
             return;
           }
           final body = await _readBody(response);
@@ -214,13 +224,15 @@ final class HttpTransport {
     void Function(StreamSubscription<SseEvent>) setSub,
     void Function() onIdleTimeout,
     ExchangeTap? tap,
+    Stream<List<int>> Function(Stream<List<int>> raw)? openBody,
   ) {
-    final source = tap == null
+    final wireBytes = tap == null
         ? response.stream
         : response.stream.map((chunk) {
             tap.chunk(chunk);
             return chunk;
           });
+    final source = openBody == null ? wireBytes : openBody(wireBytes);
     final body = source.timeout(
       settings.idleTimeout,
       onTimeout: (sink) {

@@ -3,9 +3,9 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
-import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-
 import 'frb_generated.dart';
+
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 /// Client-Identität: Ed25519-Schlüssel (öffentlich: `X-Client-Pub-Key`) und der daraus
 /// abgeleitete X25519-Geheimschlüssel zum Entschlüsseln der Antwort.

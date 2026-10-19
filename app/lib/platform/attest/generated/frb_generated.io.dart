@@ -3,17 +3,20 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api.dart';
+import 'collateral.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
 
-import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
-
-import 'api.dart';
-import 'collateral.dart';
 import 'e2ee.dart';
+import 'ehbp.dart';
 import 'frb_generated.dart';
 import 'near_e2ee.dart';
+
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
+
 import 'quote.dart';
 import 'report.dart';
 import 'sigstore.dart';
@@ -27,6 +30,50 @@ abstract class AttestNativeApiImplPlatform
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_EhbpResponseDecoderPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoderPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_EhbpSessionPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSessionPtr;
+
+  @protected
+  EhbpResponseDecoder
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    dynamic raw,
+  );
+
+  @protected
+  EhbpSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    dynamic raw,
+  );
+
+  @protected
+  EhbpResponseDecoder
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    dynamic raw,
+  );
+
+  @protected
+  EhbpSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    dynamic raw,
+  );
+
+  @protected
+  EhbpResponseDecoder
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    dynamic raw,
+  );
+
+  @protected
+  EhbpSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    dynamic raw,
+  );
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -53,6 +100,12 @@ abstract class AttestNativeApiImplPlatform
   E2eeKeypair dco_decode_e_2_ee_keypair(dynamic raw);
 
   @protected
+  EhbpBinding dco_decode_ehbp_binding(dynamic raw);
+
+  @protected
+  EhbpSealed dco_decode_ehbp_sealed(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
@@ -75,6 +128,12 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   ReceiptVerdict dco_decode_receipt_verdict(dynamic raw);
+
+  @protected
+  (EhbpSealed, EhbpSession)
+  dco_decode_record_ehbp_sealed_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_ehbp_session(
+    dynamic raw,
+  );
 
   @protected
   SigstoreVerdict dco_decode_sigstore_verdict(dynamic raw);
@@ -104,7 +163,46 @@ abstract class AttestNativeApiImplPlatform
   void dco_decode_unit(dynamic raw);
 
   @protected
+  BigInt dco_decode_usize(dynamic raw);
+
+  @protected
   Verdict dco_decode_verdict(dynamic raw);
+
+  @protected
+  EhbpResponseDecoder
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EhbpSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EhbpResponseDecoder
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EhbpSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EhbpResponseDecoder
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EhbpSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    SseDeserializer deserializer,
+  );
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
@@ -135,6 +233,12 @@ abstract class AttestNativeApiImplPlatform
   E2eeKeypair sse_decode_e_2_ee_keypair(SseDeserializer deserializer);
 
   @protected
+  EhbpBinding sse_decode_ehbp_binding(SseDeserializer deserializer);
+
+  @protected
+  EhbpSealed sse_decode_ehbp_sealed(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
@@ -159,6 +263,12 @@ abstract class AttestNativeApiImplPlatform
 
   @protected
   ReceiptVerdict sse_decode_receipt_verdict(SseDeserializer deserializer);
+
+  @protected
+  (EhbpSealed, EhbpSession)
+  sse_decode_record_ehbp_sealed_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_ehbp_session(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SigstoreVerdict sse_decode_sigstore_verdict(SseDeserializer deserializer);
@@ -188,10 +298,55 @@ abstract class AttestNativeApiImplPlatform
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer);
+
+  @protected
   Verdict sse_decode_verdict(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    EhbpResponseDecoder self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    EhbpSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    EhbpResponseDecoder self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    EhbpSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    EhbpResponseDecoder self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    EhbpSession self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
@@ -233,6 +388,12 @@ abstract class AttestNativeApiImplPlatform
   void sse_encode_e_2_ee_keypair(E2eeKeypair self, SseSerializer serializer);
 
   @protected
+  void sse_encode_ehbp_binding(EhbpBinding self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ehbp_sealed(EhbpSealed self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
@@ -262,6 +423,13 @@ abstract class AttestNativeApiImplPlatform
   @protected
   void sse_encode_receipt_verdict(
     ReceiptVerdict self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_record_ehbp_sealed_auto_owned_rust_opaque_flutter_rust_bridgefor_generated_rust_auto_opaque_inner_ehbp_session(
+    (EhbpSealed, EhbpSession) self,
     SseSerializer serializer,
   );
 
@@ -296,6 +464,9 @@ abstract class AttestNativeApiImplPlatform
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_verdict(Verdict self, SseSerializer serializer);
 
   @protected
@@ -315,4 +486,72 @@ class AttestNativeWire implements BaseWire {
   /// The symbols are looked up in [dynamicLibrary].
   AttestNativeWire(ffi.DynamicLibrary dynamicLibrary)
     : _lookup = dynamicLibrary.lookup;
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoderPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_wendelin_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoderPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoderPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_wendelin_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoderPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSessionPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_wendelin_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSessionPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSessionPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_wendelin_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSessionPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 }

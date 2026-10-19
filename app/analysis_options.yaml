@@ -8,6 +8,8 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "lib/l10n/gen/**"
+    # erzeugt von flutter_rust_bridge (Opaque-Typen lösen strict-inference-Warnungen aus)
+    - "lib/platform/attest/generated/**"
     - "build/**"
     - android/**
     - ios/**

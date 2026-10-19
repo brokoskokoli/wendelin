@@ -3,12 +3,14 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
-import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-
 import 'collateral.dart';
 import 'e2ee.dart';
+import 'ehbp.dart';
 import 'frb_generated.dart';
 import 'near_e2ee.dart';
+
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
 import 'quote.dart';
 import 'report.dart';
 import 'sigstore.dart';
@@ -187,3 +189,48 @@ Future<SigstoreVerdict> verifyTinfoilRelease({
   digestHex: digestHex,
   reportMeasurementHex: reportMeasurementHex,
 );
+
+/// Prüft die KeyConfig von `/.well-known/hpke-keys` (41 Byte, genau eine Suite) und dass ihr
+/// Schlüssel `report_data[32..64]` des attestierten Reports gleicht; liefert den TLS-Pin
+/// (`report_data[0..32]`). Jeder Fehler bedeutet: nicht senden.
+EhbpBinding ehbpBindKeyConfig({
+  required List<int> keyConfig,
+  required List<int> reportData,
+}) => AttestNative.instance.api.crateApiEhbpBindKeyConfig(
+  keyConfig: keyConfig,
+  reportData: reportData,
+);
+
+/// Verschlüsselt den Anfrage-Body (EHBP, HPKE) an den attestierten Schlüssel.
+(EhbpSealed, EhbpSession) ehbpBeginRequest({
+  required List<int> keyConfig,
+  required List<int> reportData,
+  required List<int> plaintext,
+}) => AttestNative.instance.api.crateApiEhbpBeginRequest(
+  keyConfig: keyConfig,
+  reportData: reportData,
+  plaintext: plaintext,
+);
+
+/// Antwort-Decoder aus `Ehbp-Response-Nonce` (32 Byte) und der Sitzung der Anfrage.
+EhbpResponseDecoder ehbpResponseDecoder({
+  required EhbpSession session,
+  required List<int> responseNonce,
+}) => AttestNative.instance.api.crateApiEhbpResponseDecoder(
+  session: session,
+  responseNonce: responseNonce,
+);
+
+/// Schiebt Antwortbytes hinein; liefert den Klartext vollständig authentisierter Frames.
+/// Jeder Fehler ist endgültig.
+Uint8List ehbpDecoderPush({
+  required EhbpResponseDecoder decoder,
+  required List<int> data,
+}) => AttestNative.instance.api.crateApiEhbpDecoderPush(
+  decoder: decoder,
+  data: data,
+);
+
+/// Ende des Antwort-Bodys; ein angebrochener Frame ist ein Fehler.
+void ehbpDecoderFinish({required EhbpResponseDecoder decoder}) =>
+    AttestNative.instance.api.crateApiEhbpDecoderFinish(decoder: decoder);

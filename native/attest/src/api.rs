@@ -169,3 +169,51 @@ pub fn verify_tinfoil_release(
         None,
     )
 }
+
+pub use crate::ehbp::{EhbpBinding, EhbpResponseDecoder, EhbpSealed, EhbpSession};
+
+/// Prüft die KeyConfig von `/.well-known/hpke-keys` (41 Byte, genau eine Suite) und dass ihr
+/// Schlüssel `report_data[32..64]` des attestierten Reports gleicht; liefert den TLS-Pin
+/// (`report_data[0..32]`). Jeder Fehler bedeutet: nicht senden.
+#[flutter_rust_bridge::frb(sync)]
+pub fn ehbp_bind_key_config(
+    key_config: Vec<u8>,
+    report_data: Vec<u8>,
+) -> Result<EhbpBinding, String> {
+    crate::ehbp::bind_key_config(&key_config, &report_data)
+}
+
+/// Verschlüsselt den Anfrage-Body (EHBP, HPKE) an den attestierten Schlüssel.
+#[flutter_rust_bridge::frb(sync)]
+pub fn ehbp_begin_request(
+    key_config: Vec<u8>,
+    report_data: Vec<u8>,
+    plaintext: Vec<u8>,
+) -> Result<(EhbpSealed, EhbpSession), String> {
+    crate::ehbp::begin_request(&key_config, &report_data, &plaintext)
+}
+
+/// Antwort-Decoder aus `Ehbp-Response-Nonce` (32 Byte) und der Sitzung der Anfrage.
+#[flutter_rust_bridge::frb(sync)]
+pub fn ehbp_response_decoder(
+    session: &EhbpSession,
+    response_nonce: Vec<u8>,
+) -> Result<EhbpResponseDecoder, String> {
+    session.response_decoder(&response_nonce)
+}
+
+/// Schiebt Antwortbytes hinein; liefert den Klartext vollständig authentisierter Frames.
+/// Jeder Fehler ist endgültig.
+#[flutter_rust_bridge::frb(sync)]
+pub fn ehbp_decoder_push(
+    decoder: &mut EhbpResponseDecoder,
+    data: Vec<u8>,
+) -> Result<Vec<u8>, String> {
+    decoder.push(&data)
+}
+
+/// Ende des Antwort-Bodys; ein angebrochener Frame ist ein Fehler.
+#[flutter_rust_bridge::frb(sync)]
+pub fn ehbp_decoder_finish(decoder: &mut EhbpResponseDecoder) -> Result<(), String> {
+    decoder.finish()
+}
