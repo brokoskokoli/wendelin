@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:meta/meta.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -18,7 +19,18 @@ import 'sherpa_runtime.dart';
 /// written to disk.
 final class SherpaSpeakerEmbedder implements SpeakerEmbedder {
   /// Creates the embedder for the model [model] in [directory].
-  SherpaSpeakerEmbedder({required this.model, required this.directory});
+  SherpaSpeakerEmbedder({
+    required this.model,
+    required this.directory,
+    @visibleForTesting
+    Future<SpeakerSession> Function(String modelPath)? sessionFactory,
+  }) : _factory = sessionFactory ?? _Session.start;
+
+  final Future<SpeakerSession> Function(String modelPath) _factory;
+
+  /// Hangs tolerated since the last [release]: the first one restarts the
+  /// isolate, the second one disables the embedder until [release].
+  static const maxHangs = 2;
 
   /// Catalog entry (`SpeechModelCatalog.speakerCamPlus`).
   final SpeechModel model;
@@ -33,25 +45,35 @@ final class SherpaSpeakerEmbedder implements SpeakerEmbedder {
   /// How long [release] waits for the isolate to exit before killing it.
   static Duration exitGrace = const Duration(seconds: 5);
 
-  Future<_Session>? _session;
+  Future<SpeakerSession>? _session;
+  int _hangs = 0;
 
   /// Whether the model is currently loaded.
   bool get isLoaded => _session != null;
 
   @override
   Future<Float32List> embed(Int16List pcm) async {
+    if (_hangs >= maxHangs) {
+      throw const VoiceException(
+        VoiceErrorKind.failed,
+        'Die Sprechererkennung hängt und ist bis zum Freigeben deaktiviert.',
+      );
+    }
     final pending = _session ??= _start();
     final session = await pending;
     try {
       return await session.embed(pcm);
     } on TimeoutException {
-      // The isolate hangs (and is killed): the next call starts a new one.
+      // `Isolate.kill` does not end a hanging native call: the isolate (and
+      // its model) stays until process exit. So restart at most once, then
+      // stay failed until [release].
+      _hangs++;
       if (identical(_session, pending)) _session = null;
       rethrow;
     }
   }
 
-  Future<_Session> _start() async {
+  Future<SpeakerSession> _start() async {
     try {
       final file = model.files.single;
       final f = File('$directory/${file.name}');
@@ -62,7 +84,7 @@ final class SherpaSpeakerEmbedder implements SpeakerEmbedder {
           'Das Sprechermodell ist nicht (vollständig) geladen.',
         );
       }
-      return await _Session.start(f.path);
+      return await _factory(f.path);
     } on Object {
       _session = null; // the next call tries again
       rethrow;
@@ -73,6 +95,7 @@ final class SherpaSpeakerEmbedder implements SpeakerEmbedder {
   Future<void> release() async {
     final pending = _session;
     _session = null;
+    _hangs = 0;
     if (pending == null) return;
     try {
       await (await pending).dispose();
@@ -82,7 +105,16 @@ final class SherpaSpeakerEmbedder implements SpeakerEmbedder {
   }
 }
 
-final class _Session {
+/// One loaded model in its own isolate (injectable for tests).
+abstract interface class SpeakerSession {
+  /// Embeds [pcm]; throws [TimeoutException] when the isolate hangs.
+  Future<Float32List> embed(Int16List pcm);
+
+  /// Frees the model.
+  Future<void> dispose();
+}
+
+final class _Session implements SpeakerSession {
   _Session._(this._worker, this._requests, this._replies);
 
   static Future<_Session> start(String modelPath) async {
@@ -112,6 +144,7 @@ final class _Session {
   final StreamIterator<Object?> _replies;
   Future<void> _queue = Future.value();
 
+  @override
   Future<Float32List> embed(Int16List pcm) {
     final samples = pcmToFloat(pcm);
     final result = _queue.then((_) async {
@@ -136,6 +169,7 @@ final class _Session {
     return result;
   }
 
+  @override
   Future<void> dispose() async {
     await _queue;
     _requests.send(null);
