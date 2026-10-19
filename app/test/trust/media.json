@@ -1,0 +1,9 @@
+{
+  "media__now_playing": false,
+  "media__play": true,
+  "media__pause": true,
+  "media__next": true,
+  "media__previous": true,
+  "media__seek": true,
+  "media__open_audible": true
+}

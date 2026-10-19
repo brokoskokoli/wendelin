@@ -1,0 +1,21 @@
+{
+  "confCallTitle": "Anrufen?",
+  "confHintVoiceCall": "Sag „anrufen“ oder „abbrechen“",
+  "confHintVoiceEdited": "Du hast den Text geändert: bitte per Tipp absenden",
+  "confHintVoiceSms": "Sag „absenden“ oder „abbrechen“",
+  "confNoCancel": "Abbrechen",
+  "confSmsNoText": "Die Nachricht darf nicht leer sein.",
+  "confSmsTextLabel": "Nachricht",
+  "confSmsTitle": "SMS absenden?",
+  "confSmsTo": "An {name}",
+  "@confSmsTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confYesCall": "Anrufen",
+  "confYesSend": "Absenden",
+  "integrationsContactsRationale": "Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm."
+}

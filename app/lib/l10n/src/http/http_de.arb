@@ -1,0 +1,176 @@
+{
+  "httpArgsAddArg": "+ Argument",
+  "httpArgsArgs": "Argumente",
+  "httpArgsCustomSchema": "Eigenes JSON-Schema",
+  "httpArgsCustomSchemaDetail": "Statt der einfachen Liste",
+  "httpArgsCustomSchemaSem": "Eigenes JSON-Schema",
+  "httpArgsDescription": "Beschreibung",
+  "httpArgsRemoveArg": "Argument entfernen",
+  "httpArgsRequired": "Pflicht",
+  "httpArgsRequiredNamed": "Pflicht {name}",
+  "@httpArgsRequiredNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "httpArgsSchema": "JSON-Schema",
+  "httpAuthAddSecretHeader": "+ Geheimer Header",
+  "httpAuthKeepStored": "Leer lassen behält den gespeicherten",
+  "httpAuthRemoveSecretHeader": "Geheimen Header entfernen",
+  "httpAuthSecretHeader": "Geheimer Header, z. B. X-Api-Key",
+  "httpAuthStored": "{redactedSecret} gespeichert",
+  "@httpAuthStored": {
+    "placeholders": {
+      "redactedSecret": {
+        "type": "String"
+      }
+    }
+  },
+  "httpEditorDeleteBody": "„http__{v}“ und seine gespeicherten Secrets werden gelöscht.",
+  "@httpEditorDeleteBody": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "httpEditorDeleteTitle": "HTTP-Tool löschen?",
+  "httpEditorNewTool": "Neues HTTP-Tool",
+  "httpEditorTool": "HTTP-Tool",
+  "httpPhUnknown": "{v} unbekannt",
+  "@httpPhUnknown": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "httpRunAskElse": "Sonst fragt Wendelin vor jedem Aufruf nach",
+  "httpRunExecution": "Ausführung",
+  "httpRunHomeTarget": "Heimnetz-Ziel",
+  "httpRunHomeTargetDetail": "Darf auf private Adressen zeigen, dann auch http",
+  "httpRunHomeTargetSem": "Heimnetz-Ziel",
+  "httpRunLevel": "Stufe (Vorschlag für {verb}: {name})",
+  "@httpRunLevel": {
+    "placeholders": {
+      "verb": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "httpRunNoAsk": "Ohne Nachfrage ausführen (kein Rückgängig)",
+  "httpRunNoAskSem": "Ohne Nachfrage ausführen",
+  "httpRunOnlyWrite": "Nur bei POST/PUT/PATCH mit Stufe write",
+  "httpRunSensitiveDetail": "Nur an Provider ab der Stufe für sensible Integrationen",
+  "httpRunTimeout": "Zeitlimit in Sekunden",
+  "httpSrcAddHeader": "+ Header",
+  "httpSrcBodyHelp": "{example} wird typgerecht ersetzt; leer = kein Body",
+  "@httpSrcBodyHelp": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "httpSrcBodyTemplate": "Body-Vorlage (JSON)",
+  "httpSrcForm": "Formular",
+  "httpSrcHeader": "Header",
+  "httpSrcHeaderDetail": "Nicht geheim; Tokens gehören in die Anmeldung",
+  "httpSrcJson": "JSON",
+  "httpSrcRemoveHeader": "Header entfernen",
+  "httpSrcUrlHelp": "Platzhalter wie {example} nur in Pfad und Query, Host fest",
+  "@httpSrcUrlHelp": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "httpSrcUrlTemplate": "URL-Vorlage",
+  "httpTestArgLabel": "{name} ({type})",
+  "@httpTestArgLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "httpTestFailed": "fehlgeschlagen",
+  "httpTestHeaderLine": "{key}: {value}",
+  "@httpTestHeaderLine": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "httpTestHttpStatus": "HTTP {status}",
+  "@httpTestHttpStatus": {
+    "placeholders": {
+      "status": {
+        "type": "int"
+      }
+    }
+  },
+  "httpTestMs": "{ms} ms",
+  "@httpTestMs": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "httpTestNoResponse": "Keine Antwort",
+  "httpTestRunning": "Läuft …",
+  "httpTestSent": "Gesendet",
+  "httpTestSentLine": "{method} {url}",
+  "@httpTestSentLine": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      },
+      "url": {
+        "type": "Object"
+      }
+    }
+  },
+  "httpTestSucceeded": "erfolgreich",
+  "httpTestTruncated": "gekürzt",
+  "httpToolSecModelDescription": "Beschreibung fürs Modell",
+  "httpToolSecModelDescriptionHelp": "Wann und wofür das Modell das Tool nutzen soll",
+  "httpToolsExportNote": "Export und Import enthalten keine Secrets. Nach dem Import Token und geheime Header neu eingeben; „Ohne Nachfrage ausführen“ ist dann aus.",
+  "httpToolsExportPaste": "Export (JSON) einfügen",
+  "httpToolsImportFailed": "Import fehlgeschlagen: {message}",
+  "@httpToolsImportFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "httpToolsImportTitle": "HTTP-Tools importieren",
+  "httpToolsImported": "{length, plural, one{{length} HTTP-Tool importiert. Secrets bitte neu eingeben; „Ohne Nachfrage ausführen“ ist aus.} other{{length} HTTP-Tools importiert. Secrets bitte neu eingeben; „Ohne Nachfrage ausführen“ ist aus.}}",
+  "@httpToolsImported": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "httpToolsIntro": "Eigene Tools aus Methode, URL-Vorlage, Headern und Anmeldung, z. B. für Home Assistant oder n8n. Antworten sind Daten, keine Anweisungen.",
+  "httpToolsOffShort": "aus",
+  "httpToolsRiskRead": "liest",
+  "httpToolsRiskWrite": "ändert ohne Nachfrage, kein Rückgängig",
+  "httpToolsSensitiveShort": "sensibel"
+}

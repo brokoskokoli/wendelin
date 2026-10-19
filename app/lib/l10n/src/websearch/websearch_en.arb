@@ -1,0 +1,11 @@
+{
+  "webSearchAddress": "Address, e.g. https://search.example.org",
+  "webSearchAddressMissing": "Please enter the address of the instance.",
+  "webSearchApiKey": "API key",
+  "webSearchIntro": "Without a search service Wendelin can only read pages whose address you give.",
+  "webSearchKeyMissing": "Please enter the API key.",
+  "webSearchKeySaved": "Key saved – leave empty to keep it",
+  "webSearchNone": "No search service",
+  "webSearchOwnInstance": "SearXNG (own instance)",
+  "webSearchTitle": "Web search"
+}

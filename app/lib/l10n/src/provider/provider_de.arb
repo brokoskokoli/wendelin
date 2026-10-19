@@ -1,0 +1,157 @@
+{
+  "areaAssistant": "Assistent",
+  "areaAssistantDetail": "Standard-Assistent, dein Name, Persönlichkeit",
+  "areaCosts": "Kosten",
+  "areaCostsDetail": "Heute und im Monat je Provider",
+  "areaHttpTools": "HTTP-Tools",
+  "areaHttpToolsDetail": "Eigene Tools definieren und testen",
+  "areaIntegrations": "Integrationen",
+  "areaIntegrationsDetail": "Was Wendelin darf, Tools, Risikostufen",
+  "areaMcp": "MCP-Server",
+  "areaMcpDetail": "Server, Anmeldung, Status, Tools",
+  "areaPrivacy": "Datenschutz und Logs",
+  "areaPrivacyDetail": "Aufbewahrung, Prüfprotokoll, Export",
+  "areaProvider": "Provider",
+  "areaProviderDetail": "Profile, Standard, Budget",
+  "areaRouting": "Routing",
+  "areaRoutingDetail": "Regeln, Testfeld, Import und Export",
+  "areaSpeech": "Sprache",
+  "areaSpeechDetail": "Spracherkennung, Stimme, Tempo",
+  "costsIntro": "Nach den Preisen im Modellkatalog, in US-Dollar.",
+  "costsMonth": "Monat {v}",
+  "@costsMonth": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "costsNoProviders": "Noch keine Provider.",
+  "costsOfBudget": "von {v}",
+  "@costsOfBudget": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "costsToday": "heute {v}",
+  "@costsToday": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "providerChipLevel": "Datenschutzstufe {level}",
+  "@providerChipLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "providerChipReceipt": "Quittung {status}",
+  "@providerChipReceipt": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "providerChipSemantics": "Provider {name}",
+  "@providerChipSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "providerSetupBudgetFormat": "Budget: Betrag in Dollar, z. B. 5 oder 2,50",
+  "providerSetupConnected": "Verbindung steht",
+  "providerSetupConnectedEnterModel": "Verbindung steht. Bitte die Modell-ID eingeben.",
+  "providerSetupConnectedModels": "{n, plural, one{Verbindung steht, 1 Modell gefunden.} other{Verbindung steht, {n} Modelle gefunden.}}",
+  "@providerSetupConnectedModels": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "providerSetupConnectionFailed": "Verbindung fehlgeschlagen",
+  "providerSetupEditTitle": "Provider bearbeiten",
+  "providerSetupIntroCredentials": "Der Key wird nur im sicheren Speicher des Geräts abgelegt.",
+  "providerSetupIntroFinish": "Datenschutzstufe und optional ein Monatsbudget.",
+  "providerSetupIntroModel": "Wähle das Standardmodell.",
+  "providerSetupIntroTemplate": "Wähle, mit wem Wendelin sprechen soll.",
+  "providerSetupModelListFailed": "Modellliste nicht verfügbar ({reason}). Bitte die Modell-ID eingeben.",
+  "@providerSetupModelListFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "providerSetupModelListUnavailable": "Modellliste nicht verfügbar",
+  "providerSetupModelUnusable": "Modell nicht nutzbar",
+  "providerSetupModelsFound": "{n, plural, one{1 Modell gefunden} other{{n} Modelle gefunden}}",
+  "@providerSetupModelsFound": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "providerSetupNoModelList": "Keine Modellliste. Bitte die Modell-ID eingeben.",
+  "providerSetupProviderSetupApiKeyOptional": "API-Key (optional)",
+  "providerSetupProviderSetupBaseUrl": "Base-URL",
+  "providerSetupProviderSetupCreateKey": "Key beim Anbieter erstellen",
+  "providerSetupProviderSetupModelId": "Modell-ID",
+  "providerSetupProviderSetupModels": "Modelle",
+  "providerSetupProviderSetupOtherTemplate": "Andere Vorlage",
+  "providerSetupProviderSetupProbeModel": "Modell prüfen",
+  "providerSetupProviderSetupTestConnection": "Verbindung testen",
+  "providerSetupProviderSetupTesting": "Teste …",
+  "providersAdd": "+ Provider",
+  "providersBudget": "Budget {v}/Monat",
+  "@providersBudget": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "providersChoice": "Anbieterwahl",
+  "providersDeleteBody": "Profil und gespeicherter Key werden entfernt.",
+  "providersDeleteTitle": "„{name}“ löschen?",
+  "@providersDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "providersError": "Fehler: {error}",
+  "@providersError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "providersIntro": "Der Standard bekommt jede Anfrage, für die keine Routing-Regel greift. Scheitert er, sagt Wendelin das klar und wechselt nie von selbst zu einem anderen Anbieter.",
+  "providersMakeDefault": "Als Standard",
+  "providersNone": "Noch kein Provider eingerichtet.",
+  "providersProfiles": "Profile",
+  "providersRoutingHint": "Regeln für die Wahl des Anbieters",
+  "targetPickerApply": "Übernehmen",
+  "targetPickerProfile": "Profil",
+  "targetPickerProfileGone": "Profil „{profileId}“ gibt es nicht mehr.",
+  "@targetPickerProfileGone": {
+    "placeholders": {
+      "profileId": {
+        "type": "String"
+      }
+    }
+  }
+}

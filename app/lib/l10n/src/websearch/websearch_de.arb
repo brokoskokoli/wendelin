@@ -1,0 +1,11 @@
+{
+  "webSearchAddress": "Adresse, z. B. https://search.example.org",
+  "webSearchAddressMissing": "Bitte die Adresse der Instanz angeben.",
+  "webSearchApiKey": "API-Key",
+  "webSearchIntro": "Ohne Suchdienst kann Wendelin nur Seiten lesen, deren Adresse du nennst.",
+  "webSearchKeyMissing": "Bitte den API-Key eingeben.",
+  "webSearchKeySaved": "Key gespeichert – leer lassen behält ihn",
+  "webSearchNone": "Kein Suchdienst",
+  "webSearchOwnInstance": "SearXNG (eigene Instanz)",
+  "webSearchTitle": "Web-Suche"
+}

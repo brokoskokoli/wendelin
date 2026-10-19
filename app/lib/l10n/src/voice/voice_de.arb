@@ -1,0 +1,247 @@
+{
+  "languageEnglish": "English",
+  "languageFrench": "Français",
+  "languageGerman": "Deutsch",
+  "modelRowDeleteBody": "Das Modell wird vom Gerät entfernt und muss vor der nächsten Nutzung neu geladen werden.",
+  "modelRowDeleteTitle": "{displayName} löschen?",
+  "@modelRowDeleteTitle": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "modelRowLoaded": "{size} · geladen",
+  "@modelRowLoaded": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelRowNotLoaded": "{size} · nicht geladen",
+  "@modelRowNotLoaded": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelRowProgressOf": "Fortschritt {displayName}",
+  "@modelRowProgressOf": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      }
+    }
+  },
+  "modelRowResume": "Fortsetzen",
+  "modelRowStarted": "{size} · angefangen",
+  "@modelRowStarted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceConvAdvanced": "Erweitert",
+  "voiceConvBargeInUnavailable": "Nicht verfügbar: Dafür braucht Wendelin das Wake-Word-Modell, das noch nicht eingebaut ist.",
+  "voiceConvBargeKeywords": "Schlüsselwörter",
+  "voiceConvBargeSpeech": "Beliebige Sprache (experimentell)",
+  "voiceConvCustomBarge": "Eigene Einstellung für das Unterbrechen aktiv (unter „Erweitert“ zurücksetzbar).",
+  "voiceConvInterrupt": "Unterbrechen während der Antwort",
+  "voiceConvInterruptHint": "Mit „Wendelin“ oder „Stopp“ unterbrichst du die Sprachausgabe.",
+  "voiceConvKeepListening": "Weiter zuhören nach der Antwort",
+  "voiceConvKeepListeningDetail": "Nach der gesprochenen Antwort bleibt das Mikrofon kurz offen, du kannst ohne Tippen nachfragen. „Danke“ oder „Stopp“ beendet.",
+  "voiceConvKeepListeningLabel": "Weiter zuhören nach der Antwort",
+  "voiceDownloadAnd": " und ",
+  "voiceDownloadBundled": "{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser und ist empfohlen. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.",
+  "@voiceDownloadBundled": {
+    "placeholders": {
+      "displayName": {
+        "type": "String"
+      },
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDownloadContinueInBackground": "Im Hintergrund weiterladen",
+  "voiceDownloadContinueLoading": "Weiterladen",
+  "voiceDownloadIntro": "Wendelin erkennt Sprache auf dem Gerät, ohne Internet und ohne Google. Wähle das Modell und lade es einmal, am besten im WLAN.",
+  "voiceDownloadLoad": "Laden",
+  "voiceDownloadLoadAgain": "Erneut laden",
+  "voiceDownloadLoading": "Lädt …",
+  "voiceDownloadLoadingPercent": "Lädt … {v} %",
+  "@voiceDownloadLoadingPercent": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDownloadLoadingPercentOf": "Lädt … {v} % von {size}",
+  "@voiceDownloadLoadingPercentOf": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDownloadPreselectedBase": "Vorausgewählt ist „base“, weil das Gerät wenig Arbeitsspeicher hat ({v} GB). „small“ braucht beim Erkennen deutlich mehr Speicher.",
+  "@voiceDownloadPreselectedBase": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDownloadProgressLabel": "Fortschritt Spracherkennung",
+  "voiceDownloadReady": "Bereit",
+  "voiceDownloadSizeLoaded": "{size} · geladen",
+  "@voiceDownloadSizeLoaded": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDownloadSizeMb": "{v} MB",
+  "@voiceDownloadSizeMb": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDownloadSizePartial": "{size} · angefangen",
+  "@voiceDownloadSizePartial": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDownloadStillNeeded": "Noch nötig: {v}",
+  "@voiceDownloadStillNeeded": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceDownloadTitle": "Spracherkennung laden",
+  "voiceDownloadUnpacking": "Wird entpackt …",
+  "voiceErrorGeneric": "Sprache hat nicht geklappt. Bitte versuche es noch einmal.",
+  "voiceErrorMicBusy": "Das Mikrofon war noch belegt. Bitte sprich noch einmal.",
+  "voiceErrorModelMissing": "Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).",
+  "voiceScreenAutomatic": "Automatisch",
+  "voiceScreenAutomaticDetail": "Systemstimme, sonst Offline-Stimme",
+  "voiceScreenDetectAuto": "Automatisch erkennen",
+  "voiceScreenFineTuning": "Feinabstimmung",
+  "voiceScreenFixedLanguageHint": "Mit fester Sprache erkennt Whisper kurze Sätze zuverlässiger.",
+  "voiceScreenIntro": "Wendelin erkennt Sprache auf dem Gerät (Whisper). Die Modelle werden einmal geladen und bleiben auf dem Gerät.",
+  "voiceScreenLanguageDefault": "Standard der Sprache",
+  "voiceScreenLanguageDefaultChip": "Standard der Sprache",
+  "voiceScreenLearnsVoice": "Wendelin lernt deine Stimme",
+  "voiceScreenLearnsVoiceDetail": "Einlernen, kalibrieren und ausprobieren",
+  "voiceScreenLikeApp": "Wie die App ({v})",
+  "@voiceScreenLikeApp": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceScreenListen": "Probe hören",
+  "voiceScreenMicrophone": "Mikrofon",
+  "voiceScreenMicrophoneTitle": "Mikrofon",
+  "voiceScreenMinSpeech": "Mindestsprechdauer",
+  "voiceScreenMinSpeechDetail": "Kürzere Geräusche (Klicks, Atmer) werden ignoriert.",
+  "voiceScreenModelLicenses": "Lizenzen der Sprachmodelle",
+  "voiceScreenMs": "{v} ms",
+  "@voiceScreenMs": {
+    "placeholders": {
+      "v": {
+        "type": "int"
+      }
+    }
+  },
+  "voiceScreenNoOfflineVoice": "Keine Offline-Stimme für diese Sprache geladen – Wendelin spricht mit der Systemstimme.",
+  "voiceScreenNoSpeech": "Keine Sprachausgabe verfügbar: Antworten erscheinen nur auf dem Bildschirm. Lade eine Offline-Stimme.",
+  "voiceScreenNoSystemVoice": "Keine Systemstimme installiert – Wendelin spricht mit der Offline-Stimme.",
+  "voiceScreenNotAllowed": "nicht erlaubt",
+  "voiceScreenOfflineVoice": "Offline-Stimme",
+  "voiceScreenOfflineVoices": "Offline-Stimmen",
+  "voiceScreenOverlay": "Assistent-Overlay",
+  "voiceScreenRecognition": "Spracherkennung",
+  "voiceScreenRecognitionHint": "Für die Spracheingabe braucht Wendelin das gewählte Whisper-Modell und die Sprachaktivitätserkennung.",
+  "voiceScreenRecommendSmall": "Empfohlen: small (genauer), {v} laden.",
+  "@voiceScreenRecommendSmall": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceScreenSensitivity": "Empfindlichkeit der Spracherkennung",
+  "voiceScreenSensitivityDetail": "Schwelle von Silero VAD: niedriger hört leiser, höher ignoriert mehr Geräusche.",
+  "voiceScreenSpeaksOffline": "Wendelin spricht mit der Offline-Stimme.",
+  "voiceScreenSpeaksSystem": "Wendelin spricht mit der Systemstimme.",
+  "voiceScreenSpeechOutput": "Sprachausgabe",
+  "voiceScreenSpokenLanguage": "Gesprochene Sprache",
+  "voiceScreenStopClosesOverlay": "Stopp schließt das Overlay",
+  "voiceScreenStopClosesOverlayHint": "Sagst du „Stopp“, zeigt Wendelin kurz „Abgebrochen“ und schließt das Overlay.",
+  "voiceScreenStopClosesOverlayLabel": "Stopp schließt das Overlay",
+  "voiceScreenSystemVoice": "Systemstimme",
+  "voiceScreenSystemVoiceTitle": "Systemstimme",
+  "voiceScreenTempo": "Tempo",
+  "voiceScreenVoice": "Stimme",
+  "voiceScreenVoiceAndTempo": "Stimme und Tempo",
+  "voiceScreenVoiceLanguage": "{v} ({language})",
+  "@voiceScreenVoiceLanguage": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceScreenVoices": "Stimmen",
+  "voiceScreenVoicesDetail": "Je Sprache eine weibliche und eine männliche Stimme",
+  "voiceSpokenAlwaysDetail": "Wendelin schreibt zuerst einen kurzen Sprechtext und liest ihn immer vor, auch nach Inhalten aus dem Web oder von Dritten.",
+  "voiceSpokenAlwaysTitle": "Immer eigene Sprechfassung",
+  "voiceSpokenAlwaysWarning": "Was vorgelesen wird, kann von dem abweichen, was auf dem Bildschirm steht.",
+  "voiceSpokenCheckedDetail": "Nach Inhalten aus dem Web oder von Dritten prüft ein weiterer Modellaufruf, ob Sprechtext und Antwort übereinstimmen. Die Sprachausgabe beginnt dann etwas später und kostet etwas mehr.",
+  "voiceSpokenCheckedTitle": "Mit KI-Prüfung",
+  "voiceSpokenOffDetail": "Wendelin liest die angezeigte Antwort vor, nur für die Aussprache aufbereitet.",
+  "voiceSpokenProtectedDetail": "Eigener Sprechtext, aber nach Inhalten aus dem Web oder von Dritten liest Wendelin die angezeigte Antwort vor.",
+  "voiceSpokenProtectedTitle": "Geschützt",
+  "voiceSpokenSemantic": "Sprechfassung {label}",
+  "@voiceSpokenSemantic": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceSpokenTitle": "Sprechfassung",
+  "voiceUnavailableHint": "Spracherkennung laden: Einstellungen → Sprache",
+  "voiceVoicesIntro": "Wähle je Sprache die Offline-Stimme. Nur geladene Stimmen belegen Speicher; nicht gebrauchte kannst du löschen.",
+  "voiceVoicesNotLoaded": "Gewählte Stimme nicht geladen – es spricht {v}.",
+  "@voiceVoicesNotLoaded": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceVoicesPreparing": "Probe wird vorbereitet …",
+  "voiceVoicesSampleFailed": "Probe nicht möglich – die Stimme hat nicht gesprochen.",
+  "voiceVoicesStopSample": "Probe beenden"
+}

@@ -1,0 +1,20 @@
+{
+  "weatherHomeHelp": "Wird genutzt, wenn du keinen Ort nennst und der Standort nicht bekannt ist. Leer lassen = kein Heimatort.",
+  "weatherHomeLabel": "Heimatort, z. B. Kiel",
+  "weatherIntro": "Alle Wetterdienste sind kostenlos und brauchen keinen Schlüssel. Meeresdaten (Wellen, Wassertemperatur) kommen immer von Open-Meteo.",
+  "weatherKindBrightSkyDetail": "Daten des Deutschen Wetterdienstes",
+  "weatherKindMetNorwayDetail": "Norwegischer Wetterdienst, weltweit",
+  "weatherKindOpenMeteoDetail": "Standard, weltweit",
+  "weatherNotFound": "Ort „{name}“ nicht gefunden.",
+  "@weatherNotFound": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherSearchFailed": "Ortssuche nicht erreichbar, später erneut.",
+  "weatherSetupDetail": "Dienst wählen, Ort für „Wetter hier“ festlegen",
+  "weatherSetupTitle": "Wetterdienst und Heimatort",
+  "weatherTitle": "Wetter und Meer"
+}

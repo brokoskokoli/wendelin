@@ -1,0 +1,103 @@
+{
+  "agentNoticeCancelled": "Abgebrochen.",
+  "agentNoticeGpuFailed": "GPU-Prüfung fehlgeschlagen. Details im Prüfprotokoll.",
+  "agentNoticeGpuNoEvidence": "Dieses Modell liefert keinen GPU-Nachweis. Tippe auf Ohne GPU-Prüfung senden.",
+  "agentNoticeProfileBroken": "Provider-Profil fehlerhaft: {e}",
+  "@agentNoticeProfileBroken": {
+    "placeholders": {
+      "e": {
+        "type": "Object"
+      }
+    }
+  },
+  "agentNoticeRecheckFailed": "Die neue Prüfung ist nicht bestanden. Details im Prüfprotokoll.",
+  "agentNoticeRequestEmpty": "Die Anfrage ist leer.",
+  "agentNoticeRequestRunning": "Es läuft schon eine Anfrage.",
+  "agentNoticeSetupFirst": "Bitte zuerst einen Provider einrichten.",
+  "agentNoticeStartFailed": "Die Anfrage konnte nicht starten.",
+  "agentNoticeUndoFailed": "Rückgängig hat nicht geklappt: {e}",
+  "@agentNoticeUndoFailed": {
+    "placeholders": {
+      "e": {
+        "type": "Object"
+      }
+    }
+  },
+  "assistantAnotherService": "einen anderen Dienst",
+  "assistantChangeInAndroid": "In Android ändern",
+  "assistantDefaultHint": "Langer Druck auf die Power-Taste oder die Assistenten-Geste öffnet Wendelin über jeder App.",
+  "assistantDefaultTitle": "Standard-Assistent",
+  "assistantInactiveDefault": "Android verweist für andere Apps auf Wendelin, die Spracherkennung ist aber aus (Schalter aus). Andere Apps bekommen dann einen Fehler.",
+  "assistantInactiveNotDefault": "Android verweist für andere Apps auf Wendelin, die Spracherkennung ist aber aus: Wendelin ist nicht Standard-Assistent. Andere Apps bekommen dann einen Fehler.",
+  "assistantIsDefault": "Wendelin ist Standard-Assistent",
+  "assistantNameHint": "Name und Persönlichkeit gehen als Teil der Anweisungen an das Modell.",
+  "assistantNameLabel": "Wie soll Wendelin dich nennen?",
+  "assistantNotAvailable": "Auf diesem Gerät nicht verfügbar",
+  "assistantNotDefault": "Nicht als Standard-Assistent gesetzt",
+  "assistantOfferRecognizer": "Als Spracherkennung für andere Apps anbieten",
+  "assistantOfferRecognizerUnavailable": "Als Spracherkennung für andere Apps anbieten, {reason}",
+  "@assistantOfferRecognizerUnavailable": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantOtherForNowDefault": "Android nutzt für andere Apps derzeit {app}. Ob Android nach dem Einschalten zu Wendelin wechselt, hängt vom Gerät ab.",
+  "@assistantOtherForNowDefault": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantOtherForNowNotDefault": "Android nutzt für andere Apps derzeit {app}. Das kann sich ändern, sobald Wendelin Standard-Assistent ist.",
+  "@assistantOtherForNowNotDefault": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantOtherRecognizer": "Android nutzt für andere Apps {app}. Das lässt sich auf diesem Gerät nicht umstellen.",
+  "@assistantOtherRecognizer": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantPersonaLabel": "Persönlichkeit, z. B. „antworte knapp und locker“",
+  "assistantRecognizerActiveDetail": "Android nutzt Wendelin für die Spracheingabe anderer Apps. Whisper erkennt auf dem Gerät, Aufnahmen werden nicht gespeichert.",
+  "assistantRecognizerActiveHint": "Android nutzt Wendelin für die Spracheingabe anderer Apps.",
+  "assistantRecognizerUnknownDetail": "Solange Wendelin Standard-Assistent ist, können andere Apps die Spracheingabe nutzen. Whisper erkennt auf dem Gerät, Aufnahmen werden nicht gespeichert.",
+  "assistantSetDefault": "Als Standard-Assistent setzen",
+  "assistantSetLabel": "gesetzt",
+  "assistantSwitchHint": "Wechselst du später zu einem anderen Assistenten (oder „Keiner“), antwortet die Spracherkennung von Wendelin anderen Apps nicht mehr. Wähle die Spracheingabe dann in den Android-Einstellungen neu, meist unter Apps → Standard-Apps → Digitaler Assistent.",
+  "conversationOfferHint": "Das lässt sich jederzeit unter Einstellungen → Sprache ändern.",
+  "conversationOfferQuestion": "Soll ich nach meinen Antworten standardmäßig weiter zuhören?",
+  "reducerBudgetUsed": "Budget von {name}: {spent} von {budget} verbraucht.",
+  "@reducerBudgetUsed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "spent": {
+        "type": "String"
+      },
+      "budget": {
+        "type": "String"
+      }
+    }
+  },
+  "reducerHandedOver": "an {name} übergeben",
+  "@reducerHandedOver": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reducerSpokenFallback": "Vorgelesen wurde die angezeigte Fassung.",
+  "reducerVerificationFailed": "Die Antwort des Anbieters konnte nicht geprüft werden."
+}
