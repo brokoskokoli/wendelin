@@ -49,7 +49,7 @@ void main() {
   testWidgets('„+ MCP-Server“ und „+ HTTP-Tool“ öffnen ihre Bereiche', (
     tester,
   ) async {
-    await pumpIntegrations(tester, TestEnv());
+    await pumpIntegrations(tester, TestEnv(), size: const Size(390, 2000));
     await tester.tap(find.text('+ MCP-Server'));
     await settle(tester);
     expect(find.byType(McpServersScreen), findsOneWidget);

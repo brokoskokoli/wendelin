@@ -111,6 +111,7 @@ final class TestEnv {
 
   /// SMS and calls (WP85): records instead of sending and calling.
   final phone = FakePhonePort();
+
   /// Device position and map apps (WP86).
   final location = FakeLocationPort();
   final mapsLauncher = FakeMapsLauncherPort();
