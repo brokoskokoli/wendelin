@@ -3,9 +3,9 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
-import 'frb_generated.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
+import 'frb_generated.dart';
 
 /// Mindestanforderungen an das Ziel. Debug-Gäste, MIGRATE_MA, vorläufige TCBs und VMPL ≠ 0 lehnt die Prüfung immer ab.
 class SnpPolicy {

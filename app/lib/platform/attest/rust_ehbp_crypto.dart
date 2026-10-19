@@ -71,6 +71,9 @@ final class _Session implements p.EhbpSession {
           _backend.ehbpResponseDecoder(_session, responseNonce),
         ),
       );
+
+  @override
+  void dispose() => _session.dispose();
 }
 
 final class _Decoder implements p.EhbpDecoder {
@@ -89,4 +92,7 @@ final class _Decoder implements p.EhbpDecoder {
     'Entschlüsselung fehlgeschlagen',
     () => _backend.ehbpDecoderFinish(_decoder),
   );
+
+  @override
+  void dispose() => _decoder.dispose();
 }

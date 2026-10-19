@@ -20,6 +20,9 @@ final class _Router {
   FakeEhbpExchange? exchange;
   int calls = 0;
 
+  /// HTTP status per call (0-based); default 200.
+  int Function(int call) status = (_) => 200;
+
   /// Builds the answer from the decrypted exchange; `null` = plain answer.
   ({Map<String, String> headers, List<Uint8List> chunks}) Function(
     FakeEhbpExchange ex,
@@ -35,10 +38,52 @@ final class _Router {
     final a = answer!(ex);
     return http.StreamedResponse(
       Stream.fromIterable(a.chunks),
-      200,
+      status(calls - 1),
       headers: {'content-type': 'text/event-stream', ...a.headers},
     );
   });
+}
+
+/// Delegates to the reference cipher and records disposals.
+final class _SpyCrypto implements EhbpCrypto {
+  final _inner = EhbpReferenceCrypto();
+  final sessions = <EhbpSession>[];
+  final decoders = <EhbpReferenceDecoder>[];
+  int sessionDisposed = 0;
+
+  @override
+  EhbpBinding bindKeyConfig(Uint8List k, Uint8List r) =>
+      _inner.bindKeyConfig(k, r);
+
+  @override
+  EhbpSealed beginRequest(Uint8List k, Uint8List r, Uint8List p) {
+    final s = _inner.beginRequest(k, r, p);
+    final spy = _SpySession(this, s.session);
+    return EhbpSealed(
+      encapsulatedKey: s.encapsulatedKey,
+      body: s.body,
+      session: spy,
+    );
+  }
+}
+
+final class _SpySession implements EhbpSession {
+  _SpySession(this._spy, this._inner);
+  final _SpyCrypto _spy;
+  final EhbpSession _inner;
+
+  @override
+  EhbpDecoder responseDecoder(Uint8List n) {
+    final d = _inner.responseDecoder(n) as EhbpReferenceDecoder;
+    _spy.decoders.add(d);
+    return d;
+  }
+
+  @override
+  void dispose() {
+    _spy.sessionDisposed++;
+    _inner.dispose();
+  }
 }
 
 String _sse(String fixture) =>
@@ -57,13 +102,15 @@ void main() {
   late TlsPinGate gate;
   EhbpTarget? target;
 
+  var spy = _SpyCrypto();
+
   OpenAiChatAdapter adapter() => OpenAiChatAdapter(
     baseUrl: Uri.parse('https://inference.test/v1'),
     credentials: Credentials.apiKey('test', style: ApiKeyStyle.bearer),
     defaultModel: 'gpt-oss-120b',
     client: router.client,
     wireCodec: TinfoilEhbpCodec(
-      crypto: EhbpReferenceCrypto(),
+      crypto: spy,
       target: () => target,
       tlsPin: gate,
     ),
@@ -89,6 +136,7 @@ void main() {
   }
 
   setUp(() {
+    spy = _SpyCrypto();
     service = FakeEhbpService();
     router = _Router(service);
     gate = TlsPinGate(spkiSha256: (_) => Uint8List(32));
@@ -127,6 +175,88 @@ void main() {
       events.whereType<ToolCallComplete>().single.call.name,
       'contract__echo',
     );
+  });
+
+  group('error answers', () {
+    const rejection =
+        '{"error":{"message":"unknown parameter: stream_options"}}';
+
+    test('encrypted 400 is decrypted: stream_options retry works', () async {
+      router.status = (c) => c == 0 ? 400 : 200;
+      router.answer = (ex) => router.calls == 1
+          ? encrypted(ex, rejection)
+          : encrypted(ex, _sse('text.sse'));
+      final events = await run();
+      expect(router.calls, 2);
+      expect(events.whereType<ErrorEvent>(), isEmpty);
+      expect(events.last, isA<Done>());
+      expect(router.exchange!.request.containsKey('stream_options'), isFalse);
+    });
+
+    test('encrypted 400 is classified from the decrypted body', () async {
+      router.status = (_) => 400;
+      router.answer = (ex) => encrypted(
+        ex,
+        '{"error":{"message":"Geheime Ablehnung","type":"invalid_request"}}',
+      );
+      final error = (await run()).whereType<ErrorEvent>().single.error;
+      expect(error, isNot(isA<AttestationFailedException>()));
+      expect(error.toString(), contains('Geheime Ablehnung'));
+      expect(spy.decoders.single.disposed, isTrue);
+    });
+
+    test('400 without nonce: unauthenticated diagnostic, no retry', () async {
+      router.status = (_) => 400;
+      router.answer = (ex) => (
+        headers: <String, String>{},
+        chunks: [Uint8List.fromList(utf8.encode(rejection * 20))],
+      );
+      final error = (await run()).whereType<ErrorEvent>().single.error;
+      expect(router.calls, 1, reason: 'unauthenticated body drives no retry');
+      expect(error.toString(), contains('unauthentisiert'));
+      expect(error.toString().length, lessThan(500));
+    });
+
+    test('400 with a broken ciphertext fails closed', () async {
+      router.status = (_) => 400;
+      router.answer = (ex) {
+        final r = ex.sealText('{"error":{"message":"x"}}', frameSize: 500);
+        final body = Uint8List.fromList(r.body)..[r.body.length - 3] ^= 1;
+        return (headers: {'Ehbp-Response-Nonce': r.nonceHex}, chunks: [body]);
+      };
+      final error = (await run()).whereType<ErrorEvent>().single.error;
+      expect(error, isA<AttestationFailedException>());
+      expect((error as AttestationFailedException).stage, 'e2ee.response');
+      expect(error.toString(), isNot(contains('"error"')));
+      expect(spy.decoders.single.disposed, isTrue);
+    });
+
+    test('400 with an invalid nonce header fails closed', () async {
+      router.status = (_) => 400;
+      router.answer = (ex) => (
+        headers: {'Ehbp-Response-Nonce': '00' * 5},
+        chunks: [Uint8List.fromList(utf8.encode(rejection))],
+      );
+      final error = (await run()).whereType<ErrorEvent>().single.error;
+      expect(error, isA<AttestationFailedException>());
+    });
+  });
+
+  test('session secret and decoder are disposed after the answer', () async {
+    router.answer = (ex) => encrypted(ex, _sse('text.sse'));
+    await run();
+    expect(spy.sessionDisposed, 1);
+    expect(spy.decoders.single.disposed, isTrue);
+  });
+
+  test('decoder is disposed on a broken answer', () async {
+    router.answer = (ex) {
+      final r = ex.sealText(_sse('text.sse'), frameSize: 200);
+      final body = Uint8List.fromList(r.body)..[r.body.length - 20] ^= 1;
+      return (headers: {'Ehbp-Response-Nonce': r.nonceHex}, chunks: [body]);
+    };
+    await run();
+    expect(spy.decoders.single.disposed, isTrue);
   });
 
   test('no Ehbp-Response-Nonce: error, never plaintext', () async {

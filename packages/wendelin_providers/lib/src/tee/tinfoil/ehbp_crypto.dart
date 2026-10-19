@@ -33,6 +33,9 @@ abstract interface class EhbpSession {
   /// A decoder for the answer; [responseNonce] is the 32 bytes of the
   /// header `Ehbp-Response-Nonce`.
   EhbpDecoder responseDecoder(Uint8List responseNonce);
+
+  /// Releases the secret (zeroized on the native side). Idempotent.
+  void dispose();
 }
 
 /// Stateful decoder of an EHBP answer body (frames, authentication,
@@ -48,6 +51,10 @@ abstract interface class EhbpDecoder {
   /// End of the body. Throws `E2eeCryptoException` if it ended inside a
   /// frame or length prefix.
   void finish();
+
+  /// Releases the key material (zeroized on the native side). Idempotent;
+  /// called after finish, after an error and on cancel.
+  void dispose();
 }
 
 /// Cryptography of the Encrypted HTTP Body Protocol (Tinfoil), sender side:

@@ -126,16 +126,17 @@ final class TinfoilEhbpWire implements BytesChatWire {
     return SealedBytes(wire: _sealed!.body, plain: plain);
   }
 
-  /// A successful answer must carry `Ehbp-Response-Nonce` (exactly 32 bytes
-  /// of hex); without it the body is not encrypted and is refused.
-  @override
-  void checkHead(Map<String, String> headers) {
+  /// The value of `Ehbp-Response-Nonce`, `null` if the header is missing.
+  String? _nonceHeader(Map<String, String> headers) => headers.entries
+      .where((e) => e.key.toLowerCase() == EhbpProtocol.responseNonceHeader)
+      .map((e) => e.value)
+      .firstOrNull;
+
+  /// Derives the decoder from the header value; any problem is a closed
+  /// failure (no decoder, nothing falls through as plaintext).
+  EhbpDecoder _derive(String? value) {
     final sealed = _sealed;
-    if (sealed == null) throw StateError('checkHead vor sealBytes');
-    final value = headers.entries
-        .where((e) => e.key.toLowerCase() == EhbpProtocol.responseNonceHeader)
-        .map((e) => e.value)
-        .firstOrNull;
+    if (sealed == null) throw StateError('Antwort vor sealBytes');
     Uint8List? nonce;
     if (value != null && value.length == 2 * EhbpProtocol.responseNonceLength) {
       try {
@@ -152,18 +153,66 @@ final class TinfoilEhbpWire implements BytesChatWire {
       );
     }
     try {
-      _decoder = sealed.session.responseDecoder(nonce);
+      return sealed.session.responseDecoder(nonce);
     } on E2eeCryptoException {
       throw _fail('e2ee.response', 'Antwortschlüssel nicht ableitbar');
+    } finally {
+      // The request secret is only needed to derive the answer keys.
+      sealed.session.dispose();
     }
   }
 
+  /// A successful answer must carry `Ehbp-Response-Nonce` (exactly 32 bytes
+  /// of hex); without it the body is not encrypted and is refused.
   @override
-  Stream<List<int>> openBody(Stream<List<int>> raw) async* {
+  void checkHead(Map<String, String> headers) {
+    if (_sealed == null) throw StateError('checkHead vor sealBytes');
+    _decoder = _derive(_nonceHeader(headers));
+  }
+
+  @override
+  Stream<List<int>> openBody(Stream<List<int>> raw) {
     final decoder = _decoder;
     if (decoder == null) {
       throw _fail('e2ee.response', 'Antwort ohne geprüften Kopf, verworfen');
     }
+    return _decrypt(decoder, raw);
+  }
+
+  /// Error answers: with a response nonce (SPEC §5.1/5.2) they are
+  /// encrypted like successful ones and a violation is a closed failure.
+  /// Without one (§5.3) the body is unauthenticated: only a shortened
+  /// diagnostic marked as such is returned.
+  @override
+  Stream<List<int>> openErrorBody(
+    Map<String, String> headers,
+    Stream<List<int>> raw,
+  ) async* {
+    final value = _nonceHeader(headers);
+    if (value != null) {
+      yield* _decrypt(_derive(value), raw);
+      return;
+    }
+    _sealed?.session.dispose();
+    final bytes = <int>[];
+    await for (final chunk in raw) {
+      bytes.addAll(chunk);
+      if (bytes.length >= _diagnosticBytes) break;
+    }
+    var text = utf8.decode(bytes, allowMalformed: true);
+    if (text.length > _diagnosticChars) {
+      text = '${text.substring(0, _diagnosticChars)}…';
+    }
+    yield utf8.encode('$unauthenticatedBodyPrefix$text');
+  }
+
+  static const _diagnosticBytes = 1024;
+  static const _diagnosticChars = 200;
+
+  Stream<List<int>> _decrypt(
+    EhbpDecoder decoder,
+    Stream<List<int>> raw,
+  ) async* {
     try {
       await for (final chunk in raw) {
         final plain = decoder.push(
@@ -177,6 +226,8 @@ final class TinfoilEhbpWire implements BytesChatWire {
         'e2ee.response',
         'Antwort nicht authentisch oder abgeschnitten, verworfen',
       );
+    } finally {
+      decoder.dispose();
     }
   }
 

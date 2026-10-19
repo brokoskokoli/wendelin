@@ -71,7 +71,21 @@ abstract interface class BytesChatWire implements ChatWire {
   /// authentic; any violation is a `ProviderException` error, plaintext
   /// never falls through.
   Stream<List<int>> openBody(Stream<List<int>> raw);
+
+  /// Opens the body of a non-2xx answer ([headers] are its headers). An
+  /// answer with the wire's response marker is encrypted and opened like
+  /// [openBody] (violation = `ProviderException` error). An answer without
+  /// it is unauthenticated: only a short diagnostic text that starts with
+  /// [unauthenticatedBodyPrefix] comes back, never trusted content.
+  Stream<List<int>> openErrorBody(
+    Map<String, String> headers,
+    Stream<List<int>> raw,
+  );
 }
+
+/// Marks an error body that could not be authenticated (diagnostics only).
+/// Such a body must not drive decisions such as a retry.
+const unauthenticatedBodyPrefix = '[unauthentisiert] ';
 
 /// A [StreamDecoder] that opens each event with [wire] before [inner] sees it.
 final class WireStreamDecoder implements StreamDecoder {

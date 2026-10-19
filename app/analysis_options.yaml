@@ -8,8 +8,9 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "lib/l10n/gen/**"
-    # erzeugt von flutter_rust_bridge (Opaque-Typen lösen strict-inference-Warnungen aus)
-    - "lib/platform/attest/generated/**"
+    # nur die frb-Hauptdatei: ihre Opaque-Typen (RustArcStaticData) lösen
+    # inference_failure_on_instance_creation aus und sind nicht änderbar
+    - "lib/platform/attest/generated/frb_generated.dart"
     - "build/**"
     - android/**
     - ios/**

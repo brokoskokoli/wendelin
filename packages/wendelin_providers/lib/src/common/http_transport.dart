@@ -79,6 +79,11 @@ final class HttpTransport {
     ExchangeTap? tap,
     void Function(Map<String, String> headers)? checkHead,
     Stream<List<int>> Function(Stream<List<int>> raw)? openBody,
+    Stream<List<int>> Function(
+      Map<String, String> headers,
+      Stream<List<int>> raw,
+    )?
+    openErrorBody,
   }) {
     final token = cancel ?? CancelToken();
     final abort = Completer<void>();
@@ -179,7 +184,7 @@ final class HttpTransport {
             );
             return;
           }
-          final body = await _readBody(response);
+          final body = await _readBody(response, openErrorBody);
           if (finished) return;
           if (retry != null && retry(response.statusCode, body, attempt)) {
             log('$label: neuer Versuch');
@@ -264,9 +269,15 @@ final class HttpTransport {
     );
   }
 
-  Future<String> _readBody(http.StreamedResponse response) async {
+  Future<String> _readBody(
+    http.StreamedResponse response, [
+    Stream<List<int>> Function(Map<String, String>, Stream<List<int>>)? open,
+  ]) async {
     final bytes = <int>[];
-    await for (final chunk in response.stream.timeout(settings.idleTimeout)) {
+    final source = open == null
+        ? response.stream
+        : open(response.headers, response.stream);
+    await for (final chunk in source.timeout(settings.idleTimeout)) {
       bytes.addAll(chunk);
       if (bytes.length > _maxErrorBody) break;
     }

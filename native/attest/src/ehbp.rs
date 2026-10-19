@@ -2,7 +2,7 @@
 //!
 //! Quelle: `tinfoilsh/encrypted-http-body-protocol` v0.4.1 (SPEC §3, §4, §4.4). Anfrage: HPKE
 //! (RFC 9180) `X25519-HKDF-SHA256 / HKDF-SHA256 / AES-256-GCM`, `info = "ehbp request"`, leere AAD,
-//! Body = Folge `LEN(4, BE) ‖ Chunk` mit Klartext-Frames zu höchstens 64 KiB. Antwort: Schlüssel und
+//! Body = Folge `LEN(4, BE) ‖ Chunk` mit Klartext-Frames zu höchstens 64 KiB (Antwort-Chunks ≤ 1 MiB). Antwort: Schlüssel und
 //! Nonce kommen aus `HKDF(salt = enc ‖ response_nonce, ikm = export("ehbp response", 32))` mit den
 //! Labels `key`/`nonce`; Nonce je Chunk = Basis XOR Zähler (u64, nur nichtleere Frames zählen).
 //!
@@ -27,8 +27,9 @@ const KEY_LEN: usize = 32;
 const NONCE_LEN: usize = 12;
 const TAG_LEN: usize = 16;
 const RESPONSE_NONCE_LEN: usize = 32;
-/// Obergrenze eines Chunks (SPEC §4.3): 64 MiB Chiffretext.
-const MAX_CHUNK: usize = 64 * 1024 * 1024;
+/// Obergrenze eines Antwort-Chunks (Chiffretext). SPEC §4.3 erlaubt 64 MiB; für Chat-Antworten
+/// (SSE-Frames, Fehlertexte) genügt 1 MiB, größere Längenpräfixe werden vor dem Puffern abgelehnt.
+const MAX_CHUNK: usize = 1024 * 1024;
 /// Klartext je Anfrage-Frame.
 const FRAME_PLAIN: usize = 64 * 1024;
 const KEY_CONFIG_LEN: usize = 41;
@@ -245,7 +246,7 @@ impl EhbpResponseDecoder {
             let len = u32::from_be_bytes([rest[0], rest[1], rest[2], rest[3]]) as usize;
             if len > MAX_CHUNK {
                 out.zeroize();
-                return self.fail("CHUNK_TOO_LARGE", "Chunk überschreitet 64 MiB");
+                return self.fail("CHUNK_TOO_LARGE", "Chunk überschreitet 1 MiB");
             }
             if len == 0 {
                 pos += 4;
@@ -264,6 +265,7 @@ impl EhbpResponseDecoder {
                     },
                 )
                 .ok()
+                .map(Zeroizing::new)
             });
             let Some(plain) = plain else {
                 out.zeroize();

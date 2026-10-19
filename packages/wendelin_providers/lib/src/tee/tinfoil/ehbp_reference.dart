@@ -228,6 +228,12 @@ final class _Session implements EhbpSession {
   @override
   EhbpDecoder responseDecoder(Uint8List responseNonce) =>
       EhbpReferenceCrypto.decoder(_secret, _enc, responseNonce);
+
+  /// Whether [dispose] ran (tests).
+  bool disposed = false;
+
+  @override
+  void dispose() => disposed = true;
 }
 
 /// An HPKE context with the operations EHBP needs.
@@ -323,12 +329,21 @@ final class EhbpReferenceDecoder implements EhbpDecoder {
   /// Response base nonce (contract vector).
   final Uint8List nonceBase;
 
-  static const _maxChunk = 64 * 1024 * 1024;
+  static const _maxChunk = 1024 * 1024;
   final _buf = BytesBuilder();
   Uint8List _pending = Uint8List(0);
   int _seq = 0;
   bool _failed = false;
   bool _finished = false;
+
+  /// Whether [dispose] ran (tests).
+  bool disposed = false;
+
+  @override
+  void dispose() {
+    disposed = true;
+    key.fillRange(0, key.length, 0);
+  }
 
   /// The nonce of sequence number [seq] (base XOR counter).
   Uint8List nonceFor(int seq) {

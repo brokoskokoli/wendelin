@@ -3,14 +3,13 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
 import 'collateral.dart';
 import 'e2ee.dart';
 import 'ehbp.dart';
 import 'frb_generated.dart';
 import 'near_e2ee.dart';
-
-import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-
 import 'quote.dart';
 import 'report.dart';
 import 'sigstore.dart';

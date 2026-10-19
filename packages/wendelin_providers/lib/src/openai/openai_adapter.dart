@@ -141,6 +141,10 @@ final class OpenAiChatAdapter implements LlmProvider {
         final w = wire;
         return w is BytesChatWire ? w.openBody(raw) : raw;
       },
+      openErrorBody: (headers, raw) {
+        final w = wire;
+        return w is BytesChatWire ? w.openErrorBody(headers, raw) : raw;
+      },
       decoder: () {
         final decoder = OpenAiStreamDecoder(
           label: label,
@@ -152,6 +156,7 @@ final class OpenAiChatAdapter implements LlmProvider {
       onHttpError: _httpError,
       retry: (status, body, attempt) {
         if (attempt == 0 &&
+            !body.startsWith(unauthenticatedBodyPrefix) &&
             options.includeUsage &&
             !_usageOptionRejected &&
             rejectsStreamOptions(status, body)) {

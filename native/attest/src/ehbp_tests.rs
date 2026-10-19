@@ -172,8 +172,12 @@ fn request_roundtrip_with_recipient_and_response() {
     let (req, session) = begin_request(&s.cfg, &rd, &plain).unwrap();
     // Empfängerseite
     let frames = deframe(&req.body);
+    // Literale statt FRAME_PLAIN: die Rahmengröße der Wire (64 KiB) ist festgeschrieben.
+    assert_eq!(plain.len(), 131_072 + 5);
     assert_eq!(frames.len(), 3);
-    assert_eq!(frames[0].len(), FRAME_PLAIN + TAG_LEN);
+    assert_eq!(frames[0].len(), 65_536 + 16);
+    assert_eq!(frames[1].len(), 65_536 + 16);
+    assert_eq!(frames[2].len(), 5 + 16);
     let enc =
         <X25519HkdfSha256 as hpke::Kem>::EncappedKey::from_bytes(&req.encapsulated_key).unwrap();
     let mut ctx = hpke::setup_receiver::<AesGcm256, HkdfSha256, X25519HkdfSha256>(
@@ -293,6 +297,22 @@ fn decoder_failure_is_final_and_finish_detects_truncation() {
     let mut d2 = r.response_decoder(&[1u8; 32]).unwrap();
     d2.finish().unwrap();
     assert!(d2.push(&[0]).is_err());
+}
+
+#[test]
+fn oversized_chunk_prefix_is_rejected_before_buffering() {
+    let s = server(8);
+    let (_, r) = begin_request(&s.cfg, &report_data(&s.cfg), b"x").unwrap();
+    // genau 1 MiB ist erlaubt (wartet auf den Rest) ...
+    let mut ok = r.response_decoder(&[2u8; 32]).unwrap();
+    assert!(ok.push(&(1024u32 * 1024).to_be_bytes()).unwrap().is_empty());
+    assert!(!ok.is_failed());
+    // ... 1 MiB + 1 wird sofort beim Längenpräfix abgelehnt, ohne den Chunk abzuwarten.
+    let mut d = r.response_decoder(&[2u8; 32]).unwrap();
+    let e = d.push(&(1024u32 * 1024 + 1).to_be_bytes()).unwrap_err();
+    assert!(e.starts_with("CHUNK_TOO_LARGE"));
+    assert!(d.is_failed());
+    assert!(d.buf.is_empty());
 }
 
 #[test]
