@@ -158,6 +158,10 @@ void main() {
     expect(failed.status, IntegrationStatus.error);
     expect(failed.detail, contains('Spotify: Zugang abgelehnt'));
     expect(failed.detail, endsWith('pausiert'));
+    expect(
+      c.read(toolRegistryProvider).info('spotify').errorKind,
+      PortErrorKind.permissionDenied,
+    );
     expect(failed.actionLabel, 'Erneut versuchen');
     // Abgelaufene Anmeldung: Tokens sind gelöscht, Einrichtung nötig.
     expect(await env.secrets.read('spotify.session'), isNull);

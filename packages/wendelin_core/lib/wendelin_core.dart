@@ -30,6 +30,7 @@ export 'src/safety/sensitive_content.dart';
 export 'src/sse/sse_parser.dart';
 export 'src/text/fold.dart';
 export 'src/tools/integration.dart';
+export 'src/tools/port_error_kind.dart';
 export 'src/tools/tool.dart';
 export 'src/tools/tool_context.dart';
 export 'src/tools/tool_outcome.dart';

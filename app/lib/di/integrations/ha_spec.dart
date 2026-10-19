@@ -22,7 +22,7 @@ final haSpec = IntegrationSpec(
       deps.api,
       deps.store,
       deps.store,
-      onError: (_) => d.reportError?.call('ha', pausedError),
+      onError: (_, kind) => d.reportError?.call('ha', pausedError, kind),
       onRecovered: () => d.clearError?.call('ha'),
     );
   },

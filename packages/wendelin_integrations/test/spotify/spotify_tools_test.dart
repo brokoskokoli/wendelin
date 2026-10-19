@@ -35,7 +35,7 @@ void main() {
       api,
       secrets,
       launcher: launcher,
-      onError: errors.add,
+      onError: (m, _) => errors.add(m),
       delay: (_) async {},
     );
   });

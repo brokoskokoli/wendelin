@@ -1473,6 +1473,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get devSection => 'Développement';
 
   @override
+  String integrationsErrDenied(String service) {
+    return '$service : accès refusé ou expiré · en pause';
+  }
+
+  @override
+  String integrationsErrFailed(String service) {
+    return '$service : réponse inattendue · en pause';
+  }
+
+  @override
+  String integrationsErrUnavailable(String service) {
+    return '$service est injoignable · en pause';
+  }
+
+  @override
   String get haAddressLabel => 'Adresse';
 
   @override

@@ -25,7 +25,7 @@ void main() {
     secrets = FakeBringSecrets();
     await signIn();
     errors = [];
-    bring = BringIntegration(api, secrets, onError: errors.add);
+    bring = BringIntegration(api, secrets, onError: (m, _) => errors.add(m));
   });
 
   Tool tool(String name) => bring.tools.singleWhere((t) => t.name == name);
@@ -227,7 +227,11 @@ void main() {
 
     test('Fehler nach dem ersten Artikel: Teilerfolg mit Undo', () async {
       final failing = _FailSecond(api);
-      final b2 = BringIntegration(failing, secrets, onError: errors.add);
+      final b2 = BringIntegration(
+        failing,
+        secrets,
+        onError: (m, _) => errors.add(m),
+      );
       final r = await b2.tools
           .singleWhere((t) => t.name == 'bring__add_items')
           .execute({

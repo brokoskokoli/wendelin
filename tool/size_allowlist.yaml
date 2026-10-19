@@ -15,4 +15,4 @@ app/lib/platform/attest/generated/frb_generated.dart: 2310  # WP47/WP62/WP75/WP7
 app/lib/l10n/gen/app_localizations.dart: 9000  # WP79 (erzeugt, kein Abbau)
 app/lib/l10n/gen/app_localizations_de.dart: 5250  # WP79 (erzeugt, kein Abbau; WP107 +2 Zeilen)
 app/lib/l10n/gen/app_localizations_en.dart: 5200  # WP79 (erzeugt, kein Abbau)
-app/lib/l10n/gen/app_localizations_fr.dart: 5250  # WP79 (erzeugt, kein Abbau; WP92b +28 Zeilen)
+app/lib/l10n/gen/app_localizations_fr.dart: 5252  # WP79 (erzeugt, kein Abbau; WP92b +28, WP108 +2 Zeilen)

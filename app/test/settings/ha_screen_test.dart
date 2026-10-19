@@ -208,6 +208,10 @@ void main() {
       allOf(contains('Home Assistant'), endsWith('pausiert')),
     );
     expect(failed.actionLabel, 'Erneut versuchen');
+    expect(
+      c.read(toolRegistryProvider).info('ha').errorKind,
+      PortErrorKind.permissionDenied,
+    );
 
     await tester.tap(find.text('Home Assistant (direkt)'));
     await settle(tester);

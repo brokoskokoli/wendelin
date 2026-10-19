@@ -128,6 +128,10 @@ void main() {
     expect(failed.status, IntegrationStatus.error);
     expect(failed.detail, contains('unerwartete Antwort'));
     expect(failed.detail, endsWith('pausiert'));
+    expect(
+      c.read(toolRegistryProvider).info('bring').errorKind,
+      PortErrorKind.failed,
+    );
     expect(failed.actionLabel, 'Erneut versuchen');
 
     // Seite: Fehler mit Grund und eigener Knopf.

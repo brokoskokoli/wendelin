@@ -12,6 +12,7 @@ final class IntegrationInfo {
     required this.availability,
     required this.setup,
     this.error,
+    this.errorKind,
   });
 
   /// The integration itself.
@@ -31,6 +32,9 @@ final class IntegrationInfo {
 
   /// Current failure (German text), e.g. „Anmeldung abgelaufen“.
   final String? error;
+
+  /// Category of [error] when the reporter knew it (UI wording per kind).
+  final PortErrorKind? errorKind;
 
   /// Integration id.
   String get id => integration.id;

@@ -423,6 +423,30 @@
   "devDemoModeLabel": "Demo mode",
   "devGallery": "Design gallery",
   "devSection": "Development",
+  "integrationsErrDenied": "{service}: access refused or expired · paused",
+  "@integrationsErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsErrFailed": "{service}: unexpected answer · paused",
+  "@integrationsErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsErrUnavailable": "{service} is not reachable · paused",
+  "@integrationsErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "haAddressLabel": "Address",
   "haAlwaysConfirm": "Always confirm",
   "haAlwaysConfirmHelp": "Wendelin asks before every switch (e.g. stove, oven).",

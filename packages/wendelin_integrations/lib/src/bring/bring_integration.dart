@@ -34,7 +34,7 @@ final class BringIntegration implements Integration {
   BringIntegration(
     BringApi api,
     this.secrets, {
-    void Function(String message)? onError,
+    void Function(String message, PortErrorKind kind)? onError,
     void Function()? onRecovered,
   }) : session = BringSession(
          api,
