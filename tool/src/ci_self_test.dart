@@ -55,6 +55,23 @@ void _textChecks(SelfCheck t) {
       'Allowlist zu hoch: rot (nur abbauen)',
     );
     t.isTrue(
+      allowlistGrowth(
+        {'a.dart': 3, 'b.dart': 1},
+        {'a.dart': 3, 'b.dart': 2},
+      ).isEmpty,
+      'Allowlist gleich oder kleiner als die Basis: grün',
+    );
+    t.eq(
+      allowlistGrowth({'a.dart': 4}, {'a.dart': 3}).length,
+      1,
+      'Allowlist-Wert über der Basis: rot',
+    );
+    t.eq(
+      allowlistGrowth({'neu.dart': 1}, {'a.dart': 3}).length,
+      1,
+      'neuer Allowlist-Eintrag gegenüber der Basis: rot',
+    );
+    t.isTrue(
       compareTexts(const [], {'x.dart': 1}).first.contains('entfernen'),
       'Eintrag ohne Treffer: entfernen',
     );

@@ -14,6 +14,8 @@ Future<void> emulatorLockChecks(SelfCheck t) async {
     final l = _Lock(t, dir.path);
     await l.busyAndRelease();
     l.orphan();
+    await l.orphanRace();
+    l.noInfo();
     await l.foreignRelease();
     l.wpName();
     l.wiring();
@@ -104,6 +106,51 @@ final class _Lock {
     t.isTrue(
       (take.stdout as String).contains('WP9'),
       'neuer Besitzer trägt sein WP ein',
+    );
+  }
+
+  /// Mehrere gleichzeitige Übernahmen einer verwaisten Sperre: genau einer gewinnt.
+  Future<void> orphanRace() async {
+    final o = Directory('$dir/locks/emulator-5560.lock')
+      ..createSync(recursive: true);
+    File('${o.path}/info').writeAsStringSync('2000000 WP5\n');
+    final procs = <Process>[
+      for (var i = 0; i < 8; i++)
+        await Process.start(
+          'bash',
+          [
+            '-c',
+            '. "$lib"; emu_lock_acquire emulator-5560 2>/dev/null && { echo won; sleep 4; }',
+          ],
+          environment: {...env, 'WENDELIN_WP': 'WP$i'},
+        ),
+    ];
+    var won = 0;
+    await Future.wait([
+      for (final p in procs)
+        () async {
+          unawaited(p.stderr.drain<void>());
+          final out = await p.stdout.transform(utf8.decoder).join();
+          if (out.contains('won')) won++;
+        }(),
+    ]).timeout(const Duration(seconds: 60));
+    t.eq(won, 1, 'acht gleichzeitige Übernahmen: genau einer gewinnt');
+  }
+
+  /// Sperre ohne info-Datei: frisch belegt, nach einer Minute verwaist.
+  void noInfo() {
+    final o = Directory('$dir/locks/emulator-5562.lock')
+      ..createSync(recursive: true);
+    final fresh = sh('emu_lock_acquire emulator-5562; echo "exit=\$?"');
+    t.isTrue(
+      (fresh.stdout as String).contains('exit=1'),
+      'Sperre ohne info, frisch: belegt',
+    );
+    Process.runSync('touch', ['-t', '202001010000', o.path]);
+    final take = sh('emu_lock_acquire emulator-5562; echo "exit=\$?"');
+    t.isTrue(
+      (take.stdout as String).contains('exit=0'),
+      'Sperre ohne info, alt: übernommen: ${take.stderr}',
     );
   }
 

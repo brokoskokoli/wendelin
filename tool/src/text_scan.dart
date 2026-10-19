@@ -98,3 +98,15 @@ List<String> compareTexts(Iterable<String> findings, Map<String, int> allowed) {
   }
   return msgs;
 }
+
+/// Einträge, die gegenüber der Basis ([base], die Allowlist auf origin/main bzw. an der
+/// Merge-Basis) neu sind oder höher stehen: die Liste darf nicht wachsen.
+List<String> allowlistGrowth(
+  Map<String, int> allowed,
+  Map<String, int> base,
+) => [
+  for (final MapEntry(:key, :value) in allowed.entries)
+    if (value > (base[key] ?? 0))
+      'tool/text_allowlist.yaml: $key steht mit $value, Basis ${base[key] ?? 0} '
+          '(die Liste darf nicht wachsen: Texte nach app/lib/l10n/src/<bereich>/ verschieben).',
+];

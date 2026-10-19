@@ -19,7 +19,10 @@ void main(List<String> args) {
   final allowed = list.existsSync()
       ? parseFlakyAllowlist(list.readAsStringSync())
       : <String, int>{};
-  final msgs = compareTexts(found, allowed);
+  final msgs = [
+    ...compareTexts(found, allowed),
+    ...allowlistGrowth(allowed, _baseAllowlist() ?? allowed),
+  ];
   if (msgs.isEmpty) {
     stdout.writeln(
       'check_texts: ok (${allowed.length} Dateien auf der Ausnahmeliste)',
@@ -28,4 +31,24 @@ void main(List<String> args) {
   }
   msgs.forEach(stderr.writeln);
   exitCode = 1;
+}
+
+/// Allowlist der Basis (Merge-Basis mit origin/main, sonst origin/main) aus git;
+/// null, wenn es keine gibt (kein origin/main, Datei dort noch nicht vorhanden).
+Map<String, int>? _baseAllowlist() {
+  String? git(List<String> a) {
+    try {
+      final r = Process.runSync('git', a);
+      return r.exitCode == 0 ? r.stdout as String : null;
+    } on ProcessException {
+      return null;
+    }
+  }
+
+  final mb = git(['merge-base', 'HEAD', 'origin/main'])?.trim();
+  final text = git([
+    'show',
+    '${mb == null || mb.isEmpty ? 'origin/main' : mb}:tool/text_allowlist.yaml',
+  ]);
+  return text == null ? null : parseFlakyAllowlist(text);
 }

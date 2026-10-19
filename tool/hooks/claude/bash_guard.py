@@ -19,6 +19,11 @@ from shellparse import split_commands  # noqa: E402
 ASSIGN = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)=(.*)$", re.S)
 IDENT_VAR = re.compile(r"^GIT_(AUTHOR|COMMITTER)_[A-Z_]+$|^GIT_CONFIG_(COUNT|PARAMETERS|KEY_\d+|VALUE_\d+)$")
 WRAPPERS = {"env", "command", "builtin", "exec", "sudo", "nohup", "time", "nice", "export", "declare", "typeset", "local"}
+# Shell-Schlüsselwörter, hinter denen ein Kommando steht (if/while/!/{ …).
+KEYWORDS = {"if", "then", "elif", "else", "do", "while", "until", "!", "{", "}", "coproc"}
+# Programme, die ein weiteres Kommando mit eigenen Optionen/Werten starten: alle Suffixe prüfen.
+SCAN_PROGS = {"timeout", "nice", "sudo", "nohup", "xargs", "doas", "setsid", "ionice", "caffeinate"}
+EXEC_FLAGS = {"-exec", "-execdir", "-ok", "-okdir"}
 SHELLS = {"bash", "sh", "zsh", "dash"}
 BAD_CFG = re.compile(r"^(user\.|author\.|committer\.|core\.hookspath)", re.I)
 GIT_VALUE_OPTS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path", "--super-prefix", "--config-env"}
@@ -63,7 +68,7 @@ def targets_main(args, cwd):
         dst = spec.split(":")[-1]
         if dst in ("HEAD", "@") and ":" not in spec:
             dst = current_branch(cwd)
-        dst = re.sub(r"^refs/heads/", "", dst)
+        dst = re.sub(r"^(refs/)?heads/", "", dst)
         if dst == "main" or "*" in dst:
             return True
     return False
@@ -116,7 +121,9 @@ def check_git(tokens, state, cwd):
         return
     sub, args = tokens[i], tokens[i + 1:]
     for a in args:
-        if a == "--no-verify" or a.startswith("--no-verify="):
+        o = a.split("=", 1)[0]
+        # Git akzeptiert eindeutige Abkürzungen langer Optionen (--no-v, --no-veri …).
+        if len(o) >= 6 and "--no-verify".startswith(o):
             raise Deny("--no-verify ist verboten (Hooks sind verbindlich, docs/agents/common.md).")
     if sub == "commit":
         check_commit(args)
@@ -135,7 +142,7 @@ def check_cmd(tokens, state, cwd, depth=0):
     """Prüft ein Kommando; Zuweisungen ohne Kommando (und export) wirken auf [state]."""
     if depth > 4:
         return
-    i, assigns, persist = 0, {}, False
+    i, assigns, persist, scan = 0, {}, False, False
     while i < len(tokens):
         t = tokens[i]
         m = ASSIGN.match(t)
@@ -144,8 +151,11 @@ def check_cmd(tokens, state, cwd, depth=0):
                 raise Deny("%s setzen ist verboten (Identität, docs/agents/common.md)." % m.group(1))
             assigns[m.group(1)] = m.group(2)
             i += 1
+        elif t in KEYWORDS:
+            i += 1
         elif os.path.basename(t) in WRAPPERS:
             wrapper = os.path.basename(t)
+            scan = scan or wrapper in SCAN_PROGS
             persist = persist or wrapper in ("export", "declare", "typeset")
             i += 1
             while i < len(tokens) and tokens[i].startswith("-"):
@@ -159,6 +169,18 @@ def check_cmd(tokens, state, cwd, depth=0):
         return
     local = {**state, **assigns}
     prog = os.path.basename(rest[0])
+    if scan or prog in SCAN_PROGS:
+        # Optionen mit Werten (timeout 5, nice -n 5, sudo -u x, xargs -n1 …): jedes Suffix prüfen.
+        carry = dict(local)
+        for k in range(1, len(rest)):
+            m = ASSIGN.match(rest[k - 1])
+            if m and k > 1:
+                carry[m.group(1)] = m.group(2)
+            check_cmd(rest[k:], carry, cwd, depth + 1)
+    elif prog == "find":
+        for k, a in enumerate(rest):
+            if a in EXEC_FLAGS:
+                check_cmd(rest[k + 1:], local, cwd, depth + 1)
     if prog in ("pkill", "killall"):
         raise Deny("%s ist verboten (fremde Prozesse nicht anfassen, docs/agents/common.md)." % prog)
     if prog == "git":
@@ -174,8 +196,6 @@ def check_cmd(tokens, state, cwd, depth=0):
                     break
         for c in split_commands(sub or ""):
             check_cmd(c, local, cwd, depth + 1)
-    elif prog == "xargs" and len(rest) > 1:
-        check_cmd(rest[1:], local, cwd, depth + 1)
 
 
 def check(command, cwd):
