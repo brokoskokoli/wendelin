@@ -54,6 +54,9 @@ Grundlage sind die häufigsten Review-Befunde aus 98 Nachbesserungs-Commits.
 - Ist der Emulator belegt, sofort eine klare Meldung „belegt durch WPnn, PID …“ und Exit-Code ungleich 0, kein Warten.
 - Verwaiste Locks (PID existiert nicht mehr) werden übernommen.
 
+### 6. Nachtrag (Orchestrator 2026-10-19)
+- `tool/gate.dart` wählt für `kotlin-unit` selbst ein passendes JDK (zuerst openjdk@21, sonst Android-Studio-JBR, wie `tool/e2e_android.sh`), wenn `JAVA_HOME` auf ein zu neues JDK zeigt. Beim WP93-Merge war das Gate auf main mit JDK 23 rot und mit openjdk@21 grün.
+
 ## Abnahmekriterien
 - [ ] `dart run tool/gate.dart --changed` grün, CI grün, Review FREIGABE.
 - [ ] Hook-Selbsttests belegen jede Sperre (inkl. Varianten), dass erlaubte Befehle durchgehen (z. B. `git push origin wp/…`, `git commit`), und die Schwellen 60/90.
