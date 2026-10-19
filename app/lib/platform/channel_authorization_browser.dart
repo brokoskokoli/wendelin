@@ -57,6 +57,25 @@ final class ChannelAuthorizationBrowser implements AuthorizationBrowser {
     }
   }
 
+  /// Opens [url] (https) in the browser and returns at once; the answer
+  /// comes elsewhere (Google Tasks login: a local server in Dart).
+  /// Returns `false` if no browser can show it.
+  Future<bool> open(Uri url) async {
+    if (!url.isScheme('https')) {
+      throw ArgumentError.value(url.scheme, 'url', 'nur https');
+    }
+    try {
+      return await _channel.invokeMethod<bool>('open', {
+            'url': url.toString(),
+          }) ??
+          false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   @override
   Future<Uri> authorize(Uri url, Uri redirect) async {
     if (!url.isScheme('https') && !url.isScheme('http')) {

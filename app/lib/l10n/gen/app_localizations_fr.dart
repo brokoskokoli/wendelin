@@ -3274,6 +3274,24 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get quickSwitchCurrent => 'actuel';
+
+  @override
+  String get quickSwitchHint =>
+      'Le choix termine cette conversation et en commence une nouvelle.';
+
+  @override
+  String quickSwitchItemSemantics(String name, String level) {
+    return '$name, $level';
+  }
+
+  @override
+  String get quickSwitchSemanticsAction => 'Changer d\'agent';
+
+  @override
+  String get quickSwitchTitle => 'Changer d\'agent';
+
+  @override
   String get condBuilderAddCondition => '+ Condition';
 
   @override
@@ -3708,6 +3726,195 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get spotifyTitle => 'Spotify';
+
+  @override
+  String get googleTasksApiError =>
+      'Erreur – Google injoignable ou connexion refusée';
+
+  @override
+  String get googleTasksCancel => 'Annuler';
+
+  @override
+  String get googleTasksChecking => 'Vérification …';
+
+  @override
+  String get googleTasksClientId => 'ID client';
+
+  @override
+  String get googleTasksClientSecret => 'Secret client';
+
+  @override
+  String get googleTasksErrAccessDenied =>
+      'Connexion annulée : accès non autorisé (votre compte est-il enregistré comme utilisateur test dans le projet Cloud ?).';
+
+  @override
+  String get googleTasksErrCancelled => 'Connexion annulée.';
+
+  @override
+  String get googleTasksErrClientRejected =>
+      'Google refuse l’ID client ou le secret client. Veuillez vérifier les deux.';
+
+  @override
+  String get googleTasksErrDenied => 'Google a refusé la connexion.';
+
+  @override
+  String get googleTasksErrFailed => 'La connexion a échoué.';
+
+  @override
+  String get googleTasksErrInvalidClientId =>
+      'L’ID client se termine par « .apps.googleusercontent.com ». Copiez-le depuis la console Google Cloud (client OAuth de type « Application de bureau »).';
+
+  @override
+  String get googleTasksErrMissingSecret =>
+      'Veuillez saisir le secret client OAuth (sans espaces).';
+
+  @override
+  String get googleTasksErrNoBrowser => 'Aucun navigateur n’est installé.';
+
+  @override
+  String get googleTasksErrNoCode => 'Google n’a envoyé aucun code.';
+
+  @override
+  String get googleTasksErrNoRefreshToken =>
+      'Google n’a pas envoyé de jeton d’actualisation. Retirez l’accès de Wendelin sur myaccount.google.com/permissions et reconnectez-vous.';
+
+  @override
+  String get googleTasksErrReceiver =>
+      'Le récepteur local pour la connexion n’a pas pu démarrer.';
+
+  @override
+  String get googleTasksErrTimeout =>
+      'Délai dépassé : aucune réponse de Google n’est arrivée dans le navigateur. Veuillez vous reconnecter.';
+
+  @override
+  String get googleTasksErrUnavailable =>
+      'Google est inaccessible. Veuillez réessayer plus tard.';
+
+  @override
+  String get googleTasksFine => 'OK';
+
+  @override
+  String get googleTasksGuideNote =>
+      'En mode test, la connexion expire après 7 jours ; reconnectez-vous alors ici. Google signale une « application non validée » (c’est votre propre projet) : choisissez « Continuer » et autorisez l’accès aux tâches.';
+
+  @override
+  String get googleTasksGuideStep1 =>
+      '1. Dans console.cloud.google.com, créez un projet (ou choisissez le vôtre).';
+
+  @override
+  String get googleTasksGuideStep2 =>
+      '2. Sous « API et services → Bibliothèque », activez l’« API Google Tasks ».';
+
+  @override
+  String get googleTasksGuideStep3 =>
+      '3. Sous « Google Auth Platform » (anciennement « écran de consentement OAuth »), gardez le public « Externe » en mode test et ajoutez votre compte Google comme utilisateur test.';
+
+  @override
+  String get googleTasksGuideStep4 =>
+      '4. Sous « Clients » (anciennement « Identifiants »), créez un client OAuth de type « Application de bureau ». Copiez l’ID client et le secret client et saisissez-les ci-dessous.';
+
+  @override
+  String get googleTasksGuideTitle => 'Configurer un projet Google Cloud';
+
+  @override
+  String get googleTasksIntro =>
+      'Tâches Google avec votre propre projet Cloud, sans services Google Play. La connexion se fait dans le navigateur ; ID client, secret client et connexion restent dans le stockage sécurisé de l’appareil et ne sont jamais affichés ni journalisés. Les listes de tâches servent de listes ; Google ne connaît qu’une date d’échéance, ni heure ni priorité.';
+
+  @override
+  String get googleTasksNeedClient =>
+      'Veuillez saisir l’ID client et le secret client.';
+
+  @override
+  String get googleTasksReachable => 'Google Tasks est joignable.';
+
+  @override
+  String get googleTasksSignIn => 'Se connecter à Google';
+
+  @override
+  String get googleTasksSignInWaiting => 'En attente de Google …';
+
+  @override
+  String get googleTasksSignOutBody =>
+      'La connexion est révoquée chez Google (si joignable) ; ID client, secret client et jeton sont supprimés de l’appareil.';
+
+  @override
+  String get googleTasksSignOutTitle => 'Déconnecter Google Tasks ?';
+
+  @override
+  String get googleTasksStatusAvailable => 'Connecté, intégration désactivée';
+
+  @override
+  String get googleTasksStatusSetup => 'Connexion manquante';
+
+  @override
+  String get googleTasksStatusUnavailable => 'Indisponible';
+
+  @override
+  String get googleTasksStatusUnknown => 'Inconnu';
+
+  @override
+  String get integrationDetailGoogleTasksAccount => 'Compte Google';
+
+  @override
+  String get integrationDetailTodoistAccount => 'Compte Todoist';
+
+  @override
+  String get todoistApiError => 'Erreur – Todoist injoignable ou jeton refusé';
+
+  @override
+  String get todoistChecking => 'Vérification …';
+
+  @override
+  String get todoistConnect => 'Connecter';
+
+  @override
+  String get todoistConnecting => 'Connexion …';
+
+  @override
+  String get todoistErrDenied =>
+      'Todoist a refusé le jeton (invalide ou révoqué).';
+
+  @override
+  String get todoistErrFailed => 'La connexion à Todoist a échoué.';
+
+  @override
+  String get todoistErrUnavailable =>
+      'Todoist est inaccessible. Veuillez réessayer plus tard.';
+
+  @override
+  String get todoistFine => 'OK';
+
+  @override
+  String get todoistIntro =>
+      'Tâches Todoist avec votre jeton d’API personnel. Vous le trouvez dans Todoist sous Paramètres → Intégrations → Développeur. Il reste dans le stockage sécurisé de l’appareil et n’est jamais affiché ni journalisé. Les projets servent de listes.';
+
+  @override
+  String get todoistNeedToken => 'Veuillez saisir le jeton d’API.';
+
+  @override
+  String get todoistReachable => 'Todoist est de nouveau joignable.';
+
+  @override
+  String get todoistSignOutBody =>
+      'Le jeton est supprimé de l’appareil. Vous pouvez aussi le révoquer dans Todoist.';
+
+  @override
+  String get todoistSignOutTitle => 'Déconnecter Todoist ?';
+
+  @override
+  String get todoistStatusAvailable => 'Connecté, intégration désactivée';
+
+  @override
+  String get todoistStatusSetup => 'Jeton manquant';
+
+  @override
+  String get todoistStatusUnavailable => 'Indisponible';
+
+  @override
+  String get todoistStatusUnknown => 'Inconnu';
+
+  @override
+  String get todoistToken => 'Jeton d’API';
 
   @override
   String get languageEnglish => 'English';

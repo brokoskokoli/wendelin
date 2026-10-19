@@ -12,3 +12,5 @@ Festgelegt mit dem Maintainer 2026-10-18 (K48). M5 ist nur Android. Kamera/Bild,
 
 Ablauf je Paket wie in M4: Coder (Sonnet, eigener Worktree) → Review (Opus) → Nachbesserung (frischer Agent) → E2E-Agent (Emulator) → Merge. Höchstens etwa 4 Coder gleichzeitig. Vor jedem neuen Paket das Wochenlimit prüfen (< 95 %).
 - WP102 Spike bessere Sprache (Messung), danach WP103 Einbau (K64, 2026-10-19).
+- WP104 liegengebliebene Gerätetests übernehmen (Standort, Aufgaben, HA, sprachneutrale Texte, overlay-Reihenfolge-Flake), 2026-10-19.
+- WP105 Folgepunkte Audit und Texte (WP84/WP88/WP89), 2026-10-19.
