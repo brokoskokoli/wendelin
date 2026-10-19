@@ -109,6 +109,10 @@ final class SizeReport {
 
   /// Warnungen (nur Anzahl in der Gate-Zusammenfassung).
   final warnings = <String>[];
+
+  /// Die Größenwarnungen „über Warnschwelle“ als Schlüssel (`pfad` bzw.
+  /// `pfad#name`) mit Zeilenzahl, für die Ratsche (`tool/size_warn_baseline.yaml`).
+  final warned = <String, int>{};
 }
 
 /// Prüft [files] gegen die Schwellen und die [allow]-Liste.
@@ -140,6 +144,8 @@ SizeReport evaluate(List<FileSize> files, Map<String, AllowEntry> allow) {
     }
     if (lines > warn && (error == null || lines <= error || a != null)) {
       r.warnings.add('$key: $lines Zeilen ($what > $warn)');
+      final prev = r.warned[key];
+      if (prev == null || lines > prev) r.warned[key] = lines;
     }
   }
 

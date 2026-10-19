@@ -1,0 +1,15 @@
+# Budget je Regel für `// ignore:` (ignore/<regel>) und `// ignore_for_file:`
+# (ignore_for_file/<regel>) in handgeschriebenem Dart (WP109, Ratsche, tool/check_ignores.dart).
+# Mehr Treffer oder neue Regel ist rot; weniger ebenfalls, bis gesenkt:
+# `dart run tool/check_ignores.dart --update-baseline` (senkt/entfernt, erhöht nie).
+ignore/avoid_print: 76
+ignore/cancel_subscriptions: 7
+ignore/close_sinks: 16
+ignore/deprecated_member_use: 4
+ignore/implementation_imports: 2
+ignore/invalid_use_of_protected_member: 2
+ignore/use_setters_to_change_properties: 1
+ignore_for_file/curly_braces_in_flow_control_structures: 1
+ignore_for_file/invalid_use_of_protected_member: 2
+ignore_for_file/invalid_use_of_visible_for_testing_member: 2
+ignore_for_file/public_member_api_docs: 2

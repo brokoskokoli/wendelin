@@ -16,6 +16,23 @@ env:
   NDK_VERSION: 28.2.13676358
   CI: 'true'
 jobs:
+  # Autor, Committer und Trailer aller Commits des Branches (WP109):
+  # nur die noreply-Identität, genau ein Co-Authored-By, keine Claude-Session.
+  commit-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Commit-Identität und Trailer
+        env:
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: tool/check_commit_identity.sh --ci
+
   # Paketliste aus dem Repo (wie tool/gate.dart: packages/* plus evals), damit
   # kein Paket an der Matrix vorbei neu hinzukommt.
   setup:

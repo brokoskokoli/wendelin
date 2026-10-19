@@ -5,12 +5,18 @@
 //   dart run tool/check_sizes.dart            Fehler und Anzahl der Warnungen
 //   dart run tool/check_sizes.dart --verbose  dazu alle Warnungen
 //   dart run tool/check_sizes.dart --report   größte Dateien, Klassen, Funktionen
+//   dart run tool/check_sizes.dart --update-baseline
+//       senkt/entfernt Einträge der Warn-Baseline, erhöht nie (Ratsche)
 import 'dart:io';
 
+import 'src/ratchet.dart';
 import 'src/size_rules.dart';
 import 'src/size_scan.dart';
 
 const allowlistPath = 'tool/size_allowlist.yaml';
+
+/// Baseline der heutigen Größenwarnungen (Ratsche, WP109).
+const baselinePath = 'tool/size_warn_baseline.yaml';
 const _roots = ['packages', 'app', 'evals', 'tool'];
 const _skipDirs = {'build', '.dart_tool', '.gradle', 'Pods', '.git', 'ios'};
 
@@ -28,6 +34,32 @@ void main(List<String> args) {
       : <String, AllowEntry>{};
   final r = evaluate(files, allow);
   errors.addAll(r.errors);
+  final baseFile = File(baselinePath);
+  final baseText = baseFile.existsSync() ? baseFile.readAsStringSync() : '';
+  final baseline = parseBaseline(baseText);
+  if (args.contains('--update-baseline')) {
+    final lowered = lowerBaseline(r.warned, baseline);
+    baseFile.writeAsStringSync(renderBaseline(headerOf(baseText), lowered));
+    stdout.writeln(
+      'check_sizes: Baseline ${baseline.length} -> ${lowered.length} Einträge '
+      '(nur gesenkt/entfernt, neue oder gewachsene Warnungen bleiben rot).',
+    );
+    r.warned.forEach((k, v) {
+      if (!baseline.containsKey(k) || v > baseline[k]!) {
+        errors.add('$k: $v Zeilen: nicht in der Baseline aufgenommen.');
+      }
+    });
+  } else {
+    errors.addAll(
+      ratchetErrors(
+        r.warned,
+        baseline,
+        what: 'Größenwarnung (Zeilen)',
+        file: baselinePath,
+        fix: 'dart run tool/check_sizes.dart --update-baseline',
+      ),
+    );
+  }
   errors.forEach(stderr.writeln);
   if (args.contains('--verbose')) r.warnings.forEach(stdout.writeln);
   final summary =

@@ -1,6 +1,9 @@
 // Selbsttests von tool/merge_wp.sh in temporären Git-Repos.
 import 'dart:io';
 
+import 'cleanup_self_test.dart';
+import 'git_guards_self_test.dart';
+import 'ratchet_self_test.dart';
 import 'self_check.dart';
 
 const _good = 'brokoskokoli';
@@ -16,6 +19,15 @@ const _oldCommitter = {
 const _trailer =
     'Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>';
 
+/// CI-Ersatz: ein grüner gate-Lauf auf genau dem Branch-SHA.
+const ciGreen =
+    r'printf "2026-01-01T00:00:00Z\t%s\t%s\tcompleted\tsuccess\n" "$SHA" "$BRANCH"';
+
+/// CI-Ersatz mit festen Laufzeilen (`<createdAt> <sha> <branch> <status> <conclusion>`,
+/// Tab-getrennt); `SHA`/`BRANCH` stehen für den Branch.
+String ciRuns(List<String> rows) =>
+    "printf '%s\\n' ${rows.map((r) => "'${r.replaceAll(' ', '\t')}'").join(' ')}";
+
 /// Temporäres Repo mit Hilfen zum Anlegen von Branches und zum Aufruf des Skripts.
 final class _Repo {
   _Repo(this.dir, this.script)
@@ -27,6 +39,8 @@ final class _Repo {
         'GIT_COMMITTER_NAME': _good,
         'GIT_COMMITTER_EMAIL': _goodMail,
         'MERGE_WP_GATE': 'true',
+        'MERGE_WP_CI': ciGreen,
+        'MERGE_WP_CLEANUP': File('tool/cleanup_wt.sh').absolute.path,
       };
 
   final Directory dir;
@@ -86,7 +100,11 @@ final class _Repo {
   }
 }
 
+/// Selbsttests der Git-Skripte: merge_wp.sh und die Leitplanken (WP109).
 void mergeWpChecks(SelfCheck t) {
+  ratchetChecks(t);
+  gitGuardsChecks(t);
+  cleanupChecks(t);
   t.group('merge_wp.sh');
   final dir = Directory.systemTemp.createTempSync('merge_wp_');
   try {
@@ -97,6 +115,7 @@ void mergeWpChecks(SelfCheck t) {
         .copySync('${dir.path}/tool/regen_generated.sh');
     r.commit('a.txt', 'a\n', 'init');
     _rejections(t, r);
+    _ciChecks(t, r);
     _successes(t, r);
     _conflicts(t, r);
     _generators(t, r);
@@ -310,4 +329,108 @@ void _generators(SelfCheck t, _Repo r) {
   r.branch('fine', 'k.txt', 'feat');
   res = r.merge(['fine']);
   t.isTrue(res.exitCode == 0, 'beide Erzeuger grün → Merge ok: ${res.stderr}');
+}
+
+/// Ohne grünen gate-Lauf auf genau dem Branch-SHA wird nicht gemergt.
+void _ciChecks(SelfCheck t, _Repo r) {
+  final start = r.head();
+  r.branch('ci', 'ci.txt', 'feat');
+  final sha = r.git(['rev-parse', 'ci']);
+  const old = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  void rejects(String what, String cmd) {
+    final res = r.merge(['ci'], extra: {'MERGE_WP_CI': cmd});
+    t.isTrue(
+      res.exitCode != 0 && '${res.stderr}'.contains('CI'),
+      '$what → Abbruch mit CI-Meldung',
+    );
+    t.eq(r.head(), start, '$what: main unverändert');
+    t.isTrue(r.hasBranch('ci'), '$what: Branch bleibt');
+  }
+
+  rejects(
+    'roter CI-Lauf',
+    ciRuns(['2026-01-01T00:00:00Z $sha ci completed failure']),
+  );
+  rejects('fehlender CI-Lauf', 'true');
+  rejects(
+    'abgebrochener Lauf',
+    ciRuns(['2026-01-01T00:00:00Z $sha ci completed cancelled']),
+  );
+  rejects(
+    'laufender Lauf',
+    ciRuns(['2026-01-01T00:00:00Z $sha ci in_progress ']),
+  );
+  rejects(
+    'grüner Lauf auf anderem Branch',
+    ciRuns(['2026-01-01T00:00:00Z $sha other completed success']),
+  );
+  rejects(
+    'grüner Lauf auf anderem SHA',
+    ciRuns(['2026-01-01T00:00:00Z $old ci completed success']),
+  );
+  rejects(
+    'neuester Lauf rot (älterer grün)',
+    ciRuns([
+      '2026-01-01T00:00:00Z $sha ci completed success',
+      '2026-01-02T00:00:00Z $sha ci completed failure',
+    ]),
+  );
+  rejects('CI-Abfrage schlägt fehl', 'false');
+  final res = r.merge(['ci', '--dry-run'], extra: {'MERGE_WP_CI': 'true'});
+  t.isTrue(res.exitCode != 0, 'dry-run prüft das CI ebenfalls');
+  _ciMerges(t, r, start, sha, old);
+}
+
+/// Grüne Läufe: Merge, Tree-Notiz, rotes Gate, Branch-HEAD = Merge von main.
+void _ciMerges(SelfCheck t, _Repo r, String start, String sha, String old) {
+  var res = r.merge(
+    ['ci', '--keep'],
+    extra: {
+      'MERGE_WP_CI': ciRuns([
+        '2026-01-02T00:00:00Z $sha ci completed success',
+        '2026-01-01T00:00:00Z $sha ci completed failure',
+        '2026-01-03T00:00:00Z $old ci completed failure',
+      ]),
+    },
+  );
+  t.isTrue(res.exitCode == 0, 'neuester Lauf grün → Merge: ${res.stderr}');
+  final tree = r.git(['rev-parse', 'HEAD^{tree}']);
+  final common = r.git([
+    'rev-parse',
+    '--path-format=absolute',
+    '--git-common-dir',
+  ]);
+  t.eq(
+    File('$common/wendelin-merge-ok').readAsStringSync().trim(),
+    tree,
+    'Tree des Merge-Ergebnisses nach dem Gate notiert',
+  );
+
+  // Rotes Gate: nichts notiert.
+  final noted = File('$common/wendelin-merge-ok').readAsStringSync();
+  r.branch('ci2', 'ci2.txt', 'feat');
+  res = r.merge(['ci2'], extra: {'MERGE_WP_GATE': 'false'});
+  t.isTrue(res.exitCode != 0, 'rotes Gate: Abbruch');
+  t.eq(
+    File('$common/wendelin-merge-ok').readAsStringSync(),
+    noted,
+    'rotes Gate: kein Tree notiert',
+  );
+  r.git(['reset', '-q', '--hard', start]);
+  r.git(['branch', '-D', 'ci2']);
+
+  // Branch-HEAD ist ein Merge von main: CI-Beleg und Merge funktionieren.
+  r.git(['checkout', '-q', '-b', 'ci3', 'main']);
+  r.commit('ci3.txt', 'x\n', 'feat');
+  r.git(['checkout', '-q', 'main']);
+  r.commit('main-side.txt', 'm\n', 'main moves');
+  r.git(['checkout', '-q', 'ci3']);
+  r.git(['merge', '-q', '--no-ff', '-m', 'Merge main\n\n$_trailer', 'main']);
+  r.git(['checkout', '-q', 'main']);
+  res = r.merge(['ci3']);
+  t.isTrue(
+    res.exitCode == 0,
+    'Branch-HEAD = Merge von main: Merge ok: ${res.stderr}',
+  );
+  t.isTrue(!r.hasBranch('ci3'), 'Merge-HEAD-Branch: aufgeräumt');
 }
