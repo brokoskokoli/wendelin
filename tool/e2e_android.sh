@@ -511,6 +511,9 @@ run_ha() { # <test.dart>
   for _ in $(seq 1 10); do kill -0 "$server" 2>/dev/null || break; sleep 0.5; done
   # shellcheck disable=SC2046
   kill $(pgrep -P "$server" 2>/dev/null) 2>/dev/null || true
+  # Endet der Server nicht von selbst (stdin-EOF der FIFO kam nicht an), wäre
+  # `wait` endlos blockiert (WP104: Lauf hing nach dem grünen HA-Test).
+  kill "$server" 2>/dev/null || true
   wait "$server" 2>/dev/null || true
   echo "--- Fake-HA-Anfragen (Zusammenfassung)"
   sort "$work/err" | uniq -c

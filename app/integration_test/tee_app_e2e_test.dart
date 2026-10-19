@@ -90,7 +90,7 @@ void main() {
     final (app, gateway, _) = await start(tester);
     await send(tester, 'Wie wird das Meer morgen?');
     await pumpUntil(tester, find.textContaining('Ruhig: 0,4 m Welle.'));
-    await pumpUntil(tester, find.text('geprüft'));
+    await pumpUntil(tester, find.textContaining(l10n(tester).attSummaryGreen));
     expect(gateway.chats, 1);
     expect(find.byType(StatusCard), findsNothing);
 
