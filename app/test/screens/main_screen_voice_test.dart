@@ -4,6 +4,7 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
@@ -14,7 +15,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
-import 'main_screen_test.dart' show pumpApp;
+import 'main_screen_test.dart' show containerOf, pumpApp;
 
 /// Counts what the screen asks of the speech models.
 final class _Models {
@@ -79,6 +80,29 @@ void main() {
     AppLifecycleState.inactive,
     AppLifecycleState.resumed,
   ];
+
+  testWidgets('zurück in den Vordergrund: Kontaktnamen werden neu gelesen', (
+    tester,
+  ) async {
+    final e = TestEnv(enabled: const {'contacts'});
+    await pumpApp(tester, e);
+    await tester.pump(const Duration(milliseconds: 1));
+    final c = containerOf(tester);
+    int reads() => e.contacts.methodCalls.where((m) => m == 'all').length;
+
+    await tester.runAsync(() => c.read(hintTermsProvider.future));
+    final before = reads();
+    expect(before, greaterThan(0));
+
+    // Nothing changed: the names come from the cache.
+    await tester.runAsync(() => c.read(hintTermsProvider.future));
+    expect(reads(), before);
+
+    lifecycle(tester, toBackground);
+    lifecycle(tester, toForeground);
+    await tester.runAsync(() => c.read(hintTermsProvider.future));
+    expect(reads(), greaterThan(before));
+  });
 
   testWidgets('nur getippt: kein Vorwärmen (Grundlast)', (tester) async {
     final models = _Models();

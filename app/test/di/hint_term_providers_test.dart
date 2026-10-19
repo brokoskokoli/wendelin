@@ -9,6 +9,8 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../support/test_env.dart';
+
 void main() {
   _moreSources();
   _providers();
@@ -60,7 +62,8 @@ void _moreSources() {
     final terms = await ContactNameHintSource(() async => ['Anna Meier'])
         .terms();
     expect(terms.single.kind, HintTermKind.contact);
-    final c = ProviderContainer();
+    // Ohne Freigabe der Integration bleibt die Quelle leer.
+    final c = TestEnv().container();
     addTearDown(c.dispose);
     expect(await c.read(contactNamesProvider)(), isEmpty);
   });

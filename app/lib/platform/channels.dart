@@ -46,6 +46,9 @@ const notifyChannelName = 'app.wendelin/notify';
 /// `RecognizerEngine.kt`: speech recognizer service.
 const recognizerChannelName = 'app.wendelin/recognizer';
 
+/// `ContactsChannel.kt`: address book, SMS and calls.
+const contactsChannelName = 'app.wendelin/contacts';
+
 /// `TorchChannel.kt`: flash LED as a flashlight.
 const torchChannelName = 'app.wendelin/torch';
 

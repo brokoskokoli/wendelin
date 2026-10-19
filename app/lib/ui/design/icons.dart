@@ -34,6 +34,13 @@ abstract final class WIcons {
     '<circle cx="16" cy="7" r="2.2" $_s/><circle cx="8" cy="17" r="2.2" $_s/>',
   );
 
+  /// Telefon (Hörer).
+  static const phone = WIconData._(
+    '<path d="M6 4 L10 4 L11.5 8.5 L9.5 10 C10.7 12.5 12.5 14.3 15 15.5 L16.5 13.5 '
+    'L21 15 L21 19 C21 20 20 21 19 21 C11 20.5 3.5 13 3 5 C3 4.5 4.5 4 6 4 Z" '
+    '$_sj/>',
+  );
+
   /// Zurück.
   static const back = WIconData._(
     '<path d="M15 5 L8 12 L15 19" fill="none" stroke="#000" stroke-width="2" '

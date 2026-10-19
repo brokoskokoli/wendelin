@@ -1,0 +1,5 @@
+{
+  "contacts__find": false,
+  "sms__compose": false,
+  "phone__call": false
+}

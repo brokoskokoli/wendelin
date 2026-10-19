@@ -9,6 +9,7 @@ import '../di/app_settings.dart';
 import '../di/preference_models.dart';
 import 'android_alarm_port.dart';
 import 'channel_app_presence_port.dart';
+import 'channel_contacts_port.dart';
 import 'channel_location_port.dart';
 import 'channel_media_control_port.dart';
 import 'channel_torch_port.dart';
@@ -33,7 +34,10 @@ final class PlatformPorts {
     required this.memory,
     required this.apps,
     required this.torch,
+    this.contacts,
+    this.phone,
     this.requestCalendarPermission,
+    this.requestContactsPermission,
     this.lists,
     this.obsidian,
     this.media,
@@ -49,6 +53,7 @@ final class PlatformPorts {
     ObsidianPrefs Function() obsidian = _noVault,
     String Function() language = _german,
   }) {
+    const contactsPort = ChannelContactsPort();
     final calendar = DeviceCalendarPort(
       preferredCalendar: () =>
           storage.settings.get(AppSettings.defaultCalendarId),
@@ -60,6 +65,9 @@ final class PlatformPorts {
       memory: RepositoryMemoryPort(storage.memory),
       apps: const ChannelAppPresencePort(),
       torch: const ChannelTorchPort(),
+      contacts: contactsPort,
+      phone: contactsPort,
+      requestContactsPermission: contactsPort.requestPermission,
       media: const ChannelMediaControlPort(),
       location: const ChannelLocationPort(),
       mapsLauncher: const ChannelMapsLauncherPort(),
@@ -89,6 +97,15 @@ final class PlatformPorts {
       installed: [for (final app in KnownApps.all) app.androidPackage],
     ),
     torch: FakeTorchPort(),
+    contacts: FakeContactsPort(
+      contacts: const [
+        ContactEntry(
+          name: 'Anna Beispiel',
+          phones: [ContactPhone('+49 170 0000001', label: 'Mobil')],
+        ),
+      ],
+    ),
+    phone: FakePhonePort(),
     media: FakeMediaControlPort(
       snapshot: const MediaSnapshot(
         packageName: audiblePackage,
@@ -123,8 +140,17 @@ final class PlatformPorts {
   /// Flash LED as a flashlight.
   final TorchPort torch;
 
+  /// Address book.
+  final ContactsPort? contacts;
+
+  /// SMS and calls.
+  final PhonePort? phone;
+
   /// Asks for calendar access; `null` if the port needs none.
   final Future<bool> Function()? requestCalendarPermission;
+
+  /// Asks for contacts, SMS and phone permission (switching on contacts).
+  final Future<bool> Function()? requestContactsPermission;
 
   /// List files and definitions; `null` = no lists on this platform.
   final ListsPorts? lists;

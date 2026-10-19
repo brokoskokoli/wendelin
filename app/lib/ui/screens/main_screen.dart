@@ -10,6 +10,7 @@ import '../../agent/conversation_state.dart';
 import '../../agent/money.dart';
 import '../../di/attestation_hub.dart';
 import '../../di/attestation_providers.dart';
+import '../../di/hint_term_providers.dart';
 import '../../di/obsidian_index.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
@@ -72,6 +73,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         } else if (state == AppLifecycleState.resumed) {
           // The overlay (own engine) may have marked the question as due.
           ref.invalidate(voiceSettingsProvider);
+          // Contacts may have changed or been allowed meanwhile.
+          ref.invalidate(hintTermsProvider);
           voice.prewarm(onlyIfUsed: true);
           // Back from the Android settings: allowed there meanwhile?
           unawaited(_recheckMicrophone());

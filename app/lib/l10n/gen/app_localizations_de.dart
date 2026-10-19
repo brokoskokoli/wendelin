@@ -1208,6 +1208,46 @@ class AppLocalizationsDe extends AppLocalizations {
   String get yes => 'Ja';
 
   @override
+  String get confCallTitle => 'Anrufen?';
+
+  @override
+  String get confHintVoiceCall => 'Sag „anrufen“ oder „abbrechen“';
+
+  @override
+  String get confHintVoiceEdited =>
+      'Du hast den Text geändert: bitte per Tipp absenden';
+
+  @override
+  String get confHintVoiceSms => 'Sag „absenden“ oder „abbrechen“';
+
+  @override
+  String get confNoCancel => 'Abbrechen';
+
+  @override
+  String get confSmsNoText => 'Die Nachricht darf nicht leer sein.';
+
+  @override
+  String get confSmsTextLabel => 'Nachricht';
+
+  @override
+  String get confSmsTitle => 'SMS absenden?';
+
+  @override
+  String confSmsTo(String name) {
+    return 'An $name';
+  }
+
+  @override
+  String get confYesCall => 'Anrufen';
+
+  @override
+  String get confYesSend => 'Absenden';
+
+  @override
+  String get integrationsContactsRationale =>
+      'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.';
+
+  @override
   String get batteryAllow => 'Keine Einschränkung erlauben';
 
   @override

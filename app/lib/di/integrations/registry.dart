@@ -2,6 +2,7 @@ import 'alarms_spec.dart';
 import 'bring_spec.dart';
 import 'calendar_spec.dart';
 import 'clipboard_spec.dart';
+import 'contacts_spec.dart';
 import 'flashlight_spec.dart';
 import 'ha_spec.dart';
 import 'integration_spec.dart';
@@ -34,4 +35,5 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
   spotifySpec,
   weatherSpec,
   tasksSpec,
+  contactsSpec,
 ];

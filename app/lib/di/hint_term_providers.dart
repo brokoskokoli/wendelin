@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import 'core_providers.dart';
 import 'home_assistant.dart';
+import 'integration_providers.dart';
 import 'preferences.dart';
 
 /// Names from the list settings: list names and their aliases (WP103).
@@ -38,15 +40,35 @@ final class HaNameHintSource implements HintTermSource {
   ];
 }
 
-/// Port for contact names (WP85 delivers the real source later): display
-/// names only, no numbers, addresses or notes.
+/// Port for contact names: display names only, no numbers, addresses or
+/// notes.
 typedef ContactNames = Future<List<String>> Function();
 
-/// The contact names; the default is empty until WP85 overrides it.
-final contactNamesProvider = Provider<ContactNames>(
-  (ref) =>
-      () async => const [],
-);
+/// The contact names for the recognizer hint (WP85), read from the contacts
+/// port. Empty unless the contacts integration is on (or in demo mode) and
+/// the address book may be read; a failing port yields no names. The names
+/// stay on the device: they go to the local recognizer only, never to a
+/// provider, the log or the audit. Switching the integration rebuilds it;
+/// the app invalidates [hintTermsProvider] on resume (permission dialog,
+/// changed address book).
+final contactNamesProvider = Provider<ContactNames>((ref) {
+  final on =
+      ref.watch(demoModeProvider) ||
+      ref.watch(enabledIntegrationsProvider).contains('contacts');
+  if (!on) return () async => const [];
+  return () async {
+    try {
+      final port = ref.read(platformPortsProvider).contacts;
+      if (port == null || !await port.hasPermission()) return const [];
+      return [
+        for (final c in await port.all())
+          if (c.name.trim().isNotEmpty) c.name.trim(),
+      ];
+    } on Object {
+      return const [];
+    }
+  };
+});
 
 /// [HintTermSource] over [ContactNames].
 final class ContactNameHintSource implements HintTermSource {

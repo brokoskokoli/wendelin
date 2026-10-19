@@ -1213,6 +1213,46 @@ class AppLocalizationsFr extends AppLocalizations {
   String get yes => 'Oui';
 
   @override
+  String get confCallTitle => 'Appeler ?';
+
+  @override
+  String get confHintVoiceCall => 'Dis simplement « appeler » ou « annuler »';
+
+  @override
+  String get confHintVoiceEdited =>
+      'Tu as modifié le texte : envoie-le en touchant l’écran';
+
+  @override
+  String get confHintVoiceSms => 'Dis simplement « envoyer » ou « annuler »';
+
+  @override
+  String get confNoCancel => 'Annuler';
+
+  @override
+  String get confSmsNoText => 'Le message ne doit pas être vide.';
+
+  @override
+  String get confSmsTextLabel => 'Message';
+
+  @override
+  String get confSmsTitle => 'Envoyer le SMS ?';
+
+  @override
+  String confSmsTo(String name) {
+    return 'À $name';
+  }
+
+  @override
+  String get confYesCall => 'Appeler';
+
+  @override
+  String get confYesSend => 'Envoyer';
+
+  @override
+  String get integrationsContactsRationale =>
+      'Wendelin a besoin d’accéder à tes contacts pour trouver les numéros par nom, ainsi qu’aux droits SMS et téléphone. Android te le demandera ensuite. Wendelin n’envoie jamais de SMS et n’appelle jamais sans que tu aies confirmé l’aperçu avec le nom et le numéro (en touchant l’écran ou en disant « oui »). Rien de tout cela ne marche appareil verrouillé. Sans le droit téléphone, Wendelin ouvre seulement le clavier d’appel.';
+
+  @override
   String get batteryAllow => 'Autoriser sans restriction';
 
   @override

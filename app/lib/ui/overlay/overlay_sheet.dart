@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/chat_entry.dart';
 import '../../agent/conversation_state.dart';
+import '../../agent/outgoing_preview.dart';
 import '../../l10n/l10n.dart';
 import '../attestation/attestation_texts.dart' show gpuBlockReason;
 import '../design/design.dart';
@@ -207,7 +208,7 @@ class OverlaySheet extends StatelessWidget {
       // An open confirmation replaces the conversation-mode hint with how
       // to answer (always visible, below the scrolling content).
       if (_asking)
-        hint.widget(context.l10n)
+        hint.widget(context.l10n, outgoing: outgoingPreviewOf(question)?.kind)
       else
         Opacity(
           opacity: conversationMode ? 1 : WOpacity.inactive,

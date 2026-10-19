@@ -150,4 +150,36 @@ void main() {
     expect(strict.parse('Ja'), YesNo.yes);
     expect(strict.parse('Ja bitte'), isNull);
   });
+
+  group('Antwortverben vor SMS und Anruf (WP85)', () {
+    const sms = YesNoRecognizer.smsYesWords;
+    const call = YesNoRecognizer.callYesWords;
+    YesNo? ask(String t, Set<String> extra) =>
+        recognizer.parse(t, strict: true, extraYes: extra);
+
+    test('absenden/anrufen führen aus, ja ebenso, nein/abbrechen nicht', () {
+      expect(ask('absenden', sms), YesNo.yes);
+      expect(ask('Ja, absenden', sms), YesNo.yes);
+      expect(ask('send', sms), YesNo.yes);
+      expect(ask('anrufen', call), YesNo.yes);
+      expect(ask('Ja', call), YesNo.yes);
+      expect(ask('call', call), YesNo.yes);
+      expect(ask('nein', sms), YesNo.no);
+      expect(ask('abbrechen', call), YesNo.no);
+    });
+
+    test('Verneinung und Unklares führen nichts aus', () {
+      expect(ask('nicht absenden', sms), isNull);
+      expect(ask('nicht anrufen', call), isNull);
+      expect(ask('vielleicht', sms), isNull);
+      expect(ask('mal sehen', call), isNull);
+      expect(ask('ja absenden aber später bitte noch mal', sms), isNull);
+    });
+
+    test('das Verb der anderen Frage bestätigt nicht', () {
+      expect(ask('anrufen', sms), isNull);
+      expect(ask('absenden', call), isNull);
+      expect(recognizer.parse('absenden'), isNull);
+    });
+  });
 }
