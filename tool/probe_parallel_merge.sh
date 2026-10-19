@@ -46,6 +46,7 @@ DART
   # Barrel: Export hinter obsidian.dart
   sed -i.bak "s|^export 'obsidian.dart';|&\nexport '${n}.dart';|" packages/wendelin_integrations/lib/wendelin_integrations.dart
   rm -f app/lib/di/integrations/registry.dart.bak packages/wendelin_integrations/lib/wendelin_integrations.dart.bak
+  printf '// Probe\n' > "packages/wendelin_integrations/lib/${n}.dart"
   mkdir -p "app/lib/l10n/src/$n"
   for l in de en fr; do
     printf '{\n  "%sTitle": "Probe %s %s"\n}\n' "$n" "$n" "$l" > "app/lib/l10n/src/$n/${n}_$l.arb"
@@ -107,4 +108,4 @@ done
 dart run tool/l10n_merge.dart --check || fail "l10n_merge --check rot"
 dart run tool/check_registry.dart || fail "check_registry rot"
 [ -z "$(git status --porcelain)" ] || fail "Arbeitsverzeichnis nach dem Merge nicht sauber"
-echo "probe: OK (kein manueller Konflikt${open_doc:+; Doku-Zeile erwartet offen bis D2})"
+echo "probe: OK (kein manueller Konflikt$([ $open_doc -eq 1 ] && echo "; Doku-Zeile erwartet offen bis D2"))"
