@@ -2,11 +2,11 @@
 
 Einzige Stelle für den Stand der Meilensteine und Arbeitspakete. Gepflegt vom Orchestrator auf `main`, bei jedem Start, Merge oder Verwerfen eines Pakets (Paket-Branches ändern diese Datei nicht).
 
-Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18).
+Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); bei Abwesenheit mit Freigabe mehr (2026-10-19: bis 4, je 1 Sub-Agent).
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19, WP98 und WP102 laufen; WP91, WP76b, WP84, WP79, WP96, WP88, WP90 gemergt
+Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP98, WP102, WP97, WP85
 
 ## Meilensteine
 
@@ -35,7 +35,7 @@ Stand: 2026-10-19, WP98 und WP102 laufen; WP91, WP76b, WP84, WP79, WP96, WP88, W
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
-| WP85 | Kontakte/SMS/Anrufe | geplant | – |
+| WP85 | Kontakte/SMS/Anrufe | in Arbeit | – |
 | WP86 | Standort/Maps | geplant | – |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
@@ -47,7 +47,7 @@ Stand: 2026-10-19, WP98 und WP102 laufen; WP91, WP76b, WP84, WP79, WP96, WP88, W
 | WP94 | Schnellwechsel Agent | geplant | – |
 | WP95 | CI als Gate | gemergt | – |
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
-| WP97 | Lastbremse/Cache | geplant | – |
+| WP97 | Lastbremse/Cache | in Arbeit | – |
 | WP98 | Konfliktarm | in Arbeit | – |
 | WP102 | Spike bessere Sprache (Messung) | in Arbeit | K64 |
 | WP103 | Bessere Sprache einbauen | geplant | nach WP102 |
