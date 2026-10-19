@@ -6,15 +6,12 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/providers.dart';
-import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/di/speaker_providers.dart';
 import 'package:wendelin/voice/speaker/person_storage.dart';
 import 'package:wendelin/voice/speaker/speaker_storage.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_integrations/wendelin_integrations.dart'
-    show MemoryCategory;
 import 'package:wendelin_integrations/wendelin_integrations.dart'
     show MemoryCategory;
 import 'package:wendelin_storage/fakes.dart';
@@ -102,7 +99,7 @@ void main() {
     await c.read(toolRegistryProvider).refresh();
   }
 
-  ConversationState controller_state() => c.read(agentControllerProvider);
+  ConversationState controllerState() => c.read(agentControllerProvider);
 
   AgentController controller() => c.read(agentControllerProvider.notifier);
 
@@ -246,7 +243,7 @@ void main() {
     expect(bens.id, 'm1');
     await ask('Vergiss den Kaffee', speaker: 'pa');
     expect(env.memory.entriesOf('p:pb').map((e) => e.text), ['Ben mag Kaffee']);
-    final result = controller_state().entries.whereType<ToolEntry>().single;
+    final result = controllerState().entries.whereType<ToolEntry>().single;
     expect(result.phase, ToolPhase.failed);
   });
 
