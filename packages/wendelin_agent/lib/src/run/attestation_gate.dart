@@ -87,7 +87,10 @@ final class AttestationGate {
   ///
   /// An abort while the receipt is open ends the run with the abort and
   /// emits no final status event: the yellow event stays the last one.
-  Future<AttestationReport?> settle(AttestationStep? step) async {
+  Future<AttestationReport?> settle(
+    AttestationStep? step, {
+    void Function()? onNotGreen,
+  }) async {
     final target = step;
     final pending = target?.report;
     if (target == null || pending == null) return null;
@@ -97,6 +100,7 @@ final class AttestationGate {
       _control.token.whenCancelled.then<AttestationReport?>((_) => null),
     ]);
     _control.throwIfAborted();
+    if (report?.status != AttestationStatus.green) onNotGreen?.call();
     if (!target.emitted && report != null) {
       target.emitted = true;
       target.sink.emit(

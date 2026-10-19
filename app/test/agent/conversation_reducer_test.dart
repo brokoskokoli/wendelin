@@ -496,6 +496,27 @@ void main() {
       expect(shield(s)?.stepId, 's:1');
     });
 
+    test(
+      'Parallele Runde verworfen: Rot landet an der vorigen Antwort (WP81c)',
+      () {
+        final s = _apply([
+          const AgentTextDelta('Ich lege es an.'),
+          status(AttestationStatus.yellow, logId: ''),
+          ToolCallStarted(_call),
+          ToolCallFinished(call: _call, outcome: ToolOutcome.text('ok')),
+          const AgentTextDelta('Verworfener Text.'),
+          status(AttestationStatus.yellow, step: 's:2', logId: ''),
+          const AgentTextReset('Vorherige Antwort nicht bestätigt'),
+          status(AttestationStatus.red),
+        ]);
+        final answers = s.entries.whereType<AssistantTextEntry>().toList();
+        expect(answers.map((e) => e.text), ['Ich lege es an.']);
+        expect(answers.single.attestation?.status, AttestationStatus.red);
+        expect(answers.single.attestation?.stepId, 's:1');
+        expect(s.entries.whereType<NoticeEntry>(), isEmpty);
+      },
+    );
+
     test('toolsInvolved wandert an die Antwort (WP63)', () {
       final s = _apply([
         const AgentTextDelta('Antwort'),

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:fake_async/fake_async.dart';
 import 'package:test/test.dart';
 import 'package:wendelin_agent/src/run/attestation_gate.dart';
-import 'package:wendelin_agent/src/run/buffered_control.dart';
+import 'package:wendelin_agent/src/run/overlap_control.dart';
 import 'package:wendelin_agent/src/run/run_state.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/fakes.dart';
@@ -104,8 +104,18 @@ final class HookInvoker implements ToolInvoker, ToolRiskAssessor {
   }
 }
 
+/// The text a listener shows: deltas, minus what a reset took back.
+String shownText(List<AgentEvent> events) {
+  final b = StringBuffer();
+  for (final e in events) {
+    if (e is AgentTextDelta) b.write(e.text);
+    if (e is AgentTextReset) b.clear();
+  }
+  return '$b';
+}
+
 void main() {
-  group('WP81b: nächster Modellaufruf parallel zur Quittung', () {
+  group('WP81b/c: nächster Modellaufruf parallel zur Quittung', () {
     late PerCallVerifying provider;
     late Harness h;
     late FakeTool undoable;
@@ -159,7 +169,7 @@ void main() {
       call('c1', 'calendar__create_event'),
     ]);
 
-    test('Aufruf startet vor der Quittung, Ausgabe wartet auf Grün', () {
+    test('Aufruf startet vor der Quittung, Ausgabe läuft sofort (WP81c)', () {
       fakeAsync((async) {
         start(async, [toolTurn, ScriptedTurn.text('Fertig.')]);
         expect(
@@ -172,18 +182,18 @@ void main() {
           lastResults(provider.inner.requests.last).single.isError,
           isFalse,
         );
-        expect(streamedText(events), isEmpty, reason: 'gepuffert');
-        expect(indexOfStatus('s1:2', AttestationStatus.yellow), -1);
-        expect(events.whereType<UsageReported>(), hasLength(1));
+        // Text and speech events before the green receipt.
+        expect(streamedText(events), 'Fertig.');
+        expect(events.whereType<AgentTextComplete>(), hasLength(1));
+        expect(indexOfStatus('s1:1', AttestationStatus.green), -1);
+        expect(events.whereType<UsageReported>(), hasLength(2));
+        final firstText = events.indexWhere((e) => e is AgentTextDelta);
 
         provider.settle(0, AttestationStatus.green);
         async.flushMicrotasks();
         final green = indexOfStatus('s1:1', AttestationStatus.green);
-        final yellow2 = indexOfStatus('s1:2', AttestationStatus.yellow);
-        final firstText = events.indexWhere((e) => e is AgentTextDelta);
-        expect(green, isNonNegative);
-        expect(yellow2, greaterThan(green), reason: 'Schritt 2 nach Grün 1');
-        expect(firstText, greaterThan(green));
+        expect(green, greaterThan(firstText), reason: 'Text vor Quittung 1');
+        expect(events.whereType<AgentTextReset>(), isEmpty);
         expect(streamedText(events), 'Fertig.');
         expect(
           events.last,
@@ -197,7 +207,6 @@ void main() {
         expect(done.finalText, 'Fertig.');
         expect(indexOfStatus('s1:2', AttestationStatus.green), isNonNegative);
         expect(undoable.undoCount, 0);
-        expect(events.whereType<UsageReported>(), hasLength(2));
         // Results recorded once, in order, with the answer after them.
         final roles = h.conversation.messages.map((m) => m.role).toList();
         expect(roles, [Role.user, Role.assistant, Role.tool, Role.assistant]);
@@ -219,8 +228,19 @@ void main() {
 
         expect(second.callCount, 0, reason: 'Tool der neuen Runde nie');
         expect(undoable.undoCount, 1);
-        expect(streamedText(events).contains('Verworfen'), isFalse);
-        expect(indexOfStatus('s1:2', AttestationStatus.yellow), -1);
+        // The text was shown at once, then taken back before the red status.
+        expect(streamedText(events).startsWith('Verworfen'), isTrue);
+        final reset = events.indexWhere((e) => e is AgentTextReset);
+        final red = indexOfStatus('s1:1', AttestationStatus.red);
+        expect(events.whereType<AgentTextReset>(), hasLength(1));
+        expect(reset, isNonNegative);
+        expect(red, greaterThan(reset), reason: 'Reset vor roter Quittung');
+        expect(
+          events.indexWhere((e) => e is ToolCallStarted && e.call.id == 'c2'),
+          -1,
+          reason: 'Tool-Events der verworfenen Runde nie',
+        );
+        expect(shownText(events), 'Zurückgenommen.');
         expect(provider.inner.requests, hasLength(3), reason: 'Neuaufruf');
         expect(
           lastResults(provider.inner.requests.last).single.isError,
@@ -241,7 +261,6 @@ void main() {
         // The dropped call was cancelled, the sequential ones were not.
         expect(provider.tokens[1]!.isCancelled, isTrue);
         expect(provider.tokens[2]!.isCancelled, isFalse);
-        expect(streamedText(events), 'Zurückgenommen.');
         // Paid tokens of the discarded call are still reported.
         expect(events.whereType<UsageReported>(), hasLength(3));
 
@@ -253,9 +272,33 @@ void main() {
             .map((c) => c.id);
         expect(calls, ['c1'], reason: 'verworfene Antwort nicht im Verlauf');
         expect(
-          events.whereType<AttestationStatusChanged>().map((e) => e.stepId),
+          events
+              .whereType<AttestationStatusChanged>()
+              .where((e) => e.status != AttestationStatus.yellow)
+              .map((e) => e.stepId),
           isNot(contains('s1:2')),
+          reason: 'keine Quittung für den verworfenen Schritt',
         );
+        final texts = h.conversation.messages
+            .where((m) => m.role == Role.assistant)
+            .map((m) => m.text)
+            .join();
+        expect(texts.contains('Verworfen'), isFalse);
+      });
+    });
+
+    test('Rot ohne Text im verworfenen Aufruf: kein Reset', () {
+      fakeAsync((async) {
+        start(async, [
+          toolTurn,
+          ScriptedTurn.toolCalls([call('c2', 'calendar__delete_all')]),
+          ScriptedTurn.text('Danach.'),
+        ]);
+        provider.settle(0, AttestationStatus.red);
+        async.flushMicrotasks();
+        expect(events.whereType<AgentTextReset>(), isEmpty);
+        expect(second.callCount, 0);
+        expect(undoable.undoCount, 1);
       });
     });
 
@@ -378,10 +421,53 @@ void main() {
         provider.settle(0, AttestationStatus.unconfirmed);
         async.flushMicrotasks();
         expect(undoable.undoCount, 1);
-        expect(streamedText(events), 'Danach.', reason: '„halb“ verworfen');
+        expect(shownText(events), 'Danach.', reason: '„halb“ verworfen');
         expect(provider.inner.requests, hasLength(3));
         expect(provider.inner.remainingTurns, 0);
       });
+    });
+
+    test('external-Tool der parallelen Runde wartet auf Grün, bei Rot nie', () {
+      for (final green in [true, false]) {
+        fakeAsync((async) {
+          final sms = FakeTool(
+            name: 'sms__send',
+            risk: RiskLevel.external,
+            confirmation: (_) => 'SMS',
+          );
+          start(
+            async,
+            [
+              toolTurn,
+              ScriptedTurn.toolCalls([call('c2', 'sms__send')], text: 'Sende'),
+              ScriptedTurn.text('Fertig.'),
+            ],
+            tools: (undoable) => [undoable, sms],
+            receipts: 3,
+          );
+          expect(streamedText(events), 'Sende', reason: 'Text sofort');
+          expect(events.whereType<ConfirmationRequired>(), isEmpty);
+          expect(sms.callCount, 0);
+          provider.settle(
+            0,
+            green ? AttestationStatus.green : AttestationStatus.red,
+          );
+          async.flushMicrotasks();
+          if (green) {
+            provider.settle(1, AttestationStatus.green);
+            async.flushMicrotasks();
+            for (final c in events.whereType<ConfirmationRequired>()) {
+              c.respond(true);
+            }
+            async.flushMicrotasks();
+            expect(sms.callCount, 1);
+          } else {
+            expect(events.whereType<ConfirmationRequired>(), isEmpty);
+            expect(sms.callCount, 0);
+            expect(events.whereType<AgentTextReset>(), hasLength(1));
+          }
+        });
+      }
     });
 
     test('external-Runde bleibt sequentiell', () {
@@ -424,7 +510,7 @@ void main() {
         async.flushMicrotasks();
         final failed = events.last as AgentFailed;
         expect(failed.error, AgentErrorKind.cancelled);
-        expect(streamedText(events), isEmpty);
+        expect(events.whereType<AgentTextReset>(), isEmpty);
         expect(undoable.callCount, 1, reason: 'keine doppelte Ausführung');
         expect(second.callCount, 0);
         expect(async.pendingTimers, isEmpty);
@@ -452,7 +538,7 @@ void main() {
     });
   });
 
-  group('WP81b: Bausteine', () {
+  group('WP81b/c: Bausteine', () {
     test(
       'AttestationGate: spätere Schritte überschreiben den früheren nicht',
       () {
@@ -460,7 +546,7 @@ void main() {
           final out = <AgentEvent>[];
           final real = _Recorder(out);
           final gate = AttestationGate(real, 's');
-          final buffered = BufferedControl(real);
+          final buffered = OverlapControl(real);
           final p1 = PerCallVerifying(FakeLlmProvider([]), 2);
           final request = ChatRequest(
             messages: const [],
@@ -477,24 +563,46 @@ void main() {
           expect(final1.stepId, 's:1');
           expect(final1.status, AttestationStatus.red);
           expect(second.id, 's:2');
-          // Step 2 goes to the buffer, not to the run.
-          expect(out.whereType<AttestationStatusChanged>(), hasLength(2));
-          buffered.release();
-          expect(out.whereType<AttestationStatusChanged>().last.stepId, 's:2');
+          // Step 2 goes through the overlap control to the run (yellow).
+          expect(out.whereType<AttestationStatusChanged>(), hasLength(3));
+          expect(out.whereType<AttestationStatusChanged>().last.stepId, 's:1');
         });
       },
     );
 
-    test('BufferedControl: discard verwirft Gepuffertes und bricht ab', () {
+    test(
+      'OverlapControl: reicht durch, discard setzt zurück und bricht ab',
+      () {
+        final out = <AgentEvent>[];
+        final b = OverlapControl(_Recorder(out));
+        b.emit(const AgentTextDelta('a'));
+        expect(out, hasLength(1), reason: 'sofort durchgereicht');
+        b.discard();
+        b.discard();
+        expect(out.last, isA<AgentTextReset>());
+        expect(out.whereType<AgentTextReset>(), hasLength(1));
+        b.emit(const AgentTextDelta('b'));
+        b.emit(
+          const UsageReported(
+            profileId: 'p',
+            modelId: 'm',
+            usage: Usage(inputTokens: 1),
+          ),
+        );
+        expect(out, hasLength(3), reason: 'nur Usage nach dem Verwerfen');
+        expect(b.token.isCancelled, isTrue);
+      },
+    );
+
+    test('OverlapControl: abandon bricht ohne Reset ab, verified schützt', () {
       final out = <AgentEvent>[];
-      final b = BufferedControl(_Recorder(out));
-      b.emit(const AgentTextDelta('a'));
-      expect(out, isEmpty);
-      b.discard();
-      b.release();
-      b.emit(const AgentTextDelta('b'));
-      expect(out, isEmpty);
+      final b = OverlapControl(_Recorder(out))..emit(const AgentTextDelta('a'));
+      b.abandon();
+      expect(out.whereType<AgentTextReset>(), isEmpty);
       expect(b.token.isCancelled, isTrue);
+      final ok = OverlapControl(_Recorder(out))..verified();
+      ok.abandon();
+      expect(ok.token.isCancelled, isFalse);
     });
   });
 }

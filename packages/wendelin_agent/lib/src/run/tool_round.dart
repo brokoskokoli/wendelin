@@ -145,8 +145,11 @@ final class ToolRound {
   /// receipt was known. Anything but a green receipt (red, not confirmed,
   /// missing) takes them back, like `external` calls never run without
   /// green (WP77). Returns whether the receipt is green.
-  Future<bool> verify(ToolRoundRun round) async {
-    final report = await _attest.settle(round.step);
+  ///
+  /// [onNotGreen] runs before the red status event goes out (WP81c: the
+  /// overlapping call takes back its output first).
+  Future<bool> verify(ToolRoundRun round, {void Function()? onNotGreen}) async {
+    final report = await _attest.settle(round.step, onNotGreen: onNotGreen);
     final green = report?.status == AttestationStatus.green;
     if (round.step?.report != null && !green) {
       await _undoUnverified(round.pending, round.results);
