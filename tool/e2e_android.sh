@@ -541,7 +541,15 @@ fi
 for f in ${HA[@]+"${HA[@]}"}; do
   run_ha "$f" || status=1
 done
+first_instrumented=1
 for f in ${INSTRUMENTED[@]+"${INSTRUMENTED[@]}"}; do
+  if [ -z "$first_instrumented" ]; then
+    # WP104: Die App-Datenbank der vorigen Testdatei zurücksetzen (Profile,
+    # Routing-Regeln und -Hinweis); Modelle und WAVs bleiben (kein pm clear).
+    adb shell "run-as $PKG sh -c 'find . -name \"wendelin.sqlite*\" -delete'" \
+      >/dev/null 2>&1 || true
+  fi
+  first_instrumented=
   run_instrumented "$f" || status=1
 done
 if [ -n "$LIVE" ] && installed; then

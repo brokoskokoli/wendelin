@@ -19,6 +19,7 @@ import 'package:wendelin/bootstrap/run_app.dart';
 import 'package:wendelin/debug/device_test_overrides.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_providers.dart';
+import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/main.dart' as app show openAppStorage;
 import 'package:wendelin/platform/attest/attest_backend.dart';
@@ -154,6 +155,11 @@ void main() {
           await reset.providerProfiles.delete('phala');
           await reset.settings.remove(voiceSettingsKey);
           await reset.settings.remove(AppSettings.onboardingDone);
+          // Die Migration beim ersten Laden legt Regeln (Ziel Phala) und den
+          // Hinweis „Neu: Regel Privat“ an; der Hinweis verdrängt sonst in
+          // overlay_e2e die Antwort aus dem sichtbaren Bereich.
+          await reset.settings.remove(RoutingSettings.rules);
+          await reset.settings.remove(RoutingSettings.privateRuleNotice);
         } finally {
           await reset.close();
         }
