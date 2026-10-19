@@ -13,6 +13,9 @@ enum SpeechModelKind {
 
   /// Wake word feature models (openWakeWord mel + embedding).
   wake,
+
+  /// Speaker embedding model (sherpa-onnx `SpeakerEmbeddingExtractor`, WP92a).
+  speaker,
 }
 
 /// Which sherpa-onnx recognizer runs a [SpeechModelKind.stt] model (WP103):

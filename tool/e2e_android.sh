@@ -84,6 +84,13 @@
 #   sofort; nach dem Lauf werden die App-Daten gelöscht (`pm clear`).
 set -euo pipefail
 
+# Gradle braucht JDK 21 (neuere JDKs brechen den Build): nur wenn JAVA_HOME
+# nicht gesetzt ist, openjdk@21 von Homebrew verwenden.
+if [ -z "${JAVA_HOME:-}" ] && command -v brew >/dev/null 2>&1; then
+  _jdk21="$(brew --prefix openjdk@21 2>/dev/null || true)/libexec/openjdk.jdk/Contents/Home"
+  if [ -x "$_jdk21/bin/java" ]; then export JAVA_HOME="$_jdk21"; fi
+fi
+
 PKG=app.wendelin
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=tool/android_device.sh
@@ -439,6 +446,10 @@ if [ -n "${WENDELIN_WP103_MODELS:-}" ]; then
 fi
 # WP104: Sprache der UI in den Tests (Standard de, nicht die Emulator-Sprache).
 DEFINES+=(--dart-define=E2E_LANG="${E2E_LANG:-de}")
+# WP92a: Ordner (unter files/e2e/) mit CAM++-Modell und synthetischen WAVs.
+if [ -n "${WENDELIN_WP92A_DIR:-}" ]; then
+  DEFINES+=(--dart-define=WENDELIN_WP92A_DIR="$WENDELIN_WP92A_DIR")
+fi
 # WP54: der Wake-Word-Dienst bleibt nach dem Test an (Neustart-Prüfung).
 if [ -n "${WENDELIN_KEEP:-}" ]; then DEFINES+=(--dart-define=WENDELIN_KEEP=true); fi
 # Wiederholungen der Sprach-Robustheit (WP30, voice_robustness_e2e_test.dart).

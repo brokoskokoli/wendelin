@@ -21,11 +21,13 @@ import 'package:wendelin/ui/settings/privacy_screen.dart';
 import 'package:wendelin/ui/settings/providers_screen.dart';
 import 'package:wendelin/ui/settings/routing/routing_screen.dart';
 import 'package:wendelin/ui/settings/settings_screen.dart';
+import 'package:wendelin/voice/speaker/speaker_storage.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
-import 'package:wendelin_voice/wendelin_voice.dart' show WakeTemplates;
+import 'package:wendelin_voice/wendelin_voice.dart'
+    show SpeakerProfile, WakeTemplates;
 
 import '../support/test_env.dart';
 import '../ui/helpers.dart';
@@ -364,12 +366,26 @@ void main() {
         ),
       );
       await wake.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
+      // WP92a: Stimmprofile (Sprechererkennung) ebenfalls.
+      final voices = SecretSpeakerProfileStore(env.secrets);
+      await voices.save(
+        SpeakerProfile(
+          id: 's',
+          name: 'Ben',
+          embeddings: [
+            Float32List.fromList([1, 0]),
+          ],
+          threshold: 0.5,
+          createdAt: DateTime.utc(2026),
+        ),
+      );
       await pumpPage(tester, env, const PrivacyScreen());
       await tester.tap(find.text('Verläufe und Protokoll löschen'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Abbrechen'));
       await settle(tester);
       expect(await wake.load('a'), isNotNull);
+      expect(await voices.load(), hasLength(1));
       expect(await env.storage.audit.query(), hasLength(2));
       expect(await env.storage.attestations.latest(), hasLength(1));
 
@@ -382,6 +398,8 @@ void main() {
       expect(await env.storage.conversations.sessions(), isEmpty);
       expect(await wake.load('a'), isNull);
       expect(await wake.speakers(), isEmpty);
+      expect(await voices.load(), isEmpty);
+      expect(await env.secrets.listKeys(), isNot(contains('speaker.profiles')));
       expect(await env.secrets.listKeys(), isNot(contains('wake.speakers')));
     });
 

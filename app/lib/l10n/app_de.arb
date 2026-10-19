@@ -2144,6 +2144,86 @@
       }
     }
   },
+  "speakerAdd": "Person einlernen",
+  "speakerAddDetail": "Fünf kurze Sätze vorlesen, die Aufnahmen werden nicht gespeichert.",
+  "speakerAddNeedsModel": "Lade zuerst das Modell.",
+  "speakerDeleteBody": "{name} wird mit allen gespeicherten Stimmmerkmalen gelöscht.",
+  "@speakerDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerDeleteConfirm": "Löschen",
+  "speakerDeleteSemantic": "{name} löschen",
+  "@speakerDeleteSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerDeleteTitle": "Person löschen?",
+  "speakerDone": "Fertig",
+  "speakerEnrollIntro": "Lies jeden Satz in normaler Lautstärke vor. Aus der Aufnahme wird nur ein Stimmmerkmal berechnet, das Audio wird verworfen.",
+  "speakerEnrollTitle": "Person einlernen",
+  "speakerErrFailed": "Das Modell konnte die Aufnahmen nicht auswerten. Ist es vollständig geladen?",
+  "speakerErrInconsistent": "Die Sätze klangen nicht nach derselben Person oder es war zu laut. Nichts wurde gespeichert, bitte noch einmal in ruhiger Umgebung.",
+  "speakerErrTooFew": "Es fehlen Aufnahmen.",
+  "speakerErrTooShort": "Eine Aufnahme war zu kurz. Bitte noch einmal.",
+  "speakerIntro": "Wendelin kann erkennen, wer spricht. Das Ergebnis steht dem Assistenten als Information zur Verfügung.",
+  "speakerModelSection": "Modell",
+  "speakerNameLabel": "Name",
+  "speakerNext": "Weiter",
+  "speakerNoMic": "Ohne Mikrofon-Zugriff kann keine Person eingelernt werden.",
+  "speakerNobody": "Noch niemand eingelernt.",
+  "speakerPeople": "Personen",
+  "speakerProcessing": "Wird ausgewertet …",
+  "speakerRecordCutOff": "Zu früh angefangen, bitte den Satz noch einmal.",
+  "speakerRecordNoSpeech": "Nichts gehört, bitte noch einmal.",
+  "speakerRecordTooLong": "Zu lang oder zu laut im Hintergrund, bitte noch einmal.",
+  "speakerRecordTooQuiet": "Zu leise, bitte lauter.",
+  "speakerResultClamped": "Die Schwelle wurde auf einen sicheren Wert begrenzt.",
+  "speakerResultScores": "Gleichmäßigkeit {mean}, schwächster Satz {min}, Schwelle {threshold}.",
+  "@speakerResultScores": {
+    "placeholders": {
+      "mean": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "threshold": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerResultTitle": "Eingelernt",
+  "speakerRetry": "Noch einmal",
+  "speakerRowDetail": "Erkennt, wer spricht (Name, Modell, Personen).",
+  "speakerRowTitle": "Sprechererkennung",
+  "speakerSayNow": "Lies den Satz jetzt laut vor:",
+  "speakerSentence1": "Heute Morgen habe ich einen Spaziergang durch den Park gemacht.",
+  "speakerSentence2": "Bitte erinnere mich morgen um neun Uhr an den Termin beim Arzt.",
+  "speakerSentence3": "Im Garten blühen die ersten Blumen, und die Sonne scheint warm.",
+  "speakerSentence4": "Kannst du mir sagen, wie das Wetter am Wochenende wird?",
+  "speakerSentence5": "Zum Abendessen gibt es heute Suppe mit frischem Brot.",
+  "speakerSentenceOf": "Satz {n} von {total}",
+  "@speakerSentenceOf": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "speakerSwitch": "Sprechererkennung",
+  "speakerSwitchHint": "Die Stimme ist keine sichere Anmeldung: Ähnliche oder nachgemachte Stimmen können verwechselt werden. Gespeichert werden nur verschlüsselte Stimmmerkmale, keine Aufnahmen.",
+  "speakerSwitchLabel": "Sprechererkennung ein oder aus",
+  "speakerTitle": "Sprechererkennung",
   "spotifyAppNote": "Die Spotify-App wird gebraucht, damit Wendelin auf diesem Handy abspielen kann: Läuft sie nicht, startet Wendelin sie. Auf anderen Geräten (Lautsprecher, Computer) spielt Wendelin auch ohne sie.",
   "spotifyAppTitle": "Spotify-App",
   "spotifyClientIdLabel": "Client-ID",

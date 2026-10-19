@@ -6280,6 +6280,264 @@ abstract class AppLocalizations {
   /// **'Datenschutzstufe {level},'**
   String ruleTileSemanticsLevel(String level);
 
+  /// No description provided for @speakerAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Person einlernen'**
+  String get speakerAdd;
+
+  /// No description provided for @speakerAddDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Fünf kurze Sätze vorlesen, die Aufnahmen werden nicht gespeichert.'**
+  String get speakerAddDetail;
+
+  /// No description provided for @speakerAddNeedsModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Lade zuerst das Modell.'**
+  String get speakerAddNeedsModel;
+
+  /// No description provided for @speakerDeleteBody.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen gelöscht.'**
+  String speakerDeleteBody(String name);
+
+  /// No description provided for @speakerDeleteConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen'**
+  String get speakerDeleteConfirm;
+
+  /// No description provided for @speakerDeleteSemantic.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} löschen'**
+  String speakerDeleteSemantic(String name);
+
+  /// No description provided for @speakerDeleteTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Person löschen?'**
+  String get speakerDeleteTitle;
+
+  /// No description provided for @speakerDone.
+  ///
+  /// In de, this message translates to:
+  /// **'Fertig'**
+  String get speakerDone;
+
+  /// No description provided for @speakerEnrollIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Lies jeden Satz in normaler Lautstärke vor. Aus der Aufnahme wird nur ein Stimmmerkmal berechnet, das Audio wird verworfen.'**
+  String get speakerEnrollIntro;
+
+  /// No description provided for @speakerEnrollTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Person einlernen'**
+  String get speakerEnrollTitle;
+
+  /// No description provided for @speakerErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Modell konnte die Aufnahmen nicht auswerten. Ist es vollständig geladen?'**
+  String get speakerErrFailed;
+
+  /// No description provided for @speakerErrInconsistent.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Sätze klangen nicht nach derselben Person oder es war zu laut. Nichts wurde gespeichert, bitte noch einmal in ruhiger Umgebung.'**
+  String get speakerErrInconsistent;
+
+  /// No description provided for @speakerErrTooFew.
+  ///
+  /// In de, this message translates to:
+  /// **'Es fehlen Aufnahmen.'**
+  String get speakerErrTooFew;
+
+  /// No description provided for @speakerErrTooShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Eine Aufnahme war zu kurz. Bitte noch einmal.'**
+  String get speakerErrTooShort;
+
+  /// No description provided for @speakerIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin kann erkennen, wer spricht. Das Ergebnis steht dem Assistenten als Information zur Verfügung.'**
+  String get speakerIntro;
+
+  /// No description provided for @speakerModelSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell'**
+  String get speakerModelSection;
+
+  /// No description provided for @speakerNameLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
+  String get speakerNameLabel;
+
+  /// No description provided for @speakerNext.
+  ///
+  /// In de, this message translates to:
+  /// **'Weiter'**
+  String get speakerNext;
+
+  /// No description provided for @speakerNoMic.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Mikrofon-Zugriff kann keine Person eingelernt werden.'**
+  String get speakerNoMic;
+
+  /// No description provided for @speakerNobody.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch niemand eingelernt.'**
+  String get speakerNobody;
+
+  /// No description provided for @speakerPeople.
+  ///
+  /// In de, this message translates to:
+  /// **'Personen'**
+  String get speakerPeople;
+
+  /// No description provided for @speakerProcessing.
+  ///
+  /// In de, this message translates to:
+  /// **'Wird ausgewertet …'**
+  String get speakerProcessing;
+
+  /// No description provided for @speakerRecordCutOff.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu früh angefangen, bitte den Satz noch einmal.'**
+  String get speakerRecordCutOff;
+
+  /// No description provided for @speakerRecordNoSpeech.
+  ///
+  /// In de, this message translates to:
+  /// **'Nichts gehört, bitte noch einmal.'**
+  String get speakerRecordNoSpeech;
+
+  /// No description provided for @speakerRecordTooLong.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu lang oder zu laut im Hintergrund, bitte noch einmal.'**
+  String get speakerRecordTooLong;
+
+  /// No description provided for @speakerRecordTooQuiet.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu leise, bitte lauter.'**
+  String get speakerRecordTooQuiet;
+
+  /// No description provided for @speakerResultClamped.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Schwelle wurde auf einen sicheren Wert begrenzt.'**
+  String get speakerResultClamped;
+
+  /// No description provided for @speakerResultScores.
+  ///
+  /// In de, this message translates to:
+  /// **'Gleichmäßigkeit {mean}, schwächster Satz {min}, Schwelle {threshold}.'**
+  String speakerResultScores(String mean, String min, String threshold);
+
+  /// No description provided for @speakerResultTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Eingelernt'**
+  String get speakerResultTitle;
+
+  /// No description provided for @speakerRetry.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch einmal'**
+  String get speakerRetry;
+
+  /// No description provided for @speakerRowDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennt, wer spricht (Name, Modell, Personen).'**
+  String get speakerRowDetail;
+
+  /// No description provided for @speakerRowTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprechererkennung'**
+  String get speakerRowTitle;
+
+  /// No description provided for @speakerSayNow.
+  ///
+  /// In de, this message translates to:
+  /// **'Lies den Satz jetzt laut vor:'**
+  String get speakerSayNow;
+
+  /// No description provided for @speakerSentence1.
+  ///
+  /// In de, this message translates to:
+  /// **'Heute Morgen habe ich einen Spaziergang durch den Park gemacht.'**
+  String get speakerSentence1;
+
+  /// No description provided for @speakerSentence2.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte erinnere mich morgen um neun Uhr an den Termin beim Arzt.'**
+  String get speakerSentence2;
+
+  /// No description provided for @speakerSentence3.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Garten blühen die ersten Blumen, und die Sonne scheint warm.'**
+  String get speakerSentence3;
+
+  /// No description provided for @speakerSentence4.
+  ///
+  /// In de, this message translates to:
+  /// **'Kannst du mir sagen, wie das Wetter am Wochenende wird?'**
+  String get speakerSentence4;
+
+  /// No description provided for @speakerSentence5.
+  ///
+  /// In de, this message translates to:
+  /// **'Zum Abendessen gibt es heute Suppe mit frischem Brot.'**
+  String get speakerSentence5;
+
+  /// No description provided for @speakerSentenceOf.
+  ///
+  /// In de, this message translates to:
+  /// **'Satz {n} von {total}'**
+  String speakerSentenceOf(int n, int total);
+
+  /// No description provided for @speakerSwitch.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprechererkennung'**
+  String get speakerSwitch;
+
+  /// No description provided for @speakerSwitchHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Stimme ist keine sichere Anmeldung: Ähnliche oder nachgemachte Stimmen können verwechselt werden. Gespeichert werden nur verschlüsselte Stimmmerkmale, keine Aufnahmen.'**
+  String get speakerSwitchHint;
+
+  /// No description provided for @speakerSwitchLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprechererkennung ein oder aus'**
+  String get speakerSwitchLabel;
+
+  /// No description provided for @speakerTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprechererkennung'**
+  String get speakerTitle;
+
   /// No description provided for @spotifyAppNote.
   ///
   /// In de, this message translates to:

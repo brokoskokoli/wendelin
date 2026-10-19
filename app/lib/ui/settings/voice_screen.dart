@@ -102,6 +102,16 @@ class VoiceScreen extends ConsumerWidget {
             ),
           ],
         ),
+        SettingsSection(
+          title: context.l10n.speakerRowTitle,
+          children: [
+            SettingsRow(
+              title: context.l10n.speakerRowTitle,
+              detail: context.l10n.speakerRowDetail,
+              onTap: () => Navigator.of(context).pushNamed(AppRoutes.speaker),
+            ),
+          ],
+        ),
         const _Microphone(),
         SpokenVersionSection(settings: settings, change: change),
         ConversationSettingsSection(

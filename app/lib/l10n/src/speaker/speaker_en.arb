@@ -1,0 +1,82 @@
+{
+  "speakerAdd": "Enroll a person",
+  "speakerAddDetail": "Read five short sentences aloud; the recordings are not stored.",
+  "speakerAddNeedsModel": "Download the model first.",
+  "speakerDeleteBody": "{name} is deleted with all stored voice features.",
+  "@speakerDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerDeleteConfirm": "Delete",
+  "speakerDeleteSemantic": "Delete {name}",
+  "@speakerDeleteSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerDeleteTitle": "Delete person?",
+  "speakerDone": "Done",
+  "speakerEnrollIntro": "Read each sentence aloud at normal volume. Only a voice feature is computed from each recording; the audio is discarded.",
+  "speakerEnrollTitle": "Enroll a person",
+  "speakerErrFailed": "The model could not process the recordings. Is it fully downloaded?",
+  "speakerErrInconsistent": "The sentences did not sound like one person, or it was too noisy. Nothing was stored; please try again somewhere quiet.",
+  "speakerErrTooFew": "Recordings are missing.",
+  "speakerErrTooShort": "A recording was too short. Please try again.",
+  "speakerIntro": "Wendelin can recognise who is speaking. The result is available to the assistant as information.",
+  "speakerModelSection": "Model",
+  "speakerNameLabel": "Name",
+  "speakerNext": "Next",
+  "speakerNoMic": "Without microphone access no one can be enrolled.",
+  "speakerNobody": "Nobody enrolled yet.",
+  "speakerPeople": "People",
+  "speakerProcessing": "Processing …",
+  "speakerRecordCutOff": "Started too early, please read the sentence again.",
+  "speakerRecordNoSpeech": "Heard nothing, please try again.",
+  "speakerRecordTooLong": "Too long or too much background noise, please try again.",
+  "speakerRecordTooQuiet": "Too quiet, please speak louder.",
+  "speakerResultClamped": "The threshold was limited to a safe value.",
+  "speakerResultScores": "Consistency {mean}, weakest sentence {min}, threshold {threshold}.",
+  "@speakerResultScores": {
+    "placeholders": {
+      "mean": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "threshold": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerResultTitle": "Enrolled",
+  "speakerRetry": "Try again",
+  "speakerRowDetail": "Recognises who is speaking (name, model, people).",
+  "speakerRowTitle": "Speaker recognition",
+  "speakerSayNow": "Read this sentence aloud now:",
+  "speakerSentence1": "This morning I took a walk through the park.",
+  "speakerSentence2": "Please remind me tomorrow at nine o'clock about the doctor's appointment.",
+  "speakerSentence3": "The first flowers are blooming in the garden, and the sun is shining warmly.",
+  "speakerSentence4": "Can you tell me what the weather will be like this weekend?",
+  "speakerSentence5": "For dinner tonight there is soup with fresh bread.",
+  "speakerSentenceOf": "Sentence {n} of {total}",
+  "@speakerSentenceOf": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "speakerSwitch": "Speaker recognition",
+  "speakerSwitchHint": "A voice is not a secure login: similar or imitated voices can be mistaken. Only encrypted voice features are stored, never recordings.",
+  "speakerSwitchLabel": "Speaker recognition on or off",
+  "speakerTitle": "Speaker recognition"
+}
