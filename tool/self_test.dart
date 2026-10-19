@@ -17,6 +17,7 @@ import 'src/gate_rust.dart';
 import 'src/l10n_merge_self_test.dart';
 import 'src/merge_wp_self_test.dart';
 import 'src/self_check.dart';
+import 'src/registry_lint_self_test.dart';
 import 'src/size_rules.dart';
 import 'src/size_scan.dart';
 
@@ -33,6 +34,7 @@ Future<void> main() async {
   channelChecks(t);
   mergeWpChecks(t);
   l10nMergeChecks(t);
+  registryLintChecks(t);
   kotlinUnitChecks(t);
   kotlinReportsClearChecks(t);
   await _exitCodes(t);

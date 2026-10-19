@@ -77,6 +77,12 @@ if [ $rc -ne 0 ]; then
   git add -- $conflicts
 fi
 
+# 2b. Listen-Dateien mit merge=union (Registry, Barrel): Sortierung/Doppelte reparieren.
+if [ -f tool/check_registry.dart ]; then
+  dart run tool/check_registry.dart --fix >/dev/null 2>&1
+  git add -- app/lib/di/integrations/registry.dart packages/wendelin_integrations/lib/wendelin_integrations.dart 2>/dev/null
+fi
+
 # 3. Commit mit Nachricht (ohne Session-Zeile).
 if [ $squash -eq 1 ]; then
   full="$msg
