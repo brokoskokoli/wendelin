@@ -67,12 +67,15 @@ void main() {
     });
   });
 
-  test('Bring!: nach der Anmeldung liegt nur die Sitzung im Speicher', () async {
-    final store = InMemorySecretStore();
-    final s = SecretStoreBringSecrets(store);
-    await s.saveAuth(const BringAuth(userUuid: 'u', accessToken: 't'));
-    expect(await store.listKeys(), _bringKeys.toSet());
-  });
+  test(
+    'Bring!: nach der Anmeldung liegt nur die Sitzung im Speicher',
+    () async {
+      final store = InMemorySecretStore();
+      final s = SecretStoreBringSecrets(store);
+      await s.saveAuth(const BringAuth(userUuid: 'u', accessToken: 't'));
+      expect(await store.listKeys(), _bringKeys.toSet());
+    },
+  );
 
   test('HTTP-Tools: alte Schlüssel werden gelesen, Löschen räumt nur das '
       'eigene Tool', () async {
@@ -128,13 +131,13 @@ void main() {
     () async {
       final store = deviceStore();
       final s = SecretStoreMcpSecrets(store);
-      expect(await s.read('bring.password'), isNull);
+      expect(await s.read('bring.session'), isNull);
       expect(await s.read('provider.anthropic.apiKey'), isNull);
       expect(await s.read('mcp.'), isNull);
-      await s.delete('bring.password');
-      expect(await store.read('bring.password'), canary);
-      await expectLater(s.write('bring.password', 'x'), throwsArgumentError);
-      expect(await store.read('bring.password'), canary);
+      await s.delete('bring.session');
+      expect(await store.read('bring.session'), canary);
+      await expectLater(s.write('bring.session', 'x'), throwsArgumentError);
+      expect(await store.read('bring.session'), canary);
     },
   );
 }

@@ -81,9 +81,8 @@ final class BringIntegration implements Integration {
   ];
 
   @override
-  Future<SetupState> setupState() async => SetupState(
-    missingSteps: [if (await secrets.auth() == null) loginStep],
-  );
+  Future<SetupState> setupState() async =>
+      SetupState(missingSteps: [if (await secrets.auth() == null) loginStep]);
 
   @override
   late final List<Tool> tools = List.unmodifiable(<Tool>[

@@ -151,7 +151,7 @@ void main() {
       if (!installed) env.apps.uninstall(BringAppFallback.androidPackage);
       await loginBring(env);
       env.bring.failNext(
-        'login',
+        'lists',
         const PortException(
           PortErrorKind.unavailable,
           'Bring! nicht erreichbar',
@@ -236,8 +236,9 @@ void main() {
       (await env.secrets.listKeys()).where((k) => k.startsWith('bring.')),
       {'bring.session'},
     );
-    final session = jsonDecode((await env.secrets.read('bring.session'))!)
-        as Map<String, Object?>;
+    final session = jsonDecode(
+      (await env.secrets.read('bring.session'))!,
+    ) as Map<String, Object?>;
     final tokens = [session['accessToken']! as String];
     if (session['refreshToken'] case final String r) tokens.add(r);
     for (final (what, text) in [

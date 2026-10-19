@@ -13,12 +13,10 @@ import 'providers.dart';
 /// (WP107); older versions' `bring.email` / `bring.password` are deleted.
 /// Never settings JSON, SQLite, logs or exports.
 final class SecretStoreBringSecrets implements BringSecrets {
-  /// Creates the adapter and starts the cleanup of the old login keys
-  /// ([removeLegacyLogin], idempotent).
+  /// Creates the adapter. The cleanup of the old login keys
+  /// ([removeLegacyLogin]) runs lazily at the first read of the session.
   SecretStoreBringSecrets(SecretStore store)
-    : store = ScopedSecretStore(store, namespace) {
-    _legacy = removeLegacyLogin();
-  }
+    : store = ScopedSecretStore(store, namespace);
 
   /// The Bring! part of the device secret store (keys `bring.*`).
   final ScopedSecretStore store;
@@ -36,11 +34,10 @@ final class SecretStoreBringSecrets implements BringSecrets {
   /// device).
   static const sessionKey = 'session';
 
-  late final Future<void> _legacy;
+  bool _migrated = false;
 
   /// Migration: deletes the stored e-mail and password of earlier versions;
-  /// the session stays. Idempotent, runs at construction and before every
-  /// read of the session.
+  /// the session stays. Idempotent, runs before the first read of the session.
   Future<void> removeLegacyLogin() async {
     await store.delete(emailKey);
     await store.delete(passwordKey);
@@ -48,7 +45,10 @@ final class SecretStoreBringSecrets implements BringSecrets {
 
   @override
   Future<BringAuth?> auth() async {
-    await _legacy;
+    if (!_migrated) {
+      await removeLegacyLogin();
+      _migrated = true;
+    }
     final raw = await store.read(sessionKey);
     if (raw == null) return null;
     try {

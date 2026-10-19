@@ -19,11 +19,7 @@ void main() {
     final api = server.api(log: log.add);
     // Einmal anmelden: danach liegen nur die Tokens im Speicher.
     final secrets = FakeBringSecrets(session: await api.login(email, password));
-    final bring = BringIntegration(
-      api,
-      secrets,
-      onError: reported.add,
-    );
+    final bring = BringIntegration(api, secrets, onError: reported.add);
     final seen = <String>[];
     final tokens = <String>{};
 

@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/bring.dart';
-import 'package:wendelin/di/integrations/integration_spec.dart' show reauthError;
+import 'package:wendelin/di/integrations/integration_spec.dart'
+    show reauthError;
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/bring_screen.dart';
@@ -196,8 +197,10 @@ void main() {
     c.read(toolRegistryProvider).reportError('bring', reauthError);
     await tester.tap(find.text('Bring!-Konto'));
     await settle(tester);
-    expect(find.text('Bring!: Anmeldung abgelaufen. Bitte neu anmelden.'),
-        findsOneWidget);
+    expect(
+      find.text('Bring!: Anmeldung abgelaufen. Bitte neu anmelden.'),
+      findsOneWidget,
+    );
     expect(find.text('Erneut versuchen'), findsNothing);
     await tester.tap(find.text('Erneut verbinden'));
     await settle(tester);
