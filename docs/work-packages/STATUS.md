@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 abends, Stefan da (bis 4 Paket-Sitzungen); laufen: WP99, WP110; als Nächstes WP92c (nach Gerätetest wp92a/b und nach WP99), dann WP100/WP101; Sonnet-Probe nach WP110
+Stand: 2026-10-20 nachts, Stefan schläft; läuft: WP99; als Nächstes (mit Stefan am Morgen): Wake-Word-Vergleich „Hey Wendelin“ und andere Erkennungsprogramme (Aufnahme-Anleitung `~/wendelin-fixtures/wake/hey/ANLEITUNG.md`), Modell-Empfehlung mit mittleren Modellen ohne Thinking (Wunsch Stefan), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b und WP99), dann WP100/WP101
 
 ## Meilensteine
 
@@ -34,7 +34,7 @@ Stand: 2026-10-19 abends, Stefan da (bis 4 Paket-Sitzungen); laufen: WP99, WP110
 | WP81b | Nächster Modellaufruf parallel zur Quittung | gemergt 135dbbd | K70 bestätigt; Ersparnis am Emulator ~0,4 s bis erster Text, ~0,9 s bis fertig; Tool-Runden gegen echtes TEE-Gateway ungetestet (Fixture ohne Tool-Calls); overlay-Reihenfolge-Flake behoben (WP104: Phala-Hinweis aus loadRuleSet) |
 | WP81c | Parallele Runde sofort vorlesen | gemergt 07c67ba9 | K70 ergänzt; Einzelsatz vor Toolcall wird erst bei ToolCallStarted gesprochen (Splitter); E2E-Build braucht JAVA_HOME auf Android-Studio-JBR |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
-| WP83 | NRAS-Signatur | gemergt | K56 offen |
+| WP83 | NRAS-Signatur | gemergt | K56 bestätigt |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
 | WP85 | Kontakte/SMS/Anrufe | gemergt 314deb6 | K69 bestätigt (3 Fragen an Stefan, u. a. diktierter Text im Anfrage-Audit → evtl. eigenes Paket); Sprachbestätigung nur per Unit-/Widget-Test, Gerätetest `docs/testing/m5/wp85.md`; Kontaktänderungen erreichen den Erkenner erst bei Resume/Aktivierung |
 | WP86 | Standort/Maps | gemergt f595fa0 | K67 bestätigt (Wetter-Position bei „keine Mindeststufe“, Frage an Stefan); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
@@ -58,7 +58,7 @@ Stand: 2026-10-19 abends, Stefan da (bis 4 Paket-Sitzungen); laufen: WP99, WP110
 | WP107 | Bring! nur Tokens | gemergt cfab3c1e | K75 bestätigt (ergänzt); Gerätetest WP107.2 (falsches Passwort) und WP107.4 (Update von Vorversion) offen, `docs/testing/m5/wp107.md` |
 | WP108 | Fehlerart bis zur Integrationskachel | gemergt 55953025 | K78 bestätigt; „Erfolg setzt Fehlerart zurück“ app-seitig nur für Todoist/Spotify getestet (Bring!, Google Tasks, HA nur auf Paketebene); Gerätetest `docs/testing/m5/wp108.md` |
 | WP109 | Leitplanken (Regelquelle, main-Schutz, Größen-Ratsche, Aufräumskript) | gemergt d758e3c4 | K79 bestätigt; Teil B (Ruleset, Aufräumen, Skill) erledigt; neue Merge-Folge: merge_wp.sh → amend → STATUS → --changed → `WENDELIN_PUSH_MAIN=1 git push` → `cleanup_wt.sh --apply`; parallele Pakete müssen Größen-Baseline anpassen, wenn sie Warn-Dateien ändern; lokales Gate flakte unter Last (app), Nachlauf grün |
-| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | in Arbeit | Wunsch Stefan 2026-10-19; Start nach Merge WP109; Teil B erledigt (wp-supervisor model opus, Ablauf/DoD/2 Runden, Vorlage session-prompt.md); Stefan 2026-10-19: nach WP110 kleine Pakete probeweise mit wp-supervisor auf Sonnet, Messung über Review-Urteilsdateien |
+| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | gemergt 2ff0fe8f | K81 offen; beim Merge kotlin-unit rot (`bash bash gradlew`, wenn das JDK schon passt), vom Orchestrator behoben 9c7ffbc7; Folge: cleanup_wt.sh löscht die Urteilsdateien `<wp>-review*.md` mit (sollen für die Quote „erstes Review sauber“ erhalten bleiben); Guard-Restlücken in ENGINEERING.md (fängt pre-push ab) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
