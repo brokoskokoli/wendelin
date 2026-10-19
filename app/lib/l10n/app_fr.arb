@@ -1088,11 +1088,22 @@
   "speakerAdd": "Enregistrer une personne",
   "speakerAddDetail": "Lire cinq courtes phrases ; les enregistrements ne sont pas conservés.",
   "speakerAddNeedsModel": "Télécharge d'abord le modèle.",
-  "speakerDeleteBody": "{name} est supprimé(e) avec toutes les caractéristiques vocales enregistrées.",
+  "speakerDeleteBody": "{name} est supprimé(e) avec toutes les caractéristiques vocales enregistrées et ses conversations.",
   "@speakerDeleteBody": {
     "placeholders": {
       "name": {
         "type": "String"
+      }
+    }
+  },
+  "speakerDeleteBodyMemory": "{name} est supprimé(e) avec toutes les caractéristiques vocales, ses conversations et {count} entrées de sa mémoire propre. La mémoire par défaut reste inchangée.",
+  "@speakerDeleteBodyMemory": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
       }
     }
   },
@@ -1120,6 +1131,20 @@
   "speakerNoMic": "Sans accès au microphone, personne ne peut être enregistré.",
   "speakerNobody": "Personne n'est encore enregistré.",
   "speakerPeople": "Personnes",
+  "speakerPersonAddress": "Appellation",
+  "speakerPersonAddressHint": "Comment Wendelin s'adresse à vous. Vide : le nom enregistré.",
+  "speakerPersonAgent": "Agent",
+  "speakerPersonAgentDefault": "Agent par défaut",
+  "speakerPersonAgentDetail": "Seulement une autre cible à la place de celle par défaut. Les règles et la confidentialité restent valables.",
+  "speakerPersonDelete": "Supprimer la personne",
+  "speakerPersonMemory": "Mémoire",
+  "speakerPersonMemoryOpen": "Voir les entrées",
+  "speakerPersonMemoryOwn": "Mémoire propre",
+  "speakerPersonMemoryOwnDetail": "Ne retient des choses que pour cette personne.",
+  "speakerPersonMemoryShared": "Mémoire par défaut",
+  "speakerPersonMemorySharedDetail": "Partage les entrées existantes avec tous ceux qui ne sont pas reconnus.",
+  "speakerPersonRetrain": "Réenregistrer",
+  "speakerPersonRetrainDetail": "Relire les cinq phrases.",
   "speakerProcessing": "Analyse en cours …",
   "speakerRecordCutOff": "Commencé trop tôt, relis la phrase.",
   "speakerRecordNoSpeech": "Rien entendu, réessaie.",

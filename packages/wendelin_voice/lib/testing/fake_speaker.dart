@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../src/speaker/person_settings.dart';
 import '../src/speaker/speaker_embedder.dart';
 import '../src/speaker/speaker_match.dart';
 import '../src/speaker/speaker_profile.dart';
@@ -89,4 +90,24 @@ final class FakeSpeakerRecognizer implements SpeakerRecognizer {
     if (throwing) throw StateError('boom');
     return answer;
   }
+}
+
+/// [PersonSettingsStore] in memory (stores the JSON form).
+final class InMemoryPersonSettingsStore implements PersonSettingsStore {
+  final Map<String, Map<String, Object?>> _json = {};
+
+  @override
+  Future<Map<String, PersonSettings>> load() async => {
+    for (final e in _json.entries) e.key: ?PersonSettings.fromJson(e.value),
+  };
+
+  @override
+  Future<void> save(PersonSettings settings) async =>
+      _json[settings.personId] = settings.toJson();
+
+  @override
+  Future<void> delete(String personId) async => _json.remove(personId);
+
+  @override
+  Future<void> clear() async => _json.clear();
 }

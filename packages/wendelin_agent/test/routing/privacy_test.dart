@@ -670,6 +670,28 @@ void main() {
     });
   });
 
+  test('tools get the memory namespace of the run (WP92b)', () async {
+    final invoker = ContextInvoker();
+    final (primary, _) = scripted('local', [
+      ScriptedTurn.toolCalls([call('c1', 'memory__save')]),
+      ScriptedTurn.text('Gemerkt.'),
+    ]);
+    final h = Harness(primary: primary, invoker: invoker, memoryOwner: 'p:a');
+    await h.run('merk dir das');
+    expect(invoker.contexts.single.memoryOwner, 'p:a');
+  });
+
+  test('without a person the tools get the default memory', () async {
+    final invoker = ContextInvoker();
+    final (primary, _) = scripted('local', [
+      ScriptedTurn.toolCalls([call('c1', 'memory__save')]),
+      ScriptedTurn.text('Gemerkt.'),
+    ]);
+    final h = Harness(primary: primary, invoker: invoker);
+    await h.run('merk dir das');
+    expect(invoker.contexts.single.memoryOwner, '');
+  });
+
   test('five filler words are too many (3)', () {
     final r = conceptResolver().resolve(
       UserInput(text: 'und bitte kannst du das nochmal mit Claude'),

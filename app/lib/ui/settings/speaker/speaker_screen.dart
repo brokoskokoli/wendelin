@@ -11,10 +11,12 @@ import '../../design/design.dart';
 import '../model_download_row.dart';
 import '../settings_page.dart';
 import 'speaker_enroll_screen.dart';
+import 'speaker_person_screen.dart';
 
 /// Einstellungen → Sprache → Sprechererkennung (WP92a): switch (off by
 /// default, with the note that a voice is no secure login), model download,
-/// the enrolled people and enrolling a new one.
+/// the enrolled people (a tap opens the person, WP92b) and enrolling a new
+/// one.
 class SpeakerScreen extends ConsumerWidget {
   /// Creates the screen.
   const SpeakerScreen({super.key});
@@ -66,10 +68,12 @@ class SpeakerScreen extends ConsumerWidget {
               for (final p in people)
                 SettingsRow(
                   title: p.name,
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    tooltip: l.speakerDeleteSemantic(p.name),
-                    onPressed: () => unawaited(_delete(context, ref, p)),
+                  onTap: () => unawaited(
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => SpeakerPersonScreen(personId: p.id),
+                      ),
+                    ),
                   ),
                 ),
             SettingsRow(
@@ -81,21 +85,6 @@ class SpeakerScreen extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  Future<void> _delete(
-    BuildContext context,
-    WidgetRef ref,
-    SpeakerProfile p,
-  ) async {
-    final l = context.l10n;
-    final ok = await confirm(
-      context,
-      title: l.speakerDeleteTitle,
-      message: l.speakerDeleteBody(p.name),
-      yes: l.speakerDeleteConfirm,
-    );
-    if (ok) await ref.read(speakerProfilesProvider.notifier).remove(p.id);
   }
 
   Future<void> _add(BuildContext context) async {

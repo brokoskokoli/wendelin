@@ -97,7 +97,7 @@ void main() {
       await tester.tap(find.byType(MicButton));
       await pumpUntil(
         tester,
-        find.textContaining('Rückgängig · '),
+        undoButton(tester),
         timeout: const Duration(seconds: 120),
       );
       watch.stop();
@@ -128,8 +128,8 @@ void main() {
       final stt = await c.read(speechToTextProvider.future);
       final timing = (stt as WhisperSpeechToText).lastTiming!;
 
-      await tester.tap(find.textContaining('Rückgängig · '));
-      await pumpUntil(tester, find.text('Rückgängig gemacht'));
+      await tester.tap(undoButton(tester));
+      await pumpUntil(tester, find.text(l10n(tester).toolResultUndone));
       expect(await port.read(today), testNoteBefore);
       await waitIdle(tester);
 

@@ -32,6 +32,9 @@ final class HaTestServer {
   /// Paths of every request in order.
   final List<String> paths = [];
 
+  /// Paths answered with 404 (unknown call) or 401 without any token.
+  final List<String> unexpected = [];
+
   /// Next answers: status codes returned instead of handling (FIFO).
   final List<int> failWith = [];
 
@@ -75,6 +78,11 @@ final class HaTestServer {
       return;
     }
     if (r.headers.value('authorization') != 'Bearer $token') {
+      // A wrong token that is sent is a deliberate probe (e2e "falsches
+      // Token"); a request without any token is unexpected.
+      if (r.headers.value('authorization') == null) {
+        unexpected.add(r.uri.path);
+      }
       res.statusCode = 401;
       await res.close();
       return;
@@ -107,6 +115,7 @@ final class HaTestServer {
         ));
         out = <Object?>[];
       } else {
+        unexpected.add(path);
         res.statusCode = 404;
         await res.close();
         return;
@@ -114,6 +123,7 @@ final class HaTestServer {
       res.headers.contentType = ContentType.json;
       res.write(jsonEncode(out));
     } on Object {
+      unexpected.add(path);
       res.statusCode = 404;
     }
     await res.close();

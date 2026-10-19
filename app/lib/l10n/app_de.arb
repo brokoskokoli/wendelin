@@ -2150,11 +2150,22 @@
   "speakerAdd": "Person einlernen",
   "speakerAddDetail": "Fünf kurze Sätze vorlesen, die Aufnahmen werden nicht gespeichert.",
   "speakerAddNeedsModel": "Lade zuerst das Modell.",
-  "speakerDeleteBody": "{name} wird mit allen gespeicherten Stimmmerkmalen gelöscht.",
+  "speakerDeleteBody": "{name} wird mit allen gespeicherten Stimmmerkmalen und ihren Unterhaltungen gelöscht.",
   "@speakerDeleteBody": {
     "placeholders": {
       "name": {
         "type": "String"
+      }
+    }
+  },
+  "speakerDeleteBodyMemory": "{name} wird mit allen gespeicherten Stimmmerkmalen, ihren Unterhaltungen und {count} Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.",
+  "@speakerDeleteBodyMemory": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
       }
     }
   },
@@ -2182,6 +2193,20 @@
   "speakerNoMic": "Ohne Mikrofon-Zugriff kann keine Person eingelernt werden.",
   "speakerNobody": "Noch niemand eingelernt.",
   "speakerPeople": "Personen",
+  "speakerPersonAddress": "Anrede",
+  "speakerPersonAddressHint": "So spricht Wendelin dich an. Leer: der eingelernte Name.",
+  "speakerPersonAgent": "Agent",
+  "speakerPersonAgentDefault": "Standard-Agent",
+  "speakerPersonAgentDetail": "Nur ein anderes Ziel statt des Standards. Regeln und Datenschutz gelten weiter.",
+  "speakerPersonDelete": "Person löschen",
+  "speakerPersonMemory": "Gedächtnis",
+  "speakerPersonMemoryOpen": "Einträge ansehen",
+  "speakerPersonMemoryOwn": "Eigenes Gedächtnis",
+  "speakerPersonMemoryOwnDetail": "Merkt sich Dinge nur für diese Person.",
+  "speakerPersonMemoryShared": "Standard-Gedächtnis",
+  "speakerPersonMemorySharedDetail": "Nutzt die bisherigen Einträge gemeinsam mit allen, die nicht erkannt werden.",
+  "speakerPersonRetrain": "Neu einlernen",
+  "speakerPersonRetrainDetail": "Fünf Sätze noch einmal vorlesen.",
   "speakerProcessing": "Wird ausgewertet …",
   "speakerRecordCutOff": "Zu früh angefangen, bitte den Satz noch einmal.",
   "speakerRecordNoSpeech": "Nichts gehört, bitte noch einmal.",

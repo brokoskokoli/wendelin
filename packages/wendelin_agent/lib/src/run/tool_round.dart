@@ -295,6 +295,7 @@ final class ToolRound {
       privacyLevel: current.privacy,
       // Tools persist with the run's (possibly tainted) floor.
       privacyFloor: current.privacyFloor,
+      memoryOwner: runner.memoryOwner,
     );
     await for (final event in runner.invoker.invokeAll(pending, ctx)) {
       switch (event) {

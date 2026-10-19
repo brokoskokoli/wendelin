@@ -41,4 +41,7 @@ abstract interface class RunConfig {
 
   /// Privacy floor of every memory entry.
   PrivacyLevel? get memoryFloor;
+
+  /// Memory namespace of the run's person (`''` = default memory).
+  String get memoryOwner;
 }

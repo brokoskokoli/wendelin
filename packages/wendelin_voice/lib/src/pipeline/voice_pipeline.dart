@@ -639,6 +639,7 @@ final class VoicePipeline {
       source: InputSource.voice,
       sttConfidence: transcript.confidence,
       language: language,
+      speakerId: transcript.speaker?.personId,
     );
     await _agentDrained; // a cancelled earlier run must be finished
     if (gen != _gen) return null;

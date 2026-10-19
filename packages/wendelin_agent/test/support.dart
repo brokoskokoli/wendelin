@@ -92,6 +92,7 @@ final class Harness {
     ProviderResolver? resolver,
     MemoryRetriever? memory,
     PrivacyLevel? memoryFloor,
+    String memoryOwner = '',
   }) : conversation = InMemoryConversation(history),
        clock = FixedClock(DateTime.utc(2026, 10, 13, 9)),
        catalog = FakeToolCatalog(tools) {
@@ -117,6 +118,7 @@ final class Harness {
       onToolRefused: onToolRefused,
       onUndoFailed: onUndoFailed,
       memoryFloor: memoryFloor,
+      memoryOwner: memoryOwner,
     );
   }
 

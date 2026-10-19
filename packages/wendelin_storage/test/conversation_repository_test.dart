@@ -274,4 +274,23 @@ void main() {
       expect(await repo.session(recent.id), isNotNull);
     },
   );
+
+  group('Person der Sitzung (WP92b)', () {
+    test('setzen, lesen, und nur die Sitzungen der Person löschen', () async {
+      final a = await repo.startNew(clock.now());
+      final b = await repo.startNew(clock.now());
+      final d = await repo.startNew(clock.now());
+      expect(await repo.sessionPerson(a.id), isNull);
+      await repo.setSessionPerson(a.id, 'pa');
+      await repo.setSessionPerson(b.id, 'pb');
+      expect(await repo.sessionPerson(a.id), 'pa');
+      expect(await repo.deletePersonSessions(person: 'pa'), 1);
+      expect(await repo.session(a.id), isNull);
+      expect(await repo.session(b.id), isNotNull);
+      expect(await repo.deletePersonSessions(), 1);
+      expect(await repo.session(b.id), isNull);
+      expect(await repo.session(d.id), isNotNull);
+      expect(await repo.sessionPerson('gibt-es-nicht'), isNull);
+    });
+  });
 }

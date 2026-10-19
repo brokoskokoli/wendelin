@@ -10,10 +10,12 @@ import '../design/design.dart';
 import 'export.dart';
 import 'settings_page.dart';
 
-/// All memory entries, newest first (refresh with `ref.invalidate`).
-final memoryEntriesProvider = FutureProvider.autoDispose<List<StoredMemory>>(
-  (ref) => ref.watch(storageProvider).memory.list(),
-);
+/// The entries of one memory namespace (`''` = default memory), newest first
+/// (refresh with `ref.invalidate`). Never mixes namespaces (WP92b).
+final memoryEntriesProvider = FutureProvider.autoDispose
+    .family<List<StoredMemory>, String>(
+      (ref, owner) => ref.watch(storageProvider).memory.list(owner: owner),
+    );
 
 /// German name of a memory category.
 String categoryLabel(AppLocalizations l, StoredMemoryCategory c) => switch (c) {
@@ -38,12 +40,16 @@ String memoryDetail(AppLocalizations l, StoredMemory e) =>
 /// Entries saved by private runs show their privacy floor; the user can
 /// lift it (with confirmation) in the edit dialog.
 class MemoryScreen extends ConsumerWidget {
-  /// Creates the screen.
-  const MemoryScreen({super.key});
+  /// Creates the screen for the namespace [owner] (`''` = default memory,
+  /// otherwise the memory of one person, opened from the person's page).
+  const MemoryScreen({super.key, this.owner = ''});
+
+  /// Shown memory namespace.
+  final String owner;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final entries = ref.watch(memoryEntriesProvider);
+    final entries = ref.watch(memoryEntriesProvider(owner));
     final list = entries.value ?? const <StoredMemory>[];
     return SettingsPage(
       title: context.l10n.memoryTitle,
@@ -78,7 +84,10 @@ class MemoryScreen extends ConsumerWidget {
               : () async => ref.read(exporterProvider)(
                   'wendelin-gedaechtnis.md',
                   'text/markdown',
-                  await ref.read(storageProvider).memory.exportMarkdown(),
+                  await ref
+                      .read(storageProvider)
+                      .memory
+                      .exportMarkdown(owner: owner),
                 ),
         ),
       ],
@@ -97,8 +106,8 @@ class MemoryScreen extends ConsumerWidget {
       yes: context.l10n.memoryForget,
     );
     if (!ok) return;
-    await ref.read(storageProvider).memory.forget(e.id);
-    ref.invalidate(memoryEntriesProvider);
+    await ref.read(storageProvider).memory.forget(e.id, owner: owner);
+    ref.invalidate(memoryEntriesProvider(owner));
   }
 
   Future<void> _edit(
@@ -119,11 +128,16 @@ class MemoryScreen extends ConsumerWidget {
       await ref
           .read(storageProvider)
           .memory
-          .update(e.id, text: result.text, category: result.category);
+          .update(
+            e.id,
+            text: result.text,
+            category: result.category,
+            owner: owner,
+          );
     } on SensitiveContentException catch (error) {
       if (context.mounted) showHint(context, error.message);
     }
-    ref.invalidate(memoryEntriesProvider);
+    ref.invalidate(memoryEntriesProvider(owner));
   }
 
   Future<void> _liftFloor(
@@ -139,8 +153,11 @@ class MemoryScreen extends ConsumerWidget {
       yes: context.l10n.memoryLift,
     );
     if (!ok) return;
-    await ref.read(storageProvider).memory.clearPrivacyFloor(e.id);
-    ref.invalidate(memoryEntriesProvider);
+    await ref
+        .read(storageProvider)
+        .memory
+        .clearPrivacyFloor(e.id, owner: owner);
+    ref.invalidate(memoryEntriesProvider(owner));
   }
 }
 

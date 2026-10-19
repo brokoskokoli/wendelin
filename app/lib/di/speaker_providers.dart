@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/voice/sherpa_speaker.dart';
+import '../voice/speaker/person_scope.dart';
+import '../voice/speaker/person_storage.dart';
 import '../voice/speaker/speaker_storage.dart';
 import 'core_providers.dart';
 import 'voice_providers.dart';
@@ -15,6 +17,19 @@ import 'voice_providers.dart';
 /// Encrypted profile store (embeddings only).
 final speakerProfileStoreProvider = Provider<SpeakerProfileStore>(
   (ref) => SecretSpeakerProfileStore(ref.watch(secretStoreProvider)),
+);
+
+/// Encrypted per-person settings (address, memory, agent; WP92b).
+final personSettingsStoreProvider = Provider<PersonSettingsStore>(
+  (ref) => SecretPersonSettingsStore(ref.watch(secretStoreProvider)),
+);
+
+/// Turns the id of a recognized person into its request scope.
+final personScopeResolverProvider = Provider<PersonScopeResolver>(
+  (ref) => PersonScopeResolver(
+    profiles: ref.watch(speakerProfileStoreProvider),
+    settings: ref.watch(personSettingsStoreProvider),
+  ),
 );
 
 /// Embedding model; loads lazily on first use (tests replace it).
@@ -63,10 +78,11 @@ final class SpeakerProfilesNotifier
   Future<SpeakerEnrollResult> enroll({
     required String name,
     required List<Int16List> samples,
+    String? id,
   }) async {
     final identifier = ref.read(speakerIdentifierProvider);
     final result = await identifier.enroll(
-      id: 'p${DateTime.now().microsecondsSinceEpoch}',
+      id: id ?? 'p${DateTime.now().microsecondsSinceEpoch}',
       name: name,
       samples: samples,
     );
@@ -74,17 +90,54 @@ final class SpeakerProfilesNotifier
     return result;
   }
 
-  /// Deletes the person [id].
+  /// Deletes the person [id]: embeddings, settings and the entries of the
+  /// person's own memory namespace. The default memory stays untouched, also
+  /// when the person used it.
   Future<void> remove(String id) async {
     final identifier = ref.read(speakerIdentifierProvider);
+    final storage = ref.read(storageProvider);
+    // Data first, the voice last: if one step fails the person stays
+    // enrolled and the deletion can be repeated.
+    await storage.memory.deleteOwner(PersonSettings.ownerOf(id));
+    await storage.conversations.deletePersonSessions(person: id);
+    await ref.read(personSettingsStoreProvider).delete(id);
     await identifier.remove(id);
+    ref.invalidate(personSettingsProvider);
     state = AsyncData(await identifier.profiles());
   }
 
-  /// Deletes everyone („Alles löschen“).
+  /// Deletes everyone („Alles löschen“), also their memory namespaces and
+  /// conversations (also those of persons that are no longer enrolled).
   Future<void> removeAll() async {
-    await ref.read(speakerIdentifierProvider).removeAll();
+    final identifier = ref.read(speakerIdentifierProvider);
+    final storage = ref.read(storageProvider);
+    await storage.memory.deleteAllPersons();
+    await storage.conversations.deletePersonSessions();
+    await ref.read(personSettingsStoreProvider).clear();
+    await identifier.removeAll();
+    ref.invalidate(personSettingsProvider);
     state = const AsyncData([]);
+  }
+}
+
+/// The settings of the enrolled persons by id; a person without an entry has
+/// the defaults (`PersonSettings(personId: …)`).
+final personSettingsProvider =
+    AsyncNotifierProvider<PersonSettingsNotifier, Map<String, PersonSettings>>(
+      PersonSettingsNotifier.new,
+    );
+
+/// Reads and changes the per-person settings.
+final class PersonSettingsNotifier
+    extends AsyncNotifier<Map<String, PersonSettings>> {
+  @override
+  Future<Map<String, PersonSettings>> build() =>
+      ref.read(personSettingsStoreProvider).load();
+
+  /// Saves [settings].
+  Future<void> change(PersonSettings settings) async {
+    await ref.read(personSettingsStoreProvider).save(settings);
+    state = AsyncData({...?state.value, settings.personId: settings});
   }
 }
 

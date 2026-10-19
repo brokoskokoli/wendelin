@@ -1088,11 +1088,22 @@
   "speakerAdd": "Enroll a person",
   "speakerAddDetail": "Read five short sentences aloud; the recordings are not stored.",
   "speakerAddNeedsModel": "Download the model first.",
-  "speakerDeleteBody": "{name} is deleted with all stored voice features.",
+  "speakerDeleteBody": "{name} is deleted with all stored voice features and their conversations.",
   "@speakerDeleteBody": {
     "placeholders": {
       "name": {
         "type": "String"
+      }
+    }
+  },
+  "speakerDeleteBodyMemory": "{name} is deleted with all stored voice features, their conversations and {count} entries in their own memory. The default memory stays unchanged.",
+  "@speakerDeleteBodyMemory": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
       }
     }
   },
@@ -1120,6 +1131,20 @@
   "speakerNoMic": "Without microphone access no one can be enrolled.",
   "speakerNobody": "Nobody enrolled yet.",
   "speakerPeople": "People",
+  "speakerPersonAddress": "Form of address",
+  "speakerPersonAddressHint": "How Wendelin addresses you. Empty: the enrolled name.",
+  "speakerPersonAgent": "Agent",
+  "speakerPersonAgentDefault": "Default agent",
+  "speakerPersonAgentDetail": "Only another target instead of the default. Rules and privacy still apply.",
+  "speakerPersonDelete": "Delete person",
+  "speakerPersonMemory": "Memory",
+  "speakerPersonMemoryOpen": "View entries",
+  "speakerPersonMemoryOwn": "Own memory",
+  "speakerPersonMemoryOwnDetail": "Remembers things for this person only.",
+  "speakerPersonMemoryShared": "Default memory",
+  "speakerPersonMemorySharedDetail": "Shares the existing entries with everyone who is not recognized.",
+  "speakerPersonRetrain": "Enroll again",
+  "speakerPersonRetrainDetail": "Read the five sentences once more.",
   "speakerProcessing": "Processing …",
   "speakerRecordCutOff": "Started too early, please read the sentence again.",
   "speakerRecordNoSpeech": "Heard nothing, please try again.",
