@@ -78,6 +78,13 @@ final class HttpTransport {
     CancelToken? cancel,
     ExchangeTap? tap,
     void Function(Map<String, String> headers)? checkHead,
+    Stream<List<int>> Function(Stream<List<int>> raw)? openBody,
+    Stream<List<int>> Function(
+      Map<String, String> headers,
+      Stream<List<int>> raw,
+    )?
+    openErrorBody,
+    void Function()? onEnd,
   }) {
     final token = cancel ?? CancelToken();
     final abort = Completer<void>();
@@ -92,29 +99,25 @@ final class HttpTransport {
     void finish(ChatEvent terminal, {bool abortHttp = false}) {
       if (finished) return;
       finished = true;
+      onEnd?.call();
       tap?.end(completed: terminal is Done);
+      var event = terminal;
       if (terminal is ErrorEvent) {
         final error = redactor.redact(terminal.error);
         log('$label: Fehler ${error.runtimeType}: ${error.message}');
-        out.add(ErrorEvent(error));
-      } else {
-        out.add(terminal);
+        event = ErrorEvent(error);
       }
+      out.add(event);
       unawaited(out.close());
-      final s = sub;
+      unawaited(sub?.cancel());
       sub = null;
-      if (s != null) unawaited(s.cancel());
       if (abortHttp) abortRequest();
     }
 
     void emitAll(List<ChatEvent> events) {
       for (final e in events) {
         if (finished) return;
-        if (e.isTerminal) {
-          finish(e);
-        } else {
-          out.add(e);
-        }
+        e.isTerminal ? finish(e) : out.add(e);
       }
     }
 
@@ -164,12 +167,21 @@ final class HttpTransport {
                 rethrow;
               }
             }
-            _listen(response, decoder(), emitAll, fail, (s) => sub = s, () {
-              if (!finished) abortRequest();
-            }, tap);
+            _listen(
+              response,
+              decoder(),
+              emitAll,
+              fail,
+              (s) => sub = s,
+              () {
+                if (!finished) abortRequest();
+              },
+              tap,
+              openBody,
+            );
             return;
           }
-          final body = await _readBody(response);
+          final body = await _readBody(response, openErrorBody);
           if (finished) return;
           if (retry != null && retry(response.statusCode, body, attempt)) {
             log('$label: neuer Versuch');
@@ -194,13 +206,13 @@ final class HttpTransport {
     out = StreamController<ChatEvent>(
       onListen: () => unawaited(run()),
       onCancel: () {
-        // Consumer stopped listening: stop everything without emitting.
+        // Consumer stopped: stop everything, emit nothing.
         finished = true;
+        onEnd?.call();
+        abortRequest();
         final s = sub;
         sub = null;
-        abortRequest();
-        if (s != null) return s.cancel();
-        return null;
+        return s?.cancel();
       },
     );
     return out.stream;
@@ -214,13 +226,15 @@ final class HttpTransport {
     void Function(StreamSubscription<SseEvent>) setSub,
     void Function() onIdleTimeout,
     ExchangeTap? tap,
+    Stream<List<int>> Function(Stream<List<int>> raw)? openBody,
   ) {
-    final source = tap == null
+    final wireBytes = tap == null
         ? response.stream
         : response.stream.map((chunk) {
             tap.chunk(chunk);
             return chunk;
           });
+    final source = openBody == null ? wireBytes : openBody(wireBytes);
     final body = source.timeout(
       settings.idleTimeout,
       onTimeout: (sink) {
@@ -252,9 +266,15 @@ final class HttpTransport {
     );
   }
 
-  Future<String> _readBody(http.StreamedResponse response) async {
+  Future<String> _readBody(
+    http.StreamedResponse response, [
+    Stream<List<int>> Function(Map<String, String>, Stream<List<int>>)? open,
+  ]) async {
     final bytes = <int>[];
-    await for (final chunk in response.stream.timeout(settings.idleTimeout)) {
+    final source = open == null
+        ? response.stream
+        : open(response.headers, response.stream);
+    await for (final chunk in source.timeout(settings.idleTimeout)) {
       bytes.addAll(chunk);
       if (bytes.length > _maxErrorBody) break;
     }

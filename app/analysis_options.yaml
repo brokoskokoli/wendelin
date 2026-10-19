@@ -8,6 +8,9 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "lib/l10n/gen/**"
+    # nur die frb-Hauptdatei: ihre Opaque-Typen (RustArcStaticData) lösen
+    # inference_failure_on_instance_creation aus und sind nicht änderbar
+    - "lib/platform/attest/generated/frb_generated.dart"
     - "build/**"
     - android/**
     - ios/**

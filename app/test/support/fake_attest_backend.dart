@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:wendelin/platform/attest/attest_backend.dart';
 import 'package:wendelin/platform/attest/generated/collateral.dart';
 import 'package:wendelin/platform/attest/generated/e2ee.dart';
+import 'package:wendelin/platform/attest/generated/ehbp.dart';
 import 'package:wendelin/platform/attest/generated/near_e2ee.dart';
 import 'package:wendelin/platform/attest/generated/quote.dart';
 import 'package:wendelin/platform/attest/generated/report.dart';
@@ -145,6 +146,35 @@ final class FakeAttestBackend implements AttestBackend {
     if (panic != null) throw panic!;
     if (wire.isEmpty) throw StateError('x');
     return Uint8List.fromList([wire.length]);
+  }
+
+  @override
+  EhbpBinding ehbpBindKeyConfig(Uint8List keyConfig, Uint8List reportData) =>
+      _noEhbp();
+
+  @override
+  (EhbpSealed, EhbpSession) ehbpBeginRequest(
+    Uint8List keyConfig,
+    Uint8List reportData,
+    Uint8List plaintext,
+  ) => _noEhbp();
+
+  @override
+  EhbpResponseDecoder ehbpResponseDecoder(
+    EhbpSession session,
+    Uint8List responseNonce,
+  ) => _noEhbp();
+
+  @override
+  Uint8List ehbpDecoderPush(EhbpResponseDecoder decoder, Uint8List data) =>
+      _noEhbp();
+
+  @override
+  void ehbpDecoderFinish(EhbpResponseDecoder decoder) => _noEhbp();
+
+  Never _noEhbp() {
+    if (panic != null) throw panic!;
+    throw UnimplementedError('ehbp: Rust-Bibliothek nötig');
   }
 
   SnpReportInfo snpInfo = SnpReportInfo(
