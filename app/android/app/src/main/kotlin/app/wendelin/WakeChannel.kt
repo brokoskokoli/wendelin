@@ -17,10 +17,34 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
 
     init {
         channel.setMethodCallHandler(this)
+        current = this
     }
 
     fun dispose() {
         channel.setMethodCallHandler(null)
+        if (current === this) current = null
+        ChatState.visible = false
+        // The engine goes while the chat listens: the service must not stay deaf (WP93).
+        if (ChatState.owned) {
+            ChatState.owned = false
+            WakeWordService.onOverlayClosed()
+        }
+    }
+
+    /**
+     * WP93: asks the main engine whether its chat takes the hit; [done] gets `true` only if it
+     * does. Errors and a missing handler are `false`.
+     */
+    private fun ask(done: (Any?) -> Unit) {
+        channel.invokeMethod(
+            "wakeHit",
+            null,
+            object : MethodChannel.Result {
+                override fun success(result: Any?) = done(result)
+                override fun error(code: String, message: String?, details: Any?) = done(false)
+                override fun notImplemented() = done(false)
+            },
+        )
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -46,11 +70,33 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
                     ),
                 )
             }
+            "chatVisible" -> {
+                ChatState.visible = call.argument<Boolean>("visible") == true
+                result.success(null)
+            }
+            // The chat turn is over (WP93): the service listens again, like after the overlay.
+            "chatDone" -> {
+                ChatState.owned = false
+                WakeWordService.onOverlayClosed()
+                result.success(null)
+            }
+            "debugHit" -> result.success(WakeWordService.debugHit(context))
             else -> result.notImplemented()
         }
     }
 
     companion object {
+        @Volatile private var current: WakeChannel? = null
+
+        /** Whether a main engine can be asked (WP93). */
+        val available: Boolean get() = current != null
+
+        /** Asks the main engine (main thread); [done] gets its reply. */
+        fun askHit(done: (Any?) -> Unit) {
+            val c = current
+            if (c == null) done(false) else c.ask(done)
+        }
+
         const val CHANNEL = "app.wendelin/wake"
     }
 }

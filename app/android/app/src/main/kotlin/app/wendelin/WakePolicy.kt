@@ -46,6 +46,20 @@ data class WakeSettings(
     }
 }
 
+/** Where a wake word hit goes (WP93). */
+enum class HitRoute { CHAT, OVERLAY }
+
+/**
+ * WP93: what the main app's Dart side reports about its chat (process-wide, the service and the
+ * main engine live in one process). [visible] only while the main screen is resumed, its route
+ * is the top one and nothing (dialog, sheet, settings) is above it. [owned]: the chat listens on
+ * a hit; the service stays quiet until `chatDone`.
+ */
+object ChatState {
+    @Volatile var visible = false
+    @Volatile var owned = false
+}
+
 /** Whether the service may run now, or why not (the reason goes to the log as is). */
 sealed interface WakeDecision {
     data object Start : WakeDecision
@@ -102,6 +116,26 @@ object WakePolicy {
 
     /** Whether `startMic` of Dart may open the microphone while the last [conflict] holds. */
     fun mayStartMic(conflict: String?): Boolean = !closesMicFor(conflict)
+
+    /**
+     * WP93: where a confirmed hit goes. The chat of the main app when it is visible (flag set by
+     * Dart, cleared natively on pause), the device is unlocked and the main engine can be asked;
+     * everything else is the overlay with a new conversation (K41).
+     */
+    fun routeHit(chatVisible: Boolean, locked: Boolean, hostAvailable: Boolean): HitRoute =
+        if (chatVisible && !locked && hostAvailable) HitRoute.CHAT else HitRoute.OVERLAY
+
+    /**
+     * WP93: the answer of the main engine to a hit. Only an `true` that arrives before the
+     * timeout (not [settled] yet) takes the hit over; refusal, error and a late answer do not.
+     */
+    fun chatAccepted(reply: Any?, settled: Boolean): Boolean = !settled && reply == true
+
+    /**
+     * WP93: a hit nobody asked the overlay for twice. After a timeout the overlay opens only if
+     * the chat has not taken the hit's audio meanwhile ([pending]); else the chat listens already.
+     */
+    fun opensOverlayAfterTimeout(pending: Boolean): Boolean = pending
 
     /** Whether a service that runs for [mode] has to stop when charging changes to [charging]. */
     fun stopsOnUnplug(mode: WakeMode, charging: Boolean): Boolean =

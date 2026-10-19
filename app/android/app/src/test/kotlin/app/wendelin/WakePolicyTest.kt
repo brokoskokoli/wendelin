@@ -102,6 +102,30 @@ class WakePolicyTest {
     }
 
     @Test
+    fun aHitGoesToTheChatOnlyWhenItIsVisibleUnlockedAndAskable() {
+        assertEquals(HitRoute.CHAT, WakePolicy.routeHit(chatVisible = true, locked = false, hostAvailable = true))
+        // Settings open, app paused: the flag is off.
+        assertEquals(HitRoute.OVERLAY, WakePolicy.routeHit(chatVisible = false, locked = false, hostAvailable = true))
+        assertEquals(HitRoute.OVERLAY, WakePolicy.routeHit(chatVisible = true, locked = true, hostAvailable = true))
+        assertEquals(HitRoute.OVERLAY, WakePolicy.routeHit(chatVisible = true, locked = false, hostAvailable = false))
+    }
+
+    @Test
+    fun onlyAnInTimeYesTakesTheHitIntoTheChat() {
+        assertTrue(WakePolicy.chatAccepted(true, settled = false))
+        // Refused by the main engine (it looked again), error, or too late (race).
+        assertFalse(WakePolicy.chatAccepted(false, settled = false))
+        assertFalse(WakePolicy.chatAccepted(null, settled = false))
+        assertFalse(WakePolicy.chatAccepted(true, settled = true))
+    }
+
+    @Test
+    fun noSecondListenerAfterATimeoutWhenTheChatTookTheAudio() {
+        assertTrue(WakePolicy.opensOverlayAfterTimeout(pending = true))
+        assertFalse(WakePolicy.opensOverlayAfterTimeout(pending = false))
+    }
+
+    @Test
     fun startMicWaitsWhileAConflictHolds() {
         assertFalse(WakePolicy.mayStartMic("call"))
         assertFalse(WakePolicy.mayStartMic("recording"))
