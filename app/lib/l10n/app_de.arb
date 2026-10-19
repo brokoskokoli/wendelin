@@ -1004,6 +1004,7 @@
   "listsSectionLabel": "Abschnitt in der Datei, z. B. Todo (optional)",
   "listsTaskDefault": "Standard-Aufgabenliste",
   "listsTaskDefaultDetail": "Aufgaben mit Fälligkeit landen hier, wenn keine Liste genannt wird.",
+  "integrationsLocationRationale": "Damit Wendelin sagen kann, wo du bist, und Entfernungen und Navigation vorbereiten kann, braucht es den Standortzugriff. Android fragt dich gleich danach. Wendelin fragt den Standort nur, wenn du danach fragst (nie im Hintergrund), schickt ihn nicht an Cloud-Modelle unterhalb deiner Datenschutzstufe und schreibt ihn nicht ins Prüfprotokoll. „Ungefähr“ reicht für Ortsnamen und Luftlinie.",
   "confHandOverDetail": "{toName} hat eine niedrigere Datenschutzstufe als {fromName}. Deine Anfrage und der bisherige Verlauf gehen dann dorthin.",
   "@confHandOverDetail": {
     "placeholders": {

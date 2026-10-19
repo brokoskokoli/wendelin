@@ -10,6 +10,7 @@ import '../di/preference_models.dart';
 import 'android_alarm_port.dart';
 import 'channel_app_presence_port.dart';
 import 'channel_contacts_port.dart';
+import 'channel_location_port.dart';
 import 'channel_media_control_port.dart';
 import 'channel_torch_port.dart';
 import 'device_calendar_port.dart';
@@ -40,6 +41,8 @@ final class PlatformPorts {
     this.lists,
     this.obsidian,
     this.media,
+    this.location,
+    this.mapsLauncher,
   });
 
   /// Real device ports (Android): calendar channel, system clipboard,
@@ -66,6 +69,8 @@ final class PlatformPorts {
       phone: contactsPort,
       requestContactsPermission: contactsPort.requestPermission,
       media: const ChannelMediaControlPort(),
+      location: const ChannelLocationPort(),
+      mapsLauncher: const ChannelMapsLauncherPort(),
       requestCalendarPermission: calendar.requestPermission,
       lists: ListsPorts(port: SafListFilePort(), definitions: listDefinitions),
       obsidian: ObsidianPorts(
@@ -111,6 +116,8 @@ final class PlatformPorts {
         durationMs: 3600000,
       ),
     ),
+    location: FakeLocationPort(),
+    mapsLauncher: FakeMapsLauncherPort(),
     lists: ListsPorts.demo(),
     obsidian: ObsidianPorts.demo(),
   );
@@ -153,6 +160,12 @@ final class PlatformPorts {
 
   /// Media sessions and media keys; `null` = not on this platform.
   final MediaControlPort? media;
+
+  /// Device position (WP86); `null` = not on this platform.
+  final LocationPort? location;
+
+  /// Starts map apps (WP86); `null` = not on this platform.
+  final MapsLauncherPort? mapsLauncher;
 }
 
 /// Vault, search index and settings of the Obsidian integration.

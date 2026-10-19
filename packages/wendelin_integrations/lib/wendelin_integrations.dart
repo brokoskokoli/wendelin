@@ -24,6 +24,8 @@ export 'flashlight.dart';
 export 'home_assistant.dart';
 export 'http_tools.dart';
 export 'lists.dart';
+export 'location.dart';
+export 'maps.dart';
 export 'media.dart';
 export 'memory.dart';
 export 'obsidian.dart';

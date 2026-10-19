@@ -25,6 +25,9 @@ const calendarChannelName = 'app.wendelin/calendar';
 /// `FilesChannel.kt`: single documents (storage access framework).
 const filesChannelName = 'app.wendelin/files';
 
+/// `LocationChannel.kt`: position (LocationManager), place name, map intents.
+const locationChannelName = 'app.wendelin/location';
+
 /// `MediaChannel.kt`: media sessions, media keys, opening media apps.
 const mediaChannelName = 'app.wendelin/media';
 

@@ -5,7 +5,8 @@
 /// [FakeAppPresencePort], [FakeTorchPort], [FakeHaApi], [FakeHaSecrets],
 /// [FakeHaEntityStore], [FakeHaDiscovery], [FakeSpotifyApi], [FakeSpotifySecrets],
 /// [FakeSpotifyLauncher], [FakeSpotifyAuthBrowser],
-/// [FakeMediaControlPort], [FakeContactsPort], [FakePhonePort].
+/// [FakeMediaControlPort], [FakeContactsPort], [FakePhonePort],
+/// [FakeLocationPort], [FakeMapsLauncherPort].
 ///
 /// Does **not** depend on `package:test`, so the app may use it in
 /// production code (demo mode). Tests import `testing.dart`, which also
@@ -42,6 +43,7 @@ export 'testing/fake_ha_secrets.dart';
 export 'testing/fake_http_tool_secrets.dart';
 export 'testing/fake_http_tool_store.dart';
 export 'testing/fake_list_file_port.dart';
+export 'testing/fake_location_ports.dart';
 export 'testing/fake_media_control_port.dart';
 export 'testing/fake_memory_store.dart';
 export 'testing/fake_note_index.dart';

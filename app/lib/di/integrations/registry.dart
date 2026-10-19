@@ -7,6 +7,8 @@ import 'flashlight_spec.dart';
 import 'ha_spec.dart';
 import 'integration_spec.dart';
 import 'lists_spec.dart';
+import 'location_spec.dart';
+import 'maps_spec.dart';
 import 'media_spec.dart';
 import 'memory_spec.dart';
 import 'obsidian_spec.dart';
@@ -27,6 +29,8 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
   bringSpec,
   listsSpec,
   mediaSpec,
+  locationSpec,
+  mapsSpec,
   haSpec,
   spotifySpec,
   weatherSpec,

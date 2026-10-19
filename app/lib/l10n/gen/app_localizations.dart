@@ -3334,6 +3334,12 @@ abstract class AppLocalizations {
   /// **'Aufgaben mit Fälligkeit landen hier, wenn keine Liste genannt wird.'**
   String get listsTaskDefaultDetail;
 
+  /// No description provided for @integrationsLocationRationale.
+  ///
+  /// In de, this message translates to:
+  /// **'Damit Wendelin sagen kann, wo du bist, und Entfernungen und Navigation vorbereiten kann, braucht es den Standortzugriff. Android fragt dich gleich danach. Wendelin fragt den Standort nur, wenn du danach fragst (nie im Hintergrund), schickt ihn nicht an Cloud-Modelle unterhalb deiner Datenschutzstufe und schreibt ihn nicht ins Prüfprotokoll. „Ungefähr“ reicht für Ortsnamen und Luftlinie.'**
+  String get integrationsLocationRationale;
+
   /// No description provided for @confHandOverDetail.
   ///
   /// In de, this message translates to:

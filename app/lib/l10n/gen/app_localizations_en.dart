@@ -1889,6 +1889,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tasks with a due date go here when no list is named.';
 
   @override
+  String get integrationsLocationRationale =>
+      'To tell you where you are and to prepare distances and navigation, Wendelin needs location access. Android asks you next. Wendelin only reads your location when you ask for it (never in the background), does not send it to cloud models below your privacy level and does not write it to the audit log. “Approximate” is enough for place names and straight-line distance.';
+
+  @override
   String confHandOverDetail(String toName, String fromName) {
     return '$toName has a lower privacy level than $fromName. Your request and the conversation so far will then go there.';
   }

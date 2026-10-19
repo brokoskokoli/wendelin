@@ -344,5 +344,6 @@ String? _rationale(BuildContext context, WidgetRef ref, String id) =>
       'calendar' => context.l10n.integrationsCalendarRationale,
       'media' => context.l10n.integrationsMediaRationale,
       'contacts' => context.l10n.integrationsContactsRationale,
+      'location' => context.l10n.integrationsLocationRationale,
       _ => _spec(ref, id)?.permissionRationale,
     };

@@ -387,8 +387,8 @@ void main() {
       expect(statuses.values, everyElement(IntegrationStatus.active));
       expect(statuses.keys, containsAll(['calendar', 'memory', 'web']));
       expect(registry.info('web').setup.missingSteps, ['search_backend']);
-      // Ab 30 aktiven Tools sieht das Modell zuerst nur die Werkzeugsuche;
-      // aufrufbar sind die aktiven Tools trotzdem.
+      // Ab 30 aktiven Tools sieht das Modell zuerst nur `tools__search`:
+      // über den Katalog prüfen, nicht über die Liste der Angebote.
       final catalog = registry.catalogFor(
         PrivacyLevel.standard,
         sessionId: 's',
