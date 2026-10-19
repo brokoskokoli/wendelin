@@ -12,6 +12,7 @@ import '../../di/attestation_hub.dart';
 import '../../di/attestation_providers.dart';
 import '../../di/hint_term_providers.dart';
 import '../../di/obsidian_index.dart';
+import '../../di/profiles.dart';
 import '../../di/provider_config.dart';
 import '../../di/providers.dart';
 import '../../di/routing.dart';
@@ -33,6 +34,7 @@ import 'main_composer.dart';
 import 'main_confirmation.dart';
 import 'main_parts.dart';
 import 'private_banner.dart';
+import 'quick_switch.dart';
 
 /// Main screen (docs/design/screens/hauptbildschirm): head, provider and
 /// cost chips, conversation, text field and microphone. Confirmations open
@@ -175,6 +177,28 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     await _controller.resolveGpuBlock(sendWithout: send);
   }
 
+  /// Long press on the provider chip (WP94): the chosen agent becomes the
+  /// default and the chat starts empty, so no history goes to the new one.
+  Future<void> _quickSwitch(ProviderConfig? config) async {
+    final profiles = (await ref.read(profilesProvider.future)).profiles;
+    if (!mounted || profiles.length < 2) return;
+    final current = _activeTarget(
+      config,
+      ref.read(agentControllerProvider).activeProfileId,
+    )?.profileId;
+    final id = await showQuickSwitchSheet(
+      context,
+      profiles: profiles,
+      currentId: current,
+    );
+    if (id == null || id == current || !mounted) return;
+    if (ref.read(agentControllerProvider).running) return;
+    // Speech output of the last answer ends before the switch.
+    await ref.read(voiceControllerProvider.notifier).cancel();
+    await ref.read(profilesProvider.notifier).setDefault(id);
+    await _controller.newTopic();
+  }
+
   AgentController get _controller => ref.read(agentControllerProvider.notifier);
 
   @override
@@ -217,6 +241,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             newConversationEnabled: !conversation.running,
           ),
           MainChips(
+            onQuickSwitch: conversation.running
+                ? null
+                : () => unawaited(_quickSwitch(providers)),
             providerName: active == null
                 ? null
                 : providerLabel(
