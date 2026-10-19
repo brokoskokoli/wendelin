@@ -115,7 +115,7 @@ void main() {
     void start(
       FakeAsync async,
       List<ScriptedTurn> turns, {
-      List<Tool>? tools,
+      List<Tool> Function(FakeTool undoable)? tools,
       int receipts = 3,
       AgentConfig config = const AgentConfig(),
       ToolInvoker Function(PolicyInvoker)? wrap,
@@ -133,7 +133,7 @@ void main() {
       );
       provider = PerCallVerifying(FakeLlmProvider(turns), receipts);
       prepare?.call(provider);
-      final all = tools ?? [undoable, second];
+      final all = tools == null ? [undoable, second] : tools(undoable);
       final policy = PolicyInvoker(FakeToolInvoker(FakeToolCatalog(all)));
       h = Harness(
         config: config,
@@ -330,7 +330,7 @@ void main() {
               ]),
               ScriptedTurn.text('Fertig.'),
             ],
-            tools: [undoable, sms],
+            tools: (undoable) => [undoable, sms],
             receipts: 4,
             prepare: (p) => p.lateCalls[1] = Completer<void>(),
             // The late call ends while the round of the sequential call runs.
@@ -400,7 +400,7 @@ void main() {
             ]),
             ScriptedTurn.text('Fertig.'),
           ],
-          tools: [undoable, sms],
+          tools: (undoable) => [undoable, sms],
           receipts: 2,
         );
         expect(provider.inner.requests, hasLength(1));

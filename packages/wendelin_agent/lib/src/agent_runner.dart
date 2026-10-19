@@ -468,6 +468,9 @@ final class _Run implements RunControl {
         rethrow;
       }
       // Paid tokens count in any case: the call shares the run's budget.
+      // A discarded call is still paid for: its tokens count towards the run
+      // budget and may end the run with tokenBudget. If it ends only after the
+      // run, its usage is no longer reported.
       call = ModelCall(
         runner,
         _state,

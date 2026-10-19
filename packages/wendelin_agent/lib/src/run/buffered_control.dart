@@ -13,7 +13,8 @@ import 'run_state.dart';
 /// - Until [release] nothing reaches the run's listener: events are kept in
 ///   order. [release] replays them and passes later events through.
 /// - [discard] drops everything kept and everything that follows, except
-///   [UsageReported] (paid tokens are always reported), and cancels the call's own [token]. The run's abort cancels it too.
+///   [UsageReported] (paid tokens are always reported), and cancels the
+///   call's own [token]. The run's abort cancels it too.
 /// - An abort of the run is still thrown by [throwIfAborted].
 final class BufferedControl implements RunControl {
   /// Buffers events for a call of the run behind [_parent].
