@@ -8,7 +8,10 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/agent/agent_controller.dart';
+import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/voice_providers.dart';
+import 'package:wendelin/platform/channel_memory_trim.dart';
 import 'package:wendelin/platform/voice/engine_whisper.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/voice/sherpa_tts.dart';
@@ -234,21 +237,26 @@ void main() {
   group('Provider (zwei Container = App und Overlay)', () {
     late FakeProcess process;
     late FakeDirectory dir;
+    late _FakeTrim trim;
     setUp(() {
       process = FakeProcess();
       dir = FakeDirectory(process);
+      trim = _FakeTrim();
     });
 
     ProviderContainer engineContainer({
       String model = 'whisper-small',
       Duration releaseDelay = const Duration(minutes: 2),
       List<Override> extra = const [],
+      bool keep = false,
+      Set<String> installedModels = const {},
     }) {
       final env = TestEnv(
         extraOverrides: [
           ...extra,
           whisperLoaderProvider.overrideWithValue((m, _) => process.load(m.id)),
           whisperDirectoryProvider.overrideWithValue(dir),
+          memoryTrimSourceProvider.overrideWithValue(trim),
           voiceActivityDetectorProvider.overrideWith(
             (ref) async => FakeVoiceActivityDetector(),
           ),
@@ -259,11 +267,12 @@ void main() {
         'whisper-base',
         'whisper-small',
         SpeechModelCatalog.sileroVad.id,
+        ...installedModels,
       });
       unawaited(
         env.storage.settings.set(
           voiceSettingsKey,
-          VoiceSettings(sttModel: model),
+          VoiceSettings(sttModel: model, keepModelLoaded: keep),
         ),
       );
       return env.container();
@@ -385,6 +394,176 @@ void main() {
       expect(synth.disposed, 1);
     });
 
+    group('Hinweis-Begriffe', () {
+      final names = NotifierProvider<_Names, List<String>>(_Names.new);
+
+      ProviderContainer withNames(String model) => engineContainer(
+        model: model,
+        installedModels: {SpeechModelCatalog.parakeetV3.id},
+        extra: [hintTermsProvider.overrideWith((ref) => ref.watch(names))],
+      );
+
+      test('Modell mit Hotwords: neue Namen bauen den Erkenner neu', () async {
+        final app = withNames(SpeechModelCatalog.parakeetV3.id);
+        addTearDown(app.dispose);
+        await app.read(speechToTextProvider.future);
+        expect(
+          process.events.where((e) => e.startsWith('load ')),
+          hasLength(1),
+        );
+        app.read(names.notifier).set(['Wendelin', 'Küche']);
+        await pumpEventQueue();
+        await app.read(speechToTextProvider.future);
+        await untilTrue(
+          () => process.events.where((e) => e.startsWith('load ')).length == 2,
+        );
+        expect(
+          process.events.where((e) => e.startsWith('load ')),
+          hasLength(2),
+        );
+        expect(process.live, hasLength(1));
+      });
+
+      test('Whisper ignoriert die Namen: kein Neuladen', () async {
+        final app = withNames('whisper-small');
+        addTearDown(app.dispose);
+        await app.read(speechToTextProvider.future);
+        app.read(names.notifier).set(['Wendelin', 'Küche']);
+        await pumpEventQueue();
+        await app.read(speechToTextProvider.future);
+        await pumpEventQueue();
+        expect(
+          process.events.where((e) => e.startsWith('load ')),
+          hasLength(1),
+        );
+      });
+
+      test('Engine-Name kommt aus dem Katalog', () async {
+        final app = withNames(SpeechModelCatalog.parakeetV3.id);
+        addTearDown(app.dispose);
+        final stt = await app.read(speechToTextProvider.future);
+        expect(stt.info.name, contains('Parakeet'));
+        expect(stt.info.model, SpeechModelCatalog.parakeetV3.id);
+      });
+    });
+
+    group('Modell im Speicher halten', () {
+      Future<(ProviderContainer, _CountingSynthesizer)> loaded({
+        required bool keep,
+      }) async {
+        final synth = _CountingSynthesizer();
+        final app = engineContainer(
+          keep: keep,
+          releaseDelay: Duration.zero,
+          extra: [sherpaSynthesizerProvider.overrideWithValue(synth)],
+        );
+        addTearDown(app.dispose);
+        await app.read(activeVoiceProvider.future);
+        await app.read(voiceSettingsProvider.future);
+        app.read(voiceControllerProvider); // alive, like in the app
+        expect(process.live, hasLength(1));
+        return (app, synth);
+      }
+
+      test('an: Hintergrund und Overlay-Ende geben nichts frei', () async {
+        final (app, synth) = await loaded(keep: true);
+        final voice = app.read(voiceControllerProvider.notifier);
+        await voice.background();
+        await voice.releaseModels(reason: 'overlay-close');
+        await voice.releaseModels(reason: 'idle');
+        await pumpEventQueue();
+        expect(process.live, hasLength(1));
+        expect(synth.disposed, 0);
+        expect(
+          lines.where((l) => l.contains('release-skipped')),
+          contains(contains('reason=overlay-close')),
+        );
+      });
+
+      test('aus: Overlay-Ende gibt STT und Stimme frei', () async {
+        final (app, synth) = await loaded(keep: false);
+        await app
+            .read(voiceControllerProvider.notifier)
+            .releaseModels(reason: 'overlay-close');
+        expect(process.live, isEmpty);
+        expect(synth.disposed, 1);
+      });
+
+      test(
+        'an: Speicherdruck (onTrimMemory 15) gibt STT und TTS frei',
+        () async {
+          final (app, synth) = await loaded(keep: true);
+          trim.add(15);
+          await untilTrue(() => process.live.isEmpty);
+          expect(process.live, isEmpty);
+          expect(synth.disposed, 1);
+          expect(
+            lines.any(
+              (l) => l.contains(' release ') && l.contains('reason=memory'),
+            ),
+            isTrue,
+          );
+          expect(app.read(voiceControllerProvider).active, isFalse);
+        },
+      );
+
+      test(
+        'Speicherdruck während einer laufenden Anfrage gibt nichts frei',
+        () async {
+          final (app, synth) = await loaded(keep: true);
+          final agent = app.read(agentControllerProvider.notifier);
+          agent.seed(app.read(agentControllerProvider).copyWith(running: true));
+          trim.add(15);
+          await pumpEventQueue();
+          expect(process.live, hasLength(1));
+          expect(synth.disposed, 0);
+          // Die Anfrage endet, der nächste Druck gibt frei.
+          agent.seed(
+            app.read(agentControllerProvider).copyWith(running: false),
+          );
+          trim.add(15);
+          await untilTrue(() => process.live.isEmpty);
+          expect(process.live, isEmpty);
+        },
+      );
+
+      test(
+        'Speicherdruck bei laufender Sprachsitzung gibt nichts frei',
+        () async {
+          final (app, synth) = await loaded(keep: true);
+          final voice = app.read(voiceControllerProvider.notifier);
+          voice.seed(
+            app.read(voiceControllerProvider).copyWith(awaitingAnswer: true),
+          );
+          trim.add(15);
+          await pumpEventQueue();
+          expect(process.live, hasLength(1));
+          expect(synth.disposed, 0);
+        },
+      );
+
+      test('aus: Speicherdruck gibt ebenfalls frei', () async {
+        await loaded(keep: false);
+        trim.add(40);
+        await untilTrue(() => process.live.isEmpty);
+        expect(process.live, isEmpty);
+      });
+
+      test(
+        'UI_HIDDEN (20) und schwache Stufen sind kein Speicherdruck',
+        () async {
+          final (_, synth) = await loaded(keep: true);
+          trim
+            ..add(20)
+            ..add(5)
+            ..add(10);
+          await pumpEventQueue();
+          expect(process.live, hasLength(1));
+          expect(synth.disposed, 0);
+        },
+      );
+    });
+
     test('Besitzer (App) wird geschlossen: Overlay lädt eigenes', () async {
       final app = engineContainer();
       final overlay = engineContainer();
@@ -417,4 +596,21 @@ final class _CountingSynthesizer implements SpeechSynthesizer {
 
   @override
   Future<void> dispose() async => disposed++;
+}
+
+final class _Names extends Notifier<List<String>> {
+  @override
+  List<String> build() => const [];
+
+  void set(List<String> v) => state = v;
+}
+
+/// Android `onTrimMemory` levels pushed by the test.
+final class _FakeTrim implements MemoryTrimSource {
+  final _c = StreamController<int>.broadcast();
+
+  void add(int level) => _c.add(level);
+
+  @override
+  Stream<int> get levels => _c.stream;
 }

@@ -42,6 +42,8 @@ final class SpeechModelCatalog {
   static const standard = SpeechModelCatalog([
     whisperBase,
     whisperSmall,
+    parakeetV3,
+    canary180m,
     sileroVad,
     voiceDe,
     voiceDeKerstin,
@@ -49,6 +51,8 @@ final class SpeechModelCatalog {
     voiceFrGilles,
     voiceEn,
     voiceEnJoe,
+    voiceDeThorstenHigh,
+    voiceKokoro,
     wakeFeatures,
   ]);
 
@@ -61,6 +65,7 @@ final class SpeechModelCatalog {
     license: 'MIT (OpenAI Whisper)',
     source: _hfSource,
     note: _int8Note,
+    ramBytes: 400 * 1024 * 1024,
     files: [
       ModelFile(
         name: 'base-encoder.int8.onnx',
@@ -95,6 +100,7 @@ final class SpeechModelCatalog {
     license: 'MIT (OpenAI Whisper)',
     source: _hfSource,
     note: _int8Note,
+    ramBytes: 1300 * 1024 * 1024,
     files: [
       ModelFile(
         name: 'small-encoder.int8.onnx',
@@ -115,6 +121,69 @@ final class SpeechModelCatalog {
         url: '$_hfSmall/small-tokens.txt',
         sizeBytes: 816730,
         sha256: _whisperTokensSha,
+      ),
+    ],
+  );
+
+  /// Parakeet TDT 0.6B v3, int8 (NeMo transducer; WP102/WP103): as exact as
+  /// Whisper medium in German at the speed of base, takes hotwords. No
+  /// language choice (it detects the language). Archive unpacks to
+  /// `sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/` with `encoder.int8.onnx`,
+  /// `decoder.int8.onnx`, `joiner.int8.onnx` and `tokens.txt`.
+  static const parakeetV3 = SpeechModel(
+    id: 'parakeet-tdt-0.6b-v3',
+    kind: SpeechModelKind.stt,
+    displayName: 'Parakeet v3 – groß, schnell',
+    hint: 'Schnell und genau; erkennt eigene Begriffe (Räume, Geräte, Namen).',
+    languages: {'de', 'fr', 'en'},
+    license: 'CC-BY-4.0 (NVIDIA)',
+    source: _ghSource,
+    note: _ghNote,
+    attribution:
+        'Spracherkennung „Parakeet TDT 0.6B v3“ von NVIDIA, CC BY 4.0; '
+        'sherpa-onnx-Export (k2-fsa).',
+    engine: SttEngine.nemoTransducer,
+    ramBytes: 1396 * 1024 * 1024,
+    files: [
+      ModelFile(
+        name: 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2',
+        url:
+            '$_gh/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2',
+        sizeBytes: 487170055,
+        sha256:
+            '5793d0fd397c5778d2cf2126994d58e9d56b1be7c04d13c7a15bb1b4eafb16bf',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// Canary 180M flash, int8 (NeMo, en/es/de/fr; optional, best French).
+  /// Archive unpacks to `sherpa-onnx-nemo-canary-180m-flash-en-es-de-fr-int8/`
+  /// with `encoder.int8.onnx`, `decoder.int8.onnx` and `tokens.txt`. No
+  /// hotwords; the language is bound with `srcLang`.
+  static const canary180m = SpeechModel(
+    id: 'canary-180m-flash',
+    kind: SpeechModelKind.stt,
+    displayName: 'Canary flash – klein, gut für Französisch',
+    hint: 'Klein und gut für Französisch; ohne eigene Begriffe.',
+    languages: {'de', 'fr', 'en'},
+    license: 'CC-BY-4.0 (NVIDIA)',
+    source: _ghSource,
+    note: _ghNote,
+    attribution:
+        'Spracherkennung „Canary 180M Flash“ von NVIDIA, CC BY 4.0; '
+        'sherpa-onnx-Export (k2-fsa).',
+    engine: SttEngine.canary,
+    ramBytes: 734 * 1024 * 1024,
+    files: [
+      ModelFile(
+        name: 'sherpa-onnx-nemo-canary-180m-flash-en-es-de-fr-int8.tar.bz2',
+        url:
+            '$_gh/asr-models/sherpa-onnx-nemo-canary-180m-flash-en-es-de-fr-int8.tar.bz2',
+        sizeBytes: 153692328,
+        sha256:
+            '7a38ed8b13f014ad632b09ff8d22e0c6f1359dd046af9235d281dfae841b9ab9',
+        archive: ModelArchive.tarBz2,
       ),
     ],
   );
@@ -273,6 +342,89 @@ final class SpeechModelCatalog {
         sizeBytes: 21230019,
         sha256:
             '644527f29eca0ada5595d7b6e4daf6388f5ac0c4870b4d42996a6687fcefeb37',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// German voice: Piper „Thorsten“ (high, fp32; WP103). The int8 variant
+  /// of the high model is slower on the Mac (WP102), so the full one is
+  /// offered. Not the default: heavier (RAM about 373 MB on the Mac).
+  static const voiceDeThorstenHigh = SpeechModel(
+    id: 'tts-de-thorsten-high',
+    kind: SpeechModelKind.tts,
+    displayName: 'Deutsch – Thorsten hochwertig (männlich)',
+    hint: 'Natürlicher, aber langsamer und mit mehr Speicherbedarf.',
+    gender: VoiceGender.male,
+    languages: {'de'},
+    license: 'CC0 (Thorsten-Voice), Piper MIT',
+    source: _ghSource,
+    note: _ghNote,
+    ramBytes: 373 * 1024 * 1024,
+    files: [
+      ModelFile(
+        name: 'vits-piper-de_DE-thorsten-high.tar.bz2',
+        url: '$_gh/tts-models/vits-piper-de_DE-thorsten-high.tar.bz2',
+        sizeBytes: 115591546,
+        sha256:
+            'dd4ed1b0d42c30a1a4862fc2b243e8044d52b8889c9ff3d1e99e92028888bc4a',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// Kokoro multi-lang v1.0, int8 (English and French; no German). One
+  /// model with several speakers (`voices.bin`); the speaker ids are the
+  /// positions in the model's voice list. Archive unpacks to
+  /// `kokoro-int8-multi-lang-v1_0/`.
+  static const voiceKokoro = SpeechModel(
+    id: 'tts-kokoro',
+    kind: SpeechModelKind.tts,
+    displayName: 'Kokoro – Englisch und Französisch',
+    hint: 'Sehr natürlich, aber langsamer; mehrere Sprecher.',
+    languages: {'en', 'fr'},
+    license: 'Apache-2.0 (Kokoro), Stimme ff_siwis: CC BY 4.0 (SIWIS)',
+    source: _ghSource,
+    note: _ghNote,
+    attribution:
+        'Kokoro-82M (hexgrad, Apache-2.0), sherpa-onnx-Export (k2-fsa); '
+        'Stimme „ff_siwis“ nach der SIWIS French Speech Synthesis Database '
+        '(J. Yamagishi et al., University of Edinburgh / Idiap), CC BY 4.0.',
+    synth: TtsSynth.kokoro,
+    ramBytes: 560 * 1024 * 1024,
+    speakers: [
+      TtsSpeaker(
+        id: 'af_heart',
+        language: 'en',
+        name: 'Heart (weiblich, amerikanisch)',
+        sid: 3,
+        espeakLang: 'en-us',
+        gender: VoiceGender.female,
+      ),
+      TtsSpeaker(
+        id: 'bf_emma',
+        language: 'en',
+        name: 'Emma (weiblich, britisch)',
+        sid: 21,
+        espeakLang: 'en', // 'en-gb' kennt die espeak-Datei des Modells nicht
+        gender: VoiceGender.female,
+      ),
+      TtsSpeaker(
+        id: 'ff_siwis',
+        language: 'fr',
+        name: 'Siwis (weiblich)',
+        sid: 30,
+        espeakLang: 'fr',
+        gender: VoiceGender.female,
+      ),
+    ],
+    files: [
+      ModelFile(
+        name: 'kokoro-int8-multi-lang-v1_0.tar.bz2',
+        url: '$_gh/tts-models/kokoro-int8-multi-lang-v1_0.tar.bz2',
+        sizeBytes: 132303094,
+        sha256:
+            '4c3052abaa60943a341f193888cf6abd68787dae6ab8ae5c925a706caa247e4e',
         archive: ModelArchive.tarBz2,
       ),
     ],

@@ -13,9 +13,32 @@ import 'sherpa_runtime.dart';
 import 'whisper_share.dart';
 import 'whisper_stt.dart';
 
+/// A recognizer on the current isolate (blocking FFI calls): Whisper
+/// ([SherpaWhisperEngine]) or NeMo ([SherpaNemoEngine]).
+abstract interface class BlockingStt {
+  /// Transcribes [samples]; [language] `null` = detect (if the model can).
+  WhisperResult transcribe(Float32List samples, {String? language});
+
+  /// Frees the native recognizer.
+  void dispose();
+}
+
+/// What a recognizer isolate loads: the files (checked before loading) and
+/// how to open them. Plain data, so it can be sent to the isolate.
+abstract interface class SttSpec {
+  /// Model files that must exist.
+  List<String> get paths;
+
+  /// Expected size per path (from the catalog); checked before loading.
+  Map<String, int> get sizes;
+
+  /// Opens the recognizer (on the isolate that calls this).
+  BlockingStt open(int? threads);
+}
+
 /// Paths of a downloaded Whisper model (sherpa-onnx export).
 @immutable
-final class WhisperFiles {
+final class WhisperFiles implements SttSpec {
   /// Creates the paths.
   const WhisperFiles({
     required this.encoder,
@@ -40,6 +63,7 @@ final class WhisperFiles {
   }
 
   /// Expected size per path (from the catalog); checked before loading.
+  @override
   final Map<String, int> sizes;
 
   /// Encoder `.onnx`.
@@ -50,11 +74,17 @@ final class WhisperFiles {
 
   /// `tokens.txt`.
   final String tokens;
+
+  @override
+  List<String> get paths => [encoder, decoder, tokens];
+
+  @override
+  BlockingStt open(int? threads) => SherpaWhisperEngine(this, threads: threads);
 }
 
 /// Whisper on the current isolate (blocking FFI calls). Used inside
 /// [IsolateWhisperBackend] and by the measurement tool.
-final class SherpaWhisperEngine {
+final class SherpaWhisperEngine implements BlockingStt {
   /// Loads the model (takes a few hundred milliseconds).
   SherpaWhisperEngine(this.files, {int? threads})
     : threads = threads ?? math.min(4, Platform.numberOfProcessors) {
@@ -86,7 +116,7 @@ final class SherpaWhisperEngine {
         ),
       );
 
-  /// Transcribes [samples]; [language] `null` = detect.
+  @override
   WhisperResult transcribe(Float32List samples, {String? language}) {
     final lang = language ?? '';
     if (lang != _language) {
@@ -104,7 +134,7 @@ final class SherpaWhisperEngine {
     }
   }
 
-  /// Frees the native recognizer.
+  @override
   void dispose() => _recognizer.free();
 }
 
@@ -118,10 +148,10 @@ final class IsolateWhisperBackend implements WhisperBackend {
   /// `VoiceException(modelMissing)` if a file is missing and
   /// `VoiceException(failed)` if the model does not load.
   static Future<IsolateWhisperBackend> start(
-    WhisperFiles files, {
+    SttSpec files, {
     int? threads,
   }) async {
-    for (final p in [files.encoder, files.decoder, files.tokens]) {
+    for (final p in files.paths) {
       final f = File(p);
       final size = files.sizes[p];
       // A truncated model would end the process inside sherpa-onnx.
@@ -135,9 +165,7 @@ final class IsolateWhisperBackend implements WhisperBackend {
     final replies = ReceivePort();
     final worker = await WorkerIsolate.spawn(_main, (
       replies.sendPort,
-      files.encoder,
-      files.decoder,
-      files.tokens,
+      files,
       threads,
       sherpaLibraryDir,
     ), debugName: 'whisper');
@@ -204,15 +232,12 @@ final class IsolateWhisperBackend implements WhisperBackend {
     await _isolate.awaitExit(grace: exitGrace);
   }
 
-  static void _main((SendPort, String, String, String, int?, String?) args) {
-    final (out, encoder, decoder, tokens, threads, libraryDir) = args;
+  static void _main((SendPort, SttSpec, int?, String?) args) {
+    final (out, spec, threads, libraryDir) = args;
     sherpaLibraryDir = libraryDir;
-    final SherpaWhisperEngine engine;
+    final BlockingStt engine;
     try {
-      engine = SherpaWhisperEngine(
-        WhisperFiles(encoder: encoder, decoder: decoder, tokens: tokens),
-        threads: threads,
-      );
+      engine = spec.open(threads);
     } on Object catch (e) {
       out.send('$e');
       return;

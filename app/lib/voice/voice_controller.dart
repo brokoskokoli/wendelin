@@ -157,6 +157,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
   @override
   VoiceUiState build() {
     _focus = ref.read(speechFocusProvider);
+    final trim = ref.read(memoryTrimSourceProvider).levels.listen(onMemoryTrim);
     ref
       ..listen(
         agentControllerProvider.select((s) => s.pending),
@@ -183,6 +184,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       // settings changed) are picked up at the next start (_pipelineFor).
       ..listen(demoModeProvider, (_, _) => unawaited(_reset()))
       ..onDispose(() {
+        unawaited(trim.cancel());
         _releaseTimer?.cancel();
         unawaited(_reset());
       });
@@ -508,6 +510,19 @@ final class VoiceController extends Notifier<VoiceUiState> {
     );
   }
 
+  /// Android `onTrimMemory` ([level]): under real memory pressure the
+  /// models are freed even with „Modell im Speicher halten“, unless a
+  /// request is running (the next one loads them again).
+  @visibleForTesting
+  Future<void> onMemoryTrim(int level) async {
+    if (!isMemoryPressure(level) ||
+        state.active ||
+        ref.read(agentControllerProvider).running) {
+      return;
+    }
+    await releaseModels(reason: memoryPressureReason);
+  }
+
   Future<void> _releaseIfIdle() async {
     if (_foreground ||
         state.active ||
@@ -519,7 +534,15 @@ final class VoiceController extends Notifier<VoiceUiState> {
 
   /// Frees Whisper and the offline voice now (overlay closes, idle in the
   /// background); the next request loads them again.
+  ///
+  /// With „Modell im Speicher halten“ only memory pressure frees them
+  /// ([mayReleaseModels], WP103).
   Future<void> releaseModels({String reason = 'release'}) async {
+    final keep = ref.read(voiceSettingsProvider).value?.keepModelLoaded;
+    if (!mayReleaseModels(reason, keepLoaded: keep ?? false)) {
+      voiceLog('release-skipped', {'reason': reason});
+      return;
+    }
     final components = ref.read(activeVoiceProvider).value;
     final release = components?.release;
     if (release == null) return;

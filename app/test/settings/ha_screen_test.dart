@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/home_assistant.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/settings/ha_screen.dart';
@@ -116,6 +117,35 @@ void main() {
     await settle(tester);
     expect(await env.secrets.listKeys(), isEmpty);
     expect(find.byKey(const ValueKey('haAddress')), findsOneWidget);
+  });
+
+  testWidgets('Freigabe ändern und Trennen: Hinweisbegriffe folgen', (
+    tester,
+  ) async {
+    final env = TestEnv(enabled: const {'ha'});
+    final c = await pumpIntegrations(tester, env);
+    await openHa(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('haAddress')),
+      '192.168.1.20:8123',
+    );
+    await tester.enterText(find.byKey(const ValueKey('haToken')), haToken);
+    await tester.tap(find.text('Verbinden'));
+    await settle(tester);
+    c.listen(hintTermsProvider, (_, _) {});
+    expect(await c.read(hintTermsProvider.future), isNot(contains('Küche')));
+
+    await tester.tap(find.byKey(const ValueKey('haEntity_light.kitchen')));
+    await settle(tester);
+    expect(await c.read(hintTermsProvider.future), contains('Küche'));
+
+    await tester.drag(find.byType(ListView), const Offset(0, 3000));
+    await settle(tester);
+    await tester.tap(find.text('Trennen'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Trennen'));
+    await settle(tester);
+    expect(await c.read(hintTermsProvider.future), isNot(contains('Küche')));
   });
 
   testWidgets('Suche im WLAN füllt die Adresse; ohne Treffer Hinweis', (

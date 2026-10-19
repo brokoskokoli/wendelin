@@ -132,6 +132,21 @@ const _voiceFr = SherpaVoice(
   files: PiperVoiceFiles(model: 'm', tokens: 't', dataDir: 'd'),
 );
 
+final _kokoroEn = SherpaVoice(
+  id: 'tts-kokoro',
+  language: 'en',
+  name: 'Kokoro',
+  files: const PiperVoiceFiles(model: 'm', tokens: 't', dataDir: 'd'),
+  speakers: SpeechModelCatalog.voiceKokoro.speakersFor('en'),
+);
+final _kokoroFr = SherpaVoice(
+  id: 'tts-kokoro',
+  language: 'fr',
+  name: 'Kokoro',
+  files: const PiperVoiceFiles(model: 'm', tokens: 't', dataDir: 'd'),
+  speakers: SpeechModelCatalog.voiceKokoro.speakersFor('fr'),
+);
+
 void main() {
   sherpaParameterTests();
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -271,6 +286,105 @@ void main() {
       expect(channel.methods, contains('stop'));
       expect(tts.state, TtsState.idle);
     });
+  });
+
+  group('SherpaTextToSpeech Kokoro', () {
+    test('Sprecher je Sprache: gewählter, sonst der erste', () async {
+      final synth = FakeSynthesizer();
+      final tts = SherpaTextToSpeech(
+        installed: () async => [_kokoroEn, _kokoroFr],
+        synthesizer: synth,
+        playback: FakePlayback(time: Duration.zero),
+        preferredSpeakers: () => {'en': 'bf_emma', 'fr': 'unbekannt'},
+      );
+      await tts.speak('a', voice: 'tts-kokoro', language: 'en');
+      await tts.speak('b', voice: 'tts-kokoro', language: 'fr');
+      await tts.speak('c', language: 'en');
+      expect(synth.calls.map((c) => c.$2), [
+        'tts-kokoro/bf_emma',
+        'tts-kokoro/ff_siwis',
+        'tts-kokoro/bf_emma',
+      ]);
+      final plain = FakeSynthesizer();
+      await SherpaTextToSpeech(
+        installed: () async => [_kokoroEn],
+        synthesizer: plain,
+        playback: FakePlayback(time: Duration.zero),
+      ).speak('d', language: 'en');
+      expect(plain.calls.single.$2, 'tts-kokoro/af_heart');
+    });
+
+    test(
+      'Piper-Stimme geht ohne Sprecher-Suffix, Zeiten werden gemeldet',
+      () async {
+        final timings = <(String, Duration)>[];
+        final tts = SherpaTextToSpeech(
+          installed: () async => const [_voice],
+          synthesizer: FakeSynthesizer(),
+          playback: FakePlayback(time: Duration.zero),
+          onTiming: (id, audio, compute) => timings.add((id, audio)),
+        );
+        await tts.speak('a');
+        expect(timings.single.$1, 'tts-de-thorsten');
+      },
+    );
+
+    test(
+      'Kokoro: Lexika lexicon-*-en.txt kommagetrennt, französisches nicht',
+      () {
+        final dir = Directory.systemTemp.createTempSync('kokoro');
+        addTearDown(() => dir.deleteSync(recursive: true));
+        Directory('${dir.path}/espeak-ng-data').createSync();
+        for (final n in [
+          'model.onnx',
+          'tokens.txt',
+          'lexicon-gb-en.txt',
+          'lexicon-us-en.txt',
+          'lexicon-zh.txt',
+        ]) {
+          File('${dir.path}/$n').writeAsStringSync('x');
+        }
+        expect(
+          PiperVoiceFiles.find(dir)!.lexicon,
+          '${dir.path}/lexicon-gb-en.txt,${dir.path}/lexicon-us-en.txt',
+        );
+      },
+    );
+
+    test(
+      'Kokoro-Konfiguration: Modell, Stimmen, Sprache; Lexikon nur englisch',
+      () {
+        final en = sherpaTtsConfig(
+          model: 'm',
+          tokens: 't',
+          dataDir: 'd',
+          voicesBin: 'v.bin',
+          lexicon: 'lex',
+          lang: 'en-us',
+        ).model;
+        expect(en.kokoro.voices, 'v.bin');
+        expect(en.kokoro.lexicon, 'lex');
+        expect(en.kokoro.lang, 'en-us');
+        expect(en.vits.model, isEmpty);
+        final fr = sherpaTtsConfig(
+          model: 'm',
+          tokens: 't',
+          dataDir: 'd',
+          voicesBin: 'v.bin',
+          lexicon: 'lex',
+          lang: 'fr',
+        ).model;
+        expect(fr.kokoro.lexicon, isEmpty);
+        expect(
+          sherpaTtsConfig(
+            model: 'm',
+            tokens: 't',
+            dataDir: 'd',
+          ).model.kokoro.model,
+          isEmpty,
+        );
+      },
+    );
   });
 
   group('SherpaTextToSpeech', () {
