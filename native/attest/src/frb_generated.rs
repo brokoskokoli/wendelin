@@ -26,6 +26,7 @@
 
 // Section: imports
 
+use crate::ehbp::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
@@ -38,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1185482357;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1037282534;
 
 // Section: executor
 
@@ -234,6 +235,217 @@ fn wire__crate__api__e2ee_generate_keypair_impl(
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
                 let output_ok = Result::<_, ()>::Ok(crate::api::e2ee_generate_keypair())?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__ehbp_begin_request_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "ehbp_begin_request",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_key_config = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_report_data = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_plaintext = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok =
+                    crate::api::ehbp_begin_request(api_key_config, api_report_data, api_plaintext)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__ehbp_bind_key_config_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "ehbp_bind_key_config",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_key_config = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_report_data = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::ehbp_bind_key_config(api_key_config, api_report_data)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__ehbp_decoder_finish_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "ehbp_decoder_finish",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_decoder = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let mut api_decoder_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_decoder,
+                            0,
+                            true,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_decoder_guard = Some(api_decoder.lockable_decode_sync_ref_mut()),
+                        _ => unreachable!(),
+                    }
+                }
+                let mut api_decoder_guard = api_decoder_guard.unwrap();
+                let output_ok = crate::api::ehbp_decoder_finish(&mut *api_decoder_guard)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__ehbp_decoder_push_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "ehbp_decoder_push",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_decoder = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>,
+            >>::sse_decode(&mut deserializer);
+            let api_data = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let mut api_decoder_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_decoder,
+                            0,
+                            true,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_decoder_guard = Some(api_decoder.lockable_decode_sync_ref_mut()),
+                        _ => unreachable!(),
+                    }
+                }
+                let mut api_decoder_guard = api_decoder_guard.unwrap();
+                let output_ok = crate::api::ehbp_decoder_push(&mut *api_decoder_guard, api_data)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__ehbp_response_decoder_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "ehbp_response_decoder",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_session = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_response_nonce = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let mut api_session_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_session,
+                            0,
+                            false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_session_guard = Some(api_session.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_session_guard = api_session_guard.unwrap();
+                let output_ok =
+                    crate::api::ehbp_response_decoder(&*api_session_guard, api_response_nonce)?;
                 Ok(output_ok)
             })())
         },
@@ -763,7 +975,56 @@ fn wire__crate__api__verify_tinfoil_release_impl(
     )
 }
 
+// Section: related_funcs
+
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>
+);
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpSession>
+);
+
 // Section: dart2rust
+
+impl SseDecode for EhbpResponseDecoder {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
+impl SseDecode for EhbpSession {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpSession>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
+impl SseDecode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
+    }
+}
+
+impl SseDecode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpSession>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
+    }
+}
 
 impl SseDecode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -824,6 +1085,28 @@ impl SseDecode for crate::e2ee::E2eeKeypair {
         return crate::e2ee::E2eeKeypair {
             secret: var_secret,
             public: var_public,
+        };
+    }
+}
+
+impl SseDecode for crate::ehbp::EhbpBinding {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_tlsSpkiSha256 = <Vec<u8>>::sse_decode(deserializer);
+        return crate::ehbp::EhbpBinding {
+            tls_spki_sha256: var_tlsSpkiSha256,
+        };
+    }
+}
+
+impl SseDecode for crate::ehbp::EhbpSealed {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_encapsulatedKey = <Vec<u8>>::sse_decode(deserializer);
+        let mut var_body = <Vec<u8>>::sse_decode(deserializer);
+        return crate::ehbp::EhbpSealed {
+            encapsulated_key: var_encapsulatedKey,
+            body: var_body,
         };
     }
 }
@@ -925,6 +1208,15 @@ impl SseDecode for crate::report::ReceiptVerdict {
             keyset_matches: var_keysetMatches,
             error: var_error,
         };
+    }
+}
+
+impl SseDecode for (crate::ehbp::EhbpSealed, EhbpSession) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_field0 = <crate::ehbp::EhbpSealed>::sse_decode(deserializer);
+        let mut var_field1 = <EhbpSession>::sse_decode(deserializer);
+        return (var_field0, var_field1);
     }
 }
 
@@ -1058,6 +1350,13 @@ impl SseDecode for () {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
 }
 
+impl SseDecode for usize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u64::<NativeEndian>().unwrap() as _
+    }
+}
+
 impl SseDecode for crate::report::Verdict {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1113,12 +1412,12 @@ fn pde_ffi_dispatcher_primary_impl(
         1 => wire__crate__api__build_collateral_impl(port, ptr, rust_vec_len, data_len),
         2 => wire__crate__api__collateral_next_update_impl(port, ptr, rust_vec_len, data_len),
         3 => wire__crate__api__collateral_request_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__root_crl_url_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__verify_aci_receipt_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__verify_aci_report_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__verify_quote_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__verify_snp_report_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__verify_tinfoil_release_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__root_crl_url_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__verify_aci_receipt_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__verify_aci_report_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__verify_quote_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__verify_snp_report_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__verify_tinfoil_release_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1134,20 +1433,58 @@ fn pde_ffi_dispatcher_sync_impl(
         4 => wire__crate__api__e2ee_decrypt_impl(ptr, rust_vec_len, data_len),
         5 => wire__crate__api__e2ee_encrypt_impl(ptr, rust_vec_len, data_len),
         6 => wire__crate__api__e2ee_generate_keypair_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__near_decrypt_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__near_encrypt_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__near_generate_identity_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__sha256_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__sha384_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__snp_report_info_impl(ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__spki_sha256_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__tls_spki_listed_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__verify_ed25519_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__ehbp_begin_request_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__ehbp_bind_key_config_impl(ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__ehbp_decoder_finish_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__ehbp_decoder_push_impl(ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__ehbp_response_decoder_impl(ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__near_decrypt_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__near_encrypt_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__near_generate_identity_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__sha256_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__sha384_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__snp_report_info_impl(ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__spki_sha256_impl(ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__tls_spki_listed_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__verify_ed25519_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
 
 // Section: rust2dart
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<EhbpResponseDecoder> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for FrbWrapper<EhbpResponseDecoder>
+{
+}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<EhbpResponseDecoder>> for EhbpResponseDecoder {
+    fn into_into_dart(self) -> FrbWrapper<EhbpResponseDecoder> {
+        self.into()
+    }
+}
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<EhbpSession> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<EhbpSession> {}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<EhbpSession>> for EhbpSession {
+    fn into_into_dart(self) -> FrbWrapper<EhbpSession> {
+        self.into()
+    }
+}
 
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::collateral::CollateralParts {
@@ -1210,6 +1547,34 @@ impl flutter_rust_bridge::IntoDart for crate::e2ee::E2eeKeypair {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::e2ee::E2eeKeypair {}
 impl flutter_rust_bridge::IntoIntoDart<crate::e2ee::E2eeKeypair> for crate::e2ee::E2eeKeypair {
     fn into_into_dart(self) -> crate::e2ee::E2eeKeypair {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::ehbp::EhbpBinding {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [self.tls_spki_sha256.into_into_dart().into_dart()].into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::ehbp::EhbpBinding {}
+impl flutter_rust_bridge::IntoIntoDart<crate::ehbp::EhbpBinding> for crate::ehbp::EhbpBinding {
+    fn into_into_dart(self) -> crate::ehbp::EhbpBinding {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::ehbp::EhbpSealed {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.encapsulated_key.into_into_dart().into_dart(),
+            self.body.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::ehbp::EhbpSealed {}
+impl flutter_rust_bridge::IntoIntoDart<crate::ehbp::EhbpSealed> for crate::ehbp::EhbpSealed {
+    fn into_into_dart(self) -> crate::ehbp::EhbpSealed {
         self
     }
 }
@@ -1410,6 +1775,42 @@ impl flutter_rust_bridge::IntoIntoDart<crate::report::Verdict> for crate::report
     }
 }
 
+impl SseEncode for EhbpResponseDecoder {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>>>::sse_encode(flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self), serializer);
+    }
+}
+
+impl SseEncode for EhbpSession {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpSession>>>::sse_encode(flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self), serializer);
+    }
+}
+
+impl SseEncode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
+    }
+}
+
+impl SseEncode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpSession>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
+    }
+}
+
 impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1451,6 +1852,21 @@ impl SseEncode for crate::e2ee::E2eeKeypair {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <Vec<u8>>::sse_encode(self.secret, serializer);
         <Vec<u8>>::sse_encode(self.public, serializer);
+    }
+}
+
+impl SseEncode for crate::ehbp::EhbpBinding {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<u8>>::sse_encode(self.tls_spki_sha256, serializer);
+    }
+}
+
+impl SseEncode for crate::ehbp::EhbpSealed {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<u8>>::sse_encode(self.encapsulated_key, serializer);
+        <Vec<u8>>::sse_encode(self.body, serializer);
     }
 }
 
@@ -1524,6 +1940,14 @@ impl SseEncode for crate::report::ReceiptVerdict {
         <bool>::sse_encode(self.signature_ok, serializer);
         <bool>::sse_encode(self.keyset_matches, serializer);
         <Option<String>>::sse_encode(self.error, serializer);
+    }
+}
+
+impl SseEncode for (crate::ehbp::EhbpSealed, EhbpSession) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::ehbp::EhbpSealed>::sse_encode(self.0, serializer);
+        <EhbpSession>::sse_encode(self.1, serializer);
     }
 }
 
@@ -1615,6 +2039,16 @@ impl SseEncode for () {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
 }
 
+impl SseEncode for usize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer
+            .cursor
+            .write_u64::<NativeEndian>(self as _)
+            .unwrap();
+    }
+}
+
 impl SseEncode for crate::report::Verdict {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1650,6 +2084,7 @@ mod io {
     // Section: imports
 
     use super::*;
+    use crate::ehbp::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1659,6 +2094,34 @@ mod io {
     // Section: boilerplate
 
     flutter_rust_bridge::frb_generated_boilerplate_io!();
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_wendelin_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_wendelin_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpResponseDecoder(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpResponseDecoder>>::decrement_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_wendelin_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpSession>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_wendelin_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerEhbpSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<EhbpSession>>::decrement_strong_count(ptr as _);
+    }
 }
 #[cfg(not(target_family = "wasm"))]
 pub use io::*;

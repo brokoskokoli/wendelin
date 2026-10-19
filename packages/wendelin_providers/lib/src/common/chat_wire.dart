@@ -46,6 +46,51 @@ abstract interface class ChatWire {
   SseEvent open(SseEvent event);
 }
 
+/// The request body as bytes (binary wire format, e.g. EHBP).
+final class SealedBytes {
+  /// Creates a sealed body.
+  const SealedBytes({required this.wire, required this.plain});
+
+  /// The HTTP request body as sent.
+  final Uint8List wire;
+
+  /// The plain request body (compact JSON), for the exchange tap.
+  final Uint8List plain;
+}
+
+/// A [ChatWire] whose body is binary and encrypted as a whole: the response
+/// bytes are opened **before** the SSE parser sees them (Tinfoil EHBP,
+/// WP76c). [seal] and [open] are not used; the adapter calls [sealBytes] and
+/// [openBody] instead.
+abstract interface class BytesChatWire implements ChatWire {
+  /// Turns the OpenAI request [body] into the binary wire body.
+  SealedBytes sealBytes(Map<String, Object?> body);
+
+  /// Opens the response byte stream. Must be called after [checkHead] of
+  /// the same attempt. The stream ends only if the body is complete and
+  /// authentic; any violation is a `ProviderException` error, plaintext
+  /// never falls through.
+  Stream<List<int>> openBody(Stream<List<int>> raw);
+
+  /// Opens the body of a non-2xx answer ([headers] are its headers). An
+  /// answer with the wire's response marker is encrypted and opened like
+  /// [openBody] (violation = `ProviderException` error). An answer without
+  /// it is unauthenticated: only a short diagnostic text that starts with
+  /// [unauthenticatedBodyPrefix] comes back, never trusted content.
+  Stream<List<int>> openErrorBody(
+    Map<String, String> headers,
+    Stream<List<int>> raw,
+  );
+
+  /// Releases key material of this attempt; idempotent. The adapter calls it
+  /// when the exchange ends, whatever way (abort, timeout, no body opened).
+  void dispose();
+}
+
+/// Marks an error body that could not be authenticated (diagnostics only).
+/// Such a body must not drive decisions such as a retry.
+const unauthenticatedBodyPrefix = '[unauthentisiert] ';
+
 /// A [StreamDecoder] that opens each event with [wire] before [inner] sees it.
 final class WireStreamDecoder implements StreamDecoder {
   /// Creates the decoder.

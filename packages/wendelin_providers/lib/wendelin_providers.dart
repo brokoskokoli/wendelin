@@ -14,7 +14,8 @@ export 'src/anthropic/anthropic_options.dart';
 export 'src/catalog/cost_calculator.dart';
 export 'src/catalog/model_catalog.dart';
 export 'src/catalog/provider_template.dart';
-export 'src/common/chat_wire.dart' show ChatWire, ChatWireCodec, SealedBody;
+export 'src/common/chat_wire.dart'
+    show BytesChatWire, ChatWire, ChatWireCodec, SealedBody, SealedBytes;
 export 'src/common/credentials.dart';
 export 'src/common/exchange_tap.dart' show ExchangeObserver, ExchangeRecord;
 export 'src/common/http_settings.dart' show HttpSettings, ProviderLog;
@@ -38,5 +39,7 @@ export 'src/tee/phala_verifier.dart' show PhalaVerifier;
 export 'src/tee/session_channel.dart' show ReceiptIdSource, SessionBoundChannel;
 export 'src/tee/sigstore_crypto.dart';
 export 'src/tee/snp_crypto.dart';
+export 'src/tee/tinfoil/ehbp_crypto.dart';
+export 'src/tee/tinfoil/tinfoil_ehbp.dart';
 export 'src/tee/tls_pin_gate.dart' show TlsPinGate;
 export 'src/tee/tls_pinned_client.dart' show PinnedHttpClient, TlsConnect;
