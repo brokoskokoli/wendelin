@@ -80,6 +80,37 @@ abstract interface class ConfirmationPreparer {
   );
 }
 
+/// Optional capability of a [Tool]: tells what the audit log may keep of a
+/// call. Tools whose arguments hold private text (message bodies) return a
+/// reduced JSON (e.g. only the recipient) instead of the raw arguments.
+/// Runtimes call it through [ToolAuditArguments.auditArguments].
+abstract interface class AuditArgumentsRedactor {
+  /// The JSON object stored in the audit log instead of the raw arguments.
+  /// Must not contain private texts.
+  Future<String> redactedArguments(Map<String, Object?> args, ToolContext ctx);
+}
+
+/// Audit text of any [Tool].
+extension ToolAuditArguments on Tool {
+  /// The arguments for the audit log: [raw] unless the tool implements
+  /// [AuditArgumentsRedactor]. If redacting fails, only `{}` is stored
+  /// (never the raw arguments of such a tool).
+  Future<String> auditArguments(
+    String raw,
+    Map<String, Object?>? args,
+    ToolContext ctx,
+  ) async {
+    final self = this;
+    if (self is! AuditArgumentsRedactor) return raw;
+    final redactor = self as AuditArgumentsRedactor;
+    try {
+      return await redactor.redactedArguments(args ?? const {}, ctx);
+    } on Object {
+      return '{}';
+    }
+  }
+}
+
 /// Confirmation text of any [Tool].
 extension ToolConfirmation on Tool {
   /// Longest time [confirmationText] waits for the preparer.

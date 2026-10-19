@@ -224,7 +224,12 @@ final class ConfirmationRequired extends AgentEvent {
     required this.description,
     required void Function(bool approved) respond,
     this.risk = RiskLevel.external,
+    this.privateDetails = false,
   }) : _answer = _Once(respond);
+
+  /// The lines after the first of [description] are private text (the tool
+  /// redacts its audit arguments); the audit log keeps only the first line.
+  final bool privateDetails;
 
   /// The call awaiting confirmation.
   final ToolCallBlock call;

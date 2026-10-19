@@ -6,6 +6,12 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../support/all_integrations.dart';
 
+/// Integrations whose tools carry further prefixes by design (WP85: the
+/// sending tools are `sms__` and `phone__`, matching the spoken verbs).
+const _extraPrefixes = <String, List<String>>{
+  'contacts': ['sms__', 'phone__'],
+};
+
 void main() {
   // All integrations of the real registry (built from fakes by TestEnv): a
   // new integration is covered without touching this test. The container is
@@ -29,7 +35,11 @@ void main() {
         final i = all()[spec.id]!;
         for (final t in i.tools) {
           expect(Tool.isValidToolName(t.name), isTrue, reason: t.name);
-          expect(t.name, startsWith('${i.id}__'));
+          expect(
+            ['${i.id}__', ...?_extraPrefixes[i.id]].any(t.name.startsWith),
+            isTrue,
+            reason: t.name,
+          );
           expect(t.spec.name, t.name);
         }
       });
