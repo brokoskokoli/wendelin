@@ -23,6 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wendelin/debug/device_test_overrides.dart';
 import 'package:wendelin/di/app_settings.dart';
+import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/main.dart' as app show assistantMain, openAppStorage;
 import 'package:wendelin/platform/saf_vault_port.dart';
@@ -66,6 +67,14 @@ void main() {
       // 1. Einstellungen für das Overlay in die App-Datenbank, ohne den
       //    gemeinsamen Isolate zu starten (eigene, kurze Verbindung).
       final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
+      // Vorbedingung unabhängig von vorigen Testdateien (WP104): kein Profil,
+      // keine Routing-Regeln, kein Hinweis „Neu: Regel Privat“ (er entsteht,
+      // sobald ein Standardprofil existiert, und verdrängt die Antwort).
+      for (final p in await setup.providerProfiles.list()) {
+        await setup.providerProfiles.delete(p.id);
+      }
+      await setup.settings.remove(RoutingSettings.rules);
+      await setup.settings.remove(RoutingSettings.privateRuleNotice);
       await setup.settings.set(AppSettings.onboardingDone, true);
       await setup.settings.set(
         AppSettings.integrationEnabled('obsidian'),

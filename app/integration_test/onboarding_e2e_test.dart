@@ -25,10 +25,9 @@ void main() {
       clock: FixedClock(e2eNow),
     );
     final c = await app.pump(tester);
-    await pumpUntil(tester, find.text('Willkommen'));
-    expect(find.byType(OnboardingScreen), findsOneWidget);
+    await pumpUntil(tester, find.byType(OnboardingScreen));
 
-    await tester.tap(find.text('Deutsch'));
+    await tester.tap(find.text('Deutsch').first);
     await pumpFor(tester);
     await tester.tap(find.text('Weiter'));
     await pumpUntil(tester, find.text('Sprachmodell'));

@@ -182,7 +182,7 @@ void main() {
     final (app, gateway, _) = await start(tester);
     await send(tester, 'Wie wird das Meer morgen?');
     await pumpUntil(tester, find.textContaining('Ruhig: 0,4 m Welle.'));
-    await pumpUntil(tester, find.text('geprüft'));
+    await pumpUntil(tester, find.textContaining(l10n(tester).attSummaryGreen));
     expect(gateway.chats, 1);
     expect(find.byType(StatusCard), findsNothing);
 
@@ -242,7 +242,7 @@ void main() {
       doc['text'] = parts.join(':');
     };
     await send(tester, 'Wie wird das Meer morgen?');
-    await pumpUntil(tester, find.text('Neu prüfen'));
+    await pumpUntil(tester, find.text(l10n(tester).attLogRecheck));
     expect(find.text('Prüfung fehlgeschlagen'), findsWidgets);
     expect(c.read(attestationHubProvider).isLocked('near'), isTrue);
 
