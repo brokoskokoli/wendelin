@@ -84,6 +84,7 @@ final class HttpTransport {
       Stream<List<int>> raw,
     )?
     openErrorBody,
+    void Function()? onEnd,
   }) {
     final token = cancel ?? CancelToken();
     final abort = Completer<void>();
@@ -98,29 +99,25 @@ final class HttpTransport {
     void finish(ChatEvent terminal, {bool abortHttp = false}) {
       if (finished) return;
       finished = true;
+      onEnd?.call();
       tap?.end(completed: terminal is Done);
+      var event = terminal;
       if (terminal is ErrorEvent) {
         final error = redactor.redact(terminal.error);
         log('$label: Fehler ${error.runtimeType}: ${error.message}');
-        out.add(ErrorEvent(error));
-      } else {
-        out.add(terminal);
+        event = ErrorEvent(error);
       }
+      out.add(event);
       unawaited(out.close());
-      final s = sub;
+      unawaited(sub?.cancel());
       sub = null;
-      if (s != null) unawaited(s.cancel());
       if (abortHttp) abortRequest();
     }
 
     void emitAll(List<ChatEvent> events) {
       for (final e in events) {
         if (finished) return;
-        if (e.isTerminal) {
-          finish(e);
-        } else {
-          out.add(e);
-        }
+        e.isTerminal ? finish(e) : out.add(e);
       }
     }
 
@@ -209,13 +206,13 @@ final class HttpTransport {
     out = StreamController<ChatEvent>(
       onListen: () => unawaited(run()),
       onCancel: () {
-        // Consumer stopped listening: stop everything without emitting.
+        // Consumer stopped: stop everything, emit nothing.
         finished = true;
+        onEnd?.call();
+        abortRequest();
         final s = sub;
         sub = null;
-        abortRequest();
-        if (s != null) return s.cancel();
-        return null;
+        return s?.cancel();
       },
     );
     return out.stream;

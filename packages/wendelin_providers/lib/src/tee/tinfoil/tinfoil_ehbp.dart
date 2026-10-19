@@ -137,30 +137,44 @@ final class TinfoilEhbpWire implements BytesChatWire {
   EhbpDecoder _derive(String? value) {
     final sealed = _sealed;
     if (sealed == null) throw StateError('Antwort vor sealBytes');
-    Uint8List? nonce;
-    if (value != null && value.length == 2 * EhbpProtocol.responseNonceLength) {
-      try {
-        nonce = AttestCodec.unhex(value);
-      } on FormatException {
-        nonce = null;
-      }
-    }
-    if (nonce == null) {
-      throw _fail(
-        'e2ee.response',
-        'Antwort ist nicht verschlüsselt (Ehbp-Response-Nonce fehlt oder '
-            'ist ungültig), verworfen',
-      );
-    }
     try {
-      return sealed.session.responseDecoder(nonce);
-    } on E2eeCryptoException {
-      throw _fail('e2ee.response', 'Antwortschlüssel nicht ableitbar');
+      Uint8List? nonce;
+      if (value != null &&
+          value.length == 2 * EhbpProtocol.responseNonceLength) {
+        try {
+          nonce = AttestCodec.unhex(value);
+        } on FormatException {
+          nonce = null;
+        }
+      }
+      if (nonce == null) {
+        throw _fail(
+          'e2ee.response',
+          'Antwort ist nicht verschlüsselt (Ehbp-Response-Nonce fehlt oder '
+              'ist ungültig), verworfen',
+        );
+      }
+      try {
+        return sealed.session.responseDecoder(nonce);
+      } on E2eeCryptoException {
+        throw _fail('e2ee.response', 'Antwortschlüssel nicht ableitbar');
+      }
     } finally {
       // The request secret is only needed to derive the answer keys.
-      sealed.session.dispose();
+      dispose();
     }
   }
+
+  /// Releases the request secret; idempotent. Also called by the adapter
+  /// when the exchange ends (abort, timeout, body never opened).
+  @override
+  void dispose() {
+    if (_sessionDisposed) return;
+    _sessionDisposed = true;
+    _sealed?.session.dispose();
+  }
+
+  bool _sessionDisposed = false;
 
   /// A successful answer must carry `Ehbp-Response-Nonce` (exactly 32 bytes
   /// of hex); without it the body is not encrypted and is refused.
@@ -193,7 +207,7 @@ final class TinfoilEhbpWire implements BytesChatWire {
       yield* _decrypt(_derive(value), raw);
       return;
     }
-    _sealed?.session.dispose();
+    dispose();
     final bytes = <int>[];
     await for (final chunk in raw) {
       bytes.addAll(chunk);

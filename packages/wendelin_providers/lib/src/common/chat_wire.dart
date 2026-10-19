@@ -81,6 +81,10 @@ abstract interface class BytesChatWire implements ChatWire {
     Map<String, String> headers,
     Stream<List<int>> raw,
   );
+
+  /// Releases key material of this attempt; idempotent. The adapter calls it
+  /// when the exchange ends, whatever way (abort, timeout, no body opened).
+  void dispose();
 }
 
 /// Marks an error body that could not be authenticated (diagnostics only).

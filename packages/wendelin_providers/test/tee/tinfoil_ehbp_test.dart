@@ -217,6 +217,68 @@ void main() {
       expect(error.toString().length, lessThan(500));
     });
 
+    test('unauthenticated diagnostic is cut at exactly 200 chars', () async {
+      for (final (n, cut) in [(200, false), (201, true)]) {
+        router.status = (_) => 400;
+        router.answer = (ex) => (
+          headers: <String, String>{},
+          chunks: [Uint8List.fromList(utf8.encode('a' * n))],
+        );
+        final text = (await run())
+            .whereType<ErrorEvent>()
+            .single
+            .error
+            .toString();
+        expect(text, contains('a' * 200), reason: '$n');
+        expect(text, isNot(contains('a' * 201)), reason: '$n');
+        expect(text.contains('a' * 200 + '…'), cut, reason: '$n');
+      }
+    });
+
+    test('session is disposed on every error path', () async {
+      router.status = (_) => 400;
+      router.answer = (ex) => (
+        headers: <String, String>{},
+        chunks: [Uint8List.fromList(utf8.encode(rejection))],
+      );
+      await run();
+      expect(spy.sessionDisposed, 1, reason: 'error without nonce');
+      router.answer = (ex) => (
+        headers: {'Ehbp-Response-Nonce': 'zz' * 32},
+        chunks: [Uint8List.fromList(utf8.encode(rejection))],
+      );
+      await run();
+      expect(spy.sessionDisposed, 2, reason: 'error with broken nonce');
+    });
+
+    test('2xx without nonce disposes the session', () async {
+      router.answer = (ex) => (
+        headers: <String, String>{},
+        chunks: [Uint8List.fromList(utf8.encode(_sse('text.sse')))],
+      );
+      await run();
+      expect(spy.sessionDisposed, 1);
+    });
+
+    test('failure before any answer disposes the session', () async {
+      final failing = OpenAiChatAdapter(
+        baseUrl: Uri.parse('https://inference.test/v1'),
+        credentials: Credentials.apiKey('test', style: ApiKeyStyle.bearer),
+        defaultModel: 'gpt-oss-120b',
+        client: MockClient.streaming(
+          (request, bodyStream) async => throw const SocketException('down'),
+        ),
+        wireCodec: TinfoilEhbpCodec(
+          crypto: spy,
+          target: () => target,
+          tlsPin: gate,
+        ),
+      );
+      final events = await failing.chat(_request()).toList();
+      expect(events.whereType<ErrorEvent>(), isNotEmpty);
+      expect(spy.sessionDisposed, 1);
+    });
+
     test('400 with a broken ciphertext fails closed', () async {
       router.status = (_) => 400;
       router.answer = (ex) {
@@ -350,6 +412,40 @@ void main() {
       expect(utf8.decode(out), 'data: x\n\n');
     },
   );
+
+  test('reference session: dispose wipes the secret, later use throws', () {
+    final sealed = EhbpReferenceCrypto().beginRequest(
+      target!.keyConfig,
+      target!.reportData,
+      Uint8List.fromList(utf8.encode('x')),
+    );
+    final nonce = Uint8List(32);
+    sealed.session.responseDecoder(nonce).dispose();
+    expect((sealed.session as dynamic).secretWiped, isFalse);
+    sealed.session.dispose();
+    expect((sealed.session as dynamic).secretWiped, isTrue);
+    expect(() => sealed.session.responseDecoder(nonce), throwsStateError);
+  });
+
+  test('wire disposes the session on a bad nonce, itself', () {
+    for (final bad in [null, 'zz' * 32, '00' * 31]) {
+      final before = spy.sessionDisposed;
+      final wire = TinfoilEhbpWire(crypto: spy, target: target!);
+      wire.sealBytes({'model': 'm'});
+      expect(
+        () => wire.checkHead({'Ehbp-Response-Nonce': ?bad}),
+        throwsA(isA<AttestationFailedException>()),
+      );
+      expect(spy.sessionDisposed, before + 1, reason: '$bad');
+      wire.dispose();
+      expect(spy.sessionDisposed, before + 1, reason: 'idempotent');
+    }
+    final wire = TinfoilEhbpWire(crypto: spy, target: target!);
+    final before = spy.sessionDisposed;
+    wire.sealBytes({'model': 'm'});
+    wire.dispose();
+    expect(spy.sessionDisposed, before + 1, reason: 'abort without answer');
+  });
 
   test('replayed frame fails', () async {
     router.answer = (ex) {

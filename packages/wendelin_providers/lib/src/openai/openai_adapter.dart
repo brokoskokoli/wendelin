@@ -134,6 +134,10 @@ final class OpenAiChatAdapter implements LlmProvider {
     final tap = observer == null ? null : ExchangeTap(observer);
     ChatWire? wire;
     return _transport.stream(
+      onEnd: () {
+        final w = wire;
+        if (w is BytesChatWire) w.dispose();
+      },
       cancel: cancel,
       tap: tap,
       checkHead: (headers) => wire?.checkHead(headers),

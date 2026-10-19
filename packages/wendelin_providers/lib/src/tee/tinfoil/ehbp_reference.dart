@@ -226,14 +226,22 @@ final class _Session implements EhbpSession {
   final Uint8List _secret;
 
   @override
-  EhbpDecoder responseDecoder(Uint8List responseNonce) =>
-      EhbpReferenceCrypto.decoder(_secret, _enc, responseNonce);
+  EhbpDecoder responseDecoder(Uint8List responseNonce) {
+    if (disposed) throw StateError('Sitzung nach dispose benutzt');
+    return EhbpReferenceCrypto.decoder(_secret, _enc, responseNonce);
+  }
 
   /// Whether [dispose] ran (tests).
   bool disposed = false;
 
+  /// Whether the secret is zeroed (tests).
+  bool get secretWiped => _secret.every((b) => b == 0);
+
   @override
-  void dispose() => disposed = true;
+  void dispose() {
+    disposed = true;
+    _secret.fillRange(0, _secret.length, 0);
+  }
 }
 
 /// An HPKE context with the operations EHBP needs.
