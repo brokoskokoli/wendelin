@@ -122,6 +122,11 @@ void main() {
       // Different country code, same trailing digits: not the same line.
       expect(samePhone('+44 701234567', '0170 1234567'), isFalse);
       expect(samePhone('+44 170 1234567', '+49 170 1234567'), isFalse);
+      // Edge cases: a stray prefix or short number is never the same line.
+      expect(samePhone('+1701234567', '01701234567'), isFalse);
+      expect(samePhone('+99991701234567', '01701234567'), isFalse);
+      expect(samePhone('+4911', '011'), isFalse);
+      expect(samePhone('0123456', '90123456'), isFalse);
       expect(cleanPhoneNumber('+49 (170) 123-4567'), '+491701234567');
       expect(cleanPhoneNumber('Anna'), isNull);
       expect(cleanPhoneNumber('12'), isNull);
@@ -205,6 +210,14 @@ void main() {
 
     test('geänderter Text über dem Limit: Fehler, nichts gesendet', () async {
       edits.set('+491701234567', 'Hi', 'x' * (maxSmsChars + 1));
+      final o = await tool('sms__compose')
+          .execute({'to': '+49 170 1234567', 'text': 'Hi'}, ctx());
+      expect(o.isError, isTrue);
+      expect(phone.sent, isEmpty);
+    });
+
+    test('leerer geänderter Text: Fehler, nichts gesendet', () async {
+      edits.set('+491701234567', 'Hi', '');
       final o = await tool('sms__compose')
           .execute({'to': '+49 170 1234567', 'text': 'Hi'}, ctx());
       expect(o.isError, isTrue);
