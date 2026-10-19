@@ -24,6 +24,7 @@ import 'tee/phala_verifier.dart';
 import 'tee/sigstore_crypto.dart';
 import 'tee/snp_crypto.dart';
 import 'tee/tinfoil/ehbp_crypto.dart';
+import 'tee/tinfoil/kds_cache.dart';
 import 'tee/tinfoil/release_floor.dart';
 import 'tee/tinfoil/tinfoil_ehbp.dart';
 import 'tee/tinfoil/tinfoil_verifier.dart';
@@ -49,6 +50,7 @@ final class AttestationWiring {
     this.sigstoreCrypto,
     this.ehbpCrypto,
     this.releaseFloors,
+    this.kdsCache,
   });
 
   /// SEV-SNP verification of Tinfoil profiles (Rust in the app). Together
@@ -64,6 +66,9 @@ final class AttestationWiring {
 
   /// Highest verified Tinfoil release per profile (downgrade protection).
   final ReleaseFloorStore? releaseFloors;
+
+  /// Persistent cache of the AMD certificates (`null` = in memory only).
+  final KdsCache? kdsCache;
 
   /// Field encryption of NEAR AI profiles (Rust in the app). Without it a
   /// NEAR profile is not built (fail-closed).
@@ -461,6 +466,7 @@ abstract final class ProviderFactory {
         sigstore: sigstore,
         ehbp: ehbp,
         floors: floors,
+        kdsCache: attestation.kdsCache,
         baseUrl: root,
         profileId: profile.id,
         // The documents of the router come over a connection that is not

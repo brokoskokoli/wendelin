@@ -36,8 +36,9 @@ final class SettingsAttestationPinStore implements AttestationPinStore {
       _settings.set(AppSettings.attestationPin(profileId), pin.toJson());
 }
 
-/// Persists the highest verified Tinfoil release per profile (K59). A
-/// damaged entry counts as none (the next check sets it), like the pin.
+/// Persists the highest verified Tinfoil release per provider host and
+/// router repo (K59). A damaged entry throws [FormatException]: the verifier
+/// then refuses (fail-closed), it never counts as no floor.
 final class SettingsReleaseFloorStore implements ReleaseFloorStore {
   /// Creates the store.
   const SettingsReleaseFloorStore(this._settings);
@@ -46,12 +47,8 @@ final class SettingsReleaseFloorStore implements ReleaseFloorStore {
 
   @override
   Future<ReleaseFloor?> load(String profileId) async {
-    try {
-      final json = await _settings.get(AppSettings.releaseFloor(profileId));
-      return json == null ? null : ReleaseFloor.fromJson(json);
-    } on FormatException {
-      return null;
-    }
+    final json = await _settings.get(AppSettings.releaseFloor(profileId));
+    return json == null ? null : ReleaseFloor.fromJson(json);
   }
 
   @override

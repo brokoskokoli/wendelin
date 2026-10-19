@@ -41,6 +41,7 @@ export 'src/tee/session_channel.dart'
 export 'src/tee/sigstore_crypto.dart';
 export 'src/tee/snp_crypto.dart';
 export 'src/tee/tinfoil/ehbp_crypto.dart';
+export 'src/tee/tinfoil/kds_cache.dart';
 export 'src/tee/tinfoil/release_floor.dart';
 export 'src/tee/tinfoil/tinfoil_ehbp.dart';
 export 'src/tee/tinfoil/tinfoil_policy.dart';

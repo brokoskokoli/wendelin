@@ -1,5 +1,7 @@
 import 'package:meta/meta.dart';
 
+import '../attestation_types.dart';
+
 /// Version of a Tinfoil release tag (`v0.0.158`), comparable.
 @immutable
 final class ReleaseVersion implements Comparable<ReleaseVersion> {
@@ -115,4 +117,63 @@ final class InMemoryReleaseFloorStore implements ReleaseFloorStore {
   @override
   Future<void> save(String profileId, ReleaseFloor floor) async =>
       _floors[profileId] = floor;
+}
+
+/// Downgrade protection (K59): a release older than the highest one ever
+/// verified is refused, replayed old data included. The floor is kept under
+/// [key] (provider host and router repo); one under [legacyKey] (the old
+/// per-profile key) still counts, the higher wins. A damaged entry is
+/// fail-closed: red, never "no floor". Returns the stage and the floor to
+/// store after an otherwise green check (`null` on red).
+Future<(StageResult, ReleaseFloor?)> checkReleaseFloor(
+  ReleaseFloorStore floors, {
+  required String key,
+  required String legacyKey,
+  required String tag,
+  required int time,
+}) async {
+  const s = AttestationStage.releaseFloor;
+  final version = ReleaseVersion.tryParse(tag);
+  if (version == null) {
+    return (const StageResult.fail(s, 'Release-Version nicht lesbar'), null);
+  }
+  ReleaseFloor? floor;
+  try {
+    final a = await floors.load(key);
+    final b = await floors.load(legacyKey);
+    final newerLegacy =
+        a != null &&
+        b != null &&
+        (b.version.compareTo(a.version) > 0 ||
+            (b.version == a.version && b.integratedTime > a.integratedTime));
+    floor = newerLegacy ? b : (a ?? b);
+  } on FormatException {
+    return (
+      const StageResult.fail(
+        s,
+        'Gespeicherte Untergrenze des Releases beschädigt '
+        '(Rückschrittschutz nicht prüfbar)',
+      ),
+      null,
+    );
+  }
+  if (floor != null && floor.rejects(version, time)) {
+    return (
+      StageResult.fail(
+        s,
+        'Release $version ist älter als das bereits gesehene '
+        '${floor.version} (Rückschritt abgelehnt)',
+      ),
+      null,
+    );
+  }
+  // Only ever raised: the same release keeps its first signing time.
+  final higher =
+      floor == null ||
+      version.compareTo(floor.version) > 0 ||
+      (version == floor.version && time > floor.integratedTime);
+  final next = higher
+      ? ReleaseFloor(version: version, integratedTime: time)
+      : floor;
+  return (StageResult.pass(s, 'Release $version'), next);
 }

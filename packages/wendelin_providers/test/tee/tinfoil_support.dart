@@ -63,6 +63,9 @@ final class TinfoilFixture {
   /// Digest of `tinfoil.hash`.
   String digest = 'ab' * 32;
 
+  /// Number of Sigstore bundles GitHub lists for the release.
+  int bundles = 1;
+
   /// Products the KDS knows (others answer 404).
   Set<String> kdsProducts = {'Genoa'};
 
@@ -140,9 +143,10 @@ final class TinfoilFixture {
       return http.Response(
         jsonEncode({
           'attestations': [
-            {
-              'bundle': {'mediaType': 'bundle'},
-            },
+            for (var i = 0; i < bundles; i++)
+              {
+                'bundle': {'mediaType': 'bundle', 'n': i},
+              },
           ],
         }),
         200,
@@ -151,26 +155,65 @@ final class TinfoilFixture {
     return http.Response('nicht gefunden', 404);
   });
 
-  /// A verifier against this fixture; [gate] enables the TLS measurement.
+  /// A verifier against this fixture. Without [gate] a gate is used that
+  /// measures the certificate the router's report binds (the connection
+  /// is green); with one, [router] must measure by itself.
   TinfoilVerifier verifier({
     TlsPinGate? gate,
     AttestationPinStore? pins,
     String profileId = 'tinfoil',
     http.Client? router,
-  }) => TinfoilVerifier(
-    crypto: FakeAttestationCrypto(),
-    snp: snp,
-    sigstore: sigstore,
-    ehbp: ehbp,
-    floors: floors,
-    baseUrl: Uri.parse('https://inference.test/v1'),
-    profileId: profileId,
-    client: router ?? client,
-    externalClient: client,
-    settings: HttpSettings(clock: FixedClock(tinfoilNow)),
-    tlsPin: gate,
-    pins: pins,
-  );
+    ReleaseFloorStore? floorStore,
+    KdsCache? kdsCache,
+    String host = 'inference.test',
+  }) {
+    final pin = service.tlsSpkiSha256;
+    final TlsPinGate g;
+    final http.Client r;
+    if (gate == null) {
+      g = TlsPinGate(spkiSha256: (_) => pin);
+      r = observingClient(router ?? client, g, Uint8List(1));
+    } else {
+      g = gate;
+      r = router ?? client;
+    }
+    return TinfoilVerifier(
+      crypto: FakeAttestationCrypto(),
+      snp: snp,
+      sigstore: sigstore,
+      ehbp: ehbp,
+      floors: floorStore ?? floors,
+      baseUrl: Uri.parse('https://$host/v1'),
+      profileId: profileId,
+      client: r,
+      externalClient: client,
+      settings: HttpSettings(clock: FixedClock(tinfoilNow)),
+      tlsPin: g,
+      pins: pins,
+      kdsCache: kdsCache,
+    );
+  }
+}
+
+/// A client that measures a connection (certificate [der]) like the pinned
+/// client does for every request to the router.
+http.Client observingClient(
+  http.Client base,
+  TlsPinGate gate,
+  Uint8List? der,
+) => MockClient((request) async {
+  gate.observe(der);
+  return base.get(request.url, headers: request.headers);
+});
+
+/// A floor store whose entries cannot be read (damaged storage).
+final class DamagedFloorStore implements ReleaseFloorStore {
+  @override
+  Future<ReleaseFloor?> load(String profileId) =>
+      throw const FormatException('beschädigt');
+
+  @override
+  Future<void> save(String profileId, ReleaseFloor floor) async {}
 }
 
 /// The stage [s] of [r].

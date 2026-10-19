@@ -9,7 +9,7 @@ import 'package:wendelin_storage/fakes.dart';
 
 void main() {
   group('Rückschrittschutz im Speicher (K59)', () {
-    test('Untergrenze bleibt je Profil erhalten', () async {
+    test('Untergrenze bleibt je Schlüssel erhalten', () async {
       final storage = openInMemoryStorage();
       addTearDown(storage.close);
       final store = SettingsReleaseFloorStore(storage.settings);
@@ -23,17 +23,20 @@ void main() {
       expect(await store.load('b'), isNull);
     });
 
-    test('ein beschädigter Eintrag zählt als keine Untergrenze', () async {
-      final storage = openInMemoryStorage();
-      addTearDown(storage.close);
-      await storage.settings.set(AppSettings.releaseFloor('a'), {
-        'version': 'x',
-      });
-      expect(
-        await SettingsReleaseFloorStore(storage.settings).load('a'),
-        isNull,
-      );
-    });
+    test(
+      'ein beschädigter Eintrag wirft (fail-closed, nicht „keine“)',
+      () async {
+        final storage = openInMemoryStorage();
+        addTearDown(storage.close);
+        await storage.settings.set(AppSettings.releaseFloor('a'), {
+          'version': 'x',
+        });
+        await expectLater(
+          SettingsReleaseFloorStore(storage.settings).load('a'),
+          throwsFormatException,
+        );
+      },
+    );
   });
 
   test('jede Prüfstufe hat Namen und Erklärung in der App', () {

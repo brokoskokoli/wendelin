@@ -18,6 +18,7 @@ import '../sigstore_crypto.dart';
 import '../snp_crypto.dart';
 import '../tls_pin_gate.dart';
 import 'ehbp_crypto.dart';
+import 'kds_cache.dart';
 import 'release_floor.dart';
 import 'tinfoil_policy.dart';
 
@@ -56,13 +57,15 @@ final class TinfoilVerifier
     this.settings = const HttpSettings(),
     this.policy = const AttestationPolicy(),
     this.pins,
-    this.tlsPin,
+    required this.tlsPin,
     this.sessionTtl = const Duration(minutes: 30),
+    KdsCache? kdsCache,
     this.repo = TinfoilPolicy.repo,
     this.kdsBase = 'https://kdsintf.amd.com',
     this.githubApi = 'https://api.github.com',
     this.githubWeb = 'https://github.com',
-  }) : _router = HttpTransport(
+  }) : kdsCache = kdsCache ?? InMemoryKdsCache(),
+       _router = HttpTransport(
          client: client,
          settings: settings,
          label: 'Attestierung',
@@ -105,8 +108,12 @@ final class TinfoilVerifier
   /// Pin store; `null` = no pinning.
   final AttestationPinStore? pins;
 
-  /// Pin state shared with the enforcing client (WP61).
-  final TlsPinGate? tlsPin;
+  /// Pin state shared with the enforcing client (WP61). Required: without
+  /// the measurement of the connection `tls.spki` could not be checked.
+  final TlsPinGate tlsPin;
+
+  /// Keeps VCEK and chain across restarts (the AMD KDS rate-limits).
+  final KdsCache kdsCache;
 
   /// How long an attested session is used.
   final Duration sessionTtl;
@@ -130,7 +137,6 @@ final class TinfoilVerifier
   final HttpTransport _external;
 
   String? _product;
-  final Map<String, ({Uint8List vcek, String chain, String product})> _kds = {};
   final Map<String, ({String digest, List<String> bundles})> _releases = {};
 
   @override
@@ -147,7 +153,7 @@ final class TinfoilVerifier
   @override
   Future<AttestationResult> attest() async {
     final gate = tlsPin
-      ?..expect(null)
+      ..expect(null)
       ..resetObserved();
     final now = settings.clock.now();
 
@@ -157,7 +163,7 @@ final class TinfoilVerifier
     final report = docs.report!;
     final keyConfig = docs.keyConfig!;
     // Measured on the connection that delivered the documents.
-    final observed = gate?.observed;
+    final observed = gate.observed;
 
     final SnpReportInfo info;
     final Uint8List reportData;
@@ -194,9 +200,9 @@ final class TinfoilVerifier
     if (kdsProblem != null) {
       stages.add(kdsProblem);
     } else {
-      final expectedTls = gate == null
-          ? Uint8List.fromList(reportData.sublist(0, 32))
-          : (observed == null ? Uint8List(32) : AttestCodec.unhex(observed));
+      final expectedTls = observed == null
+          ? Uint8List(32)
+          : AttestCodec.unhex(observed);
       final SnpVerdict verdict;
       try {
         verdict = await snp.verify(
@@ -217,7 +223,7 @@ final class TinfoilVerifier
         ]);
       }
       snpOk = verdict.allOk;
-      stages.addAll(_snpStages(verdict, info, gate != null, observed));
+      stages.addAll(_snpStages(verdict, info, observed));
     }
     stages.add(
       binding != null
@@ -266,7 +272,7 @@ final class TinfoilVerifier
     }
     if (status != AttestationStatus.green) return _failed(stages);
 
-    gate?.expect(AttestCodec.hex(binding!.tlsSpkiSha256));
+    gate.expect(AttestCodec.hex(binding!.tlsSpkiSha256));
     final session = _sessionOf(
       reportData: reportData,
       keyConfig: keyConfig,
@@ -275,7 +281,7 @@ final class TinfoilVerifier
       tag: release.tag,
       now: now,
     );
-    await floors.save(profileId, newFloor!);
+    await floors.save(floorKey, newFloor!);
     return AttestationResult(
       status: status,
       stages: stages,
@@ -299,9 +305,12 @@ final class TinfoilVerifier
     final verdict = release.verdict!;
     stages.addAll(_releaseStages(verdict, release.tag!));
     if (!verdict.allOk) return (false, null);
-    final (floorStage, floor) = await _floorStage(
-      release.tag!,
-      verdict.integratedTime,
+    final (floorStage, floor) = await checkReleaseFloor(
+      floors,
+      key: floorKey,
+      legacyKey: profileId,
+      tag: release.tag!,
+      time: verdict.integratedTime,
     );
     stages.add(floorStage);
     return (true, floor);
@@ -421,8 +430,16 @@ final class TinfoilVerifier
         'blSPL=${t.bootloader}&teeSPL=${t.tee}&snpSPL=${t.snp}'
         '&ucodeSPL=${t.microcode}';
     final key = '$chip?$query';
-    final cached = _kds[key];
-    if (cached != null) return _Kds(cached.vcek, cached.chain);
+    KdsEntry? cached;
+    try {
+      cached = await kdsCache.load(key);
+    } on Object {
+      cached = null; // An unreadable cache is a miss.
+    }
+    if (cached != null) {
+      _product = cached.product;
+      return _Kds(cached.vcek, cached.chain);
+    }
     final products = [
       ?_product,
       for (final p in TinfoilPolicy.products)
@@ -446,7 +463,14 @@ final class TinfoilVerifier
           allowMalformed: true,
         );
         _product = product;
-        _kds[key] = (vcek: vcek, chain: chain, product: product);
+        try {
+          await kdsCache.save(
+            key,
+            KdsEntry(vcek: vcek, chain: chain, product: product),
+          );
+        } on Object {
+          // Only a cache: the next start asks AMD again.
+        }
         return _Kds(vcek, chain);
       } on ServerException catch (e) {
         // „Not found“ for this product: the chip belongs to another one.
@@ -480,7 +504,6 @@ final class TinfoilVerifier
   List<StageResult> _snpStages(
     SnpVerdict v,
     SnpReportInfo info,
-    bool gated,
     String? observed,
   ) {
     final err = v.errors.isEmpty ? null : v.errors.join('; ');
@@ -488,7 +511,7 @@ final class TinfoilVerifier
         ok && err == null
         ? StageResult.pass(s, pass)
         : StageResult.fail(s, err ?? fail);
-    final tlsOk = v.tlsBound && gated && observed != null;
+    final tlsOk = v.tlsBound && observed != null;
     return [
       stage(
         AttestationStage.snpReport,
@@ -508,13 +531,7 @@ final class TinfoilVerifier
         'TCB ${info.reportedTcb}, Mindestens ${TinfoilPolicy.minTcb}',
         'Richtlinie nicht erfüllt',
       ),
-      if (!gated)
-        const StageResult(
-          AttestationStage.tlsSpki,
-          StageOutcome.info,
-          'Zertifikat der Verbindung nicht geprüft',
-        )
-      else if (observed == null)
+      if (observed == null)
         const StageResult.fail(
           AttestationStage.tlsSpki,
           'Zertifikat der Verbindung nicht messbar',
@@ -623,9 +640,11 @@ final class TinfoilVerifier
         return _Release.problem(_unavailable(AttestationStage.sigstoreRelease));
       }
     }
-    // The signatures hold offline; the first bundle that verifies wins, else
-    // the verdict of the first one explains the failure.
+    // The signatures hold offline. Of the valid bundles the one with the
+    // latest signing time counts (the floor must not depend on bundle order);
+    // without a valid one the verdict of the first explains the failure.
     SigstoreVerdict? first;
+    SigstoreVerdict? best;
     for (final bundle in cached.bundles) {
       final SigstoreVerdict v;
       try {
@@ -645,9 +664,11 @@ final class TinfoilVerifier
         );
       }
       first ??= v;
-      if (v.allOk) return _Release(tag: tag, verdict: v);
+      if (v.allOk && (best == null || v.integratedTime > best.integratedTime)) {
+        best = v;
+      }
     }
-    return _Release(tag: tag, verdict: first!);
+    return _Release(tag: tag, verdict: best ?? first!);
   }
 
   Map<String, String> get _githubHeaders => const {
@@ -675,43 +696,9 @@ final class TinfoilVerifier
     ];
   }
 
-  /// Downgrade protection (K59): a release older than the highest one ever
-  /// verified for this profile is refused, replayed old data included.
-  Future<(StageResult, ReleaseFloor?)> _floorStage(String tag, int time) async {
-    const s = AttestationStage.releaseFloor;
-    final version = ReleaseVersion.tryParse(tag);
-    if (version == null) {
-      return (const StageResult.fail(s, 'Release-Version nicht lesbar'), null);
-    }
-    final floor = await _loadFloor();
-    if (floor != null && floor.rejects(version, time)) {
-      return (
-        StageResult.fail(
-          s,
-          'Release $version ist älter als das bereits gesehene '
-          '${floor.version} (Rückschritt abgelehnt)',
-        ),
-        null,
-      );
-    }
-    // Only ever raised: the same release keeps its first signing time.
-    final higher =
-        floor == null ||
-        version.compareTo(floor.version) > 0 ||
-        (version == floor.version && time > floor.integratedTime);
-    final next = higher
-        ? ReleaseFloor(version: version, integratedTime: time)
-        : floor;
-    return (StageResult.pass(s, 'Release $version'), next);
-  }
-
-  Future<ReleaseFloor?> _loadFloor() async {
-    try {
-      return await floors.load(profileId);
-    } on FormatException {
-      return null; // A damaged floor counts as none: the next check sets it.
-    }
-  }
+  /// Floor key: provider host and router repo, not the profile (a new or
+  /// reset profile inherits it, deleting a profile keeps it).
+  String get floorKey => '${baseUrl.host}/$repo';
 
   Future<PinChange> _pin(AttestedSession s) async {
     final store = pins;

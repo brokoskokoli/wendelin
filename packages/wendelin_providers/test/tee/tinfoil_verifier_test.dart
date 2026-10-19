@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/fakes.dart';
@@ -10,14 +9,6 @@ import 'package:wendelin_providers/src/tee/codec.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
 import 'tinfoil_support.dart';
-
-/// A client that measures a connection (certificate [der]) like the pinned
-/// client does for every request to the router.
-http.Client _observing(http.Client base, TlsPinGate gate, Uint8List? der) =>
-    MockClient((request) async {
-      gate.observe(der);
-      return base.get(request.url, headers: request.headers);
-    });
 
 SnpVerdict _verdict({
   bool reportOk = true,
@@ -39,6 +30,9 @@ SnpVerdict _verdict({
   product: 'Genoa',
   errors: errors,
 );
+
+/// Key of the release floor: provider host and router repo.
+const floorKey = 'inference.test/${TinfoilPolicy.repo}';
 
 void main() {
   group('Richtlinie', () {
@@ -122,7 +116,7 @@ void main() {
         final result = await f
             .verifier(
               gate: gate,
-              router: _observing(f.client, gate, Uint8List(1)),
+              router: observingClient(f.client, gate, Uint8List(1)),
             )
             .attest();
         expect(
@@ -190,7 +184,7 @@ void main() {
           expect(r.status, AttestationStatus.red, reason: name);
           expect(stageOf(r, stage).outcome, StageOutcome.fail, reason: name);
           expect(r.session, isNull, reason: name);
-          expect(await f.floors.load('tinfoil'), isNull, reason: name);
+          expect(await f.floors.load(floorKey), isNull, reason: name);
         }
       },
     );
@@ -221,7 +215,7 @@ void main() {
       final r = await run(
         f,
         gate: gate,
-        router: _observing(f.client, gate, Uint8List(1)),
+        router: observingClient(f.client, gate, Uint8List(1)),
       );
       expect(r.status, AttestationStatus.red);
       expect(stageOf(r, AttestationStage.tlsSpki).outcome, StageOutcome.fail);
@@ -249,7 +243,7 @@ void main() {
         await run(
           f,
           gate: gate,
-          router: _observing(f.client, gate, Uint8List(1)),
+          router: observingClient(f.client, gate, Uint8List(1)),
         );
         // Die Fake-SNP-Prüfung hat den gemessenen Hash als Erwartung erhalten.
         expect(f.snp.lastTls, seen);
@@ -352,7 +346,7 @@ void main() {
         final r = await f.verifier().attest();
         expect(r.status, AttestationStatus.yellow, reason: route);
         expect(r.session, isNull, reason: route);
-        expect(await f.floors.load('tinfoil'), isNull, reason: route);
+        expect(await f.floors.load(floorKey), isNull, reason: route);
       }
     });
 
@@ -402,15 +396,12 @@ void main() {
       () async {
         final f = TinfoilFixture(tag: 'v0.0.158');
         await f.verifier().attest();
-        expect(
-          (await f.floors.load('tinfoil'))!.version.toString(),
-          'v0.0.158',
-        );
+        expect((await f.floors.load(floorKey))!.version.toString(), 'v0.0.158');
         f.tag = 'v0.0.159';
         f.integratedTime += 100;
         f.sigstoreGreen();
         await f.verifier().attest();
-        final floor = (await f.floors.load('tinfoil'))!;
+        final floor = (await f.floors.load(floorKey))!;
         expect(floor.version.toString(), 'v0.0.159');
         expect(floor.integratedTime, f.integratedTime);
       },
@@ -438,10 +429,7 @@ void main() {
           contains('Rückschritt'),
         );
         expect(r.session, isNull);
-        expect(
-          (await f.floors.load('tinfoil'))!.version.toString(),
-          'v0.0.159',
-        );
+        expect((await f.floors.load(floorKey))!.version.toString(), 'v0.0.159');
       },
     );
 
@@ -460,17 +448,67 @@ void main() {
     });
 
     test(
-      'Rückschritt gilt je Profil: ein anderes Profil bleibt unberührt',
+      'Untergrenze gilt je Anbieter-Host: ein neues Profil erbt sie (K59)',
       () async {
         final f = TinfoilFixture(tag: 'v0.0.159');
         await f.verifier().attest();
         f
           ..tag = 'v0.0.158'
           ..sigstoreGreen();
-        final other = await f.verifier(profileId: 'zweites').attest();
+        final fresh = await f.verifier(profileId: 'zweites').attest();
+        expect(fresh.status, AttestationStatus.red);
+        expect(
+          stageOf(fresh, AttestationStage.releaseFloor).detail,
+          contains('Rückschritt'),
+        );
+        // Ein anderer Anbieter-Host hat seine eigene Untergrenze.
+        final other = await f.verifier(host: 'anders.test').attest();
         expect(other.status, AttestationStatus.green);
       },
     );
+
+    test('eine ältere Untergrenze unter der Profil-Id zählt weiter', () async {
+      final f = TinfoilFixture(tag: 'v0.0.158');
+      await f.floors.save(
+        'altprofil',
+        ReleaseFloor(
+          version: ReleaseVersion.tryParse('v0.0.170')!,
+          integratedTime: 1,
+        ),
+      );
+      final r = await f.verifier(profileId: 'altprofil').attest();
+      expect(r.status, AttestationStatus.red);
+      expect(
+        stageOf(r, AttestationStage.releaseFloor).outcome,
+        StageOutcome.fail,
+      );
+    });
+
+    test('mehrere gültige Bundles: die späteste Signierzeit zählt, nicht die '
+        'Reihenfolge', () async {
+      final f = TinfoilFixture(tag: 'v0.0.158', integratedTime: 1789000500)
+        ..bundles = 2;
+      // Das erste Bundle ist älter, das zweite neuer (gleiche Version).
+      f.sigstore.perBundle = (b) => b.contains('"n":0')
+          ? f.sigstore.verdict
+          : const SigstoreVerdict(
+              dsseOk: true,
+              chainOk: true,
+              identityOk: true,
+              rekorOk: true,
+              measurementOk: true,
+              snpMeasurementHex: TinfoilFixture.measurement,
+              releaseTag: 'v0.0.158',
+              integratedTime: 1789000900,
+            );
+      expect((await f.verifier().attest()).status, AttestationStatus.green);
+      expect((await f.floors.load(floorKey))!.integratedTime, 1789000900);
+      // Dieselbe Version, nun nur noch mit der mittleren Zeit: kein Aussperren
+      // durch die Reihenfolge, aber die spätere Zeit bleibt die Untergrenze.
+      final r = await f.verifier().attest();
+      expect(r.status, AttestationStatus.green, reason: '${r.stages}');
+      expect((await f.floors.load(floorKey))!.integratedTime, 1789000900);
+    });
 
     test('eine rote Prüfung hebt die Untergrenze nicht an', () async {
       final f = TinfoilFixture(tag: 'v0.0.158');
@@ -480,29 +518,46 @@ void main() {
         ..sigstoreGreen();
       f.snp.verdict = _verdict(signatureOk: false);
       expect((await f.verifier().attest()).status, AttestationStatus.red);
-      expect((await f.floors.load('tinfoil'))!.version.toString(), 'v0.0.158');
+      expect((await f.floors.load(floorKey))!.version.toString(), 'v0.0.158');
     });
 
     test(
-      'beschädigter Speicher zählt als keine Untergrenze (wie der Pin)',
+      'beschädigte Untergrenze: rot, keine Sitzung, nichts gespeichert',
       () async {
         final f = TinfoilFixture();
-        final store = _BrokenFloors();
-        final v = TinfoilVerifier(
-          crypto: FakeAttestationCrypto(),
-          snp: f.snp,
-          sigstore: f.sigstore,
-          ehbp: f.ehbp,
-          floors: store,
-          baseUrl: Uri.parse('https://inference.test/v1'),
-          profileId: 'tinfoil',
-          client: f.client,
-          settings: HttpSettings(clock: FixedClock(tinfoilNow)),
-        );
-        expect((await v.attest()).status, AttestationStatus.green);
-        expect(store.saved, isNotNull);
+        final r = await f.verifier(floorStore: DamagedFloorStore()).attest();
+        expect(r.status, AttestationStatus.red);
+        final stage = stageOf(r, AttestationStage.releaseFloor);
+        expect(stage.outcome, StageOutcome.fail);
+        expect(stage.detail, contains('beschädigt'));
+        expect(r.session, isNull);
       },
     );
+  });
+
+  group('AMD-Zertifikate (KDS)', () {
+    int kdsRequests(TinfoilFixture f) =>
+        f.requests.where((r) => r.url.host == 'kdsintf.amd.com').length;
+
+    test('ein neuer Verifier fragt AMD nicht erneut (Cache)', () async {
+      final f = TinfoilFixture();
+      final cache = InMemoryKdsCache();
+      expect(
+        (await f.verifier(kdsCache: cache).attest()).status,
+        AttestationStatus.green,
+      );
+      final first = kdsRequests(f);
+      expect(first, greaterThan(0));
+      final r = await f.verifier(kdsCache: cache).attest();
+      expect(r.status, AttestationStatus.green);
+      expect(kdsRequests(f), first);
+    });
+
+    test('ein Cache, der wirft, ist nur ein Fehlschlag', () async {
+      final f = TinfoilFixture();
+      final r = await f.verifier(kdsCache: _ThrowingCache()).attest();
+      expect(r.status, AttestationStatus.green);
+    });
   });
 
   group('ReleaseVersion / ReleaseFloor', () {
@@ -542,14 +597,10 @@ void main() {
   });
 }
 
-final class _BrokenFloors implements ReleaseFloorStore {
-  ReleaseFloor? saved;
+final class _ThrowingCache implements KdsCache {
+  @override
+  Future<KdsEntry?> load(String key) => throw StateError('x');
 
   @override
-  Future<ReleaseFloor?> load(String profileId) async =>
-      throw const FormatException('kaputt');
-
-  @override
-  Future<void> save(String profileId, ReleaseFloor floor) async =>
-      saved = floor;
+  Future<void> save(String key, KdsEntry entry) => throw StateError('x');
 }

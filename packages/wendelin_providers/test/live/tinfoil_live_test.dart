@@ -19,13 +19,22 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 // Echt sind: Attestierungsdokument und Schlüsselkonfiguration des Routers, AMD KDS
 // (VCEK, Kette) und GitHub (Release, Sigstore-Bundle), die Bindung von TLS-Pin und
 // HPKE-Schlüssel allein an `report_data`, EHBP mit Werkzeugen und Streaming gegen den
-// echten Dienst. Die Signaturketten (AMD, Sigstore) prüft in Dart nur das Rust-Modul,
-// das hier nicht läuft: Report-Felder und Bindungen liest `_LiveSnp` selbst aus dem
-// Report, `_LiveSigstore` übernimmt die Angaben des Reports. Die echte Prüfung gegen
-// aufgezeichnete Daten laufen in native/attest/tests (snp.rs, sigstore.rs, ehbp_live.rs).
+// echten Dienst, der SPKI-Hash der echten TLS-Verbindung (PinnedHttpClient, TLS-Gate)
+// gegen `report_data[0..32]`.
+//
+// Live geprüft sind damit: Transport, EHBP, die Bindungen (TLS-Pin, HPKE-Schlüssel) und
+// die TCB-Richtlinie. NICHT live geprüft sind die Signaturketten (AMD: VCEK/ASK/ARK und
+// Report-Signatur; Sigstore: Zertifikat, Rekor, Identität): sie prüft nur das Rust-Modul,
+// das hier nicht läuft. `_LiveSnp` liest Felder und Bindungen selbst aus dem Report und
+// setzt Signatur und Kette auf „ok“, `_LiveSigstore` übernimmt die Angaben des Reports
+// und setzt Signatur, Kette und Rekor auf „ok“. Diese Prüfungen laufen nur gegen
+// aufgezeichnete Daten in native/attest/tests (snp.rs, sigstore.rs, ehbp_live.rs) und im
+// Gerätetest.
 
 const _model = 'gpt-oss-120b';
 final _base = Uri.parse('https://inference.tinfoil.sh/v1');
+// Shared: AMD's KDS answers a second request for the same chip with 429.
+final _kds = InMemoryKdsCache();
 final _key = Platform.environment['TINFOIL_API_KEY'];
 
 const _tool = ToolSpec(
@@ -133,7 +142,7 @@ final class _LiveSigstore implements SigstoreCrypto {
 ) {
   final ehbp = EhbpReferenceCrypto();
   const settings = HttpSettings();
-  final gate = TlsPinGate(spkiSha256: FakeAttestationCrypto().sha256);
+  final gate = TlsPinGate(spkiSha256: FakeAttestationCrypto().spkiSha256);
   final verifier = TinfoilVerifier(
     crypto: FakeAttestationCrypto(),
     snp: _LiveSnp(),
@@ -142,21 +151,25 @@ final class _LiveSigstore implements SigstoreCrypto {
     floors: InMemoryReleaseFloorStore(),
     baseUrl: _base,
     profileId: 'tinfoil-live',
-    client: client,
+    // The documents come over the measured connection, AMD and GitHub not.
+    client: PinnedHttpClient(gate: gate, enforce: false),
     externalClient: client,
     settings: settings,
+    tlsPin: gate,
+    kdsCache: _kds,
   );
   final provider = AttestedProvider(
     inner: OpenAiChatAdapter(
       baseUrl: _base,
       credentials: Credentials.apiKey(_key!, style: ApiKeyStyle.bearer),
       defaultModel: _model,
-      client: client,
+      client: PinnedHttpClient(gate: gate, enforce: true),
       settings: settings,
       wireCodec: TinfoilEhbpChannel(crypto: ehbp, tlsPin: gate),
     ),
     verifier: verifier,
     profileId: 'tinfoil-live',
+    tlsPin: gate,
     requireUpstreamEnforced: false,
     settings: settings,
   );

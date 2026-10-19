@@ -10,6 +10,7 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 
 import '../platform/attest/attest_backend.dart';
 import '../platform/attest/collateral_cache.dart';
+import '../platform/attest/file_kds_cache.dart';
 import '../platform/attest/pcs_collateral_client.dart';
 import '../platform/attest/rust_attestation_crypto.dart';
 import '../platform/attest/rust_ehbp_crypto.dart';
@@ -74,7 +75,16 @@ final attestationPinStoreProvider = Provider<AttestationPinStore>(
   (ref) => SettingsAttestationPinStore(ref.watch(storageProvider).settings),
 );
 
-/// Highest verified Tinfoil release per profile (downgrade protection).
+/// Persistent cache of the AMD certificates of Tinfoil attestations.
+final kdsCacheProvider = Provider<KdsCache?>((ref) {
+  // Loaded together with the check module; without it, memory only.
+  final dir = ref.watch(attestCacheDirProvider).asData?.value;
+  if (dir == null) return null;
+  final clock = ref.watch(clockProvider);
+  return FileKdsCache(CollateralCache(dir: dir, now: () => clock.now()));
+});
+
+/// Highest verified Tinfoil release per provider host (downgrade protection).
 final releaseFloorStoreProvider = Provider<ReleaseFloorStore>(
   (ref) => SettingsReleaseFloorStore(ref.watch(storageProvider).settings),
 );
@@ -138,6 +148,7 @@ AttestationWiring? attestationWiringOf(Ref ref) {
     sigstoreCrypto: backend == null ? null : RustSigstoreCrypto(backend),
     ehbpCrypto: backend == null ? null : RustEhbpCrypto(backend),
     releaseFloors: ref.read(releaseFloorStoreProvider),
+    kdsCache: ref.read(kdsCacheProvider),
     nearCrypto: crypto is NearCrypto ? crypto as NearCrypto : null,
     logSink: ref.read(attestationLogWriterProvider),
     pins: ref.read(attestationPinStoreProvider),
