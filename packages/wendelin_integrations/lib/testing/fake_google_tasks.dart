@@ -266,8 +266,9 @@ final class FakeRedirectReceiver implements RedirectReceiver {
   Future<void> close() async {
     closed = true;
     if (!_answer.isCompleted) {
+      // Nobody may be listening (cancel before wait()): no unhandled error.
+      _answer.future.ignore();
       _answer.completeError(StateError('Anmeldung abgebrochen'));
-      unawaited(_answer.future.then<void>((_) {}, onError: (Object _) {}));
     }
   }
 }
