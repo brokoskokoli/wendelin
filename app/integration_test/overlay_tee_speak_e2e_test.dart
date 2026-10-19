@@ -145,6 +145,20 @@ void main() {
           if (file.existsSync()) file.deleteSync();
         }
       });
+      // Restzustand (WP104): Das TEE-Profil als Standard, sein Schlüssel und die
+      // Sprach-Einstellungen (Gesprächsmodus) bleiben sonst für die nächste
+      // Testdatei derselben Skriptsitzung (z. B. overlay_e2e) stehen.
+      addTearDown(() async {
+        final reset = WendelinStorage(driftDatabase(name: 'wendelin'));
+        try {
+          await reset.providerProfiles.delete('phala');
+          await reset.settings.remove(voiceSettingsKey);
+          await reset.settings.remove(AppSettings.onboardingDone);
+        } finally {
+          await reset.close();
+        }
+        await SecureSecretStore().delete('provider.phala.apiKey');
+      });
       final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
       await setup.settings.set(AppSettings.onboardingDone, true);
       await setup.settings.set(

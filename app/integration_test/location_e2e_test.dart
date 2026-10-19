@@ -36,37 +36,40 @@ void main() {
     timeZone: 'Europe/Berlin',
   );
 
-  test('Standort: Position vom Host, Tool nennt Ort oder Koordinaten', () async {
-    // Das Skript erteilt ACCESS_FINE/COARSE_LOCATION und setzt die Position
-    // (`adb emu geo fix 10.0 53.55`, Hamburg).
-    // Das Skript erteilt im Hintergrund, sobald die App installiert ist.
-    await _until(
-      port.hasPermission,
-      'Standort-Berechtigung fehlt (tool/e2e_android.sh erteilt sie)',
-    );
-    expect((await integration.setupState()).missingSteps, isEmpty);
-    GeoFix? fix;
-    await _until(() async {
-      try {
-        fix = await port.current();
-      } on Object {
-        return false; // noch keine Position
-      }
-      return (fix!.latitude - 53.55).abs() < 0.05;
-    }, 'Position vom Host (adb emu geo fix) kam nicht an');
-    expect(fix!.latitude, closeTo(53.55, 0.05));
-    expect(fix!.longitude, closeTo(10.0, 0.05));
-    final out = await tool('location__current').execute({}, ctx);
-    expect(out.isError, isFalse, reason: out.text);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  test(
+    'Standort: Position vom Host, Tool nennt Ort oder Koordinaten',
+    () async {
+      // Das Skript erteilt ACCESS_FINE/COARSE_LOCATION und setzt die Position
+      // (`adb emu geo fix 10.0 53.55`, Hamburg).
+      // Das Skript erteilt im Hintergrund, sobald die App installiert ist.
+      await _until(
+        port.hasPermission,
+        'Standort-Berechtigung fehlt (tool/e2e_android.sh erteilt sie)',
+      );
+      expect((await integration.setupState()).missingSteps, isEmpty);
+      GeoFix? fix;
+      await _until(() async {
+        try {
+          fix = await port.current();
+        } on Object {
+          return false; // noch keine Position
+        }
+        return (fix!.latitude - 53.55).abs() < 0.05;
+      }, 'Position vom Host (adb emu geo fix) kam nicht an');
+      expect(fix!.latitude, closeTo(53.55, 0.05));
+      expect(fix!.longitude, closeTo(10.0, 0.05));
+      final out = await tool('location__current').execute({}, ctx);
+      expect(out.isError, isFalse, reason: out.text);
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 
   test('Karten: ohne Google Maps kein Absturz', () async {
     final google = await apps.isInstalled('com.google.android.apps.maps');
     // ignore: avoid_print
     print('LOC_E2E googleMaps=$google');
-    final out = await tool(
-      'location__navigate_to',
-    ).execute({'destination': 'Hamburg Hauptbahnhof'}, ctx);
+    final out = await tool('location__navigate_to')
+        .execute({'destination': 'Hamburg Hauptbahnhof'}, ctx);
     // ignore: avoid_print
     print('LOC_E2E navigate error=${out.isError} text=${out.text}');
     if (out.isError) expect(out.text, contains('Karten-App'));
