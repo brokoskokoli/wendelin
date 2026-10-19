@@ -1,0 +1,17 @@
+{
+  "quickSwitchCurrent": "current",
+  "quickSwitchHint": "Choosing one ends this conversation and starts a new one.",
+  "quickSwitchItemSemantics": "{name}, {level}",
+  "@quickSwitchItemSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "quickSwitchSemanticsAction": "Switch agent",
+  "quickSwitchTitle": "Switch agent"
+}

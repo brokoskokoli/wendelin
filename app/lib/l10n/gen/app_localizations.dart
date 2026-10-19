@@ -5374,6 +5374,36 @@ abstract class AppLocalizations {
   /// **'Profil „{profileId}“ gibt es nicht mehr.'**
   String targetPickerProfileGone(String profileId);
 
+  /// No description provided for @quickSwitchCurrent.
+  ///
+  /// In de, this message translates to:
+  /// **'aktuell'**
+  String get quickSwitchCurrent;
+
+  /// No description provided for @quickSwitchHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Auswahl beendet das Gespräch und startet ein neues.'**
+  String get quickSwitchHint;
+
+  /// No description provided for @quickSwitchItemSemantics.
+  ///
+  /// In de, this message translates to:
+  /// **'{name}, {level}'**
+  String quickSwitchItemSemantics(String name, String level);
+
+  /// No description provided for @quickSwitchSemanticsAction.
+  ///
+  /// In de, this message translates to:
+  /// **'Agent wechseln'**
+  String get quickSwitchSemanticsAction;
+
+  /// No description provided for @quickSwitchTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Agent wechseln'**
+  String get quickSwitchTitle;
+
   /// No description provided for @condBuilderAddCondition.
   ///
   /// In de, this message translates to:

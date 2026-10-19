@@ -5,6 +5,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../../l10n/l10n.dart';
 import '../../voice/voice_ui_state.dart';
 import '../design/design.dart';
+import 'quick_switch.dart';
 
 /// Head of the main screen: lockup and settings button.
 class MainHeader extends StatelessWidget {
@@ -66,7 +67,12 @@ class MainChips extends StatelessWidget {
     this.providerName,
     this.privacy,
     required this.costLabel,
+    this.onQuickSwitch,
   });
+
+  /// Opens the agent quick switch after holding the provider chip (WP94);
+  /// `null` = not possible now (request running, fewer than two agents).
+  final VoidCallback? onQuickSwitch;
 
   /// Display name of the active provider.
   final String? providerName;
@@ -92,7 +98,10 @@ class MainChips extends StatelessWidget {
         runSpacing: WSpace.s,
         children: [
           if (providerName != null && privacy != null)
-            ProviderChip(name: providerName!, level: privacy!),
+            QuickSwitchTarget(
+              onOpen: onQuickSwitch,
+              child: ProviderChip(name: providerName!, level: privacy!),
+            ),
           MetaChip(
             costLabel,
             semanticLabel: context.l10n.mainCostLabel(costLabel),
