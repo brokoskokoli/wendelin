@@ -7,20 +7,23 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 import '../helpers.dart';
 
-const _login = BringCredentials(
-  email: 'kontrakt@example.org',
-  password: 'kanarien-passwort',
-);
-
 void main() {
   late FakeBringApi api;
   late FakeBringSecrets secrets;
   late BringIntegration bring;
   late List<String> errors;
 
-  setUp(() {
+  /// A stored session for the current [api] (the user signed in once).
+  Future<void> signIn() async {
+    secrets.session = await api.login(api.email, api.password);
+    api.methodCalls.clear();
+    api.logins = 0;
+  }
+
+  setUp(() async {
     api = FakeBringApi();
-    secrets = FakeBringSecrets(login: _login);
+    secrets = FakeBringSecrets();
+    await signIn();
     errors = [];
     bring = BringIntegration(api, secrets, onError: errors.add);
   });
@@ -401,10 +404,12 @@ void main() {
           defaultListUuid: null,
           lists: [FakeBringList('l1', 'Einzige')],
         );
+        await signIn();
         bring = BringIntegration(api, secrets);
         expect(data(await call('bring__get_items', {}))['list'], 'Einzige');
 
         api = FakeBringApi(defaultListUuid: 'weg');
+        await signIn();
         bring = BringIntegration(api, secrets);
         final o = await call('bring__get_items', {});
         expect(
@@ -416,6 +421,7 @@ void main() {
 
     test('Konto ohne Listen', () async {
       api = FakeBringApi(lists: []);
+      await signIn();
       bring = BringIntegration(api, secrets);
       final o = await call('bring__list_lists', {});
       expect(data(o), {'lists': <Object?>[]});

@@ -46,7 +46,7 @@ final class BringIntegration implements Integration {
   /// Id of the setup step „Bring! login“.
   static const loginStep = 'bring_login';
 
-  /// Where credentials and tokens live.
+  /// Where the session (tokens) lives.
   final BringSecrets secrets;
 
   /// Login handling and error state shared by the tools.
@@ -81,9 +81,8 @@ final class BringIntegration implements Integration {
   ];
 
   @override
-  Future<SetupState> setupState() async => SetupState(
-    missingSteps: [if (await secrets.credentials() == null) loginStep],
-  );
+  Future<SetupState> setupState() async =>
+      SetupState(missingSteps: [if (await secrets.auth() == null) loginStep]);
 
   @override
   late final List<Tool> tools = List.unmodifiable(<Tool>[
@@ -94,7 +93,7 @@ final class BringIntegration implements Integration {
     BringCompleteItemTool(session),
   ]);
 
-  /// Tests the connection (login if needed, read the lists), e.g. after
+  /// Tests the connection (read the lists, renewing the token if needed), e.g. after
   /// the setup or from „Erneut versuchen“. Returns `null` on success
   /// (error state cleared via `onRecovered`), else the failure (the app words it).
   Future<ReconnectFailure?> reconnect() async {
@@ -106,6 +105,6 @@ final class BringIntegration implements Integration {
     }
   }
 
-  /// Forgets the cached session (call after the login changed).
+  /// Forgets the cached session (call before a new sign-in or on sign-out).
   Future<void> signOut() => session.forget();
 }

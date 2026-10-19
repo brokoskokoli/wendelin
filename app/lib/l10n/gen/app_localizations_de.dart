@@ -1133,6 +1133,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bringChecking => 'Prüfe …';
 
   @override
+  String get bringConnected => 'Verbunden';
+
+  @override
   String get bringEmail => 'E-Mail';
 
   @override
@@ -1143,7 +1146,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get bringIntro =>
-      'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps freigegeben, sie kann jederzeit brechen. E-Mail und Passwort bleiben im sicheren Speicher des Geräts.';
+      'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps freigegeben, sie kann jederzeit brechen. Du meldest dich einmal an; E-Mail und Passwort werden nicht gespeichert, nur die Sitzung (Tokens) bleibt im sicheren Speicher des Geräts.';
 
   @override
   String get bringNeedCredentials => 'Bitte E-Mail und Passwort eingeben.';
@@ -1158,6 +1161,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bringReachable => 'Bring! ist wieder erreichbar.';
 
   @override
+  String get bringReauthError =>
+      'Bring!: Anmeldung abgelaufen. Bitte neu anmelden.';
+
+  @override
+  String get bringReconnect => 'Erneut verbinden';
+
+  @override
   String get bringShareSend => 'An Bring! senden';
 
   @override
@@ -1167,8 +1177,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bringShareUnreachable => 'Bring! nicht erreichbar';
 
   @override
-  String get bringSignOutBody =>
-      'E-Mail, Passwort und Sitzung werden vom Gerät gelöscht.';
+  String get bringSignOutBody => 'Die Sitzung wird vom Gerät gelöscht.';
 
   @override
   String get bringSignOutTitle => 'Bei Bring! abmelden?';

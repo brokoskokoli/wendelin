@@ -10,21 +10,16 @@ import 'bring_server.dart';
 /// `toString` oder Log auftauchen.
 void main() {
   const password = 'KANARIE-passwort-4711';
-  const login = BringCredentials(
-    email: 'kontrakt@example.org',
-    password: password,
-  );
+  const email = 'kontrakt@example.org';
 
   test('Passwort und Tokens nirgends sichtbar', () async {
     final server = BringServer()..password = password;
     final log = <String>[];
     final reported = <String>[];
-    final secrets = FakeBringSecrets(login: login);
-    final bring = BringIntegration(
-      server.api(log: log.add),
-      secrets,
-      onError: reported.add,
-    );
+    final api = server.api(log: log.add);
+    // Einmal anmelden: danach liegen nur die Tokens im Speicher.
+    final secrets = FakeBringSecrets(session: await api.login(email, password));
+    final bring = BringIntegration(api, secrets, onError: reported.add);
     final seen = <String>[];
     final tokens = <String>{};
 
@@ -77,24 +72,22 @@ void main() {
     server.rejectTokens = true;
     await call('bring__get_items', {});
     server.rejectTokens = false;
-    secrets.login = const BringCredentials(
-      email: 'kontrakt@example.org',
-      password: '$password-falsch',
-    );
-    await bring.signOut();
+    // Refresh abgelehnt: „Bitte neu anmelden“, Sitzung verworfen.
+    server
+      ..expireTokens()
+      ..revokeRefresh();
     await call('bring__list_lists', {});
+    expect(secrets.session, isNull);
     seen.add((await bring.reconnect())?.message ?? '');
     // Zuletzt, weil danach eine Sperre gilt.
-    secrets.login = login;
+    secrets.session = await server.api().login(email, password);
     server.next.add(canned(429));
     await call('bring__list_lists', {});
-    expect(log.last, 'Bring! login → 429');
+    expect(log.last, 'Bring! lists → 429');
 
     seen
       ..addAll(log)
-      ..addAll(reported)
-      ..add('$login')
-      ..add('${secrets.login}');
+      ..addAll(reported);
     final all = seen.join('\n');
     expect(tokens, isNotEmpty);
     expect(reported, isNotEmpty);
@@ -107,7 +100,7 @@ void main() {
   test('Ausnahmen der API enthalten keine Geheimnisse', () async {
     final server = BringServer()..password = password;
     final api = server.api();
-    final auth = await api.login(login.email, password);
+    final auth = await api.login(email, password);
     final errors = <String>[];
     Future<void> catching(Future<Object?> f) async {
       try {
@@ -119,7 +112,7 @@ void main() {
       }
     }
 
-    await catching(api.login(login.email, 'x$password'));
+    await catching(api.login(email, 'x$password'));
     server.expireTokens();
     await catching(api.lists(auth));
     server.revokeRefresh();
@@ -130,6 +123,5 @@ void main() {
       expect(all, isNot(contains(secret)));
     }
     expect('$auth', 'BringAuth(<verborgen>)');
-    expect('$login', 'BringCredentials(<verborgen>)');
   });
 }

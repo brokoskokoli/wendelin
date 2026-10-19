@@ -1,6 +1,7 @@
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
-import '../../di/integrations/integration_spec.dart' show pausedError;
+import '../../di/integrations/integration_spec.dart'
+    show pausedError, reauthError;
 import '../../l10n/l10n.dart';
 
 /// Brand names are not translated.
@@ -28,7 +29,11 @@ String reconnectFailureText(AppLocalizations l, ReconnectFailure f) {
 /// Error line of an integration in the app language: the pause marker the
 /// specs report becomes a localized text, other messages stay as they are.
 String? integrationErrorText(AppLocalizations l, String id, String? error) =>
-    error == pausedError ? l.integrationsPausedError(_serviceName(id)) : error;
+    switch (error) {
+      pausedError => l.integrationsPausedError(_serviceName(id)),
+      reauthError => l.bringReauthError,
+      _ => error,
+    };
 
 /// Hint shown after a retry: the failure text or [reachable] on success.
 String reconnectHint(
