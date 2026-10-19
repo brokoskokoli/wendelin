@@ -8,6 +8,7 @@ import 'context_builder.dart';
 import 'ports.dart';
 import 'provider_resolver.dart';
 import 'run/attestation_gate.dart';
+import 'run/buffered_control.dart';
 import 'run/escalation.dart';
 import 'run/model_call.dart';
 import 'run/privacy_scope.dart';
@@ -279,9 +280,17 @@ final class _Run implements RunControl {
     }
 
     var retried = false;
+    // The reply of a model call that ran during the receipt check (WP81b).
+    ModelReply? ahead;
     while (true) {
-      await _checkBeforeCall();
-      final reply = await _model.call();
+      final ModelReply reply;
+      if (ahead != null) {
+        reply = ahead;
+        ahead = null;
+      } else {
+        await _checkBeforeCall();
+        reply = await _model.call();
+      }
 
       if (reply.error case final error?) {
         retried = await _retryOnError(error, retried: retried);
@@ -300,7 +309,7 @@ final class _Run implements RunControl {
       }
       // Tool round (also for tool calls in a paused answer: every tool_use
       // gets its tool_result).
-      await _toolRound(assistant, calls);
+      ahead = await _toolRound(assistant, calls, reply.step);
     }
   }
 
@@ -397,8 +406,13 @@ final class _Run implements RunControl {
   }
 
   /// Runs the tool [calls] of [assistant] as one round, unless a limit
-  /// refuses it (throws).
-  Future<void> _toolRound(Message assistant, List<ToolCallBlock> calls) async {
+  /// refuses it (throws). Returns the reply of the next model call if it
+  /// already ran during the receipt check ([_overlap]), else `null`.
+  Future<ModelReply?> _toolRound(
+    Message assistant,
+    List<ToolCallBlock> calls,
+    AttestationStep? step,
+  ) async {
     // Invariant: at most `maxToolRounds` rounds; the next one is refused
     // with a result for every call, then the run ends.
     if (_budget.roundLimitReached) {
@@ -411,9 +425,75 @@ final class _Run implements RunControl {
     }
     _budget.onRound();
     await _state.append(assistant);
-    final results = await _tools.run(calls);
-    await _state.append(Message.toolResults(results));
+    final round = await _tools.execute(calls, step);
+    ModelReply? ahead;
+    if (round.overlappable) {
+      ahead = await _overlap(round);
+    } else {
+      await _tools.verify(round);
+      await _state.append(Message.toolResults(_tools.resultsOf(round)));
+    }
     throwIfAborted();
+    return ahead;
+  }
+
+  /// The next model call starts now, while the receipt of the answer that
+  /// caused [round] is still being fetched (WP81b).
+  ///
+  /// Invariants:
+  /// - The call's events are buffered ([BufferedControl]) and go out only
+  ///   after the green receipt; its tool calls run in the loop, which only
+  ///   gets the reply after that.
+  /// - Anything but green drops the call: cancelled, its reply, events and
+  ///   tokens discarded, never in the history. The undo ran as without the
+  ///   overlap and the loop calls the model again; it sees the undone
+  ///   results.
+  /// - An abort ends both: the call's token follows the run's.
+  Future<ModelReply?> _overlap(ToolRoundRun round) async {
+    // The request needs the results; they are recorded once the receipt is
+    // known (an undo changes them).
+    final provisional = Message.toolResults(_tools.resultsOf(round));
+    _state.messages.add(provisional);
+    void dropProvisional() =>
+        _state.messages.removeWhere((m) => identical(m, provisional));
+    final buffer = BufferedControl(this);
+    Future<ModelReply>? call;
+    try {
+      try {
+        await _checkBeforeCall();
+      } on RunStop {
+        dropProvisional();
+        await _tools.verify(round);
+        await _state.append(Message.toolResults(_tools.resultsOf(round)));
+        rethrow;
+      }
+      // Paid tokens count in any case: the call shares the run's budget.
+      // A discarded call is still paid for: its tokens count towards the run
+      // budget and may end the run with tokenBudget. If it ends only after the
+      // run, its usage is no longer reported.
+      call = ModelCall(
+        runner,
+        _state,
+        _privacy,
+        _budget,
+        buffer,
+        _attest,
+      ).call();
+      // Failures surface where the reply is awaited.
+      call.ignore();
+      if (await _tools.verify(round)) {
+        buffer.release();
+        // Recorded at once: an abort during the call keeps the history whole.
+        await _state.record(provisional);
+        return await call;
+      }
+      dropProvisional();
+      await _state.append(Message.toolResults(_tools.resultsOf(round)));
+      return null;
+    } finally {
+      // Not released (red, abort, error): the call must not go on.
+      if (call != null) buffer.discardUnlessReleased();
+    }
   }
 
   // ---------------------------------------------------------------- limits

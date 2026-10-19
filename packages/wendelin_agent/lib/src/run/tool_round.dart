@@ -95,8 +95,25 @@ final class ToolRound {
     return (Message.assistant(out), calls);
   }
 
-  /// Executes [calls]; returns one result per call, in call order.
-  Future<List<ToolResultBlock>> run(List<ToolCallBlock> calls) async {
+  /// Executes [calls] and verifies the answer that asked for them; returns
+  /// one result per call, in call order.
+  Future<List<ToolResultBlock>> run(
+    List<ToolCallBlock> calls,
+    AttestationStep? step,
+  ) async {
+    final round = await execute(calls, step);
+    await verify(round);
+    return resultsOf(round);
+  }
+
+  /// Executes [calls] without waiting for the receipt of the answer that
+  /// asked for them (except `external` ones, which wait for green).
+  /// [step] is the check of that answer ([ModelReply.step]): a model call
+  /// that overlaps the check (WP81b) begins other steps meanwhile.
+  Future<ToolRoundRun> execute(
+    List<ToolCallBlock> calls,
+    AttestationStep? step,
+  ) async {
     final results = <String, ToolResultBlock>{};
     final pending = <ToolCallBlock>[];
     final catalog = _privacy.catalog;
@@ -111,25 +128,40 @@ final class ToolRound {
       results[call.id] = outcome.toResultBlock(call.id);
     }
 
-    if (pending.isNotEmpty) await _invokeGated(pending, results);
-    // Status of the answer that caused this round (once per model call).
-    final report = await _attest.settle();
-    // Tools with an undo ran at once, before the receipt was known. Anything
-    // but a green receipt (red, not confirmed, missing) takes them back,
-    // like `external` calls never run without green (WP77).
-    if (_attest.expectsReport && report?.status != AttestationStatus.green) {
-      await _undoUnverified(pending, results);
-    }
-
-    // Every tool_use needs a tool_result, even if an invoker broke its
-    // contract.
-    return [
-      for (final call in calls)
-        results[call.id] ??
-            ToolOutcome.error('Kein Ergebnis vom Tool erhalten')
-                .toResultBlock(call.id),
-    ];
+    final hadExternal = pending.any(_isExternal);
+    if (pending.isNotEmpty) await _invokeGated(pending, results, step);
+    return ToolRoundRun._(
+      calls,
+      pending,
+      results,
+      step,
+      // With an `external` call the round already waited for green.
+      overlappable: step?.report != null && !hadExternal,
+    );
   }
+
+  /// Waits for the receipt of the answer that caused [round] and reports its
+  /// status (once per model call). Tools with an undo ran at once, before the
+  /// receipt was known. Anything but a green receipt (red, not confirmed,
+  /// missing) takes them back, like `external` calls never run without
+  /// green (WP77). Returns whether the receipt is green.
+  Future<bool> verify(ToolRoundRun round) async {
+    final report = await _attest.settle(round.step);
+    final green = report?.status == AttestationStatus.green;
+    if (round.step?.report != null && !green) {
+      await _undoUnverified(round.pending, round.results);
+    }
+    return green;
+  }
+
+  /// The results of [round], one per call in call order. Every tool_use needs
+  /// a tool_result, even if an invoker broke its contract.
+  List<ToolResultBlock> resultsOf(ToolRoundRun round) => [
+    for (final call in round.calls)
+      round.results[call.id] ??
+          ToolOutcome.error('Kein Ergebnis vom Tool erhalten')
+              .toResultBlock(call.id),
+  ];
 
   /// Undoes the calls of [pending] that ran with an [UndoAction] before the
   /// answer that asked for them turned out red: the user did not get a
@@ -205,12 +237,13 @@ final class ToolRound {
   Future<void> _invokeGated(
     List<ToolCallBlock> pending,
     Map<String, ToolResultBlock> results,
+    AttestationStep? step,
   ) async {
     final external = [
       for (final call in pending)
         if (_isExternal(call)) call,
     ];
-    if (!_attest.expectsReport || external.isEmpty) {
+    if (step?.report == null || external.isEmpty) {
       return _invoke(pending, results);
     }
     final immediate = [
@@ -218,7 +251,7 @@ final class ToolRound {
         if (!external.contains(call)) call,
     ];
     if (immediate.isNotEmpty) await _invoke(immediate, results);
-    final report = await _attest.settle();
+    final report = await _attest.settle(step);
     if (report?.status == AttestationStatus.green) {
       return _invoke(external, results);
     }
@@ -330,4 +363,31 @@ final class ToolRound {
       ]),
     );
   }
+}
+
+/// A tool round that was executed and waits for the receipt of its answer.
+final class ToolRoundRun {
+  ToolRoundRun._(
+    this.calls,
+    this.pending,
+    this.results,
+    this.step, {
+    required this.overlappable,
+  });
+
+  /// All calls of the answer.
+  final List<ToolCallBlock> calls;
+
+  /// The calls that reached the invoker.
+  final List<ToolCallBlock> pending;
+
+  /// Results by call id; an undo replaces entries.
+  final Map<String, ToolResultBlock> results;
+
+  /// The check of the answer that asked for this round (`null`: none).
+  final AttestationStep? step;
+
+  /// Whether the next model call may start before the check ends (WP81b):
+  /// the answer is verified afterwards and the round had no `external` call.
+  final bool overlappable;
 }
