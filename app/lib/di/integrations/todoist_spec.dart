@@ -1,0 +1,40 @@
+import 'package:wendelin_integrations/common.dart'
+    show PortErrorKind, ReconnectFailure;
+import 'package:wendelin_integrations/todoist.dart';
+
+import '../core_providers.dart';
+import '../todoist.dart';
+import 'integration_spec.dart';
+
+typedef _TodoistDeps = ({TodoistApi api, TodoistSecrets secrets});
+
+/// Todoist tasks (personal API token, Einstellungen → Todoist).
+final todoistSpec = IntegrationSpec(
+  id: 'todoist',
+  // Talks to a real account: not in the demo mode.
+  prepare: (ref) => ref.watch(demoModeProvider)
+      ? null
+      : (
+          api: ref.watch(todoistApiProvider),
+          secrets: ref.watch(todoistSecretsProvider),
+        ),
+  isSupported: (d) => d.extra<_TodoistDeps>('todoist') != null,
+  create: (d) {
+    final deps = d.extra<_TodoistDeps>('todoist')!;
+    return TodoistIntegration(
+      deps.api,
+      deps.secrets,
+      onError: (_) => d.reportError?.call('todoist', pausedError),
+      onRecovered: () => d.clearError?.call('todoist'),
+    );
+  },
+  retry: (
+    run: (i) async => i is TodoistIntegration
+        ? i.reconnect()
+        : const ReconnectFailure(
+            'todoist',
+            PortErrorKind.permissionDenied,
+            'Todoist ist nicht eingerichtet.',
+          ),
+  ),
+);

@@ -1,0 +1,21 @@
+{
+  "integrationDetailTodoistAccount": "Compte Todoist",
+  "todoistApiError": "Erreur – Todoist injoignable ou jeton refusé",
+  "todoistChecking": "Vérification …",
+  "todoistConnect": "Connecter",
+  "todoistConnecting": "Connexion …",
+  "todoistErrDenied": "Todoist a refusé le jeton (invalide ou révoqué).",
+  "todoistErrFailed": "La connexion à Todoist a échoué.",
+  "todoistErrUnavailable": "Todoist est inaccessible. Veuillez réessayer plus tard.",
+  "todoistFine": "OK",
+  "todoistIntro": "Tâches Todoist avec votre jeton d’API personnel. Vous le trouvez dans Todoist sous Paramètres → Intégrations → Développeur. Il reste dans le stockage sécurisé de l’appareil et n’est jamais affiché ni journalisé. Les projets servent de listes.",
+  "todoistNeedToken": "Veuillez saisir le jeton d’API.",
+  "todoistReachable": "Todoist est de nouveau joignable.",
+  "todoistSignOutBody": "Le jeton est supprimé de l’appareil. Vous pouvez aussi le révoquer dans Todoist.",
+  "todoistSignOutTitle": "Déconnecter Todoist ?",
+  "todoistStatusAvailable": "Connecté, intégration désactivée",
+  "todoistStatusSetup": "Jeton manquant",
+  "todoistStatusUnavailable": "Indisponible",
+  "todoistStatusUnknown": "Inconnu",
+  "todoistToken": "Jeton d’API"
+}

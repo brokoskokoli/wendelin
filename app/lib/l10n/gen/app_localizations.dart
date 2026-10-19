@@ -3172,6 +3172,12 @@ abstract class AppLocalizations {
   /// **'pausiert'**
   String get integrationsPaused;
 
+  /// No description provided for @integrationsPausedError.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Zugang abgelehnt oder unerwartete Antwort · pausiert'**
+  String integrationsPausedError(String service);
+
   /// No description provided for @integrationsPermission.
   ///
   /// In de, this message translates to:
@@ -3201,6 +3207,36 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{tools} Tools'**
   String integrationsTools(int tools);
+
+  /// No description provided for @reconnectBringShare.
+  ///
+  /// In de, this message translates to:
+  /// **'Ausweg: Artikel über „Teilen“ an die Bring!-App schicken.'**
+  String get reconnectBringShare;
+
+  /// No description provided for @reconnectErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Zugang abgelehnt oder nicht eingerichtet. Bitte die Zugangsdaten prüfen.'**
+  String reconnectErrDenied(String service);
+
+  /// No description provided for @reconnectErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Die Verbindung ist fehlgeschlagen (unerwartete Antwort).'**
+  String reconnectErrFailed(String service);
+
+  /// No description provided for @reconnectErrOther.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Die Verbindung ist fehlgeschlagen.'**
+  String reconnectErrOther(String service);
+
+  /// No description provided for @reconnectErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'{service} ist nicht erreichbar oder antwortet nicht. Später erneut versuchen.'**
+  String reconnectErrUnavailable(String service);
 
   /// No description provided for @listsAccessLost.
   ///
@@ -6064,6 +6100,66 @@ abstract class AppLocalizations {
   /// **'Adresse kopieren'**
   String get spotifyCopyRedirect;
 
+  /// No description provided for @spotifyErrAccessDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgebrochen: Zugriff nicht erlaubt.'**
+  String get spotifyErrAccessDenied;
+
+  /// No description provided for @spotifyErrCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgebrochen.'**
+  String get spotifyErrCancelled;
+
+  /// No description provided for @spotifyErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Spotify hat die Anmeldung abgelehnt.'**
+  String get spotifyErrDenied;
+
+  /// No description provided for @spotifyErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung bei Spotify nicht möglich.'**
+  String get spotifyErrFailed;
+
+  /// No description provided for @spotifyErrInvalidClientId.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Client-ID besteht aus 32 Zeichen (Ziffern und Buchstaben a–f). Bitte aus dem Entwickler-Dashboard kopieren.'**
+  String get spotifyErrInvalidClientId;
+
+  /// No description provided for @spotifyErrNoBrowser.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Browser installiert, in dem die Anmeldung laufen kann.'**
+  String get spotifyErrNoBrowser;
+
+  /// No description provided for @spotifyErrNoCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Spotify hat keinen Code geschickt.'**
+  String get spotifyErrNoCode;
+
+  /// No description provided for @spotifyErrRejected.
+  ///
+  /// In de, this message translates to:
+  /// **'Spotify hat die Anmeldung abgelehnt. Client-ID prüfen und darauf achten, dass das eigene Konto unter „User Management“ steht.'**
+  String get spotifyErrRejected;
+
+  /// No description provided for @spotifyErrStateMismatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgelehnt: Die Antwort von Spotify gehört nicht zu dieser Anmeldung (z. B. ein alter Browser-Tab). Bitte die Anmeldung neu starten und im neuen Tab zu Ende führen.'**
+  String get spotifyErrStateMismatch;
+
+  /// No description provided for @spotifyErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Spotify ist nicht erreichbar. Später erneut versuchen.'**
+  String get spotifyErrUnavailable;
+
   /// No description provided for @spotifyFailed.
   ///
   /// In de, this message translates to:
@@ -6183,6 +6279,342 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Spotify'**
   String get spotifyTitle;
+
+  /// No description provided for @googleTasksApiError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler – Google nicht erreichbar oder Anmeldung abgelehnt'**
+  String get googleTasksApiError;
+
+  /// No description provided for @googleTasksCancel.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbrechen'**
+  String get googleTasksCancel;
+
+  /// No description provided for @googleTasksChecking.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfe …'**
+  String get googleTasksChecking;
+
+  /// No description provided for @googleTasksClientId.
+  ///
+  /// In de, this message translates to:
+  /// **'Client-ID'**
+  String get googleTasksClientId;
+
+  /// No description provided for @googleTasksClientSecret.
+  ///
+  /// In de, this message translates to:
+  /// **'Client-Secret'**
+  String get googleTasksClientSecret;
+
+  /// No description provided for @googleTasksErrAccessDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgebrochen: Zugriff nicht erlaubt (Ist dein Konto im Cloud-Projekt als Testnutzer eingetragen?).'**
+  String get googleTasksErrAccessDenied;
+
+  /// No description provided for @googleTasksErrCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgebrochen.'**
+  String get googleTasksErrCancelled;
+
+  /// No description provided for @googleTasksErrClientRejected.
+  ///
+  /// In de, this message translates to:
+  /// **'Google lehnt Client-ID oder Client-Secret ab. Bitte beides prüfen.'**
+  String get googleTasksErrClientRejected;
+
+  /// No description provided for @googleTasksErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Google hat die Anmeldung abgelehnt.'**
+  String get googleTasksErrDenied;
+
+  /// No description provided for @googleTasksErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Anmeldung ist fehlgeschlagen.'**
+  String get googleTasksErrFailed;
+
+  /// No description provided for @googleTasksErrInvalidClientId.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Client-ID endet auf „.apps.googleusercontent.com“. Bitte aus der Google Cloud Console kopieren (OAuth-Client Typ „Desktop“).'**
+  String get googleTasksErrInvalidClientId;
+
+  /// No description provided for @googleTasksErrMissingSecret.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte das Client-Secret des OAuth-Clients eintragen (ohne Leerzeichen).'**
+  String get googleTasksErrMissingSecret;
+
+  /// No description provided for @googleTasksErrNoBrowser.
+  ///
+  /// In de, this message translates to:
+  /// **'Es ist kein Browser installiert.'**
+  String get googleTasksErrNoBrowser;
+
+  /// No description provided for @googleTasksErrNoCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Google hat keinen Code geschickt.'**
+  String get googleTasksErrNoCode;
+
+  /// No description provided for @googleTasksErrNoRefreshToken.
+  ///
+  /// In de, this message translates to:
+  /// **'Google hat kein Refresh-Token geschickt. Bitte den Zugriff von Wendelin unter myaccount.google.com/permissions entfernen und neu anmelden.'**
+  String get googleTasksErrNoRefreshToken;
+
+  /// No description provided for @googleTasksErrReceiver.
+  ///
+  /// In de, this message translates to:
+  /// **'Der lokale Empfänger für die Anmeldung lässt sich nicht starten.'**
+  String get googleTasksErrReceiver;
+
+  /// No description provided for @googleTasksErrTimeout.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeitüberschreitung: Im Browser kam keine Antwort von Google an. Bitte erneut anmelden.'**
+  String get googleTasksErrTimeout;
+
+  /// No description provided for @googleTasksErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Google ist nicht erreichbar. Bitte später erneut versuchen.'**
+  String get googleTasksErrUnavailable;
+
+  /// No description provided for @googleTasksFine.
+  ///
+  /// In de, this message translates to:
+  /// **'in Ordnung'**
+  String get googleTasksFine;
+
+  /// No description provided for @googleTasksGuideNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Testmodus läuft die Anmeldung nach 7 Tagen ab; dann hier erneut anmelden. Google warnt bei der Anmeldung vor einer „nicht verifizierten App“ (es ist dein eigenes Projekt): „Weiter“ wählen und „Aufgaben ansehen und verwalten“ erlauben.'**
+  String get googleTasksGuideNote;
+
+  /// No description provided for @googleTasksGuideStep1.
+  ///
+  /// In de, this message translates to:
+  /// **'1. In console.cloud.google.com ein Projekt anlegen (oder ein eigenes wählen).'**
+  String get googleTasksGuideStep1;
+
+  /// No description provided for @googleTasksGuideStep2.
+  ///
+  /// In de, this message translates to:
+  /// **'2. Unter „APIs & Dienste → Bibliothek“ die „Google Tasks API“ aktivieren.'**
+  String get googleTasksGuideStep2;
+
+  /// No description provided for @googleTasksGuideStep3.
+  ///
+  /// In de, this message translates to:
+  /// **'3. Unter „Google Auth Platform“ (früher „OAuth-Zustimmungsbildschirm“) die Zielgruppe „Extern“ im Testmodus lassen und das eigene Google-Konto als Testnutzer eintragen.'**
+  String get googleTasksGuideStep3;
+
+  /// No description provided for @googleTasksGuideStep4.
+  ///
+  /// In de, this message translates to:
+  /// **'4. Unter „Clients“ (früher „Anmeldedaten“) einen OAuth-Client vom Typ „Desktop-App“ anlegen. Client-ID und Client-Secret kopieren und unten eintragen.'**
+  String get googleTasksGuideStep4;
+
+  /// No description provided for @googleTasksGuideTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Google-Cloud-Projekt einrichten'**
+  String get googleTasksGuideTitle;
+
+  /// No description provided for @googleTasksIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Google-Aufgaben mit deinem eigenen Cloud-Projekt, ohne Google-Play-Dienste. Die Anmeldung läuft im Browser; Client-ID, Client-Secret und Anmeldung bleiben im sicheren Speicher des Geräts und werden nie angezeigt oder protokolliert. Aufgabenlisten dienen als Listen; Google kennt nur ein Fälligkeitsdatum, keine Uhrzeit und keine Priorität.'**
+  String get googleTasksIntro;
+
+  /// No description provided for @googleTasksNeedClient.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte Client-ID und Client-Secret eintragen.'**
+  String get googleTasksNeedClient;
+
+  /// No description provided for @googleTasksReachable.
+  ///
+  /// In de, this message translates to:
+  /// **'Google Tasks ist erreichbar.'**
+  String get googleTasksReachable;
+
+  /// No description provided for @googleTasksSignIn.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei Google anmelden'**
+  String get googleTasksSignIn;
+
+  /// No description provided for @googleTasksSignInWaiting.
+  ///
+  /// In de, this message translates to:
+  /// **'Warte auf Google …'**
+  String get googleTasksSignInWaiting;
+
+  /// No description provided for @googleTasksSignOutBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Anmeldung wird bei Google widerrufen (soweit erreichbar), Client-ID, Client-Secret und Token werden vom Gerät gelöscht.'**
+  String get googleTasksSignOutBody;
+
+  /// No description provided for @googleTasksSignOutTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Google Tasks trennen?'**
+  String get googleTasksSignOutTitle;
+
+  /// No description provided for @googleTasksStatusAvailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbunden, Integration ausgeschaltet'**
+  String get googleTasksStatusAvailable;
+
+  /// No description provided for @googleTasksStatusSetup.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung fehlt'**
+  String get googleTasksStatusSetup;
+
+  /// No description provided for @googleTasksStatusUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht verfügbar'**
+  String get googleTasksStatusUnavailable;
+
+  /// No description provided for @googleTasksStatusUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbekannt'**
+  String get googleTasksStatusUnknown;
+
+  /// No description provided for @integrationDetailGoogleTasksAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Google-Konto'**
+  String get integrationDetailGoogleTasksAccount;
+
+  /// No description provided for @integrationDetailTodoistAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist-Konto'**
+  String get integrationDetailTodoistAccount;
+
+  /// No description provided for @todoistApiError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler – Todoist nicht erreichbar oder Token abgelehnt'**
+  String get todoistApiError;
+
+  /// No description provided for @todoistChecking.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfe …'**
+  String get todoistChecking;
+
+  /// No description provided for @todoistConnect.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbinden'**
+  String get todoistConnect;
+
+  /// No description provided for @todoistConnecting.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbinde …'**
+  String get todoistConnecting;
+
+  /// No description provided for @todoistErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist hat den Token abgelehnt (ungültig oder widerrufen).'**
+  String get todoistErrDenied;
+
+  /// No description provided for @todoistErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Verbindung zu Todoist ist fehlgeschlagen.'**
+  String get todoistErrFailed;
+
+  /// No description provided for @todoistErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist ist nicht erreichbar. Bitte später erneut versuchen.'**
+  String get todoistErrUnavailable;
+
+  /// No description provided for @todoistFine.
+  ///
+  /// In de, this message translates to:
+  /// **'in Ordnung'**
+  String get todoistFine;
+
+  /// No description provided for @todoistIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist-Aufgaben per persönlichem API-Token. Den Token findest du in Todoist unter Einstellungen → Integrationen → Entwickler. Er bleibt im sicheren Speicher des Geräts und wird nie angezeigt oder protokolliert. Projekte dienen als Listen.'**
+  String get todoistIntro;
+
+  /// No description provided for @todoistNeedToken.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte den API-Token eintragen.'**
+  String get todoistNeedToken;
+
+  /// No description provided for @todoistReachable.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist ist erreichbar.'**
+  String get todoistReachable;
+
+  /// No description provided for @todoistSignOutBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Token wird vom Gerät gelöscht. In Todoist kannst du ihn zusätzlich widerrufen.'**
+  String get todoistSignOutBody;
+
+  /// No description provided for @todoistSignOutTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist trennen?'**
+  String get todoistSignOutTitle;
+
+  /// No description provided for @todoistStatusAvailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbunden, Integration ausgeschaltet'**
+  String get todoistStatusAvailable;
+
+  /// No description provided for @todoistStatusSetup.
+  ///
+  /// In de, this message translates to:
+  /// **'Token fehlt'**
+  String get todoistStatusSetup;
+
+  /// No description provided for @todoistStatusUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht verfügbar'**
+  String get todoistStatusUnavailable;
+
+  /// No description provided for @todoistStatusUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbekannt'**
+  String get todoistStatusUnknown;
+
+  /// No description provided for @todoistToken.
+  ///
+  /// In de, this message translates to:
+  /// **'API-Token'**
+  String get todoistToken;
 
   /// No description provided for @languageEnglish.
   ///

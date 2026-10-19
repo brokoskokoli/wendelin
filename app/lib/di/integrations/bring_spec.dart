@@ -1,4 +1,6 @@
 import 'package:wendelin_integrations/bring.dart';
+import 'package:wendelin_integrations/common.dart'
+    show PortErrorKind, ReconnectFailure;
 
 import '../app_requirements.dart';
 import '../bring.dart';
@@ -28,14 +30,17 @@ final bringSpec = IntegrationSpec(
     return BringIntegration(
       deps.api,
       deps.secrets,
-      onError: (message) => d.reportError?.call('bring', '$message · pausiert'),
+      onError: (_) => d.reportError?.call('bring', pausedError),
       onRecovered: () => d.clearError?.call('bring'),
     );
   },
   retry: (
-    label: 'Erneut versuchen',
     run: (i) async => i is BringIntegration
         ? i.reconnect()
-        : 'Bring! ist nicht eingerichtet.',
+        : const ReconnectFailure(
+            'bring',
+            PortErrorKind.permissionDenied,
+            'Bring! ist nicht eingerichtet.',
+          ),
   ),
 );

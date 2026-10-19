@@ -519,11 +519,52 @@
   "integrationsIntro": "Seules les intégrations actives vont au modèle. Les intégrations désactivées ne coûtent aucun jeton.",
   "integrationsOwn": "Intégrations personnelles",
   "integrationsPaused": "en pause",
+  "integrationsPausedError": "{service} : accès refusé ou réponse inattendue · en pause",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "integrationsPermission": "Autorisation",
   "integrationsPermission2": "Autorisation",
   "integrationsReachable": "{displayName} est de nouveau joignable.",
   "integrationsRejected": "Refusée : {reason}",
   "integrationsTools": "{tools} outils",
+  "reconnectBringShare": "Solution : envoyer les articles à l'appli Bring! via Partager.",
+  "reconnectErrDenied": "{service} : accès refusé ou non configuré. Vérifiez les identifiants.",
+  "@reconnectErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrFailed": "{service} : la connexion a échoué (réponse inattendue).",
+  "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrOther": "{service} : la connexion a échoué.",
+  "@reconnectErrOther": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrUnavailable": "{service} est injoignable ou ne répond pas. Réessayez plus tard.",
+  "@reconnectErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "listsAccessLost": "Plus d’accès – choisissez à nouveau le fichier",
   "listsAdd": "+ Liste",
   "listsAliases": "Autres noms, séparés par des virgules (facultatif)",
@@ -1011,6 +1052,16 @@
   "spotifyClientIdMissing": "Saisissez l’identifiant client.",
   "spotifyCopied": "Adresse copiée.",
   "spotifyCopyRedirect": "Copier l’adresse",
+  "spotifyErrAccessDenied": "Connexion annulée : accès non autorisé.",
+  "spotifyErrCancelled": "Connexion annulée.",
+  "spotifyErrDenied": "Spotify a refusé la connexion.",
+  "spotifyErrFailed": "Connexion à Spotify impossible.",
+  "spotifyErrInvalidClientId": "L’ID client comporte 32 caractères (chiffres et lettres a–f). Copiez-le depuis le tableau de bord développeur.",
+  "spotifyErrNoBrowser": "Aucun navigateur n’est installé pour effectuer la connexion.",
+  "spotifyErrNoCode": "Spotify n’a pas envoyé de code.",
+  "spotifyErrRejected": "Spotify a refusé la connexion. Vérifiez l’ID client et que votre compte figure sous « User Management ».",
+  "spotifyErrStateMismatch": "Connexion refusée : la réponse de Spotify ne correspond pas à cette connexion (p. ex. un ancien onglet du navigateur). Relancez la connexion et terminez-la dans le nouvel onglet.",
+  "spotifyErrUnavailable": "Spotify est injoignable. Réessayez plus tard.",
   "spotifyFailed": "Erreur – connexion expirée ou Spotify injoignable",
   "spotifyGuideStep1": "1. Connectez-vous sur developer.spotify.com/dashboard avec votre compte Spotify et choisissez « Create app ».",
   "spotifyGuideStep2": "2. Choisissez librement un nom et une description. Saisissez exactement cette adresse comme « Redirect URI » : {redirect}",
@@ -1031,6 +1082,62 @@
   "spotifyStateOff": "Connecté, intégration désactivée",
   "spotifyStateUnavailable": "Non disponible",
   "spotifyTitle": "Spotify",
+  "googleTasksApiError": "Erreur – Google injoignable ou connexion refusée",
+  "googleTasksCancel": "Annuler",
+  "googleTasksChecking": "Vérification …",
+  "googleTasksClientId": "ID client",
+  "googleTasksClientSecret": "Secret client",
+  "googleTasksErrAccessDenied": "Connexion annulée : accès non autorisé (votre compte est-il enregistré comme utilisateur test dans le projet Cloud ?).",
+  "googleTasksErrCancelled": "Connexion annulée.",
+  "googleTasksErrClientRejected": "Google refuse l’ID client ou le secret client. Veuillez vérifier les deux.",
+  "googleTasksErrDenied": "Google a refusé la connexion.",
+  "googleTasksErrFailed": "La connexion a échoué.",
+  "googleTasksErrInvalidClientId": "L’ID client se termine par « .apps.googleusercontent.com ». Copiez-le depuis la console Google Cloud (client OAuth de type « Application de bureau »).",
+  "googleTasksErrMissingSecret": "Veuillez saisir le secret client OAuth (sans espaces).",
+  "googleTasksErrNoBrowser": "Aucun navigateur n’est installé.",
+  "googleTasksErrNoCode": "Google n’a envoyé aucun code.",
+  "googleTasksErrNoRefreshToken": "Google n’a pas envoyé de jeton d’actualisation. Retirez l’accès de Wendelin sur myaccount.google.com/permissions et reconnectez-vous.",
+  "googleTasksErrReceiver": "Le récepteur local pour la connexion n’a pas pu démarrer.",
+  "googleTasksErrTimeout": "Délai dépassé : aucune réponse de Google n’est arrivée dans le navigateur. Veuillez vous reconnecter.",
+  "googleTasksErrUnavailable": "Google est inaccessible. Veuillez réessayer plus tard.",
+  "googleTasksFine": "OK",
+  "googleTasksGuideNote": "En mode test, la connexion expire après 7 jours ; reconnectez-vous alors ici. Google signale une « application non validée » (c’est votre propre projet) : choisissez « Continuer » et autorisez l’accès aux tâches.",
+  "googleTasksGuideStep1": "1. Dans console.cloud.google.com, créez un projet (ou choisissez le vôtre).",
+  "googleTasksGuideStep2": "2. Sous « API et services → Bibliothèque », activez l’« API Google Tasks ».",
+  "googleTasksGuideStep3": "3. Sous « Google Auth Platform » (anciennement « écran de consentement OAuth »), gardez le public « Externe » en mode test et ajoutez votre compte Google comme utilisateur test.",
+  "googleTasksGuideStep4": "4. Sous « Clients » (anciennement « Identifiants »), créez un client OAuth de type « Application de bureau ». Copiez l’ID client et le secret client et saisissez-les ci-dessous.",
+  "googleTasksGuideTitle": "Configurer un projet Google Cloud",
+  "googleTasksIntro": "Tâches Google avec votre propre projet Cloud, sans services Google Play. La connexion se fait dans le navigateur ; ID client, secret client et connexion restent dans le stockage sécurisé de l’appareil et ne sont jamais affichés ni journalisés. Les listes de tâches servent de listes ; Google ne connaît qu’une date d’échéance, ni heure ni priorité.",
+  "googleTasksNeedClient": "Veuillez saisir l’ID client et le secret client.",
+  "googleTasksReachable": "Google Tasks est joignable.",
+  "googleTasksSignIn": "Se connecter à Google",
+  "googleTasksSignInWaiting": "En attente de Google …",
+  "googleTasksSignOutBody": "La connexion est révoquée chez Google (si joignable) ; ID client, secret client et jeton sont supprimés de l’appareil.",
+  "googleTasksSignOutTitle": "Déconnecter Google Tasks ?",
+  "googleTasksStatusAvailable": "Connecté, intégration désactivée",
+  "googleTasksStatusSetup": "Connexion manquante",
+  "googleTasksStatusUnavailable": "Indisponible",
+  "googleTasksStatusUnknown": "Inconnu",
+  "integrationDetailGoogleTasksAccount": "Compte Google",
+  "integrationDetailTodoistAccount": "Compte Todoist",
+  "todoistApiError": "Erreur – Todoist injoignable ou jeton refusé",
+  "todoistChecking": "Vérification …",
+  "todoistConnect": "Connecter",
+  "todoistConnecting": "Connexion …",
+  "todoistErrDenied": "Todoist a refusé le jeton (invalide ou révoqué).",
+  "todoistErrFailed": "La connexion à Todoist a échoué.",
+  "todoistErrUnavailable": "Todoist est inaccessible. Veuillez réessayer plus tard.",
+  "todoistFine": "OK",
+  "todoistIntro": "Tâches Todoist avec votre jeton d’API personnel. Vous le trouvez dans Todoist sous Paramètres → Intégrations → Développeur. Il reste dans le stockage sécurisé de l’appareil et n’est jamais affiché ni journalisé. Les projets servent de listes.",
+  "todoistNeedToken": "Veuillez saisir le jeton d’API.",
+  "todoistReachable": "Todoist est de nouveau joignable.",
+  "todoistSignOutBody": "Le jeton est supprimé de l’appareil. Vous pouvez aussi le révoquer dans Todoist.",
+  "todoistSignOutTitle": "Déconnecter Todoist ?",
+  "todoistStatusAvailable": "Connecté, intégration désactivée",
+  "todoistStatusSetup": "Jeton manquant",
+  "todoistStatusUnavailable": "Indisponible",
+  "todoistStatusUnknown": "Inconnu",
+  "todoistToken": "Jeton d’API",
   "languageEnglish": "English",
   "languageFrench": "Français",
   "languageGerman": "Deutsch",

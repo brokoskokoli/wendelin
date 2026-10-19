@@ -114,10 +114,9 @@ void main() {
       'login',
       const PortException(PortErrorKind.failed, 'Bring!: unerwartete Antwort'),
     );
-    expect(
-      await tester.runAsync(integration.reconnect),
-      contains('unerwartete Antwort'),
-    );
+    final failure = await tester.runAsync(integration.reconnect);
+    expect(failure!.kind, PortErrorKind.failed);
+    expect(failure.message, contains('unerwartete Antwort'));
     await settle(tester);
     final failed = tileWidget(tester, 'Bring! Einkaufsliste');
     expect(failed.status, IntegrationStatus.error);

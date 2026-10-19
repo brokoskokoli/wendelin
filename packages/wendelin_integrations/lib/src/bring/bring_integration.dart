@@ -96,13 +96,13 @@ final class BringIntegration implements Integration {
 
   /// Tests the connection (login if needed, read the lists), e.g. after
   /// the setup or from „Erneut versuchen“. Returns `null` on success
-  /// (error state cleared via `onRecovered`), else a German message.
-  Future<String?> reconnect() async {
+  /// (error state cleared via `onRecovered`), else the failure (the app words it).
+  Future<ReconnectFailure?> reconnect() async {
     try {
       await session.lists();
       return null;
     } on PortException catch (e) {
-      return e.message;
+      return ReconnectFailure.of('bring', e);
     }
   }
 

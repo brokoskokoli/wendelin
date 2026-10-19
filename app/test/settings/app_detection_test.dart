@@ -264,7 +264,7 @@ void main() {
       ], opened),
     );
     env.apps.uninstall(spotifyPkg);
-    setView(tester, const Size(390, 1400));
+    setView(tester, const Size(390, 1800));
     await tester.pumpWidget(env.app());
     await settle(tester);
     final c = ProviderScope.containerOf(

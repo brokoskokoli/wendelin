@@ -1,3 +1,5 @@
+import 'package:wendelin_integrations/common.dart'
+    show PortErrorKind, ReconnectFailure;
 import 'package:wendelin_integrations/spotify.dart';
 
 import '../app_requirements.dart';
@@ -34,15 +36,17 @@ final spotifySpec = IntegrationSpec(
       deps.api,
       deps.secrets,
       launcher: deps.launcher,
-      onError: (message) =>
-          d.reportError?.call('spotify', '$message · pausiert'),
+      onError: (message) => d.reportError?.call('spotify', pausedError),
       onRecovered: () => d.clearError?.call('spotify'),
     );
   },
   retry: (
-    label: 'Erneut versuchen',
     run: (i) async => i is SpotifyIntegration
         ? i.reconnect()
-        : 'Spotify ist nicht eingerichtet.',
+        : const ReconnectFailure(
+            'spotify',
+            PortErrorKind.permissionDenied,
+            'Spotify ist nicht eingerichtet.',
+          ),
   ),
 );
