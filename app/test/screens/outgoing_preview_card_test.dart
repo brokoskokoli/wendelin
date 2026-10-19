@@ -7,6 +7,7 @@ import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/sms_drafts.dart';
 import 'package:wendelin/ui/screens/confirmation_sheet.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/contacts.dart' show SmsDraftEdits;
 
 import '../ui/helpers.dart';
 
@@ -42,9 +43,14 @@ void main() {
   late ProviderContainer container;
   late List<bool?> results;
 
-  Future<void> pump(WidgetTester tester, ToolQuestion q) async {
+  Future<void> pump(
+    WidgetTester tester,
+    ToolQuestion q, {
+    void Function(SmsDraftEdits)? seed,
+  }) async {
     setView(tester, const Size(390, 844));
     container = ProviderContainer();
+    seed?.call(container.read(smsDraftEditsProvider));
     addTearDown(container.dispose);
     results = [];
     await tester.pumpWidget(
@@ -125,6 +131,17 @@ void main() {
     // Approved: the edit stays for the tool, which takes it.
     await tester.pumpWidget(const SizedBox());
     expect(edits.take('+491701234567', 'Ich komme später'), 'Neu');
+  });
+
+  testWidgets('SMS: eine liegengebliebene Änderung gilt nicht für die neue '
+      'Vorschau', (tester) async {
+    await pump(
+      tester,
+      _sms([]),
+      seed: (e) => e.set('+491701234567', 'Ich komme später', 'Alt'),
+    );
+    final edits = container.read(smsDraftEditsProvider);
+    expect(edits.isEdited('+491701234567', 'Ich komme später'), isFalse);
   });
 
   testWidgets('SMS: leerer Text sperrt „Absenden“', (tester) async {

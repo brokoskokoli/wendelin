@@ -138,14 +138,26 @@ String normalizePhone(String number) {
 }
 
 /// Whether two numbers are the same line: equal, or one has the country
-/// code and the other the national `0` form (last 9 digits equal).
+/// code (`+`/`00`) and the other the national `0` form, so that the
+/// international digits are a 1–3 digit country code plus the national
+/// digits. Two numbers with country code must be exactly equal.
 bool samePhone(String a, String b) {
-  final x = normalizePhone(a).replaceAll('+', '');
-  final y = normalizePhone(b).replaceAll('+', '');
-  if (x.isEmpty || y.isEmpty) return false;
+  final x = normalizePhone(a);
+  final y = normalizePhone(b);
+  if (x.replaceAll('+', '').isEmpty || y.replaceAll('+', '').isEmpty) {
+    return false;
+  }
   if (x == y) return true;
-  if (x.length < 9 || y.length < 9) return false;
-  return x.substring(x.length - 9) == y.substring(y.length - 9);
+  final xi = x.startsWith('+');
+  final yi = y.startsWith('+');
+  if (xi == yi) return false;
+  final intl = (xi ? x : y).substring(1);
+  final national = xi ? y : x;
+  if (!national.startsWith('0') || national.startsWith('00')) return false;
+  final rest = national.substring(1);
+  if (rest.length < 6) return false;
+  final cc = intl.length - rest.length;
+  return cc >= 1 && cc <= 3 && intl.endsWith(rest);
 }
 
 /// Name search over an address book.

@@ -54,6 +54,7 @@ void main() {
 
   test('Kontakte: Berechtigung beim Einschalten, nicht vorher', () async {
     final env = TestEnv();
+    var asked = 0;
     final deps = IntegrationDeps(
       ports: PlatformPorts(
         calendar: env.calendar,
@@ -64,13 +65,19 @@ void main() {
         torch: env.torch,
         contacts: env.contacts,
         phone: env.phone,
-        requestContactsPermission: () async => true,
+        requestContactsPermission: () async {
+          asked++;
+          return true;
+        },
       ),
       device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
       httpClient: http.Client(),
     );
     expect(contactsSpec.isSupported!(deps), isTrue);
+    // Nichts fragt vorher: weder die Prüfung noch das Anlegen der Tools.
+    expect(asked, 0);
     expect(await contactsSpec.requestPermission!(deps), isTrue);
+    expect(asked, 1);
     // Ohne Ports (z. B. iOS) gibt es die Integration nicht.
     final bare = IntegrationDeps(
       ports: PlatformPorts(

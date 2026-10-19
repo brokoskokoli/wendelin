@@ -11,7 +11,7 @@ final class _Audit implements ToolAuditSink {
 
 /// Message-like tool: its arguments hold a private text.
 final class _MessageTool implements Tool, AuditArgumentsRedactor {
-  _MessageTool({this.failRedaction = false});
+  _MessageTool({this.failRedaction = false, this.risk = RiskLevel.read});
 
   final bool failRedaction;
 
@@ -22,7 +22,7 @@ final class _MessageTool implements Tool, AuditArgumentsRedactor {
   @override
   Map<String, Object?> get inputSchema => const {'type': 'object'};
   @override
-  RiskLevel get risk => RiskLevel.read;
+  final RiskLevel risk;
   @override
   Future<ToolOutcome> execute(
     Map<String, Object?> args,
@@ -78,4 +78,33 @@ void main() {
     final e = await _audited(FakeTool(name: 'plain__x'));
     expect(e.argumentsJson, contains('Geheimer Text'));
   });
+
+  test(
+    'Bestätigung: Werkzeug mit AuditArgumentsRedactor meldet privateDetails',
+    () async {
+      Future<bool> flag(Tool tool) async {
+        final executor = ToolExecutor(catalog: FakeToolCatalog([tool]));
+        final events = await executor
+            .invokeAll([
+              ToolCallBlock(
+                id: '1',
+                name: tool.name,
+                argumentsJson: '{"to":"1","text":"x"}',
+              ),
+            ], _ctx())
+            .map((e) {
+              if (e is ConfirmationNeeded) e.respond(false);
+              return e;
+            })
+            .toList();
+        return events.whereType<ConfirmationNeeded>().single.privateDetails;
+      }
+
+      expect(await flag(_MessageTool(risk: RiskLevel.external)), isTrue);
+      expect(
+        await flag(FakeTool(name: 'plain__x', risk: RiskLevel.external)),
+        isFalse,
+      );
+    },
+  );
 }

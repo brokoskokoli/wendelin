@@ -46,6 +46,10 @@ class _OutgoingPreviewCardState extends ConsumerState<OutgoingPreviewCard> {
   void initState() {
     super.initState();
     _edits = ref.read(smsDraftEditsProvider);
+    // A new preview starts without an edit: one left behind by an earlier,
+    // abandoned preview (approved, then cancelled before sending) must not
+    // replace this text.
+    _edits.discard(_p.number, _p.text);
     _text.addListener(_onEdited);
   }
 

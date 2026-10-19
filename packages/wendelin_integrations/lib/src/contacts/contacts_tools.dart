@@ -159,6 +159,12 @@ final class SmsComposeTool extends IntegrationTool
     final (:to, :text) = _read(args);
     final recipient = await recipientOf(finder, to);
     final confirmed = edits.take(recipient.number, text) ?? text;
+    if (confirmed.isEmpty || confirmed.length > maxSmsChars) {
+      throw const InvalidArgumentsException(
+        'Der geänderte Text ist leer oder zu lang (höchstens '
+        '$maxSmsChars Zeichen)',
+      );
+    }
     if (!await phone.canSendSms()) {
       throw const PortException(
         PortErrorKind.permissionDenied,

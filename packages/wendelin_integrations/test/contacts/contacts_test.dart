@@ -119,6 +119,9 @@ void main() {
       expect(samePhone('+49 170 1234567', '0170 1234567'), isTrue);
       expect(samePhone('0049 170 1234567', '+491701234567'), isTrue);
       expect(samePhone('0170 1234567', '0170 1234568'), isFalse);
+      // Different country code, same trailing digits: not the same line.
+      expect(samePhone('+44 701234567', '0170 1234567'), isFalse);
+      expect(samePhone('+44 170 1234567', '+49 170 1234567'), isFalse);
       expect(cleanPhoneNumber('+49 (170) 123-4567'), '+491701234567');
       expect(cleanPhoneNumber('Anna'), isNull);
       expect(cleanPhoneNumber('12'), isNull);
@@ -200,11 +203,21 @@ void main() {
       expect(phone.sent, isEmpty);
     });
 
+    test('geänderter Text über dem Limit: Fehler, nichts gesendet', () async {
+      edits.set('+491701234567', 'Hi', 'x' * (maxSmsChars + 1));
+      final o = await tool('sms__compose')
+          .execute({'to': '+49 170 1234567', 'text': 'Hi'}, ctx());
+      expect(o.isError, isTrue);
+      expect(phone.sent, isEmpty);
+    });
+
     test('ohne SMS-Berechtigung: Fehler, nichts gesendet', () async {
       phone.smsAllowed = false;
       final o = await tool('sms__compose')
           .execute({'to': '0170 1234567', 'text': 'Hi'}, ctx());
       expect(o.isError, isTrue);
+      // The permission is checked before sending, not found out by sending.
+      expect(phone.methodCalls, isNot(contains('sendSms')));
       expect(o.text, contains('Berechtigung'));
       expect(phone.sent, isEmpty);
     });

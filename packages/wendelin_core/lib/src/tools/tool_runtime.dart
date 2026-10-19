@@ -82,7 +82,13 @@ final class ConfirmationNeeded extends ToolInvocationEvent {
     this.description,
     this.decision, {
     this.risk = RiskLevel.external,
+    this.privateDetails = false,
   });
+
+  /// The tool redacts its audit arguments ([AuditArgumentsRedactor]): the
+  /// lines after the first of [description] are private text and must not
+  /// reach the audit log.
+  final bool privateDetails;
 
   /// German text for the confirmation card (`ToolConfirmation.confirmationText`).
   final String description;

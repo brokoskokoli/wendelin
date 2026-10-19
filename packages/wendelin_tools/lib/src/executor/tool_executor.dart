@@ -203,6 +203,7 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
             await tool.confirmationText(args, ctx),
             Completer<bool>(),
             risk: risk,
+            privateDetails: tool is AuditArgumentsRedactor,
           ),
           emit,
         );
