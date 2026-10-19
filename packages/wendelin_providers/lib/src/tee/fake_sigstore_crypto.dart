@@ -9,6 +9,9 @@ final class FakeSigstoreCrypto implements SigstoreCrypto {
   /// Answer of [verifyRelease].
   SigstoreVerdict verdict;
 
+  /// Answer per bundle (overrides [verdict] when set).
+  SigstoreVerdict Function(String bundleJson)? perBundle;
+
   /// Number of [verifyRelease] calls.
   int verifies = 0;
 
@@ -38,6 +41,6 @@ final class FakeSigstoreCrypto implements SigstoreCrypto {
       digestHex: digestHex,
       measurementHex: reportMeasurementHex,
     );
-    return verdict;
+    return perBundle?.call(bundleJson) ?? verdict;
   }
 }

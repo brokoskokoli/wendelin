@@ -167,7 +167,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get attE2eeKeyNote =>
-      'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell.';
+      'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell. Bei Tinfoil endet sie im geprüften Router, der sie an das Modell weitergibt.';
 
   @override
   String get attExplainAccept => 'Akzeptieren';
@@ -247,6 +247,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get attFinishWarnFrom => 'Warnen ab';
+
+  @override
+  String get attFloorCorruptText =>
+      'Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Abhilfe schafft nur das Zurücksetzen der App-Daten. Danach wird der erste Kontakt wieder ohne Rückschrittschutz geprüft.';
+
+  @override
+  String get attFloorCorruptTitle =>
+      'Gespeicherter Rückschrittschutz beschädigt';
 
   @override
   String get attGpuFailedLabel => 'GPU-Prüfung fehlgeschlagen';
@@ -474,6 +482,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get attRevokedTitle => 'Plattform des Betreibers zurückgezogen';
 
   @override
+  String get attRollbackText =>
+      'Der Anbieter meldet eine ältere Software-Version als die, die hier schon einmal geprüft wurde. Das kann ein Zurückspielen alter, verwundbarer Software oder alter Daten sein. Die Anfrage wurde nicht gesendet. Sende nichts Vertrauliches und prüfe später erneut.';
+
+  @override
+  String get attRollbackTitle => 'Ältere Software-Version als zuvor geprüft';
+
+  @override
+  String get attSBindHpke => 'Verschlüsselungsschlüssel gebunden';
+
+  @override
   String get attSCompose => 'Compose-Hash';
 
   @override
@@ -510,6 +528,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get attSKeysetSignature => 'Schlüsselsatz-Signatur';
 
   @override
+  String get attSMeasurement => 'Messwert = Release';
+
+  @override
+  String get attSNoReceipt => 'Quittung je Antwort';
+
+  @override
   String get attSNonce => 'Nonce gebunden';
 
   @override
@@ -535,6 +559,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get attSReceiptSignature => 'Quittungs-Signatur';
+
+  @override
+  String get attSReleaseFloor => 'Kein Rückschritt';
+
+  @override
+  String get attSSigstore => 'Signiertes Release (Sigstore)';
+
+  @override
+  String get attSSnpChain => 'AMD-Zertifikatskette';
+
+  @override
+  String get attSSnpPolicy => 'Prozessor-Richtlinie';
+
+  @override
+  String get attSSnpReport => 'AMD-Hardware-Nachweis';
 
   @override
   String get attSTcb => 'Plattform-Sicherheitsstand (TCB)';
@@ -696,6 +735,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get stageAgeWhat => 'Wie alt der Nachweis ist.';
 
   @override
+  String get stageBindHpkeInfo => 'Der Schlüssel wurde nur protokolliert.';
+
+  @override
+  String get stageBindHpkePass =>
+      'Nur der geprüfte Server kann die Anfrage lesen. Der Schlüssel stammt aus dem Nachweis, nicht aus einer ungeprüften Antwort.';
+
+  @override
+  String get stageBindHpkeWhat =>
+      'Ob der Schlüssel, mit dem Wendelin deine Anfrage verschlüsselt, genau der ist, der im Hardware-Nachweis steht.';
+
+  @override
   String get stageComposeInfo =>
       'Der Hash wurde protokolliert, aber nicht gegen eine Liste vertrauenswürdiger Werte verglichen.';
 
@@ -804,6 +854,29 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Prüfsumme des Schlüsselsatzes (Schlüssel, mit denen Wendelin verschlüsselt) muss im Hardware-Nachweis stehen.';
 
   @override
+  String get stageMeasurementInfo => 'Der Messwert wurde nur protokolliert.';
+
+  @override
+  String get stageMeasurementPass =>
+      'Auf dem Server läuft der veröffentlichte Code, kein anderer.';
+
+  @override
+  String get stageMeasurementWhat =>
+      'Ob der Messwert des laufenden Servers genau der des neuesten signierten Releases ist.';
+
+  @override
+  String get stageNoReceiptInfo =>
+      'Tinfoil stellt keine Quittung je Antwort aus. Die Antwort ist nur durch die Verschlüsselung an deine Anfrage gebunden; welches Modell sie erzeugt hat, belegt keine Quittung.';
+
+  @override
+  String get stageNoReceiptPass =>
+      'Zu jeder Antwort liegt eine signierte Quittung vor.';
+
+  @override
+  String get stageNoReceiptWhat =>
+      'Ob zu jeder Antwort eine signierte Quittung vorliegt, die Anfrage und Antwort belegt.';
+
+  @override
   String get stageNonceInfo => 'Die Zahl wurde nur protokolliert.';
 
   @override
@@ -908,6 +981,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get stageReceiptSigWhat => 'Die Signatur der Quittung.';
 
   @override
+  String get stageReleaseFloorInfo =>
+      'Der Rückschrittschutz wurde nur protokolliert.';
+
+  @override
+  String get stageReleaseFloorPass =>
+      'Der Server läuft mit dem bisher neuesten oder einem neueren Release.';
+
+  @override
+  String get stageReleaseFloorWhat =>
+      'Ob das Release nicht älter ist als das neueste, das Wendelin je geprüft hat (Schutz vor einem Rückschritt auf alte, angreifbare Versionen).';
+
+  @override
   String get stageResponseKeyInfo =>
       'Der Schlüsselsatz wurde nur protokolliert.';
 
@@ -936,6 +1021,53 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get stageSignatureWhat =>
       'Eine zusätzliche Signatur über den Schlüsselsatz, die manche Anbieter liefern.';
+
+  @override
+  String get stageSigstoreInfo =>
+      'Die Signatur des Releases wurde nur protokolliert.';
+
+  @override
+  String get stageSigstorePass =>
+      'Das Release stammt aus dem Build von Tinfoil und steht öffentlich im Log.';
+
+  @override
+  String get stageSigstoreWhat =>
+      'Ob das veröffentlichte Programm-Release von Tinfoil auf GitHub echt signiert und im öffentlichen Transparenzlog (Sigstore) eingetragen ist.';
+
+  @override
+  String get stageSnpChainInfo =>
+      'Die Zertifikatskette wurde nur protokolliert.';
+
+  @override
+  String get stageSnpChainPass =>
+      'Die Kette endet bei AMD, nicht bei einem Zertifikat, das jemand unterschoben hat.';
+
+  @override
+  String get stageSnpChainWhat =>
+      'Ob das Zertifikat des Prozessors über das AMD-Zwischenzertifikat auf den in Wendelin fest hinterlegten AMD-Wurzelschlüssel zurückgeht.';
+
+  @override
+  String get stageSnpPolicyInfo => 'Die Richtlinie wurde nur protokolliert.';
+
+  @override
+  String get stageSnpPolicyPass =>
+      'Die Umgebung ist nicht zum Mitlesen geöffnet und enthält keine bekannt veraltete Firmware.';
+
+  @override
+  String get stageSnpPolicyWhat =>
+      'Ob die Umgebung ohne Debug-Zugang läuft und Firmware und Prozessor-Microcode mindestens so aktuell sind, wie Wendelin es verlangt (Bootloader 9, SNP 22, Microcode 80).';
+
+  @override
+  String get stageSnpReportInfo =>
+      'Der Bericht des Prozessors wurde nur protokolliert.';
+
+  @override
+  String get stageSnpReportPass =>
+      'Ein echter AMD-Prozessor bestätigt den Bericht. Niemand kann ihn nachträglich ändern.';
+
+  @override
+  String get stageSnpReportWhat =>
+      'Der Hardware-Nachweis des Tinfoil-Servers: Bericht des AMD-Prozessors, sein Zertifikat und die Signatur darüber.';
 
   @override
   String get stageTcbInfo => 'Der Sicherheitsstand wurde nur protokolliert.';

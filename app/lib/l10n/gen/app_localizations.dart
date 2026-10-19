@@ -349,7 +349,7 @@ abstract class AppLocalizations {
   /// No description provided for @attE2eeKeyNote.
   ///
   /// In de, this message translates to:
-  /// **'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell.'**
+  /// **'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell. Bei Tinfoil endet sie im geprüften Router, der sie an das Modell weitergibt.'**
   String get attE2eeKeyNote;
 
   /// No description provided for @attExplainAccept.
@@ -477,6 +477,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Warnen ab'**
   String get attFinishWarnFrom;
+
+  /// No description provided for @attFloorCorruptText.
+  ///
+  /// In de, this message translates to:
+  /// **'Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Abhilfe schafft nur das Zurücksetzen der App-Daten. Danach wird der erste Kontakt wieder ohne Rückschrittschutz geprüft.'**
+  String get attFloorCorruptText;
+
+  /// No description provided for @attFloorCorruptTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Gespeicherter Rückschrittschutz beschädigt'**
+  String get attFloorCorruptTitle;
 
   /// No description provided for @attGpuFailedLabel.
   ///
@@ -874,6 +886,24 @@ abstract class AppLocalizations {
   /// **'Plattform des Betreibers zurückgezogen'**
   String get attRevokedTitle;
 
+  /// No description provided for @attRollbackText.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Anbieter meldet eine ältere Software-Version als die, die hier schon einmal geprüft wurde. Das kann ein Zurückspielen alter, verwundbarer Software oder alter Daten sein. Die Anfrage wurde nicht gesendet. Sende nichts Vertrauliches und prüfe später erneut.'**
+  String get attRollbackText;
+
+  /// No description provided for @attRollbackTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Ältere Software-Version als zuvor geprüft'**
+  String get attRollbackTitle;
+
+  /// No description provided for @attSBindHpke.
+  ///
+  /// In de, this message translates to:
+  /// **'Verschlüsselungsschlüssel gebunden'**
+  String get attSBindHpke;
+
   /// No description provided for @attSCompose.
   ///
   /// In de, this message translates to:
@@ -946,6 +976,18 @@ abstract class AppLocalizations {
   /// **'Schlüsselsatz-Signatur'**
   String get attSKeysetSignature;
 
+  /// No description provided for @attSMeasurement.
+  ///
+  /// In de, this message translates to:
+  /// **'Messwert = Release'**
+  String get attSMeasurement;
+
+  /// No description provided for @attSNoReceipt.
+  ///
+  /// In de, this message translates to:
+  /// **'Quittung je Antwort'**
+  String get attSNoReceipt;
+
   /// No description provided for @attSNonce.
   ///
   /// In de, this message translates to:
@@ -999,6 +1041,36 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Quittungs-Signatur'**
   String get attSReceiptSignature;
+
+  /// No description provided for @attSReleaseFloor.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Rückschritt'**
+  String get attSReleaseFloor;
+
+  /// No description provided for @attSSigstore.
+  ///
+  /// In de, this message translates to:
+  /// **'Signiertes Release (Sigstore)'**
+  String get attSSigstore;
+
+  /// No description provided for @attSSnpChain.
+  ///
+  /// In de, this message translates to:
+  /// **'AMD-Zertifikatskette'**
+  String get attSSnpChain;
+
+  /// No description provided for @attSSnpPolicy.
+  ///
+  /// In de, this message translates to:
+  /// **'Prozessor-Richtlinie'**
+  String get attSSnpPolicy;
+
+  /// No description provided for @attSSnpReport.
+  ///
+  /// In de, this message translates to:
+  /// **'AMD-Hardware-Nachweis'**
+  String get attSSnpReport;
 
   /// No description provided for @attSTcb.
   ///
@@ -1264,6 +1336,24 @@ abstract class AppLocalizations {
   /// **'Wie alt der Nachweis ist.'**
   String get stageAgeWhat;
 
+  /// No description provided for @stageBindHpkeInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Schlüssel wurde nur protokolliert.'**
+  String get stageBindHpkeInfo;
+
+  /// No description provided for @stageBindHpkePass.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur der geprüfte Server kann die Anfrage lesen. Der Schlüssel stammt aus dem Nachweis, nicht aus einer ungeprüften Antwort.'**
+  String get stageBindHpkePass;
+
+  /// No description provided for @stageBindHpkeWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob der Schlüssel, mit dem Wendelin deine Anfrage verschlüsselt, genau der ist, der im Hardware-Nachweis steht.'**
+  String get stageBindHpkeWhat;
+
   /// No description provided for @stageComposeInfo.
   ///
   /// In de, this message translates to:
@@ -1431,6 +1521,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Die Prüfsumme des Schlüsselsatzes (Schlüssel, mit denen Wendelin verschlüsselt) muss im Hardware-Nachweis stehen.'**
   String get stageKeyBindingWhat;
+
+  /// No description provided for @stageMeasurementInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Messwert wurde nur protokolliert.'**
+  String get stageMeasurementInfo;
+
+  /// No description provided for @stageMeasurementPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf dem Server läuft der veröffentlichte Code, kein anderer.'**
+  String get stageMeasurementPass;
+
+  /// No description provided for @stageMeasurementWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob der Messwert des laufenden Servers genau der des neuesten signierten Releases ist.'**
+  String get stageMeasurementWhat;
+
+  /// No description provided for @stageNoReceiptInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Tinfoil stellt keine Quittung je Antwort aus. Die Antwort ist nur durch die Verschlüsselung an deine Anfrage gebunden; welches Modell sie erzeugt hat, belegt keine Quittung.'**
+  String get stageNoReceiptInfo;
+
+  /// No description provided for @stageNoReceiptPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu jeder Antwort liegt eine signierte Quittung vor.'**
+  String get stageNoReceiptPass;
+
+  /// No description provided for @stageNoReceiptWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob zu jeder Antwort eine signierte Quittung vorliegt, die Anfrage und Antwort belegt.'**
+  String get stageNoReceiptWhat;
 
   /// No description provided for @stageNonceInfo.
   ///
@@ -1600,6 +1726,24 @@ abstract class AppLocalizations {
   /// **'Die Signatur der Quittung.'**
   String get stageReceiptSigWhat;
 
+  /// No description provided for @stageReleaseFloorInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Rückschrittschutz wurde nur protokolliert.'**
+  String get stageReleaseFloorInfo;
+
+  /// No description provided for @stageReleaseFloorPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Server läuft mit dem bisher neuesten oder einem neueren Release.'**
+  String get stageReleaseFloorPass;
+
+  /// No description provided for @stageReleaseFloorWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob das Release nicht älter ist als das neueste, das Wendelin je geprüft hat (Schutz vor einem Rückschritt auf alte, angreifbare Versionen).'**
+  String get stageReleaseFloorWhat;
+
   /// No description provided for @stageResponseKeyInfo.
   ///
   /// In de, this message translates to:
@@ -1647,6 +1791,78 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Eine zusätzliche Signatur über den Schlüsselsatz, die manche Anbieter liefern.'**
   String get stageSignatureWhat;
+
+  /// No description provided for @stageSigstoreInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Signatur des Releases wurde nur protokolliert.'**
+  String get stageSigstoreInfo;
+
+  /// No description provided for @stageSigstorePass.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Release stammt aus dem Build von Tinfoil und steht öffentlich im Log.'**
+  String get stageSigstorePass;
+
+  /// No description provided for @stageSigstoreWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob das veröffentlichte Programm-Release von Tinfoil auf GitHub echt signiert und im öffentlichen Transparenzlog (Sigstore) eingetragen ist.'**
+  String get stageSigstoreWhat;
+
+  /// No description provided for @stageSnpChainInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Zertifikatskette wurde nur protokolliert.'**
+  String get stageSnpChainInfo;
+
+  /// No description provided for @stageSnpChainPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Kette endet bei AMD, nicht bei einem Zertifikat, das jemand unterschoben hat.'**
+  String get stageSnpChainPass;
+
+  /// No description provided for @stageSnpChainWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob das Zertifikat des Prozessors über das AMD-Zwischenzertifikat auf den in Wendelin fest hinterlegten AMD-Wurzelschlüssel zurückgeht.'**
+  String get stageSnpChainWhat;
+
+  /// No description provided for @stageSnpPolicyInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Richtlinie wurde nur protokolliert.'**
+  String get stageSnpPolicyInfo;
+
+  /// No description provided for @stageSnpPolicyPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Umgebung ist nicht zum Mitlesen geöffnet und enthält keine bekannt veraltete Firmware.'**
+  String get stageSnpPolicyPass;
+
+  /// No description provided for @stageSnpPolicyWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob die Umgebung ohne Debug-Zugang läuft und Firmware und Prozessor-Microcode mindestens so aktuell sind, wie Wendelin es verlangt (Bootloader 9, SNP 22, Microcode 80).'**
+  String get stageSnpPolicyWhat;
+
+  /// No description provided for @stageSnpReportInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Bericht des Prozessors wurde nur protokolliert.'**
+  String get stageSnpReportInfo;
+
+  /// No description provided for @stageSnpReportPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein echter AMD-Prozessor bestätigt den Bericht. Niemand kann ihn nachträglich ändern.'**
+  String get stageSnpReportPass;
+
+  /// No description provided for @stageSnpReportWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Hardware-Nachweis des Tinfoil-Servers: Bericht des AMD-Prozessors, sein Zertifikat und die Signatur darüber.'**
+  String get stageSnpReportWhat;
 
   /// No description provided for @stageTcbInfo.
   ///
