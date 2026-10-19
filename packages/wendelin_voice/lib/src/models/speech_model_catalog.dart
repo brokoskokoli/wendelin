@@ -42,6 +42,8 @@ final class SpeechModelCatalog {
   static const standard = SpeechModelCatalog([
     whisperBase,
     whisperSmall,
+    parakeetV3,
+    canary180m,
     sileroVad,
     voiceDe,
     voiceDeKerstin,
@@ -61,6 +63,7 @@ final class SpeechModelCatalog {
     license: 'MIT (OpenAI Whisper)',
     source: _hfSource,
     note: _int8Note,
+    ramBytes: 400 * 1024 * 1024,
     files: [
       ModelFile(
         name: 'base-encoder.int8.onnx',
@@ -95,6 +98,7 @@ final class SpeechModelCatalog {
     license: 'MIT (OpenAI Whisper)',
     source: _hfSource,
     note: _int8Note,
+    ramBytes: 1300 * 1024 * 1024,
     files: [
       ModelFile(
         name: 'small-encoder.int8.onnx',
@@ -115,6 +119,67 @@ final class SpeechModelCatalog {
         url: '$_hfSmall/small-tokens.txt',
         sizeBytes: 816730,
         sha256: _whisperTokensSha,
+      ),
+    ],
+  );
+
+  /// Parakeet TDT 0.6B v3, int8 (NeMo transducer; WP102/WP103): as exact as
+  /// Whisper medium in German at the speed of base, takes hotwords. No
+  /// language choice (it detects the language). Archive unpacks to
+  /// `sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/` with `encoder.int8.onnx`,
+  /// `decoder.int8.onnx`, `joiner.int8.onnx` and `tokens.txt`.
+  static const parakeetV3 = SpeechModel(
+    id: 'parakeet-tdt-0.6b-v3',
+    kind: SpeechModelKind.stt,
+    displayName: 'Parakeet v3 – groß, schnell, Eigennamen als Hinweis',
+    languages: {'de', 'fr', 'en'},
+    license: 'CC-BY-4.0 (NVIDIA)',
+    source: _ghSource,
+    note: _ghNote,
+    attribution:
+        'Spracherkennung „Parakeet TDT 0.6B v3“ von NVIDIA, CC BY 4.0; '
+        'sherpa-onnx-Export (k2-fsa).',
+    engine: SttEngine.nemoTransducer,
+    ramBytes: 1396 * 1024 * 1024,
+    files: [
+      ModelFile(
+        name: 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2',
+        url:
+            '$_gh/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2',
+        sizeBytes: 487170055,
+        sha256:
+            '5793d0fd397c5778d2cf2126994d58e9d56b1be7c04d13c7a15bb1b4eafb16bf',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// Canary 180M flash, int8 (NeMo, en/es/de/fr; optional, best French).
+  /// Archive unpacks to `sherpa-onnx-nemo-canary-180m-flash-en-es-de-fr-int8/`
+  /// with `encoder.int8.onnx`, `decoder.int8.onnx` and `tokens.txt`. No
+  /// hotwords; the language is bound with `srcLang`.
+  static const canary180m = SpeechModel(
+    id: 'canary-180m-flash',
+    kind: SpeechModelKind.stt,
+    displayName: 'Canary flash – klein, gut für Französisch',
+    languages: {'de', 'fr', 'en'},
+    license: 'CC-BY-4.0 (NVIDIA)',
+    source: _ghSource,
+    note: _ghNote,
+    attribution:
+        'Spracherkennung „Canary 180M Flash“ von NVIDIA, CC BY 4.0; '
+        'sherpa-onnx-Export (k2-fsa).',
+    engine: SttEngine.canary,
+    ramBytes: 734 * 1024 * 1024,
+    files: [
+      ModelFile(
+        name: 'sherpa-onnx-nemo-canary-180m-flash-en-es-de-fr-int8.tar.bz2',
+        url:
+            '$_gh/asr-models/sherpa-onnx-nemo-canary-180m-flash-en-es-de-fr-int8.tar.bz2',
+        sizeBytes: 153692328,
+        sha256:
+            '7a38ed8b13f014ad632b09ff8d22e0c6f1359dd046af9235d281dfae841b9ab9',
+        archive: ModelArchive.tarBz2,
       ),
     ],
   );

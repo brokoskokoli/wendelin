@@ -94,6 +94,7 @@ void main() {
       'conversationAsked': false,
       'conversationOfferPending': false,
       'bargeIn': 'keywords',
+      'keepModelLoaded': false,
     });
   });
 

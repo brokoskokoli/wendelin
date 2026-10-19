@@ -8,6 +8,7 @@ import '../src/io/speech_to_text.dart';
 import '../src/io/text_to_speech.dart';
 import '../src/io/trigger.dart';
 import '../src/io/voice_exception.dart';
+import '../src/recognizer/hint_terms.dart';
 
 /// Scripted [SpeechToText]: each [transcribe] returns the next transcript
 /// of the script (empty text when the script is exhausted or the audio is
@@ -242,5 +243,23 @@ final class FakeTriggerSource implements TriggerSource {
     final e = TriggerEvent(source: kind, at: clock.now());
     _controller.add(e);
     return e;
+  }
+}
+
+/// [HintTermSource] with fixed terms (or a failure).
+final class FakeHintTermSource implements HintTermSource {
+  /// Creates the source; [failure] is thrown by [terms] if set.
+  FakeHintTermSource(this._terms, {this.failure});
+
+  final List<HintTerm> _terms;
+
+  /// Thrown by [terms] instead of returning the terms.
+  final Object? failure;
+
+  @override
+  Future<List<HintTerm>> terms() async {
+    final f = failure;
+    if (f != null) throw f;
+    return _terms;
   }
 }

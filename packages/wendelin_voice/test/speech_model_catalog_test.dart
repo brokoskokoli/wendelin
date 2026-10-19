@@ -8,6 +8,8 @@ void main() {
     expect(catalog.ofKind(SpeechModelKind.stt).map((m) => m.id), [
       'whisper-base',
       'whisper-small',
+      'parakeet-tdt-0.6b-v3',
+      'canary-180m-flash',
     ]);
     for (final m in catalog.ofKind(SpeechModelKind.stt)) {
       expect(m.languages, containsAll(['de', 'fr', 'en']));
@@ -47,11 +49,34 @@ void main() {
 
   test('Whisper-URLs sind auf einen Commit gepinnt', () {
     for (final m in catalog.ofKind(SpeechModelKind.stt)) {
+      if (m.engine != SttEngine.whisper) continue;
       for (final f in m.files) {
         expect(f.url, matches(RegExp(r'/resolve/[0-9a-f]{40}/')));
         expect(f.archive, ModelArchive.none);
       }
     }
+  });
+
+  test('NeMo-Modelle: Engine im Katalog, Archiv, CC-BY, Größe und RAM', () {
+    const p = SpeechModelCatalog.parakeetV3;
+    const c = SpeechModelCatalog.canary180m;
+    expect(p.engine, SttEngine.nemoTransducer);
+    expect(c.engine, SttEngine.canary);
+    expect(p.supportsHotwords, isTrue);
+    expect(c.supportsHotwords, isFalse);
+    expect(SpeechModelCatalog.whisperSmall.engine, SttEngine.whisper);
+    expect(SpeechModelCatalog.whisperSmall.supportsHotwords, isFalse);
+    for (final m in [p, c]) {
+      expect(m.files.single.archive, ModelArchive.tarBz2);
+      expect(m.files.single.url, contains('/asr-models/'));
+      expect(m.license, contains('CC-BY-4.0'));
+      expect(m.attribution, contains('CC BY 4.0'));
+      expect(m.ramBytes, greaterThan(500 * 1024 * 1024));
+    }
+    expect(p.sizeBytes, 487170055);
+    expect(c.sizeBytes, 153692328);
+    // Whisper small bleibt Standard.
+    expect(const VoiceSettings().sttModel, SpeechModelCatalog.whisperSmall.id);
   });
 
   test('Pflicht-Attribution für SIWIS, englische Stimme gemeinfrei', () {

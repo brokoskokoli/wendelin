@@ -28,6 +28,7 @@ final class VoiceSettings {
     this.conversationAsked = false,
     this.conversationOfferPending = false,
     this.bargeIn = BargeInMode.keywords,
+    this.keepModelLoaded = false,
   });
 
   /// [sttLanguage]: use the language chosen in the onboarding.
@@ -45,7 +46,7 @@ final class VoiceSettings {
   /// Offered VAD thresholds.
   static const thresholds = [0.3, 0.4, 0.5, 0.6, 0.7];
 
-  /// Whisper model id (`whisper-base`, `whisper-small`).
+  /// Catalog id of the STT model (`whisper-small`, `parakeet-tdt-0.6b-v3`).
   final String sttModel;
 
   /// [followApp], [detect] or a fixed language (`de`, `fr`, `en`).
@@ -108,6 +109,17 @@ final class VoiceSettings {
   /// detector exists (WP58); default: keywords.
   final BargeInMode bargeIn;
 
+  /// „Modell im Speicher halten“ (WP103): the recognizer and the offline
+  /// voice stay loaded when the app is idle in the background or the
+  /// overlay closes, so the next utterance starts without loading. Only
+  /// memory pressure ([mayReleaseModels]) still frees them. Default off; the
+  /// station mode (WP99) turns it on through [withStationDefaults].
+  final bool keepModelLoaded;
+
+  /// Copy for the station mode (WP99, not built yet): the models stay
+  /// loaded (hook for WP99).
+  VoiceSettings withStationDefaults() => copyWith(keepModelLoaded: true);
+
   /// The STT language for app language [appLanguage] (`null` = detect).
   String? effectiveLanguage(String appLanguage) => switch (sttLanguage) {
     followApp => appLanguage,
@@ -136,6 +148,7 @@ final class VoiceSettings {
     bool? conversationAsked,
     bool? conversationOfferPending,
     BargeInMode? bargeIn,
+    bool? keepModelLoaded,
   }) => VoiceSettings(
     sttModel: sttModel ?? this.sttModel,
     sttLanguage: sttLanguage ?? this.sttLanguage,
@@ -152,6 +165,7 @@ final class VoiceSettings {
     conversationOfferPending:
         conversationOfferPending ?? this.conversationOfferPending,
     bargeIn: bargeIn ?? this.bargeIn,
+    keepModelLoaded: keepModelLoaded ?? this.keepModelLoaded,
   );
 
   /// JSON for the settings store.
@@ -170,6 +184,7 @@ final class VoiceSettings {
     'conversationAsked': conversationAsked,
     'conversationOfferPending': conversationOfferPending,
     'bargeIn': bargeIn.name,
+    'keepModelLoaded': keepModelLoaded,
   };
 
   /// Reads [json]; unknown or invalid values fall back to the defaults.
@@ -210,7 +225,12 @@ final class VoiceSettings {
 
     return VoiceSettings(
       sttModel:
-          pick<String>('sttModel', (v) => v.startsWith('whisper-')) ??
+          pick<String>(
+            'sttModel',
+            (v) =>
+                SpeechModelCatalog.standard.byId(v)?.kind ==
+                SpeechModelKind.stt,
+          ) ??
           d.sttModel,
       sttLanguage:
           pick<String>(
@@ -247,6 +267,8 @@ final class VoiceSettings {
           pick<bool>('conversationOfferPending', (_) => true) ??
           d.conversationOfferPending,
       bargeIn: BargeInMode.values.asNameMap()[json['bargeIn']] ?? d.bargeIn,
+      keepModelLoaded:
+          pick<bool>('keepModelLoaded', (_) => true) ?? d.keepModelLoaded,
     );
   }
 
@@ -266,7 +288,8 @@ final class VoiceSettings {
       other.conversationMode == conversationMode &&
       other.conversationAsked == conversationAsked &&
       other.conversationOfferPending == conversationOfferPending &&
-      other.bargeIn == bargeIn;
+      other.bargeIn == bargeIn &&
+      other.keepModelLoaded == keepModelLoaded;
 
   @override
   int get hashCode => Object.hash(
@@ -286,6 +309,7 @@ final class VoiceSettings {
     conversationAsked,
     conversationOfferPending,
     bargeIn,
+    keepModelLoaded,
   );
 }
 

@@ -15,6 +15,20 @@ enum SpeechModelKind {
   wake,
 }
 
+/// Which sherpa-onnx recognizer runs a [SpeechModelKind.stt] model (WP103):
+/// a different choice of model only changes catalog entries.
+enum SttEngine {
+  /// Whisper encoder/decoder (`*-encoder*`, `*-decoder*`, `*tokens.txt`).
+  whisper,
+
+  /// NeMo transducer (Parakeet; `encoder`, `decoder`, `joiner`, `tokens`).
+  /// The only engine that takes hotwords.
+  nemoTransducer,
+
+  /// NeMo Canary encoder/decoder with a source language (`srcLang`).
+  canary,
+}
+
 /// Gender of a voice (for the choice of offline voices, WP66).
 enum VoiceGender {
   /// Female voice.
@@ -79,6 +93,8 @@ final class SpeechModel {
     this.note,
     this.attribution,
     this.gender,
+    this.engine = SttEngine.whisper,
+    this.ramBytes,
   });
 
   /// Stable id, also the directory name in the `ModelStore`.
@@ -111,6 +127,16 @@ final class SpeechModel {
 
   /// Gender of a [SpeechModelKind.tts] voice; `null` for other models.
   final VoiceGender? gender;
+
+  /// Recognizer engine of a [SpeechModelKind.stt] model.
+  final SttEngine engine;
+
+  /// Approximate peak RAM while loaded (for the choice in the settings);
+  /// `null` = not stated. Measured on a Mac in WP102, the phone is higher.
+  final int? ramBytes;
+
+  /// Whether the engine takes hotwords (own terms as a hint, WP103).
+  bool get supportsHotwords => engine == SttEngine.nemoTransducer;
 
   /// Total download size.
   int get sizeBytes => files.fold(0, (n, f) => n + f.sizeBytes);
