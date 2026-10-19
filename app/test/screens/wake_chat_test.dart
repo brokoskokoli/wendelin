@@ -229,7 +229,7 @@ void main() {
     final c = containerOf(tester);
     await pumpUntil(tester, () => wake.done > 0);
     expect(c.read(voiceControllerProvider).active, isFalse);
-    expect(logLines.where((l) => l.contains('voice-cancelled')), hasLength(1));
+    expect(logLines.where((l) => l.contains('voice-cancelled')), isEmpty);
   });
 
   testWidgets('Bildschirm weg während des Zuhörens: Dienst hört wieder', (
@@ -372,6 +372,82 @@ void main() {
         tester,
         () => logLines.any((l) => l.contains('voice-cancelled')),
       );
+    });
+
+    testWidgets('Antwort an Kotlin vor dem Take (normaler Pfad)', (
+      tester,
+    ) async {
+      await pump(tester);
+      var answered = false;
+      bool? answeredAtTake;
+      assistant.onTake = () => answeredAtTake ??= answered;
+      unawaited(wake.hit().then((_) => answered = true));
+      await pumpUntil(tester, () => assistant.wakeTakes == 1);
+      expect(answeredAtTake, isTrue, reason: 'Kotlin kennt den Besitzer');
+    });
+
+    testWidgets('Antwort an Kotlin vor dem Take (Agent läuft)', (tester) async {
+      await pump(tester, turns: [ScriptedTurn.hang()]);
+      final c = containerOf(tester);
+      unawaited(c.read(agentControllerProvider.notifier).send('Los'));
+      await pumpUntil(tester, () => c.read(agentControllerProvider).running);
+      var answered = false;
+      bool? answeredAtTake;
+      assistant.onTake = () => answeredAtTake ??= answered;
+      unawaited(wake.hit().then((_) => answered = true));
+      await pumpUntil(tester, () => assistant.wakeTakes == 1);
+      expect(answeredAtTake, isTrue, reason: 'Kotlin kennt den Besitzer');
+      c.read(agentControllerProvider.notifier).cancel();
+      await pumpUntil(tester, () => wake.done == 1);
+    });
+
+    for (final ready in [true, false]) {
+      testWidgets(
+        'Pre-Roll verloren: das Chat-Mikro öffnet nicht (ready $ready)',
+        (tester) async {
+          final audio = FakeAudioInput(frames: speech());
+          await pump(
+            tester,
+            handoff: false,
+            ready: ready,
+            voice: speaking(const [
+              Transcript(text: 'Wie wird das Wetter?', language: 'de'),
+            ], audio: audio),
+          );
+          var everActive = false;
+          containerOf(tester).listen(voiceControllerProvider, (_, v) {
+            everActive = everActive || v.phase != VoiceState.idle;
+          });
+          expect(await askHit(tester), isTrue);
+          await pumpUntil(tester, () => wake.done > 0);
+          expect(everActive, isFalse);
+          expect(audio.startCount, 0);
+          expect(
+            containerOf(tester).read(voiceControllerProvider).active,
+            isFalse,
+          );
+        },
+      );
+    }
+
+    for (final ready in [true, false]) {
+      testWidgets('kein chatDone, solange der Start läuft (ready $ready)', (
+        tester,
+      ) async {
+        await pump(tester, ready: ready);
+        assistant.takeGate = Completer<void>();
+        expect(await askHit(tester), isTrue);
+        await pumpUntil(tester, () => assistant.wakeTakes == 1);
+        await tester.pump(const Duration(seconds: 2));
+        expect(wake.done, 0, reason: 'der Start hängt noch am Take');
+        assistant.takeGate!.complete();
+        await pumpUntil(tester, () => wake.done == 1);
+      });
+    }
+    testWidgets('Bildschirm weg ohne Treffer: kein chatDone', (tester) async {
+      await pump(tester);
+      await tester.pumpWidget(const SizedBox());
+      expect(wake.done, 0);
     });
 
     testWidgets('Bildschirm weg zwischen Frage und Antwort: keine Annahme', (

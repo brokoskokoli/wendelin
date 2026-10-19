@@ -118,8 +118,11 @@ class WakeChatSession {
     voiceLog('wake-chat-ask', {'accepts': accepts});
     if (!accepts) return false;
     _owned = true;
+    _starting = true;
     _idleTimer?.cancel();
-    unawaited(_listen());
+    // After the answer: Kotlin must know the chat owns the hit before the
+    // handoff is taken, else it refuses the take.
+    Timer.run(() => unawaited(_listen()));
     return true;
   }
 
@@ -128,6 +131,7 @@ class WakeChatSession {
     final voice = container.read(voiceControllerProvider.notifier);
     _starting = true;
     try {
+      if (_disposed) return;
       // Like the overlay: a hit while listening starts over.
       if (container.read(voiceControllerProvider).active) await voice.cancel();
       if (container.read(agentControllerProvider).running) {
@@ -150,8 +154,10 @@ class WakeChatSession {
             tone: tone,
             playTone: container.read(wakeConfirmToneProvider),
           );
-          // Taken elsewhere meanwhile (race with the overlay fallback).
+          // Taken elsewhere meanwhile (race with the overlay fallback):
+          // the microphone must not open.
           lost = pre == null;
+          if (lost) await voice.cancel();
           return pre;
         },
         prepare: prepare,
