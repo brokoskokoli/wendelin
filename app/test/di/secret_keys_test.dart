@@ -12,7 +12,8 @@ import 'package:wendelin_storage/fakes.dart';
 /// WP39). They are written down here literally and must never change:
 /// otherwise an update would lose Bring! login, HTTP-tool secrets and MCP
 /// tokens.
-const _bringKeys = ['bring.email', 'bring.password', 'bring.session'];
+const _bringKeys = ['bring.session'];
+const _legacyBringKeys = ['bring.email', 'bring.password'];
 const _httpKeys = [
   'http_tool.tool-1.bearer',
   'http_tool.tool-1.h.x-api-key',
@@ -38,28 +39,37 @@ void main() {
     'provider.anthropic.apiKey': 'fremd',
   });
 
-  test(
-    'Bring!: alte Schlüssel werden gelesen, Abmelden löscht nur Bring!',
-    () async {
-      final store = deviceStore();
-      await store.write('bring.session', '{"userUuid":"u","accessToken":"t"}');
-      final s = SecretStoreBringSecrets(store);
-      final login = await s.credentials();
-      expect((login!.email, login.password), (canary, canary));
-      expect((await s.auth())!.userUuid, 'u');
-      await s.clear();
-      expect(await store.listKeys(), {
-        ..._httpKeys,
-        ..._mcpKeys,
-        'provider.anthropic.apiKey',
-      });
-    },
-  );
+  test('Bring!: Migration löscht E-Mail und Passwort, Sitzung bleibt; '
+      'idempotent', () async {
+    final store = deviceStore();
+    await store.write('bring.session', '{"userUuid":"u","accessToken":"t"}');
+    for (final k in _legacyBringKeys) {
+      await store.write(k, canary);
+    }
+    final s = SecretStoreBringSecrets(store);
+    // Schon das erste Lesen der Sitzung wartet auf die Migration.
+    expect((await s.auth())!.userUuid, 'u');
+    expect(await store.listKeys(), {
+      ..._bringKeys,
+      ..._httpKeys,
+      ..._mcpKeys,
+      'provider.anthropic.apiKey',
+    });
+    expect(await store.read('bring.email'), isNull);
+    expect(await store.read('bring.password'), isNull);
+    await s.removeLegacyLogin();
+    expect((await s.auth())!.userUuid, 'u');
+    await s.clear();
+    expect(await store.listKeys(), {
+      ..._httpKeys,
+      ..._mcpKeys,
+      'provider.anthropic.apiKey',
+    });
+  });
 
-  test('Bring!: neu gespeichert landet unter den alten Namen', () async {
+  test('Bring!: nach der Anmeldung liegt nur die Sitzung im Speicher', () async {
     final store = InMemorySecretStore();
     final s = SecretStoreBringSecrets(store);
-    await s.saveCredentials(const BringCredentials(email: 'a', password: 'b'));
     await s.saveAuth(const BringAuth(userUuid: 'u', accessToken: 't'));
     expect(await store.listKeys(), _bringKeys.toSet());
   });

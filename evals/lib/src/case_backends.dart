@@ -18,7 +18,7 @@ final class CaseBackends {
   static Future<CaseBackends> start(Set<String> names, Clock clock) async {
     final integrations = <Integration>[];
     final cleanups = <Future<void> Function()>[];
-    if (names.contains('bring')) integrations.add(_bring());
+    if (names.contains('bring')) integrations.add(await _bring());
     if (names.contains('http')) integrations.addAll(_http(clock));
     if (names.contains('mcp')) {
       integrations.add(await _mcp(cleanups));
@@ -41,13 +41,12 @@ final class CaseBackends {
 
 /// Bring! with the contract state of `FakeBringApi` („Zuhause“ with Milch,
 /// Äpfel and recently Brot; „Büro“ with Kaffee).
-Integration _bring() {
+Future<Integration> _bring() async {
   final api = FakeBringApi();
+  // As after the one-time login: only the session is stored.
   return BringIntegration(
     api,
-    FakeBringSecrets(
-      login: BringCredentials(email: api.email, password: api.password),
-    ),
+    FakeBringSecrets(session: await api.login(api.email, api.password)),
   );
 }
 

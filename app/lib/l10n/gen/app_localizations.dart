@@ -1966,6 +1966,12 @@ abstract class AppLocalizations {
   /// **'Prüfe …'**
   String get bringChecking;
 
+  /// No description provided for @bringConnected.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbunden'**
+  String get bringConnected;
+
   /// No description provided for @bringEmail.
   ///
   /// In de, this message translates to:
@@ -1987,7 +1993,7 @@ abstract class AppLocalizations {
   /// No description provided for @bringIntro.
   ///
   /// In de, this message translates to:
-  /// **'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps freigegeben, sie kann jederzeit brechen. E-Mail und Passwort bleiben im sicheren Speicher des Geräts.'**
+  /// **'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps freigegeben, sie kann jederzeit brechen. Du meldest dich einmal an; E-Mail und Passwort werden nicht gespeichert, nur die Sitzung (Tokens) bleibt im sicheren Speicher des Geräts.'**
   String get bringIntro;
 
   /// No description provided for @bringNeedCredentials.
@@ -2014,6 +2020,18 @@ abstract class AppLocalizations {
   /// **'Bring! ist wieder erreichbar.'**
   String get bringReachable;
 
+  /// No description provided for @bringReauthError.
+  ///
+  /// In de, this message translates to:
+  /// **'Bring!: Anmeldung abgelaufen. Bitte neu anmelden.'**
+  String get bringReauthError;
+
+  /// No description provided for @bringReconnect.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut verbinden'**
+  String get bringReconnect;
+
   /// No description provided for @bringShareSend.
   ///
   /// In de, this message translates to:
@@ -2035,7 +2053,7 @@ abstract class AppLocalizations {
   /// No description provided for @bringSignOutBody.
   ///
   /// In de, this message translates to:
-  /// **'E-Mail, Passwort und Sitzung werden vom Gerät gelöscht.'**
+  /// **'Die Sitzung wird vom Gerät gelöscht.'**
   String get bringSignOutBody;
 
   /// No description provided for @bringSignOutTitle.

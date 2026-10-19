@@ -6,10 +6,8 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import '../helpers.dart';
 import 'bring_server.dart';
 
-const _login = BringCredentials(
-  email: 'kontrakt@example.org',
-  password: 'kanarien-passwort',
-);
+const _email = 'kontrakt@example.org';
+const _password = 'kanarien-passwort';
 
 void main() {
   group('BringIntegration', () {
@@ -44,8 +42,11 @@ void main() {
       expect(b.setup.single.kind, SetupStepKind.login);
       expect(b.setup.single.optional, isFalse);
       expect((await b.setupState()).missingSteps, [BringIntegration.loginStep]);
-      secrets.login = _login;
+      // Erledigt ist der Schritt mit einer Sitzung, nicht mit Zugangsdaten.
+      secrets.session = const BringAuth(userUuid: 'u', accessToken: 'a');
       expect((await b.setupState()).complete, isTrue);
+      secrets.session = null;
+      expect((await b.setupState()).missingSteps, [BringIntegration.loginStep]);
     });
 
     test('Fallback-Text für das Teilen an die Bring!-App', () {
@@ -68,9 +69,12 @@ void main() {
     late int recovered;
     late BringIntegration bring;
 
-    setUp(() {
+    setUp(() async {
       api = FakeBringApi();
-      secrets = FakeBringSecrets(login: _login);
+      secrets = FakeBringSecrets(session: await api.login(_email, _password));
+      api
+        ..logins = 0
+        ..methodCalls.clear();
       errors = [];
       recovered = 0;
       bring = BringIntegration(
@@ -83,20 +87,20 @@ void main() {
 
     Future<ToolOutcome> lists() => bring.tools.first.execute({}, ctx());
 
-    test('erste Nutzung meldet an und speichert die Sitzung', () async {
-      expect((await lists()).isError, isFalse);
-      expect(api.logins, 1);
-      expect(secrets.session, isNotNull);
-      await lists();
-      expect(api.logins, 1);
+    test('ohne Sitzung: nicht eingerichtet, kein Login-Versuch', () async {
+      secrets.session = null;
+      final o = await lists();
+      expect(o.isError, isTrue);
+      expect(o.text, BringSession.notSetUp.message);
+      expect(api.methodCalls, isEmpty);
+      expect(api.logins, 0);
+      expect(errors, isEmpty);
     });
 
     test('gespeicherte Sitzung wird ohne Login genutzt', () async {
-      final auth = await api.login(_login.email, _login.password);
-      secrets.session = auth;
       final b = BringIntegration(api, secrets);
-      await b.tools.first.execute({}, ctx());
-      expect(api.logins, 1);
+      expect((await b.tools.first.execute({}, ctx())).isError, isFalse);
+      expect(api.logins, 0);
     });
 
     test('abgelaufenes Token: einmal erneuern, Aufruf wiederholen', () async {
@@ -105,41 +109,38 @@ void main() {
       final o = await lists();
       expect(o.isError, isFalse);
       expect(api.refreshes, 1);
-      expect(api.logins, 1);
+      expect(api.logins, 0);
       expect(secrets.session!.accessToken, 'fake-access-2');
       expect(errors, isEmpty);
     });
 
-    test('Erneuerung abgelehnt: neu anmelden', () async {
+    test('Refresh abgelehnt: „Bitte neu anmelden“, kein Login', () async {
       await lists();
       api
         ..expireTokens()
         ..revokeRefresh();
-      expect((await lists()).isError, isFalse);
-      expect(api.logins, 2);
-    });
-
-    test('Sitzung ohne Refresh-Token: neu anmelden', () async {
-      secrets.session = const BringAuth(userUuid: 'u', accessToken: 'alt');
-      expect((await lists()).isError, isFalse);
-      expect(api.refreshes, 0);
-      expect(api.logins, 1);
-    });
-
-    test('Login abgelehnt: Fehlerzustand, Sitzung verworfen', () async {
-      secrets
-        ..login = const BringCredentials(
-          email: 'kontrakt@example.org',
-          password: 'alt',
-        )
-        ..session = const BringAuth(userUuid: 'u', accessToken: 'alt');
       final o = await lists();
       expect(o.isError, isTrue);
-      expect(o.text, contains('Passwort falsch'));
+      expect(o.text, contains('Bitte neu anmelden'));
       expect(o.text, contains(bringFallbackHint));
-      expect(errors.single, contains('Passwort falsch'));
+      expect(api.logins, 0);
+      expect(api.methodCalls, isNot(contains('login')));
       expect(secrets.session, isNull);
+      expect(errors.single, BringSession.reauthRequired.message);
       expect(bring.session.failed, isTrue);
+      // Ohne Sitzung geht es nur über die Anmeldung weiter.
+      expect((await lists()).text, BringSession.notSetUp.message);
+      expect(api.logins, 0);
+    });
+
+    test('Sitzung ohne Refresh-Token: „Bitte neu anmelden“', () async {
+      secrets.session = const BringAuth(userUuid: 'u', accessToken: 'alt');
+      final o = await lists();
+      expect(o.isError, isTrue);
+      expect(o.text, contains('Bitte neu anmelden'));
+      expect(api.refreshes, 0);
+      expect(api.logins, 0);
+      expect(secrets.session, isNull);
     });
 
     test('401 nach Erneuerung: Fehlerzustand', () async {
@@ -154,7 +155,7 @@ void main() {
     });
 
     test('nicht eingerichtet: kein Fehlerzustand', () async {
-      secrets.login = null;
+      secrets.session = null;
       final o = await lists();
       expect(o.isError, isTrue);
       expect(o.text, BringSession.notSetUp.message);
@@ -211,8 +212,8 @@ void main() {
       await lists();
       await bring.signOut();
       expect(secrets.session, isNull);
-      await lists();
-      expect(api.logins, 2);
+      expect((await lists()).text, BringSession.notSetUp.message);
+      expect(api.logins, 0);
     });
 
     test('parallele Aufrufe teilen eine Erneuerung', () async {
@@ -246,10 +247,12 @@ void main() {
     late BringIntegration bring;
     late FakeBringSecrets secrets;
 
-    setUp(() {
+    setUp(() async {
       server = BringServer();
       errors = [];
-      secrets = FakeBringSecrets(login: _login);
+      secrets = FakeBringSecrets(
+        session: await server.api().login(_email, _password),
+      );
       bring = BringIntegration(server.api(), secrets, onError: errors.add);
     });
 
@@ -387,6 +390,25 @@ void main() {
       expect(paths, ['lists', 'token']);
       expect(paths, isNot(contains('bringauth')));
       expect(errors, isEmpty);
+    });
+
+    test('Refresh 401 → „Bitte neu anmelden“, kein Login-Aufruf', () async {
+      server.expireTokens();
+      final before = server.requests.length;
+      server.next.addAll([
+        canned(401, bringFixture('unauthorized.json')),
+        canned(401, bringFixture('unauthorized.json')),
+      ]);
+      final o = await call('bring__list_lists', {});
+      expect(o.isError, isTrue);
+      expect(o.text, contains('Bitte neu anmelden'));
+      final paths = [
+        for (final r in server.requests.skip(before))
+          r.url.path.split('/').last,
+      ];
+      expect(paths, ['lists', 'token']);
+      expect(secrets.session, isNull);
+      expect(errors, hasLength(1));
     });
   });
 }

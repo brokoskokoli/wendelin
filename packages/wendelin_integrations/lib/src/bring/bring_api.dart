@@ -129,39 +129,11 @@ final class BringAuth {
   String toString() => 'BringAuth(<verborgen>)';
 }
 
-/// E-mail and password of the Bring! account (secret: [toString] hides the
-/// password).
-@immutable
-final class BringCredentials {
-  /// Creates credentials.
-  const BringCredentials({required this.email, required this.password});
-
-  /// Login e-mail.
-  final String email;
-
-  /// Password.
-  final String password;
-
-  @override
-  bool operator ==(Object other) =>
-      other is BringCredentials &&
-      other.email == email &&
-      other.password == password;
-
-  @override
-  int get hashCode => Object.hash(email, password);
-
-  @override
-  String toString() => 'BringCredentials(<verborgen>)';
-}
-
-/// Where the Bring! secrets live (app: `SecretStore`). Never SQLite,
-/// settings JSON, logs or exports.
+/// Where the Bring! session lives (app: `SecretStore`). Never SQLite,
+/// settings JSON, logs or exports. E-mail and password are not stored: the
+/// login happens once, only the tokens stay.
 abstract interface class BringSecrets {
-  /// The stored login, or `null` if Bring! is not set up.
-  Future<BringCredentials?> credentials();
-
-  /// The cached session, or `null`.
+  /// The stored session, or `null` if Bring! is not set up.
   Future<BringAuth?> auth();
 
   /// Replaces the cached session; `null` deletes it.

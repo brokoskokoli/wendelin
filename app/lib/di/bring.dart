@@ -8,13 +8,17 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import '../platform/app_share.dart';
 import 'providers.dart';
 
-/// [BringSecrets] on the app's [SecretStore]: e-mail and password of the
-/// Bring! account and the cached session (tokens). Never settings JSON,
-/// SQLite, logs or exports.
+/// [BringSecrets] on the app's [SecretStore]: only the cached session
+/// (tokens) of the Bring! account. E-mail and password are never stored
+/// (WP107); older versions' `bring.email` / `bring.password` are deleted.
+/// Never settings JSON, SQLite, logs or exports.
 final class SecretStoreBringSecrets implements BringSecrets {
-  /// Creates the adapter.
+  /// Creates the adapter and starts the cleanup of the old login keys
+  /// ([removeLegacyLogin], idempotent).
   SecretStoreBringSecrets(SecretStore store)
-    : store = ScopedSecretStore(store, namespace);
+    : store = ScopedSecretStore(store, namespace) {
+    _legacy = removeLegacyLogin();
+  }
 
   /// The Bring! part of the device secret store (keys `bring.*`).
   final ScopedSecretStore store;
@@ -22,26 +26,29 @@ final class SecretStoreBringSecrets implements BringSecrets {
   /// Prefix of all Bring! keys in the device secret store.
   static const namespace = 'bring.';
 
-  /// Key of the login e-mail (in [store]; `bring.email` on the device).
+  /// Old key of the login e-mail (`bring.email`): only deleted.
   static const emailKey = 'email';
 
-  /// Key of the password (`bring.password` on the device).
+  /// Old key of the password (`bring.password`): only deleted.
   static const passwordKey = 'password';
 
   /// Key of the session, JSON of [BringAuth] (`bring.session` on the
   /// device).
   static const sessionKey = 'session';
 
-  @override
-  Future<BringCredentials?> credentials() async {
-    final email = await store.read(emailKey);
-    final password = await store.read(passwordKey);
-    if (email == null || password == null) return null;
-    return BringCredentials(email: email, password: password);
+  late final Future<void> _legacy;
+
+  /// Migration: deletes the stored e-mail and password of earlier versions;
+  /// the session stays. Idempotent, runs at construction and before every
+  /// read of the session.
+  Future<void> removeLegacyLogin() async {
+    await store.delete(emailKey);
+    await store.delete(passwordKey);
   }
 
   @override
   Future<BringAuth?> auth() async {
+    await _legacy;
     final raw = await store.read(sessionKey);
     if (raw == null) return null;
     try {
@@ -56,18 +63,11 @@ final class SecretStoreBringSecrets implements BringSecrets {
       ? store.delete(sessionKey)
       : store.write(sessionKey, jsonEncode(auth.toJson()));
 
-  /// Stores the login.
-  Future<void> saveCredentials(BringCredentials login) async {
-    await store.write(emailKey, login.email);
-    await store.write(passwordKey, login.password);
-  }
-
-  /// Deletes login and session.
+  /// Deletes the session (and any old login keys).
   Future<void> clear() async {
-    // Delete the three keys directly: deleteAll() would read (decrypt) every
+    // Delete the keys directly: deleteAll() would read (decrypt) every
     // stored secret just to list keys.
-    await store.delete(emailKey);
-    await store.delete(passwordKey);
+    await removeLegacyLogin();
     await store.delete(sessionKey);
   }
 
@@ -100,28 +100,29 @@ BringIntegration? bringIntegrationOf(Map<String, Integration> integrations) =>
       null => null,
     };
 
-/// Signs in with [login]: checks it against the API first, then stores it
-/// together with the new session. Returns `null` on success, else a German
+/// Signs in with [email] and [password]: checks them against the API and
+/// stores **only the new session** (tokens); e-mail and password are not
+/// kept, not even on failure. Returns `null` on success, else a German
 /// message (nothing is stored then).
 Future<String?> bringSignIn({
   required BringApi api,
   required SecretStoreBringSecrets secrets,
   required BringIntegration? integration,
-  required BringCredentials login,
+  required String email,
+  required String password,
 }) async {
   final BringAuth auth;
   try {
-    auth = await api.login(login.email, login.password);
+    auth = await api.login(email, password);
   } on PortException catch (e) {
     return e.message;
   }
   await integration?.signOut();
-  await secrets.saveCredentials(login);
   await secrets.saveAuth(auth);
   return null;
 }
 
-/// Signs out: forgets the session and deletes login and tokens.
+/// Signs out: forgets the session and deletes the tokens.
 Future<void> bringSignOut({
   required SecretStoreBringSecrets secrets,
   required BringIntegration? integration,

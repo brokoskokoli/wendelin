@@ -230,13 +230,23 @@ void main() {
     final audit = await tester.runAsync(storage.audit.exportJson);
     expect(audit, contains('http__licht'));
     expect(audit, contains('bring__add_items'));
+    // Nach dem Login bleibt nur die Sitzung im Speicher; ihre Tokens
+    // tauchen weder in Einstellungen noch in Exporten oder Logs auf.
+    expect(
+      (await env.secrets.listKeys()).where((k) => k.startsWith('bring.')),
+      {'bring.session'},
+    );
+    final session = jsonDecode((await env.secrets.read('bring.session'))!)
+        as Map<String, Object?>;
+    final tokens = [session['accessToken']! as String];
+    if (session['refreshToken'] case final String r) tokens.add(r);
     for (final (what, text) in [
       ('Einstellungen', settingsJson),
       ('Export', export!),
       ('Audit-Log', audit!),
       ('Debug-Log', logs.join('\n')),
     ]) {
-      for (final canary in [httpCanary, bringPassword]) {
+      for (final canary in [httpCanary, bringPassword, ...tokens]) {
         expect(text, isNot(contains(canary)), reason: '$what: $canary');
       }
     }

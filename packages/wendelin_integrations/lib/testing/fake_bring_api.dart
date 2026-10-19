@@ -231,20 +231,11 @@ final class FakeBringApi with FakeFailures implements BringApi {
 
 /// In-memory [BringSecrets].
 final class FakeBringSecrets with FakeFailures implements BringSecrets {
-  /// Creates the store, optionally with [login] and [session].
-  FakeBringSecrets({this.login, this.session});
-
-  /// Stored credentials (as the app's setup would write them).
-  BringCredentials? login;
+  /// Creates the store, optionally with a [session].
+  FakeBringSecrets({this.session});
 
   /// The cached session.
   BringAuth? session;
-
-  @override
-  Future<BringCredentials?> credentials() async {
-    enter('credentials');
-    return login;
-  }
 
   @override
   Future<BringAuth?> auth() async {
