@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/integration_providers.dart';

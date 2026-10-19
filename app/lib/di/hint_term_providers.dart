@@ -55,11 +55,11 @@ final contactNamesProvider = Provider<ContactNames>((ref) {
   final on =
       ref.watch(demoModeProvider) ||
       ref.watch(enabledIntegrationsProvider).contains('contacts');
-  final port = ref.watch(platformPortsProvider).contacts;
-  if (!on || port == null) return () async => const [];
+  if (!on) return () async => const [];
   return () async {
     try {
-      if (!await port.hasPermission()) return const [];
+      final port = ref.read(platformPortsProvider).contacts;
+      if (port == null || !await port.hasPermission()) return const [];
       return [
         for (final c in await port.all())
           if (c.name.trim().isNotEmpty) c.name.trim(),
