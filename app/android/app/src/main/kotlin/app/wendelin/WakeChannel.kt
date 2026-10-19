@@ -68,7 +68,7 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
                 )
             }
             "chatVisible" -> {
-                ChatState.visible = call.argument<Boolean>("visible") == true
+                ChatState.report(call.argument<Boolean>("visible") == true)
                 result.success(null)
             }
             // The chat turn is over (WP93): the service listens again, like after the overlay.

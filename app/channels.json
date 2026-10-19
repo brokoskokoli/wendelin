@@ -217,6 +217,20 @@
       },
       "toDart": {}
     },
+    "app.wendelin/station": {
+      "dart": [
+        "app/lib/platform/channel_station_port.dart",
+        "app/lib/station/station_host.dart"
+      ],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/StationChannel.kt"],
+      "toKotlin": {
+        "isLocked": {"args": [], "returns": "value"},
+        "start": {"args": [], "returns": "none"}
+      },
+      "toDart": {
+        "ambient": {"args": ["dark"], "returns": "none"}
+      }
+    },
     "app.wendelin/torch": {
       "dart": ["app/lib/platform/channel_torch_port.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/TorchChannel.kt"],
@@ -290,7 +304,8 @@
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/WindowChannel.kt"],
       "toKotlin": {
         "setSecure": {"args": ["secure"], "returns": "none"},
-        "setKeepScreenOn": {"args": ["on"], "returns": "none"}
+        "setKeepScreenOn": {"args": ["on"], "returns": "none"},
+        "setBrightness": {"args": ["ambient"], "returns": "none"}
       },
       "toDart": {}
     }

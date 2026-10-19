@@ -22,4 +22,8 @@
         <item name="android:backgroundDimEnabled">true</item>
         <item name="android:windowNoTitle">true</item>
     </style>
+    <!-- Station mode: black window. -->
+    <style name="StationTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>

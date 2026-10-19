@@ -301,7 +301,7 @@ void main() {
         secrets: {McpSecretRefs.bearer('home'): 'token'},
       ),
     );
-    setView(tester, const Size(390, 1600));
+    setView(tester, const Size(390, 1700));
     await tester.pumpWidget(env.app(home: const IntegrationsScreen()));
     await pumpUntil(
       tester,

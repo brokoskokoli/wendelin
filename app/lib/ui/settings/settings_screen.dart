@@ -27,6 +27,7 @@ class SettingsScreen extends ConsumerWidget {
     (l.areaCosts, l.areaCostsDetail, AppRoutes.costs),
     (l.areaAssistant, l.areaAssistantDetail, AppRoutes.assistant),
     (l.areaSpeech, l.areaSpeechDetail, AppRoutes.voice),
+    (l.stationTitle, l.stationSettingsDetail, AppRoutes.station),
     (l.appLanguageTitle, l.appLanguageDetail, AppRoutes.appLanguage),
   ];
 

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../station/station_prefs.dart';
 import 'app_settings.dart';
 import 'preference_models.dart';
 import 'weather_config.dart';
@@ -25,6 +26,7 @@ final class StartupSettings {
     this.lists = const [],
     this.obsidian = const ObsidianPrefs(),
     this.secureScreen = false,
+    this.station = const StationPrefs(),
   });
 
   /// Integrations the user switched on.
@@ -70,6 +72,9 @@ final class StartupSettings {
   /// Protect the main app's screen content.
   final bool secureScreen;
 
+  /// Station mode settings (WP99).
+  final StationPrefs station;
+
   /// Reads the settings for the integrations [integrationIds].
   static Future<StartupSettings> load(
     SettingsRepository settings,
@@ -100,6 +105,7 @@ final class StartupSettings {
       obsidian:
           await settings.get(AppSettings.obsidian) ?? const ObsidianPrefs(),
       secureScreen: await settings.get(AppSettings.secureScreen) ?? false,
+      station: await settings.get(AppSettings.station) ?? const StationPrefs(),
     );
   }
 }

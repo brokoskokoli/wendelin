@@ -22,6 +22,7 @@ WIconData integrationIcon(String integrationId) => switch (integrationId) {
   'clipboard' => WIcons.clipboard,
   'alarms' => WIcons.alarm,
   'flashlight' => WIcons.flashlight,
+  'station' => WIcons.station,
   'lists' => WIcons.cart,
   'web' => WIcons.globe,
   'weather' => WIcons.waves,

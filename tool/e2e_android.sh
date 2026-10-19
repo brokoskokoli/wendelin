@@ -197,6 +197,28 @@ tap_text() { # <abzug> <text-regex>
 }
 resumed() { adb shell dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity'; }
 LOCK_PIN=4711
+# WP99: Stationsmodus. Die Station ist sichtbar, wenn StationActivity oben liegt.
+station_visible() { resumed | grep -q StationActivity; }
+station_wait() { # sichtbar (0) oder nicht (1) innerhalb von 20 s
+  local want="$1" _
+  for _ in $(seq 1 40); do
+    if station_visible; then [ "$want" = up ] && return 0; else [ "$want" = gone ] && return 0; fi
+    sleep 0.5
+  done
+  return 1
+}
+station_note() { in_app sh -c "'echo \"$1\" >> files/e2e/station-result.txt'"; }
+station_pin_shown() { ui_dump | grep -qE 'pinEntry|keyguard_pin_view|passwordEntry|keyguard_bouncer'; }
+station_tap_end() { # „Beenden“ (de) bzw. End/Terminer antippen
+  local ui
+  ui="$(ui_dump)"
+  { echo "$ui" | grep -qE '(text|content-desc)="(Beenden|End|Terminer)"'; } || return 1
+  local bounds n
+  bounds="$(echo "$ui" | grep -E '(text|content-desc)="(Beenden|End|Terminer)"' |
+    grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' | head -1)"
+  read -r -a n <<<"$(echo "$bounds" | tr -c '0-9' ' ')"
+  adb shell input tap $(((n[0] + n[2]) / 2)) $(((n[1] + n[3]) / 2))
+}
 wake_loop() { # <Durchläufe>
   local n="$1" i ok=0 answered=0 found log
   log="${WAKE_LOG:-/dev/null}"
@@ -300,6 +322,53 @@ host_request() {
       # Log (nur Wendelin-Zeilen, ohne Inhalte) nach $WAKE_LOG, falls gesetzt.
       wake_loop "${WAKE_RUNS:-10}"
       ;;
+    station-tile)
+      # WP99: Schnellkachel antippen (`cmd statusbar click-tile`, Android 13+).
+      in_app rm -f files/e2e/station-result.txt
+      adb shell cmd statusbar click-tile app.wendelin/app.wendelin.StationTileService >/dev/null 2>&1 || true
+      station_wait up && station_note tile_started=1 || station_note tile_started=0
+      ;;
+    station-check)
+      # WP99: Zustand notieren (sichtbar, PIN-Abfrage offen).
+      station_visible && station_note "visible=1" || station_note "visible=0"
+      station_pin_shown && station_note "pin=1" || station_note "pin=0"
+      ;;
+    station-lock)
+      # PIN setzen, Bildschirm aus und an: die Station liegt über der Sperre.
+      is_emulator || { echo "Sperre nur auf dem Emulator" >&2; exit 1; }
+      adb shell locksettings set-pin "$LOCK_PIN" >/dev/null 2>&1 ||
+        adb shell locksettings verify --old "$LOCK_PIN" >/dev/null 2>&1 ||
+        { echo "PIN konnte nicht gesetzt werden" >&2; exit 1; }
+      adb shell input keyevent KEYCODE_SLEEP
+      sleep 2
+      adb shell input keyevent KEYCODE_WAKEUP
+      sleep 2
+      adb shell dumpsys window | tr -d '\r' | grep -qiE 'isKeyguardShowing=true|mShowingLockscreen=true|keyguardShowing=true' &&
+        station_note locked=1 || station_note locked=0
+      station_visible && station_note shown_locked=1 || station_note shown_locked=0
+      ;;
+    station-end-cancel)
+      # „Beenden“ tippen: die PIN-Abfrage kommt; abbrechen (BACK): die Station bleibt.
+      station_tap_end && station_note end_tapped=1 || station_note end_tapped=0
+      sleep 2
+      station_pin_shown && station_note pin_asked=1 || station_note pin_asked=0
+      adb shell input keyevent KEYCODE_BACK
+      sleep 2
+      station_visible && station_note stays_after_cancel=1 || station_note stays_after_cancel=0
+      ;;
+    station-end-pin)
+      # „Beenden“ und die richtige PIN: die Station geht zu.
+      station_tap_end || true
+      sleep 2
+      adb shell input text "$LOCK_PIN"
+      adb shell input keyevent KEYCODE_ENTER
+      station_wait gone && station_note ended_after_pin=1 || station_note ended_after_pin=0
+      ;;
+    station-unlock)
+      adb shell locksettings clear --old "$LOCK_PIN" >/dev/null 2>&1 || true
+      adb shell input keyevent KEYCODE_WAKEUP
+      adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
+      ;;
     meminfo)
       # Speicher der App (B14, WP30): TOTAL PSS/RSS und Native Heap.
       adb shell dumpsys meminfo "$PKG" | tr -d '\r' |
@@ -337,10 +406,18 @@ if [ -n "$LIVE" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
 fi
 # WP104: Standort-Test? (Sammellauf ohne Argumente schließt ihn ein.)
 NEED_LOC=0
+# WP99: Der Stationstest braucht die Host-Aufträge (Kachel, Sperre, PIN) auch ohne Modelle.
+NEED_STATION=0
 if [ $# -eq 0 ]; then
   NEED_LOC=1
+  NEED_STATION=1
 else
-  for a in "$@"; do case "$a" in *location_e2e_test.dart) NEED_LOC=1 ;; esac; done
+  for a in "$@"; do
+    case "$a" in
+      *location_e2e_test.dart) NEED_LOC=1 ;;
+      *station_e2e_test.dart) NEED_STATION=1 ;;
+    esac
+  done
 fi
 LOC_LON=10.0
 LOC_LAT=53.55
@@ -389,7 +466,7 @@ helper() {
           tap_text "$ui" 'USE THIS FOLDER|DIESEN ORDNER VERWENDEN'; } ||
         tap_text "$ui" 'WendelinE2E' || tap_text "$ui" 'Documents' || true
     fi
-    if [ -n "$voiced" ]; then host_request; fi
+    if [ -n "$voiced" ] || { [ "$NEED_STATION" = 1 ] && [ -n "$granted" ]; }; then host_request; fi
     sleep 1
   done
 }

@@ -33,4 +33,15 @@ class ScreenProtection {
       // Kein Android-Fenster.
     }
   }
+
+  /// Window brightness of the station (WP99), without `WRITE_SETTINGS`:
+  /// [ambient] follows the light sensor (Kotlin side), otherwise nearly
+  /// black.
+  Future<void> setBrightness({required bool ambient}) async {
+    try {
+      await _channel.invokeMethod<void>('setBrightness', {'ambient': ambient});
+    } on MissingPluginException {
+      // Kein Android-Fenster.
+    }
+  }
 }

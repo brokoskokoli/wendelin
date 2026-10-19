@@ -21,6 +21,7 @@ List<Override> withIntegrations(TestEnv env) => [
       memory: env.memory,
       apps: env.apps,
       torch: env.torch,
+      station: env.station,
       media: env.media,
       contacts: env.contacts,
       phone: env.phone,

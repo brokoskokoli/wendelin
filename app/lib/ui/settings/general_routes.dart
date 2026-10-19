@@ -14,6 +14,7 @@ import 'providers_screen.dart';
 import 'routing/routing_screen.dart';
 import 'settings_screen.dart';
 import 'speaker/speaker_screen.dart';
+import 'station_screen.dart';
 import 'voice_metrics_screen.dart';
 import 'voice_screen.dart';
 import 'voice_voices_screen.dart';
@@ -34,6 +35,7 @@ Map<String, WidgetBuilder> generalRoutes() => {
   AppRoutes.costs: (_) => const CostsScreen(),
   AppRoutes.assistant: (_) => const AssistantScreen(),
   AppRoutes.appLanguage: (_) => const AppLanguageScreen(),
+  AppRoutes.station: (_) => const StationSettingsScreen(),
   AppRoutes.voice: (_) => const VoiceScreen(),
   AppRoutes.voices: (_) => const VoiceVoicesScreen(),
   AppRoutes.voiceMetrics: (_) => const VoiceMetricsScreen(),

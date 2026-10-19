@@ -268,6 +268,11 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
           MainHeader(
             onSettings: () =>
                 Navigator.of(context).pushNamed(AppRoutes.settings),
+            onStation: ref.watch(platformPortsProvider).station == null
+                ? null
+                : () => unawaited(
+                    ref.read(platformPortsProvider).station!.start(),
+                  ),
             onNewConversation:
                 conversation.entries.any((e) => e is! SessionStartEntry)
                 ? () => unawaited(_controller.newTopic())

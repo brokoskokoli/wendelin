@@ -6880,6 +6880,180 @@ abstract class AppLocalizations {
   /// **'Spotify'**
   String get spotifyTitle;
 
+  /// No description provided for @stationAllDay.
+  ///
+  /// In de, this message translates to:
+  /// **'ganztägig'**
+  String get stationAllDay;
+
+  /// No description provided for @stationEnd.
+  ///
+  /// In de, this message translates to:
+  /// **'Beenden'**
+  String get stationEnd;
+
+  /// No description provided for @stationEndHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Zum Beenden entsperrst du das Telefon.'**
+  String get stationEndHint;
+
+  /// No description provided for @stationEvents.
+  ///
+  /// In de, this message translates to:
+  /// **'Termine'**
+  String get stationEvents;
+
+  /// No description provided for @stationHour.
+  ///
+  /// In de, this message translates to:
+  /// **'{hour} Uhr'**
+  String stationHour(int hour);
+
+  /// No description provided for @stationNoEvents.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Termine in Sicht.'**
+  String get stationNoEvents;
+
+  /// No description provided for @stationNoTasks.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine fälligen Aufgaben.'**
+  String get stationNoTasks;
+
+  /// No description provided for @stationOverdue.
+  ///
+  /// In de, this message translates to:
+  /// **'überfällig'**
+  String get stationOverdue;
+
+  /// No description provided for @stationPlaybackSlot.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiedergabe'**
+  String get stationPlaybackSlot;
+
+  /// No description provided for @stationQuietFrom.
+  ///
+  /// In de, this message translates to:
+  /// **'Beginn der Ruhezeit'**
+  String get stationQuietFrom;
+
+  /// No description provided for @stationQuietSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Ruhezeiten'**
+  String get stationQuietSection;
+
+  /// No description provided for @stationQuietTo.
+  ///
+  /// In de, this message translates to:
+  /// **'Ende der Ruhezeit'**
+  String get stationQuietTo;
+
+  /// No description provided for @stationScreenAlways.
+  ///
+  /// In de, this message translates to:
+  /// **'Immer an, gedimmt'**
+  String get stationScreenAlways;
+
+  /// No description provided for @stationScreenAlwaysDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Helligkeit nach Umgebungslicht, der Inhalt wandert leicht gegen Einbrennen.'**
+  String get stationScreenAlwaysDetail;
+
+  /// No description provided for @stationScreenDaytime.
+  ///
+  /// In de, this message translates to:
+  /// **'Tagsüber an, in den Ruhezeiten aus'**
+  String get stationScreenDaytime;
+
+  /// No description provided for @stationScreenDaytimeDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Eine Berührung weckt die Station kurz.'**
+  String get stationScreenDaytimeDetail;
+
+  /// No description provided for @stationScreenSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Bildschirm'**
+  String get stationScreenSection;
+
+  /// No description provided for @stationScreenTouch.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus, an bei Wake Word oder Berührung'**
+  String get stationScreenTouch;
+
+  /// No description provided for @stationScreenTouchDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Bildschirm schaltet sich nach der üblichen Zeit aus.'**
+  String get stationScreenTouchDetail;
+
+  /// No description provided for @stationSectionsIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Was die Station zeigt. Uhr und Datum sind immer da. Termine und Aufgaben erscheinen mit Titeln.'**
+  String get stationSectionsIntro;
+
+  /// No description provided for @stationSectionsSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Anzeige'**
+  String get stationSectionsSection;
+
+  /// No description provided for @stationSettingsDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Bildschirm, Ruhezeiten, angezeigte Bereiche'**
+  String get stationSettingsDetail;
+
+  /// No description provided for @stationSettingsIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Handy liegt am Ladegerät und zeigt Uhr, Datum und mehr. Der Modus startet nur von Hand und endet nur mit Entsperren.'**
+  String get stationSettingsIntro;
+
+  /// No description provided for @stationSlotSoon.
+  ///
+  /// In de, this message translates to:
+  /// **'folgt'**
+  String get stationSlotSoon;
+
+  /// No description provided for @stationStart.
+  ///
+  /// In de, this message translates to:
+  /// **'Stationsmodus starten'**
+  String get stationStart;
+
+  /// No description provided for @stationTasks.
+  ///
+  /// In de, this message translates to:
+  /// **'Aufgaben'**
+  String get stationTasks;
+
+  /// No description provided for @stationTilesSlot.
+  ///
+  /// In de, this message translates to:
+  /// **'Smart Home'**
+  String get stationTilesSlot;
+
+  /// No description provided for @stationTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Stationsmodus'**
+  String get stationTitle;
+
+  /// No description provided for @stationWeather.
+  ///
+  /// In de, this message translates to:
+  /// **'Wetter'**
+  String get stationWeather;
+
   /// No description provided for @googleTasksApiError.
   ///
   /// In de, this message translates to:
