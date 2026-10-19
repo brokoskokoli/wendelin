@@ -4,11 +4,12 @@
 post (PostToolUse "*"): zählt Werkzeugaufrufe; ab WARN (60) kommt additionalContext
 „jetzt übergeben“. pre (PreToolUse "*"): ab BLOCK (90) erlaubt nur Write/Edit und
 git add/commit/status (exit 2 sonst), damit die Übergabe möglich bleibt.
-Zählschlüssel: agent_id, sonst transcript_path, sonst session_id. Zähler unter
+Zählt und sperrt NUR mit agent_id (Sub-Agenten, Reviewer eingeschlossen); Sitzungen ohne
+agent_id nie. Zählschlüssel: agent_id. Zähler unter
 ${WENDELIN_HOOK_DIR:-${TMPDIR:-/tmp}/wendelin-hooks} (außerhalb des Repos).
 Aktiv nur in Worktrees unter .../james-wt/ (Paket-Sitzungen und ihre Sub-Agenten;
 der Orchestrator im Haupt-Checkout bleibt unbehindert) oder mit
-WENDELIN_CALL_LIMIT=1; WENDELIN_CALL_LIMIT=0 schaltet ab. Reviewer zählen nicht.
+WENDELIN_CALL_LIMIT=1; WENDELIN_CALL_LIMIT=0 schaltet ab.
 Schwellen: WENDELIN_CALL_WARN / WENDELIN_CALL_BLOCK. Fail-open bei Fehlern.
 """
 import fcntl
@@ -28,14 +29,14 @@ def active(data):
     flag = os.environ.get("WENDELIN_CALL_LIMIT")
     if flag == "0":
         return False
-    if (data.get("agent_type") or "") == "wendelin-reviewer":
-        return False
+    if not data.get("agent_id"):
+        return False  # Sitzungen ohne agent_id (Hauptsitzung) zählen und sperren nie
     proj = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or ""
     return flag == "1" or "/james-wt/" in proj + "/"
 
 
 def counter_file(data):
-    key = data.get("agent_id") or data.get("transcript_path") or data.get("session_id") or "x"
+    key = data.get("agent_id") or "x"
     base = os.environ.get("WENDELIN_HOOK_DIR") or os.path.join(os.environ.get("TMPDIR", "/tmp"), "wendelin-hooks")
     os.makedirs(base, exist_ok=True)
     return os.path.join(base, hashlib.sha1(key.encode()).hexdigest()[:16] + ".count")

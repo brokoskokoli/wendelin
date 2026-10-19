@@ -232,6 +232,7 @@ void _viaMergeWp(SelfCheck t, _Env c) {
       'MERGE_WP_GATE': 'true',
       'MERGE_WP_CLEANUP': c.script,
       'MERGE_WP_CI': r'printf "2026-01-01T00:00:00Z\t%s\t%s\tcompleted\tsuccess\n" "$SHA" "$BRANCH"',
+      'MERGE_WP_CI_MODE': 'echo full',
     },
   );
   t.isTrue(

@@ -19,8 +19,25 @@ Jedes Arbeitspaket wird von einem Agenten geprüft, der den Code nicht geschrieb
 URTEIL: FREIGABE | NACHBESSERN
 CI: <grün/rot, Lauf-URL, Abdeckung je Paket>
 MUTATIONEN: <n getestet, n erkannt, Liste überlebender>
+CHECKLISTE: <Haken des Coders geprüft: ja/Abweichungen>
 BEFUNDE:
-- [Blocker|Muss|Soll] <Datei:Zeile> – <Befund> – <konkreter Vorschlag>
+- [Blocker|Muss|Soll] <kategorie> <Datei:Zeile> – <Befund> – <konkreter Vorschlag>
 ```
 
-`FREIGABE` nur ohne Blocker/Muss. Soll-Befunde dürfen offen bleiben, werden aber gelistet.
+`FREIGABE` nur ohne Blocker/Muss. Soll-Befunde dürfen offen bleiben, werden aber gelistet. Die Kategorie ist ein Schlüssel der Checkliste in `docs/agents/coder.md` (`bestaetigung`, `fail-closed`, `dispose`, `negativtest`, `texte`, `doku`, `berechtigung`) oder `sonstiges`.
+
+## Urteilsdatei (maschinenlesbar)
+
+Der Reviewer legt sein Urteil als Datei ab: `../james-wt/handoff/<wp>-review.md` (z. B. wp110-review.md), beim Re-Review `<wp>-review2.md`, dann `-review3.md`. Die Datei beginnt mit genau diesem Kopf (eine Angabe je Zeile, `Schlüssel: Wert`, danach beliebiger Text, am besten das Ergebnis oben):
+
+```
+URTEIL: FREIGABE | NACHBESSERN
+RUNDE: 1
+MUTATIONEN: 6/1
+BEFUNDE: bestaetigung=0 fail-closed=1 dispose=0 negativtest=2 texte=0 doku=0 berechtigung=0 sonstiges=0
+```
+
+- `RUNDE`: 1 beim ersten Review, 2 beim Re-Review usw. (passt zur Dateinummer).
+- `MUTATIONEN: <getestet>/<überlebt>`; überlebende Mutationen sind zugleich Befunde (meist `negativtest`).
+- `BEFUNDE`: Anzahl der Blocker/Muss/Soll-Befunde je Kategorie; fehlt eine Kategorie, gilt 0.
+- `dart run tool/review_stats.dart [ordner]` (Standard: der Ordner handoff neben dem Repo) liest alle `*-review*.md` und nennt die Quote „beim ersten Review sauber“ (Runde 1 mit FREIGABE), die Befunde je Kategorie und die Mutationsbilanz. Selbsttest: `tool/src/review_stats.dart` in `dart run tool/self_test.dart`.

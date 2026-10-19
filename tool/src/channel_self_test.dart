@@ -321,6 +321,23 @@ void kotlinUnitChecks(SelfCheck t) {
     '<testsuite name="b" tests="3" failures="0" errors="2">',
     'kein Bericht',
   ]);
+  t.eq(jdkMajor('openjdk version "21.0.5" 2024-10-15'), 21, 'JDK 21');
+  t.eq(jdkMajor('openjdk version "23.0.1" 2024-10-15'), 23, 'JDK 23');
+  t.eq(jdkMajor('java version "1.8.0_392"'), 8, 'JDK 8');
+  t.eq(jdkMajor(''), null, 'unbekannt');
+  bool has(String h) =>
+      h == gradleJdkCandidates[0] || h == gradleJdkCandidates[2];
+  const v23 = 'openjdk version "23.0.1"';
+  t.eq(gradleJavaHome(v23, has), gradleJdkCandidates[0], 'JDK 23: openjdk@21');
+  t.eq(
+    gradleJavaHome(v23, (h) => h == gradleJdkCandidates[2]),
+    gradleJdkCandidates[2],
+    'JDK 23 ohne openjdk@21: Android-Studio-JBR',
+  );
+  t.eq(gradleJavaHome(v23, (_) => false), null, 'kein Kandidat: unverändert');
+  t.eq(gradleJavaHome('openjdk version "21.0.5"', has), null, 'JDK 21 bleibt');
+  t.eq(gradleJavaHome('openjdk version "17.0.9"', has), null, 'JDK 17 bleibt');
+  t.eq(gradleJavaHome('', has), null, 'unbekannte Version: fail-open');
   t.eq(c.tests, 7, 'Testanzahl');
   t.eq(c.failures, 3, 'Fehler und Ausfälle');
 }

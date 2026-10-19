@@ -117,17 +117,14 @@ final class _Budget {
     }
   }
 
-  /// Zählschlüssel: agent_id, sonst transcript_path.
+  /// Zählschlüssel: agent_id; Sitzungen ohne agent_id zählen und sperren nie.
   void keys(_In a1) {
     t.eq(pre(input('Read', agent: 'a2')), 0, 'anderer Agent zählt separat');
-    t.eq(pre(input('Read')), 0, 'Sitzung ohne agent_id: eigener Zähler');
+    const one = {'WENDELIN_CALL_BLOCK': '1'};
     for (var n = 0; n < 3; n++) {
-      post(input('Read'));
+      t.eq(ctx(post(input('Read'))), '', 'ohne agent_id: kein Hinweis');
     }
-    const three = {'WENDELIN_CALL_BLOCK': '3'};
-    t.eq(pre(input('Read'), three), 2, 'Sitzung zählt über transcript_path');
-    final other = {...input('Read'), 'transcript_path': '/t/other.jsonl'};
-    t.eq(pre(other, three), 0, 'anderes transcript_path: anderer Zähler');
+    t.eq(pre(input('Read'), one), 0, 'ohne agent_id: nie gesperrt');
   }
 
   /// Orchestrator im Haupt-Checkout, Reviewer, Abschalter.
@@ -140,7 +137,7 @@ final class _Budget {
       'Haupt-Checkout: nie gesperrt',
     );
     final rev = input('Read', agent: 'a1', type: 'wendelin-reviewer');
-    t.eq(pre(rev), 0, 'Reviewer: nie gesperrt');
+    t.eq(pre(rev), 2, 'Reviewer (agent_id) zählt wie jeder Sub-Agent');
     t.eq(
       pre(a1, {'WENDELIN_CALL_LIMIT': '0'}),
       0,

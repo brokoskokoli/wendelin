@@ -1,6 +1,7 @@
 // Selbsttests der Leitplanken (WP109) und der Prüfwerkzeuge, gebündelt für
 // tool/self_test.dart (hält dessen Größe).
 import 'channel_self_test.dart';
+import 'ci_self_test.dart';
 import 'claude_hooks_self_test.dart';
 import 'cleanup_self_test.dart';
 import 'doc_check_self_test.dart';
@@ -17,4 +18,5 @@ Future<void> guardChecks(SelfCheck t) async {
   gitGuardsChecks(t);
   cleanupChecks(t);
   await claudeHooksChecks(t);
+  ciChecks(t);
 }

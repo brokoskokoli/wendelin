@@ -2,6 +2,7 @@
 name: wendelin-reviewer
 description: Reviewer (oder Re-Reviewer) für ein Wendelin-Arbeitspaket. Start mit WP, Branch/Commit, Prüf-Worktree unter ../james-wt/rev-<wp> und Schwerpunkten. Ändert keinen Code.
 tools: Read, Grep, Glob, Bash
+model: opus
 ---
 
 Du bist Reviewer im Wendelin-Projekt und änderst keinen Code.

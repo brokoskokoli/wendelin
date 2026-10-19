@@ -10,15 +10,23 @@
 # CI-Beleg: Der neueste Lauf des Workflows gate mit headSha == Branch-SHA und headBranch == Branch muss
 # completed/success sein (cancelled, in_progress, fehlend, anderer Branch → Abbruch). MERGE_WP_CI ist ein
 # Befehl (Umgebung: BRANCH, SHA), der je Lauf eine Zeile `<createdAt>\t<headSha>\t<headBranch>\t<status>\t<conclusion>`
-# ausgibt; Standard ist `gh run list --workflow gate`.
+# ausgibt (optional als 6. Spalte die Lauf-ID); Standard ist `gh run list --workflow gate`.
+# Verkürzte Läufe (WP110): Ein Lauf, der nur Doku prüft (Job docs-only), genügt nur für einen Branch, dessen Diff gegen
+# main ausschließlich Doku ist (tool/ci_scope.sh --classify). Sobald der Diff Code enthält, muss der Lauf ein voller sein.
+# MERGE_WP_CI_MODE ist ein Befehl (Umgebung: RUN, BRANCH, SHA), der "docs" oder "full" ausgibt; Standard: gh run view.
 set -u
+HERE=$(cd "$(dirname "$0")" && pwd)
 NAME=${MERGE_WP_NAME:-brokoskokoli}
 EMAIL=${MERGE_WP_EMAIL:-16724498+brokoskokoli@users.noreply.github.com}
 BASE=${MERGE_WP_BASE:-main}
 GATE=${MERGE_WP_GATE:-dart run tool/gate.dart --changed}
 CI_CMD=${MERGE_WP_CI:-}
 if [ -z "$CI_CMD" ]; then
-  CI_CMD='gh run list --workflow gate --branch "$BRANCH" --limit 50 --json createdAt,headSha,headBranch,status,conclusion --jq ".[] | [.createdAt,.headSha,.headBranch,.status,.conclusion] | @tsv"'
+  CI_CMD='gh run list --workflow gate --branch "$BRANCH" --limit 50 --json createdAt,headSha,headBranch,status,conclusion,databaseId --jq ".[] | [.createdAt,.headSha,.headBranch,.status,.conclusion,(.databaseId|tostring)] | @tsv"'
+fi
+MODE_CMD=${MERGE_WP_CI_MODE:-}
+if [ -z "$MODE_CMD" ]; then
+  MODE_CMD='gh run view "$RUN" --json jobs --jq "[.jobs[] | select(.name==\"docs-only\" and .conclusion==\"success\")] | if length>0 then \"docs\" else \"full\" end"'
 fi
 CLEANUP=${MERGE_WP_CLEANUP:-tool/cleanup_wt.sh}
 TRAILER='Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>'
@@ -55,6 +63,7 @@ ci_green() {
   [ -n "$line" ] || { echo "kein CI-Lauf (Workflow gate) für $want_branch auf $want_sha" >&2; return 1; }
   [ "$(printf '%s' "$line" | cut -f4)/$(printf '%s' "$line" | cut -f5)" = completed/success ] \
     || { echo "neuester CI-Lauf für $want_sha ist nicht grün: $(printf '%s' "$line" | cut -f4-5 | tr '\t' '/')" >&2; return 1; }
+  printf '%s\n' "$(printf '%s' "$line" | cut -f6)"   # Lauf-ID (leer, wenn die Zeile keine hat)
 }
 
 reset_back() { git merge --abort 2>/dev/null; git reset -q --hard "$orig"; }
@@ -74,7 +83,12 @@ fi
 # 0. CI-Beleg auf genau dem Branch-SHA.
 sha=$(git rev-parse "refs/heads/$branch")
 ci_out=$(BRANCH=$branch SHA=$sha sh -c "$CI_CMD") || die "CI-Abfrage fehlgeschlagen ($CI_CMD)"
-printf '%s\n' "$ci_out" | ci_green "$sha" "$branch" || die "Merge ohne grünen CI-Lauf abgelehnt (Branch pushen, tool/ci_wait.sh $branch)"
+ci_run=$(printf '%s\n' "$ci_out" | ci_green "$sha" "$branch") || die "Merge ohne grünen CI-Lauf abgelehnt (Branch pushen, tool/ci_wait.sh $branch)"
+# Enthält der Diff gegen main Code, muss der grüne Lauf ein voller sein (kein verkürzter Doku-Lauf).
+if [ "$(git diff --name-only "$(git merge-base "$BASE" "$branch")" "$branch" | sh "$HERE/ci_scope.sh" --classify)" != docs ]; then
+  ci_mode=$(RUN=$ci_run BRANCH=$branch SHA=$sha sh -c "$MODE_CMD") || die "CI-Modus nicht ermittelbar ($MODE_CMD)"
+  [ "$ci_mode" = full ] || die "CI-Lauf auf ${sha:0:8} war verkürzt ($ci_mode), der Branch enthält aber Code: voller Lauf nötig (Branch neu pushen oder gh run rerun, tool/ci_wait.sh $branch)"
+fi
 
 wt=$(git worktree list --porcelain | awk -v b="refs/heads/$branch" '/^worktree /{p=$2} $1=="branch" && $2==b{print p}')
 if [ $dry -eq 1 ]; then

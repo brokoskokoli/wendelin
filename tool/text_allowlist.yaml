@@ -1,0 +1,40 @@
+# Bestandstreffer des Text-Checks (tool/check_texts.dart, WP110): feste deutsche
+# Texte in app/lib/{ui,agent,di,voice}, die bewusst bleiben (Beispieldaten, gesprochen,
+# Log/Rückfalltexte). Sichtbare UI-Texte gehören in app/lib/l10n/src/<bereich>/.
+#
+# Format: <pfad>: <anzahl>  # Grund. Die Liste schrumpft nur: ein Eintrag über der
+# Anzahl ist verboten, ein Eintrag unter der Anzahl wird zum Senken/Entfernen gemeldet.
+
+app/lib/ui/attestation/attestation_texts.dart: 1  # Regex auf Pakettexte
+app/lib/ui/design/compositions.dart: 18  # Beispieldaten der Goldens
+app/lib/ui/design/gallery.dart: 17  # Beispieldaten der Galerie
+app/lib/agent/agent_controller.dart: 2  # interne Fehler, Log
+app/lib/agent/conversation_state.dart: 1  # gesprochener GPU-Hinweis
+app/lib/agent/new_topic_command.dart: 3  # Sprachbefehle und Muster
+app/lib/di/agent_providers.dart: 3  # Statusmeldungen, Log
+app/lib/di/app_requirements.dart: 1  # Schlüsselkonstante, UI mappt sie
+app/lib/di/demo_provider.dart: 12  # skriptierte Antworten des Demo-Modus
+app/lib/di/home_assistant.dart: 1  # Meldungen der Ports (Pakettexte)
+app/lib/di/integrations/bring_spec.dart: 2  # Registry-Meldung, Rückfall
+app/lib/di/integrations/calendar_spec.dart: 2  # Rückfall, UI nutzt ARB
+app/lib/di/integrations/google_tasks_spec.dart: 1  # Registry-Meldung, Rückfall
+app/lib/di/integrations/ha_spec.dart: 1  # Registry-Meldung, Rückfall
+app/lib/di/integrations/location_spec.dart: 1  # Registry-Meldung, Rückfall
+app/lib/di/integrations/obsidian_spec.dart: 1  # Rückfall, UI mappt per Paket
+app/lib/di/integrations/spotify_spec.dart: 2  # Registry-Meldung, Rückfall
+app/lib/di/integrations/todoist_spec.dart: 1  # Registry-Meldung, Rückfall
+app/lib/di/list_access.dart: 1  # Registry-Fehler, UI zeigt listsAccessLost
+app/lib/di/mcp/mcp_secrets.dart: 1  # Fehlertext an Log
+app/lib/di/preference_models.dart: 1  # FormatException, Log
+app/lib/di/vocabulary_provider.dart: 1  # Log
+app/lib/di/voice_providers.dart: 3  # VoiceException-Rückfalltexte
+app/lib/di/voice_settings_providers.dart: 1  # debugPrint
+app/lib/di/wake_providers.dart: 1  # VoiceException-Rückfalltext
+app/lib/di/weather_config.dart: 1  # FormatException, Log
+app/lib/voice/confirm_prompts.dart: 6  # gesprochen
+app/lib/voice/locked_agent_run.dart: 2  # gesprochen (Sperrbildschirm)
+app/lib/voice/primed_audio_input.dart: 1  # VoiceException-Rückfalltext
+app/lib/voice/voice_components.dart: 1  # Beispielsatz für Vokabular/STT
+app/lib/voice/wake/wake_calibrator.dart: 1  # StateError, Log
+app/lib/voice/wake/wake_enroller.dart: 3  # StateError/toString, Log
+app/lib/voice/wake/wake_tester.dart: 1  # StateError, Log

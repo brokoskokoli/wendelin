@@ -37,6 +37,7 @@ final class _Repo {
         'GIT_COMMITTER_EMAIL': _goodMail,
         'MERGE_WP_GATE': 'true',
         'MERGE_WP_CI': ciGreen,
+        'MERGE_WP_CI_MODE': 'echo full',
         'MERGE_WP_CLEANUP': File('tool/cleanup_wt.sh').absolute.path,
       };
 
@@ -372,7 +373,43 @@ void _ciChecks(SelfCheck t, _Repo r) {
   rejects('CI-Abfrage schlägt fehl', 'false');
   final res = r.merge(['ci', '--dry-run'], extra: {'MERGE_WP_CI': 'true'});
   t.isTrue(res.exitCode != 0, 'dry-run prüft das CI ebenfalls');
+  _shortRuns(t, r, start);
   _ciMerges(t, r, start, sha, old);
+}
+
+/// Verkürzte Doku-Läufe (WP110): genügen nur Branches ohne Code.
+void _shortRuns(SelfCheck t, _Repo r, String start) {
+  final docsMode = {'MERGE_WP_CI_MODE': 'echo docs'};
+  var res = r.merge(['ci'], extra: docsMode);
+  t.isTrue(
+    res.exitCode != 0 && '${res.stderr}'.contains('verkürzt'),
+    'Branch mit Code, nur verkürzter Lauf → Abbruch',
+  );
+  t.eq(r.head(), start, 'verkürzter Lauf bei Code: main unverändert');
+  res = r.merge(['ci', '--dry-run'], extra: docsMode);
+  t.isTrue(
+    res.exitCode != 0,
+    'verkürzter Lauf bei Code: auch dry-run lehnt ab',
+  );
+  res = r.merge(['ci', '--dry-run'], extra: {'MERGE_WP_CI_MODE': 'false'});
+  t.isTrue(res.exitCode != 0, 'Modus nicht ermittelbar → Abbruch');
+  // Gemischter Branch (Doku und Code) zählt als Code.
+  r.git(['checkout', '-q', '-b', 'mixed', 'main']);
+  r.commit('m.md', 'x\n', 'docs');
+  r.commit('m.txt', 'x\n', 'code');
+  r.git(['checkout', '-q', 'main']);
+  res = r.merge(['mixed', '--dry-run'], extra: docsMode);
+  t.isTrue(res.exitCode != 0, 'Doku plus Code, verkürzter Lauf → Abbruch');
+  r.git(['branch', '-D', 'mixed']);
+  // Reiner Doku-Branch: der verkürzte Lauf genügt.
+  r.branch('docs1', 'notes.md', 'docs');
+  res = r.merge(['docs1', '--dry-run'], extra: docsMode);
+  t.isTrue(res.exitCode == 0, 'nur Doku, verkürzter Lauf → ok: ${res.stderr}');
+  res = r.merge(['docs1', '--dry-run']);
+  t.isTrue(res.exitCode == 0, 'nur Doku, voller Lauf → ok: ${res.stderr}');
+  r.git(['branch', '-D', 'docs1']);
+  final scope = Process.runSync('bash', ['tool/ci_scope.sh', '--self-test']);
+  t.eq(scope.exitCode, 0, 'ci_scope.sh --self-test: ${scope.stderr}');
 }
 
 /// Grüne Läufe: Merge, Tree-Notiz, rotes Gate, Branch-HEAD = Merge von main.
