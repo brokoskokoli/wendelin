@@ -107,11 +107,16 @@ def finds(sc, rx):
 
 # ---------- Stufe 1 ----------
 class Stage1:
-    def __init__(self):
+    def __init__(self, model=None, mww=None):
+        """model: openWakeWord-Klassifikator (ONNX, Standard v7); mww: microWakeWord-tflite (ersetzt die Modellwerte `ms`, Smoothing 5)."""
         import onnxruntime as ort
+        self.mww = None
+        if mww:     # eigenes venv (tensorflow-frei, nur ai-edge-litert + microwakeword), siehe mww_train.py
+            from mww_stage import MwwScorer
+            self.mww = MwwScorer(mww)
         self.af = C.make_features(f"{S.KWS}/wp58/dl/oww", 1)
         so_ = ort.SessionOptions(); so_.intra_op_num_threads = 1
-        self.sess = ort.InferenceSession(f"{S.KWS}/wp58/out/wendelin_v7.onnx", so_, providers=["CPUExecutionProvider"])
+        self.sess = ort.InferenceSession(model or f"{S.KWS}/wp58/out/wendelin_v7.onnx", so_, providers=["CPUExecutionProvider"])
 
     def windows(self, x, chunk=120, ov=3):
         """(V, we, ms) fuer x; we = Fensterende in Samples von x. Chunks mit Ueberlappung, damit der Speicher klein bleibt."""
@@ -124,6 +129,8 @@ class Stage1:
             if n <= 0: continue
             W = np.stack([emb[j:j + C.WIN] for j in range(n)]).astype("float32")
             ms = self.sess.run(None, {"input": W})[0][:, 0]
+            if self.mww is not None:
+                ms = self.mww.on_grid(y, np.array([C.window_end(j) for j in range(n)]))
             V = W.reshape(n, -1); V = V / (np.linalg.norm(V, axis=1, keepdims=True) + 1e-9)
             we = np.array([C.window_end(j) for j in range(n)]) - SR + lo
             m = we >= st if st > 0 else np.ones(n, bool)
@@ -149,6 +156,8 @@ def main():
     ap.add_argument("--cand-limit", type=float, default=60.0)
     ap.add_argument("--spk-thr", default="0.45,0.52,0.60")
     ap.add_argument("--variants", default="whisper-small,parakeet,parakeet-hw1,parakeet-hw2,parakeet-hw3")
+    ap.add_argument("--model", help="openWakeWord-ONNX (Standard: wendelin_v7)")
+    ap.add_argument("--mww", help="microWakeWord-tflite fuer die Modellregeln M*")
     ap.add_argument("--scan-only", action="store_true")
     ap.add_argument("--max-neg-min", type=float, default=0, help="Test: nur die ersten N Minuten der Negativ-Datei")
     a = ap.parse_args()
@@ -226,7 +235,7 @@ def main():
         return x, (p + 1) * FR - max(0, t0)               # Wortende (Samples im Clip)
 
     # (4)+(5) Stufe 1: Fenster
-    s1 = Stage1()
+    s1 = Stage1(a.model, a.mww)
     spk = S.make_spk()
     thrs = [float(t) for t in a.thr.split(",")]; mthrs = [float(t) for t in a.model_thr.split(",")]
     rules = {f"T{t}": ("T", t, None) for t in thrs}
