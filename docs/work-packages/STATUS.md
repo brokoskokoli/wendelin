@@ -56,9 +56,16 @@ Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
 ## Nächste Schritte
 
-Stand 2026-10-19 (Orchestrator „Wendelin coding“):
+Reihenfolge M5 (bestätigt Stefan 2026-10-19), je Schritt höchstens 2 Paket-Sitzungen; Pakete am Sprach-Controller (WP81b, WP92, WP93, WP103) nie gleichzeitig:
 
-3. Als nächste Sitzung WP102 (Messvergleich Sprache), dann WP103; außerdem WP81b, WP97, WP76c/d (Downgrade-Schutz K59) und die M5-Wellen 2 und 3.
-4. Pakete mit alten Commits („Stefan Richter“, Claude-Session-Zeile) per Squash mergen.
+0. läuft: WP98 Konfliktarm, WP102 Messvergleich Sprache
+1. WP97 Lastbremse/Cache, WP85 Kontakte/SMS/Anrufe
+2. WP103 Bessere Sprache einbauen, WP86 Standort/Maps
+3. WP81b Modellaufruf parallel zur Quittung, WP76c Tinfoil EHBP/HPKE
+4. WP76d Tinfoil in der App (Downgrade-Schutz K59), WP89 Todoist/Google Tasks
+5. WP92a→b→c Sprechererkennung, WP94 Schnellwechsel
+6. WP93 Wake Word im Chat
 
-Wartet auf Stefan: K47 nach Stopp-Test 11.6, Test 11.7a.
+Danach M6 (nur mit Go): WP99, dann WP100/WP101 (`M6-PLAN.md`). Pakete mit Alt-Commits per Squash mergen.
+
+Wartet auf Stefan: K47 nach Stopp-Test 11.6, Test 11.7a, Gerätetests WP90.1–7 und WP91.
