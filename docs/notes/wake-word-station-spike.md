@@ -81,7 +81,29 @@ Mit Stufe 2 (Parakeet Hotword 2) und CAM++ 0,45 hinter dem Modell:
 Folgerung: Die Vorlagen sind das empfindlichste Stufe 1 (100 % sicher bei 948 Kand./h), die Modelle v7/v9 sind auf den ruhigen Segmenten schwächer, produzieren aber 15- bis 25-mal weniger Kandidaten. v9 ist nicht besser als v7 (mehr Sprecher und FLEURS ändern die echte Messung kaum), microWakeWord (61 KB, Apache-2.0) liegt darunter (Mobil mit Stufe 2 und 3: 0 % sicher). Die Treffer-Unterschiede zwischen v7/v9 liegen bei n=10 im Rauschen (1 Segment = 10 Punkte).
 
 ## Persönliches Feintuning (Stufe 1)
-**Nicht ausgeführt.** Der Plan (v7/v9 nur mit den Einlern-Segmenten 1 bis 5 beider Geräte als augmentierte Positive feinabstimmen, Test auf den übrigen Segmenten und der Negativ-Datei) wurde abgebrochen: Auf dem Mac waren nur 14 GiB frei (Vorgabe: mindestens 15 GB für neue Zwischendaten). Offen, siehe „Erneut messen“.
+Skript `tool/train_wake_word/finetune_personal.py` (ein Kommando im Kopf). v7 und v9 werden mit den 8 kurzen Einlern-Wörtern (Segmente 1 bis 5 beider Geräte; der lange Satz in Segment 1 ist ausgelassen) feinabgestimmt: 2000 augmentierte Clips (Pegel, Hall, Rauschen, Tempo/Tonhöhe, EQ) plus die WP58-Features (Negative und synthetische Positive im Verhältnis 3:1:1 je Batch), 1200 Schritte, Lernrate 2e-4, ca. 1,5 min je Modell. Die Negativ-Datei und die Testsegmente gehen nicht ins Training; die v9-Features waren gelöscht, beide Modelle nutzen die WP58-Features (work5). Getestet auf den übrigen Segmenten (n=10 sicher) und der Negativ-Datei (1,0 h). Stufe 2 = Parakeet Hotword 2, ohne CAM++ (mit 0,45 sinkt Mobil auf 20 bis 30 %).
+
+| Gerät | Modell, Schwelle | Stufe 1: Kand./h | sicher % | ev 3m/TV/leise % | + Hotword 2: sicher % | ev % | FA/h | Verw/h |
+|---|---|---|---|---|---|---|---|---|
+| Station | v7 vorher M0,5 | 58 | 70 | - | 60 | 100/75/33 | 0 | 2,1 |
+| Station | v7 fein M0,5 | 97 | 90 | 100/100/100 | 60 | 100/75/33 | 0 | 2,1 |
+| Station | v7 fein M0,7 | 64 | 80 | 100/100/100 | 60 | 100/100/33 | 0 | 2,1 |
+| Station | v7 fein M0,9 | 37 | 80 | 100/100/100 | 70 | 60/100/33 | 0 | 2,1 |
+| Station | v9 vorher M0,5 | 66 | 60 | - | 50 | 100/50/17 | 0 | 2,1 |
+| Station | v9 fein M0,5 | 87 | 90 | 100/100/100 | 80 | 100/75/17 | 0 | 2,1 |
+| Station | v9 fein M0,7 | 43 | 70 | 100/100/100 | 60 | 100/75/17 | 0 | 2,1 |
+| Station | v9 fein M0,9 | 19 | 50 | 100/75/100 | 40 | 60/50/17 | 0 | 2,1 |
+| Mobil | v7 vorher M0,5 | 33 | 30 | - | 20* | 80/50/50 | 0 | 0 |
+| Mobil | v7 fein M0,5 | 72 | 60 | 100/100/100 | 60 | 80/100/33 | 0 | 0 |
+| Mobil | v7 fein M0,7 | 43 | 50 | 100/100/100 | 50 | 80/100/67 | 0 | 0 |
+| Mobil | v7 fein M0,9 | 16 | 50 | 100/100/100 | 40 | 80/100/67 | 0 | 0 |
+| Mobil | v9 fein M0,5 | 62 | 50 | 100/100/100 | 50 | 80/100/67 | 0 | 2,1 |
+| Mobil | v9 fein M0,7 | 33 | 40 | 100/100/100 | 40 | 80/100/67 | 0 | 0 |
+| Mobil | v9 fein M0,9 | 8 | 30 | 100/100/100 | 30 | 80/100/67 | 0 | 0 |
+
+(*) Vorher-Werte aus der Tabelle oben mit CAM++ 0,45; "vorher" mit Stufe 1 allein: sicher-Spalte aus der Stufe-1-Tabelle.
+
+Das Feintuning hebt die Stufe-1-Treffer deutlich (Station 60 bis 70 → 90 %, Mobil 30 bis 40 → 50 bis 60 % bei M0,5), kostet aber etwa 1,5- bis 2,2-fach so viele Kandidaten (87 bis 97 statt 58 bis 66 je Stunde Station, 62 bis 72 statt 33 Mobil). Nach Stufe 2 bleiben 60 bis 80 % sicher (Station v9 M0,5 80 %, Mobil 50 bis 60 %) bei 0 FA/h und 2,1 Verwechsler/h (derselbe bestätigte Verwechsler). Grenze: Die Testsegmente stammen aus derselben Sitzung und demselben Raum wie die Einlern-Segmente (n=10, 1 Segment = 10 Punkte), die Werte sind eher optimistisch; ob es in anderen Räumen trägt, zeigt nur eine neue Aufnahme.
 
 ## Stufe 3: Sprecherprüfung (CAM++, 3D-Speaker, 28 MB, 50 ms je Segment)
 Kosinus zu den Einlern-Segmenten, Perzentile (5 / 25 / 50 / 75 / 95):
@@ -119,7 +141,7 @@ Einheitliche Station-Schwellen wären zu streng für das Handy und umgekehrt: Di
 ## Empfehlung
 - Stationsmodus nur als **optionaler, getrennter Modus** mit eigenem Schwellensatz: Stufe 1 = Vorlagen T0,85 (empfindlich) oder Modell v7 M0,5, Stufe 2 = Parakeet Hotword 2 (Hotword 3 nur zusammen mit CAM++ 0,45), kein Boost ab 3,0 ohne Stufe 3. Das ergibt auf echten Daten 60 % sicher bei 0 bis 6 FA/h (n=10, ein Sprecher), nicht die Abnahme (80 %, ≤ 2 FA/h).
 - Stufe 3 (CAM++) nur als Fernseher-/Fremdstimmen-Filter einplanen; sie ersetzt keine Stufe 2.
-- Vor einem Einbau: Feintuning-Messung nachholen, echte Daten von mehr Sprechern und Räumen messen (siehe Grenzen). **Aufwand Einbau (Schätzung):** Parakeet ist mit WP103 vorhanden (Hotword als Konfiguration, ca. 1 PT), CAM++ als Modell und Sprecherprofil im Einlernen (28 MB, `EmbeddingPort`, ca. 3 PT), Stationsmodus mit eigenen Schwellen, Einstellung und Dauerbetrieb (Strom, Wake-Lock, ca. 4 PT), Gerätetest (ca. 2 PT).
+- Persönliches Feintuning (Einlern-Wörter, ca. 1,5 min Rechenzeit) lohnt sich: Stufe 1 = feinabgestimmtes v9 oder v7 M0,5 + Hotword 2 ohne CAM++ ergibt 60 bis 80 % sicher (Station) bzw. 50 bis 60 % (Mobil) bei 0 FA/h; das Einlernen müsste die Feinabstimmung in der App ausführen (Klassifikator ist klein, 0,86 MB). Vor einem Einbau: echte Daten von mehr Sprechern und Räumen messen (siehe Grenzen). **Aufwand Einbau (Schätzung):** Parakeet ist mit WP103 vorhanden (Hotword als Konfiguration, ca. 1 PT), CAM++ als Modell und Sprecherprofil im Einlernen (28 MB, `EmbeddingPort`, ca. 3 PT), Stationsmodus mit eigenen Schwellen, Einstellung und Dauerbetrieb (Strom, Wake-Lock, ca. 4 PT), Gerätetest (ca. 2 PT).
 
 ## Lizenzen (alles lokal, nichts im Repo)
 | Baustein | Lizenz |
@@ -147,7 +169,7 @@ Einheitliche Station-Schwellen wären zu streng für das Handy und umgekehrt: Di
 - Sperrzeit Negativ-Ereignisse 3 s (38 Fenster), Positiv 1,5 s.
 - Toleranz ±0,5 s um das Wortsegment.
 - Neg-Scan nur auf der Station-Datei.
-- Feintuning (Teil A) nicht ausgeführt (Plattenplatz).
+- Feintuning: nur 8 der 10 Einlern-Wörter (Segment 1 ist ein Satz), v9 mit den v7-Features (die v9-Features sind gelöscht).
 
 ## Erneut messen (je ein Kommando)
 ```
@@ -158,5 +180,7 @@ nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/station_measure.py --
 nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/real_measure.py --out $K/wp106/results/real
 # anderes Modell (z. B. v9, ca. 4 min):
 nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/real_measure.py --model $K/wp58/out/wendelin_v9.onnx --thr 0.93 --model-thr 0.3,0.5,0.7,0.9 --s2-thr M0.5,M0.7,M0.9 --spk-thr 0.45,0.52 --variants parakeet-hw2,parakeet-hw3 --out $K/wp106/results/v9
+# Feintuning (ca. 3 min), danach real_measure --model $K/wp106/finetune/ft_v9.onnx --model-thr 0.5,0.7,0.9 --thr 0.95 --s2-thr M0.5,M0.7,M0.9 --variants parakeet-hw2 --spk-thr 0.45:
+nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/finetune_personal.py
 ```
 Eingaben: `~/wendelin-fixtures/wake/station/{pos,neg}/{station,mobile}/*.wav`. Neue Aufnahmen nach demselben Aufbau (Anleitung in den Fixtures) ablegen und die Kommandos wiederholen.
