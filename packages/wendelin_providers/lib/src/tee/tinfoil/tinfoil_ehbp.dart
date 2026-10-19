@@ -5,7 +5,9 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../common/chat_wire.dart';
 import '../attestation_crypto.dart';
+import '../attestation_types.dart';
 import '../codec.dart';
+import '../session_channel.dart';
 import '../tls_pin_gate.dart';
 import 'ehbp_crypto.dart';
 
@@ -78,6 +80,64 @@ final class TinfoilEhbpCodec implements ChatWireCodec {
     tlsPin?.expect(AttestCodec.hex(binding.tlsSpkiSha256));
     return TinfoilEhbpWire(crypto: crypto, target: t);
   }
+}
+
+/// The channel an `AttestedProvider` of Tinfoil takes (WP76d): every
+/// request is encrypted to the key of its **current verified session**. Key
+/// configuration and `report_data` come from [AttestedSession] only; the
+/// codec binds them again before each request. Without a valid session, an
+/// expired one or one without these values nothing is sent (K28).
+final class TinfoilEhbpChannel implements SessionBoundChannel {
+  /// Creates the channel.
+  TinfoilEhbpChannel({required this.crypto, this.tlsPin});
+
+  /// Cipher primitives.
+  final EhbpCrypto crypto;
+
+  /// Pin state of the enforcing HTTP client (WP61).
+  final TlsPinGate? tlsPin;
+
+  AttestedSession? Function()? _session;
+  Clock? _clock;
+
+  @override
+  bool get bound => _session != null;
+
+  @override
+  bool get encryptsTools => true;
+
+  @override
+  void bind(AttestedSession? Function() session, Clock clock) {
+    if (_session != null) {
+      throw StateError(
+        'TinfoilEhbpChannel ist schon an einen Anbieter gebunden',
+      );
+    }
+    _session = session;
+    _clock = clock;
+  }
+
+  EhbpTarget? _target() {
+    final session = _session?.call();
+    final now = _clock?.now();
+    final keyConfig = session?.ehbpKeyConfig;
+    final reportData = session?.reportData;
+    if (session == null ||
+        keyConfig == null ||
+        reportData == null ||
+        now == null ||
+        !now.isBefore(session.notAfter)) {
+      return null;
+    }
+    return EhbpTarget(keyConfig: keyConfig, reportData: reportData);
+  }
+
+  @override
+  Future<ChatWire> begin({required String model}) => TinfoilEhbpCodec(
+    crypto: crypto,
+    target: _target,
+    tlsPin: tlsPin,
+  ).begin(model: model);
 }
 
 /// One encrypted exchange (one HTTP attempt): the whole body goes out as an

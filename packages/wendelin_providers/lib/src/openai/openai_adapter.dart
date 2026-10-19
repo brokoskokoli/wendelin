@@ -226,15 +226,16 @@ final class OpenAiChatAdapter implements LlmProvider {
           if (asString(m['id']) case final id?)
             if (!options.teeModelsOnly || m['is_tee'] == true)
               if (options.ownedBy == null || m['owned_by'] == options.ownedBy)
-                if (!options.toolsOnly || _supportsTools(m) == true)
-                  ModelInfo(
-                    id: id,
-                    displayName: asString(m['name']),
-                    contextWindow:
-                        asInt(m['context_length']) ??
-                        asInt(m['context_window']),
-                    supportsTools: _supportsTools(m),
-                  ),
+                if (options.modelType == null || m['type'] == options.modelType)
+                  if (!options.toolsOnly || _supportsTools(m) == true)
+                    ModelInfo(
+                      id: id,
+                      displayName: asString(m['name']),
+                      contextWindow:
+                          asInt(m['context_length']) ??
+                          asInt(m['context_window']),
+                      supportsTools: _supportsTools(m),
+                    ),
     ];
   }
 
@@ -242,7 +243,9 @@ final class OpenAiChatAdapter implements LlmProvider {
     final params = model['supported_parameters'];
     if (params is List<Object?>) return params.contains('tools');
     final features = model['supported_features']; // NEAR AI
-    return features is List<Object?> ? features.contains('tools') : null;
+    if (features is List<Object?>) return features.contains('tools');
+    final calling = model['tool_calling']; // Tinfoil
+    return calling is bool ? calling : null;
   }
 
   @override

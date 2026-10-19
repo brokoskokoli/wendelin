@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: WP92a, WP76d, WP104, WP106; als Nächstes WP81c (nach WP92a), WP92b→c, WP93
+Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: WP92a, WP104, WP106; als Nächstes WP81c (nach WP92a), WP92b→c, WP93
 
 ## Meilensteine
 
@@ -28,7 +28,7 @@ Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: 
 | WP76a | Tinfoil SEV-SNP (Rust) | gemergt | Folge: rsa-Upgrade; min_tcb in WP76d |
 | WP76b | Tinfoil Sigstore | gemergt cc12c9f | K59 bestätigt; Downgrade-Schutz in WP76d |
 | WP76c | Tinfoil EHBP/HPKE | gemergt 06498bc | K71 offen; echte SNP-Bindung im Live-Pfad und Emulator-Lauf der attest-Contract-Suite in WP76d |
-| WP76d | Tinfoil in der App | in Arbeit | min_tcb setzen; Downgrade-Schutz „neuestes Release“ (K59) |
+| WP76d | Tinfoil in der App | gemergt c19b0966 | K73 offen; Folge: Turin-Pinning, rsa-Upgrade (WP76a); kein Release-Cache über Speicher hinaus (GitHub ohne Token 60/h) |
 | WP79 | App-Sprache | gemergt 604ff80 | K60 bestätigt; Folge: Stoppwort-Hinweis im Overlay folgt UI- statt Sprech-Sprache; Scan-Test erkennt deutsche Ein-Wort-Texte ohne Umlaut nicht |
 | WP81 | Sofort vorlesen, Haken danach | gemergt | – |
 | WP81b | Nächster Modellaufruf parallel zur Quittung | gemergt 135dbbd | K70 offen; Ersparnis am Emulator ~0,4 s bis erster Text, ~0,9 s bis fertig; Tool-Runden gegen echtes TEE-Gateway ungetestet (Fixture ohne Tool-Calls); overlay_e2e rot direkt nach overlay_tee_speak in derselben Skript-Sitzung (Restzustand?) beobachten |

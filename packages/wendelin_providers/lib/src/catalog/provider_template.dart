@@ -159,13 +159,16 @@ const providerTemplates = <ProviderTemplate>[
   ),
   ProviderTemplate(
     id: 'tinfoil',
-    name: 'Tinfoil',
+    name: 'Tinfoil (TEE)',
     type: ProviderType.openaiCompatible,
     baseUrl: 'https://inference.tinfoil.sh/v1',
     auth: TemplateAuth.apiKey,
     keyPageUrl: 'https://tinfoil.sh',
-    // Not „TEE“ in the app's sense until its attestation is checked.
-    privacy: PrivacyLevel.standard,
+    privacy: PrivacyLevel.tee,
+    // Eval result of the spike (docs/notes/tinfoil-spike.md, 5): 5/5 correct
+    // tool calls; `gemma4-31b` is the faster alternative (also 4/4).
+    suggestedModel: 'gpt-oss-120b',
+    options: {'attestation': 'tinfoil', 'modelType': 'chat', 'toolsOnly': true},
   ),
   ProviderTemplate(
     id: 'ollama',
