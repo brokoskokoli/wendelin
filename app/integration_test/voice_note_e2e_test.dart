@@ -125,8 +125,8 @@ void main() {
         );
 
         // Rückgängig stellt den alten Stand byte-genau wieder her.
-        await tester.tap(find.textContaining('Rückgängig · '));
-        await pumpUntil(tester, find.text('Rückgängig gemacht'));
+        await tester.tap(undoButton(tester));
+        await pumpUntil(tester, find.text(l10n(tester).toolResultUndone));
         expect(await port.read(testDailyNote), testNoteBefore);
         await waitIdle(tester);
       },

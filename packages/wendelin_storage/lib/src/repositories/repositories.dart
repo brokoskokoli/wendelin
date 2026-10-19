@@ -60,6 +60,18 @@ abstract interface class ConversationRepository {
   /// Deletes session [id] with its messages.
   Future<void> deleteSession(String id);
 
+  /// The opaque id of the person whose conversation [sessionId] is (WP92b),
+  /// `null` for the default or an unknown session. Never exported or logged.
+  Future<String?> sessionPerson(String sessionId);
+
+  /// Marks session [sessionId] as the conversation of [person] (`null` =
+  /// default).
+  Future<void> setSessionPerson(String sessionId, String? person);
+
+  /// Deletes the sessions (with messages) of [person], or of every person
+  /// if `null`; sessions of the default are never touched. Returns how many.
+  Future<int> deletePersonSessions({String? person});
+
   /// Deletes sessions whose last activity is older than [maxAge]; returns
   /// the number of deleted sessions.
   Future<int> purgeOlderThan(Duration maxAge);
@@ -70,43 +82,70 @@ abstract interface class ConversationRepository {
 /// [save] and [update] reject sensitive content (card numbers, IBANs,
 /// passwords/PINs) with a `SensitiveContentException`.
 abstract interface class MemoryRepository {
-  /// Stores a new entry (with [privacyFloor] of a private run).
+  /// Stores a new entry in the namespace [owner] (with [privacyFloor] of a
+  /// private run).
   Future<StoredMemory> save(
     String text, {
     required StoredMemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
+    String owner = '',
   });
 
-  /// Changes text and/or category of entry [id]; returns the updated entry
-  /// or `null` if it does not exist.
+  /// Changes text and/or category of entry [id] of the namespace [owner];
+  /// returns the updated entry or `null` if it does not exist there.
   Future<StoredMemory?> update(
     String id, {
     String? text,
     StoredMemoryCategory? category,
+    String owner = '',
   });
 
-  /// Removes the privacy floor of entry [id] (the user confirmed that the
-  /// entry may reach every target); returns the updated entry or `null` if
-  /// it does not exist.
-  Future<StoredMemory?> clearPrivacyFloor(String id);
+  /// Removes the privacy floor of entry [id] of the namespace [owner] (the
+  /// user confirmed that the entry may reach every target); returns the
+  /// updated entry or `null` if it does not exist there.
+  Future<StoredMemory?> clearPrivacyFloor(String id, {String owner = ''});
 
-  /// Deletes entry [id]; returns whether it existed.
-  Future<bool> forget(String id);
+  /// Deletes entry [id] of the namespace [owner]; returns whether it
+  /// existed there (an entry of another namespace is never touched).
+  Future<bool> forget(String id, {String owner = ''});
 
-  /// The entry with [id], or `null`.
-  Future<StoredMemory?> get(String id);
+  /// The entry with [id] in the namespace [owner], or `null`.
+  Future<StoredMemory?> get(String id, {String owner = ''});
 
-  /// All entries (optionally of one [category]), newest first.
-  Future<List<StoredMemory>> list({StoredMemoryCategory? category});
+  /// All entries of the namespace [owner] (optionally of one [category]),
+  /// newest first.
+  Future<List<StoredMemory>> list({
+    StoredMemoryCategory? category,
+    String owner = '',
+  });
 
-  /// Up to [limit] entries matching [query], most relevant first (FTS5
-  /// bm25). Words are matched as prefixes and combined with OR; FTS syntax
-  /// in [query] has no effect. Updates `lastUsedAt` of the returned entries.
-  Future<List<StoredMemory>> search(String query, {int limit = 5});
+  /// Up to [limit] entries of the namespace [owner] matching [query], most
+  /// relevant first (FTS5 bm25). Words are matched as prefixes and combined
+  /// with OR; FTS syntax in [query] has no effect. Updates `lastUsedAt` of
+  /// the returned entries.
+  Future<List<StoredMemory>> search(
+    String query, {
+    int limit = 5,
+    String owner = '',
+  });
 
-  /// All entries as Markdown, grouped by category.
-  Future<String> exportMarkdown();
+  /// The entries of the namespace [owner] as Markdown, grouped by category
+  /// (no owner id in the text).
+  Future<String> exportMarkdown({String owner = ''});
+
+  /// Number of entries in the namespace [owner].
+  Future<int> count({String owner = ''});
+
+  /// Deletes every entry of the namespace [owner] and returns how many.
+  /// With `''` (the default memory) it deletes nothing and returns 0: the
+  /// default memory is never removed this way.
+  Future<int> deleteOwner(String owner);
+
+  /// Deletes the entries of every person namespace (`owner <> ''`), also
+  /// those of persons that are no longer known; returns how many. The
+  /// default memory is never touched.
+  Future<int> deleteAllPersons();
 }
 
 /// Audit log (concept: Logging). Entries are redacted before storing.

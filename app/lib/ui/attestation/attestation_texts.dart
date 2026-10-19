@@ -64,6 +64,12 @@ abstract final class AttestationReason {
   /// The answer carried no receipt id.
   static const receiptMissing = 'receipt_missing';
 
+  /// The release is older than the highest one ever verified (K59).
+  static const releaseRollback = 'release_rollback';
+
+  /// The stored release floor is damaged; the check stays locked.
+  static const releaseFloorCorrupt = 'release_floor_corrupt';
+
   /// NVIDIA rejected the GPU evidence.
   static const gpuFailed = 'gpu_failed';
 
@@ -139,6 +145,19 @@ AttestationMessage attestationMessage(
           title: l.attReceiptRejectedTitle,
           text: l.attReceiptRejectedText,
         ),
+        AttestationReason.releaseRollback => AttestationMessage(
+          status: CheckStatus.failed,
+          label: l.attCheckFailed,
+          title: l.attRollbackTitle,
+          text: l.attRollbackText,
+        ),
+        AttestationReason.releaseFloorCorrupt => AttestationMessage(
+          status: CheckStatus.failed,
+          label: l.attCheckFailed,
+          title: l.attFloorCorruptTitle,
+          text: l.attFloorCorruptText,
+          canRecheck: false,
+        ),
         AttestationReason.gpuFailed => AttestationMessage(
           status: CheckStatus.failed,
           label: l.attGpuFailedLabel,
@@ -211,6 +230,14 @@ String stageLabel(AppLocalizations l, String stage) => switch (stage) {
   'gateway' => l.attSGateway,
   'gpu' => l.attSGpu,
   'gpu.evidence' => l.attSGpuEvidence,
+  'snp.report' => l.attSSnpReport,
+  'snp.chain' => l.attSSnpChain,
+  'snp.policy' => l.attSSnpPolicy,
+  'bind.hpke' => l.attSBindHpke,
+  'sigstore.release' => l.attSSigstore,
+  'measurement' => l.attSMeasurement,
+  'release.floor' => l.attSReleaseFloor,
+  'receipt.none' => l.attSNoReceipt,
   'receipt.fetch' => l.attSReceiptFetch,
   'receipt.signature' => l.attSReceiptSignature,
   'receipt.binding' => l.attSReceiptBinding,

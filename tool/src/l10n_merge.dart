@@ -19,6 +19,7 @@ const prefixAreas = <String, String>{
   'voice': 'voice',
   'model': 'voice',
   'language': 'voice',
+  'speaker': 'speaker',
   'mcp': 'mcp',
   'tool': 'mcp',
   'http': 'http',

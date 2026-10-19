@@ -14,3 +14,4 @@ Ablauf je Paket wie in M4: Coder (Sonnet, eigener Worktree) → Review (Opus) �
 - WP102 Spike bessere Sprache (Messung), danach WP103 Einbau (K64, 2026-10-19).
 - WP104 liegengebliebene Gerätetests übernehmen (Standort, Aufgaben, HA, sprachneutrale Texte, overlay-Reihenfolge-Flake), 2026-10-19.
 - WP105 Folgepunkte Audit und Texte (WP84/WP88/WP89), 2026-10-19.
+- WP107 Bring! speichert nur Tokens (Wunsch Stefan), 2026-10-19.

@@ -158,6 +158,28 @@ final class DriftConversationRepository implements ConversationRepository {
       (_db.delete(_db.sessions)..where((s) => s.id.equals(id))).go();
 
   @override
+  Future<String?> sessionPerson(String sessionId) async {
+    final row = await (_db.select(
+      _db.sessions,
+    )..where((s) => s.id.equals(sessionId))).getSingleOrNull();
+    return row?.person;
+  }
+
+  @override
+  Future<void> setSessionPerson(String sessionId, String? person) =>
+      (_db.update(_db.sessions)..where((s) => s.id.equals(sessionId))).write(
+        SessionsCompanion(person: Value(person)),
+      );
+
+  @override
+  Future<int> deletePersonSessions({String? person}) =>
+      (_db.delete(_db.sessions)..where(
+            (s) =>
+                person == null ? s.person.isNotNull() : s.person.equals(person),
+          ))
+          .go();
+
+  @override
   Future<int> purgeOlderThan(Duration maxAge) {
     final cutoff = _clock.now().subtract(maxAge).microsecondsSinceEpoch;
     return (_db.delete(

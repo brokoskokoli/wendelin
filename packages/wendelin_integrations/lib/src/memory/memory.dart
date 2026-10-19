@@ -90,6 +90,10 @@ final class MemoryEntry {
 /// Long-term memory store. The app wires it to `MemoryRepository`
 /// (`wendelin_storage`); must pass `memoryStoreContract`.
 abstract interface class MemoryStorePort {
+  /// Memory namespace [owner] (WP92b): `''` is the default memory, another
+  /// value one person's. Every method sees and changes only its own
+  /// namespace; an id of another namespace is `notFound`.
+  ///
   /// Saves [text] (with [privacyFloor], kept as given). Throws
   /// `PortException(rejected)` for sensitive content (see core's
   /// [detectSensitiveContent]) and [ArgumentError] for blank text.
@@ -98,18 +102,23 @@ abstract interface class MemoryStorePort {
     required MemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
+    String owner = '',
   });
 
   /// The [limit] most relevant entries for [query] (empty if none); marks
   /// them as used.
-  Future<List<MemoryEntry>> search(String query, {int limit = 5});
+  Future<List<MemoryEntry>> search(
+    String query, {
+    int limit = 5,
+    String owner = '',
+  });
 
   /// Deletes the entry [id] and returns it. Throws `PortException(notFound)`
   /// for unknown ids.
-  Future<MemoryEntry> forget(String id);
+  Future<MemoryEntry> forget(String id, {String owner = ''});
 
   /// All entries, newest first.
-  Future<List<MemoryEntry>> list();
+  Future<List<MemoryEntry>> list({String owner = ''});
 }
 
 /// Memory: `memory__save`, `memory__search`, `memory__forget`.
@@ -230,18 +239,20 @@ final class MemorySaveTool extends IntegrationTool
     if (finding != null) {
       throw PortException(PortErrorKind.rejected, finding.reason);
     }
+    final owner = ctx.memoryOwner;
     final entry = await store.save(
       a.text,
       category: a.category,
       source: 'session:${ctx.sessionId}',
       privacyFloor: ctx.privacyFloor,
+      owner: ctx.memoryOwner,
     );
     return jsonOutcome(
       {'saved': _entryJson(entry)},
       summary: 'Gemerkt: ${ellipsize(entry.text, 50)}',
       undo: UndoAction(
         label: 'Vergessen',
-        run: () async => store.forget(entry.id),
+        run: () async => store.forget(entry.id, owner: owner),
       ),
     );
   }
@@ -294,7 +305,11 @@ final class MemorySearchTool extends IntegrationTool {
     final limit = args.optInt('limit', min: 1, max: 20) ?? 5;
     // Entries of private runs only for targets of their level.
     final found = [
-      for (final e in await store.search(query, limit: limit))
+      for (final e in await store.search(
+        query,
+        limit: limit,
+        owner: ctx.memoryOwner,
+      ))
         if (e.visibleTo(ctx.privacyLevel)) e,
     ];
     return jsonOutcome(
@@ -351,16 +366,16 @@ final class MemoryForgetTool extends IntegrationTool
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final id = args.requireString('id');
     // Entries of private runs do not exist for weaker targets.
-    final hidden = (await store.list()).any(
-      (e) => e.id == id && !e.visibleTo(ctx.privacyLevel),
-    );
+    final owner = ctx.memoryOwner;
+    final hidden = (await store.list(owner: owner))
+        .any((e) => e.id == id && !e.visibleTo(ctx.privacyLevel));
     if (hidden) {
       throw PortException(
         PortErrorKind.notFound,
         'Eintrag „$id“ gibt es nicht',
       );
     }
-    final removed = await store.forget(id);
+    final removed = await store.forget(id, owner: owner);
     return jsonOutcome(
       {'forgotten': removed.id},
       summary: 'Vergessen: ${ellipsize(removed.text, 50)}',
@@ -371,6 +386,7 @@ final class MemoryForgetTool extends IntegrationTool
           category: removed.category,
           source: removed.source,
           privacyFloor: removed.privacyFloor,
+          owner: owner,
         ),
       ),
     );

@@ -178,10 +178,10 @@ void main() {
       expect((local.hour, local.minute), (10, 0));
       expect(event.end.difference(event.start), const Duration(hours: 1));
 
-      final undo = find.textContaining('Rückgängig · ');
+      final undo = undoButton(tester);
       expect(undo, findsOneWidget);
       await tester.tap(undo);
-      await pumpUntil(tester, find.text('Rückgängig gemacht'));
+      await pumpUntil(tester, find.text(l10n(tester).toolResultUndone));
       expect(await port.getEvent(event.id), isNull);
       expect(await _tomorrowDiving(port), isEmpty);
       final audit = await auditText(app);
@@ -202,22 +202,22 @@ void main() {
 
     await send(tester, 'Lösch den Termin');
     await pumpUntil(tester, find.byType(ConfirmationSheet));
-    await pumpUntil(tester, find.text('Nein, behalten'));
+    await pumpUntil(tester, find.text(l10n(tester).mainNoKeep));
     await pumpFor(tester);
-    expect(find.text('Termin löschen?'), findsOneWidget);
+    expect(find.text(l10n(tester).mainDeleteEventTitle), findsOneWidget);
     expect(
       find.textContaining(_title),
       findsWidgets,
       reason: 'Bestätigung nennt den Termin (live nachgeschlagen)',
     );
-    await tester.tap(find.text('Nein, behalten'));
+    await tester.tap(find.text(l10n(tester).mainNoKeep));
     await pumpUntil(tester, find.text('Gut, ich lasse alles, wie es ist.'));
     expect(await port.getEvent(id), isNotNull, reason: '„Nein“ behält ihn');
 
     await send(tester, 'Lösch den Termin');
-    await pumpUntil(tester, find.text('Ja, löschen'));
+    await pumpUntil(tester, find.text(l10n(tester).mainYesDelete));
     await pumpFor(tester);
-    await tester.tap(find.text('Ja, löschen'));
+    await tester.tap(find.text(l10n(tester).mainYesDelete));
     await pumpUntil(tester, find.text('Erledigt, der Termin ist gelöscht.'));
     expect(await port.getEvent(id), isNull, reason: '„Ja“ löscht ihn');
     expect(await auditText(app), contains('calendar__delete_event'));

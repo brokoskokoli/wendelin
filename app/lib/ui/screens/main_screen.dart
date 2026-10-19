@@ -22,6 +22,7 @@ import '../../platform/channel_notifier.dart' show attestationLogTarget;
 import '../../voice/conversation_offer.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
+import '../../voice/wake/wake_chat.dart';
 import '../attestation/attestation_texts.dart';
 import '../routes.dart';
 import '../settings/attestation_log_detail.dart';
@@ -50,23 +51,54 @@ class MainScreen extends ConsumerStatefulWidget {
   ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends ConsumerState<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
   PendingQuestion? _sheetFor;
   bool _micDeniedByAndroid = false;
   late final AppLifecycleListener _lifecycle;
+  late final WakeChatSession _wakeChat;
+  ModalRoute<void>? _observed;
 
   @override
   void dispose() {
+    wakeRouteObserver.unsubscribe(this);
+    _wakeChat.dispose();
     _lifecycle.dispose();
     super.dispose();
   }
 
+  // Another route above the chat (settings, dialog, sheet): wake word hits
+  // go to the overlay then (WP93).
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null && route != _observed) {
+      wakeRouteObserver.unsubscribe(this);
+      _observed = route;
+      wakeRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPush() => _wakeChat.setRouteCurrent(true);
+
+  @override
+  void didPopNext() => _wakeChat.setRouteCurrent(true);
+
+  @override
+  void didPushNext() => _wakeChat.setRouteCurrent(false);
+
   @override
   void initState() {
     super.initState();
+    _wakeChat = WakeChatSession(
+      container: ProviderScope.containerOf(context, listen: false),
+      prepare: _microphoneAccess,
+    );
     // In the background nothing listens, speaks or runs on unseen.
     _lifecycle = AppLifecycleListener(
       onStateChange: (state) {
+        _wakeChat.setResumed(state == AppLifecycleState.resumed);
         final voice = ref.read(voiceControllerProvider.notifier);
         if (state == AppLifecycleState.hidden ||
             state == AppLifecycleState.paused) {

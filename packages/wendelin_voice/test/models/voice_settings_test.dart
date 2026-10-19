@@ -133,4 +133,20 @@ void main() {
     expect(s.copyWith(conversationAsked: true).conversationAsked, isTrue);
     expect(s.copyWith(bargeIn: BargeInMode.off).bargeIn, BargeInMode.off);
   });
+
+  test('Sprechererkennung (WP92a): standardmäßig aus, Rundlauf', () {
+    expect(const VoiceSettings().speakerRecognition, isFalse);
+    expect(
+      const VoiceSettings().toJson().containsKey('speakerRecognition'),
+      isFalse,
+    );
+    final on = const VoiceSettings().copyWith(speakerRecognition: true);
+    expect(VoiceSettings.fromJson(on.toJson()).speakerRecognition, isTrue);
+    expect(on, isNot(const VoiceSettings()));
+    expect(on.hashCode, isNot(const VoiceSettings().hashCode));
+    expect(
+      VoiceSettings.fromJson({'speakerRecognition': 'ja'}).speakerRecognition,
+      isFalse,
+    );
+  });
 }

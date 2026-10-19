@@ -85,6 +85,12 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
             }
             "hasWakeHandoff" -> result.success(WakeHandoff.pending())
             "takeWakeHandoff" -> {
+                // The chat of the main app gets the audio only for a hit it owns (WP93).
+                if (!WakePolicy.mayTakeHandoff(activity is MainActivity, ChatState.owned)) {
+                    VoiceLog.i("wake-handoff-take refused (chat does not own the hit)")
+                    result.success(null)
+                    return
+                }
                 val closeAt = System.currentTimeMillis()
                 if (WakeHandoff.pending()) WakeWordService.beforeHandoffTake()
                 val closeMs = System.currentTimeMillis() - closeAt

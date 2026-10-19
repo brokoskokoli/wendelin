@@ -20,9 +20,19 @@ final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
   final IdGenerator ids;
 
   final List<MemoryEntry> _entries = [];
+  final Map<String, String> _owners = {};
 
-  /// Stored entries, oldest first.
+  /// Stored entries of all namespaces, oldest first.
   List<MemoryEntry> get entries => List.unmodifiable(_entries);
+
+  /// Entries of the namespace [owner], oldest first.
+  List<MemoryEntry> entriesOf(String owner) => [
+    for (final e in _entries)
+      if (_owners[e.id] == owner) e,
+  ];
+
+  /// Entries that belong to [owner].
+  bool _mine(MemoryEntry e, String owner) => _owners[e.id] == owner;
 
   @override
   Future<MemoryEntry> save(
@@ -30,6 +40,7 @@ final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
     required MemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
+    String owner = '',
   }) async {
     enter('save');
     if (text.trim().isEmpty) {
@@ -48,15 +59,21 @@ final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
       privacyFloor: privacyFloor,
     );
     _entries.add(entry);
+    _owners[entry.id] = owner;
     return entry;
   }
 
   @override
-  Future<List<MemoryEntry>> search(String query, {int limit = 5}) async {
+  Future<List<MemoryEntry>> search(
+    String query, {
+    int limit = 5,
+    String owner = '',
+  }) async {
     enter('search');
     final words = _words(query);
     final scored = <(int, int, MemoryEntry)>[];
     for (var i = 0; i < _entries.length; i++) {
+      if (!_mine(_entries[i], owner)) continue;
       final score = _words(_entries[i].text).intersection(words).length;
       if (score > 0) scored.add((score, i, _entries[i]));
     }
@@ -77,22 +94,26 @@ final class FakeMemoryStore with FakeFailures implements MemoryStorePort {
   }
 
   @override
-  Future<MemoryEntry> forget(String id) async {
+  Future<MemoryEntry> forget(String id, {String owner = ''}) async {
     enter('forget');
-    final i = _entries.indexWhere((e) => e.id == id);
+    final i = _entries.indexWhere((e) => e.id == id && _mine(e, owner));
     if (i < 0) {
       throw PortException(
         PortErrorKind.notFound,
         'Erinnerung „$id“ gibt es nicht',
       );
     }
+    _owners.remove(id);
     return _entries.removeAt(i);
   }
 
   @override
-  Future<List<MemoryEntry>> list() async {
+  Future<List<MemoryEntry>> list({String owner = ''}) async {
     enter('list');
-    return _entries.reversed.toList();
+    return [
+      for (final e in _entries.reversed)
+        if (_mine(e, owner)) e,
+    ];
   }
 
   static Set<String> _words(String text) => {

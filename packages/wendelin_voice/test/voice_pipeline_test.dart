@@ -99,6 +99,7 @@ final class Harness {
     bool withTts = true,
     AgentRun? agent,
     AudioInput? audio,
+    SpeakerRecognizer? speaker,
     VoiceActivityDetector? vad,
     Future<TextToSpeech?> Function(String?)? textToSpeech,
     List<Transcript> transcripts = const [
@@ -144,6 +145,8 @@ final class Harness {
       config: config,
       clock: clock,
       triggers: triggers,
+      speaker: speaker,
+      diagnostics: diagnostics.add,
     );
     pipeline.states.listen(states.add);
     pipeline.events.listen(events.add);
@@ -160,6 +163,7 @@ final class Harness {
   late final VoicePipeline pipeline;
   final states = <VoiceState>[];
   final events = <VoiceEvent>[];
+  final diagnostics = <String>[];
 
   List<T> eventsOf<T extends VoiceEvent>() => events.whereType<T>().toList();
 

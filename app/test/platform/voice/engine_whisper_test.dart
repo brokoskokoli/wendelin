@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/hint_term_providers.dart';
+import 'package:wendelin/di/speaker_providers.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/platform/channel_memory_trim.dart';
 import 'package:wendelin/platform/voice/engine_whisper.dart';
@@ -562,6 +563,30 @@ void main() {
           expect(synth.disposed, 0);
         },
       );
+    });
+
+    test('Sprechererkennung: aus = kein Erkenner, an = Erkenner und Freigabe '
+        'gibt das Sprechermodell frei', () async {
+      final off = engineContainer();
+      addTearDown(off.dispose);
+      expect((await off.read(voiceComponentsProvider.future)).speaker, isNull);
+
+      final embedder = FakeSpeakerEmbedder([]);
+      final on = engineContainer(
+        extra: [speakerEmbedderProvider.overrideWithValue(embedder)],
+      );
+      addTearDown(on.dispose);
+      await on
+          .read(voiceSettingsProvider.notifier)
+          .change((s) => s.copyWith(speakerRecognition: true));
+      final c = await on.read(voiceComponentsProvider.future);
+      expect(c.speaker, isNotNull);
+      await c.release!();
+      expect(embedder.releases, 1);
+
+      // Ohne Erkenner lädt die Freigabe nichts nach.
+      final cOff = await off.read(voiceComponentsProvider.future);
+      await cOff.release!();
     });
 
     test('Besitzer (App) wird geschlossen: Overlay lädt eigenes', () async {

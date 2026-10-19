@@ -166,7 +166,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attE2eeKeyNote =>
-      'All content is encrypted with this verified key. The encryption ends at the provider’s gateway (verified enclave), not in the model itself. With NEAR AI it ends in the verified model.';
+      'All content is encrypted with this verified key. The encryption ends at the provider’s gateway (verified enclave), not in the model itself. With NEAR AI it ends in the verified model. With Tinfoil it ends in the verified router, which passes it on to the model.';
 
   @override
   String get attExplainAccept => 'Accept';
@@ -246,6 +246,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attFinishWarnFrom => 'Warn at';
+
+  @override
+  String get attFloorCorruptText =>
+      'The stored lower bound for this provider’s release version is damaged. Without it a rollback to older, insecure software cannot be ruled out, so the check stays blocked and checking again does not change that. Send nothing confidential. Only resetting the app data helps. After that, the first contact is checked again without rollback protection.';
+
+  @override
+  String get attFloorCorruptTitle => 'Stored rollback protection damaged';
 
   @override
   String get attGpuFailedLabel => 'GPU check failed';
@@ -472,6 +479,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attRevokedTitle => 'Operator platform revoked';
 
   @override
+  String get attRollbackText =>
+      'The provider reports an older software version than the one verified here before. This can be old, vulnerable software or old data being replayed. The request was not sent. Send nothing confidential and check again later.';
+
+  @override
+  String get attRollbackTitle => 'Older software version than verified before';
+
+  @override
+  String get attSBindHpke => 'Encryption key bound';
+
+  @override
   String get attSCompose => 'Compose hash';
 
   @override
@@ -508,6 +525,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attSKeysetSignature => 'Key set signature';
 
   @override
+  String get attSMeasurement => 'Measurement = release';
+
+  @override
+  String get attSNoReceipt => 'Receipt per answer';
+
+  @override
   String get attSNonce => 'Nonce bound';
 
   @override
@@ -533,6 +556,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attSReceiptSignature => 'Receipt signature';
+
+  @override
+  String get attSReleaseFloor => 'No rollback';
+
+  @override
+  String get attSSigstore => 'Signed release (Sigstore)';
+
+  @override
+  String get attSSnpChain => 'AMD certificate chain';
+
+  @override
+  String get attSSnpPolicy => 'Processor policy';
+
+  @override
+  String get attSSnpReport => 'AMD hardware attestation';
 
   @override
   String get attSTcb => 'Platform security level (TCB)';
@@ -694,6 +732,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stageAgeWhat => 'How old the attestation is.';
 
   @override
+  String get stageBindHpkeInfo => 'The key was only logged.';
+
+  @override
+  String get stageBindHpkePass =>
+      'Only the verified server can read the request. The key comes from the attestation, not from an unverified reply.';
+
+  @override
+  String get stageBindHpkeWhat =>
+      'Whether the key Wendelin encrypts your request with is exactly the one in the hardware attestation.';
+
+  @override
   String get stageComposeInfo =>
       'The hash was logged but not compared against a list of trusted values.';
 
@@ -800,6 +849,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'The checksum of the key set (the keys Wendelin encrypts with) must appear in the hardware attestation.';
 
   @override
+  String get stageMeasurementInfo => 'The measurement was only logged.';
+
+  @override
+  String get stageMeasurementPass =>
+      'The server runs the published code, no other.';
+
+  @override
+  String get stageMeasurementWhat =>
+      'Whether the measurement of the running server is exactly that of the latest signed release.';
+
+  @override
+  String get stageNoReceiptInfo =>
+      'Tinfoil issues no receipt per answer. The answer is bound to your request by the encryption only; no receipt proves which model produced it.';
+
+  @override
+  String get stageNoReceiptPass => 'Every answer comes with a signed receipt.';
+
+  @override
+  String get stageNoReceiptWhat =>
+      'Whether every answer comes with a signed receipt that proves request and answer.';
+
+  @override
   String get stageNonceInfo => 'The number was only logged.';
 
   @override
@@ -900,6 +971,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stageReceiptSigWhat => 'The signature of the receipt.';
 
   @override
+  String get stageReleaseFloorInfo =>
+      'The rollback protection was only logged.';
+
+  @override
+  String get stageReleaseFloorPass =>
+      'The server runs the newest release seen so far or a newer one.';
+
+  @override
+  String get stageReleaseFloorWhat =>
+      'Whether the release is no older than the newest one Wendelin has ever verified (protection against a rollback to old, vulnerable versions).';
+
+  @override
   String get stageResponseKeyInfo => 'The key set was only logged.';
 
   @override
@@ -927,6 +1010,50 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get stageSignatureWhat =>
       'An additional signature over the key set that some providers deliver.';
+
+  @override
+  String get stageSigstoreInfo => 'The release signature was only logged.';
+
+  @override
+  String get stageSigstorePass =>
+      'The release comes from Tinfoil’s build and is publicly in the log.';
+
+  @override
+  String get stageSigstoreWhat =>
+      'Whether Tinfoil’s published program release on GitHub is genuinely signed and entered in the public transparency log (Sigstore).';
+
+  @override
+  String get stageSnpChainInfo => 'The certificate chain was only logged.';
+
+  @override
+  String get stageSnpChainPass =>
+      'The chain ends at AMD, not at a certificate someone slipped in.';
+
+  @override
+  String get stageSnpChainWhat =>
+      'Whether the processor’s certificate leads through the AMD intermediate certificate to the AMD root key built into Wendelin.';
+
+  @override
+  String get stageSnpPolicyInfo => 'The policy was only logged.';
+
+  @override
+  String get stageSnpPolicyPass =>
+      'The environment is not open for snooping and has no known outdated firmware.';
+
+  @override
+  String get stageSnpPolicyWhat =>
+      'Whether the environment runs without debug access and firmware and processor microcode are at least as recent as Wendelin requires (bootloader 9, SNP 22, microcode 80).';
+
+  @override
+  String get stageSnpReportInfo => 'The processor report was only logged.';
+
+  @override
+  String get stageSnpReportPass =>
+      'A genuine AMD processor vouches for the report. Nobody can change it afterwards.';
+
+  @override
+  String get stageSnpReportWhat =>
+      'The hardware attestation of the Tinfoil server: the AMD processor’s report, its certificate and the signature over it.';
 
   @override
   String get stageTcbInfo => 'The security level was only logged.';
@@ -989,6 +1116,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bringChecking => 'Checking …';
 
   @override
+  String get bringConnected => 'Connected';
+
+  @override
   String get bringEmail => 'Email';
 
   @override
@@ -999,7 +1129,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bringIntro =>
-      'Unofficial interface: Bring! has not released it for other apps, it can break at any time. Email and password stay in the device’s secure storage.';
+      'Unofficial interface: Bring! has not released it for other apps, it can break at any time. You sign in once; email and password are not stored, only the session (tokens) stays in the device’s secure storage.';
 
   @override
   String get bringNeedCredentials => 'Please enter email and password.';
@@ -1014,6 +1144,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bringReachable => 'Bring! is reachable again.';
 
   @override
+  String get bringReauthError =>
+      'Bring!: sign-in expired. Please sign in again.';
+
+  @override
+  String get bringReconnect => 'Reconnect';
+
+  @override
   String get bringShareSend => 'Send to Bring!';
 
   @override
@@ -1023,8 +1160,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bringShareUnreachable => 'Bring! unreachable';
 
   @override
-  String get bringSignOutBody =>
-      'Email, password and session are deleted from the device.';
+  String get bringSignOutBody => 'The session is deleted from the device.';
 
   @override
   String get bringSignOutTitle => 'Sign out of Bring!?';
@@ -1310,6 +1446,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get devSection => 'Development';
+
+  @override
+  String integrationsErrDenied(String service) {
+    return '$service: access refused or expired · paused';
+  }
+
+  @override
+  String integrationsErrFailed(String service) {
+    return '$service: unexpected answer · paused';
+  }
+
+  @override
+  String integrationsErrUnavailable(String service) {
+    return '$service is not reachable · paused';
+  }
 
   @override
   String get haAddressLabel => 'Address';
@@ -3509,6 +3660,210 @@ class AppLocalizationsEn extends AppLocalizations {
   String ruleTileSemanticsLevel(String level) {
     return 'Privacy level $level,';
   }
+
+  @override
+  String get speakerAdd => 'Enroll a person';
+
+  @override
+  String get speakerAddDetail =>
+      'Read five short sentences aloud; the recordings are not stored.';
+
+  @override
+  String get speakerAddNeedsModel => 'Download the model first.';
+
+  @override
+  String speakerDeleteBody(String name) {
+    return '$name is deleted with all stored voice features and their conversations.';
+  }
+
+  @override
+  String speakerDeleteBodyMemory(String name, int count) {
+    return '$name is deleted with all stored voice features, their conversations and $count entries in their own memory. The default memory stays unchanged.';
+  }
+
+  @override
+  String get speakerDeleteConfirm => 'Delete';
+
+  @override
+  String speakerDeleteSemantic(String name) {
+    return 'Delete $name';
+  }
+
+  @override
+  String get speakerDeleteTitle => 'Delete person?';
+
+  @override
+  String get speakerDone => 'Done';
+
+  @override
+  String get speakerEnrollIntro =>
+      'Read each sentence aloud at normal volume. Only a voice feature is computed from each recording; the audio is discarded.';
+
+  @override
+  String get speakerEnrollTitle => 'Enroll a person';
+
+  @override
+  String get speakerErrFailed =>
+      'The model could not process the recordings. Is it fully downloaded?';
+
+  @override
+  String get speakerErrInconsistent =>
+      'The sentences did not sound like one person, or it was too noisy. Nothing was stored; please try again somewhere quiet.';
+
+  @override
+  String get speakerErrTooFew => 'Recordings are missing.';
+
+  @override
+  String get speakerErrTooShort =>
+      'A recording was too short. Please try again.';
+
+  @override
+  String get speakerIntro =>
+      'Wendelin can recognise who is speaking. The result is available to the assistant as information.';
+
+  @override
+  String get speakerModelSection => 'Model';
+
+  @override
+  String get speakerNameLabel => 'Name';
+
+  @override
+  String get speakerNext => 'Next';
+
+  @override
+  String get speakerNoMic =>
+      'Without microphone access no one can be enrolled.';
+
+  @override
+  String get speakerNobody => 'Nobody enrolled yet.';
+
+  @override
+  String get speakerPeople => 'People';
+
+  @override
+  String get speakerPersonAddress => 'Form of address';
+
+  @override
+  String get speakerPersonAddressHint =>
+      'How Wendelin addresses you. Empty: the enrolled name.';
+
+  @override
+  String get speakerPersonAgent => 'Agent';
+
+  @override
+  String get speakerPersonAgentDefault => 'Default agent';
+
+  @override
+  String get speakerPersonAgentDetail =>
+      'Only another target instead of the default. Rules and privacy still apply.';
+
+  @override
+  String get speakerPersonDelete => 'Delete person';
+
+  @override
+  String get speakerPersonMemory => 'Memory';
+
+  @override
+  String get speakerPersonMemoryOpen => 'View entries';
+
+  @override
+  String get speakerPersonMemoryOwn => 'Own memory';
+
+  @override
+  String get speakerPersonMemoryOwnDetail =>
+      'Remembers things for this person only.';
+
+  @override
+  String get speakerPersonMemoryShared => 'Default memory';
+
+  @override
+  String get speakerPersonMemorySharedDetail =>
+      'Shares the existing entries with everyone who is not recognized.';
+
+  @override
+  String get speakerPersonRetrain => 'Enroll again';
+
+  @override
+  String get speakerPersonRetrainDetail => 'Read the five sentences once more.';
+
+  @override
+  String get speakerProcessing => 'Processing …';
+
+  @override
+  String get speakerRecordCutOff =>
+      'Started too early, please read the sentence again.';
+
+  @override
+  String get speakerRecordNoSpeech => 'Heard nothing, please try again.';
+
+  @override
+  String get speakerRecordTooLong =>
+      'Too long or too much background noise, please try again.';
+
+  @override
+  String get speakerRecordTooQuiet => 'Too quiet, please speak louder.';
+
+  @override
+  String get speakerResultClamped =>
+      'The threshold was limited to a safe value.';
+
+  @override
+  String speakerResultScores(String mean, String min, String threshold) {
+    return 'Consistency $mean, weakest sentence $min, threshold $threshold.';
+  }
+
+  @override
+  String get speakerResultTitle => 'Enrolled';
+
+  @override
+  String get speakerRetry => 'Try again';
+
+  @override
+  String get speakerRowDetail =>
+      'Recognises who is speaking (name, model, people).';
+
+  @override
+  String get speakerRowTitle => 'Speaker recognition';
+
+  @override
+  String get speakerSayNow => 'Read this sentence aloud now:';
+
+  @override
+  String get speakerSentence1 => 'This morning I took a walk through the park.';
+
+  @override
+  String get speakerSentence2 =>
+      'Please remind me tomorrow at nine o\'clock about the doctor\'s appointment.';
+
+  @override
+  String get speakerSentence3 =>
+      'The first flowers are blooming in the garden, and the sun is shining warmly.';
+
+  @override
+  String get speakerSentence4 =>
+      'Can you tell me what the weather will be like this weekend?';
+
+  @override
+  String get speakerSentence5 =>
+      'For dinner tonight there is soup with fresh bread.';
+
+  @override
+  String speakerSentenceOf(int n, int total) {
+    return 'Sentence $n of $total';
+  }
+
+  @override
+  String get speakerSwitch => 'Speaker recognition';
+
+  @override
+  String get speakerSwitchHint =>
+      'A voice is not a secure login: similar or imitated voices can be mistaken. Only encrypted voice features are stored, never recordings.';
+
+  @override
+  String get speakerSwitchLabel => 'Speaker recognition on or off';
+
+  @override
+  String get speakerTitle => 'Speaker recognition';
 
   @override
   String get spotifyAppNote =>

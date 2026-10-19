@@ -18,7 +18,7 @@ final class HaIntegration implements Integration {
     HaApi api,
     this.secrets,
     this.store, {
-    void Function(String message)? onError,
+    void Function(String message, PortErrorKind kind)? onError,
     void Function()? onRecovered,
   }) : context = HaContext(
          api,

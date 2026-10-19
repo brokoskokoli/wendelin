@@ -20,7 +20,7 @@ import '../../l10n/l10n.dart';
 import '../../platform/assistant_platform.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
-import '../../voice/voice_log.dart';
+import '../../voice/wake/wake_pre_roll.dart';
 import '../design/design.dart';
 import '../screens/confirmation_sheet.dart';
 import '../screens/private_banner.dart';
@@ -129,30 +129,12 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (mounted) _triggers.fire(wake: wake);
   }
 
-  /// Takes the audio of the wake word hit and, if set, plays the tone
-  /// (WP68). The tone follows the take: the service no longer records, the
-  /// new microphone silences the first [wakeToneMuteSamples] samples.
-  /// Without a tone (setting) or if the speaker is evidently continuing
-  /// already, nothing is played and nothing silenced.
-  Future<WakePreRoll?> _takeWake({required bool tone}) async {
-    final taken = await _platform.takeWakeHandoff();
-    if (taken == null) return null;
-    final pcm = taken.pcm;
-    final continues = speechAfterWakeWord(pcm, taken.wakeEnd);
-    voiceLog('wake-handoff', {
-      'ms': samplesToDuration(pcm.length),
-      'captured': Duration(milliseconds: taken.capturedMs),
-      'continues': continues,
-    });
-    final play = tone && !continues;
-    if (play) unawaited(ref.read(wakeConfirmToneProvider)());
-    return WakePreRoll(
-      pcm: pcm,
-      wakeEnd: taken.wakeEnd,
-      muteMicSamples: play ? wakeToneMuteSamples : 0,
-      lastSampleAtMs: taken.lastSampleAtMs,
-    );
-  }
+  /// Takes the audio of the wake word hit and plays the tone (WP68).
+  Future<WakePreRoll?> _takeWake({required bool tone}) => takeWakePreRoll(
+    platform: _platform,
+    tone: tone,
+    playTone: ref.read(wakeConfirmToneProvider),
+  );
 
   void _onLifecycle(AppLifecycleState state) {
     if (state == AppLifecycleState.hidden ||

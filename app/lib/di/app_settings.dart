@@ -72,6 +72,12 @@ abstract final class AppSettings {
   static SettingKey<Map<String, Object?>> attestationPin(String profileId) =>
       SettingKey.json('tee.pin.$profileId');
 
+  /// Highest verified Tinfoil release of [key] (provider host and router
+  /// repo, JSON of `ReleaseFloor`, downgrade protection K59). Never lowered;
+  /// older entries are keyed by profile id and still count.
+  static SettingKey<Map<String, Object?>> releaseFloor(String key) =>
+      SettingKey.json('tee.releaseFloor.$key');
+
   /// Restrictions of the TEE provider [profileId] with [model] the user saw
   /// and accepted (JSON `{"stages": [stage ids]}`, WP78). Bound to the model.
   static SettingKey<Map<String, Object?>> teeAccepted(

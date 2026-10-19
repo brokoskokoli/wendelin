@@ -129,14 +129,20 @@ final class ToolRegistry {
 
   /// Marks the integration [id] as failed (e.g. token expired); its tools
   /// are paused until [clearError].
-  void reportError(String id, String message) {
-    _entry(id).reportedError = message;
+  ///
+  /// [kind] is the failure category the UI words in the app language.
+  void reportError(String id, String message, {PortErrorKind? kind}) {
+    _entry(id)
+      ..reportedError = message
+      ..reportedKind = kind;
     _changed();
   }
 
   /// Clears a failure set by [reportError].
   void clearError(String id) {
-    _entry(id).reportedError = null;
+    _entry(id)
+      ..reportedError = null
+      ..reportedKind = null;
     _changed();
   }
 
@@ -275,6 +281,7 @@ final class _Entry {
   SetupState setup = SetupState();
   String? checkError;
   String? reportedError;
+  PortErrorKind? reportedKind;
 
   IntegrationInfo info(bool Function(Integration) platformOk) {
     final ok = platformOk(integration);
@@ -292,6 +299,7 @@ final class _Entry {
       availability: shown,
       setup: setup,
       error: error,
+      errorKind: reportedKind,
       status: IntegrationInfo.deriveStatus(
         available: shown.available,
         enabled: enabled,

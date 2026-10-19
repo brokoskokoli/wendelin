@@ -8,9 +8,9 @@ import 'context_builder.dart';
 import 'ports.dart';
 import 'provider_resolver.dart';
 import 'run/attestation_gate.dart';
-import 'run/buffered_control.dart';
 import 'run/escalation.dart';
 import 'run/model_call.dart';
+import 'run/overlap_control.dart';
 import 'run/privacy_scope.dart';
 import 'run/run_budget.dart';
 import 'run/run_config.dart';
@@ -41,6 +41,7 @@ final class AgentRunner implements AgentRun, RunConfig {
     this.onToolRefused,
     this.onUndoFailed,
     this.memoryFloor,
+    this.memoryOwner = '',
   });
 
   /// Chooses providers and escalation targets.
@@ -102,6 +103,11 @@ final class AgentRunner implements AgentRun, RunConfig {
   /// floor besides the entries' own.
   @override
   final PrivacyLevel? memoryFloor;
+
+  /// Memory namespace of the person this run belongs to (WP92b); passed to
+  /// the tools as `ToolContext.memoryOwner`. `''` = the default memory.
+  @override
+  final String memoryOwner;
 
   AgentConfig get _config => contextBuilder.config;
 
@@ -441,11 +447,12 @@ final class _Run implements RunControl {
   /// caused [round] is still being fetched (WP81b).
   ///
   /// Invariants:
-  /// - The call's events are buffered ([BufferedControl]) and go out only
-  ///   after the green receipt; its tool calls run in the loop, which only
-  ///   gets the reply after that.
-  /// - Anything but green drops the call: cancelled, its reply, events and
-  ///   tokens discarded, never in the history. The undo ran as without the
+  /// - The call's text, speech and thinking events go out at once
+  ///   ([OverlapControl], WP81c); its tool calls run in the loop, which only
+  ///   gets the reply after the green receipt.
+  /// - Anything but green drops the call: cancelled, `AgentTextReset` before
+  ///   the red status event of the previous answer, its reply never in the
+  ///   history; paid tokens are still reported. The undo ran as without the
   ///   overlap and the loop calls the model again; it sees the undone
   ///   results.
   /// - An abort ends both: the call's token follows the run's.
@@ -456,7 +463,7 @@ final class _Run implements RunControl {
     _state.messages.add(provisional);
     void dropProvisional() =>
         _state.messages.removeWhere((m) => identical(m, provisional));
-    final buffer = BufferedControl(this);
+    final overlap = OverlapControl(this);
     Future<ModelReply>? call;
     try {
       try {
@@ -476,23 +483,24 @@ final class _Run implements RunControl {
         _state,
         _privacy,
         _budget,
-        buffer,
+        overlap,
         _attest,
       ).call();
       // Failures surface where the reply is awaited.
       call.ignore();
-      if (await _tools.verify(round)) {
-        buffer.release();
+      if (await _tools.verify(round, onNotGreen: overlap.discard)) {
+        overlap.verified();
         // Recorded at once: an abort during the call keeps the history whole.
         await _state.record(provisional);
         return await call;
       }
+      overlap.discard();
       dropProvisional();
       await _state.append(Message.toolResults(_tools.resultsOf(round)));
       return null;
     } finally {
-      // Not released (red, abort, error): the call must not go on.
-      if (call != null) buffer.discardUnlessReleased();
+      // Not verified (abort, error): the call must not go on.
+      if (call != null) overlap.abandon();
     }
   }
 

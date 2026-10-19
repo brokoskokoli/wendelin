@@ -11,6 +11,7 @@ import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/session_manager.dart';
+import 'package:wendelin/voice/speaker/person_scope.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -811,7 +812,11 @@ final class _BrokenConversations implements ConversationRepository {
 /// An agent whose stream breaks its contract with an error.
 final class _BrokenFactory implements AgentRunFactory {
   @override
-  AgentRun create(ProviderConfig providers, String sessionId) => _BrokenRun();
+  AgentRun create(
+    ProviderConfig providers,
+    String sessionId, {
+    PersonScope person = PersonScope.standard,
+  }) => _BrokenRun();
 }
 
 final class _BrokenRun implements AgentRun {

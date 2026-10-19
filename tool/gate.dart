@@ -264,6 +264,10 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
       failure: null,
     ),
   );
+  await gate.step('check_ignores', 'dart', [
+    'run',
+    'tool/check_ignores.dart',
+  ], cacheSpec: all);
   await gate.step('check_flaky', 'dart', [
     'run',
     'tool/check_flaky.dart',

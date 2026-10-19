@@ -22,6 +22,9 @@ final class FakeSnpCrypto implements SnpCrypto {
   /// Policy of the last [verify] call.
   SnpPolicy? lastPolicy;
 
+  /// Expected TLS hash of the last [verify] call.
+  Uint8List? lastTls;
+
   /// Time of the last [verify] call.
   DateTime? lastNow;
 
@@ -64,6 +67,7 @@ final class FakeSnpCrypto implements SnpCrypto {
   }) async {
     verifies++;
     lastPolicy = policy;
+    lastTls = tlsSpkiSha256;
     lastNow = now;
     return verdict;
   }

@@ -349,7 +349,7 @@ abstract class AppLocalizations {
   /// No description provided for @attE2eeKeyNote.
   ///
   /// In de, this message translates to:
-  /// **'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell.'**
+  /// **'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell. Bei Tinfoil endet sie im geprüften Router, der sie an das Modell weitergibt.'**
   String get attE2eeKeyNote;
 
   /// No description provided for @attExplainAccept.
@@ -477,6 +477,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Warnen ab'**
   String get attFinishWarnFrom;
+
+  /// No description provided for @attFloorCorruptText.
+  ///
+  /// In de, this message translates to:
+  /// **'Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Abhilfe schafft nur das Zurücksetzen der App-Daten. Danach wird der erste Kontakt wieder ohne Rückschrittschutz geprüft.'**
+  String get attFloorCorruptText;
+
+  /// No description provided for @attFloorCorruptTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Gespeicherter Rückschrittschutz beschädigt'**
+  String get attFloorCorruptTitle;
 
   /// No description provided for @attGpuFailedLabel.
   ///
@@ -874,6 +886,24 @@ abstract class AppLocalizations {
   /// **'Plattform des Betreibers zurückgezogen'**
   String get attRevokedTitle;
 
+  /// No description provided for @attRollbackText.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Anbieter meldet eine ältere Software-Version als die, die hier schon einmal geprüft wurde. Das kann ein Zurückspielen alter, verwundbarer Software oder alter Daten sein. Die Anfrage wurde nicht gesendet. Sende nichts Vertrauliches und prüfe später erneut.'**
+  String get attRollbackText;
+
+  /// No description provided for @attRollbackTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Ältere Software-Version als zuvor geprüft'**
+  String get attRollbackTitle;
+
+  /// No description provided for @attSBindHpke.
+  ///
+  /// In de, this message translates to:
+  /// **'Verschlüsselungsschlüssel gebunden'**
+  String get attSBindHpke;
+
   /// No description provided for @attSCompose.
   ///
   /// In de, this message translates to:
@@ -946,6 +976,18 @@ abstract class AppLocalizations {
   /// **'Schlüsselsatz-Signatur'**
   String get attSKeysetSignature;
 
+  /// No description provided for @attSMeasurement.
+  ///
+  /// In de, this message translates to:
+  /// **'Messwert = Release'**
+  String get attSMeasurement;
+
+  /// No description provided for @attSNoReceipt.
+  ///
+  /// In de, this message translates to:
+  /// **'Quittung je Antwort'**
+  String get attSNoReceipt;
+
   /// No description provided for @attSNonce.
   ///
   /// In de, this message translates to:
@@ -999,6 +1041,36 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Quittungs-Signatur'**
   String get attSReceiptSignature;
+
+  /// No description provided for @attSReleaseFloor.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Rückschritt'**
+  String get attSReleaseFloor;
+
+  /// No description provided for @attSSigstore.
+  ///
+  /// In de, this message translates to:
+  /// **'Signiertes Release (Sigstore)'**
+  String get attSSigstore;
+
+  /// No description provided for @attSSnpChain.
+  ///
+  /// In de, this message translates to:
+  /// **'AMD-Zertifikatskette'**
+  String get attSSnpChain;
+
+  /// No description provided for @attSSnpPolicy.
+  ///
+  /// In de, this message translates to:
+  /// **'Prozessor-Richtlinie'**
+  String get attSSnpPolicy;
+
+  /// No description provided for @attSSnpReport.
+  ///
+  /// In de, this message translates to:
+  /// **'AMD-Hardware-Nachweis'**
+  String get attSSnpReport;
 
   /// No description provided for @attSTcb.
   ///
@@ -1264,6 +1336,24 @@ abstract class AppLocalizations {
   /// **'Wie alt der Nachweis ist.'**
   String get stageAgeWhat;
 
+  /// No description provided for @stageBindHpkeInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Schlüssel wurde nur protokolliert.'**
+  String get stageBindHpkeInfo;
+
+  /// No description provided for @stageBindHpkePass.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur der geprüfte Server kann die Anfrage lesen. Der Schlüssel stammt aus dem Nachweis, nicht aus einer ungeprüften Antwort.'**
+  String get stageBindHpkePass;
+
+  /// No description provided for @stageBindHpkeWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob der Schlüssel, mit dem Wendelin deine Anfrage verschlüsselt, genau der ist, der im Hardware-Nachweis steht.'**
+  String get stageBindHpkeWhat;
+
   /// No description provided for @stageComposeInfo.
   ///
   /// In de, this message translates to:
@@ -1431,6 +1521,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Die Prüfsumme des Schlüsselsatzes (Schlüssel, mit denen Wendelin verschlüsselt) muss im Hardware-Nachweis stehen.'**
   String get stageKeyBindingWhat;
+
+  /// No description provided for @stageMeasurementInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Messwert wurde nur protokolliert.'**
+  String get stageMeasurementInfo;
+
+  /// No description provided for @stageMeasurementPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Auf dem Server läuft der veröffentlichte Code, kein anderer.'**
+  String get stageMeasurementPass;
+
+  /// No description provided for @stageMeasurementWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob der Messwert des laufenden Servers genau der des neuesten signierten Releases ist.'**
+  String get stageMeasurementWhat;
+
+  /// No description provided for @stageNoReceiptInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Tinfoil stellt keine Quittung je Antwort aus. Die Antwort ist nur durch die Verschlüsselung an deine Anfrage gebunden; welches Modell sie erzeugt hat, belegt keine Quittung.'**
+  String get stageNoReceiptInfo;
+
+  /// No description provided for @stageNoReceiptPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu jeder Antwort liegt eine signierte Quittung vor.'**
+  String get stageNoReceiptPass;
+
+  /// No description provided for @stageNoReceiptWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob zu jeder Antwort eine signierte Quittung vorliegt, die Anfrage und Antwort belegt.'**
+  String get stageNoReceiptWhat;
 
   /// No description provided for @stageNonceInfo.
   ///
@@ -1600,6 +1726,24 @@ abstract class AppLocalizations {
   /// **'Die Signatur der Quittung.'**
   String get stageReceiptSigWhat;
 
+  /// No description provided for @stageReleaseFloorInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Rückschrittschutz wurde nur protokolliert.'**
+  String get stageReleaseFloorInfo;
+
+  /// No description provided for @stageReleaseFloorPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Server läuft mit dem bisher neuesten oder einem neueren Release.'**
+  String get stageReleaseFloorPass;
+
+  /// No description provided for @stageReleaseFloorWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob das Release nicht älter ist als das neueste, das Wendelin je geprüft hat (Schutz vor einem Rückschritt auf alte, angreifbare Versionen).'**
+  String get stageReleaseFloorWhat;
+
   /// No description provided for @stageResponseKeyInfo.
   ///
   /// In de, this message translates to:
@@ -1647,6 +1791,78 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Eine zusätzliche Signatur über den Schlüsselsatz, die manche Anbieter liefern.'**
   String get stageSignatureWhat;
+
+  /// No description provided for @stageSigstoreInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Signatur des Releases wurde nur protokolliert.'**
+  String get stageSigstoreInfo;
+
+  /// No description provided for @stageSigstorePass.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Release stammt aus dem Build von Tinfoil und steht öffentlich im Log.'**
+  String get stageSigstorePass;
+
+  /// No description provided for @stageSigstoreWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob das veröffentlichte Programm-Release von Tinfoil auf GitHub echt signiert und im öffentlichen Transparenzlog (Sigstore) eingetragen ist.'**
+  String get stageSigstoreWhat;
+
+  /// No description provided for @stageSnpChainInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Zertifikatskette wurde nur protokolliert.'**
+  String get stageSnpChainInfo;
+
+  /// No description provided for @stageSnpChainPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Kette endet bei AMD, nicht bei einem Zertifikat, das jemand unterschoben hat.'**
+  String get stageSnpChainPass;
+
+  /// No description provided for @stageSnpChainWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob das Zertifikat des Prozessors über das AMD-Zwischenzertifikat auf den in Wendelin fest hinterlegten AMD-Wurzelschlüssel zurückgeht.'**
+  String get stageSnpChainWhat;
+
+  /// No description provided for @stageSnpPolicyInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Richtlinie wurde nur protokolliert.'**
+  String get stageSnpPolicyInfo;
+
+  /// No description provided for @stageSnpPolicyPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Umgebung ist nicht zum Mitlesen geöffnet und enthält keine bekannt veraltete Firmware.'**
+  String get stageSnpPolicyPass;
+
+  /// No description provided for @stageSnpPolicyWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Ob die Umgebung ohne Debug-Zugang läuft und Firmware und Prozessor-Microcode mindestens so aktuell sind, wie Wendelin es verlangt (Bootloader 9, SNP 22, Microcode 80).'**
+  String get stageSnpPolicyWhat;
+
+  /// No description provided for @stageSnpReportInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Bericht des Prozessors wurde nur protokolliert.'**
+  String get stageSnpReportInfo;
+
+  /// No description provided for @stageSnpReportPass.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein echter AMD-Prozessor bestätigt den Bericht. Niemand kann ihn nachträglich ändern.'**
+  String get stageSnpReportPass;
+
+  /// No description provided for @stageSnpReportWhat.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Hardware-Nachweis des Tinfoil-Servers: Bericht des AMD-Prozessors, sein Zertifikat und die Signatur darüber.'**
+  String get stageSnpReportWhat;
 
   /// No description provided for @stageTcbInfo.
   ///
@@ -1750,6 +1966,12 @@ abstract class AppLocalizations {
   /// **'Prüfe …'**
   String get bringChecking;
 
+  /// No description provided for @bringConnected.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbunden'**
+  String get bringConnected;
+
   /// No description provided for @bringEmail.
   ///
   /// In de, this message translates to:
@@ -1771,7 +1993,7 @@ abstract class AppLocalizations {
   /// No description provided for @bringIntro.
   ///
   /// In de, this message translates to:
-  /// **'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps freigegeben, sie kann jederzeit brechen. E-Mail und Passwort bleiben im sicheren Speicher des Geräts.'**
+  /// **'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps freigegeben, sie kann jederzeit brechen. Du meldest dich einmal an; E-Mail und Passwort werden nicht gespeichert, nur die Sitzung (Tokens) bleibt im sicheren Speicher des Geräts.'**
   String get bringIntro;
 
   /// No description provided for @bringNeedCredentials.
@@ -1798,6 +2020,18 @@ abstract class AppLocalizations {
   /// **'Bring! ist wieder erreichbar.'**
   String get bringReachable;
 
+  /// No description provided for @bringReauthError.
+  ///
+  /// In de, this message translates to:
+  /// **'Bring!: Anmeldung abgelaufen. Bitte neu anmelden.'**
+  String get bringReauthError;
+
+  /// No description provided for @bringReconnect.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut verbinden'**
+  String get bringReconnect;
+
   /// No description provided for @bringShareSend.
   ///
   /// In de, this message translates to:
@@ -1819,7 +2053,7 @@ abstract class AppLocalizations {
   /// No description provided for @bringSignOutBody.
   ///
   /// In de, this message translates to:
-  /// **'E-Mail, Passwort und Sitzung werden vom Gerät gelöscht.'**
+  /// **'Die Sitzung wird vom Gerät gelöscht.'**
   String get bringSignOutBody;
 
   /// No description provided for @bringSignOutTitle.
@@ -2361,6 +2595,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Entwicklung'**
   String get devSection;
+
+  /// No description provided for @integrationsErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Zugang abgelehnt oder abgelaufen · pausiert'**
+  String integrationsErrDenied(String service);
+
+  /// No description provided for @integrationsErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: unerwartete Antwort · pausiert'**
+  String integrationsErrFailed(String service);
+
+  /// No description provided for @integrationsErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'{service} ist nicht erreichbar · pausiert'**
+  String integrationsErrUnavailable(String service);
 
   /// No description provided for @haAddressLabel.
   ///
@@ -6063,6 +6315,354 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Datenschutzstufe {level},'**
   String ruleTileSemanticsLevel(String level);
+
+  /// No description provided for @speakerAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Person einlernen'**
+  String get speakerAdd;
+
+  /// No description provided for @speakerAddDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Fünf kurze Sätze vorlesen, die Aufnahmen werden nicht gespeichert.'**
+  String get speakerAddDetail;
+
+  /// No description provided for @speakerAddNeedsModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Lade zuerst das Modell.'**
+  String get speakerAddNeedsModel;
+
+  /// No description provided for @speakerDeleteBody.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen und ihren Unterhaltungen gelöscht.'**
+  String speakerDeleteBody(String name);
+
+  /// No description provided for @speakerDeleteBodyMemory.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen, ihren Unterhaltungen und {count} Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.'**
+  String speakerDeleteBodyMemory(String name, int count);
+
+  /// No description provided for @speakerDeleteConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen'**
+  String get speakerDeleteConfirm;
+
+  /// No description provided for @speakerDeleteSemantic.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} löschen'**
+  String speakerDeleteSemantic(String name);
+
+  /// No description provided for @speakerDeleteTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Person löschen?'**
+  String get speakerDeleteTitle;
+
+  /// No description provided for @speakerDone.
+  ///
+  /// In de, this message translates to:
+  /// **'Fertig'**
+  String get speakerDone;
+
+  /// No description provided for @speakerEnrollIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Lies jeden Satz in normaler Lautstärke vor. Aus der Aufnahme wird nur ein Stimmmerkmal berechnet, das Audio wird verworfen.'**
+  String get speakerEnrollIntro;
+
+  /// No description provided for @speakerEnrollTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Person einlernen'**
+  String get speakerEnrollTitle;
+
+  /// No description provided for @speakerErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Modell konnte die Aufnahmen nicht auswerten. Ist es vollständig geladen?'**
+  String get speakerErrFailed;
+
+  /// No description provided for @speakerErrInconsistent.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Sätze klangen nicht nach derselben Person oder es war zu laut. Nichts wurde gespeichert, bitte noch einmal in ruhiger Umgebung.'**
+  String get speakerErrInconsistent;
+
+  /// No description provided for @speakerErrTooFew.
+  ///
+  /// In de, this message translates to:
+  /// **'Es fehlen Aufnahmen.'**
+  String get speakerErrTooFew;
+
+  /// No description provided for @speakerErrTooShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Eine Aufnahme war zu kurz. Bitte noch einmal.'**
+  String get speakerErrTooShort;
+
+  /// No description provided for @speakerIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin kann erkennen, wer spricht. Das Ergebnis steht dem Assistenten als Information zur Verfügung.'**
+  String get speakerIntro;
+
+  /// No description provided for @speakerModelSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell'**
+  String get speakerModelSection;
+
+  /// No description provided for @speakerNameLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
+  String get speakerNameLabel;
+
+  /// No description provided for @speakerNext.
+  ///
+  /// In de, this message translates to:
+  /// **'Weiter'**
+  String get speakerNext;
+
+  /// No description provided for @speakerNoMic.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Mikrofon-Zugriff kann keine Person eingelernt werden.'**
+  String get speakerNoMic;
+
+  /// No description provided for @speakerNobody.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch niemand eingelernt.'**
+  String get speakerNobody;
+
+  /// No description provided for @speakerPeople.
+  ///
+  /// In de, this message translates to:
+  /// **'Personen'**
+  String get speakerPeople;
+
+  /// No description provided for @speakerPersonAddress.
+  ///
+  /// In de, this message translates to:
+  /// **'Anrede'**
+  String get speakerPersonAddress;
+
+  /// No description provided for @speakerPersonAddressHint.
+  ///
+  /// In de, this message translates to:
+  /// **'So spricht Wendelin dich an. Leer: der eingelernte Name.'**
+  String get speakerPersonAddressHint;
+
+  /// No description provided for @speakerPersonAgent.
+  ///
+  /// In de, this message translates to:
+  /// **'Agent'**
+  String get speakerPersonAgent;
+
+  /// No description provided for @speakerPersonAgentDefault.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-Agent'**
+  String get speakerPersonAgentDefault;
+
+  /// No description provided for @speakerPersonAgentDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur ein anderes Ziel statt des Standards. Regeln und Datenschutz gelten weiter.'**
+  String get speakerPersonAgentDetail;
+
+  /// No description provided for @speakerPersonDelete.
+  ///
+  /// In de, this message translates to:
+  /// **'Person löschen'**
+  String get speakerPersonDelete;
+
+  /// No description provided for @speakerPersonMemory.
+  ///
+  /// In de, this message translates to:
+  /// **'Gedächtnis'**
+  String get speakerPersonMemory;
+
+  /// No description provided for @speakerPersonMemoryOpen.
+  ///
+  /// In de, this message translates to:
+  /// **'Einträge ansehen'**
+  String get speakerPersonMemoryOpen;
+
+  /// No description provided for @speakerPersonMemoryOwn.
+  ///
+  /// In de, this message translates to:
+  /// **'Eigenes Gedächtnis'**
+  String get speakerPersonMemoryOwn;
+
+  /// No description provided for @speakerPersonMemoryOwnDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Merkt sich Dinge nur für diese Person.'**
+  String get speakerPersonMemoryOwnDetail;
+
+  /// No description provided for @speakerPersonMemoryShared.
+  ///
+  /// In de, this message translates to:
+  /// **'Standard-Gedächtnis'**
+  String get speakerPersonMemoryShared;
+
+  /// No description provided for @speakerPersonMemorySharedDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Nutzt die bisherigen Einträge gemeinsam mit allen, die nicht erkannt werden.'**
+  String get speakerPersonMemorySharedDetail;
+
+  /// No description provided for @speakerPersonRetrain.
+  ///
+  /// In de, this message translates to:
+  /// **'Neu einlernen'**
+  String get speakerPersonRetrain;
+
+  /// No description provided for @speakerPersonRetrainDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Fünf Sätze noch einmal vorlesen.'**
+  String get speakerPersonRetrainDetail;
+
+  /// No description provided for @speakerProcessing.
+  ///
+  /// In de, this message translates to:
+  /// **'Wird ausgewertet …'**
+  String get speakerProcessing;
+
+  /// No description provided for @speakerRecordCutOff.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu früh angefangen, bitte den Satz noch einmal.'**
+  String get speakerRecordCutOff;
+
+  /// No description provided for @speakerRecordNoSpeech.
+  ///
+  /// In de, this message translates to:
+  /// **'Nichts gehört, bitte noch einmal.'**
+  String get speakerRecordNoSpeech;
+
+  /// No description provided for @speakerRecordTooLong.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu lang oder zu laut im Hintergrund, bitte noch einmal.'**
+  String get speakerRecordTooLong;
+
+  /// No description provided for @speakerRecordTooQuiet.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu leise, bitte lauter.'**
+  String get speakerRecordTooQuiet;
+
+  /// No description provided for @speakerResultClamped.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Schwelle wurde auf einen sicheren Wert begrenzt.'**
+  String get speakerResultClamped;
+
+  /// No description provided for @speakerResultScores.
+  ///
+  /// In de, this message translates to:
+  /// **'Gleichmäßigkeit {mean}, schwächster Satz {min}, Schwelle {threshold}.'**
+  String speakerResultScores(String mean, String min, String threshold);
+
+  /// No description provided for @speakerResultTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Eingelernt'**
+  String get speakerResultTitle;
+
+  /// No description provided for @speakerRetry.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch einmal'**
+  String get speakerRetry;
+
+  /// No description provided for @speakerRowDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennt, wer spricht (Name, Modell, Personen).'**
+  String get speakerRowDetail;
+
+  /// No description provided for @speakerRowTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprechererkennung'**
+  String get speakerRowTitle;
+
+  /// No description provided for @speakerSayNow.
+  ///
+  /// In de, this message translates to:
+  /// **'Lies den Satz jetzt laut vor:'**
+  String get speakerSayNow;
+
+  /// No description provided for @speakerSentence1.
+  ///
+  /// In de, this message translates to:
+  /// **'Heute Morgen habe ich einen Spaziergang durch den Park gemacht.'**
+  String get speakerSentence1;
+
+  /// No description provided for @speakerSentence2.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte erinnere mich morgen um neun Uhr an den Termin beim Arzt.'**
+  String get speakerSentence2;
+
+  /// No description provided for @speakerSentence3.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Garten blühen die ersten Blumen, und die Sonne scheint warm.'**
+  String get speakerSentence3;
+
+  /// No description provided for @speakerSentence4.
+  ///
+  /// In de, this message translates to:
+  /// **'Kannst du mir sagen, wie das Wetter am Wochenende wird?'**
+  String get speakerSentence4;
+
+  /// No description provided for @speakerSentence5.
+  ///
+  /// In de, this message translates to:
+  /// **'Zum Abendessen gibt es heute Suppe mit frischem Brot.'**
+  String get speakerSentence5;
+
+  /// No description provided for @speakerSentenceOf.
+  ///
+  /// In de, this message translates to:
+  /// **'Satz {n} von {total}'**
+  String speakerSentenceOf(int n, int total);
+
+  /// No description provided for @speakerSwitch.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprechererkennung'**
+  String get speakerSwitch;
+
+  /// No description provided for @speakerSwitchHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Stimme ist keine sichere Anmeldung: Ähnliche oder nachgemachte Stimmen können verwechselt werden. Gespeichert werden nur verschlüsselte Stimmmerkmale, keine Aufnahmen.'**
+  String get speakerSwitchHint;
+
+  /// No description provided for @speakerSwitchLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprechererkennung ein oder aus'**
+  String get speakerSwitchLabel;
+
+  /// No description provided for @speakerTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprechererkennung'**
+  String get speakerTitle;
 
   /// No description provided for @spotifyAppNote.
   ///

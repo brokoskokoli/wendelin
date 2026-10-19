@@ -17,12 +17,14 @@ const bringRetryHint =
 /// Login handling and error state of the Bring! tools.
 ///
 /// Every API call runs through [run]: the session is taken from memory,
-/// then from [BringSecrets], else a login with the stored credentials
-/// starts. A rejected token (`permissionDenied`) is renewed **once** (refresh
-/// token, then a new login) and the call repeated once; HTTP 401 means the
-/// call was not applied, so this is safe for writes too. Nothing else is
-/// repeated. Lasting failures (login or token still rejected after the
-/// renewal, unexpected answers: HTML, missing fields, unknown status) call
+/// then from [BringSecrets], else [notSetUp]. No e-mail or password is kept,
+/// so there is no automatic login. A rejected token (`permissionDenied`) is
+/// renewed **once** with the refresh token and the call repeated once; HTTP
+/// 401 means the call was not applied, so this is safe for writes too. A
+/// refused refresh (or none available) ends in [reauthRequired]: session
+/// dropped, the user signs in again. Nothing else is repeated. Lasting
+/// failures (token still rejected after the renewal, unexpected answers:
+/// HTML, missing fields, unknown status) call
 /// [onError] (the app: `ToolRegistry.reportError`, tools paused) and are
 /// rethrown with [bringFallbackHint]. Temporary ones (`unavailable`:
 /// offline, timeout, 429, 5xx) only fail the call, with [bringRetryHint].
@@ -33,11 +35,11 @@ final class BringSession {
   /// The API client.
   final BringApi api;
 
-  /// Where credentials and tokens live.
+  /// Where the session (tokens) lives.
   final BringSecrets secrets;
 
   /// Called with a German message when the integration must show „Fehler“.
-  final void Function(String message)? onError;
+  final void Function(String message, PortErrorKind kind)? onError;
 
   /// Called when a call succeeds after [onError].
   final void Function()? onRecovered;
@@ -50,10 +52,19 @@ final class BringSession {
   /// no call has succeeded since.
   bool get failed => _failed;
 
-  /// Error when no credentials are stored (setup, not a failure).
+  /// Error when no session is stored (setup, not a failure).
   static const notSetUp = PortException(
     PortErrorKind.permissionDenied,
     'Bring! ist nicht eingerichtet (Einstellungen → Integrationen → Bring!).',
+  );
+
+  /// The refresh token is refused or missing: the user must sign in again
+  /// (Settings → Bring!, „Erneut verbinden“). Pauses the tools like any
+  /// lasting failure; the session is dropped.
+  static const reauthRequired = PortException(
+    PortErrorKind.permissionDenied,
+    'Die Bring!-Anmeldung ist abgelaufen. Bitte neu anmelden '
+    '(Einstellungen → Bring!, „Erneut verbinden“).',
   );
 
   /// Runs [op] with a valid session (see the class comment).
@@ -79,9 +90,9 @@ final class BringSession {
       if (e.kind == PortErrorKind.unavailable) {
         throw PortException(e.kind, '${e.message}. $bringRetryHint');
       }
-      if (e.kind == PortErrorKind.permissionDenied) await _drop();
+      if (identical(e, reauthRequired)) await _drop();
       _failed = true;
-      onError?.call(e.message);
+      onError?.call(e.message, e.kind);
       throw PortException(e.kind, '${e.message}. $bringFallbackHint');
     }
   }
@@ -91,8 +102,8 @@ final class BringSession {
   Future<T> exclusive<T>(String listUuid, Future<T> Function() body) =>
       FileQueue.run('bring:$listUuid', body);
 
-  /// Forgets the session in memory and in [secrets] (e.g. after the login
-  /// changed in the settings).
+  /// Forgets the session in memory and in [secrets] (e.g. before a new
+  /// sign-in or after the sign-out in the settings).
   Future<void> forget() => _drop();
 
   Future<void> _drop() async {
@@ -114,18 +125,15 @@ final class BringSession {
   }
 
   Future<BringAuth> _doRenew(BringAuth? stale) async {
-    BringAuth? fresh;
-    if (stale != null && stale.refreshToken != null) {
-      try {
-        fresh = await api.refresh(stale);
-      } on PortException catch (e) {
-        if (e.kind != PortErrorKind.permissionDenied) rethrow;
-      }
-    }
-    if (fresh == null) {
-      final login = await secrets.credentials();
-      if (login == null) throw notSetUp;
-      fresh = await api.login(login.email, login.password);
+    if (stale == null) throw notSetUp;
+    final refreshToken = stale.refreshToken;
+    if (refreshToken == null) throw reauthRequired;
+    final BringAuth fresh;
+    try {
+      fresh = await api.refresh(stale);
+    } on PortException catch (e) {
+      if (e.kind != PortErrorKind.permissionDenied) rethrow;
+      throw reauthRequired;
     }
     _auth = fresh;
     await secrets.saveAuth(fresh);

@@ -5,15 +5,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/app.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
+import 'package:wendelin/l10n/l10n.dart';
 import 'package:wendelin/main.dart' show loadDeviceInfo;
 import 'package:wendelin/platform/device_calendar_port.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
+
+/// UI language of the device tests (`--dart-define=E2E_LANG=de|en|fr`, set by
+/// `tool/e2e_android.sh` via `E2E_LANG`). Default `de`, independent of the
+/// emulator locale; `system` follows the emulator.
+const e2eLanguage = String.fromEnvironment('E2E_LANG', defaultValue: 'de');
+
+/// The UI texts in the language the app currently shows (tests must not
+/// hard-code German; they run with `E2E_LANG=de` and `en`).
+AppLocalizations l10n(WidgetTester tester) =>
+    tester.element(find.byType(Scaffold).first).l10n;
+
+/// Finds the undo button of a tool result card („Rückgängig · 12 s“ /
+/// „Undo · 12 s“) in the current language.
+Finder undoButton(WidgetTester tester) {
+  final text = l10n(tester).toolResultUndoCountdown(98765);
+  return find.textContaining(text.substring(0, text.indexOf('98765')));
+}
 
 /// The app as `main.dart` builds it, with a fresh in-memory database and
 /// in-memory secrets, but the **real device ports** (calendar channel, SAF
@@ -80,9 +99,15 @@ final class E2eApp {
       ),
     );
     await tester.pump();
-    return ProviderScope.containerOf(
+    final container = ProviderScope.containerOf(
       tester.element(find.byType(child.runtimeType)),
     );
+    // Deterministic UI language (not the emulator's), unless the test sets one.
+    if (startup.uiLanguage == uiLanguageSystem) {
+      await container.read(uiLanguageProvider.notifier).set(e2eLanguage);
+      await tester.pump();
+    }
+    return container;
   }
 }
 

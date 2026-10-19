@@ -26,3 +26,14 @@ abstract interface class ReceiptIdSource {
   /// The receipt id of the finished exchange [record], or `null`.
   String? receiptIdOf(ExchangeRecord record);
 }
+
+/// Implemented by an `AttestationVerifier` of a provider that issues **no
+/// receipt per answer** (Tinfoil, ADR 0020). `AttestedProvider` then does
+/// not ask for one (no `x-receipt-id`, no retries): each answer of the
+/// attested session is green with the stage `receipt.none` (information)
+/// in the audit log. The answer itself is bound to the request by the AEAD
+/// of the end-to-end encryption.
+abstract interface class ReceiptFreeVerifier {
+  /// Secret-free note for the audit log entry of each answer.
+  String get noReceiptNote;
+}

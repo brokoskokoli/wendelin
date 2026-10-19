@@ -113,6 +113,16 @@ final class FixtureGateway {
   /// Chat requests received.
   int chats = 0;
 
+  /// SSE bodies for the chat calls in order (the last one repeats); the
+  /// default answer if null (WP81c: tool round, then answer).
+  List<String>? chatScript;
+
+  /// Model latency before the answer (WP81c).
+  Duration chatDelay = Duration.zero;
+
+  /// Called with a short event name (`chat 1`, `receipt served`).
+  void Function(String event)? onEvent;
+
   /// Delay before a receipt is served (WP81: the answer must not wait).
   Duration receiptDelay = Duration.zero;
 
@@ -129,8 +139,9 @@ final class FixtureGateway {
   /// The decrypted body of the last chat request.
   Map<String, Object?>? lastPlainBody;
 
-  Uint8List _request = Uint8List(0);
-  Uint8List _response = Uint8List(0);
+  // Per receipt id: calls overlap (WP81c), so each receipt covers its own pair.
+  final Map<String, Uint8List> _requests = {};
+  final Map<String, Uint8List> _responses = {};
 
   /// The pinned client (see [FixturePinnedClient]).
   http.Client pinned(TlsPinGate gate, {required bool enforce}) =>
@@ -160,9 +171,13 @@ final class FixtureGateway {
     }
     if (path.contains('aci/sessions/')) return json(upToDateSession());
     if (path.contains('aci/receipts/')) {
+      onEvent?.call('receipt requested');
       if (receiptDelay > Duration.zero) {
         await Future<void>.delayed(receiptDelay);
       }
+      final rid = path.split('/').last;
+      final reqBytes = _requests[rid] ?? Uint8List(0);
+      final resBytes = _responses[rid] ?? Uint8List(0);
       final r = _copy(jsonDecode(receipt));
       final id = _sha(Uint8List.fromList(utf8.encode(_jcs(upToDateSession()))))
           .substring('sha256:'.length);
@@ -171,15 +186,16 @@ final class FixtureGateway {
           case 'request.received' ||
               'middleware.forwarded' ||
               'request.forwarded':
-            e['body_hash'] = _sha(_request);
+            e['body_hash'] = _sha(reqBytes);
           case 'response.returned':
-            e['body_hash'] = _sha(_response);
+            e['body_hash'] = _sha(resBytes);
           case 'upstream.verified':
             e['required'] = true;
             e['session_id'] = id;
         }
       }
       tamper?.call(r);
+      onEvent?.call('receipt served');
       return json(r);
     }
     if (path.endsWith('/models')) {
@@ -190,20 +206,29 @@ final class FixtureGateway {
       });
     }
     chats++;
+    final n = chats;
+    onEvent?.call('chat $n');
+    if (chatDelay > Duration.zero) await Future<void>.delayed(chatDelay);
+    final script = chatScript;
+    final sse = script == null
+        ? _sse
+        : script[(n - 1).clamp(0, script.length - 1)];
     final exchange = e2ee.open(request.headers, request.bodyBytes);
     lastPlainBody = exchange.plainBody;
     // The receipt covers the decrypted request and the encrypted answer.
-    _request = exchange.plainBytes;
-    _response = Uint8List.fromList(
-      utf8.encode(plainAnswer ? _sse : exchange.sealSse(_sse)),
+    final rid = chatScript == null ? 'rcpt-fixture' : 'rcpt-fixture-$n';
+    _requests[rid] = exchange.plainBytes;
+    final response = Uint8List.fromList(
+      utf8.encode(plainAnswer ? sse : exchange.sealSse(sse)),
     );
+    _responses[rid] = response;
     return http.Response.bytes(
-      _response,
+      response,
       200,
       headers: {
         'content-type': 'text/event-stream',
         if (!plainAnswer) ...exchange.responseHeaders,
-        'x-receipt-id': 'rcpt-fixture',
+        'x-receipt-id': rid,
       },
     );
   });

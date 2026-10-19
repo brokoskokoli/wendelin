@@ -365,4 +365,57 @@ void main() {
       expect(e(PrivacyLevel.tee).visibleTo(PrivacyLevel.eu), isFalse);
     });
   });
+
+  group('Namespace der Person (ToolContext.memoryOwner, WP92b)', () {
+    ToolContext ctxOf(String owner) => ToolContext(
+      sessionId: 's1',
+      clock: FixedClock(DateTime.utc(2026, 10, 13, 12)),
+      locale: 'de-DE',
+      timeZone: 'Europe/Berlin',
+      memoryOwner: owner,
+    );
+
+    Future<ToolOutcome> save(String text, String owner) =>
+        tool('memory__save')
+            .execute({'text': text, 'category': 'fact'}, ctxOf(owner));
+
+    test('save, search und forget bleiben im Namespace', () async {
+      final a = await save('Anna mag Koriander', 'p:a');
+      await save('Ben mag Koriander', 'p:b');
+      await save('Standard mag Koriander', '');
+      expect(store.entriesOf('p:a'), hasLength(1));
+      expect(store.entriesOf(''), hasLength(1));
+      final found = json(
+        await tool('memory__search')
+            .execute({'query': 'Koriander'}, ctxOf('p:b')),
+      );
+      expect(
+        (found['memories']! as List).single,
+        containsPair('text', 'Ben mag Koriander'),
+      );
+      final id = (json(a)['saved']! as Map)['id']! as String;
+      for (final other in ['', 'p:b']) {
+        final o = await tool('memory__forget')
+            .execute({'id': id}, ctxOf(other));
+        expect(o.isError, isTrue);
+      }
+      expect(store.entriesOf('p:a'), hasLength(1));
+    });
+
+    test('Undo wirkt nur im Namespace des Aufrufs', () async {
+      final o = await save('Anna mag Tee', 'p:a');
+      expect(store.entriesOf('p:a'), hasLength(1));
+      await o.undo!();
+      expect(store.entriesOf('p:a'), isEmpty);
+
+      await save('Ben mag Kaffee', 'p:b');
+      final id = store.entriesOf('p:b').single.id;
+      final f = await tool('memory__forget').execute({'id': id}, ctxOf('p:b'));
+      expect(store.entriesOf('p:b'), isEmpty);
+      await f.undo!(); // Wiederherstellen legt im selben Namespace an
+      expect(store.entriesOf('p:b').single.text, 'Ben mag Kaffee');
+      expect(store.entriesOf(''), isEmpty);
+      expect(store.entriesOf('p:a'), isEmpty);
+    });
+  });
 }

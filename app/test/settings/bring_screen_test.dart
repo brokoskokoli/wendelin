@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/bring.dart';
@@ -13,9 +15,10 @@ import 'integrations_screen_test.dart';
 /// Password of the fake Bring! account (canary: must stay in the store).
 const bringPassword = 'kanarien-passwort';
 
+/// The state after the one-time login: only the session (tokens).
 Future<void> loginBring(TestEnv env) async {
-  await env.secrets.write('bring.email', env.bring.email);
-  await env.secrets.write('bring.password', bringPassword);
+  final auth = await env.bring.login(env.bring.email, bringPassword);
+  await env.secrets.write('bring.session', jsonEncode(auth.toJson()));
 }
 
 void main() {
@@ -58,14 +61,17 @@ void main() {
     );
     await tester.tap(find.text('Anmelden'));
     await settle(tester);
-    expect(find.text('Angemeldet'), findsOneWidget);
-    expect(find.text(env.bring.email), findsOneWidget);
+    expect(find.text('Verbunden'), findsOneWidget);
+    // Weder E-Mail noch Passwort stehen auf der Seite oder im Speicher.
+    expect(find.text(env.bring.email), findsNothing);
+    expect(find.textContaining(bringPassword), findsNothing);
     expect(find.text('Aktiv'), findsOneWidget);
-    expect(await env.secrets.listKeys(), {
-      'bring.email',
-      'bring.password',
-      'bring.session',
-    });
+    expect(await env.secrets.listKeys(), {'bring.session'});
+    for (final k in await env.secrets.listKeys()) {
+      final v = (await env.secrets.read(k))!;
+      expect(v, isNot(contains(bringPassword)));
+      expect(v, isNot(contains(env.bring.email)));
+    }
 
     await tester.tap(find.byTooltip('Zurück'));
     await settle(tester);
@@ -75,7 +81,7 @@ void main() {
     );
   });
 
-  testWidgets('Abmelden löscht Zugangsdaten und Tokens', (tester) async {
+  testWidgets('Abmelden löscht die Tokens', (tester) async {
     final env = TestEnv(enabled: const {'bring'});
     await loginBring(env);
     final c = await pumpIntegrations(tester, env);
@@ -111,7 +117,7 @@ void main() {
     final c = await pumpIntegrations(tester, env);
     final integration = bringIntegrationOf(c.read(integrationsProvider))!;
     env.bring.failNext(
-      'login',
+      'lists',
       const PortException(PortErrorKind.failed, 'Bring!: unerwartete Antwort'),
     );
     final failure = await tester.runAsync(integration.reconnect);
@@ -122,6 +128,10 @@ void main() {
     expect(failed.status, IntegrationStatus.error);
     expect(failed.detail, contains('unerwartete Antwort'));
     expect(failed.detail, endsWith('pausiert'));
+    expect(
+      c.read(toolRegistryProvider).info('bring').errorKind,
+      PortErrorKind.failed,
+    );
     expect(failed.actionLabel, 'Erneut versuchen');
 
     // Seite: Fehler mit Grund und eigener Knopf.
@@ -152,6 +162,92 @@ void main() {
       tileWidget(tester, 'Bring! Einkaufsliste').status,
       IntegrationStatus.active,
     );
+  });
+
+  testWidgets('Refresh abgelehnt: „Bitte neu anmelden“, „Erneut verbinden“ '
+      'führt zum Login, danach wieder aktiv', (tester) async {
+    final env = TestEnv(enabled: const {'bring'});
+    await loginBring(env);
+    final c = await pumpIntegrations(tester, env);
+    final integration = bringIntegrationOf(c.read(integrationsProvider))!;
+    // Die Seite ist offen (verbunden), wenn der Refresh abgelehnt wird.
+    await tester.tap(find.text('Bring! Einkaufsliste'));
+    await settle(tester);
+    await tester.tap(find.text('Bring!-Konto'));
+    await settle(tester);
+    expect(find.text('Verbunden'), findsOneWidget);
+    env.bring
+      ..expireTokens()
+      ..revokeRefresh();
+    final logins = env.bring.logins;
+    final failure = await tester.runAsync(integration.reconnect);
+    expect(failure, isNotNull);
+    // Kein Login-Versuch, Sitzung verworfen, kein Passwort im Speicher.
+    expect(env.bring.logins, logins);
+    expect(await env.secrets.listKeys(), isEmpty);
+    await settle(tester);
+    // Echter Pfad: Der Fehler kommt aus der Sitzung, nicht von Hand.
+    expect(
+      find.text('Bring!: Anmeldung abgelaufen. Bitte neu anmelden.'),
+      findsOneWidget,
+    );
+    expect(find.text('Erneut versuchen'), findsNothing);
+    await tester.tap(find.text('Erneut verbinden'));
+    await settle(tester);
+    expect(find.byKey(const ValueKey('bringEmail')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('bringEmail')),
+      env.bring.email,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('bringPassword')),
+      bringPassword,
+    );
+    await tester.tap(find.text('Anmelden'));
+    await settle(tester);
+    expect(find.text('Verbunden'), findsOneWidget);
+    expect(
+      c.read(toolRegistryProvider).status('bring'),
+      IntegrationStatus.active,
+    );
+  });
+
+  testWidgets('nach dem Login sind E-Mail- und Passwortfeld leer', (
+    tester,
+  ) async {
+    final env = TestEnv(enabled: const {'bring'});
+    await pumpIntegrations(tester, env);
+    await tester.tap(find.text('Bring! Einkaufsliste'));
+    await settle(tester);
+    await tester.tap(find.text('Bring!-Konto'));
+    await settle(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('bringEmail')),
+      env.bring.email,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('bringPassword')),
+      bringPassword,
+    );
+    await tester.tap(find.text('Anmelden'));
+    await settle(tester);
+    expect(find.text('Verbunden'), findsOneWidget);
+    // Abmelden zeigt das Formular wieder: die Felder dürfen nichts halten.
+    await tester.tap(find.text('Abmelden'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Abmelden'));
+    await settle(tester);
+    String text(String key) => tester
+        .widget<EditableText>(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(EditableText),
+          ),
+        )
+        .controller
+        .text;
+    expect(text('bringEmail'), isEmpty);
+    expect(text('bringPassword'), isEmpty);
   });
 
   testWidgets('Bring!-App fehlt: Hinweis auf der Kachel und der Seite', (

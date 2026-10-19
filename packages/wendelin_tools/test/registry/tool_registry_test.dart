@@ -227,8 +227,19 @@ void main() {
       expect(r.status('cal'), IntegrationStatus.error);
       expect(r.info('cal').error, 'Token abgelaufen');
       expect(_cat(r).activeSpecs(), isEmpty, reason: 'Tools pausiert');
+      expect(r.info('cal').errorKind, isNull, reason: 'ohne Art gemeldet');
+      r.reportError('cal', 'x', kind: PortErrorKind.permissionDenied);
+      expect(r.info('cal').errorKind, PortErrorKind.permissionDenied);
+      r.reportError('cal', 'y');
+      expect(r.info('cal').errorKind, isNull, reason: 'neue Meldung ersetzt');
+      r.reportError('cal', 'z', kind: PortErrorKind.failed);
       r.clearError('cal');
       expect(r.status('cal'), IntegrationStatus.active);
+      expect(
+        r.info('cal').errorKind,
+        isNull,
+        reason: 'clearError setzt zurück',
+      );
       cal.availability = const Availability(
         available: false,
         reason: 'App fehlt',

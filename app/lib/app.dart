@@ -7,6 +7,7 @@ import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/routes.dart';
 import 'ui/screens/main_screen.dart';
 import 'ui/theme/app_theme.dart';
+import 'voice/wake/wake_chat.dart';
 
 /// Root widget (inside a `ProviderScope`). Until the onboarding is done it
 /// shows the onboarding instead of [home].
@@ -28,5 +29,6 @@ class WendelinApp extends ConsumerWidget {
     theme: buildWendelinTheme(),
     home: StartGate(home: home),
     routes: buildAppRoutes(),
+    navigatorObservers: [wakeRouteObserver],
   );
 }

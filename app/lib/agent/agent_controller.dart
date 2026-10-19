@@ -14,7 +14,9 @@ import '../di/audit_recorder.dart';
 import '../di/preferences.dart';
 import '../di/provider_config.dart';
 import '../di/providers.dart';
+import '../di/speaker_providers.dart';
 import '../di/vocabulary_provider.dart';
+import '../voice/speaker/person_scope.dart';
 import 'chat_entry.dart';
 import 'conversation_reducer.dart';
 import 'conversation_state.dart';
@@ -37,6 +39,13 @@ final class AgentController extends Notifier<ConversationState> {
   String? _sessionId;
   String? _shownSessionId;
   ProviderConfig? _providers;
+
+  /// Scope of the open conversation (WP92b): the person it belongs to. A
+  /// known other person starts a new conversation; an unknown speaker or
+  /// typed text stays in the conversation and its scope, so a person's
+  /// history never reaches another person's agent or memory.
+  PersonScope _scope = PersonScope.standard;
+  String? _scopeSessionId;
   final _done = <Completer<void>>[];
   StreamController<AgentEvent>? _out;
   bool _cancelRequested = false;
@@ -278,14 +287,13 @@ final class AgentController extends Notifier<ConversationState> {
       _finishWithNotice(NoticeKind.info, uiTexts(ref).agentNoticeSetupFirst);
       return;
     }
-    _providers = providers;
-
     final String sessionId;
+    final PersonScope scope;
     try {
       // The first request after start waits until every integration was
       // checked, so its active tools are offered.
       await ref.read(toolRegistryReadyProvider.future);
-      sessionId = await ref.read(sessionManagerProvider).ensure();
+      (sessionId, scope) = await _sessionFor(input.speakerId);
     } on Object catch (e, stack) {
       _report(e, stack);
       _finishWithNotice(NoticeKind.error, uiTexts(ref).agentNoticeStartFailed);
@@ -301,6 +309,8 @@ final class AgentController extends Notifier<ConversationState> {
       return;
     }
     _sessionId = sessionId;
+    final scoped = providers.withDefaultProfile(scope.agentProfileId);
+    _providers = scoped;
     final isNew = sessionId != _shownSessionId;
     _shownSessionId = sessionId;
     state = _reducer.userMessage(
@@ -308,7 +318,7 @@ final class AgentController extends Notifier<ConversationState> {
       trimmed,
       sessionStart: isNew ? ref.read(clockProvider).now() : null,
     );
-    if (_isPrivateRequest(providers, input)) {
+    if (_isPrivateRequest(scoped, input)) {
       state = state.copyWith(privateByRequest: true);
     }
 
@@ -321,7 +331,9 @@ final class AgentController extends Notifier<ConversationState> {
       requestEscalation: input.requestEscalation,
     );
     _audit.request(sessionId, request, trigger: trigger);
-    final run = ref.read(agentFactoryProvider).create(providers, sessionId);
+    final run = ref
+        .read(agentFactoryProvider)
+        .create(scoped, sessionId, person: scope);
     _run = run;
     _events = run
         .run(request)
@@ -331,6 +343,67 @@ final class AgentController extends Notifier<ConversationState> {
           onDone: _finished,
           cancelOnError: true,
         );
+  }
+
+  /// The session for a request of [speakerId] and the scope it runs in
+  /// (WP92b). A known person who is not the one of the open conversation
+  /// gets a new conversation (no history); everything else continues the
+  /// open one in its scope. After an app restart the scope comes from the
+  /// person stored with the conversation; unreadable or deleted: new one.
+  Future<(String, PersonScope)> _sessionFor(String? speakerId) async {
+    final sessions = ref.read(sessionManagerProvider);
+    final resolver = ref.read(personScopeResolverProvider);
+    final requested = await resolver.scopeOf(speakerId);
+    bool clashes(PersonScope open) =>
+        !requested.isStandard && open.personId != requested.personId;
+
+    final open = sessions.currentId;
+    if (open != null && open == _scopeSessionId && clashes(_scope)) {
+      return _startFor(requested);
+    }
+    final id = await sessions.ensure();
+    if (id == _scopeSessionId) {
+      if (!requested.isStandard && _scope.personId == requested.personId) {
+        _scope = requested; // settings changed meanwhile: the fresh ones
+      }
+      return (id, _scope);
+    }
+    try {
+      final conversations = sessions.conversations;
+      if ((await conversations.messages(id)).isEmpty) {
+        return await _adopt(
+          id,
+          requested,
+        ); // new (or expired): the speaker's own
+      }
+      final stored = await conversations.sessionPerson(id);
+      final scope = stored == null
+          ? PersonScope.standard
+          : await resolver.scopeOf(stored);
+      final gone = stored != null && scope.isStandard;
+      if (!gone && !clashes(scope)) {
+        _scope = scope;
+        _scopeSessionId = id;
+        return (id, scope);
+      }
+    } on Object {
+      // Fail closed: what cannot be read is not continued.
+    }
+    return _startFor(requested);
+  }
+
+  Future<(String, PersonScope)> _startFor(PersonScope scope) async =>
+      _adopt(await ref.read(sessionManagerProvider).startNew(), scope);
+
+  /// Session [id] belongs to [scope] from now on (also stored for a restart).
+  Future<(String, PersonScope)> _adopt(String id, PersonScope scope) async {
+    await ref
+        .read(sessionManagerProvider)
+        .conversations
+        .setSessionPerson(id, scope.personId);
+    _scope = scope;
+    _scopeSessionId = id;
+    return (id, scope);
   }
 
   /// The agent stream broke its contract (no terminal event, an error):

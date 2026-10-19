@@ -76,6 +76,7 @@ final class _RejectingRepository implements MemoryRepository {
     required StoredMemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
+    String owner = '',
   }) async => throw const SensitiveContentException(SensitiveKind.cardNumber);
 
   @override

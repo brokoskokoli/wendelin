@@ -167,7 +167,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get attE2eeKeyNote =>
-      'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell.';
+      'Alle Inhalte werden mit diesem geprüften Schlüssel verschlüsselt. Die Verschlüsselung endet im Gateway des Anbieters (geprüfte Enklave), nicht im Modell selbst. Bei NEAR AI endet sie im geprüften Modell. Bei Tinfoil endet sie im geprüften Router, der sie an das Modell weitergibt.';
 
   @override
   String get attExplainAccept => 'Akzeptieren';
@@ -247,6 +247,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get attFinishWarnFrom => 'Warnen ab';
+
+  @override
+  String get attFloorCorruptText =>
+      'Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Abhilfe schafft nur das Zurücksetzen der App-Daten. Danach wird der erste Kontakt wieder ohne Rückschrittschutz geprüft.';
+
+  @override
+  String get attFloorCorruptTitle =>
+      'Gespeicherter Rückschrittschutz beschädigt';
 
   @override
   String get attGpuFailedLabel => 'GPU-Prüfung fehlgeschlagen';
@@ -474,6 +482,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get attRevokedTitle => 'Plattform des Betreibers zurückgezogen';
 
   @override
+  String get attRollbackText =>
+      'Der Anbieter meldet eine ältere Software-Version als die, die hier schon einmal geprüft wurde. Das kann ein Zurückspielen alter, verwundbarer Software oder alter Daten sein. Die Anfrage wurde nicht gesendet. Sende nichts Vertrauliches und prüfe später erneut.';
+
+  @override
+  String get attRollbackTitle => 'Ältere Software-Version als zuvor geprüft';
+
+  @override
+  String get attSBindHpke => 'Verschlüsselungsschlüssel gebunden';
+
+  @override
   String get attSCompose => 'Compose-Hash';
 
   @override
@@ -510,6 +528,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get attSKeysetSignature => 'Schlüsselsatz-Signatur';
 
   @override
+  String get attSMeasurement => 'Messwert = Release';
+
+  @override
+  String get attSNoReceipt => 'Quittung je Antwort';
+
+  @override
   String get attSNonce => 'Nonce gebunden';
 
   @override
@@ -535,6 +559,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get attSReceiptSignature => 'Quittungs-Signatur';
+
+  @override
+  String get attSReleaseFloor => 'Kein Rückschritt';
+
+  @override
+  String get attSSigstore => 'Signiertes Release (Sigstore)';
+
+  @override
+  String get attSSnpChain => 'AMD-Zertifikatskette';
+
+  @override
+  String get attSSnpPolicy => 'Prozessor-Richtlinie';
+
+  @override
+  String get attSSnpReport => 'AMD-Hardware-Nachweis';
 
   @override
   String get attSTcb => 'Plattform-Sicherheitsstand (TCB)';
@@ -696,6 +735,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get stageAgeWhat => 'Wie alt der Nachweis ist.';
 
   @override
+  String get stageBindHpkeInfo => 'Der Schlüssel wurde nur protokolliert.';
+
+  @override
+  String get stageBindHpkePass =>
+      'Nur der geprüfte Server kann die Anfrage lesen. Der Schlüssel stammt aus dem Nachweis, nicht aus einer ungeprüften Antwort.';
+
+  @override
+  String get stageBindHpkeWhat =>
+      'Ob der Schlüssel, mit dem Wendelin deine Anfrage verschlüsselt, genau der ist, der im Hardware-Nachweis steht.';
+
+  @override
   String get stageComposeInfo =>
       'Der Hash wurde protokolliert, aber nicht gegen eine Liste vertrauenswürdiger Werte verglichen.';
 
@@ -804,6 +854,29 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Prüfsumme des Schlüsselsatzes (Schlüssel, mit denen Wendelin verschlüsselt) muss im Hardware-Nachweis stehen.';
 
   @override
+  String get stageMeasurementInfo => 'Der Messwert wurde nur protokolliert.';
+
+  @override
+  String get stageMeasurementPass =>
+      'Auf dem Server läuft der veröffentlichte Code, kein anderer.';
+
+  @override
+  String get stageMeasurementWhat =>
+      'Ob der Messwert des laufenden Servers genau der des neuesten signierten Releases ist.';
+
+  @override
+  String get stageNoReceiptInfo =>
+      'Tinfoil stellt keine Quittung je Antwort aus. Die Antwort ist nur durch die Verschlüsselung an deine Anfrage gebunden; welches Modell sie erzeugt hat, belegt keine Quittung.';
+
+  @override
+  String get stageNoReceiptPass =>
+      'Zu jeder Antwort liegt eine signierte Quittung vor.';
+
+  @override
+  String get stageNoReceiptWhat =>
+      'Ob zu jeder Antwort eine signierte Quittung vorliegt, die Anfrage und Antwort belegt.';
+
+  @override
   String get stageNonceInfo => 'Die Zahl wurde nur protokolliert.';
 
   @override
@@ -908,6 +981,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get stageReceiptSigWhat => 'Die Signatur der Quittung.';
 
   @override
+  String get stageReleaseFloorInfo =>
+      'Der Rückschrittschutz wurde nur protokolliert.';
+
+  @override
+  String get stageReleaseFloorPass =>
+      'Der Server läuft mit dem bisher neuesten oder einem neueren Release.';
+
+  @override
+  String get stageReleaseFloorWhat =>
+      'Ob das Release nicht älter ist als das neueste, das Wendelin je geprüft hat (Schutz vor einem Rückschritt auf alte, angreifbare Versionen).';
+
+  @override
   String get stageResponseKeyInfo =>
       'Der Schlüsselsatz wurde nur protokolliert.';
 
@@ -936,6 +1021,53 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get stageSignatureWhat =>
       'Eine zusätzliche Signatur über den Schlüsselsatz, die manche Anbieter liefern.';
+
+  @override
+  String get stageSigstoreInfo =>
+      'Die Signatur des Releases wurde nur protokolliert.';
+
+  @override
+  String get stageSigstorePass =>
+      'Das Release stammt aus dem Build von Tinfoil und steht öffentlich im Log.';
+
+  @override
+  String get stageSigstoreWhat =>
+      'Ob das veröffentlichte Programm-Release von Tinfoil auf GitHub echt signiert und im öffentlichen Transparenzlog (Sigstore) eingetragen ist.';
+
+  @override
+  String get stageSnpChainInfo =>
+      'Die Zertifikatskette wurde nur protokolliert.';
+
+  @override
+  String get stageSnpChainPass =>
+      'Die Kette endet bei AMD, nicht bei einem Zertifikat, das jemand unterschoben hat.';
+
+  @override
+  String get stageSnpChainWhat =>
+      'Ob das Zertifikat des Prozessors über das AMD-Zwischenzertifikat auf den in Wendelin fest hinterlegten AMD-Wurzelschlüssel zurückgeht.';
+
+  @override
+  String get stageSnpPolicyInfo => 'Die Richtlinie wurde nur protokolliert.';
+
+  @override
+  String get stageSnpPolicyPass =>
+      'Die Umgebung ist nicht zum Mitlesen geöffnet und enthält keine bekannt veraltete Firmware.';
+
+  @override
+  String get stageSnpPolicyWhat =>
+      'Ob die Umgebung ohne Debug-Zugang läuft und Firmware und Prozessor-Microcode mindestens so aktuell sind, wie Wendelin es verlangt (Bootloader 9, SNP 22, Microcode 80).';
+
+  @override
+  String get stageSnpReportInfo =>
+      'Der Bericht des Prozessors wurde nur protokolliert.';
+
+  @override
+  String get stageSnpReportPass =>
+      'Ein echter AMD-Prozessor bestätigt den Bericht. Niemand kann ihn nachträglich ändern.';
+
+  @override
+  String get stageSnpReportWhat =>
+      'Der Hardware-Nachweis des Tinfoil-Servers: Bericht des AMD-Prozessors, sein Zertifikat und die Signatur darüber.';
 
   @override
   String get stageTcbInfo => 'Der Sicherheitsstand wurde nur protokolliert.';
@@ -1001,6 +1133,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bringChecking => 'Prüfe …';
 
   @override
+  String get bringConnected => 'Verbunden';
+
+  @override
   String get bringEmail => 'E-Mail';
 
   @override
@@ -1011,7 +1146,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get bringIntro =>
-      'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps freigegeben, sie kann jederzeit brechen. E-Mail und Passwort bleiben im sicheren Speicher des Geräts.';
+      'Inoffizielle Schnittstelle: Bring! hat sie nicht für andere Apps freigegeben, sie kann jederzeit brechen. Du meldest dich einmal an; E-Mail und Passwort werden nicht gespeichert, nur die Sitzung (Tokens) bleibt im sicheren Speicher des Geräts.';
 
   @override
   String get bringNeedCredentials => 'Bitte E-Mail und Passwort eingeben.';
@@ -1026,6 +1161,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bringReachable => 'Bring! ist wieder erreichbar.';
 
   @override
+  String get bringReauthError =>
+      'Bring!: Anmeldung abgelaufen. Bitte neu anmelden.';
+
+  @override
+  String get bringReconnect => 'Erneut verbinden';
+
+  @override
   String get bringShareSend => 'An Bring! senden';
 
   @override
@@ -1035,8 +1177,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bringShareUnreachable => 'Bring! nicht erreichbar';
 
   @override
-  String get bringSignOutBody =>
-      'E-Mail, Passwort und Sitzung werden vom Gerät gelöscht.';
+  String get bringSignOutBody => 'Die Sitzung wird vom Gerät gelöscht.';
 
   @override
   String get bringSignOutTitle => 'Bei Bring! abmelden?';
@@ -1323,6 +1464,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get devSection => 'Entwicklung';
+
+  @override
+  String integrationsErrDenied(String service) {
+    return '$service: Zugang abgelehnt oder abgelaufen · pausiert';
+  }
+
+  @override
+  String integrationsErrFailed(String service) {
+    return '$service: unerwartete Antwort · pausiert';
+  }
+
+  @override
+  String integrationsErrUnavailable(String service) {
+    return '$service ist nicht erreichbar · pausiert';
+  }
 
   @override
   String get haAddressLabel => 'Adresse';
@@ -3523,6 +3679,211 @@ class AppLocalizationsDe extends AppLocalizations {
   String ruleTileSemanticsLevel(String level) {
     return 'Datenschutzstufe $level,';
   }
+
+  @override
+  String get speakerAdd => 'Person einlernen';
+
+  @override
+  String get speakerAddDetail =>
+      'Fünf kurze Sätze vorlesen, die Aufnahmen werden nicht gespeichert.';
+
+  @override
+  String get speakerAddNeedsModel => 'Lade zuerst das Modell.';
+
+  @override
+  String speakerDeleteBody(String name) {
+    return '$name wird mit allen gespeicherten Stimmmerkmalen und ihren Unterhaltungen gelöscht.';
+  }
+
+  @override
+  String speakerDeleteBodyMemory(String name, int count) {
+    return '$name wird mit allen gespeicherten Stimmmerkmalen, ihren Unterhaltungen und $count Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.';
+  }
+
+  @override
+  String get speakerDeleteConfirm => 'Löschen';
+
+  @override
+  String speakerDeleteSemantic(String name) {
+    return '$name löschen';
+  }
+
+  @override
+  String get speakerDeleteTitle => 'Person löschen?';
+
+  @override
+  String get speakerDone => 'Fertig';
+
+  @override
+  String get speakerEnrollIntro =>
+      'Lies jeden Satz in normaler Lautstärke vor. Aus der Aufnahme wird nur ein Stimmmerkmal berechnet, das Audio wird verworfen.';
+
+  @override
+  String get speakerEnrollTitle => 'Person einlernen';
+
+  @override
+  String get speakerErrFailed =>
+      'Das Modell konnte die Aufnahmen nicht auswerten. Ist es vollständig geladen?';
+
+  @override
+  String get speakerErrInconsistent =>
+      'Die Sätze klangen nicht nach derselben Person oder es war zu laut. Nichts wurde gespeichert, bitte noch einmal in ruhiger Umgebung.';
+
+  @override
+  String get speakerErrTooFew => 'Es fehlen Aufnahmen.';
+
+  @override
+  String get speakerErrTooShort =>
+      'Eine Aufnahme war zu kurz. Bitte noch einmal.';
+
+  @override
+  String get speakerIntro =>
+      'Wendelin kann erkennen, wer spricht. Das Ergebnis steht dem Assistenten als Information zur Verfügung.';
+
+  @override
+  String get speakerModelSection => 'Modell';
+
+  @override
+  String get speakerNameLabel => 'Name';
+
+  @override
+  String get speakerNext => 'Weiter';
+
+  @override
+  String get speakerNoMic =>
+      'Ohne Mikrofon-Zugriff kann keine Person eingelernt werden.';
+
+  @override
+  String get speakerNobody => 'Noch niemand eingelernt.';
+
+  @override
+  String get speakerPeople => 'Personen';
+
+  @override
+  String get speakerPersonAddress => 'Anrede';
+
+  @override
+  String get speakerPersonAddressHint =>
+      'So spricht Wendelin dich an. Leer: der eingelernte Name.';
+
+  @override
+  String get speakerPersonAgent => 'Agent';
+
+  @override
+  String get speakerPersonAgentDefault => 'Standard-Agent';
+
+  @override
+  String get speakerPersonAgentDetail =>
+      'Nur ein anderes Ziel statt des Standards. Regeln und Datenschutz gelten weiter.';
+
+  @override
+  String get speakerPersonDelete => 'Person löschen';
+
+  @override
+  String get speakerPersonMemory => 'Gedächtnis';
+
+  @override
+  String get speakerPersonMemoryOpen => 'Einträge ansehen';
+
+  @override
+  String get speakerPersonMemoryOwn => 'Eigenes Gedächtnis';
+
+  @override
+  String get speakerPersonMemoryOwnDetail =>
+      'Merkt sich Dinge nur für diese Person.';
+
+  @override
+  String get speakerPersonMemoryShared => 'Standard-Gedächtnis';
+
+  @override
+  String get speakerPersonMemorySharedDetail =>
+      'Nutzt die bisherigen Einträge gemeinsam mit allen, die nicht erkannt werden.';
+
+  @override
+  String get speakerPersonRetrain => 'Neu einlernen';
+
+  @override
+  String get speakerPersonRetrainDetail => 'Fünf Sätze noch einmal vorlesen.';
+
+  @override
+  String get speakerProcessing => 'Wird ausgewertet …';
+
+  @override
+  String get speakerRecordCutOff =>
+      'Zu früh angefangen, bitte den Satz noch einmal.';
+
+  @override
+  String get speakerRecordNoSpeech => 'Nichts gehört, bitte noch einmal.';
+
+  @override
+  String get speakerRecordTooLong =>
+      'Zu lang oder zu laut im Hintergrund, bitte noch einmal.';
+
+  @override
+  String get speakerRecordTooQuiet => 'Zu leise, bitte lauter.';
+
+  @override
+  String get speakerResultClamped =>
+      'Die Schwelle wurde auf einen sicheren Wert begrenzt.';
+
+  @override
+  String speakerResultScores(String mean, String min, String threshold) {
+    return 'Gleichmäßigkeit $mean, schwächster Satz $min, Schwelle $threshold.';
+  }
+
+  @override
+  String get speakerResultTitle => 'Eingelernt';
+
+  @override
+  String get speakerRetry => 'Noch einmal';
+
+  @override
+  String get speakerRowDetail =>
+      'Erkennt, wer spricht (Name, Modell, Personen).';
+
+  @override
+  String get speakerRowTitle => 'Sprechererkennung';
+
+  @override
+  String get speakerSayNow => 'Lies den Satz jetzt laut vor:';
+
+  @override
+  String get speakerSentence1 =>
+      'Heute Morgen habe ich einen Spaziergang durch den Park gemacht.';
+
+  @override
+  String get speakerSentence2 =>
+      'Bitte erinnere mich morgen um neun Uhr an den Termin beim Arzt.';
+
+  @override
+  String get speakerSentence3 =>
+      'Im Garten blühen die ersten Blumen, und die Sonne scheint warm.';
+
+  @override
+  String get speakerSentence4 =>
+      'Kannst du mir sagen, wie das Wetter am Wochenende wird?';
+
+  @override
+  String get speakerSentence5 =>
+      'Zum Abendessen gibt es heute Suppe mit frischem Brot.';
+
+  @override
+  String speakerSentenceOf(int n, int total) {
+    return 'Satz $n von $total';
+  }
+
+  @override
+  String get speakerSwitch => 'Sprechererkennung';
+
+  @override
+  String get speakerSwitchHint =>
+      'Die Stimme ist keine sichere Anmeldung: Ähnliche oder nachgemachte Stimmen können verwechselt werden. Gespeichert werden nur verschlüsselte Stimmmerkmale, keine Aufnahmen.';
+
+  @override
+  String get speakerSwitchLabel => 'Sprechererkennung ein oder aus';
+
+  @override
+  String get speakerTitle => 'Sprechererkennung';
 
   @override
   String get spotifyAppNote =>

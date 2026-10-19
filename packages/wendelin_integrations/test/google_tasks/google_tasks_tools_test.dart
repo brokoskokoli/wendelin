@@ -18,6 +18,7 @@ void main() {
   late FakeGoogleTasksApi api;
   late GoogleTasksIntegration g;
   late List<String> errors;
+  late List<PortErrorKind> kinds;
   late int recovered;
   late DateTime now;
 
@@ -32,12 +33,16 @@ void main() {
       ],
     )..now = () => now;
     errors = [];
+    kinds = [];
     recovered = 0;
     g = GoogleTasksIntegration(
       api,
       api,
       api,
-      onError: errors.add,
+      onError: (m, k) {
+        errors.add(m);
+        kinds.add(k);
+      },
       onRecovered: () => recovered++,
       clock: _Clock(() => now),
     );
@@ -184,7 +189,7 @@ void main() {
           multi,
           multi,
           multi,
-          onError: (_) {},
+          onError: (_, _) {},
           onRecovered: () {},
           clock: _Clock(() => now),
         );
@@ -276,6 +281,7 @@ void main() {
       expect(o.text, contains(googleTasksPausedHint));
       expect(o.text, isNot(contains('widerrufen"')));
       expect(errors, hasLength(1));
+      expect(kinds, [PortErrorKind.permissionDenied]);
       expect(api.storedRefresh, isNull);
       expect(api.storedClient, isNotNull, reason: 'Client bleibt');
     });

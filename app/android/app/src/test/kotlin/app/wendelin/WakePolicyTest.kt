@@ -102,6 +102,113 @@ class WakePolicyTest {
     }
 
     @Test
+    fun aHitGoesToTheChatOnlyWhenItIsVisibleUnlockedAndAskable() {
+        assertEquals(HitRoute.CHAT, WakePolicy.routeHit(chatVisible = true, locked = false, hostAvailable = true))
+        // Settings open, app paused: the flag is off.
+        assertEquals(HitRoute.OVERLAY, WakePolicy.routeHit(chatVisible = false, locked = false, hostAvailable = true))
+        assertEquals(HitRoute.OVERLAY, WakePolicy.routeHit(chatVisible = true, locked = true, hostAvailable = true))
+        assertEquals(HitRoute.OVERLAY, WakePolicy.routeHit(chatVisible = true, locked = false, hostAvailable = false))
+    }
+
+    private class FakeScheduler : HitScheduler {
+        val tasks = mutableListOf<Runnable>()
+        var delay = 0L
+
+        override fun postDelayed(delayMs: Long, task: Runnable) {
+            delay = delayMs
+            tasks += task
+        }
+
+        override fun cancel(task: Runnable) {
+            tasks -= task
+        }
+
+        /** The time passes: pending tasks run. */
+        fun fire() = tasks.toList().also { tasks.clear() }.forEach { it.run() }
+    }
+
+    private class Run {
+        val sched = FakeScheduler()
+        var overlays = 0
+        var accepted = 0
+        var reply: ((Any?) -> Unit)? = null
+        val arbiter = ChatHitArbiter(sched, { overlays++ }, { accepted++ })
+
+        init {
+            ChatState.reset()
+            arbiter.begin { reply = it }
+        }
+    }
+
+    @Test
+    fun onlyAnInTimeYesTakesTheHitIntoTheChat() {
+        val r = Run()
+        assertEquals(ChatHitArbiter.ANSWER_MS, r.sched.delay)
+        r.reply!!(true)
+        assertEquals(1, r.accepted)
+        assertEquals(0, r.overlays)
+        assertTrue(ChatState.owned)
+        // The timeout is gone: nothing opens later.
+        assertTrue(r.sched.tasks.isEmpty())
+        r.sched.fire()
+        assertEquals(0, r.overlays)
+    }
+
+    @Test
+    fun refusalAndErrorOpenTheOverlay() {
+        for (reply in listOf<Any?>(false, null)) {
+            val r = Run()
+            r.reply!!(reply)
+            assertEquals(1, r.overlays)
+            assertFalse(ChatState.owned)
+            r.sched.fire()
+            assertEquals(1, r.overlays)
+        }
+    }
+
+    @Test
+    fun aLateYesAfterTheTimeoutDoesNotMakeTheChatAnOwner() {
+        val r = Run()
+        r.sched.fire()
+        assertEquals(1, r.overlays)
+        r.reply!!(true)
+        assertEquals(0, r.accepted)
+        assertFalse(ChatState.owned)
+        assertEquals(1, r.overlays)
+    }
+
+    @Test
+    fun chatDoneIsOnlyEffectiveForTheOwner() {
+        ChatState.reset()
+        // The overlay won; the chat that lost the hit reports done: the service stays quiet.
+        assertFalse(ChatState.release())
+        ChatState.own()
+        assertTrue(ChatState.release())
+        assertFalse(ChatState.release())
+    }
+
+    @Test
+    fun theMainAppTakesTheAudioOnlyForAnOwnedHit() {
+        assertFalse(WakePolicy.mayTakeHandoff(isMainApp = true, chatOwned = false))
+        assertTrue(WakePolicy.mayTakeHandoff(isMainApp = true, chatOwned = true))
+        assertTrue(WakePolicy.mayTakeHandoff(isMainApp = false, chatOwned = false))
+    }
+
+    @Test
+    fun theDebugHitNeedsADebuggableApp() {
+        assertTrue(WakePolicy.allowsDebugHit(2 or 8))
+        assertFalse(WakePolicy.allowsDebugHit(8))
+        assertFalse(WakePolicy.allowsDebugHit(0))
+    }
+
+    @Test
+    fun pausingTheActivityHidesTheChat() {
+        ChatState.visible = true
+        ChatState.paused()
+        assertFalse(ChatState.visible)
+    }
+
+    @Test
     fun startMicWaitsWhileAConflictHolds() {
         assertFalse(WakePolicy.mayStartMic("call"))
         assertFalse(WakePolicy.mayStartMic("recording"))

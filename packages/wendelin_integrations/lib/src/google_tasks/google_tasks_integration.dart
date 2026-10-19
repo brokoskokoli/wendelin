@@ -17,7 +17,7 @@ final class GoogleTasksIntegration implements Integration {
     GoogleTasksApi api,
     GoogleOAuthApi oauth,
     this.secrets, {
-    void Function(String message)? onError,
+    void Function(String message, PortErrorKind kind)? onError,
     void Function()? onRecovered,
     Clock clock = const SystemClock(),
   }) : session = GoogleTasksSession(

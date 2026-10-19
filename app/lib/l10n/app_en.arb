@@ -41,7 +41,7 @@
   "reducerVerificationFailed": "The provider’s answer could not be verified.",
   "attCheckFailed": "Check failed",
   "attChecking": "being checked",
-  "attE2eeKeyNote": "All content is encrypted with this verified key. The encryption ends at the provider’s gateway (verified enclave), not in the model itself. With NEAR AI it ends in the verified model.",
+  "attE2eeKeyNote": "All content is encrypted with this verified key. The encryption ends at the provider’s gateway (verified enclave), not in the model itself. With NEAR AI it ends in the verified model. With Tinfoil it ends in the verified router, which passes it on to the model.",
   "attExplainAccept": "Accept",
   "attExplainChecked": "What is checked: {what}",
   "attExplainIntro": "What Wendelin checks, what came out of it and what it means for your security.",
@@ -63,6 +63,8 @@
   "attFinishToolsNo": "✕ Tools",
   "attFinishToolsYes": "✓ Tools",
   "attFinishWarnFrom": "Warn at",
+  "attFloorCorruptText": "The stored lower bound for this provider’s release version is damaged. Without it a rollback to older, insecure software cannot be ruled out, so the check stays blocked and checking again does not change that. Send nothing confidential. Only resetting the app data helps. After that, the first contact is checked again without rollback protection.",
+  "attFloorCorruptTitle": "Stored rollback protection damaged",
   "attGpuFailedLabel": "GPU check failed",
   "attGpuFailedText": "The GPU check via NVIDIA failed.{v} The next request to this model will be checked first.",
   "attGpuFailedTitle": "GPU check failed",
@@ -129,6 +131,9 @@
   "attResultWarn": "warning",
   "attRevokedText": "The manufacturer has revoked the operator’s hardware platform as insecure. Send nothing confidential until the operator has replaced it.",
   "attRevokedTitle": "Operator platform revoked",
+  "attRollbackText": "The provider reports an older software version than the one verified here before. This can be old, vulnerable software or old data being replayed. The request was not sent. Send nothing confidential and check again later.",
+  "attRollbackTitle": "Older software version than verified before",
+  "attSBindHpke": "Encryption key bound",
   "attSCompose": "Compose hash",
   "attSE2eeKey": "E2EE key verified",
   "attSE2eeKeyset": "Key set of the response",
@@ -141,6 +146,8 @@
   "attSGpuEvidence": "GPU evidence of the provider",
   "attSKeysetDigest": "Key set (digest)",
   "attSKeysetSignature": "Key set signature",
+  "attSMeasurement": "Measurement = release",
+  "attSNoReceipt": "Receipt per answer",
   "attSNonce": "Nonce bound",
   "attSProvenance": "Origin (commit)",
   "attSQuote": "TDX quote (DCAP)",
@@ -150,6 +157,11 @@
   "attSReceiptRequest": "Request hash",
   "attSReceiptResponse": "Response hash",
   "attSReceiptSignature": "Receipt signature",
+  "attSReleaseFloor": "No rollback",
+  "attSSigstore": "Signed release (Sigstore)",
+  "attSSnpChain": "AMD certificate chain",
+  "attSSnpPolicy": "Processor policy",
+  "attSSnpReport": "AMD hardware attestation",
   "attSTcb": "Platform security level (TCB)",
   "attSTls": "TLS connection verified",
   "attSUpstream": "Upstream check",
@@ -194,6 +206,9 @@
   "stageAgeInfo": "The age was only logged.",
   "stageAgePass": "The attestation is current and not an old recording.",
   "stageAgeWhat": "How old the attestation is.",
+  "stageBindHpkeInfo": "The key was only logged.",
+  "stageBindHpkePass": "Only the verified server can read the request. The key comes from the attestation, not from an unverified reply.",
+  "stageBindHpkeWhat": "Whether the key Wendelin encrypts your request with is exactly the one in the hardware attestation.",
   "stageComposeInfo": "The hash was logged but not compared against a list of trusted values.",
   "stageComposePass": "Exactly the expected programs run in the service.",
   "stageComposeWhat": "The compose hash: a checksum of the container description, that is, which programs run in the service.",
@@ -222,6 +237,12 @@
   "stageKeyBindingInfo": "The checksum was only logged.",
   "stageKeyBindingPass": "The keys come from the verified environment, not from someone in between.",
   "stageKeyBindingWhat": "The checksum of the key set (the keys Wendelin encrypts with) must appear in the hardware attestation.",
+  "stageMeasurementInfo": "The measurement was only logged.",
+  "stageMeasurementPass": "The server runs the published code, no other.",
+  "stageMeasurementWhat": "Whether the measurement of the running server is exactly that of the latest signed release.",
+  "stageNoReceiptInfo": "Tinfoil issues no receipt per answer. The answer is bound to your request by the encryption only; no receipt proves which model produced it.",
+  "stageNoReceiptPass": "Every answer comes with a signed receipt.",
+  "stageNoReceiptWhat": "Whether every answer comes with a signed receipt that proves request and answer.",
   "stageNonceInfo": "The number was only logged.",
   "stageNoncePass": "The attestation is fresh for this request and not an old recorded one.",
   "stageNonceWhat": "A random number that Wendelin sends along and that has to show up again in the attestation.",
@@ -250,6 +271,9 @@
   "stageReceiptSigInfo": "The signature was only logged.",
   "stageReceiptSigPass": "The receipt comes from the verified environment.",
   "stageReceiptSigWhat": "The signature of the receipt.",
+  "stageReleaseFloorInfo": "The rollback protection was only logged.",
+  "stageReleaseFloorPass": "The server runs the newest release seen so far or a newer one.",
+  "stageReleaseFloorWhat": "Whether the release is no older than the newest one Wendelin has ever verified (protection against a rollback to old, vulnerable versions).",
   "stageResponseKeyInfo": "The key set was only logged.",
   "stageResponseKeyPass": "The response belongs to the verified session.",
   "stageResponseKeyWhat": "Whether the key set of the response matches the verified set.",
@@ -258,6 +282,18 @@
   "stageSignatureInfo": "This provider does not deliver such a signature. The keys are bound through the hardware attestation instead (checksum of the key set). This is slightly weaker evidence, but not an error.",
   "stageSignaturePass": "The key set is additionally signed by the provider.",
   "stageSignatureWhat": "An additional signature over the key set that some providers deliver.",
+  "stageSigstoreInfo": "The release signature was only logged.",
+  "stageSigstorePass": "The release comes from Tinfoil’s build and is publicly in the log.",
+  "stageSigstoreWhat": "Whether Tinfoil’s published program release on GitHub is genuinely signed and entered in the public transparency log (Sigstore).",
+  "stageSnpChainInfo": "The certificate chain was only logged.",
+  "stageSnpChainPass": "The chain ends at AMD, not at a certificate someone slipped in.",
+  "stageSnpChainWhat": "Whether the processor’s certificate leads through the AMD intermediate certificate to the AMD root key built into Wendelin.",
+  "stageSnpPolicyInfo": "The policy was only logged.",
+  "stageSnpPolicyPass": "The environment is not open for snooping and has no known outdated firmware.",
+  "stageSnpPolicyWhat": "Whether the environment runs without debug access and firmware and processor microcode are at least as recent as Wendelin requires (bootloader 9, SNP 22, microcode 80).",
+  "stageSnpReportInfo": "The processor report was only logged.",
+  "stageSnpReportPass": "A genuine AMD processor vouches for the report. Nobody can change it afterwards.",
+  "stageSnpReportWhat": "The hardware attestation of the Tinfoil server: the AMD processor’s report, its certificate and the signature over it.",
   "stageTcbInfo": "The security level was only logged.",
   "stageTcbPass": "The platform has all known security updates.",
   "stageTcbWhat": "The security level of the platform (TCB): whether firmware and microcode are up to date.",
@@ -275,18 +311,21 @@
   "bringApiError": "Error – interface not reachable",
   "bringApp": "Bring! app",
   "bringChecking": "Checking …",
+  "bringConnected": "Connected",
   "bringEmail": "Email",
   "bringFine": "OK",
   "bringInstalled": "Installed",
-  "bringIntro": "Unofficial interface: Bring! has not released it for other apps, it can break at any time. Email and password stay in the device’s secure storage.",
+  "bringIntro": "Unofficial interface: Bring! has not released it for other apps, it can break at any time. You sign in once; email and password are not stored, only the session (tokens) stays in the device’s secure storage.",
   "bringNeedCredentials": "Please enter email and password.",
   "bringNotInstalled": "Not installed",
   "bringPassword": "Password",
   "bringReachable": "Bring! is reachable again.",
+  "bringReauthError": "Bring!: sign-in expired. Please sign in again.",
+  "bringReconnect": "Reconnect",
   "bringShareSend": "Send to Bring!",
   "bringShareSent": "Sent to Bring!",
   "bringShareUnreachable": "Bring! unreachable",
-  "bringSignOutBody": "Email, password and session are deleted from the device.",
+  "bringSignOutBody": "The session is deleted from the device.",
   "bringSignOutTitle": "Sign out of Bring!?",
   "bringSigningIn": "Signing in …",
   "bringStatusAvailable": "Signed in, integration turned off",
@@ -384,6 +423,30 @@
   "devDemoModeLabel": "Demo mode",
   "devGallery": "Design gallery",
   "devSection": "Development",
+  "integrationsErrDenied": "{service}: access refused or expired · paused",
+  "@integrationsErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsErrFailed": "{service}: unexpected answer · paused",
+  "@integrationsErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "integrationsErrUnavailable": "{service} is not reachable · paused",
+  "@integrationsErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "haAddressLabel": "Address",
   "haAlwaysConfirm": "Always confirm",
   "haAlwaysConfirmHelp": "Wendelin asks before every switch (e.g. stove, oven).",
@@ -1046,6 +1109,111 @@
   "ruleEditorTooDeep": "This condition is nested deeper than the editor can edit. It stays unchanged.",
   "ruleTileMove": "Move",
   "ruleTileSemanticsLevel": "Privacy level {level},",
+  "speakerAdd": "Enroll a person",
+  "speakerAddDetail": "Read five short sentences aloud; the recordings are not stored.",
+  "speakerAddNeedsModel": "Download the model first.",
+  "speakerDeleteBody": "{name} is deleted with all stored voice features and their conversations.",
+  "@speakerDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerDeleteBodyMemory": "{name} is deleted with all stored voice features, their conversations and {count} entries in their own memory. The default memory stays unchanged.",
+  "@speakerDeleteBodyMemory": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "speakerDeleteConfirm": "Delete",
+  "speakerDeleteSemantic": "Delete {name}",
+  "@speakerDeleteSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerDeleteTitle": "Delete person?",
+  "speakerDone": "Done",
+  "speakerEnrollIntro": "Read each sentence aloud at normal volume. Only a voice feature is computed from each recording; the audio is discarded.",
+  "speakerEnrollTitle": "Enroll a person",
+  "speakerErrFailed": "The model could not process the recordings. Is it fully downloaded?",
+  "speakerErrInconsistent": "The sentences did not sound like one person, or it was too noisy. Nothing was stored; please try again somewhere quiet.",
+  "speakerErrTooFew": "Recordings are missing.",
+  "speakerErrTooShort": "A recording was too short. Please try again.",
+  "speakerIntro": "Wendelin can recognise who is speaking. The result is available to the assistant as information.",
+  "speakerModelSection": "Model",
+  "speakerNameLabel": "Name",
+  "speakerNext": "Next",
+  "speakerNoMic": "Without microphone access no one can be enrolled.",
+  "speakerNobody": "Nobody enrolled yet.",
+  "speakerPeople": "People",
+  "speakerPersonAddress": "Form of address",
+  "speakerPersonAddressHint": "How Wendelin addresses you. Empty: the enrolled name.",
+  "speakerPersonAgent": "Agent",
+  "speakerPersonAgentDefault": "Default agent",
+  "speakerPersonAgentDetail": "Only another target instead of the default. Rules and privacy still apply.",
+  "speakerPersonDelete": "Delete person",
+  "speakerPersonMemory": "Memory",
+  "speakerPersonMemoryOpen": "View entries",
+  "speakerPersonMemoryOwn": "Own memory",
+  "speakerPersonMemoryOwnDetail": "Remembers things for this person only.",
+  "speakerPersonMemoryShared": "Default memory",
+  "speakerPersonMemorySharedDetail": "Shares the existing entries with everyone who is not recognized.",
+  "speakerPersonRetrain": "Enroll again",
+  "speakerPersonRetrainDetail": "Read the five sentences once more.",
+  "speakerProcessing": "Processing …",
+  "speakerRecordCutOff": "Started too early, please read the sentence again.",
+  "speakerRecordNoSpeech": "Heard nothing, please try again.",
+  "speakerRecordTooLong": "Too long or too much background noise, please try again.",
+  "speakerRecordTooQuiet": "Too quiet, please speak louder.",
+  "speakerResultClamped": "The threshold was limited to a safe value.",
+  "speakerResultScores": "Consistency {mean}, weakest sentence {min}, threshold {threshold}.",
+  "@speakerResultScores": {
+    "placeholders": {
+      "mean": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "threshold": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerResultTitle": "Enrolled",
+  "speakerRetry": "Try again",
+  "speakerRowDetail": "Recognises who is speaking (name, model, people).",
+  "speakerRowTitle": "Speaker recognition",
+  "speakerSayNow": "Read this sentence aloud now:",
+  "speakerSentence1": "This morning I took a walk through the park.",
+  "speakerSentence2": "Please remind me tomorrow at nine o'clock about the doctor's appointment.",
+  "speakerSentence3": "The first flowers are blooming in the garden, and the sun is shining warmly.",
+  "speakerSentence4": "Can you tell me what the weather will be like this weekend?",
+  "speakerSentence5": "For dinner tonight there is soup with fresh bread.",
+  "speakerSentenceOf": "Sentence {n} of {total}",
+  "@speakerSentenceOf": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "speakerSwitch": "Speaker recognition",
+  "speakerSwitchHint": "A voice is not a secure login: similar or imitated voices can be mistaken. Only encrypted voice features are stored, never recordings.",
+  "speakerSwitchLabel": "Speaker recognition on or off",
+  "speakerTitle": "Speaker recognition",
   "spotifyAppNote": "The Spotify app is needed so Wendelin can play on this phone: if it is not running, Wendelin starts it. On other devices (speakers, computers) Wendelin plays without it.",
   "spotifyAppTitle": "Spotify app",
   "spotifyClientIdLabel": "Client ID",

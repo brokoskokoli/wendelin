@@ -19,6 +19,10 @@ class Sessions extends Table {
   /// Which engine opened the session (`app` or `overlay`, WP67).
   TextColumn get origin => text().withDefault(const Constant('app'))();
 
+  /// Opaque id of the person whose conversation this is (v6, WP92b), `null`
+  /// for the default. Never exported or logged.
+  TextColumn get person => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -66,6 +70,10 @@ class MemoryEntries extends Table {
 
   /// `PrivacyLevel.name` if saved by a private run (v3), else null.
   TextColumn get privacyFloor => text().nullable()();
+
+  /// Memory namespace (v6, WP92b): `''` = the default memory, otherwise the
+  /// namespace of one person. Every query filters on it.
+  TextColumn get owner => text().withDefault(const Constant(''))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};

@@ -25,6 +25,7 @@ final class RepositoryMemoryPort implements MemoryStorePort {
     required MemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
+    String owner = '',
   }) async {
     if (text.trim().isEmpty) {
       throw ArgumentError.value(text, 'text', 'darf nicht leer sein');
@@ -39,6 +40,7 @@ final class RepositoryMemoryPort implements MemoryStorePort {
         category: _toStorage(category),
         source: source,
         privacyFloor: privacyFloor,
+        owner: owner,
       );
       return _toPort(saved);
     } on SensitiveContentException catch (e) {
@@ -47,15 +49,19 @@ final class RepositoryMemoryPort implements MemoryStorePort {
   }
 
   @override
-  Future<List<MemoryEntry>> search(String query, {int limit = 5}) async {
-    final hits = await repository.search(query, limit: limit);
+  Future<List<MemoryEntry>> search(
+    String query, {
+    int limit = 5,
+    String owner = '',
+  }) async {
+    final hits = await repository.search(query, limit: limit, owner: owner);
     return [for (final e in hits) _toPort(e, used: true)];
   }
 
   @override
-  Future<MemoryEntry> forget(String id) async {
-    final entry = await repository.get(id);
-    if (entry == null || !await repository.forget(id)) {
+  Future<MemoryEntry> forget(String id, {String owner = ''}) async {
+    final entry = await repository.get(id, owner: owner);
+    if (entry == null || !await repository.forget(id, owner: owner)) {
       throw PortException(
         PortErrorKind.notFound,
         'Eintrag „$id“ gibt es nicht',
@@ -65,8 +71,8 @@ final class RepositoryMemoryPort implements MemoryStorePort {
   }
 
   @override
-  Future<List<MemoryEntry>> list() async => [
-    for (final e in await repository.list()) _toPort(e),
+  Future<List<MemoryEntry>> list({String owner = ''}) async => [
+    for (final e in await repository.list(owner: owner)) _toPort(e),
   ];
 
   static MemoryEntry _toPort(StoredMemory e, {bool used = false}) =>

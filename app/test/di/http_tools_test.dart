@@ -113,17 +113,12 @@ void main() {
   });
 
   group('Bring!', () {
-    test('SecretStore-Adapter: Login und Sitzung, abmelden löscht', () async {
+    test('SecretStore-Adapter: nur die Sitzung, abmelden löscht', () async {
       final store = InMemorySecretStore();
       final s = SecretStoreBringSecrets(store);
-      expect(await s.credentials(), isNull);
       expect(await s.auth(), isNull);
-      await s.saveCredentials(
-        const BringCredentials(email: 'a@b.de', password: httpCanary),
-      );
       const auth = BringAuth(userUuid: 'u', accessToken: 'tok');
       await s.saveAuth(auth);
-      expect((await s.credentials())!.password, httpCanary);
       expect(await s.auth(), auth);
       await store.write('bring.session', 'kaputt');
       expect(await s.auth(), isNull);

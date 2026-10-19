@@ -51,4 +51,14 @@ final class CollateralCache {
     );
     tmp.renameSync(f.path);
   }
+
+  /// Löscht den Eintrag zu [key] (kein Fehler, wenn keiner da ist).
+  void delete(String key) {
+    try {
+      final f = _file(key);
+      if (f.existsSync()) f.deleteSync();
+    } on Object {
+      // Nur ein Cache.
+    }
+  }
 }

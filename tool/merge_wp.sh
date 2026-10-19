@@ -1,14 +1,26 @@
 #!/bin/bash
 # Mergt einen Arbeitspaket-Branch in main (im main-Checkout ausführen).
 #   tool/merge_wp.sh <branch> [--squash [-m msg]] [--dry-run] [--keep]
-# Prüft Identität und Nachricht, mergt, startet das --changed-Gate und räumt Worktree/Branch auf.
+# Prüft CI-Lauf, Identität und Nachricht, mergt, startet das --changed-Gate, notiert den Tree des Ergebnisses
+# (<git-common-dir>/wendelin-merge-ok, Freigabe für den pre-push-Hook) und räumt über tool/cleanup_wt.sh auf.
 # Kein Push. Umgebung (für Tests): MERGE_WP_GATE (Gate-Befehl), MERGE_WP_NAME/MERGE_WP_EMAIL (erlaubte Identität),
-# MERGE_WP_BASE (Basisbranch, Standard main).
+# MERGE_WP_BASE (Basisbranch, Standard main), MERGE_WP_CI (Befehl für die CI-Läufe, siehe unten),
+# MERGE_WP_CLEANUP (Aufräum-Befehl, Standard tool/cleanup_wt.sh).
+#
+# CI-Beleg: Der neueste Lauf des Workflows gate mit headSha == Branch-SHA und headBranch == Branch muss
+# completed/success sein (cancelled, in_progress, fehlend, anderer Branch → Abbruch). MERGE_WP_CI ist ein
+# Befehl (Umgebung: BRANCH, SHA), der je Lauf eine Zeile `<createdAt>\t<headSha>\t<headBranch>\t<status>\t<conclusion>`
+# ausgibt; Standard ist `gh run list --workflow gate`.
 set -u
 NAME=${MERGE_WP_NAME:-brokoskokoli}
 EMAIL=${MERGE_WP_EMAIL:-16724498+brokoskokoli@users.noreply.github.com}
 BASE=${MERGE_WP_BASE:-main}
 GATE=${MERGE_WP_GATE:-dart run tool/gate.dart --changed}
+CI_CMD=${MERGE_WP_CI:-}
+if [ -z "$CI_CMD" ]; then
+  CI_CMD='gh run list --workflow gate --branch "$BRANCH" --limit 50 --json createdAt,headSha,headBranch,status,conclusion --jq ".[] | [.createdAt,.headSha,.headBranch,.status,.conclusion] | @tsv"'
+fi
+CLEANUP=${MERGE_WP_CLEANUP:-tool/cleanup_wt.sh}
 TRAILER='Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>'
 
 die() { echo "merge_wp: $*" >&2; exit 1; }
@@ -36,6 +48,15 @@ orig=$(git rev-parse HEAD)
 range="$BASE..$branch"
 [ -n "$(git rev-list "$range")" ] || die "$branch enthält keine neuen Commits"
 
+# CI-Entscheidung aus den Laufzeilen auf stdin: 0 nur, wenn der neueste Lauf auf (sha, branch) completed/success ist.
+ci_green() {
+  local want_sha=$1 want_branch=$2 line
+  line=$(awk -F'\t' -v s="$want_sha" -v b="$want_branch" '$2==s && $3==b' | sort -r | head -n 1)
+  [ -n "$line" ] || { echo "kein CI-Lauf (Workflow gate) für $want_branch auf $want_sha" >&2; return 1; }
+  [ "$(printf '%s' "$line" | cut -f4)/$(printf '%s' "$line" | cut -f5)" = completed/success ] \
+    || { echo "neuester CI-Lauf für $want_sha ist nicht grün: $(printf '%s' "$line" | cut -f4-5 | tr '\t' '/')" >&2; return 1; }
+}
+
 reset_back() { git merge --abort 2>/dev/null; git reset -q --hard "$orig"; }
 
 # 1. Identität (bei --squash darf die Historie alt sein, das Ergebnis trägt die globale Identität).
@@ -50,9 +71,14 @@ if [ -n "$msg" ] && printf '%s\n' "$msg" | grep -qiE '^Claude-Session:|claude\.a
   die "Claude-Session-Zeile in der Nachricht"
 fi
 
+# 0. CI-Beleg auf genau dem Branch-SHA.
+sha=$(git rev-parse "refs/heads/$branch")
+ci_out=$(BRANCH=$branch SHA=$sha sh -c "$CI_CMD") || die "CI-Abfrage fehlgeschlagen ($CI_CMD)"
+printf '%s\n' "$ci_out" | ci_green "$sha" "$branch" || die "Merge ohne grünen CI-Lauf abgelehnt (Branch pushen, tool/ci_wait.sh $branch)"
+
 wt=$(git worktree list --porcelain | awk -v b="refs/heads/$branch" '/^worktree /{p=$2} $1=="branch" && $2==b{print p}')
 if [ $dry -eq 1 ]; then
-  echo "merge_wp (dry-run): Prüfungen ok; würde $branch ($(git rev-list --count "$range") Commits) $([ $squash -eq 1 ] && echo squash-)mergen,"
+  echo "merge_wp (dry-run): Prüfungen ok (CI grün auf ${sha:0:8}); würde $branch ($(git rev-list --count "$range") Commits) $([ $squash -eq 1 ] && echo squash-)mergen,"
   echo "  Gate '$GATE' laufen lassen, danach ${wt:+Worktree $wt und }Branch löschen$([ $keep -eq 1 ] && echo ' (--keep: entfällt)')."
   exit 0
 fi
@@ -119,9 +145,15 @@ if ! sh -c "$GATE"; then
   exit 1
 fi
 
-# 5. Aufräumen.
+# 5. Freigabe für den pre-push-Hook (Tree des Ergebnisses) und Squash-Vermerk für cleanup_wt.sh.
+common=$(git rev-parse --path-format=absolute --git-common-dir)
+tree=$(git rev-parse 'HEAD^{tree}')
+echo "$tree $(git rev-parse HEAD)" >> "$common/wendelin-merge-ok"
+echo "$sha $(git rev-parse HEAD) $tree" >> "$common/wendelin-merged-branches"
+
+# 6. Aufräumen (nur lokal; den Remote-Branch räumt ein späterer Aufruf nach dem Push von main).
 if [ $keep -eq 0 ]; then
-  [ -z "$wt" ] || git worktree remove --force "$wt" || die "Worktree $wt nicht entfernbar"
-  git branch -D "$branch" >/dev/null || die "Branch nicht löschbar"
-  echo "merge_wp: ${wt:+Worktree $wt und }Branch $branch entfernt. Push separat."
+  sh -c "$CLEANUP \"\$0\" --apply --no-remote" "$branch" \
+    || echo "merge_wp: Aufräumen abgebrochen (siehe oben); der Merge ist erledigt. Nach Klärung: tool/cleanup_wt.sh $branch --apply. Push separat." >&2
+  echo "merge_wp: Merge fertig. Push separat (WENDELIN_PUSH_MAIN=1), danach tool/cleanup_wt.sh $branch --apply für den Remote-Branch."
 fi

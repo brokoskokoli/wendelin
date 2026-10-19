@@ -30,10 +30,20 @@ const fnWarn = 80, fnError = 150;
 /// Warnschwelle für Klassen.
 const classWarn = 400;
 
+/// Erzeugter Code: Ordner `gen`/`generated`, `frb_generated*.dart|rs`, `*.freezed.dart`.
+bool isGenerated(String path) {
+  final segs = path.split('/');
+  return segs.contains('gen') ||
+      segs.contains('generated') ||
+      RegExp(r'^frb_generated(\.\w+)?\.(dart|rs)$').hasMatch(segs.last) ||
+      segs.last.endsWith('.freezed.dart');
+}
+
 /// Ordnet einen Pfad (relativ zum Root, mit `/`) einer [FileKind] zu.
 FileKind kindOf(String path) {
   final segs = path.split('/');
-  if (path.endsWith('.g.dart') ||
+  if (isGenerated(path) ||
+      path.endsWith('.g.dart') ||
       path.endsWith('.steps.dart') ||
       (segs.contains('test') && segs.contains('generated')) ||
       path.contains('/test/fixtures/')) {
@@ -109,6 +119,10 @@ final class SizeReport {
 
   /// Warnungen (nur Anzahl in der Gate-Zusammenfassung).
   final warnings = <String>[];
+
+  /// Die Größenwarnungen „über Warnschwelle“ als Schlüssel (`pfad` bzw.
+  /// `pfad#name`) mit Zeilenzahl, für die Ratsche (`tool/size_warn_baseline.yaml`).
+  final warned = <String, int>{};
 }
 
 /// Prüft [files] gegen die Schwellen und die [allow]-Liste.
@@ -140,6 +154,8 @@ SizeReport evaluate(List<FileSize> files, Map<String, AllowEntry> allow) {
     }
     if (lines > warn && (error == null || lines <= error || a != null)) {
       r.warnings.add('$key: $lines Zeilen ($what > $warn)');
+      final prev = r.warned[key];
+      if (prev == null || lines > prev) r.warned[key] = lines;
     }
   }
 
