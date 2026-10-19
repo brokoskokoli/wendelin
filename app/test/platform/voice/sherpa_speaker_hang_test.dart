@@ -30,7 +30,8 @@ void main() {
   setUp(() {
     dir = Directory.systemTemp.createTempSync('spk');
     final file = SpeechModelCatalog.speakerCamPlus.files.single;
-    File('${dir.path}/${file.name}').writeAsBytesSync(Uint8List(file.sizeBytes));
+    File('${dir.path}/${file.name}')
+        .writeAsBytesSync(Uint8List(file.sizeBytes));
     started = [];
     script = [];
     embedder = SherpaSpeakerEmbedder(
