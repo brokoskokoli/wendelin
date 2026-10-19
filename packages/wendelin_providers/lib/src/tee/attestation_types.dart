@@ -60,6 +60,35 @@ enum AttestationStage {
   /// cannot check it; a restriction of the provider, not a failure.
   gpuEvidence('gpu.evidence'),
 
+  /// Tinfoil (WP76d): SEV-SNP report readable, VCEK belongs to the chip and
+  /// the TCB of the report, ECDSA P-384 signature valid.
+  snpReport('snp.report'),
+
+  /// Tinfoil: VCEK -> ASK -> ARK valid, ARK pinned.
+  snpChain('snp.chain'),
+
+  /// Tinfoil: no debug guest, VMPL 0, VCEK-signed, TCB minimum met.
+  snpPolicy('snp.policy'),
+
+  /// Tinfoil: the HPKE key served by the router is the one in
+  /// `report_data[32..64]` of the verified report.
+  bindHpke('bind.hpke'),
+
+  /// Tinfoil: Sigstore verification of the signed release (DSSE, Fulcio
+  /// chain, identity, Rekor).
+  sigstoreRelease('sigstore.release'),
+
+  /// Tinfoil: the measurement of the report is the one of the latest signed
+  /// release.
+  measurement('measurement'),
+
+  /// Tinfoil: the release is not older than the highest one seen before
+  /// (downgrade protection, K59).
+  releaseFloor('release.floor'),
+
+  /// Tinfoil: there is no receipt per answer (information, ADR 0020).
+  noReceipt('receipt.none'),
+
   /// Receipt could be fetched.
   receiptFetch('receipt.fetch'),
 
@@ -211,7 +240,17 @@ final class AttestedSession {
     required this.attestedAt,
     this.workloadId,
     this.e2eeKey,
+    this.ehbpKeyConfig,
+    this.reportData,
   });
+
+  /// Tinfoil: the key configuration (`/.well-known/hpke-keys`) that matches
+  /// [reportData]; `null` for other providers.
+  final Uint8List? ehbpKeyConfig;
+
+  /// Tinfoil: `report_data` (64 bytes) of the verified SNP report: TLS pin
+  /// ‖ HPKE key. The only source of both bindings.
+  final Uint8List? reportData;
 
   /// The E2EE key of the attested keyset (suite of `E2eeProtocolV2`); every
   /// request is encrypted to it. `null` only in sessions of tests that do

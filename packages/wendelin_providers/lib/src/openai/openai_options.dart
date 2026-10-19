@@ -21,6 +21,9 @@ import 'package:meta/meta.dart';
 /// - `ownedBy` (string): `listModels` keeps only models whose `owned_by`
 ///   equals it (NEAR AI: `nearai`, the own E2EE fleet, not routed models).
 /// - `toolsOnly` (bool): `listModels` keeps only models that support tools.
+/// - `modelType` (string): `listModels` keeps only models whose `type`
+///   equals it (Tinfoil: `chat`; the catalog also lists audio, embedding,
+///   safety models).
 /// - `extraBody` (object): merged into the request body (escape hatch for
 ///   server-specific parameters).
 @immutable
@@ -35,6 +38,7 @@ final class OpenAiOptions {
     this.teeModelsOnly = false,
     this.ownedBy,
     this.toolsOnly = false,
+    this.modelType,
     this.extraBody = const {},
   });
 
@@ -55,6 +59,7 @@ final class OpenAiOptions {
       teeModelsOnly: read<bool>('teeModelsOnly') ?? false,
       ownedBy: read<String>('ownedBy'),
       toolsOnly: read<bool>('toolsOnly') ?? false,
+      modelType: read<String>('modelType'),
       extraBody: read<Map<String, Object?>>('extraBody') ?? const {},
     );
   }
@@ -84,6 +89,9 @@ final class OpenAiOptions {
 
   /// See class docs.
   final bool toolsOnly;
+
+  /// See class docs.
+  final String? modelType;
 
   /// See class docs.
   final Map<String, Object?> extraBody;

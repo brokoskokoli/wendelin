@@ -21,6 +21,12 @@ import 'tee/near/near_crypto.dart';
 import 'tee/near/near_e2ee.dart';
 import 'tee/near/near_verifier.dart';
 import 'tee/phala_verifier.dart';
+import 'tee/sigstore_crypto.dart';
+import 'tee/snp_crypto.dart';
+import 'tee/tinfoil/ehbp_crypto.dart';
+import 'tee/tinfoil/release_floor.dart';
+import 'tee/tinfoil/tinfoil_ehbp.dart';
+import 'tee/tinfoil/tinfoil_verifier.dart';
 import 'tee/tls_pin_gate.dart';
 import 'tee/tls_pinned_client.dart';
 
@@ -39,7 +45,25 @@ final class AttestationWiring {
     this.pinnedClient,
     this.tlsConnect,
     this.nearCrypto,
+    this.snpCrypto,
+    this.sigstoreCrypto,
+    this.ehbpCrypto,
+    this.releaseFloors,
   });
+
+  /// SEV-SNP verification of Tinfoil profiles (Rust in the app). Together
+  /// with [sigstoreCrypto], [ehbpCrypto] and [releaseFloors] required: a
+  /// Tinfoil profile is never built without any of them (fail-closed).
+  final SnpCrypto? snpCrypto;
+
+  /// Sigstore verification of the Tinfoil release (Rust in the app).
+  final SigstoreCrypto? sigstoreCrypto;
+
+  /// EHBP/HPKE of Tinfoil profiles (Rust in the app).
+  final EhbpCrypto? ehbpCrypto;
+
+  /// Highest verified Tinfoil release per profile (downgrade protection).
+  final ReleaseFloorStore? releaseFloors;
 
   /// Field encryption of NEAR AI profiles (Rust in the app). Without it a
   /// NEAR profile is not built (fail-closed).
@@ -88,10 +112,13 @@ enum AttestationKind {
 
   /// NEAR AI Cloud (TDX report per model, E2EE with tools; ADR 0019).
   near,
+
+  /// Tinfoil router (AMD SEV-SNP, Sigstore, EHBP; ADR 0020).
+  tinfoil,
 }
 
 /// The protocol [profile] must be attested with: bound to the template
-/// option `attestation: phala|near` (or an older profile on the RedPill
+/// option `attestation: phala|near|tinfoil` (or an older profile on the RedPill
 /// host), not to the privacy level, so a profile is only „TEE“ when the app
 /// really checks it.
 AttestationKind attestationKind(ProviderProfile profile) {
@@ -101,6 +128,7 @@ AttestationKind attestationKind(ProviderProfile profile) {
   return switch (profile.options['attestation']) {
     'phala' => AttestationKind.phala,
     'near' => AttestationKind.near,
+    'tinfoil' => AttestationKind.tinfoil,
     _ =>
       _normalizedHost(profile.baseUrl) == 'api.redpill.ai'
           ? AttestationKind.phala
@@ -186,6 +214,18 @@ abstract final class ProviderFactory {
         if (attestation != null &&
             attestationKind(profile) == AttestationKind.near) {
           return _near(
+            profile,
+            baseUrl,
+            secrets,
+            attestation,
+            settings: settings,
+            client: client,
+            vision: model?.supportsVision ?? false,
+          );
+        }
+        if (attestation != null &&
+            attestationKind(profile) == AttestationKind.tinfoil) {
+          return _tinfoil(
             profile,
             baseUrl,
             secrets,
@@ -353,6 +393,92 @@ abstract final class ProviderFactory {
         evidenceSource: verifier.gpuEvidence,
       ),
       gpuMode: gpuModeOf(profile) ?? attestation.gpuMode,
+      logSink: attestation.logSink,
+      settings: settings,
+    );
+  }
+
+  /// Tinfoil: the whole body is end-to-end encrypted (EHBP) to the HPKE key
+  /// of the attested router; TLS pin and key both come from `report_data`
+  /// of the verified SNP report. No receipt, no GPU check (ADR 0020).
+  static LlmProvider _tinfoil(
+    ProviderProfile profile,
+    String baseUrl,
+    SecretReader secrets,
+    AttestationWiring attestation, {
+    required HttpSettings settings,
+    required http.Client? client,
+    required bool vision,
+  }) {
+    final snp = attestation.snpCrypto;
+    final sigstore = attestation.sigstoreCrypto;
+    final ehbp = attestation.ehbpCrypto;
+    final floors = attestation.releaseFloors;
+    if (snp == null || sigstore == null || ehbp == null || floors == null) {
+      throw ArgumentError.value(
+        profile.id,
+        'attestation.snpCrypto',
+        'Tinfoil-Profile brauchen SNP-, Sigstore-, EHBP-Prüfung und '
+            'Rückschrittschutz des Prüfmoduls',
+      );
+    }
+    final gate = TlsPinGate(spkiSha256: attestation.crypto.spkiSha256);
+    final build =
+        attestation.pinnedClient ??
+        (TlsPinGate g, {required bool enforce}) => PinnedHttpClient(
+          gate: g,
+          enforce: enforce,
+          connect: attestation.tlsConnect,
+        );
+    final credentials = Credentials(
+      profile.authMethod,
+      secrets,
+      style: ApiKeyStyle.bearer,
+    );
+    final root = Uri.parse(baseUrl);
+    final adapter = OpenAiChatAdapter(
+      wireCodec: TinfoilEhbpChannel(crypto: ehbp, tlsPin: gate),
+      baseUrl: root,
+      credentials: credentials,
+      defaultModel: profile.defaultModel,
+      label: profile.name,
+      client: build(gate, enforce: true),
+      extraHeaders: profile.extraHeaders,
+      options: OpenAiOptions.fromMap(profile.options),
+      capabilities: ProviderCapabilities(
+        tools: true,
+        streaming: true,
+        vision: vision,
+        tee: true,
+      ),
+      settings: settings,
+    );
+    return AttestedProvider(
+      inner: adapter,
+      verifier: TinfoilVerifier(
+        crypto: attestation.crypto,
+        snp: snp,
+        sigstore: sigstore,
+        ehbp: ehbp,
+        floors: floors,
+        baseUrl: root,
+        profileId: profile.id,
+        // The documents of the router come over a connection that is not
+        // pinned yet (the pin comes out of the report; TLS is validated by
+        // the system and measured); AMD and GitHub never over it, and no
+        // request to them carries the API key.
+        client: build(gate, enforce: false),
+        externalClient: client ?? defaultHttpClient(),
+        tlsPin: gate,
+        settings: settings,
+        pins: attestation.pins,
+      ),
+      profileId: profile.id,
+      tlsPin: gate,
+      requireUpstreamEnforced: false,
+      // No GPU evidence in the client path (spike, 1): off, whatever the
+      // profile says.
+      gpuMode: GpuCheckMode.off,
       logSink: attestation.logSink,
       settings: settings,
     );

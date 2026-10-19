@@ -356,7 +356,14 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
         if (event is ToolCallComplete || event is ToolCallDelta) {
           toolsInvolved = true;
         }
-        if (event is Done && record != null) {
+        if (event is Done && verifier is ReceiptFreeVerifier) {
+          // No receipt exists for this provider (ADR 0020): the session
+          // was verified completely and the answer was opened with the key
+          // derived from this very request; that is all there is to check.
+          _latest = _byRequest[req] = Future.value(
+            _receiptFree(session, req.model),
+          );
+        } else if (event is Done && record != null) {
           final involved = toolsInvolved && !toolsEncrypted;
           _latest = _byRequest[req] = _checkReceipt(
             record!,
@@ -512,6 +519,25 @@ final class AttestedProvider implements LlmProvider, AttestationAware {
   }
 
   // --- Receipt ----------------------------------------------------------
+
+  /// Report of an answer of a provider without receipts: green, the audit
+  /// log names the missing receipt as information.
+  AttestationReport _receiptFree(AttestedSession session, String model) {
+    final note = (verifier as ReceiptFreeVerifier).noReceiptNote;
+    final report = AttestationReport(
+      logId: _audit.record(
+        AttestationLogKind.receipt,
+        AttestationStatus.green,
+        [StageResult(AttestationStage.noReceipt, StageOutcome.info, note)],
+        model: model,
+        session: session,
+      ),
+      status: AttestationStatus.green,
+    );
+    _emit(report);
+    _gpu.after(model);
+    return report;
+  }
 
   Future<AttestationReport?> _checkReceipt(
     ExchangeRecord record,
