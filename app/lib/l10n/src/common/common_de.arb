@@ -1,0 +1,63 @@
+{
+  "add": "Hinzufügen",
+  "allow": "Erlauben",
+  "appLanguageDetail": "Sprache der Oberfläche; unabhängig von Spracheingabe und -ausgabe",
+  "appLanguageIntro": "Wähle die Sprache der Oberfläche. Sie gilt für die ganze App und das Overlay. Welche Sprache du sprichst und hörst, stellst du unter „Sprache“ ein.",
+  "appLanguageSystem": "System",
+  "appLanguageSystemDetail": "Folgt der Sprache des Telefons",
+  "appLanguageTitle": "App-Sprache",
+  "appName": "Wendelin",
+  "back": "Zurück",
+  "@back": {
+    "description": "Tooltip des Zurück-Knopfs"
+  },
+  "cancel": "Abbrechen",
+  "close": "Schließen",
+  "confirmCardNeedsConfirm": "Braucht deine Bestätigung",
+  "confirmCardToolLevel": "{toolName} · Stufe {level}",
+  "@confirmCardToolLevel": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmCardWarning": "Warnung",
+  "confirmed": "Bestätigt",
+  "copy": "Kopieren",
+  "delete": "Löschen",
+  "deny": "Ablehnen",
+  "details": "Details",
+  "done": "Fertig",
+  "edit": "Bearbeiten",
+  "error": "Fehler",
+  "export": "Exportieren",
+  "followUpListening": "Ich höre noch zu …",
+  "import": "Importieren",
+  "later": "Später",
+  "momentPlease": "Moment …",
+  "name": "Name",
+  "next": "Weiter",
+  "no": "Nein",
+  "off": "Aus",
+  "ok": "OK",
+  "on": "An",
+  "open": "Öffnen",
+  "remove": "Entfernen",
+  "reset": "Zurücksetzen",
+  "retry": "Erneut versuchen",
+  "save": "Speichern",
+  "search": "Suchen",
+  "selected": "gewählt",
+  "send": "Senden",
+  "settingsTitle": "Einstellungen",
+  "share": "Teilen",
+  "start": "Starten",
+  "stop": "Stopp",
+  "test": "Testen",
+  "understood": "Verstanden",
+  "yes": "Ja"
+}

@@ -1,0 +1,56 @@
+{
+  "haAddressLabel": "Adresse",
+  "haAlwaysConfirm": "Immer bestätigen",
+  "haAlwaysConfirmHelp": "Wendelin fragt vor jedem Schalten nach (z. B. Herd, Ofen).",
+  "haAlwaysConfirmSemantics": "{name}: {label}",
+  "@haAlwaysConfirmSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "haApproved": "{n, plural, one{1 Gerät freigegeben} other{{n} Geräte freigegeben}}",
+  "@haApproved": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "haConnect": "Verbinden",
+  "haConnected": "Verbunden",
+  "haConnecting": "Verbinde …",
+  "haDevices": "Geräte freigeben",
+  "haDevicesHelp": "Nur die gewählten Geräte kennt Wendelin. Schlösser, Alarmanlagen und Tore fragen immer vorher nach.",
+  "haDisconnect": "Trennen",
+  "haDisconnectMessage": "Adresse, Token und die Auswahl der Geräte werden vom Gerät gelöscht.",
+  "haDisconnectTitle": "Home Assistant trennen?",
+  "haEntityAlwaysAsks": "{entityId} · fragt immer nach",
+  "@haEntityAlwaysAsks": {
+    "placeholders": {
+      "entityId": {
+        "type": "String"
+      }
+    }
+  },
+  "haErrorTitle": "Fehler – nicht erreichbar",
+  "haFilter": "Geräte filtern",
+  "haFound": "Gefunden",
+  "haHttpNote": "Unverschlüsseltes http ist nur im Heimnetz, über Tailscale (100.x, *.ts.net) und bei *.local erlaubt, sonst nur https. Über Tailscale wird nichts automatisch gefunden: Adresse von Hand eingeben.",
+  "haInputMissing": "Bitte Adresse und Token eingeben.",
+  "haIntro": "Wendelin steuert deine freigegebenen Geräte über die Schnittstelle deines Home Assistant. Nur im Heimnetz oder über Tailscale. Adresse und Token bleiben im sicheren Speicher des Geräts.",
+  "haNoDevices": "Keine Geräte gefunden.",
+  "haNoRoom": "Ohne Raum",
+  "haNothingFound": "Nichts gefunden. Adresse von Hand eingeben (bei Tailscale nötig).",
+  "haReachable": "Home Assistant ist erreichbar.",
+  "haReload": "Geräte neu laden",
+  "haSearch": "Im WLAN suchen",
+  "haSearching": "Suche …",
+  "haTitle": "Home Assistant",
+  "haTokenHelp": "In Home Assistant: Profil → Sicherheit → Langlebige Zugriffstokens.",
+  "haTokenLabel": "Long-Lived Access Token"
+}

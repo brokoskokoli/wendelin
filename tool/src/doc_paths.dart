@@ -33,6 +33,25 @@ List<PathRef> pathRefs(String markdown) {
   return refs;
 }
 
+final _link = RegExp(r'\[[^\]\n]*\]\(([^)\s]+)\)');
+
+/// Relative Markdown-Links `[Text](pfad#anker)` (ohne Web-Adressen und reine
+/// Anker), Anker abgeschnitten.
+List<PathRef> linkRefs(String markdown) {
+  final refs = <PathRef>[];
+  for (final (i, line) in markdown.split('\n').indexed) {
+    for (final m in _link.allMatches(line)) {
+      var p = m.group(1)!;
+      if (p.startsWith('#') || RegExp(r'^[a-z]+:').hasMatch(p)) continue;
+      final h = p.indexOf('#');
+      if (h >= 0) p = p.substring(0, h);
+      if (p.isEmpty) continue;
+      refs.add((path: p, line: i + 1));
+    }
+  }
+  return refs;
+}
+
 /// `package:wendelin_core/fakes.dart` → `packages/wendelin_core/lib/fakes.dart`.
 String? _packageUri(String uri) {
   final m = RegExp(r'^package:(wendelin_\w+)/(.+)$').firstMatch(uri);
@@ -65,6 +84,13 @@ final class RepoIndex {
     if (docDir.isNotEmpty && exists(_normalize('$docDir/$p'))) return true;
     return _files.any((f) => f.endsWith('/$p')) ||
         _dirs.any((d) => d.endsWith('/$p'));
+  }
+
+  /// Ein relativer Link zeigt von [docDir] aus auf eine Datei oder einen Ordner.
+  bool resolvesLink(String path, {String docDir = ''}) {
+    final p = _normalize(docDir.isEmpty ? path : '$docDir/$path');
+    final q = p.endsWith('/') ? p.substring(0, p.length - 1) : p;
+    return _files.contains(q) || _dirs.contains(q);
   }
 
   static String _normalize(String path) {

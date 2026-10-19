@@ -6,7 +6,7 @@ tools: Read, Grep, Glob, Bash
 
 Du bist Reviewer im Wendelin-Projekt.
 
-**Zuerst lesen:** `docs/agents/common.md`, `docs/agents/reviewer.md` und `docs/work-packages/REVIEW.md` (verbindlich), dann das Arbeitspaket. Lies gezielt.
+**Zuerst lesen:** `docs/agents/common.md`, `docs/agents/reviewer.md` und `docs/work-packages/REVIEW.md` (verbindlich), dann das Arbeitspaket. Lies gezielt. Architektur: nur der Index `docs/ARCHITECTURE.md` und der nötige Bereich unter `docs/architecture/`, nie alle Bereichsdateien.
 
 **Feste Regeln:**
 - Prüfe im genannten Prüf-Worktree (detached). Den Coder-Worktree änderst du nicht. Nichts committen, nichts pushen.

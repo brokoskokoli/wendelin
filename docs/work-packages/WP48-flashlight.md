@@ -1,6 +1,6 @@
 # WP48 – Taschenlampe (`packages/wendelin_integrations/lib/src/flashlight/` + Kotlin-Kanal)
 
-Abhängig von: – (sofort startbar). Bezug: K16. Checkliste „Neue eingebaute Integration“ in `docs/ARCHITECTURE.md`. Andockpunkte: `base_tool.dart`/`tool_args.dart` (`packages/wendelin_integrations/lib/src/common/`), `UndoManager`, `PlatformPorts` (`app/lib/platform/platform_ports.dart`), `app/lib/di/integration_specs.dart` (Merge-Hotspot, nur anhängen), Kotlin unter `app/android/app/src/main/kotlin/app/wendelin/` (Registrierung in `WendelinActivity.kt`), Texte in `app/lib/ui/screens/labels.dart`.
+Abhängig von: – (sofort startbar). Bezug: K16. Checkliste „Neue eingebaute Integration“ in `docs/architecture/checklists.md`. Andockpunkte: `base_tool.dart`/`tool_args.dart` (`packages/wendelin_integrations/lib/src/common/`), `UndoManager`, `PlatformPorts` (`app/lib/platform/platform_ports.dart`), `app/lib/di/integration_specs.dart` (Merge-Hotspot, nur anhängen), Kotlin unter `app/android/app/src/main/kotlin/app/wendelin/` (Registrierung in `WendelinActivity.kt`), Texte in `app/lib/ui/screens/labels.dart`.
 
 ## Inhalt
 - Integration `flashlight`, Tools `flashlight__on`, `flashlight__off`, `flashlight__toggle`. Risiko `write` mit Undo (vorheriger Zustand), ohne Nachfrage, nicht sensibel, alle Datenschutzstufen, kein Netz.

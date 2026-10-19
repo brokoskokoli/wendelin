@@ -1,0 +1,335 @@
+{
+  "bargeDebugDefaultSuffix": "{v} (Standard)",
+  "@bargeDebugDefaultSuffix": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "bargeDebugExtraThreshold": "Zusätzliche Schwelle",
+  "bargeDebugHelpCommunication": "Kommunikation + AEC (Standard): Das Handy rechnet die eigene Ausgabe aus dem Mikrofon heraus. Wendelin hört sich selbst kaum, dein Wort kommt aber etwas leiser an.",
+  "bargeDebugHelpMargin": "Die Schwelle legt fest, wie genau ein Wort passen muss. Höher (0,05, Standard): weniger Fehlalarme, dafür wird dein Wort öfter überhört. Niedriger (0,00 oder -0,05): das Wort wird leichter erkannt, dafür gibt es mehr Fehlalarme.",
+  "bargeDebugHelpRecognition": "Erkennung, ohne AEC: keine Echo-Unterdrückung. Dein Wort kommt klar an, aber die laufende Ansage übertönt es oft, und Wendelin kann sich selbst hören.",
+  "bargeDebugHelpRecognitionAec": "Erkennung + AEC: wie Standard, aber mit dem Mikrofon der Spracherkennung. Hilft auf Geräten, bei denen das Standard-Mikrofon dein Wort zu stark dämpft.",
+  "bargeDebugIntro": "Damit stellst du ein, wie empfindlich „Wendelin“ und „Stopp“ während der Antwort erkannt werden. Die Änderung gilt ab der nächsten gesprochenen Antwort.",
+  "bargeDebugMicCommunication": "Kommunikation + AEC (Standard)",
+  "bargeDebugMicDuring": "Mikrofon während der Antwort",
+  "bargeDebugMicRecognition": "Erkennung, ohne AEC",
+  "bargeDebugMicRecognitionAec": "Erkennung + AEC",
+  "bargeDebugTitle": "Erweitert: Unterbrechen",
+  "micAllowTitle": "Mikrofon erlauben?",
+  "micAndroidSettings": "Android-Einstellungen",
+  "micExplanation": "Wendelin hört nur zu, nachdem du ihn ausgelöst hast (Mikrofontaste oder Assistent). Die Aufnahme wird auf dem Gerät in Text umgewandelt und verlässt es nicht; nur der erkannte Text geht an deinen Provider.",
+  "micNotNow": "Nicht jetzt",
+  "micOnlyText": "Ohne Mikrofon geht nur Text. {v}",
+  "@micOnlyText": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "micSettingsHint": "In den Android-Einstellungen unter Apps → Wendelin erlauben.",
+  "wakeCalibrateCancelled": "Abgebrochen. Es wurde nichts geändert.",
+  "wakeCalibrateDone": "Kalibriert.",
+  "wakeCalibrateFailed": "Gescheitert: {error}",
+  "@wakeCalibrateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "wakeCalibrateFinishNow": "Jetzt beenden",
+  "wakeCalibrateIntro": "Leg das Handy hin und red normal weiter. Wendelin hört mit (Mikrofonanzeige an), merkt sich aber nur Zahlenwerte, kein Audio und keinen Text. Ab und zu piept es: Sag dann „Wendelin“.",
+  "wakeCalibrateMicPreparing": "Mikrofon wird vorbereitet …",
+  "wakeCalibrateMinutesLeft": "Noch {v} min",
+  "@wakeCalibrateMinutesLeft": {
+    "placeholders": {
+      "v": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeCalibrateNoMic": "Ohne Mikrofon kann Wendelin nicht kalibrieren.",
+  "wakeCalibrateNotDistinct": "Deine Aufnahmen heben sich nicht vom Hintergrund ab. Lerne deine Stimme bitte noch einmal ein. Die alte Schwelle bleibt.",
+  "wakeCalibrateProgressLabel": "Fortschritt Kalibrieren",
+  "wakeCalibratePrompts": "Aufforderungen: {answered} von {prompts} beantwortet",
+  "@wakeCalibratePrompts": {
+    "placeholders": {
+      "answered": {
+        "type": "int"
+      },
+      "prompts": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeCalibrateResult": "Schwelle {v} · geschätzt {v2} Fehlalarme pro Stunde (vor der Nachprüfung) · {v3} % deiner Aufnahmen erkannt.",
+  "@wakeCalibrateResult": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      },
+      "v3": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeCalibrateTitle": "Kalibrieren",
+  "wakeCalibrateUnusable": "Nicht verwertbar.",
+  "wakeEnrollAllThere": "Alle Aufnahmen sind da.",
+  "wakeEnrollFailed": "Das Einlernen ist gescheitert: {error}",
+  "@wakeEnrollFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "wakeEnrollHeard": "Gehört.",
+  "wakeEnrollIntro": "Sag „{word}“, wenn du dran bist. Aus jeder Aufnahme behält Wendelin nur Zahlenwerte; das Audio wird sofort verworfen.",
+  "@wakeEnrollIntro": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollMicPreparing": "Mikrofon wird vorbereitet …",
+  "wakeEnrollNoMic": "Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.",
+  "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
+  "wakeEnrollProcessing": "Wird verarbeitet …",
+  "wakeEnrollProgress": "{accepted} von {target}",
+  "@wakeEnrollProgress": {
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeEnrollProgressLabel": "Fortschritt Einlernen",
+  "wakeEnrollPrompt0": "Sprich normal, das Handy nah vor dir.",
+  "wakeEnrollPrompt1": "Jetzt aus ein bis zwei Metern Abstand.",
+  "wakeEnrollPrompt2": "Jetzt leise, wie abends im Zimmer.",
+  "wakeEnrollPrompt3": "Wie du es im Alltag sagst, gern aus einer anderen Ecke.",
+  "wakeEnrollSaveWith": "Mit {accepted} Aufnahmen speichern",
+  "@wakeEnrollSaveWith": {
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeEnrollSayNow": "Sag jetzt: „{word}“",
+  "@wakeEnrollSayNow": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollTitle": "Stimme einlernen",
+  "wakeEnrollTitleStop": "„Stopp“ einlernen",
+  "wakeEnrollTooEarly": "Zu früh angefangen. Warte kurz und sprich dann.",
+  "wakeEnrollTooLong": "Zu lang. Nur „{word}“, bitte.",
+  "@wakeEnrollTooLong": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollTooQuiet": "Zu leise. Bitte etwas lauter.",
+  "wakeExplainBatteryBody": "Das ständige Zuhören kostet Akku. Standard ist deshalb „Nur beim Laden“.",
+  "wakeExplainBatteryExemptBody": "Damit Android den Dienst nicht beendet, sollte Wendelin von der Akku-Optimierung ausgenommen sein.",
+  "wakeExplainBatteryExemptTitle": "Akku-Optimierung ausnehmen?",
+  "wakeExplainBatteryTitle": "Akku",
+  "wakeExplainChecklist": "{v}: {v2}",
+  "@wakeExplainChecklist": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeExplainEnable": "Einschalten",
+  "wakeExplainEnableTitle": "Aktivierungswort einschalten?",
+  "wakeExplainExempt": "Ausnehmen",
+  "wakeExplainLocalBody": "Die Erkennung des Wortes läuft auf dem Gerät. Was du nach „Wendelin“ sagst, wird als Text an den gewählten KI-Anbieter geschickt. Audio wird weder gesendet noch gespeichert.",
+  "wakeExplainLocalTitle": "Zuhören bleibt auf dem Gerät",
+  "wakeExplainMicDotBody": "Android zeigt den grünen Punkt für das Mikrofon, solange der Dienst zuhört.",
+  "wakeExplainMicDotTitle": "Mikrofon-Punkt",
+  "wakeExplainPersistentBody": "Solange Wendelin zuhört, zeigt Android eine Benachrichtigung. Ab Android 14 kannst du sie wegwischen, der Dienst läuft dann weiter. Ohne die Berechtigung für Benachrichtigungen zeigt Android keine; Wendelin hört trotzdem zu.",
+  "wakeExplainPersistentTitle": "Dauerhafte Benachrichtigung",
+  "wakeModelsLoadModel": "Sprachmodell laden",
+  "wakeModelsNeedsModel": "Dafür muss zuerst das Sprachmodell geladen werden ({v}).",
+  "@wakeModelsNeedsModel": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeModelsVerifyNeeds": "Für die Nachprüfung Sprachmodell laden ({v}).",
+  "@wakeModelsVerifyNeeds": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeServiceSectionAlways": "Immer",
+  "wakeServiceSectionAlwaysHint": "Kostet spürbar Akku.",
+  "wakeServiceSectionBackground": "Zuhören im Hintergrund",
+  "wakeServiceSectionChime": "Bestätigungston",
+  "wakeServiceSectionChimeDetail": "Ein kurzer Ton, wenn Wendelin das Wort erkannt hat.",
+  "wakeServiceSectionChooseAssistant": "Assistenten wählen",
+  "wakeServiceSectionEnable": "Aktivierungswort einschalten",
+  "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Wendelin“.",
+  "wakeServiceSectionEndedEngine": "Beendet: Die Erkennung ist ausgefallen",
+  "wakeServiceSectionEndedNoPermission": "Beendet: Mikrofon-Berechtigung fehlt",
+  "wakeServiceSectionEndedNoRole": "Beendet: Wendelin ist nicht mehr dein Assistent",
+  "wakeServiceSectionEndedNotCharging": "Beendet: Das Gerät lädt nicht mehr",
+  "wakeServiceSectionEndedPaused": "Beendet: pausiert",
+  "wakeServiceSectionEndedSystem": "Vom System beendet",
+  "wakeServiceSectionEndedTimeout": "Vom System beendet (Zeitlimit von Android)",
+  "wakeServiceSectionEnrollFirst": "Erst Stimme einlernen",
+  "wakeServiceSectionEnrollFirstBody": "Ohne eingelernte Stimme erkennt Wendelin das Aktivierungswort nicht.",
+  "wakeServiceSectionNotAssistant": "Wendelin ist nicht dein Assistent",
+  "wakeServiceSectionNotAssistantBody": "Android erlaubt das Zuhören im Hintergrund nur dem Standard-Assistenten. Wähle Wendelin als Assistenten.",
+  "wakeServiceSectionOnlyCharging": "Nur beim Laden",
+  "wakeServiceSectionOnlyChargingHint": "Schont den Akku (Standard).",
+  "wakeServiceSectionPausedLoading": "Pausiert: wartet auf das Laden",
+  "wakeServiceSectionPausedUntil": "Pausiert bis {v}",
+  "@wakeServiceSectionPausedUntil": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeServiceSectionRunning": "Läuft",
+  "wakeServiceSectionSettingsFail": "Die Systemeinstellungen ließen sich nicht öffnen.",
+  "wakeServiceSectionSoundCheck": "Ton und Prüfung",
+  "wakeServiceSectionStatus": "Status",
+  "wakeServiceSectionToEnroll": "Zum Einlernen",
+  "wakeServiceSectionWhen": "Wann zuhören?",
+  "wakeServiceSectionWhisper": "Nachprüfung mit Whisper",
+  "wakeServiceSectionWhisperDetail": "Wendelin hört nur zu, wenn Whisper „Wendelin“ bestätigt. Schalte es aus, wenn es mit deiner Stimme zu streng ist; dann gibt es mehr Fehlauslösungen.",
+  "wakeTestAgo": "{v} · {inSeconds} s",
+  "@wakeTestAgo": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "inSeconds": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeTestBest": "{v} · höchste Ähnlichkeit {v2}",
+  "@wakeTestBest": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeTestCandidate": "Kandidat · Ähnlichkeit {v}",
+  "@wakeTestCandidate": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeTestConfirmed": "Nachprüfung: bestätigt",
+  "wakeTestFailed": "Gescheitert: {error}",
+  "@wakeTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "wakeTestIntro": "Sag „Wendelin“. Hier erscheinen Treffer, ohne dass das Overlay aufgeht. „Kandidat“ ist die Stimme, „bestätigt“ die Nachprüfung mit Whisper.",
+  "wakeTestListening": "Hört zu",
+  "wakeTestMicPreparing": "Mikrofon wird vorbereitet …",
+  "wakeTestNoHit": "Noch kein Treffer.",
+  "wakeTestNoMic": "Ohne Mikrofon geht der Test nicht.",
+  "wakeTestRejected": "Nachprüfung: nicht bestätigt",
+  "wakeTestStopped": "Angehalten",
+  "wakeTestTitle": "Ausprobieren",
+  "wakeTestUnavailable": "Nachprüfung: nicht möglich (kein Whisper)",
+  "wakeTestVerifying": "Nachprüfung läuft …",
+  "wakeWordActionsFor": "Aktionen für {v}",
+  "@wakeWordActionsFor": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeWordCalibrate": "Kalibrieren (30 min, empfohlen)",
+  "wakeWordDeleteAll": "Alle Stimmen löschen",
+  "wakeWordDeleteAllBody": "Wendelin vergisst alle eingelernten Stimmen. Du kannst sie später neu einlernen.",
+  "wakeWordDeleteAllTitle": "Alle Stimmen löschen?",
+  "wakeWordEnroll": "Stimme einlernen",
+  "wakeWordEnrollMore": "Weitere Person einlernen",
+  "wakeWordFeatureModels": "Merkmalsmodelle",
+  "wakeWordInterrupt": "Unterbrechen mit „Stopp“",
+  "wakeWordIntro": "Wendelin lernt deine Stimme: Du sagst „Wendelin“ etwa 15 Mal, danach erkennt er es auch im Alltag. Gespeichert werden nur Zahlenwerte, verschlüsselt auf dem Gerät. Audio wird nie gespeichert.",
+  "wakeWordLearned": "Gelernte Stimmen",
+  "wakeWordNameOptional": "Name (optional)",
+  "wakeWordNeedsModel": "Dafür muss zuerst das Sprachmodell geladen werden.",
+  "wakeWordNoVoice": "Noch keine Stimme",
+  "wakeWordNoVoiceHint": "Lerne mit „Stimme einlernen“ deine Stimme ein.",
+  "wakeWordPerson": "Person {number}",
+  "@wakeWordPerson": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeWordRecordingsThreshold": "{length} Aufnahmen · Schwelle {v}{v2}",
+  "@wakeWordRecordingsThreshold": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      },
+      "v": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeWordRetrain": "Neu einlernen",
+  "wakeWordRetrainStop": "„Stopp“ neu einlernen",
+  "wakeWordStopLearned": "„Stopp“ ist gelernt: Du kannst die Ansage mit „Stopp“ allein unterbrechen.",
+  "wakeWordStopNotLearned": "Ohne gelerntes „Stopp“ unterbricht nur „Wendelin, stopp“ die Ansage. Lerne „Stopp“ ein, damit du die Ansage mit dem einen Wort unterbrechen kannst.",
+  "wakeWordStopOnlySpeaking": "„Stopp“ wirkt nur, während Wendelin spricht und Unterbrechen auf „Schlüsselwörter“ steht. Im Hintergrund löst „Stopp“ nichts aus.",
+  "wakeWordTemplatesMissing": "Vorlagen fehlen. Bitte neu einlernen.",
+  "wakeWordTrainStop": "„Stopp“ einlernen",
+  "wakeWordTryNow": "Jetzt ausprobieren",
+  "wakeWordWhoCalibrate": "Wen kalibrieren?",
+  "wakeWordWhoJoins": "Wer kommt dazu?",
+  "wakeWordWhoSpeaks": "Wer spricht?",
+  "wakeWordWhoStop": "Wer lernt „Stopp“?"
+}
