@@ -7,6 +7,14 @@
   "modelRowLoaded": "{size} · downloaded",
   "modelRowNotLoaded": "{size} · not downloaded",
   "modelRowProgressOf": "Progress {displayName}",
+  "modelRowRam": "Memory about {ram}",
+  "@modelRowRam": {
+    "placeholders": {
+      "ram": {
+        "type": "String"
+      }
+    }
+  },
   "modelRowResume": "Resume",
   "modelRowStarted": "{size} · partially downloaded",
   "voiceConvAdvanced": "Advanced",
@@ -41,18 +49,45 @@
   "voiceErrorGeneric": "Speech did not work. Please try again.",
   "voiceErrorMicBusy": "The microphone was still busy. Please speak again.",
   "voiceErrorModelMissing": "A speech model has not been downloaded yet (Settings → Speech).",
+  "voiceMetricsClear": "Clear list",
+  "voiceMetricsEmpty": "No measurements yet. Say a command or play a voice sample.",
+  "voiceMetricsIntro": "The latest utterances of this session: compute time (latency), real-time factor (compute time per audio time, smaller is faster) and app memory. Numbers only, no content.",
+  "voiceMetricsRow": "{latency} ms for {audio} ms of audio · RTF {rtf} · RAM {ram}",
+  "@voiceMetricsRow": {
+    "placeholders": {
+      "latency": {
+        "type": "String"
+      },
+      "audio": {
+        "type": "String"
+      },
+      "rtf": {
+        "type": "String"
+      },
+      "ram": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceMetricsStt": "Recognition",
+  "voiceMetricsTts": "Speech output",
   "voiceScreenAutomatic": "Automatic",
   "voiceScreenAutomaticDetail": "System voice, otherwise offline voice",
   "voiceScreenDetectAuto": "Detect automatically",
   "voiceScreenFineTuning": "Fine tuning",
   "voiceScreenFixedLanguageHint": "With a fixed language Whisper recognizes short sentences more reliably.",
   "voiceScreenIntro": "Wendelin recognizes speech on the device (Whisper). The models are downloaded once and stay on the device.",
+  "voiceScreenKeepModel": "Keep model in memory",
+  "voiceScreenKeepModelHint": "Recognition and voice stay loaded: faster answers, but permanently more memory. Wendelin frees them when memory runs low.",
+  "voiceScreenKeepModelLabel": "Keep model in memory",
   "voiceScreenLanguageDefault": "Default of the language",
   "voiceScreenLanguageDefaultChip": "Default of the language",
   "voiceScreenLearnsVoice": "Wendelin learns your voice",
   "voiceScreenLearnsVoiceDetail": "Train, calibrate and try out",
   "voiceScreenLikeApp": "Like the app ({v})",
   "voiceScreenListen": "Listen to a sample",
+  "voiceScreenMetrics": "Measurements",
+  "voiceScreenMetricsDetail": "Time, real-time factor and memory per utterance",
   "voiceScreenMicrophone": "Microphone",
   "voiceScreenMicrophoneTitle": "Microphone",
   "voiceScreenMinSpeech": "Minimum speech duration",
@@ -101,5 +136,6 @@
   "voiceVoicesNotLoaded": "The chosen voice is not downloaded – {v} speaks instead.",
   "voiceVoicesPreparing": "Preparing sample …",
   "voiceVoicesSampleFailed": "Sample not possible – the voice did not speak.",
+  "voiceVoicesSpeaker": "Speaker",
   "voiceVoicesStopSample": "Stop sample"
 }

@@ -6,18 +6,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/channel_audio_focus_port.dart';
+import '../platform/channel_memory_trim.dart';
 import '../platform/voice/audio_playback.dart';
 import '../platform/voice/ducking_tts.dart';
 import '../platform/voice/engine_whisper.dart';
 import '../platform/voice/record_audio_input.dart';
 import '../platform/voice/sherpa_tts.dart';
 import '../platform/voice/silero_vad.dart';
+import '../platform/voice/stt_loader.dart';
 import '../platform/voice/system_tts.dart';
-import '../platform/voice/whisper_sherpa.dart';
 import '../platform/voice/whisper_stt.dart';
 import '../voice/voice_log.dart';
+import '../voice/voice_metrics.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
+import 'hint_term_providers.dart';
 import 'preferences.dart';
 import 'vocabulary_provider.dart';
 import 'voice_settings_providers.dart';
@@ -31,6 +34,12 @@ export 'voice_settings_providers.dart';
 // downloads, microphone, Silero VAD, Whisper, system and sherpa TTS. The
 // pipeline itself (with the agent) is built by the trigger side (WP18)
 // from [voiceComponentsProvider].
+
+/// Android `onTrimMemory` levels (WP103): frees the models under memory
+/// pressure. Tests replace it with a stream.
+final memoryTrimSourceProvider = Provider<MemoryTrimSource>(
+  (ref) => ChannelMemoryTrim(),
+);
 
 /// Microphone access of the `record` plugin.
 final microphoneProvider = Provider<PcmRecorder>(
@@ -110,10 +119,33 @@ typedef WhisperModelLoader = Future<WhisperBackend> Function(
   String directory,
 );
 
-/// How this engine loads a Whisper model (background isolate).
+/// Starts the recognizer backend (isolate); tests replace it.
+@visibleForTesting
+final sttBackendStarterProvider =
+    Provider<
+      Future<WhisperBackend> Function(
+        SpeechModel model,
+        String directory, {
+        List<String> hintTerms,
+        double hotwordsScore,
+        String fallbackLanguage,
+      })
+    >((ref) => startSttBackend);
+
+/// How this engine loads a recognizer (background isolate): the engine
+/// comes from the catalog entry ([SpeechModel.engine], WP103); names for
+/// hotwords go to the models that take them.
 final whisperLoaderProvider = Provider<WhisperModelLoader>(
   (ref) =>
-      (model, dir) => IsolateWhisperBackend.start(WhisperFiles.of(model, dir)),
+      (model, dir) async => ref.read(sttBackendStarterProvider)(
+        model,
+        dir,
+        hintTerms: model.supportsHotwords
+            ? await ref.read(hintTermsProvider.future)
+            : const [],
+        // Canary cannot detect the language: it falls back to the app's.
+        fallbackLanguage: ref.read(languageProvider),
+      ),
 );
 
 /// Whisper models of the other engines of the process (ADR 0008, B14).
@@ -130,6 +162,11 @@ final engineWhisperProvider = FutureProvider<EngineWhisper>((ref) async {
   );
   final model = await _installedModel(ref, id, 'Das Whisper-Modell');
   final service = await ref.watch(speechModelServiceProvider.future);
+  // A change of the names builds the recognizer again (vocabulary of the
+  // hotwords), only for a model that takes them.
+  if (model.supportsHotwords) {
+    await ref.watch(hintTermsProvider.selectAsync((t) => t.join('\n')));
+  }
   final load = ref.watch(whisperLoaderProvider);
   final whisper = EngineWhisper(
     modelId: model.id,
@@ -149,10 +186,35 @@ final speechToTextProvider = FutureProvider<SpeechToText>((ref) async {
   return WhisperSpeechToText(
     backend: whisper,
     modelId: whisper.modelId,
+    engineName: sttEngineName(
+      ref.read(speechModelCatalogProvider).byId(whisper.modelId)?.engine ??
+          SttEngine.whisper,
+    ),
     // Durations only, never the text (measurements on the device, WP19).
-    onTiming: (t) => debugPrint('$t'),
+    onTiming: (t) {
+      debugPrint('$t');
+      _addMetric(
+        ref,
+        VoiceMetric(
+          kind: VoiceMetricKind.stt,
+          model: t.modelId,
+          audio: t.audio,
+          compute: t.compute,
+          rssBytes: currentRssBytes(),
+        ),
+      );
+    },
   );
 });
+
+/// Adds [metric] to the log; a provider that is already gone is ignored.
+void _addMetric(Ref ref, VoiceMetric metric) {
+  try {
+    ref.read(voiceMetricsProvider.notifier).add(metric);
+  } on Object {
+    // The container was disposed (end of a test or of the engine).
+  }
+}
 
 /// Android system TTS.
 final systemTtsProvider = Provider<TextToSpeech>((ref) => SystemTextToSpeech());
@@ -169,16 +231,21 @@ Future<List<SherpaVoice>> installedSherpaVoices(
     final base = m.files.first.name.replaceFirst(RegExp(r'\.tar\.bz2$'), '');
     final files = PiperVoiceFiles.find(
       Directory('${service.directoryOf(m).path}/$base'),
+      kokoro: m.synth == TtsSynth.kokoro,
     );
     if (files == null) continue;
-    voices.add(
-      SherpaVoice(
-        id: m.id,
-        language: m.languages.first,
-        name: m.displayName,
-        files: files,
-      ),
-    );
+    // A multi-language model (Kokoro) is listed once per language.
+    for (final language in m.languages.toList()..sort()) {
+      voices.add(
+        SherpaVoice(
+          id: m.id,
+          language: language,
+          name: m.displayName,
+          files: files,
+          speakers: m.speakersFor(language),
+        ),
+      );
+    }
   }
   return voices;
 }
@@ -225,6 +292,18 @@ TextToSpeech createSherpaTts(
     playback: out,
     preferred: () =>
         ref.read(voiceSettingsProvider).value?.sherpaVoices ?? const {},
+    onTiming: (voiceId, audio, compute) => _addMetric(
+      ref,
+      VoiceMetric(
+        kind: VoiceMetricKind.tts,
+        model: voiceId.replaceAll('/', '.'),
+        audio: audio,
+        compute: compute,
+        rssBytes: currentRssBytes(),
+      ),
+    ),
+    preferredSpeakers: () =>
+        ref.read(voiceSettingsProvider).value?.sherpaSpeakers ?? const {},
   );
 }
 
