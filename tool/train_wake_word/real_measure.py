@@ -186,7 +186,7 @@ def main():
 
     # (3) Negativ-Scan mit whisper-medium (Fundstellen nur als Zeitstempel, Zeit der Station-Datei)
     import sherpa_onnx as so
-    Md = f"{S.H}/wp102-models/whisper-medium"
+    Md = f"{S.MODELS}/whisper-medium"
     med = so.OfflineRecognizer.from_whisper(encoder=f"{Md}/medium-encoder.int8.onnx", decoder=f"{Md}/medium-decoder.int8.onnx",
                                             tokens=f"{Md}/medium-tokens.txt", language="de", num_threads=4)
     fold = lambda s: K.fold(s)
