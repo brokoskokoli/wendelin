@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP85, WP103, WP76c
+Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP85, WP103, WP76c, WP89
 
 ## Meilensteine
 
@@ -39,7 +39,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP86 | Standort/Maps | gemergt f595fa0 | K67 offen (Wetter-Position bei „keine Mindeststufe“, Frage an Stefan); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
-| WP89 | Todoist/Google Tasks | geplant | kann starten (WP88 gemergt) |
+| WP89 | Todoist/Google Tasks | in Arbeit | – |
 | WP90 | Mediensteuerung | gemergt eb2cf31 | K65 bestätigt; Gerätetest WP90.1–7 (Audible, Ducking mit echter TTS, Zugriffsdialog) |
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
 | WP92a–c | Sprechererkennung | geplant | WP92c nach WP91 |
