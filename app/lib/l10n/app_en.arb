@@ -886,6 +886,21 @@
   "targetPickerApply": "Apply",
   "targetPickerProfile": "Profile",
   "targetPickerProfileGone": "Profile “{profileId}” no longer exists.",
+  "quickSwitchCurrent": "current",
+  "quickSwitchHint": "Choosing one ends this conversation and starts a new one.",
+  "quickSwitchItemSemantics": "{name}, {level}",
+  "@quickSwitchItemSemantics": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "quickSwitchSemanticsAction": "Switch agent",
+  "quickSwitchTitle": "Switch agent",
   "condBuilderAddCondition": "+ Condition",
   "condBuilderAddConditionInGroup": "+ Condition in group",
   "condBuilderAddGroup": "+ Group",

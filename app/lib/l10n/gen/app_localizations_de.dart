@@ -3131,6 +3131,24 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get quickSwitchCurrent => 'aktuell';
+
+  @override
+  String get quickSwitchHint =>
+      'Die Auswahl beendet das Gespräch und startet ein neues.';
+
+  @override
+  String quickSwitchItemSemantics(String name, String level) {
+    return '$name, $level';
+  }
+
+  @override
+  String get quickSwitchSemanticsAction => 'Agent wechseln';
+
+  @override
+  String get quickSwitchTitle => 'Agent wechseln';
+
+  @override
   String get condBuilderAddCondition => '+ Bedingung';
 
   @override
