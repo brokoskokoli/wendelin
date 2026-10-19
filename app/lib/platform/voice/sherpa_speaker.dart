@@ -104,7 +104,9 @@ final class _Session {
   Future<Float32List> embed(Int16List pcm) {
     final samples = pcmToFloat(pcm);
     final result = _queue.then((_) async {
-      _requests.send(TransferableTypedData.fromList([samples.buffer.asUint8List()]));
+      _requests.send(
+        TransferableTypedData.fromList([samples.buffer.asUint8List()]),
+      );
       await _replies.moveNext();
       final reply = _replies.current;
       if (reply is TransferableTypedData) {

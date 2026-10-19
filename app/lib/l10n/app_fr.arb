@@ -990,6 +990,86 @@
   "ruleEditorTooDeep": "Cette condition est imbriquée plus profondément que l’éditeur ne peut la modifier. Elle reste inchangée.",
   "ruleTileMove": "Déplacer",
   "ruleTileSemanticsLevel": "Niveau de confidentialité {level},",
+  "speakerAdd": "Enregistrer une personne",
+  "speakerAddDetail": "Lire cinq courtes phrases ; les enregistrements ne sont pas conservés.",
+  "speakerAddNeedsModel": "Télécharge d'abord le modèle.",
+  "speakerDeleteBody": "{name} est supprimé(e) avec toutes les caractéristiques vocales enregistrées.",
+  "@speakerDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerDeleteConfirm": "Supprimer",
+  "speakerDeleteSemantic": "Supprimer {name}",
+  "@speakerDeleteSemantic": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerDeleteTitle": "Supprimer la personne ?",
+  "speakerDone": "Terminé",
+  "speakerEnrollIntro": "Lis chaque phrase à voix normale. Seule une caractéristique vocale est calculée, l'audio est supprimé.",
+  "speakerEnrollTitle": "Enregistrer une personne",
+  "speakerErrFailed": "Le modèle n'a pas pu analyser les enregistrements. Est-il entièrement téléchargé ?",
+  "speakerErrInconsistent": "Les phrases ne semblaient pas venir de la même personne, ou il y avait trop de bruit. Rien n'a été enregistré ; réessaie au calme.",
+  "speakerErrTooFew": "Il manque des enregistrements.",
+  "speakerErrTooShort": "Un enregistrement était trop court. Réessaie.",
+  "speakerIntro": "Wendelin peut reconnaître qui parle. Le résultat est transmis à l'assistant à titre d'information.",
+  "speakerModelSection": "Modèle",
+  "speakerNameLabel": "Nom",
+  "speakerNext": "Suivant",
+  "speakerNoMic": "Sans accès au microphone, personne ne peut être enregistré.",
+  "speakerNobody": "Personne n'est encore enregistré.",
+  "speakerPeople": "Personnes",
+  "speakerProcessing": "Analyse en cours …",
+  "speakerRecordCutOff": "Commencé trop tôt, relis la phrase.",
+  "speakerRecordNoSpeech": "Rien entendu, réessaie.",
+  "speakerRecordTooLong": "Trop long ou trop de bruit de fond, réessaie.",
+  "speakerRecordTooQuiet": "Trop bas, parle plus fort.",
+  "speakerResultClamped": "Le seuil a été limité à une valeur sûre.",
+  "speakerResultScores": "Régularité {mean}, phrase la plus faible {min}, seuil {threshold}.",
+  "@speakerResultScores": {
+    "placeholders": {
+      "mean": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      },
+      "threshold": {
+        "type": "String"
+      }
+    }
+  },
+  "speakerResultTitle": "Enregistré",
+  "speakerRetry": "Réessayer",
+  "speakerRowDetail": "Reconnaît qui parle (nom, modèle, personnes).",
+  "speakerRowTitle": "Reconnaissance du locuteur",
+  "speakerSayNow": "Lis cette phrase à voix haute :",
+  "speakerSentence1": "Ce matin, j'ai fait une promenade dans le parc.",
+  "speakerSentence2": "Rappelle-moi demain à neuf heures le rendez-vous chez le médecin.",
+  "speakerSentence3": "Les premières fleurs s'ouvrent dans le jardin et le soleil est chaud.",
+  "speakerSentence4": "Peux-tu me dire quel temps il fera ce week-end ?",
+  "speakerSentence5": "Ce soir, au dîner, il y a de la soupe avec du pain frais.",
+  "speakerSentenceOf": "Phrase {n} sur {total}",
+  "@speakerSentenceOf": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "speakerSwitch": "Reconnaissance du locuteur",
+  "speakerSwitchHint": "La voix n'est pas une authentification sûre : des voix proches ou imitées peuvent être confondues. Seules des caractéristiques vocales chiffrées sont conservées, jamais des enregistrements.",
+  "speakerSwitchLabel": "Reconnaissance du locuteur activée ou désactivée",
+  "speakerTitle": "Reconnaissance du locuteur",
   "spotifyAppNote": "L’application Spotify est nécessaire pour que Wendelin puisse lire sur ce téléphone : si elle ne tourne pas, Wendelin la démarre. Sur d’autres appareils (enceintes, ordinateur), Wendelin lit aussi sans elle.",
   "spotifyAppTitle": "Application Spotify",
   "spotifyClientIdLabel": "Identifiant client",

@@ -3464,6 +3464,159 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get speakerAdd => 'Enroll a person';
+
+  @override
+  String get speakerAddDetail =>
+      'Read five short sentences aloud; the recordings are not stored.';
+
+  @override
+  String get speakerAddNeedsModel => 'Download the model first.';
+
+  @override
+  String speakerDeleteBody(String name) {
+    return '$name is deleted with all stored voice features.';
+  }
+
+  @override
+  String get speakerDeleteConfirm => 'Delete';
+
+  @override
+  String speakerDeleteSemantic(String name) {
+    return 'Delete $name';
+  }
+
+  @override
+  String get speakerDeleteTitle => 'Delete person?';
+
+  @override
+  String get speakerDone => 'Done';
+
+  @override
+  String get speakerEnrollIntro =>
+      'Read each sentence aloud at normal volume. Only a voice feature is computed from each recording; the audio is discarded.';
+
+  @override
+  String get speakerEnrollTitle => 'Enroll a person';
+
+  @override
+  String get speakerErrFailed =>
+      'The model could not process the recordings. Is it fully downloaded?';
+
+  @override
+  String get speakerErrInconsistent =>
+      'The sentences did not sound like one person, or it was too noisy. Nothing was stored; please try again somewhere quiet.';
+
+  @override
+  String get speakerErrTooFew => 'Recordings are missing.';
+
+  @override
+  String get speakerErrTooShort =>
+      'A recording was too short. Please try again.';
+
+  @override
+  String get speakerIntro =>
+      'Wendelin can recognise who is speaking. The result is available to the assistant as information.';
+
+  @override
+  String get speakerModelSection => 'Model';
+
+  @override
+  String get speakerNameLabel => 'Name';
+
+  @override
+  String get speakerNext => 'Next';
+
+  @override
+  String get speakerNoMic =>
+      'Without microphone access no one can be enrolled.';
+
+  @override
+  String get speakerNobody => 'Nobody enrolled yet.';
+
+  @override
+  String get speakerPeople => 'People';
+
+  @override
+  String get speakerProcessing => 'Processing …';
+
+  @override
+  String get speakerRecordCutOff =>
+      'Started too early, please read the sentence again.';
+
+  @override
+  String get speakerRecordNoSpeech => 'Heard nothing, please try again.';
+
+  @override
+  String get speakerRecordTooLong =>
+      'Too long or too much background noise, please try again.';
+
+  @override
+  String get speakerRecordTooQuiet => 'Too quiet, please speak louder.';
+
+  @override
+  String get speakerResultClamped =>
+      'The threshold was limited to a safe value.';
+
+  @override
+  String speakerResultScores(String mean, String min, String threshold) {
+    return 'Consistency $mean, weakest sentence $min, threshold $threshold.';
+  }
+
+  @override
+  String get speakerResultTitle => 'Enrolled';
+
+  @override
+  String get speakerRetry => 'Try again';
+
+  @override
+  String get speakerRowDetail =>
+      'Recognises who is speaking (name, model, people).';
+
+  @override
+  String get speakerRowTitle => 'Speaker recognition';
+
+  @override
+  String get speakerSayNow => 'Read this sentence aloud now:';
+
+  @override
+  String get speakerSentence1 => 'This morning I took a walk through the park.';
+
+  @override
+  String get speakerSentence2 =>
+      'Please remind me tomorrow at nine o\'clock about the doctor\'s appointment.';
+
+  @override
+  String get speakerSentence3 =>
+      'The first flowers are blooming in the garden, and the sun is shining warmly.';
+
+  @override
+  String get speakerSentence4 =>
+      'Can you tell me what the weather will be like this weekend?';
+
+  @override
+  String get speakerSentence5 =>
+      'For dinner tonight there is soup with fresh bread.';
+
+  @override
+  String speakerSentenceOf(int n, int total) {
+    return 'Sentence $n of $total';
+  }
+
+  @override
+  String get speakerSwitch => 'Speaker recognition';
+
+  @override
+  String get speakerSwitchHint =>
+      'A voice is not a secure login: similar or imitated voices can be mistaken. Only encrypted voice features are stored, never recordings.';
+
+  @override
+  String get speakerSwitchLabel => 'Speaker recognition on or off';
+
+  @override
+  String get speakerTitle => 'Speaker recognition';
+
+  @override
   String get spotifyAppNote =>
       'The Spotify app is needed so Wendelin can play on this phone: if it is not running, Wendelin starts it. On other devices (speakers, computers) Wendelin plays without it.';
 

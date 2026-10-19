@@ -13,6 +13,7 @@ import 'provider_setup_screen.dart';
 import 'providers_screen.dart';
 import 'routing/routing_screen.dart';
 import 'settings_screen.dart';
+import 'speaker/speaker_screen.dart';
 import 'voice_metrics_screen.dart';
 import 'voice_screen.dart';
 import 'voice_voices_screen.dart';
@@ -37,4 +38,5 @@ Map<String, WidgetBuilder> generalRoutes() => {
   AppRoutes.voices: (_) => const VoiceVoicesScreen(),
   AppRoutes.voiceMetrics: (_) => const VoiceMetricsScreen(),
   AppRoutes.wakeWord: (_) => const WakeWordScreen(),
+  AppRoutes.speaker: (_) => const SpeakerScreen(),
 };

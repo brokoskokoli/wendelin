@@ -3506,6 +3506,159 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get speakerAdd => 'Enregistrer une personne';
+
+  @override
+  String get speakerAddDetail =>
+      'Lire cinq courtes phrases ; les enregistrements ne sont pas conservés.';
+
+  @override
+  String get speakerAddNeedsModel => 'Télécharge d\'abord le modèle.';
+
+  @override
+  String speakerDeleteBody(String name) {
+    return '$name est supprimé(e) avec toutes les caractéristiques vocales enregistrées.';
+  }
+
+  @override
+  String get speakerDeleteConfirm => 'Supprimer';
+
+  @override
+  String speakerDeleteSemantic(String name) {
+    return 'Supprimer $name';
+  }
+
+  @override
+  String get speakerDeleteTitle => 'Supprimer la personne ?';
+
+  @override
+  String get speakerDone => 'Terminé';
+
+  @override
+  String get speakerEnrollIntro =>
+      'Lis chaque phrase à voix normale. Seule une caractéristique vocale est calculée, l\'audio est supprimé.';
+
+  @override
+  String get speakerEnrollTitle => 'Enregistrer une personne';
+
+  @override
+  String get speakerErrFailed =>
+      'Le modèle n\'a pas pu analyser les enregistrements. Est-il entièrement téléchargé ?';
+
+  @override
+  String get speakerErrInconsistent =>
+      'Les phrases ne semblaient pas venir de la même personne, ou il y avait trop de bruit. Rien n\'a été enregistré ; réessaie au calme.';
+
+  @override
+  String get speakerErrTooFew => 'Il manque des enregistrements.';
+
+  @override
+  String get speakerErrTooShort =>
+      'Un enregistrement était trop court. Réessaie.';
+
+  @override
+  String get speakerIntro =>
+      'Wendelin peut reconnaître qui parle. Le résultat est transmis à l\'assistant à titre d\'information.';
+
+  @override
+  String get speakerModelSection => 'Modèle';
+
+  @override
+  String get speakerNameLabel => 'Nom';
+
+  @override
+  String get speakerNext => 'Suivant';
+
+  @override
+  String get speakerNoMic =>
+      'Sans accès au microphone, personne ne peut être enregistré.';
+
+  @override
+  String get speakerNobody => 'Personne n\'est encore enregistré.';
+
+  @override
+  String get speakerPeople => 'Personnes';
+
+  @override
+  String get speakerProcessing => 'Analyse en cours …';
+
+  @override
+  String get speakerRecordCutOff => 'Commencé trop tôt, relis la phrase.';
+
+  @override
+  String get speakerRecordNoSpeech => 'Rien entendu, réessaie.';
+
+  @override
+  String get speakerRecordTooLong =>
+      'Trop long ou trop de bruit de fond, réessaie.';
+
+  @override
+  String get speakerRecordTooQuiet => 'Trop bas, parle plus fort.';
+
+  @override
+  String get speakerResultClamped => 'Le seuil a été limité à une valeur sûre.';
+
+  @override
+  String speakerResultScores(String mean, String min, String threshold) {
+    return 'Régularité $mean, phrase la plus faible $min, seuil $threshold.';
+  }
+
+  @override
+  String get speakerResultTitle => 'Enregistré';
+
+  @override
+  String get speakerRetry => 'Réessayer';
+
+  @override
+  String get speakerRowDetail =>
+      'Reconnaît qui parle (nom, modèle, personnes).';
+
+  @override
+  String get speakerRowTitle => 'Reconnaissance du locuteur';
+
+  @override
+  String get speakerSayNow => 'Lis cette phrase à voix haute :';
+
+  @override
+  String get speakerSentence1 =>
+      'Ce matin, j\'ai fait une promenade dans le parc.';
+
+  @override
+  String get speakerSentence2 =>
+      'Rappelle-moi demain à neuf heures le rendez-vous chez le médecin.';
+
+  @override
+  String get speakerSentence3 =>
+      'Les premières fleurs s\'ouvrent dans le jardin et le soleil est chaud.';
+
+  @override
+  String get speakerSentence4 =>
+      'Peux-tu me dire quel temps il fera ce week-end ?';
+
+  @override
+  String get speakerSentence5 =>
+      'Ce soir, au dîner, il y a de la soupe avec du pain frais.';
+
+  @override
+  String speakerSentenceOf(int n, int total) {
+    return 'Phrase $n sur $total';
+  }
+
+  @override
+  String get speakerSwitch => 'Reconnaissance du locuteur';
+
+  @override
+  String get speakerSwitchHint =>
+      'La voix n\'est pas une authentification sûre : des voix proches ou imitées peuvent être confondues. Seules des caractéristiques vocales chiffrées sont conservées, jamais des enregistrements.';
+
+  @override
+  String get speakerSwitchLabel =>
+      'Reconnaissance du locuteur activée ou désactivée';
+
+  @override
+  String get speakerTitle => 'Reconnaissance du locuteur';
+
+  @override
   String get spotifyAppNote =>
       'L’application Spotify est nécessaire pour que Wendelin puisse lire sur ce téléphone : si elle ne tourne pas, Wendelin la démarre. Sur d’autres appareils (enceintes, ordinateur), Wendelin lit aussi sans elle.';
 

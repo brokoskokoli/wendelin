@@ -610,6 +610,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       ),
       textToSpeech: components.textToSpeech,
       bargeInDetector: components.bargeInDetector,
+      speaker: components.speaker,
       diagnostics: voiceLog,
       config: components.config,
       clock: ref.read(clockProvider),

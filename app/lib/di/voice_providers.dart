@@ -22,6 +22,7 @@ import 'app_settings.dart';
 import 'core_providers.dart';
 import 'hint_term_providers.dart';
 import 'preferences.dart';
+import 'speaker_providers.dart';
 import 'vocabulary_provider.dart';
 import 'voice_settings_providers.dart';
 
@@ -372,6 +373,7 @@ final class VoiceComponents {
     required this.textToSpeech,
     required this.config,
     this.bargeInDetector,
+    this.speaker,
     this.warmUp,
     this.release,
   });
@@ -394,6 +396,9 @@ final class VoiceComponents {
   /// Detector for barge-in (`null`: none, see [bargeInDetectorProvider]).
   final BargeInDetector? bargeInDetector;
 
+  /// Speaker recognition (`null`: switched off, WP92a).
+  final SpeakerRecognizer? speaker;
+
   /// Loads the models again after [release] (`null`: always loaded).
   final Future<void> Function()? warmUp;
 
@@ -411,6 +416,7 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
   final selector = ref.watch(ttsSelectorProvider);
   final whisper = await ref.watch(engineWhisperProvider.future);
   final sherpa = ref.watch(sherpaSynthesizerProvider);
+  final speaker = ref.watch(speakerRecognizerProvider);
   return VoiceComponents(
     audio: ref.watch(audioInputProvider),
     vad: await ref.watch(voiceActivityDetectorProvider.future),
@@ -423,10 +429,14 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
     textToSpeech: selector.current,
     config: await ref.watch(voicePipelineConfigProvider.future),
     bargeInDetector: ref.watch(bargeInDetectorProvider),
+    speaker: speaker,
     warmUp: whisper.warm,
     release: () async {
       await whisper.release(reason: 'idle');
       await sherpa.dispose();
+      if (speaker != null) {
+        await ref.read(speakerIdentifierProvider).release();
+      }
     },
   );
 });

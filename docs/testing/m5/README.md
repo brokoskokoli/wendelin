@@ -12,3 +12,4 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP88 Aufgaben (Listen mit Fälligkeit)](wp88.md)
 - [WP90 Medien (`media`)](wp90.md)
 - [WP91 Home Assistant](wp91.md)
+- [WP92a Sprechererkennung](wp92a.md)
