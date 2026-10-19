@@ -85,9 +85,10 @@ final class LoopbackReceiver implements RedirectReceiver {
   @override
   Future<void> close() async {
     if (!_done.isCompleted) {
+      // Nobody may be waiting yet: do not report an unhandled error (marked
+      // before completing, as in the fake receiver).
+      _done.future.ignore();
       _done.completeError(StateError('Anmeldung abgebrochen'));
-      // Nobody may be waiting yet: do not report an unhandled error.
-      unawaited(_done.future.then<void>((_) {}, onError: (Object _) {}));
     }
     await _server.close(force: true);
   }
