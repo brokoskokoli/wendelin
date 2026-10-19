@@ -28,6 +28,11 @@ void registryLintChecks(SelfCheck t) {
         .any((p) => p.contains('a_spec.dart ohne Eintrag')),
     'Import ohne Eintrag',
   );
+  t.isTrue(
+    lintRegistry(_reg.replaceFirst('  aSpec,\n', '  foo(),\n'))
+        .contains('Registry-Zeile nicht "  xSpec,": "  foo(),"'),
+    'falsch geformte Registry-Zeile wird gemeldet',
+  );
   final unsorted = _reg.replaceFirst(
     "import 'a_spec.dart';\nimport 'b_spec.dart';",
     "import 'b_spec.dart';\nimport 'a_spec.dart';",

@@ -63,6 +63,14 @@ void docCheckChecks(SelfCheck t) {
       'Link mit Anker auf vorhandene Datei ist gültig',
     );
 
+    // Mutation: toter Link in einer Gerätetest-Datei (docs/testing/m5/).
+    put('docs/testing/m5/wp1.md', '# WP1 Eins\n\n[x](gone.md)\n');
+    t.eq(errors(), [
+      'docs/testing/m5/wp1.md:3: Link `gone.md` ist tot',
+    ], 'toter Link in docs/testing/m5 wird gemeldet');
+    put('docs/testing/m5/wp1.md', '# WP1 Eins\n');
+    t.eq(errors(), <String>[], 'm5-Datei nach Korrektur ohne Befund');
+
     // Mutation: veraltete erzeugte Datei.
     File('$root/docs/architecture/generated/packages.md')
         .writeAsStringSync('x');
