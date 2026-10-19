@@ -89,6 +89,60 @@ class WakePlatform {
 
   final MethodChannel _channel;
 
+  /// WP93: the service asks whether the chat of the main app takes a wake
+  /// word hit (`true`) or the overlay opens (`false`). Set by the main
+  /// screen while it lives; without it every hit is refused.
+  Future<bool> Function()? get onWakeHit => _onWakeHit;
+  Future<bool> Function()? _onWakeHit;
+  set onWakeHit(Future<bool> Function()? handler) {
+    _onWakeHit = handler;
+    try {
+      _channel.setMethodCallHandler(
+        handler == null
+            ? null
+            : (call) async => call.method == 'wakeHit' ? await handler() : null,
+      );
+    } on Object {
+      // No binding (plain unit tests).
+    }
+  }
+
+  /// Tells Kotlin whether the chat is visible (resumed, top route, nothing
+  /// above it), the base of its decision per hit.
+  Future<void> setChatVisible({required bool visible}) async {
+    try {
+      await _channel.invokeMethod<void>('chatVisible', {'visible': visible});
+    } on MissingPluginException {
+      // Not on Android.
+    } on PlatformException {
+      // Reported through the log of the service.
+    }
+  }
+
+  /// The chat turn that a wake word hit started is over: the service
+  /// listens again (counterpart of the overlay closing).
+  Future<void> chatDone() async {
+    try {
+      await _channel.invokeMethod<void>('chatDone');
+    } on MissingPluginException {
+      // Not on Android.
+    } on PlatformException {
+      // Reported through the log of the service.
+    }
+  }
+
+  /// Debug builds: lets the running service report a hit (device tests of
+  /// the chat route). `false` in release builds or without the service.
+  Future<bool> debugHit() async {
+    try {
+      return await _channel.invokeMethod<bool>('debugHit') ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   /// Sets the wake word settings; Kotlin starts or stops the service.
   Future<void> configure({
     required bool enabled,

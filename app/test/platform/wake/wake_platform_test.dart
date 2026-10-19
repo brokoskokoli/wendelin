@@ -67,4 +67,41 @@ void main() {
     expect(WakeCondition.parse('x'), WakeCondition.charging);
     expect(WakeCondition.parse(null), WakeCondition.charging);
   });
+
+  test('WP93: Sichtbarkeit, Ende des Chat-Zuges und Debug-Treffer', () async {
+    final calls = <MethodCall>[];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return call.method == 'debugHit' ? true : null;
+    });
+    final p = WakePlatform();
+    await p.setChatVisible(visible: true);
+    await p.chatDone();
+    expect(await p.debugHit(), isTrue);
+    expect(calls.map((c) => c.method), ['chatVisible', 'chatDone', 'debugHit']);
+    expect(calls.first.arguments, {'visible': true});
+  });
+
+  test(
+    'WP93: wakeHit von Kotlin fragt den Chat, ohne Chat keine Antwort',
+    () async {
+      final p = WakePlatform();
+      p.onWakeHit = () async => true;
+      Future<Object?> ask() async {
+        Object? out;
+        await messenger.handlePlatformMessage(
+          wakeChannelName,
+          const StandardMethodCodec().encodeMethodCall(
+            const MethodCall('wakeHit'),
+          ),
+          (data) => out = const StandardMethodCodec().decodeEnvelope(data!),
+        );
+        return out;
+      }
+
+      expect(await ask(), isTrue);
+      p.onWakeHit = null;
+      expect(p.onWakeHit, isNull);
+    },
+  );
 }

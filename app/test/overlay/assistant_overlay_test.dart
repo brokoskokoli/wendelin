@@ -78,9 +78,17 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   /// Moment ([hasWakeHandoff] .. take) for tests: how often it was taken.
   int wakeTakes = 0;
 
+  /// Called at every take (tests record the order of messages).
+  void Function()? onTake;
+
+  /// Holds the take back (tests).
+  Completer<void>? takeGate;
+
   @override
   Future<WakeHandoffAudio?> takeWakeHandoff() async {
     wakeTakes++;
+    onTake?.call();
+    await takeGate?.future;
     final audio = wakeHandoff;
     wakeHandoff = null;
     return audio == null
