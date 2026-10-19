@@ -63,6 +63,20 @@
 # sie danach selbst auf (dasselbe Gerät). Nennt man sie ausdrücklich als
 # Argument, laufen sie ebenfalls über ihr Skript.
 #
+# Standort (WP104, integration_test/location_e2e_test.dart): nur wenn die Datei
+# läuft, erteilt das Skript ACCESS_FINE/COARSE_LOCATION (`pm grant`), setzt per
+# `adb emu geo fix` die Position (Hamburg, 10.0 / 53.55) und entzieht die
+# Berechtigung danach wieder.
+#
+# Home Assistant (WP104, integration_test/ha_e2e_test.dart): das Skript startet
+# den Fake-HA app/tool/ha_test_server.dart (nur 127.0.0.1; Emulator: 10.0.2.2),
+# übergibt HA_URL/HA_TOKEN und prüft danach das Server-Log (keine unerwarteten
+# Aufrufe).
+#
+# Sprache der UI (WP104): E2E_LANG=de|en|fr|system (Standard de, unabhängig von
+# der Emulator-Sprache) wird als --dart-define E2E_LANG an die Tests gegeben;
+# die Tests lesen feste Texte aus l10n. Beide Sprachen: E2E_LANG=en wiederholen.
+#
 # Live (integration_test/live_e2e_test.dart, kostet ein paar Cent):
 #   WENDELIN_LIVE=1 mit ANTHROPIC_API_KEY in der Umgebung. Der Key geht per
 #   `adb shell run-as` über stdin in die privaten App-Daten (nicht auf die
@@ -311,8 +325,17 @@ if [ -n "$LIVE" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
   echo "WENDELIN_LIVE gesetzt, aber ANTHROPIC_API_KEY fehlt" >&2
   exit 1
 fi
+# WP104: Standort-Test? (Sammellauf ohne Argumente schließt ihn ein.)
+NEED_LOC=0
+if [ $# -eq 0 ]; then
+  NEED_LOC=1
+else
+  for a in "$@"; do case "$a" in *location_e2e_test.dart) NEED_LOC=1 ;; esac; done
+fi
+LOC_LON=10.0
+LOC_LAT=53.55
 helper() {
-  local granted="" pushed="" voiced=""
+  local granted="" pushed="" voiced="" located=""
   while true; do
     if [ -z "$granted" ] && installed; then
       if adb shell pm grant "$PKG" android.permission.READ_CALENDAR 2>/dev/null &&
@@ -326,9 +349,17 @@ helper() {
         pushed=1
       fi
     fi
+    if [ "$NEED_LOC" = 1 ] && [ -z "$located" ] && installed; then
+      if adb shell pm grant "$PKG" android.permission.ACCESS_FINE_LOCATION 2>/dev/null &&
+        adb shell pm grant "$PKG" android.permission.ACCESS_COARSE_LOCATION 2>/dev/null &&
+        adb emu geo fix "$LOC_LON" "$LOC_LAT" >/dev/null 2>&1; then
+        located=1
+      fi
+    fi
     if [ -n "$granted" ] && ! installed; then
       granted="" # neu installiert: erneut erteilen
       voiced=""
+      located=""
     fi
     if [ -n "$MODELS" ] && [ -n "$granted" ] && [ -z "$voiced" ]; then
       adb shell pm grant "$PKG" android.permission.RECORD_AUDIO 2>/dev/null &&
@@ -358,6 +389,10 @@ cleanup() {
   fi
   if [ -n "$LIVE" ]; then
     adb shell run-as "$PKG" rm -f files/live_anthropic.key 2>/dev/null || true
+  fi
+  if [ "$NEED_LOC" = 1 ] && installed; then
+    adb shell pm revoke "$PKG" android.permission.ACCESS_FINE_LOCATION 2>/dev/null || true
+    adb shell pm revoke "$PKG" android.permission.ACCESS_COARSE_LOCATION 2>/dev/null || true
   fi
   # Testdateien der Dateiauswahl und den uiautomator-Abzug entfernen.
   adb shell 'rm -f /sdcard/Download/wendelin-e2e-*.md /sdcard/wendelin_ui.xml' 2>/dev/null || true
@@ -402,6 +437,8 @@ if [ -n "$MODELS" ]; then DEFINES+=(--dart-define=WENDELIN_VOICE_E2E=true); fi
 if [ -n "${WENDELIN_WP103_MODELS:-}" ]; then
   DEFINES+=(--dart-define=WENDELIN_WP103_MODELS="$WENDELIN_WP103_MODELS")
 fi
+# WP104: Sprache der UI in den Tests (Standard de, nicht die Emulator-Sprache).
+DEFINES+=(--dart-define=E2E_LANG="${E2E_LANG:-de}")
 # WP54: der Wake-Word-Dienst bleibt nach dem Test an (Neustart-Prüfung).
 if [ -n "${WENDELIN_KEEP:-}" ]; then DEFINES+=(--dart-define=WENDELIN_KEEP=true); fi
 # Wiederholungen der Sprach-Robustheit (WP30, voice_robustness_e2e_test.dart).
@@ -416,9 +453,12 @@ fi
 # über Android-Instrumentierung (androidTest/…/FlutterE2eTest.kt).
 PLAIN=()
 INSTRUMENTED=()
+HA=()
 for f in "$@"; do
   if [ -f "$f" ] && grep -q "pragma('vm:entry-point')" "$f"; then
     INSTRUMENTED+=("$f")
+  elif [ "$(basename "$f")" = ha_e2e_test.dart ]; then
+    HA+=("$f") # braucht den Fake-HA (WP104), eigener Lauf
   else
     PLAIN+=("$f")
   fi
@@ -445,9 +485,48 @@ run_instrumented() { # <test.dart>
   adb uninstall "$PKG.test" >/dev/null 2>&1 || true
   echo "$out" | grep -q '^OK (' || return 1
 }
+# WP91/WP104: Fake-Home-Assistant auf dem Rechner (nur 127.0.0.1, der Emulator
+# erreicht ihn als 10.0.2.2), dann der Test mit HA_URL/HA_TOKEN; danach darf
+# das Server-Log nichts Unerwartetes enthalten.
+run_ha() { # <test.dart>
+  local token work server port st=0
+  token="e2e-$(date +%s)"
+  work="$(mktemp -d)"
+  mkfifo "$work/in"
+  (dart run tool/ha_test_server.dart --token "$token" <"$work/in" >"$work/out" 2>"$work/err") &
+  server=$!
+  exec 3>"$work/in"
+  for _ in $(seq 1 120); do grep -q 'port=[0-9]' "$work/out" 2>/dev/null && break; sleep 0.5; done
+  port="$(grep -oE '(^|[^_])port=[0-9]+' "$work/out" | head -1 | cut -d= -f2)"
+  if [ -z "$port" ]; then
+    echo "Fake-HA startet nicht: $(cat "$work/err")" >&2
+    st=1
+  else
+    echo "Fake-HA auf 127.0.0.1:$port (Emulator: 10.0.2.2:$port)"
+    flutter test "$1" ${DEFINES[@]+"${DEFINES[@]}"} -d "$DEVICE" \
+      --dart-define=HA_URL="http://10.0.2.2:$port" \
+      --dart-define=HA_TOKEN="$token" 3>&- || st=$?
+  fi
+  exec 3>&- || true
+  for _ in $(seq 1 10); do kill -0 "$server" 2>/dev/null || break; sleep 0.5; done
+  # shellcheck disable=SC2046
+  kill $(pgrep -P "$server" 2>/dev/null) 2>/dev/null || true
+  wait "$server" 2>/dev/null || true
+  echo "--- Fake-HA-Anfragen (Zusammenfassung)"
+  sort "$work/err" | uniq -c
+  if grep -q 'unexpected' "$work/err"; then
+    echo "Fake-HA sah unerwartete Aufrufe" >&2
+    st=1
+  fi
+  rm -rf "$work"
+  return $st
+}
 if [ ${#PLAIN[@]} -gt 0 ]; then
   flutter test "${PLAIN[@]}" ${DEFINES[@]+"${DEFINES[@]}"} -d "$DEVICE" || status=$?
 fi
+for f in ${HA[@]+"${HA[@]}"}; do
+  run_ha "$f" || status=1
+done
 for f in ${INSTRUMENTED[@]+"${INSTRUMENTED[@]}"}; do
   run_instrumented "$f" || status=1
 done
