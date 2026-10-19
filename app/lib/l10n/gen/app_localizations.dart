@@ -6301,13 +6301,13 @@ abstract class AppLocalizations {
   /// No description provided for @speakerDeleteBody.
   ///
   /// In de, this message translates to:
-  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen gelöscht.'**
+  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen und ihren Unterhaltungen gelöscht.'**
   String speakerDeleteBody(String name);
 
   /// No description provided for @speakerDeleteBodyMemory.
   ///
   /// In de, this message translates to:
-  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen und {count} Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.'**
+  /// **'{name} wird mit allen gespeicherten Stimmmerkmalen, ihren Unterhaltungen und {count} Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.'**
   String speakerDeleteBodyMemory(String name, int count);
 
   /// No description provided for @speakerDeleteConfirm.

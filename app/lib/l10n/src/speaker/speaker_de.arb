@@ -2,7 +2,7 @@
   "speakerAdd": "Person einlernen",
   "speakerAddDetail": "Fünf kurze Sätze vorlesen, die Aufnahmen werden nicht gespeichert.",
   "speakerAddNeedsModel": "Lade zuerst das Modell.",
-  "speakerDeleteBody": "{name} wird mit allen gespeicherten Stimmmerkmalen gelöscht.",
+  "speakerDeleteBody": "{name} wird mit allen gespeicherten Stimmmerkmalen und ihren Unterhaltungen gelöscht.",
   "@speakerDeleteBody": {
     "placeholders": {
       "name": {
@@ -10,7 +10,7 @@
       }
     }
   },
-  "speakerDeleteBodyMemory": "{name} wird mit allen gespeicherten Stimmmerkmalen und {count} Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.",
+  "speakerDeleteBodyMemory": "{name} wird mit allen gespeicherten Stimmmerkmalen, ihren Unterhaltungen und {count} Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.",
   "@speakerDeleteBodyMemory": {
     "placeholders": {
       "name": {

@@ -3697,12 +3697,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String speakerDeleteBody(String name) {
-    return '$name est supprimé(e) avec toutes les caractéristiques vocales enregistrées.';
+    return '$name est supprimé(e) avec toutes les caractéristiques vocales enregistrées et ses conversations.';
   }
 
   @override
   String speakerDeleteBodyMemory(String name, int count) {
-    return '$name est supprimé(e) avec toutes les caractéristiques vocales et $count entrées de sa mémoire propre. La mémoire par défaut reste inchangée.';
+    return '$name est supprimé(e) avec toutes les caractéristiques vocales, ses conversations et $count entrées de sa mémoire propre. La mémoire par défaut reste inchangée.';
   }
 
   @override

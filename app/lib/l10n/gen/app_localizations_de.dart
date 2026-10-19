@@ -3668,12 +3668,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String speakerDeleteBody(String name) {
-    return '$name wird mit allen gespeicherten Stimmmerkmalen gelöscht.';
+    return '$name wird mit allen gespeicherten Stimmmerkmalen und ihren Unterhaltungen gelöscht.';
   }
 
   @override
   String speakerDeleteBodyMemory(String name, int count) {
-    return '$name wird mit allen gespeicherten Stimmmerkmalen und $count Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.';
+    return '$name wird mit allen gespeicherten Stimmmerkmalen, ihren Unterhaltungen und $count Einträgen im eigenen Gedächtnis gelöscht. Das Standard-Gedächtnis bleibt unverändert.';
   }
 
   @override

@@ -6,6 +6,7 @@ import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/session_manager.dart';
 import 'package:wendelin/di/speaker_providers.dart';
 import 'package:wendelin/voice/speaker/person_storage.dart';
 import 'package:wendelin/voice/speaker/speaker_storage.dart';
@@ -29,6 +30,77 @@ SpeakerProfile testProfile(String id, String name) => SpeakerProfile(
   threshold: 0.5,
   createdAt: DateTime.utc(2026, 10, 19),
 );
+
+/// A conversation store whose person lookup fails (damaged row, locked DB).
+class _BrokenPersonRepo implements ConversationRepository {
+  _BrokenPersonRepo(this.i);
+  final ConversationRepository i;
+
+  @override
+  Future<String?> sessionPerson(String sessionId) async =>
+      throw StateError('unreadable');
+
+  @override
+  Future<Session> currentOrNew(
+    DateTime now, {
+    Duration inactivity = ConversationRepository.defaultInactivity,
+    SessionOrigin origin = SessionOrigin.app,
+  }) => i.currentOrNew(now, inactivity: inactivity, origin: origin);
+
+  @override
+  Future<Session> startNew(
+    DateTime now, {
+    String? title,
+    SessionOrigin origin = SessionOrigin.app,
+  }) => i.startNew(now, title: title, origin: origin);
+
+  @override
+  Future<Session?> session(String id) => i.session(id);
+
+  @override
+  Future<List<Session>> sessions({int? limit, SessionOrigin? origin}) =>
+      i.sessions(limit: limit, origin: origin);
+
+  @override
+  Future<void> setTitle(String id, String? title) => i.setTitle(id, title);
+
+  @override
+  Future<StoredMessage> append(
+    String sessionId,
+    Message message, {
+    DateTime? at,
+    String? profileId,
+    String? modelId,
+  }) => i.append(
+    sessionId,
+    message,
+    at: at,
+    profileId: profileId,
+    modelId: modelId,
+  );
+
+  @override
+  Future<List<StoredMessage>> messages(String sessionId) =>
+      i.messages(sessionId);
+
+  @override
+  Future<List<StoredMessage>> lastTurns(String sessionId, int turns) =>
+      i.lastTurns(sessionId, turns);
+
+  @override
+  Future<void> deleteSession(String id) => i.deleteSession(id);
+
+  @override
+  Future<void> setSessionPerson(String sessionId, String? person) =>
+      i.setSessionPerson(sessionId, person);
+
+  @override
+  Future<int> deletePersonSessions({String? person}) =>
+      i.deletePersonSessions(person: person);
+
+  @override
+  Future<int> purgeOlderThan(Duration maxAge) => i.purgeOlderThan(maxAge);
+}
 
 const _all = 'Was mag ich? Tee Koriander Kaffee';
 
@@ -264,6 +336,35 @@ void main() {
       expect(main_.requests.last.systemPrompt, contains('Standard mag Tee'));
     },
   );
+
+  test('Neustart, Person unlesbar: fail-closed, neue Unterhaltung ohne den '
+      'Verlauf von A', () async {
+    await setUp0();
+    await ask('Anna-Geheimnis', speaker: 'pa');
+    final annaSession = sessionId();
+    c = ProviderContainer(
+      overrides: [
+        ...env.overrides,
+        sessionManagerProvider.overrideWith(
+          (ref) => SessionManager(
+            conversations: _BrokenPersonRepo(env.storage.conversations),
+            clock: FixedClock(testNow),
+            onSessionEnd: (_) {},
+          ),
+        ),
+      ],
+      retry: (_, _) => null,
+    );
+    addTearDown(c.dispose);
+    await c.read(toolRegistryProvider).refresh();
+    await ask(_all);
+    expect(sessionId(), isNot(annaSession));
+    expect(
+      main_.requests.last.messages.map((m) => m.text).join(' '),
+      isNot(contains('Anna-Geheimnis')),
+    );
+    expect(main_.requests.last.systemPrompt, contains('Standard mag Tee'));
+  });
 
   test('memory__save und Undo wirken nur im Namespace der Person', () async {
     await setUp0(

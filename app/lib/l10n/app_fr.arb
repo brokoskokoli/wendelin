@@ -1085,7 +1085,7 @@
   "speakerAdd": "Enregistrer une personne",
   "speakerAddDetail": "Lire cinq courtes phrases ; les enregistrements ne sont pas conservés.",
   "speakerAddNeedsModel": "Télécharge d'abord le modèle.",
-  "speakerDeleteBody": "{name} est supprimé(e) avec toutes les caractéristiques vocales enregistrées.",
+  "speakerDeleteBody": "{name} est supprimé(e) avec toutes les caractéristiques vocales enregistrées et ses conversations.",
   "@speakerDeleteBody": {
     "placeholders": {
       "name": {
@@ -1093,7 +1093,7 @@
       }
     }
   },
-  "speakerDeleteBodyMemory": "{name} est supprimé(e) avec toutes les caractéristiques vocales et {count} entrées de sa mémoire propre. La mémoire par défaut reste inchangée.",
+  "speakerDeleteBodyMemory": "{name} est supprimé(e) avec toutes les caractéristiques vocales, ses conversations et {count} entrées de sa mémoire propre. La mémoire par défaut reste inchangée.",
   "@speakerDeleteBodyMemory": {
     "placeholders": {
       "name": {
