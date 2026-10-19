@@ -79,6 +79,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
           'obsidian' => context.l10n.integrationDetailVaultDaily,
           'bring' => context.l10n.integrationDetailBringAccount,
           'todoist' => context.l10n.integrationDetailTodoistAccount,
+          'gtasks' => context.l10n.integrationDetailGoogleTasksAccount,
           'ha' => context.l10n.integrationDetailIntegrationDetailHaSetup,
           'spotify' =>
             context.l10n.integrationDetailIntegrationDetailSpotifyAccount,

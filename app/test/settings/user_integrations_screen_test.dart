@@ -50,11 +50,13 @@ void main() {
     tester,
   ) async {
     await pumpIntegrations(tester, TestEnv());
+    await tester.scrollUntilVisible(find.text('+ MCP-Server'), 200);
     await tester.tap(find.text('+ MCP-Server'));
     await settle(tester);
     expect(find.byType(McpServersScreen), findsOneWidget);
     await tester.tap(find.byTooltip('Zurück'));
     await settle(tester);
+    await tester.scrollUntilVisible(find.text('+ HTTP-Tool'), 200);
     await tester.tap(find.text('+ HTTP-Tool'));
     await settle(tester);
     expect(find.byType(HttpToolEditorScreen), findsOneWidget);
@@ -132,6 +134,6 @@ void main() {
   testWidgets('ohne eigene Integrationen kein Abschnitt', (tester) async {
     await pumpIntegrations(tester, TestEnv());
     expect(find.text('Eigene Integrationen'), findsNothing);
-    expect(find.byType(IntegrationTile), findsNWidgets(17));
+    expect(find.byType(IntegrationTile), findsNWidgets(18));
   });
 }

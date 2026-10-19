@@ -11,4 +11,4 @@ Aufgaben in Todoist über die **API v1** (`https://api.todoist.com/api/v1`; die 
 | Texte | `app/lib/l10n/src/todoist/` |
 | Vertrauen | `app/test/trust/todoist.json` (nur `todoist__add` vertrauenswürdig, wie `tasks__add`) |
 
-Gerätetests: `docs/testing/m5/wp89.md`. Google Tasks (WP89b) bekommt einen eigenen Ordner unter `packages/wendelin_integrations/lib/src/` und eine eigene Datei hier.
+Gerätetests: `docs/testing/m5/wp89.md`. Google Tasks (WP89b): `gtasks.md`.

@@ -35,6 +35,7 @@ export 'testing/fake_bring_api.dart';
 export 'testing/fake_calendar_port.dart';
 export 'testing/fake_clipboard_port.dart';
 export 'testing/fake_failures.dart';
+export 'testing/fake_google_tasks.dart';
 export 'testing/fake_ha_api.dart';
 export 'testing/fake_ha_secrets.dart';
 export 'testing/fake_http_tool_secrets.dart';

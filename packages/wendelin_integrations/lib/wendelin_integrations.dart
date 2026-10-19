@@ -20,6 +20,7 @@ export 'calendar.dart';
 export 'clipboard.dart';
 export 'common.dart';
 export 'flashlight.dart';
+export 'google_tasks.dart';
 export 'home_assistant.dart';
 export 'http_tools.dart';
 export 'lists.dart';

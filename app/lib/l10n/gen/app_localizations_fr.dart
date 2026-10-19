@@ -3553,6 +3553,87 @@ class AppLocalizationsFr extends AppLocalizations {
   String get spotifyTitle => 'Spotify';
 
   @override
+  String get googleTasksApiError =>
+      'Erreur – Google injoignable ou connexion refusée';
+
+  @override
+  String get googleTasksCancel => 'Annuler';
+
+  @override
+  String get googleTasksChecking => 'Vérification …';
+
+  @override
+  String get googleTasksClientId => 'ID client';
+
+  @override
+  String get googleTasksClientSecret => 'Secret client';
+
+  @override
+  String get googleTasksFine => 'OK';
+
+  @override
+  String get googleTasksGuideNote =>
+      'En mode test, la connexion expire après 7 jours ; reconnectez-vous alors ici. Google signale une « application non validée » (c’est votre propre projet) : choisissez « Continuer » et autorisez l’accès aux tâches.';
+
+  @override
+  String get googleTasksGuideStep1 =>
+      '1. Dans console.cloud.google.com, créez un projet (ou choisissez le vôtre).';
+
+  @override
+  String get googleTasksGuideStep2 =>
+      '2. Sous « API et services → Bibliothèque », activez l’« API Google Tasks ».';
+
+  @override
+  String get googleTasksGuideStep3 =>
+      '3. Sous « Google Auth Platform » (anciennement « écran de consentement OAuth »), gardez le public « Externe » en mode test et ajoutez votre compte Google comme utilisateur test.';
+
+  @override
+  String get googleTasksGuideStep4 =>
+      '4. Sous « Clients » (anciennement « Identifiants »), créez un client OAuth de type « Application de bureau ». Copiez l’ID client et le secret client et saisissez-les ci-dessous.';
+
+  @override
+  String get googleTasksGuideTitle => 'Configurer un projet Google Cloud';
+
+  @override
+  String get googleTasksIntro =>
+      'Tâches Google avec votre propre projet Cloud, sans services Google Play. La connexion se fait dans le navigateur ; ID client, secret client et connexion restent dans le stockage sécurisé de l’appareil et ne sont jamais affichés ni journalisés. Les listes de tâches servent de listes ; Google ne connaît qu’une date d’échéance, ni heure ni priorité.';
+
+  @override
+  String get googleTasksNeedClient =>
+      'Veuillez saisir l’ID client et le secret client.';
+
+  @override
+  String get googleTasksReachable => 'Google Tasks est joignable.';
+
+  @override
+  String get googleTasksSignIn => 'Se connecter à Google';
+
+  @override
+  String get googleTasksSignInWaiting => 'En attente de Google …';
+
+  @override
+  String get googleTasksSignOutBody =>
+      'La connexion est révoquée chez Google (si joignable) ; ID client, secret client et jeton sont supprimés de l’appareil.';
+
+  @override
+  String get googleTasksSignOutTitle => 'Déconnecter Google Tasks ?';
+
+  @override
+  String get googleTasksStatusAvailable => 'Connecté, intégration désactivée';
+
+  @override
+  String get googleTasksStatusSetup => 'Connexion manquante';
+
+  @override
+  String get googleTasksStatusUnavailable => 'Indisponible';
+
+  @override
+  String get googleTasksStatusUnknown => 'Inconnu';
+
+  @override
+  String get integrationDetailGoogleTasksAccount => 'Compte Google';
+
+  @override
   String get integrationDetailTodoistAccount => 'Compte Todoist';
 
   @override

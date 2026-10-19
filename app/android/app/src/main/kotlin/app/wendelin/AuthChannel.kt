@@ -49,6 +49,7 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
                 it.resolveActivity(activity.packageManager) != null
             })
             "authorize" -> authorize(call, result)
+            "open" -> openOnly(call, result)
             else -> result.notImplemented()
         }
     }
@@ -74,6 +75,19 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
         state = expectedState
         left = false
         waiting = this
+    }
+
+    /**
+     * Opens an https page and answers at once (the redirect comes on a local server in Dart,
+     * Google Tasks login). `no_browser` if nothing can show it.
+     */
+    private fun openOnly(call: MethodCall, result: MethodChannel.Result) {
+        val url = call.argument<String>("url")?.let(Uri::parse)
+        if (url == null || url.scheme != "https") {
+            result.error("bad_args", "https-Adresse fehlt", null)
+            return
+        }
+        if (open(url)) result.success(true) else result.error("no_browser", "Kein Browser installiert", null)
     }
 
     /** Custom Tab if a browser supports it, otherwise any browser. */

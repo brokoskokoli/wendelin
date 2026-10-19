@@ -133,6 +133,15 @@ final class TestEnv {
   /// Todoist account (no request ever goes to the real API in tests).
   final todoist = FakeTodoistApi();
 
+  /// Google Tasks account (no request ever goes to the real API in tests).
+  final googleTasks = FakeGoogleTasksApi();
+
+  /// Browser and local receiver of the Google login (no socket, no browser).
+  final googleBrowser = FakeGoogleBrowser();
+
+  /// Redirect receiver the Google login gets.
+  final googleReceiver = FakeRedirectReceiver();
+
   /// Home Assistant (no request ever goes to a real instance in tests).
   final ha = FakeHaApi();
 

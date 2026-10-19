@@ -6082,6 +6082,150 @@ abstract class AppLocalizations {
   /// **'Spotify'**
   String get spotifyTitle;
 
+  /// No description provided for @googleTasksApiError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler – Google nicht erreichbar oder Anmeldung abgelehnt'**
+  String get googleTasksApiError;
+
+  /// No description provided for @googleTasksCancel.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbrechen'**
+  String get googleTasksCancel;
+
+  /// No description provided for @googleTasksChecking.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfe …'**
+  String get googleTasksChecking;
+
+  /// No description provided for @googleTasksClientId.
+  ///
+  /// In de, this message translates to:
+  /// **'Client-ID'**
+  String get googleTasksClientId;
+
+  /// No description provided for @googleTasksClientSecret.
+  ///
+  /// In de, this message translates to:
+  /// **'Client-Secret'**
+  String get googleTasksClientSecret;
+
+  /// No description provided for @googleTasksFine.
+  ///
+  /// In de, this message translates to:
+  /// **'in Ordnung'**
+  String get googleTasksFine;
+
+  /// No description provided for @googleTasksGuideNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Im Testmodus läuft die Anmeldung nach 7 Tagen ab; dann hier erneut anmelden. Google warnt bei der Anmeldung vor einer „nicht verifizierten App“ (es ist dein eigenes Projekt): „Weiter“ wählen und „Aufgaben ansehen und verwalten“ erlauben.'**
+  String get googleTasksGuideNote;
+
+  /// No description provided for @googleTasksGuideStep1.
+  ///
+  /// In de, this message translates to:
+  /// **'1. In console.cloud.google.com ein Projekt anlegen (oder ein eigenes wählen).'**
+  String get googleTasksGuideStep1;
+
+  /// No description provided for @googleTasksGuideStep2.
+  ///
+  /// In de, this message translates to:
+  /// **'2. Unter „APIs & Dienste → Bibliothek“ die „Google Tasks API“ aktivieren.'**
+  String get googleTasksGuideStep2;
+
+  /// No description provided for @googleTasksGuideStep3.
+  ///
+  /// In de, this message translates to:
+  /// **'3. Unter „Google Auth Platform“ (früher „OAuth-Zustimmungsbildschirm“) die Zielgruppe „Extern“ im Testmodus lassen und das eigene Google-Konto als Testnutzer eintragen.'**
+  String get googleTasksGuideStep3;
+
+  /// No description provided for @googleTasksGuideStep4.
+  ///
+  /// In de, this message translates to:
+  /// **'4. Unter „Clients“ (früher „Anmeldedaten“) einen OAuth-Client vom Typ „Desktop-App“ anlegen. Client-ID und Client-Secret kopieren und unten eintragen.'**
+  String get googleTasksGuideStep4;
+
+  /// No description provided for @googleTasksGuideTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Google-Cloud-Projekt einrichten'**
+  String get googleTasksGuideTitle;
+
+  /// No description provided for @googleTasksIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Google-Aufgaben mit deinem eigenen Cloud-Projekt, ohne Google-Play-Dienste. Die Anmeldung läuft im Browser; Client-ID, Client-Secret und Anmeldung bleiben im sicheren Speicher des Geräts und werden nie angezeigt oder protokolliert. Aufgabenlisten dienen als Listen; Google kennt nur ein Fälligkeitsdatum, keine Uhrzeit und keine Priorität.'**
+  String get googleTasksIntro;
+
+  /// No description provided for @googleTasksNeedClient.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte Client-ID und Client-Secret eintragen.'**
+  String get googleTasksNeedClient;
+
+  /// No description provided for @googleTasksReachable.
+  ///
+  /// In de, this message translates to:
+  /// **'Google Tasks ist erreichbar.'**
+  String get googleTasksReachable;
+
+  /// No description provided for @googleTasksSignIn.
+  ///
+  /// In de, this message translates to:
+  /// **'Bei Google anmelden'**
+  String get googleTasksSignIn;
+
+  /// No description provided for @googleTasksSignInWaiting.
+  ///
+  /// In de, this message translates to:
+  /// **'Warte auf Google …'**
+  String get googleTasksSignInWaiting;
+
+  /// No description provided for @googleTasksSignOutBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Anmeldung wird bei Google widerrufen (soweit erreichbar), Client-ID, Client-Secret und Token werden vom Gerät gelöscht.'**
+  String get googleTasksSignOutBody;
+
+  /// No description provided for @googleTasksSignOutTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Google Tasks trennen?'**
+  String get googleTasksSignOutTitle;
+
+  /// No description provided for @googleTasksStatusAvailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbunden, Integration ausgeschaltet'**
+  String get googleTasksStatusAvailable;
+
+  /// No description provided for @googleTasksStatusSetup.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung fehlt'**
+  String get googleTasksStatusSetup;
+
+  /// No description provided for @googleTasksStatusUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht verfügbar'**
+  String get googleTasksStatusUnavailable;
+
+  /// No description provided for @googleTasksStatusUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbekannt'**
+  String get googleTasksStatusUnknown;
+
+  /// No description provided for @integrationDetailGoogleTasksAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Google-Konto'**
+  String get integrationDetailGoogleTasksAccount;
+
   /// No description provided for @integrationDetailTodoistAccount.
   ///
   /// In de, this message translates to:

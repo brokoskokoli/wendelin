@@ -3,6 +3,7 @@ import 'bring_spec.dart';
 import 'calendar_spec.dart';
 import 'clipboard_spec.dart';
 import 'flashlight_spec.dart';
+import 'google_tasks_spec.dart';
 import 'ha_spec.dart';
 import 'integration_spec.dart';
 import 'lists_spec.dart';
@@ -36,4 +37,5 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
   weatherSpec,
   tasksSpec,
   todoistSpec,
+  googleTasksSpec,
 ];

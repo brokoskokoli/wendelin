@@ -3512,6 +3512,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spotifyTitle => 'Spotify';
 
   @override
+  String get googleTasksApiError =>
+      'Error – Google unreachable or sign-in rejected';
+
+  @override
+  String get googleTasksCancel => 'Cancel';
+
+  @override
+  String get googleTasksChecking => 'Checking …';
+
+  @override
+  String get googleTasksClientId => 'Client ID';
+
+  @override
+  String get googleTasksClientSecret => 'Client secret';
+
+  @override
+  String get googleTasksFine => 'OK';
+
+  @override
+  String get googleTasksGuideNote =>
+      'In testing mode the sign-in expires after 7 days; sign in again here then. Google warns about an “unverified app” during sign-in (it is your own project): choose “Continue” and allow “See, edit, create and delete your tasks”.';
+
+  @override
+  String get googleTasksGuideStep1 =>
+      '1. In console.cloud.google.com create a project (or pick your own).';
+
+  @override
+  String get googleTasksGuideStep2 =>
+      '2. Under “APIs & Services → Library” enable the “Google Tasks API”.';
+
+  @override
+  String get googleTasksGuideStep3 =>
+      '3. Under “Google Auth Platform” (formerly “OAuth consent screen”) keep the audience “External” in testing mode and add your own Google account as a test user.';
+
+  @override
+  String get googleTasksGuideStep4 =>
+      '4. Under “Clients” (formerly “Credentials”) create an OAuth client of type “Desktop app”. Copy the client ID and client secret and enter them below.';
+
+  @override
+  String get googleTasksGuideTitle => 'Set up a Google Cloud project';
+
+  @override
+  String get googleTasksIntro =>
+      'Google tasks with your own Cloud project, without Google Play services. Sign-in happens in the browser; client ID, client secret and sign-in stay in the device’s secure storage and are never shown or logged. Task lists work as lists; Google only knows a due date, no time and no priority.';
+
+  @override
+  String get googleTasksNeedClient =>
+      'Please enter the client ID and client secret.';
+
+  @override
+  String get googleTasksReachable => 'Google Tasks is reachable.';
+
+  @override
+  String get googleTasksSignIn => 'Sign in with Google';
+
+  @override
+  String get googleTasksSignInWaiting => 'Waiting for Google …';
+
+  @override
+  String get googleTasksSignOutBody =>
+      'The sign-in is revoked at Google (if reachable); client ID, client secret and token are deleted from the device.';
+
+  @override
+  String get googleTasksSignOutTitle => 'Disconnect Google Tasks?';
+
+  @override
+  String get googleTasksStatusAvailable => 'Connected, integration turned off';
+
+  @override
+  String get googleTasksStatusSetup => 'Sign-in missing';
+
+  @override
+  String get googleTasksStatusUnavailable => 'Not available';
+
+  @override
+  String get googleTasksStatusUnknown => 'Unknown';
+
+  @override
+  String get integrationDetailGoogleTasksAccount => 'Google account';
+
+  @override
   String get integrationDetailTodoistAccount => 'Todoist account';
 
   @override

@@ -9,6 +9,7 @@ String? setupPageFor(String id) => switch (id) {
   'weather' => AppRoutes.weather,
   'bring' => AppRoutes.bring,
   'todoist' => AppRoutes.todoist,
+  'gtasks' => AppRoutes.googleTasks,
   'ha' => AppRoutes.homeAssistant,
   'spotify' => AppRoutes.spotify,
   // MCP servers: login or token on the server list (WP27).

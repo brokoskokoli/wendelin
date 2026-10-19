@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:wendelin/di/bring.dart';
+import 'package:wendelin/di/google_tasks.dart';
 import 'package:wendelin/di/home_assistant.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
@@ -40,6 +41,10 @@ List<Override> withIntegrations(TestEnv env) => [
   if (!env.realDemoPorts) demoPortsProvider.overrideWithValue(env.ports),
   bringApiProvider.overrideWithValue(env.bring),
   todoistApiProvider.overrideWithValue(env.todoist),
+  googleTasksApiProvider.overrideWithValue(env.googleTasks),
+  googleOAuthProvider.overrideWithValue(env.googleTasks),
+  googleBrowserProvider.overrideWithValue(env.googleBrowser),
+  googleReceiverProvider.overrideWithValue(() async => env.googleReceiver),
   haApiProvider.overrideWithValue(env.ha),
   haDiscoveryProvider.overrideWithValue(env.haDiscovery),
   spotifyApiProvider.overrideWithValue(env.spotify),

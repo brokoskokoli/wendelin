@@ -47,6 +47,9 @@ abstract final class AppRoutes {
   /// Todoist API token and state (WP89).
   static const todoist = '/settings/todoist';
 
+  /// Google Tasks client, login and state (WP89b).
+  static const googleTasks = '/settings/google_tasks';
+
   /// Home Assistant address, token and devices (WP91).
   static const homeAssistant = '/settings/home_assistant';
 
