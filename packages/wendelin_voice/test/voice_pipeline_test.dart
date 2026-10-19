@@ -99,6 +99,7 @@ final class Harness {
     bool withTts = true,
     AgentRun? agent,
     AudioInput? audio,
+    SpeakerRecognizer? speaker,
     VoiceActivityDetector? vad,
     Future<TextToSpeech?> Function(String?)? textToSpeech,
     List<Transcript> transcripts = const [
@@ -144,6 +145,8 @@ final class Harness {
       config: config,
       clock: clock,
       triggers: triggers,
+      speaker: speaker,
+      diagnostics: diagnostics.add,
     );
     pipeline.states.listen(states.add);
     pipeline.events.listen(events.add);
@@ -160,6 +163,7 @@ final class Harness {
   late final VoicePipeline pipeline;
   final states = <VoiceState>[];
   final events = <VoiceEvent>[];
+  final diagnostics = <String>[];
 
   List<T> eventsOf<T extends VoiceEvent>() => events.whereType<T>().toList();
 
@@ -213,6 +217,63 @@ void main() {
       );
       expect(h.agentEvents.last, isA<AgentDone>());
       expect(h.eventsOf<VoiceSpeaking>().map((e) => e.sentence), h.tts.spoken);
+    });
+  });
+
+  group('Sprechererkennung (WP92a)', () {
+    const anna = SpeakerMatch.known(personId: 'a', name: 'Anna', score: 0.8);
+
+    test('aus: kein Aufwand, Transcript ohne Sprecher', () {
+      runFake((async) {
+        final h = Harness(turns: [ScriptedTurn.text('Ok.')]);
+        h.pipeline.start();
+        settle(async);
+        expect(
+          h.eventsOf<VoiceTranscribed>().single.transcript.speaker,
+          isNull,
+        );
+      });
+    });
+
+    test('an: Ergebnis hängt am Transcript, Audio ist das der Äußerung', () {
+      runFake((async) {
+        final rec = FakeSpeakerRecognizer(anna);
+        final h = Harness(turns: [ScriptedTurn.text('Ok.')], speaker: rec);
+        h.pipeline.start();
+        settle(async);
+        expect(h.eventsOf<VoiceTranscribed>().single.transcript.speaker, anna);
+        expect(rec.lengths, [h.stt.calls.single.samples]);
+        expect(h.recording.inputs.single.text, 'Wie wird das Wetter?');
+      });
+    });
+
+    test('läuft parallel: Erkennung beginnt, solange STT noch läuft', () {
+      runFake((async) {
+        final rec = FakeSpeakerRecognizer(anna);
+        final h = Harness(turns: [ScriptedTurn.text('Ok.')], speaker: rec);
+        h.stt.hold = true;
+        h.pipeline.start();
+        settle(async);
+        expect(h.pipeline.state, VoiceState.transcribing);
+        expect(rec.lengths, isNotEmpty, reason: 'STT hängt noch');
+        expect(h.eventsOf<VoiceTranscribed>(), isEmpty);
+        h.stt.release();
+        settle(async);
+        expect(h.eventsOf<VoiceTranscribed>().single.transcript.speaker, anna);
+      });
+    });
+
+    test('Fehler der Erkennung: unbekannt, Anfrage läuft weiter', () {
+      runFake((async) {
+        final rec = FakeSpeakerRecognizer(anna)..throwing = true;
+        final h = Harness(turns: [ScriptedTurn.text('Ok.')], speaker: rec);
+        h.pipeline.start();
+        settle(async);
+        final t = h.eventsOf<VoiceTranscribed>().single.transcript;
+        expect(t.speaker?.reason, SpeakerUnknownReason.failed);
+        expect(h.tts.spoken, ['Ok.']);
+        expect(h.diagnostics, contains('speaker-failed'));
+      });
     });
   });
 

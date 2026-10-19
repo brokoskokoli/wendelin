@@ -9,6 +9,7 @@ import '../io/speech_to_text.dart';
 import '../io/text_to_speech.dart';
 import '../io/trigger.dart';
 import '../io/voice_activity_detector.dart';
+import '../speaker/speaker_match.dart';
 import '../text/spoken_answer.dart';
 import '../text/voice_texts.dart';
 import '../tts/speech_queue.dart';
@@ -56,6 +57,7 @@ final class VoicePipeline {
     TriggerSource? triggers,
     this.bargeInDetector,
     this.diagnostics,
+    this.speaker,
   }) {
     _triggerSub = triggers?.triggers.listen(_onTrigger);
     _bargeSub = bargeInDetector?.signals.listen(_onBargeIn);
@@ -82,6 +84,11 @@ final class VoicePipeline {
   /// Receives secret-free diagnostic event names (`barge-wait-timeout`);
   /// the app writes them to its voice log.
   final void Function(String event)? diagnostics;
+
+  /// Speaker recognition (WP92a), `null` = off (the default: no effort).
+  /// It runs in parallel to the transcription; its result hangs at
+  /// `Transcript.speaker`. A failure or „unknown“ never blocks a request.
+  final SpeakerRecognizer? speaker;
 
   /// Time source for trigger timestamps.
   final Clock clock;
@@ -290,6 +297,7 @@ final class VoicePipeline {
           text: rest,
           language: transcript.language,
           confidence: transcript.confidence,
+          speaker: transcript.speaker,
         );
       }
       if (transcript.text.trim().isEmpty) {
@@ -537,13 +545,29 @@ final class VoicePipeline {
   Future<Transcript?> _transcribe(int gen, Int16List pcm) async {
     _setState(VoiceState.transcribing);
     try {
-      final t = await stt.transcribe(pcm, language: config.language);
+      final who = _identify(pcm);
+      final text = await stt.transcribe(pcm, language: config.language);
+      final match = await who;
       if (gen != _gen) return null;
+      final t = match == null ? text : text.withSpeaker(match);
       _emit(VoiceTranscribed(t));
       return t;
     } on Object catch (error) {
       if (gen == _gen) _emit(VoiceError(VoiceState.transcribing, error));
       return null;
+    }
+  }
+
+  /// Recognition of who spoke [pcm], started before the transcription so
+  /// both run in parallel. `null` = recognition off; never throws.
+  Future<SpeakerMatch?> _identify(Int16List pcm) async {
+    final recognizer = speaker;
+    if (recognizer == null) return null;
+    try {
+      return await recognizer.identify(pcm);
+    } on Object {
+      diagnostics?.call('speaker-failed');
+      return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);
     }
   }
 
