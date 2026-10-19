@@ -16,8 +16,11 @@ if [ "${WENDELIN_SKIP_RUST:-}" = "1" ]; then
   exit 0
 fi
 # rustup ist unter Homebrew keg-only; Gradle erbt oft kein Shell-PATH.
-for d in "$HOME/.cargo/bin" /opt/homebrew/opt/rustup/bin /usr/local/opt/rustup/bin; do
-  [ -d "$d" ] && PATH="$PATH:$d"
+# Vorn, damit ein Homebrew-cargo ohne Android-Targets nicht gewinnt.
+# WENDELIN_RUST_BIN_DIRS (Doppelpunkt-Liste) ersetzt die Standardorte (für Tests).
+IFS=':' read -ra rust_dirs <<<"${WENDELIN_RUST_BIN_DIRS-$HOME/.cargo/bin:/opt/homebrew/opt/rustup/bin:/usr/local/opt/rustup/bin}"
+for d in ${rust_dirs[@]+"${rust_dirs[@]}"}; do
+  [ -n "$d" ] && [ -d "$d" ] && PATH="$d:$PATH"
 done
 export PATH
 for tool in cargo cargo-ndk; do
@@ -51,6 +54,8 @@ if [ "${CI:-}" != "true" ] && [ "${WENDELIN_ATTEST_CACHE:-}" != "0" ]; then
         printf '%s  ' "$f"
         sha256 <"$f" | cut -d' ' -f1
       done
+      printf 'script  '
+      sha256 <"${BASH_SOURCE[0]}" | cut -d' ' -f1
       printf 'ndk=%s\ncargo-ndk=%s\nrustc=%s RUSTFLAGS=%s\n' "$ndk_ver" "$ndk_cli" "$rustc_ver" "${RUSTFLAGS:-}"
     } | sha256 | cut -d' ' -f1
   )" || key=""

@@ -152,6 +152,39 @@ void _keys(SelfCheck t) {
       'Lesefehler: kein Schlüssel (fail-open)',
     );
 
+    t.isTrue(
+      key({...base, 'packages/a/lib/x.dart': null}) != k,
+      'gelöschte, noch getrackte Datei: Marker gehört zum Schlüssel',
+    );
+    final all = _cache(tmp, base);
+    t.isTrue(
+      all.keyFor('analyze', analyzeSpec(['packages/a'])) !=
+          all.keyFor('analyze', analyzeSpec(['packages/a', 'packages/b'])),
+      'analyze: Teillauf und voller Lauf haben verschiedene Schlüssel',
+    );
+    t.eq(
+      all.keyFor('analyze', analyzeSpec(['packages/b', 'packages/a'])),
+      all.keyFor('analyze', analyzeSpec(['packages/a', 'packages/b'])),
+      'analyze: Reihenfolge der Ordner egal',
+    );
+    const ft = {'dart': '3', 'flutter': '4'};
+    final withDesign = {...base, 'docs/design/tokens.json': 't'};
+    t.isTrue(
+      _cache(tmp, withDesign, tools: ft).keyFor('test app', appSpec(['app'])) !=
+          _cache(tmp, {
+            ...withDesign,
+            'docs/design/tokens.json': 't2',
+          }, tools: ft).keyFor('test app', appSpec(['app'])),
+      'App-Schlüssel hängt von docs/design/tokens.json ab',
+    );
+    t.isTrue(
+      kotlinSpec('/sdk').roots.contains('app/android') &&
+          kotlinSpec('/sdk').roots.contains('native/attest') &&
+          _cache(tmp, base, tools: ft).keyFor('k', kotlinSpec('/a')) !=
+              _cache(tmp, base, tools: ft).keyFor('k', kotlinSpec('/b')),
+      'kotlin-unit: Wurzeln und SDK im Schlüssel',
+    );
+
     _storeAndEnv(t, tmp, base);
   } finally {
     tmp.deleteSync(recursive: true);
@@ -163,16 +196,19 @@ void _storeAndEnv(SelfCheck t, Directory tmp, Map<String, String?> base) {
     final deps = {
       'app': {'a', 'b'},
       'a': {'b'},
-      'b': <String>{},
+      'b': {'c'},
+      'c': <String>{},
     };
     t.eq(cacheRoots('a', deps), [
       'packages/a',
       'packages/b',
-    ], 'Wurzeln: Abhängige');
+      'packages/c',
+    ], 'Wurzeln: transitive Abhängigkeiten a→b→c');
     t.eq(cacheRoots('app', deps), [
       'app',
       'packages/a',
       'packages/b',
+      'packages/c',
     ], 'Wurzeln: App');
 
     final c = _cache(tmp, base);
@@ -274,6 +310,23 @@ Future<void> _gateWithCache(SelfCheck t) async {
     exit = 0;
     g = await run(s: null);
     t.eq(runs, 4, 'ohne Cache-Beschreibung läuft der Schritt');
+    // Schritt verändert seine eigenen Eingaben: Schlüssel von vorher passt nicht.
+    final before = runs;
+    files['packages/a/lib/a.dart'] = 'v1';
+    final mutating = Gate(
+      verbose: false,
+      out: StringBuffer(),
+      cache: _cache(tmp, files),
+      runner: (e, a, {cwd, required verbose}) async {
+        runs++;
+        files['packages/a/lib/a.dart'] = 'v2';
+        return const ProcResult(0);
+      },
+    );
+    await mutating.step('gen', 'x', const [], cacheSpec: spec);
+    files['packages/a/lib/a.dart'] = 'v1';
+    await mutating.step('gen', 'x', const [], cacheSpec: spec);
+    t.eq(runs - before, 2, 'Schritt ändert Dateien: nichts gespeichert');
     final off = Gate(
       verbose: false,
       out: StringBuffer(),
@@ -283,7 +336,7 @@ Future<void> _gateWithCache(SelfCheck t) async {
       },
     );
     await off.step('test a', 'dart', const [], cacheSpec: spec);
-    t.eq(runs, 5, 'ohne Cache läuft der Schritt');
+    t.eq(runs - before, 3, 'ohne Cache läuft der Schritt');
   } finally {
     tmp.deleteSync(recursive: true);
   }
@@ -374,6 +427,61 @@ Future<void> _slots(SelfCheck t) async {
     e.release();
     File('${tmp.path}/s/slot-1.lock').deleteSync();
 
+    // Rennen: zwischen Lesen und Löschen übernimmt ein anderer Lauf den Slot.
+    File('${tmp.path}/s/slot-0.lock').writeAsStringSync('999');
+    File('${tmp.path}/s/slot-1.lock').writeAsStringSync('111');
+    var swapped = false;
+    final racer = GateSlots(
+      dir: Directory('${tmp.path}/s'),
+      ownPid: 777,
+      isAlive: (p) {
+        if (p == 999 && !swapped) {
+          swapped = true;
+          File('${tmp.path}/s/slot-0.lock').writeAsStringSync('222');
+        }
+        return alive.contains(p);
+      },
+      sleep: (_) async => throw StateError('wartet'),
+      log: msgs.add,
+    );
+    try {
+      await racer.acquire();
+      t.isTrue(false, 'alle Slots belegt: acquire muss warten');
+    } on StateError {
+      t.eq(
+        File('${tmp.path}/s/slot-0.lock').readAsStringSync(),
+        '222',
+        'übernommener Slot wird nicht gelöscht',
+      );
+    }
+    t.isTrue(
+      !File('${tmp.path}/s/slot-0.lock.reap').existsSync(),
+      'Aufräum-Wächter wird entfernt',
+    );
+    File('${tmp.path}/s/slot-0.lock').deleteSync();
+    File('${tmp.path}/s/slot-1.lock').deleteSync();
+
+    // withGateSlot gibt auch bei einer Ausnahme frei.
+    try {
+      await withGateSlot(slots(888), () async => throw StateError('boom'));
+    } on StateError {
+      // erwartet
+    }
+    t.isTrue(
+      Directory('${tmp.path}/s').listSync().isEmpty,
+      'Slot nach Ausnahme freigegeben',
+    );
+    var inside = false;
+    await withGateSlot(slots(888), () async {
+      inside = Directory('${tmp.path}/s').listSync().length == 1;
+    });
+    t.isTrue(inside, 'Slot während des Laufs belegt');
+    t.isTrue(
+      Directory('${tmp.path}/s').listSync().isEmpty,
+      'Slot nach dem Lauf freigegeben',
+    );
+    await withGateSlot(null, () async {});
+
     // Ordner nicht anlegbar: fail-open.
     File('${tmp.path}/datei').writeAsStringSync('x');
     final open = await GateSlots(
@@ -390,35 +498,30 @@ Future<void> _slots(SelfCheck t) async {
 Never fail(String m) => throw StateError(m);
 
 /// `.so`-Cache von `tool/build_attest_android.sh` mit Attrappen für cargo.
+/// Das Skript läuft aus einer Kopie in einem temporären Repo-Gerüst.
 Future<void> _attestScript(SelfCheck t) async {
   t.group('Attest-.so-Cache (build_attest_android.sh)');
   if (Platform.isWindows) return;
   final tmp = Directory.systemTemp.createTempSync('attest_cache_');
   try {
+    final repo = Directory('${tmp.path}/repo')..createSync();
+    Directory('${repo.path}/tool').createSync();
+    Directory('${repo.path}/native/attest/src').createSync(recursive: true);
+    Directory('${repo.path}/native/attest/target').createSync();
+    File('${repo.path}/native/attest/src/lib.rs').writeAsStringSync('x');
+    final script = File('${repo.path}/tool/build_attest_android.sh')
+      ..writeAsStringSync(
+        File('tool/build_attest_android.sh').readAsStringSync(),
+      );
     final bin = Directory('${tmp.path}/bin')..createSync();
+    final pre = Directory('${tmp.path}/pre')..createSync();
     final log = File('${tmp.path}/builds.log')..writeAsStringSync('');
+    final envLog = File('${tmp.path}/env.log')..writeAsStringSync('');
     final ndk = Directory('${tmp.path}/ndk')..createSync();
     File('${ndk.path}/source.properties').writeAsStringSync('Pkg.Revision=1\n');
-    File('${bin.path}/cargo').writeAsStringSync('''#!/usr/bin/env bash
-[ "\$1" = ndk ] || exit 0
-shift
-[ "\${1:-}" = "--version" ] && { echo "cargo-ndk 1.0"; exit 0; }
-abis=()
-while [ \$# -gt 0 ]; do
-  case "\$1" in
-    -t) abis+=("\$2"); shift 2 ;;
-    -o) o="\$2"; shift 2 ;;
-    *) shift ;;
-  esac
-done
-echo "\${abis[*]}" >>"${log.path}"
-for a in "\${abis[@]}"; do
-  mkdir -p "\$o/\$a"
-  echo "so-\$a" >"\$o/\$a/libwendelin_attest.so"
-  echo dep >"\$o/\$a/libdcap.so"
-done
-''');
+    File('${bin.path}/cargo').writeAsStringSync(_fakeCargo('bin', log, envLog));
     File('${bin.path}/cargo-ndk').writeAsStringSync('#!/bin/sh\n');
+    File('${bin.path}/sccache').writeAsStringSync('#!/bin/sh\n');
     File('${bin.path}/rustc')
         .writeAsStringSync('#!/bin/sh\necho "rustc 1.99.0"\n');
     for (final f in bin.listSync().whereType<File>()) {
@@ -430,11 +533,12 @@ done
       );
       final r = await Process.run(
         'bash',
-        ['tool/build_attest_android.sh', out.path, abis],
+        [script.path, out.path, abis],
         includeParentEnvironment: false,
         environment: {
           'PATH': '${bin.path}:/usr/bin:/bin',
           'HOME': tmp.path,
+          'WENDELIN_RUST_BIN_DIRS': '',
           'ANDROID_NDK_HOME': ndk.path,
           'WENDELIN_ATTEST_CACHE_DIR': '${tmp.path}/cache',
           ...env,
@@ -477,6 +581,48 @@ done
     t.eq(builds().length, 6, 'andere NDK-Version: neuer Schlüssel');
     await run('x86_64');
     t.eq(builds().length, 6, 'danach wieder Treffer');
+
+    File('${repo.path}/native/attest/target/artefakt')
+        .writeAsStringSync('build-ausgabe');
+    await run('x86_64');
+    t.eq(builds().length, 6, 'target/ gehört nicht zum Schlüssel');
+    File('${repo.path}/native/attest/src/lib.rs').writeAsStringSync('y');
+    await run('x86_64');
+    t.eq(builds().length, 7, 'Quelländerung: neuer Schlüssel');
+    script.writeAsStringSync('${script.readAsStringSync()}\n# geändert\n');
+    await run('x86_64');
+    t.eq(builds().length, 8, 'geändertes Skript: neuer Schlüssel');
+    File('${repo.path}/native/attest/src/neu.rs').writeAsStringSync('z');
+    await run('x86_64');
+    t.eq(builds().length, 9, 'neue Quelldatei: neuer Schlüssel');
+
+    // sccache: lokal genutzt, in CI nicht.
+    envLog.writeAsStringSync('');
+    await run('x86_64', env: {'WENDELIN_ATTEST_CACHE': '0'});
+    t.isTrue(
+      envLog.readAsStringSync().contains('wrapper=sccache'),
+      'lokal: sccache als Wrapper',
+    );
+    envLog.writeAsStringSync('');
+    await run('x86_64', env: {'CI': 'true'});
+    t.isTrue(
+      envLog.readAsStringSync().contains('wrapper=none'),
+      'CI: kein sccache',
+    );
+
+    // PATH-Reihenfolge: Rust-Ordner stehen vor dem übrigen PATH.
+    File('${pre.path}/cargo').writeAsStringSync(_fakeCargo('pre', log, envLog));
+    Process.runSync('chmod', ['+x', '${pre.path}/cargo']);
+    envLog.writeAsStringSync('');
+    await run(
+      'x86_64',
+      env: {'WENDELIN_ATTEST_CACHE': '0', 'WENDELIN_RUST_BIN_DIRS': pre.path},
+    );
+    t.isTrue(
+      envLog.readAsStringSync().contains('pre') &&
+          !envLog.readAsStringSync().contains('bin'),
+      'cargo aus den Rust-Ordnern gewinnt gegen den übrigen PATH',
+    );
     t.isTrue(
       Directory('${tmp.path}/cache')
           .listSync()
@@ -487,6 +633,29 @@ done
     tmp.deleteSync(recursive: true);
   }
 }
+
+String _fakeCargo(String tag, File log, File envLog) =>
+    '''#!/usr/bin/env bash
+[ "\$1" = ndk ] || exit 0
+shift
+[ "\${1:-}" = "--version" ] && { echo "cargo-ndk 1.0"; exit 0; }
+abis=()
+while [ \$# -gt 0 ]; do
+  case "\$1" in
+    -t) abis+=("\$2"); shift 2 ;;
+    -o) o="\$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+echo "\${abis[*]}" >>"${log.path}"
+echo "wrapper=\${RUSTC_WRAPPER:-none}" >>"${envLog.path}"
+echo "$tag" >>"${envLog.path}"
+for a in "\${abis[@]}"; do
+  mkdir -p "\$o/\$a"
+  echo "so-\$a" >"\$o/\$a/libwendelin_attest.so"
+  echo dep >"\$o/\$a/libdcap.so"
+done
+''';
 
 Directory _last = Directory('.');
 
@@ -500,7 +669,11 @@ Future<void> _rust(SelfCheck t) async {
       verbose: false,
       out: StringBuffer(),
       cache: cache
-          ? _cache(tmp, files, tools: {'dart': '1', 'rust': 'r', 'frb': 'f'})
+          ? _cache(
+              tmp,
+              files,
+              tools: {'dart': '1', 'rust': 'r', 'frb': 'f', 'deny': 'd'},
+            )
           : null,
       runner: (e, a, {cwd, required verbose}) async {
         calls.add([e, ...a]);
@@ -549,6 +722,16 @@ Future<void> _rust(SelfCheck t) async {
       'vorhandener Wrapper bleibt',
     );
     calls = [];
+    await rustSteps(gate(), ci: true, toolDir: withSccache, snapshot: same);
+    t.isTrue(
+      !has('fetch') && !has('--offline'),
+      'CI: weder fetch noch --offline',
+    );
+    t.isTrue(
+      !calls.any((c) => c.any((a) => a.startsWith('RUSTC_WRAPPER'))),
+      'CI: kein sccache',
+    );
+    calls = [];
     await rustSteps(
       gate(fetchExit: 1),
       ci: false,
@@ -563,25 +746,41 @@ Future<void> _rust(SelfCheck t) async {
       ci: false,
       toolDir: withSccache,
       snapshot: same,
+      today: '2026-01-01',
     );
     final first = calls.length;
     calls = [];
     final g = gate(cache: true);
-    await rustSteps(g, ci: false, toolDir: withSccache, snapshot: same);
+    await rustSteps(
+      g,
+      ci: false,
+      toolDir: withSccache,
+      snapshot: same,
+      today: '2026-01-01',
+    );
     t.isTrue(first > 5, 'erster Lauf ruft cargo auf');
     t.eq(
       g.results
           .where((r) => r.outcome == Outcome.cached)
           .map((r) => r.name)
           .toList(),
-      ['rust fmt', 'rust clippy', 'rust test', 'rust frb'],
+      ['rust fmt', 'rust clippy', 'rust test', 'rust deny', 'rust frb'],
       'zweiter Lauf: Schritte cached',
     );
     t.isTrue(
       !has('fetch') && !has('clippy') && !has('test'),
       'cached: kein fetch, kein cargo',
     );
-    t.isTrue(has('deny'), 'cargo-deny wird nie gecacht');
+    t.isTrue(!has('deny'), 'cargo-deny am selben Tag gecacht');
+    calls = [];
+    await rustSteps(
+      gate(cache: true),
+      ci: false,
+      toolDir: withSccache,
+      snapshot: same,
+      today: '2099-01-01',
+    );
+    t.isTrue(has('deny') && !has('clippy'), 'neuer Tag: nur deny läuft neu');
     files['native/attest/src/lib.rs'] = 'y';
     calls = [];
     await rustSteps(

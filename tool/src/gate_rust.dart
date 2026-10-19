@@ -105,7 +105,9 @@ Future<void> rustSteps(
   required String? Function(RustTool tool) toolDir,
   Map<String, List<int>> Function() snapshot = snapshotGenerated,
   Map<String, String> env = const {},
+  String? today,
 }) async {
+  final day = today ?? DateTime.now().toIso8601String().substring(0, 10);
   void skipOrFail(String name, RustTool t) => gate.record(
     StepResult(
       name,
@@ -161,7 +163,10 @@ Future<void> rustSteps(
   }) async {
     // fetch nur, wenn der Schritt wirklich läuft (kein Cache-Treffer).
     final run = spec == null || !(gate.cache?.isHit(name, spec) ?? false);
-    final off = useOffline && run ? await offlineFlag() : const <String>[];
+    // In CI wie bisher: weder fetch noch --offline.
+    final off = useOffline && run && !ci
+        ? await offlineFlag()
+        : const <String>[];
     return gate.step(
       name,
       'env',
@@ -187,11 +192,20 @@ Future<void> rustSteps(
     useOffline: true,
     spec: crate,
   );
-  // cargo-deny prüft die Advisory-DB und bleibt deshalb ungecacht.
+  // cargo-deny prüft die Advisory-DB: das Tagesdatum gehört zum Schlüssel,
+  // ein Treffer gilt also höchstens bis Mitternacht.
   if (toolDir(RustTool.deny) == null) {
     skipOrFail('rust deny', RustTool.deny);
   } else {
-    await cargo('rust deny', ['deny', 'check']);
+    await cargo(
+      'rust deny',
+      ['deny', 'check'],
+      spec: CacheSpec(
+        const [rustDir],
+        tools: const ['rust', 'deny'],
+        extra: ['date:$day'],
+      ),
+    );
   }
   if (toolDir(RustTool.codegen) == null) {
     skipOrFail('rust frb', RustTool.codegen);

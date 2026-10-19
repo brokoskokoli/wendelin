@@ -54,6 +54,31 @@ List<String> cacheRoots(String target, Map<String, Set<String>> deps) {
   return [for (final t in seen) targetDir(t)]..sort();
 }
 
+/// Beschreibung des Analyse-Schritts: Die Argumente ([dirs]) gehören zum
+/// Schlüssel, damit ein `--changed`-Teillauf keinen vollen Lauf vergiftet.
+CacheSpec analyzeSpec(List<String> dirs) => CacheSpec(
+  const ['packages', 'evals', 'tool'],
+  extra: ['dirs:${(dirs.toList()..sort()).join(',')}'],
+);
+
+/// Beschreibung der App-Schritte: Wurzeln der App und ihrer Abhängigkeiten
+/// plus `docs/design` (`app/test/ui/tokens_test.dart` liest `tokens.json`).
+CacheSpec appSpec(List<String> roots) =>
+    CacheSpec([...roots, 'docs/design'], tools: const ['dart', 'flutter']);
+
+/// Beschreibung von `kotlin-unit`: Android-Projekt, Testdaten, das Rust-Modul
+/// (Gradle-Task `buildRustAttest`), das App-Manifest und das SDK.
+CacheSpec kotlinSpec(String sdk) => CacheSpec(
+  const [
+    'app/android',
+    'app/test/fixtures/stt',
+    'app/pubspec.yaml',
+    'native/attest',
+  ],
+  tools: const ['dart', 'flutter'],
+  extra: ['sdk:$sdk'],
+);
+
 /// Liste aller Repo-Dateien (getrackt, neu, nicht ignoriert); wirft bei Fehler.
 typedef FileLister = List<String> Function();
 
@@ -146,6 +171,13 @@ final class GateCache {
     return bytes == null ? 'fehlt' : sha256Hex(bytes);
   }
 
+  /// Verwirft Dateiliste und Hashes, damit der nächste [keyFor] den
+  /// aktuellen Stand liest (nach einem ausgeführten Schritt).
+  void invalidate() {
+    _files = null;
+    _hashes.clear();
+  }
+
   /// Gibt es für [step] einen Treffer?
   bool isHit(String step, CacheSpec spec) {
     final key = keyFor(step, spec);
@@ -222,6 +254,8 @@ ToolVersion defaultToolVersion(String home) => (tool) {
       return _run(['rustc', '-V'], home) == null
           ? null
           : '${_run(['rustc', '-V'], home)} ${_run(['cargo', '-V'], home)}';
+    case 'deny':
+      return _run(['cargo-deny', '--version'], home);
     case 'frb':
       return _run(['flutter_rust_bridge_codegen', '--version'], home);
     default:

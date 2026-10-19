@@ -162,7 +162,12 @@ final class Gate {
     sw.stop();
     final outcome = failure == null ? Outcome.ok : Outcome.red;
     record(StepResult(name, outcome, sw.elapsed, detail));
-    if (key != null && failure == null) cache?.store(key, detail);
+    if (key != null && failure == null) {
+      // Hat der Schritt Dateien verändert (Codegen, Formatierung), passt der
+      // Schlüssel von vorher nicht mehr zum Stand danach: nicht speichern.
+      cache?.invalidate();
+      if (cache?.keyFor(name, cacheSpec!) == key) cache?.store(key, detail);
+    }
     if (failure != null && !verbose) {
       final failed = report == null ? '' : renderFailures(report);
       if (failed.isNotEmpty && r.exitCode != 0) {

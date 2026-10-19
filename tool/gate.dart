@@ -88,29 +88,32 @@ Future<void> main(List<String> args) async {
   for (final n in notes) {
     stdout.writeln(n);
   }
-  // Rechnerweit höchstens 2 Läufe gleichzeitig (WP97).
-  final lease = await gateSlotsFromEnvironment(Platform.environment)?.acquire();
-  final (:targets, :tooling, :kotlin) = scope;
-  bool wants(String t) => targets == null || targets.contains(t);
-  final packages = {
-    for (final MapEntry(:key, :value) in _packageDirs().entries)
-      if (wants(key)) key: value,
-  };
-  final hasApp = File('app/pubspec.yaml').existsSync() && wants(appTarget);
-  final deps = workspaceDeps();
-  await _codeSteps(gate, packages, tooling: tooling, app: hasApp);
-  if (wants(rustTarget)) await _rustSteps(gate);
-  for (final MapEntry(key: name, value: dir) in packages.entries) {
-    await _testPackage(gate, name, dir, cacheRoots(name, deps));
-  }
-  if (hasApp && !args.contains('--no-app')) {
-    await _appSteps(gate, cacheRoots(appTarget, deps));
-  }
-  if (kotlin && hasApp && !args.contains('--no-app')) await _kotlinStep(gate);
-  await _globalSteps(gate, tooling: tooling);
-  exitCode = gate.finish(total.elapsed, notes: notes);
-  lease?.release();
-  _reports.deleteSync(recursive: true);
+  // Rechnerweit höchstens 2 Läufe gleichzeitig (WP97); der Slot wird auch bei
+  // Fehlern und bei SIGINT/SIGTERM freigegeben.
+  await withGateSlot(gateSlotsFromEnvironment(Platform.environment), () async {
+    final (:targets, :tooling, :kotlin) = scope;
+    bool wants(String t) => targets == null || targets.contains(t);
+    final packages = {
+      for (final MapEntry(:key, :value) in _packageDirs().entries)
+        if (wants(key)) key: value,
+    };
+    final hasApp = File('app/pubspec.yaml').existsSync() && wants(appTarget);
+    final deps = workspaceDeps();
+    await _codeSteps(gate, packages, tooling: tooling, app: hasApp);
+    if (wants(rustTarget)) await _rustSteps(gate);
+    for (final MapEntry(key: name, value: dir) in packages.entries) {
+      await _testPackage(gate, name, dir, cacheRoots(name, deps));
+    }
+    if (hasApp && !args.contains('--no-app')) {
+      await _appSteps(gate, cacheRoots(appTarget, deps));
+    }
+    if (kotlin && hasApp && !args.contains('--no-app')) {
+      await _kotlinStep(gate);
+    }
+    await _globalSteps(gate, tooling: tooling);
+    exitCode = gate.finish(total.elapsed, notes: notes);
+  });
+  if (_reports.existsSync()) _reports.deleteSync(recursive: true);
 }
 
 /// Rust-Crate `native/attest`; ohne Toolchain lokal übersprungen, in CI Pflicht.
@@ -158,13 +161,13 @@ Future<void> _codeSteps(
       'analyze',
       '--fatal-infos',
       ...dartDirs,
-    ], cacheSpec: const CacheSpec(['packages', 'evals', 'tool']));
+    ], cacheSpec: analyzeSpec(dartDirs));
   }
 }
 
 /// Analyse und Tests der Flutter-App.
 Future<void> _appSteps(Gate gate, List<String> roots) async {
-  final spec = CacheSpec(roots, tools: const ['dart', 'flutter']);
+  final spec = appSpec(roots);
   final appDirs = _appDirs();
   // Explizite Pfade: Ohne sie analysiert `flutter analyze` im Workspace
   // nichts, weil die Root-analysis_options `app/**` ausschließt.
@@ -229,6 +232,7 @@ Future<void> _kotlinStep(Gate gate) async {
     'bash',
     ['gradlew', ':app:testDebugUnitTest', '-q'],
     cwd: 'app/android',
+    cacheSpec: kotlinSpec(sdk ?? ''),
     check: (_) async {
       final c = countJUnit(readReports(kotlinReportDir));
       return (

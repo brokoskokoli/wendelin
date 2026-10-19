@@ -36,6 +36,7 @@ final class GateSlots {
     this.poll = const Duration(seconds: 2),
     void Function(String)? log,
     this.staleEmpty = const Duration(seconds: 10),
+    this.guardStale = const Duration(seconds: 30),
   }) : ownPid = ownPid ?? pid,
        isAlive = isAlive ?? _isAlive,
        log = log ?? stderr.writeln;
@@ -63,6 +64,9 @@ final class GateSlots {
 
   /// Eine leere Slot-Datei gilt nach dieser Zeit als verwaist.
   final Duration staleEmpty;
+
+  /// Ein Aufräum-Wächter gilt nach dieser Zeit als verwaist.
+  final Duration guardStale;
 
   /// Belegt einen Slot; wartet mit einer Meldung, bis einer frei ist.
   Future<SlotLease> acquire() async {
@@ -109,14 +113,31 @@ final class GateSlots {
     return null;
   }
 
+  /// Räumt einen toten Slot auf. Unter einer Wächterdatei je Slot (nur ein
+  /// Aufräumer gleichzeitig) und mit erneutem Lesen vor dem Löschen: Hat
+  /// inzwischen ein anderer Lauf den Slot übernommen, bleibt er unberührt.
   void _reapIfDead(File f) {
+    final guard = File('${f.path}.reap');
     try {
-      final text = f.readAsStringSync().trim();
-      final p = int.tryParse(text);
-      final dead = p == null
-          ? DateTime.now().difference(f.lastModifiedSync()) > staleEmpty
-          : !isAlive(p);
-      if (dead) f.deleteSync();
+      try {
+        guard.createSync(exclusive: true);
+      } on FileSystemException {
+        // Wächter eines abgestürzten Aufräumers nach kurzer Zeit verwerfen.
+        if (DateTime.now().difference(guard.lastModifiedSync()) > guardStale) {
+          guard.deleteSync();
+        }
+        return;
+      }
+      try {
+        final text = f.readAsStringSync().trim();
+        final p = int.tryParse(text);
+        final dead = p == null
+            ? DateTime.now().difference(f.lastModifiedSync()) > staleEmpty
+            : !isAlive(p);
+        if (dead && f.readAsStringSync().trim() == text) f.deleteSync();
+      } finally {
+        guard.deleteSync();
+      }
     } on Object {
       // Nicht lesbar: Slot gilt als belegt.
     }
@@ -161,4 +182,40 @@ GateSlots? gateSlotsFromEnvironment(Map<String, String> env) {
     dir: Directory('$home/.cache/wendelin-gate/slots'),
     max: max < 1 ? 1 : max,
   );
+}
+
+/// Führt [body] mit einem belegten Slot aus ([slots] `null` = ohne Sperre).
+/// Der Slot wird in jedem Fall freigegeben, auch bei einer Ausnahme und bei
+/// SIGINT/SIGTERM (Ausstieg mit 130 bzw. 143).
+Future<void> withGateSlot(
+  GateSlots? slots,
+  Future<void> Function() body,
+) async {
+  final lease = await slots?.acquire();
+  final subs = <StreamSubscription<ProcessSignal>>[];
+  if (lease != null) {
+    for (final (sig, code) in [
+      (ProcessSignal.sigint, 130),
+      (ProcessSignal.sigterm, 143),
+    ]) {
+      try {
+        subs.add(
+          sig.watch().listen((_) {
+            lease.release();
+            exit(code);
+          }),
+        );
+      } on Object {
+        // Signal auf dieser Plattform nicht verfügbar.
+      }
+    }
+  }
+  try {
+    await body();
+  } finally {
+    lease?.release();
+    for (final s in subs) {
+      await s.cancel();
+    }
+  }
 }
