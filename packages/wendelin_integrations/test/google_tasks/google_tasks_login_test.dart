@@ -97,10 +97,12 @@ void main() {
       statuses
         ..add(await _status(u, {'state': 'fremd', 'code': 'böse'}))
         ..add(await _status(u, {'code': 'böse'}))
+        ..add(await _status(u, {'state': 'fremd', 'error': 'access_denied'}))
+        ..add(await _status(u, {'error': 'access_denied'}))
         ..add(await _status(u, {'state': q, 'code': 'fake-code'}));
     };
     expect(await signIn(), isNull);
-    expect(statuses, [400, 400, 200]);
+    expect(statuses, [400, 400, 400, 400, 200]);
     expect(store.storedRefresh, FakeGoogleTasksApi.validRefresh);
   });
 
@@ -162,6 +164,48 @@ void main() {
     browser.onOpen = (u) async => unawaited(login.cancel());
     expect(await signIn(), GoogleLoginError.cancelled);
     expect(store.storedRefresh, isNull);
+  });
+
+  test('cancel() während des Starts des Empfängers', () async {
+    final gate = Completer<void>();
+    final fake = FakeRedirectReceiver();
+    login = GoogleTasksLogin(
+      oauth,
+      store,
+      browser,
+      random: Random(1),
+      timeout: const Duration(seconds: 5),
+      receiver: () async {
+        await gate.future;
+        return fake;
+      },
+    );
+    final result = signIn();
+    await login.cancel();
+    gate.complete();
+    expect(await result, GoogleLoginError.cancelled);
+    expect(fake.closed, isTrue);
+    expect(browser.opened, isEmpty);
+    expect(store.storedRefresh, isNull);
+  });
+
+  test('FakeRedirectReceiver verwirft Antworten vor wait()', () async {
+    final r = FakeRedirectReceiver()..deliver({'state': 's'});
+    final answer = r.wait(
+      const Duration(seconds: 1),
+      accept: (q) => q['state'] == 's',
+    );
+    r.deliver({'state': 's'});
+    expect((await answer).queryParameters['state'], 's');
+    final early = FakeRedirectReceiver()..deliver({'state': 's'});
+    var done = false;
+    unawaited(
+      early
+          .wait(const Duration(seconds: 1), accept: (_) => true)
+          .then((_) => done = true),
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(done, isFalse);
   });
 
   test('kein Browser', () async {

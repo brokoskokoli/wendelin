@@ -243,7 +243,8 @@ final class FakeRedirectReceiver implements RedirectReceiver {
   /// query the wait refuses (wrong `state`) is ignored.
   void deliver(Map<String, String> query) {
     final accept = _accept;
-    if (accept != null && !accept(query)) return;
+    // Like the real server: nothing is accepted before wait() names the rule.
+    if (accept == null || !accept(query)) return;
     if (!_answer.isCompleted) {
       _answer.complete(redirect.replace(queryParameters: query));
     }

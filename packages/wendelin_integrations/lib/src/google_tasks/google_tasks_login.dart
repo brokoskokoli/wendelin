@@ -206,6 +206,7 @@ final class GoogleTasksLogin {
   final Random _random;
   final Future<RedirectReceiver> Function() _receiver;
   RedirectReceiver? _active;
+  bool _cancelRequested = false;
 
   /// The login address (exposed for tests).
   Uri authorizationUrl(
@@ -229,7 +230,10 @@ final class GoogleTasksLogin {
   );
 
   /// Stops a running login (it ends with „abgebrochen“).
-  Future<void> cancel() async => _active?.close();
+  Future<void> cancel() async {
+    _cancelRequested = true;
+    await _active?.close();
+  }
 
   /// Logs in with the user's client. Returns `null` on success (client and
   /// refresh token are stored then), else the reason; nothing is stored on a
@@ -244,8 +248,11 @@ final class GoogleTasksLogin {
     final verifier = randomUnreserved(_random, 64);
     final state = randomUnreserved(_random, 32);
     RedirectReceiver? receiver;
+    _cancelRequested = false;
     try {
       receiver = _active = await _receiver();
+      // cancel() during the start of the receiver found no `_active` yet.
+      if (_cancelRequested) return GoogleLoginError.cancelled;
       // Listening starts before the browser opens, so no early answer is
       // refused; an unused answer must not end in an unhandled error.
       final answer = receiver.wait(

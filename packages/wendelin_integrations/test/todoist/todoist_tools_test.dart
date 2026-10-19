@@ -192,6 +192,26 @@ void main() {
       }
     });
 
+    test('Audit: nur Nicht-Inhalts-Schlüssel (Erlaubnisliste)', () async {
+      final raw = {
+        'title': 'Geheimtitel-77',
+        'notes': 'Geheimnotiz-5',
+        'due': '2026-10-20',
+      };
+      final a = await tool('todoist__add')
+          .auditArguments(jsonEncode(raw), raw, ctx());
+      expect(a, isNot(contains('Geheim')));
+      expect(jsonDecode(a), {'due': '2026-10-20'});
+    });
+
+    test('Bestätigung: Titel nur ab Zeile 2', () {
+      for (final n in ['todoist__add', 'todoist__complete']) {
+        final d = tool(n).describeForConfirmation({'title': 'Geheimtitel-77'});
+        expect(d.split('\n').first, isNot(contains('Geheimtitel')));
+        expect(d, contains('„Geheimtitel-77“'));
+      }
+    });
+
     test('Ungültiges: Zeilenumbruch, Offset, Priorität', () async {
       for (final a in [
         {'title': 'a\nb'},

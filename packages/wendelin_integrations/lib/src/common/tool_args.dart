@@ -103,9 +103,20 @@ extension type const ToolArgs(Map<String, Object?> raw) {
   }
 }
 
-/// Audit arguments of the task tools: everything but the task title (private
-/// text), see `AuditArgumentsRedactor`.
+/// Keys of the task tools that carry no private text (allow list: a new
+/// argument is dropped from the audit until it is listed here).
+const _auditSafeTaskKeys = {
+  'list',
+  'due',
+  'priority',
+  'filter',
+  'include_done',
+};
+
+/// Audit arguments of the task tools: only the non-content keys
+/// ([_auditSafeTaskKeys]); the title and any other free text stay out, see
+/// `AuditArgumentsRedactor`.
 String redactTaskTitle(Map<String, Object?> args) => jsonEncode({
   for (final e in args.entries)
-    if (e.key != 'title') e.key: e.value,
+    if (_auditSafeTaskKeys.contains(e.key)) e.key: e.value,
 });

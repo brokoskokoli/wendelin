@@ -178,7 +178,7 @@ final class TodoistAddTool extends IntegrationTool
 
   @override
   String describe(ToolArgs args) =>
-      'Todoist-Aufgabe „${_parse(args).title}“ anlegen';
+      'Todoist-Aufgabe anlegen\n„${_parse(args).title}“';
 
   @override
   String get fallbackDescription => 'Todoist-Aufgabe anlegen';
@@ -387,7 +387,7 @@ final class TodoistCompleteTool extends IntegrationTool
 
   @override
   String describe(ToolArgs args) =>
-      'Todoist-Aufgabe „${args.requireString('title')}“ abhaken';
+      'Todoist-Aufgabe abhaken\n„${args.requireString('title')}“';
 
   @override
   String get fallbackDescription => 'Todoist-Aufgabe abhaken';

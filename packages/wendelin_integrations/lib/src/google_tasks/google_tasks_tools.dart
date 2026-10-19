@@ -128,7 +128,7 @@ final class GoogleTasksAddTool extends IntegrationTool
   ) async => redactTaskTitle(args);
 
   @override
-  String describe(ToolArgs args) => 'Google-Aufgabe „${_title(args)}“ anlegen';
+  String describe(ToolArgs args) => 'Google-Aufgabe anlegen\n„${_title(args)}“';
 
   @override
   String get fallbackDescription => 'Google-Aufgabe anlegen';
@@ -330,7 +330,7 @@ final class GoogleTasksCompleteTool extends IntegrationTool
 
   @override
   String describe(ToolArgs args) =>
-      'Google-Aufgabe „${args.requireString('title')}“ abhaken';
+      'Google-Aufgabe abhaken\n„${args.requireString('title')}“';
 
   @override
   String get fallbackDescription => 'Google-Aufgabe abhaken';
