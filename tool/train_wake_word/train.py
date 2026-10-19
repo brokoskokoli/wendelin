@@ -18,15 +18,21 @@ from common import *
 
 def feat_stage(a):
     rng = np.random.default_rng(a.seed)
-    pos = load_dir(os.path.join(a.gen, "pos"), max_s=1.8) + load_dir(os.path.join(a.gen, "pos2"))
+    ld = lambda names, **k: sum((load_dir(os.path.join(a.gen, n), dtype="float16", **k) for n in names.split(",") if n), [])
+    pos = ld(a.pos_dirs, max_s=1.8)
     rng.shuffle(pos)
-    conf = load_dir(os.path.join(a.gen, "conf2"))
-    neg = load_dir(os.path.join(a.gen, "neg"))
-    # Wortclips: nur den Wortanteil, getrennt nach Val (letzte 10 %)
-    real = load_dir(a.real) if a.real else []     # echte Sprache (FLEURS dev, CC-BY 4.0)
+    conf = ld(a.conf_dirs)
+    neg = ld(a.neg_dirs)
+    # Echte Sprache (FLEURS, CC-BY 4.0): --real (Train, Komma-Liste) / --real-val (z. B. dev, sprecherfremd);
+    # ohne --real-val: letzte 10 % der Liste als Val (v7-Verhalten)
+    real = sum((load_dir(d, dtype="float16") for d in a.real.split(",") if d), []) if a.real else []
     cut = lambda l: int(len(l) * .9)
-    neg_tr = neg[:cut(neg)] + real[:cut(real)] * 12   # echte Sprache ca. 40 % der Fueller
-    neg_va = neg[cut(neg):cut(neg) + 600] + real[cut(real):] * 6
+    if a.real_val:
+        real_tr, real_va = real, sum((load_dir(d, dtype="float16") for d in a.real_val.split(",")), [])
+    else:
+        real_tr, real_va = real[:cut(real)], real[cut(real):]
+    neg_tr = neg[:cut(neg)] + real_tr * a.real_rep
+    neg_va = neg[cut(neg):cut(neg) + 600] + real_va * max(1, a.real_rep // 2)
     print(f"pos {len(pos)}, conf {len(conf)}, neg {len(neg)} ({sum(map(len,neg))/SR/3600:.1f} h), real {len(real)}", flush=True)
     af = make_features(a.models, ncpu=a.ncpu)
     pool = neg[:200]
@@ -124,6 +130,8 @@ if __name__ == "__main__":
     p.add_argument("stage", choices=["features", "train"])
     p.add_argument("--gen"); p.add_argument("--models"); p.add_argument("--work", required=True)
     p.add_argument("--out"); p.add_argument("--real"); p.add_argument("--seed", type=int, default=1)
+    p.add_argument("--pos-dirs", default="pos,pos2"); p.add_argument("--conf-dirs", default="conf2")
+    p.add_argument("--neg-dirs", default="neg"); p.add_argument("--real-val"); p.add_argument("--real-rep", type=int, default=12)
     p.add_argument("--n-pos", type=int, default=8000); p.add_argument("--n-neg", type=int, default=9000)
     p.add_argument("--ncpu", type=int, default=4); p.add_argument("--threads", type=int, default=4)
     p.add_argument("--steps", type=int, default=6000); p.add_argument("--batch", type=int, default=512)

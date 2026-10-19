@@ -108,7 +108,7 @@ Release-Tags `asr-models`, `tts-models`, `speech-enhancement-models` unter githu
 | Kokoro multi-lang v1.0 int8 | `tts-models`: `kokoro-int8-multi-lang-v1_0.tar.bz2` (132 MB) | Apache-2.0 |
 | Piper miro high (de, fr) | `vits-piper-{de_DE,fr_FR}-miro-high-int8` | CC BY-NC-SA 4.0, ausgeschlossen |
 
-Modelle liegen unter `../james-wt/handoff/wp102-models` (nicht im Repo). Für Hotwords zusätzlich `tokenizer.vocab` aus `parakeet-tdt-0.6b-v3.nemo` (HF `nvidia/parakeet-tdt-0.6b-v3`, CC-BY-4.0) in `wp102-models/parakeet-bpe/`.
+Modelle liegen unter `~/wendelin-fixtures/models` (früher `handoff/wp102-models`; Ordner per `WENDELIN_MODELS` änderbar) (nicht im Repo). Für Hotwords zusätzlich `tokenizer.vocab` aus `parakeet-tdt-0.6b-v3.nemo` (HF `nvidia/parakeet-tdt-0.6b-v3`, CC-BY-4.0) in `wp102-models/parakeet-bpe/`.
 
 ## Empfehlung für WP103
 1. **Standard bleibt `whisper-small`** (fest Sprache). Er bleibt ein vertretbarer Kompromiss und ist unverändert getestet.

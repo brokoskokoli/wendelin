@@ -15,14 +15,14 @@ def window_end(j):
     return FRAME * (j + WIN - 1) + EMB_SPAN
 
 
-def load_dir(d, limit=None, max_s=None):
+def load_dir(d, limit=None, max_s=None, dtype="float32"):
     files = sorted(glob.glob(os.path.join(d, "*.wav")))[:limit]
     out = []
     for f in files:
         try:
             x = sf.read(f, dtype="float32")[0]
             if max_s is None or len(x) <= max_s * SR:
-                out.append(x)
+                out.append(x.astype(dtype))
         except Exception:      # abgebrochene Schreibvorgaenge ueberspringen
             pass
     return out
