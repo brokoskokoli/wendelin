@@ -57,8 +57,14 @@ while read -r lref lsha rref rsha; do
   # shellcheck disable=SC2086
   for c in $(git rev-list $range); do
     grep -qx "$c" "$covered" && continue
-    if git rev-parse -q --verify "$c^" >/dev/null; then
-      files=$(git diff --no-renames --name-only -z "$c^" "$c" | tr '\0' '\n')
+    parents=$(git rev-parse "$c^@")
+    if [ -n "$parents" ]; then
+      # Gegen jeden Elternteil prüfen (ein Merge darf main nicht über den zweiten Elternteil zurücksetzen).
+      files=""
+      for pa in $parents; do
+        files="$files
+$(git diff --no-renames --name-only -z "$pa" "$c" | tr '\0' '\n')"
+      done
     else
       files=$(git diff-tree --no-renames --root -r --name-only --no-commit-id "$c")
     fi

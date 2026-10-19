@@ -13,6 +13,7 @@ String _ig(String rest, {bool file = false}) =>
 void ratchetChecks(SelfCheck t) {
   _pure(t);
   _ignoreCount(t);
+  _generated(t);
   final tool = File('tool').absolute.path;
   final d = Directory.systemTemp.createTempSync('ratchet_selftest_');
   try {
@@ -22,6 +23,21 @@ void ratchetChecks(SelfCheck t) {
   } finally {
     d.deleteSync(recursive: true);
   }
+}
+
+void _generated(SelfCheck t) {
+  t.group('Erzeugter Code');
+  t.eq(
+    kindOf('tool/src/regen_generated_self_test.dart'),
+    FileKind.production,
+    'regen_generated_self_test.dart ist nicht erzeugt',
+  );
+  t.eq(kindOf('native/attest/src/frb_generated.rs'), FileKind.excluded, 'frb');
+  t.eq(
+    kindOf('app/lib/platform/attest/generated/frb_generated.dart'),
+    FileKind.excluded,
+    'frb dart',
+  );
 }
 
 void _pure(SelfCheck t) {

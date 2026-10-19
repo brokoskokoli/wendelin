@@ -30,12 +30,12 @@ const fnWarn = 80, fnError = 150;
 /// Warnschwelle für Klassen.
 const classWarn = 400;
 
-/// Erzeugter Code: Ordner `gen`/`generated`, `*_generated*.dart`, `*.freezed.dart`.
+/// Erzeugter Code: Ordner `gen`/`generated`, `frb_generated*.dart|rs`, `*.freezed.dart`.
 bool isGenerated(String path) {
   final segs = path.split('/');
   return segs.contains('gen') ||
       segs.contains('generated') ||
-      segs.last.contains('_generated') ||
+      RegExp(r'^frb_generated(\.\w+)?\.(dart|rs)$').hasMatch(segs.last) ||
       segs.last.endsWith('.freezed.dart');
 }
 

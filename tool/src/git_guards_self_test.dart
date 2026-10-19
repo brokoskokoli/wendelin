@@ -176,6 +176,8 @@ void _prePushMerge(SelfCheck t, _PushRepo p) {
     'Merge plus Status-Commit: erlaubt',
   );
   _prePushConsume(t, p);
+  _prePushMergeReset(t, p);
+  _prePushFresh(t, p);
 }
 
 /// Freigaben, deren Commit schon in origin/main liegt, verfallen beim nächsten Push.
@@ -195,6 +197,52 @@ void _prePushConsume(SelfCheck t, _PushRepo p) {
   t.isTrue(
     !okFile.readAsStringSync().contains(tree),
     'verbrauchte Freigabe (Commit in origin/main) entfernt',
+  );
+}
+
+/// Merge `-s ours`: erster Elternteil alt, zweiter origin/main, Tree alter Stand.
+void _prePushMergeReset(SelfCheck t, _PushRepo p) {
+  final r = p.r;
+  const main = 'refs/heads/main';
+  r.git(['checkout', '-q', '-B', 'base', p.c0]);
+  r.git(['checkout', '-q', '-b', 'reset-side']);
+  r.commit('reset_code.dart', 'x\n');
+  final remote = r.head();
+  r.git(['checkout', '-q', 'base']);
+  r.git([
+    'merge',
+    '-q',
+    '--no-ff',
+    '-s',
+    'ours',
+    '-m',
+    'Merge reset\n\n$sbTrailer',
+    remote,
+  ]);
+  t.isTrue(
+    p.push(main, r.head(), allow: true, remote: remote) != 0,
+    'Merge -s ours (Code des zweiten Elternteils verworfen): abgelehnt',
+  );
+}
+
+/// Eine frisch notierte, noch nicht gepushte Freigabe übersteht das Aufräumen.
+void _prePushFresh(SelfCheck t, _PushRepo p) {
+  final r = p.r;
+  final okFile = File('${p.common}/wendelin-merge-ok');
+  r.git(['checkout', '-q', '-B', 'fresh', p.c0]);
+  r.commit('fresh_code.dart', 'f\n');
+  final code = r.head();
+  p.note('HEAD');
+  r.git(['update-ref', 'refs/remotes/origin/main', p.c0]);
+  r.git(['checkout', '-q', '-B', 'fresh2', code]);
+  t.eq(
+    p.push('refs/heads/main', r.head(), allow: true, remote: p.c0),
+    0,
+    'frisch notierte Freigabe bei gesetztem origin/main: Push erlaubt',
+  );
+  t.isTrue(
+    okFile.readAsStringSync().contains(r.git(['rev-parse', 'HEAD^{tree}'])),
+    'frische Freigabe nicht aufgeräumt',
   );
 }
 
