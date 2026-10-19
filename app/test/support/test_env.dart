@@ -88,6 +88,9 @@ final class TestEnv {
   /// Flashlight.
   final torch = FakeTorchPort();
 
+  /// Media control.
+  final media = FakeMediaControlPort();
+
   /// Alarms.
   final alarms = FakeAlarmPort();
 
@@ -179,6 +182,7 @@ final class TestEnv {
     memory: memory,
     apps: apps,
     torch: torch,
+    media: media,
     requestCalendarPermission: () async {
       permissionRequests++;
       return calendar.permissionGranted = true;

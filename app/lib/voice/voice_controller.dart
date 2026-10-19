@@ -14,6 +14,7 @@ import '../di/providers.dart';
 import '../di/voice_providers.dart';
 import '../l10n/l10n.dart';
 import '../platform/voice/capture_profile_follower.dart';
+import '../platform/voice/ducking_tts.dart' show SpeechFocus;
 import '../platform/voice/record_audio_input.dart';
 import 'answer_capture.dart';
 import 'confirm_prompts.dart';
@@ -155,6 +156,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
 
   @override
   VoiceUiState build() {
+    _focus = ref.read(speechFocusProvider);
     ref
       ..listen(
         agentControllerProvider.select((s) => s.pending),
@@ -601,6 +603,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
     return pipeline;
   }
 
+  // Read in build: a dispose callback must not read providers.
+  late SpeechFocus _focus;
+
   Future<void> _reset() async {
     _abortCapture?.call();
     final pipeline = _pipeline;
@@ -610,6 +615,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
       unawaited(s.cancel());
     }
     _subs.clear();
+    // The state stream is cancelled: nobody would clear busy any more.
+    _focus.busy = false;
     await _profile?.dispose();
     _profile = null;
     await pipeline?.dispose();
@@ -622,6 +629,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
   void _onState(VoiceState s) {
     // From here the agent request belongs to the voice pipeline.
     if (s == VoiceState.thinking) _voiceRun = true;
+    // The ducking focus stays for the whole answer, also between sentences.
+    _focus.busy = s == VoiceState.thinking || s == VoiceState.speaking;
     state = state.copyWith(
       phase: s,
       levels: s == VoiceState.listening ? const [] : state.levels,

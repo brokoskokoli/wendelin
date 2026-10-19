@@ -2468,6 +2468,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tool calls are protected by the verified connection up to the enclave, but not additionally encrypted.';
 
   @override
+  String get integrationsMediaRationale =>
+      'To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (on newer Android versions, first choose “Allow restricted settings” in the app info). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.';
+
+  @override
   String get obsIndexBuilding => 'Building index …';
 
   @override

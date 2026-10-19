@@ -9,6 +9,7 @@ import '../di/app_settings.dart';
 import '../di/preference_models.dart';
 import 'android_alarm_port.dart';
 import 'channel_app_presence_port.dart';
+import 'channel_media_control_port.dart';
 import 'channel_torch_port.dart';
 import 'device_calendar_port.dart';
 import 'flutter_clipboard_port.dart';
@@ -34,6 +35,7 @@ final class PlatformPorts {
     this.requestCalendarPermission,
     this.lists,
     this.obsidian,
+    this.media,
   });
 
   /// Real device ports (Android): calendar channel, system clipboard,
@@ -55,6 +57,7 @@ final class PlatformPorts {
       memory: RepositoryMemoryPort(storage.memory),
       apps: const ChannelAppPresencePort(),
       torch: const ChannelTorchPort(),
+      media: const ChannelMediaControlPort(),
       requestCalendarPermission: calendar.requestPermission,
       lists: ListsPorts(port: SafListFilePort(), definitions: listDefinitions),
       obsidian: ObsidianPorts(
@@ -81,6 +84,16 @@ final class PlatformPorts {
       installed: [for (final app in KnownApps.all) app.androidPackage],
     ),
     torch: FakeTorchPort(),
+    media: FakeMediaControlPort(
+      snapshot: const MediaSnapshot(
+        packageName: audiblePackage,
+        appName: 'Audible',
+        playing: true,
+        title: 'Demo-Hörbuch',
+        positionMs: 600000,
+        durationMs: 3600000,
+      ),
+    ),
     lists: ListsPorts.demo(),
     obsidian: ObsidianPorts.demo(),
   );
@@ -111,6 +124,9 @@ final class PlatformPorts {
 
   /// Obsidian vault and search index; `null` = not on this platform.
   final ObsidianPorts? obsidian;
+
+  /// Media sessions and media keys; `null` = not on this platform.
+  final MediaControlPort? media;
 }
 
 /// Vault, search index and settings of the Obsidian integration.

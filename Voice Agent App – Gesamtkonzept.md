@@ -90,7 +90,7 @@ Die Pipeline läuft in fünf Stufen, alle austauschbar: Auslöser → Aufnahme m
    - Konfigurierbar: Wake Word, Empfindlichkeit, Bestätigungston.
 3. **Aufnahme und VAD**: Silero VAD (in sherpa-onnx enthalten) beendet die Aufnahme nach ca. 800 ms Stille, maximal 30 s. Pre-Roll-Puffer von 300 ms, damit das erste Wort nach dem Wake Word nicht abgeschnitten wird.
 4. **STT** (Interface `SpeechToText`)
-   - Standard: Whisper lokal über sherpa-onnx; Modellgröße wählbar (`base` schnell, `small` besser für Deutsch und Französisch). Modelle werden beim ersten Start heruntergeladen, nicht ins APK gepackt.
+   - Standard: Whisper lokal über sherpa-onnx; Modellgröße wählbar (`base` schnell, `small` besser für Deutsch und Französisch; größere Modelle nach K64). Modelle werden beim ersten Start heruntergeladen, nicht ins APK gepackt.
    - Sprache: automatisch erkennen oder fest einstellen (de, fr, en).
    - Alternativen: System-Spracherkennung (Android `SpeechRecognizer`, iOS `SpeechAnalyzer`; nur angeboten, wenn eine Erkennungs-App installiert ist, K7), optional Cloud-STT.
    - Ausgabe: Text + erkannte Sprache + Konfidenz (für die Routing-Regeln).
@@ -441,6 +441,32 @@ Die App ist in erster Linie ein Sprach-Overlay; der Hauptbildschirm zeigt Verlau
 - **Onboarding**: Sprache, erster Provider (Key einfügen, testen), Whisper-Modell herunterladen, Integrationen auswählen, optional Standard-Assistent setzen.
 - **Widget und Schnellkachel** (Android), Control und Action-Button-Unterstützung (iOS).
 
+**Stationsmodus** (M6, K62/K63): Das Handy liegt am Ladegerät und arbeitet wie ein Lautsprecher mit Display.
+
+- **Start nur manuell:** Button auf dem Hauptbildschirm, Schnellkachel oder Sprachbefehl „Stationsmodus“ (bei entsperrtem Gerät). Kein automatischer Start beim Laden.
+- **Ende:** Button „Beenden“, der das Entsperren verlangt. Danach bleibt das Gerät gesperrt. Abstecken oder ein Sprachbefehl beenden den Modus nicht.
+- **Anzeige im Ruhezustand:**
+  - Uhr, Datum und Wetter (WP87)
+  - laufende Wiedergabe mit großen Knöpfen (Spotify WP84, Medien WP90)
+  - nächste Termine und fällige Aufgaben (WP88), **mit Titeln**
+  - Smart-Home-Kacheln für selbst gewählte Entitäten (WP91)
+  - Einzelne Bereiche lassen sich ausblenden.
+- **Gespräch:** Während eines Gesprächs zeigt die Station Transkript und Antwort groß, statt das Overlay zu öffnen. Wake Word ist Pflicht.
+- **Sperre:** Das Gerät bleibt gesperrt, die Station läuft über dem Sperrbildschirm.
+  - Sprachbefehle folgen der Freigabeliste aus K54, erkannte Sprecher (WP92) bekommen ihre Rechte.
+  - Kacheln und Wiedergabe-Knöpfe sind ohne Entsperren antippbar, im selben Umfang wie die Sprache.
+  - Schlösser, Alarm, Cover und Schalter mit „immer bestätigen“ erscheinen nicht als antippbare Kachel.
+  - Termine und Aufgaben auf dem Display und in der Wecker-Ansage zeigt die Station bewusst mit Titeln.
+  - Vorlesen auf Anfrage („was steht heute an?“) bleibt nach K54 gesperrt.
+- **Bildschirm, auswählbar:**
+  - „immer an, gedimmt“ (Standard): Helligkeit nach Umgebungslicht, Inhalt wandert leicht gegen Einbrennen
+  - „aus, an bei Wake Word oder Berührung“
+  - „tagsüber an, in den Ruhezeiten aus“
+- **Ruhezeiten** (einstellbar, Standard 22–7 Uhr): leiser antworten, Display fast schwarz, kein Bestätigungston.
+- **Ton:** Antworten und Musik laufen über einen gekoppelten Bluetooth-Lautsprecher, wenn er verbunden ist.
+- **Gesprächsmodus:** Er bleibt länger offen als sonst (Standard 15 s statt 5 s).
+- **Wecker mit Ansage:** Klingelt ein Wecker, während die Station läuft, sagt Wendelin danach Wetter, Termine und fällige Aufgaben des Tages an.
+
 **Einstellungen**
 
 | Bereich | Inhalt |
@@ -588,3 +614,7 @@ Abweichungen, die sich bei der Umsetzung ergeben haben. Status `offen` = noch ni
 | K59 | 2026-10-18 | TEE-Provider, Sicherheit | **Tinfoil-Release-Prüfung (WP76b):** keine SCT-Prüfung (Leaf über Rekor gebunden); nur Rekor v1, Rekor v2/TSA werden fail-closed abgelehnt (Umstellung bei GitHub würde Tinfoil brechen, beobachten); Sigstore-Trust-Root wird nur per App-Update erneuert (`tool/update_sigstore_root.dart` vergleicht zwei Quellen, prüft TUF-Signaturen nicht); Bundle-Quellen api.github.com und api-github-proxy.tinfoil.sh. **Offen:** „neuestes Release“ kommt aus nicht vertrauenswürdiger Quelle, Downgrade auf ein älteres gültig signiertes Release ist möglich; Lösung in WP76d. | WP76b Umsetzung und Review | bestätigt 2026-10-19 |
 | K60 | 2026-10-19 | UI/UX, Sprache | **App-Sprache (WP79):** UI-Sprache System/Deutsch/Englisch/Französisch, nicht unterstützte Systemsprache → Englisch; gesprochene Texte, Sprachbefehle und Texte an das Modell folgen der Sprech-Sprache bzw. bleiben deutsch, nicht der UI-Sprache; Sprachnamen immer als Endonyme; Beträge en „$1.50“, de/fr „1,50 $“; Modellgrößen mit einer Dezimalstelle. Technik: generierte l10n-Dateien werden committet, Tests laufen mit Systemsprache Deutsch. | WP79 Umsetzung | bestätigt 2026-10-19 |
 | K61 | 2026-10-19 | Eingebaute Integrationen | **Aufgaben (WP88):** statt `add_task`/`list_tasks`/`complete_task` auf einer festen `Tasks.md` eine eigene Integration `tasks` mit `tasks__add`/`tasks__list`/`tasks__complete` auf den Listen aus K6; Einstellung „Standard-Aufgabenliste“ (höchstens eine); Uhrzeit als eigene Erweiterung `⏰ HH:MM` vor den Obsidian-Tasks-Marken. Erinnerung über Wecker/Timer und Fortschreiben wiederkehrender Aufgaben (🔁) folgen später. | WP88 Umsetzung und Review | bestätigt 2026-10-19 |
+| K62 | 2026-10-19 | UI/UX, Sicherheit | **Stationsmodus (M6), Entscheidungen Maintainer:** Start nur manuell; Ende nur per Button mit Entsperren; Anzeige mit Uhr/Datum/Wetter, Wiedergabe, Terminen/Aufgaben mit Titeln und Smart-Home-Kacheln; Sprache nach K54; Kacheln ohne Entsperren antippbar wie Sprache nach K54; Bildschirmverhalten auswählbar; Ruhezeiten, Bluetooth-Lautsprecher, längerer Gesprächsmodus, Wecker mit Ansage. | Gespräch mit Maintainer 2026-10-19 | bestätigt 2026-10-19 |
+| K63 | 2026-10-19 | UI/UX, Sicherheit | **Stationsmodus, Vorschläge Orchestrator:** Start auch per Schnellkachel und Sprachbefehl (nur entsperrt); Abstecken beendet nicht; Station läuft über dem Sperrbildschirm statt Overlay; Wake Word Pflicht; Vorlesen von Terminen auf Anfrage bleibt gesperrt (nur Display und Wecker-Ansage mit Titeln); kritische HA-Entitäten nicht als Kachel; Bildschirm-Standard „immer an, gedimmt“; Ruhezeiten einstellbar (Standard 22–7 Uhr, Ergänzung Maintainer); Gesprächsmodus 15 s; Bereiche einzeln ausblendbar. | Gespräch mit Maintainer 2026-10-19 | bestätigt 2026-10-19 |
+| K64 | 2026-10-19 | Sprach-Pipeline | **Bessere Sprache (WP102, WP103):** größere lokale STT-Modelle (z. B. Parakeet, Whisper turbo) und bessere Stimmen (z. B. Piper high, Kokoro) wählbar, 2–3 GB RAM sind in Ordnung; erst Messvergleich (WP102), dann Einbau. Dazu Modell im Speicher halten (im Stationsmodus standardmäßig an), Rauschunterdrückung vor der Erkennung, eigene Begriffe (Kontakte, HA-Räume, Listen, Agenten) lokal als Hinweis an die Erkennung. Keine Cloud-Stimme. | Wunsch Maintainer 2026-10-19 | bestätigt 2026-10-19 |
+| K65 | 2026-10-19 | Eingebaute Integrationen, Sprach-Pipeline | **Mediensteuerung (WP90):** andere Wiedergabe wird während der ganzen Antwort leiser (Audiofokus „transient, may duck“, 1,5 s Nachlauf); beim Zuhören eigener Audiofokus, Aufnahme pausiert nur bei echtem Fokusverlust, nicht bei Ansagen mit Ducking (ersetzt das Verhalten aus WP72); `media__next`/`previous` ohne Nachfrage und ohne Undo (wie Spotify); `open_audible` mit Suche = suchen und abspielen; Medien-Listener nur mit Benachrichtigungszugriff. | WP90 Umsetzung, Entscheidungen Maintainer in der Paket-Sitzung | bestätigt 2026-10-19 |

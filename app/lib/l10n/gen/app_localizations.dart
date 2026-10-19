@@ -4294,6 +4294,12 @@ abstract class AppLocalizations {
   /// **'Tool-Aufrufe sind über die geprüfte Verbindung bis in die Enklave geschützt, aber nicht zusätzlich verschlüsselt.'**
   String get toolTlsHint;
 
+  /// No description provided for @integrationsMediaRationale.
+  ///
+  /// In de, this message translates to:
+  /// **'Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (bei neueren Android-Versionen vorher in den App-Infos „Eingeschränkte Einstellungen zulassen“ wählen). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.'**
+  String get integrationsMediaRationale;
+
   /// No description provided for @obsIndexBuilding.
   ///
   /// In de, this message translates to:

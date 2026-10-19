@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../platform/channel_audio_focus_port.dart';
 import '../platform/voice/audio_playback.dart';
+import '../platform/voice/ducking_tts.dart';
 import '../platform/voice/engine_whisper.dart';
 import '../platform/voice/record_audio_input.dart';
 import '../platform/voice/sherpa_tts.dart';
@@ -38,8 +40,21 @@ final microphoneProvider = Provider<PcmRecorder>(
     () async => SpeechCapture.parse(
       await ref.read(storageProvider).settings.get(AppSettings.bargeSource),
     ),
+    ref.watch(audioFocusPortProvider),
   ),
 );
+
+/// Audio focus for the recording and the spoken answer (WP90).
+final audioFocusPortProvider = Provider<AudioFocusPort>(
+  (ref) => ChannelAudioFocusPort(),
+);
+
+/// Holds the ducking focus for a whole spoken answer (WP90).
+final speechFocusProvider = Provider<SpeechFocus>((ref) {
+  final focus = SpeechFocus(ref.watch(audioFocusPortProvider));
+  ref.onDispose(focus.drop);
+  return focus;
+});
 
 /// Microphone as [AudioInput] (16 kHz mono PCM).
 final audioInputProvider = Provider<AudioInput>(
@@ -216,8 +231,14 @@ TextToSpeech createSherpaTts(
 /// Chooses system or offline voice per answer (K7).
 final ttsSelectorProvider = Provider<TtsSelector>(
   (ref) => TtsSelector(
-    system: ref.watch(systemTtsProvider),
-    sherpa: ref.watch(sherpaTtsProvider),
+    system: DuckingTextToSpeech(
+      ref.watch(systemTtsProvider),
+      ref.watch(speechFocusProvider),
+    ),
+    sherpa: DuckingTextToSpeech(
+      ref.watch(sherpaTtsProvider),
+      ref.watch(speechFocusProvider),
+    ),
     preference: () =>
         ref.read(voiceSettingsProvider).value?.tts ?? TtsPreference.automatic,
   ),

@@ -20,6 +20,8 @@ abstract class WendelinActivity : FlutterActivity() {
     private var network: NetworkChannel? = null
     private var auth: AuthChannel? = null
     private var torch: TorchChannel? = null
+    private var media: MediaChannel? = null
+    private var audioFocus: AudioFocusChannel? = null
     private var multicast: MulticastChannel? = null
     protected var notify: NotifyChannel? = null
         private set
@@ -43,6 +45,8 @@ abstract class WendelinActivity : FlutterActivity() {
         network = NetworkChannel(this, messenger)
         auth = AuthChannel(this, messenger)
         torch = TorchChannel(this, messenger)
+        media = MediaChannel(this, messenger)
+        audioFocus = AudioFocusChannel(this, messenger)
         multicast = MulticastChannel(this, messenger)
         notify = NotifyChannel(this, messenger)
         notify?.handleIntent(intent)
@@ -66,6 +70,10 @@ abstract class WendelinActivity : FlutterActivity() {
         auth = null
         torch?.dispose()
         torch = null
+        audioFocus?.dispose()
+        audioFocus = null
+        media?.dispose()
+        media = null
         multicast?.dispose()
         multicast = null
         notify?.dispose()

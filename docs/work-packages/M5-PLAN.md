@@ -11,3 +11,4 @@ Festgelegt mit dem Maintainer 2026-10-18 (K48). M5 ist nur Android. Kamera/Bild,
 | 3 | WP89a/b Todoist/Google Tasks, WP92a–c Sprechererkennung, WP93 Wake Word im Chat, WP94 Schnellwechsel | WP92c nach WP91 (gesperrt: Licht) |
 
 Ablauf je Paket wie in M4: Coder (Sonnet, eigener Worktree) → Review (Opus) → Nachbesserung (frischer Agent) → E2E-Agent (Emulator) → Merge. Höchstens etwa 4 Coder gleichzeitig. Vor jedem neuen Paket das Wochenlimit prüfen (< 95 %).
+- WP102 Spike bessere Sprache (Messung), danach WP103 Einbau (K64, 2026-10-19).

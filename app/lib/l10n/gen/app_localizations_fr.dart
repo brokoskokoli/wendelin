@@ -2499,6 +2499,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les appels d’outils sont protégés par la connexion vérifiée jusqu’à l’enclave, mais pas chiffrés en plus.';
 
   @override
+  String get integrationsMediaRationale =>
+      'Pour vous dire ce qui est en cours de lecture et avancer ou reculer dans un livre audio ou un podcast, Wendelin a besoin de « l’accès aux notifications ». Android ouvre ensuite cette page : choisissez Wendelin dans la liste et activez-le (sur les versions récentes d’Android, choisissez d’abord « Autoriser les paramètres restreints » dans les infos de l’appli). Wendelin ne lit pas les notifications, seulement la lecture multimédia. Pause, reprise et retour fonctionnent aussi sans.';
+
+  @override
   String get obsIndexBuilding => 'Création de l’index …';
 
   @override

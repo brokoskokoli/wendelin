@@ -88,6 +88,18 @@
             android:name=".WakeWordService"
             android:foregroundServiceType="microphone"
             android:exported="false" />
+        <!-- Anchor of the notification access for the media integration (WP90): without an
+             enabled listener MediaSessionManager.getActiveSessions is refused. Does nothing with
+             notifications. Bound only by the system. -->
+        <service
+            android:name=".MediaListenerService"
+            android:label="Wendelin"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <!-- System speech recognizer for other apps (local Whisper, WP20/ADR 0008); Android
              also requires it for an assistant. Disabled until Wendelin holds the assistant role
              and the user offers it (RecognizerSwitch), so installing the app never makes it the
@@ -151,11 +163,12 @@
         </intent>
         <!-- Apps of integrations (WP25, app detection): only these packages are visible to
              PackageManager, no QUERY_ALL_PACKAGES. Bring! (shopping list fallback), Obsidian
-             (open notes), Spotify (later). Keep in step with KnownApps in
+             (open notes), Spotify (later), Audible (media__open_audible). Keep in step with KnownApps in
              lib/di/app_requirements.dart. -->
         <package android:name="ch.publisheria.bring"/>
         <package android:name="md.obsidian"/>
         <package android:name="com.spotify.music"/>
+        <package android:name="com.audible.application"/>
         <!-- Speech recognizers: name of the service Android gives other apps (B12, only read). -->
         <intent>
             <action android:name="android.speech.RecognitionService"/>

@@ -15,6 +15,7 @@ Aus `app/lib/di/integrations/registry.dart` (Reihenfolge der Anzeige). Nicht abl
 | `obsidian` | `app/lib/di/integrations/obsidian_spec.dart` | `packages/wendelin_integrations/lib/src/obsidian/` | – |
 | `bring` | `app/lib/di/integrations/bring_spec.dart` | `packages/wendelin_integrations/lib/src/bring/` | – |
 | `lists` | `app/lib/di/integrations/lists_spec.dart` | `packages/wendelin_integrations/lib/src/lists/` | – |
+| `media` | `app/lib/di/integrations/media_spec.dart` | `packages/wendelin_integrations/lib/src/media/` | [media.md](../integrations/media.md) |
 | `ha` | `app/lib/di/integrations/ha_spec.dart` | – | – |
 | `spotify` | `app/lib/di/integrations/spotify_spec.dart` | `packages/wendelin_integrations/lib/src/spotify/` | – |
 | `weather` | `app/lib/di/integrations/weather_spec.dart` | `packages/wendelin_integrations/lib/src/weather/` | – |

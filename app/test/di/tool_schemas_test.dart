@@ -8,8 +8,6 @@ import '../support/all_integrations.dart';
 
 void main() {
   // All integrations of the real registry (built from fakes by TestEnv): a
-  // new integration is covered without touching this test.
-  // All integrations of the real registry (built from fakes by TestEnv): a
   // new integration is covered without touching this test. The container is
   // built inside the first test (needs the test zone).
   Map<String, Integration>? cache;
@@ -95,7 +93,9 @@ void main() {
     final iso = RegExp(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}');
     for (final t in tools) {
       final text = '${t.description} ${t.inputSchema}';
-      if (t.inputSchema.toString().contains('start')) {
+      // Only tools with a `start` parameter, not any description mentioning it.
+      final props = t.inputSchema['properties'] as Map<String, Object?>;
+      if (props.containsKey('start')) {
         expect(text, matches(iso), reason: t.name);
       }
     }

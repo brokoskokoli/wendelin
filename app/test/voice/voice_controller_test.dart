@@ -495,6 +495,33 @@ void main() {
     },
   );
 
+  test('Ducking-Fokus busy: Denken/Sprechen an, Ende und Reset aus', () async {
+    final tts = FakeTextToSpeech(manual: true);
+    start(
+      [ScriptedTurn.text('Ein langer Satz. Und noch einer.')],
+      voice: fakeVoice(
+        script: const [Transcript(text: 'Erzähl was')],
+        tts: tts,
+      ),
+    );
+    final focus = c.read(speechFocusProvider);
+    expect(focus.busy, isFalse);
+    await voice().start(TriggerKind.pushToTalk);
+    await waitVoice(c, (v) => v.phase == VoiceState.speaking);
+    expect(focus.busy, isTrue);
+    await voice().suspend();
+    await waitVoice(c, (v) => v.phase == VoiceState.idle);
+    expect(focus.busy, isFalse);
+
+    // Reset (demo switch) during the answer: busy must not stay set.
+    await voice().start(TriggerKind.pushToTalk);
+    await waitVoice(c, (v) => v.phase == VoiceState.speaking);
+    expect(focus.busy, isTrue);
+    await c.read(demoModeProvider.notifier).set(enabled: true);
+    await Future<void>.delayed(Duration.zero);
+    expect(focus.busy, isFalse);
+  });
+
   test('ohne Spracherkennung: kein Start, Hinweis', () async {
     start(const [], voice: null);
     expect(await voice().start(TriggerKind.pushToTalk), isFalse);

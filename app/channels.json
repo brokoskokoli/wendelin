@@ -151,6 +151,30 @@
         "shutdown": {"args": [], "returns": "none"}
       }
     },
+    "app.wendelin/audiofocus": {
+      "dart": ["app/lib/platform/channel_audio_focus_port.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AudioFocusChannel.kt"],
+      "toKotlin": {
+        "acquire": {"args": ["kind"], "returns": "value"},
+        "release": {"args": ["kind"], "returns": "none"}
+      },
+      "toDart": {
+        "focusChanged": {"args": ["kind", "state"], "returns": "none"}
+      }
+    },
+    "app.wendelin/media": {
+      "dart": ["app/lib/platform/channel_media_control_port.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/MediaChannel.kt"],
+      "toKotlin": {
+        "hasSessionAccess": {"args": [], "returns": "value"},
+        "openSessionAccessSettings": {"args": [], "returns": "none"},
+        "nowPlaying": {"args": [], "returns": "map"},
+        "send": {"args": ["command"], "returns": "none"},
+        "seekTo": {"args": ["positionMs"], "returns": "none"},
+        "openApp": {"args": ["package", "query"], "returns": "none"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/multicast": {
       "dart": ["app/lib/platform/ha_discovery.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/MulticastChannel.kt"],

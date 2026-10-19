@@ -64,16 +64,18 @@ void main() {
       }
     });
 
-    test('WP72: Erkennung pausiert bei Fokusverlust und läuft weiter', () {
-      for (final p in CaptureProfile.values) {
-        if (p == CaptureProfile.speechOutput) continue;
-        expect(
-          buildRecordConfig(p).audioInterruption,
-          AudioInterruptionMode.pauseResume,
-          reason: '$p',
-        );
-      }
-    });
+    test(
+      'WP90: das Plugin fordert nie selbst Fokus (kein dauerhaftes Pausieren)',
+      () {
+        for (final p in CaptureProfile.values) {
+          expect(
+            buildRecordConfig(p).audioInterruption,
+            AudioInterruptionMode.none,
+            reason: '$p',
+          );
+        }
+      },
+    );
 
     test('WP72: Varianten der Sprachausgabe', () {
       final c = buildRecordConfig(CaptureProfile.speechOutput);
