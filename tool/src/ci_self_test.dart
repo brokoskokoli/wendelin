@@ -271,9 +271,8 @@ void _textRunChecks(SelfCheck t) {
       "const a = 'Das ist ein Test';\nconst b = 'Ja, löschen';\n"
       "const c = 'Nein, behalten';\n",
     );
-    File(
-      '${dir.path}/tool/text_allowlist.yaml',
-    ).writeAsStringSync('app/lib/ui/a.dart: 3\n');
+    File('${dir.path}/tool/text_allowlist.yaml')
+        .writeAsStringSync('app/lib/ui/a.dart: 3\n');
     final grown = run(ci: true);
     t.isTrue(
       grown.exitCode == 1 && (grown.stderr as String).contains('a.dart'),

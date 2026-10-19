@@ -23,7 +23,7 @@ void main(List<String> args) {
   final inCi = Platform.environment['CI'] == 'true';
   final msgs = [
     ...compareTexts(found, allowed),
-    if (base == null && inCi)
+    if (inCi && !_hasBase())
       'check_texts: keine Basis (origin/main) zum Vergleich der Allowlist; '
           'im CI mit fetch-depth: 0 auschecken.'
     else
@@ -37,6 +37,21 @@ void main(List<String> args) {
   }
   msgs.forEach(stderr.writeln);
   exitCode = 1;
+}
+
+/// Wahr, wenn origin/main auflösbar ist (Datei dort darf noch fehlen: Ersteinführung).
+bool _hasBase() {
+  try {
+    return Process.runSync('git', [
+          'rev-parse',
+          '--verify',
+          '-q',
+          'origin/main',
+        ]).exitCode ==
+        0;
+  } on ProcessException {
+    return false;
+  }
 }
 
 /// Allowlist der Basis (Merge-Basis mit origin/main, sonst origin/main) aus git;
