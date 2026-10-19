@@ -111,17 +111,23 @@ final class YesNoRecognizer {
   /// Phrases of hesitation.
   static const hesitationPhrases = {'na ja', 'na gut', 'plus tard'};
 
-  /// Verbs that answer the question to send an SMS or to call with „yes“
-  /// („Soll ich sie absenden?“ – „absenden“). Only passed for those two
-  /// questions (`parse(extraYes: …)`): „call“ or „send“ in another answer
-  /// is not a yes.
-  static const outgoingYesWords = {
+  /// Verbs that answer „Soll ich sie absenden?“ with yes. Only passed for
+  /// that question (`parse(extraYes: …)`): „send“ elsewhere is not a yes,
+  /// and „anrufen“ does not confirm an SMS.
+  static const smsYesWords = {
     // de
-    'absenden', 'senden', 'abschicken', 'schicken', 'anrufen',
+    'absenden', 'senden', 'abschicken', 'schicken',
     // fr
-    'envoie', 'envoyer', 'appelle', 'appeler',
+    'envoie', 'envoyer',
     // en
-    'send', 'call',
+    'send',
+  };
+
+  /// Verbs that answer „Soll ich anrufen?“ with yes (see [smsYesWords]).
+  static const callYesWords = {
+    'anrufen', // de
+    'appelle', 'appeler', // fr
+    'call', // en
   };
 
   /// The answer in [transcript], or `null` if it is not a clear yes or no.

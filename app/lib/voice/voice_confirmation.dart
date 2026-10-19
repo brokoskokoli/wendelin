@@ -149,9 +149,11 @@ extension _VoiceConfirmation on VoiceController {
         final answer = VoiceController.recognizer.parse(
           transcript.text,
           strict: strictAnswer(question),
-          extraYes: outgoing == null
-              ? const {}
-              : YesNoRecognizer.outgoingYesWords,
+          extraYes: switch (outgoing?.kind) {
+            OutgoingKind.sms => YesNoRecognizer.smsYesWords,
+            OutgoingKind.call => YesNoRecognizer.callYesWords,
+            null => const {},
+          },
         );
         if (answer == YesNo.yes &&
             outgoing != null &&

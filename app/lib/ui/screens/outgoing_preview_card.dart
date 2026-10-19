@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/contacts.dart' show SmsDraftEdits;
 
 import '../../agent/outgoing_preview.dart';
 import '../../di/sms_drafts.dart';
@@ -34,6 +35,7 @@ class _OutgoingPreviewCardState extends ConsumerState<OutgoingPreviewCard> {
   late final TextEditingController _text = TextEditingController(
     text: widget.preview.text,
   );
+  late final SmsDraftEdits _edits;
   bool _approved = false;
 
   OutgoingPreview get _p => widget.preview;
@@ -43,6 +45,7 @@ class _OutgoingPreviewCardState extends ConsumerState<OutgoingPreviewCard> {
   @override
   void initState() {
     super.initState();
+    _edits = ref.read(smsDraftEditsProvider);
     _text.addListener(_onEdited);
   }
 
@@ -50,7 +53,7 @@ class _OutgoingPreviewCardState extends ConsumerState<OutgoingPreviewCard> {
     // The edit is recorded as typed, so a spoken „ja“ cannot confirm a text
     // the user changed and never heard (see `OutgoingPreview` in the voice
     // confirmation).
-    ref.read(smsDraftEditsProvider).set(_p.number, _p.text, _text.text.trim());
+    _edits.set(_p.number, _p.text, _text.text.trim());
     setState(() {});
   }
 
@@ -59,7 +62,7 @@ class _OutgoingPreviewCardState extends ConsumerState<OutgoingPreviewCard> {
     // Not approved (declined, dismissed, answered by voice or replaced): the
     // edit must not leak into a later message with the same text.
     if (!_approved) {
-      ref.read(smsDraftEditsProvider).discard(_p.number, _p.text);
+      _edits.discard(_p.number, _p.text);
     }
     _text.dispose();
     super.dispose();
