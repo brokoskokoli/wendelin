@@ -55,7 +55,7 @@ void main() {
     await send(tester, 'Trag mir morgen um 10 Tauchen ein');
     await pumpUntil(
       tester,
-      find.textContaining('Rückgängig · '),
+      undoButton(tester),
       timeout: const Duration(seconds: 60),
     );
     await waitIdle(tester);
@@ -70,10 +70,10 @@ void main() {
     final local = events.single.start.toLocal();
     expect((local.hour, local.minute), (10, 0));
 
-    final undo = find.textContaining('Rückgängig · ');
+    final undo = undoButton(tester);
     if (undo.evaluate().isNotEmpty) {
       await tester.tap(undo);
-      await pumpUntil(tester, find.text('Rückgängig gemacht'));
+      await pumpUntil(tester, find.text(l10n(tester).toolResultUndone));
     } else {
       await port.deleteEvent(events.single.id); // Fenster abgelaufen
     }

@@ -22,6 +22,7 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import '../test/settings/integrations_screen_test.dart'
     show pumpIntegrations, settle, tile, tileWidget;
 import '../test/support/test_env.dart';
+import 'support/e2e.dart' show l10n;
 
 TestEnv _env(String id) => TestEnv(
   startup: StartupSettings(enabledIntegrations: {id}, uiLanguage: 'de'),
@@ -38,7 +39,10 @@ Future<void> _openSetup(WidgetTester tester, String name) async {
   await tester.tap(
     find.descendant(
       of: tile(name),
-      matching: find.widgetWithText(OutlinedButton, 'Einrichten'),
+      matching: find.widgetWithText(
+        OutlinedButton,
+        l10n(tester).mcpLabelsSetUp,
+      ),
     ),
   );
   await settle(tester);
@@ -88,19 +92,16 @@ void main() {
       find.byKey(const ValueKey('todoistToken')),
       'falsch',
     );
-    await tester.tap(find.text('Verbinden'));
+    await tester.tap(find.text(l10n(tester).todoistConnect));
     await settle(tester);
-    expect(
-      _err(tester, 'todoistError'),
-      'Todoist hat den Token abgelehnt (ungültig oder widerrufen).',
-    );
+    expect(_err(tester, 'todoistError'), l10n(tester).todoistErrDenied);
     expect(await env.secrets.listKeys(), isEmpty);
 
     await tester.enterText(
       find.byKey(const ValueKey('todoistToken')),
       FakeTodoistApi.validToken,
     );
-    await tester.tap(find.text('Verbinden'));
+    await tester.tap(find.text(l10n(tester).todoistConnect));
     await settle(tester);
     expect(find.byKey(const ValueKey('todoistToken')), findsNothing);
     expect(await env.secrets.listKeys(), {'todoist.token'});
@@ -132,7 +133,7 @@ void main() {
     final c = await pumpIntegrations(tester, env);
     await _openSetup(tester, 'Google Tasks');
     expect(find.byType(GoogleTasksScreen), findsOneWidget);
-    expect(find.textContaining('Google Tasks API'), findsOneWidget);
+    expect(find.text(l10n(tester).googleTasksGuideStep2), findsOneWidget);
 
     await _fill(tester);
     // Falscher state wird ignoriert, danach Erfolg mit richtigem state.
@@ -144,7 +145,7 @@ void main() {
           'code': 'fake-code',
         });
     };
-    await tester.tap(find.text('Bei Google anmelden'));
+    await tester.tap(find.text(l10n(tester).googleTasksSignIn));
     await settle(tester);
     expect(find.byKey(const ValueKey('googleTasksError')), findsNothing);
     expect(await env.secrets.listKeys(), {
@@ -179,7 +180,7 @@ void main() {
     await pumpIntegrations(tester, env);
     await _openSetup(tester, 'Google Tasks');
     await _fill(tester);
-    await tester.tap(find.text('Bei Google anmelden'));
+    await tester.tap(find.text(l10n(tester).googleTasksSignIn));
     await tester.pump();
     await tester.pump();
     expect(env.googleBrowser.opened, hasLength(1));

@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/startup.dart';
-import 'package:wendelin/l10n/l10n.dart';
 import 'package:wendelin/platform/channel_contacts_port.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -32,10 +31,6 @@ Future<void> sendMsg(WidgetTester tester, String text) async {
   await tester.testTextInput.receiveAction(TextInputAction.send);
   await tester.pump();
 }
-
-/// Localised button labels of the current UI language (the emulator locale decides).
-AppLocalizations labels(WidgetTester tester) =>
-    tester.element(find.byType(Scaffold).first).l10n;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -115,7 +110,7 @@ void main() {
       'Ich komme spaeter EDIT',
     );
     await tester.pump();
-    await tester.tap(find.text(labels(tester).confYesSend));
+    await tester.tap(find.text(l10n(tester).confYesSend));
     await pumpUntil(
       tester,
       find.textContaining('SMS erledigt', skipOffstage: false),
@@ -128,7 +123,7 @@ void main() {
     await pumpUntil(tester, find.byKey(const ValueKey('smsText')));
     await pumpFor(tester, const Duration(seconds: 2));
     mark('sms2-cancel');
-    await tester.tap(find.text(labels(tester).confNoCancel));
+    await tester.tap(find.text(l10n(tester).confNoCancel));
     await pumpUntil(
       tester,
       find.textContaining('Abgebrochen.', skipOffstage: false),
@@ -138,12 +133,12 @@ void main() {
 
     mark('call-compose');
     await sendMsg(tester, 'Ruf Ben Schmidt an');
-    await pumpUntil(tester, find.text(labels(tester).confYesCall));
+    await pumpUntil(tester, find.text(l10n(tester).confYesCall));
     expect(find.textContaining('Ben Schmidt'), findsWidgets);
     expect(find.textContaining('5556'), findsWidgets);
     await pumpFor(tester, const Duration(seconds: 3));
     mark('call-yes');
-    await tester.tap(find.text(labels(tester).confYesCall));
+    await tester.tap(find.text(l10n(tester).confYesCall));
     await pumpUntil(
       tester,
       find.textContaining('Anruf erledigt', skipOffstage: false),
