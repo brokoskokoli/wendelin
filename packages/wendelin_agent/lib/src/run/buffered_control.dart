@@ -12,8 +12,8 @@ import 'run_state.dart';
 /// Invariants:
 /// - Until [release] nothing reaches the run's listener: events are kept in
 ///   order. [release] replays them and passes later events through.
-/// - [discard] drops everything kept and everything that follows, and
-///   cancels the call's own [token]. The run's abort cancels it too.
+/// - [discard] drops everything kept and everything that follows, except
+///   [UsageReported] (paid tokens are always reported), and cancels the call's own [token]. The run's abort cancels it too.
 /// - An abort of the run is still thrown by [throwIfAborted].
 final class BufferedControl implements RunControl {
   /// Buffers events for a call of the run behind [_parent].
@@ -36,7 +36,11 @@ final class BufferedControl implements RunControl {
 
   @override
   void emit(AgentEvent e) {
-    if (_discarded) return;
+    if (_discarded) {
+      // Paid tokens count in any case, also of a dropped call.
+      if (e is UsageReported) _parent.emit(e);
+      return;
+    }
     final held = _held;
     if (held != null) {
       held.add(e);
@@ -57,6 +61,7 @@ final class BufferedControl implements RunControl {
   /// cancels the call.
   void discard() {
     _discarded = true;
+    _held?.whereType<UsageReported>().forEach(_parent.emit);
     _held = null;
     token.cancel();
   }

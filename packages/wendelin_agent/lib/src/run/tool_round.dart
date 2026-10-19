@@ -97,18 +97,23 @@ final class ToolRound {
 
   /// Executes [calls] and verifies the answer that asked for them; returns
   /// one result per call, in call order.
-  Future<List<ToolResultBlock>> run(List<ToolCallBlock> calls) async {
-    final round = await execute(calls);
+  Future<List<ToolResultBlock>> run(
+    List<ToolCallBlock> calls,
+    AttestationStep? step,
+  ) async {
+    final round = await execute(calls, step);
     await verify(round);
     return resultsOf(round);
   }
 
   /// Executes [calls] without waiting for the receipt of the answer that
   /// asked for them (except `external` ones, which wait for green).
-  Future<ToolRoundRun> execute(List<ToolCallBlock> calls) async {
-    // The step of the answer that caused this round: a model call that
-    // overlaps the check (WP81b) starts a new step meanwhile.
-    final step = _attest.last;
+  /// [step] is the check of that answer ([ModelReply.step]): a model call
+  /// that overlaps the check (WP81b) begins other steps meanwhile.
+  Future<ToolRoundRun> execute(
+    List<ToolCallBlock> calls,
+    AttestationStep? step,
+  ) async {
     final results = <String, ToolResultBlock>{};
     final pending = <ToolCallBlock>[];
     final catalog = _privacy.catalog;
@@ -124,7 +129,7 @@ final class ToolRound {
     }
 
     final hadExternal = pending.any(_isExternal);
-    if (pending.isNotEmpty) await _invokeGated(pending, results);
+    if (pending.isNotEmpty) await _invokeGated(pending, results, step);
     return ToolRoundRun._(
       calls,
       pending,
@@ -232,12 +237,13 @@ final class ToolRound {
   Future<void> _invokeGated(
     List<ToolCallBlock> pending,
     Map<String, ToolResultBlock> results,
+    AttestationStep? step,
   ) async {
     final external = [
       for (final call in pending)
         if (_isExternal(call)) call,
     ];
-    if (!_attest.expectsReport || external.isEmpty) {
+    if (step?.report == null || external.isEmpty) {
       return _invoke(pending, results);
     }
     final immediate = [
@@ -245,7 +251,7 @@ final class ToolRound {
         if (!external.contains(call)) call,
     ];
     if (immediate.isNotEmpty) await _invoke(immediate, results);
-    final report = await _attest.settle();
+    final report = await _attest.settle(step);
     if (report?.status == AttestationStatus.green) {
       return _invoke(external, results);
     }

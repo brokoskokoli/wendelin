@@ -46,7 +46,6 @@ final class AttestationGate {
   final String _sessionId;
 
   int _steps = 0;
-  AttestationStep? _last;
 
   /// A model call on [provider] has ended: remember its pending check.
   /// Events of the step go to [sink] (default: the run).
@@ -66,7 +65,6 @@ final class AttestationGate {
       report,
       sink ?? _control,
     );
-    _last = step;
     if (report != null && !failed) {
       // Pending (yellow) until the receipt check is final: the UI shows
       // „wird geprüft“; the final event of the same step replaces it.
@@ -82,17 +80,15 @@ final class AttestationGate {
     return step;
   }
 
-  /// The step of the latest model call.
-  AttestationStep? get last => _last;
-
-  /// Whether the last model call's answer is verified afterwards.
-  bool get expectsReport => _last?.report != null;
-
-  /// Waits for the final verification of [step] (default: the last model
-  /// call), emits the status event (once) and returns the report (`null` if
-  /// the provider has none or nothing was checked).
-  Future<AttestationReport?> settle([AttestationStep? step]) async {
-    final target = step ?? _last;
+  /// Waits for the final verification of [step] (the step of the answer in
+  /// question, never "the latest": calls overlap), emits the status event
+  /// (once) and returns the report (`null` if the provider has none or
+  /// nothing was checked).
+  ///
+  /// An abort while the receipt is open ends the run with the abort and
+  /// emits no final status event: the yellow event stays the last one.
+  Future<AttestationReport?> settle(AttestationStep? step) async {
+    final target = step;
     final pending = target?.report;
     if (target == null || pending == null) return null;
     // An abort does not wait for the receipt.

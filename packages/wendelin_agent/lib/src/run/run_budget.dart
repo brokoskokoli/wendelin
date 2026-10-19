@@ -41,10 +41,6 @@ final class RunBudget {
         used.inputTokens + used.outputTokens + used.cacheWriteTokens;
   }
 
-  /// Adds the tokens of [other], a budget that an overlapping
-  /// call (WP81b) counted on its own; only a kept call is absorbed.
-  void absorb(RunBudget other) => _tokensSpent += other._tokensSpent;
-
   /// Checks the monthly budget of [target]'s profile with [guard]: throws
   /// [RunStop] when it is blocked, warns once per run and profile.
   Future<void> checkGuard(

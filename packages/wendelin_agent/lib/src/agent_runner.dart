@@ -309,7 +309,7 @@ final class _Run implements RunControl {
       }
       // Tool round (also for tool calls in a paused answer: every tool_use
       // gets its tool_result).
-      ahead = await _toolRound(assistant, calls);
+      ahead = await _toolRound(assistant, calls, reply.step);
     }
   }
 
@@ -411,6 +411,7 @@ final class _Run implements RunControl {
   Future<ModelReply?> _toolRound(
     Message assistant,
     List<ToolCallBlock> calls,
+    AttestationStep? step,
   ) async {
     // Invariant: at most `maxToolRounds` rounds; the next one is refused
     // with a result for every call, then the run ends.
@@ -424,7 +425,7 @@ final class _Run implements RunControl {
     }
     _budget.onRound();
     await _state.append(assistant);
-    final round = await _tools.execute(calls);
+    final round = await _tools.execute(calls, step);
     ModelReply? ahead;
     if (round.overlappable) {
       ahead = await _overlap(round);
@@ -456,7 +457,6 @@ final class _Run implements RunControl {
     void dropProvisional() =>
         _state.messages.removeWhere((m) => identical(m, provisional));
     final buffer = BufferedControl(this);
-    final budget = RunBudget(config);
     Future<ModelReply>? call;
     try {
       try {
@@ -467,11 +467,12 @@ final class _Run implements RunControl {
         await _state.append(Message.toolResults(_tools.resultsOf(round)));
         rethrow;
       }
+      // Paid tokens count in any case: the call shares the run's budget.
       call = ModelCall(
         runner,
         _state,
         _privacy,
-        budget,
+        _budget,
         buffer,
         _attest,
       ).call();
@@ -479,10 +480,9 @@ final class _Run implements RunControl {
       call.ignore();
       if (await _tools.verify(round)) {
         buffer.release();
-        final reply = await call;
-        _budget.absorb(budget);
+        // Recorded at once: an abort during the call keeps the history whole.
         await _state.record(provisional);
-        return reply;
+        return await call;
       }
       dropProvisional();
       await _state.append(Message.toolResults(_tools.resultsOf(round)));
