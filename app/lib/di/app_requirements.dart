@@ -77,8 +77,16 @@ abstract final class KnownApps {
     needed: false,
   );
 
+  /// Google Maps (WP86: the `maps` integration needs it; `location` uses it
+  /// for navigation when present and falls back to a `geo:` intent).
+  static const googleMaps = AppRequirement(
+    androidPackage: 'com.google.android.apps.maps',
+    appName: 'Google Maps',
+    storeUrl: 'https://www.google.com/maps/about/',
+  );
+
   /// All known apps.
-  static const all = [bring, obsidian, spotify, audible];
+  static const all = [bring, obsidian, spotify, audible, googleMaps];
 }
 
 /// Last known answers of the [AppPresencePort]; filled by every check.

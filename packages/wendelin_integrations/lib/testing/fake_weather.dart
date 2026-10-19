@@ -69,6 +69,9 @@ final class FakeGeocoder implements Geocoder {
   /// Names asked for, in order.
   final List<String> asked = [];
 
+  /// The cancel token of the last call.
+  CancelToken? lastCancel;
+
   @override
   Future<Place?> find(
     String name, {
@@ -76,6 +79,7 @@ final class FakeGeocoder implements Geocoder {
     CancelToken? cancel,
   }) async {
     asked.add(name);
+    lastCancel = cancel;
     return _places[name.trim().toLowerCase()];
   }
 }
@@ -91,8 +95,15 @@ final class FakeWeatherLocationPort implements WeatherLocationPort {
   /// Thrown instead of answering (e.g. permission revoked).
   PortException? error;
 
+  /// The privacy levels of the calls so far.
+  final List<PrivacyLevel?> levels = [];
+
   @override
-  Future<Place?> currentPlace({CancelToken? cancel}) async {
+  Future<Place?> currentPlace({
+    CancelToken? cancel,
+    PrivacyLevel? level,
+  }) async {
+    levels.add(level);
     final e = error;
     if (e != null) throw e;
     return place;

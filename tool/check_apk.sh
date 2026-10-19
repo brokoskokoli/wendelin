@@ -11,7 +11,8 @@
 #   - <application> mit android:allowBackup="false" und
 #     android:dataExtractionRules; keine Berechtigungen außer der Liste
 #     (M2: RECORD_AUDIO für Push-to-talk, Assistent und Spracherkennung;
-#     M4: POST_NOTIFICATIONS für die Warnung bei fehlgeschlagener TEE-Prüfung)
+#     M4: POST_NOTIFICATIONS für die Warnung bei fehlgeschlagener TEE-Prüfung;
+#     WP86: ACCESS_FINE/COARSE_LOCATION für den Standort, nie Hintergrund)
 #   - exportierte Komponenten nur aus der Liste: MainActivity,
 #     OAuthRedirectActivity (OAuth-Rückleitung, WP27), die
 #     Assistenten-Services nur mit BIND_VOICE_INTERACTION, der
@@ -123,8 +124,8 @@ STUB
   expect "fremde exportierte Komponente erkannt" 1 "app.wendelin.Leak unerwartet exportiert"
   echo "$good_manifest" >"$dir/manifest.xml"
 
-  printf 'android.permission.ACCESS_FINE_LOCATION\n' >>"$dir/perms.txt"
-  expect "unerwartete Berechtigung erkannt" 1 "ACCESS_FINE_LOCATION"
+  printf 'android.permission.ACCESS_BACKGROUND_LOCATION\n' >>"$dir/perms.txt"
+  expect "unerwartete Berechtigung erkannt" 1 "ACCESS_BACKGROUND_LOCATION"
   printf 'android.permission.INTERNET\n' >"$dir/perms.txt"
 
   # Gradle-Schritt mit einem Baum aus einer Datei.
@@ -262,7 +263,7 @@ elif [ "$exported_ok" = 1 ]; then
   echo "ok: exportierte Komponenten wie erwartet"
 fi
 
-ALLOWED='^(android\.permission\.FOREGROUND_SERVICE|android\.permission\.FOREGROUND_SERVICE_MICROPHONE|android\.permission\.WAKE_LOCK|android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.CHANGE_WIFI_MULTICAST_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.RECORD_AUDIO|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
+ALLOWED='^(android\.permission\.FOREGROUND_SERVICE|android\.permission\.FOREGROUND_SERVICE_MICROPHONE|android\.permission\.WAKE_LOCK|android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.CHANGE_WIFI_MULTICAST_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.RECORD_AUDIO|android\.permission\.ACCESS_FINE_LOCATION|android\.permission\.ACCESS_COARSE_LOCATION|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
 perms="$("$APKANALYZER" manifest permissions "$APK")"
 if extra="$(echo "$perms" | grep -vE "$ALLOWED")"; then
   echo "FEHLER: unerwartete Berechtigungen:" >&2

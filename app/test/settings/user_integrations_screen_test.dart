@@ -82,7 +82,7 @@ void main() {
         userIntegrationSourcesProvider.overrideWithValue([mcp, http]),
       ],
     );
-    await pumpIntegrations(tester, env);
+    await pumpIntegrations(tester, env, size: const Size(390, 2000));
     // The sync runs in the test's fake zone: let it work in steps.
     for (var i = 0; i < 3; i++) {
       await settle(tester);
@@ -132,6 +132,6 @@ void main() {
   testWidgets('ohne eigene Integrationen kein Abschnitt', (tester) async {
     await pumpIntegrations(tester, TestEnv());
     expect(find.text('Eigene Integrationen'), findsNothing);
-    expect(find.byType(IntegrationTile), findsNWidgets(14));
+    expect(find.byType(IntegrationTile), findsNWidgets(16));
   });
 }
