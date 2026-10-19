@@ -75,12 +75,11 @@ git checkout -q main
 export MERGE_WP_GATE='dart run tool/l10n_merge.dart --check && dart run tool/check_registry.dart'
 export MERGE_WP_BASE=main
 
-echo "probe: merge probe/probeone"
-bash tool/merge_wp.sh probe/probeone --keep || fail "Merge probeone"
+bash tool/merge_wp.sh probe/probetwo --keep || fail "Merge probetwo"
 
-echo "probe: merge probe/probetwo"
+echo "probe: merge probe/probeone"
 # Vorab: welche Dateien kollidieren ohne Hilfen? (Erzeugtes löst merge_wp.sh selbst.)
-git merge --no-commit --no-ff probe/probetwo >/dev/null 2>&1
+git merge --no-commit --no-ff probe/probeone >/dev/null 2>&1
 conflicts=$(git diff --name-only --diff-filter=U)
 git merge --abort 2>/dev/null; git reset -q --hard HEAD
 open_doc=0; manual=""
@@ -89,11 +88,11 @@ for f in $conflicts; do
   if [ "$f" = docs/ARCHITECTURE.md ]; then open_doc=1; else manual="$manual $f"; fi
 done
 [ -z "$manual" ] || fail "manueller Konflikt in:$manual"
-target=probe/probetwo
+target=probe/probeone
 if [ $open_doc -eq 1 ]; then
   echo "probe: erwartet offen (WP98 D2): Doku-Zeile in docs/ARCHITECTURE.md kollidiert; Probe lässt den Doku-Commit weg."
-  git branch -q -f probe/probetwo-nodoc probe/probetwo~1
-  target=probe/probetwo-nodoc
+  git branch -q -f probe/probeone-nodoc probe/probeone~1
+  target=probe/probeone-nodoc
 fi
 bash tool/merge_wp.sh "$target" --keep || fail "Merge $target"
 
