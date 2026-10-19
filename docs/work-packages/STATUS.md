@@ -58,7 +58,7 @@ Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: 
 | WP107 | Bring! nur Tokens | gemergt cfab3c1e | K75 offen (ergänzt); Gerätetest WP107.2 (falsches Passwort) und WP107.4 (Update von Vorversion) offen, `docs/testing/m5/wp107.md` |
 | WP108 | Fehlerart bis zur Integrationskachel | in Arbeit | Folgepunkt WP105 |
 | WP109 | Leitplanken (Regelquelle, main-Schutz, Größen-Ratsche, Aufräumskript) | in Arbeit | Wunsch Stefan 2026-10-19 (Architekturanalyse); Teil B (Ruleset, Aufräumen, Skill) macht der Orchestrator |
-| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | geplant | Wunsch Stefan 2026-10-19; Start nach Merge WP109; Teil B (wp-supervisor, Prompt-Vorlage) macht der Orchestrator |
+| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | geplant | Wunsch Stefan 2026-10-19; Start nach Merge WP109; Teil B erledigt (wp-supervisor model opus, Ablauf/DoD/2 Runden, Vorlage session-prompt.md); Stefan 2026-10-19: nach WP110 kleine Pakete probeweise mit wp-supervisor auf Sonnet, Messung über Review-Urteilsdateien |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
