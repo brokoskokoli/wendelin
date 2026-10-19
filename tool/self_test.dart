@@ -16,8 +16,8 @@ import 'src/gate_run.dart';
 import 'src/gate_rust.dart';
 import 'src/l10n_merge_self_test.dart';
 import 'src/merge_wp_self_test.dart';
-import 'src/self_check.dart';
 import 'src/registry_lint_self_test.dart';
+import 'src/self_check.dart';
 import 'src/size_rules.dart';
 import 'src/size_scan.dart';
 
