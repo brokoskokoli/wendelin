@@ -349,7 +349,11 @@ helper() {
   while true; do
     if [ -z "$granted" ] && installed; then
       if adb shell pm grant "$PKG" android.permission.READ_CALENDAR 2>/dev/null &&
-        adb shell pm grant "$PKG" android.permission.WRITE_CALENDAR 2>/dev/null; then
+        adb shell pm grant "$PKG" android.permission.WRITE_CALENDAR 2>/dev/null &&
+        # SEND_SMS vorab (vor jedem add-role-holder): Als Rollenbestandteil
+        # erteilt, nimmt der Rollenentzug es zurück und Android beendet den
+        # instrumentierten Prozess („permissions revoked“).
+        adb shell pm grant "$PKG" android.permission.SEND_SMS 2>/dev/null; then
         granted=1
       fi
     fi
@@ -406,6 +410,7 @@ cleanup() {
   if [ -n "$LIVE" ]; then
     adb shell run-as "$PKG" rm -f files/live_anthropic.key 2>/dev/null || true
   fi
+  if installed; then adb shell pm revoke "$PKG" android.permission.SEND_SMS 2>/dev/null || true; fi
   if [ "$NEED_LOC" = 1 ] && installed; then
     adb shell pm revoke "$PKG" android.permission.ACCESS_FINE_LOCATION 2>/dev/null || true
     adb shell pm revoke "$PKG" android.permission.ACCESS_COARSE_LOCATION 2>/dev/null || true
