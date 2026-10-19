@@ -29,6 +29,7 @@ WIconData integrationIcon(String integrationId) => switch (integrationId) {
   'bring' => WIcons.cart,
   'http' => WIcons.globe,
   'spotify' => WIcons.music,
+  'media' => WIcons.music,
   'ha' => WIcons.home,
   _ => WIcons.task,
 };

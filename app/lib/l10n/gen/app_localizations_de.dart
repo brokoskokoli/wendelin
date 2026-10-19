@@ -4451,6 +4451,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wendelin braucht Zugriff auf deine Kalender, um Termine zu lesen, anzulegen und zu ändern. Android fragt dich gleich danach. Löschen fragt Wendelin immer vorher nach.';
 
   @override
+  String get integrationsMediaRationale =>
+      'Damit Wendelin sagen kann, was läuft, und im Hörbuch oder Podcast spulen kann, braucht es den „Benachrichtigungszugriff“. Android öffnet gleich die Seite dazu: Wendelin in der Liste wählen und einschalten (bei neueren Android-Versionen vorher in den App-Infos „Eingeschränkte Einstellungen zulassen“ wählen). Wendelin liest keine Benachrichtigungen, nur die Medienwiedergabe. Pause, Weiter und Zurück gehen auch ohne.';
+
+  @override
   String get voiceErrorGeneric =>
       'Sprache hat nicht geklappt. Bitte versuche es noch einmal.';
 

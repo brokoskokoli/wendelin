@@ -10,6 +10,9 @@ const appsChannelName = 'app.wendelin/apps';
 /// `AssistantChannel.kt`: default assistant, overlay, recognizer settings.
 const assistantChannelName = 'app.wendelin/assistant';
 
+/// `AudioFocusChannel.kt`: audio focus for the spoken answer and the recording.
+const audioFocusChannelName = 'app.wendelin/audiofocus';
+
 /// `AuthChannel.kt`: OAuth authorization in the browser.
 const authChannelName = 'app.wendelin/auth';
 
@@ -21,6 +24,9 @@ const calendarChannelName = 'app.wendelin/calendar';
 
 /// `FilesChannel.kt`: single documents (storage access framework).
 const filesChannelName = 'app.wendelin/files';
+
+/// `MediaChannel.kt`: media sessions, media keys, opening media apps.
+const mediaChannelName = 'app.wendelin/media';
 
 /// `NetworkChannel.kt`: connectivity state.
 const networkChannelName = 'app.wendelin/network';

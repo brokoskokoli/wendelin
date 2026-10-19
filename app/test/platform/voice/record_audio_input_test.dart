@@ -116,6 +116,21 @@ void main() {
     expect(input.isRunning, isFalse);
   });
 
+  test(
+    'Stream endet von selbst: Recorder gestoppt (Fokus wird frei)',
+    () async {
+      final rec = FakePcmRecorder();
+      final input = RecordAudioInput(rec);
+      final done = Completer<void>();
+      input.start().listen((_) {}, onDone: done.complete);
+      await Future<void>.delayed(const Duration(milliseconds: 15));
+      await rec.endFromPlatform();
+      await done.future;
+      await input.stop();
+      expect(rec.stops, 1);
+    },
+  );
+
   test('stop direkt nach start: Recorder wird wieder gestoppt', () async {
     final rec = FakePcmRecorder();
     final input = RecordAudioInput(rec);

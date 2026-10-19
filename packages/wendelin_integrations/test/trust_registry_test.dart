@@ -73,6 +73,14 @@ const _trusted = <String, bool>{
   'memory__save': true,
   'memory__forget': true,
   'lists__add_items': true,
+  // Media: titles come from other apps; the write tools echo no title.
+  'media__now_playing': false,
+  'media__play': true,
+  'media__pause': true,
+  'media__next': true,
+  'media__previous': true,
+  'media__seek': true,
+  'media__open_audible': true,
 };
 
 void main() {
@@ -80,6 +88,7 @@ void main() {
     CalendarIntegration(FakeCalendarPort()),
     ClipboardIntegration(FakeClipboardPort()),
     FlashlightIntegration(FakeTorchPort()),
+    MediaIntegration(FakeMediaControlPort(), FakeAppPresencePort()),
     AlarmsIntegration(FakeAlarmPort()),
     MemoryIntegration(FakeMemoryStore()),
     ListsIntegration(FakeListFilePort(), definitions: () => []),

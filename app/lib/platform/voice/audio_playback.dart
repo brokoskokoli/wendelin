@@ -7,12 +7,28 @@ import 'sherpa_tts.dart';
 
 /// [AudioPlayback] with `audioplayers` (Android `MediaPlayer`, no GMS):
 /// plays the WAV from memory and completes when it ended or was stopped.
+///
+/// The player asks only for a transient focus that lets other players
+/// continue at lower volume (`gainTransientMayDuck`, WP90); an answer
+/// spoken by this engine holds the same focus for its whole length anyway
+/// (`DuckingTextToSpeech`).
 final class AudioplayersPlayback implements AudioPlayback {
   /// Creates the playback; [player] is created lazily.
   AudioplayersPlayback([AudioPlayer? player]) : _given = player;
 
   final AudioPlayer? _given;
   late final AudioPlayer _player = _given ?? AudioPlayer();
+
+  /// The audio context of the speech output: speech of an assistant that
+  /// only ducks other players.
+  static final AudioContext context = AudioContext(
+    android: const AudioContextAndroid(
+      contentType: AndroidContentType.speech,
+      usageType: AndroidUsageType.assistant,
+      audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+    ),
+  );
+  bool _contextSet = false;
   Completer<void>? _done;
   StreamSubscription<void>? _complete;
 
@@ -22,6 +38,10 @@ final class AudioplayersPlayback implements AudioPlayback {
     final done = _done = Completer<void>();
     _complete ??= _player.onPlayerComplete.listen((_) => _finish());
     try {
+      if (!_contextSet) {
+        await _player.setAudioContext(context);
+        _contextSet = true;
+      }
       await _player.play(BytesSource(wav.encode(), mimeType: 'audio/wav'));
     } on Object {
       _finish();

@@ -4437,6 +4437,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Wendelin needs access to your calendars to read, create and change events. Android will ask you right after this. Wendelin always asks before deleting.';
 
   @override
+  String get integrationsMediaRationale =>
+      'To tell you what is playing and to skip within an audiobook or podcast, Wendelin needs “Notification access”. Android opens that page next: pick Wendelin in the list and turn it on (on newer Android versions, first choose “Allow restricted settings” in the app info). Wendelin does not read notifications, only media playback. Pause, resume and back work without it.';
+
+  @override
   String get voiceErrorGeneric => 'Speech did not work. Please try again.';
 
   @override

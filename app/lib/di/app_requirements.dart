@@ -68,8 +68,17 @@ abstract final class KnownApps {
     storeUrl: 'https://www.spotify.com/download/',
   );
 
+  /// Audible (`media__open_audible`; the other media tools work with any
+  /// player).
+  static const audible = AppRequirement(
+    androidPackage: 'com.audible.application',
+    appName: 'Audible',
+    storeUrl: 'https://www.audible.de/',
+    needed: false,
+  );
+
   /// All known apps.
-  static const all = [bring, obsidian, spotify];
+  static const all = [bring, obsidian, spotify, audible];
 }
 
 /// Last known answers of the [AppPresencePort]; filled by every check.

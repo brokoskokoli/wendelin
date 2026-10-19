@@ -6,6 +6,7 @@ import 'package:record/record.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../voice/voice_log.dart';
+import '../channel_audio_focus_port.dart';
 import 'pcm.dart';
 
 /// Which source the microphone records from.
@@ -46,13 +47,11 @@ enum SpeechCapture {
 
 /// The `RecordConfig` of [profile] (WP72).
 ///
-/// The plugin's default `pause` requests audio focus with every recording
-/// and pauses the PCM engine on any focus loss, without resuming. The own
-/// speech output (system TTS per chunk, `audioplayers`) takes the focus, so
-/// the barge-in recording ([CaptureProfile.speechOutput]) must ignore focus
-/// changes (`none`). All other profiles use `pauseResume`: a call or a
-/// navigation prompt pauses the recording, afterwards it continues
-/// (record_android 2.2.0, `AudioInterruptionPolicy`).
+/// The plugin's focus handling is off (`none`) for every profile: it asks for
+/// `AUDIOFOCUS_GAIN`, which pauses a running media player for good (WP90).
+/// Instead [RecordPcmRecorder] holds the own transient focus (`listen`) while
+/// a command is recorded; during the speech output the `duck` focus of the
+/// answer is already held and the barge-in recording takes none.
 RecordConfig buildRecordConfig(
   CaptureProfile profile, [
   SpeechCapture speech = SpeechCapture.communication,
@@ -65,9 +64,7 @@ RecordConfig buildRecordConfig(
     sampleRate: AudioInput.sampleRate,
     numChannels: 1,
     echoCancel: aec,
-    audioInterruption: out
-        ? AudioInterruptionMode.none
-        : AudioInterruptionMode.pauseResume,
+    audioInterruption: AudioInterruptionMode.none,
     androidConfig: AndroidRecordConfig(
       audioSource: communication
           ? AndroidAudioSource.voiceCommunication
@@ -109,12 +106,23 @@ final class RecordPcmRecorder implements PcmRecorder {
   /// Creates the recorder; [recorder] is created lazily. [speechCapture]
   /// returns the variant for [CaptureProfile.speechOutput] (WP72, developer
   /// setting; default [SpeechCapture.communication]).
+  ///
+  /// [focus] receives the transient `listen` focus while a command (not the
+  /// barge-in during the answer) is recorded.
   RecordPcmRecorder([
     AudioRecorder? recorder,
     Future<SpeechCapture> Function()? speechCapture,
+    AudioFocusPort? focus,
   ]) : _given = recorder,
-       _speechCapture = speechCapture;
+       _speechCapture = speechCapture,
+       _focus = focus;
 
+  final AudioFocusPort? _focus;
+  bool _listening = false;
+  bool _paused = false;
+  // Cancelled in _endListening().
+  // ignore: cancel_subscriptions
+  StreamSubscription<AudioFocusChange>? _focusSub;
   final AudioRecorder? _given;
   final Future<SpeechCapture> Function()? _speechCapture;
   late final AudioRecorder _recorder = _given ?? AudioRecorder();
@@ -138,13 +146,22 @@ final class RecordPcmRecorder implements PcmRecorder {
         // Settings unreadable: the default.
       }
     }
+    if (profile != CaptureProfile.speechOutput && _focus != null) {
+      _listening = true;
+      _focusSub = _focus.changes.listen(_onFocus);
+      await _focus.acquire(AudioFocusKind.listen);
+    }
     // A pause by the platform would silence the barge-in unnoticed: log it.
     _states ??= _recorder.onStateChanged().listen(
       (s) => voiceLog('mic-state', {'state': s}),
     );
-    final stream = await _recorder.startStream(
-      buildRecordConfig(profile, speech),
-    );
+    final Stream<Uint8List> stream;
+    try {
+      stream = await _recorder.startStream(buildRecordConfig(profile, speech));
+    } on Object {
+      await _endListening();
+      rethrow;
+    }
     voiceLog('mic-state', {'state': 'started'});
     voiceLog('mic-config', {
       'profile': profile,
@@ -155,7 +172,41 @@ final class RecordPcmRecorder implements PcmRecorder {
 
   @override
   Future<void> stop() async {
-    await _recorder.stop();
+    try {
+      await _recorder.stop();
+    } finally {
+      await _endListening();
+    }
+  }
+
+  Future<void> _endListening() async {
+    if (!_listening) return;
+    _listening = false;
+    _paused = false;
+    final sub = _focusSub;
+    _focusSub = null;
+    await sub?.cancel();
+    await _focus?.release(AudioFocusKind.listen);
+  }
+
+  // Another app (a call, an alarm) took the focus: the recording pauses
+  // instead of capturing it, and continues when the focus is back.
+  void _onFocus(AudioFocusChange change) {
+    if (change.kind != AudioFocusKind.listen || !_listening) return;
+    if (change.lost == _paused) return;
+    _paused = change.lost;
+    voiceLog('mic-focus', {'lost': change.lost});
+    unawaited(() async {
+      try {
+        if (change.lost) {
+          await _recorder.pause();
+        } else {
+          await _recorder.resume();
+        }
+      } on Object {
+        // Not recording any more.
+      }
+    }());
   }
 }
 
@@ -240,7 +291,7 @@ final class RecordAudioInput implements ProfiledAudioInput {
           if (frame.isNotEmpty && !out.isClosed) out.add(frame);
         },
         onError: (Object e) => _fail(out, e),
-        onDone: () => unawaited(_finish(out)),
+        onDone: () => _stopping = _finish(out),
       );
     } on Object catch (e) {
       _fail(out, e);
@@ -270,11 +321,14 @@ final class RecordAudioInput implements ProfiledAudioInput {
     StreamController<Int16List> out, {
     bool stopRecorder = false,
   }) async {
-    if (identical(_out, out)) _out = null;
+    // The stream ended by itself (nobody called stop()): the recorder and its
+    // focus still have to be given back.
+    final ended = identical(_out, out);
+    if (ended) _out = null;
     final sub = _sub;
     _sub = null;
     await sub?.cancel();
-    if (stopRecorder) {
+    if (stopRecorder || ended) {
       try {
         await _recorder.stop();
       } on Object {

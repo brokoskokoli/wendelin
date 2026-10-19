@@ -1254,6 +1254,7 @@
   "providerSetupNoModelList": "Pas de liste de modèles. Veuillez saisir l’ID du modèle.",
   "providerSetupBudgetFormat": "Budget : montant en dollars, p. ex. 5 ou 2,50",
   "integrationsCalendarRationale": "Wendelin a besoin d’accéder à vos agendas pour lire, créer et modifier des événements. Android vous le demandera juste après. Wendelin demande toujours avant de supprimer.",
+  "integrationsMediaRationale": "Pour vous dire ce qui est en cours de lecture et avancer ou reculer dans un livre audio ou un podcast, Wendelin a besoin de « l’accès aux notifications ». Android ouvre ensuite cette page : choisissez Wendelin dans la liste et activez-le (sur les versions récentes d’Android, choisissez d’abord « Autoriser les paramètres restreints » dans les infos de l’appli). Wendelin ne lit pas les notifications, seulement la lecture multimédia. Pause, reprise et retour fonctionnent aussi sans.",
   "voiceErrorGeneric": "La voix n’a pas fonctionné. Veuillez réessayer.",
   "routingPrivateRuleNotice": "Nouveau : règle « Privé » – les demandes avec « privé », « confidentiel » … vont à {target}.",
   "voiceErrorModelMissing": "Un modèle vocal n’est pas encore téléchargé (Paramètres → Voix).",
