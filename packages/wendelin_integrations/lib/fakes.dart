@@ -45,6 +45,7 @@ export 'testing/fake_media_control_port.dart';
 export 'testing/fake_memory_store.dart';
 export 'testing/fake_note_index.dart';
 export 'testing/fake_spotify.dart';
+export 'testing/fake_todoist_api.dart';
 export 'testing/fake_torch_port.dart';
 export 'testing/fake_user_integrations.dart';
 export 'testing/fake_vault_port.dart';

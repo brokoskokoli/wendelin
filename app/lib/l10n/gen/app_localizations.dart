@@ -6082,6 +6082,102 @@ abstract class AppLocalizations {
   /// **'Spotify'**
   String get spotifyTitle;
 
+  /// No description provided for @integrationDetailTodoistAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist-Konto'**
+  String get integrationDetailTodoistAccount;
+
+  /// No description provided for @todoistApiError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler – Todoist nicht erreichbar oder Token abgelehnt'**
+  String get todoistApiError;
+
+  /// No description provided for @todoistChecking.
+  ///
+  /// In de, this message translates to:
+  /// **'Prüfe …'**
+  String get todoistChecking;
+
+  /// No description provided for @todoistConnect.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbinden'**
+  String get todoistConnect;
+
+  /// No description provided for @todoistConnecting.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbinde …'**
+  String get todoistConnecting;
+
+  /// No description provided for @todoistFine.
+  ///
+  /// In de, this message translates to:
+  /// **'in Ordnung'**
+  String get todoistFine;
+
+  /// No description provided for @todoistIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist-Aufgaben per persönlichem API-Token. Den Token findest du in Todoist unter Einstellungen → Integrationen → Entwickler. Er bleibt im sicheren Speicher des Geräts und wird nie angezeigt oder protokolliert. Projekte dienen als Listen.'**
+  String get todoistIntro;
+
+  /// No description provided for @todoistNeedToken.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte den API-Token eintragen.'**
+  String get todoistNeedToken;
+
+  /// No description provided for @todoistReachable.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist ist erreichbar.'**
+  String get todoistReachable;
+
+  /// No description provided for @todoistSignOutBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Der Token wird vom Gerät gelöscht. In Todoist kannst du ihn zusätzlich widerrufen.'**
+  String get todoistSignOutBody;
+
+  /// No description provided for @todoistSignOutTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Todoist trennen?'**
+  String get todoistSignOutTitle;
+
+  /// No description provided for @todoistStatusAvailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbunden, Integration ausgeschaltet'**
+  String get todoistStatusAvailable;
+
+  /// No description provided for @todoistStatusSetup.
+  ///
+  /// In de, this message translates to:
+  /// **'Token fehlt'**
+  String get todoistStatusSetup;
+
+  /// No description provided for @todoistStatusUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht verfügbar'**
+  String get todoistStatusUnavailable;
+
+  /// No description provided for @todoistStatusUnknown.
+  ///
+  /// In de, this message translates to:
+  /// **'Unbekannt'**
+  String get todoistStatusUnknown;
+
+  /// No description provided for @todoistToken.
+  ///
+  /// In de, this message translates to:
+  /// **'API-Token'**
+  String get todoistToken;
+
   /// No description provided for @languageEnglish.
   ///
   /// In de, this message translates to:

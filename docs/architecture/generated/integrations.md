@@ -22,3 +22,4 @@ Aus `app/lib/di/integrations/registry.dart` (Reihenfolge der Anzeige). Nicht abl
 | `spotify` | `app/lib/di/integrations/spotify_spec.dart` | `packages/wendelin_integrations/lib/src/spotify/` | – |
 | `weather` | `app/lib/di/integrations/weather_spec.dart` | `packages/wendelin_integrations/lib/src/weather/` | – |
 | `tasks` | `app/lib/di/integrations/tasks_spec.dart` | – | – |
+| `todoist` | `app/lib/di/integrations/todoist_spec.dart` | `packages/wendelin_integrations/lib/src/todoist/` | [todoist.md](../integrations/todoist.md) |

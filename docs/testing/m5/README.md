@@ -8,5 +8,6 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP86 Standort und Karten (`location`, `maps`)](wp86.md)
 - [WP87 Wetter und Meer](wp87.md)
 - [WP88 Aufgaben (Listen mit Fälligkeit)](wp88.md)
+- [WP89 Todoist und Google Tasks](wp89.md)
 - [WP90 Medien (`media`)](wp90.md)
 - [WP91 Home Assistant](wp91.md)

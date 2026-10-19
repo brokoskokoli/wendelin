@@ -130,6 +130,9 @@ final class TestEnv {
   /// Bring! account (no request ever goes to the real API in tests).
   final bring = FakeBringApi();
 
+  /// Todoist account (no request ever goes to the real API in tests).
+  final todoist = FakeTodoistApi();
+
   /// Home Assistant (no request ever goes to a real instance in tests).
   final ha = FakeHaApi();
 

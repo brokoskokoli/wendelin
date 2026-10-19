@@ -4,6 +4,7 @@ import 'package:wendelin/di/home_assistant.dart';
 import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/spotify.dart';
+import 'package:wendelin/di/todoist.dart';
 import 'package:wendelin/platform/platform_ports.dart';
 
 import '../test_env.dart';
@@ -38,6 +39,7 @@ List<Override> withIntegrations(TestEnv env) => [
   ),
   if (!env.realDemoPorts) demoPortsProvider.overrideWithValue(env.ports),
   bringApiProvider.overrideWithValue(env.bring),
+  todoistApiProvider.overrideWithValue(env.todoist),
   haApiProvider.overrideWithValue(env.ha),
   haDiscoveryProvider.overrideWithValue(env.haDiscovery),
   spotifyApiProvider.overrideWithValue(env.spotify),

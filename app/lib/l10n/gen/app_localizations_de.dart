@@ -3525,6 +3525,57 @@ class AppLocalizationsDe extends AppLocalizations {
   String get spotifyTitle => 'Spotify';
 
   @override
+  String get integrationDetailTodoistAccount => 'Todoist-Konto';
+
+  @override
+  String get todoistApiError =>
+      'Fehler – Todoist nicht erreichbar oder Token abgelehnt';
+
+  @override
+  String get todoistChecking => 'Prüfe …';
+
+  @override
+  String get todoistConnect => 'Verbinden';
+
+  @override
+  String get todoistConnecting => 'Verbinde …';
+
+  @override
+  String get todoistFine => 'in Ordnung';
+
+  @override
+  String get todoistIntro =>
+      'Todoist-Aufgaben per persönlichem API-Token. Den Token findest du in Todoist unter Einstellungen → Integrationen → Entwickler. Er bleibt im sicheren Speicher des Geräts und wird nie angezeigt oder protokolliert. Projekte dienen als Listen.';
+
+  @override
+  String get todoistNeedToken => 'Bitte den API-Token eintragen.';
+
+  @override
+  String get todoistReachable => 'Todoist ist erreichbar.';
+
+  @override
+  String get todoistSignOutBody =>
+      'Der Token wird vom Gerät gelöscht. In Todoist kannst du ihn zusätzlich widerrufen.';
+
+  @override
+  String get todoistSignOutTitle => 'Todoist trennen?';
+
+  @override
+  String get todoistStatusAvailable => 'Verbunden, Integration ausgeschaltet';
+
+  @override
+  String get todoistStatusSetup => 'Token fehlt';
+
+  @override
+  String get todoistStatusUnavailable => 'Nicht verfügbar';
+
+  @override
+  String get todoistStatusUnknown => 'Unbekannt';
+
+  @override
+  String get todoistToken => 'API-Token';
+
+  @override
   String get languageEnglish => 'English';
 
   @override

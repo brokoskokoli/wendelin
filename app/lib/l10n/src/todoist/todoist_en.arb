@@ -1,0 +1,18 @@
+{
+  "todoistApiError": "Error – Todoist unreachable or token rejected",
+  "todoistChecking": "Checking …",
+  "todoistConnect": "Connect",
+  "todoistConnecting": "Connecting …",
+  "todoistFine": "OK",
+  "todoistIntro": "Todoist tasks with your personal API token. Find it in Todoist under Settings → Integrations → Developer. It stays in the device’s secure storage and is never shown or logged. Projects work as lists.",
+  "todoistNeedToken": "Please enter the API token.",
+  "todoistReachable": "Todoist is reachable.",
+  "todoistSignOutBody": "The token is deleted from the device. You can also revoke it in Todoist.",
+  "todoistSignOutTitle": "Disconnect Todoist?",
+  "todoistStatusAvailable": "Connected, integration turned off",
+  "todoistStatusSetup": "Token missing",
+  "todoistStatusUnavailable": "Not available",
+  "todoistStatusUnknown": "Unknown",
+  "todoistToken": "API token",
+  "integrationDetailTodoistAccount": "Todoist account"
+}

@@ -3553,6 +3553,56 @@ class AppLocalizationsFr extends AppLocalizations {
   String get spotifyTitle => 'Spotify';
 
   @override
+  String get integrationDetailTodoistAccount => 'Compte Todoist';
+
+  @override
+  String get todoistApiError => 'Erreur – Todoist injoignable ou jeton refusé';
+
+  @override
+  String get todoistChecking => 'Vérification …';
+
+  @override
+  String get todoistConnect => 'Connecter';
+
+  @override
+  String get todoistConnecting => 'Connexion …';
+
+  @override
+  String get todoistFine => 'OK';
+
+  @override
+  String get todoistIntro =>
+      'Tâches Todoist avec votre jeton d’API personnel. Vous le trouvez dans Todoist sous Paramètres → Intégrations → Développeur. Il reste dans le stockage sécurisé de l’appareil et n’est jamais affiché ni journalisé. Les projets servent de listes.';
+
+  @override
+  String get todoistNeedToken => 'Veuillez saisir le jeton d’API.';
+
+  @override
+  String get todoistReachable => 'Todoist est de nouveau joignable.';
+
+  @override
+  String get todoistSignOutBody =>
+      'Le jeton est supprimé de l’appareil. Vous pouvez aussi le révoquer dans Todoist.';
+
+  @override
+  String get todoistSignOutTitle => 'Déconnecter Todoist ?';
+
+  @override
+  String get todoistStatusAvailable => 'Connecté, intégration désactivée';
+
+  @override
+  String get todoistStatusSetup => 'Jeton manquant';
+
+  @override
+  String get todoistStatusUnavailable => 'Indisponible';
+
+  @override
+  String get todoistStatusUnknown => 'Inconnu';
+
+  @override
+  String get todoistToken => 'Jeton d’API';
+
+  @override
   String get languageEnglish => 'English';
 
   @override

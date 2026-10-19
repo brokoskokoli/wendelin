@@ -44,6 +44,9 @@ abstract final class AppRoutes {
   /// Bring! login and state (WP28).
   static const bring = '/settings/bring';
 
+  /// Todoist API token and state (WP89).
+  static const todoist = '/settings/todoist';
+
   /// Home Assistant address, token and devices (WP91).
   static const homeAssistant = '/settings/home_assistant';
 

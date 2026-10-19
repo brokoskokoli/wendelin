@@ -29,6 +29,7 @@ export 'media.dart';
 export 'memory.dart';
 export 'obsidian.dart';
 export 'spotify.dart';
+export 'todoist.dart';
 export 'user.dart';
 export 'weather.dart';
 export 'web.dart';
