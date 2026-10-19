@@ -53,3 +53,41 @@ void clearReports(String dir) {
   final d = Directory(dir);
   if (d.existsSync()) d.deleteSync(recursive: true);
 }
+
+/// Hauptversion aus der Ausgabe von `java -version` (`"21.0.5"`, `"1.8.0_x"`,
+/// `openjdk 23 2024`); `null`, wenn nicht erkennbar.
+int? jdkMajor(String versionOutput) {
+  final m =
+      RegExp(r'version "(\d+)(?:\.(\d+))?').firstMatch(versionOutput) ??
+      RegExp(r'^\s*\w+ (\d+)\b').firstMatch(versionOutput);
+  if (m == null) return null;
+  final major = int.parse(m[1]!);
+  return major == 1 ? int.tryParse(m[2] ?? '') : major;
+}
+
+/// Neueste JDK-Hauptversion, mit der Gradle hier noch baut.
+const maxGradleJdk = 21;
+
+/// JDK-Orte, wie in `tool/e2e_android.sh`: zuerst openjdk@21 von Homebrew,
+/// sonst das JBR von Android Studio.
+const gradleJdkCandidates = [
+  '/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home',
+  '/usr/local/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home',
+  '/Applications/Android Studio.app/Contents/jbr/Contents/Home',
+];
+
+/// `JAVA_HOME` für Gradle, wenn das aktuelle JDK ([versionOutput]) zu neu ist
+/// (Major > [maxGradleJdk]) und ein Kandidat mit `bin/java` existiert
+/// ([hasJava]); sonst `null` (Umgebung unverändert, fail-open).
+String? gradleJavaHome(
+  String versionOutput,
+  bool Function(String javaHome) hasJava, {
+  List<String> candidates = gradleJdkCandidates,
+}) {
+  final major = jdkMajor(versionOutput);
+  if (major == null || major <= maxGradleJdk) return null;
+  for (final c in candidates) {
+    if (hasJava(c)) return c;
+  }
+  return null;
+}

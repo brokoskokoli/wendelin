@@ -34,7 +34,7 @@ Future<void> main() async {
   _sizeRules(t);
   _docPaths(t);
   _depsAndGit(t);
-  guardChecks(t);
+  await guardChecks(t);
   mergeWpChecks(t);
   l10nMergeChecks(t);
   registryLintChecks(t);
