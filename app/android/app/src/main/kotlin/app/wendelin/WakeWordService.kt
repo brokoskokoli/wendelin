@@ -222,30 +222,23 @@ class WakeWordService : Service() {
 
     /** WP93: the main engine decides (it checks again); no answer in time means the overlay. */
     private fun askChat() {
-        var settled = false
-        val timeout = Runnable {
-            if (settled) return@Runnable
-            settled = true
-            VoiceLog.i("wake-hit chat=timeout")
-            // The chat may have taken the audio just now: then it listens, no overlay besides.
-            if (WakePolicy.opensOverlayAfterTimeout(WakeHandoff.pending())) openOverlay()
-        }
-        main.postDelayed(timeout, CHAT_ANSWER_MS)
-        WakeChannel.askHit { reply ->
-            main.post {
-                val accepted = WakePolicy.chatAccepted(reply, settled)
-                if (settled) return@post
-                settled = true
-                main.removeCallbacks(timeout)
-                if (accepted) {
-                    VoiceLog.i("wake-hit chat=accepted")
-                    ChatState.owned = true
-                    armHandoffCheck()
-                } else {
-                    openOverlay()
+        ChatHitArbiter(
+            scheduler = object : HitScheduler {
+                override fun postDelayed(delayMs: Long, task: Runnable) {
+                    main.postDelayed(task, delayMs)
                 }
-            }
-        }
+
+                override fun cancel(task: Runnable) = main.removeCallbacks(task)
+            },
+            openOverlay = {
+                VoiceLog.i("wake-hit chat=refused-or-timeout")
+                openOverlay()
+            },
+            chatAccepted = {
+                VoiceLog.i("wake-hit chat=accepted")
+                armHandoffCheck()
+            },
+        ).begin { done -> WakeChannel.askHit(done) }
     }
 
     private fun openOverlay() {
@@ -375,7 +368,6 @@ class WakeWordService : Service() {
         const val EXTRA_REASON = "reason"
         private const val HOUR_MS = 60 * 60 * 1000L
         private const val HANDOFF_TIMEOUT_MS = 15_000L
-        private const val CHAT_ANSWER_MS = 1_500L
         private const val SCREEN_ON_MS = 10_000L
 
         // Stops the user did not ask for: they leave the „Wieder einschalten“ hint.
@@ -404,7 +396,7 @@ class WakeWordService : Service() {
          */
         fun debugHit(context: Context): Boolean {
             val s = instance ?: return false
-            if (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0) return false
+            if (!WakePolicy.allowsDebugHit(context.applicationInfo.flags)) return false
             s.main.post {
                 s.onHit(MethodCall("hit", mapOf("kw" to "debug", "pcm" to ByteArray(32_000), "end" to 16_000)))
             }

@@ -58,6 +58,79 @@ enum class HitRoute { CHAT, OVERLAY }
 object ChatState {
     @Volatile var visible = false
     @Volatile var owned = false
+
+    /** The main screen leaves the foreground (activity paused). */
+    fun paused() {
+        visible = false
+    }
+
+    /**
+     * The chat reports its turn as over. Only effective if it owns the hit: a chat that lost the
+     * hit to the overlay (late answer) must not reopen the service microphone. Returns whether
+     * the service is to listen again.
+     */
+    @Synchronized
+    fun release(): Boolean {
+        val was = owned
+        owned = false
+        return was
+    }
+
+    @Synchronized
+    fun own() {
+        owned = true
+    }
+
+    @Synchronized
+    fun reset() {
+        visible = false
+        owned = false
+    }
+}
+
+/** Timer seam of [ChatHitArbiter] (the service posts on its main handler; tests use a fake). */
+interface HitScheduler {
+    fun postDelayed(delayMs: Long, task: Runnable)
+
+    fun cancel(task: Runnable)
+}
+
+/**
+ * WP93: asks the chat about a hit and decides exactly once: the chat takes it (answer `true` in
+ * time) or the overlay opens (refusal, error, timeout). A late answer changes nothing, so there
+ * are never two listeners. Runs on the main thread, so the decision is made before the chat's
+ * next channel call (taking the audio) is handled.
+ */
+class ChatHitArbiter(
+    private val scheduler: HitScheduler,
+    private val openOverlay: () -> Unit,
+    private val chatAccepted: () -> Unit,
+    private val answerMs: Long = ANSWER_MS,
+) {
+    fun begin(ask: ((Any?) -> Unit) -> Unit) {
+        var settled = false
+        val timeout = Runnable {
+            if (settled) return@Runnable
+            settled = true
+            openOverlay()
+        }
+        scheduler.postDelayed(answerMs, timeout)
+        ask { reply ->
+            if (settled) return@ask
+            settled = true
+            scheduler.cancel(timeout)
+            if (reply == true) {
+                ChatState.own()
+                chatAccepted()
+            } else {
+                openOverlay()
+            }
+        }
+    }
+
+    companion object {
+        const val ANSWER_MS = 1_500L
+    }
 }
 
 /** Whether the service may run now, or why not (the reason goes to the log as is). */
@@ -126,16 +199,13 @@ object WakePolicy {
         if (chatVisible && !locked && hostAvailable) HitRoute.CHAT else HitRoute.OVERLAY
 
     /**
-     * WP93: the answer of the main engine to a hit. Only an `true` that arrives before the
-     * timeout (not [settled] yet) takes the hit over; refusal, error and a late answer do not.
+     * WP93: whether the activity asking for the hit's audio gets it. The overlay always; the main
+     * app only for a hit its chat owns (else it would take the overlay's audio).
      */
-    fun chatAccepted(reply: Any?, settled: Boolean): Boolean = !settled && reply == true
+    fun mayTakeHandoff(isMainApp: Boolean, chatOwned: Boolean): Boolean = !isMainApp || chatOwned
 
-    /**
-     * WP93: a hit nobody asked the overlay for twice. After a timeout the overlay opens only if
-     * the chat has not taken the hit's audio meanwhile ([pending]); else the chat listens already.
-     */
-    fun opensOverlayAfterTimeout(pending: Boolean): Boolean = pending
+    /** Debug builds only: the `debugHit` shortcut ([flags] of ApplicationInfo, FLAG_DEBUGGABLE = 2). */
+    fun allowsDebugHit(flags: Int): Boolean = flags and 2 != 0
 
     /** Whether a service that runs for [mode] has to stop when charging changes to [charging]. */
     fun stopsOnUnplug(mode: WakeMode, charging: Boolean): Boolean =

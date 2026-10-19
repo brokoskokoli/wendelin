@@ -25,10 +25,7 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
         if (current === this) current = null
         ChatState.visible = false
         // The engine goes while the chat listens: the service must not stay deaf (WP93).
-        if (ChatState.owned) {
-            ChatState.owned = false
-            WakeWordService.onOverlayClosed()
-        }
+        if (ChatState.release()) WakeWordService.onOverlayClosed()
     }
 
     /**
@@ -76,8 +73,8 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
             }
             // The chat turn is over (WP93): the service listens again, like after the overlay.
             "chatDone" -> {
-                ChatState.owned = false
-                WakeWordService.onOverlayClosed()
+                // Only if the chat still owns the hit (it may have lost it to the overlay).
+                if (ChatState.release()) WakeWordService.onOverlayClosed()
                 result.success(null)
             }
             "debugHit" -> result.success(WakeWordService.debugHit(context))

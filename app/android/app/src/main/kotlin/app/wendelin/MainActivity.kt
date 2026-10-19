@@ -26,7 +26,7 @@ class MainActivity : WendelinActivity() {
 
     // The chat is not visible any more (WP93); Dart reports it again when it is.
     override fun onPause() {
-        ChatState.visible = false
+        ChatState.paused()
         super.onPause()
     }
 
