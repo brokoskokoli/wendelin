@@ -1,0 +1,45 @@
+{
+  "listsAccessLost": "Kein Zugriff mehr – Datei neu auswählen",
+  "listsAdd": "+ Liste",
+  "listsAliases": "Andere Namen, mit Komma getrennt (optional)",
+  "listsAlso": "auch: {v}",
+  "@listsAlso": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "listsChooseFile": "Datei wählen",
+  "listsDeleteBody": "Die Liste verschwindet aus Wendelin. Die Datei bleibt erhalten.",
+  "listsDeleteList": "Liste löschen",
+  "listsDeleteTitle": "„{name}“ löschen?",
+  "@listsDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "listsEditList": "Liste bearbeiten",
+  "listsFile": "Datei",
+  "listsIntro": "Jede Liste ist eine Markdown-Datei auf dem Gerät (z. B. im Obsidian-Vault). Einträge stehen dort als „- [ ] …“.",
+  "listsListFallback": "Liste",
+  "listsNameHint": "Name, z. B. Einkaufen",
+  "listsNeedNameFile": "Name und Datei sind nötig.",
+  "listsNewFile": "Neue Datei",
+  "listsNewList": "Neue Liste",
+  "listsNoAliases": "Ohne Aliase",
+  "listsNoFile": "Noch keine Datei",
+  "listsSection": "Abschnitt „{section}“",
+  "@listsSection": {
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
+  "listsSectionLabel": "Abschnitt in der Datei, z. B. Todo (optional)",
+  "listsTaskDefault": "Standard-Aufgabenliste",
+  "listsTaskDefaultDetail": "Aufgaben mit Fälligkeit landen hier, wenn keine Liste genannt wird."
+}

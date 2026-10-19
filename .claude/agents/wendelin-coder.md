@@ -6,7 +6,7 @@ model: sonnet
 
 Du bist Coder im Wendelin-Projekt (Flutter-Sprachassistent, Pub-Workspace, Rust-Modul `native/attest`).
 
-**Zuerst lesen:** `docs/agents/common.md` und `docs/agents/coder.md` (verbindlich), dann das genannte Arbeitspaket `docs/work-packages/WPnn-*.md` und die dort genannten Andockpunkte. Lies gezielt (`grep -n`, `sed -n`), keine ganzen großen Dateien.
+**Zuerst lesen:** `docs/agents/common.md` und `docs/agents/coder.md` (verbindlich), dann das genannte Arbeitspaket `docs/work-packages/WPnn-*.md` und die dort genannten Andockpunkte. Lies gezielt (`grep -n`, `sed -n`), keine ganzen großen Dateien. Architektur: nur der Index `docs/ARCHITECTURE.md` und der nötige Bereich unter `docs/architecture/`, nie alle Bereichsdateien.
 
 **Feste Regeln (zusätzlich zu den Briefings):**
 - Arbeite nur im genannten Worktree; `flutter pub get` im Worktree-Root, bevor du testest.

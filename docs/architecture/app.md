@@ -1,0 +1,11 @@
+# App (`app/lib`)
+
+| Ordner | Inhalt |
+| --- | --- |
+| `app/lib/main.dart`, `app/lib/app.dart`, `app/lib/bootstrap/` | Vier Einstiege: `main` (App), `assistantMain` (Overlay-Engine), `recognizerMain` (Spracherkennung für andere Apps, ADR 0008), `wakeWordMain` (Wake-Word-Dienst, ADR 0013); Start in Schritten unter `bootstrap/` (Storage öffnen, Geräteinfo, `ProviderScope` mit Overrides) |
+| `app/lib/agent/` | `AgentController` (Anfragen, Bestätigungen, Undo), `ConversationReducer` und `ConversationState` (Events → UI-Zustand). Dazu fachfremd `bring_share.dart` und `money.dart` (N7) |
+| `app/lib/di/` | Nur Verdrahtung: `Provider`-Definitionen, dünne Notifier, die an Paket-Logik delegieren, und Adapter auf Flutter-Plugins oder die Einstellungen (`SettingsHttpToolStore`, `SecretStoreHttpToolVault`, `SettingsMcpConfigStore`, `ToolRegistryUserIntegrations`). Logik liegt in Paketen: HTTP-Tool-Entwurf, -Repository und -Quelle in `packages/wendelin_integrations/lib/src/http_tools/`, `UserIntegrationSync` in `packages/wendelin_integrations/lib/src/user/`, MCP-Quelle in `packages/wendelin_mcp/lib/src/app/`, `VoiceSettings` und `ModelInstallStates` in `packages/wendelin_voice/lib/src/models/`, `ScopedSecretStore` in `wendelin_storage`. Neue Logik gehört in ein Paket, nicht hierher (Regel und Abdeckungsschwelle in `docs/ENGINEERING.md`) |
+| `app/lib/platform/` | Implementierungen der Ports (Kanäle, Plugins, sherpa-onnx in `app/lib/platform/voice/`, Spracherkennung in `app/lib/platform/recognizer/`, Wake-Word-Dienst in `app/lib/platform/wake/` (ADR 0013), TEE-Prüfung über Rust in `app/lib/platform/attest/`) |
+| `app/lib/ui/` | `design/` (Bausteine, Galerie), `screens/` (Hauptbildschirm, Texte in `labels.dart`), `settings/`, `onboarding/`, `overlay/`, `theme/`, Routen in `app/lib/ui/routes.dart` (setzt `general_routes.dart` und `integration_routes.dart` zusammen) |
+| `app/lib/voice/` | `VoiceController` (Mikrofon, Pipeline, Sprachbestätigung), `voice_components.dart`; Gesprächsmodus: einmalige Nachfrage in `conversation_offer.dart`, Folgefenster in `voice_ui_state.dart`, Quelle der Aufnahme in `app/lib/platform/voice/capture_profile_follower.dart` (ADR 0015) |
+| `app/lib/debug/` | Überschreibungen für Gerätetests (nur Debug-Builds) |

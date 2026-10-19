@@ -1,0 +1,161 @@
+{
+  "confHandOverDetail": "{toName} hat eine niedrigere Datenschutzstufe als {fromName}. Deine Anfrage und der bisherige Verlauf gehen dann dorthin.",
+  "@confHandOverDetail": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      },
+      "fromName": {
+        "type": "String"
+      }
+    }
+  },
+  "confHandOverTitle": "An {toName} übergeben?",
+  "@confHandOverTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "confHintTap": "Antworte per Tipp",
+  "confHintVoice": "Sag einfach „ja“ oder „nein“",
+  "confMoreLines": "… {rest} weitere Zeilen",
+  "@confMoreLines": {
+    "placeholders": {
+      "rest": {
+        "type": "int"
+      }
+    }
+  },
+  "confYesHandOver": "Ja, übergeben",
+  "mainCancelListening": "Zuhören abbrechen",
+  "mainCheckProvider": "Provider prüfen",
+  "mainCostLabel": "Kosten {costLabel}",
+  "@mainCostLabel": {
+    "placeholders": {
+      "costLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "mainCostToday": "heute {v}",
+  "@mainCostToday": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "mainDeleteEventTitle": "Termin löschen?",
+  "mainFollowUpCountdown": "{followUpListeningText} {seconds} s",
+  "@mainFollowUpCountdown": {
+    "placeholders": {
+      "followUpListeningText": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "mainGpuBlockMessage": "Die GPU-Prüfung von {name} über NVIDIA ist fehlgeschlagen oder nicht möglich.{v} Deine Anfrage wurde nicht gesendet. Du kannst sie einmalig ohne GPU-Prüfung senden. Die übrigen Prüfungen bleiben aktiv.",
+  "@mainGpuBlockMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "mainGpuCheckFailedTitle": "GPU-Prüfung nicht bestanden",
+  "mainListening": "Ich höre zu …",
+  "mainMicCancelAnswer": "Antwort abbrechen",
+  "mainMicSpeak": "Sprechen",
+  "mainMicStopListening": "Zuhören beenden",
+  "mainMicStopSpeech": "Sprachausgabe stoppen",
+  "mainMicUnavailable": "Mikrofon nicht verfügbar",
+  "mainNeedsModel": "Wendelin braucht ein Sprachmodell. Richte einen Provider mit deinem API-Key ein, danach kannst du loslegen.",
+  "mainNewConversation": "Neues Gespräch",
+  "mainNoKeep": "Nein, behalten",
+  "mainNoProviderYet": "Noch kein Provider eingerichtet",
+  "mainProviderProfileUnusable": "Das Provider-Profil lässt sich nicht verwenden: {error}",
+  "@mainProviderProfileUnusable": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "mainReallyDeleteTitle": "Wirklich löschen?",
+  "mainSendWithoutGpuCheck": "Ohne GPU-Prüfung senden",
+  "mainSetUpProvider": "Provider einrichten",
+  "mainShouldIDoThat": "Soll ich das tun?",
+  "mainStartDemo": "Demo ohne Provider starten",
+  "mainToday": "Heute",
+  "mainTypeInstead": "Schreiben statt sprechen",
+  "mainViewRouting": "Routing ansehen",
+  "mainYesDelete": "Ja, löschen",
+  "mainYesDoIt": "Ja, ausführen",
+  "mainYesterday": "Gestern",
+  "overlayCloseAssistant": "Assistent schließen",
+  "overlayEnd": "Beenden",
+  "overlayFollowUpComing": "Gesprächsmodus aus · in den Einstellungen einschaltbar",
+  "overlayFollowUpWindow": "Hört noch {seconds} s zu · „Stopp“ beendet",
+  "@overlayFollowUpWindow": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "overlayKeepTalking": "Weiter sprechen",
+  "overlayLockedText": "Auf dem Sperrbildschirm zeigt und sagt Wendelin nichts aus deinen Daten. Nur die Taschenlampe geht auch gesperrt. Alles andere erst nach dem Entsperren.",
+  "overlayLockedTitle": "Gerät entsperren",
+  "overlayTextInput": "Texteingabe",
+  "overlayUnlock": "Entsperren",
+  "privateBannerConfidential": "Vertraulich: Gedächtnis genutzt (seit {since})",
+  "@privateBannerConfidential": {
+    "placeholders": {
+      "since": {
+        "type": "String"
+      }
+    }
+  },
+  "privateBannerPrivate": "Unterhaltung privat (seit {since})",
+  "@privateBannerPrivate": {
+    "placeholders": {
+      "since": {
+        "type": "String"
+      }
+    }
+  },
+  "privateEscalationMemory": "Die Unterhaltung nutzt dein Gedächtnis (seit {since}). Mit „Ja“ sieht {toName} den bisherigen Verlauf, aber nicht das Gedächtnis selbst.",
+  "@privateEscalationMemory": {
+    "placeholders": {
+      "since": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "privateEscalationPrivate": "Die Unterhaltung ist privat (seit {since}). Mit „Ja“ sieht {toName} auch ihre privaten Teile.",
+  "@privateEscalationPrivate": {
+    "placeholders": {
+      "since": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "switchTopicBody": "Beim Wechsel des Modells beginnt ein neues Gespräch. Der aktuelle Verlauf wird beendet (im Verlauf bleibt er abrufbar).",
+  "switchTopicBodyRunning": "Beim Wechsel des Modells beginnt ein neues Gespräch. Die laufende Antwort wird abgebrochen und der aktuelle Verlauf beendet (im Verlauf bleibt er abrufbar).",
+  "switchTopicSwitch": "Wechseln",
+  "switchTopicTitle": "Neues Gespräch beginnen?"
+}

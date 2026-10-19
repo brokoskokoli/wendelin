@@ -1,0 +1,12 @@
+# Erzeugte Dateien: GitHub blendet sie im Diff aus, tool/merge_wp.sh löst
+# Konflikte darin per tool/regen_generated.sh (l10n: tool/l10n_merge.dart).
+app/lib/l10n/app_*.arb linguist-generated
+app/lib/l10n/gen/** linguist-generated
+docs/architecture/generated/** linguist-generated
+docs/testing/m5/README.md linguist-generated
+
+# Reine Listen, die je Integration um eine Zeile wachsen: beide Seiten behalten.
+# tool/merge_wp.sh sortiert danach per `tool/check_registry.dart --fix`; das Gate
+# (check_registry) prüft Sortierung, Doppelte und passende Imports.
+app/lib/di/integrations/registry.dart merge=union
+packages/wendelin_integrations/lib/wendelin_integrations.dart merge=union

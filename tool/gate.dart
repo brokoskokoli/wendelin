@@ -226,6 +226,15 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
   );
   await gate.step('check_flaky', 'dart', ['run', 'tool/check_flaky.dart']);
   await gate.step('check_docs', 'dart', ['run', 'tool/check_docs.dart']);
+  await gate.step('l10n aktuell', 'dart', [
+    'run',
+    'tool/l10n_merge.dart',
+    '--check',
+  ]);
+  await gate.step('check_registry', 'dart', [
+    'run',
+    'tool/check_registry.dart',
+  ]);
   await gate.step('check_channels', 'dart', [
     'run',
     'tool/check_channels.dart',

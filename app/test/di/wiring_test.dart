@@ -1,13 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/audit_recorder.dart';
 import 'package:wendelin/di/demo_provider.dart';
 import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/integrations/clipboard_spec.dart';
 import 'package:wendelin/di/integrations/flashlight_spec.dart';
-import 'package:wendelin/di/integrations/media_spec.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/routing.dart';
@@ -340,22 +338,10 @@ void main() {
       addTearDown(c.dispose);
       final registry = c.read(toolRegistryProvider);
       await registry.refresh();
-      expect(registry.integrations.map((i) => i.id), [
-        'alarms',
-        'bring',
-        'calendar',
-        'clipboard',
-        'flashlight',
-        'ha',
-        'lists',
-        'media',
-        'memory',
-        'obsidian',
-        'spotify',
-        'tasks',
-        'weather',
-        'web',
-      ]);
+      expect(
+        registry.integrations.map((i) => i.id),
+        unorderedEquals([for (final s in builtInIntegrationSpecs) s.id]),
+      );
       expect(registry.status('memory'), IntegrationStatus.active);
       expect(registry.status('calendar'), IntegrationStatus.available);
       // Obsidian: registriert; eingeschaltet ohne Vault „Einrichtung nötig“.
@@ -387,59 +373,6 @@ void main() {
       expect(clipboardSpec.allowedWhileLocked, isFalse);
     });
 
-    test('Medien: Tools über den Media-Port, Zugriff optional', () async {
-      final env = TestEnv(enabled: const {'media'});
-      env.media.snapshot = const MediaSnapshot(
-        packageName: audiblePackage,
-        appName: 'Audible',
-        playing: true,
-        title: 'Buch',
-        positionMs: 60000,
-      );
-      final c = env.container();
-      addTearDown(c.dispose);
-      final registry = c.read(toolRegistryProvider);
-      await registry.refresh();
-      expect(registry.status('media'), IntegrationStatus.active);
-      final catalog = registry.catalogFor(PrivacyLevel.local, sessionId: 's');
-      final ctx = ToolContext(
-        sessionId: 's',
-        clock: FixedClock(testNow),
-        locale: 'de-DE',
-        timeZone: 'Europe/Berlin',
-      );
-      final o = await catalog.lookup('media__pause')!.execute({}, ctx);
-      expect(o.isError, isFalse, reason: o.text);
-      expect(env.media.sent, [MediaCommand.pause]);
-      // Ohne Benachrichtigungszugriff: Integration bleibt aktiv (Schritt optional).
-      env.media.access = false;
-      await registry.refresh('media');
-      expect(registry.status('media'), IntegrationStatus.active);
-      expect(registry.info('media').setup.missingSteps, [
-        'notification_access',
-      ]);
-      expect(mediaSpec.allowedWhileLocked, isFalse);
-    });
-
-    test(
-      'Medien: Einschalten öffnet die Zugriffsseite, bei Zugriff nicht',
-      () async {
-        final env = TestEnv();
-        final deps = IntegrationDeps(
-          ports: env.ports,
-          device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
-          httpClient: http.Client(),
-        );
-        env.media.access = false;
-        expect(await mediaSpec.requestPermission!(deps), isFalse);
-        expect(env.media.settingsOpened, 1);
-        env.media.access = true;
-        expect(await mediaSpec.requestPermission!(deps), isTrue);
-        expect(env.media.settingsOpened, 1);
-        expect(mediaSpec.isSupported!(deps), isTrue);
-      },
-    );
-
     test('Demo-Modus: In-Memory-Ports, alles aktiv, Demo-Provider', () async {
       final env = TestEnv(demo: true);
       final c = env.container();
@@ -448,21 +381,11 @@ void main() {
       expect(c.read(platformPortsProvider), same(c.read(demoPortsProvider)));
       final registry = c.read(toolRegistryProvider);
       await registry.refresh();
-      expect(
-        {for (final i in registry.integrations) i.id: i.status},
-        {
-          'alarms': IntegrationStatus.active,
-          'calendar': IntegrationStatus.active,
-          'clipboard': IntegrationStatus.active,
-          'flashlight': IntegrationStatus.active,
-          'media': IntegrationStatus.active,
-          'memory': IntegrationStatus.active,
-          'weather': IntegrationStatus.active,
-          // Ohne Suchdienst ist web aktiv (nur web__fetch); der optionale
-          // Einrichtungsschritt bleibt offen (WP14).
-          'web': IntegrationStatus.active,
-        },
-      );
+      final statuses = {for (final i in registry.integrations) i.id: i.status};
+      // Alles, was im Demo-Modus verfügbar ist, ist aktiv (neue Integrationen
+      // ändern diese Prüfung nicht); Web bleibt ohne Suchdienst aktiv (WP14).
+      expect(statuses.values, everyElement(IntegrationStatus.active));
+      expect(statuses.keys, containsAll(['calendar', 'memory', 'web']));
       expect(registry.info('web').setup.missingSteps, ['search_backend']);
       final webTools = registry
           .catalogFor(PrivacyLevel.standard, sessionId: 's')

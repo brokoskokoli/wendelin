@@ -4,7 +4,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 
 ## Verbindliche Dokumente
 - `docs/ENGINEERING.md`: Layout, Abhängigkeitsregeln, Tests, Sicherheit und Git. Lies es vor jeder Codeänderung.
-- `docs/ARCHITECTURE.md`: Architekturkarte (wo liegt was, Ports, Datenfluss, Checklisten „Feature → Dateien“).
+- `docs/ARCHITECTURE.md`: Index der Architekturkarte (kurz). Den Volltext liest du nicht: Lies nur den nötigen Bereich unter `docs/architecture/` (Ports, Datenfluss, Checklisten „Feature → Dateien“ …). Gerätetests je Paket: `docs/testing/m5/README.md`.
 - `docs/work-packages/STATUS.md`: Umsetzungsstand aller Meilensteine und Pakete (pflegt nur der Orchestrator auf main).
 - `docs/work-packages/`: Arbeitspakete mit Abnahmekriterien. `REVIEW.md` beschreibt das Prüfprotokoll.
 - `docs/adr/`: Architekturentscheidungen. Neue grundlegende Entscheidungen bekommen eine eigene ADR.

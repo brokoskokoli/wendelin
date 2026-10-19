@@ -1,0 +1,13 @@
+{
+  "weatherHomeHelp": "Utilisé lorsque vous ne nommez aucun lieu et que la position est inconnue. Laisser vide = pas de lieu de résidence.",
+  "weatherHomeLabel": "Lieu de résidence, p. ex. Kiel",
+  "weatherIntro": "Tous les services météo sont gratuits et sans clé. Les données maritimes (vagues, température de l’eau) viennent toujours d’Open-Meteo.",
+  "weatherKindBrightSkyDetail": "Données du service météorologique allemand",
+  "weatherKindMetNorwayDetail": "Service météorologique norvégien, mondial",
+  "weatherKindOpenMeteoDetail": "Par défaut, mondial",
+  "weatherNotFound": "Lieu « {name} » introuvable.",
+  "weatherSearchFailed": "Recherche de lieu injoignable, réessayez plus tard.",
+  "weatherSetupDetail": "Choisir un service, définir le lieu pour « météo ici »",
+  "weatherSetupTitle": "Service météo et lieu de résidence",
+  "weatherTitle": "Météo et mer"
+}

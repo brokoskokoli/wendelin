@@ -1,0 +1,281 @@
+{
+  "mcpAddClientId": "Client-ID (optional)",
+  "mcpAddClientIdHint": "Leer lassen: Wendelin registriert sich selbst beim Server",
+  "mcpAddConfirmAll": "Alle Tools bestätigen",
+  "mcpAddConfirmAllHint": "Jeder Aufruf fragt nach",
+  "mcpAddCustom": "Eigener Server",
+  "mcpAddHeaderLabel": "Header, z. B. X-Api-Key",
+  "mcpAddProblem": "Problem",
+  "mcpAddSensitive": "Sensibel",
+  "mcpAddSensitiveHint": "Tools nur an Provider ab der eingestellten Stufe",
+  "mcpAddServerAddress": "Adresse",
+  "mcpAddServerInsecure": "Unverschlüsselt (http): nur im Heimnetz oder über Tailscale erlaubt",
+  "mcpAddServerIntro": "Wähle eine Vorlage oder trage einen eigenen Server ein. Erreichbar über https oder im Heimnetz (Tailscale, WireGuard).",
+  "mcpAddServerTestConnection": "Verbindung prüfen",
+  "mcpAddServerTitle": "Server hinzufügen",
+  "mcpAddSignIn": "Anmeldung",
+  "mcpAddTokenHint": "Wird nie wieder angezeigt",
+  "mcpAddValue": "Wert",
+  "mcpAddValueHint": "Wird nie wieder angezeigt",
+  "mcpCheckHeaderMissing": "Bitte den Namen des Headers angeben.",
+  "mcpCheckNameMissing": "Bitte einen Namen angeben.",
+  "mcpCheckPlaceholders": "Bitte die Platzhalter in <…> in der Adresse ersetzen.",
+  "mcpCheckUrlIncomplete": "Bitte eine vollständige Adresse angeben (https://…).",
+  "mcpDetailActive": "Server aktiv",
+  "mcpDetailActiveLabel": "{name} aktiv",
+  "@mcpDetailActiveLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailAuthLabel": "Anmeldung nötig",
+  "mcpDetailBearer": "Bearer-Token",
+  "mcpDetailCheck": "Prüfung: {v}",
+  "@mcpDetailCheck": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailCheck2": "Prüfung: {v}",
+  "@mcpDetailCheck2": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailConfirmAll": "Alle Tools bestätigen",
+  "mcpDetailConfirmAllHint": "Jeder Aufruf fragt nach, egal was der Server angibt",
+  "mcpDetailDelete": "Server löschen",
+  "mcpDetailDeleteBody": "Konfiguration, Tool-Liste und alle Zugangsdaten dieses Servers werden entfernt.",
+  "mcpDetailDeleteHint": "Entfernt Konfiguration, Tool-Liste und Zugangsdaten",
+  "mcpDetailDeleteTitle": "„{name}“ löschen?",
+  "@mcpDetailDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailIntro": "Tool-Argumente gehen an diesen Server: {url}",
+  "@mcpDetailIntro": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailIntroHint": "Tippe auf ein Tool für Nachfrage und Risikostufe. MCP-Tools haben kein Rückgängig: Änderungen passieren auf dem Server.",
+  "mcpDetailLastCheck": "Letzte Prüfung: {v}",
+  "@mcpDetailLastCheck": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailNeverShown": "Wird nie wieder angezeigt",
+  "mcpDetailNoTools": "Noch keine Tools",
+  "mcpDetailNoToolsHint": "Server einschalten oder neu laden",
+  "mcpDetailOauthHint": "OAuth-Anmeldung im Browser",
+  "mcpDetailReplaceHeader": "Header {header} ersetzen",
+  "@mcpDetailReplaceHeader": {
+    "placeholders": {
+      "header": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailReplaceToken": "Token ersetzen",
+  "mcpDetailSensitive": "Sensibel",
+  "mcpDetailSensitiveHint": "Persönliche Daten: Tools nur an Provider ab der eingestellten Stufe",
+  "mcpDetailSensitiveLabel": "{name} sensibel",
+  "@mcpDetailSensitiveLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailSignIn": "Anmelden",
+  "mcpDetailSignInAgain": "Neu anmelden",
+  "mcpDetailSignOut": "Abmelden",
+  "mcpDetailSignOutHint": "Vergisst die Tokens auf diesem Gerät",
+  "mcpDetailTools": "Tools",
+  "mcpDetailUnreachableLabel": "nicht erreichbar",
+  "mcpDetailValueFor": "Wert für {header}",
+  "@mcpDetailValueFor": {
+    "placeholders": {
+      "header": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpDetailValueNeverShown": "Wert wird nie wieder angezeigt",
+  "mcpLabelsAlwaysAsks": "fragt immer nach",
+  "mcpLabelsAsksNoUndo": "fragt nach · kein Rückgängig",
+  "mcpLabelsAuthAfterSave": "Anmeldung nötig – nach dem Speichern anmelden",
+  "mcpLabelsAuthCheck": "Anmeldung nötig – Token oder Header prüfen",
+  "mcpLabelsAuthRequired": "Anmeldung nötig",
+  "mcpLabelsChanges": "ändert",
+  "mcpLabelsCredentialsMissing": "Zugangsdaten fehlen",
+  "mcpLabelsExternal": "Außenwirkung",
+  "mcpLabelsHintDestructive": "Server: destruktiv (destructiveHint)",
+  "mcpLabelsHintNonDestructive": "Server: ändert, nicht destruktiv (destructiveHint: false)",
+  "mcpLabelsHintNone": "Server: keine Angabe – gilt als Außenwirkung",
+  "mcpLabelsHintReadOnly": "Server: nur lesend (readOnlyHint)",
+  "mcpLabelsNetworkHint": "Tailscale/WireGuard aktiv?",
+  "mcpLabelsNoAsk": "ohne Nachfrage",
+  "mcpLabelsNoAskNoUndo": "ohne Nachfrage · kein Rückgängig",
+  "mcpLabelsNotChecked": "Noch nicht geprüft",
+  "mcpLabelsOneTool": "1 Tool",
+  "mcpLabelsProtocolError": "kein gültiger MCP-Server",
+  "mcpLabelsProtocolErrorDetail": "Kein gültiger MCP-Server: {v}",
+  "@mcpLabelsProtocolErrorDetail": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpLabelsProtocolErrorShort": "Kein gültiger MCP-Server",
+  "mcpLabelsReachable": "Erreichbar",
+  "mcpLabelsReads": "liest",
+  "mcpLabelsReload": "Neu laden",
+  "mcpLabelsReplaceToken": "Token ersetzen",
+  "mcpLabelsSetUp": "Einrichten",
+  "mcpLabelsSignIn": "Anmelden",
+  "mcpLabelsSignInAgain": "Neu anmelden",
+  "mcpLabelsSignInMissing": "Anmeldung fehlt",
+  "mcpLabelsTools": "{tools} Tools",
+  "@mcpLabelsTools": {
+    "placeholders": {
+      "tools": {
+        "type": "int"
+      }
+    }
+  },
+  "mcpLabelsUnreachable": "nicht erreichbar",
+  "mcpLabelsUnreachableDetail": "Nicht erreichbar: {v}. {mcpUnreachableHint}",
+  "@mcpLabelsUnreachableDetail": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "mcpUnreachableHint": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpLabelsUnreachableShort": "Nicht erreichbar · {mcpUnreachableHint}",
+  "@mcpLabelsUnreachableShort": {
+    "placeholders": {
+      "mcpUnreachableHint": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpSecretCheck": "Prüfung: {v}",
+  "@mcpSecretCheck": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpSecretSaved": "Gespeichert",
+  "mcpSecretSignInFailed": "Anmeldung fehlgeschlagen: {message}",
+  "@mcpSecretSignInFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpSecretSignInOnServer": "„{name}“: auf der Serverseite anmelden",
+  "@mcpSecretSignInOnServer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpSecretSignedIn": "Angemeldet",
+  "mcpServersAdd": "+ Server",
+  "mcpServersContent": "Inhalt der Exportdatei",
+  "mcpServersExportHint": "Serverliste ohne Tokens und Passwörter",
+  "mcpServersImportHint": "Zugangsdaten werden neu abgefragt",
+  "mcpServersImportTitle": "Serverliste importieren",
+  "mcpServersImported": "{length} Server importiert (ausgeschaltet)",
+  "@mcpServersImported": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "mcpServersImportedOne": "1 Server importiert (ausgeschaltet)",
+  "mcpServersIntro": "Tools von MCP-Servern, z. B. auf dem Homeserver über Tailscale. Tool-Argumente gehen an den jeweiligen Server.",
+  "mcpServersNone": "Noch kein Server",
+  "mcpServersNoneHint": "Vorlage wählen oder eigene Adresse eintragen",
+  "mcpToolAlwaysAsk": "Immer nachfragen",
+  "mcpToolAlwaysAsk2": "Immer nachfragen",
+  "mcpToolAlwaysAskHint": "jeder Aufruf wird bestätigt",
+  "mcpToolConfirmAllOn": "„Alle Tools bestätigen“ ist an: jeder Aufruf fragt nach.",
+  "mcpToolDefaultNoUndo": "Standard: kein Rückgängig möglich",
+  "mcpToolEffective": "Wirksam: {v}",
+  "@mcpToolEffective": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpToolExternalAsks": "Außenwirkung: fragt immer nach, das lässt sich nicht lockern.",
+  "mcpToolNoAsk": "Ohne Nachfrage",
+  "mcpToolNoAsk2": "Ohne Nachfrage",
+  "mcpToolNoUndoNow": "Kein Rückgängig: die Änderung passiert sofort auf dem Server",
+  "mcpToolReadsOnly": "liest nur",
+  "mcpToolServerChecked": "Nur vom Server geprüft: {v}",
+  "@mcpToolServerChecked": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "toolChipSemantics": "Tool {toolName}, {status}",
+  "@toolChipSemantics": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "toolResultUndoCountdown": "Rückgängig · {seconds} s",
+  "@toolResultUndoCountdown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "toolResultUndoSemantics": "Rückgängig, noch {seconds, plural, one{{seconds} Sekunde} other{{seconds} Sekunden}}",
+  "@toolResultUndoSemantics": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "toolResultUndone": "Rückgängig gemacht",
+  "toolTlsEncrypted": "Tools Ende-zu-Ende-verschlüsselt",
+  "toolTlsHint": "Tool-Aufrufe sind über die geprüfte Verbindung bis in die Enklave geschützt, aber nicht zusätzlich verschlüsselt."
+}
