@@ -3,6 +3,7 @@
 // (Hinweis in der Tabelle), in CI (`CI=true`) sind fehlende Werkzeuge ein Fehler.
 import 'dart:io';
 
+import 'gate_cache.dart';
 import 'gate_run.dart';
 
 /// Prüfziel für `dart run tool/gate.dart native/attest`.
@@ -48,7 +49,10 @@ enum RustTool {
   codegen(
     'flutter_rust_bridge_codegen',
     'flutter_rust_bridge_codegen fehlt (cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked)',
-  );
+  ),
+
+  /// `sccache` (optional, WP97): beschleunigt Rust-Builds, fehlt er, läuft alles wie bisher.
+  sccache('sccache', 'sccache fehlt (optional)');
 
   const RustTool(this.binary, this.hint);
 
@@ -100,6 +104,7 @@ Future<void> rustSteps(
   required bool ci,
   required String? Function(RustTool tool) toolDir,
   Map<String, List<int>> Function() snapshot = snapshotGenerated,
+  Map<String, String> env = const {},
 }) async {
   void skipOrFail(String name, RustTool t) => gate.record(
     StepResult(
@@ -121,32 +126,68 @@ Future<void> rustSteps(
     ?toolDir(RustTool.deny),
     ?toolDir(RustTool.codegen),
   }.join(':');
+  // sccache nur, wenn vorhanden und nicht schon ein Wrapper gesetzt ist.
+  final sccacheDir = ci ? null : toolDir(RustTool.sccache);
+  final wrapper = [
+    if (sccacheDir != null && (env['RUSTC_WRAPPER'] ?? '').isEmpty) ...[
+      'RUSTC_WRAPPER=$sccacheDir/sccache',
+      'CARGO_INCREMENTAL=0',
+    ],
+  ];
+  final path = 'PATH=$extra:${Platform.environment['PATH'] ?? ''}';
+  // Einmal `cargo fetch --locked`; danach laufen die Schritte mit --offline
+  // (kein Zugriff auf die Paket-Cache-Sperre). Schlägt es fehl, läuft alles
+  // wie bisher ohne --offline.
+  bool? offline;
+  Future<List<String>> offlineFlag() async {
+    offline ??=
+        (await gate.runner(
+          'env',
+          [path, 'cargo', 'fetch', '--locked'],
+          cwd: rustDir,
+          verbose: false,
+        )).exitCode ==
+        0;
+    return [if (offline!) '--offline'];
+  }
+
   Future<bool> cargo(
     String name,
     List<String> args, {
     String? cwd = rustDir,
     Future<StepCheck> Function(ProcResult)? check,
-  }) => gate.step(
-    name,
-    'env',
-    ['PATH=$extra:${Platform.environment['PATH'] ?? ''}', 'cargo', ...args],
-    cwd: cwd,
-    check: check,
-  );
+    bool useOffline = false,
+    CacheSpec? spec,
+  }) async {
+    // fetch nur, wenn der Schritt wirklich läuft (kein Cache-Treffer).
+    final run = spec == null || !(gate.cache?.isHit(name, spec) ?? false);
+    final off = useOffline && run ? await offlineFlag() : const <String>[];
+    return gate.step(
+      name,
+      'env',
+      [path, ...wrapper, 'cargo', args.first, ...off, ...args.skip(1)],
+      cwd: cwd,
+      check: check,
+      cacheSpec: spec,
+    );
+  }
 
-  await cargo('rust fmt', ['fmt', '--check']);
-  await cargo('rust clippy', [
-    'clippy',
-    '--all-targets',
-    '--locked',
-    '--',
-    '-D',
-    'warnings',
-  ]);
-  await cargo('rust test', [
-    'test',
-    '--locked',
-  ], check: (r) async => (detail: _passed(r.lines), failure: null));
+  const crate = CacheSpec([rustDir], tools: ['rust']);
+  await cargo('rust fmt', ['fmt', '--check'], spec: crate);
+  await cargo(
+    'rust clippy',
+    ['clippy', '--all-targets', '--locked', '--', '-D', 'warnings'],
+    useOffline: true,
+    spec: crate,
+  );
+  await cargo(
+    'rust test',
+    ['test', '--locked'],
+    check: (r) async => (detail: _passed(r.lines), failure: null),
+    useOffline: true,
+    spec: crate,
+  );
+  // cargo-deny prüft die Advisory-DB und bleibt deshalb ungecacht.
   if (toolDir(RustTool.deny) == null) {
     skipOrFail('rust deny', RustTool.deny);
   } else {
@@ -160,12 +201,12 @@ Future<void> rustSteps(
   await gate.step(
     'rust frb',
     'env',
-    [
-      'PATH=$extra:${Platform.environment['PATH'] ?? ''}',
-      'flutter_rust_bridge_codegen',
-      'generate',
-    ],
+    [path, 'flutter_rust_bridge_codegen', 'generate'],
     cwd: 'app',
+    cacheSpec: const CacheSpec(
+      [rustDir, ...frbGeneratedDirs, 'app/flutter_rust_bridge.yaml'],
+      tools: ['rust', 'frb'],
+    ),
     check: (_) async {
       final diff = changedFiles(before, snapshot());
       return (
