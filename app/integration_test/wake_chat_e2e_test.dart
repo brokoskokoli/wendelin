@@ -11,11 +11,11 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
+import 'package:wendelin/debug/device_test_overrides.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/di/wake_service.dart';
@@ -25,6 +25,7 @@ import 'package:wendelin/platform/wake/wake_platform.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
+import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'support/e2e.dart';
@@ -55,7 +56,11 @@ void main() {
     (tester) async {
       final dir = await e2eDirectory();
       final audio = _SwitchableAudio();
+      final provider = FakeLlmProvider([
+        for (var i = 0; i < 6; i++) ScriptedTurn.text('ok'),
+      ]);
       final app = E2eApp(
+        config: (_) => deviceTestProviderConfig(provider),
         extraOverrides: [wakeAudioProvider.overrideWithValue(audio)],
       );
       await app.storage.settings.set(
@@ -122,8 +127,10 @@ void main() {
 
       // Chat sichtbar: der Treffer startet das Zuhören im Chat.
       final triggers = <TriggerKind?>[];
-      c.listen(voiceControllerProvider.select((v) => v.trigger), (_, t) {
-        triggers.add(t);
+      // Das Feld `trigger` bleibt nach einem Zug stehen: zählt nur ein
+      // aktiver Zug mit Wake-Auslöser (auch beim zweiten Treffer).
+      c.listen(voiceControllerProvider, (_, v) {
+        if (v.active) triggers.add(v.trigger);
       });
       expect(await platform.debugHit(), isTrue);
       for (var i = 0; i < 40 && !triggers.contains(TriggerKind.wakeWord); i++) {
@@ -149,10 +156,11 @@ void main() {
       expect(starts(), startsBefore);
 
       // Einstellungen offen: kein Zuhören im Chat (das Overlay öffnet).
-      triggers.clear();
       final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
       unawaited(nav.pushNamed(AppRoutes.settings));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 3));
+      triggers.clear();
       expect(await platform.debugHit(), isTrue);
       await tester.pump(const Duration(seconds: 5));
       expect(triggers, isNot(contains(TriggerKind.wakeWord)));
