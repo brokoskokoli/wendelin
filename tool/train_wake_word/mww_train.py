@@ -65,6 +65,7 @@ def feats(a):
     for name, d, aug, kwc, reps, tag in (("wake", "pos", aug_w, dict(max_clip_duration_s=1.5), a.pos_rep, "pos"),
                                         ("conf", "conf", aug_w, dict(max_clip_duration_s=1.5), a.conf_rep, "conf"),
                                         ("speech", "speech", aug_s, {}, 1, "speech")):
+        if a.only_ambient: break
         cl = Clips(input_directory=f"{M}/src/{d}", file_pattern="*.wav", random_split_seed=10, split_count=0.1, **kwc)
         for sp, sub, rep, slide in (("train", "training", reps, 10 if name != "speech" else None),
                                     ("validation", "validation", 1, 10 if name != "speech" else None),
@@ -73,7 +74,7 @@ def feats(a):
     # Ambient: FLEURS dev (sprecherfremd), in 3,2-s-Stuecken gesplittet, Haelfte Validierung, Haelfte Test
     cl = Clips(input_directory=f"{M}/src/ambient", file_pattern="*.wav", random_split_seed=10, split_count=0.45)
     for sp, sub in (("validation", "validation_ambient"), ("test", "testing_ambient")):
-        dump(cl, None, f"{F}/ambient/{sub}/wakeword_mmap", sp, 1, None, split_dur=1.5)
+        dump(cl, None, f"{F}/ambient/{sub}/wakeword_mmap", sp, 1, None)   # ungesplittet: das Training teilt selbst (truncation_strategy split)
 
 
 def train(a):
@@ -83,7 +84,7 @@ def train(a):
                                             "truth": truth, "truncation_strategy": trunc, "type": "mmap"}
     cfg = {"window_step_ms": 10, "train_dir": f"{M}/trained_{a.name}",
            "features": [f("pos", a.w_pos, True, "truncate_start"), f("speech", a.w_speech, False, "random"),
-                        f("conf", a.w_conf, False, "truncate_start", a.pen_conf), f("ambient", 0.0, False, "split")],
+                        f("conf", a.w_conf, False, "truncate_start", a.pen_conf), f("ambient2", 0.0, False, "split")],
            "training_steps": [a.steps, a.steps // 2], "positive_class_weight": [1, 1], "negative_class_weight": [20, a.neg_w2],
            "learning_rates": [0.001, 0.0003], "batch_size": 128,
            "time_mask_max_size": [0, 5], "time_mask_count": [0, 2], "freq_mask_max_size": [0, 3], "freq_mask_count": [0, 2],
@@ -109,6 +110,7 @@ if __name__ == "__main__":
     p.add_argument("--steps", type=int, default=10000); p.add_argument("--threads", type=int, default=4)
     p.add_argument("--w-pos", type=float, default=2.0); p.add_argument("--w-speech", type=float, default=10.0)
     p.add_argument("--w-conf", type=float, default=4.0); p.add_argument("--pen-conf", type=float, default=2.0)
+    p.add_argument("--only-ambient", action="store_true")
     p.add_argument("--neg-w2", type=float, default=30.0)
     a = p.parse_args()
     {"prep": lambda: prep(), "feats": lambda: feats(a), "train": lambda: train(a)}[a.stage]()
