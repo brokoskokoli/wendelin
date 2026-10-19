@@ -25,6 +25,9 @@ const calendarChannelName = 'app.wendelin/calendar';
 /// `FilesChannel.kt`: single documents (storage access framework).
 const filesChannelName = 'app.wendelin/files';
 
+/// `MemoryChannel.kt`: `onTrimMemory` level of Android (frees the voice models).
+const memoryChannelName = 'app.wendelin/memory';
+
 /// `MediaChannel.kt`: media sessions, media keys, opening media apps.
 const mediaChannelName = 'app.wendelin/media';
 

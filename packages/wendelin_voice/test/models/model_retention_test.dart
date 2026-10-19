@@ -45,4 +45,16 @@ void main() {
       'whisper-small',
     );
   });
+
+  test(
+    'Speicherdruck: ab RUNNING_CRITICAL und Hintergrundstufen, nicht 20',
+    () {
+      for (final level in [15, 40, 60, 80]) {
+        expect(isMemoryPressure(level), isTrue, reason: '$level');
+      }
+      for (final level in [0, 5, 10, 20]) {
+        expect(isMemoryPressure(level), isFalse, reason: '$level');
+      }
+    },
+  );
 }

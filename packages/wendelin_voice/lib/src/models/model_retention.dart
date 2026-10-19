@@ -11,3 +11,9 @@ const memoryPressureReason = 'memory';
 /// does not go through here).
 bool mayReleaseModels(String reason, {required bool keepLoaded}) =>
     !keepLoaded || reason == memoryPressureReason;
+
+/// Whether the `onTrimMemory` [level] of Android is real memory pressure
+/// for this process: `TRIM_MEMORY_RUNNING_CRITICAL` (15) and the levels of
+/// a cached background process (40 and above). Level 20 (`UI_HIDDEN`) only
+/// says the screen is gone, which the idle release handles.
+bool isMemoryPressure(int level) => level >= 15 && level != 20;

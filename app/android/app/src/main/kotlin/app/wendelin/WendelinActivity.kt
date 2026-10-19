@@ -23,6 +23,7 @@ abstract class WendelinActivity : FlutterActivity() {
     private var media: MediaChannel? = null
     private var audioFocus: AudioFocusChannel? = null
     private var multicast: MulticastChannel? = null
+    private var memory: MemoryChannel? = null
     protected var notify: NotifyChannel? = null
         private set
     protected var assistant: AssistantChannel? = null
@@ -32,6 +33,11 @@ abstract class WendelinActivity : FlutterActivity() {
         super.onCreate(savedInstanceState)
         // Assistant role may have changed while the app was not running.
         RecognizerSwitch.sync(this)
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        memory?.trim(level)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -48,6 +54,7 @@ abstract class WendelinActivity : FlutterActivity() {
         media = MediaChannel(this, messenger)
         audioFocus = AudioFocusChannel(this, messenger)
         multicast = MulticastChannel(this, messenger)
+        memory = MemoryChannel(messenger)
         notify = NotifyChannel(this, messenger)
         notify?.handleIntent(intent)
         assistant = AssistantChannel(this, messenger)
@@ -76,6 +83,8 @@ abstract class WendelinActivity : FlutterActivity() {
         media = null
         multicast?.dispose()
         multicast = null
+        memory?.dispose()
+        memory = null
         notify?.dispose()
         notify = null
         assistant?.dispose()

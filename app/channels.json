@@ -175,6 +175,14 @@
       },
       "toDart": {}
     },
+    "app.wendelin/memory": {
+      "dart": ["app/lib/platform/channel_memory_trim.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/MemoryChannel.kt"],
+      "toKotlin": {},
+      "toDart": {
+        "trim": {"args": ["level"], "returns": "none"}
+      }
+    },
     "app.wendelin/multicast": {
       "dart": ["app/lib/platform/ha_discovery.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/MulticastChannel.kt"],

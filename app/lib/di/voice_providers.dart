@@ -6,18 +6,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../platform/channel_audio_focus_port.dart';
+import '../platform/channel_memory_trim.dart';
 import '../platform/voice/audio_playback.dart';
 import '../platform/voice/ducking_tts.dart';
 import '../platform/voice/engine_whisper.dart';
 import '../platform/voice/record_audio_input.dart';
 import '../platform/voice/sherpa_tts.dart';
 import '../platform/voice/silero_vad.dart';
+import '../platform/voice/stt_loader.dart';
 import '../platform/voice/system_tts.dart';
-import '../platform/voice/whisper_sherpa.dart';
 import '../platform/voice/whisper_stt.dart';
 import '../voice/voice_log.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
+import 'hint_term_providers.dart';
 import 'preferences.dart';
 import 'vocabulary_provider.dart';
 import 'voice_settings_providers.dart';
@@ -31,6 +33,12 @@ export 'voice_settings_providers.dart';
 // downloads, microphone, Silero VAD, Whisper, system and sherpa TTS. The
 // pipeline itself (with the agent) is built by the trigger side (WP18)
 // from [voiceComponentsProvider].
+
+/// Android `onTrimMemory` levels (WP103): frees the models under memory
+/// pressure. Tests replace it with a stream.
+final memoryTrimSourceProvider = Provider<MemoryTrimSource>(
+  (ref) => ChannelMemoryTrim(),
+);
 
 /// Microphone access of the `record` plugin.
 final microphoneProvider = Provider<PcmRecorder>(
@@ -110,10 +118,18 @@ typedef WhisperModelLoader = Future<WhisperBackend> Function(
   String directory,
 );
 
-/// How this engine loads a Whisper model (background isolate).
+/// How this engine loads a recognizer (background isolate): the engine
+/// comes from the catalog entry ([SpeechModel.engine], WP103); names for
+/// hotwords go to the models that take them.
 final whisperLoaderProvider = Provider<WhisperModelLoader>(
   (ref) =>
-      (model, dir) => IsolateWhisperBackend.start(WhisperFiles.of(model, dir)),
+      (model, dir) async => startSttBackend(
+        model,
+        dir,
+        hintTerms: model.supportsHotwords
+            ? await ref.read(hintTermsProvider.future)
+            : const [],
+      ),
 );
 
 /// Whisper models of the other engines of the process (ADR 0008, B14).
@@ -130,6 +146,11 @@ final engineWhisperProvider = FutureProvider<EngineWhisper>((ref) async {
   );
   final model = await _installedModel(ref, id, 'Das Whisper-Modell');
   final service = await ref.watch(speechModelServiceProvider.future);
+  // A change of the names builds the recognizer again (vocabulary of the
+  // hotwords), only for a model that takes them.
+  if (model.supportsHotwords) {
+    await ref.watch(hintTermsProvider.selectAsync((t) => t.join('\n')));
+  }
   final load = ref.watch(whisperLoaderProvider);
   final whisper = EngineWhisper(
     modelId: model.id,
@@ -149,6 +170,10 @@ final speechToTextProvider = FutureProvider<SpeechToText>((ref) async {
   return WhisperSpeechToText(
     backend: whisper,
     modelId: whisper.modelId,
+    engineName: sttEngineName(
+      ref.read(speechModelCatalogProvider).byId(whisper.modelId)?.engine ??
+          SttEngine.whisper,
+    ),
     // Durations only, never the text (measurements on the device, WP19).
     onTiming: (t) => debugPrint('$t'),
   );
