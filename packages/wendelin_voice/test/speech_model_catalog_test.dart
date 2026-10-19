@@ -90,7 +90,7 @@ void main() {
     for (final lang in ['de', 'fr', 'en']) {
       final voices = catalog.voicesFor(lang);
       expect(
-        voices.map((v) => v.gender),
+        voices.map((v) => v.gender ?? v.speakers.first.gender),
         containsAll([VoiceGender.female, VoiceGender.male]),
         reason: lang,
       );
@@ -99,6 +99,7 @@ void main() {
     expect(catalog.voicesFor('fr-CA').map((v) => v.id), [
       'tts-fr-siwis',
       'tts-fr-gilles',
+      'tts-kokoro',
     ]);
     expect(catalog.voicesFor('it'), isEmpty);
     expect(SpeechModelCatalog.whisperBase.gender, isNull);
@@ -121,12 +122,46 @@ void main() {
       expect(m.note, contains('selbst gehasht'));
     }
     for (final m in catalog.ofKind(SpeechModelKind.tts)) {
-      expect(m.gender, isNotNull, reason: m.id);
-      expect(m.languages, hasLength(1));
+      expect(m.gender ?? m.speakers.first.gender, isNotNull, reason: m.id);
+      if (m.synth == TtsSynth.piper) expect(m.languages, hasLength(1));
       expect(m.license, isNot(contains('NC')), reason: 'keine NC-Lizenz');
       expect(m.license, isNot(contains('GPL')));
     }
   });
+
+  test(
+    'Thorsten high (fp32) und Kokoro: Prüfsummen, Sprecher, Standard bleibt',
+    () {
+      final high = SpeechModelCatalog.voiceDeThorstenHigh;
+      expect(high.files.single.name, 'vits-piper-de_DE-thorsten-high.tar.bz2');
+      expect(high.files.single.sizeBytes, 115591546);
+      expect(
+        high.files.single.sha256,
+        'dd4ed1b0d42c30a1a4862fc2b243e8044d52b8889c9ff3d1e99e92028888bc4a',
+      );
+      final k = SpeechModelCatalog.voiceKokoro;
+      expect(k.files.single.sizeBytes, 132303094);
+      expect(
+        k.files.single.sha256,
+        '4c3052abaa60943a341f193888cf6abd68787dae6ab8ae5c925a706caa247e4e',
+      );
+      expect(k.synth, TtsSynth.kokoro);
+      expect(k.languages, {'en', 'fr'});
+      expect(k.speakersFor('en').map((s) => (s.id, s.sid)), [
+        ('af_heart', 3),
+        ('bf_emma', 21),
+      ]);
+      expect(k.speakersFor('fr').single.id, 'ff_siwis');
+      expect(k.speakersFor('de'), isEmpty);
+      expect(k.attribution, contains('SIWIS'));
+      // Piper medium/low bleibt Standard; nichts mit NC, kein lessac.
+      expect(catalog.voiceFor('de')!.id, 'tts-de-thorsten');
+      expect(catalog.voiceFor('en')!.id, 'tts-en-ljspeech');
+      expect(catalog.voiceFor('fr')!.id, 'tts-fr-siwis');
+      expect(catalog.voicesFor('de').map((v) => v.id), contains(high.id));
+      expect(catalog.models.any((m) => m.id.contains('lessac')), isFalse);
+    },
+  );
 
   test('Stimmen sind Archive, die die Plattform entpackt', () {
     for (final m in catalog.ofKind(SpeechModelKind.tts)) {

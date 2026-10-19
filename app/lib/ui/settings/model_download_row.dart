@@ -92,7 +92,12 @@ class ModelDownloadRow extends ConsumerWidget {
       children: [
         SettingsRow(
           title: model.displayName,
-          detail: detail,
+          detail: [
+            detail,
+            if (model.ramBytes case final ram?)
+              context.l10n.modelRowRam(sizeLabel(context.l10n, ram)),
+            ?model.hint,
+          ].join('\n'),
           onTap: installed ? onSelect : null,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,

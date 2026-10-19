@@ -19,6 +19,7 @@ final class VoiceSettings {
     this.tts = TtsPreference.automatic,
     this.ttsVoice,
     this.sherpaVoices = const {},
+    this.sherpaSpeakers = const {},
     this.ttsRate = 1.0,
     this.minSpeechMs = 200,
     this.vadThreshold = 0.5,
@@ -61,6 +62,11 @@ final class VoiceSettings {
   /// Chosen offline voice per language (primary subtag → catalog id, WP66);
   /// a language without an entry uses the default voice of the catalog.
   final Map<String, String> sherpaVoices;
+
+  /// Chosen speaker id per language for a multi-speaker offline voice
+  /// (Kokoro, WP103); a language without entry uses the model's first
+  /// speaker for it.
+  final Map<String, String> sherpaSpeakers;
 
   /// Catalog id of the offline voice for [language] (primary subtag): the
   /// chosen one, else the catalog default; `null` for an unknown language.
@@ -139,6 +145,7 @@ final class VoiceSettings {
     String? ttsVoice,
     bool clearVoice = false,
     Map<String, String>? sherpaVoices,
+    Map<String, String>? sherpaSpeakers,
     double? ttsRate,
     int? minSpeechMs,
     double? vadThreshold,
@@ -155,6 +162,7 @@ final class VoiceSettings {
     tts: tts ?? this.tts,
     ttsVoice: clearVoice ? null : ttsVoice ?? this.ttsVoice,
     sherpaVoices: sherpaVoices ?? this.sherpaVoices,
+    sherpaSpeakers: sherpaSpeakers ?? this.sherpaSpeakers,
     ttsRate: ttsRate ?? this.ttsRate,
     minSpeechMs: minSpeechMs ?? this.minSpeechMs,
     vadThreshold: vadThreshold ?? this.vadThreshold,
@@ -175,6 +183,7 @@ final class VoiceSettings {
     'tts': tts.name,
     'ttsVoice': ?ttsVoice,
     if (sherpaVoices.isNotEmpty) 'sherpaVoices': sherpaVoices,
+    if (sherpaSpeakers.isNotEmpty) 'sherpaSpeakers': sherpaSpeakers,
     'ttsRate': ttsRate,
     'minSpeechMs': minSpeechMs,
     'vadThreshold': vadThreshold,
@@ -219,6 +228,17 @@ final class VoiceSettings {
         }
       }
     }
+    final speakers = <String, String>{};
+    final rawSpeakers = json['sherpaSpeakers'];
+    if (rawSpeakers is Map) {
+      for (final MapEntry(:key, :value) in rawSpeakers.entries) {
+        if (key is! String || value is! String) continue;
+        final known = SpeechModelCatalog.standard.models.any(
+          (m) => m.speakersFor(key).any((s) => s.id == value),
+        );
+        if (known) speakers[key] = value;
+      }
+    }
     if (legacyOffline != null) {
       voices.putIfAbsent(legacyOffline.languages.first, () => legacyOffline.id);
     }
@@ -241,6 +261,7 @@ final class VoiceSettings {
       tts: TtsPreference.values.asNameMap()[json['tts']] ?? d.tts,
       ttsVoice: legacyOffline == null ? legacy : null,
       sherpaVoices: Map.unmodifiable(voices),
+      sherpaSpeakers: Map.unmodifiable(speakers),
       ttsRate:
           pick<num>('ttsRate', (v) => v >= 0.5 && v <= 2)?.toDouble() ??
           d.ttsRate,
@@ -280,6 +301,7 @@ final class VoiceSettings {
       other.tts == tts &&
       other.ttsVoice == ttsVoice &&
       _sameVoices(other.sherpaVoices, sherpaVoices) &&
+      _sameVoices(other.sherpaSpeakers, sherpaSpeakers) &&
       other.ttsRate == ttsRate &&
       other.minSpeechMs == minSpeechMs &&
       other.vadThreshold == vadThreshold &&
@@ -299,6 +321,9 @@ final class VoiceSettings {
     ttsVoice,
     Object.hashAllUnordered([
       for (final e in sherpaVoices.entries) Object.hash(e.key, e.value),
+    ]),
+    Object.hashAllUnordered([
+      for (final e in sherpaSpeakers.entries) Object.hash(e.key, e.value),
     ]),
     ttsRate,
     minSpeechMs,

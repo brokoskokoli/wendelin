@@ -51,6 +51,8 @@ final class SpeechModelCatalog {
     voiceFrGilles,
     voiceEn,
     voiceEnJoe,
+    voiceDeThorstenHigh,
+    voiceKokoro,
     wakeFeatures,
   ]);
 
@@ -131,7 +133,8 @@ final class SpeechModelCatalog {
   static const parakeetV3 = SpeechModel(
     id: 'parakeet-tdt-0.6b-v3',
     kind: SpeechModelKind.stt,
-    displayName: 'Parakeet v3 – groß, schnell, Eigennamen als Hinweis',
+    displayName: 'Parakeet v3 – groß, schnell',
+    hint: 'Schnell und genau; erkennt eigene Begriffe (Räume, Geräte, Namen).',
     languages: {'de', 'fr', 'en'},
     license: 'CC-BY-4.0 (NVIDIA)',
     source: _ghSource,
@@ -162,6 +165,7 @@ final class SpeechModelCatalog {
     id: 'canary-180m-flash',
     kind: SpeechModelKind.stt,
     displayName: 'Canary flash – klein, gut für Französisch',
+    hint: 'Klein und gut für Französisch; ohne eigene Begriffe.',
     languages: {'de', 'fr', 'en'},
     license: 'CC-BY-4.0 (NVIDIA)',
     source: _ghSource,
@@ -338,6 +342,89 @@ final class SpeechModelCatalog {
         sizeBytes: 21230019,
         sha256:
             '644527f29eca0ada5595d7b6e4daf6388f5ac0c4870b4d42996a6687fcefeb37',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// German voice: Piper „Thorsten“ (high, fp32; WP103). The int8 variant
+  /// of the high model is slower on the Mac (WP102), so the full one is
+  /// offered. Not the default: heavier (RAM about 373 MB on the Mac).
+  static const voiceDeThorstenHigh = SpeechModel(
+    id: 'tts-de-thorsten-high',
+    kind: SpeechModelKind.tts,
+    displayName: 'Deutsch – Thorsten hochwertig (männlich)',
+    hint: 'Natürlicher, aber langsamer und mit mehr Speicherbedarf.',
+    gender: VoiceGender.male,
+    languages: {'de'},
+    license: 'CC0 (Thorsten-Voice), Piper MIT',
+    source: _ghSource,
+    note: _ghNote,
+    ramBytes: 373 * 1024 * 1024,
+    files: [
+      ModelFile(
+        name: 'vits-piper-de_DE-thorsten-high.tar.bz2',
+        url: '$_gh/tts-models/vits-piper-de_DE-thorsten-high.tar.bz2',
+        sizeBytes: 115591546,
+        sha256:
+            'dd4ed1b0d42c30a1a4862fc2b243e8044d52b8889c9ff3d1e99e92028888bc4a',
+        archive: ModelArchive.tarBz2,
+      ),
+    ],
+  );
+
+  /// Kokoro multi-lang v1.0, int8 (English and French; no German). One
+  /// model with several speakers (`voices.bin`); the speaker ids are the
+  /// positions in the model's voice list. Archive unpacks to
+  /// `kokoro-int8-multi-lang-v1_0/`.
+  static const voiceKokoro = SpeechModel(
+    id: 'tts-kokoro',
+    kind: SpeechModelKind.tts,
+    displayName: 'Kokoro – Englisch und Französisch',
+    hint: 'Sehr natürlich, aber langsamer; mehrere Sprecher.',
+    languages: {'en', 'fr'},
+    license: 'Apache-2.0 (Kokoro), Stimme ff_siwis: CC BY 4.0 (SIWIS)',
+    source: _ghSource,
+    note: _ghNote,
+    attribution:
+        'Kokoro-82M (hexgrad, Apache-2.0), sherpa-onnx-Export (k2-fsa); '
+        'Stimme „ff_siwis“ nach der SIWIS French Speech Synthesis Database '
+        '(J. Yamagishi et al., University of Edinburgh / Idiap), CC BY 4.0.',
+    synth: TtsSynth.kokoro,
+    ramBytes: 560 * 1024 * 1024,
+    speakers: [
+      TtsSpeaker(
+        id: 'af_heart',
+        language: 'en',
+        name: 'Heart (weiblich, amerikanisch)',
+        sid: 3,
+        espeakLang: 'en-us',
+        gender: VoiceGender.female,
+      ),
+      TtsSpeaker(
+        id: 'bf_emma',
+        language: 'en',
+        name: 'Emma (weiblich, britisch)',
+        sid: 21,
+        espeakLang: 'en-gb',
+        gender: VoiceGender.female,
+      ),
+      TtsSpeaker(
+        id: 'ff_siwis',
+        language: 'fr',
+        name: 'Siwis (weiblich)',
+        sid: 30,
+        espeakLang: 'fr',
+        gender: VoiceGender.female,
+      ),
+    ],
+    files: [
+      ModelFile(
+        name: 'kokoro-int8-multi-lang-v1_0.tar.bz2',
+        url: '$_gh/tts-models/kokoro-int8-multi-lang-v1_0.tar.bz2',
+        sizeBytes: 132303094,
+        sha256:
+            '4c3052abaa60943a341f193888cf6abd68787dae6ab8ae5c925a706caa247e4e',
         archive: ModelArchive.tarBz2,
       ),
     ],

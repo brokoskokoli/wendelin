@@ -98,6 +98,21 @@ void main() {
     });
   });
 
+  test('Sprecher je Sprache: speichern, lesen, Unbekanntes verwerfen', () {
+    const s = VoiceSettings(sherpaSpeakers: {'en': 'bf_emma'});
+    final back = VoiceSettings.fromJson(s.toJson());
+    expect(back, s);
+    expect(back.sherpaSpeakers, {'en': 'bf_emma'});
+    expect(
+      VoiceSettings.fromJson({
+        'sherpaSpeakers': {'en': 'nope', 'fr': 'af_heart', 'de': 3},
+      }).sherpaSpeakers,
+      isEmpty,
+    );
+    expect(s.copyWith(keepModelLoaded: true).sherpaSpeakers, s.sherpaSpeakers);
+    expect(s == const VoiceSettings(), isFalse);
+  });
+
   test('Sprache und copyWith', () {
     const s = VoiceSettings(ttsVoice: 'v');
     expect(s.effectiveLanguage('de'), 'de');

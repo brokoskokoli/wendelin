@@ -1436,6 +1436,53 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose the offline voice for each language. Only downloaded voices use storage; you can delete the ones you do not need.';
 
   @override
+  String modelRowRam(String ram) {
+    return 'Memory about $ram';
+  }
+
+  @override
+  String get voiceScreenKeepModel => 'Keep model in memory';
+
+  @override
+  String get voiceScreenKeepModelHint =>
+      'Recognition and voice stay loaded: faster answers, but permanently more memory. Wendelin frees them when memory runs low.';
+
+  @override
+  String get voiceScreenKeepModelLabel => 'Keep model in memory';
+
+  @override
+  String get voiceVoicesSpeaker => 'Speaker';
+
+  @override
+  String get voiceScreenMetrics => 'Measurements';
+
+  @override
+  String get voiceScreenMetricsDetail =>
+      'Time, real-time factor and memory per utterance';
+
+  @override
+  String get voiceMetricsIntro =>
+      'The latest utterances of this session: compute time (latency), real-time factor (compute time per audio time, smaller is faster) and app memory. Numbers only, no content.';
+
+  @override
+  String get voiceMetricsEmpty =>
+      'No measurements yet. Say a command or play a voice sample.';
+
+  @override
+  String get voiceMetricsStt => 'Recognition';
+
+  @override
+  String get voiceMetricsTts => 'Speech output';
+
+  @override
+  String voiceMetricsRow(String latency, String audio, String rtf, String ram) {
+    return '$latency ms for $audio ms of audio · RTF $rtf · RAM $ram';
+  }
+
+  @override
+  String get voiceMetricsClear => 'Clear list';
+
+  @override
   String voiceVoicesNotLoaded(String v) {
     return 'The chosen voice is not downloaded – $v speaks instead.';
   }

@@ -1456,6 +1456,53 @@ class AppLocalizationsFr extends AppLocalizations {
       'Choisissez la voix hors ligne pour chaque langue. Seules les voix téléchargées occupent de la mémoire ; vous pouvez supprimer celles dont vous n’avez pas besoin.';
 
   @override
+  String modelRowRam(String ram) {
+    return 'Mémoire d’environ $ram';
+  }
+
+  @override
+  String get voiceScreenKeepModel => 'Garder le modèle en mémoire';
+
+  @override
+  String get voiceScreenKeepModelHint =>
+      'La reconnaissance et la voix restent chargées : réponses plus rapides, mais davantage de mémoire en permanence. Wendelin les libère quand la mémoire manque.';
+
+  @override
+  String get voiceScreenKeepModelLabel => 'Garder le modèle en mémoire';
+
+  @override
+  String get voiceVoicesSpeaker => 'Voix';
+
+  @override
+  String get voiceScreenMetrics => 'Mesures';
+
+  @override
+  String get voiceScreenMetricsDetail =>
+      'Durée, facteur temps réel et mémoire par énoncé';
+
+  @override
+  String get voiceMetricsIntro =>
+      'Les derniers énoncés de cette session : temps de calcul (latence), facteur temps réel (temps de calcul par durée audio, plus petit = plus rapide) et mémoire de l’app. Uniquement des chiffres, aucun contenu.';
+
+  @override
+  String get voiceMetricsEmpty =>
+      'Pas encore de mesures. Dites une commande ou écoutez un échantillon de voix.';
+
+  @override
+  String get voiceMetricsStt => 'Reconnaissance';
+
+  @override
+  String get voiceMetricsTts => 'Synthèse vocale';
+
+  @override
+  String voiceMetricsRow(String latency, String audio, String rtf, String ram) {
+    return '$latency ms pour $audio ms d’audio · RTF $rtf · RAM $ram';
+  }
+
+  @override
+  String get voiceMetricsClear => 'Vider la liste';
+
+  @override
   String voiceVoicesNotLoaded(String v) {
     return 'La voix choisie n’est pas téléchargée – c’est $v qui parle.';
   }

@@ -17,6 +17,7 @@ import '../platform/voice/stt_loader.dart';
 import '../platform/voice/system_tts.dart';
 import '../platform/voice/whisper_stt.dart';
 import '../voice/voice_log.dart';
+import '../voice/voice_metrics.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
 import 'hint_term_providers.dart';
@@ -175,9 +176,30 @@ final speechToTextProvider = FutureProvider<SpeechToText>((ref) async {
           SttEngine.whisper,
     ),
     // Durations only, never the text (measurements on the device, WP19).
-    onTiming: (t) => debugPrint('$t'),
+    onTiming: (t) {
+      debugPrint('$t');
+      _addMetric(
+        ref,
+        VoiceMetric(
+          kind: VoiceMetricKind.stt,
+          model: t.modelId,
+          audio: t.audio,
+          compute: t.compute,
+          rssBytes: currentRssBytes(),
+        ),
+      );
+    },
   );
 });
+
+/// Adds [metric] to the log; a provider that is already gone is ignored.
+void _addMetric(Ref ref, VoiceMetric metric) {
+  try {
+    ref.read(voiceMetricsProvider.notifier).add(metric);
+  } on Object {
+    // The container was disposed (end of a test or of the engine).
+  }
+}
 
 /// Android system TTS.
 final systemTtsProvider = Provider<TextToSpeech>((ref) => SystemTextToSpeech());
@@ -196,14 +218,18 @@ Future<List<SherpaVoice>> installedSherpaVoices(
       Directory('${service.directoryOf(m).path}/$base'),
     );
     if (files == null) continue;
-    voices.add(
-      SherpaVoice(
-        id: m.id,
-        language: m.languages.first,
-        name: m.displayName,
-        files: files,
-      ),
-    );
+    // A multi-language model (Kokoro) is listed once per language.
+    for (final language in m.languages.toList()..sort()) {
+      voices.add(
+        SherpaVoice(
+          id: m.id,
+          language: language,
+          name: m.displayName,
+          files: files,
+          speakers: m.speakersFor(language),
+        ),
+      );
+    }
   }
   return voices;
 }
@@ -250,6 +276,18 @@ TextToSpeech createSherpaTts(
     playback: out,
     preferred: () =>
         ref.read(voiceSettingsProvider).value?.sherpaVoices ?? const {},
+    onTiming: (voiceId, audio, compute) => _addMetric(
+      ref,
+      VoiceMetric(
+        kind: VoiceMetricKind.tts,
+        model: voiceId.replaceAll('/', '.'),
+        audio: audio,
+        compute: compute,
+        rssBytes: currentRssBytes(),
+      ),
+    ),
+    preferredSpeakers: () =>
+        ref.read(voiceSettingsProvider).value?.sherpaSpeakers ?? const {},
   );
 }
 

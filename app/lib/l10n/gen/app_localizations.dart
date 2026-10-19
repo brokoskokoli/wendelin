@@ -2590,6 +2590,84 @@ abstract class AppLocalizations {
   /// **'Wähle je Sprache die Offline-Stimme. Nur geladene Stimmen belegen Speicher; nicht gebrauchte kannst du löschen.'**
   String get voiceVoicesIntro;
 
+  /// No description provided for @modelRowRam.
+  ///
+  /// In de, this message translates to:
+  /// **'Arbeitsspeicher ca. {ram}'**
+  String modelRowRam(String ram);
+
+  /// No description provided for @voiceScreenKeepModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell im Speicher halten'**
+  String get voiceScreenKeepModel;
+
+  /// No description provided for @voiceScreenKeepModelHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennung und Stimme bleiben geladen: schnellere Antworten, aber dauerhaft mehr Arbeitsspeicher. Bei Speicherknappheit gibt Wendelin sie frei.'**
+  String get voiceScreenKeepModelHint;
+
+  /// No description provided for @voiceScreenKeepModelLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell im Speicher halten'**
+  String get voiceScreenKeepModelLabel;
+
+  /// No description provided for @voiceVoicesSpeaker.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprecher'**
+  String get voiceVoicesSpeaker;
+
+  /// No description provided for @voiceScreenMetrics.
+  ///
+  /// In de, this message translates to:
+  /// **'Messwerte'**
+  String get voiceScreenMetrics;
+
+  /// No description provided for @voiceScreenMetricsDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeit, Echtzeitfaktor und Speicher je Äußerung'**
+  String get voiceScreenMetricsDetail;
+
+  /// No description provided for @voiceMetricsIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Die letzten Äußerungen dieser Sitzung: Rechenzeit (Latenz), Echtzeitfaktor (Rechenzeit je Audiozeit, kleiner ist schneller) und Speicher der App. Nur Zahlen, keine Inhalte.'**
+  String get voiceMetricsIntro;
+
+  /// No description provided for @voiceMetricsEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Messwerte. Sprich einen Befehl oder spiele eine Stimmprobe ab.'**
+  String get voiceMetricsEmpty;
+
+  /// No description provided for @voiceMetricsStt.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennung'**
+  String get voiceMetricsStt;
+
+  /// No description provided for @voiceMetricsTts.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprachausgabe'**
+  String get voiceMetricsTts;
+
+  /// No description provided for @voiceMetricsRow.
+  ///
+  /// In de, this message translates to:
+  /// **'{latency} ms für {audio} ms Audio · RTF {rtf} · RAM {ram}'**
+  String voiceMetricsRow(String latency, String audio, String rtf, String ram);
+
+  /// No description provided for @voiceMetricsClear.
+  ///
+  /// In de, this message translates to:
+  /// **'Liste leeren'**
+  String get voiceMetricsClear;
+
   /// No description provided for @voiceVoicesNotLoaded.
   ///
   /// In de, this message translates to:

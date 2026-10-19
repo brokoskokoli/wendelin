@@ -79,6 +79,20 @@ class VoiceScreen extends ConsumerWidget {
           ],
         ),
         SettingsSection(
+          title: context.l10n.voiceScreenKeepModel,
+          children: [
+            SettingsRow(
+              title: context.l10n.voiceScreenKeepModel,
+              detail: context.l10n.voiceScreenKeepModelHint,
+              trailing: WSwitch(
+                value: settings.keepModelLoaded,
+                semanticLabel: context.l10n.voiceScreenKeepModelLabel,
+                onChanged: (v) => change((s) => s.copyWith(keepModelLoaded: v)),
+              ),
+            ),
+          ],
+        ),
+        SettingsSection(
           title: context.l10n.onboardingWakeWord,
           children: [
             SettingsRow(
@@ -94,6 +108,17 @@ class VoiceScreen extends ConsumerWidget {
           settings: settings,
           change: change,
           bargeInAvailable: ref.watch(bargeInAvailableProvider),
+        ),
+        SettingsSection(
+          title: context.l10n.voiceScreenMetrics,
+          children: [
+            SettingsRow(
+              title: context.l10n.voiceScreenMetrics,
+              detail: context.l10n.voiceScreenMetricsDetail,
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.voiceMetrics),
+            ),
+          ],
         ),
         SettingsSection(
           title: context.l10n.voiceScreenModelLicenses,

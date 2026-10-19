@@ -11,7 +11,7 @@ import 'isolate_exit.dart';
 import 'pcm.dart';
 import 'sherpa_runtime.dart';
 
-/// Files of an unpacked Piper/VITS voice (sherpa-onnx export).
+/// Files of an unpacked Piper/VITS or Kokoro voice (sherpa-onnx export).
 @immutable
 final class PiperVoiceFiles {
   /// Creates the paths.
@@ -19,11 +19,15 @@ final class PiperVoiceFiles {
     required this.model,
     required this.tokens,
     required this.dataDir,
+    this.voicesBin,
+    this.dictDir,
+    this.lexicon,
   });
 
   /// Finds the voice in [directory]: the archive's top folder with one
-  /// `*.onnx`, `tokens.txt` and `espeak-ng-data/`. Returns `null` if
-  /// something is missing.
+  /// `*.onnx`, `tokens.txt` and `espeak-ng-data/` (Kokoro: also
+  /// `voices.bin`, and `dict/` and `lexicon-us-en.txt` if present).
+  /// Returns `null` if something is missing.
   static PiperVoiceFiles? find(Directory directory) {
     if (!directory.existsSync()) return null;
     final dirs = [directory, ...directory.listSync().whereType<Directory>()];
@@ -40,6 +44,15 @@ final class PiperVoiceFiles {
           model: onnx.single.path,
           tokens: tokens.path,
           dataDir: data.path,
+          voicesBin: File('${d.path}/voices.bin').existsSync()
+              ? '${d.path}/voices.bin'
+              : null,
+          dictDir: Directory('${d.path}/dict').existsSync()
+              ? '${d.path}/dict'
+              : null,
+          lexicon: File('${d.path}/lexicon-us-en.txt').existsSync()
+              ? '${d.path}/lexicon-us-en.txt'
+              : null,
         );
       }
     }
@@ -54,6 +67,15 @@ final class PiperVoiceFiles {
 
   /// `espeak-ng-data` directory.
   final String dataDir;
+
+  /// Kokoro `voices.bin`; `null` = a Piper voice.
+  final String? voicesBin;
+
+  /// Kokoro `dict/` directory (Chinese segmentation), if present.
+  final String? dictDir;
+
+  /// Kokoro English lexicon, if present (used for English only).
+  final String? lexicon;
 }
 
 /// Turns text into audio (in a background isolate on the device).
@@ -83,7 +105,11 @@ final class SherpaVoice {
     required this.language,
     required this.name,
     required this.files,
+    this.speakers = const [],
   });
+
+  /// Speakers of the voice for [language] (Kokoro); empty for Piper.
+  final List<TtsSpeaker> speakers;
 
   /// Catalog id (e.g. `tts-de-thorsten`).
   final String id;
@@ -113,7 +139,18 @@ final class SherpaTextToSpeech implements TextToSpeech {
     required this.synthesizer,
     required this.playback,
     this.preferred,
+    this.preferredSpeakers,
+    this.onTiming,
   });
+
+  /// Called after every synthesis with the voice id, the length of the
+  /// audio and the compute time (numbers only, for the metrics, WP103).
+  final void Function(String voiceId, Duration audio, Duration compute)?
+  onTiming;
+
+  /// Chosen speaker id per language (Kokoro, WP103); the first speaker of
+  /// the language is used when missing or unknown.
+  final Map<String, String> Function()? preferredSpeakers;
 
   /// Chosen voice id per language (primary subtag, WP66); used when no
   /// installed voice matches the requested id. A voice that is not
@@ -181,11 +218,17 @@ final class SherpaTextToSpeech implements TextToSpeech {
       }
       _set(TtsState.speaking);
       try {
+        final speaker = _speaker(chosen, preferredSpeakers?.call());
+        final voiceId = speaker == null
+            ? chosen.id
+            : '${chosen.id}/${speaker.id}';
+        final watch = Stopwatch()..start();
         final wav = await synthesizer.synthesize(
           text,
-          voiceId: chosen.id,
+          voiceId: voiceId,
           speed: rate,
         );
+        onTiming?.call(voiceId, wav.duration, watch.elapsed);
         if (generation != _generation) return;
         await playback.play(wav);
       } finally {
@@ -196,6 +239,14 @@ final class SherpaTextToSpeech implements TextToSpeech {
     return run;
   }
 
+  static TtsSpeaker? _speaker(SherpaVoice v, Map<String, String>? chosen) {
+    if (v.speakers.isEmpty) return null;
+    for (final s in v.speakers) {
+      if (s.id == chosen?[v.language]) return s;
+    }
+    return v.speakers.first;
+  }
+
   static SherpaVoice? _pick(
     List<SherpaVoice> voices,
     String? id,
@@ -203,13 +254,17 @@ final class SherpaTextToSpeech implements TextToSpeech {
     Map<String, String> preferred,
   ) {
     if (voices.isEmpty) return null;
+    final lang = language?.split(RegExp('[-_]')).first.toLowerCase();
     if (id != null) {
+      // A multi-language voice is listed once per language.
+      for (final v in voices) {
+        if (v.id == id && (lang == null || v.language == lang)) return v;
+      }
       for (final v in voices) {
         if (v.id == id) return v;
       }
     }
-    if (language != null) {
-      final lang = language.split(RegExp('[-_]')).first.toLowerCase();
+    if (lang != null) {
       final inLanguage = [
         for (final v in voices)
           if (v.language == lang) v,
@@ -244,7 +299,9 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
   /// Creates the synthesizer; [voices] maps voice ids to their files.
   IsolateSherpaSynthesizer(this.voices);
 
-  /// Voice files by id (resolved on every call).
+  /// Voice files by model id (resolved on every call). A voice id for the
+  /// synthesizer is the model id, for a multi-speaker model
+  /// `<model id>/<speaker id>`.
   final Future<Map<String, PiperVoiceFiles>> Function() voices;
 
   Future<(WorkerIsolate, SendPort, StreamIterator<Object?>)>? _worker;
@@ -266,6 +323,13 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     return (worker, events.current! as SendPort, events);
   }
 
+  static (String, String?) _split(String voiceId) {
+    final i = voiceId.indexOf('/');
+    return i < 0
+        ? (voiceId, null)
+        : (voiceId.substring(0, i), voiceId.substring(i + 1));
+  }
+
   /// The background isolate; `null` before the first synthesis.
   @visibleForTesting
   Future<WorkerIsolate>? get worker => _worker?.then((w) => w.$1);
@@ -277,7 +341,8 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     double speed = 1.0,
   }) {
     final result = _queue.then((_) async {
-      final files = (await voices())[voiceId];
+      final (modelId, speakerId) = _split(voiceId);
+      final files = (await voices())[modelId];
       if (files == null) {
         throw VoiceException(
           VoiceErrorKind.modelMissing,
@@ -285,6 +350,13 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
         );
       }
       final (_, port, replies) = await (_worker ??= _start());
+      final speaker = speakerId == null
+          ? null
+          : SpeechModelCatalog.standard
+                .byId(modelId)
+                ?.speakers
+                .where((s) => s.id == speakerId)
+                .firstOrNull;
       port.send((
         voiceId,
         files.model,
@@ -292,6 +364,11 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
         files.dataDir,
         text,
         speed,
+        files.voicesBin,
+        files.dictDir,
+        files.lexicon,
+        speaker?.espeakLang,
+        speaker?.sid ?? 0,
       ));
       await replies.moveNext();
       final reply = replies.current;
@@ -333,20 +410,56 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
     so.OfflineTts? loaded;
     out.send(inbox.sendPort);
     inbox.listen((message) {
-      if (message is (String, String, String, String, String, double)) {
-        final (id, model, tokens, dataDir, text, speed) = message;
+      if (message
+          is (
+            String,
+            String,
+            String,
+            String,
+            String,
+            double,
+            String?,
+            String?,
+            String?,
+            String?,
+            int,
+          )) {
+        final (
+          id,
+          model,
+          tokens,
+          dataDir,
+          text,
+          speed,
+          voicesBin,
+          dictDir,
+          lexicon,
+          lang,
+          sid,
+        ) = message;
         try {
           ensureSherpaBindings();
-          if (loadedId != id) {
+          // Kokoro binds the phonemizer language at load time: one load per
+          // language (the speaker id is a per-call argument).
+          final loadKey = voicesBin == null ? id : '$id@$lang';
+          if (loadedId != loadKey) {
             loaded?.free();
             loaded = null;
             loadedId = null;
           }
           final tts = loaded ??= so.OfflineTts(
-            sherpaTtsConfig(model: model, tokens: tokens, dataDir: dataDir),
+            sherpaTtsConfig(
+              model: model,
+              tokens: tokens,
+              dataDir: dataDir,
+              voicesBin: voicesBin,
+              dictDir: dictDir,
+              lexicon: lexicon,
+              lang: lang,
+            ),
           );
-          loadedId = id;
-          final audio = tts.generate(text: text, speed: speed);
+          loadedId = loadKey;
+          final audio = tts.generate(text: text, sid: sid, speed: speed);
           out.send((
             TransferableTypedData.fromList([
               audio.samples.buffer.asUint8List(),
@@ -365,7 +478,8 @@ final class IsolateSherpaSynthesizer implements SpeechSynthesizer {
   }
 }
 
-/// Config of a Piper (VITS) voice. The noise parameters stay at the sherpa
+/// Config of a Piper (VITS) voice, or of a Kokoro voice when [voicesBin] is
+/// given ([lang] = phonemizer language, [lexicon] only for English). The noise parameters stay at the sherpa
 /// defaults on purpose (WP74: measured, they change the pause noise by
 /// at most 1.5 dB; the noise comes from the int8 models).
 @visibleForTesting
@@ -373,13 +487,32 @@ so.OfflineTtsConfig sherpaTtsConfig({
   required String model,
   required String tokens,
   required String dataDir,
+  String? voicesBin,
+  String? dictDir,
+  String? lexicon,
+  String? lang,
 }) => so.OfflineTtsConfig(
   model: so.OfflineTtsModelConfig(
-    vits: so.OfflineTtsVitsModelConfig(
-      model: model,
-      tokens: tokens,
-      dataDir: dataDir,
-    ),
+    vits: voicesBin != null
+        ? const so.OfflineTtsVitsModelConfig()
+        : so.OfflineTtsVitsModelConfig(
+            model: model,
+            tokens: tokens,
+            dataDir: dataDir,
+          ),
+    kokoro: voicesBin == null
+        ? const so.OfflineTtsKokoroModelConfig()
+        : so.OfflineTtsKokoroModelConfig(
+            model: model,
+            voices: voicesBin,
+            tokens: tokens,
+            dataDir: dataDir,
+            dictDir: dictDir ?? '',
+            lexicon: lang != null && lang.startsWith('en')
+                ? (lexicon ?? '')
+                : '',
+            lang: lang ?? '',
+          ),
     numThreads: 2,
     debug: false,
   ),

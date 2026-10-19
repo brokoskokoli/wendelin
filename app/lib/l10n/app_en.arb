@@ -415,6 +415,32 @@
   "voiceSpokenTitle": "Spoken version",
   "voiceSpokenSemantic": "Spoken version {label}",
   "voiceVoicesIntro": "Choose the offline voice for each language. Only downloaded voices use storage; you can delete the ones you do not need.",
+  "modelRowRam": "Memory about {ram}",
+  "@modelRowRam": {
+    "placeholders": {
+      "ram": { "type": "String" }
+    }
+  },
+  "voiceScreenKeepModel": "Keep model in memory",
+  "voiceScreenKeepModelHint": "Recognition and voice stay loaded: faster answers, but permanently more memory. Wendelin frees them when memory runs low.",
+  "voiceScreenKeepModelLabel": "Keep model in memory",
+  "voiceVoicesSpeaker": "Speaker",
+  "voiceScreenMetrics": "Measurements",
+  "voiceScreenMetricsDetail": "Time, real-time factor and memory per utterance",
+  "voiceMetricsIntro": "The latest utterances of this session: compute time (latency), real-time factor (compute time per audio time, smaller is faster) and app memory. Numbers only, no content.",
+  "voiceMetricsEmpty": "No measurements yet. Say a command or play a voice sample.",
+  "voiceMetricsStt": "Recognition",
+  "voiceMetricsTts": "Speech output",
+  "voiceMetricsRow": "{latency} ms for {audio} ms of audio · RTF {rtf} · RAM {ram}",
+  "@voiceMetricsRow": {
+    "placeholders": {
+      "latency": { "type": "String" },
+      "audio": { "type": "String" },
+      "rtf": { "type": "String" },
+      "ram": { "type": "String" }
+    }
+  },
+  "voiceMetricsClear": "Clear list",
   "voiceVoicesNotLoaded": "The chosen voice is not downloaded – {v} speaks instead.",
   "voiceVoicesSampleFailed": "Sample not possible – the voice did not speak.",
   "voiceVoicesPreparing": "Preparing sample …",

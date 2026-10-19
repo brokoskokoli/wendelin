@@ -734,6 +734,32 @@
     }
   },
   "voiceVoicesIntro": "Wähle je Sprache die Offline-Stimme. Nur geladene Stimmen belegen Speicher; nicht gebrauchte kannst du löschen.",
+  "modelRowRam": "Arbeitsspeicher ca. {ram}",
+  "@modelRowRam": {
+    "placeholders": {
+      "ram": { "type": "String" }
+    }
+  },
+  "voiceScreenKeepModel": "Modell im Speicher halten",
+  "voiceScreenKeepModelHint": "Erkennung und Stimme bleiben geladen: schnellere Antworten, aber dauerhaft mehr Arbeitsspeicher. Bei Speicherknappheit gibt Wendelin sie frei.",
+  "voiceScreenKeepModelLabel": "Modell im Speicher halten",
+  "voiceVoicesSpeaker": "Sprecher",
+  "voiceScreenMetrics": "Messwerte",
+  "voiceScreenMetricsDetail": "Zeit, Echtzeitfaktor und Speicher je Äußerung",
+  "voiceMetricsIntro": "Die letzten Äußerungen dieser Sitzung: Rechenzeit (Latenz), Echtzeitfaktor (Rechenzeit je Audiozeit, kleiner ist schneller) und Speicher der App. Nur Zahlen, keine Inhalte.",
+  "voiceMetricsEmpty": "Noch keine Messwerte. Sprich einen Befehl oder spiele eine Stimmprobe ab.",
+  "voiceMetricsStt": "Erkennung",
+  "voiceMetricsTts": "Sprachausgabe",
+  "voiceMetricsRow": "{latency} ms für {audio} ms Audio · RTF {rtf} · RAM {ram}",
+  "@voiceMetricsRow": {
+    "placeholders": {
+      "latency": { "type": "String" },
+      "audio": { "type": "String" },
+      "rtf": { "type": "String" },
+      "ram": { "type": "String" }
+    }
+  },
+  "voiceMetricsClear": "Liste leeren",
   "voiceVoicesNotLoaded": "Gewählte Stimme nicht geladen – es spricht {v}.",
   "@voiceVoicesNotLoaded": {
     "placeholders": {
