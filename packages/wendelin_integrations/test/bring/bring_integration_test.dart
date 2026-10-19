@@ -151,8 +151,46 @@ void main() {
       expect(o.isError, isTrue);
       expect(api.refreshes, 1);
       expect(errors, hasLength(1));
-      expect(secrets.session, isNull);
+      // Kein Anmeldeproblem (z. B. 403 auf entzogener Liste): Sitzung bleibt.
+      expect(secrets.session, isNotNull);
+      expect(bring.session.failed, isTrue);
     });
+
+    test(
+      '403 nach erfolgreicher Erneuerung: pausiert, Sitzung bleibt',
+      () async {
+        await lists();
+        api.expireTokens();
+        var calls = 0;
+        // Nach der Erneuerung wird der Aufruf mit 403 abgelehnt.
+        await expectLater(
+          bring.session.run<void>((auth) async {
+            if (++calls == 2) {
+              throw const PortException(
+                PortErrorKind.permissionDenied,
+                'Liste entzogen (HTTP 403)',
+              );
+            }
+            await api.lists(auth);
+            throw const PortException(
+              PortErrorKind.permissionDenied,
+              'abgelaufen',
+            );
+          }),
+          throwsA(
+            isA<PortException>().having(
+              (e) => e.message,
+              'message',
+              contains('Liste entzogen'),
+            ),
+          ),
+        );
+        expect(api.refreshes, 1);
+        expect(secrets.session, isNotNull);
+        expect(bring.session.failed, isTrue);
+        expect(errors, hasLength(1));
+      },
+    );
 
     test('nicht eingerichtet: kein Fehlerzustand', () async {
       secrets.session = null;

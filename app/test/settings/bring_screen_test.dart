@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/bring.dart';
-import 'package:wendelin/di/integrations/integration_spec.dart'
-    show reauthError;
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/design/design.dart';
 import 'package:wendelin/ui/settings/bring_screen.dart';
@@ -168,6 +166,12 @@ void main() {
     await loginBring(env);
     final c = await pumpIntegrations(tester, env);
     final integration = bringIntegrationOf(c.read(integrationsProvider))!;
+    // Die Seite ist offen (verbunden), wenn der Refresh abgelehnt wird.
+    await tester.tap(find.text('Bring! Einkaufsliste'));
+    await settle(tester);
+    await tester.tap(find.text('Bring!-Konto'));
+    await settle(tester);
+    expect(find.text('Verbunden'), findsOneWidget);
     env.bring
       ..expireTokens()
       ..revokeRefresh();
@@ -178,25 +182,7 @@ void main() {
     expect(env.bring.logins, logins);
     expect(await env.secrets.listKeys(), isEmpty);
     await settle(tester);
-    expect(
-      tileWidget(tester, 'Bring! Einkaufsliste').status,
-      IntegrationStatus.error,
-    );
-
-    await tester.tap(find.text('Bring! Einkaufsliste'));
-    await settle(tester);
-    await tester.tap(find.text('Bring!-Konto'));
-    await settle(tester);
-    // Ohne Sitzung zeigt die Seite direkt den Login.
-    expect(find.byKey(const ValueKey('bringEmail')), findsOneWidget);
-    await tester.tap(find.byTooltip('Zurück'));
-    await settle(tester);
-
-    // Mit Sitzung im Fehlerzustand: Knopf „Erneut verbinden“.
-    await loginBring(env);
-    c.read(toolRegistryProvider).reportError('bring', reauthError);
-    await tester.tap(find.text('Bring!-Konto'));
-    await settle(tester);
+    // Echter Pfad: Der Fehler kommt aus der Sitzung, nicht von Hand.
     expect(
       find.text('Bring!: Anmeldung abgelaufen. Bitte neu anmelden.'),
       findsOneWidget,
@@ -205,6 +191,59 @@ void main() {
     await tester.tap(find.text('Erneut verbinden'));
     await settle(tester);
     expect(find.byKey(const ValueKey('bringEmail')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('bringEmail')),
+      env.bring.email,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('bringPassword')),
+      bringPassword,
+    );
+    await tester.tap(find.text('Anmelden'));
+    await settle(tester);
+    expect(find.text('Verbunden'), findsOneWidget);
+    expect(
+      c.read(toolRegistryProvider).status('bring'),
+      IntegrationStatus.active,
+    );
+  });
+
+  testWidgets('nach dem Login sind E-Mail- und Passwortfeld leer', (
+    tester,
+  ) async {
+    final env = TestEnv(enabled: const {'bring'});
+    await pumpIntegrations(tester, env);
+    await tester.tap(find.text('Bring! Einkaufsliste'));
+    await settle(tester);
+    await tester.tap(find.text('Bring!-Konto'));
+    await settle(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('bringEmail')),
+      env.bring.email,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('bringPassword')),
+      bringPassword,
+    );
+    await tester.tap(find.text('Anmelden'));
+    await settle(tester);
+    expect(find.text('Verbunden'), findsOneWidget);
+    // Abmelden zeigt das Formular wieder: die Felder dürfen nichts halten.
+    await tester.tap(find.text('Abmelden'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Abmelden'));
+    await settle(tester);
+    String text(String key) => tester
+        .widget<EditableText>(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(EditableText),
+          ),
+        )
+        .controller
+        .text;
+    expect(text('bringEmail'), isEmpty);
+    expect(text('bringPassword'), isEmpty);
   });
 
   testWidgets('Bring!-App fehlt: Hinweis auf der Kachel und der Seite', (

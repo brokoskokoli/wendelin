@@ -1151,7 +1151,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bringIntro =>
-      'Interface non officielle : Bring! ne l’a pas ouverte à d’autres applications, elle peut cesser de fonctionner à tout moment. Tu te connectes une fois ; l’e-mail et le mot de passe ne sont pas enregistrés, seule la session (jetons) reste dans le stockage sécurisé de l’appareil.';
+      'Interface non officielle : Bring! ne l’a pas ouverte à d’autres applications, elle peut cesser de fonctionner à tout moment. Vous vous connectez une fois ; l’e-mail et le mot de passe ne sont pas enregistrés, seule la session (jetons) reste dans le stockage sécurisé de l’appareil.';
 
   @override
   String get bringNeedCredentials =>
@@ -1167,7 +1167,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bringReachable => 'Bring! est de nouveau joignable.';
 
   @override
-  String get bringReauthError => 'Bring! : connexion expirée. Reconnecte-toi.';
+  String get bringReauthError =>
+      'Bring! : connexion expirée. Reconnectez-vous.';
 
   @override
   String get bringReconnect => 'Se reconnecter';

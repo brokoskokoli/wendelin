@@ -90,7 +90,7 @@ final class BringSession {
       if (e.kind == PortErrorKind.unavailable) {
         throw PortException(e.kind, '${e.message}. $bringRetryHint');
       }
-      if (e.kind == PortErrorKind.permissionDenied) await _drop();
+      if (identical(e, reauthRequired)) await _drop();
       _failed = true;
       onError?.call(e.message);
       throw PortException(e.kind, '${e.message}. $bringFallbackHint');
