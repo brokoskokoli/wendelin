@@ -1,0 +1,19 @@
+{
+  "onboardingConversation": "Conversation",
+  "onboardingConversationIntro": "Wendelin doit-il continuer à écouter brièvement après ses réponses, pour que vous puissiez poser une question sans toucher l’écran ? Vous pouvez modifier ce réglage à tout moment sous Paramètres → Voix.",
+  "onboardingDemoNoProvider": "Démo sans fournisseur",
+  "onboardingInterfaceLanguage": "Langue de l’interface de l’application",
+  "onboardingKeepListening": "Oui, continuer à écouter",
+  "onboardingLanguageModel": "Modèle de langage",
+  "onboardingLearnAndEnable": "Entraîner et activer",
+  "onboardingPermissionsIntro": "N’activez que ce dont vous avez besoin. Android ne demande les autorisations qu’au moment où vous les activez.",
+  "onboardingProviderIntro": "Wendelin a besoin d’un fournisseur, par exemple Claude avec votre clé d’API ou votre propre modèle sur un serveur personnel.",
+  "onboardingSetUpAnotherProvider": "Configurer un autre fournisseur",
+  "onboardingSkip": "Passer",
+  "onboardingTapOnly": "Non, seulement après un appui",
+  "onboardingWakeIntro": "Wendelin peut écouter « Wendelin » même quand le téléphone est posé. Pour cela, il apprend d’abord votre voix (environ 3 minutes). Vous pouvez aussi le faire plus tard dans les paramètres.",
+  "onboardingWakeWord": "Mot d’activation",
+  "onboardingWelcome": "Bienvenue",
+  "onboardingWelcomeIntro": "Wendelin est votre assistant vocal. La configuration se fait en six étapes. Quelle langue parlez-vous avec lui ?",
+  "onboardingWhatMayWendelinDo": "Que peut faire Wendelin ?"
+}

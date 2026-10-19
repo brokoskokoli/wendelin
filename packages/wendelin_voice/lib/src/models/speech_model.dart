@@ -63,7 +63,7 @@ final class TtsSpeaker {
   /// Speaker number in the model's `voices.bin`.
   final int sid;
 
-  /// Language code for the phonemizer (`en-us`, `en-gb`, `fr`).
+  /// Language code for the phonemizer (`en-us`, `en` = British, `fr`).
   final String espeakLang;
 
   /// Gender, if known.

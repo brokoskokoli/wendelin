@@ -8,6 +8,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'gate_cache.dart';
+
 /// Ergebnis eines Unterprozesses. [lines] ist im ausführlichen Modus leer.
 final class ProcResult {
   /// Erstellt ein Ergebnis.
@@ -67,7 +69,10 @@ enum Outcome {
   red('ROT'),
 
   /// Nicht ausgeführt.
-  skipped('übersprungen');
+  skipped('übersprungen'),
+
+  /// Unverändert seit einem grünen Lauf (Gate-Cache, WP97).
+  cached('cached');
 
   const Outcome(this.label);
 
@@ -104,7 +109,11 @@ final class Gate {
     this.runner = runProcess,
     StringSink? out,
     this.tailLines = 200,
+    this.cache,
   }) : out = out ?? stdout;
+
+  /// Cache grüner Schritte; `null` = aus.
+  final GateCache? cache;
 
   /// Ausführliche Ausgabe (Unterprozesse erben stdout/stderr).
   final bool verbose;
@@ -130,9 +139,18 @@ final class Gate {
     String? cwd,
     Future<StepCheck> Function(ProcResult r)? check,
     String? report,
+    CacheSpec? cacheSpec,
   }) async {
     if (verbose) out.writeln('\n== $name');
     final sw = Stopwatch()..start();
+    final key = cacheSpec == null ? null : cache?.keyFor(name, cacheSpec);
+    if (key != null) {
+      final hit = cache?.lookup(key);
+      if (hit != null) {
+        record(StepResult(name, Outcome.cached, sw.elapsed, hit));
+        return true;
+      }
+    }
     final r = await runner(exe, args, cwd: cwd, verbose: verbose);
     var detail = '';
     String? failure = r.exitCode == 0 ? null : 'Exit-Code ${r.exitCode}';
@@ -144,6 +162,12 @@ final class Gate {
     sw.stop();
     final outcome = failure == null ? Outcome.ok : Outcome.red;
     record(StepResult(name, outcome, sw.elapsed, detail));
+    if (key != null && failure == null) {
+      // Hat der Schritt Dateien verändert (Codegen, Formatierung), passt der
+      // Schlüssel von vorher nicht mehr zum Stand danach: nicht speichern.
+      cache?.invalidate();
+      if (cache?.keyFor(name, cacheSpec!) == key) cache?.store(key, detail);
+    }
     if (failure != null && !verbose) {
       final failed = report == null ? '' : renderFailures(report);
       if (failed.isNotEmpty && r.exitCode != 0) {

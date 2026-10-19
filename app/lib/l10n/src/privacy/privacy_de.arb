@@ -1,0 +1,119 @@
+{
+  "auditEntrySession": "Sitzung",
+  "auditEntryVerifications": "Prüfungen dieser Sitzung",
+  "auditLogIntro": "Was Wendelin getan hat. Nie Schlüssel. Der Export enthält keine Texte, nur Zeiten, Arten und Ergebnisse.",
+  "auditLogTitle": "Prüfprotokoll",
+  "memoryCatFact": "Fakt",
+  "memoryCatPerson": "Person",
+  "memoryCatPreference": "Vorliebe",
+  "memoryCatProject": "Projekt",
+  "memoryDeleteTooltip": "Löschen: {text}",
+  "@memoryDeleteTooltip": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryEditTitle": "Eintrag ändern",
+  "memoryExportMd": "Als Markdown exportieren",
+  "memoryForget": "Vergessen",
+  "memoryForgetTitle": "Eintrag vergessen?",
+  "memoryFromPrivate": "Aus einer privaten Anfrage: geht nur an Provider ab {label}.",
+  "@memoryFromPrivate": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryIntro": "Wendelin merkt sich nur, worum du ausdrücklich bittest. Passwörter, PINs, Karten- und Kontonummern werden nie gespeichert.",
+  "memoryLift": "Aufheben",
+  "memoryLiftBody": "„{text}“ stammt aus einer privaten Anfrage und geht bisher nur an Provider ab {level}. Danach können ihn alle Provider sehen, die das Gedächtnis sehen dürfen.",
+  "@memoryLiftBody": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryLiftLimit": "Untergrenze aufheben",
+  "memoryLiftTitle": "Untergrenze aufheben?",
+  "memoryNone": "Noch keine Einträge.",
+  "memoryPrivateFrom": "{v} · privat, nur ab {label}",
+  "@memoryPrivateFrom": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryTitle": "Gedächtnis",
+  "privacyLevelEu": "EU",
+  "privacyLevelLocal": "lokal",
+  "privacyLevelSemantics": "{text}, Datenschutzstufe {level}",
+  "@privacyLevelSemantics": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "privacyLevelStandard": "Standard",
+  "privacyLevelTee": "TEE",
+  "privacyScreenDays": "{d} Tage",
+  "@privacyScreenDays": {
+    "placeholders": {
+      "d": {
+        "type": "int"
+      }
+    }
+  },
+  "privacyScreenDeleteAll": "Alles löschen",
+  "privacyScreenDeleteAllBody": "Alle Gesprächsverläufe, das Prüfprotokoll und die eingelernten Stimmen (Aktivierungswort) werden gelöscht. Das lässt sich nicht rückgängig machen. Gedächtnis und Einstellungen bleiben.",
+  "privacyScreenDeleteAllTitle": "Alles löschen?",
+  "privacyScreenDeleteHistory": "Verläufe und Protokoll löschen",
+  "privacyScreenEntries": "{n} Einträge",
+  "@privacyScreenEntries": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "privacyScreenGeneralLog": "Allgemeines Prüfprotokoll",
+  "privacyScreenIntro": "Verläufe und Prüfprotokoll bleiben auf dem Gerät. Ältere Einträge löscht Wendelin automatisch.",
+  "privacyScreenKindConfirmation": "Bestätigung",
+  "privacyScreenKindEscalation": "Eskalation",
+  "privacyScreenKindRequest": "Anfrage",
+  "privacyScreenKindTool": "Tool",
+  "privacyScreenKindVerification": "Prüfung",
+  "privacyScreenManyEntries": "200+ Einträge",
+  "privacyScreenOneEntry": "1 Eintrag",
+  "privacyScreenOneYear": "1 Jahr",
+  "privacyScreenProtectScreen": "Bildschirminhalt schützen",
+  "privacyScreenProtectScreenHint": "Keine Screenshots, im App-Wechsler verdeckt. Das Assistenten-Overlay ist immer geschützt.",
+  "privacyScreenRetention": "Aufbewahrung",
+  "privacyScreenTeeLog": "TEE-Prüfprotokoll",
+  "privacyScreenTeeLogHint": "Prüfung der Anbieter mit geschützter Umgebung, GPU-Prüfung über NVIDIA",
+  "privacyScreenUndone": "{v} · rückgängig · {v2}",
+  "@privacyScreenUndone": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      },
+      "v2": {
+        "type": "String"
+      }
+    }
+  }
+}

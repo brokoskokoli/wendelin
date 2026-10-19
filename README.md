@@ -40,7 +40,7 @@ evals/                          Modell-Evals (Dart-CLI) und Live-Tests
 tool/                           Gate, Prüfskripte, Gerätetests
 ```
 
-Die Pakete unter `packages/` sind reines Dart ohne Flutter; Gerätezugriff geht über Ports, die die App implementiert. Wo was liegt (Ports, Datenfluss einer Anfrage, Plattformkanäle, Checklisten): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Regeln und Abhängigkeiten: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).
+Die Pakete unter `packages/` sind reines Dart ohne Flutter; Gerätezugriff geht über Ports, die die App implementiert. Wo was liegt (Ports, Datenfluss einer Anfrage, Plattformkanäle, Checklisten): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (Index, Bereiche unter `docs/architecture/`). Regeln und Abhängigkeiten: [`docs/ENGINEERING.md`](docs/ENGINEERING.md).
 
 ## Entwickeln und Gate
 

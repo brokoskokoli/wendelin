@@ -29,4 +29,4 @@ Kein Premium (403 `PREMIUM_REQUIRED`), kein Gerät (404 `NO_ACTIVE_DEVICE`), nic
 
 - Titel, Künstler und Playlistnamen sind fremde Daten: Die Ergebnisse tragen `spotifyDataNotice`, URIs werden gegen `spotifyUriPattern` geprüft.
 - Die Tools fragen höchstens 5 Treffer je Art ab (3 bei Suche über alle Arten).
-- Prüfpunkte für das Gerät: `docs/testing/m5-device.md`.
+- Prüfpunkte für das Gerät: `docs/testing/m5/README.md`.

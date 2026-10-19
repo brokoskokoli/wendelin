@@ -24,26 +24,23 @@ final _probeSpec = IntegrationSpec(
 );
 
 void main() {
-  test('Reihenfolge der eingebauten Integrationen (UI und Tool-Katalog)', () {
-    expect(
-      [for (final s in builtInIntegrationSpecs) s.id],
-      [
-        'calendar',
-        'clipboard',
-        'alarms',
-        'flashlight',
-        'memory',
-        'web',
-        'obsidian',
-        'bring',
-        'lists',
-        'media',
-        'ha',
-        'spotify',
-        'weather',
-        'tasks',
-      ],
+  test('eingebaute Integrationen haben eindeutige, nicht leere Ids', () {
+    final ids = [for (final s in builtInIntegrationSpecs) s.id];
+    expect(ids, everyElement(isNotEmpty));
+    expect(ids.toSet(), hasLength(ids.length));
+  });
+
+  test('Anzeige- und Katalogreihenfolge folgt der Registry', () {
+    final c = ProviderContainer(
+      overrides: TestEnv(
+        enabled: {for (final s in builtInIntegrationSpecs) s.id},
+      ).overrides,
+      retry: (_, _) => null,
     );
+    addTearDown(c.dispose);
+    final order = c.read(integrationsProvider).keys.toList();
+    final specIds = [for (final s in builtInIntegrationSpecs) s.id];
+    expect(order, specIds.where(order.contains).toList());
   });
 
   test('Probe: neue Integration braucht nur die Registry-Zeile', () {

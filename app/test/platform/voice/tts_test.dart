@@ -330,6 +330,28 @@ void main() {
     );
 
     test(
+      'Kokoro: Lexika lexicon-*-en.txt kommagetrennt, französisches nicht',
+      () {
+        final dir = Directory.systemTemp.createTempSync('kokoro');
+        addTearDown(() => dir.deleteSync(recursive: true));
+        Directory('${dir.path}/espeak-ng-data').createSync();
+        for (final n in [
+          'model.onnx',
+          'tokens.txt',
+          'lexicon-gb-en.txt',
+          'lexicon-us-en.txt',
+          'lexicon-zh.txt',
+        ]) {
+          File('${dir.path}/$n').writeAsStringSync('x');
+        }
+        expect(
+          PiperVoiceFiles.find(dir)!.lexicon,
+          '${dir.path}/lexicon-gb-en.txt,${dir.path}/lexicon-us-en.txt',
+        );
+      },
+    );
+
+    test(
       'Kokoro-Konfiguration: Modell, Stimmen, Sprache; Lexikon nur englisch',
       () {
         final en = sherpaTtsConfig(

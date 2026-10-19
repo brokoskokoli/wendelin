@@ -56,7 +56,10 @@ void main() {
   testWidgets('alle Integrationen mit Zustand und Toolzahl', (tester) async {
     final env = TestEnv(enabled: const {'memory', 'web'});
     await pumpIntegrations(tester, env);
-    expect(find.byType(IntegrationTile), findsNWidgets(14));
+    expect(
+      find.byType(IntegrationTile),
+      findsNWidgets(builtInIntegrationSpecs.length),
+    );
     expect(tileWidget(tester, 'Obsidian').status, IntegrationStatus.available);
     expect(tileWidget(tester, 'Gedächtnis').status, IntegrationStatus.active);
     expect(tileWidget(tester, 'Gedächtnis').detail, '3 Tools');
@@ -245,25 +248,8 @@ void main() {
     final env = TestEnv(
       enabled: const {'calendar', 'web', 'lists'},
       extraOverrides: [
-        integrationSpecsProvider.overrideWithValue([
-          ...builtInIntegrationSpecs.where(
-            (s) =>
-                s.id != 'memory' &&
-                s.id != 'alarms' &&
-                s.id != 'bring' &&
-                s.id != 'media' &&
-                s.id != 'tasks',
-          ),
-          IntegrationSpec(
-            id: 'spotify',
-            create: (_) => FakeIntegration(
-              id: 'spotify',
-              displayName: 'Spotify',
-              tools: [FakeTool(name: 'spotify__play')],
-            ),
-            requiredApp: KnownApps.spotify,
-          ),
-        ]),
+        // Feste Fake-Liste: eine neue echte Integration ändert das Golden nicht.
+        integrationSpecsProvider.overrideWithValue(_goldenSpecs()),
       ],
     );
     env.apps.uninstall(KnownApps.spotify.androidPackage);
@@ -274,4 +260,53 @@ void main() {
       matchesGoldenFile('goldens/integrationen.png'),
     );
   });
+}
+
+List<IntegrationSpec> _goldenSpecs() {
+  IntegrationSpec spec(
+    String id,
+    String name,
+    String icon, {
+    int tools = 1,
+    bool sensitive = false,
+    List<SetupStep> setup = const [],
+    List<String> missing = const [],
+    AppRequirement? app,
+  }) => IntegrationSpec(
+    id: id,
+    requiredApp: app,
+    create: (_) => FakeIntegration(
+      id: id,
+      displayName: name,
+      iconId: icon,
+      sensitive: sensitive,
+      setup: setup,
+      missingSteps: missing,
+      tools: [for (var i = 0; i < tools; i++) FakeTool(name: '${id}__t$i')],
+    ),
+  );
+  return [
+    spec('calendar', 'Kalender', 'calendar', tools: 6, sensitive: true),
+    spec('clipboard', 'Zwischenablage', 'clipboard', sensitive: true),
+    spec('flashlight', 'Taschenlampe', 'flashlight', tools: 3),
+    spec('ha', 'Home Assistant (direkt)', 'home', tools: 4, sensitive: true),
+    spec(
+      'lists',
+      'Listen',
+      'shopping_cart',
+      tools: 6,
+      setup: const [
+        SetupStep(
+          id: 'define',
+          kind: SetupStepKind.config,
+          label: 'Liste anlegen und Datei wählen',
+        ),
+      ],
+      missing: const ['define'],
+    ),
+    spec('obsidian', 'Obsidian', 'note', tools: 8, sensitive: true),
+    spec('weather', 'Wetter und Meer', 'weather', tools: 2),
+    spec('web', 'Web', 'web'),
+    spec('spotify', 'Spotify', 'music', tools: 7, app: KnownApps.spotify),
+  ];
 }

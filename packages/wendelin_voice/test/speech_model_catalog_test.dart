@@ -151,6 +151,8 @@ void main() {
         ('af_heart', 3),
         ('bf_emma', 21),
       ]);
+      // 'en-gb' kennt die espeak-Datei des Modells nicht.
+      expect(k.speakersFor('en').map((s) => s.espeakLang), ['en-us', 'en']);
       expect(k.speakersFor('fr').single.id, 'ff_siwis');
       expect(k.speakersFor('de'), isEmpty);
       expect(k.attribution, contains('SIWIS'));

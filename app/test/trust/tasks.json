@@ -1,0 +1,5 @@
+{
+  "tasks__add": true,
+  "tasks__list": false,
+  "tasks__complete": false
+}

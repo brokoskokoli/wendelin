@@ -406,7 +406,7 @@ final class SpeechModelCatalog {
         language: 'en',
         name: 'Emma (weiblich, britisch)',
         sid: 21,
-        espeakLang: 'en-gb',
+        espeakLang: 'en', // 'en-gb' kennt die espeak-Datei des Modells nicht
         gender: VoiceGender.female,
       ),
       TtsSpeaker(

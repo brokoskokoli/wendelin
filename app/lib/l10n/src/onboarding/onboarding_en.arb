@@ -1,0 +1,19 @@
+{
+  "onboardingConversation": "Conversation",
+  "onboardingConversationIntro": "Should Wendelin keep listening briefly after its answers, so you can follow up without tapping? You can change this any time under Settings → Voice.",
+  "onboardingDemoNoProvider": "Demo without provider",
+  "onboardingInterfaceLanguage": "App language of the interface",
+  "onboardingKeepListening": "Yes, keep listening",
+  "onboardingLanguageModel": "Language model",
+  "onboardingLearnAndEnable": "Train and turn on",
+  "onboardingPermissionsIntro": "Only turn on what you need. Android asks for permissions only now, when you switch them on.",
+  "onboardingProviderIntro": "Wendelin needs a provider, for example Claude with your API key or your own model on a home server.",
+  "onboardingSetUpAnotherProvider": "Set up another provider",
+  "onboardingSkip": "Skip",
+  "onboardingTapOnly": "No, only after tapping",
+  "onboardingWakeIntro": "Wendelin can listen for “Wendelin” even while the phone is lying around. To do that, it first learns your voice (about 3 minutes). You can also do this later in Settings.",
+  "onboardingWakeWord": "Wake word",
+  "onboardingWelcome": "Welcome",
+  "onboardingWelcomeIntro": "Wendelin is your voice assistant. Setup takes six steps. Which language do you speak with it?",
+  "onboardingWhatMayWendelinDo": "What may Wendelin do?"
+}

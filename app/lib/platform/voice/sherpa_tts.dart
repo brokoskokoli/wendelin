@@ -26,7 +26,7 @@ final class PiperVoiceFiles {
 
   /// Finds the voice in [directory]: the archive's top folder with one
   /// `*.onnx`, `tokens.txt` and `espeak-ng-data/` (Kokoro: also
-  /// `voices.bin`, and `dict/` and `lexicon-us-en.txt` if present).
+  /// `voices.bin`, and `dict/` and `lexicon-*-en.txt` if present).
   /// Returns `null` if something is missing.
   static PiperVoiceFiles? find(Directory directory) {
     if (!directory.existsSync()) return null;
@@ -50,13 +50,25 @@ final class PiperVoiceFiles {
           dictDir: Directory('${d.path}/dict').existsSync()
               ? '${d.path}/dict'
               : null,
-          lexicon: File('${d.path}/lexicon-us-en.txt').existsSync()
-              ? '${d.path}/lexicon-us-en.txt'
-              : null,
+          lexicon: _englishLexicons(d),
         );
       }
     }
     return null;
+  }
+
+  /// All `lexicon-*-en.txt` of [d], comma-separated (as sherpa expects), or
+  /// `null` if there is none.
+  static String? _englishLexicons(Directory d) {
+    final names =
+        d
+            .listSync()
+            .whereType<File>()
+            .map((f) => f.path)
+            .where((p) => RegExp(r'/lexicon-[^/]*-en\.txt$').hasMatch(p))
+            .toList()
+          ..sort();
+    return names.isEmpty ? null : names.join(',');
   }
 
   /// Voice `.onnx`.
