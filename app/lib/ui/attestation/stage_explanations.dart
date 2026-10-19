@@ -54,6 +54,7 @@ String stageMeaning(
 }
 
 Map<String, StageExplanation> _explanations(AppLocalizations l) => {
+  ..._tinfoilExplanations(l),
   'quote': StageExplanation(
     what: l.stageQuoteWhat,
     ifPass: l.stageQuotePass,
@@ -134,46 +135,6 @@ Map<String, StageExplanation> _explanations(AppLocalizations l) => {
     ifPass: l.stageGpuPass,
     ifInfo: l.stageGpuInfo,
   ),
-  'snp.report': StageExplanation(
-    what: l.stageSnpReportWhat,
-    ifPass: l.stageSnpReportPass,
-    ifInfo: l.stageSnpReportInfo,
-  ),
-  'snp.chain': StageExplanation(
-    what: l.stageSnpChainWhat,
-    ifPass: l.stageSnpChainPass,
-    ifInfo: l.stageSnpChainInfo,
-  ),
-  'snp.policy': StageExplanation(
-    what: l.stageSnpPolicyWhat,
-    ifPass: l.stageSnpPolicyPass,
-    ifInfo: l.stageSnpPolicyInfo,
-  ),
-  'bind.hpke': StageExplanation(
-    what: l.stageBindHpkeWhat,
-    ifPass: l.stageBindHpkePass,
-    ifInfo: l.stageBindHpkeInfo,
-  ),
-  'sigstore.release': StageExplanation(
-    what: l.stageSigstoreWhat,
-    ifPass: l.stageSigstorePass,
-    ifInfo: l.stageSigstoreInfo,
-  ),
-  'measurement': StageExplanation(
-    what: l.stageMeasurementWhat,
-    ifPass: l.stageMeasurementPass,
-    ifInfo: l.stageMeasurementInfo,
-  ),
-  'release.floor': StageExplanation(
-    what: l.stageReleaseFloorWhat,
-    ifPass: l.stageReleaseFloorPass,
-    ifInfo: l.stageReleaseFloorInfo,
-  ),
-  'receipt.none': StageExplanation(
-    what: l.stageNoReceiptWhat,
-    ifPass: l.stageNoReceiptPass,
-    ifInfo: l.stageNoReceiptInfo,
-  ),
   'receipt.fetch': StageExplanation(
     what: l.stageReceiptFetchWhat,
     ifPass: l.stageReceiptFetchPass,
@@ -213,5 +174,49 @@ Map<String, StageExplanation> _explanations(AppLocalizations l) => {
     what: l.stageReceiptCompleteWhat,
     ifPass: l.stageReceiptCompletePass,
     ifInfo: l.stageReceiptCompleteInfo,
+  ),
+};
+
+/// Stages of the Tinfoil check (SEV-SNP, Sigstore, release floor).
+Map<String, StageExplanation> _tinfoilExplanations(AppLocalizations l) => {
+  'snp.report': StageExplanation(
+    what: l.stageSnpReportWhat,
+    ifPass: l.stageSnpReportPass,
+    ifInfo: l.stageSnpReportInfo,
+  ),
+  'snp.chain': StageExplanation(
+    what: l.stageSnpChainWhat,
+    ifPass: l.stageSnpChainPass,
+    ifInfo: l.stageSnpChainInfo,
+  ),
+  'snp.policy': StageExplanation(
+    what: l.stageSnpPolicyWhat,
+    ifPass: l.stageSnpPolicyPass,
+    ifInfo: l.stageSnpPolicyInfo,
+  ),
+  'bind.hpke': StageExplanation(
+    what: l.stageBindHpkeWhat,
+    ifPass: l.stageBindHpkePass,
+    ifInfo: l.stageBindHpkeInfo,
+  ),
+  'sigstore.release': StageExplanation(
+    what: l.stageSigstoreWhat,
+    ifPass: l.stageSigstorePass,
+    ifInfo: l.stageSigstoreInfo,
+  ),
+  'measurement': StageExplanation(
+    what: l.stageMeasurementWhat,
+    ifPass: l.stageMeasurementPass,
+    ifInfo: l.stageMeasurementInfo,
+  ),
+  'release.floor': StageExplanation(
+    what: l.stageReleaseFloorWhat,
+    ifPass: l.stageReleaseFloorPass,
+    ifInfo: l.stageReleaseFloorInfo,
+  ),
+  'receipt.none': StageExplanation(
+    what: l.stageNoReceiptWhat,
+    ifPass: l.stageNoReceiptPass,
+    ifInfo: l.stageNoReceiptInfo,
   ),
 };

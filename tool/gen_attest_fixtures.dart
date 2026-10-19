@@ -69,7 +69,7 @@ String generate() {
     );
     b
       ..writeln('/// `tinfoil/${e.value}` (base64).')
-      ..writeln("const String ${e.key}Base64 = '$data';")
+      ..writeln("const String ${e.key}Base64 =\n    '$data';")
       ..writeln();
   }
   return '${b.toString().trimRight()}\n';

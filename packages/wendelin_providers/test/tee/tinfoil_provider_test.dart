@@ -173,7 +173,7 @@ void main() {
     'Prüfung rot: keine Anfrage verlässt das Gerät, kein Klartext-Fallback',
     () async {
       for (final break_ in <void Function(TinfoilFixture)>[
-        (f) => f.snp.verdict = SnpVerdict(
+        (f) => f.snp.verdict = const SnpVerdict(
           reportOk: true,
           chainOk: false,
           vcekMatchesReport: true,

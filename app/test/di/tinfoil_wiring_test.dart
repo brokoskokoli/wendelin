@@ -4,7 +4,6 @@ import 'package:wendelin/di/attestation_hub.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
 import 'package:wendelin/ui/attestation/attestation_texts.dart';
 import 'package:wendelin/ui/attestation/stage_explanations.dart';
-import 'package:wendelin_core/wendelin_core.dart' show AttestationStage;
 import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/fakes.dart';
 

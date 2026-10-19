@@ -176,40 +176,11 @@ final class TinfoilVerifier
       ..resetObserved();
     final now = settings.clock.now();
 
-    // --- the router: report and key configuration ---------------------
-    final Uint8List report;
-    final Uint8List keyConfig;
-    try {
-      final got = await Future.wait([
-        _router.getJson(
-          _wellKnown('tinfoil-attestation'),
-          const {},
-          onHttpError: _status,
-        ),
-        _router.getBytes(
-          _wellKnown('hpke-keys'),
-          const {},
-          maxBytes: 1024,
-          onHttpError: _status,
-        ),
-      ]);
-      report = _reportOf(got[0] as Map<String, Object?>);
-      keyConfig = got[1] as Uint8List;
-    } on FormatException catch (e) {
-      return _failed([StageResult.fail(AttestationStage.snpReport, e.message)]);
-    } on MalformedResponseException {
-      return _failed(const [
-        StageResult.fail(AttestationStage.snpReport, 'Antwort nicht lesbar'),
-      ]);
-    } on ProviderException {
-      return _failed(const [
-        StageResult(
-          AttestationStage.snpReport,
-          StageOutcome.unavailable,
-          'Attestierung nicht abrufbar',
-        ),
-      ]);
-    }
+    final docs = await _documents();
+    final failure = docs.failure;
+    if (failure != null) return _failed(failure);
+    final report = docs.report!;
+    final keyConfig = docs.keyConfig!;
     // Measured on the connection that delivered the documents.
     final observed = gate?.observed;
 
@@ -338,21 +309,13 @@ final class TinfoilVerifier
     if (status != AttestationStatus.green) return _failed(stages);
 
     gate?.expect(AttestCodec.hex(binding!.tlsSpkiSha256));
-    final session = AttestedSession(
-      keysetDigest: AttestCodec.hex(crypto.sha256(reportData)),
-      notAfter: now.add(sessionTtl),
-      receiptKeys: const {},
-      repoCommit: release.tag,
-      composeHash: info.measurementHex,
-      attestedAt: now,
-      workloadId: null,
-      e2eeKey: E2eeKey(
-        keyId: 'hpke',
-        algo: 'X25519-HKDF-SHA256',
-        publicKey: hpkeKey,
-      ),
-      ehbpKeyConfig: keyConfig,
+    final session = _sessionOf(
       reportData: reportData,
+      keyConfig: keyConfig,
+      hpkeKey: hpkeKey,
+      info: info,
+      tag: release.tag,
+      now: now,
     );
     await floors.save(profileId, newFloor!);
     return AttestationResult(
@@ -363,6 +326,69 @@ final class TinfoilVerifier
       pinChange: await _pin(session),
     );
   }
+
+  /// Report and key configuration of the router, or the failed stages.
+  Future<_Docs> _documents() async {
+    try {
+      final got = await Future.wait([
+        _router.getJson(
+          _wellKnown('tinfoil-attestation'),
+          const {},
+          onHttpError: _status,
+        ),
+        _router.getBytes(
+          _wellKnown('hpke-keys'),
+          const {},
+          maxBytes: 1024,
+          onHttpError: _status,
+        ),
+      ]);
+      return _Docs(
+        report: _reportOf(got[0] as Map<String, Object?>),
+        keyConfig: got[1] as Uint8List,
+      );
+    } on FormatException catch (e) {
+      return _Docs.failed([
+        StageResult.fail(AttestationStage.snpReport, e.message),
+      ]);
+    } on MalformedResponseException {
+      return _Docs.failed(const [
+        StageResult.fail(AttestationStage.snpReport, 'Antwort nicht lesbar'),
+      ]);
+    } on ProviderException {
+      return _Docs.failed(const [
+        StageResult(
+          AttestationStage.snpReport,
+          StageOutcome.unavailable,
+          'Attestierung nicht abrufbar',
+        ),
+      ]);
+    }
+  }
+
+  AttestedSession _sessionOf({
+    required Uint8List reportData,
+    required Uint8List keyConfig,
+    required Uint8List hpkeKey,
+    required SnpReportInfo info,
+    required String? tag,
+    required DateTime now,
+  }) => AttestedSession(
+    keysetDigest: AttestCodec.hex(crypto.sha256(reportData)),
+    notAfter: now.add(sessionTtl),
+    receiptKeys: const {},
+    repoCommit: tag,
+    composeHash: info.measurementHex,
+    attestedAt: now,
+    workloadId: null,
+    e2eeKey: E2eeKey(
+      keyId: 'hpke',
+      algo: 'X25519-HKDF-SHA256',
+      publicKey: hpkeKey,
+    ),
+    ehbpKeyConfig: keyConfig,
+    reportData: reportData,
+  );
 
   AttestationResult _failed(List<StageResult> stages) =>
       AttestationResult(status: policy.sessionStatus(stages), stages: stages);
@@ -773,4 +799,17 @@ final class _Release {
   final String? tag;
   final SigstoreVerdict? verdict;
   final StageResult? problem;
+}
+
+/// The documents of the router, or the stages of the failure.
+final class _Docs {
+  _Docs({required Uint8List this.report, required Uint8List this.keyConfig})
+    : failure = null;
+  _Docs.failed(List<StageResult> this.failure)
+    : report = null,
+      keyConfig = null;
+
+  final Uint8List? report;
+  final Uint8List? keyConfig;
+  final List<StageResult>? failure;
 }
