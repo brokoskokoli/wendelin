@@ -40,7 +40,7 @@ Stand: 2026-10-19, WP98 und WP102 laufen; WP91, WP76b, WP84, WP79, WP96, WP88, W
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
 | WP89 | Todoist/Google Tasks | geplant | kann starten (WP88 gemergt) |
-| WP90 | Mediensteuerung | gemergt eb2cf31 | K65 offen; Gerätetest WP90.1–7 (Audible, Ducking mit echter TTS, Zugriffsdialog) |
+| WP90 | Mediensteuerung | gemergt eb2cf31 | K65 bestätigt; Gerätetest WP90.1–7 (Audible, Ducking mit echter TTS, Zugriffsdialog) |
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
 | WP92a–c | Sprechererkennung | geplant | WP92c nach WP91 |
 | WP93 | Wake Word im Chat | geplant | – |
