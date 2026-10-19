@@ -21,6 +21,7 @@ abstract class WendelinActivity : FlutterActivity() {
     private var auth: AuthChannel? = null
     private var torch: TorchChannel? = null
     private var media: MediaChannel? = null
+    private var location: LocationChannel? = null
     private var audioFocus: AudioFocusChannel? = null
     private var multicast: MulticastChannel? = null
     private var memory: MemoryChannel? = null
@@ -52,6 +53,7 @@ abstract class WendelinActivity : FlutterActivity() {
         auth = AuthChannel(this, messenger)
         torch = TorchChannel(this, messenger)
         media = MediaChannel(this, messenger)
+        location = LocationChannel(this, messenger)
         audioFocus = AudioFocusChannel(this, messenger)
         multicast = MulticastChannel(this, messenger)
         memory = MemoryChannel(messenger)
@@ -81,6 +83,8 @@ abstract class WendelinActivity : FlutterActivity() {
         audioFocus = null
         media?.dispose()
         media = null
+        location?.dispose()
+        location = null
         multicast?.dispose()
         multicast = null
         memory?.dispose()
@@ -109,6 +113,7 @@ abstract class WendelinActivity : FlutterActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         calendar?.onPermissionResult(requestCode, grantResults)
+        location?.onPermissionResult(requestCode, grantResults)
         notify?.onPermissionResult(requestCode, grantResults)
     }
 

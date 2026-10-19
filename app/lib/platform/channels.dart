@@ -25,6 +25,9 @@ const calendarChannelName = 'app.wendelin/calendar';
 /// `FilesChannel.kt`: single documents (storage access framework).
 const filesChannelName = 'app.wendelin/files';
 
+/// `LocationChannel.kt`: position (LocationManager), place name, map intents.
+const locationChannelName = 'app.wendelin/location';
+
 /// `MemoryChannel.kt`: `onTrimMemory` level of Android (frees the voice models).
 const memoryChannelName = 'app.wendelin/memory';
 

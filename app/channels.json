@@ -162,6 +162,17 @@
         "focusChanged": {"args": ["kind", "state"], "returns": "none"}
       }
     },
+    "app.wendelin/location": {
+      "dart": ["app/lib/platform/channel_location_port.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/LocationChannel.kt"],
+      "toKotlin": {
+        "hasPermission": {"args": [], "returns": "value"},
+        "requestPermission": {"args": [], "returns": "value"},
+        "current": {"args": [], "returns": "map"},
+        "launch": {"args": ["uri", "package"], "returns": "none"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/media": {
       "dart": ["app/lib/platform/channel_media_control_port.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/MediaChannel.kt"],

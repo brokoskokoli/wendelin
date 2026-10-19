@@ -56,6 +56,9 @@ void main() {
       'android.permission.CHANGE_WIFI_MULTICAST_STATE',
       'android.permission.ACCESS_NETWORK_STATE',
       'android.permission.READ_CALENDAR',
+      // Standort (WP86): erst beim Einschalten der Integration angefragt.
+      'android.permission.ACCESS_FINE_LOCATION',
+      'android.permission.ACCESS_COARSE_LOCATION',
       'android.permission.WRITE_CALENDAR',
       'com.android.alarm.permission.SET_ALARM',
       'android.permission.POST_NOTIFICATIONS',

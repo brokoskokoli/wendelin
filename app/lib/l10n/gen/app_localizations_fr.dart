@@ -1878,6 +1878,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les tâches avec échéance arrivent ici si aucune liste n’est indiquée.';
 
   @override
+  String get integrationsLocationRationale =>
+      'Pour vous dire où vous êtes et préparer distances et navigation, Wendelin a besoin de l’accès à la position. Android vous le demande ensuite. Wendelin ne lit la position que si vous le demandez (jamais en arrière-plan), ne l’envoie pas à des modèles cloud en dessous de votre niveau de confidentialité et ne l’écrit pas dans le journal d’audit. « Approximative » suffit pour les noms de lieux et la distance à vol d’oiseau.';
+
+  @override
   String confHandOverDetail(String toName, String fromName) {
     return '$toName a un niveau de confidentialité plus bas que $fromName. Votre demande et l’historique de la conversation y seront alors transmis.';
   }

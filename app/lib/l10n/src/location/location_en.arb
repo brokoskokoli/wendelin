@@ -1,0 +1,3 @@
+{
+  "integrationsLocationRationale": "To tell you where you are and to prepare distances and navigation, Wendelin needs location access. Android asks you next. Wendelin only reads your location when you ask for it (never in the background), does not send it to cloud models below your privacy level and does not write it to the audit log. “Approximate” is enough for place names and straight-line distance."
+}

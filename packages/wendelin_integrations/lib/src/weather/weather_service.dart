@@ -38,6 +38,8 @@ abstract interface class Geocoder {
 /// Where the user is right now (optional; the location integration of WP86
 /// provides it). Returns `null` if the position is unknown or not allowed.
 abstract interface class WeatherLocationPort {
-  /// The current place, named if possible.
-  Future<Place?> currentPlace({CancelToken? cancel});
+  /// The current place, named if possible. [level] is the privacy level of
+  /// the model the question comes from (`null` = unknown); an implementation
+  /// may refuse the device position for weaker targets.
+  Future<Place?> currentPlace({CancelToken? cancel, PrivacyLevel? level});
 }

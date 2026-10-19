@@ -99,7 +99,10 @@ final class WeatherIntegration implements Integration {
     }
     Place? here;
     try {
-      here = await location?.currentPlace(cancel: ctx.cancel);
+      here = await location?.currentPlace(
+        cancel: ctx.cancel,
+        level: ctx.privacyLevel,
+      );
     } on PortException {
       // Permission revoked or no fix: fall back to the home place.
       here = null;

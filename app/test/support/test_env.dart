@@ -91,6 +91,10 @@ final class TestEnv {
   /// Media control.
   final media = FakeMediaControlPort();
 
+  /// Device position and map apps (WP86).
+  final location = FakeLocationPort();
+  final mapsLauncher = FakeMapsLauncherPort();
+
   /// Alarms.
   final alarms = FakeAlarmPort();
 
@@ -183,6 +187,8 @@ final class TestEnv {
     apps: apps,
     torch: torch,
     media: media,
+    location: location,
+    mapsLauncher: mapsLauncher,
     requestCalendarPermission: () async {
       permissionRequests++;
       return calendar.permissionGranted = true;
