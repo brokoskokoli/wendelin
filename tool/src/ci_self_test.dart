@@ -4,11 +4,13 @@ import 'dart:io';
 
 import 'gate_changed.dart';
 import 'review_stats.dart';
+import 'sandbox.dart';
 import 'self_check.dart';
 import 'text_scan.dart';
 
 void ciChecks(SelfCheck t) {
   _textChecks(t);
+  _textRunChecks(t);
   _scopeChecks(t);
   _workflowChecks(t);
   _reviewChecks(t);
@@ -232,4 +234,52 @@ void _reviewChecks(SelfCheck t) {
     out.contains('Mutationen: 14 getestet, 2 überlebt'),
     'Mutationsbilanz',
   );
+}
+
+/// check_texts als Ganzes in einem Wegwerf-Repo: Allowlist-Wachstum und fehlende
+/// Basis im CI.
+void _textRunChecks(SelfCheck t) {
+  t.group('check_texts (Lauf)');
+  final script = File('tool/check_texts.dart').absolute.path;
+  final dir = Directory.systemTemp.createTempSync('textsrun_');
+  try {
+    final r = Sandbox(dir);
+    r.git(['init', '-q', '-b', 'main']);
+    r.commit(
+      'app/lib/ui/a.dart',
+      "const a = 'Das ist ein Test';\nconst b = 'Ja, löschen';\n",
+    );
+    r.commit('tool/text_allowlist.yaml', 'app/lib/ui/a.dart: 2\n');
+    ProcessResult run({bool ci = false}) => Process.runSync(
+      'dart',
+      [script],
+      workingDirectory: dir.path,
+      environment: {...r.env, 'CI': ci ? 'true' : 'false'},
+    );
+    final noBase = run();
+    t.isTrue(noBase.exitCode == 0, 'ohne Basis lokal: grün: ${noBase.stderr}');
+    final noBaseCi = run(ci: true);
+    t.isTrue(
+      noBaseCi.exitCode == 1 && (noBaseCi.stderr as String).contains('Basis'),
+      'ohne Basis im CI: rot, nicht still überspringen: ${noBaseCi.stderr}',
+    );
+    r.git(['update-ref', 'refs/remotes/origin/main', 'HEAD']);
+    final same = run(ci: true);
+    t.isTrue(same.exitCode == 0, 'Basis vorhanden, Allowlist gleich: grün');
+    // Bestand wächst: ein Text mehr, Allowlist entsprechend erhöht.
+    File('${dir.path}/app/lib/ui/a.dart').writeAsStringSync(
+      "const a = 'Das ist ein Test';\nconst b = 'Ja, löschen';\n"
+      "const c = 'Nein, behalten';\n",
+    );
+    File(
+      '${dir.path}/tool/text_allowlist.yaml',
+    ).writeAsStringSync('app/lib/ui/a.dart: 3\n');
+    final grown = run(ci: true);
+    t.isTrue(
+      grown.exitCode == 1 && (grown.stderr as String).contains('a.dart'),
+      'gewachsene Allowlist gegenüber der Basis: rot: ${grown.stderr}',
+    );
+  } finally {
+    dir.deleteSync(recursive: true);
+  }
 }

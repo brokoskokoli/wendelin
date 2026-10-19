@@ -68,6 +68,7 @@ emu_lock_acquire() {
     _emu_lock_busy "$serial" "${owner2#* }" "$opid2"; return 1
   fi
   echo "Hinweis: verwaiste Emulator-Sperre (${owp:-unbekannt}, PID ${opid:-?}) übernommen." >&2
+  if [ -n "${WENDELIN_LOCK_TEST_DELAY:-}" ]; then sleep "$WENDELIN_LOCK_TEST_DELAY"; fi # nur Selbsttest
   rm -rf "$lock"
   if _emu_lock_claim "$lock"; then rmdir "$tk" 2>/dev/null || true; return 0; fi
   rmdir "$tk" 2>/dev/null || true

@@ -22,7 +22,7 @@ WRAPPERS = {"env", "command", "builtin", "exec", "sudo", "nohup", "time", "nice"
 # Shell-Schlüsselwörter, hinter denen ein Kommando steht (if/while/!/{ …).
 KEYWORDS = {"if", "then", "elif", "else", "do", "while", "until", "!", "{", "}", "coproc"}
 # Programme, die ein weiteres Kommando mit eigenen Optionen/Werten starten: alle Suffixe prüfen.
-SCAN_PROGS = {"timeout", "nice", "sudo", "nohup", "xargs", "doas", "setsid", "ionice", "caffeinate"}
+SCAN_PROGS = {"timeout", "nice", "sudo", "nohup", "xargs", "doas", "setsid", "ionice", "caffeinate", "stdbuf", "chrt", "taskset"}
 EXEC_FLAGS = {"-exec", "-execdir", "-ok", "-okdir"}
 SHELLS = {"bash", "sh", "zsh", "dash"}
 BAD_CFG = re.compile(r"^(user\.|author\.|committer\.|core\.hookspath)", re.I)

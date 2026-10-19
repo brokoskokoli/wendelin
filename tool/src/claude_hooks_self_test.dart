@@ -98,6 +98,9 @@ const _denied = [
   'find . -exec git push origin main \\;',
   'find . -name x -exec pkill foo {} +',
   'timeout 5 pkill foo',
+  'stdbuf -oL git push origin main',
+  'chrt 1 git push origin main',
+  'taskset -c 0 git push origin main',
   // abgekürzte Langoptionen, heads/main
   'git commit --no-veri -m x',
   'git commit --no-v -m x',
@@ -178,6 +181,8 @@ const _allowed = [
   'while read x; do echo \$x; done',
   'timeout 5 git status',
   'nice -n 5 git log',
+  'stdbuf -oL ls',
+  'taskset -c 0 ls',
   'sudo -u root ls',
   'xargs -n1 echo',
   'find . -name x -exec echo {} \\;',

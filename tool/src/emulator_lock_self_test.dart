@@ -122,7 +122,12 @@ final class _Lock {
             '-c',
             '. "$lib"; emu_lock_acquire emulator-5560 2>/dev/null && { echo won; sleep 4; }',
           ],
-          environment: {...env, 'WENDELIN_WP': 'WP$i'},
+          environment: {
+            ...env,
+            'WENDELIN_WP': 'WP$i',
+            // Fenster zwischen Prüfung und Räumen aufweiten: ohne Mutex gewinnen mehrere.
+            'WENDELIN_LOCK_TEST_DELAY': '1',
+          },
         ),
     ];
     var won = 0;

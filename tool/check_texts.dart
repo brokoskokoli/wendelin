@@ -19,9 +19,15 @@ void main(List<String> args) {
   final allowed = list.existsSync()
       ? parseFlakyAllowlist(list.readAsStringSync())
       : <String, int>{};
+  final base = _baseAllowlist();
+  final inCi = Platform.environment['CI'] == 'true';
   final msgs = [
     ...compareTexts(found, allowed),
-    ...allowlistGrowth(allowed, _baseAllowlist() ?? allowed),
+    if (base == null && inCi)
+      'check_texts: keine Basis (origin/main) zum Vergleich der Allowlist; '
+          'im CI mit fetch-depth: 0 auschecken.'
+    else
+      ...allowlistGrowth(allowed, base ?? allowed),
   ];
   if (msgs.isEmpty) {
     stdout.writeln(
