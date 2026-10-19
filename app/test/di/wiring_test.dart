@@ -17,7 +17,6 @@ import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/platform/platform_ports.dart';
 import 'package:wendelin/platform/saf_list_file_port.dart';
 import 'package:wendelin/voice/locked_agent_run.dart';
-import 'package:wendelin_voice/wendelin_voice.dart' show LockedCommand;
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -26,6 +25,7 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 import 'package:wendelin_storage/fakes.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
+import 'package:wendelin_voice/wendelin_voice.dart' show LockedCommand;
 
 import '../support/test_env.dart';
 

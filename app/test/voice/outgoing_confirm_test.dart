@@ -5,10 +5,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
-import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/di/sms_drafts.dart';
 import 'package:wendelin/di/voice_providers.dart';
-import 'package:wendelin/voice/locked_agent_run.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin/voice/voice_log.dart';

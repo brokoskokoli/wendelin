@@ -191,7 +191,7 @@
         "hasPermission": {"args": [], "returns": "value"},
         "requestPermission": {"args": [], "returns": "value"},
         "canSendSms": {"args": [], "returns": "value"},
-        "all": {"args": [], "returns": "value"},
+        "all": {"args": [], "returns": "list"},
         "sendSms": {"args": ["number", "text"], "returns": "none"},
         "call": {"args": ["number"], "returns": "value"}
       },

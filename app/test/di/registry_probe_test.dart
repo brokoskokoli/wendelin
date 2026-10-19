@@ -42,6 +42,7 @@ void main() {
         'spotify',
         'weather',
         'tasks',
+        'contacts',
       ],
     );
   });

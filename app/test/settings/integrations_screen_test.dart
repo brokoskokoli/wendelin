@@ -56,7 +56,7 @@ void main() {
   testWidgets('alle Integrationen mit Zustand und Toolzahl', (tester) async {
     final env = TestEnv(enabled: const {'memory', 'web'});
     await pumpIntegrations(tester, env);
-    expect(find.byType(IntegrationTile), findsNWidgets(14));
+    expect(find.byType(IntegrationTile), findsNWidgets(15));
     expect(tileWidget(tester, 'Obsidian').status, IntegrationStatus.available);
     expect(tileWidget(tester, 'Gedächtnis').status, IntegrationStatus.active);
     expect(tileWidget(tester, 'Gedächtnis').detail, '3 Tools');
@@ -252,7 +252,8 @@ void main() {
                 s.id != 'alarms' &&
                 s.id != 'bring' &&
                 s.id != 'media' &&
-                s.id != 'tasks',
+                s.id != 'tasks' &&
+                s.id != 'contacts',
           ),
           IntegrationSpec(
             id: 'spotify',

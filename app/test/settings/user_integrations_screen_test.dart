@@ -132,6 +132,6 @@ void main() {
   testWidgets('ohne eigene Integrationen kein Abschnitt', (tester) async {
     await pumpIntegrations(tester, TestEnv());
     expect(find.text('Eigene Integrationen'), findsNothing);
-    expect(find.byType(IntegrationTile), findsNWidgets(14));
+    expect(find.byType(IntegrationTile), findsNWidgets(15));
   });
 }
