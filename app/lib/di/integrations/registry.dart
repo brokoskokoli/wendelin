@@ -4,6 +4,7 @@ import 'calendar_spec.dart';
 import 'clipboard_spec.dart';
 import 'contacts_spec.dart';
 import 'flashlight_spec.dart';
+import 'google_tasks_spec.dart';
 import 'ha_spec.dart';
 import 'integration_spec.dart';
 import 'lists_spec.dart';
@@ -14,6 +15,7 @@ import 'memory_spec.dart';
 import 'obsidian_spec.dart';
 import 'spotify_spec.dart';
 import 'tasks_spec.dart';
+import 'todoist_spec.dart';
 import 'weather_spec.dart';
 import 'web_spec.dart';
 
@@ -35,5 +37,7 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
   spotifySpec,
   weatherSpec,
   tasksSpec,
+  todoistSpec,
+  googleTasksSpec,
   contactsSpec,
 ];

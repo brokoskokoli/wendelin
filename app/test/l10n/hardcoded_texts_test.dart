@@ -37,6 +37,8 @@ const _allowed = <String, String>{
   'lib/di/integrations/spotify_spec.dart': 'Registry-Meldung, Rückfall',
   'lib/di/integrations/location_spec.dart': 'Registry-Meldung, Rückfall',
   'lib/di/integrations/bring_spec.dart': 'Registry-Meldung, Rückfall',
+  'lib/di/integrations/todoist_spec.dart': 'Registry-Meldung, Rückfall',
+  'lib/di/integrations/google_tasks_spec.dart': 'Registry-Meldung, Rückfall',
   'lib/di/integrations/obsidian_spec.dart': 'Rückfall, UI mappt per Paket',
   'lib/di/integrations/calendar_spec.dart': 'Rückfall, UI nutzt ARB',
   'lib/voice/wake/wake_enroller.dart': 'StateError/toString, Log',

@@ -85,7 +85,10 @@ String _integrations(String root) {
     ..writeln('| Id | Spec | Paketordner | Integrationsdoku |')
     ..writeln('| --- | --- | --- | --- |');
   for (final v in ids) {
-    final key = v.substring(0, v.length - 4); // ohne "Spec"
+    // Variable `googleTasksSpec` → Datei/Ordner `google_tasks`.
+    final key = v
+        .substring(0, v.length - 4)
+        .replaceAllMapped(RegExp('[A-Z]'), (m) => '_${m[0]!.toLowerCase()}');
     final file = files[key];
     if (file == null) continue;
     final spec = _read(root, 'app/lib/di/integrations/$file');
