@@ -225,7 +225,7 @@ void main() {
       expect(rollback.text, isNot(general.text));
       expect(corrupt.text, isNot(general.text));
       expect(corrupt.text, contains('gesperrt'));
-      expect(corrupt.text, contains('zurück'));
+      expect(corrupt.text, contains('App-Daten'));
     });
 
     test('Quittungsgründe: Grund genannt, neutral, keine Manipulation, '

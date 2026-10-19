@@ -203,7 +203,7 @@
   "attResultWarn": "Hinweis",
   "attRevokedText": "Der Hersteller hat die Hardware-Plattform des Betreibers als unsicher zurückgezogen. Sende nichts Vertrauliches, bis der Betreiber sie ersetzt hat.",
   "attRevokedTitle": "Plattform des Betreibers zurückgezogen",
-  "attFloorCorruptText": "Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Setze die App-Daten oder die Einstellungen dieses Anbieters zurück, um die Prüfung neu aufzubauen.",
+  "attFloorCorruptText": "Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Abhilfe schafft nur das Zurücksetzen der App-Daten. Danach wird der erste Kontakt wieder ohne Rückschrittschutz geprüft.",
   "attFloorCorruptTitle": "Gespeicherter Rückschrittschutz beschädigt",
   "attRollbackText": "Der Anbieter meldet eine ältere Software-Version als die, die hier schon einmal geprüft wurde. Das kann ein Zurückspielen alter, verwundbarer Software oder alter Daten sein. Die Anfrage wurde nicht gesendet. Sende nichts Vertrauliches und prüfe später erneut.",
   "attRollbackTitle": "Ältere Software-Version als zuvor geprüft",

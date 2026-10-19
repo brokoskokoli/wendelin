@@ -63,7 +63,7 @@
   "attFinishToolsNo": "✕ Tools",
   "attFinishToolsYes": "✓ Tools",
   "attFinishWarnFrom": "Warn at",
-  "attFloorCorruptText": "The stored lower bound for this provider’s release version is damaged. Without it a rollback to older, insecure software cannot be ruled out, so the check stays blocked and checking again does not change that. Send nothing confidential. Reset the app data or this provider’s settings to rebuild the check.",
+  "attFloorCorruptText": "The stored lower bound for this provider’s release version is damaged. Without it a rollback to older, insecure software cannot be ruled out, so the check stays blocked and checking again does not change that. Send nothing confidential. Only resetting the app data helps. After that, the first contact is checked again without rollback protection.",
   "attFloorCorruptTitle": "Stored rollback protection damaged",
   "attGpuFailedLabel": "GPU check failed",
   "attGpuFailedText": "The GPU check via NVIDIA failed.{v} The next request to this model will be checked first.",

@@ -249,7 +249,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attFloorCorruptText =>
-      'The stored lower bound for this provider’s release version is damaged. Without it a rollback to older, insecure software cannot be ruled out, so the check stays blocked and checking again does not change that. Send nothing confidential. Reset the app data or this provider’s settings to rebuild the check.';
+      'The stored lower bound for this provider’s release version is damaged. Without it a rollback to older, insecure software cannot be ruled out, so the check stays blocked and checking again does not change that. Send nothing confidential. Only resetting the app data helps. After that, the first contact is checked again without rollback protection.';
 
   @override
   String get attFloorCorruptTitle => 'Stored rollback protection damaged';

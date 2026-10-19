@@ -89,7 +89,7 @@
   "attResultWarn": "avertissement",
   "attRevokedText": "Le fabricant a révoqué la plateforme matérielle de l’exploitant comme non sûre. N’envoyez rien de confidentiel tant que l’exploitant ne l’a pas remplacée.",
   "attRevokedTitle": "Plateforme de l’exploitant révoquée",
-  "attFloorCorruptText": "La limite inférieure enregistrée pour la version du logiciel de ce fournisseur est endommagée. Sans elle, un retour à un logiciel plus ancien et non sûr ne peut pas être exclu ; la vérification reste donc bloquée et une nouvelle vérification n’y change rien. N’envoyez rien de confidentiel. Réinitialisez les données de l’app ou les réglages de ce fournisseur pour reconstruire la vérification.",
+  "attFloorCorruptText": "La limite inférieure enregistrée pour la version du logiciel de ce fournisseur est endommagée. Sans elle, un retour à un logiciel plus ancien et non sûr ne peut pas être exclu ; la vérification reste donc bloquée et une nouvelle vérification n’y change rien. N’envoyez rien de confidentiel. Seule la réinitialisation des données de l’app permet d’en sortir. Ensuite, le premier contact est de nouveau vérifié sans protection contre le retour en arrière.",
   "attFloorCorruptTitle": "Protection enregistrée contre le retour en arrière endommagée",
   "attRollbackText": "Le fournisseur signale une version du logiciel plus ancienne que celle déjà vérifiée ici. Il peut s’agir d’un logiciel ancien et vulnérable ou de données anciennes rejouées. La requête n’a pas été envoyée. N’envoyez rien de confidentiel et revérifiez plus tard.",
   "attRollbackTitle": "Version du logiciel plus ancienne que celle vérifiée",

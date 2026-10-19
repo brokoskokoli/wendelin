@@ -250,7 +250,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get attFloorCorruptText =>
-      'La limite inférieure enregistrée pour la version du logiciel de ce fournisseur est endommagée. Sans elle, un retour à un logiciel plus ancien et non sûr ne peut pas être exclu ; la vérification reste donc bloquée et une nouvelle vérification n’y change rien. N’envoyez rien de confidentiel. Réinitialisez les données de l’app ou les réglages de ce fournisseur pour reconstruire la vérification.';
+      'La limite inférieure enregistrée pour la version du logiciel de ce fournisseur est endommagée. Sans elle, un retour à un logiciel plus ancien et non sûr ne peut pas être exclu ; la vérification reste donc bloquée et une nouvelle vérification n’y change rien. N’envoyez rien de confidentiel. Seule la réinitialisation des données de l’app permet d’en sortir. Ensuite, le premier contact est de nouveau vérifié sans protection contre le retour en arrière.';
 
   @override
   String get attFloorCorruptTitle =>

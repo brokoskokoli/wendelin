@@ -177,7 +177,7 @@
   "attFinishToolsNo": "✕ Tools",
   "attFinishToolsYes": "✓ Tools",
   "attFinishWarnFrom": "Warnen ab",
-  "attFloorCorruptText": "Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Setze die App-Daten oder die Einstellungen dieses Anbieters zurück, um die Prüfung neu aufzubauen.",
+  "attFloorCorruptText": "Die gespeicherte Untergrenze für die Release-Version dieses Anbieters ist beschädigt. Ohne sie lässt sich ein Rückschritt auf ältere, unsichere Software nicht ausschließen. Deshalb bleibt die Prüfung gesperrt, ein erneutes Prüfen ändert daran nichts. Sende nichts Vertrauliches. Abhilfe schafft nur das Zurücksetzen der App-Daten. Danach wird der erste Kontakt wieder ohne Rückschrittschutz geprüft.",
   "attFloorCorruptTitle": "Gespeicherter Rückschrittschutz beschädigt",
   "attGpuFailedLabel": "GPU-Prüfung fehlgeschlagen",
   "attGpuFailedText": "Die GPU-Prüfung über NVIDIA ist fehlgeschlagen.{v} Die nächste Anfrage an dieses Modell wird vorher geprüft.",
