@@ -127,6 +127,9 @@ void main() {
       expect(samePhone('+99991701234567', '01701234567'), isFalse);
       expect(samePhone('+4911', '011'), isFalse);
       expect(samePhone('0123456', '90123456'), isFalse);
+      // Rest length 5 is too short to match, 6 is the minimum.
+      expect(samePhone('+4912345', '012345'), isFalse);
+      expect(samePhone('+49123456', '0123456'), isTrue);
       expect(cleanPhoneNumber('+49 (170) 123-4567'), '+491701234567');
       expect(cleanPhoneNumber('Anna'), isNull);
       expect(cleanPhoneNumber('12'), isNull);
