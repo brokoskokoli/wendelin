@@ -14,3 +14,12 @@ Voraussetzung: Emulator oder Gerät, Mikrofon erlaubt, Netz für den Modelldownl
 ## E2E (Emulator, synthetisches Audio)
 
 Mit den WAV-Fixtures aus `docs/testing/m5/README.md` (Mikrofon-Ersatz `WavAudioInput`, synthetische Stimmen aus `packages/wendelin_voice/test/fixtures/speaker/README.md`): zwei synthetische Sprecher (z. B. Thorsten/Kerstin) einlernen, mit je einem neuen Satz identifizieren (richtige Person), Fremdstimme (LJSpeech) = unbekannt. Echte Stimmen und Schwellen (Floor 0,45, Ceiling 0,60 stammen aus synthetischen Stimmen) werden auf dem Gerät mit echten Sprechern geprüft.
+
+Aufruf (Emulator `Wendelin_AOSP_35`, App als Debug-Build installiert): Modell und synthetische WAVs liegen nicht im Repo, sondern unter `/Users/stefanrichter/ai/james-wt/handoff/wp92a-e2e` (`gen_wavs.py` erzeugt die WAVs, `prepare.sh` kopiert Modell und WAVs nach `files/e2e/wp92a`, nur auf Emulatoren). Ohne Define wird der Test übersprungen.
+
+```sh
+/Users/stefanrichter/ai/james-wt/handoff/wp92a-e2e/prepare.sh emulator-5554
+WENDELIN_WP92A_DIR=wp92a tool/e2e_android.sh integration_test/speaker_e2e_test.dart
+```
+
+Ergebnis 2026-10-19 (synthetisch): Einlernen Thorsten 0,865 / Kerstin 0,832 (Schwelle 0,60, an der Obergrenze), Zuordnung Thorsten 0,904, Kerstin 0,789, Fremdstimme Miro 0,284 → unbekannt.

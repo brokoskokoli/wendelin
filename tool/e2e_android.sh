@@ -402,6 +402,10 @@ if [ -n "$MODELS" ]; then DEFINES+=(--dart-define=WENDELIN_VOICE_E2E=true); fi
 if [ -n "${WENDELIN_WP103_MODELS:-}" ]; then
   DEFINES+=(--dart-define=WENDELIN_WP103_MODELS="$WENDELIN_WP103_MODELS")
 fi
+# WP92a: Ordner (unter files/e2e/) mit CAM++-Modell und synthetischen WAVs.
+if [ -n "${WENDELIN_WP92A_DIR:-}" ]; then
+  DEFINES+=(--dart-define=WENDELIN_WP92A_DIR="$WENDELIN_WP92A_DIR")
+fi
 # WP54: der Wake-Word-Dienst bleibt nach dem Test an (Neustart-Prüfung).
 if [ -n "${WENDELIN_KEEP:-}" ]; then DEFINES+=(--dart-define=WENDELIN_KEEP=true); fi
 # Wiederholungen der Sprach-Robustheit (WP30, voice_robustness_e2e_test.dart).
