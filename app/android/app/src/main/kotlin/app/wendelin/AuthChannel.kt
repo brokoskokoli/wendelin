@@ -21,7 +21,8 @@ import io.flutter.plugin.common.MethodChannel
  * ignored and the login keeps waiting. Dart (McpOAuthFlow) checks state and issuer again.
  *
  * Errors: `no_browser` (nothing can show the page), `cancelled` (the user came back without a
- * redirect, or a new login replaced this one), `bad_args`.
+ * redirect, or a new login replaced this one), `state_mismatch` (like `cancelled`, but a redirect
+ * with another `state` arrived meanwhile), `bad_args`.
  */
 class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
     MethodChannel.MethodCallHandler {
@@ -32,6 +33,7 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
     private var redirect: Uri? = null
     private var state: String? = null
     private var left = false
+    private var foreignState = false
 
     init {
         channel.setMethodCallHandler(this)
@@ -74,6 +76,7 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
         redirect = back
         state = expectedState
         left = false
+        foreignState = false
         waiting = this
     }
 
@@ -123,20 +126,23 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
         if (pending == null || !left) return
         val expected = pending
         handler.postDelayed({
-            if (pending === expected) finish { it.error("cancelled", "Anmeldung abgebrochen", null) }
+            if (pending === expected) {
+                val code = OAuthRedirect.leaveCode(foreignState)
+                finish { it.error(code, "Anmeldung abgebrochen", null) }
+            }
         }, CANCEL_DELAY_MS)
     }
 
     private fun complete(uri: Uri): Boolean {
         val expected = redirect ?: return false
         // Not our login (another app opened the redirect address): ignore it and keep waiting.
-        if (!OAuthRedirect.accepts(
-                OAuthRedirect.Target(expected.scheme, expected.host, expected.path),
-                OAuthRedirect.Target(uri.scheme, uri.host, uri.path),
-                state,
-                uri.getQueryParameter("state"),
-            )
-        ) {
+        val target = OAuthRedirect.Target(expected.scheme, expected.host, expected.path)
+        val actual = OAuthRedirect.Target(uri.scheme, uri.host, uri.path)
+        val actualState = uri.getQueryParameter("state")
+        if (!OAuthRedirect.accepts(target, actual, state, actualState)) {
+            // Remember a wrong state: the user returning without a matching answer gets
+            // `state_mismatch` (a clear message) instead of `cancelled`.
+            if (OAuthRedirect.isForeignState(target, actual, state, actualState)) foreignState = true
             return false
         }
         finish { it.success(uri.toString()) }
@@ -154,6 +160,7 @@ class AuthChannel(private val activity: Activity, messenger: BinaryMessenger) :
         redirect = null
         state = null
         left = false
+        foreignState = false
         if (waiting === this) waiting = null
         answer(result)
     }

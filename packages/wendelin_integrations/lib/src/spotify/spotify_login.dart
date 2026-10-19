@@ -34,6 +34,41 @@ String spotifyChallenge(String verifier) => base64Url
 /// Whether [id] looks like a Spotify Client-ID (32 hex characters).
 bool isSpotifyClientId(String id) => RegExp(r'^[0-9a-f]{32}$').hasMatch(id);
 
+/// Why [SpotifyLogin.signIn] failed; the UI shows a text per kind. Never
+/// carries a secret.
+enum SpotifyLoginError {
+  /// The client ID is not 32 hex characters.
+  invalidClientId,
+
+  /// No browser can show the login page.
+  noBrowser,
+
+  /// The user closed the browser without finishing.
+  cancelled,
+
+  /// The answer carried another `state` than this login (stale tab, other
+  /// app): refused, nothing stored.
+  stateMismatch,
+
+  /// The user denied access.
+  accessDenied,
+
+  /// Spotify refused the login with another error.
+  denied,
+
+  /// The answer holds no code.
+  noCode,
+
+  /// Spotify refused the code or the client ID.
+  rejected,
+
+  /// Spotify is not reachable.
+  unavailable,
+
+  /// Any other failure.
+  failed,
+}
+
 /// Login with the user's own Spotify developer app (Authorization Code with
 /// PKCE, no client secret).
 final class SpotifyLogin {
@@ -65,14 +100,11 @@ final class SpotifyLogin {
       });
 
   /// Logs in with [clientId]. Returns `null` on success (Client-ID and
-  /// tokens are stored then), else a German message; nothing is stored on a
+  /// tokens are stored then), else the reason; nothing is stored on a
   /// failure.
-  Future<String?> signIn(String clientId) async {
+  Future<SpotifyLoginError?> signIn(String clientId) async {
     final id = clientId.trim().toLowerCase();
-    if (!isSpotifyClientId(id)) {
-      return 'Die Client-ID besteht aus 32 Zeichen (Ziffern und Buchstaben '
-          'a–f). Bitte aus dem Entwickler-Dashboard kopieren.';
-    }
+    if (!isSpotifyClientId(id)) return SpotifyLoginError.invalidClientId;
     final verifier = _randomToken(_random, 64);
     final state = _randomToken(_random, 32);
     try {
@@ -81,18 +113,14 @@ final class SpotifyLogin {
         spotifyRedirect,
       );
       final params = back.queryParameters;
-      if (params['state'] != state) {
-        return 'Anmeldung abgelehnt: Antwort gehört nicht zu dieser Anmeldung.';
-      }
+      if (params['state'] != state) return SpotifyLoginError.stateMismatch;
       if (params['error'] != null) {
         return params['error'] == 'access_denied'
-            ? 'Anmeldung abgebrochen: Zugriff nicht erlaubt.'
-            : 'Spotify hat die Anmeldung abgelehnt.';
+            ? SpotifyLoginError.accessDenied
+            : SpotifyLoginError.denied;
       }
       final code = params['code'];
-      if (code == null || code.isEmpty) {
-        return 'Spotify hat keinen Code geschickt.';
-      }
+      if (code == null || code.isEmpty) return SpotifyLoginError.noCode;
       final auth = await api.exchangeCode(
         clientId: id,
         code: code,
@@ -102,8 +130,20 @@ final class SpotifyLogin {
       await secrets.saveClientId(id);
       await secrets.saveAuth(auth);
       return null;
+    } on SpotifyBrowserException catch (e) {
+      return switch (e.failure) {
+        SpotifyBrowserFailure.noBrowser => SpotifyLoginError.noBrowser,
+        SpotifyBrowserFailure.cancelled => SpotifyLoginError.cancelled,
+        SpotifyBrowserFailure.stateMismatch => SpotifyLoginError.stateMismatch,
+        SpotifyBrowserFailure.failed => SpotifyLoginError.failed,
+      };
     } on PortException catch (e) {
-      return e.message;
+      return switch (e.kind) {
+        PortErrorKind.permissionDenied ||
+        PortErrorKind.rejected => SpotifyLoginError.rejected,
+        PortErrorKind.unavailable => SpotifyLoginError.unavailable,
+        _ => SpotifyLoginError.failed,
+      };
     }
   }
 

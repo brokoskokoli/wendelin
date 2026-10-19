@@ -16,6 +16,7 @@ import '../routes.dart';
 import '../screens/labels.dart';
 import 'integration_detail_screen.dart';
 import 'mcp/mcp_server_detail_screen.dart';
+import 'reconnect_text.dart';
 import 'settings_page.dart';
 import 'settings_routes.dart';
 
@@ -192,8 +193,11 @@ class IntegrationRow extends ConsumerWidget {
     if (context.mounted) {
       showHint(
         context,
-        error ??
-            context.l10n.integrationsReachable(info.integration.displayName),
+        reconnectHint(
+          context.l10n,
+          error,
+          context.l10n.integrationsReachable(info.integration.displayName),
+        ),
       );
     }
   }

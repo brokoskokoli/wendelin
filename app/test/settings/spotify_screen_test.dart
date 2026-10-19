@@ -99,6 +99,30 @@ void main() {
     expect(await env.secrets.listKeys(), isEmpty);
   });
 
+  testWidgets('falscher OAuth-State: eigene Meldung statt „abgebrochen“', (
+    tester,
+  ) async {
+    final env = TestEnv(enabled: const {'spotify'});
+    env.spotifyBrowser.failure = SpotifyBrowserFailure.stateMismatch;
+    await pumpIntegrations(tester, env);
+    await tester.tap(
+      find.descendant(
+        of: tile('Spotify'),
+        matching: find.widgetWithText(OutlinedButton, 'Einrichten'),
+      ),
+    );
+    await settle(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('spotifyClientId')),
+      _clientId,
+    );
+    await tester.tap(find.text('Bei Spotify anmelden'));
+    await settle(tester);
+    expect(find.textContaining('gehört nicht zu dieser Anmeldung'), findsOne);
+    expect(find.textContaining('Anmeldung abgebrochen'), findsNothing);
+    expect(await env.secrets.listKeys(), isEmpty);
+  });
+
   testWidgets('Abmelden löscht Client-ID und Tokens', (tester) async {
     final env = TestEnv(enabled: const {'spotify'});
     await loginSpotify(env);
@@ -126,10 +150,9 @@ void main() {
     env.spotify
       ..expireTokens()
       ..revokeRefresh();
-    expect(
-      await tester.runAsync(integration.reconnect),
-      contains('neu anmelden'),
-    );
+    final failure = await tester.runAsync(integration.reconnect);
+    expect(failure!.service, 'spotify');
+    expect(failure.message, contains('neu anmelden'));
     await settle(tester);
     final failed = tileWidget(tester, 'Spotify');
     expect(failed.status, IntegrationStatus.error);

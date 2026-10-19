@@ -1814,6 +1814,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String reconnectErrDenied(String service) {
+    return '$service: access refused or not set up. Please check the credentials.';
+  }
+
+  @override
+  String reconnectErrFailed(String service) {
+    return '$service: the connection failed (unexpected answer).';
+  }
+
+  @override
+  String reconnectErrUnavailable(String service) {
+    return '$service is not reachable or does not answer. Try again later.';
+  }
+
+  @override
   String get listsAccessLost => 'No access any more – choose the file again';
 
   @override
@@ -3499,6 +3514,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get spotifyCopyRedirect => 'Copy address';
+
+  @override
+  String get spotifyErrAccessDenied => 'Sign-in cancelled: access not allowed.';
+
+  @override
+  String get spotifyErrCancelled => 'Sign-in cancelled.';
+
+  @override
+  String get spotifyErrDenied => 'Spotify refused the sign-in.';
+
+  @override
+  String get spotifyErrFailed => 'Sign-in to Spotify is not possible.';
+
+  @override
+  String get spotifyErrInvalidClientId =>
+      'The client ID has 32 characters (digits and letters a–f). Please copy it from the developer dashboard.';
+
+  @override
+  String get spotifyErrNoBrowser =>
+      'No browser is installed that can run the sign-in.';
+
+  @override
+  String get spotifyErrNoCode => 'Spotify did not send a code.';
+
+  @override
+  String get spotifyErrRejected =>
+      'Spotify refused the sign-in. Check the client ID and make sure your own account is listed under “User Management”.';
+
+  @override
+  String get spotifyErrStateMismatch =>
+      'Sign-in refused: the answer from Spotify does not belong to this sign-in (e.g. an old browser tab). Please start the sign-in again and finish it in the new tab.';
+
+  @override
+  String get spotifyErrUnavailable =>
+      'Spotify is not reachable. Try again later.';
 
   @override
   String get spotifyFailed =>

@@ -13,6 +13,10 @@ enum AuthorizationFailure {
   /// The user closed the browser without finishing.
   cancelled,
 
+  /// A redirect with another `state` arrived (stale or foreign answer) and
+  /// the user came back without a matching one.
+  stateMismatch,
+
   /// Anything else (platform error, missing plugin).
   failed,
 }
@@ -106,6 +110,10 @@ final class ChannelAuthorizationBrowser implements AuthorizationBrowser {
         'cancelled' => const AuthorizationBrowserException(
           AuthorizationFailure.cancelled,
           'Anmeldung abgebrochen.',
+        ),
+        'state_mismatch' => const AuthorizationBrowserException(
+          AuthorizationFailure.stateMismatch,
+          'Anmeldung abgelehnt: Antwort gehört nicht zu dieser Anmeldung.',
         ),
         _ => AuthorizationBrowserException(
           AuthorizationFailure.failed,

@@ -1,4 +1,6 @@
 import 'package:wendelin_integrations/todoist.dart';
+import 'package:wendelin_integrations/common.dart'
+    show PortErrorKind, ReconnectFailure;
 
 import '../core_providers.dart';
 import '../todoist.dart';
@@ -27,9 +29,12 @@ final todoistSpec = IntegrationSpec(
     );
   },
   retry: (
-    label: 'Erneut versuchen',
     run: (i) async => i is TodoistIntegration
         ? i.reconnect()
-        : 'Todoist ist nicht eingerichtet.',
+        : const ReconnectFailure(
+            'todoist',
+            PortErrorKind.permissionDenied,
+            'Todoist ist nicht eingerichtet.',
+          ),
   ),
 );

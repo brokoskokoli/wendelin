@@ -197,10 +197,9 @@ void main() {
         'Home Assistant hat das Token abgelehnt.',
       ),
     );
-    expect(
-      await tester.runAsync(integration.reconnect),
-      contains('Token abgelehnt'),
-    );
+    final failure = await tester.runAsync(integration.reconnect);
+    expect(failure!.kind, PortErrorKind.permissionDenied);
+    expect(failure.message, contains('Token abgelehnt'));
     await settle(tester);
     final failed = tileWidget(tester, 'Home Assistant (direkt)');
     expect(failed.status, IntegrationStatus.error);

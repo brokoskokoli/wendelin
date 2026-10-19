@@ -10,6 +10,7 @@ import '../../di/providers.dart';
 import '../../di/todoist.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import 'reconnect_text.dart';
 import 'settings_page.dart';
 
 /// Settings → Todoist: personal API token (checked against the API before
@@ -111,7 +112,10 @@ class _TodoistScreenState extends ConsumerState<TodoistScreen> {
     final error = await integration.reconnect();
     if (!mounted) return;
     setState(() => _busy = false);
-    showHint(context, error ?? context.l10n.todoistReachable);
+    showHint(
+      context,
+      reconnectHint(context.l10n, error, context.l10n.todoistReachable),
+    );
   }
 
   /// New token or none: the old error is void, the setup state changed.

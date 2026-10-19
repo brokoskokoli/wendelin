@@ -44,5 +44,29 @@
   "integrationsPermission2": "Permission",
   "integrationsReachable": "{displayName} is reachable again.",
   "integrationsRejected": "Rejected: {reason}",
-  "integrationsTools": "{tools} tools"
+  "integrationsTools": "{tools} tools",
+  "reconnectErrDenied": "{service}: access refused or not set up. Please check the credentials.",
+  "@reconnectErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrFailed": "{service}: the connection failed (unexpected answer).",
+  "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrUnavailable": "{service} is not reachable or does not answer. Try again later.",
+  "@reconnectErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  }
 }

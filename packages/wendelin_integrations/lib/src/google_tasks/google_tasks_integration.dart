@@ -88,14 +88,14 @@ final class GoogleTasksIntegration implements Integration {
 
   /// Tests the login (reads the lists), e.g. after the setup or from
   /// „Erneut versuchen“. Returns `null` on success (error state cleared via
-  /// `onRecovered`), else a German message.
-  Future<String?> reconnect() async {
+  /// `onRecovered`), else the failure (the app words it).
+  Future<ReconnectFailure?> reconnect() async {
     try {
       session.reset();
       await session.lists();
       return null;
     } on PortException catch (e) {
-      return e.message;
+      return ReconnectFailure.of('gtasks', e);
     }
   }
 }

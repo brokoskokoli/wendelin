@@ -54,6 +54,17 @@ final _german = RegExp(
   'Die|Das|Es|Ein|Eine|Kein|Du|Dein|Deine|zu|von|Ja|Nein)\\b',
 );
 
+// Deutsche Ein-Wort-Texte ohne Umlaut (Schaltflächen, Status): `_german`
+// braucht ein Leerzeichen, deshalb gilt für ein ganzes Literal diese Liste.
+final _germanWord = RegExp(
+  '^(Abbrechen|Abmelden|Anmelden|Aktiv|Aktualisieren|Antwort|Aufnahme|'
+  'Bearbeiten|Beenden|Bestätigen|Details|Einstellungen|Entfernen|Fehler|'
+  'Fertig|Hinweis|Hinzufügen|Inaktiv|Konto|Laden|Nachricht|Nein|Prüfen|'
+  'Schließen|Senden|Speichern|Sprache|Starten|Stoppen|Suchen|Titel|Verbinden|'
+  'Verbindung|Warten|Weiter|Wiederholen|Zurück|Zugang|Ja|Okay|Alle|Keine|'
+  'Löschen|Öffnen|Erledigt|Offen|Fortfahren|Ablehnen|Erlauben|Zulassen)\$',
+);
+
 // Ein Textliteral mit mindestens einem Leerzeichen (kein Bezeichner).
 final _literal = RegExp('\'([^\'\\n]{4,})\'|"([^"\\n]{4,})"');
 
@@ -75,6 +86,7 @@ List<String> scan(String dir, {Set<String> allowed = const {}}) {
       for (final m in _literal.allMatches(lines[i])) {
         final t = m[1] ?? m[2]!;
         if ((t.contains(' ') && _german.hasMatch(t)) ||
+            _germanWord.hasMatch(t) ||
             RegExp('[äöüßÄÖÜ]').hasMatch(t)) {
           found.add('${f.path}:${i + 1}: $t');
         }
@@ -105,8 +117,22 @@ void main() {
       "const a = 'Das ist ein Test';\n"
       "x(yes: 'Ja, löschen', no: 'Nein, behalten');\n"
       "showHint(context, 'Die Datei ist weg');\n"
-      "final b = 'ok';\n",
+      "final b = 'ok';\n"
+      "final c = 'Abmelden';\n",
     );
-    expect(scan(dir.path), hasLength(4));
+    expect(scan(dir.path), hasLength(5));
+  });
+
+  test('der Scan erkennt deutsche Ein-Wort-Texte, nicht Bezeichner', () {
+    final dir = Directory.systemTemp.createTempSync('scan1');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/a.dart').writeAsStringSync(
+      "final a = 'Speichern';\n"
+      "final b = 'Fehler';\n"
+      "final c = 'save';\n"
+      "final d = 'Spotify';\n"
+      "final e = 'Speichern.dart';\n",
+    );
+    expect(scan(dir.path), hasLength(2));
   });
 }

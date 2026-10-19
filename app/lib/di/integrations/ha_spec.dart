@@ -1,4 +1,6 @@
 import 'package:wendelin_integrations/home_assistant.dart';
+import 'package:wendelin_integrations/common.dart'
+    show PortErrorKind, ReconnectFailure;
 
 import '../core_providers.dart';
 import '../home_assistant.dart';
@@ -25,9 +27,12 @@ final haSpec = IntegrationSpec(
     );
   },
   retry: (
-    label: 'Erneut versuchen',
     run: (i) async => i is HaIntegration
         ? i.reconnect()
-        : 'Home Assistant ist nicht eingerichtet.',
+        : const ReconnectFailure(
+            'ha',
+            PortErrorKind.permissionDenied,
+            'Home Assistant ist nicht eingerichtet.',
+          ),
   ),
 );

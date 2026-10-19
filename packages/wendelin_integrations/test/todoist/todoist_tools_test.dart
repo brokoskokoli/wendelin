@@ -288,7 +288,10 @@ void main() {
       final o = await call('todoist__list', {});
       expect(o.text, contains(todoistRetryHint));
       expect(errors, isEmpty);
-      expect(await todoist.reconnect(), contains('nicht erreichbar'));
+      final f = await todoist.reconnect();
+      expect(f!.service, 'todoist');
+      expect(f.kind, PortErrorKind.unavailable);
+      expect(f.message, contains('nicht erreichbar'));
     });
   });
 }

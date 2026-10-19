@@ -44,5 +44,29 @@
   "integrationsPermission2": "Autorisation",
   "integrationsReachable": "{displayName} est de nouveau joignable.",
   "integrationsRejected": "Refusée : {reason}",
-  "integrationsTools": "{tools} outils"
+  "integrationsTools": "{tools} outils",
+  "reconnectErrDenied": "{service} : accès refusé ou non configuré. Vérifiez les identifiants.",
+  "@reconnectErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrFailed": "{service} : la connexion a échoué (réponse inattendue).",
+  "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrUnavailable": "{service} est injoignable ou ne répond pas. Réessayez plus tard.",
+  "@reconnectErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  }
 }

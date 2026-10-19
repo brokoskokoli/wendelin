@@ -11,6 +11,7 @@ import '../../di/providers.dart';
 import '../../di/spotify.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import 'reconnect_text.dart';
 import 'settings_page.dart';
 
 /// Settings → Spotify: short guide for the developer app, the redirect
@@ -87,12 +88,28 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _error = error;
+      _error = error == null ? null : _words(error);
       if (error == null) {
         _signedIn = true;
         _clientId.clear();
       }
     });
+  }
+
+  String _words(SpotifyLoginError e) {
+    final l = context.l10n;
+    return switch (e) {
+      SpotifyLoginError.invalidClientId => l.spotifyErrInvalidClientId,
+      SpotifyLoginError.noBrowser => l.spotifyErrNoBrowser,
+      SpotifyLoginError.cancelled => l.spotifyErrCancelled,
+      SpotifyLoginError.stateMismatch => l.spotifyErrStateMismatch,
+      SpotifyLoginError.accessDenied => l.spotifyErrAccessDenied,
+      SpotifyLoginError.denied => l.spotifyErrDenied,
+      SpotifyLoginError.noCode => l.spotifyErrNoCode,
+      SpotifyLoginError.rejected => l.spotifyErrRejected,
+      SpotifyLoginError.unavailable => l.spotifyErrUnavailable,
+      SpotifyLoginError.failed => l.spotifyErrFailed,
+    };
   }
 
   Future<void> _signOut() async {
@@ -119,7 +136,10 @@ class _SpotifyScreenState extends ConsumerState<SpotifyScreen> {
     final error = await integration.reconnect();
     if (!mounted) return;
     setState(() => _busy = false);
-    showHint(context, error ?? context.l10n.spotifyReconnected);
+    showHint(
+      context,
+      reconnectHint(context.l10n, error, context.l10n.spotifyReconnected),
+    );
   }
 
   /// New login or none: the old error is void, the setup state changed.

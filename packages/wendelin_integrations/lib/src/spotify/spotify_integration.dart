@@ -78,13 +78,13 @@ final class SpotifyIntegration implements Integration {
   ]);
 
   /// Tests the connection (renews the token if needed, reads the playback
-  /// state). Returns `null` on success, else a German message.
-  Future<String?> reconnect() async {
+  /// state). Returns `null` on success, else the failure (the app words it).
+  Future<ReconnectFailure?> reconnect() async {
     try {
       await session.run(session.api.playback);
       return null;
     } on PortException catch (e) {
-      return e.message;
+      return ReconnectFailure.of('spotify', e);
     }
   }
 

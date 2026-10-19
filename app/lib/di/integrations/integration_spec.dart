@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
+import 'package:wendelin_integrations/common.dart' show ReconnectFailure;
 
 import '../../platform/platform_ports.dart';
 import '../app_requirements.dart';
@@ -51,11 +52,11 @@ final class IntegrationDeps {
   }
 }
 
-/// „Erneut versuchen“ of an integration in the error state: [label] on the
-/// tile, [run] returns `null` on success or a German message.
+/// „Erneut versuchen“ of an integration in the error state (the tile shows
+/// the localized `retry` label): [run] returns `null` on success or the
+/// failure, which the UI words in the app language.
 typedef IntegrationRetry = ({
-  String label,
-  Future<String?> Function(Integration integration) run,
+  Future<ReconnectFailure?> Function(Integration integration) run,
 });
 
 /// Registration of one integration in the app: how to build it, how to

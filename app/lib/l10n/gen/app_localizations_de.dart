@@ -1829,6 +1829,21 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String reconnectErrDenied(String service) {
+    return '$service: Zugang abgelehnt oder nicht eingerichtet. Bitte die Zugangsdaten prüfen.';
+  }
+
+  @override
+  String reconnectErrFailed(String service) {
+    return '$service: Die Verbindung ist fehlgeschlagen (unerwartete Antwort).';
+  }
+
+  @override
+  String reconnectErrUnavailable(String service) {
+    return '$service ist nicht erreichbar oder antwortet nicht. Später erneut versuchen.';
+  }
+
+  @override
   String get listsAccessLost => 'Kein Zugriff mehr – Datei neu auswählen';
 
   @override
@@ -3513,6 +3528,42 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get spotifyCopyRedirect => 'Adresse kopieren';
+
+  @override
+  String get spotifyErrAccessDenied =>
+      'Anmeldung abgebrochen: Zugriff nicht erlaubt.';
+
+  @override
+  String get spotifyErrCancelled => 'Anmeldung abgebrochen.';
+
+  @override
+  String get spotifyErrDenied => 'Spotify hat die Anmeldung abgelehnt.';
+
+  @override
+  String get spotifyErrFailed => 'Anmeldung bei Spotify nicht möglich.';
+
+  @override
+  String get spotifyErrInvalidClientId =>
+      'Die Client-ID besteht aus 32 Zeichen (Ziffern und Buchstaben a–f). Bitte aus dem Entwickler-Dashboard kopieren.';
+
+  @override
+  String get spotifyErrNoBrowser =>
+      'Kein Browser installiert, in dem die Anmeldung laufen kann.';
+
+  @override
+  String get spotifyErrNoCode => 'Spotify hat keinen Code geschickt.';
+
+  @override
+  String get spotifyErrRejected =>
+      'Spotify hat die Anmeldung abgelehnt. Client-ID prüfen und darauf achten, dass das eigene Konto unter „User Management“ steht.';
+
+  @override
+  String get spotifyErrStateMismatch =>
+      'Anmeldung abgelehnt: Die Antwort von Spotify gehört nicht zu dieser Anmeldung (z. B. ein alter Browser-Tab). Bitte die Anmeldung neu starten und im neuen Tab zu Ende führen.';
+
+  @override
+  String get spotifyErrUnavailable =>
+      'Spotify ist nicht erreichbar. Später erneut versuchen.';
 
   @override
   String get spotifyFailed =>

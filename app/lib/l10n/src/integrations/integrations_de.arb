@@ -79,5 +79,29 @@
         "type": "int"
       }
     }
+  },
+  "reconnectErrDenied": "{service}: Zugang abgelehnt oder nicht eingerichtet. Bitte die Zugangsdaten prüfen.",
+  "@reconnectErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrFailed": "{service}: Die Verbindung ist fehlgeschlagen (unerwartete Antwort).",
+  "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrUnavailable": "{service} ist nicht erreichbar oder antwortet nicht. Später erneut versuchen.",
+  "@reconnectErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
   }
 }

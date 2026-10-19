@@ -524,6 +524,30 @@
   "integrationsReachable": "{displayName} est de nouveau joignable.",
   "integrationsRejected": "Refusée : {reason}",
   "integrationsTools": "{tools} outils",
+  "reconnectErrDenied": "{service} : accès refusé ou non configuré. Vérifiez les identifiants.",
+  "@reconnectErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrFailed": "{service} : la connexion a échoué (réponse inattendue).",
+  "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrUnavailable": "{service} est injoignable ou ne répond pas. Réessayez plus tard.",
+  "@reconnectErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "listsAccessLost": "Plus d’accès – choisissez à nouveau le fichier",
   "listsAdd": "+ Liste",
   "listsAliases": "Autres noms, séparés par des virgules (facultatif)",
@@ -1011,6 +1035,16 @@
   "spotifyClientIdMissing": "Saisissez l’identifiant client.",
   "spotifyCopied": "Adresse copiée.",
   "spotifyCopyRedirect": "Copier l’adresse",
+  "spotifyErrAccessDenied": "Connexion annulée : accès non autorisé.",
+  "spotifyErrCancelled": "Connexion annulée.",
+  "spotifyErrDenied": "Spotify a refusé la connexion.",
+  "spotifyErrFailed": "Connexion à Spotify impossible.",
+  "spotifyErrInvalidClientId": "L’ID client comporte 32 caractères (chiffres et lettres a–f). Copiez-le depuis le tableau de bord développeur.",
+  "spotifyErrNoBrowser": "Aucun navigateur n’est installé pour effectuer la connexion.",
+  "spotifyErrNoCode": "Spotify n’a pas envoyé de code.",
+  "spotifyErrRejected": "Spotify a refusé la connexion. Vérifiez l’ID client et que votre compte figure sous « User Management ».",
+  "spotifyErrStateMismatch": "Connexion refusée : la réponse de Spotify ne correspond pas à cette connexion (p. ex. un ancien onglet du navigateur). Relancez la connexion et terminez-la dans le nouvel onglet.",
+  "spotifyErrUnavailable": "Spotify est injoignable. Réessayez plus tard.",
   "spotifyFailed": "Erreur – connexion expirée ou Spotify injoignable",
   "spotifyGuideStep1": "1. Connectez-vous sur developer.spotify.com/dashboard avec votre compte Spotify et choisissez « Create app ».",
   "spotifyGuideStep2": "2. Choisissez librement un nom et une description. Saisissez exactement cette adresse comme « Redirect URI » : {redirect}",
