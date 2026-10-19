@@ -9,7 +9,6 @@ import 'package:wendelin/platform/platform_ports.dart';
 import 'package:wendelin/voice/locked_agent_run.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
-import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_voice/wendelin_voice.dart' show LockedCommand;
 
 import '../support/test_env.dart';
