@@ -241,10 +241,30 @@ def sounds_like(w):
     return 6 <= len(w) <= 11 and w[0] in "wvf" and cologne(w) == WAKE_KEY
 
 
-def matches_wake_word(text, max_dist=1):
+NOT_SPLIT_TAIL = {"in", "im", "ins", "an", "am", "auf", "aus", "bei", "mit", "von", "vor", "zu", "zum", "zur",
+                  "den", "dem", "der", "die", "das", "ein", "und"}
+
+
+def near_wake_word(s, max_dist, single):
+    """Spiegel von _nearWakeWord (wake_verifier.dart): Phonetik, 1 Aenderung, 2 nur bei einem Wort >= 7 Zeichen w/v/f."""
+    if sounds_like(s): return True
+    two = single and max_dist >= 2 and len(s) >= 7 and s[0] in "wvf"
+    for sp in SPELL:
+        d = dist(s, sp)
+        if d <= 1 and d <= max_dist: return True
+        if two and d <= 2 and sp == "wendelin": return True
+    return False
+
+
+def matches_wake_word(text, max_dist=2):
+    """Spiegel von matchesWakeWord/wakeWordMatchLength (packages/wendelin_voice/lib/src/wake/wake_verifier.dart):
+    App-Regel = max_dist 2 (Zwei-Aenderungs-Regel nur fuer ein Wort), Zweiwort-Treffer nie vor einem Funktionswort."""
     w = fold(text).split()
-    near = lambda s: sounds_like(s) or any(abs(len(s) - len(p)) <= 3 and dist(s, p) <= max_dist for p in SPELL)
-    return any(near(w[i]) or (i + 1 < len(w) and near(w[i] + w[i + 1])) for i in range(len(w)))
+    for i in range(len(w)):
+        if near_wake_word(w[i], max_dist, True): return True
+        if i + 1 < len(w) and w[i + 1] not in NOT_SPLIT_TAIL and near_wake_word(w[i] + w[i + 1], max_dist, False):
+            return True
+    return False
 
 
 def two_stage_main():

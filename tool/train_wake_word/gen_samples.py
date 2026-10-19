@@ -55,16 +55,17 @@ def trim(x, db=-45.0, pad=0.05):
     return x[a:b]
 
 
-def synth(voice, sr, ns, text, rng):
+def synth(voice, sr, ns, text, rng, wide=False):
+    lo, hi = (0.7, 1.5) if wide else (0.8, 1.3)       # --wide (v9): mehr Tempo-/Tonhoehenvielfalt
     cfg = SynthesisConfig(speaker_id=int(rng.integers(ns)) if ns > 1 else None,
-                          length_scale=float(rng.uniform(0.8, 1.3)),
+                          length_scale=float(rng.uniform(lo, hi)),
                           noise_scale=float(rng.uniform(0.4, 1.0)),
                           noise_w_scale=float(rng.uniform(0.4, 1.0)))
     parts = [c.audio_float_array for c in voice.synthesize(text, cfg)]
     if not parts:
         return None
     x = np.concatenate(parts).astype("float32")
-    x = resample(x, sr, SR, float(rng.uniform(0.92, 1.08)))
+    x = resample(x, sr, SR, float(rng.uniform(0.85, 1.18) if wide else rng.uniform(0.92, 1.08)))
     return trim(x)
 
 
@@ -84,25 +85,28 @@ def main():
     a.add_argument("--seed", type=int, default=1)
     a.add_argument("--voices", required=True)
     a.add_argument("--text")
+    a.add_argument("--wide", action="store_true", help="v9: breiteres Tempo/Tonhoehe, MLS-Sprecher dreifach gewichtet")
     a.add_argument("--max-seconds", type=float, default=0, help="Abbruch nach so viel Audio (neg)")
     a = a.parse_args()
     rng = np.random.default_rng(a.seed)
     random.seed(a.seed)
     os.makedirs(a.out, exist_ok=True)
     voices = [load_voice(d) for d in sorted(glob.glob(os.path.join(a.voices, "v-*")))]
+    wts = np.array([3.0 if d.endswith("v-mls") else 1.0 for d in sorted(glob.glob(os.path.join(a.voices, "v-*")))])
+    wts = wts / wts.sum() if a.wide else None
     texts = None
     if a.kind == "neg":
         texts = sentences(a.text, np.random.default_rng(a.seed), a.n)
     total = 0.0
     for i in range(a.n):
-        v, sr, ns = voices[int(rng.integers(len(voices)))]
+        v, sr, ns = voices[int(rng.choice(len(voices), p=wts))]
         if a.kind == "pos":
             t = POS[int(rng.integers(len(POS)))]
         elif a.kind == "conf":
             t = CONF[int(rng.integers(len(CONF)))]
         else:
             t = texts[i]
-        x = synth(v, sr, ns, t, rng)
+        x = synth(v, sr, ns, t, rng, a.wide)
         if x is None or len(x) < 1600 or (a.kind != "neg" and len(x) > 1.8 * SR):
             continue   # Ausreisser (lange Pausen/Artefakte) verwerfen
         sf.write(os.path.join(a.out, f"{a.kind}{a.seed:02d}_{i:05d}.wav"), x, SR, subtype="PCM_16")
