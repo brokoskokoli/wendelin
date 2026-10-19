@@ -15,7 +15,7 @@ final class TodoistIntegration implements Integration {
   TodoistIntegration(
     TodoistApi api,
     this.secrets, {
-    void Function(String message)? onError,
+    void Function(String message, PortErrorKind kind)? onError,
     void Function()? onRecovered,
   }) : session = TodoistSession(
          api,

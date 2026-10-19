@@ -42,6 +42,7 @@ void main() {
   late FakeHaEntityStore store;
   late HaIntegration ha;
   late List<String> errors;
+  late List<PortErrorKind> kinds;
   late int recovered;
 
   Tool tool(String name) => ha.tools.singleWhere((t) => t.name == name);
@@ -56,12 +57,16 @@ void main() {
     api = FakeHaApi();
     store = FakeHaEntityStore(_approved);
     errors = [];
+    kinds = [];
     recovered = 0;
     ha = HaIntegration(
       api,
       FakeHaSecrets(const HaEndpoint(url: 'http://10.0.0.2:8123', token: 't')),
       store,
-      onError: errors.add,
+      onError: (m, k) {
+        errors.add(m);
+        kinds.add(k);
+      },
       onRecovered: () => recovered++,
     );
   });
@@ -420,6 +425,7 @@ void main() {
         final o = await run('ha__state', {'entity': 'Küche Deckenlicht'});
         expect(o.isError, isTrue);
         expect(errors, ['Token weg']);
+        expect(kinds, [PortErrorKind.permissionDenied]);
         expect(
           (await run('ha__state', {'entity': 'Küche Deckenlicht'})).isError,
           isFalse,

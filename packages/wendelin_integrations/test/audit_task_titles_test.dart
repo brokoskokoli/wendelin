@@ -30,14 +30,14 @@ void main() {
       ...TodoistIntegration(
         todoist,
         todoist,
-        onError: (_) {},
+        onError: (_, _) {},
         onRecovered: () {},
       ).tools,
       ...GoogleTasksIntegration(
         google,
         google,
         google,
-        onError: (_) {},
+        onError: (_, _) {},
         onRecovered: () {},
       ).tools,
     ];
