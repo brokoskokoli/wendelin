@@ -19,6 +19,7 @@ final class VoiceSettings {
     this.tts = TtsPreference.automatic,
     this.ttsVoice,
     this.sherpaVoices = const {},
+    this.sherpaSpeakers = const {},
     this.ttsRate = 1.0,
     this.minSpeechMs = 200,
     this.vadThreshold = 0.5,
@@ -28,6 +29,7 @@ final class VoiceSettings {
     this.conversationAsked = false,
     this.conversationOfferPending = false,
     this.bargeIn = BargeInMode.keywords,
+    this.keepModelLoaded = false,
   });
 
   /// [sttLanguage]: use the language chosen in the onboarding.
@@ -45,7 +47,7 @@ final class VoiceSettings {
   /// Offered VAD thresholds.
   static const thresholds = [0.3, 0.4, 0.5, 0.6, 0.7];
 
-  /// Whisper model id (`whisper-base`, `whisper-small`).
+  /// Catalog id of the STT model (`whisper-small`, `parakeet-tdt-0.6b-v3`).
   final String sttModel;
 
   /// [followApp], [detect] or a fixed language (`de`, `fr`, `en`).
@@ -60,6 +62,11 @@ final class VoiceSettings {
   /// Chosen offline voice per language (primary subtag → catalog id, WP66);
   /// a language without an entry uses the default voice of the catalog.
   final Map<String, String> sherpaVoices;
+
+  /// Chosen speaker id per language for a multi-speaker offline voice
+  /// (Kokoro, WP103); a language without entry uses the model's first
+  /// speaker for it.
+  final Map<String, String> sherpaSpeakers;
 
   /// Catalog id of the offline voice for [language] (primary subtag): the
   /// chosen one, else the catalog default; `null` for an unknown language.
@@ -108,6 +115,17 @@ final class VoiceSettings {
   /// detector exists (WP58); default: keywords.
   final BargeInMode bargeIn;
 
+  /// „Modell im Speicher halten“ (WP103): the recognizer and the offline
+  /// voice stay loaded when the app is idle in the background or the
+  /// overlay closes, so the next utterance starts without loading. Only
+  /// memory pressure ([mayReleaseModels]) still frees them. Default off; the
+  /// station mode (WP99) turns it on through [withStationDefaults].
+  final bool keepModelLoaded;
+
+  /// Copy for the station mode (WP99, not built yet): the models stay
+  /// loaded (hook for WP99).
+  VoiceSettings withStationDefaults() => copyWith(keepModelLoaded: true);
+
   /// The STT language for app language [appLanguage] (`null` = detect).
   String? effectiveLanguage(String appLanguage) => switch (sttLanguage) {
     followApp => appLanguage,
@@ -127,6 +145,7 @@ final class VoiceSettings {
     String? ttsVoice,
     bool clearVoice = false,
     Map<String, String>? sherpaVoices,
+    Map<String, String>? sherpaSpeakers,
     double? ttsRate,
     int? minSpeechMs,
     double? vadThreshold,
@@ -136,12 +155,14 @@ final class VoiceSettings {
     bool? conversationAsked,
     bool? conversationOfferPending,
     BargeInMode? bargeIn,
+    bool? keepModelLoaded,
   }) => VoiceSettings(
     sttModel: sttModel ?? this.sttModel,
     sttLanguage: sttLanguage ?? this.sttLanguage,
     tts: tts ?? this.tts,
     ttsVoice: clearVoice ? null : ttsVoice ?? this.ttsVoice,
     sherpaVoices: sherpaVoices ?? this.sherpaVoices,
+    sherpaSpeakers: sherpaSpeakers ?? this.sherpaSpeakers,
     ttsRate: ttsRate ?? this.ttsRate,
     minSpeechMs: minSpeechMs ?? this.minSpeechMs,
     vadThreshold: vadThreshold ?? this.vadThreshold,
@@ -152,6 +173,7 @@ final class VoiceSettings {
     conversationOfferPending:
         conversationOfferPending ?? this.conversationOfferPending,
     bargeIn: bargeIn ?? this.bargeIn,
+    keepModelLoaded: keepModelLoaded ?? this.keepModelLoaded,
   );
 
   /// JSON for the settings store.
@@ -161,6 +183,7 @@ final class VoiceSettings {
     'tts': tts.name,
     'ttsVoice': ?ttsVoice,
     if (sherpaVoices.isNotEmpty) 'sherpaVoices': sherpaVoices,
+    if (sherpaSpeakers.isNotEmpty) 'sherpaSpeakers': sherpaSpeakers,
     'ttsRate': ttsRate,
     'minSpeechMs': minSpeechMs,
     'vadThreshold': vadThreshold,
@@ -170,6 +193,7 @@ final class VoiceSettings {
     'conversationAsked': conversationAsked,
     'conversationOfferPending': conversationOfferPending,
     'bargeIn': bargeIn.name,
+    'keepModelLoaded': keepModelLoaded,
   };
 
   /// Reads [json]; unknown or invalid values fall back to the defaults.
@@ -204,13 +228,29 @@ final class VoiceSettings {
         }
       }
     }
+    final speakers = <String, String>{};
+    final rawSpeakers = json['sherpaSpeakers'];
+    if (rawSpeakers is Map) {
+      for (final MapEntry(:key, :value) in rawSpeakers.entries) {
+        if (key is! String || value is! String) continue;
+        final known = SpeechModelCatalog.standard.models.any(
+          (m) => m.speakersFor(key).any((s) => s.id == value),
+        );
+        if (known) speakers[key] = value;
+      }
+    }
     if (legacyOffline != null) {
       voices.putIfAbsent(legacyOffline.languages.first, () => legacyOffline.id);
     }
 
     return VoiceSettings(
       sttModel:
-          pick<String>('sttModel', (v) => v.startsWith('whisper-')) ??
+          pick<String>(
+            'sttModel',
+            (v) =>
+                SpeechModelCatalog.standard.byId(v)?.kind ==
+                SpeechModelKind.stt,
+          ) ??
           d.sttModel,
       sttLanguage:
           pick<String>(
@@ -221,6 +261,7 @@ final class VoiceSettings {
       tts: TtsPreference.values.asNameMap()[json['tts']] ?? d.tts,
       ttsVoice: legacyOffline == null ? legacy : null,
       sherpaVoices: Map.unmodifiable(voices),
+      sherpaSpeakers: Map.unmodifiable(speakers),
       ttsRate:
           pick<num>('ttsRate', (v) => v >= 0.5 && v <= 2)?.toDouble() ??
           d.ttsRate,
@@ -247,6 +288,8 @@ final class VoiceSettings {
           pick<bool>('conversationOfferPending', (_) => true) ??
           d.conversationOfferPending,
       bargeIn: BargeInMode.values.asNameMap()[json['bargeIn']] ?? d.bargeIn,
+      keepModelLoaded:
+          pick<bool>('keepModelLoaded', (_) => true) ?? d.keepModelLoaded,
     );
   }
 
@@ -258,6 +301,7 @@ final class VoiceSettings {
       other.tts == tts &&
       other.ttsVoice == ttsVoice &&
       _sameVoices(other.sherpaVoices, sherpaVoices) &&
+      _sameVoices(other.sherpaSpeakers, sherpaSpeakers) &&
       other.ttsRate == ttsRate &&
       other.minSpeechMs == minSpeechMs &&
       other.vadThreshold == vadThreshold &&
@@ -266,7 +310,8 @@ final class VoiceSettings {
       other.conversationMode == conversationMode &&
       other.conversationAsked == conversationAsked &&
       other.conversationOfferPending == conversationOfferPending &&
-      other.bargeIn == bargeIn;
+      other.bargeIn == bargeIn &&
+      other.keepModelLoaded == keepModelLoaded;
 
   @override
   int get hashCode => Object.hash(
@@ -277,6 +322,9 @@ final class VoiceSettings {
     Object.hashAllUnordered([
       for (final e in sherpaVoices.entries) Object.hash(e.key, e.value),
     ]),
+    Object.hashAllUnordered([
+      for (final e in sherpaSpeakers.entries) Object.hash(e.key, e.value),
+    ]),
     ttsRate,
     minSpeechMs,
     vadThreshold,
@@ -286,6 +334,7 @@ final class VoiceSettings {
     conversationAsked,
     conversationOfferPending,
     bargeIn,
+    keepModelLoaded,
   );
 }
 

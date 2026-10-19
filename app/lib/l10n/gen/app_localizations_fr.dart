@@ -1213,6 +1213,46 @@ class AppLocalizationsFr extends AppLocalizations {
   String get yes => 'Oui';
 
   @override
+  String get confCallTitle => 'Appeler ?';
+
+  @override
+  String get confHintVoiceCall => 'Dis simplement « appeler » ou « annuler »';
+
+  @override
+  String get confHintVoiceEdited =>
+      'Tu as modifié le texte : envoie-le en touchant l’écran';
+
+  @override
+  String get confHintVoiceSms => 'Dis simplement « envoyer » ou « annuler »';
+
+  @override
+  String get confNoCancel => 'Annuler';
+
+  @override
+  String get confSmsNoText => 'Le message ne doit pas être vide.';
+
+  @override
+  String get confSmsTextLabel => 'Message';
+
+  @override
+  String get confSmsTitle => 'Envoyer le SMS ?';
+
+  @override
+  String confSmsTo(String name) {
+    return 'À $name';
+  }
+
+  @override
+  String get confYesCall => 'Appeler';
+
+  @override
+  String get confYesSend => 'Envoyer';
+
+  @override
+  String get integrationsContactsRationale =>
+      'Wendelin a besoin d’accéder à tes contacts pour trouver les numéros par nom, ainsi qu’aux droits SMS et téléphone. Android te le demandera ensuite. Wendelin n’envoie jamais de SMS et n’appelle jamais sans que tu aies confirmé l’aperçu avec le nom et le numéro (en touchant l’écran ou en disant « oui »). Rien de tout cela ne marche appareil verrouillé. Sans le droit téléphone, Wendelin ouvre seulement le clavier d’appel.';
+
+  @override
   String get batteryAllow => 'Autoriser sans restriction';
 
   @override
@@ -3717,6 +3757,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String modelRowRam(String ram) {
+    return 'Mémoire d’environ $ram';
+  }
+
+  @override
   String get modelRowResume => 'Reprendre';
 
   @override
@@ -3847,6 +3892,28 @@ class AppLocalizationsFr extends AppLocalizations {
       'Un modèle vocal n’est pas encore téléchargé (Paramètres → Voix).';
 
   @override
+  String get voiceMetricsClear => 'Vider la liste';
+
+  @override
+  String get voiceMetricsEmpty =>
+      'Pas encore de mesures. Dites une commande ou écoutez un échantillon de voix.';
+
+  @override
+  String get voiceMetricsIntro =>
+      'Les derniers énoncés de cette session : temps de calcul (latence), facteur temps réel (temps de calcul par durée audio, plus petit = plus rapide) et mémoire de l’app. Uniquement des chiffres, aucun contenu.';
+
+  @override
+  String voiceMetricsRow(String latency, String audio, String rtf, String ram) {
+    return '$latency ms pour $audio ms d’audio · RTF $rtf · RAM $ram';
+  }
+
+  @override
+  String get voiceMetricsStt => 'Reconnaissance';
+
+  @override
+  String get voiceMetricsTts => 'Synthèse vocale';
+
+  @override
   String get voiceScreenAutomatic => 'Automatique';
 
   @override
@@ -3868,6 +3935,16 @@ class AppLocalizationsFr extends AppLocalizations {
       'Wendelin reconnaît la parole sur l’appareil (Whisper). Les modèles sont téléchargés une fois et restent sur l’appareil.';
 
   @override
+  String get voiceScreenKeepModel => 'Garder le modèle en mémoire';
+
+  @override
+  String get voiceScreenKeepModelHint =>
+      'La reconnaissance et la voix restent chargées : réponses plus rapides, mais davantage de mémoire en permanence. Wendelin les libère quand la mémoire manque.';
+
+  @override
+  String get voiceScreenKeepModelLabel => 'Garder le modèle en mémoire';
+
+  @override
   String get voiceScreenLanguageDefault => 'Voix par défaut de la langue';
 
   @override
@@ -3886,6 +3963,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get voiceScreenListen => 'Écouter un échantillon';
+
+  @override
+  String get voiceScreenMetrics => 'Mesures';
+
+  @override
+  String get voiceScreenMetricsDetail =>
+      'Durée, facteur temps réel et mémoire par énoncé';
 
   @override
   String get voiceScreenMicrophone => 'Microphone';
@@ -4059,6 +4143,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get voiceVoicesSampleFailed =>
       'Échantillon impossible – la voix n’a pas parlé.';
+
+  @override
+  String get voiceVoicesSpeaker => 'Voix';
 
   @override
   String get voiceVoicesStopSample => 'Arrêter l’échantillon';

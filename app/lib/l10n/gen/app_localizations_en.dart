@@ -1196,6 +1196,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yes => 'Yes';
 
   @override
+  String get confCallTitle => 'Call?';
+
+  @override
+  String get confHintVoiceCall => 'Just say “call” or “cancel”';
+
+  @override
+  String get confHintVoiceEdited => 'You changed the text: please tap to send';
+
+  @override
+  String get confHintVoiceSms => 'Just say “send” or “cancel”';
+
+  @override
+  String get confNoCancel => 'Cancel';
+
+  @override
+  String get confSmsNoText => 'The message must not be empty.';
+
+  @override
+  String get confSmsTextLabel => 'Message';
+
+  @override
+  String get confSmsTitle => 'Send SMS?';
+
+  @override
+  String confSmsTo(String name) {
+    return 'To $name';
+  }
+
+  @override
+  String get confYesCall => 'Call';
+
+  @override
+  String get confYesSend => 'Send';
+
+  @override
+  String get integrationsContactsRationale =>
+      'Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer.';
+
+  @override
   String get batteryAllow => 'Allow no restriction';
 
   @override
@@ -3676,6 +3715,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String modelRowRam(String ram) {
+    return 'Memory about $ram';
+  }
+
+  @override
   String get modelRowResume => 'Resume';
 
   @override
@@ -3804,6 +3848,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'A speech model has not been downloaded yet (Settings → Speech).';
 
   @override
+  String get voiceMetricsClear => 'Clear list';
+
+  @override
+  String get voiceMetricsEmpty =>
+      'No measurements yet. Say a command or play a voice sample.';
+
+  @override
+  String get voiceMetricsIntro =>
+      'The latest utterances of this session: compute time (latency), real-time factor (compute time per audio time, smaller is faster) and app memory. Numbers only, no content.';
+
+  @override
+  String voiceMetricsRow(String latency, String audio, String rtf, String ram) {
+    return '$latency ms for $audio ms of audio · RTF $rtf · RAM $ram';
+  }
+
+  @override
+  String get voiceMetricsStt => 'Recognition';
+
+  @override
+  String get voiceMetricsTts => 'Speech output';
+
+  @override
   String get voiceScreenAutomatic => 'Automatic';
 
   @override
@@ -3825,6 +3891,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Wendelin recognizes speech on the device (Whisper). The models are downloaded once and stay on the device.';
 
   @override
+  String get voiceScreenKeepModel => 'Keep model in memory';
+
+  @override
+  String get voiceScreenKeepModelHint =>
+      'Recognition and voice stay loaded: faster answers, but permanently more memory. Wendelin frees them when memory runs low.';
+
+  @override
+  String get voiceScreenKeepModelLabel => 'Keep model in memory';
+
+  @override
   String get voiceScreenLanguageDefault => 'Default of the language';
 
   @override
@@ -3843,6 +3919,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceScreenListen => 'Listen to a sample';
+
+  @override
+  String get voiceScreenMetrics => 'Measurements';
+
+  @override
+  String get voiceScreenMetricsDetail =>
+      'Time, real-time factor and memory per utterance';
 
   @override
   String get voiceScreenMicrophone => 'Microphone';
@@ -4015,6 +4098,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get voiceVoicesSampleFailed =>
       'Sample not possible – the voice did not speak.';
+
+  @override
+  String get voiceVoicesSpeaker => 'Speaker';
 
   @override
   String get voiceVoicesStopSample => 'Stop sample';

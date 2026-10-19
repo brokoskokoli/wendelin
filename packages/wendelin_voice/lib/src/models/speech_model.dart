@@ -15,6 +15,61 @@ enum SpeechModelKind {
   wake,
 }
 
+/// Which sherpa-onnx recognizer runs a [SpeechModelKind.stt] model (WP103):
+/// a different choice of model only changes catalog entries.
+enum SttEngine {
+  /// Whisper encoder/decoder (`*-encoder*`, `*-decoder*`, `*tokens.txt`).
+  whisper,
+
+  /// NeMo transducer (Parakeet; `encoder`, `decoder`, `joiner`, `tokens`).
+  /// The only engine that takes hotwords.
+  nemoTransducer,
+
+  /// NeMo Canary encoder/decoder with a source language (`srcLang`).
+  canary,
+}
+
+/// Which sherpa-onnx synthesizer runs a [SpeechModelKind.tts] model.
+enum TtsSynth {
+  /// Piper/VITS voice (one voice per model).
+  piper,
+
+  /// Kokoro (many speakers in one model, chosen with a speaker id).
+  kokoro,
+}
+
+/// One speaker of a multi-speaker voice model (Kokoro, WP103).
+@immutable
+final class TtsSpeaker {
+  /// Creates a speaker.
+  const TtsSpeaker({
+    required this.id,
+    required this.language,
+    required this.name,
+    required this.sid,
+    required this.espeakLang,
+    this.gender,
+  });
+
+  /// Stable id inside the model (e.g. `af_heart`).
+  final String id;
+
+  /// Language (BCP 47 primary subtag) the speaker speaks.
+  final String language;
+
+  /// Display name (German).
+  final String name;
+
+  /// Speaker number in the model's `voices.bin`.
+  final int sid;
+
+  /// Language code for the phonemizer (`en-us`, `en` = British, `fr`).
+  final String espeakLang;
+
+  /// Gender, if known.
+  final VoiceGender? gender;
+}
+
 /// Gender of a voice (for the choice of offline voices, WP66).
 enum VoiceGender {
   /// Female voice.
@@ -79,6 +134,11 @@ final class SpeechModel {
     this.note,
     this.attribution,
     this.gender,
+    this.engine = SttEngine.whisper,
+    this.ramBytes,
+    this.synth = TtsSynth.piper,
+    this.speakers = const [],
+    this.hint,
   });
 
   /// Stable id, also the directory name in the `ModelStore`.
@@ -111,6 +171,33 @@ final class SpeechModel {
 
   /// Gender of a [SpeechModelKind.tts] voice; `null` for other models.
   final VoiceGender? gender;
+
+  /// Recognizer engine of a [SpeechModelKind.stt] model.
+  final SttEngine engine;
+
+  /// Approximate peak RAM while loaded (for the choice in the settings);
+  /// `null` = not stated. Measured on a Mac in WP102, the phone is higher.
+  final int? ramBytes;
+
+  /// Synthesizer of a [SpeechModelKind.tts] model.
+  final TtsSynth synth;
+
+  /// Speakers of a multi-speaker model ([TtsSynth.kokoro]); empty for
+  /// single-voice models. The first one per language is the default.
+  final List<TtsSpeaker> speakers;
+
+  /// Short hint for the choice in the settings (German, e.g. „schnell,
+  /// eigene Begriffe“); `null` = none.
+  final String? hint;
+
+  /// The speakers of [language] (primary subtag).
+  List<TtsSpeaker> speakersFor(String language) => [
+    for (final s in speakers)
+      if (s.language == language) s,
+  ];
+
+  /// Whether the engine takes hotwords (own terms as a hint, WP103).
+  bool get supportsHotwords => engine == SttEngine.nemoTransducer;
 
   /// Total download size.
   int get sizeBytes => files.fold(0, (n, f) => n + f.sizeBytes);

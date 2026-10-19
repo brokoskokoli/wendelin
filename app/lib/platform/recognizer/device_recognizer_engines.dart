@@ -10,6 +10,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../voice/engine_whisper.dart';
 import '../voice/file_model_store.dart';
 import '../voice/model_installer.dart';
+import '../voice/nemo_sherpa.dart';
 import '../voice/silero_vad.dart';
 import '../voice/whisper_registry.dart';
 import '../voice/whisper_sherpa.dart';
@@ -17,7 +18,7 @@ import '../voice/whisper_stt.dart';
 import 'recognizer_host.dart';
 
 /// Starts a Whisper backend for [files] (tests replace it).
-typedef WhisperStarter = Future<WhisperBackend> Function(WhisperFiles files);
+typedef WhisperStarter = Future<WhisperBackend> Function(SttSpec files);
 
 /// Finds the Whisper model another engine has loaded (tests replace it).
 typedef SharedWhisperLookup = Future<WhisperBackend?> Function(String modelId);
@@ -159,9 +160,19 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
     if (own != null && _ownId == modelId) return own;
     final model = await _installed(modelId, 'Das Whisper-Modell');
     await _releaseOwn();
-    final loading = _startWhisper(
-      WhisperFiles.of(model, models.directoryOf(model).path),
-    );
+    final dir = models.directoryOf(model).path;
+    // Whisper or a NeMo model by the catalog entry (WP103); the system
+    // recognizer has no names for hotwords.
+    final spec = model.engine == SttEngine.whisper
+        ? WhisperFiles.of(model, dir)
+        : NemoFiles.find(model, dir);
+    if (spec == null) {
+      throw const VoiceException(
+        VoiceErrorKind.modelMissing,
+        'Das Spracherkennungsmodell ist nicht (vollständig) geladen.',
+      );
+    }
+    final loading = _startWhisper(spec);
     _ownId = modelId;
     _own = loading;
     try {

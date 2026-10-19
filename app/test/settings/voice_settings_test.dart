@@ -13,10 +13,13 @@ import 'package:wendelin/ui/design/design.dart' show CheckStatusIcon, WSwitch;
 import 'package:wendelin/ui/onboarding/voice_download_step.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/ui/settings/model_download_row.dart';
+import 'package:wendelin/ui/settings/settings_page.dart' show SettingsRow;
 import 'package:wendelin/ui/settings/settings_screen.dart';
+import 'package:wendelin/ui/settings/voice_metrics_screen.dart';
 import 'package:wendelin/ui/settings/voice_screen.dart';
 import 'package:wendelin/ui/settings/voice_spoken_section.dart';
 import 'package:wendelin/ui/settings/voice_voices_screen.dart';
+import 'package:wendelin/voice/voice_metrics.dart';
 import 'package:wendelin_agent/wendelin_agent.dart' show AgentConfig;
 import 'package:wendelin_core/wendelin_core.dart' show SpokenVersion;
 import 'package:wendelin_voice/fakes.dart';
@@ -26,7 +29,7 @@ import '../support/test_env.dart';
 import '../ui/helpers.dart';
 import 'integrations_screen_test.dart' show settle;
 
-const _tall = Size(390, 2600);
+const _tall = Size(390, 4200);
 
 Future<ProviderContainer> pumpScreen(
   WidgetTester tester,
@@ -500,7 +503,8 @@ void main() {
       expect(config().spokenVersion, SpokenVersion.off);
       await tester.ensureVisible(find.text('Mit KI-Prüfung'));
       for (final t in spokenVersionTexts(AppLocalizationsDe()).values) {
-        expect(find.text(t.$1), findsOneWidget);
+        // „Aus“ also labels the switch of „Modell im Speicher halten“.
+        expect(find.text(t.$1), findsWidgets);
         expect(find.text(t.$2), findsOneWidget);
       }
       expect(
@@ -550,14 +554,14 @@ void main() {
     testWidgets('Lizenzen inklusive Pflicht-Attribution', (tester) async {
       await pumpScreen(tester, env0(), const VoiceScreen());
       await tester.scrollUntilVisible(
-        find.textContaining('SIWIS French Speech Synthesis'),
+        find.textContaining('SIWIS French Speech Synthesis').first,
         200,
       );
       expect(
         find.textContaining('SIWIS French Speech Synthesis'),
-        findsOneWidget,
+        findsWidgets,
       );
-      expect(find.textContaining('CC0 (Thorsten-Voice)'), findsOneWidget);
+      expect(find.textContaining('CC0 (Thorsten-Voice)'), findsWidgets);
     });
 
     testWidgets('Mikrofon: Erklärung vor der Android-Abfrage', (tester) async {
@@ -725,6 +729,91 @@ void main() {
   group('Einstellungen → Sprache → Stimmen (WP66)', () {
     Finder probe(String lang) => find.byKey(Key('probe-$lang'));
 
+    testWidgets('Kokoro: Sprecher je Sprache wählen, Probe über die Stimme', (
+      tester,
+    ) async {
+      final env = TestEnv();
+      env.speechModels.installed.add('tts-kokoro');
+      final c = await pumpScreen(tester, env, const VoiceVoicesScreen());
+      // The only loaded voice of English speaks: its speakers are offered.
+      expect(find.byKey(const Key('speaker-en-af_heart')), findsOneWidget);
+      // Default speaker: the first; one speaker of French: no choice.
+      expect(find.byKey(const Key('speaker-fr-ff_siwis')), findsNothing);
+      await tester.tap(find.byKey(const Key('speaker-en-bf_emma')));
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.sherpaSpeakers, {
+        'en': 'bf_emma',
+      });
+    });
+
+    testWidgets('Modellzeilen zeigen Größe, Speicherbedarf und Hinweis', (
+      tester,
+    ) async {
+      await pumpScreen(tester, TestEnv(), const VoiceScreen());
+      expect(find.textContaining('Arbeitsspeicher ca. 1464 MB'), findsWidgets);
+      expect(find.textContaining('erkennt eigene Begriffe'), findsOneWidget);
+      expect(find.textContaining('gut für Französisch'), findsWidgets);
+    });
+
+    testWidgets('Schalter „Modell im Speicher halten“ speichert', (
+      tester,
+    ) async {
+      final c = await pumpScreen(tester, TestEnv(), const VoiceScreen());
+      expect(c.read(voiceSettingsProvider).value!.keepModelLoaded, isFalse);
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: find.textContaining('schnellere Antworten'),
+            matching: find.byType(SettingsRow),
+          ),
+          matching: find.byType(WSwitch),
+        ),
+      );
+      await settle(tester);
+      expect(c.read(voiceSettingsProvider).value!.keepModelLoaded, isTrue);
+    });
+
+    testWidgets('Lizenzen nennen Parakeet, Canary, Siwis und Kokoro', (
+      tester,
+    ) async {
+      await pumpScreen(tester, TestEnv(), const VoiceScreen());
+      for (final t in [
+        'Parakeet TDT 0.6B v3“ von NVIDIA, CC BY 4.0',
+        'Canary 180M Flash“ von NVIDIA, CC BY 4.0',
+        'Kokoro-82M (hexgrad, Apache-2.0)',
+      ]) {
+        await tester.scrollUntilVisible(find.textContaining(t), 200);
+        expect(find.textContaining(t), findsOneWidget);
+      }
+    });
+
+    testWidgets('Messwerte: leer, dann Einträge mit Latenz, RTF und RAM', (
+      tester,
+    ) async {
+      final c = await pumpScreen(tester, TestEnv(), const VoiceMetricsScreen());
+      expect(find.textContaining('Noch keine Messwerte'), findsOneWidget);
+      c
+          .read(voiceMetricsProvider.notifier)
+          .add(
+            const VoiceMetric(
+              kind: VoiceMetricKind.stt,
+              model: 'parakeet-tdt-0.6b-v3',
+              audio: Duration(seconds: 2),
+              compute: Duration(milliseconds: 100),
+              rssBytes: 1400000000,
+            ),
+          );
+      await settle(tester);
+      expect(find.text('Erkennung: parakeet-tdt-0.6b-v3'), findsOneWidget);
+      expect(
+        find.text('100 ms für 2000 ms Audio · RTF 0.05 · RAM 1400 MB'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Liste leeren'));
+      await settle(tester);
+      expect(find.textContaining('Noch keine Messwerte'), findsOneWidget);
+    });
+
     testWidgets('Stimmen je Sprache wählen, löschen, Probe hören', (
       tester,
     ) async {
@@ -741,7 +830,7 @@ void main() {
       ]) {
         expect(find.text(name), findsOneWidget);
       }
-      expect(find.byType(ModelDownloadRow), findsNWidgets(6));
+      expect(find.byType(ModelDownloadRow), findsNWidgets(9));
       // Default: first voice of the language; no voice loaded -> no sample.
       expect(
         c.read(voiceSettingsProvider).value!.sherpaVoiceFor('de'),

@@ -6,7 +6,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 
 /**
- * Flutter activity with Wendelin's platform channels (calendar, files, vault, apps, network,
+ * Flutter activity with Wendelin's platform channels (calendar, contacts, files, vault, apps, network,
  * OAuth login, assistant).
  * Both the main app ([MainActivity]) and the assistant overlay ([AssistantActivity]) run
  * the tools, so both engines need the same channels.
@@ -20,10 +20,12 @@ abstract class WendelinActivity : FlutterActivity() {
     private var network: NetworkChannel? = null
     private var auth: AuthChannel? = null
     private var torch: TorchChannel? = null
+    private var contacts: ContactsChannel? = null
     private var media: MediaChannel? = null
     private var location: LocationChannel? = null
     private var audioFocus: AudioFocusChannel? = null
     private var multicast: MulticastChannel? = null
+    private var memory: MemoryChannel? = null
     protected var notify: NotifyChannel? = null
         private set
     protected var assistant: AssistantChannel? = null
@@ -33,6 +35,11 @@ abstract class WendelinActivity : FlutterActivity() {
         super.onCreate(savedInstanceState)
         // Assistant role may have changed while the app was not running.
         RecognizerSwitch.sync(this)
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        memory?.trim(level)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -46,10 +53,12 @@ abstract class WendelinActivity : FlutterActivity() {
         network = NetworkChannel(this, messenger)
         auth = AuthChannel(this, messenger)
         torch = TorchChannel(this, messenger)
+        contacts = ContactsChannel(this, messenger)
         media = MediaChannel(this, messenger)
         location = LocationChannel(this, messenger)
         audioFocus = AudioFocusChannel(this, messenger)
         multicast = MulticastChannel(this, messenger)
+        memory = MemoryChannel(messenger)
         notify = NotifyChannel(this, messenger)
         notify?.handleIntent(intent)
         assistant = AssistantChannel(this, messenger)
@@ -72,6 +81,8 @@ abstract class WendelinActivity : FlutterActivity() {
         auth = null
         torch?.dispose()
         torch = null
+        contacts?.dispose()
+        contacts = null
         audioFocus?.dispose()
         audioFocus = null
         media?.dispose()
@@ -80,6 +91,8 @@ abstract class WendelinActivity : FlutterActivity() {
         location = null
         multicast?.dispose()
         multicast = null
+        memory?.dispose()
+        memory = null
         notify?.dispose()
         notify = null
         assistant?.dispose()
@@ -104,6 +117,7 @@ abstract class WendelinActivity : FlutterActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         calendar?.onPermissionResult(requestCode, grantResults)
+        contacts?.onPermissionResult(requestCode, grantResults, permissions)
         location?.onPermissionResult(requestCode, grantResults)
         notify?.onPermissionResult(requestCode, grantResults)
     }

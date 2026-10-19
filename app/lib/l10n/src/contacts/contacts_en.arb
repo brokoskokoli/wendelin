@@ -1,0 +1,21 @@
+{
+  "confCallTitle": "Call?",
+  "confHintVoiceCall": "Just say “call” or “cancel”",
+  "confHintVoiceEdited": "You changed the text: please tap to send",
+  "confHintVoiceSms": "Just say “send” or “cancel”",
+  "confNoCancel": "Cancel",
+  "confSmsNoText": "The message must not be empty.",
+  "confSmsTextLabel": "Message",
+  "confSmsTitle": "Send SMS?",
+  "confSmsTo": "To {name}",
+  "@confSmsTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confYesCall": "Call",
+  "confYesSend": "Send",
+  "integrationsContactsRationale": "Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer."
+}

@@ -51,6 +51,33 @@ void main() {
       );
     });
 
+    test(
+      'ConfirmationRequired carries privateDetails (default false)',
+      () async {
+        for (final priv in [true, false]) {
+          final (a, _) = scripted('a', [
+            ScriptedTurn.toolCalls([call('c1', 'sms__compose')]),
+            ScriptedTurn.text('ok'),
+          ]);
+          final h = Harness(
+            primary: a,
+            tools: [FakeTool(name: 'sms__compose', risk: RiskLevel.external)],
+            invoker: RiskInvoker(RiskLevel.external, privateDetails: priv),
+          );
+          final events = await h.run(
+            'x',
+            onEvent: (e) {
+              if (e is ConfirmationRequired) e.respond(true);
+            },
+          );
+          expect(
+            events.whereType<ConfirmationRequired>().single.privateDetails,
+            priv,
+          );
+        }
+      },
+    );
+
     late FakeTool contacts;
     late FakeTool web;
     ToolCatalog catalogFor(PrivacyLevel level) =>

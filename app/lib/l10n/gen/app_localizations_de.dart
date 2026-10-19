@@ -1208,6 +1208,46 @@ class AppLocalizationsDe extends AppLocalizations {
   String get yes => 'Ja';
 
   @override
+  String get confCallTitle => 'Anrufen?';
+
+  @override
+  String get confHintVoiceCall => 'Sag „anrufen“ oder „abbrechen“';
+
+  @override
+  String get confHintVoiceEdited =>
+      'Du hast den Text geändert: bitte per Tipp absenden';
+
+  @override
+  String get confHintVoiceSms => 'Sag „absenden“ oder „abbrechen“';
+
+  @override
+  String get confNoCancel => 'Abbrechen';
+
+  @override
+  String get confSmsNoText => 'Die Nachricht darf nicht leer sein.';
+
+  @override
+  String get confSmsTextLabel => 'Nachricht';
+
+  @override
+  String get confSmsTitle => 'SMS absenden?';
+
+  @override
+  String confSmsTo(String name) {
+    return 'An $name';
+  }
+
+  @override
+  String get confYesCall => 'Anrufen';
+
+  @override
+  String get confYesSend => 'Absenden';
+
+  @override
+  String get integrationsContactsRationale =>
+      'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.';
+
+  @override
   String get batteryAllow => 'Keine Einschränkung erlauben';
 
   @override
@@ -3691,6 +3731,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String modelRowRam(String ram) {
+    return 'Arbeitsspeicher ca. $ram';
+  }
+
+  @override
   String get modelRowResume => 'Fortsetzen';
 
   @override
@@ -3819,6 +3864,28 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).';
 
   @override
+  String get voiceMetricsClear => 'Liste leeren';
+
+  @override
+  String get voiceMetricsEmpty =>
+      'Noch keine Messwerte. Sprich einen Befehl oder spiele eine Stimmprobe ab.';
+
+  @override
+  String get voiceMetricsIntro =>
+      'Die letzten Äußerungen dieser Sitzung: Rechenzeit (Latenz), Echtzeitfaktor (Rechenzeit je Audiozeit, kleiner ist schneller) und Speicher der App. Nur Zahlen, keine Inhalte.';
+
+  @override
+  String voiceMetricsRow(String latency, String audio, String rtf, String ram) {
+    return '$latency ms für $audio ms Audio · RTF $rtf · RAM $ram';
+  }
+
+  @override
+  String get voiceMetricsStt => 'Erkennung';
+
+  @override
+  String get voiceMetricsTts => 'Sprachausgabe';
+
+  @override
   String get voiceScreenAutomatic => 'Automatisch';
 
   @override
@@ -3837,6 +3904,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get voiceScreenIntro =>
       'Wendelin erkennt Sprache auf dem Gerät (Whisper). Die Modelle werden einmal geladen und bleiben auf dem Gerät.';
+
+  @override
+  String get voiceScreenKeepModel => 'Modell im Speicher halten';
+
+  @override
+  String get voiceScreenKeepModelHint =>
+      'Erkennung und Stimme bleiben geladen: schnellere Antworten, aber dauerhaft mehr Arbeitsspeicher. Bei Speicherknappheit gibt Wendelin sie frei.';
+
+  @override
+  String get voiceScreenKeepModelLabel => 'Modell im Speicher halten';
 
   @override
   String get voiceScreenLanguageDefault => 'Standard der Sprache';
@@ -3858,6 +3935,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get voiceScreenListen => 'Probe hören';
+
+  @override
+  String get voiceScreenMetrics => 'Messwerte';
+
+  @override
+  String get voiceScreenMetricsDetail =>
+      'Zeit, Echtzeitfaktor und Speicher je Äußerung';
 
   @override
   String get voiceScreenMicrophone => 'Mikrofon';
@@ -4030,6 +4114,9 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get voiceVoicesSampleFailed =>
       'Probe nicht möglich – die Stimme hat nicht gesprochen.';
+
+  @override
+  String get voiceVoicesSpeaker => 'Sprecher';
 
   @override
   String get voiceVoicesStopSample => 'Probe beenden';

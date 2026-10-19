@@ -85,6 +85,7 @@ final class WhisperSpeechToText implements SpeechToText {
     this.languages = const {'de', 'fr', 'en'},
     this.silenceLevel = 0.002,
     this.onTiming,
+    this.engineName = 'Whisper (sherpa-onnx)',
   });
 
   /// Model runner.
@@ -99,6 +100,9 @@ final class WhisperSpeechToText implements SpeechToText {
   /// RMS level below which audio counts as silence (≈ −54 dBFS).
   final double silenceLevel;
 
+  /// Engine name in [info] (`sttEngineName` of the model's engine).
+  final String engineName;
+
   /// Called after every model run with its durations (never the text).
   final void Function(WhisperTiming timing)? onTiming;
 
@@ -108,7 +112,7 @@ final class WhisperSpeechToText implements SpeechToText {
 
   @override
   SpeechToTextEngineInfo get info => SpeechToTextEngineInfo(
-    name: 'Whisper (sherpa-onnx)',
+    name: engineName,
     languages: languages,
     model: modelId,
   );

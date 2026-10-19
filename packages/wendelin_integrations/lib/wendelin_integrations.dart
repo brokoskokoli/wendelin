@@ -19,6 +19,7 @@ export 'bring.dart';
 export 'calendar.dart';
 export 'clipboard.dart';
 export 'common.dart';
+export 'contacts.dart';
 export 'flashlight.dart';
 export 'google_tasks.dart';
 export 'home_assistant.dart';

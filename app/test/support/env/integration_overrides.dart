@@ -22,6 +22,8 @@ List<Override> withIntegrations(TestEnv env) => [
       apps: env.apps,
       torch: env.torch,
       media: env.media,
+      contacts: env.contacts,
+      phone: env.phone,
       location: env.location,
       mapsLauncher: env.mapsLauncher,
       requestCalendarPermission: env.ports.requestCalendarPermission,

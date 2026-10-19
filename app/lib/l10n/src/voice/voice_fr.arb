@@ -7,6 +7,14 @@
   "modelRowLoaded": "{size} · téléchargé",
   "modelRowNotLoaded": "{size} · non téléchargé",
   "modelRowProgressOf": "Progression {displayName}",
+  "modelRowRam": "Mémoire d’environ {ram}",
+  "@modelRowRam": {
+    "placeholders": {
+      "ram": {
+        "type": "String"
+      }
+    }
+  },
   "modelRowResume": "Reprendre",
   "modelRowStarted": "{size} · partiellement téléchargé",
   "voiceConvAdvanced": "Avancé",
@@ -41,18 +49,45 @@
   "voiceErrorGeneric": "La voix n’a pas fonctionné. Veuillez réessayer.",
   "voiceErrorMicBusy": "Le microphone était encore occupé. Veuillez parler de nouveau.",
   "voiceErrorModelMissing": "Un modèle vocal n’est pas encore téléchargé (Paramètres → Voix).",
+  "voiceMetricsClear": "Vider la liste",
+  "voiceMetricsEmpty": "Pas encore de mesures. Dites une commande ou écoutez un échantillon de voix.",
+  "voiceMetricsIntro": "Les derniers énoncés de cette session : temps de calcul (latence), facteur temps réel (temps de calcul par durée audio, plus petit = plus rapide) et mémoire de l’app. Uniquement des chiffres, aucun contenu.",
+  "voiceMetricsRow": "{latency} ms pour {audio} ms d’audio · RTF {rtf} · RAM {ram}",
+  "@voiceMetricsRow": {
+    "placeholders": {
+      "latency": {
+        "type": "String"
+      },
+      "audio": {
+        "type": "String"
+      },
+      "rtf": {
+        "type": "String"
+      },
+      "ram": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceMetricsStt": "Reconnaissance",
+  "voiceMetricsTts": "Synthèse vocale",
   "voiceScreenAutomatic": "Automatique",
   "voiceScreenAutomaticDetail": "Voix du système, sinon voix hors ligne",
   "voiceScreenDetectAuto": "Détecter automatiquement",
   "voiceScreenFineTuning": "Réglages fins",
   "voiceScreenFixedLanguageHint": "Avec une langue fixe, Whisper reconnaît les phrases courtes de façon plus fiable.",
   "voiceScreenIntro": "Wendelin reconnaît la parole sur l’appareil (Whisper). Les modèles sont téléchargés une fois et restent sur l’appareil.",
+  "voiceScreenKeepModel": "Garder le modèle en mémoire",
+  "voiceScreenKeepModelHint": "La reconnaissance et la voix restent chargées : réponses plus rapides, mais davantage de mémoire en permanence. Wendelin les libère quand la mémoire manque.",
+  "voiceScreenKeepModelLabel": "Garder le modèle en mémoire",
   "voiceScreenLanguageDefault": "Voix par défaut de la langue",
   "voiceScreenLanguageDefaultChip": "Voix par défaut de la langue",
   "voiceScreenLearnsVoice": "Wendelin apprend votre voix",
   "voiceScreenLearnsVoiceDetail": "Entraîner, calibrer et essayer",
   "voiceScreenLikeApp": "Comme l’application ({v})",
   "voiceScreenListen": "Écouter un échantillon",
+  "voiceScreenMetrics": "Mesures",
+  "voiceScreenMetricsDetail": "Durée, facteur temps réel et mémoire par énoncé",
   "voiceScreenMicrophone": "Microphone",
   "voiceScreenMicrophoneTitle": "Microphone",
   "voiceScreenMinSpeech": "Durée minimale de parole",
@@ -101,5 +136,6 @@
   "voiceVoicesNotLoaded": "La voix choisie n’est pas téléchargée – c’est {v} qui parle.",
   "voiceVoicesPreparing": "Préparation de l’échantillon …",
   "voiceVoicesSampleFailed": "Échantillon impossible – la voix n’a pas parlé.",
+  "voiceVoicesSpeaker": "Voix",
   "voiceVoicesStopSample": "Arrêter l’échantillon"
 }

@@ -2152,6 +2152,78 @@ abstract class AppLocalizations {
   /// **'Ja'**
   String get yes;
 
+  /// No description provided for @confCallTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Anrufen?'**
+  String get confCallTitle;
+
+  /// No description provided for @confHintVoiceCall.
+  ///
+  /// In de, this message translates to:
+  /// **'Sag „anrufen“ oder „abbrechen“'**
+  String get confHintVoiceCall;
+
+  /// No description provided for @confHintVoiceEdited.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast den Text geändert: bitte per Tipp absenden'**
+  String get confHintVoiceEdited;
+
+  /// No description provided for @confHintVoiceSms.
+  ///
+  /// In de, this message translates to:
+  /// **'Sag „absenden“ oder „abbrechen“'**
+  String get confHintVoiceSms;
+
+  /// No description provided for @confNoCancel.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbrechen'**
+  String get confNoCancel;
+
+  /// No description provided for @confSmsNoText.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Nachricht darf nicht leer sein.'**
+  String get confSmsNoText;
+
+  /// No description provided for @confSmsTextLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Nachricht'**
+  String get confSmsTextLabel;
+
+  /// No description provided for @confSmsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'SMS absenden?'**
+  String get confSmsTitle;
+
+  /// No description provided for @confSmsTo.
+  ///
+  /// In de, this message translates to:
+  /// **'An {name}'**
+  String confSmsTo(String name);
+
+  /// No description provided for @confYesCall.
+  ///
+  /// In de, this message translates to:
+  /// **'Anrufen'**
+  String get confYesCall;
+
+  /// No description provided for @confYesSend.
+  ///
+  /// In de, this message translates to:
+  /// **'Absenden'**
+  String get confYesSend;
+
+  /// No description provided for @integrationsContactsRationale.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.'**
+  String get integrationsContactsRationale;
+
   /// No description provided for @batteryAllow.
   ///
   /// In de, this message translates to:
@@ -6370,6 +6442,12 @@ abstract class AppLocalizations {
   /// **'Fortschritt {displayName}'**
   String modelRowProgressOf(String displayName);
 
+  /// No description provided for @modelRowRam.
+  ///
+  /// In de, this message translates to:
+  /// **'Arbeitsspeicher ca. {ram}'**
+  String modelRowRam(String ram);
+
   /// No description provided for @modelRowResume.
   ///
   /// In de, this message translates to:
@@ -6574,6 +6652,42 @@ abstract class AppLocalizations {
   /// **'Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).'**
   String get voiceErrorModelMissing;
 
+  /// No description provided for @voiceMetricsClear.
+  ///
+  /// In de, this message translates to:
+  /// **'Liste leeren'**
+  String get voiceMetricsClear;
+
+  /// No description provided for @voiceMetricsEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Messwerte. Sprich einen Befehl oder spiele eine Stimmprobe ab.'**
+  String get voiceMetricsEmpty;
+
+  /// No description provided for @voiceMetricsIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Die letzten Äußerungen dieser Sitzung: Rechenzeit (Latenz), Echtzeitfaktor (Rechenzeit je Audiozeit, kleiner ist schneller) und Speicher der App. Nur Zahlen, keine Inhalte.'**
+  String get voiceMetricsIntro;
+
+  /// No description provided for @voiceMetricsRow.
+  ///
+  /// In de, this message translates to:
+  /// **'{latency} ms für {audio} ms Audio · RTF {rtf} · RAM {ram}'**
+  String voiceMetricsRow(String latency, String audio, String rtf, String ram);
+
+  /// No description provided for @voiceMetricsStt.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennung'**
+  String get voiceMetricsStt;
+
+  /// No description provided for @voiceMetricsTts.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprachausgabe'**
+  String get voiceMetricsTts;
+
   /// No description provided for @voiceScreenAutomatic.
   ///
   /// In de, this message translates to:
@@ -6610,6 +6724,24 @@ abstract class AppLocalizations {
   /// **'Wendelin erkennt Sprache auf dem Gerät (Whisper). Die Modelle werden einmal geladen und bleiben auf dem Gerät.'**
   String get voiceScreenIntro;
 
+  /// No description provided for @voiceScreenKeepModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell im Speicher halten'**
+  String get voiceScreenKeepModel;
+
+  /// No description provided for @voiceScreenKeepModelHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennung und Stimme bleiben geladen: schnellere Antworten, aber dauerhaft mehr Arbeitsspeicher. Bei Speicherknappheit gibt Wendelin sie frei.'**
+  String get voiceScreenKeepModelHint;
+
+  /// No description provided for @voiceScreenKeepModelLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Modell im Speicher halten'**
+  String get voiceScreenKeepModelLabel;
+
   /// No description provided for @voiceScreenLanguageDefault.
   ///
   /// In de, this message translates to:
@@ -6645,6 +6777,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Probe hören'**
   String get voiceScreenListen;
+
+  /// No description provided for @voiceScreenMetrics.
+  ///
+  /// In de, this message translates to:
+  /// **'Messwerte'**
+  String get voiceScreenMetrics;
+
+  /// No description provided for @voiceScreenMetricsDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeit, Echtzeitfaktor und Speicher je Äußerung'**
+  String get voiceScreenMetricsDetail;
 
   /// No description provided for @voiceScreenMicrophone.
   ///
@@ -6933,6 +7077,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Probe nicht möglich – die Stimme hat nicht gesprochen.'**
   String get voiceVoicesSampleFailed;
+
+  /// No description provided for @voiceVoicesSpeaker.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprecher'**
+  String get voiceVoicesSpeaker;
 
   /// No description provided for @voiceVoicesStopSample.
   ///

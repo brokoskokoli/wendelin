@@ -17,6 +17,7 @@ Die Logik ohne Android-Abhängigkeit liegt in reinen Kotlin-Klassen mit JVM-Unit
 | window | `app/lib/platform/screen_protection.dart` | `WindowChannel.kt` |
 | auth | `app/lib/platform/channel_authorization_browser.dart` | `AuthChannel.kt` (mit `OAuthRedirectActivity.kt`) |
 | notify (WP52) | `app/lib/platform/channel_notifier.dart` | `NotifyChannel.kt` |
+| memory (WP103, `onTrimMemory`) | `app/lib/platform/channel_memory_trim.dart` | `MemoryChannel.kt` (in `WendelinActivity.kt` eingehängt) |
 | recognizer | `app/lib/platform/recognizer/recognizer_host.dart` | `RecognizerEngine.kt` (mit `WendelinRecognitionService.kt`, `RecognizerSwitch.kt`) |
 | wake (WP50, Einstellungen der Haupt-App) | `app/lib/platform/wake/wake_platform.dart` | `WakeChannel.kt` (mit `WakeSettingsStore.kt`, `WakeStarter.kt`) |
 | wake-engine (WP50, kopflose Engine des Dienstes) | `app/lib/platform/wake/wake_host.dart`, `app/lib/platform/wake/service_audio_input.dart` | `WakeWordService.kt` (mit `RecognizerEngine.kt`, `WakeConflictWatcher.kt`, `WakeNotifications.kt`) |

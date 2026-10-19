@@ -28,6 +28,9 @@ const filesChannelName = 'app.wendelin/files';
 /// `LocationChannel.kt`: position (LocationManager), place name, map intents.
 const locationChannelName = 'app.wendelin/location';
 
+/// `MemoryChannel.kt`: `onTrimMemory` level of Android (frees the voice models).
+const memoryChannelName = 'app.wendelin/memory';
+
 /// `MediaChannel.kt`: media sessions, media keys, opening media apps.
 const mediaChannelName = 'app.wendelin/media';
 
@@ -42,6 +45,9 @@ const notifyChannelName = 'app.wendelin/notify';
 
 /// `RecognizerEngine.kt`: speech recognizer service.
 const recognizerChannelName = 'app.wendelin/recognizer';
+
+/// `ContactsChannel.kt`: address book, SMS and calls.
+const contactsChannelName = 'app.wendelin/contacts';
 
 /// `TorchChannel.kt`: flash LED as a flashlight.
 const torchChannelName = 'app.wendelin/torch';

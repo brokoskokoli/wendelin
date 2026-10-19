@@ -65,7 +65,9 @@ final class AuditRecorder implements ToolAuditSink {
     'type': 'tool',
     'callId': event.call.id,
     'tool': event.call.name,
-    'description': event.description,
+    'description': event.privateDetails
+        ? event.description.split('\n').first
+        : event.description,
     'approved': approved,
   });
 

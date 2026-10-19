@@ -24,3 +24,4 @@ Aus `app/lib/di/integrations/registry.dart` (Reihenfolge der Anzeige). Nicht abl
 | `tasks` | `app/lib/di/integrations/tasks_spec.dart` | – | – |
 | `todoist` | `app/lib/di/integrations/todoist_spec.dart` | `packages/wendelin_integrations/lib/src/todoist/` | [todoist.md](../integrations/todoist.md) |
 | `gtasks` | `app/lib/di/integrations/google_tasks_spec.dart` | `packages/wendelin_integrations/lib/src/google_tasks/` | [gtasks.md](../integrations/gtasks.md) |
+| `contacts` | `app/lib/di/integrations/contacts_spec.dart` | `packages/wendelin_integrations/lib/src/contacts/` | [contacts.md](../integrations/contacts.md) |

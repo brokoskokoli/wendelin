@@ -80,6 +80,9 @@ void main() {
     await tester.tap(find.text('Weiter'));
     await settle(tester);
     expect(find.byType(OnboardingScreen), findsOneWidget);
+    // The golden keeps its original frame.
+    setView(tester, const Size(390, 1400));
+    await settle(tester);
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/wake_onboarding_schritt.png'),

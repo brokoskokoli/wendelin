@@ -610,6 +610,25 @@
   "test": "Testen",
   "understood": "Verstanden",
   "yes": "Ja",
+  "confCallTitle": "Anrufen?",
+  "confHintVoiceCall": "Sag „anrufen“ oder „abbrechen“",
+  "confHintVoiceEdited": "Du hast den Text geändert: bitte per Tipp absenden",
+  "confHintVoiceSms": "Sag „absenden“ oder „abbrechen“",
+  "confNoCancel": "Abbrechen",
+  "confSmsNoText": "Die Nachricht darf nicht leer sein.",
+  "confSmsTextLabel": "Nachricht",
+  "confSmsTitle": "SMS absenden?",
+  "confSmsTo": "An {name}",
+  "@confSmsTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confYesCall": "Anrufen",
+  "confYesSend": "Absenden",
+  "integrationsContactsRationale": "Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.",
   "batteryAllow": "Keine Einschränkung erlauben",
   "batteryChecklistNote": "Android lässt diese Einstellungen nicht auslesen. Das ist eine Checkliste, kein Status.",
   "batteryHuaweiBody": "Stelle „App-Start“ für Wendelin auf „Manuell verwalten“ und erlaube Autostart, Zweitstart und Hintergrundaktivität.",
@@ -2142,6 +2161,14 @@
       }
     }
   },
+  "modelRowRam": "Arbeitsspeicher ca. {ram}",
+  "@modelRowRam": {
+    "placeholders": {
+      "ram": {
+        "type": "String"
+      }
+    }
+  },
   "modelRowResume": "Fortsetzen",
   "modelRowStarted": "{size} · angefangen",
   "@modelRowStarted": {
@@ -2245,12 +2272,37 @@
   "voiceErrorGeneric": "Sprache hat nicht geklappt. Bitte versuche es noch einmal.",
   "voiceErrorMicBusy": "Das Mikrofon war noch belegt. Bitte sprich noch einmal.",
   "voiceErrorModelMissing": "Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).",
+  "voiceMetricsClear": "Liste leeren",
+  "voiceMetricsEmpty": "Noch keine Messwerte. Sprich einen Befehl oder spiele eine Stimmprobe ab.",
+  "voiceMetricsIntro": "Die letzten Äußerungen dieser Sitzung: Rechenzeit (Latenz), Echtzeitfaktor (Rechenzeit je Audiozeit, kleiner ist schneller) und Speicher der App. Nur Zahlen, keine Inhalte.",
+  "voiceMetricsRow": "{latency} ms für {audio} ms Audio · RTF {rtf} · RAM {ram}",
+  "@voiceMetricsRow": {
+    "placeholders": {
+      "latency": {
+        "type": "String"
+      },
+      "audio": {
+        "type": "String"
+      },
+      "rtf": {
+        "type": "String"
+      },
+      "ram": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceMetricsStt": "Erkennung",
+  "voiceMetricsTts": "Sprachausgabe",
   "voiceScreenAutomatic": "Automatisch",
   "voiceScreenAutomaticDetail": "Systemstimme, sonst Offline-Stimme",
   "voiceScreenDetectAuto": "Automatisch erkennen",
   "voiceScreenFineTuning": "Feinabstimmung",
   "voiceScreenFixedLanguageHint": "Mit fester Sprache erkennt Whisper kurze Sätze zuverlässiger.",
   "voiceScreenIntro": "Wendelin erkennt Sprache auf dem Gerät (Whisper). Die Modelle werden einmal geladen und bleiben auf dem Gerät.",
+  "voiceScreenKeepModel": "Modell im Speicher halten",
+  "voiceScreenKeepModelHint": "Erkennung und Stimme bleiben geladen: schnellere Antworten, aber dauerhaft mehr Arbeitsspeicher. Bei Speicherknappheit gibt Wendelin sie frei.",
+  "voiceScreenKeepModelLabel": "Modell im Speicher halten",
   "voiceScreenLanguageDefault": "Standard der Sprache",
   "voiceScreenLanguageDefaultChip": "Standard der Sprache",
   "voiceScreenLearnsVoice": "Wendelin lernt deine Stimme",
@@ -2264,6 +2316,8 @@
     }
   },
   "voiceScreenListen": "Probe hören",
+  "voiceScreenMetrics": "Messwerte",
+  "voiceScreenMetricsDetail": "Zeit, Echtzeitfaktor und Speicher je Äußerung",
   "voiceScreenMicrophone": "Mikrofon",
   "voiceScreenMicrophoneTitle": "Mikrofon",
   "voiceScreenMinSpeech": "Mindestsprechdauer",
@@ -2350,6 +2404,7 @@
   },
   "voiceVoicesPreparing": "Probe wird vorbereitet …",
   "voiceVoicesSampleFailed": "Probe nicht möglich – die Stimme hat nicht gesprochen.",
+  "voiceVoicesSpeaker": "Sprecher",
   "voiceVoicesStopSample": "Probe beenden",
   "bargeDebugDefaultSuffix": "{v} (Standard)",
   "@bargeDebugDefaultSuffix": {

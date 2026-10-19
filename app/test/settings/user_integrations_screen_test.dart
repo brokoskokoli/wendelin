@@ -49,8 +49,7 @@ void main() {
   testWidgets('„+ MCP-Server“ und „+ HTTP-Tool“ öffnen ihre Bereiche', (
     tester,
   ) async {
-    await pumpIntegrations(tester, TestEnv());
-    await tester.scrollUntilVisible(find.text('+ MCP-Server'), 200);
+    await pumpIntegrations(tester, TestEnv(), size: const Size(390, 2000));
     await tester.tap(find.text('+ MCP-Server'));
     await settle(tester);
     expect(find.byType(McpServersScreen), findsOneWidget);
@@ -134,6 +133,6 @@ void main() {
   testWidgets('ohne eigene Integrationen kein Abschnitt', (tester) async {
     await pumpIntegrations(tester, TestEnv());
     expect(find.text('Eigene Integrationen'), findsNothing);
-    expect(find.byType(IntegrationTile), findsNWidgets(18));
+    expect(find.byType(IntegrationTile), findsNWidgets(19));
   });
 }
