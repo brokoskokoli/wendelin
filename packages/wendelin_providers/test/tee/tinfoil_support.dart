@@ -55,7 +55,7 @@ final class TinfoilFixture {
   late Uint8List keyConfig = service.keyConfig;
 
   /// `format` of the attestation document.
-  String format = 'sev-snp-guest/v2';
+  String format = TinfoilPolicy.attestationFormat;
 
   /// Override of the document `body`.
   String? bodyOverride;

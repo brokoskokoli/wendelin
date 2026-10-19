@@ -39,7 +39,8 @@ abstract final class TinfoilPolicy {
   static const products = ['Genoa', 'Milan'];
 
   /// Document format of `/.well-known/tinfoil-attestation`.
-  static const attestationFormat = 'sev-snp-guest/v2';
+  static const attestationFormat =
+      'https://tinfoil.sh/predicate/sev-snp-guest/v2';
 
   /// Largest accepted SNP report (v3 is 1184 bytes).
   static const maxReportBytes = 4096;
