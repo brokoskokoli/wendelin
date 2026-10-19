@@ -19,32 +19,7 @@ import '../snp_crypto.dart';
 import '../tls_pin_gate.dart';
 import 'ehbp_crypto.dart';
 import 'release_floor.dart';
-
-/// Fixed decisions of the Tinfoil attestation (ADR 0020).
-abstract final class TinfoilPolicy {
-  /// Repository whose signed release the router measurement must belong to.
-  static const repo = 'tinfoilsh/confidential-model-router';
-
-  /// Lowest accepted `reported_tcb`: set one step below the recording
-  /// (bootloader 10, SNP 23, microcode 84) on purpose, so a firmware
-  /// update of AMD does not lock the user out while a rollback to a
-  /// vulnerable firmware is refused. TEE SPL is not constrained (0).
-  static const minTcb = SnpTcb(bootloader: 9, tee: 0, snp: 22, microcode: 80);
-
-  /// [minTcb] as the policy of `SnpCrypto.verify`.
-  static const snpPolicy = SnpPolicy(minTcb: minTcb);
-
-  /// AMD products whose ARK is pinned and whose TCB layout is supported
-  /// (Turin follows, WP76 notes), in the order they are tried.
-  static const products = ['Genoa', 'Milan'];
-
-  /// Document format of `/.well-known/tinfoil-attestation`.
-  static const attestationFormat =
-      'https://tinfoil.sh/predicate/sev-snp-guest/v2';
-
-  /// Largest accepted SNP report (v3 is 1184 bytes).
-  static const maxReportBytes = 4096;
-}
+import 'tinfoil_policy.dart';
 
 /// [AttestationVerifier] for the Tinfoil router (ADR 0020): AMD SEV-SNP of
 /// the router CVM, its measurement against the signed GitHub release
@@ -256,24 +231,7 @@ final class TinfoilVerifier
             ),
     );
 
-    var releaseOk = false;
-    ReleaseFloor? newFloor;
-    final releaseProblem = release.problem;
-    if (releaseProblem != null) {
-      stages.add(releaseProblem);
-    } else {
-      final verdict = release.verdict!;
-      releaseOk = verdict.allOk;
-      stages.addAll(_releaseStages(verdict, release.tag!));
-      if (verdict.allOk) {
-        final (floorStage, floor) = await _floorStage(
-          release.tag!,
-          verdict.integratedTime,
-        );
-        stages.add(floorStage);
-        newFloor = floor;
-      }
-    }
+    final (releaseOk, newFloor) = await _releaseSection(release, stages);
     stages
       ..add(
         binding != null
@@ -325,6 +283,28 @@ final class TinfoilVerifier
       notes: policy.notes(stages),
       pinChange: await _pin(session),
     );
+  }
+
+  /// Adds the stages of the signed release (and the release floor); returns
+  /// whether the release is fully good and the floor to store afterwards.
+  Future<(bool, ReleaseFloor?)> _releaseSection(
+    _Release release,
+    List<StageResult> stages,
+  ) async {
+    final problem = release.problem;
+    if (problem != null) {
+      stages.add(problem);
+      return (false, null);
+    }
+    final verdict = release.verdict!;
+    stages.addAll(_releaseStages(verdict, release.tag!));
+    if (!verdict.allOk) return (false, null);
+    final (floorStage, floor) = await _floorStage(
+      release.tag!,
+      verdict.integratedTime,
+    );
+    stages.add(floorStage);
+    return (true, floor);
   }
 
   /// Report and key configuration of the router, or the failed stages.

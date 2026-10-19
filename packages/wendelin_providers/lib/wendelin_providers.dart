@@ -43,6 +43,7 @@ export 'src/tee/snp_crypto.dart';
 export 'src/tee/tinfoil/ehbp_crypto.dart';
 export 'src/tee/tinfoil/release_floor.dart';
 export 'src/tee/tinfoil/tinfoil_ehbp.dart';
+export 'src/tee/tinfoil/tinfoil_policy.dart';
 export 'src/tee/tinfoil/tinfoil_verifier.dart';
 export 'src/tee/tls_pin_gate.dart' show TlsPinGate;
 export 'src/tee/tls_pinned_client.dart' show PinnedHttpClient, TlsConnect;
