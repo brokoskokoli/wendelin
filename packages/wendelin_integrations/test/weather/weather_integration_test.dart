@@ -96,6 +96,23 @@ void main() {
       expect(geocoder.asked, isEmpty);
     });
 
+    test('Standort-Port bekommt die Stufe des Ziels', () async {
+      final loc = FakeWeatherLocationPort(palma);
+      integration = make(home: home, location: loc);
+      final base = at();
+      await tool('weather__forecast').execute(
+        {},
+        ToolContext(
+          sessionId: base.sessionId,
+          clock: base.clock,
+          locale: base.locale,
+          timeZone: base.timeZone,
+          privacyLevel: PrivacyLevel.standard,
+        ),
+      );
+      expect(loc.levels, [PrivacyLevel.standard]);
+    });
+
     test('Standort unbekannt: Heimatort', () async {
       integration = make(home: home, location: FakeWeatherLocationPort(null));
       await tool('weather__forecast').execute({}, at());

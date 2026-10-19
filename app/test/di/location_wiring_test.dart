@@ -6,6 +6,8 @@ import 'package:wendelin/di/app_requirements.dart';
 import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/integrations/location_spec.dart';
 import 'package:wendelin/di/integrations/maps_spec.dart';
+import 'package:wendelin/di/preference_models.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/weather.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
@@ -117,21 +119,72 @@ void main() {
     expect(mapsSpec.requiredApp, same(KnownApps.googleMaps));
   });
 
-  test(
-    'Wetter bekommt den Standort nur bei eingeschaltetem Standort',
-    () async {
+  group('Wetter und Standort', () {
+    test('nur bei eingeschaltetem Standort', () async {
       final off = TestEnv();
       final c1 = off.container();
       addTearDown(c1.dispose);
       expect(c1.read(weatherLocationPortProvider), isNull);
+    });
 
+    test('Ziel ab Mindeststufe bekommt die Geräteposition', () async {
       final on = TestEnv(enabled: const {'location'});
-      final c2 = on.container();
-      addTearDown(c2.dispose);
-      final port = c2.read(weatherLocationPortProvider)!;
-      expect((await port.currentPlace())!.name, 'Hamburg');
+      final c = on.container();
+      addTearDown(c.dispose);
+      final port = c.read(weatherLocationPortProvider)!;
+      expect(
+        (await port.currentPlace(level: PrivacyLevel.tee))!.name,
+        'Hamburg',
+      );
+      expect(
+        (await port.currentPlace(level: PrivacyLevel.local))!.name,
+        'Hamburg',
+      );
       on.location.permission = false;
-      expect(await port.currentPlace(), isNull);
-    },
-  );
+      expect(await port.currentPlace(level: PrivacyLevel.local), isNull);
+    });
+
+    test('Standard-Ziel: Wetter ohne Geräteposition', () async {
+      final on = TestEnv(enabled: const {'location'});
+      final c = on.container();
+      addTearDown(c.dispose);
+      final port = c.read(weatherLocationPortProvider)!;
+      for (final level in [PrivacyLevel.standard, PrivacyLevel.eu, null]) {
+        expect(await port.currentPlace(level: level), isNull, reason: '$level');
+      }
+      expect(on.location.methodCalls, isNot(contains('current')));
+    });
+
+    test(
+      'Nutzer markiert Standort als nicht sensibel: auch Standard',
+      () async {
+        final on = TestEnv(enabled: const {'location'});
+        final c = on.container();
+        addTearDown(c.dispose);
+        await c
+            .read(toolPrefsProvider.notifier)
+            .set(const ToolPrefs(sensitive: {'location': false}));
+        final port = c.read(weatherLocationPortProvider)!;
+        expect(
+          (await port.currentPlace(level: PrivacyLevel.standard))!.name,
+          'Hamburg',
+        );
+      },
+    );
+
+    test('eigene Mindeststufe zählt', () async {
+      final on = TestEnv(enabled: const {'location'});
+      final c = on.container();
+      addTearDown(c.dispose);
+      await c
+          .read(toolPrefsProvider.notifier)
+          .set(const ToolPrefs(sensitiveMinimum: PrivacyLevel.eu));
+      final port = c.read(weatherLocationPortProvider)!;
+      expect(await port.currentPlace(level: PrivacyLevel.standard), isNull);
+      expect(
+        (await port.currentPlace(level: PrivacyLevel.eu))!.name,
+        'Hamburg',
+      );
+    });
+  });
 }

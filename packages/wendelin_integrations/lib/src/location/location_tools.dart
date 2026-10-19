@@ -263,7 +263,9 @@ final class LocationDistanceToTool extends IntegrationTool {
       final language = ctx.locale.split(RegExp('[-_]')).first;
       final Place? place;
       try {
-        place = await g.find(name, language: language);
+        place = await g.find(name, language: language, cancel: ctx.cancel);
+      } on CancelledException {
+        rethrow;
       } on Exception {
         throw const PortException(
           PortErrorKind.unavailable,
@@ -294,7 +296,7 @@ final class LocationDistanceToTool extends IntegrationTool {
       'kind': 'Luftlinie, nicht die Fahrstrecke',
       if (coords == null && label.isNotEmpty) 'to': ellipsize(label, 80),
     };
-    return jsonOutcome(data, summary: 'Entfernung berechnet: $text');
+    return jsonOutcome(data, summary: 'Entfernung berechnet');
   }
 
   @override

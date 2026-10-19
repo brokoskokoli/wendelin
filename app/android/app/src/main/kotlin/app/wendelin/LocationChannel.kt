@@ -214,7 +214,10 @@ class LocationChannel(private val activity: Activity, messenger: BinaryMessenger
 
     companion object {
         const val CHANNEL = "app.wendelin/location"
-        private const val PERMISSION_REQUEST = 4712
+        // Request codes in use (must stay unique, they share one Activity):
+        // Calendar 4711, Notify 4712, Files 4712 (pick, other callback),
+        // Vault 4713, Location 4714. Next free: 4715.
+        private const val PERMISSION_REQUEST = 4714
         private const val FIX_TIMEOUT_S = 12L
         private const val GEOCODE_TIMEOUT_S = 4L
     }

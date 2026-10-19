@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/testing.dart';
@@ -232,6 +235,17 @@ void main() {
       expect(json(o)['kind'], contains('Luftlinie'));
       expect(o.text, isNot(contains('53.55')));
       expect(geocoder.asked, ['Berlin']);
+      // Die Zusammenfassung (Verlauf, Zusammenfassungen an Anbieter) nennt
+      // keine Entfernung.
+      expect(o.summary, 'Entfernung berechnet');
+    });
+
+    test('Geocoder bekommt das Abbruch-Token', () async {
+      final cancel = CancelToken();
+      await tool('location__distance_to').execute({
+        'destination': 'Berlin',
+      }, ctxAt(DateTime.utc(2026), cancel: cancel));
+      expect(geocoder.lastCancel, same(cancel));
     });
 
     test('Koordinaten ohne Geocoder', () async {
@@ -303,5 +317,63 @@ void main() {
       port.fix = null;
       expect(await w.currentPlace(), isNull);
     });
+
+    test('ohne Berechtigung wird die Position nicht gelesen', () async {
+      final w = LocationWeatherPort(port);
+      port.permission = false;
+      await w.currentPlace();
+      expect(port.methodCalls, isNot(contains('current')));
+    });
+
+    test('Koordinaten auf zwei Nachkommastellen gerundet', () async {
+      final w = LocationWeatherPort(port);
+      port.fix = const GeoFix(latitude: 53.55119, longitude: 9.99371);
+      final p = (await w.currentPlace())!;
+      expect(p.latitude, 53.55);
+      expect(p.longitude, 9.99);
+    });
+
+    test('ohne Fix nach der Frist: null (Heimatort)', () {
+      fakeAsync((async) {
+        final w = LocationWeatherPort(_HangingPort());
+        var done = false;
+        Place? result = const Place(name: 'x', latitude: 0, longitude: 0);
+        w.currentPlace().then((p) {
+          done = true;
+          result = p;
+        });
+        async.elapse(const Duration(seconds: 7));
+        expect(done, isFalse);
+        async.elapse(const Duration(seconds: 2));
+        expect(done, isTrue);
+        expect(result, isNull);
+      });
+    });
+
+    test('Abbruch beendet die Suche sofort mit null', () {
+      fakeAsync((async) {
+        final w = LocationWeatherPort(_HangingPort());
+        final cancel = CancelToken();
+        var done = false;
+        w.currentPlace(cancel: cancel).then((_) => done = true);
+        async.flushMicrotasks();
+        expect(done, isFalse);
+        cancel.cancel();
+        async.flushMicrotasks();
+        expect(done, isTrue);
+      });
+    });
   });
+}
+
+/// A port whose fix never arrives.
+final class _HangingPort implements LocationPort {
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<GeoFix> current() => Completer<GeoFix>().future;
 }
