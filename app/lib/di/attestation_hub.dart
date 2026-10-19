@@ -36,6 +36,29 @@ final class SettingsAttestationPinStore implements AttestationPinStore {
       _settings.set(AppSettings.attestationPin(profileId), pin.toJson());
 }
 
+/// Persists the highest verified Tinfoil release per profile (K59). A
+/// damaged entry counts as none (the next check sets it), like the pin.
+final class SettingsReleaseFloorStore implements ReleaseFloorStore {
+  /// Creates the store.
+  const SettingsReleaseFloorStore(this._settings);
+
+  final SettingsRepository _settings;
+
+  @override
+  Future<ReleaseFloor?> load(String profileId) async {
+    try {
+      final json = await _settings.get(AppSettings.releaseFloor(profileId));
+      return json == null ? null : ReleaseFloor.fromJson(json);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> save(String profileId, ReleaseFloor floor) =>
+      _settings.set(AppSettings.releaseFloor(profileId), floor.toJson());
+}
+
 /// Keeps the live TEE providers of the app (one per profile): merges their
 /// results (the GPU mode belongs to the profile, WP82), warns about a failed
 /// asynchronous GPU check and offers „neu prüfen“, „ohne GPU-Prüfung

@@ -12,6 +12,9 @@ import '../platform/attest/attest_backend.dart';
 import '../platform/attest/collateral_cache.dart';
 import '../platform/attest/pcs_collateral_client.dart';
 import '../platform/attest/rust_attestation_crypto.dart';
+import '../platform/attest/rust_ehbp_crypto.dart';
+import '../platform/attest/rust_sigstore_crypto.dart';
+import '../platform/attest/rust_snp_crypto.dart';
 import '../platform/channel_notifier.dart';
 import 'attestation_hub.dart';
 import 'preferences.dart';
@@ -71,6 +74,11 @@ final attestationPinStoreProvider = Provider<AttestationPinStore>(
   (ref) => SettingsAttestationPinStore(ref.watch(storageProvider).settings),
 );
 
+/// Highest verified Tinfoil release per profile (downgrade protection).
+final releaseFloorStoreProvider = Provider<ReleaseFloorStore>(
+  (ref) => SettingsReleaseFloorStore(ref.watch(storageProvider).settings),
+);
+
 /// The live TEE providers, their results and actions.
 final Provider<AttestationHub> attestationHubProvider =
     Provider<AttestationHub>((ref) {
@@ -123,8 +131,13 @@ AttestationWiring? attestationWiringOf(Ref ref) {
   final crypto = ref.read(attestationCryptoProvider).asData?.value;
   if (crypto == null) return null;
   final transport = ref.read(attestationTransportProvider);
+  final backend = ref.read(attestBackendProvider).asData?.value;
   return AttestationWiring(
     crypto: crypto,
+    snpCrypto: backend == null ? null : RustSnpCrypto(backend),
+    sigstoreCrypto: backend == null ? null : RustSigstoreCrypto(backend),
+    ehbpCrypto: backend == null ? null : RustEhbpCrypto(backend),
+    releaseFloors: ref.read(releaseFloorStoreProvider),
     nearCrypto: crypto is NearCrypto ? crypto as NearCrypto : null,
     logSink: ref.read(attestationLogWriterProvider),
     pins: ref.read(attestationPinStoreProvider),

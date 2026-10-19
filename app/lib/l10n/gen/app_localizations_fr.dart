@@ -167,7 +167,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get attE2eeKeyNote =>
-      'Tout le contenu est chiffré avec cette clé vérifiée. Le chiffrement se termine dans la passerelle du fournisseur (enclave vérifiée), et non dans le modèle lui-même. Avec NEAR AI, il se termine dans le modèle vérifié.';
+      'Tout le contenu est chiffré avec cette clé vérifiée. Le chiffrement se termine dans la passerelle du fournisseur (enclave vérifiée), et non dans le modèle lui-même. Avec NEAR AI, il se termine dans le modèle vérifié. Avec Tinfoil, il se termine dans le routeur vérifié, qui le transmet au modèle.';
 
   @override
   String get attExplainAccept => 'Accepter';
@@ -476,6 +476,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get attRevokedTitle => 'Plateforme de l’exploitant révoquée';
 
   @override
+  String get attSBindHpke => 'Clé de chiffrement liée';
+
+  @override
   String get attSCompose => 'Hash compose';
 
   @override
@@ -512,6 +515,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get attSKeysetSignature => 'Signature de l’ensemble de clés';
 
   @override
+  String get attSMeasurement => 'Mesure = version';
+
+  @override
+  String get attSNoReceipt => 'Reçu par réponse';
+
+  @override
   String get attSNonce => 'Nonce lié';
 
   @override
@@ -537,6 +546,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get attSReceiptSignature => 'Signature du reçu';
+
+  @override
+  String get attSReleaseFloor => 'Pas de retour en arrière';
+
+  @override
+  String get attSSigstore => 'Version signée (Sigstore)';
+
+  @override
+  String get attSSnpChain => 'Chaîne de certificats AMD';
+
+  @override
+  String get attSSnpPolicy => 'Politique du processeur';
+
+  @override
+  String get attSSnpReport => 'Attestation matérielle AMD';
 
   @override
   String get attSTcb => 'Niveau de sécurité de la plateforme (TCB)';
@@ -699,6 +723,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get stageAgeWhat => 'L’âge de l’attestation.';
 
   @override
+  String get stageBindHpkeInfo => 'La clé a seulement été consignée.';
+
+  @override
+  String get stageBindHpkePass =>
+      'Seul le serveur vérifié peut lire la demande. La clé provient de l’attestation, pas d’une réponse non vérifiée.';
+
+  @override
+  String get stageBindHpkeWhat =>
+      'Si la clé avec laquelle Wendelin chiffre votre demande est exactement celle de l’attestation matérielle.';
+
+  @override
   String get stageComposeInfo =>
       'Le hash a été consigné, mais pas comparé à une liste de valeurs de confiance.';
 
@@ -809,6 +844,29 @@ class AppLocalizationsFr extends AppLocalizations {
       'La somme de contrôle de l’ensemble de clés (les clés avec lesquelles Wendelin chiffre) doit figurer dans l’attestation matérielle.';
 
   @override
+  String get stageMeasurementInfo => 'La mesure a seulement été consignée.';
+
+  @override
+  String get stageMeasurementPass =>
+      'Le serveur exécute le code publié, aucun autre.';
+
+  @override
+  String get stageMeasurementWhat =>
+      'Si la mesure du serveur en cours d’exécution est exactement celle de la dernière version signée.';
+
+  @override
+  String get stageNoReceiptInfo =>
+      'Tinfoil n’émet pas de reçu par réponse. La réponse n’est liée à votre demande que par le chiffrement ; aucun reçu ne prouve quel modèle l’a produite.';
+
+  @override
+  String get stageNoReceiptPass =>
+      'Chaque réponse s’accompagne d’un reçu signé.';
+
+  @override
+  String get stageNoReceiptWhat =>
+      'Si chaque réponse s’accompagne d’un reçu signé qui prouve la demande et la réponse.';
+
+  @override
   String get stageNonceInfo => 'Le nombre a seulement été consigné.';
 
   @override
@@ -913,6 +971,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get stageReceiptSigWhat => 'La signature du reçu.';
 
   @override
+  String get stageReleaseFloorInfo =>
+      'La protection contre le retour en arrière a seulement été consignée.';
+
+  @override
+  String get stageReleaseFloorPass =>
+      'Le serveur exécute la version la plus récente vue jusqu’ici ou une plus récente.';
+
+  @override
+  String get stageReleaseFloorWhat =>
+      'Si la version n’est pas plus ancienne que la plus récente que Wendelin ait jamais vérifiée (protection contre un retour à d’anciennes versions vulnérables).';
+
+  @override
   String get stageResponseKeyInfo =>
       'L’ensemble de clés a seulement été consigné.';
 
@@ -941,6 +1011,53 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get stageSignatureWhat =>
       'Une signature supplémentaire de l’ensemble de clés, fournie par certains fournisseurs.';
+
+  @override
+  String get stageSigstoreInfo =>
+      'La signature de la version a seulement été consignée.';
+
+  @override
+  String get stageSigstorePass =>
+      'La version provient de la compilation de Tinfoil et figure publiquement dans le journal.';
+
+  @override
+  String get stageSigstoreWhat =>
+      'Si la version du programme publiée par Tinfoil sur GitHub est réellement signée et inscrite dans le journal de transparence public (Sigstore).';
+
+  @override
+  String get stageSnpChainInfo =>
+      'La chaîne de certificats a seulement été consignée.';
+
+  @override
+  String get stageSnpChainPass =>
+      'La chaîne se termine chez AMD, pas sur un certificat glissé par quelqu’un.';
+
+  @override
+  String get stageSnpChainWhat =>
+      'Si le certificat du processeur remonte, par le certificat intermédiaire AMD, jusqu’à la clé racine AMD intégrée à Wendelin.';
+
+  @override
+  String get stageSnpPolicyInfo => 'La politique a seulement été consignée.';
+
+  @override
+  String get stageSnpPolicyPass =>
+      'L’environnement n’est pas ouvert à l’espionnage et ne contient aucun micrologiciel connu comme obsolète.';
+
+  @override
+  String get stageSnpPolicyWhat =>
+      'Si l’environnement tourne sans accès de débogage et si le micrologiciel et le microcode du processeur sont au moins aussi récents que Wendelin l’exige (bootloader 9, SNP 22, microcode 80).';
+
+  @override
+  String get stageSnpReportInfo =>
+      'Le rapport du processeur a seulement été consigné.';
+
+  @override
+  String get stageSnpReportPass =>
+      'Un véritable processeur AMD garantit le rapport. Personne ne peut le modifier après coup.';
+
+  @override
+  String get stageSnpReportWhat =>
+      'L’attestation matérielle du serveur Tinfoil : le rapport du processeur AMD, son certificat et la signature qui le couvre.';
 
   @override
   String get stageTcbInfo => 'Le niveau de sécurité a seulement été consigné.';
