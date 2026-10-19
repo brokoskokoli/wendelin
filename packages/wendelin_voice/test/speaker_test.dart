@@ -29,6 +29,17 @@ Float32List _at(double c) {
   return Float32List.fromList([c, s, 0, 0]);
 }
 
+double _cos(double x) {
+  // Taylor series, enough for |x| < 2.
+  var term = 1.0;
+  var sum = 1.0;
+  for (var n = 1; n < 12; n++) {
+    term *= -x * x / ((2 * n - 1) * (2 * n));
+    sum += term;
+  }
+  return sum;
+}
+
 double _sqrt(double x) {
   var r = x;
   for (var i = 0; i < 40; i++) {
@@ -179,6 +190,16 @@ void main() {
       expect(SpeakerIdentifier.decide(_at(1), [a, b]).personId, 'a');
     });
 
+    test('mehrdeutig auch, wenn der Beste hinten steht', () {
+      final a = profile('a', _at(1), 0.5);
+      final b = profile('b', _at(0.8), 0.5);
+      final m = SpeakerIdentifier.decide(
+        Float32List.fromList([0.9487, 0.3162, 0, 0]),
+        [b, a],
+      );
+      expect(m.reason, SpeakerUnknownReason.ambiguous);
+    });
+
     test('Kalibrierung zieht die Streuung ab, Klammer begrenzt', () {
       expect(
         SpeakerIdentifier.calibrateThreshold([0.8, 0.8, 0.8]),
@@ -227,6 +248,67 @@ void main() {
       );
       expect(store.isEmpty, isTrue);
     });
+
+    test('Mindestlänge 1,5 s: eine Probe darunter wird abgelehnt', () async {
+      final k = keys['thorsten']!;
+      final ok = SpeakerIdentifier.minEnrollAudioSamples;
+      expect(ok, 24000);
+      Int16List clip(int i, int n) => Int16List(n)..[0] = k[i];
+      await expectLater(
+        id.enroll(
+          id: 'a',
+          name: 'A',
+          samples: [clip(0, ok), clip(1, ok), clip(2, ok - 1)],
+        ),
+        throwsA(isA<SpeakerEnrollException>()),
+      );
+      final r = await id.enroll(
+        id: 'a',
+        name: 'A',
+        samples: [clip(0, ok), clip(1, ok), clip(2, ok)],
+      );
+      expect(r.profile.id, 'a');
+    });
+
+    test(
+      'gestreute Kalibrierung: Schwelle an der Untergrenze, markiert',
+      () async {
+        // Three embeddings 40 degrees apart: leave-one-out scores 0.5/1/0.5,
+        // so mean - 2 sigma is far below the floor.
+        Float32List at(double deg) {
+          final r = deg * 3.141592653589793 / 180;
+          return Float32List.fromList([
+            _cos(r),
+            _cos(r - 1.5707963267948966),
+            0,
+            0,
+          ]);
+        }
+
+        final e = FakeSpeakerEmbedder([at(-40), at(0), at(40), at(0)]);
+        final scattered = SpeakerIdentifier(embedder: e, store: store);
+        final r = await scattered.enroll(
+          id: 'a',
+          name: 'A',
+          samples: [for (var i = 0; i < 3; i++) FakeSpeakerEmbedder.audio(i)],
+        );
+        expect(r.minScore, greaterThanOrEqualTo(0.45));
+        expect(r.profile.threshold, SpeakerIdentifier.thresholdFloor);
+        expect(r.thresholdClamped, isTrue);
+        // A very steady voice hits the ceiling.
+        final steady = SpeakerIdentifier(
+          embedder: FakeSpeakerEmbedder([at(0), at(0), at(0)]),
+          store: store,
+        );
+        final s = await steady.enroll(
+          id: 'b',
+          name: 'B',
+          samples: [for (var i = 0; i < 3; i++) FakeSpeakerEmbedder.audio(i)],
+        );
+        expect(s.profile.threshold, SpeakerIdentifier.thresholdCeiling);
+        expect(s.thresholdClamped, isTrue);
+      },
+    );
 
     test('gemischte Sprecher: abgelehnt, nichts gespeichert', () async {
       final mixed = [
@@ -284,6 +366,23 @@ void main() {
       expect(store.dump, contains('Ben'));
       expect((await store.load()).map((p) => p.id), ['b']);
     });
+
+    test(
+      'Löschen über einen zweiten Identifier gilt sofort (kein Cache)',
+      () async {
+        await enrollBoth();
+        final other = SpeakerIdentifier(embedder: embedder, store: store);
+        expect((await id.identify(testAudio('thorsten', 0))).isKnown, isTrue);
+        await other.remove('a');
+        expect((await id.identify(testAudio('thorsten', 0))).isKnown, isFalse);
+        expect((await id.identify(testAudio('kerstin', 0))).personId, 'b');
+        await other.removeAll();
+        expect(
+          (await id.identify(testAudio('kerstin', 0))).reason,
+          SpeakerUnknownReason.noProfiles,
+        );
+      },
+    );
 
     test('alles löschen leert den Speicher', () async {
       await enrollBoth();

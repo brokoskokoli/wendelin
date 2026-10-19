@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:test/test.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_voice/fakes.dart';
@@ -61,5 +64,58 @@ void main() {
         expect(h.diagnostics, contains('speaker-failed'));
       });
     });
+
+    test('hängende Erkennung: nach dem Zeitlimit unbekannt, Anfrage läuft', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Ok.')],
+          speaker: _Hanging(),
+        );
+        h.pipeline.start();
+        async.elapse(VoicePipeline.speakerTimeout * 2);
+        async.flushMicrotasks();
+        settle(async);
+        final t = h.eventsOf<VoiceTranscribed>().single.transcript;
+        expect(t.speaker?.reason, SpeakerUnknownReason.failed);
+        expect(h.diagnostics, contains('speaker-timeout'));
+        expect(h.tts.spoken, ['Ok.']);
+      });
+    });
+
+    test('Weckwort: Sprecher am Transcript, Anfrage ohne Weckwort', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Ok.')],
+          speaker: FakeSpeakerRecognizer(anna),
+          transcripts: const [
+            Transcript(
+              text: 'Wendelin, wie wird das Wetter?',
+              language: 'de',
+              confidence: 0.9,
+            ),
+          ],
+        );
+        h.pipeline.start(
+          trigger: TriggerEvent(
+            source: TriggerKind.wakeWord,
+            at: DateTime.utc(2026, 10, 14),
+            preRoll: AudioFrames.speech(const Duration(milliseconds: 600)),
+          ),
+        );
+        settle(async);
+        final t = h.eventsOf<VoiceTranscribed>().first.transcript;
+        // The event carries the full transcript with the speaker; the agent
+        // gets the text without the wake word. (The speaker on the stripped
+        // copy is only consumed from WP92b on, so it is not observable yet.)
+        expect(t.speaker, anna);
+        expect(h.recording.inputs.single.text, 'wie wird das Wetter?');
+      });
+    });
   });
+}
+
+final class _Hanging implements SpeakerRecognizer {
+  @override
+  Future<SpeakerMatch> identify(Int16List pcm) =>
+      Completer<SpeakerMatch>().future;
 }

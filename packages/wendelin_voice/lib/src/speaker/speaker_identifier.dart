@@ -11,7 +11,7 @@ enum SpeakerEnrollProblem {
   /// Fewer than [SpeakerIdentifier.minEnrollSamples] sentences.
   tooFewSamples,
 
-  /// A recording is shorter than [SpeakerIdentifier.minEnrollSamples].
+  /// A recording is shorter than [SpeakerIdentifier.minEnrollAudioSamples].
   tooShort,
 
   /// The sentences do not sound like one person (someone else spoke, or
@@ -81,8 +81,8 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
   /// Shortest audio that is embedded when recognizing (1 s).
   static const minIdentifySamples = speakerSampleRate;
 
-  /// Shortest enrollment sentence (1.2 s).
-  static const minEnrollAudioSamples = speakerSampleRate * 12 ~/ 10;
+  /// Shortest enrollment sentence (1.5 s).
+  static const minEnrollAudioSamples = speakerSampleRate * 3 ~/ 2;
 
   /// Lowest threshold ever used. The model card names 0.33 as the
   /// equal-error point; stricter, so a stranger's voice stays „unknown“.
@@ -97,11 +97,9 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
   /// Spread of the enrollment scores kept below the threshold.
   static const spreadFactor = 2.0;
 
-  List<SpeakerProfile>? _profiles;
-
-  /// The enrolled persons.
-  Future<List<SpeakerProfile>> profiles() async =>
-      List.of(_profiles ??= await store.load());
+  /// The enrolled persons, read from the store every time (no cache), so
+  /// another identifier on the same store (overlay engine) sees deletions.
+  Future<List<SpeakerProfile>> profiles() => store.load();
 
   /// Whether anyone is enrolled.
   Future<bool> get hasProfiles async => (await profiles()).isNotEmpty;
@@ -148,11 +146,6 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
       createdAt: now ?? DateTime.now(),
     );
     await store.save(profile);
-    _profiles = [
-      for (final p in await profiles())
-        if (p.id != id) p,
-      profile,
-    ];
     return SpeakerEnrollResult(
       profile: profile,
       meanScore: mean,
@@ -243,16 +236,11 @@ final class SpeakerIdentifier implements SpeakerRecognizer {
   /// Deletes the person [id] with all embeddings.
   Future<void> remove(String id) async {
     await store.delete(id);
-    _profiles = [
-      for (final p in await profiles())
-        if (p.id != id) p,
-    ];
   }
 
   /// Deletes every profile.
   Future<void> removeAll() async {
     await store.clear();
-    _profiles = [];
   }
 
   /// Frees the embedding model.

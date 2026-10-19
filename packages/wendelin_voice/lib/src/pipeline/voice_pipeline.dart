@@ -558,13 +558,20 @@ final class VoicePipeline {
     }
   }
 
+  /// How long a request waits for the recognition at most; a hanging
+  /// recognizer must never hang the request („unbekannt“ instead).
+  static const speakerTimeout = Duration(seconds: 3);
+
   /// Recognition of who spoke [pcm], started before the transcription so
   /// both run in parallel. `null` = recognition off; never throws.
   Future<SpeakerMatch?> _identify(Int16List pcm) async {
     final recognizer = speaker;
     if (recognizer == null) return null;
     try {
-      return await recognizer.identify(pcm);
+      return await recognizer.identify(pcm).timeout(speakerTimeout);
+    } on TimeoutException {
+      diagnostics?.call('speaker-timeout');
+      return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);
     } on Object {
       diagnostics?.call('speaker-failed');
       return const SpeakerMatch.unknown(SpeakerUnknownReason.failed);

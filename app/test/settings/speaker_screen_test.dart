@@ -160,4 +160,65 @@ void main() {
     expect(find.text('Noch einmal'), findsOneWidget);
     expect(await env.secrets.listKeys(), isEmpty);
   });
+
+  testWidgets('Einlernen bei ausgeschaltetem Schalter gibt das Modell frei', (
+    tester,
+  ) async {
+    final embedder = ScriptedEmbedder([
+      [1, 0, 0],
+      [0.95, 0.1, 0],
+      [0.97, 0.05, 0.1],
+      [0.93, 0.12, 0.05],
+      [0.96, 0.08, 0.02],
+    ]);
+    final env = speakerEnv(embedder: embedder);
+    await pump(tester, env);
+    final before = embedder.releases;
+    await addPerson(tester, 'Anna');
+    await settle(
+      tester,
+      until: () => find.text('Eingelernt').evaluate().isNotEmpty,
+    );
+    expect(embedder.calls, 5);
+    expect(embedder.releases, before + 1);
+  });
+
+  testWidgets('Einlernen bei eingeschaltetem Schalter behält das Modell', (
+    tester,
+  ) async {
+    final embedder = ScriptedEmbedder([
+      [1, 0, 0],
+      [0.95, 0.1, 0],
+      [0.97, 0.05, 0.1],
+      [0.93, 0.12, 0.05],
+      [0.96, 0.08, 0.02],
+    ]);
+    final env = speakerEnv(embedder: embedder);
+    await pump(tester, env);
+    await tester.tap(find.byType(WSwitch));
+    await settle(tester);
+    final before = embedder.releases;
+    await addPerson(tester, 'Anna');
+    await settle(
+      tester,
+      until: () => find.text('Eingelernt').evaluate().isNotEmpty,
+    );
+    expect(embedder.releases, before);
+  });
+
+  testWidgets('Ausschalten gibt das Modell frei', (tester) async {
+    final embedder = ScriptedEmbedder([
+      [1, 0, 0],
+    ]);
+    final env = speakerEnv(embedder: embedder);
+    final c = await pump(tester, env);
+    await tester.tap(find.byType(WSwitch));
+    await settle(tester);
+    expect(c.read(speakerRecognizerProvider), isNotNull);
+    final before = embedder.releases;
+    await tester.tap(find.byType(WSwitch));
+    await settle(tester);
+    expect(c.read(speakerRecognizerProvider), isNull);
+    expect(embedder.releases, before + 1);
+  });
 }

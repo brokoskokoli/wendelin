@@ -6,7 +6,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../wake/utterance_capture.dart';
 
 /// One enrollment sentence: up to 6 s wait, up to 10 s speech, at least
-/// 1.2 s (WP92a).
+/// 1.5 s (WP92a).
 UtteranceCapture newSentenceCapture() => UtteranceCapture(
   maxWait: 6 * AudioInput.sampleRate,
   maxSpeech: 10 * AudioInput.sampleRate,

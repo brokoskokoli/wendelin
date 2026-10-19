@@ -434,9 +434,8 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
     release: () async {
       await whisper.release(reason: 'idle');
       await sherpa.dispose();
-      if (speaker != null) {
-        await ref.read(speakerIdentifierProvider).release();
-      }
+      // Also with the switch off: the model may be loaded by an enrollment.
+      await ref.read(speakerIdentifierProvider).release();
     },
   );
 });

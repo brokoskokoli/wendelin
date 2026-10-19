@@ -100,6 +100,10 @@ class _EnrollState extends ConsumerState<SpeakerEnrollScreen> {
       if (mounted) setState(() => _problem = SpeakerEnrollProblem.failed);
     } finally {
       _samples.clear(); // never keep the audio longer than needed
+      // The switch is off: the model loaded for the enrollment goes again.
+      if (!ref.read(speakerRecognitionEnabledProvider)) {
+        unawaited(ref.read(speakerIdentifierProvider).release());
+      }
       if (mounted) setState(() => _processing = false);
     }
   }

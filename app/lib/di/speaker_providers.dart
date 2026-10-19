@@ -38,11 +38,13 @@ final speakerRecognitionEnabledProvider = Provider<bool>(
 );
 
 /// The recognizer for the pipeline; `null` while the switch is off.
-final speakerRecognizerProvider = Provider<SpeakerRecognizer?>(
-  (ref) => ref.watch(speakerRecognitionEnabledProvider)
-      ? ref.watch(speakerIdentifierProvider)
-      : null,
-);
+final speakerRecognizerProvider = Provider<SpeakerRecognizer?>((ref) {
+  final identifier = ref.watch(speakerIdentifierProvider);
+  if (ref.watch(speakerRecognitionEnabledProvider)) return identifier;
+  // Switched off: free the model (a no-op when it was never loaded).
+  unawaited(identifier.release());
+  return null;
+});
 
 /// The enrolled persons.
 final speakerProfilesProvider =

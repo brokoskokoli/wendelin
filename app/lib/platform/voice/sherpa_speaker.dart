@@ -26,6 +26,10 @@ final class SherpaSpeakerEmbedder implements SpeakerEmbedder {
   /// Directory of the installed model.
   final String directory;
 
+  /// How long the isolate may take for one embedding before it counts as
+  /// hanging and is killed.
+  static Duration replyTimeout = const Duration(seconds: 10);
+
   /// How long [release] waits for the isolate to exit before killing it.
   static Duration exitGrace = const Duration(seconds: 5);
 
@@ -36,8 +40,15 @@ final class SherpaSpeakerEmbedder implements SpeakerEmbedder {
 
   @override
   Future<Float32List> embed(Int16List pcm) async {
-    final session = await (_session ??= _start());
-    return session.embed(pcm);
+    final pending = _session ??= _start();
+    final session = await pending;
+    try {
+      return await session.embed(pcm);
+    } on TimeoutException {
+      // The isolate hangs (and is killed): the next call starts a new one.
+      if (identical(_session, pending)) _session = null;
+      rethrow;
+    }
   }
 
   Future<_Session> _start() async {
@@ -107,7 +118,14 @@ final class _Session {
       _requests.send(
         TransferableTypedData.fromList([samples.buffer.asUint8List()]),
       );
-      await _replies.moveNext();
+      try {
+        await _replies.moveNext().timeout(SherpaSpeakerEmbedder.replyTimeout);
+      } on TimeoutException {
+        // A late reply would answer the wrong request: drop the session.
+        _worker.kill();
+        unawaited(_replies.cancel());
+        rethrow;
+      }
       final reply = _replies.current;
       if (reply is TransferableTypedData) {
         return reply.materialize().asFloat32List();
