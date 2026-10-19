@@ -40,8 +40,27 @@ extension _VoiceConfirmation on VoiceController {
     unawaited(_confirmByVoice(question));
   }
 
+  YesNo? _spokenAnswer(
+    String transcript,
+    PendingQuestion question,
+    OutgoingPreview? outgoing,
+  ) => VoiceController.recognizer.parse(
+    transcript,
+    strict: strictAnswer(question),
+    extraYes: switch (outgoing?.kind) {
+      OutgoingKind.sms => YesNoRecognizer.smsYesWords,
+      OutgoingKind.call => YesNoRecognizer.callYesWords,
+      null => const {},
+    },
+  );
+
+  bool _editedSinceRead(OutgoingPreview? outgoing) =>
+      outgoing != null &&
+      ref.read(smsDraftEditsProvider).isEdited(outgoing.number, outgoing.text);
+
   Future<void> _confirmByVoice(PendingQuestion question) async {
     final cancels = _cancels;
+    final outgoing = outgoingPreviewOf(question);
     String? closed() {
       if (cancels != _cancels) return 'not-open(cancelled)';
       final pending = ref.read(agentControllerProvider).pending;
@@ -95,7 +114,7 @@ extension _VoiceConfirmation on VoiceController {
         }
         final prompt = attempt == 0
             ? confirmationPrompt(question, _language)
-            : repeatPrompt(_language);
+            : repeatPrompt(_language, outgoing: outgoing?.kind);
         await sayBounded(
           tts,
           prompt,
@@ -145,10 +164,14 @@ extension _VoiceConfirmation on VoiceController {
           reason = r;
           return;
         }
-        final answer = VoiceController.recognizer.parse(
-          transcript.text,
-          strict: strictAnswer(question),
-        );
+        final answer = _spokenAnswer(transcript.text, question, outgoing);
+        if (answer == YesNo.yes && _editedSinceRead(outgoing)) {
+          // The user changed the text after it was read aloud: a spoken yes
+          // would confirm text nobody heard. Only a tap sends it.
+          reason = 'edited';
+          byTap = true;
+          return;
+        }
         if (answer != null) {
           reason = 'answered(${answer.name})';
           _agent.answer(approved: answer == YesNo.yes);

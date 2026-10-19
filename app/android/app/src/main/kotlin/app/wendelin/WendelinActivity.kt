@@ -6,7 +6,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 
 /**
- * Flutter activity with Wendelin's platform channels (calendar, files, vault, apps, network,
+ * Flutter activity with Wendelin's platform channels (calendar, contacts, files, vault, apps, network,
  * OAuth login, assistant).
  * Both the main app ([MainActivity]) and the assistant overlay ([AssistantActivity]) run
  * the tools, so both engines need the same channels.
@@ -20,6 +20,7 @@ abstract class WendelinActivity : FlutterActivity() {
     private var network: NetworkChannel? = null
     private var auth: AuthChannel? = null
     private var torch: TorchChannel? = null
+    private var contacts: ContactsChannel? = null
     private var media: MediaChannel? = null
     private var location: LocationChannel? = null
     private var audioFocus: AudioFocusChannel? = null
@@ -52,6 +53,7 @@ abstract class WendelinActivity : FlutterActivity() {
         network = NetworkChannel(this, messenger)
         auth = AuthChannel(this, messenger)
         torch = TorchChannel(this, messenger)
+        contacts = ContactsChannel(this, messenger)
         media = MediaChannel(this, messenger)
         location = LocationChannel(this, messenger)
         audioFocus = AudioFocusChannel(this, messenger)
@@ -79,6 +81,8 @@ abstract class WendelinActivity : FlutterActivity() {
         auth = null
         torch?.dispose()
         torch = null
+        contacts?.dispose()
+        contacts = null
         audioFocus?.dispose()
         audioFocus = null
         media?.dispose()
@@ -113,6 +117,7 @@ abstract class WendelinActivity : FlutterActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         calendar?.onPermissionResult(requestCode, grantResults)
+        contacts?.onPermissionResult(requestCode, grantResults, permissions)
         location?.onPermissionResult(requestCode, grantResults)
         notify?.onPermissionResult(requestCode, grantResults)
     }

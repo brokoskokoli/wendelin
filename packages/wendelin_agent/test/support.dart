@@ -199,9 +199,10 @@ final class ReversedInvoker implements ToolInvoker {
 /// Invoker that asks every call with the given effective [risk] and then
 /// reports it as done.
 final class RiskInvoker implements ToolInvoker {
-  RiskInvoker(this.risk);
+  RiskInvoker(this.risk, {this.privateDetails = false});
 
   final RiskLevel risk;
+  final bool privateDetails;
 
   @override
   Stream<ToolInvocationEvent> invokeAll(
@@ -210,7 +211,13 @@ final class RiskInvoker implements ToolInvoker {
   ) async* {
     for (final c in calls) {
       yield ToolStarted(c);
-      final q = ConfirmationNeeded(c, 'Frage', Completer<bool>(), risk: risk);
+      final q = ConfirmationNeeded(
+        c,
+        'Frage',
+        Completer<bool>(),
+        risk: risk,
+        privateDetails: privateDetails,
+      );
       yield q;
       final ok = await q.decision.future;
       yield ToolFinished(

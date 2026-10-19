@@ -304,6 +304,7 @@ final class ToolRound {
               description: description,
               respond: event.respond,
               risk: event.risk,
+              privateDetails: event.privateDetails,
             ),
           );
         case ToolFinished(:final call, :final outcome, :final duration):

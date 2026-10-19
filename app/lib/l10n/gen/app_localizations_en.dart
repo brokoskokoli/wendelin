@@ -1196,6 +1196,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yes => 'Yes';
 
   @override
+  String get confCallTitle => 'Call?';
+
+  @override
+  String get confHintVoiceCall => 'Just say “call” or “cancel”';
+
+  @override
+  String get confHintVoiceEdited => 'You changed the text: please tap to send';
+
+  @override
+  String get confHintVoiceSms => 'Just say “send” or “cancel”';
+
+  @override
+  String get confNoCancel => 'Cancel';
+
+  @override
+  String get confSmsNoText => 'The message must not be empty.';
+
+  @override
+  String get confSmsTextLabel => 'Message';
+
+  @override
+  String get confSmsTitle => 'Send SMS?';
+
+  @override
+  String confSmsTo(String name) {
+    return 'To $name';
+  }
+
+  @override
+  String get confYesCall => 'Call';
+
+  @override
+  String get confYesSend => 'Send';
+
+  @override
+  String get integrationsContactsRationale =>
+      'Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer.';
+
+  @override
   String get batteryAllow => 'Allow no restriction';
 
   @override

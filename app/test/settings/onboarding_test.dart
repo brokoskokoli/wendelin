@@ -24,8 +24,11 @@ TestEnv firstStart({RecordingFactory? factory}) => TestEnv(
   llmFactory: (factory ?? RecordingFactory()).call,
 );
 
+/// Tall enough for the integrations step (more tiles than fit in 1400).
+const onboardingTallView = Size(390, 1600);
+
 Future<ProviderContainer> pumpApp(WidgetTester tester, TestEnv env) async {
-  setView(tester, const Size(390, 1400));
+  setView(tester, onboardingTallView);
   await tester.pumpWidget(env.app());
   await settle(tester);
   return ProviderScope.containerOf(

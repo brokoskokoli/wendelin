@@ -18,6 +18,7 @@ class ConfirmationCard extends StatelessWidget {
     required this.onYes,
     required this.onNo,
     this.subject,
+    this.detailWidget,
     this.yesLabel,
     this.noLabel,
     this.expand = false,
@@ -32,6 +33,9 @@ class ConfirmationCard extends StatelessWidget {
 
   /// Betroffenes Objekt („Zahnarzt Dr. Weber“), optional.
   final String? subject;
+
+  /// Ersetzt [detail] (z. B. ein Eingabefeld).
+  final Widget? detailWidget;
 
   /// Tool-Name in Mono.
   final String toolName;
@@ -100,7 +104,7 @@ class ConfirmationCard extends StatelessWidget {
                   spacing: WSpace.xs,
                   children: [
                     if (subject != null) Text(subject!, style: WText.itemTitle),
-                    Text(detail, style: WText.detail),
+                    detailWidget ?? Text(detail, style: WText.detail),
                   ],
                 ),
               ),

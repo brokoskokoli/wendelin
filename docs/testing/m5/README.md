@@ -6,6 +6,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 
 - [WP103 Bessere Sprache](wp103.md)
 - [WP84 Spotify](wp84.md)
+- [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)
 - [WP86 Standort und Karten (`location`, `maps`)](wp86.md)
 - [WP87 Wetter und Meer](wp87.md)
 - [WP88 Aufgaben (Listen mit Fälligkeit)](wp88.md)

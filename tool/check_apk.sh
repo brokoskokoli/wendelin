@@ -263,7 +263,12 @@ elif [ "$exported_ok" = 1 ]; then
   echo "ok: exportierte Komponenten wie erwartet"
 fi
 
-ALLOWED='^(android\.permission\.FOREGROUND_SERVICE|android\.permission\.FOREGROUND_SERVICE_MICROPHONE|android\.permission\.WAKE_LOCK|android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.CHANGE_WIFI_MULTICAST_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.RECORD_AUDIO|android\.permission\.ACCESS_FINE_LOCATION|android\.permission\.ACCESS_COARSE_LOCATION|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
+# Begründung WP85: READ_CONTACTS (Kontakt nach Name finden), SEND_SMS (SMS erst nach bestätigter
+# Vorschau senden), CALL_PHONE (Anruf nach Bestätigung starten, sonst Wählbildschirm);
+# alle drei werden erst beim Aktivieren der Integration „Kontakte & Telefon“ abgefragt.
+# Begründung WP86: ACCESS_FINE_LOCATION/ACCESS_COARSE_LOCATION (Standort für Wetter und Karten,
+# nur beim Aktivieren der Integration „Standort“ abgefragt).
+ALLOWED='^(android\.permission\.FOREGROUND_SERVICE|android\.permission\.FOREGROUND_SERVICE_MICROPHONE|android\.permission\.WAKE_LOCK|android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.CHANGE_WIFI_MULTICAST_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.READ_CONTACTS|android\.permission\.SEND_SMS|android\.permission\.CALL_PHONE|android\.permission\.RECORD_AUDIO|android\.permission\.ACCESS_FINE_LOCATION|android\.permission\.ACCESS_COARSE_LOCATION|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
 perms="$("$APKANALYZER" manifest permissions "$APK")"
 if extra="$(echo "$perms" | grep -vE "$ALLOWED")"; then
   echo "FEHLER: unerwartete Berechtigungen:" >&2
