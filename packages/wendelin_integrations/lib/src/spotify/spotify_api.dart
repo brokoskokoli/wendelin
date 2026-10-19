@@ -295,10 +295,37 @@ abstract interface class SpotifyAppLauncher {
   Future<bool> wake();
 }
 
+/// Why the browser step of the Spotify login did not return a redirect.
+enum SpotifyBrowserFailure {
+  /// No browser can show the login page.
+  noBrowser,
+
+  /// The user closed the browser without finishing.
+  cancelled,
+
+  /// An answer with another `state` than this login's arrived (stale tab,
+  /// other app) and no matching one followed.
+  stateMismatch,
+
+  /// Any other failure.
+  failed,
+}
+
+/// Thrown by [SpotifyAuthBrowser.authorize]; carries no text (the UI words it).
+final class SpotifyBrowserException implements Exception {
+  /// Creates the exception.
+  const SpotifyBrowserException(this.failure);
+
+  /// What went wrong.
+  final SpotifyBrowserFailure failure;
+
+  @override
+  String toString() => 'SpotifyBrowserException(${failure.name})';
+}
+
 /// Shows the Spotify login page and returns the redirect (app: Custom Tab).
 abstract interface class SpotifyAuthBrowser {
   /// Opens [url] and completes with the redirect to [redirect]. Throws a
-  /// `PortException` (German text) if there is no browser or the user
-  /// aborts.
+  /// [SpotifyBrowserException] if there is no browser or the user aborts.
   Future<Uri> authorize(Uri url, Uri redirect);
 }

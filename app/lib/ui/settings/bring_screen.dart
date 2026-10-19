@@ -10,6 +10,7 @@ import '../../di/bring.dart';
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import 'reconnect_text.dart';
 import 'settings_page.dart';
 
 /// Settings → Bring!: login (e-mail, password, hint on the unofficial
@@ -122,7 +123,10 @@ class _BringScreenState extends ConsumerState<BringScreen> {
     final error = await integration.reconnect();
     if (!mounted) return;
     setState(() => _busy = false);
-    showHint(context, error ?? context.l10n.bringReachable);
+    showHint(
+      context,
+      bringReconnectHint(context.l10n, error, context.l10n.bringReachable),
+    );
   }
 
   /// New login or none: the old error is void, the setup state changed.
@@ -221,7 +225,9 @@ class _BringScreenState extends ConsumerState<BringScreen> {
               title: failed
                   ? context.l10n.bringApiError
                   : bringStateText(context.l10n, info?.status),
-              detail: failed ? info?.error : null,
+              detail: failed
+                  ? integrationErrorText(context.l10n, 'bring', info?.error)
+                  : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,

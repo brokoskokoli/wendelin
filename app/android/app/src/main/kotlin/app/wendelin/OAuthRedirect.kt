@@ -22,4 +22,15 @@ object OAuthRedirect {
      */
     fun accepts(expected: Target, actual: Target, expectedState: String?, actualState: String?): Boolean =
         actual == expected && actualState == expectedState
+
+    /**
+     * Whether [actual] is the registered redirect address but carries another `state` than the
+     * running login: a stale or foreign answer. The login then ends with `state_mismatch`
+     * instead of a plain `cancelled`.
+     */
+    fun isForeignState(expected: Target, actual: Target, expectedState: String?, actualState: String?): Boolean =
+        actual == expected && actualState != expectedState
+
+    /** Error code of a login the user left without a matching redirect. */
+    fun leaveCode(sawForeignState: Boolean): String = if (sawForeignState) "state_mismatch" else "cancelled"
 }

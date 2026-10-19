@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
@@ -309,6 +310,54 @@ final class HttpTransport {
         throw MalformedResponseException('$label: JSON-Objekt erwartet');
       }
       return decoded;
+    } on Object catch (e) {
+      throw redactor.redact(exceptionForError(e, label: label));
+    }
+  }
+
+  /// Sends a GET and returns the body bytes (at most [maxBytes], more is a
+  /// [MalformedResponseException]). Throws a redacted [ProviderException]
+  /// on failure.
+  Future<Uint8List> getBytes(
+    Uri url,
+    Map<String, String> headers, {
+    required int maxBytes,
+    required HttpErrorMapper onHttpError,
+  }) async {
+    try {
+      log('$label: GET $url');
+      final response = await client
+          .send(http.Request('GET', url)..headers.addAll(headers))
+          .timeout(settings.responseTimeout);
+      log('$label: HTTP ${response.statusCode}');
+      final builder = BytesBuilder(copy: false);
+      var oversize = false;
+      await for (final chunk in response.stream.timeout(
+        settings.responseTimeout,
+      )) {
+        builder.add(chunk);
+        if (builder.length > maxBytes) {
+          oversize = true;
+          break;
+        }
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final bytes = builder.takeBytes();
+        throw onHttpError(
+          response.statusCode,
+          utf8.decode(
+            bytes.length > _maxErrorBody
+                ? bytes.sublist(0, _maxErrorBody)
+                : bytes,
+            allowMalformed: true,
+          ),
+          parseRetryAfter(response.headers, settings.clock.now()),
+        );
+      }
+      if (oversize) {
+        throw MalformedResponseException('$label: Antwort zu groß');
+      }
+      return builder.takeBytes();
     } on Object catch (e) {
       throw redactor.redact(exceptionForError(e, label: label));
     }

@@ -40,3 +40,27 @@ final class PortException implements Exception {
   @override
   String toString() => 'PortException(${kind.name}): $message';
 }
+
+/// Result of a failed `reconnect()` („Erneut versuchen“): the app words it
+/// per [kind] and [service] in the user's language. [message] is the German
+/// text for the model and logs; the UI does not show it.
+final class ReconnectFailure {
+  /// Creates the failure of [service] (integration id).
+  const ReconnectFailure(this.service, this.kind, this.message);
+
+  /// Failure of [service] taken from [e].
+  ReconnectFailure.of(String service, PortException e)
+    : this(service, e.kind, e.message);
+
+  /// Integration id (`spotify`, `bring`, `todoist`, `gtasks`, `ha`).
+  final String service;
+
+  /// What went wrong.
+  final PortErrorKind kind;
+
+  /// German, model-safe description (not for the UI).
+  final String message;
+
+  @override
+  String toString() => 'ReconnectFailure($service, ${kind.name})';
+}

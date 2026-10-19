@@ -88,7 +88,7 @@ LocalDate _today(ToolContext ctx) =>
 
 /// `tasks__add` (write; undo removes the added line).
 final class TasksAddTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, AuditArgumentsRedactor {
   /// Creates the tool.
   const TasksAddTool(this.env);
 
@@ -186,7 +186,13 @@ final class TasksAddTool extends IntegrationTool
   }
 
   @override
-  String describe(ToolArgs args) => 'Aufgabe „${_compose(args).text}“ anlegen';
+  Future<String> redactedArguments(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => redactTaskTitle(args);
+
+  @override
+  String describe(ToolArgs args) => 'Aufgabe anlegen\n„${_compose(args).text}“';
 
   @override
   String get fallbackDescription => 'Aufgabe anlegen';
@@ -304,7 +310,8 @@ final class TasksListTool extends IntegrationTool {
 }
 
 /// `tasks__complete` (write; undo restores the original line).
-final class TasksCompleteTool extends IntegrationTool {
+final class TasksCompleteTool extends IntegrationTool
+    implements AuditArgumentsRedactor {
   /// Creates the tool.
   const TasksCompleteTool(this.env);
 
@@ -396,9 +403,14 @@ final class TasksCompleteTool extends IntegrationTool {
   }
 
   @override
+  Future<String> redactedArguments(
+    Map<String, Object?> args,
+    ToolContext ctx,
+  ) async => redactTaskTitle(args);
+
+  @override
   String describe(ToolArgs args) =>
-      'Aufgabe „${args.requireString('title')}“ '
-      'abhaken';
+      'Aufgabe abhaken\n„${args.requireString('title')}“';
 
   @override
   String get fallbackDescription => 'Aufgabe abhaken';

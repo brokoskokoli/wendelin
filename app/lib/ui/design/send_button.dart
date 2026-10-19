@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 import 'icons.dart';
 
@@ -12,12 +13,10 @@ class SendButton extends StatelessWidget {
   /// Sendet den Text.
   final VoidCallback onPressed;
 
-  /// Tooltip und Semantics-Label.
-  static const label = 'Senden';
-
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: label,
+    // Tooltip und Semantics-Label in der App-Sprache.
+    tooltip: context.l10n.send,
     onPressed: onPressed,
     icon: const WIcon(
       WIcons.send,

@@ -37,6 +37,8 @@ const _allowed = <String, String>{
   'lib/di/integrations/spotify_spec.dart': 'Registry-Meldung, Rückfall',
   'lib/di/integrations/location_spec.dart': 'Registry-Meldung, Rückfall',
   'lib/di/integrations/bring_spec.dart': 'Registry-Meldung, Rückfall',
+  'lib/di/integrations/todoist_spec.dart': 'Registry-Meldung, Rückfall',
+  'lib/di/integrations/google_tasks_spec.dart': 'Registry-Meldung, Rückfall',
   'lib/di/integrations/obsidian_spec.dart': 'Rückfall, UI mappt per Paket',
   'lib/di/integrations/calendar_spec.dart': 'Rückfall, UI nutzt ARB',
   'lib/voice/wake/wake_enroller.dart': 'StateError/toString, Log',
@@ -50,6 +52,17 @@ const _dirs = ['lib/ui', 'lib/agent', 'lib/di', 'lib/voice'];
 final _german = RegExp(
   '[äöüßÄÖÜ]|\\b(der|die|das|und|nicht|Bitte|für|mit|wird|ist|kein|keine|'
   'Die|Das|Es|Ein|Eine|Kein|Du|Dein|Deine|zu|von|Ja|Nein)\\b',
+);
+
+// Deutsche Ein-Wort-Texte ohne Umlaut (Schaltflächen, Status): `_german`
+// braucht ein Leerzeichen, deshalb gilt für ein ganzes Literal diese Liste.
+final _germanWord = RegExp(
+  '^(Abbrechen|Abmelden|Anmelden|Aktiv|Aktualisieren|Antwort|Aufnahme|'
+  'Bearbeiten|Beenden|Bestätigen|Einstellungen|Entfernen|Fehler|'
+  'Fertig|Hinweis|Hinzufügen|Inaktiv|Konto|Laden|Nachricht|Nein|Prüfen|'
+  'Schließen|Senden|Speichern|Sprache|Starten|Stoppen|Suchen|Titel|Verbinden|'
+  'Verbindung|Warten|Weiter|Wiederholen|Zurück|Zugang|Okay|Alle|Keine|'
+  'Löschen|Öffnen|Erledigt|Offen|Fortfahren|Ablehnen|Erlauben|Zulassen)\$',
 );
 
 // Ein Textliteral mit mindestens einem Leerzeichen (kein Bezeichner).
@@ -73,6 +86,7 @@ List<String> scan(String dir, {Set<String> allowed = const {}}) {
       for (final m in _literal.allMatches(lines[i])) {
         final t = m[1] ?? m[2]!;
         if ((t.contains(' ') && _german.hasMatch(t)) ||
+            _germanWord.hasMatch(t) ||
             RegExp('[äöüßÄÖÜ]').hasMatch(t)) {
           found.add('${f.path}:${i + 1}: $t');
         }
@@ -103,8 +117,24 @@ void main() {
       "const a = 'Das ist ein Test';\n"
       "x(yes: 'Ja, löschen', no: 'Nein, behalten');\n"
       "showHint(context, 'Die Datei ist weg');\n"
-      "final b = 'ok';\n",
+      "final b = 'ok';\n"
+      "final c = 'Abmelden';\n",
     );
-    expect(scan(dir.path), hasLength(4));
+    expect(scan(dir.path), hasLength(5));
+  });
+
+  test('der Scan erkennt deutsche Ein-Wort-Texte, nicht Bezeichner', () {
+    final dir = Directory.systemTemp.createTempSync('scan1');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    File('${dir.path}/a.dart').writeAsStringSync(
+      "final a = 'Speichern';\n"
+      "final b = 'Fehler';\n"
+      "final c = 'save';\n"
+      "final d = 'Spotify';\n"
+      "final e = 'Speichern.dart';\n"
+      "final f = 'Details';\n",
+    );
+    // „Details“ ist auch englisch: kein Treffer.
+    expect(scan(dir.path), hasLength(2));
   });
 }

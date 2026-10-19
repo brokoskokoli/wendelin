@@ -352,7 +352,7 @@ final class FakeSpotifyAuthBrowser implements SpotifyAuthBrowser {
   String? error;
 
   /// Thrown instead of a redirect (browser missing, user aborted).
-  PortException? failure;
+  SpotifyBrowserFailure? failure;
 
   /// Wrong `state` to send back (attack simulation).
   String? stateOverride;
@@ -363,7 +363,7 @@ final class FakeSpotifyAuthBrowser implements SpotifyAuthBrowser {
   @override
   Future<Uri> authorize(Uri url, Uri redirect) async {
     opened.add(url);
-    if (failure != null) throw failure!;
+    if (failure != null) throw SpotifyBrowserException(failure!);
     return redirect.replace(
       queryParameters: {
         'error': ?error,

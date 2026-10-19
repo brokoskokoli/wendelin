@@ -43,6 +43,34 @@ void main() {
     });
   });
 
+  test('open schickt nur die https-Adresse und antwortet sofort', () async {
+    mock((call) async => true);
+    expect(
+      await const ChannelAuthorizationBrowser().open(
+        Uri.parse('https://accounts.google.com/o/oauth2/v2/auth?state=s'),
+      ),
+      isTrue,
+    );
+    expect(calls.single.method, 'open');
+    expect(calls.single.arguments, {
+      'url': 'https://accounts.google.com/o/oauth2/v2/auth?state=s',
+    });
+    expect(
+      () => const ChannelAuthorizationBrowser().open(
+        Uri.parse('http://127.0.0.1:1/x'),
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('open: kein Browser oder fehlender Kanal ist false', () async {
+    mock((call) async => throw PlatformException(code: 'no_browser'));
+    final b = const ChannelAuthorizationBrowser();
+    expect(await b.open(Uri.parse('https://example.org')), isFalse);
+    messenger.setMockMethodCallHandler(channel, null);
+    expect(await b.open(Uri.parse('https://example.org')), isFalse);
+  });
+
   test('kein Browser, Abbruch, sonstiger Fehler, fehlender Kanal', () async {
     Future<AuthorizationFailure> failure() async {
       try {
@@ -59,6 +87,7 @@ void main() {
     for (final (code, expected) in [
       ('no_browser', AuthorizationFailure.noBrowser),
       ('cancelled', AuthorizationFailure.cancelled),
+      ('state_mismatch', AuthorizationFailure.stateMismatch),
       ('bad_args', AuthorizationFailure.failed),
     ]) {
       mock((_) async => throw PlatformException(code: code));

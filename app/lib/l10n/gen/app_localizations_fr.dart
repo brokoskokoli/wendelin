@@ -167,7 +167,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get attE2eeKeyNote =>
-      'Tout le contenu est chiffré avec cette clé vérifiée. Le chiffrement se termine dans la passerelle du fournisseur (enclave vérifiée), et non dans le modèle lui-même. Avec NEAR AI, il se termine dans le modèle vérifié.';
+      'Tout le contenu est chiffré avec cette clé vérifiée. Le chiffrement se termine dans la passerelle du fournisseur (enclave vérifiée), et non dans le modèle lui-même. Avec NEAR AI, il se termine dans le modèle vérifié. Avec Tinfoil, il se termine dans le routeur vérifié, qui le transmet au modèle.';
 
   @override
   String get attExplainAccept => 'Accepter';
@@ -247,6 +247,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get attFinishWarnFrom => 'Avertir à partir de';
+
+  @override
+  String get attFloorCorruptText =>
+      'La limite inférieure enregistrée pour la version du logiciel de ce fournisseur est endommagée. Sans elle, un retour à un logiciel plus ancien et non sûr ne peut pas être exclu ; la vérification reste donc bloquée et une nouvelle vérification n’y change rien. N’envoyez rien de confidentiel. Seule la réinitialisation des données de l’app permet d’en sortir. Ensuite, le premier contact est de nouveau vérifié sans protection contre le retour en arrière.';
+
+  @override
+  String get attFloorCorruptTitle =>
+      'Protection enregistrée contre le retour en arrière endommagée';
 
   @override
   String get attGpuFailedLabel => 'Vérification du GPU échouée';
@@ -476,6 +484,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get attRevokedTitle => 'Plateforme de l’exploitant révoquée';
 
   @override
+  String get attRollbackText =>
+      'Le fournisseur signale une version du logiciel plus ancienne que celle déjà vérifiée ici. Il peut s’agir d’un logiciel ancien et vulnérable ou de données anciennes rejouées. La requête n’a pas été envoyée. N’envoyez rien de confidentiel et revérifiez plus tard.';
+
+  @override
+  String get attRollbackTitle =>
+      'Version du logiciel plus ancienne que celle vérifiée';
+
+  @override
+  String get attSBindHpke => 'Clé de chiffrement liée';
+
+  @override
   String get attSCompose => 'Hash compose';
 
   @override
@@ -512,6 +531,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get attSKeysetSignature => 'Signature de l’ensemble de clés';
 
   @override
+  String get attSMeasurement => 'Mesure = version';
+
+  @override
+  String get attSNoReceipt => 'Reçu par réponse';
+
+  @override
   String get attSNonce => 'Nonce lié';
 
   @override
@@ -537,6 +562,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get attSReceiptSignature => 'Signature du reçu';
+
+  @override
+  String get attSReleaseFloor => 'Pas de retour en arrière';
+
+  @override
+  String get attSSigstore => 'Version signée (Sigstore)';
+
+  @override
+  String get attSSnpChain => 'Chaîne de certificats AMD';
+
+  @override
+  String get attSSnpPolicy => 'Politique du processeur';
+
+  @override
+  String get attSSnpReport => 'Attestation matérielle AMD';
 
   @override
   String get attSTcb => 'Niveau de sécurité de la plateforme (TCB)';
@@ -699,6 +739,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get stageAgeWhat => 'L’âge de l’attestation.';
 
   @override
+  String get stageBindHpkeInfo => 'La clé a seulement été consignée.';
+
+  @override
+  String get stageBindHpkePass =>
+      'Seul le serveur vérifié peut lire la demande. La clé provient de l’attestation, pas d’une réponse non vérifiée.';
+
+  @override
+  String get stageBindHpkeWhat =>
+      'Si la clé avec laquelle Wendelin chiffre votre demande est exactement celle de l’attestation matérielle.';
+
+  @override
   String get stageComposeInfo =>
       'Le hash a été consigné, mais pas comparé à une liste de valeurs de confiance.';
 
@@ -809,6 +860,29 @@ class AppLocalizationsFr extends AppLocalizations {
       'La somme de contrôle de l’ensemble de clés (les clés avec lesquelles Wendelin chiffre) doit figurer dans l’attestation matérielle.';
 
   @override
+  String get stageMeasurementInfo => 'La mesure a seulement été consignée.';
+
+  @override
+  String get stageMeasurementPass =>
+      'Le serveur exécute le code publié, aucun autre.';
+
+  @override
+  String get stageMeasurementWhat =>
+      'Si la mesure du serveur en cours d’exécution est exactement celle de la dernière version signée.';
+
+  @override
+  String get stageNoReceiptInfo =>
+      'Tinfoil n’émet pas de reçu par réponse. La réponse n’est liée à votre demande que par le chiffrement ; aucun reçu ne prouve quel modèle l’a produite.';
+
+  @override
+  String get stageNoReceiptPass =>
+      'Chaque réponse s’accompagne d’un reçu signé.';
+
+  @override
+  String get stageNoReceiptWhat =>
+      'Si chaque réponse s’accompagne d’un reçu signé qui prouve la demande et la réponse.';
+
+  @override
   String get stageNonceInfo => 'Le nombre a seulement été consigné.';
 
   @override
@@ -913,6 +987,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get stageReceiptSigWhat => 'La signature du reçu.';
 
   @override
+  String get stageReleaseFloorInfo =>
+      'La protection contre le retour en arrière a seulement été consignée.';
+
+  @override
+  String get stageReleaseFloorPass =>
+      'Le serveur exécute la version la plus récente vue jusqu’ici ou une plus récente.';
+
+  @override
+  String get stageReleaseFloorWhat =>
+      'Si la version n’est pas plus ancienne que la plus récente que Wendelin ait jamais vérifiée (protection contre un retour à d’anciennes versions vulnérables).';
+
+  @override
   String get stageResponseKeyInfo =>
       'L’ensemble de clés a seulement été consigné.';
 
@@ -941,6 +1027,53 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get stageSignatureWhat =>
       'Une signature supplémentaire de l’ensemble de clés, fournie par certains fournisseurs.';
+
+  @override
+  String get stageSigstoreInfo =>
+      'La signature de la version a seulement été consignée.';
+
+  @override
+  String get stageSigstorePass =>
+      'La version provient de la compilation de Tinfoil et figure publiquement dans le journal.';
+
+  @override
+  String get stageSigstoreWhat =>
+      'Si la version du programme publiée par Tinfoil sur GitHub est réellement signée et inscrite dans le journal de transparence public (Sigstore).';
+
+  @override
+  String get stageSnpChainInfo =>
+      'La chaîne de certificats a seulement été consignée.';
+
+  @override
+  String get stageSnpChainPass =>
+      'La chaîne se termine chez AMD, pas sur un certificat glissé par quelqu’un.';
+
+  @override
+  String get stageSnpChainWhat =>
+      'Si le certificat du processeur remonte, par le certificat intermédiaire AMD, jusqu’à la clé racine AMD intégrée à Wendelin.';
+
+  @override
+  String get stageSnpPolicyInfo => 'La politique a seulement été consignée.';
+
+  @override
+  String get stageSnpPolicyPass =>
+      'L’environnement n’est pas ouvert à l’espionnage et ne contient aucun micrologiciel connu comme obsolète.';
+
+  @override
+  String get stageSnpPolicyWhat =>
+      'Si l’environnement tourne sans accès de débogage et si le micrologiciel et le microcode du processeur sont au moins aussi récents que Wendelin l’exige (bootloader 9, SNP 22, microcode 80).';
+
+  @override
+  String get stageSnpReportInfo =>
+      'Le rapport du processeur a seulement été consigné.';
+
+  @override
+  String get stageSnpReportPass =>
+      'Un véritable processeur AMD garantit le rapport. Personne ne peut le modifier après coup.';
+
+  @override
+  String get stageSnpReportWhat =>
+      'L’attestation matérielle du serveur Tinfoil : le rapport du processeur AMD, son certificat et la signature qui le couvre.';
 
   @override
   String get stageTcbInfo => 'Le niveau de sécurité a seulement été consigné.';
@@ -1819,6 +1952,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get integrationsPaused => 'en pause';
 
   @override
+  String integrationsPausedError(String service) {
+    return '$service : accès refusé ou réponse inattendue · en pause';
+  }
+
+  @override
   String get integrationsPermission => 'Autorisation';
 
   @override
@@ -1837,6 +1975,30 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String integrationsTools(int tools) {
     return '$tools outils';
+  }
+
+  @override
+  String get reconnectBringShare =>
+      'Solution : envoyer les articles à l\'appli Bring! via Partager.';
+
+  @override
+  String reconnectErrDenied(String service) {
+    return '$service : accès refusé ou non configuré. Vérifiez les identifiants.';
+  }
+
+  @override
+  String reconnectErrFailed(String service) {
+    return '$service : la connexion a échoué (réponse inattendue).';
+  }
+
+  @override
+  String reconnectErrOther(String service) {
+    return '$service : la connexion a échoué.';
+  }
+
+  @override
+  String reconnectErrUnavailable(String service) {
+    return '$service est injoignable ou ne répond pas. Réessayez plus tard.';
   }
 
   @override
@@ -3696,6 +3858,42 @@ class AppLocalizationsFr extends AppLocalizations {
   String get spotifyCopyRedirect => 'Copier l’adresse';
 
   @override
+  String get spotifyErrAccessDenied =>
+      'Connexion annulée : accès non autorisé.';
+
+  @override
+  String get spotifyErrCancelled => 'Connexion annulée.';
+
+  @override
+  String get spotifyErrDenied => 'Spotify a refusé la connexion.';
+
+  @override
+  String get spotifyErrFailed => 'Connexion à Spotify impossible.';
+
+  @override
+  String get spotifyErrInvalidClientId =>
+      'L’ID client comporte 32 caractères (chiffres et lettres a–f). Copiez-le depuis le tableau de bord développeur.';
+
+  @override
+  String get spotifyErrNoBrowser =>
+      'Aucun navigateur n’est installé pour effectuer la connexion.';
+
+  @override
+  String get spotifyErrNoCode => 'Spotify n’a pas envoyé de code.';
+
+  @override
+  String get spotifyErrRejected =>
+      'Spotify a refusé la connexion. Vérifiez l’ID client et que votre compte figure sous « User Management ».';
+
+  @override
+  String get spotifyErrStateMismatch =>
+      'Connexion refusée : la réponse de Spotify ne correspond pas à cette connexion (p. ex. un ancien onglet du navigateur). Relancez la connexion et terminez-la dans le nouvel onglet.';
+
+  @override
+  String get spotifyErrUnavailable =>
+      'Spotify est injoignable. Réessayez plus tard.';
+
+  @override
   String get spotifyFailed =>
       'Erreur – connexion expirée ou Spotify injoignable';
 
@@ -3762,6 +3960,195 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get spotifyTitle => 'Spotify';
+
+  @override
+  String get googleTasksApiError =>
+      'Erreur – Google injoignable ou connexion refusée';
+
+  @override
+  String get googleTasksCancel => 'Annuler';
+
+  @override
+  String get googleTasksChecking => 'Vérification …';
+
+  @override
+  String get googleTasksClientId => 'ID client';
+
+  @override
+  String get googleTasksClientSecret => 'Secret client';
+
+  @override
+  String get googleTasksErrAccessDenied =>
+      'Connexion annulée : accès non autorisé (votre compte est-il enregistré comme utilisateur test dans le projet Cloud ?).';
+
+  @override
+  String get googleTasksErrCancelled => 'Connexion annulée.';
+
+  @override
+  String get googleTasksErrClientRejected =>
+      'Google refuse l’ID client ou le secret client. Veuillez vérifier les deux.';
+
+  @override
+  String get googleTasksErrDenied => 'Google a refusé la connexion.';
+
+  @override
+  String get googleTasksErrFailed => 'La connexion a échoué.';
+
+  @override
+  String get googleTasksErrInvalidClientId =>
+      'L’ID client se termine par « .apps.googleusercontent.com ». Copiez-le depuis la console Google Cloud (client OAuth de type « Application de bureau »).';
+
+  @override
+  String get googleTasksErrMissingSecret =>
+      'Veuillez saisir le secret client OAuth (sans espaces).';
+
+  @override
+  String get googleTasksErrNoBrowser => 'Aucun navigateur n’est installé.';
+
+  @override
+  String get googleTasksErrNoCode => 'Google n’a envoyé aucun code.';
+
+  @override
+  String get googleTasksErrNoRefreshToken =>
+      'Google n’a pas envoyé de jeton d’actualisation. Retirez l’accès de Wendelin sur myaccount.google.com/permissions et reconnectez-vous.';
+
+  @override
+  String get googleTasksErrReceiver =>
+      'Le récepteur local pour la connexion n’a pas pu démarrer.';
+
+  @override
+  String get googleTasksErrTimeout =>
+      'Délai dépassé : aucune réponse de Google n’est arrivée dans le navigateur. Veuillez vous reconnecter.';
+
+  @override
+  String get googleTasksErrUnavailable =>
+      'Google est inaccessible. Veuillez réessayer plus tard.';
+
+  @override
+  String get googleTasksFine => 'OK';
+
+  @override
+  String get googleTasksGuideNote =>
+      'En mode test, la connexion expire après 7 jours ; reconnectez-vous alors ici. Google signale une « application non validée » (c’est votre propre projet) : choisissez « Continuer » et autorisez l’accès aux tâches.';
+
+  @override
+  String get googleTasksGuideStep1 =>
+      '1. Dans console.cloud.google.com, créez un projet (ou choisissez le vôtre).';
+
+  @override
+  String get googleTasksGuideStep2 =>
+      '2. Sous « API et services → Bibliothèque », activez l’« API Google Tasks ».';
+
+  @override
+  String get googleTasksGuideStep3 =>
+      '3. Sous « Google Auth Platform » (anciennement « écran de consentement OAuth »), gardez le public « Externe » en mode test et ajoutez votre compte Google comme utilisateur test.';
+
+  @override
+  String get googleTasksGuideStep4 =>
+      '4. Sous « Clients » (anciennement « Identifiants »), créez un client OAuth de type « Application de bureau ». Copiez l’ID client et le secret client et saisissez-les ci-dessous.';
+
+  @override
+  String get googleTasksGuideTitle => 'Configurer un projet Google Cloud';
+
+  @override
+  String get googleTasksIntro =>
+      'Tâches Google avec votre propre projet Cloud, sans services Google Play. La connexion se fait dans le navigateur ; ID client, secret client et connexion restent dans le stockage sécurisé de l’appareil et ne sont jamais affichés ni journalisés. Les listes de tâches servent de listes ; Google ne connaît qu’une date d’échéance, ni heure ni priorité.';
+
+  @override
+  String get googleTasksNeedClient =>
+      'Veuillez saisir l’ID client et le secret client.';
+
+  @override
+  String get googleTasksReachable => 'Google Tasks est joignable.';
+
+  @override
+  String get googleTasksSignIn => 'Se connecter à Google';
+
+  @override
+  String get googleTasksSignInWaiting => 'En attente de Google …';
+
+  @override
+  String get googleTasksSignOutBody =>
+      'La connexion est révoquée chez Google (si joignable) ; ID client, secret client et jeton sont supprimés de l’appareil.';
+
+  @override
+  String get googleTasksSignOutTitle => 'Déconnecter Google Tasks ?';
+
+  @override
+  String get googleTasksStatusAvailable => 'Connecté, intégration désactivée';
+
+  @override
+  String get googleTasksStatusSetup => 'Connexion manquante';
+
+  @override
+  String get googleTasksStatusUnavailable => 'Indisponible';
+
+  @override
+  String get googleTasksStatusUnknown => 'Inconnu';
+
+  @override
+  String get integrationDetailGoogleTasksAccount => 'Compte Google';
+
+  @override
+  String get integrationDetailTodoistAccount => 'Compte Todoist';
+
+  @override
+  String get todoistApiError => 'Erreur – Todoist injoignable ou jeton refusé';
+
+  @override
+  String get todoistChecking => 'Vérification …';
+
+  @override
+  String get todoistConnect => 'Connecter';
+
+  @override
+  String get todoistConnecting => 'Connexion …';
+
+  @override
+  String get todoistErrDenied =>
+      'Todoist a refusé le jeton (invalide ou révoqué).';
+
+  @override
+  String get todoistErrFailed => 'La connexion à Todoist a échoué.';
+
+  @override
+  String get todoistErrUnavailable =>
+      'Todoist est inaccessible. Veuillez réessayer plus tard.';
+
+  @override
+  String get todoistFine => 'OK';
+
+  @override
+  String get todoistIntro =>
+      'Tâches Todoist avec votre jeton d’API personnel. Vous le trouvez dans Todoist sous Paramètres → Intégrations → Développeur. Il reste dans le stockage sécurisé de l’appareil et n’est jamais affiché ni journalisé. Les projets servent de listes.';
+
+  @override
+  String get todoistNeedToken => 'Veuillez saisir le jeton d’API.';
+
+  @override
+  String get todoistReachable => 'Todoist est de nouveau joignable.';
+
+  @override
+  String get todoistSignOutBody =>
+      'Le jeton est supprimé de l’appareil. Vous pouvez aussi le révoquer dans Todoist.';
+
+  @override
+  String get todoistSignOutTitle => 'Déconnecter Todoist ?';
+
+  @override
+  String get todoistStatusAvailable => 'Connecté, intégration désactivée';
+
+  @override
+  String get todoistStatusSetup => 'Jeton manquant';
+
+  @override
+  String get todoistStatusUnavailable => 'Indisponible';
+
+  @override
+  String get todoistStatusUnknown => 'Inconnu';
+
+  @override
+  String get todoistToken => 'Jeton d’API';
 
   @override
   String get languageEnglish => 'English';

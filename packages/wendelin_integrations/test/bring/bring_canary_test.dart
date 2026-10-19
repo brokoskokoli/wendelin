@@ -83,7 +83,7 @@ void main() {
     );
     await bring.signOut();
     await call('bring__list_lists', {});
-    seen.add(await bring.reconnect() ?? '');
+    seen.add((await bring.reconnect())?.message ?? '');
     // Zuletzt, weil danach eine Sperre gilt.
     secrets.login = login;
     server.next.add(canned(429));

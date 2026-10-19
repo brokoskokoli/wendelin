@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sein, Fragen in `handoff/questions-for-stefan.md`); laufen: WP89, WP92a, WP76d, WP104
+Stand: 2026-10-19 vormittags, Stefan wieder da (bis 4 Paket-Sitzungen); laufen: WP92a, WP104, WP106; als Nächstes WP81c (nach WP92a), WP92b→c, WP93
 
 ## Meilensteine
 
@@ -17,7 +17,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | M3 Routing, MCP, Erweiterung | WP21–WP29 | erledigt (Telefontest in M4 aufgegangen) |
 | Refactoring R1–R6 | WP35–WP40 | erledigt |
 | M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Stefan) |
-| M5 Ausbau Android | WP76b–d, WP79, WP81–WP98, WP102–WP104 | in Arbeit (Plan `M5-PLAN.md`) |
+| M5 Ausbau Android | WP76b–d, WP79, WP81–WP98, WP102–WP105 | in Arbeit (Plan `M5-PLAN.md`) |
 | M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | geplant (Plan `M6-PLAN.md`, Start nach M5 mit Go) |
 | M7 iOS | – | geplant |
 
@@ -28,10 +28,11 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP76a | Tinfoil SEV-SNP (Rust) | gemergt | Folge: rsa-Upgrade; min_tcb in WP76d |
 | WP76b | Tinfoil Sigstore | gemergt cc12c9f | K59 bestätigt; Downgrade-Schutz in WP76d |
 | WP76c | Tinfoil EHBP/HPKE | gemergt 06498bc | K71 offen; echte SNP-Bindung im Live-Pfad und Emulator-Lauf der attest-Contract-Suite in WP76d |
-| WP76d | Tinfoil in der App | in Arbeit | min_tcb setzen; Downgrade-Schutz „neuestes Release“ (K59) |
+| WP76d | Tinfoil in der App | gemergt c19b0966 | K73 offen; Folge: Turin-Pinning, rsa-Upgrade (WP76a); kein Release-Cache über Speicher hinaus (GitHub ohne Token 60/h) |
 | WP79 | App-Sprache | gemergt 604ff80 | K60 bestätigt; Folge: Stoppwort-Hinweis im Overlay folgt UI- statt Sprech-Sprache; Scan-Test erkennt deutsche Ein-Wort-Texte ohne Umlaut nicht |
 | WP81 | Sofort vorlesen, Haken danach | gemergt | – |
 | WP81b | Nächster Modellaufruf parallel zur Quittung | gemergt 135dbbd | K70 offen; Ersparnis am Emulator ~0,4 s bis erster Text, ~0,9 s bis fertig; Tool-Runden gegen echtes TEE-Gateway ungetestet (Fixture ohne Tool-Calls); overlay_e2e rot direkt nach overlay_tee_speak in derselben Skript-Sitzung (Restzustand?) beobachten |
+| WP81c | Parallele Runde sofort vorlesen | geplant | Entscheidung Stefan 2026-10-19 (statt Puffern bis grün); nächstes freies Paket, Sprach-Controller-Regel beachten (nach WP92a oder ohne Überschneidung) |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 offen |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
@@ -39,7 +40,7 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP86 | Standort/Maps | gemergt f595fa0 | K67 offen (Wetter-Position bei „keine Mindeststufe“, Frage an Stefan); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
-| WP89 | Todoist/Google Tasks | in Arbeit | – |
+| WP89 | Todoist/Google Tasks | gemergt b4777882 | K72 offen; Gerätetest mit echten Konten `docs/testing/m5/wp89.md` (WP89.1–15); Live-Tests ungelaufen (keine Tokens); Audit-Titel tasks__ und deutsche Resttexte → WP105 |
 | WP90 | Mediensteuerung | gemergt eb2cf31 | K65 bestätigt; Gerätetest WP90.1–7 (Audible, Ducking mit echter TTS, Zugriffsdialog) |
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; Folge: E2E-Dateien (Fake-HA, `tool/e2e_ha.sh`) übernehmen; CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
 | WP92a–c | Sprechererkennung | WP92a in Arbeit | WP92c nach WP91 |
@@ -52,6 +53,8 @@ Stand: 2026-10-19 nachts, Stefan abwesend (Rechner darf stärker ausgelastet sei
 | WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 offen (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
 | WP103 | Bessere Sprache einbauen | gemergt ff07cbd | K66/K68 offen (Stefans Modell-/Stimmenwahl, Katalog anpassbar); Gerätetest `docs/testing/m5/wp103.md` (RAM/RTF/Akku/Wärme); Kontaktnamen als Hinweis-Begriffe brauchen Neubau des contactNamesProvider durch WP85; Wake-Dienst ohne Hinweis-Begriffe |
 | WP104 | Liegengebliebene Gerätetests übernehmen | in Arbeit | Standort/Aufgaben/HA-E2E, sprachneutrale Texte, overlay-Reihenfolge-Flake |
+| WP105 | Folgepunkte Audit und Texte | gemergt f02332ef | Kachel-Fehlerzeile/Retry-Hinweise nur generisch (Fehlerart+Dienst), Meldungen ans Modell deutsch; Folge: Fehlerart durch onError/Registry durchreichen; Gerätetest `docs/testing/m5/wp105.md` |
+| WP106 | Spike Wake Word Stationsmodus | in Arbeit | Freigabe Stefan 2026-10-19; echte Aufnahmen: Anleitung `~/wendelin-fixtures/wake/station/ANLEITUNG.md` |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 

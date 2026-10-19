@@ -43,7 +43,8 @@
       ],
       "toKotlin": {
         "isAvailable": {"args": [], "returns": "value"},
-        "authorize": {"args": ["url", "redirect", "state"], "returns": "value"}
+        "authorize": {"args": ["url", "redirect", "state"], "returns": "value"},
+        "open": {"args": ["url"], "returns": "value"}
       },
       "toDart": {}
     },

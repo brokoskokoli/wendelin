@@ -526,4 +526,50 @@ void main() {
     expect(events.last, isA<ErrorEvent>());
     hold.complete();
   });
+
+  group('TinfoilEhbpChannel: Ablauf der Sitzung', () {
+    final t0 = DateTime.utc(2026, 10, 19, 12);
+
+    AttestedSession session(DateTime notAfter) => AttestedSession(
+      keysetDigest: 'sha256:00',
+      notAfter: notAfter,
+      receiptKeys: const {},
+      repoCommit: '',
+      composeHash: '',
+      attestedAt: t0,
+      ehbpKeyConfig: service.keyConfig,
+      reportData: service.reportData,
+    );
+
+    Future<Object?> beginAt(DateTime now, DateTime notAfter) async {
+      final channel = TinfoilEhbpChannel(crypto: spy)
+        ..bind(() => session(notAfter), FixedClock(now));
+      try {
+        await channel.begin(model: 'm');
+        return null;
+      } on AttestationFailedException catch (e) {
+        return e.stage;
+      }
+    }
+
+    test('vor Ablauf wird verschlüsselt, ab Ablauf nichts gesendet', () async {
+      final end = t0.add(const Duration(minutes: 30));
+      expect(await beginAt(t0, end), isNull);
+      expect(
+        await beginAt(end.subtract(const Duration(seconds: 1)), end),
+        isNull,
+      );
+      expect(await beginAt(end, end), 'e2ee.key');
+      expect(await beginAt(end.add(const Duration(hours: 1)), end), 'e2ee.key');
+    });
+
+    test('ohne Sitzung: kein Schlüssel, nichts gesendet', () async {
+      final channel = TinfoilEhbpChannel(crypto: spy)
+        ..bind(() => null, FixedClock(t0));
+      await expectLater(
+        channel.begin(model: 'm'),
+        throwsA(isA<AttestationFailedException>()),
+      );
+    });
+  });
 }

@@ -37,6 +37,16 @@ class OAuthRedirectTest {
     }
 
     @Test
+    fun wrongStateOnTheRegisteredRedirectIsForeignAndEndsAsStateMismatch() {
+        assertTrue(OAuthRedirect.isForeignState(expected, expected, "s1", "other"))
+        assertTrue(OAuthRedirect.isForeignState(expected, expected, "s1", null))
+        assertFalse(OAuthRedirect.isForeignState(expected, expected, "s1", "s1"))
+        assertFalse(OAuthRedirect.isForeignState(expected, expected.copy(path = "/other"), "s1", "x"))
+        assertEquals("state_mismatch", OAuthRedirect.leaveCode(true))
+        assertEquals("cancelled", OAuthRedirect.leaveCode(false))
+    }
+
+    @Test
     fun recognizerServiceIsEnabledOnlyWhenWanted() {
         assertEquals(PackageManager.COMPONENT_ENABLED_STATE_ENABLED, RecognizerSwitch.stateFor(true))
         assertEquals(PackageManager.COMPONENT_ENABLED_STATE_DEFAULT, RecognizerSwitch.stateFor(false))
