@@ -34,6 +34,10 @@ abstract final class MemoryStoreChecks {
   /// The privacy floor is stored and returned unchanged.
   static const privacyFloor = 'Untergrenze wird gespeichert und geliefert';
 
+  /// Namespaces are strictly separated (WP92b).
+  static const owners =
+      'Gedächtnis-Namespaces sind getrennt (save, search, list, forget)';
+
   /// Blank text throws ArgumentError.
   static const blank = 'leerer Text wirft ArgumentError';
 }
@@ -182,6 +186,45 @@ Map<String, Future<void> Function()> memoryStoreContractChecks(
         );
       }
       expect(await s.list(), isEmpty);
+    },
+    MemoryStoreChecks.owners: () async {
+      final s = await create();
+      final std = await fact(s, 'Standard mag Koriander');
+      final a = await s.save(
+        'Anna mag Koriander',
+        category: MemoryCategory.preference,
+        source: 'contract',
+        owner: 'p:a',
+      );
+      final b = await s.save(
+        'Ben mag Koriander',
+        category: MemoryCategory.preference,
+        source: 'contract',
+        owner: 'p:b',
+      );
+      expect((await s.list()).map((e) => e.id), [std.id]);
+      expect((await s.list(owner: 'p:a')).map((e) => e.id), [a.id]);
+      expect((await s.search('Koriander')).map((e) => e.id), [std.id]);
+      expect((await s.search('Koriander', owner: 'p:b')).map((e) => e.id), [
+        b.id,
+      ]);
+      // An id of another namespace does not exist here, and stays intact.
+      for (final other in ['', 'p:b']) {
+        await expectLater(
+          s.forget(a.id, owner: other),
+          throwsA(
+            isA<PortException>().having(
+              (p) => p.kind,
+              'kind',
+              PortErrorKind.notFound,
+            ),
+          ),
+        );
+      }
+      expect((await s.list(owner: 'p:a')).map((e) => e.id), [a.id]);
+      expect((await s.forget(a.id, owner: 'p:a')).id, a.id);
+      expect(await s.list(owner: 'p:a'), isEmpty);
+      expect((await s.list()).map((e) => e.id), [std.id]);
     },
     MemoryStoreChecks.blank: () async {
       final s = await create();

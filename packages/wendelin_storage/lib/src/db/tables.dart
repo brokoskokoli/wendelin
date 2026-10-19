@@ -67,6 +67,10 @@ class MemoryEntries extends Table {
   /// `PrivacyLevel.name` if saved by a private run (v3), else null.
   TextColumn get privacyFloor => text().nullable()();
 
+  /// Memory namespace (v6, WP92b): `''` = the default memory, otherwise the
+  /// namespace of one person. Every query filters on it.
+  TextColumn get owner => text().withDefault(const Constant(''))();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }

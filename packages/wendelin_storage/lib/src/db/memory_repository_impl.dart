@@ -21,6 +21,7 @@ final class DriftMemoryRepository implements MemoryRepository {
     required StoredMemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
+    String owner = '',
   }) async {
     checkNotSensitive(text);
     final now = _clock.now();
@@ -32,6 +33,7 @@ final class DriftMemoryRepository implements MemoryRepository {
       createdAt: now,
       lastUsedAt: now,
       privacyFloor: privacyFloor?.name,
+      owner: owner,
     );
     await _db.into(_db.memoryEntries).insert(row);
     return _entry(row);
@@ -42,43 +44,52 @@ final class DriftMemoryRepository implements MemoryRepository {
     String id, {
     String? text,
     StoredMemoryCategory? category,
+    String owner = '',
   }) async {
     if (text != null) checkNotSensitive(text);
-    await (_db.update(_db.memoryEntries)..where((m) => m.id.equals(id))).write(
+    await (_db.update(
+      _db.memoryEntries,
+    )..where((m) => _mine(m, id, owner))).write(
       MemoryEntriesCompanion(
         body: Value.absentIfNull(text),
         category: Value.absentIfNull(category),
       ),
     );
-    return get(id);
+    return get(id, owner: owner);
   }
 
   @override
-  Future<StoredMemory?> clearPrivacyFloor(String id) async {
-    await (_db.update(_db.memoryEntries)..where((m) => m.id.equals(id))).write(
-      const MemoryEntriesCompanion(privacyFloor: Value(null)),
-    );
-    return get(id);
+  Future<StoredMemory?> clearPrivacyFloor(
+    String id, {
+    String owner = '',
+  }) async {
+    await (_db.update(_db.memoryEntries)..where((m) => _mine(m, id, owner)))
+        .write(const MemoryEntriesCompanion(privacyFloor: Value(null)));
+    return get(id, owner: owner);
   }
 
   @override
-  Future<bool> forget(String id) async =>
+  Future<bool> forget(String id, {String owner = ''}) async =>
       await (_db.delete(
         _db.memoryEntries,
-      )..where((m) => m.id.equals(id))).go() >
+      )..where((m) => _mine(m, id, owner))).go() >
       0;
 
   @override
-  Future<StoredMemory?> get(String id) async {
+  Future<StoredMemory?> get(String id, {String owner = ''}) async {
     final row = await (_db.select(
       _db.memoryEntries,
-    )..where((m) => m.id.equals(id))).getSingleOrNull();
+    )..where((m) => _mine(m, id, owner))).getSingleOrNull();
     return row == null ? null : _entry(row);
   }
 
   @override
-  Future<List<StoredMemory>> list({StoredMemoryCategory? category}) async {
+  Future<List<StoredMemory>> list({
+    StoredMemoryCategory? category,
+    String owner = '',
+  }) async {
     final q = _db.select(_db.memoryEntries)
+      ..where((m) => m.owner.equals(owner))
       ..orderBy([
         (m) => OrderingTerm.desc(m.createdAt),
         (m) => OrderingTerm.asc(m.id),
@@ -88,7 +99,11 @@ final class DriftMemoryRepository implements MemoryRepository {
   }
 
   @override
-  Future<List<StoredMemory>> search(String query, {int limit = 5}) async {
+  Future<List<StoredMemory>> search(
+    String query, {
+    int limit = 5,
+    String owner = '',
+  }) async {
     final match = ftsQuery(query);
     if (match == null || limit <= 0) return const [];
     return _db.transaction(() async {
@@ -96,10 +111,14 @@ final class DriftMemoryRepository implements MemoryRepository {
           .customSelect(
             'SELECT m.* FROM memory_fts f '
             'JOIN memory_entries m ON m.id = f.entry_id '
-            'WHERE memory_fts MATCH ?1 '
+            'WHERE memory_fts MATCH ?1 AND m.owner = ?3 '
             'ORDER BY bm25(memory_fts), m.last_used_at DESC '
             'LIMIT ?2',
-            variables: [Variable.withString(match), Variable.withInt(limit)],
+            variables: [
+              Variable.withString(match),
+              Variable.withInt(limit),
+              Variable.withString(owner),
+            ],
             readsFrom: {_db.memoryFts, _db.memoryEntries},
           )
           .asyncMap((r) => _db.memoryEntries.mapFromRow(r))
@@ -115,8 +134,8 @@ final class DriftMemoryRepository implements MemoryRepository {
   }
 
   @override
-  Future<String> exportMarkdown() async {
-    final entries = await list();
+  Future<String> exportMarkdown({String owner = ''}) async {
+    final entries = await list(owner: owner);
     final b = StringBuffer('# Gedächtnis\n');
     for (final category in StoredMemoryCategory.values) {
       final inCategory = entries.where((e) => e.category == category).toList()
@@ -130,6 +149,30 @@ final class DriftMemoryRepository implements MemoryRepository {
     }
     return b.toString();
   }
+
+  @override
+  Future<int> count({String owner = ''}) async {
+    final n = _db.memoryEntries.id.count();
+    final q = _db.selectOnly(_db.memoryEntries)
+      ..addColumns([n])
+      ..where(_db.memoryEntries.owner.equals(owner));
+    return (await q.getSingle()).read(n) ?? 0;
+  }
+
+  @override
+  Future<int> deleteOwner(String owner) async {
+    if (owner.isEmpty) return 0;
+    return (_db.delete(
+      _db.memoryEntries,
+    )..where((m) => m.owner.equals(owner))).go();
+  }
+
+  /// Row [id] of the namespace [owner] only.
+  static Expression<bool> _mine(
+    $MemoryEntriesTable m,
+    String id,
+    String owner,
+  ) => m.id.equals(id) & m.owner.equals(owner);
 
   static const _heading = {
     StoredMemoryCategory.person: 'Personen',

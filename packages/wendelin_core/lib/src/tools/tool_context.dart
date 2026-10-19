@@ -13,6 +13,7 @@ final class ToolContext {
     CancelToken? cancel,
     this.privacyLevel,
     this.privacyFloor,
+    this.memoryOwner = '',
   }) : cancel = cancel ?? CancelToken();
 
   /// Current conversation session.
@@ -41,4 +42,9 @@ final class ToolContext {
   /// `memory__save`) store it with this floor so weaker targets never see
   /// it.
   final PrivacyLevel? privacyFloor;
+
+  /// Memory namespace of the person the run belongs to (WP92b); `''` = the
+  /// default memory (unknown speaker, typed chat). The memory tools read and
+  /// write only this namespace.
+  final String memoryOwner;
 }

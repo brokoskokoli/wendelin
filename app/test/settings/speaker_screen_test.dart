@@ -125,7 +125,10 @@ void main() {
     expect(find.text('Anna'), findsOneWidget);
     expect((await c.read(speakerProfilesProvider.future)).single.name, 'Anna');
 
-    await tester.tap(find.byIcon(Icons.delete_outline));
+    // Antippen öffnet die Person (WP92b); dort löscht man sie.
+    await tester.tap(find.text('Anna'));
+    await settle(tester);
+    await tester.tap(find.text('Person löschen'));
     await tester.pumpAndSettle();
     await tester.tap(
       find.descendant(
@@ -135,6 +138,7 @@ void main() {
     );
     await settle(tester);
     expect(find.text('Anna'), findsNothing);
+    expect(find.text('Noch niemand eingelernt.'), findsOneWidget);
     expect(await env.secrets.listKeys(), isEmpty);
   });
 

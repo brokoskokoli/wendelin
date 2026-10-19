@@ -31,6 +31,7 @@ export 'src/recognizer/bpe_encoder.dart';
 export 'src/recognizer/hint_terms.dart';
 export 'src/recognizer/hotwords.dart';
 export 'src/recognizer/recognition_session.dart';
+export 'src/speaker/person_settings.dart';
 export 'src/speaker/speaker_embedder.dart';
 export 'src/speaker/speaker_identifier.dart';
 export 'src/speaker/speaker_match.dart';

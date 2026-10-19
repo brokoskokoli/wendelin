@@ -28,15 +28,36 @@ void main() {
 
   test('aktuelle Schema-Version ist eingecheckt', () {
     expect(GeneratedHelper.versions.last, WendelinDatabase.version);
-    expect(WendelinDatabase.version, 5);
+    expect(WendelinDatabase.version, 6);
   });
 
-  test('neue Datenbank entspricht dem Schema-Dump v5', () async {
-    final schema = await verifier.schemaAt(5);
+  test('neue Datenbank entspricht dem Schema-Dump v6', () async {
+    final schema = await verifier.schemaAt(6);
     final db = WendelinDatabase(schema.newConnection());
     addTearDown(db.close);
-    await verifier.migrateAndValidate(db, 5);
+    await verifier.migrateAndValidate(db, 6);
   });
+
+  test(
+    'Upgrade v5 → v6: alte Einträge liegen im Standard-Gedächtnis',
+    () async {
+      final schema = await verifier.schemaAt(5);
+      schema.rawDatabase.execute(
+        'INSERT INTO memory_entries (id, body, category, source, created_at, '
+        "last_used_at) VALUES ('m1', 'Mag Tee', 'preference', 'user', 1, 1)",
+      );
+      final db = WendelinDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(db, 6);
+      await db.close();
+
+      final storage = WendelinStorage(schema.newConnection());
+      addTearDown(storage.close);
+      expect((await storage.memory.list()).single.id, 'm1');
+      expect((await storage.memory.search('Tee')).single.id, 'm1');
+      expect(await storage.memory.list(owner: 'p:a'), isEmpty);
+      expect(await storage.memory.count(), 1);
+    },
+  );
 
   test('Upgrade v4 → v5: alte Sitzungen gelten als App-Sitzungen', () async {
     final schema = await verifier.schemaAt(4);

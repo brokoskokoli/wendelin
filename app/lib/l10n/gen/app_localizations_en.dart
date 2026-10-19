@@ -3653,6 +3653,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String speakerDeleteBodyMemory(String name, int count) {
+    return '$name is deleted with all stored voice features and $count entries in their own memory. The default memory stays unchanged.';
+  }
+
+  @override
   String get speakerDeleteConfirm => 'Delete';
 
   @override
@@ -3710,6 +3715,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speakerPeople => 'People';
+
+  @override
+  String get speakerPersonAddress => 'Form of address';
+
+  @override
+  String get speakerPersonAddressHint =>
+      'How Wendelin addresses you. Empty: the enrolled name.';
+
+  @override
+  String get speakerPersonAgent => 'Agent';
+
+  @override
+  String get speakerPersonAgentDefault => 'Default agent';
+
+  @override
+  String get speakerPersonAgentDetail =>
+      'Only another target instead of the default. Rules and privacy still apply.';
+
+  @override
+  String get speakerPersonDelete => 'Delete person';
+
+  @override
+  String get speakerPersonMemory => 'Memory';
+
+  @override
+  String get speakerPersonMemoryOpen => 'View entries';
+
+  @override
+  String get speakerPersonMemoryOwn => 'Own memory';
+
+  @override
+  String get speakerPersonMemoryOwnDetail =>
+      'Remembers things for this person only.';
+
+  @override
+  String get speakerPersonMemoryShared => 'Default memory';
+
+  @override
+  String get speakerPersonMemorySharedDetail =>
+      'Shares the existing entries with everyone who is not recognized.';
+
+  @override
+  String get speakerPersonRetrain => 'Enroll again';
+
+  @override
+  String get speakerPersonRetrainDetail => 'Read the five sentences once more.';
 
   @override
   String get speakerProcessing => 'Processing …';

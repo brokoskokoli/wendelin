@@ -112,6 +112,42 @@ final class ProviderConfig {
     ...others,
   ].map((t) => t.privacy).reduce((a, b) => a.isAtLeast(b) ? b : a);
 
+  /// This configuration with the provider profile [profileId] as default
+  /// target instead of the global one (the default of a recognized person,
+  /// WP92b). Nothing else changes: the set of reachable targets, routing
+  /// rules, privacy floor and taint stay as they are, and the stored default
+  /// (`setDefault`) is not touched. Returns `this` if [profileId] is `null`,
+  /// already the default or not a usable profile.
+  ProviderConfig withDefaultProfile(String? profileId) {
+    if (profileId == null || profileId == primary.profileId) return this;
+    final chosen = others.where((t) => t.profileId == profileId).firstOrNull;
+    if (chosen == null) return this;
+    final r = routing;
+    return ProviderConfig(
+      primary: chosen,
+      others: [
+        primary,
+        for (final t in others)
+          if (t.profileId != profileId) t,
+      ],
+      names: names,
+      isPrivate: isPrivate,
+      routing: r == null
+          ? null
+          : RoutingSetup(
+              rules: r.rules.copyWith(
+                defaultTarget: RouteTarget(
+                  profileId: chosen.profileId,
+                  modelId: chosen.modelId,
+                ),
+              ),
+              profiles: r.profiles,
+              clock: r.clock,
+              network: r.network,
+            ),
+    );
+  }
+
   /// The resolver for the agent.
   ProviderResolver resolver() => switch (routing) {
     final r? => RuleBasedProviderResolver(

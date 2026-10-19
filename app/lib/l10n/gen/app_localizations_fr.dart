@@ -3701,6 +3701,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String speakerDeleteBodyMemory(String name, int count) {
+    return '$name est supprimé(e) avec toutes les caractéristiques vocales et $count entrées de sa mémoire propre. La mémoire par défaut reste inchangée.';
+  }
+
+  @override
   String get speakerDeleteConfirm => 'Supprimer';
 
   @override
@@ -3758,6 +3763,52 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get speakerPeople => 'Personnes';
+
+  @override
+  String get speakerPersonAddress => 'Appellation';
+
+  @override
+  String get speakerPersonAddressHint =>
+      'Comment Wendelin s\'adresse à vous. Vide : le nom enregistré.';
+
+  @override
+  String get speakerPersonAgent => 'Agent';
+
+  @override
+  String get speakerPersonAgentDefault => 'Agent par défaut';
+
+  @override
+  String get speakerPersonAgentDetail =>
+      'Seulement une autre cible à la place de celle par défaut. Les règles et la confidentialité restent valables.';
+
+  @override
+  String get speakerPersonDelete => 'Supprimer la personne';
+
+  @override
+  String get speakerPersonMemory => 'Mémoire';
+
+  @override
+  String get speakerPersonMemoryOpen => 'Voir les entrées';
+
+  @override
+  String get speakerPersonMemoryOwn => 'Mémoire propre';
+
+  @override
+  String get speakerPersonMemoryOwnDetail =>
+      'Ne retient des choses que pour cette personne.';
+
+  @override
+  String get speakerPersonMemoryShared => 'Mémoire par défaut';
+
+  @override
+  String get speakerPersonMemorySharedDetail =>
+      'Partage les entrées existantes avec tous ceux qui ne sont pas reconnus.';
+
+  @override
+  String get speakerPersonRetrain => 'Réenregistrer';
+
+  @override
+  String get speakerPersonRetrainDetail => 'Relire les cinq phrases.';
 
   @override
   String get speakerProcessing => 'Analyse en cours …';

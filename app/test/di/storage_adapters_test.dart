@@ -4,6 +4,8 @@ import 'package:wendelin/platform/repository_memory_port.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
+import 'package:wendelin_storage/wendelin_storage.dart'
+    show StoredMemoryCategory;
 
 void main() {
   test('Untergrenze privater Läufe: Port → Speicher → Retriever', () async {
@@ -27,6 +29,33 @@ void main() {
       {for (final i in items) i.text: i.privacyFloor},
       {'Knie-OP im März': PrivacyLevel.tee, 'Knie ist wieder gut': null},
     );
+  });
+
+  test('Retriever sieht nur den eigenen Namespace (WP92b)', () async {
+    final storage = openInMemoryStorage();
+    addTearDown(storage.close);
+    for (final (owner, text) in const [
+      ('', 'Knie Standard'),
+      ('p:a', 'Knie Anna'),
+      ('p:b', 'Knie Ben'),
+    ]) {
+      await storage.memory.save(
+        text,
+        category: StoredMemoryCategory.fact,
+        source: 'user',
+        owner: owner,
+      );
+    }
+    Future<List<String>> texts(String owner) async => [
+      for (final i in await StorageMemoryRetriever(
+        storage.memory,
+        owner: owner,
+      ).relevant('Knie', limit: 5))
+        i.text,
+    ];
+    expect(await texts(''), ['Knie Standard']);
+    expect(await texts('p:a'), ['Knie Anna']);
+    expect(await texts('p:zzz'), isEmpty);
   });
 
   test('Gesprächszüge behalten ihre Untergrenze', () async {

@@ -195,8 +195,10 @@ final class _BadMemory implements MemoryStorePort {
     this.storesSensitive = false,
     this.silentForget = false,
     this.dropsFloor = false,
+    this.ignoresOwner = false,
   });
 
+  final bool ignoresOwner;
   final bool storesSensitive;
   final bool dropsFloor;
   final bool silentForget;
@@ -209,6 +211,7 @@ final class _BadMemory implements MemoryStorePort {
     required MemoryCategory category,
     required String source,
     PrivacyLevel? privacyFloor,
+    String owner = '',
   }) async {
     if (storesSensitive && detectSensitiveContent(text) != null) {
       final e = MemoryEntry(
@@ -226,15 +229,19 @@ final class _BadMemory implements MemoryStorePort {
       category: category,
       source: source,
       privacyFloor: dropsFloor ? null : privacyFloor,
+      owner: ignoresOwner ? '' : owner,
     );
   }
 
   @override
-  Future<List<MemoryEntry>> search(String query, {int limit = 5}) =>
-      inner.search(query, limit: limit);
+  Future<List<MemoryEntry>> search(
+    String query, {
+    int limit = 5,
+    String owner = '',
+  }) => inner.search(query, limit: limit, owner: owner);
 
   @override
-  Future<MemoryEntry> forget(String id) async {
+  Future<MemoryEntry> forget(String id, {String owner = ''}) async {
     if (silentForget && !(await inner.list()).any((e) => e.id == id)) {
       return MemoryEntry(
         id: id,
@@ -244,11 +251,14 @@ final class _BadMemory implements MemoryStorePort {
         createdAt: DateTime.utc(2026),
       );
     }
-    return inner.forget(id);
+    return inner.forget(id, owner: owner);
   }
 
   @override
-  Future<List<MemoryEntry>> list() async => [...raw, ...await inner.list()];
+  Future<List<MemoryEntry>> list({String owner = ''}) async => [
+    if (owner.isEmpty) ...raw,
+    ...await inner.list(owner: owner),
+  ];
 }
 
 /// List file port with switchable defects.
@@ -471,6 +481,15 @@ void main() {
         memoryStoreContractChecks(
           () => _BadMemory(dropsFloor: true),
         )[MemoryStoreChecks.privacyFloor]!(),
+        _fails,
+      );
+    });
+
+    test('vermischte Namespaces', () async {
+      await expectLater(
+        memoryStoreContractChecks(
+          () => _BadMemory(ignoresOwner: true),
+        )[MemoryStoreChecks.owners]!(),
         _fails,
       );
     });

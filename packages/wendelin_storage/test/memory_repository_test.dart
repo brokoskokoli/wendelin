@@ -253,4 +253,78 @@ void main() {
       '- Ich mag Tee (user, 2026-10-13)\n',
     );
   });
+
+  group('Namespaces (WP92b)', () {
+    Future<StoredMemory> saveFor(String owner, String text) => repo.save(
+      text,
+      category: StoredMemoryCategory.fact,
+      source: 'user',
+      owner: owner,
+    );
+
+    test(
+      'list, search, count und Export sehen nur den eigenen Namespace',
+      () async {
+        final std = await saveFor('', 'Standard mag Koriander');
+        final a = await saveFor('p:a', 'Anna mag Koriander');
+        final b = await saveFor('p:b', 'Ben mag Koriander');
+        expect((await repo.list()).map((e) => e.id), [std.id]);
+        expect((await repo.list(owner: 'p:a')).map((e) => e.id), [a.id]);
+        expect((await repo.search('Koriander')).map((e) => e.id), [std.id]);
+        expect(
+          (await repo.search('Koriander', owner: 'p:b')).map((e) => e.id),
+          [b.id],
+        );
+        expect(await repo.search('Koriander', owner: 'p:zzz'), isEmpty);
+        expect(await repo.count(), 1);
+        expect(await repo.count(owner: 'p:a'), 1);
+        final md = await repo.exportMarkdown(owner: 'p:a');
+        expect(md, contains('Anna'));
+        expect(md, isNot(contains('Ben')));
+        expect(md, isNot(contains('Standard')));
+        expect(md, isNot(contains('p:a')));
+        expect(await repo.exportMarkdown(), isNot(contains('Anna')));
+      },
+    );
+
+    test(
+      'get, update, clearPrivacyFloor und forget treffen keine fremde Id',
+      () async {
+        final a = await repo.save(
+          'Anna Befund',
+          category: StoredMemoryCategory.fact,
+          source: 'user',
+          privacyFloor: PrivacyLevel.tee,
+          owner: 'p:a',
+        );
+        for (final other in ['', 'p:b']) {
+          expect(await repo.get(a.id, owner: other), isNull);
+          expect(await repo.update(a.id, text: 'x', owner: other), isNull);
+          expect(await repo.clearPrivacyFloor(a.id, owner: other), isNull);
+          expect(await repo.forget(a.id, owner: other), isFalse);
+        }
+        final kept = (await repo.get(a.id, owner: 'p:a'))!;
+        expect(kept.text, 'Anna Befund');
+        expect(kept.privacyFloor, PrivacyLevel.tee);
+        expect(await repo.forget(a.id, owner: 'p:a'), isTrue);
+      },
+    );
+
+    test(
+      'deleteOwner löscht nur den Namespace, nie das Standard-Gedächtnis',
+      () async {
+        await saveFor('', 'Standard');
+        await saveFor('p:a', 'Anna eins');
+        await saveFor('p:a', 'Anna zwei');
+        final b = await saveFor('p:b', 'Ben');
+        expect(await repo.deleteOwner(''), 0);
+        expect(await repo.count(), 1);
+        expect(await repo.deleteOwner('p:a'), 2);
+        expect(await repo.count(owner: 'p:a'), 0);
+        expect(await repo.search('Anna', owner: 'p:a'), isEmpty);
+        expect(await repo.count(), 1);
+        expect((await repo.get(b.id, owner: 'p:b'))!.text, 'Ben');
+      },
+    );
+  });
 }

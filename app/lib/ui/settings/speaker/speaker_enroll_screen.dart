@@ -33,10 +33,14 @@ String speakerSentence(AppLocalizations l, int index) => switch (index) {
 /// calibration result at the end.
 class SpeakerEnrollScreen extends ConsumerStatefulWidget {
   /// Creates the screen for the person [name].
-  const SpeakerEnrollScreen({super.key, required this.name});
+  const SpeakerEnrollScreen({super.key, required this.name, this.personId});
 
   /// Name of the person.
   final String name;
+
+  /// Enrolls again the existing person with this id (settings and memory
+  /// stay); `null` = a new person.
+  final String? personId;
 
   @override
   ConsumerState<SpeakerEnrollScreen> createState() => _EnrollState();
@@ -92,7 +96,11 @@ class _EnrollState extends ConsumerState<SpeakerEnrollScreen> {
     try {
       final result = await ref
           .read(speakerProfilesProvider.notifier)
-          .enroll(name: widget.name, samples: List.of(_samples));
+          .enroll(
+            name: widget.name,
+            samples: List.of(_samples),
+            id: widget.personId,
+          );
       if (mounted) setState(() => _result = result);
     } on SpeakerEnrollException catch (e) {
       if (mounted) setState(() => _problem = e.problem);

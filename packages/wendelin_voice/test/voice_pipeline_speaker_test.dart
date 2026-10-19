@@ -36,6 +36,32 @@ void main() {
       });
     });
 
+    test('erkannte Person: die Id geht mit der Anfrage zum Agenten', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Ok.')],
+          speaker: FakeSpeakerRecognizer(anna),
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.recording.inputs.single.speakerId, 'a');
+      });
+    });
+
+    test('unbekannt oder aus: keine Id an den Agenten', () {
+      runFake((async) {
+        final h = Harness(
+          turns: [ScriptedTurn.text('Ok.')],
+          speaker: FakeSpeakerRecognizer(
+            const SpeakerMatch.unknown(SpeakerUnknownReason.belowThreshold),
+          ),
+        );
+        h.pipeline.start();
+        settle(async);
+        expect(h.recording.inputs.single.speakerId, isNull);
+      });
+    });
+
     test('läuft parallel: Erkennung beginnt, solange STT noch läuft', () {
       runFake((async) {
         final rec = FakeSpeakerRecognizer(anna);

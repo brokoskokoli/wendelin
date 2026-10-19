@@ -14,7 +14,9 @@ import '../di/audit_recorder.dart';
 import '../di/preferences.dart';
 import '../di/provider_config.dart';
 import '../di/providers.dart';
+import '../di/speaker_providers.dart';
 import '../di/vocabulary_provider.dart';
+import '../voice/speaker/person_scope.dart';
 import 'chat_entry.dart';
 import 'conversation_reducer.dart';
 import 'conversation_state.dart';
@@ -37,6 +39,13 @@ final class AgentController extends Notifier<ConversationState> {
   String? _sessionId;
   String? _shownSessionId;
   ProviderConfig? _providers;
+
+  /// Scope of the open conversation (WP92b): the person it belongs to. A
+  /// known other person starts a new conversation; an unknown speaker or
+  /// typed text stays in the conversation and its scope, so a person's
+  /// history never reaches another person's agent or memory.
+  PersonScope _scope = PersonScope.standard;
+  String? _scopeSessionId;
   final _done = <Completer<void>>[];
   StreamController<AgentEvent>? _out;
   bool _cancelRequested = false;
@@ -278,14 +287,13 @@ final class AgentController extends Notifier<ConversationState> {
       _finishWithNotice(NoticeKind.info, uiTexts(ref).agentNoticeSetupFirst);
       return;
     }
-    _providers = providers;
-
     final String sessionId;
+    final PersonScope scope;
     try {
       // The first request after start waits until every integration was
       // checked, so its active tools are offered.
       await ref.read(toolRegistryReadyProvider.future);
-      sessionId = await ref.read(sessionManagerProvider).ensure();
+      (sessionId, scope) = await _sessionFor(input.speakerId);
     } on Object catch (e, stack) {
       _report(e, stack);
       _finishWithNotice(NoticeKind.error, uiTexts(ref).agentNoticeStartFailed);
@@ -301,6 +309,8 @@ final class AgentController extends Notifier<ConversationState> {
       return;
     }
     _sessionId = sessionId;
+    final scoped = providers.withDefaultProfile(scope.agentProfileId);
+    _providers = scoped;
     final isNew = sessionId != _shownSessionId;
     _shownSessionId = sessionId;
     state = _reducer.userMessage(
@@ -308,7 +318,7 @@ final class AgentController extends Notifier<ConversationState> {
       trimmed,
       sessionStart: isNew ? ref.read(clockProvider).now() : null,
     );
-    if (_isPrivateRequest(providers, input)) {
+    if (_isPrivateRequest(scoped, input)) {
       state = state.copyWith(privateByRequest: true);
     }
 
@@ -321,7 +331,9 @@ final class AgentController extends Notifier<ConversationState> {
       requestEscalation: input.requestEscalation,
     );
     _audit.request(sessionId, request, trigger: trigger);
-    final run = ref.read(agentFactoryProvider).create(providers, sessionId);
+    final run = ref
+        .read(agentFactoryProvider)
+        .create(scoped, sessionId, person: scope);
     _run = run;
     _events = run
         .run(request)
@@ -331,6 +343,34 @@ final class AgentController extends Notifier<ConversationState> {
           onDone: _finished,
           cancelOnError: true,
         );
+  }
+
+  /// The session for a request of [speakerId] and the scope it runs in
+  /// (WP92b). A known person who is not the one of the open conversation
+  /// gets a new conversation (no history); everything else continues the
+  /// open one in its scope.
+  Future<(String, PersonScope)> _sessionFor(String? speakerId) async {
+    final sessions = ref.read(sessionManagerProvider);
+    final requested = await ref
+        .read(personScopeResolverProvider)
+        .scopeOf(speakerId);
+    final open = sessions.currentId;
+    final otherPerson =
+        !requested.isStandard &&
+        open != null &&
+        open == _scopeSessionId &&
+        _scope.personId != requested.personId;
+    final id = otherPerson
+        ? await sessions.startNew()
+        : await sessions.ensure();
+    if (id != _scopeSessionId) {
+      // A new conversation belongs to whoever opened it.
+      _scope = requested;
+      _scopeSessionId = id;
+    } else if (!requested.isStandard && _scope.personId == requested.personId) {
+      _scope = requested; // settings changed meanwhile: the fresh ones
+    }
+    return (id, _scope);
   }
 
   /// The agent stream broke its contract (no terminal event, an error):

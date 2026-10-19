@@ -10,6 +10,6 @@
 
 **Quelle**: `session:<sessionId>`.
 
-**Port**: `MemoryStorePort` (`save`, `search`, `forget` → entfernter Eintrag, `list`). Die App verdrahtet ihn mit `MemoryRepository` aus `wendelin_storage`. Fake: `FakeMemoryStore`, Vertrag: `memoryStoreContract`.
+**Port**: `MemoryStorePort` (`save`, `search`, `forget` → entfernter Eintrag, `list`). Die App verdrahtet ihn mit `MemoryRepository` aus `wendelin_storage`. Jede Methode hat `owner` (Namespace einer Person, `''` = Standard, WP92b); die Tools nehmen ihn aus `ToolContext.memoryOwner`, ein Eintrag eines fremden Namespaces ist `notFound`. Fake: `FakeMemoryStore`, Vertrag: `memoryStoreContract` (Check `MemoryStoreChecks.owners`).
 
 **Berechtigung**: keine. **Plattformen**: Android, iOS. **Sensibel**: ja.

@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import '../voice/speaker/person_scope.dart';
 import 'audit_recorder.dart';
 import 'provider_config.dart';
 import 'storage_adapters.dart';
@@ -11,7 +12,14 @@ import 'storage_adapters.dart';
 abstract interface class AgentRunFactory {
   /// An agent for one request in [sessionId] with the targets of
   /// [providers].
-  AgentRun create(ProviderConfig providers, String sessionId);
+  ///
+  /// [person] is the recognized person's scope (WP92b): address, memory
+  /// namespace. Without it the request behaves as before.
+  AgentRun create(
+    ProviderConfig providers,
+    String sessionId, {
+    PersonScope person = PersonScope.standard,
+  });
 }
 
 /// Builds one [AgentRun] per request, wired to the registry, the local
@@ -75,7 +83,11 @@ final class AgentFactory implements AgentRunFactory {
   /// Weaker targets (also after „nochmal mit …“) get no memory in the
   /// system prompt; a run that sees it is tainted with that level.
   @override
-  AgentRun create(ProviderConfig providers, String sessionId) {
+  AgentRun create(
+    ProviderConfig providers,
+    String sessionId, {
+    PersonScope person = PersonScope.standard,
+  }) {
     final catalog = registry.catalogFor(
       providers.lowestPrivacy,
       sessionId: sessionId,
@@ -91,11 +103,15 @@ final class AgentFactory implements AgentRunFactory {
     return AgentRunner(
       resolver: providers.resolver(),
       contextBuilder: ContextBuilder(
-        config: config,
+        config: person.address == null
+            ? config
+            : config.withUserName(person.address),
         clock: clock,
         device: device,
         catalog: catalog,
-        memory: memoryAllowed ? StorageMemoryRetriever(storage.memory) : null,
+        memory: memoryAllowed
+            ? StorageMemoryRetriever(storage.memory, owner: person.memoryOwner)
+            : null,
         history: conversation,
       ),
       invoker: ToolExecutor(
@@ -135,6 +151,7 @@ final class AgentFactory implements AgentRunFactory {
       costEstimator: costEstimator,
       budgetGuard: budgetGuard,
       memoryFloor: memoryFloor,
+      memoryOwner: person.memoryOwner,
     );
   }
 }

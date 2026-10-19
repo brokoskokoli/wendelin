@@ -29,14 +29,18 @@ final class StorageConversation
 /// [MemoryRetriever] on the memory repository (FTS5 search).
 final class StorageMemoryRetriever implements MemoryRetriever {
   /// Creates the retriever.
-  StorageMemoryRetriever(this.repository);
+  StorageMemoryRetriever(this.repository, {this.owner = ''});
 
   /// Long-term memory.
   final MemoryRepository repository;
 
+  /// Memory namespace of the person the request belongs to (WP92b); only
+  /// this namespace reaches the prompt.
+  final String owner;
+
   @override
   Future<List<MemoryItem>> relevant(String query, {required int limit}) async {
-    final hits = await repository.search(query, limit: limit);
+    final hits = await repository.search(query, limit: limit, owner: owner);
     return [
       for (final e in hits)
         MemoryItem(

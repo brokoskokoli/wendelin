@@ -16,4 +16,5 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP90 Medien (`media`)](wp90.md)
 - [WP91 Home Assistant](wp91.md)
 - [WP92a Sprechererkennung](wp92a.md)
+- [WP92b Personen: Anrede, Gedächtnis, Agent](wp92b.md)
 - [WP94 Schnellwechsel des Standard-Agenten (langer Druck auf den Provider-Chip)](wp94.md)
