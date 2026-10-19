@@ -1,6 +1,6 @@
-/// Built-in Wendelin integrations on top of device ports: calendar,
-/// clipboard, alarms, memory, web, weather, lists, Obsidian, Bring! and Spotify, plus
-/// user-defined HTTP tools (`HttpToolsIntegration`).
+/// Built-in Wendelin integrations on top of device ports, plus user-defined
+/// HTTP tools (`HttpToolsIntegration`). The list of integrations lives in
+/// `app/lib/di/integrations/registry.dart`, not here.
 ///
 /// Device access goes only through the ports (`CalendarPort`,
 /// `ClipboardPort`, `AlarmPort`, `MemoryStorePort`, `ListFilePort`,

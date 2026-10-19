@@ -5,8 +5,9 @@
 2. Einstiegspunkt `packages/wendelin_integrations/lib/<name>.dart` (Exporte mit `show`) und **eine** Zeile in `wendelin_integrations.dart`; Fakes und Contract in `fakes.dart`/`testing.dart` (nur anhängen).
 3. Port-Implementierung in `app/lib/platform/`, Feld in `PlatformPorts`.
 4. `IntegrationSpec` in eigener Datei `app/lib/di/integrations/<name>_spec.dart` (eigene Provider über `prepare`, nicht über `IntegrationDeps`) und **eine** Zeile in `app/lib/di/integrations/registry.dart`; Einrichtungsseite ggf. in `app/lib/ui/settings/integration_routes.dart` (und `setupPageFor` in `settings_routes.dart`).
-5. Texte in `app/lib/ui/screens/labels.dart`, Berechtigung ggf. in `AndroidManifest.xml`.
-6. Tests im Paket, Verdrahtung in `app/test/di/wiring_test.dart`.
+5. Texte als Fragment `app/lib/l10n/src/<name>/<name>_{de,en,fr}.arb` (eigener Ordner reicht), Berechtigung ggf. in `AndroidManifest.xml`.
+6. Vertrauensdatei `app/test/trust/<id>.json`, Integrationsdoku `docs/architecture/integrations/<id>.md`, Gerätetests `docs/testing/m5/<wp>.md` (Überschrift `# WPnn Titel`).
+7. Tests im Paket; danach `tool/regen_generated.sh` (l10n, Tabellen, m5-Index) und die erzeugten Dateien mitcommitten.
 
 **Neue Einstellungsseite**
 1. Screen in `app/lib/ui/settings/` (Gerüst `settings_page.dart`).
