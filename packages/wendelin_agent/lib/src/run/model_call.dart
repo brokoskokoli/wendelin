@@ -21,7 +21,11 @@ import 'spoken_check.dart';
 /// Result of one model call.
 final class ModelReply {
   /// Creates the reply.
-  ModelReply(this.blocks, this.stopReason, this.error);
+  ModelReply(this.blocks, this.stopReason, this.error, [this.step]);
+
+  /// The verification step of this answer (`null` only if none was begun);
+  /// the tool round of this answer must use it, not the latest step.
+  final AttestationStep? step;
 
   /// The answer's blocks; empty on [error].
   final List<ContentBlock> blocks;
@@ -162,7 +166,7 @@ final class ModelCall {
         !blocks.any((b) => b is ToolCallBlock)) {
       _control.emit(const AgentTextComplete());
     }
-    await _reportAttestation(
+    final step = await _reportAttestation(
       target.provider,
       request,
       blocks,
@@ -170,7 +174,12 @@ final class ModelCall {
     );
     // Incomplete tool calls of a failed stream are never executed: the
     // whole reply is discarded on error.
-    return ModelReply(error == null ? blocks : const [], stopReason, error);
+    return ModelReply(
+      error == null ? blocks : const [],
+      stopReason,
+      error,
+      step,
+    );
   }
 
   String _writtenText(List<ContentBlock> blocks) =>
@@ -204,16 +213,22 @@ final class ModelCall {
   /// Remembers the verification of the answer; without tool calls nothing
   /// waits for it, so it is reported now. With tool calls the tool round
   /// reports it (external tools wait for it).
-  Future<void> _reportAttestation(
+  Future<AttestationStep> _reportAttestation(
     LlmProvider provider,
     ChatRequest request,
     List<ContentBlock> blocks, {
     required bool failed,
   }) async {
-    _attest.begin(provider, request, failed: failed);
+    final step = _attest.begin(
+      provider,
+      request,
+      failed: failed,
+      sink: _control,
+    );
     if (failed || !blocks.any((b) => b is ToolCallBlock)) {
-      await _attest.settle();
+      await _attest.settle(step);
     }
+    return step;
   }
 
   void _reportUsage(Resolution target, Usage used) {
