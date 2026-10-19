@@ -8,6 +8,24 @@ import 'package:wendelin_core/wendelin_core.dart';
 
 import 'run_state.dart';
 
+/// The check of one model call: its step id, pending report and the sink its
+/// status events go to (a buffer for a call that overlaps the previous check).
+final class AttestationStep {
+  AttestationStep._(this.id, this.report, this.sink) : emitted = report == null;
+
+  /// Id of the step (`<session>:<n>`).
+  final String id;
+
+  /// The pending check; `null` if the provider does not verify its answers.
+  final Future<AttestationReport?>? report;
+
+  /// Where the events of this step go.
+  final RunControl sink;
+
+  /// Whether the final status event went out.
+  bool emitted;
+}
+
 /// Connects the run to providers that verify their answers afterwards
 /// ([AttestationAware]). For other providers every method is a no-op.
 ///
@@ -15,6 +33,9 @@ import 'run_state.dart';
 /// - [AttestationStatusChanged] is emitted for each model call: yellow
 ///   (`logId` empty) as soon as the stream ended, then the final green or
 ///   red result of the same step.
+/// - Each model call has its own [AttestationStep]: a call started while the
+///   check of the previous answer is still open (WP81b) never overwrites its
+///   step id, report or events.
 /// - `external` tool calls of a verified-answer provider run only after a
 ///   green verification (fail-closed: red or missing result refuses them).
 final class AttestationGate {
@@ -25,47 +46,66 @@ final class AttestationGate {
   final String _sessionId;
 
   int _steps = 0;
-  String _stepId = '';
-  Future<AttestationReport?>? _report;
-  bool _emitted = true;
+  AttestationStep? _last;
 
   /// A model call on [provider] has ended: remember its pending check.
-  void begin(LlmProvider provider, ChatRequest request, {bool failed = false}) {
-    _stepId = '$_sessionId:${++_steps}';
-    _report = provider is AttestationAware
+  /// Events of the step go to [sink] (default: the run).
+  AttestationStep begin(
+    LlmProvider provider,
+    ChatRequest request, {
+    bool failed = false,
+    RunControl? sink,
+  }) {
+    final report = provider is AttestationAware
         ? (provider as AttestationAware).reportFor(request)
         : null;
-    _emitted = _report == null;
-    if (_report != null && !failed) {
+    // The check of a discarded call may fail unobserved.
+    report?.ignore();
+    final step = AttestationStep._(
+      '$_sessionId:${++_steps}',
+      report,
+      sink ?? _control,
+    );
+    _last = step;
+    if (report != null && !failed) {
       // Pending (yellow) until the receipt check is final: the UI shows
       // „wird geprüft“; the final event of the same step replaces it.
-      _control.emit(
+      step.sink.emit(
         AttestationStatusChanged(
-          stepId: _stepId,
+          stepId: step.id,
           status: AttestationStatus.yellow,
           logId: '',
           detail: 'wird geprüft',
         ),
       );
     }
+    return step;
   }
 
-  /// Whether the last model call's answer is verified afterwards.
-  bool get expectsReport => _report != null;
+  /// The step of the latest model call.
+  AttestationStep? get last => _last;
 
-  /// Waits for the final verification of the last model call, emits the
-  /// status event (once) and returns the report (`null` if the provider has
-  /// none or nothing was checked).
-  Future<AttestationReport?> settle() async {
-    final pending = _report;
-    if (pending == null) return null;
-    final report = await pending;
+  /// Whether the last model call's answer is verified afterwards.
+  bool get expectsReport => _last?.report != null;
+
+  /// Waits for the final verification of [step] (default: the last model
+  /// call), emits the status event (once) and returns the report (`null` if
+  /// the provider has none or nothing was checked).
+  Future<AttestationReport?> settle([AttestationStep? step]) async {
+    final target = step ?? _last;
+    final pending = target?.report;
+    if (target == null || pending == null) return null;
+    // An abort does not wait for the receipt.
+    final report = await Future.any([
+      pending,
+      _control.token.whenCancelled.then<AttestationReport?>((_) => null),
+    ]);
     _control.throwIfAborted();
-    if (!_emitted && report != null) {
-      _emitted = true;
-      _control.emit(
+    if (!target.emitted && report != null) {
+      target.emitted = true;
+      target.sink.emit(
         AttestationStatusChanged(
-          stepId: _stepId,
+          stepId: target.id,
           status: report.status,
           logId: report.logId,
           detail: report.detail,
