@@ -90,6 +90,9 @@ if [ -z "${JAVA_HOME:-}" ] && command -v brew >/dev/null 2>&1; then
   _jdk21="$(brew --prefix openjdk@21 2>/dev/null || true)/libexec/openjdk.jdk/Contents/Home"
   if [ -x "$_jdk21/bin/java" ]; then export JAVA_HOME="$_jdk21"; fi
 fi
+# Zweiter Ausweg: das JBR von Android Studio (JDK 27 scheitert an jlink).
+_jbr="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+if [ -z "${JAVA_HOME:-}" ] && [ -x "$_jbr/bin/java" ]; then export JAVA_HOME="$_jbr"; fi
 
 PKG=app.wendelin
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -21,6 +21,7 @@ import 'package:wendelin/debug/device_test_overrides.dart';
 import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/integration_providers.dart';
+import 'package:wendelin/di/routing.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/main.dart' as app show openAppStorage;
 import 'package:wendelin/platform/attest/attest_backend.dart';
@@ -248,6 +249,24 @@ void main() {
           final file = File('${e2e.path}/$f');
           if (file.existsSync()) file.deleteSync();
         }
+      });
+      // Restzustand (WP104): wie overlay_tee_speak aufräumen, sonst sieht die
+      // nächste Testdatei Profil, Schlüssel, Regeln und Hinweis.
+      addTearDown(() async {
+        final reset = WendelinStorage(driftDatabase(name: 'wendelin'));
+        try {
+          await reset.providerProfiles.delete('phala');
+          await reset.settings.remove(voiceSettingsKey);
+          await reset.settings.remove(AppSettings.onboardingDone);
+          await reset.settings.remove(
+            AppSettings.integrationEnabled('calendar'),
+          );
+          await reset.settings.remove(RoutingSettings.rules);
+          await reset.settings.remove(RoutingSettings.privateRuleNotice);
+        } finally {
+          await reset.close();
+        }
+        await SecureSecretStore().delete('provider.phala.apiKey');
       });
       final setup = WendelinStorage(driftDatabase(name: 'wendelin'));
       await setup.settings.set(AppSettings.onboardingDone, true);
