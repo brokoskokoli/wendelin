@@ -30,10 +30,20 @@ const fnWarn = 80, fnError = 150;
 /// Warnschwelle für Klassen.
 const classWarn = 400;
 
+/// Erzeugter Code: Ordner `gen`/`generated`, `*_generated*.dart`, `*.freezed.dart`.
+bool isGenerated(String path) {
+  final segs = path.split('/');
+  return segs.contains('gen') ||
+      segs.contains('generated') ||
+      segs.last.contains('_generated') ||
+      segs.last.endsWith('.freezed.dart');
+}
+
 /// Ordnet einen Pfad (relativ zum Root, mit `/`) einer [FileKind] zu.
 FileKind kindOf(String path) {
   final segs = path.split('/');
-  if (path.endsWith('.g.dart') ||
+  if (isGenerated(path) ||
+      path.endsWith('.g.dart') ||
       path.endsWith('.steps.dart') ||
       (segs.contains('test') && segs.contains('generated')) ||
       path.contains('/test/fixtures/')) {

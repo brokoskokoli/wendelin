@@ -127,6 +127,16 @@ void _sizesExit(SelfCheck t, _Dir d) {
   t.group('Ratsche Größen (Exit-Codes)');
   const big = 'packages/x/lib/a.dart';
   const baseline = 'tool/size_warn_baseline.yaml';
+  const gen = 'app/lib/l10n/gen/app_localizations_de.dart';
+  d.write(gen, '// x\n' * 700);
+  t.eq(
+    d.run('check_sizes.dart').exitCode,
+    0,
+    'erzeugte Datei (l10n gen/) über der Schwelle: ohne Baseline grün',
+  );
+  d.write(gen, '// x\n' * 701);
+  t.eq(d.run('check_sizes.dart').exitCode, 0, 'erzeugte Datei +1 Zeile: grün');
+  d.delete(gen);
   d.write(big, '// x\n' * 601);
   var res = d.run('check_sizes.dart');
   t.isTrue(

@@ -147,8 +147,9 @@ fi
 
 # 5. Freigabe für den pre-push-Hook (Tree des Ergebnisses) und Squash-Vermerk für cleanup_wt.sh.
 common=$(git rev-parse --path-format=absolute --git-common-dir)
-git rev-parse 'HEAD^{tree}' >> "$common/wendelin-merge-ok"
-echo "$sha $(git rev-parse HEAD)" >> "$common/wendelin-merged-branches"
+tree=$(git rev-parse 'HEAD^{tree}')
+echo "$tree $(git rev-parse HEAD)" >> "$common/wendelin-merge-ok"
+echo "$sha $(git rev-parse HEAD) $tree" >> "$common/wendelin-merged-branches"
 
 # 6. Aufräumen (nur lokal; den Remote-Branch räumt ein späterer Aufruf nach dem Push von main).
 if [ $keep -eq 0 ]; then

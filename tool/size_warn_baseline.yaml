@@ -6,17 +6,6 @@ app/lib/agent/agent_controller.dart: 637
 app/lib/agent/agent_controller.dart#AgentController: 603
 app/lib/agent/agent_controller.dart#AgentController._start: 86
 app/lib/agent/conversation_reducer.dart#ConversationReducer.apply: 128
-app/lib/l10n/gen/app_localizations.dart: 8922
-app/lib/l10n/gen/app_localizations.dart#AppLocalizations: 8822
-app/lib/l10n/gen/app_localizations_de.dart: 5202
-app/lib/l10n/gen/app_localizations_de.dart#AppLocalizationsDe: 5194
-app/lib/l10n/gen/app_localizations_en.dart: 5176
-app/lib/l10n/gen/app_localizations_en.dart#AppLocalizationsEn: 5168
-app/lib/l10n/gen/app_localizations_fr.dart: 5237
-app/lib/l10n/gen/app_localizations_fr.dart#AppLocalizationsFr: 5229
-app/lib/platform/attest/generated/frb_generated.dart: 2308
-app/lib/platform/attest/generated/frb_generated.dart#AttestNativeApiImpl: 2032
-app/lib/platform/attest/generated/frb_generated.io.dart#AttestNativeApiImplPlatform: 450
 app/lib/ui/attestation/attestation_texts.dart#attestationMessage: 100
 app/lib/ui/attestation/stage_explanations.dart#_explanations: 123
 app/lib/ui/overlay/overlay_sheet.dart#OverlaySheet._content: 92
@@ -100,7 +89,7 @@ packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._list
 packages/wendelin_voice/lib/src/pipeline/voice_pipeline.dart#VoicePipeline._run: 99
 packages/wendelin_voice/test/voice_pipeline_test.dart: 1495
 tool/check_deps.dart#main: 89
-tool/self_test.dart: 781
+tool/self_test.dart: 777
 tool/self_test.dart#_depsAndGit: 113
 tool/self_test.dart#_gateRunRed: 95
 tool/self_test.dart#_gateRust: 130

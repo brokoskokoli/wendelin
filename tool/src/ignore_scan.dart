@@ -32,15 +32,6 @@ Map<String, int> countIgnores(String text) {
   return out;
 }
 
-/// Erzeugter Code: Ordner `gen`/`generated`, `*_generated*.dart`, `*.freezed.dart`.
-bool isGenerated(String path) {
-  final segs = path.split('/');
-  return segs.contains('gen') ||
-      segs.contains('generated') ||
-      segs.last.contains('_generated') ||
-      segs.last.endsWith('.freezed.dart');
-}
-
 /// Zählt über alle Dart-Dateien unter [roots] (ohne erzeugten Code).
 Map<String, int> scanIgnores({
   String root = '.',

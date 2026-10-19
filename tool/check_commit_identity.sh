@@ -36,7 +36,7 @@ fail() { echo "check_commit_identity: $(git rev-parse --short "$1"): $2" >&2; ba
 for c in $revs; do
   n=$((n + 1))
   while IFS='|' read -r role name mail; do
-    if [ "$mail" != "$EMAIL" ] || { [ "$name" != brokoskokoli ] && [ "$name" != "Stefan Richter" ]; }; then
+    if [ "$mail" != "$EMAIL" ] || [ "$name" != brokoskokoli ]; then
       fail "$c" "$role '$name <$mail>' ist nicht die noreply-Identität"
     fi
   done <<IDENT

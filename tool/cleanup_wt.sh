@@ -61,14 +61,21 @@ branch=$branches
 
 # gemergt? <tip> <base-ref> → 0/1
 is_merged() {
-  local tip=$1 base=$2 mb pid rec c
+  local tip=$1 base=$2 mb pid rec c tr x
   git merge-base --is-ancestor "$tip" "$base" 2>/dev/null && return 0
+  mb=$(git merge-base "$base" "$tip" 2>/dev/null) || return 1
   if [ -f "$merged_list" ]; then
-    while read -r rec c _; do
-      [ "$rec" = "$tip" ] && git merge-base --is-ancestor "$c" "$base" 2>/dev/null && return 0
+    while read -r rec c tr; do
+      [ "$rec" = "$tip" ] || continue
+      # Der vermerkte Merge-Commit steht in der Basis ...
+      git merge-base --is-ancestor "$c" "$base" 2>/dev/null && return 0
+      # ... oder ein Commit der Basis trägt seinen Tree (Amend nach gen_docs/Nachricht).
+      [ -n "$tr" ] || continue
+      for x in $(git rev-list "$mb..$base"); do
+        [ "$(git rev-parse "$x^{tree}")" = "$tr" ] && return 0
+      done
     done < "$merged_list"
   fi
-  mb=$(git merge-base "$base" "$tip" 2>/dev/null) || return 1
   pid=$(git diff "$mb" "$tip" | git patch-id --stable | cut -d' ' -f1)
   [ -n "$pid" ] || return 1
   for c in $(git rev-list --no-merges "$mb..$base"); do
@@ -83,12 +90,13 @@ local_tip=""; remote_tip=""
 [ -n "$remotes" ] && remote_tip=$(git rev-parse "refs/remotes/$REMOTE/$branch")
 
 # Lokal gemergt (Voraussetzung für Worktrees, lokalen Branch und Handoff).
-local_ok=0
+local_ok=0; okbase=$BASE; okref=""
 if [ -n "$local_tip" ]; then
-  is_merged "$local_tip" "$BASE" && local_ok=1 || problems+=("Branch $branch ist nicht in $BASE gemergt: nichts wird gelöscht")
+  is_merged "$local_tip" "$BASE" && { local_ok=1; okref=$local_tip; } || problems+=("Branch $branch ist nicht in $BASE gemergt: nichts wird gelöscht")
 elif [ -n "$remote_tip" ]; then
   # Nur noch remote vorhanden (lokal schon aufgeräumt): Beleg über origin/main.
-  is_merged "$remote_tip" "$REMOTE/$BASE" && local_ok=1 || problems+=("Branch $REMOTE/$branch ist nicht in $REMOTE/$BASE enthalten: nichts wird gelöscht")
+  okbase="$REMOTE/$BASE"
+  is_merged "$remote_tip" "$REMOTE/$BASE" && { local_ok=1; okref=$remote_tip; } || problems+=("Branch $REMOTE/$branch ist nicht in $REMOTE/$BASE enthalten: nichts wird gelöscht")
 fi
 
 wt_of_branch() { git worktree list --porcelain | awk -v b="refs/heads/$1" '/^worktree /{p=$2} $1=="branch" && $2==b{print p}'; }
@@ -102,6 +110,13 @@ if [ $local_ok -eq 1 ]; then
     wb=$(git -C "$d" symbolic-ref -q --short HEAD || true)
     if [ -n "$wb" ] && [ "$wb" != "$branch" ]; then problems+=("$d hat Branch $wb (nicht $branch): bleibt"); continue; fi
     if [ "$wtname" = "$wp" ] && [ -z "$wb" ]; then problems+=("$d ohne Branch ($branch erwartet): bleibt"); continue; fi
+    if [ -z "$wb" ]; then
+      # Detached (Prüf-Worktree): HEAD muss in gemergtem Stand stehen.
+      wh=$(git -C "$d" rev-parse HEAD 2>/dev/null) || { problems+=("$d: HEAD nicht lesbar: bleibt"); continue; }
+      if ! { is_merged "$wh" "$okbase" || { [ -n "${okref:-}" ] && git merge-base --is-ancestor "$wh" "$okref" 2>/dev/null; }; }; then
+        problems+=("$d steht auf $(git rev-parse --short "$wh"), nicht in $okbase gemergt: bleibt"); continue
+      fi
+    fi
     if [ "$(cd "$d" && pwd -P)" = "$(cd "$here" && pwd -P)" ]; then problems+=("$d ist der aktuelle Worktree: bleibt"); continue; fi
     [ -z "$(git -C "$d" status --porcelain 2>/dev/null)" ] || { problems+=("$d ist nicht sauber (uncommittete oder neue Dateien): bleibt"); continue; }
     actions+=("worktree|$d")
@@ -145,7 +160,7 @@ for a in "${actions[@]:-}"; do
     worktree) git worktree remove "$what" && echo "cleanup_wt: Worktree $what entfernt" || { echo "cleanup_wt: Worktree $what nicht entfernbar" >&2; rc=1; } ;;
     branch) git branch -D "$what" >/dev/null && echo "cleanup_wt: Branch $what entfernt" || { echo "cleanup_wt: Branch $what nicht löschbar" >&2; rc=1; } ;;
     file) rm -f -- "$what" && echo "cleanup_wt: $what entfernt" ;;
-    remote) git push "$REMOTE" --delete "$what" >/dev/null 2>&1 && echo "cleanup_wt: $REMOTE/$what entfernt" || { echo "cleanup_wt: $REMOTE/$what nicht löschbar" >&2; rc=1; } ;;
+    remote) git push "$REMOTE" --delete "$what" "--force-with-lease=refs/heads/$what:$remote_tip" >/dev/null 2>&1 && echo "cleanup_wt: $REMOTE/$what entfernt" || { echo "cleanup_wt: $REMOTE/$what nicht löschbar" >&2; rc=1; } ;;
   esac
 done
 [ $apply -eq 1 ] && git worktree prune

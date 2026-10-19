@@ -16,6 +16,9 @@ void cleanupChecks(SelfCheck t) {
     _remote(t, c);
     _squash(t, c);
     _viaMergeWp(t, c);
+    _detached(t, c);
+    _amendedSquash(t, c);
+    _lease(t, c);
   } finally {
     root.deleteSync(recursive: true);
   }
@@ -251,5 +254,94 @@ void _viaMergeWp(SelfCheck t, _Env c) {
     c.run(['foo/bar', '--apply']).exitCode != 0 &&
         c.run(['wp999', '--apply']).exitCode == 0,
     'ungültiger Name abgelehnt, unbekanntes Paket: nichts zu tun',
+  );
+}
+
+/// Detached Prüf-Worktree auf ungemergtem Commit: nichts wird gelöscht.
+void _detached(SelfCheck t, _Env c) {
+  c.pkg('13', 'det');
+  c.r.git(['merge', '-q', '--no-ff', '-m', 'Merge 13', 'wp/13-det']);
+  c.r.git(['checkout', '-q', '-b', 'fremd', 'main~1']);
+  c.r.commit('fremd.txt', 'f\n');
+  c.r.git(['checkout', '-q', 'main']);
+  c.r.git(['-C', '${c.wt}/rev-wp13', 'checkout', '-q', '--detach', 'fremd']);
+  final before = c.snapshot();
+  final res = c.run(['wp13', '--apply', '--no-remote']);
+  t.isTrue(
+    res.exitCode != 0 &&
+        '${res.stderr}'.contains('nicht in') &&
+        c.snapshot() == before,
+    'detached rev-wp auf ungemergtem Commit: nichts gelöscht: ${res.stderr}',
+  );
+  if (!c.exists('${c.wt}/rev-wp13')) return;
+  c.r.git([
+    '-C',
+    '${c.wt}/rev-wp13',
+    'checkout',
+    '-q',
+    '--detach',
+    'wp/13-det',
+  ]);
+  t.eq(
+    c.run(['wp13', '--apply', '--no-remote']).exitCode,
+    0,
+    'detached rev-wp auf gemergtem Stand: aufgeräumt',
+  );
+}
+
+/// Squash mit zusätzlicher Datei (gen_docs) und Amend: Vermerk trägt den Tree.
+void _amendedSquash(SelfCheck t, _Env c) {
+  final common = c.r.git([
+    'rev-parse',
+    '--path-format=absolute',
+    '--git-common-dir',
+  ]);
+  String squash(String nr, String slug) {
+    c.pkg(nr, slug);
+    final tip = c.r.git(['rev-parse', 'wp/$nr-$slug']);
+    c.r.git(['merge', '--squash', 'wp/$nr-$slug']);
+    c.r.commit('docs/gen$nr.md', 'g\n', msg: 'Squash $nr\n\n$sbTrailer');
+    final commit = c.r.head();
+    final tree = c.r.git(['rev-parse', 'HEAD^{tree}']);
+    File('$common/wendelin-merged-branches')
+        .writeAsStringSync('$tip $commit $tree\n', mode: FileMode.append);
+    return commit;
+  }
+
+  squash('14', 'am');
+  c.r.git(['commit', '-q', '--amend', '-m', 'Andere Nachricht\n\n$sbTrailer']);
+  c.r.git(['push', '-q', 'origin', 'main']);
+  var res = c.run(['wp14', '--apply']);
+  t.isTrue(
+    res.exitCode == 0 && !c.r.hasRef('refs/heads/wp/14-am'),
+    'Squash + gen_docs-Datei + Amend: Vermerk mit Tree erkannt: ${res.stderr}',
+  );
+  squash('15', 'rs');
+  c.r.git(['reset', '-q', '--hard', 'HEAD~1']);
+  c.r.commit('other15.txt', 'o\n'); // Basis hat Commits seit der Merge-Basis
+  res = c.run(['wp15', '--apply']);
+  t.isTrue(
+    res.exitCode != 0 &&
+        c.r.hasRef('refs/heads/wp/15-rs') &&
+        c.exists('${c.wt}/wp15'),
+    'Vermerk ohne Merge-Commit/Tree in der Basis (zurückgesetzt): ungemergt',
+  );
+}
+
+/// Remote-Löschen nur, wenn der Remote-Branch noch auf dem geprüften Tip steht.
+void _lease(SelfCheck t, _Env c) {
+  c.pkg('16', 'lease');
+  c.r.git(['merge', '-q', '--no-ff', '-m', 'Merge 16', 'wp/16-lease']);
+  c.r.git(['push', '-q', 'origin', 'main']);
+  const ref = 'refs/remotes/origin/wp/16-lease';
+  final tip = c.r.git(['rev-parse', 'wp/16-lease']);
+  final tree = c.r.git(['rev-parse', '$tip^{tree}']);
+  final extra = c.r.git(['commit-tree', tree, '-p', tip, '-m', 'neu']);
+  c.r.git(['push', '-q', 'origin', '$extra:refs/heads/wp/16-lease']);
+  c.r.git(['update-ref', ref, tip]); // veralteter Tracking-Stand
+  c.run(['wp16', '--apply']);
+  t.isTrue(
+    c.remoteBranches().contains(extra),
+    'Remote-Branch, der inzwischen weitergewandert ist, bleibt (Lease)',
   );
 }

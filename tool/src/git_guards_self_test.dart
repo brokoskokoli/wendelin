@@ -30,17 +30,18 @@ final class _PushRepo {
     mode: FileMode.append,
   );
 
-  int push(String ref, String lsha, {bool allow = false}) => Process.runSync(
-    'bash',
-    ['-c', 'printf "%s\\n" "\$LINE" | sh "\$HOOK" origin x'],
-    workingDirectory: r.dir.path,
-    environment: {
-      ...r.env,
-      'LINE': '$ref $lsha $ref $c0',
-      'HOOK': hook,
-      if (allow) 'WENDELIN_PUSH_MAIN': '1',
-    },
-  ).exitCode;
+  int push(String ref, String lsha, {bool allow = false, String? remote}) =>
+      Process.runSync(
+        'bash',
+        ['-c', 'printf "%s\\n" "\$LINE" | sh "\$HOOK" origin x'],
+        workingDirectory: r.dir.path,
+        environment: {
+          ...r.env,
+          'LINE': '$ref $lsha $ref ${remote ?? c0}',
+          'HOOK': hook,
+          if (allow) 'WENDELIN_PUSH_MAIN': '1',
+        },
+      ).exitCode;
 }
 
 void _prePush(SelfCheck t) {
@@ -88,6 +89,37 @@ void _prePushPlain(SelfCheck t, _PushRepo p) {
     p.push(main, sbZero, allow: true) != 0 && p.push(main, sbZero) != 0,
     'main löschen: abgelehnt',
   );
+  // Rücksetzen/Force-Push: leerer Bereich rsha..lsha darf nicht durchgehen.
+  final tip = r.head();
+  t.isTrue(
+    p.push(main, p.c0, allow: true, remote: tip) != 0,
+    'Rücksetzen von main (Remote-Stand nicht Vorfahr): abgelehnt',
+  );
+  r.git(['checkout', '-q', '-b', 'side', p.c0]);
+  r.commit('docs/side.md', 's\n');
+  t.isTrue(
+    p.push(main, r.head(), allow: true, remote: tip) != 0,
+    'Force-Push auf divergierenden Stand: abgelehnt',
+  );
+  r.git(['checkout', '-q', 'docs']);
+  // Umbenennen von Code nach docs/ ist keine Doku-Änderung.
+  r.git(['checkout', '-q', '-b', 'mv', p.c0]);
+  r.commit('tool/x.dart', 'x\n');
+  final pre = r.head();
+  Directory('${r.dir.path}/docs').createSync();
+  r.git(['mv', 'tool/x.dart', 'docs/x.dart']);
+  r.git(['commit', '-q', '-m', 'mv\n\n$sbTrailer']);
+  t.isTrue(
+    p.push(main, r.head(), allow: true, remote: pre) != 0,
+    'git mv tool/x → docs/x: als Code abgelehnt (keine Rename-Erkennung)',
+  );
+  r.git(['checkout', '-q', '-b', 'appdocs', p.c0]);
+  r.commit('app/docs/x.md', 'x\n');
+  t.isTrue(
+    p.push(main, r.head(), allow: true, remote: p.c0) != 0,
+    'app/docs/x ist keine Doku (Regex verankert): abgelehnt',
+  );
+  r.git(['checkout', '-q', 'docs']);
 }
 
 void _prePushNoted(SelfCheck t, _PushRepo p) {
@@ -143,6 +175,27 @@ void _prePushMerge(SelfCheck t, _PushRepo p) {
     0,
     'Merge plus Status-Commit: erlaubt',
   );
+  _prePushConsume(t, p);
+}
+
+/// Freigaben, deren Commit schon in origin/main liegt, verfallen beim nächsten Push.
+void _prePushConsume(SelfCheck t, _PushRepo p) {
+  final r = p.r;
+  final okFile = File('${p.common}/wendelin-merge-ok');
+  final tree = r.git(['rev-parse', 'HEAD~1^{tree}']); // Merge-Commit (notiert)
+  final pushed = r.head();
+  r.git(['update-ref', 'refs/remotes/origin/main', pushed]);
+  r.git(['checkout', '-q', '-b', 'later']);
+  r.commit('docs/later.md', 'l\n');
+  t.eq(
+    p.push('refs/heads/main', r.head(), allow: true, remote: pushed),
+    0,
+    'Doku-Push nach der Freigabe',
+  );
+  t.isTrue(
+    !okFile.readAsStringSync().contains(tree),
+    'verbrauchte Freigabe (Commit in origin/main) entfernt',
+  );
 }
 
 void _identity(SelfCheck t) {
@@ -186,10 +239,6 @@ void _identityCases(
     'GIT_AUTHOR_NAME': 'Fremd',
     'GIT_AUTHOR_EMAIL': 'fremd@example.org',
   };
-  const foreignCommitter = {
-    'GIT_COMMITTER_NAME': 'Fremd',
-    'GIT_COMMITTER_EMAIL': 'fremd@example.org',
-  };
   void c(String msg, [Map<String, String> extra = const {}]) =>
       r.commit('b', msg, msg: msg, extra: extra);
   t.eq(check('$base..$base'), 0, 'leerer Bereich ist grün');
@@ -202,6 +251,50 @@ void _identityCases(
     'zwei saubere Commits: grün',
   );
   t.eq(branch('author', () => c('x\n\n$sbTrailer', foreign)), 1, 'Autor: rot');
+  t.eq(
+    branch(
+      'oldname',
+      () => c('x\n\n$sbTrailer', {
+        'GIT_AUTHOR_NAME': 'Stefan Richter',
+        'GIT_COMMITTER_NAME': 'Stefan Richter',
+      }),
+    ),
+    1,
+    'Name „Stefan Richter“ (richtige Mail): rot, nur brokoskokoli erlaubt',
+  );
+  _identityGuardHook(t, r);
+  _identityTrailers(t, r, branch);
+}
+
+void _identityGuardHook(SelfCheck t, Sandbox r) {
+  final guard = File('tool/hooks/identity-guard.sh').absolute.path;
+  int hook(String name) => Process.runSync(
+    'sh',
+    [guard],
+    workingDirectory: r.dir.path,
+    environment: {
+      ...r.env,
+      'GIT_AUTHOR_NAME': name,
+      'GIT_COMMITTER_NAME': name,
+    },
+  ).exitCode;
+  t.isTrue(
+    hook(sbName) == 0 && hook('Stefan Richter') != 0,
+    'identity-guard: nur brokoskokoli, „Stefan Richter“ abgelehnt',
+  );
+}
+
+void _identityTrailers(
+  SelfCheck t,
+  Sandbox r,
+  int Function(String, void Function()) branch,
+) {
+  const foreignCommitter = {
+    'GIT_COMMITTER_NAME': 'Fremd',
+    'GIT_COMMITTER_EMAIL': 'fremd@example.org',
+  };
+  void c(String msg, [Map<String, String> extra = const {}]) =>
+      r.commit('b', msg, msg: msg, extra: extra);
   t.eq(
     branch('committer', () => c('x\n\n$sbTrailer', foreignCommitter)),
     1,

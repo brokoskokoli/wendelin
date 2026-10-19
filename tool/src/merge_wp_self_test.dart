@@ -1,9 +1,6 @@
 // Selbsttests von tool/merge_wp.sh in temporären Git-Repos.
 import 'dart:io';
 
-import 'cleanup_self_test.dart';
-import 'git_guards_self_test.dart';
-import 'ratchet_self_test.dart';
 import 'self_check.dart';
 
 const _good = 'brokoskokoli';
@@ -102,9 +99,6 @@ final class _Repo {
 
 /// Selbsttests der Git-Skripte: merge_wp.sh und die Leitplanken (WP109).
 void mergeWpChecks(SelfCheck t) {
-  ratchetChecks(t);
-  gitGuardsChecks(t);
-  cleanupChecks(t);
   t.group('merge_wp.sh');
   final dir = Directory.systemTemp.createTempSync('merge_wp_');
   try {
@@ -402,7 +396,7 @@ void _ciMerges(SelfCheck t, _Repo r, String start, String sha, String old) {
   ]);
   t.eq(
     File('$common/wendelin-merge-ok').readAsStringSync().trim(),
-    tree,
+    '$tree ${r.head()}',
     'Tree des Merge-Ergebnisses nach dem Gate notiert',
   );
 
