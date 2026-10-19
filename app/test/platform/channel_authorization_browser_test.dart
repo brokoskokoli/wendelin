@@ -87,6 +87,7 @@ void main() {
     for (final (code, expected) in [
       ('no_browser', AuthorizationFailure.noBrowser),
       ('cancelled', AuthorizationFailure.cancelled),
+      ('state_mismatch', AuthorizationFailure.stateMismatch),
       ('bad_args', AuthorizationFailure.failed),
     ]) {
       mock((_) async => throw PlatformException(code: code));

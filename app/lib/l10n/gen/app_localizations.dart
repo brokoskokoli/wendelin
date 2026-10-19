@@ -3172,6 +3172,12 @@ abstract class AppLocalizations {
   /// **'pausiert'**
   String get integrationsPaused;
 
+  /// No description provided for @integrationsPausedError.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Zugang abgelehnt oder unerwartete Antwort · pausiert'**
+  String integrationsPausedError(String service);
+
   /// No description provided for @integrationsPermission.
   ///
   /// In de, this message translates to:
@@ -3201,6 +3207,36 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{tools} Tools'**
   String integrationsTools(int tools);
+
+  /// No description provided for @reconnectBringShare.
+  ///
+  /// In de, this message translates to:
+  /// **'Ausweg: Artikel über „Teilen“ an die Bring!-App schicken.'**
+  String get reconnectBringShare;
+
+  /// No description provided for @reconnectErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Zugang abgelehnt oder nicht eingerichtet. Bitte die Zugangsdaten prüfen.'**
+  String reconnectErrDenied(String service);
+
+  /// No description provided for @reconnectErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Die Verbindung ist fehlgeschlagen (unerwartete Antwort).'**
+  String reconnectErrFailed(String service);
+
+  /// No description provided for @reconnectErrOther.
+  ///
+  /// In de, this message translates to:
+  /// **'{service}: Die Verbindung ist fehlgeschlagen.'**
+  String reconnectErrOther(String service);
+
+  /// No description provided for @reconnectErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'{service} ist nicht erreichbar oder antwortet nicht. Später erneut versuchen.'**
+  String reconnectErrUnavailable(String service);
 
   /// No description provided for @listsAccessLost.
   ///
@@ -6063,6 +6099,66 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Adresse kopieren'**
   String get spotifyCopyRedirect;
+
+  /// No description provided for @spotifyErrAccessDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgebrochen: Zugriff nicht erlaubt.'**
+  String get spotifyErrAccessDenied;
+
+  /// No description provided for @spotifyErrCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgebrochen.'**
+  String get spotifyErrCancelled;
+
+  /// No description provided for @spotifyErrDenied.
+  ///
+  /// In de, this message translates to:
+  /// **'Spotify hat die Anmeldung abgelehnt.'**
+  String get spotifyErrDenied;
+
+  /// No description provided for @spotifyErrFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung bei Spotify nicht möglich.'**
+  String get spotifyErrFailed;
+
+  /// No description provided for @spotifyErrInvalidClientId.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Client-ID besteht aus 32 Zeichen (Ziffern und Buchstaben a–f). Bitte aus dem Entwickler-Dashboard kopieren.'**
+  String get spotifyErrInvalidClientId;
+
+  /// No description provided for @spotifyErrNoBrowser.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Browser installiert, in dem die Anmeldung laufen kann.'**
+  String get spotifyErrNoBrowser;
+
+  /// No description provided for @spotifyErrNoCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Spotify hat keinen Code geschickt.'**
+  String get spotifyErrNoCode;
+
+  /// No description provided for @spotifyErrRejected.
+  ///
+  /// In de, this message translates to:
+  /// **'Spotify hat die Anmeldung abgelehnt. Client-ID prüfen und darauf achten, dass das eigene Konto unter „User Management“ steht.'**
+  String get spotifyErrRejected;
+
+  /// No description provided for @spotifyErrStateMismatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung abgelehnt: Die Antwort von Spotify gehört nicht zu dieser Anmeldung (z. B. ein alter Browser-Tab). Bitte die Anmeldung neu starten und im neuen Tab zu Ende führen.'**
+  String get spotifyErrStateMismatch;
+
+  /// No description provided for @spotifyErrUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Spotify ist nicht erreichbar. Später erneut versuchen.'**
+  String get spotifyErrUnavailable;
 
   /// No description provided for @spotifyFailed.
   ///

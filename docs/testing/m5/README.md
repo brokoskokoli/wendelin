@@ -5,6 +5,7 @@
 Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `# WPnn Titel`); dieser Index wird erzeugt (`tool/regen_generated.sh`). Befehle am Telefon führt nur der Maintainer aus.
 
 - [WP103 Bessere Sprache](wp103.md)
+- [WP105 Folgepunkte Audit und Texte](wp105.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)
 - [WP86 Standort und Karten (`location`, `maps`)](wp86.md)

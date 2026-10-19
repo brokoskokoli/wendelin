@@ -299,7 +299,10 @@ void main() {
       final o = await call('gtasks__list', {});
       expect(o.text, contains(googleTasksRetryHint));
       expect(errors, isEmpty);
-      expect(await g.reconnect(), contains('nicht erreichbar'));
+      final f = await g.reconnect();
+      expect(f!.service, 'gtasks');
+      expect(f.kind, PortErrorKind.unavailable);
+      expect(f.message, contains('nicht erreichbar'));
     });
 
     test('Refresh-Netzfehler löscht das Token nicht', () async {

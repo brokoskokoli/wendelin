@@ -44,5 +44,46 @@
   "integrationsPermission2": "Permission",
   "integrationsReachable": "{displayName} is reachable again.",
   "integrationsRejected": "Rejected: {reason}",
-  "integrationsTools": "{tools} tools"
+  "integrationsTools": "{tools} tools",
+  "reconnectErrDenied": "{service}: access refused or not set up. Please check the credentials.",
+  "@reconnectErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrFailed": "{service}: the connection failed (unexpected answer).",
+  "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrUnavailable": "{service} is not reachable or does not answer. Try again later.",
+  "@reconnectErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrOther": "{service}: the connection failed.",
+  "@reconnectErrOther": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectBringShare": "Workaround: send the items to the Bring! app via Share.",
+  "integrationsPausedError": "{service}: access refused or unexpected answer · paused",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  }
 }

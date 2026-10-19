@@ -183,7 +183,10 @@ void main() {
           'Bring! ist nicht erreichbar',
         ),
       );
-      expect(await bring.reconnect(), contains('nicht erreichbar'));
+      final f = await bring.reconnect();
+      expect(f!.service, 'bring');
+      expect(f.kind, PortErrorKind.unavailable);
+      expect(f.message, contains('nicht erreichbar'));
       // Vorübergehend: kein Fehlerzustand.
       expect(errors, isEmpty);
       expect(bring.session.failed, isFalse);
@@ -194,7 +197,7 @@ void main() {
           'Bring!: unerwartete Antwort',
         ),
       );
-      expect(await bring.reconnect(), contains(bringFallbackHint));
+      expect((await bring.reconnect())!.message, contains(bringFallbackHint));
       expect(errors, hasLength(1));
       expect(recovered, 0);
       expect(await bring.reconnect(), isNull);

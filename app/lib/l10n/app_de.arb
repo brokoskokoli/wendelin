@@ -935,6 +935,14 @@
   "integrationsIntro": "Nur aktive Integrationen gehen ans Modell. Ausgeschaltete kosten keine Tokens.",
   "integrationsOwn": "Eigene Integrationen",
   "integrationsPaused": "pausiert",
+  "integrationsPausedError": "{service}: Zugang abgelehnt oder unerwartete Antwort · pausiert",
+  "@integrationsPausedError": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
   "integrationsPermission": "Berechtigung",
   "integrationsPermission2": "Berechtigung",
   "integrationsReachable": "{displayName} ist wieder erreichbar.",
@@ -958,6 +966,39 @@
     "placeholders": {
       "tools": {
         "type": "int"
+      }
+    }
+  },
+  "reconnectBringShare": "Ausweg: Artikel über „Teilen“ an die Bring!-App schicken.",
+  "reconnectErrDenied": "{service}: Zugang abgelehnt oder nicht eingerichtet. Bitte die Zugangsdaten prüfen.",
+  "@reconnectErrDenied": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrFailed": "{service}: Die Verbindung ist fehlgeschlagen (unerwartete Antwort).",
+  "@reconnectErrFailed": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrOther": "{service}: Die Verbindung ist fehlgeschlagen.",
+  "@reconnectErrOther": {
+    "placeholders": {
+      "service": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnectErrUnavailable": "{service} ist nicht erreichbar oder antwortet nicht. Später erneut versuchen.",
+  "@reconnectErrUnavailable": {
+    "placeholders": {
+      "service": {
+        "type": "String"
       }
     }
   },
@@ -2073,6 +2114,16 @@
   "spotifyClientIdMissing": "Bitte die Client-ID eintragen.",
   "spotifyCopied": "Adresse kopiert.",
   "spotifyCopyRedirect": "Adresse kopieren",
+  "spotifyErrAccessDenied": "Anmeldung abgebrochen: Zugriff nicht erlaubt.",
+  "spotifyErrCancelled": "Anmeldung abgebrochen.",
+  "spotifyErrDenied": "Spotify hat die Anmeldung abgelehnt.",
+  "spotifyErrFailed": "Anmeldung bei Spotify nicht möglich.",
+  "spotifyErrInvalidClientId": "Die Client-ID besteht aus 32 Zeichen (Ziffern und Buchstaben a–f). Bitte aus dem Entwickler-Dashboard kopieren.",
+  "spotifyErrNoBrowser": "Kein Browser installiert, in dem die Anmeldung laufen kann.",
+  "spotifyErrNoCode": "Spotify hat keinen Code geschickt.",
+  "spotifyErrRejected": "Spotify hat die Anmeldung abgelehnt. Client-ID prüfen und darauf achten, dass das eigene Konto unter „User Management“ steht.",
+  "spotifyErrStateMismatch": "Anmeldung abgelehnt: Die Antwort von Spotify gehört nicht zu dieser Anmeldung (z. B. ein alter Browser-Tab). Bitte die Anmeldung neu starten und im neuen Tab zu Ende führen.",
+  "spotifyErrUnavailable": "Spotify ist nicht erreichbar. Später erneut versuchen.",
   "spotifyFailed": "Fehler – Anmeldung abgelaufen oder Spotify nicht erreichbar",
   "spotifyGuideStep1": "1. Auf developer.spotify.com/dashboard mit dem Spotify-Konto anmelden und „Create app“ wählen.",
   "spotifyGuideStep2": "2. Name und Beschreibung frei wählen. Als „Redirect URI“ genau diese Adresse eintragen: {redirect}",

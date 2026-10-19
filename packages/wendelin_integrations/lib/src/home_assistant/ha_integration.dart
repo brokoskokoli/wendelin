@@ -97,13 +97,13 @@ final class HaIntegration implements Integration {
   ]);
 
   /// Tests the connection, e.g. after the setup or from „Erneut versuchen“.
-  /// Returns `null` on success, else a German message.
-  Future<String?> reconnect() async {
+  /// Returns `null` on success, else the failure (the app words it).
+  Future<ReconnectFailure?> reconnect() async {
     try {
       await context.guard(context.api.check);
       return null;
     } on PortException catch (e) {
-      return e.message;
+      return ReconnectFailure.of('ha', e);
     }
   }
 

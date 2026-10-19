@@ -10,6 +10,7 @@ import '../../di/google_tasks.dart';
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import 'reconnect_text.dart';
 import 'settings_page.dart';
 
 /// Settings → Google Tasks: short guide for the user's own Cloud project,
@@ -138,7 +139,10 @@ class _GoogleTasksScreenState extends ConsumerState<GoogleTasksScreen> {
     final token = await ref.read(googleTasksSecretsProvider).refreshToken();
     if (!mounted) return;
     setState(() => _signedIn = token != null && token.isNotEmpty);
-    showHint(context, error ?? context.l10n.googleTasksReachable);
+    showHint(
+      context,
+      reconnectHint(context.l10n, error, context.l10n.googleTasksReachable),
+    );
   }
 
   /// New login or none: the old error is void, the setup state changed.
@@ -231,7 +235,9 @@ class _GoogleTasksScreenState extends ConsumerState<GoogleTasksScreen> {
               title: failed
                   ? context.l10n.googleTasksApiError
                   : googleTasksStateText(context.l10n, info?.status),
-              detail: failed ? info?.error : null,
+              detail: failed
+                  ? integrationErrorText(context.l10n, 'gtasks', info?.error)
+                  : null,
               trailing: CheckStatusIcon(
                 failed ? CheckStatus.failed : CheckStatus.ok,
                 size: WSize.statusIconSmall,

@@ -59,14 +59,14 @@ void main() {
   });
 
   test('ungültige Client-ID: Hinweis, Browser bleibt zu', () async {
-    expect(await login.signIn('zu-kurz'), contains('32 Zeichen'));
+    expect(await login.signIn('zu-kurz'), SpotifyLoginError.invalidClientId);
     expect(browser.opened, isEmpty);
     expect(await secrets.clientId(), isNull);
   });
 
   test('falscher State wird abgelehnt, nichts gespeichert', () async {
     browser.stateOverride = 'fremd';
-    expect(await login.signIn(_clientId), contains('nicht zu dieser'));
+    expect(await login.signIn(_clientId), SpotifyLoginError.stateMismatch);
     expect(api.methodCalls, isNot(contains('exchangeCode')));
     expect(await secrets.auth(), isNull);
     expect(await secrets.clientId(), isNull);
@@ -74,25 +74,35 @@ void main() {
 
   test('access_denied und andere Fehler der Rückleitung', () async {
     browser.error = 'access_denied';
-    expect(await login.signIn(_clientId), contains('nicht erlaubt'));
+    expect(await login.signIn(_clientId), SpotifyLoginError.accessDenied);
     browser.error = 'invalid_client';
-    expect(await login.signIn(_clientId), contains('abgelehnt'));
+    expect(await login.signIn(_clientId), SpotifyLoginError.denied);
     expect(await secrets.auth(), isNull);
   });
 
   test('ohne Code, abgelehnter Code, kein Browser', () async {
     browser.code = null;
-    expect(await login.signIn(_clientId), contains('keinen Code'));
+    expect(await login.signIn(_clientId), SpotifyLoginError.noCode);
     browser.code = 'falsch';
-    expect(await login.signIn(_clientId), contains('abgelehnt'));
+    expect(await login.signIn(_clientId), SpotifyLoginError.rejected);
     browser.code = FakeSpotifyApi.validCode;
-    browser.failure = const PortException(
-      PortErrorKind.unavailable,
-      'Kein Browser installiert.',
-    );
-    expect(await login.signIn(_clientId), 'Kein Browser installiert.');
+    browser.failure = SpotifyBrowserFailure.noBrowser;
+    expect(await login.signIn(_clientId), SpotifyLoginError.noBrowser);
     expect(await secrets.auth(), isNull);
   });
+
+  test(
+    'Browser meldet falschen State: eigener Fehler, nicht „abgebrochen“',
+    () async {
+      browser.failure = SpotifyBrowserFailure.stateMismatch;
+      expect(await login.signIn(_clientId), SpotifyLoginError.stateMismatch);
+      browser.failure = SpotifyBrowserFailure.cancelled;
+      expect(await login.signIn(_clientId), SpotifyLoginError.cancelled);
+      browser.failure = SpotifyBrowserFailure.failed;
+      expect(await login.signIn(_clientId), SpotifyLoginError.failed);
+      expect(await secrets.auth(), isNull);
+    },
+  );
 
   test('Abmelden löscht Token und Client-ID', () async {
     await login.signIn(_clientId);
