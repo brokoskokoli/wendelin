@@ -1263,5 +1263,24 @@
   "agentNoticeGpuNoEvidence": "Ce modèle ne fournit aucune preuve GPU. Touchez Envoyer sans vérification GPU.",
   "agentNoticeRequestEmpty": "La demande est vide.",
   "agentNoticeRequestRunning": "Une demande est déjà en cours.",
-  "voiceUnavailableHint": "Télécharger la reconnaissance vocale : Paramètres → Voix"
+  "voiceUnavailableHint": "Télécharger la reconnaissance vocale : Paramètres → Voix",
+  "confSmsTitle": "Envoyer le SMS ?",
+  "confCallTitle": "Appeler ?",
+  "confSmsTo": "À {name}",
+  "@confSmsTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confSmsTextLabel": "Message",
+  "confSmsNoText": "Le message ne doit pas être vide.",
+  "confYesSend": "Envoyer",
+  "confNoCancel": "Annuler",
+  "confYesCall": "Appeler",
+  "confHintVoiceSms": "Dis simplement « envoyer » ou « annuler »",
+  "confHintVoiceCall": "Dis simplement « appeler » ou « annuler »",
+  "confHintVoiceEdited": "Tu as modifié le texte : envoie-le en touchant l’écran",
+  "integrationsContactsRationale": "Wendelin a besoin d’accéder à tes contacts pour trouver les numéros par nom, ainsi qu’aux droits SMS et téléphone. Android te le demandera ensuite. Wendelin n’envoie jamais de SMS et n’appelle jamais sans que tu aies confirmé l’aperçu avec le nom et le numéro (en touchant l’écran ou en disant « oui »). Rien de tout cela ne marche appareil verrouillé. Sans le droit téléphone, Wendelin ouvre seulement le clavier d’appel."
 }

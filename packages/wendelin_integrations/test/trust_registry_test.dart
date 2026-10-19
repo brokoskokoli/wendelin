@@ -15,6 +15,10 @@ import 'http_tools/support.dart' as http_support;
 /// Tool name -> result is trusted (own data only).
 const _trusted = <String, bool>{
   // Reading foreign or stored text.
+  'contacts__find': false,
+  // Echo the contact name from the address book: fail-closed.
+  'sms__compose': false,
+  'phone__call': false,
   'calendar__list_calendars': false,
   'calendar__list_events': false, // invitations from third parties
   'calendar__find_free_slots': false,
@@ -88,6 +92,7 @@ void main() {
     CalendarIntegration(FakeCalendarPort()),
     ClipboardIntegration(FakeClipboardPort()),
     FlashlightIntegration(FakeTorchPort()),
+    ContactsIntegration(FakeContactsPort(), FakePhonePort()),
     MediaIntegration(FakeMediaControlPort(), FakeAppPresencePort()),
     AlarmsIntegration(FakeAlarmPort()),
     MemoryIntegration(FakeMemoryStore()),

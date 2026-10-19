@@ -97,6 +97,20 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
     return out.stream;
   }
 
+  /// Arguments for the audit log: tools with private texts reduce them
+  /// ([AuditArgumentsRedactor]); a slow or failing reduction stores `{}`.
+  Future<String> _auditArguments(ToolCallBlock call, ToolContext ctx) async {
+    final tool = _catalogOf(ctx).lookup(call.name);
+    if (tool == null) return call.argumentsJson;
+    try {
+      return await tool
+          .auditArguments(call.argumentsJson, _decode(call), ctx)
+          .timeout(const Duration(seconds: 2));
+    } on Object {
+      return tool is AuditArgumentsRedactor ? '{}' : call.argumentsJson;
+    }
+  }
+
   Future<ToolFinished> _run(
     ToolCallBlock call,
     ToolContext ctx,
@@ -119,12 +133,13 @@ final class ToolExecutor implements ToolInvoker, ToolRiskAssessor {
     }
     final (outcome, status, decision) = result;
     final duration = ctx.clock.now().difference(start);
+    final auditedArguments = await _auditArguments(call, ctx);
     _audit(
       ToolAuditEntry(
         sessionId: ctx.sessionId,
         callId: call.id,
         tool: call.name,
-        argumentsJson: call.argumentsJson,
+        argumentsJson: auditedArguments,
         decision: decision,
         status: status,
         duration: duration,

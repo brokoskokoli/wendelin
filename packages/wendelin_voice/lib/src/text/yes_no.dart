@@ -111,9 +111,27 @@ final class YesNoRecognizer {
   /// Phrases of hesitation.
   static const hesitationPhrases = {'na ja', 'na gut', 'plus tard'};
 
+  /// Verbs that answer the question to send an SMS or to call with „yes“
+  /// („Soll ich sie absenden?“ – „absenden“). Only passed for those two
+  /// questions (`parse(extraYes: …)`): „call“ or „send“ in another answer
+  /// is not a yes.
+  static const outgoingYesWords = {
+    // de
+    'absenden', 'senden', 'abschicken', 'schicken', 'anrufen',
+    // fr
+    'envoie', 'envoyer', 'appelle', 'appeler',
+    // en
+    'send', 'call',
+  };
+
   /// The answer in [transcript], or `null` if it is not a clear yes or no.
-  /// [strict]: see the class documentation.
-  YesNo? parse(String transcript, {bool strict = false}) {
+  /// [strict]: see the class documentation. [extraYes]: further single
+  /// words that count like yes words for this question.
+  YesNo? parse(
+    String transcript, {
+    bool strict = false,
+    Set<String> extraYes = const {},
+  }) {
     final words = transcript
         .toLowerCase()
         .replaceAll(RegExp('[\'’`´]'), '')
@@ -143,27 +161,27 @@ final class YesNoRecognizer {
     final hesitant =
         words.any(hesitationWords.contains) || hasPhrase(hesitationPhrases);
     final no = words.any(noWords.contains) || hasPhrase(noPhrases);
+    bool isYes(String w) => yesWords.contains(w) || extraYes.contains(w);
     final weakOnly = words.every(
-      (w) =>
-          yesWords.contains(w) ||
-          weakYesWords.contains(w) ||
-          politeWords.contains(w),
+      (w) => isYes(w) || weakYesWords.contains(w) || politeWords.contains(w),
     );
     final yes =
         !hesitant &&
-        (words.any(yesWords.contains) ||
+        (words.any(isYes) ||
             (weakOnly && words.any(weakYesWords.contains)) ||
             hasPhrase(yesPhrases, negatable: true));
     if (no && !yes) return YesNo.no;
     if (!yes || no) return null;
-    if (strict && !_strictYes(words)) return null;
+    if (strict && !_strictYes(words, extraYes)) return null;
     return YesNo.yes;
   }
 
   /// 1–2 words, only yes words, or exactly one yes phrase.
-  static bool _strictYes(List<String> words) {
+  static bool _strictYes(List<String> words, Set<String> extraYes) {
     if (words.length > 2) return false;
-    if (words.every(yesWords.contains)) return true;
+    if (words.every((w) => yesWords.contains(w) || extraYes.contains(w))) {
+      return true;
+    }
     if (words.length == 1 && weakYesWords.contains(words.single)) return true;
     return yesPhrases.contains(words.join(' '));
   }

@@ -2,6 +2,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../agent/conversation_state.dart';
+import '../agent/outgoing_preview.dart';
 import '../l10n/gen/app_localizations_de.dart';
 import '../ui/screens/labels.dart';
 
@@ -16,7 +17,9 @@ bool strictAnswer(PendingQuestion question) => switch (question) {
 /// names the action.
 String confirmationPrompt(PendingQuestion question, String? language) {
   final lang = VoiceTexts.of(language).language;
+  final outgoing = outgoingPreviewOf(question);
   return switch (question) {
+    _ when outgoing != null => _outgoingPrompt(outgoing, lang),
     ToolQuestion(:final event) when _replaceSection(event) != null => () {
       // Names the note the confirmation resolved (B8).
       final (:note, :section) = _replaceSection(event)!;
@@ -39,6 +42,21 @@ String confirmationPrompt(PendingQuestion question, String? language) {
     },
   };
 }
+
+/// „Nachricht an X: …“ + „Soll ich sie absenden?“ or „Anruf bei X. Soll ich
+/// anrufen?“ (WP85): the text is read exactly as shown in the preview.
+String _outgoingPrompt(OutgoingPreview p, String lang) => switch (p.kind) {
+  OutgoingKind.sms => switch (lang) {
+    'fr' => 'Message à ${p.name} : ${p.text}. Je l’envoie ?',
+    'en' => 'Message to ${p.name}: ${p.text}. Shall I send it?',
+    _ => 'Nachricht an ${p.name}: ${p.text}. Soll ich sie absenden?',
+  },
+  OutgoingKind.call => switch (lang) {
+    'fr' => 'Appel à ${p.name}. Je l’appelle ?',
+    'en' => 'Call to ${p.name}. Shall I call?',
+    _ => 'Anruf bei ${p.name}. Soll ich anrufen?',
+  },
+};
 
 final _replaceText = RegExp(
   '^Abschnitt „(.+)“ in „(.+)“ ersetzen:',
@@ -81,11 +99,18 @@ String _actionEn(String tool) => switch (tool) {
   _ => 'Run: ${_spokenTool(tool)}?',
 };
 
-/// Spoken request to repeat an unclear answer.
-String repeatPrompt(String? language) =>
-    switch (VoiceTexts.of(language).language) {
-      'fr' => 'Dis oui ou non, s’il te plaît.',
-      'en' => 'Please say yes or no.',
+/// Spoken request to repeat an unclear answer; before an SMS or call
+/// ([outgoing]) it names the words that count.
+String repeatPrompt(String? language, {OutgoingKind? outgoing}) =>
+    switch ((VoiceTexts.of(language).language, outgoing)) {
+      ('fr', OutgoingKind.sms) => 'Dis « envoyer » ou « annuler ».',
+      ('en', OutgoingKind.sms) => 'Please say “send” or “cancel”.',
+      (_, OutgoingKind.sms) => 'Bitte sag „absenden“ oder „abbrechen“.',
+      ('fr', OutgoingKind.call) => 'Dis « appeler » ou « annuler ».',
+      ('en', OutgoingKind.call) => 'Please say “call” or “cancel”.',
+      (_, OutgoingKind.call) => 'Bitte sag „anrufen“ oder „abbrechen“.',
+      ('fr', null) => 'Dis oui ou non, s’il te plaît.',
+      ('en', null) => 'Please say yes or no.',
       _ => 'Bitte sag ja oder nein.',
     };
 

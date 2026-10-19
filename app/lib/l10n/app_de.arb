@@ -2669,5 +2669,24 @@
   "agentNoticeGpuNoEvidence": "Dieses Modell liefert keinen GPU-Nachweis. Tippe auf Ohne GPU-Prüfung senden.",
   "agentNoticeRequestEmpty": "Die Anfrage ist leer.",
   "agentNoticeRequestRunning": "Es läuft schon eine Anfrage.",
-  "voiceUnavailableHint": "Spracherkennung laden: Einstellungen → Sprache"
+  "voiceUnavailableHint": "Spracherkennung laden: Einstellungen → Sprache",
+  "confSmsTitle": "SMS absenden?",
+  "confCallTitle": "Anrufen?",
+  "confSmsTo": "An {name}",
+  "@confSmsTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confSmsTextLabel": "Nachricht",
+  "confSmsNoText": "Die Nachricht darf nicht leer sein.",
+  "confYesSend": "Absenden",
+  "confNoCancel": "Abbrechen",
+  "confYesCall": "Anrufen",
+  "confHintVoiceSms": "Sag „absenden“ oder „abbrechen“",
+  "confHintVoiceCall": "Sag „anrufen“ oder „abbrechen“",
+  "confHintVoiceEdited": "Du hast den Text geändert: bitte per Tipp absenden",
+  "integrationsContactsRationale": "Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm."
 }

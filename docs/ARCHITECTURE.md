@@ -119,6 +119,7 @@ Die Logik ohne Android-Abhängigkeit liegt in reinen Kotlin-Klassen mit JVM-Unit
 | vault | `app/lib/platform/saf_vault_port.dart` | `VaultChannel.kt` |
 | apps | `app/lib/platform/channel_app_presence_port.dart` | `AppsChannel.kt` |
 | torch | `app/lib/platform/channel_torch_port.dart` | `TorchChannel.kt` |
+| contacts (WP85) | `app/lib/platform/channel_contacts_port.dart` | `ContactsChannel.kt` (`ContactRows.kt`) |
 | media | `app/lib/platform/channel_media_control_port.dart` | `MediaChannel.kt` (`MediaListenerService.kt`, `MediaSessionPick.kt`) |
 | multicast | `app/lib/platform/ha_discovery.dart` | `MulticastChannel.kt` |
 | network | `app/lib/platform/channel_network_status.dart` | `NetworkChannel.kt` |

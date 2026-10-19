@@ -91,6 +91,27 @@ final class TestEnv {
   /// Media control.
   final media = FakeMediaControlPort();
 
+  /// Address book (WP85).
+  final contacts = FakeContactsPort(
+    contacts: const [
+      ContactEntry(
+        name: 'Anna Meier',
+        phones: [ContactPhone('+49 170 1234567', label: 'Mobil')],
+      ),
+      ContactEntry(
+        name: 'Ben Schmidt',
+        phones: [
+          ContactPhone('0171 111', label: 'Mobil'),
+          ContactPhone('030 222', label: 'Arbeit'),
+        ],
+      ),
+      ContactEntry(name: 'Ben Weber', phones: [ContactPhone('0172 333')]),
+    ],
+  );
+
+  /// SMS and calls (WP85): records instead of sending and calling.
+  final phone = FakePhonePort();
+
   /// Alarms.
   final alarms = FakeAlarmPort();
 
@@ -183,6 +204,8 @@ final class TestEnv {
     apps: apps,
     torch: torch,
     media: media,
+    contacts: contacts,
+    phone: phone,
     requestCalendarPermission: () async {
       permissionRequests++;
       return calendar.permissionGranted = true;

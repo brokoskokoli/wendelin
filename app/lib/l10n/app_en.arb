@@ -1263,5 +1263,24 @@
   "agentNoticeGpuNoEvidence": "This model provides no GPU evidence. Tap Send without GPU check.",
   "agentNoticeRequestEmpty": "The request is empty.",
   "agentNoticeRequestRunning": "A request is already running.",
-  "voiceUnavailableHint": "Download speech recognition: Settings → Speech"
+  "voiceUnavailableHint": "Download speech recognition: Settings → Speech",
+  "confSmsTitle": "Send SMS?",
+  "confCallTitle": "Call?",
+  "confSmsTo": "To {name}",
+  "@confSmsTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confSmsTextLabel": "Message",
+  "confSmsNoText": "The message must not be empty.",
+  "confYesSend": "Send",
+  "confNoCancel": "Cancel",
+  "confYesCall": "Call",
+  "confHintVoiceSms": "Just say “send” or “cancel”",
+  "confHintVoiceCall": "Just say “call” or “cancel”",
+  "confHintVoiceEdited": "You changed the text: please tap to send",
+  "integrationsContactsRationale": "Wendelin needs access to your contacts to find numbers by name, plus the SMS and phone permissions. Android asks you next. Wendelin never sends an SMS or places a call unless you confirmed the preview with name and number first (by tap or by saying “yes”). Neither works while the device is locked. Without the phone permission Wendelin only opens the dialer."
 }

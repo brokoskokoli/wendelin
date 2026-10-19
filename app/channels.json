@@ -184,6 +184,19 @@
       },
       "toDart": {}
     },
+    "app.wendelin/contacts": {
+      "dart": ["app/lib/platform/channel_contacts_port.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/ContactsChannel.kt"],
+      "toKotlin": {
+        "hasPermission": {"args": [], "returns": "value"},
+        "requestPermission": {"args": [], "returns": "value"},
+        "canSendSms": {"args": [], "returns": "value"},
+        "all": {"args": [], "returns": "value"},
+        "sendSms": {"args": ["number", "text"], "returns": "none"},
+        "call": {"args": ["number"], "returns": "value"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/torch": {
       "dart": ["app/lib/platform/channel_torch_port.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/TorchChannel.kt"],

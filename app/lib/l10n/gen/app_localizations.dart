@@ -7683,6 +7683,78 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Spracherkennung laden: Einstellungen → Sprache'**
   String get voiceUnavailableHint;
+
+  /// No description provided for @confSmsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'SMS absenden?'**
+  String get confSmsTitle;
+
+  /// No description provided for @confCallTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Anrufen?'**
+  String get confCallTitle;
+
+  /// No description provided for @confSmsTo.
+  ///
+  /// In de, this message translates to:
+  /// **'An {name}'**
+  String confSmsTo(String name);
+
+  /// No description provided for @confSmsTextLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Nachricht'**
+  String get confSmsTextLabel;
+
+  /// No description provided for @confSmsNoText.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Nachricht darf nicht leer sein.'**
+  String get confSmsNoText;
+
+  /// No description provided for @confYesSend.
+  ///
+  /// In de, this message translates to:
+  /// **'Absenden'**
+  String get confYesSend;
+
+  /// No description provided for @confNoCancel.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbrechen'**
+  String get confNoCancel;
+
+  /// No description provided for @confYesCall.
+  ///
+  /// In de, this message translates to:
+  /// **'Anrufen'**
+  String get confYesCall;
+
+  /// No description provided for @confHintVoiceSms.
+  ///
+  /// In de, this message translates to:
+  /// **'Sag „absenden“ oder „abbrechen“'**
+  String get confHintVoiceSms;
+
+  /// No description provided for @confHintVoiceCall.
+  ///
+  /// In de, this message translates to:
+  /// **'Sag „anrufen“ oder „abbrechen“'**
+  String get confHintVoiceCall;
+
+  /// No description provided for @confHintVoiceEdited.
+  ///
+  /// In de, this message translates to:
+  /// **'Du hast den Text geändert: bitte per Tipp absenden'**
+  String get confHintVoiceEdited;
+
+  /// No description provided for @integrationsContactsRationale.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin braucht Zugriff auf deine Kontakte, um Nummern nach Namen zu finden, und die Rechte für SMS und Telefon. Android fragt dich gleich danach. Wendelin sendet nie eine SMS und ruft nie an, ohne dass du vorher die Vorschau mit Name und Nummer bestätigt hast (per Tipp oder mit „ja“). Bei gesperrtem Gerät geht beides nie. Ohne Telefonrecht öffnet Wendelin nur den Wählbildschirm.'**
+  String get integrationsContactsRationale;
 }
 
 class _AppLocalizationsDelegate

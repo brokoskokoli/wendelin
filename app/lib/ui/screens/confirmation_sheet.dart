@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../../agent/conversation_state.dart';
+import '../../agent/outgoing_preview.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
 import 'labels.dart';
+import 'outgoing_preview_card.dart';
 import 'private_banner.dart';
 
 /// Bottom sheet „Bestätigung“ (docs/design/screens/bestaetigung): asks
@@ -53,6 +55,7 @@ class ConfirmationSheet extends StatelessWidget {
       ToolQuestion(:final request) => request,
       EscalationQuestion() => null,
     };
+    final outgoing = outgoingPreviewOf(question);
     final card = confirmationCardFor(
       context.l10n,
       question,
@@ -89,7 +92,7 @@ class ConfirmationSheet extends StatelessWidget {
                     if (quote != null && quote.isNotEmpty)
                       Text('„$quote“', style: WText.quote),
                     card,
-                    hint.widget(context.l10n),
+                    hint.widget(context.l10n, outgoing: outgoing?.kind),
                   ],
                 ),
               ),
@@ -111,15 +114,22 @@ enum ConfirmationHint {
 
   const ConfirmationHint({required this.listens});
 
-  /// Hint text.
-  String text(AppLocalizations l) =>
-      this == tap ? l.confHintTap : l.confHintVoice;
+  /// Hint text; a preview before an SMS or call (WP85) names its own words.
+  String text(AppLocalizations l, {OutgoingKind? outgoing}) => switch (this) {
+    tap => l.confHintTap,
+    voice => switch (outgoing) {
+      OutgoingKind.sms => l.confHintVoiceSms,
+      OutgoingKind.call => l.confHintVoiceCall,
+      null => l.confHintVoice,
+    },
+  };
 
   /// Whether the microphone listens (cobalt dot).
   final bool listens;
 
   /// The hint as widget.
-  Widget widget(AppLocalizations l) => VoiceHint(text(l), dot: listens);
+  Widget widget(AppLocalizations l, {OutgoingKind? outgoing}) =>
+      VoiceHint(text(l, outgoing: outgoing), dot: listens);
 }
 
 /// The confirmation card for [question]; [answer] gets `true` for yes. In
@@ -133,6 +143,12 @@ Widget confirmationCardFor(
   DateTime? privateSince,
   bool privateByRequest = true,
 }) => switch (question) {
+  ToolQuestion(:final event) when outgoingPreviewOf(question) != null =>
+    OutgoingPreviewCard(
+      key: ValueKey('outgoing-${event.call.id}'),
+      preview: outgoingPreviewOf(question)!,
+      answer: answer,
+    ),
   ToolQuestion(:final event) => () {
     final texts = confirmationTexts(l, event.call.name);
     return ConfirmationCard(

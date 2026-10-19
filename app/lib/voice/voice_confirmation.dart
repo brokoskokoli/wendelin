@@ -42,6 +42,7 @@ extension _VoiceConfirmation on VoiceController {
 
   Future<void> _confirmByVoice(PendingQuestion question) async {
     final cancels = _cancels;
+    final outgoing = outgoingPreviewOf(question);
     String? closed() {
       if (cancels != _cancels) return 'not-open(cancelled)';
       final pending = ref.read(agentControllerProvider).pending;
@@ -95,7 +96,7 @@ extension _VoiceConfirmation on VoiceController {
         }
         final prompt = attempt == 0
             ? confirmationPrompt(question, _language)
-            : repeatPrompt(_language);
+            : repeatPrompt(_language, outgoing: outgoing?.kind);
         await sayBounded(
           tts,
           prompt,
@@ -148,7 +149,21 @@ extension _VoiceConfirmation on VoiceController {
         final answer = VoiceController.recognizer.parse(
           transcript.text,
           strict: strictAnswer(question),
+          extraYes: outgoing == null
+              ? const {}
+              : YesNoRecognizer.outgoingYesWords,
         );
+        if (answer == YesNo.yes &&
+            outgoing != null &&
+            ref
+                .read(smsDraftEditsProvider)
+                .isEdited(outgoing.number, outgoing.text)) {
+          // The user changed the text after it was read aloud: a spoken yes
+          // would confirm text nobody heard. Only a tap sends it.
+          reason = 'edited';
+          byTap = true;
+          return;
+        }
         if (answer != null) {
           reason = 'answered(${answer.name})';
           _agent.answer(approved: answer == YesNo.yes);

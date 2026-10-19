@@ -6,14 +6,18 @@ import 'package:wendelin/di/audit_recorder.dart';
 import 'package:wendelin/di/demo_provider.dart';
 import 'package:wendelin/di/integration_specs.dart';
 import 'package:wendelin/di/integrations/clipboard_spec.dart';
+import 'package:wendelin/di/integrations/contacts_spec.dart';
 import 'package:wendelin/di/integrations/flashlight_spec.dart';
 import 'package:wendelin/di/integrations/media_spec.dart';
 import 'package:wendelin/di/provider_config.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/di/routing.dart';
+import 'package:wendelin/di/sms_drafts.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/platform/platform_ports.dart';
 import 'package:wendelin/platform/saf_list_file_port.dart';
+import 'package:wendelin/voice/locked_agent_run.dart';
+import 'package:wendelin_voice/wendelin_voice.dart' show LockedCommand;
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -345,6 +349,7 @@ void main() {
         'bring',
         'calendar',
         'clipboard',
+        'contacts',
         'flashlight',
         'ha',
         'lists',
@@ -385,6 +390,79 @@ void main() {
       expect(err.text, contains('keine Taschenlampe'));
       expect(flashlightSpec.allowedWhileLocked, isTrue);
       expect(clipboardSpec.allowedWhileLocked, isFalse);
+    });
+
+    test('Kontakte: Tools über die Ports, sensibel, nie bei Sperre', () async {
+      final env = TestEnv(enabled: const {'contacts'});
+      final c = env.container();
+      addTearDown(c.dispose);
+      final registry = c.read(toolRegistryProvider);
+      await registry.refresh();
+      expect(registry.status('contacts'), IntegrationStatus.active);
+      expect(registry.info('contacts').integration.sensitive, isTrue);
+      final catalog = registry.catalogFor(PrivacyLevel.local, sessionId: 's');
+      final ctx = ToolContext(
+        sessionId: 's',
+        clock: FixedClock(testNow),
+        locale: 'de-DE',
+        timeZone: 'Europe/Berlin',
+      );
+      final found = await catalog.lookup('contacts__find')!.execute({
+        'query': 'Anna',
+      }, ctx);
+      expect(found.text, contains('Anna Meier'));
+      // Gleicher Entwurfsspeicher wie in der Oberfläche.
+      final edits = c.read(smsDraftEditsProvider);
+      edits.set('+491701234567', 'Hallo', 'Hallo Anna');
+      final sent = await catalog.lookup('sms__compose')!.execute({
+        'to': '+49 170 1234567',
+        'text': 'Hallo',
+      }, ctx);
+      expect(sent.isError, isFalse, reason: sent.text);
+      expect(env.phone.sent.single.text, 'Hallo Anna');
+      await catalog.lookup('phone__call')!.execute({'to': '0171 111'}, ctx);
+      expect(env.phone.called, ['0171111']);
+      expect(contactsSpec.allowedWhileLocked, isFalse);
+      // Das Sperr-Gate kennt nur die Taschenlampe als Befehl.
+      expect(LockedCommand.values.map(lockedToolName).toSet(), {
+        'flashlight__on',
+        'flashlight__off',
+      });
+    });
+
+    test('Kontakte: Berechtigung beim Einschalten, nicht vorher', () async {
+      final env = TestEnv();
+      final deps = IntegrationDeps(
+        ports: PlatformPorts(
+          calendar: env.calendar,
+          clipboard: env.clipboard,
+          alarms: env.alarms,
+          memory: env.memory,
+          apps: env.apps,
+          torch: env.torch,
+          contacts: env.contacts,
+          phone: env.phone,
+          requestContactsPermission: () async => true,
+        ),
+        device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
+        httpClient: http.Client(),
+      );
+      expect(contactsSpec.isSupported!(deps), isTrue);
+      expect(await contactsSpec.requestPermission!(deps), isTrue);
+      // Ohne Ports (z. B. iOS) gibt es die Integration nicht.
+      final bare = IntegrationDeps(
+        ports: PlatformPorts(
+          calendar: env.calendar,
+          clipboard: env.clipboard,
+          alarms: env.alarms,
+          memory: env.memory,
+          apps: env.apps,
+          torch: env.torch,
+        ),
+        device: const DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin'),
+        httpClient: http.Client(),
+      );
+      expect(contactsSpec.isSupported!(bare), isFalse);
     });
 
     test('Medien: Tools über den Media-Port, Zugriff optional', () async {
@@ -454,6 +532,7 @@ void main() {
           'alarms': IntegrationStatus.active,
           'calendar': IntegrationStatus.active,
           'clipboard': IntegrationStatus.active,
+          'contacts': IntegrationStatus.active,
           'flashlight': IntegrationStatus.active,
           'media': IntegrationStatus.active,
           'memory': IntegrationStatus.active,
@@ -464,12 +543,14 @@ void main() {
         },
       );
       expect(registry.info('web').setup.missingSteps, ['search_backend']);
-      final webTools = registry
-          .catalogFor(PrivacyLevel.standard, sessionId: 's')
-          .activeSpecs()
-          .map((t) => t.name)
-          .where((n) => n.startsWith('web__'));
-      expect(webTools, ['web__fetch']);
+      // Ab 30 aktiven Tools sieht das Modell zuerst nur die Werkzeugsuche;
+      // aufrufbar sind die aktiven Tools trotzdem.
+      final catalog = registry.catalogFor(
+        PrivacyLevel.standard,
+        sessionId: 's',
+      );
+      expect(catalog.lookup('web__fetch'), isNotNull);
+      expect(catalog.lookup('web__search'), isNull);
       final config = (await c.read(providerConfigProvider.future))!;
       expect(config.primary.profileId, DemoLlmProvider.profileId);
       expect(config.primary.provider, isA<DemoLlmProvider>());
