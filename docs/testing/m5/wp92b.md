@@ -12,3 +12,15 @@ Voraussetzung: WP92a eingerichtet (Modell geladen, Schalter „Sprechererkennung
 - [ ] **Löschen**: Person mit eigenem Gedächtnis löschen. *Erwartet*: Dialog nennt die Anzahl der Einträge („… und 3 Einträgen im eigenen Gedächtnis“); danach sind Embeddings, Einstellungen und die Einträge weg, das Standard-Gedächtnis ist unverändert. Bei Person mit Standard-Gedächtnis nennt der Dialog keine Zahl. Datenschutz → „Alles löschen“ entfernt alle Personen samt deren Gedächtnis.
 - [ ] **Nichts im Klartext**: `adb shell run-as <paket> ls -R files databases shared_prefs` zeigt keine Namen/Anreden; Prüfprotokoll, Audit-Export und Logcat enthalten weder Personenname, Anrede, Personen-Id (`p:…`) noch Embeddings. Die Datenbank trägt nur den Namespace-Schlüssel `p:<id>` an Gedächtniseinträgen (nicht exportiert; Markdown-Export ohne Schlüssel).
 - [ ] **Unbekannt = heute**: Schalter „Sprechererkennung“ aus oder Fremdstimme. *Erwartet*: Prompt, Agent und Gedächtnis exakt wie vor WP92b (Standard-Namespace, Standard-Agent, Anrede aus „Assistent“).
+
+## E2E (Emulator, synthetisches Audio)
+
+`app/integration_test/speaker_persons_e2e_test.dart`: Zwei synthetische Sprecher (Thorsten/Kerstin) werden mit dem echten CAM++-Modell eingelernt. Dann laufen Anfragen über den echten Agent-Controller mit Fake-Providern: je Person Anrede, eigenes Gedächtnis und eigener Agent; eine andere Person startet eine neue Unterhaltung; die Fremdstimme bleibt unbekannt und bekommt den Standard; Löschen einer Person bzw. „Alles löschen“ entfernt Namespace, Einstellungen und Embeddings. Echte STT/Pipeline deckt der Test nicht ab (Unit-Tests). Assets wie bei WP92a; `tool/e2e_android.sh` deinstalliert die App am Ende, deshalb vor jedem Lauf neu installieren und das prepare-Skript aus dem Handoff-Ordner aufrufen.
+
+```sh
+adb -s emulator-5554 install -r app/build/app/outputs/flutter-apk/app-debug.apk
+/Users/stefanrichter/ai/james-wt/handoff/wp92a-e2e/prepare.sh emulator-5554
+WENDELIN_WP92A_DIR=wp92a tool/e2e_android.sh integration_test/speaker_persons_e2e_test.dart
+```
+
+Ergebnis 2026-10-19: alle Szenarien grün (Thorsten 0,904, Kerstin 0,789, Fremdstimme 0,284 → unbekannt; nach dem Löschen Thorsten 0,094 → unbekannt).
