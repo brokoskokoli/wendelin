@@ -284,6 +284,49 @@ void main() {
     },
   );
 
+  test(
+    'Provider fällt nach einem Aufruf aus: Ledger bucht Kosten und budgetGroup',
+    () async {
+      var calls = 0;
+      final client = MockClient.streaming((req, body) async {
+        await body.drain<void>();
+        calls++;
+        if (calls > 1) throw StateError('Test: unerwarteter Fehler');
+        const chunks =
+            'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1",'
+            '"type":"function","function":{"name":"calendar__list_events",'
+            '"arguments":"{}"}}]},"finish_reason":"tool_calls","index":0}],'
+            '"usage":{"prompt_tokens":1000,"completion_tokens":100,'
+            '"total_tokens":1100}}\n\ndata: [DONE]\n\n';
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(chunks)),
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        );
+      });
+      final ledger = '${tmp.path}/l.json';
+      final (code, out, err) = await run(
+        [
+          '-p',
+          'profiles/openai-mini.json',
+          '-c',
+          'de-cal-tauchen',
+          '--ledger',
+          ledger,
+          '--max-cost',
+          '1',
+        ],
+        env: {'OPENAI_API_KEY': 'test-key-123'},
+        client: client,
+      );
+      expect(code, 0, reason: err);
+      expect(out, contains('de-cal-tauchen: error'));
+      final entry = readLedger(File(ledger)).single;
+      expect(entry.budgetGroup, 'openai');
+      expect(entry.costUsd, greaterThan(0), reason: '$calls Aufrufe');
+    },
+  );
+
   group('Anfrage-Felder je Modell (modelOptions, WP112)', () {
     /// First request body of a run of `-c de-cal-tauchen` with [profile].
     Future<Map<String, Object?>> requestOf(

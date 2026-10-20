@@ -1,6 +1,7 @@
 {
   "id": "openai-mini",
   "name": "OpenAI klein",
+  "budgetGroup": "openai",
   "type": "openaiCompatible",
   "baseUrl": "https://api.openai.com/v1",
   "defaultModel": "gpt-5-mini",

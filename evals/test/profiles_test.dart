@@ -23,6 +23,28 @@ void main() {
     }
   });
 
+  test('budgetGroup: ein Konto je Gruppe, Anthropic teilt sich eine', () {
+    const groups = {
+      'claude-haiku': 'anthropic',
+      'claude-sonnet': 'anthropic',
+      'near-tee': 'near',
+      'openai-mini': 'openai',
+      'phala-tee-small': 'phala',
+      'tinfoil-tee': 'tinfoil',
+    };
+    for (final e in groups.entries) {
+      expect(load(e.key).budgetGroup, e.value, reason: e.key);
+      expect(load(e.key).withModel('x').budgetGroup, e.value, reason: e.key);
+    }
+    expect(
+      () => EvalProfile.parse(
+        '{"id":"a","name":"a","type":"fake","defaultModel":"m",'
+        '"privacy":"local","authMethod":{"kind":"none"},"budgetGroup":""}',
+      ),
+      throwsFormatException,
+    );
+  });
+
   test('Sonnet ist bepreist und läuft ohne Thinking', () {
     final p = load('claude-sonnet');
     expect(p.profile.defaultModel, 'claude-sonnet-5-5');

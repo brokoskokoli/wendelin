@@ -1,6 +1,7 @@
 {
   "id": "phala-tee-small",
   "name": "Phala TEE klein",
+  "budgetGroup": "phala",
   "type": "openaiCompatible",
   "baseUrl": "https://api.redpill.ai/v1",
   "defaultModel": "qwen/qwen-2.5-7b-instruct",

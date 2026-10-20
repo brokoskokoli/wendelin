@@ -1,6 +1,7 @@
 {
   "id": "tinfoil-tee",
   "name": "Tinfoil TEE",
+  "budgetGroup": "tinfoil",
   "type": "openaiCompatible",
   "baseUrl": "https://inference.tinfoil.sh/v1",
   "defaultModel": "gpt-oss-120b",

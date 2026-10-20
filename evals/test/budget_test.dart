@@ -303,13 +303,14 @@ void main() {
     });
 
     group('--provider-cap', () {
-      File seed(String provider, double usd) {
+      File seed(String group, double usd, {String provider = 'fake-demo'}) {
         final f = File('${tmp.path}/cap.json');
         appendLedger(
           f,
           LedgerEntry(
             provider: provider,
-            providerType: 'fake',
+            budgetGroup: group,
+            providerType: 'openaiCompatible',
             model: 'm',
             cases: 1,
             costUsd: usd,
@@ -368,6 +369,68 @@ void main() {
                     as Map<String, Object?>)['meta']!
                 as Map<String, Object?>;
         expect(meta['maxCostMicros'], 200);
+      });
+
+      test(
+        'Haiku-Kosten verringern den Rest für Sonnet (eine Gruppe)',
+        () async {
+          final f = seed('anthropic', 4, provider: 'claude-haiku');
+          final before = f.readAsStringSync();
+          final (code, _, err) = await run([
+            '-p',
+            'profiles/claude-sonnet.json',
+            '--ledger',
+            f.path,
+            '--provider-cap',
+            '4',
+          ]);
+          expect(code, 1);
+          expect(err, contains('Obergrenze für anthropic ausgeschöpft'));
+          expect(f.readAsStringSync(), before);
+        },
+      );
+
+      test('Tinfoil-Kosten verringern NEAR nicht (gleicher Typ)', () async {
+        final f = seed('tinfoil', 50, provider: 'tinfoil-tee');
+        final (code, _, err) = await run([
+          '-p',
+          'profiles/near-tee.json',
+          '--ledger',
+          f.path,
+          '--provider-cap',
+          '1',
+        ]);
+        // Kein Key: der Lauf scheitert später, aber nicht an der Obergrenze.
+        expect(err, isNot(contains('Obergrenze')));
+        expect(code, isNot(64));
+      });
+
+      test('Profil ohne budgetGroup: Start verweigert', () async {
+        final f = seed('fake-demo', 0.1);
+        final (code, out, err) = await run([
+          '-p',
+          'profiles/fake-full.json',
+          '--ledger',
+          f.path,
+          '--provider-cap',
+          '1',
+        ]);
+        expect(code, 1);
+        expect(err, contains('budgetGroup'));
+        expect(out, isNot(contains('Profil ')));
+      });
+
+      test('Ledger-Eintrag speichert die budgetGroup', () async {
+        final ledger = '${tmp.path}/g.json';
+        final (code, _, err) = await run([
+          ...base,
+          '--cases',
+          'tauchen',
+          '--ledger',
+          ledger,
+        ]);
+        expect(code, 0, reason: err);
+        expect(readLedger(File(ledger)).single.budgetGroup, 'fake-demo');
       });
 
       test('Kosten anderer Anbieter zählen nicht', () async {
@@ -432,6 +495,25 @@ void main() {
       ),
     ];
     expect(ledgerCostMicros(Summary.of(results), more), 200);
+  });
+
+  test('Ledger-Eintrag bucht die Budgetkosten, wenn ein Fall abbrach', () {
+    // Fall warf nach Modellaufrufen: Report-Summe 0, Budget zählte 500 µUSD.
+    final lost = CostBudget(1)..record(500);
+    final profile = EvalProfile.parse(
+      File('profiles/claude-haiku.json').readAsStringSync(),
+    ).profile;
+    final entry = ledgerEntryOf(
+      profile,
+      'anthropic',
+      Summary.of(const []),
+      lost,
+      DateTime(2026, 10, 20),
+    );
+    expect(entry.costUsd, 0.0005);
+    expect(entry.budgetGroup, 'anthropic');
+    expect(entry.provider, 'claude-haiku');
+    expect(entry.date, '2026-10-20');
   });
 
   test('Ledger-Summe rechnet je Anbieter', () {

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:wendelin_core/wendelin_core.dart';
+
 import 'budget.dart';
 import 'summary.dart';
 
@@ -14,6 +16,7 @@ final class LedgerEntry {
     required this.cases,
     required this.costUsd,
     required this.date,
+    this.budgetGroup,
     this.unpricedCases = 0,
     this.budgetExceeded = false,
   });
@@ -35,6 +38,7 @@ final class LedgerEntry {
       cases: v['cases']! as int,
       costUsd: (v['costUsd']! as num).toDouble(),
       date: v['date']! as String,
+      budgetGroup: v['budgetGroup'] as String?,
       unpricedCases: v['unpricedCases'] as int? ?? 0,
       budgetExceeded: v['budgetExceeded'] == true,
     );
@@ -45,6 +49,9 @@ final class LedgerEntry {
 
   /// Provider type (`anthropic`, `openaiCompatible` …).
   final String providerType;
+
+  /// Group of `--provider-cap` (billing account, e.g. `anthropic`), if any.
+  final String? budgetGroup;
 
   /// Model id.
   final String model;
@@ -72,6 +79,7 @@ final class LedgerEntry {
     'cases': cases,
     'costUsd': costUsd,
     'date': date,
+    'budgetGroup': ?budgetGroup,
     if (unpricedCases > 0) 'unpricedCases': unpricedCases,
     if (budgetExceeded) 'budgetExceeded': true,
   };
@@ -86,9 +94,34 @@ int ledgerCostMicros(Summary summary, CostBudget? budget) {
   return counted > summary.costMicros ? counted : summary.costMicros;
 }
 
-/// Cost in USD already booked for [provider] in [entries].
-double providerSpentUsd(List<LedgerEntry> entries, String provider) => entries
-    .where((e) => e.provider == provider)
+/// The ledger entry of one finished run of [p] (booked cost: see
+/// [ledgerCostMicros]).
+LedgerEntry ledgerEntryOf(
+  ProviderProfile p,
+  String? budgetGroup,
+  Summary summary,
+  CostBudget? budget,
+  DateTime now,
+) => LedgerEntry(
+  provider: p.id,
+  providerType: p.type.name,
+  budgetGroup: budgetGroup,
+  model: p.defaultModel,
+  cases: summary.total,
+  costUsd: ledgerCostMicros(summary, budget) / 1e6,
+  unpricedCases: summary.unpricedCases,
+  budgetExceeded: budget?.exceeded ?? false,
+  date: _date(now),
+);
+
+String _date(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
+/// Cost in USD already booked for the budget [group] in [entries] (all
+/// profiles of one billing account together).
+double groupSpentUsd(List<LedgerEntry> entries, String group) => entries
+    .where((e) => e.budgetGroup == group)
     .fold(0.0, (sum, e) => sum + e.costUsd);
 
 /// Reads the ledger [file] (missing = empty); throws [FormatException] if it

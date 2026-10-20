@@ -10,6 +10,9 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 /// eval keys:
 /// - `catalog`: price overrides in the `ModelCatalog.mergeJson` format
 ///   (`{"models": {"<id>": {"input": 0.1, "output": 0.4}}}`),
+/// - `budgetGroup`: group whose `--provider-cap` this profile shares (all
+///   profiles of one billing account use the same name, e.g. `anthropic`
+///   for Haiku and Sonnet); without it `--provider-cap` refuses to start,
 /// - `escalationModels`: no longer used (Wendelin does not switch models
 ///   on its own, K28); the key is accepted and ignored,
 /// - `modelOptions`: provider options per model id (e.g. `reasoningEffort`,
@@ -28,6 +31,7 @@ final class EvalProfile {
     this.script, [
     this._base,
     this._modelOptions = const {},
+    this.budgetGroup,
   ]);
 
   /// Parses [json]; throws [FormatException].
@@ -54,6 +58,10 @@ final class EvalProfile {
     final map = Map.of(decoded);
     final catalogJson = map.remove('catalog');
     map.remove('escalationModels');
+    final group = map.remove('budgetGroup');
+    if (group != null && (group is! String || group.trim().isEmpty)) {
+      throw const FormatException('budgetGroup: nicht leerer Text erwartet');
+    }
     final script = map.remove('script');
     if (script != null && script is! String) {
       throw const FormatException('script: Pfad erwartet');
@@ -70,6 +78,7 @@ final class EvalProfile {
       script as String?,
       base,
       modelOptions,
+      group as String?,
     );
   }
 
@@ -118,6 +127,9 @@ final class EvalProfile {
   /// Prices (built-in plus overrides).
   final ModelCatalog catalog;
 
+  /// Group for `--provider-cap` (see class doc), `null` if the profile has none.
+  final String? budgetGroup;
+
   /// Fake script path (only for `type: fake`).
   final String? script;
 
@@ -149,6 +161,7 @@ final class EvalProfile {
     script,
     _base,
     _modelOptions,
+    budgetGroup,
   );
 
   final ProviderProfile? _base;

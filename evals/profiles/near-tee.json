@@ -1,6 +1,7 @@
 {
   "id": "near-tee",
   "name": "NEAR AI TEE",
+  "budgetGroup": "near",
   "type": "openaiCompatible",
   "baseUrl": "https://cloud-api.near.ai/v1",
   "defaultModel": "z-ai/glm-5.3-flash",

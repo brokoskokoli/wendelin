@@ -15,7 +15,6 @@ import 'fake_script.dart';
 import 'ledger.dart';
 import 'report.dart';
 import 'routing_table.dart';
-import 'summary.dart';
 
 /// Default „now“ of a run: Wednesday, 18 November 2026, 09:00. Chosen so
 /// that relative dates („morgen“ = 2026-11-19) differ from the example dates
@@ -148,14 +147,12 @@ Future<int> runCli(
     }
     final p = profile.profile;
     final ledgerFile = _ledger(args.option('ledger'));
-    if (cap != null) {
-      final capped = _capBudget(cap, budget, readLedger(ledgerFile!), p.id);
-      if (capped.$2 case final msg?) {
-        err.writeln(msg);
-        return 1;
-      }
-      budget = capped.$1;
+    final capped = _capBudget(cap, budget, ledgerFile, profile);
+    if (capped.$2 case final msg?) {
+      err.writeln(msg);
+      return 1;
     }
+    budget = capped.$1;
     final priced = profile.catalog.lookup(p.defaultModel) != null;
     if (budget != null && !priced) {
       err.writeln(_noPrice(p.defaultModel));
@@ -209,6 +206,7 @@ Future<int> runCli(
       repeat: repeat,
       interrupted: interrupted,
       ledgerFile: ledgerFile,
+      budgetGroup: profile.budgetGroup,
       today: today,
     );
   } on FormatException catch (e) {
@@ -235,6 +233,7 @@ int _finish(
   required int repeat,
   required bool interrupted,
   required File? ledgerFile,
+  required String? budgetGroup,
   required DateTime Function()? today,
 }) {
   final limit = args.option('limit');
@@ -273,7 +272,13 @@ int _finish(
   if (ledgerFile != null) {
     appendLedger(
       ledgerFile,
-      _entry(p, report.summary, budget, (today ?? DateTime.now)()),
+      ledgerEntryOf(
+        p,
+        budgetGroup,
+        report.summary,
+        budget,
+        (today ?? DateTime.now)(),
+      ),
     );
     out.writeln('Bilanz ergänzt: ${ledgerFile.path}');
   }
@@ -320,17 +325,27 @@ String? _badNumber(ArgResults a) {
 /// ledger booked, the smaller of that and [own]); or an error message when
 /// nothing is left.
 (CostBudget?, String?) _capBudget(
-  double cap,
+  double? cap,
   CostBudget? own,
-  List<LedgerEntry> entries,
-  String provider,
+  File? ledgerFile,
+  EvalProfile profile,
 ) {
-  final spent = providerSpentUsd(entries, provider);
+  if (cap == null) return (own, null);
+  final group = profile.budgetGroup;
+  final profileId = profile.profile.id;
+  if (group == null) {
+    return (
+      own,
+      'Fehler: --provider-cap, aber das Profil $profileId hat keine '
+          '"budgetGroup" (Konto-Gruppe, z. B. anthropic) – Start verweigert',
+    );
+  }
+  final spent = groupSpentUsd(readLedger(ledgerFile!), group);
   final remaining = cap - spent;
   if ((remaining * 1e6).round() < 1) {
     return (
       own,
-      'Fehler: Obergrenze für $provider ausgeschöpft '
+      'Fehler: Obergrenze für $group ausgeschöpft '
           '(${spent.toStringAsFixed(4)} von ${cap.toStringAsFixed(4)} USD im '
           'Ledger) – Start verweigert',
     );
@@ -370,26 +385,6 @@ int _ledgerSummary(ArgResults args, StringSink out, StringSink err) {
     return 1;
   }
 }
-
-LedgerEntry _entry(
-  ProviderProfile p,
-  Summary summary,
-  CostBudget? budget,
-  DateTime now,
-) => LedgerEntry(
-  provider: p.id,
-  providerType: p.type.name,
-  model: p.defaultModel,
-  cases: summary.total,
-  costUsd: ledgerCostMicros(summary, budget) / 1e6,
-  unpricedCases: summary.unpricedCases,
-  budgetExceeded: budget?.exceeded ?? false,
-  date: _date(now),
-);
-
-String _date(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
 
 Directory _casesDir(String? option) {
   if (option != null) return Directory(option);

@@ -1,6 +1,7 @@
 {
   "id": "claude-sonnet",
   "name": "Claude Sonnet",
+  "budgetGroup": "anthropic",
   "type": "anthropic",
   "defaultModel": "claude-sonnet-5-5",
   "privacy": "standard",

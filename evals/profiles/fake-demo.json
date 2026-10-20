@@ -1,6 +1,7 @@
 {
   "id": "fake-demo",
   "name": "Fake-Provider (offline)",
+  "budgetGroup": "fake-demo",
   "type": "fake",
   "defaultModel": "fake-model",
   "privacy": "local",

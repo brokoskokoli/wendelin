@@ -29,9 +29,9 @@ dart run wendelin_evals:run --profile profiles/claude-haiku.json --limit 5 --out
 | `--limit, -n` | höchstens n Fälle |
 | `--out, -o` | JSON-Report schreiben (`reports/*.local.json` ist von Git ausgenommen) |
 | `--max-cost` | Kostengrenze in USD je Lauf: nach **jedem** Modellaufruf wird die Summe geprüft; wird sie erreicht, bricht der Lauf sofort ab (auch mitten im Fall: dieser Fall ist `error` mit Grund `budget`, der Rest `skip` „budget“), Teilreport mit `meta.budgetExceeded`, Exit-Code 2. Fail-closed: ohne Preis für das Modell (Katalog/`catalog`) startet der Lauf nicht (Exit 1); ein Aufruf ohne Preis stoppt ebenfalls |
-| `--provider-cap` | Obergrenze in USD je Anbieter (Profil-Id) über alle Läufe, nur mit `--ledger`: wirksame Grenze = Obergrenze minus bisherige Ledger-Summe des Anbieters (mit `--max-cost` gilt die kleinere); ist nichts mehr übrig (≤ 0), startet der Lauf nicht (Exit 1) |
+| `--provider-cap` | Obergrenze in USD je Konto-Gruppe (Profilschlüssel `budgetGroup`, z. B. `anthropic` für Haiku und Sonnet zusammen) über alle Läufe, nur mit `--ledger`: wirksame Grenze = Obergrenze minus bisherige Ledger-Summe der Gruppe (mit `--max-cost` gilt die kleinere); ist nichts mehr übrig (≤ 0) oder hat das Profil keine `budgetGroup`, startet der Lauf nicht (Exit 1) |
 | `--repeat` | jeden Fall n-mal (Standard 1, Stabilität); Report und Tabelle unterscheiden die Wiederholungen (`repetition`, `id#n`) |
-| `--ledger` | JSON-Bilanz: hängt je Lauf Anbieter (Profil-Id), Typ, Modell, Fälle, Kosten in USD und Datum an (ohne Keys/Header; ein kaputtes Ledger verhindert den Lauf) |
+| `--ledger` | JSON-Bilanz: hängt je Lauf Anbieter (Profil-Id), Typ, `budgetGroup`, Modell, Fälle, Kosten in USD und Datum an (ohne Keys/Header; ein kaputtes Ledger verhindert den Lauf) |
 | `--ledger-summary` | mit `--ledger`: Läufe, Fälle und Kosten je Anbieter summieren, kein Lauf |
 | `--now` | fester „heute“-Zeitpunkt, Standard `2026-11-18T09:00` (Mittwoch; bewusst nicht nahe am Beispieldatum 2026-10-15 der Tool-Beschreibungen) |
 | `--time-zone` | IANA-Zone, Standard `Europe/Berlin` |
@@ -266,8 +266,11 @@ die Kosten.
   liegt also unter dem Budget).
 - Geprüft wird erst **nach** einem Modellaufruf: die Grenze kann um höchstens
   einen Aufruf überschritten werden.
-- `--max-cost` gilt je Lauf, `--provider-cap` je Anbieter über das Ledger
-  (z. B. `--ledger reports/ledger.local.json --provider-cap 4` für Anthropic).
+- `--max-cost` gilt je Lauf, `--provider-cap` je Konto-Gruppe über das Ledger
+  (z. B. `--ledger reports/ledger.local.json --provider-cap 4`: Haiku und
+  Sonnet teilen sich 4 USD, weil beide `budgetGroup: anthropic` haben; NEAR,
+  Tinfoil und OpenAI haben je eine eigene Gruppe, obwohl sie denselben
+  Provider-Typ nutzen).
   Bricht ein Fall nach Modellaufrufen mit einer Ausnahme ab, bucht das Ledger
   mindestens die vom Budget gezählten Kosten.
 
