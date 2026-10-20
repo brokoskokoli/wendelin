@@ -96,6 +96,13 @@ void main() {
       expect(o.retried, isTrue);
       expect(o.costMicros, 400);
       expect(o.modelCalls, 2);
+      // Tokens of both attempts (one model call each), not just the second.
+      final (single, _, _) = runner([
+        () => [ScriptedTurn.text('Zehn Uhr.')],
+      ]);
+      final one = (await single.runAll([_case('a')])).single.observation.usage;
+      expect(one.totalTokens, greaterThan(0));
+      expect(o.usage.totalTokens, 2 * one.totalTokens);
       expect(budget.spentMicros, 400);
       expect(res.toJson()['retried'], isTrue);
     },
@@ -120,6 +127,22 @@ void main() {
     expect(sleeps, isEmpty);
     expect(res.observation.retried, isFalse);
     expect(res.toJson().containsKey('retried'), isFalse);
+  });
+
+  test('Budget nach dem ersten Versuch erreicht: keine Wiederholung', () async {
+    // The first attempt costs 200 µUSD; the budget is just below that.
+    final budget = CostBudget(0.0001);
+    final (r, sleeps, started) = runner(
+      [_limited],
+      retry: const Duration(seconds: 30),
+      budget: budget,
+    );
+    final res = (await r.runAll([_case('a')])).single;
+    expect(started, hasLength(1));
+    expect(sleeps, isEmpty);
+    expect(res.observation.retried, isFalse);
+    expect(budget.spentMicros, 200);
+    expect(budget.exceeded, isTrue);
   });
 
   test('anderer Fehler (kein Rate-Limit): keine Wiederholung', () async {

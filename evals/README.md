@@ -76,8 +76,9 @@ Der API-Key kommt ausschließlich aus einer Umgebungsvariable:
 
 Preisquellen (USD je Million Tokens): Claude und OpenAI aus dem eingebauten
 Katalog (`model_catalog.dart`: Anthropic-Modellübersicht 2026-10,
-OpenAI-Listenpreise); Phala/RedPill und NEAR aus den Modellkatalogen der
-Anbieter (Stand der Läufe vom 13./14.10.2026, im Profil unter `catalog`);
+OpenAI-Listenpreise); Phala/RedPill aus dem Modellkatalog (Stand der Läufe vom
+13./14.10.2026), NEAR aus `/v1/models` (Stand 2026-10-20), jeweils im Profil
+unter `catalog`;
 Tinfoil siehe oben (offen). Vor jedem Live-Lauf Preise prüfen und das Datum
 in der Notiz vermerken.
 
