@@ -171,3 +171,22 @@ Wie WP106: Parakeet TDT 0.6B v3 CC-BY-4.0; Whisper MIT; CAM++ Apache-2.0; microW
 - Teil B (echte Aufnahmen unter `~/wendelin-fixtures/wake/hey/`) fehlt: Ordner bei Start leer.
 - Die Python-Selbsttests laufen nicht im Gate und nicht über `tool/t.sh` (nur Dart/Flutter), sondern per `unittest` wie oben.
 - Maschine war während der Messläufe stark ausgelastet; Zeiten (RTF, ms je Segment) sind eher obere Werte.
+
+## Anhang: alternative Wörter (Nebenexperiment 2026-10-21)
+
+Wunsch Stefan nach einer Klang-Recherche (Kandidaten „Hey Wendelix“, „Hey Octavia“, „Kobalos“, dazu „Alexa“ als Bezug). Aufbau wie Teil A: 135 Positiv-Clips je Wort (9 macOS-Systemstimmen), Negativsprache 1,93 h, FLEURS-test 1,0 h als Fernseher, Stufe 2 Parakeet bs/hw2 mit passendem Hotword. Für die neuen Wörter gibt es kein trainiertes Stufe-1-Modell, nur sherpa-KWS; „Alexa“ zusätzlich mit dem openWakeWord-Originalmodell.
+
+| Wort | Programm (beste Regel) | clean | FA/h (clean) | both | station |
+|---|---|---|---|---|---|
+| Wendelin | sherpa-KWS Kz4/0,05 + hw2 | 56 % [47–64] | 2,1 | 0 % | 0 % |
+| Wendelin | v7 M0,3 + hw2 | 44 % [36–52] | 1,6 | 9 % | 11 % |
+| Hey Wendelin | sherpa-KWS Kz4/0,05 + hw2 | 53 % [44–61] | 0,5 | 0 % | 1,5 % |
+| Hey Wendelix | sherpa-KWS Kz2/0,15 + hw2 | 26 % [19–34] | 0 | 0 % | 0 % |
+| Alexa | sherpa-KWS Kz4/0,05 + hw2 | 12 % [7–18] | 0 | 0 % | 0 % |
+| Alexa | openWakeWord `alexa.onnx` M0,3 + hw2 | 8 % [5–14] | 0 | 0 % | 0 % |
+| Hey Octavia | sherpa-KWS Kz4/0,05 + hw2 | 11 % [7–18] | 0 | 0 % | 0 % |
+| Kobalos | sherpa-KWS | 0 % | – | 0 % | 0 % |
+
+Verwechsler nach Stufe 2 überall ≤ 2,3 % (neue Wörter 0–0,2 %), FA/h ≤ 2,1. Das Originalmodell für „Alexa“ reagiert fast nur auf eine der Stimmen; die Bedingungen sind für synthetisch trainierte Modelle sehr hart.
+
+**Fazit:** Im gleichen Programm (sherpa-KWS, clean) ist kein Alternativwort besser als „Wendelin“. Der Hebel liegt bei Trainingsdaten (echte Aufnahmen, passende Domäne) und bei Stufe 2 unter Rauschen, nicht beim Wort. Die Empfehlung bleibt: bei „Wendelin“ bleiben, Teil B mit echten Aufnahmen entscheidet. Skriptkopien und Tabellen liegen lokal unter `~/wendelin-models/kws/wp111/{alexa,heyx,side-scripts}/` (nicht im Repo).
