@@ -830,7 +830,7 @@ void main() {
       ]) {
         expect(find.text(name), findsOneWidget);
       }
-      expect(find.byType(ModelDownloadRow), findsNWidgets(9));
+      expect(find.byType(ModelDownloadRow), findsNWidgets(11));
       // Default: first voice of the language; no voice loaded -> no sample.
       expect(
         c.read(voiceSettingsProvider).value!.sherpaVoiceFor('de'),

@@ -79,6 +79,26 @@ void main() {
     expect(const VoiceSettings().sttModel, SpeechModelCatalog.whisperSmall.id);
   });
 
+  test('Ramona und Eva: M-AILABS-Lizenz mit Attribution, echte Prüfsumme', () {
+    const sums = {
+      'tts-de-ramona':
+          'e532ddcbb09c16a65f56441bbbbf301083d2ea5b18ce937775303942f2b7a8f4',
+      'tts-de-eva':
+          '0501123c7e184571a40690e79943f4111a57b988632f7f60a9d2344fd061e2a2',
+    };
+    for (final MapEntry(:key, :value) in sums.entries) {
+      final m = catalog.byId(key)!;
+      expect(m.files.single.sha256, value, reason: key);
+      expect(m.gender, VoiceGender.female);
+      expect(m.languages, {'de'});
+      expect(m.license, contains('M-AILABS'));
+      expect(m.attribution, contains('M-AILABS'));
+      expect(m.sizeBytes, lessThan(25000000));
+      expect(m.note, contains('selbst gehasht'));
+      expect(catalog.voicesFor('de').map((v) => v.id), contains(key));
+    }
+  });
+
   test('Pflicht-Attribution für SIWIS, englische Stimme gemeinfrei', () {
     expect(SpeechModelCatalog.voiceFr.attribution, contains('SIWIS'));
     expect(SpeechModelCatalog.voiceFr.attribution, contains('CC BY 4.0'));
