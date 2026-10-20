@@ -203,7 +203,7 @@ class WakePolicyTest {
 
     @Test
     fun pausingTheActivityHidesTheChat() {
-        ChatState.visible = true
+        ChatState.reported = true
         ChatState.paused()
         assertFalse(ChatState.visible)
     }

@@ -23,7 +23,7 @@ class WakeChannel(private val context: Context, messenger: BinaryMessenger) :
     fun dispose() {
         channel.setMethodCallHandler(null)
         if (current === this) current = null
-        ChatState.visible = false
+        ChatState.reported = false
         // The engine goes while the chat listens: the service must not stay deaf (WP93).
         if (ChatState.release()) WakeWordService.onOverlayClosed()
     }

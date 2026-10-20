@@ -63,19 +63,16 @@ void main() {
     expect(await const ChannelStationPort().isLocked(), isTrue);
   });
 
-  test(
-    'finish: false vom Kanal erreicht den Host, null gilt als geschlossen',
-    () async {
-      final host = DeviceStationHost(
-        AssistantPlatform(),
-        const ScreenProtection(),
-      );
-      finishAnswer = false;
-      expect(await host.finish(), isFalse);
-      finishAnswer = null;
-      expect(await host.finish(), isTrue);
-    },
-  );
+  test('finish: false vom Kanal erreicht den Host, null (Fehler) gilt als nicht geschlossen', () async {
+    final host = DeviceStationHost(
+      AssistantPlatform(),
+      const ScreenProtection(),
+    );
+    finishAnswer = false;
+    expect(await host.finish(), isFalse);
+    finishAnswer = null;
+    expect(await host.finish(), isFalse);
+  });
 
   test('Fehler der Plattform werden zu PortException', () async {
     error = 'locked';

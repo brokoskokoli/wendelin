@@ -56,20 +56,24 @@ enum class HitRoute { CHAT, OVERLAY }
  * a hit; the service stays quiet until `chatDone`.
  */
 object ChatState {
-    @Volatile var visible = false
+    /** The raw report from Dart; [visible] derives from it, so the lifecycle order never matters. */
+    @Volatile var reported = false
     @Volatile var owned = false
+
+    /** While the station is up the chat is never visible (WP99), whatever Dart reported. */
+    val visible: Boolean get() = reported && !StationState.active
 
     /**
      * Dart reports whether the chat is visible. While the station is up it never is (WP99): the
      * wake word opens the overlay, not the chat behind the station.
      */
     fun report(isVisible: Boolean) {
-        visible = isVisible && !StationState.active
+        reported = isVisible
     }
 
     /** The main screen leaves the foreground (activity paused). */
     fun paused() {
-        visible = false
+        reported = false
     }
 
     /**
@@ -91,7 +95,7 @@ object ChatState {
 
     @Synchronized
     fun reset() {
-        visible = false
+        reported = false
         owned = false
     }
 }

@@ -10,7 +10,7 @@ class StationPolicyTest {
     @After
     fun reset() {
         StationState.active = false
-        ChatState.visible = false
+        ChatState.reported = false
     }
 
     @Test
@@ -81,6 +81,22 @@ class StationPolicyTest {
         StationState.active = false
         ChatState.report(true)
         assertTrue(ChatState.visible)
+    }
+
+    @Test
+    fun endingTheStationAfterTheChatReportedMakesTheChatVisible() {
+        // MainActivity.onResume (report true) runs before StationActivity.onStop (active = false).
+        StationState.active = true
+        ChatState.report(true)
+        StationState.active = false
+        assertTrue(ChatState.visible)
+    }
+
+    @Test
+    fun aChatReportedDuringTheStationIsNeverVisibleWhileItRuns() {
+        StationState.active = true
+        ChatState.report(true)
+        assertFalse(ChatState.visible)
     }
 
     @Test
