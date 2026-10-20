@@ -15,6 +15,29 @@
     "ownedBy": "nearai",
     "toolsOnly": true
   },
+  "modelOptions": {
+    "Qwen/Qwen3.8-27B": {
+      "extraBody": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      }
+    },
+    "Qwen/Qwen3.6-35B-A3B-FP8": {
+      "extraBody": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      }
+    },
+    "z-ai/glm-5.3-flash": {
+      "extraBody": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      }
+    }
+  },
   "catalog": {
     "models": {
       "z-ai/glm-5.3-flash": {

@@ -409,6 +409,23 @@ void main() {
       expect(body, isNot(contains('reasoning_effort')));
     });
 
+    for (final m in [
+      'Qwen/Qwen3.8-27B',
+      'Qwen/Qwen3.6-35B-A3B-FP8',
+      'z-ai/glm-5.3-flash',
+    ]) {
+      test('NEAR $m: enable_thinking false', () async {
+        final body = await requestOf(
+          'near-tee',
+          model: m,
+          key: 'NEAR_AI_API_KEY',
+        );
+        expect(body['model'], m);
+        expect(body['chat_template_kwargs'], {'enable_thinking': false});
+        expect(body, isNot(contains('reasoning_effort')));
+      });
+    }
+
     test('OpenAI gpt-5-mini: reasoning_effort minimal', () async {
       final body = await requestOf('openai-mini', key: 'OPENAI_API_KEY');
       expect(body['model'], 'gpt-5-mini');
