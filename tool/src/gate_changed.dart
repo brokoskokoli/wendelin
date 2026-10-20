@@ -163,3 +163,39 @@ Set<String> _closure(String name, Map<String, Set<String>> deps) {
   }
   return seen;
 }
+
+/// Prüfumfang eines Aufrufs ohne `--changed`. `targets == null`: alle Pakete.
+/// `--globals`: keine Pakete, nur globale Prüfungen und Selbsttests.
+/// `--only <ziel>…`: nur diese Ziele, ohne globale Prüfungen und ohne
+/// Werkzeug-Selbsttests (CI-Matrix). Positionale Ziele ohne `--only`
+/// behalten die globalen Prüfungen.
+({Set<String>? targets, bool tooling, bool kotlin, bool globalChecks})
+explicitScope(List<String> args) {
+  final only = args.where((a) => !a.startsWith('-')).toSet();
+  if (args.contains('--globals')) {
+    return (
+      targets: <String>{},
+      tooling: true,
+      kotlin: false,
+      globalChecks: true,
+    );
+  }
+  if (only.isEmpty) {
+    return (targets: null, tooling: true, kotlin: true, globalChecks: true);
+  }
+  final isolated = args.contains('--only');
+  return (
+    targets: only,
+    tooling: !isolated,
+    kotlin: only.contains(appTarget),
+    globalChecks: !isolated,
+  );
+}
+
+/// Argumente von `dart test` für Shard [shard] (1-basiert); leer ohne Shard.
+List<String> shardFlags(({int index, int total})? shard) => [
+  if (shard != null) ...[
+    '--total-shards=${shard.total}',
+    '--shard-index=${shard.index - 1}',
+  ],
+];

@@ -115,6 +115,11 @@ if ! is_emulator; then
     "Wendelin-Daten (pm clear app.wendelin)." >&2
 fi
 
+# Ein Lauf je Emulator (WP110): belegt -> sofort Abbruch, Freigabe per trap (auch in cleanup).
+# shellcheck source=tool/emulator_lock.sh
+. "$ROOT/tool/emulator_lock.sh"
+emu_lock_acquire "$DEVICE" || exit 1
+
 if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" != "1" ]; then
   echo "Gerät $DEVICE ist noch nicht hochgefahren" >&2
   exit 1
@@ -474,6 +479,7 @@ helper &
 HELPER=$!
 HA_SERVER=
 cleanup() {
+  emu_lock_release
   kill "$HELPER" 2>/dev/null || true
   # Fake-HA (run_ha) nach Abbruch nicht verwaist lassen.
   if [ -n "$HA_SERVER" ]; then

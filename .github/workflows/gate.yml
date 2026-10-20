@@ -1,6 +1,9 @@
 name: gate
-# Volles Gate in CI (WP95): Ubuntu-Matrix je Paket, App-Tests in Shards ohne
-# Goldens, Goldens nur auf dem gepinnten macOS-Runner, Rust, kotlin-unit, APK.
+# Volles Gate in CI (WP95): Ubuntu-Matrix je Paket (gate.dart --only, wendelin_integrations
+# in 2 Shards), globale Prüfungen und Werkzeug-Selbsttests einmal im Job global-checks,
+# App-Tests in Shards ohne Goldens, Goldens nur auf dem gepinnten macOS-Runner, Rust,
+# kotlin-unit, APK. Nur Doku geändert (tool/ci_scope.sh): allein der Job docs-only (check_docs);
+# Branches mit Code bekommen immer den vollen Lauf, tool/merge_wp.sh prüft das (WP110).
 # Lokal laufen Agenten nur `--changed`; dieses Gate ist die Freigabe vor dem Merge.
 on:
   push:
@@ -16,30 +19,70 @@ env:
   NDK_VERSION: 28.2.13676358
   CI: 'true'
 jobs:
-  # Paketliste aus dem Repo (wie tool/gate.dart: packages/* plus evals), damit
-  # kein Paket an der Matrix vorbei neu hinzukommt.
-  setup:
+  # Autor, Committer und Trailer aller Commits des Branches (WP109):
+  # nur die noreply-Identität, genau ein Co-Authored-By, keine Claude-Session.
+  commit-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Commit-Identität und Trailer
+        env:
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: tool/check_commit_identity.sh --ci
+
+  # Umfang des Laufs (tool/ci_scope.sh): docs_only (nur Markdown geändert, Bezug: Merge-Basis mit
+  # main bzw. voriger Push auf main), android (APK-Job) und die Paketliste aus dem Repo (wie
+  # tool/gate.dart: packages/* plus evals; wendelin_integrations in 2 Shards), damit kein Paket
+  # an der Matrix vorbei neu hinzukommt.
+  scope:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      pkgs: ${{ steps.m.outputs.pkgs }}
+      docs_only: ${{ steps.f.outputs.docs_only }}
+      android: ${{ steps.f.outputs.android }}
+      matrix: ${{ steps.m.outputs.matrix }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - id: f
+        env:
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+        run: tool/ci_scope.sh --ci
       - id: m
         run: |
-          pkgs=$( { ls packages; [ -f evals/pubspec.yaml ] && [ -d evals/lib ] && echo evals; } | sort | jq -R . | jq -sc .)
-          echo "pkgs=$pkgs" >> "$GITHUB_OUTPUT"
-          echo "Pakete: $pkgs"
+          matrix=$( { ls packages; [ -f evals/pubspec.yaml ] && [ -d evals/lib ] && echo evals; } | sort | jq -R . | jq -sc '[ .[] as $p | if $p == "wendelin_integrations" then (1, 2) as $i | {pkg: $p, shard: $i, shards: 2} else {pkg: $p, shard: 1, shards: 1} end ]')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Matrix: $matrix"
+
+  # Nur Doku geändert: allein check_docs (die Pfade in der Agenten-Doku).
+  docs-only:
+    needs: scope
+    if: needs.scope.outputs.docs_only == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
+      - run: dart run tool/check_docs.dart
 
   packages:
-    name: ${{ matrix.pkg }}
-    needs: setup
+    name: ${{ matrix.pkg }}${{ matrix.shards > 1 && format(' {0}/{1}', matrix.shard, matrix.shards) || '' }}
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        pkg: ${{ fromJSON(needs.setup.outputs.pkgs) }}
+        include: ${{ fromJSON(needs.scope.outputs.matrix) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
@@ -53,8 +96,16 @@ jobs:
           key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
           restore-keys: pub-${{ runner.os }}-
       - run: flutter pub get
-      # Format, Analyse, Tests und Abdeckung des Pakets (ohne Werkzeug-Prüfungen).
-      - run: dart run tool/gate.dart ${{ matrix.pkg }}
+      # Format, Analyse, Tests und Abdeckung des Pakets; ohne globale Prüfungen und Werkzeug-
+      # Selbsttests (die laufen einmal im Job global-checks). Geteilte Pakete prüfen die
+      # Abdeckung über alle Shards im Job pkg-coverage.
+      - run: dart run tool/gate.dart --only ${{ matrix.pkg }}${{ matrix.shards > 1 && format(' --shard={0}/{1}', matrix.shard, matrix.shards) || '' }}
+      - if: matrix.shards > 1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pkg-lcov-${{ matrix.pkg }}-${{ matrix.shard }}
+          path: packages/${{ matrix.pkg }}/coverage/lcov.info
+          retention-days: 1
       - name: Zeitzonen-Lauf (Ortszeit-Logik)
         if: matrix.pkg == 'wendelin_storage'
         run: dart test
@@ -62,9 +113,43 @@ jobs:
         env:
           TZ: Europe/Berlin
 
-  # Rust-Prüfmodul native/attest (WP47) und die Prüfungen über das ganze Repo
-  # (check_*, Selbsttests). Mit CI=true ist ein fehlendes Werkzeug ein Fehler.
+  # Abdeckung von wendelin_integrations über beide Shards (Schwelle wie im lokalen Gate).
+  pkg-coverage:
+    needs: [scope, packages]
+    if: needs.scope.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: pkg-lcov-wendelin_integrations-*
+          path: lcov
+      - run: dart run tool/check_pkg_coverage.dart wendelin_integrations lcov/*/lcov.info
+
+  # Prüfungen über das ganze Repo (check_*, Selbsttests der Werkzeuge) einmal, nicht je Paket.
+  global-checks:
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0 # check_texts vergleicht die Allowlist mit origin/main
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      - run: dart run tool/gate.dart --globals
+
+  # Rust-Prüfmodul native/attest (WP47). Mit CI=true ist ein fehlendes Werkzeug ein Fehler.
   rust-checks:
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -87,9 +172,11 @@ jobs:
         run: |
           cargo deny --version 2>/dev/null | grep -q ' 0\.19\.' || cargo install cargo-deny --version '~0.19' --locked --force
           flutter_rust_bridge_codegen --version 2>/dev/null | grep -q '2\.12\.0' || cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked --force
-      - run: dart run tool/gate.dart native/attest
+      - run: dart run tool/gate.dart --only native/attest
 
   app-analyze:
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -108,6 +195,8 @@ jobs:
   # App-Tests ohne Goldens und ohne plattformabhängige Tests, in Shards.
   app-test:
     name: app-test ${{ matrix.shard }}/3
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -134,7 +223,8 @@ jobs:
 
   # Abdeckung von app/lib/di über alle Shards (Schwelle wie im lokalen Gate).
   app-coverage:
-    needs: app-test
+    needs: [scope, app-test]
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -148,6 +238,8 @@ jobs:
 
   # Goldens und plattformabhängige Tests (FFI) nur auf dem gepinnten macOS-Runner.
   goldens:
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: macos-15
     timeout-minutes: 30
     steps:
@@ -170,6 +262,8 @@ jobs:
           retention-days: 7
 
   kotlin-unit:
+    needs: scope
+    if: needs.scope.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -197,45 +291,17 @@ jobs:
       - run: ./gradlew :app:testDebugUnitTest -q
         working-directory: app/android
 
-  changes:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      android: ${{ steps.f.outputs.android }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-      - id: f
-        env:
-          REF: ${{ github.ref }}
-        run: |
-          # Branches und PRs: gegen die Merge-Basis mit main (alle Aenderungen
-          # des Branches, nicht nur der letzte Push). main: gegen den vorigen Push.
-          base=""
-          if [ "$REF" = refs/heads/main ]; then
-            base="${{ github.event.before }}"
-          fi
-          if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ] || ! git cat-file -e "$base" 2>/dev/null; then
-            base=$(git merge-base origin/main HEAD)
-          fi
-          if git diff --name-only "$base" HEAD | grep -qE '^(app/android/|native/|\.github/workflows/gate\.yml|tool/check_apk|pubspec|.*/pubspec[^/]*$)'; then
-            echo "android=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "android=false" >> "$GITHUB_OUTPUT"
-          fi
-
   # K7 am fertigen APK: keine GMS-/Firebase-Klassen, Manifest (exportierte
   # Komponenten, Berechtigungen, Backup) und Gradle-Baum ohne GMS und ohne
   # nicht aufgelöste Abhängigkeiten. arm64 reicht für die Prüfung.
   apk:
     # Release-APK nur für main und PRs; auf wp/** nur, wenn Android oder
     # pubspec* betroffen sind (K7, GMS-Prüfung), sonst zu teuer.
-    needs: changes
+    needs: scope
     if: >
-      github.event_name == 'pull_request' ||
+      needs.scope.outputs.docs_only != 'true' && (github.event_name == 'pull_request' ||
       (github.event_name == 'push' && (github.ref == 'refs/heads/main' ||
-      needs.changes.outputs.android == 'true'))
+      needs.scope.outputs.android == 'true')))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

@@ -3,8 +3,8 @@
 
 Nicht Teil der App und nicht des Gates. Python-Umgebung ausserhalb des Repos:
 
-  python3 -m venv ../james-wt/handoff/wp102-venv
-  ../james-wt/handoff/wp102-venv/bin/pip install sherpa-onnx numpy soundfile jiwer
+  python3 -m venv ~/wendelin-fixtures/venv
+  ~/wendelin-fixtures/venv/bin/pip install sherpa-onnx numpy soundfile jiwer
 
 Modelle liegen je Ordner unter --models (nie einchecken), Aufbau siehe
 MODELS/VOICES unten. Aufrufe (immer nacheinander, ein Modell je Prozess, damit

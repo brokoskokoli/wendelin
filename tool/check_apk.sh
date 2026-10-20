@@ -3,6 +3,7 @@
 # Manifest (kein Backup, nur die erwarteten Berechtigungen).
 #
 #   tool/check_apk.sh [pfad/zum.apk]   # Standard: Release-APK, wird gebaut
+#   tool/check_apk.sh --manifest [xml…] # Allowlist gegen das Quell-Manifest, ohne APK-Build
 #   tool/check_apk.sh --self-test      # prüft das Skript mit Attrappen
 #
 # Prüfungen:
@@ -30,6 +31,76 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+attr() { { echo "$1" | grep -oE "android:$2=\"[^\"]*\"" || true; } | head -1 | sed -E 's/.*="(.*)"/\1/'; }
+
+# Begründung WP85: READ_CONTACTS (Kontakt nach Name finden), SEND_SMS (SMS erst nach bestätigter
+# Vorschau senden), CALL_PHONE (Anruf nach Bestätigung starten, sonst Wählbildschirm);
+# alle drei werden erst beim Aktivieren der Integration „Kontakte & Telefon“ abgefragt.
+# Begründung WP86: ACCESS_FINE_LOCATION/ACCESS_COARSE_LOCATION (Standort für Wetter und Karten,
+# nur beim Aktivieren der Integration „Standort“ abgefragt).
+ALLOWED='^(android\.permission\.FOREGROUND_SERVICE|android\.permission\.FOREGROUND_SERVICE_MICROPHONE|android\.permission\.WAKE_LOCK|android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.CHANGE_WIFI_MULTICAST_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.READ_CONTACTS|android\.permission\.SEND_SMS|android\.permission\.CALL_PHONE|android\.permission\.RECORD_AUDIO|android\.permission\.ACCESS_FINE_LOCATION|android\.permission\.ACCESS_COARSE_LOCATION|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
+# Erlaubte exportierte Komponenten; Argumente: Name, android:permission, android:enabled.
+# Gibt den Befund aus (leer = erlaubt).
+export_problem() {
+  local name="$1" perm="$2" enabled="$3" problem=""
+  case "$name" in
+    app.wendelin.MainActivity) ;;
+    # OAuth-Rückleitung der MCP-Server (WP27): nimmt nur die Adresse an, state prüft die App.
+    app.wendelin.OAuthRedirectActivity) ;;
+    app.wendelin.WendelinVoiceInteractionService | app.wendelin.WendelinVoiceSessionService)
+      [ "$perm" = "android.permission.BIND_VOICE_INTERACTION" ] ||
+        problem="ohne android.permission.BIND_VOICE_INTERACTION" ;;
+    app.wendelin.WendelinRecognitionService)
+      [ "$enabled" = "false" ] ||
+        problem="nicht ab Werk deaktiviert (android:enabled=\"false\")" ;;
+    # Anker des Benachrichtigungszugriffs (WP90): das System bindet ihn, ohne
+    # die Berechtigung könnte jede App den Dienst binden.
+    app.wendelin.MediaListenerService)
+      [ "$perm" = "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" ] ||
+        problem="ohne android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" ;;
+    # Kachel zum Starten des Stationsmodus (WP99): nur das System darf binden.
+    app.wendelin.StationTileService)
+      [ "$perm" = "android.permission.BIND_QUICK_SETTINGS_TILE" ] ||
+        problem="ohne android.permission.BIND_QUICK_SETTINGS_TILE" ;;
+    androidx.profileinstaller.ProfileInstallReceiver)
+      [ "$perm" = "android.permission.DUMP" ] || problem="ohne android.permission.DUMP" ;;
+    *) problem="unerwartet exportiert" ;;
+  esac
+  echo "$problem"
+}
+
+# Quell-Manifest (ohne APK-Build): Berechtigungen gegen ALLOWED, exportierte Komponenten
+# gegen export_problem. Namen ".X" gelten als app.wendelin.X. Läuft im Gate (check_manifest),
+# sobald sich ein AndroidManifest.xml ändert.
+check_manifest() {
+  local file="$1" fail=0 tags tag name perm problem
+  [ -f "$file" ] || { echo "Manifest nicht gefunden: $file" >&2; return 1; }
+  local flat
+  flat="$(tr '\n' ' ' <"$file" | sed -E 's/<!--([^-]|-[^-])*-->//g; s/[[:space:]]+/ /g')"
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    if ! echo "$p" | grep -qE "$ALLOWED"; then
+      echo "FEHLER: Berechtigung $p nicht in der Allowlist von tool/check_apk.sh (ALLOWED, K7/K-Eintrag, Begründung ergänzen)" >&2
+      fail=1
+    fi
+  done <<<"$(echo "$flat" | grep -oE '<uses-permission(-sdk-23)? [^>]*>' | grep -oE 'android:name="[^"]*"' | sed -E 's/.*="(.*)"/\1/' | sort -u)"
+  tags="$(echo "$flat" | grep -oE '<(activity|activity-alias|service|receiver|provider) [^>]*>' || true)"
+  while IFS= read -r tag; do
+    [ -n "$tag" ] || continue
+    [ "$(attr "$tag" exported)" = "true" ] || continue
+    name="$(attr "$tag" name)"
+    case "$name" in .*) name="app.wendelin$name" ;; esac
+    perm="$(attr "$tag" permission)"
+    problem="$(export_problem "$name" "$perm" "$(attr "$tag" enabled)")"
+    if [ -n "$problem" ]; then
+      echo "FEHLER: Komponente $name $problem (Allowlist in tool/check_apk.sh)" >&2
+      fail=1
+    fi
+  done <<<"$tags"
+  [ $fail = 0 ] && echo "ok: Manifest $file entspricht der Allowlist"
+  return $fail
+}
 
 self_test() {
   local dir out status=0
@@ -152,9 +223,46 @@ STUB
       "$ROOT/tool/check_apk.sh" "$dir/x.apk" >"$dir/out.txt" 2>&1
   }
   expect "Überspringen warnt" 0 "WARNUNG: Gradle-Abhängigkeiten NICHT geprüft"
+
+  # Quell-Manifest (--manifest, ohne APK): neue Berechtigung bzw. Komponente ist rot.
+  src='<manifest xmlns:android="x">
+    <!-- <uses-permission android:name="android.permission.CAMERA"/> auskommentiert -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <application android:allowBackup="false">
+      <service android:name=".WendelinVoiceSessionService"
+          android:permission="android.permission.BIND_VOICE_INTERACTION" android:exported="true" />
+      <activity android:name=".AssistantActivity" android:exported="false" />
+    </application>
+  </manifest>'
+  mexpect() { # name, erwarteter Exit, [Meldung]
+    local got=0
+    "$ROOT/tool/check_apk.sh" --manifest "$dir/src.xml" >"$dir/out.txt" 2>&1 || got=$?
+    if [ "$got" != "$1" ] || { [ -n "${3:-}" ] && ! grep -qF "$3" "$dir/out.txt"; }; then
+      echo "Selbsttest FEHLER: $2 (Exit $got, erwartet $1)" >&2
+      sed 's/^/    /' "$dir/out.txt" >&2
+      status=1
+    else
+      echo "ok: $2"
+    fi
+  }
+  echo "$src" >"$dir/src.xml"
+  mexpect 0 "Quell-Manifest sauber (Kommentar zählt nicht)"
+  echo "$src" | sed 's#<application#<uses-permission android:name="android.permission.CAMERA"/>\n<application#' >"$dir/src.xml"
+  mexpect 1 "neue Berechtigung ohne Allowlist-Eintrag rot" "Berechtigung android.permission.CAMERA"
+  echo "$src" | sed 's#<activity#<provider android:name=".Leak" android:exported="true" />\n<activity#' >"$dir/src.xml"
+  mexpect 1 "neue exportierte Komponente rot" "app.wendelin.Leak unerwartet exportiert"
+  echo "$src" | sed 's# android:permission="android.permission.BIND_VOICE_INTERACTION"##' >"$dir/src.xml"
+  mexpect 1 "exportierter Assistenten-Dienst ohne Berechtigung rot" "ohne android.permission.BIND_VOICE_INTERACTION"
   return $status
 }
 
+if [ "${1:-}" = "--manifest" ]; then
+  shift
+  [ $# -gt 0 ] || set -- "$ROOT"/app/android/app/src/*/AndroidManifest.xml
+  rc=0
+  for f in "$@"; do check_manifest "$f" || rc=1; done
+  exit $rc
+fi
 if [ "${1:-}" = "--self-test" ]; then
   self_test
   exit $?
@@ -210,37 +318,13 @@ fi
 components="$("$APKANALYZER" manifest print "$APK" | tr '\n' ' ' |
   grep -oE '<(activity|activity-alias|service|receiver|provider)[[:space:]][^>]*>' |
   sed -E 's/[[:space:]]+/ /g' || true)"
-attr() { { echo "$1" | grep -oE "android:$2=\"[^\"]*\"" || true; } | head -1 | sed -E 's/.*="(.*)"/\1/'; }
 exported_ok=1
 while IFS= read -r tag; do
   [ -n "$tag" ] || continue
   [ "$(attr "$tag" exported)" = "true" ] || continue
   name="$(attr "$tag" name)"
   perm="$(attr "$tag" permission)"
-  problem=""
-  case "$name" in
-    app.wendelin.MainActivity) ;;
-    # OAuth-Rückleitung der MCP-Server (WP27): nimmt nur die Adresse an, state prüft die App.
-    app.wendelin.OAuthRedirectActivity) ;;
-    app.wendelin.WendelinVoiceInteractionService | app.wendelin.WendelinVoiceSessionService)
-      [ "$perm" = "android.permission.BIND_VOICE_INTERACTION" ] ||
-        problem="ohne android.permission.BIND_VOICE_INTERACTION" ;;
-    app.wendelin.WendelinRecognitionService)
-      [ "$(attr "$tag" enabled)" = "false" ] ||
-        problem="nicht ab Werk deaktiviert (android:enabled=\"false\")" ;;
-    # Anker des Benachrichtigungszugriffs (WP90): das System bindet ihn, ohne
-    # die Berechtigung könnte jede App den Dienst binden.
-    app.wendelin.MediaListenerService)
-      [ "$perm" = "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" ] ||
-        problem="ohne android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" ;;
-    # Kachel zum Starten des Stationsmodus (WP99): nur das System darf binden.
-    app.wendelin.StationTileService)
-      [ "$perm" = "android.permission.BIND_QUICK_SETTINGS_TILE" ] ||
-        problem="ohne android.permission.BIND_QUICK_SETTINGS_TILE" ;;
-    androidx.profileinstaller.ProfileInstallReceiver)
-      [ "$perm" = "android.permission.DUMP" ] || problem="ohne android.permission.DUMP" ;;
-    *) problem="unerwartet exportiert" ;;
-  esac
+  problem="$(export_problem "$name" "$perm" "$(attr "$tag" enabled)")"
   if [ -n "$problem" ]; then
     echo "FEHLER: Komponente $name $problem" >&2
     exported_ok=0
@@ -273,12 +357,6 @@ elif [ "$exported_ok" = 1 ]; then
   echo "ok: exportierte Komponenten wie erwartet"
 fi
 
-# Begründung WP85: READ_CONTACTS (Kontakt nach Name finden), SEND_SMS (SMS erst nach bestätigter
-# Vorschau senden), CALL_PHONE (Anruf nach Bestätigung starten, sonst Wählbildschirm);
-# alle drei werden erst beim Aktivieren der Integration „Kontakte & Telefon“ abgefragt.
-# Begründung WP86: ACCESS_FINE_LOCATION/ACCESS_COARSE_LOCATION (Standort für Wetter und Karten,
-# nur beim Aktivieren der Integration „Standort“ abgefragt).
-ALLOWED='^(android\.permission\.FOREGROUND_SERVICE|android\.permission\.FOREGROUND_SERVICE_MICROPHONE|android\.permission\.WAKE_LOCK|android\.permission\.INTERNET|android\.permission\.ACCESS_NETWORK_STATE|android\.permission\.CHANGE_WIFI_MULTICAST_STATE|android\.permission\.POST_NOTIFICATIONS|android\.permission\.READ_CALENDAR|android\.permission\.WRITE_CALENDAR|android\.permission\.READ_CONTACTS|android\.permission\.SEND_SMS|android\.permission\.CALL_PHONE|android\.permission\.RECORD_AUDIO|android\.permission\.ACCESS_FINE_LOCATION|android\.permission\.ACCESS_COARSE_LOCATION|android\.permission\.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS|com\.android\.alarm\.permission\.SET_ALARM|app\.wendelin\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION)$'
 perms="$("$APKANALYZER" manifest permissions "$APK")"
 if extra="$(echo "$perms" | grep -vE "$ALLOWED")"; then
   echo "FEHLER: unerwartete Berechtigungen:" >&2

@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-19 abends, Stefan da (bis 4 Paket-Sitzungen); laufen: WP106, WP109, WP99; als Nächstes WP110 (nach WP109), WP92c (nach Gerätetest wp92a/b und nach WP99), dann WP100/WP101
+Stand: 2026-10-20 nachts, Stefan schläft; läuft: WP99; als Nächstes (mit Stefan am Morgen): Wake-Word-Vergleich „Hey Wendelin“ und andere Erkennungsprogramme (Aufnahme-Anleitung `~/wendelin-fixtures/wake/hey/ANLEITUNG.md`), Modell-Empfehlung mit mittleren Modellen ohne Thinking (Wunsch Stefan), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b und WP99), dann WP100/WP101
 
 ## Meilensteine
 
@@ -27,38 +27,38 @@ Stand: 2026-10-19 abends, Stefan da (bis 4 Paket-Sitzungen); laufen: WP106, WP10
 | --- | --- | --- | --- |
 | WP76a | Tinfoil SEV-SNP (Rust) | gemergt | Folge: rsa-Upgrade; min_tcb in WP76d |
 | WP76b | Tinfoil Sigstore | gemergt cc12c9f | K59 bestätigt; Downgrade-Schutz in WP76d |
-| WP76c | Tinfoil EHBP/HPKE | gemergt 06498bc | K71 offen; echte SNP-Bindung im Live-Pfad und Emulator-Lauf der attest-Contract-Suite in WP76d |
-| WP76d | Tinfoil in der App | gemergt c19b0966 | K73 offen; Folge: Turin-Pinning, rsa-Upgrade (WP76a); kein Release-Cache über Speicher hinaus (GitHub ohne Token 60/h) |
+| WP76c | Tinfoil EHBP/HPKE | gemergt 06498bc | K71 bestätigt; echte SNP-Bindung im Live-Pfad und Emulator-Lauf der attest-Contract-Suite in WP76d |
+| WP76d | Tinfoil in der App | gemergt c19b0966 | K73 bestätigt; Folge: Turin-Pinning, rsa-Upgrade (WP76a); kein Release-Cache über Speicher hinaus (GitHub ohne Token 60/h) |
 | WP79 | App-Sprache | gemergt 604ff80 | K60 bestätigt; Folge: Stoppwort-Hinweis im Overlay folgt UI- statt Sprech-Sprache; Scan-Test erkennt deutsche Ein-Wort-Texte ohne Umlaut nicht |
 | WP81 | Sofort vorlesen, Haken danach | gemergt | – |
-| WP81b | Nächster Modellaufruf parallel zur Quittung | gemergt 135dbbd | K70 offen; Ersparnis am Emulator ~0,4 s bis erster Text, ~0,9 s bis fertig; Tool-Runden gegen echtes TEE-Gateway ungetestet (Fixture ohne Tool-Calls); overlay-Reihenfolge-Flake behoben (WP104: Phala-Hinweis aus loadRuleSet) |
+| WP81b | Nächster Modellaufruf parallel zur Quittung | gemergt 135dbbd | K70 bestätigt; Ersparnis am Emulator ~0,4 s bis erster Text, ~0,9 s bis fertig; Tool-Runden gegen echtes TEE-Gateway ungetestet (Fixture ohne Tool-Calls); overlay-Reihenfolge-Flake behoben (WP104: Phala-Hinweis aus loadRuleSet) |
 | WP81c | Parallele Runde sofort vorlesen | gemergt 07c67ba9 | K70 ergänzt; Einzelsatz vor Toolcall wird erst bei ToolCallStarted gesprochen (Splitter); E2E-Build braucht JAVA_HOME auf Android-Studio-JBR |
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
-| WP83 | NRAS-Signatur | gemergt | K56 offen |
+| WP83 | NRAS-Signatur | gemergt | K56 bestätigt |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
-| WP85 | Kontakte/SMS/Anrufe | gemergt 314deb6 | K69 offen (3 Fragen an Stefan, u. a. diktierter Text im Anfrage-Audit → evtl. eigenes Paket); Sprachbestätigung nur per Unit-/Widget-Test, Gerätetest `docs/testing/m5/wp85.md`; Kontaktänderungen erreichen den Erkenner erst bei Resume/Aktivierung |
-| WP86 | Standort/Maps | gemergt f595fa0 | K67 offen (Wetter-Position bei „keine Mindeststufe“, Frage an Stefan); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
+| WP85 | Kontakte/SMS/Anrufe | gemergt 314deb6 | K69 bestätigt (3 Fragen an Stefan, u. a. diktierter Text im Anfrage-Audit → evtl. eigenes Paket); Sprachbestätigung nur per Unit-/Widget-Test, Gerätetest `docs/testing/m5/wp85.md`; Kontaktänderungen erreichen den Erkenner erst bei Resume/Aktivierung |
+| WP86 | Standort/Maps | gemergt f595fa0 | K67 bestätigt (Wetter-Position bei „keine Mindeststufe“, Frage an Stefan); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
-| WP89 | Todoist/Google Tasks | gemergt b4777882 | K72 offen; Gerätetest mit echten Konten `docs/testing/m5/wp89.md` (WP89.1–15); Live-Tests ungelaufen (keine Tokens); Audit-Titel tasks__ und deutsche Resttexte → WP105 |
+| WP89 | Todoist/Google Tasks | gemergt b4777882 | K72 bestätigt; Gerätetest mit echten Konten `docs/testing/m5/wp89.md` (WP89.1–15); Live-Tests ungelaufen (keine Tokens); Audit-Titel tasks__ und deutsche Resttexte → WP105 |
 | WP90 | Mediensteuerung | gemergt eb2cf31 | K65 bestätigt; Gerätetest WP90.1–7 (Audible, Ducking mit echter TTS, Zugriffsdialog) |
 | WP91 | Home Assistant | gemergt 8caa7cb | K58 bestätigt; E2E Fake-HA als run_ha in e2e_android.sh (WP104); Folge: CI-Filter: Änderung nur an `tool/check_apk.sh` startet apk-Job nicht |
-| WP92a–c | Sprechererkennung | WP92a gemergt e46f48c7; WP92b gemergt 3145db56; 92c geplant | K74, K77 offen (2 Fragen: Datenlizenz CAM++, Schwelle); Gerätetest mit echten Stimmen `docs/testing/m5/wp92a.md` und `wp92b.md` (echte STT/Pipeline nur in Unit-Tests) vor 92c; e2e_android.sh deinstalliert die App am Ende |
+| WP92a–c | Sprechererkennung | WP92a gemergt e46f48c7; WP92b gemergt 3145db56; 92c geplant | K74, K77 bestätigt (2 Fragen: Datenlizenz CAM++, Schwelle); Gerätetest mit echten Stimmen `docs/testing/m5/wp92a.md` und `wp92b.md` (echte STT/Pipeline nur in Unit-Tests) vor 92c; e2e_android.sh deinstalliert die App am Ende |
 | WP93 | Wake Word im Chat | gemergt 7a722cba | keine Abweichung; „App im Hintergrund/Sperre → Overlay“ nur Unit-/JVM-Test, Handprüfpunkt `docs/testing/m5/wp93.md`; Folge: voice_controller `trigger` bleibt nach einem Zug auf wakeWord stehen; Gate kotlin-unit lokal nur mit JAVA_HOME=openjdk@21 (JDK 23/27 rot) → WP110 |
 | WP94 | Schnellwechsel Agent | gemergt 112d4be | keine Abweichung; Gerätecheck WP94.1/.7/.8 (Vibration, TTS-Abbruch, TalkBack); Restlücke: startet zwischen setDefault und newTopic eine Anfrage (Overlay), bleibt der Chat stehen (kein Verlaufsleck) |
 | WP95 | CI als Gate | gemergt | – |
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
 | WP97 | Lastbremse/Cache | gemergt fd1b53b | zweites Gate 3,5 s, APK ohne cargo 47 s; Folge: SIGINT-Freigabe ungetestet, kein actions/cache in CI; 1 App-Test-Flake unter Last beim Merge (Wiederholung grün) |
 | WP98 | Konfliktarm | gemergt 2c14825 | Folge: id-Switches in labels.dart, settings_routes.dart, integration_detail_screen.dart; `--adopt` holt von main gelöschte Schlüssel zurück; Statustabelle aus Frontmatter |
-| WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 offen (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
-| WP103 | Bessere Sprache einbauen | gemergt ff07cbd | K66/K68 offen (Stefans Modell-/Stimmenwahl, Katalog anpassbar); Gerätetest `docs/testing/m5/wp103.md` (RAM/RTF/Akku/Wärme); Kontaktnamen als Hinweis-Begriffe brauchen Neubau des contactNamesProvider durch WP85; Wake-Dienst ohne Hinweis-Begriffe |
-| WP104 | Liegengebliebene Gerätetests übernehmen | gemergt 3b45204b | K76 offen; Folge: Mutationslauf zeigt keine Zeilennummer; fest deutsche Tests (tee_gpu, wake_enroll, voice_voices, voice_robustness) nur mit de; Liste `docs/testing/m5/wp104.md` |
+| WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 bestätigt (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
+| WP103 | Bessere Sprache einbauen | gemergt ff07cbd | K66/K68 bestätigt (Stefans Modell-/Stimmenwahl, Katalog anpassbar); Gerätetest `docs/testing/m5/wp103.md` (RAM/RTF/Akku/Wärme); Kontaktnamen als Hinweis-Begriffe brauchen Neubau des contactNamesProvider durch WP85; Wake-Dienst ohne Hinweis-Begriffe |
+| WP104 | Liegengebliebene Gerätetests übernehmen | gemergt 3b45204b | K76 bestätigt; Folge: Mutationslauf zeigt keine Zeilennummer; fest deutsche Tests (tee_gpu, wake_enroll, voice_voices, voice_robustness) nur mit de; Liste `docs/testing/m5/wp104.md` |
 | WP105 | Folgepunkte Audit und Texte | gemergt f02332ef | Kachel-Fehlerzeile/Retry-Hinweise nur generisch (Fehlerart+Dienst), Meldungen ans Modell deutsch; Fehlerart durch onError/Registry → WP108; Gerätetest `docs/testing/m5/wp105.md` |
-| WP106 | Spike Wake Word Stationsmodus | in Arbeit | Freigabe Stefan 2026-10-19; echte Aufnahmen: Anleitung `~/wendelin-fixtures/wake/station/ANLEITUNG.md` |
-| WP107 | Bring! nur Tokens | gemergt cfab3c1e | K75 offen (ergänzt); Gerätetest WP107.2 (falsches Passwort) und WP107.4 (Update von Vorversion) offen, `docs/testing/m5/wp107.md` |
-| WP108 | Fehlerart bis zur Integrationskachel | gemergt 55953025 | K78 offen; „Erfolg setzt Fehlerart zurück“ app-seitig nur für Todoist/Spotify getestet (Bring!, Google Tasks, HA nur auf Paketebene); Gerätetest `docs/testing/m5/wp108.md` |
-| WP109 | Leitplanken (Regelquelle, main-Schutz, Größen-Ratsche, Aufräumskript) | in Arbeit | Wunsch Stefan 2026-10-19 (Architekturanalyse); Teil B (Ruleset, Aufräumen, Skill) macht der Orchestrator |
-| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | geplant | Wunsch Stefan 2026-10-19; Start nach Merge WP109; Teil B erledigt (wp-supervisor model opus, Ablauf/DoD/2 Runden, Vorlage session-prompt.md); Stefan 2026-10-19: nach WP110 kleine Pakete probeweise mit wp-supervisor auf Sonnet, Messung über Review-Urteilsdateien |
+| WP106 | Spike Wake Word Stationsmodus | gemergt 2e06c48e | K80 bestätigt; Notiz `docs/notes/wake-word-station-spike.md`; Empfehlung Station: v7/v9 M0,5 + persönliches Feintuning + Parakeet-Hotword 2,0, CAM++ nur TV-Filter; offen: mehr Sprecher/Räume, ≥1,5 h Negativ, Gerätemessung RAM/Akku; Modelle jetzt `~/wendelin-fixtures/models` |
+| WP107 | Bring! nur Tokens | gemergt cfab3c1e | K75 bestätigt (ergänzt); Gerätetest WP107.2 (falsches Passwort) und WP107.4 (Update von Vorversion) offen, `docs/testing/m5/wp107.md` |
+| WP108 | Fehlerart bis zur Integrationskachel | gemergt 55953025 | K78 bestätigt; „Erfolg setzt Fehlerart zurück“ app-seitig nur für Todoist/Spotify getestet (Bring!, Google Tasks, HA nur auf Paketebene); Gerätetest `docs/testing/m5/wp108.md` |
+| WP109 | Leitplanken (Regelquelle, main-Schutz, Größen-Ratsche, Aufräumskript) | gemergt d758e3c4 | K79 bestätigt; Teil B (Ruleset, Aufräumen, Skill) erledigt; neue Merge-Folge: merge_wp.sh → amend → STATUS → --changed → `WENDELIN_PUSH_MAIN=1 git push` → `cleanup_wt.sh --apply`; parallele Pakete müssen Größen-Baseline anpassen, wenn sie Warn-Dateien ändern; lokales Gate flakte unter Last (app), Nachlauf grün |
+| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | gemergt 2ff0fe8f | K81 offen; beim Merge kotlin-unit rot (`bash bash gradlew`, wenn das JDK schon passt), vom Orchestrator behoben 9c7ffbc7; Folge: cleanup_wt.sh löscht die Urteilsdateien `<wp>-review*.md` mit (sollen für die Quote „erstes Review sauber“ erhalten bleiben); Guard-Restlücken in ENGINEERING.md (fängt pre-push ab) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
