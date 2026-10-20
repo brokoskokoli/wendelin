@@ -353,8 +353,9 @@ final class BargeListening extends Notifier<bool> {
   bool build() => false;
 
   /// Sets the state.
-  // ignore: use_setters_to_change_properties
-  void set(bool listening) => state = listening;
+  void set(bool listening) {
+    if (state != listening) state = listening;
+  }
 }
 
 /// Whether barge-in works on this device (a detector exists).
