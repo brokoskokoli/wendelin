@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart'
+    show PortException;
 
 import '../../agent/agent_controller.dart';
 import '../../agent/chat_entry.dart';
@@ -233,8 +235,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
 
   AgentController get _controller => ref.read(agentControllerProvider.notifier);
 
-  @override
-  Widget build(BuildContext context) {
+  void _listenAgent() {
     ref.listen(
       agentControllerProvider.select((s) => s.pending),
       (previous, next) => _onPending(next),
@@ -245,6 +246,11 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
     ) {
       if (next != null) unawaited(_askGpuBlock(next));
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _listenAgent();
     final conversation = ref.watch(agentControllerProvider);
     final config = ref.watch(providerConfigProvider);
     final cost = ref.watch(todayCostProvider).value ?? 0;
@@ -268,6 +274,9 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
           MainHeader(
             onSettings: () =>
                 Navigator.of(context).pushNamed(AppRoutes.settings),
+            onStation: ref.watch(platformPortsProvider).station == null
+                ? null
+                : () => unawaited(_startStation()),
             onNewConversation:
                 conversation.entries.any((e) => e is! SessionStartEntry)
                 ? () => unawaited(_controller.newTopic())
@@ -353,6 +362,18 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
       );
     }
     return null;
+  }
+
+  /// Starts the station mode; a failure (e.g. no activity available) is shown.
+  Future<void> _startStation() async {
+    try {
+      await ref.read(platformPortsProvider).station!.start();
+    } on PortException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   /// Undo: a spoken answer stops, „Zurückgenommen.“ is shown (snackbar and

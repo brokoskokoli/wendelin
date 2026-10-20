@@ -42,6 +42,11 @@ class WindowChannel(private val activity: Activity, messenger: BinaryMessenger) 
                 }
                 result.success(null)
             }
+            // Station mode (WP99): follows the light sensor or nearly black, no WRITE_SETTINGS.
+            "setBrightness" -> {
+                (activity as? StationActivity)?.setAmbient(call.argument<Boolean>("ambient") != false)
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
     }

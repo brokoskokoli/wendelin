@@ -4009,6 +4009,101 @@ class AppLocalizationsDe extends AppLocalizations {
   String get spotifyTitle => 'Spotify';
 
   @override
+  String get stationAllDay => 'ganztägig';
+
+  @override
+  String get stationEnd => 'Beenden';
+
+  @override
+  String get stationEndHint => 'Zum Beenden entsperrst du das Telefon.';
+
+  @override
+  String get stationEvents => 'Termine';
+
+  @override
+  String stationHour(int hour) {
+    return '$hour Uhr';
+  }
+
+  @override
+  String get stationNoEvents => 'Keine Termine in Sicht.';
+
+  @override
+  String get stationNoTasks => 'Keine fälligen Aufgaben.';
+
+  @override
+  String get stationOverdue => 'überfällig';
+
+  @override
+  String get stationPlaybackSlot => 'Wiedergabe';
+
+  @override
+  String get stationQuietFrom => 'Beginn der Ruhezeit';
+
+  @override
+  String get stationQuietSection => 'Ruhezeiten';
+
+  @override
+  String get stationQuietTo => 'Ende der Ruhezeit';
+
+  @override
+  String get stationScreenAlways => 'Immer an, gedimmt';
+
+  @override
+  String get stationScreenAlwaysDetail =>
+      'Helligkeit nach Umgebungslicht, der Inhalt wandert leicht gegen Einbrennen.';
+
+  @override
+  String get stationScreenDaytime => 'Tagsüber an, in den Ruhezeiten aus';
+
+  @override
+  String get stationScreenDaytimeDetail =>
+      'Eine Berührung weckt die Station kurz.';
+
+  @override
+  String get stationScreenSection => 'Bildschirm';
+
+  @override
+  String get stationScreenTouch => 'Aus, an bei Wake Word oder Berührung';
+
+  @override
+  String get stationScreenTouchDetail =>
+      'Der Bildschirm schaltet sich nach der üblichen Zeit aus.';
+
+  @override
+  String get stationSectionsIntro =>
+      'Was die Station zeigt. Uhr und Datum sind immer da. Termine und Aufgaben erscheinen mit Titeln.';
+
+  @override
+  String get stationSectionsSection => 'Anzeige';
+
+  @override
+  String get stationSettingsDetail =>
+      'Bildschirm, Ruhezeiten, angezeigte Bereiche';
+
+  @override
+  String get stationSettingsIntro =>
+      'Das Handy liegt am Ladegerät und zeigt Uhr, Datum und mehr. Der Modus startet nur von Hand und endet nur mit Entsperren.';
+
+  @override
+  String get stationSlotSoon => 'folgt';
+
+  @override
+  String get stationStart => 'Stationsmodus starten';
+
+  @override
+  String get stationTasks => 'Aufgaben';
+
+  @override
+  String get stationTilesSlot => 'Smart Home';
+
+  @override
+  String get stationTitle => 'Stationsmodus';
+
+  @override
+  String get stationWeather => 'Wetter';
+
+  @override
   String get googleTasksApiError =>
       'Fehler – Google nicht erreichbar oder Anmeldung abgelehnt';
 

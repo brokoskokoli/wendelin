@@ -340,6 +340,31 @@ void main() {
     expect(find.textContaining('Base-URL fehlt'), findsOneWidget);
   });
 
+  testWidgets('Stationsmodus: Button im Kopf startet die Station', (
+    tester,
+  ) async {
+    final env = TestEnv();
+    await pumpApp(tester, env);
+    expect(env.station.starts, 0);
+    await tester.tap(find.byTooltip('Stationsmodus starten'));
+    await tester.pump();
+    expect(env.station.starts, 1);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Stationsmodus: Startfehler erscheint als Hinweis', (
+    tester,
+  ) async {
+    final env = TestEnv();
+    env.station.failNext('start');
+    await pumpApp(tester, env);
+    await tester.tap(find.byTooltip('Stationsmodus starten'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Simulierter Fehler'), findsOneWidget);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('Einstellungen öffnen und zurück', (tester) async {
     final env = TestEnv();
     await pumpApp(tester, env);

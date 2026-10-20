@@ -14,6 +14,7 @@ import 'media_spec.dart';
 import 'memory_spec.dart';
 import 'obsidian_spec.dart';
 import 'spotify_spec.dart';
+import 'station_spec.dart';
 import 'tasks_spec.dart';
 import 'todoist_spec.dart';
 import 'weather_spec.dart';
@@ -40,4 +41,5 @@ final builtInIntegrationSpecs = <IntegrationSpec>[
   todoistSpec,
   googleTasksSpec,
   contactsSpec,
+  stationSpec,
 ];

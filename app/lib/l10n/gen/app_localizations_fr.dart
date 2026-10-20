@@ -4037,6 +4037,100 @@ class AppLocalizationsFr extends AppLocalizations {
   String get spotifyTitle => 'Spotify';
 
   @override
+  String get stationAllDay => 'toute la journée';
+
+  @override
+  String get stationEnd => 'Terminer';
+
+  @override
+  String get stationEndHint => 'Déverrouille le téléphone pour terminer.';
+
+  @override
+  String get stationEvents => 'Rendez-vous';
+
+  @override
+  String stationHour(int hour) {
+    return '$hour h';
+  }
+
+  @override
+  String get stationNoEvents => 'Aucun rendez-vous à venir.';
+
+  @override
+  String get stationNoTasks => 'Aucune tâche due.';
+
+  @override
+  String get stationOverdue => 'en retard';
+
+  @override
+  String get stationPlaybackSlot => 'Lecture';
+
+  @override
+  String get stationQuietFrom => 'Début des heures calmes';
+
+  @override
+  String get stationQuietSection => 'Heures calmes';
+
+  @override
+  String get stationQuietTo => 'Fin des heures calmes';
+
+  @override
+  String get stationScreenAlways => 'Toujours allumé, atténué';
+
+  @override
+  String get stationScreenAlwaysDetail =>
+      'La luminosité suit la lumière ambiante, le contenu se déplace légèrement contre la rémanence.';
+
+  @override
+  String get stationScreenDaytime => 'Allumé le jour, éteint aux heures calmes';
+
+  @override
+  String get stationScreenDaytimeDetail =>
+      'Un toucher réveille la station un instant.';
+
+  @override
+  String get stationScreenSection => 'Écran';
+
+  @override
+  String get stationScreenTouch => 'Éteint, allumé par mot d’éveil ou toucher';
+
+  @override
+  String get stationScreenTouchDetail =>
+      'L’écran s’éteint après le délai habituel.';
+
+  @override
+  String get stationSectionsIntro =>
+      'Ce que la station affiche. L’heure et la date sont toujours là. Rendez-vous et tâches apparaissent avec leurs titres.';
+
+  @override
+  String get stationSectionsSection => 'Affichage';
+
+  @override
+  String get stationSettingsDetail => 'Écran, heures calmes, zones affichées';
+
+  @override
+  String get stationSettingsIntro =>
+      'Le téléphone est sur le chargeur et affiche l’heure, la date et plus. Le mode ne démarre qu’à la main et ne se termine qu’après déverrouillage.';
+
+  @override
+  String get stationSlotSoon => 'bientôt';
+
+  @override
+  String get stationStart => 'Démarrer le mode station';
+
+  @override
+  String get stationTasks => 'Tâches';
+
+  @override
+  String get stationTilesSlot => 'Maison connectée';
+
+  @override
+  String get stationTitle => 'Mode station';
+
+  @override
+  String get stationWeather => 'Météo';
+
+  @override
   String get googleTasksApiError =>
       'Erreur – Google injoignable ou connexion refusée';
 

@@ -30,6 +30,8 @@ abstract class WendelinActivity : FlutterActivity() {
         private set
     protected var assistant: AssistantChannel? = null
         private set
+    protected var station: StationChannel? = null
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +64,7 @@ abstract class WendelinActivity : FlutterActivity() {
         notify = NotifyChannel(this, messenger)
         notify?.handleIntent(intent)
         assistant = AssistantChannel(this, messenger)
+        station = StationChannel(this, messenger)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -97,6 +100,8 @@ abstract class WendelinActivity : FlutterActivity() {
         notify = null
         assistant?.dispose()
         assistant = null
+        station?.dispose()
+        station = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 

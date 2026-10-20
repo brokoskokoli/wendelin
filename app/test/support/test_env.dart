@@ -88,6 +88,9 @@ final class TestEnv {
   /// Flashlight.
   final torch = FakeTorchPort();
 
+  /// Station mode start (WP99).
+  final station = FakeStationPort();
+
   /// Media control.
   final media = FakeMediaControlPort();
 
@@ -219,6 +222,7 @@ final class TestEnv {
     memory: memory,
     apps: apps,
     torch: torch,
+    station: station,
     media: media,
     contacts: contacts,
     phone: phone,

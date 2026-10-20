@@ -13,12 +13,16 @@ class MainHeader extends StatelessWidget {
   const MainHeader({
     super.key,
     required this.onSettings,
+    this.onStation,
     this.onNewConversation,
     this.newConversationEnabled = true,
   });
 
   /// Opens the settings.
   final VoidCallback onSettings;
+
+  /// Starts the station mode (WP99); `null` hides the button.
+  final VoidCallback? onStation;
 
   /// „Neues Gespräch“ (same action as the one of the private banner);
   /// `null` hides the button (empty conversation).
@@ -46,6 +50,15 @@ class MainHeader extends StatelessWidget {
             icon: WIcons.newChat,
             tooltip: context.l10n.mainNewConversation,
             onPressed: newConversationEnabled ? onNew : null,
+          ),
+          const SizedBox(width: WSpace.s),
+        ],
+        if (onStation case final onStation?) ...[
+          WIconButton(
+            key: const ValueKey('stationStart'),
+            icon: WIcons.station,
+            tooltip: context.l10n.stationStart,
+            onPressed: onStation,
           ),
           const SizedBox(width: WSpace.s),
         ],

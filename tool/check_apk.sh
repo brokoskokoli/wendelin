@@ -20,7 +20,8 @@
 #     RecognitionService ab Werk deaktiviert (enabled="false", ADR 0006),
 #     ProfileInstallReceiver nur mit DUMP, MediaListenerService (WP90,
 #     NotificationListenerService) nur mit
-#     BIND_NOTIFICATION_LISTENER_SERVICE; alles andere nicht exportiert
+#     BIND_NOTIFICATION_LISTENER_SERVICE, StationTileService (WP99,
+#     Schnelleinstellungs-Kachel) nur mit BIND_QUICK_SETTINGS_TILE; alles andere nicht exportiert
 #   - Gradle-Abhängigkeiten (releaseRuntimeClasspath) ohne GMS/Firebase;
 #     ist der Baum nicht lesbar, ist das ein Fehler – überspringen nur mit
 #     CHECK_APK_SKIP_GRADLE=1 (mit Warnung). Eine nicht aufgelöste
@@ -58,6 +59,10 @@ export_problem() {
     app.wendelin.MediaListenerService)
       [ "$perm" = "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" ] ||
         problem="ohne android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" ;;
+    # Kachel zum Starten des Stationsmodus (WP99): nur das System darf binden.
+    app.wendelin.StationTileService)
+      [ "$perm" = "android.permission.BIND_QUICK_SETTINGS_TILE" ] ||
+        problem="ohne android.permission.BIND_QUICK_SETTINGS_TILE" ;;
     androidx.profileinstaller.ProfileInstallReceiver)
       [ "$perm" = "android.permission.DUMP" ] || problem="ohne android.permission.DUMP" ;;
     *) problem="unerwartet exportiert" ;;
@@ -135,6 +140,9 @@ STUB
     <service android:name="app.wendelin.MediaListenerService"
         android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
         android:exported="true" />
+    <service android:name="app.wendelin.StationTileService"
+        android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+        android:exported="true" />
   </application>
 </manifest>'
   run() {
@@ -187,6 +195,8 @@ STUB
   expect "ProfileInstallReceiver ohne DUMP erkannt" 1 "ProfileInstallReceiver ohne android.permission.DUMP"
   echo "$good_manifest" | sed 's# android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"##' >"$dir/manifest.xml"
   expect "MediaListenerService ohne BIND_NOTIFICATION_LISTENER_SERVICE erkannt" 1 "MediaListenerService ohne android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+  echo "$good_manifest" | sed 's# android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"##' >"$dir/manifest.xml"
+  expect "StationTileService ohne BIND_QUICK_SETTINGS_TILE erkannt" 1 "StationTileService ohne android.permission.BIND_QUICK_SETTINGS_TILE"
   echo "$good_manifest" | sed 's#<activity android:name="app.wendelin.AssistantActivity" android:exported="false" />#&\n    <provider android:name="app.wendelin.Leak" android:exported="true" />#' >"$dir/manifest.xml"
   expect "fremde exportierte Komponente erkannt" 1 "app.wendelin.Leak unerwartet exportiert"
   echo "$good_manifest" >"$dir/manifest.xml"

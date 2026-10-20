@@ -3988,6 +3988,100 @@ class AppLocalizationsEn extends AppLocalizations {
   String get spotifyTitle => 'Spotify';
 
   @override
+  String get stationAllDay => 'all day';
+
+  @override
+  String get stationEnd => 'End';
+
+  @override
+  String get stationEndHint => 'You unlock the phone to end it.';
+
+  @override
+  String get stationEvents => 'Appointments';
+
+  @override
+  String stationHour(int hour) {
+    return '$hour:00';
+  }
+
+  @override
+  String get stationNoEvents => 'No appointments coming up.';
+
+  @override
+  String get stationNoTasks => 'No tasks due.';
+
+  @override
+  String get stationOverdue => 'overdue';
+
+  @override
+  String get stationPlaybackSlot => 'Playback';
+
+  @override
+  String get stationQuietFrom => 'Quiet hours start';
+
+  @override
+  String get stationQuietSection => 'Quiet hours';
+
+  @override
+  String get stationQuietTo => 'Quiet hours end';
+
+  @override
+  String get stationScreenAlways => 'Always on, dimmed';
+
+  @override
+  String get stationScreenAlwaysDetail =>
+      'Brightness follows the ambient light, the content drifts slightly against burn-in.';
+
+  @override
+  String get stationScreenDaytime => 'On by day, off during quiet hours';
+
+  @override
+  String get stationScreenDaytimeDetail =>
+      'A touch wakes the station for a moment.';
+
+  @override
+  String get stationScreenSection => 'Screen';
+
+  @override
+  String get stationScreenTouch => 'Off, on with wake word or touch';
+
+  @override
+  String get stationScreenTouchDetail =>
+      'The screen turns off after the usual timeout.';
+
+  @override
+  String get stationSectionsIntro =>
+      'What the station shows. Clock and date are always there. Appointments and tasks appear with titles.';
+
+  @override
+  String get stationSectionsSection => 'Display';
+
+  @override
+  String get stationSettingsDetail => 'Screen, quiet hours, areas shown';
+
+  @override
+  String get stationSettingsIntro =>
+      'The phone sits on the charger and shows clock, date and more. The mode starts by hand only and ends only after unlocking.';
+
+  @override
+  String get stationSlotSoon => 'coming';
+
+  @override
+  String get stationStart => 'Start station mode';
+
+  @override
+  String get stationTasks => 'Tasks';
+
+  @override
+  String get stationTilesSlot => 'Smart home';
+
+  @override
+  String get stationTitle => 'Station mode';
+
+  @override
+  String get stationWeather => 'Weather';
+
+  @override
   String get googleTasksApiError =>
       'Error – Google unreachable or sign-in rejected';
 
