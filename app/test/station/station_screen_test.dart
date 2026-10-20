@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -214,6 +216,27 @@ void main() {
     await tester.pump();
     expect(host.unlockRequests, 2);
     expect(host.finishes, 1);
+  });
+
+  testWidgets('Während des Beendens ist der Button gesperrt', (tester) async {
+    final (host, _) = await pumpStation(tester);
+    final gate = Completer<bool>();
+    host.unlockGate = gate.future;
+    final button = find.byKey(const ValueKey('stationEnd'));
+    expect(tester.widget<TextButton>(button).onPressed, isNotNull);
+
+    await tester.tap(button);
+    await tester.pump();
+    expect(host.unlockRequests, 1);
+    expect(tester.widget<TextButton>(button).onPressed, isNull);
+
+    await tester.tap(button, warnIfMissed: false);
+    await tester.pump();
+    expect(host.unlockRequests, 1);
+
+    gate.complete(false);
+    await tester.pump();
+    expect(tester.widget<TextButton>(button).onPressed, isNotNull);
   });
 
   group('Goldens', () {

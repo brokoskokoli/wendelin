@@ -33,6 +33,9 @@ final class FakeStationHost implements StationHost {
   var unlockRequests = 0;
   var finishes = 0;
   var finishResult = true;
+
+  /// When set, [requestUnlock] waits for it (unlock dialog still open).
+  Future<bool>? unlockGate;
   final dark = StreamController<bool>.broadcast(sync: true);
 
   StationDisplay? get last => applied.lastOrNull;
@@ -44,6 +47,7 @@ final class FakeStationHost implements StationHost {
   @override
   Future<bool> requestUnlock() async {
     unlockRequests++;
+    if (unlockGate case final gate?) return gate;
     return unlockAnswers.isEmpty ? false : unlockAnswers.removeAt(0);
   }
 
