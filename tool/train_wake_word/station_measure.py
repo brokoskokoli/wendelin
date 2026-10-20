@@ -178,6 +178,16 @@ def apply_cond(x, cond, kind, rng, fleurs):
 
 
 # ---------- Negativkorpus ----------
+def exclusion_names(clips, scan):
+    """Ausgeschlossen wird nach Treffern eines der beiden Erkenner (Parakeet `hit` ODER Whisper `hit2`) und b6-*; Labels/Referenztexte der Clips spielen keine Rolle."""
+    return [c["name"] for c in clips if scan[c["name"]]["hit"] or scan[c["name"]].get("hit2") or c["name"].startswith("b6-")]
+
+
+def check_pairs(files_a, files_b):
+    """Positivmengen „Wendelin“/„Hey Wendelin“ muessen dieselben Dateinamen haben (gleiche Saetze, Tempi, Rausch-Seeds)."""
+    assert [os.path.basename(f) for f in files_a] == [os.path.basename(f) for f in files_b], "Paare passen nicht"
+
+
 def pick_neg(args, rec_plain, rec_other=None, cache=None):
     """Kurze Clips komplett, lange Clips (1..neg_long_max, je andere Stimme) die ersten --neg-min Minuten.
     Clips, deren Transkript "Wendelin" enthaelt (oder b6-*), werden ausgeschlossen. WP111: mit `rec_other` (zweiter, unabhaengiger
@@ -206,7 +216,7 @@ def pick_neg(args, rec_plain, rec_other=None, cache=None):
             hit2 = [t for t in (decode(rec_other, y) for y in chunks) if K.matches_wake_word(t, 1)]
             scan[c["name"]].update({"hit2": bool(hit2), "text2": " | ".join(hit2)[:200]})
         json.dump(scan, open(cache, "w"))
-    excl = [c["name"] for c in clips if scan[c["name"]]["hit"] or scan[c["name"]].get("hit2") or c["name"].startswith("b6-")]
+    excl = exclusion_names(clips, scan)
     return [c for c in clips if c["name"] not in excl], excl, scan
 
 
@@ -351,7 +361,7 @@ def compare_main(a):
         log("WARNUNG: Negativsprache unter 1,5 h")
 
     posf = {w: sorted(glob.glob(f"{WORDS[w]['pos']}/*.wav")) for w in WORDS}
-    assert [os.path.basename(f) for f in posf["wendelin"]] == [os.path.basename(f) for f in posf["hey"]], "Paare passen nicht"
+    check_pairs(posf["wendelin"], posf["hey"])
     conff = sorted(glob.glob(f"{DATA111}/conf/*.wav"))
     vof = lambda f: os.path.basename(f).split("_")[0]
     fp = hashlib.sha1(json.dumps([a.seed, conds, a.fleurs, a.tv_max_h, a.neg_min, a.neg_long_max,
