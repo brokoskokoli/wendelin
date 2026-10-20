@@ -1,7 +1,6 @@
 // Gerätetest WP99: Stationsmodus über dem Sperrbildschirm.
 //
-// 1. Start per Button (der Kopf des Hauptbildschirms ruft die echte
-//    `StationPort`-Brücke): die Station liegt oben.
+// 1. Start über die echte `StationPort`-Brücke (wie der Button): die Station liegt oben.
 // 2. Gerät sperren (PIN nur auf dem Emulator): die Station bleibt sichtbar.
 // 3. „Beenden“ tippen: die PIN-Abfrage kommt; abbrechen: die Station bleibt.
 // 4. „Beenden“ und richtige PIN: die Station geht zu.
@@ -15,14 +14,10 @@
 
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:wendelin/l10n/l10n.dart';
 import 'package:wendelin/main.dart' as app show stationMain;
 import 'package:wendelin/platform/channel_station_port.dart';
-import 'package:wendelin/ui/screens/main_parts.dart';
-import 'package:wendelin/ui/theme/app_theme.dart';
 
 import 'support/voice_e2e.dart';
 
@@ -49,22 +44,12 @@ void main() {
           line.split('=').first: line.split('=').last.trim(),
     };
 
-    // 1. Button im Kopf des Hauptbildschirms.
+    // 1. Start wie der Button im Kopf des Hauptbildschirms. Kein Widget-Baum:
+    // Sobald die StationActivity die Haupt-Engine verdeckt, wird die Fläche
+    // 0x0 und die Semantics-Assertion schlägt an. Dass der Button
+    // `port.start` aufruft, belegt app/test/screens/main_screen_test.dart:343-352.
     const port = ChannelStationPort();
-    await tester.binding.setSurfaceSize(const Size(400, 800));
-    await tester.pumpWidget(
-      MaterialApp(
-        locale: const Locale('de'),
-        localizationsDelegates: wendelinLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: buildWendelinTheme(),
-        home: Scaffold(
-          body: MainHeader(onSettings: () {}, onStation: port.start),
-        ),
-      ),
-    );
-    await tester.tap(find.byTooltip('Stationsmodus starten'));
-    await tester.pump();
+    await port.start();
     await askHost('station-check');
     // Die Station braucht einen Moment (zweite Engine).
     for (var i = 0; i < 20 && notes()['visible'] != '1'; i++) {
@@ -94,8 +79,7 @@ void main() {
     expect(notes()['tile_started'], '1', reason: 'Kachel startet nicht');
 
     // Aufräumen: die Station per PIN schließen, damit die Test-App wieder
-    // vorn ist. Die Fenstergröße bleibt gesetzt; ein Reset unter der
-    // verdeckenden Station löst die Semantics-Assertion aus.
+    // vorn ist (bei entsperrtem Gerät harmlos).
     await askHost('station-end-pin');
   });
 }
