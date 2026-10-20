@@ -21,23 +21,6 @@ class StationSettingsScreen extends ConsumerWidget {
     final prefs = ref.watch(stationPrefsProvider);
     final notifier = ref.read(stationPrefsProvider.notifier);
     void save(StationPrefs p) => unawaited(notifier.set(p));
-    String modeTitle(StationScreenMode m) => switch (m) {
-      StationScreenMode.alwaysDimmed => l.stationScreenAlways,
-      StationScreenMode.touchOnly => l.stationScreenTouch,
-      StationScreenMode.daytimeOnly => l.stationScreenDaytime,
-    };
-    String modeDetail(StationScreenMode m) => switch (m) {
-      StationScreenMode.alwaysDimmed => l.stationScreenAlwaysDetail,
-      StationScreenMode.touchOnly => l.stationScreenTouchDetail,
-      StationScreenMode.daytimeOnly => l.stationScreenDaytimeDetail,
-    };
-    String sectionTitle(StationSection s) => switch (s) {
-      StationSection.weather => l.stationWeather,
-      StationSection.events => l.stationEvents,
-      StationSection.tasks => l.stationTasks,
-      StationSection.playback => l.stationPlaybackSlot,
-      StationSection.tiles => l.stationTilesSlot,
-    };
     return SettingsPage(
       title: l.stationTitle,
       intro: l.stationSettingsIntro,
@@ -47,8 +30,8 @@ class StationSettingsScreen extends ConsumerWidget {
           children: [
             for (final m in StationScreenMode.values)
               SettingsRow(
-                title: modeTitle(m),
-                detail: modeDetail(m),
+                title: _modeTitle(l, m),
+                detail: _modeDetail(l, m),
                 onTap: () => save(prefs.copyWith(screenMode: m)),
                 trailing: prefs.screenMode == m
                     ? CheckStatusIcon(CheckStatus.ok, semanticLabel: l.selected)
@@ -87,11 +70,11 @@ class StationSettingsScreen extends ConsumerWidget {
             Text(l.stationSectionsIntro, style: WText.intro),
             for (final s in StationSection.values)
               SettingsRow(
-                title: sectionTitle(s),
+                title: _sectionTitle(l, s),
                 trailing: WSwitch(
                   key: ValueKey('section-${s.name}'),
                   value: prefs.shows(s),
-                  semanticLabel: sectionTitle(s),
+                  semanticLabel: _sectionTitle(l, s),
                   onChanged: (on) => save(
                     prefs.copyWith(
                       hidden: {
@@ -109,6 +92,26 @@ class StationSettingsScreen extends ConsumerWidget {
     );
   }
 }
+
+String _modeTitle(AppLocalizations l, StationScreenMode m) => switch (m) {
+  StationScreenMode.alwaysDimmed => l.stationScreenAlways,
+  StationScreenMode.touchOnly => l.stationScreenTouch,
+  StationScreenMode.daytimeOnly => l.stationScreenDaytime,
+};
+
+String _modeDetail(AppLocalizations l, StationScreenMode m) => switch (m) {
+  StationScreenMode.alwaysDimmed => l.stationScreenAlwaysDetail,
+  StationScreenMode.touchOnly => l.stationScreenTouchDetail,
+  StationScreenMode.daytimeOnly => l.stationScreenDaytimeDetail,
+};
+
+String _sectionTitle(AppLocalizations l, StationSection s) => switch (s) {
+  StationSection.weather => l.stationWeather,
+  StationSection.events => l.stationEvents,
+  StationSection.tasks => l.stationTasks,
+  StationSection.playback => l.stationPlaybackSlot,
+  StationSection.tiles => l.stationTilesSlot,
+};
 
 class _HourRow extends StatelessWidget {
   const _HourRow({

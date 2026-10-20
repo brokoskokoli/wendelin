@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_test/flutter_test.dart' show addTearDown;
 import 'package:wendelin/di/core_providers.dart';
 import 'package:wendelin/di/startup.dart';
 import 'package:wendelin/station/station_data.dart';
@@ -23,12 +24,15 @@ final class MutableClock implements Clock {
 
 /// Device side of the station: records what the station asks for.
 final class FakeStationHost implements StationHost {
+  FakeStationHost() {
+    addTearDown(() => dark.close());
+  }
+
   final applied = <StationDisplay>[];
   var unlockAnswers = <bool>[];
   var unlockRequests = 0;
   var finishes = 0;
   var finishResult = true;
-  // ignore: close_sinks
   final dark = StreamController<bool>.broadcast(sync: true);
 
   StationDisplay? get last => applied.lastOrNull;

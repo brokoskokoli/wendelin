@@ -63,51 +63,10 @@ class StationScreen extends ConsumerWidget {
                     style: WText.cardTitle.copyWith(color: palette.secondary),
                   ),
                   if (!quiet)
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.only(top: WSpace.xxl),
-                        children: [
-                          if (prefs.shows(StationSection.weather) &&
-                              info.weather != null)
-                            _Weather(info.weather!, palette),
-                          if (prefs.shows(StationSection.events))
-                            _Events(info.events, palette),
-                          if (prefs.shows(StationSection.tasks))
-                            _Tasks(info.tasks, palette),
-                          if (prefs.shows(StationSection.playback))
-                            _Slot(
-                              context.l10n.stationPlaybackSlot,
-                              palette,
-                              key: const ValueKey('stationPlaybackSlot'),
-                            ),
-                          if (prefs.shows(StationSection.tiles))
-                            _Slot(
-                              context.l10n.stationTilesSlot,
-                              palette,
-                              key: const ValueKey('stationTilesSlot'),
-                            ),
-                        ],
-                      ),
-                    )
+                    Expanded(child: _Sections(prefs, info, palette))
                   else
                     const Spacer(),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      key: const ValueKey('stationEnd'),
-                      onPressed: state.ending
-                          ? null
-                          : () => unawaited(
-                              ref
-                                  .read(stationControllerProvider.notifier)
-                                  .end(),
-                            ),
-                      child: Text(
-                        context.l10n.stationEnd,
-                        style: WText.button.copyWith(color: palette.secondary),
-                      ),
-                    ),
-                  ),
+                  _EndButton(palette, ending: state.ending),
                 ],
               ),
             ),
@@ -116,6 +75,59 @@ class StationScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _Sections extends StatelessWidget {
+  const _Sections(this.prefs, this.info, this.palette);
+
+  final StationPrefs prefs;
+  final StationInfo info;
+  final _Palette palette;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.only(top: WSpace.xxl),
+    children: [
+      if (prefs.shows(StationSection.weather) && info.weather != null)
+        _Weather(info.weather!, palette),
+      if (prefs.shows(StationSection.events)) _Events(info.events, palette),
+      if (prefs.shows(StationSection.tasks)) _Tasks(info.tasks, palette),
+      if (prefs.shows(StationSection.playback))
+        _Slot(
+          context.l10n.stationPlaybackSlot,
+          palette,
+          key: const ValueKey('stationPlaybackSlot'),
+        ),
+      if (prefs.shows(StationSection.tiles))
+        _Slot(
+          context.l10n.stationTilesSlot,
+          palette,
+          key: const ValueKey('stationTilesSlot'),
+        ),
+    ],
+  );
+}
+
+class _EndButton extends ConsumerWidget {
+  const _EndButton(this.palette, {required this.ending});
+
+  final _Palette palette;
+  final bool ending;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Align(
+    alignment: Alignment.centerRight,
+    child: TextButton(
+      key: const ValueKey('stationEnd'),
+      onPressed: ending
+          ? null
+          : () => unawaited(ref.read(stationControllerProvider.notifier).end()),
+      child: Text(
+        context.l10n.stationEnd,
+        style: WText.button.copyWith(color: palette.secondary),
+      ),
+    ),
+  );
 }
 
 final class _Palette {

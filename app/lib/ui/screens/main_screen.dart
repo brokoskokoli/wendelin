@@ -235,8 +235,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
 
   AgentController get _controller => ref.read(agentControllerProvider.notifier);
 
-  @override
-  Widget build(BuildContext context) {
+  void _listenAgent() {
     ref.listen(
       agentControllerProvider.select((s) => s.pending),
       (previous, next) => _onPending(next),
@@ -247,6 +246,11 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
     ) {
       if (next != null) unawaited(_askGpuBlock(next));
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _listenAgent();
     final conversation = ref.watch(agentControllerProvider);
     final config = ref.watch(providerConfigProvider);
     final cost = ref.watch(todayCostProvider).value ?? 0;
