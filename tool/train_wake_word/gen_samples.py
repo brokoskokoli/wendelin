@@ -19,6 +19,13 @@ from piper.voice import ESPEAK_DATA_DIR
 
 SR = 16000
 POS = ["Wendelin", "Wendelin.", "Wendelin!", "Wendelin?", "Hey Wendelin", "Hey, Wendelin", "Hey Wendelin."]
+# WP111: je Wort eigene Trainingsmengen (--kind bare = nur „Wendelin“, hey = „Hey Wendelin“, conf2 = Verwechsler fuer „Hey Wendelin“)
+BARE = ["Wendelin", "Wendelin.", "Wendelin!", "Wendelin?", "Wendelin,"]
+HEY = ["Hey Wendelin", "Hey, Wendelin", "Hey Wendelin.", "Hey Wendelin!", "Hey, Wendelin.", "Hey Wendelin?"]
+CONF2 = ["Hey Wendel", "Hey Berlin", "Hey Wenzel", "Hey Wendelstein", "hey, wenn der Wind", "hey, wenn die Linie", "Hey Windel",
+         "Hey Gwendolin", "Gwendolin", "Wendolin", "wenn die Linie", "Hey Wendy", "Hey Mandolin", "Hey Vendetta", "Hey Madeleine",
+         "Hey Wendehals", "Hey Kendall", "Hey Merlin", "Hey Marlin", "Hey Vanille", "Hey Wende", "Hey Handel", "Hey Wenden",
+         "Hey Heidelin", "Hey Pendel", "Hey Wandern", "Hey Wetter", "Hey Mandy", "Hey Mama"]
 # aehnlich klingende Woerter/Phrasen (Negative)
 CONF = ["Wendel", "Wendeltreppe", "Wendelstein", "Vanille", "Berlin", "Wenden", "Wende", "Windel",
         "Mandolin", "Vendetta", "Wendy", "Hey Wendy", "Handelin", "Kendall", "Wenig", "Verwendet",
@@ -79,7 +86,7 @@ def sentences(path, rng, n):
 
 def main():
     a = argparse.ArgumentParser()
-    a.add_argument("--kind", required=True, choices=["pos", "conf", "neg"])
+    a.add_argument("--kind", required=True, choices=["pos", "conf", "neg", "bare", "hey", "conf2"])
     a.add_argument("--out", required=True)
     a.add_argument("--n", type=int, default=100)
     a.add_argument("--seed", type=int, default=1)
@@ -104,10 +111,13 @@ def main():
             t = POS[int(rng.integers(len(POS)))]
         elif a.kind == "conf":
             t = CONF[int(rng.integers(len(CONF)))]
+        elif a.kind in ("bare", "hey", "conf2"):
+            L = {"bare": BARE, "hey": HEY, "conf2": CONF2}[a.kind]
+            t = L[int(rng.integers(len(L)))]
         else:
             t = texts[i]
         x = synth(v, sr, ns, t, rng, a.wide)
-        if x is None or len(x) < 1600 or (a.kind != "neg" and len(x) > 1.8 * SR):
+        if x is None or len(x) < 1600 or (a.kind != "neg" and len(x) > 1.8 * SR) or (a.kind == "conf2" and len(x) > 2.4 * SR):
             continue   # Ausreisser (lange Pausen/Artefakte) verwerfen
         sf.write(os.path.join(a.out, f"{a.kind}{a.seed:02d}_{i:05d}.wav"), x, SR, subtype="PCM_16")
         total += len(x) / SR

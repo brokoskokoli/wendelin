@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""microWakeWord (Apache-2.0, kahrendt/microWakeWord) fuer „Wendelin“ mit den Daten des Projekts (WP106, Versuch).
+"""microWakeWord (Apache-2.0, kahrendt/microWakeWord) fuer „Wendelin“ bzw. „Hey Wendelin“ mit den Daten des Projekts (WP106, WP111).
 
 Aufruf mit dem Spezial-venv (Python 3.11, TF 2.18, microwakeword-Quellen per PYTHONPATH):
-  M=~/wendelin-models/kws/wp106; PYTHONPATH=$M/mww-src $M/mww-venv/bin/python -I? mww_train.py prep|feats|train [--steps ..]
+  K=~/wendelin-models/kws; PYTHONPATH=$K/wp106/mww-src $K/wp111/mww-venv/bin/python mww_train.py prep|feats|train --word wendelin|hey [--steps ..]
+WP111: --word waehlt die Positivmenge (wendelin = nur „Wendelin“ plus ein Teil „Hey Wendelin“, hey = nur „Hey Wendelin“; fuer hey ist das
+nackte „Wendelin“ zusaetzlich Negativ). Alle Negativmengen (Sprache, Verwechsler, Hintergrund, Hall) sind fuer beide Woerter gleich.
+Ohne --word (WP106) bleibt der alte Pfad wp106/mww.
 Ohne Fremddaten-Zwang: Hintergrund/Hall sind synthetisch (wie v7/v9), Negative = Piper-Saetze (CC0/CC-BY) + FLEURS train (CC-BY 4.0).
 Alles unter $M/mww; Quell-WAVs aus $K/wp58/gen (Symlinks).
 """
@@ -12,6 +15,9 @@ import numpy as np
 K = os.path.expanduser("~/wendelin-models/kws")
 M = f"{K}/wp106/mww"
 G = f"{K}/wp58/gen"
+G2 = f"{K}/wp111/gen"          # WP111: bare/hey/conf2 (gen_samples.py --kind bare|hey|conf2)
+M111 = f"{K}/wp111/mww"
+CONF_PHRASES_NOTE = "conf = wp58 conf* + wp111 conf2 (gleich fuer beide Woerter)"
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -45,6 +51,25 @@ def prep():
     for n in ("pos", "conf", "speech", "ambient"): print(n, len(os.listdir(f"{M}/src/{n}")))
 
 
+def prep111():
+    """WP111: Quellordner (Symlinks) fuer beide Woerter; Hall/Hintergrund werden von WP106 wiederverwendet."""
+    for n in ("rirs", "bg"):
+        os.makedirs(M111, exist_ok=True)
+        if not os.path.lexists(f"{M111}/{n}"): os.symlink(f"{K}/wp106/mww/{n}", f"{M111}/{n}")
+    link([f"{G2}/bare"], f"{M111}/src/pos_wendelin")
+    heys = sorted(glob.glob(f"{G2}/hey/*.wav"))
+    nb = len(glob.glob(f"{G2}/bare/*.wav"))
+    for f in heys[: int(0.4 * nb)]:                     # „Hey Wendelin“ ist fuer das Wort Wendelin ebenfalls ein Treffer
+        d = f"{M111}/src/pos_wendelin/{os.path.basename(f)}"
+        if not os.path.lexists(d): os.symlink(f, d)
+    link([f"{G2}/hey"], f"{M111}/src/pos_hey")
+    link([f"{G2}/bare"], f"{M111}/src/conf_bare")       # nur fuer hey: nacktes Wendelin ist Negativ
+    link([f"{G}/conf", f"{G}/conf2", f"{G}/conf3", f"{G2}/conf2"], f"{M111}/src/conf")
+    link([f"{G}/neg", f"{G}/neg3", f"{G}/real/train"], f"{M111}/src/speech")
+    link([f"{G}/real/dev"], f"{M111}/src/ambient")
+    for n in sorted(os.listdir(f"{M111}/src")): print(n, len(os.listdir(f"{M111}/src/{n}")))
+
+
 def feats(a):
     from mmap_ninja.ragged import RaggedMmap
     from microwakeword.audio.augmentation import Augmentation
@@ -62,16 +87,24 @@ def feats(a):
         RaggedMmap.from_generator(out_dir=outdir, sample_generator=sg.spectrogram_generator(split=split, repeat=rep), batch_size=100, verbose=False)
         print("fertig", outdir, flush=True)
     F = f"{M}/feat"
-    for name, d, aug, kwc, reps, tag in (("wake", "pos", aug_w, dict(max_clip_duration_s=1.5), a.pos_rep, "pos"),
-                                        ("conf", "conf", aug_w, dict(max_clip_duration_s=1.5), a.conf_rep, "conf"),
-                                        ("speech", "speech", aug_s, {}, 1, "speech")):
+    todo = (("wake", "pos", aug_w, dict(max_clip_duration_s=1.5), a.pos_rep, "pos"),
+            ("conf", "conf", aug_w, dict(max_clip_duration_s=1.5), a.conf_rep, "conf"),
+            ("speech", "speech", aug_s, {}, 1, "speech"))
+    if a.word:      # WP111: gemeinsame Negativmengen nur einmal, Positivmenge je Wort
+        todo = (("wake", f"pos_{a.word}", aug_w, dict(max_clip_duration_s=1.5), a.pos_rep, f"pos_{a.word}"),
+                ("conf", "conf", aug_w, dict(max_clip_duration_s=1.5), a.conf_rep, "conf"),
+                ("conf_bare", "conf_bare", aug_w, dict(max_clip_duration_s=1.5), a.conf_rep, "conf_bare"),
+                ("speech", "speech", aug_s, {}, 1, "speech"))
+    for name, d, aug, kwc, reps, tag in todo:
         if a.only_ambient: break
+        if a.word and tag != f"pos_{a.word}" and os.path.isdir(f"{F}/{tag}/testing/wakeword_mmap"): continue   # schon berechnet
         cl = Clips(input_directory=f"{M}/src/{d}", file_pattern="*.wav", random_split_seed=10, split_count=0.1, **kwc)
         for sp, sub, rep, slide in (("train", "training", reps, 10 if name != "speech" else None),
                                     ("validation", "validation", 1, 10 if name != "speech" else None),
                                     ("test", "testing", 1, 1 if name != "speech" else None)):
             dump(cl, aug, f"{F}/{tag}/{sub}/wakeword_mmap", sp, rep, slide)
     # Ambient: FLEURS dev (sprecherfremd), in 3,2-s-Stuecken gesplittet, Haelfte Validierung, Haelfte Test
+    if a.word and os.path.isdir(f"{F}/ambient/testing_ambient/wakeword_mmap"): return
     cl = Clips(input_directory=f"{M}/src/ambient", file_pattern="*.wav", random_split_seed=10, split_count=0.45)
     for sp, sub in (("validation", "validation_ambient"), ("test", "testing_ambient")):
         dump(cl, None, f"{F}/ambient/{sub}/wakeword_mmap", sp, 1, None)   # ungesplittet: das Training teilt selbst (truncation_strategy split)
@@ -83,8 +116,10 @@ def train(a):
     f = lambda d, w, truth, trunc, pen=1.0: {"features_dir": f"{F}/{d}", "sampling_weight": w, "penalty_weight": pen,
                                             "truth": truth, "truncation_strategy": trunc, "type": "mmap"}
     cfg = {"window_step_ms": 10, "train_dir": f"{M}/trained_{a.name}",
-           "features": [f("pos", a.w_pos, True, "truncate_start"), f("speech", a.w_speech, False, "random"),
-                        f("conf", a.w_conf, False, "truncate_start", a.pen_conf), f("ambient2", 0.0, False, "split")],
+           "features": [f(f"pos_{a.word}" if a.word else "pos", a.w_pos, True, "truncate_start"), f("speech", a.w_speech, False, "random"),
+                        f("conf", a.w_conf, False, "truncate_start", a.pen_conf)]
+           + ([f("conf_bare", a.w_conf, False, "truncate_start", a.pen_conf)] if a.word == "hey" else [])
+           + [f("ambient" if a.word else "ambient2", 0.0, False, "split")],
            "training_steps": [a.steps, a.steps // 2], "positive_class_weight": [1, 1], "negative_class_weight": [20, a.neg_w2],
            "learning_rates": [0.001, 0.0003], "batch_size": 128,
            "time_mask_max_size": [0, 5], "time_mask_count": [0, 2], "freq_mask_max_size": [0, 3], "freq_mask_count": [0, 2],
@@ -106,6 +141,7 @@ def train(a):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("stage", choices=["prep", "feats", "train"]); p.add_argument("--name", default="m1")
+    p.add_argument("--word", choices=["wendelin", "hey"], help="WP111: Wort (Positivmenge); setzt den Arbeitsordner wp111/mww")
     p.add_argument("--pos-rep", type=int, default=2); p.add_argument("--conf-rep", type=int, default=2)
     p.add_argument("--steps", type=int, default=10000); p.add_argument("--threads", type=int, default=4)
     p.add_argument("--w-pos", type=float, default=2.0); p.add_argument("--w-speech", type=float, default=10.0)
@@ -113,4 +149,6 @@ if __name__ == "__main__":
     p.add_argument("--only-ambient", action="store_true")
     p.add_argument("--neg-w2", type=float, default=30.0)
     a = p.parse_args()
-    {"prep": lambda: prep(), "feats": lambda: feats(a), "train": lambda: train(a)}[a.stage]()
+    if a.word:
+        M = M111
+    {"prep": lambda: prep111() if a.word else prep(), "feats": lambda: feats(a), "train": lambda: train(a)}[a.stage]()
