@@ -99,6 +99,21 @@ void main() {
     }
   });
 
+  test('Größe und Dateiname der TTS-Archive sind festgenagelt', () {
+    const files = {
+      'tts-de-ramona': ('vits-piper-de_DE-ramona-low-int8.tar.bz2', 21199380),
+      'tts-de-eva': ('vits-piper-de_DE-eva_k-x_low-int8.tar.bz2', 13321491),
+      'tts-de-kerstin': ('vits-piper-de_DE-kerstin-low-int8.tar.bz2', 21174728),
+      'tts-fr-gilles': ('vits-piper-fr_FR-gilles-low-int8.tar.bz2', 21248965),
+      'tts-en-joe': ('vits-piper-en_US-joe-medium-int8.tar.bz2', 21230019),
+    };
+    for (final MapEntry(:key, :value) in files.entries) {
+      final f = catalog.byId(key)!.files.single;
+      expect(f.name, value.$1, reason: key);
+      expect(f.sizeBytes, value.$2, reason: key);
+    }
+  });
+
   test('Pflicht-Attribution für SIWIS, englische Stimme gemeinfrei', () {
     expect(SpeechModelCatalog.voiceFr.attribution, contains('SIWIS'));
     expect(SpeechModelCatalog.voiceFr.attribution, contains('CC BY 4.0'));
