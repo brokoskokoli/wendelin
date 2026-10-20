@@ -2,11 +2,13 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin/voice/wake/wake_barge_in.dart';
+import 'package:wendelin/voice/wake/wake_storage.dart';
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
@@ -53,6 +55,20 @@ Future<void> runFake(Future<void> Function() body) async {
 void ftest(String name, Future<void> Function() body) =>
     test(name, () => runFake(body));
 
+class _SpyVerifier implements BargeVerifier {
+  _SpyVerifier(this.onVerify);
+  final void Function() onVerify;
+
+  @override
+  Future<BargeVerdict> verify(
+    Int16List pcm, {
+    required BargeInKeyword candidate,
+  }) async {
+    onVerify();
+    return BargeVerdict.no;
+  }
+}
+
 void main() {
   group('LazyWakeBargeInDetector', () {
     late FakeAudioInput audio;
@@ -89,6 +105,67 @@ void main() {
         ),
       );
     }
+
+    ftest('onListening meldet true beim Start, false nach stop() und '
+        'dispose', () async {
+      final events = <bool>[];
+      final d = LazyWakeBargeInDetector(
+        audio: FakeAudioInput(
+          frames: [Int16List(480)],
+          frameInterval: const Duration(milliseconds: 5),
+        ),
+        templates: () async => [tpl(0.9)],
+        onListening: ({required on}) => events.add(on),
+        features: () => FakeWakeFeatureExtractor(
+          windowEvery: 480,
+          windowFor: (end, _) => WakeWindow(
+            endSample: end,
+            embedding: Float32List.fromList([0, 1]),
+          ),
+        ),
+      );
+      await d.start();
+      expect(events, [true]);
+      await d.stop();
+      expect(events, [true, false]);
+      await d.start();
+      await d.dispose(); // ended without stop()
+      expect(events, [true, false, true, false]);
+    });
+
+    ftest('Echo-Filter: stop() leert, nur die letzten Sätze zählen', () async {
+      final seen = <String>[];
+      final d = LazyWakeBargeInDetector(
+        audio: FakeAudioInput(
+          frames: [Int16List(480)],
+          frameInterval: const Duration(milliseconds: 5),
+        ),
+        templates: () async => [tpl(0.9)],
+        verifier: (spoken) => _SpyVerifier(() => seen.add(spoken())),
+        features: () => FakeWakeFeatureExtractor(
+          windowEvery: 480,
+          windowFor: (end, _) => WakeWindow(
+            endSample: end,
+            embedding: Float32List.fromList([1, 0]),
+          ),
+        ),
+      );
+      d
+        ..spoke('Eins Stopp.')
+        ..spoke('Zwei.')
+        ..spoke('Drei.');
+      await d.start();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await d.stop();
+      final first = seen.first;
+      expect(first, 'Zwei. Drei.');
+      seen.clear();
+      d.spoke('Neu.');
+      await d.start();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await d.dispose();
+      expect(seen.first, 'Neu.');
+    });
 
     ftest('„Wendelin“ während der Sprachausgabe: Signal wake', () async {
       final d = make([tpl(0.9)], Float32List.fromList([1, 0]));
@@ -288,6 +365,17 @@ void main() {
           lines.where((l) => l.contains('barge-verify')).first,
           contains('result=echo'),
         );
+      });
+
+      ftest('Eigen-Echo gilt nur für die letzten Sätze: später „Wendelin“ '
+          'unterbricht', () async {
+        final d = make([tpl(0.88)], atSim(0.80), verifier: heard('Wendelin'));
+        d
+          ..spoke('Ich bin Wendelin.')
+          ..spoke('Das Wetter ist gut.')
+          ..spoke('Morgen regnet es.');
+        d.signals.listen((_) {});
+        expect(await run(d), ['keyword-wake']);
       });
 
       ftest('„Stopp“ mit gemessenen 0.72 geht als Kandidat durch', () async {
@@ -570,6 +658,7 @@ void main() {
         addTearDown(c.dispose);
         await c.read(voiceSettingsProvider.future);
         await c.read(stopLearnedProvider.future);
+        await c.read(wakeVerifyProvider.future);
         final first = c.read(wakeBargeInDetectorProvider);
         expect(c.read(wakeBargeInDetectorProvider), same(first));
         // Learning „Stopp“ alone does not rebuild in the middle of a session.
@@ -583,6 +672,51 @@ void main() {
         expect(second, isNot(same(first)));
         await c.read(wakeSpeakersProvider.notifier).remove('x');
         expect(c.read(wakeBargeInDetectorProvider), isNot(same(second)));
+      },
+    );
+
+    ftest(
+      'Verifier-Schalter baut den Detektor neu, Ring folgt dem Detektor',
+      () async {
+        final env = TestEnv();
+        await env.storage.settings.set(
+          voiceSettingsKey,
+          const VoiceSettings(conversationMode: true),
+        );
+        final audio = FakeAudioInput(
+          frames: [Int16List(480)],
+          frameInterval: const Duration(milliseconds: 5),
+        );
+        final c = ProviderContainer(
+          overrides: [
+            ...env.overrides,
+            audioInputProvider.overrideWithValue(audio),
+            wakeFeaturesFactoryProvider.overrideWithValue(
+              () => FakeWakeFeatureExtractor(
+                windowEvery: 480,
+                windowFor: (end, _) => WakeWindow(
+                  endSample: end,
+                  embedding: Float32List.fromList([0, 1]),
+                ),
+              ),
+            ),
+          ],
+          retry: (_, _) => null,
+        );
+        addTearDown(c.dispose);
+        await c.read(voiceSettingsProvider.future);
+        await c.read(wakeVerifyProvider.future);
+        final store = c.read(wakeStoreProvider);
+        await store.saveSpeakers([const WakeSpeaker(id: 'a', name: 'A')]);
+        await store.save(tpl(0.9));
+        final first = c.read(wakeBargeInDetectorProvider)!;
+        expect(c.read(bargeListeningProvider), isFalse);
+        await first.start();
+        expect(c.read(bargeListeningProvider), isTrue);
+        await first.stop();
+        expect(c.read(bargeListeningProvider), isFalse);
+        await c.read(wakeVerifyProvider.notifier).set(enabled: false);
+        expect(c.read(wakeBargeInDetectorProvider), isNot(same(first)));
       },
     );
   });

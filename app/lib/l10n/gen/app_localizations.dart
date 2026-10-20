@@ -3727,7 +3727,7 @@ abstract class AppLocalizations {
   /// No description provided for @mainMicHearing.
   ///
   /// In de, this message translates to:
-  /// **'Wendelin hört mit: „Stopp“ sagen oder tippen'**
+  /// **'Wendelin hört mit: „Wendelin“ sagen oder tippen'**
   String get mainMicHearing;
 
   /// No description provided for @mainMicSpeak.

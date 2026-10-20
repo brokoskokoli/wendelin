@@ -186,6 +186,11 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   // would rebuild in the middle of the output.
   final store = ref.read(wakeStoreProvider);
   final makeFeatures = ref.read(wakeFeaturesFactoryProvider);
+  // Switching stage 2 or the language rebuilds the provider; a running answer
+  // keeps its old detector (`disposeWhenIdle`), whose verifier holds the
+  // language fixed instead of reading a disposed ref.
+  final verify = ref.watch(wakeVerifyProvider).value ?? true;
+  final language = ref.watch(languageProvider);
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
     // Developer setting (WP72): other margin than +0.05.
@@ -195,10 +200,10 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     ),
     // WP113 (K84): the big recognizer checks every candidate, unless stage 2
     // is switched off in the wake word settings.
-    verifier: (ref.read(wakeVerifyProvider).value ?? true)
+    verifier: verify
         ? (spoken) => LazyBargeVerifier(
             stt: () => ref.read(speechToTextProvider.future),
-            language: () => ref.read(languageProvider),
+            language: () => language,
             spokenText: spoken,
           )
         : null,

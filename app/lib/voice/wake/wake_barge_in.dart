@@ -74,12 +74,20 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// Told when listening starts and ends (the „hört mit“ ring, WP113).
   final void Function({required bool on})? onListening;
 
-  final _spoken = StringBuffer();
+  /// Sentences of the echo filter: only the latest ones can be in the clip
+  /// of the 2.5 s window, earlier words of the answer must not mute a
+  /// keyword (a text that names itself „Wendelin“).
+  static const echoSentences = 2;
+
+  final _spoken = <String>[];
+
+  String get _recentSpoken => _spoken.join(' ');
 
   @override
-  void spoke(String sentence) => _spoken
-    ..write(sentence)
-    ..write(' ');
+  void spoke(String sentence) {
+    _spoken.add(sentence);
+    if (_spoken.length > echoSentences) _spoken.removeAt(0);
+  }
 
   /// Developer setting (WP72, `debug.bargeMargin`): replaces [extraMargin]
   /// when it returns a value. Read once, when the engine is built.
@@ -190,7 +198,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
     final inner = WakeWordBargeInDetector(
       audio: MeteredAudioInput(audio, meter),
       engine: MeteredEngine(engine, meter),
-      verifier: verifier?.call(_spoken.toString),
+      verifier: verifier?.call(() => _recentSpoken),
       // Scores and kind only; the word itself stays out of the log.
       onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {
         'kind': kind.name,

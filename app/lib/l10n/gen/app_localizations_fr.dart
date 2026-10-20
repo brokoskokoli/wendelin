@@ -2170,7 +2170,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mainMicCancelAnswer => 'Annuler la réponse';
 
   @override
-  String get mainMicHearing => 'Wendelin écoute : dites « Stop » ou touchez';
+  String get mainMicHearing =>
+      'Wendelin écoute : dites « Wendelin » ou touchez';
 
   @override
   String get mainMicSpeak => 'Parler';

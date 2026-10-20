@@ -667,7 +667,7 @@
   "mainGpuCheckFailedTitle": "GPU check failed",
   "mainListening": "Listening …",
   "mainMicCancelAnswer": "Cancel answer",
-  "mainMicHearing": "Wendelin is listening: say “Stop” or tap",
+  "mainMicHearing": "Wendelin is listening: say “Wendelin” or tap",
   "mainMicSpeak": "Speak",
   "mainMicStopListening": "Stop listening",
   "mainMicStopSpeech": "Stop speech output",

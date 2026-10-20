@@ -52,5 +52,5 @@
   "switchTopicBodyRunning": "Switching the model starts a new conversation. The running answer is cancelled and the current history is ended (it stays available in the history).",
   "switchTopicSwitch": "Switch",
   "switchTopicTitle": "Start a new conversation?",
-  "mainMicHearing": "Wendelin is listening: say “Stop” or tap"
+  "mainMicHearing": "Wendelin is listening: say “Wendelin” or tap"
 }
