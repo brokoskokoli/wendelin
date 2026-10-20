@@ -203,7 +203,9 @@ tap_text() { # <abzug> <text-regex>
 resumed() { adb shell dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity'; }
 LOCK_PIN=4711
 # WP99: Stationsmodus. Die Station ist sichtbar, wenn StationActivity oben liegt.
-station_visible() { resumed | grep -q StationActivity; }
+# Hinweis: kein `cmd | grep -q` unter pipefail (grep -q beendet früh, der Schreiber
+# bekommt SIGPIPE, die Pipeline gilt als Fehlschlag). Erst in Variable lesen.
+station_visible() { local out; out="$(resumed || true)"; grep -q StationActivity <<<"$out"; }
 station_wait() { # sichtbar (0) oder nicht (1) innerhalb von 20 s
   local want="$1" _
   for _ in $(seq 1 40); do
@@ -213,11 +215,15 @@ station_wait() { # sichtbar (0) oder nicht (1) innerhalb von 20 s
   return 1
 }
 station_note() { in_app sh -c "'echo \"$1\" >> files/e2e/station-result.txt'"; }
-station_pin_shown() { ui_dump | grep -qE 'pinEntry|keyguard_pin_view|passwordEntry|keyguard_bouncer'; }
+station_pin_shown() {
+  local out
+  out="$(ui_dump || true)"
+  grep -qE 'pinEntry|keyguard_pin_view|passwordEntry|keyguard_bouncer' <<<"$out"
+}
 station_tap_end() { # „Beenden“ (de) bzw. End/Terminer antippen
   local ui
   ui="$(ui_dump)"
-  { echo "$ui" | grep -qE '(text|content-desc)="(Beenden|End|Terminer)"'; } || return 1
+  grep -qE '(text|content-desc)="(Beenden|End|Terminer)"' <<<"$ui" || return 1
   local bounds n
   bounds="$(echo "$ui" | grep -E '(text|content-desc)="(Beenden|End|Terminer)"' |
     grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' | head -1)"
@@ -348,8 +354,13 @@ host_request() {
       sleep 2
       adb shell input keyevent KEYCODE_WAKEUP
       sleep 2
-      adb shell dumpsys window | tr -d '\r' | grep -qiE 'isKeyguardShowing=true|mShowingLockscreen=true|keyguardShowing=true' &&
-        station_note locked=1 || station_note locked=0
+      local win
+      win="$(adb shell dumpsys window | tr -d '\r' || true)"
+      if grep -qiE 'isKeyguardShowing=true|mShowingLockscreen=true|keyguardShowing=true' <<<"$win"; then
+        station_note locked=1
+      else
+        station_note locked=0
+      fi
       station_visible && station_note shown_locked=1 || station_note shown_locked=0
       ;;
     station-end-cancel)

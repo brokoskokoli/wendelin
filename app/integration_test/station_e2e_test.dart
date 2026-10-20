@@ -51,6 +51,8 @@ void main() {
 
     // 1. Button im Kopf des Hauptbildschirms.
     const port = ChannelStationPort();
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('de'),
