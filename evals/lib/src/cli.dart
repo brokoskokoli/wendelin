@@ -47,6 +47,13 @@ ArgParser _parser() => ArgParser()
         'sobald die Summe sie erreicht. Ohne Preis des Modells kein Start.',
   )
   ..addOption(
+    'provider-cap',
+    help:
+        'Obergrenze in USD für den Anbieter (Profil-Id) über alle Läufe im '
+        '--ledger: wirksame Grenze = Obergrenze minus bisherige Summe '
+        '(≤ 0: kein Start). Nur mit --ledger.',
+  )
+  ..addOption(
     'repeat',
     defaultsTo: '1',
     help: 'Jeden Fall n-mal laufen lassen (Stabilität).',
@@ -114,22 +121,14 @@ Future<int> runCli(
     err.writeln('--profile fehlt\n\n${parser.usage}');
     return 64;
   }
-  final limitText = args.option('limit');
-  final limit = limitText == null ? null : int.tryParse(limitText);
-  if (limitText != null && (limit == null || limit < 1)) {
-    err.writeln('--limit braucht eine Zahl ≥ 1');
+  if (_badNumber(args) case final bad?) {
+    err.writeln(bad);
     return 64;
   }
-  final repeat = int.tryParse(args.option('repeat')!);
-  if (repeat == null || repeat < 1) {
-    err.writeln('--repeat braucht eine Zahl ≥ 1');
-    return 64;
-  }
-  final budget = _budget(args.option('max-cost'));
-  if (budget == null && args.option('max-cost') != null) {
-    err.writeln('--max-cost braucht eine Zahl > 0 (USD)');
-    return 64;
-  }
+  final limit = int.tryParse(args.option('limit') ?? '');
+  final repeat = int.parse(args.option('repeat')!);
+  var budget = _budget(args.option('max-cost'));
+  final cap = double.tryParse(args.option('provider-cap') ?? '');
   try {
     final profileFile = File(profilePath);
     var profile = EvalProfile.parse(profileFile.readAsStringSync());
@@ -148,13 +147,21 @@ Future<int> runCli(
       return 1;
     }
     final p = profile.profile;
+    final ledgerFile = _ledger(args.option('ledger'));
+    if (cap != null) {
+      final capped = _capBudget(cap, budget, readLedger(ledgerFile!), p.id);
+      if (capped.$2 case final msg?) {
+        err.writeln(msg);
+        return 1;
+      }
+      budget = capped.$1;
+    }
     final priced = profile.catalog.lookup(p.defaultModel) != null;
     if (budget != null && !priced) {
       err.writeln(_noPrice(p.defaultModel));
       return 1;
     }
     if (!priced) err.writeln(_priceWarning(p.defaultModel));
-    final ledgerFile = _ledger(args.option('ledger'));
     final provider = buildProvider(profile, profileFile, time, env, client);
     final runner = EvalRunner(
       target: EvalTarget(
@@ -286,6 +293,55 @@ File? _ledger(String? path) {
   return file;
 }
 
+/// Why a numeric option is invalid; `null` if all are fine.
+String? _badNumber(ArgResults a) {
+  final limit = a.option('limit');
+  if (limit != null && (int.tryParse(limit) ?? 0) < 1) {
+    return '--limit braucht eine Zahl ≥ 1';
+  }
+  if ((int.tryParse(a.option('repeat')!) ?? 0) < 1) {
+    return '--repeat braucht eine Zahl ≥ 1';
+  }
+  if (a.option('max-cost') != null && _budget(a.option('max-cost')) == null) {
+    return '--max-cost braucht eine Zahl > 0 (USD)';
+  }
+  final capText = a.option('provider-cap');
+  if (capText == null) return null;
+  final cap = double.tryParse(capText);
+  if (cap == null || !cap.isFinite || cap <= 0) {
+    return '--provider-cap braucht eine Zahl > 0 (USD)';
+  }
+  return a.option('ledger') == null
+      ? '--provider-cap braucht --ledger <datei>'
+      : null;
+}
+
+/// The budget after applying [cap] for [provider] (cap minus what the
+/// ledger booked, the smaller of that and [own]); or an error message when
+/// nothing is left.
+(CostBudget?, String?) _capBudget(
+  double cap,
+  CostBudget? own,
+  List<LedgerEntry> entries,
+  String provider,
+) {
+  final spent = providerSpentUsd(entries, provider);
+  final remaining = cap - spent;
+  if ((remaining * 1e6).round() < 1) {
+    return (
+      own,
+      'Fehler: Obergrenze für $provider ausgeschöpft '
+          '(${spent.toStringAsFixed(4)} von ${cap.toStringAsFixed(4)} USD im '
+          'Ledger) – Start verweigert',
+    );
+  }
+  final mine = own?.limitMicros;
+  return (
+    mine == null || remaining * 1e6 < mine ? CostBudget(remaining) : own,
+    null,
+  );
+}
+
 String _priceWarning(String model) =>
     'Warnung: kein Preis für Modell $model im Katalog – Kosten '
     'unvollständig (Preise über "catalog" im Profil ergänzen)';
@@ -325,7 +381,7 @@ LedgerEntry _entry(
   providerType: p.type.name,
   model: p.defaultModel,
   cases: summary.total,
-  costUsd: summary.costMicros / 1e6,
+  costUsd: ledgerCostMicros(summary, budget) / 1e6,
   unpricedCases: summary.unpricedCases,
   budgetExceeded: budget?.exceeded ?? false,
   date: _date(now),

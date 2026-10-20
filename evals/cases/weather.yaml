@@ -12,7 +12,10 @@ cases:
         - tool: weather__forecast
           args:
             place: {contains: Hamburg}
-            days: {min: 2}
+            days:
+              any_of:
+                - {present: false}
+                - {min: 2}
       text: {contains: Regen}
 
   - id: de-weather-schirm

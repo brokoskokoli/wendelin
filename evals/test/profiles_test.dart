@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -26,10 +27,42 @@ void main() {
     final p = load('claude-sonnet');
     expect(p.profile.defaultModel, 'claude-sonnet-5-5');
     expect(p.catalog.lookup('claude-sonnet-5-5'), isNotNull);
-    expect(
-      File('profiles/claude-sonnet.json').readAsStringSync(),
-      isNot(contains('thinking')),
-    );
+    expect(p.profile.options['thinking'], 'disabled');
+  });
+
+  test('jedes bepreiste Profil-Modell hat einen cacheRead (nie still 0)', () {
+    // Fehlt cacheRead, rechnet der Katalog gecachte Eingabe-Tokens mit 0:
+    // --max-cost zählte zu wenig. Ohne Cache-Rabatt gilt cacheRead == input.
+    // Fake-Profile (Flachpreis ohne Cache) sind ausgenommen.
+    final files = Directory('profiles')
+        .listSync()
+        .whereType<File>()
+        .where((f) => !f.uri.pathSegments.last.startsWith('fake-'));
+    for (final f in files) {
+      final json = jsonDecode(f.readAsStringSync()) as Map<String, Object?>;
+      final models =
+          ((json['catalog'] as Map<String, Object?>?)?['models']
+              as Map<String, Object?>?) ??
+          const {};
+      for (final MapEntry(key: model, value: v) in models.entries) {
+        final price = v! as Map<String, Object?>;
+        expect(
+          price['cacheRead'],
+          isA<num>(),
+          reason: '${f.path}: $model ohne cacheRead',
+        );
+        expect(
+          price['cacheRead'] as num,
+          lessThanOrEqualTo(price['input'] as num),
+          reason: '${f.path}: $model',
+        );
+      }
+    }
+    final tinfoil = load('tinfoil-tee');
+    for (final m in ['gpt-oss-120b', 'gemma4-31b']) {
+      final price = tinfoil.catalog.lookup(m)!.price;
+      expect(price.cacheRead, price.input, reason: m);
+    }
   });
 
   test('Tinfoil: TEE-Profil mit Preisen der drei Modelle (2026-10-20)', () {

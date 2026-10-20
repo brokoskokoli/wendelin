@@ -347,6 +347,36 @@ void main() {
       expect((body['provider'] as Map)['aci_verified'], isTrue);
     });
 
+    test('Phala gemma-4-31b-it: reasoning.enabled false', () async {
+      final body = await requestOf(
+        'phala-tee-small',
+        model: 'google/gemma-4-31b-it',
+      );
+      expect(body['reasoning'], {'enabled': false});
+      expect(body, isNot(contains('reasoning_effort')));
+      expect((body['provider'] as Map)['aci_verified'], isTrue);
+    });
+
+    test('Phala deepseek-v4-flash: thinking false', () async {
+      final body = await requestOf(
+        'phala-tee-small',
+        model: 'deepseek/deepseek-v4-flash-0731',
+      );
+      expect(body['chat_template_kwargs'], {'thinking': false});
+      expect(body, isNot(contains('reasoning_effort')));
+    });
+
+    test('OpenAI gpt-5-mini: reasoning_effort minimal', () async {
+      final body = await requestOf('openai-mini', key: 'OPENAI_API_KEY');
+      expect(body['model'], 'gpt-5-mini');
+      expect(body['reasoning_effort'], 'minimal');
+    });
+
+    test('Claude Sonnet: thinking disabled im Request', () async {
+      final body = await requestOf('claude-sonnet', key: 'ANTHROPIC_API_KEY');
+      expect(body['thinking'], {'type': 'disabled'});
+    });
+
     test('Phala anderes Modell: kein reasoning_effort', () async {
       final body = await requestOf('phala-tee-small');
       expect(body, isNot(contains('reasoning_effort')));

@@ -29,6 +29,7 @@ dart run wendelin_evals:run --profile profiles/claude-haiku.json --limit 5 --out
 | `--limit, -n` | höchstens n Fälle |
 | `--out, -o` | JSON-Report schreiben (`reports/*.local.json` ist von Git ausgenommen) |
 | `--max-cost` | Kostengrenze in USD je Lauf: nach **jedem** Modellaufruf wird die Summe geprüft; wird sie erreicht, bricht der Lauf sofort ab (auch mitten im Fall: dieser Fall ist `error` mit Grund `budget`, der Rest `skip` „budget“), Teilreport mit `meta.budgetExceeded`, Exit-Code 2. Fail-closed: ohne Preis für das Modell (Katalog/`catalog`) startet der Lauf nicht (Exit 1); ein Aufruf ohne Preis stoppt ebenfalls |
+| `--provider-cap` | Obergrenze in USD je Anbieter (Profil-Id) über alle Läufe, nur mit `--ledger`: wirksame Grenze = Obergrenze minus bisherige Ledger-Summe des Anbieters (mit `--max-cost` gilt die kleinere); ist nichts mehr übrig (≤ 0), startet der Lauf nicht (Exit 1) |
 | `--repeat` | jeden Fall n-mal (Standard 1, Stabilität); Report und Tabelle unterscheiden die Wiederholungen (`repetition`, `id#n`) |
 | `--ledger` | JSON-Bilanz: hängt je Lauf Anbieter (Profil-Id), Typ, Modell, Fälle, Kosten in USD und Datum an (ohne Keys/Header; ein kaputtes Ledger verhindert den Lauf) |
 | `--ledger-summary` | mit `--ledger`: Läufe, Fälle und Kosten je Anbieter summieren, kein Lauf |
@@ -257,3 +258,27 @@ Zehn Paare aus Sprechtext und geschriebener Antwort (`spoken-check/cases.yaml`,
 fünf passend, fünf manipuliert, de/fr/en). Ausgegeben werden die Trefferquote
 des Modells allein und mit lokaler Vorprüfung, die Latenz des Prüfaufrufs und
 die Kosten.
+
+## Kostengrenzen (Hinweise)
+
+- Alle Grenzen gelten in **USD**. Das Budget aus dem Paket steht in €; es wird
+  1:1 als USD übergeben (konservativ: 1 € ist mehr als 1 USD, die Grenze
+  liegt also unter dem Budget).
+- Geprüft wird erst **nach** einem Modellaufruf: die Grenze kann um höchstens
+  einen Aufruf überschritten werden.
+- `--max-cost` gilt je Lauf, `--provider-cap` je Anbieter über das Ledger
+  (z. B. `--ledger reports/ledger.local.json --provider-cap 4` für Anthropic).
+  Bricht ein Fall nach Modellaufrufen mit einer Ausnahme ab, bucht das Ledger
+  mindestens die vom Budget gezählten Kosten.
+
+## Thinking aus (gleiche Bedingungen)
+
+Alle gemessenen Modelle laufen ohne Thinking, gesetzt über `modelOptions`:
+OpenAI `gpt-5-mini` mit `reasoning_effort: minimal` (nicht ganz abschaltbar),
+Claude `thinking: disabled`, Tinfoil/Phala `gpt-oss-120b` mit
+`reasoning_effort: low` (nicht abschaltbar). Bei RedPill (Phala) meldet
+`GET /v1/models` für `google/gemma-4-31b-it` die Parameter `reasoning` und
+`include_reasoning`, daher `reasoning: {enabled: false}`; für
+`deepseek/deepseek-v4-flash-0731` listet es keine Parameter, dort steht wie bei
+Tinfoil `chat_template_kwargs.thinking: false` (ungeprüft: der erste Probelauf
+zeigt, ob das Gateway es annimmt oder ignoriert; dann hier nachtragen).

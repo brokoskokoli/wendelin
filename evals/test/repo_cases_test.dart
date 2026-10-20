@@ -98,6 +98,28 @@ void main() {
     expect(out.toString(), matches(r'fr\s+40/40'));
   });
 
+  test('Wetter morgen: days darf fehlen (Standard 2), days 1 ist falsch', () {
+    final c = active.singleWhere((c) => c.id == 'de-weather-hamburg-morgen');
+    final scorer = Scorer(EvalTime.parse('2026-10-14T09:00', defaultTimeZone));
+    CaseResult score(Map<String, Object?> args) => scorer.score(
+      c,
+      RunObservation(
+        calls: [
+          ObservedCall(
+            name: 'weather__forecast',
+            args: args,
+            rawArguments: '{}',
+          ),
+        ],
+        finalText: 'Morgen Regen in Hamburg.',
+        completed: true,
+      ),
+    );
+    expect(score({'place': 'Hamburg'}).status, CaseStatus.passed);
+    expect(score({'place': 'Hamburg', 'days': 2}).status, CaseStatus.passed);
+    expect(score({'place': 'Hamburg', 'days': 1}).status, CaseStatus.failed);
+  });
+
   test('das volle Fake-Skript deckt genau die aktiven Fälle ab', () {
     final script = FakeScript.parse(
       File('fake/full_script.yaml').readAsStringSync(),

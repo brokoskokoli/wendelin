@@ -302,6 +302,110 @@ void main() {
       }
     });
 
+    group('--provider-cap', () {
+      File seed(String provider, double usd) {
+        final f = File('${tmp.path}/cap.json');
+        appendLedger(
+          f,
+          LedgerEntry(
+            provider: provider,
+            providerType: 'fake',
+            model: 'm',
+            cases: 1,
+            costUsd: usd,
+            date: '2026-10-20',
+          ),
+        );
+        return f;
+      }
+
+      test('ohne --ledger oder mit ungültigem Wert: Exit 64', () async {
+        expect((await run([...base, '--provider-cap', '1'])).$1, 64);
+        final f = seed('fake-demo', 0.1).path;
+        for (final bad in ['abc', '0', '-1']) {
+          expect(
+            (await run([...base, '--ledger', f, '--provider-cap', bad])).$1,
+            64,
+            reason: bad,
+          );
+        }
+      });
+
+      test(
+        'ausgeschöpfte Obergrenze: Start verweigert, Ledger bleibt',
+        () async {
+          final f = seed('fake-demo', 1.0);
+          final before = f.readAsStringSync();
+          final (code, out, err) = await run([
+            ...base,
+            '--ledger',
+            f.path,
+            '--provider-cap',
+            '1.0',
+          ]);
+          expect(code, 1);
+          expect(err, contains('Start verweigert'));
+          expect(out, isNot(contains('Profil ')));
+          expect(f.readAsStringSync(), before);
+        },
+      );
+
+      test('Rest = Obergrenze minus Ledger-Summe des Anbieters', () async {
+        final f = seed('fake-demo', 0.9998); // Rest 0.0002 USD
+        final path = '${tmp.path}/r.json';
+        final (code, _, err) = await run([
+          ...base,
+          '--ledger',
+          f.path,
+          '--provider-cap',
+          '1.0',
+          '--out',
+          path,
+        ]);
+        expect(code, 2, reason: err);
+        final meta =
+            (jsonDecode(File(path).readAsStringSync())
+                    as Map<String, Object?>)['meta']!
+                as Map<String, Object?>;
+        expect(meta['maxCostMicros'], 200);
+      });
+
+      test('Kosten anderer Anbieter zählen nicht', () async {
+        final f = seed('anderer', 50);
+        final (code, _, err) = await run([
+          ...base,
+          '--cases',
+          'tauchen',
+          '--ledger',
+          f.path,
+          '--provider-cap',
+          '1.0',
+        ]);
+        expect(code, 0, reason: err);
+      });
+
+      test('--max-cost kleiner als der Rest gilt weiter', () async {
+        final f = seed('fake-demo', 0.5);
+        final path = '${tmp.path}/r.json';
+        await run([
+          ...base,
+          '--ledger',
+          f.path,
+          '--provider-cap',
+          '1.0',
+          '--max-cost',
+          '0.0002',
+          '--out',
+          path,
+        ]);
+        final meta =
+            (jsonDecode(File(path).readAsStringSync())
+                    as Map<String, Object?>)['meta']!
+                as Map<String, Object?>;
+        expect(meta['maxCostMicros'], 200);
+      });
+    });
+
     test('kaputtes Ledger: Lauf wird verweigert, Datei bleibt', () async {
       final ledger = File('${tmp.path}/l.json')..writeAsStringSync('{kaputt');
       final (code, _, err) = await run([...base, '--ledger', ledger.path]);
@@ -309,6 +413,25 @@ void main() {
       expect(err, contains('Ledger'));
       expect(ledger.readAsStringSync(), '{kaputt');
     });
+  });
+
+  test('Ledger bucht mindestens, was das Budget gezählt hat', () {
+    // Ein Fall brach nach Modellaufrufen mit Ausnahme ab: Beobachtung und
+    // Kosten fehlen im Report, das Budget kennt sie.
+    final lost = CostBudget(1)..record(500);
+    final summary = Summary.of(const []);
+    expect(summary.costMicros, 0);
+    expect(ledgerCostMicros(summary, lost), 500);
+    expect(ledgerCostMicros(summary, null), 0);
+    final more = CostBudget(1)..record(5);
+    final results = [
+      CaseResult(
+        evalCase: _case('x'),
+        status: CaseStatus.passed,
+        observation: const RunObservation(costMicros: 200, completed: true),
+      ),
+    ];
+    expect(ledgerCostMicros(Summary.of(results), more), 200);
   });
 
   test('Ledger-Summe rechnet je Anbieter', () {

@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'budget.dart';
+import 'summary.dart';
+
 /// One run in the cost ledger (`--ledger`). Holds no keys or headers.
 final class LedgerEntry {
   /// Creates an entry.
@@ -73,6 +76,20 @@ final class LedgerEntry {
     if (budgetExceeded) 'budgetExceeded': true,
   };
 }
+
+/// Cost in micro-USD to book for a run: the higher of the report sum and
+/// what the [budget] counted. If a case aborts with an exception after model
+/// calls, its observation (and cost) is lost, but the budget still counted
+/// the calls.
+int ledgerCostMicros(Summary summary, CostBudget? budget) {
+  final counted = budget?.spentMicros ?? 0;
+  return counted > summary.costMicros ? counted : summary.costMicros;
+}
+
+/// Cost in USD already booked for [provider] in [entries].
+double providerSpentUsd(List<LedgerEntry> entries, String provider) => entries
+    .where((e) => e.provider == provider)
+    .fold(0.0, (sum, e) => sum + e.costUsd);
 
 /// Reads the ledger [file] (missing = empty); throws [FormatException] if it
 /// is not a valid ledger, so a broken file is never overwritten.

@@ -4,5 +4,6 @@
   "type": "anthropic",
   "defaultModel": "claude-sonnet-5-5",
   "privacy": "standard",
-  "authMethod": {"kind": "apiKey", "secretRef": "ANTHROPIC_API_KEY"}
+  "authMethod": {"kind": "apiKey", "secretRef": "ANTHROPIC_API_KEY"},
+  "options": {"thinking": "disabled"}
 }
