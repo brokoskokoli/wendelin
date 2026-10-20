@@ -358,6 +358,13 @@ void main() {
       return h;
     }
 
+    test('WP113: der Detektor erfährt den vorgelesenen Satz (Eigen-Echo)', () {
+      fakeAsync((async) {
+        final h = speaking(async);
+        expect(h.detector.spoken, ['Antwort.']);
+      });
+    });
+
     test('Detektor läuft nur während der Ausgabe', () {
       fakeAsync((async) {
         final h = speaking(async);

@@ -19,10 +19,19 @@ import 'barge_meter.dart';
 /// 9 of 16 embeddings, the word plus its trailing sound.
 const stopTailShare = 9 / 16;
 
+/// WP113: with the check by the big recognizer (stage 2) stage 1 only has to
+/// find a candidate, so its thresholds lie below the learned ones: measured
+/// „Stopp“ similarities of 0.72–0.94 against a template threshold of 0.90
+/// pass with [candidateStopMargin]. See `docs/notes/barge-stop-verify.md`.
+const candidateWakeMargin = -0.10;
+
+/// Margin of the „Stopp“ candidate threshold (see [candidateWakeMargin]).
+const candidateStopMargin = -0.20;
+
 /// WP80: how far „Stopp“ must lie above the sliding background similarity.
 const stopFloorGap = 0.02;
 
-final class LazyWakeBargeInDetector implements BargeInDetector {
+final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// Creates the detector on [audio] (the capture profile follows the
   /// pipeline state, see `CaptureProfileFollower`).
   LazyWakeBargeInDetector({
@@ -31,6 +40,8 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     required this.features,
     this.stopTemplates = _none,
     this.extraMargin = 0.05,
+    this.verifier,
+    this.onListening,
     this.marginOverride,
     this.stopTail = stopTailShare,
     this.diagInterval = const Duration(seconds: 1),
@@ -51,8 +62,24 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
   /// A new feature chain.
   final WakeFeatureExtractor Function() features;
 
-  /// Added to every template threshold.
+  /// Added to every template threshold (without [verifier]; with one the
+  /// candidate margins [candidateWakeMargin]/[candidateStopMargin] apply).
   final double extraMargin;
+
+  /// Stage 2 (WP113, K84): builds the check of a candidate by the big
+  /// recognizer; gets the text read aloud so far (own voice filter).
+  /// `null`: no stage 2, the stage 1 hit interrupts directly.
+  final BargeVerifier Function(String Function() spokenText)? verifier;
+
+  /// Told when listening starts and ends (the „hört mit“ ring, WP113).
+  final void Function({required bool on})? onListening;
+
+  final _spoken = StringBuffer();
+
+  @override
+  void spoke(String sentence) => _spoken
+    ..write(sentence)
+    ..write(' ');
 
   /// Developer setting (WP72, `debug.bargeMargin`): replaces [extraMargin]
   /// when it returns a value. Read once, when the engine is built.
@@ -93,13 +120,17 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
         voiceLog('barge-in-off', {'reason': 'no-templates'});
       } else {
         voiceLog('barge-stop-word', {'learned': stops.isNotEmpty});
-        final margin = await marginOverride?.call() ?? extraMargin;
-        List<WakeTemplates> strictly(List<WakeTemplates> l) => [
+        final override = await marginOverride?.call();
+        final staged = verifier != null;
+        final margin = override ?? (staged ? candidateWakeMargin : extraMargin);
+        final stopMargin =
+            override ?? (staged ? candidateStopMargin : extraMargin);
+        List<WakeTemplates> strictly(List<WakeTemplates> l, double m) => [
           for (final t in l)
-            t.withThreshold((t.threshold + margin).clamp(0.0, 0.99)),
+            t.withThreshold((t.threshold + m).clamp(0.0, 0.99)),
         ];
-        final strict = strictly(sets);
-        final strictStops = strictly(stops);
+        final strict = strictly(sets, margin);
+        final strictStops = strictly(stops, stopMargin);
         double? lowest(List<WakeTemplates> l) => l.isEmpty
             ? null
             : l.map((t) => t.threshold).reduce((a, b) => a < b ? a : b);
@@ -109,6 +140,8 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
         );
         voiceLog('barge-config', {
           'margin': margin,
+          'smargin': stopMargin,
+          'verify': staged,
           'thr': meter.threshold,
           'sthr': meter.stopThreshold ?? -1,
         });
@@ -137,6 +170,15 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
         final inner = WakeWordBargeInDetector(
           audio: MeteredAudioInput(audio, meter),
           engine: MeteredEngine(engine, meter),
+          verifier: verifier?.call(_spoken.toString),
+          // Scores and kind only; the word itself stays out of the log.
+          onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {
+            'kind': kind.name,
+            'busy': busy,
+            ...meter.maxima,
+          }),
+          onVerdict: (v, ms) =>
+              voiceLog('barge-verify', {'result': v.result, 'ms': ms}),
         );
         _sub = inner.signals.listen((signal) {
           // Every hit leaves a line, with the best similarities so far.
@@ -152,6 +194,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
       await _inner?.start();
       voiceLog('barge-listen', {'on': _inner != null});
       if (_inner != null && _running) {
+        onListening?.call(on: true);
         _diag?.cancel();
         _diag = Timer.periodic(diagInterval, (_) => _meter?.flush());
       }
@@ -163,9 +206,11 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     _running = false;
     _diag?.cancel();
     _diag = null;
+    _spoken.clear();
     await _inner?.stop();
     if (_inner != null) _meter?.summary();
     voiceLog('barge-listen', {'on': false});
+    onListening?.call(on: false);
     if (_disposeWhenIdle) await dispose();
   }
 
@@ -188,7 +233,10 @@ final class LazyWakeBargeInDetector implements BargeInDetector {
     _running = false;
     _diag?.cancel();
     // Ended without stop(): the summary still belongs in the log.
-    if (wasRunning && _inner != null) _meter?.summary();
+    if (wasRunning && _inner != null) {
+      _meter?.summary();
+      onListening?.call(on: false);
+    }
     await _sub?.cancel();
     await _inner?.dispose();
     await _signals.close();

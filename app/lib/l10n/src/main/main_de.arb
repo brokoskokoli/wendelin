@@ -157,5 +157,6 @@
   "switchTopicBody": "Beim Wechsel des Modells beginnt ein neues Gespräch. Der aktuelle Verlauf wird beendet (im Verlauf bleibt er abrufbar).",
   "switchTopicBodyRunning": "Beim Wechsel des Modells beginnt ein neues Gespräch. Die laufende Antwort wird abgebrochen und der aktuelle Verlauf beendet (im Verlauf bleibt er abrufbar).",
   "switchTopicSwitch": "Wechseln",
-  "switchTopicTitle": "Neues Gespräch beginnen?"
+  "switchTopicTitle": "Neues Gespräch beginnen?",
+  "mainMicHearing": "Wendelin hört mit: „Stopp“ sagen oder tippen"
 }

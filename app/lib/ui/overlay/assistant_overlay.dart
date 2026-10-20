@@ -309,9 +309,11 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     VoiceUiState voice, {
     required bool available,
     required MicState mic,
+    required bool hearing,
     required ProviderTarget? target,
     required ProviderConfig? config,
   }) => OverlaySheet(
+    hearing: hearing,
     providerName: target == null
         ? ''
         : providerLabel(
@@ -411,6 +413,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       voice,
       available: available,
       mic: mic,
+      hearing: ref.watch(bargeListeningProvider),
       target: target,
       config: config,
     );

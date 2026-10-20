@@ -6,6 +6,12 @@
 // (`Wendelin/voice barge-listen on=true`, `barge-hit`) prüft der Aufrufer
 // per logcat.
 //
+// WP113 (K84): „Stopp“ wirkt jetzt zweistufig. Das Mikrofon-Log muss
+// `barge-config verify=true`, `barge-cand kind=…` und `barge-verify
+// result=stop`, danach `barge-hit kind=keyword-stop` zeigen (ohne
+// `barge-verify` kein Treffer); das prüft der E2E-Agent per logcat
+// (`docs/testing/m5/wp113.md`).
+//
 //   WENDELIN_MODELS=~/wendelin-models \
 //     tool/e2e_android.sh integration_test/voice_barge_in_e2e_test.dart
 

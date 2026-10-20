@@ -667,6 +667,7 @@
   "mainGpuCheckFailedTitle": "Échec de la vérification du GPU",
   "mainListening": "J’écoute …",
   "mainMicCancelAnswer": "Annuler la réponse",
+  "mainMicHearing": "Wendelin écoute : dites « Stop » ou touchez",
   "mainMicSpeak": "Parler",
   "mainMicStopListening": "Arrêter l’écoute",
   "mainMicStopSpeech": "Arrêter la lecture vocale",

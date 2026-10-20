@@ -2135,6 +2135,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mainMicCancelAnswer => 'Cancel answer';
 
   @override
+  String get mainMicHearing => 'Wendelin is listening: say “Stop” or tap';
+
+  @override
   String get mainMicSpeak => 'Speak';
 
   @override

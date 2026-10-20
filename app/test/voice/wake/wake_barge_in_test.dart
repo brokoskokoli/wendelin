@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:fake_async/fake_async.dart';
@@ -61,6 +62,7 @@ void main() {
       Float32List e, {
       List<WakeTemplates> stops = const [],
       Future<double?> Function()? margin,
+      BargeVerifier Function(String Function())? verifier,
     }) {
       audio = FakeAudioInput(
         // WP80: „Stopp“ needs speech-level sound after a quiet start.
@@ -78,6 +80,7 @@ void main() {
         templates: () async => sets,
         stopTemplates: () async => stops,
         marginOverride: margin,
+        verifier: verifier,
         stopTail: null, // two-value fake embeddings have no time axis
         diagInterval: const Duration(milliseconds: 20),
         features: () => FakeWakeFeatureExtractor(
@@ -205,6 +208,119 @@ void main() {
         () async {
           final signals = await run(defaultTail: true);
           expect(signals, isEmpty);
+        },
+      );
+    });
+
+    group('Stufe 2: Gegenprüfung des Kandidaten (WP113, K84)', () {
+      late List<String> lines;
+      late void Function(String) saved;
+      setUp(() {
+        saved = voiceLogSink;
+        lines = [];
+        voiceLogSink = lines.add;
+      });
+      tearDown(() => voiceLogSink = saved);
+
+      Float32List atSim(double sim, {bool second = false}) {
+        final o = math.sqrt(1 - sim * sim);
+        return Float32List.fromList(second ? [o, sim] : [sim, o]);
+      }
+
+      BargeVerifier Function(String Function()) heard(String text) =>
+          (spoken) => TranscriptBargeVerifier(
+            FixedTranscriptStt(text),
+            spokenText: spoken,
+          );
+
+      Future<List<String>> run(
+        LazyWakeBargeInDetector d, {
+        String? spoken,
+      }) async {
+        final codes = <String>[];
+        d.signals.listen((s) => codes.add(s.code));
+        if (spoken != null) d.spoke(spoken);
+        await d.start();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await d.dispose();
+        return codes;
+      }
+
+      ftest('Kandidat unter der gelernten Schwelle kommt durch, Erkenner '
+          'bestätigt „Wendelin“', () async {
+        // Learned threshold 0.88, window 0.80: Stufe 1 alone (+0.05) rejects.
+        final plain = make([tpl(0.88)], atSim(0.80));
+        expect(await run(plain), isEmpty);
+        final d = make(
+          [tpl(0.88)],
+          atSim(0.80),
+          verifier: heard('Wendelin, hör mal'),
+        );
+        expect(await run(d), ['keyword-wake']);
+        expect(
+          lines.any(
+            (l) => l.contains('barge-config') && l.contains('verify=true'),
+          ),
+          isTrue,
+        );
+        final cand = lines.firstWhere((l) => l.contains('barge-cand'));
+        expect(cand, contains('kind=wake'));
+        expect(cand, contains('sim=0.80'));
+        final v = lines.firstWhere((l) => l.contains('barge-verify'));
+        expect(v, contains('result=wake'));
+        // Kein Inhalt außer dem erkannten Schlüsselwort.
+        expect(lines.join('\n'), isNot(contains('hör mal')));
+      });
+
+      ftest('Gegenprüfung verwirft: kein Signal, Log result=no', () async {
+        final d = make([tpl(0.88)], atSim(0.80), verifier: heard('Guten Tag'));
+        expect(await run(d), isEmpty);
+        expect(
+          lines.where((l) => l.contains('barge-verify')).first,
+          contains('result=no'),
+        );
+      });
+
+      ftest('Eigen-Echo: Wort im vorgelesenen Text zählt nicht', () async {
+        final d = make([tpl(0.88)], atSim(0.80), verifier: heard('Wendelin'));
+        expect(await run(d, spoken: 'Ich bin Wendelin.'), isEmpty);
+        expect(
+          lines.where((l) => l.contains('barge-verify')).first,
+          contains('result=echo'),
+        );
+      });
+
+      ftest('„Stopp“ mit gemessenen 0.72 geht als Kandidat durch', () async {
+        // Learned stop threshold 0.90, window 0.72 (log of the device test).
+        final stop = WakeTemplates(
+          speakerId: 'a',
+          featureVersion: 'fake-1',
+          threshold: 0.90,
+          embeddings: [
+            Float32List.fromList([0, 1]),
+          ],
+        );
+        final d = make(
+          [tpl(0.99)],
+          atSim(0.72, second: true),
+          stops: [stop],
+          verifier: heard('Stopp'),
+        );
+        expect(await run(d), ['keyword-stop']);
+        final plain = make(
+          [tpl(0.99)],
+          atSim(0.72, second: true),
+          stops: [stop],
+        );
+        expect(await run(plain), isEmpty);
+      });
+
+      ftest(
+        'Ohne Prüfer bleibt der Aufschlag +0.05 (Schwellen unverändert)',
+        () async {
+          final d = make([tpl(0.8)], Float32List.fromList([1, 0]));
+          await run(d);
+          expect(lines.any((l) => l.contains('thr=0.85')), isTrue);
         },
       );
     });

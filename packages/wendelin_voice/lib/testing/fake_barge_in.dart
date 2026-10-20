@@ -14,7 +14,7 @@ import '../src/io/barge_in_detector.dart';
 /// detector (`WakeWordBargeInDetector`): [start] opens it, [stop] releases
 /// it after [stopDelay]. Whoever records meanwhile gets the "already
 /// running" error of the device.
-final class FakeBargeInDetector implements BargeInDetector {
+final class FakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// Creates a fake detector.
   FakeBargeInDetector({
     this.startDelay = Duration.zero,
@@ -41,6 +41,12 @@ final class FakeBargeInDetector implements BargeInDetector {
 
   final _controller = StreamController<BargeInSignal>.broadcast(sync: true);
   bool _running = false;
+
+  /// Sentences the pipeline reported as being read aloud (WP113).
+  final spoken = <String>[];
+
+  @override
+  void spoke(String sentence) => spoken.add(sentence);
 
   /// Number of effective [start] calls.
   int startCount = 0;

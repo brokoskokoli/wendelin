@@ -615,6 +615,8 @@ final class VoicePipeline {
         if (gen != _gen) return;
         _setState(VoiceState.speaking);
         _emit(VoiceSpeaking(s));
+        // WP113: the barge-in check must not take the own voice for a word.
+        if (bargeInDetector case final SpokenTextSink sink) sink.spoke(s);
       },
       onIdle: () {
         if (gen == _gen && _agentRunning) _setState(VoiceState.thinking);

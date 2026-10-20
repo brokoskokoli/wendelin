@@ -340,34 +340,39 @@ void main() {
       },
     );
 
-    test('Konflikt: das Wort weiter über der Schwelle gewinnt', () async {
-      WakeTemplates one(List<double> e) => WakeTemplates(
-        speakerId: 'a',
-        featureVersion: 'fake-1',
-        threshold: 0.3,
-        embeddings: [v(e)],
-      );
-      Future<List<String>> run(List<double> embedding) async {
-        final e = CandidateWakeEngine(
-          features: FakeWakeFeatureExtractor(
-            windowEvery: 100,
-            windowFor: (end, _) =>
-                WakeWindow(endSample: end, embedding: v(embedding)),
-          ),
-          templates: one([1, 0]),
-          stopTemplates: [
-            one([0, 1]),
-          ],
-          modelThreshold: null,
+    test(
+      'Konflikt (WP113): sind beide über der Schwelle, gewinnt „Stopp“',
+      () async {
+        WakeTemplates one(List<double> e) => WakeTemplates(
+          speakerId: 'a',
+          featureVersion: 'fake-1',
+          threshold: 0.3,
+          embeddings: [v(e)],
         );
-        await e.open([KeywordSpec.wendelin]);
-        return [for (final h in await e.accept(Int16List(200))) h.keywordId];
-      }
+        Future<List<String>> run(List<double> embedding) async {
+          final e = CandidateWakeEngine(
+            features: FakeWakeFeatureExtractor(
+              windowEvery: 100,
+              windowFor: (end, _) =>
+                  WakeWindow(endSample: end, embedding: v(embedding)),
+            ),
+            templates: one([1, 0]),
+            stopTemplates: [
+              one([0, 1]),
+            ],
+            modelThreshold: null,
+          );
+          await e.open([KeywordSpec.wendelin]);
+          return [for (final h in await e.accept(Int16List(200))) h.keywordId];
+        }
 
-      // Both templates are over the threshold in each case.
-      expect(await run([1, 0.5]), ['wake']);
-      expect(await run([0.5, 1]), ['stop']);
-    });
+        // Both templates are over the threshold in each case.
+        expect(await run([1, 0.5]), ['stop']);
+        expect(await run([0.5, 1]), ['stop']);
+        // Only „Wendelin“ over its threshold: wake.
+        expect(await run([1, -0.2]), ['wake']);
+      },
+    );
 
     test(
       '„Stopp“ zählt erst ab zwei Fenstern in Folge über der Schwelle',

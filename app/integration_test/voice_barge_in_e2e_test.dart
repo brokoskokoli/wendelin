@@ -6,6 +6,10 @@
 // (`Wendelin/voice barge-listen on=true`, `barge-hit`) prüft der Aufrufer
 // per logcat.
 //
+// WP113 (K84): „Wendelin“ während der Ausgabe geht über Stufe 2: im
+// Mikrofon-Log `barge-cand` und `barge-verify result=wake` vor `barge-hit`
+// (`docs/testing/m5/wp113.md`).
+//
 //   WENDELIN_MODELS=~/wendelin-models \
 //     tool/e2e_android.sh integration_test/voice_barge_in_e2e_test.dart
 

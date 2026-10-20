@@ -3,7 +3,9 @@ import 'dart:typed_data';
 
 import '../io/audio_input.dart';
 import '../io/barge_in_detector.dart';
+import 'barge_verifier.dart';
 import 'keyword_spec.dart';
+import 'pre_roll_buffer.dart';
 import 'wake_word_engine.dart';
 
 /// [BargeInDetector] on a [WakeWordEngine]: while the answer is spoken it
@@ -20,7 +22,37 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     required this.audio,
     required this.engine,
     this.keywords = const [KeywordSpec.wendelin],
+    this.verifier,
+    this.clip = const Duration(milliseconds: 2500),
+    this.cooldown = const Duration(milliseconds: 1500),
+    this.verifyTimeout = const Duration(seconds: 6),
+    this.onCandidate,
+    this.onVerdict,
   });
+
+  /// Stage 2 (WP113, K84): with a [verifier] a hit of the engine is only a
+  /// candidate. The audio of the last [clip] goes to the verifier and the
+  /// signal follows only if it recognizes the word. Without one the hit is
+  /// the signal.
+  final BargeVerifier? verifier;
+
+  /// Audio handed to the [verifier] (at most 5 s).
+  final Duration clip;
+
+  /// No new check this long after one ended without a keyword (CPU: the
+  /// own voice makes many candidates).
+  final Duration cooldown;
+
+  /// A check that takes longer counts as failed (fail closed).
+  final Duration verifyTimeout;
+
+  /// Called for every stage 1 candidate; [busy]: a check is running or in
+  /// cooldown, the candidate is dropped.
+  final void Function(BargeInKeyword candidate, {required bool busy})?
+  onCandidate;
+
+  /// Called with the verdict and the time of the check in ms.
+  final void Function(BargeVerdict verdict, int ms)? onVerdict;
 
   /// Microphone (capture profile for speech output, set by the app).
   final AudioInput audio;
@@ -38,6 +70,9 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   bool _running = false;
   bool _engineOpen = false;
   int _generation = 0;
+  late final PreRollBuffer _ring = PreRollBuffer(capacity: clip);
+  bool _verifying = false;
+  int _fed = 0, _blockedUntil = 0;
   Future<void> _chain = Future.value();
   Future<void> _lifecycle = Future.value();
 
@@ -62,6 +97,8 @@ final class WakeWordBargeInDetector implements BargeInDetector {
       _engineOpen = true;
     }
     engine.reset();
+    _ring.clear();
+    _fed = _blockedUntil = 0;
     final gen = ++_generation;
     _chain = Future.value();
     _sub = audio.start().listen(
@@ -73,6 +110,8 @@ final class WakeWordBargeInDetector implements BargeInDetector {
 
   Future<void> _onFrame(Int16List frame, int gen) async {
     if (gen != _generation) return;
+    if (verifier != null) _ring.add(frame);
+    _fed += frame.length;
     final hits = await engine.accept(frame);
     if (gen != _generation) return;
     for (final h in hits) {
@@ -81,8 +120,37 @@ final class WakeWordBargeInDetector implements BargeInDetector {
         'wake' => BargeInKeyword.wake,
         _ => null,
       };
-      if (keyword != null) _signals.add(BargeInSignal.keyword(keyword));
+      if (keyword == null) continue;
+      final v = verifier;
+      if (v == null) {
+        _signals.add(BargeInSignal.keyword(keyword));
+        continue;
+      }
+      final busy = _verifying || _fed < _blockedUntil;
+      onCandidate?.call(keyword, busy: busy);
+      if (!busy) unawaited(_verify(v, keyword, gen));
     }
+  }
+
+  Future<void> _verify(BargeVerifier v, BargeInKeyword cand, int gen) async {
+    _verifying = true;
+    final pcm = _ring.snapshot();
+    final sw = Stopwatch()..start();
+    var verdict = const BargeVerdict('skip');
+    try {
+      verdict = await v.verify(pcm, candidate: cand).timeout(verifyTimeout);
+    } on Object catch (_) {
+      // Fail closed: no verdict, no keyword.
+    }
+    _verifying = false;
+    if (gen != _generation) return;
+    onVerdict?.call(verdict, sw.elapsedMilliseconds);
+    final keyword = verdict.keyword;
+    if (keyword == null) {
+      _blockedUntil = _fed + durationToSamples(cooldown);
+      return;
+    }
+    _signals.add(BargeInSignal.keyword(keyword));
   }
 
   @override

@@ -51,5 +51,6 @@
   "switchTopicBody": "Changer de modèle démarre une nouvelle conversation. L’historique actuel est terminé (il reste consultable dans l’historique).",
   "switchTopicBodyRunning": "Changer de modèle démarre une nouvelle conversation. La réponse en cours est interrompue et l’historique actuel est terminé (il reste consultable dans l’historique).",
   "switchTopicSwitch": "Changer",
-  "switchTopicTitle": "Commencer une nouvelle conversation ?"
+  "switchTopicTitle": "Commencer une nouvelle conversation ?",
+  "mainMicHearing": "Wendelin écoute : dites « Stop » ou touchez"
 }

@@ -138,6 +138,7 @@ class Composer extends StatefulWidget {
     required this.running,
     required this.onSend,
     required this.mic,
+    this.hearing = false,
     required this.onMic,
     this.levels = const [],
     this.micHint,
@@ -155,6 +156,9 @@ class Composer extends StatefulWidget {
 
   /// State of the microphone button.
   final MicState mic;
+
+  /// Wendelin hört während der Ausgabe mit (WP113).
+  final bool hearing;
 
   /// Tap on the microphone (start, or cancel while active).
   final VoidCallback onMic;
@@ -260,6 +264,7 @@ class _ComposerState extends State<Composer> {
                   builder: (context, value, _) => value.text.trim().isEmpty
                       ? MicButton(
                           state: widget.mic,
+                          hearing: widget.hearing,
                           onPressed: widget.mic == MicState.disabled
                               ? null
                               : widget.onMic,

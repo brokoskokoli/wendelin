@@ -68,3 +68,11 @@ abstract interface class BargeInDetector {
   /// Stops listening and releases the microphone. Idempotent.
   Future<void> stop();
 }
+
+/// A [BargeInDetector] that wants the text being read aloud (WP113): the
+/// pipeline reports every sentence that starts playing, so the detector can
+/// tell the own voice from the user.
+abstract interface class SpokenTextSink {
+  /// [sentence] started playing.
+  void spoke(String sentence);
+}

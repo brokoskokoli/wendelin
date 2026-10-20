@@ -24,6 +24,7 @@ class MainComposer extends ConsumerWidget {
     required this.conversation,
     required this.voice,
     required this.mic,
+    this.hearing = false,
     required this.micDeniedByAndroid,
     required this.onAllowMicrophone,
     required this.microphoneAccess,
@@ -37,6 +38,9 @@ class MainComposer extends ConsumerWidget {
 
   /// State of the microphone button.
   final MicState mic;
+
+  /// Wendelin hört während der Ausgabe mit (WP113).
+  final bool hearing;
 
   /// Android denied the permission (notice offers the settings).
   final bool micDeniedByAndroid;
@@ -53,6 +57,7 @@ class MainComposer extends ConsumerWidget {
     child: Composer(
       running: conversation.running,
       mic: mic,
+      hearing: hearing,
       levels: voice.levels,
       followUpUntil: voice.followUpUntil,
       now: ref.read(clockProvider).now,

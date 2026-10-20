@@ -3724,6 +3724,12 @@ abstract class AppLocalizations {
   /// **'Antwort abbrechen'**
   String get mainMicCancelAnswer;
 
+  /// No description provided for @mainMicHearing.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin hört mit: „Stopp“ sagen oder tippen'**
+  String get mainMicHearing;
+
   /// No description provided for @mainMicSpeak.
   ///
   /// In de, this message translates to:

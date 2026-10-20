@@ -10,10 +10,12 @@ import '../platform/voice/audio_playback.dart';
 import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
+import '../voice/wake/lazy_barge_verifier.dart';
 import '../voice/wake/wake_barge_in.dart';
 import '../voice/wake/wake_storage.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
+import 'preferences.dart';
 import 'voice_providers.dart';
 
 // Personal wake word (WP60): templates, speakers, the second-stage setting
@@ -191,6 +193,23 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
       await ref.read(storageProvider).settings.get(AppSettings.bargeMargin) ??
           '',
     ),
+    // WP113 (K84): the big recognizer checks every candidate, unless stage 2
+    // is switched off in the wake word settings.
+    verifier: (ref.read(wakeVerifyProvider).value ?? true)
+        ? (spoken) => LazyBargeVerifier(
+            stt: () => ref.read(speechToTextProvider.future),
+            language: () => ref.read(languageProvider),
+            spokenText: spoken,
+          )
+        : null,
+    onListening: ({required on}) {
+      // The container may be gone (end of a test, rebuild).
+      try {
+        ref.read(bargeListeningProvider.notifier).set(on);
+      } on Object {
+        // Nobody shows it any more.
+      }
+    },
     features: () => makeFeatures(),
     templates: () async => [
       for (final s in await store.speakers()) ?await store.load(s.id),

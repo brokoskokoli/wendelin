@@ -38,6 +38,7 @@ class MicButton extends StatelessWidget {
     required this.onPressed,
     this.compact = false,
     this.semanticLabel,
+    this.hearing = false,
   });
 
   /// Zustand.
@@ -48,6 +49,10 @@ class MicButton extends StatelessWidget {
 
   /// 64 statt 72 (Hauptbildschirm).
   final bool compact;
+
+  /// Wendelin hört während der Sprachausgabe auf „Stopp“/„Wendelin“
+  /// (WP113): bei [MicState.speaking] liegt ein Ring um den Knopf.
+  final bool hearing;
 
   /// Überschreibt das Standard-Label des Zustands.
   final String? semanticLabel;
@@ -77,11 +82,12 @@ class MicButton extends StatelessWidget {
     };
     final listening = state == MicState.listening;
     final preparing = state == MicState.preparing;
+    final hearingRing = hearing && state == MicState.speaking;
     // Der Ring beim Zuhören liegt innerhalb der Fläche (72 bzw. 64): außen
     // der Ring, dann eine Lücke, innen die Kobalt-Scheibe. Kein Überstand,
     // kein Layout-Sprung zwischen den Zuständen.
     return CustomPaint(
-      painter: listening
+      painter: listening || hearingRing
           ? _ListeningPainter(WColors.accentLight)
           : preparing
           ? _ListeningPainter(
@@ -91,13 +97,17 @@ class MicButton extends StatelessWidget {
       child: IconButton(
         // Nur Tooltip: wird auch als Semantics-Tooltip vorgelesen; ein
         // zusätzliches Label würde doppelt angesagt.
-        tooltip: semanticLabel ?? labelFor(context.l10n, state),
+        tooltip:
+            semanticLabel ??
+            (hearingRing
+                ? context.l10n.mainMicHearing
+                : labelFor(context.l10n, state)),
         onPressed: disabled ? null : onPressed,
         icon: content,
         style: IconButton.styleFrom(
           fixedSize: Size.square(extent),
           padding: EdgeInsets.zero,
-          backgroundColor: listening || preparing
+          backgroundColor: listening || preparing || hearingRing
               ? WColors.transparent
               : WColors.accent,
           disabledBackgroundColor: WColors.surfaceRaised,

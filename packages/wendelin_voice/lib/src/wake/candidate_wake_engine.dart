@@ -92,6 +92,8 @@ final class CandidateWakeEngine implements WakeWordEngine {
 
   bool _open = false;
   int _stopRun = 0;
+  int _sinceStop = 1 << 30;
+  CandidateDecision? _lastStop;
   double? _stopFloor;
   int _stopSeen = 0;
   int _lastHit = -1 << 40;
@@ -163,14 +165,23 @@ final class CandidateWakeEngine implements WakeWordEngine {
       // „Stopp“ is short: it counts only after [stopWindows] consecutive
       // windows above its threshold (a single spike is no hit).
       _stopRun = stopDecision == null ? 0 : _stopRun + 1;
-      // Both words match: the one further above its threshold wins.
-      if (stopDecision != null && (d == null || stop.margin > main.margin)) {
-        if (_stopRun >= stopWindows) {
+      _sinceStop = stopDecision == null ? _sinceStop + 1 : 0;
+      if (stopDecision != null) {
+        _lastStop = stopDecision;
+        // WP113: both words over their threshold (during the output): „Stopp“
+        // wins, whatever the margins. Otherwise wait for the confirming
+        // window, a „Wendelin“ must not slip through meanwhile.
+        if (d != null || _stopRun >= stopWindows) {
           d = stopDecision;
           id = stopKeywordId;
         } else {
-          d = null; // wait for the confirming window
+          d = null;
         }
+      } else if (d != null && _lastStop != null && _sinceStop <= stopWindows) {
+        // „Stopp“ was over its threshold a moment ago (a spike), now only
+        // „Wendelin“ is: it is the same utterance, „Stopp“ wins.
+        d = _lastStop;
+        id = stopKeywordId;
       }
       final gap = (refractory.inMicroseconds * 16000) ~/ 1000000;
       if (d == null || w.endSample - _lastHit < gap) continue;
@@ -225,6 +236,8 @@ final class CandidateWakeEngine implements WakeWordEngine {
   void reset() {
     features.reset();
     _stopRun = 0;
+    _sinceStop = 1 << 30;
+    _lastStop = null;
     stopGate?.reset();
     _stopFloor = null;
     _stopSeen = 0;
