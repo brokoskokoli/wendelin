@@ -57,6 +57,19 @@ ArgParser _parser() => ArgParser()
         '(≤ 0: kein Start). Nur mit --ledger.',
   )
   ..addOption(
+    'pause-ms',
+    help:
+        'Pause in ms vor jedem Fall außer dem ersten (zählt nicht in die '
+        'Latenz), gegen Rate-Limits.',
+  )
+  ..addOption(
+    'retry-rate-limit',
+    help:
+        'Endet ein Fall mit Rate-Limit (429), n Sekunden warten und den Fall '
+        'genau einmal wiederholen (Kosten beider Versuche zählen, Report: '
+        'retried).',
+  )
+  ..addOption(
     'repeat',
     defaultsTo: '1',
     help: 'Jeden Fall n-mal laufen lassen (Stabilität).',
@@ -171,11 +184,10 @@ Future<int> runCli(
       time: time,
       onlyIntegrations: args.option('integrations')?.split(',').toSet(),
       budget: budget,
+      pause: _pause(args),
+      retryRateLimit: _retryRateLimit(args),
     );
-    out.writeln(
-      'Profil ${p.id} (${p.type.name}), Modell ${p.defaultModel}, '
-      '${cases.length} Fälle${repeat > 1 ? ' × $repeat' : ''}, heute = ${time.now} ${time.timeZone}',
-    );
+    out.writeln(_banner(p, cases.length, repeat, time));
     var interrupted = false;
     final subscription = interrupt?.listen((_) {
       if (!interrupted) {
@@ -257,6 +269,10 @@ int _finish(
         'budgetReason': budget!.stopReason,
       },
       if (interrupted) 'interrupted': true,
+      if (results.any((r) => r.observation.retried))
+        'retried': results.where((r) => r.observation.retried).length,
+      if (results.any((r) => r.reasons.contains('rate-limit')))
+        'rateLimitAborted': true,
     },
     results: results,
   );
@@ -338,11 +354,32 @@ File? _ledger(String? path) {
   return (ids: ids, error: null);
 }
 
+String _banner(ProviderProfile p, int cases, int repeat, EvalTime time) =>
+    'Profil ${p.id} (${p.type.name}), Modell ${p.defaultModel}, '
+    '$cases Fälle${repeat > 1 ? ' × $repeat' : ''}, heute = ${time.now} ${time.timeZone}';
+
+Duration _pause(ArgResults a) =>
+    Duration(milliseconds: int.parse(a.option('pause-ms') ?? '0'));
+
+Duration? _retryRateLimit(ArgResults a) =>
+    switch (a.option('retry-rate-limit')) {
+      final s? => Duration(milliseconds: (double.parse(s) * 1000).round()),
+      null => null,
+    };
+
 /// Why a numeric option is invalid; `null` if all are fine.
 String? _badNumber(ArgResults a) {
   final limit = a.option('limit');
   if (limit != null && (int.tryParse(limit) ?? 0) < 1) {
     return '--limit braucht eine Zahl ≥ 1';
+  }
+  final pauseMs = a.option('pause-ms');
+  if (pauseMs != null && (int.tryParse(pauseMs) ?? -1) < 0) {
+    return '--pause-ms braucht eine ganze Zahl ≥ 0';
+  }
+  final retry = a.option('retry-rate-limit');
+  if (retry != null && !((double.tryParse(retry) ?? -1) >= 0)) {
+    return '--retry-rate-limit braucht eine Zahl ≥ 0 (Sekunden)';
   }
   if ((int.tryParse(a.option('repeat')!) ?? 0) < 1) {
     return '--repeat braucht eine Zahl ≥ 1';

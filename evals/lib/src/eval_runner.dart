@@ -75,6 +75,10 @@ final class EvalRunner {
     this.onlyIntegrations,
     this.budget,
     GiveUpClassifier? giveUpClassifier,
+    this.pause = Duration.zero,
+    this.retryRateLimit,
+    this.maxRateLimited = 5,
+    this.sleep = _realSleep,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier(),
        scorer = Scorer(time);
 
@@ -102,6 +106,23 @@ final class EvalRunner {
   /// Evaluates observations.
   final Scorer scorer;
 
+  /// Wait before every case that really runs, except the first (`--pause-ms`).
+  /// Not part of the latency.
+  final Duration pause;
+
+  /// Wait before the single second attempt of a case that ended with a rate
+  /// limit (`--retry-rate-limit`); `null` = no second attempt.
+  final Duration? retryRateLimit;
+
+  /// Once more than this many cases still end with a rate limit after the
+  /// second attempt, the remaining cases are skipped as `rate-limit`.
+  final int maxRateLimited;
+
+  /// Waits for [pause] and [retryRateLimit]; replaceable in tests.
+  final Future<void> Function(Duration) sleep;
+
+  static Future<void> _realSleep(Duration d) => Future<void>.delayed(d);
+
   /// Device locale for a case language (`de` → `de-DE`, `fr` → `fr-FR`,
   /// `en` → `en-US`; others `<lang>-<LANG>`).
   static String localeFor(String language) => switch (language) {
@@ -124,6 +145,8 @@ final class EvalRunner {
       throw ArgumentError.value(repeat, 'repeat', 'muss ≥ 1 sein');
     }
     final results = <CaseResult>[];
+    var rateLimited = 0;
+    var ranAny = false;
     for (final c in cases) {
       for (var n = 1; n <= repeat; n++) {
         final rep = repeat > 1 ? n : null;
@@ -131,18 +154,73 @@ final class EvalRunner {
             ? CaseResult.skipped(c, 'abgebrochen', repetition: rep)
             : (budget?.exceeded ?? false)
             ? CaseResult.skipped(c, 'budget', repetition: rep)
+            : rateLimited > maxRateLimited
+            ? CaseResult.skipped(c, 'rate-limit', repetition: rep)
             : c.pending && !includePending
             ? CaseResult.skipped(
                 c,
                 'pending: Integration fehlt noch',
                 repetition: rep,
               )
-            : (await runCase(c)).withRepetition(rep);
+            : (await _runPaced(c, first: !ranAny)).withRepetition(rep);
+        if (r.ran) ranAny = true;
+        if (_isRateLimited(r)) rateLimited++;
         results.add(r);
         onResult?.call(r);
       }
     }
     return results;
+  }
+
+  Future<CaseResult> _runPaced(EvalCase c, {required bool first}) async {
+    if (!first && pause > Duration.zero) await sleep(pause);
+    final attempt = await runCase(c);
+    final wait = retryRateLimit;
+    if (wait == null ||
+        !_isRateLimited(attempt) ||
+        (budget?.exceeded ?? false)) {
+      return attempt;
+    }
+    await sleep(wait);
+    final second = await runCase(c);
+    return _merge(attempt, second);
+  }
+
+  static bool _isRateLimited(CaseResult r) =>
+      r.observation.failure?.cause is RateLimitException;
+
+  /// The second attempt, with usage, cost and model calls of both and
+  /// `retried`; latency and failure stay those of the second attempt.
+  static CaseResult _merge(CaseResult a, CaseResult b) {
+    final x = a.observation;
+    final y = b.observation;
+    int? cost(RunObservation o) => o.modelCalls == 0 ? 0 : o.costMicros;
+    final cx = cost(x);
+    final cy = cost(y);
+    final merged = RunObservation(
+      calls: y.calls,
+      finalText: y.finalText,
+      failure: y.failure,
+      latency: y.latency,
+      usage: x.usage + y.usage,
+      costMicros: x.modelCalls + y.modelCalls == 0
+          ? null
+          : (cx == null || cy == null ? null : cx + cy),
+      modelCalls: x.modelCalls + y.modelCalls,
+      confirmations: y.confirmations,
+      escalationConfirmations: y.escalationConfirmations,
+      completed: y.completed,
+      escalations: y.escalations,
+      gaveUp: y.gaveUp,
+      spokenText: y.spokenText,
+      retried: true,
+    );
+    return CaseResult(
+      evalCase: b.evalCase,
+      status: b.status,
+      reasons: b.reasons,
+      observation: merged,
+    );
   }
 
   /// Runs one case and scores it.

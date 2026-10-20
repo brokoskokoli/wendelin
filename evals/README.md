@@ -275,6 +275,21 @@ die Kosten.
   Bricht ein Fall nach Modellaufrufen mit einer Ausnahme ab, bucht das Ledger
   mindestens die vom Budget gezählten Kosten.
 
+## Drosselung und Rate-Limit
+
+- `--pause-ms <n>`: Pause vor jedem Fall außer dem ersten (auch zwischen
+  Wiederholungen), nicht in der Latenz.
+- `--retry-rate-limit <s>`: Endet ein Fall mit Rate-Limit (HTTP 429, also
+  `AgentFailed` mit `RateLimitException` als Ursache, nachdem der Agent selbst
+  schon einmal wiederholt hat), wartet der Runner `s` Sekunden und wiederholt
+  den Fall **genau einmal**. Kosten, Tokens und Modellaufrufe beider Versuche
+  zählen ins Budget, in den Report und ins Ledger; Latenz und Ergebnis sind
+  die des zweiten Versuchs. Im Report steht beim Fall `retried: true`, in
+  `meta` die Anzahl (`retried`).
+- Bleiben mehr als 5 Fälle trotz Wiederholung limitiert, werden die übrigen als
+  `rate-limit` übersprungen (`meta.rateLimitAborted`): nicht weiter probieren.
+- Pausen sind im Runner injizierbar (`EvalRunner.sleep`), Tests warten nicht.
+
 ## Thinking aus (gleiche Bedingungen)
 
 Alle gemessenen Modelle laufen ohne Thinking, gesetzt über `modelOptions`:

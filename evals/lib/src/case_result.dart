@@ -60,6 +60,7 @@ final class RunObservation {
     this.escalations = const [],
     this.gaveUp = false,
     this.spokenText,
+    this.retried = false,
   });
 
   /// Tool calls in order.
@@ -103,6 +104,11 @@ final class RunObservation {
 
   /// The `<spoken>` block of the answer (WP41, stage 2); `null` = none.
   final String? spokenText;
+
+  /// Whether the case ran a second time after a rate limit
+  /// (`--retry-rate-limit`). Latency and failure are those of the second
+  /// attempt; usage, cost and model calls add up both.
+  final bool retried;
 }
 
 /// Outcome category of a case.
@@ -187,6 +193,7 @@ final class CaseResult {
         'finalText': o.finalText,
         if (o.failure case final f?)
           'failure': {'kind': f.error.name, 'message': f.message},
+        if (o.retried) 'retried': true,
         'latencyMs': o.latency.inMilliseconds,
         'modelCalls': o.modelCalls,
         'usage': {

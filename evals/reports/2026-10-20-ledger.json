@@ -218,5 +218,23 @@
     "costUsd": 0.078744,
     "date": "2026-10-21",
     "budgetGroup": "near"
+  },
+  {
+    "provider": "tinfoil-tee",
+    "providerType": "openaiCompatible",
+    "model": "gemma4-31b",
+    "cases": 58,
+    "costUsd": 0.249219,
+    "date": "2026-10-21",
+    "budgetGroup": "tinfoil"
+  },
+  {
+    "provider": "tinfoil-tee",
+    "providerType": "openaiCompatible",
+    "model": "deepseek-v4-1-flash",
+    "cases": 58,
+    "costUsd": 0.290543,
+    "date": "2026-10-21",
+    "budgetGroup": "tinfoil"
   }
 ]
