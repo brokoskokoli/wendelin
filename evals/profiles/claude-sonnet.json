@@ -6,5 +6,5 @@
   "defaultModel": "claude-sonnet-5-5",
   "privacy": "standard",
   "authMethod": {"kind": "apiKey", "secretRef": "ANTHROPIC_API_KEY"},
-  "options": {"thinking": "disabled"}
+  "options": {"thinking": "between_tools"}
 }

@@ -49,7 +49,7 @@ void main() {
     final p = load('claude-sonnet');
     expect(p.profile.defaultModel, 'claude-sonnet-5-5');
     expect(p.catalog.lookup('claude-sonnet-5-5'), isNotNull);
-    expect(p.profile.options['thinking'], 'disabled');
+    expect(p.profile.options['thinking'], 'between_tools');
   });
 
   test('jedes bepreiste Profil-Modell hat einen cacheRead (nie still 0)', () {
