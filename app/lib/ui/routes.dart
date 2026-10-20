@@ -62,6 +62,9 @@ abstract final class AppRoutes {
   /// Web search service.
   static const webSearch = '/settings/web';
 
+  /// Station mode settings (WP99).
+  static const station = '/settings/station';
+
   /// Weather service and home place.
   static const weather = '/settings/weather';
 

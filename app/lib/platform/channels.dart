@@ -55,6 +55,9 @@ const torchChannelName = 'app.wendelin/torch';
 /// `VaultChannel.kt`: Obsidian vault tree.
 const vaultChannelName = 'app.wendelin/vault';
 
+/// `StationChannel.kt`: start of the station mode (WP99).
+const stationChannelName = 'app.wendelin/station';
+
 /// `WakeChannel.kt`: wake word settings and state (main app).
 const wakeChannelName = 'app.wendelin/wake';
 

@@ -136,6 +136,12 @@ abstract final class WIcons {
     '<path d="M12 12 L12 14" $_sj/>',
   );
 
+  /// Stationsmodus (Uhr im Rahmen).
+  static const station = WIconData._(
+    '<rect x="3.5" y="5" width="17" height="12" rx="2" $_s/>'
+    '<path d="M9 20 L15 20 M12 17 L12 20 M12 8 L12 11 L14.5 12.5" $_sj/>',
+  );
+
   /// Globus (Web).
   static const globe = WIconData._(
     '<circle cx="12" cy="12" r="8.5" $_s/>'

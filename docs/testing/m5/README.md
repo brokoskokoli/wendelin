@@ -22,3 +22,4 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP92b Personen: Anrede, Gedächtnis, Agent](wp92b.md)
 - [WP93 Wake Word im sichtbaren Chat](wp93.md)
 - [WP94 Schnellwechsel des Standard-Agenten (langer Druck auf den Provider-Chip)](wp94.md)
+- [WP99 Stationsmodus (Kern)](wp99.md)

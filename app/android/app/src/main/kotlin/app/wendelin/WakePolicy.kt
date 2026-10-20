@@ -56,12 +56,24 @@ enum class HitRoute { CHAT, OVERLAY }
  * a hit; the service stays quiet until `chatDone`.
  */
 object ChatState {
-    @Volatile var visible = false
+    /** The raw report from Dart; [visible] derives from it, so the lifecycle order never matters. */
+    @Volatile var reported = false
     @Volatile var owned = false
+
+    /** While the station is up the chat is never visible (WP99), whatever Dart reported. */
+    val visible: Boolean get() = reported && !StationState.active
+
+    /**
+     * Dart reports whether the chat is visible. While the station is up it never is (WP99): the
+     * wake word opens the overlay, not the chat behind the station.
+     */
+    fun report(isVisible: Boolean) {
+        reported = isVisible
+    }
 
     /** The main screen leaves the foreground (activity paused). */
     fun paused() {
-        visible = false
+        reported = false
     }
 
     /**
@@ -83,7 +95,7 @@ object ChatState {
 
     @Synchronized
     fun reset() {
-        visible = false
+        reported = false
         owned = false
     }
 }
@@ -195,8 +207,13 @@ object WakePolicy {
      * Dart, cleared natively on pause), the device is unlocked and the main engine can be asked;
      * everything else is the overlay with a new conversation (K41).
      */
-    fun routeHit(chatVisible: Boolean, locked: Boolean, hostAvailable: Boolean): HitRoute =
-        if (chatVisible && !locked && hostAvailable) HitRoute.CHAT else HitRoute.OVERLAY
+    fun routeHit(
+        chatVisible: Boolean,
+        locked: Boolean,
+        hostAvailable: Boolean,
+        stationActive: Boolean = false,
+    ): HitRoute =
+        if (chatVisible && !stationActive && !locked && hostAvailable) HitRoute.CHAT else HitRoute.OVERLAY
 
     /**
      * WP93: whether the activity asking for the hit's audio gets it. The overlay always; the main

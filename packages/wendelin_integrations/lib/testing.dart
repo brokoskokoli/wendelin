@@ -21,6 +21,7 @@ export 'testing/list_file_port_contract.dart';
 export 'testing/media_control_port_contract.dart';
 export 'testing/memory_store_contract.dart';
 export 'testing/note_index_port_contract.dart';
+export 'testing/station_port_contract.dart';
 export 'testing/torch_port_contract.dart';
 export 'testing/vault_port_contract.dart';
 export 'testing/weather_service_contract.dart';

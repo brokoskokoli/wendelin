@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 mittags, Stefan da; laufen: WP99, WP111; als Nächstes: Modell-Empfehlung (mittlere Modelle ohne Thinking, Budget offen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b und WP99), dann WP100/WP101
+Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP111, WP112; als Nächstes: Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
 
 ## Meilensteine
 
@@ -58,8 +58,9 @@ Stand: 2026-10-20 mittags, Stefan da; laufen: WP99, WP111; als Nächstes: Modell
 | WP107 | Bring! nur Tokens | gemergt cfab3c1e | K75 bestätigt (ergänzt); Gerätetest WP107.2 (falsches Passwort) und WP107.4 (Update von Vorversion) offen, `docs/testing/m5/wp107.md` |
 | WP108 | Fehlerart bis zur Integrationskachel | gemergt 55953025 | K78 bestätigt; „Erfolg setzt Fehlerart zurück“ app-seitig nur für Todoist/Spotify getestet (Bring!, Google Tasks, HA nur auf Paketebene); Gerätetest `docs/testing/m5/wp108.md` |
 | WP109 | Leitplanken (Regelquelle, main-Schutz, Größen-Ratsche, Aufräumskript) | gemergt d758e3c4 | K79 bestätigt; Teil B (Ruleset, Aufräumen, Skill) erledigt; neue Merge-Folge: merge_wp.sh → amend → STATUS → --changed → `WENDELIN_PUSH_MAIN=1 git push` → `cleanup_wt.sh --apply`; parallele Pakete müssen Größen-Baseline anpassen, wenn sie Warn-Dateien ändern; lokales Gate flakte unter Last (app), Nachlauf grün |
-| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | gemergt 2ff0fe8f | K81 offen; beim Merge kotlin-unit rot (`bash bash gradlew`, wenn das JDK schon passt), vom Orchestrator behoben 9c7ffbc7; Folge: cleanup_wt.sh löscht die Urteilsdateien `<wp>-review*.md` mit (sollen für die Quote „erstes Review sauber“ erhalten bleiben); Guard-Restlücken in ENGINEERING.md (fängt pre-push ab) |
+| WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | gemergt 2ff0fe8f | K81 offen; beim Merge kotlin-unit rot (`bash bash gradlew`, wenn das JDK schon passt), vom Orchestrator behoben 9c7ffbc7; Folge: cleanup_wt.sh löscht die Urteilsdateien `<wp>-review*.md` mit (sollen für die Quote „erstes Review sauber“ erhalten bleiben; bis dahin sichert der Orchestrator sie vor dem Merge nach `james-wt/reviews/`); Guard-Restlücken in ENGINEERING.md (fängt pre-push ab) |
 | WP111 | Vergleich alternativer Wake Words („Hey Wendelin“, microWakeWord, sherpa-KWS) | in Arbeit | M6; Entscheid Stefan 2026-10-20: Hey Wendelin, offene Programme, ohne Porcupine; Teil A synthetisch, Teil B mit Aufnahmen `~/wendelin-fixtures/wake/hey/` |
+| WP112 | Modell-Empfehlung (~150 Evals de/en/fr, 5 Anbieter, Empfehlung je Rolle) | in Arbeit | M6; Entscheid Stefan 2026-10-20: mittlere Modelle ohne Thinking, Budget max 8,50 € (Anthropic 4, Phala 1,50, Tinfoil 1, NEAR 1, OpenAI 1) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 

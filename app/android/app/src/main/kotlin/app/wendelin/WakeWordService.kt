@@ -215,7 +215,12 @@ class WakeWordService : Service() {
         val pos = call.argument<Number>("pos")?.toLong()
         if (mic != null) WakeHandoff.beginCapture(if (pos != null) tap.tailAfter(pos) else ByteArray(0))
         val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
-        val route = WakePolicy.routeHit(ChatState.visible, keyguard.isKeyguardLocked, WakeChannel.available)
+        val route = WakePolicy.routeHit(
+            ChatState.visible,
+            keyguard.isKeyguardLocked,
+            WakeChannel.available,
+            StationState.active,
+        )
         VoiceLog.i("wake-hit route=${route.name.lowercase()}")
         if (route == HitRoute.CHAT) askChat() else openOverlay()
     }

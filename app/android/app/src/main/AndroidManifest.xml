@@ -75,6 +75,30 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize" />
+        <!-- Station mode (WP99): over the lock screen, own task, not in recents. Started only by
+             StationChannel and StationTileService. -->
+        <activity
+            android:name=".StationActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="app.wendelin.station"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/StationTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true" />
+        <!-- Quick settings tile that starts the station mode. -->
+        <service
+            android:name=".StationTileService"
+            android:label="@string/station_tile_label"
+            android:icon="@drawable/ic_stat_wendelin"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
         <!-- Standard assistant (long press on the power button, assistant gesture). Bound only by
              the system (BIND_VOICE_INTERACTION). -->
         <service

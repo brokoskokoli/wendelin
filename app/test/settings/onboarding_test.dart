@@ -25,7 +25,7 @@ TestEnv firstStart({RecordingFactory? factory}) => TestEnv(
 );
 
 /// Tall enough for the integrations step (more tiles than fit in 1400).
-const onboardingTallView = Size(390, 1600);
+const onboardingTallView = Size(390, 1700);
 
 Future<ProviderContainer> pumpApp(WidgetTester tester, TestEnv env) async {
   setView(tester, onboardingTallView);

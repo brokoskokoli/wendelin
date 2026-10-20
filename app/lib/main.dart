@@ -12,6 +12,7 @@ import 'platform/recognizer/device_recognizer_engines.dart';
 import 'platform/screen_protection.dart';
 import 'platform/secure_secret_store.dart';
 import 'platform/wake/device_wake_parts.dart';
+import 'station/ui/station_app.dart';
 import 'ui/overlay/assistant_overlay.dart';
 import 'ui/theme/app_theme.dart';
 import 'voice/voice_log.dart';
@@ -54,6 +55,16 @@ Future<void> assistantMain() async {
       if (kDebugMode) ...await deviceTestOverrides(),
     ],
   );
+}
+
+/// Entry point of the station mode (`StationActivity` shows it over the lock
+/// screen, WP99): own engine like the overlay, no wake word chat.
+@pragma('vm:entry-point')
+Future<void> stationMain() async {
+  voiceLogEngine = 'station';
+  WidgetsFlutterBinding.ensureInitialized();
+  final (storage, startup) = await openAppStorage();
+  await runWendelinApp(storage, startup, const StationApp());
 }
 
 /// Entry point of the system speech recognizer (`WendelinRecognitionService`

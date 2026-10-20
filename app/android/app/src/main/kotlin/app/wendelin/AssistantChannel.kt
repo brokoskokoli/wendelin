@@ -111,9 +111,16 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
                 )
             }
             "finish" -> {
-                VoiceLog.i("overlay-finish finishing=${activity.isFinishing}")
-                activity.finish()
-                result.success(null)
+                // The station closes only after the keyguard was dismissed (WP99).
+                val done = StationPolicy.finishIfAllowed(
+                    activity is StationActivity,
+                    keyguard().isKeyguardLocked,
+                ) {
+                    VoiceLog.i("overlay-finish finishing=${activity.isFinishing}")
+                    activity.finish()
+                }
+                if (!done) VoiceLog.i("station-finish refused (device locked)")
+                result.success(done)
             }
             else -> result.notImplemented()
         }

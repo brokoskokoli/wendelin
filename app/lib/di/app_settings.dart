@@ -1,6 +1,7 @@
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
 
+import '../station/station_prefs.dart';
 import 'preference_models.dart';
 import 'weather_config.dart';
 
@@ -142,5 +143,16 @@ abstract final class AppSettings {
       throw const FormatException('obsidian.prefs: Objekt erwartet');
     },
     defaultValue: const ObsidianPrefs(),
+  );
+
+  /// Station mode: screen mode, quiet hours, hidden areas (WP99).
+  static final station = SettingKey<StationPrefs>(
+    'station.prefs',
+    encode: (p) => p.toJson(),
+    decode: (json) {
+      if (json is Map<String, Object?>) return StationPrefs.fromJson(json);
+      throw const FormatException('station.prefs: Objekt erwartet');
+    },
+    defaultValue: const StationPrefs(),
   );
 }

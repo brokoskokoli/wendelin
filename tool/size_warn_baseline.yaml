@@ -9,7 +9,6 @@ app/lib/agent/conversation_reducer.dart#ConversationReducer.apply: 128
 app/lib/ui/attestation/attestation_texts.dart#attestationMessage: 100
 app/lib/ui/attestation/stage_explanations.dart#_explanations: 123
 app/lib/ui/overlay/overlay_sheet.dart#OverlaySheet._content: 92
-app/lib/ui/screens/main_screen.dart#_MainScreenState.build: 86
 app/lib/ui/settings/attestation_log_detail.dart#AttestationLogDetailScreen.build: 101
 app/lib/ui/settings/attestation_log_screen.dart#_LogState.build: 85
 app/lib/ui/settings/model_download_row.dart#ModelDownloadRow.build: 100
