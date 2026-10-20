@@ -116,6 +116,23 @@ cases:
       });
     }
 
+    test('expect darf nur aus forbid bestehen; Backends M5 sind erlaubt', () {
+      final c = parseCaseFile(
+        'language: de\ncases: [{id: a, prompt: p, '
+        'setup: {backends: [gtasks, spotify, weather, station, notes]}, '
+        'expect: {forbid: [memory__save]}}]',
+      ).single;
+      expect(c.expect.forbid, ['memory__save']);
+      expect(c.expect.calls, isEmpty);
+      expect(c.setup.backends, {
+        'gtasks',
+        'spotify',
+        'weather',
+        'station',
+        'notes',
+      });
+    });
+
     test('Fehlermeldung nennt Datei und Fall', () {
       expect(
         () => parseCaseFile(

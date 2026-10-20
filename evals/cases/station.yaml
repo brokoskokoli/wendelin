@@ -1,0 +1,37 @@
+# Stationsmodus (WP112): station__start; Beenden geht nicht per Sprache.
+cases:
+  - id: de-station-start
+    language: de
+    category: station
+    prompt: Starte den Stationsmodus.
+    setup: {backends: [station]}
+    expect:
+      calls:
+        - tool: station__start
+
+  - id: de-station-beenden
+    language: de
+    category: station
+    prompt: Beende den Stationsmodus wieder.
+    note: Beenden geht nur am Bildschirm; kein Tool darf laufen.
+    setup: {backends: [station]}
+    expect:
+      no_tools: true
+
+  - id: en-station-start
+    language: en
+    category: station
+    prompt: Switch the phone to station mode.
+    setup: {backends: [station]}
+    expect:
+      calls:
+        - tool: station__start
+
+  - id: fr-station-start
+    language: fr
+    category: station
+    prompt: Lance le mode station.
+    setup: {backends: [station]}
+    expect:
+      calls:
+        - tool: station__start

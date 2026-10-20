@@ -1,0 +1,126 @@
+# Spotify (WP112). Fake-Katalog: Lena Nord (Künstlerin; Lieder Sternenstaub
+# und Nachtfahrt, Album Leuchtfeuer), The Tidewater (Harbor Lights),
+# Playlist Morgenroutine. Läuft gerade: Nachtfahrt.
+cases:
+  - id: de-spotify-kuenstlerin
+    language: de
+    category: spotify
+    prompt: Spiel Lena Nord auf Spotify.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - any_of:
+            - tool: spotify__play
+              args: {query: {contains: Lena}}
+            - tool: spotify__play
+              args: {uri: {contains: lenanord}}
+
+  - id: de-spotify-titel
+    language: de
+    category: spotify
+    prompt: Spiel Sternenstaub von Lena Nord.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - any_of:
+            - tool: spotify__play
+              args: {query: {contains: Sternenstaub}}
+            - tool: spotify__play
+              args: {uri: {contains: sternenstaub}}
+
+  - id: de-spotify-pause
+    language: de
+    category: spotify
+    prompt: Pausier die Musik.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - tool: spotify__pause
+
+  - id: de-spotify-laeuft
+    language: de
+    category: spotify
+    prompt: Was läuft gerade auf Spotify?
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - tool: spotify__now_playing
+      text: {contains: Nachtfahrt}
+
+  - id: de-spotify-warteschlange
+    language: de
+    category: spotify
+    prompt: Häng Harbor Lights von The Tidewater hinten in die Warteschlange.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - any_of:
+            - tool: spotify__queue_add
+              args: {query: {contains: Harbor}}
+            - tool: spotify__queue_add
+              args: {uri: {contains: harborlights}}
+
+  - id: en-spotify-skip
+    language: en
+    category: spotify
+    prompt: Skip this song.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - tool: spotify__next
+
+  - id: en-spotify-album
+    language: en
+    category: spotify
+    prompt: Play the album Leuchtfeuer on Spotify.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - any_of:
+            - tool: spotify__play
+              args: {query: {contains: Leuchtfeuer}}
+            - tool: spotify__play
+              args: {uri: {contains: leuchtfeuer}}
+
+  - id: en-spotify-playlist
+    language: en
+    category: spotify
+    prompt: Put on the Morgenroutine playlist.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - any_of:
+            - tool: spotify__play
+              args: {query: {contains: Morgenroutine}}
+            - tool: spotify__play
+              args: {uri: {contains: morgenroutine}}
+
+  - id: fr-spotify-precedent
+    language: fr
+    category: spotify
+    prompt: Reviens au morceau précédent.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - tool: spotify__previous
+
+  - id: fr-spotify-recherche
+    language: fr
+    category: spotify
+    prompt: Cherche sur Spotify des chansons de The Tidewater.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - tool: spotify__search
+          args:
+            query: {contains: Tidewater}
+
+  - id: fr-spotify-en-cours
+    language: fr
+    category: spotify
+    prompt: Qu'est-ce qui passe en ce moment ?
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - tool: spotify__now_playing
+      text: {contains: Nachtfahrt}

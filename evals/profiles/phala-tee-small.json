@@ -12,6 +12,11 @@
   "options": {
     "teeModelsOnly": true
   },
+  "modelOptions": {
+    "openai/gpt-oss-120b": {
+      "reasoningEffort": "low"
+    }
+  },
   "catalog": {
     "models": {
       "qwen/qwen-2.5-7b-instruct": {

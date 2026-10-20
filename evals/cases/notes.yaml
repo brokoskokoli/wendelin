@@ -1,0 +1,126 @@
+# Notizen (Obsidian, WP112). Fake-Vault: Projekte/Gartenhaus (Material mit
+# Holzlatten und Dachpappe, Status), Ideen/Reisen (Wunschziele),
+# Rezepte/Linsensuppe (Zutaten, Zubereitung), Inbox/Hinweis.
+cases:
+  - id: de-notes-lesen
+    language: de
+    category: notes
+    prompt: Was steht in meiner Notiz Gartenhaus unter Material?
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__read_note
+          args:
+            path: {contains: Gartenhaus}
+            heading: {contains: Material}
+      text: {contains: Holzlatten}
+
+  - id: de-notes-suche
+    language: de
+    category: notes
+    prompt: Such in meinen Notizen nach Linsen.
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__search_notes
+          args:
+            query: {contains: Linsen}
+      text: {contains: Linsensuppe}
+
+  - id: de-notes-anhaengen
+    language: de
+    category: notes
+    prompt: Schreib in die Notiz Reisen unter Wunschziele, Island.
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__append_to_note
+          args:
+            path: {contains: Reisen}
+            text: {contains: Island}
+            heading: {contains: Wunschziele}
+
+  - id: de-notes-tagesnotiz
+    language: de
+    category: notes
+    prompt: Notier in meiner Tagesnotiz, Sven wegen der Leiter anrufen.
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__append_daily_note
+          args:
+            text: {contains: Leiter}
+
+  - id: en-notes-create
+    language: en
+    category: notes
+    prompt: Create a note called Ideas/Birdhouse with the text cedar wood.
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__create_note
+          args:
+            path: {contains: Birdhouse}
+            content: {contains: cedar}
+
+  - id: en-notes-folder
+    language: en
+    category: notes
+    prompt: What notes are in my Rezepte folder?
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__list_folder
+          args:
+            folder: {contains: Rezepte}
+      text: {contains: Linsensuppe}
+
+  - id: en-notes-replace
+    language: en
+    category: notes-external
+    prompt: Replace the Status section in my Gartenhaus note with Building started.
+    note: external-Aktion (Diff) – muss bestätigt werden (automatisch „ja“).
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__replace_section
+          args:
+            path: {contains: Gartenhaus}
+            heading: {contains: Status}
+            content: {contains: Building}
+      confirmed: true
+
+  - id: fr-notes-lire
+    language: fr
+    category: notes
+    prompt: Lis-moi la note Linsensuppe, section Zubereitung.
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__read_note
+          args:
+            path: {contains: Linsensuppe}
+            heading: {contains: Zubereitung}
+      text: {contains: "20"}
+
+  - id: fr-notes-journal
+    language: fr
+    category: notes
+    prompt: Ajoute à ma note du jour, appeler le garage.
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__append_daily_note
+          args:
+            text: {contains: garage}
+
+  - id: fr-notes-recherche
+    language: fr
+    category: notes
+    prompt: Cherche dans mes notes tout ce qui parle de Madeira.
+    setup: {backends: [notes]}
+    expect:
+      calls:
+        - tool: obsidian__search_notes
+          args:
+            query: {contains: Madeira}

@@ -1,0 +1,70 @@
+# Web: Suche und Seite lesen (WP112); Treffer und Seite sind Fakes.
+cases:
+  - id: de-web-fetch-rezept
+    language: de
+    category: web
+    prompt: Lies mir die Seite https://example.org/rezept vor.
+    expect:
+      calls:
+        - tool: web__fetch
+          args:
+            url: {contains: example.org/rezept}
+      text: {contains: Testseite}
+
+  - id: de-web-schwimmbad
+    language: de
+    category: web
+    prompt: Such nach den Öffnungszeiten vom Schwimmbad in Kiel.
+    setup:
+      search_results:
+        - {title: Stadtbad Kiel, url: "https://example.org/stadtbad", snippet: "Öffnungszeiten: Montag bis Freitag 6 bis 21 Uhr"}
+    expect:
+      calls:
+        - tool: web__search
+          args:
+            query: {contains: Schwimmbad}
+      text: {contains: "21"}
+
+  - id: en-web-chess
+    language: en
+    category: web
+    prompt: Look up who won the chess tournament in Reykjavik last week.
+    setup:
+      search_results:
+        - {title: Reykjavik Open results, url: "https://example.org/chess", snippet: "Ingrid Solheim won the Reykjavik Open on Sunday."}
+    expect:
+      calls:
+        - tool: web__search
+          args:
+            query: {contains: Reykjavik}
+      text: {contains: Solheim}
+
+  - id: en-web-fetch-guide
+    language: en
+    category: web
+    prompt: Open https://example.org/guide and tell me what it says.
+    expect:
+      calls:
+        - tool: web__fetch
+          args:
+            url: {contains: example.org/guide}
+
+  - id: fr-web-ratatouille
+    language: fr
+    category: web
+    prompt: Cherche sur internet la recette de la ratatouille.
+    expect:
+      calls:
+        - tool: web__search
+          args:
+            query: {contains: ratatouille}
+
+  - id: fr-web-lire-page
+    language: fr
+    category: web
+    prompt: Lis-moi la page https://example.org/article.
+    expect:
+      calls:
+        - tool: web__fetch
+          args:
+            url: {contains: example.org/article}

@@ -1,0 +1,104 @@
+# Mehrschritt-Fälle über mehrere Integrationen (WP112).
+cases:
+  - id: de-multi-wetter-termin
+    language: de
+    category: multistep
+    prompt: Wie wird das Wetter morgen in Kiel, und trag mir danach um 15 Uhr einen Spaziergang ein.
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {contains: Kiel}
+        - tool: calendar__create_event
+          args:
+            title: {contains: Spaziergang}
+            start: {at: "+1d 15:00"}
+
+  - id: de-multi-timer-musik
+    language: de
+    category: multistep
+    prompt: Stell einen Timer auf 20 Minuten und spiel dabei Morgenroutine.
+    setup: {backends: [spotify]}
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 1200
+        - any_of:
+            - tool: spotify__play
+              args: {query: {contains: Morgenroutine}}
+            - tool: spotify__play
+              args: {uri: {contains: morgenroutine}}
+
+  - id: de-multi-bring-aufgabe
+    language: de
+    category: multistep
+    prompt: Setz Hafermilch auf die Bring-Liste und leg mir die Aufgabe an, Getränke bestellen.
+    setup: {backends: [bring, gtasks]}
+    expect:
+      calls:
+        - tool: bring__add_items
+          args:
+            items: {contains: [Hafermilch]}
+        - tool: gtasks__add
+          args:
+            title: {contains: Getränke}
+
+  - id: en-multi-flight-alarm
+    language: en
+    category: multistep
+    prompt: Add a flight to Madeira on Friday at 7 am to my calendar and set an alarm for 4:45 that morning.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: Madeira}
+            start: {at: "fri 07:00"}
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "04:45"}
+
+  - id: en-multi-note-task
+    language: en
+    category: multistep
+    prompt: Write buy sunscreen into my Reisen note under Wunschziele and add it to my tasks, too.
+    setup: {backends: [notes, gtasks]}
+    expect:
+      calls:
+        - tool: obsidian__append_to_note
+          args:
+            path: {contains: Reisen}
+            text: {contains: sunscreen}
+        - tool: gtasks__add
+          args:
+            title: {contains: sunscreen}
+
+  - id: fr-multi-meteo-agenda
+    language: fr
+    category: multistep
+    prompt: Dis-moi s'il va pleuvoir à Lyon demain et ajoute une promenade à 15h.
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {contains: Lyon}
+        - tool: calendar__create_event
+          args:
+            title: {contains: promenade}
+            start: {at: "+1d 15:00"}
+
+  - id: fr-multi-liste-minuteur
+    language: fr
+    category: multistep
+    prompt: Ajoute des pâtes à ma liste Bring et mets un minuteur de 11 minutes.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__add_items
+          args:
+            items: {contains: [pâtes]}
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 660

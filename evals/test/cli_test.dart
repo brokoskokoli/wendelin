@@ -283,4 +283,73 @@ void main() {
       expect(out, isNot(contains('test-key-123')));
     },
   );
+
+  group('Anfrage-Felder je Modell (modelOptions, WP112)', () {
+    /// First request body of a run of `-c de-cal-tauchen` with [profile].
+    Future<Map<String, Object?>> requestOf(
+      String profile, {
+      String? model,
+      String key = 'PHALA_API_KEY',
+    }) async {
+      final bodies = <String>[];
+      final client = MockClient((req) async {
+        bodies.add(req.body);
+        return http.Response('{}', 401);
+      });
+      final (code, _, err) = await run(
+        [
+          '-p',
+          'profiles/$profile.json',
+          '-c',
+          'de-cal-tauchen',
+          if (model != null) ...['-m', model],
+        ],
+        env: {key: 'test-key-123'},
+        client: client,
+      );
+      expect(code, 0, reason: err);
+      expect(bodies, isNotEmpty);
+      return jsonDecode(bodies.first) as Map<String, Object?>;
+    }
+
+    Future<Map<String, Object?>> tinfoil(String? model) =>
+        requestOf('tinfoil-tee', model: model, key: 'TINFOIL_API_KEY');
+
+    test(
+      'Tinfoil gpt-oss-120b: reasoning_effort low, kein Template-Feld',
+      () async {
+        final body = await tinfoil(null);
+        expect(body['model'], 'gpt-oss-120b');
+        expect(body['reasoning_effort'], 'low');
+        expect(body, isNot(contains('chat_template_kwargs')));
+      },
+    );
+
+    test('Tinfoil gemma4-31b: enable_thinking false, sonst nichts', () async {
+      final body = await tinfoil('gemma4-31b');
+      expect(body['model'], 'gemma4-31b');
+      expect(body['chat_template_kwargs'], {'enable_thinking': false});
+      expect(body, isNot(contains('reasoning_effort')));
+    });
+
+    test('Tinfoil deepseek-v4-1-flash: thinking false', () async {
+      final body = await tinfoil('deepseek-v4-1-flash');
+      expect(body['chat_template_kwargs'], {'thinking': false});
+      expect(body, isNot(contains('reasoning_effort')));
+    });
+
+    test('Phala gpt-oss-120b: reasoning low, aci_verified bleibt', () async {
+      final body = await requestOf(
+        'phala-tee-small',
+        model: 'openai/gpt-oss-120b',
+      );
+      expect(body['reasoning_effort'], 'low');
+      expect((body['provider'] as Map)['aci_verified'], isTrue);
+    });
+
+    test('Phala anderes Modell: kein reasoning_effort', () async {
+      final body = await requestOf('phala-tee-small');
+      expect(body, isNot(contains('reasoning_effort')));
+    });
+  });
 }
