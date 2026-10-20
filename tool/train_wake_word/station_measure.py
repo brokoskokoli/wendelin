@@ -183,6 +183,11 @@ def exclusion_names(clips, scan):
     return [c["name"] for c in clips if scan[c["name"]]["hit"] or scan[c["name"]].get("hit2") or c["name"].startswith("b6-")]
 
 
+def scan_current(entry, n, need_other):
+    """Gilt ein Cache-Eintrag des Negativscans noch? Gleiche Laenge `n`, und mit zweitem Erkenner (`need_other`) muss `hit2` vorliegen."""
+    return entry is not None and entry["n"] == n and (not need_other or "hit2" in entry)
+
+
 def check_pairs(files_a, files_b):
     """Positivmengen „Wendelin“/„Hey Wendelin“ muessen dieselben Dateinamen haben (gleiche Saetze, Tempi, Rausch-Seeds)."""
     assert [os.path.basename(f) for f in files_a] == [os.path.basename(f) for f in files_b], "Paare passen nicht"
@@ -191,7 +196,8 @@ def check_pairs(files_a, files_b):
 def pick_neg(args, rec_plain, rec_other=None, cache=None):
     """Kurze Clips komplett, lange Clips (1..neg_long_max, je andere Stimme) die ersten --neg-min Minuten.
     Clips, deren Transkript "Wendelin" enthaelt (oder b6-*), werden ausgeschlossen. WP111: mit `rec_other` (zweiter, unabhaengiger
-    Erkenner, Whisper) und `cache` entscheidet die Oder-Verknuepfung beider Erkenner; die Textvorlagen der Clips werden zusaetzlich geprueft."""
+    Erkenner, Whisper) und `cache` entscheidet die Oder-Verknuepfung beider Erkenner (`exclusion_names`). Textvorlagen der Clips
+    gehen nicht ein; der Ausschluss haengt nur an den Erkenner-Treffern und der Namensregel b6-*."""
     long_max = getattr(args, "neg_long_max", 8)
     clips = []
     for f in sorted(glob.glob(f"{KWS}/data/neg/*.wav")):
@@ -206,7 +212,7 @@ def pick_neg(args, rec_plain, rec_other=None, cache=None):
     cache = cache or f"{WORK}/neg_scan.json"
     scan = json.load(open(cache)) if os.path.exists(cache) else {}
     for c in clips:
-        if c["name"] in scan and scan[c["name"]]["n"] == len(c["x"]) and (rec_other is None or "hit2" in scan[c["name"]]):
+        if scan_current(scan.get(c["name"]), len(c["x"]), rec_other is not None):
             continue
         chunks = [c["x"][i:i + 20 * SR] for i in range(0, len(c["x"]), 20 * SR)]
         texts = [decode(rec_plain, y) for y in chunks]

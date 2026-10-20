@@ -27,6 +27,7 @@ class HeyRule(unittest.TestCase):
 
     def test_funktionswort_trennt(self):
         self.assertFalse(K.matches_hey_wake_word("hey in wendelin"))
+        self.assertFalse(K.matches_hey_wake_word("hey wendel in der Küche"))   # Funktionswort nach dem Teilwort trennt nicht zusammen
 
 
 class Stats(unittest.TestCase):
@@ -73,6 +74,13 @@ class Exclusion(unittest.TestCase):
                 "d.wav": {"hit": False},                    # ohne zweiten Erkenner
                 "b6-x.wav": {"hit": False, "hit2": False}}
         self.assertEqual(S.exclusion_names(clips, scan), ["b.wav", "c.wav", "b6-x.wav"])
+
+    def test_cache_neuscan(self):
+        self.assertTrue(S.scan_current({"n": 5, "hit": False}, 5, False))
+        self.assertTrue(S.scan_current({"n": 5, "hit": False, "hit2": False}, 5, True))
+        self.assertFalse(S.scan_current({"n": 5, "hit": False}, 5, True))     # ohne Whisper-Treffer-Feld: neu scannen
+        self.assertFalse(S.scan_current({"n": 6, "hit": False, "hit2": False}, 5, True))
+        self.assertFalse(S.scan_current(None, 5, False))
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ HEY = ["Hey Wendelin", "Hey, Wendelin", "Hey Wendelin.", "Hey Wendelin!", "Hey, 
 CONF2 = ["Hey Wendel", "Hey Berlin", "Hey Wenzel", "Hey Wendelstein", "hey, wenn der Wind", "hey, wenn die Linie", "Hey Windel",
          "Hey Gwendolin", "Gwendolin", "Wendolin", "wenn die Linie", "Hey Wendy", "Hey Mandolin", "Hey Vendetta", "Hey Madeleine",
          "Hey Wendehals", "Hey Kendall", "Hey Merlin", "Hey Marlin", "Hey Vanille", "Hey Wende", "Hey Handel", "Hey Wenden",
-         "Hey Wendelin Müller", "Hey Heidelin", "Hey Pendel", "Hey Wandern", "Hey Wetter", "Hey Mandy", "Hey Mama"]
+         "Hey Heidelin", "Hey Pendel", "Hey Wandern", "Hey Wetter", "Hey Mandy", "Hey Mama"]
 # aehnlich klingende Woerter/Phrasen (Negative)
 CONF = ["Wendel", "Wendeltreppe", "Wendelstein", "Vanille", "Berlin", "Wenden", "Wende", "Windel",
         "Mandolin", "Vendetta", "Wendy", "Hey Wendy", "Handelin", "Kendall", "Wenig", "Verwendet",
