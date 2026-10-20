@@ -321,7 +321,6 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
             conversation: conversation,
             voice: voice,
             mic: mic,
-            hearing: ref.watch(bargeListeningProvider),
             micDeniedByAndroid: _micDeniedByAndroid,
             onAllowMicrophone: () => unawaited(_allowMicrophone()),
             microphoneAccess: _microphoneAccess,

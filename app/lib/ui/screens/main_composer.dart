@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
 import '../../di/providers.dart';
+import '../../di/voice_providers.dart';
 import '../../l10n/l10n.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
@@ -24,7 +25,6 @@ class MainComposer extends ConsumerWidget {
     required this.conversation,
     required this.voice,
     required this.mic,
-    this.hearing = false,
     required this.micDeniedByAndroid,
     required this.onAllowMicrophone,
     required this.microphoneAccess,
@@ -38,9 +38,6 @@ class MainComposer extends ConsumerWidget {
 
   /// State of the microphone button.
   final MicState mic;
-
-  /// Wendelin hört während der Ausgabe mit (WP113).
-  final bool hearing;
 
   /// Android denied the permission (notice offers the settings).
   final bool micDeniedByAndroid;
@@ -57,7 +54,7 @@ class MainComposer extends ConsumerWidget {
     child: Composer(
       running: conversation.running,
       mic: mic,
-      hearing: hearing,
+      hearing: ref.watch(bargeListeningProvider),
       levels: voice.levels,
       followUpUntil: voice.followUpUntil,
       now: ref.read(clockProvider).now,

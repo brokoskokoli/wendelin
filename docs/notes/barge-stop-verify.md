@@ -28,9 +28,15 @@ Begründung: gemessene „Stopp“-Werte 0,72–0,94 gehen als Kandidat durch (0
 
 Laut K40/K47 gilt das eingelernte „Stopp“ nur während der Sprachausgabe (der Barge-in-Zuhörer startet mit dem Zustand `speaking`, auch über „thinking“ hinweg, und endet mit dem Gespräch). Im Ruhezustand hört nur der Wake-Word-Dienst auf „Wendelin“, und beim offenen Zuhören wird „Stopp“ aus dem Transkript gewertet (`isStopWord`: nur Stopp- und Füllwörter). Damit ist das Verhalten laut Stefan („geht auch nicht, wenn Wendelin nicht spricht“) wie im Konzept vorgesehen: kein Fehler, keine Änderung. Falls gewünscht, wäre ein „Stopp“ im Ruhezustand eine neue Anforderung (Konzeptänderung).
 
+## Gleichzeitiger Whisper-Zugriff (Stufe 2 und Folge-Zuhören)
+
+Kein Fix nötig. Stufe 2 nutzt das `SpeechToText` der Pipeline; alle Aufrufe laufen über `IsolateWhisperBackend.transcribe` (`app/lib/platform/voice/whisper_sherpa.dart`, `_queue`) in einem einzigen Isolat nacheinander ab, auch die der anderen Engines (`publishSharedWhisper`, ADR 0008). Es laufen nie zwei Läufe zugleich. Folge: Läuft bei Ende der Ausgabe noch eine Gegenprüfung (höchstens eine, 2,5 s Audio, `verifyTimeout` 6 s), wartet die Erkennung der Folgefrage um deren Rechenzeit (etwa 0,3 bis 1 s). Das ist vertretbar; die Gegenprüfung wird mit `stop()` verworfen (Generation), blockiert aber die Queue bis zum Ende des Laufs.
+
 ## Log (ohne Inhalt)
 
 - `barge-config … smargin=… verify=true|false`
 - `barge-cand kind=wake|stop busy=true|false` mit den Maxima (`sim`, `stop`, `thr`, `sthr`)
 - `barge-verify result=stop|wake|no|echo|skip ms=…` (nur das erkannte Schlüsselwort, nie der Text)
 - `barge-hit` wie bisher, jetzt erst nach `barge-verify`.
+
+E2E: `app/integration_test/support/barge_log.dart` prüft das Log aus dem Overlay (Datei `files/e2e/voice.log`): kein `barge-hit` ohne `barge-cand` und passendes `barge-verify` (Regeln in `app/test/voice/barge_log_check_test.dart`).

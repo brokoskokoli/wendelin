@@ -144,24 +144,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
         modelThreshold: null,
         templateThreshold: stop.threshold,
       );
-      // WP80: no „Stopp“ without speech-level sound and without a clear rise
-      // over the background similarity.
-      final floor = _stopFloor;
-      if (stopDecision != null) {
-        final quiet = stopGate != null && !stopGate!.active;
-        final flat =
-            stopFloorGap > 0 &&
-            floor != null &&
-            _stopSeen >= stopFloorWarmup &&
-            stop.top < floor + stopFloorGap;
-        if (quiet || flat) stopDecision = null;
-      }
-      if (stops.isNotEmpty) {
-        _stopSeen++;
-        _stopFloor = floor == null
-            ? stop.top
-            : floor + (stop.top - floor) * 0.05;
-      }
+      stopDecision = _gateStop(stopDecision, stop.top, stops.isNotEmpty);
       // „Stopp“ is short: it counts only after [stopWindows] consecutive
       // windows above its threshold (a single spike is no hit).
       _stopRun = stopDecision == null ? 0 : _stopRun + 1;
@@ -202,6 +185,31 @@ final class CandidateWakeEngine implements WakeWordEngine {
     for (final t in sets)
       if (t.isCompatible(features.featureVersion)) t,
   ];
+
+  /// WP80: no „Stopp“ without speech-level sound and without a clear rise
+  /// over the background similarity ([top] = best similarity); also tracks
+  /// that background.
+  CandidateDecision? _gateStop(
+    CandidateDecision? decision,
+    double top,
+    bool hasStops,
+  ) {
+    final floor = _stopFloor;
+    if (decision != null) {
+      final quiet = stopGate != null && !stopGate!.active;
+      final flat =
+          stopFloorGap > 0 &&
+          floor != null &&
+          _stopSeen >= stopFloorWarmup &&
+          top < floor + stopFloorGap;
+      if (quiet || flat) decision = null;
+    }
+    if (hasStops) {
+      _stopSeen++;
+      _stopFloor = floor == null ? top : floor + (top - floor) * 0.05;
+    }
+    return decision;
+  }
 
   ({double? similarity, double? threshold, double margin, double top}) _closest(
     Float32List embedding,

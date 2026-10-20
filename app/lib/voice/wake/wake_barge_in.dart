@@ -119,73 +119,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
         _empty = true;
         voiceLog('barge-in-off', {'reason': 'no-templates'});
       } else {
-        voiceLog('barge-stop-word', {'learned': stops.isNotEmpty});
-        final override = await marginOverride?.call();
-        final staged = verifier != null;
-        final margin = override ?? (staged ? candidateWakeMargin : extraMargin);
-        final stopMargin =
-            override ?? (staged ? candidateStopMargin : extraMargin);
-        List<WakeTemplates> strictly(List<WakeTemplates> l, double m) => [
-          for (final t in l)
-            t.withThreshold((t.threshold + m).clamp(0.0, 0.99)),
-        ];
-        final strict = strictly(sets, margin);
-        final strictStops = strictly(stops, stopMargin);
-        double? lowest(List<WakeTemplates> l) => l.isEmpty
-            ? null
-            : l.map((t) => t.threshold).reduce((a, b) => a < b ? a : b);
-        final meter = _meter = BargeMeter(
-          threshold: lowest(strict),
-          stopThreshold: lowest(strictStops),
-        );
-        voiceLog('barge-config', {
-          'margin': margin,
-          'smargin': stopMargin,
-          'verify': staged,
-          'thr': meter.threshold,
-          'sthr': meter.stopThreshold ?? -1,
-        });
-        final gate = SpeechGate();
-        late final CandidateWakeEngine engine;
-        engine = CandidateWakeEngine(
-          features: features(),
-          templates: strict.first,
-          moreTemplates: strict.skip(1).toList(),
-          stopTemplates: strictStops,
-          modelThreshold: null,
-          // WP80: „Stopp“ is judged on the tail of the window (the word, not
-          // the background), only with speech-level sound and clearly above
-          // the sliding background similarity.
-          stopTailShare: stopTail,
-          stopGate: gate,
-          stopFloorGap: stopFloorGap,
-          onWindow: (main, stop, _) => meter.onWindow(
-            main,
-            stop,
-            floor: engine.stopFloor,
-            quiet: gate.floor,
-            peak: gate.peak,
-          ),
-        );
-        final inner = WakeWordBargeInDetector(
-          audio: MeteredAudioInput(audio, meter),
-          engine: MeteredEngine(engine, meter),
-          verifier: verifier?.call(_spoken.toString),
-          // Scores and kind only; the word itself stays out of the log.
-          onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {
-            'kind': kind.name,
-            'busy': busy,
-            ...meter.maxima,
-          }),
-          onVerdict: (v, ms) =>
-              voiceLog('barge-verify', {'result': v.result, 'ms': ms}),
-        );
-        _sub = inner.signals.listen((signal) {
-          // Every hit leaves a line, with the best similarities so far.
-          voiceLog('barge-hit', {'kind': signal.code, ...?_meter?.maxima});
-          _signals.add(signal);
-        });
-        _inner = inner;
+        _inner = await _build(sets, stops);
       }
     }
     // A stop during the loading wins.
@@ -199,6 +133,79 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
         _diag = Timer.periodic(diagInterval, (_) => _meter?.flush());
       }
     }
+  }
+
+  /// Builds the engine and the detector from the templates (stage 1 with the
+  /// candidate margins, stage 2 when a [verifier] is set).
+  Future<WakeWordBargeInDetector> _build(
+    List<WakeTemplates> sets,
+    List<WakeTemplates> stops,
+  ) async {
+    voiceLog('barge-stop-word', {'learned': stops.isNotEmpty});
+    final override = await marginOverride?.call();
+    final staged = verifier != null;
+    final margin = override ?? (staged ? candidateWakeMargin : extraMargin);
+    final stopMargin = override ?? (staged ? candidateStopMargin : extraMargin);
+    List<WakeTemplates> strictly(List<WakeTemplates> l, double m) => [
+      for (final t in l) t.withThreshold((t.threshold + m).clamp(0.0, 0.99)),
+    ];
+    final strict = strictly(sets, margin);
+    final strictStops = strictly(stops, stopMargin);
+    double? lowest(List<WakeTemplates> l) => l.isEmpty
+        ? null
+        : l.map((t) => t.threshold).reduce((a, b) => a < b ? a : b);
+    final meter = _meter = BargeMeter(
+      threshold: lowest(strict),
+      stopThreshold: lowest(strictStops),
+    );
+    voiceLog('barge-config', {
+      'margin': margin,
+      'smargin': stopMargin,
+      'verify': staged,
+      'thr': meter.threshold,
+      'sthr': meter.stopThreshold ?? -1,
+    });
+    final gate = SpeechGate();
+    late final CandidateWakeEngine engine;
+    engine = CandidateWakeEngine(
+      features: features(),
+      templates: strict.first,
+      moreTemplates: strict.skip(1).toList(),
+      stopTemplates: strictStops,
+      modelThreshold: null,
+      // WP80: „Stopp“ is judged on the tail of the window (the word, not
+      // the background), only with speech-level sound and clearly above
+      // the sliding background similarity.
+      stopTailShare: stopTail,
+      stopGate: gate,
+      stopFloorGap: stopFloorGap,
+      onWindow: (main, stop, _) => meter.onWindow(
+        main,
+        stop,
+        floor: engine.stopFloor,
+        quiet: gate.floor,
+        peak: gate.peak,
+      ),
+    );
+    final inner = WakeWordBargeInDetector(
+      audio: MeteredAudioInput(audio, meter),
+      engine: MeteredEngine(engine, meter),
+      verifier: verifier?.call(_spoken.toString),
+      // Scores and kind only; the word itself stays out of the log.
+      onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {
+        'kind': kind.name,
+        'busy': busy,
+        ...meter.maxima,
+      }),
+      onVerdict: (v, ms) =>
+          voiceLog('barge-verify', {'result': v.result, 'ms': ms}),
+    );
+    _sub = inner.signals.listen((signal) {
+      // Every hit leaves a line, with the best similarities so far.
+      voiceLog('barge-hit', {'kind': signal.code, ...?_meter?.maxima});
+      _signals.add(signal);
+    });
+    return inner;
   }
 
   @override

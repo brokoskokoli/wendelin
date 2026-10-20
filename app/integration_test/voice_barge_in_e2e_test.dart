@@ -38,6 +38,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/testing.dart' show FakeTextToSpeech;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import 'support/barge_log.dart';
 import 'support/e2e.dart';
 import 'support/voice_e2e.dart';
 
@@ -48,6 +49,13 @@ import 'support/voice_e2e.dart';
 Future<void> assistantMain() async {
   voiceLogEngine = 'overlay';
   WidgetsFlutterBinding.ensureInitialized();
+  // Die Diagnosezeilen auch in eine Datei, damit der Test sie prüft
+  // (logcat gehört dem Aufrufer, `barge_log.dart`).
+  final log = File('${(await e2eDirectory()).path}/voice.log');
+  voiceLogSink = (l) {
+    debugPrint(l);
+    log.writeAsStringSync('$l\n', mode: FileMode.append);
+  };
   final (storage, startup) = await app.openAppStorage();
   await runWendelinApp(
     storage,
@@ -71,6 +79,8 @@ void main() {
       await waitForDeviceFiles();
       final e2e = await e2eDirectory();
       final wavs = '${e2e.path}/wake';
+      final voiceLogFile = File('${e2e.path}/voice.log');
+      if (voiceLogFile.existsSync()) voiceLogFile.deleteSync();
       addTearDown(() async {
         final spec = File('${e2e.path}/overlay.json');
         if (spec.existsSync()) spec.deleteSync();
@@ -163,6 +173,19 @@ void main() {
         texts,
         isNot(contains('ANTWORT-DREI')),
         reason: 'Nach dem Stoppwort darf keine weitere Antwort kommen',
+      );
+      // WP113 (K84): Kandidat -> Gegenprüfung -> Treffer, nie ein Treffer
+      // nach `no`/`echo`/`skip`.
+      final lines = voiceLogFile.readAsLinesSync();
+      expect(
+        bargeLogProblem(lines, hitKind: 'keyword-wake'),
+        isNull,
+        reason: lines.where((l) => l.contains('barge-')).join('\n'),
+      );
+      expect(
+        lines.where((l) => logField(l, 'kind') == 'keyword-stop'),
+        isNotEmpty,
+        reason: 'das Stoppwort am Ende muss ebenfalls gegengeprüft treffen',
       );
       await askHost('back');
     },
