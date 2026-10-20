@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:wendelin_evals/wendelin_evals.dart';
+import 'package:wendelin_providers/wendelin_providers.dart' show ModelPrice;
 
 void main() {
   EvalProfile load(String name) =>
@@ -41,11 +42,19 @@ void main() {
       'deepseek-v4-1-flash': (0.65, 1.45),
     };
     for (final MapEntry(key: model, value: (input, output)) in prices.entries) {
-      final price = p.catalog.lookup(model);
-      expect(price, isNotNull, reason: model);
-      expect((price!.input, price.output), (input, output), reason: model);
+      final entry = p.catalog.lookup(model);
+      expect(entry, isNotNull, reason: model);
+      final want = ModelPrice.usd(input: input, output: output);
+      expect(
+        (entry!.price.input, entry.price.output),
+        (want.input, want.output),
+        reason: model,
+      );
     }
-    expect(p.catalog.lookup('deepseek-v4-1-flash')!.cacheRead, 0.13);
+    expect(
+      p.catalog.lookup('deepseek-v4-1-flash')!.price.cacheRead,
+      ModelPrice.usd(input: 0, output: 0, cacheRead: 0.13).cacheRead,
+    );
   });
 
   test('modelOptions gelten für das gewählte Modell, nicht für andere', () {

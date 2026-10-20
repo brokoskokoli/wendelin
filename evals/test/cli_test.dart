@@ -43,9 +43,9 @@ void main() {
     final report =
         jsonDecode(File(path).readAsStringSync()) as Map<String, Object?>;
     final summary = report['summary']! as Map<String, Object?>;
-    // Das Demo-Skript beantwortet 10 von 40 Fällen richtig.
-    expect(summary['total'], 40);
-    expect(summary['passed'], 10);
+    // Das Demo-Skript beantwortet 15 von 150 Fällen richtig (Rest: weiß ich nicht).
+    expect(summary['total'], 150);
+    expect(summary['passed'], 15);
     expect(summary['skipped'], 2);
     expect(summary['gaveUp'], 1);
     expect(summary['escalated'], 0);
@@ -272,7 +272,7 @@ void main() {
         return http.Response('{}', 401);
       });
       final (code, out, err) = await run(
-        ['-p', 'profiles/phala-tee-small.json', '-n', '1'],
+        ['-p', 'profiles/phala-tee-small.json', '-c', 'de-cal-tauchen'],
         env: {'PHALA_API_KEY': 'test-key-123'},
         client: client,
       );
