@@ -8,6 +8,7 @@ import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import 'budget.dart';
 import 'case_backends.dart';
 import 'case_result.dart';
 import 'eval_case.dart';
@@ -72,6 +73,7 @@ final class EvalRunner {
     this.config = const AgentConfig(),
     this.voice = false,
     this.onlyIntegrations,
+    this.budget,
     GiveUpClassifier? giveUpClassifier,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier(),
        scorer = Scorer(time);
@@ -87,6 +89,9 @@ final class EvalRunner {
 
   /// Integration ids to register (reduced catalog, WP57); `null` = all.
   final Set<String>? onlyIntegrations;
+
+  /// Cost limit of the run (`--max-cost`); `null` = none.
+  final CostBudget? budget;
 
   /// Whether the request counts as spoken (WP41: speech hint, stage 2).
   final bool voice;
@@ -113,16 +118,29 @@ final class EvalRunner {
     bool includePending = false,
     void Function(CaseResult result)? onResult,
     bool Function()? shouldStop,
+    int repeat = 1,
   }) async {
+    if (repeat < 1) {
+      throw ArgumentError.value(repeat, 'repeat', 'muss ≥ 1 sein');
+    }
     final results = <CaseResult>[];
     for (final c in cases) {
-      final r = (shouldStop?.call() ?? false)
-          ? CaseResult.skipped(c, 'abgebrochen')
-          : c.pending && !includePending
-          ? CaseResult.skipped(c, 'pending: Integration fehlt noch')
-          : await runCase(c);
-      results.add(r);
-      onResult?.call(r);
+      for (var n = 1; n <= repeat; n++) {
+        final rep = repeat > 1 ? n : null;
+        final r = (shouldStop?.call() ?? false)
+            ? CaseResult.skipped(c, 'abgebrochen', repetition: rep)
+            : (budget?.exceeded ?? false)
+            ? CaseResult.skipped(c, 'budget', repetition: rep)
+            : c.pending && !includePending
+            ? CaseResult.skipped(
+                c,
+                'pending: Integration fehlt noch',
+                repetition: rep,
+              )
+            : (await runCase(c)).withRepetition(rep);
+        results.add(r);
+        onResult?.call(r);
+      }
     }
     return results;
   }
@@ -130,7 +148,16 @@ final class EvalRunner {
   /// Runs one case and scores it.
   Future<CaseResult> runCase(EvalCase c) async {
     try {
-      return scorer.score(c, await observe(c));
+      final observation = await observe(c);
+      if (budget?.stopReason case final why?) {
+        return CaseResult(
+          evalCase: c,
+          status: CaseStatus.error,
+          reasons: ['budget: $why'],
+          observation: observation,
+        );
+      }
+      return scorer.score(c, observation);
     } on Object catch (e) {
       return CaseResult(
         evalCase: c,
@@ -210,6 +237,7 @@ final class EvalRunner {
     String? spokenText;
     AgentFailed? failure;
     final watch = Stopwatch()..start();
+    loop:
     await for (final event in agent.run(
       UserInput(
         text: c.prompt,
@@ -240,6 +268,10 @@ final class EvalRunner {
           modelCalls++;
           usage = usage + u;
           cost = cost == null || costMicros == null ? null : cost + costMicros;
+          if (budget case final b? when !b.record(costMicros)) {
+            // Stop right here, mid-case: leaving the loop cancels the agent.
+            break loop;
+          }
         case AgentSpokenText(:final text):
           spokenText ??= text;
         case AgentDone(finalText: final text):

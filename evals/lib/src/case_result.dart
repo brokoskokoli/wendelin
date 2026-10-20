@@ -129,11 +129,31 @@ final class CaseResult {
     required this.status,
     this.reasons = const [],
     this.observation = const RunObservation(),
+    this.repetition,
   });
 
   /// A skipped case.
-  factory CaseResult.skipped(EvalCase c, String why) =>
-      CaseResult(evalCase: c, status: CaseStatus.skipped, reasons: [why]);
+  factory CaseResult.skipped(EvalCase c, String why, {int? repetition}) =>
+      CaseResult(
+        evalCase: c,
+        status: CaseStatus.skipped,
+        reasons: [why],
+        repetition: repetition,
+      );
+
+  /// This result as repetition [n] (`null` = no `--repeat`).
+  CaseResult withRepetition(int? n) => n == null
+      ? this
+      : CaseResult(
+          evalCase: evalCase,
+          status: status,
+          reasons: reasons,
+          observation: observation,
+          repetition: n,
+        );
+
+  /// Number of the repetition (1-based) with `--repeat` > 1, else `null`.
+  final int? repetition;
 
   /// The case.
   final EvalCase evalCase;
@@ -156,6 +176,7 @@ final class CaseResult {
     final c = evalCase;
     return {
       'id': c.id,
+      'repetition': ?repetition,
       'language': c.language,
       'category': c.category,
       'prompt': c.prompt,

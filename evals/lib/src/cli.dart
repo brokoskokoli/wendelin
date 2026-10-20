@@ -5,12 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
+import 'budget.dart';
 import 'case_result.dart';
 import 'eval_case.dart';
 import 'eval_profile.dart';
 import 'eval_runner.dart';
 import 'eval_time.dart';
 import 'fake_script.dart';
+import 'ledger.dart';
 import 'report.dart';
 import 'routing_table.dart';
 
@@ -37,6 +39,26 @@ ArgParser _parser() => ArgParser()
     'integrations',
     help: 'Nur diese Integrationen (kommagetrennt, z. B. calendar,alarms).',
   )
+  ..addOption(
+    'max-cost',
+    help:
+        'Kostengrenze in USD: der Lauf bricht ab (auch mitten im Fall), '
+        'sobald die Summe sie erreicht. Ohne Preis des Modells kein Start.',
+  )
+  ..addOption(
+    'repeat',
+    defaultsTo: '1',
+    help: 'Jeden Fall n-mal laufen lassen (Stabilität).',
+  )
+  ..addOption(
+    'ledger',
+    help: 'JSON-Bilanz: hängt je Lauf Anbieter, Modell, Fälle, Kosten an.',
+  )
+  ..addFlag(
+    'ledger-summary',
+    negatable: false,
+    help: 'Summe je Anbieter aus --ledger zeigen, kein Lauf.',
+  )
   ..addOption('now', defaultsTo: defaultNow, help: 'Fester „heute“-Zeitpunkt.')
   ..addOption('time-zone', defaultsTo: defaultTimeZone, help: 'IANA-Zone.')
   ..addFlag(
@@ -52,7 +74,7 @@ ArgParser _parser() => ArgParser()
   ..addFlag('help', abbr: 'h', negatable: false, help: 'Hilfe anzeigen.');
 
 /// Runs the eval CLI; returns the exit code (0 = ran, 64 = usage error,
-/// 1 = setup error, 130 = interrupted). [env] supplies the API key,
+/// 1 = setup error, 2 = stopped by `--max-cost`, 130 = interrupted). [env] supplies the API key,
 /// [client] the HTTP client for real providers. An event on [interrupt]
 /// (Ctrl+C) stops after the running case; the partial report is still
 /// printed and written.
@@ -63,6 +85,7 @@ Future<int> runCli(
   required StringSink err,
   http.Client? client,
   Stream<void>? interrupt,
+  DateTime Function()? today,
 }) async {
   final parser = _parser();
   final ArgResults args;
@@ -84,6 +107,20 @@ Future<int> runCli(
     out.write(formatRoutingTable(outcomes));
     return outcomes.every((o) => o.ok) ? 0 : 1;
   }
+  if (args.flag('ledger-summary')) {
+    final path = args.option('ledger');
+    if (path == null) {
+      err.writeln('--ledger-summary braucht --ledger <datei>');
+      return 64;
+    }
+    try {
+      out.write(renderLedgerSummary(readLedger(File(path))));
+      return 0;
+    } on FormatException catch (e) {
+      err.writeln('Fehler: ${e.message}');
+      return 1;
+    }
+  }
   final profilePath = args.option('profile');
   if (profilePath == null) {
     err.writeln('--profile fehlt\n\n${parser.usage}');
@@ -94,6 +131,20 @@ Future<int> runCli(
   if (limitText != null && (limit == null || limit < 1)) {
     err.writeln('--limit braucht eine Zahl ≥ 1');
     return 64;
+  }
+  final repeat = int.tryParse(args.option('repeat')!);
+  if (repeat == null || repeat < 1) {
+    err.writeln('--repeat braucht eine Zahl ≥ 1');
+    return 64;
+  }
+  CostBudget? budget;
+  if (args.option('max-cost') case final text?) {
+    final usd = double.tryParse(text);
+    if (usd == null || !(usd > 0) || usd.isInfinite) {
+      err.writeln('--max-cost braucht eine Zahl > 0 (USD)');
+      return 64;
+    }
+    budget = CostBudget(usd);
   }
 
   try {
@@ -115,6 +166,20 @@ Future<int> runCli(
       return 1;
     }
 
+    if (budget != null &&
+        profile.catalog.lookup(profile.profile.defaultModel) == null) {
+      err.writeln(
+        'Fehler: --max-cost, aber kein Preis für Modell '
+        '${profile.profile.defaultModel} (Preise über "catalog" im Profil '
+        'ergänzen) – Start verweigert',
+      );
+      return 1;
+    }
+    final ledgerPath = args.option('ledger');
+    final ledgerFile = ledgerPath == null ? null : File(ledgerPath);
+    // Read now: a broken ledger must stop the run before it costs money.
+    if (ledgerFile != null) readLedger(ledgerFile);
+
     final provider = buildProvider(profile, profileFile, time, env, client);
     final p = profile.profile;
     for (final model in [p.defaultModel]) {
@@ -135,10 +200,11 @@ Future<int> runCli(
       ),
       time: time,
       onlyIntegrations: args.option('integrations')?.split(',').toSet(),
+      budget: budget,
     );
     out.writeln(
       'Profil ${p.id} (${p.type.name}), Modell ${p.defaultModel}, '
-      '${cases.length} Fälle, heute = ${time.now} ${time.timeZone}',
+      '${cases.length} Fälle${repeat > 1 ? ' × $repeat' : ''}, heute = ${time.now} ${time.timeZone}',
     );
     var interrupted = false;
     final subscription = interrupt?.listen((_) {
@@ -154,6 +220,7 @@ Future<int> runCli(
         includePending: args.flag('include-pending'),
         onResult: (r) => out.writeln('  ${r.evalCase.id}: ${r.status.name}'),
         shouldStop: () => interrupted,
+        repeat: repeat,
       );
     } finally {
       await subscription?.cancel();
@@ -169,6 +236,12 @@ Future<int> runCli(
         'filter': ?filter,
         'limit': ?limit,
         'cases': cases.length,
+        if (repeat > 1) 'repeat': repeat,
+        if (budget != null) 'maxCostMicros': budget.limitMicros,
+        if (budget?.exceeded ?? false) ...{
+          'budgetExceeded': true,
+          'budgetReason': budget!.stopReason,
+        },
         if (interrupted) 'interrupted': true,
       },
       results: results,
@@ -182,6 +255,26 @@ Future<int> runCli(
       file.writeAsStringSync(report.encode());
       out.writeln('Report: $path');
     }
+    if (ledgerFile != null) {
+      appendLedger(
+        ledgerFile,
+        LedgerEntry(
+          provider: p.id,
+          providerType: p.type.name,
+          model: p.defaultModel,
+          cases: report.summary.total,
+          costUsd: report.summary.costMicros / 1e6,
+          unpricedCases: report.summary.unpricedCases,
+          budgetExceeded: budget?.exceeded ?? false,
+          date: _date((today ?? DateTime.now)()),
+        ),
+      );
+      out.writeln('Bilanz ergänzt: ${ledgerFile.path}');
+    }
+    if (budget?.exceeded ?? false) {
+      err.writeln('Abbruch: ${budget!.stopReason}');
+      return 2;
+    }
     return interrupted ? 130 : 0;
   } on FormatException catch (e) {
     err.writeln('Fehler: ${e.message}');
@@ -194,6 +287,10 @@ Future<int> runCli(
     return 1;
   }
 }
+
+String _date(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
 
 Directory _casesDir(String? option) {
   if (option != null) return Directory(option);
