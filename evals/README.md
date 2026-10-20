@@ -28,6 +28,10 @@ dart run wendelin_evals:run --profile profiles/claude-haiku.json --limit 5 --out
 | `--cases-dir` | Verzeichnis mit `*.yaml` (Standard `cases`) |
 | `--limit, -n` | höchstens n Fälle |
 | `--out, -o` | JSON-Report schreiben (`reports/*.local.json` ist von Git ausgenommen) |
+| `--max-cost` | Kostengrenze in USD je Lauf: nach **jedem** Modellaufruf wird die Summe geprüft; wird sie erreicht, bricht der Lauf sofort ab (auch mitten im Fall: dieser Fall ist `error` mit Grund `budget`, der Rest `skip` „budget“), Teilreport mit `meta.budgetExceeded`, Exit-Code 2. Fail-closed: ohne Preis für das Modell (Katalog/`catalog`) startet der Lauf nicht (Exit 1); ein Aufruf ohne Preis stoppt ebenfalls |
+| `--repeat` | jeden Fall n-mal (Standard 1, Stabilität); Report und Tabelle unterscheiden die Wiederholungen (`repetition`, `id#n`) |
+| `--ledger` | JSON-Bilanz: hängt je Lauf Anbieter (Profil-Id), Typ, Modell, Fälle, Kosten in USD und Datum an (ohne Keys/Header; ein kaputtes Ledger verhindert den Lauf) |
+| `--ledger-summary` | mit `--ledger`: Läufe, Fälle und Kosten je Anbieter summieren, kein Lauf |
 | `--now` | fester „heute“-Zeitpunkt, Standard `2026-11-18T09:00` (Mittwoch; bewusst nicht nahe am Beispieldatum 2026-10-15 der Tool-Beschreibungen) |
 | `--time-zone` | IANA-Zone, Standard `Europe/Berlin` |
 | `--include-pending` | auch Fälle mit `pending: true` laufen lassen |
@@ -36,6 +40,16 @@ Strg+C beendet den Lauf nach dem laufenden Fall: die restlichen Fälle
 werden als „abgebrochen“ übersprungen, Tabelle und Teilreport
 (`meta.interrupted: true`) werden trotzdem geschrieben, Exit-Code 130. Ein
 zweites Strg+C bricht sofort ab.
+
+Die Zusammenfassung nennt zur Trefferquote das **Wilson-95-%-Intervall**
+(auch `summary.passRateWilson95` im Report). Beispiel mit Grenze und
+Bilanz:
+
+```sh
+dart run wendelin_evals:run -p profiles/claude-sonnet.json --repeat 2 \
+  --max-cost 1.50 --ledger reports/ledger.local.json -o reports/sonnet.local.json
+dart run wendelin_evals:run --ledger reports/ledger.local.json --ledger-summary
+```
 
 Ausgabe: eine Zeile je Fall (Status, ms, Tokens, Kosten in Mikro-USD,
 Hinweise wie `aufgegeben`/`eskaliert(...)` und der erste Fehlgrund), danach
@@ -53,7 +67,16 @@ Der API-Key kommt ausschließlich aus einer Umgebungsvariable:
 | `profiles/openai-mini.json` | OpenAI, `gpt-5-mini` | `OPENAI_API_KEY` |
 | `profiles/phala-tee-small.json` | Phala/RedPill (TEE), `qwen/qwen-2.5-7b-instruct` (Preise weiterer TEE-Modelle im Profil) | `PHALA_API_KEY` |
 | `profiles/near-tee.json` | NEAR AI Cloud (TEE), `z-ai/glm-5.3-flash` (ohne Verschlüsselung und Prüfung gemessen, wie bei Phala) | `NEAR_AI_API_KEY` |
+| `profiles/claude-sonnet.json` | Anthropic, `claude-sonnet-5-5` (ohne Thinking, Preis aus dem eingebauten Katalog) | `ANTHROPIC_API_KEY` |
+| `profiles/tinfoil-tee.json` | Tinfoil (TEE), `gpt-oss-120b`, Basis-URL `https://inference.tinfoil.sh/v1`, ohne Attestierung gemessen. Modelle laut Doku (2026-10-20): `kimi-k3`, `glm-5-3`, `deepseek-v4-1-flash`, `gemma4-31b`, `gpt-oss-120b`, `llama3-3-70b`. **TODO:** Preise stehen weder in der Doku noch auf tinfoil.sh/pricing; vor dem Lauf unter `catalog` eintragen, sonst verweigert `--max-cost` den Start | `TINFOIL_API_KEY` |
 | `profiles/fake-demo.json` | Fake-Provider mit Skript | – |
+
+Preisquellen (USD je Million Tokens): Claude und OpenAI aus dem eingebauten
+Katalog (`model_catalog.dart`: Anthropic-Modellübersicht 2026-10,
+OpenAI-Listenpreise); Phala/RedPill und NEAR aus den Modellkatalogen der
+Anbieter (Stand der Läufe vom 13./14.10.2026, im Profil unter `catalog`);
+Tinfoil siehe oben (offen). Vor jedem Live-Lauf Preise prüfen und das Datum
+in der Notiz vermerken.
 
 Ist `authMethod.secretRef` ein Variablenname (`ANTHROPIC_API_KEY`), gilt
 dieser; sonst entscheidet der Typ (Anthropic → `ANTHROPIC_API_KEY`,

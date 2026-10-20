@@ -1,0 +1,15 @@
+{
+  "id": "tinfoil-tee",
+  "name": "Tinfoil TEE",
+  "type": "openaiCompatible",
+  "baseUrl": "https://inference.tinfoil.sh/v1",
+  "defaultModel": "gpt-oss-120b",
+  "privacy": "tee",
+  "authMethod": {
+    "kind": "apiKey",
+    "secretRef": "TINFOIL_API_KEY"
+  },
+  "options": {
+    "toolsOnly": true
+  }
+}

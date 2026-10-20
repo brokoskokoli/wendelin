@@ -253,15 +253,7 @@ final class EvalRunner {
           escalationConfirmations++;
           event.respond(true);
         case ToolCallFinished(:final call, :final outcome):
-          calls.add(
-            ObservedCall(
-              name: call.name,
-              args: call.tryDecodeArguments(),
-              rawArguments: call.argumentsJson,
-              isError: outcome.isError,
-              summary: outcome.summary,
-            ),
-          );
+          calls.add(_observedCall(call, outcome));
         case Escalated(:final toProfile, :final reason):
           escalations.add((to: toProfile, reason: reason));
         case UsageReported(usage: final u, :final costMicros):
@@ -300,6 +292,15 @@ final class EvalRunner {
       spokenText: spokenText,
     );
   }
+
+  static ObservedCall _observedCall(ToolCallBlock call, ToolOutcome outcome) =>
+      ObservedCall(
+        name: call.name,
+        args: call.tryDecodeArguments(),
+        rawArguments: call.argumentsJson,
+        isError: outcome.isError,
+        summary: outcome.summary,
+      );
 
   Future<(List<Integration>, MemoryStorePort)> _integrations(
     EvalCase c,
