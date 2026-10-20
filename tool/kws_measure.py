@@ -267,6 +267,21 @@ def matches_wake_word(text, max_dist=2):
     return False
 
 
+HEY_WORDS = {"hey", "hei", "hej", "hay", "hai", "ey"}
+
+
+def matches_hey_wake_word(text, max_dist=2):
+    """WP111: Stufe-2-Regel fuer das Wort „Hey Wendelin“: ein Hey-Wort direkt vor einem Wendelin-Treffer (auch zusammengeschrieben)."""
+    w = fold(text).split()
+    for i in range(len(w)):
+        if w[i] in HEY_WORDS and i + 1 < len(w):
+            if near_wake_word(w[i + 1], max_dist, True): return True
+            if i + 2 < len(w) and w[i + 2] not in NOT_SPLIT_TAIL and near_wake_word(w[i + 1] + w[i + 2], max_dist, False): return True
+        for h in ("hey", "hei"):
+            if w[i].startswith(h) and len(w[i]) > len(h) + 4 and near_wake_word(w[i][len(h):], max_dist, True): return True
+    return False
+
+
 def two_stage_main():
     here = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, os.path.join(here, "train_wake_word"))

@@ -14,6 +14,8 @@ je Stimme/Bedingung, (3) Stufe 2 je Variante (Whisper small, Parakeet v3 ohne/mi
 Mikrofonrauschen 25 dB). Negativ-Mengen: "neg" (Systemstimmen-Sprache) und "tv" (FLEURS-Sprache allein).
 Stufe 2 spiegelt matchesWakeWord aus kws_measure.py in zwei Regeln: "d1" (Abstand 1) und "app" (App: Abstand 2,
 Zwei-Aenderungs-Regel nur fuer ein Wort, Zweiwort-Treffer nie vor Funktionswort); Spalte "match" in den Tabellen.
+WP111 (--compare): Vergleich „Wendelin“ gegen „Hey Wendelin“ und mehrerer Stufe-1-Programme (Vorlagen T, openWakeWord-Modell M, microWakeWord W,
+sherpa-onnx-KWS K) auf denselben Audiodaten, siehe compare_main und docs/notes/wake-word-compare.md.
 Basis des Boosts ist "parakeet-bs" (modified_beam_search ohne Hotwords), nicht das greedy-"parakeet". Zwischendaten nur unter
 ~/wendelin-models/kws/wp106/work. Voraussetzung: FLEURS-dev entpackt nach work/fleurs, CAM++ nach wp106/models.
 """
@@ -34,13 +36,27 @@ H = os.environ.get("WENDELIN_HANDOFF") or os.path.abspath(os.path.join(HERE, "..
 WORK = f"{KWS}/wp106/work"
 SPEAKER = f"{KWS}/wp106/models/3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx"
 TAIL = 0.9
+DATA111 = f"{KWS}/wp111/data"
+WORK111 = f"{KWS}/wp111/work"
+VOICES = ["Anna", "Eddy", "Flo", "Grandma", "Grandpa", "Reed", "Rocko", "Sandy", "Shelley"]
+# WP111: je Wort Positivclips, Einlernclips (Vorlagen), Hotword-Liste der Stufe 2 und Stufe-2-Regel
+WORDS = {
+    "wendelin": {"pos": f"{DATA111}/pos_wendelin", "enroll": f"{KWS}/data/enroll", "hot": ["Wendelin"], "match": K.matches_wake_word,
+                 "kws_bpe": ["WENDELIN", "VENDELIN", "VENDELINE"], "kws_ph": ["V EH1 N D AH0 L IY2 N", "W EH1 N D AH0 L IH0 N"]},
+    "hey": {"pos": f"{DATA111}/pos_hey", "enroll": f"{DATA111}/enroll_hey", "hot": ["Hey Wendelin", "Wendelin"],
+            "match": K.matches_hey_wake_word,
+            "kws_bpe": ["HEY WENDELIN", "HEY VENDELIN", "HEY VENDELINE"],
+            "kws_ph": ["HH EY1 V EH1 N D AH0 L IY2 N", "HH EY1 W EH1 N D AH0 L IH0 N"]},
+}
 VARIANTS = ["whisper-small", "parakeet", "parakeet-bs", "parakeet-hw1", "parakeet-hw2", "parakeet-hw3", "parakeet-hw5"]
 RULES = {"T": "Vorlage", "M": "Modell v7", "TM": "Modell v7 ODER Vorlage"}
 
 
 # ---------- Recognizer ----------
 def make_rec(name, threads=4):
+    """name: whisper-small, parakeet, parakeet-bs oder parakeet-hw<Score>[@<Wort>] (WP111: Hotwords je Wort)."""
     import sherpa_onnx as so
+    name, _, word = name.partition("@")
     M = MODELS
     if name == "whisper-small":
         d = f"{M}/whisper-small"
@@ -58,6 +74,10 @@ def make_rec(name, threads=4):
     os.makedirs(WORK, exist_ok=True)
     hw = f"{WORK}/hotwords-{score}.txt"
     open(hw, "w").write("Wendelin\n")
+    if word:                       # WP111: Hotword-Liste je Wort („Hey Wendelin“ und „Wendelin“)
+        os.makedirs(WORK111, exist_ok=True)
+        hw = f"{WORK111}/hotwords-{word}-{score}.txt"
+        open(hw, "w").write("".join(f"{h}\n" for h in WORDS[word]["hot"]))
     bpe = f"{M}/parakeet-bpe/bpe.vocab"          # Pflicht: ohne bpe_vocab wirkt der Boost nicht (WP102)
     assert os.path.exists(bpe), bpe
     return so.OfflineRecognizer.from_transducer(
@@ -97,6 +117,11 @@ def probe(name):
         so_ = ort.SessionOptions(); so_.intra_op_num_threads = 1
         ort.InferenceSession(f"{KWS}/wp58/out/wendelin_v7.onnx", so_, providers=["CPUExecutionProvider"])
         C.embed(af, [x])
+    elif name == "mww":                    # WP111: Pfad in der Umgebungsvariable WENDELIN_MWW
+        from mww_stage import MwwScorer
+        MwwScorer(os.environ["WENDELIN_MWW"]).probs(x)
+    elif name.startswith("kws"):
+        r = KwsRunner(name[3:] or "g"); r.hits(x, r.line("wendelin", 2.0, 0.25))
     else:
         decode(make_rec(name), x)
     rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1048576      # macOS: Bytes
@@ -153,30 +178,367 @@ def apply_cond(x, cond, kind, rng, fleurs):
 
 
 # ---------- Negativkorpus ----------
-def pick_neg(args, rec_plain):
-    """Kurze Clips komplett, lange Clips (1..8, je andere Stimme) die ersten --neg-min Minuten.
-    Clips, deren Transkript "Wendelin" enthaelt (oder b6-*), werden ausgeschlossen."""
+def exclusion_names(clips, scan):
+    """Ausgeschlossen wird nach Treffern eines der beiden Erkenner (Parakeet `hit` ODER Whisper `hit2`) und b6-*; Labels/Referenztexte der Clips spielen keine Rolle."""
+    return [c["name"] for c in clips if scan[c["name"]]["hit"] or scan[c["name"]].get("hit2") or c["name"].startswith("b6-")]
+
+
+def scan_current(entry, n, need_other):
+    """Gilt ein Cache-Eintrag des Negativscans noch? Gleiche Laenge `n`, und mit zweitem Erkenner (`need_other`) muss `hit2` vorliegen."""
+    return entry is not None and entry["n"] == n and (not need_other or "hit2" in entry)
+
+
+def check_pairs(files_a, files_b):
+    """Positivmengen „Wendelin“/„Hey Wendelin“ muessen dieselben Dateinamen haben (gleiche Saetze, Tempi, Rausch-Seeds)."""
+    assert [os.path.basename(f) for f in files_a] == [os.path.basename(f) for f in files_b], "Paare passen nicht"
+
+
+def pick_neg(args, rec_plain, rec_other=None, cache=None):
+    """Kurze Clips komplett, lange Clips (1..neg_long_max, je andere Stimme) die ersten --neg-min Minuten.
+    Clips, deren Transkript "Wendelin" enthaelt (oder b6-*), werden ausgeschlossen. WP111: mit `rec_other` (zweiter, unabhaengiger
+    Erkenner, Whisper) und `cache` entscheidet die Oder-Verknuepfung beider Erkenner (`exclusion_names`). Textvorlagen der Clips
+    gehen nicht ein; der Ausschluss haengt nur an den Erkenner-Treffern und der Namensregel b6-*."""
+    long_max = getattr(args, "neg_long_max", 8)
     clips = []
     for f in sorted(glob.glob(f"{KWS}/data/neg/*.wav")):
         b = os.path.basename(f)
         x = K.load(f)
         if b.startswith("long"):
-            if int(re.match(r"long(\d+)", b).group(1)) > 8:
+            if int(re.match(r"long(\d+)", b).group(1)) > long_max:
                 continue
             x = x[: int(args.neg_min * 60 * SR)]
         m = re.search(r"_([A-Za-z]+)\.wav$", b)
         clips.append({"name": b, "x": x, "voice": m.group(1) if m else None})
-    cache = f"{WORK}/neg_scan.json"
+    cache = cache or f"{WORK}/neg_scan.json"
     scan = json.load(open(cache)) if os.path.exists(cache) else {}
     for c in clips:
-        if c["name"] in scan and scan[c["name"]]["n"] == len(c["x"]):
+        if scan_current(scan.get(c["name"]), len(c["x"]), rec_other is not None):
             continue
-        texts = [decode(rec_plain, c["x"][i:i + 20 * SR]) for i in range(0, len(c["x"]), 20 * SR)]
+        chunks = [c["x"][i:i + 20 * SR] for i in range(0, len(c["x"]), 20 * SR)]
+        texts = [decode(rec_plain, y) for y in chunks]
         hit = [t for t in texts if K.matches_wake_word(t, 1)]
         scan[c["name"]] = {"n": len(c["x"]), "hit": bool(hit), "text": " | ".join(hit)[:200]}
+        if rec_other is not None:
+            hit2 = [t for t in (decode(rec_other, y) for y in chunks) if K.matches_wake_word(t, 1)]
+            scan[c["name"]].update({"hit2": bool(hit2), "text2": " | ".join(hit2)[:200]})
         json.dump(scan, open(cache, "w"))
-    excl = [c["name"] for c in clips if scan[c["name"]]["hit"] or c["name"].startswith("b6-")]
+    excl = exclusion_names(clips, scan)
     return [c for c in clips if c["name"] not in excl], excl, scan
+
+
+# ---------- WP111: Vergleich Woerter x Programme (--compare) ----------
+KWS_DIRS = {"g": ("x-sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01", True),
+            "z": ("x-sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20", False)}
+STAGE1_NAMES = {"T": "Vorlagen", "M": "openWakeWord v7", "W": "microWakeWord", "K": "sherpa-onnx KWS"}
+
+
+class KwsRunner:
+    """sherpa-onnx Keyword Spotting mit frei eingegebenem Wort (g = gigaspeech-BPE englisch, z = zh-en Phoneme)."""
+
+    def __init__(self, m):
+        d, self.bpe = KWS_DIRS[m]
+        root = glob.glob(f"{KWS}/{d}/*/")[0]
+        if self.bpe:
+            import sentencepiece as spm
+            self.sp = spm.SentencePieceProcessor(); self.sp.load(f"{root}bpe.model")
+        self.spotter = K.make_spotter(root, 16, self.bpe, 1)
+
+    def line(self, word, boost, thr):
+        w = WORDS[word]
+        toks = [" ".join(self.sp.encode(t, out_type=str)) for t in w["kws_bpe"]] if self.bpe else w["kws_ph"]
+        return "/".join(f"{t} :{boost} #{thr} @{word.upper()}" for t in toks)
+
+    def hits(self, x, line):
+        return K.run(self.spotter, x, line)[0]
+
+
+def parse_rules(spec):
+    """T0.85 (Vorlagen-Kosinus), M0.5 (openWakeWord), W0.7 (microWakeWord), Kg2/0.25 (KWS Modell g|z, Boost/Schwelle)."""
+    out = []
+    for r in spec.split(","):
+        r = r.strip()
+        if r[0] == "K":
+            b, t = r[2:].split("/")
+            out.append({"name": r, "kind": "K", "model": r[1], "boost": float(b), "thr": float(t)})
+        else:
+            out.append({"name": r, "kind": r[0], "thr": float(r[1:])})
+    return out
+
+
+def wilson(k, n, z=1.96):
+    if n == 0: return (0.0, 0.0)
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return (max(0.0, c - h), min(1.0, c + h))
+
+
+def poisson_upper(k, hours):
+    """Obere 95-%-Grenze (zweiseitig exakt, 97,5 % einseitig) der Rate in 1/h bei k Ereignissen in `hours`."""
+    from scipy.stats import chi2
+    return float(chi2.ppf(0.975, 2 * (k + 1)) / 2 / max(hours, 1e-9))
+
+
+def render_compare(rows, path):
+    """Markdown je Wort und Bedingung: Treffer mit Wilson-95-%-Intervall, FA/h mit Poisson-Obergrenze."""
+    f = lambda v: str(v).replace(".", ",")
+    out = []
+    for word in sorted({r["word"] for r in rows}):
+        for cond in dict.fromkeys(r["cond"] for r in rows):
+            R = [r for r in rows if r["word"] == word and r["cond"] == cond]
+            if not R: continue
+            out.append(f"\n### Wort {word}, Bedingung {cond}\n")
+            out.append("| Stufe 1 | Stufe 2 | Treffer % (n) [Wilson] | nur S1 % | Kand./h S1 | FA/h Sprache (≤95 %) | FA/h Fernseher (≤95 %) | Verwechsler % (n) | andere Phrase löst aus % |")
+            out.append("|---|---|---|---|---|---|---|---|---|")
+            for r in R:
+                n, k, k1 = int(r["n_pos"]), int(r["hit"]), int(r["hit1"])
+                lo, hi = wilson(k, n)
+                hn, hv = float(r["h_neg"]), float(r["h_tv"])
+                fa, fv = int(r["fa_neg"]), int(r["fa_tv"])
+                nc, kc = int(r["n_conf"]), int(r["conf_hit"])
+                nx, kx = int(r["n_cross"]), int(r["cross_hit"])
+                out.append(f"| {r['rule']} | {r['stage2']} | {f(round(100 * k / max(n, 1), 1))} ({n}) [{f(round(100 * lo))}–{f(round(100 * hi))}] | "
+                           f"{f(round(100 * k1 / max(n, 1), 1))} | {f(round(int(r['cand_neg']) / max(hn, 1e-9)))} | "
+                           f"{f(round(fa / max(hn, 1e-9), 2))} (≤{f(round(poisson_upper(fa, hn), 1))}) | "
+                           f"{f(round(fv / max(hv, 1e-9), 2))} (≤{f(round(poisson_upper(fv, hv), 1))}) | "
+                           f"{f(round(100 * kc / max(nc, 1), 1))} ({nc}) | {f(round(100 * kx / max(nx, 1), 1))} ({nx}) |")
+    open(path, "w").write("\n".join(out) + "\n")
+
+
+class Oww:
+    """Stufe 1 mit openWakeWord-Merkmalen: Fenster (Vorlagen-Vektoren, Fensterende, Klassifikatorwert) je Clip."""
+
+    def __init__(self, model):
+        import onnxruntime as ort
+        self.af = C.make_features(f"{KWS}/wp58/dl/oww", 1)
+        so_ = ort.SessionOptions(); so_.intra_op_num_threads = 1
+        self.sess = ort.InferenceSession(model, so_, providers=["CPUExecutionProvider"])
+        self.cpu = 0.0
+
+    def windows(self, xp):
+        t0 = time.process_time()
+        emb = C.embed(self.af, [xp])[0]
+        n = len(emb) - C.WIN + 1
+        if n <= 0:
+            return np.zeros((0, 1)), np.zeros(0, int), np.zeros(0)
+        W = np.stack([emb[j:j + C.WIN] for j in range(n)]).astype("float32")
+        ms = self.sess.run(None, {"input": W})[0][:, 0]
+        V = W.reshape(n, -1)
+        V = V / (np.linalg.norm(V, axis=1, keepdims=True) + 1e-9)
+        self.cpu += time.process_time() - t0
+        return V, np.array([C.window_end(j) for j in range(n)]), ms
+
+
+def _events(ok, refr=19):
+    ev, last = [], -10 ** 9
+    for j in np.where(ok)[0]:
+        if j - last >= refr:
+            ev.append(int(j)); last = j
+    return ev
+
+
+def compare_main(a):
+    """Gleiche Audiodaten fuer alle Woerter und Programme: Stufe 1 (T/M/W/K) -> Stufe 2 (Parakeet ohne/mit Hotwords).
+    Pos: 9 macOS-Stimmen, Paare „Wendelin“/„Hey Wendelin“ (gleiche Saetze, Tempi, Rausch-Parameter). Negativ: Sprache (>= 1,5 h), Fernseher
+    (FLEURS test), Verwechsler. Ausgabe: compare_table.csv/.md, compare_meta.json in --out."""
+    import hashlib
+    t00 = time.time()
+    log = lambda *s: print(f"[{time.time() - t00:6.0f}s]", *s, flush=True)
+    words, conds, rules = a.words.split(","), a.cond.split(","), parse_rules(a.rules)
+    variants = [v for v in a.variants.split(",") if v]
+    mww_paths = dict(p.split("=") for p in a.mww.split(",") if p)
+    os.makedirs(a.out, exist_ok=True); os.makedirs(WORK111, exist_ok=True)
+
+    fleurs = [K.load(f) for f in sorted(glob.glob(f"{a.fleurs}/*.wav"))]
+    fleurs = [x / (np.abs(x).max() + 1e-9) for x in fleurs]
+    tvonly, th = [], 0.0
+    for x in fleurs:
+        if th >= a.tv_max_h: break
+        tvonly.append(x); th += len(x) / SR / 3600
+    log(f"FLEURS {len(fleurs)} Clips ({a.fleurs}), TV-only {len(tvonly)} Clips = {th:.2f} h")
+
+    plain, other = make_rec("parakeet"), make_rec("whisper-small")
+    neg, excl, scan = pick_neg(a, plain, other, cache=f"{WORK111}/neg_scan.json")
+    del plain, other
+    nh = sum(len(c["x"]) for c in neg) / SR / 3600
+    log(f"Negativ: {len(neg)} Clips = {nh:.2f} h; ausgeschlossen (Parakeet ODER Whisper small hoeren (Hey) Wendelin): {len(excl)}")
+    if nh < 1.5:
+        log("WARNUNG: Negativsprache unter 1,5 h")
+
+    posf = {w: sorted(glob.glob(f"{WORDS[w]['pos']}/*.wav")) for w in WORDS}
+    check_pairs(posf["wendelin"], posf["hey"])
+    conff = sorted(glob.glob(f"{DATA111}/conf/*.wav"))
+    vof = lambda f: os.path.basename(f).split("_")[0]
+    fp = hashlib.sha1(json.dumps([a.seed, conds, a.fleurs, a.tv_max_h, a.neg_min, a.neg_long_max,
+                                  [c["name"] for c in neg], [os.path.basename(f) for f in posf["hey"]],
+                                  [os.path.basename(f) for f in conff]]).encode()).hexdigest()[:10]
+
+    O = Oww(a.model)
+    pad = lambda x: np.concatenate([np.zeros(SR, "float32"), x, np.zeros(SR, "float32")])
+    txt = " ".join(open(f).read().lower() for f in glob.glob(f"{KWS}/data/text/*.txt"))
+    log(f"Textvorlagen der Negativ-Clips enthalten 'wendel': {'wendel' in txt}")
+    mww = {}
+    if any(r["kind"] == "W" for r in rules):
+        from mww_stage import MwwScorer
+        mww = {w: MwwScorer(mww_paths[w]) for w in words}
+    kws = {m: KwsRunner(m) for m in {r["model"] for r in rules if r["kind"] == "K"}}
+    tmpl = {}
+    for w in words:                          # Vorlagen je Wort und Stimme (15 Einlernclips)
+        by = {}
+        for f in sorted(glob.glob(f"{WORDS[w]['enroll']}/*.wav")):
+            by.setdefault(vof(f), []).append(f)
+        tmpl[w] = {}
+        for v, fs in by.items():
+            T = []
+            for f in fs[:15]:
+                x = K.load(f); V, we, _ = O.windows(pad(x))
+                T.append(V[int(np.argmax(we >= (SR + K.speech_end(x) * SR + 0.3 * SR)))])
+            tmpl[w][v] = np.stack(T)
+    O.cpu = 0.0
+    cpu = {"T": 0.0, "M": 0.0, "W": 0.0, "K": 0.0}; aud = {"s": 0.0}
+
+    segs, recs, lat = {}, [], {}
+
+    def seg(key, xp, e):
+        if key not in segs:
+            segs[key] = (np.clip(xp[max(0, e - 2 * SR): e + int(TAIL * SR)], -1, 1) * 32767).astype("int16")
+        return key
+
+    for ci, cond in enumerate(conds):
+        sets = {}
+        for sn, files, kind, cls in (("pos_wendelin", posf["wendelin"], "pos", 1), ("pos_hey", posf["hey"], "pos", 1),
+                                     ("conf", conff, "pos", 4)):
+            sets[sn] = [apply_cond(K.load(f), cond, kind, np.random.default_rng([a.seed, ci, cls, i]), fleurs)
+                        for i, f in enumerate(files)]
+        sets["neg"] = [apply_cond(c["x"], cond, "neg", np.random.default_rng([a.seed, ci, 2, i]), fleurs) for i, c in enumerate(neg)]
+        sets["tv"] = [apply_cond(x, cond, "tv", np.random.default_rng([a.seed, ci, 3, i]), fleurs) for i, x in enumerate(tvonly)]
+        names = {"pos_wendelin": posf["wendelin"], "pos_hey": posf["hey"], "conf": conff}
+        log(f"{cond}: Fenster berechnen")
+        W = {sn: [O.windows(pad(x)) for x in xs] for sn, xs in sets.items()}
+        aud["s"] += sum(len(x) for xs in sets.values() for x in xs) / SR
+        for w in words:
+            for sn, xs in sets.items():
+                role = "own" if sn == f"pos_{w}" else "cross" if sn.startswith("pos_") else sn
+                for i, x in enumerate(xs):
+                    V, we, ms = W[sn][i]
+                    xp = pad(x)
+                    voice = vof(names[sn][i]) if sn in names else None
+                    rec = {"cond": cond, "word": w, "set": role, "h": len(x) / SR / 3600, "ev": {}, "mult": {}}
+                    wsc = None
+                    for r in rules:
+                        js, mult = [], 1
+                        if len(we):
+                            if r["kind"] == "T":
+                                t0 = time.process_time()
+                                vs = [voice] if voice in tmpl[w] else list(tmpl[w])
+                                for v in vs:
+                                    js += _events((V @ tmpl[w][v].T).max(axis=1) >= r["thr"])
+                                mult = 1 if voice in tmpl[w] else len(vs)       # Negativ: jede Vorlagenstimme einzeln
+                                cpu["T"] += time.process_time() - t0
+                            elif r["kind"] == "M":
+                                js = _events(ms >= r["thr"])
+                            elif r["kind"] == "W":
+                                t0 = time.process_time()
+                                if wsc is None: wsc = mww[w].on_grid(xp, we)
+                                js = _events(wsc >= r["thr"])
+                                cpu["W"] += time.process_time() - t0
+                            else:
+                                t0 = time.process_time()
+                                hs = kws[r["model"]].hits(x, kws[r["model"]].line(w, r["boost"], r["thr"]))
+                                cpu["K"] += time.process_time() - t0
+                                js = _events(np.isin(np.arange(len(we)), np.minimum(len(we) - 1, np.searchsorted(we, [h * SR + SR for h in hs]))))
+                        if role in ("own", "cross", "conf"):
+                            js = js[:3]
+                        rec["ev"][r["name"]] = [seg((cond, sn, i, j), xp, int(we[j])) for j in js]
+                        rec["mult"][r["name"]] = mult
+                        if role == "own" and cond == "clean" and "_f0_" in os.path.basename(names[sn][i]) and js:
+                            lat.setdefault(f"{w}|{r['name']}", []).append(float((we[js[0]] - SR) / SR - K.speech_end(x)))
+                    recs.append(rec)
+        del W, sets
+        log(f"{cond}: Stufe 1 fertig, {len(segs)} Segmente gesamt")
+    cpu["M"] = O.cpu
+    s1_rtf = {k: v / max(aud["s"] * len(words) if k != "M" else aud["s"], 1e-9) for k, v in cpu.items()}
+    cnt = {}
+    for rec in recs:
+        for rn, ks in rec["ev"].items():
+            c = cnt.setdefault((rec["word"], rec["cond"], rn), 0); cnt[(rec["word"], rec["cond"], rn)] = c + len(ks)
+    log("Kandidaten je Wort/Bedingung/Regel:", {f"{w}|{c}|{r}": n for (w, c, r), n in cnt.items()})
+
+    if a.s1_only:
+        json.dump({"candidates": {f"{w}|{c}|{r}": n for (w, c, r), n in cnt.items()}, "neg_h": nh, "tv_h": th, "segments": len(segs),
+                   "stage1_cpu_rtf": s1_rtf}, open(f"{a.out}/compare_s1_only.json", "w"), indent=1)
+        return log("nur Stufe 1 ->", a.out)
+
+    # --- Stufe 2 ---
+    tcache = f"{WORK111}/texts_{fp}.json"
+    old = json.load(open(tcache)) if os.path.exists(tcache) else {}
+    kj = lambda k: "|".join(map(str, k))
+    text, tstat = {}, {}
+    for var in variants:
+        for w in ([None] if var == "parakeet-bs" else words):
+            vn = var if w is None else f"{var}@{w}"
+            need = {k for rec in recs if w is None or rec["word"] == w for ks in rec["ev"].values() for k in ks}
+            have = old.get(vn, {})
+            todo = [k for k in need if kj(k) not in have]
+            text[vn] = {k: have[kj(k)] for k in need if kj(k) in have}
+            if todo:
+                rec_ = make_rec(vn)
+                t0 = time.time()
+                for k in todo:
+                    text[vn][k] = decode(rec_, segs[k].astype("float32") / 32767)
+                el = time.time() - t0
+                tstat[vn] = {"segments": len(todo), "rtf": el / max(sum(len(segs[k]) for k in todo) / SR, 1e-9),
+                             "ms_per_seg": 1000 * el / len(todo)}
+                del rec_
+                log(f"{vn}: {len(todo)} neue Segmente (von {len(need)}), RTF {tstat[vn]['rtf']:.3f}")
+                old.setdefault(vn, {}).update({kj(k): t for k, t in text[vn].items()})
+                json.dump(old, open(tcache, "w"))
+    if "parakeet-bs" in text:                # Sanity: Hotwords veraendern den Text (Messfehler WP102 ausschliessen)
+        for vn in text:
+            if "-hw" in vn:
+                diff = sum(1 for k, t in text[vn].items() if k in text["parakeet-bs"] and t.lower() != text["parakeet-bs"][k].lower())
+                log(f"SANITY {vn}: Text weicht von parakeet-bs auf {diff}/{len(text[vn])} Segmenten ab")
+
+    # --- Aggregation ---
+    rows = []
+    for w in words:
+        match = WORDS[w]["match"]
+        for cond in conds:
+            R = [r for r in recs if r["word"] == w and r["cond"] == cond]
+            for r_ in rules:
+                rn = r_["name"]
+                for var in [None] + variants:
+                    vn = None if var is None else (var if var == "parakeet-bs" else f"{var}@{w}")
+                    ok = lambda k: vn is None or match(text[vn][k], 2)
+                    hit = lambda sel: sum(any(ok(k) for k in r["ev"][rn]) for r in R if r["set"] == sel)
+                    cnts = lambda sel: sum(ok(k) for r in R if r["set"] == sel for k in r["ev"][rn])
+                    hrs = lambda sel: sum(r["h"] * r["mult"][rn] for r in R if r["set"] == sel)
+                    rows.append({"word": w, "cond": cond, "rule": rn, "stage2": var or "-",
+                                 "n_pos": sum(r["set"] == "own" for r in R), "hit": hit("own"),
+                                 "hit1": sum(bool(r["ev"][rn]) for r in R if r["set"] == "own"),
+                                 "n_cross": sum(r["set"] == "cross" for r in R), "cross_hit": hit("cross"),
+                                 "n_conf": sum(r["set"] == "conf" for r in R), "conf_hit": hit("conf"),
+                                 "h_neg": round(hrs("neg"), 3), "fa_neg": cnts("neg"),
+                                 "cand_neg": sum(len(r["ev"][rn]) for r in R if r["set"] == "neg"),
+                                 "h_tv": round(hrs("tv"), 3), "fa_tv": cnts("tv")})
+    with open(f"{a.out}/compare_table.csv", "w", newline="") as f:
+        wr = csv.DictWriter(f, list(rows[0])); wr.writeheader(); wr.writerows(rows)
+    render_compare(rows, f"{a.out}/compare_table.md")
+
+    ram = []
+    if not a.no_probe:
+        envs = dict(os.environ, WENDELIN_MWW=next(iter(mww_paths.values()), ""))
+        for nm in ["stage1"] + (["mww"] if mww else []) + [f"kws{m}" for m in kws] + ["parakeet-hw2@hey"]:
+            r = subprocess.run([sys.executable, "-I", os.path.abspath(__file__), "--probe", nm], capture_output=True, text=True, env=envs)
+            try: ram.append(json.loads(r.stdout.strip().splitlines()[-1]))
+            except Exception: ram.append({"name": nm, "error": r.stderr[-200:]})
+    meta = {"neg_h": nh, "neg_clips": len(neg), "excluded": excl, "tv_h": th, "segments": len(segs), "fingerprint": fp,
+            "stage1_cpu_rtf": s1_rtf, "stage2": tstat, "ram_mb": ram, "candidates": {f"{w}|{c}|{r}": n for (w, c, r), n in cnt.items()},
+            "latency_median_s": {k: round(float(np.median(v)), 2) for k, v in lat.items()}, "latency_n": {k: len(v) for k, v in lat.items()},
+            "params": vars(a)}
+    json.dump(meta, open(f"{a.out}/compare_meta.json", "w"), indent=1, default=str)
+    log("fertig ->", a.out)
 
 
 # ---------- Hauptlauf ----------
@@ -194,9 +556,23 @@ def main():
     ap.add_argument("--probe")
     ap.add_argument("--no-probe", action="store_true")
     ap.add_argument("--seed", type=int, default=1)
+    # WP111 (--compare)
+    ap.add_argument("--compare", action="store_true", help="WP111: Vergleich Woerter x Programme (compare_main)")
+    ap.add_argument("--words", default="wendelin,hey")
+    ap.add_argument("--rules", default="T0.9,M0.3,M0.5,W0.5,W0.8,Kg2/0.25")
+    ap.add_argument("--mww", default="", help="Wort=Pfad.tflite,... (microWakeWord je Wort)")
+    ap.add_argument("--model", default=f"{KWS}/wp58/out/wendelin_v7.onnx", help="openWakeWord-Klassifikator fuer die Regeln M")
+    ap.add_argument("--neg-long-max", type=int, default=8, help="lange Negativ-Clips 1..N (WP111: 16 fuer >= 1,5 h)")
+    ap.add_argument("--fleurs", default=f"{WORK}/fleurs/dev", help="FLEURS-Ordner fuer Fernsehton (WP111: test)")
+    ap.add_argument("--s1-only", action="store_true", help="WP111: nur Stufe 1 und Kandidatenzahlen (Planung des Stufe-2-Aufwands)")
+    ap.add_argument("--render", help="nur Tabelle aus compare_table.csv neu schreiben (Pfad der CSV)")
     a = ap.parse_args()
+    if a.render:
+        return render_compare(list(csv.DictReader(open(a.render))), os.path.splitext(a.render)[0] + ".md")
     if a.probe:
         return probe(a.probe)
+    if a.compare:
+        return compare_main(a)
     os.makedirs(a.out, exist_ok=True); os.makedirs(WORK, exist_ok=True)
     rng = np.random.default_rng(a.seed)
     t00 = time.time()
