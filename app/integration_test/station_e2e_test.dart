@@ -52,7 +52,6 @@ void main() {
     // 1. Button im Kopf des Hauptbildschirms.
     const port = ChannelStationPort();
     await tester.binding.setSurfaceSize(const Size(400, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('de'),
@@ -93,5 +92,10 @@ void main() {
     await askHost('station-unlock');
     await askHost('station-tile');
     expect(notes()['tile_started'], '1', reason: 'Kachel startet nicht');
+
+    // Aufräumen: die Station per PIN schließen, damit die Test-App wieder
+    // vorn ist. Die Fenstergröße bleibt gesetzt; ein Reset unter der
+    // verdeckenden Station löst die Semantics-Assertion aus.
+    await askHost('station-end-pin');
   });
 }

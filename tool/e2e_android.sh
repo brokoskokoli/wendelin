@@ -336,7 +336,11 @@ host_request() {
     station-tile)
       # WP99: Schnellkachel antippen (`cmd statusbar click-tile`, Android 13+).
       in_app rm -f files/e2e/station-result.txt
+      # click-tile wirkt nur, wenn die Kachel im QS-Panel liegt: vorher add-tile.
+      adb shell cmd statusbar add-tile app.wendelin/app.wendelin.StationTileService >/dev/null 2>&1 || true
+      sleep 2
       adb shell cmd statusbar click-tile app.wendelin/app.wendelin.StationTileService >/dev/null 2>&1 || true
+      adb shell cmd statusbar remove-tile app.wendelin/app.wendelin.StationTileService >/dev/null 2>&1 || true
       station_wait up && station_note tile_started=1 || station_note tile_started=0
       ;;
     station-check)
