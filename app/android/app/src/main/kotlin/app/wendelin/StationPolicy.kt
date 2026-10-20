@@ -30,6 +30,16 @@ object StationPolicy {
     /** The activity closes only while the keyguard is not showing (after `requestDismissKeyguard`). */
     fun mayFinish(locked: Boolean): Boolean = !locked
 
+    /** `finish` from Dart: the overlay always closes; the station only while the keyguard is not showing. */
+    fun finishAllowed(isStation: Boolean, locked: Boolean): Boolean = !isStation || mayFinish(locked)
+
+    /** Runs [finish] if allowed; the result is what Dart hears (`false`: refused, nothing was closed). */
+    fun finishIfAllowed(isStation: Boolean, locked: Boolean, finish: () -> Unit): Boolean {
+        if (!finishAllowed(isStation, locked)) return false
+        finish()
+        return true
+    }
+
     /** The voice command „Stationsmodus“ starts only on an unlocked device. */
     fun voiceStartAllowed(locked: Boolean): Boolean = !locked
 

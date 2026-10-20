@@ -187,6 +187,22 @@ void main() {
       expect(c.read(stationControllerProvider).ended, isTrue);
     });
 
+    test(
+      'verweigert der native Teil das Schließen, ist end() wieder möglich',
+      () async {
+        host
+          ..unlockAnswers = [true, true]
+          ..finishResult = false;
+        final n = c.read(stationControllerProvider.notifier);
+        expect(await n.end(), isFalse);
+        expect(c.read(stationControllerProvider).ended, isFalse);
+        expect(c.read(stationControllerProvider).ending, isFalse);
+        host.finishResult = true;
+        expect(await n.end(), isTrue);
+        expect(c.read(stationControllerProvider).ended, isTrue);
+      },
+    );
+
     test('Abstecken, Sprachbefehl und Wecken beenden nichts', () async {
       // Nichts außer end() erreicht finish: Berührung, Takt, dunkler Raum.
       c.read(stationControllerProvider.notifier).touch();

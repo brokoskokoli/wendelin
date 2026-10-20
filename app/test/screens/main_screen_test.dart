@@ -352,6 +352,19 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('Stationsmodus: Startfehler erscheint als Hinweis', (
+    tester,
+  ) async {
+    final env = TestEnv();
+    env.station.failNext('start');
+    await pumpApp(tester, env);
+    await tester.tap(find.byTooltip('Stationsmodus starten'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Simulierter Fehler'), findsOneWidget);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('Einstellungen öffnen und zurück', (tester) async {
     final env = TestEnv();
     await pumpApp(tester, env);

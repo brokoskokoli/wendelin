@@ -23,6 +23,7 @@ class StationApp extends ConsumerWidget {
     localeListResolutionCallback: (l, s) => resolveUiLocale(l, s),
     debugShowCheckedModeBanner: false,
     theme: buildWendelinTheme(),
-    home: const StationScreen(),
+    // Back never leaves the station; ending asks to unlock (WP99).
+    home: const PopScope(canPop: false, child: StationScreen()),
   );
 }

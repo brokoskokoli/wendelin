@@ -100,7 +100,10 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   int? wakeEnd;
 
   @override
-  Future<void> finish() async => finished++;
+  Future<bool> finish() async {
+    finished++;
+    return true;
+  }
 
   @override
   Future<bool> isDefaultAssistant() async => isDefault;

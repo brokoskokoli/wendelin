@@ -91,7 +91,7 @@
         <!-- Quick settings tile that starts the station mode. -->
         <service
             android:name=".StationTileService"
-            android:label="Stationsmodus"
+            android:label="@string/station_tile_label"
             android:icon="@drawable/ic_stat_wendelin"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">

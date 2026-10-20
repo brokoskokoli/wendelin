@@ -27,6 +27,7 @@ final class FakeStationHost implements StationHost {
   var unlockAnswers = <bool>[];
   var unlockRequests = 0;
   var finishes = 0;
+  var finishResult = true;
   // ignore: close_sinks
   final dark = StreamController<bool>.broadcast(sync: true);
 
@@ -43,7 +44,10 @@ final class FakeStationHost implements StationHost {
   }
 
   @override
-  Future<void> finish() async => finishes++;
+  Future<bool> finish() async {
+    finishes++;
+    return finishResult;
+  }
 
   @override
   Stream<bool> get ambientDark => dark.stream;

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/l10n/l10n.dart';
 import 'package:wendelin/station/station_data.dart';
 import 'package:wendelin/station/station_prefs.dart';
+import 'package:wendelin/station/ui/station_app.dart';
 import 'package:wendelin/station/ui/station_screen.dart';
 import 'package:wendelin/ui/theme/app_theme.dart';
 
@@ -71,6 +72,27 @@ Future<(FakeStationHost, FakeStationData)> pumpStation(
 }
 
 void main() {
+  testWidgets('Zurück verlässt die Station nie (PopScope canPop: false)', (
+    tester,
+  ) async {
+    setView(tester, const Size(390, 800));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: stationOverrides(
+          clock: MutableClock(noon),
+          host: FakeStationHost(),
+          data: data(),
+        ),
+        child: const StationApp(),
+      ),
+    );
+    await tester.pump();
+    final locked = find.byWidgetPredicate(
+      (w) => w is PopScope && !w.canPop && w.child is StationScreen,
+    );
+    expect(locked, findsOneWidget);
+  });
+
   testWidgets('Ruhezustand zeigt Uhr, Datum, Wetter, Termine und Aufgaben mit '
       'Titeln', (tester) async {
     await pumpStation(tester);

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
+import 'package:wendelin_integrations/wendelin_integrations.dart'
+    show PortException;
 
 import '../../agent/agent_controller.dart';
 import '../../agent/chat_entry.dart';
@@ -270,9 +272,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
                 Navigator.of(context).pushNamed(AppRoutes.settings),
             onStation: ref.watch(platformPortsProvider).station == null
                 ? null
-                : () => unawaited(
-                    ref.read(platformPortsProvider).station!.start(),
-                  ),
+                : () => unawaited(_startStation()),
             onNewConversation:
                 conversation.entries.any((e) => e is! SessionStartEntry)
                 ? () => unawaited(_controller.newTopic())
@@ -358,6 +358,18 @@ class _MainScreenState extends ConsumerState<MainScreen> with RouteAware {
       );
     }
     return null;
+  }
+
+  /// Starts the station mode; a failure (e.g. no activity available) is shown.
+  Future<void> _startStation() async {
+    try {
+      await ref.read(platformPortsProvider).station!.start();
+    } on PortException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   /// Undo: a spoken answer stops, „Zurückgenommen.“ is shown (snackbar and

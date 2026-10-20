@@ -16,8 +16,8 @@ abstract interface class StationHost {
   /// if the device was unlocked.
   Future<bool> requestUnlock();
 
-  /// Closes the station activity.
-  Future<void> finish();
+  /// Closes the station activity; `false` if the device refused (locked).
+  Future<bool> finish();
 
   /// The ambient light is low (`true`) or normal (`false`); from the light
   /// sensor on the Kotlin side.
@@ -61,5 +61,5 @@ final class DeviceStationHost implements StationHost {
   Future<bool> requestUnlock() => _assistant.requestUnlock();
 
   @override
-  Future<void> finish() => _assistant.finish();
+  Future<bool> finish() => _assistant.finish();
 }

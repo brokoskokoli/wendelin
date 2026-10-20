@@ -203,9 +203,9 @@ final class StationController extends Notifier<StationState> {
       state = state.copyWith(ending: false);
       return false;
     }
-    state = state.copyWith(ending: false, ended: true);
-    await host.finish();
-    return true;
+    final closed = await host.finish();
+    state = state.copyWith(ending: false, ended: closed);
+    return closed;
   }
 }
 

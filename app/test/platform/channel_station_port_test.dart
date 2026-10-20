@@ -12,24 +12,30 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const station = MethodChannel(stationChannelName);
   const window = MethodChannel(windowChannelName);
+  const assistant = MethodChannel(assistantChannelName);
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   final calls = <String>[];
   var locked = false;
+  var lockedAnswer = true;
+  bool? finishAnswer;
+
   String? error;
 
   setUp(() {
     calls.clear();
     locked = false;
+    lockedAnswer = true;
     error = null;
     messenger.setMockMethodCallHandler(station, (call) async {
       calls.add('station.${call.method}');
       if (error case final code?) throw PlatformException(code: code);
       return switch (call.method) {
-        'isLocked' => locked,
+        'isLocked' => lockedAnswer ? locked : null,
         _ => null,
       };
     });
+    messenger.setMockMethodCallHandler(assistant, (call) async => finishAnswer);
     messenger.setMockMethodCallHandler(window, (call) async {
       calls.add('window.${call.method} ${call.arguments}');
       return null;
@@ -39,6 +45,7 @@ void main() {
   tearDown(() {
     messenger.setMockMethodCallHandler(station, null);
     messenger.setMockMethodCallHandler(window, null);
+    messenger.setMockMethodCallHandler(assistant, null);
   });
 
   stationPortContract(() => const ChannelStationPort());
@@ -50,6 +57,25 @@ void main() {
     await port.start();
     expect(calls, ['station.isLocked', 'station.start']);
   });
+
+  test('isLocked ohne Antwort (null) gilt als gesperrt', () async {
+    lockedAnswer = false;
+    expect(await const ChannelStationPort().isLocked(), isTrue);
+  });
+
+  test(
+    'finish: false vom Kanal erreicht den Host, null gilt als geschlossen',
+    () async {
+      final host = DeviceStationHost(
+        AssistantPlatform(),
+        const ScreenProtection(),
+      );
+      finishAnswer = false;
+      expect(await host.finish(), isFalse);
+      finishAnswer = null;
+      expect(await host.finish(), isTrue);
+    },
+  );
 
   test('Fehler der Plattform werden zu PortException', () async {
     error = 'locked';

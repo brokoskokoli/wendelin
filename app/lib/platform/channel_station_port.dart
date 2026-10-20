@@ -14,6 +14,7 @@ final class ChannelStationPort implements StationPort {
 
   final MethodChannel _channel;
 
+  /// Unknown (`null`) counts as locked: fail closed.
   @override
   Future<bool> isLocked() => _call<bool>('isLocked').then((v) => v ?? true);
 

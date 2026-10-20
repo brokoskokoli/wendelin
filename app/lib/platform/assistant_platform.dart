@@ -129,9 +129,10 @@ class AssistantPlatform {
   }
 
   /// Closes the overlay activity.
-  Future<void> finish() async {
-    await _invoke<void>('finish');
-  }
+  ///
+  /// `false` only if the station refused (device still locked); the overlay
+  /// always closes.
+  Future<bool> finish() async => await _invoke<bool>('finish') ?? true;
 
   Future<T?> _invoke<T>(String method, [Object? args]) async {
     try {

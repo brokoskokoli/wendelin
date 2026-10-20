@@ -35,6 +35,18 @@ class StationPolicyTest {
     }
 
     @Test
+    fun finishFromDartIsRefusedForTheLockedStationButNotTheOverlay() {
+        var closed = 0
+        assertFalse(StationPolicy.finishIfAllowed(isStation = true, locked = true) { closed++ })
+        assertEquals(0, closed)
+        assertTrue(StationPolicy.finishIfAllowed(isStation = true, locked = false) { closed++ })
+        assertEquals(1, closed)
+        // The overlay over the lock screen closes as before.
+        assertTrue(StationPolicy.finishIfAllowed(isStation = false, locked = true) { closed++ })
+        assertEquals(2, closed)
+    }
+
+    @Test
     fun theVoiceCommandStartsOnlyUnlocked() {
         assertFalse(StationPolicy.voiceStartAllowed(locked = true))
         assertTrue(StationPolicy.voiceStartAllowed(locked = false))

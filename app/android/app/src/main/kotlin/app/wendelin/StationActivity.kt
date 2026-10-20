@@ -11,6 +11,8 @@ import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 
 /**
  * The station mode (WP99): a full-screen clock and information display with its own Flutter
@@ -28,6 +30,11 @@ class StationActivity : WendelinActivity(), SensorEventListener {
     private var ambient = true
     private var lastDark: Boolean? = null
 
+    // Lazy: the class does not exist below API 33 and must not be touched there.
+    private val backCallback by lazy {
+        OnBackInvokedCallback { VoiceLog.i("station-back swallowed") }
+    }
+
     /** Unplugging is no reason to leave (K63): the receiver only notes it. */
     private val power = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -38,7 +45,6 @@ class StationActivity : WendelinActivity(), SensorEventListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        StationState.active = true
         // Personal content (appointment titles): no screenshots, hidden in the app switcher.
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -52,7 +58,28 @@ class StationActivity : WendelinActivity(), SensorEventListener {
             )
         }
         registerReceiver(power, IntentFilter(Intent.ACTION_POWER_DISCONNECTED))
+        // Android 13+ (and 16, where onBackPressed is no longer called): swallow back.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                backCallback,
+            )
+        }
     }
+
+    // Visible means: counts for the wake word routing. Home or a dark screen clears it.
+    override fun onStart() {
+        super.onStart()
+        StationState.active = true
+    }
+
+    override fun onStop() {
+        StationState.active = false
+        super.onStop()
+    }
+
+    /** `SystemNavigator.pop()` from Dart would finish the activity past the lock. */
+    override fun popSystemNavigator(): Boolean = true
 
     override fun getDartEntrypointFunctionName(): String = "stationMain"
 
@@ -105,7 +132,10 @@ class StationActivity : WendelinActivity(), SensorEventListener {
         } catch (e: IllegalArgumentException) {
             // Already gone.
         }
-        if (isFinishing) StationState.active = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.unregisterOnBackInvokedCallback(backCallback)
+        }
+        StationState.active = false
         super.onDestroy()
     }
 }

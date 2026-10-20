@@ -29,7 +29,7 @@
         },
         "hasWakeHandoff": {"args": [], "returns": "value"},
         "takeWakeHandoff": {"args": [], "returns": "map"},
-        "finish": {"args": [], "returns": "none"}
+        "finish": {"args": [], "returns": "value"}
       },
       "toDart": {
         "trigger": {"args": [], "returns": "none"},
