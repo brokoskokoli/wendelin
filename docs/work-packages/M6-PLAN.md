@@ -8,5 +8,6 @@ Start erst nach M5 und mit Go des Maintainers. Inhalt laut Konzept: Kamera/Bild,
 - Konfliktstellen: Einstellungen „Stationsmodus“ (WP99 legt sie an, WP100/WP101 ergänzen je eigene Felder), ARB-Texte.
 
 ## Noch zu spezifizieren
-- Kamera/Bild, Vergleich alternativer Wake Words, Modell-Empfehlung (gemeinsam mit Stefan).
+- WP111 Vergleich alternativer Wake Words (spezifiziert 2026-10-20: „Hey Wendelin“, microWakeWord, sherpa-KWS, ohne Porcupine).
+- Kamera/Bild, Modell-Empfehlung (gemeinsam mit Stefan; Richtung: mittlere Modelle ohne Thinking).
 - WP106 Spike Wake-Word-Erkennung Stationsmodus (Messung, vorgezogen neben M5, Freigabe Stefan 2026-10-19).
