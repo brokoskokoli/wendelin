@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP112, WP113, WP115, WP117; als Nächstes: WP116, WP114 (nach WP113), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
+Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP112, WP113, WP115, WP116, WP117; als Nächstes: WP114 (nach WP113), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
 
 ## Meilensteine
 
@@ -64,7 +64,7 @@ Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP112, WP113, WP115, WP117; al
 | WP113 | „Stopp“ während der Antwort mit Gegenprüfung, Anzeige „hört mit“ | in Arbeit | Gerätetest 2026-10-20 T20-B.1; K84 |
 | WP114 | Gesperrtes Handy: Overlay bleibt nach dem Entsperren, harmlose Aktionen ohne Entsperren | geplant (nach WP113, Sprach-Controller) | T20-Z.5/Z.6; K85 |
 | WP115 | Große Modelle streamend entpacken (Parakeet v3), erkannte Sprache loggen | in Arbeit | T20-P.1, T20-V |
-| WP116 | Einstellungsseiten: Überschriften, Info-Texte, Links | geplant (Start, sobald eine Sitzung frei ist) | T20-0.9 |
+| WP116 | Einstellungsseiten: Überschriften, Info-Texte, Links | in Arbeit | T20-0.9 |
 | WP117 | Weitere deutsche Stimmen (Ramona, Eva) | in Arbeit | T20-P.4; K86 (dii angehört, verworfen) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
