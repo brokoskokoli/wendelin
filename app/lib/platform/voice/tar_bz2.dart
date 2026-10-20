@@ -243,7 +243,8 @@ Future<int> extractTarBz2(
 }
 
 /// [extractTarBz2] in the calling isolate. [onChunk] sees the size of every
-/// piece written (tests prove the bounded buffer with it).
+/// piece written, [onInput] the read position in the archive at that moment
+/// (tests prove the bounded buffer and the streaming read with them).
 @visibleForTesting
 int unpackTarBz2(
   String archivePath,
@@ -251,17 +252,22 @@ int unpackTarBz2(
   int? limit, {
   int chunkBytes = tarChunkBytes,
   void Function(int bytes)? onChunk,
+  void Function(int archivePosition)? onInput,
 }) {
   final input = InputFileStream(archivePath);
   try {
     final limitBytes = limit ?? unpackLimit(File(archivePath).lengthSync());
-    final tar = BZip2Decoder().decodeLazy(input);
+    // verify: block and stream CRCs, a flipped bit is "corrupt".
+    final tar = BZip2Decoder().decodeLazy(input, verify: true);
     return unpackTarStream(
       tar,
       targetPath,
       limitBytes,
       chunkBytes: chunkBytes,
-      onChunk: onChunk,
+      onChunk: (n) {
+        onInput?.call(input.position);
+        onChunk?.call(n);
+      },
     );
   } finally {
     input.closeSync();

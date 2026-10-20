@@ -3,6 +3,7 @@
 library;
 
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart' show BZip2Decoder, InputFileStream;
@@ -91,6 +92,41 @@ void main() {
       );
       expect(total, 24 << 20);
       expect(lazy.position, greaterThan(24 << 20));
+    });
+
+    test('liest das Archiv beim Entpacken vorwärts, nicht vorab ganz', () {
+      // Schwer komprimierbare Daten: das Archiv ist groß, der erste Block
+      // klein dagegen.
+      final rnd = Random(7);
+      final data = Uint8List.fromList(
+        List.generate(6 << 20, (_) => rnd.nextInt(256)),
+      );
+      final archive = write('s.tar.bz2', bz2(tar([tarEntry('a', data)])));
+      final size = archive.lengthSync();
+      final positions = <int>[];
+      unpackTarBz2(
+        archive.path,
+        '${tmp.path}/s',
+        64 << 20,
+        chunkBytes: 256 << 10,
+        onInput: positions.add,
+      );
+      expect(size, greaterThan(5 << 20));
+      expect(positions.first, lessThan(size ~/ 4));
+      expect(positions.last, greaterThan(size ~/ 2));
+    });
+
+    test('Bitfehler in der bzip2-Prüfsumme: beschädigt, nichts bleibt', () {
+      final bytes = bz2(tar([tarEntry('a', Uint8List(1 << 16))]));
+      // Offset 10: CRC des ersten Blocks; die Daten selbst bleiben lesbar.
+      bytes[10] ^= 0x01;
+      final archive = write('x.tar.bz2', bytes);
+      expect(
+        () => unpackTarBz2(archive.path, '${tmp.path}/x', null),
+        _rejected('corrupt'),
+      );
+      expect(Directory('${tmp.path}/x').existsSync(), isFalse);
+      expect(Directory('${tmp.path}/x.tmp').existsSync(), isFalse);
     });
 
     test('Größenlimit: zu viel entpackt wird abgelehnt, nichts bleibt', () {
@@ -254,6 +290,30 @@ void main() {
           File(inst.store.pathOf(m.id, 'u.tar.bz2')).existsSync(),
           isFalse,
         );
+      },
+    );
+
+    test(
+      'Dateisystemfehler (io): Archiv bleibt für einen neuen Versuch',
+      () async {
+        final bytes = bz2(
+          tar([
+            tarEntry('a', [1]),
+            tarEntry('a/b', [2]),
+          ]),
+        );
+        final m = model(bytes);
+        final inst = installer(1 << 40);
+        inst.store.modelDir(m.id).createSync(recursive: true);
+        File(inst.store.pathOf(m.id, 'u.tar.bz2')).writeAsBytesSync(bytes);
+        final lines = await capture(() async {
+          await expectLater(
+            inst.install(m),
+            throwsA(isA<ArchiveRejected>().having((e) => e.reason, 'r', 'io')),
+          );
+        });
+        expect(lines.any((l) => l.contains('reason=io')), isTrue);
+        expect(File(inst.store.pathOf(m.id, 'u.tar.bz2')).existsSync(), isTrue);
       },
     );
 
