@@ -32,6 +32,10 @@ ArgParser _parser() => ArgParser()
     abbr: 'c',
     help: 'Filter: Id-Teil, Sprache oder Kategorie, kommagetrennt.',
   )
+  ..addOption(
+    'ids',
+    help: 'Datei mit exakten Fall-Ids, eine je Zeile (unbekannte Id = Fehler).',
+  )
   ..addOption('cases-dir', help: 'Verzeichnis mit *.yaml (Standard: cases).')
   ..addOption('limit', abbr: 'n', help: 'Höchstens n Fälle laufen lassen.')
   ..addOption('out', abbr: 'o', help: 'JSON-Report schreiben.')
@@ -136,13 +140,9 @@ Future<int> runCli(
     }
     final time = EvalTime.parse(args.option('now')!, args.option('time-zone')!);
     final casesDir = _casesDir(args.option('cases-dir'));
-    final filter = args.option('cases');
-    var cases = loadCases(casesDir).where((c) => c.matches(filter)).toList();
-    if (limit != null && cases.length > limit) {
-      cases = cases.take(limit).toList();
-    }
-    if (cases.isEmpty) {
-      err.writeln('Keine Fälle ausgewählt');
+    final (:cases, :error) = _selectCases(args, loadCases(casesDir), limit);
+    if (error != null) {
+      err.writeln(error);
       return 1;
     }
     final p = profile.profile;
@@ -296,6 +296,46 @@ File? _ledger(String? path) {
   final file = File(path);
   readLedger(file);
   return file;
+}
+
+/// Cases for `--cases`, `--ids` and `--limit`; `error` if none are left.
+({List<EvalCase> cases, String? error}) _selectCases(
+  ArgResults args,
+  List<EvalCase> all,
+  int? limit,
+) {
+  final filter = args.option('cases');
+  var cases = all.where((c) => c.matches(filter)).toList();
+  if (args.option('ids') case final idsPath?) {
+    final (:ids, :error) = _readIds(idsPath, all);
+    if (error != null) return (cases: cases, error: error);
+    cases = cases.where((c) => ids.contains(c.id)).toList();
+  }
+  if (limit != null && cases.length > limit) {
+    cases = cases.take(limit).toList();
+  }
+  return (cases: cases, error: cases.isEmpty ? 'Keine Fälle ausgewählt' : null);
+}
+
+/// Exact case ids from the `--ids` file; `error` if it is missing or has
+/// ids not in [all].
+({Set<String> ids, String? error}) _readIds(String path, List<EvalCase> all) {
+  final file = File(path);
+  if (!file.existsSync()) return (ids: {}, error: '--ids: Datei $path fehlt');
+  final ids = file
+      .readAsLinesSync()
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty && !l.startsWith('#'))
+      .toSet();
+  final known = {for (final c in all) c.id};
+  final unknown = ids.where((i) => !known.contains(i)).toList();
+  if (unknown.isNotEmpty) {
+    return (
+      ids: ids,
+      error: '--ids: unbekannte Fall-Id(s): ${unknown.join(', ')}',
+    );
+  }
+  return (ids: ids, error: null);
 }
 
 /// Why a numeric option is invalid; `null` if all are fine.

@@ -67,6 +67,40 @@ void main() {
     expect((report['meta']! as Map)['now'], '2026-11-18T09:00');
   });
 
+  test(
+    '--ids wählt exakt die genannten Fälle, unbekannte Id ist ein Fehler',
+    () async {
+      final ids = File('${tmp.path}/ids.txt')
+        ..writeAsStringSync('# Kommentar\nde-cal-tauchen\n\n  en-timer \n');
+      final (code, out, err) = await run([
+        '-p',
+        'profiles/fake-demo.json',
+        '--ids',
+        ids.path,
+      ]);
+      expect(code, 0, reason: err);
+      expect(out, contains('2 Fälle'));
+      expect(out, contains('de-cal-tauchen'));
+      expect(out, isNot(contains('de-cal-zahnarzt-freitag')));
+      ids.writeAsStringSync('de-cal-tauchen\nde-gibts-nicht\n');
+      final bad = await run([
+        '-p',
+        'profiles/fake-demo.json',
+        '--ids',
+        ids.path,
+      ]);
+      expect(bad.$1, 1);
+      expect(bad.$3, contains('de-gibts-nicht'));
+      final missing = await run([
+        '-p',
+        'profiles/fake-demo.json',
+        '--ids',
+        '${tmp.path}/nope.txt',
+      ]);
+      expect(missing.$1, 1);
+    },
+  );
+
   test('Filter, Limit, Modell, eigenes Fall-Verzeichnis und heute', () async {
     final (code, out, _) = await run([
       '-p',
@@ -432,9 +466,9 @@ void main() {
       expect(body['reasoning_effort'], 'minimal');
     });
 
-    test('Claude Sonnet: thinking disabled im Request', () async {
+    test('Claude Sonnet: thinking between_tools im Request', () async {
       final body = await requestOf('claude-sonnet', key: 'ANTHROPIC_API_KEY');
-      expect(body['thinking'], {'type': 'disabled'});
+      expect(body['thinking'], {'type': 'between_tools'});
     });
 
     test('Phala anderes Modell: kein reasoning_effort', () async {

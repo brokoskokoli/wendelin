@@ -27,6 +27,7 @@ dart run wendelin_evals:run --profile profiles/claude-haiku.json --limit 5 --out
 | `--cases, -c` | Filter, kommagetrennt: Sprache (`de`), Kategorie (`calendar`) oder Teil der Fall-Id (`tauchen`, ab 3 Zeichen) |
 | `--cases-dir` | Verzeichnis mit `*.yaml` (Standard `cases`) |
 | `--limit, -n` | höchstens n Fälle |
+| `--ids <datei>` | exakte Fall-Ids, eine je Zeile (`#` Kommentar); unbekannte Id = Fehler (z. B. `cases/live30.txt`) |
 | `--out, -o` | JSON-Report schreiben (`reports/*.local.json` ist von Git ausgenommen) |
 | `--max-cost` | Kostengrenze in USD je Lauf: nach **jedem** Modellaufruf wird die Summe geprüft; wird sie erreicht, bricht der Lauf sofort ab (auch mitten im Fall: dieser Fall ist `error` mit Grund `budget`, der Rest `skip` „budget“), Teilreport mit `meta.budgetExceeded`, Exit-Code 2. Fail-closed: ohne Preis für das Modell (Katalog/`catalog`) startet der Lauf nicht (Exit 1); ein Aufruf ohne Preis stoppt ebenfalls |
 | `--provider-cap` | Obergrenze in USD je Konto-Gruppe (Profilschlüssel `budgetGroup`, z. B. `anthropic` für Haiku und Sonnet zusammen) über alle Läufe, nur mit `--ledger`: wirksame Grenze = Obergrenze minus bisherige Ledger-Summe der Gruppe (mit `--max-cost` gilt die kleinere); ist nichts mehr übrig (≤ 0) oder hat das Profil keine `budgetGroup`, startet der Lauf nicht (Exit 1) |
@@ -278,7 +279,7 @@ die Kosten.
 
 Alle gemessenen Modelle laufen ohne Thinking, gesetzt über `modelOptions`:
 OpenAI `gpt-5-mini` mit `reasoning_effort: minimal` (nicht ganz abschaltbar),
-Claude `thinking: disabled`, Tinfoil/Phala `gpt-oss-120b` mit
+Claude Haiku `thinking: disabled` (Sonnet 5.5 lehnt `disabled` ab: `between_tools`), Tinfoil/Phala `gpt-oss-120b` mit
 `reasoning_effort: low` (nicht abschaltbar). Bei RedPill (Phala) meldet
 `GET /v1/models` für `google/gemma-4-31b-it` die Parameter `reasoning` und
 `include_reasoning`, daher `reasoning: {enabled: false}`; für
