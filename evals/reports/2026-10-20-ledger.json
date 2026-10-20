@@ -1,0 +1,111 @@
+[
+  {
+    "provider": "claude-haiku",
+    "providerType": "anthropic",
+    "model": "claude-haiku-5-5",
+    "cases": 5,
+    "costUsd": 0.003034,
+    "date": "2026-10-20",
+    "budgetGroup": "anthropic"
+  },
+  {
+    "provider": "claude-sonnet",
+    "providerType": "anthropic",
+    "model": "claude-sonnet-5-5",
+    "cases": 5,
+    "costUsd": 0.0,
+    "date": "2026-10-20",
+    "budgetGroup": "anthropic",
+    "unpricedCases": 5
+  },
+  {
+    "provider": "openai-mini",
+    "providerType": "openaiCompatible",
+    "model": "gpt-5-mini",
+    "cases": 5,
+    "costUsd": 0.004519,
+    "date": "2026-10-20",
+    "budgetGroup": "openai"
+  },
+  {
+    "provider": "phala-tee-small",
+    "providerType": "openaiCompatible",
+    "model": "google/gemma-4-31b-it",
+    "cases": 5,
+    "costUsd": 0.005459,
+    "date": "2026-10-20",
+    "budgetGroup": "phala"
+  },
+  {
+    "provider": "phala-tee-small",
+    "providerType": "openaiCompatible",
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "cases": 5,
+    "costUsd": 0.014821,
+    "date": "2026-10-20",
+    "budgetGroup": "phala"
+  },
+  {
+    "provider": "phala-tee-small",
+    "providerType": "openaiCompatible",
+    "model": "openai/gpt-oss-120b",
+    "cases": 5,
+    "costUsd": 0.004145,
+    "date": "2026-10-20",
+    "budgetGroup": "phala"
+  },
+  {
+    "provider": "tinfoil-tee",
+    "providerType": "openaiCompatible",
+    "model": "gpt-oss-120b",
+    "cases": 5,
+    "costUsd": 0.004583,
+    "date": "2026-10-20",
+    "budgetGroup": "tinfoil"
+  },
+  {
+    "provider": "tinfoil-tee",
+    "providerType": "openaiCompatible",
+    "model": "gemma4-31b",
+    "cases": 5,
+    "costUsd": 0.017124,
+    "date": "2026-10-20",
+    "budgetGroup": "tinfoil"
+  },
+  {
+    "provider": "tinfoil-tee",
+    "providerType": "openaiCompatible",
+    "model": "deepseek-v4-1-flash",
+    "cases": 5,
+    "costUsd": 0.022572,
+    "date": "2026-10-20",
+    "budgetGroup": "tinfoil"
+  },
+  {
+    "provider": "near-tee",
+    "providerType": "openaiCompatible",
+    "model": "Qwen/Qwen3.8-27B",
+    "cases": 5,
+    "costUsd": 0.002435,
+    "date": "2026-10-20",
+    "budgetGroup": "near"
+  },
+  {
+    "provider": "near-tee",
+    "providerType": "openaiCompatible",
+    "model": "z-ai/glm-5.3-flash",
+    "cases": 5,
+    "costUsd": 0.002514,
+    "date": "2026-10-20",
+    "budgetGroup": "near"
+  },
+  {
+    "provider": "near-tee",
+    "providerType": "openaiCompatible",
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "cases": 5,
+    "costUsd": 0.007178,
+    "date": "2026-10-20",
+    "budgetGroup": "near"
+  }
+]
