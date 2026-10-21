@@ -2254,6 +2254,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get overlayUnlock => 'Entsperren';
 
   @override
+  String get overlayUnlockCancelled =>
+      'Entsperren abgebrochen. Deine Anfrage wurde verworfen.';
+
+  @override
   String privateBannerConfidential(String since) {
     return 'Vertraulich: Gedächtnis genutzt (seit $since)';
   }

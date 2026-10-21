@@ -697,6 +697,7 @@
   "overlayLockedTitle": "Déverrouiller l’appareil",
   "overlayTextInput": "Saisie de texte",
   "overlayUnlock": "Déverrouiller",
+  "overlayUnlockCancelled": "Déverrouillage annulé. Votre demande a été abandonnée.",
   "privateBannerConfidential": "Confidentiel : mémoire utilisée (depuis {since})",
   "privateBannerPrivate": "Conversation privée (depuis {since})",
   "privateEscalationMemory": "La conversation utilise votre mémoire (depuis {since}). Avec « Oui », {toName} voit l’historique jusqu’ici, mais pas la mémoire elle-même.",

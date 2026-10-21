@@ -22,6 +22,11 @@ void main() {
       'Taschenlampe ausmachen': off,
       'Mach mal das Licht an!': on,
       'Handylampe aus': off,
+      // WP114 (T20-Z.5): Weckwort davor, getrennte Komposita
+      'Hey Wendelin, Taschenlampe an': on,
+      'Wendeln, Taschenlampe an': on,
+      'Taschen Lampe an': on,
+      'Taschenlampen aus': off,
       // fr
       'allume la lampe': on,
       'Allume la lampe torche': on,
@@ -74,6 +79,9 @@ void main() {
       'Licht an Anna schreiben',
       'Licht an aus',
       'Taschenlampe aus an',
+      'Hey Wendelin, wie spät ist es',
+      'Wendelin Taschenlampe im Keller an',
+      'Taschen Lampe',
     ];
     for (final text in negative) {
       test('"$text" -> null', () {

@@ -110,6 +110,29 @@ void main() {
       }
       final sessions = await storage.conversations.sessions(limit: 5);
       expect(sessions, isEmpty, reason: 'kein Verlauf');
+
+      // Runde 3 (WP114, K85): gesperrt gefragt, entsperrt: das Overlay bleibt
+      // offen und die Anfrage von vorher wird beantwortet (Verlauf entsteht
+      // erst jetzt). Log: kein `conv-exit reason=tap` nach dem Entsperren.
+      File('${e2e.path}/overlay.json').writeAsStringSync(
+        jsonEncode({
+          'audio': 'lock-02.wav',
+          'torch': 'file',
+          'turns': [
+            {'text': 'Es ist zehn Uhr.'},
+          ],
+        }),
+      );
+      await askHost('assist-locked');
+      await Future<void>.delayed(const Duration(seconds: 25));
+      await askHost('unlock');
+      final answered = DateTime.now().add(const Duration(seconds: 90));
+      while ((await storage.conversations.sessions(limit: 5)).isEmpty) {
+        if (DateTime.now().isAfter(answered)) {
+          fail('Anfrage lief nach dem Entsperren nicht weiter');
+        }
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
     },
     skip: !voiceE2e,
     timeout: const Timeout(Duration(minutes: 8)),

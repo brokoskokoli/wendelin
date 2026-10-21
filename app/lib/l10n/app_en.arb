@@ -697,6 +697,7 @@
   "overlayLockedTitle": "Unlock device",
   "overlayTextInput": "Text input",
   "overlayUnlock": "Unlock",
+  "overlayUnlockCancelled": "Unlocking cancelled. Your request was discarded.",
   "privateBannerConfidential": "Confidential: memory used (since {since})",
   "privateBannerPrivate": "Conversation private (since {since})",
   "privateEscalationMemory": "The conversation uses your memory (since {since}). With “Yes” {toName} sees the history so far, but not the memory itself.",

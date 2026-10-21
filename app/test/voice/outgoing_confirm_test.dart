@@ -271,7 +271,7 @@ void main() {
           inner: _Spy(() => innerCalled = true),
           locked: () => true,
           runCommand: (_, _) async => true,
-          onRefused: refused.add,
+          onRefused: (t, _) => refused.add(t),
           trigger: () => 'assistant',
         );
         final out = await gate

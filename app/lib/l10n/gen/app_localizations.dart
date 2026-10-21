@@ -3904,6 +3904,12 @@ abstract class AppLocalizations {
   /// **'Entsperren'**
   String get overlayUnlock;
 
+  /// No description provided for @overlayUnlockCancelled.
+  ///
+  /// In de, this message translates to:
+  /// **'Entsperren abgebrochen. Deine Anfrage wurde verworfen.'**
+  String get overlayUnlockCancelled;
+
   /// No description provided for @privateBannerConfidential.
   ///
   /// In de, this message translates to:

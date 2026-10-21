@@ -1227,6 +1227,7 @@
   "overlayLockedTitle": "Gerät entsperren",
   "overlayTextInput": "Texteingabe",
   "overlayUnlock": "Entsperren",
+  "overlayUnlockCancelled": "Entsperren abgebrochen. Deine Anfrage wurde verworfen.",
   "privateBannerConfidential": "Vertraulich: Gedächtnis genutzt (seit {since})",
   "@privateBannerConfidential": {
     "placeholders": {

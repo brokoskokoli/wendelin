@@ -603,15 +603,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
       audio: audio,
       vad: components.vad,
       stt: components.stt,
-      agent: LockGateAgentRun(
+      agent: lockGateFor(
+        ref,
         inner: ControllerAgentRun(_agent, trigger: () => state.trigger?.name),
-        locked: () => ref.read(lockedModeProvider),
-        runCommand: (c, trigger) =>
-            ref.read(lockedCommandRunnerProvider)(c, trigger),
-        onRefused: (trigger) {
-          ref.read(auditRecorderProvider).lockedRefused(trigger: trigger);
-          ref.read(lockedRefusalsProvider.notifier).bump();
-        },
         trigger: () => state.trigger?.name ?? 'assistant',
       ),
       textToSpeech: components.textToSpeech,

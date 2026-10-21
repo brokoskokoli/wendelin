@@ -22,7 +22,7 @@ void main() {
         inner: inner,
         locked: () => locked,
         runCommand: (_, _) async => true,
-        onRefused: (_) {},
+        onRefused: (_, _) {},
         trigger: () => 'assistant',
       );
       locked = !startLocked; // Sperrzustand wechselt vor dem Abbruch
