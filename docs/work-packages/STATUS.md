@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP121; offen: E2E Stopp/Barge 3× (WP123); Test-APK a2c4a1f bei Stefan; Stopp-/Barge-E2E → WP123; als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
+Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125, WP126 (Stopp-E2E rot seit WP123); E2E Stopp/Barge 3× (WP123) läuft; Test-APK 954e065 bei Stefan; als Nächstes: WP100/WP101 (Stationsmodus Welle 2) nach WP121, WP92c nach Gerätetest wp92a/b, Scorer-Fix Reasoning-Leck, Sonnet-Probe
 
 ## Meilensteine
 
@@ -69,10 +69,12 @@ Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP121; offen: E2E Stopp/Barge 
 | WP118 | Antwort als Gesprächston (bessere Echo-Unterdrückung), Schalter | gemergt 983346c4 | K93; Gerätetest docs/testing/m5/wp118.md; Stopp-E2E an/aus offen (Stopp-E2E auf main rot, siehe Nächste Schritte); Soll: Rennen erstes Play+Stopp (audio_playback.dart:65), Besitzer-Token bei dispose, WakeConflictWatcher.kt:61 ohne Test |
 | WP119 | Nächster Wecker auslesen, Tools vorab mitschicken | gemergt fb246094 | K91; Gerätetest docs/testing/m5/wp119.md; Soll: Test endSession räumt gemerkte Sprache auf |
 | WP120 | Antwortzeit vermessen, Pausen beim Vorlesen, früher vorlesen | gemergt ad6db5ad | K95; Gerätetest docs/testing/m5/wp120.md (10 Befehle, p50/p90); kein Schnell-Anbieter-Vergleich (kein Key); Stopp-E2E siehe Nächste Schritte |
-| WP121 | Wake Words mit echten Aufnahmen vergleichen (fair) | in Arbeit | Aufnahmen 2026-10-21; Folge WP111/K83 |
+| WP121 | Wake Words mit echten Aufnahmen vergleichen (fair) | gemergt f5f59f2e | K98; Empfehlung bei „Wendelin“ bleiben; Folge: Negativ-Aufnahme mit Fernseher (≥ 1,5 h), weitere Sprecher, sherpa-Spalten WP106/WP111 neu rechnen |
 | WP122 | Feste Bestätigungssätze statt zweitem Modellaufruf | gemergt 4f596e66 | K97; Gerätetest T21-WP122; Soll: Test AgentDone.fixed, Satz „schon vorhanden“ (confirmation_texts de:30/34 en:45/48 fr:53/56), Doku fixed_confirmation.dart:20, toter Schlüssel lists_write_tools.dart:47; CI-Flake wake_lifecycle_test (UnmountedRefException) |
 | WP123 | Stopp sofort ab Antwortbeginn (Barge-in-Warmstart), Stopp-E2E stabil | gemergt ab054e98 | K96; E2E voice_stop_word/voice_barge_in je 3× offen (Last 15–18); Gerätetest T21-WP123; Soll: Provider-Test take statt snapshot (wake_providers.dart:204) |
 | WP124 | Emulator startet bei Bedarf, wird nach jedem E2E-Lauf beendet (E2E_KEEP_EMULATOR=1 für Serien) | gemergt 909738c1 | Wunsch Stefan 2026-10-21; echter Lauf torch_e2e grün |
+| WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | in Arbeit | Go Stefan 2026-10-22; Barge-in-Punkte (WP113, WP123) → WP126 |
+| WP126 | „Stopp“ nach Warmstart: Fehlkandidat auf Stille blockiert echtes Wort (Fehler aus WP123) | in Arbeit | voice_stop_word_e2e rot seit ab054e98 (Bisekt 2026-10-22) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 

@@ -20,7 +20,7 @@ Je Stimme sind die ersten 15 Einlern-Aufnahmen die Vorlagen, die Positiv-Clips d
 Stufe 1 = Modell ueber niedriger Schwelle ODER Kosinus-Aehnlichkeit zu einer Vorlage; Stufe 2 =
 Whisper-Transkript von 2 s vor bis --tail (0,9 s) nach dem Treffer enthaelt unscharf "Wendelin" (Spiegel von matchesWakeWord in Dart).
 """
-import argparse, glob, os, sys, time
+import argparse, glob, hashlib, os, sys, time
 import numpy as np
 import soundfile as sf
 
@@ -75,7 +75,16 @@ def condition(x, name, rng):
     raise SystemExit(f"unbekannte Bedingung {name}")
 
 
-def make_spotter(model_dir, chunk, bpe, threads):
+PLACEHOLDER = "X"      # Label des Platzhalter-Keywords der Spotter-Datei; es feuert auch in Streams mit eigenen Woertern, zaehlt nie als Treffer
+
+
+def dummy_path(model_dir, content):
+    """Datei des Platzhalter-Keywords: je Inhalt und Prozess eindeutig (parallele Laeufe mit verschiedenem Platzhalter ueberschrieben sich)."""
+    return os.path.join(model_dir, f"_dummy_{hashlib.sha1(content.encode()).hexdigest()[:8]}_{os.getpid()}.txt")
+
+
+def make_spotter(model_dir, chunk, bpe, threads, dummy_kw=None):
+    """dummy_kw: Platzhalter-Schluesselwort der Spotter-Datei; es feuert auch in Streams mit eigenen Woertern (siehe words_measure.own_hits)."""
     import sherpa_onnx
     def pick(kind):
         pat = f"{kind}-*chunk-{chunk}-left-64.int8.onnx"
@@ -86,13 +95,17 @@ def make_spotter(model_dir, chunk, bpe, threads):
         if not r:
             raise SystemExit(f"{pat} nicht in {model_dir}")
         return r[0]
-    dummy = os.path.join(model_dir, "_dummy_keywords.txt")
-    open(dummy, "w").write("▁HE LL O @X\n" if bpe else "HH AH0 L OW1 @X\n")
-    return sherpa_onnx.KeywordSpotter(
-        tokens=os.path.join(model_dir, "tokens.txt"),
-        encoder=pick("encoder"), decoder=pick("decoder"), joiner=pick("joiner"),
-        keywords_file=dummy, num_threads=threads, provider="cpu",
-    )
+    kw = dummy_kw or ("▁HE LL O @X\n" if bpe else "HH AH0 L OW1 @X\n")
+    dummy = dummy_path(model_dir, kw)
+    open(dummy, "w").write(kw)
+    try:
+        return sherpa_onnx.KeywordSpotter(
+            tokens=os.path.join(model_dir, "tokens.txt"),
+            encoder=pick("encoder"), decoder=pick("decoder"), joiner=pick("joiner"),
+            keywords_file=dummy, num_threads=threads, provider="cpu",
+        )
+    finally:
+        os.remove(dummy)
 
 
 def run(spotter, x, kwline, tail=0.6, step=0.1):
@@ -108,7 +121,7 @@ def run(spotter, x, kwline, tail=0.6, step=0.1):
             spotter.decode_stream(s)
             r = spotter.get_result(s)
             if r:
-                hits.append(min(i + n, len(xx)) / SR)
+                if r != PLACEHOLDER: hits.append(min(i + n, len(xx)) / SR)
                 spotter.reset_stream(s)
     return hits, time.process_time() - t0
 

@@ -1,6 +1,6 @@
 # Wake Words im Vergleich (WP111): Messung
 
-Stand: Teil A (synthetisch) gemessen, 2026-10-20/21. Teil B (echte Aufnahmen) offen. Nur Zahlen, keine Transkripte und keine Aufnahmen.
+Stand: Teil A (synthetisch) gemessen, 2026-10-20/21. Teil B (echte Aufnahmen, WP121) gemessen 2026-10-22, siehe Abschnitt „Teil B“ am Ende; Teil A und Anhang sind vom Platzhalter-Fehler (dort beschrieben) möglicherweise betroffen und nicht neu gemessen. Nur Zahlen, keine Transkripte und keine Aufnahmen.
 
 ## Ziel
 Frage: Ist „Hey Wendelin“ als Wake Word besser als „Wendelin“, und welches offene Erkennungsprogramm trägt es? Zielwerte: Treffer >= 80 %, <= 2 Fehlalarme je Stunde (FA/h) nach allen Stufen. Bezug ist WP106 (`docs/notes/wake-word-station-spike.md`). Porcupine entfällt (Entscheidung Stefan 2026-10-20).
@@ -168,7 +168,7 @@ Wie WP106: Parakeet TDT 0.6B v3 CC-BY-4.0; Whisper MIT; CAM++ Apache-2.0; microW
 - Hintergrund/Hall synthetisch, kein FSD50K/FMA; Trainingsumfang des mww-Modells über dem Start-Beispiel des Projekts, aber kleiner als eine Vollproduktion (Fairness c).
 - Persönliches Feintuning wurde nicht neu gemessen; CAM++-Stufe 3 nicht in `--compare`.
 - Ausschlussregel der Negativmenge (Parakeet ODER Whisper small, `b6-*`) ist optimistisch (Fairness b: bis +1,0 FA/h im Worst Case).
-- Teil B (echte Aufnahmen unter `~/wendelin-fixtures/wake/hey/`) fehlt: Ordner bei Start leer.
+- Teil B (echte Aufnahmen) fehlte bei WP111 (Ordner leer); er steht jetzt am Ende (WP121).
 - Die Python-Selbsttests laufen nicht im Gate und nicht über `tool/t.sh` (nur Dart/Flutter), sondern per `unittest` wie oben.
 - Maschine war während der Messläufe stark ausgelastet; Zeiten (RTF, ms je Segment) sind eher obere Werte.
 
@@ -190,3 +190,155 @@ Wunsch Stefan nach einer Klang-Recherche (Kandidaten „Hey Wendelix“, „Hey 
 Verwechsler nach Stufe 2 überall ≤ 2,3 % (neue Wörter 0–0,2 %), FA/h ≤ 2,1. Das Originalmodell für „Alexa“ reagiert fast nur auf eine der Stimmen; die Bedingungen sind für synthetisch trainierte Modelle sehr hart.
 
 **Fazit:** Im gleichen Programm (sherpa-KWS, clean) ist kein Alternativwort besser als „Wendelin“. Der Hebel liegt bei Trainingsdaten (echte Aufnahmen, passende Domäne) und bei Stufe 2 unter Rauschen, nicht beim Wort. Die Empfehlung bleibt: bei „Wendelin“ bleiben, Teil B mit echten Aufnahmen entscheidet. Skriptkopien und Tabellen liegen lokal unter `~/wendelin-models/kws/wp111/{alexa,heyx,side-scripts}/` (nicht im Repo).
+
+## Teil B: echte Aufnahmen (WP121, 2026-10-22)
+
+Stand: gemessen 2026-10-22 (Labels aus Etappe 1, Messung `words_measure.py`, Etappe 4). Nur Zahlen, keine Transkripte und keine Aufnahmen; Ergebnisdateien (`grid.csv`, `tables.md`, `det.csv`, `det.png`) liegen lokal unter `~/wendelin-models/kws/wp121/results/`.
+
+### Aufbau und Lesehilfe
+- Daten je Gerät (Huawei, handy2): 5 Wörter (Wendelin, Hey Wendelin, Alexa, Hey Octavia, Kobalos) × 30 Äußerungen in 6 Blöcken à 5 (13 min Positive je Gerät); Negativ „Alltag leise“ 0,61 h je Gerät (echt), dazu synthetische Negativsprache (WP111, 1,93 h) und FLEURS test (1,01 h). **Huawei und handy2 nahmen dieselben Äußerungen gleichzeitig auf: nicht addieren, effektiv n = 30.**
+- Programme: M = openWakeWord (Wendelin/Hey Wendelin v7, Alexa `alexa.onnx`, neu Hey Octavia und Kobalos), W = microWakeWord (nur Wendelin/Hey Wendelin), Kz/Kg = sherpa-KWS (zh-en / gigaspeech). Stufe 2 `-` (nur Stufe 1), `bs` / `hw2` / `hw3` = Parakeet (Beam-Search, Hotwords 2 / 3). Pro Wort/Programm sweept die Messung Schwelle (M, W) bzw. Boost/Schwelle (Kz, Kg) × Stufe 2.
+- **Wortvergleich nur im selben Programm.** Modellvergleich (z. B. v7 gegen die neuen Modelle) getrennt: Die Modelle für Hey Octavia und Kobalos sind neu trainiert, `alexa.onnx` ist ein fremdes Modell; ein Unterschied zwischen Wörtern in Spalte M ist damit auch ein Unterschied zwischen Modellen.
+- **Kalibrierung:** die Konfiguration mit der höchsten Trefferzahl, deren FA/h an der Kalibrierungsquelle ≤ Ziel (1 bzw. 2 FA/h) liegt; zwei getrennte Kalibrierungen: (a) synthetisch + FLEURS (3,0 h), (b) echte Negativ-Aufnahme (0,61 h). Die jeweils andere Quelle dient als Gegenprobe.
+- **Kreuz-Auswahl zuerst:** Konfiguration auf Block 1–3 wählen, auf 4–6 zählen, und umgekehrt (je 15 Äußerungen). „In-sample“ (Auswahl auf allen 30) steht daneben und ist optimistisch (Abstand Kreuz zu in-sample bis 33 Punkte, z. B. Wendelin Kz bei echter Kalibrierung und 2 FA/h: Huawei 3/30 gegen 13/30). Intervalle: Wilson 95 % für Treffer, Poisson 95 % (Obergrenze) für FA/h; bei 0 Ereignissen in 0,61 h ist die Obergrenze 6,0 FA/h (3,0 h: 1,3), bei 1 Ereignis 9,1.
+- Aussprachevarianten (Stufe 1 KWS und Stufe 2): für jedes Wort derselbe Slot-Mechanismus (`_prod` in `words_measure.py`), alle Kombinationen, keine an den Aufnahmen gewählt: Wendelin und Hey 6, Octavia 8, Kobalos 8, Alexa 4 Phonemfolgen; Schreibvarianten (BPE) 4/4/4/2.
+
+### Ergebnisse
+Treffer sind Äußerungen von 30 (je Gerät); „Kreuz“ = auf der anderen Blockhälfte gezählt. FA/h Kal. gilt für die in-sample-Konfiguration (Auswahl auf allen 30, Huawei); die Kreuz-Konfiguration hat je Fold eine eigene, deren FA/h die Tabelle nicht ausweist (je Fold ≤ Ziel).
+
+#### Kalibrierung synthetisch + FLEURS (3,0 h, `echt`-Gegenprobe an der Negativ-Aufnahme)
+
+Treffer Kreuz von 30 (Wilson 95 %), Huawei / handy2; FA/h Kal. = Punktwert (Poisson-Obergrenze 95 %) der in-sample-Konfiguration; Gegenprobe = FA/h der in-sample-Konfiguration an der anderen Quelle (Huawei).
+
+| Wort | Prog. | 1 FA/h Kreuz H / h2 | 1 FA/h in-sample H / h2 | 2 FA/h Kreuz H / h2 | 2 FA/h in-sample H / h2 | 2 FA/h FA/h Kal. (Poisson) | 2 FA/h Gegenprobe |
+|---|---|---|---|---|---|---|---|
+| Wendelin | M | 19/30 / 20/30 | 23 / 22 | 83 % [66–93] / 83 % [66–93] | 25 / 25 | 1,7 (≤4,0) | echt 0,0 |
+| Wendelin | W | 13/30 / 12/30 | 14 / 13 | 43 % [27–61] / 43 % [27–61] | 15 / 14 | 1,7 (≤4,0) | echt 0,0 |
+| Wendelin | Kz | 1/30 / 8/30 | 5 / 8 | 0 % [0–11] / 27 % [14–44] | 6 / 8 | 1,36 (≤3,5) | echt 0,0 |
+| Wendelin | Kg | 11/30 / 7/30 | 11 / 7 | 37 % [22–54] / 23 % [12–41] | 11 / 7 | 0,0 (≤1,3) | echt 0,0 |
+| Hey Wendelin | M | 16/30 / 17/30 | 20 / 21 | 53 % [36–70] / 57 % [39–73] | 21 / 21 | 1,02 (≤3,0) | echt 0,0 |
+| Hey Wendelin | W | 4/30 / 0/30 | 4 / 3 | 13 % [5–30] / 0 % [0–11] | 4 / 3 | 0,0 (≤1,3) | echt 0,0 |
+| Hey Wendelin | Kz | 11/30 / 9/30 | 11 / 9 | 43 % [27–61] / 30 % [17–48] | 13 / 10 | 1,02 (≤3,0) | echt 0,0 |
+| Hey Wendelin | Kg | 0/30 / 3/30 | 6 / 4 | 0 % [0–11] / 10 % [3–26] | 6 / 4 | 0,0 (≤1,3) | echt 0,0 |
+| Alexa | M | 25/30 / 22/30 | 27 / 26 | 83 % [66–93] / 73 % [56–86] | 27 / 27 | 0,0 (≤1,3) | echt 6,53 |
+| Alexa | Kz | 16/30 / 11/30 | 16 / 13 | 53 % [36–70] / 37 % [22–54] | 16 / 13 | 0,0 (≤1,3) | echt 0,0 |
+| Alexa | Kg | 8/30 / 8/30 | 11 / 12 | 27 % [14–44] / 27 % [14–44] | 11 / 12 | 0,0 (≤1,3) | echt 0,0 |
+| Hey Octavia | M | 24/30 / 27/30 | 26 / 28 | 80 % [63–90] / 90 % [74–97] | 26 / 28 | 0,0 (≤1,3) | echt 0,0 |
+| Hey Octavia | Kz | 5/30 / 8/30 | 9 / 12 | 17 % [7–34] / 27 % [14–44] | 9 / 12 | 0,0 (≤1,3) | echt 0,0 |
+| Hey Octavia | Kg | 0/30 / 1/30 | 4 / 4 | 0 % [0–11] / 3 % [1–17] | 4 / 4 | 0,0 (≤1,3) | echt 0,0 |
+| Kobalos | M | 26/30 / 26/30 | 27 / 27 | 87 % [70–95] / 87 % [70–95] | 27 / 27 | 0,0 (≤1,3) | echt 0,0 |
+| Kobalos | Kz | 5/30 / 12/30 | 8 / 12 | 17 % [7–34] / 40 % [25–58] | 8 / 12 | 0,0 (≤1,3) | echt 0,0 |
+| Kobalos | Kg | 16/30 / 8/30 | 17 / 12 | 53 % [36–70] / 27 % [14–44] | 17 / 12 | 0,0 (≤1,3) | echt 0,0 |
+
+#### Kalibrierung echte Negativ-Aufnahme (0,61 h je Gerät, `synth.`-Gegenprobe)
+
+Treffer Kreuz von 30 (Wilson 95 %), Huawei / handy2; FA/h Kal. = Punktwert (Poisson-Obergrenze 95 %) der in-sample-Konfiguration; Gegenprobe = FA/h der in-sample-Konfiguration an der anderen Quelle (Huawei).
+
+| Wort | Prog. | 1 FA/h Kreuz H / h2 | 1 FA/h in-sample H / h2 | 2 FA/h Kreuz H / h2 | 2 FA/h in-sample H / h2 | 2 FA/h FA/h Kal. (Poisson) | 2 FA/h Gegenprobe |
+|---|---|---|---|---|---|---|---|
+| Wendelin | M | 25/30 / 24/30 | 25 / 25 | 80 % [63–90] / 80 % [63–90] | 25 / 25 | 0,0 (≤6,0) | synth. 1,7 |
+| Wendelin | W | 17/30 / 15/30 | 19 / 18 | 63 % [46–78] / 50 % [33–67] | 22 / 18 | 1,63 (≤9,1) | synth. 15,66 |
+| Wendelin | Kz | 2/30 / 8/30 | 11 / 11 | 10 % [3–26] / 27 % [14–44] | 13 / 11 | 1,63 (≤9,1) | synth. 48,68 |
+| Wendelin | Kg | 11/30 / 7/30 | 11 / 7 | 37 % [22–54] / 23 % [12–41] | 11 / 7 | 0,0 (≤6,0) | synth. 0,0 |
+| Hey Wendelin | M | 20/30 / 20/30 | 22 / 21 | 67 % [49–81] / 57 % [39–73] | 22 / 21 | 0,0 (≤6,0) | synth. 6,13 |
+| Hey Wendelin | W | 4/30 / 3/30 | 4 / 4 | 13 % [5–30] / 10 % [3–26] | 4 / 4 | 0,0 (≤6,0) | synth. 0,0 |
+| Hey Wendelin | Kz | 15/30 / 13/30 | 18 / 17 | 50 % [33–67] / 43 % [27–61] | 18 / 17 | 0,0 (≤6,0) | synth. 26,55 |
+| Hey Wendelin | Kg | 0/30 / 3/30 | 6 / 4 | 0 % [0–11] / 10 % [3–26] | 6 / 4 | 0,0 (≤6,0) | synth. 0,0 |
+| Alexa | M | 14/30 / 16/30 | 17 / 21 | 53 % [36–70] / 53 % [36–70] | 19 / 21 | 1,63 (≤9,1) | synth. 0,0 |
+| Alexa | Kz | 16/30 / 11/30 | 16 / 13 | 63 % [46–78] / 70 % [52–83] | 19 / 21 | 1,63 (≤9,1) | synth. 10,55 |
+| Alexa | Kg | 21/30 / 11/30 | 21 / 17 | 70 % [52–83] / 57 % [39–73] | 21 / 22 | 0,0 (≤6,0) | synth. 10,89 |
+| Hey Octavia | M | 24/30 / 27/30 | 26 / 28 | 80 % [63–90] / 90 % [74–97] | 26 / 28 | 0,0 (≤6,0) | synth. 0,0 |
+| Hey Octavia | Kz | 5/30 / 8/30 | 9 / 12 | 17 % [7–34] / 27 % [14–44] | 9 / 12 | 0,0 (≤6,0) | synth. 0,0 |
+| Hey Octavia | Kg | 0/30 / 1/30 | 4 / 4 | 0 % [0–11] / 3 % [1–17] | 4 / 4 | 0,0 (≤6,0) | synth. 0,0 |
+| Kobalos | M | 27/30 / 24/30 | 27 / 27 | 90 % [74–97] / 80 % [63–90] | 27 / 27 | 0,0 (≤6,0) | synth. 0,0 |
+| Kobalos | Kz | 5/30 / 12/30 | 8 / 12 | 17 % [7–34] / 40 % [25–58] | 8 / 12 | 0,0 (≤6,0) | synth. 0,0 |
+| Kobalos | Kg | 16/30 / 8/30 | 17 / 12 | 53 % [36–70] / 27 % [14–44] | 17 / 12 | 0,0 (≤6,0) | synth. 0,0 |
+
+#### Treffer je Block (Kalibrierung synthetisch + FLEURS, 2 FA/h)
+Treffer von 5 je Block 1..6 für die in-sample-Konfiguration der Zeile (Kreuz-Konfigurationen je Fold: `tables.md`, lokal), Huawei und handy2.
+
+| Wort | Prog. | Huawei Konfiguration | Huawei Block 1..6 | handy2 Konfiguration | handy2 Block 1..6 |
+|---|---|---|---|---|---|
+| Wendelin | M | M0.95 + hw3 | 4/5 5/5 5/5 4/5 4/5 3/5 | M0.95 + hw3 | 4/5 5/5 5/5 4/5 3/5 4/5 |
+| Wendelin | W | W0.6 + hw2 | 3/5 2/5 2/5 4/5 4/5 0/5 | W0.6 + hw2 | 3/5 3/5 2/5 3/5 2/5 1/5 |
+| Wendelin | Kz | Kz6/0.12 + hw2 | 2/5 2/5 1/5 1/5 0/5 0/5 | Kz3/0.25 + hw2 | 1/5 3/5 1/5 2/5 0/5 1/5 |
+| Wendelin | Kg | Kg10/0.03 + hw2 | 3/5 2/5 3/5 2/5 1/5 0/5 | Kg10/0.03 + hw2 | 2/5 0/5 1/5 3/5 1/5 0/5 |
+| Hey Wendelin | M | M0.98 + hw3 | 5/5 4/5 4/5 5/5 3/5 0/5 | M0.99 + hw3 | 3/5 5/5 4/5 5/5 1/5 3/5 |
+| Hey Wendelin | W | W0.4 + hw2 | 0/5 0/5 3/5 0/5 1/5 0/5 | W0.4 + hw2 | 1/5 0/5 2/5 0/5 0/5 0/5 |
+| Hey Wendelin | Kz | Kz3/0.12 + hw2 | 5/5 1/5 2/5 3/5 2/5 0/5 | Kz3/0.12 + hw2 | 2/5 3/5 1/5 3/5 0/5 1/5 |
+| Hey Wendelin | Kg | Kg10/0.03 + hw2 | 4/5 2/5 0/5 0/5 0/5 0/5 | Kg6/0.12 + hw2 | 2/5 1/5 0/5 1/5 0/5 0/5 |
+| Alexa | M | M0.5 + - | 5/5 4/5 5/5 5/5 3/5 5/5 | M0.2 + - | 5/5 5/5 5/5 3/5 4/5 5/5 |
+| Alexa | Kz | Kz6/0.03 + bs | 4/5 4/5 1/5 4/5 2/5 1/5 | Kz3/0.12 + hw2 | 2/5 5/5 2/5 2/5 1/5 1/5 |
+| Alexa | Kg | Kg3/0.03 + bs | 3/5 2/5 1/5 4/5 1/5 0/5 | Kg3/0.03 + bs | 1/5 3/5 2/5 3/5 3/5 0/5 |
+| Hey Octavia | M | M0.2 + hw3 | 5/5 5/5 5/5 5/5 4/5 2/5 | M0.98 + hw3 | 5/5 5/5 5/5 5/5 3/5 5/5 |
+| Hey Octavia | Kz | Kz10/0.03 + hw2 | 5/5 2/5 2/5 0/5 0/5 0/5 | Kz10/0.03 + - | 3/5 3/5 3/5 3/5 0/5 0/5 |
+| Hey Octavia | Kg | Kg6/0.03 + hw2 | 4/5 0/5 0/5 0/5 0/5 0/5 | Kg6/0.03 + hw2 | 2/5 0/5 1/5 1/5 0/5 0/5 |
+| Kobalos | M | M0.8 + hw3 | 5/5 5/5 5/5 4/5 3/5 5/5 | M0.99 + hw3 | 4/5 4/5 5/5 5/5 4/5 5/5 |
+| Kobalos | Kz | Kz10/0.03 + hw3 | 5/5 1/5 0/5 1/5 0/5 1/5 | Kz10/0.03 + hw2 | 3/5 3/5 2/5 2/5 0/5 2/5 |
+| Kobalos | Kg | Kg3/0.03 + - | 3/5 5/5 2/5 4/5 0/5 3/5 | Kg6/0.03 + hw3 | 2/5 4/5 1/5 1/5 2/5 2/5 |
+
+#### Labelzählung (je Gerät, beide Geräte gleich)
+Äußerungen ok/unsicher je Wort × Block 1..6 (5 je Zelle): „unsicher“ = zusammengezogen oder lang, Zählfenster größer. Dazu je Gerät 1 Versprecher (Block 2, Runde 2, statt Alexa „Octavia“ gesagt), nicht gewertet; die Alexa-Wiederholung steht in der Zählung. Gesamt je Gerät 139 ok, 11 unsicher, 1 Versprecher.
+
+| Wort | B1 | B2 | B3 | B4 | B5 | B6 |
+|---|---|---|---|---|---|---|
+| Wendelin | 4/1 | 5/0 | 5/0 | 3/2 | 5/0 | 5/0 |
+| Hey Wendelin | 5/0 | 5/0 | 5/0 | 2/3 | 5/0 | 5/0 |
+| Alexa | 5/0 | 5/0 | 5/0 | 4/1 | 5/0 | 5/0 |
+| Hey Octavia | 5/0 | 5/0 | 5/0 | 3/2 | 5/0 | 5/0 |
+| Kobalos | 5/0 | 5/0 | 5/0 | 4/1 | 5/0 | 4/1 |
+
+Auffällig: Block 4 hat 9 der 11 unsicheren Äußerungen (u. a. Wendelin und Hey Wendelin in einer Äußerung zusammengezogen), Block 1 und 6 je 1.
+
+#### Negativ-Suche in der Negativ-Aufnahme
+Whisper medium (nur zur Suche, nicht der gemessene Erkenner) über die Negativ-Aufnahme „Alltag leise“: Huawei 111 Fenster (24 s, Hop 20 s), davon 97 mit Sprache; handy2 110 Fenster, 109 mit Sprache. Gesucht: die fünf Wörter und Verwechsler (Regex-Klassen in `words_labels.py`). Ergebnis: **0 Fundstellen** (beide Geräte), die Negativ-Aufnahme enthält damit nach dieser Suche keines der Wörter. Grenzen: Whisper kann ein Wort verfehlen, Fenster ohne Sprachaktivität (> 10 dB, 3 % der Frames) wurden nicht transkribiert.
+
+Zentrale Zahlen (Kreuz, 2 FA/h, synthetische Kalibrierung, Huawei / handy2; jeweils bestes Programm): Wendelin M 83 % / 83 %, Hey Wendelin M 53 % / 57 %, Alexa M 83 % / 73 %, Hey Octavia M 80 % / 90 %, Kobalos M 87 % / 87 %. Bei Kalibrierung an der echten Negativ-Aufnahme: Wendelin M 80 / 80, Hey Wendelin M 67 / 57, Alexa Kg 70 / 57 (M 53 / 53), Hey Octavia M 80 / 90, Kobalos M 90 / 80 (je Wilson ±15 Punkte, n = 30). M liegt in jeder Zeile vorn außer bei Alexa mit echter Kalibrierung (dort 0,61 h, Obergrenze ≤ 9,1 FA/h). Wendelin und Hey Wendelin unterscheiden sich im selben Programm (M, gleiches Modell v7): 83 % gegen 53–57 % bei 2 FA/h, die Wilson-Intervalle überlappen knapp (83 % [66–93] gegen 53 % [36–70] bzw. 57 % [39–73]); der Unterschied ist groß (26–30 Punkte), bei n = 30 aber nicht statistisch gesichert.
+
+DET-Kurven (`det.csv`/`det.png`, nur lokal): nur als Hinweis, nicht zusätzlich ausgewertet; die Entscheidung stützt sich auf die Tabellen.
+
+### Kontrollen
+- **Alexa:** WP111 maß 8 % mit `alexa.onnx` auf synthetischen Systemstimmen; auf echten Aufnahmen trifft dasselbe Modell 27/30 (Stufe 1, Schwelle 0,5, ohne Stufe 2) und 73–83 % Kreuz bei 2 FA/h. Die 8 % lagen an den synthetischen Stimmen, nicht am Modell. Gleichzeitig zeigt Alexa die Grenze der synthetischen Kalibrierung: dort 0 FA/h, an der echten Negativ-Aufnahme 6,5 FA/h (Huawei) bzw. 11,5 FA/h (handy2); die Werte gehören zur jeweiligen in-sample-Konfiguration (Huawei M0.5, handy2 M0.2, jeweils ohne Stufe 2; handy2 bei M0.5 wären es 5 FA = 8,2 FA/h).
+- **Kobalos, Octavia:** Parakeet war nie das Problem. Die KWS-Fehler kamen von der Aussprache (Phonem- und BPE-Varianten fehlten) und vom Platzhalter-Fehler (nächster Punkt). Mit allen Slot-Varianten treffen Kz/Kg Hey Octavia 0–12/30 (Kz 5–12, Kg 0–4) und Kobalos 5–17/30; Hey Octavia Kz hat nun Treffer (vorher 0/17 FA = Platzhalter-Artefakt). Die Werte der KWS-Programme bleiben klar unter M.
+- **sherpa-Platzhalter:** `kws_measure.make_spotter` schrieb den Platzhalter-Keyword „hello @X“ in die Spotter-Datei; er feuerte auch in Streams mit anderen Wörtern, `K.run` zählte jedes Ergebnis als Treffer (konstante FA je Wort, 0 Treffer bei Hey Octavia Kz). Behoben: `words_measure.own_hits` zählt nur Ergebnisse mit eigenem Label, `KwsX` verwendet einen unwahrscheinlichen Platzhalter (`DUMMY_KW`); alle KWS-Caches wurden verworfen und neu gerechnet (480 Aufgaben). Die FA/h der KWS-Programme ändern sich jetzt mit der Schwelle (`fa_syn` in `grid.csv`: 8 bis 19 verschiedene Werte je Wort bei Kz, nur bei Hey Octavia konstant 0). **Teil A dieser Notiz und der Anhang (WP111) und WP106 nutzten `K.run` und sind davon möglicherweise betroffen (KWS-Spalten); sie wurden nicht neu gemessen.** Für „Wendelin“ ist der Effekt kaum zu erwarten, aber nicht geprüft. Nachtrag (Nachbesserung Runde 1): `kws_measure.run` verwirft den Platzhalter jetzt selbst (`PLACEHOLDER`) und die Platzhalter-Datei ist je Inhalt und Prozess eindeutig (`dummy_path`); künftige Läufe von WP106/WP111/`station_measure` sind damit korrekt, die alten Pakete wurden nicht neu gemessen.
+
+### Grenzen
+- FA/h: nur 0,61 h „Alltag leise“ je Gerät (eine Umgebung); 0 Ereignisse heißen ≤ 6,0 FA/h (95 %). Ziele von 1–2 FA/h sind damit an echten Daten nicht prüfbar, nur ein Hinweis. Die synthetische Kalibrierung unterschätzt echte FA/h deutlich (Alexa: 0 gegenüber 6,5–11,5).
+- n = 30 effektiv (zwei Geräte = dieselben Äußerungen), wenige Sprecher und Räume; Wilson-Intervalle ±15–20 Punkte. Gerätedifferenzen (Kg Kobalos 53 % gegen 27 %) liegen im Rauschen.
+- Auswahl-Bias: in-sample schätzt um bis zu 33 Punkte zu hoch (Kz/Kg am stärksten, weil dort die Konfigurationsmenge am größten ist).
+- Modelle Hey Octavia/Kobalos: nur ein Training, kein Zufallsvergleich (Seeds nicht wiederholt).
+
+### Training der neuen Modelle (Octavia, Kobalos)
+Pipeline wie v7 (kein `--wide`): ca. 14000 Positive je Wort (v7: 5000 + 8734 = 13,7k), 3100 Verwechsler aus eigenen Listen (`CONF_OCT`, `CONF_KOB`), Negative + FLEURS dev wie `wp58`, Features `--n-pos 20000 --n-neg 7000`, 5000 Schritte; Modelle `oct.onnx` (nur „Hey Octavia“, kein bares „Octavia“ als Positiv) und `kob.onnx` (je ca. 0,86 MB). Aufruf `tool/train_wake_word/run_words.sh`.
+
+### Empfehlung
+- **Wendelin** (M, Stufe 2 hw3) bleibt: Kreuz 83 % bei 2 FA/h (synth. Kalibrierung), 80 % bei echter Kalibrierung, gegenüber 53–67 % für „Hey Wendelin“ im selben Programm (Intervalle überlappen knapp, der Unterschied ist nicht gesichert, aber in jeder Kalibrierung gleichgerichtet). Auch Octavia (80–90 %) und Kobalos (80–90 %) erreichen das nur mit eigenem Training, also nicht besser als Wendelin im Rahmen der Intervalle; ein Wechsel des Wortes ist nach diesen Daten nicht begründet.
+- Programm: M vor Kz/Kg und W. KWS bleibt Rückfall (Kz/Kg hier 0–70 %, stark vom Wort abhängig).
+- Vor einer Produktentscheidung: Negativ-Aufnahme verlängern (mehrere Stunden, mit Fernseher), mehr Sprecher/Räume, KWS-Messungen aus Teil A/WP111 neu rechnen.
+
+### Reproduzierbar (aus dem Repo-Root, `P="nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/words_measure.py"`, `K=~/wendelin-models/kws`)
+```
+nice -n 10 tool/train_wake_word/run_words.sh                 # oct.onnx, kob.onnx unter $K/wp121/models
+$P s1 oww                          # M (Wendelin/Hey v7, alexa) + W; bei vorhandenen oct/kob: run_oww_x
+$P s1 kws --jobs 2                 # sherpa-KWS Kz/Kg (480 Aufgaben)
+$P s2 --variants bs --threads 4    # dann hw2, hw3 nacheinander (Parakeet ca. 1 GB RAM je Prozess)
+$P report                          # grid.csv, tables.md, det.csv, det.png
+$P kontrolle                       # Stufe 1 an den Labels
+```
+Label-Schritte (`words_labels.py`, vor der Messung; Rohaufnahmen und Labels liegen nur lokal unter `~/wendelin-fixtures/wake/words`):
+```
+L="nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/words_labels.py"
+$L convert                         # Rohaufnahmen -> work/*.wav
+$L events                          # Energie-VAD beider Geräte, Whisper medium je Ereignis -> work/events.json
+$L label                           # Ansagen und Reihenfolge -> labels/labels.csv (Abweichungen: labels/manual.csv)
+$L neg                             # Negativ-Suche -> labels/neg_hits.csv
+```
+Tests:
+```
+$K/wp58/venv/bin/python -I -m unittest discover -s tool/train_wake_word -p 'test_measure.py'
+```
+Etappe 4 lief mit s2, dann s1 oww (neue Modelle), s2 erneut, report. Der erste s2-Durchlauf brach ab (`KeyError: pos_huawei|oct`, oww-x-Spalten fehlten) und wurde nach s1 oww wiederholt.
+
+### Abweichungen (Teil B)
+- Keine Vorlagen-Regel T (Teil A) in Teil B; microWakeWord nur für Wendelin/Hey Wendelin; oWW-Schwellen 0,2 bis 0,99; Positive als fortlaufende Aufnahme je Gerät geschnitten (Labels aus Etappe 1); matplotlib im wp58-venv; die Python-Selbsttests laufen nicht im Gate.
+- Platzhalter-Fehler in `kws_measure` (Teil A/Anhang evtl. betroffen, nicht neu gemessen); Aussprachevarianten aus der Slot-Regel statt aus Aufnahmen; neue Modelle oct/kob mit v7-Pipeline.
