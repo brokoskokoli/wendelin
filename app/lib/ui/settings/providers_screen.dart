@@ -37,7 +37,7 @@ class ProvidersScreen extends ConsumerWidget {
           )
         else ...[
           if (data.profiles.isEmpty)
-            Text(context.l10n.providersNone, style: WText.intro)
+            InfoBox(context.l10n.providersNone)
           else
             SettingsSection(
               title: context.l10n.providersProfiles,

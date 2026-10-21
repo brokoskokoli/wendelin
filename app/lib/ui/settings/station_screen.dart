@@ -67,7 +67,10 @@ class StationSettingsScreen extends ConsumerWidget {
         SettingsSection(
           title: l.stationSectionsSection,
           children: [
-            Text(l.stationSectionsIntro, style: WText.intro),
+            Padding(
+              padding: const EdgeInsets.all(WSpace.m),
+              child: InfoBox(l.stationSectionsIntro),
+            ),
             for (final s in StationSection.values)
               SettingsRow(
                 title: _sectionTitle(l, s),

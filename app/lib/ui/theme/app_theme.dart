@@ -319,6 +319,17 @@ abstract final class WText {
     color: WColors.textMuted,
   );
 
+  /// Überschrift eines Abschnitts auf Einstellungsseiten (18, 600, Text).
+  static final sectionTitle = _ui(18, FontWeight.w600);
+
+  /// Text in der Info-Box (14, 1.5, sekundär).
+  static final info = _ui(
+    14,
+    FontWeight.w400,
+    height: 1.5,
+    color: WColors.textSecondary,
+  );
+
   /// Titel eines Eintrags in der Bestätigungskarte (17, 600).
   static final itemTitle = _ui(17, FontWeight.w600);
 

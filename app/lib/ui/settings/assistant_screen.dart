@@ -151,16 +151,9 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
         ],
       ),
       if (isDefault)
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: TextButton(
-            onPressed: () => unawaited(_openSystemSettings()),
-            style: TextButton.styleFrom(
-              foregroundColor: WColors.link,
-              minimumSize: const Size(WSize.touchMin, WSize.touchMin),
-            ),
-            child: Text(l.assistantChangeInAndroid),
-          ),
+        LinkButton(
+          l.assistantChangeInAndroid,
+          onPressed: () => unawaited(_openSystemSettings()),
         )
       else
         PrimaryButton(
@@ -174,7 +167,7 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
         offered: offered,
         elsewhere: elsewhere,
       ),
-      if (!elsewhere) Text(l.assistantSwitchHint, style: WText.caption),
+      if (!elsewhere) InfoBox(l.assistantSwitchHint),
     ],
   );
 
@@ -206,7 +199,7 @@ class _AssistantState extends ConsumerState<AssistantScreen> {
         // Only with something to say, so the column adds no empty gap.
         if (ref.watch(batteryStatusProvider).value?.hasHints ?? false)
           const BatteryHints(),
-        Text(l.assistantNameHint, style: WText.intro),
+        InfoBox(l.assistantNameHint),
         TextField(
           controller: _name,
           style: WText.body,

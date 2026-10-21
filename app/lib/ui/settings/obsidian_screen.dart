@@ -238,7 +238,7 @@ class _ObsidianState extends ConsumerState<ObsidianScreen> {
               value: index.fraction,
               semanticsLabel: context.l10n.obsidianIndexBuilding,
             ),
-          Text(context.l10n.obsidianIndexHint, style: WText.caption),
+          InfoBox(context.l10n.obsidianIndexHint),
           WideButton(
             context.l10n.obsidianBuildIndex,
             onPressed: !prefs.hasVault || index.running

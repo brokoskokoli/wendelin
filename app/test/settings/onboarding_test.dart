@@ -290,7 +290,8 @@ void main() {
     final area = tester.getRect(
       find.ancestor(of: intro, matching: find.byType(Column)).first,
     );
-    final top = tester.getTopLeft(intro).dy - area.top;
+    final box = find.ancestor(of: intro, matching: find.byType(InfoBox));
+    final top = tester.getTopLeft(box).dy - area.top;
     final below = area.bottom - tester.getBottomLeft(last).dy;
     // Equal space above and below the content, a lot of it on a phone.
     expect(top, closeTo(below, 1));

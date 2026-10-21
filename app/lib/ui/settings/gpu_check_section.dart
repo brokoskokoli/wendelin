@@ -51,7 +51,7 @@ class GpuCheckSection extends StatelessWidget {
             ),
         ],
       ),
-      Text(context.l10n.gpuSectionNote, style: WText.caption),
+      InfoBox(context.l10n.gpuSectionNote),
     ],
   );
 }

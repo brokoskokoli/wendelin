@@ -75,12 +75,9 @@ List<Widget> credentialsStep({
       _baseUrlField(l, baseUrl),
     if (t.auth != TemplateAuth.none) ...[
       if (t.keyPageUrl case final url?)
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: TextButton(
-            onPressed: () => onOpenUrl(url),
-            child: Text(l.providerSetupProviderSetupCreateKey),
-          ),
+        LinkButton(
+          l.providerSetupProviderSetupCreateKey,
+          onPressed: () => onOpenUrl(url),
         ),
     ],
     ?failure,

@@ -62,7 +62,7 @@ class IntegrationDetailScreen extends ConsumerWidget {
           hasUndo: hasUndo,
           update: update,
         ),
-        Text(context.l10n.integrationDetailTapTool, style: WText.caption),
+        InfoBox(context.l10n.integrationDetailTapTool),
         _sensitiveCard(context, integration, prefs, update),
         if (integration.sensitive) const SensitiveLevelSection(),
       ],

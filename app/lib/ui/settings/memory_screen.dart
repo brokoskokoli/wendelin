@@ -58,7 +58,7 @@ class MemoryScreen extends ConsumerWidget {
         if (entries.isLoading && list.isEmpty)
           Text('…', style: WText.caption)
         else if (list.isEmpty)
-          Text(context.l10n.memoryNone, style: WText.intro)
+          InfoBox(context.l10n.memoryNone)
         else
           SectionCard(
             children: [

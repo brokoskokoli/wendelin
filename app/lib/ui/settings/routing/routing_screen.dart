@@ -158,7 +158,7 @@ class _RoutingScreenState extends ConsumerState<RoutingScreen> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(context.l10n.routingScreenFirstWins, style: WText.sectionLabel),
+          Text(context.l10n.routingScreenFirstWins, style: WText.sectionTitle),
           const SizedBox(height: WSpace.s),
           _RuleList(
             state: state,
@@ -289,7 +289,7 @@ class _TestCard extends StatelessWidget {
         children: [
           Text(
             context.l10n.routingScreenTestSentence,
-            style: WText.sectionLabel,
+            style: WText.sectionTitle,
           ),
           TextField(
             controller: controller,

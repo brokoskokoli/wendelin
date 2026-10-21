@@ -91,7 +91,7 @@ class _Page extends ConsumerWidget {
       children: [
         _serverCard(context, ref),
         _toolsSection(context, ref),
-        Text(context.l10n.mcpDetailIntroHint, style: WText.caption),
+        InfoBox(context.l10n.mcpDetailIntroHint),
         _optionsCard(context, ref),
         if (config.sensitive) const SensitiveLevelSection(),
         SectionCard(
