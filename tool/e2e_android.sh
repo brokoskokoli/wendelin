@@ -3,9 +3,14 @@
 #
 #   tool/e2e_android.sh [integration_test/<datei>.dart …]
 #
-# Erwartet ein laufendes Gerät (adb) – z. B. das AVD Wendelin_AOSP_35:
-#   ~/Library/Android/sdk/emulator/emulator -avd Wendelin_AOSP_35 \
-#     -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
+# Emulator (WP124): Läuft keiner, startet das Skript das AVD Wendelin_AOSP_35
+# selbst (tool/emulator_boot.sh: ohne Fenster/Audio, Port aus DEVICE=emulator-NNNN,
+# sonst 5554, Log ${TMPDIR}/wendelin-emulator-<serial>.log, Boot-Zeitlimit
+# EMU_BOOT_TIMEOUT, Standard 240 s) und beendet ihn am Ende jedes Laufs, auch bei
+# Abbruch. E2E_KEEP_EMULATOR=1 lässt ihn laufen (mehrere Läufe hintereinander;
+# der letzte ohne die Variable beendet ihn). Hängt zusätzlich ein echtes Gerät
+# am USB, wird trotzdem der Emulator benutzt; echte Geräte werden nie gestartet
+# oder beendet. Gleichzeitiger Start durch zwei Läufe: der zweite bricht ab.
 #
 # Das Skript
 #   1. legt einen lokalen Kalender an, falls das Gerät keinen hat
@@ -96,6 +101,10 @@ if [ -z "${JAVA_HOME:-}" ] && [ -x "$_jbr/bin/java" ]; then export JAVA_HOME="$_
 
 PKG=app.wendelin
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Emulator selbst starten, falls keiner läuft (WP124); DEVICE wird gesetzt.
+# shellcheck source=tool/emulator_boot.sh
+. "$ROOT/tool/emulator_boot.sh"
+emu_boot_ensure || exit 1
 # shellcheck source=tool/android_device.sh
 . "$ROOT/tool/android_device.sh"
 
@@ -118,7 +127,12 @@ fi
 # Ein Lauf je Emulator (WP110): belegt -> sofort Abbruch, Freigabe per trap (auch in cleanup).
 # shellcheck source=tool/emulator_lock.sh
 . "$ROOT/tool/emulator_lock.sh"
-emu_lock_acquire "$DEVICE" || exit 1
+if ! emu_lock_acquire "$DEVICE"; then
+  [ -z "$_EMU_STARTED_PID" ] || emu_boot_stop # selbst gestartet, aber nicht benutzbar
+  exit 1
+fi
+# Bis cleanup steht: Emulator beenden VOR der Freigabe der Sperre.
+trap 'emu_boot_stop; emu_lock_release' EXIT
 
 if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" != "1" ]; then
   echo "Gerät $DEVICE ist noch nicht hochgefahren" >&2
@@ -502,7 +516,6 @@ helper &
 HELPER=$!
 HA_SERVER=
 cleanup() {
-  emu_lock_release
   kill "$HELPER" 2>/dev/null || true
   # Fake-HA (run_ha) nach Abbruch nicht verwaist lassen.
   if [ -n "$HA_SERVER" ]; then
@@ -528,6 +541,9 @@ cleanup() {
     adb shell rm -rf "$VAULT_DIR" "$TMP" 2>/dev/null || true
     if installed; then adb shell pm clear "$PKG" >/dev/null || true; fi
   fi
+  # Emulator beenden (WP124), erst danach die Sperre freigeben.
+  emu_boot_stop
+  emu_lock_release
 }
 trap cleanup EXIT
 

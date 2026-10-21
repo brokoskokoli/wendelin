@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'budget_self_test.dart';
+import 'emulator_boot_self_test.dart';
 import 'emulator_lock_self_test.dart';
 import 'sandbox.dart';
 import 'self_check.dart';
@@ -13,6 +14,7 @@ Future<void> claudeHooksChecks(SelfCheck t) async {
   budgetChecks(t);
   _settings(t);
   await emulatorLockChecks(t);
+  await emulatorBootChecks(t);
 }
 
 const hooksDir = 'tool/hooks/claude';
