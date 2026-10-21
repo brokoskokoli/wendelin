@@ -254,7 +254,11 @@ final class SpotifyPlayTool extends IntegrationTool
       summary: target == null ? 'Weiter' : 'Spielt ${target.label}',
       fixed: target == null
           ? const ConfirmationSentence('media.play')
-          : ConfirmationSentence('spotify.playing', {'label': target.label}),
+          // A label is a server name (search hit) unless the user gave the
+          // uri; only then it is safe in the sentence (task_format.dart).
+          : args.has('uri')
+          ? ConfirmationSentence('spotify.playing', {'label': target.label})
+          : const ConfirmationSentence('media.play'),
       undo: UndoAction(
         label: before != null && before.isPlaying && target != null
             ? 'Vorheriges wieder spielen'

@@ -453,7 +453,10 @@ final class _Run implements RunControl {
     await _state.append(assistant);
     final round = await _tools.execute(calls, step);
     // WP122: every call succeeded and has a template → no second model call.
-    final sentence = _fixed.sentenceFor(round, input.language);
+    final sentence = _fixed.sentenceFor(
+      round,
+      input.language ?? input.interfaceLanguage,
+    );
     if (sentence != null) {
       _fixedDone = await _fixed.finish(round, sentence);
       throwIfAborted();

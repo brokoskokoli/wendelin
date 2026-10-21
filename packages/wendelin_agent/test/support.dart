@@ -140,6 +140,7 @@ final class Harness {
     bool requestEscalation = false,
     InputSource source = InputSource.text,
     String? language,
+    String? interfaceLanguage,
   }) async {
     final events = <AgentEvent>[];
     await for (final e in runner.run(
@@ -148,6 +149,7 @@ final class Harness {
         requestEscalation: requestEscalation,
         source: source,
         language: language,
+        interfaceLanguage: interfaceLanguage,
       ),
     )) {
       events.add(e);

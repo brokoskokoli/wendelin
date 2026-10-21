@@ -48,6 +48,9 @@ final class FixedAnswer {
 
   /// The sentence for [round] in [language], or `null` (model answers).
   String? sentenceFor(ToolRoundRun round, String? language) {
+    // Second safeguard: a rejected or repeated call has no `executed` entry
+    // with its id, so the lookup below already returns null for it. This
+    // check is deliberately redundant (equivalent mutation, no own test).
     if (round.calls.isEmpty || round.pending.length != round.calls.length) {
       return null;
     }

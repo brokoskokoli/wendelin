@@ -264,10 +264,18 @@ final class BringAddItemsTool extends IntegrationTool
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final wanted = _items(args);
     final list = await session.resolveList(args.optString('list'), write: true);
-    return session.exclusive(list.uuid, () => _add(list, wanted));
+    final said = args.optString('list');
+    return session.exclusive(
+      list.uuid,
+      () => _add(list, wanted, said == null || said.isEmpty ? null : said),
+    );
   }
 
-  Future<ToolOutcome> _add(BringList list, List<BringItem> wanted) async {
+  Future<ToolOutcome> _add(
+    BringList list,
+    List<BringItem> wanted,
+    String? said,
+  ) async {
     final items = await session.run((a) => session.api.items(a, list.uuid));
     final open = {for (final i in items.purchase) _flat(i.name): i};
     final recent = {for (final i in items.recently) _flat(i.name): i};
@@ -307,11 +315,15 @@ final class BringAddItemsTool extends IntegrationTool
       open[key] = item;
       added.add((item: item, before: before));
     }
-    return _outcome(list, added, skipped, notAdded, error);
+    return _outcome(list, said, added, skipped, notAdded, error);
   }
 
+  /// [said] is the list name as the user said it (untrusted server names
+  /// never go into a fixed sentence, see `task_format.dart`); without it the
+  /// model answers.
   ToolOutcome _outcome(
     BringList list,
+    String? said,
     List<({BringItem item, BringItem? before})> added,
     List<BringItem> skipped,
     List<BringItem> notAdded,
@@ -332,10 +344,14 @@ final class BringAddItemsTool extends IntegrationTool
         result,
         summary: '${list.name}: schon vorhanden',
         // Only when nothing failed: all wanted items were on the list.
-        fixed: error == null && skipped.isNotEmpty && notAdded.isEmpty
+        fixed:
+            said != null &&
+                error == null &&
+                skipped.isNotEmpty &&
+                notAdded.isEmpty
             ? ConfirmationSentence('list.present', {
                 'items': [for (final s in skipped) s.name],
-                'list': list.name,
+                'list': said,
                 'count': skipped.length,
               })
             : null,
@@ -348,10 +364,10 @@ final class BringAddItemsTool extends IntegrationTool
           ? '${list.name}: $labels hinzugefügt'
           : '${list.name}: teilweise hinzugefügt ($labels)',
       // Only a complete success; skipped, partial or failed → the model.
-      fixed: error == null && skipped.isEmpty
+      fixed: said != null && error == null && skipped.isEmpty
           ? ConfirmationSentence('list.added', {
               'items': [for (final a in added) _label(a.item)],
-              'list': list.name,
+              'list': said,
               'count': added.length,
             })
           : null,
@@ -526,7 +542,9 @@ final class BringCompleteItemTool extends IntegrationTool
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final query = args.requireString('item');
-    final list = await session.resolveList(args.optString('list'), write: true);
+    final said0 = args.optString('list');
+    final said = said0 == null || said0.isEmpty ? null : said0;
+    final list = await session.resolveList(said0, write: true);
     return session.exclusive(list.uuid, () async {
       final items = await session.run((a) => session.api.items(a, list.uuid));
       // Abhaken ist rückgängig machbar: ein eindeutiger Treffer über ganze
@@ -549,10 +567,10 @@ final class BringCompleteItemTool extends IntegrationTool
       return jsonOutcome(
         {'list': list.name, 'completed': item.toJson()},
         summary: '${list.name}: ${item.name} gekauft',
-        fixed: ConfirmationSentence('list.done', {
-          'item': item.name,
-          'list': list.name,
-        }),
+        // Only what the user said, never server names.
+        fixed: said == null
+            ? null
+            : ConfirmationSentence('list.done', {'item': query, 'list': said}),
         undo: UndoAction(
           label: 'Wieder offen',
           run: () => session.exclusive(

@@ -13,7 +13,6 @@ String? _optText(ToolArgs args, String key) {
   return v == null || v.isEmpty ? null : v;
 }
 
-/// German span for confirmation texts from raw arguments.
 /// The wall-clock time of [instant] in [loc] as a plain date-time (fields
 /// only, the confirmation sentence shows them as they are).
 DateTime _wallClock(DateTime instant, tz.Location loc) {
@@ -21,6 +20,7 @@ DateTime _wallClock(DateTime instant, tz.Location loc) {
   return DateTime.utc(l.year, l.month, l.day, l.hour, l.minute);
 }
 
+/// German span for confirmation texts from raw arguments.
 String _describeArgsSpan(ToolArgs args, tz.Location loc, {CalendarEvent? old}) {
   final t = readEventTimes(args, loc, old: old);
   if (t.allDay) {

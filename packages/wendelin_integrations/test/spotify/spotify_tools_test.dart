@@ -434,12 +434,26 @@ void main() {
   });
 
   group('feste Bestätigung', () {
-    test('play mit Suche: spotify.playing mit Treffer', () async {
+    test(
+      'play mit Suche: neutraler Satz, Trefferbezeichnung ist Servername',
+      () async {
+        expectFixed(
+          await call('spotify__play', {'query': 'bohemian rhapsody'}),
+          tool('spotify__play'),
+          'media.play',
+          de: 'Die Wiedergabe läuft.',
+        );
+      },
+    );
+
+    test('play mit uri: spotify.playing mit der genannten Adresse', () async {
       expectFixed(
-        await call('spotify__play', {'query': 'bohemian rhapsody'}),
+        await call('spotify__play', {
+          'uri': 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
+        }),
         tool('spotify__play'),
         'spotify.playing',
-        de: 'Es spielt jetzt Bohemian Rhapsody – Queen.',
+        de: 'Es spielt jetzt spotify:track:4uLU6hMCjMI75M1A2tKUQC.',
       );
     });
 

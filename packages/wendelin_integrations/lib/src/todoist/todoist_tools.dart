@@ -379,7 +379,7 @@ final class TodoistCompleteTool extends IntegrationTool
       // A recurring task only moves on: the model words that.
       fixed: task.recurring
           ? null
-          : ConfirmationSentence('task.done', {'title': task.content}),
+          : ConfirmationSentence('task.done', {'title': query}),
       // Closing a recurring task moves its due date; reopening would not
       // restore it.
       undo: task.recurring

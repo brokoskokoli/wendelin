@@ -331,7 +331,7 @@ void main() {
         await call('todoist__complete', {'title': 'Milch'}),
         tool('todoist__complete'),
         'task.done',
-        de: 'Die Aufgabe „Milch kaufen“ ist erledigt.',
+        de: 'Die Aufgabe „Milch“ ist erledigt.',
       );
     });
 

@@ -115,7 +115,11 @@ void main() {
   ) async {
     final provider = FakeLlmProvider([
       ScriptedTurn.toolCalls([
-        call('c1', 'bring__add_items', '{"items":[{"name":"Eier"}]}'),
+        call(
+          'c1',
+          'bring__add_items',
+          '{"items":[{"name":"Eier"}],"list":"Zuhause"}',
+        ),
       ]),
       // Fester Satz (WP122): die Modellantwort entfällt.
     ]);
@@ -197,7 +201,11 @@ void main() {
     final provider = FakeLlmProvider([
       ScriptedTurn.toolCalls([
         call('c1', 'http__licht', '{"raum":"bad"}'),
-        call('c2', 'bring__add_items', '{"items":[{"name":"Eier"}]}'),
+        call(
+          'c2',
+          'bring__add_items',
+          '{"items":[{"name":"Eier"}],"list":"Zuhause"}',
+        ),
       ]),
       ScriptedTurn.text('Fertig.'),
     ]);

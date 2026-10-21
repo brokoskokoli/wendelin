@@ -261,6 +261,29 @@ void main() {
       });
     }
 
+    for (final (language, interface, text) in [
+      (null, 'en', 'Milch, Eier and Brot are now on the list Einkauf.'),
+      ('fr', 'en', 'Milch, Eier et Brot sont maintenant sur la liste Einkauf.'),
+    ]) {
+      test('Sprache $language, Oberfläche $interface', () async {
+        final (a, _) = scripted('a', [
+          ScriptedTurn.toolCalls([call('c1', 'bring__add_items')]),
+        ]);
+        final h = Harness(
+          primary: a,
+          tools: [
+            bring(['Milch', 'Eier', 'Brot']),
+          ],
+        );
+        final events = await h.run(
+          'Setz auf die Liste',
+          language: language,
+          interfaceLanguage: interface,
+        );
+        expect((terminal(events) as AgentDone).finalText, text);
+      });
+    }
+
     test('Folgefrage sieht den Satz im Verlauf', () async {
       final (a, provider) = scripted('a', [
         ScriptedTurn.toolCalls([call('c1', 'bring__add_items')]),

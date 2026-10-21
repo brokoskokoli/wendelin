@@ -593,21 +593,23 @@ void main() {
       final t = tool('bring__add_items');
       var o = await call('bring__add_items', {
         'items': ['Eier', 'Butter'],
+        'list': 'zuhause',
       });
       expectFixed(
         o,
         t,
         'list.added',
-        de: 'Eier und Butter stehen jetzt auf der Liste Zuhause.',
+        de: 'Eier und Butter stehen jetzt auf der Liste zuhause.',
       );
       o = await call('bring__add_items', {
         'items': ['Käse'],
+        'list': 'zuhause',
       });
       expectFixed(
         o,
         t,
         'list.added',
-        de: 'Käse steht jetzt auf der Liste Zuhause.',
+        de: 'Käse steht jetzt auf der Liste zuhause.',
       );
     });
 
@@ -615,12 +617,13 @@ void main() {
       final t = tool('bring__add_items');
       final o = await call('bring__add_items', {
         'items': ['Milch'],
+        'list': 'zuhause',
       });
       expectFixed(
         o,
         t,
         'list.present',
-        de: 'Milch steht schon auf der Liste Zuhause.',
+        de: 'Milch steht schon auf der Liste zuhause.',
       );
     });
 
@@ -654,14 +657,37 @@ void main() {
 
     test('complete_item: abgehakt', () async {
       final t = tool('bring__complete_item');
-      final o = await call('bring__complete_item', {'item': 'Milch'});
+      final o = await call('bring__complete_item', {
+        'item': 'Milch',
+        'list': 'zuhause',
+      });
       expectFixed(
         o,
         t,
         'list.done',
-        de: 'Milch ist auf der Liste Zuhause abgehakt.',
+        de: 'Milch ist auf der Liste zuhause abgehakt.',
       );
     });
+
+    test(
+      'ohne genannte Liste → kein Satz (Servername nicht vertrauenswürdig)',
+      () async {
+        for (final o in [
+          await call('bring__add_items', {
+            'items': ['Eier'],
+          }),
+          await call('bring__add_items', {
+            'items': ['Milch'],
+          }),
+          await call('bring__complete_item', {'item': 'Brot'}),
+        ]) {
+          expect(o.isError, isFalse);
+          expect(o.fixed, isNull);
+        }
+        final done = await call('bring__complete_item', {'item': 'Käse'});
+        expect(done.fixed, isNull);
+      },
+    );
 
     test('complete_item: schon gekauft → kein Satz', () async {
       final o = await call('bring__complete_item', {'item': 'Brot'});

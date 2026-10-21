@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
 import 'package:wendelin/agent/conversation_state.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
 import 'package:wendelin_core/testing.dart';
@@ -147,9 +148,24 @@ void main() {
       });
     }
 
+    test('getippt bei englischer App: Satz auf Englisch', () async {
+      start([create], script: const []);
+      await c.read(uiLanguageProvider.notifier).set('en');
+      await agent().send('Add diving');
+      await agent().idle;
+
+      final text = c
+          .read(agentControllerProvider)
+          .entries
+          .whereType<AssistantTextEntry>()
+          .last
+          .text;
+      expect(text, startsWith('The event “Tauchen” is in your calendar'));
+    });
+
     test('getippte Anfrage: nur Anzeige, kein Ton', () async {
       final tts = FakeTextToSpeech();
-      start([create, answer], script: const [], tts: tts);
+      start([create], script: const [], tts: tts);
       await agent().send('Trag Tauchen ein');
       await agent().idle;
 
@@ -283,7 +299,7 @@ void main() {
     test('Neues Gespräch leert die Zuordnung', () async {
       final tts = FakeTextToSpeech();
       start(
-        [create, answer, create, answer],
+        [create, create],
         script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
         tts: tts,
       );
