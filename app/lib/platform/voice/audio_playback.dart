@@ -41,9 +41,9 @@ final class AudioplayersPlayback implements AudioPlayback {
   /// the call path then knows this playback.
   ///
   /// `audioMode` must be `inCommunication`: audioplayers_android sets
-  /// `audioManager.mode = context.audioMode` at every play
-  /// (`WrappedPlayer.kt:171`, default `MODE_NORMAL`) and would otherwise undo
-  /// the call mode of `SpeechRoute`.
+  /// `audioManager.mode = context.audioMode` whenever the context changes
+  /// (`WrappedPlayer.kt:159-171`, default `MODE_NORMAL`) and would otherwise
+  /// undo the call mode of `SpeechRoute`.
   static final AudioContext communicationContext = AudioContext(
     android: const AudioContextAndroid(
       contentType: AndroidContentType.speech,
@@ -62,13 +62,18 @@ final class AudioplayersPlayback implements AudioPlayback {
     final done = _done = Completer<void>();
     _complete ??= _player.onPlayerComplete.listen((_) => _finish());
     try {
-      final comm = communication?.call() ?? false;
-      if (_contextComm != comm) {
+      // A stop (or a newer play) during the awaits ends this play: the
+      // player must not start afterwards, and a second stop would do nothing.
+      var comm = communication?.call() ?? false;
+      while (_contextComm != comm) {
         await _player.setAudioContext(comm ? communicationContext : context);
         _contextComm = comm;
         voiceLog('speech-route', {
           'usage': comm ? 'voice_communication' : 'assistant',
         });
+        if (!identical(_done, done)) return;
+        // The switch may have flipped meanwhile: follow it.
+        comm = communication?.call() ?? false;
       }
       await _player.play(BytesSource(wav.encode(), mimeType: 'audio/wav'));
     } on Object {
