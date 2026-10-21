@@ -128,8 +128,11 @@ class AndroidRouteAudio(private val audio: AudioManager) : RouteAudio {
         if (sdk < 31) null
         else audio.availableCommunicationDevices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
 
+    // Only a device the call path can really use counts: from API 31 the communication devices,
+    // before that the outputs. A plain A2DP speaker is no communication device.
     override fun externalOutputActive(): Boolean =
-        audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { it.type in EXTERNAL }
+        (if (sdk >= 31) audio.availableCommunicationDevices
+        else audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).toList()).any { it.type in EXTERNAL }
 
     private companion object {
         val EXTERNAL = setOf(
@@ -137,7 +140,6 @@ class AndroidRouteAudio(private val audio: AudioManager) : RouteAudio {
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
             AudioDeviceInfo.TYPE_USB_HEADSET,
             AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
-            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_BLE_HEADSET,
             AudioDeviceInfo.TYPE_HEARING_AID,
         )

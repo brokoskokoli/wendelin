@@ -45,6 +45,21 @@ final class _Route implements SpeechRoutePort {
   Future<void> leave() async => log.add('leave');
 }
 
+final class _SlowRoute implements SpeechRoutePort {
+  _SlowRoute(this.log, this.result);
+  final List<String> log;
+  final Future<String?> result;
+
+  @override
+  Future<String?> enter() {
+    log.add('enter');
+    return result;
+  }
+
+  @override
+  Future<void> leave() async => log.add('leave');
+}
+
 final class _Tts implements TextToSpeech {
   _Tts({this.fail = false});
   final bool fail;
@@ -178,11 +193,7 @@ void main() {
         expect(lines, hasLength(2));
         expect(
           lines.first,
-          allOf(
-            contains('mode=communication'),
-            contains('usage=voice_communication'),
-            contains('device=external'),
-          ),
+          allOf(contains('mode=communication'), contains('device=external')),
         );
         expect(lines.last, contains('mode=normal'));
       });
@@ -236,8 +247,43 @@ void main() {
         async.flushMicrotasks();
         expect(focus.log, ['+duck']);
         expect(logLines.single, contains('device=failed'));
+        // Not switched: the player must not use the call usage (K88).
+        expect(f.routed, isFalse);
         f.drop();
         async.flushMicrotasks();
+        expect(events, ['enter', 'leave']);
+      });
+    });
+
+    test('Stopp während die Einstellung gelesen wird: kein Wechsel', () {
+      fakeAsync((async) {
+        final setting = Completer<bool>();
+        final f = build(communication: () => setting.future);
+        f.begin();
+        async.flushMicrotasks();
+        f.drop();
+        setting.complete(true);
+        async.elapse(const Duration(seconds: 10));
+        expect(f.routed, isFalse);
+        expect(events, isEmpty);
+      });
+    });
+
+    test('Stopp während der Wechsel läuft: Rückgabe, nicht gerouted', () {
+      fakeAsync((async) {
+        final enter = Completer<String?>();
+        final route = _SlowRoute(events, enter.future);
+        final f = SpeechFocus(
+          focus,
+          route: route,
+          communication: () async => true,
+        );
+        f.begin();
+        async.flushMicrotasks();
+        f.drop();
+        enter.complete('speaker');
+        async.elapse(const Duration(seconds: 10));
+        expect(f.routed, isFalse);
         expect(events, ['enter', 'leave']);
       });
     });
@@ -276,6 +322,11 @@ void main() {
         expect(player.contexts, [
           AudioplayersPlayback.communicationContext,
           AudioplayersPlayback.context,
+        ]);
+        // The log tells the usage really used (not a guess of the focus).
+        expect(logLines.where((l) => l.contains('usage=')).toList(), [
+          contains('usage=voice_communication'),
+          contains('usage=assistant'),
         ]);
         final a = AudioplayersPlayback.communicationContext.android;
         expect(a.usageType, AndroidUsageType.voiceCommunication);

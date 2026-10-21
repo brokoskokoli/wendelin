@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 
+import '../../voice/voice_log.dart';
 import 'pcm.dart';
 import 'sherpa_tts.dart';
 
@@ -59,6 +60,9 @@ final class AudioplayersPlayback implements AudioPlayback {
       if (_contextComm != comm) {
         await _player.setAudioContext(comm ? communicationContext : context);
         _contextComm = comm;
+        voiceLog('speech-route', {
+          'usage': comm ? 'voice_communication' : 'assistant',
+        });
       }
       await _player.play(BytesSource(wav.encode(), mimeType: 'audio/wav'));
     } on Object {

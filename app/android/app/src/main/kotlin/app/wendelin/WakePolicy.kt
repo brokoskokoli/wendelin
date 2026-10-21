@@ -198,6 +198,10 @@ object WakePolicy {
         else -> null
     }
 
+    /** [conflict] for the current state: the app's own call path ([SpeechRoute.active]) is no call. */
+    fun conflictNow(audioMode: Int, foreignRecording: Boolean): String? =
+        conflict(audioMode, foreignRecording, SpeechRoute.active)
+
     /** Whether the microphone is closed by the service itself, not only by Dart: any conflict. */
     fun closesMicFor(conflict: String?): Boolean = conflict == "call" || conflict == "recording"
 

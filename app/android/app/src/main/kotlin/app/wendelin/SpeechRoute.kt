@@ -28,14 +28,9 @@ interface RouteAudio {
  * wake-word watcher that this mode is the app's own (see [WakePolicy.conflict]).
  */
 class SpeechRoute(private val audio: RouteAudio, private val log: (String) -> Unit = {}) {
-    private var saved: Saved? = null
-
-    private class Saved(val mode: Int, val speaker: Boolean, val device: Any?)
-
     /** Switches to the call path; returns the output (`speaker`, `external`). Asking twice is fine. */
-    @Synchronized
-    fun enter(): String {
-        saved?.let { return device(audio.externalOutputActive()) }
+    fun enter(): String = synchronized(lock) {
+        if (saved != null) return device(audio.externalOutputActive())
         val before = Saved(audio.mode, audio.speakerphoneOn, communicationDeviceOrNull())
         saved = before
         active = true
@@ -48,22 +43,27 @@ class SpeechRoute(private val audio: RouteAudio, private val log: (String) -> Un
             throw e
         }
         val device = device(external)
-        log("speech-route mode=communication usage=voice_communication device=$device")
-        return device
+        log("speech-route mode=communication device=$device")
+        device
     }
 
-    /** Restores what [enter] found. The mode is restored even if the device cannot be. */
-    @Synchronized
-    fun leave() {
+    /**
+     * Restores what [enter] found. The mode is restored even if the device cannot be. [active]
+     * turns false only after that, so the watcher never sees the mode without the flag.
+     */
+    fun leave(): Unit = synchronized(lock) {
         val before = saved ?: return
         saved = null
-        active = false
         try {
             if (audio.sdk >= 31) audio.communicationDevice = before.device
             else audio.speakerphoneOn = before.speaker
         } finally {
-            audio.mode = before.mode
-            log("speech-route mode=normal usage=assistant device=restored")
+            try {
+                audio.mode = before.mode
+            } finally {
+                active = false
+            }
+            log("speech-route mode=normal device=restored")
         }
     }
 
@@ -82,8 +82,15 @@ class SpeechRoute(private val audio: RouteAudio, private val log: (String) -> Un
 
     private fun device(external: Boolean) = if (external) "external" else "speaker"
 
+    private class Saved(val mode: Int, val speaker: Boolean, val device: Any?)
+
     companion object {
         const val MODE_IN_COMMUNICATION = 3
+
+        // One state per process: MainActivity and AssistantActivity each own a route, but there is
+        // only one audio mode. The first enter saves the state, any leave gives it back.
+        private val lock = Any()
+        private var saved: Saved? = null
 
         /** Whether the app itself holds the call path right now (any thread). */
         @Volatile

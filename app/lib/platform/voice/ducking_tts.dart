@@ -29,9 +29,13 @@ final class SpeechFocus {
   final AudioFocusPort _port;
   final SpeechRoutePort? _route;
   final Future<bool> Function()? _communication;
+  // The call path works for the answer (the player may use its usage).
   bool _routed = false;
+  // A switch was asked for, so a leave must follow (also if it failed).
+  bool _entered = false;
 
-  /// Whether the answer runs in the call path right now.
+  /// Whether the answer runs in the call path right now (only after the
+  /// switch succeeded).
   bool get routed => _routed;
 
   /// How long the focus stays after the answer ended (and nobody is busy).
@@ -72,35 +76,36 @@ final class SpeechFocus {
     _release = null;
     final first = !_held;
     _held = true;
-    if (first) await _enterRoute();
+    if (first) await _enterRoute(_generation);
     await _port.acquire(AudioFocusKind.duck);
   }
 
-  Future<void> _enterRoute() async {
+  Future<void> _enterRoute(int generation) async {
     final route = _route;
-    if (route == null || _routed) return;
+    if (route == null || _entered) return;
     try {
       if (!await (_communication?.call() ?? Future.value(false))) return;
     } on Object {
       return; // Setting unreadable: stay in the normal path.
     }
-    _routed = true;
+    // Stopped (or given back) while the setting was read: do not switch.
+    if (generation != _generation || !_held) return;
+    _entered = true;
     final device = await route.enter();
+    // Stopped meanwhile: drop already asked for the leave (after our enter).
+    if (generation != _generation || !_entered) return;
+    _routed = device != null;
     voiceLog('speech-route', {
-      'mode': 'communication',
-      'usage': 'voice_communication',
+      'mode': device == null ? 'normal' : 'communication',
       'device': device ?? 'failed',
     });
   }
 
   void _leaveRoute() {
-    if (!_routed) return;
+    if (!_entered) return;
+    _entered = false;
     _routed = false;
-    voiceLog('speech-route', {
-      'mode': 'normal',
-      'usage': 'assistant',
-      'device': 'restored',
-    });
+    voiceLog('speech-route', {'mode': 'normal', 'device': 'restored'});
     unawaited(_route?.leave());
   }
 

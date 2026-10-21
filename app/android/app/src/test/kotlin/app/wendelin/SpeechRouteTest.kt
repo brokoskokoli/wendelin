@@ -1,5 +1,6 @@
 package app.wendelin
 
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -22,7 +23,14 @@ class SpeechRouteTest {
         override fun externalOutputActive(): Boolean = external
     }
 
-    private fun route(a: FakeAudio, log: MutableList<String> = mutableListOf()) = SpeechRoute(a) { log += it }
+    private val routes = mutableListOf<SpeechRoute>()
+
+    // The state is per process: every test gives it back.
+    @After
+    fun giveBack() = routes.forEach { it.leave() }
+
+    private fun route(a: FakeAudio, log: MutableList<String> = mutableListOf()) =
+        SpeechRoute(a) { log += it }.also { routes += it }
 
     @Test
     fun enterSwitchesToCommunicationAndSpeakerFromApi31() {
@@ -166,5 +174,50 @@ class SpeechRouteTest {
     @Test
     fun foreignRecordingIsStillFoundDuringOwnAnswer() {
         assertEquals("recording", WakePolicy.conflict(audioMode = 3, foreignRecording = true, ownCommunication = true))
+    }
+
+    @Test
+    fun watcherDecisionKnowsTheOwnCommunicationMode() {
+        val r = route(FakeAudio())
+        assertEquals("call", WakePolicy.conflictNow(audioMode = 3, foreignRecording = false))
+        r.enter()
+        assertNull(WakePolicy.conflictNow(audioMode = 3, foreignRecording = false))
+        r.leave()
+        assertEquals("call", WakePolicy.conflictNow(audioMode = 3, foreignRecording = false))
+    }
+
+    @Test
+    fun twoRoutesShareOneState() {
+        val a = FakeAudio(sdk = 34, mode = 0)
+        val main = route(a)
+        val overlay = route(a)
+        main.enter()
+        overlay.enter() // must not save mode 3 as "before"
+        main.leave()
+        assertEquals(0, a.mode)
+        assertFalse(SpeechRoute.active)
+        overlay.leave()
+        assertEquals(0, a.mode)
+    }
+
+    @Test
+    fun activeStaysTrueUntilTheModeIsRestored() {
+        val seen = mutableListOf<Boolean>()
+        val a = object : RouteAudio {
+            override val sdk = 34
+            override var mode = 0
+                set(v) {
+                    seen += SpeechRoute.active
+                    field = v
+                }
+            override var speakerphoneOn = false
+            override var communicationDevice: Any? = null
+            override fun builtinSpeaker(): Any? = "speaker"
+            override fun externalOutputActive() = false
+        }
+        val r = SpeechRoute(a).also { routes += it }
+        r.enter()
+        r.leave()
+        assertEquals(listOf(true, true), seen)
     }
 }
