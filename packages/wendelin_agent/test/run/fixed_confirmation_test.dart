@@ -64,6 +64,7 @@ void main() {
       final done = terminal(events) as AgentDone;
       expect(done.finalText, sentence);
       expect(done.stopReason, StopReason.endTurn);
+      expect(done.fixed, isTrue);
       expect(logged, [('s1', 'flashlight__set')]);
       expect(h.conversation.messages, [
         Message.user('Licht an'),
@@ -97,6 +98,7 @@ void main() {
       final events = await h.run('Licht an');
       expect(provider.requests, hasLength(2));
       expect((terminal(events) as AgentDone).finalText, 'Das ging nicht.');
+      expect((terminal(events) as AgentDone).fixed, isFalse);
       expect(logged, isEmpty);
     });
 
