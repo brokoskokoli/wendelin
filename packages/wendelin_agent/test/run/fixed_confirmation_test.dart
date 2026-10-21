@@ -3,7 +3,6 @@
 
 import 'package:fake_async/fake_async.dart';
 import 'package:test/test.dart';
-import 'package:wendelin_agent/fakes.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';

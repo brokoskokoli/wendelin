@@ -117,13 +117,13 @@ void main() {
       ScriptedTurn.toolCalls([
         call('c1', 'bring__add_items', '{"items":[{"name":"Eier"}]}'),
       ]),
-      ScriptedTurn.text('Eier stehen drauf.'),
+      // Fester Satz (WP122): die Modellantwort entfällt.
     ]);
     final env = agentEnv(provider);
     await loginBring(env);
     await pumpApp(tester, env);
     await send(tester, 'Setz Eier auf die Bring-Liste');
-    await pumpUntil(tester, find.text('Eier stehen drauf.'));
+    await pumpUntil(tester, find.textContaining('auf der Liste'));
     final zuhause = env.bring.list('list-zuhause')!;
     expect(zuhause.purchase.map((i) => i.name), contains('Eier'));
     final undo = find.textContaining('Rückgängig · ');

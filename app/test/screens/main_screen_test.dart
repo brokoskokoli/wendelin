@@ -47,7 +47,7 @@ void main() {
 
       await send(tester, 'Trag mir morgen um 10 Tauchen ein');
       expect(find.text('Trag mir morgen um 10 Tauchen ein'), findsOneWidget);
-      await pumpUntil(tester, find.textContaining('steht im Kalender'));
+      await pumpUntil(tester, find.textContaining('ist eingetragen'));
 
       final card = find.byType(ToolResultCard);
       expect(card, findsOneWidget);
@@ -83,7 +83,7 @@ void main() {
     final env = TestEnv(demo: true);
     await pumpApp(tester, env);
     await send(tester, 'Trag mir morgen um 10 Tauchen ein');
-    await pumpUntil(tester, find.textContaining('steht im Kalender'));
+    await pumpUntil(tester, find.textContaining('ist eingetragen'));
     expect(find.textContaining('Rückgängig · 1'), findsOneWidget);
     await tester.pump(const Duration(seconds: 4));
     expect(find.textContaining('Rückgängig · '), findsOneWidget);
@@ -106,7 +106,6 @@ void main() {
               '{"title":"Tauchen","start":"2026-10-14T10:00"}',
             ),
           ]),
-          ScriptedTurn.text('Erledigt.'),
         ]),
       ),
     );
@@ -116,7 +115,7 @@ void main() {
     // Undo-Fenster beginnt bei 0.
     await tester.pump();
     await tester.pump();
-    expect(find.text('Erledigt.'), findsOneWidget);
+    expect(find.textContaining('ist eingetragen'), findsOneWidget);
     expect(find.textContaining('Rückgängig · '), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 9900));
     expect(find.textContaining('Rückgängig · '), findsOneWidget);

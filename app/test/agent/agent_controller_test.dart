@@ -64,7 +64,6 @@ void main() {
     () async {
       start([
         ScriptedTurn.toolCalls([call('c1', 'calendar__create_event', _create)]),
-        ScriptedTurn.text('Erledigt, Tauchen steht morgen um 10.'),
       ]);
       final s = await sendAndWait(c, 'Trag mir morgen um 10 Tauchen ein');
       expect(s.running, isFalse);
@@ -74,7 +73,7 @@ void main() {
       expect(tool.summary, startsWith('Termin angelegt: Tauchen'));
       expect(
         s.entries.whereType<AssistantTextEntry>().last.text,
-        'Erledigt, Tauchen steht morgen um 10.',
+        'Der Termin „Tauchen“ ist eingetragen: Mi. 14.10., 10:00 Uhr.',
       );
       expect(env.calendar.events, hasLength(1));
 

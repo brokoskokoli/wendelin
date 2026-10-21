@@ -307,6 +307,16 @@ final class BringAddItemsTool extends IntegrationTool
       open[key] = item;
       added.add((item: item, before: before));
     }
+    return _outcome(list, added, skipped, notAdded, error);
+  }
+
+  ToolOutcome _outcome(
+    BringList list,
+    List<({BringItem item, BringItem? before})> added,
+    List<BringItem> skipped,
+    List<BringItem> notAdded,
+    String? error,
+  ) {
     final result = {
       'list': list.name,
       'added': [for (final a in added) a.item.toJson()],

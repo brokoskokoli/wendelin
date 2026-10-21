@@ -174,7 +174,6 @@ void main() {
       start(
         [
           create,
-          answer,
           ScriptedTurn.toolCalls([
             call('c2', 'calendar__delete_event', '{"event_id":"e1"}'),
           ]),
@@ -210,7 +209,6 @@ void main() {
       start(
         [
           create,
-          answer,
           ScriptedTurn.toolCalls([
             call('c2', 'calendar__delete_event', '{"event_id":"e1"}'),
           ]),
@@ -238,11 +236,9 @@ void main() {
       start(
         [
           create,
-          answer,
           ScriptedTurn.toolCalls([
             call('c2', 'calendar__create_event', _create),
           ]),
-          answer,
         ],
         script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
         tts: tts,
@@ -265,11 +261,9 @@ void main() {
       start(
         [
           create,
-          answer,
           ScriptedTurn.toolCalls([
             call('c2', 'calendar__create_event', _create),
           ]),
-          answer,
         ],
         script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
         tts: tts,
@@ -311,11 +305,9 @@ void main() {
       start(
         [
           create,
-          answer,
           ScriptedTurn.toolCalls([
             call('c2', 'calendar__create_event', _create),
           ]),
-          answer,
         ],
         script: const [Transcript(text: 'Trag Tauchen ein', language: 'de')],
         tts: tts,
