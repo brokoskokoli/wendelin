@@ -15,7 +15,8 @@ import 'obsidian_tool_support.dart';
 import 'vault_path.dart';
 
 /// `obsidian__create_note` (write; undo deletes the note if unchanged).
-final class CreateNoteTool extends IntegrationTool {
+final class CreateNoteTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const CreateNoteTool(this.env);
 
@@ -44,6 +45,9 @@ final class CreateNoteTool extends IntegrationTool {
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'note.created'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final path = VaultPath.newNote(args.requireString('path'));
     final lines = textLines(args, 'content', allowEmpty: true);
@@ -54,6 +58,9 @@ final class CreateNoteTool extends IntegrationTool {
       return jsonOutcome(
         {'created': path},
         summary: 'Notiz angelegt: ${VaultPath.title(path)}',
+        fixed: ConfirmationSentence('note.created', {
+          'note': VaultPath.title(path),
+        }),
         undo: UndoAction(
           label: 'Notiz löschen',
           run: () => env.exclusive(path, () async {
@@ -82,7 +89,8 @@ final class CreateNoteTool extends IntegrationTool {
 }
 
 /// `obsidian__append_to_note` (write; undo removes the appended lines).
-final class AppendToNoteTool extends IntegrationTool {
+final class AppendToNoteTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const AppendToNoteTool(this.env);
 
@@ -116,6 +124,9 @@ final class AppendToNoteTool extends IntegrationTool {
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'note.appended'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final text = textLines(args, 'text');
     final heading = args.optString('heading');
@@ -142,6 +153,9 @@ final class AppendToNoteTool extends IntegrationTool {
             'created_heading': plan.createdHeading,
         },
         summary: 'An ${VaultPath.title(path)} angehängt: ${excerpt(text)}',
+        fixed: ConfirmationSentence('note.appended', {
+          'note': VaultPath.title(path),
+        }),
         undo: removeBlockUndo(env, path, plan.block, plan.at),
       );
     });
@@ -160,7 +174,8 @@ final class AppendToNoteTool extends IntegrationTool {
 
 /// `obsidian__append_daily_note` (write; creates the daily note from the
 /// template if missing; undo removes the text or the new note).
-final class AppendDailyNoteTool extends IntegrationTool {
+final class AppendDailyNoteTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const AppendDailyNoteTool(this.env);
 
@@ -195,6 +210,9 @@ final class AppendDailyNoteTool extends IntegrationTool {
 
   @override
   RiskLevel get risk => RiskLevel.write;
+
+  @override
+  Set<String> get confirmationKeys => const {'note.appended'};
 
   LocalDate _date(ToolArgs args, ToolContext ctx) {
     final raw = args.optString('date');
@@ -266,6 +284,9 @@ final class AppendDailyNoteTool extends IntegrationTool {
             'created_heading': plan.createdHeading,
         },
         summary: 'Tagesnotiz ${date.toIso()}: ${excerpt(text)}',
+        fixed: ConfirmationSentence('note.appended', {
+          'note': VaultPath.title(path),
+        }),
         undo: existed
             ? blockUndo
             : UndoAction(

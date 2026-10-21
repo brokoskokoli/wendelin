@@ -465,6 +465,40 @@ void main() {
       expect(await file(), '- [x] Alt ✅ 2026-10-01\n');
     });
   });
+
+  group('feste Bestätigung', () {
+    test('add: Aufgabe mit Listenname', () async {
+      expectFixed(
+        await run('tasks__add', {'title': 'Auto waschen'}),
+        tool('tasks__add'),
+        'task.added',
+        de: 'Die Aufgabe „Auto waschen“ steht jetzt auf der Liste Aufgaben.',
+      );
+    });
+
+    test('add: Duplikat → kein Satz', () async {
+      final o = await run('tasks__add', {
+        'title': 'Irgendwann aufräumen #haus',
+      });
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+
+    test('complete: erledigt', () async {
+      expectFixed(
+        await run('tasks__complete', {'title': 'Steuer'}),
+        tool('tasks__complete'),
+        'task.done',
+        de: 'Die Aufgabe „Steuer abgeben“ ist erledigt.',
+      );
+    });
+
+    test('complete: schon erledigt → kein Satz', () async {
+      final o = await run('tasks__complete', {'title': 'Miete'});
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+  });
 }
 
 LocalDate localDate(String iso) => LocalDate(

@@ -44,17 +44,21 @@ void main() {
             'start': '2026-10-15T10:00',
           }),
         ]),
-        ScriptedTurn.text('Eingetragen.'),
+        ScriptedTurn.text('Eingetragen.'), // WP122: nie angefordert
       ],
     ).runCase(tauchen);
     expect(r.status, CaseStatus.passed, reason: '${r.reasons}');
     final o = r.observation;
     expect(o.calls.single.isError, isFalse);
     expect(o.calls.single.summary, contains('Tauchen'));
-    expect(o.finalText, 'Eingetragen.');
-    expect(o.modelCalls, 2);
-    expect(o.usage, const Usage(inputTokens: 200, outputTokens: 40));
-    expect(o.costMicros, 400);
+    // WP122: fester Satz der App statt zweitem Modellaufruf.
+    expect(
+      o.finalText,
+      'Der Termin „Tauchen“ ist eingetragen: Do. 15.10., 10:00 Uhr.',
+    );
+    expect(o.modelCalls, 1);
+    expect(o.usage, const Usage(inputTokens: 100, outputTokens: 20));
+    expect(o.costMicros, 200);
     expect(o.gaveUp, isFalse);
     expect(o.escalations, isEmpty);
     expect(o.confirmations, 0);

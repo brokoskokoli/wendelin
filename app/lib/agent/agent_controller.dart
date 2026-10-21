@@ -264,8 +264,7 @@ final class AgentController extends Notifier<ConversationState> {
     required StreamController<AgentEvent>? out,
   }) async {
     final trimmed = input.text.trim();
-    // Note names the speech correction filled in only count for the spoken
-    // request they came from (WP33, B8).
+    // Corrected note names only count for their spoken request (WP33, B8).
     if (input.source != InputSource.voice) {
       ref.read(correctedTitlesProvider).record(const []);
     }
@@ -328,6 +327,7 @@ final class AgentController extends Notifier<ConversationState> {
       source: input.source,
       sttConfidence: input.sttConfidence,
       language: input.language,
+      interfaceLanguage: uiTexts(ref).localeName,
       requestEscalation: input.requestEscalation,
     );
     _audit.request(sessionId, request, trigger: trigger);

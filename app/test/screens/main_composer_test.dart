@@ -18,6 +18,6 @@ void main() {
     expect(find.byType(UserBubble), findsOneWidget);
     expect(find.text('Noch etwas'), findsOneWidget, reason: 'bleibt im Feld');
 
-    await pumpUntil(tester, find.textContaining('steht im Kalender'));
+    await pumpUntil(tester, find.textContaining('ist eingetragen'));
   });
 }

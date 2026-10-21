@@ -92,7 +92,7 @@ final class NowPlayingTool extends IntegrationTool {
 /// Play and pause undo each other; skipping has no undo (there is no
 /// way back to the track that was skipped). The result holds no titles.
 final class MediaCommandTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool for [command].
   const MediaCommandTool(this.port, this.command);
 
@@ -125,6 +125,14 @@ final class MediaCommandTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {
+    'media.play',
+    'media.pause',
+    'media.next',
+    'media.previous',
+  };
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final before = await _peek(port);
     final toggles =
@@ -151,6 +159,8 @@ final class MediaCommandTool extends IntegrationTool
         MediaCommand.previous => 'Zurückgeschaltet zum vorherigen Titel.',
       },
       summary: _summary,
+      // Not for „sent“ without a known effect (no session access).
+      fixed: unknown ? null : ConfirmationSentence('media.${command.name}'),
       undo: toggles
           ? UndoAction(
               label: unknown

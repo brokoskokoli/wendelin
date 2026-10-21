@@ -15,6 +15,7 @@ Verträge, die alle anderen Pakete teilen. Reines Dart ohne Abhängigkeiten auß
 | Tools | `lib/src/tools/` | `Tool`, `RiskLevel`, `Integration`, `ToolContext`, `ToolOutcome`, `ToolInvoker` (`tool_runtime.dart`) |
 | Agent | `lib/src/agent/` | `AgentRun`, `AgentEvent` (sealed, Events an die UI), `UserInput` |
 | Sicherheit | `lib/src/safety/` | `SensitiveFinding`, Erkennung sensibler Inhalte |
+| Feste Sätze | `lib/src/tools/fixed_confirmation.dart`, `lib/src/tools/confirmation_texts/` | `FixedConfirmationTool`, `ConfirmationSentence`, `renderConfirmation` und die Vorlagen de/en/fr (WP122) |
 | Werkzeuge | `lib/src/util/`, `lib/src/sse/` | `Clock`, `IdGenerator`, JSON-Lesehilfen, `SseParser` |
 
 ## Regeln

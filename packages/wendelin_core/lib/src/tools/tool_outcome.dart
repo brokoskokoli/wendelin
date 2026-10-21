@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import '../messages/content_block.dart';
+import 'fixed_confirmation.dart';
 
 /// Reverts the effect of a `write` tool (e.g. deletes the created event).
 @immutable
@@ -30,11 +31,21 @@ final class ToolOutcome {
     this.isError = false,
     this.undo,
     this.summary,
+    this.fixed,
   }) : content = List.unmodifiable(content);
 
   /// Successful outcome with a single text block.
-  factory ToolOutcome.text(String text, {String? summary, UndoAction? undo}) =>
-      ToolOutcome(content: [TextBlock(text)], summary: summary, undo: undo);
+  factory ToolOutcome.text(
+    String text, {
+    String? summary,
+    UndoAction? undo,
+    ConfirmationSentence? fixed,
+  }) => ToolOutcome(
+    content: [TextBlock(text)],
+    summary: summary,
+    undo: undo,
+    fixed: fixed,
+  );
 
   /// Failed outcome with a readable [message] for the model (no stack
   /// traces).
@@ -75,6 +86,11 @@ final class ToolOutcome {
 
   /// Short UI text, e.g. „Termin angelegt: Tauchen, Di 10:00“.
   final String? summary;
+
+  /// The fixed confirmation sentence for this success (WP122), only set by
+  /// tools that implement [FixedConfirmationTool]. `null` = the model words
+  /// the answer. Never sent to the model.
+  final ConfirmationSentence? fixed;
 
   /// Concatenated text of all [TextBlock]s in [content].
   String get text => content.whereType<TextBlock>().map((b) => b.text).join();

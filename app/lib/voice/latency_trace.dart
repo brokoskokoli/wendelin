@@ -58,6 +58,7 @@ final class LatencyTrace {
   final _starts = <Duration>[];
   final _ends = <Duration>[];
   int _sentences = 0;
+  int _callsAtTools = 0;
 
   /// Whether a request is being timed.
   bool get active => _t0 != null;
@@ -95,6 +96,11 @@ final class LatencyTrace {
         if (_calls.isNotEmpty) _calls.last.first ??= _at();
       case ToolCallFinished():
         _pendingReq = _at();
+        _callsAtTools = _calls.length;
+      case AgentDone(:final fixed):
+        // A fixed confirmation (WP122) comes as text after the tool result
+        // without a model call: the first token event opened a call for it.
+        if (fixed && _calls.length > _callsAtTools) _calls.removeLast();
       default:
         break;
     }
@@ -155,6 +161,7 @@ final class LatencyTrace {
     _pendingReq = null;
     _calls.clear();
     _tools = 0;
+    _callsAtTools = 0;
     _tts1 = null;
     _synEnd = null;
     _syn.clear();

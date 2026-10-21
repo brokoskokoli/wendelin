@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
@@ -145,6 +146,7 @@ final class AgentFactory implements AgentRunFactory {
           duration: Duration.zero,
         ),
       ),
+      onFixedConfirmation: _logFixed,
       clock: clock,
       sessionId: sessionId,
       recorder: conversation,
@@ -162,6 +164,10 @@ final class AgentFactory implements AgentRunFactory {
     );
   }
 }
+
+/// WP122: logs only the tool name, never the sentence.
+void _logFixed(String session, String tool) =>
+    debugPrint('confirm=fixed tool=$tool');
 
 /// The lowest privacy level whose catalog offers `memory__search` (from
 /// [catalogFor]), `tee` if none does; `null` if every level may see the

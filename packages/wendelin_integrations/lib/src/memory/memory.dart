@@ -172,7 +172,7 @@ Map<String, Object?> _entryJson(MemoryEntry e) => {
 
 /// `memory__save` (write, undo forgets the entry).
 final class MemorySaveTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool.
   const MemorySaveTool(this.store);
 
@@ -212,6 +212,9 @@ final class MemorySaveTool extends IntegrationTool
   @override
   RiskLevel get risk => RiskLevel.write;
 
+  @override
+  Set<String> get confirmationKeys => const {'memory.saved'};
+
   ({String text, MemoryCategory category}) _read(ToolArgs args) {
     final text = args.requireString('text');
     if (text.length > maxChars) {
@@ -250,6 +253,7 @@ final class MemorySaveTool extends IntegrationTool
     return jsonOutcome(
       {'saved': _entryJson(entry)},
       summary: 'Gemerkt: ${ellipsize(entry.text, 50)}',
+      fixed: const ConfirmationSentence('memory.saved'),
       undo: UndoAction(
         label: 'Vergessen',
         run: () async => store.forget(entry.id, owner: owner),

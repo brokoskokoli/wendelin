@@ -32,8 +32,8 @@ final class ResultShaper {
   /// whitespace, optional `/`, optional whitespace, `tool_data`.
   static final _tagLike = RegExp(r'<(\s*/?\s*tool_data)', caseSensitive: false);
 
-  /// [outcome] truncated and wrapped for [tool]; `summary`, `undo` and
-  /// `isError` are kept.
+  /// [outcome] truncated and wrapped for [tool]; `summary`, `undo`,
+  /// `fixed` and `isError` are kept.
   ToolOutcome shape(String tool, ToolOutcome outcome) => ToolOutcome(
     content: envelope
         ? _wrap(tool, _truncate(outcome.content))
@@ -41,6 +41,7 @@ final class ResultShaper {
     isError: outcome.isError,
     summary: outcome.summary,
     undo: outcome.undo,
+    fixed: outcome.fixed,
   );
 
   List<ContentBlock> _truncate(List<ContentBlock> content) {
