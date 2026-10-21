@@ -8,6 +8,7 @@ import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_tools/wendelin_tools.dart';
 
+import 'budget.dart';
 import 'case_backends.dart';
 import 'case_result.dart';
 import 'eval_case.dart';
@@ -72,7 +73,12 @@ final class EvalRunner {
     this.config = const AgentConfig(),
     this.voice = false,
     this.onlyIntegrations,
+    this.budget,
     GiveUpClassifier? giveUpClassifier,
+    this.pause = Duration.zero,
+    this.retryRateLimit,
+    this.maxRateLimited = 5,
+    this.sleep = _realSleep,
   }) : giveUpClassifier = giveUpClassifier ?? GiveUpClassifier(),
        scorer = Scorer(time);
 
@@ -88,6 +94,9 @@ final class EvalRunner {
   /// Integration ids to register (reduced catalog, WP57); `null` = all.
   final Set<String>? onlyIntegrations;
 
+  /// Cost limit of the run (`--max-cost`); `null` = none.
+  final CostBudget? budget;
+
   /// Whether the request counts as spoken (WP41: speech hint, stage 2).
   final bool voice;
 
@@ -96,6 +105,23 @@ final class EvalRunner {
 
   /// Evaluates observations.
   final Scorer scorer;
+
+  /// Wait before every case that really runs, except the first (`--pause-ms`).
+  /// Not part of the latency.
+  final Duration pause;
+
+  /// Wait before the single second attempt of a case that ended with a rate
+  /// limit (`--retry-rate-limit`); `null` = no second attempt.
+  final Duration? retryRateLimit;
+
+  /// Once more than this many cases still end with a rate limit after the
+  /// second attempt, the remaining cases are skipped as `rate-limit`.
+  final int maxRateLimited;
+
+  /// Waits for [pause] and [retryRateLimit]; replaceable in tests.
+  final Future<void> Function(Duration) sleep;
+
+  static Future<void> _realSleep(Duration d) => Future<void>.delayed(d);
 
   /// Device locale for a case language (`de` → `de-DE`, `fr` → `fr-FR`,
   /// `en` → `en-US`; others `<lang>-<LANG>`).
@@ -113,24 +139,103 @@ final class EvalRunner {
     bool includePending = false,
     void Function(CaseResult result)? onResult,
     bool Function()? shouldStop,
+    int repeat = 1,
   }) async {
+    if (repeat < 1) {
+      throw ArgumentError.value(repeat, 'repeat', 'muss ≥ 1 sein');
+    }
     final results = <CaseResult>[];
+    var rateLimited = 0;
+    var ranAny = false;
     for (final c in cases) {
-      final r = (shouldStop?.call() ?? false)
-          ? CaseResult.skipped(c, 'abgebrochen')
-          : c.pending && !includePending
-          ? CaseResult.skipped(c, 'pending: Integration fehlt noch')
-          : await runCase(c);
-      results.add(r);
-      onResult?.call(r);
+      for (var n = 1; n <= repeat; n++) {
+        final rep = repeat > 1 ? n : null;
+        final r = (shouldStop?.call() ?? false)
+            ? CaseResult.skipped(c, 'abgebrochen', repetition: rep)
+            : (budget?.exceeded ?? false)
+            ? CaseResult.skipped(c, 'budget', repetition: rep)
+            : rateLimited > maxRateLimited
+            ? CaseResult.skipped(c, 'rate-limit', repetition: rep)
+            : c.pending && !includePending
+            ? CaseResult.skipped(
+                c,
+                'pending: Integration fehlt noch',
+                repetition: rep,
+              )
+            : (await _runPaced(c, first: !ranAny)).withRepetition(rep);
+        if (r.ran) ranAny = true;
+        if (_isRateLimited(r)) rateLimited++;
+        results.add(r);
+        onResult?.call(r);
+      }
     }
     return results;
+  }
+
+  Future<CaseResult> _runPaced(EvalCase c, {required bool first}) async {
+    if (!first && pause > Duration.zero) await sleep(pause);
+    final attempt = await runCase(c);
+    final wait = retryRateLimit;
+    if (wait == null ||
+        !_isRateLimited(attempt) ||
+        (budget?.exceeded ?? false)) {
+      return attempt;
+    }
+    await sleep(wait);
+    final second = await runCase(c);
+    return _merge(attempt, second);
+  }
+
+  static bool _isRateLimited(CaseResult r) =>
+      r.observation.failure?.cause is RateLimitException;
+
+  /// The second attempt, with usage, cost and model calls of both and
+  /// `retried`; latency and failure stay those of the second attempt.
+  static CaseResult _merge(CaseResult a, CaseResult b) {
+    final x = a.observation;
+    final y = b.observation;
+    int? cost(RunObservation o) => o.modelCalls == 0 ? 0 : o.costMicros;
+    final cx = cost(x);
+    final cy = cost(y);
+    final merged = RunObservation(
+      calls: y.calls,
+      finalText: y.finalText,
+      failure: y.failure,
+      latency: y.latency,
+      usage: x.usage + y.usage,
+      costMicros: x.modelCalls + y.modelCalls == 0
+          ? null
+          : (cx == null || cy == null ? null : cx + cy),
+      modelCalls: x.modelCalls + y.modelCalls,
+      confirmations: y.confirmations,
+      escalationConfirmations: y.escalationConfirmations,
+      completed: y.completed,
+      escalations: y.escalations,
+      gaveUp: y.gaveUp,
+      spokenText: y.spokenText,
+      retried: true,
+    );
+    return CaseResult(
+      evalCase: b.evalCase,
+      status: b.status,
+      reasons: b.reasons,
+      observation: merged,
+    );
   }
 
   /// Runs one case and scores it.
   Future<CaseResult> runCase(EvalCase c) async {
     try {
-      return scorer.score(c, await observe(c));
+      final observation = await observe(c);
+      if (budget?.stopReason case final why?) {
+        return CaseResult(
+          evalCase: c,
+          status: CaseStatus.error,
+          reasons: ['budget: $why'],
+          observation: observation,
+        );
+      }
+      return scorer.score(c, observation);
     } on Object catch (e) {
       return CaseResult(
         evalCase: c,
@@ -210,6 +315,7 @@ final class EvalRunner {
     String? spokenText;
     AgentFailed? failure;
     final watch = Stopwatch()..start();
+    loop:
     await for (final event in agent.run(
       UserInput(
         text: c.prompt,
@@ -225,21 +331,17 @@ final class EvalRunner {
           escalationConfirmations++;
           event.respond(true);
         case ToolCallFinished(:final call, :final outcome):
-          calls.add(
-            ObservedCall(
-              name: call.name,
-              args: call.tryDecodeArguments(),
-              rawArguments: call.argumentsJson,
-              isError: outcome.isError,
-              summary: outcome.summary,
-            ),
-          );
+          calls.add(_observedCall(call, outcome));
         case Escalated(:final toProfile, :final reason):
           escalations.add((to: toProfile, reason: reason));
         case UsageReported(usage: final u, :final costMicros):
           modelCalls++;
           usage = usage + u;
           cost = cost == null || costMicros == null ? null : cost + costMicros;
+          if (budget case final b? when !b.record(costMicros)) {
+            // Stop right here, mid-case: leaving the loop cancels the agent.
+            break loop;
+          }
         case AgentSpokenText(:final text):
           spokenText ??= text;
         case AgentDone(finalText: final text):
@@ -268,6 +370,15 @@ final class EvalRunner {
       spokenText: spokenText,
     );
   }
+
+  static ObservedCall _observedCall(ToolCallBlock call, ToolOutcome outcome) =>
+      ObservedCall(
+        name: call.name,
+        args: call.tryDecodeArguments(),
+        rawArguments: call.argumentsJson,
+        isError: outcome.isError,
+        summary: outcome.summary,
+      );
 
   Future<(List<Integration>, MemoryStorePort)> _integrations(
     EvalCase c,

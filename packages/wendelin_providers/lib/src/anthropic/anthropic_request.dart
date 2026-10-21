@@ -124,6 +124,12 @@ Map<String, Object?>? _thinking(AnthropicOptions o) {
       'thinking': {'type': 'disabled'},
     };
   }
+  if (o.thinking == 'between_tools') {
+    // Newer models (e.g. Sonnet 5.5) reject `disabled`.
+    return {
+      'thinking': {'type': 'between_tools'},
+    };
+  }
   if (o.thinking == 'adaptive') {
     return {
       'thinking': {

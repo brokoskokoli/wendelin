@@ -10,10 +10,121 @@ void main() {
   final cases = loadCases(Directory('cases'));
   final active = cases.where((c) => !c.pending).toList();
 
-  test('40 aktive Fälle: de 20, fr 10, en 10', () {
+  test('150 aktive Fälle: de 70, en 40, fr 40', () {
     int count(String l) => active.where((c) => c.language == l).length;
-    expect(active, hasLength(40));
-    expect((count('de'), count('fr'), count('en')), (20, 10, 10));
+    expect(active, hasLength(150));
+    expect((count('de'), count('en'), count('fr')), (70, 40, 40));
+  });
+
+  test('Fälle je Integration und Sprache (eigene Dateien, WP112)', () {
+    // Datei -> (de, en, fr)
+    const perFile = {
+      'calendar.yaml': (6, 3, 3),
+      'tasks.yaml': (5, 3, 3),
+      'bring.yaml': (5, 3, 3),
+      'spotify.yaml': (5, 3, 3),
+      'weather.yaml': (5, 3, 3),
+      'web.yaml': (2, 2, 2),
+      'alarm.yaml': (5, 3, 3),
+      'notes.yaml': (4, 3, 3),
+      'memory.yaml': (2, 0, 0),
+      'station.yaml': (2, 1, 1),
+      'multistep.yaml': (3, 2, 2),
+      'clarify.yaml': (3, 2, 2),
+      'refuse.yaml': (3, 2, 2),
+    };
+    for (final MapEntry(key: file, value: want) in perFile.entries) {
+      final cs = parseCaseFile(File('cases/$file').readAsStringSync());
+      int n(String l) => cs.where((c) => c.language == l).length;
+      expect((n('de'), n('en'), n('fr')), want, reason: file);
+      expect(cs.every((c) => !c.pending), isTrue, reason: file);
+    }
+    // Jede neue M5-Integration hat Fälle mit ihrem Fake-Backend.
+    for (final b in [
+      'bring',
+      'gtasks',
+      'spotify',
+      'weather',
+      'station',
+      'notes',
+    ]) {
+      expect(
+        active.where((c) => c.setup.backends.contains(b)).length,
+        greaterThanOrEqualTo(4),
+        reason: b,
+      );
+    }
+  });
+
+  test(
+    'Rückfragen ohne Tool, Ablehnungen mit forbid, Mehrschritt mit 2 Aufrufen',
+    () {
+      final clarify = active.where((c) => c.category == 'clarify').toList();
+      expect(clarify.length, 7);
+      for (final c in clarify) {
+        expect(c.expect.noTools, isTrue, reason: c.id);
+        expect(c.expect.text, isNotNull, reason: c.id);
+      }
+      final refuse = active.where((c) => c.category == 'refuse').toList();
+      expect(refuse.length, 7);
+      for (final c in refuse) {
+        expect(c.expect.forbid, isNotEmpty, reason: c.id);
+      }
+      final multi = active.where((c) => c.category == 'multistep').toList();
+      expect(multi.length, 7);
+      for (final c in multi) {
+        expect(c.expect.calls.length, greaterThanOrEqualTo(2), reason: c.id);
+      }
+      // station__start bleibt ohne Sprachbefehl zum Beenden.
+      expect(
+        active.any((c) => c.id == 'de-station-beenden' && c.expect.noTools),
+        isTrue,
+      );
+    },
+  );
+
+  test('alle Fälle laufen grün gegen das volle Fake-Skript', () async {
+    final out = StringBuffer();
+    final code = await runCli(
+      ['-p', 'profiles/fake-full.json'],
+      env: const {},
+      out: out,
+      err: out,
+    );
+    expect(code, 0, reason: '$out');
+    expect(out.toString(), matches(r'gesamt\s+150/150'));
+    expect(out.toString(), matches(r'de\s+70/70'));
+    expect(out.toString(), matches(r'en\s+40/40'));
+    expect(out.toString(), matches(r'fr\s+40/40'));
+  });
+
+  test('Wetter morgen: days darf fehlen (Standard 2), days 1 ist falsch', () {
+    final c = active.singleWhere((c) => c.id == 'de-weather-hamburg-morgen');
+    final scorer = Scorer(EvalTime.parse('2026-10-14T09:00', defaultTimeZone));
+    CaseResult score(Map<String, Object?> args) => scorer.score(
+      c,
+      RunObservation(
+        calls: [
+          ObservedCall(
+            name: 'weather__forecast',
+            args: args,
+            rawArguments: '{}',
+          ),
+        ],
+        finalText: 'Morgen Regen in Hamburg.',
+        completed: true,
+      ),
+    );
+    expect(score({'place': 'Hamburg'}).status, CaseStatus.passed);
+    expect(score({'place': 'Hamburg', 'days': 2}).status, CaseStatus.passed);
+    expect(score({'place': 'Hamburg', 'days': 1}).status, CaseStatus.failed);
+  });
+
+  test('das volle Fake-Skript deckt genau die aktiven Fälle ab', () {
+    final script = FakeScript.parse(
+      File('fake/full_script.yaml').readAsStringSync(),
+    );
+    expect(script.caseIds.toSet(), active.map((c) => c.id).toSet());
   });
 
   test(
@@ -95,8 +206,8 @@ void main() {
   test(
     'alle erwarteten Tools existieren und Zeitangaben sind gültig',
     () async {
-      // Einmal durchlaufen lassen, damit die Registry gebaut wird; die
-      // Tool-Namen kommen aus den echten Integrationen.
+      // Je Backend-Menge einmal durchlaufen lassen, damit die Registry
+      // gebaut wird; die Tool-Namen kommen aus den echten Integrationen.
       final provider = FakeLlmProviderForNames();
       final runner = EvalRunner(
         target: EvalTarget(
@@ -107,15 +218,22 @@ void main() {
         ),
         time: EvalTime.parse(defaultNow, defaultTimeZone),
       );
-      await runner.runCase(active.first);
-      final known = provider.toolNames;
-      expect(known, contains('calendar__create_event'));
+      final known = <String, Set<String>>{};
       for (final c in active) {
+        final key = ([...c.setup.backends]..sort()).join(',');
+        if (known.containsKey(key)) continue;
+        provider.toolNames.clear();
+        await runner.runCase(c);
+        known[key] = {...provider.toolNames};
+      }
+      expect(known[''], contains('calendar__create_event'));
+      for (final c in active) {
+        final names = known[([...c.setup.backends]..sort()).join(',')]!;
         for (final name in [
           ...c.expect.calls.expand((e) => e.toolNames),
           ...c.expect.forbid,
         ]) {
-          expect(known, contains(name), reason: '${c.id}: $name');
+          expect(names, contains(name), reason: '${c.id}: $name');
         }
         final time = EvalTime.parse(defaultNow, defaultTimeZone);
         for (final e in c.setup.events) {

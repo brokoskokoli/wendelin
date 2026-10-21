@@ -83,3 +83,7 @@ Tool-Calls formal, löst aber relative Daten und Wochentage zu oft falsch auf
 dazwischen. `glm-5.3-flash` wurde nicht gemessen (Reasoning lässt sich auf
 RedPill nicht abschalten, K8 g). Vor der Umstellung sollte ein voller Lauf
 (alle 40 Fälle, auch fr/en, Gedächtnis, Web) die Wahl bestätigen.
+
+## 2026-10-20/21 – Modellempfehlung (WP112)
+
+Live-Lauf `cases/live30.txt` (29 aktive Fälle x 2 = 58 Läufe) für 12 Modelle von 5 Anbietern, Thinking aus bzw. minimal; Reports `2026-10-20-<profil>-<modell>.json`, Kosten aller Läufe in `2026-10-20-ledger.json` (Summe 1,48 $). Auswertung, Empfehlung je Rolle und Kommandos: `docs/notes/model-recommendation.md`.

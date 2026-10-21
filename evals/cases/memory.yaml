@@ -1,0 +1,22 @@
+# Gedächtnis: Person merken und Wissen nutzen (WP112).
+cases:
+  - id: de-mem-schwester
+    language: de
+    category: memory
+    prompt: Merk dir, dass Mara meine Schwester ist.
+    expect:
+      calls:
+        - tool: memory__save
+          args:
+            text: {contains: Mara}
+            category: person
+
+  - id: de-mem-allergie
+    language: de
+    category: memory
+    prompt: Gegen was habe ich noch mal eine Allergie?
+    setup:
+      memory:
+        - {text: "Allergie gegen Haselnüsse", category: fact}
+    expect:
+      text: {contains: Haselnüsse}

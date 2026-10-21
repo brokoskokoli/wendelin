@@ -1,0 +1,167 @@
+# Weitere Kalender-Fälle (WP112): Bereiche, Orte, Dauer, Verschieben,
+# Löschen (external). "Heute" = Mittwoch 2026-11-18. Format: evals/README.md.
+cases:
+  - id: de-cal-woche
+    language: de
+    category: calendar
+    prompt: Was habe ich diese Woche noch vor?
+    setup:
+      events:
+        - {id: evt-eltern, title: Elternabend, start: "fri 19:00", end: "fri 20:30"}
+    expect:
+      calls:
+        - tool: calendar__list_events
+          args:
+            start: {date: today}
+            end: {any_of: [{date: sun}, {date: "+5d"}]}
+      text: {contains: Elternabend}
+
+  - id: de-cal-ort
+    language: de
+    category: calendar
+    prompt: Trag Freitag um 19 Uhr Abendessen im Restaurant Seeblick ein.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: Abendessen}
+            start: {at: "fri 19:00"}
+            location: {contains: Seeblick}
+
+  - id: de-cal-dauer
+    language: de
+    category: calendar
+    prompt: Plane morgen von 14 bis 16 Uhr einen Workshop ein.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: Workshop}
+            start: {at: "+1d 14:00"}
+            end: {at: "+1d 16:00"}
+
+  - id: de-cal-spaeter
+    language: de
+    category: calendar
+    prompt: Mein Physiotermin morgen ist eine Stunde später.
+    setup:
+      events:
+        - {id: evt-physio, title: Physio, start: "+1d 08:00", end: "+1d 09:00"}
+    expect:
+      calls:
+        - tool: calendar__update_event
+          args:
+            event_id: evt-physio
+            start: {at: "+1d 09:00"}
+      forbid: [calendar__delete_event]
+
+  - id: de-cal-frei-montag
+    language: de
+    category: calendar
+    prompt: Wann ist nächsten Montag ein Zeitfenster von zwei Stunden frei?
+    setup:
+      events:
+        - {id: evt-montag, title: Teamrunde, start: "mon 09:00", end: "mon 11:00"}
+    expect:
+      calls:
+        - tool: calendar__find_free_slots
+          args:
+            start: {date: mon}
+            min_duration_minutes: 120
+
+  - id: de-cal-streichen
+    language: de
+    category: calendar-external
+    prompt: Streich den Yogakurs am Samstag aus dem Kalender.
+    note: external-Aktion – muss bestätigt werden (automatisch „ja“).
+    setup:
+      events:
+        - {id: evt-yoga, title: Yogakurs, start: "sat 10:00", end: "sat 11:00"}
+    expect:
+      calls:
+        - tool: calendar__delete_event
+          args:
+            event_id: evt-yoga
+      confirmed: true
+
+  - id: en-cal-friday
+    language: en
+    category: calendar
+    prompt: What do I have on Friday?
+    setup:
+      events:
+        - {id: evt-dinner, title: Dinner with Sam, start: "fri 19:30", end: "fri 21:30"}
+    expect:
+      calls:
+        - tool: calendar__list_events
+          args:
+            start: {date: fri}
+      text: {contains: Sam}
+
+  - id: en-cal-lunch-location
+    language: en
+    category: calendar
+    prompt: Schedule a team lunch next Monday at 12:30 at the Harbour Cafe.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: lunch}
+            start: {at: "mon 12:30"}
+            location: {contains: Harbour}
+
+  - id: en-cal-move
+    language: en
+    category: calendar
+    prompt: Move my dentist appointment to Thursday at 4 pm.
+    setup:
+      events:
+        - {id: evt-dentist, title: Dentist, start: "fri 10:00", end: "fri 11:00"}
+    expect:
+      calls:
+        - tool: calendar__update_event
+          args:
+            event_id: evt-dentist
+            start: {at: "+1d 16:00"}
+      forbid: [calendar__delete_event]
+
+  - id: fr-cal-vendredi
+    language: fr
+    category: calendar
+    prompt: Qu'est-ce que j'ai de prévu vendredi ?
+    setup:
+      events:
+        - {id: evt-diner, title: Dîner chez Léa, start: "fri 20:00", end: "fri 22:00"}
+    expect:
+      calls:
+        - tool: calendar__list_events
+          args:
+            start: {date: fri}
+      text: {contains: Léa}
+
+  - id: fr-cal-journee
+    language: fr
+    category: calendar
+    prompt: Note une journée entière « Randonnée » samedi.
+    expect:
+      calls:
+        - tool: calendar__create_event
+          args:
+            title: {contains: Randonnée}
+            start: {date: sat}
+            all_day: true
+
+  - id: fr-cal-decaler
+    language: fr
+    category: calendar
+    prompt: Décale la réunion de demain à 15h.
+    setup:
+      events:
+        - {id: evt-reunion, title: Réunion, start: "+1d 11:00", end: "+1d 12:00"}
+    expect:
+      calls:
+        - tool: calendar__update_event
+          args:
+            event_id: evt-reunion
+            start: {at: "+1d 15:00"}
+      forbid: [calendar__delete_event]

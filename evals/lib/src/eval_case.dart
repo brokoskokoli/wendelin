@@ -169,12 +169,23 @@ final class CaseSetup {
 
   /// Extra integrations with fake backends (WP29): `bring` (Bring! account
   /// with two lists), `http` (Home-Assistant-like HTTP tools, fake
-  /// responses), `mcp` (in-process `FakeMcpServer`, server name „Home“).
+  /// responses), `mcp` (in-process `FakeMcpServer`, server name „Home“),
+  /// and (WP112) `gtasks`, `spotify`, `weather`, `station`, `notes`
+  /// (Obsidian vault), see `case_backends_m5.dart`.
   final Set<String> backends;
 }
 
 /// Backends a case may ask for in `setup.backends`.
-const caseBackends = {'bring', 'http', 'mcp'};
+const caseBackends = {
+  'bring',
+  'http',
+  'mcp',
+  'gtasks',
+  'spotify',
+  'weather',
+  'station',
+  'notes',
+};
 
 /// One eval case: a user request and what should happen.
 @immutable
@@ -348,8 +359,13 @@ Expectation _expect(Map<String, Object?> m) {
   if (noTools && expectation.calls.isNotEmpty) {
     throw const FormatException('no_tools und calls schließen sich aus');
   }
-  if (!noTools && expectation.calls.isEmpty && expectation.text == null) {
-    throw const FormatException('expect braucht calls, no_tools oder text');
+  if (!noTools &&
+      expectation.calls.isEmpty &&
+      expectation.text == null &&
+      expectation.forbid.isEmpty) {
+    throw const FormatException(
+      'expect braucht calls, no_tools, text oder forbid',
+    );
   }
   return expectation;
 }

@@ -1,0 +1,60 @@
+# Rückfragen (WP112): Es fehlt eine Angabe (Zeit, Titel, Liste). Erwartet
+# wird eine Frage statt eines geratenen Tool-Aufrufs.
+cases:
+  - id: de-clarify-wecker
+    language: de
+    category: clarify
+    prompt: Stell mir einen Wecker.
+    expect:
+      no_tools: true
+      text: {matches: "[?]"}
+
+  - id: de-clarify-termin
+    language: de
+    category: clarify
+    prompt: Trag einen Termin für mich ein.
+    expect:
+      no_tools: true
+      text: {matches: "[?]"}
+
+  - id: de-clarify-liste
+    language: de
+    category: clarify
+    prompt: Setz das bitte auf die Liste.
+    setup: {backends: [bring]}
+    expect:
+      no_tools: true
+      text: {matches: "[?]"}
+
+  - id: en-clarify-timer
+    language: en
+    category: clarify
+    prompt: Set a timer.
+    expect:
+      no_tools: true
+      text: {matches: "[?]"}
+
+  - id: en-clarify-meeting
+    language: en
+    category: clarify
+    prompt: Put a meeting in my calendar.
+    expect:
+      no_tools: true
+      text: {matches: "[?]"}
+
+  - id: fr-clarify-reveil
+    language: fr
+    category: clarify
+    prompt: Mets un réveil.
+    expect:
+      no_tools: true
+      text: {matches: "[?]"}
+
+  - id: fr-clarify-liste
+    language: fr
+    category: clarify
+    prompt: Ajoute ça à la liste.
+    setup: {backends: [bring]}
+    expect:
+      no_tools: true
+      text: {matches: "[?]"}
