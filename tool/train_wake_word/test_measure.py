@@ -316,5 +316,69 @@ class Kreuz(unittest.TestCase):
         self.assertEqual(W.cv_pick([a, b], 1.0, 1)[2], ["Ma+-", "Ma+-"])
 
 
+class RowsFor(unittest.TestCase):
+    """Kernzaehlung rows_for / calib_point (Treffer je Label, Fenster, eigenes Wort, Kalibrierungsquelle)."""
+    FA = {"neg_huawei": 1, "neg_handy2": 2, "syn": 3, "fleurs": 4}
+    HR = {"neg_huawei": 0.5, "neg_handy2": 0.5, "syn": 2.0, "fleurs": 1.0}
+
+    @staticmethod
+    def lb(dev, word, start, end, status="ok", block=1):
+        return {"dev": dev, "word": word, "start": start, "end": end, "status": status, "block": block}
+
+    def rows(self, w, labels, huawei, handy2=(), passes=None):
+        ev = {"pos_huawei": {"pos_huawei": list(huawei)}, "pos_handy2": {"pos_handy2": list(handy2)},
+              "neg_huawei": {"f": [1.0, 2.0]}, "neg_handy2": {}}
+        passes = passes or (lambda s, i, t: True)
+        return {r["dev"]: r for r in W.rows_for(w, "M", 0.5, "-", ev, passes, self.FA, self.HR, labels)}
+
+    def test_fenster_hat_ober_und_untergrenze(self):
+        labels = [self.lb("huawei", "Wendelin", 10.0, 11.0, block=1),     # Fenster 9.7 .. 12.2
+                  self.lb("huawei", "Wendelin", 20.0, 21.0, block=2),
+                  self.lb("huawei", "Wendelin", 30.0, 31.0, block=3),
+                  self.lb("huawei", "Wendelin", 40.0, 41.0, block=4)]
+        r = self.rows("Wendelin", labels, [11.0, 20.0 - 0.5, 31.0 + 2.0, 40.0])["huawei"]
+        self.assertEqual((r["n"], r["hit"]), (4, 2))                      # zu frueh (19.5) und zu spaet (33.0) zaehlen nicht
+        self.assertEqual([r[f"hit_b{b}"] for b in (1, 2, 3, 4)], [1, 0, 0, 1])
+
+    def test_nur_eigenes_wort_und_verwechsler(self):
+        labels = [self.lb("huawei", "Wendelin", 10.0, 11.0), self.lb("huawei", "Alexa", 20.0, 21.0)]
+        r = self.rows("Wendelin", labels, [20.5])["huawei"]
+        self.assertEqual((r["n"], r["hit"], r["n_ok"], r["hit_ok"]), (1, 0, 1, 0))       # Treffer im Alexa-Fenster ist kein Wendelin-Treffer
+        self.assertEqual(r["x_alexa"], 1)                                                 # sondern ein Verwechsler
+        self.assertEqual(r["x_hey_wendelin"], 0)
+        self.assertNotIn("x_wendelin", r)
+
+    def test_stufe2_filter_und_geraet(self):
+        labels = [self.lb("huawei", "Wendelin", 10.0, 11.0), self.lb("handy2", "Wendelin", 10.0, 11.0, "unsicher")]
+        rows = self.rows("Wendelin", labels, [10.5], [], passes=lambda s, i, t: False)
+        self.assertEqual((rows["huawei"]["hit"], rows["handy2"]["hit"]), (0, 0))
+        rows = self.rows("Wendelin", labels, [10.5], [])
+        self.assertEqual((rows["huawei"]["hit"], rows["handy2"]["hit"]), (1, 0))           # handy2 hat keine eigene Detektion
+        self.assertEqual((rows["handy2"]["n"], rows["handy2"]["n_ok"]), (1, 0))
+        self.assertEqual((rows["huawei"]["fa_real"], rows["handy2"]["fa_real"], rows["huawei"]["cand_real"]), (1, 2, 2))
+
+    def test_calib_point_quellen(self):
+        r = self.rows("Wendelin", [], [])["huawei"]
+        s, e = W.calib_point(r, "syn"), W.calib_point(r, "real")
+        self.assertEqual((s["fa"], s["hours"]), (7, 3.0))                  # synthetisch + FLEURS
+        self.assertEqual((e["fa"], e["hours"]), (1, 0.5))                  # nur die echte Negativ-Aufnahme des Geraets
+
+
+class KwsRun(unittest.TestCase):
+    def test_platzhalter_zaehlt_nicht(self):
+        import numpy as np
+        sp = FakeSpotter(["", "X", "", "WENDELIN", "X"])
+        hits, _ = K.run(sp, np.zeros(5 * 1600, "float32"), "x", tail=0.0)
+        self.assertEqual(hits, [0.4])                      # Platzhalter X ist kein Treffer
+        self.assertEqual(sp.resets, 3)                     # er setzt den Stream trotzdem zurueck
+
+    def test_platzhalterdatei_je_inhalt_und_prozess(self):
+        a, b = K.dummy_path("/m", "A @X\n"), K.dummy_path("/m", "B @X\n")
+        self.assertNotEqual(a, b)
+        self.assertEqual(a, K.dummy_path("/m", "A @X\n"))
+        self.assertIn(str(os.getpid()), a)
+        self.assertNotEqual(os.path.basename(a), "_dummy_keywords.txt")
+
+
 if __name__ == "__main__":
     unittest.main()
