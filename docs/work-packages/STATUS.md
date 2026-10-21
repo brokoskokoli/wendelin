@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP113, WP115, WP116; als Nächstes: WP114 (nach WP113), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
+Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP113, WP116; als Nächstes: WP114 (nach WP113), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
 
 ## Meilensteine
 
@@ -63,7 +63,7 @@ Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP113, WP115, WP116; als Näch
 | WP112 | Modell-Empfehlung (150 Evals de/en/fr, 5 Anbieter, Empfehlung je Rolle) | gemergt d6ba4602 | K87 offen; Kosten 1,48 $ (alle unter Obergrenze); Folge: Scorer soll Reasoning-Leck (`</think>`) als Fehlschlag werten, `fr-clarify-liste` zu streng, `live30.txt` enthält pending `de-lists-add`, Soll: CLI-Test Ledger-Budgetübergabe; Fallback je Rolle als eigenes Paket möglich |
 | WP113 | „Stopp“ während der Antwort mit Gegenprüfung, Anzeige „hört mit“ | in Arbeit | Gerätetest 2026-10-20 T20-B.1; K84 |
 | WP114 | Gesperrtes Handy: Overlay bleibt nach dem Entsperren, harmlose Aktionen ohne Entsperren | geplant (nach WP113, Sprach-Controller) | T20-Z.5/Z.6; K85 |
-| WP115 | Große Modelle streamend entpacken (Parakeet v3), erkannte Sprache loggen | in Arbeit | T20-P.1, T20-V |
+| WP115 | Große Modelle streamend entpacken (Parakeet v3), erkannte Sprache loggen | gemergt 781af471 | keine Abweichung; neue Logzeilen model-unpack(-ed/-failed), stt-lang; Gerätetest `docs/testing/m5/wp115.md`; Soll: Tests `a/b` dann `a` → corrupt, doppelte Datei → ok, Doc install() `model_installer.dart:84-86` (io-Ausnahme), io-Test mit chmod 555 scheitert als root |
 | WP116 | Einstellungsseiten: Überschriften, Info-Texte, Links | in Arbeit | T20-0.9 |
 | WP117 | Weitere deutsche Stimmen (Ramona, Eva) | gemergt 49fca790 | K86; Lizenz M-AILABS (BSD-artig, Attribution) statt CC0; Soll: Stimmen später in eigene Datei auslagern (check_sizes) |
 
