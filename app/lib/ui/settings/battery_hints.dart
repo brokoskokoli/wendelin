@@ -66,17 +66,8 @@ class _BatteryHintsState extends ConsumerState<BatteryHints> {
     }
   }
 
-  Widget _action(String label, Future<bool> Function() action) => Align(
-    alignment: AlignmentDirectional.centerStart,
-    child: TextButton(
-      onPressed: () => unawaited(_open(action)),
-      style: TextButton.styleFrom(
-        foregroundColor: WColors.link,
-        minimumSize: const Size(WSize.touchMin, WSize.touchMin),
-      ),
-      child: Text(label),
-    ),
-  );
+  Widget _action(String label, Future<bool> Function() action) =>
+      LinkButton(label, onPressed: () => unawaited(_open(action)));
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +124,7 @@ class _BatteryHintsState extends ConsumerState<BatteryHints> {
               context.l10n.batteryOpenSettings,
               platform.openBatterySettings,
             ),
-          Text(context.l10n.batteryChecklistNote, style: WText.caption),
+          InfoBox(context.l10n.batteryChecklistNote),
         ],
       ],
     );

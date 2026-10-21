@@ -132,16 +132,13 @@ class _State extends ConsumerState<WakeServiceSection> {
     }
   }
 
-  Widget _action(String label, VoidCallback onPressed) => Align(
-    alignment: AlignmentDirectional.centerStart,
-    child: TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: WColors.link,
-        minimumSize: const Size(WSize.touchMin, WSize.touchMin),
-      ),
-      child: Text(label),
-    ),
+  Widget _action(String label, VoidCallback onPressed) =>
+      LinkButton(label, onPressed: onPressed);
+
+  Widget _enrollLink() => LinkButton(
+    context.l10n.wakeServiceSectionToEnroll,
+    onPressed: widget.onEnroll,
+    external: false,
   );
 
   Widget _condition(
@@ -217,7 +214,7 @@ class _State extends ConsumerState<WakeServiceSection> {
                 title: context.l10n.wakeServiceSectionEnrollFirst,
                 detail: context.l10n.wakeServiceSectionEnrollFirstBody,
               ),
-              _action(context.l10n.wakeServiceSectionToEnroll, widget.onEnroll),
+              _enrollLink(),
             ],
           ],
         ),

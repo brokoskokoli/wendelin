@@ -38,7 +38,7 @@ class AttestationStagesCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.s,
       children: [
-        Text(context.l10n.attStagesCardFirst, style: WText.sectionLabel),
+        Text(context.l10n.attStagesCardFirst, style: WText.sectionTitle),
         SectionCard(
           children: [
             SettingsRow(

@@ -67,7 +67,7 @@ class HttpToolsScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              Text(context.l10n.httpToolsExportNote, style: WText.caption),
+              InfoBox(context.l10n.httpToolsExportNote),
             ],
           );
         },

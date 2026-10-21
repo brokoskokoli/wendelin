@@ -60,6 +60,7 @@ final class RunObservation {
     this.escalations = const [],
     this.gaveUp = false,
     this.spokenText,
+    this.retried = false,
   });
 
   /// Tool calls in order.
@@ -103,6 +104,11 @@ final class RunObservation {
 
   /// The `<spoken>` block of the answer (WP41, stage 2); `null` = none.
   final String? spokenText;
+
+  /// Whether the case ran a second time after a rate limit
+  /// (`--retry-rate-limit`). Latency and failure are those of the second
+  /// attempt; usage, cost and model calls add up both.
+  final bool retried;
 }
 
 /// Outcome category of a case.
@@ -129,11 +135,31 @@ final class CaseResult {
     required this.status,
     this.reasons = const [],
     this.observation = const RunObservation(),
+    this.repetition,
   });
 
   /// A skipped case.
-  factory CaseResult.skipped(EvalCase c, String why) =>
-      CaseResult(evalCase: c, status: CaseStatus.skipped, reasons: [why]);
+  factory CaseResult.skipped(EvalCase c, String why, {int? repetition}) =>
+      CaseResult(
+        evalCase: c,
+        status: CaseStatus.skipped,
+        reasons: [why],
+        repetition: repetition,
+      );
+
+  /// This result as repetition [n] (`null` = no `--repeat`).
+  CaseResult withRepetition(int? n) => n == null
+      ? this
+      : CaseResult(
+          evalCase: evalCase,
+          status: status,
+          reasons: reasons,
+          observation: observation,
+          repetition: n,
+        );
+
+  /// Number of the repetition (1-based) with `--repeat` > 1, else `null`.
+  final int? repetition;
 
   /// The case.
   final EvalCase evalCase;
@@ -156,6 +182,7 @@ final class CaseResult {
     final c = evalCase;
     return {
       'id': c.id,
+      'repetition': ?repetition,
       'language': c.language,
       'category': c.category,
       'prompt': c.prompt,
@@ -166,6 +193,7 @@ final class CaseResult {
         'finalText': o.finalText,
         if (o.failure case final f?)
           'failure': {'kind': f.error.name, 'message': f.message},
+        if (o.retried) 'retried': true,
         'latencyMs': o.latency.inMilliseconds,
         'modelCalls': o.modelCalls,
         'usage': {

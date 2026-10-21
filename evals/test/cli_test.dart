@@ -43,9 +43,9 @@ void main() {
     final report =
         jsonDecode(File(path).readAsStringSync()) as Map<String, Object?>;
     final summary = report['summary']! as Map<String, Object?>;
-    // Das Demo-Skript beantwortet 10 von 40 Fällen richtig.
-    expect(summary['total'], 40);
-    expect(summary['passed'], 10);
+    // Das Demo-Skript beantwortet 15 von 150 Fällen richtig (Rest: weiß ich nicht).
+    expect(summary['total'], 150);
+    expect(summary['passed'], 15);
     expect(summary['skipped'], 2);
     expect(summary['gaveUp'], 1);
     expect(summary['escalated'], 0);
@@ -66,6 +66,40 @@ void main() {
     expect(byId('de-lists-add')['status'], 'skipped');
     expect((report['meta']! as Map)['now'], '2026-11-18T09:00');
   });
+
+  test(
+    '--ids wählt exakt die genannten Fälle, unbekannte Id ist ein Fehler',
+    () async {
+      final ids = File('${tmp.path}/ids.txt')
+        ..writeAsStringSync('# Kommentar\nde-cal-tauchen\n\n  en-timer \n');
+      final (code, out, err) = await run([
+        '-p',
+        'profiles/fake-demo.json',
+        '--ids',
+        ids.path,
+      ]);
+      expect(code, 0, reason: err);
+      expect(out, contains('2 Fälle'));
+      expect(out, contains('de-cal-tauchen'));
+      expect(out, isNot(contains('de-cal-zahnarzt-freitag')));
+      ids.writeAsStringSync('de-cal-tauchen\nde-gibts-nicht\n');
+      final bad = await run([
+        '-p',
+        'profiles/fake-demo.json',
+        '--ids',
+        ids.path,
+      ]);
+      expect(bad.$1, 1);
+      expect(bad.$3, contains('de-gibts-nicht'));
+      final missing = await run([
+        '-p',
+        'profiles/fake-demo.json',
+        '--ids',
+        '${tmp.path}/nope.txt',
+      ]);
+      expect(missing.$1, 1);
+    },
+  );
 
   test('Filter, Limit, Modell, eigenes Fall-Verzeichnis und heute', () async {
     final (code, out, _) = await run([
@@ -272,7 +306,7 @@ void main() {
         return http.Response('{}', 401);
       });
       final (code, out, err) = await run(
-        ['-p', 'profiles/phala-tee-small.json', '-n', '1'],
+        ['-p', 'profiles/phala-tee-small.json', '-c', 'de-cal-tauchen'],
         env: {'PHALA_API_KEY': 'test-key-123'},
         client: client,
       );
@@ -283,4 +317,163 @@ void main() {
       expect(out, isNot(contains('test-key-123')));
     },
   );
+
+  test(
+    'Provider fällt nach einem Aufruf aus: Ledger bucht Kosten und budgetGroup',
+    () async {
+      var calls = 0;
+      final client = MockClient.streaming((req, body) async {
+        await body.drain<void>();
+        calls++;
+        if (calls > 1) throw StateError('Test: unerwarteter Fehler');
+        const chunks =
+            'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1",'
+            '"type":"function","function":{"name":"calendar__list_events",'
+            '"arguments":"{}"}}]},"finish_reason":"tool_calls","index":0}],'
+            '"usage":{"prompt_tokens":1000,"completion_tokens":100,'
+            '"total_tokens":1100}}\n\ndata: [DONE]\n\n';
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(chunks)),
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        );
+      });
+      final ledger = '${tmp.path}/l.json';
+      final (code, out, err) = await run(
+        [
+          '-p',
+          'profiles/openai-mini.json',
+          '-c',
+          'de-cal-tauchen',
+          '--ledger',
+          ledger,
+          '--max-cost',
+          '1',
+        ],
+        env: {'OPENAI_API_KEY': 'test-key-123'},
+        client: client,
+      );
+      expect(code, 0, reason: err);
+      expect(out, contains('de-cal-tauchen: error'));
+      final entry = readLedger(File(ledger)).single;
+      expect(entry.budgetGroup, 'openai');
+      expect(entry.costUsd, greaterThan(0), reason: '$calls Aufrufe');
+    },
+  );
+
+  group('Anfrage-Felder je Modell (modelOptions, WP112)', () {
+    /// First request body of a run of `-c de-cal-tauchen` with [profile].
+    Future<Map<String, Object?>> requestOf(
+      String profile, {
+      String? model,
+      String key = 'PHALA_API_KEY',
+    }) async {
+      final bodies = <String>[];
+      final client = MockClient((req) async {
+        bodies.add(req.body);
+        return http.Response('{}', 401);
+      });
+      final (code, _, err) = await run(
+        [
+          '-p',
+          'profiles/$profile.json',
+          '-c',
+          'de-cal-tauchen',
+          if (model != null) ...['-m', model],
+        ],
+        env: {key: 'test-key-123'},
+        client: client,
+      );
+      expect(code, 0, reason: err);
+      expect(bodies, isNotEmpty);
+      return jsonDecode(bodies.first) as Map<String, Object?>;
+    }
+
+    Future<Map<String, Object?>> tinfoil(String? model) =>
+        requestOf('tinfoil-tee', model: model, key: 'TINFOIL_API_KEY');
+
+    test(
+      'Tinfoil gpt-oss-120b: reasoning_effort low, kein Template-Feld',
+      () async {
+        final body = await tinfoil(null);
+        expect(body['model'], 'gpt-oss-120b');
+        expect(body['reasoning_effort'], 'low');
+        expect(body, isNot(contains('chat_template_kwargs')));
+      },
+    );
+
+    test('Tinfoil gemma4-31b: enable_thinking false, sonst nichts', () async {
+      final body = await tinfoil('gemma4-31b');
+      expect(body['model'], 'gemma4-31b');
+      expect(body['chat_template_kwargs'], {'enable_thinking': false});
+      expect(body, isNot(contains('reasoning_effort')));
+    });
+
+    test('Tinfoil deepseek-v4-1-flash: thinking false', () async {
+      final body = await tinfoil('deepseek-v4-1-flash');
+      expect(body['chat_template_kwargs'], {'thinking': false});
+      expect(body, isNot(contains('reasoning_effort')));
+    });
+
+    test('Phala gpt-oss-120b: reasoning low, aci_verified bleibt', () async {
+      final body = await requestOf(
+        'phala-tee-small',
+        model: 'openai/gpt-oss-120b',
+      );
+      expect(body['reasoning_effort'], 'low');
+      expect((body['provider'] as Map)['aci_verified'], isTrue);
+    });
+
+    test('Phala gemma-4-31b-it: reasoning.enabled false', () async {
+      final body = await requestOf(
+        'phala-tee-small',
+        model: 'google/gemma-4-31b-it',
+      );
+      expect(body['reasoning'], {'enabled': false});
+      expect(body, isNot(contains('reasoning_effort')));
+      expect((body['provider'] as Map)['aci_verified'], isTrue);
+    });
+
+    test('Phala deepseek-v4-flash: thinking false', () async {
+      final body = await requestOf(
+        'phala-tee-small',
+        model: 'deepseek/deepseek-v4-flash-0731',
+      );
+      expect(body['chat_template_kwargs'], {'thinking': false});
+      expect(body, isNot(contains('reasoning_effort')));
+    });
+
+    for (final m in [
+      'Qwen/Qwen3.8-27B',
+      'Qwen/Qwen3.6-35B-A3B-FP8',
+      'z-ai/glm-5.3-flash',
+    ]) {
+      test('NEAR $m: enable_thinking false', () async {
+        final body = await requestOf(
+          'near-tee',
+          model: m,
+          key: 'NEAR_AI_API_KEY',
+        );
+        expect(body['model'], m);
+        expect(body['chat_template_kwargs'], {'enable_thinking': false});
+        expect(body, isNot(contains('reasoning_effort')));
+      });
+    }
+
+    test('OpenAI gpt-5-mini: reasoning_effort minimal', () async {
+      final body = await requestOf('openai-mini', key: 'OPENAI_API_KEY');
+      expect(body['model'], 'gpt-5-mini');
+      expect(body['reasoning_effort'], 'minimal');
+    });
+
+    test('Claude Sonnet: thinking between_tools im Request', () async {
+      final body = await requestOf('claude-sonnet', key: 'ANTHROPIC_API_KEY');
+      expect(body['thinking'], {'type': 'between_tools'});
+    });
+
+    test('Phala anderes Modell: kein reasoning_effort', () async {
+      final body = await requestOf('phala-tee-small');
+      expect(body, isNot(contains('reasoning_effort')));
+    });
+  });
 }

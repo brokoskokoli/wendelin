@@ -1,6 +1,7 @@
 {
   "id": "phala-tee-small",
   "name": "Phala TEE klein",
+  "budgetGroup": "phala",
   "type": "openaiCompatible",
   "baseUrl": "https://api.redpill.ai/v1",
   "defaultModel": "qwen/qwen-2.5-7b-instruct",
@@ -11,6 +12,25 @@
   },
   "options": {
     "teeModelsOnly": true
+  },
+  "modelOptions": {
+    "openai/gpt-oss-120b": {
+      "reasoningEffort": "low"
+    },
+    "google/gemma-4-31b-it": {
+      "extraBody": {
+        "reasoning": {
+          "enabled": false
+        }
+      }
+    },
+    "deepseek/deepseek-v4-flash-0731": {
+      "extraBody": {
+        "chat_template_kwargs": {
+          "thinking": false
+        }
+      }
+    }
   },
   "catalog": {
     "models": {

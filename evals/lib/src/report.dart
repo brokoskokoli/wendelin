@@ -37,10 +37,10 @@ final class EvalReport {
   /// Plain-text table: one line per case, then the summaries.
   String renderTable() {
     final b = StringBuffer();
-    final idWidth = results.fold(
-      4,
-      (w, r) => r.evalCase.id.length > w ? r.evalCase.id.length : w,
-    );
+    final idWidth = results.fold(4, (w, r) {
+      final n = r.evalCase.id.length + (r.repetition == null ? 0 : 3);
+      return n > w ? n : w;
+    });
     b.writeln(
       '${'Fall'.padRight(idWidth)}  Status   ms      Tokens  Kosten µ\$  Hinweis',
     );
@@ -54,7 +54,8 @@ final class EvalReport {
       ].join('; ');
       b.writeln(
         [
-          r.evalCase.id.padRight(idWidth),
+          (r.evalCase.id + (r.repetition == null ? '' : '#${r.repetition}'))
+              .padRight(idWidth),
           _status(r.status).padRight(7),
           (r.ran ? '${o.latency.inMilliseconds}' : '-').padLeft(6),
           (r.ran ? '${o.usage.totalTokens}' : '-').padLeft(9),
@@ -88,6 +89,13 @@ final class EvalReport {
                   '${s.escalationConfirmations > 0 ? '+${s.escalationConfirmations}E' : ''}'
               .padLeft(10),
         ].join(' '),
+      );
+    }
+    if (summary.total > 0) {
+      final w = wilson95(summary.passed, summary.total);
+      b.writeln(
+        'Wilson-95-%-Intervall der Trefferquote: '
+        '${(w[0] * 100).toStringAsFixed(1)}–${(w[1] * 100).toStringAsFixed(1)} %',
       );
     }
     if (summary.skipped > 0) {

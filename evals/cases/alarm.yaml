@@ -1,0 +1,118 @@
+# Wecker und Timer (WP112). Werte bewusst nicht aus den Beispielen der
+# Tool-Beschreibungen (07:30, 06:45, 600 s, 90 s, [1,2,3,4,5]).
+cases:
+  - id: de-alarm-label
+    language: de
+    category: alarms
+    prompt: Weck mich morgen um 8 Uhr 20 für den Zahnarzt.
+    expect:
+      calls:
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "08:20"}
+            label: {contains: Zahnarzt}
+
+  - id: de-alarm-wochenende
+    language: de
+    category: alarms
+    prompt: Stell einen Wecker für Samstag und Sonntag um neun Uhr.
+    expect:
+      calls:
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "09:00"}
+            days: [6, 7]
+
+  - id: de-alarm-liste
+    language: de
+    category: alarms
+    prompt: Welche Wecker sind gerade gestellt?
+    expect:
+      calls:
+        - tool: alarms__list
+      forbid: [alarms__set_alarm]
+
+  - id: de-timer-eier
+    language: de
+    category: alarms
+    prompt: Stell einen Timer auf 7 Minuten für die Eier.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 420
+            label: {contains: Eier}
+
+  - id: de-timer-anderthalb-stunden
+    language: de
+    category: alarms
+    prompt: Stell mir einen Timer auf anderthalb Stunden.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 5400
+
+  - id: en-alarm-tue-thu
+    language: en
+    category: alarms
+    prompt: Wake me at 6:10 on Tuesdays and Thursdays.
+    expect:
+      calls:
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "06:10"}
+            days: [2, 4]
+
+  - id: en-timer-pizza
+    language: en
+    category: alarms
+    prompt: Set a timer for 18 minutes for the pizza.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 1080
+            label: {contains: pizza}
+
+  - id: en-timer-seconds
+    language: en
+    category: alarms
+    prompt: Timer for 45 seconds.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 45
+
+  - id: fr-alarm-lundis
+    language: fr
+    category: alarms
+    prompt: Réveille-moi tous les lundis à 6h20.
+    expect:
+      calls:
+        - tool: alarms__set_alarm
+          args:
+            time: {clock: "06:20"}
+            days: [1]
+
+  - id: fr-timer-the
+    language: fr
+    category: alarms
+    prompt: Minuteur de 4 minutes pour le thé.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 240
+            label: {contains: thé}
+
+  - id: fr-timer-heure
+    language: fr
+    category: alarms
+    prompt: Mets un minuteur d'une heure.
+    expect:
+      calls:
+        - tool: alarms__set_timer
+          args:
+            duration_seconds: 3600

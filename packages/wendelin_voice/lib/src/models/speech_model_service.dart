@@ -58,7 +58,11 @@ abstract interface class SpeechModelService {
 /// Why unpacking failed.
 final class ArchiveRejected implements Exception {
   /// Creates the error.
-  const ArchiveRejected(this.message);
+  const ArchiveRejected(this.message, {this.reason = 'rejected'});
+
+  /// Short log code of the cause (`too-large`, `corrupt`, `unsafe-path`,
+  /// `forbidden-entry`, `io`); never a path or content.
+  final String reason;
 
   /// German message for the user.
   final String message;

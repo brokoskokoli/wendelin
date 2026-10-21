@@ -1,0 +1,123 @@
+# Bring! (WP112). Fake-Konto: Liste "Zuhause" (offen Milch 1 Liter und
+# Äpfel, zuletzt Brot) und Liste "Büro" (offen Kaffee).
+cases:
+  - id: de-bring-mehrere
+    language: de
+    category: bring
+    prompt: Pack Butter, Joghurt und Zitronen auf die Einkaufsliste.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__add_items
+          args:
+            items: {contains: [Butter, Joghurt, Zitronen]}
+
+  - id: de-bring-kartoffeln-buero
+    language: de
+    category: bring
+    prompt: Ich brauche zwei Kilo Kartoffeln auf der Bring-Liste Büro.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__add_items
+          args:
+            list: {contains: Büro}
+            items: {contains: [Kartoffeln]}
+
+  - id: de-bring-buero-lesen
+    language: de
+    category: bring
+    prompt: Was steht auf meiner Büro-Liste?
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__get_items
+          args:
+            list: {contains: Büro}
+      text: {contains: Kaffee}
+
+  - id: de-bring-entfernen
+    language: de
+    category: bring
+    prompt: Streich die Äpfel von der Einkaufsliste.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__remove_item
+          args:
+            item: {contains: Äpfel}
+
+  - id: de-bring-abhaken
+    language: de
+    category: bring
+    prompt: Die Milch ist gekauft, hak sie bei Bring ab.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__complete_item
+          args:
+            item: {contains: Milch}
+
+  - id: en-bring-add
+    language: en
+    category: bring
+    prompt: Put oat milk and two avocados on my shopping list.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__add_items
+          args:
+            items: {contains: [milk, avocado]}
+
+  - id: en-bring-open
+    language: en
+    category: bring
+    prompt: What's still open on my home shopping list?
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__get_items
+      text: {contains: Milch}
+
+  - id: en-bring-office
+    language: en
+    category: bring
+    prompt: Take the coffee off my office list.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__remove_item
+          args:
+            item: {contains_any: [Kaffee, coffee]}
+            list: {contains_any: [Büro, Buero, office]}
+
+  - id: fr-bring-add
+    language: fr
+    category: bring
+    prompt: Mets du lait d'avoine et deux avocats sur ma liste de courses.
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__add_items
+          args:
+            items: {contains: [avoine, avocat]}
+
+  - id: fr-bring-zuhause
+    language: fr
+    category: bring
+    prompt: Qu'est-ce qu'il y a sur ma liste de courses Zuhause ?
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__get_items
+      text: {contains: Milch}
+
+  - id: fr-bring-listes
+    language: fr
+    category: bring
+    prompt: Quelles listes de courses ai-je dans Bring ?
+    setup: {backends: [bring]}
+    expect:
+      calls:
+        - tool: bring__list_lists
+      text: {contains: Büro}

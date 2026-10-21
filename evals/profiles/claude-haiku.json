@@ -1,6 +1,7 @@
 {
   "id": "claude-haiku",
   "name": "Claude Haiku",
+  "budgetGroup": "anthropic",
   "type": "anthropic",
   "defaultModel": "claude-haiku-5-5",
   "privacy": "standard",

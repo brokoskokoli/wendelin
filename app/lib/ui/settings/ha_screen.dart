@@ -236,7 +236,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       helperText: context.l10n.haTokenHelp,
       mono: true,
     ),
-    Text(context.l10n.haHttpNote, style: WText.caption),
+    InfoBox(context.l10n.haHttpNote),
     if (_error != null)
       Text(
         _error!,
@@ -331,8 +331,8 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       (byArea[e.area ?? context.l10n.haNoRoom] ??= []).add(e);
     }
     return [
-      Text(context.l10n.haDevices, style: WText.sectionLabel),
-      Text(context.l10n.haDevicesHelp, style: WText.caption),
+      Text(context.l10n.haDevices, style: WText.sectionTitle),
+      InfoBox(context.l10n.haDevicesHelp),
       TextField(
         key: const ValueKey('haFilter'),
         controller: _filter,

@@ -9,6 +9,8 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_mcp/testing.dart';
 import 'package:wendelin_mcp/wendelin_mcp.dart';
 
+import 'case_backends_m5.dart';
+
 /// Fake backends of one case (WP29, `setup.backends`) and what to close
 /// afterwards.
 final class CaseBackends {
@@ -23,6 +25,13 @@ final class CaseBackends {
     if (names.contains('mcp')) {
       integrations.add(await _mcp(cleanups));
     }
+    if (names.contains('gtasks')) integrations.add(gtasksBackend(clock));
+    if (names.contains('spotify')) {
+      integrations.add(await spotifyBackend(clock));
+    }
+    if (names.contains('weather')) integrations.add(weatherBackend(clock));
+    if (names.contains('station')) integrations.add(stationBackend());
+    if (names.contains('notes')) integrations.add(notesBackend('de'));
     return CaseBackends._(integrations, cleanups);
   }
 

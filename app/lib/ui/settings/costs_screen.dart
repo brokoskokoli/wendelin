@@ -77,7 +77,7 @@ class CostsScreen extends ConsumerWidget {
       intro: context.l10n.costsIntro,
       children: [
         if (costs.isEmpty)
-          Text(context.l10n.costsNoProviders, style: WText.intro)
+          InfoBox(context.l10n.costsNoProviders)
         else
           SectionCard(
             children: [

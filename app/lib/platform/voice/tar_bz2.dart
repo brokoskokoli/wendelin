@@ -4,7 +4,13 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart'
-    show BZip2Decoder, InputMemoryStream, OutputMemoryStream;
+    show
+        ArchiveException,
+        BZip2Decoder,
+        InputFileStream,
+        InputMemoryStream,
+        InputStream;
+import 'package:meta/meta.dart';
 import 'package:wendelin_voice/wendelin_voice.dart' show ArchiveRejected;
 
 export 'package:wendelin_voice/wendelin_voice.dart' show ArchiveRejected;
@@ -12,37 +18,113 @@ export 'package:wendelin_voice/wendelin_voice.dart' show ArchiveRejected;
 /// One regular file or directory of a tar archive.
 typedef TarEntry = ({String path, bool directory, Uint8List data});
 
-/// Reads the entries of a tar archive (POSIX ustar and GNU) and rejects
-/// anything unsafe: absolute paths, `..` components, symbolic and hard
-/// links, devices and FIFOs. Supports GNU long names (`L`) and PAX `path`
-/// records; other PAX/GNU metadata is skipped.
+/// Size of the pieces a file body is copied in (the only buffer that grows
+/// with the entry, independent of its size).
+const tarChunkBytes = 1 << 20;
+
+/// Largest unpacked size accepted for an archive of [archiveBytes]: four
+/// times the archive plus 16 MB (bzip2 on model files stays far below; this
+/// is the same factor the free-space check uses, `requiredSpace`).
+int unpackLimit(int archiveBytes) => archiveBytes * 4 + (16 << 20);
+
+/// The body of the tar entry being read: [next] hands it out in pieces of
+/// at most `chunkBytes`, so even a gigabyte file needs one small buffer.
+final class TarBody {
+  TarBody._(this._in, this.size, this._chunk) : remaining = size;
+  final InputStream _in;
+  final int _chunk;
+
+  /// Size of the body in bytes.
+  final int size;
+
+  /// Bytes not yet handed out.
+  int remaining;
+
+  /// The next piece, or `null` when the body is used up. A truncated
+  /// archive throws [ArchiveRejected].
+  Uint8List? next() {
+    if (remaining == 0) return null;
+    final n = remaining < _chunk ? remaining : _chunk;
+    final Uint8List piece;
+    try {
+      piece = _in.readBytes(n).toUint8List();
+    } on ArchiveException {
+      throw const ArchiveRejected(
+        'Das Archiv ist beschädigt.',
+        reason: 'corrupt',
+      );
+    }
+    if (piece.length != n) {
+      throw const ArchiveRejected(
+        'Das Archiv ist beschädigt.',
+        reason: 'corrupt',
+      );
+    }
+    remaining -= n;
+    return piece;
+  }
+}
+
+/// Walks the tar stream [tar] (POSIX ustar and GNU) entry by entry and
+/// rejects anything unsafe: absolute paths, `..` components, symbolic and
+/// hard links, devices and FIFOs, and an unpacked size above [maxBytes]
+/// (headers, bodies and padding count). Supports GNU long names (`L`) and
+/// PAX `path` records; other PAX/GNU metadata is skipped.
+///
+/// [onEntry] must consume what it wants of the [TarBody]; the rest is
+/// skipped. Memory stays at one header plus one chunk ([chunkBytes]).
 ///
 /// Throws [ArchiveRejected].
-List<TarEntry> readTar(Uint8List tar) {
-  final entries = <TarEntry>[];
+void walkTar(
+  InputStream tar, {
+  required int maxBytes,
+  required void Function(String path, bool directory, TarBody body) onEntry,
+  int chunkBytes = tarChunkBytes,
+}) {
   String? longName;
-  var off = 0;
-  while (off + 512 <= tar.length) {
-    final header = Uint8List.sublistView(tar, off, off + 512);
+  var used = 0;
+  Uint8List read(int n) {
+    final Uint8List b;
+    try {
+      b = tar.readBytes(n).toUint8List();
+    } on ArchiveException {
+      throw const ArchiveRejected(
+        'Das Archiv ist beschädigt.',
+        reason: 'corrupt',
+      );
+    }
+    return b;
+  }
+
+  while (!tar.isEOS) {
+    final header = read(512);
+    if (header.length < 512) break; // trailing garbage shorter than a block
     if (header.every((b) => b == 0)) break; // end of archive
     _checkChecksum(header);
     final size = _octal(header, 124, 12);
     final type = header[156];
-    final body = off + 512;
-    if (size < 0 || body + size > tar.length) {
-      throw const ArchiveRejected('Das Archiv ist beschädigt.');
+    final padded = ((size + 511) ~/ 512) * 512;
+    used += 512 + padded;
+    if (size < 0) {
+      throw const ArchiveRejected(
+        'Das Archiv ist beschädigt.',
+        reason: 'corrupt',
+      );
     }
-    final data = Uint8List.sublistView(tar, body, body + size);
-    off = body + ((size + 511) ~/ 512) * 512;
+    if (used > maxBytes) {
+      throw ArchiveRejected(
+        'Das Archiv ist zu groß (mehr als ${maxBytes >> 20} MB entpackt).',
+        reason: 'too-large',
+      );
+    }
 
+    final body = TarBody._(tar, size, chunkBytes);
     switch (type) {
-      case 0x4c: // 'L': GNU long name of the next entry
-        longName = _cString(data);
-        continue;
-      case 0x78: // 'x': PAX header of the next entry
-        longName = _paxPath(data) ?? longName;
-        continue;
-      case 0x67: // 'g': global PAX header
+      case 0x4c || 0x78 || 0x67: // GNU long name, PAX header, global PAX
+        final data = _readRecord(tar, size);
+        _skipPadding(tar, padded - size);
+        if (type == 0x4c) longName = _cString(data);
+        if (type == 0x78) longName = _paxPath(data) ?? longName;
         continue;
     }
 
@@ -53,14 +135,61 @@ List<TarEntry> readTar(Uint8List tar) {
       // '1' hard link, '2' symlink, '3'/'4' devices, '6' FIFO, …
       throw ArchiveRejected(
         'Das Archiv enthält einen nicht erlaubten Eintrag ($name).',
+        reason: 'forbidden-entry',
       );
     }
-    entries.add((
-      path: safeRelativePath(name),
-      directory: directory,
-      data: data,
-    ));
+    onEntry(safeRelativePath(name), directory, body);
+    // Unread rest of the body and the padding.
+    while (body.next() != null) {}
+    _skipPadding(tar, padded - size);
   }
+}
+
+ArchiveRejected _corrupt() =>
+    const ArchiveRejected('Das Archiv ist beschädigt.', reason: 'corrupt');
+
+/// A small metadata record (long name, PAX): a huge one is not a name.
+Uint8List _readRecord(InputStream tar, int size) {
+  if (size > 1 << 20) throw _corrupt();
+  final Uint8List data;
+  try {
+    data = tar.readBytes(size).toUint8List();
+  } on ArchiveException {
+    throw _corrupt();
+  }
+  if (data.length != size) throw _corrupt();
+  return data;
+}
+
+void _skipPadding(InputStream tar, int n) {
+  if (n <= 0) return;
+  try {
+    tar.skip(n);
+  } on ArchiveException {
+    throw const ArchiveRejected(
+      'Das Archiv ist beschädigt.',
+      reason: 'corrupt',
+    );
+  }
+}
+
+/// Reads the entries of a small tar archive in memory (see [walkTar] for
+/// what is rejected); [unpackTarStream] is the way for model archives.
+///
+/// Throws [ArchiveRejected].
+List<TarEntry> readTar(Uint8List tar) {
+  final entries = <TarEntry>[];
+  walkTar(
+    InputMemoryStream(tar),
+    maxBytes: 1 << 50, // a lying size fails on the truncated body
+    onEntry: (path, directory, body) {
+      final out = BytesBuilder(copy: false);
+      for (var p = body.next(); p != null; p = body.next()) {
+        out.add(p);
+      }
+      entries.add((path: path, directory: directory, data: out.takeBytes()));
+    },
+  );
   return entries;
 }
 
@@ -68,34 +197,39 @@ List<TarEntry> readTar(Uint8List tar) {
 /// `.` components after normalization). Throws [ArchiveRejected].
 String safeRelativePath(String name) {
   if (name.startsWith('/') || name.contains('\\') || name.contains('\x00')) {
-    throw ArchiveRejected('Unsicherer Pfad im Archiv: $name');
+    throw ArchiveRejected(
+      'Unsicherer Pfad im Archiv: $name',
+      reason: 'unsafe-path',
+    );
   }
   final parts = [
     for (final p in name.split('/'))
       if (p.isNotEmpty && p != '.') p,
   ];
   if (parts.isEmpty || parts.any((p) => p == '..')) {
-    throw ArchiveRejected('Unsicherer Pfad im Archiv: $name');
+    throw ArchiveRejected(
+      'Unsicherer Pfad im Archiv: $name',
+      reason: 'unsafe-path',
+    );
   }
   return parts.join('/');
 }
 
-/// Unpacks the `.tar.bz2` [archive] into [target] safely:
-/// 1. decompress with a size limit ([maxUnpackedBytes], default four times
-///    the archive plus 16 MB) against bzip2 bombs,
-/// 2. check all entries with [readTar] before writing anything,
-/// 3. write into a temporary sibling directory and rename it to [target]
-///    (an existing [target] is replaced only after success).
+/// Unpacks the `.tar.bz2` [archive] into [target] safely and streaming
+/// (file, bzip2, tar, files; memory independent of the archive size):
+/// 1. the unpacked size is limited ([maxUnpackedBytes], default
+///    [unpackLimit]) against bzip2 bombs,
+/// 2. every entry is checked by [walkTar] before it is written,
+/// 3. everything goes into a temporary sibling directory that is renamed to
+///    [target] (an existing [target] is replaced only after success).
 ///
 /// A file system error while writing (storage full, clashing entries)
 /// becomes [ArchiveRejected] as well; nothing half-written stays.
 ///
-/// Memory: the whole archive and the unpacked tar are held in memory (a
-/// Piper voice: 21 MB archive, 37 MB tar, so about 60 MB at peak).
-///
 /// The archive itself is left alone; the caller deletes it afterwards.
-/// Runs in a background isolate. Throws [ArchiveRejected].
-Future<void> extractTarBz2(
+/// Runs in a background isolate. Returns the unpacked bytes (files).
+/// Throws [ArchiveRejected] (its `reason` is a log code).
+Future<int> extractTarBz2(
   File archive,
   Directory target, {
   int? maxUnpackedBytes,
@@ -103,55 +237,121 @@ Future<void> extractTarBz2(
   final archivePath = archive.path;
   final targetPath = target.path;
   return Isolate.run(
-    () => _extract(archivePath, targetPath, maxUnpackedBytes),
+    () => unpackTarBz2(archivePath, targetPath, maxUnpackedBytes),
     debugName: 'untar',
   );
 }
 
-void _extract(String archivePath, String targetPath, int? limit) {
-  final compressed = File(archivePath).readAsBytesSync();
-  final out = OutputMemoryStream();
-  final bool ok;
+/// [extractTarBz2] in the calling isolate. [onChunk] sees the size of every
+/// piece written, [onInput] the read position in the archive at that moment
+/// (tests prove the bounded buffer and the streaming read with them).
+@visibleForTesting
+int unpackTarBz2(
+  String archivePath,
+  String targetPath,
+  int? limit, {
+  int chunkBytes = tarChunkBytes,
+  void Function(int bytes)? onChunk,
+  void Function(int archivePosition)? onInput,
+}) {
+  final input = InputFileStream(archivePath);
   try {
-    ok = BZip2Decoder().decodeStream(
-      InputMemoryStream(compressed),
-      out,
-      maxOutputSize: limit ?? compressed.length * 4 + (16 << 20),
+    final limitBytes = limit ?? unpackLimit(File(archivePath).lengthSync());
+    // verify: block and stream CRCs, a flipped bit is "corrupt".
+    final tar = BZip2Decoder().decodeLazy(input, verify: true);
+    return unpackTarStream(
+      tar,
+      targetPath,
+      limitBytes,
+      chunkBytes: chunkBytes,
+      onChunk: (n) {
+        onInput?.call(input.position);
+        onChunk?.call(n);
+      },
     );
-  } on Object {
-    throw const ArchiveRejected(
-      'Das Archiv ist zu groß oder beschädigt und wurde nicht entpackt.',
-    );
+  } finally {
+    input.closeSync();
   }
-  if (!ok) throw const ArchiveRejected('Das Archiv ist beschädigt.');
-  final entries = readTar(out.getBytes());
+}
 
+/// Unpacks the tar stream [tar] into [targetPath] via `<targetPath>.tmp`
+/// (see [extractTarBz2]); returns the bytes of the files written.
+@visibleForTesting
+int unpackTarStream(
+  InputStream tar,
+  String targetPath,
+  int limit, {
+  int chunkBytes = tarChunkBytes,
+  void Function(int bytes)? onChunk,
+}) {
   final target = Directory(targetPath);
   final tmp = Directory('$targetPath.tmp');
+  var written = 0;
   try {
     if (tmp.existsSync()) tmp.deleteSync(recursive: true);
     tmp.createSync(recursive: true);
-    for (final e in entries) {
-      final path = '${tmp.path}/${e.path}';
-      if (e.directory) {
-        Directory(path).createSync(recursive: true);
-      } else {
-        final f = File(path)..parent.createSync(recursive: true);
-        f.writeAsBytesSync(e.data, flush: false);
-      }
-    }
+    walkTar(
+      tar,
+      maxBytes: limit,
+      chunkBytes: chunkBytes,
+      onEntry: (path, directory, body) {
+        final full = '${tmp.path}/$path';
+        _rejectClash(tmp.path, path, directory);
+        if (directory) {
+          Directory(full).createSync(recursive: true);
+          return;
+        }
+        final f = File(full)..parent.createSync(recursive: true);
+        final sink = f.openSync(mode: FileMode.write);
+        try {
+          for (var p = body.next(); p != null; p = body.next()) {
+            sink.writeFromSync(p);
+            written += p.length;
+            onChunk?.call(p.length);
+          }
+        } finally {
+          sink.closeSync();
+        }
+      },
+    );
     if (target.existsSync()) target.deleteSync(recursive: true);
     tmp.renameSync(targetPath);
+    return written;
   } on FileSystemException catch (e) {
-    // Full storage or entries that clash (a file where a folder must be):
-    // nothing half-written stays, the caller discards the archive.
+    // OS or storage error (full disk, no permission): nothing half-written
+    // stays, the archive is kept for a new attempt. Clashing entries are
+    // an archive fault and never get here (see [_rejectClash]).
     _removeQuietly(tmp);
     throw ArchiveRejected(
       'Das Archiv ließ sich nicht entpacken (${e.osError?.message ?? e.message}).',
+      reason: 'io',
+    );
+  } on ArchiveException {
+    _removeQuietly(tmp);
+    throw const ArchiveRejected(
+      'Das Archiv ist beschädigt.',
+      reason: 'corrupt',
     );
   } on Object {
     _removeQuietly(tmp);
     rethrow;
+  }
+}
+
+/// Entries that clash (a file where a folder must be, or the reverse) make
+/// the archive itself faulty: throws [ArchiveException] (reason `corrupt`).
+void _rejectClash(String root, String path, bool directory) {
+  final parts = path.split('/').where((p) => p.isNotEmpty).toList();
+  var cur = root;
+  for (var i = 0; i < parts.length; i++) {
+    cur = '$cur/${parts[i]}';
+    final last = i == parts.length - 1;
+    final type = FileSystemEntity.typeSync(cur, followLinks: false);
+    if (type == FileSystemEntityType.notFound) return;
+    final isDir = type == FileSystemEntityType.directory;
+    if (last ? isDir != directory : !isDir) {
+      throw ArchiveException('Einträge widersprechen sich.');
+    }
   }
 }
 
@@ -170,7 +370,10 @@ void _checkChecksum(Uint8List h) {
     sum += (i >= 148 && i < 156) ? 0x20 : h[i];
   }
   if (stored != sum) {
-    throw const ArchiveRejected('Das Archiv ist beschädigt (Prüfsumme).');
+    throw const ArchiveRejected(
+      'Das Archiv ist beschädigt (Prüfsumme).',
+      reason: 'corrupt',
+    );
   }
 }
 
@@ -180,7 +383,10 @@ int _octal(Uint8List h, int at, int len) {
   ).trim();
   if (s.isEmpty) return 0;
   return int.tryParse(s, radix: 8) ??
-      (throw const ArchiveRejected('Das Archiv ist beschädigt.'));
+      (throw const ArchiveRejected(
+        'Das Archiv ist beschädigt.',
+        reason: 'corrupt',
+      ));
 }
 
 String _cString(Uint8List b) =>

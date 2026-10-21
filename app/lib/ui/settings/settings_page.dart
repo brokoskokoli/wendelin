@@ -55,7 +55,7 @@ class SettingsPage extends StatelessWidget {
     );
     final content = [
       if (intro != null) ...[
-        Text(intro!, style: WText.intro),
+        InfoBox(intro!),
         const SizedBox(height: WSpace.l18),
       ],
       for (final (i, child) in children.indexed) ...[
@@ -172,7 +172,10 @@ class SettingsSection extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     spacing: WSpace.s,
     children: [
-      Text(title, style: WText.sectionLabel),
+      Padding(
+        padding: const EdgeInsets.only(top: WSpace.xs),
+        child: Text(title, style: WText.sectionTitle),
+      ),
       SectionCard(children: children),
     ],
   );

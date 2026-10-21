@@ -35,7 +35,7 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <Widget>[
-      if (title != null) Text(title!, style: WText.sectionLabel),
+      if (title != null) Text(title!, style: WText.sectionTitle),
       for (var i = 0; i < children.length; i++) ...[
         if (dividers && i > 0) const Divider(),
         children[i],

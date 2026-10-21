@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:meta/meta.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
@@ -118,6 +120,10 @@ final class Summary {
     'errors': errors,
     'skipped': skipped,
     'passRate': double.parse(passRate.toStringAsFixed(4)),
+    'passRateWilson95': [
+      for (final v in wilson95(passed, total))
+        double.parse(v.toStringAsFixed(4)),
+    ],
     'latencyMs': {
       'p50': latencyP50?.inMilliseconds,
       'p90': latencyP90?.inMilliseconds,
@@ -158,4 +164,17 @@ Duration? percentile(List<Duration> values, num p) {
   final sorted = List.of(values)..sort();
   final rank = (p / 100 * sorted.length).ceil();
   return sorted[rank - 1];
+}
+
+/// Wilson score interval (95 %) of [successes] in [total] trials as
+/// `[low, high]`; `[0, 1]` without trials.
+List<double> wilson95(int successes, int total) {
+  if (total <= 0) return const [0, 1];
+  const z = 1.959963984540054;
+  final n = total.toDouble();
+  final p = successes / n;
+  final denom = 1 + z * z / n;
+  final centre = (p + z * z / (2 * n)) / denom;
+  final half = z * sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom;
+  return [max(0, centre - half), min(1, centre + half)];
 }
