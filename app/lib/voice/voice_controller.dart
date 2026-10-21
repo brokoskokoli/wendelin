@@ -598,7 +598,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
     unawaited(_audio?.dispose());
     unawaited(_profile?.dispose());
     _profile = null;
-    final audio = MeteredAudioInput(_primedFor(components.audio));
+    final audio = MeteredAudioInput(tapMic(ref, _primedFor(components.audio)));
     final pipeline = VoicePipeline(
       audio: audio,
       vad: components.vad,

@@ -23,6 +23,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     required this.engine,
     this.keywords = const [KeywordSpec.wendelin],
     this.verifier,
+    this.warm,
     this.clip = const Duration(milliseconds: 2500),
     this.cooldown = const Duration(milliseconds: 1500),
     this.settle = const Duration(milliseconds: 800),
@@ -37,6 +38,12 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   /// signal follows only if it recognizes the word. Without one the hit is
   /// the signal.
   final BargeVerifier? verifier;
+
+  /// WP123 warm start: the microphone audio shortly before the start (not
+  /// the answer). It fills the feature chain of a [WarmableWakeEngine] before
+  /// the live frames, so the first window is rated after one chunk instead of
+  /// ~2 s. Hits in it are ignored. `null`/empty: cold start.
+  final Int16List Function()? warm;
 
   /// Audio handed to the [verifier] (at most 5 s).
   final Duration clip;
@@ -121,12 +128,35 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     _verifying = false;
     final gen = ++_generation;
     _chain = Future.value();
+    final e = engine;
+    Int16List? pcm;
+    try {
+      pcm = warm?.call();
+    } on Object {
+      // Fail soft: cold start.
+    }
+    if (pcm != null && pcm.isNotEmpty && e is WarmableWakeEngine) {
+      // The live frames queue behind it (same chain), none is lost.
+      _chain = _warmUp(e, pcm, gen);
+    }
     _sub = audio.start().listen(
       (f) => _chain = _chain.then((_) => _onFrame(f, gen)),
       onError: (Object _) => unawaited(stop()),
     );
     _running = true;
   });
+
+  Future<void> _warmUp(WarmableWakeEngine e, Int16List pcm, int gen) async {
+    const step = 1280;
+    try {
+      for (var i = 0; i < pcm.length && gen == _generation; i += step) {
+        final end = i + step < pcm.length ? i + step : pcm.length;
+        await e.warmUp(Int16List.sublistView(pcm, i, end));
+      }
+    } on Object {
+      // Fail soft: a cold chain is the old behavior.
+    }
+  }
 
   Future<void> _onFrame(Int16List frame, int gen) async {
     if (gen != _generation) return;

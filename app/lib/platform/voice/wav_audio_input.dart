@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:clock/clock.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'pcm.dart';
@@ -120,19 +121,31 @@ final class WavAudioInput implements AudioInput {
     final interval = Duration(
       microseconds: (frame.inMicroseconds / speed).round(),
     );
-    void play() => _timer = Timer.periodic(interval, (_) {
-      if (out.isClosed) return;
-      final chunk = Int16List(perFrame);
-      for (var i = 0; i < perFrame; i++) {
-        final at = position + i;
-        if (at >= 0 && at < samples.length) chunk[i] = samples[at];
-      }
-      position += perFrame;
-      if (position >= samples.length && _endOfRecording == null) {
-        _endOfRecording = now();
-      }
-      out.add(chunk);
-    });
+    void play() {
+      // WP123: a tick that comes late (load) delivers all frames that are
+      // due by the clock, like a buffered microphone; at least one per tick.
+      final clockSw = clock.stopwatch()..start();
+      var delivered = 0;
+      _timer = Timer.periodic(interval, (_) {
+        final due = clockSw.elapsedMicroseconds * speed ~/ frame.inMicroseconds;
+        final count = due > delivered ? due - delivered : 1;
+        for (var n = 0; n < count; n++) {
+          if (out.isClosed) return;
+          final chunk = Int16List(perFrame);
+          for (var i = 0; i < perFrame; i++) {
+            final at = position + i;
+            if (at >= 0 && at < samples.length) chunk[i] = samples[at];
+          }
+          position += perFrame;
+          if (position >= samples.length && _endOfRecording == null) {
+            _endOfRecording = now();
+          }
+          delivered++;
+          out.add(chunk);
+        }
+      });
+    }
+
     final wait = gate?.call(index);
     if (wait == null) {
       play();

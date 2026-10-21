@@ -10,7 +10,7 @@ import 'wake_word_engine.dart';
 /// Stage 1 of the two-stage detection (WP44 Nachtrag 2): a candidate arises
 /// when the classifier is above a **low** threshold or a window is similar
 /// to a personal template. Stage 2 (transcription) confirms.
-final class CandidateWakeEngine implements WakeWordEngine {
+final class CandidateWakeEngine implements WarmableWakeEngine {
   /// Creates the engine. [templates] may be `null` (classifier only);
   /// templates of another [WakeFeatureExtractor.featureVersion] are ignored.
   /// [modelThreshold] `null` disables the classifier rule. [refractory]
@@ -256,6 +256,13 @@ final class CandidateWakeEngine implements WakeWordEngine {
       }
     }
     return (similarity: sim, threshold: threshold, margin: margin, top: top);
+  }
+
+  @override
+  Future<void> warmUp(Int16List frame) async {
+    if (!_open) throw StateError('Engine nicht offen');
+    // Windows are dropped: the earlier audio only fills the chain.
+    await features.accept(frame);
   }
 
   @override
