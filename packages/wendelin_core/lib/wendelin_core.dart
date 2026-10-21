@@ -35,6 +35,7 @@ export 'src/tools/tool.dart';
 export 'src/tools/tool_context.dart';
 export 'src/tools/tool_outcome.dart';
 export 'src/tools/tool_runtime.dart';
+export 'src/tools/topic_words.dart';
 export 'src/util/clock.dart';
 export 'src/util/id_generator.dart';
 export 'src/util/phonetics.dart';

@@ -1,3 +1,6 @@
+import 'package:wendelin_core/wendelin_core.dart'
+    show topicWordsByLanguage, topicWordsFor;
+
 import 'routing_text.dart';
 
 /// Decides whether a request needs a tool category (`needsTool`), without
@@ -12,6 +15,10 @@ abstract interface class ToolCategoryMatcher {
 }
 
 /// Standard [ToolCategoryMatcher] with keyword lists (de/fr/en).
+///
+/// Without [topics] it uses the topic lists of all languages
+/// ([defaultTopics]); `KeywordToolCategoryMatcher(topics:
+/// KeywordToolCategoryMatcher.topicsOf('fr'))` only those of one language.
 ///
 /// A request matches `<integration>` if it contains one of the
 /// integration's topic words, and `<integration>.read|edit` if it also
@@ -29,38 +36,22 @@ final class KeywordToolCategoryMatcher implements ToolCategoryMatcher {
   final Map<String, List<List<String>>> _topics;
   final Map<String, List<List<String>>> _verbs;
 
-  /// Topic stems per integration.
-  static const defaultTopics = <String, List<String>>{
-    'obsidian': [
-      'obsidian', 'notiz', 'vault', 'tagebuch', 'journal', //
-      'note', 'notes', 'carnet',
-    ],
-    'calendar': [
-      'kalender', 'termin', 'besprechung', 'meeting', //
-      'calendar', 'appointment', 'agenda', 'calendrier', 'rendez vous',
-      'reunion',
-    ],
-    'memory': [
-      'merk dir', 'merke dir', 'erinner dich', 'gedachtnis', //
-      'remember', 'memory', 'souviens toi', 'retiens', 'memoire',
-    ],
-    'web': [
-      'internet', 'web', 'google', 'such im netz', 'recherchier', //
-      'search the web', 'look up', 'cherche sur', 'recherche',
-    ],
-    'alarm': [
-      'wecker', 'weck mich', 'timer', //
-      'alarm', 'wake me', 'reveil', 'minuteur',
-    ],
-    'lists': [
-      'einkaufsliste', 'liste', 'todo', 'aufgabe', //
-      'shopping list', 'list', 'to do', 'task', 'courses',
-    ],
-    'tasks': [
-      'aufgabe', 'faellig', 'uberfaellig', 'todo', 'erinner', //
-      'task', 'due', 'overdue', 'tache', 'echeance',
-    ],
-  };
+  /// Topic stems per integration id, all languages merged (shared lists of
+  /// `wendelin_core`, see `topic_words/README.md`); `alarm` stays as an alias
+  /// of `alarms` for stored rules.
+  static final defaultTopics = withAlarmAlias({
+    for (final id in topicWordsFor('de').keys)
+      id: [for (final lang in topicWordsByLanguage.values) ...?lang[id]],
+  });
+
+  /// The topic stems of one language ([languageTag] such as `de-DE`).
+  static Map<String, List<String>> topicsOf(String languageTag) =>
+      withAlarmAlias(topicWordsFor(languageTag));
+
+  /// [topics] plus `alarm` as alias of `alarms`.
+  static Map<String, List<String>> withAlarmAlias(
+    Map<String, List<String>> topics,
+  ) => {...topics, 'alarm': ?topics['alarms']};
 
   /// Verb stems per access kind.
   static const defaultVerbs = <String, List<String>>{

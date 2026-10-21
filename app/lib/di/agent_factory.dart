@@ -100,7 +100,7 @@ final class AgentFactory implements AgentRunFactory {
       ...providers.others,
     ].any((t) => catalogFor(t.privacy).lookup('memory__search') != null);
     final memoryFloor = memoryFloorOf(catalogFor);
-    return AgentRunner(
+    final runner = AgentRunner(
       resolver: providers.resolver(),
       contextBuilder: ContextBuilder(
         config: person.address == null
@@ -153,6 +153,13 @@ final class AgentFactory implements AgentRunFactory {
       memoryFloor: memoryFloor,
       memoryOwner: person.memoryOwner,
     );
+    return _PreloadingRun(
+      registry: registry,
+      level: providers.primary.privacy,
+      sessionId: sessionId,
+      locale: device.locale,
+      inner: runner,
+    );
   }
 }
 
@@ -168,4 +175,37 @@ PrivacyLevel? memoryFloorOf(ToolCatalog Function(PrivacyLevel) catalogFor) {
     }
   }
   return PrivacyLevel.tee;
+}
+
+/// Unlocks the tools of the integrations a request names (topic words)
+/// before the first model call (WP119), so the model need not call
+/// `tools__search` first. The privacy filter stays with the registry.
+final class _PreloadingRun implements AgentRun {
+  _PreloadingRun({
+    required this.registry,
+    required this.level,
+    required this.sessionId,
+    required this.locale,
+    required this.inner,
+  });
+
+  final ToolRegistry registry;
+  final PrivacyLevel level;
+  final String sessionId;
+  final String locale;
+  final AgentRun inner;
+
+  @override
+  Stream<AgentEvent> run(UserInput input) {
+    registry.preloadForRequest(
+      input.text,
+      level,
+      sessionId: sessionId,
+      languageTag: input.language ?? locale,
+    );
+    return inner.run(input);
+  }
+
+  @override
+  void cancel() => inner.cancel();
 }

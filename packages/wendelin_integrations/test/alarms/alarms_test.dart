@@ -204,6 +204,42 @@ void main() {
       expect(o.summary, '3 Wecker');
     });
 
+    test('nur nächster Wecker (Android): only_next und Hinweis', () async {
+      port = FakeAlarmPort(onlyNext: true);
+      integration = AlarmsIntegration(port);
+      await port.setAlarm(hour: 9, minute: 0);
+      await port.setAlarm(hour: 6, minute: 30);
+      final o = await tool('alarms__list').execute({}, ctx());
+      final j = json(o);
+      expect(j['only_next'], isTrue);
+      expect(j['alarms'], [
+        {'time': '06:30', 'days': 'einmalig'},
+      ]);
+      expect(j['note'], contains('Nur der nächste Wecker'));
+      expect(o.summary, 'Nächster Wecker 06:30');
+    });
+
+    test('nur nächster Wecker mit Zeitpunkt: next_ring in Ortszeit', () async {
+      port = FakeAlarmPort(onlyNext: true)
+        ..alarms.add(
+          AlarmInfo(hour: 7, minute: 5, at: DateTime.utc(2026, 10, 22, 5, 5)),
+        );
+      integration = AlarmsIntegration(port);
+      final o = await tool('alarms__list').execute({}, ctx());
+      final ring = ((json(o)['alarms'] as List).single as Map)['next_ring'];
+      expect(ring, startsWith('2026-10-22T07:05'));
+    });
+
+    test('kein Wecker gestellt: leere Liste, kein Fehler', () async {
+      port = FakeAlarmPort(onlyNext: true);
+      integration = AlarmsIntegration(port);
+      final o = await tool('alarms__list').execute({}, ctx());
+      expect(o.isError, isFalse);
+      expect(json(o)['alarms'], isEmpty);
+      expect(json(o)['note'], 'Es ist kein Wecker gestellt.');
+      expect(o.summary, 'Kein Wecker gestellt');
+    });
+
     test('nicht unterstützt: Fehler mit Hinweis', () async {
       port = FakeAlarmPort(canList: false);
       integration = AlarmsIntegration(port);
@@ -216,6 +252,16 @@ void main() {
       port.failNext('listAlarms');
       final o = await tool('alarms__list').execute({}, ctx());
       expect(o.isError, isTrue);
+    });
+
+    test('Lesefehler (nur nächster): Fehler, nie „kein Wecker“', () async {
+      port = FakeAlarmPort(onlyNext: true);
+      integration = AlarmsIntegration(port);
+      port.failNext('listAlarms');
+      final o = await tool('alarms__list').execute({}, ctx());
+      expect(o.isError, isTrue);
+      expect(o.text, isNot(contains('kein Wecker')));
+      expect(o.text, isNot(contains('Kein Wecker')));
     });
 
     test('Bestätigungstext', () {

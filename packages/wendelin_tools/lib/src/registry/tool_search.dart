@@ -14,6 +14,7 @@ final class ToolSearchTool implements Tool {
   ToolSearchTool({
     required List<CatalogEntry> candidates,
     required this.unlock,
+    this.languageFor,
     this.maxResults = 10,
   }) : _candidates = candidates,
        categories = _categoriesOf(candidates);
@@ -25,6 +26,10 @@ final class ToolSearchTool implements Tool {
 
   /// Called with the session id and the names of the tools found.
   final void Function(String sessionId, List<String> names) unlock;
+
+  /// Language of the current request of a session (as used for preloading);
+  /// without it, or when it answers null, the device locale is used.
+  final String? Function(String sessionId)? languageFor;
 
   /// At most this many tools per search.
   final int maxResults;
@@ -84,7 +89,11 @@ final class ToolSearchTool implements Tool {
     if (query.isEmpty && category == null) {
       return ToolOutcome.error('Bitte query oder category angeben.');
     }
-    final found = search(query, category: category);
+    final found = search(
+      query,
+      category: category,
+      languageTag: languageFor?.call(ctx.sessionId) ?? ctx.locale,
+    );
     unlock(ctx.sessionId, [for (final t in found) t.name]);
     final json = jsonEncode({
       'tools': [
@@ -109,13 +118,20 @@ final class ToolSearchTool implements Tool {
   }
 
   /// Tools matching [query] (any word, case-insensitive, in name,
-  /// description or integration name) and [category], best first.
-  List<Tool> search(String query, {String? category}) {
+  /// description or integration name, or topic word of the language of
+  /// [languageTag]) and [category], best first.
+  List<Tool> search(String query, {String? category, String? languageTag}) {
     final words = query
         .toLowerCase()
         .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
         .where((w) => w.length >= 2)
         .toSet();
+    // German and French requests: the topic words of the integration count
+    // as well (descriptions are English).
+    final topical = topicIntegrationsIn(
+      query,
+      languageTag: languageTag,
+    ).toSet();
     final scored = <(int, Tool)>[];
     for (final (:integration, :tool) in _candidates) {
       if (category != null && integration.id != category) continue;
@@ -125,7 +141,9 @@ final class ToolSearchTool implements Tool {
         integration.id,
         integration.displayName,
       ].join(' ').toLowerCase();
-      final score = words.where(haystack.contains).length;
+      final score =
+          words.where(haystack.contains).length +
+          (topical.contains(integration.id) ? 2 : 0);
       if (score > 0 || words.isEmpty) scored.add((score, tool));
     }
     scored.sort((a, b) {

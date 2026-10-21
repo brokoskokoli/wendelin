@@ -4,6 +4,9 @@
 /// compares it with both sides.
 library;
 
+/// `AlarmChannel.kt`: next alarm of the clock app (AlarmManager).
+const alarmChannelName = 'app.wendelin/alarm';
+
 /// `AppsChannel.kt`: installed-app detection.
 const appsChannelName = 'app.wendelin/apps';
 
