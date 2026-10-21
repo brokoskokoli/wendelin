@@ -61,6 +61,7 @@ final class _Verifier implements BargeVerifier {
   BargeVerdict verdict;
   Completer<void>? hold;
   Object? error;
+  BargeVerdict Function(Int16List pcm)? decide;
   final calls = <int>[];
   final candidates = <BargeInKeyword>[];
 
@@ -73,7 +74,7 @@ final class _Verifier implements BargeVerifier {
     candidates.add(candidate);
     await hold?.future;
     if (error != null) throw error!;
-    return verdict;
+    return decide?.call(pcm) ?? verdict;
   }
 }
 
@@ -350,6 +351,22 @@ void main() {
       expect(verdicts, ['skip/stopped']);
     });
 
+    test('Neustart während der Prüfung: altes Urteil gilt nicht', () async {
+      await setUp0();
+      v.hold = Completer<void>();
+      await hit();
+      await d.stop();
+      await d.start(); // neue Sitzung, neue Generation
+      v.hold!.complete();
+      await pumpEventQueue();
+      expect(got, isEmpty);
+      expect(verdicts, ['skip/stopped']);
+      // Die neue Sitzung prüft wieder (nicht durch die alte blockiert).
+      v.hold = null;
+      await hit();
+      expect(got, ['keyword-stop']);
+    });
+
     test('stop() mit wartendem Kandidat: skip/stopped im Log', () async {
       await setUp0(settle: const Duration(milliseconds: 800));
       await hit();
@@ -474,13 +491,145 @@ void main() {
       });
 
       test('Stille im Ausschnitt: skip/silent ohne Erkenner', () async {
-        // Kandidat aus Hintergrund-Ähnlichkeit (Frame 2), der Ausschnitt ist still.
-        await setUp0(hitAt: {2});
-        await frames(3);
+        // Kandidat 800 ms nach lautem Audio (noch im Fensterbereich), der
+        // kurze Ausschnitt (500 ms) ist still.
+        await setUp0(hitAt: {8}, clip: const Duration(milliseconds: 500));
+        await frames(1, loud: true);
+        await frames(8);
         expect(v.calls, isEmpty);
         expect(verdicts, ['skip/silent']);
         expect(got, isEmpty);
       });
+
+      // WP126, lokale Logs: Stille (rms 0) bekommt stop=0.85 > sthr,
+      // das echte Stopp (0.96) kommt danach.
+      test('Fenster ohne Pegel ist kein Kandidat (Stille-Score)', () async {
+        await setUp0(
+          settle: const Duration(milliseconds: 800),
+          custom: _ScriptEngine({1: 'stop'}, conf: {1: 0.85}),
+        );
+        await frames(4); // 400 ms Stille, Treffer in Frame 1
+        expect(cands, isEmpty);
+        expect(verdicts, ['skip/silent']);
+        await frames(20);
+        expect(v.calls, isEmpty);
+      });
+
+      test(
+        'Pegel knapp unter der Grenze zählt nicht, knapp darüber schon',
+        () async {
+          Int16List level(int v) => Int16List(1600)..fillRange(0, 1600, v);
+          Future<void> run(int v) async {
+            await setUp0(custom: _ScriptEngine({1: 'stop'}));
+            audio.push(level(v));
+            audio.push(level(v));
+            await pumpEventQueue();
+          }
+
+          await run(149);
+          expect(cands, isEmpty);
+          await d.dispose();
+          await run(150);
+          expect(cands, ['stop false']);
+        },
+      );
+
+      test('Stille-Fehlkandidat, danach echtes Stopp: Signal', () async {
+        final script = _ScriptEngine(
+          {1: 'stop', 12: 'stop'},
+          conf: {1: 0.85, 12: 0.96},
+        );
+        await setUp0(
+          settle: const Duration(milliseconds: 800),
+          cooldown: const Duration(milliseconds: 1500),
+          custom: script,
+        );
+        // Nur ein Ausschnitt mit ganzem Wort (>= 5 laute Frames) ist "stop".
+        v.decide = (pcm) {
+          var loud = 0;
+          for (var i = 0; i + 1600 <= pcm.length; i += 1600) {
+            if (pcm[i] > 1000) loud++;
+          }
+          return loud >= 5
+              ? const BargeVerdict('stop', BargeInKeyword.stop)
+              : BargeVerdict.no;
+        };
+        await frames(6); // 0,6 s Stille, Fehltreffer in Frame 1
+        await frames(16, loud: true); // Wort ab Frame 6, Treffer in Frame 12
+        expect(got, ['keyword-stop']); // vor dem Ende eines Cooldowns
+        expect(v.calls, hasLength(1)); // nur das echte Wort wurde geprüft
+      });
+
+      test(
+        'stärkerer Kandidat nach "no" wartet nicht auf den Cooldown',
+        () async {
+          final script = _ScriptEngine(
+            {0: 'stop', 12: 'stop'},
+            conf: {0: 0.85, 12: 0.96},
+          );
+          await setUp0(
+            settle: const Duration(milliseconds: 800),
+            cooldown: const Duration(milliseconds: 1500),
+            custom: script,
+          );
+          v.verdict = BargeVerdict.no;
+          await frames(1, loud: true);
+          await frames(10, loud: true); // Echo geprüft: no, Cooldown 1,5 s
+          expect(v.calls, hasLength(1));
+          v.verdict = const BargeVerdict('stop', BargeInKeyword.stop);
+          await frames(2, loud: true); // Frame 12: stärker, im Cooldown
+          expect(cands.last, 'stop false');
+          await frames(8, loud: true); // eigene Wartezeit, Cooldown läuft noch
+          expect(v.calls, hasLength(2));
+          expect(got, ['keyword-stop']);
+        },
+      );
+
+      test('gleich starker Kandidat im Cooldown bleibt gesperrt', () async {
+        final script = _ScriptEngine(
+          {0: 'stop', 12: 'stop'},
+          conf: {0: 0.9, 12: 0.92},
+        );
+        await setUp0(
+          settle: const Duration(milliseconds: 800),
+          cooldown: const Duration(milliseconds: 1500),
+          custom: script,
+        );
+        v.verdict = BargeVerdict.no;
+        await frames(12, loud: true);
+        await frames(8, loud: true);
+        expect(cands.last, 'stop true');
+        expect(v.calls, hasLength(1));
+      });
+
+      test(
+        'Kandidat während der Prüfung, stärker: eigenes Fenster nach "no"',
+        () async {
+          final script = _ScriptEngine(
+            {0: 'stop', 3: 'stop'},
+            conf: {0: 0.85, 3: 0.96},
+          );
+          await setUp0(
+            settle: const Duration(milliseconds: 200),
+            cooldown: const Duration(milliseconds: 1500),
+            custom: script,
+          );
+          v
+            ..verdict = BargeVerdict.no
+            ..hold = Completer<void>();
+          await frames(1, loud: true);
+          await frames(3, loud: true); // Prüfung läuft, Frame 3 ist busy
+          expect(cands, ['stop false', 'stop true']);
+          v.hold!.complete();
+          await pumpEventQueue();
+          v
+            ..hold = null
+            ..verdict = const BargeVerdict('stop', BargeInKeyword.stop);
+          await frames(2, loud: true); // weit vor dem Ende des Cooldowns
+          expect(v.calls, hasLength(2));
+          expect(got, ['keyword-stop']);
+        },
+      );
     });
 
     test('ohne Prüfer ist der Treffer das Signal (wie bisher)', () async {
@@ -502,8 +651,9 @@ void main() {
 
 /// Engine with a script: frame index -> keyword id (a hit per entry).
 final class _ScriptEngine implements WakeWordEngine {
-  _ScriptEngine(this.ids);
+  _ScriptEngine(this.ids, {this.conf = const {}});
   final Map<int, String> ids;
+  final Map<int, double> conf;
   int _i = 0, _samples = 0;
 
   @override
@@ -511,11 +661,18 @@ final class _ScriptEngine implements WakeWordEngine {
 
   @override
   Future<List<WakeWordHit>> accept(Int16List frame) async {
-    final id = ids[_i++];
+    final index = _i++;
+    final id = ids[index];
     _samples += frame.length;
     return id == null
         ? const []
-        : [WakeWordHit(keywordId: id, endSample: _samples, confidence: 0.9)];
+        : [
+            WakeWordHit(
+              keywordId: id,
+              endSample: _samples,
+              confidence: conf[index] ?? 0.9,
+            ),
+          ];
   }
 
   @override

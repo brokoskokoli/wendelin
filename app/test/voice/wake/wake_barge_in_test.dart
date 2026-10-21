@@ -55,6 +55,20 @@ Future<void> runFake(Future<void> Function() body) async {
 void ftest(String name, Future<void> Function() body) =>
     test(name, () => runFake(body));
 
+class _KindSpy implements BargeVerifier {
+  _KindSpy(this.onKind);
+  final void Function(BargeInKeyword) onKind;
+
+  @override
+  Future<BargeVerdict> verify(
+    Int16List pcm, {
+    required BargeInKeyword candidate,
+  }) async {
+    onKind(candidate);
+    return BargeVerdict.no;
+  }
+}
+
 class _SpyVerifier implements BargeVerifier {
   _SpyVerifier(this.onVerify);
   final void Function() onVerify;
@@ -79,12 +93,17 @@ void main() {
       List<WakeTemplates> stops = const [],
       Future<double?> Function()? margin,
       BargeVerifier Function(String Function())? verifier,
+      bool? quietStart,
     }) {
+      final quiet = quietStart ?? (verifier == null || stops.isNotEmpty);
       audio = FakeAudioInput(
         // WP80: „Stopp“ needs speech-level sound after a quiet start.
+        // „Stopp“ needs two windows and speech after a quiet start (WP80).
+        // With stage 2 a „Wendelin“ candidate needs level already in its first
+        // window (WP126), so the stream is loud from the start there.
         frames: [
-          Int16List(480),
-          for (var i = 0; i < 3; i++)
+          if (quiet) Int16List(480),
+          for (var i = 0; i < (quiet ? 3 : 4); i++)
             Int16List.fromList([
               for (var j = 0; j < 480; j++) j.isEven ? 2000 : -2000,
             ]),
@@ -330,6 +349,46 @@ void main() {
         await d.dispose();
         return codes;
       }
+
+      // WP126: records the kind of the candidate, rejects it.
+      BargeInKeyword? seenKind;
+      BargeVerifier Function(String Function()) kindSpy() =>
+          (_) => _KindSpy((k) => seenKind = k);
+
+      ftest(
+        'stopOverridesWake ist mit Stufe 2 verdrahtet: Wake-Fenster, in '
+        'dem „Stopp“ nur am Pegel scheitert, geht als stop an die Prüfung',
+        () async {
+          // Both words over their threshold (0.71 vs 0.70 / 0.60); the stream
+          // is constantly loud, so the level gate holds „Stopp“ back.
+          final e = Float32List.fromList([1, 1]);
+          final d = make(
+            [tpl(0.8)],
+            e,
+            stops: [stopTpl(0.8)],
+            verifier: kindSpy(),
+            quietStart: false,
+          );
+          await run(d);
+          expect(seenKind, BargeInKeyword.stop);
+        },
+      );
+
+      ftest(
+        'verifySettle der App geht an den Detektor: Prüfung ohne Wartezeit',
+        () async {
+          var calls = 0;
+          final d = make(
+            [tpl(0.8)],
+            Float32List.fromList([1, 0]),
+            verifier: (_) => _SpyVerifier(() => calls++),
+          );
+          await run(d);
+          // Settle 20 ms in make(); the default of 800 ms would not fit into
+          // the 20 ms of audio.
+          expect(calls, greaterThan(0));
+        },
+      );
 
       ftest('Kandidat unter der gelernten Schwelle kommt durch, Erkenner '
           'bestätigt „Wendelin“', () async {
