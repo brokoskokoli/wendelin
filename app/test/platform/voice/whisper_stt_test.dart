@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -106,6 +107,35 @@ void main() {
       expect(en.language, 'en');
       expect(en.confidence, 0.9);
     });
+
+    test(
+      'Logzeile stt-lang: Sprache, Quelle, Konfidenz, nie der Text',
+      () async {
+        final lines = <String>[];
+        voiceLogSink = lines.add;
+        final b = FakeWhisperBackend(
+          text: 'Buongiorno a tutti',
+          language: 'it',
+        );
+        final stt = WhisperSpeechToText(backend: b, modelId: 'parakeet-v3');
+        await stt.transcribe(speech);
+        b
+          ..language = 'fr'
+          ..text = 'Ajoute du lait';
+        await stt.transcribe(speech, language: 'fr-CH');
+        expect(lines, hasLength(2));
+        expect(lines[0], contains('stt-lang'));
+        expect(lines[0], contains('model=parakeet-v3'));
+        expect(lines[0], contains('src=detected'));
+        expect(lines[0], contains('detected=it'));
+        expect(lines[0], isNot(contains('lang=it '))); // unsupported: no lang
+        expect(lines[1], contains('src=fixed'));
+        expect(lines[1], contains('lang=fr'));
+        expect(lines[1], contains('conf=0.90'));
+        expect(lines.join(), isNot(contains('Buongiorno')));
+        expect(lines.join(), isNot(contains('lait')));
+      },
+    );
 
     test('Halluzination ergibt leeren Text ohne Konfidenz', () async {
       final b = FakeWhisperBackend(text: 'Untertitel der Amara.org-Community');
