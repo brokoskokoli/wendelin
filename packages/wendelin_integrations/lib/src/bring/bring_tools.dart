@@ -178,7 +178,6 @@ ConfirmationSentence _sentence(String key, String? said, List<String> items) =>
     ConfirmationSentence(said == null ? '$key.default' : key, {
       'items': items,
       'list': ?said,
-      'count': items.length,
     });
 
 /// `bring__add_items` (write): undo removes exactly the added items.
@@ -235,13 +234,9 @@ final class BringAddItemsTool extends IntegrationTool
   @override
   Set<String> get confirmationKeys => const {
     'list.added',
-    'list.added#one',
     'list.present',
-    'list.present#one',
     'list.added.default',
-    'list.added.default#one',
     'list.present.default',
-    'list.present.default#one',
   };
 
   List<BringItem> _items(ToolArgs args) {

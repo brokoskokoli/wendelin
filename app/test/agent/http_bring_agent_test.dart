@@ -127,7 +127,10 @@ void main() {
     await loginBring(env);
     await pumpApp(tester, env);
     await send(tester, 'Setz Eier auf die Bring-Liste');
-    await pumpUntil(tester, find.textContaining('auf der Liste'));
+    await pumpUntil(
+      tester,
+      find.textContaining('auf die Liste Zuhause gesetzt'),
+    );
     final zuhause = env.bring.list('list-zuhause')!;
     expect(zuhause.purchase.map((i) => i.name), contains('Eier'));
     final undo = find.textContaining('Rückgängig · ');

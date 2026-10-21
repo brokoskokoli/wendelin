@@ -96,6 +96,10 @@ final class FixedAnswer {
     final answer = Message.assistant([TextBlock(sentence)]);
     final text = [..._state.paused, answer].map((m) => m.text).join();
     await _state.append(answer);
-    return AgentDone(finalText: text, stopReason: StopReason.endTurn);
+    return AgentDone(
+      finalText: text,
+      stopReason: StopReason.endTurn,
+      fixed: true,
+    );
   }
 }

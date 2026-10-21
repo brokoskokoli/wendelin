@@ -696,13 +696,13 @@ void main() {
         await call({'entity': 'Küche Deckenlicht', 'service': 'turn_off'}),
         t,
         'ha.off',
-        de: 'Küche Deckenlicht ist aus.',
+        de: 'Ich habe Küche Deckenlicht ausgeschaltet.',
       );
       expectFixed(
         await call({'entity': 'Küche Deckenlicht', 'service': 'turn_on'}),
         t,
         'ha.on',
-        de: 'Küche Deckenlicht ist an.',
+        de: 'Ich habe Küche Deckenlicht eingeschaltet.',
       );
     });
 

@@ -599,7 +599,7 @@ void main() {
         o,
         t,
         'list.added',
-        de: 'Eier und Butter stehen jetzt auf der Liste zuhause.',
+        de: 'Ich habe Eier und Butter auf die Liste zuhause gesetzt.',
       );
       o = await call('bring__add_items', {
         'items': ['Käse'],
@@ -609,7 +609,7 @@ void main() {
         o,
         t,
         'list.added',
-        de: 'Käse steht jetzt auf der Liste zuhause.',
+        de: 'Ich habe Käse auf die Liste zuhause gesetzt.',
       );
     });
 
@@ -623,7 +623,7 @@ void main() {
         o,
         t,
         'list.present',
-        de: 'Milch steht schon auf der Liste zuhause.',
+        de: 'Ich habe Milch schon auf der Liste zuhause gefunden.',
       );
     });
 
@@ -665,7 +665,7 @@ void main() {
         o,
         t,
         'list.done',
-        de: 'Milch ist auf der Liste zuhause abgehakt.',
+        de: 'Ich habe Milch auf der Liste zuhause abgehakt.',
       );
     });
 
@@ -678,15 +678,15 @@ void main() {
         three,
         add,
         'list.added.default',
-        de: 'Eier, Butter und Wurst stehen jetzt auf der Einkaufsliste.',
+        de: 'Ich habe Eier, Butter und Wurst auf die Einkaufsliste gesetzt.',
       );
       expect(
         renderConfirmation(three.fixed!, 'en'),
-        'Eier, Butter and Wurst are now on the shopping list.',
+        'I added Eier, Butter and Wurst to the shopping list.',
       );
       expect(
         renderConfirmation(three.fixed!, 'fr'),
-        'Eier, Butter et Wurst sont maintenant sur la liste de courses.',
+        'J’ai ajouté Eier, Butter et Wurst à la liste de courses.',
       );
       expectFixed(
         await call('bring__add_items', {
@@ -694,13 +694,13 @@ void main() {
         }),
         add,
         'list.present.default',
-        de: 'Milch steht schon auf der Einkaufsliste.',
+        de: 'Ich habe Milch schon auf der Einkaufsliste gefunden.',
       );
       expectFixed(
         await call('bring__complete_item', {'item': 'Äpfel'}),
         tool('bring__complete_item'),
         'list.done.default',
-        de: 'Äpfel ist abgehakt.',
+        de: 'Ich habe Äpfel abgehakt.',
       );
       final done = await call('bring__complete_item', {'item': 'Milch'});
       expect(done.fixed?.key, 'list.done.default');

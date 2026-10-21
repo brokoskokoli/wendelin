@@ -31,13 +31,12 @@ FakeTool flashlight({
 FakeTool bring(List<String> items) => FakeTool(
   name: 'bring__add_items',
   risk: RiskLevel.write,
-  confirmationKeys: const {'list.added', 'list.added#one'},
+  confirmationKeys: const {'list.added'},
   outcome: ToolOutcome.text(
     'ok',
     fixed: ConfirmationSentence('list.added', {
       'items': items,
       'list': 'Einkauf',
-      'count': items.length,
     }),
   ),
 );
@@ -240,9 +239,9 @@ void main() {
     });
 
     final expected = {
-      'de-DE': 'Milch, Eier und Brot stehen jetzt auf der Liste Einkauf.',
-      'en-US': 'Milch, Eier and Brot are now on the list Einkauf.',
-      'fr-FR': 'Milch, Eier et Brot sont maintenant sur la liste Einkauf.',
+      'de-DE': 'Ich habe Milch, Eier und Brot auf die Liste Einkauf gesetzt.',
+      'en-US': 'I added Milch, Eier and Brot to the list Einkauf.',
+      'fr-FR': 'J’ai ajouté Milch, Eier et Brot à la liste Einkauf.',
     };
     for (final MapEntry(key: lang, value: text) in expected.entries) {
       test('Bring mit drei Artikeln ($lang)', () async {
@@ -262,8 +261,8 @@ void main() {
     }
 
     for (final (language, interface, text) in [
-      (null, 'en', 'Milch, Eier and Brot are now on the list Einkauf.'),
-      ('fr', 'en', 'Milch, Eier et Brot sont maintenant sur la liste Einkauf.'),
+      (null, 'en', 'I added Milch, Eier and Brot to the list Einkauf.'),
+      ('fr', 'en', 'J’ai ajouté Milch, Eier et Brot à la liste Einkauf.'),
     ]) {
       test('Sprache $language, Oberfläche $interface', () async {
         final (a, _) = scripted('a', [
@@ -299,7 +298,7 @@ void main() {
       await h.run('und noch Butter');
       expect(provider.requests, hasLength(2));
       final texts = provider.requests[1].messages.map((m) => m.text).toList();
-      expect(texts, contains(contains('stehen jetzt auf der Liste Einkauf')));
+      expect(texts, contains(contains('auf die Liste Einkauf gesetzt')));
       expect(
         provider.requests[1].messages.last,
         Message.user('und noch Butter'),

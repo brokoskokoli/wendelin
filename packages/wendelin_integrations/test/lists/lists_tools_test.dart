@@ -645,7 +645,7 @@ void main() {
         }),
         t,
         'list.added',
-        de: 'Eier und Butter stehen jetzt auf der Liste Einkaufen.',
+        de: 'Ich habe Eier und Butter auf die Liste Einkaufen gesetzt.',
       );
       expectFixed(
         await run('lists__add_items', {
@@ -654,7 +654,7 @@ void main() {
         }),
         t,
         'list.added',
-        de: 'Käse steht jetzt auf der Liste Einkaufen.',
+        de: 'Ich habe Käse auf die Liste Einkaufen gesetzt.',
       );
     });
 
@@ -684,7 +684,7 @@ void main() {
         }),
         tool('lists__complete_item'),
         'list.done',
-        de: 'Milch (1 l) ist auf der Liste Einkaufen abgehakt.',
+        de: 'Ich habe Milch (1 l) auf der Liste Einkaufen abgehakt.',
       );
     });
 

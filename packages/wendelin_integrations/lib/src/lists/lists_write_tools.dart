@@ -44,12 +44,7 @@ final class AddItemsTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
-  Set<String> get confirmationKeys => const {
-    'list.added',
-    'list.added#one',
-    'list.present',
-    'list.present#one',
-  };
+  Set<String> get confirmationKeys => const {'list.added', 'list.present'};
 
   List<String> _items(ToolArgs args) {
     final raw = args.optStringList('items');
@@ -80,11 +75,7 @@ final class AddItemsTool extends IntegrationTool
   static ConfirmationSentence _listSentence(
     ListDefinition def,
     List<String> added,
-  ) => ConfirmationSentence('list.added', {
-    'items': added,
-    'list': def.name,
-    'count': added.length,
-  });
+  ) => ConfirmationSentence('list.added', {'items': added, 'list': def.name});
 
   /// Adds the item texts [wanted] to [def] (caller holds the file queue).
   Future<ToolOutcome> add(

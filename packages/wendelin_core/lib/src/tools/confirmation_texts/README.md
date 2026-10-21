@@ -8,7 +8,7 @@ Werte aus seinem **Ergebnis**; `renderConfirmation` baut den Satz in der
 Sprache der Anfrage. Fehlt Sprache oder Vorlage, antwortet das Modell.
 
 ## Regeln
-- `<key>#one` ist die Einzahl, gewählt über den Wert `count` (`int`).
+- Sätze sind numerus-neutral formuliert (Nutzerwörter tragen ihren Numerus selbst, kein Verb richtet sich danach): „Ich habe {item} abgehakt.“
 - Jede Sprache führt **dieselben** Schlüssel (Test `fixed_confirmation_test.dart`),
   und jeder Schlüssel eines Tools (`confirmationKeys`) steht in jeder Sprache.
 - Nur Sätze für eindeutige Aktionen mit klarem Ergebnis; nie für Lese-Tools.

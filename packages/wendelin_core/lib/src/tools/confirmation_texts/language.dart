@@ -3,8 +3,8 @@ abstract class ConfirmationLanguage {
   /// Const base constructor.
   const ConfirmationLanguage();
 
-  /// Template per key; `{name}` is a placeholder. A key with `#one` is the
-  /// singular variant. Every language has the same keys (test).
+  /// Template per key; `{name}` is a placeholder. Number-neutral wording: no
+  /// verb agrees with a user word. Every language has the same keys (test).
   Map<String, String> get templates;
 
   /// „A, B und C“.

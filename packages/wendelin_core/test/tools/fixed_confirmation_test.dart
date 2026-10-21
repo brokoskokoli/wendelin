@@ -29,18 +29,6 @@ void main() {
         }
       }
     });
-
-    test('jede Einzahl-Variante hat eine Grundvorlage', () {
-      for (final lang in confirmationLanguages.values) {
-        for (final k in lang.templates.keys.where((k) => k.endsWith('#one'))) {
-          expect(
-            lang.templates,
-            contains(k.substring(0, k.length - 4)),
-            reason: k,
-          );
-        }
-      }
-    });
   });
 
   group('renderConfirmation', () {
@@ -57,20 +45,16 @@ void main() {
       expect(r('list.added', 'de', {'list': 'Einkauf'}), isNull);
     });
 
-    test('count 1 wählt die Einzahl', () {
-      const p = {
-        'items': ['Milch'],
-        'list': 'Einkauf',
-      };
-      expect(
-        r('list.added', 'de', {...p, 'count': 1}),
-        contains('steht jetzt'),
-      );
-      expect(
-        r('list.added', 'de', {...p, 'count': 2}),
-        contains('stehen jetzt'),
-      );
-      expect(r('list.added', 'de', p), contains('stehen jetzt'));
+    test('Listensätze sind numerus-neutral', () {
+      for (final n in [1, 2]) {
+        expect(
+          r('list.added', 'de', {
+            'items': [for (var i = 0; i < n; i++) 'Äpfel'],
+            'list': 'Einkauf',
+          }),
+          startsWith('Ich habe Äpfel'),
+        );
+      }
     });
 
     test('joinConfirmations hängt Sätze aneinander', () {

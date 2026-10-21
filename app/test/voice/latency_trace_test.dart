@@ -49,13 +49,63 @@ void main() {
       at(1200);
       trace.agentEvent(const AgentTextDelta('Die Taschenlampe ist an.'));
       trace.agentEvent(
-        const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+        const AgentDone(
+          finalText: 'x',
+          stopReason: StopReason.endTurn,
+          fixed: true,
+        ),
       );
       trace.finish();
 
       expect(logged.single.$2['calls'], 1);
       expect(logged.single.$2['tools'], 1);
       expect(logged.single.$2.containsKey('m2_req'), isFalse);
+    });
+
+    test('echter zweiter Aufruf ohne Usage bleibt (calls 2)', () {
+      trace.begin();
+      at(300);
+      trace.sttDone();
+      at(900);
+      trace.agentEvent(_used());
+      trace.agentEvent(ToolCallStarted(_call()));
+      at(1100);
+      trace.agentEvent(
+        ToolCallFinished(call: _call(), outcome: ToolOutcome.text('an')),
+      );
+      at(1700);
+      trace.agentEvent(const AgentTextDelta('Taschenlampe ist an.'));
+      trace.agentEvent(
+        const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+      );
+      trace.finish();
+
+      expect(logged.single.$2['calls'], 2);
+    });
+
+    test('fester Satz ohne Usage im ersten Aufruf: der Aufruf bleibt', () {
+      trace.begin();
+      at(300);
+      trace.sttDone();
+      at(900);
+      trace.agentEvent(const AgentTextDelta('Ich schalte'));
+      trace.agentEvent(ToolCallStarted(_call()));
+      at(1100);
+      trace.agentEvent(
+        ToolCallFinished(call: _call(), outcome: ToolOutcome.text('an')),
+      );
+      at(1200);
+      trace.agentEvent(const AgentTextDelta('Die Taschenlampe ist an.'));
+      trace.agentEvent(
+        const AgentDone(
+          finalText: 'x',
+          stopReason: StopReason.endTurn,
+          fixed: true,
+        ),
+      );
+      trace.finish();
+
+      expect(logged.single.$2['calls'], 1);
     });
 
     test('Zeitleiste: zwei Modellaufrufe mit Werkzeug, zwei Sätze', () {

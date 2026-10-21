@@ -29,8 +29,8 @@ abstract interface class FixedConfirmationTool {
 /// `Duration`, `Set<int>` (weekdays, 1 = Monday) and `DateTime` (wall-clock
 /// time, fields as shown).
 ///
-/// A param `count` (`int`) selects the template `<key>#one` when it is 1,
-/// if that exists (singular/plural verb).
+/// Templates are worded number-neutral (a user word brings its own
+/// singular/plural, so no verb agrees with it).
 @immutable
 final class ConfirmationSentence {
   /// Creates a sentence for template [key].
@@ -61,9 +61,7 @@ String? renderConfirmation(ConfirmationSentence sentence, String? languageTag) {
   final code = (languageTag ?? 'de').toLowerCase().split(RegExp('[-_]')).first;
   final lang = confirmationLanguages[code];
   if (lang == null) return null;
-  final count = sentence.params['count'];
-  final one = count == 1 ? lang.templates['${sentence.key}#one'] : null;
-  final template = one ?? lang.templates[sentence.key];
+  final template = lang.templates[sentence.key];
   if (template == null) return null;
   var missing = false;
   final text = template.replaceAllMapped(RegExp(r'\{(\w+)\}'), (m) {
