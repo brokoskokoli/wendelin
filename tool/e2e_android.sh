@@ -306,6 +306,15 @@ host_request() {
       for _ in $(seq 1 40); do resumed | grep -q AssistantActivity && break; sleep 0.5; done
       ;;
     unlock)
+      # Nur bei gesperrtem Gerät aufrufen (locked_flashlight_e2e_test): erst die
+      # PIN wirklich im Bouncer eintippen, damit der Entsperr-Callback der App
+      # (requestDismissKeyguard) eintrifft; danach die PIN entfernen (WP114).
+      adb shell input keyevent KEYCODE_WAKEUP
+      adb shell input swipe 540 1800 540 600 >/dev/null 2>&1 || true
+      sleep 1
+      adb shell input text "$LOCK_PIN" >/dev/null 2>&1 || true
+      adb shell input keyevent KEYCODE_ENTER >/dev/null 2>&1 || true
+      sleep 3
       adb shell locksettings clear --old "$LOCK_PIN" >/dev/null 2>&1 || true
       adb shell input keyevent KEYCODE_WAKEUP
       adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
