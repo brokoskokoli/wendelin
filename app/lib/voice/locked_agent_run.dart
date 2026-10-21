@@ -54,7 +54,7 @@ final class LockedPendingRequest {
 }
 
 /// How long a refused request waits for the unlock.
-const lockedPendingMaxAge = Duration(minutes: 2);
+const lockedPendingMaxAge = Duration(seconds: 30);
 
 /// The request waiting for the unlock, if any ([LockedPendingRequest]).
 final lockedPendingProvider =

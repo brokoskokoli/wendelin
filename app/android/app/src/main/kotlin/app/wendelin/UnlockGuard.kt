@@ -31,8 +31,18 @@ class UnlockGuard(private val now: () -> Long) {
         return now() - ended < GRACE_MS
     }
 
+    /**
+     * How long until [active] can turn false (0 if it is not active). While a request is open it
+     * is one full [GRACE_MS]: look again then.
+     */
+    fun remainingMs(): Long {
+        if (pending) return GRACE_MS
+        val ended = endedAt ?: return 0L
+        return (GRACE_MS - (now() - ended)).coerceAtLeast(0L)
+    }
+
     companion object {
         /** How long after the keyguard result the lifecycle changes still count as unlocking. */
-        const val GRACE_MS = 2500L
+        const val GRACE_MS = 1500L
     }
 }

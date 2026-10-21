@@ -37,6 +37,9 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
     val unlocking: Boolean
         get() = unlockGuard.active()
 
+    /** Milliseconds until [unlocking] can end (0 if it is not on). */
+    fun unlockingRemainingMs(): Long = unlockGuard.remainingMs()
+
     init {
         channel.setMethodCallHandler(this)
     }

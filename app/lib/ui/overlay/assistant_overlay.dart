@@ -90,7 +90,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   // The keyguard transition is not „leaving“ the overlay and not a tap
   // (WP114, K85): while the unlock runs and shortly after, lifecycle
   // changes, taps outside and the platform close request are ignored.
-  late final _unlockWindow = UnlockWindow(ref.read(clockProvider));
+  late final UnlockWatch _unlockWatch;
   // The request refused while locked was dropped (unlock cancelled).
   bool _discardedNotice = false;
   // After a spoken „Stopp“ (B5): entries before this index belong to the
@@ -103,6 +103,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   @override
   void initState() {
     super.initState();
+    _unlockWatch = UnlockWatch(ref.read(clockProvider));
     _triggers = AssistantTriggerSource(
       ref.read(assistantPlatformProvider),
       clock: ref.read(clockProvider),
@@ -110,7 +111,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     _sub = _triggers.triggers.listen((e) => unawaited(_onTrigger(e)));
     // Android leaves the overlay (home, screen off): the Dart close path
     // first, so nothing keeps listening or speaking.
-    ref.read(assistantPlatformProvider).onCloseRequested = _closeFromPlatform;
+    ref.read(assistantPlatformProvider).onCloseRequested =
+        _closeUnlessUnlocking;
     _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
     unawaited(_checkLock());
     _warmUpAttestation();
@@ -143,19 +145,15 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     playTone: ref.read(wakeConfirmToneProvider),
   );
 
-  Future<void> _closeFromPlatform() async {
-    if (_unlockWindow.active) return;
-    await _close();
-  }
-
-  // A tap outside the sheet or back: not while the unlock settles.
-  Future<void> _closeByTap() async {
-    if (_unlockWindow.active) return;
-    await _close();
+  // Platform close request, tap outside the sheet or back: not while the
+  // unlock settles.
+  Future<void> _closeUnlessUnlocking() async {
+    if (!_unlockWatch.window.active) await _close();
   }
 
   void _onLifecycle(AppLifecycleState state) {
-    if (_unlockWindow.active) return;
+    if (state == AppLifecycleState.resumed) _unlockWatch.resumed();
+    if (_unlockWatch.window.active) return;
     if (state == AppLifecycleState.hidden ||
         state == AppLifecycleState.paused) {
       unawaited(_voice.suspend());
@@ -165,6 +163,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   @override
   void dispose() {
     _closeTimer?.cancel();
+    _unlockWatch.dispose();
     _lifecycle.dispose();
     unawaited(_sub.cancel());
     unawaited(_triggers.dispose());
@@ -285,14 +284,13 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   }
 
   Future<void> _unlock() async {
-    if (_unlockWindow.active) return;
-    _unlockWindow.begin();
-    var ok = false;
-    try {
-      ok = await _platform.requestUnlock();
-    } finally {
-      _unlockWindow.end();
-    }
+    // Only an open request blocks a new one (not the grace period).
+    if (_unlockWatch.window.open) return;
+    final ok = await _unlockWatch.run(
+      _platform.requestUnlock,
+      alive: () => mounted && !_closing,
+      close: () => unawaited(_close()),
+    );
     if (!mounted) return;
     final pending = ref.read(lockedPendingProvider);
     final text = ref.read(lockedPendingProvider.notifier).take();
@@ -306,12 +304,20 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       _discardedNotice = false;
     });
     ref.read(lockedModeProvider.notifier).set(false);
+    // Gone meanwhile (home, screen off): nothing listens or sends.
+    if (!await _unlockWatch.visibleAfterUnlock(() => mounted)) {
+      if (mounted) await _close();
+      return;
+    }
     _voice.prewarm();
-    // The request from before the unlock goes on now and its answer shows
-    // here (K85); without one, the overlay listens again.
+    // The request from before goes on now, answered here and read aloud
+    // (K85); without one, the overlay listens again.
     if (text != null) {
-      unawaited(_agent.send(text));
-    } else {
+      if (_closing) return;
+      if (!await _voice.answerText(text) && mounted && !_closing) {
+        unawaited(_agent.send(text));
+      }
+    } else if (!_closing) {
       _triggers.fire();
     }
   }
@@ -465,7 +471,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       target: target,
       config: config,
     );
-    return OverlayFrame(onClose: () => unawaited(_closeByTap()), child: sheet);
+    return OverlayFrame(
+      onClose: () => unawaited(_closeUnlessUnlocking()),
+      child: sheet,
+    );
   }
 }
 
