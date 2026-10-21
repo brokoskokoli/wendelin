@@ -81,6 +81,12 @@ void main() {
       final button = find.byType(OutlinedButton);
       expect(button, findsOneWidget);
       expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
+      final style = tester.widget<OutlinedButton>(button).style!;
+      expect(style.minimumSize!.resolve({}), const Size(44, 44));
+      expect(
+        style.padding!.resolve({}),
+        const EdgeInsets.symmetric(horizontal: WSpace.l),
+      );
       expect(
         find.descendant(of: button, matching: find.byType(WIcon)),
         findsOneWidget,

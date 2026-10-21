@@ -4,7 +4,8 @@ import '../theme/app_theme.dart';
 import 'icons.dart';
 
 /// Linksbündiger Knopf für Sprünge aus der App heraus (Systemeinstellungen,
-/// Webseite): Outlined, ↗ hinter dem Text, mindestens 44 hoch.
+/// Webseite): Outlined, ↗ hinter dem Text, mindestens 44 hoch, seitlicher
+/// Abstand `WSpace.l` (Text fluchtet mit SettingsRow-Text).
 class LinkButton extends StatelessWidget {
   /// Erstellt den Knopf.
   const LinkButton(
@@ -31,6 +32,8 @@ class LinkButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         foregroundColor: WColors.link,
         minimumSize: const Size(WSize.touchMin, WSize.touchMin),
+        // Text fluchtet mit dem Zeilentext der Karte darüber.
+        padding: const EdgeInsets.symmetric(horizontal: WSpace.l),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

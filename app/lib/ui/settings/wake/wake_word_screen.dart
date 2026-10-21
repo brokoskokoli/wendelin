@@ -292,13 +292,12 @@ class _StopWordSection extends ConsumerWidget {
       spacing: WSpace.s,
       children: [
         Text(context.l10n.wakeWordInterrupt, style: WText.sectionTitle),
-        Text(
+        InfoBox(
           learned
               ? context.l10n.wakeWordStopLearned
               : context.l10n.wakeWordStopNotLearned,
-          style: WText.caption,
         ),
-        Text(context.l10n.wakeWordStopOnlySpeaking, style: WText.caption),
+        InfoBox(context.l10n.wakeWordStopOnlySpeaking),
         WideButton(
           learned
               ? context.l10n.wakeWordRetrainStop
