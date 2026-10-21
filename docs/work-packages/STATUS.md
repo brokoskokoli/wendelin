@@ -72,6 +72,7 @@ Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP121; offen: E2E Stopp/Barge 
 | WP121 | Wake Words mit echten Aufnahmen vergleichen (fair) | in Arbeit | Aufnahmen 2026-10-21; Folge WP111/K83 |
 | WP122 | Feste Bestätigungssätze statt zweitem Modellaufruf | gemergt 4f596e66 | K97; Gerätetest T21-WP122; Soll: Test AgentDone.fixed, Satz „schon vorhanden“ (confirmation_texts de:30/34 en:45/48 fr:53/56), Doku fixed_confirmation.dart:20, toter Schlüssel lists_write_tools.dart:47; CI-Flake wake_lifecycle_test (UnmountedRefException) |
 | WP123 | Stopp sofort ab Antwortbeginn (Barge-in-Warmstart), Stopp-E2E stabil | gemergt ab054e98 | K96; E2E voice_stop_word/voice_barge_in je 3× offen (Last 15–18); Gerätetest T21-WP123; Soll: Provider-Test take statt snapshot (wake_providers.dart:204) |
+| WP124 | Emulator startet bei Bedarf, wird nach jedem E2E-Lauf beendet (E2E_KEEP_EMULATOR=1 für Serien) | gemergt 909738c1 | Wunsch Stefan 2026-10-21; echter Lauf torch_e2e grün |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
