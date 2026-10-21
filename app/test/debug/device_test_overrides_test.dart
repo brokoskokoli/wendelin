@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/debug/device_test_overrides.dart';
@@ -157,6 +159,58 @@ void main() {
       addTearDown(c.dispose);
       final input = c.read(audioInputProvider) as WavAudioInput;
       expect(input.recordings.map((r) => r.length), [8, 4]);
+    });
+
+    test('waitForBargeListen: Aufnahme 1 läuft erst nach barge-listen', () {
+      File('${dir.path}/a.wav').writeAsBytesSync(Wav(Int16List(80)).encode());
+      File('${dir.path}/b.wav').writeAsBytesSync(Wav(Int16List(80)).encode());
+      fakeAsync((async) {
+        final c = ProviderContainer(
+          overrides: parseDeviceTestOverrides(
+            '{"audio": ["a.wav", "b.wav"], "waitForBargeListen": [1]}',
+            dir.path,
+          ),
+        );
+        final input = c.read(audioInputProvider) as WavAudioInput;
+        var frames = 0;
+        // Aufnahme 0 ist nicht gesperrt: läuft sofort.
+        final first = input.start().listen((_) => frames++);
+        async.elapse(const Duration(seconds: 1));
+        expect(frames, greaterThan(0));
+        unawaited(first.cancel());
+        unawaited(input.stop());
+        // Aufnahme 1 wartet auf den Zuhörer, auch nach langer Wanduhrzeit.
+        frames = 0;
+        input.start().listen((_) => frames++);
+        async.elapse(const Duration(seconds: 20));
+        expect(frames, 0, reason: 'vor barge-listen on=true keine Frames');
+        c.read(bargeListeningProvider.notifier).set(true);
+        async.elapse(const Duration(seconds: 1));
+        expect(frames, greaterThan(0));
+        unawaited(input.stop());
+        c.dispose();
+      });
+    });
+
+    test('waitForBargeListen: ohne Zuhörer gibt das Zeitlimit frei', () {
+      File('${dir.path}/a.wav').writeAsBytesSync(Wav(Int16List(80)).encode());
+      fakeAsync((async) {
+        final c = ProviderContainer(
+          overrides: parseDeviceTestOverrides(
+            '{"audio": ["a.wav"], "waitForBargeListen": [0]}',
+            dir.path,
+          ),
+        );
+        final input = c.read(audioInputProvider) as WavAudioInput;
+        var frames = 0;
+        input.start().listen((_) => frames++);
+        async.elapse(const Duration(seconds: 29));
+        expect(frames, 0);
+        async.elapse(const Duration(seconds: 3));
+        expect(frames, greaterThan(0));
+        unawaited(input.stop());
+        c.dispose();
+      });
     });
 
     test(

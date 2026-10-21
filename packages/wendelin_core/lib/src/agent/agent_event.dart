@@ -443,13 +443,21 @@ final class AttestationStatusChanged extends AgentEvent {
 /// The run finished with a final answer (terminal).
 final class AgentDone extends AgentEvent {
   /// Creates the event.
-  const AgentDone({required this.finalText, required this.stopReason});
+  const AgentDone({
+    required this.finalText,
+    required this.stopReason,
+    this.fixed = false,
+  });
 
   /// Complete answer text of the last model turn.
   final String finalText;
 
   /// Stop reason of the last model call.
   final StopReason stopReason;
+
+  /// Whether the answer is a fixed confirmation sentence (WP122): the last
+  /// text came without a model call.
+  final bool fixed;
 
   @override
   String toString() => 'AgentDone(${stopReason.name}, $finalText)';

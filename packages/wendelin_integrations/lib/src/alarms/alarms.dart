@@ -194,7 +194,7 @@ final class AlarmsIntegration implements Integration {
 
 /// `alarms__set_alarm` (write; undo only if the platform returns an id).
 final class SetAlarmTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool.
   const SetAlarmTool(this.port);
 
@@ -230,6 +230,9 @@ final class SetAlarmTool extends IntegrationTool
   @override
   RiskLevel get risk => RiskLevel.write;
 
+  @override
+  Set<String> get confirmationKeys => const {'alarm.set'};
+
   ({int hour, int minute, String? label, Set<int> days}) _read(ToolArgs args) {
     final minutes = parseClockTime(args.requireString('time'), 'time');
     if (minutes >= 24 * 60) {
@@ -257,6 +260,10 @@ final class SetAlarmTool extends IntegrationTool
     return ToolOutcome.text(
       'Wecker gestellt: $when${a.label == null ? '' : ', „${a.label}“'}.',
       summary: 'Wecker gestellt: $when',
+      fixed: ConfirmationSentence('alarm.set', {
+        'time': _clock(a.hour, a.minute),
+        'days': a.days,
+      }),
       undo: id == null
           ? null
           : UndoAction(label: 'Wecker löschen', run: () => port.cancel(id)),
@@ -275,7 +282,7 @@ final class SetAlarmTool extends IntegrationTool
 
 /// `alarms__set_timer` (write; undo only if the platform returns an id).
 final class SetTimerTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool.
   const SetTimerTool(this.port);
 
@@ -312,6 +319,9 @@ final class SetTimerTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'timer.set'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final duration = Duration(
       seconds: args.requireInt('duration_seconds', min: 1, max: maxSeconds),
@@ -325,6 +335,7 @@ final class SetTimerTool extends IntegrationTool
       'Timer gestellt: $text${label == null ? '' : ', „$label“'}; '
       'läuft ab um ${isoInZone(ends, timeZoneLocation(ctx.timeZone))}.',
       summary: 'Timer: $text',
+      fixed: ConfirmationSentence('timer.set', {'duration': duration}),
       undo: id == null
           ? null
           : UndoAction(label: 'Timer löschen', run: () => port.cancel(id)),

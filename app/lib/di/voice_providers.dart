@@ -16,8 +16,10 @@ import '../platform/voice/silero_vad.dart';
 import '../platform/voice/stt_loader.dart';
 import '../platform/voice/system_tts.dart';
 import '../platform/voice/whisper_stt.dart';
+import '../voice/latency_trace.dart';
 import '../voice/voice_log.dart';
 import '../voice/voice_metrics.dart';
+import '../voice/wake/mic_tail.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
 import 'hint_term_providers.dart';
@@ -85,6 +87,15 @@ final speechFocusProvider = Provider<SpeechFocus>((ref) {
 final audioInputProvider = Provider<AudioInput>(
   (ref) => RecordAudioInput(ref.watch(microphoneProvider)),
 );
+
+/// WP123: the last seconds of the pipeline's capture (warm start of the
+/// barge-in chain, see `MicTail`).
+final micTailProvider = Provider<MicTail>((ref) => MicTail());
+
+/// The voice pipeline's [mic], with a copy of what it records in
+/// [micTailProvider] (WP123).
+AudioInput tapMic(Ref ref, AudioInput mic) =>
+    TappedAudioInput(mic, ref.read(micTailProvider));
 
 Future<SpeechModel> _installedModel(Ref ref, String id, String what) async {
   final model = ref.read(speechModelCatalogProvider).byId(id);
@@ -232,6 +243,15 @@ void _addMetric(Ref ref, VoiceMetric metric) {
   }
 }
 
+/// Feeds the latency time line (WP120); ignored once the container is gone.
+void _trace(Ref ref, void Function(LatencyTrace trace) f) {
+  try {
+    f(ref.read(latencyTraceProvider));
+  } on Object {
+    // The container was disposed (end of a test or of the engine).
+  }
+}
+
 /// Android system TTS.
 final systemTtsProvider = Provider<TextToSpeech>((ref) => SystemTextToSpeech());
 
@@ -310,16 +330,20 @@ TextToSpeech createSherpaTts(
     playback: out,
     preferred: () =>
         ref.read(voiceSettingsProvider).value?.sherpaVoices ?? const {},
-    onTiming: (voiceId, audio, compute) => _addMetric(
-      ref,
-      VoiceMetric(
-        kind: VoiceMetricKind.tts,
-        model: voiceId.replaceAll('/', '.'),
-        audio: audio,
-        compute: compute,
-        rssBytes: currentRssBytes(),
-      ),
-    ),
+    onPlay: (started) => _trace(ref, (t) => t.audio(started: started)),
+    onTiming: (voiceId, audio, compute) {
+      _trace(ref, (t) => t.synthesized(compute));
+      _addMetric(
+        ref,
+        VoiceMetric(
+          kind: VoiceMetricKind.tts,
+          model: voiceId.replaceAll('/', '.'),
+          audio: audio,
+          compute: compute,
+          rssBytes: currentRssBytes(),
+        ),
+      );
+    },
     preferredSpeakers: () =>
         ref.read(voiceSettingsProvider).value?.sherpaSpeakers ?? const {},
   );

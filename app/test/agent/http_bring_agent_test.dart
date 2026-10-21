@@ -115,15 +115,22 @@ void main() {
   ) async {
     final provider = FakeLlmProvider([
       ScriptedTurn.toolCalls([
-        call('c1', 'bring__add_items', '{"items":[{"name":"Eier"}]}'),
+        call(
+          'c1',
+          'bring__add_items',
+          '{"items":[{"name":"Eier"}],"list":"Zuhause"}',
+        ),
       ]),
-      ScriptedTurn.text('Eier stehen drauf.'),
+      // Fester Satz (WP122): die Modellantwort entfällt.
     ]);
     final env = agentEnv(provider);
     await loginBring(env);
     await pumpApp(tester, env);
     await send(tester, 'Setz Eier auf die Bring-Liste');
-    await pumpUntil(tester, find.text('Eier stehen drauf.'));
+    await pumpUntil(
+      tester,
+      find.textContaining('auf die Liste Zuhause gesetzt'),
+    );
     final zuhause = env.bring.list('list-zuhause')!;
     expect(zuhause.purchase.map((i) => i.name), contains('Eier'));
     final undo = find.textContaining('Rückgängig · ');
@@ -197,7 +204,11 @@ void main() {
     final provider = FakeLlmProvider([
       ScriptedTurn.toolCalls([
         call('c1', 'http__licht', '{"raum":"bad"}'),
-        call('c2', 'bring__add_items', '{"items":[{"name":"Eier"}]}'),
+        call(
+          'c2',
+          'bring__add_items',
+          '{"items":[{"name":"Eier"}],"list":"Zuhause"}',
+        ),
       ]),
       ScriptedTurn.text('Fertig.'),
     ]);

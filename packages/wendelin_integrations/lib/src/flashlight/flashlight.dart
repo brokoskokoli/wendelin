@@ -80,7 +80,7 @@ enum TorchMode {
 /// `flashlight__on`, `flashlight__off`, `flashlight__toggle` (write, undo
 /// restores the previous state). The result holds only the own state.
 final class FlashlightTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates a tool of the given [mode].
   const FlashlightTool(this.port, {required this.name, required this.mode});
 
@@ -112,6 +112,9 @@ final class FlashlightTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'flashlight.on', 'flashlight.off'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     if (!await port.isAvailable()) {
       throw const PortException(
@@ -132,6 +135,7 @@ final class FlashlightTool extends IntegrationTool
     return ToolOutcome.text(
       previous == target ? '$text (war schon so)' : text,
       summary: target ? 'Taschenlampe an' : 'Taschenlampe aus',
+      fixed: ConfirmationSentence(target ? 'flashlight.on' : 'flashlight.off'),
       undo: previous == target
           ? null
           : UndoAction(

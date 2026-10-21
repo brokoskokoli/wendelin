@@ -13,6 +13,13 @@ String? _optText(ToolArgs args, String key) {
   return v == null || v.isEmpty ? null : v;
 }
 
+/// The wall-clock time of [instant] in [loc] as a plain date-time (fields
+/// only, the confirmation sentence shows them as they are).
+DateTime _wallClock(DateTime instant, tz.Location loc) {
+  final l = tz.TZDateTime.from(instant, loc);
+  return DateTime.utc(l.year, l.month, l.day, l.hour, l.minute);
+}
+
 /// German span for confirmation texts from raw arguments.
 String _describeArgsSpan(ToolArgs args, tz.Location loc, {CalendarEvent? old}) {
   final t = readEventTimes(args, loc, old: old);
@@ -27,7 +34,7 @@ String _describeArgsSpan(ToolArgs args, tz.Location loc, {CalendarEvent? old}) {
 
 /// `calendar__create_event` (write, undo deletes the event).
 final class CreateEventTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool.
   const CreateEventTool(this.env);
 
@@ -80,6 +87,9 @@ final class CreateEventTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'event.created'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final zoneName = _optText(args, 'time_zone');
     final loc = env.zoneFor(ctx, zoneName);
@@ -107,6 +117,12 @@ final class CreateEventTool extends IntegrationTool
         'created': eventJson(event, loc, const {}),
       },
       summary: 'Termin angelegt: ${event.title}, $when',
+      fixed: event.allDay
+          ? null
+          : ConfirmationSentence('event.created', {
+              'title': event.title,
+              'when': _wallClock(event.start, loc),
+            }),
       undo: UndoAction(
         label: 'Termin entfernen',
         run: () => env.port.deleteEvent(event.id),

@@ -4,7 +4,16 @@
 // orders). Parsing never changes the stored line; the writer only appends
 // tokens, so unknown tokens (🔁, ⏳, #tags …) survive.
 
+import 'package:wendelin_core/wendelin_core.dart' show ConfirmationSentence;
+
 import '../common/time.dart';
+
+/// Sentence for a task added to a cloud task service; [list] is only what
+/// the user said (untrusted server names never go in).
+ConfirmationSentence addedTaskSentence(String title, String? list) =>
+    list == null
+    ? ConfirmationSentence('task.addedPlain', {'title': title})
+    : ConfirmationSentence('task.added', {'title': title, 'list': list});
 
 /// Task priority, mapped to the Obsidian Tasks emojis.
 enum TaskPriority {

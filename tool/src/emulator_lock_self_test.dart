@@ -187,8 +187,8 @@ final class _Lock {
     final e2e = File('tool/e2e_android.sh').readAsStringSync();
     t.isTrue(
       e2e.contains('emu_lock_acquire "\$DEVICE"') &&
-          RegExp(r'cleanup\(\) \{\n\s+emu_lock_release').hasMatch(e2e),
-      'e2e_android.sh: acquire nach Geräteauswahl, release in cleanup',
+          RegExp(r'\n  emu_lock_release\n\}\ntrap cleanup EXIT').hasMatch(e2e),
+      'e2e_android.sh: acquire nach Geräteauswahl, release am Ende von cleanup',
     );
   }
 }

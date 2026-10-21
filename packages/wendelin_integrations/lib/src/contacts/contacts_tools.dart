@@ -106,7 +106,10 @@ String recipientLine(String name, String number) =>
 /// was confirmed is the text that is sent: an edit of the preview wins
 /// ([SmsDraftEdits]).
 final class SmsComposeTool extends IntegrationTool
-    implements ConfirmationPreparer, AuditArgumentsRedactor {
+    implements
+        ConfirmationPreparer,
+        AuditArgumentsRedactor,
+        FixedConfirmationTool {
   /// Creates the tool.
   const SmsComposeTool(this.finder, this.phone, this.edits);
 
@@ -143,6 +146,9 @@ final class SmsComposeTool extends IntegrationTool
   @override
   RiskLevel get risk => RiskLevel.external;
 
+  @override
+  Set<String> get confirmationKeys => const {'sms.sent'};
+
   ({String to, String text}) _read(ToolArgs args) {
     final text = args.requireString('text').trim();
     if (text.isEmpty) throw const InvalidArgumentsException('„text“ ist leer');
@@ -176,6 +182,7 @@ final class SmsComposeTool extends IntegrationTool
     return ToolOutcome.text(
       'Die SMS an ${recipient.name} wurde gesendet.',
       summary: 'SMS an ${recipient.name} gesendet',
+      fixed: ConfirmationSentence('sms.sent', {'name': recipient.name}),
     );
   }
 
@@ -211,7 +218,10 @@ final class SmsComposeTool extends IntegrationTool
 /// `phone__call` (external): calls a number after the user confirmed
 /// (name and number shown). Without `CALL_PHONE` the dialer opens instead.
 final class PhoneCallTool extends IntegrationTool
-    implements ConfirmationPreparer, AuditArgumentsRedactor {
+    implements
+        ConfirmationPreparer,
+        AuditArgumentsRedactor,
+        FixedConfirmationTool {
   /// Creates the tool.
   const PhoneCallTool(this.finder, this.phone);
 
@@ -244,6 +254,9 @@ final class PhoneCallTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.external;
 
   @override
+  Set<String> get confirmationKeys => const {'call.started'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final r = await recipientOf(finder, args.requireString('to'));
     final placement = await phone.call(r.number);
@@ -251,6 +264,7 @@ final class PhoneCallTool extends IntegrationTool
       CallPlacement.direct => ToolOutcome.text(
         'Der Anruf bei ${r.name} wurde gestartet.',
         summary: 'Anruf bei ${r.name}',
+        fixed: ConfirmationSentence('call.started', {'name': r.name}),
       ),
       CallPlacement.dialer => ToolOutcome.text(
         'Der Wählbildschirm mit der Nummer von ${r.name} ist geöffnet; der '

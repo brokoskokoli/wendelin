@@ -285,4 +285,32 @@ void main() {
     );
     expect(a.toString(), contains('07:05'));
   });
+
+  group('feste Bestätigung', () {
+    test('Wecker: Zeit und Tage', () async {
+      final t = tool('alarms__set_alarm');
+      final o = await t.execute({
+        'time': '06:45',
+        'days': [1, 2, 3, 4, 5],
+      }, ctx());
+      expectFixed(
+        o,
+        t,
+        'alarm.set',
+        de: 'Der Wecker ist auf 06:45 Uhr gestellt (montags bis freitags).',
+      );
+    });
+
+    test('Timer: Dauer', () async {
+      final t = tool('alarms__set_timer');
+      final o = await t.execute({'duration_seconds': 600}, ctx());
+      expectFixed(o, t, 'timer.set', de: 'Der Timer läuft: 10 Minuten.');
+    });
+
+    test('Fehler: keine Bestätigung', () async {
+      final o = await tool('alarms__set_alarm').execute({'time': 'xx'}, ctx());
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+  });
 }

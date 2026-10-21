@@ -74,3 +74,39 @@ abstract interface class TextToSpeech {
   /// Stops the current utterance.
   Future<void> stop();
 }
+
+/// An utterance whose synthesis was started ahead of playback
+/// ([PrefetchingTextToSpeech.prepare]).
+abstract interface class TtsPrepared {
+  /// The text of the utterance.
+  String get text;
+
+  /// Throws the prepared audio away (idempotent, never throws). Playing a
+  /// discarded utterance completes at once without a sound.
+  void discard();
+}
+
+/// A [TextToSpeech] that can synthesise an utterance while another one is
+/// still playing (WP120): the pause between two sentences then shrinks from
+/// "synthesis time" to nothing, as long as the voice is faster than real
+/// time.
+///
+/// Contract:
+/// - [prepare] starts the synthesis at once and never plays; it does not
+///   change [state]. Errors surface in [speakPrepared].
+/// - [speakPrepared] behaves like [speak] but uses the prepared audio; it
+///   completes when the utterance has finished or was stopped.
+/// - [stop] also invalidates everything prepared before it (a later
+///   [speakPrepared] of such an utterance completes without a sound).
+abstract interface class PrefetchingTextToSpeech implements TextToSpeech {
+  /// Starts synthesising [text] without playing it.
+  TtsPrepared prepare(
+    String text, {
+    String? voice,
+    String? language,
+    double rate = 1.0,
+  });
+
+  /// Plays [prepared] (waits for its synthesis if it is still running).
+  Future<void> speakPrepared(TtsPrepared prepared);
+}

@@ -21,6 +21,7 @@ final class UserInput {
     this.source = InputSource.text,
     this.sttConfidence,
     this.language,
+    this.interfaceLanguage,
     this.requestEscalation = false,
     this.speakerId,
   }) : images = List.unmodifiable(images);
@@ -39,6 +40,11 @@ final class UserInput {
 
   /// Detected or chosen language as BCP 47 tag (e.g. `de`).
   final String? language;
+
+  /// Language of the app / device (BCP 47). Only used for fixed
+  /// confirmation sentences when [language] is unknown (typed input); it
+  /// does not take part in routing.
+  final String? interfaceLanguage;
 
   /// The user explicitly asked for a stronger model ("nochmal mit Claude",
   /// "das war falsch"); the agent escalates (concept: Routing → Eskalation).

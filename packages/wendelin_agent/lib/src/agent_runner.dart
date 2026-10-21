@@ -9,6 +9,7 @@ import 'ports.dart';
 import 'provider_resolver.dart';
 import 'run/attestation_gate.dart';
 import 'run/escalation.dart';
+import 'run/fixed_answer.dart';
 import 'run/model_call.dart';
 import 'run/overlap_control.dart';
 import 'run/privacy_scope.dart';
@@ -40,6 +41,7 @@ final class AgentRunner implements AgentRun, RunConfig {
     this.catalogFor,
     this.onToolRefused,
     this.onUndoFailed,
+    this.onFixedConfirmation,
     this.memoryFloor,
     this.memoryOwner = '',
   });
@@ -94,6 +96,12 @@ final class AgentRunner implements AgentRun, RunConfig {
   /// verified (TEE) and the undo failed (the app audits it here).
   @override
   final void Function(String sessionId, ToolCallBlock call)? onUndoFailed;
+
+  /// Called per tool whose fixed confirmation sentence ended a request
+  /// without a second model call (WP122); the app logs
+  /// `confirm=fixed tool=<name>` here.
+  @override
+  final void Function(String sessionId, String toolName)? onFixedConfirmation;
 
   /// Privacy floor of every memory entry: the lowest level allowed to see
   /// the memory at all (e.g. `tee` for the sensitive memory integration).
@@ -201,6 +209,17 @@ final class _Run implements RunControl {
     this,
     _attest,
   );
+  late final FixedAnswer _fixed = FixedAnswer(
+    runner,
+    _state,
+    _privacy,
+    this,
+    _tools,
+  );
+
+  /// The terminal event when a tool round ended the run with a fixed
+  /// confirmation sentence (WP122), else `null`.
+  AgentDone? _fixedDone;
   late final _model = ModelCall(
     runner,
     _state,
@@ -316,6 +335,7 @@ final class _Run implements RunControl {
       // Tool round (also for tool calls in a paused answer: every tool_use
       // gets its tool_result).
       ahead = await _toolRound(assistant, calls, reply.step);
+      if (_fixedDone case final done?) return done;
     }
   }
 
@@ -432,6 +452,16 @@ final class _Run implements RunControl {
     _budget.onRound();
     await _state.append(assistant);
     final round = await _tools.execute(calls, step);
+    // WP122: every call succeeded and has a template → no second model call.
+    final sentence = _fixed.sentenceFor(
+      round,
+      input.language ?? input.interfaceLanguage,
+    );
+    if (sentence != null) {
+      _fixedDone = await _fixed.finish(round, sentence);
+      throwIfAborted();
+      return null;
+    }
     ModelReply? ahead;
     if (round.overlappable) {
       ahead = await _overlap(round);

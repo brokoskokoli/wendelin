@@ -40,4 +40,18 @@ void main() {
     expect(out.isError, isTrue);
     expect(port.starts, 0);
   });
+
+  test('feste Bestätigung beim Start; gesperrt ohne Satz', () async {
+    final t = integration.tools.single;
+    expectFixed(
+      await t.execute({}, ctx()),
+      t,
+      'station.started',
+      de: 'Der Stationsmodus ist an.',
+    );
+    port.locked = true;
+    final o = await t.execute({}, ctx());
+    expect(o.isError, isTrue);
+    expect(o.fixed, isNull);
+  });
 }

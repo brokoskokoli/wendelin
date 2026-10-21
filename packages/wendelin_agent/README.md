@@ -10,6 +10,7 @@ Agent-Schleife in reinem Dart: Kontext aufbauen, Modell aufrufen, Tools ausführ
 
 | Datei | Inhalt |
 | --- | --- |
+| `lib/src/run/fixed_answer.dart` | Feste Bestätigungssätze (WP122): Tool-Runde mit lauter erfolgreichen Aufrufen und Vorlage endet ohne zweiten Modellaufruf; sonst antwortet das Modell. |
 | `lib/src/agent_runner.dart` | `AgentRunner` (`AgentRun`): eine Anfrage bis zur Antwort, Runden, Budget, Eskalation, Pause bei Bestätigung, Taint und Privatsphäre-Untergrenze. WP37 zerlegt die Datei. |
 | `lib/src/agent_config.dart` | `AgentConfig` (Runden, Zeit, Tokens, Systemprompt) |
 | `lib/src/context_builder.dart` | `ContextBuilder`: Systemprompt, Gedächtnis, Verlauf |

@@ -39,6 +39,10 @@ abstract interface class RunConfig {
   /// Called when taking back an unverified answer's action failed.
   void Function(String sessionId, ToolCallBlock call)? get onUndoFailed;
 
+  /// Called once per tool that ended a request with its fixed confirmation
+  /// sentence (WP122); only the tool name, never the sentence.
+  void Function(String sessionId, String toolName)? get onFixedConfirmation;
+
   /// Privacy floor of every memory entry.
   PrivacyLevel? get memoryFloor;
 

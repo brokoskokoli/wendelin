@@ -57,7 +57,7 @@ final class StationIntegration implements Integration {
 
 /// `station__start` (write): opens the station mode on an unlocked device.
 final class StationStartTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool.
   const StationStartTool(this.port);
 
@@ -83,6 +83,9 @@ final class StationStartTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'station.started'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     if (await port.isLocked()) {
       throw const PortException(
@@ -95,6 +98,7 @@ final class StationStartTool extends IntegrationTool
       'Der Stationsmodus ist an. Beenden geht nur am Bildschirm nach dem '
       'Entsperren.',
       summary: 'Stationsmodus gestartet',
+      fixed: const ConfirmationSentence('station.started'),
     );
   }
 

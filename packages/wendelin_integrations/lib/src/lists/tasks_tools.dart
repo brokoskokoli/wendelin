@@ -88,7 +88,10 @@ LocalDate _today(ToolContext ctx) =>
 
 /// `tasks__add` (write; undo removes the added line).
 final class TasksAddTool extends IntegrationTool
-    implements TrustedContentSource, AuditArgumentsRedactor {
+    implements
+        TrustedContentSource,
+        AuditArgumentsRedactor,
+        FixedConfirmationTool {
   /// Creates the tool.
   const TasksAddTool(this.env);
 
@@ -128,6 +131,9 @@ final class TasksAddTool extends IntegrationTool
 
   @override
   RiskLevel get risk => RiskLevel.write;
+
+  @override
+  Set<String> get confirmationKeys => const {'task.added'};
 
   ({String text, String title}) _compose(ToolArgs args) {
     final title = args.requireString('title');
@@ -181,7 +187,14 @@ final class TasksAddTool extends IntegrationTool
     final def = env.resolveTaskList(args.optString('list'), write: true);
     return env.exclusive(
       def.target,
-      () => AddItemsTool(env).add(def, [task.text]),
+      () => AddItemsTool(env).add(
+        def,
+        [task.text],
+        sentence: (def, _) => ConfirmationSentence('task.added', {
+          'title': task.title,
+          'list': def.name,
+        }),
+      ),
     );
   }
 
@@ -311,7 +324,7 @@ final class TasksListTool extends IntegrationTool {
 
 /// `tasks__complete` (write; undo restores the original line).
 final class TasksCompleteTool extends IntegrationTool
-    implements AuditArgumentsRedactor {
+    implements AuditArgumentsRedactor, FixedConfirmationTool {
   /// Creates the tool.
   const TasksCompleteTool(this.env);
 
@@ -341,6 +354,9 @@ final class TasksCompleteTool extends IntegrationTool
 
   @override
   RiskLevel get risk => RiskLevel.write;
+
+  @override
+  Set<String> get confirmationKeys => const {'task.done'};
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
@@ -374,6 +390,7 @@ final class TasksCompleteTool extends IntegrationTool
       return jsonOutcome(
         {'list': def.name, 'completed': title},
         summary: '${def.name}: $title erledigt',
+        fixed: ConfirmationSentence('task.done', {'title': title}),
         undo: UndoAction(
           label: 'Wieder offen',
           run: () => env.exclusive(def.target, () async {

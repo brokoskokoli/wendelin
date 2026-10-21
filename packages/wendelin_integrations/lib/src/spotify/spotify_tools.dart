@@ -201,7 +201,8 @@ final class SpotifyNowPlayingTool extends IntegrationTool {
 }
 
 /// `spotify__play` (write): undo pauses or restores the previous title.
-final class SpotifyPlayTool extends IntegrationTool {
+final class SpotifyPlayTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const SpotifyPlayTool(this.session);
 
@@ -228,6 +229,9 @@ final class SpotifyPlayTool extends IntegrationTool {
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'media.play'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final wanted = args.has('query') || args.has('uri');
     final target = wanted ? await _resolve(session, args) : null;
@@ -248,6 +252,8 @@ final class SpotifyPlayTool extends IntegrationTool {
           ? 'Wiedergabe fortgesetzt.'
           : 'Spielt: ${target.label} (${target.uri}).',
       summary: target == null ? 'Weiter' : 'Spielt ${target.label}',
+      // A label is the uri or a server name; never read it aloud.
+      fixed: const ConfirmationSentence('media.play'),
       undo: UndoAction(
         label: before != null && before.isPlaying && target != null
             ? 'Vorheriges wieder spielen'
@@ -307,7 +313,8 @@ final class SpotifyPlayTool extends IntegrationTool {
 }
 
 /// `spotify__pause` (write): undo continues playing.
-final class SpotifyPauseTool extends IntegrationTool {
+final class SpotifyPauseTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const SpotifyPauseTool(this.session);
 
@@ -328,6 +335,9 @@ final class SpotifyPauseTool extends IntegrationTool {
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'media.pause'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final p = await session.run(session.api.playback);
     if (p == null || !p.isPlaying) {
@@ -340,6 +350,7 @@ final class SpotifyPauseTool extends IntegrationTool {
     return ToolOutcome.text(
       'Pausiert${p.title == null ? '' : ': ${p.title}'}.',
       summary: 'Pausiert',
+      fixed: const ConfirmationSentence('media.pause'),
       undo: UndoAction(
         label: 'Weiter abspielen',
         run: () => session.run(session.api.play),
@@ -356,7 +367,7 @@ final class SpotifyPauseTool extends IntegrationTool {
 
 /// `spotify__next` (write, no undo: skipping cannot be taken back exactly).
 final class SpotifyNextTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool.
   const SpotifyNextTool(this.session);
 
@@ -376,9 +387,16 @@ final class SpotifyNextTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'media.next'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     await session.playbackCommand((a, d) => session.api.next(a, deviceId: d));
-    return ToolOutcome.text('Nächster Titel.', summary: 'Nächster Titel');
+    return ToolOutcome.text(
+      'Nächster Titel.',
+      summary: 'Nächster Titel',
+      fixed: const ConfirmationSentence('media.next'),
+    );
   }
 
   @override
@@ -390,7 +408,7 @@ final class SpotifyNextTool extends IntegrationTool
 
 /// `spotify__previous` (write, no undo).
 final class SpotifyPreviousTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool.
   const SpotifyPreviousTool(this.session);
 
@@ -412,11 +430,18 @@ final class SpotifyPreviousTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'media.previous'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     await session.playbackCommand(
       (a, d) => session.api.previous(a, deviceId: d),
     );
-    return ToolOutcome.text('Vorheriger Titel.', summary: 'Vorheriger Titel');
+    return ToolOutcome.text(
+      'Vorheriger Titel.',
+      summary: 'Vorheriger Titel',
+      fixed: const ConfirmationSentence('media.previous'),
+    );
   }
 
   @override

@@ -172,8 +172,17 @@ final class BringGetItemsTool extends IntegrationTool {
   String get fallbackDescription => 'Bring!-Liste anzeigen';
 }
 
+/// The sentence for [key] with the list the user named, else its
+/// `.default` variant without a list name (never a server name).
+ConfirmationSentence _sentence(String key, String? said, List<String> items) =>
+    ConfirmationSentence(said == null ? '$key.default' : key, {
+      'items': items,
+      'list': ?said,
+    });
+
 /// `bring__add_items` (write): undo removes exactly the added items.
-final class BringAddItemsTool extends IntegrationTool {
+final class BringAddItemsTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const BringAddItemsTool(this.session);
 
@@ -222,6 +231,14 @@ final class BringAddItemsTool extends IntegrationTool {
   @override
   RiskLevel get risk => RiskLevel.write;
 
+  @override
+  Set<String> get confirmationKeys => const {
+    'list.added',
+    'list.present',
+    'list.added.default',
+    'list.present.default',
+  };
+
   List<BringItem> _items(ToolArgs args) {
     final raw = args.raw['items'];
     if (raw is! List<Object?> || raw.isEmpty) {
@@ -255,10 +272,18 @@ final class BringAddItemsTool extends IntegrationTool {
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final wanted = _items(args);
     final list = await session.resolveList(args.optString('list'), write: true);
-    return session.exclusive(list.uuid, () => _add(list, wanted));
+    final said = args.optString('list');
+    return session.exclusive(
+      list.uuid,
+      () => _add(list, wanted, said == null || said.isEmpty ? null : said),
+    );
   }
 
-  Future<ToolOutcome> _add(BringList list, List<BringItem> wanted) async {
+  Future<ToolOutcome> _add(
+    BringList list,
+    List<BringItem> wanted,
+    String? said,
+  ) async {
     final items = await session.run((a) => session.api.items(a, list.uuid));
     final open = {for (final i in items.purchase) _flat(i.name): i};
     final recent = {for (final i in items.recently) _flat(i.name): i};
@@ -298,6 +323,20 @@ final class BringAddItemsTool extends IntegrationTool {
       open[key] = item;
       added.add((item: item, before: before));
     }
+    return _outcome(list, said, added, skipped, notAdded, error);
+  }
+
+  /// [said] is the list name as the user said it (untrusted server names
+  /// never go into a fixed sentence, see `task_format.dart`); without it the
+  /// model answers.
+  ToolOutcome _outcome(
+    BringList list,
+    String? said,
+    List<({BringItem item, BringItem? before})> added,
+    List<BringItem> skipped,
+    List<BringItem> notAdded,
+    String? error,
+  ) {
     final result = {
       'list': list.name,
       'added': [for (final a in added) a.item.toJson()],
@@ -309,7 +348,14 @@ final class BringAddItemsTool extends IntegrationTool {
       },
     };
     if (added.isEmpty) {
-      return jsonOutcome(result, summary: '${list.name}: schon vorhanden');
+      return jsonOutcome(
+        result,
+        summary: '${list.name}: schon vorhanden',
+        // Only when nothing failed: all wanted items were on the list.
+        fixed: error == null && skipped.isNotEmpty && notAdded.isEmpty
+            ? _sentence('list.present', said, [for (final s in skipped) s.name])
+            : null,
+      );
     }
     final labels = added.map((a) => _label(a.item)).join(', ');
     return jsonOutcome(
@@ -317,6 +363,12 @@ final class BringAddItemsTool extends IntegrationTool {
       summary: error == null
           ? '${list.name}: $labels hinzugefügt'
           : '${list.name}: teilweise hinzugefügt ($labels)',
+      // Only a complete success; skipped, partial or failed → the model.
+      fixed: error == null && skipped.isEmpty
+          ? _sentence('list.added', said, [
+              for (final a in added) _label(a.item),
+            ])
+          : null,
       undo: UndoAction(
         label: 'Artikel entfernen',
         run: () => session.exclusive(list.uuid, () => _undo(list, added)),
@@ -457,7 +509,8 @@ final class BringRemoveItemTool extends IntegrationTool {
 
 /// `bring__complete_item` (write): marks an item as bought; undo puts it
 /// back on the open list.
-final class BringCompleteItemTool extends IntegrationTool {
+final class BringCompleteItemTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const BringCompleteItemTool(this.session);
 
@@ -482,9 +535,14 @@ final class BringCompleteItemTool extends IntegrationTool {
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'list.done', 'list.done.default'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final query = args.requireString('item');
-    final list = await session.resolveList(args.optString('list'), write: true);
+    final said0 = args.optString('list');
+    final said = said0 == null || said0.isEmpty ? null : said0;
+    final list = await session.resolveList(said0, write: true);
     return session.exclusive(list.uuid, () async {
       final items = await session.run((a) => session.api.items(a, list.uuid));
       // Abhaken ist rückgängig machbar: ein eindeutiger Treffer über ganze
@@ -507,6 +565,10 @@ final class BringCompleteItemTool extends IntegrationTool {
       return jsonOutcome(
         {'list': list.name, 'completed': item.toJson()},
         summary: '${list.name}: ${item.name} gekauft',
+        // Only what the user said, never server names.
+        fixed: said == null
+            ? ConfirmationSentence('list.done.default', {'item': query})
+            : ConfirmationSentence('list.done', {'item': query, 'list': said}),
         undo: UndoAction(
           label: 'Wieder offen',
           run: () => session.exclusive(

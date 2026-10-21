@@ -87,11 +87,12 @@ final class FakeSpeechToText implements SpeechToText {
 /// queued utterances.
 ///
 /// Passes `textToSpeechContract`.
-final class FakeTextToSpeech implements TextToSpeech {
+final class FakeTextToSpeech implements PrefetchingTextToSpeech {
   /// Creates a fake engine.
   FakeTextToSpeech({
     this.utteranceDuration = Duration.zero,
     this.manual = false,
+    this.synthesisDuration = Duration.zero,
     this.available = true,
     List<TtsVoice> voices = const [
       TtsVoice(id: 'fake-de', language: 'de'),
@@ -102,6 +103,10 @@ final class FakeTextToSpeech implements TextToSpeech {
 
   /// Length of each utterance.
   final Duration utteranceDuration;
+
+  /// Time the synthesis of one utterance takes ([speak] waits for it before
+  /// the utterance starts; [prepare] runs it in the background).
+  final Duration synthesisDuration;
 
   /// Whether utterances only end with [completeCurrent] or [stop].
   final bool manual;
@@ -125,6 +130,12 @@ final class FakeTextToSpeech implements TextToSpeech {
   /// Options of all [speak] calls.
   final calls =
       <({String text, String? voice, String? language, double rate})>[];
+
+  /// Texts handed to [prepare], in order.
+  final prepared = <String>[];
+
+  /// Prepared texts that were discarded before they were played.
+  final discarded = <String>[];
 
   /// Number of [stop] calls.
   int stops = 0;
@@ -166,6 +177,15 @@ final class FakeTextToSpeech implements TextToSpeech {
     }
     calls.add((text: text, voice: voice, language: language, rate: rate));
     if (text.trim().isEmpty) return Future.value();
+    if (synthesisDuration > Duration.zero) {
+      final wait = Completer<void>();
+      Timer(synthesisDuration, wait.complete);
+      return wait.future.then((_) => _play(text));
+    }
+    return _play(text);
+  }
+
+  Future<void> _play(String text) {
     final done = Completer<void>();
     final wait = synthesis;
     if (wait != null && !wait.isCompleted) {
@@ -178,6 +198,45 @@ final class FakeTextToSpeech implements TextToSpeech {
     _queue.add((text: text, done: done));
     _startNext();
     return done.future;
+  }
+
+  @override
+  TtsPrepared prepare(
+    String text, {
+    String? voice,
+    String? language,
+    double rate = 1.0,
+  }) {
+    if (rate <= 0) throw ArgumentError.value(rate, 'rate', 'muss > 0 sein');
+    prepared.add(text);
+    calls.add((text: text, voice: voice, language: language, rate: rate));
+    final item = _FakePrepared(text, stops, this);
+    if (synthesisDuration > Duration.zero) {
+      Timer(synthesisDuration, item.complete);
+    } else {
+      item.complete();
+    }
+    return item;
+  }
+
+  @override
+  Future<void> speakPrepared(TtsPrepared prepared) {
+    final item = prepared as _FakePrepared;
+    // Synchronous when the synthesis is done (like [speak] without one).
+    if (item.isReady) return _playPrepared(item);
+    return item._ready.future.then((_) => _playPrepared(item));
+  }
+
+  Future<void> _playPrepared(_FakePrepared item) async {
+    // Discarded, or stopped after it was prepared: no sound.
+    if (item.discardedFlag || item.stopsAtPrepare != stops) return;
+    final error = nextError;
+    if (error != null) {
+      nextError = null;
+      throw error;
+    }
+    if (item.text.trim().isEmpty) return;
+    return _play(item.text);
   }
 
   /// Ends the current utterance (manual mode) and starts the next one.
@@ -261,5 +320,29 @@ final class FakeHintTermSource implements HintTermSource {
     final f = failure;
     if (f != null) throw f;
     return _terms;
+  }
+}
+
+final class _FakePrepared implements TtsPrepared {
+  _FakePrepared(this.text, this.stopsAtPrepare, this._owner);
+
+  @override
+  final String text;
+  final int stopsAtPrepare;
+  final FakeTextToSpeech _owner;
+  final _ready = Completer<void>();
+  bool discardedFlag = false;
+  bool isReady = false;
+
+  void complete() {
+    isReady = true;
+    _ready.complete();
+  }
+
+  @override
+  void discard() {
+    if (discardedFlag) return;
+    discardedFlag = true;
+    _owner.discarded.add(text);
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:clock/clock.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'pcm.dart';
@@ -13,6 +14,9 @@ import 'pcm.dart';
 /// overlay reads it through `deviceTestOverrides` (`lib/debug/`), device
 /// tests override `audioInputProvider` with it. Release builds never use it.
 final class WavAudioInput implements AudioInput {
+  /// Most frames one timer tick delivers (1 s of audio at 20 ms frames).
+  static const maxCatchUpFrames = 50;
+
   /// Plays [samples] (16 kHz mono PCM16) in frames of [frame], paced in
   /// real time divided by [speed].
   WavAudioInput(
@@ -38,6 +42,7 @@ final class WavAudioInput implements AudioInput {
     this.speed = 1,
     this.leadingSilence = const Duration(milliseconds: 300),
     this.now = DateTime.now,
+    this.gate,
   }) : assert(speed > 0, 'speed > 0'),
        assert(recordings.isNotEmpty, 'at least one recording');
 
@@ -54,10 +59,15 @@ final class WavAudioInput implements AudioInput {
 
   /// Reads the WAV files at [paths] (16 kHz mono PCM16), one per recording
   /// ([WavAudioInput.sequence]).
-  factory WavAudioInput.files(List<String> paths, {double speed = 1}) =>
-      WavAudioInput.sequence([
-        for (final path in paths) WavAudioInput.file(path).samples,
-      ], speed: speed);
+  factory WavAudioInput.files(
+    List<String> paths, {
+    double speed = 1,
+    Future<void> Function(int index)? gate,
+  }) => WavAudioInput.sequence(
+    [for (final path in paths) WavAudioInput.file(path).samples],
+    speed: speed,
+    gate: gate,
+  );
 
   /// The recordings, one per [start].
   final List<Int16List> recordings;
@@ -73,6 +83,11 @@ final class WavAudioInput implements AudioInput {
 
   /// Silence before the recording (as after pressing the microphone).
   final Duration leadingSilence;
+
+  /// Device tests (WP120): called with the index of the recording at every
+  /// [start]; the playback begins when the future completes (e.g. after
+  /// `barge-listen on=true`), not by the wall clock under load.
+  final Future<void> Function(int index)? gate;
 
   /// Time source for [endOfRecording].
   final DateTime Function() now;
@@ -96,7 +111,8 @@ final class WavAudioInput implements AudioInput {
   @override
   Stream<Int16List> start() {
     if (_out != null) throw StateError('Aufnahme läuft schon');
-    final samples = recordings[_starts.clamp(0, recordings.length - 1)];
+    final index = _starts.clamp(0, recordings.length - 1);
+    final samples = recordings[index];
     _starts++;
     _endOfRecording = null;
     // Closed in stop().
@@ -108,19 +124,47 @@ final class WavAudioInput implements AudioInput {
     final interval = Duration(
       microseconds: (frame.inMicroseconds / speed).round(),
     );
-    _timer = Timer.periodic(interval, (_) {
-      if (out.isClosed) return;
-      final chunk = Int16List(perFrame);
-      for (var i = 0; i < perFrame; i++) {
-        final at = position + i;
-        if (at >= 0 && at < samples.length) chunk[i] = samples[at];
-      }
-      position += perFrame;
-      if (position >= samples.length && _endOfRecording == null) {
-        _endOfRecording = now();
-      }
-      out.add(chunk);
-    });
+    void play() {
+      // WP123: a tick that comes late (load) delivers all frames that are
+      // due by the clock, like a buffered microphone; at least one per tick.
+      final clockSw = clock.stopwatch()..start();
+      var delivered = 0;
+      _timer = Timer.periodic(interval, (_) {
+        final due = clockSw.elapsedMicroseconds * speed ~/ frame.inMicroseconds;
+        var count = due > delivered ? due - delivered : 1;
+        if (count > maxCatchUpFrames) {
+          // After a long pause (suspend, debugger) no burst: the clock is
+          // set back to the cap, the recording goes on from where it is.
+          delivered += count - maxCatchUpFrames;
+          count = maxCatchUpFrames;
+        }
+        for (var n = 0; n < count; n++) {
+          if (out.isClosed) return;
+          final chunk = Int16List(perFrame);
+          for (var i = 0; i < perFrame; i++) {
+            final at = position + i;
+            if (at >= 0 && at < samples.length) chunk[i] = samples[at];
+          }
+          position += perFrame;
+          if (position >= samples.length && _endOfRecording == null) {
+            _endOfRecording = now();
+          }
+          delivered++;
+          out.add(chunk);
+        }
+      });
+    }
+
+    final wait = gate?.call(index);
+    if (wait == null) {
+      play();
+    } else {
+      unawaited(
+        wait.then((_) {
+          if (!out.isClosed && _out == out) play();
+        }),
+      );
+    }
     return out.stream;
   }
 

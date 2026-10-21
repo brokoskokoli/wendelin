@@ -418,4 +418,21 @@ void main() {
       expect(store.entriesOf('p:a'), isEmpty);
     });
   });
+
+  group('feste Bestätigung', () {
+    test('memory__save: Satz ohne Inhalt', () async {
+      final t = tool('memory__save');
+      final o = await t.execute({
+        'text': 'Mag keinen Koriander',
+        'category': 'preference',
+      }, ctx());
+      expectFixed(o, t, 'memory.saved', de: 'Ich habe es mir gemerkt.');
+    });
+
+    test('memory__save: abgelehnter Inhalt → Fehler ohne Satz', () async {
+      final o = await tool('memory__save')
+          .execute({'text': 'Mein Passwort ist hunter2hunter2'}, ctx());
+      expect(o.fixed, isNull);
+    });
+  });
 }

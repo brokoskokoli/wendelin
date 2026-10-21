@@ -245,6 +245,16 @@ abstract base class HaCallTool extends IntegrationTool {
       },
       summary: '${ellipsize(e.name, 40)}: ${haServiceText(service, data)}',
       undo: ready == null ? null : _undo(e.name, ready),
+      // Only plain on/off of devices; scenes, climate settings etc. → model.
+      fixed:
+          (service == 'turn_on' || service == 'turn_off') &&
+              data.isEmpty &&
+              e.domain != 'scene' &&
+              e.domain != 'script'
+          ? ConfirmationSentence(service == 'turn_on' ? 'ha.on' : 'ha.off', {
+              'device': ellipsize(e.name, 40),
+            })
+          : null,
     );
   }
 
@@ -281,7 +291,8 @@ abstract base class HaCallTool extends IntegrationTool {
 
 /// `ha__call` (write): light, switch, scene, media player, climate. Runs
 /// without a question and offers undo to the previous state.
-final class HaCallDeviceTool extends HaCallTool {
+final class HaCallDeviceTool extends HaCallTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const HaCallDeviceTool(super.ctx);
 
@@ -296,6 +307,9 @@ final class HaCallDeviceTool extends HaCallTool {
 
   @override
   RiskLevel get risk => RiskLevel.write;
+
+  @override
+  Set<String> get confirmationKeys => const {'ha.on', 'ha.off'};
 
   @override
   HaServices get table => haOpenServices;

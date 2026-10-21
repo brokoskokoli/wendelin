@@ -52,3 +52,12 @@ abstract interface class WakeWordEngine {
   /// Releases the engine. Idempotent.
   Future<void> close();
 }
+
+/// WP123: an engine that can be primed with earlier audio (the feature chain
+/// needs ~2 s before the first window; a barge-in that starts cold would
+/// miss the first words of the answer).
+abstract interface class WarmableWakeEngine implements WakeWordEngine {
+  /// Feeds [frame] into the feature chain only: no window is rated, no hit
+  /// or decision state changes. Call after [reset], before the live frames.
+  Future<void> warmUp(Int16List frame);
+}

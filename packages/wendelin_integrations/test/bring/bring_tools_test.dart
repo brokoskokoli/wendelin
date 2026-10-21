@@ -587,6 +587,132 @@ void main() {
       'Bring!-Liste anzeigen',
     );
   });
+
+  group('feste Bestätigung', () {
+    test('add_items: Vollerfolg (Plural) und ein Artikel (Singular)', () async {
+      final t = tool('bring__add_items');
+      var o = await call('bring__add_items', {
+        'items': ['Eier', 'Butter'],
+        'list': 'zuhause',
+      });
+      expectFixed(
+        o,
+        t,
+        'list.added',
+        de: 'Ich habe Eier und Butter auf die Liste zuhause gesetzt.',
+      );
+      o = await call('bring__add_items', {
+        'items': ['Käse'],
+        'list': 'zuhause',
+      });
+      expectFixed(
+        o,
+        t,
+        'list.added',
+        de: 'Ich habe Käse auf die Liste zuhause gesetzt.',
+      );
+    });
+
+    test('add_items: alles schon da → list.present', () async {
+      final t = tool('bring__add_items');
+      final o = await call('bring__add_items', {
+        'items': ['Milch'],
+        'list': 'zuhause',
+      });
+      expectFixed(
+        o,
+        t,
+        'list.present',
+        de: 'Ich habe Milch schon auf der Liste zuhause gefunden.',
+      );
+    });
+
+    test(
+      'add_items: gemischt (einiges schon da) → Modell formuliert',
+      () async {
+        final o = await call('bring__add_items', {
+          'items': ['Eier', 'Milch'],
+        });
+        expect(o.isError, isFalse);
+        expect(o.fixed, isNull);
+      },
+    );
+
+    test('add_items: Teilerfolg nach Fehler → Modell formuliert', () async {
+      final b2 = BringIntegration(_FailSecond(api), secrets);
+      final r = await b2.tools
+          .singleWhere((t) => t.name == 'bring__add_items')
+          .execute({
+            'items': ['Eier', 'Butter'],
+          }, ctx());
+      expect(r.isError, isFalse);
+      expect(r.fixed, isNull);
+    });
+
+    test('add_items: Fehler → kein Satz', () async {
+      final o = await call('bring__add_items', {'items': <String>[]});
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+
+    test('complete_item: abgehakt', () async {
+      final t = tool('bring__complete_item');
+      final o = await call('bring__complete_item', {
+        'item': 'Milch',
+        'list': 'zuhause',
+      });
+      expectFixed(
+        o,
+        t,
+        'list.done',
+        de: 'Ich habe Milch auf der Liste zuhause abgehakt.',
+      );
+    });
+
+    test('ohne genannte Liste: Vorlagen ohne Listennamen (de/en/fr)', () async {
+      final add = tool('bring__add_items');
+      final three = await call('bring__add_items', {
+        'items': ['Eier', 'Butter', 'Wurst'],
+      });
+      expectFixed(
+        three,
+        add,
+        'list.added.default',
+        de: 'Ich habe Eier, Butter und Wurst auf die Einkaufsliste gesetzt.',
+      );
+      expect(
+        renderConfirmation(three.fixed!, 'en'),
+        'I added Eier, Butter and Wurst to the shopping list.',
+      );
+      expect(
+        renderConfirmation(three.fixed!, 'fr'),
+        'J’ai ajouté Eier, Butter et Wurst à la liste de courses.',
+      );
+      expectFixed(
+        await call('bring__add_items', {
+          'items': ['Milch'],
+        }),
+        add,
+        'list.present.default',
+        de: 'Ich habe Milch schon auf der Einkaufsliste gefunden.',
+      );
+      expectFixed(
+        await call('bring__complete_item', {'item': 'Äpfel'}),
+        tool('bring__complete_item'),
+        'list.done.default',
+        de: 'Ich habe Äpfel abgehakt.',
+      );
+      final done = await call('bring__complete_item', {'item': 'Milch'});
+      expect(done.fixed?.key, 'list.done.default');
+      expect(done.fixed?.params.containsKey('list'), isFalse);
+    });
+
+    test('complete_item: schon gekauft → kein Satz', () async {
+      final o = await call('bring__complete_item', {'item': 'Brot'});
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+  });
 }
 
 /// Delegates to [inner] but fails the second `saveItem` with a server
