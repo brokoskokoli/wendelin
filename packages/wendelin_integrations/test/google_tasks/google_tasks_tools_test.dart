@@ -376,6 +376,50 @@ void main() {
       isNot(anyOf(contains('idX'), contains('secretX'))),
     );
   });
+
+  group('feste Bestätigung', () {
+    test('add: ohne Liste → task.addedPlain, mit Datum ohne Uhrzeit', () async {
+      expectFixed(
+        await call('gtasks__add', {'title': 'Anrufen', 'due': 'morgen'}),
+        tool('gtasks__add'),
+        'task.addedPlain',
+        de: 'Die Aufgabe „Anrufen“ ist angelegt.',
+      );
+    });
+
+    test('add: mit genannter Liste → task.added', () async {
+      expectFixed(
+        await call('gtasks__add', {'title': 'Anrufen', 'list': 'Arbeit'}),
+        tool('gtasks__add'),
+        'task.added',
+      );
+    });
+
+    test('add: Uhrzeit weggelassen → Modell formuliert den Hinweis', () async {
+      final o = await call('gtasks__add', {
+        'title': 'Anrufen',
+        'due': 'morgen 9 Uhr',
+      });
+      expect(o.isError, isFalse);
+      expect(data(o)['note'], contains('Uhrzeit'));
+      expect(o.fixed, isNull);
+    });
+
+    test('complete: erledigt', () async {
+      expectFixed(
+        await call('gtasks__complete', {'title': 'Milch'}),
+        tool('gtasks__complete'),
+        'task.done',
+        de: 'Die Aufgabe „Milch kaufen“ ist erledigt.',
+      );
+    });
+
+    test('complete: nicht gefunden → Fehler ohne Satz', () async {
+      final o = await call('gtasks__complete', {'title': 'Nichts'});
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+  });
 }
 
 final class _Clock implements Clock {

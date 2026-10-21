@@ -634,4 +634,67 @@ void main() {
       ['Release bauen', 'Changelog', 'Bilder'],
     );
   });
+
+  group('feste Bestätigung', () {
+    test('add_items: Vollerfolg (Plural, Singular)', () async {
+      final t = tool('lists__add_items');
+      expectFixed(
+        await run('lists__add_items', {
+          'list': 'Einkaufen',
+          'items': ['Eier', 'Butter'],
+        }),
+        t,
+        'list.added',
+        de: 'Eier und Butter stehen jetzt auf der Liste Einkaufen.',
+      );
+      expectFixed(
+        await run('lists__add_items', {
+          'list': 'Einkaufen',
+          'items': ['Käse'],
+        }),
+        t,
+        'list.added',
+        de: 'Käse steht jetzt auf der Liste Einkaufen.',
+      );
+    });
+
+    test('add_items: Duplikate übersprungen → Modell formuliert', () async {
+      final o = await run('lists__add_items', {
+        'list': 'Einkaufen',
+        'items': ['Eier', 'milch (1 L)'],
+      });
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+
+    test('add_items: unbekannte Liste → Fehler ohne Satz', () async {
+      final o = await run('lists__add_items', {
+        'list': 'Gibtsnicht',
+        'items': ['Eier'],
+      });
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+
+    test('complete_item: abgehakt', () async {
+      expectFixed(
+        await run('lists__complete_item', {
+          'list': 'Einkaufen',
+          'item': 'milch (1 L)',
+        }),
+        tool('lists__complete_item'),
+        'list.done',
+        de: 'Milch (1 l) ist auf der Liste Einkaufen abgehakt.',
+      );
+    });
+
+    test('complete_item: schon erledigt → kein Satz', () async {
+      final o = await run('lists__complete_item', {
+        'list': 'Einkaufen',
+        'item': 'Brot',
+      });
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+  });
 }

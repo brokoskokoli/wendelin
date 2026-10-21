@@ -300,6 +300,53 @@ void main() {
       expect(f.message, contains('nicht erreichbar'));
     });
   });
+
+  group('feste Bestätigung', () {
+    test('add: ohne Liste → task.addedPlain', () async {
+      expectFixed(
+        await call('todoist__add', {'title': 'Auto waschen'}),
+        tool('todoist__add'),
+        'task.addedPlain',
+        de: 'Die Aufgabe „Auto waschen“ ist angelegt.',
+      );
+    });
+
+    test(
+      'add: mit genannter Liste → task.added mit dem Wort des Nutzers',
+      () async {
+        expectFixed(
+          await call('todoist__add', {
+            'title': 'Auto waschen',
+            'list': 'arbeit',
+          }),
+          tool('todoist__add'),
+          'task.added',
+          de: 'Die Aufgabe „Auto waschen“ steht jetzt auf der Liste arbeit.',
+        );
+      },
+    );
+
+    test('complete: erledigt', () async {
+      expectFixed(
+        await call('todoist__complete', {'title': 'Milch'}),
+        tool('todoist__complete'),
+        'task.done',
+        de: 'Die Aufgabe „Milch kaufen“ ist erledigt.',
+      );
+    });
+
+    test('complete: wiederkehrende Aufgabe → Modell formuliert', () async {
+      final o = await call('todoist__complete', {'title': 'Wäsche'});
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+
+    test('complete: nicht gefunden → Fehler ohne Satz', () async {
+      final o = await call('todoist__complete', {'title': 'Nichts'});
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+  });
 }
 
 class _SpyApi implements TodoistApi {

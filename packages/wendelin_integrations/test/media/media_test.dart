@@ -268,4 +268,45 @@ void main() {
     FakeMediaControlPort.new,
     name: 'FakeMediaControlPort ohne Player',
   );
+
+  group('feste Bestätigung', () {
+    test('pause, play, next, previous mit bekanntem Zustand', () async {
+      expectFixed(
+        await run('media__pause'),
+        tool('media__pause'),
+        'media.pause',
+        de: 'Die Wiedergabe ist pausiert.',
+      );
+      expectFixed(
+        await run('media__play'),
+        tool('media__play'),
+        'media.play',
+        de: 'Die Wiedergabe läuft.',
+      );
+      expectFixed(await run('media__next'), tool('media__next'), 'media.next');
+      expectFixed(
+        await run('media__previous'),
+        tool('media__previous'),
+        'media.previous',
+      );
+    });
+
+    test(
+      'Medientasten ohne Zugriff: play/pause unbekannt → kein Satz',
+      () async {
+        port.access = false;
+        for (final n in ['media__pause', 'media__play']) {
+          final o = await run(n);
+          expect(o.isError, isFalse);
+          expect(o.fixed, isNull, reason: n);
+        }
+      },
+    );
+
+    test('Zustand schon erreicht → kein Satz', () async {
+      final o = await run('media__play');
+      expect(o.text, 'Es läuft schon.');
+      expect(o.fixed, isNull);
+    });
+  });
 }

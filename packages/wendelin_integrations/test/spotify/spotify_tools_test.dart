@@ -432,4 +432,64 @@ void main() {
       expect(errors, ['Spotify-Anmeldung abgelaufen']);
     });
   });
+
+  group('feste Bestätigung', () {
+    test('play mit Suche: spotify.playing mit Treffer', () async {
+      expectFixed(
+        await call('spotify__play', {'query': 'bohemian rhapsody'}),
+        tool('spotify__play'),
+        'spotify.playing',
+        de: 'Es spielt jetzt Bohemian Rhapsody – Queen.',
+      );
+    });
+
+    test('play ohne Angaben: media.play', () async {
+      playing();
+      api.playing = false;
+      expectFixed(
+        await call('spotify__play'),
+        tool('spotify__play'),
+        'media.play',
+        de: 'Die Wiedergabe läuft.',
+      );
+    });
+
+    test('play ohne Treffer → Fehler ohne Satz', () async {
+      final o = await call('spotify__play', {'query': 'gibtesnicht'});
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+
+    test('pause, next, previous', () async {
+      playing();
+      expectFixed(
+        await call('spotify__pause'),
+        tool('spotify__pause'),
+        'media.pause',
+      );
+      expectFixed(
+        await call('spotify__next'),
+        tool('spotify__next'),
+        'media.next',
+      );
+      expectFixed(
+        await call('spotify__previous'),
+        tool('spotify__previous'),
+        'media.previous',
+      );
+    });
+
+    test('pause, wenn nichts läuft → kein Satz', () async {
+      final o = await call('spotify__pause');
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+
+    test('next ohne Gerät → Fehler ohne Satz', () async {
+      api.knownDevices.clear();
+      final o = await call('spotify__next');
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+  });
 }

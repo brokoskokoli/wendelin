@@ -688,6 +688,59 @@ void main() {
       expect(await allowed('ha__list_entities', 'x'), isFalse);
     });
   });
+
+  group('feste Bestätigung', () {
+    test('Licht an und aus ohne Daten', () async {
+      final t = tool('ha__call');
+      expectFixed(
+        await call({'entity': 'Küche Deckenlicht', 'service': 'turn_off'}),
+        t,
+        'ha.off',
+        de: 'Küche Deckenlicht ist aus.',
+      );
+      expectFixed(
+        await call({'entity': 'Küche Deckenlicht', 'service': 'turn_on'}),
+        t,
+        'ha.on',
+        de: 'Küche Deckenlicht ist an.',
+      );
+    });
+
+    test('mit Daten (Helligkeit) → Modell formuliert', () async {
+      final o = await call({
+        'entity': 'Küche Deckenlicht',
+        'service': 'turn_on',
+        'brightness_pct': 20,
+      });
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+
+    test('Szene → Modell formuliert', () async {
+      api.set('scene.movie', 'scening', {
+        'entity_id': ['light.living'],
+      });
+      final o = await call({'entity': 'Filmabend', 'service': 'turn_on'});
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+
+    test('anderer Dienst (Temperatur) → Modell formuliert', () async {
+      final o = await call({
+        'entity': 'Heizung Wohnzimmer',
+        'service': 'set_temperature',
+        'temperature': '22',
+      });
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+
+    test('nicht erlaubter Dienst → Fehler ohne Satz', () async {
+      final o = await call({'entity': 'Haustür', 'service': 'unlock'});
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+  });
 }
 
 Future<bool> _locked(HaIntegration ha, String entity) =>

@@ -284,4 +284,51 @@ void main() {
       expect(s, '{"recipient":"Anna Meier"}');
     });
   });
+
+  group('feste Bestätigung', () {
+    test('SMS gesendet: Name aus dem Adressbuch', () async {
+      final t = tool('sms__compose');
+      final o = await t.execute({'to': '0170 1234567', 'text': 'Hallo'}, ctx());
+      expectFixed(
+        o,
+        t,
+        'sms.sent',
+        de: 'Die SMS an Anna Meier wurde gesendet.',
+      );
+    });
+
+    test('SMS ohne Berechtigung → Fehler ohne Satz', () async {
+      phone.smsAllowed = false;
+      final o = await tool('sms__compose')
+          .execute({'to': '0170 1234567', 'text': 'Hallo'}, ctx());
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+
+    test('Anruf direkt gestartet', () async {
+      final t = tool('phone__call');
+      final o = await t.execute({'to': '030 555-0100'}, ctx());
+      expectFixed(
+        o,
+        t,
+        'call.started',
+        de: 'Der Anruf bei Anna Meier wurde gestartet.',
+      );
+    });
+
+    test('Anruf nur als Wählbildschirm → kein Satz', () async {
+      phone.callAllowed = false;
+      final o = await tool('phone__call')
+          .execute({'to': '030 555-0100'}, ctx());
+      expect(o.isError, isFalse);
+      expect(o.text, contains('Wählbildschirm'));
+      expect(o.fixed, isNull);
+    });
+
+    test('Anruf ohne Nummer → Fehler ohne Satz', () async {
+      final o = await tool('phone__call').execute({'to': 'Anna'}, ctx());
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+  });
 }

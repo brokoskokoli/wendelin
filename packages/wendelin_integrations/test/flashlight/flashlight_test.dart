@@ -97,4 +97,26 @@ void main() {
     expect(o.text, contains('Kamera'));
     expect(port.on, isFalse);
   });
+
+  test('feste Bestätigung: an/aus; Toggle folgt dem neuen Zustand', () async {
+    final on = tool('flashlight__on');
+    expectFixed(
+      await on.execute({}, ctx()),
+      on,
+      'flashlight.on',
+      de: 'Die Taschenlampe ist an.',
+    );
+    final off = tool('flashlight__off');
+    expectFixed(await off.execute({}, ctx()), off, 'flashlight.off');
+    final toggle = tool('flashlight__toggle');
+    expectFixed(await toggle.execute({}, ctx()), toggle, 'flashlight.on');
+    expectFixed(await toggle.execute({}, ctx()), toggle, 'flashlight.off');
+  });
+
+  test('keine feste Bestätigung bei Fehler', () async {
+    port.available = false;
+    final o = await tool('flashlight__on').execute({}, ctx());
+    expect(o.isError, isTrue);
+    expect(o.fixed, isNull);
+  });
 }

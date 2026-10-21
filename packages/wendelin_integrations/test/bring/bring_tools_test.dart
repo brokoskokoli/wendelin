@@ -587,6 +587,88 @@ void main() {
       'Bring!-Liste anzeigen',
     );
   });
+
+  group('feste Bestätigung', () {
+    test('add_items: Vollerfolg (Plural) und ein Artikel (Singular)', () async {
+      final t = tool('bring__add_items');
+      var o = await call('bring__add_items', {
+        'items': ['Eier', 'Butter'],
+      });
+      expectFixed(
+        o,
+        t,
+        'list.added',
+        de: 'Eier und Butter stehen jetzt auf der Liste Zuhause.',
+      );
+      o = await call('bring__add_items', {
+        'items': ['Käse'],
+      });
+      expectFixed(
+        o,
+        t,
+        'list.added',
+        de: 'Käse steht jetzt auf der Liste Zuhause.',
+      );
+    });
+
+    test('add_items: alles schon da → list.present', () async {
+      final t = tool('bring__add_items');
+      final o = await call('bring__add_items', {
+        'items': ['Milch'],
+      });
+      expectFixed(
+        o,
+        t,
+        'list.present',
+        de: 'Milch steht schon auf der Liste Zuhause.',
+      );
+    });
+
+    test(
+      'add_items: gemischt (einiges schon da) → Modell formuliert',
+      () async {
+        final o = await call('bring__add_items', {
+          'items': ['Eier', 'Milch'],
+        });
+        expect(o.isError, isFalse);
+        expect(o.fixed, isNull);
+      },
+    );
+
+    test('add_items: Teilerfolg nach Fehler → Modell formuliert', () async {
+      final b2 = BringIntegration(_FailSecond(api), secrets);
+      final r = await b2.tools
+          .singleWhere((t) => t.name == 'bring__add_items')
+          .execute({
+            'items': ['Eier', 'Butter'],
+          }, ctx());
+      expect(r.isError, isFalse);
+      expect(r.fixed, isNull);
+    });
+
+    test('add_items: Fehler → kein Satz', () async {
+      final o = await call('bring__add_items', {'items': <String>[]});
+      expect(o.isError, isTrue);
+      expect(o.fixed, isNull);
+    });
+
+    test('complete_item: abgehakt', () async {
+      final t = tool('bring__complete_item');
+      final o = await call('bring__complete_item', {'item': 'Milch'});
+      expectFixed(
+        o,
+        t,
+        'list.done',
+        de: 'Milch ist auf der Liste Zuhause abgehakt.',
+      );
+    });
+
+    test('complete_item: schon gekauft → kein Satz', () async {
+      final o = await call('bring__complete_item', {'item': 'Brot'});
+      expect(o.isError, isFalse);
+      expect(o.fixed, isNull);
+    });
+  });
 }
 
 /// Delegates to [inner] but fails the second `saveItem` with a server
