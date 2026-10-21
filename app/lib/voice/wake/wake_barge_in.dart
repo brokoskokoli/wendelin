@@ -191,6 +191,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
       stopTailShare: stopTail,
       stopGate: gate,
       stopFloorGap: stopFloorGap,
+      stopOverridesWake: staged,
       onWindow: (main, stop, _) => meter.onWindow(
         main,
         stop,

@@ -32,6 +32,7 @@ Future<List<String>> _hits(
   double thr = 0.85,
   double sthr = 0.90,
   SpeechGate? gate,
+  bool verify = true,
 }) async {
   var i = 0;
   final e = CandidateWakeEngine(
@@ -45,6 +46,7 @@ Future<List<String>> _hits(
     modelThreshold: null,
     refractory: Duration.zero,
     stopGate: gate,
+    stopOverridesWake: verify,
   );
   await e.open([KeywordSpec.wendelin]);
   final ids = <String>[];
@@ -112,6 +114,24 @@ void main() {
           thr: 0.75,
           sthr: 0.70,
           gate: SpeechGate(),
+        ),
+        ['wake'],
+      );
+    });
+
+    test('ohne Stufe 2 wird Wendelin nicht zu Stopp (WP80-Gate bleibt)', () async {
+      final w = _deg(0.85);
+      final a = w - _deg(0.96);
+      // Gleiches Fenster wie oben (Stopp roh über der Schwelle, Pegelfilter
+      // hält zurück): mit Stufe 2 stop, ohne bleibt es wake.
+      expect(
+        await _hits(
+          [w],
+          stopDeg: a,
+          thr: 0.75,
+          sthr: 0.70,
+          gate: SpeechGate(),
+          verify: false,
         ),
         ['wake'],
       );
@@ -211,17 +231,21 @@ void main() {
       Duration timeout = const Duration(seconds: 6),
       String keyword = 'stop',
       Set<int> hitAt = const {},
+      Duration clip = const Duration(milliseconds: 2500),
+      WakeWordEngine? custom,
     }) async {
       got.clear();
       cands.clear();
       verdicts.clear();
       audio = FakeAudioInput();
       engine = FakeWakeWordEngine(keywordId: keyword, hitAtFrame: hitAt);
+      final eng = custom ?? engine;
       v = _Verifier(const BargeVerdict('stop', BargeInKeyword.stop));
       d = WakeWordBargeInDetector(
         audio: audio,
-        engine: engine,
+        engine: eng,
         verifier: v,
+        clip: clip,
         cooldown: cooldown,
         settle: settle,
         verifyTimeout: timeout,
@@ -320,7 +344,16 @@ void main() {
       v.hold!.complete();
       await pumpEventQueue();
       expect(got, isEmpty);
-      expect(verdicts, isEmpty);
+      expect(verdicts, ['skip/stopped']);
+    });
+
+    test('stop() mit wartendem Kandidat: skip/stopped im Log', () async {
+      await setUp0(settle: const Duration(milliseconds: 800));
+      await hit();
+      expect(v.calls, isEmpty);
+      await d.stop();
+      expect(verdicts, ['skip/stopped']);
+      expect(got, isEmpty);
     });
 
     group('Timing und Stille (Gerätelog 2026-10-21)', () {
@@ -373,6 +406,71 @@ void main() {
         expect(got, ['keyword-stop']);
       });
 
+      test('echtes Stopp im Cooldown nach verworfenem Echo wird geprüft', () async {
+        await setUp0(cooldown: const Duration(milliseconds: 1500));
+        v.verdict = BargeVerdict.no;
+        await hit(); // Echo-Kandidat, Urteil no, Cooldown 1,5 s
+        expect(verdicts, ['no']);
+        v.verdict = const BargeVerdict('stop', BargeInKeyword.stop);
+        await frames(10, loud: true); // 1 s später
+        await hit(); // das echte Stopp, im Cooldown
+        expect(cands.last, 'stop true');
+        expect(v.calls, hasLength(1));
+        await frames(8, loud: true); // Cooldown endet
+        expect(v.calls, hasLength(2));
+        expect(got, ['keyword-stop']);
+      });
+
+      test('Kandidat im Cooldown außerhalb des Ausschnitts verfällt', () async {
+        await setUp0(
+          cooldown: const Duration(milliseconds: 3000),
+          clip: const Duration(milliseconds: 500),
+        );
+        v.verdict = BargeVerdict.no;
+        await hit();
+        await hit(); // im Cooldown
+        await frames(40, loud: true); // Cooldown endet, Wort lange vorbei
+        expect(v.calls, hasLength(1));
+        expect(got, isEmpty);
+      });
+
+      test('Kandidat früh in langer Prüfung, kurzer Ausschnitt: keine zweite Prüfung',
+          () async {
+        await setUp0(
+          cooldown: const Duration(milliseconds: 400),
+          clip: const Duration(milliseconds: 500),
+        );
+        v
+          ..verdict = BargeVerdict.no
+          ..hold = Completer<void>();
+        await hit();
+        await frames(1, loud: true);
+        await hit(); // busy
+        await frames(10, loud: true); // die Prüfung dauert lange
+        v.hold!.complete();
+        await pumpEventQueue();
+        v
+          ..hold = null
+          ..verdict = const BargeVerdict('stop', BargeInKeyword.stop);
+        await frames(10, loud: true);
+        expect(v.calls, hasLength(1));
+        expect(got, isEmpty);
+      });
+
+      test('Stopp hat Vorrang vor Wake im selben Wartefenster', () async {
+        final script = _ScriptEngine({0: 'stop', 1: 'wake'});
+        await setUp0(
+          settle: const Duration(milliseconds: 800),
+          custom: script,
+        );
+        // Stopp zuerst, dann Wake im Settle: der Prüfer bekommt stop.
+        audio.push(FakeWakeWordEngine.markerFrame(1600));
+        await pumpEventQueue();
+        audio.push(FakeWakeWordEngine.markerFrame(1600));
+        await frames(8, loud: true);
+        expect(v.candidates, [BargeInKeyword.stop]);
+      });
+
       test('Stille im Ausschnitt: skip/silent ohne Erkenner', () async {
         // Kandidat aus Hintergrund-Ähnlichkeit (Frame 2), der Ausschnitt ist still.
         await setUp0(hitAt: {2});
@@ -398,6 +496,34 @@ void main() {
       await plain.dispose();
     });
   });
+}
+
+/// Engine with a script: frame index -> keyword id (a hit per entry).
+final class _ScriptEngine implements WakeWordEngine {
+  _ScriptEngine(this.ids);
+  final Map<int, String> ids;
+  int _i = 0, _samples = 0;
+
+  @override
+  Future<void> open(List<KeywordSpec> keywords) async {}
+
+  @override
+  Future<List<WakeWordHit>> accept(Int16List frame) async {
+    final id = ids[_i++];
+    _samples += frame.length;
+    return id == null
+        ? const []
+        : [WakeWordHit(keywordId: id, endSample: _samples, confidence: 0.9)];
+  }
+
+  @override
+  void reset() {
+    _i = 0;
+    _samples = 0;
+  }
+
+  @override
+  Future<void> close() async {}
 }
 
 final class _SlowStt implements SpeechToText {

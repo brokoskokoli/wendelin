@@ -157,6 +157,22 @@ final class WakeWordBargeInDetector implements BargeInDetector {
       }
     }
     final v = verifier;
+    // A candidate from the cooldown (after a check): once the cooldown is
+    // over it is checked, if its word is still inside the clip.
+    if (v != null &&
+        !_verifying &&
+        _fed >= _blockedUntil &&
+        _deferredKind != null) {
+      final kind = _deferredKind!;
+      _deferredKind = null;
+      if (_fed - _deferredAt <= durationToSamples(clip)) {
+        _pendingKind = _best(_pendingKind, kind);
+        if (_pendingAt < 0) {
+          final after = _deferredAt + durationToSamples(settle);
+          _pendingAt = after > _fed ? after : _fed;
+        }
+      }
+    }
     if (v != null && _pendingAt >= 0 && _fed >= _pendingAt && !_verifying) {
       final kind = _pendingKind!;
       _pendingAt = -1;
@@ -201,7 +217,14 @@ final class WakeWordBargeInDetector implements BargeInDetector {
       // Fail closed: no verdict, no keyword.
     }
     _verifying = false;
-    if (gen != _generation) return;
+    if (gen != _generation) {
+      // Ended meanwhile: no signal, but visible in the log.
+      onVerdict?.call(
+        const BargeVerdict('skip', null, 'stopped'),
+        sw.elapsedMilliseconds,
+      );
+      return;
+    }
     onVerdict?.call(verdict, sw.elapsedMilliseconds);
     final keyword = verdict.keyword;
     if (keyword == null) {
@@ -226,6 +249,11 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     if (!_running) return;
     _running = false;
     _generation++;
+    if (_pendingKind != null) {
+      onVerdict?.call(const BargeVerdict('skip', null, 'stopped'), 0);
+    }
+    _pendingAt = -1;
+    _pendingKind = _deferredKind = null;
     final sub = _sub;
     _sub = null;
     await sub?.cancel();

@@ -27,6 +27,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
     this.stopTailShare,
     this.stopGate,
     this.stopFloorGap = 0,
+    this.stopOverridesWake = false,
     this.onWindow,
   });
 
@@ -74,6 +75,12 @@ final class CandidateWakeEngine implements WakeWordEngine {
   /// silence or echo). `0`: no check. Applies after a warm-up of
   /// [stopFloorWarmup] windows.
   final double stopFloorGap;
+
+  /// WP113: with stage 2 (the transcript decides) a main-word candidate in a
+  /// window where „Stopp“ is also over its raw threshold becomes „Stopp“,
+  /// past the level and background gate. Without stage 2 the gate stays
+  /// as it is (WP80): „Wendelin“ must not turn into „Stopp“.
+  final bool stopOverridesWake;
 
   /// Windows before the background similarity is trusted.
   static const stopFloorWarmup = 10;
@@ -170,7 +177,9 @@ final class CandidateWakeEngine implements WakeWordEngine {
       // WP113: a candidate of the main word while „Stopp“ is also over its
       // threshold in this window (only the level or background gate kept it
       // back): it is „Stopp“, the other one is its echo in the template.
-      if (d != null && id == keywordId && rawStop != null) {
+      if (d != null && id == keywordId &&
+          rawStop != null &&
+          stopOverridesWake) {
         d = rawStop;
         id = stopKeywordId;
       }
