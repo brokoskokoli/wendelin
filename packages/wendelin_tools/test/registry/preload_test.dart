@@ -201,4 +201,17 @@ void main() {
     );
     expect(await _search(r, {'query': 'réveille'}), contains('alarms__a'));
   });
+
+  test('endSession räumt die gemerkte Sprache auf', () async {
+    final r = await _registry(all);
+    r.preloadForRequest(
+      'Réveille-moi à sept heures',
+      PrivacyLevel.local,
+      sessionId: 's',
+      languageTag: 'fr',
+    );
+    r.endSession('s');
+    // Zurück bei der Gerätesprache (de): französisches Wort findet nichts.
+    expect(await _search(r, {'query': 'réveille'}), isEmpty);
+  });
 }
