@@ -30,6 +30,7 @@ interface RouteAudio {
 class SpeechRoute(private val audio: RouteAudio, private val log: (String) -> Unit = {}) {
     /** Switches to the call path; returns the output (`speaker`, `external`). Asking twice is fine. */
     fun enter(): String = synchronized(lock) {
+        holders += this
         if (saved != null) return device(audio.externalOutputActive())
         val before = Saved(audio.mode, audio.speakerphoneOn, communicationDeviceOrNull())
         saved = before
@@ -52,6 +53,7 @@ class SpeechRoute(private val audio: RouteAudio, private val log: (String) -> Un
      * turns false only after that, so the watcher never sees the mode without the flag.
      */
     fun leave(): Unit = synchronized(lock) {
+        holders.clear()
         val before = saved ?: return
         saved = null
         try {
@@ -65,6 +67,16 @@ class SpeechRoute(private val audio: RouteAudio, private val log: (String) -> Un
             }
             log("speech-route mode=normal device=restored")
         }
+    }
+
+    /**
+     * For the end of the owner (its activity is destroyed): gives the state back only if no other
+     * route still holds the call path, so a destroyed activity does not cut the answer of the
+     * other one. A route that never entered changes nothing.
+     */
+    fun release(): Unit = synchronized(lock) {
+        holders -= this
+        if (holders.isEmpty()) leave()
     }
 
     private fun toSpeaker() {
@@ -91,6 +103,9 @@ class SpeechRoute(private val audio: RouteAudio, private val log: (String) -> Un
         // only one audio mode. The first enter saves the state, any leave gives it back.
         private val lock = Any()
         private var saved: Saved? = null
+
+        // Routes that entered and have not left (guarded by [lock]).
+        private val holders = mutableSetOf<SpeechRoute>()
 
         /** Whether the app itself holds the call path right now (any thread). */
         @Volatile

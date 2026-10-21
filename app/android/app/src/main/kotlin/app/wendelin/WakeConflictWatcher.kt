@@ -58,7 +58,7 @@ class WakeConflictWatcher(
             it.clientAudioSessionId != own &&
                 !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && it.isClientSilenced)
         }
-        val reason = WakePolicy.conflictNow(audio.mode, foreign)
+        val reason = reasonFor(audio.mode, foreign)
         if (reason != last) {
             last = reason
             onChange(reason)
@@ -67,5 +67,9 @@ class WakeConflictWatcher(
 
     companion object {
         private const val POLL_MS = 2000L
+
+        /** The reason for the current state; the app's own call path ([SpeechRoute.active]) is no call. */
+        internal fun reasonFor(audioMode: Int, foreignRecording: Boolean): String? =
+            WakePolicy.conflictNow(audioMode, foreignRecording)
     }
 }

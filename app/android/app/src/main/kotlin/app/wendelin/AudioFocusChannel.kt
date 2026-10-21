@@ -32,7 +32,7 @@ class AudioFocusChannel(context: Context, messenger: BinaryMessenger) :
     fun dispose() {
         channel.setMethodCallHandler(null)
         for (kind in held.keys.toList()) release(kind)
-        route.leave()
+        route.release()
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
