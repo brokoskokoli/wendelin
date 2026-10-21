@@ -719,5 +719,46 @@ void main() {
         expect(c.read(wakeBargeInDetectorProvider), isNot(same(first)));
       },
     );
+
+    ftest('Start ohne vorgeladenes Verify: Neubau beim Laden stoert den Start nicht', () async {
+      final env = TestEnv();
+      await env.storage.settings.set(
+        voiceSettingsKey,
+        const VoiceSettings(conversationMode: true),
+      );
+      final audio = FakeAudioInput(
+        frames: [Int16List(480)],
+        frameInterval: const Duration(milliseconds: 5),
+      );
+      final c = ProviderContainer(
+        overrides: [
+          ...env.overrides,
+          audioInputProvider.overrideWithValue(audio),
+          wakeFeaturesFactoryProvider.overrideWithValue(
+            () => FakeWakeFeatureExtractor(
+              windowEvery: 480,
+              windowFor: (end, _) => WakeWindow(
+                endSample: end,
+                embedding: Float32List.fromList([0, 1]),
+              ),
+            ),
+          ),
+        ],
+        retry: (_, _) => null,
+      );
+      addTearDown(c.dispose);
+      await c.read(voiceSettingsProvider.future);
+      final store = c.read(wakeStoreProvider);
+      await store.saveSpeakers([const WakeSpeaker(id: 'a', name: 'A')]);
+      await store.save(tpl(0.9));
+      // wakeVerifyProvider is still loading: it must not rebuild the
+      // detector when it delivers its (default) value.
+      final first = c.read(wakeBargeInDetectorProvider)!;
+      await first.start();
+      expect(c.read(bargeListeningProvider), isTrue);
+      expect(audio.isRunning, isTrue);
+      expect(c.read(wakeBargeInDetectorProvider), same(first));
+      await first.stop();
+    });
   });
 }

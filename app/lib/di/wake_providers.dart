@@ -189,18 +189,20 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   // Switching stage 2 or the language rebuilds the provider; a running answer
   // keeps its old detector (`disposeWhenIdle`), whose verifier holds the
   // language fixed instead of reading a disposed ref.
-  final verify = ref.watch(wakeVerifyProvider).value ?? true;
+  final verify = ref.watch(wakeVerifyProvider.select((v) => v.value ?? true));
   final language = ref.watch(languageProvider);
   // Held now: after a rebuild during the answer the old ref is disposed and
   // a later `ref.read` in the verifier would fail (check skipped).
   final sttFuture = verify ? ref.read(speechToTextProvider.future) : null;
+  // Also held now: the callbacks run after awaits, when this provider may
+  // have been rebuilt (disposed ref -> `UnmountedRefException`, no start).
+  final settings = ref.read(storageProvider).settings;
+  final listening = ref.read(bargeListeningProvider.notifier);
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
     // Developer setting (WP72): other margin than +0.05.
-    marginOverride: () async => double.tryParse(
-      await ref.read(storageProvider).settings.get(AppSettings.bargeMargin) ??
-          '',
-    ),
+    marginOverride: () async =>
+        double.tryParse(await settings.get(AppSettings.bargeMargin) ?? ''),
     // WP113 (K84): the big recognizer checks every candidate, unless stage 2
     // is switched off in the wake word settings.
     verifier: verify
@@ -213,7 +215,7 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     onListening: ({required on}) {
       // The container may be gone (end of a test, rebuild).
       try {
-        ref.read(bargeListeningProvider.notifier).set(on);
+        listening.set(on);
       } on Object {
         // Nobody shows it any more.
       }
