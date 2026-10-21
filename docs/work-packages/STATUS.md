@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP120, WP121; Test-APK a2c4a1f bei Stefan; Folgepunkt: Stopp-E2E (voice_stop_word/voice_barge_in) zeitempfindlich – WAV läuft nach Wanduhr (wav_audio_input.dart:35), unter Last rot; Fix: barge.wav erst nach `barge-listen on=true` freigeben (kein Code-Fehler, e7e17b9b = de201681); als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
+Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP120, WP121, WP122; Test-APK a2c4a1f bei Stefan; Folgepunkt: Stopp-E2E (voice_stop_word/voice_barge_in) zeitempfindlich – WAV läuft nach Wanduhr (wav_audio_input.dart:35), unter Last rot; Fix: barge.wav erst nach `barge-listen on=true` freigeben (kein Code-Fehler, e7e17b9b = de201681); als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
 
 ## Meilensteine
 
@@ -70,6 +70,7 @@ Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP120, WP121; Test-APK a2c4a1f
 | WP119 | Nächster Wecker auslesen, Tools vorab mitschicken | gemergt fb246094 | K91; Gerätetest docs/testing/m5/wp119.md; Soll: Test endSession räumt gemerkte Sprache auf |
 | WP120 | Antwortzeit vermessen, Pausen beim Vorlesen, früher vorlesen | in Arbeit | Wunsch/Befund Stefan 2026-10-21 |
 | WP121 | Wake Words mit echten Aufnahmen vergleichen (fair) | in Arbeit | Aufnahmen 2026-10-21; Folge WP111/K83 |
+| WP122 | Feste Bestätigungssätze statt zweitem Modellaufruf | in Arbeit | Entscheid Stefan 2026-10-21 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
