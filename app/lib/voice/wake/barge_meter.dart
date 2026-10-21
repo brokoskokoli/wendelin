@@ -24,13 +24,13 @@ final class BargeMeter {
   int _frames = 0, _samples = 0, _peak = 0, _processed = 0, _micros = 0;
   double _sumSq = 0, _sim = -1, _stop = -1;
   double _allSim = -1, _allStop = -1;
-  int _allFrames = 0;
+  int _allFrames = 0, _windows = 0, _allWindows = 0;
   // WP80: background of „Stopp“ and level of the stream.
   double _floor = -1, _gap = -1, _quiet = 0, _peakRms = 0;
 
   /// Starts a new listening session.
   void reset() {
-    _seconds = _allFrames = 0;
+    _seconds = _allFrames = _windows = _allWindows = 0;
     _allSim = _allStop = -1;
     _frames = _samples = _peak = _processed = _micros = 0;
     _sumSq = 0;
@@ -68,6 +68,8 @@ final class BargeMeter {
     double quiet = 0,
     double peak = 0,
   }) {
+    _windows++;
+    _allWindows++;
     if (floor != null) {
       _floor = floor;
       if (stop - floor > _gap) _gap = stop - floor;
@@ -92,6 +94,9 @@ final class BargeMeter {
     voiceLog('barge-diag', {
       't': _seconds,
       'frames': _frames,
+      // WP123: finished feature windows; 0 = the chain is still warming up
+      // (not: nothing recognized).
+      'win': _windows,
       'rms': rms,
       'peak': _peak,
       'lag': (backlog * 1000 ~/ AudioInput.sampleRate).clamp(0, 1 << 30),
@@ -110,6 +115,7 @@ final class BargeMeter {
       'lvl': _peakRms.round(),
     });
     _gap = -1;
+    _windows = 0;
     _frames = _samples = _peak = _processed = _micros = 0;
     _sumSq = 0;
     _sim = _stop = -1;
@@ -128,6 +134,7 @@ final class BargeMeter {
   void summary() => voiceLog('barge-end', {
     't': _seconds,
     'frames': _allFrames,
+    'win': _allWindows,
     'sim': _allSim,
     'stop': _allStop,
     'thr': threshold,
@@ -160,7 +167,7 @@ final class MeteredAudioInput implements AudioInput {
 }
 
 /// [WakeWordEngine] that times [inner] per frame for [meter].
-final class MeteredEngine implements WakeWordEngine {
+final class MeteredEngine implements WarmableWakeEngine {
   /// Wraps [inner].
   MeteredEngine(this.inner, this.meter);
 
@@ -179,6 +186,12 @@ final class MeteredEngine implements WakeWordEngine {
     final hits = await inner.accept(frame);
     meter.onProcessed(frame.length, sw.elapsedMicroseconds);
     return hits;
+  }
+
+  @override
+  Future<void> warmUp(Int16List frame) async {
+    final e = inner;
+    if (e is WarmableWakeEngine) await e.warmUp(frame);
   }
 
   @override

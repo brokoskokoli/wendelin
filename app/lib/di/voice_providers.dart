@@ -19,6 +19,7 @@ import '../platform/voice/whisper_stt.dart';
 import '../voice/latency_trace.dart';
 import '../voice/voice_log.dart';
 import '../voice/voice_metrics.dart';
+import '../voice/wake/mic_tail.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
 import 'hint_term_providers.dart';
@@ -86,6 +87,15 @@ final speechFocusProvider = Provider<SpeechFocus>((ref) {
 final audioInputProvider = Provider<AudioInput>(
   (ref) => RecordAudioInput(ref.watch(microphoneProvider)),
 );
+
+/// WP123: the last seconds of the pipeline's capture (warm start of the
+/// barge-in chain, see `MicTail`).
+final micTailProvider = Provider<MicTail>((ref) => MicTail());
+
+/// The voice pipeline's [mic], with a copy of what it records in
+/// [micTailProvider] (WP123).
+AudioInput tapMic(Ref ref, AudioInput mic) =>
+    TappedAudioInput(mic, ref.read(micTailProvider));
 
 Future<SpeechModel> _installedModel(Ref ref, String id, String what) async {
   final model = ref.read(speechModelCatalogProvider).byId(id);
