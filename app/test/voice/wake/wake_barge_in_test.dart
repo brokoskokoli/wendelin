@@ -769,43 +769,46 @@ void main() {
       await first.stop();
     });
 
-    ftest('Alter Detektor nach Neubau meldet das Ende noch (Listening gehalten)', () async {
-      final env = TestEnv();
-      await env.storage.settings.set(
-        voiceSettingsKey,
-        const VoiceSettings(conversationMode: true),
-      );
-      final audio = FakeAudioInput();
-      final c = ProviderContainer(
-        overrides: [
-          ...env.overrides,
-          audioInputProvider.overrideWithValue(audio),
-          wakeFeaturesFactoryProvider.overrideWithValue(
-            () => FakeWakeFeatureExtractor(
-              windowEvery: 480,
-              windowFor: (end, _) => WakeWindow(
-                endSample: end,
-                embedding: Float32List.fromList([0, 1]),
+    ftest(
+      'Alter Detektor nach Neubau meldet das Ende noch (Listening gehalten)',
+      () async {
+        final env = TestEnv();
+        await env.storage.settings.set(
+          voiceSettingsKey,
+          const VoiceSettings(conversationMode: true),
+        );
+        final audio = FakeAudioInput();
+        final c = ProviderContainer(
+          overrides: [
+            ...env.overrides,
+            audioInputProvider.overrideWithValue(audio),
+            wakeFeaturesFactoryProvider.overrideWithValue(
+              () => FakeWakeFeatureExtractor(
+                windowEvery: 480,
+                windowFor: (end, _) => WakeWindow(
+                  endSample: end,
+                  embedding: Float32List.fromList([0, 1]),
+                ),
               ),
             ),
-          ),
-        ],
-        retry: (_, _) => null,
-      );
-      addTearDown(c.dispose);
-      await c.read(voiceSettingsProvider.future);
-      await c.read(wakeVerifyProvider.future);
-      final store = c.read(wakeStoreProvider);
-      await store.saveSpeakers([const WakeSpeaker(id: 'a', name: 'A')]);
-      await store.save(tpl(0.9));
-      final first = c.read(wakeBargeInDetectorProvider)!;
-      await first.start();
-      expect(c.read(bargeListeningProvider), isTrue);
-      // Rebuild while the answer runs: the old ref is disposed.
-      await c.read(wakeVerifyProvider.notifier).set(enabled: false);
-      expect(c.read(wakeBargeInDetectorProvider), isNot(same(first)));
-      await first.stop();
-      expect(c.read(bargeListeningProvider), isFalse);
-    });
+          ],
+          retry: (_, _) => null,
+        );
+        addTearDown(c.dispose);
+        await c.read(voiceSettingsProvider.future);
+        await c.read(wakeVerifyProvider.future);
+        final store = c.read(wakeStoreProvider);
+        await store.saveSpeakers([const WakeSpeaker(id: 'a', name: 'A')]);
+        await store.save(tpl(0.9));
+        final first = c.read(wakeBargeInDetectorProvider)!;
+        await first.start();
+        expect(c.read(bargeListeningProvider), isTrue);
+        // Rebuild while the answer runs: the old ref is disposed.
+        await c.read(wakeVerifyProvider.notifier).set(enabled: false);
+        expect(c.read(wakeBargeInDetectorProvider), isNot(same(first)));
+        await first.stop();
+        expect(c.read(bargeListeningProvider), isFalse);
+      },
+    );
   });
 }

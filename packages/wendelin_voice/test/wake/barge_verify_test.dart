@@ -119,23 +119,26 @@ void main() {
       );
     });
 
-    test('ohne Stufe 2 wird Wendelin nicht zu Stopp (WP80-Gate bleibt)', () async {
-      final w = _deg(0.85);
-      final a = w - _deg(0.96);
-      // Gleiches Fenster wie oben (Stopp roh über der Schwelle, Pegelfilter
-      // hält zurück): mit Stufe 2 stop, ohne bleibt es wake.
-      expect(
-        await _hits(
-          [w],
-          stopDeg: a,
-          thr: 0.75,
-          sthr: 0.70,
-          gate: SpeechGate(),
-          verify: false,
-        ),
-        ['wake'],
-      );
-    });
+    test(
+      'ohne Stufe 2 wird Wendelin nicht zu Stopp (WP80-Gate bleibt)',
+      () async {
+        final w = _deg(0.85);
+        final a = w - _deg(0.96);
+        // Gleiches Fenster wie oben (Stopp roh über der Schwelle, Pegelfilter
+        // hält zurück): mit Stufe 2 stop, ohne bleibt es wake.
+        expect(
+          await _hits(
+            [w],
+            stopDeg: a,
+            thr: 0.75,
+            sthr: 0.70,
+            gate: SpeechGate(),
+            verify: false,
+          ),
+          ['wake'],
+        );
+      },
+    );
 
     test('reines Wendelin (Stopp deutlich darunter) bleibt wake', () async {
       expect(await _hits([0, 0], stopDeg: 80), ['wake', 'wake']);
@@ -406,20 +409,23 @@ void main() {
         expect(got, ['keyword-stop']);
       });
 
-      test('echtes Stopp im Cooldown nach verworfenem Echo wird geprüft', () async {
-        await setUp0(cooldown: const Duration(milliseconds: 1500));
-        v.verdict = BargeVerdict.no;
-        await hit(); // Echo-Kandidat, Urteil no, Cooldown 1,5 s
-        expect(verdicts, ['no']);
-        v.verdict = const BargeVerdict('stop', BargeInKeyword.stop);
-        await frames(10, loud: true); // 1 s später
-        await hit(); // das echte Stopp, im Cooldown
-        expect(cands.last, 'stop true');
-        expect(v.calls, hasLength(1));
-        await frames(8, loud: true); // Cooldown endet
-        expect(v.calls, hasLength(2));
-        expect(got, ['keyword-stop']);
-      });
+      test(
+        'echtes Stopp im Cooldown nach verworfenem Echo wird geprüft',
+        () async {
+          await setUp0(cooldown: const Duration(milliseconds: 1500));
+          v.verdict = BargeVerdict.no;
+          await hit(); // Echo-Kandidat, Urteil no, Cooldown 1,5 s
+          expect(verdicts, ['no']);
+          v.verdict = const BargeVerdict('stop', BargeInKeyword.stop);
+          await frames(10, loud: true); // 1 s später
+          await hit(); // das echte Stopp, im Cooldown
+          expect(cands.last, 'stop true');
+          expect(v.calls, hasLength(1));
+          await frames(8, loud: true); // Cooldown endet
+          expect(v.calls, hasLength(2));
+          expect(got, ['keyword-stop']);
+        },
+      );
 
       test('Kandidat im Cooldown außerhalb des Ausschnitts verfällt', () async {
         await setUp0(
@@ -434,8 +440,7 @@ void main() {
         expect(got, isEmpty);
       });
 
-      test('Kandidat früh in langer Prüfung, kurzer Ausschnitt: keine zweite Prüfung',
-          () async {
+      test('Kandidat früh in langer Prüfung, kurzer Ausschnitt: keine zweite Prüfung', () async {
         await setUp0(
           cooldown: const Duration(milliseconds: 400),
           clip: const Duration(milliseconds: 500),
@@ -459,10 +464,7 @@ void main() {
 
       test('Stopp hat Vorrang vor Wake im selben Wartefenster', () async {
         final script = _ScriptEngine({0: 'stop', 1: 'wake'});
-        await setUp0(
-          settle: const Duration(milliseconds: 800),
-          custom: script,
-        );
+        await setUp0(settle: const Duration(milliseconds: 800), custom: script);
         // Stopp zuerst, dann Wake im Settle: der Prüfer bekommt stop.
         audio.push(FakeWakeWordEngine.markerFrame(1600));
         await pumpEventQueue();

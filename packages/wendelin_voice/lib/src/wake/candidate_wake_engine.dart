@@ -177,7 +177,8 @@ final class CandidateWakeEngine implements WakeWordEngine {
       // WP113: a candidate of the main word while „Stopp“ is also over its
       // threshold in this window (only the level or background gate kept it
       // back): it is „Stopp“, the other one is its echo in the template.
-      if (d != null && id == keywordId &&
+      if (d != null &&
+          id == keywordId &&
           rawStop != null &&
           stopOverridesWake) {
         d = rawStop;
