@@ -51,6 +51,18 @@ String _json(Object? o) => switch (o) {
 };
 
 void main() {
+  // WP120: the first text reaches the consumer while the stream is still
+  // open (the voice output starts with it).
+  test('erstes Textstück kommt, bevor der Strom endet (Streaming)', () async {
+    final server = FakeServer([
+      FakeResponse.hang(chunk({'role': 'assistant', 'content': 'Hallo'})),
+    ]);
+    final first = await adapter(server)
+        .chat(ContractExpectations.request())
+        .first;
+    expect(first, const TextDelta('Hallo'));
+  });
+
   group('OpenAiChatAdapter – Fixtures', () {
     test('Text mit Usage aus letztem Chunk (Cache-Anteil getrennt)', () async {
       final events = await run(

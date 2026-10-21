@@ -22,6 +22,7 @@ import 'answer_capture.dart';
 import 'confirm_prompts.dart';
 import 'controller_agent_run.dart';
 import 'conversation_offer.dart';
+import 'latency_trace.dart';
 import 'level_meter.dart';
 import 'locked_agent_run.dart';
 import 'primed_audio_input.dart';
@@ -655,6 +656,12 @@ final class VoiceController extends Notifier<VoiceUiState> {
   void _onState(VoiceState s) {
     // From here the agent request belongs to the voice pipeline.
     if (s == VoiceState.thinking) _voiceRun = true;
+    // WP120: the time line of the request runs from the end of the speech.
+    final latency = ref.read(latencyTraceProvider);
+    if (s == VoiceState.transcribing) latency.begin();
+    if (s == VoiceState.idle || s == VoiceState.listening) {
+      latency.finishSoon();
+    }
     // The ducking focus stays for the whole answer, also between sentences.
     _focus.busy = s == VoiceState.thinking || s == VoiceState.speaking;
     state = state.copyWith(

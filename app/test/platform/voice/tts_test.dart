@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -499,6 +500,67 @@ void main() {
     await a;
     expect(playback.played, 0);
     expect(tts.state, TtsState.idle);
+  });
+
+  group('Vorlauf-Synthese (WP120)', () {
+    const syn = Duration(seconds: 2);
+    const play = Duration(seconds: 3);
+
+    SherpaTextToSpeech engine(FakePlayback playback, FakeSynthesizer synth) =>
+        SherpaTextToSpeech(
+          installed: () async => const [_voice],
+          synthesizer: synth,
+          playback: playback,
+        );
+
+    test('Satz B wird synthetisiert, während A spielt: keine Lücke', () {
+      fakeAsync((async) {
+        final playback = FakePlayback(time: play);
+        final synth = FakeSynthesizer(delay: syn);
+        final tts = engine(playback, synth);
+        tts.speakPrepared(tts.prepare('A'));
+        tts.speakPrepared(tts.prepare('B'));
+        async.elapse(syn + const Duration(milliseconds: 1));
+        expect(playback.played, 1); // A plays, B is in synthesis
+        expect(synth.calls.map((c) => c.$1), ['A', 'B']);
+        // B was ready 2 s into A; it starts the moment A ends (5 s).
+        async.elapse(play);
+        expect(playback.played, 2);
+      });
+    });
+
+    test('verworfener oder vor stop vorbereiteter Satz bleibt stumm', () {
+      fakeAsync((async) {
+        final playback = FakePlayback(time: play);
+        final tts = engine(playback, FakeSynthesizer(delay: syn));
+        tts.speakPrepared(tts.prepare('A'));
+        final b = tts.prepare('B');
+        final c = tts.prepare('C');
+        b.discard();
+        async.elapse(syn);
+        tts.stop(); // C was prepared before: invalid
+        var cDone = false;
+        tts.speakPrepared(c).then((_) => cDone = true);
+        async.elapse(const Duration(seconds: 30));
+        expect(cDone, isTrue);
+        expect(playback.played, 1); // only A
+      });
+    });
+
+    test('onPlay meldet Beginn und Ende jedes Satzes', () {
+      fakeAsync((async) {
+        final events = <bool>[];
+        final tts = SherpaTextToSpeech(
+          installed: () async => const [_voice],
+          synthesizer: FakeSynthesizer(),
+          playback: FakePlayback(time: play),
+          onPlay: events.add,
+        );
+        tts.speak('A');
+        async.elapse(play);
+        expect(events, [true, false]);
+      });
+    });
   });
 
   test('PiperVoiceFiles.find: Ordner mit onnx, tokens, espeak-ng-data', () {

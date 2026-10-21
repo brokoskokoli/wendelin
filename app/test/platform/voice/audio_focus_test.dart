@@ -14,6 +14,7 @@ import 'package:wendelin/platform/voice/audio_playback.dart';
 import 'package:wendelin/platform/voice/ducking_tts.dart';
 import 'package:wendelin/platform/voice/pcm.dart';
 import 'package:wendelin/platform/voice/record_audio_input.dart';
+import 'package:wendelin_voice/testing.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 final class _FakeFocus implements AudioFocusPort {
@@ -269,6 +270,48 @@ void main() {
       expect(port.log, hasLength(2));
     });
   });
+
+  test(
+    'DuckingTextToSpeech (WP120): Vorlauf der Engine, Fokus erst beim Spielen',
+    () {
+      fakeAsync((async) {
+        final port = _FakeFocus();
+        final inner = FakeTextToSpeech(
+          utteranceDuration: const Duration(seconds: 1),
+          synthesisDuration: const Duration(seconds: 2),
+        );
+        final tts = DuckingTextToSpeech(inner, SpeechFocus(port));
+        final prepared = tts.prepare('Hallo');
+        async.flushMicrotasks();
+        expect(inner.prepared, ['Hallo']);
+        expect(port.log, isEmpty); // preparing is silent
+        unawaited(tts.speakPrepared(prepared));
+        async.flushMicrotasks();
+        expect(port.log, ['+duck']);
+        async.elapse(const Duration(seconds: 10));
+        expect(inner.spoken, ['Hallo']);
+        expect(port.log, ['+duck', '-duck']);
+      });
+    },
+  );
+
+  test(
+    'DuckingTextToSpeech (WP120): Engine ohne Vorlauf spricht beim Abspielen',
+    () {
+      fakeAsync((async) {
+        final port = _FakeFocus();
+        final inner = _StubTts();
+        final tts = DuckingTextToSpeech(inner, SpeechFocus(port));
+        final prepared = tts.prepare('Hallo');
+        async.flushMicrotasks();
+        expect(port.log, isEmpty);
+        prepared.discard(); // nothing to drop
+        unawaited(tts.speakPrepared(tts.prepare('Zwei')));
+        async.flushMicrotasks();
+        expect(port.log, ['+duck']);
+      });
+    },
+  );
 
   test(
     'DuckingTextToSpeech: auch bei werfender Engine wird der Fokus frei',

@@ -152,7 +152,7 @@ final class SherpaVoice {
 /// the voice for the language (or the first one). Synthesis and playback
 /// run one utterance after the other; [stop] ends the current one and
 /// drops the waiting ones.
-final class SherpaTextToSpeech implements TextToSpeech {
+final class SherpaTextToSpeech implements PrefetchingTextToSpeech {
   /// Creates the engine. [installed] lists the voices on disk (re-read on
   /// every call, so a finished download is picked up).
   SherpaTextToSpeech({
@@ -162,7 +162,12 @@ final class SherpaTextToSpeech implements TextToSpeech {
     this.preferred,
     this.preferredSpeakers,
     this.onTiming,
+    this.onPlay,
   });
+
+  /// Called when the audio of an utterance starts and when it ended (or was
+  /// stopped), for the latency line (WP120); no content.
+  final void Function(bool started)? onPlay;
 
   /// Called after every synthesis with the voice id, the length of the
   /// audio and the compute time (numbers only, for the metrics, WP103).
@@ -222,9 +227,28 @@ final class SherpaTextToSpeech implements TextToSpeech {
   }) {
     if (rate <= 0) throw ArgumentError.value(rate, 'rate', 'muss > 0 sein');
     if (text.trim().isEmpty) return Future.value();
+    return speakPrepared(
+      prepare(text, voice: voice, language: language, rate: rate),
+    );
+  }
+
+  /// Synthesis of one utterance after the other (the isolate works serially
+  /// anyway); playback has its own chain ([_queue]), so the next utterance
+  /// is synthesised while the previous one plays (WP120).
+  Future<void> _synthChain = Future.value();
+
+  @override
+  TtsPrepared prepare(
+    String text, {
+    String? voice,
+    String? language,
+    double rate = 1.0,
+  }) {
+    if (rate <= 0) throw ArgumentError.value(rate, 'rate', 'muss > 0 sein');
     final generation = _generation;
-    final run = _queue.then((_) async {
-      if (generation != _generation) return;
+    final prepared = _SherpaPrepared(text, generation);
+    final run = _synthChain.then((_) async {
+      if (prepared.discarded || generation != _generation) return null;
       final chosen = _pick(
         await installed(),
         voice,
@@ -237,21 +261,42 @@ final class SherpaTextToSpeech implements TextToSpeech {
           'Es ist keine Offline-Stimme geladen.',
         );
       }
+      final speaker = _speaker(chosen, preferredSpeakers?.call());
+      final voiceId = speaker == null
+          ? chosen.id
+          : '${chosen.id}/${speaker.id}';
+      final watch = Stopwatch()..start();
+      final wav = await synthesizer.synthesize(
+        text,
+        voiceId: voiceId,
+        speed: rate,
+      );
+      onTiming?.call(voiceId, wav.duration, watch.elapsed);
+      return wav;
+    });
+    prepared.wav = run;
+    // Errors are reported by speakPrepared; the chain itself continues.
+    _synthChain = run.then<void>((_) {}, onError: (_) {});
+    return prepared;
+  }
+
+  @override
+  Future<void> speakPrepared(TtsPrepared prepared) {
+    final item = prepared as _SherpaPrepared;
+    final run = _queue.then((_) async {
+      if (item.discarded || item.generation != _generation) return;
       _set(TtsState.speaking);
       try {
-        final speaker = _speaker(chosen, preferredSpeakers?.call());
-        final voiceId = speaker == null
-            ? chosen.id
-            : '${chosen.id}/${speaker.id}';
-        final watch = Stopwatch()..start();
-        final wav = await synthesizer.synthesize(
-          text,
-          voiceId: voiceId,
-          speed: rate,
-        );
-        onTiming?.call(voiceId, wav.duration, watch.elapsed);
-        if (generation != _generation) return;
-        await playback.play(wav);
+        final wav = await item.wav;
+        if (wav == null || item.discarded || item.generation != _generation) {
+          return;
+        }
+        onPlay?.call(true);
+        try {
+          await playback.play(wav);
+        } finally {
+          onPlay?.call(false);
+        }
       } finally {
         _set(TtsState.idle);
       }
@@ -311,6 +356,19 @@ final class SherpaTextToSpeech implements TextToSpeech {
       // Nothing playing any more.
     }
   }
+}
+
+final class _SherpaPrepared implements TtsPrepared {
+  _SherpaPrepared(this.text, this.generation);
+
+  @override
+  final String text;
+  final int generation;
+  late final Future<Wav?> wav;
+  bool discarded = false;
+
+  @override
+  void discard() => discarded = true;
 }
 
 /// [SpeechSynthesizer] with sherpa-onnx in a background isolate; a voice

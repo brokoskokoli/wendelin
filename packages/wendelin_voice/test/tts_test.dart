@@ -87,6 +87,112 @@ void main() {
         expect(tts.spoken, ['B.']);
       });
     });
+
+    group('Vorlauf-Synthese (WP120)', () {
+      const syn = Duration(seconds: 2);
+      const play = Duration(seconds: 3);
+
+      test('Satz 2 wird synthetisiert, während Satz 1 spielt', () {
+        fakeAsync((async) {
+          final tts = FakeTextToSpeech(
+            utteranceDuration: play,
+            synthesisDuration: syn,
+          );
+          final q = SpeechQueue(tts)..addAll(['A.', 'B.']);
+          async.elapse(syn); // A ready and playing
+          expect(tts.current, 'A.');
+          expect(tts.prepared, ['A.', 'B.']); // B is in synthesis now
+          async.elapse(play); // A ends; B was ready since 2 s into A
+          expect(tts.current, 'B.');
+          expect(tts.spoken, ['A.', 'B.']);
+          async.elapse(play);
+          expect(q.isIdle, isTrue);
+          // 2 s + 3 s + 3 s: no pause of the synthesis between A and B.
+        });
+      });
+
+      test('ein später eintreffender Satz wird sofort vorbereitet', () {
+        fakeAsync((async) {
+          final tts = FakeTextToSpeech(
+            utteranceDuration: play,
+            synthesisDuration: syn,
+          );
+          final q = SpeechQueue(tts)..addAll(['A.']);
+          async.elapse(syn);
+          expect(tts.prepared, ['A.']);
+          q.addAll(['B.']);
+          expect(tts.prepared, ['A.', 'B.']);
+          q.addAll(['C.']); // lead of one sentence only
+          expect(tts.prepared, ['A.', 'B.']);
+          expect(q.hasPrepared, isTrue);
+        });
+      });
+
+      test('interrupt verwirft den vorbereiteten Satz', () {
+        fakeAsync((async) {
+          final tts = FakeTextToSpeech(
+            utteranceDuration: play,
+            synthesisDuration: syn,
+          );
+          final q = SpeechQueue(tts)..addAll(['A.', 'B.']);
+          async.elapse(syn);
+          q.interrupt();
+          async.elapse(const Duration(seconds: 10));
+          expect(tts.discarded, ['B.']);
+          expect(tts.spoken, ['A.']);
+          expect(q.pending, isEmpty);
+        });
+      });
+
+      test('stop verwirft den vorbereiteten Satz', () {
+        fakeAsync((async) {
+          final tts = FakeTextToSpeech(
+            utteranceDuration: play,
+            synthesisDuration: syn,
+          );
+          SpeechQueue(tts)
+            ..addAll(['A.', 'B.'])
+            ..stop();
+          async.elapse(const Duration(seconds: 10));
+          expect(tts.discarded, contains('B.'));
+          expect(tts.spoken, isNot(contains('B.')));
+        });
+      });
+
+      test(
+        'dropSegment verwirft den vorbereiteten Satz, der nächste rückt nach',
+        () {
+          fakeAsync((async) {
+            final tts = FakeTextToSpeech(
+              utteranceDuration: play,
+              synthesisDuration: syn,
+            );
+            final q = SpeechQueue(tts)
+              ..addAll(['A.'])
+              ..addAll(['B.'], segment: 1)
+              ..addAll(['C.'], segment: 2);
+            async.elapse(syn);
+            expect(q.dropSegment(1), ['B.']);
+            expect(tts.discarded, ['B.']);
+            expect(tts.prepared, ['A.', 'B.', 'C.']); // C takes the lead
+            async.elapse(const Duration(seconds: 10));
+            expect(tts.spoken, ['A.', 'C.']);
+          });
+        },
+      );
+
+      test('Fehler beim Sprechen eines vorbereiteten Satzes: weiter', () {
+        fakeAsync((async) {
+          final tts = FakeTextToSpeech(utteranceDuration: ms100);
+          final errors = <Object>[];
+          SpeechQueue(tts, onError: errors.add).addAll(['A.', 'B.']);
+          tts.nextError = StateError('kaputt');
+          async.elapse(const Duration(seconds: 1));
+          expect(errors, hasLength(1));
+          expect(tts.spoken, ['A.']);
+        });
+      });
+    });
   });
 
   group('TtsSelector (K7)', () {

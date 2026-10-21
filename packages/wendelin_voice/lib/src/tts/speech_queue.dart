@@ -9,6 +9,12 @@ import '../io/text_to_speech.dart';
 /// that an `AgentTextReset` can drop exactly the not yet spoken sentences of
 /// the discarded segment ([dropSegment]). The sentence currently playing is
 /// finished.
+///
+/// WP120: on an engine that is a [PrefetchingTextToSpeech] the sentence
+/// after the playing one is synthesised while the playing one is audible
+/// (lead of one sentence), so there is no pause for the synthesis between
+/// two sentences. [dropSegment], [interrupt] and [stop] discard what was
+/// prepared.
 final class SpeechQueue {
   /// Creates a queue on [tts].
   SpeechQueue(
@@ -42,7 +48,7 @@ final class SpeechQueue {
   /// Called when the engine fails on a sentence; the queue continues.
   final void Function(Object error)? onError;
 
-  final _pending = Queue<({String text, int segment})>();
+  final _pending = Queue<_Item>();
   String? _current;
   bool _stopped = false;
   Completer<void>? _idle;
@@ -56,6 +62,11 @@ final class SpeechQueue {
   /// Sentences waiting to be spoken.
   List<String> get pending => [for (final e in _pending) e.text];
 
+  /// Whether the head of the waiting sentences is already synthesised or
+  /// being synthesised (WP120).
+  bool get hasPrepared =>
+      _pending.isNotEmpty && _pending.first.prepared != null;
+
   /// Completes when the queue is idle (immediately if it already is) or
   /// stopped.
   Future<void> get whenIdle {
@@ -67,9 +78,13 @@ final class SpeechQueue {
   void addAll(Iterable<String> sentences, {int segment = 0}) {
     if (_stopped) return;
     for (final s in sentences) {
-      _pending.add((text: s, segment: segment));
+      _pending.add(_Item(s, segment));
     }
-    if (_current == null && _pending.isNotEmpty) unawaited(_pump());
+    if (_current == null && _pending.isNotEmpty) {
+      unawaited(_pump());
+    } else {
+      _prefetch();
+    }
   }
 
   /// Removes the waiting sentences of [segment] and returns them.
@@ -78,7 +93,12 @@ final class SpeechQueue {
       for (final e in _pending)
         if (e.segment == segment) e.text,
     ];
-    _pending.removeWhere((e) => e.segment == segment);
+    _pending.removeWhere((e) {
+      if (e.segment != segment) return false;
+      e.prepared?.discard();
+      return true;
+    });
+    _prefetch(); // a new head may need its synthesis now
     return dropped;
   }
 
@@ -86,7 +106,7 @@ final class SpeechQueue {
   /// queue stays usable (unlike [stop]).
   Future<void> interrupt() async {
     if (_stopped) return;
-    _pending.clear();
+    _clearPending();
     if (_current != null) await tts.stop();
   }
 
@@ -94,7 +114,7 @@ final class SpeechQueue {
   /// afterwards.
   Future<void> stop() async {
     _stopped = true;
-    _pending.clear();
+    _clearPending();
     _completeIdle();
     if (_current != null) await tts.stop();
   }
@@ -105,12 +125,20 @@ final class SpeechQueue {
       _current = next.text;
       onStart?.call(next.text);
       try {
-        await tts.speak(
-          next.text,
-          voice: voice,
-          language: language,
-          rate: rate,
-        );
+        final engine = tts;
+        if (engine is PrefetchingTextToSpeech) {
+          final prepared = next.prepared ?? _prepare(engine, next.text);
+          // The next sentence is synthesised while this one plays.
+          _prefetch();
+          await engine.speakPrepared(prepared);
+        } else {
+          await tts.speak(
+            next.text,
+            voice: voice,
+            language: language,
+            rate: rate,
+          );
+        }
       } on Object catch (e) {
         onError?.call(e);
       }
@@ -121,9 +149,44 @@ final class SpeechQueue {
     onIdle?.call();
   }
 
+  TtsPrepared _prepare(PrefetchingTextToSpeech engine, String text) =>
+      engine.prepare(text, voice: voice, language: language, rate: rate);
+
+  void _prefetch() {
+    final engine = tts;
+    if (engine is! PrefetchingTextToSpeech ||
+        _stopped ||
+        _current == null ||
+        _pending.isEmpty) {
+      return;
+    }
+    final head = _pending.first;
+    if (head.prepared != null) return;
+    try {
+      head.prepared = _prepare(engine, head.text);
+    } on Object {
+      // Not prepared: it is prepared (and fails visibly) when its turn comes.
+    }
+  }
+
+  void _clearPending() {
+    for (final e in _pending) {
+      e.prepared?.discard();
+    }
+    _pending.clear();
+  }
+
   void _completeIdle() {
     final idle = _idle;
     _idle = null;
     if (idle != null && !idle.isCompleted) idle.complete();
   }
+}
+
+final class _Item {
+  _Item(this.text, this.segment);
+
+  final String text;
+  final int segment;
+  TtsPrepared? prepared;
 }
