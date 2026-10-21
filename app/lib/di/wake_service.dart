@@ -60,13 +60,12 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
   /// the assistant role may have changed).
   Future<void> push() async {
     final s = await future;
+    if (!ref.mounted) return;
+    final verify = await ref.read(wakeVerifyProvider.future);
+    if (!ref.mounted) return;
     await ref
         .read(wakePlatformProvider)
-        .configure(
-          enabled: s.enabled,
-          condition: s.condition,
-          verify: await ref.read(wakeVerifyProvider.future),
-        );
+        .configure(enabled: s.enabled, condition: s.condition, verify: verify);
   }
 
   /// Start of the app: takes over „Aus“ from the notification (Kotlin
@@ -74,6 +73,8 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
   /// assistant role may have changed).
   Future<void> sync() async {
     final status = await ref.read(wakePlatformProvider).status();
+    // The provider may be gone after the await (screen or test ended).
+    if (!ref.mounted) return;
     if (!await adoptStatus(status)) await push();
   }
 
@@ -82,7 +83,7 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
   /// switch was changed.
   Future<bool> adoptStatus(WakeServiceStatus status) async {
     final s = await future;
-    if (!status.offByUser || !s.enabled) return false;
+    if (!ref.mounted || !status.offByUser || !s.enabled) return false;
     state = AsyncData(WakeServiceSettings(condition: s.condition));
     await ref.read(storageProvider).settings.set(wakeEnabledKey, false);
     return true;

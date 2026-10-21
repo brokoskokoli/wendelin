@@ -158,4 +158,17 @@ void main() {
     await n.sync();
     expect(platform.sent.single.enabled, isTrue);
   });
+
+  test('sync: Container während status() entsorgt, kein Ref-Fehler', () async {
+    await c.read(wakeServiceProvider.future);
+    final n = c.read(wakeServiceProvider.notifier);
+    final gate = Completer<void>();
+    platform.gate = gate.future;
+    platform.current = const WakeServiceStatus(enabled: true, offByUser: true);
+    final pending = n.sync();
+    c.dispose();
+    gate.complete();
+    await pending; // UnmountedRefException (CI-Flake wake_lifecycle_test)
+    expect(platform.sent, isEmpty);
+  });
 }
