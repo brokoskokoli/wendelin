@@ -168,13 +168,12 @@ List<Widget> _recognition(
       ModelDownloadRow(model: SpeechModelCatalog.sileroVad),
     ],
   ),
-  if (!sttReady) Text(l.voiceScreenRecognitionHint, style: WText.caption),
+  if (!sttReady) InfoBox(l.voiceScreenRecognitionHint),
   if (_recommendSmall(ref, settings))
-    Text(
+    InfoBox(
       l.voiceScreenRecommendSmall(
         sizeLabel(l, SpeechModelCatalog.whisperSmall.sizeBytes),
       ),
-      style: WText.caption,
     ),
 ];
 
@@ -203,7 +202,7 @@ List<Widget> _language(
         ),
     ],
   ),
-  Text(l.voiceScreenFixedLanguageHint, style: WText.caption),
+  InfoBox(l.voiceScreenFixedLanguageHint),
 ];
 
 /// Minimum speech duration and VAD sensitivity.

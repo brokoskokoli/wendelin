@@ -291,7 +291,7 @@ class _StopWordSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: WSpace.s,
       children: [
-        Text(context.l10n.wakeWordInterrupt, style: WText.sectionLabel),
+        Text(context.l10n.wakeWordInterrupt, style: WText.sectionTitle),
         Text(
           learned
               ? context.l10n.wakeWordStopLearned

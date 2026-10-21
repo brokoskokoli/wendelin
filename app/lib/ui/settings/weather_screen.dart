@@ -104,7 +104,7 @@ class _WeatherState extends ConsumerState<WeatherScreen> {
           style: WText.body,
           decoration: InputDecoration(labelText: context.l10n.weatherHomeLabel),
         ),
-        Text(context.l10n.weatherHomeHelp, style: WText.caption),
+        InfoBox(context.l10n.weatherHomeHelp),
         if (_error != null) Text(_error!, style: WText.caption),
         PrimaryButton(
           context.l10n.save,

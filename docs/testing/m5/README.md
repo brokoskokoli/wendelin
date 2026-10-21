@@ -9,6 +9,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP105 Folgepunkte Audit und Texte](wp105.md)
 - [WP107 Bring! speichert nur Tokens](wp107.md)
 - [WP108 Fehlerart bis zur Integrationskachel](wp108.md)
+- [WP116 Einstellungsseiten: Überschrift, Info, Link](wp116.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)

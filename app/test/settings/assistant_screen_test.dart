@@ -101,7 +101,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      final link = find.widgetWithText(TextButton, 'In Android ändern');
+      final link = find.widgetWithText(OutlinedButton, 'In Android ändern');
       expect(tester.getSize(link).height, greaterThanOrEqualTo(WSize.touchMin));
       await tester.tap(link);
       await tester.pump();

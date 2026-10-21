@@ -41,6 +41,14 @@ Wiederverwendbare Bausteine: `MicButton`, `ProviderChip(PrivacyLevel)`, `CheckSt
 
 Die grauen Blöcke hinter Overlay und Bestätigung stehen nur für „irgendeine andere App“ und werden nicht nachgebaut.
 
+## Einstellungsseiten: Überschrift, Info, Link
+
+Drei Bausteine, nie seitenweise nachgebaut (`app/lib/ui/design/`, `app/lib/ui/settings/settings_page.dart`):
+
+- **Überschrift:** `WText.sectionTitle` (18/600, `text`, etwas Abstand darüber) in `SettingsSection` und im Titel von `SectionCard`. Größer als Einträge (`WText.label` 16), `sectionLabel` (13, gedämpft) bleibt nur für kleine Beschriftungen.
+- **Info:** `InfoBox`: Fläche `surfaceRaised`, Radius 16, Innenabstand 12, ⓘ-Icon links, Text `WText.info` (14, `textSecondary`). `SettingsPage.intro` und freistehende Erläuterungen nutzen sie; Fehler- und Statuszeilen bleiben `caption`.
+- **Link/Aktion nach außen:** `LinkButton`: Outlined, linksbündig, ≥ 44 hoch, Text in `link`, ↗ dahinter (Sprung aus der App: Systemeinstellungen, Webseite). `external: false` ohne ↗ für Wechsel innerhalb der App.
+
 ## Logo
 
 - **Bildmarke** = Ohrmuschel-Spirale mit Punkt. Hell auf dunkel: Spirale `text`, Punkt `accentLight`. Dunkel auf hell: Spirale `paperInk`, Punkt `accent`.

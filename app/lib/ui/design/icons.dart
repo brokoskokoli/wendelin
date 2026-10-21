@@ -162,6 +162,16 @@ abstract final class WIcons {
     'M10 20 L10 14 L14 14 L14 20" $_sj/>',
   );
 
+  /// Information (Kreis mit i).
+  static const info = WIconData._(
+    '<circle cx="12" cy="12" r="9" $_s/><path d="M12 11 L12 16.5 M12 7.8 L12 7.9" $_s/>',
+  );
+
+  /// Externer Sprung (Pfeil nach oben rechts).
+  static const external = WIconData._(
+    '<path d="M7 17 L17 7 M9 7 L17 7 L17 15" $_sj/>',
+  );
+
   /// Abspielen (Dreieck).
   static const play = WIconData._('<path d="M8 5.5 L18 12 L8 18.5 Z" $_sj/>');
 
