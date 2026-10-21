@@ -5,12 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_providers/wendelin_providers.dart';
 
+import 'budget.dart';
 import 'case_result.dart';
 import 'eval_case.dart';
 import 'eval_profile.dart';
 import 'eval_runner.dart';
 import 'eval_time.dart';
 import 'fake_script.dart';
+import 'ledger.dart';
 import 'report.dart';
 import 'routing_table.dart';
 
@@ -30,12 +32,56 @@ ArgParser _parser() => ArgParser()
     abbr: 'c',
     help: 'Filter: Id-Teil, Sprache oder Kategorie, kommagetrennt.',
   )
+  ..addOption(
+    'ids',
+    help: 'Datei mit exakten Fall-Ids, eine je Zeile (unbekannte Id = Fehler).',
+  )
   ..addOption('cases-dir', help: 'Verzeichnis mit *.yaml (Standard: cases).')
   ..addOption('limit', abbr: 'n', help: 'Höchstens n Fälle laufen lassen.')
   ..addOption('out', abbr: 'o', help: 'JSON-Report schreiben.')
   ..addOption(
     'integrations',
     help: 'Nur diese Integrationen (kommagetrennt, z. B. calendar,alarms).',
+  )
+  ..addOption(
+    'max-cost',
+    help:
+        'Kostengrenze in USD: der Lauf bricht ab (auch mitten im Fall), '
+        'sobald die Summe sie erreicht. Ohne Preis des Modells kein Start.',
+  )
+  ..addOption(
+    'provider-cap',
+    help:
+        'Obergrenze in USD für den Anbieter (Profil-Id) über alle Läufe im '
+        '--ledger: wirksame Grenze = Obergrenze minus bisherige Summe '
+        '(≤ 0: kein Start). Nur mit --ledger.',
+  )
+  ..addOption(
+    'pause-ms',
+    help:
+        'Pause in ms vor jedem Fall außer dem ersten (zählt nicht in die '
+        'Latenz), gegen Rate-Limits.',
+  )
+  ..addOption(
+    'retry-rate-limit',
+    help:
+        'Endet ein Fall mit Rate-Limit (429), n Sekunden warten und den Fall '
+        'genau einmal wiederholen (Kosten beider Versuche zählen, Report: '
+        'retried).',
+  )
+  ..addOption(
+    'repeat',
+    defaultsTo: '1',
+    help: 'Jeden Fall n-mal laufen lassen (Stabilität).',
+  )
+  ..addOption(
+    'ledger',
+    help: 'JSON-Bilanz: hängt je Lauf Anbieter, Modell, Fälle, Kosten an.',
+  )
+  ..addFlag(
+    'ledger-summary',
+    negatable: false,
+    help: 'Summe je Anbieter aus --ledger zeigen, kein Lauf.',
   )
   ..addOption('now', defaultsTo: defaultNow, help: 'Fester „heute“-Zeitpunkt.')
   ..addOption('time-zone', defaultsTo: defaultTimeZone, help: 'IANA-Zone.')
@@ -52,7 +98,7 @@ ArgParser _parser() => ArgParser()
   ..addFlag('help', abbr: 'h', negatable: false, help: 'Hilfe anzeigen.');
 
 /// Runs the eval CLI; returns the exit code (0 = ran, 64 = usage error,
-/// 1 = setup error, 130 = interrupted). [env] supplies the API key,
+/// 1 = setup error, 2 = stopped by `--max-cost`, 130 = interrupted). [env] supplies the API key,
 /// [client] the HTTP client for real providers. An event on [interrupt]
 /// (Ctrl+C) stops after the running case; the partial report is still
 /// printed and written.
@@ -63,6 +109,7 @@ Future<int> runCli(
   required StringSink err,
   http.Client? client,
   Stream<void>? interrupt,
+  DateTime Function()? today,
 }) async {
   final parser = _parser();
   final ArgResults args;
@@ -84,18 +131,20 @@ Future<int> runCli(
     out.write(formatRoutingTable(outcomes));
     return outcomes.every((o) => o.ok) ? 0 : 1;
   }
+  if (args.flag('ledger-summary')) return _ledgerSummary(args, out, err);
   final profilePath = args.option('profile');
   if (profilePath == null) {
     err.writeln('--profile fehlt\n\n${parser.usage}');
     return 64;
   }
-  final limitText = args.option('limit');
-  final limit = limitText == null ? null : int.tryParse(limitText);
-  if (limitText != null && (limit == null || limit < 1)) {
-    err.writeln('--limit braucht eine Zahl ≥ 1');
+  if (_badNumber(args) case final bad?) {
+    err.writeln(bad);
     return 64;
   }
-
+  final limit = int.tryParse(args.option('limit') ?? '');
+  final repeat = int.parse(args.option('repeat')!);
+  var budget = _budget(args.option('max-cost'));
+  final cap = double.tryParse(args.option('provider-cap') ?? '');
   try {
     final profileFile = File(profilePath);
     var profile = EvalProfile.parse(profileFile.readAsStringSync());
@@ -103,28 +152,27 @@ Future<int> runCli(
       profile = profile.withModel(model);
     }
     final time = EvalTime.parse(args.option('now')!, args.option('time-zone')!);
-
     final casesDir = _casesDir(args.option('cases-dir'));
-    final filter = args.option('cases');
-    var cases = loadCases(casesDir).where((c) => c.matches(filter)).toList();
-    if (limit != null && cases.length > limit) {
-      cases = cases.take(limit).toList();
-    }
-    if (cases.isEmpty) {
-      err.writeln('Keine Fälle ausgewählt');
+    final (:cases, :error) = _selectCases(args, loadCases(casesDir), limit);
+    if (error != null) {
+      err.writeln(error);
       return 1;
     }
-
-    final provider = buildProvider(profile, profileFile, time, env, client);
     final p = profile.profile;
-    for (final model in [p.defaultModel]) {
-      if (profile.catalog.lookup(model) == null) {
-        err.writeln(
-          'Warnung: kein Preis für Modell $model im Katalog – Kosten '
-          'unvollständig (Preise über "catalog" im Profil ergänzen)',
-        );
-      }
+    final ledgerFile = _ledger(args.option('ledger'));
+    final capped = _capBudget(cap, budget, ledgerFile, profile);
+    if (capped.$2 case final msg?) {
+      err.writeln(msg);
+      return 1;
     }
+    budget = capped.$1;
+    final priced = profile.catalog.lookup(p.defaultModel) != null;
+    if (budget != null && !priced) {
+      err.writeln(_noPrice(p.defaultModel));
+      return 1;
+    }
+    if (!priced) err.writeln(_priceWarning(p.defaultModel));
+    final provider = buildProvider(profile, profileFile, time, env, client);
     final runner = EvalRunner(
       target: EvalTarget(
         profileId: p.id,
@@ -135,11 +183,11 @@ Future<int> runCli(
       ),
       time: time,
       onlyIntegrations: args.option('integrations')?.split(',').toSet(),
+      budget: budget,
+      pause: _pause(args),
+      retryRateLimit: _retryRateLimit(args),
     );
-    out.writeln(
-      'Profil ${p.id} (${p.type.name}), Modell ${p.defaultModel}, '
-      '${cases.length} Fälle, heute = ${time.now} ${time.timeZone}',
-    );
+    out.writeln(_banner(p, cases.length, repeat, time));
     var interrupted = false;
     final subscription = interrupt?.listen((_) {
       if (!interrupted) {
@@ -154,35 +202,25 @@ Future<int> runCli(
         includePending: args.flag('include-pending'),
         onResult: (r) => out.writeln('  ${r.evalCase.id}: ${r.status.name}'),
         shouldStop: () => interrupted,
+        repeat: repeat,
       );
     } finally {
       await subscription?.cancel();
     }
-    final report = EvalReport(
-      meta: {
-        'profileId': p.id,
-        'providerType': p.type.name,
-        'model': p.defaultModel,
-        'privacy': p.privacy.name,
-        'now': time.now.toIso(),
-        'timeZone': time.timeZone,
-        'filter': ?filter,
-        'limit': ?limit,
-        'cases': cases.length,
-        if (interrupted) 'interrupted': true,
-      },
-      results: results,
+    return _finish(
+      args,
+      out,
+      err,
+      p,
+      time,
+      results,
+      budget: budget,
+      repeat: repeat,
+      interrupted: interrupted,
+      ledgerFile: ledgerFile,
+      budgetGroup: profile.budgetGroup,
+      today: today,
     );
-    out
-      ..writeln()
-      ..write(report.renderTable());
-    if (args.option('out') case final path?) {
-      final file = File(path);
-      file.parent.createSync(recursive: true);
-      file.writeAsStringSync(report.encode());
-      out.writeln('Report: $path');
-    }
-    return interrupted ? 130 : 0;
   } on FormatException catch (e) {
     err.writeln('Fehler: ${e.message}');
     return 1;
@@ -190,6 +228,236 @@ Future<int> runCli(
     err.writeln('Fehler: ${e.message} (${e.path})');
     return 1;
   } on ArgumentError catch (e) {
+    err.writeln('Fehler: ${e.message}');
+    return 1;
+  }
+}
+
+/// Prints and writes the report, books the ledger and returns the exit code.
+int _finish(
+  ArgResults args,
+  StringSink out,
+  StringSink err,
+  ProviderProfile p,
+  EvalTime time,
+  List<CaseResult> results, {
+  required CostBudget? budget,
+  required int repeat,
+  required bool interrupted,
+  required File? ledgerFile,
+  required String? budgetGroup,
+  required DateTime Function()? today,
+}) {
+  final limit = args.option('limit');
+  final report = EvalReport(
+    meta: {
+      'profileId': p.id,
+      'providerType': p.type.name,
+      'model': p.defaultModel,
+      'privacy': p.privacy.name,
+      'now': time.now.toIso(),
+      'timeZone': time.timeZone,
+      'filter': ?args.option('cases'),
+      'limit': ?(limit == null ? null : int.tryParse(limit)),
+      'cases': results
+          .where((r) => r.repetition == null || r.repetition == 1)
+          .length,
+      if (repeat > 1) 'repeat': repeat,
+      if (budget != null) 'maxCostMicros': budget.limitMicros,
+      if (budget?.exceeded ?? false) ...{
+        'budgetExceeded': true,
+        'budgetReason': budget!.stopReason,
+      },
+      if (interrupted) 'interrupted': true,
+      if (results.any((r) => r.observation.retried))
+        'retried': results.where((r) => r.observation.retried).length,
+      if (results.any((r) => r.reasons.contains('rate-limit')))
+        'rateLimitAborted': true,
+    },
+    results: results,
+  );
+  out
+    ..writeln()
+    ..write(report.renderTable());
+  if (args.option('out') case final path?) {
+    final file = File(path);
+    file.parent.createSync(recursive: true);
+    file.writeAsStringSync(report.encode());
+    out.writeln('Report: $path');
+  }
+  if (ledgerFile != null) {
+    appendLedger(
+      ledgerFile,
+      ledgerEntryOf(
+        p,
+        budgetGroup,
+        report.summary,
+        budget,
+        (today ?? DateTime.now)(),
+      ),
+    );
+    out.writeln('Bilanz ergänzt: ${ledgerFile.path}');
+  }
+  if (budget?.exceeded ?? false) {
+    err.writeln('Abbruch: ${budget!.stopReason}');
+    return 2;
+  }
+  return interrupted ? 130 : 0;
+}
+
+/// The ledger file, read now: a broken ledger must stop the run before it
+/// costs money.
+File? _ledger(String? path) {
+  if (path == null) return null;
+  final file = File(path);
+  readLedger(file);
+  return file;
+}
+
+/// Cases for `--cases`, `--ids` and `--limit`; `error` if none are left.
+({List<EvalCase> cases, String? error}) _selectCases(
+  ArgResults args,
+  List<EvalCase> all,
+  int? limit,
+) {
+  final filter = args.option('cases');
+  var cases = all.where((c) => c.matches(filter)).toList();
+  if (args.option('ids') case final idsPath?) {
+    final (:ids, :error) = _readIds(idsPath, all);
+    if (error != null) return (cases: cases, error: error);
+    cases = cases.where((c) => ids.contains(c.id)).toList();
+  }
+  if (limit != null && cases.length > limit) {
+    cases = cases.take(limit).toList();
+  }
+  return (cases: cases, error: cases.isEmpty ? 'Keine Fälle ausgewählt' : null);
+}
+
+/// Exact case ids from the `--ids` file; `error` if it is missing or has
+/// ids not in [all].
+({Set<String> ids, String? error}) _readIds(String path, List<EvalCase> all) {
+  final file = File(path);
+  if (!file.existsSync()) return (ids: {}, error: '--ids: Datei $path fehlt');
+  final ids = file
+      .readAsLinesSync()
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty && !l.startsWith('#'))
+      .toSet();
+  final known = {for (final c in all) c.id};
+  final unknown = ids.where((i) => !known.contains(i)).toList();
+  if (unknown.isNotEmpty) {
+    return (
+      ids: ids,
+      error: '--ids: unbekannte Fall-Id(s): ${unknown.join(', ')}',
+    );
+  }
+  return (ids: ids, error: null);
+}
+
+String _banner(ProviderProfile p, int cases, int repeat, EvalTime time) =>
+    'Profil ${p.id} (${p.type.name}), Modell ${p.defaultModel}, '
+    '$cases Fälle${repeat > 1 ? ' × $repeat' : ''}, heute = ${time.now} ${time.timeZone}';
+
+Duration _pause(ArgResults a) =>
+    Duration(milliseconds: int.parse(a.option('pause-ms') ?? '0'));
+
+Duration? _retryRateLimit(ArgResults a) =>
+    switch (a.option('retry-rate-limit')) {
+      final s? => Duration(milliseconds: (double.parse(s) * 1000).round()),
+      null => null,
+    };
+
+/// Why a numeric option is invalid; `null` if all are fine.
+String? _badNumber(ArgResults a) {
+  final limit = a.option('limit');
+  if (limit != null && (int.tryParse(limit) ?? 0) < 1) {
+    return '--limit braucht eine Zahl ≥ 1';
+  }
+  final pauseMs = a.option('pause-ms');
+  if (pauseMs != null && (int.tryParse(pauseMs) ?? -1) < 0) {
+    return '--pause-ms braucht eine ganze Zahl ≥ 0';
+  }
+  final retry = a.option('retry-rate-limit');
+  if (retry != null && !((double.tryParse(retry) ?? -1) >= 0)) {
+    return '--retry-rate-limit braucht eine Zahl ≥ 0 (Sekunden)';
+  }
+  if ((int.tryParse(a.option('repeat')!) ?? 0) < 1) {
+    return '--repeat braucht eine Zahl ≥ 1';
+  }
+  if (a.option('max-cost') != null && _budget(a.option('max-cost')) == null) {
+    return '--max-cost braucht eine Zahl > 0 (USD)';
+  }
+  final capText = a.option('provider-cap');
+  if (capText == null) return null;
+  final cap = double.tryParse(capText);
+  if (cap == null || !cap.isFinite || cap <= 0) {
+    return '--provider-cap braucht eine Zahl > 0 (USD)';
+  }
+  return a.option('ledger') == null
+      ? '--provider-cap braucht --ledger <datei>'
+      : null;
+}
+
+/// The budget after applying [cap] for [provider] (cap minus what the
+/// ledger booked, the smaller of that and [own]); or an error message when
+/// nothing is left.
+(CostBudget?, String?) _capBudget(
+  double? cap,
+  CostBudget? own,
+  File? ledgerFile,
+  EvalProfile profile,
+) {
+  if (cap == null) return (own, null);
+  final group = profile.budgetGroup;
+  final profileId = profile.profile.id;
+  if (group == null) {
+    return (
+      own,
+      'Fehler: --provider-cap, aber das Profil $profileId hat keine '
+          '"budgetGroup" (Konto-Gruppe, z. B. anthropic) – Start verweigert',
+    );
+  }
+  final spent = groupSpentUsd(readLedger(ledgerFile!), group);
+  final remaining = cap - spent;
+  if ((remaining * 1e6).round() < 1) {
+    return (
+      own,
+      'Fehler: Obergrenze für $group ausgeschöpft '
+          '(${spent.toStringAsFixed(4)} von ${cap.toStringAsFixed(4)} USD im '
+          'Ledger) – Start verweigert',
+    );
+  }
+  final mine = own?.limitMicros;
+  return (
+    mine == null || remaining * 1e6 < mine ? CostBudget(remaining) : own,
+    null,
+  );
+}
+
+String _priceWarning(String model) =>
+    'Warnung: kein Preis für Modell $model im Katalog – Kosten '
+    'unvollständig (Preise über "catalog" im Profil ergänzen)';
+
+String _noPrice(String model) =>
+    'Fehler: --max-cost, aber kein Preis für Modell $model (Preise über '
+    '"catalog" im Profil ergänzen) – Start verweigert';
+
+CostBudget? _budget(String? text) {
+  if (text == null) return null;
+  final usd = double.tryParse(text);
+  return usd == null || !usd.isFinite || usd <= 0 ? null : CostBudget(usd);
+}
+
+int _ledgerSummary(ArgResults args, StringSink out, StringSink err) {
+  final path = args.option('ledger');
+  if (path == null) {
+    err.writeln('--ledger-summary braucht --ledger <datei>');
+    return 64;
+  }
+  try {
+    out.write(renderLedgerSummary(readLedger(File(path))));
+    return 0;
+  } on FormatException catch (e) {
     err.writeln('Fehler: ${e.message}');
     return 1;
   }

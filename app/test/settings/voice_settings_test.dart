@@ -827,10 +827,12 @@ void main() {
         'Français – Gilles (männlich)',
         'English – LJSpeech (weiblich)',
         'English – Joe (männlich)',
+        'Deutsch – Ramona (weiblich)',
+        'Deutsch – Eva (weiblich)',
       ]) {
         expect(find.text(name), findsOneWidget);
       }
-      expect(find.byType(ModelDownloadRow), findsNWidgets(9));
+      expect(find.byType(ModelDownloadRow), findsNWidgets(11));
       // Default: first voice of the language; no voice loaded -> no sample.
       expect(
         c.read(voiceSettingsProvider).value!.sherpaVoiceFor('de'),
@@ -841,7 +843,6 @@ void main() {
       // One play button per language, on the chosen voice only.
       expect(find.byTooltip('Probe hören'), findsOneWidget);
       expect(find.text('Probe hören'), findsNothing);
-
       await tester.tap(find.text('Deutsch – Kerstin (weiblich)'));
       await settle(tester);
       expect(c.read(voiceSettingsProvider).value!.sherpaVoices, {
@@ -852,7 +853,6 @@ void main() {
       final call = env.sherpaTts.calls.single;
       expect((call.voice, call.language), ('tts-de-kerstin', 'de'));
       expect(call.text, 'Hallo, ich bin Wendelin.');
-
       // Not loaded voices are not selectable; loading is offered.
       await tester.tap(find.text('English – Joe (männlich)'));
       await settle(tester);

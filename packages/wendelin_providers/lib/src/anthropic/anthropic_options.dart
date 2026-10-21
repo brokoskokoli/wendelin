@@ -8,7 +8,8 @@ import 'package:meta/meta.dart';
 /// - `webSearchToolType` (String): override the tool version
 ///   (default: `web_search_20260209` for models that support it, otherwise
 ///   `web_search_20250305`).
-/// - `thinking` (`adaptive` | `disabled`): thinking mode.
+/// - `thinking` (`adaptive` | `disabled` | `between_tools`): thinking mode
+///   (`between_tools` for models that reject `disabled`, e.g. Sonnet 5.5).
 /// - `thinkingDisplay` (`summarized` | `omitted`): visibility of adaptive
 ///   thinking text.
 /// - `thinkingBudget` (int): fixed budget (`budget_tokens`) – only for

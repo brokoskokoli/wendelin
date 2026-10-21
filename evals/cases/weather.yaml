@@ -1,0 +1,134 @@
+# Wetter und Meer (WP112) mit Fake-Dienst: Hamburg 9 Grad, Kiel 8,
+# Lissabon 19, Palma 21 (Wassertemperatur 17), Lyon 12, Heimatort ohne
+# Namen 7 Grad; heute bedeckt, morgen Regen.
+cases:
+  - id: de-weather-hamburg-morgen
+    language: de
+    category: weather
+    prompt: Wie wird das Wetter morgen in Hamburg?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {contains: Hamburg}
+            days:
+              any_of:
+                - {present: false}
+                - {min: 2}
+      text: {contains: Regen}
+
+  - id: de-weather-schirm
+    language: de
+    category: weather
+    prompt: Brauche ich heute einen Regenschirm?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {present: false}
+
+  - id: de-weather-kiel-nachmittag
+    language: de
+    category: weather
+    prompt: Wie warm ist es heute Nachmittag in Kiel?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {contains: Kiel}
+            hours: {min: 1}
+
+  - id: de-weather-wellen
+    language: de
+    category: weather
+    prompt: Wie hoch sind die Wellen vor Palma?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__marine
+          args:
+            place: {contains: Palma}
+
+  - id: de-weather-lissabon-woche
+    language: de
+    category: weather
+    prompt: Gib mir die Vorhersage für Lissabon für die nächsten fünf Tage.
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {contains: Lissabon}
+            days: 5
+
+  - id: en-weather-lisbon
+    language: en
+    category: weather
+    prompt: What's the weather like in Lisbon tomorrow?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {contains_any: [Lisbon, Lissabon]}
+
+  - id: en-weather-rain-today
+    language: en
+    category: weather
+    prompt: Is it going to rain today?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {present: false}
+
+  - id: en-weather-waves
+    language: en
+    category: weather
+    prompt: How are the waves near Palma this weekend?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__marine
+          args:
+            place: {contains: Palma}
+            days: {min: 4}
+
+  - id: fr-weather-lyon
+    language: fr
+    category: weather
+    prompt: Quel temps fait-il à Lyon demain ?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {contains: Lyon}
+
+  - id: fr-weather-hambourg
+    language: fr
+    category: weather
+    prompt: Va-t-il pleuvoir à Hambourg dans les prochaines heures ?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__forecast
+          args:
+            place: {contains_any: [Hambourg, Hamburg]}
+            hours: {min: 1}
+
+  - id: fr-weather-eau
+    language: fr
+    category: weather
+    prompt: Quelle est la température de l'eau à Palma ?
+    setup: {backends: [weather]}
+    expect:
+      calls:
+        - tool: weather__marine
+          args:
+            place: {contains: Palma}
+      text: {contains: "17"}

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:meta/meta.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/voice_log.dart';
 import 'pcm.dart';
 
 /// Raw output of one Whisper run.
@@ -151,16 +152,23 @@ final class WhisperSpeechToText implements SpeechToText {
     final text = cleanWhisperText(raw.text);
     final detected = primaryLanguage(raw.language);
     final lang = fixed ?? (languages.contains(detected) ? detected : null);
+    final confidence = text.isEmpty
+        ? null
+        : whisperConfidence(
+            text,
+            audio: samplesToDuration(pcm.length),
+            languageSupported: fixed != null || languages.contains(detected),
+          );
+    // Which language was used, never what was said.
+    voiceLog('stt-lang', {
+      'model': modelId,
+      'src': fixed != null ? 'fixed' : 'detected',
+      'lang': lang,
+      'detected': detected.isEmpty ? null : detected,
+      'conf': confidence,
+    });
     if (text.isEmpty) return Transcript(text: '', language: lang);
-    return Transcript(
-      text: text,
-      language: lang,
-      confidence: whisperConfidence(
-        text,
-        audio: samplesToDuration(pcm.length),
-        languageSupported: fixed != null || languages.contains(detected),
-      ),
-    );
+    return Transcript(text: text, language: lang, confidence: confidence);
   }
 }
 

@@ -1,0 +1,54 @@
+{
+  "id": "tinfoil-tee",
+  "name": "Tinfoil TEE",
+  "budgetGroup": "tinfoil",
+  "type": "openaiCompatible",
+  "baseUrl": "https://inference.tinfoil.sh/v1",
+  "defaultModel": "gpt-oss-120b",
+  "privacy": "tee",
+  "authMethod": {
+    "kind": "apiKey",
+    "secretRef": "TINFOIL_API_KEY"
+  },
+  "options": {
+    "toolsOnly": true
+  },
+  "modelOptions": {
+    "gpt-oss-120b": {
+      "reasoningEffort": "low"
+    },
+    "gemma4-31b": {
+      "extraBody": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      }
+    },
+    "deepseek-v4-1-flash": {
+      "extraBody": {
+        "chat_template_kwargs": {
+          "thinking": false
+        }
+      }
+    }
+  },
+  "catalog": {
+    "models": {
+      "gpt-oss-120b": {
+        "input": 0.15,
+        "output": 0.6,
+        "cacheRead": 0.15
+      },
+      "gemma4-31b": {
+        "input": 0.4,
+        "output": 1.0,
+        "cacheRead": 0.4
+      },
+      "deepseek-v4-1-flash": {
+        "input": 0.65,
+        "output": 1.45,
+        "cacheRead": 0.13
+      }
+    }
+  }
+}

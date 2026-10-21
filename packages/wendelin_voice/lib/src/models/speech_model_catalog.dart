@@ -47,6 +47,8 @@ final class SpeechModelCatalog {
     sileroVad,
     voiceDe,
     voiceDeKerstin,
+    _voiceDeRamona,
+    _voiceDeEva,
     voiceFr,
     voiceFrGilles,
     voiceEn,
@@ -279,8 +281,7 @@ final class SpeechModelCatalog {
     ],
   );
 
-  /// German voice: Piper „Kerstin“ (low, int8; CC0 dataset of the Rhasspy
-  /// project).
+  /// German voice: Piper „Kerstin“ (low, int8; CC0, Rhasspy).
   static const voiceDeKerstin = SpeechModel(
     id: 'tts-de-kerstin',
     kind: SpeechModelKind.tts,
@@ -302,8 +303,7 @@ final class SpeechModelCatalog {
     ],
   );
 
-  /// French voice: Piper „Gilles“ (low, int8; CC0 dataset). The gender
-  /// is taken from the voice's description, not checked by ear.
+  /// French voice: Piper „Gilles“ (low, int8; CC0), gender per description.
   static const voiceFrGilles = SpeechModel(
     id: 'tts-fr-gilles',
     kind: SpeechModelKind.tts,
@@ -538,3 +538,61 @@ final class SpeechModelCatalog {
     ];
   }
 }
+
+/// German voice: Piper „Ramona“ (low, int8; M-AILABS speech dataset, BSD-style
+/// license that requires keeping the copyright notice).
+const _voiceDeRamona = SpeechModel(
+  id: 'tts-de-ramona',
+  kind: SpeechModelKind.tts,
+  displayName: 'Deutsch – Ramona (weiblich)',
+  gender: VoiceGender.female,
+  languages: {'de'},
+  license: 'BSD-3-Clause-artig (M-AILABS Speech Dataset), Piper MIT',
+  source: _ghSource,
+  note: '$_ghNote $_int8Note SHA-256 selbst gehasht (2026-10-21).',
+  attribution:
+      'Stimme „Ramona“ (low): Daten © 2017–2019 M-AILABS (Speech Dataset, '
+      'https://www.caito.de/2019/01/03/the-m-ailabs-speech-dataset/), '
+      'Weitergabe und Nutzung inkl. kommerziell erlaubt unter Beibehaltung '
+      'des Copyright-Hinweises; Modell Piper (rhasspy/piper-voices, '
+      'de/de_DE/ramona/low).',
+  files: [
+    ModelFile(
+      name: 'vits-piper-de_DE-ramona-low-int8.tar.bz2',
+      url: '$_gh/tts-models/vits-piper-de_DE-ramona-low-int8.tar.bz2',
+      sizeBytes: 21199380,
+      sha256:
+          'e532ddcbb09c16a65f56441bbbbf301083d2ea5b18ce937775303942f2b7a8f4',
+      archive: ModelArchive.tarBz2,
+    ),
+  ],
+);
+
+/// German voice: Piper „Eva“ (x_low, int8; M-AILABS speech dataset, BSD-style
+/// license that requires keeping the copyright notice).
+const _voiceDeEva = SpeechModel(
+  id: 'tts-de-eva',
+  kind: SpeechModelKind.tts,
+  displayName: 'Deutsch – Eva (weiblich)',
+  gender: VoiceGender.female,
+  languages: {'de'},
+  license: 'BSD-3-Clause-artig (M-AILABS Speech Dataset), Piper MIT',
+  source: _ghSource,
+  note: '$_ghNote $_int8Note SHA-256 selbst gehasht (2026-10-21).',
+  attribution:
+      'Stimme „Eva“ (x_low): Daten © 2017–2019 M-AILABS (Speech Dataset, '
+      'https://www.caito.de/2019/01/03/the-m-ailabs-speech-dataset/), '
+      'Weitergabe und Nutzung inkl. kommerziell erlaubt unter Beibehaltung '
+      'des Copyright-Hinweises; Modell Piper (rhasspy/piper-voices, '
+      'de/de_DE/eva_k/x_low).',
+  files: [
+    ModelFile(
+      name: 'vits-piper-de_DE-eva_k-x_low-int8.tar.bz2',
+      url: '$_gh/tts-models/vits-piper-de_DE-eva_k-x_low-int8.tar.bz2',
+      sizeBytes: 13321491,
+      sha256:
+          '0501123c7e184571a40690e79943f4111a57b988632f7f60a9d2344fd061e2a2',
+      archive: ModelArchive.tarBz2,
+    ),
+  ],
+);

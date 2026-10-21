@@ -173,6 +173,10 @@ void main() {
       expect(body(const AnthropicOptions(thinking: 'disabled'))['thinking'], {
         'type': 'disabled',
       });
+      expect(
+        body(const AnthropicOptions(thinking: 'between_tools'))['thinking'],
+        {'type': 'between_tools'},
+      );
       expect(body(const AnthropicOptions(thinkingBudget: 2000))['thinking'], {
         'type': 'enabled',
         'budget_tokens': 2000,

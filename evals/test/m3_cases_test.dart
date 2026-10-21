@@ -12,7 +12,7 @@ void main() {
     for (final l in ['de', 'fr', 'en']) {
       expect(cases.where((c) => c.language == l), hasLength(4), reason: l);
     }
-    for (final b in caseBackends) {
+    for (final b in ['bring', 'http', 'mcp']) {
       expect(
         cases.where((c) => c.setup.backends.contains(b)),
         hasLength(greaterThanOrEqualTo(3)),

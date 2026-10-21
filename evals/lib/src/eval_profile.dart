@@ -10,15 +10,29 @@ import 'package:wendelin_providers/wendelin_providers.dart';
 /// eval keys:
 /// - `catalog`: price overrides in the `ModelCatalog.mergeJson` format
 ///   (`{"models": {"<id>": {"input": 0.1, "output": 0.4}}}`),
+/// - `budgetGroup`: group whose `--provider-cap` this profile shares (all
+///   profiles of one billing account use the same name, e.g. `anthropic`
+///   for Haiku and Sonnet); without it `--provider-cap` refuses to start,
 /// - `escalationModels`: no longer used (Wendelin does not switch models
 ///   on its own, K28); the key is accepted and ignored,
+/// - `modelOptions`: provider options per model id (e.g. `reasoningEffort`,
+///   `extraBody` with `chat_template_kwargs` to switch thinking off); merged
+///   over `options` for the model in use, `extraBody` key by key, so one
+///   profile can run several models that need different request fields,
 /// - `script`: for `type: fake` the path of the fake script (relative to
 ///   the profile file).
 ///
 /// It never contains a key: the API key comes from an environment variable
 /// (see [apiKeyVariable]).
 final class EvalProfile {
-  EvalProfile._(this.profile, this.catalog, this.script);
+  EvalProfile._(
+    this.profile,
+    this.catalog,
+    this.script, [
+    this._base,
+    this._modelOptions = const {},
+    this.budgetGroup,
+  ]);
 
   /// Parses [json]; throws [FormatException].
   factory EvalProfile.parse(String json) {
@@ -44,18 +58,66 @@ final class EvalProfile {
     final map = Map.of(decoded);
     final catalogJson = map.remove('catalog');
     map.remove('escalationModels');
+    final group = map.remove('budgetGroup');
+    if (group != null && (group is! String || group.trim().isEmpty)) {
+      throw const FormatException('budgetGroup: nicht leerer Text erwartet');
+    }
     final script = map.remove('script');
     if (script != null && script is! String) {
       throw const FormatException('script: Pfad erwartet');
     }
+    final modelOptions = _modelOptionsOf(map.remove('modelOptions'));
     var catalog = ModelCatalog.builtIn();
     if (catalogJson != null) {
       catalog = catalog.mergeJson(jsonEncode(catalogJson));
     }
+    final base = ProviderProfile.fromJson(map);
     return EvalProfile._(
-      ProviderProfile.fromJson(map),
+      _withModelOptions(base, base.defaultModel, modelOptions),
       catalog,
       script as String?,
+      base,
+      modelOptions,
+      group as String?,
+    );
+  }
+
+  static Map<String, Map<String, Object?>> _modelOptionsOf(Object? v) {
+    if (v == null) return const {};
+    if (v is! Map<String, Object?>) {
+      throw const FormatException('modelOptions: Objekt je Modell erwartet');
+    }
+    return {
+      for (final e in v.entries)
+        e.key: switch (e.value) {
+          final Map<String, Object?> m => m,
+          _ => throw FormatException('modelOptions.${e.key}: Objekt erwartet'),
+        },
+    };
+  }
+
+  /// [base] with the options of [model] merged over `options`
+  /// (`extraBody` merged key by key).
+  static ProviderProfile _withModelOptions(
+    ProviderProfile base,
+    String model,
+    Map<String, Map<String, Object?>> modelOptions,
+  ) {
+    final own = modelOptions[model];
+    if (own == null) return base.copyWith(defaultModel: model);
+    final baseBody = base.options['extraBody'];
+    final ownBody = own['extraBody'];
+    return base.copyWith(
+      defaultModel: model,
+      options: {
+        ...base.options,
+        ...own,
+        if (baseBody is Map<String, Object?> || ownBody is Map<String, Object?>)
+          'extraBody': {
+            if (baseBody is Map<String, Object?>) ...baseBody,
+            if (ownBody is Map<String, Object?>) ...ownBody,
+          },
+      },
     );
   }
 
@@ -64,6 +126,9 @@ final class EvalProfile {
 
   /// Prices (built-in plus overrides).
   final ModelCatalog catalog;
+
+  /// Group for `--provider-cap` (see class doc), `null` if the profile has none.
+  final String? budgetGroup;
 
   /// Fake script path (only for `type: fake`).
   final String? script;
@@ -90,8 +155,17 @@ final class EvalProfile {
   }
 
   /// The profile with [model] as default model.
-  EvalProfile withModel(String model) =>
-      EvalProfile._(profile.copyWith(defaultModel: model), catalog, script);
+  EvalProfile withModel(String model) => EvalProfile._(
+    _withModelOptions(_base ?? profile, model, _modelOptions),
+    catalog,
+    script,
+    _base,
+    _modelOptions,
+    budgetGroup,
+  );
+
+  final ProviderProfile? _base;
+  final Map<String, Map<String, Object?>> _modelOptions;
 
   /// Cost estimator from [catalog].
   CostEstimator get costEstimator =>

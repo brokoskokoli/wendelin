@@ -1,0 +1,132 @@
+# Google Tasks (WP112): Liste "Meine Aufgaben" mit Steuerbelege sortieren
+# (überfällig), Zahnarzt anrufen (heute), Geschenk für Mara besorgen
+# (in 3 Tagen), Reisepass verlängern (ohne Datum); Liste "Arbeit" mit
+# Quartalsbericht abgeben (heute), Folien für Montag prüfen (morgen).
+cases:
+  - id: de-gtasks-add-faellig
+    language: de
+    category: tasks
+    prompt: Setz auf meine Aufgabenliste Steuererklärung abgeben, fällig Freitag.
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__add
+          args:
+            title: {contains: Steuererklärung}
+            due: {any_of: [{date: fri}, {contains: Freitag}]}
+
+  - id: de-gtasks-add-arbeit
+    language: de
+    category: tasks
+    prompt: Füge der Liste Arbeit hinzu, Spesenabrechnung einreichen.
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__add
+          args:
+            title: {contains: Spesenabrechnung}
+            list: {contains: Arbeit}
+
+  - id: de-gtasks-heute
+    language: de
+    category: tasks
+    prompt: Welche Aufgaben sind heute fällig?
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__list
+          args:
+            filter: today
+      text: {contains: Zahnarzt}
+
+  - id: de-gtasks-ueberfaellig
+    language: de
+    category: tasks
+    prompt: Was ist bei meinen Aufgaben überfällig?
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__list
+          args:
+            filter: overdue
+      text: {contains: Steuerbelege}
+
+  - id: de-gtasks-abhaken
+    language: de
+    category: tasks
+    prompt: Hak die Aufgabe Zahnarzt anrufen ab.
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__complete
+          args:
+            title: {contains: Zahnarzt}
+
+  - id: en-gtasks-add
+    language: en
+    category: tasks
+    prompt: Add a task to buy batteries, due tomorrow.
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__add
+          args:
+            title: {contains: batter}
+            due: {any_of: [{date: "+1d"}, {contains: tomorrow}]}
+
+  - id: en-gtasks-work
+    language: en
+    category: tasks
+    prompt: What tasks are on my work list?
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__list
+      text: {contains: Quartalsbericht}
+
+  - id: en-gtasks-complete
+    language: en
+    category: tasks
+    prompt: Tick off my task Reisepass verlängern.
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__complete
+          args:
+            title: {contains: Reisepass}
+
+  - id: fr-gtasks-add
+    language: fr
+    category: tasks
+    prompt: "Ajoute à mes tâches : appeler le plombier, pour lundi."
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__add
+          args:
+            title: {contains: plombier}
+            due: {any_of: [{date: mon}, {contains_any: [lundi, monday]}]}
+
+  - id: fr-gtasks-retard
+    language: fr
+    category: tasks
+    prompt: Quelles tâches sont en retard ?
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__list
+          args:
+            filter: overdue
+      text: {contains: Steuerbelege}
+
+  - id: fr-gtasks-cocher
+    language: fr
+    category: tasks
+    prompt: Coche la tâche « Folien für Montag prüfen » dans la liste Arbeit.
+    setup: {backends: [gtasks]}
+    expect:
+      calls:
+        - tool: gtasks__complete
+          args:
+            title: {contains: Folien}
+            list: {contains: Arbeit}

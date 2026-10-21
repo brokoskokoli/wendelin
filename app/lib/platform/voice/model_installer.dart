@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/voice_log.dart';
 import 'disk_space.dart';
 import 'file_model_store.dart';
 import 'tar_bz2.dart';
@@ -124,15 +125,65 @@ final class ModelInstaller implements SpeechModelService {
       if (f.archive != ModelArchive.tarBz2) continue;
       cancel?.throwIfCancelled();
       onUnpacking?.call();
-      final file = File(store.pathOf(model.id, f.name));
-      try {
-        await extractTarBz2(file, unpackedDir(model, f));
-      } on ArchiveRejected {
-        await store.deleteFile(model.id, f.name);
-        rethrow;
-      }
-      await store.deleteFile(model.id, f.name);
+      await _unpack(model, f);
     }
+  }
+
+  /// Unpacks the downloaded archive [f] of [model]: space check, log
+  /// lines (sizes and reason, no paths), archive removed afterwards.
+  Future<void> _unpack(SpeechModel model, ModelFile f) async {
+    final file = File(store.pathOf(model.id, f.name));
+    final archiveBytes = await file.length();
+    final limit = unpackLimit(archiveBytes);
+    // The download check may be long ago (resumed install): the room for
+    // the unpacked files is checked again, with a clear message.
+    final free = await disk.freeBytes(store.root.path);
+    voiceLog('model-unpack', {
+      'model': model.id,
+      'archive_bytes': archiveBytes,
+      'limit_bytes': limit,
+      'free_bytes': free,
+    });
+    if (free != null && free < limit) {
+      voiceLog('model-unpack-failed', {
+        'model': model.id,
+        'reason': 'no-space',
+        'archive_bytes': archiveBytes,
+        'free_bytes': free,
+        'need_bytes': limit,
+      });
+      throw InsufficientSpaceException(requiredBytes: limit, freeBytes: free);
+    }
+    final watch = Stopwatch()..start();
+    try {
+      final bytes = await extractTarBz2(file, unpackedDir(model, f));
+      voiceLog('model-unpacked', {
+        'model': model.id,
+        'bytes': bytes,
+        'ms': watch.elapsed,
+      });
+    } on ArchiveRejected catch (e) {
+      voiceLog('model-unpack-failed', {
+        'model': model.id,
+        'reason': e.reason,
+        'archive_bytes': archiveBytes,
+        'limit_bytes': limit,
+      });
+      // Only an OS/storage error while writing (storage full, no permission)
+      // says nothing against the archive: keep it, a retry unpacks again
+      // without a new download. Everything from the archive content,
+      // clashing entries included, is `corrupt` and deletes it.
+      if (e.reason != 'io') await store.deleteFile(model.id, f.name);
+      rethrow;
+    } on Object catch (e) {
+      voiceLog('model-unpack-failed', {
+        'model': model.id,
+        'reason': errorCode(e),
+        'archive_bytes': archiveBytes,
+      });
+      rethrow;
+    }
+    await store.deleteFile(model.id, f.name);
   }
 
   /// Removes [model] from the device.
