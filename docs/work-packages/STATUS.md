@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 nachmittags, Stefan da; läuft: Klärung Stopp-E2E rot auf main (voice_stop_word/voice_barge_in, kein barge-hit); als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
+Stand: 2026-10-20 nachmittags, Stefan da; läuft: Test-APK a2c4a1f; Folgepunkt: Stopp-E2E (voice_stop_word/voice_barge_in) zeitempfindlich – WAV läuft nach Wanduhr (wav_audio_input.dart:35), unter Last rot; Fix: barge.wav erst nach `barge-listen on=true` freigeben (kein Code-Fehler, e7e17b9b = de201681); als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
 
 ## Meilensteine
 
