@@ -296,6 +296,7 @@ int unpackTarStream(
       chunkBytes: chunkBytes,
       onEntry: (path, directory, body) {
         final full = '${tmp.path}/$path';
+        _rejectClash(tmp.path, path, directory);
         if (directory) {
           Directory(full).createSync(recursive: true);
           return;
@@ -317,8 +318,9 @@ int unpackTarStream(
     tmp.renameSync(targetPath);
     return written;
   } on FileSystemException catch (e) {
-    // Full storage or entries that clash (a file where a folder must be):
-    // nothing half-written stays, the caller discards the archive.
+    // OS or storage error (full disk, no permission): nothing half-written
+    // stays, the archive is kept for a new attempt. Clashing entries are
+    // an archive fault and never get here (see [_rejectClash]).
     _removeQuietly(tmp);
     throw ArchiveRejected(
       'Das Archiv ließ sich nicht entpacken (${e.osError?.message ?? e.message}).',
@@ -333,6 +335,23 @@ int unpackTarStream(
   } on Object {
     _removeQuietly(tmp);
     rethrow;
+  }
+}
+
+/// Entries that clash (a file where a folder must be, or the reverse) make
+/// the archive itself faulty: throws [ArchiveException] (reason `corrupt`).
+void _rejectClash(String root, String path, bool directory) {
+  final parts = path.split('/').where((p) => p.isNotEmpty).toList();
+  var cur = root;
+  for (var i = 0; i < parts.length; i++) {
+    cur = '$cur/${parts[i]}';
+    final last = i == parts.length - 1;
+    final type = FileSystemEntity.typeSync(cur, followLinks: false);
+    if (type == FileSystemEntityType.notFound) return;
+    final isDir = type == FileSystemEntityType.directory;
+    if (last ? isDir != directory : !isDir) {
+      throw ArchiveException('Einträge widersprechen sich.');
+    }
   }
 }
 

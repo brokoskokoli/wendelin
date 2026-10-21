@@ -294,7 +294,7 @@ void main() {
     );
 
     test(
-      'Dateisystemfehler (io): Archiv bleibt für einen neuen Versuch',
+      'Konflikt Datei/Ordner im Archiv (a und a/b): corrupt, Archiv gelöscht',
       () async {
         final bytes = bz2(
           tar([
@@ -306,6 +306,36 @@ void main() {
         final inst = installer(1 << 40);
         inst.store.modelDir(m.id).createSync(recursive: true);
         File(inst.store.pathOf(m.id, 'u.tar.bz2')).writeAsBytesSync(bytes);
+        final lines = await capture(() async {
+          await expectLater(
+            inst.install(m),
+            throwsA(
+              isA<ArchiveRejected>().having((e) => e.reason, 'r', 'corrupt'),
+            ),
+          );
+        });
+        expect(lines.any((l) => l.contains('reason=corrupt')), isTrue);
+        expect(
+          File(inst.store.pathOf(m.id, 'u.tar.bz2')).existsSync(),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'Schreibfehler (io, Ordner schreibgeschützt): Archiv bleibt',
+      () async {
+        final bytes = bz2(
+          tar([
+            tarEntry('a', [1]),
+          ]),
+        );
+        final m = model(bytes);
+        final inst = installer(1 << 40);
+        final dir = inst.store.modelDir(m.id)..createSync(recursive: true);
+        File(inst.store.pathOf(m.id, 'u.tar.bz2')).writeAsBytesSync(bytes);
+        Process.runSync('chmod', ['555', dir.path]);
+        addTearDown(() => Process.runSync('chmod', ['755', dir.path]));
         final lines = await capture(() async {
           await expectLater(
             inst.install(m),

@@ -169,8 +169,10 @@ final class ModelInstaller implements SpeechModelService {
         'archive_bytes': archiveBytes,
         'limit_bytes': limit,
       });
-      // A file system error (storage full) says nothing against the archive:
-      // keep it, a retry unpacks again without a new download.
+      // Only an OS/storage error while writing (storage full, no permission)
+      // says nothing against the archive: keep it, a retry unpacks again
+      // without a new download. Everything from the archive content,
+      // clashing entries included, is `corrupt` and deletes it.
       if (e.reason != 'io') await store.deleteFile(model.id, f.name);
       rethrow;
     } on Object catch (e) {

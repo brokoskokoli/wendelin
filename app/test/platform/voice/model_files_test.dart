@@ -196,7 +196,7 @@ void main() {
       expect(File('${target.path}/voice/ok').existsSync(), isFalse);
     });
 
-    test('Schreibfehler (Datei, wo ein Ordner hin muss): abgelehnt, '
+    test('Konflikt (Datei, wo ein Ordner hin muss): beschädigt, '
         'nichts bleibt liegen', () async {
       final clash = File('${tmp.path}/c.tar.bz2')
         ..writeAsBytesSync(
@@ -208,10 +208,7 @@ void main() {
           ),
         );
       final target = Directory('${tmp.path}/c');
-      await expectLater(
-        extractTarBz2(clash, target),
-        _rejected('ließ sich nicht entpacken'),
-      );
+      await expectLater(extractTarBz2(clash, target), _rejected('beschädigt'));
       expect(target.existsSync(), isFalse);
       expect(Directory('${target.path}.tmp').existsSync(), isFalse);
     });
