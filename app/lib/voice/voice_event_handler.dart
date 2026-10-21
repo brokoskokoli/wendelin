@@ -4,6 +4,16 @@ part of 'voice_controller.dart';
 
 /// Maps pipeline events to the UI state and the voice log.
 extension _VoiceEventHandler on VoiceController {
+  /// WP120: the time line of the request runs from the end of the speech.
+  void _onStateTraced(VoiceState s) {
+    final latency = ref.read(latencyTraceProvider);
+    if (s == VoiceState.transcribing) latency.begin();
+    if (s == VoiceState.idle || s == VoiceState.listening) {
+      latency.finishSoon();
+    }
+    _onState(s);
+  }
+
   void _onEvent(VoiceEvent e) {
     switch (e) {
       case VoiceListening(:final followUp):

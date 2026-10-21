@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:path_provider/path_provider.dart';
 import 'package:wendelin_agent/wendelin_agent.dart';
@@ -34,6 +36,9 @@ const deviceTestFolder = 'e2e';
 /// - `audio`: WAV (16 kHz mono) in `files/e2e/` instead of the microphone
 ///   ([WavAudioInput]); a list plays one file per recording (command, then
 ///   the spoken answer to a confirmation),
+/// - `waitForBargeListen`: indices of the `audio` recordings that start
+///   only after the barge-in listener runs (`barge-listen on=true`, WP120):
+///   the WAV does not run by the wall clock under load,
 /// - `torch`: `"file"` = the flashlight port writes `on`/`off` into
 ///   `files/e2e/torch-state` instead of using the LED (WP53, an emulator
 ///   has none, and the test engine cannot see the overlay engine's port),
@@ -67,11 +72,15 @@ List<Override> parseDeviceTestOverrides(String json, String dir) {
   }
   final audio = spec['audio'];
   final raw = spec['turns'];
+  // Invalid specs fail here, not only when the provider is first read.
+  if (audio is List<Object?>) _wavs(dir, audio);
   final turns = raw is List<Object?> ? _turns(raw) : null;
   return [
     if (audio is String) audioInputProvider.overrideWithValue(_wav(dir, audio)),
     if (audio is List<Object?>)
-      audioInputProvider.overrideWithValue(_wavs(dir, audio)),
+      audioInputProvider.overrideWith(
+        (ref) => _wavs(dir, audio, gate: _bargeGate(ref, spec)),
+      ),
     if (spec['torch'] == 'file')
       platformPortsProvider.overrideWith((ref) {
         final demo = ref.watch(demoPortsProvider);
@@ -129,10 +138,42 @@ final class FileTorchPort implements TorchPort {
 }
 
 /// One WAV per recording (command, then the spoken answer, WP30).
-WavAudioInput _wavs(String dir, List<Object?> names) {
+WavAudioInput _wavs(
+  String dir,
+  List<Object?> names, {
+  Future<void> Function(int index)? gate,
+}) {
   if (names.isEmpty) throw const FormatException('audio: leere Liste');
-  return WavAudioInput.files([for (final n in names) _wavPath(dir, n)]);
+  return WavAudioInput.files([
+    for (final n in names) _wavPath(dir, n),
+  ], gate: gate);
 }
+
+/// Gate for `waitForBargeListen` (null without it): the listed recordings
+/// wait until the barge-in listener runs, at most [_bargeWait].
+Future<void> Function(int)? _bargeGate(Ref ref, Map<String, Object?> spec) {
+  final raw = spec['waitForBargeListen'];
+  if (raw is! List<Object?>) return null;
+  final gated = {for (final i in raw) ?(i is int ? i : null)};
+  var on = false;
+  final waiting = <Completer<void>>[];
+  ref.listen(bargeListeningProvider, (_, v) {
+    on = v;
+    if (!v) return;
+    for (final w in waiting) {
+      if (!w.isCompleted) w.complete();
+    }
+    waiting.clear();
+  }, fireImmediately: true);
+  return (index) {
+    if (!gated.contains(index) || on) return Future.value();
+    final w = Completer<void>();
+    waiting.add(w);
+    return w.future.timeout(_bargeWait, onTimeout: () {});
+  };
+}
+
+const _bargeWait = Duration(seconds: 30);
 
 List<ScriptedTurn> _turns(List<Object?> raw) => [
   for (final (i, t) in raw.indexed)

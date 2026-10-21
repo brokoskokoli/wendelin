@@ -190,12 +190,18 @@ void main() {
         'läuft auch schon. Danach';
 
     test('aus: der erste Satz kommt erst am Satzende', () {
-      expect(SentenceChunker().add('Ich habe die Lampe im Wohnzimmer, '), []);
+      expect(
+        SentenceChunker().add('Ich habe die Lampe im Wohnzimmer, '),
+        <String>[],
+      );
     });
 
     test('schneidet am Komma nach mindestens N Wörtern', () {
       final c = SentenceChunker(firstSplitWords: 6);
-      expect(c.add('Ich habe die Lampe im Wohnzimmer eingeschaltet,'), []);
+      expect(
+        c.add('Ich habe die Lampe im Wohnzimmer eingeschaltet,'),
+        <String>[],
+      );
       expect(c.add(' und'), [
         'Ich habe die Lampe im Wohnzimmer eingeschaltet,',
       ]);
@@ -208,13 +214,13 @@ void main() {
 
     test('zu wenige Wörter vor dem Komma: kein Schnitt', () {
       final c = SentenceChunker(firstSplitWords: 6);
-      expect(c.add('Ja, ich habe die Lampe an'), []);
+      expect(c.add('Ja, ich habe die Lampe an'), <String>[]);
       expect(c.pending, 'Ja, ich habe die Lampe an');
     });
 
     test('Doppelpunkt schneidet auch, Uhrzeit und Dezimalzahl nicht', () {
       final c = SentenceChunker(firstSplitWords: 3);
-      expect(c.add('Um 10:30 Uhr kostet es 10,5 Euro'), []);
+      expect(c.add('Um 10:30 Uhr kostet es 10,5 Euro'), <String>[]);
       expect(c.add(' pro Person: '), [
         'Um 10:30 Uhr kostet es 10,5 Euro pro Person:',
       ]);

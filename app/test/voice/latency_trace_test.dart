@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/di/voice_providers.dart';
@@ -91,15 +89,30 @@ void main() {
       });
     });
 
-    test('ohne Transkript oder nach abort keine Zeile', () {
+    test('ohne Transkript oder nach abort keine Zeile', () async {
       trace.begin();
       trace.finish();
       trace.begin();
       trace.sttDone();
       trace.finishSoon();
       trace.abort();
+      await Future<void>.value();
       expect(logged, isEmpty);
     });
+
+    test(
+      'abort und neue Anfrage: das alte finishSoon schreibt nicht',
+      () async {
+        trace.begin();
+        trace.sttDone();
+        trace.finishSoon();
+        trace.begin(); // next request starts in the same moment
+        trace.sttDone();
+        await Future<void>.value();
+        expect(logged, isEmpty, reason: 'die neue Anfrage läuft noch');
+        expect(trace.active, isTrue);
+      },
+    );
 
     test(
       'finishSoon schreibt nach den Ereignissen desselben Moments',
@@ -173,7 +186,6 @@ void main() {
       expect(latency.single, contains('sentences='));
       expect(latency.single, isNot(contains(secret)));
       expect(latency.single, isNot(contains('Wasser')));
-      expect(Uint8List(0), isEmpty);
     },
   );
 }
