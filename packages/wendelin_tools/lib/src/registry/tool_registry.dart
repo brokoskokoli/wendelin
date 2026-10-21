@@ -168,6 +168,47 @@ final class ToolRegistry {
   Set<String> unlockedTools(String sessionId) =>
       Set.unmodifiable(_unlocked[sessionId] ?? const <String>{});
 
+  /// Most integrations [preloadForRequest] unlocks (small models get
+  /// overloaded by more).
+  static const maxPreloaded = 3;
+
+  /// Unlocks, before the first model call, the tools of the integrations
+  /// that [requestText] names by topic words (`topicWordsFor` the language of [languageTag]), at
+  /// most [maxPreloaded]. Only tools the provider with [level] may see are
+  /// unlocked (K10); `tools__search` stays as the fallback. Without meta
+  /// mode all tools are offered anyway. Returns the integration ids.
+  List<String> preloadForRequest(
+    String requestText,
+    PrivacyLevel level, {
+    required String sessionId,
+    String? languageTag,
+  }) {
+    final active = _active(level);
+    if (active.length < metaToolThreshold) return const [];
+    final topics = topicIntegrationsIn(
+      requestText,
+      languageTag: languageTag,
+    ).toSet();
+    final ids =
+        <String>[
+          for (final id in {for (final e in active) e.integration.id})
+            if (topics.contains(id)) id,
+        ]..sort(
+          (a, b) =>
+              _topicRank(a, languageTag).compareTo(_topicRank(b, languageTag)),
+        );
+    final chosen = ids.take(maxPreloaded).toSet();
+    if (chosen.isEmpty) return const [];
+    _unlock(sessionId, [
+      for (final e in active)
+        if (chosen.contains(e.integration.id)) e.tool.name,
+    ]);
+    return chosen.toList();
+  }
+
+  static int _topicRank(String id, String? languageTag) =>
+      topicWordsFor(languageTag).keys.toList().indexOf(id);
+
   /// Forgets the tools unlocked in [sessionId] (session ended).
   void endSession(String sessionId) {
     if (_unlocked.remove(sessionId) != null) _changed();

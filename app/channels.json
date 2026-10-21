@@ -104,6 +104,14 @@
       },
       "toDart": {}
     },
+    "app.wendelin/alarm": {
+      "dart": ["app/lib/platform/android_alarm_port.dart"],
+      "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AlarmChannel.kt"],
+      "toKotlin": {
+        "nextAlarm": {"args": [], "returns": "value"}
+      },
+      "toDart": {}
+    },
     "app.wendelin/network": {
       "dart": ["app/lib/platform/channel_network_status.dart"],
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/NetworkChannel.kt"],

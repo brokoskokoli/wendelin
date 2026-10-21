@@ -30,6 +30,7 @@ final class _FakeIntents {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late _FakeIntents intents;
+  Object? Function() nextAlarm = () => null;
   // ignore: deprecated_member_use, AndroidIntent expects the legacy Platform.
   final android = FakePlatform(operatingSystem: 'android');
 
@@ -37,11 +38,18 @@ void main() {
     intents = _FakeIntents();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, intents.handle);
+    nextAlarm = () => null;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel(alarmChannelName),
+          (call) async => call.method == 'nextAlarm' ? nextAlarm() : null,
+        );
   });
 
   tearDown(
     () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, null),
+      ..setMockMethodCallHandler(_channel, null)
+      ..setMockMethodCallHandler(const MethodChannel(alarmChannelName), null),
   );
 
   alarmPortContract(
@@ -49,10 +57,63 @@ void main() {
     name: 'AndroidAlarmPort',
   );
 
-  test('kann nicht abbrechen und nicht auflisten', () async {
+  test('kann nicht abbrechen und kennt nur den nächsten Wecker', () {
     final port = AndroidAlarmPort(platform: android);
     expect(port.supportsCancel, isFalse);
-    expect(await port.listAlarms(), isNull);
+    expect(port.listsOnlyNext, isTrue);
+  });
+
+  group('listAlarms (nächster Wecker, WP119)', () {
+    test('liefert Datum und Uhrzeit des nächsten Weckers', () async {
+      final at = DateTime(2026, 10, 22, 7, 5);
+      nextAlarm = () => {'at': at.millisecondsSinceEpoch};
+      final list = await AndroidAlarmPort(platform: android).listAlarms();
+      expect(list, [AlarmInfo(hour: 7, minute: 5, at: at)]);
+    });
+
+    test('kein Wecker gestellt: leere Liste, kein Fehler', () async {
+      expect(await AndroidAlarmPort(platform: android).listAlarms(), isEmpty);
+    });
+
+    test('unsinnige Antwort: Fehler statt erfundener Zeit', () async {
+      nextAlarm = () => {'at': 'bald'};
+      await expectLater(
+        AndroidAlarmPort(platform: android).listAlarms(),
+        throwsA(
+          isA<PortException>().having(
+            (e) => e.kind,
+            'kind',
+            PortErrorKind.failed,
+          ),
+        ),
+      );
+    });
+
+    test('Plattformfehler wird ein PortException(failed)', () async {
+      nextAlarm = () => throw PlatformException(code: 'boom');
+      await expectLater(
+        AndroidAlarmPort(platform: android).listAlarms(),
+        throwsA(isA<PortException>()),
+      );
+    });
+
+    test('ohne Kanal: nicht unterstützt', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel(alarmChannelName),
+            null,
+          );
+      await expectLater(
+        AndroidAlarmPort(platform: android).listAlarms(),
+        throwsA(
+          isA<PortException>().having(
+            (e) => e.kind,
+            'kind',
+            PortErrorKind.unsupported,
+          ),
+        ),
+      );
+    });
   });
 
   test(

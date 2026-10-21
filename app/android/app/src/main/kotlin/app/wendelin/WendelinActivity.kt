@@ -13,6 +13,7 @@ import io.flutter.embedding.engine.FlutterEngine
  */
 abstract class WendelinActivity : FlutterActivity() {
     private var calendar: CalendarChannel? = null
+    private var alarm: AlarmChannel? = null
     private var files: FilesChannel? = null
     private var vault: VaultChannel? = null
     private var window: WindowChannel? = null
@@ -48,6 +49,7 @@ abstract class WendelinActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         calendar = CalendarChannel(this, messenger)
+        alarm = AlarmChannel(this, messenger)
         files = FilesChannel(this, messenger)
         vault = VaultChannel(this, messenger)
         window = WindowChannel(this, messenger)
@@ -70,6 +72,8 @@ abstract class WendelinActivity : FlutterActivity() {
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         calendar?.dispose()
         calendar = null
+        alarm?.dispose()
+        alarm = null
         files?.dispose()
         files = null
         vault?.dispose()

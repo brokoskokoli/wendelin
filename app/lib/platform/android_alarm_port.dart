@@ -3,11 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:platform/platform.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
+import 'channels.dart';
+
+export 'channels.dart' show alarmChannelName;
+
 /// [AlarmPort] over the Android `AlarmClock` intents
 /// (`ACTION_SET_ALARM`/`ACTION_SET_TIMER` with `EXTRA_SKIP_UI`).
 ///
-/// The intents return no handle: nothing can be cancelled or listed
-/// ([supportsCancel] is `false`, [listAlarms] returns `null`). Whether a
+/// The intents return no handle: nothing can be cancelled
+/// ([supportsCancel] is `false`). Android has no list of the alarms of other
+/// apps; [listAlarms] reports only the next alarm (`getNextAlarmClock` over
+/// the alarm channel, [listsOnlyNext]; WP119). Whether a
 /// clock app handles them is checked by intent resolution (the manifest
 /// declares both actions in `<queries>`). Without a clock app the
 /// integration is unavailable; the notification fallback from K7 is still
@@ -15,9 +21,13 @@ import 'package:wendelin_integrations/wendelin_integrations.dart';
 final class AndroidAlarmPort implements AlarmPort {
   /// Creates the port; `platform` is injectable for tests (default: the
   /// real platform).
-  const AndroidAlarmPort({this._platform});
+  const AndroidAlarmPort({
+    this._platform,
+    this._channel = const MethodChannel(alarmChannelName),
+  });
 
   final Platform? _platform;
+  final MethodChannel _channel;
 
   /// `AlarmClock.ACTION_SET_ALARM`.
   static const actionSetAlarm = 'android.intent.action.SET_ALARM';
@@ -102,7 +112,37 @@ final class AndroidAlarmPort implements AlarmPort {
   );
 
   @override
-  Future<List<AlarmInfo>?> listAlarms() async => null;
+  bool get listsOnlyNext => true;
+
+  /// The next alarm of the device (empty list: none is set). Fails closed
+  /// with [PortErrorKind.failed] if the channel does not answer sensibly.
+  @override
+  Future<List<AlarmInfo>?> listAlarms() async {
+    final Object? reply;
+    try {
+      reply = await _channel.invokeMethod<Object?>('nextAlarm');
+    } on PlatformException catch (e) {
+      throw PortException(
+        PortErrorKind.failed,
+        'Der nächste Wecker ließ sich nicht lesen (${e.code}).',
+      );
+    } on MissingPluginException {
+      throw const PortException(
+        PortErrorKind.unsupported,
+        'Auf diesem Gerät können Wecker nicht ausgelesen werden.',
+      );
+    }
+    if (reply == null) return const [];
+    final at = reply is Map ? reply['at'] : null;
+    if (at is! int) {
+      throw const PortException(
+        PortErrorKind.failed,
+        'Der nächste Wecker ließ sich nicht lesen.',
+      );
+    }
+    final time = DateTime.fromMillisecondsSinceEpoch(at);
+    return [AlarmInfo(hour: time.hour, minute: time.minute, at: time)];
+  }
 
   /// ISO weekday (1 = Monday … 7 = Sunday) to `java.util.Calendar`
   /// (1 = Sunday … 7 = Saturday).
