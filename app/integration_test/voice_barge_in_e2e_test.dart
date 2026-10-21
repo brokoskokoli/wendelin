@@ -182,11 +182,10 @@ void main() {
         isNull,
         reason: lines.where((l) => l.contains('barge-')).join('\n'),
       );
-      expect(
-        lines.where((l) => logField(l, 'kind') == 'keyword-stop'),
-        isNotEmpty,
-        reason: 'das Stoppwort am Ende muss ebenfalls gegengeprüft treffen',
-      );
+      // Das Stoppwort am Ende kommt nach der (kurzen) Antwort, also nicht
+      // während der Ausgabe: Es wirkt über das Transkript
+      // (`stop-word source=transcript`), nicht über Barge-in. Den
+      // gegengeprüften `keyword-stop` deckt voice_stop_word_e2e_test ab.
       await askHost('back');
     },
     skip: !voiceE2e,
