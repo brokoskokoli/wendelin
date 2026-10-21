@@ -191,6 +191,9 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   // language fixed instead of reading a disposed ref.
   final verify = ref.watch(wakeVerifyProvider).value ?? true;
   final language = ref.watch(languageProvider);
+  // Held now: after a rebuild during the answer the old ref is disposed and
+  // a later `ref.read` in the verifier would fail (check skipped).
+  final sttFuture = verify ? ref.read(speechToTextProvider.future) : null;
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
     // Developer setting (WP72): other margin than +0.05.
@@ -202,7 +205,7 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     // is switched off in the wake word settings.
     verifier: verify
         ? (spoken) => LazyBargeVerifier(
-            stt: () => ref.read(speechToTextProvider.future),
+            stt: () => sttFuture!,
             language: () => language,
             spokenText: spoken,
           )

@@ -95,8 +95,9 @@ final class TranscriptBargeVerifier implements BargeVerifier {
     final audio = pcm.length > maxSamples
         ? Int16List.sublistView(pcm, pcm.length - maxSamples)
         : pcm;
-    final text = (await stt.transcribe(audio, language: language)).text;
+    // Read before the await: the ring of read sentences moves on meanwhile.
     final spoken = spokenText();
+    final text = (await stt.transcribe(audio, language: language)).text;
     // The own voice: a keyword that is part of the read text does not count.
     final wake = matchesWakeWord(text) && !matchesWakeWord(spoken);
     final stop =

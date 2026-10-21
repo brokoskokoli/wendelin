@@ -26,9 +26,13 @@ final class LazyBargeVerifier implements BargeVerifier {
   Future<BargeVerdict> verify(
     Int16List pcm, {
     required BargeInKeyword candidate,
-  }) async => TranscriptBargeVerifier(
-    await stt(),
-    language: language(),
-    spokenText: spokenText,
-  ).verify(pcm, candidate: candidate);
+  }) async {
+    // Hold the text of the candidate's moment, not of the end of the load.
+    final spoken = spokenText();
+    return TranscriptBargeVerifier(
+      await stt(),
+      language: language(),
+      spokenText: () => spoken,
+    ).verify(pcm, candidate: candidate);
+  }
 }

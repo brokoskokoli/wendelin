@@ -151,6 +151,19 @@ void main() {
       );
     });
 
+    test('vorgelesener Text wird vor der Transkription gelesen', () async {
+      var spoken = 'Am Bahnhof Stopp und weiter.';
+      final gate = Completer<void>();
+      final v = TranscriptBargeVerifier(
+        _SlowStt('Stopp', gate.future),
+        spokenText: () => spoken,
+      ).verify(Int16List(16000), candidate: BargeInKeyword.stop);
+      // Der Ring rutscht weiter, waehrend die Transkription laeuft.
+      spoken = 'Ganz anderer Satz.';
+      gate.complete();
+      expect((await v).result, 'echo');
+    });
+
     test('nur die letzten 2,5 s gehen an die Erkennung', () async {
       final stt = FixedTranscriptStt('Stopp');
       await TranscriptBargeVerifier(stt)
@@ -296,4 +309,20 @@ void main() {
       await plain.dispose();
     });
   });
+}
+
+final class _SlowStt implements SpeechToText {
+  _SlowStt(this.text, this.gate);
+  final String text;
+  final Future<void> gate;
+
+  @override
+  SpeechToTextEngineInfo get info =>
+      const SpeechToTextEngineInfo(name: 'slow', languages: {'de'});
+
+  @override
+  Future<Transcript> transcribe(Int16List pcm, {String? language}) async {
+    await gate;
+    return Transcript(text: text);
+  }
 }
