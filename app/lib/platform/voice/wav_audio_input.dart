@@ -14,6 +14,9 @@ import 'pcm.dart';
 /// overlay reads it through `deviceTestOverrides` (`lib/debug/`), device
 /// tests override `audioInputProvider` with it. Release builds never use it.
 final class WavAudioInput implements AudioInput {
+  /// Most frames one timer tick delivers (1 s of audio at 20 ms frames).
+  static const maxCatchUpFrames = 50;
+
   /// Plays [samples] (16 kHz mono PCM16) in frames of [frame], paced in
   /// real time divided by [speed].
   WavAudioInput(
@@ -128,7 +131,13 @@ final class WavAudioInput implements AudioInput {
       var delivered = 0;
       _timer = Timer.periodic(interval, (_) {
         final due = clockSw.elapsedMicroseconds * speed ~/ frame.inMicroseconds;
-        final count = due > delivered ? due - delivered : 1;
+        var count = due > delivered ? due - delivered : 1;
+        if (count > maxCatchUpFrames) {
+          // After a long pause (suspend, debugger) no burst: the clock is
+          // set back to the cap, the recording goes on from where it is.
+          delivered += count - maxCatchUpFrames;
+          count = maxCatchUpFrames;
+        }
         for (var n = 0; n < count; n++) {
           if (out.isClosed) return;
           final chunk = Int16List(perFrame);

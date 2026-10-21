@@ -51,4 +51,28 @@ void main() {
       });
     });
   });
+
+  test('nach langer Pause kein Burst: höchstens maxCatchUpFrames je Tick', () {
+    fakeAsync((async) {
+      var t = DateTime(2026);
+      withClock(Clock(() => t), () {
+        final input = WavAudioInput(
+          Int16List(16000 * 20),
+          leadingSilence: Duration.zero,
+        );
+        var frames = 0;
+        final sub = input.start().listen((_) => frames++);
+        // 10 s Pause (Suspend), der Timer feuert einmal.
+        t = t.add(const Duration(seconds: 10));
+        async.elapse(const Duration(milliseconds: 20));
+        expect(frames, WavAudioInput.maxCatchUpFrames);
+        // Danach wieder im Takt: ein Frame je Tick, kein Rückstau.
+        t = t.add(const Duration(milliseconds: 20));
+        async.elapse(const Duration(milliseconds: 20));
+        expect(frames, WavAudioInput.maxCatchUpFrames + 1);
+        sub.cancel();
+        input.stop();
+      });
+    });
+  });
 }

@@ -24,6 +24,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     this.keywords = const [KeywordSpec.wendelin],
     this.verifier,
     this.warm,
+    this.warmSpan = const Duration(milliseconds: 1500),
     this.clip = const Duration(milliseconds: 2500),
     this.cooldown = const Duration(milliseconds: 1500),
     this.settle = const Duration(milliseconds: 800),
@@ -44,6 +45,14 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   /// the live frames, so the first window is rated after one chunk instead of
   /// ~2 s. Hits in it are ignored. `null`/empty: cold start.
   final Int16List Function()? warm;
+
+  /// Audio a feature window reaches back (16 windows of 80 ms = 1.28 s, plus
+  /// a margin). With a warm start a hit counts only when its window holds
+  /// no loud audio of the lead-in any more: the end of the user's command
+  /// (`endSilence` ~800 ms of quiet follows it) must not stop the answer.
+  /// So the first hits are ignored for `speech end + warmSpan - lead-in`
+  /// (~0.7 s live audio with the usual 800 ms of silence).
+  final Duration warmSpan;
 
   /// Audio handed to the [verifier] (at most 5 s).
   final Duration clip;
@@ -92,7 +101,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   int _generation = 0;
   late final PreRollBuffer _ring = PreRollBuffer(capacity: clip);
   bool _verifying = false;
-  int _fed = 0, _blockedUntil = 0;
+  int _fed = 0, _blockedUntil = 0, _ignoreUntil = 0;
   // Candidate waiting for the end of its word (-1: none), and the best one
   // that came during a check or the cooldown.
   int _pendingAt = -1, _deferredAt = 0;
@@ -122,7 +131,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     }
     engine.reset();
     _ring.clear();
-    _fed = _blockedUntil = 0;
+    _fed = _blockedUntil = _ignoreUntil = 0;
     _pendingAt = -1;
     _pendingKind = _deferredKind = null;
     _verifying = false;
@@ -138,6 +147,8 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     if (pcm != null && pcm.isNotEmpty && e is WarmableWakeEngine) {
       // The live frames queue behind it (same chain), none is lost.
       _chain = _warmUp(e, pcm, gen);
+      final guard = _speechEnd(pcm) + durationToSamples(warmSpan) - pcm.length;
+      _ignoreUntil = guard > 0 ? guard : 0;
     }
     _sub = audio.start().listen(
       (f) => _chain = _chain.then((_) => _onFrame(f, gen)),
@@ -165,6 +176,8 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     final hits = await engine.accept(frame);
     if (gen != _generation) return;
     for (final h in hits) {
+      // The window still reaches into the user's command (warm start).
+      if (_fed < _ignoreUntil) continue;
       final keyword = switch (h.keywordId) {
         'stop' => BargeInKeyword.stop,
         'wake' => BargeInKeyword.wake,
@@ -215,6 +228,21 @@ final class WakeWordBargeInDetector implements BargeInDetector {
       a == BargeInKeyword.stop || b == BargeInKeyword.stop
       ? BargeInKeyword.stop
       : b;
+
+  /// End (sample index) of the last block of [pcm] that reaches [minLevel].
+  int _speechEnd(Int16List pcm) {
+    const block = 320;
+    var last = 0;
+    for (var i = 0; i < pcm.length; i += block) {
+      final end = i + block < pcm.length ? i + block : pcm.length;
+      var sum = 0.0;
+      for (var j = i; j < end; j++) {
+        sum += pcm[j] * pcm[j];
+      }
+      if (sum / (end - i) >= minLevel * minLevel) last = end;
+    }
+    return last;
+  }
 
   bool _quiet(Int16List pcm) {
     const block = 320;

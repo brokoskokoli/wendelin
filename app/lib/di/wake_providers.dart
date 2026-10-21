@@ -201,7 +201,7 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
   final detector = LazyWakeBargeInDetector(
     audio: ref.watch(audioInputProvider),
     // WP123: the capture before the answer primes the feature chain.
-    warm: ref.read(micTailProvider).snapshot,
+    warm: ref.read(micTailProvider).take,
     // Developer setting (WP72): other margin than +0.05.
     marginOverride: () async =>
         double.tryParse(await settings.get(AppSettings.bargeMargin) ?? ''),

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/voice/voice_log.dart';
+import 'package:wendelin/voice/wake/barge_meter.dart';
 import 'package:wendelin/voice/wake/mic_tail.dart';
 import 'package:wendelin/voice/wake/wake_barge_in.dart';
 import 'package:wendelin_voice/fakes.dart';
@@ -146,15 +147,53 @@ void main() {
     });
   });
 
+  group('BargeMeter win', () {
+    test('win zählt je diag-Zeile neu, barge-end die ganze Sitzung', () {
+      final saved = voiceLogSink;
+      final lines = <String>[];
+      voiceLogSink = lines.add;
+      addTearDown(() => voiceLogSink = saved);
+      final m = BargeMeter();
+      m
+        ..onWindow(0.1, 0.1)
+        ..onWindow(0.1, 0.1)
+        ..onWindow(0.1, 0.1)
+        ..flush()
+        ..onWindow(0.1, 0.1)
+        ..flush()
+        ..flush()
+        ..summary();
+      final win = [
+        for (final l in lines)
+          if (l.contains('barge-diag'))
+            RegExp(r'win=(\d+)').firstMatch(l)!.group(1),
+      ];
+      expect(win, ['3', '1', '0']);
+      expect(lines.last, contains('barge-end'));
+      expect(lines.last, contains('win=4'));
+    });
+  });
+
   group('MicTail', () {
+    test('take gibt den Vorlauf einmal her und leert ihn', () {
+      final tail = MicTail()..add(Int16List.fromList([1, 2, 3]));
+      expect(tail.take(), [1, 2, 3]);
+      expect(tail.snapshot(), isEmpty);
+      expect(tail.take(), isEmpty);
+    });
+
     test('behält die letzten 2,4 s, TappedAudioInput füttert sie', () async {
-      final tail = MicTail();
+      final tail = MicTail()..add(Int16List.fromList([9, 9]));
       final input = TappedAudioInput(
         FakeAudioInput(frames: [Int16List.fromList(List.filled(480, 7))]),
         tail,
       );
       await input.start().first;
-      expect(tail.snapshot(), hasLength(480));
+      expect(
+        tail.snapshot(),
+        hasLength(480),
+        reason: 'Rest der alten Aufnahme weg',
+      );
       tail.add(Int16List(48000));
       expect(tail.snapshot(), hasLength(38400));
       tail.clear();

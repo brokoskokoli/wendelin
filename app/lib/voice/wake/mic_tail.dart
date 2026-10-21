@@ -21,6 +21,14 @@ final class MicTail {
   /// The audio so far, oldest first.
   Int16List snapshot() => _ring.snapshot();
 
+  /// The audio so far, and forgets it: the lead-in is used once, so no
+  /// speech stays in memory longer than needed.
+  Int16List take() {
+    final out = _ring.snapshot();
+    _ring.clear();
+    return out;
+  }
+
   /// Forgets everything.
   void clear() => _ring.clear();
 }
@@ -40,10 +48,14 @@ final class TappedAudioInput implements AudioInput {
   bool get isRunning => inner.isRunning;
 
   @override
-  Stream<Int16List> start() => inner.start().map((f) {
-    tail.add(f);
-    return f;
-  });
+  Stream<Int16List> start() {
+    // A new capture: the lead-in of the one before is stale.
+    tail.clear();
+    return inner.start().map((f) {
+      tail.add(f);
+      return f;
+    });
+  }
 
   @override
   Future<void> stop() => inner.stop();
