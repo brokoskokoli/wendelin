@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
@@ -145,6 +146,9 @@ final class AgentFactory implements AgentRunFactory {
           duration: Duration.zero,
         ),
       ),
+      // WP122: only the tool name, never the sentence.
+      onFixedConfirmation: (session, tool) =>
+          debugPrint('confirm=fixed tool=$tool'),
       clock: clock,
       sessionId: sessionId,
       recorder: conversation,

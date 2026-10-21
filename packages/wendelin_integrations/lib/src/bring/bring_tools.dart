@@ -173,7 +173,8 @@ final class BringGetItemsTool extends IntegrationTool {
 }
 
 /// `bring__add_items` (write): undo removes exactly the added items.
-final class BringAddItemsTool extends IntegrationTool {
+final class BringAddItemsTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const BringAddItemsTool(this.session);
 
@@ -221,6 +222,14 @@ final class BringAddItemsTool extends IntegrationTool {
 
   @override
   RiskLevel get risk => RiskLevel.write;
+
+  @override
+  Set<String> get confirmationKeys => const {
+    'list.added',
+    'list.added#one',
+    'list.present',
+    'list.present#one',
+  };
 
   List<BringItem> _items(ToolArgs args) {
     final raw = args.raw['items'];
@@ -309,7 +318,18 @@ final class BringAddItemsTool extends IntegrationTool {
       },
     };
     if (added.isEmpty) {
-      return jsonOutcome(result, summary: '${list.name}: schon vorhanden');
+      return jsonOutcome(
+        result,
+        summary: '${list.name}: schon vorhanden',
+        // Only when nothing failed: all wanted items were on the list.
+        fixed: error == null && skipped.isNotEmpty && notAdded.isEmpty
+            ? ConfirmationSentence('list.present', {
+                'items': [for (final s in skipped) s.name],
+                'list': list.name,
+                'count': skipped.length,
+              })
+            : null,
+      );
     }
     final labels = added.map((a) => _label(a.item)).join(', ');
     return jsonOutcome(
@@ -317,6 +337,14 @@ final class BringAddItemsTool extends IntegrationTool {
       summary: error == null
           ? '${list.name}: $labels hinzugefügt'
           : '${list.name}: teilweise hinzugefügt ($labels)',
+      // Only a complete success; skipped, partial or failed → the model.
+      fixed: error == null && skipped.isEmpty
+          ? ConfirmationSentence('list.added', {
+              'items': [for (final a in added) _label(a.item)],
+              'list': list.name,
+              'count': added.length,
+            })
+          : null,
       undo: UndoAction(
         label: 'Artikel entfernen',
         run: () => session.exclusive(list.uuid, () => _undo(list, added)),
@@ -457,7 +485,8 @@ final class BringRemoveItemTool extends IntegrationTool {
 
 /// `bring__complete_item` (write): marks an item as bought; undo puts it
 /// back on the open list.
-final class BringCompleteItemTool extends IntegrationTool {
+final class BringCompleteItemTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const BringCompleteItemTool(this.session);
 
@@ -480,6 +509,9 @@ final class BringCompleteItemTool extends IntegrationTool {
 
   @override
   RiskLevel get risk => RiskLevel.write;
+
+  @override
+  Set<String> get confirmationKeys => const {'list.done'};
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
@@ -507,6 +539,10 @@ final class BringCompleteItemTool extends IntegrationTool {
       return jsonOutcome(
         {'list': list.name, 'completed': item.toJson()},
         summary: '${list.name}: ${item.name} gekauft',
+        fixed: ConfirmationSentence('list.done', {
+          'item': item.name,
+          'list': list.name,
+        }),
         undo: UndoAction(
           label: 'Wieder offen',
           run: () => session.exclusive(

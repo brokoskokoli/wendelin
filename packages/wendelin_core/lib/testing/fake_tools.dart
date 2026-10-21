@@ -10,7 +10,8 @@ typedef FakeToolHandler = FutureOr<ToolOutcome> Function(
 
 /// Configurable [Tool] for tests: risk, result, delay, failure, undo and a
 /// record of all calls.
-final class FakeTool implements Tool, ConfirmationPreparer {
+final class FakeTool
+    implements Tool, ConfirmationPreparer, FixedConfirmationTool {
   /// Creates a fake tool.
   ///
   /// Result precedence: [throws] (thrown after [delay]) > [handler] >
@@ -29,6 +30,7 @@ final class FakeTool implements Tool, ConfirmationPreparer {
     this.ignoresCancel = false,
     this.confirmation,
     this.prepare,
+    this.confirmationKeys = const {},
   });
 
   @override
@@ -68,6 +70,11 @@ final class FakeTool implements Tool, ConfirmationPreparer {
 
   /// Text for [describeForConfirmation]; default „`name` ausführen“.
   final String Function(Map<String, Object?> args)? confirmation;
+
+  /// Template keys of the tool (WP122); empty = no fixed sentence is used,
+  /// even if the outcome carries one.
+  @override
+  final Set<String> confirmationKeys;
 
   /// Arguments of every [execute] call, in order.
   final List<Map<String, Object?>> calls = [];
@@ -112,6 +119,7 @@ final class FakeTool implements Tool, ConfirmationPreparer {
       content: result.content,
       isError: result.isError,
       summary: result.summary,
+      fixed: result.fixed,
       undo: UndoAction(label: 'Rückgängig', run: () async => undoCount++),
     );
   }

@@ -51,8 +51,17 @@ abstract base class IntegrationTool implements Tool {
 }
 
 /// A successful outcome whose content is [data] as compact JSON.
-ToolOutcome jsonOutcome(Object? data, {String? summary, UndoAction? undo}) =>
-    ToolOutcome.text(jsonEncode(data), summary: summary, undo: undo);
+ToolOutcome jsonOutcome(
+  Object? data, {
+  String? summary,
+  UndoAction? undo,
+  ConfirmationSentence? fixed,
+}) => ToolOutcome.text(
+  jsonEncode(data),
+  summary: summary,
+  undo: undo,
+  fixed: fixed,
+);
 
 /// Shortens [text] to at most [maxChars] characters and marks the cut.
 ({String text, bool truncated}) truncateText(String text, int maxChars) {

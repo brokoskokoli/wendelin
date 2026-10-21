@@ -8,7 +8,7 @@ import 'markdown_list.dart';
 
 /// `lists__add_items` (write; undo removes exactly the added lines).
 final class AddItemsTool extends IntegrationTool
-    implements TrustedContentSource {
+    implements TrustedContentSource, FixedConfirmationTool {
   /// Creates the tool.
   const AddItemsTool(this.env);
 
@@ -43,6 +43,14 @@ final class AddItemsTool extends IntegrationTool
   @override
   RiskLevel get risk => RiskLevel.write;
 
+  @override
+  Set<String> get confirmationKeys => const {
+    'list.added',
+    'list.added#one',
+    'list.present',
+    'list.present#one',
+  };
+
   List<String> _items(ToolArgs args) {
     final raw = args.optStringList('items');
     if (raw == null || raw.isEmpty) {
@@ -69,8 +77,22 @@ final class AddItemsTool extends IntegrationTool
     return env.exclusive(def.target, () => add(def, wanted));
   }
 
+  static ConfirmationSentence _listSentence(
+    ListDefinition def,
+    List<String> added,
+  ) => ConfirmationSentence('list.added', {
+    'items': added,
+    'list': def.name,
+    'count': added.length,
+  });
+
   /// Adds the item texts [wanted] to [def] (caller holds the file queue).
-  Future<ToolOutcome> add(ListDefinition def, List<String> wanted) async {
+  Future<ToolOutcome> add(
+    ListDefinition def,
+    List<String> wanted, {
+    ConfirmationSentence? Function(ListDefinition def, List<String> added)?
+    sentence,
+  }) async {
     final l = await env.load(def);
     final doc = l.doc;
     final present = {
@@ -115,6 +137,8 @@ final class AddItemsTool extends IntegrationTool
         if (skipped.isNotEmpty) 'already_present': skipped,
       },
       summary: '${def.name}: ${added.join(', ')} hinzugefügt',
+      // Only a complete success; skipped items → the model words it.
+      fixed: skipped.isEmpty ? (sentence ?? _listSentence)(def, added) : null,
       undo: UndoAction(
         label: 'Einträge entfernen',
         run: () => env.exclusive(
@@ -184,7 +208,8 @@ final class AddItemsTool extends IntegrationTool
 }
 
 /// `lists__complete_item` (write; undo unchecks again).
-final class CompleteItemTool extends IntegrationTool {
+final class CompleteItemTool extends IntegrationTool
+    implements FixedConfirmationTool {
   /// Creates the tool.
   const CompleteItemTool(this.env);
 
@@ -215,6 +240,9 @@ final class CompleteItemTool extends IntegrationTool {
   RiskLevel get risk => RiskLevel.write;
 
   @override
+  Set<String> get confirmationKeys => const {'list.done'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final def = env.resolve(args.requireString('list'), write: true);
     final query = args.requireString('item');
@@ -235,6 +263,10 @@ final class CompleteItemTool extends IntegrationTool {
       return jsonOutcome(
         {'list': def.name, 'completed': item.text},
         summary: '${def.name}: ${item.text} erledigt',
+        fixed: ConfirmationSentence('list.done', {
+          'item': item.text,
+          'list': def.name,
+        }),
         undo: UndoAction(
           label: 'Wieder offen',
           run: () => env.exclusive(def.target, () async {

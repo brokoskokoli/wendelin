@@ -88,6 +88,7 @@ final class Harness {
     ToolCatalog Function(PrivacyLevel)? catalogFor,
     void Function(String, ToolCallBlock)? onToolRefused,
     void Function(String, ToolCallBlock)? onUndoFailed,
+    void Function(String, String)? onFixedConfirmation,
     List<Message> history = const [],
     ProviderResolver? resolver,
     MemoryRetriever? memory,
@@ -117,6 +118,7 @@ final class Harness {
       catalogFor: catalogFor,
       onToolRefused: onToolRefused,
       onUndoFailed: onUndoFailed,
+      onFixedConfirmation: onFixedConfirmation,
       memoryFloor: memoryFloor,
       memoryOwner: memoryOwner,
     );
