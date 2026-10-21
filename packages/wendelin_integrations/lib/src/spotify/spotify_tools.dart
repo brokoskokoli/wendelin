@@ -229,7 +229,7 @@ final class SpotifyPlayTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
-  Set<String> get confirmationKeys => const {'media.play', 'spotify.playing'};
+  Set<String> get confirmationKeys => const {'media.play'};
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
@@ -252,13 +252,8 @@ final class SpotifyPlayTool extends IntegrationTool
           ? 'Wiedergabe fortgesetzt.'
           : 'Spielt: ${target.label} (${target.uri}).',
       summary: target == null ? 'Weiter' : 'Spielt ${target.label}',
-      fixed: target == null
-          ? const ConfirmationSentence('media.play')
-          // A label is a server name (search hit) unless the user gave the
-          // uri; only then it is safe in the sentence (task_format.dart).
-          : args.has('uri')
-          ? ConfirmationSentence('spotify.playing', {'label': target.label})
-          : const ConfirmationSentence('media.play'),
+      // A label is the uri or a server name; never read it aloud.
+      fixed: const ConfirmationSentence('media.play'),
       undo: UndoAction(
         label: before != null && before.isPlaying && target != null
             ? 'Vorheriges wieder spielen'

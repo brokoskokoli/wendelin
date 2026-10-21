@@ -95,6 +95,13 @@ final class LatencyTrace {
         if (_calls.isNotEmpty) _calls.last.first ??= _at();
       case ToolCallFinished():
         _pendingReq = _at();
+      case AgentDone():
+        // A fixed confirmation (WP122) comes as text after the tool result
+        // without a model call: a call that never reported its usage after
+        // a tool is no call.
+        if (_tools > 0 && _calls.isNotEmpty && _calls.last.done == null) {
+          _calls.removeLast();
+        }
       default:
         break;
     }

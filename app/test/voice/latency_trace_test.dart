@@ -35,6 +35,29 @@ void main() {
     void at(int ms) =>
         clock = const Duration(seconds: 100) + Duration(milliseconds: ms);
 
+    test('fester Bestätigungssatz zählt keinen zweiten Modellaufruf', () {
+      trace.begin();
+      at(300);
+      trace.sttDone();
+      at(900);
+      trace.agentEvent(_used());
+      trace.agentEvent(ToolCallStarted(_call()));
+      at(1100);
+      trace.agentEvent(
+        ToolCallFinished(call: _call(), outcome: ToolOutcome.text('an')),
+      );
+      at(1200);
+      trace.agentEvent(const AgentTextDelta('Die Taschenlampe ist an.'));
+      trace.agentEvent(
+        const AgentDone(finalText: 'x', stopReason: StopReason.endTurn),
+      );
+      trace.finish();
+
+      expect(logged.single.$2['calls'], 1);
+      expect(logged.single.$2['tools'], 1);
+      expect(logged.single.$2.containsKey('m2_req'), isFalse);
+    });
+
     test('Zeitleiste: zwei Modellaufrufe mit Werkzeug, zwei Sätze', () {
       trace.begin(); // t0 = 0
       at(300);

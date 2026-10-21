@@ -669,25 +669,43 @@ void main() {
       );
     });
 
-    test(
-      'ohne genannte Liste → kein Satz (Servername nicht vertrauenswürdig)',
-      () async {
-        for (final o in [
-          await call('bring__add_items', {
-            'items': ['Eier'],
-          }),
-          await call('bring__add_items', {
-            'items': ['Milch'],
-          }),
-          await call('bring__complete_item', {'item': 'Brot'}),
-        ]) {
-          expect(o.isError, isFalse);
-          expect(o.fixed, isNull);
-        }
-        final done = await call('bring__complete_item', {'item': 'Käse'});
-        expect(done.fixed, isNull);
-      },
-    );
+    test('ohne genannte Liste: Vorlagen ohne Listennamen (de/en/fr)', () async {
+      final add = tool('bring__add_items');
+      final three = await call('bring__add_items', {
+        'items': ['Eier', 'Butter', 'Wurst'],
+      });
+      expectFixed(
+        three,
+        add,
+        'list.added.default',
+        de: 'Eier, Butter und Wurst stehen jetzt auf der Einkaufsliste.',
+      );
+      expect(
+        renderConfirmation(three.fixed!, 'en'),
+        'Eier, Butter and Wurst are now on the shopping list.',
+      );
+      expect(
+        renderConfirmation(three.fixed!, 'fr'),
+        'Eier, Butter et Wurst sont maintenant sur la liste de courses.',
+      );
+      expectFixed(
+        await call('bring__add_items', {
+          'items': ['Milch'],
+        }),
+        add,
+        'list.present.default',
+        de: 'Milch steht schon auf der Einkaufsliste.',
+      );
+      expectFixed(
+        await call('bring__complete_item', {'item': 'Äpfel'}),
+        tool('bring__complete_item'),
+        'list.done.default',
+        de: 'Äpfel ist abgehakt.',
+      );
+      final done = await call('bring__complete_item', {'item': 'Milch'});
+      expect(done.fixed?.key, 'list.done.default');
+      expect(done.fixed?.params.containsKey('list'), isFalse);
+    });
 
     test('complete_item: schon gekauft → kein Satz', () async {
       final o = await call('bring__complete_item', {'item': 'Brot'});

@@ -172,6 +172,15 @@ final class BringGetItemsTool extends IntegrationTool {
   String get fallbackDescription => 'Bring!-Liste anzeigen';
 }
 
+/// The sentence for [key] with the list the user named, else its
+/// `.default` variant without a list name (never a server name).
+ConfirmationSentence _sentence(String key, String? said, List<String> items) =>
+    ConfirmationSentence(said == null ? '$key.default' : key, {
+      'items': items,
+      'list': ?said,
+      'count': items.length,
+    });
+
 /// `bring__add_items` (write): undo removes exactly the added items.
 final class BringAddItemsTool extends IntegrationTool
     implements FixedConfirmationTool {
@@ -229,6 +238,10 @@ final class BringAddItemsTool extends IntegrationTool
     'list.added#one',
     'list.present',
     'list.present#one',
+    'list.added.default',
+    'list.added.default#one',
+    'list.present.default',
+    'list.present.default#one',
   };
 
   List<BringItem> _items(ToolArgs args) {
@@ -344,16 +357,8 @@ final class BringAddItemsTool extends IntegrationTool
         result,
         summary: '${list.name}: schon vorhanden',
         // Only when nothing failed: all wanted items were on the list.
-        fixed:
-            said != null &&
-                error == null &&
-                skipped.isNotEmpty &&
-                notAdded.isEmpty
-            ? ConfirmationSentence('list.present', {
-                'items': [for (final s in skipped) s.name],
-                'list': said,
-                'count': skipped.length,
-              })
+        fixed: error == null && skipped.isNotEmpty && notAdded.isEmpty
+            ? _sentence('list.present', said, [for (final s in skipped) s.name])
             : null,
       );
     }
@@ -364,12 +369,10 @@ final class BringAddItemsTool extends IntegrationTool
           ? '${list.name}: $labels hinzugefügt'
           : '${list.name}: teilweise hinzugefügt ($labels)',
       // Only a complete success; skipped, partial or failed → the model.
-      fixed: said != null && error == null && skipped.isEmpty
-          ? ConfirmationSentence('list.added', {
-              'items': [for (final a in added) _label(a.item)],
-              'list': said,
-              'count': added.length,
-            })
+      fixed: error == null && skipped.isEmpty
+          ? _sentence('list.added', said, [
+              for (final a in added) _label(a.item),
+            ])
           : null,
       undo: UndoAction(
         label: 'Artikel entfernen',
@@ -537,7 +540,7 @@ final class BringCompleteItemTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
-  Set<String> get confirmationKeys => const {'list.done'};
+  Set<String> get confirmationKeys => const {'list.done', 'list.done.default'};
 
   @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
@@ -569,7 +572,7 @@ final class BringCompleteItemTool extends IntegrationTool
         summary: '${list.name}: ${item.name} gekauft',
         // Only what the user said, never server names.
         fixed: said == null
-            ? null
+            ? ConfirmationSentence('list.done.default', {'item': query})
             : ConfirmationSentence('list.done', {'item': query, 'list': said}),
         undo: UndoAction(
           label: 'Wieder offen',

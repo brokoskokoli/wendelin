@@ -446,16 +446,19 @@ void main() {
       },
     );
 
-    test('play mit uri: spotify.playing mit der genannten Adresse', () async {
-      expectFixed(
-        await call('spotify__play', {
-          'uri': 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
-        }),
-        tool('spotify__play'),
-        'spotify.playing',
-        de: 'Es spielt jetzt spotify:track:4uLU6hMCjMI75M1A2tKUQC.',
-      );
-    });
+    test(
+      'play mit uri: media.play, die Adresse wird nicht vorgelesen',
+      () async {
+        expectFixed(
+          await call('spotify__play', {
+            'uri': 'spotify:track:4uLU6hMCjMI75M1A2tKUQC',
+          }),
+          tool('spotify__play'),
+          'media.play',
+          de: 'Die Wiedergabe läuft.',
+        );
+      },
+    );
 
     test('play ohne Angaben: media.play', () async {
       playing();
