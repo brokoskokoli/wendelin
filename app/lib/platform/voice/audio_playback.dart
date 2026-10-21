@@ -14,7 +14,14 @@ import 'sherpa_tts.dart';
 /// (`DuckingTextToSpeech`).
 final class AudioplayersPlayback implements AudioPlayback {
   /// Creates the playback; [player] is created lazily.
-  AudioplayersPlayback([AudioPlayer? player]) : _given = player;
+  ///
+  /// WP118: while [communication] is true (the answer runs in the call path)
+  /// the player uses `USAGE_VOICE_COMMUNICATION`.
+  AudioplayersPlayback([AudioPlayer? player, this.communication])
+    : _given = player;
+
+  /// Whether the answer plays in the call path right now (read per [play]).
+  final bool Function()? communication;
 
   final AudioPlayer? _given;
   late final AudioPlayer _player = _given ?? AudioPlayer();
@@ -28,7 +35,17 @@ final class AudioplayersPlayback implements AudioPlayback {
       audioFocus: AndroidAudioFocus.gainTransientMayDuck,
     ),
   );
-  bool _contextSet = false;
+
+  /// The same with the usage of a call (WP118, K88): the echo canceller of
+  /// the call path then knows this playback.
+  static final AudioContext communicationContext = AudioContext(
+    android: const AudioContextAndroid(
+      contentType: AndroidContentType.speech,
+      usageType: AndroidUsageType.voiceCommunication,
+      audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+    ),
+  );
+  bool? _contextComm;
   Completer<void>? _done;
   StreamSubscription<void>? _complete;
 
@@ -38,9 +55,10 @@ final class AudioplayersPlayback implements AudioPlayback {
     final done = _done = Completer<void>();
     _complete ??= _player.onPlayerComplete.listen((_) => _finish());
     try {
-      if (!_contextSet) {
-        await _player.setAudioContext(context);
-        _contextSet = true;
+      final comm = communication?.call() ?? false;
+      if (_contextComm != comm) {
+        await _player.setAudioContext(comm ? communicationContext : context);
+        _contextComm = comm;
       }
       await _player.play(BytesSource(wav.encode(), mimeType: 'audio/wav'));
     } on Object {

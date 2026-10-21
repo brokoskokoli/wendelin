@@ -143,5 +143,7 @@
   "wakeWordWhoCalibrate": "Whom to calibrate?",
   "wakeWordWhoJoins": "Who is joining?",
   "wakeWordWhoSpeaks": "Who is speaking?",
-  "wakeWordWhoStop": "Who trains “Stop”?"
+  "wakeWordWhoStop": "Who trains “Stop”?",
+  "speechCommunicationTitle": "Answer as call audio (better echo cancellation)",
+  "speechCommunicationHelp": "The answer plays like a call through the speaker, so “Stop” is recognized more reliably. Side effects: the call volume applies, the sound is thinner, and Bluetooth devices may switch playback. With headphones the output stays there. Applies from the next answer."
 }

@@ -57,6 +57,7 @@ class BargeDebugSheet extends ConsumerStatefulWidget {
 class _State extends ConsumerState<BargeDebugSheet> {
   SpeechCapture _source = SpeechCapture.communication;
   String _margin = bargeMarginChoices.first;
+  bool _communication = false;
 
   @override
   void initState() {
@@ -68,8 +69,10 @@ class _State extends ConsumerState<BargeDebugSheet> {
     final s = ref.read(storageProvider).settings;
     final source = await s.get(AppSettings.bargeSource);
     final margin = await s.get(AppSettings.bargeMargin);
+    final comm = await s.get(AppSettings.speechCommunication);
     if (!mounted) return;
     setState(() {
+      _communication = comm ?? false;
       _source = SpeechCapture.parse(source);
       if (bargeMarginChoices.contains(margin)) _margin = margin!;
     });
@@ -87,6 +90,15 @@ class _State extends ConsumerState<BargeDebugSheet> {
       if (source != null) _source = source;
       if (margin != null) _margin = margin;
     });
+  }
+
+  Future<void> _setCommunication(bool value) async {
+    await ref
+        .read(storageProvider)
+        .settings
+        .set(AppSettings.speechCommunication, value);
+    if (!mounted) return;
+    setState(() => _communication = value);
   }
 
   Future<void> _reset() =>
@@ -150,6 +162,13 @@ class _State extends ConsumerState<BargeDebugSheet> {
                 ? null
                 : _reset,
             child: Text(context.l10n.reset),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(context.l10n.speechCommunicationTitle),
+            subtitle: Text(context.l10n.speechCommunicationHelp),
+            value: _communication,
+            onChanged: _setCommunication,
           ),
         ],
       ),

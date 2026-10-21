@@ -1,0 +1,170 @@
+package app.wendelin
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Test
+
+/** WP118: the call path for the answer, its restore and the wake-word exception. */
+class SpeechRouteTest {
+    private class FakeAudio(
+        override val sdk: Int = 34,
+        override var mode: Int = 0,
+        override var speakerphoneOn: Boolean = false,
+        override var communicationDevice: Any? = null,
+        var external: Boolean = false,
+        var speaker: Any? = "speaker",
+    ) : RouteAudio {
+        override fun builtinSpeaker(): Any? = speaker
+
+        override fun externalOutputActive(): Boolean = external
+    }
+
+    private fun route(a: FakeAudio, log: MutableList<String> = mutableListOf()) = SpeechRoute(a) { log += it }
+
+    @Test
+    fun enterSwitchesToCommunicationAndSpeakerFromApi31() {
+        val a = FakeAudio(sdk = 34)
+        assertEquals("speaker", route(a).enter())
+        assertEquals(3, a.mode)
+        assertEquals("speaker", a.communicationDevice)
+        assertFalse(a.speakerphoneOn)
+        assertTrue(SpeechRoute.active)
+    }
+
+    @Test
+    fun enterUsesSpeakerphoneBeforeApi31() {
+        val a = FakeAudio(sdk = 30)
+        route(a).enter()
+        assertEquals(3, a.mode)
+        assertTrue(a.speakerphoneOn)
+        assertNull(a.communicationDevice)
+    }
+
+    @Test
+    fun headsetOrBluetoothKeepsTheirOutput() {
+        val a = FakeAudio(sdk = 34, external = true)
+        assertEquals("external", route(a).enter())
+        assertEquals(3, a.mode)
+        assertNull(a.communicationDevice)
+        assertFalse(a.speakerphoneOn)
+    }
+
+    @Test
+    fun leaveRestoresTheStateBefore() {
+        val a = FakeAudio(sdk = 34, mode = 0, communicationDevice = "bt")
+        val r = route(a)
+        r.enter()
+        r.leave()
+        assertEquals(0, a.mode)
+        assertEquals("bt", a.communicationDevice)
+        assertFalse(SpeechRoute.active)
+    }
+
+    @Test
+    fun leaveRestoresSpeakerphoneBeforeApi31() {
+        val a = FakeAudio(sdk = 30, mode = 0, speakerphoneOn = false)
+        val r = route(a)
+        r.enter()
+        r.leave()
+        assertEquals(0, a.mode)
+        assertFalse(a.speakerphoneOn)
+    }
+
+    @Test
+    fun enterAndLeaveAreIdempotent() {
+        val a = FakeAudio(sdk = 34, mode = 0)
+        val r = route(a)
+        r.enter()
+        r.enter() // must not save mode 3 as "before"
+        r.leave()
+        r.leave()
+        assertEquals(0, a.mode)
+        assertFalse(SpeechRoute.active)
+        r.leave() // without enter: nothing
+        assertEquals(0, a.mode)
+    }
+
+    @Test
+    fun failedEnterLeavesNoModeBehind() {
+        var m = 0
+        val a = object : RouteAudio {
+            override val sdk = 34
+            override var mode: Int
+                get() = m
+                set(v) {
+                    m = v
+                }
+            override var speakerphoneOn = false
+            override var communicationDevice: Any?
+                get() = null
+                set(_) = throw IllegalStateException("device")
+            override fun builtinSpeaker(): Any? = "speaker"
+            override fun externalOutputActive() = false
+        }
+        try {
+            SpeechRoute(a).enter()
+            fail("expected exception")
+        } catch (e: IllegalStateException) {
+            // expected
+        }
+        assertEquals(0, m)
+        assertFalse(SpeechRoute.active)
+    }
+
+    @Test
+    fun leaveRestoresModeEvenIfTheDeviceFails() {
+        var m = 0
+        var failing = false
+        val a = object : RouteAudio {
+            override val sdk = 34
+            override var mode: Int
+                get() = m
+                set(v) {
+                    m = v
+                }
+            override var speakerphoneOn = false
+            override var communicationDevice: Any? = null
+                set(v) {
+                    if (failing) throw IllegalStateException("device")
+                    field = v
+                }
+            override fun builtinSpeaker(): Any? = "speaker"
+            override fun externalOutputActive() = false
+        }
+        val r = SpeechRoute(a)
+        r.enter()
+        failing = true
+        try {
+            r.leave()
+            fail("expected exception")
+        } catch (e: IllegalStateException) {
+            // expected
+        }
+        assertEquals(0, m)
+        assertFalse(SpeechRoute.active)
+    }
+
+    @Test
+    fun ownCommunicationModeIsNoCall() {
+        assertNull(WakePolicy.conflict(audioMode = 3, foreignRecording = false, ownCommunication = true))
+    }
+
+    @Test
+    fun otherAppsCommunicationModeStillIsACall() {
+        assertEquals("call", WakePolicy.conflict(audioMode = 3, foreignRecording = false, ownCommunication = false))
+    }
+
+    @Test
+    fun realPhoneCallIsStillACallDuringOwnAnswer() {
+        assertEquals("call", WakePolicy.conflict(audioMode = 2, foreignRecording = false, ownCommunication = true))
+        assertEquals("call", WakePolicy.conflict(audioMode = 4, foreignRecording = false, ownCommunication = true))
+    }
+
+    @Test
+    fun foreignRecordingIsStillFoundDuringOwnAnswer() {
+        assertEquals("recording", WakePolicy.conflict(audioMode = 3, foreignRecording = true, ownCommunication = true))
+    }
+}

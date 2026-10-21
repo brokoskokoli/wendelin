@@ -66,6 +66,8 @@ void main() {
       'com.android.alarm.permission.SET_ALARM',
       'android.permission.POST_NOTIFICATIONS',
       'android.permission.RECORD_AUDIO',
+      // Antwort als Gesprächston (WP118, K88): Audiomodus und Ausgabegerät.
+      'android.permission.MODIFY_AUDIO_SETTINGS',
       'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
       // Wake-Word-Dienst (WP50, ADR 0013).
       'android.permission.FOREGROUND_SERVICE',

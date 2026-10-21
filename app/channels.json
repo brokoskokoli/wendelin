@@ -165,7 +165,10 @@
       "kotlin": ["app/android/app/src/main/kotlin/app/wendelin/AudioFocusChannel.kt"],
       "toKotlin": {
         "acquire": {"args": ["kind"], "returns": "value"},
-        "release": {"args": ["kind"], "returns": "none"}
+        "release": {"args": ["kind"], "returns": "none"},
+        "enterCommunication": {"args": [], "returns": "value"},
+        "leaveCommunication": {"args": [], "returns": "none"},
+        "audioMode": {"args": [], "returns": "value"}
       },
       "toDart": {
         "focusChanged": {"args": ["kind", "state"], "returns": "none"}

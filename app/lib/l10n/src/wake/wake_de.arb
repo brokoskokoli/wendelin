@@ -331,5 +331,7 @@
   "wakeWordWhoCalibrate": "Wen kalibrieren?",
   "wakeWordWhoJoins": "Wer kommt dazu?",
   "wakeWordWhoSpeaks": "Wer spricht?",
-  "wakeWordWhoStop": "Wer lernt „Stopp“?"
+  "wakeWordWhoStop": "Wer lernt „Stopp“?",
+  "speechCommunicationTitle": "Antwort als Gesprächston (bessere Echo-Unterdrückung)",
+  "speechCommunicationHelp": "Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Stopp“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort."
 }

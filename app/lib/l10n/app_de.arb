@@ -2726,6 +2726,8 @@
     }
   },
   "micSettingsHint": "In den Android-Einstellungen unter Apps → Wendelin erlauben.",
+  "speechCommunicationHelp": "Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Stopp“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.",
+  "speechCommunicationTitle": "Antwort als Gesprächston (bessere Echo-Unterdrückung)",
   "wakeCalibrateCancelled": "Abgebrochen. Es wurde nichts geändert.",
   "wakeCalibrateDone": "Kalibriert.",
   "wakeCalibrateFailed": "Gescheitert: {error}",

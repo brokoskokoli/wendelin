@@ -3,7 +3,9 @@ package app.wendelin
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Build
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -21,6 +23,7 @@ class AudioFocusChannel(context: Context, messenger: BinaryMessenger) :
     private val channel = MethodChannel(messenger, CHANNEL)
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val held = HashMap<String, AudioFocusRequest>()
+    private val route = SpeechRoute(AndroidRouteAudio(audio))
 
     init {
         channel.setMethodCallHandler(this)
@@ -29,6 +32,7 @@ class AudioFocusChannel(context: Context, messenger: BinaryMessenger) :
     fun dispose() {
         channel.setMethodCallHandler(null)
         for (kind in held.keys.toList()) release(kind)
+        route.leave()
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -38,6 +42,12 @@ class AudioFocusChannel(context: Context, messenger: BinaryMessenger) :
                 "acquire" -> result.success(acquire(args.requireString("kind")))
                 "release" -> {
                     release(args.requireString("kind"))
+                    result.success(null)
+                }
+                "enterCommunication" -> result.success(route.enter())
+                "audioMode" -> result.success(audio.mode)
+                "leaveCommunication" -> {
+                    route.leave()
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -55,7 +65,10 @@ class AudioFocusChannel(context: Context, messenger: BinaryMessenger) :
         if (held.containsKey(kind)) return true
         val attributes =
             AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                .setUsage(
+                    if (SpeechRoute.active) AudioAttributes.USAGE_VOICE_COMMUNICATION
+                    else AudioAttributes.USAGE_ASSISTANT,
+                )
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                 .build()
         // The answer is spoken anyway; the recording pauses on a loss (Dart side).
@@ -84,5 +97,49 @@ class AudioFocusChannel(context: Context, messenger: BinaryMessenger) :
 
     companion object {
         const val CHANNEL = "app.wendelin/audiofocus"
+    }
+}
+
+/** [RouteAudio] over `AudioManager`. */
+class AndroidRouteAudio(private val audio: AudioManager) : RouteAudio {
+    override val sdk: Int get() = Build.VERSION.SDK_INT
+
+    override var mode: Int
+        get() = audio.mode
+        set(value) {
+            audio.mode = value
+        }
+
+    @Suppress("DEPRECATION")
+    override var speakerphoneOn: Boolean
+        get() = audio.isSpeakerphoneOn
+        set(value) {
+            audio.isSpeakerphoneOn = value
+        }
+
+    override var communicationDevice: Any?
+        get() = if (sdk >= 31) audio.communicationDevice else null
+        set(value) {
+            if (sdk < 31) return
+            if (value is AudioDeviceInfo) audio.setCommunicationDevice(value) else audio.clearCommunicationDevice()
+        }
+
+    override fun builtinSpeaker(): Any? =
+        if (sdk < 31) null
+        else audio.availableCommunicationDevices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+
+    override fun externalOutputActive(): Boolean =
+        audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { it.type in EXTERNAL }
+
+    private companion object {
+        val EXTERNAL = setOf(
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+            AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_BLE_HEADSET,
+            AudioDeviceInfo.TYPE_HEARING_AID,
+        )
     }
 }
