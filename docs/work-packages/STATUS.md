@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP119, WP114; als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
+Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP114; als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
 
 ## Meilensteine
 
@@ -67,7 +67,7 @@ Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP119, WP114; als Nächstes: W
 | WP116 | Einstellungsseiten: Überschriften, Info-Texte, Links | gemergt 75a243b6 | keine Abweichung (WText.sectionTitle, InfoBox, LinkButton; Varianten von Stefan gewählt); Gerätetest `docs/testing/m5/wp116.md`; Soll: Leerzustand providersNone ohne Test/Golden |
 | WP117 | Weitere deutsche Stimmen (Ramona, Eva) | gemergt 49fca790 | K86; Lizenz M-AILABS (BSD-artig, Attribution) statt CC0; Soll: Stimmen später in eigene Datei auslagern (check_sizes) |
 | WP118 | Antwort als Gesprächston (bessere Echo-Unterdrückung), Schalter | geplant (nach WP113) | T20-B.1; K88 |
-| WP119 | Nächster Wecker auslesen, Tools vorab mitschicken | in Arbeit | Testbefund 2026-10-21; K89 |
+| WP119 | Nächster Wecker auslesen, Tools vorab mitschicken | gemergt fb246094 | K91; Gerätetest docs/testing/m5/wp119.md; Soll: Test endSession räumt gemerkte Sprache auf |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
