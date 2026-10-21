@@ -10,6 +10,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP107 Bring! speichert nur Tokens](wp107.md)
 - [WP108 Fehlerart bis zur Integrationskachel](wp108.md)
 - [WP113 „Stopp“ während der Antwort mit Gegenprüfung](wp113.md)
+- [WP114 Gesperrtes Handy: Entsperren schließt das Overlay nicht, Anfrage läuft weiter](wp114.md)
 - [WP115 Große Modelle streamend entpacken, erkannte Sprache loggen](wp115.md)
 - [WP116 Einstellungsseiten: Überschrift, Info, Link](wp116.md)
 - [WP119 Nächster Wecker und Tools vorab](wp119.md)

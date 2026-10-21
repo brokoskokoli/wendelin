@@ -62,9 +62,13 @@ final class FakeAssistantPlatform extends AssistantPlatform {
   @override
   Future<bool> requestUnlock() async {
     unlockRequests++;
-    if (unlockSucceeds) locked = false;
-    return unlockSucceeds;
+    final ok = await unlockGate?.future ?? unlockSucceeds;
+    if (ok) locked = false;
+    return ok;
   }
+
+  /// Holds the unlock request open until completed (keyguard showing).
+  Completer<bool>? unlockGate;
 
   @override
   Future<bool> hasWakeHandoff() async {

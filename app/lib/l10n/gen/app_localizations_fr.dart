@@ -2268,6 +2268,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get overlayUnlock => 'Déverrouiller';
 
   @override
+  String get overlayUnlockCancelled =>
+      'Déverrouillage annulé. Votre demande a été abandonnée.';
+
+  @override
   String privateBannerConfidential(String since) {
     return 'Confidentiel : mémoire utilisée (depuis $since)';
   }

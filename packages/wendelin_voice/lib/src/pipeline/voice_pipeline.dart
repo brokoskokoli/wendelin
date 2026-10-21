@@ -22,6 +22,7 @@ import 'voice_pipeline_config.dart';
 
 export 'conversation.dart';
 export 'voice_pipeline_config.dart';
+part 'voice_pipeline_text.dart';
 
 /// The voice pipeline (concept: Auslöser → Aufnahme mit VAD → STT → Agent →
 /// TTS) as a state machine:
@@ -122,8 +123,7 @@ final class VoicePipeline {
   /// engine position is an estimate) is not mistaken for the request.
   static const wakeEndMargin = Duration(milliseconds: 100);
 
-  /// How long a recording waits for the barge-in detector to release the
-  /// microphone.
+  /// How long a recording waits for the barge-in detector to release the mic.
   static const bargeReleaseTimeout = Duration(seconds: 2);
 
   /// Current state.

@@ -86,6 +86,7 @@ class OverlaySheet extends StatelessWidget {
     this.status,
     this.locked = false,
     this.onUnlock,
+    this.lockedNotice,
     this.typing,
     this.conversationMode = false,
     this.followUpUntil,
@@ -171,6 +172,10 @@ class OverlaySheet extends StatelessWidget {
   /// Asks for unlocking.
   final VoidCallback? onUnlock;
 
+  /// Fixed hint on the lock screen (no content), e.g. the request was
+  /// discarded because the unlock was cancelled (WP114).
+  final String? lockedNotice;
+
   /// Text field shown instead of the transcript (keyboard mode).
   final Widget? typing;
 
@@ -251,6 +256,7 @@ class OverlaySheet extends StatelessWidget {
     if (onUnlock != null) ...[
       Text(context.l10n.overlayLockedTitle, style: WText.transcript),
       Text(context.l10n.overlayLockedText, style: WText.answer),
+      if (lockedNotice != null) Text(lockedNotice!, style: WText.answer),
       FilledButton(
         onPressed: onUnlock,
         child: Text(context.l10n.overlayUnlock),

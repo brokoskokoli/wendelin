@@ -2232,6 +2232,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get overlayUnlock => 'Unlock';
 
   @override
+  String get overlayUnlockCancelled =>
+      'Unlocking cancelled. Your request was discarded.';
+
+  @override
   String privateBannerConfidential(String since) {
     return 'Confidential: memory used (since $since)';
   }

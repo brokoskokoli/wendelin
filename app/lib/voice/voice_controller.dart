@@ -35,6 +35,7 @@ export 'controller_agent_run.dart';
 export 'locked_agent_run.dart';
 export 'voice_ui_state.dart';
 
+part 'voice_answer_text.dart';
 part 'voice_confirmation.dart';
 part 'voice_event_handler.dart';
 
@@ -254,8 +255,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       clearError: true,
     );
     // The hit's earlier recording ends right before this microphone opens
-    // (WP68): nothing in between is lost.
-    // (No await without a pre-roll: the order of the other starts stays.)
+    // (WP68), nothing is lost. (No await without a pre-roll: same order.)
     final preRoll = takePreRoll == null ? null : await takePreRoll();
     if (cancels != _cancels) {
       // Cancelled while taking the hit (WP93: the audio went elsewhere):
@@ -603,15 +603,9 @@ final class VoiceController extends Notifier<VoiceUiState> {
       audio: audio,
       vad: components.vad,
       stt: components.stt,
-      agent: LockGateAgentRun(
+      agent: lockGateFor(
+        ref,
         inner: ControllerAgentRun(_agent, trigger: () => state.trigger?.name),
-        locked: () => ref.read(lockedModeProvider),
-        runCommand: (c, trigger) =>
-            ref.read(lockedCommandRunnerProvider)(c, trigger),
-        onRefused: (trigger) {
-          ref.read(auditRecorderProvider).lockedRefused(trigger: trigger);
-          ref.read(lockedRefusalsProvider.notifier).bump();
-        },
         trigger: () => state.trigger?.name ?? 'assistant',
       ),
       textToSpeech: components.textToSpeech,

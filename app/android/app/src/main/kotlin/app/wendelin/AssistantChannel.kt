@@ -10,6 +10,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -27,9 +28,17 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
 
     private val channel = MethodChannel(messenger, CHANNEL)
 
-    /** Whether an unlock request (keyguard) is showing. */
-    var unlocking = false
-        private set
+    private val unlockGuard = UnlockGuard(SystemClock::elapsedRealtime)
+
+    /**
+     * Whether an unlock request (keyguard) is showing or just ended: the lifecycle changes of
+     * the keyguard transition are not "leaving the overlay" (WP114, K85).
+     */
+    val unlocking: Boolean
+        get() = unlockGuard.active()
+
+    /** Milliseconds until [unlocking] can end (0 if it is not on). */
+    fun unlockingRemainingMs(): Long = unlockGuard.remainingMs()
 
     init {
         channel.setMethodCallHandler(this)
@@ -160,14 +169,14 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
             result.success(true)
             return
         }
-        unlocking = true
+        unlockGuard.begin()
         keyguard.requestDismissKeyguard(activity, object : KeyguardManager.KeyguardDismissCallback() {
             override fun onDismissSucceeded() = done(true)
             override fun onDismissCancelled() = done(false)
             override fun onDismissError() = done(false)
 
             private fun done(ok: Boolean) {
-                unlocking = false
+                unlockGuard.end()
                 result.success(ok)
             }
         })

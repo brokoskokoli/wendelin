@@ -3,11 +3,14 @@ package app.wendelin
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.Lifecycle
 import io.flutter.embedding.engine.FlutterEngine
 
 /**
@@ -114,6 +117,9 @@ class AssistantActivity : WendelinActivity() {
     companion object {
         /** Intent extra: the session starts the overlay a second time (B10). */
         const val EXTRA_RETRY = "app.wendelin.assistant.retry"
+
+        private val RECHECK_TOKEN = Any()
+        private const val RECHECK_MARGIN_MS = 100L
     }
 
     // When the overlay last arrived (create or new intent), elapsed realtime.
@@ -122,6 +128,7 @@ class AssistantActivity : WendelinActivity() {
 
     override fun onDestroy() {
         frameWatchdog.stop()
+        handler.removeCallbacksAndMessages(null)
         hidePlaceholder()
         VoiceLog.i("overlay-destroy finishing=$isFinishing")
         // The wake-word service listens again once the overlay is gone (WP50).
@@ -133,7 +140,36 @@ class AssistantActivity : WendelinActivity() {
         super.onStop()
         // The overlay belongs to the moment it was opened; it does not stay in the background.
         // Dart closes first (stops microphone, speech output, request), then finishes.
-        if (isChangingConfigurations || assistant?.unlocking == true || isFinishing) return
+        if (isChangingConfigurations || isFinishing) return
+        if (assistant?.unlocking == true) {
+            // The keyguard transition: not leaving. But if the user really left (home) in this
+            // time, the stop must not be lost: look again when the grace period is over.
+            postStopRecheck()
+            return
+        }
+        closeOverlay()
+    }
+
+    private val handler = Handler(Looper.getMainLooper())
+
+    private fun postStopRecheck() {
+        handler.removeCallbacksAndMessages(RECHECK_TOKEN)
+        val delay = (assistant?.unlockingRemainingMs() ?: 0L) + RECHECK_MARGIN_MS
+        handler.postAtTime(
+            {
+                if (isFinishing || isDestroyed) return@postAtTime
+                when {
+                    assistant?.unlocking == true -> postStopRecheck()
+                    // Still stopped after the transition: the overlay was left.
+                    !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) -> closeOverlay()
+                }
+            },
+            RECHECK_TOKEN,
+            SystemClock.uptimeMillis() + delay,
+        )
+    }
+
+    private fun closeOverlay() {
         val channel = assistant
         VoiceLog.i("overlay-stop engine=${channel != null}")
         if (channel == null) {

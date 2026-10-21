@@ -6,6 +6,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../di/preferences.dart';
 import '../di/providers.dart';
+import 'voice_log.dart';
 
 /// Whether the device is locked while the assistant overlay listens
 /// (WP53, K16). Set by the overlay; while `true` the voice pipeline does
@@ -37,6 +38,50 @@ final class LockedRefusals extends Notifier<int> {
   void bump() => state++;
 }
 
+/// A request refused while locked, kept only in memory until the unlock
+/// (WP114, K85): the overlay runs it after a successful unlock and drops it
+/// when the unlock is cancelled, the overlay closes or [lockedPendingMaxAge]
+/// has passed. Never logged, never in the audit log, never stored.
+final class LockedPendingRequest {
+  /// Creates the pending request.
+  const LockedPendingRequest(this.text, this.at);
+
+  /// What was said (kept in memory only).
+  final String text;
+
+  /// When it was refused.
+  final DateTime at;
+}
+
+/// How long a refused request waits for the unlock.
+const lockedPendingMaxAge = Duration(seconds: 30);
+
+/// The request waiting for the unlock, if any ([LockedPendingRequest]).
+final lockedPendingProvider =
+    NotifierProvider<LockedPending, LockedPendingRequest?>(LockedPending.new);
+
+/// State of [lockedPendingProvider].
+final class LockedPending extends Notifier<LockedPendingRequest?> {
+  @override
+  LockedPendingRequest? build() => null;
+
+  /// Remembers [text] (replaces an older one).
+  void keep(String text) =>
+      state = LockedPendingRequest(text, ref.read(clockProvider).now());
+
+  /// Drops the request.
+  void clear() => state = null;
+
+  /// The request, once; `null` if none or too old (fail closed).
+  String? take() {
+    final p = state;
+    state = null;
+    if (p == null) return null;
+    final age = ref.read(clockProvider).now().difference(p.at);
+    return age > lockedPendingMaxAge ? null : p.text;
+  }
+}
+
 /// Runs a locally recognized [LockedCommand]; returns whether it worked.
 typedef LockedCommandRunner = Future<bool> Function(
   LockedCommand command,
@@ -45,6 +90,18 @@ typedef LockedCommandRunner = Future<bool> Function(
 
 /// Tool name of each [LockedCommand] (it only runs if its integration is
 /// on and `IntegrationSpec.allowedWhileLocked`).
+///
+/// **Approval list for a locked device (WP114, K85), reviewed per tool:**
+/// - `flashlight__on`, `flashlight__off`: allowed. Only the torch state of
+///   the phone changes; no personal data is read, nothing leaves the device,
+///   nobody else is affected, no permission prompt, the effect is visible at
+///   once and reversible by the other command.
+/// - `flashlight__toggle`: not reachable (no spoken command maps to it).
+/// - Everything else is refused while locked, because it reads personal data
+///   (calendar, contacts, notes, memory, lists, messages, location), acts on
+///   others (calls, messages, mail, smart home) or costs money/network
+///   (search, model). New entries need a review of the same questions.
+/// `test/overlay/locked_approval_list_test.dart` pins the list.
 String lockedToolName(LockedCommand c) => switch (c) {
   LockedCommand.flashlightOn => 'flashlight__on',
   LockedCommand.flashlightOff => 'flashlight__off',
@@ -134,6 +191,7 @@ final class LockGateAgentRun implements AgentRun {
     required this.runCommand,
     required this.onRefused,
     required this.trigger,
+    this.log,
   });
 
   /// The normal agent run (used when unlocked).
@@ -145,8 +203,13 @@ final class LockGateAgentRun implements AgentRun {
   /// Executes a recognized command.
   final LockedCommandRunner runCommand;
 
-  /// Called when a request was refused (audit, no text).
-  final void Function(String trigger) onRefused;
+  /// Called when a request was refused: [trigger] for the audit log (no
+  /// text there), [input] so the overlay can run it after the unlock
+  /// (WP114; memory only).
+  final void Function(String trigger, UserInput input) onRefused;
+
+  /// Diagnostics without any content (`locked-cmd …`).
+  final void Function(String line)? log;
 
   /// Name of the trigger that started the request (audit).
   final String Function() trigger;
@@ -160,8 +223,9 @@ final class LockGateAgentRun implements AgentRun {
   Stream<AgentEvent> _locked(UserInput input) async* {
     final command = matchLockedCommand(input.text);
     final String say;
+    log?.call('locked-cmd match=${command?.name ?? 'none'}');
     if (command == null) {
-      onRefused(trigger());
+      onRefused(trigger(), input);
       say = LockedTexts.unlock(input.language);
     } else {
       final ok = await runCommand(command, trigger());
@@ -182,3 +246,23 @@ final class LockGateAgentRun implements AgentRun {
     inner.cancel();
   }
 }
+
+/// The lock gate with its app wiring (voice pipeline): runs of
+/// [lockedCommandRunnerProvider], refusals go to the audit log (no text),
+/// the wording waits in [lockedPendingProvider] (memory only, WP114).
+LockGateAgentRun lockGateFor(
+  Ref ref, {
+  required AgentRun inner,
+  required String Function() trigger,
+}) => LockGateAgentRun(
+  inner: inner,
+  locked: () => ref.read(lockedModeProvider),
+  runCommand: (c, t) => ref.read(lockedCommandRunnerProvider)(c, t),
+  onRefused: (t, input) {
+    ref.read(auditRecorderProvider).lockedRefused(trigger: t);
+    ref.read(lockedPendingProvider.notifier).keep(input.text);
+    ref.read(lockedRefusalsProvider.notifier).bump();
+  },
+  trigger: trigger,
+  log: voiceLog,
+);
