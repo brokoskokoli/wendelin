@@ -45,8 +45,13 @@ abstract interface class AlarmPort {
   Future<void> cancel(String id);
 
   /// The alarms set on the device, or `null` if the platform cannot list
-  /// them.
+  /// them. With [listsOnlyNext] the list holds at most the next alarm
+  /// (empty = no alarm set).
   Future<List<AlarmInfo>?> listAlarms();
+
+  /// Whether [listAlarms] knows only the next alarm of the device, not all
+  /// of them (Android: `AlarmManager.getNextAlarmClock`, WP119).
+  bool get listsOnlyNext;
 }
 
 /// An alarm reported by [AlarmPort.listAlarms].
@@ -60,6 +65,7 @@ final class AlarmInfo {
     this.label,
     Set<int> days = const {},
     this.enabled = true,
+    this.at,
   }) : days = Set.unmodifiable(days);
 
   /// Id, if the platform has one.
@@ -80,6 +86,9 @@ final class AlarmInfo {
   /// Whether the alarm is active.
   final bool enabled;
 
+  /// The next time it rings, if the platform knows it.
+  final DateTime? at;
+
   @override
   bool operator ==(Object other) =>
       other is AlarmInfo &&
@@ -88,7 +97,8 @@ final class AlarmInfo {
       other.minute == minute &&
       other.label == label &&
       const SetEquality<int>().equals(other.days, days) &&
-      other.enabled == enabled;
+      other.enabled == enabled &&
+      other.at == at;
 
   @override
   int get hashCode => Object.hash(
@@ -98,6 +108,7 @@ final class AlarmInfo {
     label,
     const SetEquality<int>().hash(days),
     enabled,
+    at,
   );
 
   @override
@@ -341,7 +352,9 @@ final class ListAlarmsTool extends IntegrationTool {
 
   @override
   String get description =>
-      'List the alarms set on the device (not possible on every device).';
+      'List the alarms set on the device (not possible on every device; '
+      'Android knows only the next alarm: then "only_next" is true and an '
+      'empty list means no alarm is set).';
 
   @override
   Map<String, Object?> get inputSchema => const {
@@ -364,18 +377,31 @@ final class ListAlarmsTool extends IntegrationTool {
     }
     final sorted = [...alarms]
       ..sort((a, b) => (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute));
+    final zone = timeZoneLocation(ctx.timeZone);
+    final onlyNext = port.listsOnlyNext;
     return jsonOutcome({
       'alarms': [
         for (final a in sorted)
           {
             'time': _clock(a.hour, a.minute),
+            if (a.at != null) 'next_ring': isoInZone(a.at!, zone),
             if (a.label != null) 'label': a.label,
             'days': germanDays(a.days),
             if (!a.enabled) 'enabled': false,
           },
       ],
-    }, summary: '${alarms.length} Wecker');
+      if (onlyNext) 'only_next': true,
+      if (onlyNext)
+        'note': alarms.isEmpty
+            ? 'Es ist kein Wecker gestellt.'
+            : 'Nur der nächste Wecker ist bekannt, weitere kann Android '
+                  'nicht auslesen.',
+    }, summary: onlyNext ? _nextSummary(alarms) : '${alarms.length} Wecker');
   }
+
+  static String _nextSummary(List<AlarmInfo> alarms) => alarms.isEmpty
+      ? 'Kein Wecker gestellt'
+      : 'Nächster Wecker ${_clock(alarms.first.hour, alarms.first.minute)}';
 
   @override
   String describe(ToolArgs args) => 'Wecker auflisten';

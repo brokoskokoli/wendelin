@@ -98,7 +98,7 @@ Map<String, Future<void> Function()> alarmPortContractChecks(
         ids,
       );
       final listed = await p.listAlarms();
-      if (listed != null) {
+      if (listed != null && !p.listsOnlyNext) {
         final mine = listed.where((a) => a.id == id);
         expect(mine, hasLength(1), reason: 'gestellter Wecker gelistet');
         expect(mine.single.hour, 3);
@@ -125,7 +125,7 @@ Map<String, Future<void> Function()> alarmPortContractChecks(
         ids,
       );
       final listed = await p.listAlarms();
-      if (listed == null) return;
+      if (listed == null || p.listsOnlyNext) return;
       expect(listed.singleWhere((a) => a.id == id).days, {1, 3, 5});
     }),
     AlarmPortChecks.timer: () => withCancellable((p, ids) async {

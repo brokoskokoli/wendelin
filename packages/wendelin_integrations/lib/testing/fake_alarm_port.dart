@@ -15,6 +15,7 @@ final class FakeAlarmPort with FakeFailures implements AlarmPort {
     this.returnsIds = true,
     this.canList = true,
     this.available = true,
+    this.onlyNext = false,
   });
 
   /// Returned by [isAvailable].
@@ -25,6 +26,9 @@ final class FakeAlarmPort with FakeFailures implements AlarmPort {
 
   /// Whether [listAlarms] is supported.
   final bool canList;
+
+  /// Behaves like Android: [listAlarms] reports only the earliest alarm.
+  final bool onlyNext;
 
   /// Alarms currently set.
   final List<AlarmInfo> alarms = [];
@@ -100,6 +104,13 @@ final class FakeAlarmPort with FakeFailures implements AlarmPort {
   @override
   Future<List<AlarmInfo>?> listAlarms() async {
     enter('listAlarms');
-    return canList ? List.unmodifiable(alarms) : null;
+    if (!canList) return null;
+    if (!onlyNext) return List.unmodifiable(alarms);
+    final sorted = [...alarms]
+      ..sort((a, b) => (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute));
+    return List.unmodifiable(sorted.take(1));
   }
+
+  @override
+  bool get listsOnlyNext => onlyNext;
 }

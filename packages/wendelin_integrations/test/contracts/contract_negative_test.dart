@@ -156,6 +156,9 @@ final class _BadAlarms implements AlarmPort {
   bool get supportsCancel => true;
 
   @override
+  bool get listsOnlyNext => false;
+
+  @override
   Future<String?> setAlarm({
     required int hour,
     required int minute,

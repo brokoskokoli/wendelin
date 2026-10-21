@@ -111,4 +111,35 @@ void main() {
       isNull,
     );
   });
+
+  group('Wortliste (WP119)', () {
+    final alarms = FakeIntegration(id: 'alarms', displayName: 'Uhr', tools: []);
+    final other = FakeIntegration(id: 'x', displayName: 'Sonst', tools: []);
+    final s = ToolSearchTool(
+      candidates: [
+        _e(alarms, 'alarms__set_alarm', 'Set an alarm clock'),
+        _e(other, 'x__do', 'Does something'),
+      ],
+      unlock: (_, _) {},
+    );
+
+    for (final (q, lang) in [
+      ('Wecker', 'de-DE'),
+      ('Weck mich', 'de'),
+      ('réveil', 'fr-FR'),
+      ('wake me up', 'en-US'),
+    ]) {
+      test('„$q“ ($lang) findet alarms__*', () {
+        expect(s.search(q, languageTag: lang).first.name, 'alarms__set_alarm');
+      });
+    }
+
+    test('nur die aktuelle Sprache zählt', () {
+      expect(s.search('réveil', languageTag: 'de-DE'), isEmpty);
+    });
+
+    test('Wort ohne Bezug findet nichts', () {
+      expect(s.search('Zebra', languageTag: 'de'), isEmpty);
+    });
+  });
 }
