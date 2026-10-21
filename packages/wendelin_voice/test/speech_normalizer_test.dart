@@ -2,7 +2,12 @@ import 'package:test/test.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 List<String> spoken(String text, String language) =>
-    SpokenAnswer.shorten(text, language: language);
+    // The normalizer is tested without the early cut (WP120).
+    SpokenAnswer.shorten(
+      text,
+      language: language,
+      config: const SpeechShortening(firstSplitWords: 0),
+    );
 
 void main() {
   // WP41, stage 0: language, input, expected spoken sentences.

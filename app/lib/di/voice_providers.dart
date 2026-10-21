@@ -16,6 +16,7 @@ import '../platform/voice/silero_vad.dart';
 import '../platform/voice/stt_loader.dart';
 import '../platform/voice/system_tts.dart';
 import '../platform/voice/whisper_stt.dart';
+import '../voice/latency_trace.dart';
 import '../voice/voice_log.dart';
 import '../voice/voice_metrics.dart';
 import 'app_settings.dart';
@@ -232,6 +233,15 @@ void _addMetric(Ref ref, VoiceMetric metric) {
   }
 }
 
+/// Feeds the latency time line (WP120); ignored once the container is gone.
+void _trace(Ref ref, void Function(LatencyTrace trace) f) {
+  try {
+    f(ref.read(latencyTraceProvider));
+  } on Object {
+    // The container was disposed (end of a test or of the engine).
+  }
+}
+
 /// Android system TTS.
 final systemTtsProvider = Provider<TextToSpeech>((ref) => SystemTextToSpeech());
 
@@ -310,16 +320,20 @@ TextToSpeech createSherpaTts(
     playback: out,
     preferred: () =>
         ref.read(voiceSettingsProvider).value?.sherpaVoices ?? const {},
-    onTiming: (voiceId, audio, compute) => _addMetric(
-      ref,
-      VoiceMetric(
-        kind: VoiceMetricKind.tts,
-        model: voiceId.replaceAll('/', '.'),
-        audio: audio,
-        compute: compute,
-        rssBytes: currentRssBytes(),
-      ),
-    ),
+    onPlay: (started) => _trace(ref, (t) => t.audio(started: started)),
+    onTiming: (voiceId, audio, compute) {
+      _trace(ref, (t) => t.synthesized(compute));
+      _addMetric(
+        ref,
+        VoiceMetric(
+          kind: VoiceMetricKind.tts,
+          model: voiceId.replaceAll('/', '.'),
+          audio: audio,
+          compute: compute,
+          rssBytes: currentRssBytes(),
+        ),
+      );
+    },
     preferredSpeakers: () =>
         ref.read(voiceSettingsProvider).value?.sherpaSpeakers ?? const {},
   );

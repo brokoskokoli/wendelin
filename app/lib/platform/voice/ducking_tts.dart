@@ -143,7 +143,7 @@ final class SpeechFocus {
 }
 
 /// A [TextToSpeech] that holds [SpeechFocus] while it speaks.
-final class DuckingTextToSpeech implements TextToSpeech {
+final class DuckingTextToSpeech implements PrefetchingTextToSpeech {
   /// Wraps [inner].
   DuckingTextToSpeech(this.inner, this.focus);
 
@@ -183,6 +183,44 @@ final class DuckingTextToSpeech implements TextToSpeech {
   }
 
   @override
+  TtsPrepared prepare(
+    String text, {
+    String? voice,
+    String? language,
+    double rate = 1.0,
+  }) {
+    final engine = inner;
+    if (engine is PrefetchingTextToSpeech) {
+      return engine.prepare(text, voice: voice, language: language, rate: rate);
+    }
+    // No lead for an engine that cannot prepare: spoken on its turn.
+    return _Deferred(text, voice, language, rate);
+  }
+
+  @override
+  Future<void> speakPrepared(TtsPrepared prepared) async {
+    final text = prepared.text;
+    if (text.trim().isEmpty) return;
+    final generation = focus.generation;
+    await focus.begin();
+    try {
+      final engine = inner;
+      if (prepared is _Deferred) {
+        await engine.speak(
+          text,
+          voice: prepared.voice,
+          language: prepared.language,
+          rate: prepared.rate,
+        );
+      } else {
+        await (engine as PrefetchingTextToSpeech).speakPrepared(prepared);
+      }
+    } finally {
+      focus.end(generation);
+    }
+  }
+
+  @override
   Future<void> stop() async {
     try {
       await inner.stop();
@@ -190,4 +228,17 @@ final class DuckingTextToSpeech implements TextToSpeech {
       focus.drop();
     }
   }
+}
+
+final class _Deferred implements TtsPrepared {
+  _Deferred(this.text, this.voice, this.language, this.rate);
+
+  @override
+  final String text;
+  final String? voice;
+  final String? language;
+  final double rate;
+
+  @override
+  void discard() {}
 }

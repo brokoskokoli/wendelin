@@ -38,6 +38,7 @@ final class WavAudioInput implements AudioInput {
     this.speed = 1,
     this.leadingSilence = const Duration(milliseconds: 300),
     this.now = DateTime.now,
+    this.gate,
   }) : assert(speed > 0, 'speed > 0'),
        assert(recordings.isNotEmpty, 'at least one recording');
 
@@ -54,10 +55,15 @@ final class WavAudioInput implements AudioInput {
 
   /// Reads the WAV files at [paths] (16 kHz mono PCM16), one per recording
   /// ([WavAudioInput.sequence]).
-  factory WavAudioInput.files(List<String> paths, {double speed = 1}) =>
-      WavAudioInput.sequence([
-        for (final path in paths) WavAudioInput.file(path).samples,
-      ], speed: speed);
+  factory WavAudioInput.files(
+    List<String> paths, {
+    double speed = 1,
+    Future<void> Function(int index)? gate,
+  }) => WavAudioInput.sequence(
+    [for (final path in paths) WavAudioInput.file(path).samples],
+    speed: speed,
+    gate: gate,
+  );
 
   /// The recordings, one per [start].
   final List<Int16List> recordings;
@@ -73,6 +79,11 @@ final class WavAudioInput implements AudioInput {
 
   /// Silence before the recording (as after pressing the microphone).
   final Duration leadingSilence;
+
+  /// Device tests (WP120): called with the index of the recording at every
+  /// [start]; the playback begins when the future completes (e.g. after
+  /// `barge-listen on=true`), not by the wall clock under load.
+  final Future<void> Function(int index)? gate;
 
   /// Time source for [endOfRecording].
   final DateTime Function() now;
@@ -96,7 +107,8 @@ final class WavAudioInput implements AudioInput {
   @override
   Stream<Int16List> start() {
     if (_out != null) throw StateError('Aufnahme läuft schon');
-    final samples = recordings[_starts.clamp(0, recordings.length - 1)];
+    final index = _starts.clamp(0, recordings.length - 1);
+    final samples = recordings[index];
     _starts++;
     _endOfRecording = null;
     // Closed in stop().
@@ -108,7 +120,7 @@ final class WavAudioInput implements AudioInput {
     final interval = Duration(
       microseconds: (frame.inMicroseconds / speed).round(),
     );
-    _timer = Timer.periodic(interval, (_) {
+    void play() => _timer = Timer.periodic(interval, (_) {
       if (out.isClosed) return;
       final chunk = Int16List(perFrame);
       for (var i = 0; i < perFrame; i++) {
@@ -121,6 +133,16 @@ final class WavAudioInput implements AudioInput {
       }
       out.add(chunk);
     });
+    final wait = gate?.call(index);
+    if (wait == null) {
+      play();
+    } else {
+      unawaited(
+        wait.then((_) {
+          if (!out.isClosed && _out == out) play();
+        }),
+      );
+    }
     return out.stream;
   }
 

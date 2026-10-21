@@ -183,4 +183,65 @@ void main() {
       expect(c.flush(), ['Who.']);
     });
   });
+
+  group('früher Schnitt des ersten Satzes (WP120)', () {
+    const text =
+        'Ich habe die Lampe im Wohnzimmer eingeschaltet, und die Heizung '
+        'läuft auch schon. Danach';
+
+    test('aus: der erste Satz kommt erst am Satzende', () {
+      expect(
+        SentenceChunker().add('Ich habe die Lampe im Wohnzimmer, '),
+        <String>[],
+      );
+    });
+
+    test('schneidet am Komma nach mindestens N Wörtern', () {
+      final c = SentenceChunker(firstSplitWords: 6);
+      expect(
+        c.add('Ich habe die Lampe im Wohnzimmer eingeschaltet,'),
+        <String>[],
+      );
+      expect(c.add(' und'), [
+        'Ich habe die Lampe im Wohnzimmer eingeschaltet,',
+      ]);
+      expect(c.lastPartial, [true]);
+      expect(c.add(' die Heizung läuft auch schon. Danach'), [
+        'und die Heizung läuft auch schon.',
+      ]);
+      expect(c.lastPartial, [false]);
+    });
+
+    test('zu wenige Wörter vor dem Komma: kein Schnitt', () {
+      final c = SentenceChunker(firstSplitWords: 6);
+      expect(c.add('Ja, ich habe die Lampe an'), <String>[]);
+      expect(c.pending, 'Ja, ich habe die Lampe an');
+    });
+
+    test('Doppelpunkt schneidet auch, Uhrzeit und Dezimalzahl nicht', () {
+      final c = SentenceChunker(firstSplitWords: 3);
+      expect(c.add('Um 10:30 Uhr kostet es 10,5 Euro'), <String>[]);
+      expect(c.add(' pro Person: '), [
+        'Um 10:30 Uhr kostet es 10,5 Euro pro Person:',
+      ]);
+    });
+
+    test('nur der erste Satz wird geschnitten', () {
+      final c = SentenceChunker(firstSplitWords: 2);
+      expect(c.add(text), isNotEmpty);
+      expect(c.add(' Eins zwei drei, vier fünf sechs. Nochmal'), [
+        'Danach Eins zwei drei, vier fünf sechs.',
+      ]);
+    });
+
+    test('nach flush und reset gilt wieder ein erster Satz', () {
+      final c = SentenceChunker(firstSplitWords: 2)
+        ..add('Eins zwei drei, vier');
+      c.flush();
+      expect(c.add('Fünf sechs sieben, acht'), ['Fünf sechs sieben,']);
+      c.flush();
+      c.reset();
+      expect(c.add('A b c, d'), ['A b c,']);
+    });
+  });
 }
