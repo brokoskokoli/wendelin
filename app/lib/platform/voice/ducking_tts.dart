@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/voice_log.dart';
 import '../channel_audio_focus_port.dart';
 
 /// Holds the `duck` audio focus while an answer is spoken (WP90): a running
@@ -12,11 +13,30 @@ import '../channel_audio_focus_port.dart';
 /// while the pipeline still works on the answer ([SpeechFocus.busy]) and
 /// given back only [hold] after that, so it stays for the whole answer and
 /// does not flutter between sentences or tool rounds.
+///
+/// WP118 (K88): with [communication] on, the same span also holds the call
+/// path ([route]); it is given back with the focus, also on [drop] (stop).
 final class SpeechFocus {
-  /// Creates the holder on [port].
-  SpeechFocus(this._port, {this.hold = const Duration(milliseconds: 1500)});
+  /// Creates the holder on [port]; [route] and [communication] are the
+  /// optional call path of the answer (off when [communication] is null).
+  SpeechFocus(
+    this._port, {
+    this.hold = const Duration(milliseconds: 1500),
+    this._route,
+    this._communication,
+  });
 
   final AudioFocusPort _port;
+  final SpeechRoutePort? _route;
+  final Future<bool> Function()? _communication;
+  // The call path works for the answer (the player may use its usage).
+  bool _routed = false;
+  // A switch was asked for, so a leave must follow (also if it failed).
+  bool _entered = false;
+
+  /// Whether the answer runs in the call path right now (only after the
+  /// switch succeeded).
+  bool get routed => _routed;
 
   /// How long the focus stays after the answer ended (and nobody is busy).
   final Duration hold;
@@ -54,8 +74,39 @@ final class SpeechFocus {
     _active++;
     _release?.cancel();
     _release = null;
+    final first = !_held;
     _held = true;
+    if (first) await _enterRoute(_generation);
     await _port.acquire(AudioFocusKind.duck);
+  }
+
+  Future<void> _enterRoute(int generation) async {
+    final route = _route;
+    if (route == null || _entered) return;
+    try {
+      if (!await (_communication?.call() ?? Future.value(false))) return;
+    } on Object {
+      return; // Setting unreadable: stay in the normal path.
+    }
+    // Stopped (or given back) while the setting was read: do not switch.
+    if (generation != _generation || !_held) return;
+    _entered = true;
+    final device = await route.enter();
+    // Stopped meanwhile: drop already asked for the leave (after our enter).
+    if (generation != _generation || !_entered) return;
+    _routed = device != null;
+    voiceLog('speech-route', {
+      'mode': device == null ? 'normal' : 'communication',
+      'device': device ?? 'failed',
+    });
+  }
+
+  void _leaveRoute() {
+    if (!_entered) return;
+    _entered = false;
+    _routed = false;
+    voiceLog('speech-route', {'mode': 'normal', 'device': 'restored'});
+    unawaited(_route?.leave());
   }
 
   /// The sentence ended or failed: gives the focus back after [hold] unless
@@ -74,6 +125,7 @@ final class SpeechFocus {
       _release = null;
       _held = false;
       unawaited(_port.release(AudioFocusKind.duck));
+      _leaveRoute();
     });
   }
 
@@ -83,6 +135,7 @@ final class SpeechFocus {
     _active = 0;
     _release?.cancel();
     _release = null;
+    _leaveRoute();
     if (!_held) return;
     _held = false;
     unawaited(_port.release(AudioFocusKind.duck));

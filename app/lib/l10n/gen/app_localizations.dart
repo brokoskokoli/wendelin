@@ -8206,6 +8206,18 @@ abstract class AppLocalizations {
   /// **'In den Android-Einstellungen unter Apps → Wendelin erlauben.'**
   String get micSettingsHint;
 
+  /// No description provided for @speechCommunicationHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Stopp“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.'**
+  String get speechCommunicationHelp;
+
+  /// No description provided for @speechCommunicationTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Antwort als Gesprächston (bessere Echo-Unterdrückung)'**
+  String get speechCommunicationTitle;
+
   /// No description provided for @wakeCalibrateCancelled.
   ///
   /// In de, this message translates to:

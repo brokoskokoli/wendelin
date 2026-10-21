@@ -59,9 +59,24 @@ final audioFocusPortProvider = Provider<AudioFocusPort>(
   (ref) => ChannelAudioFocusPort(),
 );
 
+/// The call path for the spoken answer (WP118, K88).
+final speechRoutePortProvider = Provider<SpeechRoutePort>(
+  (ref) => ChannelSpeechRoutePort(),
+);
+
 /// Holds the ducking focus for a whole spoken answer (WP90).
 final speechFocusProvider = Provider<SpeechFocus>((ref) {
-  final focus = SpeechFocus(ref.watch(audioFocusPortProvider));
+  final focus = SpeechFocus(
+    ref.watch(audioFocusPortProvider),
+    route: ref.watch(speechRoutePortProvider),
+    // WP118: setting „Antwort als Gesprächston“ (off by default).
+    communication: () async =>
+        await ref
+            .read(storageProvider)
+            .settings
+            .get(AppSettings.speechCommunication) ??
+        false,
+  );
   ref.onDispose(focus.drop);
   return focus;
 });
@@ -284,7 +299,9 @@ TextToSpeech createSherpaTts(
           await ref.read(speechModelServiceProvider.future),
           ref.read(speechModelCatalogProvider),
         );
-  final own = playback == null ? AudioplayersPlayback() : null;
+  final own = playback == null
+      ? AudioplayersPlayback(null, () => ref.read(speechFocusProvider).routed)
+      : null;
   if (own != null) ref.onDispose(() => unawaited(own.dispose()));
   final out = playback ?? own!;
   return SherpaTextToSpeech(

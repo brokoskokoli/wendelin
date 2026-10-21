@@ -23,6 +23,14 @@ abstract final class AppSettings {
   /// text (`0.05` default, `0.00`, `-0.05`).
   static final bargeMargin = SettingKey.string('debug.bargeMargin');
 
+  /// WP118 (K88, „Erweitert“): speak the answer in the call path
+  /// (`MODE_IN_COMMUNICATION`, `USAGE_VOICE_COMMUNICATION`) for a better echo
+  /// cancellation; off by default.
+  static final speechCommunication = SettingKey.boolean(
+    'voice.speechCommunication',
+    defaultValue: false,
+  );
+
   /// Show reasoning text of the model in the conversation (off by default).
   static final showThinking = SettingKey.boolean(
     'chat.showThinking',

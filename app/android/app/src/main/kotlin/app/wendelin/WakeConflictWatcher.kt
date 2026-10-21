@@ -58,7 +58,7 @@ class WakeConflictWatcher(
             it.clientAudioSessionId != own &&
                 !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && it.isClientSilenced)
         }
-        val reason = WakePolicy.conflict(audio.mode, foreign)
+        val reason = WakePolicy.conflictNow(audio.mode, foreign)
         if (reason != last) {
             last = reason
             onChange(reason)

@@ -30,7 +30,8 @@ void main() {
     await settle(tester);
     // WP80: every option is explained.
     expect(find.textContaining('rechnet die eigene Ausgabe'), findsOneWidget);
-    expect(find.textContaining('Echo-Unterdrückung'), findsOneWidget);
+    // WP118: the title of the new switch mentions it as well.
+    expect(find.textContaining('Echo-Unterdrückung'), findsNWidgets(2));
     expect(find.textContaining('mehr Fehlalarme'), findsOneWidget);
     expect(find.text('Kommunikation + AEC (Standard)'), findsOneWidget);
     expect(find.text('0,05 (Standard)'), findsOneWidget);
@@ -68,5 +69,46 @@ void main() {
     await tester.pumpWidget(env.app(home: const VoiceScreen()));
     await settle(tester);
     expect(find.textContaining(hint), findsOneWidget);
+  });
+
+  testWidgets('Schalter „Antwort als Gesprächston“: Standard aus, speichert', (
+    tester,
+  ) async {
+    final env = TestEnv();
+    setView(tester, const Size(390, 5000));
+    await tester.pumpWidget(env.app(home: const VoiceScreen()));
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('Erweitert'), 300);
+    await tester.tap(find.text('Erweitert'));
+    await settle(tester);
+    final tile = find.widgetWithText(
+      SwitchListTile,
+      'Antwort als Gesprächston (bessere Echo-Unterdrückung)',
+    );
+    expect(tile, findsOneWidget);
+    expect(tester.widget<SwitchListTile>(tile).value, isFalse);
+    final c = ProviderScope.containerOf(
+      tester.element(find.byType(BargeDebugSheet)),
+    );
+    expect(
+      await c
+          .read(storageProvider)
+          .settings
+          .get(AppSettings.speechCommunication),
+      isFalse,
+    );
+
+    await tester.tap(tile);
+    await settle(tester);
+    expect(tester.widget<SwitchListTile>(tile).value, isTrue);
+    expect(
+      await c
+          .read(storageProvider)
+          .settings
+          .get(AppSettings.speechCommunication),
+      isTrue,
+    );
+    // „Zurücksetzen“ betrifft nur das Unterbrechen.
+    expect(find.textContaining('Nebenwirkungen'), findsOneWidget);
   });
 }

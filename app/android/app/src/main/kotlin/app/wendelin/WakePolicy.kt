@@ -186,15 +186,21 @@ object WakePolicy {
 
     /**
      * Why the microphone must be free right now: `call` (phone or voice call) or `recording`
-     * (another recording is active), else `null`.
+     * (another recording is active), else `null`. WP118: [ownCommunication] means the app itself
+     * put the mode to `MODE_IN_COMMUNICATION` for its spoken answer; that is no call. A real phone
+     * call (`MODE_IN_CALL`, call screening) still is one.
      */
-    fun conflict(audioMode: Int, foreignRecording: Boolean): String? = when {
+    fun conflict(audioMode: Int, foreignRecording: Boolean, ownCommunication: Boolean = false): String? = when {
         audioMode == MODE_IN_CALL ||
-            audioMode == MODE_IN_COMMUNICATION ||
+            (audioMode == MODE_IN_COMMUNICATION && !ownCommunication) ||
             audioMode == MODE_CALL_SCREENING -> "call"
         foreignRecording -> "recording"
         else -> null
     }
+
+    /** [conflict] for the current state: the app's own call path ([SpeechRoute.active]) is no call. */
+    fun conflictNow(audioMode: Int, foreignRecording: Boolean): String? =
+        conflict(audioMode, foreignRecording, SpeechRoute.active)
 
     /** Whether the microphone is closed by the service itself, not only by Dart: any conflict. */
     fun closesMicFor(conflict: String?): Boolean = conflict == "call" || conflict == "recording"
