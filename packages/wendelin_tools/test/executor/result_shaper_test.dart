@@ -129,4 +129,14 @@ void main() {
     ).shape('t', ToolOutcome.text('abcdef'));
     expect(o.text, 'abc\n[gekürzt: 3 von 6 Zeichen]');
   });
+
+  test('fixed (WP122) bleibt bei Hülle und Kürzung erhalten', () {
+    const sentence = ConfirmationSentence('flashlight.on');
+    final o = shaper.shape(
+      't',
+      ToolOutcome.text('0123456789A', fixed: sentence),
+    );
+    expect(o.text, contains('gekürzt'));
+    expect(o.fixed, same(sentence));
+  });
 }

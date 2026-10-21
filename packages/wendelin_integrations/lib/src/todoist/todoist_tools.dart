@@ -7,7 +7,7 @@ import '../common/matching.dart';
 import '../common/port_exception.dart';
 import '../common/time.dart';
 import '../common/tool_args.dart';
-import '../lists/task_format.dart' show formatMinutes;
+import '../lists/task_format.dart' show addedTaskSentence, formatMinutes;
 import 'todoist_api.dart';
 import 'todoist_session.dart';
 
@@ -46,7 +46,10 @@ LocalDate _today(ToolContext ctx) =>
 
 /// `todoist__add` (write; undo deletes the created task).
 final class TodoistAddTool extends IntegrationTool
-    implements TrustedContentSource, AuditArgumentsRedactor {
+    implements
+        TrustedContentSource,
+        AuditArgumentsRedactor,
+        FixedConfirmationTool {
   /// Creates the tool.
   const TodoistAddTool(this.session);
 
@@ -133,6 +136,9 @@ final class TodoistAddTool extends IntegrationTool
   }
 
   @override
+  Set<String> get confirmationKeys => const {'task.added', 'task.addedPlain'};
+
+  @override
   Future<ToolOutcome> run(ToolArgs args, ToolContext ctx) async {
     final a = _parse(args);
     final project = await session.resolveProject(
@@ -163,6 +169,7 @@ final class TodoistAddTool extends IntegrationTool
           'priority': _priorityName(task.priority),
       },
       summary: '${named ?? 'Todoist'}: ${a.title} angelegt',
+      fixed: addedTaskSentence(a.title, named),
       undo: UndoAction(
         label: 'Entfernen',
         run: () => session.run((token) => session.api.deleteTask(token, id)),
@@ -288,7 +295,7 @@ final class TodoistListTool extends IntegrationTool {
 
 /// `todoist__complete` (write; undo reopens the task).
 final class TodoistCompleteTool extends IntegrationTool
-    implements AuditArgumentsRedactor {
+    implements AuditArgumentsRedactor, FixedConfirmationTool {
   /// Creates the tool.
   const TodoistCompleteTool(this.session);
 
@@ -297,6 +304,9 @@ final class TodoistCompleteTool extends IntegrationTool
 
   @override
   String get name => 'todoist__complete';
+
+  @override
+  Set<String> get confirmationKeys => const {'task.done'};
 
   @override
   String get description =>
@@ -366,6 +376,10 @@ final class TodoistCompleteTool extends IntegrationTool
       summary: task.recurring
           ? 'Todoist: ${task.content} erledigt (Rückgängig nicht möglich)'
           : 'Todoist: ${task.content} erledigt',
+      // A recurring task only moves on: the model words that.
+      fixed: task.recurring
+          ? null
+          : ConfirmationSentence('task.done', {'title': task.content}),
       // Closing a recurring task moves its due date; reopening would not
       // restore it.
       undo: task.recurring

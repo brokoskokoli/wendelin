@@ -64,6 +64,7 @@ final class _Fr extends ConfirmationLanguage {
     'spotify.playing': 'Lecture en cours : {label}.',
     'station.started': 'Le mode station est activé.',
     'task.added': 'La tâche « {title} » est maintenant sur la liste {list}.',
+    'task.addedPlain': 'La tâche « {title} » est ajoutée.',
     'task.done': 'La tâche « {title} » est terminée.',
     'timer.set': 'Le minuteur est lancé : {duration}.',
   };

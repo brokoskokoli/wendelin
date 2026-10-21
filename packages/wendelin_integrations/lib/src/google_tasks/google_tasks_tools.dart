@@ -7,6 +7,7 @@ import '../common/matching.dart';
 import '../common/port_exception.dart';
 import '../common/time.dart';
 import '../common/tool_args.dart';
+import '../lists/task_format.dart' show addedTaskSentence;
 import 'google_tasks_api.dart';
 import 'google_tasks_due.dart';
 import 'google_tasks_session.dart';
@@ -22,7 +23,10 @@ LocalDate _today(ToolContext ctx) =>
 
 /// `gtasks__add` (write; undo deletes the created task).
 final class GoogleTasksAddTool extends IntegrationTool
-    implements TrustedContentSource, AuditArgumentsRedactor {
+    implements
+        TrustedContentSource,
+        AuditArgumentsRedactor,
+        FixedConfirmationTool {
   /// Creates the tool.
   const GoogleTasksAddTool(this.session);
 
@@ -31,6 +35,9 @@ final class GoogleTasksAddTool extends IntegrationTool
 
   @override
   String get name => 'gtasks__add';
+
+  @override
+  Set<String> get confirmationKeys => const {'task.added', 'task.addedPlain'};
 
   @override
   String get description =>
@@ -113,6 +120,8 @@ final class GoogleTasksAddTool extends IntegrationTool
               'weggelassen.',
       },
       summary: '${named ?? 'Google Tasks'}: $title angelegt',
+      // With a dropped time the model words the note.
+      fixed: due?.timeDropped ?? false ? null : addedTaskSentence(title, named),
       undo: UndoAction(
         label: 'Entfernen',
         run: () =>
@@ -231,7 +240,7 @@ final class GoogleTasksListTool extends IntegrationTool {
 
 /// `gtasks__complete` (write; undo sets the task open again).
 final class GoogleTasksCompleteTool extends IntegrationTool
-    implements AuditArgumentsRedactor {
+    implements AuditArgumentsRedactor, FixedConfirmationTool {
   /// Creates the tool.
   const GoogleTasksCompleteTool(this.session);
 
@@ -240,6 +249,9 @@ final class GoogleTasksCompleteTool extends IntegrationTool
 
   @override
   String get name => 'gtasks__complete';
+
+  @override
+  Set<String> get confirmationKeys => const {'task.done'};
 
   @override
   String get description =>
@@ -308,6 +320,7 @@ final class GoogleTasksCompleteTool extends IntegrationTool
     return jsonOutcome(
       {'list': listName, 'completed': task.title},
       summary: 'Google Tasks: ${task.title} erledigt',
+      fixed: ConfirmationSentence('task.done', {'title': task.title}),
       undo: UndoAction(
         label: 'Wieder offen',
         run: () => session.run(

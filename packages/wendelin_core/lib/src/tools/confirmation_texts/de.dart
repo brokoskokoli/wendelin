@@ -42,6 +42,7 @@ final class _De extends ConfirmationLanguage {
     'spotify.playing': 'Es spielt jetzt {label}.',
     'station.started': 'Der Stationsmodus ist an.',
     'task.added': 'Die Aufgabe „{title}“ steht jetzt auf der Liste {list}.',
+    'task.addedPlain': 'Die Aufgabe „{title}“ ist angelegt.',
     'task.done': 'Die Aufgabe „{title}“ ist erledigt.',
     'timer.set': 'Der Timer läuft: {duration}.',
   };
