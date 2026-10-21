@@ -14,6 +14,7 @@ final class SpeechShortening {
     this.maxChars = 400,
     this.maxListItems = 3,
     this.announceRest = true,
+    this.firstSplitWords = 6,
   });
 
   /// Maximum number of spoken sentences (a summarized list counts as one).
@@ -24,6 +25,16 @@ final class SpeechShortening {
 
   /// List items read out before „und N weitere“.
   final int maxListItems;
+
+  /// The first sentence of an answer (and of each segment after a tool
+  /// call) is cut at the first comma or colon after at least this many
+  /// words, so the voice starts sooner (WP120); 0 = never.
+  ///
+  /// Six words are about 2 s of speech: long enough that the cut falls at a
+  /// natural pause and the next piece is synthesised before this one ends,
+  /// short enough that a typical German opening clause („Ich habe die
+  /// Lampe im Wohnzimmer eingeschaltet, …“) is spoken first.
+  final int firstSplitWords;
 
   /// Whether to add „Den Rest siehst du auf dem Bildschirm.“ when something
   /// was cut or left out (code, tables, sentences over the limit).
@@ -54,7 +65,8 @@ final class SpokenAnswer {
     String? language,
     SentenceChunker? chunker,
   }) : texts = VoiceTexts.of(language),
-       _chunker = chunker ?? SentenceChunker();
+       _chunker =
+           chunker ?? SentenceChunker(firstSplitWords: config.firstSplitWords);
 
   /// Shortens a complete [text] at once (same rules as streaming).
   static List<String> shorten(
@@ -190,7 +202,10 @@ final class SpokenAnswer {
   void _flushAll(List<String> out) {
     if (_line.isNotEmpty) _completeLine(out);
     _endList(out);
-    _chunker.flush().forEach((s) => _accept(s, out));
+    final rest = _chunker.flush();
+    for (var i = 0; i < rest.length; i++) {
+      _accept(rest[i], out, part: _chunker.lastPartial[i]);
+    }
     _inCode = false;
   }
 
@@ -259,8 +274,9 @@ final class SpokenAnswer {
 
   void _feed(String text, List<String> out) {
     if (text.isEmpty) return;
-    for (final s in _chunker.add(stripUrls(text, placeholder: urlMark))) {
-      _accept(s, out);
+    final sentences = _chunker.add(stripUrls(text, placeholder: urlMark));
+    for (var i = 0; i < sentences.length; i++) {
+      _accept(sentences[i], out, part: _chunker.lastPartial[i]);
     }
   }
 
@@ -282,7 +298,9 @@ final class SpokenAnswer {
     _accept(sentence, out);
   }
 
-  void _accept(String raw, List<String> out) {
+  // [part]: the first piece of a sentence cut early (it does not count as a
+  // sentence of its own, the rest of the sentence does).
+  void _accept(String raw, List<String> out, {bool part = false}) {
     var s = cleanForSpeech(raw);
     if (s.isNotEmpty) s = normalizeForSpeech(s, texts.language);
     if (s.isEmpty) {
@@ -299,7 +317,7 @@ final class SpokenAnswer {
       _replay.clear();
     }
     if (_truncated) return;
-    final counted = !_heading;
+    final counted = !_heading && !part;
     final fits =
         (!counted || _sentences < config.maxSentences) &&
         _chars + s.length <= config.maxChars;

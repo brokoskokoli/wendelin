@@ -4,6 +4,16 @@ part of 'voice_controller.dart';
 
 /// Maps pipeline events to the UI state and the voice log.
 extension _VoiceEventHandler on VoiceController {
+  /// WP120: the time line of the request runs from the end of the speech.
+  void _onStateTraced(VoiceState s) {
+    final latency = ref.read(latencyTraceProvider);
+    if (s == VoiceState.transcribing) latency.begin();
+    if (s == VoiceState.idle || s == VoiceState.listening) {
+      latency.finishSoon();
+    }
+    _onState(s);
+  }
+
   void _onEvent(VoiceEvent e) {
     switch (e) {
       case VoiceListening(:final followUp):
@@ -20,6 +30,7 @@ extension _VoiceEventHandler on VoiceController {
         voiceLogPipelineEvent(e);
       case VoiceTranscribed(:final transcript):
         _language = transcript.language;
+        ref.read(latencyTraceProvider).sttDone();
       case VoiceNothingUnderstood(:final reason):
         voiceLog('nothing-understood', {'reason': reason});
         state = state.copyWith(
@@ -30,15 +41,17 @@ extension _VoiceEventHandler on VoiceController {
         state = state.copyWith(error: voiceErrorText(uiTexts(ref), error));
       case VoiceSpeaking(:final sentence):
         _answers.spoke(sentence);
+        ref.read(latencyTraceProvider).sentenceToTts();
         // Source of what is heard: the answer (not the confirmation).
         voiceLog('speak', {'source': 'answer'});
       case VoiceCancelled(:final reason, :final during):
+        ref.read(latencyTraceProvider).abort();
         voiceLog('voice-cancelled', {'reason': reason, 'phase': during});
         _onCancelled(reason, during);
       case VoiceBargeIn():
         voiceLogPipelineEvent(e); // barge-in
-      case VoiceAgentEvent():
-        break;
+      case VoiceAgentEvent(:final event):
+        ref.read(latencyTraceProvider).agentEvent(event);
     }
   }
 

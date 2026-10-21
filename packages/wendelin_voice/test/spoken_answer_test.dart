@@ -423,4 +423,46 @@ void main() {
     expect(VoiceTexts.en.nothingUnderstood, isNotEmpty);
     expect(VoiceTexts.fr.more(3), 'et 3 autres');
   });
+
+  group('früher Schnitt (WP120)', () {
+    const first = 'Ich habe die Lampe im Wohnzimmer eingeschaltet, und';
+
+    test('erster langer Satz wird am Komma geteilt', () {
+      final a = SpokenAnswer();
+      expect(a.add(first), ['Ich habe die Lampe im Wohnzimmer eingeschaltet,']);
+      expect(a.add(' die Heizung läuft. Fertig. '), ['und die Heizung läuft.']);
+      expect(a.finish(), ['Fertig.']);
+    });
+
+    test('das erste Stück zählt nicht als eigener Satz', () {
+      final a = SpokenAnswer(config: const SpeechShortening(maxSentences: 2));
+      final out = [
+        ...a.add('Ich habe die Lampe im Wohnzimmer eingeschaltet, und gut. '),
+        ...a.add('Zweiter Satz. Dritter Satz. '),
+        ...a.finish(),
+      ];
+      expect(out, [
+        'Ich habe die Lampe im Wohnzimmer eingeschaltet,',
+        'und gut.',
+        'Zweiter Satz.',
+        restDe,
+      ]);
+    });
+
+    test('nach einem Werkzeugaufruf gilt wieder ein erster Satz', () {
+      final a = SpokenAnswer();
+      a.add('Eins zwei drei vier fünf sechs, sieben');
+      a.endSegment();
+      expect(a.add('Eins zwei drei vier fünf sechs, sieben'), [
+        'Eins zwei drei vier fünf sechs,',
+      ]);
+    });
+
+    test('firstSplitWords 0 schaltet den Schnitt ab', () {
+      final a = SpokenAnswer(
+        config: const SpeechShortening(firstSplitWords: 0),
+      );
+      expect(a.add(first), isEmpty);
+    });
+  });
 }

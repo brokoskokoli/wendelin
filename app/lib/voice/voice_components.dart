@@ -9,6 +9,8 @@ import '../di/providers.dart';
 import '../di/voice_providers.dart';
 import '../l10n/l10n.dart';
 
+export 'latency_trace.dart' show latencyTraceProvider;
+
 /// The voice parts the app uses for push-to-talk and the overlay, or
 /// `null` while speech is not available on the device (Whisper or Silero
 /// not downloaded – the microphone then shows [voiceUnavailableError]).

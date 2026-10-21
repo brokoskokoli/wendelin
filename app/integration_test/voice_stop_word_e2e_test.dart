@@ -154,6 +154,8 @@ void main() {
       File('${e2e.path}/overlay.json').writeAsStringSync(
         jsonEncode({
           'audio': ['lock-02.wav', 'barge.wav'],
+          // WP120: barge.wav erst, wenn der Zuhörer läuft (nicht nach Wanduhr).
+          'waitForBargeListen': [1],
           'turns': [
             {'text': 'ANTWORT-EINS $long'},
             {'text': 'ANTWORT-ZWEI'},

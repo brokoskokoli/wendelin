@@ -623,7 +623,7 @@ final class VoiceController extends Notifier<VoiceUiState> {
       _profile = CaptureProfileFollower(input, pipeline.states);
     }
     _subs
-      ..add(pipeline.states.listen(_onState))
+      ..add(pipeline.states.listen(_onStateTraced))
       ..add(pipeline.events.listen(_onEvent))
       ..add(audio.levels.listen(_onLevel));
     return pipeline;

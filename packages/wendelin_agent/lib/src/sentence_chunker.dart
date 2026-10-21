@@ -9,11 +9,27 @@
 ///
 /// Because the decision needs the next character, a sentence is returned
 /// only once the text after it has started; [flush] returns the rest.
+///
+/// WP120: with [firstSplitWords] > 0 a long **first** sentence (of the
+/// answer or after [flush]/[reset]) is cut at the first comma or colon that
+/// follows at least that many words, so the voice can start before the
+/// sentence is complete. The pieces are marked in [lastPartial].
 final class SentenceChunker {
   /// Creates a chunker; [abbreviations] (lower case, without the dot)
   /// replaces [defaultAbbreviations].
-  SentenceChunker({Set<String>? abbreviations})
+  SentenceChunker({Set<String>? abbreviations, this.firstSplitWords = 0})
     : abbreviations = abbreviations ?? defaultAbbreviations;
+
+  /// Minimum number of words before the first comma/colon of the first
+  /// sentence at which it is cut early; 0 = never.
+  final int firstSplitWords;
+
+  /// For the list returned by the last [add]/[flush]: whether the sentence
+  /// at that index is only the first part of a sentence that continues (cut
+  /// at a comma or colon, [firstSplitWords]).
+  List<bool> lastPartial = const [];
+
+  bool _first = true;
 
   /// Words that are followed by a dot without ending the sentence.
   static const defaultAbbreviations = {
@@ -73,20 +89,32 @@ final class SentenceChunker {
   }
 
   /// Returns all remaining text as sentences and clears the buffer.
-  List<String> flush() => _extract(isFinal: true);
+  List<String> flush() {
+    final out = _extract(isFinal: true);
+    _first = true;
+    return out;
+  }
 
   /// Clears the buffer without returning anything (e.g. after an
   /// escalation replaced the answer).
-  void reset() => _buffer = '';
+  void reset() {
+    _buffer = '';
+    _first = true;
+  }
 
   List<String> _extract({required bool isFinal}) {
     final s = _buffer;
     final out = <String>[];
+    final partial = <bool>[];
     var start = 0;
 
-    void emit(int end) {
+    void emit(int end, {bool part = false}) {
       final sentence = s.substring(start, end).trim();
-      if (sentence.isNotEmpty) out.add(sentence);
+      if (sentence.isNotEmpty) {
+        out.add(sentence);
+        partial.add(part);
+        _first = false;
+      }
       start = end;
     }
 
@@ -146,8 +174,31 @@ final class SentenceChunker {
       i = k;
     }
     if (isFinal) emit(s.length);
+    if (!isFinal && _first && firstSplitWords > 0) {
+      final cut = _earlySplit(s, start);
+      if (cut != null) emit(cut, part: true);
+    }
+    lastPartial = partial;
     _buffer = s.substring(start).trimLeft();
     return out;
+  }
+
+  /// End (exclusive) of the first part of the unfinished sentence starting at
+  /// [from]: after the first comma or colon that is followed by a space and
+  /// preceded by at least [firstSplitWords] words (so „10,5“ and „10:30“ are
+  /// never cut); `null` if there is none yet.
+  int? _earlySplit(String s, int from) {
+    for (var i = from; i < s.length - 1; i++) {
+      final c = s[i];
+      if ((c != ',' && c != ':') || !_isSpace(s[i + 1])) continue;
+      final words = s
+          .substring(from, i)
+          .split(RegExp(r'\s+'))
+          .where((w) => w.isNotEmpty)
+          .length;
+      if (words >= firstSplitWords) return i + 1;
+    }
+    return null;
   }
 
   /// Whether the dot at [dot] belongs to an abbreviation, initial or
