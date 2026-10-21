@@ -218,18 +218,22 @@ def neg_classes(text):
 
 
 def cmd_neg(a):
-    """Zeitstempel (Sekunden der jeweiligen Datei) der Fundstellen; Fenster 24 s, Hop 20 s, dann 8-s-Teilfenster (Hop 4 s)."""
+    """Zeitstempel (Sekunden der jeweiligen Datei) der Fundstellen; Fenster 24 s, Hop 20 s, dann 8-s-Teilfenster (Hop 4 s).
+    Transkripte der Grobfenster werden unter work/negscan_<geraet>.json gecacht (nur lokal, Gespraechsinhalt)."""
     import real_measure as R
     dec = whisper(); os.makedirs(LABELS, exist_ok=True); hits = []
     for d in DEVICES:
         x = R.load(f"{WORK}/neg_{d}.wav"); act = R.level_db(x) > 10
+        cp = f"{WORK}/negscan_{d}.json"; sc = json.load(open(cp)) if os.path.exists(cp) else {}
         for t in range(0, max(1, int(len(x) / SR - 2)), 20):
-            if act[t * R.FPS:(t + 24) * R.FPS].mean() < 0.03: continue
-            if not neg_classes(dec(x[t * SR:(t + 24) * SR])): continue
-            for u in range(t, t + 24, 4):
-                cl = neg_classes(dec(x[u * SR:(u + 8) * SR]))
-                for c in cl: hits.append((d, u, c))
-        print(d, len(hits), flush=True)
+            k = str(t)
+            if k not in sc:
+                if act[t * R.FPS:(t + 24) * R.FPS].mean() < 0.03: sc[k] = None; continue
+                sc[k] = dec(x[t * SR:(t + 24) * SR]); json.dump(sc, open(cp, "w"), ensure_ascii=False)
+            if sc[k] and neg_classes(sc[k]):
+                for u in range(t, t + 24, 4):
+                    for c in neg_classes(dec(x[u * SR:(u + 8) * SR])): hits.append((d, u, c))
+        print(d, "Fenster", len(sc), "mit Sprache", sum(v is not None for v in sc.values()), "Treffer", len(hits), flush=True)
     with open(f"{LABELS}/neg_hits.csv", "w", newline="") as f:
         w = csv.writer(f); w.writerow(["geraet", "zeit_s", "klasse"])
         w.writerows(sorted(set(hits)))
