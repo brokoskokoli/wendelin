@@ -79,6 +79,41 @@ void main() {
     expect(const VoiceSettings().sttModel, SpeechModelCatalog.whisperSmall.id);
   });
 
+  test('Ramona und Eva: M-AILABS-Lizenz mit Attribution, echte Prüfsumme', () {
+    const sums = {
+      'tts-de-ramona':
+          'e532ddcbb09c16a65f56441bbbbf301083d2ea5b18ce937775303942f2b7a8f4',
+      'tts-de-eva':
+          '0501123c7e184571a40690e79943f4111a57b988632f7f60a9d2344fd061e2a2',
+    };
+    for (final MapEntry(:key, :value) in sums.entries) {
+      final m = catalog.byId(key)!;
+      expect(m.files.single.sha256, value, reason: key);
+      expect(m.gender, VoiceGender.female);
+      expect(m.languages, {'de'});
+      expect(m.license, contains('M-AILABS'));
+      expect(m.attribution, contains('M-AILABS'));
+      expect(m.sizeBytes, lessThan(25000000));
+      expect(m.note, contains('selbst gehasht'));
+      expect(catalog.voicesFor('de').map((v) => v.id), contains(key));
+    }
+  });
+
+  test('Größe und Dateiname der TTS-Archive sind festgenagelt', () {
+    const files = {
+      'tts-de-ramona': ('vits-piper-de_DE-ramona-low-int8.tar.bz2', 21199380),
+      'tts-de-eva': ('vits-piper-de_DE-eva_k-x_low-int8.tar.bz2', 13321491),
+      'tts-de-kerstin': ('vits-piper-de_DE-kerstin-low-int8.tar.bz2', 21174728),
+      'tts-fr-gilles': ('vits-piper-fr_FR-gilles-low-int8.tar.bz2', 21248965),
+      'tts-en-joe': ('vits-piper-en_US-joe-medium-int8.tar.bz2', 21230019),
+    };
+    for (final MapEntry(:key, :value) in files.entries) {
+      final f = catalog.byId(key)!.files.single;
+      expect(f.name, value.$1, reason: key);
+      expect(f.sizeBytes, value.$2, reason: key);
+    }
+  });
+
   test('Pflicht-Attribution für SIWIS, englische Stimme gemeinfrei', () {
     expect(SpeechModelCatalog.voiceFr.attribution, contains('SIWIS'));
     expect(SpeechModelCatalog.voiceFr.attribution, contains('CC BY 4.0'));
