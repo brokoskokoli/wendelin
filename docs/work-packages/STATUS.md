@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125; Stopp-E2E rot auf main (Diagnose läuft); E2E Stopp/Barge 3× (WP123) läuft; Test-APK 954e065 bei Stefan; als Nächstes: WP100/WP101 (Stationsmodus Welle 2) nach WP121, WP92c nach Gerätetest wp92a/b, Scorer-Fix Reasoning-Leck, Sonnet-Probe
+Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125, WP126 (Stopp-E2E rot seit WP123); E2E Stopp/Barge 3× (WP123) läuft; Test-APK 954e065 bei Stefan; als Nächstes: WP100/WP101 (Stationsmodus Welle 2) nach WP121, WP92c nach Gerätetest wp92a/b, Scorer-Fix Reasoning-Leck, Sonnet-Probe
 
 ## Meilensteine
 
@@ -73,7 +73,8 @@ Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125; Stopp-E2E
 | WP122 | Feste Bestätigungssätze statt zweitem Modellaufruf | gemergt 4f596e66 | K97; Gerätetest T21-WP122; Soll: Test AgentDone.fixed, Satz „schon vorhanden“ (confirmation_texts de:30/34 en:45/48 fr:53/56), Doku fixed_confirmation.dart:20, toter Schlüssel lists_write_tools.dart:47; CI-Flake wake_lifecycle_test (UnmountedRefException) |
 | WP123 | Stopp sofort ab Antwortbeginn (Barge-in-Warmstart), Stopp-E2E stabil | gemergt ab054e98 | K96; E2E voice_stop_word/voice_barge_in je 3× offen (Last 15–18); Gerätetest T21-WP123; Soll: Provider-Test take statt snapshot (wake_providers.dart:204) |
 | WP124 | Emulator startet bei Bedarf, wird nach jedem E2E-Lauf beendet (E2E_KEEP_EMULATOR=1 für Serien) | gemergt 909738c1 | Wunsch Stefan 2026-10-21; echter Lauf torch_e2e grün |
-| WP125 | Sammelpaket Soll-Befunde WP113–WP123, CI-Flake wake_lifecycle_test | in Arbeit | Go Stefan 2026-10-22 |
+| WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | in Arbeit | Go Stefan 2026-10-22; Barge-in-Punkte (WP113, WP123) → WP126 |
+| WP126 | „Stopp“ nach Warmstart: Fehlkandidat auf Stille blockiert echtes Wort (Fehler aus WP123) | in Arbeit | voice_stop_word_e2e rot seit ab054e98 (Bisekt 2026-10-22) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
