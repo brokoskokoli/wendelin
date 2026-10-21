@@ -84,7 +84,12 @@ final class LatencyTrace {
       case AgentTextDelta() || AgentThinkingDelta():
         _current()?.first ??= _at();
       case UsageReported():
-        _current()?.done = _at();
+        // A call that only answers with a tool call reports its usage
+        // before the tool event: the first token never comes after done.
+        final call = _current();
+        final t = _at();
+        call?.first ??= t;
+        call?.done = t;
       case ToolCallStarted():
         _tools++;
         if (_calls.isNotEmpty) _calls.last.first ??= _at();

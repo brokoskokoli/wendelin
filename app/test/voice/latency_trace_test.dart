@@ -89,6 +89,19 @@ void main() {
       });
     });
 
+    test('reine Tool-Antwort: erstes Token nie nach dem Ende des Aufrufs', () {
+      trace.begin();
+      at(300);
+      trace.sttDone();
+      at(1000);
+      trace.agentEvent(_used()); // usage comes before the tool event
+      at(1100);
+      trace.agentEvent(ToolCallStarted(_call()));
+      trace.finish();
+      expect(logged.single.$2['m1_first'], const Duration(milliseconds: 1000));
+      expect(logged.single.$2['m1_done'], const Duration(milliseconds: 1000));
+    });
+
     test('ohne Transkript oder nach abort keine Zeile', () async {
       trace.begin();
       trace.finish();
@@ -188,4 +201,44 @@ void main() {
       expect(latency.single, isNot(contains('Wasser')));
     },
   );
+
+  test('Abbruch (Stopp) schreibt keine Zeile `latency`', () async {
+    final lines = <String>[];
+    voiceLogSink = lines.add;
+    final tts = FakeTextToSpeech(manual: true);
+    final env = TestEnv(
+      providerConfig: scripted(
+        FakeLlmProvider([ScriptedTurn.text('Das Wasser hat 19 Grad.')]),
+      ),
+      extraOverrides: [
+        activeVoiceProvider.overrideWith(
+          (ref) async => VoiceComponents(
+            audio: FakeAudioInput(
+              frames: AudioFrames.pattern('S' * 10 + '.' * 30),
+            ),
+            vad: FakeVoiceActivityDetector(),
+            stt: FakeSpeechToText(const [
+              Transcript(text: 'Wie warm ist es', language: 'de'),
+            ]),
+            textToSpeech: (_) async => tts,
+            config: const VoicePipelineConfig(),
+          ),
+        ),
+      ],
+    );
+    final c = env.container();
+    addTearDown(c.dispose);
+    c.listen(agentControllerProvider, (_, _) {});
+    final voice = c.read(voiceControllerProvider.notifier);
+    expect(await voice.start(TriggerKind.pushToTalk), isTrue);
+    for (var i = 0; i < 100 && tts.current == null; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    expect(tts.current, isNotNull, reason: 'die Antwort wird gesprochen');
+    await voice.cancel();
+    await voice.whenIdle;
+    await Future<void>.delayed(Duration.zero);
+    expect(lines.any((l) => l.contains('voice-cancelled')), isTrue);
+    expect(lines.where((l) => l.contains(' latency ')), isEmpty);
+  });
 }

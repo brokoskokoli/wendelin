@@ -16,6 +16,7 @@ import '../di/providers.dart';
 import '../di/voice_providers.dart';
 import '../platform/platform_ports.dart';
 import '../platform/voice/wav_audio_input.dart';
+import '../voice/voice_log.dart';
 
 /// Name of the folder in the app data (`files/e2e/`) the device tests fill.
 const deviceTestFolder = 'e2e';
@@ -169,7 +170,10 @@ Future<void> Function(int)? _bargeGate(Ref ref, Map<String, Object?> spec) {
     if (!gated.contains(index) || on) return Future.value();
     final w = Completer<void>();
     waiting.add(w);
-    return w.future.timeout(_bargeWait, onTimeout: () {});
+    return w.future.timeout(
+      _bargeWait,
+      onTimeout: () => voiceLog('e2e-gate', {'timeout': true}),
+    );
   };
 }
 

@@ -532,7 +532,8 @@ void main() {
     test('verworfener oder vor stop vorbereiteter Satz bleibt stumm', () {
       fakeAsync((async) {
         final playback = FakePlayback(time: play);
-        final tts = engine(playback, FakeSynthesizer(delay: syn));
+        final synth = FakeSynthesizer(delay: syn);
+        final tts = engine(playback, synth);
         tts.speakPrepared(tts.prepare('A'));
         final b = tts.prepare('B');
         final c = tts.prepare('C');
@@ -544,8 +545,34 @@ void main() {
         async.elapse(const Duration(seconds: 30));
         expect(cDone, isTrue);
         expect(playback.played, 1); // only A
+        expect(
+          synth.calls.map((x) => x.$1),
+          isNot(contains('B')),
+          reason: 'verworfener Satz wird nicht synthetisiert',
+        );
       });
     });
+
+    test(
+      'stop während der Synthese: das fertige Ergebnis wird nicht gespielt',
+      () {
+        fakeAsync((async) {
+          final playback = FakePlayback(time: play);
+          final synth = FakeSynthesizer(delay: syn);
+          final tts = engine(playback, synth);
+          final done = tts.speakPrepared(tts.prepare('A'));
+          async.elapse(const Duration(seconds: 1));
+          expect(synth.calls, hasLength(1), reason: 'die Synthese läuft');
+          tts.stop();
+          async.elapse(const Duration(seconds: 30));
+          var finished = false;
+          done.then((_) => finished = true);
+          async.flushMicrotasks();
+          expect(finished, isTrue);
+          expect(playback.played, 0);
+        });
+      },
+    );
 
     test('onPlay meldet Beginn und Ende jedes Satzes', () {
       fakeAsync((async) {
