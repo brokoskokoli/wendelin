@@ -72,6 +72,18 @@ class SpeechRouteTest {
     }
 
     @Test
+    fun leaveRestoresModeSavedBeforeThePlayerTouchedIt() {
+        val a = FakeAudio(sdk = 34, mode = 0)
+        val r = route(a)
+        r.enter()
+        // audioplayers sets audioManager.mode at every play (WrappedPlayer.kt:171).
+        a.mode = 0
+        a.mode = SpeechRoute.MODE_IN_COMMUNICATION
+        r.leave()
+        assertEquals(0, a.mode)
+    }
+
+    @Test
     fun leaveRestoresSpeakerphoneBeforeApi31() {
         val a = FakeAudio(sdk = 30, mode = 0, speakerphoneOn = false)
         val r = route(a)

@@ -332,6 +332,9 @@ void main() {
         expect(a.usageType, AndroidUsageType.voiceCommunication);
         expect(a.contentType, AndroidContentType.speech);
         expect(a.audioFocus, AndroidAudioFocus.gainTransientMayDuck);
+        // audioplayers sets audioManager.mode = audioMode at every play
+        // (WrappedPlayer.kt:171); normal would undo the call mode.
+        expect(a.audioMode, AndroidAudioMode.inCommunication);
       },
     );
 
@@ -344,6 +347,11 @@ void main() {
       expect(
         AudioplayersPlayback.context.android.usageType,
         AndroidUsageType.assistant,
+      );
+      // Unchanged: audioplayers sets MODE_NORMAL at every play.
+      expect(
+        AudioplayersPlayback.context.android.audioMode,
+        AndroidAudioMode.normal,
       );
     });
   });

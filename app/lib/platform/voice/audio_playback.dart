@@ -39,10 +39,16 @@ final class AudioplayersPlayback implements AudioPlayback {
 
   /// The same with the usage of a call (WP118, K88): the echo canceller of
   /// the call path then knows this playback.
+  ///
+  /// `audioMode` must be `inCommunication`: audioplayers_android sets
+  /// `audioManager.mode = context.audioMode` at every play
+  /// (`WrappedPlayer.kt:171`, default `MODE_NORMAL`) and would otherwise undo
+  /// the call mode of `SpeechRoute`.
   static final AudioContext communicationContext = AudioContext(
     android: const AudioContextAndroid(
       contentType: AndroidContentType.speech,
       usageType: AndroidUsageType.voiceCommunication,
+      audioMode: AndroidAudioMode.inCommunication,
       audioFocus: AndroidAudioFocus.gainTransientMayDuck,
     ),
   );
