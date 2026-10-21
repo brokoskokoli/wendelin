@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP113, WP119; als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
+Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP119, WP114; als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
 
 ## Meilensteine
 
@@ -61,8 +61,8 @@ Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP113, WP119; als Nächstes: W
 | WP110 | Agenten-Leitplanken und CI-Entlastung (Claude-Hooks, Coder-Checkliste, docs-only-CI, Emulator-Sperre) | gemergt 2ff0fe8f | K81 offen; beim Merge kotlin-unit rot (`bash bash gradlew`, wenn das JDK schon passt), vom Orchestrator behoben 9c7ffbc7; Folge: cleanup_wt.sh löscht die Urteilsdateien `<wp>-review*.md` mit (sollen für die Quote „erstes Review sauber“ erhalten bleiben; bis dahin sichert der Orchestrator sie vor dem Merge nach `james-wt/reviews/`); Guard-Restlücken in ENGINEERING.md (fängt pre-push ab) |
 | WP111 | Vergleich alternativer Wake Words („Hey Wendelin“, microWakeWord, sherpa-KWS) | gemergt fcf956d9 | K83 offen; synthetisch: Zielwerte von keinem Wort erreicht, Empfehlung bei „Wendelin“ bleiben (v7 M0,3 + Parakeet-Hotword 2); Abweichungen: Testclips macOS-Systemstimmen statt Piper, persönliches Feintuning nicht neu gemessen, ohne CAM++-Stufe, Python-Selbsttests `tool/train_wake_word/test_measure.py` nicht im Gate; Folge: Teil B echte Aufnahmen (Folgepaket), Soll Re-Review (Test pick_neg-Aufruf `station_measure.py:215`, `requirements-mww.txt`), Kandidaten aus Klang-Recherche (Okay Wendelin, Hey Wendelino, Hey Kasimir) für späteren Vergleich |
 | WP112 | Modell-Empfehlung (150 Evals de/en/fr, 5 Anbieter, Empfehlung je Rolle) | gemergt d6ba4602 | K87 offen; Kosten 1,48 $ (alle unter Obergrenze); Folge: Scorer soll Reasoning-Leck (`</think>`) als Fehlschlag werten, `fr-clarify-liste` zu streng, `live30.txt` enthält pending `de-lists-add`, Soll: CLI-Test Ledger-Budgetübergabe; Fallback je Rolle als eigenes Paket möglich |
-| WP113 | „Stopp“ während der Antwort mit Gegenprüfung, Anzeige „hört mit“ | in Arbeit | Gerätetest 2026-10-20 T20-B.1; K84 |
-| WP114 | Gesperrtes Handy: Overlay bleibt nach dem Entsperren, harmlose Aktionen ohne Entsperren | geplant (nach WP113, Sprach-Controller) | T20-Z.5/Z.6; K85 |
+| WP113 | „Stopp“ während der Antwort mit Gegenprüfung, Anzeige „hört mit“ | gemergt e7e17b9b | K90 (Stopp gewinnt, Schwellen, Gegenprüfung 0,8 s, Echo-Filter); Gerätetest docs/testing/m5/wp113.md; Soll: stopOverridesWake-Verdrahtung wake_barge_in.dart:194 und Settle wake_word_barge_in.dart:170 ungetestet, _verify alte Generation :219 |
+| WP114 | Gesperrtes Handy: Overlay bleibt nach dem Entsperren, harmlose Aktionen ohne Entsperren | in Arbeit | T20-Z.5/Z.6; K85 |
 | WP115 | Große Modelle streamend entpacken (Parakeet v3), erkannte Sprache loggen | gemergt 781af471 | keine Abweichung; neue Logzeilen model-unpack(-ed/-failed), stt-lang; Gerätetest `docs/testing/m5/wp115.md`; Soll: Tests `a/b` dann `a` → corrupt, doppelte Datei → ok, Doc install() `model_installer.dart:84-86` (io-Ausnahme), io-Test mit chmod 555 scheitert als root |
 | WP116 | Einstellungsseiten: Überschriften, Info-Texte, Links | gemergt 75a243b6 | keine Abweichung (WText.sectionTitle, InfoBox, LinkButton; Varianten von Stefan gewählt); Gerätetest `docs/testing/m5/wp116.md`; Soll: Leerzustand providersNone ohne Test/Golden |
 | WP117 | Weitere deutsche Stimmen (Ramona, Eva) | gemergt 49fca790 | K86; Lizenz M-AILABS (BSD-artig, Attribution) statt CC0; Soll: Stimmen später in eigene Datei auslagern (check_sizes) |
