@@ -28,12 +28,13 @@ class AlarmChannel(context: Context, messenger: BinaryMessenger) :
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
-            "nextAlarm" -> result.success(
-                try {
-                    NextAlarm.reply(manager?.nextAlarmClock?.triggerTime)
-                } catch (_: RuntimeException) {
-                    null
+            "nextAlarm" -> NextAlarm.answer(
+                {
+                    val am = manager ?: throw IllegalStateException("no AlarmManager")
+                    am.nextAlarmClock?.triggerTime
                 },
+                { result.success(it) },
+                { code, message -> result.error(code, message, null) },
             )
             else -> result.notImplemented()
         }
@@ -49,4 +50,23 @@ object NextAlarm {
     /** `{at: millis}` for a valid trigger time, else `null` (no alarm or nonsense). */
     fun reply(triggerMillis: Long?): Map<String, Any>? =
         if (triggerMillis != null && triggerMillis > 0) mapOf("at" to triggerMillis) else null
+
+    /**
+     * Reads the trigger time with [read] and reports it through [success] (`null` = no alarm) or,
+     * if the read fails (also a missing [AlarmManager] or a `SecurityException`), through
+     * [error] with code `failed`. A failed read is never reported as "no alarm".
+     */
+    fun answer(
+        read: () -> Long?,
+        success: (Map<String, Any>?) -> Unit,
+        error: (String, String) -> Unit,
+    ) {
+        val millis = try {
+            read()
+        } catch (e: RuntimeException) {
+            error("failed", e.message ?: "nextAlarm failed")
+            return
+        }
+        success(reply(millis))
+    }
 }

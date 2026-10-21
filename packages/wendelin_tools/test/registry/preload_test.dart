@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:test/test.dart';
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -30,6 +32,24 @@ Future<ToolRegistry> _registry(
 List<String> _offered(ToolRegistry r, PrivacyLevel level) => [
   for (final s in r.activeSpecsFor(level, sessionId: 's')) s.name,
 ];
+
+ToolContext _ctx() => ToolContext(
+  sessionId: 's',
+  clock: const SystemClock(),
+  locale: 'de-DE',
+  timeZone: 'Europe/Berlin',
+);
+
+Future<List<String>> _search(ToolRegistry r, Map<String, Object?> args) async {
+  final tool = r
+      .catalogFor(PrivacyLevel.local, sessionId: 's')
+      .lookup(ToolSearchTool.toolName)!;
+  final o = await tool.execute(args, _ctx());
+  return [
+    for (final t in (jsonDecode(o.text) as Map)['tools'] as List)
+      (t as Map)['name'] as String,
+  ];
+}
 
 void main() {
   final all = [_i('alarms'), _i('calendar'), _i('weather'), _i('maps')];
@@ -138,5 +158,47 @@ void main() {
       languageTag: 'de',
     );
     expect(r.unlockedTools('other'), isEmpty);
+  });
+
+  test('Vorab-Menge wird je Anfrage ersetzt, Suchtreffer bleiben', () async {
+    final r = await _registry(all);
+    r.preloadForRequest(
+      'Wecker',
+      PrivacyLevel.local,
+      sessionId: 's',
+      languageTag: 'de',
+    );
+    await _search(r, {'category': 'maps'});
+    r.preloadForRequest(
+      'Wie wird das Wetter?',
+      PrivacyLevel.local,
+      sessionId: 's',
+      languageTag: 'de',
+    );
+    expect(r.unlockedTools('s'), {
+      'weather__a',
+      'weather__b',
+      'maps__a',
+      'maps__b',
+    });
+    r.preloadForRequest(
+      'Erzähl einen Witz',
+      PrivacyLevel.local,
+      sessionId: 's',
+      languageTag: 'de',
+    );
+    expect(r.unlockedTools('s'), {'maps__a', 'maps__b'});
+  });
+
+  test('Suche nutzt die Sprache der Anfrage, nicht des Geräts', () async {
+    final r = await _registry(all);
+    expect(await _search(r, {'query': 'réveille'}), isEmpty);
+    r.preloadForRequest(
+      'Réveille-moi à sept heures',
+      PrivacyLevel.local,
+      sessionId: 's',
+      languageTag: 'fr',
+    );
+    expect(await _search(r, {'query': 'réveille'}), contains('alarms__a'));
   });
 }

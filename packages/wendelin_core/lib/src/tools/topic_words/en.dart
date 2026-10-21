@@ -9,7 +9,7 @@ const topicWordsEn = <String, List<String>>{
     'buy', 'supermarket', 'add to the list',
   ],
   'calendar': [
-    'calendar', 'appointment', 'agenda', 'meeting', 'event', //
+    'calendar', 'appointment', 'agenda', 'meeting', 'events', 'new event', //
     'schedule', 'birthday', 'dentist', 'what s on', 'my day',
   ],
   'clipboard': [
@@ -17,23 +17,48 @@ const topicWordsEn = <String, List<String>>{
   ],
   'contacts': [
     'contact', 'phone number', 'mobile number', 'call', 'ring', //
-    'text', 'sms', 'message', 'address book', 'dial', 'whatsapp',
+    'text message',
+    'send a text',
+    'text to',
+    'sms',
+    'message',
+    'address book',
+    'dial',
+    'whatsapp',
   ],
   'flashlight': [
     'flashlight', 'torch', 'light on', 'light off', 'lamp on', //
     'lamp off', 'flash',
   ],
   'gtasks': [
-    'google tasks', 'task', 'todo', 'to do', 'due', 'overdue', //
+    'google tasks',
+    'task',
+    'todo',
+    'to do',
+    'due today',
+    'due tomorrow',
+    'overdue', //
     'remind', 'errand',
   ],
   'ha': [
     'home assistant', 'smart home', 'heating', 'light', 'lamp', //
     'socket', 'plug', 'thermostat', 'blinds', 'shutter', 'switch',
-    'living room', 'bedroom', 'fan', 'turn on', 'turn off',
+    'living room',
+    'bedroom',
+    'fan on',
+    'fan off',
+    'fan speed',
+    'turn on',
+    'turn off',
   ],
   'lists': [
-    'list', 'lists', 'packing list', 'put on', 'cross off', //
+    'my list',
+    'the list',
+    'a list',
+    'lists',
+    'packing list',
+    'put on',
+    'cross off', //
     'shopping list', 'wish list', 'checklist', 'add to my',
   ],
   'location': [
@@ -47,7 +72,13 @@ const topicWordsEn = <String, List<String>>{
   ],
   'media': [
     'pause', 'resume playback', 'volume', 'louder', 'quieter', //
-    'next track', 'previous track', 'play', 'skip', 'stop the music',
+    'next track',
+    'previous track',
+    'play the',
+    'play some',
+    'play it',
+    'skip',
+    'stop the music',
     'mute', 'turn it up', 'turn it down', 'what s playing',
   ],
   'memory': [
@@ -67,11 +98,18 @@ const topicWordsEn = <String, List<String>>{
     'bedside', 'photo frame',
   ],
   'tasks': [
-    'task', 'due', 'overdue', 'todo', 'to do', 'remind', 'errand', //
-    'tick off', 'to dos',
+    'task', 'due today', 'due tomorrow', 'overdue', 'todo', 'to do', //
+    'remind', 'errand', 'tick off', 'to dos',
   ],
   'todoist': [
-    'todoist', 'task', 'due', 'overdue', 'todo', 'to do', 'remind', //
+    'todoist',
+    'task',
+    'due today',
+    'due tomorrow',
+    'overdue',
+    'todo',
+    'to do',
+    'remind', //
     'project',
   ],
   'weather': [

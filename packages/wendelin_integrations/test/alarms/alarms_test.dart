@@ -254,6 +254,16 @@ void main() {
       expect(o.isError, isTrue);
     });
 
+    test('Lesefehler (nur nächster): Fehler, nie „kein Wecker“', () async {
+      port = FakeAlarmPort(onlyNext: true);
+      integration = AlarmsIntegration(port);
+      port.failNext('listAlarms');
+      final o = await tool('alarms__list').execute({}, ctx());
+      expect(o.isError, isTrue);
+      expect(o.text, isNot(contains('kein Wecker')));
+      expect(o.text, isNot(contains('Kein Wecker')));
+    });
+
     test('Bestätigungstext', () {
       expect(
         tool('alarms__list').describeForConfirmation({}),

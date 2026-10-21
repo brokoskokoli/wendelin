@@ -90,10 +90,16 @@ void main() {
     });
 
     test('Plattformfehler wird ein PortException(failed)', () async {
-      nextAlarm = () => throw PlatformException(code: 'boom');
+      nextAlarm = () => throw PlatformException(code: 'failed');
       await expectLater(
         AndroidAlarmPort(platform: android).listAlarms(),
-        throwsA(isA<PortException>()),
+        throwsA(
+          isA<PortException>().having(
+            (e) => e.kind,
+            'kind',
+            PortErrorKind.failed,
+          ),
+        ),
       );
     });
 

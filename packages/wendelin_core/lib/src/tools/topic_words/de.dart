@@ -10,15 +10,22 @@ const topicWordsDe = <String, List<String>>{
   ],
   'calendar': [
     'kalender', 'termin', 'besprechung', 'meeting', 'verabredung', //
-    'treffen', 'veranstaltung', 'geburtstag', 'zahnarzt', 'was steht an',
+    'treffen mit',
+    'treffen um',
+    'treffen am',
+    'veranstaltung',
+    'geburtstag',
+    'zahnarzt',
+    'was steht an',
   ],
   'clipboard': [
     'zwischenablage', 'kopier', 'einfugen', 'paste', 'copy', //
     'in die ablage', 'was habe ich kopiert',
   ],
   'contacts': [
-    'kontakt', 'telefonnummer', 'handynummer', 'nummer von', 'ruf', //
-    'anruf', 'anrufen', 'telefonier', 'sms', 'nachricht', 'schreib an',
+    'kontakt', 'telefonnummer', 'handynummer', 'nummer von', 'rufnummer', //
+    'ruf mich', 'ruf mal', 'ruf bitte', 'anruf', 'anrufen', 'telefonier', 'sms',
+    'eine nachricht', 'nachricht an', 'schreib an',
     'adressbuch', 'whatsapp',
   ],
   'flashlight': [

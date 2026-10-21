@@ -49,7 +49,11 @@ void main() {
       ('Quelle météo demain ?', 'fr', 'weather'),
       ('Navigate to the station', 'en', 'maps'),
       ('Schreib das in meine Notizen', 'de', 'obsidian'),
-      ('Ruf Anna an', 'de', 'contacts'),
+      ('Ruf mich bitte an', 'de', 'contacts'),
+      ('Send a text message to Anna', 'en', 'contacts'),
+      ('Turn the fan on', 'en', 'ha'),
+      ('Fan on in the bedroom', 'en', 'ha'),
+      ('Schick Anna eine Nachricht', 'de', 'contacts'),
     ];
     for (final (text, lang, id) in cases) {
       test('„$text“ ($lang) → $id', () {
@@ -67,6 +71,30 @@ void main() {
         isEmpty,
       );
       expect(topicIntegrationsIn('', languageTag: 'de'), isEmpty);
+    });
+
+    test('zu allgemeine Stämme treffen nicht', () {
+      const neg = <(String, String, String)>[
+        ('That was fantastic', 'en', 'ha'),
+        ('Eventually it worked', 'en', 'calendar'),
+        ('Listen to this story', 'en', 'lists'),
+        ('The text is long', 'en', 'contacts'),
+        ('A duet of two singers', 'en', 'gtasks'),
+        ('Gibt es Nachrichten?', 'de', 'contacts'),
+        ('Die Rufbereitschaft', 'de', 'contacts'),
+        ('Wir müssen uns treffen', 'de', 'calendar'),
+      ];
+      for (final (text, lang, id) in neg) {
+        expect(
+          topicIntegrationsIn(text, languageTag: lang),
+          isNot(contains(id)),
+          reason: text,
+        );
+      }
+      expect(
+        topicIntegrationsIn('Gibt es Nachrichten?', languageTag: 'de'),
+        contains('web'),
+      );
     });
 
     test('Wortanfang, nicht Wortmitte', () {

@@ -14,6 +14,7 @@ final class ToolSearchTool implements Tool {
   ToolSearchTool({
     required List<CatalogEntry> candidates,
     required this.unlock,
+    this.languageFor,
     this.maxResults = 10,
   }) : _candidates = candidates,
        categories = _categoriesOf(candidates);
@@ -25,6 +26,10 @@ final class ToolSearchTool implements Tool {
 
   /// Called with the session id and the names of the tools found.
   final void Function(String sessionId, List<String> names) unlock;
+
+  /// Language of the current request of a session (as used for preloading);
+  /// without it, or when it answers null, the device locale is used.
+  final String? Function(String sessionId)? languageFor;
 
   /// At most this many tools per search.
   final int maxResults;
@@ -84,7 +89,11 @@ final class ToolSearchTool implements Tool {
     if (query.isEmpty && category == null) {
       return ToolOutcome.error('Bitte query oder category angeben.');
     }
-    final found = search(query, category: category, languageTag: ctx.locale);
+    final found = search(
+      query,
+      category: category,
+      languageTag: languageFor?.call(ctx.sessionId) ?? ctx.locale,
+    );
     unlock(ctx.sessionId, [for (final t in found) t.name]);
     final json = jsonEncode({
       'tools': [

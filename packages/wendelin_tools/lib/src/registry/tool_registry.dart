@@ -39,6 +39,9 @@ final class ToolRegistry {
   final Map<String, _Entry> _toolOwner = {};
   final Set<String> _disabledTools = {};
   final Map<String, Set<String>> _unlocked = {};
+  // Unlocked by [preloadForRequest]; replaced with every request.
+  final Map<String, Set<String>> _preloaded = {};
+  final Map<String, String?> _languages = {};
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
   /// Emits after every change of integrations, activation, status,
@@ -105,6 +108,9 @@ final class ToolRegistry {
       for (final names in _unlocked.values) {
         names.remove(tool.name);
       }
+      for (final names in _preloaded.values) {
+        names.remove(tool.name);
+      }
     }
     _changed();
   }
@@ -166,7 +172,7 @@ final class ToolRegistry {
 
   /// Names of the tools unlocked by `tools__search` in [sessionId].
   Set<String> unlockedTools(String sessionId) =>
-      Set.unmodifiable(_unlocked[sessionId] ?? const <String>{});
+      Set.unmodifiable({...?_unlocked[sessionId], ...?_preloaded[sessionId]});
 
   /// Most integrations [preloadForRequest] unlocks (small models get
   /// overloaded by more).
@@ -185,6 +191,7 @@ final class ToolRegistry {
   }) {
     final active = _active(level);
     if (active.length < metaToolThreshold) return const [];
+    _languages[sessionId] = languageTag;
     final topics = topicIntegrationsIn(
       requestText,
       languageTag: languageTag,
@@ -198,11 +205,16 @@ final class ToolRegistry {
               _topicRank(a, languageTag).compareTo(_topicRank(b, languageTag)),
         );
     final chosen = ids.take(maxPreloaded).toSet();
-    if (chosen.isEmpty) return const [];
-    _unlock(sessionId, [
+    // Replaces the previous request's preload; tools found by search stay.
+    final names = {
       for (final e in active)
         if (chosen.contains(e.integration.id)) e.tool.name,
-    ]);
+    };
+    final old = _preloaded[sessionId] ?? const <String>{};
+    if (old.length != names.length || !old.containsAll(names)) {
+      _preloaded[sessionId] = names;
+      _changed();
+    }
     return chosen.toList();
   }
 
@@ -211,7 +223,10 @@ final class ToolRegistry {
 
   /// Forgets the tools unlocked in [sessionId] (session ended).
   void endSession(String sessionId) {
-    if (_unlocked.remove(sessionId) != null) _changed();
+    _languages.remove(sessionId);
+    final a = _unlocked.remove(sessionId);
+    final b = _preloaded.remove(sessionId);
+    if (a != null || b != null) _changed();
   }
 
   /// Specs for a provider with privacy [level] in [sessionId]: active tools
@@ -239,7 +254,9 @@ final class ToolRegistry {
     return [
       _searchTool(active),
       for (final e in active)
-        if (_unlocked[sessionId]?.contains(e.tool.name) ?? false) e.tool,
+        if ((_unlocked[sessionId]?.contains(e.tool.name) ?? false) ||
+            (_preloaded[sessionId]?.contains(e.tool.name) ?? false))
+          e.tool,
     ];
   }
 
@@ -258,8 +275,11 @@ final class ToolRegistry {
     return null;
   }
 
-  ToolSearchTool _searchTool(List<CatalogEntry> active) =>
-      ToolSearchTool(candidates: active, unlock: _unlock);
+  ToolSearchTool _searchTool(List<CatalogEntry> active) => ToolSearchTool(
+    candidates: active,
+    unlock: _unlock,
+    languageFor: (sessionId) => _languages[sessionId],
+  );
 
   void _unlock(String sessionId, List<String> names) {
     _unlocked.putIfAbsent(sessionId, () => {}).addAll(names);
