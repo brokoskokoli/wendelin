@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -41,6 +42,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
     this.stopTemplates = _none,
     this.extraMargin = 0.05,
     this.verifier,
+    this.warm,
     this.onListening,
     this.marginOverride,
     this.stopTail = stopTailShare,
@@ -71,6 +73,11 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// recognizer; gets the text read aloud so far (own voice filter).
   /// `null`: no stage 2, the stage 1 hit interrupts directly.
   final BargeVerifier Function(String Function() spokenText)? verifier;
+
+  /// WP123: the microphone audio before the answer (the tail of the capture,
+  /// see `MicTail`); primes the feature chain so the first window comes
+  /// after one chunk, not after ~2 s. `null`: cold start.
+  final Int16List Function()? warm;
 
   /// Told when listening starts and ends (the „hört mit“ ring, WP113).
   final void Function({required bool on})? onListening;
@@ -204,6 +211,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
       audio: MeteredAudioInput(audio, meter),
       engine: MeteredEngine(engine, meter),
       verifier: verifier?.call(() => _recentSpoken),
+      warm: warm,
       settle: verifySettle,
       // Scores and kind only; the word itself stays out of the log.
       onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {

@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP121, WP122, WP123; Test-APK a2c4a1f bei Stefan; Stopp-/Barge-E2E → WP123; als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
+Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP121, WP122; offen: E2E Stopp/Barge 3× (WP123); Test-APK a2c4a1f bei Stefan; Stopp-/Barge-E2E → WP123; als Nächstes: WP114 und WP118 (nach WP113, nacheinander), WP111 Teil B (nach Aufnahmen), Sonnet-Probe, WP92c (nach Gerätetest wp92a/b), WP100/WP101 (Stationsmodus Welle 2)
 
 ## Meilensteine
 
@@ -71,7 +71,7 @@ Stand: 2026-10-20 nachmittags, Stefan da; läuft: WP121, WP122, WP123; Test-APK 
 | WP120 | Antwortzeit vermessen, Pausen beim Vorlesen, früher vorlesen | gemergt ad6db5ad | K95; Gerätetest docs/testing/m5/wp120.md (10 Befehle, p50/p90); kein Schnell-Anbieter-Vergleich (kein Key); Stopp-E2E siehe Nächste Schritte |
 | WP121 | Wake Words mit echten Aufnahmen vergleichen (fair) | in Arbeit | Aufnahmen 2026-10-21; Folge WP111/K83 |
 | WP122 | Feste Bestätigungssätze statt zweitem Modellaufruf | in Arbeit | Entscheid Stefan 2026-10-21 |
-| WP123 | Stopp sofort ab Antwortbeginn (Barge-in-Warmstart), Stopp-E2E stabil | in Arbeit | Diagnose 2026-10-21 (sim=-1 = kein Fenster) |
+| WP123 | Stopp sofort ab Antwortbeginn (Barge-in-Warmstart), Stopp-E2E stabil | gemergt ab054e98 | K96; E2E voice_stop_word/voice_barge_in je 3× offen (Last 15–18); Gerätetest T21-WP123; Soll: Provider-Test take statt snapshot (wake_providers.dart:204) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
 
