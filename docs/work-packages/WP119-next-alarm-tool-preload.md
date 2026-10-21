@@ -14,6 +14,7 @@
 - Neu: Vor dem ersten Modellaufruf einer Anfrage werden die Tools der Integrationen freigeschaltet, die die Anfrage ohne Modell erkennbar braucht (Wortliste `KeywordToolCategoryMatcher`, `packages/wendelin_agent/lib/src/routing/tool_category_matcher.dart`). `tools__search` bleibt als Fallback im Angebot.
 - Wortliste auf alle eingebauten Integrationen erweitern (de/en/fr; u. a. alarms, calendar, gtasks/tasks/todoist, lists, bring, spotify, media, weather, web, maps, location, contacts, phone/sms/msg, ha, obsidian, memory, clipboard, station); Schlüssel = Integrations-ID (heute z. B. `alarm` statt `alarms` prüfen).
 - Datenschutzfilter (K10) gilt unverändert: freigeschaltet wird nur, was der Provider der Stufe sehen darf. Höchstens ~3 Integrationen vorab, damit kleine Modelle nicht überladen werden.
+- Suche selbst verbessern: `ToolSearchTool.search` zählt nur Wortgleichheit in Name/Beschreibung/Integrationsname (`packages/wendelin_tools/lib/src/registry/tool_search.dart:113`). Tool-Beschreibungen sind englisch, das Modell sucht oft deutsch („Wecker“) → Treffer hängen vom Integrationsnamen ab. Die Suche nutzt zusätzlich die Wortliste aus dem Matcher (de/en/fr) je Integration; Test „Wecker“/„réveil“ findet `alarms__*`.
 - Einstiegsstelle: `app/lib/di/agent_factory.dart:91` bzw. Agent-Schleife; Abhängigkeitsregeln aus `docs/ENGINEERING.md` beachten (`wendelin_tools` importiert `wendelin_agent` nicht – ggf. Callback/Port).
 
 ## Abnahmekriterien
