@@ -232,6 +232,89 @@ class WordsRules(unittest.TestCase):
         for t in ["Carlos", "Kobold", "Cobalt", "Carbonos, why", "Copolos"]:
             self.assertFalse(W.matches_kobalos(t), t)
 
+class FakeSpotter:
+    """Liefert je decode-Schritt ein vorgegebenes Ergebnis (Label oder "") ohne sherpa."""
+
+    def __init__(self, labels): self.labels, self.i, self.cur, self.resets = list(labels), 0, "", 0
+    def create_stream(self, line): return self
+    def accept_waveform(self, sr, x): self.pending = True
+    def is_ready(self, s):
+        r = self.pending; self.pending = False; return r
+    def decode_stream(self, s): self.cur = self.labels[self.i] if self.i < len(self.labels) else ""; self.i += 1
+    def get_result(self, s): return self.cur
+    def reset_stream(self, s): self.resets += 1
+
+
+class OwnHits(unittest.TestCase):
+    def test_nur_eigenes_label(self):
+        import numpy as np
+        sp = FakeSpotter(["", "X", "", "HEY_OCTAVIA", "X"])
+        hits = W.own_hits(sp, np.zeros(5 * 1600, "float32"), "x", "HEY_OCTAVIA", tail=0.0)
+        self.assertEqual(hits, [0.4])                      # X (Platzhalter) zaehlt nicht, fremdes Label auch nicht
+        self.assertEqual(sp.resets, 3)                     # der Stream wird nach jedem Ergebnis zurueckgesetzt
+
+    def test_kein_treffer_ohne_label(self):
+        import numpy as np
+        sp = FakeSpotter(["X", "X", "X"])
+        self.assertEqual(W.own_hits(sp, np.zeros(3 * 1600, "float32"), "x", "WENDELIN", tail=0.0), [])
+
+    def test_platzhalter_ist_kein_wort(self):
+        for bpe in (False, True):
+            self.assertTrue(W.DUMMY_KW[bpe].endswith("@" + W.DUMMY_LABEL + "\n"))
+        self.assertNotIn(W.DUMMY_LABEL, [W.key(w).upper() for w in W.WORDS])
+
+
+class Varianten(unittest.TestCase):
+    def test_anzahl_und_gleichbehandlung(self):
+        n = {w: len(W.SPEC[w]["ph"]) for w in W.WORDS}
+        self.assertEqual(n, {"Wendelin": 6, "Hey Wendelin": 6, "Alexa": 4, "Hey Octavia": 8, "Kobalos": 8})
+        for w in W.WORDS: self.assertEqual(len(set(W.SPEC[w]["ph"])), n[w], w)            # keine Duplikate
+
+    def test_hey_ist_vorspann(self):
+        self.assertEqual(W.SPEC["Hey Wendelin"]["ph"], ["HH EY1 " + p for p in W.SPEC["Wendelin"]["ph"]])
+
+    def test_octavia_deutsch_und_englisch(self):
+        ph = W.SPEC["Hey Octavia"]["ph"]
+        self.assertIn("HH EY1 AA0 K T EY1 V IY0 AH0", ph)          # englisch
+        self.assertIn("HH EY1 AO0 K T AA1 V IY0 AA0", ph)          # deutsch: offenes O, Ok-TAH-via
+
+    def test_phoneme_im_modell(self):
+        import glob
+        f = glob.glob(os.path.expanduser("~/wendelin-models/kws/x-*zh-en*/*/tokens.txt"))
+        if not f: self.skipTest("Modell nicht vorhanden")
+        tok = {l.split()[0] for l in open(f[0])}
+        for w in W.WORDS:
+            for p in W.SPEC[w]["ph"]: self.assertLessEqual(set(p.split()), tok, p)
+
+
+class Kreuz(unittest.TestCase):
+    @staticmethod
+    def pt(name, blocks, fa, ordv=0):
+        """blocks: Treffer je Block 1..6 (n = 5 je Block)."""
+        d = {"prog": "M", "thr": name, "stage2": "-", "fa": fa, "hours": 1.0, "ord": ordv, "hit": sum(blocks)}
+        for b, h in enumerate(blocks, 1): d[f"hit_b{b}"], d[f"n_b{b}"] = h, 5
+        return d
+
+    def test_auswahl_und_zaehlung_getrennt(self):
+        a = self.pt("a", [5, 5, 5, 0, 0, 0], 0)          # nur auf Block 1-3 gut
+        b = self.pt("b", [2, 2, 2, 3, 3, 3], 0)
+        hit, n, cfgs = W.cv_pick([a, b], 1.0, 1)
+        # Fold 1: Auswahl 1-3 -> a (15 > 6), Test 4-6: 0. Fold 2: Auswahl 4-6 -> b (9 > 0), Test 1-3: 6. In-sample waehlt a mit 15.
+        self.assertEqual((hit, n), (6, 30))
+        self.assertEqual(cfgs, ["Ma+-", "Mb+-"])
+
+    def test_fa_grenze_je_fold(self):
+        a = self.pt("a", [5, 5, 5, 5, 5, 5], 3)          # zu viele FA
+        b = self.pt("b", [1, 0, 0, 0, 0, 1], 0)
+        hit, n, cfgs = W.cv_pick([a, b], 1.0, 1)
+        self.assertEqual((hit, n), (2, 30))
+        hit, n, cfgs = W.cv_pick([a], 1.0, 1)
+        self.assertEqual((hit, cfgs), (None, None))
+
+    def test_gleichstand_frueherer_eintrag(self):
+        a = self.pt("a", [1, 1, 1, 1, 1, 1], 0); b = self.pt("b", [1, 1, 1, 1, 1, 1], 0)
+        self.assertEqual(W.cv_pick([a, b], 1.0, 1)[2], ["Ma+-", "Ma+-"])
+
 
 if __name__ == "__main__":
     unittest.main()

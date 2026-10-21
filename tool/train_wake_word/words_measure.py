@@ -41,16 +41,38 @@ NEG_SRC = [s for s in ALL_SRC if not s.startswith("pos_")]
 def key(word): return word.lower().replace(" ", "_")
 
 
+def _prod(*slots):
+    """Alle Kombinationen der Slot-Alternativen (je Slot eine Liste von Phonemfolgen) als Phonemfolgen."""
+    out = [""]
+    for alts in slots: out = [f"{o} {a}".strip() for o in out for a in alts]
+    return out
+
+
+# Aussprachevarianten (Befund 2): fuer ALLE Woerter gleich abgeleitet, nicht an den Aufnahmen ausgewaehlt. Je Wort werden die
+# Stellen markiert, an denen die englische Lesung (CMUdict-Stil) und die deutsche Leseregel (Buchstabe -> Laut, Betonung auf dem
+# Namensstamm) auseinandergehen; jedes Wort bekommt ALLE Kombinationen dieser Stellen (keine wird weggelassen).
+#   Wendelin:  Anlaut W (en) / V (de); Auslaut IH0 (en, reduziert) / IY2, IY1 (de, langes i).
+#   Octavia:   erstes O  AA0 (en) / AO0 (de, offen: Ok-TAH-via); Betonung EY1 (en) / AA1 (de); Ausgang AH0 (en) / AA0 (de).
+#   Kobalos:   erstes O  OW1 (en) / AO1 (de, offen); zweite Silbe AH0 (en, reduziert) / AA1 (de, betont); Ausgang OW0 / AH0.
+#   Alexa:     erstes A  AH0 (en) / AA0 (de); Ausgang AH0 (en) / AA0 (de).
+_WEN = _prod(["W", "V"], ["EH1 N D AH0 L"], ["IH0 N", "IY2 N", "IY1 N"])
+_OCT = _prod(["AA0", "AO0"], ["K T"], ["EY1", "AA1"], ["V IY0"], ["AH0", "AA0"])
+_KOB = _prod(["K"], ["OW1", "AO1"], ["B"], ["AH0", "AA1"], ["L"], ["OW0", "AH0"], ["S"])
+_ALX = _prod(["AH0", "AA0"], ["L EH1 K S"], ["AH0", "AA0"])
+
+
+
 SPEC = {
-    "Wendelin": {"hot": ["Wendelin"], "bpe": ["WENDELIN", "VENDELIN", "VENDELINE"],
-                 "ph": ["V EH1 N D AH0 L IY2 N", "W EH1 N D AH0 L IH0 N", "V EH1 N D AH0 L IY1 N"], "oww": "v7", "mww": "wendelin"},
-    "Hey Wendelin": {"hot": ["Hey Wendelin", "Wendelin"], "bpe": ["HEY WENDELIN", "HEY VENDELIN", "HEY VENDELINE"],
-                     "ph": ["HH EY1 V EH1 N D AH0 L IY2 N", "HH EY1 W EH1 N D AH0 L IH0 N", "HH EY1 V EH1 N D AH0 L IY1 N"], "oww": "v7", "mww": "hey"},
-    "Alexa": {"hot": ["Alexa"], "bpe": ["ALEXA"], "ph": ["AH0 L EH1 K S AH0", "AA0 L EH1 K S AA0"], "oww": "alexa", "mww": None},
-    "Hey Octavia": {"hot": ["Hey Octavia", "Octavia"], "bpe": ["HEY OCTAVIA", "HEY OKTAVIA"],
-                    "ph": ["HH EY1 AA0 K T EY1 V IY0 AH0", "HH EY1 AA0 K T AA1 V IY0 AA0"], "oww": None, "mww": None},
-    "Kobalos": {"hot": ["Kobalos"], "bpe": ["KOBALOS", "COBALOS", "COBALUS"],
-                "ph": ["K OW1 B AH0 L OW2 S", "K OW1 B AH0 L AH0 S", "K OW1 B AA1 L OW0 S", "K OW0 B AA1 L OW0 S"], "oww": None, "mww": None},
+    "Wendelin": {"hot": ["Wendelin"], "bpe": [s.replace(" ", "") for s in _prod(["W", "V"], ["ENDELIN", "ENDELINE"])],
+                 "ph": _WEN, "oww": "v7", "mww": "wendelin"},
+    "Hey Wendelin": {"hot": ["Hey Wendelin", "Wendelin"], "bpe": ["HEY " + s.replace(" ", "") for s in _prod(["W", "V"], ["ENDELIN", "ENDELINE"])],
+                     "ph": ["HH EY1 " + p for p in _WEN], "oww": "v7", "mww": "hey"},
+    "Alexa": {"hot": ["Alexa"], "bpe": ["ALEXA", "ALEKSA"], "ph": _ALX, "oww": "alexa", "mww": None},
+    "Hey Octavia": {"hot": ["Hey Octavia", "Octavia"],
+                    "bpe": ["HEY " + s.replace(" ", "") for s in _prod(["OC", "OK"], ["TAVIA", "TAWIA"])],
+                    "ph": ["HH EY1 " + p for p in _OCT], "oww": "oct", "mww": None},
+    "Kobalos": {"hot": ["Kobalos"], "bpe": [s.replace(" ", "") for s in _prod(["K", "C"], ["OBALOS", "OBALUS"])],
+                "ph": _KOB, "oww": "kob", "mww": None},
 }
 
 
@@ -246,8 +268,61 @@ def run_oww(srcs):
         print(f"oww {src}: {len(d)} Felder, {time.time() - t0:.0f} s", flush=True)
 
 
+DUMMY_LABEL = "X"
+DUMMY_KW = {False: "ZH OY1 Z OY1 ZH @X\n", True: "Q Z Q Z @X\n"}      # (bpe) -> Platzhalter, praktisch nie gesprochen
+
+
+def own_hits(spotter, x, line, label, tail=0.6, step=0.1):
+    """Trefferzeiten (s) nur fuer `label`. Der Platzhalter der Spotter-Datei (Label X, frueher "hello") feuert auch in Streams mit
+    eigenen Woertern und wurde als Treffer jedes Worts gezaehlt (konstante FA je Wort, Hey Octavia Kz 0 Treffer / 17 FA, Befund 1)."""
+    s = spotter.create_stream(line)
+    hits, n = [], int(step * SR)
+    xx = np.concatenate([x, np.zeros(int(tail * SR), "float32")])
+    for i in range(0, len(xx), n):
+        s.accept_waveform(SR, xx[i:i + n])
+        while spotter.is_ready(s):
+            spotter.decode_stream(s)
+            r = spotter.get_result(s)
+            if r:
+                if r == label: hits.append(min(i + n, len(xx)) / SR)
+                spotter.reset_stream(s)
+    return hits
+
+
+OWW_X = {"oct": "oct.onnx", "kob": "kob.onnx"}       # eigene Modelle (run_words.sh) unter $KWS/wp121/models, Spalten in s1/oww/<src>.x.npz
+
+
+def run_oww_x(srcs):
+    """Wertekurven der Modelle oct/kob (Hey Octavia, Kobalos) auf demselben Fenstergitter wie run_oww -> s1/oww/<src>.x.npz"""
+    O = S.Oww(f"{KWS}/wp58/out/wendelin_v7.onnx")                    # nur Mel/Embedding (af), gleiche Fenster wie bei v7
+    import onnxruntime as ort
+    so_ = ort.SessionOptions(); so_.intra_op_num_threads = 1
+    ses = {k: ort.InferenceSession(f"{KWS}/wp121/models/{f}", so_, providers=["CPUExecutionProvider"]) for k, f in OWW_X.items()}
+    pad = lambda x: np.concatenate([np.zeros(SR, "float32"), x, np.zeros(SR, "float32")])
+    for src in srcs:
+        path = f"{OUT}/s1/oww/{src}.x.npz"
+        if os.path.exists(path): continue
+        d, t0 = {}, time.time()
+        for name, x in iter_items(src):
+            emb = S.C.embed(O.af, [pad(x)])[0]
+            n = len(emb) - S.C.WIN + 1
+            if n <= 0: continue
+            W_ = np.stack([emb[j:j + S.C.WIN] for j in range(n)]).astype("float32")
+            d[f"{name}|t"] = ((np.array([S.C.window_end(j) for j in range(n)]) - SR) / SR).astype("float32")
+            for k, ss in ses.items(): d[f"{name}|{k}"] = ss.run(None, {"input": W_})[0][:, 0].astype("float32")
+        np.savez_compressed(path, **d)
+        print(f"oww-x {src}: {len(d)} Felder, {time.time() - t0:.0f} s", flush=True)
+
+
 class KwsX(S.KwsRunner):
     """sherpa-KWS mit den Woertern dieses Skripts (Tokens aus SPEC)."""
+
+    def __init__(self, m):
+        super().__init__(m)
+        d, bpe = S.KWS_DIRS[m]
+        self.spotter = K.make_spotter(glob.glob(f"{KWS}/{d}/*/")[0], 16, bpe, 1, DUMMY_KW[bool(bpe)])
+
+    def own_hits(self, word, x, line): return own_hits(self.spotter, x, line, key(word).upper())
 
     def line(self, word, boost, thr):
         w = SPEC[word]
@@ -276,7 +351,7 @@ def kws_task(a):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     r = KwsX(model)
     line = r.line(word, cfg[0], cfg[1])
-    res = {name: merge_times(r.hits(x, line)) for name, x in iter_items(src)}
+    res = {name: merge_times(r.own_hits(word, x, line)) for name, x in iter_items(src)}
     json.dump(res, open(path + ".tmp", "w")); os.replace(path + ".tmp", path)
     return path
 
@@ -299,6 +374,11 @@ class Stage1:
         if src not in self.npz:
             p = f"{OUT}/s1/oww/{src}.npz"
             self.npz[src] = dict(np.load(p)) if os.path.exists(p) else None
+            px = p[:-4] + ".x.npz"
+            if self.npz[src] is not None and os.path.exists(px):
+                x = np.load(px)
+                for k in x.files:
+                    if not k.endswith("|t"): self.npz[src][k] = x[k]       # Spalten der eigenen Modelle (t ist dasselbe Gitter)
         return self.npz[src]
 
     def events(self, prog, word, cfg, src):
@@ -457,6 +537,36 @@ def op_table(rows, target, calib):
     return out
 
 
+FOLDS = [((1, 2, 3), (4, 5, 6)), ((4, 5, 6), (1, 2, 3))]       # (Auswahl-Blocks, Test-Blocks): Kreuz-Auswahl je Wort/Programm
+
+
+def cv_pick(pts, hours, target, folds=FOLDS):
+    """Kreuz-Auswahl: Konfiguration auf den Auswahl-Blocks waehlen (hoechster Treffer bei FA/h <= target, Reihenfolge von pts als
+    Gleichstand), Treffer auf den Test-Blocks derselben Konfiguration zaehlen. -> (Treffer, n, [Konfiguration je Fold]);
+    Treffer None, wenn in einem Fold keine Konfiguration die FA-Grenze einhaelt."""
+    hit = n = 0
+    cfgs = []
+    for sel, test in folds:
+        ptsx = [dict(p, hit=sum(p[f"hit_b{b}"] for b in sel)) for p in pts]
+        best = pick_op(ptsx, hours, target)
+        if best is None: return None, sum(pts[0][f"n_b{b}"] for _, t in folds for b in t), None
+        hit += sum(best[f"hit_b{b}"] for b in test); n += sum(best[f"n_b{b}"] for b in test)
+        cfgs.append(f"{best['prog']}{best['thr']}+{best['stage2']}")
+    return hit, n, cfgs
+
+
+def cv_table(rows, target, calib):
+    """Wie op_table, aber mit Kreuz-Auswahl (Befund 3): {(dev, word, prog): (hit, n, cfgs)}."""
+    out = {}
+    for dev in DEVICES:
+        for w in WORDS:
+            for prog in PROGRAMS:
+                pts = sorted((calib_point(r, calib) for r in rows if r["dev"] == dev and r["word"] == w and r["prog"] == prog),
+                             key=lambda p: (p["stage2"] == "-", -p["ord"]))
+                if pts: out[(dev, w, prog)] = cv_pick(pts, pts[0]["hours"], target)
+    return out
+
+
 def fc(v): return str(v).replace(".", ",")
 
 
@@ -474,16 +584,21 @@ def write_report(rows):
         for target in (1, 2):
             md.append(f"\n## Kalibrierung {'echte Negativ-Aufnahme' if calib == 'real' else 'synthetisch + FLEURS'}, Ziel {target} FA/h\n")
             T = op_table(rows, target, calib)
+            CV = cv_table(rows, target, calib)
+            md.append("n = 30 Äußerungen je Wort; Huawei und handy2 nahmen dieselben Äußerungen gleichzeitig auf (nicht addieren, effektiv n = 30). "
+                      "Kreuz: Konfiguration auf Block 1–3 gewählt und auf 4–6 gezählt, und umgekehrt; in-sample: auf allen 30 gewählt (optimistisch).\n")
             for dev in DEVICES:
-                md += [f"\n### {dev}\n", "| Wort | Programm | Konfiguration | Treffer (alle) | nur ok | FA/h Kalibrierung (≤95 %) | FA/h Gegenprobe | Block 1..6 |",
-                       "|---|---|---|---|---|---|---|---|"]
+                md += [f"\n### {dev}\n", "| Wort | Programm | Treffer Kreuz | Treffer in-sample | Konfiguration in-sample | Konfiguration Kreuz (1–3 / 4–6) | FA/h Kalibrierung (≤95 %) | FA/h Gegenprobe | Block 1..6 |",
+                       "|---|---|---|---|---|---|---|---|---|"]
                 for r in (t for t in T if t["dev"] == dev):
+                    ch, cn, cc = CV[(dev, r["word"], r["prog"])]
+                    cross = "keine Konfiguration" if ch is None else fmt_hit(ch, cn)
                     if r["hit"] is None:
-                        md.append(f"| {r['word']} | {r['prog']} | keine Konfiguration mit FA/h ≤ {target} | | | | | |"); continue
+                        md.append(f"| {r['word']} | {r['prog']} | {cross} | keine Konfiguration mit FA/h ≤ {target} | | | | | |"); continue
                     c, o = calib_point(r, calib), calib_point(r, "syn" if calib == "real" else "real")
                     blocks = " ".join(f"{r[f'hit_b{b}']}/{r[f'n_b{b}']}" for b in range(1, 7))
-                    md.append(f"| {r['word']} | {r['prog']} | {r['prog']}{r['thr']} + {r['stage2']} | {fmt_hit(r['hit'], r['n'])} | "
-                              f"{fmt_hit(r['hit_ok'], r['n_ok'])} | {fc(round(c['fa'] / c['hours'], 2))} (≤{fc(round(S.poisson_upper(c['fa'], c['hours']), 1))}) | "
+                    md.append(f"| {r['word']} | {r['prog']} | {cross} | {fmt_hit(r['hit'], r['n'])} | {r['prog']}{r['thr']} + {r['stage2']} | "
+                              f"{' / '.join(cc) if cc else ''} | {fc(round(c['fa'] / c['hours'], 2))} (≤{fc(round(S.poisson_upper(c['fa'], c['hours']), 1))}) | "
                               f"{'synth.' if calib == 'real' else 'echt'} {fc(round(o['fa'] / o['hours'], 2))} | {blocks} |")
     open(f"{OUT}/tables.md", "w").write("\n".join(md) + "\n")
     det_csv(rows)
@@ -560,6 +675,7 @@ def main():
     os.makedirs(WORK, exist_ok=True)
     if args.cmd == "s1" and args.prog == "oww":
         run_oww(args.src.split(","))
+        if all(os.path.exists(f"{KWS}/wp121/models/{f}") for f in OWW_X.values()): run_oww_x(args.src.split(","))
     elif args.cmd == "s1":
         cfgs = [tuple(float(y) for y in x.split("/")) for x in args.cfg.split(",")] if args.cfg else KWS_CFG
         run_kws(args.jobs, args.models.split(","), args.words.split(","), args.src.split(","), cfgs)

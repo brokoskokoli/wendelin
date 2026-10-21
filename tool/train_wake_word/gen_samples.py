@@ -26,6 +26,16 @@ CONF2 = ["Hey Wendel", "Hey Berlin", "Hey Wenzel", "Hey Wendelstein", "hey, wenn
          "Hey Gwendolin", "Gwendolin", "Wendolin", "wenn die Linie", "Hey Wendy", "Hey Mandolin", "Hey Vendetta", "Hey Madeleine",
          "Hey Wendehals", "Hey Kendall", "Hey Merlin", "Hey Marlin", "Hey Vanille", "Hey Wende", "Hey Handel", "Hey Wenden",
          "Hey Heidelin", "Hey Pendel", "Hey Wandern", "Hey Wetter", "Hey Mandy", "Hey Mama"]
+# WP121: weitere Woerter, gleiche Pipeline wie v7. oct/kob = Positive (wie hey bzw. bare), conf_oct/conf_kob = Verwechsler (wie conf2)
+OCT = ["Hey Octavia", "Hey, Octavia", "Hey Octavia.", "Hey Octavia!", "Hey, Octavia.", "Hey Octavia?"]
+KOB = ["Kobalos", "Kobalos.", "Kobalos!", "Kobalos?", "Kobalos,"]
+CONF_OCT = ["Hey Olivia", "Hey Octavian", "Hey Ottavio", "Hey Tavia", "Hey Oktave", "Hey Ophelia", "Hey Octopus", "Hey Lavia", "Hey Mafia",
+            "Hey Octavio", "Hey Ottavia", "Octavia", "Oktavia", "Hey Tabea", "Hey Otto", "Hey Oktober", "Hey Opa", "Hey Oma",
+            "Hey Ottilie", "Hey Aktie", "Hey Octave", "Hey Olga", "Hey Mama", "Hey Mandy", "Hey Eva", "Hey Sophia", "Hey Victoria",
+            "Hey Ocatvia", "Hey Hortensia", "Hey Tavita", "Hey Ocean", "hey, oh Tavia"]
+CONF_KOB = ["Kobold", "Kobolde", "Kobalt", "Cobalt", "Kolibri", "Carlos", "Karlos", "Kolonos", "Kokolores", "Kobra", "Kolossos", "Koloss",
+            "Kolumbus", "Kabalos", "Gobelin", "Koboldos", "Kobaltos", "Kobel", "Kobold Alos", "Bolos", "Kolonie", "Kopalos", "Kolos",
+            "Hey Kobalos", "Kobalus", "Kollos", "Kobolos", "Kolobos", "Kolokos", "Kopallos", "Kobalo", "Gobalos"]
 # aehnlich klingende Woerter/Phrasen (Negative)
 CONF = ["Wendel", "Wendeltreppe", "Wendelstein", "Vanille", "Berlin", "Wenden", "Wende", "Windel",
         "Mandolin", "Vendetta", "Wendy", "Hey Wendy", "Handelin", "Kendall", "Wenig", "Verwendet",
@@ -86,7 +96,7 @@ def sentences(path, rng, n):
 
 def main():
     a = argparse.ArgumentParser()
-    a.add_argument("--kind", required=True, choices=["pos", "conf", "neg", "bare", "hey", "conf2"])
+    a.add_argument("--kind", required=True, choices=["pos", "conf", "neg", "bare", "hey", "conf2", "oct", "conf_oct", "kob", "conf_kob"])
     a.add_argument("--out", required=True)
     a.add_argument("--n", type=int, default=100)
     a.add_argument("--seed", type=int, default=1)
@@ -111,13 +121,13 @@ def main():
             t = POS[int(rng.integers(len(POS)))]
         elif a.kind == "conf":
             t = CONF[int(rng.integers(len(CONF)))]
-        elif a.kind in ("bare", "hey", "conf2"):
-            L = {"bare": BARE, "hey": HEY, "conf2": CONF2}[a.kind]
+        elif a.kind in ("bare", "hey", "conf2", "oct", "conf_oct", "kob", "conf_kob"):
+            L = {"bare": BARE, "hey": HEY, "conf2": CONF2, "oct": OCT, "conf_oct": CONF_OCT, "kob": KOB, "conf_kob": CONF_KOB}[a.kind]
             t = L[int(rng.integers(len(L)))]
         else:
             t = texts[i]
         x = synth(v, sr, ns, t, rng, a.wide)
-        if x is None or len(x) < 1600 or (a.kind != "neg" and len(x) > 1.8 * SR) or (a.kind == "conf2" and len(x) > 2.4 * SR):
+        if x is None or len(x) < 1600 or (a.kind != "neg" and len(x) > 1.8 * SR) or (a.kind.startswith("conf") and a.kind != "conf" and len(x) > 2.4 * SR):
             continue   # Ausreisser (lange Pausen/Artefakte) verwerfen
         sf.write(os.path.join(a.out, f"{a.kind}{a.seed:02d}_{i:05d}.wav"), x, SR, subtype="PCM_16")
         total += len(x) / SR

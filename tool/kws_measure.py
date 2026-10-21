@@ -75,7 +75,8 @@ def condition(x, name, rng):
     raise SystemExit(f"unbekannte Bedingung {name}")
 
 
-def make_spotter(model_dir, chunk, bpe, threads):
+def make_spotter(model_dir, chunk, bpe, threads, dummy_kw=None):
+    """dummy_kw: Platzhalter-Schluesselwort der Spotter-Datei; es feuert auch in Streams mit eigenen Woertern (siehe words_measure.own_hits)."""
     import sherpa_onnx
     def pick(kind):
         pat = f"{kind}-*chunk-{chunk}-left-64.int8.onnx"
@@ -87,7 +88,7 @@ def make_spotter(model_dir, chunk, bpe, threads):
             raise SystemExit(f"{pat} nicht in {model_dir}")
         return r[0]
     dummy = os.path.join(model_dir, "_dummy_keywords.txt")
-    open(dummy, "w").write("▁HE LL O @X\n" if bpe else "HH AH0 L OW1 @X\n")
+    open(dummy, "w").write(dummy_kw or ("▁HE LL O @X\n" if bpe else "HH AH0 L OW1 @X\n"))
     return sherpa_onnx.KeywordSpotter(
         tokens=os.path.join(model_dir, "tokens.txt"),
         encoder=pick("encoder"), decoder=pick("decoder"), joiner=pick("joiner"),
