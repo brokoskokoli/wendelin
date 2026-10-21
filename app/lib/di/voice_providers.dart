@@ -341,6 +341,23 @@ final ttsSelectionProvider = FutureProvider.autoDispose<TtsSelection>((
 /// the pipeline gets barge-in `off`. Tests and WP58 override it.
 final bargeInDetectorProvider = Provider<BargeInDetector?>((ref) => null);
 
+/// Whether the barge-in detector listens right now (WP113): the buttons show
+/// a ring during the spoken answer.
+final bargeListeningProvider = NotifierProvider<BargeListening, bool>(
+  BargeListening.new,
+);
+
+/// State of [bargeListeningProvider].
+final class BargeListening extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  /// Sets the state.
+  void set(bool listening) {
+    if (state != listening) state = listening;
+  }
+}
+
 /// Whether barge-in works on this device (a detector exists).
 final bargeInAvailableProvider = Provider<bool>(
   (ref) => ref.watch(bargeInDetectorProvider) != null,

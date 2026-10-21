@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../agent/agent_controller.dart';
 import '../../agent/conversation_state.dart';
 import '../../di/providers.dart';
+import '../../di/voice_providers.dart';
 import '../../l10n/l10n.dart';
 import '../../voice/voice_components.dart';
 import '../../voice/voice_controller.dart';
@@ -53,6 +54,7 @@ class MainComposer extends ConsumerWidget {
     child: Composer(
       running: conversation.running,
       mic: mic,
+      hearing: ref.watch(bargeListeningProvider),
       levels: voice.levels,
       followUpUntil: voice.followUpUntil,
       now: ref.read(clockProvider).now,

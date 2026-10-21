@@ -44,6 +44,7 @@ export 'src/text/voice_texts.dart';
 export 'src/text/yes_no.dart';
 export 'src/tts/speech_queue.dart';
 export 'src/tts/tts_selector.dart';
+export 'src/wake/barge_verifier.dart';
 export 'src/wake/candidate_wake_engine.dart';
 export 'src/wake/keyword_spec.dart';
 export 'src/wake/pre_roll_buffer.dart';

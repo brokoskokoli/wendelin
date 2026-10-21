@@ -6,6 +6,10 @@
 // (`Wendelin/voice barge-listen on=true`, `barge-hit`) prüft der Aufrufer
 // per logcat.
 //
+// WP113 (K84): „Wendelin“ während der Ausgabe geht über Stufe 2: im
+// Mikrofon-Log `barge-cand` und `barge-verify result=wake` vor `barge-hit`
+// (`docs/testing/m5/wp113.md`).
+//
 //   WENDELIN_MODELS=~/wendelin-models \
 //     tool/e2e_android.sh integration_test/voice_barge_in_e2e_test.dart
 
@@ -34,6 +38,7 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/testing.dart' show FakeTextToSpeech;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import 'support/barge_log.dart';
 import 'support/e2e.dart';
 import 'support/voice_e2e.dart';
 
@@ -44,6 +49,13 @@ import 'support/voice_e2e.dart';
 Future<void> assistantMain() async {
   voiceLogEngine = 'overlay';
   WidgetsFlutterBinding.ensureInitialized();
+  // Die Diagnosezeilen auch in eine Datei, damit der Test sie prüft
+  // (logcat gehört dem Aufrufer, `barge_log.dart`).
+  final log = File('${(await e2eDirectory()).path}/voice.log');
+  voiceLogSink = (l) {
+    debugPrint(l);
+    log.writeAsStringSync('$l\n', mode: FileMode.append);
+  };
   final (storage, startup) = await app.openAppStorage();
   await runWendelinApp(
     storage,
@@ -67,6 +79,8 @@ void main() {
       await waitForDeviceFiles();
       final e2e = await e2eDirectory();
       final wavs = '${e2e.path}/wake';
+      final voiceLogFile = File('${e2e.path}/voice.log');
+      if (voiceLogFile.existsSync()) voiceLogFile.deleteSync();
       addTearDown(() async {
         final spec = File('${e2e.path}/overlay.json');
         if (spec.existsSync()) spec.deleteSync();
@@ -160,6 +174,18 @@ void main() {
         isNot(contains('ANTWORT-DREI')),
         reason: 'Nach dem Stoppwort darf keine weitere Antwort kommen',
       );
+      // WP113 (K84): Kandidat -> Gegenprüfung -> Treffer, nie ein Treffer
+      // nach `no`/`echo`/`skip`.
+      final lines = voiceLogFile.readAsLinesSync();
+      expect(
+        bargeLogProblem(lines, hitKind: 'keyword-wake'),
+        isNull,
+        reason: lines.where((l) => l.contains('barge-')).join('\n'),
+      );
+      // Das Stoppwort am Ende kommt nach der (kurzen) Antwort, also nicht
+      // während der Ausgabe: Es wirkt über das Transkript
+      // (`stop-word source=transcript`), nicht über Barge-in. Den
+      // gegengeprüften `keyword-stop` deckt voice_stop_word_e2e_test ab.
       await askHost('back');
     },
     skip: !voiceE2e,

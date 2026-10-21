@@ -366,9 +366,8 @@ final class VoicePipeline {
     );
   }
 
-  /// Starts and stops the detector with the state. Operations run one after
-  /// the other: a stop never overtakes a pending start, and a start that
-  /// finishes after the speech has ended is stopped again.
+  /// Starts and stops the detector with the state, one operation after the
+  /// other: a stop never overtakes a start, a late start is stopped again.
   void _syncBargeDetector(VoiceState s) {
     final d = bargeInDetector;
     if (d == null || config.bargeIn == BargeInMode.off) return;
@@ -615,6 +614,7 @@ final class VoicePipeline {
         if (gen != _gen) return;
         _setState(VoiceState.speaking);
         _emit(VoiceSpeaking(s));
+        if (bargeInDetector case final SpokenTextSink sink) sink.spoke(s);
       },
       onIdle: () {
         if (gen == _gen && _agentRunning) _setState(VoiceState.thinking);

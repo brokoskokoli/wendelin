@@ -138,6 +138,7 @@ class Composer extends StatefulWidget {
     required this.running,
     required this.onSend,
     required this.mic,
+    this.hearing = false,
     required this.onMic,
     this.levels = const [],
     this.micHint,
@@ -155,6 +156,9 @@ class Composer extends StatefulWidget {
 
   /// State of the microphone button.
   final MicState mic;
+
+  /// Wendelin hört während der Ausgabe mit (WP113).
+  final bool hearing;
 
   /// Tap on the microphone (start, or cancel while active).
   final VoidCallback onMic;
@@ -258,19 +262,7 @@ class _ComposerState extends State<Composer> {
                 ValueListenableBuilder(
                   valueListenable: _text,
                   builder: (context, value, _) => value.text.trim().isEmpty
-                      ? MicButton(
-                          state: widget.mic,
-                          onPressed: widget.mic == MicState.disabled
-                              ? null
-                              : widget.onMic,
-                          compact: true,
-                          semanticLabel: switch (widget.mic) {
-                            MicState.disabled => widget.micHint,
-                            MicState.listening =>
-                              context.l10n.mainCancelListening,
-                            _ => null,
-                          },
-                        )
+                      ? _micButton(context)
                       : SendButton(onPressed: () => _submit(_text.text)),
                 ),
               ],
@@ -280,6 +272,18 @@ class _ComposerState extends State<Composer> {
       ),
     );
   }
+
+  Widget _micButton(BuildContext context) => MicButton(
+    state: widget.mic,
+    hearing: widget.hearing,
+    onPressed: widget.mic == MicState.disabled ? null : widget.onMic,
+    compact: true,
+    semanticLabel: switch (widget.mic) {
+      MicState.disabled => widget.micHint,
+      MicState.listening => context.l10n.mainCancelListening,
+      _ => null,
+    },
+  );
 }
 
 /// Level bar above the text field while the microphone listens: the

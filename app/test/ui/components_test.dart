@@ -72,6 +72,42 @@ void main() {
     });
   });
 
+  group('MicButton „hört mit“ (WP113)', () {
+    CustomPaint paint(WidgetTester tester) => tester.widget<CustomPaint>(
+      find
+          .descendant(
+            of: find.byType(MicButton),
+            matching: find.byType(CustomPaint),
+          )
+          .first,
+    );
+
+    testWidgets('Ring und Hinweis nur beim Sprechen mit hearing', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        MicButton(state: MicState.speaking, onPressed: () {}),
+      );
+      expect(paint(tester).painter, isNull);
+      expect(find.byTooltip('Sprachausgabe stoppen'), findsOneWidget);
+
+      await _pump(
+        tester,
+        MicButton(state: MicState.speaking, hearing: true, onPressed: () {}),
+      );
+      expect(paint(tester).painter, isNotNull);
+      expect(find.byTooltip(AppLocalizationsDe().mainMicHearing), findsOne);
+
+      // Not speaking: hearing alone shows nothing.
+      await _pump(
+        tester,
+        MicButton(state: MicState.idle, hearing: true, onPressed: () {}),
+      );
+      expect(paint(tester).painter, isNull);
+    });
+  });
+
   group('ToolResultCard rückgängig', () {
     testWidgets('Hinweis statt Button, durchgestrichen', (tester) async {
       await _pump(

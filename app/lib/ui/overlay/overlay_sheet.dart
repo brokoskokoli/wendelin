@@ -71,6 +71,7 @@ class OverlaySheet extends StatelessWidget {
     required this.privacy,
     required this.exchange,
     required this.mic,
+    this.hearing = false,
     required this.levels,
     required this.onMic,
     required this.onClose,
@@ -132,6 +133,9 @@ class OverlaySheet extends StatelessWidget {
 
   /// Microphone button state.
   final MicState mic;
+
+  /// Wendelin hört während der Ausgabe mit (WP113).
+  final bool hearing;
 
   /// Recent microphone levels (0–1).
   final List<double> levels;
@@ -368,6 +372,7 @@ class OverlaySheet extends StatelessWidget {
           ),
           MicButton(
             state: mic,
+            hearing: hearing,
             onPressed: mic == MicState.disabled ? null : onMic,
             semanticLabel: switch (mic) {
               MicState.idle => context.l10n.overlayKeepTalking,

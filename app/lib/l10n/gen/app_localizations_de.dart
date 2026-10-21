@@ -2156,6 +2156,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mainMicCancelAnswer => 'Antwort abbrechen';
 
   @override
+  String get mainMicHearing =>
+      'Wendelin hört mit: „Wendelin“ sagen oder tippen';
+
+  @override
   String get mainMicSpeak => 'Sprechen';
 
   @override

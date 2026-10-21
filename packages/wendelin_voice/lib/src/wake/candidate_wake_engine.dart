@@ -27,6 +27,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
     this.stopTailShare,
     this.stopGate,
     this.stopFloorGap = 0,
+    this.stopOverridesWake = false,
     this.onWindow,
   });
 
@@ -75,6 +76,12 @@ final class CandidateWakeEngine implements WakeWordEngine {
   /// [stopFloorWarmup] windows.
   final double stopFloorGap;
 
+  /// WP113: with stage 2 (the transcript decides) a main-word candidate in a
+  /// window where „Stopp“ is also over its raw threshold becomes „Stopp“,
+  /// past the level and background gate. Without stage 2 the gate stays
+  /// as it is (WP80): „Wendelin“ must not turn into „Stopp“.
+  final bool stopOverridesWake;
+
   /// Windows before the background similarity is trusted.
   static const stopFloorWarmup = 10;
 
@@ -92,6 +99,8 @@ final class CandidateWakeEngine implements WakeWordEngine {
 
   bool _open = false;
   int _stopRun = 0;
+  int _sinceStop = 1 << 30;
+  CandidateDecision? _lastStop;
   double? _stopFloor;
   int _stopSeen = 0;
   int _lastHit = -1 << 40;
@@ -142,35 +151,38 @@ final class CandidateWakeEngine implements WakeWordEngine {
         modelThreshold: null,
         templateThreshold: stop.threshold,
       );
-      // WP80: no „Stopp“ without speech-level sound and without a clear rise
-      // over the background similarity.
-      final floor = _stopFloor;
-      if (stopDecision != null) {
-        final quiet = stopGate != null && !stopGate!.active;
-        final flat =
-            stopFloorGap > 0 &&
-            floor != null &&
-            _stopSeen >= stopFloorWarmup &&
-            stop.top < floor + stopFloorGap;
-        if (quiet || flat) stopDecision = null;
-      }
-      if (stops.isNotEmpty) {
-        _stopSeen++;
-        _stopFloor = floor == null
-            ? stop.top
-            : floor + (stop.top - floor) * 0.05;
-      }
+      final rawStop = stopDecision;
+      stopDecision = _gateStop(stopDecision, stop.top, stops.isNotEmpty);
       // „Stopp“ is short: it counts only after [stopWindows] consecutive
       // windows above its threshold (a single spike is no hit).
       _stopRun = stopDecision == null ? 0 : _stopRun + 1;
-      // Both words match: the one further above its threshold wins.
-      if (stopDecision != null && (d == null || stop.margin > main.margin)) {
-        if (_stopRun >= stopWindows) {
+      _sinceStop = stopDecision == null ? _sinceStop + 1 : 0;
+      if (stopDecision != null) {
+        _lastStop = stopDecision;
+        // WP113: both words over their threshold (during the output): „Stopp“
+        // wins, whatever the margins. Otherwise wait for the confirming
+        // window, a „Wendelin“ must not slip through meanwhile.
+        if (d != null || _stopRun >= stopWindows) {
           d = stopDecision;
           id = stopKeywordId;
         } else {
-          d = null; // wait for the confirming window
+          d = null;
         }
+      } else if (d != null && _lastStop != null && _sinceStop <= stopWindows) {
+        // „Stopp“ was over its threshold a moment ago (a spike), now only
+        // „Wendelin“ is: it is the same utterance, „Stopp“ wins.
+        d = _lastStop;
+        id = stopKeywordId;
+      }
+      // WP113: a candidate of the main word while „Stopp“ is also over its
+      // threshold in this window (only the level or background gate kept it
+      // back): it is „Stopp“, the other one is its echo in the template.
+      if (d != null &&
+          id == keywordId &&
+          rawStop != null &&
+          stopOverridesWake) {
+        d = rawStop;
+        id = stopKeywordId;
       }
       final gap = (refractory.inMicroseconds * 16000) ~/ 1000000;
       if (d == null || w.endSample - _lastHit < gap) continue;
@@ -191,6 +203,31 @@ final class CandidateWakeEngine implements WakeWordEngine {
     for (final t in sets)
       if (t.isCompatible(features.featureVersion)) t,
   ];
+
+  /// WP80: no „Stopp“ without speech-level sound and without a clear rise
+  /// over the background similarity ([top] = best similarity); also tracks
+  /// that background.
+  CandidateDecision? _gateStop(
+    CandidateDecision? decision,
+    double top,
+    bool hasStops,
+  ) {
+    final floor = _stopFloor;
+    if (decision != null) {
+      final quiet = stopGate != null && !stopGate!.active;
+      final flat =
+          stopFloorGap > 0 &&
+          floor != null &&
+          _stopSeen >= stopFloorWarmup &&
+          top < floor + stopFloorGap;
+      if (quiet || flat) decision = null;
+    }
+    if (hasStops) {
+      _stopSeen++;
+      _stopFloor = floor == null ? top : floor + (top - floor) * 0.05;
+    }
+    return decision;
+  }
 
   ({double? similarity, double? threshold, double margin, double top}) _closest(
     Float32List embedding,
@@ -225,6 +262,8 @@ final class CandidateWakeEngine implements WakeWordEngine {
   void reset() {
     features.reset();
     _stopRun = 0;
+    _sinceStop = 1 << 30;
+    _lastStop = null;
     stopGate?.reset();
     _stopFloor = null;
     _stopSeen = 0;
