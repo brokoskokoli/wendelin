@@ -144,6 +144,7 @@ final class CandidateWakeEngine implements WakeWordEngine {
         modelThreshold: null,
         templateThreshold: stop.threshold,
       );
+      final rawStop = stopDecision;
       stopDecision = _gateStop(stopDecision, stop.top, stops.isNotEmpty);
       // „Stopp“ is short: it counts only after [stopWindows] consecutive
       // windows above its threshold (a single spike is no hit).
@@ -164,6 +165,13 @@ final class CandidateWakeEngine implements WakeWordEngine {
         // „Stopp“ was over its threshold a moment ago (a spike), now only
         // „Wendelin“ is: it is the same utterance, „Stopp“ wins.
         d = _lastStop;
+        id = stopKeywordId;
+      }
+      // WP113: a candidate of the main word while „Stopp“ is also over its
+      // threshold in this window (only the level or background gate kept it
+      // back): it is „Stopp“, the other one is its echo in the template.
+      if (d != null && id == keywordId && rawStop != null) {
+        d = rawStop;
         id = stopKeywordId;
       }
       final gap = (refractory.inMicroseconds * 16000) ~/ 1000000;

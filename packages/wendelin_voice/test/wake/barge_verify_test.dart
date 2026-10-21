@@ -31,6 +31,7 @@ Future<List<String>> _hits(
   required double stopDeg,
   double thr = 0.85,
   double sthr = 0.90,
+  SpeechGate? gate,
 }) async {
   var i = 0;
   final e = CandidateWakeEngine(
@@ -43,6 +44,7 @@ Future<List<String>> _hits(
     stopTemplates: [_tpl(stopDeg, sthr)],
     modelThreshold: null,
     refractory: Duration.zero,
+    stopGate: gate,
   );
   await e.open([KeywordSpec.wendelin]);
   final ids = <String>[];
@@ -91,6 +93,28 @@ void main() {
       // Wake-Vorlage 0 Grad, Stopp-Vorlage 90 Grad: Fenster 1 ist nur Stopp
       // (eine Spitze), Fenster 2 nur Wake.
       expect(await _hits([85, 0], stopDeg: 90), ['stop']);
+    });
+
+    test('Gerätelog 2026-10-21: stop 0.96 > sthr, still danach: stop', () async {
+      // sim 0.85 (thr 0.75), stop 0.96 (sthr 0.70); nach dem Wort ist es still,
+      // der Pegelfilter hält die Stopp-Wertung zurück, das Wort bleibt Stopp.
+      final w = _deg(0.85);
+      final a = w - _deg(0.96);
+      expect(
+        await _hits([w], stopDeg: a, thr: 0.75, sthr: 0.70, gate: SpeechGate()),
+        ['stop'],
+      );
+      // Nur Wake über der Schwelle (Stopp darunter): bleibt wake.
+      expect(
+        await _hits(
+          [w],
+          stopDeg: w + 60,
+          thr: 0.75,
+          sthr: 0.70,
+          gate: SpeechGate(),
+        ),
+        ['wake'],
+      );
     });
 
     test('reines Wendelin (Stopp deutlich darunter) bleibt wake', () async {
@@ -182,24 +206,29 @@ void main() {
     final verdicts = <String>[];
 
     Future<void> setUp0({
+      Duration settle = Duration.zero,
       Duration cooldown = const Duration(seconds: 100),
       Duration timeout = const Duration(seconds: 6),
       String keyword = 'stop',
+      Set<int> hitAt = const {},
     }) async {
       got.clear();
       cands.clear();
       verdicts.clear();
       audio = FakeAudioInput();
-      engine = FakeWakeWordEngine(keywordId: keyword);
+      engine = FakeWakeWordEngine(keywordId: keyword, hitAtFrame: hitAt);
       v = _Verifier(const BargeVerdict('stop', BargeInKeyword.stop));
       d = WakeWordBargeInDetector(
         audio: audio,
         engine: engine,
         verifier: v,
         cooldown: cooldown,
+        settle: settle,
         verifyTimeout: timeout,
         onCandidate: (k, {required busy}) => cands.add('${k.name} $busy'),
-        onVerdict: (r, ms) => verdicts.add(r.result),
+        onVerdict: (r, ms) => verdicts.add(
+          r.reason == null ? r.result : '${r.result}/${r.reason}',
+        ),
       );
       d.signals.listen((s) => got.add(s.code));
       await d.start();
@@ -235,7 +264,7 @@ void main() {
       v.error = StateError('model gone');
       await hit();
       expect(got, isEmpty);
-      expect(verdicts, ['skip']);
+      expect(verdicts, [startsWith('skip')]);
     });
 
     test('Zeitüberschreitung: fail closed', () async {
@@ -244,7 +273,7 @@ void main() {
       await hit();
       await Future<void>.delayed(const Duration(milliseconds: 60));
       expect(got, isEmpty);
-      expect(verdicts, ['skip']);
+      expect(verdicts, [startsWith('skip')]);
     });
 
     test('während der Prüfung und im Cooldown: Kandidat verworfen', () async {
@@ -292,6 +321,66 @@ void main() {
       await pumpEventQueue();
       expect(got, isEmpty);
       expect(verdicts, isEmpty);
+    });
+
+    group('Timing und Stille (Gerätelog 2026-10-21)', () {
+      Future<void> frames(int n, {bool loud = false}) async {
+        for (var i = 0; i < n; i++) {
+          audio.push(
+            loud
+                ? (Int16List(1600)..fillRange(0, 1600, 5000))
+                : Int16List(1600),
+          );
+        }
+        await pumpEventQueue();
+      }
+
+      test('Prüfung erst nach dem Wort: Ausschnitt enthält es', () async {
+        await setUp0(settle: const Duration(milliseconds: 800));
+        // Kandidat, das Wort beginnt gerade (Marker = laut, hier auch Wort).
+        audio.push(FakeWakeWordEngine.markerFrame(1600));
+        await pumpEventQueue();
+        expect(v.calls, isEmpty); // noch nicht: das Wort läuft
+        await frames(4, loud: true); // 400 ms
+        expect(v.calls, isEmpty);
+        await frames(4, loud: true); // 800 ms
+        expect(v.calls, hasLength(1));
+        expect(got, ['keyword-stop']);
+        // Der Ausschnitt reicht über den Kandidaten hinaus (Nachlauf).
+        expect(v.calls.single, 1600 * 9);
+      });
+
+      test('Kandidat während der Prüfung wird danach erneut geprüft', () async {
+        await setUp0(
+          settle: Duration.zero,
+          cooldown: const Duration(milliseconds: 400),
+        );
+        v
+          ..verdict = BargeVerdict.no
+          ..hold = Completer<void>();
+        await hit();
+        await frames(1, loud: true);
+        await hit(); // busy
+        expect(cands, ['stop false', 'stop true']);
+        v.hold!.complete();
+        await pumpEventQueue();
+        expect(got, isEmpty);
+        v
+          ..hold = null
+          ..verdict = const BargeVerdict('stop', BargeInKeyword.stop);
+        await frames(6, loud: true); // Cooldown endet
+        expect(v.calls, hasLength(2));
+        expect(got, ['keyword-stop']);
+      });
+
+      test('Stille im Ausschnitt: skip/silent ohne Erkenner', () async {
+        // Kandidat aus Hintergrund-Ähnlichkeit (Frame 2), der Ausschnitt ist still.
+        await setUp0(hitAt: {2});
+        await frames(3);
+        expect(v.calls, isEmpty);
+        expect(verdicts, ['skip/silent']);
+        expect(got, isEmpty);
+      });
     });
 
     test('ohne Prüfer ist der Treffer das Signal (wie bisher)', () async {

@@ -34,7 +34,7 @@ bool containsStopWord(String transcript, {String language = 'de'}) {
 @immutable
 final class BargeVerdict {
   /// Creates a verdict.
-  const BargeVerdict(this.result, [this.keyword]);
+  const BargeVerdict(this.result, [this.keyword, this.reason]);
 
   /// The candidate was discarded, nothing recognized.
   static const no = BargeVerdict('no');
@@ -42,6 +42,9 @@ final class BargeVerdict {
   /// Log value: `stop`, `wake`, `no`, `echo` (the word was in the text being
   /// read aloud) or `skip` (the check failed).
   final String result;
+
+  /// Why a check was skipped (`silent`, `timeout`, `error`); `null` otherwise.
+  final String? reason;
 
   /// The recognized keyword; `null` = discard the candidate.
   final BargeInKeyword? keyword;

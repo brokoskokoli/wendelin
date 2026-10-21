@@ -45,6 +45,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
     this.marginOverride,
     this.stopTail = stopTailShare,
     this.diagInterval = const Duration(seconds: 1),
+    this.verifySettle = const Duration(milliseconds: 800),
   });
 
   /// Microphone shared with the pipeline.
@@ -95,6 +96,9 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
 
   /// Share of the window that decides „Stopp“ (WP80); `null`: whole window.
   final double? stopTail;
+
+  /// Wait after a candidate until the check starts (the word is over).
+  final Duration verifySettle;
 
   /// Interval of the `barge-diag` lines while listening.
   final Duration diagInterval;
@@ -199,14 +203,18 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
       audio: MeteredAudioInput(audio, meter),
       engine: MeteredEngine(engine, meter),
       verifier: verifier?.call(() => _recentSpoken),
+      settle: verifySettle,
       // Scores and kind only; the word itself stays out of the log.
       onCandidate: (kind, {required busy}) => voiceLog('barge-cand', {
         'kind': kind.name,
         'busy': busy,
         ...meter.maxima,
       }),
-      onVerdict: (v, ms) =>
-          voiceLog('barge-verify', {'result': v.result, 'ms': ms}),
+      onVerdict: (v, ms) => voiceLog('barge-verify', {
+        'result': v.result,
+        'ms': ms,
+        if (v.reason != null) 'reason': v.reason,
+      }),
     );
     _sub = inner.signals.listen((signal) {
       // Every hit leaves a line, with the best similarities so far.

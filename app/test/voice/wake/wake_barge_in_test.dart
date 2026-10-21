@@ -97,6 +97,9 @@ void main() {
         stopTemplates: () async => stops,
         marginOverride: margin,
         verifier: verifier,
+        // The first (quiet) window is the candidate, the check follows on
+        // the next (loud) frame.
+        verifySettle: const Duration(milliseconds: 20),
         stopTail: null, // two-value fake embeddings have no time axis
         diagInterval: const Duration(milliseconds: 20),
         features: () => FakeWakeFeatureExtractor(
@@ -137,9 +140,14 @@ void main() {
       final seen = <String>[];
       final d = LazyWakeBargeInDetector(
         audio: FakeAudioInput(
-          frames: [Int16List(480)],
+          frames: [
+            Int16List.fromList([
+              for (var j = 0; j < 480; j++) j.isEven ? 2000 : -2000,
+            ]),
+          ],
           frameInterval: const Duration(milliseconds: 5),
         ),
+        verifySettle: Duration.zero,
         templates: () async => [tpl(0.9)],
         verifier: (spoken) => _SpyVerifier(() => seen.add(spoken())),
         features: () => FakeWakeFeatureExtractor(

@@ -25,6 +25,8 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     this.verifier,
     this.clip = const Duration(milliseconds: 2500),
     this.cooldown = const Duration(milliseconds: 1500),
+    this.settle = const Duration(milliseconds: 800),
+    this.minLevel = 150,
     this.verifyTimeout = const Duration(seconds: 6),
     this.onCandidate,
     this.onVerdict,
@@ -43,11 +45,22 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   /// own voice makes many candidates).
   final Duration cooldown;
 
+  /// Wait after a candidate before the check starts: the word is over then
+  /// and inside the clip (the stage 1 hit comes while the word starts or
+  /// ends, device finding 2026-10-21). Candidates in between are merged.
+  final Duration settle;
+
+  /// Smallest level (RMS of a 20 ms block, 16-bit samples) the clip must
+  /// reach; a quieter clip is skipped without the recognizer
+  /// (`skip`/`silent`).
+  final int minLevel;
+
   /// A check that takes longer counts as failed (fail closed).
   final Duration verifyTimeout;
 
   /// Called for every stage 1 candidate; [busy]: a check is running or in
-  /// cooldown, the candidate is dropped.
+  /// cooldown, the candidate is kept and checked again afterwards (the best
+  /// one, `stop` before `wake`).
   final void Function(BargeInKeyword candidate, {required bool busy})?
   onCandidate;
 
@@ -73,6 +86,10 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   late final PreRollBuffer _ring = PreRollBuffer(capacity: clip);
   bool _verifying = false;
   int _fed = 0, _blockedUntil = 0;
+  // Candidate waiting for the end of its word (-1: none), and the best one
+  // that came during a check or the cooldown.
+  int _pendingAt = -1, _deferredAt = 0;
+  BargeInKeyword? _pendingKind, _deferredKind;
   Future<void> _chain = Future.value();
   Future<void> _lifecycle = Future.value();
 
@@ -99,6 +116,9 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     engine.reset();
     _ring.clear();
     _fed = _blockedUntil = 0;
+    _pendingAt = -1;
+    _pendingKind = _deferredKind = null;
+    _verifying = false;
     final gen = ++_generation;
     _chain = Future.value();
     _sub = audio.start().listen(
@@ -121,24 +141,62 @@ final class WakeWordBargeInDetector implements BargeInDetector {
         _ => null,
       };
       if (keyword == null) continue;
-      final v = verifier;
-      if (v == null) {
+      if (verifier == null) {
         _signals.add(BargeInSignal.keyword(keyword));
         continue;
       }
       final busy = _verifying || _fed < _blockedUntil;
       onCandidate?.call(keyword, busy: busy);
-      if (!busy) unawaited(_verify(v, keyword, gen));
+      if (busy) {
+        _deferredKind = _best(_deferredKind, keyword);
+        _deferredAt = _fed;
+      } else {
+        // Waiting (or already waiting): the check starts after the word.
+        _pendingKind = _best(_pendingKind, keyword);
+        if (_pendingAt < 0) _pendingAt = _fed + durationToSamples(settle);
+      }
+    }
+    final v = verifier;
+    if (v != null && _pendingAt >= 0 && _fed >= _pendingAt && !_verifying) {
+      final kind = _pendingKind!;
+      _pendingAt = -1;
+      _pendingKind = null;
+      unawaited(_verify(v, kind, gen));
     }
   }
 
+  static BargeInKeyword _best(BargeInKeyword? a, BargeInKeyword b) =>
+      a == BargeInKeyword.stop || b == BargeInKeyword.stop
+      ? BargeInKeyword.stop
+      : b;
+
+  bool _quiet(Int16List pcm) {
+    const block = 320;
+    for (var i = 0; i < pcm.length; i += block) {
+      final end = i + block < pcm.length ? i + block : pcm.length;
+      var sum = 0.0;
+      for (var j = i; j < end; j++) {
+        sum += pcm[j] * pcm[j];
+      }
+      if (sum / (end - i) >= minLevel * minLevel) return false;
+    }
+    return true;
+  }
+
   Future<void> _verify(BargeVerifier v, BargeInKeyword cand, int gen) async {
-    _verifying = true;
     final pcm = _ring.snapshot();
+    if (_quiet(pcm)) {
+      // Nothing to recognize (background similarity): no recognizer run.
+      onVerdict?.call(const BargeVerdict('skip', null, 'silent'), 0);
+      return;
+    }
+    _verifying = true;
     final sw = Stopwatch()..start();
-    var verdict = const BargeVerdict('skip');
+    var verdict = const BargeVerdict('skip', null, 'error');
     try {
       verdict = await v.verify(pcm, candidate: cand).timeout(verifyTimeout);
+    } on TimeoutException catch (_) {
+      verdict = const BargeVerdict('skip', null, 'timeout');
     } on Object catch (_) {
       // Fail closed: no verdict, no keyword.
     }
@@ -148,8 +206,18 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     final keyword = verdict.keyword;
     if (keyword == null) {
       _blockedUntil = _fed + durationToSamples(cooldown);
+      // A candidate that came meanwhile is checked once the cooldown ends,
+      // if its word is still inside the clip.
+      final kind = _deferredKind;
+      _deferredKind = null;
+      final at = _blockedUntil > _fed ? _blockedUntil : _fed;
+      if (kind != null && at - _deferredAt <= durationToSamples(clip)) {
+        _pendingKind = _best(_pendingKind, kind);
+        _pendingAt = at;
+      }
       return;
     }
+    _deferredKind = null;
     _signals.add(BargeInSignal.keyword(keyword));
   }
 
