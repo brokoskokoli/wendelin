@@ -15,6 +15,7 @@ Wo liegt was, und welche Dateien gehören zu einer Änderung? Das ist nur der In
 - **Voice-Pipeline** (ADR 0007, 0008). [voice.md](architecture/voice.md)
 - **Plattformkanäle**: Kotlin-Kanäle und ihre Dart-Seite. [channels.md](architecture/channels.md)
 - **HTTP-Stacks** (N3). [http.md](architecture/http.md)
+- **Release und Signatur** (WP131): Schlüssel, Secrets, Tag-Release, Umstieg vom Debug-Schlüssel. [RELEASE.md](RELEASE.md)
 - **Checklisten „Feature → Dateien“**: neue Integration, Einstellungsseite, Kanal u. a. [checklists.md](architecture/checklists.md)
 
 Gerätetests je Arbeitspaket stehen in `docs/testing/m5/README.md` (erzeugter Index).
