@@ -531,35 +531,38 @@ void main() {
       expect(e.holdWindows, 0);
     });
 
-    test('Modell: Band je Ort aus dem Katalog, keine Vorlagen, '
-        'Stille-Sperre (kein Pegel-Gate); Vorlagen-Engine hat die Sperre auch', () async {
-      final (c, _) = await container([tpl('a', 0.9)]);
-      WakeScoreBand band(bool station) =>
-          station ? WakeClassifierRules.station : WakeClassifierRules.phone;
-      for (final station in [false, true]) {
-        final e =
-            (await DeviceWakeParts(
-                  ProviderContainer(
-                    overrides: [
-                      wakeClassifierFeaturesFactoryProvider.overrideWithValue(
-                        () => FakeWakeFeatureExtractor(windowEvery: 100),
-                      ),
-                    ],
-                  ),
-                ).engine(detector: WakeDetector.model, station: station))!
-                as CandidateWakeEngine;
-        expect(e.templates, isNull);
-        expect(e.modelThreshold, band(station).verifyFrom);
-        expect(e.directThreshold, band(station).acceptFrom);
-        expect(e.holdWindows, WakeClassifierRules.holdWindows);
-        expect(e.silenceFloor, isNotNull);
-        expect(e.silenceFloor!.minRms, WakeClassifierRules.silenceFloorRms);
-        expect(e.silenceFloor!.ratio, 0, reason: 'kein Rauschboden-Faktor');
-      }
-      final t = (await DeviceWakeParts(c).engine())! as CandidateWakeEngine;
-      expect(t.silenceFloor!.minRms, WakeClassifierRules.silenceFloorRms);
-      expect(t.directThreshold, isNull);
-    });
+    test(
+      'Modell: Band je Ort aus dem Katalog, keine Vorlagen, '
+      'Stille-Sperre (kein Pegel-Gate); Vorlagen-Engine hat die Sperre auch',
+      () async {
+        final (c, _) = await container([tpl('a', 0.9)]);
+        WakeScoreBand band(bool station) =>
+            station ? WakeClassifierRules.station : WakeClassifierRules.phone;
+        for (final station in [false, true]) {
+          final e =
+              (await DeviceWakeParts(
+                    ProviderContainer(
+                      overrides: [
+                        wakeClassifierFeaturesFactoryProvider.overrideWithValue(
+                          () => FakeWakeFeatureExtractor(windowEvery: 100),
+                        ),
+                      ],
+                    ),
+                  ).engine(detector: WakeDetector.model, station: station))!
+                  as CandidateWakeEngine;
+          expect(e.templates, isNull);
+          expect(e.modelThreshold, band(station).verifyFrom);
+          expect(e.directThreshold, band(station).acceptFrom);
+          expect(e.holdWindows, WakeClassifierRules.holdWindows);
+          expect(e.silenceFloor, isNotNull);
+          expect(e.silenceFloor!.minRms, WakeClassifierRules.silenceFloorRms);
+          expect(e.silenceFloor!.ratio, 0, reason: 'kein Rauschboden-Faktor');
+        }
+        final t = (await DeviceWakeParts(c).engine())! as CandidateWakeEngine;
+        expect(t.silenceFloor!.minRms, WakeClassifierRules.silenceFloorRms);
+        expect(t.directThreshold, isNull);
+      },
+    );
 
     test('niemand eingelernt: keine Engine', () async {
       final (c, _) = await container([]);

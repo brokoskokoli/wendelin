@@ -147,11 +147,8 @@ abstract final class WakeClassifierRules {
 
   /// The silence floor of the engine (`CandidateWakeEngine.silenceFloor`),
   /// no ratio to the noise floor.
-  static SpeechGate? silenceFloor() => SpeechGate(
-    minRms: silenceFloorRms,
-    ratio: 0,
-    memory: silenceFloorMemory,
-  );
+  static SpeechGate? silenceFloor() =>
+      SpeechGate(minRms: silenceFloorRms, ratio: 0, memory: silenceFloorMemory);
 
   /// Phone: the lower limit 0.98 of the measured working point.
   static const phone = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.999);

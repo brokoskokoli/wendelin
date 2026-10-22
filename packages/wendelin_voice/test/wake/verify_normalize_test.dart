@@ -72,14 +72,17 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }
 
-    test('Standard an: Whisper bekommt Spitze 0,5, der Pre-Roll bleibt', () async {
-      expect(WakeClassifierRules.verifyNormalize, isTrue);
-      await run(900);
-      expect(_peak(verifier.calls.single), inInclusiveRange(16383, 16385));
-      expect(found, hasLength(1));
-      expect(_peak(found.single.preRoll), lessThanOrEqualTo(900));
-      await listener.dispose();
-    });
+    test(
+      'Standard an: Whisper bekommt Spitze 0,5, der Pre-Roll bleibt',
+      () async {
+        expect(WakeClassifierRules.verifyNormalize, isTrue);
+        await run(900);
+        expect(_peak(verifier.calls.single), inInclusiveRange(16383, 16385));
+        expect(found, hasLength(1));
+        expect(_peak(found.single.preRoll), lessThanOrEqualTo(900));
+        await listener.dispose();
+      },
+    );
 
     test('Schalter aus: Ausschnitt unverändert', () async {
       await run(900, normalize: false);
