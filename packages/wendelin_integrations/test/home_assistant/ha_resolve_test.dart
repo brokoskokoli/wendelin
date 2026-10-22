@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
-import 'package:wendelin_integrations/testing.dart';
 import 'package:wendelin_integrations/src/home_assistant/ha_context.dart';
+import 'package:wendelin_integrations/testing.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
 // Made-up flat: names do not contain the type word the user says.

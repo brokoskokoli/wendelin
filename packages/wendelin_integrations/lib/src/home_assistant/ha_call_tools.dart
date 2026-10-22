@@ -6,6 +6,7 @@ import '../common/tool_args.dart';
 import 'ha_context.dart';
 import 'ha_model.dart';
 import 'ha_policy.dart';
+import 'ha_prompt.dart';
 import 'ha_undo.dart';
 
 const _hvacModes = {
@@ -347,7 +348,7 @@ abstract base class HaCallTool extends IntegrationTool {
 /// `ha__call` (write): light, switch, scene, media player, climate. Runs
 /// without a question and offers undo to the previous state.
 final class HaCallDeviceTool extends HaCallTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, PromptContributor {
   /// Creates the tool.
   const HaCallDeviceTool(super.ctx);
 
@@ -370,6 +371,15 @@ final class HaCallDeviceTool extends HaCallTool
     'ha.brightness',
     'ha.temperature',
   };
+
+  @override
+  Future<String?> promptSection(String requestText) async {
+    try {
+      return await haPromptSection(ctx, requestText);
+    } on Object {
+      return null;
+    }
+  }
 
   @override
   HaServices get table => haOpenServices;

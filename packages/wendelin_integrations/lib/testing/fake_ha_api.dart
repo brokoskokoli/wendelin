@@ -109,6 +109,22 @@ final class FakeHaApi with FakeFailures implements HaApi {
     };
   }
 
+  /// Removes an entity as if the user deleted it in Home Assistant.
+  void remove(String id) {
+    _states.remove(id);
+    areas.remove(id);
+  }
+
+  void _setCoverPosition(String id, Object? position) {
+    if (position is! int) {
+      throw const PortException(
+        PortErrorKind.failed,
+        'Unerwartete Antwort von Home Assistant (HTTP 400).',
+      );
+    }
+    set(id, position > 0 ? 'open' : 'closed', {'current_position': position});
+  }
+
   /// Sets a state directly (test setup).
   void set(
     String id,
@@ -231,25 +247,14 @@ final class FakeHaApi with FakeFailures implements HaApi {
         set(id, 'locked');
       case ('lock', 'unlock'):
         set(id, 'unlocked');
-      case ('lock', 'open'):
-        set(id, 'open');
-      case ('cover', 'open_cover'):
+      case ('lock', 'open') || ('cover', 'open_cover'):
         set(id, 'open');
       case ('cover', 'close_cover'):
         set(id, 'closed');
       case ('cover', 'stop_cover'):
         break;
       case ('cover', 'set_cover_position'):
-        final position = d['position'];
-        if (position is! int) {
-          throw const PortException(
-            PortErrorKind.failed,
-            'Unerwartete Antwort von Home Assistant (HTTP 400).',
-          );
-        }
-        set(id, position > 0 ? 'open' : 'closed', {
-          'current_position': position,
-        });
+        _setCoverPosition(id, d['position']);
       case ('alarm_control_panel', final s):
         set(id, switch (s) {
           'alarm_disarm' => 'disarmed',

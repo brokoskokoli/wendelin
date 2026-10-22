@@ -3,6 +3,7 @@ import 'package:wendelin/di/home_assistant.dart';
 import 'package:wendelin_integrations/fakes.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 import 'package:wendelin_storage/fakes.dart';
+import 'package:wendelin_storage/wendelin_storage.dart';
 
 void main() {
   const canary = 'kanarien-token';
@@ -86,6 +87,64 @@ void main() {
     await secrets.write('ha.entities', 'kein json');
     expect(await store.load(), isEmpty);
     await secrets.write('ha.entities', '{"a":1}');
-    expect(await store.load(), isEmpty);
+    expect(await SecretStoreHa(secrets).load(), isEmpty);
   });
+
+  group('Speicher-Cache der Geräteliste', () {
+    const a = HaEntity(entityId: 'light.a', name: 'A');
+    const b = HaEntity(entityId: 'light.b', name: 'B');
+
+    test('liest die Geräte nur einmal aus dem Secret-Store', () async {
+      await store.save(const [a]);
+      expect(await store.load(), [a]);
+      await secrets.write('ha.entities', '[]');
+      expect(await store.load(), [a]);
+    });
+
+    test('save, leeres save und clear verwerfen den Cache', () async {
+      await store.save(const [a]);
+      expect(await store.load(), [a]);
+      await store.save(const [a, b]);
+      expect(await store.load(), [a, b]);
+      await store.save(const []);
+      expect(await store.load(), isEmpty);
+      await store.save(const [a]);
+      expect(await store.load(), [a]);
+      await store.clear();
+      expect(await store.load(), isEmpty);
+    });
+
+    test('ein Lesefehler wird nicht zwischengespeichert', () async {
+      final failing = SecretStoreHa(_FailOnce(secrets));
+      await expectLater(failing.load(), throwsStateError);
+      await secrets.write('ha.entities', '[{"id":"light.a","name":"A"}]');
+      expect((await failing.load()), isNotEmpty);
+    });
+  });
+}
+
+/// Secret store whose first read throws.
+final class _FailOnce implements SecretStore {
+  _FailOnce(this._inner);
+
+  final SecretStore _inner;
+  bool _failed = false;
+
+  @override
+  Future<String?> read(String key) {
+    if (!_failed) {
+      _failed = true;
+      throw StateError('Lesefehler');
+    }
+    return _inner.read(key);
+  }
+
+  @override
+  Future<void> write(String key, String value) => _inner.write(key, value);
+
+  @override
+  Future<void> delete(String key) => _inner.delete(key);
+
+  @override
+  Future<Set<String>> listKeys() => _inner.listKeys();
 }

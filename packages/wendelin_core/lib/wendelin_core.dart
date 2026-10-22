@@ -33,6 +33,7 @@ export 'src/tools/fixed_confirmation.dart';
 export 'src/tools/ha_words.dart';
 export 'src/tools/integration.dart';
 export 'src/tools/port_error_kind.dart';
+export 'src/tools/prompt_contributor.dart';
 export 'src/tools/tool.dart';
 export 'src/tools/tool_context.dart';
 export 'src/tools/tool_outcome.dart';

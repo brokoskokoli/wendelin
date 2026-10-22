@@ -103,7 +103,7 @@ final class HaListEntitiesTool extends IntegrationTool {
   Future<ToolOutcome> run(ToolArgs args, ToolContext c) async {
     final area = args.optString('area');
     final domain = args.optString('domain')?.toLowerCase();
-    final all = await ctx.store.load();
+    final all = await ctx.approved();
     final shown = [
       for (final e in all)
         if ((area == null || area.isEmpty || _inArea(e, area)) &&
@@ -176,7 +176,7 @@ final class HaStateTool extends IntegrationTool {
     }
     final area = args.optString('area');
     final domain = args.optString('domain')?.toLowerCase();
-    final all = await ctx.store.load();
+    final all = await ctx.approved();
     final picked = [
       for (final e in all)
         if ((area == null ||

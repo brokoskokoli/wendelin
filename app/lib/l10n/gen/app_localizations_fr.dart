@@ -1554,6 +1554,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get haFound => 'Trouvés';
 
   @override
+  String get haGone => 'Plus dans Home Assistant';
+
+  @override
   String get haHttpNote =>
       'Le http non chiffré n’est autorisé que sur le réseau local, via Tailscale (100.x, *.ts.net) et pour *.local, sinon uniquement https. Rien n’est détecté automatiquement via Tailscale : saisissez l’adresse à la main.';
 
@@ -1579,6 +1582,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get haReload => 'Recharger les appareils';
+
+  @override
+  String get haRemoveGone => 'Supprimer';
 
   @override
   String get haSearch => 'Rechercher sur le Wi-Fi';

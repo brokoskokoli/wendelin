@@ -2716,6 +2716,12 @@ abstract class AppLocalizations {
   /// **'Gefunden'**
   String get haFound;
 
+  /// No description provided for @haGone.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht mehr in Home Assistant'**
+  String get haGone;
+
   /// No description provided for @haHttpNote.
   ///
   /// In de, this message translates to:
@@ -2763,6 +2769,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Geräte neu laden'**
   String get haReload;
+
+  /// No description provided for @haRemoveGone.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernen'**
+  String get haRemoveGone;
 
   /// No description provided for @haSearch.
   ///

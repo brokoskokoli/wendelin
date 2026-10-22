@@ -11,7 +11,11 @@ typedef FakeToolHandler = FutureOr<ToolOutcome> Function(
 /// Configurable [Tool] for tests: risk, result, delay, failure, undo and a
 /// record of all calls.
 final class FakeTool
-    implements Tool, ConfirmationPreparer, FixedConfirmationTool {
+    implements
+        Tool,
+        ConfirmationPreparer,
+        FixedConfirmationTool,
+        PromptContributor {
   /// Creates a fake tool.
   ///
   /// Result precedence: [throws] (thrown after [delay]) > [handler] >
@@ -31,6 +35,7 @@ final class FakeTool
     this.confirmation,
     this.prepare,
     this.confirmationKeys = const {},
+    this.section,
   });
 
   @override
@@ -75,6 +80,18 @@ final class FakeTool
   /// even if the outcome carries one.
   @override
   final Set<String> confirmationKeys;
+
+  /// Prompt section of the tool (WP135 A); `null` = none.
+  final String? section;
+
+  /// Request texts [promptSection] was asked for.
+  final List<String> sectionRequests = [];
+
+  @override
+  Future<String?> promptSection(String requestText) async {
+    sectionRequests.add(requestText);
+    return section;
+  }
 
   /// Arguments of every [execute] call, in order.
   final List<Map<String, Object?>> calls = [];

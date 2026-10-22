@@ -63,7 +63,7 @@ void main() {
     await connect('192.168.1.20:8123', haToken);
     expect(find.text('Verbunden'), findsOneWidget);
     expect(find.text('http://192.168.1.20:8123'), findsOneWidget);
-    expect(await env.secrets.listKeys(), {'ha.url', 'ha.token'});
+    expect(await env.secrets.listKeys(), {'ha.url', 'ha.token', 'ha.synced'});
     expect(await env.secrets.read('ha.token'), haToken);
     expect(find.text('Küche Deckenlicht'), findsOneWidget);
     expect(find.text('0 Geräte freigegeben'), findsOneWidget);
@@ -223,5 +223,54 @@ void main() {
     expect(find.text('Home Assistant ist erreichbar.'), findsOneWidget);
     await tester.pumpAndSettle(const Duration(seconds: 5));
     expect(c.read(toolRegistryProvider).status('ha'), IntegrationStatus.active);
+  });
+
+  testWidgets('Neu laden gleicht Freigaben mit Home Assistant ab; '
+      'verschwundene Geräte sind markiert und entfernbar (WP135 A)', (
+    tester,
+  ) async {
+    final env = TestEnv(enabled: const {'ha'});
+    final c = await pumpIntegrations(tester, env);
+    await openHa(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('haAddress')),
+      '192.168.1.20:8123',
+    );
+    await tester.enterText(find.byKey(const ValueKey('haToken')), haToken);
+    await tester.tap(find.text('Verbinden'));
+    await settle(tester);
+    for (final id in ['light.kitchen', 'switch.coffee']) {
+      await tester.ensureVisible(find.byKey(ValueKey('haEntity_$id')));
+      await tester.tap(find.byKey(ValueKey('haEntity_$id')));
+      await settle(tester);
+    }
+    env.ha
+      ..set('light.kitchen', 'on', {'friendly_name': 'Küchenlampe'})
+      ..areas['light.kitchen'] = 'Essbereich'
+      ..remove('switch.coffee');
+    await tester.scrollUntilVisible(
+      find.text('Geräte neu laden'),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Geräte neu laden'));
+    await settle(tester);
+
+    final store = c.read(haStoreProvider);
+    final saved = {for (final e in await store.load()) e.entityId: e};
+    expect(saved['light.kitchen']!.name, 'Küchenlampe');
+    expect(saved['light.kitchen']!.area, 'Essbereich');
+    expect(saved['switch.coffee']!.missing, isTrue);
+    expect(find.text('Nicht mehr in Home Assistant'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('haRemove_switch.coffee')),
+      -500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const ValueKey('haRemove_switch.coffee')));
+    await settle(tester);
+    expect((await store.load()).map((e) => e.entityId), ['light.kitchen']);
+    expect(find.text('Nicht mehr in Home Assistant'), findsNothing);
   });
 }

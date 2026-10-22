@@ -21,6 +21,8 @@
   "haIntro": "Wendelin controls your approved devices through the API of your Home Assistant. Only on the home network or via Tailscale. Address and token stay in the device’s secure storage.",
   "haNoDevices": "No devices found.",
   "haNoRoom": "No room",
+  "haGone": "No longer in Home Assistant",
+  "haRemoveGone": "Remove",
   "haNothingFound": "Nothing found. Enter the address by hand (required for Tailscale).",
   "haReachable": "Home Assistant is reachable.",
   "haReload": "Reload devices",

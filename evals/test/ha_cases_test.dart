@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:wendelin_agent/fakes.dart';
-import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_evals/wendelin_evals.dart';
 
@@ -35,21 +34,23 @@ void main() {
   }
 
   /// id → (model calls, tool calls, errors among them). VORHER (Stand vor
-  /// WP135 A–C); nach den Änderungen siehe unten.
+  /// WP135 A–C): licht-aus 1/1/0, lampe-an 3/3/1, rollo-runter 2/1/0,
+  /// rollo-rauf 2/1/0, rollo-50 2/1/1. NACHHER: überall 1/1/0. Das Skript ist
+  /// fest (kein echtes Modell) und nennt das Gerät schon beim ersten Aufruf,
+  /// wie es mit Geräteliste im Prompt wäre; echte Läufe schwanken mehr.
   const expected = <String, (int, int, int)>{
     'de-ha-licht-aus': (1, 1, 0),
-    'de-ha-lampe-an': (3, 3, 1),
-    'de-ha-rollo-runter': (2, 1, 0),
-    'de-ha-rollo-rauf': (2, 1, 0),
-    'de-ha-rollo-50': (2, 1, 1),
+    'de-ha-lampe-an': (1, 1, 0),
+    'de-ha-rollo-runter': (1, 1, 0),
+    'de-ha-rollo-rauf': (1, 1, 0),
+    'de-ha-rollo-50': (1, 1, 0),
   };
 
   for (final id in expected.keys) {
     test(id, () async {
       final r = await run(id);
       final o = r.observation;
-      // ignore: avoid_print
-      print(
+      stdout.writeln(
         'MESSUNG $id modell=${o.modelCalls} tools=${o.calls.length} '
         'fehler=${o.calls.where((x) => x.isError).length} '
         'text="${o.finalText}"',

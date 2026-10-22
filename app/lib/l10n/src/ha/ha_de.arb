@@ -45,6 +45,8 @@
   "haIntro": "Wendelin steuert deine freigegebenen Geräte über die Schnittstelle deines Home Assistant. Nur im Heimnetz oder über Tailscale. Adresse und Token bleiben im sicheren Speicher des Geräts.",
   "haNoDevices": "Keine Geräte gefunden.",
   "haNoRoom": "Ohne Raum",
+  "haGone": "Nicht mehr in Home Assistant",
+  "haRemoveGone": "Entfernen",
   "haNothingFound": "Nichts gefunden. Adresse von Hand eingeben (bei Tailscale nötig).",
   "haReachable": "Home Assistant ist erreichbar.",
   "haReload": "Geräte neu laden",

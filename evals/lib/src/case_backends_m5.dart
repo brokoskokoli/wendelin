@@ -302,11 +302,7 @@ Integration haBackend() {
       name: 'Rollo Schlafzimmer',
       area: 'Schlafzimmer',
     ),
-    const HaEntity(
-      entityId: 'lock.front',
-      name: 'Haustür',
-      area: 'Flur',
-    ),
+    const HaEntity(entityId: 'lock.front', name: 'Haustür', area: 'Flur'),
   ]);
   return HaIntegration(
     api,

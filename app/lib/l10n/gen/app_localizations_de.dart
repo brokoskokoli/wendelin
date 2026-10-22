@@ -1547,6 +1547,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get haFound => 'Gefunden';
 
   @override
+  String get haGone => 'Nicht mehr in Home Assistant';
+
+  @override
   String get haHttpNote =>
       'Unverschlüsseltes http ist nur im Heimnetz, über Tailscale (100.x, *.ts.net) und bei *.local erlaubt, sonst nur https. Über Tailscale wird nichts automatisch gefunden: Adresse von Hand eingeben.';
 
@@ -1572,6 +1575,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get haReload => 'Geräte neu laden';
+
+  @override
+  String get haRemoveGone => 'Entfernen';
 
   @override
   String get haSearch => 'Im WLAN suchen';

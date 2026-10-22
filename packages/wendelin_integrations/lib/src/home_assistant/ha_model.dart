@@ -91,6 +91,7 @@ final class HaEntity {
     required this.name,
     this.area,
     this.alwaysConfirm = false,
+    this.missing = false,
   });
 
   /// Reads [toJson] output; `null` if malformed.
@@ -105,6 +106,7 @@ final class HaEntity {
       name: name,
       area: area is String && area.isNotEmpty ? area : null,
       alwaysConfirm: json['confirm'] == true,
+      missing: json['missing'] == true,
     );
   }
 
@@ -122,6 +124,11 @@ final class HaEntity {
   /// `ha__call_secure`.
   final bool alwaysConfirm;
 
+  /// Home Assistant no longer lists the entity (WP135 A, set by the sync).
+  /// Such an entity is not offered to the model and not resolved; the user
+  /// removes it in the settings.
+  final bool missing;
+
   /// Domain part of [entityId].
   String get domain => haDomainOf(entityId);
 
@@ -131,7 +138,18 @@ final class HaEntity {
     name: name,
     area: area,
     alwaysConfirm: value,
+    missing: missing,
   );
+
+  /// Copy with the name, room and presence from Home Assistant.
+  HaEntity synced({String? name, String? area, bool missing = false}) =>
+      HaEntity(
+        entityId: entityId,
+        name: name ?? this.name,
+        area: area,
+        alwaysConfirm: alwaysConfirm,
+        missing: missing,
+      );
 
   /// JSON for the entity store.
   Map<String, Object?> toJson() => {
@@ -139,6 +157,7 @@ final class HaEntity {
     'name': name,
     if (area != null) 'area': area,
     if (alwaysConfirm) 'confirm': true,
+    if (missing) 'missing': true,
   };
 
   @override
@@ -147,14 +166,16 @@ final class HaEntity {
       other.entityId == entityId &&
       other.name == name &&
       other.area == area &&
-      other.alwaysConfirm == alwaysConfirm;
+      other.alwaysConfirm == alwaysConfirm &&
+      other.missing == missing;
 
   @override
-  int get hashCode => Object.hash(entityId, name, area, alwaysConfirm);
+  int get hashCode => Object.hash(entityId, name, area, alwaysConfirm, missing);
 
   @override
   String toString() =>
-      'HaEntity($entityId, $name, $area${alwaysConfirm ? ', confirm' : ''})';
+      'HaEntity($entityId, $name, $area${alwaysConfirm ? ', confirm' : ''}'
+      '${missing ? ', missing' : ''})';
 }
 
 /// A Home Assistant instance found in the local network.
