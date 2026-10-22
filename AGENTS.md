@@ -14,7 +14,7 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - Mit `/development-supervisor mach weiter` setzt sie nach Abschnitt 0 „Fortsetzen“ fort. Der Stand kommt aus `docs/work-packages/STATUS.md` (Abschnitt „Nächste Schritte“), aus `git worktree list` und aus den Übergabedateien im Ordner james-wt/handoff neben dem Repo.
 
 ## Konzeptänderungen
-- **Wenn sich bei der Umsetzung herausstellt, dass etwas vom Konzept abweicht oder abweichen muss, wird das im Gesamtkonzept nachgetragen. Der Maintainer (Stefan) bekommt dazu eine kurze Liste der Änderungen und bestätigt sie.**
+- **Wenn sich bei der Umsetzung herausstellt, dass etwas vom Konzept abweicht oder abweichen muss, wird das im Gesamtkonzept nachgetragen. Der Maintainer bekommt dazu eine kurze Liste der Änderungen und bestätigt sie.**
 - Unbestätigte Änderungen stehen im Abschnitt „Änderungsprotokoll“ am Ende des Konzepts mit dem Status `offen`. Nach der Bestätigung wird der Status auf `bestätigt` gesetzt.
 - Agenten ändern das Konzept nicht still. Sie melden Abweichungen in ihrem Abschlussbericht, und der Orchestrator trägt sie ein.
 
@@ -46,4 +46,5 @@ Persönlicher Sprachassistent (Flutter, Android zuerst). Fachliche Grundlage ist
 - Kurze Rollen-Briefings liegen in `docs/agents/` (`common.md` für alle, dazu `coder.md`, `reviewer.md`, `integrator.md`, `e2e.md`); sie sind zusätzlich als Projekt-Agenten unter `.claude/agents/` abgelegt.
 
 ## Git, Identität, Secrets
+- Öffentliches Repo: kein Name, keine Kontaktdaten und keine Anwesenheit des Maintainers, keine absoluten lokalen Pfade; „Maintainer“ schreiben (Regel und Prüfungen: `docs/agents/common.md`, „Öffentliches Repo“).
 - Identität, Trailer, öffentliches Repo und Secrets: nur in `docs/agents/common.md` („Identität“, „Secrets und Live-Tests“). Hooks in `tool/hooks/` und der CI-Schritt prüfen sie; niemals `--no-verify` oder Identitäts-Overrides.

@@ -1,8 +1,8 @@
 # WP107 – Bring! speichert nur Tokens, kein Passwort (`wendelin_integrations`, `app/`)
 
-**Zuordnung:** M5 (Nachbesserung Bring!-Integration). Wunsch Stefan 2026-10-19 (über die Sitzung „wendelin-75“), zeitnah.
+**Zuordnung:** M5 (Nachbesserung Bring!-Integration). Wunsch Maintainer 2026-10-19 (über die Sitzung „wendelin-75“), zeitnah.
 
-## Live-Befund 2026-10-19 (Stefans Konto, ein Login, Liste unverändert)
+## Live-Befund 2026-10-19 (Maintainers Konto, ein Login, Liste unverändert)
 - Access-Token: JWT, 7 Tage (`expires_in=604799`). Refresh-Token: JWT, `exp` 2076-10-06 (~50 Jahre).
 - `POST v2/bringauth/token` liefert denselben Refresh-Token (keine Rotation) und einen neuen Access-Token (7 Tage); der alte Access-Token gilt danach weiter.
 - JWT-Claims: brn, email, exp, privateUuid, roles, sub.

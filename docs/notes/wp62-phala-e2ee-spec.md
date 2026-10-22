@@ -3,7 +3,7 @@
 Stand 2026-10-14. Recherche, kein Repo-Code geändert.
 
 Quellenkürzel:
-- **SPEC** = `Dstack-TEE/private-ai-gateway` @ `57477f5d9caced1f95ffd2562e7ba421849a0d7e` (https://github.com/Dstack-TEE/private-ai-gateway), Datei `spec/...`. Lokaler Klon: `/private/tmp/claude-501/-Users-stefanrichter-ai-james/f56969ca-5b83-41fc-888c-87fe9795f5d4/scratchpad/phala-ref/private-ai-gateway/`
+- **SPEC** = `Dstack-TEE/private-ai-gateway` @ `57477f5d9caced1f95ffd2562e7ba421849a0d7e` (https://github.com/Dstack-TEE/private-ai-gateway), Datei `spec/...`. Lokaler Klon: `<lokales Scratchpad>/phala-ref/private-ai-gateway/`
 - **REF** = derselbe Repo, Server-Referenzcode (Rust, `src/...`). Es gibt dort keinen Client-Encrypt-Code; `clients/verifier-ts/src/index.ts:10` sagt ausdrücklich, E2EE-Feldverschlüsselung werde nicht konstruiert. Der Client muss also nach SPEC plus Server-Gegenstück (REF) gebaut werden.
 - **PHALA-DOC** = https://docs.phala.com/phala-cloud/confidential-ai/confidential-model/e2ee-encryption
 - **RP-DOC** = https://docs.redpill.ai/confidential-ai/e2e-encryption und https://docs.redpill.ai/guides/e2ee-encryption

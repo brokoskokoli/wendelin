@@ -1,12 +1,12 @@
 # WP120 – Antwortzeit vermessen, Pausen beim Vorlesen, früher vorlesen
 
-**Zuordnung:** M6, Wunsch Stefan 2026-10-21: „mach auch mal die Vermessung … auf dem Handy“, „früher vorlesen finde ich eine gute Idee“, Befund „hier und da Pausen beim Vorlesen, zwischen zwei Sätzen bestimmt 2 Sekunden“.
+**Zuordnung:** M6, Wunsch Maintainer 2026-10-21: „mach auch mal die Vermessung … auf dem Handy“, „früher vorlesen finde ich eine gute Idee“, Befund „hier und da Pausen beim Vorlesen, zwischen zwei Sätzen bestimmt 2 Sekunden“.
 
 ## Inhalt
 
 ### 1. Zeitleiste je Anfrage (Messung)
 - Eine Logzeile `latency` je Anfrage (nur Zahlen, kein Text) mit den Abschnitten ab Sprechende: VAD-Ende → STT fertig → je Modellaufruf (Anfrage gesendet, erstes Token, fertig, Anzahl Aufrufe, Tools) → erster Satz an TTS → TTS-Synthese fertig → erster Ton → letzter Ton; dazu je Satz Synthesezeit und Lücke zum vorherigen Satz.
-- Auswerte-Skript (`tool/`), das aus `adb logcat` eine Tabelle macht (p50/p90 je Abschnitt). Gerätetest mit 10 typischen Befehlen (Anleitung in `docs/testing/m5/wp120.md`), Stefan führt aus.
+- Auswerte-Skript (`tool/`), das aus `adb logcat` eine Tabelle macht (p50/p90 je Abschnitt). Gerätetest mit 10 typischen Befehlen (Anleitung in `docs/testing/m5/wp120.md`), Maintainer führt aus.
 - Vergleichsmessung Modell-Abschnitt optional mit einem Schnell-Anbieter (Groq oder Cerebras, gpt-oss-120b) im Eval-Runner, nur wenn ein Key in `~/.wendelin-live.env` steht; Budget ≤ 0,50 €. Fehlt der Key: weglassen und melden.
 
 ### 2. Pausen zwischen Sätzen

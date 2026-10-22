@@ -1,6 +1,6 @@
 # WP116 – Einstellungsseiten: Überschriften, Info-Texte, Links (`app/`, UI)
 
-**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, T20-0.9), Wunsch Stefan.
+**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, T20-0.9), Wunsch Maintainer.
 
 ## Inhalt
 1. Überschriften auf allen Einstellungsseiten klar als Überschrift erkennbar (Größe/Gewicht nach `docs/design/DESIGN.md`).

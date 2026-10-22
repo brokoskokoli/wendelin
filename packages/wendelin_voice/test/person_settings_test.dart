@@ -22,7 +22,7 @@ void main() {
     test('JSON-Runde und kaputte Einträge', () {
       const s = PersonSettings(
         personId: 'a',
-        address: 'Stefan',
+        address: 'Mia',
         sharedMemory: true,
         agentProfileId: 'claude',
       );

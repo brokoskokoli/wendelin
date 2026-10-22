@@ -1,6 +1,6 @@
 # Tinfoil-Spike: E2EE mit Tools (EHBP/HPKE), Stand 2026-10-15
 
-Skripte und Rohdaten (nicht im Repo): `/private/tmp/claude-501/-Users-stefanrichter-ai-james/f56969ca-5b83-41fc-888c-87fe9795f5d4/scratchpad/tinfoil-spike/` (`ehbp-check/`, `verify-live/`, `live/`, `att.bin`, `proxy.json`, `models.json`, `docs/`). Quellen: `.../scratchpad/e2ee-alt/tinfoil/`. Ergänzt `e2ee-alternatives.md` (dort Abschnitt 1). **[?]** = unsicher/nicht belegt.
+Skripte und Rohdaten (nicht im Repo): `<lokales Scratchpad>/tinfoil-spike/` (`ehbp-check/`, `verify-live/`, `live/`, `att.bin`, `proxy.json`, `models.json`, `docs/`). Quellen: `.../scratchpad/e2ee-alt/tinfoil/`. Ergänzt `e2ee-alternatives.md` (dort Abschnitt 1). **[?]** = unsicher/nicht belegt.
 
 ## Empfehlung
 
@@ -65,7 +65,7 @@ Nicht getestet (Budget/Umfang): zweiter Zug mit Tool-Ergebnis (`role: tool`) zur
 - „Neuestes Release“ als Soll-Messwert: nach Tinfoil-Updates kurzzeitig Abweichung möglich (Fail-closed führt zu Ausfall, dann Retry); Hängt von `github-proxy`/`kds-proxy` ab, Fallback auf direkte Quellen **[?]**.
 - Formate bewegen sich (V2 → V3-Dokument, Rust-SDK 0.2.1, EHBP 0.4.1): Breaking-Change-Risiko; Version pinnen.
 - Keine Quittung; Preis-/Limit-Details und Zahlweg nur im Konto; Router-Tools (Websuche) im Klartext im Router – Wendelins Tools laufen lokal, also nicht betroffen.
-- Konzept: zweiter E2EE-Anbieter berührt K28/K37 (Änderungsprotokoll, Bestätigung durch Stefan).
+- Konzept: zweiter E2EE-Anbieter berührt K28/K37 (Änderungsprotokoll, Bestätigung durch Maintainer).
 
 ## 8. Offen
 

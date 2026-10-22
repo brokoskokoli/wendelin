@@ -12,7 +12,7 @@ Bezug: Konzept „Eingebaute Integrationen“ (Spotify), Entscheidung Maintainer
 
 ## Abnahmekriterien
 - [ ] Unit-Tests mit aufgezeichneten API-Antworten (Suche, Play, Fehler 401/403/404), OAuth-Ablauf mit Fake.
-- [ ] Prüfpunkte Gerät (Stefan): „Spiel …“, „Pause“, „Was läuft gerade?“.
+- [ ] Prüfpunkte Gerät (Maintainer): „Spiel …“, „Pause“, „Was läuft gerade?“.
 
 ## Gemeinsam für M5
 - Neue Integration nach der Checkliste „Neue eingebaute Integration“ in `docs/architecture/checklists.md` (Ordner mit README, Port, `IntegrationSpec`, eine Zeile in der Registry, Einrichtungsseite). Risiko je Tool (r/w/e) nach Konzept, Undo wo möglich.

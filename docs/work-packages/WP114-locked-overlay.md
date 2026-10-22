@@ -1,6 +1,6 @@
 # WP114 – Gesperrtes Handy: Overlay bleibt nach dem Entsperren, harmlose Aktionen ohne Entsperren (`app/`, Android)
 
-**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, T20-Z.5, T20-Z.6, L.6). Entscheid Stefan 2026-10-21: Overlay bleibt nach dem Entsperren offen, die Anfrage von vorher wird ausgeführt und die Antwort kommt im Overlay; harmlose Aktionen gehen ohne Entsperren (K85).
+**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, T20-Z.5, T20-Z.6, L.6). Entscheid Maintainer 2026-10-21: Overlay bleibt nach dem Entsperren offen, die Anfrage von vorher wird ausgeführt und die Antwort kommt im Overlay; harmlose Aktionen gehen ohne Entsperren (K85).
 
 ## Befund
 - Z.5: Gesperrt, „Taschenlampe an“ verlangt Entsperren, statt die LED einzuschalten.
