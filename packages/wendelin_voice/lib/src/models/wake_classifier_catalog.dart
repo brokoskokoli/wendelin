@@ -103,6 +103,12 @@ abstract final class WakeClassifierRules {
   /// peak ends the hold early.
   static const holdWindows = 5;
 
+  /// The hold ends after this many consecutive windows below the peak
+  /// (`CandidateWakeEngine.dropsToEnd`): one dip between two high windows
+  /// (0.9917, 0.9892, 0.998) must not end it. Measured in WP129 on real
+  /// recordings, see `docs/testing/m5/wp129.md`.
+  static const dropsToEnd = 2;
+
   /// Stage 2: audio before the hit that is transcribed (the listener default,
   /// `WakeWordListener.verifyWindow`). Provisional like the band; WP133
   /// sets the final value.

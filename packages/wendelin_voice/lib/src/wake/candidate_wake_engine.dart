@@ -32,7 +32,8 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     this.mainGate,
     this.directThreshold,
     this.holdWindows = 0,
-  });
+    this.dropsToEnd = 1,
+  }) : assert(dropsToEnd >= 1, 'dropsToEnd muss >= 1 sein');
 
   /// The feature chain.
   final WakeFeatureExtractor features;
@@ -101,7 +102,15 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
   /// windows and the event is decided with its **peak**: when the score falls
   /// below the peak, or at the limit. A score at or above [directThreshold]
   /// decides at once. `0` (or no [directThreshold]): the first window decides.
+  /// [holdWindows] counts all windows from the first one in the band, also the
+  /// ones that fell.
   final int holdWindows;
+
+  /// WP129: the hold ends after this many **consecutive** windows below the
+  /// peak (a null/NaN score counts as below); a window at or above the peak
+  /// resets the count. `1`: the first fall ends it. A single dip between two
+  /// high windows (0.9917, 0.9892, 0.998) is no end with `2`.
+  final int dropsToEnd;
 
   /// Windows before the background similarity is trusted.
   static const stopFloorWarmup = 10;
@@ -194,6 +203,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
 
   double? _peak;
   int _heldCount = 0;
+  int _drops = 0;
 
   /// The score the rules see: the raw one, or with [holdWindows] the peak of
   /// the event once it is decided (`null` while the event is still held).
@@ -207,18 +217,23 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
       if (score == null || score < lower || score >= upper) return score;
       _peak = score;
       _heldCount = 1;
+      _drops = 0;
       return _heldCount >= holdWindows ? _release() : null;
     }
     if (score != null && score >= upper) {
       _peak = null;
       return score;
     }
+    _heldCount++;
     if (score != null && score >= peak) {
       _peak = score;
-      _heldCount++;
-      return _heldCount >= holdWindows ? _release() : null;
+      _drops = 0;
+    } else {
+      _drops++;
     }
-    return _release();
+    return _drops >= dropsToEnd || _heldCount >= holdWindows
+        ? _release()
+        : null;
   }
 
   double _release() {
@@ -356,6 +371,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     _lastHit = -1 << 40;
     _peak = null;
     _heldCount = 0;
+    _drops = 0;
   }
 
   @override

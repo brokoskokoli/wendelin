@@ -90,6 +90,7 @@ final class DeviceWakeParts implements WakeParts {
         modelThreshold: band.verifyFrom,
         directThreshold: band.acceptFrom,
         holdWindows: WakeClassifierRules.holdWindows,
+        dropsToEnd: WakeClassifierRules.dropsToEnd,
         mainGate: SpeechGate(),
       );
     }

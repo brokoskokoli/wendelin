@@ -12,6 +12,7 @@ const _band = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.995);
 Future<List<(int, WakeWordHit)>> _run(
   List<double?> scores, {
   int hold = 5,
+  int drops = 1,
 }) async {
   var i = 0;
   final e = CandidateWakeEngine(
@@ -26,6 +27,7 @@ Future<List<(int, WakeWordHit)>> _run(
     modelThreshold: _band.verifyFrom,
     directThreshold: _band.acceptFrom,
     holdWindows: hold,
+    dropsToEnd: drops,
   );
   await e.open([KeywordSpec.wendelin]);
   final hits = <(int, WakeWordHit)>[];
@@ -122,6 +124,87 @@ void main() {
       expect(hits.single.$2.direct, isTrue);
     },
   );
+
+  group('dropsToEnd', () {
+    test('2: ein einzelnes Absinken beendet das Halten nicht, der spätere '
+        'Anstieg über acceptFrom entscheidet direkt', () async {
+      final hits = await _run([0.5, 0.9917, 0.9892, 0.998], drops: 2);
+      expect(hits.single.$1, 3);
+      expect(hits.single.$2.direct, isTrue);
+      expect(hits.single.$2.score, 0.998);
+    });
+
+    test('1 (Standard): dasselbe Muster endet beim ersten Absinken', () async {
+      final hits = await _run([0.5, 0.9917, 0.9892, 0.998]);
+      expect(hits.first.$1, 2);
+      expect(hits.first.$2.score, 0.9917);
+      expect(hits.first.$2.direct, isFalse);
+    });
+
+    test(
+      '2: zwei aufeinanderfolgende Absinken beenden es mit der Spitze',
+      () async {
+        final hits = await _run([0.99, 0.985, 0.984, 0.998], drops: 2);
+        expect(hits.first.$1, 2, reason: 'zweites Absinken in Folge');
+        expect(hits.first.$2.score, 0.99);
+        expect(hits.first.$2.direct, isFalse);
+      },
+    );
+
+    test(
+      '2: ein Fenster auf/über der Spitze setzt die Zählung zurück',
+      () async {
+        // Absinken, Gleichstand (>= Spitze), Absinken: nie zwei in Folge.
+        final hits = await _run([0.99, 0.985, 0.99, 0.985, 0.2], drops: 2);
+        expect(
+          hits.single.$1,
+          4,
+          reason: 'Ende erst am Limit/zweiten Absinken',
+        );
+        expect(hits.single.$2.score, 0.99);
+      },
+    );
+
+    test('Absinken zählt zum Limit holdWindows', () async {
+      final hits = await _run([0.99, 0.985, 0.99, 0.985, 0.99, 0.99], drops: 3);
+      expect(hits.single.$1, 4, reason: 'fünftes Fenster = Limit');
+    });
+
+    test('2: Absinken unter die untere Grenze und null zählen mit', () async {
+      expect((await _run([0.99, 0.5, 0.5, 0.998], drops: 2)).first.$1, 2);
+      expect((await _run([0.99, null, null, 0.998], drops: 2)).first.$1, 2);
+      expect((await _run([0.99, double.nan, 0.5, 0.9], drops: 2)).first.$1, 2);
+    });
+
+    test('Spitze nach einem Absinken wird die neue Spitze', () async {
+      final hits = await _run([0.981, 0.98, 0.99, 0.2, 0.2], drops: 2);
+      expect(hits.single.$1, 4);
+      expect(hits.single.$2.score, 0.99);
+    });
+
+    test('Zustand ist nach dem Ereignis frei (zweites Ereignis neu)', () async {
+      final hits = await _run([
+        0.99,
+        0.2,
+        0.2,
+        ...List.filled(250, 0.1),
+        0.985,
+        0.2,
+        0.2,
+      ], drops: 2);
+      expect(hits.map((h) => h.$2.score), [0.99, 0.985]);
+    });
+
+    test('dropsToEnd < 1 ist ein Programmierfehler', () {
+      expect(
+        () => CandidateWakeEngine(
+          features: FakeWakeFeatureExtractor(windowEvery: 100),
+          dropsToEnd: 0,
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+  });
 
   group('NaN-Score (fail-closed)', () {
     const nan = double.nan;

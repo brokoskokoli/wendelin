@@ -10,6 +10,9 @@
 //   WENDELIN_WAKE_MODELS / WENDELIN_WAKE_CLASSIFIER / WENDELIN_ORT_LIB
 //   WENDELIN_PARITY_FRAME=320   (Samples je Block; Gerät: 20 ms)
 //   WENDELIN_PARITY_SRC=pos_huawei,...  (optional, sonst alle vier)
+//   WENDELIN_PARITY_DROPS=1,2,99  (dropsToEnd je Engine; ein Strom der Kette,
+//                                  je Wert ein Unterordner d<N> im Ausgabeordner;
+//                                  99 = Halten bis holdWindows)
 //   WENDELIN_PARITY_SKIP=0      (führende Samples weglassen: verschiebt das
 //                                Raster gegenüber der Sprache, Phasenstreuung)
 import 'dart:convert';
@@ -50,6 +53,24 @@ final class _Recorder implements WakeFeatureExtractor {
   Future<void> close() => inner.close();
 }
 
+/// Spielt die einmal gerechneten Fenster je Block wieder ab (mehrere Engines
+/// mit verschiedenen Regeln sehen exakt denselben Strom der Kette).
+final class _Replay implements WakeFeatureExtractor {
+  _Replay(this.blocks);
+  final List<List<WakeWindow>> blocks;
+  var _i = 0;
+  @override
+  String get featureVersion => 'replay';
+  @override
+  Future<void> open() async {}
+  @override
+  Future<List<WakeWindow>> accept(Int16List frame) async => blocks[_i++];
+  @override
+  void reset() => _i = 0;
+  @override
+  Future<void> close() async {}
+}
+
 /// PCM16 aus einer WAV-Datei (Chunks durchlaufen: manche Dateien tragen
 /// vor `data` einen Füll-Chunk).
 Int16List readWav(String path) {
@@ -82,6 +103,10 @@ void main() {
   final all = ['pos_huawei', 'pos_handy2', 'neg_huawei', 'neg_handy2'];
   final srcs = env['WENDELIN_PARITY_SRC']?.split(',') ?? all;
   final band = WakeClassifierRules.phone;
+  final drops = [
+    for (final d in (env['WENDELIN_PARITY_DROPS'] ?? '').split(','))
+      if (int.tryParse(d) != null) int.parse(d),
+  ];
 
   test(
     'App-Strom auf den Prüf-Aufnahmen (Rohdaten für den Abgleich)',
@@ -97,41 +122,52 @@ void main() {
         final file = src.startsWith('pos_') ? 'all_$dev.wav' : 'neg_$dev.wav';
         final pcm = Int16List.sublistView(readWav('$audio/$file'), skip);
         final rec = _Recorder(ChainWakeFeatureExtractor(() async => m));
-        final engine = CandidateWakeEngine(
-          features: rec,
-          modelThreshold: band.verifyFrom,
-          directThreshold: band.acceptFrom,
-          holdWindows: WakeClassifierRules.holdWindows,
-          mainGate: SpeechGate(),
-        );
-        await engine.open(const [KeywordSpec.wendelin]);
-        final hits = <Map<String, Object?>>[];
+        final blocks = <List<WakeWindow>>[];
+        await rec.open();
         for (var i = 0; i < pcm.length; i += frameLen) {
           final end = i + frameLen < pcm.length ? i + frameLen : pcm.length;
-          for (final h in await engine.accept(
-            Int16List.sublistView(pcm, i, end),
-          )) {
-            hits.add({
-              'end': h.endSample,
-              'score': h.score,
-              'direct': h.direct,
-            });
-          }
+          blocks.add(await rec.accept(Int16List.sublistView(pcm, i, end)));
         }
-        File(
-          '$out/$src.ends.i32',
-        ).writeAsBytesSync(Int32List.fromList(rec.ends).buffer.asUint8List());
-        File('$out/$src.scores.f32').writeAsBytesSync(
-          Float32List.fromList(rec.scores).buffer.asUint8List(),
-        );
-        File('$out/$src.hits.json').writeAsStringSync(
-          jsonEncode({
-            'frame': frameLen,
-            'skip': skip,
-            'samples': pcm.length,
-            'hits': hits,
-          }),
-        );
+        for (final n in drops.isEmpty ? [null] : drops) {
+          final engine = CandidateWakeEngine(
+            features: _Replay(blocks),
+            modelThreshold: band.verifyFrom,
+            directThreshold: band.acceptFrom,
+            holdWindows: WakeClassifierRules.holdWindows,
+            dropsToEnd: n ?? WakeClassifierRules.dropsToEnd,
+            mainGate: SpeechGate(),
+          );
+          await engine.open(const [KeywordSpec.wendelin]);
+          final hits = <Map<String, Object?>>[];
+          for (var i = 0; i < pcm.length; i += frameLen) {
+            final end = i + frameLen < pcm.length ? i + frameLen : pcm.length;
+            for (final h in await engine.accept(
+              Int16List.sublistView(pcm, i, end),
+            )) {
+              hits.add({
+                'end': h.endSample,
+                'score': h.score,
+                'direct': h.direct,
+              });
+            }
+          }
+          final dir = n == null ? out : '$out/d$n';
+          Directory(dir).createSync(recursive: true);
+          File(
+            '$dir/$src.ends.i32',
+          ).writeAsBytesSync(Int32List.fromList(rec.ends).buffer.asUint8List());
+          File('$dir/$src.scores.f32').writeAsBytesSync(
+            Float32List.fromList(rec.scores).buffer.asUint8List(),
+          );
+          File('$dir/$src.hits.json').writeAsStringSync(
+            jsonEncode({
+              'frame': frameLen,
+              'skip': skip,
+              'samples': pcm.length,
+              'hits': hits,
+            }),
+          );
+        }
         // Die Kette gehört der Engine nicht: nur den Wrapper-Zustand lösen.
         rec.reset();
       }
