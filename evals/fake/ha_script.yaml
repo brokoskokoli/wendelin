@@ -1,0 +1,31 @@
+# Skript für cases-ha (WP135): so geht ein Modell ohne Geräteliste vor. Der
+# Name wird so genommen, wie der Nutzer ihn sagt; scheitert das, folgt die
+# Geräteliste und ein neuer Versuch. Mit fester Bestätigung endet jeder Fall
+# nach dem ersten Modellaufruf, die übrigen Züge bleiben ungenutzt.
+default:
+  - text: Das weiß ich leider nicht.
+cases:
+  de-ha-licht-aus:
+    - tool: ha__call
+      args: {entity: Licht Wohnzimmer, service: turn_off}
+    - text: Das Licht im Wohnzimmer ist aus.
+  de-ha-lampe-an:
+    - tool: ha__call
+      args: {entity: Lampe Wohnzimmer, service: turn_on}
+    - tool: ha__list_entities
+      args: {}
+    - tool: ha__call
+      args: {entity: Licht Wohnzimmer, service: turn_on}
+    - text: Das Licht im Wohnzimmer ist an.
+  de-ha-rollo-runter:
+    - tool: ha__call_secure
+      args: {entity: Rollo Wohnzimmer, service: close_cover}
+    - text: Das Rollo im Wohnzimmer ist unten.
+  de-ha-rollo-rauf:
+    - tool: ha__call_secure
+      args: {entity: Rollo Wohnzimmer, service: open_cover}
+    - text: Das Rollo im Wohnzimmer ist oben.
+  de-ha-rollo-50:
+    - tool: ha__call_secure
+      args: {entity: Rollo Wohnzimmer, service: set_cover_position, position_pct: 50}
+    - text: Das Rollo im Wohnzimmer steht auf 50 Prozent.
