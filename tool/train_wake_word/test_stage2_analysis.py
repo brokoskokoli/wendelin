@@ -2,7 +2,7 @@
 Lauf (Venv mit numpy/soundfile/piper, z. B. wp58):
   ~/wendelin-models/kws/wp58/venv/bin/python -I -m unittest discover -s tool/train_wake_word -p 'test_stage2_analysis.py'
 Hinweis: Das Gate fuehrt keine Python-Tests aus."""
-import os, sys, unittest
+import argparse, os, sys, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.dirname(HERE))
@@ -304,6 +304,40 @@ class FesteSchwelle(unittest.TestCase):
         self.assertIn("| band999 | 2/4 |", md)
 
 
+    def _fx(self):
+        low = (np.array([800.0]), np.array([0.1]))
+        cv = {s: {s: low} for s in ("neg_huawei", "neg_handy2", "syn", "fleurs", "conf")}
+        cv["pos_huawei"] = self.curves["pos_huawei"]; cv["pos_handy2"] = {"pos_handy2": low}
+        # syn: Ereignis 0,996 mit Text "Hallo" (Wendelin) bzw. Hey-Wort-Text; conf: Ereignis 0,9995
+        cv["syn"] = {"syn": (np.array([2.0]), np.array([0.996]))}; cv["conf"] = {"conf": (np.array([1.0, 5.0]), np.array([0.9995, 0.99]))}
+        cv["neg_handy2"] = {"neg_handy2": (np.array([3.0]), np.array([0.99]))}       # echte Negativzeit: ein Ereignis auf dem zweiten Geraet
+        k = lambda s, t: W.seg_key(s, s, t)
+        s2 = {**self.tx["s2"], k("neg_handy2", 3.0): "Hallo", k("syn", 2.0): "Hallo", k("conf", 1.0): "Hallo", k("conf", 5.0): "Hallo"}
+        tx = {"s2": {w: s2 for w in V.WORDS}, "s2x": {w: None for w in V.WORDS}, "wh": {w: None for w in V.WORDS}, "hw4": {w: None for w in V.WORDS}}
+        hw = [{**x, "word": "Hey Wendelin"} for x in self.labels]       # gleiche Fenster auch fuer das zweite Wort
+        return A.fixed_analysis(cv, tx, self.labels + hw, 0.98)
+
+    def test_ueberschrift_nennt_modell(self):
+        fx = self._fx()
+        self.assertIn("## 6. Feste Schwelle 0,98 (v8a, nur Zahlen", A.render_fixed(fx, 0.98))
+        self.assertIn("## 6. Feste Schwelle 0,99 (a-syn, nur Zahlen", A.render_fixed(fx, 0.99, "a-syn"))
+
+    def test_uebersicht_6e(self):
+        fx = self._fx()
+        md = A.render_fixed_overview({("v8a", 0.98): fx, ("a-syn", 0.95): fx})
+        self.assertIn("## 6e. Modelle bei fester Schwelle", md)
+        # Stufe 1: 3 Rufe je Wort = 6 von 8, davon 3 Hey Wendelin; conf 2, syn 1, echt 1 (handy2)
+        self.assertIn("| v8a | 0,98 | - | 6/8 | 3 | 2 | 1 | 1 |", md)
+        self.assertIn("| a-syn | 0,95 | - | 6/8 | 3 | 2 | 1 | 1 |", md)
+        self.assertIn("| v8a | 0,98 | band999 | 3/8 | 1 | 1 | 0 | 0 |", md)       # Wendelin: Ruf 4 (>= 0,999) und 5 (Text ok), Hey Wendelin: nur Ruf 4
+        self.assertIn("| v8a | 0,98 | app | 1/8 | 0 | 0 | 0 | 0 |", md)         # nur Ruf 5 und nur als Wendelin
+
+    def test_parse_thrs(self):
+        self.assertEqual(A.parse_thrs("0.95,0.98,0.99"), [0.95, 0.98, 0.99])
+        self.assertEqual(A.parse_thrs("0.98,0.98"), [0.98])
+        with self.assertRaises(argparse.ArgumentTypeError): A.parse_thrs("x")
+
+
 class ExtraQuellen(unittest.TestCase):
     def test_normalisierung(self):
         x = np.array([0.0, 0.02, -0.04, 0.01], "float32")
@@ -476,6 +510,46 @@ class SplitAll(unittest.TestCase):
 
     def test_main_all_ohne_abschnitt_6_und_mit_all_dateien(self):
         self.assertEqual(self._lauf("all", 0), ([1, 2, 3, 4, 5, 6], 0, ["stage2_lost_all.local.md", "stage2_table_all.md"]))
+
+    def test_main_mehrere_modelle_und_schwellen(self):
+        import json, tempfile
+        calls = []
+        with tempfile.TemporaryDirectory() as td:
+            ms = []
+            for n in ("v8a", "a-syn"):
+                m = os.path.join(td, n + ".onnx"); open(m, "w").close(); json.dump({"real_pos": 1 if n == "v8a" else 0}, open(m + ".meta.json", "w")); ms += ["--model", f"{n}={m}"]
+            res = os.path.join(td, "res"); os.makedirs(res)
+            o = (V.RES, V.load_curves, V.hours, W.read_labels, A.grid, A.analyse, A.render, A.render_fixed, A.fixed_analysis, A.load_tx, A.render_fixed_overview, sys.argv)
+            V.RES = res; V.load_curves = lambda t: {"t": t}; V.hours = lambda s: 1.0; W.read_labels = lambda: self._labels()
+            A.grid = lambda *a: ([], {}); A.analyse = lambda *a: {}; A.render = lambda *a: "T\n"; A.load_tx = lambda t: t
+            A.fixed_analysis = lambda cv, tx, lab, thr: (cv["t"], thr)
+            A.render_fixed = lambda fx, thr, tag: calls.append((tag, thr, fx)) or "F\n"
+            A.render_fixed_overview = lambda fxs: calls.append(("6e", list(fxs))) or "O\n"
+            sys.argv = ["x", "--no-v7", "--report-only", "--fixed-thr", "0.95,0.98", *ms]
+            try: A.main()
+            finally: V.RES, V.load_curves, V.hours, W.read_labels, A.grid, A.analyse, A.render, A.render_fixed, A.fixed_analysis, A.load_tx, A.render_fixed_overview, sys.argv = o
+            txt = open(os.path.join(res, "stage2_table.md")).read()
+        self.assertEqual([c[:2] for c in calls[:4]], [("v8a", 0.95), ("v8a", 0.98), ("a-syn", 0.95), ("a-syn", 0.98)])
+        self.assertEqual(calls[4], ("6e", [("v8a", 0.95), ("v8a", 0.98), ("a-syn", 0.95), ("a-syn", 0.98)]))
+        self.assertEqual(txt, "T\nF\nF\nF\nF\nO\n")
+
+    def test_main_all_rechnet_abschnitt_6_fuer_andere_modelle(self):
+        import json, tempfile
+        tags = []
+        with tempfile.TemporaryDirectory() as td:
+            ms = []
+            for n in ("a-syn", "c-syn"):
+                m = os.path.join(td, n + ".onnx"); open(m, "w").close(); json.dump({"real_pos": 0}, open(m + ".meta.json", "w")); ms += ["--model", f"{n}={m}"]
+            res = os.path.join(td, "res"); os.makedirs(res)
+            o = (V.RES, V.load_curves, V.hours, W.read_labels, A.grid, A.analyse, A.render, A.render_fixed, A.fixed_analysis, A.load_tx, A.render_fixed_overview, sys.argv)
+            V.RES = res; V.load_curves = lambda t: {"t": t}; V.hours = lambda s: 1.0; W.read_labels = lambda: self._labels()
+            A.grid = lambda *a: ([], {}); A.analyse = lambda *a: {}; A.render = lambda *a: "T\n"; A.load_tx = lambda t: t
+            A.fixed_analysis = lambda cv, tx, lab, thr: 1
+            A.render_fixed = lambda fx, thr, tag: tags.append(tag) or "F\n"; A.render_fixed_overview = lambda fxs: "O\n"
+            sys.argv = ["x", "--no-v7", "--report-only", "--split", "all", *ms]
+            try: A.main()
+            finally: V.RES, V.load_curves, V.hours, W.read_labels, A.grid, A.analyse, A.render, A.render_fixed, A.fixed_analysis, A.load_tx, A.render_fixed_overview, sys.argv = o
+        self.assertEqual(tags, ["a-syn", "c-syn"])
 
     def test_main_eval_unveraendert(self):
         self.assertEqual(self._lauf("eval", 1), ([4, 5, 6], 1, ["stage2_lost.local.md", "stage2_table.md"]))

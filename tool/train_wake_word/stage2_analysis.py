@@ -14,7 +14,7 @@ whisper_de (Whisper small, language=de, ein Decode je Segment fuer beide Woerter
 beide gleicher Ausschnitt wie hw2, nur Modell v8a und Schwellen >= 0.95, je auch mit Band (_band999 / _band995). app_ge09 ist die Kontrolle fuer
 ausschnitt (gleiche Schwellen, heutiger Ausschnitt).
 
-Abschnitt 6 der Ausgabe zaehlt bei fester Stufe-1-Schwelle (--fixed-thr, Standard 0.98, nur v8a) echte Rufe und Verwechsler je Spitzenwert-Band
+Abschnitt 6 der Ausgabe zaehlt bei fester Stufe-1-Schwelle (--fixed-thr, Komma-Liste, Standard 0.98) je Modell (bei --split all ohne v8a) echte Rufe und Verwechsler je Spitzenwert-Band
 sowie Treffer und durchkommende Ereignisse je Variante (keine, app, band999, band995, whisper_de, hw4, norm, hw3, blank1, blank2 je auch mit Band), nur aus den Caches.
 
 Ausschnitt-Paritaet mit der App (Bezugszeit „app“ = Halten) und Vor-/Nachlauf: eigener Lauf mit --cut-only, Logik und Doku in stage2_cut.py (Ausgabe stage2_cut_table.md).
@@ -477,10 +477,10 @@ def fixed_analysis(curves, tx_all, labels, thr):
     return out
 
 
-def render_fixed(fx, thr):
-    """Abschnitt 6 (nur Zahlen)."""
+def render_fixed(fx, thr, tag="v8a"):
+    """Abschnitt 6 (nur Zahlen) fuer ein Modell."""
     f = lambda v: "-" if v is None else str(v)
-    out = ["", f"## 6. Feste Schwelle {W.fc(thr)} (v8a, nur Zahlen aus den Caches)", "",
+    out = ["", f"## 6. Feste Schwelle {W.fc(thr)} ({tag}, nur Zahlen aus den Caches)", "",
            "Ereignis = Stufe-1-Wert über der Schwelle, Spitzenwert = Maximum im Ereignis, Band wie bei Stufe 2 mit Obergrenze. Echte Rufe: Ereignis im Labelfenster; "
            "„hw2 besteht“ = ein Ereignis im Fenster besteht die App-Regel. „-“ = Text fehlt oder Schwelle unter dem Minimum der Variante.", "",
            "### 6a. Echte Prüf-Rufe je Spitzenwert-Band", "", "| Gerät | Wort | Rufe | " + " | ".join(f"{b} (davon hw2)" for b in BAND_NAMES) + " | nicht erkannt |", "|---|---|---|---|---|---|---|"]
@@ -505,6 +505,29 @@ def render_fixed(fx, thr):
             "| Stufe-1-Ereignisse | " + " | ".join(str(fx[V.WORDS[0]]["n"][s]) for s in FIXED_SRC) + " |"]
     for vn in FIXED_VARIANTS:
         out.append(f"| {vn} | " + " | ".join(" / ".join(f(fx[w]["pass"][vn][s]) for w in V.WORDS) for s in FIXED_SRC) + " |")
+    return "\n".join(out) + "\n"
+
+
+OVERVIEW_VARIANTS = ("-", "app", "band999")
+
+
+def render_fixed_overview(fxs):
+    """6e: Modelle bei fester Schwelle. fxs = {(Modell, Schwelle): fixed_analysis}. Treffer = Summe ueber Geraete und Woerter, HW = nur Hey Wendelin;
+    Verwechsler/syn/echt = durchkommende Ereignisse W/HW (gleiche Zahl: einmal); echt = neg_huawei + neg_handy2."""
+    pair = lambda a, b: "-" if a is None or b is None else (str(a) if a == b else f"{a}/{b}")
+    out = ["", "## 6e. Modelle bei fester Schwelle", "",
+           "Treffer = echte Prüf-Rufe mit Ereignis im Labelfenster, durchgelassen von der Variante (Summe über Geräte und Wörter, davon Hey Wendelin). "
+           "Verwechsler, syn, echt = durchkommende Ereignisse (Wendelin/Hey Wendelin, bei gleicher Zahl einmal); echt = beide Negativgeräte. „-“ = Text fehlt oder Schwelle unter dem Minimum.", "",
+           "| Modell | Schwelle | Variante | Treffer | davon Hey Wendelin | Verwechsler | syn | echt |", "|---|---|---|---|---|---|---|---|"]
+    for (tag, thr), fx in fxs.items():
+        for vn in OVERVIEW_VARIANTS:
+            hits = [fx[(d, w)]["hits"][vn] for d in V.DEVICES for w in V.WORDS]
+            hw = [fx[(d, V.WORDS[1])]["hits"][vn] for d in V.DEVICES]
+            n = sum(fx[(d, w)]["n"] for d in V.DEVICES for w in V.WORDS)
+            tot = lambda xs: None if None in xs else sum(xs)
+            ev = lambda srcs: pair(*[tot([fx[w]["pass"][vn][s] for s in srcs]) for w in V.WORDS])
+            out.append(f"| {tag} | {W.fc(thr)} | {vn} | {'-' if tot(hits) is None else tot(hits)}/{n} | {'-' if tot(hw) is None else tot(hw)} | "
+                       f"{ev(('conf',))} | {ev(('syn',))} | {ev(('neg_huawei', 'neg_handy2'))} |")
     return "\n".join(out) + "\n"
 
 
@@ -590,6 +613,13 @@ def out_names(split):
     return f"{V.RES}/stage2_table{sfx}.md", f"{V.RES}/stage2_lost{sfx}.local.md"
 
 
+def parse_thrs(text):
+    """'0.95,0.98' -> [0.95, 0.98] (Reihenfolge bleibt, Dubletten entfallen)."""
+    try: v = [float(x) for x in text.split(",")]
+    except ValueError: raise argparse.ArgumentTypeError(f"keine Zahlenliste: {text!r}")
+    return list(dict.fromkeys(v))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", action="append", default=[], help="name=pfad (mehrfach); v7 ist immer dabei")
@@ -600,7 +630,7 @@ def main():
     ap.add_argument("--cut-only", action="store_true", help="nur Ausschnitt-Paritaet/Vor-/Nachlauf (stage2_cut.py, v8a), Ausgabe stage2_cut_table.md")
     ap.add_argument("--split", choices=V.SPLITS, default="eval",
                     help="eval = Prüf-Split (Standard); all = alle Blöcke 1–6, nur v7 und Modelle mit Sidecar real_pos=0 (ohne Abschnitt 6, Ausgabe *_all)")
-    ap.add_argument("--fixed-thr", type=float, default=FIXED_THR, help="feste Stufe-1-Schwelle fuer Abschnitt 6 (nur v8a)")
+    ap.add_argument("--fixed-thr", type=parse_thrs, default=[FIXED_THR], help="feste Stufe-1-Schwellen fuer Abschnitt 6, Komma-Liste (Standard 0.98)")
     a = ap.parse_args()
     models = V.parse_models(a.model, not a.no_v7)
     if a.cut_only and a.split != "eval": sys.exit("--cut-only gibt es nur mit --split eval")
@@ -617,8 +647,14 @@ def main():
     rows, skipped = grid(models, curves, labels, hr)
     op = analyse(models, curves, labels, rows, a.target, a.split)
     md = render(rows, models, a.target, op, skipped, a.split)
-    if "v8a" in models and a.split == "eval":      # Abschnitt 6 nur v8a (real_pos > 0), bei all nie
-        md += render_fixed(fixed_analysis(curves["v8a"], load_tx("v8a"), labels, a.fixed_thr), a.fixed_thr)
+    fxs = {}
+    for tag in models:
+        if tag == "v8a" and a.split == "all": continue      # v8a hat echte Positive (real_pos > 0): nicht auf allen Bloecken
+        tx = load_tx(tag)
+        for thr in a.fixed_thr:
+            fxs[(tag, thr)] = fixed_analysis(curves[tag], tx, labels, thr)
+            md += render_fixed(fxs[(tag, thr)], thr, tag)
+    if len(fxs) > 1: md += render_fixed_overview(fxs)
     tbl, lost = out_names(a.split)
     open(tbl, "w").write(md)
     open(lost, "w").write(render_lost(op))
