@@ -44,7 +44,7 @@ final class AddItemsTool extends IntegrationTool
   RiskLevel get risk => RiskLevel.write;
 
   @override
-  Set<String> get confirmationKeys => const {'list.added', 'list.present'};
+  Set<String> get confirmationKeys => const {'list.added'};
 
   List<String> _items(ToolArgs args) {
     final raw = args.optStringList('items');

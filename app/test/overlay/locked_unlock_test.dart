@@ -213,6 +213,22 @@ void main() {
       expect(platform.finished, 1, reason: 'danach nachgeholt');
     });
 
+    testWidgets('Home in der Frist, dann zurück: die Anfrage läuft sofort, '
+        'ohne die Frist abzuwarten', (tester) async {
+      final c = await locked(tester);
+      final binding = tester.binding;
+      _leave(binding);
+      platform.unlockGate!.complete(true);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(llm.requests, isEmpty, reason: 'unsichtbar: nichts senden');
+      _back(binding);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(llm.requests, hasLength(1), reason: 'nicht bis zum Fristende');
+      expect(platform.finished, 0);
+      await _settle(tester, c);
+    });
+
     testWidgets('Keyguard-Aufblitzen (hidden, dann resumed) bricht die '
         'laufende Anfrage nicht ab', (tester) async {
       llm = FakeLlmProvider([
@@ -258,6 +274,52 @@ void main() {
       await platform.closeHandler!();
       await tester.pump();
       expect(c.read(lockedPendingProvider), isNull);
+    });
+  });
+
+  group('UnlockWatch.visibleAfterUnlock', () {
+    testWidgets('sichtbar: sofort true', (tester) async {
+      final w = UnlockWatch(env.clock);
+      expect(await w.visibleAfterUnlock(() => true), isTrue);
+    });
+
+    testWidgets('unsichtbar, kommt zurück: true vor Ablauf der Frist', (
+      tester,
+    ) async {
+      final w = UnlockWatch(env.clock);
+      _leave(tester.binding);
+      bool? seen;
+      unawaited(w.visibleAfterUnlock(() => true).then((v) => seen = v));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(seen, isNull);
+      _back(tester.binding);
+      w.resumed(); // the overlay reports it from its lifecycle callback
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(seen, isTrue, reason: 'nicht die volle Frist abwarten');
+    });
+
+    testWidgets('unsichtbar bis zum Ablauf der Frist: false', (tester) async {
+      final w = UnlockWatch(env.clock);
+      _leave(tester.binding);
+      bool? seen;
+      unawaited(w.visibleAfterUnlock(() => true).then((v) => seen = v));
+      await tester.pump(unlockGrace + const Duration(milliseconds: 100));
+      expect(seen, isFalse);
+      _back(tester.binding);
+    });
+
+    testWidgets('Overlay weg während des Wartens: false', (tester) async {
+      final w = UnlockWatch(env.clock);
+      _leave(tester.binding);
+      var mounted = true;
+      bool? seen;
+      unawaited(w.visibleAfterUnlock(() => mounted).then((v) => seen = v));
+      await tester.pump(const Duration(milliseconds: 100));
+      _back(tester.binding);
+      mounted = false;
+      w.resumed();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(seen, isFalse);
     });
   });
 }

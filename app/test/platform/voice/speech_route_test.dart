@@ -94,11 +94,22 @@ final class _Player implements AudioPlayer {
   final contexts = <AudioContext>[];
   final complete = StreamController<void>.broadcast();
 
+  /// Holds `setAudioContext` (the context is recorded when it is released).
+  Completer<void>? contextGate;
+  var plays = 0;
+  var stops = 0;
+
+  /// Holds `stop` (the stop is counted when it is released).
+  Completer<void>? stopGate;
+
   @override
   Stream<void> get onPlayerComplete => complete.stream;
 
   @override
-  Future<void> setAudioContext(AudioContext ctx) async => contexts.add(ctx);
+  Future<void> setAudioContext(AudioContext ctx) async {
+    await contextGate?.future;
+    contexts.add(ctx);
+  }
 
   @override
   Future<void> play(
@@ -108,10 +119,13 @@ final class _Player implements AudioPlayer {
     AudioContext? ctx,
     Duration? position,
     PlayerMode? mode,
-  }) async {}
+  }) async => plays++;
 
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async {
+    await stopGate?.future;
+    stops++;
+  }
 
   Future<void> close() => complete.close();
 
@@ -332,9 +346,104 @@ void main() {
         expect(a.usageType, AndroidUsageType.voiceCommunication);
         expect(a.contentType, AndroidContentType.speech);
         expect(a.audioFocus, AndroidAudioFocus.gainTransientMayDuck);
-        // audioplayers sets audioManager.mode = audioMode at every play
+        // audioplayers sets audioManager.mode = audioMode on a context change
         // (WrappedPlayer.kt:171); normal would undo the call mode.
         expect(a.audioMode, AndroidAudioMode.inCommunication);
+      },
+    );
+
+    test('Stopp vor dem ersten Play: der Player startet nicht mehr', () async {
+      final player = _Player()..contextGate = Completer<void>();
+      addTearDown(player.close);
+      final p = AudioplayersPlayback(player);
+      final done = p.play(Wav(Int16List(160)));
+      await Future<void>.delayed(Duration.zero);
+      await p.stop(); // while setAudioContext is still running
+      player.contextGate!.complete();
+      await done; // returns at once, no wait for the safety limit
+      expect(player.plays, 0);
+      expect(player.stops, greaterThan(0));
+    });
+
+    test(
+      'neues Play während des Kontextwechsels: das alte startet nicht',
+      () async {
+        final player = _Player()..contextGate = Completer<void>();
+        addTearDown(player.close);
+        final p = AudioplayersPlayback(player);
+        final first = p.play(Wav(Int16List(160)));
+        await Future<void>.delayed(Duration.zero);
+        final second = p.play(Wav(Int16List(160)));
+        await Future<void>.delayed(Duration.zero);
+        player.contextGate!.complete();
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+        expect(player.plays, 1); // only the newer one
+        player.complete.add(null);
+        await Future.wait([first, second]);
+      },
+    );
+
+    test('neues Play verdrängt das laufende: das alte kehrt sofort zurück, '
+        'ohne Sicherheits-Timeout', () {
+      fakeAsync((async) {
+        final player = _Player();
+        final p = AudioplayersPlayback(player);
+        var firstDone = false;
+        var secondDone = false;
+        unawaited(p.play(Wav(Int16List(160))).then((_) => firstDone = true));
+        async.flushMicrotasks();
+        expect(player.plays, 1);
+        unawaited(p.play(Wav(Int16List(160))).then((_) => secondDone = true));
+        async.flushMicrotasks(); // no time elapsed: no safety timeout
+        expect(firstDone, isTrue);
+        expect(secondDone, isFalse);
+        expect(player.plays, 2);
+        player.complete.add(null);
+        async.flushMicrotasks();
+        expect(secondDone, isTrue);
+        unawaited(player.close());
+      });
+    });
+
+    test('Stopp, während play() auf das Stoppen des vorigen Plays wartet: '
+        'das neue Play startet nicht', () async {
+      final player = _Player();
+      addTearDown(player.close);
+      final p = AudioplayersPlayback(player);
+      final first = p.play(Wav(Int16List(160)));
+      await Future<void>.delayed(Duration.zero);
+      expect(player.plays, 1); // the first one is still running
+      player.stopGate = Completer<void>();
+      final second = p.play(Wav(Int16List(160))); // waits for the stop of first
+      await Future<void>.delayed(Duration.zero);
+      unawaited(p.stop()); // in the window before the new play is set
+      await Future<void>.delayed(Duration.zero);
+      player.stopGate!.complete();
+      await Future.wait([first, second]);
+      expect(player.plays, 1); // the second one must not start
+    });
+
+    test(
+      'Schalter kippt während des Kontextwechsels: letzter Kontext passt',
+      () async {
+        final player = _Player()..contextGate = Completer<void>();
+        addTearDown(player.close);
+        var comm = true;
+        final p = AudioplayersPlayback(player, () => comm);
+        final done = p.play(Wav(Int16List(160)));
+        await Future<void>.delayed(Duration.zero);
+        comm = false;
+        player.contextGate!.complete();
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+        player.complete.add(null);
+        await done;
+        expect(player.contexts.last, AudioplayersPlayback.context);
+        // The next play with the same switch needs no further change.
+        final n = player.contexts.length;
+        await playOnce(p, player);
+        expect(player.contexts, hasLength(n));
       },
     );
 
@@ -348,7 +457,7 @@ void main() {
         AudioplayersPlayback.context.android.usageType,
         AndroidUsageType.assistant,
       );
-      // Unchanged: audioplayers sets MODE_NORMAL at every play.
+      // Unchanged: audioplayers sets MODE_NORMAL on a context change.
       expect(
         AudioplayersPlayback.context.android.audioMode,
         AndroidAudioMode.normal,
