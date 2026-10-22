@@ -365,45 +365,16 @@ final class _Run implements RunControl {
     throwIfAborted();
     // Invariant: at most one retry at the same provider per model call;
     // `retried` is reset after every successful call and every hand-over.
-    if (error is AttestationFailedException) {
-      return _onAttestationError(error, retried: retried);
-    }
+    // A failed or impossible TEE check (session, receipt, GPU) is not
+    // `retryable`; only one that could not be completed (`unavailable`) is.
+    // It never hands the request to another provider silently; the GPU
+    // dialog „Ohne GPU-Prüfung senden“ stays with the same provider.
     if (error.retryable && !retried) {
       _retryCurrentCall();
       return true;
     }
     // Invariant (K28): after the retry the run ends with the reason, unless
     // the user accepts the offer „Mit X nochmal?“ ([_offerRetry]).
-    throwIfAborted();
-    if (await _offerRetry(error)) return false;
-    throw RunStop(
-      AgentFailed(
-        error: AgentErrorKind.provider,
-        message: AgentRunnerTexts.providerFailure(
-          _state.current.target.displayName,
-          error,
-          language: input.language,
-        ),
-        cause: error,
-      ),
-    );
-  }
-
-  /// A TEE check failed. Invariant: a failed or impossible check (session,
-  /// receipt, GPU) never hands the request to another provider silently.
-  /// Only a check that could not be completed (`unavailable`) is retried
-  /// once at the same provider; then the user is offered another provider
-  /// with at least the same privacy level ([_offerRetry]), else the run
-  /// ends with the reason. The GPU dialog „Ohne GPU-Prüfung
-  /// senden“ stays with the same provider.
-  Future<bool> _onAttestationError(
-    AttestationFailedException error, {
-    required bool retried,
-  }) async {
-    if (error.unavailable && !retried) {
-      _retryCurrentCall();
-      return true;
-    }
     throwIfAborted();
     if (await _offerRetry(error)) return false;
     throw RunStop(

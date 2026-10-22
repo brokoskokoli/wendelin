@@ -172,12 +172,10 @@ final class AuditRecorder implements ToolAuditSink {
           'message': message,
         });
       case AgentSpokenVerdict(:final accepted, :final reason):
-        // Only verdict and reason, never the texts (WP55).
         _write(AuditKind.verification, sessionId, {
           'spokenCheck': true,
           'accepted': accepted,
-          // Fixed codes only; anything else is not logged (WP55).
-          'reason': SpokenCheck.codes.contains(reason) ? reason : 'error',
+          'reason': _verdictReason(reason),
         });
       case AgentTextDelta() ||
           AgentSpokenText() ||
@@ -250,3 +248,8 @@ final class AuditRecorder implements ToolAuditSink {
     });
   }
 }
+
+/// Only verdict and reason are logged, never the texts (WP55); fixed codes
+/// only, anything else is not logged.
+String _verdictReason(String reason) =>
+    SpokenCheck.codes.contains(reason) ? reason : 'error';

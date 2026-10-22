@@ -4,6 +4,8 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../agent/conversation_state.dart';
 import '../agent/outgoing_preview.dart';
 import '../l10n/gen/app_localizations_de.dart';
+import '../l10n/gen/app_localizations_en.dart';
+import '../l10n/gen/app_localizations_fr.dart';
 import '../ui/screens/labels.dart';
 
 /// Whether a spoken „yes“ to [question] must be strict (1–2 yes words):
@@ -42,9 +44,9 @@ String confirmationPrompt(PendingQuestion question, String? language) {
       _ => 'An $toName übergeben? Ja oder nein?',
     },
     RetryOfferQuestion(:final fromName, :final toName) => switch (lang) {
-      'fr' => '$fromName ne répond pas. Réessayer avec $toName ? Oui ou non ?',
-      'en' => '$fromName is not answering. Try again with $toName? Yes or no?',
-      _ => '$fromName antwortet nicht. Mit $toName nochmal? Ja oder nein?',
+      'fr' => AppLocalizationsFr().retryOfferSpoken(fromName, toName),
+      'en' => AppLocalizationsEn().retryOfferSpoken(fromName, toName),
+      _ => AppLocalizationsDe().retryOfferSpoken(fromName, toName),
     },
   };
 }

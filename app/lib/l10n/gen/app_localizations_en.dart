@@ -2261,6 +2261,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String retryOfferSpoken(String fromName, String toName) {
+    return '$fromName is not answering. Try again with $toName? Yes or no?';
+  }
+
+  @override
   String retryOfferTitle(String toName) {
     return 'Try again with $toName?';
   }

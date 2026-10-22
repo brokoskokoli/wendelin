@@ -2297,6 +2297,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String retryOfferSpoken(String fromName, String toName) {
+    return '$fromName ne répond pas. Réessayer avec $toName ? Oui ou non ?';
+  }
+
+  @override
   String retryOfferTitle(String toName) {
     return 'Réessayer avec $toName ?';
   }

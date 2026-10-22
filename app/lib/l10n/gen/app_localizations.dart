@@ -3940,6 +3940,12 @@ abstract class AppLocalizations {
   /// **'{fromName} antwortet gerade nicht. {toName} schützt deine Daten mindestens so gut. Schon ausgeführte Aktionen werden nicht wiederholt, nur die Antwort wird neu angefragt.'**
   String retryOfferDetail(String fromName, String toName);
 
+  /// No description provided for @retryOfferSpoken.
+  ///
+  /// In de, this message translates to:
+  /// **'{fromName} antwortet nicht. Mit {toName} nochmal? Ja oder nein?'**
+  String retryOfferSpoken(String fromName, String toName);
+
   /// No description provided for @retryOfferTitle.
   ///
   /// In de, this message translates to:

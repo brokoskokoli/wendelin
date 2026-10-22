@@ -1277,6 +1277,17 @@
       }
     }
   },
+  "retryOfferSpoken": "{fromName} antwortet nicht. Mit {toName} nochmal? Ja oder nein?",
+  "@retryOfferSpoken": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
   "retryOfferTitle": "Mit {toName} nochmal?",
   "@retryOfferTitle": {
     "placeholders": {

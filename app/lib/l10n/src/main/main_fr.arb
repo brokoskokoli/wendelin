@@ -80,5 +80,16 @@
         "type": "String"
       }
     }
+  },
+  "retryOfferSpoken": "{fromName} ne répond pas. Réessayer avec {toName} ? Oui ou non ?",
+  "@retryOfferSpoken": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
   }
 }
