@@ -1,3 +1,5 @@
+import '../ha_words/de.dart';
+
 /// German topic words per integration id (alphabetical). See README.md.
 const topicWordsDe = <String, List<String>>{
   'alarms': [
@@ -40,6 +42,7 @@ const topicWordsDe = <String, List<String>>{
     'home assistant', 'smart home', 'heizung', 'licht', 'lampe', //
     'steckdose', 'thermostat', 'rolladen', 'rollo', 'jalousie',
     'schalt', 'wohnzimmer', 'schlafzimmer', 'ventilator',
+    ...haTypeStemsDe, ...haTopicWordsDe,
   ],
   'lists': [
     'liste', 'listen', 'packliste', 'setz auf', 'streich von', //

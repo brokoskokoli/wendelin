@@ -1,3 +1,5 @@
+import 'package:wendelin_core/wendelin_core.dart';
+
 import '../common/matching.dart';
 import '../common/port_exception.dart';
 import 'ha_model.dart';
@@ -58,11 +60,12 @@ final class HaContext {
     for (final e in all) {
       if (e.entityId == lower) return e;
     }
-    final m = bestMatches(
+    var m = bestMatches(
       query,
       all,
       (e) => [e.name, '${e.area ?? ''} ${e.name}'],
     );
+    if (m.best.isEmpty) m = _byTypeAndRoom(query, all);
     if (m.best.isEmpty) {
       throw PortException(
         PortErrorKind.notFound,
@@ -81,5 +84,22 @@ final class HaContext {
       );
     }
     return m.best.first;
+  }
+
+  /// „Lampe Wohnzimmer“ for a device called „Licht Wohnzimmer“ (WP135 B):
+  /// when the name does not match, the type word of the query (any language,
+  /// see `haDomainsIn`) selects the domain and the rest the room or name.
+  /// Without a rest („die Lampe“) every device of the type is a candidate:
+  /// a single one is taken, several stay „Mehrdeutig“.
+  Matches<HaEntity> _byTypeAndRoom(String query, List<HaEntity> all) {
+    final domains = haDomainsIn(query);
+    if (domains.isEmpty) return (score: 0, best: const <HaEntity>[]);
+    final ofType = [
+      for (final e in all)
+        if (domains.contains(e.domain)) e,
+    ];
+    final rest = haWithoutTypeWords(query);
+    if (rest.isEmpty || ofType.isEmpty) return (score: 0, best: ofType);
+    return bestMatches(rest, ofType, (e) => [e.name, e.area ?? '']);
   }
 }
