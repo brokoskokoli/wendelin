@@ -239,6 +239,17 @@ final class FakeHaApi with FakeFailures implements HaApi {
         set(id, 'closed');
       case ('cover', 'stop_cover'):
         break;
+      case ('cover', 'set_cover_position'):
+        final position = d['position'];
+        if (position is! int) {
+          throw const PortException(
+            PortErrorKind.failed,
+            'Unerwartete Antwort von Home Assistant (HTTP 400).',
+          );
+        }
+        set(id, position > 0 ? 'open' : 'closed', {
+          'current_position': position,
+        });
       case ('alarm_control_panel', final s):
         set(id, switch (s) {
           'alarm_disarm' => 'disarmed',

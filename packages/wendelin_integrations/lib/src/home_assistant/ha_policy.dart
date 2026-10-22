@@ -51,7 +51,12 @@ final HaServices haSecureServices = {
     'alarm_arm_night': {},
     'alarm_disarm': {},
   },
-  'cover': {'open_cover': {}, 'close_cover': {}, 'stop_cover': {}},
+  'cover': {
+    'open_cover': {},
+    'close_cover': {},
+    'stop_cover': {},
+    'set_cover_position': {'position'},
+  },
 };
 
 /// Risk of controlling an entity of [domain], `null` if the domain cannot

@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
 import 'package:wendelin_integrations/testing.dart';
-import 'package:wendelin_integrations/src/common/port_exception.dart';
 import 'package:wendelin_integrations/src/home_assistant/ha_context.dart';
 import 'package:wendelin_integrations/wendelin_integrations.dart';
 
