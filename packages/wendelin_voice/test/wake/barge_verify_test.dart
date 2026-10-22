@@ -630,6 +630,38 @@ void main() {
           expect(got, ['keyword-stop']);
         },
       );
+
+      test(
+        'schwächerer busy-Kandidat verschiebt das Fenster des stärkeren nicht',
+        () async {
+          final script = _ScriptEngine(
+            {0: 'stop', 3: 'stop', 4: 'stop'},
+            conf: {0: 0.85, 3: 0.96, 4: 0.9},
+          );
+          await setUp0(
+            settle: const Duration(milliseconds: 200),
+            cooldown: const Duration(milliseconds: 1500),
+            custom: script,
+          );
+          v
+            ..verdict = BargeVerdict.no
+            ..hold = Completer<void>();
+          await frames(1, loud: true);
+          await frames(4, loud: true); // Frame 3 stark, Frame 4 schwächer, busy
+          expect(cands, ['stop false', 'stop true', 'stop true']);
+          v.hold!.complete();
+          await pumpEventQueue();
+          v
+            ..hold = null
+            ..verdict = const BargeVerdict('stop', BargeInKeyword.stop);
+          await frames(
+            1,
+            loud: true,
+          ); // Fenster des stärkeren, nicht des schwächeren
+          expect(v.calls, hasLength(2));
+          expect(got, ['keyword-stop']);
+        },
+      );
     });
 
     test('ohne Prüfer ist der Treffer das Signal (wie bisher)', () async {

@@ -97,7 +97,6 @@ void main() {
     }) {
       final quiet = quietStart ?? (verifier == null || stops.isNotEmpty);
       audio = FakeAudioInput(
-        // WP80: „Stopp“ needs speech-level sound after a quiet start.
         // „Stopp“ needs two windows and speech after a quiet start (WP80).
         // With stage 2 a „Wendelin“ candidate needs level already in its first
         // window (WP126), so the stream is loud from the start there.

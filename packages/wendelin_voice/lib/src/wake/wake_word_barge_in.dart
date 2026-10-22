@@ -54,15 +54,6 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   /// (~0.7 s live audio with the usual 800 ms of silence).
   final Duration warmSpan;
 
-  /// With a [verifier] a candidate counts only if the live audio held a
-  /// block of at least [minLevel] within the last [warmSpan] (the reach of a
-  /// feature window). WP126: a silent stream (rms 0 in the device log) still
-  /// rates `stop=0.85` against `sthr=0.70`, because silence embeddings look
-  /// like the templates (the background similarity `sfloor` is 0.85 itself);
-  /// such a window is no candidate. `minLevel` 150 is the level of the
-  /// [SpeechGate] and the clip check: speech reads 800..1300 rms, the
-  /// silent AEC stream 0 and room noise ~12 (local logs).
-
   /// Audio handed to the [verifier] (at most 5 s).
   final Duration clip;
 
@@ -77,7 +68,14 @@ final class WakeWordBargeInDetector implements BargeInDetector {
 
   /// Smallest level (RMS of a 20 ms block, 16-bit samples) the clip must
   /// reach; a quieter clip is skipped without the recognizer
-  /// (`skip`/`silent`).
+  /// (`skip`/`silent`). With a [verifier] a candidate also counts only if the
+  /// live audio held such a block within the last [warmSpan] (the reach of a
+  /// feature window). WP126: the device log showed a silent stream (rms 0)
+  /// producing a main-word candidate (sim 0.83 > thr 0.75) that
+  /// `stopOverridesWake` turns into "stop" past the level gate; silence
+  /// embeddings look like the templates. This gate closes that gap. 150 is the
+  /// level of the [SpeechGate] and the clip check: speech reads 800..1300 rms,
+  /// the silent AEC stream 0 and room noise ~12 (local logs).
   final int minLevel;
 
   /// A check that takes longer counts as failed (fail closed).
@@ -226,8 +224,10 @@ final class WakeWordBargeInDetector implements BargeInDetector {
       final busy = _verifying || (_fed < _blockedUntil && !stronger);
       onCandidate?.call(keyword, busy: busy);
       if (busy) {
+        // The window follows the strongest busy candidate; a weaker later one
+        // must not push it back.
+        if (_deferredKind == null || score > _deferredScore) _deferredAt = _fed;
         _deferredKind = _best(_deferredKind, keyword);
-        _deferredAt = _fed;
         if (score > _deferredScore) _deferredScore = score;
       } else {
         // Waiting (or already waiting): the check starts after the word.
