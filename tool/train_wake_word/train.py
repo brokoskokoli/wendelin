@@ -18,6 +18,8 @@ import real_split
 
 
 def feat_stage(a):
+    if a.no_real_pos and a.real_pos:
+        raise SystemExit("--no-real-pos und --real-pos schliessen sich aus")
     if a.real_pos:
         real_split.check_dir(a.real_pos, require_nonempty=True)      # fail-closed vor jedem Laden: nur Trainings-Clips (WP130)
     rng = np.random.default_rng(a.seed)
@@ -47,6 +49,8 @@ def feat_stage(a):
         npos = a.n_pos if split == "train" else a.n_pos // 9
         nneg = a.n_neg if split == "train" else a.n_neg // 9
         ps = real_split.pos_for_split(pos, real_pos, a.real_pos_rep, split)
+        if a.no_real_pos:
+            real_split.assert_syn_only(ps, pos, split)
         ns = neg_tr if split == "train" else neg_va
         cs = conf[: int(len(conf) * .9)] if split == "train" else conf[int(len(conf) * .9):]
         embs, ends = [], []
@@ -137,7 +141,7 @@ if __name__ == "__main__":
     p.add_argument("--gen"); p.add_argument("--models"); p.add_argument("--work", required=True)
     p.add_argument("--out"); p.add_argument("--real"); p.add_argument("--seed", type=int, default=1)
     p.add_argument("--pos-dirs", default="pos,pos2"); p.add_argument("--conf-dirs", default="conf2")
-    p.add_argument("--neg-dirs", default="neg"); p.add_argument("--real-val"); p.add_argument("--real-pos"); p.add_argument("--real-pos-rep", type=int, default=100); p.add_argument("--real-rep", type=int, default=12)
+    p.add_argument("--neg-dirs", default="neg"); p.add_argument("--real-val"); p.add_argument("--real-pos"); p.add_argument("--no-real-pos", action="store_true", help="WP133: Lauf ohne echte Positive (fail-closed)"); p.add_argument("--real-pos-rep", type=int, default=100); p.add_argument("--real-rep", type=int, default=12)
     p.add_argument("--n-pos", type=int, default=8000); p.add_argument("--n-neg", type=int, default=9000)
     p.add_argument("--ncpu", type=int, default=4); p.add_argument("--threads", type=int, default=4)
     p.add_argument("--steps", type=int, default=6000); p.add_argument("--batch", type=int, default=512)

@@ -113,5 +113,62 @@ class Verwechsler(unittest.TestCase):
         with self.assertRaises(SystemExit): V.parse_models(["x=/gibt/es/nicht.onnx"], with_v7=False)
 
 
+class SplitAll(unittest.TestCase):
+    """WP133: --split all wertet alle Bloecke, aber nur fuer v7 und Modelle mit Sidecar real_pos == 0."""
+
+    def mk(self, td, name, meta):
+        import json
+        p = os.path.join(td, name + ".onnx"); open(p, "w").write("x")
+        if meta is not None:
+            open(p + ".meta.json", "w").write(meta if isinstance(meta, str) else json.dumps(meta))
+        return p
+
+    def test_alle_bloecke_beider_geraete(self):
+        sel = V.filter_labels(labels(), "all")
+        self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "huawei"}), [1, 2, 3, 4, 5, 6])
+        self.assertEqual(len(sel), 6 * 2 * 2)
+        self.assertEqual(V.filter_labels(labels()), V.filter_labels(labels(), "eval"))         # Standard unveraendert
+        self.assertEqual(len(V.folds_for("huawei", "all")), 6)
+        self.assertEqual(len(V.folds_for("huawei")), 3)
+        V.assert_eval_only([{"dev": "huawei", "block": 2}], "all")
+        with self.assertRaises(SystemExit): V.assert_eval_only([{"dev": "huawei", "block": 2}], "eval")
+        with self.assertRaises(SystemExit): V.eval_blocks("huawei", "alle")
+
+    def test_huawei_1_bis_3_zaehlen_nur_bei_all(self):
+        ev = {"pos_huawei": {"pos_huawei": [200.2]}, "pos_handy2": {"pos_handy2": []},
+              "neg_huawei": {"n": []}, "neg_handy2": {"n": []}, "syn": {"s": []}, "fleurs": {"f": []}, "conf": {"c": []}}
+        hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 1.0, "fleurs": 1.0, "conf": 0.1}
+        h_all = next(r for r in V.rows_for_cfg("m", "Wendelin", 0.5, "-", ev, {}, hr, V.filter_labels(labels(), "all")) if r["dev"] == "huawei")
+        self.assertEqual((h_all["n"], h_all["n_b2"], h_all["hit_b2"]), (6, 1, 1))
+        h_ev = next(r for r in V.rows_for_cfg("m", "Wendelin", 0.5, "-", ev, {}, hr, V.filter_labels(labels())) if r["dev"] == "huawei")
+        self.assertEqual((h_ev["n"], h_ev["n_b2"], h_ev["hit_b2"]), (3, 0, 0))
+
+    def test_modelle_pruefung(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            V.check_split_models("eval", {"v8a": self.mk(td, "a", None)})                      # eval: keine Pruefung
+            V.check_split_models("all", {"v7": V.V7})                                          # v7 immer erlaubt (Pfad, kein Sidecar)
+            V.check_split_models("all", {"s": self.mk(td, "s", {"real_pos": 0, "tag": "a-syn"})})
+            for bad in (None, {"real_pos": 1}, {"tag": "x"}, {"real_pos": False}, {"real_pos": "0"}, "kein json", "[]"):
+                with self.assertRaises(SystemExit, msg=repr(bad)):
+                    V.check_split_models("all", {"b": self.mk(td, "b", bad)})
+            with self.assertRaises(SystemExit):                                                # ein schlechtes Modell unter guten
+                V.check_split_models("all", {"v7": V.V7, "s": self.mk(td, "s2", {"real_pos": 0}), "a": self.mk(td, "a2", {"real_pos": 1})})
+
+    def test_ausgabedateien_und_titel(self):
+        self.assertTrue(V.out_names("all")[0].endswith("v8_grid_all.csv") and V.out_names("all")[1].endswith("v8_table_all.md"))
+        self.assertTrue(V.out_names("eval")[0].endswith("v8_grid.csv") and V.out_names("eval")[1].endswith("v8_table.md"))
+        pts = Auswahl().pts()
+        rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0, fa_syn=1, h_syn=2.0, fa_fleurs=0, h_fleurs=1.0,
+                     conf_n=10, conf_hit=1, conf_ev=1, conf_h=0.01) for p in pts]
+        hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 2.0, "fleurs": 1.0, "conf": 0.01}
+        self.assertIn("allen Blöcken", V.render(rows, {"m": "x"}, 2.0, hr, "all"))
+        self.assertIn("dem Prüf-Split", V.render(rows, {"m": "x"}, 2.0, hr))
+
+    def test_cv_cell_all_nutzt_alle_bloecke(self):
+        rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0) for p in Auswahl().pts()]
+        self.assertEqual(len(V.cv_cell(rows, "huawei", "Wendelin", "m", ("-",), "real", 2.0, "all")[2]), 6)
+
+
 if __name__ == "__main__":
     unittest.main()
