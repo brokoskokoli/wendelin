@@ -345,6 +345,23 @@ void main() {
   });
 
   group('ConfirmationCard', () {
+    testWidgets('ohne Stufe zeigt nur den Namen (Angebot „Mit X nochmal?“)', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        ConfirmationCard(
+          title: 'Mit B nochmal?',
+          detail: 'A antwortet nicht.',
+          toolName: 'A → B',
+          onYes: () {},
+          onNo: () {},
+        ),
+      );
+      expect(find.text('A → B'), findsOneWidget);
+      expect(find.textContaining('Stufe'), findsNothing);
+    });
+
     testWidgets('Ja / Nein, Tool-Name und Stufe', (tester) async {
       final calls = <String>[];
       await _pump(

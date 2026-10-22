@@ -801,7 +801,13 @@ void main() {
       fromName: 'Phala',
       toName: 'Claude',
     );
-    expect(strictAnswer(offer), isFalse);
+    expect(strictAnswer(offer), isTrue);
+    // Like the escalation: a casual „ja, aber …“ does not send the request
+    // to another provider.
+    YesNo? parse(String t) =>
+        VoiceController.recognizer.parse(t, strict: strictAnswer(offer));
+    expect(parse('Ja, aber lieber morgen'), isNull);
+    expect(parse('ja'), YesNo.yes);
     expect(
       confirmationPrompt(offer, 'en'),
       'Phala is not answering. Try again with Claude? Yes or no?',

@@ -22,7 +22,8 @@ import 'run_state.dart';
 ///   check): never for a cancel, a budget stop, a rejected request or
 ///   missing credentials ([offerable]).
 /// - The offered target is another configured profile whose privacy level is
-///   at least the failed one's ([candidate]); a private run never goes to a
+///   at least the failed one's and at least the run's privacy floor
+///   ([candidate]); a private run never goes to a
 ///   weaker (cloud) target. Without such a target there is no offer.
 /// - Nothing is handed over before a „yes“; a profile is offered at most
 ///   once per run and a failed target is never offered again.
@@ -53,11 +54,17 @@ final class RetryOffer {
     if (!offerable(error)) return null;
     final current = _state.current;
     final targets = _config.fallbackTargets?.call() ?? const [];
+    // A private run keeps its floor even after an approved escalation to a
+    // weaker target: the next offer must not be below it either.
+    final floor = current.privacyFloor;
+    final required = floor != null && floor.isAtLeast(current.privacy)
+        ? floor
+        : current.privacy;
     for (final t in targets) {
       if (t.profileId == current.profileId || _used.contains(t.profileId)) {
         continue;
       }
-      if (t.privacy.isAtLeast(current.privacy)) return t;
+      if (t.privacy.isAtLeast(required)) return t;
     }
     return null;
   }

@@ -9,11 +9,11 @@ import '../l10n/gen/app_localizations_fr.dart';
 import '../ui/screens/labels.dart';
 
 /// Whether a spoken „yes“ to [question] must be strict (1–2 yes words):
-/// `external` tools and escalations below the privacy level.
+/// `external` tools, escalations below the privacy level and the offer
+/// „Mit X nochmal?“ (it sends the request to another provider, WP128).
 bool strictAnswer(PendingQuestion question) => switch (question) {
   ToolQuestion(:final event) => event.risk == RiskLevel.external,
-  EscalationQuestion() => true,
-  RetryOfferQuestion() => false,
+  EscalationQuestion() || RetryOfferQuestion() => true,
 };
 
 /// Spoken question for an open confirmation, in [language] (de/fr/en);

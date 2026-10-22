@@ -185,7 +185,6 @@ Widget confirmationCardFor(
     title: l.retryOfferTitle(toName),
     detail: l.retryOfferDetail(fromName, toName),
     toolName: '$fromName → $toName',
-    risk: RiskLevel.write,
     onYes: () => answer(true),
     onNo: () => answer(false),
     yesLabel: l.retryOfferYes(toName),

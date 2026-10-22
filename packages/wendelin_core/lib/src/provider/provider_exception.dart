@@ -12,7 +12,8 @@ sealed class ProviderException implements Exception {
   /// Human-readable, secret-free description.
   final String message;
 
-  /// Whether retrying (or escalating to another provider) may help.
+  /// Whether retrying may help. Another provider is only ever offered, and
+  /// used only after the user's yes (K28, WP128).
   bool get retryable;
 
   @override
@@ -131,7 +132,8 @@ final class MalformedResponseException extends ProviderException {
 /// Nothing was sent to the provider when this is raised before a request;
 /// [stage] names the failed check (`quote`, `receipt.signature`, `gpu`, …).
 /// Retryable only when the check could not be completed (network), not when
-/// it failed. Never a reason to hand the request to another provider.
+/// it failed. Another provider is at most offered („Mit X nochmal?“), and
+/// used only after the user's yes (K28).
 final class AttestationFailedException extends ProviderException {
   /// Creates the exception.
   const AttestationFailedException(

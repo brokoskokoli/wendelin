@@ -61,9 +61,13 @@ void main() {
     final (app, llm) = await _start(tester);
     await send(tester, 'Wie spät ist es?');
     await pumpUntil(tester, find.text('Mit Zweiter nochmal?'));
+    // Das Sheet fährt noch hoch: erst abwarten, sonst trifft der Tipp nicht.
+    await tester.pump(const Duration(seconds: 1)); // Sheet-Animation
     // Vor dem Tipp geht nichts an den zweiten Anbieter.
     expect(llm['zweiter']!.requests, isEmpty);
-    await tester.tap(find.text('Mit Zweiter nochmal?').last);
+    final yes = find.text('Mit Zweiter nochmal?').last; // Titel + Schaltfläche
+    await tester.ensureVisible(yes);
+    await tester.tap(yes);
     await pumpUntil(tester, find.textContaining('Zweiter antwortet.'));
     await waitIdle(tester);
     expect(llm['erster']!.requests, hasLength(2));
@@ -92,6 +96,7 @@ void main() {
     final (_, llm) = await _start(tester);
     await send(tester, 'Wie spät ist es?');
     await pumpUntil(tester, find.text('Mit Zweiter nochmal?'));
+    await tester.pump(const Duration(seconds: 1)); // Sheet-Animation
     await tester.tap(find.text('Nein').last);
     await waitIdle(tester);
     expect(llm['zweiter']!.requests, isEmpty);

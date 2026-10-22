@@ -9,6 +9,8 @@ import 'package:wendelin_agent/wendelin_agent.dart';
 import 'package:wendelin_core/fakes.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 
+import '../routing/fixtures.dart';
+import '../routing/privacy_test.dart' show withProviders;
 import '../support.dart';
 
 const _down = NetworkException('weg');
@@ -208,6 +210,35 @@ void main() {
       expect(pt.requests, hasLength(1));
       expect((terminal(events) as AgentDone).finalText, 'Tinfoil hier.');
     });
+
+    test(
+      'after an approved escalation the private floor still holds',
+      () async {
+        final phala = FakeLlmProvider([ScriptedTurn.text('Befund notiert.')]);
+        final claude = FakeLlmProvider(_fails());
+        final (primary, _) = scripted('x', const []);
+        final (other, po) = scripted('other', [ScriptedTurn.text('nie')]);
+        final h = Harness(
+          primary: primary,
+          fallbackTargets: () => [other],
+          resolver: conceptResolver(
+            profiles: withProviders({'phala': phala, 'claude': claude}),
+          ),
+        );
+        await h.run('privat: Diagnose');
+        final events = await h.run(
+          'nochmal mit Claude',
+          onEvent: (e) {
+            if (e is EscalationConfirmationRequired) e.respond(true);
+          },
+        );
+        expect(events.whereType<Escalated>().single.toProfile, 'claude');
+        // The second cloud provider is not offered to the private run.
+        expect(events.whereType<RetryOfferRequired>(), isEmpty);
+        expect(po.requests, isEmpty);
+        expect(terminal(events), isA<AgentFailed>());
+      },
+    );
 
     test('a stronger target is fine', () async {
       final (a, _) = scripted('claude', _fails());

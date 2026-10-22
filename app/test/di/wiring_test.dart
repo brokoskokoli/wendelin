@@ -152,6 +152,20 @@ void main() {
     );
   });
 
+  test('fallbackTargets: empfohlene Modelle zuerst, Rest in Reihenfolge', () {
+    ProviderTarget t(String id, String model) => ProviderTarget(
+      profileId: id,
+      modelId: model,
+      provider: FakeLlmProvider(const []),
+      privacy: PrivacyLevel.standard,
+    );
+    final config = ProviderConfig(
+      primary: t('a', 'unbekannt-1'),
+      others: [t('b', 'unbekannt-2'), t('c', 'claude-haiku-5-5')],
+    );
+    expect(config.fallbackTargets().map((x) => x.profileId), ['c', 'a', 'b']);
+  });
+
   group('DemoLlmProvider', () {
     final clock = FixedClock(testNow);
     final demo = DemoLlmProvider(clock: clock);
