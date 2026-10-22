@@ -2,14 +2,20 @@ import '../messages/content_block.dart';
 import '../messages/stop_reason.dart';
 import '../messages/usage.dart';
 import '../provider/attestation.dart';
+import '../provider/provider_exception.dart';
 import '../tools/tool.dart';
 import '../tools/tool_outcome.dart';
 
 /// Why the agent hands a request to another provider. Wendelin never does
-/// so on its own (concept K28): only on the user's explicit request.
+/// so on its own (concept K28): only on the user's explicit request or
+/// after the user said yes to an offer.
 enum EscalationReason {
   /// The user asked for it („nochmal mit Claude“, `UserInput.requestEscalation`).
   userRequested,
+
+  /// The provider failed and the user accepted the offer „Mit X nochmal?“
+  /// ([RetryOfferRequired], WP128).
+  providerFailed,
 }
 
 /// Why an agent run failed.
@@ -290,6 +296,44 @@ final class EscalationConfirmationRequired extends AgentEvent {
   String toString() =>
       'EscalationConfirmationRequired($fromProfile → $toProfile, '
       '${reason.name})';
+}
+
+/// The provider failed (timeout, server error, network, TEE check) and the
+/// agent offers another configured provider with **at least the same privacy
+/// level** („Mit X nochmal?“, WP128). Nothing is sent to [toProfile] before the
+/// user approves via [respond]; declining ends the run with the failure.
+/// Only the model call is repeated at [toProfile]: tools that already ran are
+/// never run again. Never offered after a cancel or a budget stop.
+final class RetryOfferRequired extends AgentEvent {
+  /// Creates the event; [respond] forwards the answer to the agent.
+  RetryOfferRequired({
+    required this.fromProfile,
+    required this.toProfile,
+    required this.error,
+    required void Function(bool approved) respond,
+  }) : _answer = _Once(respond);
+
+  /// Profile that failed.
+  final String fromProfile;
+
+  /// Offered profile.
+  final String toProfile;
+
+  /// Why the first provider failed (secret-free).
+  final ProviderException error;
+
+  final _Once _answer;
+
+  /// Whether an answer has already been given.
+  bool get answered => _answer.done;
+
+  /// Answers: `true` = try [toProfile], `false` = give up. Idempotent: the
+  /// first answer wins, later calls are ignored.
+  void respond(bool approved) => _answer(approved);
+
+  @override
+  String toString() =>
+      'RetryOfferRequired($fromProfile → $toProfile, ${error.runtimeType})';
 }
 
 /// Forwards only the first answer.

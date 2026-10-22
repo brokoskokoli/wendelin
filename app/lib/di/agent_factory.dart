@@ -147,6 +147,7 @@ final class AgentFactory implements AgentRunFactory {
         ),
       ),
       onFixedConfirmation: _logFixed,
+      fallbackTargets: providers.fallbackTargets,
       clock: clock,
       sessionId: sessionId,
       recorder: conversation,

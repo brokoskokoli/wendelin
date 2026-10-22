@@ -49,6 +49,28 @@ final class EscalationQuestion extends PendingQuestion {
   bool get answered => event.answered;
 }
 
+/// The offer „Mit X nochmal?“ after a provider failure (WP128).
+final class RetryOfferQuestion extends PendingQuestion {
+  /// Creates the question.
+  const RetryOfferQuestion(
+    this.event, {
+    required this.fromName,
+    required this.toName,
+  });
+
+  /// The agent event (answer with `respond`).
+  final RetryOfferRequired event;
+
+  /// Display name of the provider that failed.
+  final String fromName;
+
+  /// Display name of the offered provider.
+  final String toName;
+
+  @override
+  bool get answered => event.answered;
+}
+
 /// Notice and spoken hint when a request is stopped because the provider
 /// delivers no GPU evidence (mode „Vorher“, WP82).
 const gpuNoEvidenceSpoken =

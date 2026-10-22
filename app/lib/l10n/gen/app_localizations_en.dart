@@ -2256,6 +2256,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String retryOfferDetail(String fromName, String toName) {
+    return '$fromName is not answering right now. $toName protects your data at least as well. Actions that already ran are not repeated, only the answer is requested again.';
+  }
+
+  @override
+  String retryOfferSpoken(String fromName, String toName) {
+    return '$fromName is not answering. Try again with $toName? Yes or no?';
+  }
+
+  @override
+  String retryOfferTitle(String toName) {
+    return 'Try again with $toName?';
+  }
+
+  @override
+  String retryOfferYes(String toName) {
+    return 'Try again with $toName?';
+  }
+
+  @override
   String get switchTopicBody =>
       'Switching the model starts a new conversation. The current history is ended (it stays available in the history).';
 
@@ -3154,6 +3174,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String providerChipSemantics(String name) {
     return 'Provider $name';
   }
+
+  @override
+  String get providerModelRecommendedBadge => 'Recommended';
+
+  @override
+  String providerModelRecommendedReason(
+    String hits,
+    String runs,
+    String p50,
+    String date,
+  ) {
+    return '$hits of $runs test runs correct, typically $p50 s, measured on $date';
+  }
+
+  @override
+  String get providerModelRecommendedWeaker =>
+      'The best model of this provider, but weaker than on Phala and Tinfoil.';
 
   @override
   String get providerSetupBudgetFormat =>

@@ -47,20 +47,17 @@ AttestationWiring complete({
 );
 
 void main() {
-  test(
-    'Vorlage „Tinfoil (TEE)“: Stufe TEE, gpt-oss-120b, nur Chat-Modelle',
-    () {
-      final t = providerTemplates.firstWhere((t) => t.id == 'tinfoil');
-      expect(t.name, 'Tinfoil (TEE)');
-      expect(t.baseUrl, 'https://inference.tinfoil.sh/v1');
-      expect(t.privacy, PrivacyLevel.tee);
-      expect(t.suggestedModel, 'gpt-oss-120b');
-      expect(t.options['attestation'], 'tinfoil');
-      final profile = t.toProfile(id: 'x', secretRef: 'r');
-      expect(attestationKind(profile), AttestationKind.tinfoil);
-      expect(effectivePrivacy(profile), PrivacyLevel.tee);
-    },
-  );
+  test('Vorlage „Tinfoil (TEE)“: Stufe TEE, gemma4-31b, nur Chat-Modelle', () {
+    final t = providerTemplates.firstWhere((t) => t.id == 'tinfoil');
+    expect(t.name, 'Tinfoil (TEE)');
+    expect(t.baseUrl, 'https://inference.tinfoil.sh/v1');
+    expect(t.privacy, PrivacyLevel.tee);
+    expect(t.suggestedModel, 'gemma4-31b');
+    expect(t.options['attestation'], 'tinfoil');
+    final profile = t.toProfile(id: 'x', secretRef: 'r');
+    expect(attestationKind(profile), AttestationKind.tinfoil);
+    expect(effectivePrivacy(profile), PrivacyLevel.tee);
+  });
 
   test('„tee“ gilt nur mit Prüfung: ohne Option bleibt es Standard', () {
     final p = tinfoil(options: const {});
