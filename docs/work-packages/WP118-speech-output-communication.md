@@ -1,6 +1,6 @@
 # WP118 – Antwort als Gesprächston für bessere Echo-Unterdrückung (`app/`, Android)
 
-**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, T20-B.1). Entscheid Stefan 2026-10-21 (K88): zuerst nur ein Schalter, Messung per Ping und eigene Echo-Unterdrückung erst, wenn das nicht reicht.
+**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, T20-B.1). Entscheid Maintainer 2026-10-21 (K88): zuerst nur ein Schalter, Messung per Ping und eigene Echo-Unterdrückung erst, wenn das nicht reicht.
 
 ## Hintergrund
 Während der Ausgabe nimmt die App mit `VOICE_COMMUNICATION` und dem Android-`AcousticEchoCanceler` auf (`app/lib/platform/voice/record_audio_input.dart:18-60`), spielt die Antwort aber mit `USAGE_ASSISTANT` ab (`app/lib/platform/voice/audio_playback.dart:27`, `AudioFocusChannel.kt:58`). Viele Geräte unterdrücken das Echo nur im Telefonie-Pfad zuverlässig. Gemessen: „Stopp“ erreicht 0,72–0,94 statt der nötigen 0,95.

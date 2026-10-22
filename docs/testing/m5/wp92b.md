@@ -1,10 +1,10 @@
 # WP92b Personen: Anrede, Gedächtnis, Agent
 
-Voraussetzung: WP92a eingerichtet (Modell geladen, Schalter „Sprechererkennung“ an, mindestens zwei Personen eingelernt, z. B. Stefan und eine zweite Stimme), zwei Provider-Profile (Standard und ein weiteres, z. B. Claude), Integration „Gedächtnis“ aktiv.
+Voraussetzung: WP92a eingerichtet (Modell geladen, Schalter „Sprechererkennung“ an, mindestens zwei Personen eingelernt, z. B. Maintainer und eine zweite Stimme), zwei Provider-Profile (Standard und ein weiteres, z. B. Claude), Integration „Gedächtnis“ aktiv.
 
 - [ ] **Personenliste**: Einstellungen → Sprache → Sprechererkennung. *Erwartet*: Unter „Personen“ stehen die eingelernten Personen; Antippen öffnet die Person (Anrede, Gedächtnis, Agent, Neu einlernen, Person löschen). Kein Papierkorb mehr in der Liste.
-- [ ] **Anrede**: In der Person „Anrede“ setzen (z. B. „Stefan“), leer lassen bei der zweiten. Sprachbefehl „Wie heiße ich?“ von beiden. *Erwartet*: Person 1 wird mit der Anrede angesprochen, Person 2 mit dem eingelernten Namen; ein Unbekannter oder Tippen im Chat bekommt die Anrede aus Einstellungen → Assistent (wie bisher).
-- [ ] **Eigenes Gedächtnis**: Person 1: „Merk dir, ich mag Koriander.“ Person 2: „Was mag ich?“. *Erwartet*: Person 2 erfährt nichts davon; Person 1 sieht den Eintrag unter Person → „Einträge ansehen“, er fehlt in Einstellungen → Gedächtnis (Standard) und im Markdown-Export des Standards. Unbekannte Stimme: „Was mag Stefan?“ findet nichts.
+- [ ] **Anrede**: In der Person „Anrede“ setzen (z. B. „Maintainer“), leer lassen bei der zweiten. Sprachbefehl „Wie heiße ich?“ von beiden. *Erwartet*: Person 1 wird mit der Anrede angesprochen, Person 2 mit dem eingelernten Namen; ein Unbekannter oder Tippen im Chat bekommt die Anrede aus Einstellungen → Assistent (wie bisher).
+- [ ] **Eigenes Gedächtnis**: Person 1: „Merk dir, ich mag Koriander.“ Person 2: „Was mag ich?“. *Erwartet*: Person 2 erfährt nichts davon; Person 1 sieht den Eintrag unter Person → „Einträge ansehen“, er fehlt in Einstellungen → Gedächtnis (Standard) und im Markdown-Export des Standards. Unbekannte Stimme: „Was mag Maintainer?“ findet nichts.
 - [ ] **Standard-Gedächtnis**: Bei Person 2 den Schalter „Eigenes Gedächtnis“ ausschalten. *Erwartet*: Person 2 sieht und ändert die bisherigen Einträge des Standard-Gedächtnisses (ebenso Tippen und Unbekannte); Einträge von Person 1 bleiben für sie unsichtbar.
 - [ ] **Undo**: Person 1 „Merk dir X“, in der Karte „Vergessen“. *Erwartet*: Nur der Eintrag von Person 1 verschwindet; „Wiederherstellen“ nach „Vergiss X“ legt ihn wieder im Gedächtnis der Person 1 an, nie im Standard.
 - [ ] **Agent**: Bei Person 1 „Agent“ → anderes Profil wählen. *Erwartet*: Die Antwortzeile (Provider-Chip) zeigt das gewählte Profil, bei Unbekannten und Person 2 weiter den Standard. Einstellungen → Provider: der Standard bleibt unverändert. „Privat: …“ geht trotz Person-Agent an das Ziel der Regel; „Claude, …“ weiter an Claude.
@@ -19,7 +19,7 @@ Voraussetzung: WP92a eingerichtet (Modell geladen, Schalter „Sprechererkennung
 
 ```sh
 adb -s emulator-5554 install -r app/build/app/outputs/flutter-apk/app-debug.apk
-/Users/stefanrichter/ai/james-wt/handoff/wp92a-e2e/prepare.sh emulator-5554
+~/ai/james-wt/handoff/wp92a-e2e/prepare.sh emulator-5554
 WENDELIN_WP92A_DIR=wp92a tool/e2e_android.sh integration_test/speaker_persons_e2e_test.dart
 ```
 

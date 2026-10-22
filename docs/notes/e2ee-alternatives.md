@@ -1,7 +1,7 @@
 # E2EE-Alternativen zu Phala: Tinfoil und NEAR AI Cloud (Recherche, Stand 2026-10-15)
 
 Recherche ohne Codeänderung im Repo. Quellcode liegt (nicht ausgeführt) unter
-`/private/tmp/claude-501/-Users-stefanrichter-ai-james/f56969ca-5b83-41fc-888c-87fe9795f5d4/scratchpad/e2ee-alt/`
+`<lokales Scratchpad>/e2ee-alt/`
 (`tinfoil/{ehbp,tinfoil-rs,go,tfshim,router}`, `near/{docs,inference-proxy,cloud-api}`). Pfade unten relativ dazu.
 Markierung: **[?]** = nicht belegt/unsicher. Es wurden nur öffentliche GETs gemacht (Tinfoil-Attestierung/Schlüssel, NEAR `/v1/model/list`); kein Konto, kein Key.
 
@@ -137,7 +137,7 @@ Markierung: **[?]** = nicht belegt/unsicher. Es wurden nur öffentliche GETs gem
 ## 5. Risiken
 - **NEAR:** (a) Streaming-Quittung kommt vom Gateway statt vom Modell [?]; (b) kein AAD/keine Anfragebindung, Gateway kann Felder umsortieren, nicht lesen; (c) gemeinsamer Modellschlüssel über Instanzen; (d) Responses-API und Chutes-Modelle nicht E2EE; (e) Protokoll jung und nur durch Doku/Code spezifiziert; (f) Zahlung/Limits unklar; (g) kleine Qwen/GLM-Modelle statt 120B+; Tool-Treue und Deutsch zuerst messen.
 - **Tinfoil:** (a) SEV-SNP und Sigstore sind viel neuer Sicherheitscode, der in Dart/Rust sauber geprüft werden muss; (b) Router sieht Klartext (attestiert, aber ein zusätzlicher Vertrauensanker, Modell-Routing im Router); (c) V2→V3-Verifikationswechsel läuft, Rust-SDK hinkt (TDX fehlt, Version 0.2.1); (d) keine Quittung; (e) Preise/Limits nur über Konto sichtbar; (f) Tool-Streaming nicht belegt.
-- Beide: Anbieter-Wechsel ist eine Konzeptänderung (K28 „kein stiller Wechsel zu anderem Anbieter“) und braucht Eintrag im Änderungsprotokoll samt Bestätigung durch Stefan.
+- Beide: Anbieter-Wechsel ist eine Konzeptänderung (K28 „kein stiller Wechsel zu anderem Anbieter“) und braucht Eintrag im Änderungsprotokoll samt Bestätigung durch Maintainer.
 
 ## 6. Empfehlung
 1. **NEAR zuerst, als zusätzlicher Anbieter neben Phala** (nicht als Ersatz). Gründe: Tools/`tool_calls` verschlüsselt, Ende im Modell-TEE (Hauptproblem gelöst), gleiche TDX/dstack/`dcap-qvl`/NRAS-Familie wie Phala (höchste Wiederverwendung, geringster neuer Sicherheitscode), kleine Krypto, Quittungen vorhanden, Aufwand ≈ WP62.

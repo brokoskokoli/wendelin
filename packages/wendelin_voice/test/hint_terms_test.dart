@@ -9,10 +9,10 @@ void main() {
     expect(
       sanitizeHintTerms([
         room('  Wohnzimmer   Licht '),
-        const HintTerm('Stefan Richter', HintTermKind.contact),
+        const HintTerm('Mia Berger', HintTermKind.contact),
         const HintTerm('Wendelin-Test', HintTermKind.list),
       ]),
-      ['Stefan Richter', 'Wendelin-Test', 'Wohnzimmer Licht'],
+      ['Mia Berger', 'Wendelin-Test', 'Wohnzimmer Licht'],
     );
   });
 

@@ -17,7 +17,7 @@ void main() {
     'Gästezimmer': ['▁G', 'ä', 'ste', 'z', 'im', 'mer'],
     'Einkaufsliste': ['▁Ein', 'ka', 'u', 'fs', 'l', 'iste'],
     'Jürgen': ['▁J', 'ür', 'gen'],
-    'Stefan Richter': ['▁Ste', 'f', 'an', '▁Rich', 'ter'],
+    'Jürgen Küche': ['▁J', 'ür', 'gen', '▁K', 'ü', 'che'],
     'Wohnzimmer Licht': ['▁Wo', 'hn', 'z', 'im', 'mer', '▁Li', 'cht'],
     'Édouard': ['▁É', 'd', 'ou', 'ard'],
     'Zoë': ['▁Z', 'o', 'ë'],
@@ -39,7 +39,7 @@ void main() {
   });
 
   test('Leerraum wird zusammengefasst, Wortgrenzen bleiben getrennt', () {
-    expect(encoder.encode('  Stefan \n Richter '), golden['Stefan Richter']);
+    expect(encoder.encode('  Jürgen \n Küche '), golden['Jürgen Küche']);
     expect(encoder.encode(''), isEmpty);
   });
 
@@ -58,8 +58,8 @@ void main() {
   group('Hotwords-Datei', () {
     test('eine Zeile je Name als Text', () {
       expect(
-        buildHotwordsFile(['Wendelin', ' Küche  ', 'Stefan Richter'], encoder),
-        'Wendelin\nKüche\nStefan Richter\n',
+        buildHotwordsFile(['Wendelin', ' Küche  ', 'Jürgen Küche'], encoder),
+        'Wendelin\nKüche\nJürgen Küche\n',
       );
     });
 

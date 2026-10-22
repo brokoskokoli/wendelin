@@ -3,7 +3,7 @@
 Stand: Teil A (synthetisch) gemessen, 2026-10-20/21. Teil B (echte Aufnahmen, WP121) gemessen 2026-10-22, siehe Abschnitt „Teil B“ am Ende; Teil A und Anhang sind vom Platzhalter-Fehler (dort beschrieben) möglicherweise betroffen und nicht neu gemessen. Nur Zahlen, keine Transkripte und keine Aufnahmen.
 
 ## Ziel
-Frage: Ist „Hey Wendelin“ als Wake Word besser als „Wendelin“, und welches offene Erkennungsprogramm trägt es? Zielwerte: Treffer >= 80 %, <= 2 Fehlalarme je Stunde (FA/h) nach allen Stufen. Bezug ist WP106 (`docs/notes/wake-word-station-spike.md`). Porcupine entfällt (Entscheidung Stefan 2026-10-20).
+Frage: Ist „Hey Wendelin“ als Wake Word besser als „Wendelin“, und welches offene Erkennungsprogramm trägt es? Zielwerte: Treffer >= 80 %, <= 2 Fehlalarme je Stunde (FA/h) nach allen Stufen. Bezug ist WP106 (`docs/notes/wake-word-station-spike.md`). Porcupine entfällt (Entscheidung Maintainer 2026-10-20).
 
 ## Aufbau
 Zwei Wörter (`wendelin`, `hey`) x vier Stufe-1-Regeln, danach Stufe 2 (Parakeet ohne/mit Hotwords) auf identischem Audio (Rausch-Parameter je Clip per Seed, Paare „Wendelin“/„Hey Wendelin“ gleich).
@@ -174,7 +174,7 @@ Wie WP106: Parakeet TDT 0.6B v3 CC-BY-4.0; Whisper MIT; CAM++ Apache-2.0; microW
 
 ## Anhang: alternative Wörter (Nebenexperiment 2026-10-21)
 
-Wunsch Stefan nach einer Klang-Recherche (Kandidaten „Hey Wendelix“, „Hey Octavia“, „Kobalos“, dazu „Alexa“ als Bezug). Aufbau wie Teil A: 135 Positiv-Clips je Wort (9 macOS-Systemstimmen), Negativsprache 1,93 h, FLEURS-test 1,0 h als Fernseher, Stufe 2 Parakeet bs/hw2 mit passendem Hotword. Für die neuen Wörter gibt es kein trainiertes Stufe-1-Modell, nur sherpa-KWS; „Alexa“ zusätzlich mit dem openWakeWord-Originalmodell.
+Wunsch Maintainer nach einer Klang-Recherche (Kandidaten „Hey Wendelix“, „Hey Octavia“, „Kobalos“, dazu „Alexa“ als Bezug). Aufbau wie Teil A: 135 Positiv-Clips je Wort (9 macOS-Systemstimmen), Negativsprache 1,93 h, FLEURS-test 1,0 h als Fernseher, Stufe 2 Parakeet bs/hw2 mit passendem Hotword. Für die neuen Wörter gibt es kein trainiertes Stufe-1-Modell, nur sherpa-KWS; „Alexa“ zusätzlich mit dem openWakeWord-Originalmodell.
 
 | Wort | Programm (beste Regel) | clean | FA/h (clean) | both | station |
 |---|---|---|---|---|---|

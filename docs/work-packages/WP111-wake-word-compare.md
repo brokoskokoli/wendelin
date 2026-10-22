@@ -1,6 +1,6 @@
 # WP111 – Vergleich alternativer Wake Words (Spike, Messung)
 
-**Zuordnung:** M6, „Vergleich alternativer Wake Words“. Baut auf WP106 auf (`docs/notes/wake-word-station-spike.md`, K80). Entscheidungen Stefan 2026-10-20: „Hey Wendelin“ testen, andere Erkennungsprogramme auch, Porcupine weglassen; Start mit dem synthetischen Teil, echte Aufnahmen folgen.
+**Zuordnung:** M6, „Vergleich alternativer Wake Words“. Baut auf WP106 auf (`docs/notes/wake-word-station-spike.md`, K80). Entscheidungen Maintainer 2026-10-20: „Hey Wendelin“ testen, andere Erkennungsprogramme auch, Porcupine weglassen; Start mit dem synthetischen Teil, echte Aufnahmen folgen.
 
 Ergebnis ist eine Notiz `docs/notes/wake-word-compare.md` mit Zahlen und Empfehlung. Kein App-Code.
 
@@ -15,7 +15,7 @@ Ergebnis ist eine Notiz `docs/notes/wake-word-compare.md` mit Zahlen und Empfehl
 - Unser Zwei-Stufen-Aufbau (v7/v9, Vorlagen, persönliches Feintuning) als Bezug.
 - **microWakeWord** richtig trainiert (nicht das 2-h-Kurztraining aus WP106): Trainingsdauer und Datenmenge nach Doku des Projekts, für beide Wörter.
 - **sherpa-onnx Keyword Spotting** mit frei eingegebenem Wort ohne Training (Konzept: Standard-Engine), für beide Wörter.
-- Porcupine entfällt (Entscheidung Stefan).
+- Porcupine entfällt (Entscheidung Maintainer).
 
 ### 3. Messung
 - **Teil A synthetisch (sofort):** Piper-Stimmen, Rauschen/Hall wie WP106, synthetischer Fernseher, Negativsprache ≥ 1,5 h. Kennzahlen: Treffer %, Kandidaten/h Stufe 1, FA/h und Verwechsler/h nach allen Stufen, Latenz/RTF/RAM am Mac.

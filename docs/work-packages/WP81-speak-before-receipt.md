@@ -17,7 +17,7 @@ Bezug: Nachtest APK 11193bb (2026-10-16, Xiaomi, `ergebnisse.md`): Tools wirken 
 
 In Tool-Runden startet der nächste Modellaufruf parallel zum Abruf der Quittung der vorigen Antwort (spart ca. 1–2 s je Runde). `external`-Tools warten weiter auf die geprüfte Quittung; eine rote Quittung bricht die laufende Runde ab, verwirft ihr Ergebnis und endet wie in WP81. Entscheidung Maintainer 2026-10-18.
 
-## WP81c (Entscheidung Stefan 2026-10-19)
+## WP81c (Entscheidung Maintainer 2026-10-19)
 
 Die Ausgabe der parallel gestarteten Runde (WP81b) wird **nicht** mehr bis zur grünen Quittung der vorigen Runde gepuffert, sondern wie in WP81 sofort angezeigt und vorgelesen. Fällt die Quittung der vorigen Runde rot aus: Sprachausgabe abbrechen, Text als verworfen markieren bzw. entfernen, gesprochener Hinweis, Undo wie bisher, dann sequentieller Neuaufruf wie in WP81b. `external`-Tools der parallelen Runde warten weiter auf die geprüfte Quittung (unverändert).
 

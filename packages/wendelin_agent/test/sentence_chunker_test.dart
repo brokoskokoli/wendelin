@@ -16,8 +16,8 @@ void main() {
     // de
     (
       'de: zwei Sätze',
-      'Hallo Stefan. Wie geht es dir?',
-      ['Hallo Stefan.', 'Wie geht es dir?'],
+      'Hallo Mia. Wie geht es dir?',
+      ['Hallo Mia.', 'Wie geht es dir?'],
     ),
     (
       'de: z. B. mit Leerzeichen',
@@ -163,9 +163,9 @@ void main() {
 
     test('returns a sentence only once the next one has started', () {
       final c = SentenceChunker();
-      expect(c.add('Hallo Stefan.'), isEmpty);
+      expect(c.add('Hallo Mia.'), isEmpty);
       expect(c.add(' '), isEmpty);
-      expect(c.add('Wie'), ['Hallo Stefan.']);
+      expect(c.add('Wie'), ['Hallo Mia.']);
       expect(c.pending, 'Wie');
       expect(c.flush(), ['Wie']);
       expect(c.pending, isEmpty);

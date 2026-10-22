@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125, WP126 (Stopp-E2E rot seit WP123); E2E Stopp/Barge 3× (WP123) läuft; Test-APK 954e065 bei Stefan; als Nächstes: WP100/WP101 (Stationsmodus Welle 2) nach WP121, WP92c nach Gerätetest wp92a/b, Scorer-Fix Reasoning-Leck, Sonnet-Probe
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP125, WP126 (Stopp-E2E rot seit WP123); E2E Stopp/Barge 3× (WP123) läuft; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101 (Stationsmodus Welle 2) nach WP121, WP92c nach Gerätetest wp92a/b, Scorer-Fix Reasoning-Leck, Sonnet-Probe
 
 ## Meilensteine
 
@@ -16,9 +16,9 @@ Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125, WP126 (St
 | M2 Sprache und Assistent (+ Nachbesserungen) | WP15–WP20, WP30–WP33 | erledigt |
 | M3 Routing, MCP, Erweiterung | WP21–WP29 | erledigt (Telefontest in M4 aufgegangen) |
 | Refactoring R1–R6 | WP35–WP40 | erledigt |
-| M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Stefan) |
+| M4 Wake Word und TEE (+ Gerätetest-Korrekturen) | WP41–WP78, WP80 | erledigt; Rest offen: K47 (nach Stopp-Test 11.6), Test 11.7a (Maintainer) |
 | M5 Ausbau Android | WP76b–d, WP79, WP81–WP98, WP102–WP110 | in Arbeit (Plan `M5-PLAN.md`) |
-| M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | in Arbeit: WP99 (Go Stefan 2026-10-19, vor WP92c); Rest geplant (Plan `M6-PLAN.md`) |
+| M6 Ausbau 2: Kamera/Bild, Stationsmodus, Wake-Word-Vergleich, Modell-Empfehlung | WP99–WP101 (Stationsmodus), Rest offen | in Arbeit: WP99 (Go Maintainer 2026-10-19, vor WP92c); Rest geplant (Plan `M6-PLAN.md`) |
 | M7 iOS | – | geplant |
 
 ## M5 im Detail
@@ -36,8 +36,8 @@ Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125, WP126 (St
 | WP82 | GPU-Prüfung je Profil | gemergt ad50713 | Folge: AttestationStagesCard ignoriert info-Stufen |
 | WP83 | NRAS-Signatur | gemergt | K56 bestätigt |
 | WP84 | Spotify | gemergt f609849 | Folge (UX): falscher OAuth-state zeigt nur „Anmeldung abgebrochen“ (AuthChannel.kt lehnt vor Dart ab) |
-| WP85 | Kontakte/SMS/Anrufe | gemergt 314deb6 | K69 bestätigt (3 Fragen an Stefan, u. a. diktierter Text im Anfrage-Audit → evtl. eigenes Paket); Sprachbestätigung nur per Unit-/Widget-Test, Gerätetest `docs/testing/m5/wp85.md`; Kontaktänderungen erreichen den Erkenner erst bei Resume/Aktivierung |
-| WP86 | Standort/Maps | gemergt f595fa0 | K67 bestätigt (Wetter-Position bei „keine Mindeststufe“, Frage an Stefan); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
+| WP85 | Kontakte/SMS/Anrufe | gemergt 314deb6 | K69 bestätigt (3 Fragen an Maintainer, u. a. diktierter Text im Anfrage-Audit → evtl. eigenes Paket); Sprachbestätigung nur per Unit-/Widget-Test, Gerätetest `docs/testing/m5/wp85.md`; Kontaktänderungen erreichen den Erkenner erst bei Resume/Aktivierung |
+| WP86 | Standort/Maps | gemergt f595fa0 | K67 bestätigt (Wetter-Position bei „keine Mindeststufe“, Frage an Maintainer); Gerätetest WP86.5 (geo: mit Karten-App, Google-Maps-Fall); E2E-Test liegt in `../james-wt/handoff/wp86-location_e2e_test.dart` (braucht Grant/geo fix im e2e-Skript) |
 | WP87 | Wetter/Meer | gemergt | – |
 | WP88 | Aufgaben | gemergt bb776da | K61 bestätigt; Folge: Erinnerung per Wecker/Timer, 🔁 fortschreiben; E2E-Test liegt in `../james-wt/handoff/wp88-e2e`; calendar_e2e_test sucht fest „Rückgängig · “ (auf englischem Emulator rot) |
 | WP89 | Todoist/Google Tasks | gemergt b4777882 | K72 bestätigt; Gerätetest mit echten Konten `docs/testing/m5/wp89.md` (WP89.1–15); Live-Tests ungelaufen (keine Tokens); Audit-Titel tasks__ und deutsche Resttexte → WP105 |
@@ -50,8 +50,8 @@ Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125, WP126 (St
 | WP96 | Gate schlank/stabil | gemergt 9023943 | Folge: `attestation_hub.dart:82` Default isLocked für unbekannte Profile ungetestet; Absenzprüfungen in `main_attestation_test` je ~1 s Echtzeit |
 | WP97 | Lastbremse/Cache | gemergt fd1b53b | zweites Gate 3,5 s, APK ohne cargo 47 s; Folge: SIGINT-Freigabe ungetestet, kein actions/cache in CI; 1 App-Test-Flake unter Last beim Merge (Wiederholung grün) |
 | WP98 | Konfliktarm | gemergt 2c14825 | Folge: id-Switches in labels.dart, settings_routes.dart, integration_detail_screen.dart; `--adopt` holt von main gelöschte Schlüssel zurück; Statustabelle aus Frontmatter |
-| WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 bestätigt (Wahl Stefan); Folge: Handy-Messung, WER mit echten Stimmen |
-| WP103 | Bessere Sprache einbauen | gemergt ff07cbd | K66/K68 bestätigt (Stefans Modell-/Stimmenwahl, Katalog anpassbar); Gerätetest `docs/testing/m5/wp103.md` (RAM/RTF/Akku/Wärme); Kontaktnamen als Hinweis-Begriffe brauchen Neubau des contactNamesProvider durch WP85; Wake-Dienst ohne Hinweis-Begriffe |
+| WP102 | Spike bessere Sprache (Messung) | gemergt a3e640b | K66 bestätigt (Wahl Maintainer); Folge: Handy-Messung, WER mit echten Stimmen |
+| WP103 | Bessere Sprache einbauen | gemergt ff07cbd | K66/K68 bestätigt (Maintainers Modell-/Stimmenwahl, Katalog anpassbar); Gerätetest `docs/testing/m5/wp103.md` (RAM/RTF/Akku/Wärme); Kontaktnamen als Hinweis-Begriffe brauchen Neubau des contactNamesProvider durch WP85; Wake-Dienst ohne Hinweis-Begriffe |
 | WP104 | Liegengebliebene Gerätetests übernehmen | gemergt 3b45204b | K76 bestätigt; Folge: Mutationslauf zeigt keine Zeilennummer; fest deutsche Tests (tee_gpu, wake_enroll, voice_voices, voice_robustness) nur mit de; Liste `docs/testing/m5/wp104.md` |
 | WP105 | Folgepunkte Audit und Texte | gemergt f02332ef | Kachel-Fehlerzeile/Retry-Hinweise nur generisch (Fehlerart+Dienst), Meldungen ans Modell deutsch; Fehlerart durch onError/Registry → WP108; Gerätetest `docs/testing/m5/wp105.md` |
 | WP106 | Spike Wake Word Stationsmodus | gemergt 2e06c48e | K80 bestätigt; Notiz `docs/notes/wake-word-station-spike.md`; Empfehlung Station: v7/v9 M0,5 + persönliches Feintuning + Parakeet-Hotword 2,0, CAM++ nur TV-Filter; offen: mehr Sprecher/Räume, ≥1,5 h Negativ, Gerätemessung RAM/Akku; Modelle jetzt `~/wendelin-fixtures/models` |
@@ -64,7 +64,7 @@ Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125, WP126 (St
 | WP113 | „Stopp“ während der Antwort mit Gegenprüfung, Anzeige „hört mit“ | gemergt e7e17b9b | K90 (Stopp gewinnt, Schwellen, Gegenprüfung 0,8 s, Echo-Filter); Gerätetest docs/testing/m5/wp113.md; Soll: stopOverridesWake-Verdrahtung wake_barge_in.dart:194 und Settle wake_word_barge_in.dart:170 ungetestet, _verify alte Generation :219 |
 | WP114 | Gesperrtes Handy: Overlay bleibt nach dem Entsperren, harmlose Aktionen ohne Entsperren | gemergt 82a0afe0 | K92; Gerätetest docs/testing/m5/wp114.md (Z.5-Ursache über Log locked-cmd, Home beim Entsperren); Soll: answerText-Abbruch beim Modell-Laden (voice_answer_text.dart:10), Mutanten M3/M5/M6/M8 |
 | WP115 | Große Modelle streamend entpacken (Parakeet v3), erkannte Sprache loggen | gemergt 781af471 | keine Abweichung; neue Logzeilen model-unpack(-ed/-failed), stt-lang; Gerätetest `docs/testing/m5/wp115.md`; Soll: Tests `a/b` dann `a` → corrupt, doppelte Datei → ok, Doc install() `model_installer.dart:84-86` (io-Ausnahme), io-Test mit chmod 555 scheitert als root |
-| WP116 | Einstellungsseiten: Überschriften, Info-Texte, Links | gemergt 75a243b6 | keine Abweichung (WText.sectionTitle, InfoBox, LinkButton; Varianten von Stefan gewählt); Gerätetest `docs/testing/m5/wp116.md`; Soll: Leerzustand providersNone ohne Test/Golden |
+| WP116 | Einstellungsseiten: Überschriften, Info-Texte, Links | gemergt 75a243b6 | keine Abweichung (WText.sectionTitle, InfoBox, LinkButton; Varianten von Maintainer gewählt); Gerätetest `docs/testing/m5/wp116.md`; Soll: Leerzustand providersNone ohne Test/Golden |
 | WP117 | Weitere deutsche Stimmen (Ramona, Eva) | gemergt 49fca790 | K86; Lizenz M-AILABS (BSD-artig, Attribution) statt CC0; Soll: Stimmen später in eigene Datei auslagern (check_sizes) |
 | WP118 | Antwort als Gesprächston (bessere Echo-Unterdrückung), Schalter | gemergt 983346c4 | K93; Gerätetest docs/testing/m5/wp118.md; Stopp-E2E an/aus offen (Stopp-E2E auf main rot, siehe Nächste Schritte); Soll: Rennen erstes Play+Stopp (audio_playback.dart:65), Besitzer-Token bei dispose, WakeConflictWatcher.kt:61 ohne Test |
 | WP119 | Nächster Wecker auslesen, Tools vorab mitschicken | gemergt fb246094 | K91; Gerätetest docs/testing/m5/wp119.md; Soll: Test endSession räumt gemerkte Sprache auf |
@@ -72,15 +72,15 @@ Stand: 2026-10-22 nachts, Stefan da (max. 2 Sitzungen); läuft: WP125, WP126 (St
 | WP121 | Wake Words mit echten Aufnahmen vergleichen (fair) | gemergt f5f59f2e | K98; Empfehlung bei „Wendelin“ bleiben; Folge: Negativ-Aufnahme mit Fernseher (≥ 1,5 h), weitere Sprecher, sherpa-Spalten WP106/WP111 neu rechnen |
 | WP122 | Feste Bestätigungssätze statt zweitem Modellaufruf | gemergt 4f596e66 | K97; Gerätetest T21-WP122; Soll: Test AgentDone.fixed, Satz „schon vorhanden“ (confirmation_texts de:30/34 en:45/48 fr:53/56), Doku fixed_confirmation.dart:20, toter Schlüssel lists_write_tools.dart:47; CI-Flake wake_lifecycle_test (UnmountedRefException) |
 | WP123 | Stopp sofort ab Antwortbeginn (Barge-in-Warmstart), Stopp-E2E stabil | gemergt ab054e98 | K96; E2E voice_stop_word/voice_barge_in je 3× offen (Last 15–18); Gerätetest T21-WP123; Soll: Provider-Test take statt snapshot (wake_providers.dart:204) |
-| WP124 | Emulator startet bei Bedarf, wird nach jedem E2E-Lauf beendet (E2E_KEEP_EMULATOR=1 für Serien) | gemergt 909738c1 | Wunsch Stefan 2026-10-21; echter Lauf torch_e2e grün |
-| WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | in Arbeit | Go Stefan 2026-10-22; Barge-in-Punkte (WP113, WP123) → WP126 |
+| WP124 | Emulator startet bei Bedarf, wird nach jedem E2E-Lauf beendet (E2E_KEEP_EMULATOR=1 für Serien) | gemergt 909738c1 | Wunsch Maintainer 2026-10-21; echter Lauf torch_e2e grün |
+| WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | in Arbeit | Go Maintainer 2026-10-22; Barge-in-Punkte (WP113, WP123) → WP126 |
 | WP126 | „Stopp“ nach Warmstart: Fehlkandidat auf Stille blockiert echtes Wort (Fehler aus WP123) | in Arbeit | voice_stop_word_e2e rot seit ab054e98 (Bisekt 2026-10-22) |
 
-Empfehlung von Modellen: M6 (gemeinsam mit Stefan besprechen).
+Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
 ## Nächste Schritte
 
-Reihenfolge M5 (bestätigt Stefan 2026-10-19), je Schritt höchstens 2 Paket-Sitzungen; Pakete am Sprach-Controller (WP81b, WP92, WP93, WP103) nie gleichzeitig:
+Reihenfolge M5 (bestätigt Maintainer 2026-10-19), je Schritt höchstens 2 Paket-Sitzungen; Pakete am Sprach-Controller (WP81b, WP92, WP93, WP103) nie gleichzeitig:
 
 0. erledigt: WP98, WP102; Merge ab jetzt mit `tool/merge_wp.sh <branch> [--squash]`, Paket-Anleitung `docs/work-packages/WP98-migration.md`
 1. WP97 Lastbremse/Cache, WP85 Kontakte/SMS/Anrufe
@@ -92,4 +92,4 @@ Reihenfolge M5 (bestätigt Stefan 2026-10-19), je Schritt höchstens 2 Paket-Sit
 
 Danach M6 (nur mit Go): WP99, dann WP100/WP101 (`M6-PLAN.md`). Pakete mit Alt-Commits per Squash mergen.
 
-Wartet auf Stefan: K47 nach Stopp-Test 11.6, Test 11.7a, Gerätetests WP90.1–7 und WP91.
+Wartet auf Maintainer: K47 nach Stopp-Test 11.6, Test 11.7a, Gerätetests WP90.1–7 und WP91.

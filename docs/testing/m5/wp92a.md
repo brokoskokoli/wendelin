@@ -15,10 +15,10 @@ Voraussetzung: Emulator oder Gerät, Mikrofon erlaubt, Netz für den Modelldownl
 
 Mit den WAV-Fixtures aus `docs/testing/m5/README.md` (Mikrofon-Ersatz `WavAudioInput`, synthetische Stimmen aus `packages/wendelin_voice/test/fixtures/speaker/README.md`): zwei synthetische Sprecher (z. B. Thorsten/Kerstin) einlernen, mit je einem neuen Satz identifizieren (richtige Person), Fremdstimme (LJSpeech) = unbekannt. Echte Stimmen und Schwellen (Floor 0,45, Ceiling 0,60 stammen aus synthetischen Stimmen) werden auf dem Gerät mit echten Sprechern geprüft.
 
-Aufruf (Emulator `Wendelin_AOSP_35`, App als Debug-Build installiert): Modell und synthetische WAVs liegen nicht im Repo, sondern unter `/Users/stefanrichter/ai/james-wt/handoff/wp92a-e2e` (gen_wavs.py erzeugt die WAVs, prepare.sh kopiert Modell und WAVs in den App-Ordner files/e2e/wp92a, nur auf Emulatoren). Ohne Define wird der Test übersprungen.
+Aufruf (Emulator `Wendelin_AOSP_35`, App als Debug-Build installiert): Modell und synthetische WAVs liegen nicht im Repo, sondern unter `~/ai/james-wt/handoff/wp92a-e2e` (gen_wavs.py erzeugt die WAVs, prepare.sh kopiert Modell und WAVs in den App-Ordner files/e2e/wp92a, nur auf Emulatoren). Ohne Define wird der Test übersprungen.
 
 ```sh
-/Users/stefanrichter/ai/james-wt/handoff/wp92a-e2e/prepare.sh emulator-5554
+~/ai/james-wt/handoff/wp92a-e2e/prepare.sh emulator-5554
 WENDELIN_WP92A_DIR=wp92a tool/e2e_android.sh integration_test/speaker_e2e_test.dart
 ```
 

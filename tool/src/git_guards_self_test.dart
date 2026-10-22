@@ -303,12 +303,12 @@ void _identityCases(
     branch(
       'oldname',
       () => c('x\n\n$sbTrailer', {
-        'GIT_AUTHOR_NAME': 'Stefan Richter',
-        'GIT_COMMITTER_NAME': 'Stefan Richter',
+        'GIT_AUTHOR_NAME': 'Mia Berger',
+        'GIT_COMMITTER_NAME': 'Mia Berger',
       }),
     ),
     1,
-    'Name „Stefan Richter“ (richtige Mail): rot, nur brokoskokoli erlaubt',
+    'Name „Mia Berger“ (richtige Mail): rot, nur brokoskokoli erlaubt',
   );
   _identityGuardHook(t, r);
   _identityTrailers(t, r, branch);
@@ -327,8 +327,8 @@ void _identityGuardHook(SelfCheck t, Sandbox r) {
     },
   ).exitCode;
   t.isTrue(
-    hook(sbName) == 0 && hook('Stefan Richter') != 0,
-    'identity-guard: nur brokoskokoli, „Stefan Richter“ abgelehnt',
+    hook(sbName) == 0 && hook('Mia Berger') != 0,
+    'identity-guard: nur brokoskokoli, „Mia Berger“ abgelehnt',
   );
 }
 

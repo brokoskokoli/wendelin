@@ -1,10 +1,10 @@
 # NEAR AI Cloud Spike (Stand 2026-10-15): Teil 1 belegt, Teil 2 blockiert (keine Credits)
 
-Skripte und Rohdaten: `/private/tmp/claude-501/-Users-stefanrichter-ai-james/f56969ca-5b83-41fc-888c-87fe9795f5d4/scratchpad/near-spike/` (`nearlib.py` = fertiger E2EE-Client, `att.py` = Quote-Prüfung, `att_*.json` = Attestierungen). Key nie ausgegeben.
+Skripte und Rohdaten: `<lokales Scratchpad>/near-spike/` (`nearlib.py` = fertiger E2EE-Client, `att.py` = Quote-Prüfung, `att_*.json` = Attestierungen). Key nie ausgegeben.
 Markierung **[?]** = nicht belegt.
 
 ## Ergebnis in einem Satz
-Der Key ist gültig, aber die Organisation hat **kein Spending-Limit/keine Credits**: jeder `POST /v1/chat/completions` liefert **HTTP 402 `no_limit_configured`** ("No spending limit configured. Please contact support to set up credits."). Damit sind die Punkte 3, 4 (Quittung), 5 (Qualität/Latenz/Kosten) und die Fehlerbilder aus 6 **nicht gemessen**. Attestierung (Punkt 2) und Modellliste (Punkt 1) sind vollständig belegt, da kostenlos. Verbraucht: 1 Chat-Request (abgelehnt, 0 Kosten), sonst nur GETs und 3 Attestierungsabrufe. Zum Weitermachen: auf `cloud.near.ai` Credits kaufen bzw. Limit setzen (Stefan), dann `t1.py` und Evals laufen lassen (Client ist vorbereitet).
+Der Key ist gültig, aber die Organisation hat **kein Spending-Limit/keine Credits**: jeder `POST /v1/chat/completions` liefert **HTTP 402 `no_limit_configured`** ("No spending limit configured. Please contact support to set up credits."). Damit sind die Punkte 3, 4 (Quittung), 5 (Qualität/Latenz/Kosten) und die Fehlerbilder aus 6 **nicht gemessen**. Attestierung (Punkt 2) und Modellliste (Punkt 1) sind vollständig belegt, da kostenlos. Verbraucht: 1 Chat-Request (abgelehnt, 0 Kosten), sonst nur GETs und 3 Attestierungsabrufe. Zum Weitermachen: auf `cloud.near.ai` Credits kaufen bzw. Limit setzen (Maintainer), dann `t1.py` und Evals laufen lassen (Client ist vorbereitet).
 
 ## 1. Key und Modelle
 - `GET /v1/models` mit Key: 200, 58 Modelle. Eigene NEAR-Flotte (`owned_by: nearai`, E2EE-fähig laut Doku) mit Tools:

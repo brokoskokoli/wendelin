@@ -1,12 +1,12 @@
 # WP113 – „Stopp“ während der Antwort mit Gegenprüfung (`app/`, Sprache)
 
-**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, `~/ai/wendelin-testing/ergebnisse-2026-10-20.md` T20-B.1). Bezug: K47 (WP80). Entscheid Stefan 2026-10-21: Kandidat mit niedriger Schwelle wird vom großen Erkenner gegengeprüft, wie beim Wake Word (K84).
+**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, `~/ai/wendelin-testing/ergebnisse-2026-10-20.md` T20-B.1). Bezug: K47 (WP80). Entscheid Maintainer 2026-10-21: Kandidat mit niedriger Schwelle wird vom großen Erkenner gegengeprüft, wie beim Wake Word (K84).
 
 ## Befund (Gerät, Xiaomi 15T Pro)
 - Aufschlag +0,05 (`sthr=0.95`): „Stopp“ erreicht nie die Schwelle (gemessen 0,72–0,94, einmal 0,95 ohne `barge-hit`).
 - Aufschlag 0,00 (`thr=0.85 sthr=0.90`): ständige Fehlabbrüche, 3× `keyword-wake` knapp an der Schwelle (sim 0,85–0,86).
 - **Fehler:** zweimal lag `stop` 0,94/0,95 über `sthr`, gewertet wurde trotzdem `wake` (00:24:26, 00:24:54).
-- „Stopp“ geht laut Stefan auch nicht, wenn Wendelin gerade nicht spricht.
+- „Stopp“ geht laut Maintainer auch nicht, wenn Wendelin gerade nicht spricht.
 - Die Anzeige zeigt nicht, dass Wendelin während der Ausgabe mithört.
 
 ## Inhalt

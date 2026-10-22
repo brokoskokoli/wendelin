@@ -152,7 +152,7 @@ def merge_times(times, refr=REFR):
 
 
 def label_window(start, end, status):
-    """Zeitfenster (s), in dem ein Treffer zum Label zaehlt; "unsicher" (zusammengezogene/lange Aeusserung) toleranter (Stefan 2026-10-21)."""
+    """Zeitfenster (s), in dem ein Treffer zum Label zaehlt; "unsicher" (zusammengezogene/lange Aeusserung) toleranter (Maintainer 2026-10-21)."""
     return (start - 0.5, end + 2.0) if status == "unsicher" else (start - 0.3, end + 1.2)
 
 
