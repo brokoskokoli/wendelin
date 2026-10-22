@@ -9,7 +9,7 @@ MAX_S Sekunden). Pruefung (nie im Training): huawei Block 4 bis 6, das gesamte z
 
 Aufnahmen und Labels bleiben lokal (nie ins Repo). Selbsttest: test_real_split.py.
 """
-import argparse, csv, os, subprocess
+import argparse, csv, os, re, subprocess
 import numpy as np
 import soundfile as sf
 
@@ -69,13 +69,30 @@ def cut_clips(rows, x):
     return out
 
 
-def check_dir(d):
-    """Alle Clips im Ordner muessen Trainingsnamen sein (huawei, Block 1 bis 3); sonst Abbruch."""
-    for f in os.listdir(d):
-        if f.endswith(".wav"):
-            parts = f.split("_")
-            if parts[0] != TRAIN_DEVICE or int(parts[1][1:]) not in TRAIN_BLOCKS:
-                raise SystemExit(f"Pruef-Clip im Trainingsordner: {f}")
+NAME_RE = re.compile(r"^([a-z0-9]+)_b(\d+)_r(\d{2,})_(hey|bare)_(\d{6})\.wav$")     # Muster von clip_name()
+
+
+def check_dir(d, require_nonempty=False):
+    """Alle Clips im Ordner muessen Trainingsnamen sein (huawei, Block 1 bis 3, clip_name-Muster); sonst Abbruch.
+    Fail-closed: fremdes Namensschema, fehlender Ordner und (mit require_nonempty) leerer Ordner brechen ab."""
+    if not os.path.isdir(d):
+        raise SystemExit(f"Ordner der echten Positive fehlt: {d}")
+    n = 0
+    for f in sorted(os.listdir(d)):
+        if not f.endswith(".wav"):
+            continue
+        m = NAME_RE.match(f)
+        if not m or m.group(1) != TRAIN_DEVICE or int(m.group(2)) not in TRAIN_BLOCKS:
+            raise SystemExit(f"Pruef-Clip oder fremder Name im Trainingsordner: {f}")
+        n += 1
+    if require_nonempty and n == 0:
+        raise SystemExit(f"keine echten Positive im Ordner: {d}")
+
+
+def pos_for_split(pos, real_pos, rep, split):
+    """Positiv-Liste je Split fuer train.py: Train = 90 % synthetisch + echte Positive x rep; Val = restliche 10 % synthetisch (nie echt)."""
+    cut = int(len(pos) * .9)
+    return pos[:cut] + list(real_pos) * rep if split == "train" else pos[cut:]
 
 
 def main():

@@ -6,6 +6,8 @@
 # Variablen: NJ = parallele Erzeuger (2), THREADS = Rechenkerne in features/train (NJ), TAG = Modellname (a),
 #   STEPS (5000), SEED (1), HIDDEN (128), N_POS/N_CONF/N_NEG/N_CV (Mengen), PROBE=1 (Mini-Probe in $W/probe, ohne Marker),
 #   FIX = Ordner der Wortaufnahmen mit labels/ und raw/ (nur Huawei-Block 1 bis 3, siehe real_split.py).
+# Reproduktionsbedingung: NJ (Standard 2). Die Erzeuger nutzen die Seeds sb+1..sb+NJ mit n/NJ (abgerundet) Clips; anderes NJ = andere Daten.
+# Downloads sind per SHA-256 gepinnt (run_v8.sha256, Pruefung verify_dl); Stimmen kommen von resolve/main, Tatoeba ist die Live-Datei.
 # Aller Rechenaufwand laeuft mit nice -n 5.
 set -euo pipefail
 K0=${K0:-$HOME/wendelin-models/kws}
@@ -49,19 +51,27 @@ download() {
   touch "$D/dl.done"
 }
 
+verify_dl() {      # SHA-256 aller geladenen Dateien gegen run_v8.sha256 (gepinnt); Abweichung = Abbruch
+  ( cd "$D" && grep -v '^#' "$T/run_v8.sha256" | shasum -a 256 -c --quiet ) || { echo "SHA-256 der Downloads weicht von run_v8.sha256 ab" >&2; exit 1; }
+}
+
 link() { [ -e "$2" ] || ln -s "$1" "$2"; }     # v7-Daten wiederverwenden
 
 synth_kind() {   # synth_kind <kind> <ordner> <n> <seedbasis> [weitere Argumente]
   local kind=$1 out=$2 n=$3 sb=$4; shift 4
   marker "$out" && return 0
+  local pids=() p
   for s in $(seq 1 "$NJ"); do
     $N $PY -I "$T/gen_samples.py" --kind "$kind" --out "$G/$out" --n $((n / NJ)) --seed $((sb + s)) --voices "$D" "$@" &
-  done; wait
+    pids+=($!)
+  done
+  for p in "${pids[@]}"; do wait "$p" || { echo "gen_samples ($kind) fehlgeschlagen" >&2; exit 1; }; done    # kein .done bei Fehler
   ok "$out"
 }
 
 gen() {
   download
+  verify_dl
   mkdir -p "$G/real"
   link "$B/gen/pos" "$G/pos"; link "$B/gen/pos2" "$G/pos2"; link "$B/gen/conf2" "$G/conf2"; link "$B/gen/neg" "$G/neg"
   link "$B/gen/real/train" "$G/real/train"; link "$B/gen/real/dev" "$G/real/dev"     # FLEURS de_de (CC-BY 4.0)
@@ -74,8 +84,10 @@ gen() {
       [ -s "$D/cv/probe.tar" ] || curl -fL -r 0-40000000 -o "$D/cv/probe.tar" "$CV"; src=$D/cv/probe.tar
     else
       fetch "$CV" "$D/cv/de_train_0.tar"; src=$D/cv/de_train_0.tar
+    shasum -a 256 "$src" | tee "$D/cv/de_train_0.tar.sha256"      # noch nicht gepinnt: nur loggen
     fi
-    $N $PY -I "$T/cv_extract.py" --tar "$src" --out "$G/cv" --every 3 --max "$N_CV"
+    local trunc=(); [ "$PROBE" = 1 ] && trunc=(--allow-truncated)      # nur die Probe darf ein abgeschnittenes Archiv lesen
+    $N $PY -I "$T/cv_extract.py" --tar "$src" --out "$G/cv" --every 3 --max "$N_CV" ${trunc[@]+"${trunc[@]}"}
     ok cv
   fi
   if ! marker real_pos; then    # echte Positive: nur Huawei Block 1 bis 3 (real_split.py)

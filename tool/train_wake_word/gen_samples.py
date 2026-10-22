@@ -49,12 +49,12 @@ CONF = ["Wendel", "Wendeltreppe", "Wendelstein", "Vanille", "Berlin", "Wenden", 
 CMD_V8 = ["mach das Licht an", "wie spät ist es", "wie wird das Wetter morgen", "stell einen Timer auf fünf Minuten", "spiel etwas Musik",
           "was steht heute im Kalender", "schreib eine Nachricht", "erinnere mich an den Termin", "sag mir die Nachrichten",
           "kannst du mir helfen", "wie geht es dir", "stopp", "hör zu", "mach bitte leiser", "such mir ein Rezept"]
-CONF_V8 = CONF + CONF2 + [
-    "Wendeline", "Wendelinde", "Wendels", "Wendezeit", "Wendepunkt", "Wendekreis", "Windeln", "Wendelin Berlin", "Berliner", "Berlinale",
+CONF_V8 = [c for c in CONF + CONF2 if "wendelin" not in c.lower()] + [   # nie das Wake Word selbst als Negativ
+    "Wendels", "Wendezeit", "Wendepunkt", "Wendekreis", "Windeln", "Berliner", "Berlinale",
     "Wenn der Lin", "wenn der Linus", "wenn der Linie", "wenn der Lindwurm", "wenn der Wind", "wenn den Lin", "wenn die Linde",
-    "Hey Wendel", "Hey Wendeline", "Hey Wendeltreppe", "Hey Wendelstein", "Hey Windel", "Hey Berlin", "Hey Wenden",
-    "Wendell", "Wendelin Gwendolin", "Gwendolyn", "Mendelin", "Mendel", "Bandelin", "Wendling", "Wedeln", "Wenzeslaus",
-    "Wendelsheim", "Wendlingen", "Vendelin", "Wendelinsbrunn", "Wandelin", "Hey Mendel", "Hey Hendrik", "Hey Wende",
+    "Hey Wendel", "Hey Wendeltreppe", "Hey Wendelstein", "Hey Windel", "Hey Berlin", "Hey Wenden",
+    "Wendell", "Gwendolyn", "Mendelin", "Mendel", "Bandelin", "Wendling", "Wedeln", "Wenzeslaus",
+    "Wendelsheim", "Wendlingen", "Wandelin", "Hey Mendel", "Hey Hendrik", "Hey Wende",
     "Kendelin", "Endlich", "Wenn ich", "Wenn er", "Wendungen", "Verwenden", "Handel", "Hey Handel"]
 POS_V8_SHARE = (0.35, 0.35, 0.30)       # allein / Hey allein / im Befehlssatz (abgeschnitten)
 

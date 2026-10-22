@@ -4,8 +4,11 @@
 Pruef-Split (aus real_split.py, nie im Training): Huawei Block 4 bis 6, das gesamte zweite Handy (Block 1 bis 6). Huawei Block 1 bis 3
 sind Trainingsdaten und werden nie gewertet. Ausgabe wie words_measure.py: Treffer bei gleicher FA/h (Ziel 2/h, Kreuz-Auswahl nach
 cv_pick, Wilson-Intervall), je Geraet, Stufe 1 („-“) und Stufe 2 (hw2). FA/h auf neg_huawei/neg_handy2 (echt), syn und fleurs.
-Dazu synthetische Verwechsler: eigener, seed-getrennter Satz aus gen_samples (conf_v8-Texte) mit den macOS-Stimmen aus
-gen_say_test.py (nicht im Training), Rate je Clip und Ereignisse je Stunde.
+Dazu synthetische Verwechsler: Seed-Satz aus gen_samples (conf_v8-Texte) mit den macOS-Stimmen aus gen_say_test.py. Disjunkt zum
+Training sind nur die Stimmen (macOS nur in der Messung); die TEXTE stammen aus derselben CONF_V8-Liste wie im Training und
+ueberdecken sie also. Die Rate je Clip misst daher Stimm-Verallgemeinerung, nicht unbekannte Woerter.
+Reproduktion: Der Plan haengt nur von Seed und n ab; die Trainingsdaten dagegen von NJ (run_v8.sh, Seeds sb+1..sb+NJ, n/NJ
+abgerundet): NJ gehoert zur Reproduktionsbedingung und steht im Ergebnis.
 
 Venv wie words_measure.py (K=~/wendelin-models/kws):
   nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/v8_measure.py \\

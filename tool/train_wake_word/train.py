@@ -14,9 +14,12 @@ import torch
 from torch import nn
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
+import real_split
 
 
 def feat_stage(a):
+    if a.real_pos:
+        real_split.check_dir(a.real_pos, require_nonempty=True)      # fail-closed vor jedem Laden: nur Trainings-Clips (WP130)
     rng = np.random.default_rng(a.seed)
     ld = lambda names, **k: sum((load_dir(os.path.join(a.gen, n), dtype="float16", **k) for n in names.split(",") if n), [])
     pos = ld(a.pos_dirs, max_s=1.8)
@@ -43,7 +46,7 @@ def feat_stage(a):
     for split in ("train", "val"):
         npos = a.n_pos if split == "train" else a.n_pos // 9
         nneg = a.n_neg if split == "train" else a.n_neg // 9
-        ps = pos[: int(len(pos) * .9)] + real_pos * a.real_pos_rep if split == "train" else pos[int(len(pos) * .9):]
+        ps = real_split.pos_for_split(pos, real_pos, a.real_pos_rep, split)
         ns = neg_tr if split == "train" else neg_va
         cs = conf[: int(len(conf) * .9)] if split == "train" else conf[int(len(conf) * .9):]
         embs, ends = [], []

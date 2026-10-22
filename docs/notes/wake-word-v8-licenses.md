@@ -14,6 +14,8 @@ Das Modell enthält nur Klassifikatorgewichte (ONNX); Trainingsdaten und Aufnahm
 
 Hinweis M-AILABS: Der Lizenztext steht auf der Datensatzseite (`caito.de`, Beitrag „The M-AILABS Speech Dataset“, Archivstand 2023), nicht in der Piper-Modellkarte. Vor der Veröffentlichung des Modells prüft der Orchestrator die Seite erneut.
 
+macOS-Systemstimmen (`say`): nur in der Messung (`v8_measure.py`, Verwechsler-Satz), **nicht im Training** (Apple-Lizenz). Das weicht von WP130 Inhalt 1 ab und entspricht v7.
+
 ## Daten für Negative und Merkmale
 | Quelle | Verwendung | Lizenz | Namensnennung |
 |---|---|---|---|
