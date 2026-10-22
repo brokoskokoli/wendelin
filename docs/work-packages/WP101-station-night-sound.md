@@ -15,4 +15,4 @@ Bezug: Konzept Stationsmodus; K62, K63.
 
 ## Abnahmekriterien
 - [ ] Tests: Ruhezeit-Grenzen (virtuelle Uhr, Mitternacht), Audioziel-Wechsel bei Verbinden/Trennen, Inhalt der Wecker-Ansage.
-- [ ] E2E (Emulator): Ruhezeit-Verhalten, Wecker-Ansage nach Test-Wecker. Bluetooth nur im Gerätetest (Stefan). Gate grün.
+- [ ] E2E (Emulator): Ruhezeit-Verhalten, Wecker-Ansage nach Test-Wecker. Bluetooth nur im Gerätetest (Maintainer). Gate grün.

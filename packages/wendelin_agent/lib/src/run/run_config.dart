@@ -43,6 +43,10 @@ abstract interface class RunConfig {
   /// sentence (WP122); only the tool name, never the sentence.
   void Function(String sessionId, String toolName)? get onFixedConfirmation;
 
+  /// Other configured targets, best first, for the offer after a provider
+  /// failure (WP128); `null` = no offer.
+  List<ProviderTarget> Function()? get fallbackTargets;
+
   /// Privacy floor of every memory entry.
   PrivacyLevel? get memoryFloor;
 

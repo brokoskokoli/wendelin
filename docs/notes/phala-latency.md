@@ -1,7 +1,7 @@
 # Phala (RedPill/TEE) vs. Claude: Latenz vor dem ersten Token
 
 Stand: main 3e845fe, Messung 2026-10-16 vom Mac (WLAN/Heim-Internet), Rohdaten und Skripte unter
-`/private/tmp/claude-501/-Users-stefanrichter-ai-james/f56969ca-5b83-41fc-888c-87fe9795f5d4/scratchpad/latency/`
+`<lokales Scratchpad>/latency/`
 (`measure.dart`, `nras.dart`, `nras2.dart`, `rs/` = Rust-Zeitmessung). Kein Repo-Code geändert.
 
 ## 1. Kurzfassung

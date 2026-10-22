@@ -291,6 +291,8 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
     'run',
     'tool/check_secrets.dart',
   ], cacheSpec: all);
+  // Ohne Cache: die Begriffsliste liegt außerhalb des Repos.
+  await gate.step('check_privacy', 'dart', ['run', 'tool/check_privacy.dart']);
   await gate.step(
     'check_sizes',
     'dart',

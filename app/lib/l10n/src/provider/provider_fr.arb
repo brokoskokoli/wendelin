@@ -62,5 +62,24 @@
   "providersRoutingHint": "Règles pour le choix du fournisseur",
   "targetPickerApply": "Appliquer",
   "targetPickerProfile": "Profil",
-  "targetPickerProfileGone": "Le profil « {profileId} » n’existe plus."
+  "targetPickerProfileGone": "Le profil « {profileId} » n’existe plus.",
+  "providerModelRecommendedBadge": "Recommandé",
+  "providerModelRecommendedReason": "{hits} essais sur {runs} corrects, typiquement {p50} s, mesuré le {date}",
+  "@providerModelRecommendedReason": {
+    "placeholders": {
+      "hits": {
+        "type": "String"
+      },
+      "runs": {
+        "type": "String"
+      },
+      "p50": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "providerModelRecommendedWeaker": "Le meilleur modèle de ce fournisseur, mais moins bon que chez Phala et Tinfoil."
 }

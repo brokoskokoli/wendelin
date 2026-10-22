@@ -4,7 +4,7 @@ Grundlage für die Standardmodelle je Rolle (normal, privat/TEE, schnell/Station
 
 ## Aufbau
 
-- Entscheid Stefan 2026-10-20: live nur **30 Fälle** (`evals/cases/live30.txt`, quer über Kalender, Wecker, Aufgaben, Bring, Spotify, Wetter, Web, Notizen, Stationsmodus, Mehrschritt, Rückfragen, Ablehnung; de/en/fr). Ein Fall ist `pending` und wird übersprungen: **29 aktive Fälle x 2 Wiederholungen = 58 Läufe je Modell**. Der Gesamtsatz hat **150 Fälle** und läuft grün gegen den Fake-Provider (Gate); nur die 30 gehen gegen echte Modelle, um das Budget zu halten.
+- Entscheid Maintainer 2026-10-20: live nur **30 Fälle** (`evals/cases/live30.txt`, quer über Kalender, Wecker, Aufgaben, Bring, Spotify, Wetter, Web, Notizen, Stationsmodus, Mehrschritt, Rückfragen, Ablehnung; de/en/fr). Ein Fall ist `pending` und wird übersprungen: **29 aktive Fälle x 2 Wiederholungen = 58 Läufe je Modell**. Der Gesamtsatz hat **150 Fälle** und läuft grün gegen den Fake-Provider (Gate); nur die 30 gehen gegen echte Modelle, um das Budget zu halten.
 - Gleiche Bedingungen: „heute“ = Mi 18.11.2026 09:00, Zone Europe/Berlin (Standard des Runners), gleicher Prompt und gleiche Tools, Fakes für alle Integrationen. Zeitlimit je Fall 60 s.
 - **Thinking aus bzw. minimal, je Anbieter**: Claude Haiku 5.5 ohne Thinking; Claude Sonnet 5.5 lehnt `thinking: disabled` ab und läuft deshalb mit `between_tools` (Adapter-Anpassung, siehe Abweichungen); `gpt-5-mini` mit `reasoningEffort: minimal`; `gpt-oss-120b` (Phala, Tinfoil) `low`; gemma, Qwen, glm, deepseek per `chat_template_kwargs` (`enable_thinking`/`thinking: false`) bzw. Phala-Reasoning-Option aus. Profile: `evals/profiles/`.
 - Preise (USD je Mio. Token) stammen aus dem Modellkatalog der App (Anthropic, OpenAI) bzw. dem `catalog` des Profils (Phala/RedPill `/v1/models`, Stand 2026-10-14; Tinfoil öffentlicher `/v1/models`, `docs/notes/tinfoil-spike.md`; NEAR `/v1/models`, Stand 2026-10-20, im Profil `near-tee.json` unter `catalog`). Tinfoil und NEAR haben für die meisten Modelle keinen eigenen Cache-Preis: Cache-Lesen ist mit dem Eingabepreis gerechnet.
@@ -94,9 +94,9 @@ Profile: `claude-haiku`, `claude-sonnet`, `openai-mini`, `phala-tee-small`, `tin
 - `fr-clarify-liste` (`evals/cases/clarify.yaml:53`) ist zu streng: `clipboard__read` ist bei „Ajoute ça“ plausibel (9 der 12 Fehlschläge), die Rückfrage kommt auch ohne „?“ (3). Erwartung lockern oder Prompt ändern; Wirkung: beide Sonnet-Fehlschläge (56/58) gehen allein darauf zurück.
 - `evals/cases/live30.txt:13` (`de-lists-add`) ist `pending`, der Live-Satz hat daher 29 Fälle: gegen einen aktiven Fall tauschen.
 
-## Abweichungen fürs Konzept (zur Bestätigung durch Stefan)
+## Abweichungen fürs Konzept (zur Bestätigung durch Maintainer)
 
-1. **Live-Satz 30 statt 150 Fälle** (Entscheid Stefan 2026-10-20); die 150 laufen nur gegen den Fake.
+1. **Live-Satz 30 statt 150 Fälle** (Entscheid Maintainer 2026-10-20); die 150 laufen nur gegen den Fake.
 2. **Anthropic-Adapter: Thinking `between_tools`** für Sonnet 5.5 (lehnt `disabled` ab); Haiku bleibt ohne Thinking. „Kein Thinking“ gilt für Sonnet daher nur eingeschränkt.
 3. **Runner**: neue Optionen `--max-cost`, `--provider-cap`, `--ledger`, `--ids`, `--pause-ms`, `--retry-rate-limit` (nicht im Konzept).
 4. Modellempfehlung je Rolle (oben) ist ein Vorschlag, keine Änderung der App-Defaults.

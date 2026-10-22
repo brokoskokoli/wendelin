@@ -26,7 +26,7 @@ Begründung: gemessene „Stopp“-Werte 0,72–0,94 gehen als Kandidat durch (0
 
 ## „Stopp“ außerhalb der Ausgabe (Punkt 4)
 
-Laut K40/K47 gilt das eingelernte „Stopp“ nur während der Sprachausgabe (der Barge-in-Zuhörer startet mit dem Zustand `speaking`, auch über „thinking“ hinweg, und endet mit dem Gespräch). Im Ruhezustand hört nur der Wake-Word-Dienst auf „Wendelin“, und beim offenen Zuhören wird „Stopp“ aus dem Transkript gewertet (`isStopWord`: nur Stopp- und Füllwörter). Damit ist das Verhalten laut Stefan („geht auch nicht, wenn Wendelin nicht spricht“) wie im Konzept vorgesehen: kein Fehler, keine Änderung. Falls gewünscht, wäre ein „Stopp“ im Ruhezustand eine neue Anforderung (Konzeptänderung).
+Laut K40/K47 gilt das eingelernte „Stopp“ nur während der Sprachausgabe (der Barge-in-Zuhörer startet mit dem Zustand `speaking`, auch über „thinking“ hinweg, und endet mit dem Gespräch). Im Ruhezustand hört nur der Wake-Word-Dienst auf „Wendelin“, und beim offenen Zuhören wird „Stopp“ aus dem Transkript gewertet (`isStopWord`: nur Stopp- und Füllwörter). Damit ist das Verhalten laut Maintainer („geht auch nicht, wenn Wendelin nicht spricht“) wie im Konzept vorgesehen: kein Fehler, keine Änderung. Falls gewünscht, wäre ein „Stopp“ im Ruhezustand eine neue Anforderung (Konzeptänderung).
 
 ## Gleichzeitiger Whisper-Zugriff (Stufe 2 und Folge-Zuhören)
 

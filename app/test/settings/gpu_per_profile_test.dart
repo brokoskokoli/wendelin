@@ -178,6 +178,7 @@ void main() {
                 ModelInfo(id: 'glm-5.2', displayName: 'glm-5.2'),
                 ModelInfo(id: 'gpt-x', displayName: 'gpt-x'),
               ],
+              recommendations: const [],
               model: TextEditingController(),
               noGpuEvidence: const {'glm-5.2'},
               failure: null,

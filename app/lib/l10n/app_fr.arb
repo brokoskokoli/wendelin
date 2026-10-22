@@ -702,6 +702,44 @@
   "privateBannerPrivate": "Conversation privée (depuis {since})",
   "privateEscalationMemory": "La conversation utilise votre mémoire (depuis {since}). Avec « Oui », {toName} voit l’historique jusqu’ici, mais pas la mémoire elle-même.",
   "privateEscalationPrivate": "La conversation est privée (depuis {since}). Avec « Oui », {toName} voit aussi ses parties privées.",
+  "retryOfferDetail": "{fromName} ne répond pas pour le moment. {toName} protège tes données au moins aussi bien. Les actions déjà exécutées ne sont pas répétées, seule la réponse est redemandée.",
+  "@retryOfferDetail": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferSpoken": "{fromName} ne répond pas. Réessayer avec {toName} ? Oui ou non ?",
+  "@retryOfferSpoken": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferTitle": "Réessayer avec {toName} ?",
+  "@retryOfferTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferYes": "Réessayer avec {toName} ?",
+  "@retryOfferYes": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
   "switchTopicBody": "Changer de modèle démarre une nouvelle conversation. L’historique actuel est terminé (il reste consultable dans l’historique).",
   "switchTopicBodyRunning": "Changer de modèle démarre une nouvelle conversation. La réponse en cours est interrompue et l’historique actuel est terminé (il reste consultable dans l’historique).",
   "switchTopicSwitch": "Changer",
@@ -954,6 +992,25 @@
   "providerChipLevel": "Niveau de confidentialité {level}",
   "providerChipReceipt": "Reçu {status}",
   "providerChipSemantics": "Fournisseur {name}",
+  "providerModelRecommendedBadge": "Recommandé",
+  "providerModelRecommendedReason": "{hits} essais sur {runs} corrects, typiquement {p50} s, mesuré le {date}",
+  "@providerModelRecommendedReason": {
+    "placeholders": {
+      "hits": {
+        "type": "String"
+      },
+      "runs": {
+        "type": "String"
+      },
+      "p50": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "providerModelRecommendedWeaker": "Le meilleur modèle de ce fournisseur, mais moins bon que chez Phala et Tinfoil.",
   "providerSetupBudgetFormat": "Budget : montant en dollars, p. ex. 5 ou 2,50",
   "providerSetupConnected": "Connexion établie",
   "providerSetupConnectedEnterModel": "Connexion établie. Veuillez saisir l’ID du modèle.",

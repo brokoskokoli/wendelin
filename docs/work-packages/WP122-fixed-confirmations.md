@@ -1,6 +1,6 @@
 # WP122 – Feste Bestätigungssätze statt zweitem Modellaufruf
 
-**Zuordnung:** M6, Entscheid Stefan 2026-10-21: „Standardformulierung für die Dinge, die gemacht worden sind … ‚das und das ist jetzt auf der Einkaufsliste‘, ‚Taschenlampe an‘, ‚SMS versendet‘ … da muss ja die KI nicht für fragen.“
+**Zuordnung:** M6, Entscheid Maintainer 2026-10-21: „Standardformulierung für die Dinge, die gemacht worden sind … ‚das und das ist jetzt auf der Einkaufsliste‘, ‚Taschenlampe an‘, ‚SMS versendet‘ … da muss ja die KI nicht für fragen.“
 
 ## Inhalt
 - Heute: Modell ruft ein Tool → App führt aus → **zweiter Modellaufruf** nur für den Antwortsatz. Neu: Für eindeutige Aktionen bildet die App den Satz selbst aus einer festen Vorlage und beendet die Anfrage ohne zweiten Aufruf (spart ~1 s und Kosten).

@@ -38,7 +38,7 @@ EXPECT_CLIPS = {"rest3m": 5, "restTV": 4, "restLeise": 6}   # laut ANLEITUNG (06
 NEG_REFR = 38                            # Sperrzeit Negativ-Ereignisse (Fenster a 80 ms, ~3 s); Positiv 19 (~1,5 s)
 EXPECT_SEGS = 47
 POS_TOL = 0.5                            # Ereignis zaehlt zum Segment, wenn es im Wortbereich +-0,5 s liegt
-CONFIRMED_CONFUSER_S = (1680, 1700)      # Stefan bestaetigt: kein echtes Wendelin (Station-Zeit), Verwechsler
+CONFIRMED_CONFUSER_S = (1680, 1700)      # Maintainer bestaetigt: kein echtes Wendelin (Station-Zeit), Verwechsler
 WENDELIN = re.compile(r"w[eiu]nd[eao]l[iyu]n|wendeline|vendelin|gwendolin")
 CONFUSER = re.compile(r"wendel|windel|berlin|vanill|linie|wendolin|gwendol|wenn die")
 
@@ -322,7 +322,7 @@ def main():
         if kstr(k) not in text["medium"]: cls[k] = "fa"; continue
         f = fold(text["medium"][kstr(k)])
         tst = k[3] / SR + shift[k[1]]
-        # Befund 3 (Stefan bestaetigt): "Wendelin"-Fundstellen bei ~1680/1700 s waren Verwechsler -> Verwechsler-FA, nicht ausschliessen
+        # Befund 3 (Maintainer bestaetigt): "Wendelin"-Fundstellen bei ~1680/1700 s waren Verwechsler -> Verwechsler-FA, nicht ausschliessen
         cls[k] = "verwechsler" if (WENDELIN.search(f) and any(abs(tst - t0) <= 25 for t0 in CONFIRMED_CONFUSER_S)) else \
                  "echt" if WENDELIN.search(f) else "verwechsler" if CONFUSER.search(f) else "fa"
     cos = lambda k: float(emb[k] @ prof[k[1]])

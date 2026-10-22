@@ -1,6 +1,6 @@
 # WP117 – Weitere deutsche Stimmen: Ramona und Eva (`packages/wendelin_voice`)
 
-**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, T20-P.4). Wunsch Stefan 2026-10-21 nach Hörprobe: „Fügt bitte alle drei Stimmen schon mal hinzu“; nach der Hörprobe von dii-high: „die mag ich nicht so gerne … nur die anderen beiden“. Also Ramona und Eva, kein dii (K86).
+**Zuordnung:** M5-Nachtest (Gerätetest 2026-10-20, T20-P.4). Wunsch Maintainer 2026-10-21 nach Hörprobe: „Fügt bitte alle drei Stimmen schon mal hinzu“; nach der Hörprobe von dii-high: „die mag ich nicht so gerne … nur die anderen beiden“. Also Ramona und Eva, kein dii (K86).
 
 ## Inhalt
 Zwei Katalogeinträge in `packages/wendelin_voice/lib/src/models/speech_model_catalog.dart` nach dem Muster von `voiceDeKerstin` (int8, sherpa-onnx-Release `tts-models`):

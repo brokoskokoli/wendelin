@@ -153,5 +153,24 @@
         "type": "String"
       }
     }
-  }
+  },
+  "providerModelRecommendedBadge": "Empfohlen",
+  "providerModelRecommendedReason": "{hits} von {runs} Testläufen richtig, typisch {p50} s, gemessen am {date}",
+  "@providerModelRecommendedReason": {
+    "placeholders": {
+      "hits": {
+        "type": "String"
+      },
+      "runs": {
+        "type": "String"
+      },
+      "p50": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "providerModelRecommendedWeaker": "Das beste Modell dieses Anbieters, aber schwächer als bei Phala und Tinfoil."
 }

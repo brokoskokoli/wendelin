@@ -62,5 +62,24 @@
   "providersRoutingHint": "Rules for choosing the provider",
   "targetPickerApply": "Apply",
   "targetPickerProfile": "Profile",
-  "targetPickerProfileGone": "Profile “{profileId}” no longer exists."
+  "targetPickerProfileGone": "Profile “{profileId}” no longer exists.",
+  "providerModelRecommendedBadge": "Recommended",
+  "providerModelRecommendedReason": "{hits} of {runs} test runs correct, typically {p50} s, measured on {date}",
+  "@providerModelRecommendedReason": {
+    "placeholders": {
+      "hits": {
+        "type": "String"
+      },
+      "runs": {
+        "type": "String"
+      },
+      "p50": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "providerModelRecommendedWeaker": "The best model of this provider, but weaker than on Phala and Tinfoil."
 }

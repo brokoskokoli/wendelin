@@ -16,6 +16,7 @@ import '../tts/speech_queue.dart';
 import '../wake/wake_verifier.dart' show stripWakeWord;
 import 'conversation.dart';
 import 'endpointer.dart';
+import 'open_question.dart';
 import 'speech_hold.dart';
 import 'voice_events.dart';
 import 'voice_pipeline_config.dart';
@@ -712,7 +713,7 @@ final class VoicePipeline {
             failed = true; // no follow-up listening after an unverified answer
             unawaited(queue?.interrupt());
             say([VoiceTexts.of(language).unverified]);
-          case ConfirmationRequired() || EscalationConfirmationRequired():
+          case _ when isQuestionEvent(e):
             confirmations.add(e);
           case AgentFailed(:final error, :final message):
             if (error != AgentErrorKind.cancelled) failed = true;
@@ -740,13 +741,7 @@ final class VoicePipeline {
       if (_queue == queue) _queue = null;
     }
     if (gen != _gen) return null;
-    final open = confirmations.any(
-      (e) => switch (e) {
-        ConfirmationRequired(:final answered) => !answered,
-        EscalationConfirmationRequired(:final answered) => !answered,
-        _ => false,
-      },
-    );
+    final open = confirmations.any(isOpenQuestion);
     if (open) return ConversationEndReason.confirmation;
     return failed || _speechFailed ? ConversationEndReason.error : null;
   }

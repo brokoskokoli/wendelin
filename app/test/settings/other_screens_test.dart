@@ -506,7 +506,7 @@ void main() {
     final c = await pumpPage(tester, env, const AssistantScreen());
     await tester.enterText(
       find.widgetWithText(TextField, 'Wie soll Wendelin dich nennen?'),
-      'Stefan',
+      'Mia',
     );
     await tester.enterText(
       find.widgetWithText(
@@ -520,12 +520,12 @@ void main() {
     expect(
       c.read(assistantPrefsProvider),
       isA<AssistantPrefs>()
-          .having((p) => p.userName, 'userName', 'Stefan')
+          .having((p) => p.userName, 'userName', 'Mia')
           .having((p) => p.persona, 'persona', 'Antworte knapp.'),
     );
-    expect(await env.storage.settings.get(AppSettings.userName), 'Stefan');
+    expect(await env.storage.settings.get(AppSettings.userName), 'Mia');
     final factory = c.read(agentFactoryProvider) as AgentFactory;
-    expect(factory.config.userName, 'Stefan');
+    expect(factory.config.userName, 'Mia');
     expect(factory.config.personaAddon, 'Antworte knapp.');
 
     await c

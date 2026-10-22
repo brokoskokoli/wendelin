@@ -22,6 +22,7 @@ import 'conversation_reducer.dart';
 import 'conversation_state.dart';
 import 'history_entries.dart';
 import 'new_topic_command.dart';
+import 'question_answer.dart';
 
 /// The conversation on the main screen.
 final agentControllerProvider =
@@ -447,14 +448,7 @@ final class AgentController extends Notifier<ConversationState> {
     final sessionId = _sessionId;
     if (pending == null || sessionId == null) return;
     if (!pending.answered) {
-      switch (pending) {
-        case ToolQuestion(:final event):
-          event.respond(approved);
-          _audit.toolConfirmation(sessionId, event, approved: approved);
-        case EscalationQuestion(:final event):
-          event.respond(approved);
-          _audit.escalationConfirmation(sessionId, event, approved: approved);
-      }
+      answerQuestion(pending, _audit, sessionId, approved: approved);
     }
     state = _reducer.answered(state);
   }

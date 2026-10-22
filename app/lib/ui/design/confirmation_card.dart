@@ -14,7 +14,7 @@ class ConfirmationCard extends StatelessWidget {
     required this.title,
     required this.detail,
     required this.toolName,
-    required this.risk,
+    this.risk,
     required this.onYes,
     required this.onNo,
     this.subject,
@@ -40,8 +40,9 @@ class ConfirmationCard extends StatelessWidget {
   /// Tool-Name in Mono.
   final String toolName;
 
-  /// Risikostufe des Tools.
-  final RiskLevel risk;
+  /// Risikostufe des Tools; `null` zeigt nur [toolName] (z. B. beim Angebot
+  /// „Mit X nochmal?“, das kein Tool ist).
+  final RiskLevel? risk;
 
   /// Bestätigen.
   final VoidCallback? onYes;
@@ -111,7 +112,9 @@ class ConfirmationCard extends StatelessWidget {
             ),
             if (!compact)
               Text(
-                context.l10n.confirmCardToolLevel(toolName, risk.name),
+                risk == null
+                    ? toolName
+                    : context.l10n.confirmCardToolLevel(toolName, risk!.name),
                 style: WText.mono,
               ),
           ],

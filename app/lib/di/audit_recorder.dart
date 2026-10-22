@@ -84,6 +84,26 @@ final class AuditRecorder implements ToolAuditSink {
     'approved': approved,
   });
 
+  /// The user answered the offer „Mit X nochmal?“ after a provider failure
+  /// (WP128). Only the profiles and the kind of failure, never content.
+  void retryOffer(
+    String sessionId,
+    RetryOfferRequired event, {
+    required bool approved,
+  }) => _write(AuditKind.confirmation, sessionId, {
+    'type': 'retryOffer',
+    'fromProfile': event.fromProfile,
+    'toProfile': event.toProfile,
+    'failure': switch (event.error) {
+      ProviderTimeoutException() => 'timeout',
+      NetworkException() => 'network',
+      ServerException() => 'server',
+      AttestationFailedException() => 'attestation',
+      _ => 'other',
+    },
+    'approved': approved,
+  });
+
   /// The user undid the tool call [callId] ([ok] = the port reverted it).
   /// Undo changes the device after the call, so it is logged like a call.
   void undo(
@@ -152,12 +172,10 @@ final class AuditRecorder implements ToolAuditSink {
           'message': message,
         });
       case AgentSpokenVerdict(:final accepted, :final reason):
-        // Only verdict and reason, never the texts (WP55).
         _write(AuditKind.verification, sessionId, {
           'spokenCheck': true,
           'accepted': accepted,
-          // Fixed codes only; anything else is not logged (WP55).
-          'reason': SpokenCheck.codes.contains(reason) ? reason : 'error',
+          'reason': _verdictReason(reason),
         });
       case AgentTextDelta() ||
           AgentSpokenText() ||
@@ -168,6 +186,7 @@ final class AuditRecorder implements ToolAuditSink {
           ToolCallStarted() ||
           ConfirmationRequired() ||
           EscalationConfirmationRequired() ||
+          RetryOfferRequired() ||
           ToolCallFinished() ||
           AgentDone():
         // Tool calls come from the executor (record), answers to
@@ -229,3 +248,8 @@ final class AuditRecorder implements ToolAuditSink {
     });
   }
 }
+
+/// Only verdict and reason are logged, never the texts (WP55); fixed codes
+/// only, anything else is not logged.
+String _verdictReason(String reason) =>
+    SpokenCheck.codes.contains(reason) ? reason : 'error';

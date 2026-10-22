@@ -1,6 +1,6 @@
 # WP124 – Emulator nur während der Gerätetests
 
-**Zuordnung:** Werkzeuge. Wunsch Stefan 2026-10-21: „dass der End-to-End-Test immer den Emulator beendet, wenn er fertig ist, und der nächste, der ihn braucht, ihn wieder startet. Das braucht halt irgendwie eine Minute, aber jetzt aktuell läuft halt ständig der Emulator, obwohl ich ihn nicht brauche.“
+**Zuordnung:** Werkzeuge. Wunsch Maintainer 2026-10-21: „dass der End-to-End-Test immer den Emulator beendet, wenn er fertig ist, und der nächste, der ihn braucht, ihn wieder startet. Das braucht halt irgendwie eine Minute, aber jetzt aktuell läuft halt ständig der Emulator, obwohl ich ihn nicht brauche.“
 
 ## Inhalt
 - `tool/e2e_android.sh` startet das AVD `Wendelin_AOSP_35` selbst, wenn kein Emulator läuft (ohne Fenster, ohne Audio, ohne Boot-Animation, `-no-snapshot-save`, feste Portnummer → Serial `emulator-5554`, bzw. Port aus `DEVICE=emulator-NNNN`), und wartet auf `sys.boot_completed` (Zeitlimit, dann Abbruch mit klarer Meldung).
