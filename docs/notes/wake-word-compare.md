@@ -408,6 +408,25 @@ Stufe 1 ist ein Modell für beide Wörter, die Verwechsler-Ereignisse sind daher
 
 Ohne Wirkung (gleich hw2): Editierabstand 3, Kölner-Phonetik-Präfix, „Hey“ optional (holt 0–2 von 9). Längerer Ausschnitt (Vorlauf 3,0 s, Nachlauf 1,8 s) verschlechtert (27–57 %). Whisper mit fester Sprache Deutsch liefert deutsche, aber oft falsche Wörter und trifft seltener als Parakeet. Score 4 halluziniert das Hotword (mehrfach wiederholt) und lässt so viele Verwechsler durch wie Band 0,995.
 
-**Empfehlung (Maintainer bestätigt 2026-10-22):** Stufe 2 im Stationsmodus nur im **Band unter 0,999**: Spitzenwert ≥ 0,999 nimmt die App direkt an, darunter prüft hw2 wie bisher. Gegenüber hw2 immer deutlich mehr Treffer bei fast gleichem Verwechsler-Schutz (5 / 4 statt 5 / 2 von 300). Tolerantere Regeln, längerer Ausschnitt, Whisper auf Deutsch und stärkerer Boost sind nicht besser.
+**Weitere Stufe-2-Varianten (v8a, feste Schwelle 0,98, 90 Rufe; Verwechsler W / HW von 300):** hw2 heute 46 Treffer, 5 / 2; hw2 mit Pegel-Normalisierung des Ausschnitts (Spitze 0,5) 52, 4 / 2; Hotword-Score 3 60, 7 / 4 (dazu 2 syn); `blank_penalty` 1 / 2 48 / 51, 5 / 2. Mit Band 0,999 liegen alle Varianten innerhalb weniger Treffer. In der Kreuzauswahl ist die Normalisierung gemischt (je Zelle −1 bis +4); kein Unterschied ist signifikant.
 
-Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`): `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx` → `$K/wp130/results/stage2_table.md` (lokal). Die Zahlen bei fester Schwelle 0,98 (Spitzenwerte, Verwechsler, FA) stehen dort in Abschnitt 6 (Option `--fixed-thr`, Standard 0,98; `--report-only` rechnet nur aus den Caches), die Treffer-Spalten in Abschnitt 4.
+**Plausibilität „leer“:** Kein Aufbaufehler. Der Ausschnitt entspricht der App (2,0 s vor bis 0,9 s nach dem Treffer), Neudekodieren reproduziert die Cache-Texte, 16 kHz. Bei 27 von 30 verlorenen Rufen liegt das Wort ganz im Ausschnitt; 3 sind abgeschnitten (Stufe 1 löst bei „Hey Wende…“ bzw. bei langen Äußerungen aus). Die „leeren“ Rufe sind leise (Wort −37 bis −43 dBFS gegen −27 bis −33 dBFS bei erkannten).
+
+**Ausschnitt und Parität mit der App** (`stage2_cut.py`, Aufruf `stage2_analysis.py --cut-only`): Die App entscheidet am Fenster mit dem Spitzenwert (Halten); das liegt 0–0,32 s (meist 0,08 s) nach der ersten Überschreitung, die bisher gemessen wurde. Beide Bezugszeiten geben dieselben Ergebnisse (hw2 + Band 0,999: 66 Treffer, Verwechsler 5 / 4). Vorlauf 1,2–2,0 s × Nachlauf 0,9–1,8 s liegen alle innerhalb ±3 Treffer; nur Vorlauf 2,5 s ist schlechter (hw2 allein 38–42 statt 46–47, nur ein Hinweis). App-Werte 2,0 s / 0,9 s bleiben.
+
+**Fehlalarme mit mehr Negativzeit** (`stage2_extra_neg.py`): zusätzlich FLEURS-de-Test ohne die erste Stunde (2,15 h) und Multilingual LibriSpeech Deutsch, Test-Split (14,29 h, CC-BY 4.0, nicht im Training; lokal). FA/h über alle Negativquellen ohne Verwechsler (20,8 h), v8a, Schwelle 0,98, Poisson 95 %:
+
+| Stufe 2 | Ereignisse | FA/h | Obergrenze |
+|---|---|---|---|
+| keine (Stufe 1 allein) | 28 | 1,36 | 1,96 |
+| hw2 immer | 0 | 0 | 0,18 |
+| hw2 + Band 0,999 | 3 | 0,15 | 0,43 |
+| hw2 + Band 0,995 | 9 | 0,44 | 0,83 |
+
+Belastbar ist vor allem MLS (14,3 h, 30 Sprecher, daher Obergrenze eher zu knapp). Das eine MLS-Ereignis bei Band 0,999 ist ein „Hallo“ (Spitzenwert 0,9996), ein Muster, das auch bei den Verwechslern auftaucht. Vorgelesene Sprache ersetzt keine lange Alltagsaufnahme (Fernsehen, Gespräche, Raumhall).
+
+**Empfehlung (Maintainer bestätigt 2026-10-22):** Stufe 2 im Stationsmodus nur im **Band unter 0,999**: Spitzenwert ≥ 0,999 nimmt die App direkt an, darunter prüft hw2 wie bisher; Ausschnitt 2,0 s / 0,9 s bleibt. Gegenüber hw2 immer deutlich mehr Treffer bei fast gleichem Verwechsler-Schutz (5 / 4 statt 5 / 2 von 300) und rund 0,15 FA/h (≤ 0,43) mehr. Band 0,995 bringt wenige Treffer mehr, aber etwa doppelt so viele Verwechsler und dreimal so viele Fehlalarme. Pegel-Normalisierung vor hw2 ist ein kleiner, kostenloser Zugewinn (optional). Tolerantere Regeln, längerer Ausschnitt, Whisper auf Deutsch, stärkerer Boost und `blank_penalty` sind nicht besser. Grundsätzlich tut sich ein allgemeiner Erkenner mit einem einzelnen, leisen Eigennamen schwer; ein wortspezifischer Prüfer (Bewertung „passt Wendelin“ oder Vorlagen-Vergleich) ist als Folgepunkt vorgeschlagen.
+
+**Vergleich der Wörter (Band 0,999):** Kreuzauswahl Wendelin 40/45, Hey Wendelin 34/45; feste Schwelle 32/45 gegen 34/45; Verwechsler 5 gegen 4. Kein belastbarer Unterschied; Stufe 1 ist für beide dasselbe Modell, nur Stufe 2 trennt über das Hey-Wort.
+
+Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`): `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx` → `$K/wp130/results/stage2_table.md` (lokal). Die Zahlen bei fester Schwelle 0,98 (Spitzenwerte, Verwechsler, FA) stehen dort in Abschnitt 6 (Option `--fixed-thr`, Standard 0,98; `--report-only` rechnet nur aus den Caches), die Treffer-Spalten in Abschnitt 4. Ausschnitt: `… stage2_analysis.py --cut-only --model v8a=…` → `stage2_cut_table.md`. Negativquellen: `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_extra_neg.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2` → `stage2_extra_neg.md` (lokal; lädt den MLS-Test-Split einmalig nach `$K/wp133/dl`).
