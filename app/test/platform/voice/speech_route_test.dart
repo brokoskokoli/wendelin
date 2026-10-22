@@ -384,6 +384,28 @@ void main() {
       },
     );
 
+    test('neues Play verdrängt das laufende: das alte kehrt sofort zurück, '
+        'ohne Sicherheits-Timeout', () {
+      fakeAsync((async) {
+        final player = _Player();
+        final p = AudioplayersPlayback(player);
+        var firstDone = false;
+        var secondDone = false;
+        unawaited(p.play(Wav(Int16List(160))).then((_) => firstDone = true));
+        async.flushMicrotasks();
+        expect(player.plays, 1);
+        unawaited(p.play(Wav(Int16List(160))).then((_) => secondDone = true));
+        async.flushMicrotasks(); // no time elapsed: no safety timeout
+        expect(firstDone, isTrue);
+        expect(secondDone, isFalse);
+        expect(player.plays, 2);
+        player.complete.add(null);
+        async.flushMicrotasks();
+        expect(secondDone, isTrue);
+        unawaited(player.close());
+      });
+    });
+
     test('Stopp, während play() auf das Stoppen des vorigen Plays wartet: '
         'das neue Play startet nicht', () async {
       final player = _Player();
