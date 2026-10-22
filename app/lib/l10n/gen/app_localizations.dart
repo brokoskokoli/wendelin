@@ -5446,6 +5446,29 @@ abstract class AppLocalizations {
   /// **'Provider {name}'**
   String providerChipSemantics(String name);
 
+  /// No description provided for @providerModelRecommendedBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'Empfohlen'**
+  String get providerModelRecommendedBadge;
+
+  /// No description provided for @providerModelRecommendedReason.
+  ///
+  /// In de, this message translates to:
+  /// **'{hits} von {runs} Testläufen richtig, typisch {p50} s, gemessen am {date}'**
+  String providerModelRecommendedReason(
+    String hits,
+    String runs,
+    String p50,
+    String date,
+  );
+
+  /// No description provided for @providerModelRecommendedWeaker.
+  ///
+  /// In de, this message translates to:
+  /// **'Das beste Modell dieses Anbieters, aber schwächer als bei Phala und Tinfoil.'**
+  String get providerModelRecommendedWeaker;
+
   /// No description provided for @providerSetupBudgetFormat.
   ///
   /// In de, this message translates to:

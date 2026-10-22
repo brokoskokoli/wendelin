@@ -13,6 +13,94 @@ enum TemplateAuth {
   none,
 }
 
+/// A model recommended for a template, with the numbers behind it
+/// (source: `docs/notes/model-recommendation.md`).
+@immutable
+final class ModelRecommendation {
+  /// Creates a recommendation.
+  const ModelRecommendation({
+    required this.modelId,
+    required this.hits,
+    required this.runs,
+    required this.p50Seconds,
+    required this.measured,
+    this.weakerThanTee = false,
+  });
+
+  /// Model id as the provider lists it.
+  final String modelId;
+
+  /// Passed runs of the live evaluation.
+  final int hits;
+
+  /// All runs of the live evaluation.
+  final int runs;
+
+  /// Median latency of the agent loop in seconds.
+  final double p50Seconds;
+
+  /// Measurement date (ISO `yyyy-MM-dd`).
+  final String measured;
+
+  /// Best model of this provider, but measurably weaker than the TEE
+  /// favourites (the UI says so honestly).
+  final bool weakerThanTee;
+}
+
+const _measured = '2026-10-20';
+
+/// Recommended models per template id, the single place for them. Templates
+/// that are missing here (Mistral, OpenRouter, Ollama, custom) were not
+/// measured and recommend nothing.
+const modelRecommendations = <String, List<ModelRecommendation>>{
+  'claude': [
+    ModelRecommendation(
+      modelId: 'claude-haiku-5-5',
+      hits: 58,
+      runs: 58,
+      p50Seconds: 1.9,
+      measured: _measured,
+    ),
+  ],
+  'openai': [
+    ModelRecommendation(
+      modelId: 'gpt-5-mini',
+      hits: 51,
+      runs: 58,
+      p50Seconds: 2.0,
+      measured: _measured,
+    ),
+  ],
+  'phala': [
+    ModelRecommendation(
+      modelId: 'google/gemma-4-31b-it',
+      hits: 58,
+      runs: 58,
+      p50Seconds: 1.8,
+      measured: _measured,
+    ),
+  ],
+  'tinfoil': [
+    ModelRecommendation(
+      modelId: 'gemma4-31b',
+      hits: 57,
+      runs: 58,
+      p50Seconds: 1.9,
+      measured: _measured,
+    ),
+  ],
+  'near': [
+    ModelRecommendation(
+      modelId: 'Qwen/Qwen3.6-35B-A3B-FP8',
+      hits: 51,
+      runs: 58,
+      p50Seconds: 2.3,
+      measured: _measured,
+      weakerThanTee: true,
+    ),
+  ],
+};
+
 /// A preset for the provider setup dialog.
 @immutable
 final class ProviderTemplate {
@@ -55,6 +143,10 @@ final class ProviderTemplate {
 
   /// Default adapter options (`ProviderProfile.options`).
   final Map<String, Object?> options;
+
+  /// Recommended models of this template, best first (may be empty).
+  List<ModelRecommendation> get recommendations =>
+      modelRecommendations[id] ?? const [];
 
   /// Builds a profile from this template. [secretRef] names the stored API
   /// key; without it the profile uses [NoAuth].
@@ -143,7 +235,7 @@ const providerTemplates = <ProviderTemplate>[
     auth: TemplateAuth.apiKey,
     keyPageUrl: 'https://redpill.ai',
     privacy: PrivacyLevel.tee,
-    suggestedModel: 'z-ai/glm-5.3-flash',
+    suggestedModel: 'google/gemma-4-31b-it',
     options: {'teeModelsOnly': true, 'attestation': 'phala'},
   ),
   ProviderTemplate(
@@ -154,7 +246,7 @@ const providerTemplates = <ProviderTemplate>[
     auth: TemplateAuth.apiKey,
     keyPageUrl: 'https://cloud.near.ai',
     privacy: PrivacyLevel.tee,
-    suggestedModel: 'z-ai/glm-5.3-flash',
+    suggestedModel: 'Qwen/Qwen3.6-35B-A3B-FP8',
     options: {'attestation': 'near', 'ownedBy': 'nearai', 'toolsOnly': true},
   ),
   ProviderTemplate(
@@ -165,9 +257,9 @@ const providerTemplates = <ProviderTemplate>[
     auth: TemplateAuth.apiKey,
     keyPageUrl: 'https://tinfoil.sh',
     privacy: PrivacyLevel.tee,
-    // Eval result of the spike (docs/notes/tinfoil-spike.md, 5): 5/5 correct
-    // tool calls; `gemma4-31b` is the faster alternative (also 4/4).
-    suggestedModel: 'gpt-oss-120b',
+    // Live evaluation 2026-10-20 (docs/notes/model-recommendation.md):
+    // `gemma4-31b` 57/58, `gpt-oss-120b` only 50/58.
+    suggestedModel: 'gemma4-31b',
     options: {'attestation': 'tinfoil', 'modelType': 'chat', 'toolsOnly': true},
   ),
   ProviderTemplate(

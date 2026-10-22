@@ -3175,6 +3175,23 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get providerModelRecommendedBadge => 'Empfohlen';
+
+  @override
+  String providerModelRecommendedReason(
+    String hits,
+    String runs,
+    String p50,
+    String date,
+  ) {
+    return '$hits von $runs Testläufen richtig, typisch $p50 s, gemessen am $date';
+  }
+
+  @override
+  String get providerModelRecommendedWeaker =>
+      'Das beste Modell dieses Anbieters, aber schwächer als bei Phala und Tinfoil.';
+
+  @override
   String get providerSetupBudgetFormat =>
       'Budget: Betrag in Dollar, z. B. 5 oder 2,50';
 

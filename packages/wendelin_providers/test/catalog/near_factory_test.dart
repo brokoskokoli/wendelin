@@ -26,7 +26,7 @@ void main() {
     expect(t.name, 'NEAR AI (TEE)');
     expect(t.baseUrl, 'https://cloud-api.near.ai/v1');
     expect(t.privacy, PrivacyLevel.tee);
-    expect(t.suggestedModel, 'z-ai/glm-5.3-flash');
+    expect(t.suggestedModel, 'Qwen/Qwen3.6-35B-A3B-FP8');
     expect(t.options, {
       'attestation': 'near',
       'ownedBy': 'nearai',

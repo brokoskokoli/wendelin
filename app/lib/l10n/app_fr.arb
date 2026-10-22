@@ -954,6 +954,25 @@
   "providerChipLevel": "Niveau de confidentialité {level}",
   "providerChipReceipt": "Reçu {status}",
   "providerChipSemantics": "Fournisseur {name}",
+  "providerModelRecommendedBadge": "Recommandé",
+  "providerModelRecommendedReason": "{hits} essais sur {runs} corrects, typiquement {p50} s, mesuré le {date}",
+  "@providerModelRecommendedReason": {
+    "placeholders": {
+      "hits": {
+        "type": "String"
+      },
+      "runs": {
+        "type": "String"
+      },
+      "p50": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "providerModelRecommendedWeaker": "Le meilleur modèle de ce fournisseur, mais moins bon que chez Phala et Tinfoil.",
   "providerSetupBudgetFormat": "Budget : montant en dollars, p. ex. 5 ou 2,50",
   "providerSetupConnected": "Connexion établie",
   "providerSetupConnectedEnterModel": "Connexion établie. Veuillez saisir l’ID du modèle.",
