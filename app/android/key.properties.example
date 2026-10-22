@@ -1,0 +1,7 @@
+# Copy to key.properties (gitignored) to sign release builds locally with the release key.
+# Without key.properties and without the ANDROID_* environment, the release build warns and
+# falls back to the debug key. See docs/RELEASE.md.
+storeFile=/absolute/path/to/wendelin-release.jks
+storePassword=
+keyAlias=wendelin
+keyPassword=
