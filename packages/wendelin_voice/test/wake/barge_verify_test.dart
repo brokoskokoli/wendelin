@@ -426,6 +426,63 @@ void main() {
         },
       );
 
+      test(
+        'Ausschnitt endet genau settle nach dem letzten lauten Block',
+        () async {
+          // Wort 2,0 bis 2,6 s, Kandidat 3,9 s: Nachlauf-Stille = settle
+          // (Whisper braucht Stille nach einem kurzen Wort, Gerätebefund).
+          await setUp0(settle: const Duration(milliseconds: 800), hitAt: {38});
+          Int16List? clip;
+          v.decide = (pcm) {
+            clip = pcm;
+            return BargeVerdict.no;
+          };
+          await frames(20);
+          for (var i = 0; i < 6; i++) {
+            audio.push(Int16List(1600)..fillRange(0, 1600, 7000));
+          }
+          await frames(13); // Kandidat im letzten Frame (3,9 s)
+          await frames(8); // settle
+          expect(clip, isNotNull);
+          expect(clip!.length, 40000);
+          var trailing = 0;
+          for (var i = clip!.length - 1; i >= 0 && clip![i] != 7000; i--) {
+            trailing++;
+          }
+          expect(trailing, 12800); // 800 ms, Wort vorhanden
+          expect(clip!.contains(7000), isTrue);
+        },
+      );
+
+      test(
+        'erst schwacher, dann stärkerer busy-Kandidat: Fenster des stärkeren',
+        () async {
+          final script = _ScriptEngine(
+            {0: 'stop', 2: 'stop', 4: 'stop'},
+            conf: {0: 0.5, 2: 0.6, 4: 0.95},
+          );
+          await setUp0(
+            clip: const Duration(milliseconds: 500),
+            cooldown: const Duration(seconds: 100),
+            custom: script,
+          );
+          final hold = Completer<void>();
+          v
+            ..verdict = BargeVerdict.no
+            ..hold = hold;
+          await frames(10, loud: true); // Treffer bei Frame 0, 2 und 4 (1,0 s)
+          expect(v.calls, hasLength(1)); // die Prüfung läuft noch
+          v.hold = null;
+          hold.complete(); // Urteil der ersten Prüfung: no
+          await pumpEventQueue();
+          v.verdict = const BargeVerdict('stop', BargeInKeyword.stop);
+          await frames(1, loud: true);
+          // Das Wort des stärkeren liegt 0,5 s zurück: noch im Ausschnitt.
+          expect(v.calls, hasLength(2));
+          expect(got, ['keyword-stop']);
+        },
+      );
+
       test('Kandidat während der Prüfung wird danach erneut geprüft', () async {
         await setUp0(
           settle: Duration.zero,

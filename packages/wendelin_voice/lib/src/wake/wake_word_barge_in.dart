@@ -306,7 +306,10 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   Int16List _clipEndingAtSpeech() {
     final all = _ring.snapshot();
     final first = _fed - all.length;
-    final tail = durationToSamples(const Duration(milliseconds: 300));
+    // Trailing silence = settle (device finding 2026-10-22): Whisper needs
+    // quiet after a short word ("Stopp") to recognise it; the end stays
+    // min(now, _lastLoud + settle).
+    final tail = durationToSamples(settle);
     var end = all.length;
     if (_lastLoud + tail - first < end) end = _lastLoud + tail - first;
     if (end <= 0) return all; // loud block left the ring: quiet, skipped
