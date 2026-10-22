@@ -702,6 +702,33 @@
   "privateBannerPrivate": "Conversation private (since {since})",
   "privateEscalationMemory": "The conversation uses your memory (since {since}). With “Yes” {toName} sees the history so far, but not the memory itself.",
   "privateEscalationPrivate": "The conversation is private (since {since}). With “Yes” {toName} also sees its private parts.",
+  "retryOfferDetail": "{fromName} is not answering right now. {toName} protects your data at least as well. Actions that already ran are not repeated, only the answer is requested again.",
+  "@retryOfferDetail": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferTitle": "Try again with {toName}?",
+  "@retryOfferTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferYes": "Try again with {toName}?",
+  "@retryOfferYes": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
   "switchTopicBody": "Switching the model starts a new conversation. The current history is ended (it stays available in the history).",
   "switchTopicBodyRunning": "Switching the model starts a new conversation. The running answer is cancelled and the current history is ended (it stays available in the history).",
   "switchTopicSwitch": "Switch",

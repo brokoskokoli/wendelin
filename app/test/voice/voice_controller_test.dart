@@ -15,6 +15,7 @@ import 'package:wendelin/ui/design/mic_button.dart';
 import 'package:wendelin/voice/level_meter.dart';
 import 'package:wendelin/voice/voice_components.dart';
 import 'package:wendelin/voice/voice_controller.dart';
+import 'package:wendelin_agent/wendelin_agent.dart' show ProviderTarget;
 import 'package:wendelin_core/testing.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_storage/wendelin_storage.dart';
@@ -208,6 +209,80 @@ void main() {
     await c.read(agentControllerProvider.notifier).idle;
     expect(c.read(agentControllerProvider).running, isFalse);
     expect(c.read(voiceControllerProvider).active, isFalse);
+  });
+
+  group('Nachfrage bei Ausfall per Stimme (WP128)', () {
+    const down = NetworkException('weg');
+    late FakeLlmProvider second;
+
+    Future<void> failAndSay(
+      List<Transcript> answers, {
+      FakeTextToSpeech? tts,
+      PrivacyLevel secondPrivacy = PrivacyLevel.standard,
+    }) async {
+      second = FakeLlmProvider([ScriptedTurn.text('Zweiter hier.')]);
+      env = TestEnv(
+        providerConfig: scripted(
+          FakeLlmProvider([ScriptedTurn.error(down), ScriptedTurn.error(down)]),
+          others: [
+            ProviderTarget(
+              profileId: 'zweit',
+              modelId: 'zweit-model',
+              provider: second,
+              privacy: secondPrivacy,
+              name: 'Zweit',
+            ),
+          ],
+          names: {'zweit': 'Zweit'},
+        ),
+        extraOverrides: [
+          activeVoiceProvider.overrideWith(
+            (ref) async => fakeVoice(
+              script: [
+                const Transcript(text: 'Wie wird das Wetter', language: 'de'),
+                ...answers,
+              ],
+              tts: tts,
+            ),
+          ),
+        ],
+      );
+      c = env.container();
+      await voice().start(TriggerKind.pushToTalk);
+    }
+
+    test('„Ja“ wiederholt den Aufruf beim zweiten Anbieter', () async {
+      final tts = FakeTextToSpeech();
+      await failAndSay(const [Transcript(text: 'Ja')], tts: tts);
+      await voice().whenIdle;
+      expect(second.requests, hasLength(1));
+      expect(
+        tts.spoken,
+        contains(
+          'Claude Haiku antwortet nicht. Mit Zweit nochmal? '
+          'Ja oder nein?',
+        ),
+      );
+      await c.read(auditRecorderProvider).flush();
+      final audit = await env.storage.audit.query();
+      final offer = audit.firstWhere((e) => e.payload['type'] == 'retryOffer');
+      expect(offer.payload['approved'], isTrue);
+      expect(offer.payload['failure'], 'network');
+      expect(audit.any((e) => e.kind == AuditKind.escalation), isTrue);
+    });
+
+    test('„Nein“ lässt es bei der Fehlermeldung, nichts geht raus', () async {
+      await failAndSay(const [Transcript(text: 'Nein')]);
+      await voice().whenIdle;
+      expect(second.requests, isEmpty);
+      final s = c.read(agentControllerProvider);
+      expect(s.pending, isNull);
+      await c.read(auditRecorderProvider).flush();
+      final offer = (await env.storage.audit.query()).firstWhere(
+        (e) => e.payload['type'] == 'retryOffer',
+      );
+      expect(offer.payload['approved'], isFalse);
+    });
   });
 
   group('Bestätigung per Stimme', () {
@@ -716,6 +791,22 @@ void main() {
       toName: 'Claude',
     );
     expect(strictAnswer(escalation), isTrue);
+    final offer = RetryOfferQuestion(
+      RetryOfferRequired(
+        fromProfile: 'a',
+        toProfile: 'b',
+        error: const NetworkException('x'),
+        respond: (_) {},
+      ),
+      fromName: 'Phala',
+      toName: 'Claude',
+    );
+    expect(strictAnswer(offer), isFalse);
+    expect(
+      confirmationPrompt(offer, 'en'),
+      'Phala is not answering. Try again with Claude? Yes or no?',
+    );
+    expect(confirmationPrompt(offer, 'fr'), contains('Réessayer avec Claude'));
     expect(
       confirmationPrompt(escalation, 'en'),
       'Hand over to Claude? Yes or no?',

@@ -3934,6 +3934,24 @@ abstract class AppLocalizations {
   /// **'Die Unterhaltung ist privat (seit {since}). Mit „Ja“ sieht {toName} auch ihre privaten Teile.'**
   String privateEscalationPrivate(String since, String toName);
 
+  /// No description provided for @retryOfferDetail.
+  ///
+  /// In de, this message translates to:
+  /// **'{fromName} antwortet gerade nicht. {toName} schützt deine Daten mindestens so gut. Schon ausgeführte Aktionen werden nicht wiederholt, nur die Antwort wird neu angefragt.'**
+  String retryOfferDetail(String fromName, String toName);
+
+  /// No description provided for @retryOfferTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Mit {toName} nochmal?'**
+  String retryOfferTitle(String toName);
+
+  /// No description provided for @retryOfferYes.
+  ///
+  /// In de, this message translates to:
+  /// **'Mit {toName} nochmal?'**
+  String retryOfferYes(String toName);
+
   /// No description provided for @switchTopicBody.
   ///
   /// In de, this message translates to:

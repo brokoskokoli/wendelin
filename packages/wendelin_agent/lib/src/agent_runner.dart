@@ -13,6 +13,7 @@ import 'run/fixed_answer.dart';
 import 'run/model_call.dart';
 import 'run/overlap_control.dart';
 import 'run/privacy_scope.dart';
+import 'run/retry_offer.dart';
 import 'run/run_budget.dart';
 import 'run/run_config.dart';
 import 'run/run_start.dart';
@@ -25,7 +26,8 @@ import 'run/tool_round.dart';
 /// streaming, execute requested tools through the [ToolInvoker], repeat until
 /// a final answer or a limit. A failing provider ends the run with the reason;
 /// the runner never switches to another provider on its own (K28), only on the
-/// user's explicit request („nochmal mit …“). See `docs/adr/0003-agent-loop.md` for the details; the
+/// user's explicit request („nochmal mit …“) or after a yes to the offer „Mit X
+/// nochmal?“ ([RetryOffer]). See `docs/adr/0003-agent-loop.md` for the details; the
 /// loop is [_Run], its parts are under `src/run/`.
 final class AgentRunner implements AgentRun, RunConfig {
   /// Creates a runner.
@@ -42,6 +44,7 @@ final class AgentRunner implements AgentRun, RunConfig {
     this.onToolRefused,
     this.onUndoFailed,
     this.onFixedConfirmation,
+    this.fallbackTargets,
     this.memoryFloor,
     this.memoryOwner = '',
   });
@@ -102,6 +105,13 @@ final class AgentRunner implements AgentRun, RunConfig {
   /// `confirm=fixed tool=<name>` here.
   @override
   final void Function(String sessionId, String toolName)? onFixedConfirmation;
+
+  /// The other configured targets, best (recommended) first. After a provider
+  /// failure the runner offers the first one with at least the privacy level
+  /// of the failed target („Mit X nochmal?“, WP128) and hands over only if the
+  /// user says yes. `null` = no offer, the run just fails.
+  @override
+  final List<ProviderTarget> Function()? fallbackTargets;
 
   /// Privacy floor of every memory entry: the lowest level allowed to see
   /// the memory at all (e.g. `tee` for the sensitive memory integration).
@@ -234,6 +244,12 @@ final class _Run implements RunControl {
     _privacy,
     this,
   );
+  late final RetryOffer _retryOffer = RetryOffer(
+    runner,
+    _state,
+    _escalation,
+    this,
+  );
 
   @override
   bool get segmentStreamed => _segmentStreamed;
@@ -356,9 +372,10 @@ final class _Run implements RunControl {
       _retryCurrentCall();
       return true;
     }
-    // Invariant (K28): after the retry the run ends with the reason. It
-    // never goes on at another provider; a new request of the user may.
+    // Invariant (K28): after the retry the run ends with the reason, unless
+    // the user accepts the offer „Mit X nochmal?“ ([_offerRetry]).
     throwIfAborted();
+    if (await _offerRetry(error)) return false;
     throw RunStop(
       AgentFailed(
         error: AgentErrorKind.provider,
@@ -373,11 +390,11 @@ final class _Run implements RunControl {
   }
 
   /// A TEE check failed. Invariant: a failed or impossible check (session,
-  /// receipt, GPU) never hands the request to another provider, neither
-  /// silently nor after asking. Only a check that could not be completed
-  /// (`unavailable`) is retried once at the same provider; else the run
-  /// ends with the reason (the user may ask again, e.g. „nochmal mit
-  /// Claude“, which is a new request). The GPU dialog „Ohne GPU-Prüfung
+  /// receipt, GPU) never hands the request to another provider silently.
+  /// Only a check that could not be completed (`unavailable`) is retried
+  /// once at the same provider; then the user is offered another provider
+  /// with at least the same privacy level ([_offerRetry]), else the run
+  /// ends with the reason. The GPU dialog „Ohne GPU-Prüfung
   /// senden“ stays with the same provider.
   Future<bool> _onAttestationError(
     AttestationFailedException error, {
@@ -388,6 +405,7 @@ final class _Run implements RunControl {
       return true;
     }
     throwIfAborted();
+    if (await _offerRetry(error)) return false;
     throw RunStop(
       AgentFailed(
         error: AgentErrorKind.provider,
@@ -399,6 +417,19 @@ final class _Run implements RunControl {
         cause: error,
       ),
     );
+  }
+
+  /// After the retry failed: offers another provider (WP128). Returns
+  /// whether the user accepted and the run goes on there. The time the user
+  /// needs to decide does not count towards the duration limit.
+  Future<bool> _offerRetry(ProviderException error) async {
+    final target = _retryOffer.candidate(error);
+    if (target == null) return false;
+    _timer?.cancel();
+    if (!await _retryOffer.offer(error, target)) return false;
+    _start = runner.clock.now();
+    _timer = Timer(config.maxDuration, () => abort(AgentErrorKind.timeout));
+    return true;
   }
 
   /// Before retrying a failed call at the same provider: drop the text it

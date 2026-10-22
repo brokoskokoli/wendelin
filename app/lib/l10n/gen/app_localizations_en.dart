@@ -2256,6 +2256,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String retryOfferDetail(String fromName, String toName) {
+    return '$fromName is not answering right now. $toName protects your data at least as well. Actions that already ran are not repeated, only the answer is requested again.';
+  }
+
+  @override
+  String retryOfferTitle(String toName) {
+    return 'Try again with $toName?';
+  }
+
+  @override
+  String retryOfferYes(String toName) {
+    return 'Try again with $toName?';
+  }
+
+  @override
   String get switchTopicBody =>
       'Switching the model starts a new conversation. The current history is ended (it stays available in the history).';
 

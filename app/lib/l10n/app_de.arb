@@ -1266,6 +1266,33 @@
       }
     }
   },
+  "retryOfferDetail": "{fromName} antwortet gerade nicht. {toName} schützt deine Daten mindestens so gut. Schon ausgeführte Aktionen werden nicht wiederholt, nur die Antwort wird neu angefragt.",
+  "@retryOfferDetail": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferTitle": "Mit {toName} nochmal?",
+  "@retryOfferTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferYes": "Mit {toName} nochmal?",
+  "@retryOfferYes": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
   "switchTopicBody": "Beim Wechsel des Modells beginnt ein neues Gespräch. Der aktuelle Verlauf wird beendet (im Verlauf bleibt er abrufbar).",
   "switchTopicBodyRunning": "Beim Wechsel des Modells beginnt ein neues Gespräch. Die laufende Antwort wird abgebrochen und der aktuelle Verlauf beendet (im Verlauf bleibt er abrufbar).",
   "switchTopicSwitch": "Wechseln",

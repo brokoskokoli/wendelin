@@ -702,6 +702,33 @@
   "privateBannerPrivate": "Conversation privée (depuis {since})",
   "privateEscalationMemory": "La conversation utilise votre mémoire (depuis {since}). Avec « Oui », {toName} voit l’historique jusqu’ici, mais pas la mémoire elle-même.",
   "privateEscalationPrivate": "La conversation est privée (depuis {since}). Avec « Oui », {toName} voit aussi ses parties privées.",
+  "retryOfferDetail": "{fromName} ne répond pas pour le moment. {toName} protège tes données au moins aussi bien. Les actions déjà exécutées ne sont pas répétées, seule la réponse est redemandée.",
+  "@retryOfferDetail": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferTitle": "Réessayer avec {toName} ?",
+  "@retryOfferTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferYes": "Réessayer avec {toName} ?",
+  "@retryOfferYes": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
   "switchTopicBody": "Changer de modèle démarre une nouvelle conversation. L’historique actuel est terminé (il reste consultable dans l’historique).",
   "switchTopicBodyRunning": "Changer de modèle démarre une nouvelle conversation. La réponse en cours est interrompue et l’historique actuel est terminé (il reste consultable dans l’historique).",
   "switchTopicSwitch": "Changer",

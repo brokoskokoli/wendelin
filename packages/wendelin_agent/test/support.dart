@@ -89,6 +89,7 @@ final class Harness {
     void Function(String, ToolCallBlock)? onToolRefused,
     void Function(String, ToolCallBlock)? onUndoFailed,
     void Function(String, String)? onFixedConfirmation,
+    List<ProviderTarget> Function()? fallbackTargets,
     List<Message> history = const [],
     ProviderResolver? resolver,
     MemoryRetriever? memory,
@@ -119,6 +120,7 @@ final class Harness {
       onToolRefused: onToolRefused,
       onUndoFailed: onUndoFailed,
       onFixedConfirmation: onFixedConfirmation,
+      fallbackTargets: fallbackTargets,
       memoryFloor: memoryFloor,
       memoryOwner: memoryOwner,
     );

@@ -11,6 +11,7 @@ import '../ui/screens/labels.dart';
 bool strictAnswer(PendingQuestion question) => switch (question) {
   ToolQuestion(:final event) => event.risk == RiskLevel.external,
   EscalationQuestion() => true,
+  RetryOfferQuestion() => false,
 };
 
 /// Spoken question for an open confirmation, in [language] (de/fr/en);
@@ -39,6 +40,11 @@ String confirmationPrompt(PendingQuestion question, String? language) {
       'fr' => 'Transmettre à $toName ? Oui ou non ?',
       'en' => 'Hand over to $toName? Yes or no?',
       _ => 'An $toName übergeben? Ja oder nein?',
+    },
+    RetryOfferQuestion(:final fromName, :final toName) => switch (lang) {
+      'fr' => '$fromName ne répond pas. Réessayer avec $toName ? Oui ou non ?',
+      'en' => '$fromName is not answering. Try again with $toName? Yes or no?',
+      _ => '$fromName antwortet nicht. Mit $toName nochmal? Ja oder nein?',
     },
   };
 }

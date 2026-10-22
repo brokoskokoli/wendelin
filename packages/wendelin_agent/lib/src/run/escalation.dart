@@ -83,6 +83,11 @@ final class Escalation {
     return false;
   }
 
+  /// Hands the run to [next] after the user accepted a retry offer
+  /// (`RetryOffer`); the conversation stays, only the model call is repeated.
+  void handOver(Resolution next, EscalationReason reason) =>
+      _handOver(next, reason);
+
   /// Switches the run to [next] (another target).
   void _handOver(Resolution next, EscalationReason reason) {
     _control.emit(

@@ -2292,6 +2292,21 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String retryOfferDetail(String fromName, String toName) {
+    return '$fromName ne répond pas pour le moment. $toName protège tes données au moins aussi bien. Les actions déjà exécutées ne sont pas répétées, seule la réponse est redemandée.';
+  }
+
+  @override
+  String retryOfferTitle(String toName) {
+    return 'Réessayer avec $toName ?';
+  }
+
+  @override
+  String retryOfferYes(String toName) {
+    return 'Réessayer avec $toName ?';
+  }
+
+  @override
   String get switchTopicBody =>
       'Changer de modèle démarre une nouvelle conversation. L’historique actuel est terminé (il reste consultable dans l’historique).';
 

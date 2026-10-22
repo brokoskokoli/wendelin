@@ -454,6 +454,9 @@ final class AgentController extends Notifier<ConversationState> {
         case EscalationQuestion(:final event):
           event.respond(approved);
           _audit.escalationConfirmation(sessionId, event, approved: approved);
+        case RetryOfferQuestion(:final event):
+          event.respond(approved);
+          _audit.retryOffer(sessionId, event, approved: approved);
       }
     }
     state = _reducer.answered(state);

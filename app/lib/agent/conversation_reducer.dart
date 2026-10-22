@@ -129,6 +129,14 @@ final class ConversationReducer {
             toName: nameOf(toProfile),
           ),
         );
+      case RetryOfferRequired(:final fromProfile, :final toProfile):
+        return s.copyWith(
+          pending: RetryOfferQuestion(
+            event,
+            fromName: nameOf(fromProfile),
+            toName: nameOf(toProfile),
+          ),
+        );
       case ToolCallFinished(:final call, :final outcome):
         final phase = phaseOf(outcome);
         final undo = phase == ToolPhase.done ? outcome.undo : null;

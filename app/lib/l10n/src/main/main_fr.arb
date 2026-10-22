@@ -53,5 +53,32 @@
   "switchTopicSwitch": "Changer",
   "switchTopicTitle": "Commencer une nouvelle conversation ?",
   "mainMicHearing": "Wendelin écoute : dites « Wendelin » ou touchez",
-  "overlayUnlockCancelled": "Déverrouillage annulé. Votre demande a été abandonnée."
+  "overlayUnlockCancelled": "Déverrouillage annulé. Votre demande a été abandonnée.",
+  "retryOfferDetail": "{fromName} ne répond pas pour le moment. {toName} protège tes données au moins aussi bien. Les actions déjà exécutées ne sont pas répétées, seule la réponse est redemandée.",
+  "@retryOfferDetail": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferTitle": "Réessayer avec {toName} ?",
+  "@retryOfferTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferYes": "Réessayer avec {toName} ?",
+  "@retryOfferYes": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  }
 }

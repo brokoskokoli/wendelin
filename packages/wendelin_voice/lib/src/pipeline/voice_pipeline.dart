@@ -712,7 +712,9 @@ final class VoicePipeline {
             failed = true; // no follow-up listening after an unverified answer
             unawaited(queue?.interrupt());
             say([VoiceTexts.of(language).unverified]);
-          case ConfirmationRequired() || EscalationConfirmationRequired():
+          case ConfirmationRequired() ||
+              EscalationConfirmationRequired() ||
+              RetryOfferRequired():
             confirmations.add(e);
           case AgentFailed(:final error, :final message):
             if (error != AgentErrorKind.cancelled) failed = true;
@@ -744,6 +746,7 @@ final class VoicePipeline {
       (e) => switch (e) {
         ConfirmationRequired(:final answered) => !answered,
         EscalationConfirmationRequired(:final answered) => !answered,
+        RetryOfferRequired(:final answered) => !answered,
         _ => false,
       },
     );

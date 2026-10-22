@@ -53,7 +53,7 @@ class ConfirmationSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final quote = switch (question) {
       ToolQuestion(:final request) => request,
-      EscalationQuestion() => null,
+      EscalationQuestion() || RetryOfferQuestion() => null,
     };
     final outgoing = outgoingPreviewOf(question);
     final card = confirmationCardFor(
@@ -179,6 +179,16 @@ Widget confirmationCardFor(
     onYes: () => answer(true),
     onNo: () => answer(false),
     yesLabel: l.confYesHandOver,
+    noLabel: l.no,
+  ),
+  RetryOfferQuestion(:final fromName, :final toName) => ConfirmationCard(
+    title: l.retryOfferTitle(toName),
+    detail: l.retryOfferDetail(fromName, toName),
+    toolName: '$fromName → $toName',
+    risk: RiskLevel.write,
+    onYes: () => answer(true),
+    onNo: () => answer(false),
+    yesLabel: l.retryOfferYes(toName),
     noLabel: l.no,
   ),
 };

@@ -53,5 +53,32 @@
   "switchTopicSwitch": "Switch",
   "switchTopicTitle": "Start a new conversation?",
   "mainMicHearing": "Wendelin is listening: say “Wendelin” or tap",
-  "overlayUnlockCancelled": "Unlocking cancelled. Your request was discarded."
+  "overlayUnlockCancelled": "Unlocking cancelled. Your request was discarded.",
+  "retryOfferDetail": "{fromName} is not answering right now. {toName} protects your data at least as well. Actions that already ran are not repeated, only the answer is requested again.",
+  "@retryOfferDetail": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferTitle": "Try again with {toName}?",
+  "@retryOfferTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferYes": "Try again with {toName}?",
+  "@retryOfferYes": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  }
 }

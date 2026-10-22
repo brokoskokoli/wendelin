@@ -2278,6 +2278,21 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String retryOfferDetail(String fromName, String toName) {
+    return '$fromName antwortet gerade nicht. $toName schützt deine Daten mindestens so gut. Schon ausgeführte Aktionen werden nicht wiederholt, nur die Antwort wird neu angefragt.';
+  }
+
+  @override
+  String retryOfferTitle(String toName) {
+    return 'Mit $toName nochmal?';
+  }
+
+  @override
+  String retryOfferYes(String toName) {
+    return 'Mit $toName nochmal?';
+  }
+
+  @override
   String get switchTopicBody =>
       'Beim Wechsel des Modells beginnt ein neues Gespräch. Der aktuelle Verlauf wird beendet (im Verlauf bleibt er abrufbar).';
 
