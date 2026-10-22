@@ -342,3 +342,34 @@ Etappe 4 lief mit s2, dann s1 oww (neue Modelle), s2 erneut, report. Der erste s
 ### Abweichungen (Teil B)
 - Keine Vorlagen-Regel T (Teil A) in Teil B; microWakeWord nur für Wendelin/Hey Wendelin; oWW-Schwellen 0,2 bis 0,99; Positive als fortlaufende Aufnahme je Gerät geschnitten (Labels aus Etappe 1); matplotlib im wp58-venv; die Python-Selbsttests laufen nicht im Gate.
 - Platzhalter-Fehler in `kws_measure` (Teil A/Anhang evtl. betroffen, nicht neu gemessen); Aussprachevarianten aus der Slot-Regel statt aus Aufnahmen; neue Modelle oct/kob mit v7-Pipeline.
+
+## v8 (WP130)
+
+openWakeWord v8, nur Deutsch (Pipeline `tool/train_wake_word/run_v8.sh`, Lizenzen `docs/notes/wake-word-v8-licenses.md`). Daten: 35 866 Positive (Piper, 9 Stimmen, Tempo 0,75–1,5, plus v7-Positive, plus 29 echte Clips aus Huawei Block 1–3 je 100-fach), 10 297 Verwechsler, 18 794 Negative (19,2 h), FLEURS train/dev. Varianten: **v8a** 5000 Schritte, Seed 1 (SHA-256 `bfeb939d9e50c4913b27e4d082e5d620e3967af6c2603666e6bc40b30a06997d`), **v8b** 10 000 Schritte, Seed 2 (`ff63b28ac4f247aecf3de093fef0705d7c5e1aac670dbf872bbd49c652fcf73a`). Je 0,86 MB.
+
+Messung `tool/train_wake_word/v8_measure.py` nur auf dem Prüf-Split: Huawei Block 4–6 (n = 15 je Wort), handy2 Block 1–6 (n = 30). Ziel 2 FA/h, kalibriert auf der echten Negativ-Aufnahme des Geräts (0,61 h je Gerät, also höchstens 1 FA), Schwelle per Kreuzauswahl über die Prüf-Blöcke (ein Block ausgelassen), Wilson 95 %. Verwechsler: 300 Clips (conf_v8-Texte, Seed 9001, macOS-Stimmen, nicht im Training).
+
+| Gerät | Wort | v7 Stufe 1 | v8a Stufe 1 | v8b Stufe 1 | v7 + hw2 | v8a + hw2 | v8b + hw2 |
+|---|---|---|---|---|---|---|---|
+| huawei | Wendelin | keine Schwelle ≤ Ziel | **80 %** [55–93] | 93 % [70–99] | 60 % [36–80] | 60 % [36–80] | 53 % [30–75] |
+| huawei | Hey Wendelin | keine Schwelle ≤ Ziel | **93 %** [70–99] | 93 % [70–99] | 33 % [15–58] | 40 % [20–64] | 40 % [20–64] |
+| handy2 | Wendelin | keine Schwelle ≤ Ziel | **77 %** [59–88] | 73 % [56–86] | 67 % [49–81] | 67 % [49–81] | 63 % [46–78] |
+| handy2 | Hey Wendelin | keine Schwelle ≤ Ziel | **90 %** [74–97] | 87 % [70–95] | 63 % [46–78] | 63 % [46–78] | 57 % [39–73] |
+
+Arbeitspunkte Stufe 1 (Schwelle 0,98–0,99): v8a FA/h echt 0,0–1,6, syn 1,0–1,6, FLEURS 1,0, Verwechsler-Clips mit Ereignis 5–8 % [3–11]. v8b bei 0,99: FA/h echt 1,6, Verwechsler 15 % [11–19]. v7 erreicht 2 FA/h nur mit Stufe 2. Mit hw2: Verwechsler bei v7 1–7 %, bei v8a 1–6 %. Kalibrierung auf syn + FLEURS ergibt dieselben Stufe-1-Zahlen. Die „beste Wahl“ (Stufe frei in der Kreuzauswahl) liegt für Wendelin bei v8a unter Stufe 1 allein (47 % bzw. 60 %), weil die Auswahl je Block zwischen den Stufen wechselt. Volle Tabellen lokal unter `~/wendelin-models/kws/wp130/results/v8_table.md`.
+
+### Empfehlung
+- **v8a übernehmen.** Bei 2 FA/h erreicht v8a mit Stufe 1 allein 77–93 %. v7 hält das Ziel ohne Stufe 2 nicht ein. Mit Stufe 2 (hw2) sind beide Modelle gleich gut. Bei Huawei überlappen sich die Intervalle von Stufe 1 und v7 + hw2, bei handy2 „Hey Wendelin“ (90 % [74–97] gegen 63 % [46–78]) nur knapp.
+- v8b (doppelte Schritte) bringt nichts dazu und erzeugt die doppelte Verwechsler-Rate.
+
+### Grenzen
+- Prüfsprecher ist der Maintainer. Seine Stimme steckt mit Huawei Block 1–3 im Training, und für andere Sprecher fehlt eine Messung. handy2 ist ein anderes Gerät, die Blöcke sind dieselbe Sitzung.
+- Für die Negativzeit gibt es je Gerät nur 0,61 h echte Aufnahme, das sind höchstens 1 FA. Die FA/h-Werte sind damit grob. n = 15 bzw. 30 je Zelle.
+- Ein Lauf je Variante. Common Voice fehlt in v8a/v8b (Plattenplatz), das Skript kann es (`N_CV`).
+
+### Reproduzierbar (aus dem Repo-Root, `K=~/wendelin-models/kws`)
+```
+NJ=4 THREADS=4 TAG=a nice -n 5 tool/train_wake_word/run_v8.sh alle
+TAG=b STEPS=10000 SEED=2 THREADS=4 nice -n 5 tool/train_wake_word/run_v8.sh train
+nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/v8_measure.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --model v8b=$K/wp130/out/wendelin_wp130_b.onnx
+```
