@@ -19,7 +19,7 @@ sowie Treffer und durchkommende Ereignisse je Variante (keine, app, band999, ban
 
 Ausschnitt-Paritaet mit der App (Bezugszeit „app“ = Halten) und Vor-/Nachlauf: eigener Lauf mit --cut-only, Logik und Doku in stage2_cut.py (Ausgabe stage2_cut_table.md).
 Ausgabe nur lokal (nie im Repo): $RES/stage2_table.md (Zahlen) und $RES/stage2_lost.local.md (Transkripte);
-mit --split all (alle Bloecke 1..6, nur v7 und Modelle mit Sidecar real_pos=0, ohne Abschnitt 6) stage2_table_all.md / stage2_lost_all.local.md.
+mit --split all (alle Bloecke 1..6, nur v7 und Modelle mit Sidecar real_pos=0, Abschnitt 6 je Modell ausser v8a) stage2_table_all.md / stage2_lost_all.local.md.
 Lauf (K=~/wendelin-models/kws, vorher `memory_pressure | tail -1`: frei >= 30 %):
   nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2
 Selbsttest: test_stage2_analysis.py.
@@ -629,7 +629,7 @@ def main():
     ap.add_argument("--threads", type=int, default=2)
     ap.add_argument("--cut-only", action="store_true", help="nur Ausschnitt-Paritaet/Vor-/Nachlauf (stage2_cut.py, v8a), Ausgabe stage2_cut_table.md")
     ap.add_argument("--split", choices=V.SPLITS, default="eval",
-                    help="eval = Prüf-Split (Standard); all = alle Blöcke 1–6, nur v7 und Modelle mit Sidecar real_pos=0 (ohne Abschnitt 6, Ausgabe *_all)")
+                    help="eval = Prüf-Split (Standard); all = alle Blöcke 1–6, nur v7 und Modelle mit Sidecar real_pos=0 (Abschnitt 6 je Modell ohne v8a, Ausgabe *_all)")
     ap.add_argument("--fixed-thr", type=parse_thrs, default=[FIXED_THR], help="feste Stufe-1-Schwellen fuer Abschnitt 6, Komma-Liste (Standard 0.98)")
     a = ap.parse_args()
     models = V.parse_models(a.model, not a.no_v7)
