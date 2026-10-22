@@ -22,6 +22,8 @@ data class WakeSettings(
     /** Stage 2 (Whisper check) on or off, `wake.verify` of the app. */
     val verify: Boolean = true,
     /** „Pause 1 h“: nothing starts before this time (epoch ms), 0 = not paused. */
+    /** Stage 1 detection choice (WP129): `auto`, `templates` or `model`. */
+    val detector: String = "auto",
     val pausedUntilMs: Long = 0L,
     /**
      * Switched off by the notification's „Aus“ (not by the app). Set only there; every
