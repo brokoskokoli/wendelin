@@ -99,6 +99,9 @@ final class _Player implements AudioPlayer {
   var plays = 0;
   var stops = 0;
 
+  /// Holds `stop` (the stop is counted when it is released).
+  Completer<void>? stopGate;
+
   @override
   Stream<void> get onPlayerComplete => complete.stream;
 
@@ -119,7 +122,10 @@ final class _Player implements AudioPlayer {
   }) async => plays++;
 
   @override
-  Future<void> stop() async => stops++;
+  Future<void> stop() async {
+    await stopGate?.future;
+    stops++;
+  }
 
   Future<void> close() => complete.close();
 
@@ -377,6 +383,24 @@ void main() {
         await Future.wait([first, second]);
       },
     );
+
+    test('Stopp, während play() auf das Stoppen des vorigen Plays wartet: '
+        'das neue Play startet nicht', () async {
+      final player = _Player();
+      addTearDown(player.close);
+      final p = AudioplayersPlayback(player);
+      final first = p.play(Wav(Int16List(160)));
+      await Future<void>.delayed(Duration.zero);
+      expect(player.plays, 1); // the first one is still running
+      player.stopGate = Completer<void>();
+      final second = p.play(Wav(Int16List(160))); // waits for the stop of first
+      await Future<void>.delayed(Duration.zero);
+      unawaited(p.stop()); // in the window before the new play is set
+      await Future<void>.delayed(Duration.zero);
+      player.stopGate!.complete();
+      await Future.wait([first, second]);
+      expect(player.plays, 1); // the second one must not start
+    });
 
     test(
       'Schalter kippt während des Kontextwechsels: letzter Kontext passt',

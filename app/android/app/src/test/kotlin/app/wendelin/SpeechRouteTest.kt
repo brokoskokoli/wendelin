@@ -203,11 +203,35 @@ class SpeechRouteTest {
     @Test
     fun watcherReasonIgnoresOnlyTheOwnCallMode() {
         val r = route(FakeAudio())
-        assertEquals("call", WakeConflictWatcher.reasonFor(audioMode = 3, foreignRecording = false))
+        assertEquals("call", WakeConflictWatcher.reasonFor(3, 7, emptyList()))
         r.enter()
-        assertNull(WakeConflictWatcher.reasonFor(audioMode = 3, foreignRecording = false))
-        assertEquals("call", WakeConflictWatcher.reasonFor(audioMode = 2, foreignRecording = false))
-        assertEquals("recording", WakeConflictWatcher.reasonFor(audioMode = 3, foreignRecording = true))
+        assertNull(WakeConflictWatcher.reasonFor(3, 7, emptyList()))
+        assertEquals("call", WakeConflictWatcher.reasonFor(2, 7, emptyList()))
+    }
+
+    @Test
+    fun watcherReasonCountsOnlyForeignUnsilencedRecordings() {
+        val own = RecordingClient(7, false)
+        val foreign = RecordingClient(8, false)
+        val silenced = RecordingClient(9, true)
+        assertEquals("recording", WakeConflictWatcher.reasonFor(0, 7, listOf(foreign)))
+        assertEquals("recording", WakeConflictWatcher.reasonFor(0, 7, listOf(own, silenced, foreign)))
+        assertNull(WakeConflictWatcher.reasonFor(0, 7, listOf(own)))
+        assertNull(WakeConflictWatcher.reasonFor(0, 7, listOf(silenced)))
+    }
+
+    @Test
+    fun disposeReleasesOnlyTheOwnPartOfTheCallPath() {
+        val a = FakeAudio(sdk = 34, mode = 0)
+        val main = route(a)
+        val overlay = route(a)
+        main.enter()
+        overlay.enter()
+        val released = mutableListOf<String>()
+        releaseAll(listOf("duck", "listen"), { released += it }, overlay)
+        assertEquals(listOf("duck", "listen"), released)
+        assertEquals(3, a.mode) // the other route still answers
+        assertTrue(SpeechRoute.active)
     }
 
     @Test

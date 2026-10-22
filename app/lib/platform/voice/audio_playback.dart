@@ -58,8 +58,15 @@ final class AudioplayersPlayback implements AudioPlayback {
 
   @override
   Future<void> play(Wav wav) async {
-    await stop();
+    // The new play is set before the old one is stopped, so a stop during that
+    // wait reaches this play (and it must not start afterwards).
+    final previous = _done;
     final done = _done = Completer<void>();
+    if (previous != null) {
+      if (!previous.isCompleted) previous.complete();
+      await _player.stop();
+      if (!identical(_done, done)) return;
+    }
     _complete ??= _player.onPlayerComplete.listen((_) => _finish());
     try {
       // A stop (or a newer play) during the awaits ends this play: the

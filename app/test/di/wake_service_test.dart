@@ -171,4 +171,46 @@ void main() {
     await pending; // UnmountedRefException (CI-Flake wake_lifecycle_test)
     expect(platform.sent, isEmpty);
   });
+
+  test(
+    'adoptStatus nach dispose: kein Ref-Fehler, nichts gespeichert',
+    () async {
+      await c.read(wakeSpeakersProvider.notifier).upsert('s1', 'Anna');
+      await c.read(wakeServiceProvider.future);
+      final n = c.read(wakeServiceProvider.notifier);
+      await n.setEnabled(enabled: true);
+      final storage = c.read(storageProvider);
+      final pending = n.adoptStatus(
+        const WakeServiceStatus(enabled: true, offByUser: true),
+      );
+      c.dispose();
+      expect(await pending, isFalse); // UnmountedRefException without the check
+      expect(await storage.settings.get(wakeEnabledKey), isTrue);
+    },
+  );
+
+  test(
+    'setEnabled: Container während des Wartens entsorgt, kein Ref-Fehler',
+    () async {
+      await c.read(wakeSpeakersProvider.notifier).upsert('s1', 'Anna');
+      await c.read(wakeServiceProvider.future);
+      final n = c.read(wakeServiceProvider.notifier);
+      final pending = n.setEnabled(enabled: true);
+      c.dispose();
+      await pending;
+      expect(platform.sent, isEmpty);
+    },
+  );
+
+  test(
+    'setCondition: Container während des Wartens entsorgt, kein Ref-Fehler',
+    () async {
+      await c.read(wakeServiceProvider.future);
+      final n = c.read(wakeServiceProvider.notifier);
+      final pending = n.setCondition(WakeCondition.always);
+      c.dispose();
+      await pending;
+      expect(platform.sent, isEmpty);
+    },
+  );
 }

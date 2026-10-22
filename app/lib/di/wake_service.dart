@@ -95,11 +95,12 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     if (enabled && (await ref.read(wakeSpeakersProvider.future)).isEmpty) {
       return false;
     }
-    final next = WakeServiceSettings(
-      enabled: enabled,
-      condition: (await future).condition,
+    if (!ref.mounted) return false;
+    final condition = (await future).condition;
+    if (!ref.mounted) return false;
+    state = AsyncData(
+      WakeServiceSettings(enabled: enabled, condition: condition),
     );
-    state = AsyncData(next);
     await ref.read(storageProvider).settings.set(wakeEnabledKey, enabled);
     await push();
     return true;
@@ -107,11 +108,10 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
 
   /// Chooses when it listens.
   Future<void> setCondition(WakeCondition condition) async {
+    final enabled = (await future).enabled;
+    if (!ref.mounted) return;
     state = AsyncData(
-      WakeServiceSettings(
-        enabled: (await future).enabled,
-        condition: condition,
-      ),
+      WakeServiceSettings(enabled: enabled, condition: condition),
     );
     await ref
         .read(storageProvider)

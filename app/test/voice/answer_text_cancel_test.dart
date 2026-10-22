@@ -15,7 +15,7 @@ import '../support/test_env.dart';
 
 void main() {
   test('answerText: Abbruch während des Ladens, keine Anfrage und keine '
-      'Sprache; false lässt den Aufrufer als Text senden', () async {
+      'Sprache; true: der Aufrufer sendet nicht als Text', () async {
     final warm = Completer<void>();
     final tts = FakeTextToSpeech();
     final llm = FakeLlmProvider([ScriptedTurn.text('Es ist zehn Uhr.')]);

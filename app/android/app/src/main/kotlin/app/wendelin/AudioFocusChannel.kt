@@ -31,8 +31,7 @@ class AudioFocusChannel(context: Context, messenger: BinaryMessenger) :
 
     fun dispose() {
         channel.setMethodCallHandler(null)
-        for (kind in held.keys.toList()) release(kind)
-        route.release()
+        releaseAll(held.keys.toList(), ::release, route)
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -144,4 +143,10 @@ class AndroidRouteAudio(private val audio: AudioManager) : RouteAudio {
             AudioDeviceInfo.TYPE_HEARING_AID,
         )
     }
+}
+
+/** End of the channel: gives back every focus, then the own part of the call path (not the others'). */
+internal fun releaseAll(kinds: List<String>, release: (String) -> Unit, route: SpeechRoute) {
+    for (kind in kinds) release(kind)
+    route.release()
 }
