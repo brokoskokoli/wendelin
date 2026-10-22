@@ -9,7 +9,12 @@ Pruefregel: `matchesWakeWord` (maxDistance 2) auf dem Whisper-Text (`TranscriptW
 Whisper: sherpa-onnx, int8, Modelle `~/wendelin-models/whisper-<base|small>`. Last: Aufruf mit nice, hoechstens 2 Threads.
 Ausgabe nur Zaehlungen und Laufzeiten; Texte stehen nur im Cache (--cache, lokal, nie im Repo), nie in der Ausgabe ausser als Kategorie.
 
-  nice -n 10 ~/wendelin-models/kws/wp58/venv/bin/python -I tool/wake_stage2_whisper.py --cache <ordner> [--models base small] [--list]
+Parakeet (WP129, Modell-Modus): `--models parakeet-hw2` = Parakeet v3, modified_beam_search, Hotword „Wendelin“ (eine Zeile), Boost 2,0,
+BPE-Vokabular aus `tokens.txt` abgeleitet wie `buildBpeVocab` der App (nicht das Sentencepiece-Vokabular der WP133-Messung), Regel wie die App
+(`matchesWakeWord`, maxDistance 2). Die App normalisiert fuer Parakeet (an) und nicht fuer Whisper (aus); die Messung zeigt beide Faelle.
+Modelle: `WENDELIN_MODELS` (Standard `~/wendelin-fixtures/models/parakeet-v3`). Ausgabe zusaetzlich: RSS (aktuell/Spitze) nach dem Laden.
+
+  nice -n 10 ~/wendelin-models/kws/wp58/venv/bin/python -I tool/wake_stage2_whisper.py --cache <ordner> [--models base small parakeet-hw2 parakeet-hw2-spm] [--list]
 """
 import argparse, collections, json, math, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -102,8 +107,53 @@ def fmt(k, n):
     return f"{k}/{n} ({100 * max(lo, 0):.0f}-{100 * hi:.0f} %)"
 
 
-def make_rec(model, threads=2):
+PARAKEET = os.path.join(os.environ.get("WENDELIN_MODELS") or os.path.expanduser("~/wendelin-fixtures/models"), "parakeet-v3")
+HOTWORDS = ["Wendelin"]                          # WakeClassifierRules.parakeetHotwords
+HOTWORDS_SCORE = 2.0                             # WakeClassifierRules.parakeetHotwordsScore (WP133 hw2)
+
+
+def app_bpe_vocab(tokens_txt):
+    """Spiegel von buildBpeVocab (hotwords.dart): Steuer-Token 0, sonst −(id − erste regulaere id); <blk> entfaellt."""
+    rows = []
+    for line in tokens_txt.split("\n"):
+        cut = line.rfind(" ")
+        if cut <= 0: continue
+        try: i = int(line[cut + 1:].strip())
+        except ValueError: continue
+        piece = line[:cut]
+        if piece != "<blk>": rows.append((piece, i))
+    ctl = lambda p: len(p) > 2 and p.startswith("<") and p.endswith(">")
+    first = min((i for p, i in rows if not ctl(p)), default=None)
+    return "".join(f"{p}\t{0 if ctl(p) or first is None else first - i}\n" for p, i in rows)
+
+
+def make_parakeet(work, threads=2, vocab_file=None):
+    """Parakeet wie die App (nemoRecognizerConfig mit Hotwords): modified_beam_search, bpe, Hotword-Datei, Boost."""
     import sherpa_onnx as so
+    os.makedirs(work, exist_ok=True)
+    hw, vocab = f"{work}/hotwords.txt", f"{work}/bpe.vocab"
+    open(hw, "w").write("".join(h + "\n" for h in HOTWORDS))
+    if vocab_file: vocab = vocab_file            # Gegenprobe: Sentencepiece-Vokabular der WP133-Messung
+    else: open(vocab, "w").write(app_bpe_vocab(open(f"{PARAKEET}/tokens.txt", encoding="utf-8").read()))
+    return so.OfflineRecognizer.from_transducer(
+        encoder=f"{PARAKEET}/encoder.int8.onnx", decoder=f"{PARAKEET}/decoder.int8.onnx", joiner=f"{PARAKEET}/joiner.int8.onnx",
+        tokens=f"{PARAKEET}/tokens.txt", num_threads=threads, model_type="nemo_transducer", decoding_method="modified_beam_search",
+        hotwords_file=hw, hotwords_score=HOTWORDS_SCORE, modeling_unit="bpe", bpe_vocab=vocab)
+
+
+def rss_mb():
+    """Aktueller RSS dieses Prozesses in MB (ps) und Spitze (getrusage; macOS liefert Bytes)."""
+    import resource, subprocess
+    cur = int(subprocess.check_output(["ps", "-o", "rss=", "-p", str(os.getpid())]).split()[0]) / 1024
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024 if sys.platform == "darwin" else 1024)
+    return cur, peak
+
+
+def make_rec(model, threads=2, work=None):
+    import sherpa_onnx as so
+    if model == "parakeet-hw2-spm":
+        return make_parakeet(work or "/tmp/wake_hw2", threads, os.path.join(os.path.dirname(PARAKEET), "parakeet-bpe", "bpe.vocab"))
+    if model == "parakeet-hw2": return make_parakeet(work or os.path.join(os.environ.get("TMPDIR", "/tmp"), "wake_hw2"), threads)
     d = f"{MODELS}/whisper-{model}"
     return so.OfflineRecognizer.from_whisper(encoder=f"{d}/{model}-encoder.int8.onnx", decoder=f"{d}/{model}-decoder.int8.onnx",
                                              tokens=f"{d}/{model}-tokens.txt", language="de", num_threads=threads)
@@ -176,7 +226,10 @@ def main():
     if a.list: return
     audio = {}
     for model in a.models:
-        rec = make_rec(model, a.threads)
+        r0 = rss_mb()
+        rec = make_rec(model, a.threads, work=f"{a.cache}/hw2")
+        r1 = rss_mb()
+        print(f"{model}: RSS nach dem Laden {r1[0]:.0f} MB (vorher {r0[0]:.0f} MB, Zuwachs {r1[0] - r0[0]:.0f} MB), Spitze {r1[1]:.0f} MB", flush=True)
         tx = {}
         for norm in (False, True):
             texts, times = [], []
@@ -192,6 +245,7 @@ def main():
             tx[norm] = (texts, times)
             json.dump(texts, open(f"{a.cache}/{model}_{'norm' if norm else 'raw'}.json", "w"))
             report(model, norm, items, texts, times)
+            if norm: print(f"{model}: RSS nach den Pruefungen {rss_mb()[0]:.0f} MB, Spitze {rss_mb()[1]:.0f} MB", flush=True)
             if not norm and model == a.models[0]: report_clips(peaks)
         del rec
 

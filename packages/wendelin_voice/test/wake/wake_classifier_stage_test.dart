@@ -301,7 +301,10 @@ void main() {
       expect(WakeClassifierRules.holdWindows, 5);
       expect(WakeClassifierRules.silenceFloorRms, 50.0);
       expect(WakeClassifierRules.silenceFloorMemory.inMilliseconds, 2000);
-      expect(WakeClassifierRules.verifyNormalize, isTrue);
+      expect(WakeClassifierRules.verifyNormalizeParakeet, isTrue);
+      expect(WakeClassifierRules.verifyNormalizeWhisper, isFalse);
+      expect(WakeClassifierRules.parakeetHotwords, ['Wendelin']);
+      expect(WakeClassifierRules.parakeetHotwordsScore, 2.0);
       expect(WakeClassifierRules.verifyPeak, 0.5);
       expect(WakeClassifierRules.verifyMinPeak, 164);
       expect(WakeClassifierRules.phone.acceptFrom, 0.999);

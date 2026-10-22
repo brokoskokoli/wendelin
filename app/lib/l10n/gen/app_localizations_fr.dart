@@ -4403,6 +4403,9 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get modelRowRecommended => '(recommandé)';
+
+  @override
   String get modelRowResume => 'Reprendre';
 
   @override

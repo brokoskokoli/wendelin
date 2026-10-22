@@ -352,6 +352,21 @@ void main() {
       expect(AppRoutes.voice, '/settings/voice');
     });
 
+    testWidgets('Parakeet trägt „(empfohlen)“, Whisper base nicht', (
+      tester,
+    ) async {
+      await pumpScreen(tester, env0(), const VoiceScreen());
+      expect(
+        find.text('${SpeechModelCatalog.parakeetV3.displayName} (empfohlen)'),
+        findsOneWidget,
+      );
+      expect(find.text(base), findsWidgets);
+      expect(
+        find.text('${SpeechModelCatalog.whisperBase.displayName} (empfohlen)'),
+        findsNothing,
+      );
+    });
+
     testWidgets('Modell, Sprache, Ausgabe, Tempo, Feinabstimmung speichern', (
       tester,
     ) async {

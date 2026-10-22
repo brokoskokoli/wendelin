@@ -35,6 +35,7 @@
       }
     }
   },
+  "modelRowRecommended": "(empfohlen)",
   "modelRowRam": "Arbeitsspeicher ca. {ram}",
   "@modelRowRam": {
     "placeholders": {

@@ -162,6 +162,7 @@ List<Widget> _recognition(
       for (final m in catalog.ofKind(SpeechModelKind.stt))
         ModelDownloadRow(
           model: m,
+          recommended: m.id == SpeechModelCatalog.parakeetV3.id,
           selected: settings.sttModel == m.id,
           onSelect: () => change((s) => s.copyWith(sttModel: m.id)),
         ),

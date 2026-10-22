@@ -119,11 +119,22 @@ abstract final class WakeClassifierRules {
   /// listener default, `WakeWordListener.verifyTail`). Provisional (WP133).
   static const verifyTail = Duration(milliseconds: 900);
 
-  /// Stage 2: the clip is scaled to [verifyPeak] of full scale before the
-  /// transcription (`WakeWordListener.verifyNormalize`; a quiet call at
-  /// distance reaches Whisper at a usable level). The pre-roll for the
-  /// consumer stays as recorded.
-  static const verifyNormalize = true;
+  /// Stage 2 with Parakeet: the clip is scaled to [verifyPeak] before the
+  /// transcription (WP133 measured a gain with the hotword setting `hw2`;
+  /// a quiet call at distance reaches the model at a usable level). The
+  /// pre-roll for the consumer stays as recorded.
+  static const verifyNormalizeParakeet = true;
+
+  /// Stage 2 with Whisper: no scaling (own measurement WP129: no benefit).
+  static const verifyNormalizeWhisper = false;
+
+  /// Stage 2 with Parakeet: the hotwords (WP133 `hw2`: one line „Wendelin“)
+  /// and their boost in `modified_beam_search`. Change them here only.
+  static const parakeetHotwords = ['Wendelin'];
+
+  /// Boost of the hotwords of stage 2 (WP133 `hw2` = 2.0; the general
+  /// default of the recognizer is 3.0).
+  static const parakeetHotwordsScore = 2.0;
 
   /// Stage 2: target peak (fraction of full scale) of the normalization.
   static const verifyPeak = 0.5;

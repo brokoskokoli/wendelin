@@ -21,8 +21,10 @@ abstract interface class WakeParts {
     bool station = false,
   });
 
-  /// Stage 2; loads Whisper when needed and frees it again.
-  WakeVerifier verifier();
+  /// Stage 2; loads the recognizer when needed and frees it again. With the
+  /// classifier ([detector] `model`) Parakeet is preferred, Whisper is the
+  /// fallback; the template path always uses Whisper.
+  WakeVerifier verifier({WakeDetector detector = WakeDetector.templates});
 
   /// Frees everything the parts hold (Whisper).
   Future<void> dispose();
@@ -67,6 +69,7 @@ final class WakeHost {
 
   WakeWordListener? _listener;
   bool _verify = true;
+  _LoggingVerifier? _verifier;
   WakeDetector _detector = WakeDetector.templates;
   bool _station = false;
   bool _started = false;
@@ -156,7 +159,9 @@ final class WakeHost {
     final listener = WakeWordListener(
       audio: audio,
       engine: _LoggingEngine(engine, detector),
-      verifier: verify ? _LoggingVerifier(parts.verifier()) : null,
+      verifier: verify
+          ? _verifier = _LoggingVerifier(parts.verifier(detector: detector))
+          : null,
       // Room noise before the word (WP73): `speechAfterWakeWord` measures
       // its threshold there. The overlay skips everything up to the end of
       // the word, so the longer lead costs nothing but a few KB.
@@ -216,6 +221,8 @@ final class WakeHost {
           ? '2-verified'
           : '1-unchecked',
       'score': (d.hit.score ?? d.hit.confidence ?? 0).toStringAsFixed(3),
+      // Which recognizer decided stage 2 (parakeet, whisper); `none` if none.
+      'verifier': !d.hit.direct && _verify ? _verifier?.kind ?? 'none' : 'none',
     });
     if (!_verify && !d.hit.direct) {
       voiceLog('wake-verify', {'result': 'skip'});
@@ -343,6 +350,9 @@ final class _LoggingVerifier implements WakeVerifier {
   _LoggingVerifier(this.inner);
 
   final WakeVerifier inner;
+
+  @override
+  String get kind => inner.kind;
 
   @override
   Future<bool> confirm(Int16List pcm) async {

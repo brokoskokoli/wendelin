@@ -4379,6 +4379,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get modelRowRecommended => '(empfohlen)';
+
+  @override
   String get modelRowResume => 'Fortsetzen';
 
   @override

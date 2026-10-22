@@ -39,6 +39,7 @@ final class _Parts implements WakeParts {
   int engines = 0;
   WakeDetector? lastDetector;
   bool? lastStation;
+  WakeDetector? verifierDetector;
 
   @override
   Future<WakeWordEngine?> engine({
@@ -55,7 +56,13 @@ final class _Parts implements WakeParts {
   }
 
   @override
-  WakeVerifier verifier() => _Verifier(this);
+  WakeVerifier verifier({WakeDetector detector = WakeDetector.templates}) {
+    verifierDetector = detector;
+    return _Verifier(
+      this,
+      detector == WakeDetector.model ? 'parakeet' : 'whisper',
+    );
+  }
 
   @override
   Future<void> dispose() async => disposed++;
@@ -80,8 +87,11 @@ final class _OpenFails implements WakeWordEngine {
 }
 
 final class _Verifier implements WakeVerifier {
-  _Verifier(this.parts);
+  _Verifier(this.parts, this.kind);
   final _Parts parts;
+
+  @override
+  final String kind;
 
   @override
   Future<bool> confirm(Int16List pcm) async {
@@ -280,7 +290,7 @@ void main() {
       logs.join('\n'),
       contains(
         'wake-hit-stage engine=wake detector=templates '
-        'stage=1-unchecked score=0.900',
+        'stage=1-unchecked score=0.900 verifier=none',
       ),
     );
   });
@@ -387,6 +397,7 @@ void main() {
         await until(() => calls().contains('hit'));
         final text = logs.join('\n');
         expect(text, contains('stage=1-direct'));
+        expect(text, contains('verifier=none'));
         expect(text, contains('direct=true'));
         expect(text, isNot(contains('wake-verify')));
       },
@@ -400,6 +411,20 @@ void main() {
       }
       await until(() => calls().contains('hit'));
       expect(logs.join('\n'), contains('stage=2-verified'));
+      // The log names the recognizer that decided (WP129 Parakeet).
+      expect(logs.join('\n'), contains('verifier=parakeet'));
+      expect(parts.verifierDetector, WakeDetector.model);
+    });
+
+    test('Vorlagen-Weg: Prüfer Whisper im Log', () async {
+      await start(verify: true, extra: {'detector': 'templates'});
+      await hear(FakeWakeWordEngine.markerFrame(1600));
+      for (var i = 0; i < 12; i++) {
+        await hear(Int16List(1600));
+      }
+      await until(() => calls().contains('hit'));
+      expect(logs.join('\n'), contains('verifier=whisper'));
+      expect(parts.verifierDetector, WakeDetector.templates);
     });
   });
 

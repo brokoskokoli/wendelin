@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../debug/wake_test_audio.dart';
@@ -13,6 +15,9 @@ import '../../di/wake_providers.dart';
 import '../../voice/voice_log.dart';
 import '../recognizer/device_recognizer_engines.dart';
 import '../recognizer/recognizer_host.dart';
+import '../voice/nemo_sherpa.dart';
+import '../voice/whisper_sherpa.dart';
+import '../voice/whisper_stt.dart';
 import 'service_audio_input.dart';
 import 'wake_detector.dart';
 import 'wake_host.dart';
@@ -37,6 +42,9 @@ final class LazyWhisperVerifier implements WakeVerifier {
   final String language;
 
   @override
+  String get kind => 'whisper';
+
+  @override
   Future<bool> confirm(Int16List pcm) async {
     final models = await engines();
     final id = await models.checkInstalled(modelId);
@@ -47,6 +55,8 @@ final class LazyWhisperVerifier implements WakeVerifier {
       return await TranscriptWakeVerifier(
         stt,
         language: language,
+        kind: kind,
+        normalize: WakeClassifierRules.verifyNormalizeWhisper,
         onCategory: (category, ms) =>
             voiceLog('wake-verify-text', {'cat': category, 'ms': ms}),
       ).confirm(pcm);
@@ -54,6 +64,120 @@ final class LazyWhisperVerifier implements WakeVerifier {
       models.idle();
     }
   }
+}
+
+/// Stage 2 on Parakeet v3 with the hotword „Wendelin“ (WP129, WP133 `hw2`):
+/// loaded in an own isolate at the first candidate and freed [idleRelease]
+/// after the last one. Whisper (the recognizer engines) is not touched, so
+/// „Stopp“ and the template path keep their model.
+final class LazyParakeetVerifier implements WakeVerifier {
+  /// Creates the verifier; [files] returns the paths of the installed model
+  /// with the hotwords file, or `null` if Parakeet is not installed.
+  LazyParakeetVerifier({
+    required this.files,
+    this.idleRelease = const Duration(seconds: 60),
+    this.start = IsolateWhisperBackend.start,
+    this.language = 'de',
+  });
+
+  /// Installed model files with hotwords, `null` = not installed.
+  final Future<NemoFiles?> Function() files;
+
+  /// How long the model stays loaded after the last candidate.
+  final Duration idleRelease;
+
+  /// Starts the backend (tests replace it).
+  final Future<WhisperBackend> Function(SttSpec files) start;
+
+  /// Recognition language (Parakeet detects it on its own).
+  final String language;
+
+  Future<WhisperBackend>? _backend;
+  Timer? _idle;
+
+  @override
+  String get kind => 'parakeet';
+
+  /// Whether Parakeet is installed.
+  Future<bool> isAvailable() async => await files() != null;
+
+  @override
+  Future<bool> confirm(Int16List pcm) async {
+    _idle?.cancel();
+    try {
+      final backend = await (_backend ??= _load());
+      return await TranscriptWakeVerifier(
+        WhisperSpeechToText(
+          backend: backend,
+          modelId: SpeechModelCatalog.parakeetV3.id,
+          engineName: 'Parakeet (sherpa-onnx)',
+        ),
+        language: language,
+        kind: kind,
+        normalize: WakeClassifierRules.verifyNormalizeParakeet,
+        onCategory: (category, ms) =>
+            voiceLog('wake-verify-text', {'cat': category, 'ms': ms}),
+      ).confirm(pcm);
+    } on Object {
+      _backend = null; // a failed load must not stay cached
+      rethrow;
+    } finally {
+      _arm();
+    }
+  }
+
+  Future<WhisperBackend> _load() async {
+    final spec = await files();
+    if (spec == null) {
+      throw const VoiceException(
+        VoiceErrorKind.modelMissing,
+        'Parakeet ist nicht geladen.',
+      );
+    }
+    return start(spec);
+  }
+
+  void _arm() {
+    _idle?.cancel();
+    _idle = Timer(idleRelease, () => unawaited(release()));
+  }
+
+  /// Frees the model.
+  Future<void> release() async {
+    _idle?.cancel();
+    final backend = _backend;
+    _backend = null;
+    if (backend == null) return;
+    try {
+      await (await backend).dispose();
+    } on Object catch (e) {
+      debugPrint('Wake: Parakeet ließ sich nicht freigeben: $e');
+    }
+  }
+}
+
+/// Parakeet with the hotwords of stage 2 (catalog: `parakeetHotwords`,
+/// `parakeetHotwordsScore`), or `null` if it is not installed or the name
+/// cannot be spelled. The hotwords file holds only the fixed wake word, so
+/// [hotwordsDirectory] may be a private directory of the app.
+Future<NemoFiles?> wakeParakeetFiles({
+  required SpeechModelService service,
+  required Directory hotwordsDirectory,
+}) async {
+  const model = SpeechModelCatalog.parakeetV3;
+  if (!await service.isInstalled(model)) return null;
+  final dir = service.directoryOf(model).path;
+  final bare = NemoFiles.find(model, dir);
+  if (bare == null) return null;
+  final hotwords = writeNemoHotwords(
+    tokens: bare.tokens,
+    terms: WakeClassifierRules.parakeetHotwords,
+    directory: hotwordsDirectory,
+    score: WakeClassifierRules.parakeetHotwordsScore,
+  );
+  // The measured rule needs the hotword: without it fall back to Whisper.
+  if (hotwords == null) return null;
+  return NemoFiles.find(model, dir, hotwords: hotwords);
 }
 
 /// The wake word parts on the device: the feature chain and the templates
@@ -65,7 +189,16 @@ final class DeviceWakeParts implements WakeParts {
   DeviceWakeParts(
     this.container, {
     this.idleRelease = const Duration(seconds: 60),
+    this.hotwordsDirectory,
+    this.parakeetStart = IsolateWhisperBackend.start,
   });
+
+  /// Directory of the hotwords file of stage 2 (default: `wake-hotwords` in
+  /// the support directory).
+  final Future<Directory> Function()? hotwordsDirectory;
+
+  /// Starts the Parakeet backend (tests replace it).
+  final Future<WhisperBackend> Function(SttSpec files) parakeetStart;
 
   /// Providers (secret store, model directory, feature chain).
   final ProviderContainer container;
@@ -74,6 +207,16 @@ final class DeviceWakeParts implements WakeParts {
   final Duration idleRelease;
 
   RecognizerEngines? _engines;
+  LazyParakeetVerifier? _parakeet;
+
+  Future<NemoFiles?> _parakeetFiles() async => wakeParakeetFiles(
+    service: await container.read(speechModelServiceProvider.future),
+    hotwordsDirectory: hotwordsDirectory != null
+        ? await hotwordsDirectory!()
+        : Directory(
+            '${(await getApplicationSupportDirectory()).path}/wake-hotwords',
+          ),
+  );
 
   @override
   Future<WakeWordEngine?> engine({
@@ -112,15 +255,32 @@ final class DeviceWakeParts implements WakeParts {
   }
 
   @override
-  WakeVerifier verifier() => LazyWhisperVerifier(
-    engines: () async => _engines ??= DeviceRecognizerEngines(
-      models: await container.read(speechModelServiceProvider.future),
+  WakeVerifier verifier({WakeDetector detector = WakeDetector.templates}) {
+    final whisper = LazyWhisperVerifier(
+      engines: () async => _engines ??= DeviceRecognizerEngines(
+        models: await container.read(speechModelServiceProvider.future),
+        idleRelease: idleRelease,
+      ),
+    );
+    // Templates path and „Stopp“ stay on Whisper; the classifier's stage 2
+    // takes Parakeet when installed, else Whisper without a message.
+    if (detector != WakeDetector.model) return whisper;
+    final parakeet = _parakeet ??= LazyParakeetVerifier(
+      files: _parakeetFiles,
       idleRelease: idleRelease,
-    ),
-  );
+      start: parakeetStart,
+    );
+    return PreferredWakeVerifier(
+      preferred: parakeet,
+      fallback: whisper,
+      available: parakeet.isAvailable,
+    );
+  }
 
   @override
   Future<void> dispose() async {
+    await _parakeet?.release();
+    _parakeet = null;
     await _engines?.dispose();
     _engines = null;
     container.dispose();

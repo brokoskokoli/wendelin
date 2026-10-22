@@ -36,7 +36,6 @@ void main() {
       engine: engine,
       verifier: v ?? verifier,
       verifyTail: tail,
-      verifyNormalize: false,
     );
     found = [];
     listener.detections.listen(found.add);

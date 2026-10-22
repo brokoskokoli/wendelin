@@ -7503,6 +7503,12 @@ abstract class AppLocalizations {
   /// **'Arbeitsspeicher ca. {ram}'**
   String modelRowRam(String ram);
 
+  /// No description provided for @modelRowRecommended.
+  ///
+  /// In de, this message translates to:
+  /// **'(empfohlen)'**
+  String get modelRowRecommended;
+
   /// No description provided for @modelRowResume.
   ///
   /// In de, this message translates to:

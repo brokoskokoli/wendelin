@@ -2514,6 +2514,7 @@
       }
     }
   },
+  "modelRowRecommended": "(empfohlen)",
   "modelRowResume": "Fortsetzen",
   "modelRowStarted": "{size} · angefangen",
   "@modelRowStarted": {

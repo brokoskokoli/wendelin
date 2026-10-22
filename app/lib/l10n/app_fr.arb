@@ -1410,6 +1410,7 @@
       }
     }
   },
+  "modelRowRecommended": "(recommandé)",
   "modelRowResume": "Reprendre",
   "modelRowStarted": "{size} · partiellement téléchargé",
   "voiceConvAdvanced": "Avancé",

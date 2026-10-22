@@ -46,53 +46,68 @@ void main() {
     });
   });
 
-  group('Listener', () {
-    late FakeAudioInput audio;
-    late FakeWakeVerifier verifier;
-    late WakeWordListener listener;
-    late List<WakeWordDetection> found;
+  group('Prüfer', () {
+    Future<FixedTranscriptStt> run(
+      int amp, {
+      required bool normalize,
+      String kind = 'whisper',
+    }) async {
+      final stt = FixedTranscriptStt('Wendelin');
+      final v = TranscriptWakeVerifier(stt, normalize: normalize, kind: kind);
+      expect(await v.confirm(_tone(8000, amp)), isTrue);
+      expect(v.kind, kind);
+      return stt;
+    }
 
-    Future<void> run(int amp, {bool? normalize}) async {
-      audio = FakeAudioInput();
-      verifier = FakeWakeVerifier();
-      listener = WakeWordListener(
+    test('Parakeet-Regel an: Ausschnitt auf Spitze 0,5', () async {
+      final stt = await run(
+        900,
+        normalize: WakeClassifierRules.verifyNormalizeParakeet,
+        kind: 'parakeet',
+      );
+      expect(stt.lastPeak, inInclusiveRange(16383, 16385));
+    });
+
+    test('Whisper-Regel aus: Ausschnitt unverändert', () async {
+      final stt = await run(
+        900,
+        normalize: WakeClassifierRules.verifyNormalizeWhisper,
+      );
+      expect(stt.lastPeak, lessThanOrEqualTo(900));
+    });
+
+    test('Standard ist die Whisper-Regel (aus)', () async {
+      final stt = FixedTranscriptStt('Wendelin');
+      await TranscriptWakeVerifier(stt).confirm(_tone(8000, 900));
+      expect(stt.lastPeak, lessThanOrEqualTo(900));
+    });
+
+    test('Stille wird nicht verstärkt (Spitze 0 bleibt 0)', () async {
+      final stt = await run(0, normalize: true, kind: 'parakeet');
+      expect(stt.lastPeak, 0);
+    });
+  });
+
+  group('Listener', () {
+    test('Pre-Roll und Ausschnitt kommen unverändert beim Prüfer an', () async {
+      final audio = FakeAudioInput();
+      final verifier = FakeWakeVerifier();
+      final listener = WakeWordListener(
         audio: audio,
         engine: FakeWakeWordEngine(hitAtFrame: {19}),
         verifier: verifier,
         verifyTail: Duration.zero,
-        verifyNormalize: normalize ?? WakeClassifierRules.verifyNormalize,
       );
-      found = [];
+      final found = <WakeWordDetection>[];
       listener.detections.listen(found.add);
       await listener.start();
       for (var i = 0; i < 25; i++) {
-        audio.push(_tone(480, amp));
+        audio.push(_tone(480, 900));
         await Future<void>.delayed(Duration.zero);
       }
       await Future<void>.delayed(const Duration(milliseconds: 20));
-    }
-
-    test(
-      'Standard an: Whisper bekommt Spitze 0,5, der Pre-Roll bleibt',
-      () async {
-        expect(WakeClassifierRules.verifyNormalize, isTrue);
-        await run(900);
-        expect(_peak(verifier.calls.single), inInclusiveRange(16383, 16385));
-        expect(found, hasLength(1));
-        expect(_peak(found.single.preRoll), lessThanOrEqualTo(900));
-        await listener.dispose();
-      },
-    );
-
-    test('Schalter aus: Ausschnitt unverändert', () async {
-      await run(900, normalize: false);
       expect(_peak(verifier.calls.single), lessThanOrEqualTo(900));
-      await listener.dispose();
-    });
-
-    test('Stille wird nicht verstärkt (Spitze 0 bleibt 0)', () async {
-      await run(0);
-      expect(_peak(verifier.calls.single), 0);
+      expect(found, hasLength(1));
       await listener.dispose();
     });
   });
