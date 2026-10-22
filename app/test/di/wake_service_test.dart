@@ -27,6 +27,7 @@ final class _FakePlatform extends WakePlatform {
     required bool enabled,
     required WakeCondition condition,
     required bool verify,
+    String detector = 'auto',
   }) async =>
       sent.add((enabled: enabled, condition: condition, verify: verify));
 }

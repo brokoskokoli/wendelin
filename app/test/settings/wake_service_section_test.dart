@@ -35,6 +35,7 @@ final class FakeWakePlatform extends WakePlatform {
     required bool enabled,
     required WakeCondition condition,
     required bool verify,
+    String detector = 'auto',
   }) async => configured.add((enabled: enabled, condition: condition));
 }
 

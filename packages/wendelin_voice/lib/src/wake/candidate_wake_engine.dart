@@ -29,6 +29,8 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     this.stopFloorGap = 0,
     this.stopOverridesWake = false,
     this.onWindow,
+    this.mainGate,
+    this.directThreshold,
   });
 
   /// The feature chain.
@@ -82,6 +84,17 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
   /// as it is (WP80): „Wendelin“ must not turn into „Stopp“.
   final bool stopOverridesWake;
 
+  /// WP129 (WP126 Folgepunkt b): the main word counts only with speech-level
+  /// sound in the stream, whichever rule (classifier or template) fired.
+  /// Silence embeddings look like the templates (similarity 0.82..0.83 over
+  /// the threshold 0.75), so a silent stream after a warm start would
+  /// otherwise be a candidate. `null`: no level check.
+  final SpeechGate? mainGate;
+
+  /// WP129: a classifier score at or above this value is a sure hit
+  /// (`WakeWordHit.direct`, no stage 2). `null`: every hit goes to stage 2.
+  final double? directThreshold;
+
   /// Windows before the background similarity is trusted.
   static const stopFloorWarmup = 10;
 
@@ -128,6 +141,9 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     final stops = _usable(stopTemplates);
     final hits = <WakeWordHit>[];
     stopGate?.feed(frame);
+    if (mainGate != null && !identical(mainGate, stopGate)) {
+      mainGate!.feed(frame);
+    }
     for (final w in await features.accept(frame)) {
       if (w.modelScore != null && w.modelScore! > maxModelScore) {
         maxModelScore = w.modelScore!;
@@ -142,6 +158,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
         modelThreshold: modelThreshold,
         templateThreshold: main.threshold,
       );
+      if (d != null && mainGate != null && !mainGate!.active) d = null;
       var id = keywordId;
       final stop = _closest(w.embedding, stops, tail: stopTailShare);
       onWindow?.call(main.top, stop.top, w.modelScore);
@@ -193,6 +210,12 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
           endSample: w.endSample,
           confidence: d.confidence,
           reason: d.reason.name,
+          score: id == keywordId ? w.modelScore : null,
+          direct:
+              id == keywordId &&
+              d.reason != CandidateReason.template &&
+              directThreshold != null &&
+              (w.modelScore ?? 0) >= directThreshold!,
         ),
       );
     }
@@ -272,6 +295,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     _sinceStop = 1 << 30;
     _lastStop = null;
     stopGate?.reset();
+    mainGate?.reset();
     _stopFloor = null;
     _stopSeen = 0;
     _lastHit = -1 << 40;

@@ -13,6 +13,8 @@ final class WakeWordHit {
     required this.endSample,
     this.confidence,
     this.reason,
+    this.score,
+    this.direct = false,
   });
 
   /// Id of the [KeywordSpec] (`wake`, `stop`).
@@ -27,6 +29,13 @@ final class WakeWordHit {
 
   /// Diagnostics: which rule fired (`model`, `template`, `both`), no content.
   final String? reason;
+
+  /// WP129: classifier score of the window (`null` without classifier).
+  final double? score;
+
+  /// WP129: a sure hit (classifier at or above the accept limit): the
+  /// listener skips stage 2.
+  final bool direct;
 
   @override
   String toString() => 'WakeWordHit($keywordId, @$endSample, $confidence)';

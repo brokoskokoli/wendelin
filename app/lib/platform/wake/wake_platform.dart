@@ -148,12 +148,14 @@ class WakePlatform {
     required bool enabled,
     required WakeCondition condition,
     required bool verify,
+    String detector = 'auto',
   }) async {
     try {
       await _channel.invokeMethod<void>('configure', {
         'enabled': enabled,
         'mode': condition.name,
         'verify': verify,
+        'detector': detector,
       });
     } on MissingPluginException {
       // Not on Android (tests, desktop).

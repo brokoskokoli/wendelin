@@ -270,7 +270,7 @@ final class WakeWordListener {
     _candidates++;
     final end = hit.endSample;
     final v = verifier;
-    final tail = v == null ? 0 : durationToSamples(verifyTail);
+    final tail = v == null || hit.direct ? 0 : durationToSamples(verifyTail);
     if (tail > 0 && _position < end + tail) {
       _tailTarget = end + tail;
       final wait = _tailWait = Completer<void>();
@@ -291,7 +291,7 @@ final class WakeWordListener {
       rel(end + tail),
     );
     var ok = true;
-    if (v != null) {
+    if (v != null && !hit.direct) {
       try {
         ok = await v.confirm(lead).timeout(verifyTimeout);
       } on Object {

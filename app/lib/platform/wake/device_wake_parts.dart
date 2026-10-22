@@ -14,6 +14,7 @@ import '../../voice/voice_log.dart';
 import '../recognizer/device_recognizer_engines.dart';
 import '../recognizer/recognizer_host.dart';
 import 'service_audio_input.dart';
+import 'wake_detector.dart';
 import 'wake_host.dart';
 
 /// Whisper of stage 2: loaded at the first candidate, freed [idleRelease]
@@ -75,7 +76,22 @@ final class DeviceWakeParts implements WakeParts {
   RecognizerEngines? _engines;
 
   @override
-  Future<WakeWordEngine?> engine() async {
+  Future<WakeWordEngine?> engine({
+    WakeDetector detector = WakeDetector.templates,
+    bool station = false,
+  }) async {
+    if (detector == WakeDetector.model) {
+      // WP129: stage 1 is the trained classifier (no templates needed); the
+      // band comes from the catalog, one place for model and limits. The
+      // main gate keeps silence from being a hit (WP126 follow-up b).
+      final band = wakeBandFor(station: station);
+      return CandidateWakeEngine(
+        features: container.read(wakeClassifierFeaturesFactoryProvider)(),
+        modelThreshold: band.verifyFrom,
+        directThreshold: band.acceptFrom,
+        mainGate: SpeechGate(),
+      );
+    }
     final store = container.read(wakeStoreProvider);
     final sets = <WakeTemplates>[];
     for (final speaker in await store.speakers()) {
@@ -89,6 +105,7 @@ final class DeviceWakeParts implements WakeParts {
       moreTemplates: sets.skip(1).toList(),
       // No classifier model yet (WP58): the personal templates decide.
       modelThreshold: null,
+      mainGate: SpeechGate(),
     );
   }
 

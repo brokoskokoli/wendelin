@@ -99,13 +99,13 @@ class WakeWordService : Service() {
         }
         if (engine != null) {
             // Already listening: only the settings may have changed.
-            engine?.send("run", mapOf("verify" to settings.verify))
+            engine?.send("run", settings.runArgs(StationState.active))
             VoiceLog.i("wake-start result=ok source=$source again=true")
             return
         }
         val e = RecognizerEngine(this, ::onEngineCall, "wakeWordMain", ENGINE_CHANNEL)
         engine = e
-        e.send("run", mapOf("verify" to settings.verify))
+        e.send("run", settings.runArgs(StationState.active))
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
             VoiceLog.i("wake-conflict reason=${reason ?: "none"}")
             lastConflict = reason

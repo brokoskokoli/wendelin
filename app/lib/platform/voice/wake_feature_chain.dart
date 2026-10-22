@@ -21,6 +21,17 @@ abstract interface class WakeModelRunner {
   void close();
 }
 
+/// The trained wake word classifier (WP129, `wake-classifier-wendelin`) on a
+/// window of the chain. A runner that also implements this scores every
+/// window ([WakeWindow.modelScore]).
+abstract interface class WakeClassifier {
+  /// Whether a classifier model is loaded (else the windows carry no score).
+  bool get hasClassifier;
+
+  /// Score 0..1 of [window] (16 × 96 values, the layout of the training).
+  double classify(Float32List window);
+}
+
 /// openWakeWord feature chain (streaming): 80 ms chunks of 1 280 samples
 /// give 8 mel frames each (with 480 samples of context, scaled `x / 10 + 2`),
 /// every chunk one embedding of the last 76 frames, and 16 embeddings form
@@ -100,7 +111,16 @@ final class WakeFeatureChain {
     for (var i = 0; i < windowEmbeddings; i++) {
       window.setAll(i * embeddingSize, _emb[i]);
     }
-    return WakeWindow(endSample: _consumed, embedding: window);
+    final Object r = runner;
+    final score = switch (r) {
+      WakeClassifier(hasClassifier: true) => r.classify(window),
+      _ => null,
+    };
+    return WakeWindow(
+      endSample: _consumed,
+      embedding: window,
+      modelScore: score,
+    );
   }
 
   /// Starts a new stream.

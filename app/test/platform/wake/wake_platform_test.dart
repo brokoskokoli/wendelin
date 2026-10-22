@@ -22,7 +22,7 @@ void main() {
       condition: WakeCondition.always,
       verify: false,
     );
-    expect(sent, {'enabled': true, 'mode': 'always', 'verify': false});
+    expect(sent, {'enabled': true, 'mode': 'always', 'verify': false, 'detector': 'auto'});
   });
 
   test('status liest die Antwort von Kotlin', () async {

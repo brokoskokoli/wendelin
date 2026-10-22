@@ -34,17 +34,25 @@ data class WakeSettings(
      * [old] changed by the channel arguments `enabled`, `mode`, `verify`; missing or invalid
      * values keep the old ones. Switching off also ends a pause.
      */
+    /** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129). */
+    fun runArgs(stationActive: Boolean): Map<String, Any> =
+        mapOf("verify" to verify, "detector" to detector, "station" to stationActive)
+
     fun withArgs(args: Map<*, *>?): WakeSettings {
         val on = args?.get("enabled") as? Boolean ?: enabled
         return WakeSettings(
             enabled = on,
             mode = (args?.get("mode") as? String)?.let { WakeMode.parse(it) } ?: mode,
             verify = args?.get("verify") as? Boolean ?: verify,
+            detector = (args?.get("detector") as? String)?.takeIf { it in DETECTORS } ?: detector,
             pausedUntilMs = if (on) pausedUntilMs else 0L,
             offByUser = if (args?.containsKey("enabled") == true) false else offByUser,
         )
     }
 }
+
+/** Accepted values of the setting `detector` (WP129). */
+val DETECTORS = setOf("auto", "templates", "model")
 
 /** Where a wake word hit goes (WP93). */
 enum class HitRoute { CHAT, OVERLAY }

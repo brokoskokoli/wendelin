@@ -53,6 +53,7 @@ export 'src/wake/speech_gate.dart';
 export 'src/wake/wake_calibration.dart';
 export 'src/wake/wake_feature_extractor.dart';
 export 'src/wake/wake_math.dart';
+export 'src/wake/wake_score_band.dart';
 export 'src/wake/wake_templates.dart';
 export 'src/wake/wake_verifier.dart';
 export 'src/wake/wake_word_barge_in.dart';

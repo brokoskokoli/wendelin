@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/platform/wake/device_wake_parts.dart';
 import 'package:wendelin/platform/wake/service_audio_input.dart';
+import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/platform/wake/wake_host.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
@@ -27,10 +28,17 @@ final class _Parts implements WakeParts {
   Object? verifyError;
   int disposed = 0;
   int engines = 0;
+  WakeDetector? lastDetector;
+  bool? lastStation;
 
   @override
-  Future<WakeWordEngine?> engine() async {
+  Future<WakeWordEngine?> engine({
+    WakeDetector detector = WakeDetector.templates,
+    bool station = false,
+  }) async {
     engines++;
+    lastDetector = detector;
+    lastStation = station;
     return engineless ? null : FakeWakeWordEngine();
   }
 
@@ -230,7 +238,7 @@ void main() {
     await hear(FakeWakeWordEngine.markerFrame(1600));
     await until(() => calls().contains('hit'));
     expect(logs.join('\n'), contains('wake-verify engine=wake result=skip'));
-    expect(logs.join('\n'), contains('wake-cand engine=wake score=0.90'));
+    expect(logs.join('\n'), contains('wake-cand engine=wake stage=1 detector=templates score=0.900'));
   });
 
   test('nichts eingelernt: der Dienst meldet failed', () async {

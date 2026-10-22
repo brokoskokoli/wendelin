@@ -17,6 +17,7 @@ object WakeSettingsStore {
             enabled = p.getBoolean("enabled", false),
             mode = WakeMode.parse(p.getString("mode", null)),
             verify = p.getBoolean("verify", true),
+            detector = p.getString("detector", null)?.takeIf { it in DETECTORS } ?: "auto",
             pausedUntilMs = p.getLong("pausedUntil", 0L),
             offByUser = p.getBoolean("offByUser", false),
         )
@@ -27,6 +28,7 @@ object WakeSettingsStore {
             .putBoolean("enabled", s.enabled)
             .putString("mode", s.mode.key)
             .putBoolean("verify", s.verify)
+            .putString("detector", s.detector)
             .putLong("pausedUntil", s.pausedUntilMs)
             .putBoolean("offByUser", s.offByUser)
             .apply()

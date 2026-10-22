@@ -1,3 +1,4 @@
+import '../wake/wake_score_band.dart';
 import 'speech_model.dart';
 
 const _hfBase =
@@ -8,6 +9,8 @@ const _hfSmall =
     '8f3c18b358db4d1f2fc1eae49d75cd20989e4309';
 const _oww =
     'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1';
+const _wendelinRelease =
+    'https://github.com/brokoskokoli/wendelin/releases/download';
 const _gh = 'https://github.com/k2-fsa/sherpa-onnx/releases/download';
 
 /// Whisper tokens (identical file for base and small).
@@ -56,6 +59,7 @@ final class SpeechModelCatalog {
     voiceDeThorstenHigh,
     voiceKokoro,
     wakeFeatures,
+    wakeClassifierWendelin,
     speakerCamPlus,
   ]);
 
@@ -465,6 +469,46 @@ final class SpeechModelCatalog {
     ],
   );
 
+  /// Trained wake word classifier „Wendelin“ (v8a, WP129/WP130, K105):
+  /// stage 1 on the openWakeWord features. **One place** for model id, file,
+  /// hash, URL and the limits per mode ([WakeClassifierRules]); WP133 may
+  /// still change model and rule.
+  ///
+  /// The URL is a placeholder until the release asset is uploaded (the
+  /// orchestrator does that); the SHA-256 is the one of the published file,
+  /// so a wrong or replaced file is refused.
+  static const wakeClassifierWendelin = SpeechModel(
+    id: 'wake-classifier-wendelin',
+    kind: SpeechModelKind.wake,
+    displayName: 'Aktivierungswort – trainiertes Modell „Wendelin“',
+    languages: {},
+    license: 'Gewichte: Wendelin-Projekt; Trainingsdaten siehe Lizenzseite',
+    source:
+        'GitHub-Release des Wendelin-Repos (models-wake-v8a); '
+        'SHA-256 des Trainingslaufs v8a (WP130)',
+    note:
+        'Enthält nur Klassifikatorgewichte (ONNX), keine Aufnahmen. '
+        'Trainiert auf synthetischen Stimmen (CC0, CC-BY, M-AILABS) und '
+        'Aufnahmen des Maintainers aus dem Trainings-Split.',
+    attribution:
+        'Training mit Piper-Stimmen: Thorsten-Voice (CC0), Multilingual '
+        'LibriSpeech (CC-BY 4.0), M-AILABS Speech Dataset; Negativdaten: '
+        'Tatoeba (CC-BY 2.0 FR), FLEURS (CC-BY 4.0), Mozilla Common Voice '
+        '(CC0); Merkmale: openWakeWord (Apache-2.0).',
+    files: [
+      ModelFile(
+        name: wakeClassifierFile,
+        url: '$_wendelinRelease/models-wake-v8a/$wakeClassifierFile',
+        sizeBytes: 858044,
+        sha256:
+            'bfeb939d9e50c4913b27e4d082e5d620e3967af6c2603666e6bc40b30a06997d',
+      ),
+    ],
+  );
+
+  /// File name of the classifier inside its model directory.
+  static const wakeClassifierFile = 'wendelin_wp130_a.onnx';
+
   /// Speaker embedding for the speaker recognition (WP92a): 3D-Speaker
   /// CAM++ trained on Chinese and English speaker data, 192-dimensional
   /// embeddings, 16 kHz. Also usable for German (verified with synthetic
@@ -596,3 +640,18 @@ const _voiceDeEva = SpeechModel(
     ),
   ],
 );
+
+/// Stage 1 limits of the wake word classifier per mode (WP129, rule of
+/// WP133: score at or above `acceptFrom` is taken directly, from `verifyFrom`
+/// up to it stage 2 checks, below it is discarded). The values are the
+/// v8a working point of `docs/notes/wake-word-compare.md` (threshold
+/// 0.98..0.99) and the provisional upper limit of WP133; they are final only
+/// with WP133. Change them here only.
+abstract final class WakeClassifierRules {
+  /// Phone: the lower limit 0.98 of the measured working point.
+  static const phone = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.995);
+
+  /// Station (TV, longer listening): the stricter end 0.99 of the working
+  /// point, so fewer false alarms per hour.
+  static const station = WakeScoreBand(verifyFrom: 0.99, acceptFrom: 0.995);
+}

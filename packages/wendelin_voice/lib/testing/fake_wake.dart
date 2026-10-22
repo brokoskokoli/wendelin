@@ -18,7 +18,11 @@ final class FakeWakeWordEngine implements WakeWordEngine {
     this.hitAtFrame = const {},
     this.keywordId = 'wake',
     this.acceptDelay = Duration.zero,
+    this.direct = false,
   });
+
+  /// Hits are sure hits (`WakeWordHit.direct`, WP129).
+  final bool direct;
 
   /// Time [accept] takes per frame (an engine that lags behind the audio).
   final Duration acceptDelay;
@@ -73,6 +77,7 @@ final class FakeWakeWordEngine implements WakeWordEngine {
               keywordId: keywordId,
               endSample: _samples,
               confidence: 0.9,
+              direct: direct,
             ),
           ]
         : const [];
