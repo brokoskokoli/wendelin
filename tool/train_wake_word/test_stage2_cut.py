@@ -44,6 +44,16 @@ class AppHalten(unittest.TestCase):
         self.assertEqual([round(x - 10, 2) for x, _ in C.app_events(t, np.array([0.1, 0.995, 0.5]), 0.98)], [0.08])
         self.assertEqual(ev([0.1, 0.985, 0.996, 0.1]), [(0.16, 0.996)])          # waehrend des Haltens: sofort mit dem neuen Wert
 
+    def test_obergrenze_genau_entscheidet_sofort_ausserhalb_und_im_halten(self):
+        # Wert exakt auf der Obergrenze (float64) = Direktannahme wie in der App (>= directThreshold), in beiden Zweigen
+        t = 10 + HOP * np.arange(4)
+        aus = C.app_events(t, np.array([0.1, 0.995, 0.5, 0.1]), 0.98)
+        self.assertEqual([(round(x - 10, 2), p) for x, p in aus], [(0.08, 0.995)])               # ohne Halten: sofort im Fenster
+        im = C.app_events(t, np.array([0.1, 0.985, 0.995, 0.1]), 0.98)
+        self.assertEqual([(round(x - 10, 2), p) for x, p in im], [(0.16, 0.995)])                # im Halten: sofort, nicht erst beim Abfall (0.24)
+        eig = C.app_events(t, np.array([0.1, 0.985, 0.9, 0.1]), 0.98, upper=0.985)
+        self.assertEqual([(round(x - 10, 2), p) for x, p in eig], [(0.08, 0.985)])               # eigene Obergrenze 0.985 gilt auch
+
     def test_untere_grenze_inklusive_und_darunter_nichts(self):
         t = 10 + HOP * np.arange(3)
         self.assertEqual([round(x - 10, 2) for x, _ in C.app_events(t, np.array([0.1, 0.98, 0.1]), 0.98)], [0.16])   # Halten, Abfall im naechsten Fenster

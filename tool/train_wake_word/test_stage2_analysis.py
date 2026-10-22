@@ -50,6 +50,10 @@ class Regeln(unittest.TestCase):
         self.assertTrue(A.passes_rule(v, "Wendelin", "Hallo", 0.996))           # ueber der Obergrenze: Stufe 1 genuegt
         self.assertFalse(A.passes_rule(v, "Wendelin", "Hallo", 0.99))           # darunter entscheidet Stufe 2
         self.assertTrue(A.passes_rule(v, "Wendelin", "Wendelin", 0.5))
+        self.assertTrue(A.passes_rule(v, "Wendelin", "Hallo", 0.995))           # genau auf der Obergrenze: durch (>=)
+        self.assertFalse(A.passes_rule(v, "Wendelin", "Hallo", 0.9949))
+        self.assertTrue(A.passes_rule(A.VARIANTS["band999"], "Wendelin", "Hallo", 0.999))
+        self.assertFalse(A.passes_rule(A.VARIANTS["band999"], "Wendelin", "Hallo", 0.9989))
         self.assertFalse(A.passes_rule(A.VARIANTS["app"], "Wendelin", "Hallo", 1.0))
 
     def test_peak(self):
