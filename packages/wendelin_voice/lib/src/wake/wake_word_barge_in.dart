@@ -112,7 +112,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   bool _running = false;
   bool _engineOpen = false;
   int _generation = 0;
-  late final PreRollBuffer _ring = PreRollBuffer(capacity: clip);
+  late final PreRollBuffer _ring = PreRollBuffer(capacity: clip + clip);
   bool _verifying = false;
   int _fed = 0, _blockedUntil = 0, _ignoreUntil = 0;
   // End of the last live block with speech level, and the confidence of the
@@ -299,6 +299,21 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     return last;
   }
 
+  /// The last [clip] of the ring, ending shortly after the last loud block
+  /// instead of at "now": a late stage 1 hit (the check starts after
+  /// [settle]) must not push the word out of the clip (device finding
+  /// 2026-10-22). Speech up to now: the clip ends now.
+  Int16List _clipEndingAtSpeech() {
+    final all = _ring.snapshot();
+    final first = _fed - all.length;
+    final tail = durationToSamples(const Duration(milliseconds: 300));
+    var end = all.length;
+    if (_lastLoud + tail - first < end) end = _lastLoud + tail - first;
+    if (end <= 0) return all; // loud block left the ring: quiet, skipped
+    final n = durationToSamples(clip);
+    return Int16List.sublistView(all, end > n ? end - n : 0, end);
+  }
+
   bool _quiet(Int16List pcm) {
     const block = 320;
     for (var i = 0; i < pcm.length; i += block) {
@@ -313,7 +328,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   }
 
   Future<void> _verify(BargeVerifier v, BargeInKeyword cand, int gen) async {
-    final pcm = _ring.snapshot();
+    final pcm = _clipEndingAtSpeech();
     if (_quiet(pcm)) {
       // Nothing to recognize (background similarity): no recognizer run.
       onVerdict?.call(const BargeVerdict('skip', null, 'silent'), 0);

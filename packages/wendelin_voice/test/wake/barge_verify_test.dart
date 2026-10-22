@@ -403,6 +403,29 @@ void main() {
         expect(v.calls.single, 1600 * 9);
       });
 
+      test(
+        'später Kandidat: Ausschnitt endet an der Sprache, Wort drin',
+        () async {
+          // Wort bei 1,5 bis 2,1 s, Stufe 1 meldet erst bei 3,9 s.
+          await setUp0(settle: const Duration(milliseconds: 800), hitAt: {38});
+          v.decide = (pcm) => pcm.contains(7000)
+              ? const BargeVerdict('stop', BargeInKeyword.stop)
+              : BargeVerdict.no;
+          await frames(15);
+          for (var i = 0; i < 6; i++) {
+            audio.push(Int16List(1600)..fillRange(0, 1600, 7000));
+          }
+          await frames(4); // Stille bis 2,5 s
+          await frames(1, loud: true); // Nachhall bei 2,5 bis 2,6 s
+          await frames(12); // bis 3,8 s
+          await frames(1); // Kandidat bei 3,9 s
+          expect(v.calls, isEmpty);
+          await frames(8); // settle
+          expect(v.calls, hasLength(1));
+          expect(got, ['keyword-stop']);
+        },
+      );
+
       test('Kandidat während der Prüfung wird danach erneut geprüft', () async {
         await setUp0(
           settle: Duration.zero,
@@ -491,11 +514,10 @@ void main() {
       });
 
       test('Stille im Ausschnitt: skip/silent ohne Erkenner', () async {
-        // Kandidat 800 ms nach lautem Audio (noch im Fensterbereich), der
-        // kurze Ausschnitt (500 ms) ist still.
-        await setUp0(hitAt: {8}, clip: const Duration(milliseconds: 500));
+        // Kandidat 1,5 s nach lautem Audio, der Ring (1 s) ist still.
+        await setUp0(hitAt: {14}, clip: const Duration(milliseconds: 500));
         await frames(1, loud: true);
-        await frames(8);
+        await frames(14); // Lautes ist älter als der Ring (2 x Ausschnitt)
         expect(v.calls, isEmpty);
         expect(verdicts, ['skip/silent']);
         expect(got, isEmpty);
