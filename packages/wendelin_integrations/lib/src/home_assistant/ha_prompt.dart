@@ -92,9 +92,17 @@ String _lines(List<HaEntity> es) {
 String _clean(String s) =>
     ellipsize(s.replaceAll(RegExp(r'\s+'), ' ').trim(), haPromptNameChars);
 
+/// Whether the stored data say the cover runs without a confirmation (the
+/// call re-checks the live class, [haCoverIsQuiet]).
+bool _quiet(HaEntity e) =>
+    e.noConfirm &&
+    !e.alwaysConfirm &&
+    haQuietCoverClasses.contains(e.deviceClass);
+
 /// One or two short sample calls with ids from the list (WP135 A): the model
 /// calls `ha__call` at once instead of listing first. The cover example
-/// names `ha__call_secure` (covers need the confirmation) and the position.
+/// names `ha__call_secure` (covers need the confirmation, except quiet
+/// blinds: `ha__call`) and the position.
 String _examples(List<HaEntity> shown) {
   HaEntity? first(Set<String> domains) {
     for (final e in shown) {
@@ -109,7 +117,8 @@ String _examples(List<HaEntity> shown) {
     if (onOff != null)
       '\nBeispiel: ha__call {"entity":"${onOff.entityId}","service":"turn_off"}',
     if (cover != null)
-      '\nBeispiel: ha__call_secure {"entity":"${cover.entityId}",'
+      '\nBeispiel: ${_quiet(cover) ? 'ha__call' : 'ha__call_secure'} '
+          '{"entity":"${cover.entityId}",'
           '"service":"set_cover_position","position_pct":50}',
   ].join();
 }

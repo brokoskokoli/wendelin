@@ -29,6 +29,7 @@ export 'src/provider/provider_type.dart';
 export 'src/safety/sensitive_content.dart';
 export 'src/sse/sse_parser.dart';
 export 'src/text/fold.dart';
+export 'src/tools/fast_path.dart';
 export 'src/tools/fixed_confirmation.dart';
 export 'src/tools/ha_words.dart';
 export 'src/tools/integration.dart';

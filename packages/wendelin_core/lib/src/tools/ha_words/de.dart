@@ -97,6 +97,12 @@ const haWordsDe = HaWords(
     'bitte',
   ],
   degrees: ['grad'],
+  neutral: [
+    'mach', 'mache', 'machen', 'schalte', 'schalt', 'schalten', 'stell', //
+    'stelle', 'fahr', 'fahre', 'lass', 'lasse', 'mal', 'bitte', 'doch',
+    'jetzt', 'kannst', 'du', 'mir', 'wendelin', 'wendeln', 'hey', 'hallo',
+    'okay', 'ok',
+  ],
 );
 
 /// Extra topic words for the preloading of the `ha` tools (on top of the

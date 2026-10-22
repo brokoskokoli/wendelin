@@ -51,6 +51,7 @@ final class HaWords {
     required this.percent,
     required this.degrees,
     required this.fillers,
+    required this.neutral,
   });
 
   /// Device type words per Home Assistant domain (`light`, `cover`,
@@ -74,6 +75,12 @@ final class HaWords {
   /// Articles and prepositions that carry no meaning for finding a device
   /// („die Lampe im Wohnzimmer“), whole words.
   final List<String> fillers;
+
+  /// Verbs of the request, politeness and the wake word („mach“, „bitte“,
+  /// „hey“, „wendelin“), whole words. Known to the fast path, but they carry
+  /// no meaning: the fast path accepts an utterance only if **every** word
+  /// is known (like `matchLockedCommand`).
+  final List<String> neutral;
 }
 
 /// Word lists per language code. New language: see `ha_words/README.md`.

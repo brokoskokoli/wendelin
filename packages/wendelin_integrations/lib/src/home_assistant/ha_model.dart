@@ -92,6 +92,8 @@ final class HaEntity {
     this.area,
     this.alwaysConfirm = false,
     this.missing = false,
+    this.deviceClass,
+    this.noConfirm = false,
   });
 
   /// Reads [toJson] output; `null` if malformed.
@@ -107,6 +109,8 @@ final class HaEntity {
       area: area is String && area.isNotEmpty ? area : null,
       alwaysConfirm: json['confirm'] == true,
       missing: json['missing'] == true,
+      deviceClass: json['class'] is String ? json['class'] as String : null,
+      noConfirm: json['quiet'] == true,
     );
   }
 
@@ -129,6 +133,16 @@ final class HaEntity {
   /// removes it in the settings.
   final bool missing;
 
+  /// `device_class` Home Assistant reported (WP135 E: `shutter`, `blind`,
+  /// `garage`, …), a snapshot for the settings and the prompt. The call
+  /// always checks the live state, never this value alone.
+  final String? deviceClass;
+
+  /// „Ohne Rückfrage“ (WP135 E): the user lets Wendelin move this cover
+  /// without a confirmation. Only effective for the classes in
+  /// [haQuietCoverClasses]; the check happens at every call.
+  final bool noConfirm;
+
   /// Domain part of [entityId].
   String get domain => haDomainOf(entityId);
 
@@ -139,17 +153,36 @@ final class HaEntity {
     area: area,
     alwaysConfirm: value,
     missing: missing,
+    deviceClass: deviceClass,
+    noConfirm: noConfirm,
   );
 
-  /// Copy with the name, room and presence from Home Assistant.
-  HaEntity synced({String? name, String? area, bool missing = false}) =>
-      HaEntity(
-        entityId: entityId,
-        name: name ?? this.name,
-        area: area,
-        alwaysConfirm: alwaysConfirm,
-        missing: missing,
-      );
+  /// Copy with a different [noConfirm] (cover „ohne Rückfrage“).
+  HaEntity withNoConfirm(bool value) => HaEntity(
+    entityId: entityId,
+    name: name,
+    area: area,
+    alwaysConfirm: alwaysConfirm,
+    missing: missing,
+    deviceClass: deviceClass,
+    noConfirm: value,
+  );
+
+  /// Copy with the name, room, class and presence from Home Assistant.
+  HaEntity synced({
+    String? name,
+    String? area,
+    String? deviceClass,
+    bool missing = false,
+  }) => HaEntity(
+    entityId: entityId,
+    name: name ?? this.name,
+    area: area,
+    alwaysConfirm: alwaysConfirm,
+    missing: missing,
+    deviceClass: deviceClass,
+    noConfirm: noConfirm,
+  );
 
   /// JSON for the entity store.
   Map<String, Object?> toJson() => {
@@ -158,6 +191,8 @@ final class HaEntity {
     if (area != null) 'area': area,
     if (alwaysConfirm) 'confirm': true,
     if (missing) 'missing': true,
+    if (deviceClass != null) 'class': deviceClass,
+    if (noConfirm) 'quiet': true,
   };
 
   @override
@@ -167,10 +202,20 @@ final class HaEntity {
       other.name == name &&
       other.area == area &&
       other.alwaysConfirm == alwaysConfirm &&
-      other.missing == missing;
+      other.missing == missing &&
+      other.deviceClass == deviceClass &&
+      other.noConfirm == noConfirm;
 
   @override
-  int get hashCode => Object.hash(entityId, name, area, alwaysConfirm, missing);
+  int get hashCode => Object.hash(
+    entityId,
+    name,
+    area,
+    alwaysConfirm,
+    missing,
+    deviceClass,
+    noConfirm,
+  );
 
   @override
   String toString() =>

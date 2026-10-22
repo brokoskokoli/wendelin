@@ -23,8 +23,16 @@ List<HaEntity>? haReconcile(List<HaEntity> approved, List<HaEntity> fresh) {
   return [
     for (final e in approved)
       switch (byId[e.entityId]) {
-        final f? => e.synced(name: f.name, area: roomsKnown ? f.area : e.area),
-        null => e.synced(area: e.area, missing: true),
+        final f? => e.synced(
+          name: f.name,
+          area: roomsKnown ? f.area : e.area,
+          deviceClass: f.deviceClass ?? e.deviceClass,
+        ),
+        null => e.synced(
+          area: e.area,
+          deviceClass: e.deviceClass,
+          missing: true,
+        ),
       },
   ];
 }

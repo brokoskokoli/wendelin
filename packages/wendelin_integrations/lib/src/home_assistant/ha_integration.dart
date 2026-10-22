@@ -3,6 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import '../common/port_exception.dart';
 import 'ha_call_tools.dart';
 import 'ha_context.dart';
+import 'ha_fast_path.dart';
 import 'ha_policy.dart';
 import 'ha_ports.dart';
 import 'ha_read_tools.dart';
@@ -41,6 +42,10 @@ final class HaIntegration implements Integration {
 
   /// API, approved devices and error state shared by the tools.
   final HaContext context;
+
+  /// The fast path without a model (WP135 D); the agent runs it before the
+  /// first model call when the user has not switched it off.
+  late final FastPath fastPath = HaFastPath(context);
 
   @override
   String get id => 'ha';

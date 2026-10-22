@@ -85,6 +85,10 @@ const haWordsFr = HaWords(
     'plait',
   ],
   degrees: ['degre', 'degres'],
+  neutral: [
+    's', 'il', 'te', 'vous', 'plait', 'stp', 'svp', 'peux', 'tu', 'pouvez', //
+    'maintenant', 'a', 'sil', 'hey', 'ok', 'okay', 'wendelin',
+  ],
 );
 
 /// Extra topic words for the preloading of the `ha` tools.

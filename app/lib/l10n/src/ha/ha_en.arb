@@ -1,4 +1,8 @@
 {
+  "haFastPath": "Run simple commands right away",
+  "haFastPathHelp": "„Living room blind down“ or „Kitchen ceiling light off“ runs without AI, under the same rules. Locks, alarms, gates and devices set to „Always confirm“ never use it. For anything unclear the AI answers as before.",
+  "haNoAsk": "Without confirmation",
+  "haNoAskHelp": "Wendelin moves this blind without asking (with undo). Only for shutters, blinds, awnings and curtains; garage doors and doors always ask.",
   "haAddressLabel": "Address",
   "haAlwaysConfirm": "Always confirm",
   "haAlwaysConfirmHelp": "Wendelin asks before every switch (e.g. stove, oven).",

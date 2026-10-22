@@ -1,4 +1,8 @@
 {
+  "haFastPath": "Einfache Befehle sofort ausführen",
+  "haFastPathHelp": "„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte mit „Immer bestätigen“ gehen nie so. Bei Unklarem fragt wie bisher die KI.",
+  "haNoAsk": "Ohne Rückfrage",
+  "haNoAskHelp": "Wendelin bewegt dieses Rollo ohne Nachfrage (mit Rückgängig). Nur für Rollos, Jalousien, Markisen und Vorhänge; Garagentore und Türen fragen immer.",
   "haAddressLabel": "Adresse",
   "haAlwaysConfirm": "Immer bestätigen",
   "haAlwaysConfirmHelp": "Wendelin fragt vor jedem Schalten nach (z. B. Herd, Ofen).",

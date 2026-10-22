@@ -22,10 +22,7 @@ const topicWordsFr = <String, List<String>>{
     'contact', 'numero', 'telephone', 'appelle', 'appel', 'sms', //
     'message', 'envoie un message', 'repertoire', 'whatsapp', 'texto',
   ],
-  'flashlight': [
-    'lampe de poche', 'lampe torche', 'torche', 'allume la lumiere', //
-    'eteins la lumiere', 'flash',
-  ],
+  'flashlight': ['lampe de poche', 'lampe torche', 'torche', 'flash'],
   'gtasks': [
     'google tasks', 'tache', 'a faire', 'echeance', 'en retard', //
     'rappelle', 'todo',

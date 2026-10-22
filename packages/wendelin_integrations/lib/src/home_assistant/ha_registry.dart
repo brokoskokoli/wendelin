@@ -13,6 +13,10 @@ List<HaEntity> haEntitiesFrom(List<HaState> states, Map<String, String> areas) {
             entityId: s.entityId,
             name: s.friendlyName,
             area: areas[s.entityId],
+            deviceClass: switch (s.attributes['device_class']) {
+              final String c when c.isNotEmpty => c,
+              _ => null,
+            },
           ),
       ]..sort((a, b) {
         final byArea = (a.area ?? '~').toLowerCase().compareTo(

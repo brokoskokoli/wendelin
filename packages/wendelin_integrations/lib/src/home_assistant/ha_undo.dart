@@ -24,6 +24,7 @@ HaUndoPlan? planHaUndo(HaState prior, String service, DateTime now) {
     'switch' => [_call(prior, prior.state == 'on' ? 'turn_on' : 'turn_off')],
     'media_player' => _media(prior, service),
     'climate' => _climate(prior, service),
+    'cover' => _cover(prior, service),
     _ => null,
   };
   if (prior.domain == 'scene') return _scene(prior, now);
@@ -71,6 +72,24 @@ List<HaCall>? _media(HaState s, String service) {
               _call(s, 'volume_mute', {'is_volume_muted': muted}),
             ]
           : null,
+    _ => null,
+  };
+}
+
+/// Undo of a quiet cover call (WP135 E): back to the position before, else
+/// to open/closed. After a stop nothing sensible is known (the cover was
+/// moving).
+List<HaCall>? _cover(HaState s, String service) {
+  if (service == 'stop_cover') return null;
+  final position = s.attributes['current_position'];
+  if (position is num) {
+    return [
+      _call(s, 'set_cover_position', {'position': position}),
+    ];
+  }
+  return switch (s.state) {
+    'open' => [_call(s, 'open_cover')],
+    'closed' => [_call(s, 'close_cover')],
     _ => null,
   };
 }

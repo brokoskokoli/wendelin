@@ -28,10 +28,7 @@ const topicWordsEn = <String, List<String>>{
     'dial',
     'whatsapp',
   ],
-  'flashlight': [
-    'flashlight', 'torch', 'light on', 'light off', 'lamp on', //
-    'lamp off', 'flash',
-  ],
+  'flashlight': ['flashlight', 'torch', 'flash'],
   'gtasks': [
     'google tasks',
     'task',

@@ -39,6 +39,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
   List<HaEntity>? _all;
   Set<String> _approved = {};
   Set<String> _confirm = {};
+  Set<String> _noAsk = {};
   List<HaEntity> _gone = const [];
 
   @override
@@ -66,6 +67,10 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       _confirm = {
         for (final e in approved)
           if (e.alwaysConfirm) e.entityId,
+      };
+      _noAsk = {
+        for (final e in approved)
+          if (e.noConfirm) e.entityId,
       };
       _gone = [
         for (final e in approved)
@@ -165,6 +170,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       _all = null;
       _approved = {};
       _confirm = {};
+      _noAsk = {};
       _error = null;
     });
   }
@@ -198,6 +204,14 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     await _save();
   }
 
+  /// „Ohne Rückfrage“ of a blind (WP135 E).
+  Future<void> _toggleNoAsk(HaEntity e, bool on) async {
+    final next = {..._noAsk};
+    on ? next.add(e.entityId) : next.remove(e.entityId);
+    setState(() => _noAsk = next);
+    await _save();
+  }
+
   Future<void> _save() async {
     final byId = {for (final x in _all ?? const <HaEntity>[]) x.entityId: x};
     final store = ref.read(haStoreProvider);
@@ -207,7 +221,9 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     await store.save([
       for (final id in _approved)
         if (byId[id] ?? old[id] case final e?)
-          e.withConfirm(_confirm.contains(id)),
+          e
+              .withConfirm(_confirm.contains(id))
+              .withNoConfirm(_noAsk.contains(id)),
     ]);
     // The hint names of the recognizer follow the approval.
     ref.invalidate(haApprovedEntitiesProvider);
@@ -381,8 +397,10 @@ class _HaScreenState extends ConsumerState<HaScreen> {
           entities: value,
           approved: _approved,
           alwaysConfirm: _confirm,
+          noAsk: _noAsk,
           onToggle: (e, on) => unawaited(_toggle(e, on)),
           onToggleConfirm: (e, on) => unawaited(_toggleConfirm(e, on)),
+          onToggleNoAsk: (e, on) => unawaited(_toggleNoAsk(e, on)),
         ),
       WideButton(
         context.l10n.haReload,

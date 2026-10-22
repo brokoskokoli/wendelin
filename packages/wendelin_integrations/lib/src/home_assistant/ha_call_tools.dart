@@ -128,8 +128,13 @@ abstract base class HaCallTool extends IntegrationTool {
   /// The services of [e] this tool may call, `null` if [e] belongs to the
   /// other tool. [confirmed]: the entity needs a confirmation (the user
   /// marked it „immer bestätigen“, or it is a scene with a lock, alarm or
-  /// cover among its members).
-  Map<String, Set<String>>? servicesFor(HaEntity e, {required bool confirmed});
+  /// cover among its members). [quiet]: a cover the user let move without
+  /// a confirmation and whose live class allows it ([haCoverIsQuiet]).
+  Map<String, Set<String>>? servicesFor(
+    HaEntity e, {
+    required bool confirmed,
+    bool quiet = false,
+  });
 
   /// Service names offered in the tool schema.
   Set<String> get serviceNames => {for (final s in table.values) ...s.keys};
@@ -207,12 +212,15 @@ abstract base class HaCallTool extends IntegrationTool {
     // the tool (K57).
     Future<HaState> read() => ctx.guard(() => ctx.api.state(e.entityId));
     HaState? prior;
-    if (e.domain == 'scene') prior = await read();
+    if (e.domain == 'scene' || e.domain == 'cover') prior = await read();
+    // E: the live state decides, not the stored class (fail-closed).
+    final quiet = prior != null && haCoverIsQuiet(e, prior);
     final confirmed =
         e.alwaysConfirm ||
-        (prior != null &&
+        (e.domain == 'scene' &&
+            prior != null &&
             haSceneHasSecureMember(prior, confirmIds: await ctx.confirmIds()));
-    final services = servicesFor(e, confirmed: confirmed);
+    final services = servicesFor(e, confirmed: confirmed, quiet: quiet);
     if (services == null) {
       return ToolOutcome.error(
         haRiskForDomain(e.domain) == null
@@ -358,8 +366,9 @@ final class HaCallDeviceTool extends HaCallTool
   @override
   String get description =>
       'Control a smart-home device the user approved: lights, switches, '
-      'scenes, media players and thermostats (not locks, alarms or doors: '
-      'use ha__call_secure). Runs at once; can be undone.';
+      'scenes, media players, thermostats and blinds the user allowed '
+      'without confirmation (not locks, alarms, garage doors or other '
+      'covers: use ha__call_secure). Runs at once; can be undone.';
 
   @override
   RiskLevel get risk => RiskLevel.write;
@@ -370,6 +379,11 @@ final class HaCallDeviceTool extends HaCallTool
     'ha.off',
     'ha.brightness',
     'ha.temperature',
+    // Only quiet covers reach this tool (WP135 E).
+    'ha.cover.open',
+    'ha.cover.close',
+    'ha.cover.stop',
+    'ha.cover.position',
   };
 
   @override
@@ -385,10 +399,22 @@ final class HaCallDeviceTool extends HaCallTool
   HaServices get table => haOpenServices;
 
   @override
+  Set<String> get serviceNames => {
+    ...super.serviceNames,
+    // Quiet blinds (WP135 E); other covers are refused at the call.
+    ...?haSecureServices['cover']?.keys,
+  };
+
+  @override
   Map<String, Set<String>>? servicesFor(
     HaEntity e, {
     required bool confirmed,
-  }) => confirmed ? null : haOpenServices[e.domain];
+    bool quiet = false,
+  }) => confirmed
+      ? null
+      : e.domain == 'cover'
+      ? (quiet ? haSecureServices['cover'] : null)
+      : haOpenServices[e.domain];
 
   @override
   String get otherTool => 'ha__call_secure';
@@ -440,6 +466,7 @@ final class HaCallSecureTool extends HaCallTool
   Map<String, Set<String>>? servicesFor(
     HaEntity e, {
     required bool confirmed,
+    bool quiet = false,
   }) =>
       haSecureServices[e.domain] ??
       (confirmed &&

@@ -2704,6 +2704,18 @@ abstract class AppLocalizations {
   /// **'Fehler – nicht erreichbar'**
   String get haErrorTitle;
 
+  /// No description provided for @haFastPath.
+  ///
+  /// In de, this message translates to:
+  /// **'Einfache Befehle sofort ausführen'**
+  String get haFastPath;
+
+  /// No description provided for @haFastPathHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte mit „Immer bestätigen“ gehen nie so. Bei Unklarem fragt wie bisher die KI.'**
+  String get haFastPathHelp;
+
   /// No description provided for @haFilter.
   ///
   /// In de, this message translates to:
@@ -2739,6 +2751,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Wendelin steuert deine freigegebenen Geräte über die Schnittstelle deines Home Assistant. Nur im Heimnetz oder über Tailscale. Adresse und Token bleiben im sicheren Speicher des Geräts.'**
   String get haIntro;
+
+  /// No description provided for @haNoAsk.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Rückfrage'**
+  String get haNoAsk;
+
+  /// No description provided for @haNoAskHelp.
+  ///
+  /// In de, this message translates to:
+  /// **'Wendelin bewegt dieses Rollo ohne Nachfrage (mit Rückgängig). Nur für Rollos, Jalousien, Markisen und Vorhänge; Garagentore und Türen fragen immer.'**
+  String get haNoAskHelp;
 
   /// No description provided for @haNoDevices.
   ///

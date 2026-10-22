@@ -30,10 +30,7 @@ const topicWordsDe = <String, List<String>>{
     'eine nachricht', 'nachricht an', 'schreib an',
     'adressbuch', 'whatsapp',
   ],
-  'flashlight': [
-    'taschenlampe', 'licht an', 'licht aus', 'lampe an', 'lampe aus', //
-    'leuchte', 'blitz an', 'blitzlicht',
-  ],
+  'flashlight': ['taschenlampe', 'handylampe', 'blitzlicht'],
   'gtasks': [
     'google tasks', 'google aufgaben', 'aufgabe', 'todo', 'to do', //
     'erledigen', 'faellig', 'uberfaellig', 'erinner',

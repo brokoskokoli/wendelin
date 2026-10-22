@@ -45,8 +45,10 @@ class HaAreaSection extends StatelessWidget {
     required this.entities,
     required this.approved,
     required this.alwaysConfirm,
+    required this.noAsk,
     required this.onToggle,
     required this.onToggleConfirm,
+    required this.onToggleNoAsk,
     super.key,
   });
 
@@ -62,11 +64,22 @@ class HaAreaSection extends StatelessWidget {
   /// Ids of the devices with "always confirm".
   final Set<String> alwaysConfirm;
 
+  /// Ids of the covers with „ohne Rückfrage“ (WP135 E).
+  final Set<String> noAsk;
+
   /// Approves or revokes a device.
   final void Function(HaEntity entity, bool on) onToggle;
 
   /// Sets "always confirm" of a device.
   final void Function(HaEntity entity, bool on) onToggleConfirm;
+
+  /// Sets „ohne Rückfrage“ of a cover.
+  final void Function(HaEntity entity, bool on) onToggleNoAsk;
+
+  /// Whether the option „ohne Rückfrage“ is offered: blinds and the like
+  /// only (garage, gate, door and an unknown class always ask).
+  static bool offersNoAsk(HaEntity e) =>
+      e.domain == 'cover' && haQuietCoverClasses.contains(e.deviceClass);
 
   static bool _secure(HaEntity e) =>
       haRiskForDomain(e.domain) == RiskLevel.external;
@@ -100,6 +113,20 @@ class HaAreaSection extends StatelessWidget {
                 context.l10n.haAlwaysConfirm,
               ),
               onChanged: (on) => onToggleConfirm(e, on),
+            ),
+          ),
+        if (offersNoAsk(e) && approved.contains(e.entityId))
+          SettingsRow(
+            title: context.l10n.haNoAsk,
+            detail: context.l10n.haNoAskHelp,
+            trailing: WSwitch(
+              key: ValueKey('haNoAsk_${e.entityId}'),
+              value: noAsk.contains(e.entityId),
+              semanticLabel: context.l10n.haAlwaysConfirmSemantics(
+                e.name,
+                context.l10n.haNoAsk,
+              ),
+              onChanged: (on) => onToggleNoAsk(e, on),
             ),
           ),
       ],

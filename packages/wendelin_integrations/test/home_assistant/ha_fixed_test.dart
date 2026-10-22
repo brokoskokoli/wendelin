@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:test/test.dart';
 import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/testing.dart';
@@ -178,21 +176,25 @@ void main() {
       expect(o.fixed, isNull);
     });
 
-    test('Position ist ein Schlüssel nur von ha__call_secure', () {
+    test('Cover-Schlüssel: ha__call nur für ruhige Rollos (WP135 E)', () async {
+      const keys = {
+        'ha.cover.open',
+        'ha.cover.close',
+        'ha.cover.stop',
+        'ha.cover.position',
+      };
       expect(
         (tool('ha__call_secure') as FixedConfirmationTool).confirmationKeys,
-        {
-          'ha.cover.open',
-          'ha.cover.close',
-          'ha.cover.stop',
-          'ha.cover.position',
-        },
+        keys,
       );
-      final props = tool('ha__call').inputSchema['properties']! as Map;
       expect(
-        jsonEncode((props['service']! as Map)['enum']),
-        isNot(contains('set_cover_position')),
+        (tool('ha__call') as FixedConfirmationTool).confirmationKeys,
+        containsAll(keys),
       );
+      // Without the option the blind is refused at ha__call.
+      final o = await call({'entity': 'Rollo', 'service': 'close_cover'});
+      expect(o.isError, isTrue);
+      expect(api.calls, isEmpty);
     });
   });
 

@@ -65,6 +65,10 @@ const haWordsEn = HaWords(
   percent: ['percent', 'per cent', 'pct'],
   fillers: ['the', 'my', 'in', 'of', 'a', 'please', 'room'],
   degrees: ['degree', 'degrees'],
+  neutral: [
+    'turn', 'switch', 'put', 'set', 'make', 'can', 'you', 'could', 'now', //
+    'me', 'to', 'it', 'hey', 'hi', 'okay', 'ok', 'wendelin',
+  ],
 );
 
 /// Extra topic words for the preloading of the `ha` tools.

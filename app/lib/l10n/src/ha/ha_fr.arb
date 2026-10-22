@@ -1,4 +1,8 @@
 {
+  "haFastPath": "Exécuter tout de suite les commandes simples",
+  "haFastPathHelp": "« Volet du salon, descends » ou « Lumière de la cuisine, éteins » s’exécute sans IA, avec les mêmes règles. Serrures, alarmes, portails et appareils réglés sur « Toujours confirmer » ne passent jamais par là. Pour tout ce qui est flou, l’IA répond comme avant.",
+  "haNoAsk": "Sans confirmation",
+  "haNoAskHelp": "Wendelin actionne ce volet sans demander (avec annulation). Seulement pour volets, stores, bannes et rideaux ; les portes de garage et les portes demandent toujours.",
   "haAddressLabel": "Adresse",
   "haAlwaysConfirm": "Toujours confirmer",
   "haAlwaysConfirmHelp": "Wendelin demande confirmation avant chaque commande (p. ex. cuisinière, four).",
