@@ -24,3 +24,8 @@ __pycache__/
 
 # Lokales Startskript der Orchestrator-Sitzung
 start-wendelin-coding.sh
+
+# Signierschlüssel nie ins Repo (WP131); Beispieldatei key.properties.example bleibt
+key.properties
+*.jks
+*.keystore

@@ -1,7 +1,61 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+class ReleaseSigning(
+    val storeFile: File,
+    val storePassword: String,
+    val keyAlias: String,
+    val keyPassword: String,
+)
+
+/** Reads key.properties, else ANDROID_KEY* env; null = not configured (see build type below). */
+fun loadReleaseSigning(): ReleaseSigning? {
+    val propsFile = rootProject.file("key.properties")
+    val values: Map<String, String?> = if (propsFile.exists()) {
+        val p = Properties()
+        propsFile.inputStream().use { p.load(it) }
+        mapOf(
+            "storeFile" to p.getProperty("storeFile"),
+            "storePassword" to p.getProperty("storePassword"),
+            "keyAlias" to p.getProperty("keyAlias"),
+            "keyPassword" to p.getProperty("keyPassword"),
+        )
+    } else {
+        mapOf(
+            "storeFile" to System.getenv("ANDROID_KEYSTORE_PATH"),
+            "storePassword" to System.getenv("ANDROID_KEYSTORE_PASSWORD"),
+            "keyAlias" to System.getenv("ANDROID_KEY_ALIAS"),
+            "keyPassword" to System.getenv("ANDROID_KEY_PASSWORD"),
+        )
+    }
+    val missing = values.filterValues { it.isNullOrBlank() }.keys
+    val source = if (propsFile.exists()) "key.properties" else "ANDROID_* environment"
+    if (missing.size == values.size) {
+        if (System.getenv("WENDELIN_REQUIRE_RELEASE_SIGNING") == "1") {
+            throw GradleException(
+                "Release signing required (WENDELIN_REQUIRE_RELEASE_SIGNING=1) but neither " +
+                    "key.properties nor ANDROID_KEYSTORE_PATH/_PASSWORD/ANDROID_KEY_ALIAS/_PASSWORD are set.",
+            )
+        }
+        logger.warn(
+            "WARNING: no release signing configured (key.properties / ANDROID_* env); " +
+                "release builds are signed with the DEBUG key and must not be published.",
+        )
+        return null
+    }
+    if (missing.isNotEmpty()) {
+        throw GradleException("Incomplete release signing in $source, missing: ${missing.joinToString()}")
+    }
+    val store = file(values["storeFile"]!!)
+    if (!store.isFile) {
+        throw GradleException("Release keystore from $source not found: ${store.name}")
+    }
+    return ReleaseSigning(store, values["storePassword"]!!, values["keyAlias"]!!, values["keyPassword"]!!)
 }
 
 android {
@@ -34,11 +88,26 @@ android {
     // Only in the test APK: the STT fixtures as audio for the recognizer test.
     sourceSets["androidTest"].assets.srcDir("../../test/fixtures/stt")
 
+    // Release signing (WP131): key.properties (local, gitignored) or environment (CI). Neither
+    // present: warning and debug key (local only); WENDELIN_REQUIRE_RELEASE_SIGNING=1 aborts
+    // instead. A half-configured key (some values missing) always aborts. Never prints values.
+    val releaseSigning = loadReleaseSigning()
+    if (releaseSigning != null) {
+        signingConfigs.create("release") {
+            storeFile = releaseSigning.storeFile
+            storePassword = releaseSigning.storePassword
+            keyAlias = releaseSigning.keyAlias
+            keyPassword = releaseSigning.keyPassword
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (releaseSigning != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
