@@ -2,7 +2,7 @@
 
 **Zuordnung:** M5.
 
-Bezug: K32, Entscheidungen Maintainer 2026-10-18: beliebig viele eingetragene Personen (primär Stefan); je Person Anrede, eigenes Gedächtnis, eigener Standard-Agent; gesperrt für erkannte Personen erlaubt: Timer/Wecker, Wetter, Musik/Medien, auf Listen setzen, Licht/Szenen über Home Assistant – nichts, was Inhalte vorliest (Kalender, Kontakte, Nachrichten). Stimme ist keine starke Authentifizierung.
+Bezug: K32, Entscheidungen Maintainer 2026-10-18: beliebig viele eingetragene Personen (primär Maintainer); je Person Anrede, eigenes Gedächtnis, eigener Standard-Agent; gesperrt für erkannte Personen erlaubt: Timer/Wecker, Wetter, Musik/Medien, auf Listen setzen, Licht/Szenen über Home Assistant – nichts, was Inhalte vorliest (Kalender, Kontakte, Nachrichten). Stimme ist keine starke Authentifizierung.
 
 ## Inhalt
 1. **WP92a Erkennung:** Sprecher-Embedding (sherpa-onnx Speaker-ID-Modell, klein, lokal, Download wie andere Modelle), Einlernen je Person (mehrere Sätze), Schwelle mit Kalibrierung, „unbekannt“ als Ergebnis. Nur lokal, Aufnahmen bleiben auf dem Gerät.

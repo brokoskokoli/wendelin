@@ -1,6 +1,6 @@
 # WP112 – Modell-Empfehlung (Eval, Live-Messung)
 
-**Zuordnung:** M6, „Empfehlung von Modellen“. Baut auf WP54b (`docs/notes/wp54-tee-eval.md`) und den Evals vom 13./14.10. auf. Entscheidungen Stefan 2026-10-20: „nicht das größte Modell, nicht irgendwie ein Thinking-Model, sondern halt einfach ein normales Modell, was halt aber schon größer ist, nicht das kleinste“; Budget freigegeben: alle 5 Anbieter, zusammen höchstens 8,50 €; Start parallel zu WP111.
+**Zuordnung:** M6, „Empfehlung von Modellen“. Baut auf WP54b (`docs/notes/wp54-tee-eval.md`) und den Evals vom 13./14.10. auf. Entscheidungen Maintainer 2026-10-20: „nicht das größte Modell, nicht irgendwie ein Thinking-Model, sondern halt einfach ein normales Modell, was halt aber schon größer ist, nicht das kleinste“; Budget freigegeben: alle 5 Anbieter, zusammen höchstens 8,50 €; Start parallel zu WP111.
 
 Ergebnis ist eine Notiz `docs/notes/model-recommendation.md` mit Zahlen und einer Empfehlung je Rolle. App-Code nur, wenn die Empfehlung Standardwerte in Profilen ändert (dann als eigener, kleiner Commit).
 

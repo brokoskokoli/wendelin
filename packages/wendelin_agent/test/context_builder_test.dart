@@ -8,7 +8,7 @@ const _device = DeviceInfo(locale: 'de-DE', timeZone: 'Europe/Berlin');
 
 ContextBuilder builder({
   AgentConfig config = const AgentConfig(
-    userName: 'Stefan',
+    userName: 'Mia',
     personaAddon: 'Du bist trocken-humorvoll.',
   ),
   MemoryRetriever? memory,
@@ -25,7 +25,7 @@ ContextBuilder builder({
 
 const _snapshot = '''
 Du bist Wendelin, ein persönlicher Sprachassistent.
-Du sprichst mit Stefan.
+Du sprichst mit Mia.
 
 Regeln:
 - Antworte kurz, natürlich und gut vorlesbar: ganze Sätze, keine Tabellen, kein Markdown, keine Aufzählungszeichen, keine URLs, außer der Nutzer will sie ausdrücklich.

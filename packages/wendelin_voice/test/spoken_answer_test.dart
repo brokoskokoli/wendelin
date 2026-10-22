@@ -159,8 +159,8 @@ void main() {
   group('Streaming', () {
     test('erster Satz kommt, bevor die Antwort fertig ist', () {
       final a = SpokenAnswer();
-      expect(a.add('Hallo Stefan. Heu'), isEmpty);
-      expect(a.add('te ist Dienstag'), ['Hallo Stefan.']);
+      expect(a.add('Hallo Mia. Heu'), isEmpty);
+      expect(a.add('te ist Dienstag'), ['Hallo Mia.']);
       expect(a.finish(), ['Heute ist Dienstag']);
       expect(a.finish(), isEmpty);
       expect(a.add('Noch was.'), isEmpty);

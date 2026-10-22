@@ -14,7 +14,7 @@ import '../support.dart';
 void main() {
   group('scenarios', () {
     test('plain text answer', () async {
-      final (a, provider) = scripted('a', [ScriptedTurn.text('Hallo Stefan.')]);
+      final (a, provider) = scripted('a', [ScriptedTurn.text('Hallo Mia.')]);
       final h = Harness(primary: a, cost: const FlatCostEstimator());
       final events = await h.run('Hallo');
 
@@ -24,14 +24,14 @@ void main() {
         (routed.profileId, routed.modelId, routed.reason),
         ('a', 'a-model', 'Standard'),
       );
-      expect(streamedText(events), 'Hallo Stefan.');
+      expect(streamedText(events), 'Hallo Mia.');
       final usage = events.whereType<UsageReported>().single;
       expect(usage.usage, ScriptedTurn.defaultUsage);
       expect(usage.profileId, 'a');
       expect(usage.modelId, 'a-model');
       expect(usage.costMicros, 200); // 100 in × 1 + 20 out × 5
       final done = terminal(events) as AgentDone;
-      expect(done.finalText, 'Hallo Stefan.');
+      expect(done.finalText, 'Hallo Mia.');
       expect(done.stopReason, StopReason.endTurn);
 
       final req = provider.requests.single;
@@ -42,7 +42,7 @@ void main() {
       expect(req.metadata, {'sessionId': 's1'});
       expect(h.conversation.messages, [
         Message.user('Hallo'),
-        Message.assistantText('Hallo Stefan.'),
+        Message.assistantText('Hallo Mia.'),
       ]);
     });
 

@@ -4,7 +4,7 @@
 
 Bezug: Wunsch Maintainer 2026-10-19 (K64); Ergebnis WP102 in `docs/notes/voice-quality-spike.md` (K66).
 
-**Stand nach WP102 (K66, Wahl Stefan offen, bis dahin gilt):** STT „groß“ = Parakeet TDT 0.6B v3 int8 mit Hotwords (bpe_vocab aus der .nemo), fr optional Canary-180m-flash; Whisper bleibt Standard (small). TTS wählbar Thorsten high (fp32) und Kokoro (en/fr). **Teil 4 (Rauschunterdrückung) entfällt.** Hinweis-Begriffe nur für Parakeet/Transducer. Lizenzhinweise (CC-BY-4.0) in der App. Modell-Liste so bauen, dass Stefans Wahl nur Katalogeinträge ändert.
+**Stand nach WP102 (K66, Wahl Maintainer offen, bis dahin gilt):** STT „groß“ = Parakeet TDT 0.6B v3 int8 mit Hotwords (bpe_vocab aus der .nemo), fr optional Canary-180m-flash; Whisper bleibt Standard (small). TTS wählbar Thorsten high (fp32) und Kokoro (en/fr). **Teil 4 (Rauschunterdrückung) entfällt.** Hinweis-Begriffe nur für Parakeet/Transducer. Lizenzhinweise (CC-BY-4.0) in der App. Modell-Liste so bauen, dass Maintainers Wahl nur Katalogeinträge ändert.
 
 ## Inhalt
 1. **Größere STT-Modelle wählbar** nach WP102 (z. B. Parakeet, Whisper turbo), mit Größe, RAM-Bedarf und Hinweis in der Auswahl; Download wie bisher, nicht im APK.
