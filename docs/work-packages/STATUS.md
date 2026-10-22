@@ -81,7 +81,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP130 | Wake-Word-Modell v8 (mehr Stimmen, Varianten, harte Negative) | gemergt (8f85b96c) | K105; Empfehlung v8a (Stufe 1 allein: Wendelin 80/77 %, Hey Wendelin 93/90 % bei 2 FA/h; v7 braucht dafür Stufe 2). Folgepunkte: M-AILABS-Lizenz vor Release-Asset belegen; Test „--allow-truncated fehlt im Volllauf“; cv_extract erkennt Abschneiden an Header-Grenze nicht (CV-Shard nicht gepinnt); v8c (hidden 256) zurückgestellt |
 | WP131 | Release-Signatur und automatischer APK-Build auf GitHub (Tag → Release) | geplant | K103; Start 2026-10-23, wartet auf Zertifikat als GitHub-Secret |
 | WP132 | Zwei Build-Varianten frei/Store (Vorbereitung) | geplant | K103; nur mit Go, nach WP131 und Gesamttest |
-| WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | geplant | K105; Teil A sofort (niedrige Last), Teil B Training im Zeitfenster |
+| WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | in Arbeit | K105; Teil A sofort (niedrige Last), Teil B Training im Zeitfenster |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
