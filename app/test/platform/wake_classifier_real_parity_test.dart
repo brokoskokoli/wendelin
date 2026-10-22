@@ -10,7 +10,8 @@
 //   WENDELIN_WAKE_MODELS / WENDELIN_WAKE_CLASSIFIER / WENDELIN_ORT_LIB
 //   WENDELIN_PARITY_FRAME=320   (Samples je Block; Gerät: 20 ms)
 //   WENDELIN_PARITY_SRC=pos_huawei,...  (optional, sonst alle vier)
-//   WENDELIN_PARITY_DROPS=1,2,99  (dropsToEnd je Engine; ein Strom der Kette,
+//   WENDELIN_PARITY_DROPS=1,2,99,2g1200,2goff  (dropsToEnd je Engine, optional
+//                                  Gate-Gedächtnis ms bzw. off; ein Strom der Kette,
 //                                  je Wert ein Unterordner d<N> im Ausgabeordner;
 //                                  99 = Halten bis holdWindows)
 //   WENDELIN_PARITY_SKIP=0      (führende Samples weglassen: verschiebt das
@@ -103,10 +104,19 @@ void main() {
   final all = ['pos_huawei', 'pos_handy2', 'neg_huawei', 'neg_handy2'];
   final srcs = env['WENDELIN_PARITY_SRC']?.split(',') ?? all;
   final band = WakeClassifierRules.phone;
-  final drops = [
+  // Varianten: <N> oder <N>g<ms> / <N>goff (anderes Pegel-Gate: Gedächtnis in ms
+  // bzw. ohne Gate), nur für die Messung der Fix-Optionen.
+  final variants = [
     for (final d in (env['WENDELIN_PARITY_DROPS'] ?? '').split(','))
-      if (int.tryParse(d) != null) int.parse(d),
+      if (RegExp(r'^\d+(g(off|\d+))?$').hasMatch(d)) d,
   ];
+  SpeechGate? gateFor(String v) {
+    final g = RegExp(r'g(off|\d+)$').firstMatch(v)?.group(1);
+    if (g == null) return SpeechGate();
+    return g == 'off'
+        ? null
+        : SpeechGate(memory: Duration(milliseconds: int.parse(g)));
+  }
 
   test(
     'App-Strom auf den Prüf-Aufnahmen (Rohdaten für den Abgleich)',
@@ -128,14 +138,16 @@ void main() {
           final end = i + frameLen < pcm.length ? i + frameLen : pcm.length;
           blocks.add(await rec.accept(Int16List.sublistView(pcm, i, end)));
         }
-        for (final n in drops.isEmpty ? [null] : drops) {
+        for (final n in variants.isEmpty ? [null] : variants) {
           final engine = CandidateWakeEngine(
             features: _Replay(blocks),
             modelThreshold: band.verifyFrom,
             directThreshold: band.acceptFrom,
             holdWindows: WakeClassifierRules.holdWindows,
-            dropsToEnd: n ?? WakeClassifierRules.dropsToEnd,
-            mainGate: SpeechGate(),
+            dropsToEnd: n == null
+                ? WakeClassifierRules.dropsToEnd
+                : int.parse(RegExp(r'^\d+').firstMatch(n)![0]!),
+            mainGate: n == null ? SpeechGate() : gateFor(n),
           );
           await engine.open(const [KeywordSpec.wendelin]);
           final hits = <Map<String, Object?>>[];

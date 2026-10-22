@@ -22,7 +22,7 @@ SR = 16000
 DEV = ["huawei", "handy2"]
 WORDS = {"Wendelin", "Hey Wendelin"}
 AUDIO = os.path.expanduser("~/wendelin-models/kws/wp121/work")
-LO, HI = 0.98, 0.995
+LO, HI = 0.98, 0.999
 
 
 def engine_hits(d, src):
@@ -73,17 +73,17 @@ def summarize(rows):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("root"); ap.add_argument("--lost", type=int); ap.add_argument("--phase", type=int, default=0)
+    ap = argparse.ArgumentParser(); ap.add_argument("root"); ap.add_argument("--lost"); ap.add_argument("--phase", type=int, default=0)
     a = ap.parse_args()
     cache = f"{V.RES}/s1/v8a-bfeb939d"
     labels = [lb for lb in V.filter_labels(W.read_labels()) if lb["word"] in WORDS]
     hrs = {s: V.hours(s) for s in W.NEG_SRC if s.startswith("neg_")}
     phases = sorted(int(os.path.basename(p)[1:]) for p in glob.glob(f"{a.root}/p[0-9]*"))
-    ns = sorted(int(os.path.basename(p)[1:]) for p in glob.glob(f"{a.root}/p{phases[0]}/d*"))
+    ns = sorted((os.path.basename(p)[1:] for p in glob.glob(f"{a.root}/p{phases[0]}/d*")), key=lambda x: (int(x.split('g')[0]), x))
     if a.lost is not None:
         return lost(a, cache, labels)
     print(f"Phasen (skip): {phases}; N: {ns}; Schwellen: Band {LO}..{HI}")
-    print("Je Geraet und N: Direkt-Treffer >=0,995 | Band-Treffer | verloren (Skript>=0,98, kein Treffer) | FA direkt/Band (je 0,61 h) | Zusatzlatenz ms")
+    print("Je Geraet und N: Direkt-Treffer (Engine-Flag, Band bis 0,999) | Band-Treffer | verloren (Skript>=0,98, kein Treffer) | FA direkt/Band (je 0,61 h) | Zusatzlatenz ms")
     for dev in DEV:
         L = [lb for lb in labels if lb["dev"] == dev]; ref = P.load_ref(cache, f"pos_{dev}")
         for n in ns:
@@ -96,7 +96,7 @@ def main():
                 F.append((sum(h[2] for h in nh), sum(1 for h in nh if not h[2])))
             f = lambda i: f"{np.mean([s[i] for s in S]):.1f} ({min(s[i] for s in S)}-{max(s[i] for s in S)})"
             fa = lambda i: f"{np.mean([x[i] for x in F]):.1f} ({min(x[i] for x in F)}-{max(x[i] for x in F)})"
-            print(f"{dev} N={n:<3} n={S[0][0]} Skript>=0,98: {S[0][6]} | direkt {f(1)} | Band {f(3)} | verloren {f(4)} (App roh>=0,98 ohne Treffer {f(5)}) "
+            print(f"{dev} N={n:<7} n={S[0][0]} Skript>=0,98: {S[0][6]} | direkt {f(1)} | Band {f(3)} | verloren {f(4)} (App roh>=0,98 ohne Treffer {f(5)}) "
                   f"| FA direkt {fa(0)}, Band {fa(1)} | Latenz {np.mean(LAT):.0f} ms (max {np.max(LAT):.0f}, n={len(LAT)})")
 
 

@@ -195,6 +195,23 @@ void main() {
       expect(hits.map((h) => h.$2.score), [0.99, 0.985]);
     });
 
+    test('Zählung der Absinken beginnt mit jedem Ereignis neu', () async {
+      final hits = await _run([
+        0.99,
+        0.2,
+        0.2,
+        ...List.filled(250, 0.1),
+        0.985,
+        0.2,
+        0.986,
+        0.2,
+        0.2,
+      ], drops: 2);
+      expect(hits, hasLength(2));
+      expect(hits.last.$1, 3 + 250 + 4, reason: 'zweites Absinken in Folge');
+      expect(hits.last.$2.score, 0.986);
+    });
+
     test('dropsToEnd < 1 ist ein Programmierfehler', () {
       expect(
         () => CandidateWakeEngine(

@@ -119,9 +119,9 @@ abstract final class WakeClassifierRules {
   static const verifyTail = Duration(milliseconds: 900);
 
   /// Phone: the lower limit 0.98 of the measured working point.
-  static const phone = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.995);
+  static const phone = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.999);
 
   /// Station (TV, longer listening): the stricter end 0.99 of the working
   /// point, so fewer false alarms per hour.
-  static const station = WakeScoreBand(verifyFrom: 0.99, acceptFrom: 0.995);
+  static const station = WakeScoreBand(verifyFrom: 0.99, acceptFrom: 0.999);
 }
