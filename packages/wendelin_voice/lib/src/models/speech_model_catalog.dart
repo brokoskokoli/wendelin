@@ -491,10 +491,12 @@ final class SpeechModelCatalog {
         'Trainiert auf synthetischen Stimmen (CC0, CC-BY, M-AILABS) und '
         'Aufnahmen des Maintainers aus dem Trainings-Split.',
     attribution:
-        'Training mit Piper-Stimmen: Thorsten-Voice (CC0), Multilingual '
-        'LibriSpeech (CC-BY 4.0), M-AILABS Speech Dataset; Negativdaten: '
-        'Tatoeba (CC-BY 2.0 FR), FLEURS (CC-BY 4.0), Mozilla Common Voice '
-        '(CC0); Merkmale: openWakeWord (Apache-2.0).',
+        'Training mit synthetischen Stimmen (Piper, MIT): Thorsten-Voice '
+        '(CC0), Multilingual LibriSpeech (Pratap et al., OpenSLR 94), '
+        'CC-BY 4.0; M-AILABS Speech Dataset, Copyright (c) 2017-2019 '
+        'M-AILABS. Negativdaten: Tatoeba-Mitwirkende, tatoeba.org '
+        '(CC-BY 2.0 FR); FLEURS (Conneau et al.), CC-BY 4.0; Mozilla Common '
+        'Voice (CC0). Merkmale: openWakeWord (Apache-2.0).',
     files: [
       ModelFile(
         name: wakeClassifierFile,

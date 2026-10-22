@@ -9,6 +9,10 @@
 //     tool/e2e_android.sh integration_test/wake_service_e2e_test.dart
 //
 // Das Skript führt `role` und `wake-loop` aus (Bildschirm, BACK, logcat).
+//
+// WP129: mit WENDELIN_WAKE_DETECTOR=model (auch templates, auto) wird vor dem
+// Einschalten „Erkennung“ gesetzt; dann prüft der Lauf das trainierte Modell
+// (Stufe 1 aus dem Klassifikator, `wake-cand ... detector=model`).
 
 import 'dart:async';
 import 'dart:io';
@@ -23,6 +27,7 @@ import 'package:wendelin/di/wake_service.dart';
 import 'package:wendelin/main.dart' as app show assistantMain, wakeWordMain;
 import 'package:wendelin/platform/secure_secret_store.dart';
 import 'package:wendelin/platform/voice/wav_audio_input.dart';
+import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/platform/wake/wake_platform.dart';
 import 'package:wendelin/ui/routes.dart';
 import 'package:wendelin/voice/wake/wake_storage.dart';
@@ -128,6 +133,12 @@ void main() {
       // Bedingung „immer“ (der Emulator lädt nicht), Rolle, Dienst an.
       await askHost('role');
       final service = c.read(wakeServiceProvider.notifier);
+      const detector = String.fromEnvironment('WENDELIN_WAKE_DETECTOR');
+      if (detector.isNotEmpty) {
+        await c
+            .read(wakeDetectorProvider.notifier)
+            .set(WakeDetectorChoice.parse(detector));
+      }
       await service.setCondition(WakeCondition.always);
       expect(await service.setEnabled(enabled: true), isTrue);
       final platform = WakePlatform();

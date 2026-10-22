@@ -4865,6 +4865,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeCalibrateUnusable => 'Not usable.';
 
   @override
+  String get wakeDetectorAuto => 'Automatic';
+
+  @override
+  String get wakeDetectorAutoHint =>
+      'Phone: your voice (templates). Station: the trained model.';
+
+  @override
+  String get wakeDetectorModel => 'Trained model';
+
+  @override
+  String get wakeDetectorModelHint =>
+      'Recognizes “Wendelin” without enrollment. Needs the download.';
+
+  @override
+  String wakeDetectorModelNeeded(String v) {
+    return 'This setting needs the trained model: $v.';
+  }
+
+  @override
+  String get wakeDetectorTemplates => 'Templates of your voice';
+
+  @override
+  String get wakeDetectorTemplatesHint =>
+      'Compares with your recordings. Needs enrollment.';
+
+  @override
+  String get wakeDetectorTitle => 'Detection';
+
+  @override
   String get wakeEnrollAllThere => 'All recordings are in.';
 
   @override
@@ -5035,6 +5064,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEndedEngine => 'Ended: recognition failed';
+
+  @override
+  String get wakeServiceSectionEndedModel =>
+      'Ended: the trained model is missing';
 
   @override
   String get wakeServiceSectionEndedNoPermission =>

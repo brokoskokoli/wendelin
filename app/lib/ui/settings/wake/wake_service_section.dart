@@ -71,6 +71,7 @@ String wakeStopText(AppLocalizations l, String? reason) => switch (reason) {
   'no-role' => l.wakeServiceSectionEndedNoRole,
   'no-permission' => l.wakeServiceSectionEndedNoPermission,
   'engine-failed' => l.wakeServiceSectionEndedEngine,
+  'modelMissing' => l.wakeServiceSectionEndedModel,
   'not-charging' || 'unplug' => l.wakeServiceSectionEndedNotCharging,
   'paused' => l.wakeServiceSectionEndedPaused,
   'user-off' || 'disabled' => l.off,

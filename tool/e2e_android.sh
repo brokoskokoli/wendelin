@@ -55,6 +55,10 @@
 # WENDELIN_KEEP=1 lässt Rolle, App-Daten und den eingeschalteten Dienst stehen
 # (Neustart-Test, WP54: `adb -s <emulator> reboot`, dann `wake-start source=vis`).
 #
+# Trainiertes Wake-Modell (WP129): WENDELIN_WAKE_DETECTOR=model (oder templates,
+# auto) stellt „Erkennung“ im wake_service_e2e_test.dart ein; das Modell liegt
+# in <WENDELIN_MODELS>/wake-classifier-wendelin/ (Datei wendelin_wp130_a.onnx).
+#
 # Sprach-Robustheit (WP30): WENDELIN_REPEAT=<n> wiederholt die Runden von
 # voice_robustness_e2e_test.dart (je Runde D3 ohne und nach Overlay-Nutzung),
 # E2E_VOICE_LOG=<datei> sammelt danach alle `Wendelin/voice`-Zeilen.
@@ -193,6 +197,13 @@ prepare_voice() {
     for f in "$MODELS"/wake-e2e/*.wav; do
       copy_in "$f" "e2e/wake/$(basename "$f")"
     done
+    # Trainiertes Modell (WP129), falls vorhanden: <dir>/wake-classifier-wendelin/.
+    if [ -d "$MODELS/wake-classifier-wendelin" ]; then
+      in_app mkdir -p files/models/wake-classifier-wendelin
+      for f in "$MODELS"/wake-classifier-wendelin/*; do
+        copy_in "$f" "models/wake-classifier-wendelin/$(basename "$f")"
+      done
+    fi
     # „Stopp“ (WP64b), falls vorhanden.
     for f in "$MODELS"/wake-e2e-stop/*.wav; do
       [ -f "$f" ] && copy_in "$f" "e2e/wake/$(basename "$f")"
@@ -587,6 +598,9 @@ if [ -n "${WENDELIN_WP92A_DIR:-}" ]; then
   DEFINES+=(--dart-define=WENDELIN_WP92A_DIR="$WENDELIN_WP92A_DIR")
 fi
 # WP54: der Wake-Word-Dienst bleibt nach dem Test an (Neustart-Prüfung).
+if [ -n "${WENDELIN_WAKE_DETECTOR:-}" ]; then
+  DEFINES+=(--dart-define=WENDELIN_WAKE_DETECTOR="$WENDELIN_WAKE_DETECTOR")
+fi
 if [ -n "${WENDELIN_KEEP:-}" ]; then DEFINES+=(--dart-define=WENDELIN_KEEP=true); fi
 # Wiederholungen der Sprach-Robustheit (WP30, voice_robustness_e2e_test.dart).
 if [ -n "${WENDELIN_REPEAT:-}" ]; then

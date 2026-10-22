@@ -391,6 +391,21 @@ void main() {
       expect(archive.existsSync(), isFalse);
     });
 
+    test('Wake-Klassifikator mit falscher Prüfsumme wird abgelehnt und nicht '
+        'installiert (WP129)', () async {
+      final model = SpeechModelCatalog.wakeClassifierWendelin;
+      final file = model.files.single;
+      // Richtige Länge, falscher Inhalt.
+      final wrong = List<int>.filled(file.sizeBytes, 7);
+      final (inst, _) = installer({file.name: wrong});
+      await expectLater(inst.install(model), throwsA(isA<Exception>()));
+      expect(await inst.isInstalled(model), isFalse);
+      expect(
+        File(inst.store.pathOf(model.id, file.name)).existsSync(),
+        isFalse,
+      );
+    });
+
     test('zu wenig Platz: Fehler vor dem Download', () async {
       final (inst, requests) = installer({'v.onnx': small}, free: 10 << 20);
       await expectLater(

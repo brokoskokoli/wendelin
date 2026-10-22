@@ -2836,6 +2836,21 @@
   },
   "wakeCalibrateTitle": "Kalibrieren",
   "wakeCalibrateUnusable": "Nicht verwertbar.",
+  "wakeDetectorAuto": "Automatisch",
+  "wakeDetectorAutoHint": "Handy: deine Stimme (Vorlagen). Station: das trainierte Modell.",
+  "wakeDetectorModel": "Trainiertes Modell",
+  "wakeDetectorModelHint": "Erkennt „Wendelin“ ohne Einlernen. Braucht den Download.",
+  "wakeDetectorModelNeeded": "Das trainierte Modell wird für diese Einstellung benötigt: {v}.",
+  "@wakeDetectorModelNeeded": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeDetectorTemplates": "Vorlagen deiner Stimme",
+  "wakeDetectorTemplatesHint": "Vergleicht mit deinen Aufnahmen. Braucht das Einlernen.",
+  "wakeDetectorTitle": "Erkennung",
   "wakeEnrollAllThere": "Alle Aufnahmen sind da.",
   "wakeEnrollFailed": "Das Einlernen ist gescheitert: {error}",
   "@wakeEnrollFailed": {
@@ -2952,6 +2967,7 @@
   "wakeServiceSectionEnable": "Aktivierungswort einschalten",
   "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Wendelin“.",
   "wakeServiceSectionEndedEngine": "Beendet: Die Erkennung ist ausgefallen",
+  "wakeServiceSectionEndedModel": "Beendet: Das trainierte Modell fehlt",
   "wakeServiceSectionEndedNoPermission": "Beendet: Mikrofon-Berechtigung fehlt",
   "wakeServiceSectionEndedNoRole": "Beendet: Wendelin ist nicht mehr dein Assistent",
   "wakeServiceSectionEndedNotCharging": "Beendet: Das Gerät lädt nicht mehr",

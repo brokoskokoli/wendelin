@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
+import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/voice/wake/wake_barge_in.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -56,6 +57,39 @@ void main() {
     final c = env.container();
     addTearDown(c.dispose);
     final features = c.read(wakeFeaturesFactoryProvider)();
+    await expectLater(
+      features.open(),
+      throwsA(
+        isA<VoiceException>().having(
+          (e) => e.kind,
+          'kind',
+          VoiceErrorKind.modelMissing,
+        ),
+      ),
+    );
+  });
+
+  test('Erkennung ist standardmäßig auto und bleibt gespeichert', () async {
+    final env = TestEnv();
+    final c = env.container();
+    addTearDown(c.dispose);
+    expect(await c.read(wakeDetectorProvider.future), WakeDetectorChoice.auto);
+    await c.read(wakeDetectorProvider.notifier).set(WakeDetectorChoice.model);
+    expect(await env.storage.settings.get(wakeDetectorKey), 'model');
+    final again = env.container();
+    addTearDown(again.dispose);
+    expect(
+      await again.read(wakeDetectorProvider.future),
+      WakeDetectorChoice.model,
+    );
+    expect(WakeDetectorChoice.parse('x'), WakeDetectorChoice.auto);
+  });
+
+  test('Klassifikator-Kette ohne Modelle: Fehler „Modell fehlt“', () async {
+    final env = TestEnv();
+    final c = env.container();
+    addTearDown(c.dispose);
+    final features = c.read(wakeClassifierFeaturesFactoryProvider)();
     await expectLater(
       features.open(),
       throwsA(

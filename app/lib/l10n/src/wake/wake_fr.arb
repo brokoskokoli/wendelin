@@ -17,6 +17,8 @@
   "micNotNow": "Pas maintenant",
   "micOnlyText": "Sans microphone, seul le texte fonctionne. {v}",
   "micSettingsHint": "Autorisez-le dans les paramètres Android sous Applications → Wendelin.",
+  "speechCommunicationHelp": "La réponse est jouée comme un appel par le haut-parleur, pour mieux reconnaître « Stop ». Effets secondaires : le volume d’appel s’applique, le son est plus mince et les appareils Bluetooth peuvent changer la lecture. Avec un casque, la sortie y reste. S’applique à partir de la prochaine réponse.",
+  "speechCommunicationTitle": "Réponse en mode appel (meilleure suppression d’écho)",
   "wakeCalibrateCancelled": "Annulé. Rien n’a été modifié.",
   "wakeCalibrateDone": "Calibré.",
   "wakeCalibrateFailed": "Échec : {error}",
@@ -31,6 +33,21 @@
   "wakeCalibrateResult": "Seuil {v} · {v2} fausses alertes par heure estimées (avant la vérification) · {v3} % de vos enregistrements reconnus.",
   "wakeCalibrateTitle": "Calibrer",
   "wakeCalibrateUnusable": "Inutilisable.",
+  "wakeDetectorAuto": "Automatique",
+  "wakeDetectorAutoHint": "Téléphone : ta voix (modèles). Station : le modèle entraîné.",
+  "wakeDetectorModel": "Modèle entraîné",
+  "wakeDetectorModelHint": "Reconnaît « Wendelin » sans apprentissage. Demande le téléchargement.",
+  "wakeDetectorModelNeeded": "Ce réglage demande le modèle entraîné : {v}.",
+  "@wakeDetectorModelNeeded": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeDetectorTemplates": "Modèles de ta voix",
+  "wakeDetectorTemplatesHint": "Compare avec tes enregistrements. Demande l’apprentissage.",
+  "wakeDetectorTitle": "Détection",
   "wakeEnrollAllThere": "Tous les enregistrements sont là.",
   "wakeEnrollFailed": "L’entraînement a échoué : {error}",
   "wakeEnrollHeard": "Entendu.",
@@ -78,6 +95,7 @@
   "wakeServiceSectionEnable": "Activer le mot d’activation",
   "wakeServiceSectionEnableDetail": "Wendelin écoute en arrière-plan le mot « Wendelin ».",
   "wakeServiceSectionEndedEngine": "Arrêté : la reconnaissance a échoué",
+  "wakeServiceSectionEndedModel": "Arrêté : le modèle entraîné manque",
   "wakeServiceSectionEndedNoPermission": "Arrêté : autorisation du microphone manquante",
   "wakeServiceSectionEndedNoRole": "Arrêté : Wendelin n’est plus votre assistant",
   "wakeServiceSectionEndedNotCharging": "Arrêté : l’appareil ne charge plus",
@@ -143,7 +161,5 @@
   "wakeWordWhoCalibrate": "Qui calibrer ?",
   "wakeWordWhoJoins": "Qui s’ajoute ?",
   "wakeWordWhoSpeaks": "Qui parle ?",
-  "wakeWordWhoStop": "Qui entraîne « Stop » ?",
-  "speechCommunicationTitle": "Réponse en mode appel (meilleure suppression d’écho)",
-  "speechCommunicationHelp": "La réponse est jouée comme un appel par le haut-parleur, pour mieux reconnaître « Stop ». Effets secondaires : le volume d’appel s’applique, le son est plus mince et les appareils Bluetooth peuvent changer la lecture. Avec un casque, la sortie y reste. S’applique à partir de la prochaine réponse."
+  "wakeWordWhoStop": "Qui entraîne « Stop » ?"
 }

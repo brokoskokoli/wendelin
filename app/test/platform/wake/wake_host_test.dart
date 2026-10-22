@@ -21,9 +21,18 @@ import '../recognizer/recognizer_host_test.dart' show FakeEngines;
 const channel = MethodChannel(wakeEngineChannelName);
 
 final class _Parts implements WakeParts {
-  _Parts({this.engineless = false, this.verdict = true});
+  _Parts({
+    this.engineless = false,
+    this.verdict = true,
+    this.direct = false,
+    this.engineError,
+    this.openError,
+  });
 
   final bool engineless;
+  final bool direct;
+  final Object? engineError;
+  final Object? openError;
   bool verdict;
   Object? verifyError;
   int disposed = 0;
@@ -39,7 +48,10 @@ final class _Parts implements WakeParts {
     engines++;
     lastDetector = detector;
     lastStation = station;
-    return engineless ? null : FakeWakeWordEngine();
+    final error = engineError;
+    if (error != null) throw error;
+    if (openError != null) return _OpenFails(openError!);
+    return engineless ? null : FakeWakeWordEngine(direct: direct);
   }
 
   @override
@@ -47,6 +59,24 @@ final class _Parts implements WakeParts {
 
   @override
   Future<void> dispose() async => disposed++;
+}
+
+/// An engine whose models cannot be opened (classifier file missing).
+final class _OpenFails implements WakeWordEngine {
+  _OpenFails(this.error);
+  final Object error;
+
+  @override
+  Future<void> open(List<KeywordSpec> keywords) async => throw error;
+
+  @override
+  Future<List<WakeWordHit>> accept(Int16List frame) async => const [];
+
+  @override
+  void reset() {}
+
+  @override
+  Future<void> close() async {}
 }
 
 final class _Verifier implements WakeVerifier {
@@ -95,12 +125,16 @@ void main() {
     expect(condition(), isTrue, reason: '${calls()} $logs');
   }
 
-  Future<void> start({bool verify = false, _Parts? p}) async {
+  Future<void> start({
+    bool verify = false,
+    _Parts? p,
+    Map<String, Object?> extra = const {},
+  }) async {
     parts = p ?? _Parts();
     audio = ServiceAudioInput(channel);
     host = WakeHost(parts: parts, audio: audio);
     await host.attach();
-    await fromKotlin('run', {'verify': verify});
+    await fromKotlin('run', {'verify': verify, ...extra});
     await until(() => calls().contains('startMic'));
   }
 
@@ -238,7 +272,130 @@ void main() {
     await hear(FakeWakeWordEngine.markerFrame(1600));
     await until(() => calls().contains('hit'));
     expect(logs.join('\n'), contains('wake-verify engine=wake result=skip'));
-    expect(logs.join('\n'), contains('wake-cand engine=wake stage=1 detector=templates score=0.900'));
+    expect(
+      logs.join('\n'),
+      contains('wake-cand engine=wake stage=1 detector=templates score=0.900'),
+    );
+    expect(
+      logs.join('\n'),
+      contains(
+        'wake-hit-stage engine=wake detector=templates '
+        'stage=1-unchecked score=0.900',
+      ),
+    );
+  });
+
+  group('Erkennung (WP129)', () {
+    test(
+      'auto: Handy Vorlagen, Station Modell; run reicht Ort durch',
+      () async {
+        await start(extra: {'detector': 'auto'});
+        expect(parts.lastDetector, WakeDetector.templates);
+        expect(parts.lastStation, isFalse);
+        await fromKotlin('run', {
+          'verify': false,
+          'detector': 'auto',
+          'station': true,
+        });
+        await until(() => parts.engines == 2);
+        expect(parts.lastDetector, WakeDetector.model);
+        expect(parts.lastStation, isTrue);
+        expect(
+          logs.join('\n'),
+          contains(
+            'wake-listening engine=wake verify=false detector=model '
+            'station=true',
+          ),
+        );
+      },
+    );
+
+    test('fest gewählt gilt auch an der Station; unbekannt: auto', () async {
+      await start(extra: {'detector': 'templates', 'station': true});
+      expect(parts.lastDetector, WakeDetector.templates);
+      await fromKotlin('run', {'verify': false, 'detector': 'model'});
+      await until(() => parts.engines == 2);
+      expect(parts.lastDetector, WakeDetector.model);
+      await fromKotlin('run', {'verify': false, 'detector': 'quatsch'});
+      await until(() => parts.engines == 3);
+      expect(parts.lastDetector, WakeDetector.templates);
+    });
+
+    test('gleiche Erkennung und gleicher Ort: kein Neustart', () async {
+      await start(extra: {'detector': 'model'});
+      await fromKotlin('run', {'verify': false, 'detector': 'model'});
+      await pumpEventQueue();
+      expect(parts.engines, 1);
+    });
+
+    test('Modell fehlt: failed modelMissing, kein Mikrofon, kein Rückfall '
+        'auf Vorlagen', () async {
+      parts = _Parts(
+        engineError: const VoiceException(VoiceErrorKind.modelMissing, 'x'),
+      );
+      audio = ServiceAudioInput(channel);
+      host = WakeHost(parts: parts, audio: audio);
+      await host.attach();
+      await fromKotlin('run', {'verify': false, 'detector': 'model'});
+      await until(() => calls().contains('failed'));
+      final failed = toKotlin.firstWhere((c) => c.$1 == 'failed').$2! as Map;
+      expect(failed['reason'], 'modelMissing');
+      expect(parts.engines, 1);
+      expect(calls(), isNot(contains('startMic')));
+    });
+
+    test('Modelldatei fehlt beim Öffnen: failed modelMissing (der Weg der '
+        'Merkmalskette), kein Mikrofon', () async {
+      parts = _Parts(
+        openError: const VoiceException(VoiceErrorKind.modelMissing, 'x'),
+      );
+      audio = ServiceAudioInput(channel);
+      host = WakeHost(parts: parts, audio: audio);
+      await host.attach();
+      await fromKotlin('run', {'verify': false, 'detector': 'model'});
+      await until(() => calls().contains('failed'));
+      final failed = toKotlin.firstWhere((c) => c.$1 == 'failed').$2! as Map;
+      expect(failed['reason'], 'modelMissing');
+      expect(calls(), isNot(contains('startMic')));
+    });
+
+    test('anderer Fehler der Engine: failed engine-failed', () async {
+      parts = _Parts(engineError: StateError('kaputt'));
+      audio = ServiceAudioInput(channel);
+      host = WakeHost(parts: parts, audio: audio);
+      await host.attach();
+      await fromKotlin('run', {'verify': false, 'detector': 'model'});
+      await until(() => calls().contains('failed'));
+      final failed = toKotlin.firstWhere((c) => c.$1 == 'failed').$2! as Map;
+      expect(failed['reason'], 'engine-failed');
+    });
+
+    test(
+      'sicherer Treffer: Stufe 1-direct, Whisper wird nicht gefragt',
+      () async {
+        await start(
+          verify: true,
+          p: _Parts(direct: true, verdict: false),
+          extra: {'detector': 'model'},
+        );
+        await hear(FakeWakeWordEngine.markerFrame(1600));
+        await until(() => calls().contains('hit'));
+        final text = logs.join('\n');
+        expect(text, contains('stage=1-direct'));
+        expect(text, contains('direct=true'));
+        expect(text, isNot(contains('wake-verify')));
+      },
+    );
+
+    test('Treffer im Band: Stufe 2-verified', () async {
+      await start(verify: true, extra: {'detector': 'model'});
+      await hear(FakeWakeWordEngine.markerFrame(1600));
+      for (var i = 0; i < 12; i++) {
+        await hear(Int16List(1600));
+      }
+      await until(() => calls().contains('hit'));
+      expect(logs.join('\n'), contains('stage=2-verified'));
+    });
   });
 
   test('nichts eingelernt: der Dienst meldet failed', () async {
@@ -366,6 +523,33 @@ void main() {
         ['a', 'b'],
       );
       expect(e.modelThreshold, isNull);
+    });
+
+    test('Modell: Band je Ort aus dem Katalog, keine Vorlagen, Hauptwort-'
+        'Gate; Vorlagen-Engine hat das Gate auch', () async {
+      final (c, _) = await container([tpl('a', 0.9)]);
+      WakeScoreBand band(bool station) =>
+          station ? WakeClassifierRules.station : WakeClassifierRules.phone;
+      for (final station in [false, true]) {
+        final e =
+            (await DeviceWakeParts(
+                  ProviderContainer(
+                    overrides: [
+                      wakeClassifierFeaturesFactoryProvider.overrideWithValue(
+                        () => FakeWakeFeatureExtractor(windowEvery: 100),
+                      ),
+                    ],
+                  ),
+                ).engine(detector: WakeDetector.model, station: station))!
+                as CandidateWakeEngine;
+        expect(e.templates, isNull);
+        expect(e.modelThreshold, band(station).verifyFrom);
+        expect(e.directThreshold, band(station).acceptFrom);
+        expect(e.mainGate, isNotNull);
+      }
+      final t = (await DeviceWakeParts(c).engine())! as CandidateWakeEngine;
+      expect(t.mainGate, isNotNull);
+      expect(t.directThreshold, isNull);
     });
 
     test('niemand eingelernt: keine Engine', () async {

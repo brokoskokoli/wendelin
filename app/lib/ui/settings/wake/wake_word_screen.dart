@@ -11,6 +11,7 @@ import '../../design/design.dart';
 import '../model_download_row.dart';
 import '../settings_page.dart';
 import 'wake_calibrate_screen.dart';
+import 'wake_detector_section.dart';
 import 'wake_enroll_screen.dart';
 import 'wake_models.dart';
 import 'wake_service_section.dart';
@@ -37,6 +38,7 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_enroll(context, ref, speakers, null))
               : () => showHint(context, context.l10n.wakeWordNeedsModel),
         ),
+        const WakeDetectorSection(),
         SettingsSection(
           title: context.l10n.wakeWordFeatureModels,
           children: [

@@ -162,10 +162,7 @@ void main() {
     });
 
     test('Vorlagen-Weg: Sprachpegel löst aus', () async {
-      expect(
-        await _speech(templated(gate: SpeechGate())),
-        isNotEmpty,
-      );
+      expect(await _speech(templated(gate: SpeechGate())), isNotEmpty);
     });
 
     test('Klassifikator-Weg: Stille mit hohem Score löst nicht aus', () async {

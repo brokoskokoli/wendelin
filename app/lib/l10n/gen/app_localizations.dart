@@ -8349,6 +8349,54 @@ abstract class AppLocalizations {
   /// **'Nicht verwertbar.'**
   String get wakeCalibrateUnusable;
 
+  /// No description provided for @wakeDetectorAuto.
+  ///
+  /// In de, this message translates to:
+  /// **'Automatisch'**
+  String get wakeDetectorAuto;
+
+  /// No description provided for @wakeDetectorAutoHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Handy: deine Stimme (Vorlagen). Station: das trainierte Modell.'**
+  String get wakeDetectorAutoHint;
+
+  /// No description provided for @wakeDetectorModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Trainiertes Modell'**
+  String get wakeDetectorModel;
+
+  /// No description provided for @wakeDetectorModelHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennt „Wendelin“ ohne Einlernen. Braucht den Download.'**
+  String get wakeDetectorModelHint;
+
+  /// No description provided for @wakeDetectorModelNeeded.
+  ///
+  /// In de, this message translates to:
+  /// **'Das trainierte Modell wird für diese Einstellung benötigt: {v}.'**
+  String wakeDetectorModelNeeded(String v);
+
+  /// No description provided for @wakeDetectorTemplates.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorlagen deiner Stimme'**
+  String get wakeDetectorTemplates;
+
+  /// No description provided for @wakeDetectorTemplatesHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Vergleicht mit deinen Aufnahmen. Braucht das Einlernen.'**
+  String get wakeDetectorTemplatesHint;
+
+  /// No description provided for @wakeDetectorTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennung'**
+  String get wakeDetectorTitle;
+
   /// No description provided for @wakeEnrollAllThere.
   ///
   /// In de, this message translates to:
@@ -8630,6 +8678,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Beendet: Die Erkennung ist ausgefallen'**
   String get wakeServiceSectionEndedEngine;
+
+  /// No description provided for @wakeServiceSectionEndedModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Beendet: Das trainierte Modell fehlt'**
+  String get wakeServiceSectionEndedModel;
 
   /// No description provided for @wakeServiceSectionEndedNoPermission.
   ///

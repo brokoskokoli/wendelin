@@ -17,6 +17,8 @@
   "micNotNow": "Not now",
   "micOnlyText": "Without a microphone only text works. {v}",
   "micSettingsHint": "Allow it in the Android settings under Apps → Wendelin.",
+  "speechCommunicationHelp": "The answer plays like a call through the speaker, so “Stop” is recognized more reliably. Side effects: the call volume applies, the sound is thinner, and Bluetooth devices may switch playback. With headphones the output stays there. Applies from the next answer.",
+  "speechCommunicationTitle": "Answer as call audio (better echo cancellation)",
   "wakeCalibrateCancelled": "Cancelled. Nothing was changed.",
   "wakeCalibrateDone": "Calibrated.",
   "wakeCalibrateFailed": "Failed: {error}",
@@ -31,6 +33,21 @@
   "wakeCalibrateResult": "Threshold {v} · estimated {v2} false alarms per hour (before verification) · {v3} % of your recordings recognized.",
   "wakeCalibrateTitle": "Calibrate",
   "wakeCalibrateUnusable": "Not usable.",
+  "wakeDetectorAuto": "Automatic",
+  "wakeDetectorAutoHint": "Phone: your voice (templates). Station: the trained model.",
+  "wakeDetectorModel": "Trained model",
+  "wakeDetectorModelHint": "Recognizes “Wendelin” without enrollment. Needs the download.",
+  "wakeDetectorModelNeeded": "This setting needs the trained model: {v}.",
+  "@wakeDetectorModelNeeded": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeDetectorTemplates": "Templates of your voice",
+  "wakeDetectorTemplatesHint": "Compares with your recordings. Needs enrollment.",
+  "wakeDetectorTitle": "Detection",
   "wakeEnrollAllThere": "All recordings are in.",
   "wakeEnrollFailed": "Training failed: {error}",
   "wakeEnrollHeard": "Heard.",
@@ -78,6 +95,7 @@
   "wakeServiceSectionEnable": "Turn on wake word",
   "wakeServiceSectionEnableDetail": "Wendelin listens in the background for “Wendelin”.",
   "wakeServiceSectionEndedEngine": "Ended: recognition failed",
+  "wakeServiceSectionEndedModel": "Ended: the trained model is missing",
   "wakeServiceSectionEndedNoPermission": "Ended: microphone permission missing",
   "wakeServiceSectionEndedNoRole": "Ended: Wendelin is no longer your assistant",
   "wakeServiceSectionEndedNotCharging": "Ended: the device is no longer charging",
@@ -143,7 +161,5 @@
   "wakeWordWhoCalibrate": "Whom to calibrate?",
   "wakeWordWhoJoins": "Who is joining?",
   "wakeWordWhoSpeaks": "Who is speaking?",
-  "wakeWordWhoStop": "Who trains “Stop”?",
-  "speechCommunicationTitle": "Answer as call audio (better echo cancellation)",
-  "speechCommunicationHelp": "The answer plays like a call through the speaker, so “Stop” is recognized more reliably. Side effects: the call volume applies, the sound is thinner, and Bluetooth devices may switch playback. With headphones the output stays there. Applies from the next answer."
+  "wakeWordWhoStop": "Who trains “Stop”?"
 }
