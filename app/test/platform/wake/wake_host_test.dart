@@ -340,6 +340,11 @@ void main() {
       await until(() => calls().contains('failed'));
       final failed = toKotlin.firstWhere((c) => c.$1 == 'failed').$2! as Map;
       expect(failed['reason'], 'modelMissing');
+      // Das Log nennt den Grund lesbar (kebab), nicht als `?`.
+      expect(
+        logs.where((l) => l.contains('wake-failed')),
+        contains(endsWith('reason=model-missing')),
+      );
       expect(parts.engines, 1);
       expect(calls(), isNot(contains('startMic')));
     });

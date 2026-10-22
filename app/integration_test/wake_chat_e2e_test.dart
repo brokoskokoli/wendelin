@@ -125,6 +125,22 @@ void main() {
       expect(hasMessage(), isTrue);
       final startsBefore = starts();
 
+      // `whenIdle` wartet nicht, solange der Zug noch startet (keine Pipeline)
+      // und ein zweiter Treffer startet den Zug neu: erst wenn Sprache und
+      // Agent zwei Sekunden am Stück ruhen, ist der Zug wirklich vorbei. Sonst
+      // läuft er in die Einstellungen hinein und zählt dort als Treffer.
+      Future<void> turnOver() async {
+        var quiet = 0;
+        for (var i = 0; i < 120 && quiet < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 500));
+          final v = c.read(voiceControllerProvider);
+          final busy =
+              v.active || v.followUp || c.read(agentControllerProvider).running;
+          quiet = busy ? 0 : quiet + 1;
+        }
+        expect(quiet, 4, reason: 'Der Zug endet');
+      }
+
       // Chat sichtbar: der Treffer startet das Zuhören im Chat.
       final triggers = <TriggerKind?>[];
       // Das Feld `trigger` bleibt nach einem Zug stehen: zählt nur ein
@@ -138,7 +154,7 @@ void main() {
       }
       expect(triggers, contains(TriggerKind.wakeWord));
       // Ende des Zuges: der Dienst hört wieder (Status läuft weiter).
-      await c.read(voiceControllerProvider.notifier).whenIdle;
+      await turnOver();
       expect((await platform.status()).running, isTrue);
       // Dieselbe Sitzung: kein session-new, die Nachricht bleibt sichtbar.
       expect(starts(), startsBefore);
@@ -151,7 +167,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
       }
       expect(triggers, contains(TriggerKind.wakeWord));
-      await c.read(voiceControllerProvider.notifier).whenIdle;
+      await turnOver();
       expect((await platform.status()).running, isTrue);
       expect(starts(), startsBefore);
 

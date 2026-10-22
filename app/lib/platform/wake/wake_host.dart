@@ -262,7 +262,12 @@ final class WakeHost {
   Future<void> _fail(String reason) async {
     if (_ending) return;
     _ending = true;
-    voiceLog('wake-failed', {'reason': reason});
+    // The log allows lower-case codes only: `modelMissing` → `model-missing`.
+    final code = reason.replaceAllMapped(
+      RegExp('[A-Z]'),
+      (m) => '-${m[0]!.toLowerCase()}',
+    );
+    voiceLog('wake-failed', {'reason': code});
     await _call('failed', {'reason': reason});
   }
 
