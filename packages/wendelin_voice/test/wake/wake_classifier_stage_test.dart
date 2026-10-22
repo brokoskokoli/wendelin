@@ -63,6 +63,17 @@ void main() {
       );
     });
 
+    test('Stufe 2: Fenster und Nachlauf kommen aus dem Katalog (WP129)', () {
+      expect(WakeClassifierRules.verifyWindow, const Duration(seconds: 2));
+      expect(WakeClassifierRules.verifyTail, const Duration(milliseconds: 900));
+      final l = WakeWordListener(
+        audio: FakeAudioInput(),
+        engine: FakeWakeWordEngine(),
+      );
+      expect(l.verifyWindow, WakeClassifierRules.verifyWindow);
+      expect(l.verifyTail, WakeClassifierRules.verifyTail);
+    });
+
     test('Lizenzhinweis: M-AILABS mit Copyright und Haftungsausschluss', () {
       final a = WakeClassifierCatalog.model.attribution!;
       expect(a, contains('Copyright (c) 2017-2019'));

@@ -103,6 +103,15 @@ abstract final class WakeClassifierRules {
   /// peak ends the hold early.
   static const holdWindows = 5;
 
+  /// Stage 2: audio before the hit that is transcribed (the listener default,
+  /// `WakeWordListener.verifyWindow`). Provisional like the band; WP133
+  /// sets the final value.
+  static const verifyWindow = Duration(seconds: 2);
+
+  /// Stage 2: audio recorded after the hit before stage 2 starts (the
+  /// listener default, `WakeWordListener.verifyTail`). Provisional (WP133).
+  static const verifyTail = Duration(milliseconds: 900);
+
   /// Phone: the lower limit 0.98 of the measured working point.
   static const phone = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.995);
 
