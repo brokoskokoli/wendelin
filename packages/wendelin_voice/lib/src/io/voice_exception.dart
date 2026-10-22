@@ -9,6 +9,10 @@ enum VoiceErrorKind {
   /// A required model is not downloaded.
   modelMissing,
 
+  /// A model is unpacked but lacks the files to load it (damaged or
+  /// unexpected layout): it has to be downloaded again.
+  modelBroken,
+
   /// The requested language is not supported by the engine.
   unsupportedLanguage,
 

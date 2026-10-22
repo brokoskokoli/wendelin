@@ -14,6 +14,60 @@ import 'package:wendelin_storage/wendelin_storage.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 void main() {
+  group('installiertes, aber nicht ladbares Modell (WP136)', () {
+    Future<Object?> loadError(Directory models) async {
+      final storage = openInMemoryStorage();
+      addTearDown(storage.close);
+      await storage.settings.set(
+        voiceSettingsKey,
+        VoiceSettings(sttModel: SpeechModelCatalog.parakeetV3.id),
+      );
+      final c = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [
+          storageProvider.overrideWithValue(storage),
+          modelsDirectoryProvider.overrideWith((ref) async => models),
+        ],
+      );
+      addTearDown(c.dispose);
+      try {
+        await c.read(engineWhisperProvider.future);
+      } on Object catch (e) {
+        return e;
+      }
+      return null;
+    }
+
+    test('Ordner ohne Modelldateien: modelBroken statt modelMissing', () async {
+      final tmp = Directory.systemTemp.createTempSync('broken');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      const m = SpeechModelCatalog.parakeetV3;
+      final base = m.files.first.name.replaceFirst('.tar.bz2', '');
+      Directory('${tmp.path}/${m.id}/$base/$base').createSync(recursive: true);
+      expect(
+        await loadError(tmp),
+        isA<VoiceException>().having(
+          (e) => e.kind,
+          'kind',
+          VoiceErrorKind.modelBroken,
+        ),
+      );
+    });
+
+    test('nichts geladen bleibt modelMissing', () async {
+      final tmp = Directory.systemTemp.createTempSync('absent');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      expect(
+        await loadError(tmp),
+        isA<VoiceException>().having(
+          (e) => e.kind,
+          'kind',
+          VoiceErrorKind.modelMissing,
+        ),
+      );
+    });
+  });
+
   test('Ladeplan: die App-Sprache geht als Rückfall an den Erkenner', () async {
     String? seen;
     final c = ProviderContainer(

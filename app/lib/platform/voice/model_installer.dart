@@ -6,6 +6,8 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../../voice/voice_log.dart';
 import 'disk_space.dart';
 import 'file_model_store.dart';
+import 'nemo_sherpa.dart';
+import 'sherpa_voice_files.dart';
 import 'tar_bz2.dart';
 
 export 'package:wendelin_voice/wendelin_voice.dart'
@@ -43,8 +45,38 @@ final class ModelInstaller implements SpeechModelService {
 
   Future<bool> _fileInstalled(SpeechModel model, ModelFile f) async =>
       f.archive == ModelArchive.tarBz2
-      ? unpackedDir(model, f).exists()
+      ? _unpackedUsable(model, f)
       : _finalComplete(model, f);
+
+  /// Whether the unpacked archive holds the files the engine loads: the
+  /// archive's top folder lies inside [unpackedDir], so "the folder is
+  /// there" is not enough (WP136).
+  Future<bool> _unpackedUsable(SpeechModel model, ModelFile f) async {
+    final dir = unpackedDir(model, f);
+    if (!await dir.exists()) return false;
+    return switch (model.kind) {
+      SpeechModelKind.stt when model.engine != SttEngine.whisper =>
+        NemoFiles.find(model, store.modelDir(model.id).path) != null,
+      SpeechModelKind.tts =>
+        PiperVoiceFiles.find(dir, kokoro: model.synth == TtsSynth.kokoro) !=
+            null,
+      _ => true,
+    };
+  }
+
+  /// Whether an unpacked archive of [model] is there but lacks the files
+  /// to load (damaged or unexpected layout): the user must download it
+  /// again. A missing or only partly downloaded model is not damaged.
+  Future<bool> isDamaged(SpeechModel model) async {
+    for (final f in model.files) {
+      if (f.archive != ModelArchive.tarBz2) continue;
+      if (await unpackedDir(model, f).exists() &&
+          !await _unpackedUsable(model, f)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /// Whether the final file exists with exactly its catalog size (a
   /// truncated model would crash sherpa-onnx when loaded).

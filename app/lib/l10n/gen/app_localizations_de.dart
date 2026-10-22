@@ -4503,6 +4503,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Das Mikrofon war noch belegt. Bitte sprich noch einmal.';
 
   @override
+  String get voiceErrorModelBroken =>
+      'Das Sprachmodell ist beschädigt. Bitte lade es neu (Einstellungen → Sprache).';
+
+  @override
   String get voiceErrorModelMissing =>
       'Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).';
 

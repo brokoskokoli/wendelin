@@ -2616,6 +2616,7 @@
   "voiceDownloadUnpacking": "Wird entpackt …",
   "voiceErrorGeneric": "Sprache hat nicht geklappt. Bitte versuche es noch einmal.",
   "voiceErrorMicBusy": "Das Mikrofon war noch belegt. Bitte sprich noch einmal.",
+  "voiceErrorModelBroken": "Das Sprachmodell ist beschädigt. Bitte lade es neu (Einstellungen → Sprache).",
   "voiceErrorModelMissing": "Ein Sprachmodell ist noch nicht geladen (Einstellungen → Sprache).",
   "voiceMetricsClear": "Liste leeren",
   "voiceMetricsEmpty": "Noch keine Messwerte. Sprich einen Befehl oder spiele eine Stimmprobe ab.",

@@ -850,6 +850,13 @@ void main() {
     );
     expect(
       voiceErrorText(
+        AppLocalizationsDe(),
+        const VoiceException(VoiceErrorKind.modelBroken, 'egal'),
+      ),
+      AppLocalizationsDe().voiceErrorModelBroken,
+    );
+    expect(
+      voiceErrorText(
         AppLocalizationsFr(),
         const VoiceException(VoiceErrorKind.busy, 'egal'),
       ),
