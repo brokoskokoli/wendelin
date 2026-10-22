@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP133, WP129, WP135; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP133, WP129, WP135, WP136 (4 mit Freigabe); Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -84,6 +84,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | in Arbeit | K105; Teil A sofort (niedrige Last), Teil B Training im Zeitfenster |
 | WP134 | Stopp-Wort ausbauen, Vorlagen-Vergleich für „Wendelin“ zentrieren | geplant | K107; nach WP129 (Wake-Dateien) |
 | WP135 | Smart Home schneller: Geräteliste, Synonyme, feste Bestätigung, Schnellweg ohne KI, Rollo ohne Rückfrage | in Arbeit | K108; parallel zu Wake-Paketen möglich |
+| WP136 | Parakeet (NeMo) lädt nach dem Download nicht | in Arbeit | Testbefund 2026-10-23; Go Maintainer, 4. Sitzung |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
