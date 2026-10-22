@@ -29,7 +29,7 @@
   "voiceConvKeepListeningDetail": "Après la réponse parlée, le microphone reste brièvement ouvert et vous pouvez poser une question sans toucher l’écran. « Merci » ou « Stop » y met fin.",
   "voiceConvKeepListeningLabel": "Continuer à écouter après la réponse",
   "voiceDownloadAnd": " et ",
-  "voiceDownloadBundled": "{displayName} en fait partie ({v}) et est téléchargé aussi. « small » reconnaît bien mieux l’allemand, le français et les noms, et il est recommandé. « base » est rapide et prévu pour les appareils peu puissants. Autres modèles : Paramètres → Voix.",
+  "voiceDownloadBundled": "{displayName} en fait partie ({v}) et est téléchargé aussi. « small » reconnaît bien mieux l’allemand, le français et les noms. « base » est rapide et prévu pour les appareils peu puissants. Autres modèles : Paramètres → Voix.",
   "voiceDownloadContinueInBackground": "Continuer en arrière-plan",
   "voiceDownloadContinueLoading": "Reprendre le chargement",
   "voiceDownloadIntro": "Wendelin reconnaît la parole sur l’appareil, sans internet et sans Google. Choisissez le modèle et téléchargez-le une fois, de préférence en Wi-Fi.",

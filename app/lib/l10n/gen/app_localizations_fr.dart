@@ -4453,7 +4453,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String voiceDownloadBundled(String displayName, String v) {
-    return '$displayName en fait partie ($v) et est téléchargé aussi. « small » reconnaît bien mieux l’allemand, le français et les noms, et il est recommandé. « base » est rapide et prévu pour les appareils peu puissants. Autres modèles : Paramètres → Voix.';
+    return '$displayName en fait partie ($v) et est téléchargé aussi. « small » reconnaît bien mieux l’allemand, le français et les noms. « base » est rapide et prévu pour les appareils peu puissants. Autres modèles : Paramètres → Voix.';
   }
 
   @override

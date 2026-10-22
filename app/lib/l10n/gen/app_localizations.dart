@@ -7590,7 +7590,7 @@ abstract class AppLocalizations {
   /// No description provided for @voiceDownloadBundled.
   ///
   /// In de, this message translates to:
-  /// **'{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser und ist empfohlen. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.'**
+  /// **'{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.'**
   String voiceDownloadBundled(String displayName, String v);
 
   /// No description provided for @voiceDownloadContinueInBackground.

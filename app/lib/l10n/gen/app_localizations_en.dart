@@ -4402,7 +4402,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String voiceDownloadBundled(String displayName, String v) {
-    return '$displayName is included and is downloaded too ($v). “small” recognizes German, French and names much better and is recommended. “base” is fast and meant for weak devices. More models: Settings → Voice.';
+    return '$displayName is included and is downloaded too ($v). “small” recognizes German, French and names much better. “base” is fast and meant for weak devices. More models: Settings → Voice.';
   }
 
   @override

@@ -95,17 +95,24 @@ final class LazyParakeetVerifier implements WakeVerifier {
   Future<WhisperBackend>? _backend;
   Timer? _idle;
 
+  /// The last start failed (defective files, no memory): until the next
+  /// [release] (after [idleRelease]) Parakeet counts as not available, so
+  /// the stage falls back to Whisper instead of rejecting every hit.
+  bool _loadFailed = false;
+
   @override
   String get kind => 'parakeet';
 
   /// Whether Parakeet is installed.
-  Future<bool> isAvailable() async => await files() != null;
+  Future<bool> isAvailable() async => !_loadFailed && await files() != null;
 
   @override
   Future<bool> confirm(Int16List pcm) async {
     _idle?.cancel();
+    var loaded = false;
     try {
       final backend = await (_backend ??= _load());
+      loaded = true;
       return await TranscriptWakeVerifier(
         WhisperSpeechToText(
           backend: backend,
@@ -119,7 +126,10 @@ final class LazyParakeetVerifier implements WakeVerifier {
             voiceLog('wake-verify-text', {'cat': category, 'ms': ms}),
       ).confirm(pcm);
     } on Object {
-      _backend = null; // a failed load must not stay cached
+      // Neither a failed load nor a loaded isolate after a failed check may
+      // stay: the first must not be cached, the second would leak (~1 GB).
+      await release();
+      _loadFailed = !loaded;
       rethrow;
     } finally {
       _arm();
@@ -145,6 +155,7 @@ final class LazyParakeetVerifier implements WakeVerifier {
   /// Frees the model.
   Future<void> release() async {
     _idle?.cancel();
+    _loadFailed = false;
     final backend = _backend;
     _backend = null;
     if (backend == null) return;

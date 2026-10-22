@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/voice_settings_providers.dart';
@@ -34,6 +35,7 @@ final class _Svc implements SpeechModelService {
 final class _Backend implements WhisperBackend {
   _Backend(this.text);
   final String text;
+  Object? error;
   int peak = 0;
   bool disposed = false;
 
@@ -42,6 +44,7 @@ final class _Backend implements WhisperBackend {
     Float32List samples, {
     String? language,
   }) async {
+    if (error != null) throw error!;
     peak = samples.fold(
       0,
       (p, s) => (s * 32768).abs() > p ? (s * 32768).abs().round() : p,
@@ -56,6 +59,14 @@ final class _Backend implements WhisperBackend {
 Int16List _tone(int amp) => Int16List.fromList([
   for (var i = 0; i < 16000; i++) (amp * (i.isEven ? 1 : -1) * 0.7).round(),
 ]);
+
+const _files = NemoFiles(
+  engine: SttEngine.nemoTransducer,
+  encoder: 'e',
+  decoder: 'd',
+  joiner: 'j',
+  tokens: 't',
+);
 
 void main() {
   late Directory dir;
@@ -106,6 +117,17 @@ void main() {
       );
     });
 
+    test('Hotword nicht buchstabierbar: null, kein Parakeet ohne Hotword', () async {
+      final hw = install();
+      File(
+        '${dir.path}/${SpeechModelCatalog.parakeetV3.files.first.name.replaceFirst('.tar.bz2', '')}/tokens.txt',
+      ).writeAsStringSync('<unk> 0\n<blk> 1\n');
+      expect(
+        await wakeParakeetFiles(service: _Svc(dir), hotwordsDirectory: hw),
+        isNull,
+      );
+    });
+
     test('Dateien fehlen: null', () async {
       final base = SpeechModelCatalog.parakeetV3.files.first.name.replaceFirst(
         '.tar.bz2',
@@ -145,9 +167,59 @@ void main() {
       expect(await v.confirm(_tone(900)), isTrue);
       expect(starts, 1);
       expect(backend.peak, inInclusiveRange(16300, 16400));
-      await Future<void>.delayed(const Duration(milliseconds: 60));
-      expect(backend.disposed, isTrue);
     });
+
+    test('Freigabe nach der Haltezeit (fakeAsync)', () {
+      fakeAsync((async) {
+        final backend = _Backend('Wendelin');
+        final v = LazyParakeetVerifier(
+          files: () async => _files,
+          idleRelease: const Duration(seconds: 60),
+          start: (_) async => backend,
+        );
+        v.confirm(_tone(900));
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 59));
+        expect(backend.disposed, isFalse);
+        async.elapse(const Duration(seconds: 2));
+        async.flushMicrotasks();
+        expect(backend.disposed, isTrue);
+      });
+    });
+
+    test('Prüfung wirft nach dem Laden: Isolat wird freigegeben', () async {
+      final backend = _Backend('x')..error = StateError('boom');
+      final v = LazyParakeetVerifier(
+        files: () async => _files,
+        start: (_) async => backend,
+      );
+      await expectLater(v.confirm(_tone(900)), throwsA(isA<VoiceException>()));
+      expect(backend.disposed, isTrue);
+      await v.release();
+    });
+
+    test(
+      'Ladefehler: nicht gemerkt, nicht verfügbar bis zur Freigabe',
+      () async {
+        var fail = true;
+        var starts = 0;
+        final v = LazyParakeetVerifier(
+          files: () async => _files,
+          start: (_) async {
+            starts++;
+            if (fail) throw StateError('defekt');
+            return _Backend('Wendelin');
+          },
+        );
+        await expectLater(v.confirm(_tone(900)), throwsStateError);
+        expect(await v.isAvailable(), isFalse); // Rückfall auf Whisper
+        fail = false;
+        expect(await v.confirm(_tone(900)), isTrue); // lädt neu
+        expect(starts, 2);
+        await v.release();
+        expect(await v.isAvailable(), isTrue);
+      },
+    );
 
     test('anderes Wort wird abgelehnt', () async {
       final v = LazyParakeetVerifier(
@@ -213,6 +285,21 @@ void main() {
         expect(backend.disposed, isTrue);
       },
     );
+
+    test('Modell-Modus, Hotword nicht buchstabierbar: Whisper, kein Parakeet', () async {
+      final hw = install();
+      File(
+        '${dir.path}/${SpeechModelCatalog.parakeetV3.files.first.name.replaceFirst('.tar.bz2', '')}/tokens.txt',
+      ).writeAsStringSync('<unk> 0\n<blk> 1\n');
+      final parts = DeviceWakeParts(
+        container(true),
+        hotwordsDirectory: () async => hw,
+        parakeetStart: (_) async => fail('Parakeet darf nicht starten'),
+      );
+      final v = parts.verifier(detector: WakeDetector.model);
+      await expectLater(v.confirm(_tone(900)), throwsA(isA<Object>()));
+      expect(v.kind, 'whisper');
+    });
 
     test('Modell-Modus ohne Parakeet: still Whisper (Rückfall)', () async {
       final parts = DeviceWakeParts(

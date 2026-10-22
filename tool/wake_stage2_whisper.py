@@ -45,7 +45,7 @@ def engine_events(t, v, LO=LO):
             if peak < HI:
                 while k < HOLD and j + 1 < n:
                     j += 1; k += 1
-                    if v[j] > peak: peak, below = v[j], 0
+                    if v[j] >= peak: peak, below = v[j], 0
                     else:
                         below += 1
                         if below >= DROPS: break

@@ -4428,7 +4428,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String voiceDownloadBundled(String displayName, String v) {
-    return '$displayName gehört dazu ($v) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser und ist empfohlen. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.';
+    return '$displayName gehört dazu ($v) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.';
   }
 
   @override
