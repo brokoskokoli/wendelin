@@ -17,6 +17,7 @@ ausschnitt (gleiche Schwellen, heutiger Ausschnitt).
 Abschnitt 6 der Ausgabe zaehlt bei fester Stufe-1-Schwelle (--fixed-thr, Standard 0.98, nur v8a) echte Rufe und Verwechsler je Spitzenwert-Band
 sowie Treffer und durchkommende Ereignisse je Variante (keine, app, band999, band995, whisper_de, hw4, norm, hw3, blank1, blank2 je auch mit Band), nur aus den Caches.
 
+Ausschnitt-Paritaet mit der App (Bezugszeit „app“ = Halten) und Vor-/Nachlauf: eigener Lauf mit --cut-only, Logik und Doku in stage2_cut.py (Ausgabe stage2_cut_table.md).
 Ausgabe nur lokal (nie im Repo): $RES/stage2_table.md (Zahlen) und $RES/stage2_lost.local.md (Transkripte).
 Lauf (K=~/wendelin-models/kws, vorher `memory_pressure | tail -1`: frei >= 30 %):
   nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2
@@ -262,6 +263,17 @@ def run_extra(models, curves, threads):
 
 
 # ---------- Zeilen je Variante ----------
+def rows_generic(tag, word, thr, vname, ev, passes, hr, labels):
+    """Zeilen (je Geraet) wie v8_measure.rows_for_cfg fuer beliebiges passes(src, item, t) -> bool (KeyError, wenn ein Stufe-2-Text fehlt)."""
+    fa = {s: sum(passes(s, i, t) for i, ts in ev[s].items() for t in ts) for s in W.NEG_SRC}
+    rows = W.rows_for(word, tag, thr, vname, ev, passes, fa, hr, labels)
+    cd = ev["conf"]
+    ce = {i: sum(passes("conf", i, t) for t in ts) for i, ts in cd.items()}
+    for r in rows:
+        r.update(conf_n=len(cd), conf_hit=sum(v > 0 for v in ce.values()), conf_ev=sum(ce.values()), conf_h=hr["conf"])
+    return rows
+
+
 def variant_rows(tag, word, thr, vname, tx, ev, curves, hr, labels):
     """Zeilen (je Geraet) wie v8_measure.rows_for_cfg, aber mit Variantenregel. KeyError, wenn ein Stufe-2-Text fehlt.
     curves: {Quelle: {Item: (t, v)}} dieses Modells."""
@@ -272,13 +284,7 @@ def variant_rows(tag, word, thr, vname, tx, ev, curves, hr, labels):
         pk = peak_at(*curves[src][item], t) if var["ceil"] is not None else 0.0
         return passes_rule(var, word, text, pk)
 
-    fa = {s: sum(passes(s, i, t) for i, ts in ev[s].items() for t in ts) for s in W.NEG_SRC}
-    rows = W.rows_for(word, tag, thr, vname, ev, passes, fa, hr, labels)
-    cd = ev["conf"]
-    ce = {i: sum(passes("conf", i, t) for t in ts) for i, ts in cd.items()}
-    for r in rows:
-        r.update(conf_n=len(cd), conf_hit=sum(v > 0 for v in ce.values()), conf_ev=sum(ce.values()), conf_h=hr["conf"])
-    return rows
+    return rows_generic(tag, word, thr, vname, ev, passes, hr, labels)
 
 
 def load_tx(tag):
@@ -584,9 +590,15 @@ def main():
     ap.add_argument("--report-only", action="store_true", help="Ausschnitt nicht neu dekodieren")
     ap.add_argument("--target", type=float, default=2.0, help="FA/h")
     ap.add_argument("--threads", type=int, default=2)
+    ap.add_argument("--cut-only", action="store_true", help="nur Ausschnitt-Paritaet/Vor-/Nachlauf (stage2_cut.py, v8a), Ausgabe stage2_cut_table.md")
     ap.add_argument("--fixed-thr", type=float, default=FIXED_THR, help="feste Stufe-1-Schwelle fuer Abschnitt 6 (nur v8a)")
     a = ap.parse_args()
     models = V.parse_models(a.model, not a.no_v7)
+    if a.cut_only:
+        import stage2_cut as C
+        if C.CUT_TAG not in models: sys.exit("--cut-only braucht --model v8a=<pfad>")
+        C.run_all(V.load_curves(C.CUT_TAG), V.filter_labels(W.read_labels()), {s: V.hours(s) for s in W.NEG_SRC + ["conf"]}, a.target, a.threads, a.report_only)
+        return
     curves = {t: V.load_curves(t) for t in models}
     if not a.report_only: run_s2x(models, curves, a.threads); run_extra(models, curves, a.threads)
     labels = V.filter_labels(W.read_labels())
