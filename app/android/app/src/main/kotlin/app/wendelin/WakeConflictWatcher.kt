@@ -6,6 +6,9 @@ import android.media.AudioRecordingConfiguration
 import android.os.Build
 import android.os.Handler
 
+/** One active recording as the watcher sees it (session id, silenced by the system). */
+internal data class RecordingClient(val session: Int, val silenced: Boolean)
+
 /**
  * Watches for things that need the microphone more than the wake word: a phone or voice call
  * (`AudioManager.mode`) and a recording of another app (`getActiveRecordingConfigurations`,
@@ -53,12 +56,11 @@ class WakeConflictWatcher(
     }
 
     private fun refresh(configs: List<AudioRecordingConfiguration>) {
-        val own = ownSession()
-        val foreign = configs.any {
-            it.clientAudioSessionId != own &&
-                !(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && it.isClientSilenced)
+        val silencedKnown = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        val clients = configs.map {
+            RecordingClient(it.clientAudioSessionId, silencedKnown && it.isClientSilenced)
         }
-        val reason = WakePolicy.conflictNow(audio.mode, foreign)
+        val reason = reasonFor(audio.mode, ownSession(), clients)
         if (reason != last) {
             last = reason
             onChange(reason)
@@ -67,5 +69,14 @@ class WakeConflictWatcher(
 
     companion object {
         private const val POLL_MS = 2000L
+
+        /**
+         * The reason for the current state: a recording of another session that is not silenced
+         * counts; the app's own call path ([SpeechRoute.active]) is no call.
+         */
+        internal fun reasonFor(audioMode: Int, ownSession: Int, clients: List<RecordingClient>): String? {
+            val foreign = clients.any { it.session != ownSession && !it.silenced }
+            return WakePolicy.conflictNow(audioMode, foreign)
+        }
     }
 }

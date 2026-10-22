@@ -17,8 +17,7 @@ export 'confirmation_texts/language.dart' show ConfirmationLanguage;
 /// test checks them in every language of [confirmationLanguages]. Only for
 /// tools whose success is unambiguous: read tools never get one.
 abstract interface class FixedConfirmationTool {
-  /// All template keys the tool's outcomes may use (including `#one`
-  /// variants, see [ConfirmationSentence]).
+  /// All template keys the tool's outcomes may use.
   Set<String> get confirmationKeys;
 }
 

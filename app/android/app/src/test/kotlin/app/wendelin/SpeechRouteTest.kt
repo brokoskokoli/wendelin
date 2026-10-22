@@ -71,12 +71,14 @@ class SpeechRouteTest {
         assertFalse(SpeechRoute.active)
     }
 
+    // Documentation of the contract, not a regression guard: leave() restores the mode saved
+    // at enter(), whatever the player set meanwhile. audioplayers sets audioManager.mode only
+    // when its context changes (WrappedPlayer.kt:159-171), not at every play.
     @Test
     fun leaveRestoresModeSavedBeforeThePlayerTouchedIt() {
         val a = FakeAudio(sdk = 34, mode = 0)
         val r = route(a)
         r.enter()
-        // audioplayers sets audioManager.mode at every play (WrappedPlayer.kt:171).
         a.mode = 0
         a.mode = SpeechRoute.MODE_IN_COMMUNICATION
         r.leave()
@@ -199,6 +201,40 @@ class SpeechRouteTest {
     }
 
     @Test
+    fun watcherReasonIgnoresOnlyTheOwnCallMode() {
+        val r = route(FakeAudio())
+        assertEquals("call", WakeConflictWatcher.reasonFor(3, 7, emptyList()))
+        r.enter()
+        assertNull(WakeConflictWatcher.reasonFor(3, 7, emptyList()))
+        assertEquals("call", WakeConflictWatcher.reasonFor(2, 7, emptyList()))
+    }
+
+    @Test
+    fun watcherReasonCountsOnlyForeignUnsilencedRecordings() {
+        val own = RecordingClient(7, false)
+        val foreign = RecordingClient(8, false)
+        val silenced = RecordingClient(9, true)
+        assertEquals("recording", WakeConflictWatcher.reasonFor(0, 7, listOf(foreign)))
+        assertEquals("recording", WakeConflictWatcher.reasonFor(0, 7, listOf(own, silenced, foreign)))
+        assertNull(WakeConflictWatcher.reasonFor(0, 7, listOf(own)))
+        assertNull(WakeConflictWatcher.reasonFor(0, 7, listOf(silenced)))
+    }
+
+    @Test
+    fun disposeReleasesOnlyTheOwnPartOfTheCallPath() {
+        val a = FakeAudio(sdk = 34, mode = 0)
+        val main = route(a)
+        val overlay = route(a)
+        main.enter()
+        overlay.enter()
+        val released = mutableListOf<String>()
+        releaseAll(listOf("duck", "listen"), { released += it }, overlay)
+        assertEquals(listOf("duck", "listen"), released)
+        assertEquals(3, a.mode) // the other route still answers
+        assertTrue(SpeechRoute.active)
+    }
+
+    @Test
     fun twoRoutesShareOneState() {
         val a = FakeAudio(sdk = 34, mode = 0)
         val main = route(a)
@@ -210,6 +246,44 @@ class SpeechRouteTest {
         assertFalse(SpeechRoute.active)
         overlay.leave()
         assertEquals(0, a.mode)
+    }
+
+    @Test
+    fun releaseOfOneRouteKeepsTheCallPathForTheOther() {
+        val a = FakeAudio(sdk = 34, mode = 0)
+        val main = route(a)
+        val overlay = route(a)
+        main.enter()
+        overlay.enter()
+        overlay.release() // its activity is destroyed while the other still answers
+        assertEquals(3, a.mode)
+        assertTrue(SpeechRoute.active)
+        main.release()
+        assertEquals(0, a.mode)
+        assertFalse(SpeechRoute.active)
+    }
+
+    @Test
+    fun releaseOfARouteThatNeverEnteredChangesNothing() {
+        val a = FakeAudio(sdk = 34, mode = 0)
+        val main = route(a)
+        val idle = route(a)
+        main.enter()
+        idle.release()
+        assertEquals(3, a.mode)
+        assertTrue(SpeechRoute.active)
+        main.release()
+        assertEquals(0, a.mode)
+    }
+
+    @Test
+    fun releaseOfTheOnlyHolderGivesTheStateBack() {
+        val a = FakeAudio(sdk = 34, mode = 0)
+        val r = route(a)
+        r.enter()
+        r.release()
+        assertEquals(0, a.mode)
+        assertFalse(SpeechRoute.active)
     }
 
     @Test

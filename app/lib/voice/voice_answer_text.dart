@@ -8,6 +8,7 @@ extension VoiceAnswerText on VoiceController {
   /// typed text.
   Future<bool> answerText(String text) async {
     if (_pipeline != null && _pipeline!.state != VoiceState.idle) return false;
+    final cancels = _cancels;
     final VoiceComponents? components;
     try {
       components = await _loadComponents();
@@ -15,6 +16,9 @@ extension VoiceAnswerText on VoiceController {
       voiceLog('answer-text-failed', {'error': errorCode(e)});
       return false;
     }
+    // Cancelled while the models loaded (home, close): nothing starts, and
+    // `true` keeps the caller from sending the text as typed.
+    if (cancels != _cancels) return true;
     return components != null && _pipelineFor(components).answerText(text);
   }
 }
