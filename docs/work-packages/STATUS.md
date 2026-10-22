@@ -82,6 +82,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP131 | Release-Signatur und automatischer APK-Build auf GitHub (Tag → Release) | geplant | K103; Start 2026-10-23, wartet auf Zertifikat als GitHub-Secret |
 | WP132 | Zwei Build-Varianten frei/Store (Vorbereitung) | geplant | K103; nur mit Go, nach WP131 und Gesamttest |
 | WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | in Arbeit | K105; Teil A sofort (niedrige Last), Teil B Training im Zeitfenster |
+| WP134 | Stopp-Wort ausbauen, Vorlagen-Vergleich für „Wendelin“ zentrieren | geplant | K107; nach WP129 (Wake-Dateien) |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
