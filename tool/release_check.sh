@@ -62,9 +62,10 @@ cmd_cert_match() {
     printf '%s\n' "$out" >&2
     fail "apksigner verify fehlgeschlagen (Exit $rc)"
   fi
-  # „Signer #1 certificate …“ oder „Signer (minSdkVersion=…) certificate …“; mehrere Signer: alle müssen gleich sein.
+  # Jede Zeile „… certificate SHA-256 digest: <64 hex>“, unabhängig vom Präfix (Signer #n, Signer (minSdkVersion=…),
+  # V1/V2/V3/V3.1 Signer …, build-tools 37: „V2 Signer: …“). Die Menge muss genau ein Zertifikat enthalten.
   local fps
-  fps="$(printf '%s\n' "$out" | sed -nE 's/^Signer.* certificate SHA-256 digest: *//p' | norm | sort -u)"
+  fps="$(printf '%s\n' "$out" | sed -nE 's/.*certificate SHA-256 digest: *([0-9A-Fa-f]{64})([^0-9A-Fa-f].*)?$/\1/p' | norm | sort -u)"
   if [ -z "$fps" ]; then
     echo "apksigner-Ausgabe (Zertifikate sind öffentlich):" >&2; printf '%s\n' "$out" >&2
     fail "Kein Signer-Zertifikat in der APK gefunden"
@@ -108,22 +109,38 @@ self_test() {
   [ "$(cmd_prerelease v1.2.3)" = false ] || { echo "FEHLER Selbsttest: prerelease stabil" >&2; rc=1; }
   # cert-match mit Attrappen
   touch "$d/x.apk" "$d/x.jks"
-  printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: aabbcc"\n' >"$d/apksigner"
+  printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13"\n' >"$d/apksigner"
   printf '#!/usr/bin/env bash\necho "Certificate fingerprints:"; echo "	 SHA256: $(cat "$(dirname "$0")/fp")"\n' >"$d/keytool"
   chmod +x "$d/apksigner" "$d/keytool"
   export APKSIGNER="$d/apksigner" KEYTOOL="$d/keytool" ANDROID_KEY_ALIAS=a ANDROID_KEYSTORE_PASSWORD=p
-  echo "AA:BB:CC" >"$d/fp"
+  echo "A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13" >"$d/fp"
   expect_ok "Zertifikat gleich" cmd_cert_match "$d/x.apk" "$d/x.jks"
-  echo "AA:BB:DD" >"$d/fp"
+  echo "11:22:33:44:11:22:33:44:11:22:33:44:11:22:33:44:11:22:33:44:11:22:33:44:11:22:33:44:11:22:33:44" >"$d/fp"
   expect_fail "Zertifikat verschieden (z. B. Debug-Schlüssel)" cmd_cert_match "$d/x.apk" "$d/x.jks"
   # Format „Signer (minSdkVersion=…)“ und mehrere Signer
-  echo "AA:BB:CC" >"$d/fp"; printf '#!/usr/bin/env bash\necho "	 SHA256: $(cat "$(dirname "$0")/fp")"\n' >"$d/keytool"
-  printf '#!/usr/bin/env bash\necho "Signer (minSdkVersion=24, maxSdkVersion=34) certificate SHA-256 digest: AABBCC"\n' >"$d/apksigner"
+  echo "A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13" >"$d/fp"; printf '#!/usr/bin/env bash\necho "	 SHA256: $(cat "$(dirname "$0")/fp")"\n' >"$d/keytool"
+  printf '#!/usr/bin/env bash\necho "Signer (minSdkVersion=24, maxSdkVersion=34) certificate SHA-256 digest: A9E95A13A9E95A13A9E95A13A9E95A13A9E95A13A9E95A13A9E95A13A9E95A13"\n' >"$d/apksigner"
   expect_ok "Signer-Format mit minSdkVersion" cmd_cert_match "$d/x.apk" "$d/x.jks"
-  printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: aabbcc"\necho "Signer #2 certificate SHA-256 digest: aabbcc"\n' >"$d/apksigner"
+  printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13"\necho "Signer #2 certificate SHA-256 digest: a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13"\n' >"$d/apksigner"
   expect_ok "mehrere Signer, gleiches Zertifikat" cmd_cert_match "$d/x.apk" "$d/x.jks"
-  printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: aabbcc"\necho "Signer #2 certificate SHA-256 digest: 112233"\n' >"$d/apksigner"
+  printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13"\necho "Signer #2 certificate SHA-256 digest: 1122334411223344112233441122334411223344112233441122334411223344"\n' >"$d/apksigner"
   expect_fail "mehrere Signer, verschiedene Zertifikate" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  # Echtes Format von build-tools 37.0.0 („V2 Signer: …“) sowie Mischungen mehrerer Schemata
+  fa="a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13"; fb="1122334411223344112233441122334411223344112233441122334411223344"
+  mk_signer() { { echo '#!/usr/bin/env bash'; for l in "$@"; do printf 'echo "%s"\n' "$l"; done; } >"$d/apksigner"; }
+  mk_signer "V2 Signer: certificate DN: CN=Test" "V2 Signer: certificate SHA-256 digest: $fa" "V2 Signer: certificate SHA-1 digest: 0123456789abcdef0123456789abcdef01234567"
+  expect_ok "build-tools-37-Format V2 Signer" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  mk_signer "V2 Signer: certificate SHA-256 digest: $fa" "V3 Signer: certificate SHA-256 digest: $fa"
+  expect_ok "V2 und V3, gleicher Fingerabdruck" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  mk_signer "V2 Signer: certificate SHA-256 digest: $fa" "V3 Signer: certificate SHA-256 digest: $fb"
+  expect_fail "V2 und V3, verschiedene Fingerabdrücke" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  mk_signer "V2 Signer: certificate DN: CN=Test" "V2 Signer: certificate SHA-1 digest: 0123456789abcdef0123456789abcdef01234567"
+  # Keystore-Fingerabdruck absichtlich gleich dem (falschen) Wert, damit nur das Parsing den Fehler fangen kann
+  cp "$d/fp" "$d/fp.orig"; echo "0123456789abcdef0123456789abcdef01234567" >"$d/fp"
+  expect_fail "nur SHA-1/DN, kein SHA-256-Fingerabdruck" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  mk_signer "V2 Signer: certificate SHA-256 digest: ${fa#?}"; echo "${fa#?}" >"$d/fp"
+  expect_fail "abgeschnittener Fingerabdruck (63 Hex)" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  cp "$d/fp.orig" "$d/fp"
   printf '#!/usr/bin/env bash\n[ \"${1:-}\" = verify ] && echo \"Verified using v2 scheme: true\"\nexit 0\n' >"$d/apksigner"
   expect_fail "Ausgabe ohne Zertifikatszeile" cmd_cert_match "$d/x.apk" "$d/x.jks"
   local err
@@ -132,12 +149,12 @@ self_test() {
   # Build-Tools-Auswahl: stabile Version vor -rc, apksigner-Version im Log
   mkdir -p "$d/sdk/build-tools/35.0.0" "$d/sdk/build-tools/9.0.0" "$d/sdk/build-tools/37.0.0-rc1"
   for v in 35.0.0 9.0.0 37.0.0-rc1; do
-    printf '#!/usr/bin/env bash\n[ "${1:-}" = --version ] && { echo %s; exit 0; }\necho "Signer #1 certificate SHA-256 digest: aabbcc"\n' "$v" >"$d/sdk/build-tools/$v/apksigner"
+    printf '#!/usr/bin/env bash\n[ "${1:-}" = --version ] && { echo %s; exit 0; }\necho "Signer #1 certificate SHA-256 digest: a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13"\n' "$v" >"$d/sdk/build-tools/$v/apksigner"
     chmod +x "$d/sdk/build-tools/$v/apksigner"
   done
   err="$( ( unset APKSIGNER; ANDROID_SDK_ROOT="$d/sdk" cmd_cert_match "$d/x.apk" "$d/x.jks" ) 2>&1 || true)"
   case "$err" in *"build-tools/35.0.0/apksigner (Version 35.0.0)"*) ;; *) echo "FEHLER Selbsttest: falsche apksigner-Auswahl: $err" >&2; rc=1 ;; esac
-  echo "AA:BB:CC" >"$d/fp"; printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: aabbcc"\n' >"$d/apksigner"
+  echo "A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13:A9:E9:5A:13" >"$d/fp"; printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13"\n' >"$d/apksigner"
   : >"$d/fp"; printf '#!/usr/bin/env bash\nexit 1\n' >"$d/keytool"
   expect_fail "Keystore nicht lesbar" cmd_cert_match "$d/x.apk" "$d/x.jks"
   printf '#!/usr/bin/env bash\nexit 1\n' >"$d/apksigner"
