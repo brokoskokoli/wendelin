@@ -134,5 +134,42 @@ class CutFirstWord(unittest.TestCase):
         self.assertIsNone(G.cut_first_word(np.zeros(16000, "float32")))
 
 
+class CvAbschnitt(unittest.TestCase):
+    def test_cv_extract_abgeschnittenes_tar_nur_mit_flag(self):
+        import io, tarfile
+        with tempfile.TemporaryDirectory() as d:
+            buf = io.BytesIO()
+            with tarfile.open(fileobj=buf, mode="w") as tf:
+                for i in range(2):
+                    ti = tarfile.TarInfo(f"clip{i}.mp3"); ti.size = 3000
+                    tf.addfile(ti, io.BytesIO(b"x" * 3000))
+            tar = os.path.join(d, "t.tar")
+            open(tar, "wb").write(buf.getvalue()[:5000])      # mitten in den Daten des zweiten Eintrags abgeschnitten
+            cmd = [sys.executable, "-I", os.path.join(HERE, "cv_extract.py"), "--tar", tar, "--out", os.path.join(d, "o"), "--every", "1"]
+            p = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertNotEqual(p.returncode, 0)
+            self.assertIn("unvollstaendig", p.stderr + p.stdout)
+            p = subprocess.run(cmd + ["--allow-truncated"], capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertIn("abgeschnitten", p.stdout)
+
+
+class RunV8Cv(unittest.TestCase):
+    def test_n_cv_0_ueberspringt_ohne_download(self):
+        with tempfile.TemporaryDirectory() as d:
+            bin_, log = os.path.join(d, "bin"), os.path.join(d, "calls.log")
+            py = os.path.join(d, "k", "wp58", "venv", "bin")
+            os.makedirs(bin_); os.makedirs(py)
+            for path in (os.path.join(bin_, "curl"), os.path.join(py, "python")):
+                open(path, "w").write(f'#!/bin/sh\necho "$0 $@" >> "{log}"\nexit 1\n'); os.chmod(path, 0o755)
+            env = dict(os.environ, PATH=bin_ + os.pathsep + os.environ["PATH"], K0=os.path.join(d, "k"),
+                       W=os.path.join(d, "w"), N_CV="0")
+            p = subprocess.run(["bash", os.path.join(HERE, "run_v8.sh"), "cv"], env=env, capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertFalse(os.path.exists(log), "weder curl noch python duerfen laufen")
+            self.assertTrue(os.path.exists(os.path.join(d, "w", "gen", ".done", "cv")))
+            self.assertEqual(os.listdir(os.path.join(d, "w", "gen", "cv")), [])
+
+
 if __name__ == "__main__":
     unittest.main()

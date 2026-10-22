@@ -4,7 +4,7 @@
 # .done-Marker; ein erneuter Aufruf ueberspringt Erledigtes. Venv und v7-Daten kommen aus dem WP58-Ordner.
 # Nutzung (aus dem Repo-Root):  tool/train_wake_word/run_v8.sh [gen | features | train | alle]
 # Variablen: NJ = parallele Erzeuger (2), THREADS = Rechenkerne in features/train (NJ), TAG = Modellname (a),
-#   STEPS (5000), SEED (1), HIDDEN (128), N_POS/N_CONF/N_NEG/N_CV (Mengen), PROBE=1 (Mini-Probe in $W/probe, ohne Marker),
+#   STEPS (5000), SEED (1), HIDDEN (128), N_POS/N_CONF/N_NEG/N_CV (Mengen; N_CV=0 = Common Voice ohne Download auslassen), PROBE=1 (Mini-Probe in $W/probe, ohne Marker),
 #   FIX = Ordner der Wortaufnahmen mit labels/ und raw/ (nur Huawei-Block 1 bis 3, siehe real_split.py).
 # Reproduktionsbedingung: NJ (Standard 2). Die Erzeuger nutzen die Seeds sb+1..sb+NJ mit n/NJ (abgerundet) Clips; anderes NJ = andere Daten.
 # Downloads sind per SHA-256 gepinnt (run_v8.sha256, Pruefung verify_dl); Stimmen kommen von resolve/main, Tatoeba ist die Live-Datei.
@@ -69,6 +69,22 @@ synth_kind() {   # synth_kind <kind> <ordner> <n> <seedbasis> [weitere Argumente
   ok "$out"
 }
 
+cv_step() {      # Common Voice de (CC0, ohne Login ueber die HF-Spiegelung), jeder dritte Clip des ersten Train-Shards
+  marker cv && return 0
+  mkdir -p "$D/cv" "$G/cv"
+  if [ "$N_CV" = 0 ]; then ok cv; return 0; fi      # N_CV=0: ohne Download ueberspringen, gen/cv bleibt leer
+  local src
+  if [ "$PROBE" = 1 ]; then
+    [ -s "$D/cv/probe.tar" ] || curl -fL -r 0-40000000 -o "$D/cv/probe.tar" "$CV"; src=$D/cv/probe.tar
+  else
+    fetch "$CV" "$D/cv/de_train_0.tar"; src=$D/cv/de_train_0.tar
+    shasum -a 256 "$src" | tee "$D/cv/de_train_0.tar.sha256"      # noch nicht gepinnt: nur loggen
+  fi
+  local trunc=(); [ "$PROBE" = 1 ] && trunc=(--allow-truncated)      # nur die Probe darf ein abgeschnittenes Archiv lesen
+  $N $PY -I "$T/cv_extract.py" --tar "$src" --out "$G/cv" --every 3 --max "$N_CV" ${trunc[@]+"${trunc[@]}"}
+  ok cv
+}
+
 gen() {
   download
   verify_dl
@@ -78,18 +94,7 @@ gen() {
   synth_kind pos_v8 pos_v8 "$N_POS" 100
   synth_kind conf_v8 conf_v8 "$N_CONF" 200
   synth_kind neg_v8 neg_v8 "$N_NEG" 300 --text "$D/tatoeba/deu.tsv.bz2"
-  if ! marker cv; then      # Common Voice de (CC0, ohne Login ueber die HF-Spiegelung), jeder dritte Clip des ersten Train-Shards
-    mkdir -p "$D/cv"
-    if [ "$PROBE" = 1 ]; then
-      [ -s "$D/cv/probe.tar" ] || curl -fL -r 0-40000000 -o "$D/cv/probe.tar" "$CV"; src=$D/cv/probe.tar
-    else
-      fetch "$CV" "$D/cv/de_train_0.tar"; src=$D/cv/de_train_0.tar
-    shasum -a 256 "$src" | tee "$D/cv/de_train_0.tar.sha256"      # noch nicht gepinnt: nur loggen
-    fi
-    local trunc=(); [ "$PROBE" = 1 ] && trunc=(--allow-truncated)      # nur die Probe darf ein abgeschnittenes Archiv lesen
-    $N $PY -I "$T/cv_extract.py" --tar "$src" --out "$G/cv" --every 3 --max "$N_CV" ${trunc[@]+"${trunc[@]}"}
-    ok cv
-  fi
+  cv_step
   if ! marker real_pos; then    # echte Positive: nur Huawei Block 1 bis 3 (real_split.py)
     $N $PY -I "$T/real_split.py" cut --fix "$FIX" --work "$WK" --out "$WK/real_pos"
     ok real_pos
@@ -119,6 +124,7 @@ train() {
 
 case $step in
   gen) gen ;;
+  cv) cv_step ;;      # nur der CV-Schritt (Selbsttest)
   features) features ;;
   train) train ;;
   alle) gen; features; train ;;
