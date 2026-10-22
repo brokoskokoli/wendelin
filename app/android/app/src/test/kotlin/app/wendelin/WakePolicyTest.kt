@@ -306,4 +306,11 @@ class WakePolicyTest {
         // older than kept: only what is still there
         assertTrue(tap.tailAfter(0).size <= 3 * 960)
     }
+
+    @Test
+    fun aMissingModelKeepsItsOwnStopReason() {
+        assertEquals("modelMissing", WakePolicy.failureReason("modelMissing"))
+        assertEquals("engine-failed", WakePolicy.failureReason("no-templates"))
+        assertEquals("engine-failed", WakePolicy.failureReason(null))
+    }
 }

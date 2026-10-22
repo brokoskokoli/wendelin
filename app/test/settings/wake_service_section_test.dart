@@ -216,6 +216,7 @@ void main() {
       'no-role': 'Beendet: Wendelin ist nicht mehr dein Assistent',
       'no-permission': 'Beendet: Mikrofon-Berechtigung fehlt',
       'engine-failed': 'Beendet: Die Erkennung ist ausgefallen',
+      'modelMissing': 'Beendet: Das trainierte Modell fehlt',
       'not-charging': 'Beendet: Das Gerät lädt nicht mehr',
       'unplug': 'Beendet: Das Gerät lädt nicht mehr',
       'user-off': 'Aus',

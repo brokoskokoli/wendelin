@@ -3,7 +3,7 @@
 
 Erzeugt ein kleines synthetisches Signal (keine Aufnahme) und die erwarteten
 Fenster-Scores. Die Fensterbildung ist die von `tool/kws_measure.py`
-(`two_stage_main.windows`): 1 s Stille davor und danach, Embeddings per
+(`two_stage_main.windows`): Embeddings per
 openWakeWord, Fenster aus 16 Embeddings (`common.WIN`), Klassifikator
 `input` (N,16,96) -> `output` (N,1). Das Modell liegt lokal (nie im Repo).
 
@@ -47,11 +47,6 @@ def main():
     import onnxruntime as ort
     pcm = synth()
     x = pcm.astype("float32") / 32767
-    # Die App rechnet im Strom: Mel-Chunks von 1280 Samples mit 480 Samples
-    # Kontext, das Embedding-Raster liegt dadurch 7 Mel-Frames (1120 Samples)
-    # hinter dem des Batch-Pfads (kws_measure: Raster ab Clipanfang). Fuer den
-    # Paritaetstest steht deshalb PHASE Nullen mehr vor dem Clip; die Fenster
-    # sind dann Embedding fuer Embedding dieselben wie die der App.
     # Zwei Unterschiede zur App, beide hier berücksichtigt:
     # 1. Raster: Die App rechnet im Strom (Mel-Chunks von 1280 Samples mit 480
     #    Samples Kontext); ihr k-tes Embedding beginnt bei 160 + 1280 k, das
@@ -72,7 +67,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     with wave.open(os.path.join(a.out, "parity.wav"), "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(C.SR); w.writeframes(pcm.tobytes())
-    # Fensterenden im Strom des gepolsterten Clips (1 s Stille davor).
+    # Fensterenden im Strom der App (um SKIP verschoben, ohne Polster).
     ends = [C.window_end(j) + a.skip for j in range(n)]
     json.dump({"ends": ends, "scores": [float(s) for s in scores],
                "windows": [[float(v) for v in W[j].ravel()[:8]] for j in range(n)]},

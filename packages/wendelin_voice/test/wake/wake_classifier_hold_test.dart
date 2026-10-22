@@ -75,6 +75,16 @@ void main() {
     expect(hits.single.$2.score, 0.984);
   });
 
+  test('gleicher Score verlängert das Halten (>= Spitze)', () async {
+    final hits = await _run([0.981, 0.99, 0.99, 0.2]);
+    expect(
+      hits.single.$1,
+      3,
+      reason: 'gleicher Wert hält weiter, Ende erst beim Abfall',
+    );
+    expect(hits.single.$2.score, 0.99);
+  });
+
   test('erstes Fenster schon >= acceptFrom: sofort direkt', () async {
     final hits = await _run([0.5, 0.996]);
     expect(hits.single.$1, 1);

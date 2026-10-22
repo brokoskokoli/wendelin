@@ -127,8 +127,10 @@ class WakeWordService : Service() {
             "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) stopMic()
             "hit" -> onHit(call)
             "failed" -> {
-                VoiceLog.i("wake-failed reason=${call.argument<String>("reason") ?: "?"}")
-                end("engine-failed")
+                val reported = call.argument<String>("reason")
+                VoiceLog.i("wake-failed reason=${reported ?: "?"}")
+                // modelMissing is no „Wieder einschalten“ case: the model stays missing.
+                end(WakePolicy.failureReason(reported))
             }
         }
     }

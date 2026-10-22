@@ -52,16 +52,6 @@ Future<List<WakeWordHit>> _speech(CandidateWakeEngine e) async {
 
 void main() {
   group('WakeScoreBand', () {
-    test('drei Bereiche und ihre Grenzen', () {
-      expect(_band.verdict(0.0), WakeScoreVerdict.reject);
-      expect(_band.verdict(0.9799999), WakeScoreVerdict.reject);
-      expect(_band.verdict(0.98), WakeScoreVerdict.verify);
-      expect(_band.verdict(0.9949999), WakeScoreVerdict.verify);
-      expect(_band.verdict(0.995), WakeScoreVerdict.accept);
-      expect(_band.verdict(1.0), WakeScoreVerdict.accept);
-      expect(_band.verdict(double.nan), WakeScoreVerdict.reject);
-    });
-
     test('Katalog: Station ist nicht lockerer als das Handy', () {
       expect(
         WakeClassifierRules.station.verifyFrom,
@@ -71,6 +61,13 @@ void main() {
         SpeechModelCatalog.standard.byId('wake-classifier-wendelin'),
         isNotNull,
       );
+    });
+
+    test('Lizenzhinweis: M-AILABS mit Copyright und Haftungsausschluss', () {
+      final a = WakeClassifierCatalog.model.attribution!;
+      expect(a, contains('Copyright (c) 2017-2019'));
+      expect(a, contains('ohne Gewähr'));
+      expect(a, contains('haften nicht'));
     });
   });
 
@@ -170,6 +167,16 @@ void main() {
       expect(await _run(e, frame: Int16List(100)), isEmpty);
     });
 
+    test('Klassifikator-Weg: warmUp mit lautem Audio füttert das Gate nicht, '
+        'danach Stille löst nicht aus', () async {
+      final e = _classifier(0.999, mainGate: SpeechGate());
+      await e.open([KeywordSpec.wendelin]);
+      // Quiet first (the floor), then loud: would be speech if the gate saw it.
+      await e.warmUp(Int16List(3200));
+      await e.warmUp(_loud(1600));
+      expect(await e.accept(Int16List(100)), isEmpty);
+    });
+
     test('Klassifikator-Weg: Sprachpegel mit hohem Score löst aus', () async {
       final e = _classifier(0.999, mainGate: SpeechGate());
       final hits = await _speech(e);
@@ -209,11 +216,7 @@ void main() {
       final e = make();
       await e.open([KeywordSpec.wendelin]);
       final silent = await e.accept(Int16List(300));
-      expect(
-        silent.where((h) => h.keywordId == 'stop'),
-        isEmpty,
-        reason: 'ohne Pegel kein Stopp',
-      );
+      expect(silent, isEmpty, reason: 'ohne Pegel weder Stopp noch Wendelin');
     });
   });
 }

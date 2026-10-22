@@ -71,7 +71,9 @@ abstract final class WakeClassifierCatalog {
         'Training mit synthetischen Stimmen (Piper, MIT): Thorsten-Voice '
         '(CC0), Multilingual LibriSpeech (Pratap et al., OpenSLR 94), '
         'CC-BY 4.0; M-AILABS Speech Dataset, Copyright (c) 2017-2019 '
-        'M-AILABS. Negativdaten: Tatoeba-Mitwirkende, tatoeba.org '
+        'M-AILABS (Weitergabe mit Urheberhinweis; die Daten werden ohne Gewähr '
+        'bereitgestellt, die Urheber haften nicht für Schäden aus ihrer '
+        'Nutzung; ihr Name dient nicht der Werbung). Negativdaten: Tatoeba-Mitwirkende, tatoeba.org '
         '(CC-BY 2.0 FR); FLEURS (Conneau et al.), CC-BY 4.0; Mozilla Common '
         'Voice (CC0). Merkmale: openWakeWord (Apache-2.0).',
     files: [
