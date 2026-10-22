@@ -18,7 +18,8 @@ Abschnitt 6 der Ausgabe zaehlt bei fester Stufe-1-Schwelle (--fixed-thr, Standar
 sowie Treffer und durchkommende Ereignisse je Variante (keine, app, band999, band995, whisper_de, hw4, norm, hw3, blank1, blank2 je auch mit Band), nur aus den Caches.
 
 Ausschnitt-Paritaet mit der App (Bezugszeit „app“ = Halten) und Vor-/Nachlauf: eigener Lauf mit --cut-only, Logik und Doku in stage2_cut.py (Ausgabe stage2_cut_table.md).
-Ausgabe nur lokal (nie im Repo): $RES/stage2_table.md (Zahlen) und $RES/stage2_lost.local.md (Transkripte).
+Ausgabe nur lokal (nie im Repo): $RES/stage2_table.md (Zahlen) und $RES/stage2_lost.local.md (Transkripte);
+mit --split all (alle Bloecke 1..6, nur v7 und Modelle mit Sidecar real_pos=0, ohne Abschnitt 6) stage2_table_all.md / stage2_lost_all.local.md.
 Lauf (K=~/wendelin-models/kws, vorher `memory_pressure | tail -1`: frei >= 30 %):
   nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2
 Selbsttest: test_stage2_analysis.py.
@@ -374,7 +375,7 @@ def filtered_events(dev, word, thr, curves, tx, evs):
     return out
 
 
-def analyse(models, curves, labels, rows, target):
+def analyse(models, curves, labels, rows, target, split="eval"):
     """{(Geraet, Wort, Modell): {"n1", "lost", "thrs", "filt"}} am Stufe-1-Arbeitspunkt (Kreuz-Auswahl, Kalibrierung echt)."""
     op = {}
     for tag in models:
@@ -383,15 +384,15 @@ def analyse(models, curves, labels, rows, target):
             for w in V.WORDS:
                 tw = {src: m[w] or {} for src, m in tx.items()}
                 basis = "Stufe 1"
-                c = V.cv_cell(rows, dev, w, tag, ("-",), "real", target)
+                c = V.cv_cell(rows, dev, w, tag, ("-",), "real", target, split)
                 if c is None or c[2] is None:                      # Stufe 1 haelt die FA-Grenze in einem Fold nie ein:
                     basis = "Wahl -/app"                           # Schwellen der Kreuz-Auswahl ueber Stufe 1 und App-Stufe-2
-                    c = V.cv_cell(rows, dev, w, tag, ("-", "app"), "real", target)
+                    c = V.cv_cell(rows, dev, w, tag, ("-", "app"), "real", target, split)
                 if c is None or c[2] is None: continue
                 thrs = op_thresholds(tag, c[2])
                 evs = {t: V.events_at(curves[tag], t) for t in set(thrs)}
                 try:
-                    n1, lost = lost_calls(dev, w, thrs, V.folds_for(dev), curves[tag], tw, labels, evs)
+                    n1, lost = lost_calls(dev, w, thrs, V.folds_for(dev, split), curves[tag], tw, labels, evs)
                     filt = {t: filtered_events(dev, w, t, curves[tag], tw, evs) for t in sorted(set(thrs))}
                 except KeyError as e:
                     print(f"Stufe-2-Text fehlt fuer {tag}/{dev}/{w}: {e}", flush=True)
@@ -508,10 +509,11 @@ def render_fixed(fx, thr):
 
 
 # ---------- Ausgabe ----------
-def render(rows, models, target, op, skipped):
+def render(rows, models, target, op, skipped, split="eval"):
     """Zahlen-Tabellen (keine Transkripte)."""
     vn_all = list(VARIANTS)
-    out = [f"# Stufe-2-Analyse (WP133 A): Prüfsplit, Ziel {W.fc(target)} FA/h, Kalibrierung echt", "",
+    scope = ("alle Blöcke (Huawei und handy2 Block 1–6; nur Modelle ohne echte Positive und v7)" if split == "all" else "Prüfsplit")
+    out = [f"# Stufe-2-Analyse (WP133 A): {scope}, Ziel {W.fc(target)} FA/h, Kalibrierung echt", "",
            "Auswahl der Schwelle je Block auf den übrigen Prüf-Blöcken, Zählung auf dem ausgelassenen Block (Leave-one-block-out), Wilson 95 %. "
            "Stufe-1-Arbeitspunkt = Kreuz-Auswahl nur über Stufe 1. Modelle: " + ", ".join(models) + ".", ""]
     out += ["## 1. Echte Rufe: Stufe 1 trifft, hw2 (App-Regel) verwirft", "",
@@ -549,7 +551,7 @@ def render(rows, models, target, op, skipped):
                 for tag in models:
                     cells = []
                     for _, st in ss:
-                        c = V.cv_cell(rows, dev, w, tag, st, "real", target)
+                        c = V.cv_cell(rows, dev, w, tag, st, "real", target, split)
                         cells.append("keine Konfiguration ≤ Ziel" if c is None or c[0] is None else W.fmt_hit(c[0], c[1]))
                     out.append(f"| {dev} | {w} | {tag} | " + " | ".join(cells) + " |")
         out.append("")
@@ -560,7 +562,7 @@ def render(rows, models, target, op, skipped):
         for w in V.WORDS:
             for tag in models:
                 for vn in vn_all:
-                    c = V.cv_cell(rows, dev, w, tag, ("-", vn), "real", target)
+                    c = V.cv_cell(rows, dev, w, tag, ("-", vn), "real", target, split)
                     for k in dict.fromkeys(c[2] if c and c[2] else []):
                         r = by_cfg.get((dev, w, k))
                         if r is None: continue
@@ -583,6 +585,11 @@ def render_lost(op):
     return "\n".join(out) + "\n"
 
 
+def out_names(split):
+    sfx = "_all" if split == "all" else ""
+    return f"{V.RES}/stage2_table{sfx}.md", f"{V.RES}/stage2_lost{sfx}.local.md"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", action="append", default=[], help="name=pfad (mehrfach); v7 ist immer dabei")
@@ -591,9 +598,13 @@ def main():
     ap.add_argument("--target", type=float, default=2.0, help="FA/h")
     ap.add_argument("--threads", type=int, default=2)
     ap.add_argument("--cut-only", action="store_true", help="nur Ausschnitt-Paritaet/Vor-/Nachlauf (stage2_cut.py, v8a), Ausgabe stage2_cut_table.md")
+    ap.add_argument("--split", choices=V.SPLITS, default="eval",
+                    help="eval = Prüf-Split (Standard); all = alle Blöcke 1–6, nur v7 und Modelle mit Sidecar real_pos=0 (ohne Abschnitt 6, Ausgabe *_all)")
     ap.add_argument("--fixed-thr", type=float, default=FIXED_THR, help="feste Stufe-1-Schwelle fuer Abschnitt 6 (nur v8a)")
     a = ap.parse_args()
     models = V.parse_models(a.model, not a.no_v7)
+    if a.cut_only and a.split != "eval": sys.exit("--cut-only gibt es nur mit --split eval")
+    V.check_split_models(a.split, models)
     if a.cut_only:
         import stage2_cut as C
         if C.CUT_TAG not in models: sys.exit("--cut-only braucht --model v8a=<pfad>")
@@ -601,16 +612,17 @@ def main():
         return
     curves = {t: V.load_curves(t) for t in models}
     if not a.report_only: run_s2x(models, curves, a.threads); run_extra(models, curves, a.threads)
-    labels = V.filter_labels(W.read_labels())
+    labels = V.filter_labels(W.read_labels(), a.split)
     hr = {s: V.hours(s) for s in W.NEG_SRC + ["conf"]}
     rows, skipped = grid(models, curves, labels, hr)
-    op = analyse(models, curves, labels, rows, a.target)
-    md = render(rows, models, a.target, op, skipped)
-    if "v8a" in models:
+    op = analyse(models, curves, labels, rows, a.target, a.split)
+    md = render(rows, models, a.target, op, skipped, a.split)
+    if "v8a" in models and a.split == "eval":      # Abschnitt 6 nur v8a (real_pos > 0), bei all nie
         md += render_fixed(fixed_analysis(curves["v8a"], load_tx("v8a"), labels, a.fixed_thr), a.fixed_thr)
-    open(f"{V.RES}/stage2_table.md", "w").write(md)
-    open(f"{V.RES}/stage2_lost.local.md", "w").write(render_lost(op))
-    print(f"{len(rows)} Zeilen -> {V.RES}/stage2_table.md", flush=True)
+    tbl, lost = out_names(a.split)
+    open(tbl, "w").write(md)
+    open(lost, "w").write(render_lost(op))
+    print(f"{len(rows)} Zeilen -> {tbl}", flush=True)
 
 
 if __name__ == "__main__":

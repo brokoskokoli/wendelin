@@ -375,5 +375,111 @@ class Ausgabe(unittest.TestCase):
         self.assertIn("GEHEIMTEXT", A.render_lost(op))
 
 
+class SplitAll(unittest.TestCase):
+    """WP133 Teil B: --split all in stage2_analysis (Labels, Folds, Modellpruefung, Ausgabe); eval bleibt gleich."""
+
+    def _labels(self):
+        return [{"dev": d, "block": b, "round": 1, "word": w, "start": 100.0 * b, "end": 100.0 * b + 1, "status": "ok"}
+                for d in ("huawei", "handy2") for b in range(1, 7) for w in ("Wendelin", "Hey Wendelin")]
+
+    def _patched(self, split):
+        """analyse mit gestubbten Messfunktionen; -> (Splits an cv_cell, Folds je (Geraet, Wort))"""
+        seen, folds = [], {}
+        o = (V.cv_cell, V.events_at, A.load_tx, A.lost_calls, A.filtered_events)
+        def cv(rows, dev, w, tag, st, calib, target, sp="eval"):
+            seen.append(sp); return (1, 1, [f"{tag}0.9+-"] * len(V.folds_for(dev, sp)))
+        def lost(dev, w, thrs, fl, *a):
+            folds[(dev, w)] = (list(fl), len(thrs)); return 0, []
+        V.cv_cell, V.events_at, A.load_tx, A.lost_calls, A.filtered_events = cv, (lambda c, t: {}), (lambda t: {}), lost, (lambda *a: {})
+        try: A.analyse({"m": "x"}, {"m": None}, self._labels(), [], 2.0, split)
+        finally: V.cv_cell, V.events_at, A.load_tx, A.lost_calls, A.filtered_events = o
+        return seen, folds
+
+    def test_analyse_all_nutzt_sechs_folds(self):
+        seen, folds = self._patched("all")
+        self.assertEqual(set(seen), {"all"})
+        for (dev, w), (fl, nthr) in folds.items():
+            self.assertEqual(len(fl), 6); self.assertEqual(nthr, 6)
+            self.assertEqual(sorted(t for _, (t,) in fl), [1, 2, 3, 4, 5, 6])
+
+    def test_analyse_eval_unveraendert(self):
+        seen, folds = self._patched("eval")
+        self.assertEqual(set(seen), {"eval"})
+        self.assertEqual(len(folds[("huawei", "Wendelin")][0]), 3); self.assertEqual(len(folds[("handy2", "Wendelin")][0]), 6)
+
+    def test_labels_all_vs_eval(self):
+        lb = self._labels()
+        self.assertEqual(sorted({x["block"] for x in V.filter_labels(lb, "all") if x["dev"] == "huawei"}), [1, 2, 3, 4, 5, 6])
+        self.assertEqual(sorted({x["block"] for x in V.filter_labels(lb) if x["dev"] == "huawei"}), [4, 5, 6])
+
+    def test_render_reicht_split_durch_und_nennt_umfang(self):
+        seen = []
+        o = V.cv_cell
+        V.cv_cell = lambda rows, dev, w, tag, st, calib, target, sp="eval": seen.append(sp)
+        try:
+            md_all = A.render([], {"m": "x"}, 2.0, {}, {}, "all"); n_all = list(seen); seen.clear()
+            md_ev = A.render([], {"m": "x"}, 2.0, {}, {})
+        finally: V.cv_cell = o
+        self.assertTrue(n_all and set(n_all) == {"all"}); self.assertEqual(set(seen), {"eval"})
+        self.assertIn("alle Blöcke", md_all.splitlines()[0]); self.assertIn("Prüfsplit", md_ev.splitlines()[0])
+        self.assertNotIn("alle Blöcke", md_ev.splitlines()[0])
+
+    def test_ausgabenamen(self):
+        self.assertTrue(A.out_names("all")[0].endswith("stage2_table_all.md") and A.out_names("all")[1].endswith("stage2_lost_all.local.md"))
+        self.assertTrue(A.out_names("eval")[0].endswith("stage2_table.md") and A.out_names("eval")[1].endswith("stage2_lost.local.md"))
+
+    def _main(self, argv):
+        calls = []
+        o = (A.run_s2x, A.run_extra, sys.argv)
+        A.run_s2x = A.run_extra = lambda *a: calls.append("rechnet")
+        sys.argv = ["x"] + argv
+        try: A.main()
+        finally: A.run_s2x, A.run_extra, sys.argv = o
+        return calls
+
+    def test_main_lehnt_modell_mit_echten_positiven_ab(self):
+        import json, tempfile
+        with tempfile.TemporaryDirectory() as td:
+            def mk(name, meta):
+                p = os.path.join(td, name + ".onnx"); open(p, "w").write("x")
+                if meta is not None: json.dump(meta, open(p + ".meta.json", "w"))
+                return p
+            for name, meta in (("a", {"real_pos": 1}), ("b", None)):
+                with self.assertRaises(SystemExit, msg=name):
+                    self._main(["--no-v7", "--split", "all", "--model", f"v8a={mk(name, meta)}"])
+            with self.assertRaises(SystemExit):                                       # --cut-only nie mit all (auch bei gutem Modell)
+                self._main(["--no-v7", "--split", "all", "--cut-only", "--model", f"v8a={mk('c', {'real_pos': 0})}"])
+            with self.assertRaises(SystemExit):
+                self._main(["--no-v7", "--split", "alle", "--model", f"v8a={mk('d', {'real_pos': 0})}"])
+
+    def _lauf(self, split, sidecar):
+        """main() mit gestubbter Rechnung; -> (Blöcke der Huawei-Labels, Abschnitt-6-Aufrufe, geschriebene Dateien)"""
+        import json, tempfile
+        got = {"blocks": None, "fixed": 0}
+        with tempfile.TemporaryDirectory() as td:
+            m = os.path.join(td, "m.onnx"); open(m, "w").close()
+            json.dump({"real_pos": sidecar}, open(m + ".meta.json", "w"))
+            res = os.path.join(td, "res"); os.makedirs(res)
+            o = (V.RES, V.load_curves, V.hours, W.read_labels, A.grid, A.analyse, A.render, A.render_fixed, A.fixed_analysis, A.load_tx, sys.argv)
+            V.RES = res; V.load_curves = lambda t: {}; V.hours = lambda s: 1.0; W.read_labels = lambda: self._labels()
+            def grid(models, curves, labels, hr):
+                got["blocks"] = sorted({x["block"] for x in labels if x["dev"] == "huawei"}); return [], {}
+            A.grid = grid; A.analyse = lambda *a: got.__setitem__("an", a[5:]) or {}; A.render = lambda *a: got.__setitem__("rd", a[5:]) or "T\n"
+            A.fixed_analysis = lambda *a: None; A.load_tx = lambda t: {}
+            A.render_fixed = lambda *a: got.__setitem__("fixed", got["fixed"] + 1) or "F\n"
+            sys.argv = ["x", "--no-v7", "--report-only", "--split", split, "--model", f"v8a={m}"]
+            try: A.main()
+            finally: V.RES, V.load_curves, V.hours, W.read_labels, A.grid, A.analyse, A.render, A.render_fixed, A.fixed_analysis, A.load_tx, sys.argv = o
+            files = sorted(os.listdir(res))
+        self.assertEqual((got["an"], got["rd"]), ((split,), (split,)))      # split bis analyse und render durchgereicht
+        return got["blocks"], got["fixed"], files
+
+    def test_main_all_ohne_abschnitt_6_und_mit_all_dateien(self):
+        self.assertEqual(self._lauf("all", 0), ([1, 2, 3, 4, 5, 6], 0, ["stage2_lost_all.local.md", "stage2_table_all.md"]))
+
+    def test_main_eval_unveraendert(self):
+        self.assertEqual(self._lauf("eval", 1), ([4, 5, 6], 1, ["stage2_lost.local.md", "stage2_table.md"]))
+
+
 if __name__ == "__main__":
     unittest.main()
