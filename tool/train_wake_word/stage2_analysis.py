@@ -12,6 +12,9 @@ whisper_de (Whisper small, language=de, ein Decode je Segment fuer beide Woerter
 beide gleicher Ausschnitt wie hw2, nur Modell v8a und Schwellen >= 0.95, je auch mit Band (_band999 / _band995). app_ge09 ist die Kontrolle fuer
 ausschnitt (gleiche Schwellen, heutiger Ausschnitt).
 
+Abschnitt 6 der Ausgabe zaehlt bei fester Stufe-1-Schwelle (--fixed-thr, Standard 0.98, nur v8a) echte Rufe und Verwechsler je Spitzenwert-Band
+sowie Treffer und durchkommende Ereignisse je Variante (keine, app, band999, band995, whisper_de, hw4), nur aus den Caches.
+
 Ausgabe nur lokal (nie im Repo): $RES/stage2_table.md (Zahlen) und $RES/stage2_lost.local.md (Transkripte).
 Lauf (K=~/wendelin-models/kws, vorher `memory_pressure | tail -1`: frei >= 30 %):
   nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2
@@ -365,6 +368,113 @@ def analyse(models, curves, labels, rows, target):
     return op
 
 
+# ---------- Feste Stufe-1-Schwelle: Spitzenwert-Baender, Treffer und durchkommende Ereignisse ----------
+FIXED_THR = 0.98
+FIXED_VARIANTS = ("-", "app", "band999", "band995", "whisper_de", "hw4")            # "-" = Stufe 1 allein
+FIXED_SRC = ("neg_huawei", "neg_handy2", "syn", "fleurs", "conf")
+BAND_EDGES = (0.995, 0.999)
+BAND_NAMES = ("thr-0,995", "0,995-0,999", ">=0,999")
+
+
+def band_of(peak):
+    """Band des Spitzenwerts: 0 = [thr, 0.995), 1 = [0.995, 0.999), 2 = >= 0.999 (Stufe 1 ist ein Modell fuer beide Woerter)."""
+    return sum(peak >= e for e in BAND_EDGES)
+
+
+def fixed_pass(vn, word, tx, src, key, peak, thr):
+    """Laesst die Variante das Ereignis durch? None, wenn die Schwelle unter dem Minimum liegt oder der Text fehlt."""
+    if vn == "-": return True
+    var = VARIANTS[vn]
+    if thr < var["thr_min"]: return None
+    t = tx[var["src"]][key] if vn == "app" else tx[var["src"]].get(key)           # hw2-Text muss da sein (KeyError), andere Quellen: None
+    return None if t is None else passes_rule(var, word, t, peak)
+
+
+def fixed_calls(dev, word, thr, curves, tx, labels, evs, vnames=FIXED_VARIANTS):
+    """Echte Prueflabels eines Geraets/Wortes bei fester Schwelle (Ereignis im Labelfenster wie lost_calls).
+    -> {"bands": [[Rufe, davon hw2 besteht] je Band] + "miss" (nicht erkannt), "hits": {Variante: Treffer oder None}, "n": Rufe}.
+    Spitzenwert = Maximum ueber die Ereignisse im Fenster; hw2 besteht, wenn ein Ereignis im Fenster die App-Regel besteht."""
+    src = f"pos_{dev}"
+    res = {"bands": [[0, 0] for _ in BAND_NAMES], "miss": 0, "n": 0, "hits": {vn: 0 for vn in vnames}}
+    for lb in labels:
+        if lb["dev"] != dev or lb["word"] != word: continue
+        lo, hi = W.label_window(lb["start"], lb["end"], lb["status"])
+        inside = [t for t in evs[thr][src][src] if lo <= t <= hi]
+        res["n"] += 1
+        if not inside:
+            res["miss"] += 1; continue
+        pk = {t: peak_at(*curves[src][src], t) for t in inside}
+        b = res["bands"][band_of(max(pk.values()))]
+        b[0] += 1
+        b[1] += any(fixed_pass("app", word, tx, src, W.seg_key(src, src, t), pk[t], thr) for t in inside)
+        for vn in vnames:
+            r = [fixed_pass(vn, word, tx, src, W.seg_key(src, src, t), pk[t], thr) for t in inside]
+            res["hits"][vn] = None if res["hits"][vn] is None or None in r else res["hits"][vn] + any(r)
+    return res
+
+
+def fixed_events(word, thr, curves, tx, evs, vnames=FIXED_VARIANTS):
+    """Ereignisse bei fester Schwelle je Quelle. -> {"conf_bands": [[Ereignisse, davon hw2 besteht] je Band],
+    "pass": {Variante: {Quelle: durchkommende Ereignisse oder None}}, "n": {Quelle: Ereignisse}}."""
+    out = {"conf_bands": [[0, 0] for _ in BAND_NAMES], "pass": {vn: {s: 0 for s in FIXED_SRC} for vn in vnames}, "n": {}}
+    for s in FIXED_SRC:
+        out["n"][s] = 0
+        for item, ts in evs[thr][s].items():
+            for t in ts:
+                out["n"][s] += 1
+                key, pk = W.seg_key(s, item, t), peak_at(*curves[s][item], t)
+                if s == "conf":
+                    b = out["conf_bands"][band_of(pk)]
+                    b[0] += 1; b[1] += bool(fixed_pass("app", word, tx, s, key, pk, thr))
+                for vn in vnames:
+                    r = fixed_pass(vn, word, tx, s, key, pk, thr)
+                    cur = out["pass"][vn][s]
+                    out["pass"][vn][s] = None if cur is None or r is None else cur + r
+    return out
+
+
+def fixed_analysis(curves, tx_all, labels, thr):
+    """{(Geraet, Wort): fixed_calls, Wort: fixed_events} fuer ein Modell aus Kurven und Caches. KeyError bei fehlendem hw2-Text."""
+    evs = {thr: V.events_at(curves, thr)}
+    out = {}
+    for w in V.WORDS:
+        tx = {src: m[w] or {} for src, m in tx_all.items()}
+        for dev in V.DEVICES: out[(dev, w)] = fixed_calls(dev, w, thr, curves, tx, labels, evs)
+        out[w] = fixed_events(w, thr, curves, tx, evs)
+    return out
+
+
+def render_fixed(fx, thr):
+    """Abschnitt 6 (nur Zahlen)."""
+    f = lambda v: "-" if v is None else str(v)
+    out = ["", f"## 6. Feste Schwelle {W.fc(thr)} (v8a, nur Zahlen aus den Caches)", "",
+           "Ereignis = Stufe-1-Wert über der Schwelle, Spitzenwert = Maximum im Ereignis, Band wie bei Stufe 2 mit Obergrenze. Echte Rufe: Ereignis im Labelfenster; "
+           "„hw2 besteht“ = ein Ereignis im Fenster besteht die App-Regel. „-“ = Text fehlt oder Schwelle unter dem Minimum der Variante.", "",
+           "### 6a. Echte Prüf-Rufe je Spitzenwert-Band", "", "| Gerät | Wort | Rufe | " + " | ".join(f"{b} (davon hw2)" for b in BAND_NAMES) + " | nicht erkannt |", "|---|---|---|---|---|---|---|"]
+    tot = [[0, 0] for _ in BAND_NAMES]; tn = tm = 0
+    for dev in V.DEVICES:
+        for w in V.WORDS:
+            c = fx[(dev, w)]
+            out.append(f"| {dev} | {w} | {c['n']} | " + " | ".join(f"{b[0]} ({b[1]})" for b in c["bands"]) + f" | {c['miss']} |")
+            tn += c["n"]; tm += c["miss"]
+            for t, b in zip(tot, c["bands"]): t[0] += b[0]; t[1] += b[1]
+    out.append(f"| Summe | beide | {tn} | " + " | ".join(f"{b[0]} ({b[1]})" for b in tot) + f" | {tm} |")
+    out += ["", "### 6b. Verwechsler-Ereignisse (conf) je Band", "", "| Band | Ereignisse | hw2 besteht " + V.WORDS[0] + " | hw2 besteht " + V.WORDS[1] + " |"]
+    out.append("|---|---|---|---|")
+    for i, b in enumerate(BAND_NAMES):
+        out.append(f"| {b} | {fx[V.WORDS[0]]['conf_bands'][i][0]} | " + " | ".join(str(fx[w]["conf_bands"][i][1]) for w in V.WORDS) + " |")
+    out += ["", "### 6c. Treffer je Variante (feste Schwelle, Rufe mit Ereignis im Labelfenster)", "",
+            "| Variante | " + " | ".join(f"{d} {w}" for d in V.DEVICES for w in V.WORDS) + " |", "|---|" + "---|" * (len(V.DEVICES) * len(V.WORDS))]
+    for vn in FIXED_VARIANTS:
+        out.append(f"| {vn} | " + " | ".join(f"{f(fx[(d, w)]['hits'][vn])}/{fx[(d, w)]['n']}" for d in V.DEVICES for w in V.WORDS) + " |")
+    out += ["", "### 6d. Ereignisse, die durchkommen, je Quelle (Wendelin / Hey Wendelin)", "",
+            "| Variante | " + " | ".join(FIXED_SRC) + " |", "|---|" + "---|" * len(FIXED_SRC),
+            "| Stufe-1-Ereignisse | " + " | ".join(str(fx[V.WORDS[0]]["n"][s]) for s in FIXED_SRC) + " |"]
+    for vn in FIXED_VARIANTS:
+        out.append(f"| {vn} | " + " | ".join(" / ".join(f(fx[w]["pass"][vn][s]) for w in V.WORDS) for s in FIXED_SRC) + " |")
+    return "\n".join(out) + "\n"
+
+
 # ---------- Ausgabe ----------
 def render(rows, models, target, op, skipped):
     """Zahlen-Tabellen (keine Transkripte)."""
@@ -448,6 +558,7 @@ def main():
     ap.add_argument("--report-only", action="store_true", help="Ausschnitt nicht neu dekodieren")
     ap.add_argument("--target", type=float, default=2.0, help="FA/h")
     ap.add_argument("--threads", type=int, default=2)
+    ap.add_argument("--fixed-thr", type=float, default=FIXED_THR, help="feste Stufe-1-Schwelle fuer Abschnitt 6 (nur v8a)")
     a = ap.parse_args()
     models = V.parse_models(a.model, not a.no_v7)
     curves = {t: V.load_curves(t) for t in models}
@@ -456,7 +567,10 @@ def main():
     hr = {s: V.hours(s) for s in W.NEG_SRC + ["conf"]}
     rows, skipped = grid(models, curves, labels, hr)
     op = analyse(models, curves, labels, rows, a.target)
-    open(f"{V.RES}/stage2_table.md", "w").write(render(rows, models, a.target, op, skipped))
+    md = render(rows, models, a.target, op, skipped)
+    if "v8a" in models:
+        md += render_fixed(fixed_analysis(curves["v8a"], load_tx("v8a"), labels, a.fixed_thr), a.fixed_thr)
+    open(f"{V.RES}/stage2_table.md", "w").write(md)
     open(f"{V.RES}/stage2_lost.local.md", "w").write(render_lost(op))
     print(f"{len(rows)} Zeilen -> {V.RES}/stage2_table.md", flush=True)
 

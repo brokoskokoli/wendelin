@@ -225,6 +225,81 @@ class Arbeitspunkt(unittest.TestCase):
             A.variant_rows("m", "Wendelin", 0.9, "app", {}, ev, self.curves, hr, V.filter_labels(lab))
 
 
+class FesteSchwelle(unittest.TestCase):
+    def setUp(self):
+        # Ruf 4: Spitzenwert 0,9995, Text falsch; Ruf 5: 0,996, Text ok; Ruf 6: 0,985, Text falsch; Ruf 7: kein Ereignis
+        self.ts = {4: 400.5, 5: 500.5, 6: 600.5}
+        self.curves = curves_mini({"pos_huawei": (np.array([400.5, 500.5, 600.5, 800.0]), np.array([0.9995, 0.996, 0.985, 0.1]))})
+        lab = [{"dev": "huawei", "block": b, "round": 1, "word": "Wendelin", "start": 100.0 * b, "end": 100.0 * b + 1, "status": "ok"} for b in (4, 5, 6, 7)]
+        self.labels = lab
+        k = lambda t: W.seg_key("pos_huawei", "pos_huawei", t)
+        self.tx = {"s2": {k(400.5): "Hallo", k(500.5): "Wendelin", k(600.5): "Hallo"}, "s2x": {}, "wh": {}, "hw4": {}}
+        self.evs = {0.98: V.events_at(self.curves, 0.98)}
+
+    def test_baender(self):
+        self.assertEqual([A.band_of(p) for p in (0.98, 0.9949, 0.995, 0.9989, 0.999, 1.0)], [0, 0, 1, 1, 2, 2])
+
+    def test_rufe_je_band(self):
+        c = A.fixed_calls("huawei", "Wendelin", 0.98, self.curves, self.tx, self.labels, self.evs)
+        self.assertEqual((c["n"], c["miss"]), (4, 1))
+        self.assertEqual(c["bands"], [[1, 0], [1, 1], [1, 0]])                  # 0,985 / 0,996 / 0,9995
+        self.assertEqual(c["hits"]["-"], 3)
+        self.assertEqual(c["hits"]["app"], 1)
+        self.assertEqual(c["hits"]["band999"], 2)                               # Ruf 4 (>= 0,999) kommt direkt durch
+        self.assertEqual(c["hits"]["band995"], 2)                               # Ruf 4 und 5 sind >= 0,995; Ruf 5 besteht ohnehin
+        self.assertIsNone(c["hits"]["hw4"])                                     # Cache fehlt
+
+    def test_fehlender_hw2_text(self):
+        del self.tx["s2"][W.seg_key("pos_huawei", "pos_huawei", 400.5)]
+        with self.assertRaises(KeyError):
+            A.fixed_calls("huawei", "Wendelin", 0.98, self.curves, self.tx, self.labels, self.evs)
+
+    def test_ereignisse_je_quelle(self):
+        cv = curves_mini({"conf": (np.array([1.0, 5.0, 9.0]), np.array([0.9995, 0.99, 0.985])), "syn": (np.array([2.0]), np.array([0.996]))})
+        k = lambda s, t: W.seg_key(s, s, t)
+        tx = {"s2": {k("conf", 1.0): "Hallo", k("conf", 5.0): "Wendelin", k("conf", 9.0): "Hey Hallo", k("syn", 2.0): "Hallo"},
+              "s2x": {}, "wh": {}, "hw4": {}}
+        ev = {0.98: V.events_at(cv, 0.98)}
+        for s in ("neg_huawei", "neg_handy2", "fleurs"): ev[0.98][s] = {}
+        r = A.fixed_events("Wendelin", 0.98, cv, tx, ev)
+        self.assertEqual(r["n"]["conf"], 3)
+        self.assertEqual(r["conf_bands"], [[2, 1], [0, 0], [1, 0]])             # 0,99 besteht, 0,985 nicht
+        self.assertEqual(r["pass"]["-"]["conf"], 3)
+        self.assertEqual(r["pass"]["app"]["conf"], 1)
+        self.assertEqual(r["pass"]["band999"]["conf"], 2)
+        self.assertEqual(r["pass"]["band995"]["syn"], 1)
+        self.assertEqual(r["pass"]["app"]["syn"], 0)
+        self.assertIsNone(r["pass"]["whisper_de"]["conf"])
+        self.assertEqual(r["pass"]["app"]["fleurs"], 0)
+
+    def test_zwei_ereignisse_im_fenster(self):
+        cv = curves_mini({"pos_huawei": (np.array([800.5, 802.1]), np.array([0.985, 0.986]))})
+        k = lambda t: W.seg_key("pos_huawei", "pos_huawei", t)
+        tx = {"s2": {k(800.5): "Hallo", k(802.1): "Wendelin"}}
+        lab = [{"dev": "huawei", "block": 8, "round": 1, "word": "Wendelin", "start": 800.0, "end": 801.0, "status": "ok"}]
+        c = A.fixed_calls("huawei", "Wendelin", 0.98, cv, tx, lab, {0.98: V.events_at(cv, 0.98)}, ("-", "app"))
+        self.assertEqual((c["bands"][0], c["hits"]["app"]), ([1, 1], 1))         # ein Ereignis genuegt
+
+    def test_schwelle_unter_minimum_ist_none(self):
+        tx = {"hw4": {"k": "Wendelin"}}
+        self.assertIsNone(A.fixed_pass("hw4", "Wendelin", tx, "syn", "k", 0.9, 0.9))
+        self.assertTrue(A.fixed_pass("hw4", "Wendelin", tx, "syn", "k", 0.9, 0.98))
+
+    def test_render_abschnitt_6(self):
+        low = (np.array([800.0]), np.array([0.1]))
+        cv = {s: {s: low} for s in ("neg_huawei", "neg_handy2", "syn", "fleurs", "conf")}
+        cv["pos_huawei"] = self.curves["pos_huawei"]; cv["pos_handy2"] = {"pos_handy2": low}
+        txs = {"s2": {w: self.tx["s2"] for w in V.WORDS}, "s2x": {}, "wh": {}, "hw4": {}}
+        fx = A.fixed_analysis({s: d for s, d in ((s, {s: low}) for s in cv) if s != "pos_huawei"} | {"pos_huawei": self.curves["pos_huawei"]},
+                              {k: {w: (v if k == "s2" else None) for w in V.WORDS} for k, v in {"s2": self.tx["s2"], "s2x": None, "wh": None, "hw4": None}.items()},
+                              self.labels, 0.98)
+        md = A.render_fixed(fx, 0.98)
+        self.assertIn("| huawei | Wendelin | 4 | 1 (0) | 1 (1) | 1 (0) | 1 |", md)
+        self.assertIn("| Summe | beide | 4 | 1 (0) | 1 (1) | 1 (0) | 1 |", md)
+        self.assertIn("| app | 1/4 |", md)
+        self.assertIn("| band999 | 2/4 |", md)
+
+
 class Ausgabe(unittest.TestCase):
     def test_render_ohne_transkripte(self):
         op = {("huawei", "Wendelin", "m"): {"basis": "Stufe 1", "n1": 3, "lost": [{"block": 5, "thr": 0.9, "texts": ["GEHEIMTEXT"], "cat": "leer", "rec": {"ausschnitt": True}}],

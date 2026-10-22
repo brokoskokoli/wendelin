@@ -375,3 +375,39 @@ N_CV=0 NJ=4 THREADS=4 TAG=a nice -n 5 tool/train_wake_word/run_v8.sh alle
 TAG=b STEPS=10000 SEED=2 THREADS=4 nice -n 5 tool/train_wake_word/run_v8.sh train
 nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/v8_measure.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --model v8b=$K/wp130/out/wendelin_wp130_b.onnx
 ```
+
+## Stufe 2 und v8-syn (WP133)
+
+### A. Nutzen von Stufe 2 (Analyse ohne Training, 2026-10-22)
+
+Skript `tool/train_wake_word/stage2_analysis.py` (Selbsttest `test_stage2_analysis.py`). Es nutzt die Stufe-1-Kurven und Stufe-2-Texte aus WP130 (lokal, `$K/wp130/results`), gleicher Prüf-Split, gleiche Kreuzauswahl (2 FA/h, Kalibrierung echte Negativ-Aufnahme), Wilson 95 %. Transkripte bleiben lokal; hier nur Zahlen und Kategorien. Begriffe: **Ereignis** = Stufe-1-Wert über der Schwelle; **Spitzenwert** = Maximum von Stufe 1 im Ereignis; **Band** = Stufe 2 prüft nur Ereignisse mit Spitzenwert unter der Obergrenze, darüber nimmt die App direkt an.
+
+**Verworfene echte Rufe (v8a, Stufe-1-Arbeitspunkt):** Stufe 1 trifft 12/15, 14/15, 23/30, 27/30 (Huawei W, Huawei HW, handy2 W, handy2 HW); hw2 verwirft davon 7, 9, 5, 9 (30 Rufe). Kategorien: leer 10, anderes Wort 14, abgeschnitten (nur „Hey“) 3, „Hey“ fehlt 3, Schreibvariante 0. „Anderes Wort“ ist fast immer eine englische Lesart: Parakeet v3 wählt die Sprache selbst und fällt bei kurzen Ausschnitten oft ins Englische. v7 sieht gleich aus.
+
+**Spitzenwerte (v8a, feste Schwelle 0,98, beide Wörter, 90 Prüf-Rufe; Verwechsler 300 Clips, für beide Wörter dieselben):**
+
+| Spitzenwert Stufe 1 | echte Rufe | davon besteht hw2 | Verwechsler-Ereignisse | davon besteht hw2 (W / HW) |
+|---|---|---|---|---|
+| 0,98–0,995 | 8 | 5 | 13 | 3 / 2 |
+| 0,995–0,999 | 23 | 15 | 8 | 0 / 0 |
+| ≥ 0,999 | 46 | 26 | 2 | 2 / 0 |
+| nicht erkannt | 13 | – | – | – |
+
+Stufe 1 ist ein Modell für beide Wörter, die Verwechsler-Ereignisse sind daher gleich; erst die Stufe-2-Regel unterscheidet („Hey Wendelin“ verlangt ein Hey-Wort und lässt weniger Verwechsler durch). Auf der echten Negativ-Aufnahme filtert hw2 bei 0,98 höchstens 1 Ereignis, bei syn und FLEURS 1–3.
+
+**Varianten (v8a, Treffer Kreuzauswahl; Verwechsler und FA bei fester Schwelle 0,98):**
+
+| Stufe 2 | Huawei W | Huawei HW | handy2 W | handy2 HW | Verwechsler W / HW (von 300) | FA syn / FLEURS / echt |
+|---|---|---|---|---|---|---|
+| keine (Stufe 1 allein) | 80 % [55–93] | 93 % [70–99] | 77 % [59–88] | 90 % [74–97] | 23 / 23 | 3 / 1 / 0–1 |
+| hw2 (heute) | 60 % [36–80] | 40 % [20–64] | 67 % [49–81] | 63 % [46–78] | 5 / 2 | 0 / 0 / 0 |
+| hw2 + Band 0,999 | 87 % [62–96] | 80 % [55–93] | 90 % [74–97] | 73 % [56–86] | 5 / 4 | 1 / 1 / 0 |
+| hw2 + Band 0,995 | 80 % [55–93] | 93 % [70–99] | 93 % [79–98] | 90 % [74–97] | 13 / 12 | 2 / 1 / 0 |
+| Whisper small, Sprache de | 40 % [20–64] | 20 % [7–45] | 53 % [36–70] | 37 % [22–54] | 3 / 1 | 0 / 0 / 0 |
+| Parakeet Hotword-Score 4 | 73 % [48–89] | 93 % [70–99] | 80 % [63–90] | 87 % [70–95] | 13 / 10 | 1–2 / 1 / 0–1 |
+
+Ohne Wirkung (gleich hw2): Editierabstand 3, Kölner-Phonetik-Präfix, „Hey“ optional (holt 0–2 von 9). Längerer Ausschnitt (Vorlauf 3,0 s, Nachlauf 1,8 s) verschlechtert (27–57 %). Whisper mit fester Sprache Deutsch liefert deutsche, aber oft falsche Wörter und trifft seltener als Parakeet. Score 4 halluziniert das Hotword (mehrfach wiederholt) und lässt so viele Verwechsler durch wie Band 0,995.
+
+**Empfehlung (Maintainer bestätigt 2026-10-22):** Stufe 2 im Stationsmodus nur im **Band unter 0,999**: Spitzenwert ≥ 0,999 nimmt die App direkt an, darunter prüft hw2 wie bisher. Gegenüber hw2 immer deutlich mehr Treffer bei fast gleichem Verwechsler-Schutz (5 / 4 statt 5 / 2 von 300). Tolerantere Regeln, längerer Ausschnitt, Whisper auf Deutsch und stärkerer Boost sind nicht besser.
+
+Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`): `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx` → `$K/wp130/results/stage2_table.md` (lokal). Die Zahlen bei fester Schwelle 0,98 (Spitzenwerte, Verwechsler, FA) stehen dort in Abschnitt 6 (Option `--fixed-thr`, Standard 0,98; `--report-only` rechnet nur aus den Caches), die Treffer-Spalten in Abschnitt 4.
