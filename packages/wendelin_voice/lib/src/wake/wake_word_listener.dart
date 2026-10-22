@@ -7,6 +7,7 @@ import '../io/audio_input.dart';
 import '../io/voice_exception.dart';
 import '../models/wake_classifier_catalog.dart';
 import 'keyword_spec.dart';
+import 'level_normalize.dart';
 import 'pre_roll_buffer.dart';
 import 'wake_verifier.dart';
 import 'wake_word_engine.dart';
@@ -108,6 +109,7 @@ final class WakeWordListener {
     this.preRoll = PreRollBuffer.defaultCapacity,
     this.verifyWindow = WakeClassifierRules.verifyWindow,
     this.verifyTail = WakeClassifierRules.verifyTail,
+    this.verifyNormalize = WakeClassifierRules.verifyNormalize,
     this.verifyTimeout = const Duration(seconds: 8),
   });
 
@@ -136,6 +138,10 @@ final class WakeWordListener {
   /// be ending; Whisper then sees about `verifyWindow + verifyTail`, ~3 s).
   /// Skipped without a verifier. Adds this much latency.
   final Duration verifyTail;
+
+  /// Scales the clip for stage 2 to a peak of
+  /// `WakeClassifierRules.verifyPeak` (not the pre-roll for the consumer).
+  final bool verifyNormalize;
 
   /// Longest wait for stage 2 (a timeout counts as rejected).
   final Duration verifyTimeout;
@@ -294,7 +300,14 @@ final class WakeWordListener {
     var ok = true;
     if (v != null && !hit.direct) {
       try {
-        ok = await v.confirm(lead).timeout(verifyTimeout);
+        final clip = verifyNormalize
+            ? normalizePeak(
+                lead,
+                target: WakeClassifierRules.verifyPeak,
+                minPeak: WakeClassifierRules.verifyMinPeak,
+              )
+            : lead;
+        ok = await v.confirm(clip).timeout(verifyTimeout);
       } on Object {
         ok = false; // a failing or slow verifier must not trigger
       }

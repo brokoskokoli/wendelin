@@ -83,7 +83,7 @@ final class DeviceWakeParts implements WakeParts {
     if (detector == WakeDetector.model) {
       // WP129: stage 1 is the trained classifier (no templates needed); the
       // band comes from the catalog, one place for model and limits. The
-      // main gate keeps silence from being a hit (WP126 follow-up b).
+      // silence floor keeps silence from being a hit (WP126 follow-up b).
       final band = wakeBandFor(station: station);
       return CandidateWakeEngine(
         features: container.read(wakeClassifierFeaturesFactoryProvider)(),
@@ -91,7 +91,7 @@ final class DeviceWakeParts implements WakeParts {
         directThreshold: band.acceptFrom,
         holdWindows: WakeClassifierRules.holdWindows,
         dropsToEnd: WakeClassifierRules.dropsToEnd,
-        mainGate: SpeechGate(),
+        silenceFloor: WakeClassifierRules.silenceFloor(),
       );
     }
     final store = container.read(wakeStoreProvider);
@@ -107,7 +107,7 @@ final class DeviceWakeParts implements WakeParts {
       moreTemplates: sets.skip(1).toList(),
       // No classifier model yet (WP58): the personal templates decide.
       modelThreshold: null,
-      mainGate: SpeechGate(),
+      silenceFloor: WakeClassifierRules.silenceFloor(),
     );
   }
 

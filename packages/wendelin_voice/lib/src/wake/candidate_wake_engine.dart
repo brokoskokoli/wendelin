@@ -29,7 +29,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     this.stopFloorGap = 0,
     this.stopOverridesWake = false,
     this.onWindow,
-    this.mainGate,
+    this.silenceFloor,
     this.directThreshold,
     this.holdWindows = 0,
     this.dropsToEnd = 1,
@@ -86,12 +86,15 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
   /// as it is (WP80): „Wendelin“ must not turn into „Stopp“.
   final bool stopOverridesWake;
 
-  /// WP129 (WP126 Folgepunkt b): the main word counts only with speech-level
-  /// sound in the stream, whichever rule (classifier or template) fired.
-  /// Silence embeddings look like the templates (similarity 0.82..0.83 over
-  /// the threshold 0.75), so a silent stream after a warm start would
-  /// otherwise be a candidate. `null`: no level check.
-  final SpeechGate? mainGate;
+  /// WP129 (WP126 Folgepunkt b): no main-word hit unless the recent audio
+  /// held at least a minimum level (absolute, see
+  /// `WakeClassifierRules.silenceFloorRms`), whichever rule fired. Template
+  /// embeddings look like the templates in digital silence **and** in a
+  /// quiet room (similarity 0.82..0.89 over the threshold 0.75), so a silent
+  /// stream after a warm start would otherwise be a candidate. It is no
+  /// speech detector: the ratio to the noise floor is not used (a late
+  /// decision of a real call must not be lost). `null`: no level check.
+  final SpeechGate? silenceFloor;
 
   /// WP129: a classifier score at or above this value is a sure hit
   /// (`WakeWordHit.direct`, no stage 2). `null`: every hit goes to stage 2.
@@ -158,8 +161,8 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     final stops = _usable(stopTemplates);
     final hits = <WakeWordHit>[];
     stopGate?.feed(frame);
-    if (mainGate != null && !identical(mainGate, stopGate)) {
-      mainGate!.feed(frame);
+    if (silenceFloor != null && !identical(silenceFloor, stopGate)) {
+      silenceFloor!.feed(frame);
     }
     for (final w in await features.accept(frame)) {
       if (w.modelScore != null && w.modelScore! > maxModelScore) {
@@ -176,7 +179,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
         modelThreshold: modelThreshold,
         templateThreshold: main.threshold,
       );
-      if (d != null && mainGate != null && !mainGate!.active) d = null;
+      if (d != null && silenceFloor != null && !silenceFloor!.active) d = null;
       final onStop = _mergeStop(w, d, stops, main.top);
       d = onStop.d;
       final id = onStop.id;
@@ -365,7 +368,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     _sinceStop = 1 << 30;
     _lastStop = null;
     stopGate?.reset();
-    mainGate?.reset();
+    silenceFloor?.reset();
     _stopFloor = null;
     _stopSeen = 0;
     _lastHit = -1 << 40;

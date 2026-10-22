@@ -15,7 +15,7 @@ Float32List _v(List<double> x) => Float32List.fromList(x);
 /// Engine with a classifier whose score is [score] in every window.
 CandidateWakeEngine _classifier(
   double score, {
-  SpeechGate? mainGate,
+  SpeechGate? silenceFloor,
   WakeTemplates? templates,
   Float32List? embedding,
 }) => CandidateWakeEngine(
@@ -30,7 +30,7 @@ CandidateWakeEngine _classifier(
   templates: templates,
   modelThreshold: _band.verifyFrom,
   directThreshold: _band.acceptFrom,
-  mainGate: mainGate,
+  silenceFloor: silenceFloor,
 );
 
 Int16List _loud(int n) => Int16List(n)..fillRange(0, n, 3000);
@@ -157,30 +157,30 @@ void main() {
       ),
       templates: tpl,
       modelThreshold: null,
-      mainGate: gate,
+      silenceFloor: gate,
     );
 
-    test('Vorlagen-Weg: Stille ohne Gate ist (Ausgangsfehler) ein Treffer, '
-        'mit Gate nicht', () async {
+    test('Vorlagen-Weg: Stille ohne Sperre ist (Ausgangsfehler) ein Treffer, '
+        'mit Sperre nicht', () async {
       expect(await _run(templated(), frame: Int16List(100)), isNotEmpty);
       expect(
-        await _run(templated(gate: SpeechGate()), frame: Int16List(100)),
+        await _run(templated(gate: WakeClassifierRules.silenceFloor()), frame: Int16List(100)),
         isEmpty,
       );
     });
 
     test('Vorlagen-Weg: Sprachpegel löst aus', () async {
-      expect(await _speech(templated(gate: SpeechGate())), isNotEmpty);
+      expect(await _speech(templated(gate: WakeClassifierRules.silenceFloor())), isNotEmpty);
     });
 
     test('Klassifikator-Weg: Stille mit hohem Score löst nicht aus', () async {
-      final e = _classifier(0.999, mainGate: SpeechGate());
+      final e = _classifier(0.999, silenceFloor: WakeClassifierRules.silenceFloor());
       expect(await _run(e, frame: Int16List(100)), isEmpty);
     });
 
     test('Klassifikator-Weg: warmUp mit lautem Audio füttert das Gate nicht, '
         'danach Stille löst nicht aus', () async {
-      final e = _classifier(0.999, mainGate: SpeechGate());
+      final e = _classifier(0.999, silenceFloor: WakeClassifierRules.silenceFloor());
       await e.open([KeywordSpec.wendelin]);
       // Quiet first (the floor), then loud: would be speech if the gate saw it.
       await e.warmUp(Int16List(3200));
@@ -188,13 +188,60 @@ void main() {
       expect(await e.accept(Int16List(100)), isEmpty);
     });
 
+    test('Stille nach Warmstart (Nullen), beide Wege: kein Treffer', () async {
+      for (final e in [
+        templated(gate: WakeClassifierRules.silenceFloor()),
+        _classifier(0.999, silenceFloor: WakeClassifierRules.silenceFloor()),
+      ]) {
+        await e.open([KeywordSpec.wendelin]);
+        await e.warmUp(_loud(3200));
+        for (var i = 0; i < 15; i++) {
+          expect(await e.accept(Int16List(1600)), isEmpty);
+        }
+      }
+    });
+
+    test('Leiser Raum (Pegel 20 RMS, unter der Untergrenze): kein Treffer',
+        () async {
+      final room = Int16List(1600)..fillRange(0, 1600, 20);
+      for (final e in [
+        templated(gate: WakeClassifierRules.silenceFloor()),
+        _classifier(0.999, silenceFloor: WakeClassifierRules.silenceFloor()),
+      ]) {
+        await e.open([KeywordSpec.wendelin]);
+        expect(await e.accept(room), isEmpty);
+      }
+    });
+
+    test('Echter Ruf wird nicht berührt: leiser Ruf (Pegel 400) und späte '
+        'Entscheidung (1,5 s nach dem Wort) bleiben Treffer', () async {
+      final e = CandidateWakeEngine(
+        features: FakeWakeFeatureExtractor(
+          windowEvery: 100,
+          windowFor: (end, _) => WakeWindow(
+            endSample: end,
+            embedding: _v([0, 1]),
+            modelScore: end > 25000 ? 0.999 : 0.0,
+          ),
+        ),
+        modelThreshold: _band.verifyFrom,
+        directThreshold: _band.acceptFrom,
+        silenceFloor: WakeClassifierRules.silenceFloor(),
+      );
+      await e.open([KeywordSpec.wendelin]);
+      await e.accept(Int16List(3200));
+      await e.accept(Int16List(1600)..fillRange(0, 1600, 400));
+      final late = await e.accept(Int16List(24000));
+      expect(late.single.direct, isTrue);
+    });
+
     test('Klassifikator-Weg: Sprachpegel mit hohem Score löst aus', () async {
-      final e = _classifier(0.999, mainGate: SpeechGate());
+      final e = _classifier(0.999, silenceFloor: WakeClassifierRules.silenceFloor());
       final hits = await _speech(e);
       expect(hits.single.direct, isTrue);
     });
 
-    test('Stille: das Hauptwort-Gate verhindert auch den Weg über stopOverridesWake', () async {
+    test('Stille: das Stille-Sperre verhindert auch den Weg über stopOverridesWake', () async {
       final stop = WakeTemplates(
         speakerId: 's',
         featureVersion: 'fake-1',
@@ -221,7 +268,7 @@ void main() {
         stopTemplates: [stop],
         modelThreshold: null,
         stopGate: SpeechGate(),
-        mainGate: SpeechGate(),
+        silenceFloor: WakeClassifierRules.silenceFloor(),
         stopOverridesWake: true,
       );
       final e = make();

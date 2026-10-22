@@ -1,3 +1,4 @@
+import '../wake/speech_gate.dart';
 import '../wake/wake_score_band.dart';
 import 'speech_model.dart';
 
@@ -117,6 +118,40 @@ abstract final class WakeClassifierRules {
   /// Stage 2: audio recorded after the hit before stage 2 starts (the
   /// listener default, `WakeWordListener.verifyTail`). Provisional (WP133).
   static const verifyTail = Duration(milliseconds: 900);
+
+  /// Stage 2: the clip is scaled to [verifyPeak] of full scale before the
+  /// transcription (`WakeWordListener.verifyNormalize`; a quiet call at
+  /// distance reaches Whisper at a usable level). The pre-roll for the
+  /// consumer stays as recorded.
+  static const verifyNormalize = true;
+
+  /// Stage 2: target peak (fraction of full scale) of the normalization.
+  static const verifyPeak = 0.5;
+
+  /// Stage 2: clips with a smaller peak (16-bit sample value) are not scaled
+  /// (digital silence or a closed room would be amplified to noise); 164 is
+  /// 0.5 % of full scale, a tenth of the quietest call measured (WP129).
+  static const verifyMinPeak = 164;
+
+  /// Lower level limit (RMS of a 20 ms block, 16-bit samples) the audio of the
+  /// last [silenceFloorMemory] must have reached for a main-word hit (WP126
+  /// follow-up b). Measured on real recordings (WP129): quiet rooms have
+  /// blocks of 9 to 93 RMS (median floor 9..18), calls of a speaker at normal
+  /// distance reach at least 324 RMS; 50 keeps digital silence and a quiet
+  /// room out and costs no call. It is **not** a speech detector.
+  static const silenceFloorRms = 50.0;
+
+  /// Look-back of the silence floor: the classifier decides after the word
+  /// (window 1.3 s, hold up to 0.4 s), so the word must still be in memory.
+  static const silenceFloorMemory = Duration(milliseconds: 2000);
+
+  /// The silence floor of the engine (`CandidateWakeEngine.silenceFloor`),
+  /// no ratio to the noise floor.
+  static SpeechGate? silenceFloor() => SpeechGate(
+    minRms: silenceFloorRms,
+    ratio: 0,
+    memory: silenceFloorMemory,
+  );
 
   /// Phone: the lower limit 0.98 of the measured working point.
   static const phone = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.999);
