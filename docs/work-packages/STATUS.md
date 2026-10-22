@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP125, WP126 (Stopp-E2E rot seit WP123); E2E Stopp/Barge 3× (WP123) läuft; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101 (Stationsmodus Welle 2) nach WP121, WP92c nach Gerätetest wp92a/b, Scorer-Fix Reasoning-Leck, Sonnet-Probe
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP125, WP126, WP128, WP130; Test-APK 954e065 beim Maintainer; als Nächstes: WP129 (nach WP126), WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -75,6 +75,10 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4); läuft: WP125, WP1
 | WP124 | Emulator startet bei Bedarf, wird nach jedem E2E-Lauf beendet (E2E_KEEP_EMULATOR=1 für Serien) | gemergt 909738c1 | Wunsch Maintainer 2026-10-21; echter Lauf torch_e2e grün |
 | WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | in Arbeit | Go Maintainer 2026-10-22; Barge-in-Punkte (WP113, WP123) → WP126 |
 | WP126 | „Stopp“ nach Warmstart: Fehlkandidat auf Stille blockiert echtes Wort (Fehler aus WP123) | in Arbeit | voice_stop_word_e2e rot seit ab054e98 (Bisekt 2026-10-22) |
+| WP127 | Öffentliches Repo ohne Namen/Anwesenheit/lokale Pfade, Sperre (check_privacy, privacy-guard) | gemergt 51917089 | Entscheidung Maintainer 2026-10-22; Historie bleibt |
+| WP128 | Empfohlene Modelle markieren, Nachfrage bei Ausfall | in Arbeit | K100 |
+| WP129 | Trainiertes Wake-Word-Modell (v7) in der App, zweistufig | geplant | K101; nach WP126 (Wake-Dateien) |
+| WP130 | Wake-Word-Modell v8 (mehr Stimmen, Varianten, harte Negative) | in Arbeit | K101; Training nur bei Abwesenheit |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
