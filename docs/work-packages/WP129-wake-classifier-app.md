@@ -1,6 +1,8 @@
-# WP129 – Trainiertes Wake-Word-Modell (v7) in der App, zweistufig
+# WP129 – Trainiertes Wake-Word-Modell (v8a) in der App, zweistufig
 
 **Zuordnung:** K80 (Stationsmodus), Ergebnisse WP106/WP111/WP121 (K83, K98). Entscheidung Maintainer 2026-10-22: v7 in die App – Standard im Stationsmodus, auf dem Handy als wählbare Variante neben dem Vorlagen-Vergleich.
+
+**Nachtrag K105 (WP130):** Statt v7 kommt **v8a** in die App (`~/wendelin-models/kws/wp130/out/wendelin_wp130_a.onnx`, SHA-256 `bfeb939d9e50c4913b27e4d082e5d620e3967af6c2603666e6bc40b30a06997d`); es enthält Aufnahmen des Maintainers nur aus dem Trainings-Split (K101) und darf veröffentlicht werden. Schwellen aus `docs/notes/` (Abschnitt v8) übernehmen. Vor dem Release-Asset die M-AILABS-Lizenz belegen. Wo unten „v7“ steht, gilt v8a.
 
 ## Ausgangslage
 - App heute: Merkmalsmodelle (openWakeWord mel + embedding, Katalog `wake-features`) + Ähnlichkeit zu persönlichen Vorlagen (K31) → Bestätigung per STT. Platzhalter `wake-classifier-wendelin` (`packages/wendelin_voice/lib/src/models/speech_model_catalog.dart:436`).
