@@ -198,26 +198,76 @@ void main() {
       await v.release();
     });
 
-    test(
-      'Ladefehler: nicht gemerkt, nicht verfügbar bis zur Freigabe',
-      () async {
-        var fail = true;
+    test('Ladefehler: Signal für den Rückfall, nicht verfügbar', () async {
+      var starts = 0;
+      final v = LazyParakeetVerifier(
+        files: () async => _files,
+        start: (_) async {
+          starts++;
+          throw StateError('defekt');
+        },
+      );
+      await expectLater(
+        v.confirm(_tone(900)),
+        throwsA(isA<WakeVerifierUnavailable>()),
+      );
+      expect(await v.isAvailable(), isFalse);
+      expect(starts, 1);
+    });
+
+    test('Ladefehler: kein zweiter Versuch nach 60 s (fakeAsync)', () {
+      fakeAsync((async) {
         var starts = 0;
         final v = LazyParakeetVerifier(
           files: () async => _files,
+          idleRelease: const Duration(seconds: 60),
           start: (_) async {
             starts++;
+            throw StateError('defekt');
+          },
+        );
+        v.confirm(_tone(900)).then((_) {}, onError: (_) {});
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 120));
+        async.flushMicrotasks();
+        var available = true;
+        v.isAvailable().then((a) => available = a);
+        async.flushMicrotasks();
+        expect(available, isFalse);
+        expect(starts, 1);
+      });
+    });
+
+    test(
+      'Ladefehler: geänderte Modelldateien geben eine neue Chance',
+      () async {
+        final f = File('${dir.path}/enc')..writeAsStringSync('a');
+        final files = NemoFiles(
+          engine: SttEngine.nemoTransducer,
+          encoder: f.path,
+          decoder: 'd',
+          joiner: 'j',
+          tokens: 't',
+        );
+        var fail = true;
+        final v = LazyParakeetVerifier(
+          files: () async => files,
+          start: (_) async {
             if (fail) throw StateError('defekt');
             return _Backend('Wendelin');
           },
         );
-        await expectLater(v.confirm(_tone(900)), throwsStateError);
-        expect(await v.isAvailable(), isFalse); // Rückfall auf Whisper
-        fail = false;
-        expect(await v.confirm(_tone(900)), isTrue); // lädt neu
-        expect(starts, 2);
+        await expectLater(
+          v.confirm(_tone(900)),
+          throwsA(isA<WakeVerifierUnavailable>()),
+        );
         await v.release();
+        expect(await v.isAvailable(), isFalse); // release setzt nicht zurück
+        f.writeAsStringSync('neue Datei, anderer Inhalt');
         expect(await v.isAvailable(), isTrue);
+        fail = false;
+        expect(await v.confirm(_tone(900)), isTrue);
+        await v.release();
       },
     );
 
@@ -300,6 +350,33 @@ void main() {
       await expectLater(v.confirm(_tone(900)), throwsA(isA<Object>()));
       expect(v.kind, 'whisper');
     });
+
+    test(
+      'Modell-Modus, Parakeet-Ladefehler: derselbe Treffer an Whisper',
+      () async {
+        final hw = install();
+        var starts = 0;
+        final parts = DeviceWakeParts(
+          container(true),
+          hotwordsDirectory: () async => hw,
+          parakeetStart: (_) async {
+            starts++;
+            throw StateError('defekt');
+          },
+        );
+        final v = parts.verifier(detector: WakeDetector.model);
+        // Whisper is not installed in this test: its error (not the one of
+        // Parakeet) reaches the caller, so the same hit went to Whisper.
+        await expectLater(
+          v.confirm(_tone(900)),
+          throwsA(isNot(isA<WakeVerifierUnavailable>())),
+        );
+        expect(v.kind, 'whisper');
+        await expectLater(v.confirm(_tone(900)), throwsA(isA<Object>()));
+        expect(starts, 1);
+        await parts.dispose();
+      },
+    );
 
     test('Modell-Modus ohne Parakeet: still Whisper (Rückfall)', () async {
       final parts = DeviceWakeParts(

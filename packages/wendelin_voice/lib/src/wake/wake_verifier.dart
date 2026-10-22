@@ -194,9 +194,20 @@ int _distance(String a, String b) {
   return prev[b.length];
 }
 
+/// A verifier could not start (e.g. its model fails to load): the stage
+/// hands the same clip to the fallback instead of rejecting the hit.
+final class WakeVerifierUnavailable implements Exception {
+  /// Creates the signal.
+  const WakeVerifierUnavailable();
+
+  @override
+  String toString() => 'WakeVerifierUnavailable';
+}
+
 /// Takes [preferred] if [available] says so (e.g. the better model is
 /// installed), else [fallback]; an [available] that throws counts as
-/// „not available“ (WP129: Parakeet, else Whisper). [kind] is the one of the
+/// „not available“ (WP129: Parakeet, else Whisper); a [preferred] that throws
+/// [WakeVerifierUnavailable] hands the same clip to [fallback]. [kind] is the one of the
 /// recognizer that took the last clip.
 final class PreferredWakeVerifier implements WakeVerifier {
   /// Creates the verifier.
@@ -229,6 +240,14 @@ final class PreferredWakeVerifier implements WakeVerifier {
       use = fallback;
     }
     _kind = use.kind;
+    if (identical(use, preferred)) {
+      try {
+        return await use.confirm(pcm);
+      } on WakeVerifierUnavailable {
+        _kind = fallback.kind;
+        return fallback.confirm(pcm);
+      }
+    }
     return use.confirm(pcm);
   }
 }

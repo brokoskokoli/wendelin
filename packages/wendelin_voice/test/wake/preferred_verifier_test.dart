@@ -4,6 +4,21 @@ import 'package:test/test.dart';
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+final class _Unavailable implements WakeVerifier {
+  @override
+  String get kind => 'parakeet';
+  @override
+  Future<bool> confirm(Int16List pcm) async =>
+      throw const WakeVerifierUnavailable();
+}
+
+final class _Throws implements WakeVerifier {
+  @override
+  String get kind => 'parakeet';
+  @override
+  Future<bool> confirm(Int16List pcm) async => throw StateError('check');
+}
+
 final class _Named implements WakeVerifier {
   _Named(this.kind, this.verdict);
   @override
@@ -53,6 +68,31 @@ void main() {
       await v.confirm(Int16List(10));
       expect(v.kind, 'whisper');
       expect(whisper.calls, 1);
+    });
+
+    test(
+      'bevorzugter Prüfer startet nicht: derselbe Treffer an Whisper',
+      () async {
+        whisper = _Named('whisper', true);
+        final v = PreferredWakeVerifier(
+          preferred: _Unavailable(),
+          fallback: whisper,
+          available: () async => true,
+        );
+        expect(await v.confirm(Int16List(10)), isTrue);
+        expect(v.kind, 'whisper');
+        expect(whisper.calls, 1);
+      },
+    );
+
+    test('Prüfer-Fehler nach dem Laden wird nicht verdeckt', () async {
+      final v = PreferredWakeVerifier(
+        preferred: _Throws(),
+        fallback: whisper,
+        available: () async => true,
+      );
+      await expectLater(v.confirm(Int16List(10)), throwsStateError);
+      expect(whisper.calls, 0);
     });
 
     test('Entscheidung je Ausschnitt (Modell später installiert)', () async {

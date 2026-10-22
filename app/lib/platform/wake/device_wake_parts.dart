@@ -95,16 +95,33 @@ final class LazyParakeetVerifier implements WakeVerifier {
   Future<WhisperBackend>? _backend;
   Timer? _idle;
 
-  /// The last start failed (defective files, no memory): until the next
-  /// [release] (after [idleRelease]) Parakeet counts as not available, so
-  /// the stage falls back to Whisper instead of rejecting every hit.
+  /// The last start failed (defective files, no memory): until the service
+  /// restarts or the model files change ([_failedSignature]) Parakeet counts
+  /// as not available, so the stage falls back to Whisper instead of loading
+  /// ~1 GB again for every hit. [release] does not reset it.
   bool _loadFailed = false;
+  String? _failedSignature;
+  String? _lastSignature;
+
+  static String _signature(NemoFiles f) => [
+    for (final p in [f.encoder, f.decoder, f.joiner, f.tokens])
+      () {
+        final st = FileStat.statSync(p);
+        return '$p:${st.size}:${st.modified.millisecondsSinceEpoch}';
+      }(),
+  ].join('|');
 
   @override
   String get kind => 'parakeet';
 
   /// Whether Parakeet is installed.
-  Future<bool> isAvailable() async => !_loadFailed && await files() != null;
+  Future<bool> isAvailable() async {
+    final f = await files();
+    if (f == null) return false;
+    // Changed model files (new download) give Parakeet another chance.
+    if (_loadFailed && _failedSignature != _signature(f)) _loadFailed = false;
+    return !_loadFailed;
+  }
 
   @override
   Future<bool> confirm(Int16List pcm) async {
@@ -125,11 +142,21 @@ final class LazyParakeetVerifier implements WakeVerifier {
         onCategory: (category, ms) =>
             voiceLog('wake-verify-text', {'cat': category, 'ms': ms}),
       ).confirm(pcm);
-    } on Object {
+    } on Object catch (e) {
       // Neither a failed load nor a loaded isolate after a failed check may
       // stay: the first must not be cached, the second would leak (~1 GB).
       await release();
-      _loadFailed = !loaded;
+      // „Not installed“ is no load failure (isAvailable covers it).
+      final missing =
+          e is VoiceException && e.kind == VoiceErrorKind.modelMissing;
+      if (!loaded && !missing) {
+        _loadFailed = true;
+        _failedSignature = _lastSignature;
+        voiceLog('wake-verifier-fallback', {'reason': 'load-failed'});
+        // The stage hands this very hit to Whisper (a check error after a
+        // successful load is not hidden and stays as it was).
+        throw const WakeVerifierUnavailable();
+      }
       rethrow;
     } finally {
       _arm();
@@ -144,6 +171,7 @@ final class LazyParakeetVerifier implements WakeVerifier {
         'Parakeet ist nicht geladen.',
       );
     }
+    _lastSignature = _signature(spec);
     return start(spec);
   }
 
@@ -155,7 +183,6 @@ final class LazyParakeetVerifier implements WakeVerifier {
   /// Frees the model.
   Future<void> release() async {
     _idle?.cancel();
-    _loadFailed = false;
     final backend = _backend;
     _backend = null;
     if (backend == null) return;
