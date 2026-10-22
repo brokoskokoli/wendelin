@@ -117,6 +117,35 @@ class Ausschnitt(unittest.TestCase):
         self.assertTrue(A.s2x_path("v8a", "Hey Wendelin").endswith("hw2@hey_wendelin.json"))
 
 
+class WeitereErkenner(unittest.TestCase):
+    def test_varianten_registriert(self):
+        for n, src in (("whisper_de", "wh"), ("hw4", "hw4")):
+            self.assertEqual(A.VARIANTS[n]["src"], src); self.assertIsNone(A.VARIANTS[n]["ceil"])
+            self.assertEqual(A.VARIANTS[n + "_band999"]["ceil"], 0.999); self.assertEqual(A.VARIANTS[n + "_band995"]["ceil"], 0.995)
+            self.assertEqual(A.VARIANTS[n + "_band999"]["src"], src)
+
+    def test_schwellenminimum_095(self):
+        for n in ("whisper_de", "hw4", "whisper_de_band999", "hw4_band995"):
+            self.assertEqual(A.VARIANTS[n]["thr_min"], 0.95)
+        cv = curves_mini({"pos_huawei": (np.array([1.0, 5.0, 9.0]), np.array([0.5, 0.93, 0.96]))})
+        self.assertEqual(A.ausschnitt_keys(cv, A.E_THR_MIN), {W.seg_key("pos_huawei", "pos_huawei", 9.0)})
+        self.assertEqual(A.E_TAGS, ("v8a",))
+
+    def test_cache_pfade(self):
+        self.assertIn("whisper-small-de", A.wh_path("v8a")); self.assertNotIn("hey", A.wh_path("v8a"))      # ein Cache fuer beide Woerter
+        self.assertTrue(A.hw4_path("v8a", "Hey Wendelin").endswith("parakeet-hw4.0@hey_wendelin.json"))
+        self.assertIn("parakeet-hw4.0", A.hw4_path("v8a", "Wendelin"))
+        paths = {A.wh_path("v8a"), A.hw4_path("v8a", "Wendelin"), A.hw4_path("v8a", "Hey Wendelin"), A.s2x_path("v8a", "Wendelin"), V.s2_path("v8a", "Wendelin")}
+        self.assertEqual(len(paths), 5)                                           # keine Kollision, vorhandene Caches bleiben unberuehrt
+
+    def test_quelle_und_regel(self):
+        tx = {"wh": {"k": "Wendelin"}, "hw4": {"k": "Hallo"}}
+        v = A.VARIANTS
+        self.assertTrue(A.passes_rule(v["whisper_de"], "Wendelin", tx[v["whisper_de"]["src"]]["k"], 0.0))
+        self.assertFalse(A.passes_rule(v["hw4"], "Wendelin", tx[v["hw4"]["src"]]["k"], 0.0))
+        self.assertTrue(A.passes_rule(v["hw4_band999"], "Wendelin", "Hallo", 0.9995))
+
+
 def labels_huawei(word="Wendelin"):
     return [{"dev": "huawei", "block": b, "round": 1, "word": word, "start": 100.0 * b, "end": 100.0 * b + 1, "status": "ok"} for b in (4, 5, 6)]
 

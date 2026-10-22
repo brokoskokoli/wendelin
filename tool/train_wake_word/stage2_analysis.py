@@ -7,7 +7,9 @@ Am Stufe-1-Arbeitspunkt (Kreuz-Auswahl, Kalibrierung echt, je Geraet/Wort/Fold) 
   (2) Ereignisse je Quelle (echt, syn, fleurs, conf), die hw2 herausfiltert.
 Dazu Varianten der Stufe-2-Regel (austauschbar, siehe VARIANTS): app (heute), locker_d3 / locker_cp (toleranter Abgleich),
 hey_opt (Hey Wendelin akzeptiert auch reines Wendelin), band (Stufe 2 nur unter einer Obergrenze des Stufe-1-Spitzenwerts) und
-ausschnitt (laengerer Vor-/Nachlauf, neu dekodiert, nur Schwellen >= 0.9, eigener Cache s2x/). app_ge09 ist die Kontrolle fuer
+ausschnitt (laengerer Vor-/Nachlauf, neu dekodiert, nur Schwellen >= 0.9, eigener Cache s2x/),
+whisper_de (Whisper small, language=de, ein Decode je Segment fuer beide Woerter, Cache s2w/) und hw4 (Parakeet-Hotword-Score 4, Cache s2h/),
+beide gleicher Ausschnitt wie hw2, nur Modell v8a und Schwellen >= 0.95, je auch mit Band (_band999 / _band995). app_ge09 ist die Kontrolle fuer
 ausschnitt (gleiche Schwellen, heutiger Ausschnitt).
 
 Ausgabe nur lokal (nie im Repo): $RES/stage2_table.md (Zahlen) und $RES/stage2_lost.local.md (Transkripte).
@@ -29,6 +31,9 @@ SR = W.SR
 CATS = ["leer", "Schreibvariante", "abgeschnitten", "anderes Wort", "Hey fehlt"]
 PRE_X, TAIL_X = 3.0, 1.8                       # Ausschnitt-Variante: Vorlauf/Nachlauf in s (heute 2,0 / 0,9)
 X_THR_MIN = 0.9                                # nur Segmente an Schwellen >= 0.9 werden neu dekodiert
+E_THR_MIN = 0.95                               # whisper_de / hw4: nur Segmente an Schwellen >= 0.95
+E_TAGS = ("v8a",)                              # whisper_de / hw4 nur fuer dieses Modell
+WH_NAME, HW4_NAME = "whisper-small", "parakeet-hw4.0"          # station_measure.make_rec (Whisper mit language="de"; Hotword-Score 4)
 
 
 # ---------- Reine Regeln ----------
@@ -87,6 +92,11 @@ VARIANTS = {
     "band999": dict(rule=rule_app, ceil=0.999, thr_min=0.0, src="s2"),
     "ausschnitt": dict(rule=rule_app, ceil=None, thr_min=X_THR_MIN, src="s2x"),
 }
+# Weitere Stufe-2-Erkenner (eigene Text-Quelle, eigener Cache), je allein und mit Band
+for _src, _name in (("wh", "whisper_de"), ("hw4", "hw4")):
+    VARIANTS[_name] = dict(rule=rule_app, ceil=None, thr_min=E_THR_MIN, src=_src)
+    for _b in (999, 995):
+        VARIANTS[f"{_name}_band{_b}"] = dict(rule=rule_app, ceil=_b / 1000, thr_min=E_THR_MIN, src=_src)
 
 
 def passes_rule(var, word, text, peak):
@@ -140,6 +150,14 @@ def segment_x(x, k, pre=PRE_X, tail=TAIL_X):
 def s2x_path(tag, word): return f"{V.RES}/s2x/{V.ctag(tag)}-p{PRE_X}-t{TAIL_X}/hw2@{W.key(word)}.json"
 
 
+def wh_path(tag):
+    """Whisper (de): ein Decode je Segment fuer beide Woerter, daher ein Cache ohne Wort im Dateinamen."""
+    return f"{V.RES}/s2w/{V.ctag(tag)}-{WH_NAME}-de/texts.json"
+
+
+def hw4_path(tag, word): return f"{V.RES}/s2h/{V.ctag(tag)}-{HW4_NAME}/{HW4_NAME}@{W.key(word)}.json"
+
+
 def ausschnitt_keys(curves, thr_min=X_THR_MIN):
     """seg_keys der Ereignisse an Schwellen >= thr_min (Konfigurationen mit zu vielen Negativ-Kandidaten wie in v8_measure uebersprungen)."""
     cand = set()
@@ -179,6 +197,42 @@ def run_s2x(models, curves, threads):
             del rec
 
 
+def _decode_into(rec, p, todo, have):
+    """Segmente `todo` (gleicher Ausschnitt wie hw2: words_measure.segment) mit rec dekodieren, regelmaessig in p sichern."""
+    by_item = {}
+    for k in todo:
+        src, item, _ = k.split("|")
+        by_item.setdefault((src, item), []).append(k)
+    t_dump = time.time()
+    for (src, item), ks in by_item.items():
+        x = V.load_item(src, item)
+        for k in ks: have[k] = S.decode(rec, W.segment(x, k).astype("float32"))
+        if time.time() - t_dump > 120: json.dump(have, open(p, "w")); t_dump = time.time()
+    json.dump(have, open(p, "w"))
+
+
+def run_extra(models, curves, threads):
+    """Whisper (de) und hw4 fuer E_TAGS an Schwellen >= E_THR_MIN; vorhandene Caches bleiben, es werden nur fehlende Segmente ergaenzt."""
+    for w in V.WORDS: S.WORDS.setdefault(W.key(w), {})["hot"] = W.SPEC[w]["hot"]
+    S.WORK111 = f"{V.RES}/hw"
+    os.makedirs(S.WORK111, exist_ok=True)
+    for tag in models:
+        if tag not in E_TAGS: continue
+        cand = ausschnitt_keys(curves[tag], E_THR_MIN)
+        jobs = [("whisper_de", wh_path(tag), WH_NAME)] + [(f"hw4/{w}", hw4_path(tag, w), f"{HW4_NAME}@{W.key(w)}") for w in V.WORDS]
+        for label, p, recname in jobs:
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            have = json.load(open(p)) if os.path.exists(p) else {}
+            todo = sorted(k for k in cand if k not in have)
+            print(f"{label} {tag}: {len(todo)} neue Segmente (von {len(cand)})", flush=True)
+            if not todo: continue
+            t0 = time.time()
+            rec = S.make_rec(recname, threads)
+            _decode_into(rec, p, todo, have)
+            print(f"{label} {tag}: {time.time() - t0:.0f} s", flush=True)
+            del rec
+
+
 # ---------- Zeilen je Variante ----------
 def variant_rows(tag, word, thr, vname, tx, ev, curves, hr, labels):
     """Zeilen (je Geraet) wie v8_measure.rows_for_cfg, aber mit Variantenregel. KeyError, wenn ein Stufe-2-Text fehlt.
@@ -200,9 +254,11 @@ def variant_rows(tag, word, thr, vname, tx, ev, curves, hr, labels):
 
 
 def load_tx(tag):
-    """{"s2"/"s2x": {Wort: {seg_key: Text} oder None}} aus den Caches."""
+    """{"s2"/"s2x"/"wh"/"hw4": {Wort: {seg_key: Text} oder None}} aus den Caches (wh: ein Cache fuer beide Woerter)."""
     def ld(p): return json.load(open(p)) if os.path.exists(p) else None
-    return {"s2": {w: ld(V.s2_path(tag, w)) for w in V.WORDS}, "s2x": {w: ld(s2x_path(tag, w)) for w in V.WORDS}}
+    wh = ld(wh_path(tag))
+    return {"s2": {w: ld(V.s2_path(tag, w)) for w in V.WORDS}, "s2x": {w: ld(s2x_path(tag, w)) for w in V.WORDS},
+            "wh": {w: wh for w in V.WORDS}, "hw4": {w: ld(hw4_path(tag, w)) for w in V.WORDS}}
 
 
 def grid(models, curves, labels, hr):
@@ -290,7 +346,7 @@ def analyse(models, curves, labels, rows, target):
         tx = load_tx(tag)
         for dev in V.DEVICES:
             for w in V.WORDS:
-                tw = {"s2": tx["s2"][w] or {}, "s2x": tx["s2x"][w] or {}}
+                tw = {src: m[w] or {} for src, m in tx.items()}
                 basis = "Stufe 1"
                 c = V.cv_cell(rows, dev, w, tag, ("-",), "real", target)
                 if c is None or c[2] is None:                      # Stufe 1 haelt die FA-Grenze in einem Fold nie ein:
@@ -395,7 +451,7 @@ def main():
     a = ap.parse_args()
     models = V.parse_models(a.model, not a.no_v7)
     curves = {t: V.load_curves(t) for t in models}
-    if not a.report_only: run_s2x(models, curves, a.threads)
+    if not a.report_only: run_s2x(models, curves, a.threads); run_extra(models, curves, a.threads)
     labels = V.filter_labels(W.read_labels())
     hr = {s: V.hours(s) for s in W.NEG_SRC + ["conf"]}
     rows, skipped = grid(models, curves, labels, hr)
