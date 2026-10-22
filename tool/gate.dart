@@ -351,6 +351,10 @@ Future<void> _globalSteps(Gate gate, {required bool tooling}) async {
     'tool/check_apk.sh',
     '--self-test',
   ], cacheSpec: const CacheSpec(['tool'], tools: []));
+  await gate.step('release_check self-test', 'bash', [
+    'tool/release_check.sh',
+    '--self-test',
+  ], cacheSpec: const CacheSpec(['tool'], tools: []));
 }
 
 /// Prüfumfang: `targets == null` heißt alle Pakete. `null` bei einem

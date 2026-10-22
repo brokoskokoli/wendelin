@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP133, WP129; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP133, WP129, WP135, WP136 (4 mit Freigabe); Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -79,11 +79,12 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP128 | Empfohlene Modelle markieren, Nachfrage bei Ausfall | gemergt 20c94d8b | K100, K104; Soll: retry_offer_card_test prüft „Stufe“ → findsNothing nicht (Mutant M4); Gerätetest docs/testing/m5/wp128.md |
 | WP129 | Trainiertes Wake-Word-Modell (v8a statt v7, K105) in der App, zweistufig | in Arbeit | K101, K105; nach WP126 (Wake-Dateien) |
 | WP130 | Wake-Word-Modell v8 (mehr Stimmen, Varianten, harte Negative) | gemergt (8f85b96c) | K105; Empfehlung v8a (Stufe 1 allein: Wendelin 80/77 %, Hey Wendelin 93/90 % bei 2 FA/h; v7 braucht dafür Stufe 2). Folgepunkte: M-AILABS-Lizenz vor Release-Asset belegen; Test „--allow-truncated fehlt im Volllauf“; cv_extract erkennt Abschneiden an Header-Grenze nicht (CV-Shard nicht gepinnt); v8c (hidden 256) zurückgestellt |
-| WP131 | Release-Signatur und automatischer APK-Build auf GitHub (Tag → Release) | geplant | K103; Start 2026-10-23, wartet auf Zertifikat als GitHub-Secret |
+| WP131 | Release-Signatur und automatischer APK-Build auf GitHub (Tag → Release) | gemergt (0501df86) | K109; Probe-Release geprüft (Signer CN=Wendelin, nicht Debug), ohne Secrets rot. Folgepunkte: Debug-Fallback-Warnung in check_apk.sh greift kaum (apksigner auf CN=Android Debug prüfen); versionCode-Anstieg ungeprüft; Tag-Schutzregel v* empfohlen; erster echter Tag v0.1.0 + Dispatch-Probe probe_missing_secrets auf main |
 | WP132 | Zwei Build-Varianten frei/Store (Vorbereitung) | geplant | K103; nur mit Go, nach WP131 und Gesamttest |
 | WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | in Arbeit | K105; Teil A sofort (niedrige Last), Teil B Training im Zeitfenster |
 | WP134 | Stopp-Wort ausbauen, Vorlagen-Vergleich für „Wendelin“ zentrieren | geplant | K107; nach WP129 (Wake-Dateien) |
-| WP135 | Smart Home schneller: Geräteliste, Synonyme, feste Bestätigung, Schnellweg ohne KI, Rollo ohne Rückfrage | geplant | K108; parallel zu Wake-Paketen möglich |
+| WP135 | Smart Home schneller: Geräteliste, Synonyme, feste Bestätigung, Schnellweg ohne KI, Rollo ohne Rückfrage | in Arbeit | K108; parallel zu Wake-Paketen möglich |
+| WP136 | Parakeet (NeMo) lädt nach dem Download nicht | in Arbeit | Testbefund 2026-10-23; Go Maintainer, 4. Sitzung |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
