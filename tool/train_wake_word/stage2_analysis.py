@@ -8,12 +8,14 @@ Am Stufe-1-Arbeitspunkt (Kreuz-Auswahl, Kalibrierung echt, je Geraet/Wort/Fold) 
 Dazu Varianten der Stufe-2-Regel (austauschbar, siehe VARIANTS): app (heute), locker_d3 / locker_cp (toleranter Abgleich),
 hey_opt (Hey Wendelin akzeptiert auch reines Wendelin), band (Stufe 2 nur unter einer Obergrenze des Stufe-1-Spitzenwerts) und
 ausschnitt (laengerer Vor-/Nachlauf, neu dekodiert, nur Schwellen >= 0.9, eigener Cache s2x/),
+norm (hw2 auf dem vorher auf Spitze 0,5 normalisierten Ausschnitt, Cache s2e/), hw3 (Hotword-Score 3) und blank1 / blank2 (hw2 mit sherpa-onnx blank_penalty 1,0 / 2,0)
+sind drei weitere Quellen wie hw4 (eigener Cache s2e/ mit den Parametern im Pfad, nur v8a, Schwellen >= 0.95, je allein und mit Band),
 whisper_de (Whisper small, language=de, ein Decode je Segment fuer beide Woerter, Cache s2w/) und hw4 (Parakeet-Hotword-Score 4, Cache s2h/),
 beide gleicher Ausschnitt wie hw2, nur Modell v8a und Schwellen >= 0.95, je auch mit Band (_band999 / _band995). app_ge09 ist die Kontrolle fuer
 ausschnitt (gleiche Schwellen, heutiger Ausschnitt).
 
 Abschnitt 6 der Ausgabe zaehlt bei fester Stufe-1-Schwelle (--fixed-thr, Standard 0.98, nur v8a) echte Rufe und Verwechsler je Spitzenwert-Band
-sowie Treffer und durchkommende Ereignisse je Variante (keine, app, band999, band995, whisper_de, hw4), nur aus den Caches.
+sowie Treffer und durchkommende Ereignisse je Variante (keine, app, band999, band995, whisper_de, hw4, norm, hw3, blank1, blank2 je auch mit Band), nur aus den Caches.
 
 Ausgabe nur lokal (nie im Repo): $RES/stage2_table.md (Zahlen) und $RES/stage2_lost.local.md (Transkripte).
 Lauf (K=~/wendelin-models/kws, vorher `memory_pressure | tail -1`: frei >= 30 %):
@@ -36,6 +38,13 @@ PRE_X, TAIL_X = 3.0, 1.8                       # Ausschnitt-Variante: Vorlauf/Na
 X_THR_MIN = 0.9                                # nur Segmente an Schwellen >= 0.9 werden neu dekodiert
 E_THR_MIN = 0.95                               # whisper_de / hw4: nur Segmente an Schwellen >= 0.95
 E_TAGS = ("v8a",)                              # whisper_de / hw4 nur fuer dieses Modell
+# Weitere Stufe-2-Quellen: Variante -> (Quelle, Cache-Name mit Parametern, make_rec-Name, Normalisierungs-Spitze oder None, blank_penalty)
+EXTRA = {
+    "norm": ("nm", "hw2-norm0.5", "parakeet-hw2", 0.5, 0.0),
+    "hw3": ("h3", "parakeet-hw3.0", "parakeet-hw3", None, 0.0),
+    "blank1": ("b1", "hw2-bp1.0", "parakeet-hw2", None, 1.0),
+    "blank2": ("b2", "hw2-bp2.0", "parakeet-hw2", None, 2.0),
+}
 WH_NAME, HW4_NAME = "whisper-small", "parakeet-hw4.0"          # station_measure.make_rec (Whisper mit language="de"; Hotword-Score 4)
 
 
@@ -96,7 +105,7 @@ VARIANTS = {
     "ausschnitt": dict(rule=rule_app, ceil=None, thr_min=X_THR_MIN, src="s2x"),
 }
 # Weitere Stufe-2-Erkenner (eigene Text-Quelle, eigener Cache), je allein und mit Band
-for _src, _name in (("wh", "whisper_de"), ("hw4", "hw4")):
+for _src, _name in (("wh", "whisper_de"), ("hw4", "hw4")) + tuple((v[0], k) for k, v in EXTRA.items()):
     VARIANTS[_name] = dict(rule=rule_app, ceil=None, thr_min=E_THR_MIN, src=_src)
     for _b in (999, 995):
         VARIANTS[f"{_name}_band{_b}"] = dict(rule=rule_app, ceil=_b / 1000, thr_min=E_THR_MIN, src=_src)
@@ -161,6 +170,19 @@ def wh_path(tag):
 def hw4_path(tag, word): return f"{V.RES}/s2h/{V.ctag(tag)}-{HW4_NAME}/{HW4_NAME}@{W.key(word)}.json"
 
 
+def extra_path(tag, vname, word):
+    """Cache der EXTRA-Quellen; Parameter (Normalisierung, Score, blank_penalty) stehen im Namen, kein Wort-Teil kollidiert mit s2/ s2x/ s2h/."""
+    label = EXTRA[vname][1]
+    return f"{V.RES}/s2e/{V.ctag(tag)}-{label}/{label}@{W.key(word)}.json"
+
+
+def normalize_peak(x, peak=0.5):
+    """Ausschnitt auf Betrags-Spitze `peak` skalieren (Stille bleibt unveraendert)."""
+    x = np.asarray(x, "float32")
+    m = float(np.abs(x).max()) if x.size else 0.0
+    return x if m <= 0 else (x * (peak / m)).astype("float32")
+
+
 def ausschnitt_keys(curves, thr_min=X_THR_MIN):
     """seg_keys der Ereignisse an Schwellen >= thr_min (Konfigurationen mit zu vielen Negativ-Kandidaten wie in v8_measure uebersprungen)."""
     cand = set()
@@ -200,7 +222,7 @@ def run_s2x(models, curves, threads):
             del rec
 
 
-def _decode_into(rec, p, todo, have):
+def _decode_into(rec, p, todo, have, norm=None):
     """Segmente `todo` (gleicher Ausschnitt wie hw2: words_measure.segment) mit rec dekodieren, regelmaessig in p sichern."""
     by_item = {}
     for k in todo:
@@ -209,29 +231,32 @@ def _decode_into(rec, p, todo, have):
     t_dump = time.time()
     for (src, item), ks in by_item.items():
         x = V.load_item(src, item)
-        for k in ks: have[k] = S.decode(rec, W.segment(x, k).astype("float32"))
+        for k in ks:
+            seg = W.segment(x, k).astype("float32")
+            have[k] = S.decode(rec, seg if norm is None else normalize_peak(seg, norm))
         if time.time() - t_dump > 120: json.dump(have, open(p, "w")); t_dump = time.time()
     json.dump(have, open(p, "w"))
 
 
 def run_extra(models, curves, threads):
-    """Whisper (de) und hw4 fuer E_TAGS an Schwellen >= E_THR_MIN; vorhandene Caches bleiben, es werden nur fehlende Segmente ergaenzt."""
+    """Whisper (de), hw4 und die EXTRA-Quellen (norm, hw3, blank) fuer E_TAGS an Schwellen >= E_THR_MIN; vorhandene Caches bleiben, es werden nur fehlende Segmente ergaenzt."""
     for w in V.WORDS: S.WORDS.setdefault(W.key(w), {})["hot"] = W.SPEC[w]["hot"]
     S.WORK111 = f"{V.RES}/hw"
     os.makedirs(S.WORK111, exist_ok=True)
     for tag in models:
         if tag not in E_TAGS: continue
         cand = ausschnitt_keys(curves[tag], E_THR_MIN)
-        jobs = [("whisper_de", wh_path(tag), WH_NAME)] + [(f"hw4/{w}", hw4_path(tag, w), f"{HW4_NAME}@{W.key(w)}") for w in V.WORDS]
-        for label, p, recname in jobs:
+        jobs = [("whisper_de", wh_path(tag), WH_NAME, None, 0.0)] + [(f"hw4/{w}", hw4_path(tag, w), f"{HW4_NAME}@{W.key(w)}", None, 0.0) for w in V.WORDS]
+        jobs += [(f"{vn}/{w}", extra_path(tag, vn, w), f"{e[2]}@{W.key(w)}", e[3], e[4]) for vn, e in EXTRA.items() for w in V.WORDS]
+        for label, p, recname, norm, bp in jobs:
             os.makedirs(os.path.dirname(p), exist_ok=True)
             have = json.load(open(p)) if os.path.exists(p) else {}
             todo = sorted(k for k in cand if k not in have)
             print(f"{label} {tag}: {len(todo)} neue Segmente (von {len(cand)})", flush=True)
             if not todo: continue
             t0 = time.time()
-            rec = S.make_rec(recname, threads)
-            _decode_into(rec, p, todo, have)
+            rec = S.make_rec(recname, threads, blank_penalty=bp)
+            _decode_into(rec, p, todo, have, norm)
             print(f"{label} {tag}: {time.time() - t0:.0f} s", flush=True)
             del rec
 
@@ -257,11 +282,12 @@ def variant_rows(tag, word, thr, vname, tx, ev, curves, hr, labels):
 
 
 def load_tx(tag):
-    """{"s2"/"s2x"/"wh"/"hw4": {Wort: {seg_key: Text} oder None}} aus den Caches (wh: ein Cache fuer beide Woerter)."""
+    """{"s2"/"s2x"/"wh"/"hw4"/EXTRA-Quellen: {Wort: {seg_key: Text} oder None}} aus den Caches (wh: ein Cache fuer beide Woerter)."""
     def ld(p): return json.load(open(p)) if os.path.exists(p) else None
     wh = ld(wh_path(tag))
     return {"s2": {w: ld(V.s2_path(tag, w)) for w in V.WORDS}, "s2x": {w: ld(s2x_path(tag, w)) for w in V.WORDS},
-            "wh": {w: wh for w in V.WORDS}, "hw4": {w: ld(hw4_path(tag, w)) for w in V.WORDS}}
+            "wh": {w: wh for w in V.WORDS}, "hw4": {w: ld(hw4_path(tag, w)) for w in V.WORDS},
+            **{e[0]: {w: ld(extra_path(tag, vn, w)) for w in V.WORDS} for vn, e in EXTRA.items()}}
 
 
 def grid(models, curves, labels, hr):
@@ -370,7 +396,7 @@ def analyse(models, curves, labels, rows, target):
 
 # ---------- Feste Stufe-1-Schwelle: Spitzenwert-Baender, Treffer und durchkommende Ereignisse ----------
 FIXED_THR = 0.98
-FIXED_VARIANTS = ("-", "app", "band999", "band995", "whisper_de", "hw4")            # "-" = Stufe 1 allein
+FIXED_VARIANTS = ("-", "app", "band999", "band995", "whisper_de", "hw4") + tuple(f"{v}{b}" for v in EXTRA for b in ("", "_band999", "_band995"))            # "-" = Stufe 1 allein
 FIXED_SRC = ("neg_huawei", "neg_handy2", "syn", "fleurs", "conf")
 BAND_EDGES = (0.995, 0.999)
 BAND_NAMES = ("thr-0,995", "0,995-0,999", ">=0,999")
@@ -386,7 +412,7 @@ def fixed_pass(vn, word, tx, src, key, peak, thr):
     if vn == "-": return True
     var = VARIANTS[vn]
     if thr < var["thr_min"]: return None
-    t = tx[var["src"]][key] if vn == "app" else tx[var["src"]].get(key)           # hw2-Text muss da sein (KeyError), andere Quellen: None
+    t = tx[var["src"]][key] if vn == "app" else tx.get(var["src"], {}).get(key)           # hw2-Text muss da sein (KeyError), andere Quellen: None
     return None if t is None else passes_rule(var, word, t, peak)
 
 

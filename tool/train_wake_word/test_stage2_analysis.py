@@ -300,6 +300,65 @@ class FesteSchwelle(unittest.TestCase):
         self.assertIn("| band999 | 2/4 |", md)
 
 
+class ExtraQuellen(unittest.TestCase):
+    def test_normalisierung(self):
+        x = np.array([0.0, 0.02, -0.04, 0.01], "float32")
+        y = A.normalize_peak(x, 0.5)
+        self.assertAlmostEqual(float(np.abs(y).max()), 0.5, places=6)
+        np.testing.assert_allclose(y / y[2], x / x[2], atol=1e-6)               # nur skaliert, Form gleich
+        self.assertEqual(y.dtype, np.float32)
+        z = np.zeros(5, "float32")
+        np.testing.assert_array_equal(A.normalize_peak(z), z)                    # Stille: keine Division durch 0
+        self.assertEqual(A.normalize_peak(np.zeros(0, "float32")).size, 0)
+
+    def test_varianten_und_baender(self):
+        for n, (src, *_rest) in A.EXTRA.items():
+            self.assertEqual(A.VARIANTS[n]["src"], src); self.assertEqual(A.VARIANTS[n]["thr_min"], 0.95)
+            self.assertEqual(A.VARIANTS[n + "_band999"]["ceil"], 0.999); self.assertEqual(A.VARIANTS[n + "_band995"]["ceil"], 0.995)
+            self.assertIn(n, A.FIXED_VARIANTS); self.assertIn(n + "_band995", A.FIXED_VARIANTS)
+        self.assertEqual(len({v[0] for v in A.EXTRA.values()}), len(A.EXTRA))   # Quellen verschieden
+        self.assertEqual((A.EXTRA["norm"][3], A.EXTRA["blank1"][4], A.EXTRA["blank2"][4]), (0.5, 1.0, 2.0))
+
+    def test_cache_pfade_tragen_parameter_und_kollidieren_nicht(self):
+        paths = {A.extra_path("v8a", n, "Wendelin") for n in A.EXTRA} | {A.hw4_path("v8a", "Wendelin"), V.s2_path("v8a", "Wendelin"), A.s2x_path("v8a", "Wendelin")}
+        self.assertEqual(len(paths), len(A.EXTRA) + 3)
+        self.assertIn("norm0.5", A.extra_path("v8a", "norm", "Wendelin")); self.assertIn("bp2.0", A.extra_path("v8a", "blank2", "Wendelin"))
+        self.assertTrue(A.extra_path("v8a", "hw3", "Hey Wendelin").endswith("parakeet-hw3.0@hey_wendelin.json"))
+        self.assertNotEqual(A.extra_path("v8a", "blank1", "Wendelin"), A.extra_path("v8a", "blank2", "Wendelin"))
+
+    def test_load_tx_hat_quellen(self):
+        self.assertTrue({v[0] for v in A.EXTRA.values()} <= set(A.load_tx("nichtda")))
+
+    def test_fixed_pass_fehlende_quelle_ist_none(self):
+        self.assertIsNone(A.fixed_pass("norm", "Wendelin", {"s2": {}}, "syn", "k", 0.9, 0.98))
+        self.assertTrue(A.fixed_pass("norm", "Wendelin", {"nm": {"k": "Wendelin"}}, "syn", "k", 0.9, 0.98))
+        self.assertTrue(A.fixed_pass("blank1_band999", "Wendelin", {"b1": {"k": "Hallo"}}, "syn", "k", 0.9995, 0.98))
+
+
+class MakeRecBlankPenalty(unittest.TestCase):
+    def _call(self, **kw):
+        import types, station_measure as SM
+        seen = {}
+        fake = types.SimpleNamespace(OfflineRecognizer=types.SimpleNamespace(from_transducer=lambda **k: seen.update(k) or "rec"))
+        old = sys.modules.get("sherpa_onnx"); sys.modules["sherpa_onnx"] = fake
+        old_exists = os.path.exists
+        os.path.exists = lambda p: True
+        old_wd = (SM.WORK, SM.WORK111); SM.WORK = SM.WORK111 = os.path.join(os.environ.get("TMPDIR", "/tmp"), "s2a_test")
+        SM.WORDS.setdefault("wendelin", {})["hot"] = ["Wendelin"]
+        try: SM.make_rec("parakeet-hw2@wendelin", 1, **kw)
+        finally:
+            os.path.exists = old_exists; SM.WORK, SM.WORK111 = old_wd
+            if old is None: del sys.modules["sherpa_onnx"]
+            else: sys.modules["sherpa_onnx"] = old
+        return seen
+
+    def test_standard_unveraendert(self):
+        self.assertNotIn("blank_penalty", self._call())
+
+    def test_penalty_durchgereicht(self):
+        self.assertEqual(self._call(blank_penalty=2.0)["blank_penalty"], 2.0)
+
+
 class Ausgabe(unittest.TestCase):
     def test_render_ohne_transkripte(self):
         op = {("huawei", "Wendelin", "m"): {"basis": "Stufe 1", "n1": 3, "lost": [{"block": 5, "thr": 0.9, "texts": ["GEHEIMTEXT"], "cat": "leer", "rec": {"ausschnitt": True}}],
