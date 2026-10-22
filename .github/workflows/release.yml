@@ -39,7 +39,7 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
           ANDROID_KEYSTORE_PASSWORD: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
-          ANDROID_KEY_ALIAS: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEY_ALIAS || '' }}
+          ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEY_PASSWORD || '' }}
         run: tool/release_check.sh secrets
       - name: Version und Name
@@ -113,7 +113,7 @@ jobs:
         env:
           WENDELIN_REQUIRE_RELEASE_SIGNING: '1'
           ANDROID_KEYSTORE_PASSWORD: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
-          ANDROID_KEY_ALIAS: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEY_ALIAS || '' }}
+          ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEY_PASSWORD || '' }}
         run: flutter build apk --release --target-platform android-arm64
       - name: APK prüfen (K7, Manifest)
@@ -125,7 +125,7 @@ jobs:
         id: sign
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
-          ANDROID_KEY_ALIAS: ${{ inputs.probe_missing_secrets != true && secrets.ANDROID_KEY_ALIAS || '' }}
+          ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
           APK_NAME: ${{ steps.meta.outputs.apk }}
         run: |
           tool/release_check.sh cert-match app/build/app/outputs/flutter-apk/app-release.apk "$ANDROID_KEYSTORE_PATH" >"$RUNNER_TEMP/cert.txt" || { cat "$RUNNER_TEMP/cert.txt"; exit 1; }
@@ -182,7 +182,8 @@ jobs:
           (cd dist && sha256sum -c SHA256SUMS)
           prev="$(git describe --tags --abbrev=0 --match 'v*' "$TAG^" 2>/dev/null || true)"
           range="${prev:+$prev..}$TAG"
-          git log --merges --pretty='- %s' "$range" >notes-body.txt
+          # Ohne früheren v*-Tag nur die letzten 50 Merges (nicht die ganze Historie).
+          git log --merges -n 50 --pretty='- %s' "$range" >notes-body.txt
           {
             if [ -s notes-body.txt ]; then
               echo "## Änderungen seit ${prev:-Beginn}"; echo; cat notes-body.txt; echo

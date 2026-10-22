@@ -37,8 +37,9 @@ Unter Settings → Secrets and variables → Actions (Repository-Secrets):
 | --- | --- |
 | `ANDROID_KEYSTORE_BASE64` | Keystore als Base64: `base64 -i wendelin-release.jks \| pbcopy` (macOS) |
 | `ANDROID_KEYSTORE_PASSWORD` | Store-Passwort |
-| `ANDROID_KEY_ALIAS` | Alias (`wendelin`) |
 | `ANDROID_KEY_PASSWORD` | Schlüsselpasswort |
+
+Der Alias ist kein Geheimnis und eine **Repo-Variable** (Settings → Secrets and variables → Actions → Variables): `gh variable set ANDROID_KEY_ALIAS --body wendelin`. Als Secret würde GitHub den Wert („wendelin“) überall im Log maskieren und Job-Outputs mit dem APK-Namen verwerfen.
 
 Empfehlung: Tags `v*` per Tag-Schutzregel (Settings → Rules) auf den Maintainer beschränken, weil jeder mit Schreibrecht sonst einen Release-Lauf mit den Secrets auslösen kann.
 

@@ -9,7 +9,7 @@
 #   tool/release_check.sh --self-test
 #
 # Umgebung: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
-# ANDROID_KEY_PASSWORD (secrets, cert-match); APKSIGNER, KEYTOOL (Pfad, auch für Attrappen).
+# ANDROID_KEY_PASSWORD (ANDROID_KEY_ALIAS ist eine Repo-Variable, die übrigen Secrets; cert-match); APKSIGNER, KEYTOOL (Pfad, auch für Attrappen).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,8 +22,8 @@ cmd_secrets() {
   for n in "${SECRETS[@]}"; do
     [ -n "${!n:-}" ] || missing+=("$n")
   done
-  [ ${#missing[@]} -eq 0 ] || fail "Release-Secrets fehlen oder sind leer: ${missing[*]} (Anleitung: docs/RELEASE.md)"
-  echo "ok: alle ${#SECRETS[@]} Release-Secrets sind gesetzt"
+  [ ${#missing[@]} -eq 0 ] || fail "Release-Secrets/-Variable fehlen oder sind leer: ${missing[*]} (ANDROID_KEY_ALIAS ist eine Repo-Variable, Anleitung: docs/RELEASE.md)"
+  echo "ok: alle ${#SECRETS[@]} Release-Werte (drei Secrets, Variable ANDROID_KEY_ALIAS) sind gesetzt"
 }
 
 cmd_prerelease() {
@@ -46,14 +46,34 @@ cmd_cert_match() {
   local apk="${1:?apk}" ks="${2:?keystore}" signer keytool apk_fp ks_fp
   signer="${APKSIGNER:-}"
   if [ -z "$signer" ]; then
-    signer="$(ls -d "${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
+    # Nur stabile Build-Tools (Verzeichnisname ohne „-rc“ o. Ä.), die höchste Version.
+    local sdk bt
+    sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
+    for bt in $(ls "$sdk/build-tools" 2>/dev/null | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -V); do
+      [ -x "$sdk/build-tools/$bt/apksigner" ] && signer="$sdk/build-tools/$bt/apksigner"
+    done
   fi
   [ -x "$signer" ] || fail "apksigner nicht gefunden"
+  echo "apksigner: $signer (Version $("$signer" --version 2>&1 | head -1))"
   keytool="${KEYTOOL:-keytool}"
-  local out
-  out="$("$signer" verify --print-certs "$apk")" || fail "apksigner verify fehlgeschlagen"
-  apk_fp="$(printf '%s\n' "$out" | sed -nE 's/^Signer #1 certificate SHA-256 digest: *//p' | head -1 | norm)"
-  [ -n "$apk_fp" ] || fail "Kein Signer-Zertifikat in der APK gefunden"
+  local out rc=0
+  out="$("$signer" verify --print-certs "$apk" 2>&1)" || rc=$?
+  if [ $rc -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    fail "apksigner verify fehlgeschlagen (Exit $rc)"
+  fi
+  # „Signer #1 certificate …“ oder „Signer (minSdkVersion=…) certificate …“; mehrere Signer: alle müssen gleich sein.
+  local fps
+  fps="$(printf '%s\n' "$out" | sed -nE 's/^Signer.* certificate SHA-256 digest: *//p' | norm | sort -u)"
+  if [ -z "$fps" ]; then
+    echo "apksigner-Ausgabe (Zertifikate sind öffentlich):" >&2; printf '%s\n' "$out" >&2
+    fail "Kein Signer-Zertifikat in der APK gefunden"
+  fi
+  if [ "$(printf '%s\n' "$fps" | wc -l | tr -d ' ')" -ne 1 ]; then
+    printf '%s\n' "$out" >&2
+    fail "APK enthält mehrere Signer mit verschiedenen Zertifikaten"
+  fi
+  apk_fp="$fps"
   ks_fp="$("$keytool" -list -v -keystore "$ks" -alias "$ANDROID_KEY_ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD 2>/dev/null \
     | sed -nE 's/^[[:space:]]*SHA-?256: *//p' | head -1 | norm)" || true
   [ -n "$ks_fp" ] || fail "Fingerabdruck aus dem Keystore nicht lesbar (Alias oder Passwort falsch?)"
@@ -96,6 +116,28 @@ self_test() {
   expect_ok "Zertifikat gleich" cmd_cert_match "$d/x.apk" "$d/x.jks"
   echo "AA:BB:DD" >"$d/fp"
   expect_fail "Zertifikat verschieden (z. B. Debug-Schlüssel)" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  # Format „Signer (minSdkVersion=…)“ und mehrere Signer
+  echo "AA:BB:CC" >"$d/fp"; printf '#!/usr/bin/env bash\necho "	 SHA256: $(cat "$(dirname "$0")/fp")"\n' >"$d/keytool"
+  printf '#!/usr/bin/env bash\necho "Signer (minSdkVersion=24, maxSdkVersion=34) certificate SHA-256 digest: AABBCC"\n' >"$d/apksigner"
+  expect_ok "Signer-Format mit minSdkVersion" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: aabbcc"\necho "Signer #2 certificate SHA-256 digest: aabbcc"\n' >"$d/apksigner"
+  expect_ok "mehrere Signer, gleiches Zertifikat" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: aabbcc"\necho "Signer #2 certificate SHA-256 digest: 112233"\n' >"$d/apksigner"
+  expect_fail "mehrere Signer, verschiedene Zertifikate" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  printf '#!/usr/bin/env bash\n[ \"${1:-}\" = verify ] && echo \"Verified using v2 scheme: true\"\nexit 0\n' >"$d/apksigner"
+  expect_fail "Ausgabe ohne Zertifikatszeile" cmd_cert_match "$d/x.apk" "$d/x.jks"
+  local err
+  err="$( ( cmd_cert_match "$d/x.apk" "$d/x.jks" ) 2>&1 || true)"
+  case "$err" in *"Verified using v2 scheme"*) ;; *) echo "FEHLER Selbsttest: apksigner-Ausgabe fehlt im Log" >&2; rc=1 ;; esac
+  # Build-Tools-Auswahl: stabile Version vor -rc, apksigner-Version im Log
+  mkdir -p "$d/sdk/build-tools/35.0.0" "$d/sdk/build-tools/9.0.0" "$d/sdk/build-tools/37.0.0-rc1"
+  for v in 35.0.0 9.0.0 37.0.0-rc1; do
+    printf '#!/usr/bin/env bash\n[ "${1:-}" = --version ] && { echo %s; exit 0; }\necho "Signer #1 certificate SHA-256 digest: aabbcc"\n' "$v" >"$d/sdk/build-tools/$v/apksigner"
+    chmod +x "$d/sdk/build-tools/$v/apksigner"
+  done
+  err="$( ( unset APKSIGNER; ANDROID_SDK_ROOT="$d/sdk" cmd_cert_match "$d/x.apk" "$d/x.jks" ) 2>&1 || true)"
+  case "$err" in *"build-tools/35.0.0/apksigner (Version 35.0.0)"*) ;; *) echo "FEHLER Selbsttest: falsche apksigner-Auswahl: $err" >&2; rc=1 ;; esac
+  echo "AA:BB:CC" >"$d/fp"; printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: aabbcc"\n' >"$d/apksigner"
   : >"$d/fp"; printf '#!/usr/bin/env bash\nexit 1\n' >"$d/keytool"
   expect_fail "Keystore nicht lesbar" cmd_cert_match "$d/x.apk" "$d/x.jks"
   printf '#!/usr/bin/env bash\nexit 1\n' >"$d/apksigner"
