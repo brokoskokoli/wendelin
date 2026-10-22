@@ -84,6 +84,7 @@ void main() {
         service: _Svc(dir),
         hotwordsDirectory: hw,
       );
+      expect(WakeClassifierRules.parakeetHotwords, ['Wendelin']);
       expect(f, isNotNull);
       expect(File(f!.hotwords!.file).readAsStringSync(), 'Wendelin\n');
       expect(f.hotwords!.score, 2.0);

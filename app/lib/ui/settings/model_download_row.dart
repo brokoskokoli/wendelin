@@ -49,6 +49,10 @@ class ModelDownloadRow extends ConsumerWidget {
   /// Whether „Löschen“ is offered for an installed model.
   final bool deletable;
 
+  String _title(BuildContext context) => recommended
+      ? '${model.displayName} ${context.l10n.modelRowRecommended}'
+      : model.displayName;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(
@@ -95,9 +99,7 @@ class ModelDownloadRow extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SettingsRow(
-          title: recommended
-              ? '${model.displayName} ${context.l10n.modelRowRecommended}'
-              : model.displayName,
+          title: _title(context),
           detail: [
             detail,
             if (model.ramBytes case final ram?)

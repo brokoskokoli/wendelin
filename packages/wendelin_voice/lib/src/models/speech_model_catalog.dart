@@ -98,7 +98,7 @@ final class SpeechModelCatalog {
   static const whisperSmall = SpeechModel(
     id: 'whisper-small',
     kind: SpeechModelKind.stt,
-    displayName: 'Whisper small – genauer (empfohlen)',
+    displayName: 'Whisper small – genauer',
     languages: {'de', 'fr', 'en'},
     license: 'MIT (OpenAI Whisper)',
     source: _hfSource,

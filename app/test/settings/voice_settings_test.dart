@@ -59,7 +59,7 @@ Finder action(String model, String label) => find.descendant(
 
 void main() {
   const base = 'Whisper base – schnell, für schwache Geräte';
-  const small = 'Whisper small – genauer (empfohlen)';
+  const small = 'Whisper small – genauer';
   const vad = 'Silero VAD';
 
   group('Onboarding-Schritt „Spracherkennung laden“', () {
@@ -350,21 +350,6 @@ void main() {
       await settle(tester);
       expect(find.byType(VoiceScreen), findsOneWidget);
       expect(AppRoutes.voice, '/settings/voice');
-    });
-
-    testWidgets('Parakeet trägt „(empfohlen)“, Whisper base nicht', (
-      tester,
-    ) async {
-      await pumpScreen(tester, env0(), const VoiceScreen());
-      expect(
-        find.text('${SpeechModelCatalog.parakeetV3.displayName} (empfohlen)'),
-        findsOneWidget,
-      );
-      expect(find.text(base), findsWidgets);
-      expect(
-        find.text('${SpeechModelCatalog.whisperBase.displayName} (empfohlen)'),
-        findsNothing,
-      );
     });
 
     testWidgets('Modell, Sprache, Ausgabe, Tempo, Feinabstimmung speichern', (
@@ -710,7 +695,7 @@ void main() {
       expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-small');
       expect(find.text(small), findsOneWidget);
       expect(find.text(base), findsOneWidget);
-      expect(find.textContaining('genauer (empfohlen)'), findsOneWidget);
+      expect(find.textContaining('genauer'), findsOneWidget);
       expect(
         find.textContaining('schnell, für schwache Geräte'),
         findsOneWidget,

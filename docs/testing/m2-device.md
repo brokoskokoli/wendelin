@@ -50,7 +50,7 @@ Wendelin öffnen. Das Onboarding hat vier Schritte, jeder lässt sich übersprin
 1. **Willkommen**: Sprache wählen (für diesen Test „Deutsch“).
 2. **Sprachmodell (Provider)**: „Provider einrichten“ → Vorlage „Claude“ (Anthropic) → API-Key einfügen (ein Passwort-Manager mit Android-Autofill kann das Feld füllen) → „Verbindung testen“. Über der Modellliste steht dann „Verbindung steht“ mit grünem Haken. Als Modell z. B. Claude Haiku → Datenschutzstufe lassen → „Speichern“.
 3. **Spracherkennung laden**: Whisper-Modell antippen, dann den einen Knopf „Laden“.
-   - Vorausgewählt ist „Whisper small – genauer (empfohlen)“: 375 MB, erkennt Deutsch, Französisch und Namen deutlich besser (Wortfehler auf unseren Testsätzen 9 % statt 21 %; Standard seit WP33). „Whisper base – schnell, für schwache Geräte“: 161 MB, etwa dreimal schneller, verfehlt aber öfter Eigennamen wie Notiztitel.
+   - Vorausgewählt ist „Whisper small – genauer“: 375 MB, erkennt Deutsch, Französisch und Namen deutlich besser (Wortfehler auf unseren Testsätzen 9 % statt 21 %; Standard seit WP33). „Whisper base – schnell, für schwache Geräte“: 161 MB, etwa dreimal schneller, verfehlt aber öfter Eigennamen wie Notiztitel.
    - Hat das Telefon wenig Arbeitsspeicher (unter 3,5 GB laut System, also Geräte mit 3 GB oder weniger), ist base vorausgewählt, und der Schritt nennt den Grund.
    - Eine bestehende Installation behält ihr Modell. War nur base geladen, bleibt base aktiv; Einstellungen → Sprache empfiehlt dann small.
    - Silero VAD (0,6 MB, die Sprachaktivitätserkennung) gehört dazu und wird automatisch mitgeladen.
