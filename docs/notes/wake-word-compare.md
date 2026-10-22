@@ -375,3 +375,108 @@ N_CV=0 NJ=4 THREADS=4 TAG=a nice -n 5 tool/train_wake_word/run_v8.sh alle
 TAG=b STEPS=10000 SEED=2 THREADS=4 nice -n 5 tool/train_wake_word/run_v8.sh train
 nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/v8_measure.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --model v8b=$K/wp130/out/wendelin_wp130_b.onnx
 ```
+
+## Stufe 2 und v8-syn (WP133)
+
+### A. Nutzen von Stufe 2 (Analyse ohne Training, 2026-10-22)
+
+Skript `tool/train_wake_word/stage2_analysis.py` (Selbsttest `test_stage2_analysis.py`). Es nutzt die Stufe-1-Kurven und Stufe-2-Texte aus WP130 (lokal, `$K/wp130/results`), gleicher Prüf-Split, gleiche Kreuzauswahl (2 FA/h, Kalibrierung echte Negativ-Aufnahme), Wilson 95 %. Transkripte bleiben lokal; hier nur Zahlen und Kategorien. Begriffe: **Ereignis** = Stufe-1-Wert über der Schwelle; **Spitzenwert** = Maximum von Stufe 1 im Ereignis; **Band** = Stufe 2 prüft nur Ereignisse mit Spitzenwert unter der Obergrenze, darüber nimmt die App direkt an.
+
+**Verworfene echte Rufe (v8a, Stufe-1-Arbeitspunkt):** Stufe 1 trifft 12/15, 14/15, 23/30, 27/30 (Huawei W, Huawei HW, handy2 W, handy2 HW); hw2 verwirft davon 7, 9, 5, 9 (30 Rufe). Kategorien: leer 10, anderes Wort 14, abgeschnitten (nur „Hey“) 3, „Hey“ fehlt 3, Schreibvariante 0. „Anderes Wort“ ist fast immer eine englische Lesart: Parakeet v3 wählt die Sprache selbst und fällt bei kurzen Ausschnitten oft ins Englische. v7 sieht gleich aus.
+
+**Spitzenwerte (v8a, feste Schwelle 0,98, beide Wörter, 90 Prüf-Rufe; Verwechsler 300 Clips, für beide Wörter dieselben):**
+
+| Spitzenwert Stufe 1 | echte Rufe | davon besteht hw2 | Verwechsler-Ereignisse | davon besteht hw2 (W / HW) |
+|---|---|---|---|---|
+| 0,98–0,995 | 8 | 5 | 13 | 3 / 2 |
+| 0,995–0,999 | 23 | 15 | 8 | 0 / 0 |
+| ≥ 0,999 | 46 | 26 | 2 | 2 / 0 |
+| nicht erkannt | 13 | – | – | – |
+
+Stufe 1 ist ein Modell für beide Wörter, die Verwechsler-Ereignisse sind daher gleich; erst die Stufe-2-Regel unterscheidet („Hey Wendelin“ verlangt ein Hey-Wort und lässt weniger Verwechsler durch). Auf der echten Negativ-Aufnahme filtert hw2 bei 0,98 höchstens 1 Ereignis, bei syn und FLEURS 1–3.
+
+**Varianten (v8a, Treffer Kreuzauswahl; Verwechsler und FA bei fester Schwelle 0,98).** Zwei Bezugszeiten: „Spitze“ = Spitzenwert im Ereignis mit 1,5 s Vorschau (`peak_at` in `stage2_analysis.py`), den die App nicht hat; „App“ = Entscheidungsfenster der App mit Halten (`stage2_cut.py`, Ausschnitt 2,0 s / 0,9 s). **Maßgeblich ist App**, die Spitze-Zeilen sind optimistisch.
+
+| Stufe 2 | Bezug | Huawei W | Huawei HW | handy2 W | handy2 HW | Verwechsler W / HW (von 300) | FA syn / FLEURS / echt |
+|---|---|---|---|---|---|---|---|
+| keine (Stufe 1 allein) | – | 80 % [55–93] | 93 % [70–99] | 77 % [59–88] | 90 % [74–97] | 23 / 23 | 3 / 1 / 0–1 |
+| hw2 (heute) | Spitze | 60 % [36–80] | 40 % [20–64] | 67 % [49–81] | 63 % [46–78] | 5 / 2 | 0 / 0 / 0 |
+| hw2 + Band 0,999 | Spitze | 87 % [62–96] | 80 % [55–93] | 90 % [74–97] | 73 % [56–86] | 5 / 4 | 1 / 1 / 0 |
+| hw2 + Band 0,995 | Spitze | 80 % [55–93] | 93 % [70–99] | 93 % [79–98] | 90 % [74–97] | 13 / 12 | 2 / 1 / 0 |
+| hw2 (heute) | **App** | 47 % [25–70] | 40 % [20–64] | 63 % [46–78] | 60 % [42–75] | 5 / 2 | 0 / 0 / 0 |
+| hw2 + Band 0,999 | **App** | 67 % [42–85] | 87 % [62–96] | 80 % [63–90] | 73 % [56–86] | 5 / 4 | 1 / 1 / 0 |
+| hw2 + Band 0,995 | **App** | 80 % [55–93] | 93 % [70–99] | 83 % [66–93] | 83 % [66–93] | 12 / 11 | 2 / 1 / 0 |
+| hw2 + Pegel-Norm. + Band 0,999 | **App** | 73 % [48–89] | 80 % [55–93] | 83 % [66–93] | 73 % [56–86] | 5 / 4 | 1 / 1 / 0 |
+| Whisper small, Sprache de | – | 40 % [20–64] | 20 % [7–45] | 53 % [36–70] | 37 % [22–54] | 3 / 1 | 0 / 0 / 0 |
+| Parakeet Hotword-Score 4 | – | 73 % [48–89] | 93 % [70–99] | 80 % [63–90] | 87 % [70–95] | 13 / 10 | 1–2 / 1 / 0–1 |
+
+Stufe 1 allein ändert sich mit dem Bezug nicht. Die Spitze-Zeilen wählen in der Kreuzauswahl aus Schwellen 0,2–0,99 (`stage2_analysis.py`), die App-Zeilen nur aus 0,95–0,99 (`stage2_cut.py`); der Unterschied Spitze → App mischt damit beide Effekte: Band 0,999 74 → 73 (Raster) → 69 (Bezugszeit), hw2 54 → 53 → 50, Band 0,995 81 → 79 → 76, also etwa 1 Treffer auf das Raster und etwa 4 auf die Bezugszeit. Manche Spitze-Arbeitspunkte liegen bei 0,2–0,9 mit mehr Verwechslern, als die Spalte „bei 0,98“ zeigt. Unter App-Bezug bleibt die Rangfolge gleich: Summe der vier Zellen (von 90 Rufen) Band 0,995 76 > Band 0,999 69 > hw2 50, mit Spitze 81 > 74 > 54. Der Abstand zwischen Band 0,995 und 0,999 bleibt bei 7 Treffern, die Intervalle überlappen in jeder Zelle. Band 0,999 verliert unter App-Bezug 5 Treffer (Huawei Wendelin 13 → 10, handy2 Wendelin 27 → 24, Huawei „Hey Wendelin“ 12 → 13), Band 0,995 und hw2 ebenfalls 5 bzw. 4. Bei fester Schwelle 0,98 stimmen die Bezüge nur für hw2 + Band 0,999 überein (66 Treffer, Verwechsler 5 / 4); hw2 allein hat 47 statt 46, Band 0,995 73 Treffer und Verwechsler 12 / 11 statt 13 / 12.
+
+**Auswahlverzerrung:** Band (0,999) und Variante wurden auf denselben Prüfdaten gewählt, auf denen sie hier berichtet werden; die Trefferzahlen sind damit eher optimistisch, und alle Unterschiede zwischen den Bändern liegen innerhalb der Wilson-Intervalle. Eine Bestätigung auf frischen Daten (Teil B) steht aus.
+
+Ohne Wirkung (gleich hw2): Editierabstand 3, Kölner-Phonetik-Präfix, „Hey“ optional (holt 0–2 von 9). Längerer Ausschnitt (Vorlauf 3,0 s, Nachlauf 1,8 s) verschlechtert (27–57 %). Whisper mit fester Sprache Deutsch liefert deutsche, aber oft falsche Wörter und trifft seltener als Parakeet. Score 4 halluziniert das Hotword (mehrfach wiederholt) und lässt so viele Verwechsler durch wie Band 0,995.
+
+**Weitere Stufe-2-Varianten (v8a, feste Schwelle 0,98, 90 Rufe, Bezug Spitze; mit App-Bezug hw2 47, hw2 + Norm. 54, hw2 + Norm. + Band 0,999 66; Verwechsler W / HW von 300):** hw2 heute 46 Treffer, 5 / 2; hw2 mit Pegel-Normalisierung des Ausschnitts (Spitze 0,5) 52, 4 / 2; Hotword-Score 3 60, 7 / 4 (dazu 2 syn); `blank_penalty` 1 / 2 48 / 51, 5 / 2. Mit Band 0,999 liegen alle Varianten innerhalb weniger Treffer. In der Kreuzauswahl ist die Normalisierung gemischt (je Zelle −1 bis +4); kein Unterschied ist signifikant.
+
+**Plausibilität „leer“:** Kein Aufbaufehler. Der Ausschnitt entspricht der App (2,0 s vor bis 0,9 s nach dem Treffer), Neudekodieren reproduziert die Cache-Texte, 16 kHz. Bei 27 von 30 verlorenen Rufen liegt das Wort ganz im Ausschnitt; 3 sind abgeschnitten (Stufe 1 löst bei „Hey Wende…“ bzw. bei langen Äußerungen aus). Die „leeren“ Rufe sind leise (Wort −37 bis −43 dBFS gegen −27 bis −33 dBFS bei erkannten).
+
+**Ausschnitt und Parität mit der App** (`stage2_cut.py`, Aufruf `stage2_analysis.py --cut-only`): Die App entscheidet am Fenster mit dem Spitzenwert (Halten); das liegt 0–0,32 s (meist 0,08 s) nach der ersten Überschreitung, die bisher gemessen wurde. Bei fester Schwelle 0,98 geben beide Bezugszeiten für hw2 + Band 0,999 dasselbe (66 Treffer, Verwechsler 5 / 4); in der Kreuzauswahl nicht (Tabelle oben, App-Bezug 5 Treffer weniger). Vorlauf 1,2–2,0 s × Nachlauf 0,9–1,8 s liegen alle innerhalb ±3 Treffer; nur Vorlauf 2,5 s ist schlechter (hw2 allein 38–42 statt 46–47, nur ein Hinweis). App-Werte 2,0 s / 0,9 s bleiben.
+
+**Fehlalarme mit mehr Negativzeit** (`stage2_extra_neg.py`): zusätzlich FLEURS-de-Test ohne die erste Stunde (2,15 h) und Multilingual LibriSpeech Deutsch, Test-Split (14,29 h, CC-BY 4.0, nicht im Training; lokal). FA/h über alle Negativquellen ohne Verwechsler (20,6 h), v8a, Schwelle 0,98, Poisson 95 %:
+
+| Stufe 2 | Ereignisse | FA/h | Obergrenze |
+|---|---|---|---|
+| keine (Stufe 1 allein) | 28 | 1,36 | 1,96 |
+| hw2 immer | 0 | 0 | 0,18 |
+| hw2 + Band 0,999 | 3 | 0,15 | 0,43 |
+| hw2 + Band 0,995 | 9 | 0,44 | 0,83 |
+
+Belastbar ist vor allem MLS (14,3 h, 30 Sprecher, daher Obergrenze eher zu knapp). Das eine MLS-Ereignis bei Band 0,999 ist ein „Hallo“ (Spitzenwert 0,9996), ein Muster, das auch bei den Verwechslern auftaucht. Vorgelesene Sprache ersetzt keine lange Alltagsaufnahme (Fernsehen, Gespräche, Raumhall). **Nicht monoton in der Schwelle:** Mit Halten (App-Parität) startet bei niedrigerer Schwelle das Ereignis früher, wird beim ersten Abfall mit kleinerer Spitze entschieden, und die spätere höhere Spitze fällt in die Sperrzeit; das Ereignis geht dann an hw2 statt direkt durch (MLS: Ereignisse mit Spitze ≥ 0,999 gleich 0 / 1 / 1 bei 0,95 / 0,98 / 0,99). Das ist App-Verhalten, kein Rechenfehler, aber für die Wahl der Stufe-1-Schwelle (WP129) relevant: niedrigere Schwelle heißt weniger Direktannahmen.
+
+**Empfehlung (Maintainer bestätigt 2026-10-22):** Stufe 2 im Stationsmodus nur im **Band unter 0,999**: Spitzenwert ≥ 0,999 nimmt die App direkt an, darunter prüft hw2 wie bisher; Ausschnitt 2,0 s / 0,9 s bleibt. Gegenüber hw2 immer deutlich mehr Treffer (App-Bezug 69 statt 50 von 90) bei fast gleichem Verwechsler-Schutz (5 / 4 statt 5 / 2 von 300) und rund 0,15 FA/h (≤ 0,43) mehr. Band 0,995 bringt wenige Treffer mehr (76 von 90, Intervalle überlappen), aber mehr als doppelt so viele Verwechsler (12 / 11) und dreimal so viele Fehlalarme. Pegel-Normalisierung vor hw2 ist ein kleiner, kostenloser Zugewinn (optional). Tolerantere Regeln, längerer Ausschnitt, Whisper auf Deutsch, stärkerer Boost und `blank_penalty` sind nicht besser. Grundsätzlich tut sich ein allgemeiner Erkenner mit einem einzelnen, leisen Eigennamen schwer; ein wortspezifischer Prüfer (Bewertung „passt Wendelin“ oder Vorlagen-Vergleich) ist als Folgepunkt vorgeschlagen.
+
+**Vergleich der Wörter (Band 0,999):** mit App-Bezug Kreuzauswahl Wendelin 34/45, Hey Wendelin 35/45; feste Schwelle 31/45 gegen 35/45; Verwechsler 5 gegen 4 (mit Spitze: 40/45 gegen 34/45 und 32/45 gegen 34/45; die scheinbare Überlegenheit von „Wendelin“ verschwindet unter App-Bezug). Kein belastbarer Unterschied; Stufe 1 ist für beide dasselbe Modell, nur Stufe 2 trennt über das Hey-Wort.
+
+Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`): `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --threads 2 --model v8a=$K/wp130/out/wendelin_wp130_a.onnx` → `$K/wp130/results/stage2_table.md` (lokal). Die Zahlen bei fester Schwelle 0,98 (Spitzenwerte, Verwechsler, FA) stehen dort in Abschnitt 6 (Option `--fixed-thr`, Standard 0,98; `--report-only` rechnet nur aus den Caches), die Treffer-Spalten in Abschnitt 4. Ausschnitt: `… stage2_analysis.py --cut-only --model v8a=…` → `stage2_cut_table.md`. Negativquellen: `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_extra_neg.py --model v8a=$K/wp130/out/wendelin_wp130_a.onnx --threads 2` → `stage2_extra_neg.md` (lokal; lädt den MLS-Test-Split einmalig nach `$K/wp133/dl`).
+
+### B. v8a-syn gegen v8c-syn (2026-10-23)
+
+Frage: Bringt die Sprecheranpassung mit 29 echten Clips (v8a) etwas gegenüber einem Modell ganz ohne echte Positive, und hilft ein größeres Netz? Zwei Modelle nur mit synthetischen Positiven (kein echter Clip, Log `real_pos 0`, Sidecar `real_pos 0`, Prüfung `assert_syn_only`): **a-syn** (hidden 128) und **c-syn** (hidden 256), je 5000 Schritte, Seed 1, sonst wie v8a (Training 11 bzw. 18 min bei 2 Threads). v8a: 29 echte Clips, je 100-fach. Gleicher Prüf-Split, gleiche Kreuzauswahl (2 FA/h, Kalibrierung echt), Wilson 95 %. Die v7- und v8a-Zeilen sind mit Teil A identisch (Tabellen-Diff leer). Modelle, Kurven und Transkripte bleiben lokal; hier nur Zahlen.
+
+**1. Kreuzauswahl Stufe 1 (2 FA/h), Prüf-Split.** Zellen: Huawei W, Huawei HW, handy2 W, handy2 HW.
+
+| Modell | Huawei W | Huawei HW | handy2 W | handy2 HW | Summe (Wilson 95 %) | davon Wendelin | davon Hey Wendelin |
+|---|---|---|---|---|---|---|---|
+| v8a | 12/15 | 14/15 | 23/30 | 27/30 | 76/90, 84 % [76–91] | 35/45 | 41/45 |
+| a-syn | 11/15 | 9/15 | 22/30 | 17/30 | 59/90, 66 % [55–75] | 33/45 | 26/45 |
+| c-syn | 11/15 | 12/15 | 24/30 | 20/30 | 67/90, 74 % [65–82] | 35/45 | 32/45 |
+| v7 | keine Konfiguration unter dem Ziel | | | | | | |
+
+Zum Vergleich der Streuung: v8b (WP130, Seed 2, 10 000 Schritte) 14, 14, 22, 26 = 76/90, also gleich v8a; bei den Treffern ist die Seed-Streuung klein. Bei den Verwechslern ist sie es nicht: v8b verdoppelt sie mit anderem Seed (WP130, 15 % gegen 5–8 %). Mit Kalibrierung synthetisch + FLEURS findet Stufe 1 bei a-syn und c-syn keine Konfiguration unter dem Ziel (FA syn bei 0,99: a-syn 2,6, c-syn 1,6–3,1 je Stunde; v8a 1,0). Über alle Blöcke 1–6 (nur v7 und die Modelle ohne echte Positive): a-syn 24, 22, 22, 17 = 85/120, 71 % [62–78]; c-syn 25, 26, 24, 20 = 95/120, 79 % [71–85].
+
+**2. Feste Schwelle 0,98 (Spitze-Bezug, Ereignisse), Prüf-Split.** Verwechsler = Verwechsler-Ereignisse (300 Clips, Wendelin / Hey Wendelin, eine Zahl bei Gleichstand), syn = Ereignisse auf den synthetischen Negativen, echt = Ereignisse in 1,22 h echter Negativ-Aufnahme.
+
+| Modell | Stufe 1: Treffer (HW) | Verwechsler | syn | echt | Band 0,999: Treffer (HW) | Verwechsler | syn | echt | hw2 immer |
+|---|---|---|---|---|---|---|---|---|---|
+| v7 | 74/90 (36) | 49 | 13 | 7 | 69/90 (32) | 27 | 5 | 0 | 43/90 |
+| v8a | 77/90 (41) | 23 | 3 | 1 | 66/90 (34) | 5 / 4 | 1 | 0 | 46/90 |
+| a-syn | 64/90 (29) | 40 | 8 | 4 | 56/90 (22) | 10 / 8 | 2 | 0 | 42/90 |
+| c-syn | 69/90 (33) | 44 | 6 | 1 | 56/90 (24) | 16 / 14 | 1 | 0 | 43/90 |
+
+Wilson 95 % der Stufe-1-Summen: v8a 86 % [77–91], c-syn 77 % [67–84], a-syn 71 % [61–79]. Band 0,999: v8a 73 % [63–81], a-syn und c-syn je 62 % [52–72].
+
+Andere Schwellen, Band 0,999 (Treffer, Verwechsler W / HW): bei 0,95 v8a 75 (7 / 4), a-syn 56 (13 / 9), c-syn 57 (17 / 14); bei 0,99 v8a 61 (4 / 3), a-syn 54 (9 / 8), c-syn 57 (15 / 13). Über alle Blöcke bei 0,98 mit Band 0,999: a-syn 83/120 (Verwechsler 10 / 8), c-syn 84/120 (16 / 14), v7 97/120 (27); Wilson 69 % [60–77], 70 % [61–77], 81 % [73–87]. Die Wilson-Intervalle zählen Rufe als unabhängig; Rufe desselben Sprechers sind es nicht, die Intervalle sind eher zu eng.
+
+**3. Methodenbefund: Kreuzauswahl allein täuscht.** In den Kreuzauswahl-Zeilen mit Band 0,999 (Abschnitt 4 der Analyse, Raster 0,2–0,99) liegen v7 bei 75/90, a-syn 68, c-syn 73, v8a 74, also gleichauf. v7 (0,3–0,99), a-syn (0,3–0,99) und c-syn (0,2–0,99) wählen dort überwiegend niedrigere Schwellen mit 4–15 % Verwechsler-Clips, v8a überwiegend 0,95 und höher (1–3 %), teils 0,7–0,9 mit etwa 6 % und bei handy2 „Hey Wendelin“ auch 0,2 mit 2 % (Abschnitt 5 der Analyse). Gleiche Treffer bei ungleichem Verwechsler-Schutz: Die Auswahl kann ein schwächeres Modell durch eine niedrige Schwelle ausgleichen und bezahlt mit Verwechslern, die die FA-Kalibrierung (Negativ-Sprache, kaum ähnliche Wörter) nicht sieht (Deutung, nicht weiter geprüft). Die Modelle vergleicht man deshalb zusätzlich bei fester Schwelle (Abschnitt 6e der Analyse); die Kreuzauswahl allein reicht nicht. Auch die feste Schwelle ist je Modell ein anderer Arbeitspunkt (bei 0,98 a-syn echt 4 / syn 8, v8a 1 / 3); hier trägt der Vergleich, weil v8a bei 0,95, 0,98 und 0,99 gegenüber a-syn und c-syn in Stufe 1 und im Band mehr Treffer bei weniger Verwechslern hat (v7 trifft im Band etwas öfter, 69 gegen 66 bei 0,98, mit fünf- bis siebenmal so vielen Verwechslern (27 gegen 5 / 4)).
+
+**4. Das Band schützt bei den syn-Modellen schlechter.** Verwechsler mit Spitzenwert ≥ 0,999 (am Band vorbei) sind bei a-syn und c-syn deutlich häufiger als bei v8a (bei 0,98: 10 / 8 und 16 / 14 gegen 5 / 4). Das ist eine Einzellauf-Beobachtung: Die Verwechsler streuen zwischen Seeds stark (v8b), der Unterschied zwischen a-syn und c-syn liegt in dieser Streuung. Eine Erklärung haben wir nicht untersucht.
+
+**Empfehlung.** WP129 nimmt v8a mit Stufe-1-Schwelle 0,98 und dem Band aus Teil A: Spitzenwert ≥ 0,999 direkt, 0,98–0,999 prüft hw2. c-syn hat gegen a-syn in Stufe 1 überall mehr Treffer (Prüf-Split 69 gegen 64 bei 0,98; Kreuzauswahl 67 gegen 59), im Band gleich viele (56 / 56). Der Verwechsler-Unterschied ist mit einem Seed nicht belastbar, ob das größere Netz lohnt, bleibt offen (Folgepunkt: mehrere Seeds). Die Sprecheranpassung mit 29 echten Clips bringt vor allem „Hey Wendelin“ (Stufe 1: 41/45 gegen 26/45 bei a-syn und 32/45 bei c-syn), auch auf handy2, das nicht im Training war: ein Sprecher-, kein Geräteeffekt.
+
+**Grenzen.**
+- Ein Sprecher (alle echten Aufnahmen vom Maintainer): „fremde Stimme“ ist nur durch das syn-Modell nachgebildet, nicht gemessen. Die Aussage „Anpassung hilft“ gilt für diesen Sprecher.
+- Ein Seed je syn-Modell. Die Streuung ist nur über v8a gegen v8b (gleiche Treffersumme, doppelte Verwechsler) abgeschätzt, nicht für a-syn und c-syn; der Abstand zu v8a (a-syn 17, c-syn 9 Treffer in der Kreuzauswahl) ist groß gegen den einen Streuungsvergleich, und für die Verwechsler ist die Streuung groß (v8b); mehr als diesen haben wir nicht.
+- Der Spitze-Bezug ist optimistisch (die App hat ihn nicht); mit App-Bezug sind es bei v8a etwa 5 Treffer weniger. Die App-Parität (`stage2_cut.py`) ist nur für v8a gemessen, die Rangfolge der Modelle ist es nicht unter App-Bezug.
+- Echte Negativzeit nur 1,22 h; ein Ereignis je Gerät ist die FA-Grenze, die „echt“-Spalte unterscheidet 0 von 1 kaum.
+
+**Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`, nur aus den Caches):** `M=$K/wp130/out/wendelin_wp130; nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --report-only --threads 2 --fixed-thr 0.95,0.98,0.99 --model v8a=${M}_a.onnx --model a-syn=${M}_a-syn.onnx --model c-syn=${M}_c-syn.onnx` → `stage2_table.md` (Abschnitt 6 je Modell und Schwelle, 6e: Vergleichstabelle). Alle Blöcke ohne v8a: dasselbe mit `--split all` und nur den Modellen `a-syn`, `c-syn` (v7 ist immer dabei) → `stage2_table_all.md`.

@@ -6,6 +6,9 @@
 # Variablen: NJ = parallele Erzeuger (2), THREADS = Rechenkerne in features/train (NJ), TAG = Modellname (a),
 #   STEPS (5000), SEED (1), HIDDEN (128), N_POS/N_CONF/N_NEG/N_CV (Mengen; N_CV=0 = Common Voice ohne Download auslassen), PROBE=1 (Mini-Probe in $W/probe, ohne Marker),
 #   FIX = Ordner der Wortaufnahmen mit labels/ und raw/ (nur Huawei-Block 1 bis 3, siehe real_split.py).
+#   REAL_POS = 1 (Standard, Verhalten WP130) | 0 (WP133 „-syn“: ohne echte Positive; eigener Arbeitsordner $W/work_syn, FIX und real_pos
+#   werden nie gelesen; gen/Downloads bleiben gemeinsam). Jedes Modell bekommt <modell>.onnx.meta.json mit real_pos/tag/steps/seed/hidden;
+#   v8_measure.py --split all akzeptiert nur Modelle mit real_pos 0 (und v7).
 # Reproduktionsbedingung: NJ (Standard 2). Die Erzeuger nutzen die Seeds sb+1..sb+NJ mit n/NJ (abgerundet) Clips; anderes NJ = andere Daten.
 # Downloads sind per SHA-256 gepinnt (run_v8.sha256, Pruefung verify_dl); Stimmen kommen von resolve/main, Tatoeba ist die Live-Datei.
 # Aller Rechenaufwand laeuft mit nice -n 5.
@@ -18,13 +21,15 @@ T=$(cd "$(dirname "$0")" && pwd)
 FIX=${FIX:-$HOME/wendelin-fixtures/wake/words}
 NJ=${NJ:-2}; THREADS=${THREADS:-$NJ}; TAG=${TAG:-a}; STEPS=${STEPS:-5000}; SEED=${SEED:-1}; HIDDEN=${HIDDEN:-128}
 N_POS=${N_POS:-34000}; N_CONF=${N_CONF:-10000}; N_NEG=${N_NEG:-13000}; N_CV=${N_CV:-4000}
-PROBE=${PROBE:-0}
+PROBE=${PROBE:-0}; REAL_POS=${REAL_POS:-1}
+case $REAL_POS in 0|1) ;; *) echo "REAL_POS muss 0 oder 1 sein" >&2; exit 2 ;; esac
 step=${1:-alle}
 N="nice -n 5"
 HF=https://huggingface.co/rhasspy/piper-voices/resolve/main/de/de_DE
 CV=https://huggingface.co/datasets/fsicoli/common_voice_17_0/resolve/main/audio/de/train/de_train_0.tar   # CC0
 G=$W/gen; [ "$PROBE" = 1 ] && G=$W/probe/gen
 D=$W/dl; WK=$W/work; [ "$PROBE" = 1 ] && WK=$W/probe/work
+if [ "$REAL_POS" = 0 ]; then WK=$W/work_syn; [ "$PROBE" = 1 ] && WK=$W/probe/work_syn; fi
 mkdir -p "$D" "$G/.done" "$WK" "$W/out"
 
 fetch() {      # fetch <url> <ziel>: fortsetzbar, erst .part, dann umbenennen
@@ -95,19 +100,26 @@ gen() {
   synth_kind conf_v8 conf_v8 "$N_CONF" 200
   synth_kind neg_v8 neg_v8 "$N_NEG" 300 --text "$D/tatoeba/deu.tsv.bz2"
   cv_step
-  if ! marker real_pos; then    # echte Positive: nur Huawei Block 1 bis 3 (real_split.py)
+  real_pos_step
+  local nrp=0; [ "$REAL_POS" = 1 ] && nrp=$(ls "$WK/real_pos" | wc -l)
+  echo "gen fertig: $(ls "$G/pos_v8" | wc -l) pos_v8, $(ls "$G/conf_v8" | wc -l) conf_v8, $(ls "$G/neg_v8" | wc -l) neg_v8, $(ls "$G/cv" | wc -l) cv, $nrp real_pos"
+}
+
+real_pos_step() {      # echte Positive: nur Huawei Block 1 bis 3 (real_split.py); REAL_POS=0: nichts (FIX wird nie gelesen)
+  [ "$REAL_POS" = 0 ] && return 0
+  if ! marker real_pos; then
     $N $PY -I "$T/real_split.py" cut --fix "$FIX" --work "$WK" --out "$WK/real_pos"
     ok real_pos
   fi
-  echo "gen fertig: $(ls "$G/pos_v8" | wc -l) pos_v8, $(ls "$G/conf_v8" | wc -l) conf_v8, $(ls "$G/neg_v8" | wc -l) neg_v8, $(ls "$G/cv" | wc -l) cv, $(ls "$WK/real_pos" | wc -l) real_pos"
 }
 
 # ---------- Phase features ----------
 features() {
   [ -f "$WK/features.done" ] && return 0
+  local rp=(--real-pos "$WK/real_pos" --real-pos-rep 100)
+  [ "$REAL_POS" = 0 ] && rp=(--no-real-pos)      # fail-closed: train.py bricht ab, wenn trotzdem echte Positive auftauchen
   $N $PY -I "$T/train.py" features --gen "$G" --models "$D/oww" --work "$WK" \
-    --real "$G/real/train" --real-val "$G/real/dev" --real-rep 3 \
-    --real-pos "$WK/real_pos" --real-pos-rep 100 \
+    --real "$G/real/train" --real-val "$G/real/dev" --real-rep 3 "${rp[@]}" \
     --pos-dirs pos,pos2,pos_v8 --conf-dirs conf2,conf_v8 --neg-dirs neg,neg_v8,cv \
     --n-pos 30000 --n-neg 14000 --ncpu "$THREADS" --seed "$SEED"
   touch "$WK/features.done"
@@ -116,8 +128,13 @@ features() {
 # ---------- Phase train ----------
 train() {
   local out=$W/out/wendelin_wp130_$TAG.onnx
-  [ -f "$out.done" ] && return 0
+  if [ -f "$out.done" ]; then      # vorhandenes Modell muss zum Schalter passen (kein stilles Wiederverwenden von a/c mit echten Positiven)
+    if [ -f "$out.meta.json" ]; then grep -q "\"real_pos\": $REAL_POS[,}]" "$out.meta.json" || { echo "$out gehoert zu anderem REAL_POS" >&2; exit 1; }
+    elif [ "$REAL_POS" = 0 ]; then echo "$out ohne Sidecar, REAL_POS=0 abgelehnt" >&2; exit 1; fi
+    return 0
+  fi
   $N $PY -I "$T/train.py" train --work "$WK" --out "$out" --threads "$THREADS" --steps "$STEPS" --seed "$SEED" --hidden "$HIDDEN"
+  printf '{"real_pos": %s, "tag": "%s", "steps": %s, "seed": %s, "hidden": %s}\n' "$REAL_POS" "$TAG" "$STEPS" "$SEED" "$HIDDEN" > "$out.meta.json"
   shasum -a 256 "$out" | tee "$out.sha256"
   touch "$out.done"
 }
@@ -125,6 +142,7 @@ train() {
 case $step in
   gen) gen ;;
   cv) cv_step ;;      # nur der CV-Schritt (Selbsttest)
+  real_pos) real_pos_step ;;      # nur der Schritt echte Positive (Selbsttest)
   features) features ;;
   train) train ;;
   alle) gen; features; train ;;
