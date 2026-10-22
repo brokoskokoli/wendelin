@@ -415,3 +415,7 @@ class WakeWordService : Service() {
         }
     }
 }
+
+/** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129). */
+internal fun WakeSettings.runArgs(stationActive: Boolean): Map<String, Any> =
+    mapOf("verify" to verify, "detector" to detector, "station" to stationActive)

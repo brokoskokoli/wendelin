@@ -523,6 +523,7 @@ void main() {
         ['a', 'b'],
       );
       expect(e.modelThreshold, isNull);
+      expect(e.holdWindows, 0);
     });
 
     test('Modell: Band je Ort aus dem Katalog, keine Vorlagen, Hauptwort-'
@@ -545,6 +546,7 @@ void main() {
         expect(e.templates, isNull);
         expect(e.modelThreshold, band(station).verifyFrom);
         expect(e.directThreshold, band(station).acceptFrom);
+        expect(e.holdWindows, WakeClassifierRules.holdWindows);
         expect(e.mainGate, isNotNull);
       }
       final t = (await DeviceWakeParts(c).engine())! as CandidateWakeEngine;

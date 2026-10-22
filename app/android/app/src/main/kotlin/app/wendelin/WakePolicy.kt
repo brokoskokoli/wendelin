@@ -36,10 +36,6 @@ data class WakeSettings(
      * [old] changed by the channel arguments `enabled`, `mode`, `verify`; missing or invalid
      * values keep the old ones. Switching off also ends a pause.
      */
-    /** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129). */
-    fun runArgs(stationActive: Boolean): Map<String, Any> =
-        mapOf("verify" to verify, "detector" to detector, "station" to stationActive)
-
     fun withArgs(args: Map<*, *>?): WakeSettings {
         val on = args?.get("enabled") as? Boolean ?: enabled
         return WakeSettings(

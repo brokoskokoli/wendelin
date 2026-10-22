@@ -89,6 +89,7 @@ final class DeviceWakeParts implements WakeParts {
         features: container.read(wakeClassifierFeaturesFactoryProvider)(),
         modelThreshold: band.verifyFrom,
         directThreshold: band.acceptFrom,
+        holdWindows: WakeClassifierRules.holdWindows,
         mainGate: SpeechGate(),
       );
     }

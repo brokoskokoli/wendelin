@@ -19,7 +19,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP122 Feste Bestätigungssätze](wp122.md)
 - [WP123 – Stopp sofort ab Antwortbeginn (Gerätetest)](wp123.md)
 - [WP128 – Empfohlene Modelle markieren (Gerätetest)](wp128.md)
-- [WP129 – Trainiertes Wake-Word-Modell (Gerätetest)](wp129.md)
+- [WP129 – Trainiertes Wake-Word-Modell (v8a) in der App (Gerätetest)](wp129.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)

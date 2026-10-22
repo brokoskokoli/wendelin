@@ -1,5 +1,5 @@
-import '../wake/wake_score_band.dart';
 import 'speech_model.dart';
+import 'wake_classifier_catalog.dart';
 
 const _hfBase =
     'https://huggingface.co/csukuangfj/sherpa-onnx-whisper-base/resolve/'
@@ -7,10 +7,6 @@ const _hfBase =
 const _hfSmall =
     'https://huggingface.co/csukuangfj/sherpa-onnx-whisper-small/resolve/'
     '8f3c18b358db4d1f2fc1eae49d75cd20989e4309';
-const _oww =
-    'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1';
-const _wendelinRelease =
-    'https://github.com/brokoskokoli/wendelin/releases/download';
 const _gh = 'https://github.com/k2-fsa/sherpa-onnx/releases/download';
 
 /// Whisper tokens (identical file for base and small).
@@ -435,81 +431,16 @@ final class SpeechModelCatalog {
     ],
   );
 
-  /// openWakeWord feature models (mel spectrogram and speech embedding) for
-  /// the wake word „Wendelin“ (WP44). The WP58 classifier is added as
-  /// `wake-classifier-wendelin` once it passes its acceptance and is hosted.
-  static const wakeFeatures = SpeechModel(
-    id: 'wake-features',
-    kind: SpeechModelKind.wake,
-    displayName: 'Aktivierungswort – Merkmalsmodelle',
-    languages: {},
-    license: 'Apache-2.0 (openWakeWord, Google speech_embedding)',
-    source:
-        'GitHub-Release dscripka/openWakeWord v0.5.1; SHA-256 selbst '
-        'gehasht (2026-10-14)',
-    note: _ghNote,
-    attribution:
-        'Merkmalsmodelle aus openWakeWord (David Scripka, Apache-2.0); das '
-        'Embedding-Modell basiert auf Google speech_embedding (Apache-2.0).',
-    files: [
-      ModelFile(
-        name: 'melspectrogram.onnx',
-        url: '$_oww/melspectrogram.onnx',
-        sizeBytes: 1087958,
-        sha256:
-            'ba2b0e0f8b7b875369a2c89cb13360ff53bac436f2895cced9f479fa65eb176f',
-      ),
-      ModelFile(
-        name: 'embedding_model.onnx',
-        url: '$_oww/embedding_model.onnx',
-        sizeBytes: 1326578,
-        sha256:
-            '70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f',
-      ),
-    ],
-  );
+  /// openWakeWord feature models for the wake word (WP44), see
+  /// [WakeClassifierCatalog.features].
+  static const wakeFeatures = WakeClassifierCatalog.features;
 
-  /// Trained wake word classifier „Wendelin“ (v8a, WP129/WP130, K105):
-  /// stage 1 on the openWakeWord features. **One place** for model id, file,
-  /// hash, URL and the limits per mode ([WakeClassifierRules]); WP133 may
-  /// still change model and rule.
-  ///
-  /// The URL is a placeholder until the release asset is uploaded (the
-  /// orchestrator does that); the SHA-256 is the one of the published file,
-  /// so a wrong or replaced file is refused.
-  static const wakeClassifierWendelin = SpeechModel(
-    id: 'wake-classifier-wendelin',
-    kind: SpeechModelKind.wake,
-    displayName: 'Aktivierungswort – trainiertes Modell „Wendelin“',
-    languages: {},
-    license: 'Gewichte: Wendelin-Projekt; Trainingsdaten siehe Lizenzseite',
-    source:
-        'GitHub-Release des Wendelin-Repos (models-wake-v8a); '
-        'SHA-256 des Trainingslaufs v8a (WP130)',
-    note:
-        'Enthält nur Klassifikatorgewichte (ONNX), keine Aufnahmen. '
-        'Trainiert auf synthetischen Stimmen (CC0, CC-BY, M-AILABS) und '
-        'Aufnahmen des Maintainers aus dem Trainings-Split.',
-    attribution:
-        'Training mit synthetischen Stimmen (Piper, MIT): Thorsten-Voice '
-        '(CC0), Multilingual LibriSpeech (Pratap et al., OpenSLR 94), '
-        'CC-BY 4.0; M-AILABS Speech Dataset, Copyright (c) 2017-2019 '
-        'M-AILABS. Negativdaten: Tatoeba-Mitwirkende, tatoeba.org '
-        '(CC-BY 2.0 FR); FLEURS (Conneau et al.), CC-BY 4.0; Mozilla Common '
-        'Voice (CC0). Merkmale: openWakeWord (Apache-2.0).',
-    files: [
-      ModelFile(
-        name: wakeClassifierFile,
-        url: '$_wendelinRelease/models-wake-v8a/$wakeClassifierFile',
-        sizeBytes: 858044,
-        sha256:
-            'bfeb939d9e50c4913b27e4d082e5d620e3967af6c2603666e6bc40b30a06997d',
-      ),
-    ],
-  );
+  /// Trained wake word classifier „Wendelin“ (WP129): defined in
+  /// [WakeClassifierCatalog], the one place for id, hash, URL and limits.
+  static const wakeClassifierWendelin = WakeClassifierCatalog.model;
 
   /// File name of the classifier inside its model directory.
-  static const wakeClassifierFile = 'wendelin_wp130_a.onnx';
+  static const wakeClassifierFile = WakeClassifierCatalog.file;
 
   /// Speaker embedding for the speaker recognition (WP92a): 3D-Speaker
   /// CAM++ trained on Chinese and English speaker data, 192-dimensional
@@ -642,18 +573,3 @@ const _voiceDeEva = SpeechModel(
     ),
   ],
 );
-
-/// Stage 1 limits of the wake word classifier per mode (WP129, rule of
-/// WP133: score at or above `acceptFrom` is taken directly, from `verifyFrom`
-/// up to it stage 2 checks, below it is discarded). The values are the
-/// v8a working point of `docs/notes/wake-word-compare.md` (threshold
-/// 0.98..0.99) and the provisional upper limit of WP133; they are final only
-/// with WP133. Change them here only.
-abstract final class WakeClassifierRules {
-  /// Phone: the lower limit 0.98 of the measured working point.
-  static const phone = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.995);
-
-  /// Station (TV, longer listening): the stricter end 0.99 of the working
-  /// point, so fewer false alarms per hour.
-  static const station = WakeScoreBand(verifyFrom: 0.99, acceptFrom: 0.995);
-}

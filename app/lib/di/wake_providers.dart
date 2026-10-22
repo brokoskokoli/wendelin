@@ -143,6 +143,9 @@ final wakeClassifierFeaturesFactoryProvider =
       (ref) => _featuresFactory(ref, classifier: true),
     );
 
+const _missingText =
+    'Die Wake-Modelle fehlen (Einstellungen → Sprache → Aktivierungswort).';
+
 WakeFeatureExtractor Function() _featuresFactory(
   Ref ref, {
   required bool classifier,
@@ -152,21 +155,13 @@ WakeFeatureExtractor Function() _featuresFactory(
     final catalog = ref.read(speechModelCatalogProvider);
     final model = catalog.byId(SpeechModelCatalog.wakeFeatures.id)!;
     if (!await service.isInstalled(model)) {
-      throw const VoiceException(
-        VoiceErrorKind.modelMissing,
-        'Die Merkmalsmodelle fehlen (Einstellungen → Sprache → '
-        'Aktivierungswort).',
-      );
+      throw const VoiceException(VoiceErrorKind.modelMissing, _missingText);
     }
     String? classifierPath;
     if (classifier) {
       final c = catalog.byId(SpeechModelCatalog.wakeClassifierWendelin.id)!;
       if (!await service.isInstalled(c)) {
-        throw const VoiceException(
-          VoiceErrorKind.modelMissing,
-          'Das trainierte Modell fehlt (Einstellungen → Sprache → '
-          'Aktivierungswort).',
-        );
+        throw const VoiceException(VoiceErrorKind.modelMissing, _missingText);
       }
       classifierPath =
           '${service.directoryOf(c).path}/'
