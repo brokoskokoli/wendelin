@@ -8682,7 +8682,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeServiceSectionEndedModel.
   ///
   /// In de, this message translates to:
-  /// **'Beendet: Das trainierte Modell fehlt'**
+  /// **'Beendet: Ein Modell für die Wake-Erkennung fehlt'**
   String get wakeServiceSectionEndedModel;
 
   /// No description provided for @wakeServiceSectionEndedNoPermission.

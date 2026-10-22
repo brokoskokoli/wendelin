@@ -5067,7 +5067,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEndedModel =>
-      'Ended: the trained model is missing';
+      'Ended: a model for wake detection is missing';
 
   @override
   String get wakeServiceSectionEndedNoPermission =>

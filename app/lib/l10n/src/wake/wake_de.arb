@@ -215,7 +215,7 @@
   "wakeServiceSectionEnable": "Aktivierungswort einschalten",
   "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Wendelin“.",
   "wakeServiceSectionEndedEngine": "Beendet: Die Erkennung ist ausgefallen",
-  "wakeServiceSectionEndedModel": "Beendet: Das trainierte Modell fehlt",
+  "wakeServiceSectionEndedModel": "Beendet: Ein Modell für die Wake-Erkennung fehlt",
   "wakeServiceSectionEndedNoPermission": "Beendet: Mikrofon-Berechtigung fehlt",
   "wakeServiceSectionEndedNoRole": "Beendet: Wendelin ist nicht mehr dein Assistent",
   "wakeServiceSectionEndedNotCharging": "Beendet: Das Gerät lädt nicht mehr",

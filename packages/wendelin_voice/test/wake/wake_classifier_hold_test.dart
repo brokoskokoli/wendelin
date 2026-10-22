@@ -122,4 +122,37 @@ void main() {
       expect(hits.single.$2.direct, isTrue);
     },
   );
+
+  group('NaN-Score (fail-closed)', () {
+    const nan = double.nan;
+
+    test('NaN allein löst nie aus (mit und ohne Halten)', () async {
+      expect(await _run([nan, nan, nan]), isEmpty);
+      expect(await _run([nan, nan], hold: 0), isEmpty);
+    });
+
+    test('NaN vor dem Band wird nie zur Spitze: Band danach zählt', () async {
+      final hits = await _run([nan, 0.99, 0.2]);
+      expect(hits, hasLength(1));
+      expect(hits.single.$2.score, 0.99);
+    });
+
+    test('NaN nach Band-Eintritt gibt die endliche Spitze frei', () async {
+      final hits = await _run([0.99, nan, 0.2]);
+      expect(hits, hasLength(1));
+      expect(hits.single.$2.score, 0.99);
+    });
+
+    test('decideCandidate: NaN ist kein Kandidat', () {
+      expect(
+        decideCandidate(
+          modelScore: nan,
+          templateSimilarity: null,
+          modelThreshold: 0.98,
+          templateThreshold: null,
+        ),
+        isNull,
+      );
+    });
+  });
 }

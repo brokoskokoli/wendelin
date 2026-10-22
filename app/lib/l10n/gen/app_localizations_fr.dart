@@ -5123,7 +5123,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEndedModel =>
-      'Arrêté : le modèle entraîné manque';
+      'Arrêté : un modèle de détection manque';
 
   @override
   String get wakeServiceSectionEndedNoPermission =>

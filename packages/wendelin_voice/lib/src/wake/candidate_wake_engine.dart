@@ -197,7 +197,9 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
 
   /// The score the rules see: the raw one, or with [holdWindows] the peak of
   /// the event once it is decided (`null` while the event is still held).
-  double? _eventScore(double? score) {
+  double? _eventScore(double? rawScore) {
+    // Fail-closed: NaN is no score (never a peak, never a hit).
+    final score = rawScore != null && rawScore.isNaN ? null : rawScore;
     final lower = modelThreshold, upper = directThreshold;
     if (holdWindows <= 0 || lower == null || upper == null) return score;
     final peak = _peak;
