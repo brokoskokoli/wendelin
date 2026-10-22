@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Erzeugt synthetische Trainingsclips (Piper, deutsche Stimmen) fuer das Wake Word (WP58).
 
-  python gen_samples.py --kind pos|conf|neg --out <ordner> --n 1000 --seed 1 \
+  python gen_samples.py --kind pos|conf|neg|pos_v8|conf_v8|neg_v8 --out <ordner> --n 1000 --seed 1 \
       --voices <ordner-mit-v-*-Stimmen> [--text deu.tsv.bz2]
 
 Ausgabe: 16-kHz-Mono-WAVs. Stimmen/Daten liegen ausserhalb des Repos
@@ -44,6 +44,63 @@ CONF = ["Wendel", "Wendeltreppe", "Wendelstein", "Vanille", "Berlin", "Wenden", 
         "Hey Google", "Alexa", "Hey Siri", "Okay", "Wetter", "Timer", "Hey Wenzel", "Wenzel", "Wanderlin"]
 
 
+# WP130 (v8): Kontexte und harte Verwechsler. Positive stehen allein (BARE/HEY) oder im Befehlssatz und werden am ersten
+# Atemzug nach dem Wort abgeschnitten (cut_first_word), damit das Wortende bekannt ist.
+CMD_V8 = ["mach das Licht an", "wie spät ist es", "wie wird das Wetter morgen", "stell einen Timer auf fünf Minuten", "spiel etwas Musik",
+          "was steht heute im Kalender", "schreib eine Nachricht", "erinnere mich an den Termin", "sag mir die Nachrichten",
+          "kannst du mir helfen", "wie geht es dir", "stopp", "hör zu", "mach bitte leiser", "such mir ein Rezept"]
+CONF_V8 = [c for c in CONF + CONF2 if "wendelin" not in c.lower()] + [   # nie das Wake Word selbst als Negativ
+    "Wendels", "Wendezeit", "Wendepunkt", "Wendekreis", "Windeln", "Berliner", "Berlinale",
+    "Wenn der Lin", "wenn der Linus", "wenn der Linie", "wenn der Lindwurm", "wenn der Wind", "wenn den Lin", "wenn die Linde",
+    "Hey Wendel", "Hey Wendeltreppe", "Hey Wendelstein", "Hey Windel", "Hey Berlin", "Hey Wenden",
+    "Wendell", "Gwendolyn", "Mendelin", "Mendel", "Bandelin", "Wendling", "Wedeln", "Wenzeslaus",
+    "Wendelsheim", "Wendlingen", "Wandelin", "Hey Mendel", "Hey Hendrik", "Hey Wende",
+    "Kendelin", "Endlich", "Wenn ich", "Wenn er", "Wendungen", "Verwenden", "Handel", "Hey Handel"]
+POS_V8_SHARE = (0.35, 0.35, 0.30)       # allein / Hey allein / im Befehlssatz (abgeschnitten)
+
+
+def cut_first_word(x, min_speech=0.25, min_gap=0.08, db=-38.0):
+    """Schneidet den Anfang bis zur ersten Sprechpause (Komma) ab; None, wenn keine Pause gefunden wird."""
+    f = 160
+    n = len(x) // f
+    if n == 0:
+        return None
+    rms = np.sqrt((x[: n * f].reshape(n, f) ** 2).mean(axis=1) + 1e-12)
+    loud = 20 * np.log10(rms / (rms.max() + 1e-9) + 1e-12) > db
+    on = np.where(loud)[0]
+    if len(on) == 0:
+        return None
+    i = on[0]
+    speech = 0
+    while i < n:
+        if loud[i]:
+            speech += 1; i += 1
+            continue
+        j = i
+        while j < n and not loud[j]:
+            j += 1
+        if speech >= int(min_speech * 100) and (j - i) >= int(min_gap * 100) and j < n:
+            return x[: i * f]
+        i = j
+    return None
+
+
+def v8_text(kind, rng):
+    """-> (text, cut). cut=True: Satz synthetisieren und nach dem ersten Wort abschneiden."""
+    if kind == "pos_v8":
+        r = rng.random()
+        if r < POS_V8_SHARE[0]:
+            return BARE[int(rng.integers(len(BARE)))], False
+        if r < POS_V8_SHARE[0] + POS_V8_SHARE[1]:
+            return HEY[int(rng.integers(len(HEY)))], False
+        head = ["Wendelin", "Hey Wendelin", "Hey, Wendelin"][int(rng.integers(3))]
+        return f"{head}, {CMD_V8[int(rng.integers(len(CMD_V8)))]}", True
+    w = CONF_V8[int(rng.integers(len(CONF_V8)))]
+    if " " not in w.strip() and rng.random() < 0.25:
+        return f"{w}, {CMD_V8[int(rng.integers(len(CMD_V8)))]}", True
+    return w, False
+
+
 def load_voice(d):
     cfg = json.load(open(os.path.join(d, "m.onnx.json")))
     so = ort.SessionOptions(); so.intra_op_num_threads = 1; so.inter_op_num_threads = 1
@@ -72,17 +129,19 @@ def trim(x, db=-45.0, pad=0.05):
     return x[a:b]
 
 
-def synth(voice, sr, ns, text, rng, wide=False):
-    lo, hi = (0.7, 1.5) if wide else (0.8, 1.3)       # --wide (v9): mehr Tempo-/Tonhoehenvielfalt
+def synth(voice, sr, ns, text, rng, wide=False, v8=False):
+    lo, hi = (0.75, 1.5) if v8 else ((0.7, 1.5) if wide else (0.8, 1.3))       # --wide (v9) / v8: mehr Tempo-/Tonhoehenvielfalt
+    nlo = 0.3 if v8 else 0.4
     cfg = SynthesisConfig(speaker_id=int(rng.integers(ns)) if ns > 1 else None,
                           length_scale=float(rng.uniform(lo, hi)),
-                          noise_scale=float(rng.uniform(0.4, 1.0)),
-                          noise_w_scale=float(rng.uniform(0.4, 1.0)))
+                          noise_scale=float(rng.uniform(nlo, 1.0)),
+                          noise_w_scale=float(rng.uniform(nlo, 1.0)))
     parts = [c.audio_float_array for c in voice.synthesize(text, cfg)]
     if not parts:
         return None
     x = np.concatenate(parts).astype("float32")
-    x = resample(x, sr, SR, float(rng.uniform(0.85, 1.18) if wide else rng.uniform(0.92, 1.08)))
+    pf = rng.uniform(0.88, 1.14) if v8 else (rng.uniform(0.85, 1.18) if wide else rng.uniform(0.92, 1.08))
+    x = resample(x, sr, SR, float(pf))
     return trim(x)
 
 
@@ -96,7 +155,8 @@ def sentences(path, rng, n):
 
 def main():
     a = argparse.ArgumentParser()
-    a.add_argument("--kind", required=True, choices=["pos", "conf", "neg", "bare", "hey", "conf2", "oct", "conf_oct", "kob", "conf_kob"])
+    a.add_argument("--kind", required=True, choices=["pos", "conf", "neg", "bare", "hey", "conf2", "oct", "conf_oct", "kob", "conf_kob",
+                                                       "pos_v8", "conf_v8", "neg_v8"])
     a.add_argument("--out", required=True)
     a.add_argument("--n", type=int, default=100)
     a.add_argument("--seed", type=int, default=1)
@@ -109,13 +169,16 @@ def main():
     random.seed(a.seed)
     os.makedirs(a.out, exist_ok=True)
     voices = [load_voice(d) for d in sorted(glob.glob(os.path.join(a.voices, "v-*")))]
-    wts = np.array([3.0 if d.endswith("v-mls") else 1.0 for d in sorted(glob.glob(os.path.join(a.voices, "v-*")))])
-    wts = wts / wts.sum() if a.wide else None
+    v8 = a.kind.endswith("_v8")
+    wts = np.array([(4.0 if v8 else 3.0) if d.endswith("v-mls") else 1.0
+                    for d in sorted(glob.glob(os.path.join(a.voices, "v-*")))])
+    wts = wts / wts.sum() if (a.wide or v8) else None
     texts = None
-    if a.kind == "neg":
+    if a.kind in ("neg", "neg_v8"):
         texts = sentences(a.text, np.random.default_rng(a.seed), a.n)
     total = 0.0
     for i in range(a.n):
+        cut = False
         v, sr, ns = voices[int(rng.choice(len(voices), p=wts))]
         if a.kind == "pos":
             t = POS[int(rng.integers(len(POS)))]
@@ -124,10 +187,16 @@ def main():
         elif a.kind in ("bare", "hey", "conf2", "oct", "conf_oct", "kob", "conf_kob"):
             L = {"bare": BARE, "hey": HEY, "conf2": CONF2, "oct": OCT, "conf_oct": CONF_OCT, "kob": KOB, "conf_kob": CONF_KOB}[a.kind]
             t = L[int(rng.integers(len(L)))]
+        elif v8 and a.kind != "neg_v8":
+            t, cut = v8_text(a.kind, rng)
         else:
             t = texts[i]
-        x = synth(v, sr, ns, t, rng, a.wide)
-        if x is None or len(x) < 1600 or (a.kind != "neg" and len(x) > 1.8 * SR) or (a.kind.startswith("conf") and a.kind != "conf" and len(x) > 2.4 * SR):
+        x = synth(v, sr, ns, t, rng, a.wide, v8)
+        if x is not None and v8 and a.kind != "neg_v8" and cut:
+            x = cut_first_word(x)
+            if a.kind == "conf_v8" and x is not None:
+                x = trim(x)
+        if x is None or len(x) < 1600 or (a.kind not in ("neg", "neg_v8") and len(x) > 1.8 * SR) or (a.kind.startswith("conf") and a.kind != "conf" and len(x) > 2.4 * SR):
             continue   # Ausreisser (lange Pausen/Artefakte) verwerfen
         sf.write(os.path.join(a.out, f"{a.kind}{a.seed:02d}_{i:05d}.wav"), x, SR, subtype="PCM_16")
         total += len(x) / SR

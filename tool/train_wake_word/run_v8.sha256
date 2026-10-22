@@ -1,0 +1,23 @@
+# SHA-256 der geladenen Dateien (Stand 2026-10-22), relativ zu $D; geprueft nach dem Download (run_v8.sh verify_dl).
+# Common Voice (cv/de_train_0.tar) ist noch nicht gepinnt: Hash wird nur geloggt.
+c1764e652266cd6dcebf1b95c61973df5970a5f5272e94b655ff1ddf9a99d1ff  v-emo/m.onnx
+e88cf290fbfb768bf111330d2e8a46e376b0d85e3423a28bfebbc863a260dad8  v-eva/m.onnx
+f9793bf7e461a472b3916cf260774bfc9812e9eb72601b147ed649d01064e8fe  v-karlsson/m.onnx
+d352a7641892cebf2903859af94e9ba81a141110215fe3943bcda7f7da401b7a  v-kerstin/m.onnx
+69cd1d2aa5a35839a518966fcc4924b5f93e5f8c948ed0752b1a616ad53f65bf  v-mls/m.onnx
+a1068592532aad8c49bf3d1a01b8749c11d7dba726689ee28ad64e7b627ae4c5  v-ramona/m.onnx
+9df1c43c61149ef9b39e618e2b861fbe41e1fcea9390b2dac62e8761573ea4f1  v-thorsten-high/m.onnx
+9ac27fad17cec5c1a791161976a64f026f16fc058b400b1fea62565b8b2cf375  v-thorsten-low/m.onnx
+7e64762d8e5118bb578f2eea6207e1a35a8e0c30595010b666f983fc87bb7819  v-thorsten-medium/m.onnx
+92895b9e99f7cfc13f4a9879da615c3d6e0baa4d660e26d7b685abdd27a6d1d3  v-emo/m.onnx.json
+ef14b3dcb279ab4b18422a7a132877bee7a148821bd91152fb7ae9c4b3d79625  v-eva/m.onnx.json
+3b2095adbfeede316f22007a0a09d4bfc25514b7189850740b06800a6cfb9838  v-karlsson/m.onnx.json
+56e708556b7b9b7a53c4f8957e021421e69f11a600962bba554cffbe72cf2d47  v-kerstin/m.onnx.json
+b0af1c89ddfdc72d32e015729b0e89b99eec13c2c8caa1db7488d98e9e570b40  v-mls/m.onnx.json
+64906ab7a050ac685fa3dcea044baa798f67ed77be164f9c668a69298c6487d2  v-ramona/m.onnx.json
+6de734444e4c3f9e33b7ebe2746dbc19b71e85f613e79c65acf623200b99a76a  v-thorsten-high/m.onnx.json
+df38e892ed949f62d0c40978bc666de0b341c5f7921840ae7c72f4df8e8ffa05  v-thorsten-low/m.onnx.json
+974adee790533adb273a1ac88f49027d2a1b8f0f2cf4905954a4791e79264e85  v-thorsten-medium/m.onnx.json
+ccd063727cf3b6d8c74a0e4696c6f898ba9cd62e0b132af6b082bb53b33278e8  tatoeba/deu.tsv.bz2
+70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f  oww/embedding_model.onnx
+ba2b0e0f8b7b875369a2c89cb13360ff53bac436f2895cced9f479fa65eb176f  oww/melspectrogram.onnx
