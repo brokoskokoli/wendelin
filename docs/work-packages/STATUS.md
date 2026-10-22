@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP125, WP133; Test-APK 954e065 beim Maintainer; als Nächstes: WP129, WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP133; Test-APK 954e065 beim Maintainer; als Nächstes: WP129, WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -73,7 +73,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP122 | Feste Bestätigungssätze statt zweitem Modellaufruf | gemergt 4f596e66 | K97; Gerätetest T21-WP122; Soll: Test AgentDone.fixed, Satz „schon vorhanden“ (confirmation_texts de:30/34 en:45/48 fr:53/56), Doku fixed_confirmation.dart:20, toter Schlüssel lists_write_tools.dart:47; CI-Flake wake_lifecycle_test (UnmountedRefException) |
 | WP123 | Stopp sofort ab Antwortbeginn (Barge-in-Warmstart), Stopp-E2E stabil | gemergt ab054e98 | K96; E2E voice_stop_word/voice_barge_in je 3× offen (Last 15–18); Gerätetest T21-WP123; Soll: Provider-Test take statt snapshot (wake_providers.dart:204) |
 | WP124 | Emulator startet bei Bedarf, wird nach jedem E2E-Lauf beendet (E2E_KEEP_EMULATOR=1 für Serien) | gemergt 909738c1 | Wunsch Maintainer 2026-10-21; echter Lauf torch_e2e grün |
-| WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | in Arbeit | Go Maintainer 2026-10-22; Barge-in-Punkte (WP113, WP123) → WP126 |
+| WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | gemergt (ed38ba1e) | E2E stop_word/barge_in grün; Punkte 1/6 in WP126; dazu: answerText bricht beim Modell-Laden ab (WP114), WakeServiceNotifier prüft ref.mounted nach awaits (Flake-Ursache). Folgepunkt: WakeConflictWatcher.refresh und releaseAll in dispose ohne Robolectric ungetestet |
 | WP126 | „Stopp“ nach Warmstart: Fehlkandidat auf Stille blockiert echtes Wort (Fehler aus WP123) | gemergt (d8c908dd) | K106; E2E stop_word/barge_in je 3× grün. Folgepunkte: (a) Stille-Embeddings scoren hoch (sfloor≈0,85), stopOverridesWake umgeht das Pegel-Gate der Engine – nur abgefangen, Engine-Fix offen; (b) Hauptwort-Ähnlichkeit in Stille 0,82–0,83 > thr 0,75: „Wendelin“ könnte nach Warmstart auf Stille auslösen (seit WP123) → in WP129 prüfen |
 | WP127 | Öffentliches Repo ohne Namen/Anwesenheit/lokale Pfade, Sperre (check_privacy, privacy-guard) | gemergt 51917089 | Entscheidung Maintainer 2026-10-22; Historie bleibt |
 | WP128 | Empfohlene Modelle markieren, Nachfrage bei Ausfall | gemergt 20c94d8b | K100, K104; Soll: retry_offer_card_test prüft „Stufe“ → findsNothing nicht (Mutant M4); Gerätetest docs/testing/m5/wp128.md |
