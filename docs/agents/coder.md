@@ -21,3 +21,4 @@ Lies zuerst `common.md` (Identität, Arbeitsort, Übergabe) und die Regeln in `A
 - **Übergabe:** Bei Erreichen der Kontextgrenze (`AGENTS.md`) zuerst ein WIP-Commit, dann Übergabedatei und `ÜBERGABE: <pfad>` wie in `common.md`.
 - **Git:** committen und nur den eigenen Branch `wp/*` pushen, nie `main` pushen, nie mergen.
 - **Bericht:** höchstens 10 bis 15 Zeilen: Commit(s), je Abnahmekriterium bzw. Befund Datei:Zeile + Test, „CI GRÜN“ mit Lauf-URL, abgehakte Checkliste (eine Zeile, z. B. `bestaetigung [x] fail-closed [x] dispose [-] …`), Mutationen, offene Emulator-Kriterien mit genauem Befehl, Abweichungen vom Konzept für das Änderungsprotokoll.
+- **Plausibilität:** Prüf eigene Ergebnisse und Messungen auf Plausibilität (kann das so sein, was könnte im Aufbau falsch sein?) und meld Auffälliges ausdrücklich im Bericht, statt es zu glätten.
