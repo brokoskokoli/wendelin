@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP125, WP126, WP128, WP130; Test-APK 954e065 beim Maintainer; als Nächstes: WP129 (nach WP126), WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP125, WP126, WP130; Test-APK 954e065 beim Maintainer; als Nächstes: WP129 (nach WP126), WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -76,7 +76,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP125 | Sammelpaket Soll-Befunde WP114/118/119/122, CI-Flake wake_lifecycle_test | in Arbeit | Go Maintainer 2026-10-22; Barge-in-Punkte (WP113, WP123) → WP126 |
 | WP126 | „Stopp“ nach Warmstart: Fehlkandidat auf Stille blockiert echtes Wort (Fehler aus WP123) | in Arbeit | voice_stop_word_e2e rot seit ab054e98 (Bisekt 2026-10-22) |
 | WP127 | Öffentliches Repo ohne Namen/Anwesenheit/lokale Pfade, Sperre (check_privacy, privacy-guard) | gemergt 51917089 | Entscheidung Maintainer 2026-10-22; Historie bleibt |
-| WP128 | Empfohlene Modelle markieren, Nachfrage bei Ausfall | in Arbeit | K100 |
+| WP128 | Empfohlene Modelle markieren, Nachfrage bei Ausfall | gemergt 20c94d8b | K100, K104; Soll: retry_offer_card_test prüft „Stufe“ → findsNothing nicht (Mutant M4); Gerätetest docs/testing/m5/wp128.md |
 | WP129 | Trainiertes Wake-Word-Modell (v7) in der App, zweistufig | geplant | K101; nach WP126 (Wake-Dateien) |
 | WP130 | Wake-Word-Modell v8 (mehr Stimmen, Varianten, harte Negative) | in Arbeit | K101; Training nur bei Abwesenheit |
 | WP131 | Release-Signatur und automatischer APK-Build auf GitHub (Tag → Release) | geplant | K103; Start 2026-10-23, wartet auf Zertifikat als GitHub-Secret |
