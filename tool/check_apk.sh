@@ -273,7 +273,15 @@ APKANALYZER="${APKANALYZER:-$(ls -d "$SDK"/cmdline-tools/*/bin/apkanalyzer 2>/de
 [ -x "$APKANALYZER" ] || { echo "apkanalyzer fehlt (Android cmdline-tools)" >&2; exit 1; }
 APK="${1:-}"
 if [ -z "$APK" ]; then
-  (cd "$ROOT/app" && flutter build apk --release >/dev/null)
+  # Build-Log nicht fluten, aber die Debug-Signatur-Warnung (build.gradle.kts) durchreichen.
+  blog="$(mktemp)"
+  if ! (cd "$ROOT/app" && flutter build apk --release >"$blog" 2>&1); then
+    tail -40 "$blog" >&2; rm -f "$blog"; exit 1
+  fi
+  if grep -q 'no release signing configured' "$blog"; then
+    echo "WARNUNG: APK ist mit dem DEBUG-Schlüssel signiert (kein Release-Schlüssel konfiguriert); nie weitergeben." >&2
+  fi
+  rm -f "$blog"
   APK="$ROOT/app/build/app/outputs/flutter-apk/app-release.apk"
 fi
 [ -f "$APK" ] || { echo "APK nicht gefunden: $APK" >&2; exit 1; }

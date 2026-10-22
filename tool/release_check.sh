@@ -5,6 +5,7 @@
 #   tool/release_check.sh secrets                 # alle Release-Secrets gesetzt und nicht leer?
 #   tool/release_check.sh version <tag> [pubspec] # Tag-Basisversion == pubspec-Version?
 #   tool/release_check.sh prerelease <tag>        # Ausgabe true/false (Tag mit „-“)
+#   tool/release_check.sh on-main <tag> <sha> [ref]  # echtes Release (Tag ohne „-“): Commit muss Vorfahre von ref (origin/main) sein
 #   tool/release_check.sh cert-match <apk> <keystore>  # APK-Zertifikat == Zertifikat des Keystores?
 #   tool/release_check.sh --self-test
 #
@@ -38,6 +39,17 @@ cmd_version() {
   [ -n "$pub" ] || fail "Keine version: in $pubspec gefunden"
   [ "$base" = "$pub" ] || fail "Tag-Basisversion $base ist nicht die pubspec-Version $pub"
   echo "ok: Tag $tag entspricht pubspec-Version $pub"
+}
+
+cmd_on_main() {
+  local tag="${1:-}" sha="${2:-}" ref="${3:-origin/main}"
+  [ -n "$tag" ] && [ -n "$sha" ] || fail "on-main: Tag und Commit angeben"
+  if [ "$(cmd_prerelease "$tag")" = true ]; then
+    echo "ok: Vorabversion $tag darf von einem Branch kommen (Probe)"; return 0
+  fi
+  git merge-base --is-ancestor "$sha" "$ref" 2>/dev/null ||
+    fail "Commit $sha liegt nicht auf $ref. Ein echtes Release (Tag ohne „-“) nur von gemergtem main; für Proben einen Tag mit „-“ (z. B. $tag-rc.1) verwenden."
+  echo "ok: Commit $sha liegt auf $ref"
 }
 
 norm() { tr -d ': \r' | tr 'A-F' 'a-f'; }
@@ -107,6 +119,15 @@ self_test() {
   expect_fail "Tag mit Müll" cmd_version v1.2 "$d/pubspec.yaml"
   [ "$(cmd_prerelease v1.2.3-test)" = true ] || { echo "FEHLER Selbsttest: prerelease" >&2; rc=1; }
   [ "$(cmd_prerelease v1.2.3)" = false ] || { echo "FEHLER Selbsttest: prerelease stabil" >&2; rc=1; }
+  # on-main: echtes Release nur von main, Vorabversion von jedem Branch
+  ( export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
+    cd "$d" && git init -q r && cd r && git commit -q --allow-empty -m a && git branch -M main &&
+    git commit -q --allow-empty -m b && git checkout -q -b wp/x && git commit -q --allow-empty -m c ) >/dev/null 2>&1
+  local onmain offmain
+  onmain="$(git -C "$d/r" rev-parse main)"; offmain="$(git -C "$d/r" rev-parse wp/x)"
+  expect_ok "Release-Tag, Commit auf main" bash -c "cd '$d/r' && '$ROOT/tool/release_check.sh' on-main v1.0.0 $onmain main"
+  expect_fail "Release-Tag, Commit nur auf Branch" bash -c "cd '$d/r' && '$ROOT/tool/release_check.sh' on-main v1.0.0 $offmain main"
+  expect_ok "Vorabversion vom Branch" bash -c "cd '$d/r' && '$ROOT/tool/release_check.sh' on-main v1.0.0-rc.1 $offmain main"
   # cert-match mit Attrappen
   touch "$d/x.apk" "$d/x.jks"
   printf '#!/usr/bin/env bash\necho "Signer #1 certificate SHA-256 digest: a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13a9e95a13"\n' >"$d/apksigner"
@@ -167,6 +188,7 @@ case "${1:-}" in
   secrets) cmd_secrets ;;
   version) shift; cmd_version "$@" ;;
   prerelease) shift; cmd_prerelease "$@" ;;
+  on-main) shift; cmd_on_main "$@" ;;
   cert-match) shift; cmd_cert_match "$@" ;;
   --self-test) self_test ;;
   *) sed -n 2,12p "$0" >&2; exit 2 ;;
