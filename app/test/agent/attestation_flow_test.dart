@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/agent/agent_controller.dart';
 import 'package:wendelin/agent/chat_entry.dart';
+import 'package:wendelin/agent/conversation_state.dart';
 import 'package:wendelin/di/attestation_log_writer.dart';
 import 'package:wendelin/di/attestation_providers.dart';
 import 'package:wendelin/di/provider_config.dart';
@@ -179,15 +180,33 @@ void main() {
     );
 
     for (final privacy in [PrivacyLevel.standard, PrivacyLevel.tee]) {
-      test('Sitzung fehlgeschlagen ($privacy): weder Frage noch Aufruf, '
+      test('Sitzung fehlgeschlagen ($privacy): keine Übergabe ohne Ja, '
           'Fehler sichtbar', () async {
         start(others: [otherTarget(privacy)]);
         verifier.sessionStages = const [
           StageResult.fail(AttestationStage.quote, 'ungültig'),
         ];
-        await send('Frage');
+        final offered = privacy == PrivacyLevel.tee;
+        if (offered) {
+          // Gleiche Stufe: nur das Angebot (WP128), nichts geht vorher raus.
+          final controller = c.read(agentControllerProvider.notifier);
+          await controller.send('Frage');
+          await pumpEventQueue(times: 50);
+          expect(
+            c.read(agentControllerProvider).pending,
+            isA<RetryOfferQuestion>(),
+          );
+          expect(other.requests, isEmpty);
+          controller.answer(approved: false);
+          await controller.idle;
+          await c.read(auditRecorderProvider).flush();
+        } else {
+          await send('Frage');
+        }
         final s = c.read(agentControllerProvider);
-        expect(s.pending, isNull, reason: 'keine Rückfrage zur Übergabe');
+        if (!offered) {
+          expect(s.pending, isNull, reason: 'keine Rückfrage zur Übergabe');
+        }
         expect(other.requests, isEmpty);
         expect(gateway.requests, 0);
         expect(s.entries.whereType<EscalationEntry>(), isEmpty);

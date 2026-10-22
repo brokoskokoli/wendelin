@@ -170,10 +170,12 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
       SecretField.finishAutofill();
       _connection = result;
       _models = result.models;
-      final ids = [for (final m in _models) m.id];
-      if (ids.isNotEmpty && !ids.contains(_model.text)) {
-        _model.text = ids.first;
-      }
+      final pick = preselectModel(
+        _model.text,
+        _models,
+        _session!.template.recommendations,
+      );
+      if (pick != null) _model.text = pick;
       _step = _Step.model;
     });
   }
@@ -313,6 +315,7 @@ class _ProviderSetupState extends ConsumerState<ProviderSetupScreen> {
     l: context.l10n,
     connection: _connection,
     models: _models,
+    recommendations: _session!.template.recommendations,
     model: _model,
     noGpuEvidence: _noGpu,
     failure: _failure(context.l10n.providerSetupModelUnusable),

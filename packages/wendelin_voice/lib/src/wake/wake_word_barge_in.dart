@@ -68,7 +68,14 @@ final class WakeWordBargeInDetector implements BargeInDetector {
 
   /// Smallest level (RMS of a 20 ms block, 16-bit samples) the clip must
   /// reach; a quieter clip is skipped without the recognizer
-  /// (`skip`/`silent`).
+  /// (`skip`/`silent`). With a [verifier] a candidate also counts only if the
+  /// live audio held such a block within the last [warmSpan] (the reach of a
+  /// feature window). WP126: the device log showed a silent stream (rms 0)
+  /// producing a main-word candidate (sim 0.83 > thr 0.75) that
+  /// `stopOverridesWake` turns into "stop" past the level gate; silence
+  /// embeddings look like the templates. This gate closes that gap. 150 is the
+  /// level of the [SpeechGate] and the clip check: speech reads 800..1300 rms,
+  /// the silent AEC stream 0 and room noise ~12 (local logs).
   final int minLevel;
 
   /// A check that takes longer counts as failed (fail closed).
@@ -76,9 +83,15 @@ final class WakeWordBargeInDetector implements BargeInDetector {
 
   /// Called for every stage 1 candidate; [busy]: a check is running or in
   /// cooldown, the candidate is kept and checked again afterwards (the best
-  /// one, `stop` before `wake`).
+  /// one, `stop` before `wake`). A candidate whose confidence is
+  /// [strongerMargin] above the one just rejected is not busy in the
+  /// cooldown: it gets its own check (WP126).
   final void Function(BargeInKeyword candidate, {required bool busy})?
   onCandidate;
+
+  /// Confidence a candidate must exceed the one rejected last by to skip
+  /// the cooldown (log: echo `stop=0.85`, the real word `0.96`).
+  static const strongerMargin = 0.05;
 
   /// Called with the verdict and the time of the check in ms.
   final void Function(BargeVerdict verdict, int ms)? onVerdict;
@@ -99,12 +112,17 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   bool _running = false;
   bool _engineOpen = false;
   int _generation = 0;
-  late final PreRollBuffer _ring = PreRollBuffer(capacity: clip);
+  late final PreRollBuffer _ring = PreRollBuffer(capacity: clip + clip);
   bool _verifying = false;
   int _fed = 0, _blockedUntil = 0, _ignoreUntil = 0;
+  // End of the last live block with speech level, and the confidence of the
+  // candidate whose check ended without a keyword (the cooldown holds it).
+  int _lastLoud = -1 << 40;
+  double _rejected = 0;
   // Candidate waiting for the end of its word (-1: none), and the best one
   // that came during a check or the cooldown.
   int _pendingAt = -1, _deferredAt = 0;
+  double _deferredScore = 0, _pendingScore = 0, _checkedScore = 0;
   BargeInKeyword? _pendingKind, _deferredKind;
   Future<void> _chain = Future.value();
   Future<void> _lifecycle = Future.value();
@@ -132,8 +150,11 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     engine.reset();
     _ring.clear();
     _fed = _blockedUntil = _ignoreUntil = 0;
+    _lastLoud = -1 << 40;
+    _rejected = 0;
     _pendingAt = -1;
     _pendingKind = _deferredKind = null;
+    _deferredScore = _pendingScore = _checkedScore = 0;
     _verifying = false;
     final gen = ++_generation;
     _chain = Future.value();
@@ -171,7 +192,10 @@ final class WakeWordBargeInDetector implements BargeInDetector {
 
   Future<void> _onFrame(Int16List frame, int gen) async {
     if (gen != _generation) return;
-    if (verifier != null) _ring.add(frame);
+    if (verifier != null) {
+      _ring.add(frame);
+      _trackLevel(frame);
+    }
     _fed += frame.length;
     final hits = await engine.accept(frame);
     if (gen != _generation) return;
@@ -188,14 +212,27 @@ final class WakeWordBargeInDetector implements BargeInDetector {
         _signals.add(BargeInSignal.keyword(keyword));
         continue;
       }
-      final busy = _verifying || _fed < _blockedUntil;
+      // WP126: no speech-level sound in the reach of the window.
+      if (_fed - _lastLoud > durationToSamples(warmSpan)) {
+        onVerdict?.call(const BargeVerdict('skip', null, 'silent'), 0);
+        continue;
+      }
+      // After a rejected check the cooldown holds only candidates that are
+      // not clearly stronger (an echo must not shadow the real word).
+      final score = h.confidence ?? 0;
+      final stronger = score > _rejected + strongerMargin;
+      final busy = _verifying || (_fed < _blockedUntil && !stronger);
       onCandidate?.call(keyword, busy: busy);
       if (busy) {
+        // The window follows the strongest busy candidate; a weaker later one
+        // must not push it back.
+        if (_deferredKind == null || score > _deferredScore) _deferredAt = _fed;
         _deferredKind = _best(_deferredKind, keyword);
-        _deferredAt = _fed;
+        if (score > _deferredScore) _deferredScore = score;
       } else {
         // Waiting (or already waiting): the check starts after the word.
         _pendingKind = _best(_pendingKind, keyword);
+        if (score > _pendingScore) _pendingScore = score;
         if (_pendingAt < 0) _pendingAt = _fed + durationToSamples(settle);
       }
     }
@@ -208,8 +245,11 @@ final class WakeWordBargeInDetector implements BargeInDetector {
         _deferredKind != null) {
       final kind = _deferredKind!;
       _deferredKind = null;
+      final score = _deferredScore;
+      _deferredScore = 0;
       if (_fed - _deferredAt <= durationToSamples(clip)) {
         _pendingKind = _best(_pendingKind, kind);
+        if (score > _pendingScore) _pendingScore = score;
         if (_pendingAt < 0) {
           final after = _deferredAt + durationToSamples(settle);
           _pendingAt = after > _fed ? after : _fed;
@@ -220,7 +260,22 @@ final class WakeWordBargeInDetector implements BargeInDetector {
       final kind = _pendingKind!;
       _pendingAt = -1;
       _pendingKind = null;
+      _checkedScore = _pendingScore;
+      _pendingScore = 0;
       unawaited(_verify(v, kind, gen));
+    }
+  }
+
+  // Notes the end of the last block of [frame] that reaches [minLevel].
+  void _trackLevel(Int16List frame) {
+    const block = 320;
+    for (var i = 0; i < frame.length; i += block) {
+      final end = i + block < frame.length ? i + block : frame.length;
+      var sum = 0.0;
+      for (var j = i; j < end; j++) {
+        sum += frame[j] * frame[j];
+      }
+      if (sum / (end - i) >= minLevel * minLevel) _lastLoud = _fed + end;
     }
   }
 
@@ -244,6 +299,24 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     return last;
   }
 
+  /// The last [clip] of the ring, ending shortly after the last loud block
+  /// instead of at "now": a late stage 1 hit (the check starts after
+  /// [settle]) must not push the word out of the clip (device finding
+  /// 2026-10-22). Speech up to now: the clip ends now.
+  Int16List _clipEndingAtSpeech() {
+    final all = _ring.snapshot();
+    final first = _fed - all.length;
+    // Trailing silence = settle (device finding 2026-10-22): Whisper needs
+    // quiet after a short word ("Stopp") to recognise it; the end stays
+    // min(now, _lastLoud + settle).
+    final tail = durationToSamples(settle);
+    var end = all.length;
+    if (_lastLoud + tail - first < end) end = _lastLoud + tail - first;
+    if (end <= 0) return all; // loud block left the ring: quiet, skipped
+    final n = durationToSamples(clip);
+    return Int16List.sublistView(all, end > n ? end - n : 0, end);
+  }
+
   bool _quiet(Int16List pcm) {
     const block = 320;
     for (var i = 0; i < pcm.length; i += block) {
@@ -258,7 +331,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   }
 
   Future<void> _verify(BargeVerifier v, BargeInKeyword cand, int gen) async {
-    final pcm = _ring.snapshot();
+    final pcm = _clipEndingAtSpeech();
     if (_quiet(pcm)) {
       // Nothing to recognize (background similarity): no recognizer run.
       onVerdict?.call(const BargeVerdict('skip', null, 'silent'), 0);
@@ -287,18 +360,28 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     final keyword = verdict.keyword;
     if (keyword == null) {
       _blockedUntil = _fed + durationToSamples(cooldown);
+      _rejected = _checkedScore;
       // A candidate that came meanwhile is checked once the cooldown ends,
-      // if its word is still inside the clip.
+      // if its word is still inside the clip; a clearly stronger one (the
+      // real word after an echo) right after its own settle time.
       final kind = _deferredKind;
+      final deferredScore = _deferredScore;
       _deferredKind = null;
-      final at = _blockedUntil > _fed ? _blockedUntil : _fed;
+      _deferredScore = 0;
+      var at = _blockedUntil > _fed ? _blockedUntil : _fed;
+      if (deferredScore > _checkedScore + strongerMargin) {
+        final own = _deferredAt + durationToSamples(settle);
+        at = own > _fed ? own : _fed;
+      }
       if (kind != null && at - _deferredAt <= durationToSamples(clip)) {
         _pendingKind = _best(_pendingKind, kind);
+        if (deferredScore > _pendingScore) _pendingScore = deferredScore;
         _pendingAt = at;
       }
       return;
     }
     _deferredKind = null;
+    _deferredScore = 0;
     _signals.add(BargeInSignal.keyword(keyword));
   }
 
@@ -312,6 +395,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
     }
     _pendingAt = -1;
     _pendingKind = _deferredKind = null;
+    _deferredScore = _pendingScore = 0;
     final sub = _sub;
     _sub = null;
     await sub?.cancel();

@@ -1266,6 +1266,44 @@
       }
     }
   },
+  "retryOfferDetail": "{fromName} antwortet gerade nicht. {toName} schützt deine Daten mindestens so gut. Schon ausgeführte Aktionen werden nicht wiederholt, nur die Antwort wird neu angefragt.",
+  "@retryOfferDetail": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferSpoken": "{fromName} antwortet nicht. Mit {toName} nochmal? Ja oder nein?",
+  "@retryOfferSpoken": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferTitle": "Mit {toName} nochmal?",
+  "@retryOfferTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferYes": "Mit {toName} nochmal?",
+  "@retryOfferYes": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
   "switchTopicBody": "Beim Wechsel des Modells beginnt ein neues Gespräch. Der aktuelle Verlauf wird beendet (im Verlauf bleibt er abrufbar).",
   "switchTopicBodyRunning": "Beim Wechsel des Modells beginnt ein neues Gespräch. Die laufende Antwort wird abgebrochen und der aktuelle Verlauf beendet (im Verlauf bleibt er abrufbar).",
   "switchTopicSwitch": "Wechseln",
@@ -1857,6 +1895,25 @@
       }
     }
   },
+  "providerModelRecommendedBadge": "Empfohlen",
+  "providerModelRecommendedReason": "{hits} von {runs} Testläufen richtig, typisch {p50} s, gemessen am {date}",
+  "@providerModelRecommendedReason": {
+    "placeholders": {
+      "hits": {
+        "type": "String"
+      },
+      "runs": {
+        "type": "String"
+      },
+      "p50": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "providerModelRecommendedWeaker": "Das beste Modell dieses Anbieters, aber schwächer als bei Phala und Tinfoil.",
   "providerSetupBudgetFormat": "Budget: Betrag in Dollar, z. B. 5 oder 2,50",
   "providerSetupConnected": "Verbindung steht",
   "providerSetupConnectedEnterModel": "Verbindung steht. Bitte die Modell-ID eingeben.",

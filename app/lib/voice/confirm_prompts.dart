@@ -4,13 +4,16 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../agent/conversation_state.dart';
 import '../agent/outgoing_preview.dart';
 import '../l10n/gen/app_localizations_de.dart';
+import '../l10n/gen/app_localizations_en.dart';
+import '../l10n/gen/app_localizations_fr.dart';
 import '../ui/screens/labels.dart';
 
 /// Whether a spoken „yes“ to [question] must be strict (1–2 yes words):
-/// `external` tools and escalations below the privacy level.
+/// `external` tools, escalations below the privacy level and the offer
+/// „Mit X nochmal?“ (it sends the request to another provider, WP128).
 bool strictAnswer(PendingQuestion question) => switch (question) {
   ToolQuestion(:final event) => event.risk == RiskLevel.external,
-  EscalationQuestion() => true,
+  EscalationQuestion() || RetryOfferQuestion() => true,
 };
 
 /// Spoken question for an open confirmation, in [language] (de/fr/en);
@@ -39,6 +42,11 @@ String confirmationPrompt(PendingQuestion question, String? language) {
       'fr' => 'Transmettre à $toName ? Oui ou non ?',
       'en' => 'Hand over to $toName? Yes or no?',
       _ => 'An $toName übergeben? Ja oder nein?',
+    },
+    RetryOfferQuestion(:final fromName, :final toName) => switch (lang) {
+      'fr' => AppLocalizationsFr().retryOfferSpoken(fromName, toName),
+      'en' => AppLocalizationsEn().retryOfferSpoken(fromName, toName),
+      _ => AppLocalizationsDe().retryOfferSpoken(fromName, toName),
     },
   };
 }

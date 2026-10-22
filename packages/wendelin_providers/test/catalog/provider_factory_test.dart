@@ -48,7 +48,7 @@ void main() {
       expect(p.name, 'Phala (RedPill)');
       expect(p.baseUrl, 'https://api.redpill.ai/v1');
       expect(p.authMethod, const ApiKeyAuth('phala-key'));
-      expect(p.defaultModel, 'z-ai/glm-5.3-flash');
+      expect(p.defaultModel, 'google/gemma-4-31b-it');
       expect(p.options, {'teeModelsOnly': true, 'attestation': 'phala'});
 
       final ollama = providerTemplateById('ollama')!

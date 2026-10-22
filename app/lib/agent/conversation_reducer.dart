@@ -121,14 +121,8 @@ final class ConversationReducer {
           call.id,
           (t) => t.copyWith(phase: ToolPhase.awaitingConfirmation),
         ).copyWith(pending: ToolQuestion(event, request: s.lastRequest ?? ''));
-      case EscalationConfirmationRequired(:final fromProfile, :final toProfile):
-        return s.copyWith(
-          pending: EscalationQuestion(
-            event,
-            fromName: nameOf(fromProfile),
-            toName: nameOf(toProfile),
-          ),
-        );
+      case EscalationConfirmationRequired() || RetryOfferRequired():
+        return s.copyWith(pending: _handoverQuestion(event));
       case ToolCallFinished(:final call, :final outcome):
         final phase = phaseOf(outcome);
         final undo = phase == ToolPhase.done ? outcome.undo : null;
@@ -371,6 +365,24 @@ final class ConversationReducer {
     }
     return false;
   }
+
+  /// The question for a hand-over to another provider ([event] is an
+  /// escalation consent or the retry offer „Mit X nochmal?“).
+  PendingQuestion _handoverQuestion(AgentEvent event) => switch (event) {
+    EscalationConfirmationRequired(:final fromProfile, :final toProfile) =>
+      EscalationQuestion(
+        event,
+        fromName: nameOf(fromProfile),
+        toName: nameOf(toProfile),
+      ),
+    RetryOfferRequired(:final fromProfile, :final toProfile) =>
+      RetryOfferQuestion(
+        event,
+        fromName: nameOf(fromProfile),
+        toName: nameOf(toProfile),
+      ),
+    _ => throw ArgumentError.value(event, 'event'),
+  };
 
   ConversationState _updateTool(
     ConversationState s,

@@ -281,6 +281,20 @@ void main() {
       expect(q.toName, 'Claude Sonnet');
     });
 
+    test('RetryOfferRequired fragt mit Anzeigenamen', () {
+      final s = _apply([
+        RetryOfferRequired(
+          fromProfile: 'phala',
+          toProfile: 'sonnet',
+          error: const NetworkException('weg'),
+          respond: (_) {},
+        ),
+      ]);
+      final q = s.pending! as RetryOfferQuestion;
+      expect(q.fromName, 'Phala · GLM klein');
+      expect(q.toName, 'Claude Sonnet');
+    });
+
     test('answered schließt die Frage', () {
       final s = reducer.answered(_apply([ToolCallStarted(_call), confirm()]));
       expect(s.pending, isNull);

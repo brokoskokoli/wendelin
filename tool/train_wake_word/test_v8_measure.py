@@ -1,0 +1,117 @@
+"""Selbsttest (stdlib unittest, erfundene Mini-Daten, ohne Modelle/Audio) fuer v8_measure.py (WP130).
+Lauf (Venv mit numpy/soundfile/piper, z. B. wp58):
+  ~/wendelin-models/kws/wp58/venv/bin/python -I -m unittest discover -s tool/train_wake_word -p 'test_v8_measure.py'
+Hinweis: Das Gate fuehrt keine Python-Tests aus."""
+import os, sys, unittest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE); sys.path.insert(0, os.path.dirname(HERE))
+import v8_measure as V   # noqa: E402
+import real_split as R   # noqa: E402
+import words_measure as W  # noqa: E402
+import station_measure as S  # noqa: E402
+
+
+def labels():
+    out = []
+    for dev in ("huawei", "handy2"):
+        for b in range(1, 7):
+            for w in ("Wendelin", "Hey Wendelin", "Alexa"):
+                out.append({"dev": dev, "block": b, "round": 1, "word": w, "start": 100.0 * b, "end": 100.0 * b + 1, "status": "ok"})
+    return out
+
+
+class Split(unittest.TestCase):
+    def test_keine_huawei_1_bis_3(self):
+        sel = V.filter_labels(labels())
+        self.assertFalse([lb for lb in sel if lb["dev"] == "huawei" and lb["block"] in R.TRAIN_BLOCKS])
+        self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "huawei"}), [4, 5, 6])
+        self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "handy2"}), [1, 2, 3, 4, 5, 6])
+        self.assertEqual(len(sel), (3 + 6) * 2)                                  # nur die beiden Woerter
+        self.assertEqual({lb["word"] for lb in sel}, {"Wendelin", "Hey Wendelin"})
+
+    def test_pruefung_bricht_bei_trainingslabel_ab(self):
+        with self.assertRaises(SystemExit):
+            V.assert_eval_only([{"dev": "huawei", "block": 2}])
+        V.assert_eval_only([{"dev": "huawei", "block": 4}, {"dev": "handy2", "block": 2}])
+
+    def test_folds_je_geraet(self):
+        self.assertEqual(V.folds_for("huawei"), [((5, 6), (4,)), ((4, 6), (5,)), ((4, 5), (6,))])
+        self.assertEqual(len(V.folds_for("handy2")), 6)
+        for dev in V.DEVICES:
+            for sel, test in V.folds_for(dev):
+                self.assertFalse(set(sel) & set(test))
+                self.assertTrue(set(sel + test) <= set(V.eval_blocks(dev)))
+
+    def test_training_nie_im_ergebnis(self):
+        # Ereignis im Trainingsblock 2 (Zeit 200 s) darf nicht als Treffer zaehlen
+        ev = {"pos_huawei": {"pos_huawei": [200.2, 400.2]}, "pos_handy2": {"pos_handy2": []},
+              "neg_huawei": {"n": []}, "neg_handy2": {"n": []}, "syn": {"s": []}, "fleurs": {"f": []}, "conf": {"c": []}}
+        hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 1.0, "fleurs": 1.0, "conf": 0.1}
+        rows = V.rows_for_cfg("m", "Wendelin", 0.5, "-", ev, {}, hr, V.filter_labels(labels()))
+        h = next(r for r in rows if r["dev"] == "huawei")
+        self.assertEqual((h["n"], h["hit"], h["n_b2"], h["hit_b2"], h["n_b4"], h["hit_b4"]), (3, 1, 0, 0, 1, 1))
+
+
+class Auswahl(unittest.TestCase):
+    def test_wilson(self):
+        lo, hi = S.wilson(5, 10)
+        self.assertAlmostEqual(lo, 0.2366, places=3); self.assertAlmostEqual(hi, 0.7634, places=3)
+        self.assertEqual(S.wilson(0, 0), (0.0, 0.0))
+        self.assertIn("(5/10)", W.fmt_hit(5, 10))
+
+    def pts(self):
+        # zwei Konfigurationen: scharf (kein FA, wenig Treffer) und lasch (viele Treffer, zu viele FA bei 1 h / Ziel 2)
+        def p(thr, hit, fa):
+            d = {"prog": "m", "thr": str(thr), "stage2": "-", "ord": thr, "hit": 0, "fa": fa, "hours": 1.0}
+            for b in range(1, 7):
+                d[f"hit_b{b}"] = hit if b in (4, 5, 6) else 0; d[f"n_b{b}"] = 5 if b in (4, 5, 6) else 0
+            return d
+        return [p(0.9, 3, 0), p(0.2, 5, 9)]
+
+    def test_kreuzauswahl_haelt_fa_grenze(self):
+        hit, n, cfgs = W.cv_pick(self.pts(), 1.0, 2.0, V.folds_for("huawei"))
+        self.assertEqual((hit, n), (9, 15))                                       # nur die scharfe Konfiguration (3 je Block)
+        self.assertEqual(set(cfgs), {"m0.9+-"})
+
+    def test_keine_konfiguration_unter_ziel(self):
+        pts = [dict(p, fa=9) for p in self.pts()]
+        self.assertIsNone(W.cv_pick(pts, 1.0, 2.0, V.folds_for("huawei"))[0])
+
+    def test_cv_cell_nutzt_pruefblocks(self):
+        rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0) for p in self.pts()]
+        c = V.cv_cell(rows, "huawei", "Wendelin", "m", ("-",), "real", 2.0)
+        self.assertEqual(c[:2], (9, 15))
+        self.assertEqual(len(c[2]), 3)                                             # ein Fold je Pruef-Block (4, 5, 6)
+        self.assertIsNone(V.cv_cell(rows, "handy2", "Wendelin", "m", ("-",), "real", 2.0))
+
+
+class Ausgabe(unittest.TestCase):
+    def test_render_tabelle(self):
+        pts = Auswahl().pts()
+        rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0, fa_syn=1, h_syn=2.0, fa_fleurs=0, h_fleurs=1.0,
+                     conf_n=10, conf_hit=1, conf_ev=1, conf_h=0.01) for p in pts]
+        hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 2.0, "fleurs": 1.0, "conf": 0.01}
+        md = V.render(rows, {"m": "x"}, 2.0, hr)
+        self.assertIn("| huawei | Wendelin | m | 60 % [", md)                       # 9/15
+        self.assertIn("(1/10)", md)                                                 # Verwechsler-Clips
+        self.assertIn("keine Konfiguration ≤ Ziel", md)                             # handy2: keine Zeilen
+
+
+class Verwechsler(unittest.TestCase):
+    def test_plan_reproduzierbar_und_seed_getrennt(self):
+        a, b = V.conf_plan(20, V.CONF_SEED), V.conf_plan(20, V.CONF_SEED)
+        self.assertEqual(a, b)
+        self.assertNotEqual(a, V.conf_plan(20, V.CONF_SEED + 1))
+        self.assertTrue(V.CONF_SEED > 202)                                        # Trainingsseeds 201, 202
+        import gen_say_test as T
+        self.assertTrue({v for _, _, v, _ in a} <= set(T.VOICES))
+
+    def test_parse_models(self):
+        with self.assertRaises(SystemExit): V.parse_models(["ohne-gleich"])
+        with self.assertRaises(SystemExit): V.parse_models(["a b=/nope"])
+        with self.assertRaises(SystemExit): V.parse_models(["x=/gibt/es/nicht.onnx"], with_v7=False)
+
+
+if __name__ == "__main__":
+    unittest.main()

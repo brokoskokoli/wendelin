@@ -23,5 +23,5 @@
 
 **Neue Provider-Art**
 1. Adapter unter `packages/wendelin_providers/lib/src/<adapter>/` (Wire-Format nur dort), Contract-Suite `llmProviderContract` aus `wendelin_core`.
-2. `ProviderType` (`packages/wendelin_core/lib/src/provider/provider_type.dart`), `ProviderFactory`, Vorlage in `packages/wendelin_providers/lib/src/catalog/provider_template.dart`.
+2. `ProviderType` (`packages/wendelin_core/lib/src/provider/provider_type.dart`), `ProviderFactory`, Vorlage in `packages/wendelin_providers/lib/src/catalog/provider_template.dart`; Empfehlungen (Modell-ID, Treffer, p50, Messdatum) nur dort in `modelRecommendations` (WP128, Quelle `docs/notes/model-recommendation.md`), die Anzeige im Modellschritt `app/lib/ui/settings/provider_setup/model_step.dart`.
 3. Einrichtung in `app/lib/ui/settings/provider_setup_screen.dart` und `app/lib/di/provider_setup.dart`.

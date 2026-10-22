@@ -104,6 +104,19 @@ final class ProviderConfig {
     return primary;
   }
 
+  /// The targets offered after a provider failure („Mit X nochmal?“,
+  /// WP128): every configured target, those whose model is recommended
+  /// (`modelRecommendations`) first. The agent drops the failed one and
+  /// everything below its privacy level; nothing is ever used without the
+  /// user's yes (K28).
+  List<ProviderTarget> fallbackTargets() {
+    bool recommended(ProviderTarget t) => modelRecommendations.values.any(
+      (list) => list.any((r) => r.modelId == t.modelId),
+    );
+    final all = [primary, ...others];
+    return [...all.where(recommended), ...all.where((t) => !recommended(t))];
+  }
+
   /// The lowest privacy level among all targets a request can reach. The
   /// tool catalog is built for it, so neither a rule nor „nochmal mit …“
   /// sends sensitive tools to a provider that may not see them.

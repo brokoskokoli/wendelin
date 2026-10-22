@@ -159,5 +159,43 @@
   "switchTopicSwitch": "Wechseln",
   "switchTopicTitle": "Neues Gespräch beginnen?",
   "mainMicHearing": "Wendelin hört mit: „Wendelin“ sagen oder tippen",
-  "overlayUnlockCancelled": "Entsperren abgebrochen. Deine Anfrage wurde verworfen."
+  "overlayUnlockCancelled": "Entsperren abgebrochen. Deine Anfrage wurde verworfen.",
+  "retryOfferDetail": "{fromName} antwortet gerade nicht. {toName} schützt deine Daten mindestens so gut. Schon ausgeführte Aktionen werden nicht wiederholt, nur die Antwort wird neu angefragt.",
+  "@retryOfferDetail": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferTitle": "Mit {toName} nochmal?",
+  "@retryOfferTitle": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferYes": "Mit {toName} nochmal?",
+  "@retryOfferYes": {
+    "placeholders": {
+      "toName": {
+        "type": "String"
+      }
+    }
+  },
+  "retryOfferSpoken": "{fromName} antwortet nicht. Mit {toName} nochmal? Ja oder nein?",
+  "@retryOfferSpoken": {
+    "placeholders": {
+      "fromName": {
+        "type": "String"
+      },
+      "toName": {
+        "type": "String"
+      }
+    }
+  }
 }

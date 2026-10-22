@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/voice_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
+import 'package:wendelin/voice/wake/wake_barge_in.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../support/test_env.dart';
@@ -70,4 +74,24 @@ void main() {
     addTearDown(c.dispose);
     expect(await c.read(wakeVerifierProvider.future), isNull);
   });
+
+  test(
+    'Warmstart nimmt das Mikrofon-Ende einmal (take, nicht snapshot)',
+    () async {
+      final env = TestEnv();
+      final c = env.container();
+      addTearDown(c.dispose);
+      await c.read(voiceSettingsProvider.future);
+      await c
+          .read(voiceSettingsProvider.notifier)
+          .change((s) => s.copyWith(conversationMode: true));
+      c.read(micTailProvider).add(Int16List.fromList([1, 2, 3]));
+      final detector = c.read(wakeBargeInDetectorProvider);
+      expect(detector, isA<LazyWakeBargeInDetector>());
+      final warm = (detector! as LazyWakeBargeInDetector).warm!;
+      expect(warm(), [1, 2, 3]);
+      // Used once: no speech stays in memory, no stale lead-in next time.
+      expect(warm(), isEmpty);
+    },
+  );
 }
