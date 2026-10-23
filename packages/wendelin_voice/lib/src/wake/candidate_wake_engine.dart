@@ -25,9 +25,8 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     this.onWindow,
     this.silenceFloor,
     this.directThreshold,
-    this.holdWindows = 0,
-    this.dropsToEnd = 1,
-  }) : assert(dropsToEnd >= 1, 'dropsToEnd muss >= 1 sein');
+    this.holdDuration = Duration.zero,
+  });
 
   /// The feature chain.
   final WakeFeatureExtractor features;
@@ -64,20 +63,19 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
   /// (`WakeWordHit.direct`, no stage 2). `null`: every hit goes to stage 2.
   final double? directThreshold;
 
-  /// WP129: from the first window in the band (at or above [modelThreshold],
-  /// below [directThreshold]) the classifier score is held for up to this many
-  /// windows and the event is decided with its **peak**: when the score falls
-  /// below the peak, or at the limit. A score at or above [directThreshold]
-  /// decides at once. `0` (or no [directThreshold]): the first window decides.
-  /// [holdWindows] counts all windows from the first one in the band, also the
-  /// ones that fell.
-  final int holdWindows;
-
-  /// WP129: the hold ends after this many **consecutive** windows below the
-  /// peak (a null/NaN score counts as below); a window at or above the peak
-  /// resets the count. `1`: the first fall ends it. A single dip between two
-  /// high windows (0.9917, 0.9892, 0.998) is no end with `2`.
-  final int dropsToEnd;
+  /// WP141: from the first window in the band (at or above [modelThreshold],
+  /// below [directThreshold]) the classifier score is held until the stream
+  /// position has advanced by this much (`endSample - first endSample >= W`,
+  /// inclusive: the window exactly at +W still counts and decides). Falls
+  /// below the peak or below the band, and null/NaN scores, do not end the
+  /// hold. A score at or above [directThreshold] decides at once (direct).
+  /// Otherwise the **peak** decides at the end of W; the hit time
+  /// (`WakeWordHit.endSample`) is the peak window, so the stage 2 clip lies
+  /// around the peak. Of equal scores the later window is the peak.
+  /// [Duration.zero] (or no [directThreshold]): the first window decides.
+  /// The same rule is replicated in `tool/train_wake_word/stage2_cut.py`
+  /// (`app_events`), parity fixture `test/fixtures/wake_hold_parity.json`.
+  final Duration holdDuration;
 
   /// Diagnostics (WP72): called for every window with the best similarity to
   /// the main templates (`-1` without templates) and the classifier score.
@@ -114,7 +112,8 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
       }
       // The speaker whose similarity is closest above the own threshold
       // decides (no speaker: only the classifier rule).
-      final score = _eventScore(w.modelScore);
+      final ev = _eventScore(w.modelScore, w.endSample);
+      final score = ev.score;
       final main = _closest(w.embedding, usable);
       if (main.top > maxSimilarity) maxSimilarity = main.top;
       var d = decideCandidate(
@@ -126,12 +125,14 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
       if (d != null && silenceFloor != null && !silenceFloor!.active) d = null;
       onWindow?.call(main.top, w.modelScore);
       final gap = (refractory.inMicroseconds * 16000) ~/ 1000000;
-      if (d == null || w.endSample - _lastHit < gap) continue;
-      _lastHit = w.endSample;
+      // The lock runs from the hit time (the peak), also for the next hit.
+      if (d == null || ev.end - _lastHit < gap) continue;
+      _lastHit = ev.end;
       hits.add(
         WakeWordHit(
           keywordId: keywordId,
-          endSample: w.endSample,
+          endSample: ev.end,
+          holdMs: ev.holdSamples == null ? null : ev.holdSamples! ~/ 16,
           confidence: d.confidence,
           reason: d.reason.name,
           score: score,
@@ -145,45 +146,41 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     return hits;
   }
 
-  double? _peak;
-  int _heldCount = 0;
-  int _drops = 0;
+  int? _holdStart;
+  double _peak = 0;
+  int _peakEnd = 0;
 
-  /// The score the rules see: the raw one, or with [holdWindows] the peak of
-  /// the event once it is decided (`null` while the event is still held).
-  double? _eventScore(double? rawScore) {
+  /// The score the rules see: the raw one, or with [holdDuration] the peak of
+  /// the event once it is decided (`score == null` while it is still held).
+  _Scored _eventScore(double? rawScore, int end) {
     // Fail-closed: NaN is no score (never a peak, never a hit).
     final score = rawScore != null && rawScore.isNaN ? null : rawScore;
     final lower = modelThreshold, upper = directThreshold;
-    if (holdWindows <= 0 || lower == null || upper == null) return score;
-    final peak = _peak;
-    if (peak == null) {
-      if (score == null || score < lower || score >= upper) return score;
+    final holdSamples = (holdDuration.inMicroseconds * 16000) ~/ 1000000;
+    if (holdSamples <= 0 || lower == null || upper == null) {
+      return _Scored(score, end, null);
+    }
+    final start = _holdStart;
+    if (start == null) {
+      if (score == null || score < lower || score >= upper) {
+        return _Scored(score, end, 0);
+      }
+      _holdStart = end;
       _peak = score;
-      _heldCount = 1;
-      _drops = 0;
-      return _heldCount >= holdWindows ? _release() : null;
+      _peakEnd = end;
+      return _Scored(null, end, null);
     }
     if (score != null && score >= upper) {
-      _peak = null;
-      return score;
+      _holdStart = null;
+      return _Scored(score, end, end - start);
     }
-    _heldCount++;
-    if (score != null && score >= peak) {
+    if (score != null && score >= _peak) {
       _peak = score;
-      _drops = 0;
-    } else {
-      _drops++;
+      _peakEnd = end;
     }
-    return _drops >= dropsToEnd || _heldCount >= holdWindows
-        ? _release()
-        : null;
-  }
-
-  double _release() {
-    final peak = _peak!;
-    _peak = null;
-    return peak;
+    if (end - start < holdSamples) return _Scored(null, end, null);
+    _holdStart = null;
+    return _Scored(_peak, _peakEnd, end - start);
   }
 
   List<WakeTemplates> _usable(List<WakeTemplates> sets) => [
@@ -225,9 +222,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     features.reset();
     silenceFloor?.reset();
     _lastHit = -1 << 40;
-    _peak = null;
-    _heldCount = 0;
-    _drops = 0;
+    _holdStart = null;
   }
 
   @override
@@ -236,4 +231,13 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     _open = false;
     await features.close();
   }
+}
+
+/// Result of the hold rule for one window: [score] (null while held), the
+/// hit time [end] (peak window when released) and the held span in samples.
+final class _Scored {
+  const _Scored(this.score, this.end, this.holdSamples);
+  final double? score;
+  final int end;
+  final int? holdSamples;
 }

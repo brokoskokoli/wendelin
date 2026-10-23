@@ -25,6 +25,7 @@ final class _Parts implements WakeParts {
     this.engineless = false,
     this.verdict = true,
     this.direct = false,
+    this.holdMs,
     this.engineError,
     this.openError,
     this.errorsOnlyModel = false,
@@ -35,6 +36,7 @@ final class _Parts implements WakeParts {
 
   final bool engineless;
   final bool direct;
+  final int? holdMs;
   final Object? engineError;
   final Object? openError;
   bool verdict;
@@ -57,7 +59,9 @@ final class _Parts implements WakeParts {
     final error = engineError;
     if (hit && error != null) throw error;
     if (hit && openError != null) return _OpenFails(openError!);
-    return engineless ? null : FakeWakeWordEngine(direct: direct);
+    return engineless
+        ? null
+        : FakeWakeWordEngine(direct: direct, holdMs: holdMs);
   }
 
   @override
@@ -297,6 +301,34 @@ void main() {
         'wake-hit-stage engine=wake detector=templates '
         'stage=1-unchecked score=0.900 verifier=none',
       ),
+    );
+    expect(
+      logs.join('\n'),
+      contains('wake-decision engine=wake hold_ms=0 peak=0.900 path=unchecked'),
+    );
+  });
+
+  test('wake-decision: abgelehnter Stufe-2-Kandidat wird geloggt', () async {
+    await start(verify: true, p: _Parts(verdict: false, holdMs: 800));
+    await hear(FakeWakeWordEngine.markerFrame(1600));
+    for (var i = 0; i < 12; i++) {
+      await hear(Int16List(1600));
+    }
+    await until(() => logs.any((l) => l.contains('result=no')));
+    expect(
+      logs.join('\n'),
+      contains('wake-decision engine=wake hold_ms=800 peak=0.900 path=stage2'),
+    );
+    expect(calls(), isNot(contains('hit')));
+  });
+
+  test('wake-decision: Direkttreffer mit hold_ms > 0', () async {
+    await start(verify: true, p: _Parts(direct: true, holdMs: 640));
+    await hear(FakeWakeWordEngine.markerFrame(1600));
+    await until(() => calls().contains('hit'));
+    expect(
+      logs.join('\n'),
+      contains('wake-decision engine=wake hold_ms=640 peak=0.900 path=direct'),
     );
   });
 
@@ -606,7 +638,7 @@ void main() {
         ['a', 'b'],
       );
       expect(e.modelThreshold, isNull);
-      expect(e.holdWindows, 0);
+      expect(e.holdDuration, Duration.zero);
     });
 
     test(
@@ -631,7 +663,7 @@ void main() {
           expect(e.templates, isNull);
           expect(e.modelThreshold, band(station).verifyFrom);
           expect(e.directThreshold, band(station).acceptFrom);
-          expect(e.holdWindows, WakeClassifierRules.holdWindows);
+          expect(e.holdDuration, WakeClassifierRules.holdWindow);
           expect(e.silenceFloor, isNotNull);
           expect(e.silenceFloor!.minRms, WakeClassifierRules.silenceFloorRms);
           expect(e.silenceFloor!.ratio, 0, reason: 'kein Rauschboden-Faktor');
