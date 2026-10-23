@@ -65,6 +65,21 @@ final wakeDetectorProvider =
       WakeDetectorNotifier.new,
     );
 
+/// Whether listening needs a learned voice (WP140): the templates path does
+/// (choice „Vorlagen“, or the classifier model is not installed, so the host
+/// falls back to templates). With the model installed the classifier alone
+/// listens, without any enrolled voice.
+final wakeNeedsVoiceProvider = Provider<bool>((ref) {
+  final choice =
+      ref.watch(wakeDetectorProvider).value ?? WakeDetectorChoice.auto;
+  if (choice == WakeDetectorChoice.templates) return true;
+  final m = ref
+      .watch(speechModelCatalogProvider)
+      .byId(SpeechModelCatalog.wakeClassifierWendelin.id);
+  if (m == null) return true;
+  return ref.watch(modelStatesProvider)[m.id]?.phase != ModelPhase.installed;
+});
+
 /// Stores the setting.
 final class WakeDetectorNotifier extends AsyncNotifier<WakeDetectorChoice> {
   @override

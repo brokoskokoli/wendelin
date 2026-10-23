@@ -145,6 +145,34 @@ void main() {
       expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsOne);
     });
 
+    testWidgets('kein Modell und keine Stimme: Hinweis „nichts zu hören“; '
+        'mit Stimme nicht', (tester) async {
+      final env = wakeEnv();
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.byKey(const ValueKey('wakeNothingToHear')), findsOne);
+    });
+
+    testWidgets('Modell da, keine Stimme: kein Hinweis (Modell hört allein)', (
+      tester,
+    ) async {
+      final env = wakeEnv();
+      env.speechModels.installed.add(
+        SpeechModelCatalog.wakeClassifierWendelin.id,
+      );
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.byKey(const ValueKey('wakeNothingToHear')), findsNothing);
+    });
+
+    testWidgets('kein Modell, aber eine Stimme: kein Hinweis', (tester) async {
+      final env = wakeEnv();
+      final store = SecretWakeTemplateStore(env.secrets);
+      await store.save(templates('a'));
+      await store.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsOne);
+      expect(find.byKey(const ValueKey('wakeNothingToHear')), findsNothing);
+    });
+
     testWidgets('Vorlagen: kein Modell-Download, kein Hinweis', (tester) async {
       final env = wakeEnv();
       await pumpWake(tester, env, const WakeWordScreen());

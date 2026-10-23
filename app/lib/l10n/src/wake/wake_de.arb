@@ -96,6 +96,7 @@
       }
     }
   },
+  "wakeDetectorNothingToHear": "Ohne das Modell hört nur deine eingelernte Stimme zu, und die fehlt. Lade das Modell oder lerne deine Stimme ein, sonst bleibt das Wake Word aus.",
   "wakeDetectorTemplates": "Vorlagen deiner Stimme",
   "wakeDetectorTemplatesHint": "Vergleicht mit deinen Aufnahmen. Braucht das Einlernen.",
   "wakeDetectorTitle": "Erkennung",

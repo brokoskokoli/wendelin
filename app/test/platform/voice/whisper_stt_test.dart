@@ -120,7 +120,11 @@ void main() {
       const gate = SttConfidenceGate();
       expect(gate.decide(t.confidence, followUp: true), SttGateAction.accept);
       expect(
-        gate.decide(t.confidence, followUp: false, source: TriggerKind.wakeWord),
+        gate.decide(
+          t.confidence,
+          followUp: false,
+          source: TriggerKind.wakeWord,
+        ),
         SttGateAction.accept,
       );
     });

@@ -3,10 +3,14 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/providers.dart';
+import 'package:wendelin/di/voice_settings_providers.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/di/wake_service.dart';
+import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/platform/wake/wake_platform.dart';
 import 'package:wendelin_storage/testing.dart';
+import 'package:wendelin_voice/fakes.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 final class _FakePlatform extends WakePlatform {
   WakeServiceStatus current = const WakeServiceStatus();
@@ -65,6 +69,63 @@ void main() {
       expect(platform.sent.where((s) => s.enabled), isEmpty);
     },
   );
+
+  // WP140: reproduces `wake-start result=disabled` on the device: the model
+  // alone can listen, yet the switch stayed off without an enrolled voice.
+  group('Modell-Weg braucht keine Stimme', () {
+    late FakeSpeechModelService models;
+
+    Future<void> withModel({required bool installed}) async {
+      models = FakeSpeechModelService();
+      if (installed) {
+        models.installed.add(SpeechModelCatalog.wakeClassifierWendelin.id);
+      }
+      final storage = openInMemoryStorage();
+      c.dispose();
+      c = ProviderContainer(
+        overrides: [
+          storageProvider.overrideWithValue(storage),
+          secretStoreProvider.overrideWithValue(InMemorySecretStore()),
+          wakePlatformProvider.overrideWithValue(platform),
+          speechModelServiceProvider.overrideWith((_) async => models),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(modelStatesProvider.notifier).refresh();
+      await c.read(wakeServiceProvider.future);
+    }
+
+    test('Modell da, keine Stimme: einschalten geht', () async {
+      await withModel(installed: true);
+      expect(c.read(wakeNeedsVoiceProvider), isFalse);
+      expect(
+        await c.read(wakeServiceProvider.notifier).setEnabled(enabled: true),
+        isTrue,
+      );
+      expect(platform.sent.last.enabled, isTrue);
+    });
+
+    test('Modell fehlt, keine Stimme: gesperrt, nicht still aus', () async {
+      await withModel(installed: false);
+      expect(c.read(wakeNeedsVoiceProvider), isTrue);
+      expect(
+        await c.read(wakeServiceProvider.notifier).setEnabled(enabled: true),
+        isFalse,
+      );
+    });
+
+    test('Modell da, aber Wahl „Vorlagen“, keine Stimme: gesperrt', () async {
+      await withModel(installed: true);
+      await c
+          .read(wakeDetectorProvider.notifier)
+          .set(WakeDetectorChoice.templates);
+      expect(c.read(wakeNeedsVoiceProvider), isTrue);
+      expect(
+        await c.read(wakeServiceProvider.notifier).setEnabled(enabled: true),
+        isFalse,
+      );
+    });
+  });
 
   test(
     'mit Stimme: einschalten, Bedingung ändern, Nachprüfung folgt',

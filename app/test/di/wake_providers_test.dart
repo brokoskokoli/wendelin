@@ -32,45 +32,48 @@ WakeTemplates _set(List<Float32List> e) => WakeTemplates(
 );
 
 void main() {
-  test('Audit: einmal je Vorlagenstand, zweiter Start entfernt nichts', () async {
-    final env = TestEnv();
-    final store = env.container().read(wakeStoreProvider);
-    await store.saveSpeakers([const WakeSpeaker(id: 'a', name: 'Anna')]);
-    await store.save(
-      _set([for (var i = 0; i < 9; i++) _tpl(i), _tpl(100, stray: true)]),
-    );
-    final c = env.container();
-    addTearDown(c.dispose);
-    await c.read(wakeSpeakersProvider.future);
-    expect((await store.load('a'))!.embeddings, hasLength(9));
-    final mark = await env.storage.settings.get(
-      SettingKey.string('wake.audit.a'),
-    );
-    expect(mark, templateFingerprint((await store.load('a'))!));
-    // The set is marked as audited: a stray in it now stays at the next
-    // start (the audit is relative and would otherwise nibble further).
-    final withStray = _set([
-      for (var i = 0; i < 9; i++) _tpl(i),
-      _tpl(101, stray: true),
-    ]);
-    await store.save(withStray);
-    await env.storage.settings.set(
-      SettingKey.string('wake.audit.a'),
-      templateFingerprint(withStray),
-    );
-    final again = env.container();
-    addTearDown(again.dispose);
-    await again.read(wakeSpeakersProvider.future);
-    expect((await store.load('a'))!.embeddings, hasLength(10));
-    // A new enrollment (other set) is audited once more.
-    await store.save(
-      _set([for (var i = 0; i < 9; i++) _tpl(i), _tpl(102, stray: true)]),
-    );
-    final third = env.container();
-    addTearDown(third.dispose);
-    await third.read(wakeSpeakersProvider.future);
-    expect((await store.load('a'))!.embeddings, hasLength(9));
-  });
+  test(
+    'Audit: einmal je Vorlagenstand, zweiter Start entfernt nichts',
+    () async {
+      final env = TestEnv();
+      final store = env.container().read(wakeStoreProvider);
+      await store.saveSpeakers([const WakeSpeaker(id: 'a', name: 'Anna')]);
+      await store.save(
+        _set([for (var i = 0; i < 9; i++) _tpl(i), _tpl(100, stray: true)]),
+      );
+      final c = env.container();
+      addTearDown(c.dispose);
+      await c.read(wakeSpeakersProvider.future);
+      expect((await store.load('a'))!.embeddings, hasLength(9));
+      final mark = await env.storage.settings.get(
+        SettingKey.string('wake.audit.a'),
+      );
+      expect(mark, templateFingerprint((await store.load('a'))!));
+      // The set is marked as audited: a stray in it now stays at the next
+      // start (the audit is relative and would otherwise nibble further).
+      final withStray = _set([
+        for (var i = 0; i < 9; i++) _tpl(i),
+        _tpl(101, stray: true),
+      ]);
+      await store.save(withStray);
+      await env.storage.settings.set(
+        SettingKey.string('wake.audit.a'),
+        templateFingerprint(withStray),
+      );
+      final again = env.container();
+      addTearDown(again.dispose);
+      await again.read(wakeSpeakersProvider.future);
+      expect((await store.load('a'))!.embeddings, hasLength(10));
+      // A new enrollment (other set) is audited once more.
+      await store.save(
+        _set([for (var i = 0; i < 9; i++) _tpl(i), _tpl(102, stray: true)]),
+      );
+      final third = env.container();
+      addTearDown(third.dispose);
+      await third.read(wakeSpeakersProvider.future);
+      expect((await store.load('a'))!.embeddings, hasLength(9));
+    },
+  );
 
   test('Nachprüfung ist standardmäßig an und bleibt gespeichert', () async {
     final env = TestEnv();

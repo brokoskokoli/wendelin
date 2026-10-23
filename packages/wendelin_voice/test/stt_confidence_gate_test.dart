@@ -75,20 +75,23 @@ void main() {
       });
     });
 
-    test('Wake Word bei niedriger Sicherheit (0,4): Nachfrage statt Modell', () {
-      runFake((async) {
-        final h = Harness(transcripts: [_t('Wetter', 0.4)]);
-        h.pipeline.start(
-          trigger: TriggerEvent(
-            source: TriggerKind.wakeWord,
-            at: DateTime.utc(2026),
-          ),
-        );
-        settle(async);
-        expect(h.recording.inputs, isEmpty);
-        expect(h.eventsOf<VoiceNothingUnderstood>(), hasLength(1));
-      });
-    });
+    test(
+      'Wake Word bei niedriger Sicherheit (0,4): Nachfrage statt Modell',
+      () {
+        runFake((async) {
+          final h = Harness(transcripts: [_t('Wetter', 0.4)]);
+          h.pipeline.start(
+            trigger: TriggerEvent(
+              source: TriggerKind.wakeWord,
+              at: DateTime.utc(2026),
+            ),
+          );
+          settle(async);
+          expect(h.recording.inputs, isEmpty);
+          expect(h.eventsOf<VoiceNothingUnderstood>(), hasLength(1));
+        });
+      },
+    );
 
     test('hohe Sicherheit: normaler Ablauf', () {
       runFake((async) {

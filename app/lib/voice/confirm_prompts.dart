@@ -29,7 +29,8 @@ String? answerLanguage({
 }) {
   if (!strict) return spoken ?? app;
   if (spoken == null) return app;
-  String primary(String t) => t.trim().split(RegExp('[-_]')).first.toLowerCase();
+  String primary(String t) =>
+      t.trim().split(RegExp('[-_]')).first.toLowerCase();
   return primary(spoken) == primary(app) ? app : null;
 }
 

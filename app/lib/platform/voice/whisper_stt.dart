@@ -189,7 +189,9 @@ final class WhisperSpeechToText implements SpeechToText {
             // is no evidence against the language: only a detected foreign
             // language counts as unsupported.
             languageSupported:
-                fixed != null || detected.isEmpty || languages.contains(detected),
+                fixed != null ||
+                detected.isEmpty ||
+                languages.contains(detected),
           );
     // Which language was used, never what was said.
     voiceLog('stt-lang', {
