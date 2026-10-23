@@ -186,4 +186,42 @@ void main() {
       );
     });
   });
+
+  group('haHasBlocker', () {
+    test('Ausnahme nur für ganzes Wort: Saunatür bleibt gesperrt', () {
+      expect(haHasBlocker('Saunatür switch.saunatur'), isTrue);
+      expect(haHasBlocker('Sauna switch.saunatur'), isTrue);
+      expect(haHasBlocker('Saunatür'), isTrue);
+    });
+
+    test('Ausnahme nimmt keinen Stamm mit: Motortor (de)', () {
+      expect(haHasBlocker('Motortor switch.motortor'), isTrue);
+    });
+
+    test('en: Navigate nur als Teil eines Worts bleibt gesperrt', () {
+      expect(haHasBlocker('Navigates switch.x'), isTrue);
+      expect(haHasBlocker('Gps navigategate'), isTrue);
+      expect(haHasBlocker('Navigate switch.x'), isFalse);
+    });
+
+    test('fr: Teil eines Worts mit porte bleibt gesperrt', () {
+      expect(haHasBlocker('Support switch.x'), isFalse);
+      expect(haHasBlocker('Supporte switch.x'), isFalse);
+      expect(haHasBlocker('Supporteur switch.x'), isTrue);
+      expect(haHasBlocker('Soupporte switch.x'), isTrue);
+    });
+
+    test('ganze Ausnahmewörter bleiben erlaubt', () {
+      for (final n in ['Ventilator', 'Monitor', 'Temperatur', 'Radiator']) {
+        expect(haHasBlocker('$n switch.ok'), isFalse, reason: n);
+      }
+      expect(haHasBlocker('Ventilator switch.ventilator'), isFalse);
+      expect(haHasBlocker('Wohnzimmer-Monitor switch.wohn_monitor'), isFalse);
+    });
+
+    test('Raumtemperatur ist gesperrt (gewollt, fail-closed)', () {
+      expect(haHasBlocker('Raumtemperatur switch.x'), isTrue);
+      expect(haHasBlocker('Temperaturtür switch.x'), isTrue);
+    });
+  });
 }

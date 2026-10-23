@@ -93,26 +93,29 @@ final class HaWords {
   final List<String> blockers;
 
   /// Known harmless words that contain a blocker stem („Ventilator“,
-  /// „Temperatur“). They are cut out of the name before the stems are
-  /// looked for, so „Temperaturtür“ is still blocked. Every language counts.
+  /// „Temperatur“). An exception applies only to a **whole word** (token of
+  /// name or entity id, split at space, `_`, `-`, `.`) that equals it
+  /// exactly; nothing is cut out of a longer word, so „Temperaturtür“,
+  /// „Saunatür“ and „Raumtemperatur“ stay blocked. Every language counts.
   final List<String> blockerExceptions;
 }
 
 /// Whether [nameAndId] (device name and entity id) contains a blocker of
 /// any language (see [HaWords.blockers]).
 bool haHasBlocker(String nameAndId) {
-  var folded = foldForMatch(nameAndId);
-  for (final w in haWordsByLanguage.values) {
-    for (final e in w.blockerExceptions) {
-      final x = foldForMatch(e);
-      if (x.isNotEmpty) folded = folded.replaceAll(x, ' ');
-    }
-  }
-  for (final w in haWordsByLanguage.values) {
-    for (final b in w.blockers) {
-      final stem = foldForMatch(b);
-      if (stem.isNotEmpty && folded.contains(stem)) return true;
-    }
+  final exceptions = {
+    for (final w in haWordsByLanguage.values)
+      for (final e in w.blockerExceptions) foldForMatch(e),
+  };
+  final stems = [
+    for (final w in haWordsByLanguage.values)
+      for (final b in w.blockers) foldForMatch(b),
+  ].where((s) => s.isNotEmpty).toList();
+  for (final token in foldForMatch(nameAndId).split(' ')) {
+    // An exception only counts for a token that equals it exactly; nothing
+    // is cut out of a longer word (fail closed).
+    if (token.isEmpty || exceptions.contains(token)) continue;
+    if (stems.any(token.contains)) return true;
   }
   return false;
 }

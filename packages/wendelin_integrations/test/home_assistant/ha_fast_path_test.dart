@@ -221,6 +221,20 @@ void main() {
       expect(await f.match('Ventilatortor an', language: 'de'), isNull);
     });
 
+    test('Saunatür und Motortor: Ausnahme schneidet keinen Stamm ab', () async {
+      for (final (id, name) in [
+        ('switch.saunatur', 'Saunatür'),
+        ('switch.motortor', 'Motortor'),
+      ]) {
+        final f = with_([HaEntity(entityId: id, name: name)]);
+        expect(await f.match('$name an', language: 'de'), isNull, reason: id);
+      }
+      final ok = with_(const [
+        HaEntity(entityId: 'switch.sauna', name: 'Sauna'),
+      ]);
+      expect(await ok.match('Sauna an', language: 'de'), isNotNull);
+    });
+
     test('Frage mit Fragezeichen: Modell', () async {
       expect(await fast.match('Küche Licht an?', language: 'de'), isNull);
       expect(
