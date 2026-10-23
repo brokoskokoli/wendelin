@@ -5280,6 +5280,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Vorlagen fehlen. Bitte neu einlernen.';
 
   @override
+  String get wakeWordTemplatesOutdated =>
+      'Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.';
+
+  @override
   String get wakeWordTryNow => 'Jetzt ausprobieren';
 
   @override

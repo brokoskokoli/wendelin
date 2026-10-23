@@ -58,6 +58,7 @@ FakeWakeFeatureExtractor fakeFeatures({
   String version = 'fake-1',
 }) => FakeWakeFeatureExtractor(
   featureVersion: version,
+  centerId: wakeCenterId,
   windowFor: (end, _) => WakeWindow(
     endSample: end,
     embedding:

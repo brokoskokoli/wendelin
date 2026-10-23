@@ -8991,6 +8991,12 @@ abstract class AppLocalizations {
   /// **'Vorlagen fehlen. Bitte neu einlernen.'**
   String get wakeWordTemplatesMissing;
 
+  /// No description provided for @wakeWordTemplatesOutdated.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.'**
+  String get wakeWordTemplatesOutdated;
+
   /// No description provided for @wakeWordTryNow.
   ///
   /// In de, this message translates to:

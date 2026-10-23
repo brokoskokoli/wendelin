@@ -335,6 +335,7 @@
   },
   "wakeWordRetrain": "Neu einlernen",
   "wakeWordTemplatesMissing": "Vorlagen fehlen. Bitte neu einlernen.",
+  "wakeWordTemplatesOutdated": "Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.",
   "wakeWordTryNow": "Jetzt ausprobieren",
   "wakeWordWhoCalibrate": "Wen kalibrieren?",
   "wakeWordWhoJoins": "Wer kommt dazu?",

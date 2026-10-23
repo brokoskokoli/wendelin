@@ -30,6 +30,14 @@ abstract interface class WakeFeatureExtractor {
   /// Identifies the feature models; stored with the personal templates.
   String get featureVersion;
 
+  /// Fixed mean of the embedding windows (WP134): template and window are
+  /// centered with it before the cosine. `null`: raw vectors (fakes).
+  Float32List? get embeddingMean;
+
+  /// Identifies [embeddingMean]; stored with the templates (they are
+  /// unusable with another value). `null` when there is no mean.
+  String? get centerId;
+
   /// Loads the models.
   Future<void> open();
 

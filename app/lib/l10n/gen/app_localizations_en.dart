@@ -5252,6 +5252,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Templates missing. Please train again.';
 
   @override
+  String get wakeWordTemplatesOutdated =>
+      'These templates are outdated (the comparison was improved). Please train again.';
+
+  @override
   String get wakeWordTryNow => 'Try it now';
 
   @override

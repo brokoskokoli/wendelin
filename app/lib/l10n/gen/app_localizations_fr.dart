@@ -5312,6 +5312,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Modèles manquants. Veuillez entraîner de nouveau.';
 
   @override
+  String get wakeWordTemplatesOutdated =>
+      'Ces modèles sont périmés (la comparaison a été améliorée). Veuillez entraîner de nouveau.';
+
+  @override
   String get wakeWordTryNow => 'Essayer maintenant';
 
   @override

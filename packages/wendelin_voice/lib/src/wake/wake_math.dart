@@ -18,12 +18,41 @@ double cosineSimilarity(Float32List a, Float32List b) {
   return dot / (math.sqrt(na) * math.sqrt(nb));
 }
 
+/// Cosine similarity of `a - mean` and `b - mean` (WP134): the embeddings
+/// share a large fixed component (about 71 % of the energy), so raw cosines
+/// of unrelated audio, noise and digital silence all lie near 0.85. Without
+/// it the spread between speech and background is 0.1..0.4 instead of 0.02.
+/// 0 when one centered vector is zero.
+double centeredCosine(Float32List a, Float32List b, Float32List mean) {
+  if (a.length != b.length || a.length != mean.length) {
+    throw ArgumentError(
+      'Längen verschieden: ${a.length}, ${b.length}, ${mean.length}',
+    );
+  }
+  var dot = 0.0, na = 0.0, nb = 0.0;
+  for (var i = 0; i < a.length; i++) {
+    final x = a[i] - mean[i], y = b[i] - mean[i];
+    dot += x * y;
+    na += x * x;
+    nb += y * y;
+  }
+  if (na == 0 || nb == 0) return 0;
+  return dot / (math.sqrt(na) * math.sqrt(nb));
+}
+
 /// Highest similarity of [embedding] to any of [templates]; `-1` when there
-/// are none.
-double bestSimilarity(Float32List embedding, List<Float32List> templates) {
+/// are none. With [mean] (the extractor's `embeddingMean`) the cosine is
+/// centered, see [centeredCosine]; `null` compares the raw vectors.
+double bestSimilarity(
+  Float32List embedding,
+  List<Float32List> templates, {
+  Float32List? mean,
+}) {
   var best = -1.0;
   for (final t in templates) {
-    final s = cosineSimilarity(embedding, t);
+    final s = mean == null
+        ? cosineSimilarity(embedding, t)
+        : centeredCosine(embedding, t, mean);
     if (s > best) best = s;
   }
   return best;

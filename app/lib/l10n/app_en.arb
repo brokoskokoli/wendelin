@@ -1681,6 +1681,7 @@
   "wakeWordRecordingsThreshold": "{length} recordings · threshold {v}",
   "wakeWordRetrain": "Train again",
   "wakeWordTemplatesMissing": "Templates missing. Please train again.",
+  "wakeWordTemplatesOutdated": "These templates are outdated (the comparison was improved). Please train again.",
   "wakeWordTryNow": "Try it now",
   "wakeWordWhoCalibrate": "Whom to calibrate?",
   "wakeWordWhoJoins": "Who is joining?",

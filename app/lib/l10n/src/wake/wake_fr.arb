@@ -150,6 +150,7 @@
   "wakeWordRecordingsThreshold": "{length} enregistrements · seuil {v}",
   "wakeWordRetrain": "Entraîner de nouveau",
   "wakeWordTemplatesMissing": "Modèles manquants. Veuillez entraîner de nouveau.",
+  "wakeWordTemplatesOutdated": "Ces modèles sont périmés (la comparaison a été améliorée). Veuillez entraîner de nouveau.",
   "wakeWordTryNow": "Essayer maintenant",
   "wakeWordWhoCalibrate": "Qui calibrer ?",
   "wakeWordWhoJoins": "Qui s’ajoute ?",

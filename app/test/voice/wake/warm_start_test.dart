@@ -61,6 +61,12 @@ class _ColdChain implements WakeFeatureExtractor {
 
   @override
   String get featureVersion => 'fake-1';
+
+  @override
+  Float32List? get embeddingMean => null;
+
+  @override
+  String? get centerId => null;
   @override
   Future<void> open() async {}
   @override

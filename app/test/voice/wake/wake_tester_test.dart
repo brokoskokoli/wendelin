@@ -12,6 +12,7 @@ Float32List v(List<double> x) => Float32List.fromList(x);
 WakeTemplates tmpl({double threshold = 0.9, String id = 'a'}) => WakeTemplates(
   speakerId: id,
   featureVersion: 'fake-1',
+  center: wakeCenterId,
   threshold: threshold,
   embeddings: [
     v([1, 0, 0, 0]),

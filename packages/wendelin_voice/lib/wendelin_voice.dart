@@ -53,6 +53,7 @@ export 'src/wake/pre_roll_buffer.dart';
 export 'src/wake/pre_roll_speech.dart';
 export 'src/wake/speech_gate.dart';
 export 'src/wake/wake_calibration.dart';
+export 'src/wake/wake_center.dart';
 export 'src/wake/wake_feature_extractor.dart';
 export 'src/wake/wake_math.dart';
 export 'src/wake/wake_score_band.dart';

@@ -51,9 +51,11 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
   /// WP129 (WP126 Folgepunkt b): no main-word hit unless the recent audio
   /// held at least a minimum level (absolute, see
   /// `WakeClassifierRules.silenceFloorRms`), whichever rule fired. Template
-  /// embeddings look like the templates in digital silence **and** in a
-  /// quiet room (similarity 0.82..0.89 over the threshold 0.75), so a silent
-  /// stream after a warm start would otherwise be a candidate. It is no
+  /// embeddings looked like the templates in digital silence **and** in a
+  /// quiet room (raw cosine 0.82..0.89 over the threshold 0.75; since WP134
+  /// the cosine is centered and the gap is wide, this stays as a safety net),
+  /// so a silent stream after a warm start would otherwise be a candidate.
+  /// It is no
   /// speech detector: the ratio to the noise floor is not used (a late
   /// decision of a real call must not be lost). `null`: no level check.
   final SpeechGate? silenceFloor;
@@ -186,7 +188,7 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
 
   List<WakeTemplates> _usable(List<WakeTemplates> sets) => [
     for (final t in sets)
-      if (t.isCompatible(features.featureVersion)) t,
+      if (t.isCompatible(features.featureVersion, center: features.centerId)) t,
   ];
 
   ({double? similarity, double? threshold, double margin, double top}) _closest(
@@ -196,7 +198,11 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     double? sim, threshold;
     var margin = double.negativeInfinity, top = -1.0;
     for (final t in sets) {
-      final s = bestSimilarity(embedding, t.embeddings);
+      final s = bestSimilarity(
+        embedding,
+        t.embeddings,
+        mean: features.embeddingMean,
+      );
       if (s > top) top = s;
       if (s - t.threshold > margin) {
         margin = s - t.threshold;

@@ -106,10 +106,10 @@ void main() {
     });
 
     group('robust', () {
-      test('Untergrenze: Schwelle nie unter 0,85', () {
+      test('Untergrenze: Schwelle nie unter 0,40 (zentrierter Raum)', () {
         final c = calibrateThreshold(
-          positiveScores: [0.9, 0.8, 0.7],
-          negativeEvents: [0.3, 0.4],
+          positiveScores: [0.9, 0.3, 0.2],
+          negativeEvents: [0.3, 0.35],
           negativeHours: 2,
         );
         expect(c.threshold, wakeMinThreshold);

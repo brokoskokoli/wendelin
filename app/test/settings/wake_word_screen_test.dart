@@ -26,9 +26,14 @@ import 'integrations_screen_test.dart' show settle;
 
 Float32List v(List<double> x) => Float32List.fromList(x);
 
-WakeTemplates templates(String id, {double threshold = 0.9}) => WakeTemplates(
+WakeTemplates templates(
+  String id, {
+  double threshold = 0.9,
+  String? center = wakeCenterId,
+}) => WakeTemplates(
   speakerId: id,
   featureVersion: 'fake-1',
+  center: center,
   threshold: threshold,
   embeddings: [
     v([1, 0, 0, 0]),
@@ -259,6 +264,24 @@ void main() {
       expect(tester.widget<WSwitch>(sw).value, isFalse);
       expect(await c.read(wakeVerifyProvider.future), isFalse);
       expect(await env.storage.settings.get(wakeVerifyKey), isFalse);
+    });
+
+    testWidgets('alte (rohe) Vorlagen: Hinweis, nicht kalibrierbar/testbar', (
+      tester,
+    ) async {
+      final env = wakeEnv();
+      final store = SecretWakeTemplateStore(env.secrets);
+      await store.save(templates('a', center: null));
+      await store.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.textContaining('veraltet'), findsOneWidget);
+      expect(find.textContaining('Aufnahmen · Schwelle'), findsNothing);
+      await tester.tap(find.text('Kalibrieren (30 min, empfohlen)'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WakeCalibrateScreen), findsNothing);
+      await tester.tap(find.text('Jetzt ausprobieren'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WakeTestScreen), findsNothing);
     });
 
     testWidgets('Sprecherverwaltung: listen, neu einlernen, einzeln löschen', (

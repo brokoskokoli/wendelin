@@ -480,3 +480,115 @@ Andere Schwellen, Band 0,999 (Treffer, Verwechsler W / HW): bei 0,95 v8a 75 (7 /
 - Echte Negativzeit nur 1,22 h; ein Ereignis je Gerät ist die FA-Grenze, die „echt“-Spalte unterscheidet 0 von 1 kaum.
 
 **Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`, nur aus den Caches):** `M=$K/wp130/out/wendelin_wp130; nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/stage2_analysis.py --report-only --threads 2 --fixed-thr 0.95,0.98,0.99 --model v8a=${M}_a.onnx --model a-syn=${M}_a-syn.onnx --model c-syn=${M}_c-syn.onnx` → `stage2_table.md` (Abschnitt 6 je Modell und Schwelle, 6e: Vergleichstabelle). Alle Blöcke ohne v8a: dasselbe mit `--split all` und nur den Modellen `a-syn`, `c-syn` (v7 ist immer dabei) → `stage2_table_all.md`.
+
+## Vorlagen zentriert (WP134)
+
+Frage (WP134 Teil B, nur Messung, kein App-Code): Soll der Vorlagen-Vergleich für „Wendelin“ (Kosinus eines 1536er-Fensters gegen die Einlern-Vorlagen) zentriert werden, und welche Schwelle gilt dann? Skript `tool/train_wake_word/template_center_measure.py` (Selbsttest `test_template_center_measure.py`), Arbeitsdaten lokal unter `$K/wp134` (nie im Repo).
+
+**Aufbau.** Die App-Kette ist in Python nachgebildet: Strom in Blöcken zu 1280 Samples mit 480 Samples Kontext, Mel `x/10+2`, ein Embedding je 76 Mel-Frames, Fenster aus 16 Embeddings (`wake_feature_chain.dart`); Einlernen wie `embedUtterance` (1 s und 2 s Polster, Fenster mit Ende 300 ms nach dem Wortende; Ausschnitt wie `UtteranceCapture`: 200 ms Vorlauf, Wortende plus 160 ms, Grenzen aus den Labels); Vergleich wie `_closest` (höchster Kosinus über die Vorlagen). **Abgleich mit Dart:** dieselben 40 s Huawei-Aufnahme durch die echte `WakeFeatureChain` (ONNX, Blöcke zu 320 Samples) und durch die Nachbildung: 476 Fenster, gleiche `endSample`-Folge, Kosinus Fenster gegen Fenster min 0,99998, Mittel 0,99999 (der Offline-Weg von openWakeWord, den die älteren Messungen nutzten, liegt nur bei Mittel 0,992 / min 0,969, deshalb die Nachbildung). Nicht nachgebildet: die Sprachgrenzen des Aufnahme-Erkenners (hier die Labels), der Klassifikator-Weg (ODER-Regel), Rasterphasen des Stroms (eine Phase).
+
+**Split.** Vorlagen nur huawei Block 1–3, Wort „Wendelin“ (14 Clips, `ok` und `unsicher` bis 2 s). Prüfung: huawei Block 4–6 und handy2 Block 1–6 (45 „Wendelin“, 45 „Hey Wendelin“, Treffer = höchste Ähnlichkeit mit Fensterende im Labelfenster, Fenster wie `words_measure`), echte Negativ-Aufnahmen (je 0,61 h), FLEURS test (1,0 h, „Fernseher“), digitale Stille und Rauschen (je 120 s), 300 Verwechsler (WP130, in 2 s rosa Raumrauschen eingebettet). Mittel und Schwelle werden nie auf Prüfclips mit Positiven gefittet: V1 aus den Einlern-Fenstern, V2 aus FLEURS dev (0,5 h, 21 171 Fenster, getrennt von FLEURS test), V2b zu gleichen Teilen aus FLEURS dev, synthetischem Rauschen und digitaler Stille; die Schwelle hängt nur an Negativ-Aufnahmen (niedrigster Wert mit höchstens 2 FA/h, Ereignisse mit 1,5 s Sperre). „Streng“ nimmt den Fernseher hinzu, gewählt auf der einen Hälfte der FLEURS-Clips, berichtet auf der anderen.
+
+**Varianten.** V0 roh (heute); V1 zentriert mit dem Mittel aller Einlern-Fenster (Wort + Hintergrund); V2 zentriert mit festem Mittel aus neutraler Sprache; V2b mit festem Mittel aus Sprache, Rauschen, Stille. Jeweils mit Polster der Vorlagen `zero` (digitale Nullen, heute) oder `noise` (weißes Rauschen mit dem Pegel der aufgenommenen 200 ms Vorlauf).
+
+**Warum Polster-Vorlagen?** Es sind keine eigenen Vorlagen, sondern jede Vorlage trägt Polster: Das Fenster ist 2,0 s lang und endet 0,3 s nach dem Wortende, das Wort ist etwa 0,7 s lang, davor liegen die 1 s digitale Nullen. Median 49 % der Samples im Vorlagenfenster sind digitale Nullen (min 13 %, max 54 %), bei `noise` 1 %. Ähnlichkeit der Vorlagen zur digitalen Stille (roh): 0,79–0,85 (Median 0,80), mit Rauschpolster 0,81–0,85; keine Vorlage ist stilleähnlich (>0,9). Die „3 von 16 Stille-Polster-Vorlagen“ aus WP126 konnte ich mit den Huawei-Vorlagen **nicht** reproduzieren (vermutlich Vorlagen des Maintainers mit leisem Wort, nicht geprüft). Leave-one-out unter den 14 Vorlagen (roh): min 0,76, Median 0,95, max 0,97.
+
+
+**Ergebnis.**
+- **Roh (V0) hat kaum Abstand zum Hintergrund:** Stille 0,85, Rauschen 0,86–0,87, Fernseher bis 0,89, schwächster „Wendelin“-Treffer 0,84 (unter der Stille). Jede Schwelle unter 0,88 löst in Rauschen aus; die Schwelle für ≤2 FA/h liegt bei 0,89–0,90 und damit 0,02–0,03 über dem Rauschen. Der Treffer-Abstand ist klein: bei gleicher FA-Rate auf dem Fernseher (Kurvenvergleich) trifft V0 mit digitalem Polster nur 71 % [57–82] („Hey Wendelin“ 33 % [21–48]), mit Rauschpolster 93 % [82–98] („Hey Wendelin“ 44 % [31–59]).
+- **Zentriert (V1/V2/V2b):** Stille −0,15 bis 0,24, Rauschen 0,02–0,37 gegen Schwellen 0,43–0,55, also Abstand 0,1–0,4 statt 0,02. Bei gleicher FA-Rate auf dem Fernseher: „Wendelin“ 93–98 % [82–100] (42–44 von 45), „Hey Wendelin“ 49–73 %; mit `noise`-Polster und V2b 98 % [88–100] und 69 % [54–80]. Die Intervalle von V0-`noise` und zentriert überlappen bei „Wendelin“ (93 % gegen 93–98 %); der Gewinn bei den Treffern ist klar nur gegenüber V0 mit digitalem Polster, bei „Hey Wendelin“ (Vorlagen sind „Wendelin“) deutlich (69 gegen 44 %).
+- **Verwechsler** (300 synthetische Clips): bei gleicher Fernseher-Rate lösen V0 5–16, zentriert 18–25 Clips aus (6–8 % gegen 2–5 %). Zentrieren kostet hier Trennschärfe gegen ähnliche Wörter; bei der strengen Schwelle sind es 29–64 gegen 25–31 (V0). Das Maß ist synthetisch (nur Stimmen disjunkt zum Training), kein Alltagsmaß.
+- **Warmstart:** keine Variante löst in digitaler Stille oder in einem der fünf Rauschstücke (weiß 3/10/30 LSB, rosa 10/100 LSB) aus, weder mit der ruhigen noch mit der strengen Schwelle. Die Spanne ist bei V0 aber nur 0,02–0,04, zentriert 0,1–0,4.
+- **Polster:** Das digitale Polster allein kostet bei V0 22 Punkte „Wendelin“ (71 gegen 93 % bei gleicher FA-Rate; ruhige Schwelle handy2 80 gegen 93 %); es ist der größere Teil des V0-Defizits. Bei V1 zieht es das Mittel auf die Stille (Stille 0,24, Rauschen bis 0,37 gegen −0,02 und bis 0,10 mit `noise`), weil das Mittel dann zur Hälfte aus digitalen Nullen besteht (schlechter als `noise`). V2/V2b sind vom Polster kaum abhängig.
+- **Empfehlung:** Vorlagen mit Rauschpolster (Pegel des Vorlaufs) statt digitaler Nullen, **zentriert mit festem Mittel V2b** (Sprache + Rauschen + Stille, 1536 Werte, an `wakeFeatureVersion` gebunden, Herkunft: nicht Einlern- und nicht Prüfdaten). Schwelle (streng, Auswahl auf echten Negativ-Aufnahmen und einer Fernseher-Hälfte) **0,50**; die Schwellen aller zentrierten Varianten streuen 0,43–0,55 (jede beruht auf 1–4 Ereignissen, Unsicherheit etwa ±0,05). Das Einlern-Mittel V1 ist mit `noise`-Polster fast gleichwertig (Schwelle 0,47, Stille −0,02), hängt aber am Raumrauschen beim Einlernen.
+- **Konsequenzen für den Code (jetzt umgesetzt, siehe „Umsetzung in der App“):** `wakeMinThreshold` und `wakeProvisionalThreshold` (0,85) sind Werte des rohen Kosinus und müssen für den zentrierten Vergleich neu gesetzt werden (Vorschlag 0,50 vorläufig, Untergrenze 0,40); Vorlagen von vor der Änderung sind roh gespeichert (Neueinlernen oder Mittel nachrechnen; das Polster lässt sich nachträglich nicht entfernen).
+
+**Saubere Prüfmenge.** handy2 Block 1–3 ist nach Angabe des Maintainers dieselbe Aufnahmesitzung wie die Vorlagen (nicht von mir geprüft); „sauber“ nimmt deshalb nur huawei Block 4–6 und handy2 Block 4–6 (n = 30 je Wort). Die Spitzen je Gerät und Wort stehen in Label-Reihenfolge; das Skript prüft per Assertion (`clean_peaks`), dass die Blöcke nichtfallend sortiert sind, bevor es nach Block 4–6 teilt (sonst bricht es ab). Die Schwellen hängen nur an Negativ-Aufnahmen, die Teilmenge ändert sie nicht. Treffer „Wendelin“ / „Hey Wendelin“ (Wilson-Intervall) bei der **strengen** Schwelle:
+
+| Polster | Var. | Schwelle | Wendelin sauber | Hey Wendelin sauber |
+|---|---|---|---|---|
+| zero | V0 (heute) | 0,89 | 83 % (25/30) [66–93] | 40 % (12/30) [25–58] |
+| noise | V0 | 0,89 | 90 % (27/30) [74–97] | 43 % (13/30) [27–61] |
+| noise | V1 | 0,47 | 97 % (29/30) [83–99] | 70 % (21/30) [52–83] |
+| noise | V2 | 0,47 | 97 % (29/30) [83–99] | 73 % (22/30) [56–86] |
+| noise | **V2b** | **0,50** | **97 % (29/30) [83–99]** | **77 % (23/30) [59–88]** |
+
+Bei der ruhigen Schwelle (0,47) trifft V2b-`noise` ebenfalls 29/30 und „Hey“ 26/30; im Kurvenvergleich (gleiche FA-Rate auf dem Fernseher) 29/30 und 19/30. Die Erwartung 29/30 und 23/30 trifft zu. **Plausibilität:** Der Gewinn gegenüber heute (83 gegen 97 %, „Hey“ 40 gegen 77 %) ist nur bei „Hey Wendelin“ außerhalb der Intervall-Überlappung; bei „Wendelin“ überlappen die Intervalle (66–93 gegen 83–99), und V0-`noise` (90 %) ist nicht klar schlechter. Die Zahl 29/30 hängt an einem einzigen Ruf; das Ziel „mindestens wie vorher“ ist erfüllt, ein klarer Gewinn beim Hauptwort ist nicht belegt.
+
+**Umsetzung in der App (WP134 Teil B).** Das feste Mittel V2b steht als `packages/wendelin_voice/lib/src/wake/wake_center_mean.g.dart` (1536 Werte, base64; erzeugt mit `template_center_measure.py export`, deterministisch aus FLEURS dev [CC-BY 4.0, Google], synthetischem Rauschen und digitaler Stille zu gleichen Teilen; kein Einlern- und kein Prüfclip, kein Fit auf Prüfdaten), gebunden an `wakeFeatureVersion` (Test) und mit der Kennung `v2b-1`. Der Kosinus zentriert in `bestSimilarity(…, mean:)` (Engine `_closest`, Tester, Kalibrator, Leave-one-out; der Barge-in nutzt dieselbe Engine). Das Einlernen polstert mit Gauß-Rauschen im Pegel der ersten 200 ms der Aufnahme (Seed 134, mindestens 1 LSB) statt mit Nullen. Schwellen: vorläufig 0,50, Untergrenze 0,40, Obergrenze der Kalibrierung 0,90, Ereignis-Untergrenze 0,30, Antwort-Untergrenze 0,40. Vorlagen ohne Kennung (`center` fehlt im JSON) werden beim Laden ignoriert (`isCompatible`), im Wake-Wort-Bildschirm steht „neu einlernen“; kalibrieren und ausprobieren sind dafür gesperrt. Nicht angefasst: `candidateWakeMargin` (-0,10): bei gelernter Schwelle 0,50 liegt die Stufe-1-Schwelle des Barge-in bei 0,40, knapp über dem Rauschmaximum 0,37 und unter der Spanne der Fernseher-Schwellen (0,43–0,55), Stufe 2 fängt das ab; das ist nicht gemessen (E2E `voice_barge_in`).
+
+**Zweifel und Grenzen.**
+- Ein Sprecher, Vorlagen von einem Gerät (huawei), n = 45 je Wort: die Wilson-Intervalle sind breit und zählen Rufe als unabhängig. Die Rangfolge der zentrierten Varianten untereinander (V1/V2/V2b, `zero`/`noise`) ist **nicht** belegt; belegt ist nur der Abstand zu V0 in den Abständen zu Stille und Rauschen und, mit dem digitalen Polster, bei den Treffern.
+- Negativ-Aufnahmen sind „Alltag leise“ (1,22 h): ruhige Schwelle ergibt 8–12 FA/h auf Sprache (FLEURS, vorgelesen, kein echter Fernseher). Streng sind es 2–8/h (1–4 Ereignisse in 0,5 h); die Auswahlhälften sind klein. Die ruhige Schwelle ist für Fernseher zu locker, auch bei V0 (2–4/h).
+- Die Gegenprobe (Schwelle vom anderen Gerät) bestätigt die Treffer (huawei 15/15, handy2 29–30 von 30 zentriert), aber die FA auf dem eigenen Negativ liegen bei 0–4 Ereignissen (0,61 h erlaubt 1).
+- Die Nachbildung der Aufnahme (Labels statt Erkenner) und das Rauschpolster (weißes Rauschen, App-Code gibt es dafür noch nicht) weichen von der App ab; die Kette selbst ist gegen Dart abgeglichen. Eine Rasterphase, keine Streuung über Phasen (WP129 fand beim Klassifikator bis 0,17 p95 zwischen App und Skript; für Vorlagen nicht gemessen).
+- Keine Klassifikator-Kopplung: In der App entscheidet die ODER-Regel; die Messung gilt dem Vorlagen-Weg allein.
+
+**Reproduzierbar (Repo-Root, `K=~/wendelin-models/kws`):** `nice -n 10 $K/wp58/venv/bin/python -I tool/train_wake_word/template_center_measure.py run --threads 2` (Cache der Fenster unter `$K/wp134/cache`, erster Lauf etwa 10 min, danach unter 1 min; Selbsttest: `$K/wp58/venv/bin/python -I -m unittest discover -s tool/train_wake_word -p 'test_template_center_measure.py'`). Rohtabelle des Laufs:
+
+Negativ echt: huawei 0.61 h, handy2 0.61 h (zusammen 1.22 h, erlaubt 2 Ereignisse bei 2/h); FLEURS-Fernseher test 1.00 h (Auswahlhälfte 0.50 h, Berichtshälfte 0.50 h).
+
+**Verteilungen der Ähnlichkeit** (Spitze je Strom bzw. Clip):
+
+| Polster | Var. | Stille max | Rauschen max (weiß 3/10/30, rosa 10/100) | Negativ echt p99,9 / max (hu; h2) | Fernseher p99,9 / max | Wendelin Spitze min / Median / max | Verwechsler Median / p90 / max |
+|---|---|---|---|---|---|---|---|
+| zero | V0 | 0,85 | 0,87 / 0,87 / 0,87 / 0,87 / 0,86 | 0,88 / 0,88; 0,87 / 0,88 | 0,87 / 0,89 | 0,84 / 0,91 / 0,96 | 0,86 / 0,88 / 0,91 |
+| zero | V1 | 0,24 | 0,35 / 0,33 / 0,33 / 0,37 / 0,30 | 0,44 / 0,49; 0,41 / 0,52 | 0,47 / 0,56 | 0,46 / 0,68 / 0,86 | 0,43 / 0,53 / 0,62 |
+| zero | V2 | 0,18 | 0,27 / 0,25 / 0,26 / 0,28 / 0,23 | 0,38 / 0,46; 0,35 / 0,44 | 0,40 / 0,51 | 0,41 / 0,66 / 0,86 | 0,39 / 0,50 / 0,60 |
+| zero | V2b | -0,13 | 0,08 / 0,06 / 0,07 / 0,09 / 0,02 | 0,41 / 0,51; 0,39 / 0,47 | 0,45 / 0,55 | 0,49 / 0,69 / 0,87 | 0,43 / 0,52 / 0,63 |
+| noise | V0 | 0,85 | 0,87 / 0,86 / 0,87 / 0,87 / 0,86 | 0,88 / 0,88; 0,87 / 0,88 | 0,87 / 0,89 | 0,84 / 0,92 / 0,96 | 0,86 / 0,89 / 0,91 |
+| noise | V1 | -0,02 | 0,10 / 0,09 / 0,08 / 0,09 / 0,04 | 0,36 / 0,46; 0,35 / 0,43 | 0,41 / 0,55 | 0,42 / 0,68 / 0,87 | 0,38 / 0,50 / 0,62 |
+| noise | V2 | 0,22 | 0,28 / 0,29 / 0,27 / 0,28 / 0,28 | 0,38 / 0,44; 0,36 / 0,44 | 0,42 / 0,55 | 0,36 / 0,68 / 0,87 | 0,40 / 0,51 / 0,64 |
+| noise | V2b | -0,15 | 0,15 / 0,11 / 0,10 / 0,11 / 0,08 | 0,39 / 0,51; 0,38 / 0,47 | 0,45 / 0,57 | 0,45 / 0,71 / 0,88 | 0,42 / 0,52 / 0,65 |
+
+**Schwelle ruhig:** niedrigster Wert mit höchstens 2 FA/h auf den echten Negativ-Aufnahmen (beide Geräte zusammen):
+
+| Polster | Var. | Schwelle | FA echt hu / h2 | FA/h Fernseher (Ereignisse) | Wendelin huawei B4–6 | Wendelin handy2 | Wendelin gesamt | Hey Wendelin gesamt | Verwechsler-Clips | löst nach Warmstart aus (Stille / Rauschen) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| zero | V0 | 0,89 | 0 / 0 | 2,0 (1) | 93 % (14/15) [70–99] | 80 % (24/30) [63–90] | 84 % (38/45) [71–92] | 51 % (23/45) [37–65] | 25/300 | nein |
+| zero | V1 | 0,49 | 0 / 2 | 11,9 (6) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 80 % (36/45) [66–89] | 73/300 | nein |
+| zero | V2 | 0,44 | 2 / 0 | 10,0 (5) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 80 % (36/45) [66–89] | 91/300 | nein |
+| zero | V2b | 0,47 | 2 / 0 | 11,9 (6) | 100 % (15/15) [80–100] | 100 % (30/30) [89–100] | 100 % (45/45) [92–100] | 89 % (40/45) [77–95] | 87/300 | nein |
+| noise | V0 | 0,89 | 0 / 0 | 4,0 (2) | 93 % (14/15) [70–99] | 93 % (28/30) [79–98] | 93 % (42/45) [82–98] | 53 % (24/45) [39–67] | 31/300 | nein |
+| noise | V1 | 0,43 | 1 / 1 | 8,0 (4) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 87 % (39/45) [74–94] | 91/300 | nein |
+| noise | V2 | 0,45 | 0 / 0 | 10,0 (5) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 82 % (37/45) [69–91] | 84/300 | nein |
+| noise | V2b | 0,47 | 1 / 1 | 8,0 (4) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 89 % (40/45) [77–95] | 79/300 | nein |
+
+**Schwelle streng:** wie ruhig, zusätzlich mit der Auswahlhälfte des Fernsehers (FA/h Fernseher auf der anderen Hälfte):
+
+| Polster | Var. | Schwelle | FA echt hu / h2 | FA/h Fernseher (Ereignisse) | Wendelin huawei B4–6 | Wendelin handy2 | Wendelin gesamt | Hey Wendelin gesamt | Verwechsler-Clips | löst nach Warmstart aus (Stille / Rauschen) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| zero | V0 | 0,89 | 0 / 0 | 2,0 (1) | 93 % (14/15) [70–99] | 80 % (24/30) [63–90] | 84 % (38/45) [71–92] | 51 % (23/45) [37–65] | 25/300 | nein |
+| zero | V1 | 0,52 | 0 / 0 | 8,0 (4) | 100 % (15/15) [80–100] | 93 % (28/30) [79–98] | 96 % (43/45) [85–99] | 73 % (33/45) [59–84] | 40/300 | nein |
+| zero | V2 | 0,46 | 1 / 0 | 8,0 (4) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 76 % (34/45) [61–86] | 64/300 | nein |
+| zero | V2b | 0,52 | 0 / 0 | 2,0 (1) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 73 % (33/45) [59–84] | 29/300 | nein |
+| noise | V0 | 0,89 | 0 / 0 | 4,0 (2) | 93 % (14/15) [70–99] | 93 % (28/30) [79–98] | 93 % (42/45) [82–98] | 53 % (24/45) [39–67] | 31/300 | nein |
+| noise | V1 | 0,47 | 0 / 0 | 4,0 (2) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 78 % (35/45) [64–87] | 53/300 | nein |
+| noise | V2 | 0,47 | 0 / 0 | 6,0 (3) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 80 % (36/45) [66–89] | 63/300 | nein |
+| noise | V2b | 0,50 | 1 / 0 | 4,0 (2) | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 82 % (37/45) [69–91] | 53/300 | nein |
+
+**Kurvenvergleich:** Schwelle mit höchstens 2 FA/h auf dem ganzen Fernseher-Satz (keine Einsatz-Schwelle, nur gleiche FA-Rate je Variante):
+
+| Polster | Var. | Schwelle | FA echt hu / h2 | FA/h Fernseher (Ereignisse) | Wendelin huawei B4–6 | Wendelin handy2 | Wendelin gesamt | Hey Wendelin gesamt | Verwechsler-Clips | löst nach Warmstart aus (Stille / Rauschen) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| zero | V0 | 0,90 | 0 / 0 | – | 67 % (10/15) [42–85] | 73 % (22/30) [56–86] | 71 % (32/45) [57–82] | 33 % (15/45) [21–48] | 5/300 | nein |
+| zero | V1 | 0,55 | 0 / 0 | – | 93 % (14/15) [70–99] | 93 % (28/30) [79–98] | 93 % (42/45) [82–98] | 69 % (31/45) [54–80] | 18/300 | nein |
+| zero | V2 | 0,51 | 0 / 0 | – | 93 % (14/15) [70–99] | 93 % (28/30) [79–98] | 93 % (42/45) [82–98] | 60 % (27/45) [45–73] | 24/300 | nein |
+| zero | V2b | 0,53 | 0 / 0 | – | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 73 % (33/45) [59–84] | 25/300 | nein |
+| noise | V0 | 0,89 | 0 / 0 | – | 93 % (14/15) [70–99] | 93 % (28/30) [79–98] | 93 % (42/45) [82–98] | 44 % (20/45) [31–59] | 16/300 | nein |
+| noise | V1 | 0,51 | 0 / 0 | – | 93 % (14/15) [70–99] | 97 % (29/30) [83–99] | 96 % (43/45) [85–99] | 64 % (29/45) [50–77] | 22/300 | nein |
+| noise | V2 | 0,53 | 0 / 0 | – | 93 % (14/15) [70–99] | 93 % (28/30) [79–98] | 93 % (42/45) [82–98] | 49 % (22/45) [35–63] | 20/300 | nein |
+| noise | V2b | 0,54 | 0 / 0 | – | 100 % (15/15) [80–100] | 97 % (29/30) [83–99] | 98 % (44/45) [88–100] | 69 % (31/45) [54–80] | 21/300 | nein |
+
+**Gegenprobe Gerät:** Schwelle nur aus dem Negativ des anderen Geräts (huawei-Schwelle aus handy2 und umgekehrt), FA auf dem eigenen Negativ, Treffer „Wendelin“ auf dem eigenen Gerät:
+
+| Polster | Var. | -> huawei: Schwelle, FA, Treffer | -> handy2: Schwelle, FA, Treffer |
+|---|---|---|---|
+| zero | V0 | 0,88, 4, 14/15 | 0,89, 0, 24/30 |
+| zero | V1 | 0,52, 0, 15/15 | 0,49, 2, 29/30 |
+| zero | V2 | 0,42, 4, 15/15 | 0,45, 0, 29/30 |
+| zero | V2b | 0,46, 2, 15/15 | 0,52, 0, 29/30 |
+| noise | V0 | 0,89, 0, 14/15 | 0,89, 0, 28/30 |
+| noise | V1 | 0,43, 1, 15/15 | 0,42, 2, 29/30 |
+| noise | V2 | 0,45, 0, 15/15 | 0,43, 3, 29/30 |
+| noise | V2b | 0,47, 1, 15/15 | 0,45, 3, 30/30 |

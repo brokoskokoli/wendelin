@@ -37,7 +37,11 @@ final class WakeCalibration {
 
 /// Lowest threshold [calibrateThreshold] ever returns (a personal template
 /// below it would fire on most speech).
-const wakeMinThreshold = 0.85;
+///
+/// Value of the **centered** cosine (WP134, `wake_center_mean.g.dart`):
+/// quiet background and noise reach at most 0.37, evaluation thresholds for
+/// 2 false alarms per hour lay at 0.43..0.55.
+const wakeMinThreshold = 0.40;
 
 /// Fewest templates (and thus leave-one-out scores) a calibration needs.
 const wakeMinTemplates = 2;
@@ -104,10 +108,13 @@ WakeCalibration calibrateThreshold({
 
 /// Leave-one-out similarities of [templates]: each template against all
 /// others (input of [calibrateThreshold] when only the templates exist).
-List<double> leaveOneOutScores(List<Float32List> templates) => [
+List<double> leaveOneOutScores(
+  List<Float32List> templates, {
+  Float32List? mean,
+}) => [
   for (var i = 0; i < templates.length; i++)
     bestSimilarity(templates[i], [
       for (var j = 0; j < templates.length; j++)
         if (j != i) templates[j],
-    ]),
+    ], mean: mean),
 ];

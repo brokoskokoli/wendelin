@@ -177,7 +177,12 @@ Future<void> _calibrate(
   );
   if (speaker == null || !context.mounted) return;
   final templates = await ref.read(wakeStoreProvider).load(speaker.id);
-  if (templates == null || !context.mounted) return;
+  // Outdated (raw) templates cannot be used: record again first.
+  if (templates == null ||
+      templates.center != wakeCenterId ||
+      !context.mounted) {
+    return;
+  }
   await Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => WakeCalibrateScreen(templates: templates),
@@ -192,7 +197,8 @@ Future<void> _test(
 ) async {
   final store = ref.read(wakeStoreProvider);
   final all = <WakeTemplates>[
-    for (final s in speakers) ?await store.load(s.id),
+    for (final s in speakers)
+      if (await store.load(s.id) case final t? when t.center == wakeCenterId) t,
   ];
   if (all.isEmpty || !context.mounted) return;
   await Navigator.of(context).push<void>(
@@ -247,6 +253,8 @@ class _SpeakerRow extends ConsumerWidget {
       title: speakerLabel(context.l10n, speaker, number),
       detail: templates == null
           ? context.l10n.wakeWordTemplatesMissing
+          : templates.center != wakeCenterId
+          ? context.l10n.wakeWordTemplatesOutdated
           : context.l10n.wakeWordRecordingsThreshold(
               templates.embeddings.length,
               templates.threshold.toStringAsFixed(2),

@@ -37,6 +37,32 @@ void main() {
     expect(await store.load('b'), isNull);
   });
 
+  test(
+    'alte Vorlagen (ohne Mittel-Kennung) laden, bleiben aber unbrauchbar',
+    () async {
+      // So lagen die Vorlagen vor WP134 (roher Kosinus) im Speicher.
+      await secrets.write(
+        '${SecretWakeTemplateStore.templatePrefix}a',
+        jsonEncode({
+          'speakerId': 'a',
+          'featureVersion': 'oww-0.5.1-mel-emb-1',
+          'threshold': 0.85,
+          'embeddings': [
+            base64Encode(Uint8List.view(Float32List.fromList([1, 2]).buffer)),
+          ],
+        }),
+      );
+      final old = (await store.load('a'))!;
+      expect(old.center, isNull);
+      expect(
+        old.isCompatible('oww-0.5.1-mel-emb-1', center: wakeCenterId),
+        isFalse,
+      );
+      await store.save(old.withThreshold(0.9));
+      expect((await store.load('a'))!.center, isNull, reason: 'bleibt alt');
+    },
+  );
+
   test('liegt im verschlüsselten SecretStore, nur Embeddings', () async {
     await store.save(templates('a'));
     final raw = jsonDecode(
