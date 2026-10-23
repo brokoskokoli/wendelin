@@ -153,6 +153,23 @@ class Leck(unittest.TestCase):
         with mock.patch.dict(os.environ, {D.VOICES_ALLOWED_ENV: f}):
             self.assertEqual(D.voice_weights(), {"a": 4.0, "b": 1.0}); self.assertEqual(D.allowed_voices(), ["a", "b"])
 
+    def test_erlaubtliste_ungueltig_bricht_ab(self):
+        f = os.path.join(self.t, "voices.allowed")
+        with mock.patch.dict(os.environ, {D.VOICES_ALLOWED_ENV: f}):
+            for zeile in ("a abc", "a nan", "a inf", "a -inf", "a -1", "a 0", "a 1 2", "a 1 x"):
+                with self.subTest(zeile=zeile):
+                    open(f, "w").write(f"b 1\n{zeile}\n")
+                    with self.assertRaises(D.LeakError) as m: D.voice_weights()
+                    self.assertIn("Erlaubtliste", str(m.exception))
+
+    def test_erlaubtliste_standardpfad_unter_clean(self):
+        c = os.path.join(self.t, "cl"); os.makedirs(c); open(os.path.join(c, "voices.allowed"), "w").write("v-a 3\nb\n")
+        env = {k: v for k, v in os.environ.items() if k != D.VOICES_ALLOWED_ENV}
+        with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(D, "CLEAN", c):
+            self.assertEqual(D.voice_weights(), {"a": 3.0, "b": 1.0})
+            os.remove(os.path.join(c, "voices.allowed"))
+            with self.assertRaises(D.LeakError): D.voice_weights()
+
     def test_audio_gleich_pruefclip_bricht_ab(self):
         a, b = os.path.join(self.t, "tr", "a.wav"), os.path.join(self.t, "ev", "b.wav")
         wav(a, seed=1); wav(b, seed=2)
@@ -325,6 +342,15 @@ class Erzeugen(unittest.TestCase):
         texts = D.gen_clips("pos", 60, 4, self.voices, os.path.join(self.t, "pos"))
         self.assertEqual({e["word"] for e in texts.values()}, {"hey", "bare"})
         for e in texts.values(): self.assertEqual(e["word"] == "hey", e["text"].lower().startswith("hey"))
+
+    def test_gen_nutzt_gewichte_der_erlaubtliste(self):
+        v = os.path.join(self.t, "vw")
+        for n in ("a", "b"): os.makedirs(os.path.join(v, f"v-{n}"))
+        f = os.path.join(self.t, "w.allowed"); open(f, "w").write("a 9\nb 1\n")
+        with mock.patch.dict(os.environ, {D.VOICES_ALLOWED_ENV: f}):
+            texts = D.gen_clips("conf", 200, 5, v, os.path.join(self.t, "cw"))
+        cnt = {n: sum(e["voice"] == n for e in texts.values()) for n in ("a", "b")}
+        self.assertGreater(cnt["a"], 4 * cnt["b"]); self.assertGreater(cnt["b"], 0)           # 9:1 erwartet, gleichverteilt waere ~1:1
 
     def test_gen_mit_unerlaubter_stimme_bricht_ab(self):
         os.makedirs(os.path.join(self.voices, "v-x"))

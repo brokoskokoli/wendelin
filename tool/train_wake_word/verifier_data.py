@@ -13,7 +13,7 @@ Verwechsler-Texte: fester Hash-Split der conf_v8-Basistexte (sha1 des normalisie
 sieht nie Test-Texte; die Verwechsler-Zahl des Vergleichs kommt aus den Pruef-Verwechslern (macOS-say, v8_measure.conf_say) mit Test-Texten
 (und getrennt mit Trainings-Texten, zeigt Ueberanpassung). Die schon vorhandenen conf_v8-Clips haben keinen Text im Dateinamen; deshalb erzeugt `gen`
 eigene Clips mit Sidecar (verwendet werden nur diese). Selbsttest: test_verifier_data.py."""
-import argparse, glob, hashlib, json, os, re, sys, time
+import argparse, glob, hashlib, json, math, os, re, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.dirname(HERE))
@@ -145,15 +145,23 @@ def assert_text_disjoint(train_bases, test_bases):
 
 
 def voice_weights():
-    """Lokale Liste der erlaubten Stimmen des Stimmensets clean (ausserhalb des Repos, Pfad per Umgebungsvariable oder <clean>/voices.allowed):
-    eine Stimme je Zeile, optional mit Gewicht ("name 4", Standard 1). Fehlt die Datei oder ist sie leer: LeakError (fail-closed)."""
+    """Lokale Liste der erlaubten Stimmen des Stimmensets clean (ausserhalb des Repos, Pfad per Umgebungsvariable, sonst <CLEAN>/voices.allowed mit dem Modul-Standard CLEAN, unabhaengig von --clean):
+    eine Stimme je Zeile, optional mit Gewicht ("name 4", Standard 1; endlich und > 0). Fehlt die Datei, ist sie leer,
+    oder ist eine Zeile ungueltig (Gewicht, zusaetzliche Spalten): LeakError (fail-closed)."""
     f = os.environ.get(VOICES_ALLOWED_ENV) or os.path.join(CLEAN, "voices.allowed")
     try:
         rows = [l.split() for l in open(f, encoding="utf-8") if l.strip() and not l.lstrip().startswith("#")]
     except OSError:
         raise LeakError(f"Liste der erlaubten Stimmen fehlt: {f}")
     if not rows: raise LeakError(f"Liste der erlaubten Stimmen leer: {f}")
-    return {r[0][2:] if r[0].startswith("v-") else r[0]: (float(r[1]) if len(r) > 1 else 1.0) for r in rows}
+    out = {}
+    for r in rows:
+        if len(r) > 2: raise LeakError(f"Erlaubtliste: zusaetzliche Spalten in Zeile {' '.join(r)!r}: {f}")
+        try: w = float(r[1]) if len(r) > 1 else 1.0
+        except ValueError: w = float("nan")
+        if not (math.isfinite(w) and w > 0): raise LeakError(f"Erlaubtliste: ungueltiges Gewicht in Zeile {' '.join(r)!r} (endlich und > 0 noetig): {f}")
+        out[r[0][2:] if r[0].startswith("v-") else r[0]] = w
+    return out
 
 
 def allowed_voices(): return list(voice_weights())
