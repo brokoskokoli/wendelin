@@ -228,6 +228,11 @@ final wakeEnrollVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {
   );
 });
 
+/// How long the enrollment waits for the recognizer to load (WP140).
+final wakeEnrollVerifierWaitProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 90),
+);
+
 /// Microphone for enrollment, calibration and test (the same as the
 /// voice pipeline; device tests replace it by WAV files).
 final wakeAudioProvider = Provider<AudioInput>(

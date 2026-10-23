@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -61,8 +62,11 @@ WakeEnroller make(
   WakeFeatureExtractor? features,
   WakeVerifier? verifier,
   int target = 3,
+  Duration checkTimeout = wakeEnrollCheckTimeout,
 }) => WakeEnroller(
-  audio: SequenceAudio(clips),
+  // No endless loop on the first clip: a missing recording ends the run.
+  audio: SequenceAudio(clips, loop: false),
+  checkTimeout: checkTimeout,
   features: features ?? fakeFeatures(),
   store: FakeWakeTemplateStore(),
   speakerId: 'a',
@@ -178,27 +182,60 @@ void main() {
       expect(e.accepted, 1);
     });
 
-    test('Erkenner ohne Klassifikator fehlt: nichts wird angenommen '
-        '(fail closed)', () async {
+    test('weder Erkenner noch Klassifikator: nichts wird angenommen, '
+        'klarer Hinweis statt stiller Dauerablehnung', () async {
       final e = make([recording(), recording()], target: 1);
-      e.addListener(() {
-        if (e.rejected >= 2) e.cancel();
-      });
       await e.run();
       expect(e.accepted, 0);
+      expect(e.error, isA<EnrollCheckUnavailable>());
+      expect(e.phase, EnrollPhase.cancelled);
       expect(e.lastVerdict, UtteranceVerdict.unchecked);
     });
 
-    test('Erkenner wirft: unchecked, nicht angenommen, kein Absturz', () async {
+    test('Erkenner wirft immer: nach drei Versuchen Hinweis, nie '
+        'angenommen', () async {
       final v = FakeWakeVerifier()..error = StateError('Modell weg');
-      final e = make([recording(), recording()], verifier: v, target: 1);
-      e.addListener(() {
-        if (e.rejected >= 2) e.cancel();
-      });
+      final e = make([recording(), recording(), recording()], verifier: v);
       await e.run();
       expect(e.accepted, 0);
+      expect(e.rejected, wakeEnrollMaxUnchecked);
+      expect(e.error, isA<EnrollCheckUnavailable>());
+    });
+
+    test('Erkenner wirft einmal: weiter, danach angenommen', () async {
+      final v = FakeWakeVerifier(
+        answer: (n) => n == 1 ? throw StateError('lädt') : true,
+      );
+      final e = make([recording(), recording()], verifier: v, target: 1);
+      await e.run();
       expect(e.error, isNull);
-      expect(e.lastVerdict, UtteranceVerdict.unchecked);
+      expect(e.accepted, 1);
+      expect(e.rejected, 1);
+    });
+
+    test('Erkenner lädt noch: die Prüfung wartet und nimmt dann an', () async {
+      final loaded = Completer<void>();
+      final v = FakeWakeVerifier()..gate = loaded;
+      final e = make([recording()], verifier: v, target: 1);
+      final run = e.run();
+      await pumpEventQueue();
+      expect(e.accepted, 0);
+      expect(e.rejected, 0, reason: 'noch nicht abgelehnt, nur gewartet');
+      loaded.complete();
+      await run;
+      expect(e.accepted, 1);
+      expect(e.rejected, 0);
+    });
+
+    test('Erkenner lädt nie fertig: Zeitlimit, dann Hinweis', () async {
+      final e = make(
+        [recording(), recording(), recording()],
+        verifier: FakeWakeVerifier()..gate = Completer<void>(),
+        checkTimeout: const Duration(milliseconds: 5),
+      );
+      await e.run();
+      expect(e.accepted, 0);
+      expect(e.error, isA<EnrollCheckUnavailable>());
     });
 
     test('Rechenzeit je Prüfung wird ohne Text geloggt', () async {

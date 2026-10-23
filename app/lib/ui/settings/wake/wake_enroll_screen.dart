@@ -99,7 +99,10 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
   /// the enroller then rejects what the classifier does not vouch for).
   Future<WakeVerifier?> _verifier() async {
     try {
-      return await ref.read(wakeEnrollVerifierProvider.future);
+      // Wait for the recognizer while it loads, but not for ever.
+      return await ref
+          .read(wakeEnrollVerifierProvider.future)
+          .timeout(ref.read(wakeEnrollVerifierWaitProvider));
     } on Object {
       return null;
     }
@@ -199,7 +202,9 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
                     Text(context.l10n.wakeEnrollAllThere, style: WText.label),
                   if (failed)
                     Text(
-                      context.l10n.wakeEnrollFailed(e.error!),
+                      e.error is EnrollCheckUnavailable
+                          ? context.l10n.wakeEnrollNoRecognizer
+                          : context.l10n.wakeEnrollFailed(e.error!),
                       style: WText.caption,
                     ),
                 ],

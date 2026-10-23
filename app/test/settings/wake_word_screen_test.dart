@@ -49,6 +49,7 @@ TestEnv wakeEnv({
   WakeVerifier? verifier,
   Float32List Function(int)? vector,
   bool installed = true,
+  Future<WakeVerifier?>? enrollVerifier,
   List<Override> extra = const [],
 }) {
   final env = TestEnv(
@@ -59,7 +60,7 @@ TestEnv wakeEnv({
       ),
       wakeVerifierProvider.overrideWith((ref) async => verifier),
       wakeEnrollVerifierProvider.overrideWith(
-        (ref) async => verifier ?? FakeWakeVerifier(),
+        (ref) => enrollVerifier ?? Future.value(verifier ?? FakeWakeVerifier()),
       ),
       wakePromptToneProvider.overrideWithValue(() async {}),
       wakeEnrollPauseProvider.overrideWithValue(Duration.zero),
@@ -374,6 +375,25 @@ void main() {
       expect(find.text('0 von 15'), findsOneWidget);
       await until(tester, find.text('2 von 15'));
       expect(find.text('Mit 2 Aufnahmen speichern'), findsNothing);
+    });
+
+    testWidgets('Erkenner fehlt dauerhaft: klarer Hinweis statt stiller '
+        'Ablehnung', (tester) async {
+      final audio = SequenceAudio([for (var i = 0; i < 3; i++) recording()]);
+      final env = wakeEnv(
+        audio: audio,
+        // Never ready: the wait runs into its limit, no recognizer.
+        enrollVerifier: Completer<WakeVerifier?>().future,
+        extra: [
+          wakeEnrollVerifierWaitProvider.overrideWithValue(
+            const Duration(milliseconds: 200),
+          ),
+        ],
+      );
+      await pumpWake(tester, env, const WakeWordScreen());
+      await startEnroll(tester);
+      await until(tester, find.textContaining('Spracherkennung fehlt'));
+      expect(find.text('0 von 15'), findsOneWidget);
     });
 
     testWidgets('ab 8 Aufnahmen vorzeitig speichern', (tester) async {

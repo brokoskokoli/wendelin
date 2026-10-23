@@ -55,6 +55,7 @@
   "wakeEnrollMicPreparing": "Preparing the microphone …",
   "wakeEnrollNoMic": "Without a microphone Wendelin cannot learn your voice.",
   "wakeEnrollNoSpeech": "Heard nothing. Once more, please.",
+  "wakeEnrollNoRecognizer": "Speech recognition is missing: without it “Wendelin” cannot be checked during enrollment. Please download a recognition model under Settings → Voice.",
   "wakeEnrollNotWord": "Not recognized as “{word}”. Once more, please.",
   "wakeEnrollInconsistent": "That recording did not match the others and was removed. Once more, please.",
   "wakeEnrollUnchecked": "The check is not possible right now (speech recognition not ready). Once more, please.",

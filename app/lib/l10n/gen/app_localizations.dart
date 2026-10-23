@@ -8457,6 +8457,12 @@ abstract class AppLocalizations {
   /// **'Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.'**
   String get wakeEnrollNoMic;
 
+  /// No description provided for @wakeEnrollNoRecognizer.
+  ///
+  /// In de, this message translates to:
+  /// **'Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.'**
+  String get wakeEnrollNoRecognizer;
+
   /// No description provided for @wakeEnrollNoSpeech.
   ///
   /// In de, this message translates to:

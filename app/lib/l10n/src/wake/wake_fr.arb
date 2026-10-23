@@ -55,6 +55,7 @@
   "wakeEnrollMicPreparing": "Préparation du microphone …",
   "wakeEnrollNoMic": "Sans microphone, Wendelin ne peut pas apprendre votre voix.",
   "wakeEnrollNoSpeech": "Rien entendu. Encore une fois, s’il vous plaît.",
+  "wakeEnrollNoRecognizer": "La reconnaissance vocale est absente : sans elle, « Wendelin » ne peut pas être vérifié pendant l’apprentissage. Télécharge un modèle de reconnaissance dans Réglages → Voix.",
   "wakeEnrollNotWord": "Non reconnu comme « {word} ». Encore une fois, s’il vous plaît.",
   "wakeEnrollInconsistent": "Cet enregistrement ne correspondait pas aux autres et a été supprimé. Encore une fois, s’il vous plaît.",
   "wakeEnrollUnchecked": "La vérification est impossible pour le moment (reconnaissance vocale pas prête). Encore une fois, s’il vous plaît.",

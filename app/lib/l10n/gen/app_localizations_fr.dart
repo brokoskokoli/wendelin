@@ -4985,6 +4985,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Sans microphone, Wendelin ne peut pas apprendre votre voix.';
 
   @override
+  String get wakeEnrollNoRecognizer =>
+      'La reconnaissance vocale est absente : sans elle, « Wendelin » ne peut pas être vérifié pendant l’apprentissage. Télécharge un modèle de reconnaissance dans Réglages → Voix.';
+
+  @override
   String get wakeEnrollNoSpeech =>
       'Rien entendu. Encore une fois, s’il vous plaît.';
 

@@ -4932,6 +4932,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Without a microphone Wendelin cannot learn your voice.';
 
   @override
+  String get wakeEnrollNoRecognizer =>
+      'Speech recognition is missing: without it “Wendelin” cannot be checked during enrollment. Please download a recognition model under Settings → Voice.';
+
+  @override
   String get wakeEnrollNoSpeech => 'Heard nothing. Once more, please.';
 
   @override

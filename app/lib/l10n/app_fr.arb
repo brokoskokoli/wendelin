@@ -1592,6 +1592,7 @@
   "wakeEnrollIntro": "Dites « {word} » quand c’est votre tour. De chaque enregistrement, Wendelin ne garde que des valeurs numériques ; l’audio est immédiatement supprimé.",
   "wakeEnrollMicPreparing": "Préparation du microphone …",
   "wakeEnrollNoMic": "Sans microphone, Wendelin ne peut pas apprendre votre voix.",
+  "wakeEnrollNoRecognizer": "La reconnaissance vocale est absente : sans elle, « Wendelin » ne peut pas être vérifié pendant l’apprentissage. Télécharge un modèle de reconnaissance dans Réglages → Voix.",
   "wakeEnrollNoSpeech": "Rien entendu. Encore une fois, s’il vous plaît.",
   "wakeEnrollNotWord": "Non reconnu comme « {word} ». Encore une fois, s’il vous plaît.",
   "wakeEnrollProcessing": "Traitement en cours …",

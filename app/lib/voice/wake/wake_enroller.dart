@@ -106,6 +106,24 @@ final class MicrophoneEnded implements Exception {
   String toString() => 'Das Mikrofon hat aufgehört zu liefern.';
 }
 
+/// The content check cannot work at all: neither a recognizer nor a
+/// classifier vouches for the recordings (or the recognizer keeps failing).
+/// The enrollment stops with this instead of rejecting everything silently.
+final class EnrollCheckUnavailable implements Exception {
+  /// Creates the exception.
+  const EnrollCheckUnavailable();
+
+  @override
+  String toString() => 'Spracherkennung fehlt';
+}
+
+/// Longest wait for the recognizer per check (it may still be loading).
+const wakeEnrollCheckTimeout = Duration(seconds: 45);
+
+/// Unchecked recordings in a row after which the enrollment stops when a
+/// recognizer exists but keeps failing (no recognizer: at the first one).
+const wakeEnrollMaxUnchecked = 3;
+
 /// Provisional threshold right after the enrollment, before the calibration
 /// has seen any background (WP134 measurement, centered cosine: strict
 /// threshold 0.50 of the fixed mean, 97 % of „Wendelin“ on clean evaluation
@@ -155,6 +173,7 @@ class WakeEnroller extends ChangeNotifier {
     this.pause = const Duration(milliseconds: 900),
     this.verifier,
     this.classifierMinScore = WakeEnrollRules.classifierMinScore,
+    this.checkTimeout = wakeEnrollCheckTimeout,
     UtteranceCapture Function()? newCapture,
   }) : _newCapture = newCapture ?? UtteranceCapture.new;
 
@@ -190,6 +209,10 @@ class WakeEnroller extends ChangeNotifier {
   /// Classifier score from which a recording passes without the recognizer.
   final double classifierMinScore;
 
+  /// How long a check waits for the recognizer (still loading) before the
+  /// recording counts as unchecked.
+  final Duration checkTimeout;
+
   final UtteranceCapture Function() _newCapture;
   final _embeddings = <Float32List>[];
   var _phase = EnrollPhase.idle;
@@ -198,6 +221,7 @@ class WakeEnroller extends ChangeNotifier {
   var _level = 0.0;
   Object? _error;
   var _stopped = false;
+  var _unchecked = 0;
 
   /// Current phase.
   EnrollPhase get phase => _phase;
@@ -298,9 +322,15 @@ class WakeEnroller extends ChangeNotifier {
     if (verdict != UtteranceVerdict.accepted) {
       _last = verdict;
       _rejected++;
+      _unchecked = verdict == UtteranceVerdict.unchecked ? _unchecked + 1 : 0;
       notifyListeners();
+      // No evidence at all: say so instead of rejecting for ever.
+      if (_unchecked >= (verifier == null ? 1 : wakeEnrollMaxUnchecked)) {
+        throw const EnrollCheckUnavailable();
+      }
       return;
     }
+    _unchecked = 0;
     _embeddings.add(scored.embedding);
     _dropInconsistent();
     notifyListeners();
@@ -337,7 +367,8 @@ class WakeEnroller extends ChangeNotifier {
       verdict = UtteranceVerdict.accepted;
     } else if (verifier != null) {
       try {
-        final heard = await verifier!.confirm(pcm);
+        // The recognizer may still be loading: wait, but not for ever.
+        final heard = await verifier!.confirm(pcm).timeout(checkTimeout);
         source = heard ? 'stt' : 'stt-no';
         verdict = heard ? UtteranceVerdict.accepted : UtteranceVerdict.notWord;
       } on Object catch (e) {

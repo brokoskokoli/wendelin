@@ -4958,6 +4958,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.';
 
   @override
+  String get wakeEnrollNoRecognizer =>
+      'Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.';
+
+  @override
   String get wakeEnrollNoSpeech => 'Nichts gehört. Noch einmal bitte.';
 
   @override

@@ -120,6 +120,7 @@
   "wakeEnrollMicPreparing": "Mikrofon wird vorbereitet …",
   "wakeEnrollNoMic": "Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.",
   "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
+  "wakeEnrollNoRecognizer": "Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.",
   "wakeEnrollNotWord": "Nicht als „{word}“ erkannt. Bitte noch einmal.",
   "@wakeEnrollNotWord": {
     "placeholders": {
