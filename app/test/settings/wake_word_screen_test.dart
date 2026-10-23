@@ -30,6 +30,7 @@ WakeTemplates templates(
   String id, {
   double threshold = 0.9,
   String? center = wakeCenterId,
+  int count = 2,
 }) => WakeTemplates(
   speakerId: id,
   featureVersion: 'fake-1',
@@ -38,6 +39,7 @@ WakeTemplates templates(
   embeddings: [
     v([1, 0, 0, 0]),
     v([0.98, 0.2, 0, 0]),
+    for (var i = 2; i < count; i++) v([0.97, 0.02 * i, 0, 0]),
   ],
 );
 
@@ -56,6 +58,9 @@ TestEnv wakeEnv({
         () => fakeFeatures(vector: vector),
       ),
       wakeVerifierProvider.overrideWith((ref) async => verifier),
+      wakeEnrollVerifierProvider.overrideWith(
+        (ref) async => verifier ?? FakeWakeVerifier(),
+      ),
       wakePromptToneProvider.overrideWithValue(() async {}),
       wakeEnrollPauseProvider.overrideWithValue(Duration.zero),
       ...extra,
@@ -297,7 +302,7 @@ void main() {
       final env = wakeEnv();
       final store = SecretWakeTemplateStore(env.secrets);
       await store.save(templates('a'));
-      await store.save(templates('b', threshold: 0.88));
+      await store.save(templates('b', threshold: 0.88, count: 9));
       await store.saveSpeakers(const [
         WakeSpeaker(id: 'a', name: 'Anna'),
         WakeSpeaker(id: 'b', name: ''),
@@ -305,7 +310,8 @@ void main() {
       final c = await pumpWake(tester, env, const WakeWordScreen());
       expect(find.text('Anna'), findsOneWidget);
       expect(find.text('Person 2'), findsOneWidget);
-      expect(find.text('2 Aufnahmen · Schwelle 0.88'), findsOneWidget);
+      expect(find.text('9 Aufnahmen · Schwelle 0.88'), findsOneWidget);
+      expect(find.textContaining('Nur 2 brauchbare'), findsOneWidget);
       expect(find.text('Weitere Person einlernen'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Aktionen für Anna'));

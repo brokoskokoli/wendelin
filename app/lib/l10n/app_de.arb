@@ -2864,6 +2864,7 @@
     }
   },
   "wakeEnrollHeard": "Gehört.",
+  "wakeEnrollInconsistent": "Diese Aufnahme passte nicht zu den anderen und wurde entfernt. Bitte noch einmal.",
   "wakeEnrollIntro": "Sag „{word}“, wenn du dran bist. Aus jeder Aufnahme behält Wendelin nur Zahlenwerte; das Audio wird sofort verworfen.",
   "@wakeEnrollIntro": {
     "placeholders": {
@@ -2875,6 +2876,14 @@
   "wakeEnrollMicPreparing": "Mikrofon wird vorbereitet …",
   "wakeEnrollNoMic": "Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.",
   "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
+  "wakeEnrollNotWord": "Nicht als „{word}“ erkannt. Bitte noch einmal.",
+  "@wakeEnrollNotWord": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
   "wakeEnrollProcessing": "Wird verarbeitet …",
   "wakeEnrollProgress": "{accepted} von {target}",
   "@wakeEnrollProgress": {
@@ -2892,6 +2901,14 @@
   "wakeEnrollPrompt1": "Jetzt aus ein bis zwei Metern Abstand.",
   "wakeEnrollPrompt2": "Jetzt leise, wie abends im Zimmer.",
   "wakeEnrollPrompt3": "Wie du es im Alltag sagst, gern aus einer anderen Ecke.",
+  "wakeEnrollRejected": "{count} abgelehnt",
+  "@wakeEnrollRejected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "wakeEnrollSaveWith": "Mit {accepted} Aufnahmen speichern",
   "@wakeEnrollSaveWith": {
     "placeholders": {
@@ -2919,6 +2936,7 @@
     }
   },
   "wakeEnrollTooQuiet": "Zu leise. Bitte etwas lauter.",
+  "wakeEnrollUnchecked": "Die Prüfung ist gerade nicht möglich (Spracherkennung nicht bereit). Bitte noch einmal.",
   "wakeExplainBatteryBody": "Das ständige Zuhören kostet Akku. Standard ist deshalb „Nur beim Laden“.",
   "wakeExplainBatteryExemptBody": "Damit Android den Dienst nicht beendet, sollte Wendelin von der Akku-Optimierung ausgenommen sein.",
   "wakeExplainBatteryExemptTitle": "Akku-Optimierung ausnehmen?",
@@ -3089,6 +3107,14 @@
     }
   },
   "wakeWordRetrain": "Neu einlernen",
+  "wakeWordTemplatesFew": "Nur {count} brauchbare Aufnahmen übrig. Bitte neu einlernen.",
+  "@wakeWordTemplatesFew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "wakeWordTemplatesMissing": "Vorlagen fehlen. Bitte neu einlernen.",
   "wakeWordTemplatesOutdated": "Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.",
   "wakeWordTryNow": "Jetzt ausprobieren",

@@ -4969,6 +4969,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get wakeEnrollHeard => 'Entendu.';
 
   @override
+  String get wakeEnrollInconsistent =>
+      'Cet enregistrement ne correspondait pas aux autres et a été supprimé. Encore une fois, s’il vous plaît.';
+
+  @override
   String wakeEnrollIntro(String word) {
     return 'Dites « $word » quand c’est votre tour. De chaque enregistrement, Wendelin ne garde que des valeurs numériques ; l’audio est immédiatement supprimé.';
   }
@@ -4983,6 +4987,11 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get wakeEnrollNoSpeech =>
       'Rien entendu. Encore une fois, s’il vous plaît.';
+
+  @override
+  String wakeEnrollNotWord(String word) {
+    return 'Non reconnu comme « $word ». Encore une fois, s’il vous plaît.';
+  }
 
   @override
   String get wakeEnrollProcessing => 'Traitement en cours …';
@@ -5011,6 +5020,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Comme vous le dites au quotidien, par exemple depuis un autre coin.';
 
   @override
+  String wakeEnrollRejected(int count) {
+    return '$count refusés';
+  }
+
+  @override
   String wakeEnrollSaveWith(int accepted) {
     return 'Enregistrer avec $accepted enregistrements';
   }
@@ -5035,6 +5049,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get wakeEnrollTooQuiet =>
       'Trop bas. Un peu plus fort, s’il vous plaît.';
+
+  @override
+  String get wakeEnrollUnchecked =>
+      'La vérification est impossible pour le moment (reconnaissance vocale pas prête). Encore une fois, s’il vous plaît.';
 
   @override
   String get wakeExplainBatteryBody =>
@@ -5326,6 +5344,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeWordRetrain => 'Entraîner de nouveau';
+
+  @override
+  String wakeWordTemplatesFew(int count) {
+    return 'Seulement $count enregistrements utilisables. Veuillez entraîner de nouveau.';
+  }
 
   @override
   String get wakeWordTemplatesMissing =>

@@ -4916,6 +4916,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeEnrollHeard => 'Heard.';
 
   @override
+  String get wakeEnrollInconsistent =>
+      'That recording did not match the others and was removed. Once more, please.';
+
+  @override
   String wakeEnrollIntro(String word) {
     return 'Say “$word” when it is your turn. Wendelin keeps only numeric values from each recording; the audio is discarded immediately.';
   }
@@ -4929,6 +4933,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeEnrollNoSpeech => 'Heard nothing. Once more, please.';
+
+  @override
+  String wakeEnrollNotWord(String word) {
+    return 'Not recognized as “$word”. Once more, please.';
+  }
 
   @override
   String get wakeEnrollProcessing => 'Processing …';
@@ -4957,6 +4966,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'The way you say it every day, maybe from another corner.';
 
   @override
+  String wakeEnrollRejected(int count) {
+    return '$count rejected';
+  }
+
+  @override
   String wakeEnrollSaveWith(int accepted) {
     return 'Save with $accepted recordings';
   }
@@ -4980,6 +4994,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeEnrollTooQuiet => 'Too quiet. A bit louder, please.';
+
+  @override
+  String get wakeEnrollUnchecked =>
+      'The check is not possible right now (speech recognition not ready). Once more, please.';
 
   @override
   String get wakeExplainBatteryBody =>
@@ -5266,6 +5284,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeWordRetrain => 'Train again';
+
+  @override
+  String wakeWordTemplatesFew(int count) {
+    return 'Only $count usable recordings left. Please train again.';
+  }
 
   @override
   String get wakeWordTemplatesMissing =>

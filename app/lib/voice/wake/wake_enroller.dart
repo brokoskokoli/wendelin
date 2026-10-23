@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../voice_log.dart';
 import 'utterance_capture.dart';
 
 /// Where in the padded recording the template window is taken: this long
@@ -61,6 +62,15 @@ Future<Float32List?> embedUtterance(
   WakeFeatureExtractor features,
   Int16List pcm,
   int speechEnd,
+) async => (await embedUtteranceScored(features, pcm, speechEnd))?.embedding;
+
+/// [embedUtterance] plus the highest classifier score of any window of the
+/// recording (`null` when the extractor has no classifier): the evidence of
+/// the content check (WP140, [WakeEnrollRules.classifierMinScore]).
+Future<({Float32List embedding, double? modelScore})?> embedUtteranceScored(
+  WakeFeatureExtractor features,
+  Int16List pcm,
+  int speechEnd,
 ) async {
   const lead = AudioInput.sampleRate; // 1 s
   const trail = 2 * AudioInput.sampleRate;
@@ -68,11 +78,14 @@ Future<Float32List?> embedUtterance(
   final padded = padWithNoise(pcm, lead, trail);
   final target = lead + speechEnd + durationToSamples(templateOffset);
   WakeWindow? best;
+  double? top;
   for (var i = 0; i < padded.length; i += 1280) {
     final end = i + 1280 > padded.length ? padded.length : i + 1280;
     for (final w in await features.accept(
       Int16List.sublistView(padded, i, end),
     )) {
+      final score = w.modelScore;
+      if (score != null && (top == null || score > top)) top = score;
       if (best == null ||
           (w.endSample - target).abs() < (best.endSample - target).abs()) {
         best = w;
@@ -80,7 +93,8 @@ Future<Float32List?> embedUtterance(
     }
   }
   features.reset();
-  return best?.embedding;
+  if (best == null) return null;
+  return (embedding: best.embedding, modelScore: top);
 }
 
 /// The microphone stream ended before the enrollment was done.
@@ -99,6 +113,10 @@ final class MicrophoneEnded implements Exception {
 /// nearly identical (leave-one-out similarity 1.0); a threshold derived from
 /// them would never fire on a live utterance.
 const wakeProvisionalThreshold = wakeUnconstrainedMaxThreshold;
+
+/// Fewest recordings an enrollment accepts; fewer left after the audit of
+/// older templates ask for a new enrollment (WP140).
+const wakeEnrollMinimum = 8;
 
 /// Phase of an enrollment.
 enum EnrollPhase {
@@ -132,9 +150,11 @@ class WakeEnroller extends ChangeNotifier {
     required this.store,
     required this.speakerId,
     this.target = 15,
-    this.minimum = 8,
+    this.minimum = wakeEnrollMinimum,
     this.threshold = wakeProvisionalThreshold,
     this.pause = const Duration(milliseconds: 900),
+    this.verifier,
+    this.classifierMinScore = WakeEnrollRules.classifierMinScore,
     UtteranceCapture Function()? newCapture,
   }) : _newCapture = newCapture ?? UtteranceCapture.new;
 
@@ -161,6 +181,14 @@ class WakeEnroller extends ChangeNotifier {
 
   /// Pause after each recording (time to read the result).
   final Duration pause;
+
+  /// Content check (WP140): the configured recognizer must hear „Wendelin“
+  /// (`matchesWakeWord`) unless the classifier is sure. `null`: no
+  /// recognizer; then only the classifier can vouch for a recording.
+  final WakeVerifier? verifier;
+
+  /// Classifier score from which a recording passes without the recognizer.
+  final double classifierMinScore;
 
   final UtteranceCapture Function() _newCapture;
   final _embeddings = <Float32List>[];
@@ -259,14 +287,74 @@ class WakeEnroller extends ChangeNotifier {
       return;
     }
     _set(EnrollPhase.processing);
-    final e = await embedUtterance(features, u.pcm!, u.speechEnd);
-    if (e == null) {
+    final scored = await embedUtteranceScored(features, u.pcm!, u.speechEnd);
+    if (scored == null) {
       _last = UtteranceVerdict.noSpeech;
       _rejected++;
-    } else {
-      _embeddings.add(e);
+      notifyListeners();
+      return;
     }
+    final verdict = await _checkContent(u.pcm!, scored.modelScore);
+    if (verdict != UtteranceVerdict.accepted) {
+      _last = verdict;
+      _rejected++;
+      notifyListeners();
+      return;
+    }
+    _embeddings.add(scored.embedding);
+    _dropInconsistent();
     notifyListeners();
+  }
+
+  /// Drops templates that do not fit the others (WP140) and counts them as
+  /// rejected; the verdict then says so.
+  void _dropInconsistent() {
+    if (_embeddings.length < WakeEnrollRules.outlierMinTemplates) return;
+    final mean =
+        features.embeddingMean ?? Float32List(_embeddings.first.length);
+    final drop = outlierIndices(_embeddings, mean).toList()
+      ..sort((a, b) => b.compareTo(a));
+    for (final i in drop) {
+      _embeddings.removeAt(i);
+    }
+    if (drop.isNotEmpty) {
+      _rejected += drop.length;
+      _last = UtteranceVerdict.inconsistent;
+      voiceLog('enroll-outlier', {'removed': drop.length, 'left': accepted});
+    }
+  }
+
+  /// Whether the recording is „Wendelin“: the classifier is sure
+  /// ([classifierMinScore]) or the recognizer hears the word. No evidence
+  /// at all (no classifier, recognizer missing or failing) is no pass
+  /// (fail closed). Logs source, outcome and time, never text.
+  Future<UtteranceVerdict> _checkContent(Int16List pcm, double? score) async {
+    final watch = Stopwatch()..start();
+    var source = 'none';
+    var verdict = UtteranceVerdict.unchecked;
+    if (score != null && score >= classifierMinScore) {
+      source = 'classifier';
+      verdict = UtteranceVerdict.accepted;
+    } else if (verifier != null) {
+      try {
+        final heard = await verifier!.confirm(pcm);
+        source = heard ? 'stt' : 'stt-no';
+        verdict = heard ? UtteranceVerdict.accepted : UtteranceVerdict.notWord;
+      } on Object catch (e) {
+        source = 'stt-error';
+        voiceLog('enroll-check-error', {'error': errorCode(e)});
+      }
+    } else if (score != null) {
+      source = 'classifier-no';
+      verdict = UtteranceVerdict.notWord;
+    }
+    voiceLog('enroll-check', {
+      'source': source,
+      'ok': verdict == UtteranceVerdict.accepted,
+      'score': score == null ? null : (score * 100).round(),
+      'ms': watch.elapsedMilliseconds,
+    });
+    return verdict;
   }
 
   /// Stops after the current recording; nothing is stored.

@@ -8433,6 +8433,12 @@ abstract class AppLocalizations {
   /// **'Gehört.'**
   String get wakeEnrollHeard;
 
+  /// No description provided for @wakeEnrollInconsistent.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Aufnahme passte nicht zu den anderen und wurde entfernt. Bitte noch einmal.'**
+  String get wakeEnrollInconsistent;
+
   /// No description provided for @wakeEnrollIntro.
   ///
   /// In de, this message translates to:
@@ -8456,6 +8462,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Nichts gehört. Noch einmal bitte.'**
   String get wakeEnrollNoSpeech;
+
+  /// No description provided for @wakeEnrollNotWord.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht als „{word}“ erkannt. Bitte noch einmal.'**
+  String wakeEnrollNotWord(String word);
 
   /// No description provided for @wakeEnrollProcessing.
   ///
@@ -8499,6 +8511,12 @@ abstract class AppLocalizations {
   /// **'Wie du es im Alltag sagst, gern aus einer anderen Ecke.'**
   String get wakeEnrollPrompt3;
 
+  /// No description provided for @wakeEnrollRejected.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} abgelehnt'**
+  String wakeEnrollRejected(int count);
+
   /// No description provided for @wakeEnrollSaveWith.
   ///
   /// In de, this message translates to:
@@ -8534,6 +8552,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Zu leise. Bitte etwas lauter.'**
   String get wakeEnrollTooQuiet;
+
+  /// No description provided for @wakeEnrollUnchecked.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Prüfung ist gerade nicht möglich (Spracherkennung nicht bereit). Bitte noch einmal.'**
+  String get wakeEnrollUnchecked;
 
   /// No description provided for @wakeExplainBatteryBody.
   ///
@@ -9020,6 +9044,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Neu einlernen'**
   String get wakeWordRetrain;
+
+  /// No description provided for @wakeWordTemplatesFew.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur {count} brauchbare Aufnahmen übrig. Bitte neu einlernen.'**
+  String wakeWordTemplatesFew(int count);
 
   /// No description provided for @wakeWordTemplatesMissing.
   ///

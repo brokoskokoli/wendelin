@@ -11,9 +11,11 @@ import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
 import '../platform/wake/wake_detector.dart';
+import '../voice/voice_log.dart';
 import '../voice/wake/lazy_barge_verifier.dart';
 import '../voice/wake/wake_barge_in.dart';
 import '../voice/wake/wake_storage.dart';
+import '../voice/wake/wake_template_audit.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
 import 'preferences.dart';
@@ -86,7 +88,15 @@ final wakeSpeakersProvider =
 /// Speaker list with add, rename and delete (templates go with it).
 final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   @override
-  Future<List<WakeSpeaker>> build() => ref.read(wakeStoreProvider).speakers();
+  Future<List<WakeSpeaker>> build() async {
+    final store = ref.read(wakeStoreProvider);
+    final speakers = await store.speakers();
+    // WP140: once per start, drop outliers an older enrollment let in.
+    for (final s in speakers) {
+      await auditTemplates(store, s.id);
+    }
+    return speakers;
+  }
 
   /// Adds (or keeps) the speaker [id]; the templates come from the
   /// enrollment.
@@ -178,6 +188,44 @@ final wakeVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {
   } on Object {
     return null;
   }
+});
+
+/// Feature chain of the enrollment (WP140): with the classifier when its
+/// model is installed (its score is evidence (b) of the content check),
+/// otherwise the plain chain.
+final wakeEnrollFeaturesFactoryProvider =
+    FutureProvider<WakeFeatureExtractor Function()>((ref) async {
+      var useClassifier = false;
+      try {
+        final service = await ref.read(speechModelServiceProvider.future);
+        final c = ref
+            .read(speechModelCatalogProvider)
+            .byId(SpeechModelCatalog.wakeClassifierWendelin.id);
+        if (c != null && await service.isInstalled(c)) {
+          useClassifier = true;
+        }
+      } on Object {
+        // Falls through to the plain chain.
+      }
+      return ref.read(
+        useClassifier
+            ? wakeClassifierFeaturesFactoryProvider
+            : wakeFeaturesFactoryProvider,
+      );
+    });
+
+/// Content check of the enrollment (WP140): the configured recognizer
+/// (Whisper or Parakeet, as the pipeline), clip scaled to the verify peak
+/// like stage 2 with Parakeet. The check log carries only the category.
+final wakeEnrollVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {
+  final stt = await ref.watch(speechToTextProvider.future);
+  return TranscriptWakeVerifier(
+    stt,
+    language: ref.read(languageProvider),
+    normalize: true,
+    onCategory: (category, ms) =>
+        voiceLog('enroll-check-text', {'cat': category, 'audio': ms}),
+  );
 });
 
 /// Microphone for enrollment, calibration and test (the same as the

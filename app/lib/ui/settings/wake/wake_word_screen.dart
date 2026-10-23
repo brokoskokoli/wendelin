@@ -6,6 +6,7 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../../di/wake_providers.dart';
 import '../../../l10n/l10n.dart';
+import '../../../voice/wake/wake_enroller.dart';
 import '../../../voice/wake/wake_storage.dart';
 import '../../design/design.dart';
 import '../model_download_row.dart';
@@ -269,6 +270,8 @@ class _SpeakerRow extends ConsumerWidget {
           ? context.l10n.wakeWordTemplatesMissing
           : templates.center != wakeCenterId
           ? context.l10n.wakeWordTemplatesOutdated
+          : templates.embeddings.length < wakeEnrollMinimum
+          ? context.l10n.wakeWordTemplatesFew(templates.embeddings.length)
           : context.l10n.wakeWordRecordingsThreshold(
               templates.embeddings.length,
               templates.threshold.toStringAsFixed(2),

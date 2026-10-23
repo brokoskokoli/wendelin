@@ -120,6 +120,32 @@
   "wakeEnrollMicPreparing": "Mikrofon wird vorbereitet …",
   "wakeEnrollNoMic": "Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.",
   "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
+  "wakeEnrollNotWord": "Nicht als „{word}“ erkannt. Bitte noch einmal.",
+  "@wakeEnrollNotWord": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollInconsistent": "Diese Aufnahme passte nicht zu den anderen und wurde entfernt. Bitte noch einmal.",
+  "wakeEnrollUnchecked": "Die Prüfung ist gerade nicht möglich (Spracherkennung nicht bereit). Bitte noch einmal.",
+  "wakeEnrollRejected": "{count} abgelehnt",
+  "@wakeEnrollRejected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "wakeWordTemplatesFew": "Nur {count} brauchbare Aufnahmen übrig. Bitte neu einlernen.",
+  "@wakeWordTemplatesFew": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "wakeEnrollProcessing": "Wird verarbeitet …",
   "wakeEnrollProgress": "{accepted} von {target}",
   "@wakeEnrollProgress": {
