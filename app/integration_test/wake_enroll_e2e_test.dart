@@ -94,6 +94,16 @@ void main() {
         for (var i = 1; i <= 15; i++)
           WavAudioInput.file('$dir/Anna_${i.toString().padLeft(2, '0')}.wav')
               .samples,
+        // WP140: Ausreißer werden verworfen und neu aufgenommen; ohne
+        // Ersatzaufnahmen würde die letzte Datei endlos wiederholt. Die
+        // Ersatzaufnahmen sind abgewandelt (leiser, leicht verschoben), keine
+        // exakten Duplikate (sonst LOO 1.00 und die Schwelle läge am Boden).
+        for (var i = 1; i <= 8; i++)
+          _variant(
+            WavAudioInput.file('$dir/Anna_${i.toString().padLeft(2, '0')}.wav')
+                .samples,
+            i,
+          ),
       ], speed: 4);
       await tester.tap(find.text('Stimme einlernen'));
       await pumpUntil(tester, find.text('Weiter'));
@@ -231,10 +241,25 @@ void main() {
         find.textContaining('Nicht als'),
         timeout: const Duration(minutes: 2),
       );
+      // Mehr Prüfungen sammeln (Log enroll-check), bevor der Test endet.
+      await tester.pump(const Duration(seconds: 20));
       expect(find.text('Speichern'), findsNothing);
       expect(await c.read(wakeSpeakersProvider.future), isEmpty);
     },
     skip: !voiceE2e,
     timeout: const Timeout(Duration(minutes: 10)),
   );
+}
+
+/// Abwandlung einer Aufnahme: andere Verstärkung und Zeitverschiebung je
+/// [seed], damit Ersatzvorlagen nicht exakt gleich sind.
+Int16List _variant(Int16List s, int seed) {
+  final gain = 0.55 + 0.05 * seed;
+  final shift = 160 * seed;
+  final out = Int16List(s.length);
+  for (var i = 0; i < s.length; i++) {
+    final at = i - shift;
+    if (at >= 0) out[i] = (s[at] * gain).round().clamp(-32768, 32767);
+  }
+  return out;
 }
