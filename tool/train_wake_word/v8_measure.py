@@ -15,6 +15,8 @@ Venv wie words_measure.py (K=~/wendelin-models/kws):
       --model v8a=$K/wp130/out/wendelin_wp130_a.onnx [--model name=pfad ...] [--no-s2] [--report-only]
 v7 ($K/wp58/out/wendelin_v7.onnx) ist immer dabei (--no-v7 schaltet ab). Cache und Ergebnis unter $K/wp130/results
 (s1/, s2/, conf_say/, v8_grid.csv, v8_table.md); nie im Repo. Fehlt im Cache etwas, wird nur das nachgerechnet.
+--split all (WP133): alle Bloecke beider Geraete, nur v7 und Modelle mit <modell>.meta.json real_pos=0 (run_v8.sh REAL_POS=0); Ausgabe
+v8_table_all.md/v8_grid_all.csv, Caches gemeinsam (s1/s2 sind je Quelle ueber das ganze Band gerechnet: pos_<geraet> = ganze Aufnahme).
 Selbsttest: test_v8_measure.py.
 """
 import argparse, csv, hashlib, json, os, sys, time
@@ -41,28 +43,46 @@ NEG_SRC_ALL = W.NEG_SRC + ["conf"]                       # Quellen, deren Ereign
 
 
 # ---------- Split (Pruef-Split aus real_split.py, nichts duplizieren) ----------
-def eval_blocks(dev):
-    """Bloecke 1..6, die nicht zu den Trainingsdaten gehoeren (real_split.TRAIN_DEVICE/TRAIN_BLOCKS)."""
-    return tuple(b for b in range(1, 7) if not (dev == R.TRAIN_DEVICE and b in R.TRAIN_BLOCKS))
+SPLITS = ("eval", "all")      # „all“ (WP133): alle Bloecke 1..6 beider Geraete, nur fuer Modelle ohne echte Positive (check_split_models)
 
 
-def filter_labels(labels):
+def eval_blocks(dev, split="eval"):
+    """Bloecke 1..6, die nicht zu den Trainingsdaten gehoeren (real_split.TRAIN_DEVICE/TRAIN_BLOCKS); split="all": alle Bloecke 1..6."""
+    if split not in SPLITS: raise SystemExit(f"unbekannter Split: {split!r}")
+    return tuple(b for b in range(1, 7) if split == "all" or not (dev == R.TRAIN_DEVICE and b in R.TRAIN_BLOCKS))
+
+
+def filter_labels(labels, split="eval"):
     """Nur Pruef-Labels der beiden Woerter (labels im Format von words_measure.read_labels)."""
-    out = [lb for lb in labels if lb["word"] in WORDS and lb["dev"] in DEVICES and lb["block"] in eval_blocks(lb["dev"])]
-    assert_eval_only(out)
+    out = [lb for lb in labels if lb["word"] in WORDS and lb["dev"] in DEVICES and lb["block"] in eval_blocks(lb["dev"], split)]
+    assert_eval_only(out, split)
     return out
 
 
-def assert_eval_only(labels):
-    """Fail-closed: ein Trainings-Label in der Messung bricht ab."""
+def assert_eval_only(labels, split="eval"):
+    """Fail-closed: ein Trainings-Label in der Messung bricht ab (nur split="all" erlaubt sie)."""
+    if split == "all": return
     for lb in labels:
         if lb["dev"] == R.TRAIN_DEVICE and lb["block"] in R.TRAIN_BLOCKS:
             raise SystemExit(f"Trainings-Label in der Messung: {lb['dev']} Block {lb['block']}")
 
 
-def folds_for(dev):
+def check_split_models(split, models):
+    """--split all nur fuer v7 (Pfad = V7) und Modelle, deren Sidecar <modell>.meta.json real_pos == 0 sagt; sonst Abbruch (fail-closed)."""
+    if split == "eval": return
+    for name, path in models.items():
+        if os.path.realpath(path) == os.path.realpath(V7): continue
+        try:
+            rp = json.load(open(path + ".meta.json")).get("real_pos")
+        except (OSError, ValueError, AttributeError):
+            raise SystemExit(f"--split all: Sidecar {path}.meta.json fehlt oder ist unlesbar ({name})")
+        if not (type(rp) is int and rp == 0):
+            raise SystemExit(f"--split all: Modell {name} ist nicht ohne echte Positive trainiert (real_pos={rp!r})")
+
+
+def folds_for(dev, split="eval"):
     """Kreuz-Auswahl innerhalb des Pruef-Splits: je Block auswaehlen auf den uebrigen, zaehlen auf diesem Block (Leave-one-block-out)."""
-    bl = eval_blocks(dev)
+    bl = eval_blocks(dev, split)
     return [(tuple(b for b in bl if b != t), (t,)) for t in bl]
 
 
@@ -272,13 +292,13 @@ def grid(models, curves, labels, hr):
     return rows
 
 
-def cv_cell(rows, dev, word, tag, stages, calib, target):
+def cv_cell(rows, dev, word, tag, stages, calib, target, split="eval"):
     """-> (hit, n, [Konfiguration je Fold]) mit Kreuz-Auswahl im Pruef-Split; None, wenn keine Zeile oder FA-Grenze nie eingehalten."""
     pts = sorted((W.calib_point(r, calib) for r in rows
                   if r["dev"] == dev and r["word"] == word and r["prog"] == tag and r["stage2"] in stages),
                  key=lambda p: (p["stage2"] == "-", -p["ord"]))
     if not pts: return None
-    return W.cv_pick(pts, pts[0]["hours"], target, folds_for(dev))
+    return W.cv_pick(pts, pts[0]["hours"], target, folds_for(dev, split))
 
 
 def cfg_key(r): return f"{r['prog']}{r['thr']}+{r['stage2']}"
@@ -287,10 +307,12 @@ def cfg_key(r): return f"{r['prog']}{r['thr']}+{r['stage2']}"
 def rate(a, b): return W.fc(f"{a / b:.1f}") if b else "-"
 
 
-def render(rows, models, target, hr):
+def render(rows, models, target, hr, split="eval"):
     stage_sets = [("Stufe 1 (-)", ("-",)), ("Stufe 2 (hw2)", ("hw2",)), ("beste Wahl (-/hw2)", ("-", "hw2"))]
-    out = [f"# Wake-Word v8: Messung auf dem Prüf-Split (Ziel {W.fc(target)} FA/h)", "",
-           "Prüf-Split: Huawei Block 4–6, handy2 Block 1–6 (Huawei Block 1–3 sind Training und werden nicht gewertet). Auswahl der "
+    scope = ("Alle Blöcke: Huawei Block 1–6, handy2 Block 1–6 (nur Modelle ohne echte Positive und v7). " if split == "all" else
+             "Prüf-Split: Huawei Block 4–6, handy2 Block 1–6 (Huawei Block 1–3 sind Training und werden nicht gewertet). ")
+    out = [f"# Wake-Word v8: Messung auf {'allen Blöcken' if split == 'all' else 'dem Prüf-Split'} (Ziel {W.fc(target)} FA/h)", "",
+           scope + "Auswahl der "
            "Schwelle (und Stufe) je Block auf den übrigen Prüf-Blöcken, Zählung auf dem ausgelassenen Block; Wilson 95 %. "
            f"Modelle: {', '.join(models)}. Negativstunden: "
            + ", ".join(f"{s} {W.fc(hr[s])} h" for s in W.NEG_SRC) + f"; Verwechsler {W.fc(hr['conf'])} h. "
@@ -303,7 +325,7 @@ def render(rows, models, target, hr):
                 for tag in models:
                     cells = []
                     for _, st in stage_sets:
-                        c = cv_cell(rows, dev, w, tag, st, calib, target)
+                        c = cv_cell(rows, dev, w, tag, st, calib, target, split)
                         cells.append("keine Konfiguration ≤ Ziel" if c is None or c[0] is None else W.fmt_hit(c[0], c[1]))
                     out.append(f"| {dev} | {w} | {tag} | " + " | ".join(cells) + " |")
         out.append("")
@@ -314,7 +336,7 @@ def render(rows, models, target, hr):
         for w in WORDS:
             for tag in models:
                 for sname, st in stage_sets[:2]:
-                    c = cv_cell(rows, dev, w, tag, st, "real", target)
+                    c = cv_cell(rows, dev, w, tag, st, "real", target, split)
                     for k in dict.fromkeys(c[2] if c and c[2] else []):
                         r = by_cfg.get((dev, w, k))
                         if r is None: continue
@@ -323,12 +345,18 @@ def render(rows, models, target, hr):
     return "\n".join(out) + "\n"
 
 
-def write_outputs(rows, models, target, hr):
+def out_names(split):
+    sfx = "_all" if split == "all" else ""
+    return f"{RES}/v8_grid{sfx}.csv", f"{RES}/v8_table{sfx}.md"
+
+
+def write_outputs(rows, models, target, hr, split="eval"):
     os.makedirs(RES, exist_ok=True)
     keys = sorted({k for r in rows for k in r})
-    with open(f"{RES}/v8_grid.csv", "w", newline="") as fh:
+    csv_p, md_p = out_names(split)
+    with open(csv_p, "w", newline="") as fh:
         wr = csv.DictWriter(fh, fieldnames=keys); wr.writeheader(); wr.writerows(rows)
-    open(f"{RES}/v8_table.md", "w").write(render(rows, models, target, hr))
+    open(md_p, "w").write(render(rows, models, target, hr, split))
 
 
 def parse_models(specs, with_v7=True):
@@ -351,8 +379,11 @@ def main():
     ap.add_argument("--target", type=float, default=2.0, help="FA/h")
     ap.add_argument("--conf-n", type=int, default=CONF_N); ap.add_argument("--conf-seed", type=int, default=CONF_SEED)
     ap.add_argument("--threads", type=int, default=2)
+    ap.add_argument("--split", choices=SPLITS, default="eval",
+                    help="eval = Prüf-Split (Standard); all = alle Blöcke, nur v7 und Modelle mit Sidecar real_pos=0")
     a = ap.parse_args()
     models = parse_models(a.model, not a.no_v7)
+    check_split_models(a.split, models)
     if not conf_names():
         print("Verwechsler:", gen_conf(conf_dir(), a.conf_n, a.conf_seed), flush=True)
     if not a.report_only:
@@ -360,11 +391,11 @@ def main():
     curves = {t: load_curves(t) for t in models}
     if not a.report_only and not a.no_s2:
         run_s2(models, curves, a.threads)
-    labels = filter_labels(W.read_labels())
+    labels = filter_labels(W.read_labels(), a.split)
     hr = {s: hours(s) for s in W.NEG_SRC + ["conf"]}
     rows = grid(models, curves, labels, hr)
-    write_outputs(rows, models, a.target, hr)
-    print(f"{len(rows)} Zeilen -> {RES}/v8_table.md")
+    write_outputs(rows, models, a.target, hr, a.split)
+    print(f"{len(rows)} Zeilen -> {out_names(a.split)[1]}")
 
 
 if __name__ == "__main__":
