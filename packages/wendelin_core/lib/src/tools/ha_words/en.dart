@@ -70,7 +70,12 @@ const haWordsEn = HaWords(
     'me', 'to', 'it', 'hey', 'hi', 'okay', 'ok', 'wendelin',
   ],
   // Never on the fast path, any domain (garage, gate, door, lock, alarm).
-  blockers: ['garage', 'gate', 'door', 'lock', 'opener', 'alarm', 'latch'],
+  blockers: [
+    'garage', 'gate', 'door', 'lock', 'opener', 'alarm', 'latch', 'siren', //
+    'safe',
+  ],
+  // Harmless words with a stem inside (not „outdoor“: that stays blocked).
+  blockerExceptions: ['navigate', 'investigate', 'aggregate'],
 );
 
 /// Extra topic words for the preloading of the `ha` tools.

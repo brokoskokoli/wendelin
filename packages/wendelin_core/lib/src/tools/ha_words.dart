@@ -53,6 +53,7 @@ final class HaWords {
     required this.fillers,
     required this.neutral,
     required this.blockers,
+    this.blockerExceptions = const [],
   });
 
   /// Device type words per Home Assistant domain (`light`, `cover`,
@@ -85,26 +86,32 @@ final class HaWords {
 
   /// Stems of words that mark a device the fast path never switches
   /// (garage, gate, door, lock, alarm), whatever its Home Assistant domain.
-  /// A stem is looked for anywhere in the folded name and entity id
-  /// („garage“ in „Garagentor“); a leading `^` means start of a word („^tur“
-  /// does not hit „Temperatur“, „^tor“ not „Ventilator“). Stems of **every** language count (names
-  /// can be in any language); a hit means the model decides.
+  /// A stem is looked for **anywhere** in the folded name and entity id
+  /// („tor“ in „Rolltor“, „tur“ in „Haustür“): fail closed. Stems of **every**
+  /// language count (names can be in any language); a hit means the model
+  /// decides.
   final List<String> blockers;
+
+  /// Known harmless words that contain a blocker stem („Ventilator“,
+  /// „Temperatur“). They are cut out of the name before the stems are
+  /// looked for, so „Temperaturtür“ is still blocked. Every language counts.
+  final List<String> blockerExceptions;
 }
 
 /// Whether [nameAndId] (device name and entity id) contains a blocker of
 /// any language (see [HaWords.blockers]).
 bool haHasBlocker(String nameAndId) {
-  final folded = foldForMatch(nameAndId);
-  final spaced = ' $folded';
+  var folded = foldForMatch(nameAndId);
+  for (final w in haWordsByLanguage.values) {
+    for (final e in w.blockerExceptions) {
+      final x = foldForMatch(e);
+      if (x.isNotEmpty) folded = folded.replaceAll(x, ' ');
+    }
+  }
   for (final w in haWordsByLanguage.values) {
     for (final b in w.blockers) {
-      final startOnly = b.startsWith('^');
-      final stem = foldForMatch(startOnly ? b.substring(1) : b);
-      if (stem.isEmpty) continue;
-      if (startOnly ? spaced.contains(' $stem') : folded.contains(stem)) {
-        return true;
-      }
+      final stem = foldForMatch(b);
+      if (stem.isNotEmpty && folded.contains(stem)) return true;
     }
   }
   return false;

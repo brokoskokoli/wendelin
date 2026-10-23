@@ -142,6 +142,85 @@ void main() {
       );
     });
 
+    // Review Runde 2: Stämme tür/tor sperren überall im Wort (fail-closed).
+    test('Kompositum mit tür/tor/…: kein Schnellweg', () async {
+      const names = {
+        'Haustür': 'Haustür an',
+        'Haustuer': 'Haustuer an',
+        'Eingangstür': 'Eingangstür an',
+        'Rolltor': 'Rolltor an',
+        'Scheunentor': 'Scheunentor an',
+        'Schiebetor': 'Schiebetor an',
+        'Hoftor': 'Hoftor an',
+        'Pforte': 'Pforte an',
+        'Sirene': 'Sirene an',
+        'Tresor': 'Tresor an',
+        'Klingel': 'Klingel an',
+        'Outdoor Lampe': 'Outdoor Lampe an',
+      };
+      const other = {
+        'Front Door': ('Front Door on', 'en'),
+        'Outdoor Switch': ('Outdoor Switch on', 'en'),
+        'Safe': ('Safe on', 'en'),
+        'Porte Entree': ('Porte Entree allume', 'fr'),
+        'Sonnette': ('Sonnette allume', 'fr'),
+      };
+      for (final MapEntry(:key, :value) in names.entries) {
+        final f = with_([HaEntity(entityId: 'switch.x', name: key)]);
+        expect(await f.match(value, language: 'de'), isNull, reason: key);
+      }
+      for (final MapEntry(:key, :value) in other.entries) {
+        final f = with_([HaEntity(entityId: 'switch.x', name: key)]);
+        expect(
+          await f.match(value.$1, language: value.$2),
+          isNull,
+          reason: key,
+        );
+      }
+      // Gegenprobe: ohne Sperrwort wird dieselbe Sprache erkannt.
+      final ok = with_(const [HaEntity(entityId: 'switch.x', name: 'Fan')]);
+      expect(await ok.match('Fan on', language: 'en'), isNotNull);
+      final okFr = with_(const [HaEntity(entityId: 'switch.x', name: 'Fan')]);
+      expect(await okFr.match('Fan allume', language: 'fr'), isNotNull);
+    });
+
+    test('Sperrstamm nur in der entity_id (Name harmlos)', () async {
+      for (final id in [
+        'switch.haustuer',
+        'switch.rolltor',
+        'switch.scheunentor',
+        'switch.pforte',
+      ]) {
+        final f = with_([HaEntity(entityId: id, name: 'Eingang')]);
+        expect(await f.match('Eingang an', language: 'de'), isNull, reason: id);
+      }
+    });
+
+    test('harmlose Wörter mit tor/tur bleiben erlaubt', () async {
+      for (final name in ['Ventilator', 'Monitor', 'Temperatur', 'Radiator']) {
+        final f = with_([HaEntity(entityId: 'switch.ok', name: name)]);
+        expect(
+          await f.match('$name an', language: 'de'),
+          isNotNull,
+          reason: name,
+        );
+      }
+    });
+
+    test('Kaffeemaschine (Bestandsgerät) bleibt erlaubt', () async {
+      expect(
+        await fast.match('Kaffeemaschine einschalten', language: 'de'),
+        isNotNull,
+      );
+    });
+
+    test('Ausnahmewort mit Stamm dahinter bleibt gesperrt', () async {
+      final f = with_(const [
+        HaEntity(entityId: 'switch.t', name: 'Ventilatortor'),
+      ]);
+      expect(await f.match('Ventilatortor an', language: 'de'), isNull);
+    });
+
     test('Frage mit Fragezeichen: Modell', () async {
       expect(await fast.match('Küche Licht an?', language: 'de'), isNull);
       expect(

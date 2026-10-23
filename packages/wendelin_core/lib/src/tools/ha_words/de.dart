@@ -105,18 +105,15 @@ const haWordsDe = HaWords(
   ],
   // Never on the fast path, any domain (garage, gate, door, lock, alarm).
   blockers: [
-    'garage',
-    '^tor',
-    'hoftor',
-    'gartentor',
-    'einfahrtstor',
-    '^tur',
-    '^tuer',
-    'offner',
-    'oeffner',
-    'schloss',
-    'alarm',
-    'riegel',
+    'garage', 'tor', 'tur', 'tuer', 'pforte', 'offner', 'oeffner', //
+    'schloss', 'alarm', 'tresor', 'klingel', 'riegel',
+  ],
+  // Harmless words with a stem inside (tor, tur).
+  blockerExceptions: [
+    'ventilator', 'monitor', 'radiator', 'generator', 'motor', 'doktor', //
+    'traktor', 'faktor', 'sektor', 'reflektor', 'projektor', 'detektor',
+    'operator', 'indikator', 'kondensator', 'temperatur', 'natur', 'kultur',
+    'tastatur', 'armatur', 'struktur', 'signatur', 'garnitur',
   ],
 );
 

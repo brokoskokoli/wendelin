@@ -90,7 +90,12 @@ const haWordsFr = HaWords(
     'maintenant', 'a', 'sil', 'hey', 'ok', 'okay', 'wendelin',
   ],
   // Never on the fast path, any domain (garage, gate, door, lock, alarm).
-  blockers: ['garage', 'portail', 'porte', 'serrure', 'verrou', 'alarme'],
+  blockers: [
+    'garage', 'portail', 'porte', 'serrure', 'verrou', 'alarme', //
+    'coffre', 'sonnette',
+  ],
+  // Harmless words with a stem inside.
+  blockerExceptions: ['importe', 'apporte', 'transporte', 'supporte'],
 );
 
 /// Extra topic words for the preloading of the `ha` tools.

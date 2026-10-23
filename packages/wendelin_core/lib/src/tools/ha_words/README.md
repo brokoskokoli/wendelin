@@ -7,7 +7,8 @@ Prozent- und Gradwörter sowie typische Verhörer der Spracherkennung
 (`recognitionErrors`, z. B. de „Rolle“ für „Rollo“).
 
 ## Sperrwörter
-`blockers` je Sprache: Wortstämme (Garage, Tor, Tür, Schloss, Alarm …), die den Schnellweg für jedes Gerät sperren, dessen Name oder Entity-Id sie enthält, in jeder Domain. Es zählen die Listen **aller** Sprachen. `^` vorn = Wortanfang (`^tur` trifft nicht „Temperatur“, `^tor` nicht „Ventilator“). Im Zweifel sperren (Modell entscheidet).
+`blockers` je Sprache: Wortstämme (Garage, Tor, Tür, Pforte, Schloss, Alarm, Sirene, Tresor, Klingel …), die den Schnellweg für jedes Gerät sperren, dessen Name oder Entity-Id sie enthalten, in jeder Domain. Es zählen die Listen **aller** Sprachen. Ein Stamm sperrt **überall im Wort** („tor“ in „Rolltor“, „tur“ in „Haustür“, `door` in „outdoor“): fail-closed, im Zweifel entscheidet das Modell.
+`blockerExceptions`: kurze Liste bekannter harmloser Wörter mit Stamm (Ventilator, Monitor, Temperatur, Natur …). Sie werden vor der Prüfung aus dem Namen geschnitten, „Temperaturtür“ bleibt also gesperrt. Unbekannte Wörter mit Stamm sind gesperrt; neue Ausnahme nur mit Test (positiv und Gegenprobe).
 
 ## Regeln
 - Typen sind **Wortstämme** (Wortanfang, „lampe“ trifft „Lampen“), Aktionen
