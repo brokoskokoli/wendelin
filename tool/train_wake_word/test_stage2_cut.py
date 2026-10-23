@@ -55,6 +55,11 @@ class AppHalten(unittest.TestCase):
         eig = C.app_events(t, np.array([0.1, 0.985, 0.9, 0.1]), 0.98, upper=0.985)
         self.assertEqual([(round(x - 10, 2), p) for x, p in eig], [(0.08, 0.985)])               # eigene Obergrenze 0.985 gilt auch
 
+    def test_erstes_fenster_genau_obergrenze_entscheidet_sofort(self):
+        t = 10 + HOP * np.arange(4)
+        e = C.app_events(t, np.array([0.1, 0.995, 0.5, 0.5]), 0.98, flush=False)
+        self.assertEqual([(round(x - 10, 2), p) for x, p in e], [(0.08, 0.995)])                 # sofort: mit Halten fehlte das Ereignis (Kurve endet vor 0,8 s, flush=False)
+
     def test_untere_grenze_inklusive_und_darunter_nichts(self):
         self.assertEqual(ev([0.1, 0.98, 0.1] + PAD), [(0.08, 0.98)])
         self.assertEqual(ev([0.1, 0.9799, 0.9799, 0.1] + PAD), [])

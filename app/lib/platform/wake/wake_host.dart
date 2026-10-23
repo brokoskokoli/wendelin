@@ -171,7 +171,7 @@ final class WakeHost {
   }) async {
     final listener = WakeWordListener(
       audio: audio,
-      engine: _LoggingEngine(engine, _detector),
+      engine: _LoggingEngine(engine, _detector, verify: verify),
       verifier: verify
           ? _verifier = _LoggingVerifier(parts.verifier(detector: _detector))
           : null,
@@ -277,12 +277,6 @@ final class WakeHost {
       // Which recognizer decided stage 2 (parakeet, whisper); `none` if none.
       'verifier': !d.hit.direct && _verify ? _verifier?.kind ?? 'none' : 'none',
     });
-    // WP141: how long stage 1 held the score and on which path it went on.
-    voiceLog('wake-decision', {
-      'hold_ms': d.hit.holdMs ?? 0,
-      'peak': (d.hit.score ?? d.hit.confidence ?? 0).toStringAsFixed(3),
-      'path': d.hit.direct ? 'direct' : 'stage2',
-    });
     if (!_verify && !d.hit.direct) {
       voiceLog('wake-verify', {'result': 'skip'});
     }
@@ -373,10 +367,14 @@ const wakePreRoll = Duration(milliseconds: 2500);
 
 /// Logs every stage 1 candidate: score and rule, nothing else.
 final class _LoggingEngine implements WakeWordEngine {
-  _LoggingEngine(this.inner, this.detector);
+  _LoggingEngine(this.inner, this.detector, {required this.verify});
 
   final WakeWordEngine inner;
   final WakeDetector detector;
+
+  /// Whether stage 2 runs (else a candidate below `acceptFrom` goes on
+  /// `unchecked`).
+  final bool verify;
 
   @override
   Future<void> open(List<KeywordSpec> keywords) => inner.open(keywords);
@@ -391,6 +389,13 @@ final class _LoggingEngine implements WakeWordEngine {
         'score': (h.score ?? h.confidence ?? 0).toStringAsFixed(3),
         'rule': h.reason,
         'direct': h.direct,
+      });
+      // WP141: how long stage 1 held the score and where the candidate goes
+      // on; also for candidates stage 2 rejects later (`wake-verify`).
+      voiceLog('wake-decision', {
+        'hold_ms': h.holdMs ?? 0,
+        'peak': (h.score ?? h.confidence ?? 0).toStringAsFixed(3),
+        'path': h.direct ? 'direct' : (verify ? 'stage2' : 'unchecked'),
       });
     }
     return hits;

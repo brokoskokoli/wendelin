@@ -150,7 +150,7 @@ abstract final class WakeClassifierRules {
   static const silenceFloorRms = 50.0;
 
   /// Look-back of the silence floor: the classifier decides after the word
-  /// (window 1.3 s, hold up to 0.4 s), so the word must still be in memory.
+  /// (window 1.3 s, hold up to 0.8 s), so the word must still be in memory.
   static const silenceFloorMemory = Duration(milliseconds: 2000);
 
   /// The silence floor of the engine (`CandidateWakeEngine.silenceFloor`),

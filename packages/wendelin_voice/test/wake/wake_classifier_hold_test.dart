@@ -130,6 +130,25 @@ void main() {
     },
   );
 
+  test(
+    'erstes Fenster genau auf acceptFrom entscheidet sofort (holdMs 0)',
+    () async {
+      final hits = await _run([0.1, 0.995, 0.5, 0.5]);
+      expect(hits, hasLength(1));
+      expect(hits.single.$1, 1, reason: 'kein Halten');
+      expect(hits.single.$2.direct, isTrue);
+      expect(hits.single.$2.holdMs, 0);
+    },
+  );
+
+  test('Stille nach dem Wort während des Haltens: Spitze entscheidet am '
+      'Ende, nicht früher', () async {
+    final hits = await _run(_call([0.985, 0.99, 0.0, 0.0, 0.0, 0.0]));
+    expect(hits, hasLength(1));
+    expect(hits.single.$1, 1 + 10, reason: 'erst 0,8 s nach dem ersten');
+    expect(hits.single.$2.score, 0.99);
+  });
+
   test('Sperrzeit läuft ab der Spitze: Spitze 1,36 s nach der ersten '
       'gesperrt, auch wenn die Entscheidung später als 1,5 s liegt', () async {
     // Call 1: first window 1, peak 3 (0.24 s), decision 11. Call 2: first 20,
@@ -158,13 +177,16 @@ void main() {
   });
 
   test('reset verwirft ein laufendes Halten', () async {
+    // Before the reset the hold starts at window 3 (a stale start would
+    // lie after every new window and hold two windows longer).
+    var i = 0, afterReset = false;
     final e = CandidateWakeEngine(
       features: FakeWakeFeatureExtractor(
         windowEvery: _w,
         windowFor: (end, _) => WakeWindow(
           endSample: end,
           embedding: Float32List(2),
-          modelScore: 0.99,
+          modelScore: afterReset || i >= 3 ? 0.99 : 0.1,
         ),
       ),
       modelThreshold: _band.verifyFrom,
@@ -172,17 +194,21 @@ void main() {
       holdDuration: const Duration(milliseconds: 800),
     );
     await e.open([KeywordSpec.wendelin]);
-    for (var i = 0; i < 5; i++) {
+    for (i = 0; i < 6; i++) {
       expect(await e.accept(Int16List(_w)), isEmpty);
     }
     e.reset();
-    // A fresh hold starts: nothing for 10 windows (+0.72 s), the 11th ends it.
+    afterReset = true;
+    // A fresh hold starts at the first window: nothing for 10 windows
+    // (+0.72 s), the 11th (+0.8 s) ends it.
     var n = 0;
-    for (var i = 0; i < 10; i++) {
+    for (var k = 0; k < 10; k++) {
       n += (await e.accept(Int16List(_w))).length;
     }
     expect(n, 0);
-    expect((await e.accept(Int16List(_w))), hasLength(1));
+    final hits = await e.accept(Int16List(_w));
+    expect(hits, hasLength(1));
+    expect(hits.single.holdMs, 800);
   });
 
   group('NaN-Score (fail-closed)', () {
