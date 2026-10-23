@@ -64,7 +64,10 @@ void main() {
     });
 
     test('Katalog: Endwerte WP133 (0,98 bis 0,999, Handy und Station)', () {
-      for (final b in [WakeClassifierRules.phone, WakeClassifierRules.station]) {
+      for (final b in [
+        WakeClassifierRules.phone,
+        WakeClassifierRules.station,
+      ]) {
         expect(b.verifyFrom, 0.98);
         expect(b.acceptFrom, 0.999);
       }
