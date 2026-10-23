@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP135, WP137; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP134, WP135, WP137; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -82,7 +82,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP131 | Release-Signatur und automatischer APK-Build auf GitHub (Tag → Release) | gemergt (0501df86) | K109; Probe-Release geprüft (Signer CN=Wendelin, nicht Debug), ohne Secrets rot. Folgepunkte: Debug-Fallback-Warnung in check_apk.sh greift kaum (apksigner auf CN=Android Debug prüfen); versionCode-Anstieg ungeprüft; Tag-Schutzregel v* empfohlen; erster echter Tag v0.1.0 + Dispatch-Probe probe_missing_secrets auf main |
 | WP132 | Zwei Build-Varianten frei/Store (Vorbereitung) | geplant | K103; nur mit Go, nach WP131 und Gesamttest |
 | WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | gemergt (5dca4d8d) | K110; Empfehlung v8a, Stufe 1 ab 0,98, ≥ 0,999 direkt, 0,98–0,999 prüft hw2 (Ausschnitt 2,0/0,9 s). Folgepunkte: wortspezifischer Prüfer statt hw2 (Go Maintainer); c-syn vs a-syn mit mehreren Seeds; mehr Sprecher; Notiz :470 zwei Ungenauigkeiten |
-| WP134 | Stopp-Wort ausbauen, Vorlagen-Vergleich für „Wendelin“ zentrieren | geplant | K107; nach WP129 (Wake-Dateien) |
+| WP134 | Stopp-Wort ausbauen, Vorlagen-Vergleich für „Wendelin“ zentrieren | in Arbeit | K107; nach WP129 (Wake-Dateien) |
 | WP135 | Smart Home schneller: Geräteliste, Synonyme, feste Bestätigung, Schnellweg ohne KI, Rollo ohne Rückfrage | in Arbeit | K108; parallel zu Wake-Paketen möglich |
 | WP136 | Parakeet (NeMo) lädt nach dem Download nicht | gemergt (dc113dc1) | Ursache: oberste Ordnerebene im Archiv; offen: Gerätetest Teil A am Handy (Fehlergerät ohne Neu-Download), Wiederaufnahme nach Download-Abbruch |
 | WP137 | Wake Word: v8c mit echten Aufnahmen, wortspezifischer Prüfer statt Parakeet, Aufnahme-Anleitung | in Arbeit | K110; Go Maintainer 2026-10-23 |
