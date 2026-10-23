@@ -1,3 +1,5 @@
+import '../ha_words/en.dart';
+
 /// English topic words per integration id (alphabetical). See README.md.
 const topicWordsEn = <String, List<String>>{
   'alarms': [
@@ -26,10 +28,7 @@ const topicWordsEn = <String, List<String>>{
     'dial',
     'whatsapp',
   ],
-  'flashlight': [
-    'flashlight', 'torch', 'light on', 'light off', 'lamp on', //
-    'lamp off', 'flash',
-  ],
+  'flashlight': ['flashlight', 'torch', 'flash'],
   'gtasks': [
     'google tasks',
     'task',
@@ -50,6 +49,7 @@ const topicWordsEn = <String, List<String>>{
     'fan speed',
     'turn on',
     'turn off',
+    ...haTypeStemsEn, ...haTopicWordsEn,
   ],
   'lists': [
     'my list',

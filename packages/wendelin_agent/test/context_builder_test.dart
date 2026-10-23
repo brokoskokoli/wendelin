@@ -115,4 +115,49 @@ void main() {
     final ctx = await builder(tools: [a, b]).build(UserInput(text: 'x'));
     expect(ctx.tools.map((t) => t.name), ['cal__create', 'clip__read']);
   });
+
+  group('WP135 A: tool sections', () {
+    test('sections of active tools stand in the prompt, in order', () async {
+      final a = FakeTool(name: 'a__x', section: 'Geräte A:\n- Licht');
+      final b = FakeTool(name: 'b__x');
+      final c = FakeTool(name: 'c__x', section: 'Liste C');
+      final ctx = await builder(tools: [a, b, c])
+          .build(UserInput(text: 'Licht an'));
+      expect(ctx.sections.map((s) => s.toolName), ['a__x', 'c__x']);
+      expect(ctx.systemPrompt, contains('\n\nGeräte A:\n- Licht\n\nListe C'));
+      expect(a.sectionRequests, ['Licht an']);
+    });
+
+    test('a failing tool adds no section and no failure', () async {
+      final bad = _ThrowingSection();
+      final ctx = await builder(tools: [bad]).build(UserInput(text: 'x'));
+      expect(ctx.sections, isEmpty);
+      expect(ctx.systemPrompt, isNot(contains('kaputt')));
+    });
+
+    test('without sections the prompt is unchanged', () async {
+      final ctx = await builder(tools: [FakeTool(name: 'a__x')])
+          .build(UserInput(text: 'Hallo'));
+      expect(ctx.systemPrompt, endsWith('Gerätesprache: de-DE'));
+    });
+  });
+}
+
+final class _ThrowingSection implements Tool, PromptContributor {
+  @override
+  String get name => 'bad__x';
+  @override
+  String get description => 'kaputt';
+  @override
+  Map<String, Object?> get inputSchema => const {'type': 'object'};
+  @override
+  RiskLevel get risk => RiskLevel.read;
+  @override
+  Future<ToolOutcome> execute(Map<String, Object?> args, ToolContext ctx) =>
+      throw UnimplementedError();
+  @override
+  String describeForConfirmation(Map<String, Object?> args) => name;
+  @override
+  Future<String?> promptSection(String requestText) async =>
+      throw StateError('kaputt');
 }

@@ -37,6 +37,7 @@ final class AgentFactory implements AgentRunFactory {
     required this.costEstimator,
     required this.budgetGuard,
     this.config = const AgentConfig(),
+    this.fastPath,
   });
 
   /// Integrations and their tools.
@@ -65,6 +66,9 @@ final class AgentFactory implements AgentRunFactory {
 
   /// Limits and persona.
   final AgentConfig config;
+
+  /// Recognizes simple requests without a model (WP135 D); `null` = off.
+  final FastPath? fastPath;
 
   /// An agent for one request in [sessionId] with the targets of
   /// [providers].
@@ -96,10 +100,7 @@ final class AgentFactory implements AgentRunFactory {
     ToolCatalog catalogFor(PrivacyLevel level) =>
         registry.catalogFor(level, sessionId: sessionId);
     final conversation = StorageConversation(storage.conversations, sessionId);
-    final memoryAllowed = [
-      providers.primary,
-      ...providers.others,
-    ].any((t) => catalogFor(t.privacy).lookup('memory__search') != null);
+    final memoryAllowed = _memoryAllowed(providers, catalogFor);
     final memoryFloor = memoryFloorOf(catalogFor);
     final runner = AgentRunner(
       resolver: providers.resolver(),
@@ -147,6 +148,8 @@ final class AgentFactory implements AgentRunFactory {
         ),
       ),
       onFixedConfirmation: _logFixed,
+      fastPath: fastPath,
+      onFastPath: _logFast,
       fallbackTargets: providers.fallbackTargets,
       clock: clock,
       sessionId: sessionId,
@@ -164,11 +167,22 @@ final class AgentFactory implements AgentRunFactory {
       inner: runner,
     );
   }
+
+  static bool _memoryAllowed(
+    ProviderConfig providers,
+    ToolCatalog Function(PrivacyLevel) catalogFor,
+  ) => [
+    providers.primary,
+    ...providers.others,
+  ].any((t) => catalogFor(t.privacy).lookup('memory__search') != null);
 }
 
 /// WP122: logs only the tool name, never the sentence.
 void _logFixed(String session, String tool) =>
     debugPrint('confirm=fixed tool=$tool');
+
+/// WP135 D: logs only the tool name, never the request.
+void _logFast(String session, String tool) => debugPrint('fastpath tool=$tool');
 
 /// The lowest privacy level whose catalog offers `memory__search` (from
 /// [catalogFor]), `tee` if none does; `null` if every level may see the

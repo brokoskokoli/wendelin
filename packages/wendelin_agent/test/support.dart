@@ -89,6 +89,8 @@ final class Harness {
     void Function(String, ToolCallBlock)? onToolRefused,
     void Function(String, ToolCallBlock)? onUndoFailed,
     void Function(String, String)? onFixedConfirmation,
+    FastPath? fastPath,
+    void Function(String, String)? onFastPath,
     List<ProviderTarget> Function()? fallbackTargets,
     List<Message> history = const [],
     ProviderResolver? resolver,
@@ -120,6 +122,8 @@ final class Harness {
       onToolRefused: onToolRefused,
       onUndoFailed: onUndoFailed,
       onFixedConfirmation: onFixedConfirmation,
+      fastPath: fastPath,
+      onFastPath: onFastPath,
       fallbackTargets: fallbackTargets,
       memoryFloor: memoryFloor,
       memoryOwner: memoryOwner,
@@ -143,11 +147,15 @@ final class Harness {
     InputSource source = InputSource.text,
     String? language,
     String? interfaceLanguage,
+    double? sttConfidence,
+    List<ImageBlock> images = const [],
   }) async {
     final events = <AgentEvent>[];
     await for (final e in runner.run(
       UserInput(
         text: text,
+        images: images,
+        sttConfidence: sttConfidence,
         requestEscalation: requestEscalation,
         source: source,
         language: language,

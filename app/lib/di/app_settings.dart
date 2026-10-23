@@ -72,6 +72,13 @@ abstract final class AppSettings {
     defaultValue: false,
   );
 
+  /// Run simple Home Assistant commands without a model (WP135 D), on by
+  /// default.
+  static final haFastPath = SettingKey.boolean(
+    'ha.fastPath',
+    defaultValue: true,
+  );
+
   /// Former global GPU check mode (name of `GpuCheckMode`). Since WP82 the
   /// mode belongs to each TEE profile (`options.gpuCheck`); this key is only
   /// read once by `migrateGlobalGpuCheck` and then removed.

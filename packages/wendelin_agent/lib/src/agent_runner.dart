@@ -9,6 +9,7 @@ import 'ports.dart';
 import 'provider_resolver.dart';
 import 'run/attestation_gate.dart';
 import 'run/escalation.dart';
+import 'run/fast_path_step.dart';
 import 'run/fixed_answer.dart';
 import 'run/model_call.dart';
 import 'run/overlap_control.dart';
@@ -44,6 +45,8 @@ final class AgentRunner implements AgentRun, RunConfig {
     this.onToolRefused,
     this.onUndoFailed,
     this.onFixedConfirmation,
+    this.fastPath,
+    this.onFastPath,
     this.fallbackTargets,
     this.memoryFloor,
     this.memoryOwner = '',
@@ -105,6 +108,16 @@ final class AgentRunner implements AgentRun, RunConfig {
   /// `confirm=fixed tool=<name>` here.
   @override
   final void Function(String sessionId, String toolName)? onFixedConfirmation;
+
+  /// Recognizes simple requests locally; a match runs as a tool call before
+  /// the first model call, without a model (WP135 D). `null` = off.
+  @override
+  final FastPath? fastPath;
+
+  /// Called per request the fast path answered (the app logs
+  /// `fastpath tool=<name>`).
+  @override
+  final void Function(String sessionId, String toolName)? onFastPath;
 
   /// The other configured targets, best (recommended) first. After a provider
   /// failure the runner offers the first one with at least the privacy level
@@ -227,6 +240,15 @@ final class _Run implements RunControl {
     _tools,
   );
 
+  late final FastPathStep _fast = FastPathStep(
+    runner,
+    _state,
+    _privacy,
+    this,
+    _tools,
+    _fixed,
+  );
+
   /// The terminal event when a tool round ended the run with a fixed
   /// confirmation sentence (WP122), else `null`.
   AgentDone? _fixedDone;
@@ -304,6 +326,12 @@ final class _Run implements RunControl {
     _start = runner.clock.now();
     _timer = Timer(config.maxDuration, () => abort(AgentErrorKind.timeout));
     final retry = await startRun(runner, input, _state, _privacy, this);
+    // WP135 D: a simple, unambiguous command runs without a model. Not for
+    // a repeated turn („nochmal mit …“).
+    if (!retry) {
+      final fast = await _fast.tryRun(input);
+      if (fast != null) return fast;
+    }
     if (retry &&
         !await _escalation.escalate(EscalationReason.userRequested) &&
         _privacy.consentDeclined) {

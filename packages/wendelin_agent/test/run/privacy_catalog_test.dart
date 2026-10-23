@@ -105,6 +105,37 @@ void main() {
       );
     }
 
+    test(
+      'WP135 A: a tool section only goes to targets that get the tool',
+      () async {
+        // The section tool belongs to the TEE catalog only (K10 per target).
+        final house = FakeTool(
+          name: 'ha__call',
+          section: 'Geräte: Haustür-Licht',
+        );
+        for (final (level, expected) in [
+          (PrivacyLevel.standard, false),
+          (PrivacyLevel.tee, true),
+        ]) {
+          final (p, ps) = scripted('p', [
+            ScriptedTurn.text('ok'),
+          ], privacy: level);
+          final h = Harness(
+            primary: p,
+            tools: [house],
+            catalogFor: (l) =>
+                FakeToolCatalog([if (l.isAtLeast(PrivacyLevel.tee)) house]),
+          );
+          await h.run('Licht an');
+          expect(
+            ps.requests.single.systemPrompt,
+            expected ? contains('Haustür-Licht') : isNot(contains('Haustür')),
+            reason: '$level',
+          );
+        }
+      },
+    );
+
     test('(b) protected answers from earlier runs are hidden', () async {
       final history = [
         Message.user('Wie ist Annas Nummer?'),

@@ -93,6 +93,7 @@ void main() {
         'spotify__next',
         'spotify__previous',
         'ha__call',
+        'ha__call_secure',
         'obsidian__create_note',
         'obsidian__append_to_note',
         'obsidian__append_daily_note',

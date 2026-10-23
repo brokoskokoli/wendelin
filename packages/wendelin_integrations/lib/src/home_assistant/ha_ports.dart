@@ -47,6 +47,13 @@ abstract interface class HaEntityStore {
 
   /// Replaces the approved entities.
   Future<void> save(List<HaEntity> entities);
+
+  /// When the approved entities were last compared with Home Assistant
+  /// (WP135 A), `null` if never.
+  Future<DateTime?> lastSync();
+
+  /// Remembers the time of the last successful comparison.
+  Future<void> saveLastSync(DateTime time);
 }
 
 /// Finds Home Assistant instances in the local network (mDNS

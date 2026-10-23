@@ -25,12 +25,26 @@ final class FakeHaEntityStore implements HaEntityStore {
   /// The approved entities.
   List<HaEntity> entities;
 
+  /// Time of the last comparison with Home Assistant.
+  DateTime? synced;
+
+  /// Number of [save] calls.
+  int saves = 0;
+
   @override
   Future<List<HaEntity>> load() async => [...entities];
 
   @override
-  Future<void> save(List<HaEntity> entities) async =>
-      this.entities = [...entities];
+  Future<void> save(List<HaEntity> entities) async {
+    saves++;
+    this.entities = [...entities];
+  }
+
+  @override
+  Future<DateTime?> lastSync() async => synced;
+
+  @override
+  Future<void> saveLastSync(DateTime time) async => synced = time;
 }
 
 /// [HaDiscovery] with a fixed answer.

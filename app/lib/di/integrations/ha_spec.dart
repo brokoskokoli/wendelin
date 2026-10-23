@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:wendelin_integrations/common.dart'
     show PortErrorKind, ReconnectFailure;
 import 'package:wendelin_integrations/home_assistant.dart';
@@ -18,13 +20,17 @@ final haSpec = IntegrationSpec(
   isSupported: (d) => d.extra<_HaDeps>('ha') != null,
   create: (d) {
     final deps = d.extra<_HaDeps>('ha')!;
-    return HaIntegration(
+    final ha = HaIntegration(
       deps.api,
       deps.store,
       deps.store,
       onError: (_, kind) => d.reportError?.call('ha', pausedError, kind),
       onRecovered: () => d.clearError?.call('ha'),
     );
+    // App start: compare the approved devices with Home Assistant (at most
+    // daily; failures keep the old state).
+    unawaited(ha.context.syncIfDue());
+    return ha;
   },
   retry: (
     run: (i) async => i is HaIntegration

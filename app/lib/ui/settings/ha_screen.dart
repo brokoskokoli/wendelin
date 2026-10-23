@@ -8,9 +8,11 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../di/hint_term_providers.dart';
 import '../../di/home_assistant.dart';
+import '../../di/preferences.dart';
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
+import 'ha_device_sections.dart';
 import 'reconnect_text.dart';
 import 'settings_page.dart';
 
@@ -38,6 +40,8 @@ class _HaScreenState extends ConsumerState<HaScreen> {
   List<HaEntity>? _all;
   Set<String> _approved = {};
   Set<String> _confirm = {};
+  Set<String> _noAsk = {};
+  List<HaEntity> _gone = const [];
 
   @override
   void initState() {
@@ -65,6 +69,14 @@ class _HaScreenState extends ConsumerState<HaScreen> {
         for (final e in approved)
           if (e.alwaysConfirm) e.entityId,
       };
+      _noAsk = {
+        for (final e in approved)
+          if (e.noConfirm) e.entityId,
+      };
+      _gone = [
+        for (final e in approved)
+          if (e.missing) e,
+      ];
       _loaded = true;
     });
     if (endpoint != null) await _loadDevices();
@@ -73,7 +85,20 @@ class _HaScreenState extends ConsumerState<HaScreen> {
   Future<void> _loadDevices() async {
     try {
       final all = await ref.read(haApiProvider).entities();
-      if (mounted) setState(() => _all = all);
+      // WP135 A: name, room and "no longer there" of the approved devices
+      // follow Home Assistant (a new device is never approved here).
+      final store = ref.read(haStoreProvider);
+      final synced = await haSyncStore(store, all, DateTime.now());
+      ref.invalidate(haApprovedEntitiesProvider);
+      if (mounted) {
+        setState(() {
+          _all = all;
+          _gone = [
+            for (final e in synced)
+              if (e.missing) e,
+          ];
+        });
+      }
     } on PortException catch (e) {
       if (mounted) setState(() => _error = e.message);
     }
@@ -146,6 +171,7 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       _all = null;
       _approved = {};
       _confirm = {};
+      _noAsk = {};
       _error = null;
     });
   }
@@ -159,10 +185,31 @@ class _HaScreenState extends ConsumerState<HaScreen> {
 
   /// „Immer bestätigen“ of a switch: its calls then go through the
   /// confirmation (`ha__call_secure`).
+  /// Removes a device Home Assistant no longer lists.
+  Future<void> _removeGone(HaEntity e) async {
+    final next = {..._approved}..remove(e.entityId);
+    setState(() {
+      _approved = next;
+      _gone = [
+        for (final g in _gone)
+          if (g.entityId != e.entityId) g,
+      ];
+    });
+    await _save();
+  }
+
   Future<void> _toggleConfirm(HaEntity e, bool on) async {
     final next = {..._confirm};
     on ? next.add(e.entityId) : next.remove(e.entityId);
     setState(() => _confirm = next);
+    await _save();
+  }
+
+  /// „Ohne Rückfrage“ of a blind (WP135 E).
+  Future<void> _toggleNoAsk(HaEntity e, bool on) async {
+    final next = {..._noAsk};
+    on ? next.add(e.entityId) : next.remove(e.entityId);
+    setState(() => _noAsk = next);
     await _save();
   }
 
@@ -175,7 +222,9 @@ class _HaScreenState extends ConsumerState<HaScreen> {
     await store.save([
       for (final id in _approved)
         if (byId[id] ?? old[id] case final e?)
-          e.withConfirm(_confirm.contains(id)),
+          e
+              .withConfirm(_confirm.contains(id))
+              .withNoConfirm(_noAsk.contains(id)),
     ]);
     // The hint names of the recognizer follow the approval.
     ref.invalidate(haApprovedEntitiesProvider);
@@ -297,6 +346,18 @@ class _HaScreenState extends ConsumerState<HaScreen> {
               ),
             ),
             SettingsRow(title: context.l10n.haApproved(_approved.length)),
+            SettingsRow(
+              title: context.l10n.haFastPath,
+              detail: context.l10n.haFastPathHelp,
+              trailing: WSwitch(
+                key: const ValueKey('haFastPath'),
+                value: ref.watch(haFastPathProvider),
+                semanticLabel: context.l10n.haFastPath,
+                onChanged: (on) => unawaited(
+                  ref.read(haFastPathProvider.notifier).set(on: on),
+                ),
+              ),
+            ),
           ],
         ),
         if (failed)
@@ -341,39 +402,18 @@ class _HaScreenState extends ConsumerState<HaScreen> {
         decoration: InputDecoration(labelText: context.l10n.haFilter),
       ),
       if (all.isEmpty) Text(context.l10n.haNoDevices, style: WText.caption),
+      if (_gone.isNotEmpty)
+        HaGoneSection(gone: _gone, onRemove: (e) => unawaited(_removeGone(e))),
       for (final MapEntry(:key, :value) in byArea.entries)
-        SettingsSection(
+        HaAreaSection(
           title: key,
-          children: [
-            for (final e in value) ...[
-              SettingsRow(
-                title: e.name,
-                detail: _secure(e)
-                    ? context.l10n.haEntityAlwaysAsks(e.entityId)
-                    : e.entityId,
-                trailing: WSwitch(
-                  key: ValueKey('haEntity_${e.entityId}'),
-                  value: _approved.contains(e.entityId),
-                  semanticLabel: e.name,
-                  onChanged: (on) => unawaited(_toggle(e, on)),
-                ),
-              ),
-              if (e.domain == 'switch' && _approved.contains(e.entityId))
-                SettingsRow(
-                  title: context.l10n.haAlwaysConfirm,
-                  detail: context.l10n.haAlwaysConfirmHelp,
-                  trailing: WSwitch(
-                    key: ValueKey('haConfirm_${e.entityId}'),
-                    value: _confirm.contains(e.entityId),
-                    semanticLabel: context.l10n.haAlwaysConfirmSemantics(
-                      e.name,
-                      context.l10n.haAlwaysConfirm,
-                    ),
-                    onChanged: (on) => unawaited(_toggleConfirm(e, on)),
-                  ),
-                ),
-            ],
-          ],
+          entities: value,
+          approved: _approved,
+          alwaysConfirm: _confirm,
+          noAsk: _noAsk,
+          onToggle: (e, on) => unawaited(_toggle(e, on)),
+          onToggleConfirm: (e, on) => unawaited(_toggleConfirm(e, on)),
+          onToggleNoAsk: (e, on) => unawaited(_toggleNoAsk(e, on)),
         ),
       WideButton(
         context.l10n.haReload,
@@ -381,7 +421,4 @@ class _HaScreenState extends ConsumerState<HaScreen> {
       ),
     ];
   }
-
-  static bool _secure(HaEntity e) =>
-      haRiskForDomain(e.domain) == RiskLevel.external;
 }

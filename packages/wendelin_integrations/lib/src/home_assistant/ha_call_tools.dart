@@ -6,6 +6,7 @@ import '../common/tool_args.dart';
 import 'ha_context.dart';
 import 'ha_model.dart';
 import 'ha_policy.dart';
+import 'ha_prompt.dart';
 import 'ha_undo.dart';
 
 const _hvacModes = {
@@ -36,12 +37,14 @@ String haServiceText(String service, Map<String, Object?> data) =>
       'volume_up' => 'lauter',
       'volume_down' => 'leiser',
       'set_temperature' => 'Temperatur ${data['temperature'] ?? ''}'.trim(),
+      'set_cover_position' => 'auf ${data['position'] ?? ''} %'.trim(),
       _ => service,
     };
 
 /// Flat tool argument → key of the Home Assistant service data.
 const _dataKeys = {
   'brightness_pct': 'brightness_pct',
+  'position_pct': 'position',
   'color_temp_kelvin': 'color_temp_kelvin',
   'rgb_color': 'rgb_color',
   'volume_pct': 'volume_level',
@@ -66,6 +69,7 @@ Map<String, Object?> checkHaData(ToolArgs args, Set<String> allowed) {
     }
     out[value] = switch (key) {
       'brightness_pct' => args.requireInt(key, min: 0, max: 100),
+      'position_pct' => args.requireInt(key, min: 0, max: 100),
       'color_temp_kelvin' => args.requireInt(key, min: 1000, max: 10000),
       'rgb_color' => _rgb(args.raw[key]),
       'volume_pct' => args.requireInt(key, min: 0, max: 100) / 100,
@@ -124,8 +128,13 @@ abstract base class HaCallTool extends IntegrationTool {
   /// The services of [e] this tool may call, `null` if [e] belongs to the
   /// other tool. [confirmed]: the entity needs a confirmation (the user
   /// marked it „immer bestätigen“, or it is a scene with a lock, alarm or
-  /// cover among its members).
-  Map<String, Set<String>>? servicesFor(HaEntity e, {required bool confirmed});
+  /// cover among its members). [quiet]: a cover the user let move without
+  /// a confirmation and whose live class allows it ([haCoverIsQuiet]).
+  Map<String, Set<String>>? servicesFor(
+    HaEntity e, {
+    required bool confirmed,
+    bool quiet = false,
+  });
 
   /// Service names offered in the tool schema.
   Set<String> get serviceNames => {for (final s in table.values) ...s.keys};
@@ -164,6 +173,12 @@ abstract base class HaCallTool extends IntegrationTool {
         'items': {'type': 'integer'},
         'description': 'Light color as [red, green, blue], each 0-255.',
       },
+      'position_pct': {
+        'type': 'integer',
+        'description':
+            'Cover (blind, shutter) position in percent: 0 closed, 100 '
+            'fully open. Only with service set_cover_position.',
+      },
       'volume_pct': {
         'type': 'integer',
         'description': 'Media player volume in percent (0-100).',
@@ -197,12 +212,15 @@ abstract base class HaCallTool extends IntegrationTool {
     // the tool (K57).
     Future<HaState> read() => ctx.guard(() => ctx.api.state(e.entityId));
     HaState? prior;
-    if (e.domain == 'scene') prior = await read();
+    if (e.domain == 'scene' || e.domain == 'cover') prior = await read();
+    // E: the live state decides, not the stored class (fail-closed).
+    final quiet = prior != null && haCoverIsQuiet(e, prior);
     final confirmed =
         e.alwaysConfirm ||
-        (prior != null &&
+        (e.domain == 'scene' &&
+            prior != null &&
             haSceneHasSecureMember(prior, confirmIds: await ctx.confirmIds()));
-    final services = servicesFor(e, confirmed: confirmed);
+    final services = servicesFor(e, confirmed: confirmed, quiet: quiet);
     if (services == null) {
       return ToolOutcome.error(
         haRiskForDomain(e.domain) == null
@@ -220,6 +238,10 @@ abstract base class HaCallTool extends IntegrationTool {
       );
     }
     final data = checkHaData(args, allowed);
+    // Fail-closed: a position call without a position must not reach HA.
+    if (service == 'set_cover_position' && data['position'] == null) {
+      throw const InvalidArgumentsException('„position_pct“ fehlt (0 bis 100)');
+    }
     final state = prior ?? await read();
     if (state.isUnavailable) {
       return ToolOutcome.error(
@@ -245,18 +267,60 @@ abstract base class HaCallTool extends IntegrationTool {
       },
       summary: '${ellipsize(e.name, 40)}: ${haServiceText(service, data)}',
       undo: ready == null ? null : _undo(e.name, ready),
-      // Only plain on/off of devices; scenes, climate settings etc. → model.
-      fixed:
-          (service == 'turn_on' || service == 'turn_off') &&
-              data.isEmpty &&
-              e.domain != 'scene' &&
-              e.domain != 'script'
-          ? ConfirmationSentence(service == 'turn_on' ? 'ha.on' : 'ha.off', {
-              'device': ellipsize(e.name, 40),
-            })
-          : null,
+      fixed: _fixed(e, service, data),
     );
   }
+
+  /// The fixed confirmation of a call that ran (WP122, WP135 C), built from
+  /// the entity and the validated service data Home Assistant accepted;
+  /// `null` = the model words the answer. Only sentences whose key the tool
+  /// declared in `confirmationKeys` are used.
+  ConfirmationSentence? _fixed(
+    HaEntity e,
+    String service,
+    Map<String, Object?> data,
+  ) {
+    final device = ellipsize(e.name, 40);
+    ConfirmationSentence with_(String key, Object? value) =>
+        ConfirmationSentence(key, {'device': device, 'value': ?value});
+    final onOff = service == 'turn_on' || service == 'turn_off';
+    final sentence = switch ((e.domain, service)) {
+      // Scenes, scripts and everything with several values → model.
+      ('scene' || 'script', _) => null,
+      (_, _) when onOff && data.isEmpty => ConfirmationSentence(
+        service == 'turn_on' ? 'ha.on' : 'ha.off',
+        {'device': device},
+      ),
+      ('light', 'turn_on') when _only(data, 'brightness_pct') => with_(
+        'ha.brightness',
+        data['brightness_pct'],
+      ),
+      ('climate', 'set_temperature') when _only(data, 'temperature') => with_(
+        'ha.temperature',
+        data['temperature'],
+      ),
+      ('cover', 'open_cover') when data.isEmpty => with_('ha.cover.open', null),
+      ('cover', 'close_cover') when data.isEmpty => with_(
+        'ha.cover.close',
+        null,
+      ),
+      ('cover', 'stop_cover') when data.isEmpty => with_('ha.cover.stop', null),
+      ('cover', 'set_cover_position') when _only(data, 'position') => with_(
+        'ha.cover.position',
+        data['position'],
+      ),
+      _ => null,
+    };
+    if (sentence == null) return null;
+    final keys = switch (this) {
+      final FixedConfirmationTool t => t.confirmationKeys,
+      _ => const <String>{},
+    };
+    return keys.contains(sentence.key) ? sentence : null;
+  }
+
+  static bool _only(Map<String, Object?> data, String key) =>
+      data.length == 1 && data[key] is num;
 
   /// Runs the pre-steps of [plan] (scene snapshot); `null` when they fail,
   /// the call then runs without undo.
@@ -283,7 +347,7 @@ abstract base class HaCallTool extends IntegrationTool {
 
   @override
   String describe(ToolArgs args) =>
-      '${args.requireString('entity')}: ${haServiceText(args.requireString('service'), {'temperature': args.optString('temperature')})}';
+      '${args.requireString('entity')}: ${haServiceText(args.requireString('service'), {'temperature': args.optString('temperature'), 'position': args.raw['position_pct']})}';
 
   @override
   String get fallbackDescription => 'Smart-Home-Gerät steuern';
@@ -292,7 +356,7 @@ abstract base class HaCallTool extends IntegrationTool {
 /// `ha__call` (write): light, switch, scene, media player, climate. Runs
 /// without a question and offers undo to the previous state.
 final class HaCallDeviceTool extends HaCallTool
-    implements FixedConfirmationTool {
+    implements FixedConfirmationTool, PromptContributor {
   /// Creates the tool.
   const HaCallDeviceTool(super.ctx);
 
@@ -302,23 +366,55 @@ final class HaCallDeviceTool extends HaCallTool
   @override
   String get description =>
       'Control a smart-home device the user approved: lights, switches, '
-      'scenes, media players and thermostats (not locks, alarms or doors: '
-      'use ha__call_secure). Runs at once; can be undone.';
+      'scenes, media players, thermostats and blinds the user allowed '
+      'without confirmation (not locks, alarms, garage doors or other '
+      'covers: use ha__call_secure). Runs at once; can be undone.';
 
   @override
   RiskLevel get risk => RiskLevel.write;
 
   @override
-  Set<String> get confirmationKeys => const {'ha.on', 'ha.off'};
+  Set<String> get confirmationKeys => const {
+    'ha.on',
+    'ha.off',
+    'ha.brightness',
+    'ha.temperature',
+    // Only quiet covers reach this tool (WP135 E).
+    'ha.cover.open',
+    'ha.cover.close',
+    'ha.cover.stop',
+    'ha.cover.position',
+  };
+
+  @override
+  Future<String?> promptSection(String requestText) async {
+    try {
+      return await haPromptSection(ctx, requestText);
+    } on Object {
+      return null;
+    }
+  }
 
   @override
   HaServices get table => haOpenServices;
 
   @override
+  Set<String> get serviceNames => {
+    ...super.serviceNames,
+    // Quiet blinds (WP135 E); other covers are refused at the call.
+    ...?haSecureServices['cover']?.keys,
+  };
+
+  @override
   Map<String, Set<String>>? servicesFor(
     HaEntity e, {
     required bool confirmed,
-  }) => confirmed ? null : haOpenServices[e.domain];
+    bool quiet = false,
+  }) => confirmed
+      ? null
+      : e.domain == 'cover'
+      ? (quiet ? haSecureServices['cover'] : null)
+      : haOpenServices[e.domain];
 
   @override
   String get otherTool => 'ha__call_secure';
@@ -330,7 +426,7 @@ final class HaCallDeviceTool extends HaCallTool
 /// `ha__call_secure` (external): locks, alarm panels and covers (garage,
 /// gate, door). Always needs the user's confirmation; no undo.
 final class HaCallSecureTool extends HaCallTool
-    implements ConfirmationPreparer {
+    implements ConfirmationPreparer, FixedConfirmationTool {
   /// Creates the tool.
   const HaCallSecureTool(super.ctx);
 
@@ -345,6 +441,15 @@ final class HaCallSecureTool extends HaCallTool
 
   @override
   RiskLevel get risk => RiskLevel.external;
+
+  /// The sentences after a confirmed cover call (blinds, shutters, doors).
+  @override
+  Set<String> get confirmationKeys => const {
+    'ha.cover.open',
+    'ha.cover.close',
+    'ha.cover.stop',
+    'ha.cover.position',
+  };
 
   @override
   HaServices get table => haSecureServices;
@@ -361,6 +466,7 @@ final class HaCallSecureTool extends HaCallTool
   Map<String, Set<String>>? servicesFor(
     HaEntity e, {
     required bool confirmed,
+    bool quiet = false,
   }) =>
       haSecureServices[e.domain] ??
       (confirmed &&
@@ -384,6 +490,6 @@ final class HaCallSecureTool extends HaCallTool
     final a = ToolArgs(args);
     final e = await ctx.resolve(a.requireString('entity'));
     final room = e.area == null ? '' : ' (${e.area})';
-    return '${e.name}$room: ${haServiceText(a.requireString('service'), const {})}';
+    return '${e.name}$room: ${haServiceText(a.requireString('service'), {'position': a.raw['position_pct']})}';
   }
 }

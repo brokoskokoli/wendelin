@@ -1,3 +1,5 @@
+import '../ha_words/fr.dart';
+
 /// French topic words per integration id (alphabetical). See README.md.
 const topicWordsFr = <String, List<String>>{
   'alarms': [
@@ -20,10 +22,7 @@ const topicWordsFr = <String, List<String>>{
     'contact', 'numero', 'telephone', 'appelle', 'appel', 'sms', //
     'message', 'envoie un message', 'repertoire', 'whatsapp', 'texto',
   ],
-  'flashlight': [
-    'lampe de poche', 'lampe torche', 'torche', 'allume la lumiere', //
-    'eteins la lumiere', 'flash',
-  ],
+  'flashlight': ['lampe de poche', 'lampe torche', 'torche', 'flash'],
   'gtasks': [
     'google tasks', 'tache', 'a faire', 'echeance', 'en retard', //
     'rappelle', 'todo',
@@ -32,6 +31,7 @@ const topicWordsFr = <String, List<String>>{
     'home assistant', 'maison connectee', 'chauffage', 'lumiere', //
     'lampe', 'prise', 'thermostat', 'volet', 'store', 'allume',
     'eteins', 'salon', 'chambre', 'ventilateur',
+    ...haTypeStemsFr, ...haTopicWordsFr,
   ],
   'lists': [
     'liste', 'listes', 'liste de voyage', 'mets sur', 'raye de', //
