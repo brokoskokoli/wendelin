@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP137; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP137, WP140; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -87,6 +87,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP136 | Parakeet (NeMo) lädt nach dem Download nicht | gemergt (dc113dc1) | Ursache: oberste Ordnerebene im Archiv; offen: Gerätetest Teil A am Handy (Fehlergerät ohne Neu-Download), Wiederaufnahme nach Download-Abbruch |
 | WP137 | Wake Word: v8c mit echten Aufnahmen, wortspezifischer Prüfer statt Parakeet, Aufnahme-Anleitung | in Arbeit | K110; Go Maintainer 2026-10-23 |
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
+| WP140 | Einlernen mit Inhaltsprüfung, unsichere Erkennung verwerfen, Ja/Nein robuster | in Arbeit | Gerätetest rc1 2026-10-23; Go Maintainer |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
