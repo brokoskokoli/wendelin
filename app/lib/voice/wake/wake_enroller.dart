@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -11,10 +12,51 @@ import 'utterance_capture.dart';
 /// reaches while the word was just spoken, measured in WP44).
 const templateOffset = Duration(milliseconds: 300);
 
-/// Embedding window of one spoken word: [pcm] is padded with silence on
-/// both sides, run through a fresh stream of [features] and the window
-/// whose end lies [templateOffset] after [speechEnd] is returned (`null`
-/// if the models yield no window). The audio is not kept.
+/// Seed of the padding noise (deterministic: same recording, same template).
+const _padSeed = 134;
+
+/// [pcm] with [lead] samples before and [trail] after, both filled with
+/// Gaussian noise at the level of the first 200 ms of [pcm] (the recorded
+/// lead-in, at least 1 LSB), not with digital zeros (WP134): a window with
+/// about half zeros resembled digital silence and pulled every comparison
+/// towards it.
+Int16List padWithNoise(
+  Int16List pcm,
+  int lead,
+  int trail, {
+  int seed = _padSeed,
+}) {
+  final head = pcm.length < 3200 ? pcm.length : 3200;
+  var sum = 0.0;
+  for (var i = 0; i < head; i++) {
+    sum += pcm[i] * pcm[i];
+  }
+  final level = head == 0 ? 1.0 : math.max(1.0, math.sqrt(sum / head));
+  final rnd = math.Random(seed);
+  int noise() {
+    // Box-Muller; 1 - nextDouble() lies in (0, 1].
+    final g =
+        math.sqrt(-2 * math.log(1 - rnd.nextDouble())) *
+        math.cos(2 * math.pi * rnd.nextDouble());
+    return (g * level).round().clamp(-32768, 32767);
+  }
+
+  final out = Int16List(lead + pcm.length + trail);
+  for (var i = 0; i < lead; i++) {
+    out[i] = noise();
+  }
+  out.setRange(lead, lead + pcm.length, pcm);
+  for (var i = lead + pcm.length; i < out.length; i++) {
+    out[i] = noise();
+  }
+  return out;
+}
+
+/// Embedding window of one spoken word: [pcm] is padded with noise at the
+/// level of its lead-in on both sides ([padWithNoise]), run through a fresh
+/// stream of [features] and the window whose end lies [templateOffset] after
+/// [speechEnd] is returned (`null` if the models yield no window). The audio
+/// is not kept.
 Future<Float32List?> embedUtterance(
   WakeFeatureExtractor features,
   Int16List pcm,
@@ -23,8 +65,7 @@ Future<Float32List?> embedUtterance(
   const lead = AudioInput.sampleRate; // 1 s
   const trail = 2 * AudioInput.sampleRate;
   features.reset();
-  final padded = Int16List(lead + pcm.length + trail)
-    ..setRange(lead, lead + pcm.length, pcm);
+  final padded = padWithNoise(pcm, lead, trail);
   final target = lead + speechEnd + durationToSamples(templateOffset);
   WakeWindow? best;
   for (var i = 0; i < padded.length; i += 1280) {
@@ -52,16 +93,12 @@ final class MicrophoneEnded implements Exception {
 }
 
 /// Provisional threshold right after the enrollment, before the calibration
-/// has seen any background: the floor of `calibrateThreshold` (WP44
-/// measurement: about 84 % recall at 2.8 candidates per hour, stage 2 filters
-/// the rest). Recordings of one voice can be nearly identical (leave-one-out
-/// similarity 1.0); a threshold derived from them would never fire on a live
-/// utterance.
-const wakeProvisionalThreshold = wakeMinThreshold;
-
-/// Provisional threshold of „Stopp“ (WP64b): a short word is confused with
-/// other speech more easily, so it starts stricter than „Wendelin“.
-const stopProvisionalThreshold = 0.9;
+/// has seen any background (WP134 measurement, centered cosine: strict
+/// threshold 0.50 of the fixed mean, 97 % of „Wendelin“ on clean evaluation
+/// recordings; stage 2 filters the rest). Recordings of one voice can be
+/// nearly identical (leave-one-out similarity 1.0); a threshold derived from
+/// them would never fire on a live utterance.
+const wakeProvisionalThreshold = wakeUnconstrainedMaxThreshold;
 
 /// Phase of an enrollment.
 enum EnrollPhase {
@@ -245,6 +282,7 @@ class WakeEnroller extends ChangeNotifier {
     final templates = WakeTemplates(
       speakerId: speakerId,
       featureVersion: features.featureVersion,
+      center: features.centerId,
       threshold: threshold,
       embeddings: List.unmodifiable(_embeddings),
     );

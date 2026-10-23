@@ -1320,9 +1320,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get start => 'Start';
 
   @override
-  String get stop => 'Stop';
-
-  @override
   String get test => 'Test';
 
   @override
@@ -4405,7 +4402,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceConvInterruptHint =>
-      'With “Wendelin” or “Stop” you interrupt the speech output.';
+      'With “Wendelin” you interrupt the speech output.';
 
   @override
   String get voiceConvKeepListening => 'Keep listening after the answer';
@@ -4630,9 +4627,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceScreenOfflineVoices => 'Offline voices';
 
   @override
-  String get voiceScreenOverlay => 'Assistant overlay';
-
-  @override
   String get voiceScreenRecognition => 'Speech recognition';
 
   @override
@@ -4664,16 +4658,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get voiceScreenSpokenLanguage => 'Spoken language';
-
-  @override
-  String get voiceScreenStopClosesOverlay => 'Stop closes the overlay';
-
-  @override
-  String get voiceScreenStopClosesOverlayHint =>
-      'If you say “Stop”, Wendelin briefly shows “Cancelled” and closes the overlay.';
-
-  @override
-  String get voiceScreenStopClosesOverlayLabel => 'Stop closes the overlay';
 
   @override
   String get voiceScreenSystemVoice => 'System voice';
@@ -4791,7 +4775,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bargeDebugIntro =>
-      'Sets how sensitively “Wendelin” and “Stop” are recognized during the answer. The change applies from the next spoken answer.';
+      'Sets how sensitively “Wendelin” is recognized during the answer. The change applies from the next spoken answer.';
 
   @override
   String get bargeDebugMicCommunication => 'Communication + AEC (default)';
@@ -4832,7 +4816,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speechCommunicationHelp =>
-      'The answer plays like a call through the speaker, so “Stop” is recognized more reliably. Side effects: the call volume applies, the sound is thinner, and Bluetooth devices may switch playback. With headphones the output stays there. Applies from the next answer.';
+      'The answer plays like a call through the speaker, so “Wendelin” is recognized more reliably. Side effects: the call volume applies, the sound is thinner, and Bluetooth devices may switch playback. With headphones the output stays there. Applies from the next answer.';
 
   @override
   String get speechCommunicationTitle =>
@@ -4984,9 +4968,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeEnrollTitle => 'Train voice';
-
-  @override
-  String get wakeEnrollTitleStop => 'Train “Stop”';
 
   @override
   String get wakeEnrollTooEarly =>
@@ -5255,9 +5236,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeWordFeatureModels => 'Feature models';
 
   @override
-  String get wakeWordInterrupt => 'Interrupt with “Stop”';
-
-  @override
   String get wakeWordIntro =>
       'Wendelin learns your voice: you say “Wendelin” about 15 times, after that it also recognizes it in everyday use. Only numeric values are stored, encrypted on the device. Audio is never stored.';
 
@@ -5282,34 +5260,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String wakeWordRecordingsThreshold(int length, String v, String v2) {
-    return '$length recordings · threshold $v$v2';
+  String wakeWordRecordingsThreshold(int length, String v) {
+    return '$length recordings · threshold $v';
   }
 
   @override
   String get wakeWordRetrain => 'Train again';
 
   @override
-  String get wakeWordRetrainStop => 'Train “Stop” again';
-
-  @override
-  String get wakeWordStopLearned =>
-      '“Stop” is trained: you can interrupt the announcement with “Stop” alone.';
-
-  @override
-  String get wakeWordStopNotLearned =>
-      'Without a trained “Stop”, only “Wendelin, stop” interrupts the announcement. Train “Stop” so you can interrupt the announcement with the single word.';
-
-  @override
-  String get wakeWordStopOnlySpeaking =>
-      '“Stop” only works while Wendelin is speaking and interruption is set to “Keywords”. In the background, “Stop” triggers nothing.';
-
-  @override
   String get wakeWordTemplatesMissing =>
       'Templates missing. Please train again.';
 
   @override
-  String get wakeWordTrainStop => 'Train “Stop”';
+  String get wakeWordTemplatesOutdated =>
+      'These templates are outdated (the comparison was improved). Please train again.';
 
   @override
   String get wakeWordTryNow => 'Try it now';
@@ -5322,9 +5286,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeWordWhoSpeaks => 'Who is speaking?';
-
-  @override
-  String get wakeWordWhoStop => 'Who trains “Stop”?';
 
   @override
   String get weatherHomeHelp =>

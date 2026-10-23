@@ -26,9 +26,14 @@ import 'integrations_screen_test.dart' show settle;
 
 Float32List v(List<double> x) => Float32List.fromList(x);
 
-WakeTemplates templates(String id, {double threshold = 0.9}) => WakeTemplates(
+WakeTemplates templates(
+  String id, {
+  double threshold = 0.9,
+  String? center = wakeCenterId,
+}) => WakeTemplates(
   speakerId: id,
   featureVersion: 'fake-1',
+  center: center,
   threshold: threshold,
   embeddings: [
     v([1, 0, 0, 0]),
@@ -261,6 +266,31 @@ void main() {
       expect(await env.storage.settings.get(wakeVerifyKey), isFalse);
     });
 
+    testWidgets('alte (rohe) Vorlagen: Hinweis, nicht kalibrierbar/testbar', (
+      tester,
+    ) async {
+      final env = wakeEnv();
+      final store = SecretWakeTemplateStore(env.secrets);
+      await store.save(templates('a', center: null));
+      await store.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.textContaining('veraltet'), findsOneWidget);
+      expect(find.textContaining('Aufnahmen · Schwelle'), findsNothing);
+      await tester.tap(find.text('Kalibrieren (30 min, empfohlen)'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WakeCalibrateScreen), findsNothing);
+      // Row detail plus the snack bar: no silent no-op.
+      expect(find.textContaining('veraltet'), findsNWidgets(2));
+      ScaffoldMessenger.of(tester.element(find.byType(WakeWordScreen)))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('veraltet'), findsOneWidget);
+      await tester.tap(find.text('Jetzt ausprobieren'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WakeTestScreen), findsNothing);
+      expect(find.textContaining('veraltet'), findsNWidgets(2));
+    });
+
     testWidgets('Sprecherverwaltung: listen, neu einlernen, einzeln löschen', (
       tester,
     ) async {
@@ -321,45 +351,6 @@ void main() {
       final t = (await SecretWakeTemplateStore(env.secrets).load(id))!;
       expect(t.embeddings, hasLength(15));
       expect(audio.starts, 15);
-    });
-
-    testWidgets('„Stopp“ einlernen: 10 Aufnahmen, nur Embeddings, getrennt', (
-      tester,
-    ) async {
-      final audio = SequenceAudio([for (var i = 0; i < 10; i++) recording()]);
-      final env = wakeEnv(audio: audio);
-      final store = SecretWakeTemplateStore(env.secrets);
-      await store.save(templates('a'));
-      await store.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
-      final c = await pumpWake(tester, env, const WakeWordScreen());
-      expect(find.textContaining('Ohne gelerntes „Stopp“'), findsOneWidget);
-      await tester.tap(find.text('„Stopp“ einlernen'));
-      await tester.pump();
-      await until(tester, find.text('1 von 10'));
-      expect(find.text('Sag jetzt: „Stopp“'), findsOneWidget);
-      await until(tester, find.text('Speichern'));
-      await tester.tap(find.text('Speichern'));
-      await settle(tester);
-
-      final stop = (await store.stop.load('a'))!;
-      expect(stop.embeddings, hasLength(10));
-      expect(stop.threshold, 0.9);
-      expect((await store.load('a'))!.embeddings, hasLength(2));
-      expect(await c.read(stopLearnedProvider.future), isTrue);
-      expect(find.textContaining('„Stopp“ ist gelernt'), findsOneWidget);
-      expect(find.text('Unterbrechen mit „Stopp“'), findsOneWidget);
-      expect(find.textContaining('Im Hintergrund löst'), findsOneWidget);
-      expect(find.textContaining('Stopp ✓'), findsOneWidget);
-      expect(
-        await env.secrets.listKeys(),
-        containsAll(['wake.templates.a', 'wake.stop.a']),
-      );
-
-      await tester.tap(find.text('Alle Stimmen löschen'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Löschen'));
-      await settle(tester);
-      expect(await env.secrets.listKeys(), isEmpty);
     });
 
     testWidgets('zu leise: Hinweis, zählt nicht', (tester) async {

@@ -68,8 +68,6 @@ class WakeWordScreen extends ConsumerWidget {
               ? () => unawaited(_enroll(context, ref, speakers, null))
               : null,
         ),
-        if (speakers.isNotEmpty)
-          _StopWordSection(speakers: speakers, installed: installed),
         if (!installed) const WakeModelsNotice(),
         WideButton(
           context.l10n.wakeWordCalibrate,
@@ -167,6 +165,16 @@ class _NameDialogState extends State<_NameDialog> {
   );
 }
 
+/// Old (raw) templates are ignored since WP134: say so instead of doing
+/// nothing.
+void _showOutdated(BuildContext context) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(content: Text(context.l10n.wakeWordTemplatesOutdated)),
+    );
+}
+
 Future<void> _calibrate(
   BuildContext context,
   WidgetRef ref,
@@ -179,7 +187,12 @@ Future<void> _calibrate(
   );
   if (speaker == null || !context.mounted) return;
   final templates = await ref.read(wakeStoreProvider).load(speaker.id);
-  if (templates == null || !context.mounted) return;
+  // Outdated (raw) templates cannot be used: record again first.
+  if (!context.mounted) return;
+  if (templates == null || templates.center != wakeCenterId) {
+    _showOutdated(context);
+    return;
+  }
   await Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => WakeCalibrateScreen(templates: templates),
@@ -194,9 +207,14 @@ Future<void> _test(
 ) async {
   final store = ref.read(wakeStoreProvider);
   final all = <WakeTemplates>[
-    for (final s in speakers) ?await store.load(s.id),
+    for (final s in speakers)
+      if (await store.load(s.id) case final t? when t.center == wakeCenterId) t,
   ];
-  if (all.isEmpty || !context.mounted) return;
+  if (!context.mounted) return;
+  if (all.isEmpty) {
+    _showOutdated(context);
+    return;
+  }
   await Navigator.of(context).push<void>(
     MaterialPageRoute(builder: (_) => WakeTestScreen(speakers: all)),
   );
@@ -245,15 +263,15 @@ class _SpeakerRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final templates = ref.watch(wakeTemplatesProvider(speaker.id)).value;
     final all = ref.read(wakeSpeakersProvider).value ?? [];
-    final stop = ref.watch(stopLearnedForProvider(speaker.id)).value ?? false;
     return SettingsRow(
       title: speakerLabel(context.l10n, speaker, number),
       detail: templates == null
           ? context.l10n.wakeWordTemplatesMissing
+          : templates.center != wakeCenterId
+          ? context.l10n.wakeWordTemplatesOutdated
           : context.l10n.wakeWordRecordingsThreshold(
               templates.embeddings.length,
               templates.threshold.toStringAsFixed(2),
-              stop ? ' · ${context.l10n.stop} ✓' : '',
             ),
       trailing: PopupMenuButton<String>(
         tooltip: context.l10n.wakeWordActionsFor(
@@ -276,57 +294,4 @@ class _SpeakerRow extends ConsumerWidget {
       ),
     );
   }
-}
-
-/// „Stopp“ allein unterbricht die Sprachausgabe (WP64b): learned like
-/// „Wendelin“, only embeddings. Without it only „Wendelin, stopp“ works.
-class _StopWordSection extends ConsumerWidget {
-  const _StopWordSection({required this.speakers, required this.installed});
-
-  final List<WakeSpeaker> speakers;
-  final bool installed;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final learned = ref.watch(stopLearnedProvider).value ?? false;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: WSpace.s,
-      children: [
-        Text(context.l10n.wakeWordInterrupt, style: WText.sectionTitle),
-        InfoBox(
-          learned
-              ? context.l10n.wakeWordStopLearned
-              : context.l10n.wakeWordStopNotLearned,
-        ),
-        InfoBox(context.l10n.wakeWordStopOnlySpeaking),
-        WideButton(
-          learned
-              ? context.l10n.wakeWordRetrainStop
-              : context.l10n.wakeWordTrainStop,
-          onPressed: installed
-              ? () => unawaited(_enrollStop(context, ref, speakers))
-              : null,
-        ),
-      ],
-    );
-  }
-}
-
-Future<void> _enrollStop(
-  BuildContext context,
-  WidgetRef ref,
-  List<WakeSpeaker> speakers,
-) async {
-  final speaker = await _pick(context, speakers, context.l10n.wakeWordWhoStop);
-  if (speaker == null || !context.mounted) return;
-  await Navigator.of(context).push<bool>(
-    MaterialPageRoute(
-      builder: (_) => WakeEnrollScreen(
-        speakerId: speaker.id,
-        name: speaker.name,
-        stop: true,
-      ),
-    ),
-  );
 }

@@ -106,10 +106,18 @@ final class FakeWakeFeatureExtractor implements WakeFeatureExtractor {
     this.featureVersion = 'fake-1',
     this.windowEvery = 1280,
     this.windowFor,
+    this.embeddingMean,
+    this.centerId,
   });
 
   @override
   final String featureVersion;
+
+  @override
+  final Float32List? embeddingMean;
+
+  @override
+  final String? centerId;
 
   /// Samples between windows.
   final int windowEvery;

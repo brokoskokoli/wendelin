@@ -186,8 +186,8 @@ void main() {
       );
       // Das Stoppwort am Ende kommt nach der (kurzen) Antwort, also nicht
       // während der Ausgabe: Es wirkt über das Transkript
-      // (`stop-word source=transcript`), nicht über Barge-in. Den
-      // gegengeprüften `keyword-stop` deckt voice_stop_word_e2e_test ab.
+      // (`stop-word source=transcript`), nicht über Barge-in (den
+      // Barge-in-Stopp gibt es seit WP134 nicht mehr).
       await askHost('back');
     },
     skip: !voiceE2e,

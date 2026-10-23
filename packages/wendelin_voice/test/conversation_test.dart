@@ -307,6 +307,8 @@ void main() {
         async.elapse(const Duration(seconds: 30));
         final end = h.events.whereType<VoiceConversationEnded>().single;
         expect(end.diagnostic, 'conv-exit reason=stopWord');
+        // WP134: the transcript is the only stop path left.
+        expect(h.diag, contains('stop-word source=transcript first=false'));
       });
     });
 
@@ -377,28 +379,6 @@ void main() {
       });
     });
 
-    test('Stopp-Signal: Queue sofort gestoppt, Anfrage beendet', () {
-      fakeAsync((async) {
-        final h = speaking(async, conversation: true);
-        h.detector.emit(const BargeInSignal.keyword(BargeInKeyword.stop));
-        // No time has passed: the engine was stopped synchronously.
-        expect(h.tts.stops, 1);
-        expect(h.tts.interrupted, ['Antwort.']);
-        async.flushMicrotasks();
-        expect(h.pipeline.state, VoiceState.idle);
-        final bi = h.events.whereType<VoiceBargeIn>().single;
-        expect(bi.diagnostic, 'barge-in kind=keyword-stop');
-        expect(
-          h.events.whereType<VoiceCancelled>().single.reason,
-          VoiceCancelReason.stopWord,
-        );
-        expect(h.ends, [ConversationEndReason.stopWord]);
-        async.elapse(const Duration(seconds: 30));
-        expect(h.agent.inputs, ['Eins']); // no new request
-        expect(h.audio.startCount, 1);
-      });
-    });
-
     test('Wake-Signal: Queue gestoppt, neues Zuhören mit Pre-Roll', () {
       fakeAsync((async) {
         final h = speaking(async, conversation: true);
@@ -433,7 +413,7 @@ void main() {
         );
         h.detector.start();
         async.flushMicrotasks();
-        const stop = BargeInSignal.keyword(BargeInKeyword.stop);
+        const stop = BargeInSignal.keyword(BargeInKeyword.wake);
         h.detector.emit(stop); // idle
         h.pipeline.start();
         h.detector.emit(stop); // listening
@@ -457,7 +437,7 @@ void main() {
         final off = speaking(async, mode: BargeInMode.off);
         off.detector.start();
         async.flushMicrotasks();
-        off.detector.emit(const BargeInSignal.keyword(BargeInKeyword.stop));
+        off.detector.emit(const BargeInSignal.keyword(BargeInKeyword.wake));
         expect(off.tts.stops, 0);
         expect(off.pipeline.state, VoiceState.speaking);
         expect(off.detector.startCount, 1); // started by hand only
@@ -544,10 +524,10 @@ void main() {
         h.until(async, () => h.pipeline.state == VoiceState.speaking);
         expect(h.detector.isRunning, isTrue);
         expect(h.detector.startCount, 1);
-        h.detector.emit(const BargeInSignal.keyword(BargeInKeyword.stop));
+        h.detector.emit(const BargeInSignal.keyword(BargeInKeyword.wake));
         async.flushMicrotasks();
         expect(h.events.whereType<VoiceBargeIn>(), hasLength(1));
-        expect(h.pipeline.state, VoiceState.idle);
+        expect(h.pipeline.state, VoiceState.listening);
         expect(h.detector.isRunning, isFalse);
       });
     });

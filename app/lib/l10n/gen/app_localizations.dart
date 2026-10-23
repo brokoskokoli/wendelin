@@ -2362,12 +2362,6 @@ abstract class AppLocalizations {
   /// **'Starten'**
   String get start;
 
-  /// No description provided for @stop.
-  ///
-  /// In de, this message translates to:
-  /// **'Stopp'**
-  String get stop;
-
   /// No description provided for @test.
   ///
   /// In de, this message translates to:
@@ -7596,7 +7590,7 @@ abstract class AppLocalizations {
   /// No description provided for @voiceConvInterruptHint.
   ///
   /// In de, this message translates to:
-  /// **'Mit „Wendelin“ oder „Stopp“ unterbrichst du die Sprachausgabe.'**
+  /// **'Mit „Wendelin“ unterbrichst du die Sprachausgabe.'**
   String get voiceConvInterruptHint;
 
   /// No description provided for @voiceConvKeepListening.
@@ -7965,12 +7959,6 @@ abstract class AppLocalizations {
   /// **'Offline-Stimmen'**
   String get voiceScreenOfflineVoices;
 
-  /// No description provided for @voiceScreenOverlay.
-  ///
-  /// In de, this message translates to:
-  /// **'Assistent-Overlay'**
-  String get voiceScreenOverlay;
-
   /// No description provided for @voiceScreenRecognition.
   ///
   /// In de, this message translates to:
@@ -8024,24 +8012,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Gesprochene Sprache'**
   String get voiceScreenSpokenLanguage;
-
-  /// No description provided for @voiceScreenStopClosesOverlay.
-  ///
-  /// In de, this message translates to:
-  /// **'Stopp schließt das Overlay'**
-  String get voiceScreenStopClosesOverlay;
-
-  /// No description provided for @voiceScreenStopClosesOverlayHint.
-  ///
-  /// In de, this message translates to:
-  /// **'Sagst du „Stopp“, zeigt Wendelin kurz „Abgebrochen“ und schließt das Overlay.'**
-  String get voiceScreenStopClosesOverlayHint;
-
-  /// No description provided for @voiceScreenStopClosesOverlayLabel.
-  ///
-  /// In de, this message translates to:
-  /// **'Stopp schließt das Overlay'**
-  String get voiceScreenStopClosesOverlayLabel;
 
   /// No description provided for @voiceScreenSystemVoice.
   ///
@@ -8232,7 +8202,7 @@ abstract class AppLocalizations {
   /// No description provided for @bargeDebugIntro.
   ///
   /// In de, this message translates to:
-  /// **'Damit stellst du ein, wie empfindlich „Wendelin“ und „Stopp“ während der Antwort erkannt werden. Die Änderung gilt ab der nächsten gesprochenen Antwort.'**
+  /// **'Damit stellst du ein, wie empfindlich „Wendelin“ während der Antwort erkannt wird. Die Änderung gilt ab der nächsten gesprochenen Antwort.'**
   String get bargeDebugIntro;
 
   /// No description provided for @bargeDebugMicCommunication.
@@ -8304,7 +8274,7 @@ abstract class AppLocalizations {
   /// No description provided for @speechCommunicationHelp.
   ///
   /// In de, this message translates to:
-  /// **'Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Stopp“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.'**
+  /// **'Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Wendelin“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.'**
   String get speechCommunicationHelp;
 
   /// No description provided for @speechCommunicationTitle.
@@ -8546,12 +8516,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Stimme einlernen'**
   String get wakeEnrollTitle;
-
-  /// No description provided for @wakeEnrollTitleStop.
-  ///
-  /// In de, this message translates to:
-  /// **'„Stopp“ einlernen'**
-  String get wakeEnrollTitleStop;
 
   /// No description provided for @wakeEnrollTooEarly.
   ///
@@ -9003,12 +8967,6 @@ abstract class AppLocalizations {
   /// **'Merkmalsmodelle'**
   String get wakeWordFeatureModels;
 
-  /// No description provided for @wakeWordInterrupt.
-  ///
-  /// In de, this message translates to:
-  /// **'Unterbrechen mit „Stopp“'**
-  String get wakeWordInterrupt;
-
   /// No description provided for @wakeWordIntro.
   ///
   /// In de, this message translates to:
@@ -9054,8 +9012,8 @@ abstract class AppLocalizations {
   /// No description provided for @wakeWordRecordingsThreshold.
   ///
   /// In de, this message translates to:
-  /// **'{length} Aufnahmen · Schwelle {v}{v2}'**
-  String wakeWordRecordingsThreshold(int length, String v, String v2);
+  /// **'{length} Aufnahmen · Schwelle {v}'**
+  String wakeWordRecordingsThreshold(int length, String v);
 
   /// No description provided for @wakeWordRetrain.
   ///
@@ -9063,41 +9021,17 @@ abstract class AppLocalizations {
   /// **'Neu einlernen'**
   String get wakeWordRetrain;
 
-  /// No description provided for @wakeWordRetrainStop.
-  ///
-  /// In de, this message translates to:
-  /// **'„Stopp“ neu einlernen'**
-  String get wakeWordRetrainStop;
-
-  /// No description provided for @wakeWordStopLearned.
-  ///
-  /// In de, this message translates to:
-  /// **'„Stopp“ ist gelernt: Du kannst die Ansage mit „Stopp“ allein unterbrechen.'**
-  String get wakeWordStopLearned;
-
-  /// No description provided for @wakeWordStopNotLearned.
-  ///
-  /// In de, this message translates to:
-  /// **'Ohne gelerntes „Stopp“ unterbricht nur „Wendelin, stopp“ die Ansage. Lerne „Stopp“ ein, damit du die Ansage mit dem einen Wort unterbrechen kannst.'**
-  String get wakeWordStopNotLearned;
-
-  /// No description provided for @wakeWordStopOnlySpeaking.
-  ///
-  /// In de, this message translates to:
-  /// **'„Stopp“ wirkt nur, während Wendelin spricht und Unterbrechen auf „Schlüsselwörter“ steht. Im Hintergrund löst „Stopp“ nichts aus.'**
-  String get wakeWordStopOnlySpeaking;
-
   /// No description provided for @wakeWordTemplatesMissing.
   ///
   /// In de, this message translates to:
   /// **'Vorlagen fehlen. Bitte neu einlernen.'**
   String get wakeWordTemplatesMissing;
 
-  /// No description provided for @wakeWordTrainStop.
+  /// No description provided for @wakeWordTemplatesOutdated.
   ///
   /// In de, this message translates to:
-  /// **'„Stopp“ einlernen'**
-  String get wakeWordTrainStop;
+  /// **'Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.'**
+  String get wakeWordTemplatesOutdated;
 
   /// No description provided for @wakeWordTryNow.
   ///
@@ -9122,12 +9056,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Wer spricht?'**
   String get wakeWordWhoSpeaks;
-
-  /// No description provided for @wakeWordWhoStop.
-  ///
-  /// In de, this message translates to:
-  /// **'Wer lernt „Stopp“?'**
-  String get wakeWordWhoStop;
 
   /// No description provided for @weatherHomeHelp.
   ///

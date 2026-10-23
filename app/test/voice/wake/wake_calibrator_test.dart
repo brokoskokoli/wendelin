@@ -41,7 +41,76 @@ WakeTemplates templates() => WakeTemplates(
   ],
 );
 
+/// WP134: common component of the embeddings and templates around it. Raw,
+/// all vectors look alike (cosine near 1); centered, they are orthogonal or
+/// 0.5..0.7 apart.
+final _mean = v([5, 5, 5, 5]);
+WakeTemplates centeredTemplates() => WakeTemplates(
+  speakerId: 'a',
+  featureVersion: 'fake-1',
+  threshold: 0.9,
+  embeddings: [
+    v([6, 5, 5, 5]),
+    v([5.7, 5.7, 5, 5]),
+    v([5.7, 5, 5.7, 5]),
+  ],
+);
+
+/// Centered best-other cosine 0.4525 (0.36 / (0.36 + 0.66^2)), raw above 0.99.
+WakeTemplates lowCenteredTemplates() => WakeTemplates(
+  speakerId: 'a',
+  featureVersion: 'fake-1',
+  threshold: 0.9,
+  embeddings: [
+    v([5.6, 5.66, 5, 5]),
+    v([5.6, 5, 5.66, 5]),
+    v([5.6, 5, 5, 5.66]),
+  ],
+);
+
 void main() {
+  test(
+    'zentriert: Hintergrund ist roh nah an den Vorlagen, zentriert nicht',
+    () async {
+      // Raw cosine of this window to every template is about 0.97 (an event
+      // that would push the threshold to the cap); centered it is 0.
+      final cal = WakeCalibrator(
+        audio: SilentAudio(12),
+        features: fakeFeatures(mean: _mean, vector: (_) => v([5, 5, 5, 6])),
+        templates: centeredTemplates(),
+        store: FakeWakeTemplateStore(),
+        onPrompt: () async {},
+        duration: const Duration(minutes: 10),
+        firstPrompt: const Duration(hours: 1),
+      );
+      await cal.run();
+      final r = cal.result!;
+      expect(r.falseAlarmsPerHour, 0);
+      expect(r.meetsTarget, isTrue);
+    },
+  );
+
+  test('zentriert: Schwelle aus zentrierten Leave-one-out-Werten', () async {
+    // Centered the templates are 0.45 apart (best of the others), raw they
+    // are above 0.9. Without background events the centered quantile (0.45)
+    // decides: neither the cap (0.50) nor the lower bound (0.40) nor the raw
+    // value. The background is centered-orthogonal to all templates.
+    final cal = WakeCalibrator(
+      audio: SilentAudio(12),
+      features: fakeFeatures(
+        mean: _mean,
+        vector: (_) => v([6, 4.09, 4.09, 4.09]),
+      ),
+      templates: lowCenteredTemplates(),
+      store: FakeWakeTemplateStore(),
+      onPrompt: () async {},
+      duration: const Duration(minutes: 10),
+      firstPrompt: const Duration(hours: 1),
+    );
+    await cal.run();
+    expect(cal.result!.threshold, closeTo(0.4525, 0.005));
+  });
+
   test(
     'Ergebnis: Schwelle aus Hintergrund und Aufforderungen, gespeichert',
     () async {
@@ -150,7 +219,9 @@ void main() {
     await cal.run();
     final r = cal.result!;
     expect(r.meetsTarget, isTrue);
-    expect(r.threshold, closeTo(0.9, 0.01));
+    // Quiet room (no events): the answers (0.9) lift it at most to the
+    // provisional threshold, not to the cap (WP134).
+    expect(r.threshold, wakeUnconstrainedMaxThreshold);
     expect(r.threshold, lessThan(calibrationMaxThreshold));
   });
 

@@ -13,6 +13,7 @@ final class WakeTemplates {
     required this.featureVersion,
     required this.threshold,
     required this.embeddings,
+    this.center,
   });
 
   /// Reads [toJson] output.
@@ -20,6 +21,8 @@ final class WakeTemplates {
     speakerId: json['speakerId']! as String,
     featureVersion: json['featureVersion']! as String,
     threshold: (json['threshold']! as num).toDouble(),
+    // Absent in templates before WP134 (raw cosine): they stay unusable.
+    center: json['center'] as String?,
     embeddings: [
       for (final e in json['embeddings']! as List<Object?>)
         _decode(e! as String),
@@ -39,9 +42,17 @@ final class WakeTemplates {
   /// One embedding window (flattened) per recorded utterance.
   final List<Float32List> embeddings;
 
-  /// Whether the templates fit the feature models [version].
-  bool isCompatible(String version) =>
-      version == featureVersion && embeddings.isNotEmpty;
+  /// Id of the embedding mean the comparison centers with (WP134); `null`
+  /// for templates recorded before: their padding was digital silence and
+  /// cannot be removed afterwards, so they must be recorded again.
+  final String? center;
+
+  /// Whether the templates fit the feature models [version] and the mean
+  /// [center] of the extractor.
+  bool isCompatible(String version, {String? center}) =>
+      version == featureVersion &&
+      center == this.center &&
+      embeddings.isNotEmpty;
 
   /// A copy with a new [threshold] (after re-calibration).
   WakeTemplates withThreshold(double threshold) => WakeTemplates(
@@ -49,6 +60,7 @@ final class WakeTemplates {
     featureVersion: featureVersion,
     threshold: threshold,
     embeddings: embeddings,
+    center: center,
   );
 
   /// JSON map (embeddings as base64 of little-endian float32).
@@ -56,6 +68,7 @@ final class WakeTemplates {
     'speakerId': speakerId,
     'featureVersion': featureVersion,
     'threshold': threshold,
+    'center': ?center,
     'embeddings': [
       for (final e in embeddings)
         base64Encode(Uint8List.view(Float32List.fromList(e).buffer)),

@@ -150,8 +150,14 @@ class WakeTester extends ChangeNotifier {
 
   void _score(WakeWindow w) {
     for (final t in speakers) {
-      if (!t.isCompatible(features.featureVersion)) continue;
-      final sim = bestSimilarity(w.embedding, t.embeddings);
+      if (!t.isCompatible(features.featureVersion, center: features.centerId)) {
+        continue;
+      }
+      final sim = bestSimilarity(
+        w.embedding,
+        t.embeddings,
+        mean: features.embeddingMean,
+      );
       if (sim > _maxSimilarity) _maxSimilarity = sim;
       final gap = durationToSamples(refractory);
       if (sim < t.threshold || w.endSample - _lastHit < gap) continue;

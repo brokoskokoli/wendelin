@@ -13,14 +13,11 @@ enum BargeInKind {
 
 /// The keywords that interrupt the speech output (concept K23 c).
 enum BargeInKeyword {
-  /// „Stopp“: the request ends.
-  stop,
-
   /// „Wendelin“: a new utterance follows.
   wake,
 }
 
-/// One detection, e.g. the user said „Wendelin“ or „Stopp“.
+/// One detection, e.g. the user said „Wendelin“.
 @immutable
 final class BargeInSignal {
   /// A keyword detection. [preRoll] is the audio just before and
@@ -42,7 +39,7 @@ final class BargeInSignal {
   /// Optional 16 kHz mono PCM that precedes the detection.
   final Int16List? preRoll;
 
-  /// Diagnostics code without any content (`keyword-stop`, `keyword-wake`,
+  /// Diagnostics code without any content (`keyword-wake`,
   /// `speech`).
   String get code => keyword == null ? kind.name : 'keyword-${keyword!.name}';
 

@@ -3,7 +3,7 @@ import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 void main() {
-  test('Standardwerte: whisper-small, Sprache der App, Stopp schließt', () {
+  test('Standardwerte: whisper-small, Sprache der App', () {
     const s = VoiceSettings();
     expect(s.sttModel, 'whisper-small');
     expect(s.sttLanguage, VoiceSettings.followApp);
@@ -11,7 +11,6 @@ void main() {
     expect(s.ttsRate, 1.0);
     expect(s.minSpeechMs, 200);
     expect(s.vadThreshold, 0.5);
-    expect(s.stopClosesOverlay, isTrue);
     expect(s.spokenVersion, SpokenVersion.off);
     // M4, Entscheidung 2: Gesprächsmodus aus, Frage noch nicht gestellt.
     expect(s.conversationMode, isFalse);
@@ -30,7 +29,6 @@ void main() {
       ttsRate: 1.5,
       minSpeechMs: 300,
       vadThreshold: 0.4,
-      stopClosesOverlay: false,
       spokenVersion: SpokenVersion.checked,
       conversationMode: true,
       conversationAsked: true,
@@ -49,7 +47,6 @@ void main() {
         'ttsRate': 9,
         'minSpeechMs': 5,
         'vadThreshold': 1.5,
-        'stopClosesOverlay': 'ja',
         'twoVersions': 1,
         'spokenVersion': 'weird',
         'conversationMode': 'an',
@@ -79,6 +76,15 @@ void main() {
     expect(const VoiceSettings().toJson().containsKey('twoVersions'), isFalse);
   });
 
+  test('WP134: der alte Schlüssel stopClosesOverlay wird ignoriert', () {
+    final s = VoiceSettings.fromJson({
+      'stopClosesOverlay': false,
+      'vadThreshold': 0.4,
+    });
+    expect(s.vadThreshold, 0.4);
+    expect(s.toJson().containsKey('stopClosesOverlay'), isFalse);
+  });
+
   test('Das JSON-Format ist festgeschrieben', () {
     expect(const VoiceSettings(ttsVoice: 'v').toJson(), {
       'sttModel': 'whisper-small',
@@ -88,7 +94,6 @@ void main() {
       'ttsRate': 1.0,
       'minSpeechMs': 200,
       'vadThreshold': 0.5,
-      'stopClosesOverlay': true,
       'spokenVersion': 'off',
       'conversationMode': false,
       'conversationAsked': false,

@@ -150,6 +150,12 @@ final class ChainWakeFeatureExtractor implements WakeFeatureExtractor {
   String get featureVersion => wakeFeatureVersion;
 
   @override
+  Float32List get embeddingMean => wakeCenterMean;
+
+  @override
+  String get centerId => wakeCenterId;
+
+  @override
   Future<void> open() async {
     if (_chain != null) return;
     final epoch = _epoch;

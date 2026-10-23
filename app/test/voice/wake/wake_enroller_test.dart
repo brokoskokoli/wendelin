@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -47,7 +48,7 @@ void main() {
     expect(t.embeddings, hasLength(3));
     expect(t.featureVersion, 'fake-1');
     expect(t.threshold, wakeProvisionalThreshold);
-    expect(t.threshold, 0.85); // vorläufig, bis kalibriert wird (WP44)
+    expect(t.threshold, 0.50); // vorläufig, bis kalibriert wird (WP44, WP134)
     expect((await store.load('a'))!.embeddings, hasLength(3));
   });
 
@@ -161,6 +162,7 @@ void main() {
         expect(json.keys, {
           'speakerId',
           'featureVersion',
+          'center',
           'threshold',
           'embeddings',
         });
@@ -207,6 +209,71 @@ void main() {
     final e = await embedUtterance(f, Int16List(10000), 8000);
     expect(e!.single, closeTo(16000 + 8000 + 4800, 1280));
     expect(chosen.length, greaterThan(5));
+  });
+
+  group('Rauschpolster statt digitaler Nullen (WP134)', () {
+    Int16List word() => Int16List.fromList([
+      for (var i = 0; i < 8000; i++)
+        i < 3200 ? ((i * 37) % 81) - 40 : ((i * 91) % 20001) - 10000,
+    ]);
+
+    double rms(Int16List x, int a, int b) {
+      var s = 0.0;
+      for (var i = a; i < b; i++) {
+        s += x[i] * x[i];
+      }
+      return math.sqrt(s / (b - a));
+    }
+
+    test(
+      'Polster hat den Pegel des Vorlaufs, ist nicht null und deterministisch',
+      () {
+        final pcm = word();
+        final p = padWithNoise(pcm, 16000, 32000);
+        expect(p.length, 16000 + 8000 + 32000);
+        expect(p.sublist(16000, 24000), pcm, reason: 'Aufnahme unverändert');
+        final lead = rms(pcm, 0, 3200);
+        for (final (a, b) in [(0, 16000), (24000, 56000)]) {
+          expect(rms(p, a, b), closeTo(lead, lead * 0.1));
+          expect(
+            p.sublist(a, b).where((x) => x == 0).length,
+            lessThan((b - a) ~/ 10),
+          );
+        }
+        expect(padWithNoise(pcm, 16000, 32000), p);
+      },
+    );
+
+    test('digitale Stille als Vorlauf: Polster nie digital null', () {
+      final p = padWithNoise(Int16List(8000), 16000, 32000);
+      expect(p.sublist(0, 16000).any((x) => x != 0), isTrue);
+      expect(rms(p, 0, 16000), closeTo(1, 0.2));
+      expect(padWithNoise(Int16List(0), 100, 100).length, 200);
+    });
+
+    test('embedUtterance speist das Rauschpolster in die Kette', () async {
+      var zeros = 0, total = 0;
+      final f = FakeWakeFeatureExtractor(
+        windowFor: (end, frame) {
+          total += frame.length;
+          zeros += frame.where((x) => x == 0).length;
+          return WakeWindow(endSample: end, embedding: Float32List(1));
+        },
+      );
+      await embedUtterance(f, word(), 8000);
+      expect(zeros / total, lessThan(0.1), reason: 'sonst digitale Nullen');
+    });
+
+    test('Vorlagen tragen die Mittel-Kennung der Kette', () async {
+      final store = FakeWakeTemplateStore();
+      final e = enroller(
+        SequenceAudio([recording(), recording(), recording()]),
+        store,
+      );
+      await e.run();
+      await e.finish();
+      expect((await store.load('a'))!.center, wakeCenterId);
+    });
   });
 }
 

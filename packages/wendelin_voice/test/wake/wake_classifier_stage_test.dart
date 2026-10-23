@@ -268,41 +268,37 @@ void main() {
       expect(hits.single.direct, isTrue);
     });
 
-    test('Stille: das Stille-Sperre verhindert auch den Weg über stopOverridesWake', () async {
-      final stop = WakeTemplates(
-        speakerId: 's',
-        featureVersion: 'fake-1',
-        threshold: 0.7,
-        embeddings: [
-          _v([0, 1]),
-        ],
-      );
-      // Window similar to both words, silent stream.
-      final both = _v([0.7, 0.72]);
-      CandidateWakeEngine make() => CandidateWakeEngine(
-        features: FakeWakeFeatureExtractor(
-          windowEvery: 100,
-          windowFor: (end, _) => WakeWindow(endSample: end, embedding: both),
-        ),
-        templates: WakeTemplates(
-          speakerId: 's',
-          featureVersion: 'fake-1',
-          threshold: 0.65,
-          embeddings: [
-            _v([1, 0]),
-          ],
-        ),
-        stopTemplates: [stop],
-        modelThreshold: null,
-        stopGate: SpeechGate(),
-        silenceFloor: WakeClassifierRules.silenceFloor(),
-        stopOverridesWake: true,
-      );
-      final e = make();
-      await e.open([KeywordSpec.wendelin]);
-      final silent = await e.accept(Int16List(300));
-      expect(silent, isEmpty, reason: 'ohne Pegel weder Stopp noch Wendelin');
-    });
+    test(
+      'Stille: die Sperre hält den Vorlagen-Treffer im stillen Strom',
+      () async {
+        // Fenster ähnlich der Vorlage (0.70 > 0.65), aber der Strom ist still.
+        CandidateWakeEngine make() => CandidateWakeEngine(
+          features: FakeWakeFeatureExtractor(
+            windowEvery: 100,
+            windowFor: (end, _) =>
+                WakeWindow(endSample: end, embedding: _v([0.7, 0.72])),
+          ),
+          templates: WakeTemplates(
+            speakerId: 's',
+            featureVersion: 'fake-1',
+            threshold: 0.65,
+            embeddings: [
+              _v([1, 0]),
+            ],
+          ),
+          modelThreshold: null,
+          silenceFloor: WakeClassifierRules.silenceFloor(),
+        );
+        final e = make();
+        await e.open([KeywordSpec.wendelin]);
+        expect(await e.accept(Int16List(300)), isEmpty);
+        // Gegenprobe: mit Sprachpegel löst dasselbe Fenster aus.
+        final loud = make();
+        await loud.open([KeywordSpec.wendelin]);
+        final hits = await loud.accept(Int16List(300)..fillRange(0, 300, 400));
+        expect(hits, isNotEmpty);
+      },
+    );
   });
 
   group('Katalog WP129 (Messwerte festgelegt)', () {

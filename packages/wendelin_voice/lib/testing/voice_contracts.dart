@@ -317,7 +317,7 @@ void bargeInDetectorContract(
       final d = await create();
       final got = <BargeInSignal>[];
       final sub = d.signals.listen(got.add);
-      await fire(d, const BargeInSignal.keyword(BargeInKeyword.stop));
+      await fire(d, const BargeInSignal.speech());
       await Future<void>.delayed(Duration.zero);
       expect(got, isEmpty);
       await d.start();

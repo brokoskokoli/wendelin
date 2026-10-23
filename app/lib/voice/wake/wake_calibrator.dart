@@ -21,15 +21,15 @@ enum CalibrationPhase {
 
 /// Similarity peaks at or above this value count as false-alarm events;
 /// lower ones can never reach a usable threshold anyway.
-const calibrationEventFloor = 0.5;
+const calibrationEventFloor = 0.3;
 
 /// Highest threshold a calibration stores: positives that resemble each
 /// other perfectly (recordings of one voice) would otherwise push the
 /// threshold to 1.0, where nothing fires.
-const calibrationMaxThreshold = 0.95;
+const calibrationMaxThreshold = 0.90;
 
 /// A prompt answer needs at least this similarity to count as „said it“.
-const calibrationPromptFloor = 0.6;
+const calibrationPromptFloor = 0.4;
 
 /// Calibration while the phone lies around (WP60): scores the live windows
 /// against the speaker's templates. Only similarity numbers are kept (one
@@ -189,7 +189,11 @@ class WakeCalibrator extends ChangeNotifier {
   }
 
   void _window(WakeWindow w) {
-    final sim = bestSimilarity(w.embedding, templates.embeddings);
+    final sim = bestSimilarity(
+      w.embedding,
+      templates.embeddings,
+      mean: features.embeddingMean,
+    );
     if (_promptStart >= 0 && w.endSample >= _promptStart + _toneGap) {
       if (sim > _promptMax) _promptMax = sim;
     }
@@ -254,7 +258,10 @@ class WakeCalibrator extends ChangeNotifier {
   /// leave-one-out scores together; otherwise the threshold would stick at
   /// [calibrationMaxThreshold].
   List<double> _weightedPositives() {
-    final loo = leaveOneOutScores(templates.embeddings);
+    final loo = leaveOneOutScores(
+      templates.embeddings,
+      mean: features.embeddingMean,
+    );
     if (_positives.isEmpty) return loo;
     final repeat = (loo.length / _positives.length).ceil().clamp(1, 1000);
     return [...loo, for (var i = 0; i < repeat; i++) ..._positives];

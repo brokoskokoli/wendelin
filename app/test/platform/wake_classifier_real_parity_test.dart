@@ -36,6 +36,12 @@ final class _Recorder implements WakeFeatureExtractor {
 
   @override
   String get featureVersion => inner.featureVersion;
+
+  @override
+  Float32List? get embeddingMean => null;
+
+  @override
+  String? get centerId => null;
   @override
   Future<void> open() => inner.open();
   @override
@@ -62,6 +68,12 @@ final class _Replay implements WakeFeatureExtractor {
   var _i = 0;
   @override
   String get featureVersion => 'replay';
+
+  @override
+  Float32List? get embeddingMean => null;
+
+  @override
+  String? get centerId => null;
   @override
   Future<void> open() async {}
   @override

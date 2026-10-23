@@ -178,7 +178,7 @@ void main() {
         threshold: 0.9,
         embeddings: [v(e)],
       );
-      final seen = <(double, double)>[];
+      final seen = <double>[];
       final e = CandidateWakeEngine(
         features: FakeWakeFeatureExtractor(
           windowEvery: 100,
@@ -186,17 +186,13 @@ void main() {
               WakeWindow(endSample: end, embedding: v([1, 0])),
         ),
         templates: one([1, 0]),
-        stopTemplates: [
-          one([0, 1]),
-        ],
         modelThreshold: null,
-        onWindow: (m, s, _) => seen.add((m, s)),
+        onWindow: (m, _) => seen.add(m),
       );
       await e.open([KeywordSpec.wendelin]);
       await e.accept(Int16List(200));
       expect(seen, hasLength(2));
-      expect(seen.first.$1, closeTo(1, 1e-6));
-      expect(seen.first.$2, closeTo(0, 1e-6));
+      expect(seen.first, closeTo(1, 1e-6));
     });
 
     Float32List v(List<double> x) => Float32List.fromList(x);
@@ -294,131 +290,36 @@ void main() {
       expect(await other.accept(Int16List(100)), isEmpty);
     });
 
-    test(
-      '„Stopp“-Vorlagen: stop bzw. wake je Vorlage, Echo löst nichts aus',
-      () async {
-        WakeTemplates one(String id, List<double> e, double th) =>
-            WakeTemplates(
-              speakerId: id,
-              featureVersion: 'fake-1',
-              threshold: th,
-              embeddings: [v(e)],
-            );
-        final wake = one('a', [1, 0], 0.9);
-        final stop = one('a', [0, 1], 0.9);
-        Future<List<String>> run(List<double> embedding) async {
-          final e = CandidateWakeEngine(
-            features: FakeWakeFeatureExtractor(
-              windowEvery: 100,
-              windowFor: (end, _) =>
-                  WakeWindow(endSample: end, embedding: v(embedding)),
-            ),
-            templates: wake,
-            stopTemplates: [stop],
-            modelThreshold: null,
-          );
-          await e.open([KeywordSpec.wendelin]);
-          return [for (final h in await e.accept(Int16List(200))) h.keywordId];
-        }
-
-        expect(await run([1, 0.05]), ['wake']);
-        expect(await run([0.05, 1]), ['stop']);
-        // Echo/other speech: similar to neither (e.g. the own TTS voice).
-        expect(await run([-1, -1]), isEmpty);
-        // Without stop templates nothing changes: „Stopp“ stays silent.
-        final plain = CandidateWakeEngine(
-          features: FakeWakeFeatureExtractor(
-            windowEvery: 100,
-            windowFor: (end, _) =>
-                WakeWindow(endSample: end, embedding: v([0.05, 1])),
-          ),
-          templates: wake,
-          modelThreshold: null,
-        );
-        await plain.open([KeywordSpec.wendelin]);
-        expect(await plain.accept(Int16List(200)), isEmpty);
-      },
-    );
-
-    test(
-      'Konflikt (WP113): sind beide über der Schwelle, gewinnt „Stopp“',
-      () async {
-        WakeTemplates one(List<double> e) => WakeTemplates(
-          speakerId: 'a',
-          featureVersion: 'fake-1',
-          threshold: 0.3,
-          embeddings: [v(e)],
-        );
-        Future<List<String>> run(List<double> embedding) async {
-          final e = CandidateWakeEngine(
-            features: FakeWakeFeatureExtractor(
-              windowEvery: 100,
-              windowFor: (end, _) =>
-                  WakeWindow(endSample: end, embedding: v(embedding)),
-            ),
-            templates: one([1, 0]),
-            stopTemplates: [
-              one([0, 1]),
-            ],
-            modelThreshold: null,
-          );
-          await e.open([KeywordSpec.wendelin]);
-          return [for (final h in await e.accept(Int16List(200))) h.keywordId];
-        }
-
-        // Both templates are over the threshold in each case.
-        expect(await run([1, 0.5]), ['stop']);
-        expect(await run([0.5, 1]), ['stop']);
-        // Only „Wendelin“ over its threshold: wake.
-        expect(await run([1, -0.2]), ['wake']);
-      },
-    );
-
-    test(
-      '„Stopp“ zählt erst ab zwei Fenstern in Folge über der Schwelle',
-      () async {
-        WakeTemplates one(String id, List<double> e) => WakeTemplates(
-          speakerId: id,
-          featureVersion: 'fake-1',
-          threshold: 0.9,
-          embeddings: [v(e)],
-        );
-        final seq = [
-          [0.05, 1.0], // stop
-          [-1.0, -1.0], // nothing
-          [0.05, 1.0], // stop
-          [-1.0, -1.0], // nothing
-        ];
-        var i = 0;
+    test('WP134: ein Fenster im Stopp-Muster löst nichts aus', () async {
+      // Das Muster [0, 1] gehörte der „Stopp“-Vorlage; es gibt keine mehr.
+      // Echo oder andere Sprache (ähnlich keiner Vorlage) bleibt still.
+      final wake = WakeTemplates(
+        speakerId: 'a',
+        featureVersion: 'fake-1',
+        threshold: 0.9,
+        embeddings: [
+          v([1, 0]),
+        ],
+      );
+      Future<List<String>> run(List<double> embedding) async {
         final e = CandidateWakeEngine(
           features: FakeWakeFeatureExtractor(
             windowEvery: 100,
             windowFor: (end, _) =>
-                WakeWindow(endSample: end, embedding: v(seq[i++ % seq.length])),
+                WakeWindow(endSample: end, embedding: v(embedding)),
           ),
-          templates: one('a', [1, 0]),
-          stopTemplates: [
-            one('a', [0, 1]),
-          ],
+          templates: wake,
           modelThreshold: null,
         );
         await e.open([KeywordSpec.wendelin]);
-        // Alternating windows: never two in a row.
-        expect(await e.accept(Int16List(400)), isEmpty);
-        // Two stop windows in a row: hit.
-        seq
-          ..clear()
-          ..addAll([
-            [0.05, 1.0],
-            [0.05, 1.0],
-          ]);
-        i = 0;
-        expect(
-          [for (final h in await e.accept(Int16List(200))) h.keywordId],
-          ['stop'],
-        );
-      },
-    );
+        return [for (final h in await e.accept(Int16List(200))) h.keywordId];
+      }
+
+      expect(await run([1, 0.05]), everyElement('wake'));
+      expect(await run([1, 0.05]), isNotEmpty);
+      expect(await run([0.05, 1]), isEmpty);
+      expect(await run([-1, -1]), isEmpty);
+    });
 
     test('Vorlagen anderer Merkmalsversion werden ignoriert', () async {
       final e = make(
@@ -508,31 +409,28 @@ void main() {
     );
   });
 
-  test(
-    'WakeWordBargeInDetector: Schlüsselwörter, stop gibt das Mikro frei',
-    () async {
-      final audio = FakeAudioInput();
-      final engine = FakeWakeWordEngine(keywordId: 'stop');
-      final d = WakeWordBargeInDetector(audio: audio, engine: engine);
-      final got = <String>[];
-      d.signals.listen((s) => got.add(s.code));
-      await d.start();
-      audio.push(FakeWakeWordEngine.markerFrame());
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-      expect(got, ['keyword-stop']);
-      await d.stop();
-      expect(
-        audio.isRunning,
-        isFalse,
-      ); // vor dem Rückkehren frei (VOICE_RECOGNITION)
-      expect(engine.isOpen, isTrue);
-      await d.start();
-      expect(engine.resetCount, 2);
-      await d.dispose();
-      expect(engine.isOpen, isFalse);
-      expect(audio.isRunning, isFalse);
-    },
-  );
+  test('WakeWordBargeInDetector: nur wake löst aus, ein anderes Wort (stop) bleibt still', () async {
+    final audio = FakeAudioInput();
+    final engine = FakeWakeWordEngine(keywordId: 'stop');
+    final d = WakeWordBargeInDetector(audio: audio, engine: engine);
+    final got = <String>[];
+    d.signals.listen((s) => got.add(s.code));
+    await d.start();
+    audio.push(FakeWakeWordEngine.markerFrame());
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    expect(got, isEmpty); // WP134: kein Barge-in-Stopp mehr
+    await d.stop();
+    expect(
+      audio.isRunning,
+      isFalse,
+    ); // vor dem Rückkehren frei (VOICE_RECOGNITION)
+    expect(engine.isOpen, isTrue);
+    await d.start();
+    expect(engine.resetCount, 2);
+    await d.dispose();
+    expect(engine.isOpen, isFalse);
+    expect(audio.isRunning, isFalse);
+  });
 
   test('FakeWakeTemplateStore: Speichern, Laden, Löschen', () async {
     final s = FakeWakeTemplateStore();

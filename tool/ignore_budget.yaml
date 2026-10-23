@@ -2,7 +2,7 @@
 # (ignore_for_file/<regel>) in handgeschriebenem Dart (WP109, Ratsche, tool/check_ignores.dart).
 # Mehr Treffer oder neue Regel ist rot; weniger ebenfalls, bis gesenkt:
 # `dart run tool/check_ignores.dart --update-baseline` (senkt/entfernt, erhöht nie).
-ignore/avoid_print: 76
+ignore/avoid_print: 73
 ignore/cancel_subscriptions: 7
 ignore/close_sinks: 16
 ignore/deprecated_member_use: 4

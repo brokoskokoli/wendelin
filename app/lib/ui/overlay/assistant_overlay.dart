@@ -266,14 +266,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   void _onStop() {
     final entries = ref.read(agentControllerProvider).entries;
     setState(() => _hideBefore = entries.length);
-    final closes =
-        ref.read(voiceSettingsProvider).value?.stopClosesOverlay ?? true;
     _closeTimer?.cancel();
-    if (closes) {
-      _closeTimer = Timer(AssistantOverlayScreen.stopCloseDelay, () {
-        if (mounted) unawaited(_close());
-      });
-    }
+    _closeTimer = Timer(AssistantOverlayScreen.stopCloseDelay, () {
+      if (mounted) unawaited(_close());
+    });
   }
 
   // A request was refused while locked: after the spoken hint the system

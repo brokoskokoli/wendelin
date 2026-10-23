@@ -12,7 +12,7 @@
   "bargeDebugHelpMargin": "Die Schwelle legt fest, wie genau ein Wort passen muss. Höher (0,05, Standard): weniger Fehlalarme, dafür wird dein Wort öfter überhört. Niedriger (0,00 oder -0,05): das Wort wird leichter erkannt, dafür gibt es mehr Fehlalarme.",
   "bargeDebugHelpRecognition": "Erkennung, ohne AEC: keine Echo-Unterdrückung. Dein Wort kommt klar an, aber die laufende Ansage übertönt es oft, und Wendelin kann sich selbst hören.",
   "bargeDebugHelpRecognitionAec": "Erkennung + AEC: wie Standard, aber mit dem Mikrofon der Spracherkennung. Hilft auf Geräten, bei denen das Standard-Mikrofon dein Wort zu stark dämpft.",
-  "bargeDebugIntro": "Damit stellst du ein, wie empfindlich „Wendelin“ und „Stopp“ während der Antwort erkannt werden. Die Änderung gilt ab der nächsten gesprochenen Antwort.",
+  "bargeDebugIntro": "Damit stellst du ein, wie empfindlich „Wendelin“ während der Antwort erkannt wird. Die Änderung gilt ab der nächsten gesprochenen Antwort.",
   "bargeDebugMicCommunication": "Kommunikation + AEC (Standard)",
   "bargeDebugMicDuring": "Mikrofon während der Antwort",
   "bargeDebugMicRecognition": "Erkennung, ohne AEC",
@@ -31,7 +31,7 @@
     }
   },
   "micSettingsHint": "In den Android-Einstellungen unter Apps → Wendelin erlauben.",
-  "speechCommunicationHelp": "Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Stopp“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.",
+  "speechCommunicationHelp": "Die Antwort läuft wie ein Anruf über den Lautsprecher, damit „Wendelin“ sicherer erkannt wird. Nebenwirkungen: Es gilt die Anruf-Lautstärke, der Klang ist dünner, und mit Bluetooth-Geräten kann die Wiedergabe umschalten. Mit Kopfhörern bleibt die Ausgabe dort. Gilt ab der nächsten Antwort.",
   "speechCommunicationTitle": "Antwort als Gesprächston (bessere Echo-Unterdrückung)",
   "wakeCalibrateCancelled": "Abgebrochen. Es wurde nichts geändert.",
   "wakeCalibrateDone": "Kalibriert.",
@@ -154,7 +154,6 @@
     }
   },
   "wakeEnrollTitle": "Stimme einlernen",
-  "wakeEnrollTitleStop": "„Stopp“ einlernen",
   "wakeEnrollTooEarly": "Zu früh angefangen. Warte kurz und sprich dann.",
   "wakeEnrollTooLong": "Zu lang. Nur „{word}“, bitte.",
   "@wakeEnrollTooLong": {
@@ -309,7 +308,6 @@
   "wakeWordEnroll": "Stimme einlernen",
   "wakeWordEnrollMore": "Weitere Person einlernen",
   "wakeWordFeatureModels": "Merkmalsmodelle",
-  "wakeWordInterrupt": "Unterbrechen mit „Stopp“",
   "wakeWordIntro": "Wendelin lernt deine Stimme: Du sagst „Wendelin“ etwa 15 Mal, danach erkennt er es auch im Alltag. Gespeichert werden nur Zahlenwerte, verschlüsselt auf dem Gerät. Audio wird nie gespeichert.",
   "wakeWordLearned": "Gelernte Stimmen",
   "wakeWordNameOptional": "Name (optional)",
@@ -324,7 +322,7 @@
       }
     }
   },
-  "wakeWordRecordingsThreshold": "{length} Aufnahmen · Schwelle {v}{v2}",
+  "wakeWordRecordingsThreshold": "{length} Aufnahmen · Schwelle {v}",
   "@wakeWordRecordingsThreshold": {
     "placeholders": {
       "length": {
@@ -332,22 +330,14 @@
       },
       "v": {
         "type": "String"
-      },
-      "v2": {
-        "type": "String"
       }
     }
   },
   "wakeWordRetrain": "Neu einlernen",
-  "wakeWordRetrainStop": "„Stopp“ neu einlernen",
-  "wakeWordStopLearned": "„Stopp“ ist gelernt: Du kannst die Ansage mit „Stopp“ allein unterbrechen.",
-  "wakeWordStopNotLearned": "Ohne gelerntes „Stopp“ unterbricht nur „Wendelin, stopp“ die Ansage. Lerne „Stopp“ ein, damit du die Ansage mit dem einen Wort unterbrechen kannst.",
-  "wakeWordStopOnlySpeaking": "„Stopp“ wirkt nur, während Wendelin spricht und Unterbrechen auf „Schlüsselwörter“ steht. Im Hintergrund löst „Stopp“ nichts aus.",
   "wakeWordTemplatesMissing": "Vorlagen fehlen. Bitte neu einlernen.",
-  "wakeWordTrainStop": "„Stopp“ einlernen",
+  "wakeWordTemplatesOutdated": "Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.",
   "wakeWordTryNow": "Jetzt ausprobieren",
   "wakeWordWhoCalibrate": "Wen kalibrieren?",
   "wakeWordWhoJoins": "Wer kommt dazu?",
-  "wakeWordWhoSpeaks": "Wer spricht?",
-  "wakeWordWhoStop": "Wer lernt „Stopp“?"
+  "wakeWordWhoSpeaks": "Wer spricht?"
 }

@@ -13,7 +13,7 @@ bool isLogEvent(String line, String event) =>
     line.contains('Wendelin/voice: $event ');
 
 /// The `barge-hit kind=` that follows a verdict.
-const bargeHitOfVerdict = {'stop': 'keyword-stop', 'wake': 'keyword-wake'};
+const bargeHitOfVerdict = {'wake': 'keyword-wake'};
 
 /// Checks the two-stage barge-in (K84) in [lines]: `barge-config` has
 /// `verify=true`, every `barge-hit` is preceded by a `barge-cand` and by a

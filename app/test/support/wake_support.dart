@@ -56,8 +56,11 @@ class SequenceAudio implements AudioInput {
 FakeWakeFeatureExtractor fakeFeatures({
   Float32List Function(int endSample)? vector,
   String version = 'fake-1',
+  Float32List? mean,
 }) => FakeWakeFeatureExtractor(
   featureVersion: version,
+  embeddingMean: mean,
+  centerId: wakeCenterId,
   windowFor: (end, _) => WakeWindow(
     endSample: end,
     embedding:

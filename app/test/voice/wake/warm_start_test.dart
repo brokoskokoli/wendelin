@@ -61,6 +61,12 @@ class _ColdChain implements WakeFeatureExtractor {
 
   @override
   String get featureVersion => 'fake-1';
+
+  @override
+  Float32List? get embeddingMean => null;
+
+  @override
+  String? get centerId => null;
   @override
   Future<void> open() async {}
   @override
@@ -155,11 +161,11 @@ void main() {
       addTearDown(() => voiceLogSink = saved);
       final m = BargeMeter();
       m
-        ..onWindow(0.1, 0.1)
-        ..onWindow(0.1, 0.1)
-        ..onWindow(0.1, 0.1)
+        ..onWindow(0.1)
+        ..onWindow(0.1)
+        ..onWindow(0.1)
         ..flush()
-        ..onWindow(0.1, 0.1)
+        ..onWindow(0.1)
         ..flush()
         ..flush()
         ..summary();

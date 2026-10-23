@@ -9,7 +9,6 @@ import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 final _wake = Float32List.fromList([1, 0]);
-final _stop = Float32List.fromList([0, 1]);
 final _none = Float32List.fromList([-1, -1]);
 
 WakeTemplates _tpl(Float32List e) => WakeTemplates(
@@ -23,7 +22,7 @@ WakeTemplates _tpl(Float32List e) => WakeTemplates(
 /// order, first the warm-up ones, then the live ones.
 CandidateWakeEngine _engine(
   List<Float32List> windows, {
-  void Function(double, double, double?)? onWindow,
+  void Function(double, double?)? onWindow,
 }) {
   var i = 0;
   return CandidateWakeEngine(
@@ -33,7 +32,6 @@ CandidateWakeEngine _engine(
           WakeWindow(endSample: end, embedding: windows[i++]),
     ),
     templates: _tpl(_wake),
-    stopTemplates: [_tpl(_stop)],
     modelThreshold: null,
     onWindow: onWindow,
   );
@@ -71,7 +69,7 @@ final class _LogEngine implements WarmableWakeEngine {
   @override
   Future<List<WakeWordHit>> accept(Int16List frame) async {
     log.add('live');
-    return [const WakeWordHit(keywordId: 'stop', endSample: 0, confidence: 1)];
+    return [const WakeWordHit(keywordId: 'wake', endSample: 0, confidence: 1)];
   }
 
   @override
@@ -91,32 +89,20 @@ Int16List _loud(int n) => Int16List(n)..fillRange(0, n, 3000);
 
 void main() {
   group('CandidateWakeEngine.warmUp', () {
-    test(
-      'Fenster im Vorlauf: kein onWindow, kein Zustand (Stopp-Folge)',
-      () async {
-        var seen = 0;
-        final e = _engine([
-          _stop,
-          _stop,
-          _stop,
-          _stop,
-        ], onWindow: (_, _, _) => seen++);
-        await e.open([KeywordSpec.wendelin]);
-        e.reset();
-        await _warm(e, 3);
-        expect(seen, 0, reason: 'der Vorlauf bewertet kein Fenster');
-        // Stopp braucht zwei Fenster in Folge; der Vorlauf zählt nicht mit.
-        expect(await _live(e, 1), isEmpty);
-        expect(seen, 1);
-      },
-    );
-
-    test('Stopp im Vorlauf macht ein Wake-Fenster nicht zu Stopp', () async {
-      final e = _engine([_stop, _stop, _wake]);
+    test('Fenster im Vorlauf: kein onWindow, kein Zustand', () async {
+      var seen = 0;
+      final e = _engine([
+        _none,
+        _none,
+        _none,
+        _none,
+      ], onWindow: (_, _) => seen++);
       await e.open([KeywordSpec.wendelin]);
       e.reset();
-      await _warm(e, 2);
-      expect(await _live(e, 1), ['wake']);
+      await _warm(e, 3);
+      expect(seen, 0, reason: 'der Vorlauf bewertet kein Fenster');
+      expect(await _live(e, 1), isEmpty);
+      expect(seen, 1);
     });
 
     test('Wake im Vorlauf sperrt das erste Live-Fenster nicht', () async {
@@ -130,7 +116,7 @@ void main() {
     test(
       'neutrale Live-Fenster nach einem Vorlauf aus Treffern: kein Treffer',
       () async {
-        final e = _engine([_wake, _stop, _none, _none]);
+        final e = _engine([_wake, _wake, _none, _none]);
         await e.open([KeywordSpec.wendelin]);
         e.reset();
         await _warm(e, 2);
@@ -194,12 +180,12 @@ void main() {
       await d.dispose();
     });
 
-    test('Befehl endet auf "Stopp" + 800 ms Stille: kein Stopp aus dem Vorlauf', () async {
+    test('Befehl + 800 ms Stille: kein Treffer aus dem Vorlauf', () async {
       // Vorlauf 2,4 s: 1,6 s Sprache, dann 0,8 s Stille (endSilence).
       final pcm = Int16List(38400)..setRange(0, 25600, _loud(25600));
       final d = detector(() => pcm);
       await d.start();
-      // Jeder Live-Frame meldet "stop" (Fenster reicht noch in den Befehl).
+      // Jeder Live-Frame meldet "wake" (Fenster reicht noch in den Befehl).
       for (var i = 0; i < 30; i++) {
         audio.push(Int16List(480));
       }

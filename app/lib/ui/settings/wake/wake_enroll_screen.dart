@@ -41,7 +41,6 @@ class WakeEnrollScreen extends ConsumerStatefulWidget {
     super.key,
     required this.speakerId,
     required this.name,
-    this.stop = false,
   });
 
   /// Speaker to learn (existing ones are re-learned).
@@ -49,10 +48,6 @@ class WakeEnrollScreen extends ConsumerStatefulWidget {
 
   /// Display name (may be empty).
   final String name;
-
-  /// Learn „Stopp“ for [speakerId] instead of „Wendelin“ (WP64b): ten
-  /// recordings, stored apart from the wake word templates.
-  final bool stop;
 
   @override
   ConsumerState<WakeEnrollScreen> createState() => _WakeEnrollScreenState();
@@ -79,15 +74,11 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
     final e = WakeEnroller(
       audio: ref.read(wakeAudioProvider),
       features: ref.read(wakeFeaturesFactoryProvider)(),
-      store: widget.stop
-          ? ref.read(wakeStoreProvider).stop
-          : ref.read(wakeStoreProvider),
+      store: ref.read(wakeStoreProvider),
       speakerId: widget.speakerId,
-      target: widget.stop ? 10 : 15,
-      minimum: widget.stop ? 6 : 8,
-      threshold: widget.stop
-          ? stopProvisionalThreshold
-          : wakeProvisionalThreshold,
+      target: 15,
+      minimum: 8,
+      threshold: wakeProvisionalThreshold,
       pause: ref.read(wakeEnrollPauseProvider),
     );
     setState(() => _enroller = e);
@@ -109,16 +100,10 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
 
   Future<void> _finish(WakeEnroller e) async {
     await e.finish();
-    if (widget.stop) {
-      ref.invalidate(stopLearnedProvider);
-      ref.invalidate(stopLearnedForProvider(widget.speakerId));
-      ref.invalidate(wakeBargeInDetectorProvider);
-    } else {
-      await ref
-          .read(wakeSpeakersProvider.notifier)
-          .upsert(widget.speakerId, widget.name);
-      ref.invalidate(wakeTemplatesProvider(widget.speakerId));
-    }
+    await ref
+        .read(wakeSpeakersProvider.notifier)
+        .upsert(widget.speakerId, widget.name);
+    ref.invalidate(wakeTemplatesProvider(widget.speakerId));
     if (mounted) Navigator.of(context).pop(true);
   }
 
@@ -144,11 +129,9 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
   Widget _body(WakeEnroller e) {
     final done = e.phase == EnrollPhase.complete;
     final failed = e.error != null;
-    final word = widget.stop ? context.l10n.stop : context.l10n.appName;
+    final word = context.l10n.appName;
     return SettingsPage(
-      title: widget.stop
-          ? context.l10n.wakeEnrollTitleStop
-          : context.l10n.wakeWordEnroll,
+      title: context.l10n.wakeWordEnroll,
       intro: context.l10n.wakeEnrollIntro(word),
       children: [
         SectionCard(
@@ -175,11 +158,7 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
                       style: WText.label,
                     ),
                     Text(
-                      enrollHint(
-                        context.l10n,
-                        e.accepted,
-                        perStep: widget.stop ? 3 : 4,
-                      ),
+                      enrollHint(context.l10n, e.accepted),
                       style: WText.detail,
                     ),
                     Waveform(
