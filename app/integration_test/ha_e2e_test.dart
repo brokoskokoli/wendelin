@@ -53,15 +53,6 @@ void main() {
       'nur mit Bestätigung, gesperrt ohne HA', (tester) async {
     expect(_url, startsWith('http://10.0.2.2:'), reason: 'HA_URL fehlt');
     final llm = FakeLlmProvider([
-      // 1 Licht aus
-      ScriptedTurn.toolCalls([
-        _call(
-          'c1',
-          'ha__call',
-          '{"entity":"Küche Deckenlicht","service":"turn_off"}',
-        ),
-      ]),
-      ScriptedTurn.text('Licht ist aus.'),
       // 2 Szene
       ScriptedTurn.toolCalls([
         _call('c2', 'ha__call', '{"entity":"Filmabend","service":"turn_on"}'),
@@ -196,19 +187,45 @@ void main() {
         return s.pending!;
       }
 
-      // 1 Licht aus: ohne Rückfrage, dann Undo stellt Helligkeit wieder her.
+      // Schnellweg (WP135, Standard an): feste Befehle laufen ohne Modell.
+      // Tool-ID und fester Satz kommen aus dem Verlauf, nicht aus einem Skript.
+      List<ToolEntry> toolEntries() => c
+          .read(agentControllerProvider)
+          .entries
+          .whereType<ToolEntry>()
+          .toList();
+      Future<ToolEntry> fastSend(String text) async {
+        final known = {for (final e in toolEntries()) e.id};
+        final asked = llm.requests.length;
+        await controller.send(text);
+        await controller.idle;
+        expect(c.read(agentControllerProvider).pending, isNull);
+        expect(llm.requests.length, asked, reason: 'Modell gefragt: $text');
+        final added = toolEntries().where((e) => !known.contains(e.id));
+        expect(added, hasLength(1), reason: 'ein neuer Tool-Aufruf: $text');
+        expect(added.single.toolName, 'ha__call');
+        // Fester Satz (de: „… ausgeschaltet.“), nicht ein Satz des Modells.
+        final last = c.read(agentControllerProvider).entries.last;
+        expect(last, isA<AssistantTextEntry>());
+        expect(
+          (last as AssistantTextEntry).text,
+          matches(RegExp('ausgeschaltet|turned off|éteint')),
+        );
+        return added.single;
+      }
+
+      // 1 Licht aus (Schnellweg): ohne Rückfrage und ohne Modell, dann Undo
+      // stellt Helligkeit wieder her.
       expect((await now('light.kitchen')).state, 'on');
-      await controller.send('Mach das Licht in der Küche aus');
-      await controller.idle;
-      expect(c.read(agentControllerProvider).pending, isNull);
+      final kitchen = await fastSend('Mach das Licht in der Küche aus');
       expect((await now('light.kitchen')).state, 'off');
-      expect(tool('c1')?.undo, UndoPhase.pending);
-      expect(await controller.undo('c1'), isTrue);
+      expect(tool(kitchen.id)?.undo, UndoPhase.pending);
+      expect(await controller.undo(kitchen.id), isTrue);
       final k = await now('light.kitchen');
       expect(k.state, 'on');
       expect(k.attributes['brightness'], 200);
       // ignore: avoid_print
-      print('HA Licht: aus ohne Rückfrage, Undo -> on, brightness 200');
+      print('HA Licht: Schnellweg ohne Modell, Undo -> on, brightness 200');
 
       // 2 Szene: ohne Rückfrage; Undo stellt Lampe zurück, keine Rest-Szene.
       final before = (await now('light.living')).attributes['brightness'];
@@ -225,6 +242,14 @@ void main() {
       // ignore: avoid_print
       print('HA Szene: Undo stellt brightness $before her, keine Rest-Szene');
 
+      // 2b Licht Wohnzimmer aus (Schnellweg): kein Modell, Undo stellt "on" her.
+      expect((await now('light.living')).state, 'on');
+      final living = await fastSend('Licht Wohnzimmer aus');
+      expect((await now('light.living')).state, 'off');
+      expect(tool(living.id)?.undo, UndoPhase.pending);
+      expect(await controller.undo(living.id), isTrue);
+      expect((await now('light.living')).state, 'on');
+
       // 3 Schloss: Bestätigung, Nein ändert nichts.
       await controller.send('Schließ die Haustür auf');
       final q3 = await waitQuestion() as ToolQuestion;
@@ -237,7 +262,8 @@ void main() {
       expect((await now('lock.front')).state, 'locked');
       expect(tool('c3')?.undo ?? UndoPhase.none, isNot(UndoPhase.pending));
 
-      // 4 Garage: Ja öffnet, kein Undo.
+      // 4 Garage: kein Schnellweg (Tore fragen immer), das Modell ruft
+      // ha__call_secure, Ja öffnet, kein Undo.
       await controller.send('Mach das Garagentor auf');
       final q4 = await waitQuestion() as ToolQuestion;
       expect(q4.event.description, contains('Garagentor'));
