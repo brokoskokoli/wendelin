@@ -86,6 +86,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP135 | Smart Home schneller: Geräteliste, Synonyme, feste Bestätigung, Schnellweg ohne KI, Rollo ohne Rückfrage | in Arbeit | K108; parallel zu Wake-Paketen möglich |
 | WP136 | Parakeet (NeMo) lädt nach dem Download nicht | in Arbeit | Testbefund 2026-10-23; Go Maintainer, 4. Sitzung |
 | WP137 | Wake Word: v8c mit echten Aufnahmen, wortspezifischer Prüfer statt Parakeet, Aufnahme-Anleitung | in Arbeit | K110; Go Maintainer 2026-10-23 |
+| WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
