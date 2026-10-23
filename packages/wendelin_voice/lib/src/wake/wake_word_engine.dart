@@ -15,6 +15,7 @@ final class WakeWordHit {
     this.reason,
     this.score,
     this.direct = false,
+    this.holdMs,
   });
 
   /// Id of the [KeywordSpec] (`wake`, `stop`).
@@ -36,6 +37,11 @@ final class WakeWordHit {
   /// WP129: a sure hit (classifier at or above the accept limit): the
   /// listener skips stage 2.
   final bool direct;
+
+  /// WP141: how long the engine held the score before deciding, in ms
+  /// (decision window minus first window in the band; `0` for an immediate
+  /// decision, `null` without hold). [endSample] is the peak window.
+  final int? holdMs;
 
   @override
   String toString() => 'WakeWordHit($keywordId, @$endSample, $confidence)';

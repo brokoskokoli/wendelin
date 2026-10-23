@@ -277,6 +277,12 @@ final class WakeHost {
       // Which recognizer decided stage 2 (parakeet, whisper); `none` if none.
       'verifier': !d.hit.direct && _verify ? _verifier?.kind ?? 'none' : 'none',
     });
+    // WP141: how long stage 1 held the score and on which path it went on.
+    voiceLog('wake-decision', {
+      'hold_ms': d.hit.holdMs ?? 0,
+      'peak': (d.hit.score ?? d.hit.confidence ?? 0).toStringAsFixed(3),
+      'path': d.hit.direct ? 'direct' : 'stage2',
+    });
     if (!_verify && !d.hit.direct) {
       voiceLog('wake-verify', {'result': 'skip'});
     }

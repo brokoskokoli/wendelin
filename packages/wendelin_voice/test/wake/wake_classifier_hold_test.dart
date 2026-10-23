@@ -1,5 +1,5 @@
-// WP129: Stufe 1 entscheidet mit dem Spitzenwert des Ereignisses (Halten ab
-// Band-Eintritt), nicht mit dem ersten Fenster im Band.
+// WP129/WP141: stage 1 decides with the **peak** of the event, observed from
+// the first window in the band for `holdDuration` (inclusive).
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
@@ -8,16 +8,19 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 const _band = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.995);
 
-/// Feeds [scores] one window each; returns the hits as (window index, hit).
+/// Window of 80 ms (1280 samples at 16 kHz).
+const _w = 1280;
+
+/// Feeds [scores] one 80 ms window each; returns the hits as (window index
+/// of the decision, hit).
 Future<List<(int, WakeWordHit)>> _run(
   List<double?> scores, {
-  int hold = 5,
-  int drops = 1,
+  Duration hold = const Duration(milliseconds: 800),
 }) async {
   var i = 0;
   final e = CandidateWakeEngine(
     features: FakeWakeFeatureExtractor(
-      windowEvery: 100,
+      windowEvery: _w,
       windowFor: (end, _) => WakeWindow(
         endSample: end,
         embedding: Float32List.fromList([0, 1]),
@@ -26,18 +29,24 @@ Future<List<(int, WakeWordHit)>> _run(
     ),
     modelThreshold: _band.verifyFrom,
     directThreshold: _band.acceptFrom,
-    holdWindows: hold,
-    dropsToEnd: drops,
+    holdDuration: hold,
   );
   await e.open([KeywordSpec.wendelin]);
   final hits = <(int, WakeWordHit)>[];
   for (i = 0; i < scores.length; i++) {
-    for (final h in await e.accept(Int16List(100))) {
+    for (final h in await e.accept(Int16List(_w))) {
       hits.add((i, h));
     }
   }
   return hits;
 }
+
+/// [lead] low windows, the event windows, then 12 low windows (the hold ends).
+List<double?> _call(List<double?> event, {int lead = 1}) => [
+  ...List.filled(lead, 0.1),
+  ...event,
+  ...List.filled(12, 0.1),
+];
 
 void main() {
   test(
@@ -48,179 +57,132 @@ void main() {
       expect(hits.single.$1, 3);
       expect(hits.single.$2.direct, isTrue);
       expect(hits.single.$2.score, 0.995);
+      expect(hits.single.$2.holdMs, 160, reason: '2 Fenster nach dem ersten');
+      expect(hits.single.$2.endSample, 4 * _w);
     },
   );
 
-  test(
-    'Spitze im Band: nach dem Abfall mit dem Spitzenwert, nicht direkt',
-    () async {
-      final hits = await _run([0.5, 0.981, 0.99, 0.985, 0.2]);
-      expect(
-        hits.single.$1,
-        3,
-        reason: 'Abfall unter die Spitze beendet das Halten',
-      );
-      expect(hits.single.$2.score, 0.99);
-      expect(hits.single.$2.direct, isFalse);
-    },
-  );
-
-  test('Halten endet nach holdWindows mit dem Spitzenwert', () async {
-    final hits = await _run([0.981, 0.982, 0.983, 0.984, 0.985, 0.986, 0.987]);
-    expect(hits.single.$1, 4, reason: 'fünftes Fenster im Band');
-    expect(hits.single.$2.score, 0.985);
+  test('Spitze im Band: Abfall beendet nichts, nach 0,8 s entscheidet die '
+      'Spitze, Trefferzeit ist das Spitzenfenster', () async {
+    final hits = await _run(_call([0.981, 0.99, 0.985, 0.2]));
+    // First band window index 1 -> decision window index 11 (+0.80 s).
+    expect(hits.single.$1, 11);
+    expect(hits.single.$2.score, 0.99);
+    expect(hits.single.$2.direct, isFalse);
+    expect(hits.single.$2.endSample, 3 * _w, reason: 'Spitzenfenster');
+    expect(hits.single.$2.holdMs, 800);
   });
 
-  test('knapp vor dem Limit (4 Fenster) wird noch gehalten', () async {
-    final hits = await _run([0.981, 0.982, 0.983, 0.984, 0.2]);
-    expect(hits.single.$1, 4);
-    expect(hits.single.$2.score, 0.984);
+  test('Spitze bei +0,80 s zählt noch, bei +0,88 s nicht', () async {
+    List<double?> series(int peakAt) =>
+        [0.1, 0.981, ...List.filled(12, 0.5)]..[1 + peakAt] = 0.995 - 0.0001;
+    final in80 = await _run(series(10));
+    expect(in80.single.$2.score, closeTo(0.9949, 1e-9));
+    expect(in80.single.$1, 11);
+    expect(in80.single.$2.endSample, 12 * _w);
+    final at88 = await _run(series(11));
+    expect(at88.single.$2.score, 0.981, reason: '+0,88 s zählt nicht');
+    expect(at88.single.$1, 11);
   });
 
-  test('gleicher Score verlängert das Halten (>= Spitze)', () async {
-    final hits = await _run([0.981, 0.99, 0.99, 0.2]);
-    expect(
-      hits.single.$1,
-      3,
-      reason: 'gleicher Wert hält weiter, Ende erst beim Abfall',
-    );
+  test('gleicher Score: das spätere Fenster ist die Spitze', () async {
+    final hits = await _run(_call([0.981, 0.99, 0.99, 0.2]));
+    expect(hits.single.$2.endSample, 4 * _w);
     expect(hits.single.$2.score, 0.99);
   });
 
-  test('erstes Fenster schon >= acceptFrom: sofort direkt', () async {
+  test('erstes Fenster schon >= acceptFrom: sofort direkt, holdMs 0', () async {
     final hits = await _run([0.5, 0.996]);
     expect(hits.single.$1, 1);
     expect(hits.single.$2.direct, isTrue);
+    expect(hits.single.$2.holdMs, 0);
   });
 
   test('unter der unteren Grenze: nie ein Treffer', () async {
-    expect(await _run([0.979, 0.9799, 0.5, 0.979]), isEmpty);
+    expect(await _run(_call([0.979, 0.9799, 0.5, 0.979])), isEmpty);
+  });
+
+  test('Score fehlt (null) im Halten: beendet nichts', () async {
+    final hits = await _run(_call([0.981, null, 0.99, null]));
+    expect(hits.single.$1, 11);
+    expect(hits.single.$2.score, 0.99);
+  });
+
+  test('ein später höherer Score wird nach dem Halten direkt', () async {
+    final hits = await _run([0.981, 0.985, ...List.filled(5, 0.2), 0.9951]);
+    expect(hits.single.$1, 7);
+    expect(hits.single.$2.direct, isTrue);
+  });
+
+  test('Wert >= acceptFrom nach einem Abfall unter das Band: direkt', () async {
+    final hits = await _run([0.99, 0.5, 0.2, 0.9951]);
+    expect(hits.single.$1, 3);
+    expect(hits.single.$2.direct, isTrue);
   });
 
   test(
-    'Score fehlt im Halten (null): mit dem Spitzenwert entscheiden',
+    'holdDuration 0: erstes Fenster im Band entscheidet (wie bisher)',
     () async {
-      final hits = await _run([0.981, 0.99, null]);
-      expect(hits.single.$1, 2);
-      expect(hits.single.$2.score, 0.99);
-    },
-  );
-
-  test(
-    'holdWindows 0: erstes Fenster im Band entscheidet (wie bisher)',
-    () async {
-      final hits = await _run([0.981, 0.99, 0.996], hold: 0);
+      final hits = await _run([0.981, 0.99, 0.996], hold: Duration.zero);
       expect(hits.single.$1, 0);
       expect(hits.single.$2.score, 0.981);
+      expect(hits.single.$2.holdMs, isNull);
     },
   );
 
-  test(
-    'Stufe-2-Fall: ein später höherer Score wird nach dem Halten direkt',
-    () async {
-      // Früher: Treffer beim ersten Fenster (0.981, Stufe 2). Jetzt: Spitze.
-      final hits = await _run([0.981, 0.985, 0.9951]);
-      expect(hits.single.$1, 2);
-      expect(hits.single.$2.direct, isTrue);
-    },
-  );
+  test('Sperrzeit läuft ab der Spitze: Spitze 1,36 s nach der ersten '
+      'gesperrt, auch wenn die Entscheidung später als 1,5 s liegt', () async {
+    // Call 1: first window 1, peak 3 (0.24 s), decision 11. Call 2: first 20,
+    // peak 22 (1,76 s - 0,24 s = 1,52 s) -> allowed; with peak at 21 blocked.
+    List<double?> two(int peak2) => List.filled(40, 0.1)
+      ..[1] = 0.981
+      ..[3] = 0.99
+      ..[19] = 0.981
+      ..[peak2] = 0.99;
+    final blocked = await _run(two(20));
+    expect(blocked, hasLength(1), reason: '1,52 s - 0,24 s = 1,28 s');
+    final allowed = await _run(two(22));
+    expect(allowed, hasLength(2));
+    expect(allowed.last.$2.endSample, 23 * _w);
+  });
 
-  group('dropsToEnd', () {
-    test('2: ein einzelnes Absinken beendet das Halten nicht, der spätere '
-        'Anstieg über acceptFrom entscheidet direkt', () async {
-      final hits = await _run([0.5, 0.9917, 0.9892, 0.998], drops: 2);
-      expect(hits.single.$1, 3);
-      expect(hits.single.$2.direct, isTrue);
-      expect(hits.single.$2.score, 0.998);
-    });
+  test('Zustand ist nach dem Ereignis frei (zweites Ereignis neu)', () async {
+    final hits = await _run([
+      0.99,
+      ...List.filled(12, 0.2),
+      ...List.filled(25, 0.1),
+      0.985,
+      ...List.filled(12, 0.2),
+    ]);
+    expect(hits.map((h) => h.$2.score), [0.99, 0.985]);
+  });
 
-    test('1 (Standard): dasselbe Muster endet beim ersten Absinken', () async {
-      final hits = await _run([0.5, 0.9917, 0.9892, 0.998]);
-      expect(hits.first.$1, 2);
-      expect(hits.first.$2.score, 0.9917);
-      expect(hits.first.$2.direct, isFalse);
-    });
-
-    test(
-      '2: zwei aufeinanderfolgende Absinken beenden es mit der Spitze',
-      () async {
-        final hits = await _run([0.99, 0.985, 0.984, 0.998], drops: 2);
-        expect(hits.first.$1, 2, reason: 'zweites Absinken in Folge');
-        expect(hits.first.$2.score, 0.99);
-        expect(hits.first.$2.direct, isFalse);
-      },
-    );
-
-    test(
-      '2: ein Fenster auf/über der Spitze setzt die Zählung zurück',
-      () async {
-        // Absinken, Gleichstand (>= Spitze), Absinken: nie zwei in Folge.
-        final hits = await _run([0.99, 0.985, 0.99, 0.985, 0.2], drops: 2);
-        expect(
-          hits.single.$1,
-          4,
-          reason: 'Ende erst am Limit/zweiten Absinken',
-        );
-        expect(hits.single.$2.score, 0.99);
-      },
-    );
-
-    test('Absinken zählt zum Limit holdWindows', () async {
-      final hits = await _run([0.99, 0.985, 0.99, 0.985, 0.99, 0.99], drops: 3);
-      expect(hits.single.$1, 4, reason: 'fünftes Fenster = Limit');
-    });
-
-    test('2: Absinken unter die untere Grenze und null zählen mit', () async {
-      expect((await _run([0.99, 0.5, 0.5, 0.998], drops: 2)).first.$1, 2);
-      expect((await _run([0.99, null, null, 0.998], drops: 2)).first.$1, 2);
-      expect((await _run([0.99, double.nan, 0.5, 0.9], drops: 2)).first.$1, 2);
-    });
-
-    test('Spitze nach einem Absinken wird die neue Spitze', () async {
-      final hits = await _run([0.981, 0.98, 0.99, 0.2, 0.2], drops: 2);
-      expect(hits.single.$1, 4);
-      expect(hits.single.$2.score, 0.99);
-    });
-
-    test('Zustand ist nach dem Ereignis frei (zweites Ereignis neu)', () async {
-      final hits = await _run([
-        0.99,
-        0.2,
-        0.2,
-        ...List.filled(250, 0.1),
-        0.985,
-        0.2,
-        0.2,
-      ], drops: 2);
-      expect(hits.map((h) => h.$2.score), [0.99, 0.985]);
-    });
-
-    test('Zählung der Absinken beginnt mit jedem Ereignis neu', () async {
-      final hits = await _run([
-        0.99,
-        0.2,
-        0.2,
-        ...List.filled(250, 0.1),
-        0.985,
-        0.2,
-        0.986,
-        0.2,
-        0.2,
-      ], drops: 2);
-      expect(hits, hasLength(2));
-      expect(hits.last.$1, 3 + 250 + 4, reason: 'zweites Absinken in Folge');
-      expect(hits.last.$2.score, 0.986);
-    });
-
-    test('dropsToEnd < 1 ist ein Programmierfehler', () {
-      expect(
-        () => CandidateWakeEngine(
-          features: FakeWakeFeatureExtractor(windowEvery: 100),
-          dropsToEnd: 0,
+  test('reset verwirft ein laufendes Halten', () async {
+    final e = CandidateWakeEngine(
+      features: FakeWakeFeatureExtractor(
+        windowEvery: _w,
+        windowFor: (end, _) => WakeWindow(
+          endSample: end,
+          embedding: Float32List(2),
+          modelScore: 0.99,
         ),
-        throwsA(isA<AssertionError>()),
-      );
-    });
+      ),
+      modelThreshold: _band.verifyFrom,
+      directThreshold: _band.acceptFrom,
+      holdDuration: const Duration(milliseconds: 800),
+    );
+    await e.open([KeywordSpec.wendelin]);
+    for (var i = 0; i < 5; i++) {
+      expect(await e.accept(Int16List(_w)), isEmpty);
+    }
+    e.reset();
+    // A fresh hold starts: nothing for 10 windows (+0.72 s), the 11th ends it.
+    var n = 0;
+    for (var i = 0; i < 10; i++) {
+      n += (await e.accept(Int16List(_w))).length;
+    }
+    expect(n, 0);
+    expect((await e.accept(Int16List(_w))), hasLength(1));
   });
 
   group('NaN-Score (fail-closed)', () {
@@ -228,19 +190,18 @@ void main() {
 
     test('NaN allein löst nie aus (mit und ohne Halten)', () async {
       expect(await _run([nan, nan, nan]), isEmpty);
-      expect(await _run([nan, nan], hold: 0), isEmpty);
+      expect(await _run([nan, nan], hold: Duration.zero), isEmpty);
     });
 
     test('NaN vor dem Band wird nie zur Spitze: Band danach zählt', () async {
-      final hits = await _run([nan, 0.99, 0.2]);
+      final hits = await _run(_call([nan, 0.99, 0.2]));
       expect(hits, hasLength(1));
       expect(hits.single.$2.score, 0.99);
     });
 
-    test('NaN nach Band-Eintritt gibt die endliche Spitze frei', () async {
-      final hits = await _run([0.99, nan, 0.2]);
-      expect(hits, hasLength(1));
-      expect(hits.single.$2.score, 0.99);
+    test('NaN im Halten beendet nichts: später höhere Spitze zählt', () async {
+      final hits = await _run(_call([0.99, nan, 0.992, 0.2]));
+      expect(hits.single.$2.score, 0.992);
     });
 
     test('decideCandidate: NaN ist kein Kandidat', () {

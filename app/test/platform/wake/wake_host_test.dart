@@ -298,6 +298,10 @@ void main() {
         'stage=1-unchecked score=0.900 verifier=none',
       ),
     );
+    expect(
+      logs.join('\n'),
+      contains('wake-decision engine=wake hold_ms=0 peak=0.900 path=stage2'),
+    );
   });
 
   group('Erkennung (WP129)', () {
@@ -606,7 +610,7 @@ void main() {
         ['a', 'b'],
       );
       expect(e.modelThreshold, isNull);
-      expect(e.holdWindows, 0);
+      expect(e.holdDuration, Duration.zero);
     });
 
     test(
@@ -631,7 +635,7 @@ void main() {
           expect(e.templates, isNull);
           expect(e.modelThreshold, band(station).verifyFrom);
           expect(e.directThreshold, band(station).acceptFrom);
-          expect(e.holdWindows, WakeClassifierRules.holdWindows);
+          expect(e.holdDuration, WakeClassifierRules.holdWindow);
           expect(e.silenceFloor, isNotNull);
           expect(e.silenceFloor!.minRms, WakeClassifierRules.silenceFloorRms);
           expect(e.silenceFloor!.ratio, 0, reason: 'kein Rauschboden-Faktor');
