@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/di/agent_factory.dart';
+import 'package:wendelin/di/app_settings.dart';
 import 'package:wendelin/di/hint_term_providers.dart';
 import 'package:wendelin/di/home_assistant.dart';
+import 'package:wendelin/di/preferences.dart';
 import 'package:wendelin/di/providers.dart';
 import 'package:wendelin/ui/settings/ha_screen.dart';
 import 'package:wendelin_core/wendelin_core.dart';
@@ -107,6 +110,18 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('haEntity_light.kitchen')));
     await settle(tester);
     expect(await confirmed('switch.coffee'), isTrue);
+
+    // Schnellweg: standardmäßig an, der Schalter speichert und wirkt auf die
+    // nächste Anfrage (WP135 D).
+    await tester.drag(find.byType(ListView), const Offset(0, 3000));
+    await settle(tester);
+    expect(c.read(haFastPathProvider), isTrue);
+    expect((c.read(agentFactoryProvider) as AgentFactory).fastPath, isNotNull);
+    await tester.tap(find.byKey(const ValueKey('haFastPath')));
+    await settle(tester);
+    expect(c.read(haFastPathProvider), isFalse);
+    expect(await env.storage.settings.get(AppSettings.haFastPath), isFalse);
+    expect((c.read(agentFactoryProvider) as AgentFactory).fastPath, isNull);
 
     // Trennen löscht alles.
     await tester.drag(find.byType(ListView), const Offset(0, 3000));

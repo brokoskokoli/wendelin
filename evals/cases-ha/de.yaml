@@ -38,3 +38,16 @@ cases:
     expect:
       calls:
         - tool: ha__call_secure
+  - id: de-ha-kaffee-an
+    category: smarthome
+    prompt: Kaffeemaschine an.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call
+  - id: de-ha-licht-nackt
+    category: smarthome
+    prompt: Licht an.
+    setup: {backends: [ha]}
+    expect:
+      no_tools: true

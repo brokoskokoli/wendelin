@@ -35,6 +35,9 @@ final class HaContext {
   bool _failed = false;
   bool _syncing = false;
 
+  /// When the last comparison failed (`null` = it did not).
+  DateTime? _failedAt;
+
   /// Runs [body]; a rejected token pauses the integration, the next success
   /// lifts the pause. Temporary failures (offline, 5xx) do not pause.
   Future<T> guard<T>(Future<T> Function() body) async {
@@ -65,12 +68,18 @@ final class HaContext {
   /// room are taken over, entities it no longer lists get `missing`. Runs
   /// when [force] or the last comparison is older than [haSyncInterval].
   /// Never throws; a failure (network, token, store) keeps the old state
-  /// and has no effect on calls. A new entity is never approved (K10).
+  /// and has no effect on calls; a failed comparison is tried again after
+  /// [haSyncRetry] at the earliest (not at every prompt). A new entity is
+  /// never approved (K10).
   Future<void> syncIfDue({bool force = false}) async {
     if (_syncing) return;
     _syncing = true;
+    final now = _now();
     try {
-      final now = _now();
+      final failed = _failedAt;
+      if (!force && failed != null && now.difference(failed) < haSyncRetry) {
+        return;
+      }
       final last = await store.lastSync();
       if (!force && last != null && now.difference(last) < haSyncInterval) {
         return;
@@ -78,8 +87,10 @@ final class HaContext {
       if ((await store.load()).isEmpty) return;
       final fresh = await guard(api.entities);
       await haSyncStore(store, fresh, now);
+      _failedAt = null;
     } on Object {
       // Old state stays.
+      _failedAt = now;
     } finally {
       _syncing = false;
     }

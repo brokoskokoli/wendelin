@@ -29,3 +29,7 @@ cases:
     - tool: ha__call_secure
       args: {entity: Rollo Wohnzimmer, service: set_cover_position, position_pct: 50}
     - text: Das Rollo im Wohnzimmer steht auf 50 Prozent.
+  de-ha-kaffee-an:
+    - tool: ha__call
+      args: {entity: Kaffeemaschine, service: turn_on}
+    - text: Die Kaffeemaschine ist an.

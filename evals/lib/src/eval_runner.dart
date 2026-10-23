@@ -72,6 +72,7 @@ final class EvalRunner {
     required this.time,
     this.config = const AgentConfig(),
     this.voice = false,
+    this.fastPath = false,
     this.onlyIntegrations,
     this.budget,
     GiveUpClassifier? giveUpClassifier,
@@ -99,6 +100,10 @@ final class EvalRunner {
 
   /// Whether the request counts as spoken (WP41: speech hint, stage 2).
   final bool voice;
+
+  /// Wire the fast path of the Home Assistant integration like the app
+  /// does (WP135 D); off = every request goes to the model.
+  final bool fastPath;
 
   /// Detects „kann ich nicht“ answers (the agent's own classifier).
   final GiveUpClassifier giveUpClassifier;
@@ -270,13 +275,7 @@ final class EvalRunner {
     MemoryStorePort memory,
     List<Integration> integrations,
   ) async {
-    for (final integration in integrations) {
-      if (onlyIntegrations != null &&
-          !onlyIntegrations!.contains(integration.id)) {
-        continue;
-      }
-      await registry.registerIntegration(integration, enabled: true);
-    }
+    await _register(registry, integrations);
     final catalog = registry.catalogFor(target.privacy, sessionId: sessionId);
     final provider = target.provider(c);
     final agent = AgentRunner(
@@ -302,6 +301,7 @@ final class EvalRunner {
       clock: clock,
       sessionId: sessionId,
       costEstimator: target.costEstimator,
+      fastPath: _fastPathOf(integrations),
     );
 
     final calls = <ObservedCall>[];
@@ -370,6 +370,23 @@ final class EvalRunner {
       spokenText: spokenText,
     );
   }
+
+  Future<void> _register(
+    ToolRegistry registry,
+    List<Integration> integrations,
+  ) async {
+    for (final integration in integrations) {
+      if (onlyIntegrations != null &&
+          !onlyIntegrations!.contains(integration.id)) {
+        continue;
+      }
+      await registry.registerIntegration(integration, enabled: true);
+    }
+  }
+
+  FastPath? _fastPathOf(List<Integration> integrations) => fastPath
+      ? integrations.whereType<HaIntegration>().firstOrNull?.fastPath
+      : null;
 
   static ObservedCall _observedCall(ToolCallBlock call, ToolOutcome outcome) =>
       ObservedCall(

@@ -105,6 +105,36 @@ void main() {
       expect((await ctx.resolve('Alter Name')).entityId, 'light.kitchen');
     });
 
+    test(
+      'after a failure the next try waits 15 minutes, force does not',
+      () async {
+        api.failNext(
+          'entities',
+          const PortException(PortErrorKind.unavailable, 'offline'),
+        );
+        await ctx.syncIfDue();
+        api.remove('light.bedroom');
+        now = now.add(const Duration(minutes: 14));
+        await ctx.syncIfDue();
+        expect(store.synced, isNull, reason: 'too early, no second call');
+        expect(store.entities.any((e) => e.missing), isFalse);
+        now = now.add(const Duration(minutes: 1));
+        await ctx.syncIfDue();
+        expect(store.synced, now);
+        expect(store.entities.any((e) => e.missing), isTrue);
+      },
+    );
+
+    test('force ignores the wait after a failure', () async {
+      api.failNext(
+        'entities',
+        const PortException(PortErrorKind.unavailable, 'offline'),
+      );
+      await ctx.syncIfDue();
+      await ctx.syncIfDue(force: true);
+      expect(store.synced, now);
+    });
+
     test('an empty answer is no evidence: nothing is marked missing', () async {
       expect(haReconcile([_kitchen], const []), isNull);
       api.failNext('entities', StateError('x'));

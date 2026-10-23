@@ -271,6 +271,7 @@ Integration haBackend() {
       'light.eval_living': 'Wohnzimmer',
       'cover.eval_living': 'Wohnzimmer',
       'cover.eval_bedroom': 'Schlafzimmer',
+      'switch.eval_coffee': 'Küche',
     })
     ..set('light.eval_living', 'on', {
       'friendly_name': 'Licht Wohnzimmer',
@@ -281,6 +282,7 @@ Integration haBackend() {
       'device_class': 'blind',
       'current_position': 100,
     })
+    ..set('switch.eval_coffee', 'off', {'friendly_name': 'Kaffeemaschine'})
     ..set('cover.eval_bedroom', 'open', {
       'friendly_name': 'Rollo Schlafzimmer',
       'device_class': 'blind',
@@ -296,11 +298,20 @@ Integration haBackend() {
       entityId: 'cover.eval_living',
       name: 'Rollo Wohnzimmer',
       area: 'Wohnzimmer',
+      deviceClass: 'blind',
+      noConfirm: true,
     ),
     const HaEntity(
       entityId: 'cover.eval_bedroom',
       name: 'Rollo Schlafzimmer',
       area: 'Schlafzimmer',
+      deviceClass: 'blind',
+      noConfirm: true,
+    ),
+    const HaEntity(
+      entityId: 'switch.eval_coffee',
+      name: 'Kaffeemaschine',
+      area: 'Küche',
     ),
     const HaEntity(entityId: 'lock.front', name: 'Haustür', area: 'Flur'),
   ]);

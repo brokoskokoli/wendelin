@@ -19,7 +19,7 @@ void main() {
     File('fake/ha_script.yaml').readAsStringSync(),
   );
 
-  Future<CaseResult> run(String id) {
+  Future<CaseResult> run(String id, {bool fastPath = false}) {
     final c = cases.singleWhere((c) => c.id == id);
     return EvalRunner(
       target: EvalTarget(
@@ -30,20 +30,38 @@ void main() {
         costEstimator: const FlatCostEstimator(),
       ),
       time: time,
+      fastPath: fastPath,
     ).runCase(c);
   }
 
   /// id → (model calls, tool calls, errors among them). VORHER (Stand vor
   /// WP135 A–C): licht-aus 1/1/0, lampe-an 3/3/1, rollo-runter 2/1/0,
-  /// rollo-rauf 2/1/0, rollo-50 2/1/1. NACHHER: überall 1/1/0. Das Skript ist
-  /// fest (kein echtes Modell) und nennt das Gerät schon beim ersten Aufruf,
-  /// wie es mit Geräteliste im Prompt wäre; echte Läufe schwanken mehr.
+  /// rollo-rauf 2/1/0, rollo-50 2/1/1. NACHHER (A–C): überall 1/1/0; die
+  /// Rollo-Fälle gehen ohne Rückfrage über ha__call_secure nur im Skript, das
+  /// weiter dieses Werkzeug wählt. Das Skript ist fest (kein echtes Modell)
+  /// und nennt das Gerät schon beim ersten Aufruf, wie es mit Geräteliste im
+  /// Prompt wäre; echte Läufe schwanken mehr.
   const expected = <String, (int, int, int)>{
     'de-ha-licht-aus': (1, 1, 0),
     'de-ha-lampe-an': (1, 1, 0),
     'de-ha-rollo-runter': (1, 1, 0),
     'de-ha-rollo-rauf': (1, 1, 0),
     'de-ha-rollo-50': (1, 1, 0),
+    'de-ha-kaffee-an': (1, 1, 0),
+    // Ein nacktes „Licht an“ ist mehrdeutig: das Modell antwortet.
+    'de-ha-licht-nackt': (1, 0, 0),
+  };
+
+  /// Mit Schnellweg (D): einfache Befehle ohne Modellaufruf, nur der Werkzeug-
+  /// aufruf bleibt. „Lampe Wohnzimmer an“ trifft über das Typwort das Licht.
+  const withFastPath = <String, (int, int, int)>{
+    'de-ha-licht-aus': (0, 1, 0),
+    'de-ha-lampe-an': (0, 1, 0),
+    'de-ha-rollo-runter': (0, 1, 0),
+    'de-ha-rollo-rauf': (0, 1, 0),
+    'de-ha-rollo-50': (0, 1, 0),
+    'de-ha-kaffee-an': (0, 1, 0),
+    'de-ha-licht-nackt': (1, 0, 0),
   };
 
   for (final id in expected.keys) {
@@ -60,6 +78,21 @@ void main() {
         o.calls.length,
         o.calls.where((x) => x.isError).length,
       ), expected[id]);
+    });
+  }
+
+  for (final id in withFastPath.keys) {
+    test('$id (Schnellweg)', () async {
+      final o = (await run(id, fastPath: true)).observation;
+      stdout.writeln(
+        'MESSUNG schnellweg $id modell=${o.modelCalls} '
+        'tools=${o.calls.length} text="${o.finalText}"',
+      );
+      expect((
+        o.modelCalls,
+        o.calls.length,
+        o.calls.where((x) => x.isError).length,
+      ), withFastPath[id]);
     });
   }
 }

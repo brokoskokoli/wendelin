@@ -17,6 +17,7 @@ import 'attestation_providers.dart';
 import 'audit_recorder.dart';
 import 'core_providers.dart';
 import 'costs.dart';
+import 'home_assistant.dart' show haIntegrationOf;
 import 'integration_providers.dart';
 import 'preference_models.dart';
 import 'preferences.dart';
@@ -213,6 +214,9 @@ final agentFactoryProvider = Provider<AgentRunFactory>((ref) {
       personaAddon: assistant.persona,
       spokenVersion: spokenVersion,
     ),
+    fastPath: ref.watch(haFastPathProvider)
+        ? haIntegrationOf(ref.watch(integrationsProvider))?.fastPath
+        : null,
     registry: ref.watch(toolRegistryProvider),
     storage: storage,
     policy: ref.watch(riskPolicyProvider),

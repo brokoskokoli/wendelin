@@ -8,6 +8,7 @@ import 'package:wendelin_tools/wendelin_tools.dart';
 
 import '../../di/hint_term_providers.dart';
 import '../../di/home_assistant.dart';
+import '../../di/preferences.dart';
 import '../../di/providers.dart';
 import '../../l10n/l10n.dart';
 import '../design/design.dart';
@@ -345,6 +346,18 @@ class _HaScreenState extends ConsumerState<HaScreen> {
               ),
             ),
             SettingsRow(title: context.l10n.haApproved(_approved.length)),
+            SettingsRow(
+              title: context.l10n.haFastPath,
+              detail: context.l10n.haFastPathHelp,
+              trailing: WSwitch(
+                key: const ValueKey('haFastPath'),
+                value: ref.watch(haFastPathProvider),
+                semanticLabel: context.l10n.haFastPath,
+                onChanged: (on) => unawaited(
+                  ref.read(haFastPathProvider.notifier).set(on: on),
+                ),
+              ),
+            ),
           ],
         ),
         if (failed)

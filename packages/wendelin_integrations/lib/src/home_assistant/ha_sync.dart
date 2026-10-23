@@ -5,6 +5,9 @@ import 'ha_ports.dart';
 /// when nobody asks for it (app start, prompt).
 const haSyncInterval = Duration(days: 1);
 
+/// After a failed comparison the next one waits at least this long.
+const haSyncRetry = Duration(minutes: 15);
+
 /// The approved entities after a comparison with [fresh], the list Home
 /// Assistant reports now (WP135 A).
 ///

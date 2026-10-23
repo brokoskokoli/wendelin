@@ -1,5 +1,4 @@
 import 'package:test/test.dart';
-import 'package:wendelin_core/wendelin_core.dart';
 import 'package:wendelin_integrations/src/home_assistant/ha_context.dart';
 import 'package:wendelin_integrations/src/home_assistant/ha_fast_path.dart';
 import 'package:wendelin_integrations/testing.dart';
@@ -279,6 +278,24 @@ void main() {
         expect(await args(text, lang), isNull);
       });
     });
+
+    test(
+      'ohne Gerätename trifft auch ein einziges Gerät des Typs nicht',
+      () async {
+        final single = HaFastPath(
+          HaContext(
+            FakeHaApi(),
+            FakeHaEntityStore(const [
+              HaEntity(entityId: 'light.only', name: 'Leselampe', area: 'Büro'),
+              HaEntity(entityId: 'switch.only', name: 'Radio', area: 'Küche'),
+            ]),
+          ),
+        );
+        expect(await single.match('Licht an', language: 'de'), isNull);
+        expect(await single.match('Schalter aus', language: 'de'), isNull);
+        expect(await single.match('Leselampe an', language: 'de'), isNotNull);
+      },
+    );
 
     test('unbekannte Sprache und fehlende Sprache', () async {
       expect(await fast.match('Küche Licht an', language: 'it'), isNull);
