@@ -178,16 +178,7 @@ extension _VoiceConfirmation on VoiceController {
           _agent.answer(approved: answer == YesNo.yes);
           return;
         }
-        // Counts only (no text): tells „too short / cut off“ from „wrong
-        // words“ on the device (WP140).
-        voiceLog('confirm-unclear', {
-          'attempt': attempt + 1,
-          'words': RegExp(
-            r'[\p{L}\p{N}]+',
-            unicode: true,
-          ).allMatches(transcript.text).length,
-          'audioMs': pcm.length * 1000 ~/ AudioInput.sampleRate,
-        });
+        _logUnclear(attempt, transcript, pcm);
       }
       reason = 'unclear';
       byTap = true;
@@ -209,6 +200,19 @@ extension _VoiceConfirmation on VoiceController {
       if (byTap && closed() == null) await _answerByTap(tts);
       _askQueued();
     }
+  }
+
+  /// Counts only (no text): tells „too short / cut off“ from „wrong words“
+  /// on the device (WP140).
+  void _logUnclear(int attempt, Transcript transcript, Int16List pcm) {
+    voiceLog('confirm-unclear', {
+      'attempt': attempt + 1,
+      'words': RegExp(
+        r'[\p{L}\p{N}]+',
+        unicode: true,
+      ).allMatches(transcript.text).length,
+      'audioMs': pcm.length * 1000 ~/ AudioInput.sampleRate,
+    });
   }
 
   /// The spoken answer did not work: the card says „Antworte per Tipp“
