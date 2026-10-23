@@ -1,4 +1,5 @@
 import 'speech_model.dart';
+import 'wake_classifier_catalog.dart';
 
 const _hfBase =
     'https://huggingface.co/csukuangfj/sherpa-onnx-whisper-base/resolve/'
@@ -6,8 +7,6 @@ const _hfBase =
 const _hfSmall =
     'https://huggingface.co/csukuangfj/sherpa-onnx-whisper-small/resolve/'
     '8f3c18b358db4d1f2fc1eae49d75cd20989e4309';
-const _oww =
-    'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1';
 const _gh = 'https://github.com/k2-fsa/sherpa-onnx/releases/download';
 
 /// Whisper tokens (identical file for base and small).
@@ -56,6 +55,7 @@ final class SpeechModelCatalog {
     voiceDeThorstenHigh,
     voiceKokoro,
     wakeFeatures,
+    wakeClassifierWendelin,
     speakerCamPlus,
   ]);
 
@@ -98,7 +98,7 @@ final class SpeechModelCatalog {
   static const whisperSmall = SpeechModel(
     id: 'whisper-small',
     kind: SpeechModelKind.stt,
-    displayName: 'Whisper small – genauer (empfohlen)',
+    displayName: 'Whisper small – genauer',
     languages: {'de', 'fr', 'en'},
     license: 'MIT (OpenAI Whisper)',
     source: _hfSource,
@@ -431,39 +431,16 @@ final class SpeechModelCatalog {
     ],
   );
 
-  /// openWakeWord feature models (mel spectrogram and speech embedding) for
-  /// the wake word „Wendelin“ (WP44). The WP58 classifier is added as
-  /// `wake-classifier-wendelin` once it passes its acceptance and is hosted.
-  static const wakeFeatures = SpeechModel(
-    id: 'wake-features',
-    kind: SpeechModelKind.wake,
-    displayName: 'Aktivierungswort – Merkmalsmodelle',
-    languages: {},
-    license: 'Apache-2.0 (openWakeWord, Google speech_embedding)',
-    source:
-        'GitHub-Release dscripka/openWakeWord v0.5.1; SHA-256 selbst '
-        'gehasht (2026-10-14)',
-    note: _ghNote,
-    attribution:
-        'Merkmalsmodelle aus openWakeWord (David Scripka, Apache-2.0); das '
-        'Embedding-Modell basiert auf Google speech_embedding (Apache-2.0).',
-    files: [
-      ModelFile(
-        name: 'melspectrogram.onnx',
-        url: '$_oww/melspectrogram.onnx',
-        sizeBytes: 1087958,
-        sha256:
-            'ba2b0e0f8b7b875369a2c89cb13360ff53bac436f2895cced9f479fa65eb176f',
-      ),
-      ModelFile(
-        name: 'embedding_model.onnx',
-        url: '$_oww/embedding_model.onnx',
-        sizeBytes: 1326578,
-        sha256:
-            '70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f',
-      ),
-    ],
-  );
+  /// openWakeWord feature models for the wake word (WP44), see
+  /// [WakeClassifierCatalog.features].
+  static const wakeFeatures = WakeClassifierCatalog.features;
+
+  /// Trained wake word classifier „Wendelin“ (WP129): defined in
+  /// [WakeClassifierCatalog], the one place for id, hash, URL and limits.
+  static const wakeClassifierWendelin = WakeClassifierCatalog.model;
+
+  /// File name of the classifier inside its model directory.
+  static const wakeClassifierFile = WakeClassifierCatalog.file;
 
   /// Speaker embedding for the speaker recognition (WP92a): 3D-Speaker
   /// CAM++ trained on Chinese and English speaker data, 192-dimensional

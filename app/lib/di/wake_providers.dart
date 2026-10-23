@@ -10,6 +10,7 @@ import '../platform/voice/audio_playback.dart';
 import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
+import '../platform/wake/wake_detector.dart';
 import '../voice/wake/lazy_barge_verifier.dart';
 import '../voice/wake/wake_barge_in.dart';
 import '../voice/wake/wake_storage.dart';
@@ -46,6 +47,33 @@ final class WakeVerifyNotifier extends AsyncNotifier<bool> {
   Future<void> set({required bool enabled}) async {
     state = AsyncData(enabled);
     await ref.read(storageProvider).settings.set(wakeVerifyKey, enabled);
+  }
+}
+
+/// Setting „Erkennung“ (WP129): `auto` (default), `templates`, `model`.
+final wakeDetectorKey = SettingKey.string(
+  'wake.detector',
+  defaultValue: 'auto',
+);
+
+/// The choice of the stage 1 detection; mirrored to the service by
+/// `WakeServiceNotifier`.
+final wakeDetectorProvider =
+    AsyncNotifierProvider<WakeDetectorNotifier, WakeDetectorChoice>(
+      WakeDetectorNotifier.new,
+    );
+
+/// Stores the setting.
+final class WakeDetectorNotifier extends AsyncNotifier<WakeDetectorChoice> {
+  @override
+  Future<WakeDetectorChoice> build() async => WakeDetectorChoice.parse(
+    await ref.read(storageProvider).settings.get(wakeDetectorKey),
+  );
+
+  /// Chooses the detection.
+  Future<void> set(WakeDetectorChoice choice) async {
+    state = AsyncData(choice);
+    await ref.read(storageProvider).settings.set(wakeDetectorKey, choice.name);
   }
 }
 
@@ -103,24 +131,48 @@ final wakeTemplatesProvider = FutureProvider.family<WakeTemplates?, String>(
 
 /// New feature chain (tests replace it by a fake). The models come from
 /// the catalog entry `wake-features`; an error if they are not downloaded.
-final wakeFeaturesFactoryProvider = Provider<WakeFeatureExtractor Function()>((
-  ref,
-) {
+final wakeFeaturesFactoryProvider = Provider<WakeFeatureExtractor Function()>(
+  (ref) => _featuresFactory(ref, classifier: false),
+);
+
+/// WP129: the feature chain with the trained classifier (windows carry
+/// `modelScore`). Needs `wake-features` and `wake-classifier-wendelin`;
+/// without them an error (`modelMissing`), never a silent fallback.
+final wakeClassifierFeaturesFactoryProvider =
+    Provider<WakeFeatureExtractor Function()>(
+      (ref) => _featuresFactory(ref, classifier: true),
+    );
+
+const _missingText =
+    'Die Wake-Modelle fehlen (Einstellungen → Sprache → Aktivierungswort).';
+
+WakeFeatureExtractor Function() _featuresFactory(
+  Ref ref, {
+  required bool classifier,
+}) {
   return () => ChainWakeFeatureExtractor(() async {
     final service = await ref.read(speechModelServiceProvider.future);
-    final model = ref
-        .read(speechModelCatalogProvider)
-        .byId(SpeechModelCatalog.wakeFeatures.id)!;
+    final catalog = ref.read(speechModelCatalogProvider);
+    final model = catalog.byId(SpeechModelCatalog.wakeFeatures.id)!;
     if (!await service.isInstalled(model)) {
-      throw const VoiceException(
-        VoiceErrorKind.modelMissing,
-        'Die Merkmalsmodelle fehlen (Einstellungen → Sprache → '
-        'Aktivierungswort).',
-      );
+      throw const VoiceException(VoiceErrorKind.modelMissing, _missingText);
     }
-    return OnnxWakeModels.open(service.directoryOf(model).path);
+    String? classifierPath;
+    if (classifier) {
+      final c = catalog.byId(SpeechModelCatalog.wakeClassifierWendelin.id)!;
+      if (!await service.isInstalled(c)) {
+        throw const VoiceException(VoiceErrorKind.modelMissing, _missingText);
+      }
+      classifierPath =
+          '${service.directoryOf(c).path}/'
+          '${SpeechModelCatalog.wakeClassifierFile}';
+    }
+    return OnnxWakeModels.open(
+      service.directoryOf(model).path,
+      classifierPath: classifierPath,
+    );
   });
-});
+}
 
 /// Stage 2 on Whisper; `null` while Whisper is not loaded.
 final wakeVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {

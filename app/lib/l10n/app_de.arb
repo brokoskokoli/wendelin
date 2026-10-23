@@ -2514,6 +2514,7 @@
       }
     }
   },
+  "modelRowRecommended": "(empfohlen)",
   "modelRowResume": "Fortsetzen",
   "modelRowStarted": "{size} · angefangen",
   "@modelRowStarted": {
@@ -2534,7 +2535,7 @@
   "voiceConvKeepListeningDetail": "Nach der gesprochenen Antwort bleibt das Mikrofon kurz offen, du kannst ohne Tippen nachfragen. „Danke“ oder „Stopp“ beendet.",
   "voiceConvKeepListeningLabel": "Weiter zuhören nach der Antwort",
   "voiceDownloadAnd": " und ",
-  "voiceDownloadBundled": "{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser und ist empfohlen. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.",
+  "voiceDownloadBundled": "{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.",
   "@voiceDownloadBundled": {
     "placeholders": {
       "displayName": {
@@ -2837,6 +2838,21 @@
   },
   "wakeCalibrateTitle": "Kalibrieren",
   "wakeCalibrateUnusable": "Nicht verwertbar.",
+  "wakeDetectorAuto": "Automatisch",
+  "wakeDetectorAutoHint": "Handy: deine Stimme (Vorlagen). Station: das trainierte Modell.",
+  "wakeDetectorModel": "Trainiertes Modell",
+  "wakeDetectorModelHint": "Erkennt „Wendelin“ ohne Einlernen. Braucht den Download.",
+  "wakeDetectorModelNeeded": "Das trainierte Modell wird für diese Einstellung benötigt: {v}.",
+  "@wakeDetectorModelNeeded": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeDetectorTemplates": "Vorlagen deiner Stimme",
+  "wakeDetectorTemplatesHint": "Vergleicht mit deinen Aufnahmen. Braucht das Einlernen.",
+  "wakeDetectorTitle": "Erkennung",
   "wakeEnrollAllThere": "Alle Aufnahmen sind da.",
   "wakeEnrollFailed": "Das Einlernen ist gescheitert: {error}",
   "@wakeEnrollFailed": {
@@ -2953,6 +2969,7 @@
   "wakeServiceSectionEnable": "Aktivierungswort einschalten",
   "wakeServiceSectionEnableDetail": "Wendelin hört im Hintergrund auf „Wendelin“.",
   "wakeServiceSectionEndedEngine": "Beendet: Die Erkennung ist ausgefallen",
+  "wakeServiceSectionEndedModel": "Beendet: Ein Modell für die Wake-Erkennung fehlt",
   "wakeServiceSectionEndedNoPermission": "Beendet: Mikrofon-Berechtigung fehlt",
   "wakeServiceSectionEndedNoRole": "Beendet: Wendelin ist nicht mehr dein Assistent",
   "wakeServiceSectionEndedNotCharging": "Beendet: Das Gerät lädt nicht mehr",

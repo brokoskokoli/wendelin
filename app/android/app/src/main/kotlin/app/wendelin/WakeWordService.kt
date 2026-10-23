@@ -99,13 +99,13 @@ class WakeWordService : Service() {
         }
         if (engine != null) {
             // Already listening: only the settings may have changed.
-            engine?.send("run", mapOf("verify" to settings.verify))
+            engine?.send("run", settings.runArgs(StationState.active))
             VoiceLog.i("wake-start result=ok source=$source again=true")
             return
         }
         val e = RecognizerEngine(this, ::onEngineCall, "wakeWordMain", ENGINE_CHANNEL)
         engine = e
-        e.send("run", mapOf("verify" to settings.verify))
+        e.send("run", settings.runArgs(StationState.active))
         watcher = WakeConflictWatcher(this, main, { mic?.sessionId ?: 0 }) { reason ->
             VoiceLog.i("wake-conflict reason=${reason ?: "none"}")
             lastConflict = reason
@@ -127,8 +127,10 @@ class WakeWordService : Service() {
             "stopMic" -> if (!WakePolicy.ignoresMicCalls(WakeHandoff.capturing(), mic != null)) stopMic()
             "hit" -> onHit(call)
             "failed" -> {
-                VoiceLog.i("wake-failed reason=${call.argument<String>("reason") ?: "?"}")
-                end("engine-failed")
+                val reported = call.argument<String>("reason")
+                VoiceLog.i("wake-failed reason=${reported ?: "?"}")
+                // modelMissing is no „Wieder einschalten“ case: the model stays missing.
+                end(WakePolicy.failureReason(reported))
             }
         }
     }
@@ -415,3 +417,7 @@ class WakeWordService : Service() {
         }
     }
 }
+
+/** Channel arguments of `run` for the wake engine: stage 2, detector choice, station flag (WP129). */
+internal fun WakeSettings.runArgs(stationActive: Boolean): Map<String, Any> =
+    mapOf("verify" to verify, "detector" to detector, "station" to stationActive)

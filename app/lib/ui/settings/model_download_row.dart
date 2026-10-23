@@ -24,11 +24,15 @@ class ModelDownloadRow extends ConsumerWidget {
     this.deletable = true,
     this.onDeleted,
     this.extra,
+    this.recommended = false,
   });
 
   /// Small action next to the check mark of the chosen model (WP74: the
   /// play button of „Probe hören“).
   final Widget? extra;
+
+  /// Adds „(empfohlen)“ to the title (WP129: Parakeet checks the wake word).
+  final bool recommended;
 
   /// Catalog entry.
   final SpeechModel model;
@@ -44,6 +48,10 @@ class ModelDownloadRow extends ConsumerWidget {
 
   /// Whether „Löschen“ is offered for an installed model.
   final bool deletable;
+
+  String _title(BuildContext context) => recommended
+      ? '${model.displayName} ${context.l10n.modelRowRecommended}'
+      : model.displayName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,7 +99,7 @@ class ModelDownloadRow extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SettingsRow(
-          title: model.displayName,
+          title: _title(context),
           detail: [
             detail,
             if (model.ramBytes case final ram?)

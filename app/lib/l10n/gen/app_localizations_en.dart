@@ -4353,6 +4353,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get modelRowRecommended => '(recommended)';
+
+  @override
   String get modelRowResume => 'Resume';
 
   @override
@@ -4399,7 +4402,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String voiceDownloadBundled(String displayName, String v) {
-    return '$displayName is included and is downloaded too ($v). “small” recognizes German, French and names much better and is recommended. “base” is fast and meant for weak devices. More models: Settings → Voice.';
+    return '$displayName is included and is downloaded too ($v). “small” recognizes German, French and names much better. “base” is fast and meant for weak devices. More models: Settings → Voice.';
   }
 
   @override
@@ -4869,6 +4872,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeCalibrateUnusable => 'Not usable.';
 
   @override
+  String get wakeDetectorAuto => 'Automatic';
+
+  @override
+  String get wakeDetectorAutoHint =>
+      'Phone: your voice (templates). Station: the trained model.';
+
+  @override
+  String get wakeDetectorModel => 'Trained model';
+
+  @override
+  String get wakeDetectorModelHint =>
+      'Recognizes “Wendelin” without enrollment. Needs the download.';
+
+  @override
+  String wakeDetectorModelNeeded(String v) {
+    return 'This setting needs the trained model: $v.';
+  }
+
+  @override
+  String get wakeDetectorTemplates => 'Templates of your voice';
+
+  @override
+  String get wakeDetectorTemplatesHint =>
+      'Compares with your recordings. Needs enrollment.';
+
+  @override
+  String get wakeDetectorTitle => 'Detection';
+
+  @override
   String get wakeEnrollAllThere => 'All recordings are in.';
 
   @override
@@ -5039,6 +5071,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeServiceSectionEndedEngine => 'Ended: recognition failed';
+
+  @override
+  String get wakeServiceSectionEndedModel =>
+      'Ended: a model for wake detection is missing';
 
   @override
   String get wakeServiceSectionEndedNoPermission =>

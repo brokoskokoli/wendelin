@@ -21,6 +21,8 @@ data class WakeSettings(
     val mode: WakeMode = WakeMode.CHARGING,
     /** Stage 2 (Whisper check) on or off, `wake.verify` of the app. */
     val verify: Boolean = true,
+    /** Stage 1 detection choice (WP129): `auto`, `templates` or `model`. */
+    val detector: String = "auto",
     /** „Pause 1 h“: nothing starts before this time (epoch ms), 0 = not paused. */
     val pausedUntilMs: Long = 0L,
     /**
@@ -40,11 +42,15 @@ data class WakeSettings(
             enabled = on,
             mode = (args?.get("mode") as? String)?.let { WakeMode.parse(it) } ?: mode,
             verify = args?.get("verify") as? Boolean ?: verify,
+            detector = (args?.get("detector") as? String)?.takeIf { it in DETECTORS } ?: detector,
             pausedUntilMs = if (on) pausedUntilMs else 0L,
             offByUser = if (args?.containsKey("enabled") == true) false else offByUser,
         )
     }
 }
+
+/** Accepted values of the setting `detector` (WP129). */
+val DETECTORS = setOf("auto", "templates", "model")
 
 /** Where a wake word hit goes (WP93). */
 enum class HitRoute { CHAT, OVERLAY }
@@ -229,6 +235,13 @@ object WakePolicy {
 
     /** Debug builds only: the `debugHit` shortcut ([flags] of ApplicationInfo, FLAG_DEBUGGABLE = 2). */
     fun allowsDebugHit(flags: Int): Boolean = flags and 2 != 0
+
+    /**
+     * The stop reason the service stores for a failure [reported] by the Dart engine. The missing
+     * model keeps its own reason (the status names it); every other failure is `engine-failed`.
+     */
+    fun failureReason(reported: String?): String =
+        if (reported == "modelMissing") "modelMissing" else "engine-failed"
 
     /** Whether a service that runs for [mode] has to stop when charging changes to [charging]. */
     fun stopsOnUnplug(mode: WakeMode, charging: Boolean): Boolean =

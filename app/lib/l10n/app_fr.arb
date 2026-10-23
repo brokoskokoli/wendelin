@@ -1410,6 +1410,7 @@
       }
     }
   },
+  "modelRowRecommended": "(recommandé)",
   "modelRowResume": "Reprendre",
   "modelRowStarted": "{size} · partiellement téléchargé",
   "voiceConvAdvanced": "Avancé",
@@ -1423,7 +1424,7 @@
   "voiceConvKeepListeningDetail": "Après la réponse parlée, le microphone reste brièvement ouvert et vous pouvez poser une question sans toucher l’écran. « Merci » ou « Stop » y met fin.",
   "voiceConvKeepListeningLabel": "Continuer à écouter après la réponse",
   "voiceDownloadAnd": " et ",
-  "voiceDownloadBundled": "{displayName} en fait partie ({v}) et est téléchargé aussi. « small » reconnaît bien mieux l’allemand, le français et les noms, et il est recommandé. « base » est rapide et prévu pour les appareils peu puissants. Autres modèles : Paramètres → Voix.",
+  "voiceDownloadBundled": "{displayName} en fait partie ({v}) et est téléchargé aussi. « small » reconnaît bien mieux l’allemand, le français et les noms. « base » est rapide et prévu pour les appareils peu puissants. Autres modèles : Paramètres → Voix.",
   "voiceDownloadContinueInBackground": "Continuer en arrière-plan",
   "voiceDownloadContinueLoading": "Reprendre le chargement",
   "voiceDownloadIntro": "Wendelin reconnaît la parole sur l’appareil, sans internet et sans Google. Choisissez le modèle et téléchargez-le une fois, de préférence en Wi-Fi.",
@@ -1568,6 +1569,21 @@
   "wakeCalibrateResult": "Seuil {v} · {v2} fausses alertes par heure estimées (avant la vérification) · {v3} % de vos enregistrements reconnus.",
   "wakeCalibrateTitle": "Calibrer",
   "wakeCalibrateUnusable": "Inutilisable.",
+  "wakeDetectorAuto": "Automatique",
+  "wakeDetectorAutoHint": "Téléphone : ta voix (modèles). Station : le modèle entraîné.",
+  "wakeDetectorModel": "Modèle entraîné",
+  "wakeDetectorModelHint": "Reconnaît « Wendelin » sans apprentissage. Demande le téléchargement.",
+  "wakeDetectorModelNeeded": "Ce réglage demande le modèle entraîné : {v}.",
+  "@wakeDetectorModelNeeded": {
+    "placeholders": {
+      "v": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeDetectorTemplates": "Modèles de ta voix",
+  "wakeDetectorTemplatesHint": "Compare avec tes enregistrements. Demande l’apprentissage.",
+  "wakeDetectorTitle": "Détection",
   "wakeEnrollAllThere": "Tous les enregistrements sont là.",
   "wakeEnrollFailed": "L’entraînement a échoué : {error}",
   "wakeEnrollHeard": "Entendu.",
@@ -1615,6 +1631,7 @@
   "wakeServiceSectionEnable": "Activer le mot d’activation",
   "wakeServiceSectionEnableDetail": "Wendelin écoute en arrière-plan le mot « Wendelin ».",
   "wakeServiceSectionEndedEngine": "Arrêté : la reconnaissance a échoué",
+  "wakeServiceSectionEndedModel": "Arrêté : un modèle de détection manque",
   "wakeServiceSectionEndedNoPermission": "Arrêté : autorisation du microphone manquante",
   "wakeServiceSectionEndedNoRole": "Arrêté : Wendelin n’est plus votre assistant",
   "wakeServiceSectionEndedNotCharging": "Arrêté : l’appareil ne charge plus",

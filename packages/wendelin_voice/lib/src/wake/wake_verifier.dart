@@ -3,9 +3,15 @@ import 'dart:typed_data';
 import 'package:wendelin_core/wendelin_core.dart';
 
 import '../io/speech_to_text.dart';
+import '../models/wake_classifier_catalog.dart';
+import 'level_normalize.dart';
 
 /// Stage 2: confirms a candidate (port, so tests run without Whisper).
 abstract interface class WakeVerifier {
+  /// Which recognizer decides (`whisper`, `parakeet`; diagnostics only, goes
+  /// into the log line `wake-hit-stage`).
+  String get kind;
+
   /// Whether [pcm] (16 kHz mono, pre-roll plus candidate window, at most
   /// about three seconds) really contains the wake word.
   Future<bool> confirm(Int16List pcm);
@@ -188,8 +194,67 @@ int _distance(String a, String b) {
   return prev[b.length];
 }
 
-/// [WakeVerifier] on top of a [SpeechToText] (Whisper, already loaded or
-/// base).
+/// A verifier could not start (e.g. its model fails to load): the stage
+/// hands the same clip to the fallback instead of rejecting the hit.
+final class WakeVerifierUnavailable implements Exception {
+  /// Creates the signal.
+  const WakeVerifierUnavailable();
+
+  @override
+  String toString() => 'WakeVerifierUnavailable';
+}
+
+/// Takes [preferred] if [available] says so (e.g. the better model is
+/// installed), else [fallback]; an [available] that throws counts as
+/// „not available“ (WP129: Parakeet, else Whisper); a [preferred] that throws
+/// [WakeVerifierUnavailable] hands the same clip to [fallback]. [kind] is the one of the
+/// recognizer that took the last clip.
+final class PreferredWakeVerifier implements WakeVerifier {
+  /// Creates the verifier.
+  PreferredWakeVerifier({
+    required this.preferred,
+    required this.fallback,
+    required this.available,
+  }) : _kind = fallback.kind;
+
+  /// Used when [available].
+  final WakeVerifier preferred;
+
+  /// Used otherwise.
+  final WakeVerifier fallback;
+
+  /// Whether [preferred] can run now.
+  final Future<bool> Function() available;
+
+  String _kind;
+
+  @override
+  String get kind => _kind;
+
+  @override
+  Future<bool> confirm(Int16List pcm) async {
+    var use = fallback;
+    try {
+      if (await available()) use = preferred;
+    } on Object {
+      use = fallback;
+    }
+    _kind = use.kind;
+    if (identical(use, preferred)) {
+      try {
+        return await use.confirm(pcm);
+      } on WakeVerifierUnavailable {
+        _kind = fallback.kind;
+        return fallback.confirm(pcm);
+      }
+    }
+    return use.confirm(pcm);
+  }
+}
+
+/// [WakeVerifier] on top of a [SpeechToText] (Whisper or Parakeet, already
+/// loaded or base). The clip is scaled to `WakeClassifierRules.verifyPeak`
+/// first if [normalize] is set (per recognizer, see the catalog rules).
 final class TranscriptWakeVerifier implements WakeVerifier {
   /// Creates the verifier; only the last [maxSamples] are transcribed.
   TranscriptWakeVerifier(
@@ -198,7 +263,15 @@ final class TranscriptWakeVerifier implements WakeVerifier {
     this.language = 'de',
     this.maxDistance = wakeVerifyMaxDistance,
     this.onCategory,
+    this.kind = 'whisper',
+    this.normalize = WakeClassifierRules.verifyNormalizeWhisper,
   });
+
+  @override
+  final String kind;
+
+  /// Whether the clip is scaled to the target peak before the transcription.
+  final bool normalize;
 
   /// The recognizer.
   final SpeechToText stt;
@@ -219,9 +292,16 @@ final class TranscriptWakeVerifier implements WakeVerifier {
 
   @override
   Future<bool> confirm(Int16List pcm) async {
-    final audio = pcm.length > maxSamples
+    final tail = pcm.length > maxSamples
         ? Int16List.sublistView(pcm, pcm.length - maxSamples)
         : pcm;
+    final audio = normalize
+        ? normalizePeak(
+            tail,
+            target: WakeClassifierRules.verifyPeak,
+            minPeak: WakeClassifierRules.verifyMinPeak,
+          )
+        : tail;
     final t = await stt.transcribe(audio, language: language);
     onCategory?.call(
       wakeTranscriptCategory(t.text, maxDistance: maxDistance),

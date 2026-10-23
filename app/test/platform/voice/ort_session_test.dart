@@ -27,8 +27,19 @@ P _handle(PP out, String kind) {
 P _createEnv(int level, Pointer<Utf8> name, PP out) => _handle(out, 'env');
 P _options(PP out) => _handle(out, 'options');
 P _threads(P options, int n) => nullptr;
-P _session(P env, Pointer<Utf8> path, P options, PP out) =>
-    _handle(out, 'session');
+
+/// Opening the n-th session fails (1-based, 0 = never).
+int failSessionNumber = 0;
+
+P _session(P env, Pointer<Utf8> path, P options, PP out) {
+  final n = (counts['create session'] ?? 0) + 1;
+  if (n == failSessionNumber) {
+    _inc('create session failed');
+    return Pointer.fromAddress(0x9999);
+  }
+  return _handle(out, 'session');
+}
+
 P _memory(int a, int b, PP out) => _handle(out, 'memory');
 P _tensor(
   P mem,
@@ -133,6 +144,15 @@ PP fakeTable() {
   return t;
 }
 
+/// Resets the fake state (for tests that import this file).
+void resetOrtFakes() {
+  counts.clear();
+  elementType = 1;
+  failRun = false;
+  failSessionNumber = 0;
+  _data.asTypedList(4).setAll(0, [1, 2, 3, 4]);
+}
+
 void expectBalanced() {
   for (final kind in ['memory', 'value', 'info', 'options']) {
     expect(
@@ -151,6 +171,7 @@ void main() {
     counts.clear();
     elementType = 1;
     failRun = false;
+    failSessionNumber = 0;
     _data.asTypedList(4).setAll(0, [1, 2, 3, 4]);
     runtime = OrtRuntime.fromTable(fakeTable());
     session = runtime.open('/model.onnx');

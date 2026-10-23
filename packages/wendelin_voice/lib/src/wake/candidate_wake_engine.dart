@@ -29,7 +29,11 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     this.stopFloorGap = 0,
     this.stopOverridesWake = false,
     this.onWindow,
-  });
+    this.silenceFloor,
+    this.directThreshold,
+    this.holdWindows = 0,
+    this.dropsToEnd = 1,
+  }) : assert(dropsToEnd >= 1, 'dropsToEnd muss >= 1 sein');
 
   /// The feature chain.
   final WakeFeatureExtractor features;
@@ -82,6 +86,35 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
   /// as it is (WP80): „Wendelin“ must not turn into „Stopp“.
   final bool stopOverridesWake;
 
+  /// WP129 (WP126 Folgepunkt b): no main-word hit unless the recent audio
+  /// held at least a minimum level (absolute, see
+  /// `WakeClassifierRules.silenceFloorRms`), whichever rule fired. Template
+  /// embeddings look like the templates in digital silence **and** in a
+  /// quiet room (similarity 0.82..0.89 over the threshold 0.75), so a silent
+  /// stream after a warm start would otherwise be a candidate. It is no
+  /// speech detector: the ratio to the noise floor is not used (a late
+  /// decision of a real call must not be lost). `null`: no level check.
+  final SpeechGate? silenceFloor;
+
+  /// WP129: a classifier score at or above this value is a sure hit
+  /// (`WakeWordHit.direct`, no stage 2). `null`: every hit goes to stage 2.
+  final double? directThreshold;
+
+  /// WP129: from the first window in the band (at or above [modelThreshold],
+  /// below [directThreshold]) the classifier score is held for up to this many
+  /// windows and the event is decided with its **peak**: when the score falls
+  /// below the peak, or at the limit. A score at or above [directThreshold]
+  /// decides at once. `0` (or no [directThreshold]): the first window decides.
+  /// [holdWindows] counts all windows from the first one in the band, also the
+  /// ones that fell.
+  final int holdWindows;
+
+  /// WP129: the hold ends after this many **consecutive** windows below the
+  /// peak (a null/NaN score counts as below); a window at or above the peak
+  /// resets the count. `1`: the first fall ends it. A single dip between two
+  /// high windows (0.9917, 0.9892, 0.998) is no end with `2`.
+  final int dropsToEnd;
+
   /// Windows before the background similarity is trusted.
   static const stopFloorWarmup = 10;
 
@@ -128,62 +161,28 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     final stops = _usable(stopTemplates);
     final hits = <WakeWordHit>[];
     stopGate?.feed(frame);
+    if (silenceFloor != null && !identical(silenceFloor, stopGate)) {
+      silenceFloor!.feed(frame);
+    }
     for (final w in await features.accept(frame)) {
       if (w.modelScore != null && w.modelScore! > maxModelScore) {
         maxModelScore = w.modelScore!;
       }
       // The speaker whose similarity is closest above the own threshold
       // decides (no speaker: only the classifier rule).
+      final score = _eventScore(w.modelScore);
       final main = _closest(w.embedding, usable);
       if (main.top > maxSimilarity) maxSimilarity = main.top;
       var d = decideCandidate(
-        modelScore: w.modelScore,
+        modelScore: score,
         templateSimilarity: main.similarity,
         modelThreshold: modelThreshold,
         templateThreshold: main.threshold,
       );
-      var id = keywordId;
-      final stop = _closest(w.embedding, stops, tail: stopTailShare);
-      onWindow?.call(main.top, stop.top, w.modelScore);
-      var stopDecision = decideCandidate(
-        modelScore: null,
-        templateSimilarity: stop.similarity,
-        modelThreshold: null,
-        templateThreshold: stop.threshold,
-      );
-      final rawStop = stopDecision;
-      stopDecision = _gateStop(stopDecision, stop.top, stops.isNotEmpty);
-      // „Stopp“ is short: it counts only after [stopWindows] consecutive
-      // windows above its threshold (a single spike is no hit).
-      _stopRun = stopDecision == null ? 0 : _stopRun + 1;
-      _sinceStop = stopDecision == null ? _sinceStop + 1 : 0;
-      if (stopDecision != null) {
-        _lastStop = stopDecision;
-        // WP113: both words over their threshold (during the output): „Stopp“
-        // wins, whatever the margins. Otherwise wait for the confirming
-        // window, a „Wendelin“ must not slip through meanwhile.
-        if (d != null || _stopRun >= stopWindows) {
-          d = stopDecision;
-          id = stopKeywordId;
-        } else {
-          d = null;
-        }
-      } else if (d != null && _lastStop != null && _sinceStop <= stopWindows) {
-        // „Stopp“ was over its threshold a moment ago (a spike), now only
-        // „Wendelin“ is: it is the same utterance, „Stopp“ wins.
-        d = _lastStop;
-        id = stopKeywordId;
-      }
-      // WP113: a candidate of the main word while „Stopp“ is also over its
-      // threshold in this window (only the level or background gate kept it
-      // back): it is „Stopp“, the other one is its echo in the template.
-      if (d != null &&
-          id == keywordId &&
-          rawStop != null &&
-          stopOverridesWake) {
-        d = rawStop;
-        id = stopKeywordId;
-      }
+      if (d != null && silenceFloor != null && !silenceFloor!.active) d = null;
+      final onStop = _mergeStop(w, d, stops, main.top);
+      d = onStop.d;
+      final id = onStop.id;
       final gap = (refractory.inMicroseconds * 16000) ~/ 1000000;
       if (d == null || w.endSample - _lastHit < gap) continue;
       _lastHit = w.endSample;
@@ -193,10 +192,107 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
           endSample: w.endSample,
           confidence: d.confidence,
           reason: d.reason.name,
+          score: id == keywordId ? score : null,
+          direct:
+              id == keywordId &&
+              d.reason != CandidateReason.template &&
+              directThreshold != null &&
+              (score ?? 0) >= directThreshold!,
         ),
       );
     }
     return hits;
+  }
+
+  double? _peak;
+  int _heldCount = 0;
+  int _drops = 0;
+
+  /// The score the rules see: the raw one, or with [holdWindows] the peak of
+  /// the event once it is decided (`null` while the event is still held).
+  double? _eventScore(double? rawScore) {
+    // Fail-closed: NaN is no score (never a peak, never a hit).
+    final score = rawScore != null && rawScore.isNaN ? null : rawScore;
+    final lower = modelThreshold, upper = directThreshold;
+    if (holdWindows <= 0 || lower == null || upper == null) return score;
+    final peak = _peak;
+    if (peak == null) {
+      if (score == null || score < lower || score >= upper) return score;
+      _peak = score;
+      _heldCount = 1;
+      _drops = 0;
+      return _heldCount >= holdWindows ? _release() : null;
+    }
+    if (score != null && score >= upper) {
+      _peak = null;
+      return score;
+    }
+    _heldCount++;
+    if (score != null && score >= peak) {
+      _peak = score;
+      _drops = 0;
+    } else {
+      _drops++;
+    }
+    return _drops >= dropsToEnd || _heldCount >= holdWindows
+        ? _release()
+        : null;
+  }
+
+  double _release() {
+    final peak = _peak!;
+    _peak = null;
+    return peak;
+  }
+
+  /// Merges the main decision [d] with the „Stopp“ rules (WP80, WP113);
+  /// returns the final decision and the keyword id.
+  ({CandidateDecision? d, String id}) _mergeStop(
+    WakeWindow w,
+    CandidateDecision? d,
+    List<WakeTemplates> stops,
+    double mainTop,
+  ) {
+    var id = keywordId;
+    final stop = _closest(w.embedding, stops, tail: stopTailShare);
+    onWindow?.call(mainTop, stop.top, w.modelScore);
+    var stopDecision = decideCandidate(
+      modelScore: null,
+      templateSimilarity: stop.similarity,
+      modelThreshold: null,
+      templateThreshold: stop.threshold,
+    );
+    final rawStop = stopDecision;
+    stopDecision = _gateStop(stopDecision, stop.top, stops.isNotEmpty);
+    // „Stopp“ is short: it counts only after [stopWindows] consecutive
+    // windows above its threshold (a single spike is no hit).
+    _stopRun = stopDecision == null ? 0 : _stopRun + 1;
+    _sinceStop = stopDecision == null ? _sinceStop + 1 : 0;
+    if (stopDecision != null) {
+      _lastStop = stopDecision;
+      // WP113: both words over their threshold (during the output): „Stopp“
+      // wins, whatever the margins. Otherwise wait for the confirming
+      // window, a „Wendelin“ must not slip through meanwhile.
+      if (d != null || _stopRun >= stopWindows) {
+        d = stopDecision;
+        id = stopKeywordId;
+      } else {
+        d = null;
+      }
+    } else if (d != null && _lastStop != null && _sinceStop <= stopWindows) {
+      // „Stopp“ was over its threshold a moment ago (a spike), now only
+      // „Wendelin“ is: it is the same utterance, „Stopp“ wins.
+      d = _lastStop;
+      id = stopKeywordId;
+    }
+    // WP113: a candidate of the main word while „Stopp“ is also over its
+    // threshold in this window (only the level or background gate kept it
+    // back): it is „Stopp“, the other one is its echo in the template.
+    if (d != null && id == keywordId && rawStop != null && stopOverridesWake) {
+      d = rawStop;
+      id = stopKeywordId;
+    }
+    return (d: d, id: id);
   }
 
   List<WakeTemplates> _usable(List<WakeTemplates> sets) => [
@@ -272,9 +368,13 @@ final class CandidateWakeEngine implements WarmableWakeEngine {
     _sinceStop = 1 << 30;
     _lastStop = null;
     stopGate?.reset();
+    silenceFloor?.reset();
     _stopFloor = null;
     _stopSeen = 0;
     _lastHit = -1 << 40;
+    _peak = null;
+    _heldCount = 0;
+    _drops = 0;
   }
 
   @override

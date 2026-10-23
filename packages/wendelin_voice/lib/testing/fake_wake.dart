@@ -18,7 +18,11 @@ final class FakeWakeWordEngine implements WakeWordEngine {
     this.hitAtFrame = const {},
     this.keywordId = 'wake',
     this.acceptDelay = Duration.zero,
+    this.direct = false,
   });
+
+  /// Hits are sure hits (`WakeWordHit.direct`, WP129).
+  final bool direct;
 
   /// Time [accept] takes per frame (an engine that lags behind the audio).
   final Duration acceptDelay;
@@ -73,6 +77,7 @@ final class FakeWakeWordEngine implements WakeWordEngine {
               keywordId: keywordId,
               endSample: _samples,
               confidence: 0.9,
+              direct: direct,
             ),
           ]
         : const [];
@@ -165,6 +170,9 @@ final class FakeWakeVerifier implements WakeVerifier {
   final List<Int16List> calls = [];
 
   @override
+  String get kind => 'fake';
+
+  @override
   Future<bool> confirm(Int16List pcm) async {
     calls.add(pcm);
     if (delay > Duration.zero) await Future<void>.delayed(delay);
@@ -186,6 +194,9 @@ final class FixedTranscriptStt implements SpeechToText {
   /// Audio length of the last call in samples.
   int lastSamples = 0;
 
+  /// Peak (absolute sample value) of the audio of the last call.
+  int lastPeak = 0;
+
   @override
   SpeechToTextEngineInfo get info =>
       const SpeechToTextEngineInfo(name: 'fixed', languages: {'de'});
@@ -193,6 +204,7 @@ final class FixedTranscriptStt implements SpeechToText {
   @override
   Future<Transcript> transcribe(Int16List pcm, {String? language}) async {
     lastSamples = pcm.length;
+    lastPeak = pcm.fold(0, (p, s) => s.abs() > p ? s.abs() : p);
     return Transcript(text: text);
   }
 }

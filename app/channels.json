@@ -275,7 +275,7 @@
         "app/android/app/src/main/kotlin/app/wendelin/WakePolicy.kt"
       ],
       "toKotlin": {
-        "configure": {"args": ["enabled", "mode", "verify"], "returns": "none"},
+        "configure": {"args": ["enabled", "mode", "verify", "detector"], "returns": "none"},
         "status": {"args": [], "returns": "map"},
         "chatVisible": {"args": ["visible"], "returns": "none"},
         "chatDone": {"args": [], "returns": "none"},
@@ -302,7 +302,7 @@
         "failed": {"args": ["reason"], "returns": "none"}
       },
       "toDart": {
-        "run": {"args": ["verify"], "returns": "none"},
+        "run": {"args": ["verify", "detector", "station"], "returns": "none"},
         "audio": {"args": ["pcm"], "returns": "none"},
         "audioError": {"args": ["message"], "returns": "none"},
         "conflict": {"args": ["reason"], "returns": "none"},

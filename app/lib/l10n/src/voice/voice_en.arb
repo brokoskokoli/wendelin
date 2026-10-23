@@ -7,6 +7,7 @@
   "modelRowLoaded": "{size} · downloaded",
   "modelRowNotLoaded": "{size} · not downloaded",
   "modelRowProgressOf": "Progress {displayName}",
+  "modelRowRecommended": "(recommended)",
   "modelRowRam": "Memory about {ram}",
   "@modelRowRam": {
     "placeholders": {
@@ -28,7 +29,7 @@
   "voiceConvKeepListeningDetail": "After the spoken answer the microphone stays open briefly, so you can follow up without tapping. “Thanks” or “Stop” ends it.",
   "voiceConvKeepListeningLabel": "Keep listening after the answer",
   "voiceDownloadAnd": " and ",
-  "voiceDownloadBundled": "{displayName} is included and is downloaded too ({v}). “small” recognizes German, French and names much better and is recommended. “base” is fast and meant for weak devices. More models: Settings → Voice.",
+  "voiceDownloadBundled": "{displayName} is included and is downloaded too ({v}). “small” recognizes German, French and names much better. “base” is fast and meant for weak devices. More models: Settings → Voice.",
   "voiceDownloadContinueInBackground": "Keep loading in the background",
   "voiceDownloadContinueLoading": "Continue loading",
   "voiceDownloadIntro": "Wendelin recognizes speech on the device, without internet and without Google. Pick the model and download it once, preferably on Wi-Fi.",

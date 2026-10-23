@@ -7,16 +7,24 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 import '../../voice/voice_log.dart';
 import '../channels.dart';
 import 'service_audio_input.dart';
+import 'wake_detector.dart';
 
 export '../channels.dart' show wakeEngineChannelName;
 
 /// What the wake word host needs from the device (replaced in tests).
 abstract interface class WakeParts {
-  /// Stage 1 for all learned voices; `null` if nothing is learned.
-  Future<WakeWordEngine?> engine();
+  /// Stage 1 for all learned voices; `null` if nothing is learned. WP129:
+  /// [detector] chooses templates or the trained classifier, [station] the
+  /// score band of the place; the classifier throws if its model is missing.
+  Future<WakeWordEngine?> engine({
+    WakeDetector detector = WakeDetector.templates,
+    bool station = false,
+  });
 
-  /// Stage 2; loads Whisper when needed and frees it again.
-  WakeVerifier verifier();
+  /// Stage 2; loads the recognizer when needed and frees it again. With the
+  /// classifier ([detector] `model`) Parakeet is preferred, Whisper is the
+  /// fallback; the template path always uses Whisper.
+  WakeVerifier verifier({WakeDetector detector = WakeDetector.templates});
 
   /// Frees everything the parts hold (Whisper).
   Future<void> dispose();
@@ -61,6 +69,9 @@ final class WakeHost {
 
   WakeWordListener? _listener;
   bool _verify = true;
+  _LoggingVerifier? _verifier;
+  WakeDetector _detector = WakeDetector.templates;
+  bool _station = false;
   bool _started = false;
   final _holds = <String>{};
   final _subs = <StreamSubscription<Object?>>[];
@@ -80,7 +91,13 @@ final class WakeHost {
         : const <Object?, Object?>{};
     switch (call.method) {
       case 'run':
-        await _serial(() => _run(verify: args['verify'] != false));
+        await _serial(
+          () => _run(
+            verify: args['verify'] != false,
+            choice: WakeDetectorChoice.parse(args['detector']),
+            station: args['station'] == true,
+          ),
+        );
       case 'audio':
         final pcm = args['pcm'];
         if (audio case final ServiceAudioInput input when pcm is Uint8List) {
@@ -112,18 +129,39 @@ final class WakeHost {
     return next;
   }
 
-  Future<void> _run({required bool verify}) async {
+  Future<void> _run({
+    required bool verify,
+    WakeDetectorChoice choice = WakeDetectorChoice.auto,
+    bool station = false,
+  }) async {
     if (_ending) return;
-    if (_listener != null && _verify == verify) return;
+    final detector = choice.resolve(station: station);
+    if (_listener != null &&
+        _verify == verify &&
+        _detector == detector &&
+        _station == station) {
+      return;
+    }
     await _stopListener();
     _verify = verify;
+    _detector = detector;
+    _station = station;
     _started = false;
-    final engine = await parts.engine();
+    final WakeWordEngine? engine;
+    try {
+      engine = await parts.engine(detector: detector, station: station);
+    } on Object catch (e) {
+      // The classifier without its model: no listening, never a fallback to
+      // another detection the user did not choose.
+      return _fail(e is VoiceException ? e.kind.name : 'engine-failed');
+    }
     if (engine == null) return _fail('no-templates');
     final listener = WakeWordListener(
       audio: audio,
-      engine: _LoggingEngine(engine),
-      verifier: verify ? _LoggingVerifier(parts.verifier()) : null,
+      engine: _LoggingEngine(engine, detector),
+      verifier: verify
+          ? _verifier = _LoggingVerifier(parts.verifier(detector: detector))
+          : null,
       // Room noise before the word (WP73): `speechAfterWakeWord` measures
       // its threshold there. The overlay skips everything up to the end of
       // the word, so the longer lead costs nothing but a few KB.
@@ -152,7 +190,11 @@ final class WakeHost {
   Future<void> _begin(WakeWordListener listener) async {
     _started = true;
     await listener.start();
-    voiceLog('wake-listening', {'verify': _verify});
+    voiceLog('wake-listening', {
+      'verify': _verify,
+      'detector': _detector.name,
+      'station': _station,
+    });
     _alive = Timer.periodic(aliveEvery, (_) => _logAlive());
   }
 
@@ -169,7 +211,22 @@ final class WakeHost {
   }
 
   Future<void> _onDetection(WakeWordDetection d) => _serial(() async {
-    if (!_verify) voiceLog('wake-verify', {'result': 'skip'});
+    // Which stage decided: a sure classifier hit (1), the transcript (2), or
+    // nothing checked (stage 2 off). Counting FA/h and hits per stage.
+    voiceLog('wake-hit-stage', {
+      'detector': _detector.name,
+      'stage': d.hit.direct
+          ? '1-direct'
+          : _verify
+          ? '2-verified'
+          : '1-unchecked',
+      'score': (d.hit.score ?? d.hit.confidence ?? 0).toStringAsFixed(3),
+      // Which recognizer decided stage 2 (parakeet, whisper); `none` if none.
+      'verifier': !d.hit.direct && _verify ? _verifier?.kind ?? 'none' : 'none',
+    });
+    if (!_verify && !d.hit.direct) {
+      voiceLog('wake-verify', {'result': 'skip'});
+    }
     final pcm = d.preRoll;
     // The service keeps the microphone open from the end of `pcm` on until
     // the overlay takes the audio and opens its own (WP68, WP51: never two
@@ -212,7 +269,12 @@ final class WakeHost {
   Future<void> _fail(String reason) async {
     if (_ending) return;
     _ending = true;
-    voiceLog('wake-failed', {'reason': reason});
+    // The log allows lower-case codes only: `modelMissing` → `model-missing`.
+    final code = reason.replaceAllMapped(
+      RegExp('[A-Z]'),
+      (m) => '-${m[0]!.toLowerCase()}',
+    );
+    voiceLog('wake-failed', {'reason': code});
     await _call('failed', {'reason': reason});
   }
 
@@ -252,9 +314,10 @@ const wakePreRoll = Duration(milliseconds: 2500);
 
 /// Logs every stage 1 candidate: score and rule, nothing else.
 final class _LoggingEngine implements WakeWordEngine {
-  _LoggingEngine(this.inner);
+  _LoggingEngine(this.inner, this.detector);
 
   final WakeWordEngine inner;
+  final WakeDetector detector;
 
   @override
   Future<void> open(List<KeywordSpec> keywords) => inner.open(keywords);
@@ -264,8 +327,11 @@ final class _LoggingEngine implements WakeWordEngine {
     final hits = await inner.accept(frame);
     for (final h in hits) {
       voiceLog('wake-cand', {
-        'score': (h.confidence ?? 0).toStringAsFixed(2),
+        'stage': 1,
+        'detector': detector.name,
+        'score': (h.score ?? h.confidence ?? 0).toStringAsFixed(3),
         'rule': h.reason,
+        'direct': h.direct,
       });
     }
     return hits;
@@ -284,6 +350,9 @@ final class _LoggingVerifier implements WakeVerifier {
   _LoggingVerifier(this.inner);
 
   final WakeVerifier inner;
+
+  @override
+  String get kind => inner.kind;
 
   @override
   Future<bool> confirm(Int16List pcm) async {

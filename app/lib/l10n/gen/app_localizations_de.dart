@@ -4379,6 +4379,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get modelRowRecommended => '(empfohlen)';
+
+  @override
   String get modelRowResume => 'Fortsetzen';
 
   @override
@@ -4425,7 +4428,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String voiceDownloadBundled(String displayName, String v) {
-    return '$displayName gehört dazu ($v) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser und ist empfohlen. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.';
+    return '$displayName gehört dazu ($v) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.';
   }
 
   @override
@@ -4895,6 +4898,35 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeCalibrateUnusable => 'Nicht verwertbar.';
 
   @override
+  String get wakeDetectorAuto => 'Automatisch';
+
+  @override
+  String get wakeDetectorAutoHint =>
+      'Handy: deine Stimme (Vorlagen). Station: das trainierte Modell.';
+
+  @override
+  String get wakeDetectorModel => 'Trainiertes Modell';
+
+  @override
+  String get wakeDetectorModelHint =>
+      'Erkennt „Wendelin“ ohne Einlernen. Braucht den Download.';
+
+  @override
+  String wakeDetectorModelNeeded(String v) {
+    return 'Das trainierte Modell wird für diese Einstellung benötigt: $v.';
+  }
+
+  @override
+  String get wakeDetectorTemplates => 'Vorlagen deiner Stimme';
+
+  @override
+  String get wakeDetectorTemplatesHint =>
+      'Vergleicht mit deinen Aufnahmen. Braucht das Einlernen.';
+
+  @override
+  String get wakeDetectorTitle => 'Erkennung';
+
+  @override
   String get wakeEnrollAllThere => 'Alle Aufnahmen sind da.';
 
   @override
@@ -5063,6 +5095,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get wakeServiceSectionEndedEngine =>
       'Beendet: Die Erkennung ist ausgefallen';
+
+  @override
+  String get wakeServiceSectionEndedModel =>
+      'Beendet: Ein Modell für die Wake-Erkennung fehlt';
 
   @override
   String get wakeServiceSectionEndedNoPermission =>

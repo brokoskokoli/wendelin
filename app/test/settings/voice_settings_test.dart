@@ -59,7 +59,7 @@ Finder action(String model, String label) => find.descendant(
 
 void main() {
   const base = 'Whisper base – schnell, für schwache Geräte';
-  const small = 'Whisper small – genauer (empfohlen)';
+  const small = 'Whisper small – genauer';
   const vad = 'Silero VAD';
 
   group('Onboarding-Schritt „Spracherkennung laden“', () {
@@ -695,7 +695,7 @@ void main() {
       expect(c.read(voiceSettingsProvider).value!.sttModel, 'whisper-small');
       expect(find.text(small), findsOneWidget);
       expect(find.text(base), findsOneWidget);
-      expect(find.textContaining('genauer (empfohlen)'), findsOneWidget);
+      expect(find.textContaining('genauer'), findsOneWidget);
       expect(
         find.textContaining('schnell, für schwache Geräte'),
         findsOneWidget,

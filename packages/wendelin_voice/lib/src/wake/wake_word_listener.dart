@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 
 import '../io/audio_input.dart';
 import '../io/voice_exception.dart';
+import '../models/wake_classifier_catalog.dart';
 import 'keyword_spec.dart';
 import 'pre_roll_buffer.dart';
 import 'wake_verifier.dart';
@@ -105,8 +106,8 @@ final class WakeWordListener {
     this.keywords = const [KeywordSpec.wendelin],
     this.lockout = const Duration(milliseconds: 1500),
     this.preRoll = PreRollBuffer.defaultCapacity,
-    this.verifyWindow = const Duration(seconds: 2),
-    this.verifyTail = const Duration(milliseconds: 900),
+    this.verifyWindow = WakeClassifierRules.verifyWindow,
+    this.verifyTail = WakeClassifierRules.verifyTail,
     this.verifyTimeout = const Duration(seconds: 8),
   });
 
@@ -270,7 +271,7 @@ final class WakeWordListener {
     _candidates++;
     final end = hit.endSample;
     final v = verifier;
-    final tail = v == null ? 0 : durationToSamples(verifyTail);
+    final tail = v == null || hit.direct ? 0 : durationToSamples(verifyTail);
     if (tail > 0 && _position < end + tail) {
       _tailTarget = end + tail;
       final wait = _tailWait = Completer<void>();
@@ -291,7 +292,7 @@ final class WakeWordListener {
       rel(end + tail),
     );
     var ok = true;
-    if (v != null) {
+    if (v != null && !hit.direct) {
       try {
         ok = await v.confirm(lead).timeout(verifyTimeout);
       } on Object {

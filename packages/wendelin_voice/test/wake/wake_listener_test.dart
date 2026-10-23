@@ -26,6 +26,8 @@ void main() {
     Duration tail = Duration.zero,
     Duration acceptDelay = Duration.zero,
   }) {
+    // Die Tests prüfen den Inhalt der Samples; die Pegelnormalisierung der
+    // Stufe 2 hat eigene Tests (verify_normalize_test.dart).
     audio = FakeAudioInput();
     engine = FakeWakeWordEngine(hitAtFrame: hits, acceptDelay: acceptDelay);
     verifier = FakeWakeVerifier();

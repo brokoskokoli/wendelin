@@ -71,10 +71,13 @@ class StationActivity : WendelinActivity(), SensorEventListener {
     override fun onStart() {
         super.onStart()
         StationState.active = true
+        // WP129: the wake engine takes the station detector (model) while the station is up.
+        WakeStarter.sync(this, "station")
     }
 
     override fun onStop() {
         StationState.active = false
+        WakeStarter.sync(this, "station-end")
         super.onStop()
     }
 

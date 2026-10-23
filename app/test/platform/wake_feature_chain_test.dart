@@ -27,9 +27,44 @@ final class FakeRunner implements WakeModelRunner {
   void close() => closed = true;
 }
 
+/// A runner that also scores the windows (WP129).
+final class ScoringRunner extends FakeRunner implements WakeClassifier {
+  ScoringRunner({this.loaded = true});
+  final bool loaded;
+  final scored = <Float32List>[];
+
+  @override
+  bool get hasClassifier => loaded;
+
+  @override
+  double classify(Float32List window) {
+    scored.add(Float32List.fromList(window));
+    return 0.25 * scored.length;
+  }
+}
+
 Int16List pcm(int n, [int v = 1]) => Int16List(n)..fillRange(0, n, v);
 
 void main() {
+  test('Klassifikator: jedes Fenster trägt den Score, Eingabe 16 × 96', () {
+    final r = ScoringRunner();
+    final chain = WakeFeatureChain(r);
+    final w = [for (var i = 0; i < 26; i++) ...chain.accept(pcm(1280))];
+    expect(w.map((x) => x.modelScore), [0.25, 0.5]);
+    expect(r.scored.first, hasLength(1536));
+    // Dasselbe Fenster, das auch die Vorlagen sehen.
+    expect(r.scored.first, w.first.embedding);
+  });
+
+  test('Runner ohne Klassifikator oder ohne geladenes Modell: kein Score', () {
+    final plain = WakeFeatureChain(FakeRunner()).accept(pcm(1280 * 25));
+    expect(plain.single.modelScore, isNull);
+    final unloaded = ScoringRunner(loaded: false);
+    final w = WakeFeatureChain(unloaded).accept(pcm(1280 * 25));
+    expect(w.single.modelScore, isNull);
+    expect(unloaded.scored, isEmpty);
+  });
+
   test(
     'Chunks à 1 280 Samples mit 480 Samples Kontext ergeben 8 Mel-Frames',
     () {

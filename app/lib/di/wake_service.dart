@@ -50,6 +50,8 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     final settings = ref.read(storageProvider).settings;
     // „Nachprüfung“ is part of what the service needs to know.
     ref.listen(wakeVerifyProvider, (_, _) => unawaited(push()));
+    // WP129: the choice of the detection goes to the service as well.
+    ref.listen(wakeDetectorProvider, (_, _) => unawaited(push()));
     return WakeServiceSettings(
       enabled: await settings.get(wakeEnabledKey) ?? false,
       condition: WakeCondition.parse(await settings.get(wakeConditionKey)),
@@ -63,9 +65,16 @@ final class WakeServiceNotifier extends AsyncNotifier<WakeServiceSettings> {
     if (!ref.mounted) return;
     final verify = await ref.read(wakeVerifyProvider.future);
     if (!ref.mounted) return;
+    final detector = await ref.read(wakeDetectorProvider.future);
+    if (!ref.mounted) return;
     await ref
         .read(wakePlatformProvider)
-        .configure(enabled: s.enabled, condition: s.condition, verify: verify);
+        .configure(
+          enabled: s.enabled,
+          condition: s.condition,
+          verify: verify,
+          detector: detector.name,
+        );
   }
 
   /// Start of the app: takes over „Aus“ from the notification (Kotlin

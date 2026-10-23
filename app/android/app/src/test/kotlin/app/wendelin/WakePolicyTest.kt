@@ -83,6 +83,12 @@ class WakePolicyTest {
         val old = WakeSettings(enabled = true, mode = WakeMode.ALWAYS, verify = true, pausedUntilMs = 5)
         assertEquals(old, old.withArgs(null))
         assertEquals(old.copy(verify = false), old.withArgs(mapOf("verify" to false)))
+        assertEquals(old.copy(detector = "model"), old.withArgs(mapOf("detector" to "model")))
+        assertEquals(old, old.withArgs(mapOf("detector" to "bogus")))
+        assertEquals(
+            mapOf("verify" to true, "detector" to "auto", "station" to true),
+            WakeSettings().runArgs(stationActive = true),
+        )
         assertEquals(old.copy(mode = WakeMode.CHARGING), old.withArgs(mapOf("mode" to "charging")))
         // Wrong types keep the old values.
         assertEquals(old, old.withArgs(mapOf("enabled" to "yes", "mode" to 3, "verify" to 1)))
@@ -299,5 +305,12 @@ class WakePolicyTest {
         assertEquals(960, tap.tailAfter(4320).size)
         // older than kept: only what is still there
         assertTrue(tap.tailAfter(0).size <= 3 * 960)
+    }
+
+    @Test
+    fun aMissingModelKeepsItsOwnStopReason() {
+        assertEquals("modelMissing", WakePolicy.failureReason("modelMissing"))
+        assertEquals("engine-failed", WakePolicy.failureReason("no-templates"))
+        assertEquals("engine-failed", WakePolicy.failureReason(null))
     }
 }

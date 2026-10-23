@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wendelin/di/wake_providers.dart';
 import 'package:wendelin/l10n/gen/app_localizations_de.dart';
+import 'package:wendelin/platform/wake/wake_detector.dart';
 import 'package:wendelin/ui/design/design.dart' show WSwitch;
 import 'package:wendelin/ui/settings/wake/wake_calibrate_screen.dart';
 import 'package:wendelin/ui/settings/wake/wake_enroll_screen.dart';
@@ -66,7 +67,7 @@ Future<ProviderContainer> pumpWake(
   TestEnv env,
   Widget screen,
 ) async {
-  setView(tester, const Size(390, 2000));
+  setView(tester, const Size(390, 3000));
   await tester.pumpWidget(env.app(home: screen));
   await settle(tester);
   return ProviderScope.containerOf(tester.element(find.byWidget(screen)));
@@ -112,6 +113,57 @@ Future<void> startEnroll(WidgetTester tester, {String name = 'Anna'}) async {
 }
 
 void main() {
+  group('Erkennung (WP129)', () {
+    testWidgets('automatisch ist gewählt; Modell wählen speichert und zeigt '
+        'den Download samt Hinweis', (tester) async {
+      final env = wakeEnv();
+      final c = await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.text('Erkennung'), findsOneWidget);
+      expect(find.text('Automatisch'), findsOneWidget);
+      // Auto: die Station braucht das Modell, also steht der Download da.
+      expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsOne);
+      expect(find.textContaining('trainierte'), findsWidgets);
+
+      await tester.tap(find.byKey(const ValueKey('wakeDetector.model')));
+      await tester.pump();
+      expect(
+        await c.read(wakeDetectorProvider.future),
+        WakeDetectorChoice.model,
+      );
+      expect(await env.storage.settings.get(wakeDetectorKey), 'model');
+      expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsOne);
+    });
+
+    testWidgets('Vorlagen: kein Modell-Download, kein Hinweis', (tester) async {
+      final env = wakeEnv();
+      await pumpWake(tester, env, const WakeWordScreen());
+      await tester.tap(find.byKey(const ValueKey('wakeDetector.templates')));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsNothing);
+      expect(
+        find.textContaining(
+          SpeechModelCatalog.wakeClassifierWendelin.displayName,
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('Modell geladen: kein Hinweis mehr', (tester) async {
+      final env = wakeEnv();
+      env.speechModels.installed.add(
+        SpeechModelCatalog.wakeClassifierWendelin.id,
+      );
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsNothing);
+      expect(
+        find.textContaining(
+          SpeechModelCatalog.wakeClassifierWendelin.displayName,
+        ),
+        findsWidgets,
+      );
+    });
+  });
+
   group('Übersicht', () {
     testWidgets('ohne Modelle ist Einlernen gesperrt, mit Modellen offen', (
       tester,

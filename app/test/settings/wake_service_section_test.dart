@@ -35,6 +35,7 @@ final class FakeWakePlatform extends WakePlatform {
     required bool enabled,
     required WakeCondition condition,
     required bool verify,
+    String detector = 'auto',
   }) async => configured.add((enabled: enabled, condition: condition));
 }
 
@@ -215,6 +216,7 @@ void main() {
       'no-role': 'Beendet: Wendelin ist nicht mehr dein Assistent',
       'no-permission': 'Beendet: Mikrofon-Berechtigung fehlt',
       'engine-failed': 'Beendet: Die Erkennung ist ausgefallen',
+      'modelMissing': 'Beendet: Ein Modell für die Wake-Erkennung fehlt',
       'not-charging': 'Beendet: Das Gerät lädt nicht mehr',
       'unplug': 'Beendet: Das Gerät lädt nicht mehr',
       'user-off': 'Aus',

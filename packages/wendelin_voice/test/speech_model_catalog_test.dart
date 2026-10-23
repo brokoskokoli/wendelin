@@ -242,4 +242,30 @@ void main() {
     expect(m.files.single.archive, ModelArchive.none);
     expect(m.sizeBytes, lessThan(40000000));
   });
+
+  test('trainiertes Wake-Modell (WP129): ein Eintrag, Datei, Prüfsumme, '
+      'Namensnennung der Trainingsdaten', () {
+    final m = SpeechModelCatalog.wakeClassifierWendelin;
+    expect(catalog.byId(m.id), same(m));
+    expect(catalog.ofKind(SpeechModelKind.wake), contains(m));
+    final f = m.files.single;
+    // Dateiname und Id nur hier festgelegt: der Aufrufer nimmt die Konstante.
+    expect(f.name, SpeechModelCatalog.wakeClassifierFile);
+    expect(f.archive, ModelArchive.none);
+    expect(f.sha256, matches(RegExp(r'^[0-9a-f]{64}$')));
+    expect(f.sizeBytes, inInclusiveRange(100000, 5000000));
+    expect(Uri.parse(f.url).scheme, 'https');
+    for (final needed in [
+      'Thorsten',
+      'Multilingual LibriSpeech (Pratap et al., OpenSLR 94), CC-BY 4.0',
+      'M-AILABS Speech Dataset, Copyright (c) 2017-2019 M-AILABS',
+      'Tatoeba-Mitwirkende, tatoeba.org',
+      'FLEURS (Conneau et al.), CC-BY 4.0',
+      'Apache-2.0',
+    ]) {
+      expect(m.attribution, contains(needed));
+    }
+    // Die Rechte stehen im Eintrag, damit die Lizenzseite sie zeigt.
+    expect(m.license, isNotEmpty);
+  });
 }

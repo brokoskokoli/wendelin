@@ -7503,6 +7503,12 @@ abstract class AppLocalizations {
   /// **'Arbeitsspeicher ca. {ram}'**
   String modelRowRam(String ram);
 
+  /// No description provided for @modelRowRecommended.
+  ///
+  /// In de, this message translates to:
+  /// **'(empfohlen)'**
+  String get modelRowRecommended;
+
   /// No description provided for @modelRowResume.
   ///
   /// In de, this message translates to:
@@ -7584,7 +7590,7 @@ abstract class AppLocalizations {
   /// No description provided for @voiceDownloadBundled.
   ///
   /// In de, this message translates to:
-  /// **'{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser und ist empfohlen. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.'**
+  /// **'{displayName} gehört dazu ({v}) und wird mitgeladen. „small“ erkennt Deutsch, Französisch und Namen deutlich besser. „base“ ist schnell und für schwache Geräte gedacht. Weitere Modelle: Einstellungen → Sprache.'**
   String voiceDownloadBundled(String displayName, String v);
 
   /// No description provided for @voiceDownloadContinueInBackground.
@@ -8355,6 +8361,54 @@ abstract class AppLocalizations {
   /// **'Nicht verwertbar.'**
   String get wakeCalibrateUnusable;
 
+  /// No description provided for @wakeDetectorAuto.
+  ///
+  /// In de, this message translates to:
+  /// **'Automatisch'**
+  String get wakeDetectorAuto;
+
+  /// No description provided for @wakeDetectorAutoHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Handy: deine Stimme (Vorlagen). Station: das trainierte Modell.'**
+  String get wakeDetectorAutoHint;
+
+  /// No description provided for @wakeDetectorModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Trainiertes Modell'**
+  String get wakeDetectorModel;
+
+  /// No description provided for @wakeDetectorModelHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennt „Wendelin“ ohne Einlernen. Braucht den Download.'**
+  String get wakeDetectorModelHint;
+
+  /// No description provided for @wakeDetectorModelNeeded.
+  ///
+  /// In de, this message translates to:
+  /// **'Das trainierte Modell wird für diese Einstellung benötigt: {v}.'**
+  String wakeDetectorModelNeeded(String v);
+
+  /// No description provided for @wakeDetectorTemplates.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorlagen deiner Stimme'**
+  String get wakeDetectorTemplates;
+
+  /// No description provided for @wakeDetectorTemplatesHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Vergleicht mit deinen Aufnahmen. Braucht das Einlernen.'**
+  String get wakeDetectorTemplatesHint;
+
+  /// No description provided for @wakeDetectorTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkennung'**
+  String get wakeDetectorTitle;
+
   /// No description provided for @wakeEnrollAllThere.
   ///
   /// In de, this message translates to:
@@ -8636,6 +8690,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Beendet: Die Erkennung ist ausgefallen'**
   String get wakeServiceSectionEndedEngine;
+
+  /// No description provided for @wakeServiceSectionEndedModel.
+  ///
+  /// In de, this message translates to:
+  /// **'Beendet: Ein Modell für die Wake-Erkennung fehlt'**
+  String get wakeServiceSectionEndedModel;
 
   /// No description provided for @wakeServiceSectionEndedNoPermission.
   ///
