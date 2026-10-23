@@ -123,6 +123,7 @@ void main() {
 
   group('mit dem echten Mittel (1536 Werte)', () {
     final rnd = math.Random(7);
+    // sigma small: |mean| is about 550, so the raw cosine of two windows stays above 0.9.
     Float32List gauss(double sigma) => Float32List.fromList([
       for (var i = 0; i < 1536; i++)
         sigma *
@@ -131,7 +132,7 @@ void main() {
     ]);
     Float32List plus(Float32List a, Float32List b) =>
         Float32List.fromList([for (var i = 0; i < a.length; i++) a[i] + b[i]]);
-    final word = plus(wakeCenterMean, gauss(40));
+    final word = plus(wakeCenterMean, gauss(4));
     final tpl = WakeTemplates(
       speakerId: 'a',
       featureVersion: 'fake-1',
@@ -161,7 +162,7 @@ void main() {
       () async {
         final silence = Float32List.fromList(wakeCenterMean);
         final noise = [
-          for (var i = 0; i < 8; i++) plus(wakeCenterMean, gauss(40)),
+          for (var i = 0; i < 8; i++) plus(wakeCenterMean, gauss(4)),
         ];
         expect(bestSimilarity(silence, [word], mean: wakeCenterMean), 0);
         for (final n in noise) {
@@ -173,7 +174,7 @@ void main() {
           expect(bestSimilarity(n, [word]), greaterThan(0.9));
         }
         expect(await hits([silence, ...noise]), 0);
-        final again = plus(word, gauss(10));
+        final again = plus(word, gauss(1));
         expect(
           bestSimilarity(again, [word], mean: wakeCenterMean),
           greaterThan(0.9),

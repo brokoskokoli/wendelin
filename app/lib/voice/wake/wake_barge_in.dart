@@ -19,7 +19,7 @@ import 'barge_meter.dart';
 /// WP113: with the check by the big recognizer (stage 2) stage 1 only has to
 /// find a candidate, so its thresholds lie below the learned ones. See
 /// `docs/notes/barge-stop-verify.md`. (WP134: the „Stopp“ rules were removed.)
-const candidateWakeMargin = -0.10;
+const candidateWakeMargin = -0.05;
 
 final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// Creates the detector on [audio] (the capture profile follows the

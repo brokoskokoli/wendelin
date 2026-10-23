@@ -260,12 +260,12 @@ void main() {
 
       ftest('Kandidat unter der gelernten Schwelle kommt durch, Erkenner '
           'bestätigt „Wendelin“', () async {
-        // Learned threshold 0.88, window 0.80: Stufe 1 alone (+0.05) rejects.
-        final plain = make([tpl(0.88)], atSim(0.80));
+        // Learned threshold 0.88, window 0.85: Stufe 1 alone (+0.05) rejects.
+        final plain = make([tpl(0.88)], atSim(0.85));
         expect(await run(plain), isEmpty);
         final d = make(
           [tpl(0.88)],
-          atSim(0.80),
+          atSim(0.85),
           verifier: heard('Wendelin, hör mal'),
         );
         expect(await run(d), ['keyword-wake']);
@@ -277,7 +277,7 @@ void main() {
         );
         final cand = lines.firstWhere((l) => l.contains('barge-cand'));
         expect(cand, contains('kind=wake'));
-        expect(cand, contains('sim=0.80'));
+        expect(cand, contains('sim=0.85'));
         final v = lines.firstWhere((l) => l.contains('barge-verify'));
         expect(v, contains('result=wake'));
         // Kein Inhalt außer dem erkannten Schlüsselwort.
@@ -285,7 +285,7 @@ void main() {
       });
 
       ftest('Gegenprüfung verwirft: kein Signal, Log result=no', () async {
-        final d = make([tpl(0.88)], atSim(0.80), verifier: heard('Guten Tag'));
+        final d = make([tpl(0.88)], atSim(0.85), verifier: heard('Guten Tag'));
         expect(await run(d), isEmpty);
         expect(
           lines.where((l) => l.contains('barge-verify')).first,
@@ -294,7 +294,7 @@ void main() {
       });
 
       ftest('Eigen-Echo: Wort im vorgelesenen Text zählt nicht', () async {
-        final d = make([tpl(0.88)], atSim(0.80), verifier: heard('Wendelin'));
+        final d = make([tpl(0.88)], atSim(0.85), verifier: heard('Wendelin'));
         expect(await run(d, spoken: 'Ich bin Wendelin.'), isEmpty);
         expect(
           lines.where((l) => l.contains('barge-verify')).first,
@@ -304,7 +304,7 @@ void main() {
 
       ftest('Eigen-Echo gilt nur für die letzten Sätze: später „Wendelin“ '
           'unterbricht', () async {
-        final d = make([tpl(0.88)], atSim(0.80), verifier: heard('Wendelin'));
+        final d = make([tpl(0.88)], atSim(0.85), verifier: heard('Wendelin'));
         d
           ..spoke('Ich bin Wendelin.')
           ..spoke('Das Wetter ist gut.')
