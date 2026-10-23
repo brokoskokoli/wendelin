@@ -44,13 +44,13 @@ final class WakeCalibration {
 /// evaluation thresholds for 2 false alarms per hour lay at 0.43..0.55.
 const wakeMinThreshold = 0.40;
 
-/// Highest threshold [calibrateThreshold] picks when the background has no
-/// events at all (WP134): the provisional threshold of the enrolment.
+/// Highest threshold [calibrateThreshold] picks when no background event
+/// forces a higher one (none, or all within the allowed rate; WP134): the provisional threshold of the enrolment.
 ///
 /// Leave-one-out inside one session is optimistic; its 10 % quantile lay at
 /// 0.66..0.73 in a quiet room and cut "Wendelin" to 11..23 of 30 hits (fixed
-/// 0.50: 29 of 30). Without background events the threshold therefore never
-/// rises above this value (the lower bound [wakeMinThreshold] still holds).
+/// 0.50: 29 of 30). Unless background events force it, the threshold
+/// therefore never rises above this value (the lower bound [wakeMinThreshold] still holds).
 const wakeUnconstrainedMaxThreshold = 0.50;
 
 /// Fewest templates (and thus leave-one-out scores) a calibration needs.
@@ -96,7 +96,9 @@ WakeCalibration calibrateThreshold({
     threshold = pos.isEmpty
         ? 0
         : pos[((pos.length - 1) * wakePositiveQuantile).floor()];
-    if (neg.isEmpty && threshold > wakeUnconstrainedMaxThreshold) {
+    // No event forces a higher threshold: cap it (a high quantile of
+    // near-identical enrollment takes would cost recall, WP134).
+    if (threshold > wakeUnconstrainedMaxThreshold) {
       threshold = wakeUnconstrainedMaxThreshold;
     }
   } else {

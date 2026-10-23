@@ -163,17 +163,27 @@ void main() {
         expect(strict.threshold, wakeMinThreshold);
       });
 
-      test('Ausreißer 0,5 unter den Positiven senkt die Schwelle nicht', () {
-        final pos = [0.5, for (var i = 0; i < 19; i++) 0.9 + i * 0.005];
+      test('Ausreißer 0,1 unter den Positiven senkt die Schwelle nicht', () {
+        final pos = [0.1, for (var i = 0; i < 19; i++) 0.42 + i * 0.001];
         final c = calibrateThreshold(
           positiveScores: pos,
           negativeEvents: [0.2],
           negativeHours: 1,
           minThreshold: 0,
         );
-        expect(c.threshold, greaterThanOrEqualTo(0.9));
+        expect(c.threshold, greaterThanOrEqualTo(0.42));
         expect(c.recall, closeTo(19 / 20, 1e-9));
         expect(c.meetsTarget, isTrue);
+      });
+
+      test('ein erlaubtes Ereignis hebt den Deckel 0,50 nicht auf', () {
+        final c = calibrateThreshold(
+          positiveScores: [0.85, 0.8, 0.77, 0.75, 0.9, 0.82],
+          negativeEvents: [0.2],
+          negativeHours: 1,
+        );
+        expect(c.threshold, wakeUnconstrainedMaxThreshold);
+        expect(c.recall, 1);
       });
 
       test('nur eine Vorlage: kein Erfolg', () {

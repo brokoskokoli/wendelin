@@ -74,7 +74,7 @@ def calibrate(pos, neg, hours, target=1.0):
     allowed = int(np.floor(target * hours))
     if len(neg) <= allowed:
         thr = pos[int(np.floor((len(pos) - 1) * QUANTILE))]
-        if not neg: thr = min(thr, UNCONSTRAINED_MAX)  # Nachbesserung Runde 2: leiser Raum nie ueber die vorlaeufige Schwelle
+        thr = min(thr, UNCONSTRAINED_MAX)  # WP134: kein Ereignis erzwingt mehr -> nie ueber die vorlaeufige Schwelle
     else:
         thr = neg[len(neg) - allowed - 1] + 1e-6
     thr = min(max(thr, MIN_THR), MAX_THR)
