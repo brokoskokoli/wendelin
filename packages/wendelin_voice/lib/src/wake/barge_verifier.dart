@@ -1,34 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
-import 'package:wendelin_core/wendelin_core.dart';
 
 import '../io/barge_in_detector.dart';
 import '../io/speech_to_text.dart';
 import 'wake_verifier.dart';
-
-/// „Stopp“ per language as folded word forms (`foldForMatch`): German
-/// „Stopp“/„Stop“, English „Stop“, French „Arrête“/„Stop“. Other languages
-/// fall back to German.
-const bargeStopWords = <String, List<String>>{
-  'de': ['stopp', 'stop'],
-  'en': ['stop'],
-  'fr': ['arrete', 'stop'],
-};
-
-/// Whether [transcript] contains a stop word of [language] (one edit
-/// tolerated for words of five letters or more: Whisper writes „Stop.“,
-/// „Stopp!“ and sometimes „Stob“).
-bool containsStopWord(String transcript, {String language = 'de'}) {
-  final forms = bargeStopWords[language] ?? bargeStopWords['de']!;
-  for (final w in foldForMatch(transcript).split(' ')) {
-    if (w.isEmpty) continue;
-    for (final f in forms) {
-      if (w == f || (f.length >= 5 && editDistance(w, f) <= 1)) return true;
-    }
-  }
-  return false;
-}
 
 /// Outcome of the check of a barge-in candidate by the big recognizer.
 @immutable
@@ -39,7 +15,7 @@ final class BargeVerdict {
   /// The candidate was discarded, nothing recognized.
   static const no = BargeVerdict('no');
 
-  /// Log value: `stop`, `wake`, `no`, `echo` (the word was in the text being
+  /// Log value: `wake`, `no`, `echo` (the word was in the text being
   /// read aloud) or `skip` (the check failed).
   final String result;
 
@@ -64,8 +40,8 @@ abstract interface class BargeVerifier {
   });
 }
 
-/// [BargeVerifier] on a [SpeechToText]: „Wendelin“ (as for the wake word)
-/// or a stop word of [language]. A word that occurs in the text just being
+/// [BargeVerifier] on a [SpeechToText]: „Wendelin“ (as for the wake word).
+/// A word that occurs in the text just being
 /// read aloud ([spokenText]) is the own voice and does not count.
 final class TranscriptBargeVerifier implements BargeVerifier {
   /// Creates the verifier.
@@ -81,7 +57,7 @@ final class TranscriptBargeVerifier implements BargeVerifier {
   /// The recognizer.
   final SpeechToText stt;
 
-  /// Language of the stop word.
+  /// Language of the recognition.
   final String language;
 
   /// The text read aloud so far in this answer.
@@ -103,15 +79,8 @@ final class TranscriptBargeVerifier implements BargeVerifier {
     final text = (await stt.transcribe(audio, language: language)).text;
     // The own voice: a keyword that is part of the read text does not count.
     final wake = matchesWakeWord(text) && !matchesWakeWord(spoken);
-    final stop =
-        containsStopWord(text, language: language) &&
-        !containsStopWord(spoken, language: language);
     if (wake) return const BargeVerdict('wake', BargeInKeyword.wake);
-    if (stop) return const BargeVerdict('stop', BargeInKeyword.stop);
-    final echo =
-        matchesWakeWord(text) && matchesWakeWord(spoken) ||
-        containsStopWord(text, language: language) &&
-            containsStopWord(spoken, language: language);
+    final echo = matchesWakeWord(text) && matchesWakeWord(spoken);
     return echo ? const BargeVerdict('echo') : BargeVerdict.no;
   }
 }

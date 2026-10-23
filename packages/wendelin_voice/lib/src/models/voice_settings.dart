@@ -23,7 +23,6 @@ final class VoiceSettings {
     this.ttsRate = 1.0,
     this.minSpeechMs = 200,
     this.vadThreshold = 0.5,
-    this.stopClosesOverlay = true,
     this.spokenVersion = SpokenVersion.off,
     this.conversationMode = false,
     this.conversationAsked = false,
@@ -88,9 +87,6 @@ final class VoiceSettings {
   /// Silero speech probability threshold.
   final double vadThreshold;
 
-  /// A spoken „Stopp“ in the assistant overlay closes it (WP31, B5).
-  final bool stopClosesOverlay;
-
   /// „Sprechfassung“ (WP41, WP55): whether the model writes a separate
   /// spoken version first and how it is protected after foreign content.
   /// More tokens, more natural speech.
@@ -154,7 +150,6 @@ final class VoiceSettings {
     double? ttsRate,
     int? minSpeechMs,
     double? vadThreshold,
-    bool? stopClosesOverlay,
     SpokenVersion? spokenVersion,
     bool? conversationMode,
     bool? conversationAsked,
@@ -172,7 +167,6 @@ final class VoiceSettings {
     ttsRate: ttsRate ?? this.ttsRate,
     minSpeechMs: minSpeechMs ?? this.minSpeechMs,
     vadThreshold: vadThreshold ?? this.vadThreshold,
-    stopClosesOverlay: stopClosesOverlay ?? this.stopClosesOverlay,
     spokenVersion: spokenVersion ?? this.spokenVersion,
     conversationMode: conversationMode ?? this.conversationMode,
     conversationAsked: conversationAsked ?? this.conversationAsked,
@@ -194,7 +188,6 @@ final class VoiceSettings {
     'ttsRate': ttsRate,
     'minSpeechMs': minSpeechMs,
     'vadThreshold': vadThreshold,
-    'stopClosesOverlay': stopClosesOverlay,
     'spokenVersion': spokenVersion.name,
     'conversationMode': conversationMode,
     'conversationAsked': conversationAsked,
@@ -279,8 +272,6 @@ final class VoiceSettings {
       vadThreshold:
           pick<num>('vadThreshold', (v) => v > 0 && v < 1)?.toDouble() ??
           d.vadThreshold,
-      stopClosesOverlay:
-          pick<bool>('stopClosesOverlay', (_) => true) ?? d.stopClosesOverlay,
       // Migration (WP55): the former switch „twoVersions“ becomes the level
       // `protected` (its behaviour) or `off`.
       spokenVersion:
@@ -315,7 +306,6 @@ final class VoiceSettings {
       other.ttsRate == ttsRate &&
       other.minSpeechMs == minSpeechMs &&
       other.vadThreshold == vadThreshold &&
-      other.stopClosesOverlay == stopClosesOverlay &&
       other.spokenVersion == spokenVersion &&
       other.conversationMode == conversationMode &&
       other.conversationAsked == conversationAsked &&
@@ -339,7 +329,6 @@ final class VoiceSettings {
     ttsRate,
     minSpeechMs,
     vadThreshold,
-    stopClosesOverlay,
     spokenVersion,
     conversationMode,
     conversationAsked,

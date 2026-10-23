@@ -59,10 +59,6 @@ final class MicrophoneEnded implements Exception {
 /// utterance.
 const wakeProvisionalThreshold = wakeMinThreshold;
 
-/// Provisional threshold of „Stopp“ (WP64b): a short word is confused with
-/// other speech more easily, so it starts stricter than „Wendelin“.
-const stopProvisionalThreshold = 0.9;
-
 /// Phase of an enrollment.
 enum EnrollPhase {
   /// Not started.

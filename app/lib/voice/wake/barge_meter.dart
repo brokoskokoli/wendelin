@@ -10,33 +10,26 @@ import '../voice_log.dart';
 /// loud it was, whether the detector kept up and how close the best window
 /// came to the templates.
 final class BargeMeter {
-  /// Creates the meter; [threshold] / [stopThreshold] are the effective
-  /// (strict) thresholds, logged as reference for `sim` / `stop`.
-  BargeMeter({this.threshold, this.stopThreshold});
+  /// Creates the meter; [threshold] is the effective (strict) threshold,
+  /// logged as reference for `sim`.
+  BargeMeter({this.threshold});
 
   /// Lowest effective „Wendelin“ threshold (`null`: no templates).
   final double? threshold;
 
-  /// Lowest effective „Stopp“ threshold (`null`: not learned).
-  final double? stopThreshold;
-
   int _seconds = 0;
   int _frames = 0, _samples = 0, _peak = 0, _processed = 0, _micros = 0;
-  double _sumSq = 0, _sim = -1, _stop = -1;
-  double _allSim = -1, _allStop = -1;
+  double _sumSq = 0, _sim = -1;
+  double _allSim = -1;
   int _allFrames = 0, _windows = 0, _allWindows = 0;
-  // WP80: background of „Stopp“ and level of the stream.
-  double _floor = -1, _gap = -1, _quiet = 0, _peakRms = 0;
 
   /// Starts a new listening session.
   void reset() {
     _seconds = _allFrames = _windows = _allWindows = 0;
-    _allSim = _allStop = -1;
+    _allSim = -1;
     _frames = _samples = _peak = _processed = _micros = 0;
     _sumSq = 0;
-    _sim = _stop = -1;
-    _floor = _gap = -1;
-    _quiet = _peakRms = 0;
+    _sim = -1;
   }
 
   /// Called for every frame the microphone delivers.
@@ -57,29 +50,12 @@ final class BargeMeter {
     _micros += micros;
   }
 
-  /// Called for every feature window.
-  ///
-  /// [floor]: sliding background similarity of „Stopp“ (silence or echo),
-  /// [quiet] / [peak]: noise floor and recent peak level (RMS) of the stream.
-  void onWindow(
-    double main,
-    double stop, {
-    double? floor,
-    double quiet = 0,
-    double peak = 0,
-  }) {
+  /// Called for every feature window with the best main similarity.
+  void onWindow(double main) {
     _windows++;
     _allWindows++;
-    if (floor != null) {
-      _floor = floor;
-      if (stop - floor > _gap) _gap = stop - floor;
-    }
-    _quiet = quiet;
-    _peakRms = peak;
     if (main > _sim) _sim = main;
-    if (stop > _stop) _stop = stop;
     if (main > _allSim) _allSim = main;
-    if (stop > _allStop) _allStop = stop;
   }
 
   /// Writes one `barge-diag` line and starts a new interval.
@@ -104,30 +80,19 @@ final class BargeMeter {
           ? 0
           : _micros * AudioInput.sampleRate ~/ _processed ~/ 1000,
       'sim': _sim,
-      'stop': _stop,
       'thr': threshold,
-      'sthr': stopThreshold ?? -1,
-      // WP80: `sfloor` = background similarity of „Stopp“, `sgap` = largest
-      // distance of `stop` above it, `quiet` = noise floor, `lvl` = peak level.
-      'sfloor': _floor,
-      'sgap': _gap,
-      'quiet': _quiet.round(),
-      'lvl': _peakRms.round(),
     });
-    _gap = -1;
     _windows = 0;
     _frames = _samples = _peak = _processed = _micros = 0;
     _sumSq = 0;
-    _sim = _stop = -1;
+    _sim = -1;
   }
 
   /// Best similarities of the whole session so far (for `barge-hit`).
   Map<String, Object?> get maxima => {
     't': _seconds,
     'sim': _allSim,
-    'stop': _allStop,
     'thr': threshold,
-    'sthr': stopThreshold ?? -1,
   };
 
   /// Writes the `barge-end` line (maxima of the whole listening session).
@@ -136,9 +101,7 @@ final class BargeMeter {
     'frames': _allFrames,
     'win': _allWindows,
     'sim': _allSim,
-    'stop': _allStop,
     'thr': threshold,
-    'sthr': stopThreshold ?? -1,
   });
 }
 

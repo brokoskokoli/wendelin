@@ -42,8 +42,8 @@ part 'voice_pipeline_text.dart';
 ///   the answer for [VoicePipelineConfig.followUpWindow]; every
 ///   conversation ends once with a [ConversationEndReason].
 /// - With a [BargeInDetector] and [VoicePipelineConfig.bargeIn] a signal
-///   during [VoiceState.speaking] stops the speech at once: „Stopp“ ends the
-///   request, „Wendelin“ (or speech) starts a new utterance.
+///   during [VoiceState.speaking] stops the speech at once: „Wendelin“ (or
+///   speech) starts a new utterance.
 final class VoicePipeline {
   /// Creates a pipeline. [textToSpeech] is asked for the engine before
   /// every answer with the answer language (see `TtsSelector.current`);
@@ -353,11 +353,6 @@ final class VoicePipeline {
     }
     if (s.kind == BargeInKind.speech && mode != BargeInMode.speech) return;
     _emit(VoiceBargeIn(s));
-    if (s.keyword == BargeInKeyword.stop) {
-      diagnostics?.call('stop-word source=barge-in');
-      unawaited(cancel(VoiceCancelReason.stopWord));
-      return;
-    }
     unawaited(cancel(VoiceCancelReason.bargeIn)); // stops the queue at once
     _begin(
       TriggerEvent(source: TriggerKind.wakeWord, at: clock.now()),

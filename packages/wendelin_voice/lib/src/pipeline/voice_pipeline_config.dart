@@ -8,7 +8,7 @@ enum BargeInMode {
   /// No barge-in (default): only tapping stops the speech.
   off,
 
-  /// Only the keywords „Wendelin“ and „Stopp“ (concept K23 c).
+  /// Only the keyword „Wendelin“ (concept K23 c).
   keywords,
 
   /// Free speech as well (experimental; needs echo cancellation).

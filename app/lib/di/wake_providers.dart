@@ -104,8 +104,6 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   Future<void> remove(String id) async {
     final store = ref.read(wakeStoreProvider);
     await store.delete(id);
-    ref.invalidate(stopLearnedProvider);
-    ref.invalidate(stopLearnedForProvider(id));
     ref.invalidate(wakeBargeInDetectorProvider);
     final list = [
       for (final s in await future)
@@ -118,7 +116,6 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   /// Forgets everyone („Alles löschen“).
   Future<void> removeAll() async {
     await ref.read(wakeStoreProvider).deleteAll();
-    ref.invalidate(stopLearnedProvider);
     ref.invalidate(wakeBargeInDetectorProvider);
     state = const AsyncData([]);
   }
@@ -208,23 +205,8 @@ final wakeEnrollPauseProvider = Provider<Duration>(
   (ref) => const Duration(milliseconds: 900),
 );
 
-/// Whether „Stopp“ is learned for at least one voice (WP64b); the wake word
-/// page shows a hint if not. Invalidate after enrolling.
-final stopLearnedProvider = FutureProvider<bool>((ref) async {
-  final store = ref.watch(wakeStoreProvider);
-  for (final s in await store.speakers()) {
-    if (await store.stop.load(s.id) != null) return true;
-  }
-  return false;
-});
-
-/// Whether „Stopp“ is learned for the voice [id] (hint per person).
-final stopLearnedForProvider = FutureProvider.family<bool, String>(
-  (ref, id) async => await ref.watch(wakeStoreProvider).stop.load(id) != null,
-);
-
-/// Barge-in on the wake word chain (WP50): „Wendelin“ (and, if learned,
-/// „Stopp“ alone, WP64b) interrupts the spoken answer in the conversation mode. `null` while the conversation
+/// Barge-in on the wake word chain (WP50): „Wendelin“ interrupts the spoken
+/// answer in the conversation mode. `null` while the conversation
 /// mode is off. `bootstrap/run_app.dart` puts it in place of the empty
 /// [bargeInDetectorProvider]; tests keep that one.
 final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
@@ -232,10 +214,9 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     voiceSettingsProvider.select((s) => s.value?.conversationMode ?? false),
   );
   if (!conversation) return null;
-  // Newly learned or deleted „Stopp“: the callers invalidate this provider
-  // (`invalidateBargeInDetector`); the old detector ends only when idle, so
-  // a running answer is never cut off. No `watch` of stopLearnedProvider: it
-  // would rebuild in the middle of the output.
+  // Newly learned or deleted voices: the callers invalidate this provider;
+  // the old detector ends only when idle, so a running answer is never cut
+  // off.
   final store = ref.read(wakeStoreProvider);
   final makeFeatures = ref.read(wakeFeaturesFactoryProvider);
   // Switching stage 2 or the language rebuilds the provider; a running answer
@@ -277,9 +258,6 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
     features: () => makeFeatures(),
     templates: () async => [
       for (final s in await store.speakers()) ?await store.load(s.id),
-    ],
-    stopTemplates: () async => [
-      for (final s in await store.speakers()) ?await store.stop.load(s.id),
     ],
   );
   ref.onDispose(() => unawaited(detector.disposeWhenIdle()));

@@ -64,21 +64,6 @@ class VoiceScreen extends ConsumerWidget {
         _SpeechOutput(settings: settings, change: change),
         ..._tuning(context.l10n, settings, change),
         SettingsSection(
-          title: context.l10n.voiceScreenOverlay,
-          children: [
-            SettingsRow(
-              title: context.l10n.voiceScreenStopClosesOverlay,
-              detail: context.l10n.voiceScreenStopClosesOverlayHint,
-              trailing: WSwitch(
-                value: settings.stopClosesOverlay,
-                semanticLabel: context.l10n.voiceScreenStopClosesOverlayLabel,
-                onChanged: (v) =>
-                    change((s) => s.copyWith(stopClosesOverlay: v)),
-              ),
-            ),
-          ],
-        ),
-        SettingsSection(
           title: context.l10n.voiceScreenKeepModel,
           children: [
             SettingsRow(

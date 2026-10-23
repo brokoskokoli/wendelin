@@ -16,21 +16,10 @@ import 'barge_meter.dart';
 /// The engine is built at the first [start]: the templates are read then,
 /// not when the overlay opens. Without a learned voice the detector stays
 /// silent (barge-in by a tap on the microphone still works).
-/// WP80: share of the window (counted from its end) that decides „Stopp“:
-/// 9 of 16 embeddings, the word plus its trailing sound.
-const stopTailShare = 9 / 16;
-
 /// WP113: with the check by the big recognizer (stage 2) stage 1 only has to
-/// find a candidate, so its thresholds lie below the learned ones: measured
-/// „Stopp“ similarities of 0.72–0.94 against a template threshold of 0.90
-/// pass with [candidateStopMargin]. See `docs/notes/barge-stop-verify.md`.
+/// find a candidate, so its thresholds lie below the learned ones. See
+/// `docs/notes/barge-stop-verify.md`. (WP134: the „Stopp“ rules were removed.)
 const candidateWakeMargin = -0.10;
-
-/// Margin of the „Stopp“ candidate threshold (see [candidateWakeMargin]).
-const candidateStopMargin = -0.20;
-
-/// WP80: how far „Stopp“ must lie above the sliding background similarity.
-const stopFloorGap = 0.02;
 
 final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// Creates the detector on [audio] (the capture profile follows the
@@ -39,13 +28,11 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
     required this.audio,
     required this.templates,
     required this.features,
-    this.stopTemplates = _none,
     this.extraMargin = 0.05,
     this.verifier,
     this.warm,
     this.onListening,
     this.marginOverride,
-    this.stopTail = stopTailShare,
     this.diagInterval = const Duration(seconds: 1),
     this.verifySettle = const Duration(milliseconds: 800),
   });
@@ -55,12 +42,6 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
 
   /// Templates of all learned voices.
   final Future<List<WakeTemplates>> Function() templates;
-
-  /// Templates of „Stopp“ for all learned voices (WP64b); without them only
-  /// „Wendelin“ (and „Wendelin, stopp“) interrupts.
-  final Future<List<WakeTemplates>> Function() stopTemplates;
-
-  static Future<List<WakeTemplates>> _none() async => const [];
 
   /// A new feature chain.
   final WakeFeatureExtractor Function() features;
@@ -101,9 +82,6 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// when it returns a value. Read once, when the engine is built.
   final Future<double?> Function()? marginOverride;
 
-  /// Share of the window that decides „Stopp“ (WP80); `null`: whole window.
-  final double? stopTail;
-
   /// Wait after a candidate until the check starts (the word is over).
   final Duration verifySettle;
 
@@ -133,12 +111,11 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
     _running = true;
     if (_inner == null && !_empty) {
       final sets = await templates();
-      final stops = await stopTemplates();
       if (sets.isEmpty) {
         _empty = true;
         voiceLog('barge-in-off', {'reason': 'no-templates'});
       } else {
-        _inner = await _build(sets, stops);
+        _inner = await _build(sets);
       }
     }
     // A stop during the loading wins.
@@ -156,56 +133,28 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
 
   /// Builds the engine and the detector from the templates (stage 1 with the
   /// candidate margins, stage 2 when a [verifier] is set).
-  Future<WakeWordBargeInDetector> _build(
-    List<WakeTemplates> sets,
-    List<WakeTemplates> stops,
-  ) async {
-    voiceLog('barge-stop-word', {'learned': stops.isNotEmpty});
+  Future<WakeWordBargeInDetector> _build(List<WakeTemplates> sets) async {
     final override = await marginOverride?.call();
     final staged = verifier != null;
     final margin = override ?? (staged ? candidateWakeMargin : extraMargin);
-    final stopMargin = override ?? (staged ? candidateStopMargin : extraMargin);
-    List<WakeTemplates> strictly(List<WakeTemplates> l, double m) => [
-      for (final t in l) t.withThreshold((t.threshold + m).clamp(0.0, 0.99)),
+    final strict = [
+      for (final t in sets)
+        t.withThreshold((t.threshold + margin).clamp(0.0, 0.99)),
     ];
-    final strict = strictly(sets, margin);
-    final strictStops = strictly(stops, stopMargin);
-    double? lowest(List<WakeTemplates> l) => l.isEmpty
-        ? null
-        : l.map((t) => t.threshold).reduce((a, b) => a < b ? a : b);
     final meter = _meter = BargeMeter(
-      threshold: lowest(strict),
-      stopThreshold: lowest(strictStops),
+      threshold: strict.map((t) => t.threshold).reduce((a, b) => a < b ? a : b),
     );
     voiceLog('barge-config', {
       'margin': margin,
-      'smargin': stopMargin,
       'verify': staged,
       'thr': meter.threshold,
-      'sthr': meter.stopThreshold ?? -1,
     });
-    final gate = SpeechGate();
-    late final CandidateWakeEngine engine;
-    engine = CandidateWakeEngine(
+    final engine = CandidateWakeEngine(
       features: features(),
       templates: strict.first,
       moreTemplates: strict.skip(1).toList(),
-      stopTemplates: strictStops,
       modelThreshold: null,
-      // WP80: „Stopp“ is judged on the tail of the window (the word, not
-      // the background), only with speech-level sound and clearly above
-      // the sliding background similarity.
-      stopTailShare: stopTail,
-      stopGate: gate,
-      stopFloorGap: stopFloorGap,
-      stopOverridesWake: staged,
-      onWindow: (main, stop, _) => meter.onWindow(
-        main,
-        stop,
-        floor: engine.stopFloor,
-        quiet: gate.floor,
-        peak: gate.peak,
-      ),
+      onWindow: (main, _) => meter.onWindow(main),
     );
     final inner = WakeWordBargeInDetector(
       audio: MeteredAudioInput(audio, meter),
@@ -248,7 +197,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
 
   /// Ends the detector as soon as it is idle: a running listening session
   /// (the spoken answer) is not cut off by a rebuild of the provider
-  /// (WP64b, new or deleted „Stopp“ takes effect at the next start).
+  /// (a new or deleted voice takes effect at the next start).
   Future<void> disposeWhenIdle() async {
     if (_running) {
       _disposeWhenIdle = true;

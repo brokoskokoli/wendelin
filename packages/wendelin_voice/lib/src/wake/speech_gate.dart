@@ -2,7 +2,7 @@ import 'dart:collection';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-/// Level gate for short keywords („Stopp“, WP80): tells whether the last
+/// Level gate for short keywords (WP80): tells whether the last
 /// moments held speech-level sound compared with the quiet background of the
 /// same stream. A keyword hit that arrives while the microphone only
 /// delivers silence (AEC output, closed room) is no hit.
