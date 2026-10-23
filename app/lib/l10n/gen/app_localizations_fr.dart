@@ -4529,6 +4529,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le microphone était encore occupé. Veuillez parler de nouveau.';
 
   @override
+  String get voiceErrorModelBroken =>
+      'Le modèle vocal est endommagé. Veuillez le télécharger à nouveau (Paramètres → Voix).';
+
+  @override
   String get voiceErrorModelMissing =>
       'Un modèle vocal n’est pas encore téléchargé (Paramètres → Voix).';
 

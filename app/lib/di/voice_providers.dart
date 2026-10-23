@@ -17,6 +17,7 @@ import '../platform/voice/stt_loader.dart';
 import '../platform/voice/system_tts.dart';
 import '../platform/voice/whisper_stt.dart';
 import '../voice/latency_trace.dart';
+import '../voice/model_check.dart';
 import '../voice/voice_log.dart';
 import '../voice/voice_metrics.dart';
 import '../voice/wake/mic_tail.dart';
@@ -100,7 +101,7 @@ AudioInput tapMic(Ref ref, AudioInput mic) =>
 Future<SpeechModel> _installedModel(Ref ref, String id, String what) async {
   final model = ref.read(speechModelCatalogProvider).byId(id);
   final service = await ref.watch(speechModelServiceProvider.future);
-  if (model == null || !await service.isInstalled(model)) {
+  if (model == null || !await isModelInstalled(service, model)) {
     throw VoiceException(
       VoiceErrorKind.modelMissing,
       '$what ist noch nicht geladen (Einstellungen → Sprache).',

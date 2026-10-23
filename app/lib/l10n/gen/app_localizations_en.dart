@@ -4477,6 +4477,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The microphone was still busy. Please speak again.';
 
   @override
+  String get voiceErrorModelBroken =>
+      'The speech model is damaged. Please download it again (Settings → Speech).';
+
+  @override
   String get voiceErrorModelMissing =>
       'A speech model has not been downloaded yet (Settings → Speech).';
 

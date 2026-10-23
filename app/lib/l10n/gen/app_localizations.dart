@@ -7701,6 +7701,12 @@ abstract class AppLocalizations {
   /// **'Das Mikrofon war noch belegt. Bitte sprich noch einmal.'**
   String get voiceErrorMicBusy;
 
+  /// No description provided for @voiceErrorModelBroken.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Sprachmodell ist beschädigt. Bitte lade es neu (Einstellungen → Sprache).'**
+  String get voiceErrorModelBroken;
+
   /// No description provided for @voiceErrorModelMissing.
   ///
   /// In de, this message translates to:

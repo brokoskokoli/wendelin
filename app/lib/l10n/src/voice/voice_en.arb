@@ -48,6 +48,7 @@
   "voiceDownloadUnpacking": "Unpacking …",
   "voiceErrorGeneric": "Speech did not work. Please try again.",
   "voiceErrorMicBusy": "The microphone was still busy. Please speak again.",
+  "voiceErrorModelBroken": "The speech model is damaged. Please download it again (Settings → Speech).",
   "voiceErrorModelMissing": "A speech model has not been downloaded yet (Settings → Speech).",
   "voiceMetricsClear": "Clear list",
   "voiceMetricsEmpty": "No measurements yet. Say a command or play a voice sample.",

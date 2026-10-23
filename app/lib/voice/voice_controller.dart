@@ -718,8 +718,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
 /// German text for a failure of a voice component.
 String voiceErrorText(AppLocalizations l, Object error) => switch (error) {
   VoiceException(kind: VoiceErrorKind.modelMissing) => l.voiceErrorModelMissing,
+  VoiceException(kind: VoiceErrorKind.modelBroken) => l.voiceErrorModelBroken,
   VoiceException(kind: VoiceErrorKind.busy) => l.voiceErrorMicBusy,
   VoiceException(:final message) => message,
-  // Never the raw message („Bad state: …“, WP64); the log has the type.
-  _ => l.voiceErrorGeneric,
+  _ => l.voiceErrorGeneric, // never the raw message (WP64)
 };

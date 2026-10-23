@@ -48,6 +48,7 @@
   "voiceDownloadUnpacking": "Décompression …",
   "voiceErrorGeneric": "La voix n’a pas fonctionné. Veuillez réessayer.",
   "voiceErrorMicBusy": "Le microphone était encore occupé. Veuillez parler de nouveau.",
+  "voiceErrorModelBroken": "Le modèle vocal est endommagé. Veuillez le télécharger à nouveau (Paramètres → Voix).",
   "voiceErrorModelMissing": "Un modèle vocal n’est pas encore téléchargé (Paramètres → Voix).",
   "voiceMetricsClear": "Vider la liste",
   "voiceMetricsEmpty": "Pas encore de mesures. Dites une commande ou écoutez un échantillon de voix.",

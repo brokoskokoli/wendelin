@@ -82,7 +82,8 @@ final class NemoFiles implements SttSpec {
   });
 
   /// The files of [model] under [directory] (the archive unpacks to a
-  /// folder named like the archive), or `null` if a file is missing.
+  /// folder named like the archive, with the archive's own top folder of
+  /// the same name inside), or `null` if a file is missing.
   static NemoFiles? find(
     SpeechModel model,
     String directory, {
@@ -94,8 +95,23 @@ final class NemoFiles implements SttSpec {
       RegExp(r'\.tar\.bz2$'),
       '',
     );
-    final dir = Directory('$directory/$base');
-    if (!dir.existsSync()) return null;
+    final root = Directory('$directory/$base');
+    if (!root.existsSync()) return null;
+    // sherpa archives carry their own top folder, so the files lie in
+    // `<base>/` (flat) or `<base>/<base>/` (as unpacked by extractTarBz2).
+    for (final dir in [root, ...root.listSync().whereType<Directory>()]) {
+      final found = _findIn(model, dir, hotwords, fallbackLanguage);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  static NemoFiles? _findIn(
+    SpeechModel model,
+    Directory dir,
+    NemoHotwords? hotwords,
+    String fallbackLanguage,
+  ) {
     final files = dir.listSync().whereType<File>().map((f) => f.path).toList();
     String? pick(bool Function(String name) test) {
       for (final f in files) {

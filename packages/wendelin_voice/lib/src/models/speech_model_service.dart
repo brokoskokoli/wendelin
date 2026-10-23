@@ -37,6 +37,11 @@ abstract interface class SpeechModelService {
   /// Whether every file of [model] is installed.
   Future<bool> isInstalled(SpeechModel model);
 
+  /// Whether [model] is unpacked but lacks the files to load it (damaged or
+  /// unexpected layout), so it has to be downloaded again. Not installed
+  /// and not downloaded at all is not damaged.
+  Future<bool> isDamaged(SpeechModel model);
+
   /// Whether a partial download of [model] exists.
   Future<bool> hasPartial(SpeechModel model);
 
