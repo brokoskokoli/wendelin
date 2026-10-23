@@ -92,7 +92,10 @@ final class ContactNameHintSource implements HintTermSource {
 /// then go without Home Assistant, the recognizer still starts.
 final haApprovedEntitiesProvider = FutureProvider<List<HaEntity>>((ref) async {
   try {
-    return await ref.watch(haStoreProvider).load();
+    return [
+      for (final e in await ref.watch(haStoreProvider).load())
+        if (!e.missing) e,
+    ];
   } on Object {
     return const [];
   }

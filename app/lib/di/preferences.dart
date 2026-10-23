@@ -280,6 +280,24 @@ final secureScreenProvider = NotifierProvider<SecureScreen, bool>(
   SecureScreen.new,
 );
 
+/// „Einfache Befehle sofort ausführen“ (Einstellungen → Home Assistant,
+/// default on, WP135 D).
+final haFastPathProvider = NotifierProvider<HaFastPathSetting, bool>(
+  HaFastPathSetting.new,
+);
+
+/// Fast path setting for Home Assistant commands.
+final class HaFastPathSetting extends Notifier<bool> {
+  @override
+  bool build() => ref.watch(startupProvider).haFastPath;
+
+  /// Stores [on]; the next request uses it.
+  Future<void> set({required bool on}) async {
+    state = on;
+    await _settings(ref).set(AppSettings.haFastPath, on);
+  }
+}
+
 /// Screen protection setting of the main app.
 final class SecureScreen extends Notifier<bool> {
   @override

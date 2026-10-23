@@ -43,6 +43,13 @@ abstract interface class RunConfig {
   /// sentence (WP122); only the tool name, never the sentence.
   void Function(String sessionId, String toolName)? get onFixedConfirmation;
 
+  /// Recognizes simple requests without a model (WP135 D); `null` = no
+  /// fast path.
+  FastPath? get fastPath;
+
+  /// Called once per request the fast path answered; only the tool name.
+  void Function(String sessionId, String toolName)? get onFastPath;
+
   /// Other configured targets, best first, for the offer after a provider
   /// failure (WP128); `null` = no offer.
   List<ProviderTarget> Function()? get fallbackTargets;

@@ -51,7 +51,12 @@ final HaServices haSecureServices = {
     'alarm_arm_night': {},
     'alarm_disarm': {},
   },
-  'cover': {'open_cover': {}, 'close_cover': {}, 'stop_cover': {}},
+  'cover': {
+    'open_cover': {},
+    'close_cover': {},
+    'stop_cover': {},
+    'set_cover_position': {'position'},
+  },
 };
 
 /// Risk of controlling an entity of [domain], `null` if the domain cannot
@@ -85,6 +90,23 @@ bool haSceneHasSecureMember(HaState s, {Set<String> confirmIds = const {}}) {
 /// Without them nothing can be said about its safety: not allowed while
 /// the device is locked.
 bool haSceneHasMembers(HaState s) => s.attributes['entity_id'] != null;
+
+/// Cover device classes (blinds and the like) a user may let Wendelin move
+/// without a confirmation (WP135 E). Garage, gate, door, damper, window,
+/// and an unknown or missing class always need the confirmation.
+const haQuietCoverClasses = {'shutter', 'blind', 'shade', 'awning', 'curtain'};
+
+/// Whether the cover [e] runs without a confirmation: the user switched
+/// „ohne Rückfrage“ on **and** the live state [s] reports one of
+/// [haQuietCoverClasses] (fail-closed: a missing or other class, a
+/// manipulated stored flag or class, a device marked „always confirm“ all
+/// mean the confirmation).
+bool haCoverIsQuiet(HaEntity e, HaState s) =>
+    e.domain == 'cover' &&
+    e.noConfirm &&
+    !e.alwaysConfirm &&
+    s.entityId == e.entityId &&
+    haQuietCoverClasses.contains(s.attributes['device_class']);
 
 /// Domains a recognized speaker may control while the device is locked
 /// (WP92: light, scenes, media). Hook only: WP91 does not apply a lock

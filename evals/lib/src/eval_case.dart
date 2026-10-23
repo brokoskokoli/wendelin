@@ -185,6 +185,7 @@ const caseBackends = {
   'weather',
   'station',
   'notes',
+  'ha',
 };
 
 /// One eval case: a user request and what should happen.

@@ -273,8 +273,21 @@ final class ModelCall {
     final memories = _state.context.memories;
     final visible = _privacy.visibleMemories();
     final speech = _state.speech;
-    return visible.length == memories.length && speech == _state.context.speech
+    // A tool section only goes to a target whose catalog offers the tool
+    // (privacy level per target, K10).
+    final all = _state.context.sections;
+    final sections = [
+      for (final s in all)
+        if (_privacy.catalog.lookup(s.toolName) != null) s,
+    ];
+    return visible.length == memories.length &&
+            speech == _state.context.speech &&
+            sections.length == all.length
         ? _state.context.systemPrompt
-        : runner.contextBuilder.systemPrompt(memories: visible, speech: speech);
+        : runner.contextBuilder.systemPrompt(
+            memories: visible,
+            speech: speech,
+            sections: sections,
+          );
   }
 }

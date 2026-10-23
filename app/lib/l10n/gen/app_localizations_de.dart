@@ -1541,10 +1541,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String get haErrorTitle => 'Fehler – nicht erreichbar';
 
   @override
+  String get haFastPath => 'Einfache Befehle sofort ausführen';
+
+  @override
+  String get haFastPathHelp =>
+      '„Rollo Wohnzimmer runter“ oder „Küche Deckenlicht aus“ führt Wendelin ohne KI aus, mit denselben Regeln. Schlösser, Alarmanlagen, Tore und Geräte mit „Immer bestätigen“ gehen nie so. Bei Unklarem fragt wie bisher die KI.';
+
+  @override
   String get haFilter => 'Geräte filtern';
 
   @override
   String get haFound => 'Gefunden';
+
+  @override
+  String get haGone => 'Nicht mehr in Home Assistant';
 
   @override
   String get haHttpNote =>
@@ -1556,6 +1566,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get haIntro =>
       'Wendelin steuert deine freigegebenen Geräte über die Schnittstelle deines Home Assistant. Nur im Heimnetz oder über Tailscale. Adresse und Token bleiben im sicheren Speicher des Geräts.';
+
+  @override
+  String get haNoAsk => 'Ohne Rückfrage';
+
+  @override
+  String get haNoAskHelp =>
+      'Wendelin bewegt dieses Rollo ohne Nachfrage (mit Rückgängig). Nur für Rollos, Jalousien, Markisen und Vorhänge; Garagentore und Türen fragen immer.';
 
   @override
   String get haNoDevices => 'Keine Geräte gefunden.';
@@ -1572,6 +1589,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get haReload => 'Geräte neu laden';
+
+  @override
+  String get haRemoveGone => 'Entfernen';
 
   @override
   String get haSearch => 'Im WLAN suchen';

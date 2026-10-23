@@ -261,3 +261,65 @@ Integration notesBackend(String locale) => ObsidianIntegration(
   FakeNoteIndex(),
   settings: () => ObsidianSettings(vaultName: 'Eval-Vault', locale: locale),
 );
+
+/// Home Assistant (direct) with a made-up flat: lights, two blinds, a
+/// thermostat, a lock (marked „immer bestätigen“ not needed: locks are
+/// sensitive anyway). Only the entities in the store are approved.
+Integration haBackend() {
+  final api = FakeHaApi()
+    ..areas.addAll({
+      'light.eval_living': 'Wohnzimmer',
+      'cover.eval_living': 'Wohnzimmer',
+      'cover.eval_bedroom': 'Schlafzimmer',
+      'switch.eval_coffee': 'Küche',
+    })
+    ..set('light.eval_living', 'on', {
+      'friendly_name': 'Licht Wohnzimmer',
+      'brightness': 255,
+    })
+    ..set('cover.eval_living', 'open', {
+      'friendly_name': 'Rollo Wohnzimmer',
+      'device_class': 'blind',
+      'current_position': 100,
+    })
+    ..set('switch.eval_coffee', 'off', {'friendly_name': 'Kaffeemaschine'})
+    ..set('cover.eval_bedroom', 'open', {
+      'friendly_name': 'Rollo Schlafzimmer',
+      'device_class': 'blind',
+      'current_position': 100,
+    });
+  final store = FakeHaEntityStore([
+    const HaEntity(
+      entityId: 'light.eval_living',
+      name: 'Licht Wohnzimmer',
+      area: 'Wohnzimmer',
+    ),
+    const HaEntity(
+      entityId: 'cover.eval_living',
+      name: 'Rollo Wohnzimmer',
+      area: 'Wohnzimmer',
+      deviceClass: 'blind',
+      noConfirm: true,
+    ),
+    const HaEntity(
+      entityId: 'cover.eval_bedroom',
+      name: 'Rollo Schlafzimmer',
+      area: 'Schlafzimmer',
+      deviceClass: 'blind',
+      noConfirm: true,
+    ),
+    const HaEntity(
+      entityId: 'switch.eval_coffee',
+      name: 'Kaffeemaschine',
+      area: 'Küche',
+    ),
+    const HaEntity(entityId: 'lock.front', name: 'Haustür', area: 'Flur'),
+  ]);
+  return HaIntegration(
+    api,
+    FakeHaSecrets(
+      const HaEndpoint(url: 'http://ha.example:8123', token: 'eval-token'),
+    ),
+    store,
+  );
+}

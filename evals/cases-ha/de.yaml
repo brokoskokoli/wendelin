@@ -1,0 +1,53 @@
+# Smart-Home-Schnellweg (WP135): Anzahl Modell- und Tool-Aufrufe für typische
+# Sätze. Erfundene Geräte; Skript fake/ha_script.yaml beschreibt, wie ein
+# Modell ohne Geräteliste vorgeht (erst Name wie gesagt, bei Fehler Liste).
+language: de
+cases:
+  - id: de-ha-licht-aus
+    category: smarthome
+    prompt: Licht Wohnzimmer aus.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call
+  - id: de-ha-lampe-an
+    category: smarthome
+    prompt: Lampe Wohnzimmer an.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call
+  - id: de-ha-rollo-runter
+    category: smarthome
+    prompt: Rollo Wohnzimmer runter.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call_secure
+  - id: de-ha-rollo-rauf
+    category: smarthome
+    prompt: Rollo Wohnzimmer rauf.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call_secure
+  - id: de-ha-rollo-50
+    category: smarthome
+    prompt: Rollo Wohnzimmer auf 50 Prozent.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call_secure
+  - id: de-ha-kaffee-an
+    category: smarthome
+    prompt: Kaffeemaschine an.
+    setup: {backends: [ha]}
+    expect:
+      calls:
+        - tool: ha__call
+  - id: de-ha-licht-nackt
+    category: smarthome
+    prompt: Licht an.
+    setup: {backends: [ha]}
+    expect:
+      no_tools: true

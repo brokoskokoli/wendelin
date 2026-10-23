@@ -28,11 +28,13 @@ final class AgentContext {
     required List<ToolSpec> tools,
     required List<Message> messages,
     List<MemoryItem> memories = const [],
+    List<PromptSection> sections = const [],
     this.speech = SpeechStyle.none,
     this.untrustedSeen = false,
   }) : tools = List.unmodifiable(tools),
        messages = List.unmodifiable(messages),
-       memories = List.unmodifiable(memories);
+       memories = List.unmodifiable(memories),
+       sections = List.unmodifiable(sections);
 
   /// The system prompt.
   final String systemPrompt;
@@ -47,12 +49,30 @@ final class AgentContext {
   /// without entries a target may not see).
   final List<MemoryItem> memories;
 
+  /// The tool sections in [systemPrompt] (WP135 A). The agent rebuilds the
+  /// prompt without sections whose tool the current target does not get.
+  final List<PromptSection> sections;
+
   /// Speech preparation of the answer (decides the end of the prompt).
   final SpeechStyle speech;
 
   /// Whether the history already holds a tool result that is not trusted
   /// ([isTrustedResult]); the run then starts with stage 2 switched off.
   final bool untrustedSeen;
+}
+
+/// A prompt section of the tool [toolName] ([PromptContributor]): only valid
+/// for a target whose catalog offers that tool.
+@immutable
+final class PromptSection {
+  /// Creates a section.
+  const PromptSection(this.toolName, this.text);
+
+  /// Tool that contributed the section.
+  final String toolName;
+
+  /// The section text (data, may be several lines).
+  final String text;
 }
 
 /// Whether a result of the tool [name] is trusted: only a successful result
@@ -130,9 +150,15 @@ final class ContextBuilder {
         await history?.recentMessages(turns: config.historyTurns) ??
         const <Message>[];
     final speech = speechStyleFor(input);
+    final sections = await _sections(input.text);
     return AgentContext(
-      systemPrompt: systemPrompt(memories: memories, speech: speech),
+      systemPrompt: systemPrompt(
+        memories: memories,
+        speech: speech,
+        sections: sections,
+      ),
       memories: memories,
+      sections: sections,
       speech: speech,
       untrustedSeen: hasUntrustedResult(catalog, previous),
       tools: catalog.activeSpecs(),
@@ -141,6 +167,25 @@ final class ContextBuilder {
         Message.user(input.text, images: input.images),
       ],
     );
+  }
+
+  /// The sections of the active tools that are a [PromptContributor]
+  /// (WP135 A). A failing tool adds none.
+  Future<List<PromptSection>> _sections(String text) async {
+    final out = <PromptSection>[];
+    for (final spec in catalog.activeSpecs()) {
+      final tool = catalog.lookup(spec.name);
+      if (tool is! PromptContributor) continue;
+      try {
+        final section = await (tool as PromptContributor).promptSection(text);
+        if (section != null && section.trim().isNotEmpty) {
+          out.add(PromptSection(spec.name, section.trim()));
+        }
+      } on Object {
+        // No section is better than no answer.
+      }
+    }
+    return out;
   }
 
   /// The speech style of [input]: only spoken requests get one (WP41).
@@ -157,6 +202,7 @@ final class ContextBuilder {
   String systemPrompt({
     List<MemoryItem> memories = const [],
     SpeechStyle speech = SpeechStyle.none,
+    List<PromptSection> sections = const [],
   }) {
     final now = clock.now();
     final b = StringBuffer()
@@ -205,6 +251,11 @@ final class ContextBuilder {
       ..writeln('- Uhrzeit: ${_two(now.hour)}:${_two(now.minute)}')
       ..writeln('- Zeitzone: ${device.timeZone}')
       ..writeln('- Gerätesprache: ${device.locale}');
+    for (final section in sections) {
+      b
+        ..writeln()
+        ..writeln(section.text);
+    }
     final used = memories.take(config.memoryEntries).toList();
     if (used.isNotEmpty) {
       b

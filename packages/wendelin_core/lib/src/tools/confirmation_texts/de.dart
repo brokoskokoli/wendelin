@@ -18,14 +18,24 @@ final class _De extends ConfirmationLanguage {
   static const _shortDays = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.', 'So.'];
 
   @override
+  String get decimalSeparator => ',';
+
+  @override
   Map<String, String> get templates => const {
     'alarm.set': 'Der Wecker ist auf {time} Uhr gestellt ({days}).',
     'call.started': 'Der Anruf bei {name} wurde gestartet.',
     'event.created': 'Der Termin „{title}“ ist eingetragen: {when}.',
     'flashlight.off': 'Die Taschenlampe ist aus.',
     'flashlight.on': 'Die Taschenlampe ist an.',
+    'ha.brightness':
+        'Ich habe {device} auf {value} Prozent Helligkeit gestellt.',
+    'ha.cover.close': 'Ich habe {device} geschlossen.',
+    'ha.cover.open': 'Ich habe {device} geöffnet.',
+    'ha.cover.position': 'Ich habe {device} auf {value} Prozent gestellt.',
+    'ha.cover.stop': 'Ich habe {device} angehalten.',
     'ha.off': 'Ich habe {device} ausgeschaltet.',
     'ha.on': 'Ich habe {device} eingeschaltet.',
+    'ha.temperature': 'Ich habe {device} auf {value} Grad gestellt.',
     'list.added': 'Ich habe {items} auf die Liste {list} gesetzt.',
     'list.done': 'Ich habe {item} auf der Liste {list} abgehakt.',
     'list.present': 'Ich habe {items} schon auf der Liste {list} gefunden.',

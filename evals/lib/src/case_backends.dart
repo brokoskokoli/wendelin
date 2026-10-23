@@ -32,6 +32,7 @@ final class CaseBackends {
     if (names.contains('weather')) integrations.add(weatherBackend(clock));
     if (names.contains('station')) integrations.add(stationBackend());
     if (names.contains('notes')) integrations.add(notesBackend('de'));
+    if (names.contains('ha')) integrations.add(haBackend());
     return CaseBackends._(integrations, cleanups);
   }
 

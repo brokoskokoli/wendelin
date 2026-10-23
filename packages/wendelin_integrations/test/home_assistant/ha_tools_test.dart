@@ -706,11 +706,12 @@ void main() {
       );
     });
 
-    test('mit Daten (Helligkeit) → Modell formuliert', () async {
+    test('mit mehreren Werten (Helligkeit und Farbe) → Modell', () async {
       final o = await call({
         'entity': 'Küche Deckenlicht',
         'service': 'turn_on',
         'brightness_pct': 20,
+        'rgb_color': [255, 0, 0],
       });
       expect(o.isError, isFalse);
       expect(o.fixed, isNull);
@@ -725,11 +726,11 @@ void main() {
       expect(o.fixed, isNull);
     });
 
-    test('anderer Dienst (Temperatur) → Modell formuliert', () async {
+    test('anderer Dienst (Heizmodus) → Modell formuliert', () async {
       final o = await call({
         'entity': 'Heizung Wohnzimmer',
-        'service': 'set_temperature',
-        'temperature': '22',
+        'service': 'set_hvac_mode',
+        'hvac_mode': 'off',
       });
       expect(o.isError, isFalse);
       expect(o.fixed, isNull);

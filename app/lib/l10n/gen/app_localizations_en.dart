@@ -1523,10 +1523,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haErrorTitle => 'Error – not reachable';
 
   @override
+  String get haFastPath => 'Run simple commands right away';
+
+  @override
+  String get haFastPathHelp =>
+      '„Living room blind down“ or „Kitchen ceiling light off“ runs without AI, under the same rules. Locks, alarms, gates and devices set to „Always confirm“ never use it. For anything unclear the AI answers as before.';
+
+  @override
   String get haFilter => 'Filter devices';
 
   @override
   String get haFound => 'Found';
+
+  @override
+  String get haGone => 'No longer in Home Assistant';
 
   @override
   String get haHttpNote =>
@@ -1538,6 +1548,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get haIntro =>
       'Wendelin controls your approved devices through the API of your Home Assistant. Only on the home network or via Tailscale. Address and token stay in the device’s secure storage.';
+
+  @override
+  String get haNoAsk => 'Without confirmation';
+
+  @override
+  String get haNoAskHelp =>
+      'Wendelin moves this blind without asking (with undo). Only for shutters, blinds, awnings and curtains; garage doors and doors always ask.';
 
   @override
   String get haNoDevices => 'No devices found.';
@@ -1554,6 +1571,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get haReload => 'Reload devices';
+
+  @override
+  String get haRemoveGone => 'Remove';
 
   @override
   String get haSearch => 'Search the Wi-Fi';

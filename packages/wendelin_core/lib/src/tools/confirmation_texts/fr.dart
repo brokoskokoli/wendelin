@@ -40,14 +40,23 @@ final class _Fr extends ConfirmationLanguage {
   ];
 
   @override
+  String get decimalSeparator => ',';
+
+  @override
   Map<String, String> get templates => const {
     'alarm.set': 'Le réveil est réglé à {time} ({days}).',
     'call.started': 'L’appel vers {name} est lancé.',
     'event.created': 'Le rendez-vous « {title} » est ajouté : {when}.',
     'flashlight.off': 'La lampe de poche est éteinte.',
     'flashlight.on': 'La lampe de poche est allumée.',
+    'ha.brightness': 'J’ai réglé {device} à {value} pour cent de luminosité.',
+    'ha.cover.close': 'J’ai fermé {device}.',
+    'ha.cover.open': 'J’ai ouvert {device}.',
+    'ha.cover.position': 'J’ai réglé {device} à {value} pour cent.',
+    'ha.cover.stop': 'J’ai arrêté {device}.',
     'ha.off': 'J’ai éteint {device}.',
     'ha.on': 'J’ai allumé {device}.',
+    'ha.temperature': 'J’ai réglé {device} sur {value} degrés.',
     'list.added': 'J’ai ajouté {items} à la liste {list}.',
     'list.done': 'J’ai coché {item} sur la liste {list}.',
     'list.present': 'J’ai déjà trouvé {items} sur la liste {list}.',

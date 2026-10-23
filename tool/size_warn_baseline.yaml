@@ -26,7 +26,7 @@ app/test/settings/voice_settings_test.dart: 1142
 app/tool/mcp_test_server.dart#main: 100
 app/tool/stt_wer.dart#main: 111
 evals/lib/src/cli.dart#runCli: 130
-evals/lib/src/eval_runner.dart#EvalRunner._observe: 108
+evals/lib/src/eval_runner.dart#EvalRunner._observe: 103
 evals/lib/src/speech_eval.dart#runSpeechCli: 98
 packages/wendelin_agent/lib/src/routing/conditions.dart: 603
 packages/wendelin_agent/lib/src/run/model_call.dart#ModelCall.call: 115

@@ -1548,10 +1548,20 @@ class AppLocalizationsFr extends AppLocalizations {
   String get haErrorTitle => 'Erreur – injoignable';
 
   @override
+  String get haFastPath => 'Exécuter tout de suite les commandes simples';
+
+  @override
+  String get haFastPathHelp =>
+      '« Volet du salon, descends » ou « Lumière de la cuisine, éteins » s’exécute sans IA, avec les mêmes règles. Serrures, alarmes, portails et appareils réglés sur « Toujours confirmer » ne passent jamais par là. Pour tout ce qui est flou, l’IA répond comme avant.';
+
+  @override
   String get haFilter => 'Filtrer les appareils';
 
   @override
   String get haFound => 'Trouvés';
+
+  @override
+  String get haGone => 'Plus dans Home Assistant';
 
   @override
   String get haHttpNote =>
@@ -1563,6 +1573,13 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get haIntro =>
       'Wendelin pilote vos appareils autorisés via l’interface de votre Home Assistant. Uniquement sur le réseau local ou via Tailscale. L’adresse et le jeton restent dans le stockage sécurisé de l’appareil.';
+
+  @override
+  String get haNoAsk => 'Sans confirmation';
+
+  @override
+  String get haNoAskHelp =>
+      'Wendelin actionne ce volet sans demander (avec annulation). Seulement pour volets, stores, bannes et rideaux ; les portes de garage et les portes demandent toujours.';
 
   @override
   String get haNoDevices => 'Aucun appareil trouvé.';
@@ -1579,6 +1596,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get haReload => 'Recharger les appareils';
+
+  @override
+  String get haRemoveGone => 'Supprimer';
 
   @override
   String get haSearch => 'Rechercher sur le Wi-Fi';

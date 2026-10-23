@@ -15,7 +15,8 @@ enum LockedCommand {
 /// any model, so it can run on a locked device (WP53, K16).
 ///
 /// Conservative on purpose: every word must be known. The utterance needs
-/// a flashlight noun („Taschenlampe“, „Licht“, „lampe“, „flashlight“ …)
+/// a flashlight noun („Taschenlampe“, „lampe de poche“, „flashlight“ …;
+/// „Licht“/„Lampe“ alone are room lights, WP135)
 /// and exactly one direction („an“/„aus“, „allume“/„éteins“, „on“/„off“);
 /// politeness and the verb („mach“, „schalte“, „turn“) are allowed,
 /// anything else („im Wohnzimmer“, „nicht“, „ist“, a question) gives
@@ -33,12 +34,25 @@ LockedCommand? matchLockedCommand(String text) {
   var off = 0;
   for (var i = 0; i < words.length; i++) {
     final w = words[i];
-    if (_nouns.contains(w)) {
-      nouns++;
-    } else if (i + 1 < words.length && _nouns.contains(w + words[i + 1])) {
+    if (i + 1 < words.length && _nouns.contains(w + words[i + 1])) {
       // Speech recognition splits compounds: „Taschen Lampe“ (WP114).
       nouns++;
       i++;
+    } else if (w == 'lampe' &&
+        i + 1 < words.length &&
+        words[i + 1] == 'torche') {
+      // „lampe torche“ (WP135).
+      nouns++;
+      i++;
+    } else if (w == 'lampe' &&
+        i + 2 < words.length &&
+        words[i + 1] == 'de' &&
+        words[i + 2] == 'poche') {
+      // „lampe de poche“: „lampe“ alone is a room light (WP135).
+      nouns++;
+      i += 2;
+    } else if (_nouns.contains(w)) {
+      nouns++;
     } else if (_on.contains(w)) {
       on++;
     } else if (_off.contains(w)) {
@@ -53,12 +67,11 @@ LockedCommand? matchLockedCommand(String text) {
 
 const _nouns = {
   // de
-  'taschenlampe', 'taschenlampen', 'handylampe', 'lampe', 'licht',
-  'blitzlicht',
+  'taschenlampe', 'taschenlampen', 'handylampe', 'blitzlicht',
   // fr
-  'torche', 'lumiere', 'poche',
+  'torche', 'poche',
   // en
-  'flashlight', 'flash', 'torch', 'light', 'lamp',
+  'flashlight', 'flash', 'torch',
 };
 
 const _on = {

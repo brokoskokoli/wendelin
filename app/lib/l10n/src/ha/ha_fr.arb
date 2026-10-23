@@ -1,4 +1,8 @@
 {
+  "haFastPath": "Exécuter tout de suite les commandes simples",
+  "haFastPathHelp": "« Volet du salon, descends » ou « Lumière de la cuisine, éteins » s’exécute sans IA, avec les mêmes règles. Serrures, alarmes, portails et appareils réglés sur « Toujours confirmer » ne passent jamais par là. Pour tout ce qui est flou, l’IA répond comme avant.",
+  "haNoAsk": "Sans confirmation",
+  "haNoAskHelp": "Wendelin actionne ce volet sans demander (avec annulation). Seulement pour volets, stores, bannes et rideaux ; les portes de garage et les portes demandent toujours.",
   "haAddressLabel": "Adresse",
   "haAlwaysConfirm": "Toujours confirmer",
   "haAlwaysConfirmHelp": "Wendelin demande confirmation avant chaque commande (p. ex. cuisinière, four).",
@@ -21,6 +25,8 @@
   "haIntro": "Wendelin pilote vos appareils autorisés via l’interface de votre Home Assistant. Uniquement sur le réseau local ou via Tailscale. L’adresse et le jeton restent dans le stockage sécurisé de l’appareil.",
   "haNoDevices": "Aucun appareil trouvé.",
   "haNoRoom": "Sans pièce",
+  "haGone": "Plus dans Home Assistant",
+  "haRemoveGone": "Supprimer",
   "haNothingFound": "Rien trouvé. Saisissez l’adresse à la main (nécessaire avec Tailscale).",
   "haReachable": "Home Assistant est joignable.",
   "haReload": "Recharger les appareils",

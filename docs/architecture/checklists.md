@@ -25,3 +25,11 @@
 1. Adapter unter `packages/wendelin_providers/lib/src/<adapter>/` (Wire-Format nur dort), Contract-Suite `llmProviderContract` aus `wendelin_core`.
 2. `ProviderType` (`packages/wendelin_core/lib/src/provider/provider_type.dart`), `ProviderFactory`, Vorlage in `packages/wendelin_providers/lib/src/catalog/provider_template.dart`; Empfehlungen (Modell-ID, Treffer, p50, Messdatum) nur dort in `modelRecommendations` (WP128, Quelle `docs/notes/model-recommendation.md`), die Anzeige im Modellschritt `app/lib/ui/settings/provider_setup/model_step.dart`.
 3. Einrichtung in `app/lib/ui/settings/provider_setup_screen.dart` und `app/lib/di/provider_setup.dart`.
+
+**Smart Home: Gerät/Prompt/Abgleich (WP135)**
+1. Wortlisten Gerätetyp/Aktion je Sprache: `packages/wendelin_core/lib/src/tools/ha_words/{de,en,fr}.dart` (`ha_words.dart`); Auflösung `ha_context.dart` (`_byTypeAndRoom`).
+2. Feste Bestätigung: `ha_call_tools.dart` (`_fixed`, `confirmationKeys`), Texte `confirmation_texts/{de,en,fr}.dart`.
+3. Geräteliste im Prompt: `PromptContributor` (`wendelin_core/lib/src/tools/prompt_contributor.dart`) von `HaCallDeviceTool`, Inhalt `ha_prompt.dart`; Sammeln `ContextBuilder._sections`, Filter je Ziel `run/model_call.dart` (`_basePrompt`).
+4. Abgleich mit Home Assistant: `ha_sync.dart` (`haReconcile`, `haSyncStore`), `HaContext.syncIfDue`, Start in `app/lib/di/integrations/ha_spec.dart`, „Neu laden“ in `app/lib/ui/settings/ha_screen.dart`, Zeitstempel `ha.synced` in `app/lib/di/home_assistant.dart`.
+5. Schnellweg (D): Erkennung `ha_fast_path.dart` (`HaFastPath`, Wörter `HaWords.neutral`), Port `FastPath` in `wendelin_core/lib/src/tools/fast_path.dart`, Ausführung `wendelin_agent/lib/src/run/fast_path_step.dart` (Einschub in `agent_runner.dart` `_loop`), Verdrahtung `app/lib/di/agent_factory.dart`/`agent_providers.dart`, Schalter `AppSettings.haFastPath` und `ha_screen.dart`.
+6. Rollo ohne Rückfrage (E): `HaEntity.noConfirm`/`deviceClass`, `haCoverIsQuiet` in `ha_policy.dart`, `ha_call_tools.dart`, Undo `ha_undo.dart`, Schalter `ha_device_sections.dart`.

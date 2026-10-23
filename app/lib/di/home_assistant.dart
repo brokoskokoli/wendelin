@@ -51,8 +51,21 @@ final class SecretStoreHa implements HaSecrets, HaEntityStore {
     await store.write(tokenKey, endpoint.token);
   }
 
+  /// The decoded entities, kept in memory so that the prompt build does not
+  /// decrypt and parse them on every request; dropped by [save] and [clear]
+  /// and not set when reading fails.
+  List<HaEntity>? _cache;
+
   @override
   Future<List<HaEntity>> load() async {
+    final cached = _cache;
+    if (cached != null) return cached;
+    final loaded = List<HaEntity>.unmodifiable(await _read());
+    _cache = loaded;
+    return loaded;
+  }
+
+  Future<List<HaEntity>> _read() async {
     final raw = await store.read(entitiesKey);
     if (raw == null) return const [];
     try {
@@ -65,18 +78,40 @@ final class SecretStoreHa implements HaSecrets, HaEntityStore {
   }
 
   @override
-  Future<void> save(List<HaEntity> entities) => entities.isEmpty
-      ? store.delete(entitiesKey)
-      : store.write(
-          entitiesKey,
-          jsonEncode([for (final e in entities) e.toJson()]),
-        );
+  Future<void> save(List<HaEntity> entities) async {
+    _cache = null;
+    if (entities.isEmpty) {
+      await store.delete(entitiesKey);
+    } else {
+      await store.write(
+        entitiesKey,
+        jsonEncode([for (final e in entities) e.toJson()]),
+      );
+    }
+    _cache = null;
+  }
+
+  /// Key of the time of the last comparison (`ha.synced` on the device).
+  static const syncedKey = 'synced';
+
+  @override
+  Future<DateTime?> lastSync() async {
+    final raw = await store.read(syncedKey);
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  @override
+  Future<void> saveLastSync(DateTime time) =>
+      store.write(syncedKey, time.toUtc().toIso8601String());
 
   /// Deletes address, token and approved entities.
   Future<void> clear() async {
+    _cache = null;
     await store.delete(urlKey);
     await store.delete(tokenKey);
     await store.delete(entitiesKey);
+    _cache = null;
+    await store.delete(syncedKey);
   }
 
   @override
@@ -135,7 +170,10 @@ Future<String?> haConnect({
     return e.message;
   }
   // A different instance has different entities.
-  if (previous?.url != endpoint.url) await store.save(const []);
+  if (previous?.url != endpoint.url) {
+    await store.save(const []);
+    await store.store.delete(SecretStoreHa.syncedKey);
+  }
   return null;
 }
 

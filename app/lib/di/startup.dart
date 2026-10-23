@@ -26,6 +26,7 @@ final class StartupSettings {
     this.lists = const [],
     this.obsidian = const ObsidianPrefs(),
     this.secureScreen = false,
+    this.haFastPath = true,
     this.station = const StationPrefs(),
   });
 
@@ -72,6 +73,9 @@ final class StartupSettings {
   /// Protect the main app's screen content.
   final bool secureScreen;
 
+  /// Simple Home Assistant commands without a model (WP135 D).
+  final bool haFastPath;
+
   /// Station mode settings (WP99).
   final StationPrefs station;
 
@@ -105,6 +109,7 @@ final class StartupSettings {
       obsidian:
           await settings.get(AppSettings.obsidian) ?? const ObsidianPrefs(),
       secureScreen: await settings.get(AppSettings.secureScreen) ?? false,
+      haFastPath: await settings.get(AppSettings.haFastPath) ?? true,
       station: await settings.get(AppSettings.station) ?? const StationPrefs(),
     );
   }
