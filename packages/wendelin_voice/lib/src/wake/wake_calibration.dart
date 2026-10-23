@@ -73,7 +73,8 @@ const wakePositiveQuantile = 0.1;
 /// result has `meetsTarget == false`. If the negatives do not constrain the
 /// threshold, the [wakePositiveQuantile] quantile of the positives is used
 /// instead of their minimum (outlier-robust); without any event at most
-/// [wakeUnconstrainedMaxThreshold]. [requireNegatives] `false`:
+/// [wakeUnconstrainedMaxThreshold]; with events it never falls below the
+/// lower of that cap and the quantile. [requireNegatives] `false`:
 /// empty [negativeEvents] mean a measured quiet background, not a missing
 /// one. A pure function.
 WakeCalibration calibrateThreshold({
@@ -104,6 +105,15 @@ WakeCalibration calibrateThreshold({
   } else {
     // Exclude all but the [allowed] highest events.
     threshold = neg[neg.length - allowed - 1] + 1e-6;
+    // A weak event (e.g. a quiet room with one 0.35 peak) says nothing about
+    // false alarms by speech: do not fall below the capped quantile.
+    if (pos.isNotEmpty) {
+      final q = pos[((pos.length - 1) * wakePositiveQuantile).floor()];
+      final floor = q < wakeUnconstrainedMaxThreshold
+          ? q
+          : wakeUnconstrainedMaxThreshold;
+      if (threshold < floor) threshold = floor;
+    }
   }
   if (threshold < minThreshold) threshold = minThreshold;
   final recall = pos.isEmpty

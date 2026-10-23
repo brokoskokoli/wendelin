@@ -56,6 +56,18 @@ WakeTemplates centeredTemplates() => WakeTemplates(
   ],
 );
 
+/// Centered best-other cosine 0.4525 (0.36 / (0.36 + 0.66^2)), raw above 0.99.
+WakeTemplates lowCenteredTemplates() => WakeTemplates(
+  speakerId: 'a',
+  featureVersion: 'fake-1',
+  threshold: 0.9,
+  embeddings: [
+    v([5.6, 5.66, 5, 5]),
+    v([5.6, 5, 5.66, 5]),
+    v([5.6, 5, 5, 5.66]),
+  ],
+);
+
 void main() {
   test(
     'zentriert: Hintergrund ist roh nah an den Vorlagen, zentriert nicht',
@@ -79,21 +91,24 @@ void main() {
   );
 
   test('zentriert: Schwelle aus zentrierten Leave-one-out-Werten', () async {
-    // Centered the templates are 0.5..0.71 apart (best of the others 0.71);
-    // raw it would be above 0.99 and the threshold would sit at the cap.
-    // Without background events the quantile (0.707) is limited to the
-    // provisional threshold (WP134).
+    // Centered the templates are 0.45 apart (best of the others), raw they
+    // are above 0.9. Without background events the centered quantile (0.45)
+    // decides: neither the cap (0.50) nor the lower bound (0.40) nor the raw
+    // value. The background is centered-orthogonal to all templates.
     final cal = WakeCalibrator(
       audio: SilentAudio(12),
-      features: fakeFeatures(mean: _mean, vector: (_) => v([5, 5, 5, 6])),
-      templates: centeredTemplates(),
+      features: fakeFeatures(
+        mean: _mean,
+        vector: (_) => v([6, 4.09, 4.09, 4.09]),
+      ),
+      templates: lowCenteredTemplates(),
       store: FakeWakeTemplateStore(),
       onPrompt: () async {},
       duration: const Duration(minutes: 10),
       firstPrompt: const Duration(hours: 1),
     );
     await cal.run();
-    expect(cal.result!.threshold, wakeUnconstrainedMaxThreshold);
+    expect(cal.result!.threshold, closeTo(0.4525, 0.005));
   });
 
   test(

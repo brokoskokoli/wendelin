@@ -52,7 +52,7 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   final WakeFeatureExtractor Function() features;
 
   /// Added to every template threshold (without [verifier]; with one the
-  /// candidate margins [candidateWakeMargin]/[candidateStopMargin] apply).
+  /// candidate margin [candidateWakeMargin] applies).
   final double extraMargin;
 
   /// Stage 2 (WP113, K84): builds the check of a candidate by the big

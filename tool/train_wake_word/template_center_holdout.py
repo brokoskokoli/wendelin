@@ -77,6 +77,7 @@ def calibrate(pos, neg, hours, target=1.0):
         thr = min(thr, UNCONSTRAINED_MAX)  # WP134: kein Ereignis erzwingt mehr -> nie ueber die vorlaeufige Schwelle
     else:
         thr = neg[len(neg) - allowed - 1] + 1e-6
+        if pos: thr = max(thr, min(pos[int(np.floor((len(pos) - 1) * QUANTILE))], UNCONSTRAINED_MAX))  # Review R2/B: schwaches Ereignis senkt nicht unter min(Quantil, 0,50)
     thr = min(max(thr, MIN_THR), MAX_THR)
     return thr, sum(p >= thr for p in pos) / len(pos), sum(n >= thr for n in neg) / hours
 
@@ -168,6 +169,7 @@ def main():
     repeat = max(1, int(np.ceil(len(loo) / max(len(answers), 1))))
     pos_both = loo + answers * repeat
     bg = {}
+    hold = {}  # zurueckgehaltener Rest je Hintergrund: (Events, Stunden), nur Bericht der FA/h
     bg["leiser Raum (10 leiseste 5-s-Stücke je Gerät)"] = ([], sum(len(m.windows_from_emb(E)) for E in qe.values()) and 0)
     qE = qe
     qh = sum(max(0, len(E) + m.FIRST_EMB) * m.CHUNK for E in qE.values()) / m.SR / 3600
@@ -183,6 +185,8 @@ def main():
         t, v = m.one(S)
         keep = t < 1800
         bg[f"Negativ-Aufnahme {dev} (erste 30 min)"] = (slot_events(t[keep], v[keep]), 0.5)
+        rest = ~keep
+        hold[f"Negativ-Aufnahme {dev} (erste 30 min)"] = (slot_events(t[rest], v[rest]), m.hours_of(Ed) - 0.5)
         bg[f"Negativ-Aufnahme {dev} (ganz)"] = (slot_events(t, v), m.hours_of(Ed))
     tvE = cache.get("fleurs_test", srcs["fleurs_test"])
     acc, ev, tot = {}, [], 0.0
@@ -193,12 +197,24 @@ def main():
         W = m.windows_from_emb(E)
         if len(W): ev += slot_events(m.win_times(len(W)), m.best_sim(W, T, mv))
     bg["Fernseher (FLEURS test, erste 0,5 h)"] = (ev, tot)
-    C = ["| Hintergrund | Events (Slots ≥0,3) / h | Positive | Schwelle | Recall eigene Positive | FA/h | Wendelin sauber | Hey Wendelin sauber |", "|---|---|---|---|---|---|---|---|"]
+    rev, rtot = [], 0.0
+    for k in sorted(tvE):
+        if k in acc: continue
+        W = m.windows_from_emb({k: tvE[k]})
+        if len(W): rev += slot_events(m.win_times(len(W)), m.best_sim(W, T, mv))
+        rtot += m.hours_of({k: tvE[k]})
+    hold["Fernseher (FLEURS test, erste 0,5 h)"] = (rev, rtot)
+    def held(name, thr):
+        if name not in hold: return "-"
+        e, h = hold[name]
+        n = sum(x >= thr for x in e)
+        return f"{n / h:.1f} ({n} / {h:.2f} h)"
+    C = ["| Hintergrund | Events (Slots ≥0,3) / h | Positive | Schwelle | Recall eigene Positive | FA/h | Wendelin sauber | Hey Wendelin sauber | FA/h zurückgehalten (Events / h) |", "|---|---|---|---|---|---|---|---|---|"]
     for name, (neg, hrs) in bg.items():
         for pname, pos in (("LOO", loo), ("LOO+Antworten", pos_both)):
             thr, rec, fa = calibrate(pos, neg, hrs)
             hit = lambda w: f"{sum(p >= thr for p in clean[w])}/{len(clean[w])}"
-            C.append(f"| {name} | {len(neg)} / {hrs:.2f} h | {pname} | {thr:.2f} | {rec:.2f} | {fa:.1f} | {hit('Wendelin')} | {hit('Hey Wendelin')} |".replace(".", ","))
+            C.append(f"| {name} | {len(neg)} / {hrs:.2f} h | {pname} | {thr:.2f} | {rec:.2f} | {fa:.1f} | {hit('Wendelin')} | {hit('Hey Wendelin')} | {held(name, thr)} |".replace(".", ","))
     print("\n" + "\n".join(C), flush=True)
     json.dump({"hold": rows, "loo": loo, "answers": answers}, open(f"{a.out}/holdout.json", "w"), indent=1)
     open(f"{a.out}/holdout.md", "w").write("\n".join(L) + "\n\n" + "\n".join(C) + "\n")
