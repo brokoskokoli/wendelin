@@ -6,7 +6,8 @@ import 'ha_policy.dart';
 
 /// Domains the fast path may touch (WP135 D): lights, switches, quiet
 /// blinds and thermostats. Never locks, alarm panels, garage/gate/door
-/// covers, scenes or media players.
+/// covers, scenes or media players, and no device whose name or entity id
+/// holds a blocker word ([HaWords.blockers]), whatever its domain.
 const _fastDomains = {'light', 'switch', 'cover', 'climate'};
 
 /// The fast path of Home Assistant (WP135 D): recognizes simple requests
@@ -47,12 +48,17 @@ final class HaFastPath implements FastPath {
   }
 
   Future<FastPathCall?> _match(String text, String? language) async {
+    // A question is no command („Küche Licht an?“): the model answers.
+    if (text.contains('?')) return null;
     final code = (language ?? '').toLowerCase().split(RegExp('[-_]')).first;
     final words = haWordsByLanguage[code];
     if (words == null) return null;
     final eligible = [
       for (final e in await ctx.approved())
-        if (_fastDomains.contains(e.domain) && !e.alwaysConfirm) e,
+        if (_fastDomains.contains(e.domain) &&
+            !e.alwaysConfirm &&
+            !haHasBlocker('${e.name} ${e.entityId}'))
+          e,
     ];
     if (eligible.isEmpty) return null;
 
@@ -79,7 +85,9 @@ final class HaFastPath implements FastPath {
     final matches = [
       for (final e in eligible)
         if ((domains.isEmpty || domains.contains(e.domain)) &&
-            _wordsOf(e).containsAll(nameWords))
+            _wordsOf(e).containsAll(nameWords) &&
+            // A room word alone is no device: a name or type word is needed.
+            (domains.isNotEmpty || nameWords.any(_nameWordsOf(e).contains)))
           e,
     ];
     if (matches.length != 1) return null;
@@ -195,6 +203,10 @@ final class HaFastPath implements FastPath {
   }
 
   int? _percent(num v) => v is int && v >= 0 && v <= 100 ? v : null;
+
+  /// Words of the device name only, folded.
+  Set<String> _nameWordsOf(HaEntity e) =>
+      foldForMatch(e.name).split(' ').toSet();
 
   /// Words of the device name and room, folded.
   Set<String> _wordsOf(HaEntity e) =>

@@ -302,25 +302,28 @@ void main() {
       expect(provider.requests, hasLength(1));
     });
 
-    test('Sprache mit unsicherer Erkennung (< 0,5): Modell', () async {
-      final (a, provider) = scripted('a', [ScriptedTurn.text('Okay.')]);
-      final match = _Match('Taschenlampe an');
-      final tool = flashlight();
-      final h = Harness(primary: a, tools: [tool], fastPath: match);
-      await h.run(
-        'Taschenlampe an',
-        source: InputSource.voice,
-        sttConfidence: 0.49,
-      );
-      expect(match.asked, isEmpty);
-      expect(tool.callCount, 0);
-      expect(provider.requests, hasLength(1));
+    test('Sprache mit unsicherer Erkennung (< 0,6): Modell', () async {
+      // 0,54 = „Sprache verschluckt“ (whisperConfidence): darf nicht durch.
+      for (final conf in <double>[0.49, 0.54, 0.59]) {
+        final (a, provider) = scripted('a', [ScriptedTurn.text('Okay.')]);
+        final match = _Match('Taschenlampe an');
+        final tool = flashlight();
+        final h = Harness(primary: a, tools: [tool], fastPath: match);
+        await h.run(
+          'Taschenlampe an',
+          source: InputSource.voice,
+          sttConfidence: conf,
+        );
+        expect(match.asked, isEmpty, reason: '$conf');
+        expect(tool.callCount, 0, reason: '$conf');
+        expect(provider.requests, hasLength(1), reason: '$conf');
+      }
     });
 
     test(
-      'Sprache mit Erkennung genau 0,5 und fehlender Wert: Schnellweg',
+      'Sprache mit Erkennung ab 0,6 und fehlender Wert: Schnellweg',
       () async {
-        for (final conf in <double?>[0.5, 0.97, null]) {
+        for (final conf in <double?>[0.6, 0.97, null]) {
           final (a, provider) = scripted('a', const []);
           final h = Harness(
             primary: a,

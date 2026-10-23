@@ -87,6 +87,70 @@ void main() {
     fast = HaFastPath(HaContext(FakeHaApi(), FakeHaEntityStore(_devices)));
   });
 
+  HaFastPath with_(List<HaEntity> extra) => HaFastPath(
+    HaContext(FakeHaApi(), FakeHaEntityStore([..._devices, ...extra])),
+  );
+
+  group('Sperrwörter und Raumwort (Review Runde 1)', () {
+    test('Raum allein ist kein Gerät: Tür-Schalter im Flur', () async {
+      final f = with_(const [
+        HaEntity(entityId: 'switch.door', name: 'Türöffner', area: 'Flur'),
+      ]);
+      expect((await f.match('Flur an', language: 'de')), isNull);
+    });
+
+    test('Raum allein ist kein Gerät (ohne Sperrwort)', () async {
+      final f = with_(const [
+        HaEntity(entityId: 'switch.fan', name: 'Ventilator', area: 'Diele'),
+      ]);
+      expect(await f.match('Diele an', language: 'de'), isNull);
+      expect(await f.match('Ventilator an', language: 'de'), isNotNull);
+    });
+
+    test('Garage als Schalter: kein Schnellweg', () async {
+      final f = with_(const [
+        HaEntity(
+          entityId: 'switch.garage',
+          name: 'Garagentor Süd',
+          area: 'Garage',
+        ),
+      ]);
+      expect(await f.match('Garage an', language: 'de'), isNull);
+      expect(await f.match('Garagentor Süd an', language: 'de'), isNull);
+    });
+
+    test('Sperrwort nur in der entity_id oder in anderer Sprache', () async {
+      final f = with_(const [
+        HaEntity(entityId: 'switch.garage_opener', name: 'Hofeinfahrt'),
+        HaEntity(entityId: 'light.x', name: 'Gate Spots', area: 'Hof'),
+        HaEntity(entityId: 'switch.y', name: 'Portail Hof'),
+        HaEntity(entityId: 'light.z', name: 'Alarm Licht'),
+      ]);
+      expect(await f.match('Hofeinfahrt an', language: 'de'), isNull);
+      expect(await f.match('Gate Spots on', language: 'en'), isNull);
+      expect(await f.match('Portail Hof allume', language: 'fr'), isNull);
+      expect(await f.match('Alarm Licht an', language: 'de'), isNull);
+    });
+
+    test('Temperatur-Sensor wird nicht von „tür“ oder „tor“ erfasst', () async {
+      final f = with_(const [
+        HaEntity(entityId: 'switch.t', name: 'Temperatur Ventilator'),
+      ]);
+      expect(
+        await f.match('Temperatur Ventilator an', language: 'de'),
+        isNotNull,
+      );
+    });
+
+    test('Frage mit Fragezeichen: Modell', () async {
+      expect(await fast.match('Küche Licht an?', language: 'de'), isNull);
+      expect(
+        await fast.match('Küche Deckenlicht aus', language: 'de'),
+        isNotNull,
+      );
+    });
+  });
+
   Future<Map<String, Object?>?> args(String text, [String lang = 'de']) async =>
       (await fast.match(text, language: lang))?.arguments;
 

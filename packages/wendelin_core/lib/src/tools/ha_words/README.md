@@ -6,6 +6,9 @@ Home-Assistant-Domain: `light`, `cover`, `switch`, `climate`), Aktionswörter
 Prozent- und Gradwörter sowie typische Verhörer der Spracherkennung
 (`recognitionErrors`, z. B. de „Rolle“ für „Rollo“).
 
+## Sperrwörter
+`blockers` je Sprache: Wortstämme (Garage, Tor, Tür, Schloss, Alarm …), die den Schnellweg für jedes Gerät sperren, dessen Name oder Entity-Id sie enthält, in jeder Domain. Es zählen die Listen **aller** Sprachen. `^` vorn = Wortanfang (`^tur` trifft nicht „Temperatur“, `^tor` nicht „Ventilator“). Im Zweifel sperren (Modell entscheidet).
+
 ## Regeln
 - Typen sind **Wortstämme** (Wortanfang, „lampe“ trifft „Lampen“), Aktionen
   **ganze Wörter** oder Wortfolgen („an“ darf nicht in „Anhalter“ treffen).

@@ -52,6 +52,7 @@ final class HaWords {
     required this.degrees,
     required this.fillers,
     required this.neutral,
+    required this.blockers,
   });
 
   /// Device type words per Home Assistant domain (`light`, `cover`,
@@ -81,6 +82,32 @@ final class HaWords {
   /// no meaning: the fast path accepts an utterance only if **every** word
   /// is known (like `matchLockedCommand`).
   final List<String> neutral;
+
+  /// Stems of words that mark a device the fast path never switches
+  /// (garage, gate, door, lock, alarm), whatever its Home Assistant domain.
+  /// A stem is looked for anywhere in the folded name and entity id
+  /// („garage“ in „Garagentor“); a leading `^` means start of a word („^tur“
+  /// does not hit „Temperatur“, „^tor“ not „Ventilator“). Stems of **every** language count (names
+  /// can be in any language); a hit means the model decides.
+  final List<String> blockers;
+}
+
+/// Whether [nameAndId] (device name and entity id) contains a blocker of
+/// any language (see [HaWords.blockers]).
+bool haHasBlocker(String nameAndId) {
+  final folded = foldForMatch(nameAndId);
+  final spaced = ' $folded';
+  for (final w in haWordsByLanguage.values) {
+    for (final b in w.blockers) {
+      final startOnly = b.startsWith('^');
+      final stem = foldForMatch(startOnly ? b.substring(1) : b);
+      if (stem.isEmpty) continue;
+      if (startOnly ? spaced.contains(' $stem') : folded.contains(stem)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /// Word lists per language code. New language: see `ha_words/README.md`.

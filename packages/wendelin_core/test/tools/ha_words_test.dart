@@ -20,6 +20,7 @@ void main() {
           expect(value.actions[a], isNotEmpty, reason: '$key/$a');
         }
         expect(value.percent, isNotEmpty);
+        expect(value.blockers, isNotEmpty, reason: '$key blockers');
         expect(value.degrees, isNotEmpty);
         expect(value.fillers, isNotEmpty);
         expect(value.recognitionErrors['cover'], isNotEmpty);

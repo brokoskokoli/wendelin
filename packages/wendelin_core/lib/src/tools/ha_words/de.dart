@@ -103,6 +103,21 @@ const haWordsDe = HaWords(
     'jetzt', 'kannst', 'du', 'mir', 'wendelin', 'wendeln', 'hey', 'hallo',
     'okay', 'ok',
   ],
+  // Never on the fast path, any domain (garage, gate, door, lock, alarm).
+  blockers: [
+    'garage',
+    '^tor',
+    'hoftor',
+    'gartentor',
+    'einfahrtstor',
+    '^tur',
+    '^tuer',
+    'offner',
+    'oeffner',
+    'schloss',
+    'alarm',
+    'riegel',
+  ],
 );
 
 /// Extra topic words for the preloading of the `ha` tools (on top of the

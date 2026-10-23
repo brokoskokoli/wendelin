@@ -47,6 +47,24 @@ void main() {
       });
   });
 
+  group('haCoverIsQuiet', () {
+    HaState state(String id, [String cls = 'blind']) =>
+        HaState(entityId: id, state: 'open', attributes: {'device_class': cls});
+
+    test('Klasse shade zählt als ruhig (echte HA-Klasse)', () {
+      expect(haQuietCoverClasses, contains('shade'));
+      expect(
+        haCoverIsQuiet(_cover('cover.a'), state('cover.a', 'shade')),
+        isTrue,
+      );
+    });
+
+    test('Live-Zustand mit anderer entity_id: nicht ruhig', () {
+      expect(haCoverIsQuiet(_cover('cover.a'), state('cover.a')), isTrue);
+      expect(haCoverIsQuiet(_cover('cover.a'), state('cover.b')), isFalse);
+    });
+  });
+
   group('erlaubte Klassen', () {
     for (final cls in haQuietCoverClasses) {
       test('$cls läuft über ha__call mit Undo und festem Satz', () async {

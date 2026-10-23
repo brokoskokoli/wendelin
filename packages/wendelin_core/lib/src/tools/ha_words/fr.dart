@@ -89,6 +89,8 @@ const haWordsFr = HaWords(
     's', 'il', 'te', 'vous', 'plait', 'stp', 'svp', 'peux', 'tu', 'pouvez', //
     'maintenant', 'a', 'sil', 'hey', 'ok', 'okay', 'wendelin',
   ],
+  // Never on the fast path, any domain (garage, gate, door, lock, alarm).
+  blockers: ['garage', 'portail', 'porte', 'serrure', 'verrou', 'alarme'],
 );
 
 /// Extra topic words for the preloading of the `ha` tools.

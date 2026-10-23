@@ -94,7 +94,7 @@ bool haSceneHasMembers(HaState s) => s.attributes['entity_id'] != null;
 /// Cover device classes (blinds and the like) a user may let Wendelin move
 /// without a confirmation (WP135 E). Garage, gate, door, damper, window,
 /// and an unknown or missing class always need the confirmation.
-const haQuietCoverClasses = {'shutter', 'blind', 'awning', 'curtain'};
+const haQuietCoverClasses = {'shutter', 'blind', 'shade', 'awning', 'curtain'};
 
 /// Whether the cover [e] runs without a confirmation: the user switched
 /// „ohne Rückfrage“ on **and** the live state [s] reports one of

@@ -69,6 +69,8 @@ const haWordsEn = HaWords(
     'turn', 'switch', 'put', 'set', 'make', 'can', 'you', 'could', 'now', //
     'me', 'to', 'it', 'hey', 'hi', 'okay', 'ok', 'wendelin',
   ],
+  // Never on the fast path, any domain (garage, gate, door, lock, alarm).
+  blockers: ['garage', 'gate', 'door', 'lock', 'opener', 'alarm', 'latch'],
 );
 
 /// Extra topic words for the preloading of the `ha` tools.

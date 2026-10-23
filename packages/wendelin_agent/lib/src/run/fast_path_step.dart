@@ -16,7 +16,7 @@ import 'tool_round.dart';
 /// Lowest speech recognition confidence at which a spoken request may take
 /// the fast path; below it the model decides (a misheard command is not run
 /// directly). Typed input has no confidence.
-const fastPathMinConfidence = 0.5;
+const fastPathMinConfidence = 0.6;
 
 /// Runs a [FastPath] match as one tool round.
 ///
