@@ -81,6 +81,8 @@ void main() {
   test('zentriert: Schwelle aus zentrierten Leave-one-out-Werten', () async {
     // Centered the templates are 0.5..0.71 apart (best of the others 0.71);
     // raw it would be above 0.99 and the threshold would sit at the cap.
+    // Without background events the quantile (0.707) is limited to the
+    // provisional threshold (WP134).
     final cal = WakeCalibrator(
       audio: SilentAudio(12),
       features: fakeFeatures(mean: _mean, vector: (_) => v([5, 5, 5, 6])),
@@ -91,7 +93,7 @@ void main() {
       firstPrompt: const Duration(hours: 1),
     );
     await cal.run();
-    expect(cal.result!.threshold, closeTo(0.707, 0.01));
+    expect(cal.result!.threshold, wakeUnconstrainedMaxThreshold);
   });
 
   test(
@@ -202,7 +204,9 @@ void main() {
     await cal.run();
     final r = cal.result!;
     expect(r.meetsTarget, isTrue);
-    expect(r.threshold, closeTo(0.9, 0.01));
+    // Quiet room (no events): the answers (0.9) lift it at most to the
+    // provisional threshold, not to the cap (WP134).
+    expect(r.threshold, wakeUnconstrainedMaxThreshold);
     expect(r.threshold, lessThan(calibrationMaxThreshold));
   });
 

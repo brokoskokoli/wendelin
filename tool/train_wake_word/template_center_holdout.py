@@ -18,6 +18,7 @@ import template_center_measure as m
 
 SLOT = 24000          # 1,5 s wie WakeCalibrator._slot
 EVENT_FLOOR, PROMPT_FLOOR, MAX_THR, MIN_THR, QUANTILE = 0.3, 0.4, 0.90, 0.40, 0.1
+UNCONSTRAINED_MAX = 0.50  # wakeUnconstrainedMaxThreshold
 
 
 def holdout_sources():
@@ -73,10 +74,38 @@ def calibrate(pos, neg, hours, target=1.0):
     allowed = int(np.floor(target * hours))
     if len(neg) <= allowed:
         thr = pos[int(np.floor((len(pos) - 1) * QUANTILE))]
+        if not neg: thr = min(thr, UNCONSTRAINED_MAX)  # Nachbesserung Runde 2: leiser Raum nie ueber die vorlaeufige Schwelle
     else:
         thr = neg[len(neg) - allowed - 1] + 1e-6
     thr = min(max(thr, MIN_THR), MAX_THR)
     return thr, sum(p >= thr for p in pos) / len(pos), sum(n >= thr for n in neg) / hours
+
+
+def outlier_report(x, train_rows, info, G, loo):
+    """Schwaechste Vorlage (kleinstes zentriertes LOO): Label, Nullanteil, Pegel, beste Nachbarn. Nur Ausgabe, keine Datenaenderung."""
+    i = int(np.argmin(loo))
+    inf = info[i]
+    cand = [r for r in train_rows if int(r["block"]) == inf["block"] and int(r["runde"]) == inf["runde"]]
+    r = cand[0] if len(cand) == 1 else None
+    log = print
+    log(f"Ausreisser-Vorlage #{i}: LOO {loo[i]:.2f}, naechste Nachbarn {np.sort(G[i])[-3:][::-1].round(2).tolist()}, info {inf}; Zeilen mit Block/Runde: {len(cand)}")
+    if r is not None:
+        a, b, _ = m.capture_bounds(x, float(r["start"]), float(r["ende"]))
+        seg = m.to16(x[a:b]).astype("float64")
+        lead = seg[:3200]
+        # Pegel Wort / erste 200 ms (Raumton) in LSB, Sprachanteil der Dauer
+        log(f"  Label: {dict((k, r[k]) for k in r if k not in ('datei',))}; Dauer {float(r['ende']) - float(r['start']):.2f} s; "
+            f"RMS Ausschnitt {np.sqrt((seg**2).mean()):.0f} LSB, erste 200 ms {np.sqrt((lead**2).mean()):.0f} LSB, Spitze {np.abs(seg).max():.0f}; "
+            f"Rand: Ende liegt {len(x) / m.SR - float(r['ende']):.2f} s vor Dateiende")
+    dur = [float(rr["ende"]) - float(rr["start"]) for rr in train_rows]
+    rms = []
+    for rr in train_rows:
+        a, b, _ = m.capture_bounds(x, float(rr["start"]), float(rr["ende"]))
+        rms.append(float(np.sqrt((m.to16(x[a:b]).astype("float64") ** 2).mean())))
+    log(f"  Vergleich alle Vorlagen: Dauer {min(dur):.2f}..{max(dur):.2f} s (Median {np.median(dur):.2f}), RMS {min(rms):.0f}..{max(rms):.0f} (Median {np.median(rms):.0f})")
+    st = {}
+    for rr in train_rows: st[rr["status"]] = st.get(rr["status"], 0) + 1
+    log(f"  Status der Vorlagen: {st}")
 
 
 def main():
@@ -93,7 +122,7 @@ def main():
     train_rows = [r for r in labels if m.is_train_row(r)]
     eval_rows = [r for r in labels if m.is_eval_row(r)]
     x = m.load16(f"{m.WORK121}/all_{m.TRAIN_DEVICE}.wav")
-    T, _, _ = m.enroll(chain, x, train_rows, "noise")
+    T, _, info = m.enroll(chain, x, train_rows, "noise")
     mus, _ = m.neutral_means(chain, cache, srcs)
     sp = m.windows_from_emb(np.concatenate(list(cache.get("fleurs_dev", srcs["fleurs_dev"]).values())))
     sep = {k: m.windows_from_emb(v) for k, v in cache.get("synth_sep", separate_noise_mean_sources).items()}
@@ -135,6 +164,7 @@ def main():
     answers = [v for v in answers if v >= PROMPT_FLOOR]
     clean = {w: [p["peak"] for d in m.DEVICES for p in pk[d] if p["word"] == w and (d != "handy2" or p["block"] >= 4)] for w in m.WORDS}
     log(f"Antworten (handy2 B1-3, >= {PROMPT_FLOOR}): {len(answers)}; saubere Menge: " + ", ".join(f"{w} {len(v)}" for w, v in clean.items()))
+    outlier_report(x, train_rows, info, G, loo)
     repeat = max(1, int(np.ceil(len(loo) / max(len(answers), 1))))
     pos_both = loo + answers * repeat
     bg = {}

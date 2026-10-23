@@ -98,7 +98,7 @@ final class MicrophoneEnded implements Exception {
 /// recordings; stage 2 filters the rest). Recordings of one voice can be
 /// nearly identical (leave-one-out similarity 1.0); a threshold derived from
 /// them would never fire on a live utterance.
-const wakeProvisionalThreshold = 0.50;
+const wakeProvisionalThreshold = wakeUnconstrainedMaxThreshold;
 
 /// Phase of an enrollment.
 enum EnrollPhase {

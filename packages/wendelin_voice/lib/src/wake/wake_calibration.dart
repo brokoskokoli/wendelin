@@ -44,6 +44,15 @@ final class WakeCalibration {
 /// evaluation thresholds for 2 false alarms per hour lay at 0.43..0.55.
 const wakeMinThreshold = 0.40;
 
+/// Highest threshold [calibrateThreshold] picks when the background has no
+/// events at all (WP134): the provisional threshold of the enrolment.
+///
+/// Leave-one-out inside one session is optimistic; its 10 % quantile lay at
+/// 0.66..0.73 in a quiet room and cut "Wendelin" to 11..23 of 30 hits (fixed
+/// 0.50: 29 of 30). Without background events the threshold therefore never
+/// rises above this value (the lower bound [wakeMinThreshold] still holds).
+const wakeUnconstrainedMaxThreshold = 0.50;
+
 /// Fewest templates (and thus leave-one-out scores) a calibration needs.
 const wakeMinTemplates = 2;
 
@@ -63,7 +72,8 @@ const wakePositiveQuantile = 0.1;
 /// measure the rate on) or with fewer than [wakeMinTemplates] positives the
 /// result has `meetsTarget == false`. If the negatives do not constrain the
 /// threshold, the [wakePositiveQuantile] quantile of the positives is used
-/// instead of their minimum (outlier-robust). [requireNegatives] `false`:
+/// instead of their minimum (outlier-robust); without any event at most
+/// [wakeUnconstrainedMaxThreshold]. [requireNegatives] `false`:
 /// empty [negativeEvents] mean a measured quiet background, not a missing
 /// one. A pure function.
 WakeCalibration calibrateThreshold({
@@ -86,6 +96,9 @@ WakeCalibration calibrateThreshold({
     threshold = pos.isEmpty
         ? 0
         : pos[((pos.length - 1) * wakePositiveQuantile).floor()];
+    if (neg.isEmpty && threshold > wakeUnconstrainedMaxThreshold) {
+      threshold = wakeUnconstrainedMaxThreshold;
+    }
   } else {
     // Exclude all but the [allowed] highest events.
     threshold = neg[neg.length - allowed - 1] + 1e-6;

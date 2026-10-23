@@ -94,7 +94,8 @@ void main() {
       );
       expect(c.meetsTarget, isTrue);
       expect(c.falseAlarmsPerHour, 0);
-      expect(c.threshold, 0.9);
+      expect(c.threshold, wakeUnconstrainedMaxThreshold);
+      expect(c.recall, 1);
       expect(
         calibrateThreshold(
           positiveScores: [0.9, 0.92, 0.95],
@@ -103,6 +104,46 @@ void main() {
         ).meetsTarget,
         isFalse,
       );
+    });
+
+    group('ohne Ereignisse (leiser Raum)', () {
+      test('Schwelle höchstens 0,50, auch bei hohen Positiven', () {
+        final c = calibrateThreshold(
+          positiveScores: [0.85, 0.8, 0.77, 0.75, 0.9, 0.82],
+          negativeEvents: [],
+          negativeHours: 0.03,
+          requireNegatives: false,
+        );
+        expect(c.threshold, wakeUnconstrainedMaxThreshold);
+        expect(c.recall, 1);
+      });
+
+      test('niedrige Positive: Quantil darunter, Untergrenze bleibt', () {
+        final low = calibrateThreshold(
+          positiveScores: [0.45, 0.46, 0.47],
+          negativeEvents: [],
+          negativeHours: 0.1,
+          requireNegatives: false,
+        );
+        expect(low.threshold, closeTo(0.45, 1e-9));
+        final floor = calibrateThreshold(
+          positiveScores: [0.2, 0.3, 0.9],
+          negativeEvents: [],
+          negativeHours: 0.1,
+          requireNegatives: false,
+        );
+        expect(floor.threshold, wakeMinThreshold);
+      });
+
+      test('mit Ereignissen darf die Schwelle über 0,50 liegen', () {
+        final c = calibrateThreshold(
+          positiveScores: [0.9, 0.85, 0.8],
+          negativeEvents: [0.3, 0.6, 0.7],
+          negativeHours: 1,
+        );
+        expect(c.threshold, greaterThan(0.6));
+        expect(c.threshold, lessThan(0.61));
+      });
     });
 
     group('robust', () {
