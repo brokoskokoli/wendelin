@@ -176,4 +176,16 @@ void main() {
       [-1],
     );
   });
+
+  test('leaveOneOutScores zentriert mit dem Mittel (WP134)', () {
+    Float32List v(List<double> x) => Float32List.fromList(x);
+    final ts = [
+      v([6, 5, 5, 5]),
+      v([5.7, 5.7, 5, 5]),
+    ];
+    final raw = leaveOneOutScores(ts);
+    final centered = leaveOneOutScores(ts, mean: v([5, 5, 5, 5]));
+    expect(raw.first, greaterThan(0.99));
+    expect(centered.first, closeTo(0.707, 0.01));
+  });
 }

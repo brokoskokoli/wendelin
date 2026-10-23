@@ -39,8 +39,9 @@ final class WakeCalibration {
 /// below it would fire on most speech).
 ///
 /// Value of the **centered** cosine (WP134, `wake_center_mean.g.dart`):
-/// quiet background and noise reach at most 0.37, evaluation thresholds for
-/// 2 false alarms per hour lay at 0.43..0.55.
+/// quiet synthetic background and noise reach at most 0.37 (V1-zero); real
+/// quiet negative recordings with the noise padding of V2b reach 0.47..0.51,
+/// evaluation thresholds for 2 false alarms per hour lay at 0.43..0.55.
 const wakeMinThreshold = 0.40;
 
 /// Fewest templates (and thus leave-one-out scores) a calibration needs.

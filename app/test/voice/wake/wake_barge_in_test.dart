@@ -284,6 +284,41 @@ void main() {
         expect(lines.join('\n'), isNot(contains('hör mal')));
       });
 
+      ftest(
+        'Kandidatenschwelle nie unter candidateWakeFloor (WP134)',
+        () async {
+          // Calibrated threshold 0.40, margin -0.05 would give 0.35: speech
+          // at 0.42 would reach stage 2 all the time.
+          var asked = 0;
+          BargeVerifier Function(String Function()) counting() =>
+              (_) => _SpyVerifier(() => asked++);
+          final low = make([tpl(0.40)], atSim(0.42), verifier: counting());
+          expect(await run(low), isEmpty);
+          expect(asked, 0);
+          expect(
+            lines.any(
+              (l) => l.contains('barge-config') && l.contains('thr=0.45'),
+            ),
+            isTrue,
+            reason: lines.join('\n'),
+          );
+          final ok = make([tpl(0.40)], atSim(0.47), verifier: counting());
+          await run(ok);
+          expect(asked, greaterThan(0));
+        },
+      );
+
+      ftest('Rand der Kandidatenmarge -0,05 (WP134)', () async {
+        // 0.88 - 0.05 = 0.83: 0.80 stays out, 0.85 gets in.
+        var asked = 0;
+        BargeVerifier Function(String Function()) spy() =>
+            (_) => _SpyVerifier(() => asked++);
+        await run(make([tpl(0.88)], atSim(0.80), verifier: spy()));
+        expect(asked, 0);
+        await run(make([tpl(0.88)], atSim(0.85), verifier: spy()));
+        expect(asked, greaterThan(0));
+      });
+
       ftest('Gegenprüfung verwirft: kein Signal, Log result=no', () async {
         final d = make([tpl(0.88)], atSim(0.85), verifier: heard('Guten Tag'));
         expect(await run(d), isEmpty);

@@ -279,9 +279,16 @@ void main() {
       await tester.tap(find.text('Kalibrieren (30 min, empfohlen)'));
       await tester.pumpAndSettle();
       expect(find.byType(WakeCalibrateScreen), findsNothing);
+      // Row detail plus the snack bar: no silent no-op.
+      expect(find.textContaining('veraltet'), findsNWidgets(2));
+      ScaffoldMessenger.of(tester.element(find.byType(WakeWordScreen)))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('veraltet'), findsOneWidget);
       await tester.tap(find.text('Jetzt ausprobieren'));
       await tester.pumpAndSettle();
       expect(find.byType(WakeTestScreen), findsNothing);
+      expect(find.textContaining('veraltet'), findsNWidgets(2));
     });
 
     testWidgets('Sprecherverwaltung: listen, neu einlernen, einzeln löschen', (

@@ -21,6 +21,11 @@ import 'barge_meter.dart';
 /// `docs/notes/barge-stop-verify.md`. (WP134: the „Stopp“ rules were removed.)
 const candidateWakeMargin = -0.05;
 
+/// Lowest stage 1 threshold with stage 2 (WP134). A calibrated template
+/// threshold can be as low as 0.40; with the margin stage 1 would sit at
+/// 0.35, where FLEURS speech alone gives 88 candidates per hour (0.45: 30).
+const candidateWakeFloor = 0.45;
+
 final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
   /// Creates the detector on [audio] (the capture profile follows the
   /// pipeline state, see `CaptureProfileFollower`).
@@ -139,7 +144,12 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
     final margin = override ?? (staged ? candidateWakeMargin : extraMargin);
     final strict = [
       for (final t in sets)
-        t.withThreshold((t.threshold + margin).clamp(0.0, 0.99)),
+        t.withThreshold(
+          (t.threshold + margin).clamp(
+            staged && override == null ? candidateWakeFloor : 0.0,
+            0.99,
+          ),
+        ),
     ];
     final meter = _meter = BargeMeter(
       threshold: strict.map((t) => t.threshold).reduce((a, b) => a < b ? a : b),

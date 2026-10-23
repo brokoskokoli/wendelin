@@ -41,7 +41,59 @@ WakeTemplates templates() => WakeTemplates(
   ],
 );
 
+/// WP134: common component of the embeddings and templates around it. Raw,
+/// all vectors look alike (cosine near 1); centered, they are orthogonal or
+/// 0.5..0.7 apart.
+final _mean = v([5, 5, 5, 5]);
+WakeTemplates centeredTemplates() => WakeTemplates(
+  speakerId: 'a',
+  featureVersion: 'fake-1',
+  threshold: 0.9,
+  embeddings: [
+    v([6, 5, 5, 5]),
+    v([5.7, 5.7, 5, 5]),
+    v([5.7, 5, 5.7, 5]),
+  ],
+);
+
 void main() {
+  test(
+    'zentriert: Hintergrund ist roh nah an den Vorlagen, zentriert nicht',
+    () async {
+      // Raw cosine of this window to every template is about 0.97 (an event
+      // that would push the threshold to the cap); centered it is 0.
+      final cal = WakeCalibrator(
+        audio: SilentAudio(12),
+        features: fakeFeatures(mean: _mean, vector: (_) => v([5, 5, 5, 6])),
+        templates: centeredTemplates(),
+        store: FakeWakeTemplateStore(),
+        onPrompt: () async {},
+        duration: const Duration(minutes: 10),
+        firstPrompt: const Duration(hours: 1),
+      );
+      await cal.run();
+      final r = cal.result!;
+      expect(r.falseAlarmsPerHour, 0);
+      expect(r.meetsTarget, isTrue);
+    },
+  );
+
+  test('zentriert: Schwelle aus zentrierten Leave-one-out-Werten', () async {
+    // Centered the templates are 0.5..0.71 apart (best of the others 0.71);
+    // raw it would be above 0.99 and the threshold would sit at the cap.
+    final cal = WakeCalibrator(
+      audio: SilentAudio(12),
+      features: fakeFeatures(mean: _mean, vector: (_) => v([5, 5, 5, 6])),
+      templates: centeredTemplates(),
+      store: FakeWakeTemplateStore(),
+      onPrompt: () async {},
+      duration: const Duration(minutes: 10),
+      firstPrompt: const Duration(hours: 1),
+    );
+    await cal.run();
+    expect(cal.result!.threshold, closeTo(0.707, 0.01));
+  });
+
   test(
     'Ergebnis: Schwelle aus Hintergrund und Aufforderungen, gespeichert',
     () async {

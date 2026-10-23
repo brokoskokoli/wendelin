@@ -83,7 +83,7 @@ final class WakeWordBargeInDetector implements BargeInDetector {
   final Duration verifyTimeout;
 
   /// Called for every stage 1 candidate; [busy]: a check is running or in
-  /// cooldown, the candidate is kept and checked again afterwards . A candidate whose confidence is
+  /// cooldown, the candidate is kept and checked again afterwards. A candidate whose confidence is
   /// [strongerMargin] above the one just rejected is not busy in the
   /// cooldown: it gets its own check (WP126).
   final void Function(BargeInKeyword candidate, {required bool busy})?

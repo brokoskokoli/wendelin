@@ -184,6 +184,34 @@ void main() {
     );
   });
 
+  group('Stille ungleich Mittel (nicht zirkulär)', () {
+    test(
+      'Stille und Rauschen neben dem Mittel: weder 0 noch Treffer',
+      () async {
+        // Silence is NOT the mean here: scaled mean, dithered silence, much
+        // quieter and much louder noise. All must stay far below 0.5.
+        final rnd = math.Random(99);
+        Float32List noise(double sigma) => Float32List.fromList([
+          for (var i = 0; i < 4; i++) 10 + sigma * (rnd.nextDouble() - 0.5),
+        ]);
+        final windows = [
+          v([9.8, 9.8, 9.8, 9.8]), // scaled mean (level change of the silence)
+          noise(0.2),
+          noise(0.2),
+          noise(6),
+          noise(6),
+          v([10.02, 9.9, 10.05, 9.95]), // dither
+        ];
+        for (final w in windows) {
+          final s = centeredCosine(w, _word, _mean);
+          expect(s, isNot(0)); // not the degenerate zero vector
+          expect(s, lessThan(0.5), reason: '$w');
+        }
+        expect(await _hits(_engine(windows, mean: _mean), windows.length), 0);
+      },
+    );
+  });
+
   group('WakeTemplates.center', () {
     test('Rundlauf mit Mittel-Kennung; Kennung nur wenn gesetzt', () {
       final t = _tpl(center: 'm-1');

@@ -165,6 +165,16 @@ class _NameDialogState extends State<_NameDialog> {
   );
 }
 
+/// Old (raw) templates are ignored since WP134: say so instead of doing
+/// nothing.
+void _showOutdated(BuildContext context) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(content: Text(context.l10n.wakeWordTemplatesOutdated)),
+    );
+}
+
 Future<void> _calibrate(
   BuildContext context,
   WidgetRef ref,
@@ -178,9 +188,9 @@ Future<void> _calibrate(
   if (speaker == null || !context.mounted) return;
   final templates = await ref.read(wakeStoreProvider).load(speaker.id);
   // Outdated (raw) templates cannot be used: record again first.
-  if (templates == null ||
-      templates.center != wakeCenterId ||
-      !context.mounted) {
+  if (!context.mounted) return;
+  if (templates == null || templates.center != wakeCenterId) {
+    _showOutdated(context);
     return;
   }
   await Navigator.of(context).push<void>(
@@ -200,7 +210,11 @@ Future<void> _test(
     for (final s in speakers)
       if (await store.load(s.id) case final t? when t.center == wakeCenterId) t,
   ];
-  if (all.isEmpty || !context.mounted) return;
+  if (!context.mounted) return;
+  if (all.isEmpty) {
+    _showOutdated(context);
+    return;
+  }
   await Navigator.of(context).push<void>(
     MaterialPageRoute(builder: (_) => WakeTestScreen(speakers: all)),
   );

@@ -52,6 +52,22 @@ void main() {
     expect(verifier.calls.single.length, 32000 + 14400);
   });
 
+  test('zentriert: Treffer, den der rohe Kosinus verfehlt', () async {
+    // Mean [0.5, 0.5, 0, 0], template [1, 0, 0, 0]. The window lies on the
+    // line mean -> template: centered 1.0, raw only 0.77 (below 0.9).
+    final t = WakeTester(
+      audio: FakeAudioInput(frames: frames(4), closeAfterFrames: true),
+      features: fakeFeatures(
+        mean: v([0.5, 0.5, 0, 0]),
+        vector: (end) => v([0.55, 0.45, 0, 0]),
+      ),
+      speakers: [tmpl()],
+    );
+    await run(t);
+    expect(t.events, isNotEmpty);
+    expect(t.maxSimilarity, closeTo(1, 1e-3));
+  });
+
   test('Kandidat, aber Whisper bestätigt nicht: getrennt sichtbar', () async {
     final t = WakeTester(
       audio: FakeAudioInput(frames: frames(8), closeAfterFrames: true),
