@@ -67,6 +67,7 @@ final class ModelInstaller implements SpeechModelService {
   /// Whether an unpacked archive of [model] is there but lacks the files
   /// to load (damaged or unexpected layout): the user must download it
   /// again. A missing or only partly downloaded model is not damaged.
+  @override
   Future<bool> isDamaged(SpeechModel model) async {
     for (final f in model.files) {
       if (f.archive != ModelArchive.tarBz2) continue;

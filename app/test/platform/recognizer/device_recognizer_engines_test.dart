@@ -7,6 +7,7 @@ import 'package:wendelin/platform/recognizer/device_recognizer_engines.dart';
 import 'package:wendelin/platform/voice/engine_whisper.dart';
 import 'package:wendelin/platform/voice/whisper_sherpa.dart';
 import 'package:wendelin/platform/voice/whisper_stt.dart';
+import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin_voice/fakes.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
@@ -173,6 +174,33 @@ void main() {
     expect(own.first.disposed, 1);
     expect(own.last.disposed, 0);
   });
+
+  test(
+    'Modell entpackt, aber beschädigt: modelBroken, Log ohne Pfad',
+    () async {
+      final lines = <String>[];
+      final saved = voiceLogSink;
+      voiceLogSink = lines.add;
+      addTearDown(() => voiceLogSink = saved);
+      models.installed.remove('whisper-base');
+      models.damaged.add('whisper-base');
+      await expectLater(
+        engines().speechToText('whisper-base'),
+        throwsA(
+          isA<VoiceException>().having(
+            (e) => e.kind,
+            'kind',
+            VoiceErrorKind.modelBroken,
+          ),
+        ),
+      );
+      expect(started, isEmpty);
+      expect(
+        lines.join(),
+        allOf(contains('model-broken'), isNot(contains('/fake'))),
+      );
+    },
+  );
 
   test('Modell nicht installiert: modelMissing', () async {
     models.installed.remove('whisper-base');

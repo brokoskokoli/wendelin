@@ -26,6 +26,9 @@ final class FakeSpeechModelService implements SpeechModelService {
   /// Partly downloaded model ids.
   final partial = <String>{};
 
+  /// Model ids that are unpacked but unusable (see [isDamaged]).
+  final damaged = <String>{};
+
   /// Running downloads by model id.
   final running = <String, FakeDownload>{};
 
@@ -35,6 +38,9 @@ final class FakeSpeechModelService implements SpeechModelService {
   @override
   Future<bool> isInstalled(SpeechModel model) async =>
       installed.contains(model.id);
+
+  @override
+  Future<bool> isDamaged(SpeechModel model) async => damaged.contains(model.id);
 
   @override
   Future<bool> hasPartial(SpeechModel model) async =>

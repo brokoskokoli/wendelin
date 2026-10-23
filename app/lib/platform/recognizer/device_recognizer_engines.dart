@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:wendelin_voice/wendelin_voice.dart';
 
+import '../../voice/model_check.dart';
 import '../voice/engine_whisper.dart';
 import '../voice/file_model_store.dart';
 import '../voice/model_installer.dart';
@@ -75,7 +76,7 @@ final class DeviceRecognizerEngines implements RecognizerEngines {
 
   Future<SpeechModel> _installed(String id, String what) async {
     final model = catalog.byId(id);
-    if (model == null || !await models.isInstalled(model)) {
+    if (model == null || !await isModelInstalled(models, model)) {
       throw VoiceException(
         VoiceErrorKind.modelMissing,
         '$what ist noch nicht geladen (Wendelin → Einstellungen → Sprache).',

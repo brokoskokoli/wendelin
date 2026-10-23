@@ -162,6 +162,8 @@ final class _DirService implements SpeechModelService {
   Future<bool> isInstalled(SpeechModel model) async =>
       installed.contains(model.id);
   @override
+  Future<bool> isDamaged(SpeechModel model) async => false;
+  @override
   Directory directoryOf(SpeechModel model) => root;
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

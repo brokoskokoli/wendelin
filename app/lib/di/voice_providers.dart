@@ -10,7 +10,6 @@ import '../platform/channel_memory_trim.dart';
 import '../platform/voice/audio_playback.dart';
 import '../platform/voice/ducking_tts.dart';
 import '../platform/voice/engine_whisper.dart';
-import '../platform/voice/model_installer.dart';
 import '../platform/voice/record_audio_input.dart';
 import '../platform/voice/sherpa_tts.dart';
 import '../platform/voice/silero_vad.dart';
@@ -18,6 +17,7 @@ import '../platform/voice/stt_loader.dart';
 import '../platform/voice/system_tts.dart';
 import '../platform/voice/whisper_stt.dart';
 import '../voice/latency_trace.dart';
+import '../voice/model_check.dart';
 import '../voice/voice_log.dart';
 import '../voice/voice_metrics.dart';
 import '../voice/wake/mic_tail.dart';
@@ -101,18 +101,7 @@ AudioInput tapMic(Ref ref, AudioInput mic) =>
 Future<SpeechModel> _installedModel(Ref ref, String id, String what) async {
   final model = ref.read(speechModelCatalogProvider).byId(id);
   final service = await ref.watch(speechModelServiceProvider.future);
-  if (model != null &&
-      !await service.isInstalled(model) &&
-      service is ModelInstaller &&
-      await service.isDamaged(model)) {
-    // Reason without paths: the unpacked folder lacks the model files.
-    voiceLog('model-broken', {'model': model.id, 'reason': 'files-missing'});
-    throw const VoiceException(
-      VoiceErrorKind.modelBroken,
-      'model files missing (UI text: voiceErrorModelBroken)',
-    );
-  }
-  if (model == null || !await service.isInstalled(model)) {
+  if (model == null || !await isModelInstalled(service, model)) {
     throw VoiceException(
       VoiceErrorKind.modelMissing,
       '$what ist noch nicht geladen (Einstellungen → Sprache).',
