@@ -386,7 +386,14 @@ void main() {
             allOf(contains('wake-fallback'), contains('reason=model-missing')),
           ),
         );
-      });
+        // The service listens with the templates (not with the missing model).
+        expect(
+          logs,
+          contains(
+            allOf(contains('wake-listening'), contains('detector=templates')),
+          ),
+        );
+      }, timeout: const Timeout(Duration(seconds: 10)));
     }
 
     test('Modell fehlt, keine Vorlagen: failed modelMissing (Hinweis in den '

@@ -4925,6 +4925,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ohne das Modell hört nur deine eingelernte Stimme zu, und die fehlt. Lade das Modell oder lerne deine Stimme ein, sonst bleibt das Wake Word aus.';
 
   @override
+  String get wakeDetectorNothingToHearAuto =>
+      'Automatisch hört auf dem Telefon mit deiner eingelernten Stimme, und die fehlt. Lerne deine Stimme ein oder wähle „Trainiertes Modell“, sonst bleibt das Wake Word aus.';
+
+  @override
   String get wakeDetectorTemplates => 'Vorlagen deiner Stimme';
 
   @override

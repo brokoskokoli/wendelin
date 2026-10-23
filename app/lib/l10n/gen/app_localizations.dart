@@ -8403,6 +8403,12 @@ abstract class AppLocalizations {
   /// **'Ohne das Modell hört nur deine eingelernte Stimme zu, und die fehlt. Lade das Modell oder lerne deine Stimme ein, sonst bleibt das Wake Word aus.'**
   String get wakeDetectorNothingToHear;
 
+  /// No description provided for @wakeDetectorNothingToHearAuto.
+  ///
+  /// In de, this message translates to:
+  /// **'Automatisch hört auf dem Telefon mit deiner eingelernten Stimme, und die fehlt. Lerne deine Stimme ein oder wähle „Trainiertes Modell“, sonst bleibt das Wake Word aus.'**
+  String get wakeDetectorNothingToHearAuto;
+
   /// No description provided for @wakeDetectorTemplates.
   ///
   /// In de, this message translates to:

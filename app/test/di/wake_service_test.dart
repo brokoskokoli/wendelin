@@ -95,8 +95,9 @@ void main() {
       await c.read(wakeServiceProvider.future);
     }
 
-    test('Modell da, keine Stimme: einschalten geht', () async {
+    test('Wahl „Modell“, Modell da, keine Stimme: einschalten geht', () async {
       await withModel(installed: true);
+      await c.read(wakeDetectorProvider.notifier).set(WakeDetectorChoice.model);
       expect(c.read(wakeNeedsVoiceProvider), isFalse);
       expect(
         await c.read(wakeServiceProvider.notifier).setEnabled(enabled: true),
@@ -104,6 +105,19 @@ void main() {
       );
       expect(platform.sent.last.enabled, isTrue);
     });
+
+    test(
+      'Automatisch, Modell da, keine Stimme: nicht einschaltbar (das Telefon '
+      'hört dort mit den Vorlagen)',
+      () async {
+        await withModel(installed: true);
+        expect(c.read(wakeNeedsVoiceProvider), isTrue);
+        expect(
+          await c.read(wakeServiceProvider.notifier).setEnabled(enabled: true),
+          isFalse,
+        );
+      },
+    );
 
     test('Modell fehlt, keine Stimme: gesperrt, nicht still aus', () async {
       await withModel(installed: false);

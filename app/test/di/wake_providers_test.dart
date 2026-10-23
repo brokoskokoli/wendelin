@@ -75,6 +75,28 @@ void main() {
     },
   );
 
+  test('Stimme löschen entfernt auch den Audit-Marker', () async {
+    final env = TestEnv();
+    final store = env.container().read(wakeStoreProvider);
+    await store.saveSpeakers([
+      const WakeSpeaker(id: 'a', name: 'Anna'),
+      const WakeSpeaker(id: 'b', name: 'Ben'),
+    ]);
+    await store.save(_set([for (var i = 0; i < 9; i++) _tpl(i)]));
+    final c = env.container();
+    addTearDown(c.dispose);
+    await c.read(wakeSpeakersProvider.future);
+    final keyA = SettingKey.string('wake.audit.a');
+    final keyB = SettingKey.string('wake.audit.b');
+    expect(await env.storage.settings.get(keyA), isNotNull);
+    await env.storage.settings.set(keyB, 'x');
+    await c.read(wakeSpeakersProvider.notifier).remove('a');
+    expect(await env.storage.settings.get(keyA), isNull);
+    expect(await env.storage.settings.get(keyB), isNotNull);
+    await c.read(wakeSpeakersProvider.notifier).removeAll();
+    expect(await env.storage.settings.get(keyB), isNull);
+  });
+
   test('Nachprüfung ist standardmäßig an und bleibt gespeichert', () async {
     final env = TestEnv();
     final c = env.container();

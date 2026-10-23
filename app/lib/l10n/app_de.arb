@@ -2852,6 +2852,7 @@
     }
   },
   "wakeDetectorNothingToHear": "Ohne das Modell hört nur deine eingelernte Stimme zu, und die fehlt. Lade das Modell oder lerne deine Stimme ein, sonst bleibt das Wake Word aus.",
+  "wakeDetectorNothingToHearAuto": "Automatisch hört auf dem Telefon mit deiner eingelernten Stimme, und die fehlt. Lerne deine Stimme ein oder wähle „Trainiertes Modell“, sonst bleibt das Wake Word aus.",
   "wakeDetectorTemplates": "Vorlagen deiner Stimme",
   "wakeDetectorTemplatesHint": "Vergleicht mit deinen Aufnahmen. Braucht das Einlernen.",
   "wakeDetectorTitle": "Erkennung",

@@ -66,13 +66,14 @@ final wakeDetectorProvider =
     );
 
 /// Whether listening needs a learned voice (WP140): the templates path does
-/// (choice „Vorlagen“, or the classifier model is not installed, so the host
-/// falls back to templates). With the model installed the classifier alone
-/// listens, without any enrolled voice.
+/// (choice „Vorlagen“, „Automatisch“ (on the phone it listens with the
+/// templates), or the classifier model is not installed, so the host falls
+/// back to templates). Only the explicit choice „Modell“ with the model
+/// installed listens without any enrolled voice.
 final wakeNeedsVoiceProvider = Provider<bool>((ref) {
   final choice =
       ref.watch(wakeDetectorProvider).value ?? WakeDetectorChoice.auto;
-  if (choice == WakeDetectorChoice.templates) return true;
+  if (choice != WakeDetectorChoice.model) return true;
   final m = ref
       .watch(speechModelCatalogProvider)
       .byId(SpeechModelCatalog.wakeClassifierWendelin.id);
@@ -94,6 +95,8 @@ final class WakeDetectorNotifier extends AsyncNotifier<WakeDetectorChoice> {
   }
 }
 
+SettingKey<String> _auditKey(String id) => SettingKey.string('wake.audit.$id');
+
 /// The learned speakers.
 final wakeSpeakersProvider =
     AsyncNotifierProvider<WakeSpeakersNotifier, List<WakeSpeaker>>(
@@ -111,7 +114,7 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
     final settings = ref.read(storageProvider).settings;
     var changed = false;
     for (final s in speakers) {
-      final key = SettingKey.string('wake.audit.${s.id}');
+      final key = _auditKey(s.id);
       final r = await auditTemplatesOnce(
         store,
         s.id,
@@ -143,6 +146,7 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   Future<void> remove(String id) async {
     final store = ref.read(wakeStoreProvider);
     await store.delete(id);
+    await ref.read(storageProvider).settings.remove(_auditKey(id));
     ref.invalidate(wakeBargeInDetectorProvider);
     final list = [
       for (final s in await future)
@@ -154,6 +158,10 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
 
   /// Forgets everyone („Alles löschen“).
   Future<void> removeAll() async {
+    final settings = ref.read(storageProvider).settings;
+    for (final s in await future) {
+      await settings.remove(_auditKey(s.id));
+    }
     await ref.read(wakeStoreProvider).deleteAll();
     ref.invalidate(wakeBargeInDetectorProvider);
     state = const AsyncData([]);

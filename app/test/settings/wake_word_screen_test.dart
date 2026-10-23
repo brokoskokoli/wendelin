@@ -152,14 +152,17 @@ void main() {
       expect(find.byKey(const ValueKey('wakeNothingToHear')), findsOne);
     });
 
-    testWidgets('Modell da, keine Stimme: kein Hinweis (Modell hört allein)', (
-      tester,
-    ) async {
+    testWidgets('Automatisch, Modell da, keine Stimme: Hinweis; Wahl „Modell“: '
+        'keiner (Modell hört allein)', (tester) async {
       final env = wakeEnv();
       env.speechModels.installed.add(
         SpeechModelCatalog.wakeClassifierWendelin.id,
       );
       await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.byKey(const ValueKey('wakeNothingToHear')), findsOne);
+      expect(find.textContaining('Automatisch hört'), findsOne);
+      await tester.tap(find.byKey(const ValueKey('wakeDetector.model')));
+      await tester.pump();
       expect(find.byKey(const ValueKey('wakeNothingToHear')), findsNothing);
     });
 

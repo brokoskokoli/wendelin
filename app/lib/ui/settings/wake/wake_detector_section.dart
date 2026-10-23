@@ -81,11 +81,14 @@ class WakeDetectorSection extends ConsumerWidget {
               l.wakeDetectorModelNeeded(missing.displayName),
               style: WText.caption,
             ),
-          // WP140: no model and no learned voice: nothing can listen.
-          if (missing != null && noVoice)
+          // WP140: nothing can listen: no learned voice, and the choice needs
+          // one (no model, or „Automatisch“ listens with the voice).
+          if (noVoice && ref.watch(wakeNeedsVoiceProvider))
             Text(
               key: const ValueKey('wakeNothingToHear'),
-              l.wakeDetectorNothingToHear,
+              missing != null
+                  ? l.wakeDetectorNothingToHear
+                  : l.wakeDetectorNothingToHearAuto,
               style: WText.caption,
             ),
           ModelDownloadRow(model: SpeechModelCatalog.wakeClassifierWendelin),

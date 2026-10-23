@@ -46,6 +46,7 @@
     }
   },
   "wakeDetectorNothingToHear": "Without the model only your learned voice can wake Wendelin, and none is learned. Download the model or learn your voice, otherwise the wake word stays off.",
+  "wakeDetectorNothingToHearAuto": "Automatic listens with your learned voice on the phone, and none is learned. Learn your voice or choose “Trained model”, otherwise the wake word stays off.",
   "wakeDetectorTemplates": "Templates of your voice",
   "wakeDetectorTemplatesHint": "Compares with your recordings. Needs enrollment.",
   "wakeDetectorTitle": "Detection",
