@@ -5,7 +5,13 @@ Training: NUR Geraet huawei, Bloecke 1 bis 3, Woerter Wendelin und Hey Wendelin,
 MAX_S Sekunden). Pruefung (nie im Training): huawei Block 4 bis 6, das gesamte zweite Geraet, alle Negativ-Aufnahmen
 (raw-neg), alle anderen Woerter. Die Audioquelle ist fest die huawei-Aufnahme; fuer andere Geraete gibt es keinen Pfad.
 
-  python real_split.py cut --fix <ordner-mit-labels/ und raw/> --work <arbeitsordner> --out <clip-ordner>
+  python real_split.py cut --fix <ordner-mit-labels/ und raw/> --work <arbeitsordner> --out <clip-ordner> [--speakers <speakers.csv>]
+
+Weitere Sprecher (WP137, nur mit --speakers; ohne die Option bleibt alles wie bisher): Ablage je Sprecher-Kuerzel
+<fix>/speakers/<kuerzel>/labels/labels.csv (Spalte geraet = Kuerzel, sonst wie labels.csv) und <fix>/speakers/<kuerzel>/raw/all_<kuerzel>.m4a.
+Konfig speakers.csv (Spalten kuerzel, rolle, train_blocks; Kuerzel nur [a-z0-9]+, "huawei" und "handy2" sind fest und stehen nicht darin):
+  rolle train: alle Bloecke Training | eval: nur Pruefung (nichts davon wird je gelesen) | split: train_blocks (z. B. "1 2 3") Training, Rest Pruefung.
+Mindestens ein Sprecher mit rolle eval ist Pflicht. Alles, was nicht ausdruecklich Training ist, ist Pruefung (fail-closed).
 
 Aufnahmen und Labels bleiben lokal (nie ins Repo). Selbsttest: test_real_split.py.
 """
@@ -22,18 +28,61 @@ SOURCES = {"huawei": "raw/all_huawei.m4a"}      # bewusst nur diese eine Quelle
 PRE, POST = 0.12, 0.20           # Rand um das Label in Sekunden
 
 
-def is_train_clip(row):
-    """row: Dict mit geraet, block, wort, start, ende, status (Strings wie in labels.csv)."""
+FIXED_SPEAKERS = {"huawei": (1, 2, 3), "handy2": ()}   # Sprecher/Geraete mit festem Split (huawei: Block 1-3 Training; handy2: nur Pruefung)
+ROLES = ("train", "eval", "split")
+KUERZEL_RE = re.compile(r"^[a-z0-9]+$")
+
+
+def default_speakers():
+    """Nur die festen Sprecher: Wert = Trainingsbloecke (leer: nur Pruefung, None: alle Bloecke Training)."""
+    return dict(FIXED_SPEAKERS)
+
+
+def load_speakers(path):
+    """speakers.csv (kuerzel, rolle, train_blocks) -> {kuerzel: Trainingsbloecke}, inkl. fester Sprecher. Fail-closed: Fehler brechen ab
+    (unbekannte Rolle, ungueltiges/doppeltes/festes Kuerzel, Bloecke passen nicht zur Rolle, kein reiner Pruef-Sprecher in der Datei)."""
+    sp, roles = default_speakers(), []
+    with open(path, encoding="utf-8", newline="") as f:
+        for r in csv.DictReader(f):
+            k, role, tb = (r.get("kuerzel") or "").strip(), (r.get("rolle") or "").strip(), (r.get("train_blocks") or "").strip()
+            if not KUERZEL_RE.match(k) or k in sp: raise SystemExit(f"speakers.csv: ungueltiges, doppeltes oder festes Kuerzel {k!r}")
+            if role not in ROLES: raise SystemExit(f"speakers.csv: unbekannte Rolle {role!r} bei {k}")
+            try: blocks = tuple(sorted({int(x) for x in tb.split()}))
+            except ValueError: raise SystemExit(f"speakers.csv: train_blocks bei {k} nicht lesbar: {tb!r}")
+            if role == "split" and not blocks or role != "split" and blocks: raise SystemExit(f"speakers.csv: train_blocks passt nicht zur Rolle {role} bei {k}")
+            sp[k] = None if role == "train" else blocks
+            roles.append(role)
+    if "eval" not in roles: raise SystemExit("speakers.csv: mindestens ein Sprecher nur zur Pruefung (rolle eval) ist Pflicht")
+    return sp
+
+
+def is_train_block(speakers, k, block):
+    """Training nur, wenn der Sprecher bekannt ist und der Block ausdruecklich Training ist."""
+    if k not in speakers: return False
+    tb = speakers[k]
+    return tb is None or block in tb
+
+
+def speaker_source(speakers, k):
+    """Audioquelle (relativ zu fix) eines Sprechers mit Trainingsbloecken; Pruef-Sprecher haben keinen Pfad."""
+    if k == TRAIN_DEVICE: return source_for(k)
+    if k not in speakers or speakers[k] == (): raise ValueError(f"keine Trainingsquelle fuer Sprecher {k!r}")
+    return f"speakers/{k}/raw/all_{k}.m4a"
+
+
+def is_train_clip(row, speakers=None):
+    """row: Dict mit geraet, block, wort, start, ende, status (Strings wie in labels.csv). speakers=None: nur huawei Block 1-3 (wie bisher)."""
     try:
-        return (row["geraet"] == TRAIN_DEVICE and int(row["block"]) in TRAIN_BLOCKS and row["wort"] in TRAIN_WORDS
+        sp = {TRAIN_DEVICE: TRAIN_BLOCKS} if speakers is None else speakers
+        return (is_train_block(sp, row["geraet"], int(row["block"])) and row["wort"] in TRAIN_WORDS
                 and row["status"] != "fehler" and row["status"] in ("ok", "unsicher")
                 and 0 < float(row["ende"]) - float(row["start"]) <= MAX_S)
     except (KeyError, ValueError, TypeError):
         return False             # fail-closed: unlesbare Zeile wird nie Trainingsclip
 
 
-def select(rows):
-    return [r for r in rows if is_train_clip(r)]
+def select(rows, speakers=None):
+    return [r for r in rows if is_train_clip(r, speakers)]
 
 
 def source_for(geraet):
@@ -59,9 +108,9 @@ def trim(x, db=-40.0, pad=0.05):
     return x[max(0, idx[0] * f - int(pad * SR)): min(len(x), (idx[-1] + 1) * f + int(pad * SR))]
 
 
-def cut_clips(rows, x):
+def cut_clips(rows, x, speakers=None):
     out = []
-    for r in select(rows):
+    for r in select(rows, speakers):
         a = max(0, int((float(r["start"]) - PRE) * SR)); b = min(len(x), int((float(r["ende"]) + POST) * SR))
         c = trim(x[a:b])
         if len(c) >= SR // 4:
@@ -72,8 +121,9 @@ def cut_clips(rows, x):
 NAME_RE = re.compile(r"^([a-z0-9]+)_b(\d+)_r(\d{2,})_(hey|bare)_(\d{6})\.wav$")     # Muster von clip_name()
 
 
-def check_dir(d, require_nonempty=False):
-    """Alle Clips im Ordner muessen Trainingsnamen sein (huawei, Block 1 bis 3, clip_name-Muster); sonst Abbruch.
+def check_dir(d, require_nonempty=False, speakers=None):
+    """Alle Clips im Ordner muessen Trainingsnamen sein (Trainingssprecher und -block, clip_name-Muster; Standard huawei Block 1 bis 3); sonst Abbruch.
+    Clips von Pruef-Sprechern (rolle eval, handy2) und Pruef-Bloecken werden abgewiesen.
     Fail-closed: fremdes Namensschema, fehlender Ordner und (mit require_nonempty) leerer Ordner brechen ab."""
     if not os.path.isdir(d):
         raise SystemExit(f"Ordner der echten Positive fehlt: {d}")
@@ -82,7 +132,7 @@ def check_dir(d, require_nonempty=False):
         if not f.endswith(".wav"):
             continue
         m = NAME_RE.match(f)
-        if not m or m.group(1) != TRAIN_DEVICE or int(m.group(2)) not in TRAIN_BLOCKS:
+        if not m or not is_train_block({TRAIN_DEVICE: TRAIN_BLOCKS} if speakers is None else speakers, m.group(1), int(m.group(2))):
             raise SystemExit(f"Pruef-Clip oder fremder Name im Trainingsordner: {f}")
         n += 1
     if require_nonempty and n == 0:
@@ -103,24 +153,38 @@ def assert_syn_only(ps, pos, split):
         raise SystemExit("echte Positive im Lauf ohne echte Positive")
 
 
+def cut_speaker(fix, work, out, k, speakers):
+    """Trainingsclips eines Sprechers nach out; huawei wie bisher (labels/labels.csv, raw/all_huawei.m4a), andere unter speakers/<k>/.
+    -> (Zahl Clips, Zahl ausgeschlossener Zeilen im Trainingsbereich)."""
+    base = fix if k == TRAIN_DEVICE else os.path.join(fix, "speakers", k)
+    rows = list(csv.DictReader(open(os.path.join(base, "labels", "labels.csv"), encoding="utf-8")))
+    rows = [r for r in rows if r.get("geraet") == k]                    # nur Zeilen dieses Sprechers
+    wav = os.path.join(work, f"train_{k}.wav")
+    if not os.path.exists(wav):
+        subprocess.run(["afconvert", "-f", "WAVE", "-d", "LEI16@16000", "-c", "1",
+                        os.path.join(fix, speaker_source(speakers, k)), wav], check=True)
+    x = sf.read(wav, dtype="float32")[0]
+    sp = {k: speakers[k]}
+    skipped = [r for r in rows if is_train_block(sp, k, int(r["block"])) and r["wort"] in TRAIN_WORDS and not is_train_clip(r, sp)]
+    n = 0
+    for name, c in cut_clips(rows, x, sp):
+        sf.write(os.path.join(out, name), c, SR, subtype="PCM_16"); n += 1
+    return n, len(skipped)
+
+
 def main():
     a = argparse.ArgumentParser(); a.add_argument("cmd", choices=["cut"])
     a.add_argument("--fix", required=True); a.add_argument("--work", required=True); a.add_argument("--out", required=True)
+    a.add_argument("--speakers", help="speakers.csv mit weiteren Sprechern (siehe Modul-Doku); ohne: nur huawei")
     a = a.parse_args()
-    rows = list(csv.DictReader(open(os.path.join(a.fix, "labels", "labels.csv"), encoding="utf-8")))
+    speakers = load_speakers(a.speakers) if a.speakers else None
+    sp = default_speakers() if speakers is None else speakers
+    sp = {k: v for k, v in sp.items() if k == TRAIN_DEVICE or v != ()}
     os.makedirs(a.work, exist_ok=True); os.makedirs(a.out, exist_ok=True)
-    wav = os.path.join(a.work, "train_huawei.wav")
-    if not os.path.exists(wav):
-        subprocess.run(["afconvert", "-f", "WAVE", "-d", "LEI16@16000", "-c", "1",
-                        os.path.join(a.fix, source_for(TRAIN_DEVICE)), wav], check=True)
-    x = sf.read(wav, dtype="float32")[0]
-    skipped = [r for r in rows if r["geraet"] == TRAIN_DEVICE and int(r["block"]) in TRAIN_BLOCKS
-               and r["wort"] in TRAIN_WORDS and not is_train_clip(r)]
-    n = 0
-    for name, c in cut_clips(rows, x):
-        sf.write(os.path.join(a.out, name), c, SR, subtype="PCM_16"); n += 1
-    check_dir(a.out)
-    print(f"echte Positive (Training): {n} Clips, ausgeschlossen im Trainingsbereich: {len(skipped)}")
+    for k in sorted(sp, key=lambda x: (x != TRAIN_DEVICE, x)):          # huawei zuerst; Pruef-Sprecher werden nie gelesen
+        n, sk = cut_speaker(a.fix, a.work, a.out, k, sp)
+        print(f"echte Positive (Training){'' if k == TRAIN_DEVICE else ' ' + k}: {n} Clips, ausgeschlossen im Trainingsbereich: {sk}")
+    check_dir(a.out, speakers=None if speakers is None else sp)
 
 
 if __name__ == "__main__":
