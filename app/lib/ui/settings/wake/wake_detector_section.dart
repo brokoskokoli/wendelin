@@ -38,6 +38,7 @@ class WakeDetectorSection extends ConsumerWidget {
     final choice =
         ref.watch(wakeDetectorProvider).value ?? WakeDetectorChoice.auto;
     final missing = ref.watch(wakeClassifierMissingProvider);
+    final noVoice = (ref.watch(wakeSpeakersProvider).value ?? const []).isEmpty;
     Widget row(WakeDetectorChoice c, String title, String detail) =>
         SettingsRow(
           key: ValueKey('wakeDetector.${c.name}'),
@@ -78,6 +79,16 @@ class WakeDetectorSection extends ConsumerWidget {
             Text(
               key: const ValueKey('wakeClassifierMissing'),
               l.wakeDetectorModelNeeded(missing.displayName),
+              style: WText.caption,
+            ),
+          // WP140: nothing can listen: no learned voice, and the choice needs
+          // one (no model, or „Automatisch“ listens with the voice).
+          if (noVoice && ref.watch(wakeNeedsVoiceProvider))
+            Text(
+              key: const ValueKey('wakeNothingToHear'),
+              missing != null
+                  ? l.wakeDetectorNothingToHear
+                  : l.wakeDetectorNothingToHearAuto,
               style: WText.caption,
             ),
           ModelDownloadRow(model: SpeechModelCatalog.wakeClassifierWendelin),

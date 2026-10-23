@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wendelin_voice/wendelin_voice.dart';
 
 import '../../../di/voice_providers.dart';
 import '../../../di/wake_providers.dart';
@@ -30,6 +31,9 @@ String verdictText(AppLocalizations l, UtteranceVerdict v, {String? word}) =>
       UtteranceVerdict.tooQuiet => l.wakeEnrollTooQuiet,
       UtteranceVerdict.cutOff => l.wakeEnrollTooEarly,
       UtteranceVerdict.tooLong => l.wakeEnrollTooLong(word ?? l.appName),
+      UtteranceVerdict.notWord => l.wakeEnrollNotWord(word ?? l.appName),
+      UtteranceVerdict.inconsistent => l.wakeEnrollInconsistent,
+      UtteranceVerdict.unchecked => l.wakeEnrollUnchecked,
     };
 
 /// Einstellungen → Sprache → Aktivierungswort → „Stimme einlernen“:
@@ -71,18 +75,37 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
       return;
     }
     if (!mounted) return;
+    final makeFeatures = await ref.read(
+      wakeEnrollFeaturesFactoryProvider.future,
+    );
+    final verifier = await _verifier();
+    if (!mounted) return;
     final e = WakeEnroller(
       audio: ref.read(wakeAudioProvider),
-      features: ref.read(wakeFeaturesFactoryProvider)(),
+      features: makeFeatures(),
       store: ref.read(wakeStoreProvider),
       speakerId: widget.speakerId,
       target: 15,
       minimum: 8,
       threshold: wakeProvisionalThreshold,
       pause: ref.read(wakeEnrollPauseProvider),
+      verifier: verifier,
     );
     setState(() => _enroller = e);
     await e.run();
+  }
+
+  /// The configured recognizer for the content check (`null`: not available,
+  /// the enroller then rejects what the classifier does not vouch for).
+  Future<WakeVerifier?> _verifier() async {
+    try {
+      // Wait for the recognizer while it loads, but not for ever.
+      return await ref
+          .read(wakeEnrollVerifierProvider.future)
+          .timeout(ref.read(wakeEnrollVerifierWaitProvider));
+    } on Object {
+      return null;
+    }
   }
 
   @override
@@ -170,11 +193,18 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
                       verdictText(context.l10n, e.lastVerdict!, word: word),
                       style: WText.caption,
                     ),
+                  if (e.rejected > 0)
+                    Text(
+                      context.l10n.wakeEnrollRejected(e.rejected),
+                      style: WText.caption,
+                    ),
                   if (done)
                     Text(context.l10n.wakeEnrollAllThere, style: WText.label),
                   if (failed)
                     Text(
-                      context.l10n.wakeEnrollFailed(e.error!),
+                      e.error is EnrollCheckUnavailable
+                          ? context.l10n.wakeEnrollNoRecognizer
+                          : context.l10n.wakeEnrollFailed(e.error!),
                       style: WText.caption,
                     ),
                 ],

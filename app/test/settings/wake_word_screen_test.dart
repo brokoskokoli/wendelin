@@ -30,6 +30,7 @@ WakeTemplates templates(
   String id, {
   double threshold = 0.9,
   String? center = wakeCenterId,
+  int count = 2,
 }) => WakeTemplates(
   speakerId: id,
   featureVersion: 'fake-1',
@@ -38,6 +39,7 @@ WakeTemplates templates(
   embeddings: [
     v([1, 0, 0, 0]),
     v([0.98, 0.2, 0, 0]),
+    for (var i = 2; i < count; i++) v([0.97, 0.02 * i, 0, 0]),
   ],
 );
 
@@ -47,6 +49,7 @@ TestEnv wakeEnv({
   WakeVerifier? verifier,
   Float32List Function(int)? vector,
   bool installed = true,
+  Future<WakeVerifier?>? enrollVerifier,
   List<Override> extra = const [],
 }) {
   final env = TestEnv(
@@ -56,6 +59,9 @@ TestEnv wakeEnv({
         () => fakeFeatures(vector: vector),
       ),
       wakeVerifierProvider.overrideWith((ref) async => verifier),
+      wakeEnrollVerifierProvider.overrideWith(
+        (ref) => enrollVerifier ?? Future.value(verifier ?? FakeWakeVerifier()),
+      ),
       wakePromptToneProvider.overrideWithValue(() async {}),
       wakeEnrollPauseProvider.overrideWithValue(Duration.zero),
       ...extra,
@@ -137,6 +143,37 @@ void main() {
       );
       expect(await env.storage.settings.get(wakeDetectorKey), 'model');
       expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsOne);
+    });
+
+    testWidgets('kein Modell und keine Stimme: Hinweis „nichts zu hören“; '
+        'mit Stimme nicht', (tester) async {
+      final env = wakeEnv();
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.byKey(const ValueKey('wakeNothingToHear')), findsOne);
+    });
+
+    testWidgets('Automatisch, Modell da, keine Stimme: Hinweis; Wahl „Modell“: '
+        'keiner (Modell hört allein)', (tester) async {
+      final env = wakeEnv();
+      env.speechModels.installed.add(
+        SpeechModelCatalog.wakeClassifierWendelin.id,
+      );
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.byKey(const ValueKey('wakeNothingToHear')), findsOne);
+      expect(find.textContaining('Automatisch hört'), findsOne);
+      await tester.tap(find.byKey(const ValueKey('wakeDetector.model')));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('wakeNothingToHear')), findsNothing);
+    });
+
+    testWidgets('kein Modell, aber eine Stimme: kein Hinweis', (tester) async {
+      final env = wakeEnv();
+      final store = SecretWakeTemplateStore(env.secrets);
+      await store.save(templates('a'));
+      await store.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.byKey(const ValueKey('wakeClassifierMissing')), findsOne);
+      expect(find.byKey(const ValueKey('wakeNothingToHear')), findsNothing);
     });
 
     testWidgets('Vorlagen: kein Modell-Download, kein Hinweis', (tester) async {
@@ -297,7 +334,7 @@ void main() {
       final env = wakeEnv();
       final store = SecretWakeTemplateStore(env.secrets);
       await store.save(templates('a'));
-      await store.save(templates('b', threshold: 0.88));
+      await store.save(templates('b', threshold: 0.88, count: 9));
       await store.saveSpeakers(const [
         WakeSpeaker(id: 'a', name: 'Anna'),
         WakeSpeaker(id: 'b', name: ''),
@@ -305,7 +342,8 @@ void main() {
       final c = await pumpWake(tester, env, const WakeWordScreen());
       expect(find.text('Anna'), findsOneWidget);
       expect(find.text('Person 2'), findsOneWidget);
-      expect(find.text('2 Aufnahmen · Schwelle 0.88'), findsOneWidget);
+      expect(find.text('9 Aufnahmen · Schwelle 0.88'), findsOneWidget);
+      expect(find.textContaining('Nur 2 brauchbare'), findsOneWidget);
       expect(find.text('Weitere Person einlernen'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Aktionen für Anna'));
@@ -368,6 +406,25 @@ void main() {
       expect(find.text('0 von 15'), findsOneWidget);
       await until(tester, find.text('2 von 15'));
       expect(find.text('Mit 2 Aufnahmen speichern'), findsNothing);
+    });
+
+    testWidgets('Erkenner fehlt dauerhaft: klarer Hinweis statt stiller '
+        'Ablehnung', (tester) async {
+      final audio = SequenceAudio([for (var i = 0; i < 3; i++) recording()]);
+      final env = wakeEnv(
+        audio: audio,
+        // Never ready: the wait runs into its limit, no recognizer.
+        enrollVerifier: Completer<WakeVerifier?>().future,
+        extra: [
+          wakeEnrollVerifierWaitProvider.overrideWithValue(
+            const Duration(milliseconds: 200),
+          ),
+        ],
+      );
+      await pumpWake(tester, env, const WakeWordScreen());
+      await startEnroll(tester);
+      await until(tester, find.textContaining('Spracherkennung fehlt'));
+      expect(find.text('0 von 15'), findsOneWidget);
     });
 
     testWidgets('ab 8 Aufnahmen vorzeitig speichern', (tester) async {

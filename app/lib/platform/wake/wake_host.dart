@@ -151,16 +151,29 @@ final class WakeHost {
     try {
       engine = await parts.engine(detector: detector, station: station);
     } on Object catch (e) {
-      // The classifier without its model: no listening, never a fallback to
-      // another detection the user did not choose.
+      // The classifier without its model (WP140): the learned voice takes
+      // over if there is one; without it the service ends and the settings
+      // say why.
+      if (e is VoiceException &&
+          e.kind == VoiceErrorKind.modelMissing &&
+          await _fallBackToTemplates(verify: verify, detector: detector)) {
+        return;
+      }
       return _fail(e is VoiceException ? e.kind.name : 'engine-failed');
     }
     if (engine == null) return _fail('no-templates');
+    await _startListener(engine, verify: verify);
+  }
+
+  Future<void> _startListener(
+    WakeWordEngine engine, {
+    required bool verify,
+  }) async {
     final listener = WakeWordListener(
       audio: audio,
-      engine: _LoggingEngine(engine, detector),
+      engine: _LoggingEngine(engine, _detector),
       verifier: verify
-          ? _verifier = _LoggingVerifier(parts.verifier(detector: detector))
+          ? _verifier = _LoggingVerifier(parts.verifier(detector: _detector))
           : null,
       // Room noise before the word (WP73): `speechAfterWakeWord` measures
       // its threshold there. The overlay skips everything up to the end of
@@ -173,7 +186,22 @@ final class WakeHost {
       ..add(
         listener.states.listen((s) {
           if (s == WakeListenerState.failed) {
-            unawaited(_fail(listener.failure?.kind.name ?? 'failed'));
+            final kind = listener.failure?.kind;
+            unawaited(
+              _serial(() async {
+                // The model file is checked when the chain opens: same
+                // fallback as above.
+                if (kind == VoiceErrorKind.modelMissing &&
+                    _listener == listener &&
+                    await _fallBackToTemplates(
+                      verify: verify,
+                      detector: _detector,
+                    )) {
+                  return;
+                }
+                await _fail(kind?.name ?? 'failed');
+              }),
+            );
           }
         }),
       );
@@ -185,6 +213,31 @@ final class WakeHost {
     } on Object {
       return; // reported through the state change
     }
+  }
+
+  /// The classifier is missing: run on the templates instead (`true` if
+  /// that works). Not for a run that already is on the templates.
+  Future<bool> _fallBackToTemplates({
+    required bool verify,
+    required WakeDetector detector,
+  }) async {
+    if (detector != WakeDetector.model || _ending) return false;
+    final WakeWordEngine? templates;
+    try {
+      templates = await parts.engine(
+        detector: WakeDetector.templates,
+        station: _station,
+      );
+    } on Object {
+      return false;
+    }
+    if (templates == null) return false;
+    voiceLog('wake-fallback', {'from': 'model', 'reason': 'model-missing'});
+    await _stopListener();
+    _detector = WakeDetector.templates;
+    _started = false;
+    await _startListener(templates, verify: verify);
+    return true;
   }
 
   Future<void> _begin(WakeWordListener listener) async {

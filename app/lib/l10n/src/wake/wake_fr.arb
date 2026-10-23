@@ -45,6 +45,8 @@
       }
     }
   },
+  "wakeDetectorNothingToHear": "Sans le modèle, seule votre voix apprise peut réveiller Wendelin, et aucune n’est apprise. Téléchargez le modèle ou apprenez votre voix, sinon le mot d’activation reste désactivé.",
+  "wakeDetectorNothingToHearAuto": "Le mode automatique écoute avec votre voix apprise sur le téléphone, et aucune n’est apprise. Apprenez votre voix ou choisissez « Modèle entraîné », sinon le mot d’activation reste désactivé.",
   "wakeDetectorTemplates": "Modèles de ta voix",
   "wakeDetectorTemplatesHint": "Compare avec tes enregistrements. Demande l’apprentissage.",
   "wakeDetectorTitle": "Détection",
@@ -55,6 +57,12 @@
   "wakeEnrollMicPreparing": "Préparation du microphone …",
   "wakeEnrollNoMic": "Sans microphone, Wendelin ne peut pas apprendre votre voix.",
   "wakeEnrollNoSpeech": "Rien entendu. Encore une fois, s’il vous plaît.",
+  "wakeEnrollNoRecognizer": "La reconnaissance vocale est absente : sans elle, « Wendelin » ne peut pas être vérifié pendant l’apprentissage. Télécharge un modèle de reconnaissance dans Réglages → Voix.",
+  "wakeEnrollNotWord": "Non reconnu comme « {word} ». Encore une fois, s’il vous plaît.",
+  "wakeEnrollInconsistent": "Cet enregistrement ne correspondait pas aux autres et a été supprimé. Encore une fois, s’il vous plaît.",
+  "wakeEnrollUnchecked": "La vérification est impossible pour le moment (reconnaissance vocale pas prête). Encore une fois, s’il vous plaît.",
+  "wakeEnrollRejected": "{count} refusés",
+  "wakeWordTemplatesFew": "Seulement {count} enregistrements utilisables. Veuillez entraîner de nouveau.",
   "wakeEnrollProcessing": "Traitement en cours …",
   "wakeEnrollProgress": "{accepted} sur {target}",
   "wakeEnrollProgressLabel": "Progression de l’entraînement",

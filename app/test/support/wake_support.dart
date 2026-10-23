@@ -27,9 +27,13 @@ List<Int16List> recording({
 /// Audio input that hands out one scripted recording per [start] and ends
 /// the stream after it (like [WavAudioInput] up to the silence).
 class SequenceAudio implements AudioInput {
-  SequenceAudio(this.recordings);
+  /// [loop]: after the last recording the first one repeats (default);
+  /// `false`: the microphone then delivers nothing and ends, so a test that
+  /// needs more recordings than given fails at once instead of looping.
+  SequenceAudio(this.recordings, {this.loop = true});
 
   final List<List<Int16List>> recordings;
+  final bool loop;
   int starts = 0, stops = 0;
   bool _running = false;
 
@@ -38,7 +42,9 @@ class SequenceAudio implements AudioInput {
 
   @override
   Stream<Int16List> start() {
-    final frames = recordings[starts < recordings.length ? starts : 0];
+    final frames = starts < recordings.length
+        ? recordings[starts]
+        : (loop ? recordings[0] : const <Int16List>[]);
     starts++;
     _running = true;
     return Stream.fromIterable(frames);

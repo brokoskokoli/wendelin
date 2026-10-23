@@ -19,6 +19,7 @@ WakeEnroller enroller(
   int target = 3,
   int minimum = 2,
   WakeFeatureExtractor? features,
+  WakeVerifier? verifier,
 }) => WakeEnroller(
   audio: audio,
   features: features ?? fakeFeatures(),
@@ -27,6 +28,7 @@ WakeEnroller enroller(
   target: target,
   minimum: minimum,
   pause: Duration.zero,
+  verifier: verifier ?? FakeWakeVerifier(),
 );
 
 void main() {
@@ -111,6 +113,7 @@ void main() {
       features: fakeFeatures(),
       store: FakeWakeTemplateStore(),
       speakerId: 'a',
+      verifier: FakeWakeVerifier(),
     );
     await e.run();
     expect(e.phase, EnrollPhase.cancelled);

@@ -367,6 +367,15 @@ void main() {
       );
       await expectTapOnly(tts, 'unclear');
       expect(tts.spoken, contains('Bitte sag ja oder nein.'));
+      // Only counts, never the text (WP140).
+      final unclear = lines
+          .where((l) => l.contains(' confirm-unclear '))
+          .toList();
+      expect(unclear, hasLength(2));
+      expect(unclear.first, contains('words=1'));
+      expect(unclear.last, contains('words=3'));
+      expect(unclear.first, contains('audioMs='));
+      expect(unclear.join(), isNot(contains('Vielleicht')));
     });
 
     test('Erkennung der Antwort scheitert: „Antworte per Tipp“', () async {

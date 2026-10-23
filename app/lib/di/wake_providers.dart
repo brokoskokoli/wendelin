@@ -11,9 +11,11 @@ import '../platform/voice/onnx_wake_models.dart';
 import '../platform/voice/pcm.dart';
 import '../platform/voice/wake_feature_chain.dart';
 import '../platform/wake/wake_detector.dart';
+import '../voice/voice_log.dart';
 import '../voice/wake/lazy_barge_verifier.dart';
 import '../voice/wake/wake_barge_in.dart';
 import '../voice/wake/wake_storage.dart';
+import '../voice/wake/wake_template_audit.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
 import 'preferences.dart';
@@ -63,6 +65,22 @@ final wakeDetectorProvider =
       WakeDetectorNotifier.new,
     );
 
+/// Whether listening needs a learned voice (WP140): the templates path does
+/// (choice „Vorlagen“, „Automatisch“ (on the phone it listens with the
+/// templates), or the classifier model is not installed, so the host falls
+/// back to templates). Only the explicit choice „Modell“ with the model
+/// installed listens without any enrolled voice.
+final wakeNeedsVoiceProvider = Provider<bool>((ref) {
+  final choice =
+      ref.watch(wakeDetectorProvider).value ?? WakeDetectorChoice.auto;
+  if (choice != WakeDetectorChoice.model) return true;
+  final m = ref
+      .watch(speechModelCatalogProvider)
+      .byId(SpeechModelCatalog.wakeClassifierWendelin.id);
+  if (m == null) return true;
+  return ref.watch(modelStatesProvider)[m.id]?.phase != ModelPhase.installed;
+});
+
 /// Stores the setting.
 final class WakeDetectorNotifier extends AsyncNotifier<WakeDetectorChoice> {
   @override
@@ -77,6 +95,8 @@ final class WakeDetectorNotifier extends AsyncNotifier<WakeDetectorChoice> {
   }
 }
 
+SettingKey<String> _auditKey(String id) => SettingKey.string('wake.audit.$id');
+
 /// The learned speakers.
 final wakeSpeakersProvider =
     AsyncNotifierProvider<WakeSpeakersNotifier, List<WakeSpeaker>>(
@@ -86,7 +106,29 @@ final wakeSpeakersProvider =
 /// Speaker list with add, rename and delete (templates go with it).
 final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   @override
-  Future<List<WakeSpeaker>> build() => ref.read(wakeStoreProvider).speakers();
+  Future<List<WakeSpeaker>> build() async {
+    final store = ref.read(wakeStoreProvider);
+    final speakers = await store.speakers();
+    // WP140: once per template set, drop outliers an older enrollment let
+    // in; afterwards detector and display read the pruned set.
+    final settings = ref.read(storageProvider).settings;
+    var changed = false;
+    for (final s in speakers) {
+      final key = _auditKey(s.id);
+      final r = await auditTemplatesOnce(
+        store,
+        s.id,
+        readMark: () => settings.get(key),
+        writeMark: (m) => settings.set(key, m),
+      );
+      if (r != null && r.removed > 0) {
+        changed = true;
+        ref.invalidate(wakeTemplatesProvider(s.id));
+      }
+    }
+    if (changed) ref.invalidate(wakeBargeInDetectorProvider);
+    return speakers;
+  }
 
   /// Adds (or keeps) the speaker [id]; the templates come from the
   /// enrollment.
@@ -104,6 +146,7 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   Future<void> remove(String id) async {
     final store = ref.read(wakeStoreProvider);
     await store.delete(id);
+    await ref.read(storageProvider).settings.remove(_auditKey(id));
     ref.invalidate(wakeBargeInDetectorProvider);
     final list = [
       for (final s in await future)
@@ -115,6 +158,10 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
 
   /// Forgets everyone („Alles löschen“).
   Future<void> removeAll() async {
+    final settings = ref.read(storageProvider).settings;
+    for (final s in await future) {
+      await settings.remove(_auditKey(s.id));
+    }
     await ref.read(wakeStoreProvider).deleteAll();
     ref.invalidate(wakeBargeInDetectorProvider);
     state = const AsyncData([]);
@@ -179,6 +226,49 @@ final wakeVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {
     return null;
   }
 });
+
+/// Feature chain of the enrollment (WP140): with the classifier when its
+/// model is installed (its score is evidence (b) of the content check),
+/// otherwise the plain chain.
+final wakeEnrollFeaturesFactoryProvider =
+    FutureProvider<WakeFeatureExtractor Function()>((ref) async {
+      var useClassifier = false;
+      try {
+        final service = await ref.read(speechModelServiceProvider.future);
+        final c = ref
+            .read(speechModelCatalogProvider)
+            .byId(SpeechModelCatalog.wakeClassifierWendelin.id);
+        if (c != null && await service.isInstalled(c)) {
+          useClassifier = true;
+        }
+      } on Object {
+        // Falls through to the plain chain.
+      }
+      return ref.read(
+        useClassifier
+            ? wakeClassifierFeaturesFactoryProvider
+            : wakeFeaturesFactoryProvider,
+      );
+    });
+
+/// Content check of the enrollment (WP140): the configured recognizer
+/// (Whisper or Parakeet, as the pipeline), clip scaled to the verify peak
+/// like stage 2 with Parakeet. The check log carries only the category.
+final wakeEnrollVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {
+  final stt = await ref.watch(speechToTextProvider.future);
+  return TranscriptWakeVerifier(
+    stt,
+    language: ref.read(languageProvider),
+    normalize: true,
+    onCategory: (category, ms) =>
+        voiceLog('enroll-check-text', {'cat': category, 'audio': ms}),
+  );
+});
+
+/// How long the enrollment waits for the recognizer to load (WP140).
+final wakeEnrollVerifierWaitProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 90),
+);
 
 /// Microphone for enrollment, calibration and test (the same as the
 /// voice pipeline; device tests replace it by WAV files).

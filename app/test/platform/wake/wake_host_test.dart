@@ -27,7 +27,11 @@ final class _Parts implements WakeParts {
     this.direct = false,
     this.engineError,
     this.openError,
+    this.errorsOnlyModel = false,
   });
+
+  /// The errors hit only the classifier (the templates work).
+  final bool errorsOnlyModel;
 
   final bool engineless;
   final bool direct;
@@ -49,9 +53,10 @@ final class _Parts implements WakeParts {
     engines++;
     lastDetector = detector;
     lastStation = station;
+    final hit = !errorsOnlyModel || detector == WakeDetector.model;
     final error = engineError;
-    if (error != null) throw error;
-    if (openError != null) return _OpenFails(openError!);
+    if (hit && error != null) throw error;
+    if (hit && openError != null) return _OpenFails(openError!);
     return engineless ? null : FakeWakeWordEngine(direct: direct);
   }
 
@@ -338,8 +343,8 @@ void main() {
       expect(parts.engines, 1);
     });
 
-    test('Modell fehlt: failed modelMissing, kein Mikrofon, kein Rückfall '
-        'auf Vorlagen', () async {
+    test('Modell fehlt und auch sonst nichts da: failed modelMissing, kein '
+        'Mikrofon', () async {
       parts = _Parts(
         engineError: const VoiceException(VoiceErrorKind.modelMissing, 'x'),
       );
@@ -355,8 +360,56 @@ void main() {
         logs.where((l) => l.contains('wake-failed')),
         contains(endsWith('reason=model-missing')),
       );
-      expect(parts.engines, 1);
+      expect(parts.engines, 2, reason: 'Modell, dann Vorlagen versucht');
       expect(calls(), isNot(contains('startMic')));
+    });
+
+    for (final viaOpen in [false, true]) {
+      test('Modell fehlt (${viaOpen ? 'beim Öffnen' : 'beim Bauen'}), Vorlagen '
+          'da: Rückfall auf Vorlagen, Dienst hört zu (WP140)', () async {
+        const missing = VoiceException(VoiceErrorKind.modelMissing, 'x');
+        parts = _Parts(
+          engineError: viaOpen ? null : missing,
+          openError: viaOpen ? missing : null,
+          errorsOnlyModel: true,
+        );
+        audio = ServiceAudioInput(channel);
+        host = WakeHost(parts: parts, audio: audio);
+        await host.attach();
+        await fromKotlin('run', {'verify': false, 'detector': 'model'});
+        await until(() => calls().contains('startMic'));
+        expect(calls(), isNot(contains('failed')));
+        expect(parts.lastDetector, WakeDetector.templates);
+        expect(
+          logs,
+          contains(
+            allOf(contains('wake-fallback'), contains('reason=model-missing')),
+          ),
+        );
+        // The service listens with the templates (not with the missing model).
+        expect(
+          logs,
+          contains(
+            allOf(contains('wake-listening'), contains('detector=templates')),
+          ),
+        );
+      }, timeout: const Timeout(Duration(seconds: 10)));
+    }
+
+    test('Modell fehlt, keine Vorlagen: failed modelMissing (Hinweis in den '
+        'Einstellungen)', () async {
+      parts = _Parts(
+        engineError: const VoiceException(VoiceErrorKind.modelMissing, 'x'),
+        errorsOnlyModel: true,
+        engineless: true,
+      );
+      audio = ServiceAudioInput(channel);
+      host = WakeHost(parts: parts, audio: audio);
+      await host.attach();
+      await fromKotlin('run', {'verify': false, 'detector': 'model'});
+      await until(() => calls().contains('failed'));
+      final failed = toKotlin.firstWhere((c) => c.$1 == 'failed').$2! as Map;
+      expect(failed['reason'], 'modelMissing');
     });
 
     test('Modelldatei fehlt beim Öffnen: failed modelMissing (der Weg der '

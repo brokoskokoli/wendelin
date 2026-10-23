@@ -2,6 +2,7 @@ import 'package:meta/meta.dart';
 
 import '../text/spoken_answer.dart';
 import 'endpointer.dart';
+import 'stt_confidence_gate.dart';
 
 /// How barge-in (interrupting the spoken answer) reacts.
 enum BargeInMode {
@@ -36,6 +37,8 @@ final class VoicePipelineConfig {
     this.listenGrace = const Duration(seconds: 3),
     this.speakNothingUnderstood = true,
     this.speakErrors = true,
+    this.confidenceGate = const SttConfidenceGate(),
+    this.maxQuietRejects = 2,
   });
 
   /// Stop words (lower case) in de/fr/en.
@@ -138,4 +141,11 @@ final class VoicePipelineConfig {
 
   /// Whether the message of a failed agent run is spoken.
   final bool speakErrors;
+
+  /// Drops low-confidence recognitions before the model (WP140).
+  final SttConfidenceGate confidenceGate;
+
+  /// How many unsure follow-up recognitions in a row are dropped quietly
+  /// before the conversation ends.
+  final int maxQuietRejects;
 }
