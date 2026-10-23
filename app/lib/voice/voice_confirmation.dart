@@ -177,7 +177,16 @@ extension _VoiceConfirmation on VoiceController {
           _agent.answer(approved: answer == YesNo.yes);
           return;
         }
-        voiceLog('confirm-unclear', {'attempt': attempt + 1});
+        // Counts only (no text): tells „too short / cut off“ from „wrong
+        // words“ on the device (WP140).
+        voiceLog('confirm-unclear', {
+          'attempt': attempt + 1,
+          'words': RegExp(
+            r'[\p{L}\p{N}]+',
+            unicode: true,
+          ).allMatches(transcript.text).length,
+          'audioMs': pcm.length * 1000 ~/ AudioInput.sampleRate,
+        });
       }
       reason = 'unclear';
       byTap = true;
