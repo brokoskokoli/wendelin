@@ -4895,6 +4895,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get wakeDetectorNothingToHear =>
+      'Without the model only your learned voice can wake Wendelin, and none is learned. Download the model or learn your voice, otherwise the wake word stays off.';
+
+  @override
   String get wakeDetectorTemplates => 'Templates of your voice';
 
   @override

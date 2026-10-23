@@ -75,9 +75,9 @@ void main() {
       });
     });
 
-    test('Wake Word bei 0,45: Nachfrage statt Modell', () {
+    test('Wake Word bei niedriger Sicherheit (0,4): Nachfrage statt Modell', () {
       runFake((async) {
-        final h = Harness(transcripts: [_t('Wetter', 0.45)]);
+        final h = Harness(transcripts: [_t('Wetter', 0.4)]);
         h.pipeline.start(
           trigger: TriggerEvent(
             source: TriggerKind.wakeWord,

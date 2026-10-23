@@ -8397,6 +8397,12 @@ abstract class AppLocalizations {
   /// **'Das trainierte Modell wird für diese Einstellung benötigt: {v}.'**
   String wakeDetectorModelNeeded(String v);
 
+  /// No description provided for @wakeDetectorNothingToHear.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne das Modell hört nur deine eingelernte Stimme zu, und die fehlt. Lade das Modell oder lerne deine Stimme ein, sonst bleibt das Wake Word aus.'**
+  String get wakeDetectorNothingToHear;
+
   /// No description provided for @wakeDetectorTemplates.
   ///
   /// In de, this message translates to:

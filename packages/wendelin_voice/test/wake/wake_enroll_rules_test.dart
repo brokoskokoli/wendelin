@@ -62,4 +62,25 @@ void main() {
     expect(r.kept, hasLength(8));
     expect(pruneOutliers(r.kept, mean).removed, 0, reason: 'idempotent');
   });
+
+  test('Deckel: höchstens 25 % werden entfernt, die schlechtesten zuerst', () {
+    final all = [
+      ...group(8),
+      v([-1, 0.8, -0.5]),
+      v([-1, -0.8, 0.1]),
+      v([0, -1, -1]),
+      v([-0.2, 1, -1]),
+    ];
+    final dev = templateDeviations(all, mean);
+    final bad = [
+      for (var i = 8; i < 12; i++)
+        if (dev[i] < -WakeEnrollRules.outlierMargin) i,
+    ];
+    expect(bad, hasLength(4), reason: 'Aufbau: alle vier wären Ausreißer');
+    final out = outlierIndices(all, mean);
+    expect(out, hasLength(3), reason: 'Deckel 25 % von 12');
+    final worst = [...bad]..sort((a, b) => dev[a].compareTo(dev[b]));
+    expect(out, worst.take(3).toList());
+    expect(pruneOutliers(all, mean).removed, 3);
+  });
 }

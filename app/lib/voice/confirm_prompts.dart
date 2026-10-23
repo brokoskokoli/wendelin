@@ -16,6 +16,23 @@ bool strictAnswer(PendingQuestion question) => switch (question) {
   EscalationQuestion() || RetryOfferQuestion() => true,
 };
 
+/// Language the answer is parsed in. Strict answers (external actions)
+/// accept the yes words of a foreign language only when the app language
+/// and the language recognized for the request agree: a request that the
+/// recognizer takes for English ("Yeah", "Okay") must not confirm an action
+/// in a German app. Mismatch: `null`, the safe word set. Other answers
+/// follow the spoken language.
+String? answerLanguage({
+  required bool strict,
+  required String? spoken,
+  required String app,
+}) {
+  if (!strict) return spoken ?? app;
+  if (spoken == null) return app;
+  String primary(String t) => t.trim().split(RegExp('[-_]')).first.toLowerCase();
+  return primary(spoken) == primary(app) ? app : null;
+}
+
 /// Spoken question for an open confirmation, in [language] (de/fr/en);
 /// names the action.
 String confirmationPrompt(PendingQuestion question, String? language) {

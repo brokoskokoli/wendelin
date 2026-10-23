@@ -47,7 +47,11 @@ extension _VoiceConfirmation on VoiceController {
   ) => VoiceController.recognizer.parse(
     transcript,
     strict: strictAnswer(question),
-    language: _language ?? ref.read(languageProvider),
+    language: answerLanguage(
+      strict: strictAnswer(question),
+      spoken: _language,
+      app: ref.read(languageProvider),
+    ),
     extraYes: switch (outgoing?.kind) {
       OutgoingKind.sms => YesNoRecognizer.smsYesWords,
       OutgoingKind.call => YesNoRecognizer.callYesWords,

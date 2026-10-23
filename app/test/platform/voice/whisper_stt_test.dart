@@ -110,6 +110,21 @@ void main() {
       expect(en.confidence, 0.9);
     });
 
+    test('automatisch + Engine ohne Spracherkennung (lang leer): 0,9, '
+        'Gate lässt durch', () async {
+      final b = FakeWhisperBackend(text: 'Wie wird das Wetter', language: '');
+      final stt = WhisperSpeechToText(backend: b, modelId: 'parakeet-v3');
+      final t = await stt.transcribe(speech);
+      expect(t.language, isNull);
+      expect(t.confidence, 0.9);
+      const gate = SttConfidenceGate();
+      expect(gate.decide(t.confidence, followUp: true), SttGateAction.accept);
+      expect(
+        gate.decide(t.confidence, followUp: false, source: TriggerKind.wakeWord),
+        SttGateAction.accept,
+      );
+    });
+
     test(
       'Logzeile stt-lang: Sprache, Quelle, Konfidenz, nie der Text',
       () async {

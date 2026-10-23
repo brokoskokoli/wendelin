@@ -91,10 +91,24 @@ final class WakeSpeakersNotifier extends AsyncNotifier<List<WakeSpeaker>> {
   Future<List<WakeSpeaker>> build() async {
     final store = ref.read(wakeStoreProvider);
     final speakers = await store.speakers();
-    // WP140: once per start, drop outliers an older enrollment let in.
+    // WP140: once per template set, drop outliers an older enrollment let
+    // in; afterwards detector and display read the pruned set.
+    final settings = ref.read(storageProvider).settings;
+    var changed = false;
     for (final s in speakers) {
-      await auditTemplates(store, s.id);
+      final key = SettingKey.string('wake.audit.${s.id}');
+      final r = await auditTemplatesOnce(
+        store,
+        s.id,
+        readMark: () => settings.get(key),
+        writeMark: (m) => settings.set(key, m),
+      );
+      if (r != null && r.removed > 0) {
+        changed = true;
+        ref.invalidate(wakeTemplatesProvider(s.id));
+      }
     }
+    if (changed) ref.invalidate(wakeBargeInDetectorProvider);
     return speakers;
   }
 

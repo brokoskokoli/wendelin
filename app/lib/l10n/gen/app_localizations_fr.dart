@@ -4948,6 +4948,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get wakeDetectorNothingToHear =>
+      'Sans le modèle, seule votre voix apprise peut réveiller Wendelin, et aucune n’est apprise. Téléchargez le modèle ou apprenez votre voix, sinon le mot d’activation reste désactivé.';
+
+  @override
   String get wakeDetectorTemplates => 'Modèles de ta voix';
 
   @override
