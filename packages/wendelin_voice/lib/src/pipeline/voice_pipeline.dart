@@ -18,6 +18,7 @@ import 'conversation.dart';
 import 'endpointer.dart';
 import 'open_question.dart';
 import 'speech_hold.dart';
+import 'stt_confidence_gate.dart';
 import 'voice_events.dart';
 import 'voice_pipeline_config.dart';
 
@@ -240,6 +241,7 @@ final class VoicePipeline {
     int? wakeEnd,
   }) async {
     var followUp = false;
+    var quietRejects = 0;
     // The wake word is cut from the first transcript (WP68).
     var stripWake = trigger?.source == TriggerKind.wakeWord;
     var pre = preRoll;
@@ -318,6 +320,27 @@ final class VoicePipeline {
       if (followUp && isClosingPhrase(transcript.text, config.closingPhrases)) {
         return _finish(gen, ConversationEndReason.closingPhrase);
       }
+      final gate = config.confidenceGate.decide(
+        transcript.confidence,
+        followUp: followUp,
+        source: trigger?.source,
+      );
+      if (gate != SttGateAction.accept) {
+        // Only the confidence and the mode, never the text.
+        diagnostics?.call(
+          'stt-reject reason=low-conf conf=${transcript.confidence} '
+          'mode=${followUp ? 'followup' : trigger?.source.name ?? 'none'}',
+        );
+        if (gate == SttGateAction.askAgain) {
+          await _nothingUnderstood(gen, null, language: transcript.language);
+          return _finish(gen, ConversationEndReason.silence);
+        }
+        if (++quietRejects > config.maxQuietRejects) {
+          return _finish(gen, ConversationEndReason.silence);
+        }
+        continue; // keep listening in the same follow-up window
+      }
+      quietRejects = 0;
       _setState(VoiceState.thinking);
       final problem = await _answer(gen, transcript);
       if (gen != _gen) return;
