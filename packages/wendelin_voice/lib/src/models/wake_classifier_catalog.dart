@@ -95,9 +95,9 @@ abstract final class WakeClassifierCatalog {
 /// Stage 1 limits of the wake word classifier per mode (WP129, rule of
 /// WP133: score at or above `acceptFrom` is taken directly, from `verifyFrom`
 /// up to it stage 2 checks, below it is discarded). The values are the
-/// v8a working point of `docs/notes/wake-word-compare.md` (threshold
-/// 0.98..0.99) and the provisional upper limit of WP133; they are final only
-/// with WP133. Change them here only.
+/// v8a working point of `docs/notes/wake-word-compare.md` with the final
+/// values of WP133 (threshold 0.98 for phone and station, direct from 0.999).
+/// Change them here only.
 abstract final class WakeClassifierRules {
   /// Windows (80 ms each) a score in the band is held to find the peak of the
   /// event; a score at or above `acceptFrom` decides at once, a fall below the
@@ -164,7 +164,7 @@ abstract final class WakeClassifierRules {
   /// Phone: the lower limit 0.98 of the measured working point.
   static const phone = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.999);
 
-  /// Station (TV, longer listening): the stricter end 0.99 of the working
-  /// point, so fewer false alarms per hour.
-  static const station = WakeScoreBand(verifyFrom: 0.99, acceptFrom: 0.999);
+  /// Station (TV, longer listening): same limits as the phone (WP133 final
+  /// value 0.98); stage 2 (Parakeet) catches false alarms in the band.
+  static const station = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.999);
 }
