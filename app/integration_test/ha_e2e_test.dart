@@ -31,7 +31,7 @@ ProviderContainer _container(List<Override> overrides) {
       storageProvider.overrideWithValue(storage),
       secretStoreProvider.overrideWithValue(InMemorySecretStore()),
       startupProvider.overrideWithValue(
-        const StartupSettings(enabledIntegrations: {'ha'}),
+        const StartupSettings(enabledIntegrations: {'ha'}, uiLanguage: 'de'),
       ),
       ...overrides,
     ],
@@ -207,10 +207,7 @@ void main() {
         // Fester Satz (de: „… ausgeschaltet.“), nicht ein Satz des Modells.
         final last = c.read(agentControllerProvider).entries.last;
         expect(last, isA<AssistantTextEntry>());
-        expect(
-          (last as AssistantTextEntry).text,
-          matches(RegExp('ausgeschaltet|turned off|éteint')),
-        );
+        expect((last as AssistantTextEntry).text, contains('ausgeschaltet'));
         return added.single;
       }
 
