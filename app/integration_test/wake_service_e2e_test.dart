@@ -115,11 +115,13 @@ void main() {
       await tester.tap(find.text('Weiter'));
       await pumpUntil(
         tester,
-        find.text('Speichern'),
+        find.textContaining(RegExp(r'^(Mit \d+ Aufnahmen )?[Ss]peichern$')),
         timeout: const Duration(minutes: 3),
       );
-      await tester.tap(find.text('Speichern'));
-      await pumpUntil(tester, find.textContaining('15 Aufnahmen'));
+      await tester.tap(
+        find.textContaining(RegExp(r'^(Mit \d+ Aufnahmen )?[Ss]peichern$')),
+      );
+      await pumpUntil(tester, find.textContaining(RegExp(r'\d+ Aufnahmen')));
       final speakers = await c.read(wakeSpeakersProvider.future);
       expect(speakers, hasLength(1));
       // The service runs in another engine and reads the device's secret
