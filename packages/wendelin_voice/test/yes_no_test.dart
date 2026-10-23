@@ -105,7 +105,6 @@ void main() {
     ('Ja.', YesNo.yes),
     ('Ja ja', YesNo.yes),
     ('Ja genau', YesNo.yes),
-    ('Okay', YesNo.yes),
     ('Oui', YesNo.yes),
     ("D'accord", YesNo.yes),
     ('Bien sûr', YesNo.yes),
@@ -117,7 +116,8 @@ void main() {
     ('Ja, bitte!', YesNo.yes),
     ('Ja, mach', YesNo.yes),
     ('Ja, mach das', YesNo.yes),
-    ('OK, mach das', YesNo.yes),
+    ('Okay, mach das', null),
+    ('OK, mach das', null),
     ('Ja ja', YesNo.yes),
     ('Ja ja ja', YesNo.yes),
     ('Ja gerne bitte', YesNo.yes),
@@ -167,6 +167,69 @@ void main() {
       expect(recognizer.parse(text, strict: true), expected);
     });
   }
+
+  // Parakeet macht aus „Nee/Nein/Non“ oft „Yeah.“/„Okay.“/„All right.“:
+  // streng zählen nur Zustimmungswörter der eingestellten Sprache.
+  group('streng je Sprache', () {
+    YesNo? de(String t) => recognizer.parse(t, strict: true, language: 'de');
+
+    for (final t in [
+      'Yeah.',
+      'Okay.',
+      'OK',
+      'All right.',
+      'Alright',
+      'Sure',
+      'Right',
+      'Yes',
+      'Okay, mach das',
+      'Yeah, bitte',
+      'Ja okay yeah',
+    ]) {
+      test('de: „$t“ ist streng kein Ja', () {
+        expect(de(t), isNot(YesNo.yes));
+      });
+    }
+    for (final t in [
+      'Ja',
+      'Jawohl',
+      'Jo',
+      'Genau',
+      'Klar',
+      'Ja, bitte',
+      'Mach das',
+      'Klar, bitte',
+      'Na klar',
+      'In Ordnung',
+      'Ja, mach das',
+    ]) {
+      test('de: „$t“ ist streng ein Ja', () => expect(de(t), YesNo.yes));
+    }
+    test('de: Nein bleibt Nein, Yeah/Okay normal (nicht streng) Ja', () {
+      expect(de('Nein'), YesNo.no);
+      expect(recognizer.parse('Yeah.', language: 'de'), YesNo.yes);
+      expect(recognizer.parse('Okay.', language: 'de'), YesNo.yes);
+    });
+    test('en/fr: eigene Zustimmung zählt', () {
+      expect(recognizer.parse('Yeah', strict: true, language: 'en'), YesNo.yes);
+      expect(recognizer.parse('Okay', strict: true, language: 'en'), YesNo.yes);
+      expect(
+        recognizer.parse('All right', strict: true, language: 'en'),
+        YesNo.yes,
+      );
+      expect(recognizer.parse('Yeah', strict: true, language: 'fr'), isNull);
+      expect(recognizer.parse('Oui', strict: true, language: 'fr'), YesNo.yes);
+      expect(recognizer.parse('Oui', strict: true, language: 'en'), isNull);
+    });
+    test('unbekannte Sprache: Fehlhör-Wörter zählen nicht', () {
+      expect(recognizer.parse('Yeah', strict: true), isNull);
+      expect(
+        recognizer.parse('All right', strict: true, language: 'xx'),
+        isNull,
+      );
+      expect(recognizer.parse('Yes', strict: true, language: 'xx'), YesNo.yes);
+    });
+  });
 
   for (final (text, expected) in cases) {
     test('„$text“ → $expected', () {

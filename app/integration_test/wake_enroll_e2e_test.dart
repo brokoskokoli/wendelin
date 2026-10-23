@@ -193,4 +193,48 @@ void main() {
     skip: !voiceE2e,
     timeout: const Timeout(Duration(minutes: 10)),
   );
+
+  // WP140: Der Inhalt wird beim Einlernen geprüft. Aufnahmen ohne „Wendelin“
+  // (hier test-neg.wav, ein Satz ohne das Wort) werden abgelehnt, die
+  // Vorlagen bleiben leer und der Bildschirm zeigt den Hinweis.
+  testWidgets(
+    'Einlernen mit Aufnahmen ohne „Wendelin“ wird abgelehnt (WP140)',
+    (tester) async {
+      final dir = '${(await e2eDirectory()).path}/wake';
+      final audio = _SwitchableAudio();
+      final app = E2eApp(
+        extraOverrides: [wakeAudioProvider.overrideWithValue(audio)],
+      );
+      await app.storage.settings.set(
+        voiceSettingsKey,
+        VoiceSettings(sttModel: 'whisper-base'),
+      );
+      final c = await app.pump(tester);
+      final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+      unawaited(nav.pushNamed(AppRoutes.wakeWord));
+      await pumpUntil(tester, find.text('Aktivierungswort'));
+      await tester.scrollUntilVisible(
+        find.text('Stimme einlernen'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final negative = WavAudioInput.file('$dir/test-neg.wav').samples;
+      audio.inner = WavAudioInput.sequence([
+        for (var i = 0; i < 15; i++) negative,
+      ], speed: 4);
+      await tester.tap(find.text('Stimme einlernen'));
+      await pumpUntil(tester, find.text('Weiter'));
+      await tester.enterText(find.byType(TextField), 'Stoerer');
+      await tester.tap(find.text('Weiter'));
+      await pumpUntil(
+        tester,
+        find.textContaining('Nicht als'),
+        timeout: const Duration(minutes: 2),
+      );
+      expect(find.text('Speichern'), findsNothing);
+      expect(await c.read(wakeSpeakersProvider.future), isEmpty);
+    },
+    skip: !voiceE2e,
+    timeout: const Timeout(Duration(minutes: 10)),
+  );
 }

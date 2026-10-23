@@ -3,18 +3,20 @@ import 'dart:typed_data';
 
 import 'wake_math.dart';
 
-/// Limits of the content check of the enrollment (WP140). All values are
-/// provisional until the measurement on real recordings is entered (see
-/// `docs/testing/m5/WP140.md`); change them here only.
+/// Limits of the content check of the enrollment (WP140), measured on real
+/// calls (see `docs/testing/m5/wp140.md`); change them here only.
 abstract final class WakeEnrollRules {
   /// A recording passes the content check by the classifier alone when its
   /// highest window score (`WakeWindow.modelScore`) reaches this value. The
   /// other way to pass is the recognizer hearing „Wendelin“ (OR).
-  static const classifierMinScore = 0.5;
+  ///
+  /// Measured (Parakeet, real calls): at 0.5, 9.5 % of the intruders got
+  /// through, at 0.9 1.2 %.
+  static const classifierMinScore = 0.9;
 
-  /// A template is an outlier when its typicality (median centered cosine to
-  /// the others) lies more than this far below the median typicality.
-  static const outlierMargin = 0.25;
+  /// A template is an outlier when its deviation ([templateDeviation]) is
+  /// below minus this value. Measured: all intruders were at or below -0.31.
+  static const outlierMargin = 0.2;
 
   /// Consistency is judged only with at least this many templates (with
   /// fewer there is no „median of the others“ worth the name).
@@ -40,9 +42,46 @@ double templateTypicality(List<Float32List> all, int i, Float32List mean) =>
         if (j != i) centeredCosine(all[i], all[j], mean),
     ]);
 
-/// Indices of [all] that are outliers (typicality more than [margin] below
-/// the median typicality), worst first and at most [maxShare] of them.
-/// Empty with fewer than [minTemplates] templates.
+/// Deviation of template [i]: its typicality (median centered cosine to the
+/// others) minus the median centered cosine of the other templates among
+/// themselves. Around 0 for a template that fits in, clearly negative for
+/// an outlier. [sim] is the pairwise centered cosine ([similarityMatrix]).
+double templateDeviation(List<List<double>> sim, int i) {
+  final n = sim.length;
+  final own = median([
+    for (var j = 0; j < n; j++)
+      if (j != i) sim[i][j],
+  ]);
+  final others = [
+    for (var j = 0; j < n; j++)
+      if (j != i)
+        for (var k = j + 1; k < n; k++)
+          if (k != i) sim[j][k],
+  ];
+  return own - median(others);
+}
+
+/// Pairwise centered cosine of [all].
+List<List<double>> similarityMatrix(List<Float32List> all, Float32List mean) {
+  final n = all.length;
+  final sim = [for (var i = 0; i < n; i++) List<double>.filled(n, 1)];
+  for (var i = 0; i < n; i++) {
+    for (var j = i + 1; j < n; j++) {
+      sim[i][j] = sim[j][i] = centeredCosine(all[i], all[j], mean);
+    }
+  }
+  return sim;
+}
+
+/// The [templateDeviation] of every template in [all].
+List<double> templateDeviations(List<Float32List> all, Float32List mean) {
+  final sim = similarityMatrix(all, mean);
+  return [for (var i = 0; i < all.length; i++) templateDeviation(sim, i)];
+}
+
+/// Indices of [all] that are outliers (deviation below minus [margin]),
+/// worst first and at most [maxShare] of them. Empty with fewer than
+/// [minTemplates] templates.
 List<int> outlierIndices(
   List<Float32List> all,
   Float32List mean, {
@@ -51,14 +90,11 @@ List<int> outlierIndices(
   double maxShare = WakeEnrollRules.maxPruneShare,
 }) {
   if (all.length < minTemplates) return const [];
-  final typical = [
-    for (var i = 0; i < all.length; i++) templateTypicality(all, i, mean),
-  ];
-  final limit = median(typical) - margin;
+  final dev = templateDeviations(all, mean);
   final out = [
     for (var i = 0; i < all.length; i++)
-      if (typical[i] < limit) i,
-  ]..sort((a, b) => typical[a].compareTo(typical[b]));
+      if (dev[i] < -margin) i,
+  ]..sort((a, b) => dev[a].compareTo(dev[b]));
   final cap = math.max(1, (all.length * maxShare).floor());
   return out.length > cap ? out.sublist(0, cap) : out;
 }

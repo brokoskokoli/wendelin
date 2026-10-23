@@ -9,6 +9,7 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 import 'package:wendelin_voice/wendelin_voice.dart';
 
 import 'isolate_exit.dart';
+import 'sherpa_log_probs.dart';
 import 'sherpa_runtime.dart';
 import 'whisper_share.dart';
 import 'whisper_stt.dart';
@@ -128,7 +129,11 @@ final class SherpaWhisperEngine implements BlockingStt {
       stream.acceptWaveform(samples: samples, sampleRate: 16000);
       _recognizer.decode(stream);
       final r = _recognizer.getResult(stream);
-      return WhisperResult(text: r.text, language: r.lang);
+      return WhisperResult(
+        text: r.text,
+        language: r.lang,
+        meanLogProb: streamMeanLogProb(stream),
+      );
     } finally {
       stream.free();
     }
@@ -204,8 +209,12 @@ final class IsolateWhisperBackend implements WhisperBackend {
       ));
       await _replies.moveNext();
       final reply = _replies.current;
-      if (reply is (String, String)) {
-        return WhisperResult(text: reply.$1, language: reply.$2);
+      if (reply is (String, String, double?)) {
+        return WhisperResult(
+          text: reply.$1,
+          language: reply.$2,
+          meanLogProb: reply.$3,
+        );
       }
       throw StateError('Whisper-Isolat: $reply');
     });
@@ -252,7 +261,7 @@ final class IsolateWhisperBackend implements WhisperBackend {
             bytes.asFloat32List(),
             language: message.$2,
           );
-          out.send((r.text, r.language));
+          out.send((r.text, r.language, r.meanLogProb));
         } on Object catch (e) {
           out.send('$e');
         }

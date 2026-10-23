@@ -32,6 +32,10 @@ enum YesNo {
 ///   with yes/polite words around it („Yes, do it“). Anything with a
 ///   negation or hesitation („Ja, aber nicht“, „Ja nein“) is never a yes;
 ///   „no“ is recognized as usual.
+/// - Strict yes counts only agreement words of the set language
+///   ([strictYesWordsFor]): the recognizer often turns „Nee/Nein/Non“ into
+///   „Yeah.“/„Okay.“/„All right.“, so these never confirm in German (or
+///   with an unknown language) – the answer stays unclear.
 final class YesNoRecognizer {
   /// Creates the recognizer.
   const YesNoRecognizer({this.maxWords = 8});
@@ -53,6 +57,108 @@ final class YesNoRecognizer {
     'yes', 'yeah', 'yep', 'yup', 'sure', 'correct', 'affirmative',
     'absolutely', 'definitely', 'aye',
   };
+
+  /// Agreement words of a strict yes per language (`de`, `fr`, `en`).
+  /// Words foreign to the language (and the typical mis-hearings „yeah“,
+  /// „okay“, „right“, „sure“ for „nein“) are not in the German set.
+  static const _strictDe = {
+    'ja',
+    'jawohl',
+    'jo',
+    'jep',
+    'jup',
+    'jaa',
+    'jaja',
+    'joa',
+    'jau',
+    'jap',
+    'genau',
+    'klaro',
+    'gerne',
+    'gern',
+    'einverstanden',
+    'natürlich',
+    'selbstverständlich',
+    'unbedingt',
+  };
+  static const _strictFr = {
+    'oui',
+    'ouais',
+    'daccord',
+    'certainement',
+    'volontiers',
+    'parfait',
+    'exactement',
+  };
+  static const _strictEnglishSafe = {
+    'yes',
+    'yep',
+    'yup',
+    'correct',
+    'affirmative',
+    'absolutely',
+    'definitely',
+    'aye',
+  };
+  static const _strictEn = {
+    ..._strictEnglishSafe,
+    'yeah',
+    'sure',
+    'ok',
+    'okay',
+    'okey',
+  };
+
+  /// Yes phrases of a strict yes per language.
+  static const _strictPhrasesDe = {
+    'in ordnung',
+    'na klar',
+    'mach das',
+    'mach es',
+    'tu das',
+  };
+  static const _strictPhrasesFr = {
+    'bien sûr',
+    'bien sur',
+    'vas y',
+    'allez y',
+    'cest bon',
+    'je confirme',
+    'tout à fait',
+    'tout a fait',
+  };
+  static const _strictPhrasesEn = {
+    'go ahead',
+    'do it',
+    'of course',
+    'all right',
+    'alright',
+  };
+
+  /// Strong yes words of a strict answer in [language] (`de`, `fr`, `en`;
+  /// anything else, also `null`: all languages without the English
+  /// mis-hearing words „yeah“, „okay“, „sure“, „all right“).
+  static Set<String> strictYesWordsFor(String? language) => switch (language) {
+    'de' => _strictDe,
+    'fr' => _strictFr,
+    'en' => _strictEn,
+    _ => {..._strictDe, ..._strictFr, ..._strictEnglishSafe},
+  };
+
+  /// Yes phrases of a strict answer in [language] (see [strictYesWordsFor]).
+  static Set<String> strictYesPhrasesFor(String? language) =>
+      switch (language) {
+        'de' => _strictPhrasesDe,
+        'fr' => _strictPhrasesFr,
+        'en' => _strictPhrasesEn,
+        _ => {
+          ..._strictPhrasesDe,
+          ..._strictPhrasesFr,
+          'go ahead',
+          'do it',
+          'of course',
+        },
+      };
 
   /// Words that mean „yes“ only when the answer consists of yes words and
   /// [politeWords] alone.
@@ -172,11 +278,13 @@ final class YesNoRecognizer {
 
   /// The answer in [transcript], or `null` if it is not a clear yes or no.
   /// [strict]: see the class documentation. [extraYes]: further single
-  /// words that count like yes words for this question.
+  /// words that count like yes words for this question. [language]: set
+  /// language, limits the strict yes words (see class documentation).
   YesNo? parse(
     String transcript, {
     bool strict = false,
     Set<String> extraYes = const {},
+    String? language,
   }) {
     final words = transcript
         .toLowerCase()
@@ -223,15 +331,20 @@ final class YesNoRecognizer {
             hasPhrase(yesPhrases, negatable: true));
     if (no && !yes) return YesNo.no;
     if (!yes || no) return null;
-    if (strict && !_strictYes(words, extraYes)) return null;
+    if (strict && !_strictYes(words, extraYes, language)) return null;
     return YesNo.yes;
   }
 
   /// Clear agreement only: up to 3 yes/polite/filler words with at least
   /// one yes word, or one yes phrase with yes or polite words around it.
-  static bool _strictYes(List<String> words, Set<String> extraYes) {
+  static bool _strictYes(
+    List<String> words,
+    Set<String> extraYes,
+    String? language,
+  ) {
+    final yesSet = strictYesWordsFor(language);
     if (words.length > 6) return false;
-    bool strong(String w) => yesWords.contains(w) || extraYes.contains(w);
+    bool strong(String w) => yesSet.contains(w) || extraYes.contains(w);
     bool soft(String w) =>
         strong(w) ||
         weakYesWords.contains(w) ||
@@ -244,6 +357,6 @@ final class YesNoRecognizer {
       return true;
     }
     final rest = words.where((w) => !strong(w) && !politeWords.contains(w));
-    return yesPhrases.contains(rest.join(' '));
+    return strictYesPhrasesFor(language).contains(rest.join(' '));
   }
 }

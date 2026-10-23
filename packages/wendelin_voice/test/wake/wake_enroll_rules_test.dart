@@ -27,17 +27,29 @@ void main() {
     );
   });
 
-  test('Rand: Abstand genau am Limit ist kein Ausreißer', () {
+  test('Abweichung: Ausreißer stark negativ, passende Vorlage nahe 0', () {
     final all = [
       ...group(6),
       v([-1, 0.8, -0.5]),
     ];
-    final typical = [
-      for (var i = 0; i < all.length; i++) templateTypicality(all, i, mean),
+    final dev = templateDeviations(all, mean);
+    expect(dev[6], lessThan(-0.5));
+    expect(dev[0].abs(), lessThan(0.1));
+  });
+
+  test('Rand: Abweichung genau am Limit ist kein Ausreißer', () {
+    final all = [
+      ...group(6),
+      v([-1, 0.8, -0.5]),
     ];
-    final gap = median(typical) - typical[6];
+    final gap = -templateDeviations(all, mean)[6];
     expect(outlierIndices(all, mean, margin: gap - 0.01), contains(6));
     expect(outlierIndices(all, mean, margin: gap + 0.01), isEmpty);
+  });
+
+  test('Schwellen aus der Messung', () {
+    expect(WakeEnrollRules.classifierMinScore, 0.9);
+    expect(WakeEnrollRules.outlierMargin, 0.2);
   });
 
   test('pruneOutliers entfernt und zählt', () {
