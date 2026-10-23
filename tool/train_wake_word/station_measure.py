@@ -53,8 +53,9 @@ RULES = {"T": "Vorlage", "M": "Modell v7", "TM": "Modell v7 ODER Vorlage"}
 
 
 # ---------- Recognizer ----------
-def make_rec(name, threads=4):
-    """name: whisper-small, parakeet, parakeet-bs oder parakeet-hw<Score>[@<Wort>] (WP111: Hotwords je Wort)."""
+def make_rec(name, threads=4, blank_penalty=0.0):
+    """name: whisper-small, parakeet, parakeet-bs oder parakeet-hw<Score>[@<Wort>] (WP111: Hotwords je Wort).
+    blank_penalty > 0 wird nur an die Hotword-Suche (modified_beam_search) durchgereicht; 0 = Standard, Verhalten unveraendert."""
     import sherpa_onnx as so
     name, _, word = name.partition("@")
     M = MODELS
@@ -82,7 +83,7 @@ def make_rec(name, threads=4):
     assert os.path.exists(bpe), bpe
     return so.OfflineRecognizer.from_transducer(
         **kw, decoding_method="modified_beam_search", hotwords_file=hw, hotwords_score=score,
-        modeling_unit="bpe", bpe_vocab=bpe)
+        modeling_unit="bpe", bpe_vocab=bpe, **({"blank_penalty": blank_penalty} if blank_penalty else {}))
 
 
 def decode(rec, x):

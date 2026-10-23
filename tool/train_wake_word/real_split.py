@@ -95,6 +95,14 @@ def pos_for_split(pos, real_pos, rep, split):
     return pos[:cut] + list(real_pos) * rep if split == "train" else pos[cut:]
 
 
+def assert_syn_only(ps, pos, split):
+    """Fail-closed fuer --no-real-pos: die Positiv-Liste des Splits darf nur die synthetischen Clips enthalten (Train 90 %, Val 10 %)."""
+    cut = int(len(pos) * .9)
+    exp = pos[:cut] if split == "train" else pos[cut:]
+    if len(ps) != len(exp) or any(a is not b for a, b in zip(ps, exp)):
+        raise SystemExit("echte Positive im Lauf ohne echte Positive")
+
+
 def main():
     a = argparse.ArgumentParser(); a.add_argument("cmd", choices=["cut"])
     a.add_argument("--fix", required=True); a.add_argument("--work", required=True); a.add_argument("--out", required=True)

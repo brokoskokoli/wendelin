@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP133, WP129, WP135, WP136 (4 mit Freigabe); Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP129, WP135, WP136, WP137; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -81,10 +81,12 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP130 | Wake-Word-Modell v8 (mehr Stimmen, Varianten, harte Negative) | gemergt (8f85b96c) | K105; Empfehlung v8a (Stufe 1 allein: Wendelin 80/77 %, Hey Wendelin 93/90 % bei 2 FA/h; v7 braucht dafür Stufe 2). Folgepunkte: M-AILABS-Lizenz vor Release-Asset belegen; Test „--allow-truncated fehlt im Volllauf“; cv_extract erkennt Abschneiden an Header-Grenze nicht (CV-Shard nicht gepinnt); v8c (hidden 256) zurückgestellt |
 | WP131 | Release-Signatur und automatischer APK-Build auf GitHub (Tag → Release) | gemergt (0501df86) | K109; Probe-Release geprüft (Signer CN=Wendelin, nicht Debug), ohne Secrets rot. Folgepunkte: Debug-Fallback-Warnung in check_apk.sh greift kaum (apksigner auf CN=Android Debug prüfen); versionCode-Anstieg ungeprüft; Tag-Schutzregel v* empfohlen; erster echter Tag v0.1.0 + Dispatch-Probe probe_missing_secrets auf main |
 | WP132 | Zwei Build-Varianten frei/Store (Vorbereitung) | geplant | K103; nur mit Go, nach WP131 und Gesamttest |
-| WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | in Arbeit | K105; Teil A sofort (niedrige Last), Teil B Training im Zeitfenster |
+| WP133 | Wake Word: Nutzen von Stufe 2, v8a gegen v8c nur synthetisch | gemergt (5dca4d8d) | K110; Empfehlung v8a, Stufe 1 ab 0,98, ≥ 0,999 direkt, 0,98–0,999 prüft hw2 (Ausschnitt 2,0/0,9 s). Folgepunkte: wortspezifischer Prüfer statt hw2 (Go Maintainer); c-syn vs a-syn mit mehreren Seeds; mehr Sprecher; Notiz :470 zwei Ungenauigkeiten |
 | WP134 | Stopp-Wort ausbauen, Vorlagen-Vergleich für „Wendelin“ zentrieren | geplant | K107; nach WP129 (Wake-Dateien) |
 | WP135 | Smart Home schneller: Geräteliste, Synonyme, feste Bestätigung, Schnellweg ohne KI, Rollo ohne Rückfrage | in Arbeit | K108; parallel zu Wake-Paketen möglich |
 | WP136 | Parakeet (NeMo) lädt nach dem Download nicht | in Arbeit | Testbefund 2026-10-23; Go Maintainer, 4. Sitzung |
+| WP137 | Wake Word: v8c mit echten Aufnahmen, wortspezifischer Prüfer statt Parakeet, Aufnahme-Anleitung | in Arbeit | K110; Go Maintainer 2026-10-23 |
+| WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
