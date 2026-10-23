@@ -10,17 +10,17 @@ import 'package:wendelin_voice/wendelin_voice.dart';
 
 void main() {
   test('spoken wird vor dem Laden des Erkenners gelesen', () async {
-    var spoken = 'Am Bahnhof Stopp und weiter.';
+    var spoken = 'Am Bahnhof Wendelin und weiter.';
     final load = Completer<SpeechToText>();
     final v = LazyBargeVerifier(
       stt: () => load.future,
       language: () => 'de',
       spokenText: () => spoken,
     );
-    final result = v.verify(Int16List(16000), candidate: BargeInKeyword.stop);
+    final result = v.verify(Int16List(16000), candidate: BargeInKeyword.wake);
     // Der Ring rutscht weiter, waehrend das Modell laedt.
     spoken = 'Ganz anderer Satz.';
-    load.complete(FixedTranscriptStt('Stopp'));
+    load.complete(FixedTranscriptStt('Wendelin'));
     final verdict = await result;
     expect(verdict.result, 'echo');
     expect(verdict.keyword, isNull);

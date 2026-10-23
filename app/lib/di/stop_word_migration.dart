@@ -28,7 +28,10 @@ Future<void> migrateRemovedStopWord(
   try {
     final raw = await settings.get(_rawVoiceSettings);
     if (raw == null || !raw.containsKey(legacyStopClosesOverlay)) return;
-    await settings.set(_rawVoiceSettings, {...raw}..remove(legacyStopClosesOverlay));
+    await settings.set(
+      _rawVoiceSettings,
+      {...raw}..remove(legacyStopClosesOverlay),
+    );
   } on Object {
     // Damaged settings: the normal loading falls back to the defaults.
   }

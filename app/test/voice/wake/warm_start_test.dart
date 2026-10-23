@@ -155,11 +155,11 @@ void main() {
       addTearDown(() => voiceLogSink = saved);
       final m = BargeMeter();
       m
-        ..onWindow(0.1, 0.1)
-        ..onWindow(0.1, 0.1)
-        ..onWindow(0.1, 0.1)
+        ..onWindow(0.1)
+        ..onWindow(0.1)
+        ..onWindow(0.1)
         ..flush()
-        ..onWindow(0.1, 0.1)
+        ..onWindow(0.1)
         ..flush()
         ..flush()
         ..summary();

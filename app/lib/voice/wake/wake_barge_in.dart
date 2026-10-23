@@ -154,6 +154,9 @@ final class LazyWakeBargeInDetector implements BargeInDetector, SpokenTextSink {
       templates: strict.first,
       moreTemplates: strict.skip(1).toList(),
       modelThreshold: null,
+      // WP134: also without stage 2 (switch off) a silent stream after the
+      // warm start must not fire; templates look like silence (WP126/129).
+      silenceFloor: WakeClassifierRules.silenceFloor(),
       onWindow: (main, _) => meter.onWindow(main),
     );
     final inner = WakeWordBargeInDetector(

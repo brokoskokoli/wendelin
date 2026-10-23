@@ -89,24 +89,21 @@ Int16List _loud(int n) => Int16List(n)..fillRange(0, n, 3000);
 
 void main() {
   group('CandidateWakeEngine.warmUp', () {
-    test(
-      'Fenster im Vorlauf: kein onWindow, kein Zustand',
-      () async {
-        var seen = 0;
-        final e = _engine([
-          _none,
-          _none,
-          _none,
-          _none,
-        ], onWindow: (_, _) => seen++);
-        await e.open([KeywordSpec.wendelin]);
-        e.reset();
-        await _warm(e, 3);
-        expect(seen, 0, reason: 'der Vorlauf bewertet kein Fenster');
-        expect(await _live(e, 1), isEmpty);
-        expect(seen, 1);
-      },
-    );
+    test('Fenster im Vorlauf: kein onWindow, kein Zustand', () async {
+      var seen = 0;
+      final e = _engine([
+        _none,
+        _none,
+        _none,
+        _none,
+      ], onWindow: (_, _) => seen++);
+      await e.open([KeywordSpec.wendelin]);
+      e.reset();
+      await _warm(e, 3);
+      expect(seen, 0, reason: 'der Vorlauf bewertet kein Fenster');
+      expect(await _live(e, 1), isEmpty);
+      expect(seen, 1);
+    });
 
     test('Wake im Vorlauf sperrt das erste Live-Fenster nicht', () async {
       final e = _engine([_wake, _wake, _wake]);

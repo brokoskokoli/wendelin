@@ -13,10 +13,7 @@ import '../voice/voice_controller_test.dart' show fakeVoice;
 import 'assistant_overlay_test.dart'
     show FakeAssistantPlatform, overlaySample, pumpOverlay;
 
-Future<FakeAssistantPlatform> _stop(
-  WidgetTester tester, {
-  required bool closes,
-}) async {
+Future<FakeAssistantPlatform> _stop(WidgetTester tester) async {
   AssistantOverlayScreen.stopCloseDelay = const Duration(milliseconds: 300);
   addTearDown(
     () => AssistantOverlayScreen.stopCloseDelay = const Duration(
@@ -34,9 +31,7 @@ Future<FakeAssistantPlatform> _stop(
   );
   c.read(agentControllerProvider.notifier).seed(overlaySample());
   await c.read(voiceSettingsProvider.future);
-  await c
-      .read(voiceSettingsProvider.notifier)
-      .set(VoiceSettings(stopClosesOverlay: closes));
+  await c.read(voiceSettingsProvider.notifier).set(const VoiceSettings());
   await tester.pump();
   expect(find.text('„Trag mir morgen um zehn Tauchen ein.“'), findsOneWidget);
   platform.trigger();
@@ -48,7 +43,7 @@ void main() {
   testWidgets('Stopp: alter Austausch weg, „Abgebrochen.“, Overlay schließt', (
     tester,
   ) async {
-    final platform = await _stop(tester, closes: true);
+    final platform = await _stop(tester);
     expect(find.textContaining('Tauchen'), findsNothing);
     expect(find.text('Rückgängig · 8 s'), findsNothing);
     expect(platform.finished, 0);
@@ -56,13 +51,5 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect(platform.finished, 1);
-  });
-
-  testWidgets('Einstellung aus: Overlay bleibt offen', (tester) async {
-    final platform = await _stop(tester, closes: false);
-    await tester.pump(const Duration(seconds: 2));
-    expect(platform.finished, 0);
-    expect(find.text('Abgebrochen.'), findsOneWidget);
-    expect(find.textContaining('Tauchen'), findsNothing);
   });
 }

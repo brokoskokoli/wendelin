@@ -12,10 +12,10 @@ void main() {
     expect(
       bargeLogProblem([
         config,
-        l('barge-cand', 'kind=stop busy=false'),
-        l('barge-verify', 'result=stop ms=900'),
-        l('barge-hit', 'kind=keyword-stop'),
-      ], hitKind: 'keyword-stop'),
+        l('barge-cand', 'kind=wake busy=false'),
+        l('barge-verify', 'result=wake ms=900'),
+        l('barge-hit', 'kind=keyword-wake'),
+      ], hitKind: 'keyword-wake'),
       isNull,
     );
   });
@@ -24,8 +24,8 @@ void main() {
     expect(
       bargeLogProblem([
         config,
-        l('barge-cand', 'kind=stop busy=false'),
-        l('barge-hit', 'kind=keyword-stop'),
+        l('barge-cand', 'kind=wake busy=false'),
+        l('barge-hit', 'kind=keyword-wake'),
       ]),
       contains('ohne passendes barge-verify'),
     );
@@ -49,27 +49,30 @@ void main() {
     },
   );
 
-  test('Wake-Treffer nach Stopp-Urteil ist ein Befund', () {
-    expect(
-      bargeLogProblem([
-        config,
-        l('barge-cand', 'kind=wake busy=false'),
-        l('barge-verify', 'result=stop ms=500'),
-        l('barge-hit', 'kind=keyword-wake'),
-      ]),
-      isNotNull,
-    );
-  });
+  test(
+    'WP134: ein Urteil result=stop (altes Stopp-Wort) trägt keinen Treffer',
+    () {
+      expect(
+        bargeLogProblem([
+          config,
+          l('barge-cand', 'kind=wake busy=false'),
+          l('barge-verify', 'result=stop ms=500'),
+          l('barge-hit', 'kind=keyword-wake'),
+        ]),
+        isNotNull,
+      );
+    },
+  );
 
   test('Ein Urteil trägt nur einen Treffer', () {
     expect(
       bargeLogProblem([
         config,
-        l('barge-cand', 'kind=stop busy=false'),
-        l('barge-verify', 'result=stop ms=500'),
-        l('barge-hit', 'kind=keyword-stop'),
-        l('barge-cand', 'kind=stop busy=false'),
-        l('barge-hit', 'kind=keyword-stop'),
+        l('barge-cand', 'kind=wake busy=false'),
+        l('barge-verify', 'result=wake ms=500'),
+        l('barge-hit', 'kind=keyword-wake'),
+        l('barge-cand', 'kind=wake busy=false'),
+        l('barge-hit', 'kind=keyword-wake'),
       ]),
       contains('ohne passendes barge-verify'),
     );
@@ -79,11 +82,11 @@ void main() {
     expect(
       bargeLogProblem([
         config,
-        l('barge-cand', 'kind=stop busy=false'),
-        l('barge-verify', 'result=stop ms=500'),
-        l('barge-hit', 'kind=keyword-stop'),
-        l('barge-verify', 'result=stop ms=500'),
-        l('barge-hit', 'kind=keyword-stop'),
+        l('barge-cand', 'kind=wake busy=false'),
+        l('barge-verify', 'result=wake ms=500'),
+        l('barge-hit', 'kind=keyword-wake'),
+        l('barge-verify', 'result=wake ms=500'),
+        l('barge-hit', 'kind=keyword-wake'),
       ]),
       contains('ohne barge-cand'),
     );
@@ -102,8 +105,8 @@ void main() {
         l('barge-cand', 'kind=wake busy=false'),
         l('barge-verify', 'result=wake ms=1'),
         l('barge-hit', 'kind=keyword-wake'),
-      ], hitKind: 'keyword-stop'),
-      contains('keyword-stop'),
+      ], hitKind: 'keyword-andere'),
+      contains('keyword-andere'),
     );
   });
 }

@@ -464,19 +464,9 @@ void main() {
       expect(sherpa.calls.single.language, c.read(languageProvider));
     });
 
-    test('„Stopp schließt das Overlay“: Standard an, wird gespeichert', () {
-      expect(const VoiceSettings().stopClosesOverlay, isTrue);
-      final off = const VoiceSettings().copyWith(stopClosesOverlay: false);
-      expect(VoiceSettings.fromJson(off.toJson()).stopClosesOverlay, isFalse);
-      expect(VoiceSettings.fromJson(const {}).stopClosesOverlay, isTrue);
-    });
-
-    testWidgets('Schalter „Stopp schließt das Overlay“', (tester) async {
-      final c = await pumpScreen(tester, env0(), const VoiceScreen());
-      await tester.ensureVisible(find.text('Stopp schließt das Overlay'));
-      await tester.tap(find.byType(WSwitch).first);
-      await settle(tester);
-      expect(c.read(voiceSettingsProvider).value!.stopClosesOverlay, isFalse);
+    test('WP134: der Altschlüssel stopClosesOverlay wird ignoriert', () {
+      final v = VoiceSettings.fromJson({'stopClosesOverlay': false});
+      expect(v.toJson().containsKey('stopClosesOverlay'), isFalse);
     });
 
     test('„Sprechfassung“: Standard aus, wird gespeichert, alter Schalter '

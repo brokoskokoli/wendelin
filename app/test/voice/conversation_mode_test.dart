@@ -210,20 +210,6 @@ void main() {
       return (detector, tts, audio);
     }
 
-    test('„Stopp“ während der Ausgabe stoppt die Sprachausgabe', () async {
-      final (detector, tts, _) = await speaking(BargeInMode.keywords);
-      detector.emit(const BargeInSignal.keyword(BargeInKeyword.stop));
-      expect(tts.stops, greaterThan(0));
-      await voice().whenIdle;
-      expect(c.read(voiceControllerProvider).phase, VoiceState.idle);
-      expect(
-        log.any(
-          (l) => l.contains('barge-in') && l.contains('kind=keyword-stop'),
-        ),
-        isTrue,
-      );
-    });
-
     test('„Wendelin“ stoppt die Ausgabe und hört wieder zu', () async {
       final (detector, tts, audio) = await speaking(BargeInMode.keywords);
       final starts = audio.startCount;
@@ -240,7 +226,7 @@ void main() {
     test('Modus aus: das Signal bleibt wirkungslos', () async {
       final (detector, tts, _) = await speaking(BargeInMode.off);
       expect(detector.startCount, 0, reason: 'läuft gar nicht erst an');
-      detector.emit(const BargeInSignal.keyword(BargeInKeyword.stop));
+      detector.emit(const BargeInSignal.keyword(BargeInKeyword.wake));
       expect(tts.stops, 0);
       await voice().cancel();
     });

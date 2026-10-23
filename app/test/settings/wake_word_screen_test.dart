@@ -323,45 +323,6 @@ void main() {
       expect(audio.starts, 15);
     });
 
-    testWidgets('„Stopp“ einlernen: 10 Aufnahmen, nur Embeddings, getrennt', (
-      tester,
-    ) async {
-      final audio = SequenceAudio([for (var i = 0; i < 10; i++) recording()]);
-      final env = wakeEnv(audio: audio);
-      final store = SecretWakeTemplateStore(env.secrets);
-      await store.save(templates('a'));
-      await store.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
-      final c = await pumpWake(tester, env, const WakeWordScreen());
-      expect(find.textContaining('Ohne gelerntes „Stopp“'), findsOneWidget);
-      await tester.tap(find.text('„Stopp“ einlernen'));
-      await tester.pump();
-      await until(tester, find.text('1 von 10'));
-      expect(find.text('Sag jetzt: „Stopp“'), findsOneWidget);
-      await until(tester, find.text('Speichern'));
-      await tester.tap(find.text('Speichern'));
-      await settle(tester);
-
-      final stop = (await store.stop.load('a'))!;
-      expect(stop.embeddings, hasLength(10));
-      expect(stop.threshold, 0.9);
-      expect((await store.load('a'))!.embeddings, hasLength(2));
-      expect(await c.read(stopLearnedProvider.future), isTrue);
-      expect(find.textContaining('„Stopp“ ist gelernt'), findsOneWidget);
-      expect(find.text('Unterbrechen mit „Stopp“'), findsOneWidget);
-      expect(find.textContaining('Im Hintergrund löst'), findsOneWidget);
-      expect(find.textContaining('Stopp ✓'), findsOneWidget);
-      expect(
-        await env.secrets.listKeys(),
-        containsAll(['wake.templates.a', 'wake.stop.a']),
-      );
-
-      await tester.tap(find.text('Alle Stimmen löschen'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Löschen'));
-      await settle(tester);
-      expect(await env.secrets.listKeys(), isEmpty);
-    });
-
     testWidgets('zu leise: Hinweis, zählt nicht', (tester) async {
       final audio = SequenceAudio([
         recording(amplitude: 350),

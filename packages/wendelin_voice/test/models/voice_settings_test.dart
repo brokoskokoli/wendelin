@@ -77,7 +77,10 @@ void main() {
   });
 
   test('WP134: der alte Schlüssel stopClosesOverlay wird ignoriert', () {
-    final s = VoiceSettings.fromJson({'stopClosesOverlay': false, 'vadThreshold': 0.4});
+    final s = VoiceSettings.fromJson({
+      'stopClosesOverlay': false,
+      'vadThreshold': 0.4,
+    });
     expect(s.vadThreshold, 0.4);
     expect(s.toJson().containsKey('stopClosesOverlay'), isFalse);
   });

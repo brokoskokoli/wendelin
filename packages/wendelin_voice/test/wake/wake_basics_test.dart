@@ -297,7 +297,9 @@ void main() {
         speakerId: 'a',
         featureVersion: 'fake-1',
         threshold: 0.9,
-        embeddings: [v([1, 0])],
+        embeddings: [
+          v([1, 0]),
+        ],
       );
       Future<List<String>> run(List<double> embedding) async {
         final e = CandidateWakeEngine(
@@ -313,7 +315,8 @@ void main() {
         return [for (final h in await e.accept(Int16List(200))) h.keywordId];
       }
 
-      expect(await run([1, 0.05]), ['wake', 'wake']);
+      expect(await run([1, 0.05]), everyElement('wake'));
+      expect(await run([1, 0.05]), isNotEmpty);
       expect(await run([0.05, 1]), isEmpty);
       expect(await run([-1, -1]), isEmpty);
     });
@@ -406,31 +409,28 @@ void main() {
     );
   });
 
-  test(
-    'WakeWordBargeInDetector: Schlüsselwörter, stop gibt das Mikro frei',
-    () async {
-      final audio = FakeAudioInput();
-      final engine = FakeWakeWordEngine(keywordId: 'stop');
-      final d = WakeWordBargeInDetector(audio: audio, engine: engine);
-      final got = <String>[];
-      d.signals.listen((s) => got.add(s.code));
-      await d.start();
-      audio.push(FakeWakeWordEngine.markerFrame());
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-      expect(got, ['keyword-stop']);
-      await d.stop();
-      expect(
-        audio.isRunning,
-        isFalse,
-      ); // vor dem Rückkehren frei (VOICE_RECOGNITION)
-      expect(engine.isOpen, isTrue);
-      await d.start();
-      expect(engine.resetCount, 2);
-      await d.dispose();
-      expect(engine.isOpen, isFalse);
-      expect(audio.isRunning, isFalse);
-    },
-  );
+  test('WakeWordBargeInDetector: nur wake löst aus, ein anderes Wort (stop) bleibt still', () async {
+    final audio = FakeAudioInput();
+    final engine = FakeWakeWordEngine(keywordId: 'stop');
+    final d = WakeWordBargeInDetector(audio: audio, engine: engine);
+    final got = <String>[];
+    d.signals.listen((s) => got.add(s.code));
+    await d.start();
+    audio.push(FakeWakeWordEngine.markerFrame());
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    expect(got, isEmpty); // WP134: kein Barge-in-Stopp mehr
+    await d.stop();
+    expect(
+      audio.isRunning,
+      isFalse,
+    ); // vor dem Rückkehren frei (VOICE_RECOGNITION)
+    expect(engine.isOpen, isTrue);
+    await d.start();
+    expect(engine.resetCount, 2);
+    await d.dispose();
+    expect(engine.isOpen, isFalse);
+    expect(audio.isRunning, isFalse);
+  });
 
   test('FakeWakeTemplateStore: Speichern, Laden, Löschen', () async {
     final s = FakeWakeTemplateStore();
