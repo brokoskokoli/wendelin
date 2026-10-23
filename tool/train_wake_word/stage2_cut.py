@@ -37,13 +37,16 @@ FIXED_THR = 0.98
 
 
 # ---------- Reine Funktionen ----------
-def app_events(t, v, lower, upper=APP_UPPER, hold_s=APP_HOLD_S, refr=W.REFR, hold=None):
+def app_events(t, v, lower, upper=APP_UPPER, hold_s=APP_HOLD_S, refr=W.REFR, hold=None, flush=True):
     """Nachbildung von CandidateWakeEngine (WP141) auf der Stufe-1-Kurve: [(Spitzenzeit, Spitzenwert)].
     Ab dem ersten Fenster im Band [lower, upper) wird gehalten, bis (Fensterende - erstes Fensterende) >= hold_s (einschliesslich: das
     Fenster bei +hold_s zaehlt noch mit und entscheidet; Vergleich in Samples bei 16 kHz). Abfaelle unter die Spitze oder unter das Band
     und NaN beenden das Halten nicht. Ein Wert >= upper entscheidet sofort mit diesem Wert (direkt). Sonst entscheidet am Ende die
     Spitze (bei gleichen Werten das spaetere Fenster); die Trefferzeit ist das Spitzenfenster. hold_s <= 0 (Alias hold=1): das erste Fenster im Band
-    entscheidet. Ein unvollstaendiges Halten am Stromende gibt kein Ereignis. Sperrzeit `refr` von Trefferzeit zu Trefferzeit.
+    entscheidet. Sperrzeit `refr` von Trefferzeit zu Trefferzeit.
+    flush=True (Standard): ein am Kurvenende noch offenes Halten entscheidet mit der Spitze (Spitzenzeit, Spitze), die Sperrzeit gilt wie
+    sonst. Das entspricht einem weiterlaufenden Strom mit leisen Fenstern (die App sieht solche Ereignisse, die Kurve eines kurzen Clips
+    endet nur frueher). flush=False: unvollstaendiges Halten am Stromende gibt kein Ereignis (so entscheidet die Dart-Engine, Paritaetstest).
     Gleiche Regel wie Dart, Paritaetsfixture packages/wendelin_voice/test/fixtures/wake_hold_parity.json (test_stage2_cut.py)."""
     if hold is not None: hold_s = (hold - 1) * 0.08          # Alias: Fensterzahl inkl. erstem Fenster
     hold_n, refr_n = round(hold_s * SR), round(refr * SR)
@@ -69,6 +72,8 @@ def app_events(t, v, lower, upper=APP_UPPER, hold_s=APP_HOLD_S, refr=W.REFR, hol
         if last is not None and ev[1] - last < refr_n: continue
         last = ev[1]
         out.append((ev[0], ev[2]))
+    if flush and start is not None and (last is None or pk_n - last >= refr_n):
+        out.append((pk_t, pk))
     return out
 
 

@@ -64,8 +64,8 @@ class AppHalten(unittest.TestCase):
         self.assertEqual(ev([float("nan"), float("nan")]), [])
         self.assertEqual(ev([0.985, 0.99, None] + PAD), [(0.08, 0.99)])                  # None wie NaN
 
-    def test_unvollstaendiges_halten_gibt_kein_ereignis(self):
-        self.assertEqual(ev([0.985, 0.99, 0.985]), [])
+    def test_unvollstaendiges_halten_gibt_ohne_flush_kein_ereignis(self):
+        self.assertEqual(ev([0.985, 0.99, 0.985], flush=False), [])
 
     def test_sperrzeit_von_trefferzeit_zu_trefferzeit(self):
         v = [0.996] + [0.1] * 18 + [0.996, 0.1, 0.996]                           # Fenster 0, 19 (1,52 s), 21
@@ -101,6 +101,31 @@ class AppHalten(unittest.TestCase):
         inband = t[v >= 0.98]
         for a in app: self.assertTrue(any(-1e-6 <= a - f <= 0.8 + 1e-4 for f in inband), a)
 
+    def test_flush_offenes_halten_am_ende_gibt_spitze(self):
+        v = [0.1, 0.985, 0.99, 0.986]                                            # Kurve endet 0,16 s nach dem ersten Bandfenster
+        self.assertEqual(ev(v), [(0.16, 0.99)])
+        self.assertEqual(ev(v, flush=False), [])
+
+    def test_flush_gleich_elf_nullfenster_angehaengt(self):
+        rng = np.random.RandomState(3)
+        n_ev = 0
+        for k in range(60):
+            n = int(rng.randint(3, 80))
+            v = np.clip(rng.rand(n) * 1.2 - 0.1 + (rng.rand(n) > 0.8), 0, 1).astype("float32")
+            t = 10 + HOP * np.arange(n)
+            t0 = np.concatenate([t, t[-1] + HOP * np.arange(1, 12)])
+            v0 = np.concatenate([v, np.zeros(11, dtype="float32")])
+            a = C.app_events(t, v, 0.98)
+            self.assertEqual(a, C.app_events(t0, v0, 0.98, flush=False), k)
+            n_ev += len(a)
+        self.assertGreater(n_ev, 20)
+
+    def test_flush_ereignis_beachtet_sperrzeit(self):
+        v = [0.1, 0.985, 0.99] + [0.1] * 12 + [0.985, 0.99]                      # zweites Halten offen am Ende, Spitze bei 1,28 s
+        self.assertEqual(ev(v, refr=1.0), [(0.16, 0.99), (1.28, 0.99)])          # Abstand 1,12 s >= 1,0 s: Flush-Ereignis
+        self.assertEqual(ev(v), [(0.16, 0.99)])                                  # Abstand 1,12 s < 1,5 s: Sperrzeit gilt auch fuer das Flush-Ereignis
+        self.assertEqual(ev(v, refr=1.0, flush=False), [(0.16, 0.99)])
+
     def test_paritaet_mit_dart_fixture(self):
         with open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "packages", "wendelin_voice", "test", "fixtures", "wake_hold_parity.json")) as f:
             fx = json.load(f)
@@ -111,7 +136,7 @@ class AppHalten(unittest.TestCase):
             with self.subTest(c["name"]):
                 t = np.array([10.0 + w[0] / 1000 for w in c["windows"]])
                 v = [w[1] for w in c["windows"]]
-                got = C.app_events(t, v, r["lower"], r["upper"], r["hold_ms"] / 1000, r["refractory_ms"] / 1000)
+                got = C.app_events(t, v, r["lower"], r["upper"], r["hold_ms"] / 1000, r["refractory_ms"] / 1000, flush=False)   # Dart entscheidet beim Stromende nicht
                 got = [(round((te - 10.0) * 1000), p, p >= r["upper"]) for te, p in got]
                 want = [(e["t_ms"], e["score"], e["direct"]) for e in c["events"]]
                 self.assertEqual([(a, b, d) for a, b, d in got], [(a, b, d) for a, b, d in want])
