@@ -50,7 +50,7 @@ void main() {
     expect(t.embeddings, hasLength(3));
     expect(t.featureVersion, 'fake-1');
     expect(t.threshold, wakeProvisionalThreshold);
-    expect(t.threshold, 0.50); // vorläufig, bis kalibriert wird (WP44, WP134)
+    expect(t.threshold, 0.58); // vorläufig, bis kalibriert wird (WP44, WP134)
     expect((await store.load('a'))!.embeddings, hasLength(3));
   });
 

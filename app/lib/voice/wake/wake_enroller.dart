@@ -134,9 +134,10 @@ const wakeEnrollCheckTimeout = Duration(seconds: 45);
 const wakeEnrollMaxUnchecked = 3;
 
 /// Provisional threshold right after the enrollment, before the calibration
-/// has seen any background (WP134 measurement, centered cosine: strict
-/// threshold 0.50 of the fixed mean, 97 % of „Wendelin“ on clean evaluation
-/// recordings; stage 2 filters the rest). Recordings of one voice can be
+/// has seen any background (WP134 measurement, centered cosine; WP142: 0.58
+/// for templates of "Hey Wendelin", 28 of 30 hits on blocks 4..6 without
+/// leak, real negatives peak at 0.52 at most, television at 0.53; stage 2
+/// filters the rest). Recordings of one voice can be
 /// nearly identical (leave-one-out similarity 1.0); a threshold derived from
 /// them would never fire on a live utterance.
 const wakeProvisionalThreshold = wakeUnconstrainedMaxThreshold;

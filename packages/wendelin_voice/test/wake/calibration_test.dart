@@ -107,7 +107,7 @@ void main() {
     });
 
     group('ohne Ereignisse (leiser Raum)', () {
-      test('Schwelle höchstens 0,50, auch bei hohen Positiven', () {
+      test('Schwelle höchstens 0,58, auch bei hohen Positiven', () {
         final c = calibrateThreshold(
           positiveScores: [0.85, 0.8, 0.77, 0.75, 0.9, 0.82],
           negativeEvents: [],
@@ -135,7 +135,7 @@ void main() {
         expect(floor.threshold, wakeMinThreshold);
       });
 
-      test('mit Ereignissen darf die Schwelle über 0,50 liegen', () {
+      test('mit Ereignissen darf die Schwelle über 0,58 liegen', () {
         final c = calibrateThreshold(
           positiveScores: [0.9, 0.85, 0.8],
           negativeEvents: [0.3, 0.6, 0.7],
@@ -176,7 +176,7 @@ void main() {
         expect(c.meetsTarget, isTrue);
       });
 
-      test('ein erlaubtes Ereignis hebt den Deckel 0,50 nicht auf', () {
+      test('ein erlaubtes Ereignis hebt den Deckel 0,58 nicht auf', () {
         final c = calibrateThreshold(
           positiveScores: [0.85, 0.8, 0.77, 0.75, 0.9, 0.82],
           negativeEvents: [0.2],
@@ -186,24 +186,24 @@ void main() {
         expect(c.recall, 1);
       });
 
-      test('Deckel ist 0,50 (Zahl, nicht nur Konstante)', () {
-        expect(wakeUnconstrainedMaxThreshold, 0.5);
+      test('Deckel ist 0,58 (Zahl, nicht nur Konstante)', () {
+        expect(wakeUnconstrainedMaxThreshold, 0.58);
         final c = calibrateThreshold(
           positiveScores: [0.9, 0.85, 0.8],
           negativeEvents: [],
           negativeHours: 0.1,
           requireNegatives: false,
         );
-        expect(c.threshold, 0.5);
+        expect(c.threshold, 0.58);
       });
 
-      test('schwaches Ereignis senkt nicht unter min(Quantil, 0,50)', () {
+      test('schwaches Ereignis senkt nicht unter min(Quantil, 0,58)', () {
         final c = calibrateThreshold(
           positiveScores: [0.9, 0.85, 0.8, 0.75, 0.7, 0.8],
           negativeEvents: [0.35],
           negativeHours: 0.5, // allowed = 0
         );
-        expect(c.threshold, 0.5);
+        expect(c.threshold, 0.58);
         // The quantile below the cap still decides.
         final low = calibrateThreshold(
           positiveScores: [0.45, 0.46, 0.47],
