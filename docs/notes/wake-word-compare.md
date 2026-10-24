@@ -195,6 +195,8 @@ Verwechsler nach Stufe 2 überall ≤ 2,3 % (neue Wörter 0–0,2 %), FA/h ≤ 2
 
 Stand: gemessen 2026-10-22 (Labels aus Etappe 1, Messung `words_measure.py`, Etappe 4). Nur Zahlen, keine Transkripte und keine Aufnahmen; Ergebnisdateien (`grid.csv`, `tables.md`, `det.csv`, `det.png`) liegen lokal unter `~/wendelin-models/kws/wp121/results/`.
 
+Hinweis (Stand 2026-10-24): Die Zahlen dieses Teils B sind mit Leck gemessen (enthalten handy2 B1–3, dieselben Rufe wie Huawei B1–3, also Doppelzählung der Trainingsseite der echten Positive; die Programme selbst haben nicht darauf trainiert). Nicht neu gerechnet; `words_measure.py` lässt die gepaarte Sitzung (`real_split.paired_sessions`) ab jetzt aus der Auswertung heraus.
+
 ### Aufbau und Lesehilfe
 - Daten je Gerät (Huawei, handy2): 5 Wörter (Wendelin, Hey Wendelin, Alexa, Hey Octavia, Kobalos) × 30 Äußerungen in 6 Blöcken à 5 (13 min Positive je Gerät); Negativ „Alltag leise“ 0,61 h je Gerät (echt), dazu synthetische Negativsprache (WP111, 1,93 h) und FLEURS test (1,01 h). **Huawei und handy2 nahmen dieselben Äußerungen gleichzeitig auf: nicht addieren, effektiv n = 30.**
 - Programme: M = openWakeWord (Wendelin/Hey Wendelin v7, Alexa `alexa.onnx`, neu Hey Octavia und Kobalos), W = microWakeWord (nur Wendelin/Hey Wendelin), Kz/Kg = sherpa-KWS (zh-en / gigaspeech). Stufe 2 `-` (nur Stufe 1), `bs` / `hw2` / `hw3` = Parakeet (Beam-Search, Hotwords 2 / 3). Pro Wort/Programm sweept die Messung Schwelle (M, W) bzw. Boost/Schwelle (Kz, Kg) × Stufe 2.

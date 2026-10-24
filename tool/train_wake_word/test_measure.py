@@ -183,6 +183,19 @@ class Sweep(unittest.TestCase):
     def test_merge_times(self):
         self.assertEqual(W.merge_times([3.2, 0.0, 1.0, 1.6]), [0.0, 1.6, 3.2])
 
+    def test_eval_labels_ohne_gepaarte_sitzung(self):
+        """handy2 Block 1 bis 3 sind dieselben Rufe wie Huawei Block 1 bis 3 (Versatz 0,72 s): fallen aus der Auswertung; handy2 Block 4 nicht gepaart."""
+        def lab(dev, b, rd, w, st): return {"dev": dev, "block": b, "round": rd, "word": w, "start": st, "end": st + 0.8, "status": "ok"}
+        rows = []
+        for b in (1, 4):
+            for rd in range(1, 6):
+                st = 10.0 * rd + 100 * b
+                rows += [lab("huawei", b, rd, "Wendelin", st), lab("handy2", b, rd, "Wendelin", st + 0.72 if b == 1 else st + 3.0 * rd)]
+        out = W.eval_labels(rows)
+        self.assertEqual(len(rows), 20)
+        self.assertEqual(sorted({(lb["dev"], lb["block"]) for lb in out}), [("handy2", 4), ("huawei", 1), ("huawei", 4)])
+        self.assertEqual(len(out), 15)
+
     def test_fa_grenze(self):
         self.assertEqual(W.fa_limit(1, 0.62), 0)          # 0,62 h bei 1 FA/h: kein Ereignis erlaubt
         self.assertEqual(W.fa_limit(2, 0.62), 1)
