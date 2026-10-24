@@ -15,8 +15,9 @@
 //
 // Zwei Läufe: (1) Clips wie in Python (Gleitkomma, Spitze 0,5, ganzzahlig
 // `trunc(x * 32767)`): prüft Mel, Embedding, Phase der Frames auf 1e-3.
-// (2) Clips der App (int16 der Quelle, `normalizePeak` rundet): die
-// Quantisierung um 1 LSB verschiebt die Embeddings um bis zu etwa 0,004 (bei
+// (2) Clips der App (int16 der Quelle, Spitzenanpassung von B schneidet ab
+// wie Python, `verifierBScaleToPeak`): die Quantisierung der Quelle (nicht
+// die Anpassung; mit Abschneiden gemessen 3,9e-3 wie vorher mit Runden) verschiebt die Embeddings um bis zu etwa 0,004 (bei
 // Werten von ±5 bis ±30), die Kopfwerte um unter 6e-5; geprüft werden hier
 // die Kopfwerte auf 1e-4 und die Embeddings auf 0,01.
 import 'dart:convert';
@@ -68,10 +69,9 @@ Int16List toClip(List<double> x, Mode mode) {
       for (final v in x) (v * 0.5 / peak * 32767).truncate(),
     ]);
   }
-  return normalizePeak(
+  // Wie die App: int16 der Quelle, dann der Zuschnitt von B (Abschneiden).
+  return verifierBScaleToPeak(
     Int16List.fromList([for (final v in x) (v * 32768).round()]),
-    target: 0.5,
-    minPeak: 1,
   );
 }
 

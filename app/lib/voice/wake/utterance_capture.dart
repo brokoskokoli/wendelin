@@ -45,7 +45,7 @@ final class Utterance {
   /// Decision.
   final UtteranceVerdict verdict;
 
-  /// The speech with a little lead and tail, 200 ms each (only when
+  /// The speech with a little lead and tail (only when
   /// accepted).
   final Int16List? pcm;
 
@@ -100,7 +100,7 @@ final class UtteranceCapture {
   static const _quiet = 22; // blocks = 440 ms
   static const _loud = 0.03; // RMS that is clearly speech, not noise
   static const _lead = 10; // blocks kept before the speech
-  static const _tail = 10; // blocks kept after the speech (200 ms, WP143)
+  static const _tail = 8; // blocks kept after the speech (160 ms)
   static const _context = 25; // blocks of context for verifier B (500 ms)
 
   /// Seconds of real audio kept around the speech for [Utterance.context]

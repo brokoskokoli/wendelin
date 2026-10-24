@@ -174,7 +174,7 @@ class WakeEnroller extends ChangeNotifier {
     this.verifier,
     this.classifierMinScore = WakeEnrollRules.classifierMinScore,
     this.checkTimeout = wakeEnrollCheckTimeout,
-    this.word = WakeTemplates.wordW,
+    this.word = WakeTemplates.wordHw,
     UtteranceCapture Function()? newCapture,
   }) : _newCapture = newCapture ?? UtteranceCapture.new;
 

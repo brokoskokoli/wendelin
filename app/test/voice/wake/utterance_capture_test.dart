@@ -22,11 +22,11 @@ void main() {
     expect(r.speechEnd, inInclusiveRange(16 * 900, r.pcm!.length));
   });
 
-  test('Sprachanfang und mindestens 200 ms Nachlauf (WP143)', () {
+  test('Sprachanfang und Nachlauf 160 ms (WP134-Vorlage)', () {
     final r = run(UtteranceCapture(), recording())!;
-    // 200 ms Vorlauf vor der Sprache, Nachlauf 200 ms nach ihrem Ende.
+    // 200 ms Vorlauf vor der Sprache, Nachlauf 160 ms nach ihrem Ende.
     expect(r.speechStart, 16 * 200);
-    expect(r.pcm!.length - r.speechEnd, 16 * 200);
+    expect(r.pcm!.length - r.speechEnd, 16 * 160);
     expect(r.speechEnd - r.speechStart, inInclusiveRange(16 * 880, 16 * 940));
   });
 
@@ -40,9 +40,9 @@ void main() {
     );
     expect(r.contextStart, greaterThanOrEqualTo(16 * 300));
     expect(c.length - r.contextEnd, greaterThanOrEqualTo(16 * 400));
-    // Die WP134-Vorlage bleibt unverändert (200 ms Rand).
+    // Die WP134-Vorlage bleibt unverändert (200 ms Vorlauf, 160 ms Nachlauf).
     expect(r.speechStart, 16 * 200);
-    expect(r.pcm!.length - r.speechEnd, 16 * 200);
+    expect(r.pcm!.length - r.speechEnd, 16 * 160);
   });
 
   test('zu leise: Pegel unter der Grenze', () {

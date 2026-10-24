@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import '../io/audio_input.dart';
 import '../models/wake_classifier_catalog.dart';
-import 'level_normalize.dart';
 import 'wake_feature_extractor.dart';
 import 'wake_templates.dart';
 import 'wake_verifier.dart';
@@ -136,7 +135,7 @@ Int16List verifierBLiveClip(Int16List pcm, int endSample) {
   final out = Int16List(to - from);
   final lo = math.max(0, from), hi = math.min(pcm.length, to);
   if (hi > lo) out.setRange(lo - from, hi - from, pcm, lo);
-  return normalizePeak(out, target: WakeClassifierRules.verifyPeak, minPeak: 1);
+  return verifierBScaleToPeak(out);
 }
 
 /// Bounds `(from, to)` of the template cut before the trim, for speech from
@@ -215,11 +214,25 @@ Int16List? verifierBTemplateClip(
 ) {
   final w = verifierBTemplateWindow(pcm.length, speechStart, speechEnd);
   if (w == null) return null;
-  return normalizePeak(
-    Int16List.sublistView(pcm, w.from, w.to),
-    target: WakeClassifierRules.verifyPeak,
-    minPeak: 1,
-  );
+  return verifierBScaleToPeak(Int16List.sublistView(pcm, w.from, w.to));
+}
+
+/// Scales [pcm] to the peak [WakeClassifierRules.verifyPeak] like the
+/// measurement (Python: `trunc(x * peak / max * 32767)`): truncating, not
+/// rounding, so that the embeddings match. [pcm] without any signal stays.
+Int16List verifierBScaleToPeak(Int16List pcm) {
+  var peak = 0;
+  for (final s in pcm) {
+    final a = s < 0 ? -s : s;
+    if (a > peak) peak = a;
+  }
+  if (peak < 1) return pcm;
+  final gain = WakeClassifierRules.verifyPeak * 32767 / peak;
+  final out = Int16List(pcm.length);
+  for (var i = 0; i < pcm.length; i++) {
+    out[i] = (pcm[i] * gain).truncate().clamp(-32768, 32767);
+  }
+  return out;
 }
 
 /// The enrollment side: the embedding sequence of the template cut, or
@@ -269,10 +282,7 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
     Float32List? mu,
     this.fallbackLabel = 'hw2',
     this.onDecision,
-    this.thresholds = const {
-      WakeTemplates.wordW: WakeClassifierRules.verifierBThresholdW,
-      WakeTemplates.wordHw: WakeClassifierRules.verifierBThresholdHw,
-    },
+    this.threshold = WakeClassifierRules.verifierBThresholdHw,
   }) : mu = mu ?? wakeVerifierBMu;
 
   /// The enrolled templates of all speakers (empty: no B).
@@ -290,8 +300,8 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
   /// Name of the fallback in the log.
   final String fallbackLabel;
 
-  /// Threshold per word (`WakeTemplates.wordW`, `wordHw`).
-  final Map<String, double> thresholds;
+  /// Threshold of the HW head, valid whichever word was heard.
+  final double threshold;
 
   /// Called with every verdict.
   final VerifierBDecision? onDecision;
@@ -318,13 +328,13 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
 
   @override
   Future<bool> confirmAt(Int16List pcm, int endSample) async {
-    final byWord = await _sequences();
-    if (byWord.isEmpty) return _viaFallback(pcm);
+    final templates = await _sequences();
+    if (templates.isEmpty) return _viaFallback(pcm);
     ({double score, double threshold, bool ok})? verdict;
     try {
       final raw = await _sequence(verifierBLiveClip(pcm, endSample));
       final live = raw == null ? null : VerifierBSequence.prepare(raw, mu);
-      verdict = _decide(live, byWord);
+      verdict = _decide(live, templates);
     } on Object {
       verdict = null;
     }
@@ -334,27 +344,15 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
     return verdict.ok;
   }
 
-  /// The word with the largest margin to its threshold decides the log;
-  /// the clip passes when any word reaches its threshold. A [live] sequence
-  /// that is `null` (clip too short for any window) scores -1: rejected.
-  ({double score, double threshold, bool ok})? _decide(
+  /// Scores [live] against the HW templates; the clip passes at
+  /// `score >= threshold`. A [live] sequence that is `null` (clip too short
+  /// for any window) scores -1: rejected.
+  ({double score, double threshold, bool ok}) _decide(
     VerifierBSequence? live,
-    Map<String, List<VerifierBSequence>> byWord,
+    List<VerifierBSequence> templates,
   ) {
-    double? score, threshold;
-    var ok = false;
-    for (final MapEntry(key: word, value: list) in byWord.entries) {
-      final thr = thresholds[word];
-      if (thr == null) continue;
-      final s = live == null ? -1.0 : verifierBScore(live, list);
-      if (threshold == null || s - thr > score! - threshold) {
-        score = s;
-        threshold = thr;
-      }
-      if (s >= thr) ok = true;
-    }
-    if (score == null || threshold == null) return null;
-    return (score: score, threshold: threshold, ok: ok);
+    final s = live == null ? -1.0 : verifierBScore(live, templates);
+    return (score: s, threshold: threshold, ok: s >= threshold);
   }
 
   Future<bool> _viaFallback(Int16List pcm) async {
@@ -367,22 +365,23 @@ final class VerifierBWakeVerifier implements WakeEndAwareVerifier {
     return ok;
   }
 
-  /// Prepared template sequences per word; only templates of the feature
-  /// version of `mu`.
-  Future<Map<String, List<VerifierBSequence>>> _sequences() async {
-    final out = <String, List<VerifierBSequence>>{};
+  /// Prepared HW template sequences; only templates of the feature version
+  /// of `mu`. Sequences of other words (`w`, stored before) are ignored.
+  Future<List<VerifierBSequence>> _sequences() async {
+    final out = <VerifierBSequence>[];
     try {
       for (final t in await templates()) {
         if (t.featureVersion != wakeVerifierBFeatureVersion) continue;
         for (final s in t.sequences) {
+          if (s.word != WakeTemplates.wordHw) continue;
           if (s.frames < WakeClassifierRules.verifierBMinTemplateFrames) {
             continue;
           }
-          (out[s.word] ??= []).add(VerifierBSequence.prepare(s.values, mu));
+          out.add(VerifierBSequence.prepare(s.values, mu));
         }
       }
     } on Object {
-      return {};
+      return [];
     }
     return out;
   }

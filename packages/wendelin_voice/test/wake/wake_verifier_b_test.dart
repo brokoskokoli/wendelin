@@ -230,7 +230,7 @@ void main() {
           .sublist(w.from, w.to)
           .map((s) => s.abs())
           .reduce(math.max);
-      final gain = 16384 / peak;
+      final gain = 16384 * 32767 / 32768 / peak; // abgeschnitten (Python)
       for (var i = 0; i < c.length; i += 97) {
         expect(c[i], closeTo(pcm[w.from + i] * gain, 1));
       }
@@ -302,6 +302,16 @@ void main() {
     });
   });
 
+  test('Spitzenanpassung schneidet ab wie Python (trunc, 32767)', () {
+    // peak 3 -> gain 0.5 * 32767 / 3 = 5461.17: 3 -> 16383, 1 -> 5461,
+    // -2 -> -10922 (Runden gäbe 16384, 5461, -10922; 32768 gäbe 16384).
+    final out = verifierBScaleToPeak(Int16List.fromList([3, 1, -2, 0]));
+    expect(out, [16383, 5461, -10922, 0]);
+    // Ohne Signal bleibt der Ausschnitt.
+    final silent = Int16List(4);
+    expect(verifierBScaleToPeak(silent), silent);
+  });
+
   group('VerifierBWakeVerifier', () {
     // Live: 25 gleiche Frames `liveRow`.
     WakeFeatureExtractor liveFeatures(Float32List liveRow) =>
@@ -333,14 +343,14 @@ void main() {
     VerifierBWakeVerifier make(
       WakeFeatureExtractor f,
       List<WakeTemplates> t, {
-      Map<String, double>? thresholds,
+      double? threshold,
     }) => VerifierBWakeVerifier(
       templates: () async => t,
       features: () => f,
       fallback: fallback,
       mu: Float32List(96),
       onDecision: (v, s, t) => log.add((v, s, t)),
-      thresholds: thresholds ?? const {'w': 0.6038, 'hw': 0.6815},
+      threshold: threshold ?? 0.6815,
     );
 
     setUp(() {
@@ -381,13 +391,9 @@ void main() {
       ];
       await make(liveFeatures(axis(0)), tpl).confirmAt(pcm, end);
       final exact = log.single.$2!;
-      final on = make(liveFeatures(axis(0)), tpl, thresholds: {'hw': exact});
+      final on = make(liveFeatures(axis(0)), tpl, threshold: exact);
       expect(await on.confirmAt(pcm, end), isTrue);
-      final above = make(
-        liveFeatures(axis(0)),
-        tpl,
-        thresholds: {'hw': exact + 1e-9},
-      );
+      final above = make(liveFeatures(axis(0)), tpl, threshold: exact + 1e-9);
       expect(await above.confirmAt(pcm, end), isFalse);
     });
 
@@ -399,25 +405,43 @@ void main() {
       expect(fallback.calls, hasLength(1));
     });
 
-    test('ein Wort reicht: W unter, HW über der Schwelle', () async {
+    test('gespeicherte w-Folgen werden ignoriert (zählen als keine)', () async {
       final v = make(liveFeatures(axis(0)), [
-        WakeTemplates(
-          speakerId: 's',
-          featureVersion: wakeVerifierBFeatureVersion,
-          threshold: 0.5,
-          embeddings: [Float32List(4)],
-          sequences: [
-            WakeTemplateSequence(word: 'w', values: flat([row(0.1), row(0.1)])),
-            WakeTemplateSequence(
-              word: 'hw',
-              values: flat([row(0.95), row(0.95)]),
-            ),
-          ],
-        ),
+        templatesWith([row(0.95)], word: 'w'),
       ]);
-      expect(await v.confirmAt(pcm, end), isTrue);
-      expect(fallback.calls, isEmpty);
+      fallback.answer = (_) => false;
+      expect(await v.confirmAt(pcm, end), isFalse);
+      expect(fallback.calls, hasLength(1)); // Rückfall hw2
+      expect(log.single, ('hw2', null, null));
     });
+
+    for (final wFirst in [true, false]) {
+      test(
+        'w hoch, HW unter der Schwelle: abgelehnt (w zuerst: $wFirst)',
+        () async {
+          final w = WakeTemplateSequence(
+            word: 'w',
+            values: flat([row(0.95), row(0.95)]),
+          );
+          final hw = WakeTemplateSequence(
+            word: 'hw',
+            values: flat([row(0.1), row(0.1)]),
+          );
+          final v = make(liveFeatures(axis(0)), [
+            WakeTemplates(
+              speakerId: 's',
+              featureVersion: wakeVerifierBFeatureVersion,
+              threshold: 0.5,
+              embeddings: [Float32List(4)],
+              sequences: wFirst ? [w, hw] : [hw, w],
+            ),
+          ]);
+          expect(await v.confirmAt(pcm, end), isFalse);
+          expect(fallback.calls, isEmpty);
+          expect(log.single.$2, closeTo(0.1, 1e-4)); // nur HW zählt
+        },
+      );
+    }
 
     test('ohne Folgen (Altvorlagen): Rückfall hw2, Log verifier=hw2', () async {
       final old = WakeTemplates(
@@ -578,8 +602,7 @@ void main() {
       expect(f.sizeBytes, 858044);
     });
 
-    test('Schwellen W 0,6038, HW 0,6815', () {
-      expect(WakeClassifierRules.verifierBThresholdW, 0.6038);
+    test('Schwelle HW 0,6815', () {
       expect(WakeClassifierRules.verifierBThresholdHw, 0.6815);
     });
   });

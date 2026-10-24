@@ -344,6 +344,19 @@ void main() {
     expect(aware.ends, [32000]);
     expect(aware.plain, 0);
   });
+
+  test('endbewusst mit Nachlauf: Endstelle liegt vor dem Nachlauf', () async {
+    final aware = _EndAware();
+    setUpListener(
+      v: aware,
+      hits: {99},
+      tail: const Duration(milliseconds: 900),
+    );
+    await listener.start();
+    await feed(140);
+    // Clip = 32000 vor + 14400 nach dem Treffer; Ende bleibt bei 32000.
+    expect(aware.ends, [32000]);
+  });
 }
 
 final class _EndAware implements WakeEndAwareVerifier {

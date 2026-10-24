@@ -70,7 +70,7 @@ void main() {
       await e.run();
       final t = await e.finish();
       expect(t.sequences, hasLength(2));
-      expect(t.sequences.first.word, WakeTemplates.wordW);
+      expect(t.sequences.first.word, WakeTemplates.wordHw);
       expect(t.sequences.first.frames, 3);
       // Zuschnitt: 900 ms Sprache, -0,12 s / +0,20 s, ohne Trim.
       expect(

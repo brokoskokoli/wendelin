@@ -199,11 +199,8 @@ abstract final class WakeClassifierRules {
   /// templates of a word; with fewer templates the mean of all of them.
   static const verifierBTopK = 3;
 
-  /// Verifier B threshold for „Hey Wendelin“ (WP137 delivery for the model
-  /// v8a clean). Unsure: on the training side it accepts about 4 % of the
+  /// Verifier B threshold (HW head, for both words; WP137 delivery for the
+  /// model v8a clean). Unsure: on the training side it accepts about 4 % of the
   /// positives, on the test split about 60 %.
   static const verifierBThresholdHw = 0.6815;
-
-  /// Verifier B threshold for „Wendelin“ (WP137 delivery, same model).
-  static const verifierBThresholdW = 0.6038;
 }

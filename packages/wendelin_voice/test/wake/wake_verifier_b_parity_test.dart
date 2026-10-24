@@ -57,12 +57,8 @@ void main() {
     }
   });
 
-  test('Schwellen der App = Schwellen der Lieferung', () {
+  test('Schwelle HW der App = Schwelle der Lieferung', () {
     final t = fx['thresholds_trainingsseite'] as Map<String, dynamic>;
-    expect(
-      WakeClassifierRules.verifierBThresholdW,
-      closeTo((t['W'] as num).toDouble(), 5e-5),
-    );
     expect(
       WakeClassifierRules.verifierBThresholdHw,
       closeTo((t['HW'] as num).toDouble(), 5e-5),
@@ -119,7 +115,8 @@ void main() {
         final lo = c['copy_lo'] as int, hi = c['copy_hi'] as int;
         expect(hi - lo, clip.length - front - back);
         final peakIn = sig.sublist(lo, hi).map((s) => s.abs()).reduce(math.max);
-        final gain = (c['peak_out'] as num) * 32768 / peakIn;
+        // Wie Python: trunc(x * peak / max * 32767).
+        final gain = (c['peak_out'] as num) * 32767 / peakIn;
         for (var i = 0; i < hi - lo; i += 101) {
           expect(clip[front + i], closeTo(sig[lo + i] * gain, 1));
         }
