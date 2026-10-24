@@ -93,6 +93,67 @@ bool matchesWakeWord(
   return false;
 }
 
+/// Words that stand for „Hey“ in a transcript: the spellings recognizers
+/// give for it (WP142, measured on real calls).
+const heyWords = {'hey', 'hei', 'he', 'hej', 'hay', 'ey', 'eh', 'ei', 'hi'};
+
+/// [heyWords] plus mis-hearings of „Hey“ (WP142: Parakeet writes „a“, „äh“,
+/// „yeah“ … for a soft or quick „Hey“). For the enrollment, where a missed
+/// good call costs more than an accepted odd one.
+const heyWordsLenient = {
+  ...heyWords,
+  'a',
+  'ah',
+  'äh',
+  'e',
+  'yeah',
+  'nee',
+  'ne',
+  'ja',
+  'and',
+};
+
+/// Whether [transcript] contains „Hey Wendelin“: the wake word as in
+/// [matchesWakeWord] with one of [heyWords] ([heyWordsLenient] if [lenient])
+/// directly in front of it. „Wendelin“ alone, „Hey Octavia“ and „Hey“ alone
+/// do not match. The single source of this rule (enrollment, WP143).
+bool matchesHeyWakeWord(
+  String transcript, {
+  bool lenient = false,
+  int maxDistance = wakeVerifyMaxDistance,
+}) {
+  final hey = lenient ? heyWordsLenient : heyWords;
+  final list = foldForMatch(transcript)
+      .split(' ')
+      .where((w) => w.isNotEmpty)
+      .toList();
+  for (var i = 1; i < list.length; i++) {
+    if (hey.contains(list[i - 1]) &&
+        wakeWordMatchLength(list, i, maxDistance: maxDistance) > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// What the enrollment's recognizer heard in a recording (WP142).
+enum HeardWake {
+  /// „Hey Wendelin“ ([matchesHeyWakeWord], lenient).
+  heyWendelin,
+
+  /// The wake word without „Hey“ in front of it.
+  wendelinOnly,
+
+  /// Something else (noise, another word, nothing).
+  other,
+}
+
+/// A verifier that also says whether „Hey“ was heard, for the enrollment.
+abstract interface class WakeEnrollVerifier implements WakeVerifier {
+  /// What [pcm] contains (same clip rules as [confirm]).
+  Future<HeardWake> hear(Int16List pcm);
+}
+
 bool _nearWakeWord(String s, int maxDistance, {required bool single}) {
   if (soundsLikeWakeWord(s)) return true;
   final twoEdits =
@@ -255,7 +316,7 @@ final class PreferredWakeVerifier implements WakeVerifier {
 /// [WakeVerifier] on top of a [SpeechToText] (Whisper or Parakeet, already
 /// loaded or base). The clip is scaled to `WakeClassifierRules.verifyPeak`
 /// first if [normalize] is set (per recognizer, see the catalog rules).
-final class TranscriptWakeVerifier implements WakeVerifier {
+final class TranscriptWakeVerifier implements WakeEnrollVerifier {
   /// Creates the verifier; only the last [maxSamples] are transcribed.
   TranscriptWakeVerifier(
     this.stt, {
@@ -290,8 +351,7 @@ final class TranscriptWakeVerifier implements WakeVerifier {
   /// verdict (diagnostics, no text).
   final void Function(String category, int ms)? onCategory;
 
-  @override
-  Future<bool> confirm(Int16List pcm) async {
+  Future<String> _transcribe(Int16List pcm) async {
     final tail = pcm.length > maxSamples
         ? Int16List.sublistView(pcm, pcm.length - maxSamples)
         : pcm;
@@ -307,6 +367,21 @@ final class TranscriptWakeVerifier implements WakeVerifier {
       wakeTranscriptCategory(t.text, maxDistance: maxDistance),
       audio.length ~/ 16,
     );
-    return matchesWakeWord(t.text, maxDistance: maxDistance);
+    return t.text;
+  }
+
+  @override
+  Future<bool> confirm(Int16List pcm) async =>
+      matchesWakeWord(await _transcribe(pcm), maxDistance: maxDistance);
+
+  @override
+  Future<HeardWake> hear(Int16List pcm) async {
+    final text = await _transcribe(pcm);
+    if (matchesHeyWakeWord(text, lenient: true, maxDistance: maxDistance)) {
+      return HeardWake.heyWendelin;
+    }
+    return matchesWakeWord(text, maxDistance: maxDistance)
+        ? HeardWake.wendelinOnly
+        : HeardWake.other;
   }
 }

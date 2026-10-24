@@ -176,7 +176,7 @@ final class FakeWakeFeatureExtractor implements WakeSequenceExtractor {
 }
 
 /// [WakeVerifier] answering from a script (default: confirms).
-final class FakeWakeVerifier implements WakeVerifier {
+final class FakeWakeVerifier implements WakeEnrollVerifier {
   /// Creates the fake; [answer] decides per call (1-based number).
   FakeWakeVerifier({this.answer, this.delay = Duration.zero});
 
@@ -207,6 +207,16 @@ final class FakeWakeVerifier implements WakeVerifier {
     final e = error;
     if (e != null) throw e;
     return answer?.call(calls.length) ?? true;
+  }
+
+  /// For the enrollment: what [hear] reports instead of the default
+  /// (`heyWendelin` if [confirm] would say yes, else `other`).
+  HeardWake? heard;
+
+  @override
+  Future<HeardWake> hear(Int16List pcm) async {
+    final ok = await confirm(pcm);
+    return heard ?? (ok ? HeardWake.heyWendelin : HeardWake.other);
   }
 }
 

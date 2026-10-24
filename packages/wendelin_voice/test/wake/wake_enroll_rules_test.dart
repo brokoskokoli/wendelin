@@ -48,8 +48,7 @@ void main() {
   });
 
   test('Schwellen aus der Messung', () {
-    expect(WakeEnrollRules.classifierMinScore, 0.9);
-    expect(WakeEnrollRules.outlierMargin, 0.2);
+    expect(WakeEnrollRules.outlierMargin, 0.3);
   });
 
   test('pruneOutliers entfernt und zählt', () {

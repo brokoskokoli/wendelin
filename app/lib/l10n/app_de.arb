@@ -2876,10 +2876,18 @@
     }
   },
   "wakeEnrollMicPreparing": "Mikrofon wird vorbereitet …",
+  "wakeEnrollMissingHey": "Bitte „{word}“ sagen, nicht nur den Namen.",
+  "@wakeEnrollMissingHey": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
   "wakeEnrollNoMic": "Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.",
   "wakeEnrollNoRecognizer": "Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.",
   "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
-  "wakeEnrollNotWord": "Nicht als „{word}“ erkannt. Bitte noch einmal.",
+  "wakeEnrollNotWord": "Nicht erkannt. Bitte noch einmal mit „{word}“.",
   "@wakeEnrollNotWord": {
     "placeholders": {
       "word": {
@@ -2900,10 +2908,11 @@
     }
   },
   "wakeEnrollProgressLabel": "Fortschritt Einlernen",
-  "wakeEnrollPrompt0": "Sprich normal, das Handy nah vor dir.",
+  "wakeEnrollPrompt0": "Sprich normal, das Handy etwa 0,5–1 m vor dir.",
   "wakeEnrollPrompt1": "Jetzt aus ein bis zwei Metern Abstand.",
   "wakeEnrollPrompt2": "Jetzt leise, wie abends im Zimmer.",
   "wakeEnrollPrompt3": "Wie du es im Alltag sagst, gern aus einer anderen Ecke.",
+  "wakeEnrollQuietTip": "Mehrmals nichts oder zu leise gehört: Geh näher ans Handy (etwa 0,5–1 m), such einen ruhigeren Raum und sprich normal laut.",
   "wakeEnrollRejected": "{count} abgelehnt",
   "@wakeEnrollRejected": {
     "placeholders": {
@@ -2928,6 +2937,15 @@
       }
     }
   },
+  "wakeEnrollSetupHint": "Ruhiger Raum, normal laut sprechen, etwa 0,5–1 m vom Handy entfernt.",
+  "wakeEnrollSpokenWord": "Hey {name}",
+  "@wakeEnrollSpokenWord": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wakeEnrollTitle": "Stimme einlernen",
   "wakeEnrollTooEarly": "Zu früh angefangen. Warte kurz und sprich dann.",
   "wakeEnrollTooLong": "Zu lang. Nur „{word}“, bitte.",
@@ -2938,7 +2956,7 @@
       }
     }
   },
-  "wakeEnrollTooQuiet": "Zu leise. Bitte etwas lauter.",
+  "wakeEnrollTooQuiet": "Zu leise – bitte näher ans Handy.",
   "wakeEnrollUnchecked": "Die Prüfung ist gerade nicht möglich (Spracherkennung nicht bereit). Bitte noch einmal.",
   "wakeExplainBatteryBody": "Das ständige Zuhören kostet Akku. Standard ist deshalb „Nur beim Laden“.",
   "wakeExplainBatteryExemptBody": "Damit Android den Dienst nicht beendet, sollte Wendelin von der Akku-Optimierung ausgenommen sein.",

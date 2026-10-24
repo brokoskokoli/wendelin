@@ -211,6 +211,7 @@ class _EnrollState extends ConsumerState<SpeakerEnrollScreen> {
           UtteranceVerdict.tooLong => l.speakerRecordTooLong,
           // Set only by the wake word enroller.
           UtteranceVerdict.notWord ||
+          UtteranceVerdict.missingHey ||
           UtteranceVerdict.inconsistent ||
           UtteranceVerdict.unchecked => l.speakerRecordNoSpeech,
         }, style: WText.caption),

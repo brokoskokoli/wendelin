@@ -80,6 +80,7 @@ void main() {
     ]) {
       for (final v in [
         UtteranceVerdict.notWord,
+        UtteranceVerdict.missingHey,
         UtteranceVerdict.inconsistent,
         UtteranceVerdict.unchecked,
       ]) {
@@ -92,9 +93,21 @@ void main() {
       verdictText(
         AppLocalizationsDe(),
         UtteranceVerdict.notWord,
-        word: 'Wendelin',
+        word: 'Hey Wendelin',
       ),
-      contains('Nicht als „Wendelin“ erkannt'),
+      contains('mit „Hey Wendelin“'),
+    );
+    expect(
+      verdictText(
+        AppLocalizationsDe(),
+        UtteranceVerdict.missingHey,
+        word: 'Hey Wendelin',
+      ),
+      'Bitte „Hey Wendelin“ sagen, nicht nur den Namen.',
+    );
+    expect(
+      verdictText(AppLocalizationsDe(), UtteranceVerdict.tooQuiet),
+      'Zu leise – bitte näher ans Handy.',
     );
   });
 }
