@@ -4994,7 +4994,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeEnrollProgressLabel => 'Fortschritt Einlernen';
 
   @override
-  String get wakeEnrollPrompt0 => 'Sprich normal, das Handy nah vor dir.';
+  String get wakeEnrollPrompt0 =>
+      'Sprich normal, das Handy etwa 0,5–1 m vor dir.';
 
   @override
   String get wakeEnrollPrompt1 => 'Jetzt aus ein bis zwei Metern Abstand.';
@@ -5008,7 +5009,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get wakeEnrollQuietTip =>
-      'Mehrmals zu leise: Geh näher ans Handy, such einen ruhigeren Raum und sprich normal laut.';
+      'Mehrmals nichts oder zu leise gehört: Geh näher ans Handy (etwa 0,5–1 m), such einen ruhigeren Raum und sprich normal laut.';
 
   @override
   String wakeEnrollRejected(int count) {

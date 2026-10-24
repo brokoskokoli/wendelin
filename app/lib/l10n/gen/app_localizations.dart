@@ -8514,7 +8514,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeEnrollPrompt0.
   ///
   /// In de, this message translates to:
-  /// **'Sprich normal, das Handy nah vor dir.'**
+  /// **'Sprich normal, das Handy etwa 0,5–1 m vor dir.'**
   String get wakeEnrollPrompt0;
 
   /// No description provided for @wakeEnrollPrompt1.
@@ -8538,7 +8538,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeEnrollQuietTip.
   ///
   /// In de, this message translates to:
-  /// **'Mehrmals zu leise: Geh näher ans Handy, such einen ruhigeren Raum und sprich normal laut.'**
+  /// **'Mehrmals nichts oder zu leise gehört: Geh näher ans Handy (etwa 0,5–1 m), such einen ruhigeren Raum und sprich normal laut.'**
   String get wakeEnrollQuietTip;
 
   /// No description provided for @wakeEnrollRejected.

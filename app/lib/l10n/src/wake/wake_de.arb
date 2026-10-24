@@ -124,7 +124,7 @@
   "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
   "wakeEnrollNoRecognizer": "Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.",
   "wakeEnrollSetupHint": "Ruhiger Raum, normal laut sprechen, etwa 0,5–1 m vom Handy entfernt.",
-  "wakeEnrollQuietTip": "Mehrmals zu leise: Geh näher ans Handy, such einen ruhigeren Raum und sprich normal laut.",
+  "wakeEnrollQuietTip": "Mehrmals nichts oder zu leise gehört: Geh näher ans Handy (etwa 0,5–1 m), such einen ruhigeren Raum und sprich normal laut.",
   "wakeEnrollMissingHey": "Bitte „{word}“ sagen, nicht nur den Namen.",
   "@wakeEnrollMissingHey": {
     "placeholders": {
@@ -180,7 +180,7 @@
     }
   },
   "wakeEnrollProgressLabel": "Fortschritt Einlernen",
-  "wakeEnrollPrompt0": "Sprich normal, das Handy nah vor dir.",
+  "wakeEnrollPrompt0": "Sprich normal, das Handy etwa 0,5–1 m vor dir.",
   "wakeEnrollPrompt1": "Jetzt aus ein bis zwei Metern Abstand.",
   "wakeEnrollPrompt2": "Jetzt leise, wie abends im Zimmer.",
   "wakeEnrollPrompt3": "Wie du es im Alltag sagst, gern aus einer anderen Ecke.",

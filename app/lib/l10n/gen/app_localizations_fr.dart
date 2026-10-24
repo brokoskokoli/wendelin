@@ -5023,7 +5023,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeEnrollPrompt0 =>
-      'Parlez normalement, le téléphone près de vous.';
+      'Parlez normalement, le téléphone à environ 0,5–1 m.';
 
   @override
   String get wakeEnrollPrompt1 => 'Maintenant à un ou deux mètres de distance.';
@@ -5038,7 +5038,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeEnrollQuietTip =>
-      'Trop bas plusieurs fois : rapprochez-vous du téléphone, choisissez une pièce plus calme et parlez à volume normal.';
+      'Plusieurs fois rien ou trop bas : rapprochez-vous du téléphone (environ 0,5–1 m), choisissez une pièce plus calme et parlez à volume normal.';
 
   @override
   String wakeEnrollRejected(int count) {

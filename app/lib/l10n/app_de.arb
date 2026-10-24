@@ -2908,11 +2908,11 @@
     }
   },
   "wakeEnrollProgressLabel": "Fortschritt Einlernen",
-  "wakeEnrollPrompt0": "Sprich normal, das Handy nah vor dir.",
+  "wakeEnrollPrompt0": "Sprich normal, das Handy etwa 0,5–1 m vor dir.",
   "wakeEnrollPrompt1": "Jetzt aus ein bis zwei Metern Abstand.",
   "wakeEnrollPrompt2": "Jetzt leise, wie abends im Zimmer.",
   "wakeEnrollPrompt3": "Wie du es im Alltag sagst, gern aus einer anderen Ecke.",
-  "wakeEnrollQuietTip": "Mehrmals zu leise: Geh näher ans Handy, such einen ruhigeren Raum und sprich normal laut.",
+  "wakeEnrollQuietTip": "Mehrmals nichts oder zu leise gehört: Geh näher ans Handy (etwa 0,5–1 m), such einen ruhigeren Raum und sprich normal laut.",
   "wakeEnrollRejected": "{count} abgelehnt",
   "@wakeEnrollRejected": {
     "placeholders": {

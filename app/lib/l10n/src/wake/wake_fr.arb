@@ -59,7 +59,7 @@
   "wakeEnrollNoSpeech": "Rien entendu. Encore une fois, s’il vous plaît.",
   "wakeEnrollNoRecognizer": "La reconnaissance vocale est absente : sans elle, « Wendelin » ne peut pas être vérifié pendant l’apprentissage. Télécharge un modèle de reconnaissance dans Réglages → Voix.",
   "wakeEnrollSetupHint": "Pièce calme, volume normal, à environ 0,5–1 m du téléphone.",
-  "wakeEnrollQuietTip": "Trop bas plusieurs fois : rapprochez-vous du téléphone, choisissez une pièce plus calme et parlez à volume normal.",
+  "wakeEnrollQuietTip": "Plusieurs fois rien ou trop bas : rapprochez-vous du téléphone (environ 0,5–1 m), choisissez une pièce plus calme et parlez à volume normal.",
   "wakeEnrollMissingHey": "Dites « {word} », pas seulement le nom.",
   "@wakeEnrollMissingHey": {
     "placeholders": {
@@ -84,7 +84,7 @@
   "wakeEnrollProcessing": "Traitement en cours …",
   "wakeEnrollProgress": "{accepted} sur {target}",
   "wakeEnrollProgressLabel": "Progression de l’entraînement",
-  "wakeEnrollPrompt0": "Parlez normalement, le téléphone près de vous.",
+  "wakeEnrollPrompt0": "Parlez normalement, le téléphone à environ 0,5–1 m.",
   "wakeEnrollPrompt1": "Maintenant à un ou deux mètres de distance.",
   "wakeEnrollPrompt2": "Maintenant à voix basse, comme le soir dans votre chambre.",
   "wakeEnrollPrompt3": "Comme vous le dites au quotidien, par exemple depuis un autre coin.",

@@ -59,7 +59,7 @@
   "wakeEnrollNoSpeech": "Heard nothing. Once more, please.",
   "wakeEnrollNoRecognizer": "Speech recognition is missing: without it “Wendelin” cannot be checked during enrollment. Please download a recognition model under Settings → Voice.",
   "wakeEnrollSetupHint": "Quiet room, normal volume, about 0.5–1 m from the phone.",
-  "wakeEnrollQuietTip": "Too quiet several times: move closer to the phone, find a quieter room and speak at normal volume.",
+  "wakeEnrollQuietTip": "Nothing or too little heard several times: move closer to the phone (about 0.5–1 m), find a quieter room and speak at normal volume.",
   "wakeEnrollMissingHey": "Please say “{word}”, not just the name.",
   "@wakeEnrollMissingHey": {
     "placeholders": {
@@ -84,7 +84,7 @@
   "wakeEnrollProcessing": "Processing …",
   "wakeEnrollProgress": "{accepted} of {target}",
   "wakeEnrollProgressLabel": "Training progress",
-  "wakeEnrollPrompt0": "Speak normally, with the phone close to you.",
+  "wakeEnrollPrompt0": "Speak normally, with the phone about 0.5–1 m away.",
   "wakeEnrollPrompt1": "Now from one to two meters away.",
   "wakeEnrollPrompt2": "Now quietly, like in the evening in your room.",
   "wakeEnrollPrompt3": "The way you say it every day, maybe from another corner.",

@@ -4969,7 +4969,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeEnrollPrompt0 =>
-      'Speak normally, with the phone close to you.';
+      'Speak normally, with the phone about 0.5–1 m away.';
 
   @override
   String get wakeEnrollPrompt1 => 'Now from one to two meters away.';
@@ -4984,7 +4984,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeEnrollQuietTip =>
-      'Too quiet several times: move closer to the phone, find a quieter room and speak at normal volume.';
+      'Nothing or too little heard several times: move closer to the phone (about 0.5–1 m), find a quieter room and speak at normal volume.';
 
   @override
   String wakeEnrollRejected(int count) {
