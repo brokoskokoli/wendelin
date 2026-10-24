@@ -50,3 +50,15 @@ abstract interface class WakeFeatureExtractor {
   /// Releases the models. Idempotent.
   Future<void> close();
 }
+
+/// A [WakeFeatureExtractor] that can also embed a whole clip at once, like
+/// openWakeWord's batch call (verifier B, WP143): the mel spectrogram of the
+/// clip (cut to a multiple of 160 samples, `k - 3` frames for `k` blocks of
+/// 160), one embedding per 76 mel frames with a stride of 8. The streaming
+/// chain starts its embeddings in another phase, so it cannot stand in.
+abstract interface class WakeSequenceExtractor implements WakeFeatureExtractor {
+  /// Embedding frames of [clip] (`frames` x 96, flattened), or `null` when
+  /// the clip yields fewer than 76 mel frames (too short). The extractor
+  /// must be open.
+  Future<Float32List?> sequence(Int16List clip);
+}

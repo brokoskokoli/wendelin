@@ -41,6 +41,7 @@ Future<TemplateAudit?> auditTemplates(
           threshold: t.threshold,
           embeddings: List.unmodifiable(r.kept),
           center: t.center,
+          sequences: t.sequences,
         ),
       );
     }

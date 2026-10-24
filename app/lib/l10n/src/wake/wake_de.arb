@@ -380,6 +380,7 @@
       }
     }
   },
+  "wakeWordRelearnForVerifier": "Neu einlernen für den Prüfer.",
   "wakeWordRetrain": "Neu einlernen",
   "wakeWordTemplatesMissing": "Vorlagen fehlen. Bitte neu einlernen.",
   "wakeWordTemplatesOutdated": "Die Vorlagen sind veraltet (der Vergleich wurde verbessert). Bitte neu einlernen.",

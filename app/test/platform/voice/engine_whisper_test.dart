@@ -3,6 +3,7 @@
 // frees the old one first, idle in the background frees it (WP30).
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -251,6 +252,7 @@ void main() {
       List<Override> extra = const [],
       bool keep = false,
       Set<String> installedModels = const {},
+      bool realVad = false,
     }) {
       final env = TestEnv(
         extraOverrides: [
@@ -258,9 +260,10 @@ void main() {
           whisperLoaderProvider.overrideWithValue((m, _) => process.load(m.id)),
           whisperDirectoryProvider.overrideWithValue(dir),
           memoryTrimSourceProvider.overrideWithValue(trim),
-          voiceActivityDetectorProvider.overrideWith(
-            (ref) async => FakeVoiceActivityDetector(),
-          ),
+          if (!realVad)
+            voiceActivityDetectorProvider.overrideWith(
+              (ref) async => FakeVoiceActivityDetector(),
+            ),
           voiceReleaseDelayProvider.overrideWithValue(releaseDelay),
         ],
       );
@@ -301,6 +304,133 @@ void main() {
         language: 'de',
       );
       expect(t.text, 'ok whisper-small');
+      expect(process.live, hasLength(1));
+    });
+
+    // The real wiring of voiceActivityDetectorProvider runs; only the
+    // native Silero constructor is a counting fake (B14/WP143).
+    for (final keep in [false, true]) {
+      test('sechs Overlay-Zyklen, keepModelLoaded=$keep: höchstens ein Silero '
+          'und ein Whisper', () async {
+        var live = 0;
+        var maxLive = 0;
+        var loads = 0;
+        var frees = 0;
+        var warmFrames = 0;
+        OpenedVad open(String path, double threshold) {
+          loads++;
+          maxLive = math.max(maxLive, ++live);
+          return (
+            vad: _CountingVad(() => warmFrames++),
+            dispose: () {
+              frees++;
+              live--;
+            },
+          );
+        }
+
+        final app = engineContainer(
+          model: 'whisper-base',
+          keep: keep,
+          extra: [sileroOpenerProvider.overrideWithValue(open)],
+          realVad: true,
+        );
+        addTearDown(app.dispose);
+        await app.read(voiceComponentsProvider.future);
+        // The app's own Silero stays open (it is in use), count it.
+        final appLive = live;
+        expect(appLive, 1, reason: 'prewarm opens Silero');
+        for (var cycle = 0; cycle < 6; cycle++) {
+          final overlay = engineContainer(
+            model: 'whisper-base',
+            keep: keep,
+            extra: [sileroOpenerProvider.overrideWithValue(open)],
+            realVad: true,
+          );
+          // No addTearDown(dispose): the overlay engine ends without
+          // disposing its container.
+          final c = await overlay.read(activeVoiceProvider.future);
+          c!.vad.speechProbability(Int16List(512));
+          await overlay
+              .read(voiceControllerProvider.notifier)
+              .releaseModels(reason: 'overlay-close');
+          expect(
+            live,
+            appLive,
+            reason: 'Zyklus $cycle: Silero des Overlays frei',
+          );
+          expect(process.live, hasLength(1), reason: 'Zyklus $cycle');
+        }
+        expect(loads, 1 + 6);
+        expect(frees, 6);
+        expect(maxLive, 2, reason: 'App + ein Overlay, nie mehr');
+        expect(process.loads, 1, reason: 'das Modell der App wird geteilt');
+        expect(warmFrames, 6);
+      });
+
+      test('sechs Overlay-Zyklen mit eigenem Whisper, keep=$keep: höchstens '
+          'ein Modell und ein Silero', () async {
+        var live = 0;
+        var maxLive = 0;
+        var maxWhisper = 0;
+        OpenedVad open(String path, double threshold) {
+          maxLive = math.max(maxLive, ++live);
+          return (vad: _CountingVad(() {}), dispose: () => live--);
+        }
+
+        for (var cycle = 0; cycle < 6; cycle++) {
+          final overlay = engineContainer(
+            model: 'whisper-small',
+            keep: keep,
+            extra: [sileroOpenerProvider.overrideWithValue(open)],
+            realVad: true,
+          );
+          final c = await overlay.read(activeVoiceProvider.future);
+          maxWhisper = math.max(maxWhisper, process.live.length);
+          await c!.stt.transcribe(Int16List(1600), language: 'de');
+          await overlay
+              .read(voiceControllerProvider.notifier)
+              .releaseModels(reason: 'overlay-close');
+          expect(live, 0, reason: 'Zyklus $cycle: Silero frei');
+          if (!keep) {
+            expect(process.live, isEmpty, reason: 'Zyklus $cycle');
+          }
+        }
+        expect(maxLive, 1);
+        expect(maxWhisper, 1);
+        expect(process.live.length, keep ? 1 : 0);
+        if (!keep) {
+          expect(process.loads, 6);
+          expect(
+            process.events.where((e) => e.startsWith('freed ')).length,
+            process.loads,
+          );
+        } else {
+          // Kept on purpose: the next overlay shares the kept model.
+          expect(process.loads, 1);
+        }
+      });
+    }
+
+    test('warmUp öffnet Silero und Whisper nach release wieder', () async {
+      var live = 0;
+      OpenedVad open(String path, double threshold) {
+        live++;
+        return (vad: _CountingVad(() {}), dispose: () => live--);
+      }
+
+      final c = engineContainer(
+        extra: [sileroOpenerProvider.overrideWithValue(open)],
+        realVad: true,
+      );
+      addTearDown(c.dispose);
+      final comps = (await c.read(activeVoiceProvider.future))!;
+      expect(live, 1);
+      await comps.release!();
+      expect(live, 0);
+      expect(process.live, isEmpty);
+      await comps.warmUp!();
+      expect(live, 1, reason: 'Silero wieder offen');
       expect(process.live, hasLength(1));
     });
 
@@ -638,4 +768,20 @@ final class _FakeTrim implements MemoryTrimSource {
 
   @override
   Stream<int> get levels => _c.stream;
+}
+
+/// Detector fake that counts the frames it hears.
+final class _CountingVad implements VoiceActivityDetector {
+  _CountingVad(this.onFrame);
+  final void Function() onFrame;
+  @override
+  double get threshold => 0.5;
+  @override
+  double speechProbability(Int16List frame) {
+    onFrame();
+    return 0;
+  }
+
+  @override
+  void reset() {}
 }

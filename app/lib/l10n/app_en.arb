@@ -1710,6 +1710,7 @@
   "wakeWordNoVoiceHint": "Train your voice with “Train voice”.",
   "wakeWordPerson": "Person {number}",
   "wakeWordRecordingsThreshold": "{length} recordings · threshold {v}",
+  "wakeWordRelearnForVerifier": "Train again for the checker.",
   "wakeWordRetrain": "Train again",
   "wakeWordTemplatesFew": "Only {count} usable recordings left. Please train again.",
   "wakeWordTemplatesMissing": "Templates missing. Please train again.",

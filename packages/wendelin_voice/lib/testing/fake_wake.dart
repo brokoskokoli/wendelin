@@ -105,7 +105,7 @@ final class FakeWakeWordEngine implements WakeWordEngine {
 
 /// [WakeFeatureExtractor] with scripted windows: every [windowEvery]
 /// samples one [WakeWindow] built by [windowFor] (default: zero embedding).
-final class FakeWakeFeatureExtractor implements WakeFeatureExtractor {
+final class FakeWakeFeatureExtractor implements WakeSequenceExtractor {
   /// Creates the fake.
   FakeWakeFeatureExtractor({
     this.featureVersion = 'fake-1',
@@ -113,7 +113,21 @@ final class FakeWakeFeatureExtractor implements WakeFeatureExtractor {
     this.windowFor,
     this.embeddingMean,
     this.centerId,
+    this.sequenceFor,
   });
+
+  /// Answer of [sequence] for a clip (default: `null`, too short). Every call
+  /// is kept in [sequenceCalls].
+  Float32List? Function(Int16List clip)? sequenceFor;
+
+  /// The clips [sequence] was asked about.
+  final List<Int16List> sequenceCalls = [];
+
+  @override
+  Future<Float32List?> sequence(Int16List clip) async {
+    sequenceCalls.add(clip);
+    return sequenceFor?.call(clip);
+  }
 
   @override
   final String featureVersion;

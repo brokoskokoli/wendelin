@@ -62,8 +62,8 @@ abstract final class WakeClassifierCatalog {
     languages: {},
     license: 'Gewichte: Wendelin-Projekt; Trainingsdaten siehe Lizenzseite',
     source:
-        'GitHub-Release des Wendelin-Repos (models-wake-v8a); '
-        'SHA-256 des Trainingslaufs v8a (WP130)',
+        'GitHub-Release des Wendelin-Repos (models-wake-v8a-clean); '
+        'SHA-256 des Trainingslaufs v8a clean (WP143)',
     note:
         'Enthält nur Klassifikatorgewichte (ONNX), keine Aufnahmen. '
         'Trainiert auf synthetischen Stimmen (CC0, CC-BY, M-AILABS) und '
@@ -80,10 +80,10 @@ abstract final class WakeClassifierCatalog {
     files: [
       ModelFile(
         name: file,
-        url: '$_wendelinRelease/models-wake-v8a/$file',
+        url: '$_wendelinRelease/models-wake-v8a-clean/$file',
         sizeBytes: 858044,
         sha256:
-            'bfeb939d9e50c4913b27e4d082e5d620e3967af6c2603666e6bc40b30a06997d',
+            '6b41519fa776f5d6c810d0323c64df86433e636d17ddb512d1a630acd9c2e58b',
       ),
     ],
   );
@@ -164,4 +164,43 @@ abstract final class WakeClassifierRules {
   /// Station (TV, longer listening): same limits as the phone (WP133 final
   /// value 0.98); stage 2 (Parakeet) catches false alarms in the band.
   static const station = WakeScoreBand(verifyFrom: 0.98, acceptFrom: 0.999);
+
+  /// Stage 2 verifier B (WP143, result of WP137): the clip is cut
+  /// [verifierBBefore] before and [verifierBAfter] after the end of the
+  /// decision window of stage 1 (the peak window, `WakeWordHit.endSample`)
+  /// and scaled to [verifierPeak]. Must equal the cut of the measurement.
+  static const verifierBBefore = Duration(milliseconds: 1900);
+
+  /// See [verifierBBefore].
+  static const verifierBAfter = Duration(milliseconds: 850);
+
+  /// Template cut of verifier B: seconds before the start of the speech
+  /// (a double on purpose: the cut is `trunc((start - lead) * 16000)` in
+  /// floating point like the measurement; the cut is padded only up to
+  /// [verifierBMinTemplateSamples]).
+  static const verifierBTemplateLeadSeconds = 0.12;
+
+  /// Template cut of verifier B: seconds after the end of the speech.
+  static const verifierBTemplateTailSeconds = 0.20;
+
+  /// Template cut of verifier B: a shorter cut is padded with the real audio
+  /// around it to this length (1.0 s, WP137 probe; no trim, never zeros).
+  static const verifierBMinTemplateSamples = 16000;
+
+  /// Template cut of verifier B: a longer cut (2.2 s) is discarded; only
+  /// clips up to this length were measured (WP137).
+  static const verifierBMaxTemplateSamples = 35200;
+
+  /// A template of verifier B needs at least this many embedding frames
+  /// (the measurement used 2-6); a template with fewer is not stored.
+  static const verifierBMinTemplateFrames = 2;
+
+  /// Verifier B: the score is the mean of the best [verifierBTopK]
+  /// templates of a word; with fewer templates the mean of all of them.
+  static const verifierBTopK = 3;
+
+  /// Verifier B threshold (HW head, for both words; WP137 delivery for the
+  /// model v8a clean). Unsure: on the training side it accepts about 4 % of the
+  /// positives, on the test split about 60 %.
+  static const verifierBThresholdHw = 0.6815;
 }

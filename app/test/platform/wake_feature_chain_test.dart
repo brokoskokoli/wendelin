@@ -46,6 +46,51 @@ final class ScoringRunner extends FakeRunner implements WakeClassifier {
 Int16List pcm(int n, [int v = 1]) => Int16List(n)..fillRange(0, n, v);
 
 void main() {
+  group('batchSequence (Prüfer B)', () {
+    test('44000 Samples: 272 Mel-Frames, 25 Embeddings im Abstand 8', () {
+      final r = FakeRunner();
+      final seq = WakeFeatureChain.batchSequence(r, pcm(44000))!;
+      expect(r.melInputs, [44000]);
+      expect(seq.length, 25 * 96);
+      expect(r.embedInputs, hasLength(25));
+      expect(r.embedInputs.first.length, 76 * 32);
+      // Mel wird wie im Strom skaliert: 10 / 10 + 2.
+      expect(r.embedInputs.first.first, 3.0);
+    });
+
+    test(
+      'Embedding-Frames je Länge = gemessene Paare von openWakeWord (WP137)',
+      () {
+        // `pcm.oww_frames_checked` der Lieferung (an echtem openWakeWord gemessen).
+        const pairs = {
+          16000: 3, 16480: 4, 17760: 5, 19040: 6, 24000: 9,
+          32000: 16, 40000: 22, 44000: 25, 44160: 25, //
+        };
+        pairs.forEach((samples, frames) {
+          final seq = WakeFeatureChain.batchSequence(
+            FakeRunner(),
+            pcm(samples),
+          );
+          expect(seq!.length ~/ 96, frames, reason: '$samples Samples');
+        });
+      },
+    );
+
+    test('auf Vielfache von 160 gekürzt', () {
+      final r = FakeRunner();
+      WakeFeatureChain.batchSequence(r, pcm(44100));
+      expect(r.melInputs, [44000]);
+    });
+
+    test('unter 76 Mel-Frames: null, ohne Modellaufruf', () {
+      final r = FakeRunner();
+      expect(WakeFeatureChain.batchSequence(r, pcm(79 * 160 - 1)), isNull);
+      expect(r.melInputs, isEmpty);
+      // 79 Blöcke = 76 Mel-Frames: gültig, ein Embedding.
+      expect(WakeFeatureChain.batchSequence(r, pcm(79 * 160))!.length, 96);
+    });
+  });
+
   test('Klassifikator: jedes Fenster trägt den Score, Eingabe 16 × 96', () {
     final r = ScoringRunner();
     final chain = WakeFeatureChain(r);

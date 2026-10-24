@@ -19,8 +19,8 @@ app/lib/ui/settings/voice_screen.dart#VoiceScreen.build: 95
 app/lib/ui/settings/voice_voices_screen.dart#VoiceVoicesScreen.build: 102
 app/lib/ui/settings/wake/wake_service_section.dart#_State.build: 108
 app/lib/voice/voice_confirmation.dart#_VoiceConfirmation._confirmByVoice: 142
-app/lib/voice/voice_controller.dart: 725
-app/lib/voice/voice_controller.dart#VoiceController: 610
+app/lib/voice/voice_controller.dart: 723
+app/lib/voice/voice_controller.dart#VoiceController: 608
 app/lib/voice/voice_controller.dart#VoiceController.start: 105
 app/test/settings/voice_settings_test.dart: 1132
 app/tool/mcp_test_server.dart#main: 100

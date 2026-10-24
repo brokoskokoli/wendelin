@@ -184,6 +184,7 @@ class WakeEnroller extends ChangeNotifier {
     this.verifier,
     this.classifierMinScore = WakeEnrollRules.classifierMinScore,
     this.checkTimeout = wakeEnrollCheckTimeout,
+    this.word = WakeTemplates.wordHw,
     UtteranceCapture Function()? newCapture,
   }) : _newCapture =
            newCapture ?? (() => UtteranceCapture(minPeak: wakeEnrollMinPeak));
@@ -227,8 +228,16 @@ class WakeEnroller extends ChangeNotifier {
   /// recording counts as unchecked.
   final Duration checkTimeout;
 
+  /// Which wake word is recorded (tag of the sequences for verifier B).
+  final String word;
+
   final UtteranceCapture Function() _newCapture;
   final _embeddings = <Float32List>[];
+
+  /// Verifier B sequence per accepted recording (`null`: the cut was too
+  /// short); parallel to [_embeddings].
+  final _sequences = <Float32List?>[];
+  var _sequencesDropped = 0;
   var _phase = EnrollPhase.idle;
   UtteranceVerdict? _last;
   var _rejected = 0;
@@ -243,6 +252,11 @@ class WakeEnroller extends ChangeNotifier {
 
   /// Usable recordings so far.
   int get accepted => _embeddings.length;
+
+  /// Accepted recordings that yielded no sequence for verifier B (WP143:
+  /// too short or fewer than two embedding frames); logged as
+  /// `enroll-sequence-dropped`. They still count for the plain comparison.
+  int get sequencesDropped => _sequencesDropped;
 
   /// Dropped recordings so far.
   int get rejected => _rejected;
@@ -354,6 +368,21 @@ class WakeEnroller extends ChangeNotifier {
     }
     _unchecked = 0;
     _embeddings.add(scored.embedding);
+    final f = features;
+    final sequence = f is WakeSequenceExtractor
+        ? await verifierBTemplate(
+            f,
+            u.context ?? u.pcm!,
+            u.context == null ? u.speechStart : u.contextStart,
+            u.context == null ? u.speechEnd : u.contextEnd,
+          )
+        : null;
+    if (sequence == null && f is WakeSequenceExtractor) {
+      // Not silent: the recording counts for hw2 but not for verifier B.
+      _sequencesDropped++;
+      voiceLog('enroll-sequence-dropped', {'word': word});
+    }
+    _sequences.add(sequence);
     _dropInconsistent();
     notifyListeners();
   }
@@ -376,6 +405,7 @@ class WakeEnroller extends ChangeNotifier {
       ..sort((a, b) => b.compareTo(a));
     for (final i in drop) {
       _embeddings.removeAt(i);
+      _sequences.removeAt(i);
     }
     if (drop.isNotEmpty) {
       _rejected += drop.length;
@@ -449,6 +479,10 @@ class WakeEnroller extends ChangeNotifier {
       center: features.centerId,
       threshold: threshold,
       embeddings: List.unmodifiable(_embeddings),
+      sequences: [
+        for (final q in _sequences)
+          if (q != null) WakeTemplateSequence(word: word, values: q),
+      ],
     );
     await store.save(templates);
     _set(EnrollPhase.saved);

@@ -54,6 +54,124 @@ void main() {
     expect((await store.load('a'))!.embeddings, hasLength(3));
   });
 
+  test(
+    'Ausreißer verliert auch seine B-Folge: Zuordnung bleibt (WP143)',
+    () async {
+      // Aufnahme k (0-basiert) trägt Vektor good(k) und Folge mit Kennung k+1;
+      // Aufnahme 5 weicht ab und wird verworfen. Die Folge folgt der Aufnahme.
+      List<double> good(int n) => [1, 0.02 * (n % 5), 0.3, 0.1 * (n % 3)];
+      var seqCalls = 0; // Folge k wird nach dem Vektor k berechnet
+      final features =
+          fakeFeatures(
+              vector: (_) => Float32List.fromList(
+                seqCalls == 5 ? [-1, 0.5, -0.4, 0.9] : good(seqCalls),
+              ),
+            )
+            ..sequenceFor = (clip) {
+              seqCalls++;
+              return Float32List(3 * 96)..[0] = seqCalls.toDouble();
+            };
+      final store = FakeWakeTemplateStore();
+      final e = enroller(
+        SequenceAudio([for (var i = 0; i < 7; i++) recording()]),
+        store,
+        target: 6,
+        features: features,
+      );
+      await e.run();
+      final t = await e.finish();
+      expect(e.rejected, 1, reason: 'genau ein Ausreißer entfernt');
+      const kept = [0, 1, 2, 3, 4, 6];
+      expect(t.embeddings, hasLength(kept.length));
+      expect(t.sequences, hasLength(kept.length));
+      expect(
+        [for (final s in t.sequences) s.values[0]],
+        [for (final k in kept) k + 1.0],
+        reason: 'Folge von Aufnahme 5 (Kennung 6) fehlt, Rest in Reihenfolge',
+      );
+      expect(
+        [for (final v in t.embeddings) v.toList()],
+        [for (final k in kept) Float32List.fromList(good(k)).toList()],
+      );
+    },
+  );
+
+  test(
+    'Folgen für den Prüfer B werden je Aufnahme gespeichert (WP143)',
+    () async {
+      final store = FakeWakeTemplateStore();
+      final features = fakeFeatures()
+        ..sequenceFor = (clip) =>
+            Float32List(3 * 96)..[0] = clip.length.toDouble();
+      final e = enroller(
+        SequenceAudio([recording(), recording()]),
+        store,
+        target: 2,
+        features: features,
+      );
+      await e.run();
+      final t = await e.finish();
+      expect(t.sequences, hasLength(2));
+      expect(t.sequences.first.word, WakeTemplates.wordHw);
+      expect(t.sequences.first.frames, 3);
+      // Zuschnitt: 900 ms Sprache, -0,12 s / +0,20 s, ohne Trim.
+      expect(
+        features.sequenceCalls.first.length,
+        inInclusiveRange(16000, 16 * 1300),
+      );
+      final back = (await store.load('a'))!;
+      expect(back.sequences, hasLength(2));
+    },
+  );
+
+  test(
+    'ohne Folge (Zuschnitt zu kurz) bleibt die Vorlage ohne Prüfer B',
+    () async {
+      final e = enroller(
+        SequenceAudio([recording(), recording()]),
+        FakeWakeTemplateStore(),
+        target: 2,
+      ); // fakeFeatures liefert keine Folge
+      await e.run();
+      final t = await e.finish();
+      expect(t.embeddings, hasLength(2));
+      expect(t.hasSequences, isFalse);
+      expect(e.sequencesDropped, 2, reason: 'gemeldet, nicht still');
+    },
+  );
+
+  test('Wort über 2,2 s Zuschnitt: keine Folge, gemeldet (WP143)', () async {
+    final features = fakeFeatures()
+      ..sequenceFor = (clip) => Float32List(3 * 96);
+    final e = enroller(
+      SequenceAudio([recording(speech: 1950), recording()]),
+      FakeWakeTemplateStore(),
+      target: 2,
+      features: features,
+    );
+    await e.run();
+    final t = await e.finish();
+    expect(t.embeddings, hasLength(2));
+    expect(t.sequences, hasLength(1));
+    expect(e.sequencesDropped, 1);
+  });
+
+  test('Folge entsteht aus dem Kontext: kurzes Wort wird aufgefüllt', () async {
+    final features = fakeFeatures()
+      ..sequenceFor = (clip) => Float32List(3 * 96);
+    final e = enroller(
+      SequenceAudio([recording(speech: 300), recording(speech: 300)]),
+      FakeWakeTemplateStore(),
+      target: 2,
+      features: features,
+    );
+    await e.run();
+    await e.finish();
+    // 300 ms Sprache: Zuschnitt 0,62 s, aufgefüllt auf 1,0 s echtes Audio.
+    expect(features.sequenceCalls.map((c) => c.length), [16000, 16000]);
+    expect(e.sequencesDropped, 0);
+  });
+
   test('ungültige Aufnahmen werden verworfen und gezählt', () async {
     final audio = SequenceAudio([
       recording(amplitude: 200), // zu leise

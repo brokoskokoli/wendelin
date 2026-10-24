@@ -5372,6 +5372,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get wakeWordRelearnForVerifier =>
+      'Entraîner de nouveau pour le vérificateur.';
+
+  @override
   String get wakeWordRetrain => 'Entraîner de nouveau';
 
   @override

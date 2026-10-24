@@ -10,6 +10,7 @@ import '../platform/channel_memory_trim.dart';
 import '../platform/voice/audio_playback.dart';
 import '../platform/voice/ducking_tts.dart';
 import '../platform/voice/engine_whisper.dart';
+import '../platform/voice/lazy_vad.dart';
 import '../platform/voice/record_audio_input.dart';
 import '../platform/voice/sherpa_tts.dart';
 import '../platform/voice/silero_vad.dart';
@@ -110,6 +111,23 @@ Future<SpeechModel> _installedModel(Ref ref, String id, String what) async {
   return model;
 }
 
+/// A native detector with its way to free it.
+typedef OpenedVad = ({VoiceActivityDetector vad, void Function() dispose});
+
+/// Opens the native Silero detector (tests replace it with a counting
+/// fake, so the real wiring of [voiceActivityDetectorProvider] runs).
+@visibleForTesting
+final sileroOpenerProvider =
+    Provider<OpenedVad Function(String path, double threshold)>(
+      (ref) => (path, threshold) {
+        final silero = SileroVoiceActivityDetector(
+          modelPath: path,
+          threshold: threshold,
+        );
+        return (vad: silero, dispose: silero.dispose);
+      },
+    );
+
 /// Silero VAD with the threshold from the settings.
 final voiceActivityDetectorProvider = FutureProvider<VoiceActivityDetector>((
   ref,
@@ -123,20 +141,30 @@ final voiceActivityDetectorProvider = FutureProvider<VoiceActivityDetector>((
     'Die Sprachaktivitätserkennung',
   );
   final service = await ref.watch(speechModelServiceProvider.future);
-  final watch = Stopwatch()..start();
-  final vad = SileroVoiceActivityDetector(
-    modelPath: '${service.directoryOf(model).path}/${model.files.single.name}',
+  final path = '${service.directoryOf(model).path}/${model.files.single.name}';
+  final opener = ref.read(sileroOpenerProvider);
+  final disposers = Expando<void Function()>('vad-dispose');
+  final vad = LazyVoiceActivityDetector(
     threshold: threshold,
+    open: () {
+      final watch = Stopwatch()..start();
+      final native = opener(path, threshold);
+      final opened = native.vad;
+      disposers[opened] = native.dispose;
+      voiceLog('model-load', {
+        'model': model.id,
+        'kind': 'vad',
+        'ms': watch.elapsed,
+      });
+      return opened;
+    },
+    close: (v) {
+      disposers[v]?.call();
+      voiceLog('model-free', {'model': model.id, 'kind': 'vad'});
+    },
   );
-  voiceLog('model-load', {
-    'model': model.id,
-    'kind': 'vad',
-    'ms': watch.elapsed,
-  });
-  ref.onDispose(() {
-    vad.dispose();
-    voiceLog('model-free', {'model': model.id, 'kind': 'vad'});
-  });
+  vad.warm();
+  ref.onDispose(vad.dispose);
   return vad;
 });
 
@@ -435,6 +463,7 @@ final class VoiceComponents {
     this.speaker,
     this.warmUp,
     this.release,
+    this.releaseDetector,
   });
 
   /// Microphone.
@@ -464,6 +493,10 @@ final class VoiceComponents {
   /// Frees the large models (Whisper, offline voice) until [warmUp] or the
   /// next use (B14: idle in the background).
   final Future<void> Function()? release;
+
+  /// Frees only the small detector (also with „Modell im Speicher halten“,
+  /// when the overlay engine ends; the next frame opens it again).
+  final void Function()? releaseDetector;
 }
 
 /// The voice building blocks; fails with `VoiceException(modelMissing)`
@@ -476,9 +509,10 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
   final whisper = await ref.watch(engineWhisperProvider.future);
   final sherpa = ref.watch(sherpaSynthesizerProvider);
   final speaker = ref.watch(speakerRecognizerProvider);
+  final vad = await ref.watch(voiceActivityDetectorProvider.future);
   return VoiceComponents(
     audio: ref.watch(audioInputProvider),
-    vad: await ref.watch(voiceActivityDetectorProvider.future),
+    vad: vad,
     // Names from the vault are corrected after recognition (WP33, B6).
     stt: CorrectingSpeechToText(
       await ref.watch(speechToTextProvider.future),
@@ -489,8 +523,17 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
     config: await ref.watch(voicePipelineConfigProvider.future),
     bargeInDetector: ref.watch(bargeInDetectorProvider),
     speaker: speaker,
-    warmUp: whisper.warm,
+    warmUp: () async {
+      if (vad is LazyVoiceActivityDetector) vad.warm();
+      await whisper.warm();
+    },
+    releaseDetector: () {
+      if (vad is LazyVoiceActivityDetector) vad.release();
+    },
     release: () async {
+      // First and synchronous: the overlay gives up after 600 ms and ends
+      // the engine, a slow Whisper must not keep the detector (WP143).
+      if (vad is LazyVoiceActivityDetector) vad.release();
       await whisper.release(reason: 'idle');
       await sherpa.dispose();
       // Also with the switch off: the model may be loaded by an enrollment.

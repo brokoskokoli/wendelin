@@ -22,6 +22,29 @@ void main() {
     expect(r.speechEnd, inInclusiveRange(16 * 900, r.pcm!.length));
   });
 
+  test('Sprachanfang und Nachlauf 160 ms (WP134-Vorlage)', () {
+    final r = run(UtteranceCapture(), recording())!;
+    // 200 ms Vorlauf vor der Sprache, Nachlauf 160 ms nach ihrem Ende.
+    expect(r.speechStart, 16 * 200);
+    expect(r.pcm!.length - r.speechEnd, 16 * 160);
+    expect(r.speechEnd - r.speechStart, inInclusiveRange(16 * 880, 16 * 940));
+  });
+
+  test('Kontext für Prüfer B: echtes Audio um die Sprache (WP143)', () {
+    final r = run(UtteranceCapture(), recording())!;
+    final c = r.context!;
+    // Dieselbe Sprache wie in pcm, nur mit mehr Rand.
+    expect(
+      c.sublist(r.contextStart, r.contextEnd),
+      r.pcm!.sublist(r.speechStart, r.speechEnd),
+    );
+    expect(r.contextStart, greaterThanOrEqualTo(16 * 300));
+    expect(c.length - r.contextEnd, greaterThanOrEqualTo(16 * 400));
+    // Die WP134-Vorlage bleibt unverändert (200 ms Vorlauf, 160 ms Nachlauf).
+    expect(r.speechStart, 16 * 200);
+    expect(r.pcm!.length - r.speechEnd, 16 * 160);
+  });
+
   test('zu leise: Pegel unter der Grenze', () {
     final r = run(UtteranceCapture(), recording(amplitude: 350))!;
     expect(r.verdict, UtteranceVerdict.tooQuiet);

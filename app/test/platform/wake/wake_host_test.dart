@@ -674,6 +674,100 @@ void main() {
       },
     );
 
+    group('Stufe 2 mit Prüfer B (WP143)', () {
+      WakeTemplates withSeq(Float32List frame) => WakeTemplates(
+        speakerId: 'a',
+        featureVersion: wakeVerifierBFeatureVersion,
+        threshold: 0.5,
+        embeddings: [
+          Float32List.fromList([1, 0]),
+        ],
+        sequences: [
+          for (var i = 0; i < 3; i++)
+            WakeTemplateSequence(
+              word: WakeTemplates.wordHw,
+              values: Float32List(192)
+                ..setAll(0, frame)
+                ..setAll(96, frame),
+            ),
+        ],
+      );
+
+      Future<(DeviceWakeParts, List<String>)> parts(
+        List<WakeTemplates> sets,
+      ) async {
+        final (c, _) = await container(sets);
+        // Live: `mu + e0` in every frame (centered: e0).
+        final live = Float32List(25 * 96);
+        for (var f = 0; f < 25; f++) {
+          live.setAll(f * 96, wakeVerifierBMu);
+          live[f * 96] += 1;
+        }
+        final inner = ProviderContainer(
+          parent: c,
+          overrides: [
+            wakeFeaturesFactoryProvider.overrideWithValue(
+              () => FakeWakeFeatureExtractor(sequenceFor: (_) => live),
+            ),
+          ],
+        );
+        addTearDown(inner.dispose);
+        final logs = <String>[];
+        final saved = voiceLogSink;
+        voiceLogSink = logs.add;
+        addTearDown(() => voiceLogSink = saved);
+        return (DeviceWakeParts(inner, useVerifierB: true), logs);
+      }
+
+      test('mit Folgen entscheidet B, kein Rückfall, Log verifier=b', () async {
+        final f = Float32List.fromList(wakeVerifierBMu)..[0] += 1;
+        final (p, logs) = await parts([withSeq(f)]);
+        final v = p.verifier(detector: WakeDetector.model);
+        expect(
+          await v.confirm(Int16List(48000)..fillRange(0, 48000, 900)),
+          isTrue,
+        );
+        expect(v.kind, 'b');
+        expect(
+          logs.single,
+          contains(
+            'wake-decision engine=wake verifier=b score=1.0000 thr=0.6815',
+          ),
+        );
+      });
+
+      test('B lehnt ab: false, trotzdem kein Rückfall', () async {
+        // Zentriert -e0: Gegenrichtung zum Live-Strom.
+        final f = Float32List.fromList(wakeVerifierBMu)..[0] -= 1;
+        final (p, logs) = await parts([withSeq(f)]);
+        final v = p.verifier(detector: WakeDetector.model);
+        expect(
+          await v.confirm(Int16List(48000)..fillRange(0, 48000, 900)),
+          isFalse,
+        );
+        expect(logs.single, contains('verifier=b'));
+      });
+
+      test(
+        'Vorlagen-Weg und ausgeschaltetes B bleiben bei Whisper/Parakeet',
+        () async {
+          final (c, _) = await container([]);
+          expect(
+            DeviceWakeParts(
+              c,
+              useVerifierB: false,
+            ).verifier(detector: WakeDetector.model),
+            isA<PreferredWakeVerifier>(),
+            reason: 'B ausgeschaltet',
+          );
+          expect(
+            DeviceWakeParts(c, useVerifierB: true).verifier(),
+            isA<LazyWhisperVerifier>(),
+          );
+        },
+      );
+    });
+
     test('niemand eingelernt: keine Engine', () async {
       final (c, _) = await container([]);
       expect(await DeviceWakeParts(c).engine(), isNull);

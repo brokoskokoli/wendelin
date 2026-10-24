@@ -35,16 +35,41 @@ enum UtteranceVerdict {
 /// Outcome of one recording.
 final class Utterance {
   /// Creates an outcome.
-  const Utterance(this.verdict, [this.pcm, this.speechEnd = 0]);
+  const Utterance(
+    this.verdict, [
+    this.pcm,
+    this.speechEnd = 0,
+    this.speechStart = 0,
+    this.context,
+    this.contextStart = 0,
+    this.contextEnd = 0,
+  ]);
 
   /// Decision.
   final UtteranceVerdict verdict;
 
-  /// The speech with a little lead and tail (only when accepted).
+  /// The speech with a little lead and tail (only when
+  /// accepted).
   final Int16List? pcm;
 
   /// Sample in [pcm] where the speech ends.
   final int speechEnd;
+
+  /// Sample in [pcm] where the speech starts (WP143: the cut of the
+  /// templates for verifier B is taken around it).
+  final int speechStart;
+
+  /// WP143: the same recording with up to [UtteranceCapture.contextSeconds]
+  /// of real audio around the speech (only when accepted). Only the cut of
+  /// verifier B's templates reads it (it pads short words with the audio
+  /// that was really there); [pcm] stays the WP134 template.
+  final Int16List? context;
+
+  /// Sample in [context] where the speech starts.
+  final int contextStart;
+
+  /// Sample in [context] where the speech ends.
+  final int contextEnd;
 }
 
 /// Cuts one spoken word out of a microphone stream by energy (WP60):
@@ -78,6 +103,13 @@ final class UtteranceCapture {
   static const _quiet = 22; // blocks = 440 ms
   static const _loud = 0.03; // RMS that is clearly speech, not noise
   static const _lead = 10; // blocks kept before the speech
+  static const _tail = 8; // blocks kept after the speech (160 ms)
+  static const _context = 25; // blocks of context for verifier B (500 ms)
+
+  /// Seconds of real audio kept around the speech for [Utterance.context]
+  /// (as far as the recording has them: at least 300 ms before the speech
+  /// because of the calibration, 440 ms after because of the quiet wait).
+  static const contextSeconds = 0.5;
 
   final _samples = <int>[];
   final _floors = <double>[];
@@ -151,11 +183,17 @@ final class UtteranceCapture {
     if (length < minSpeech) return const Utterance(UtteranceVerdict.noSpeech);
     if (_peak < minPeak) return const Utterance(UtteranceVerdict.tooQuiet);
     final from = math.max(0, (_first - _lead) * _block);
-    final to = math.min(_samples.length, (_last + 1 + 8) * _block);
+    final to = math.min(_samples.length, (_last + 1 + _tail) * _block);
+    final wideFrom = math.max(0, (_first - _context) * _block);
+    final wideTo = math.min(_samples.length, (_last + 1 + _context) * _block);
     return Utterance(
       UtteranceVerdict.accepted,
       Int16List.fromList(_samples.sublist(from, to)),
       (_last + 1) * _block - from,
+      _first * _block - from,
+      Int16List.fromList(_samples.sublist(wideFrom, wideTo)),
+      _first * _block - wideFrom,
+      (_last + 1) * _block - wideFrom,
     );
   }
 }

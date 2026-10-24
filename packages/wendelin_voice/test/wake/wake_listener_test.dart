@@ -334,4 +334,47 @@ void main() {
     expect(events.single.preRoll, isNotEmpty);
     await listener.dispose();
   });
+
+  test('endbewusster Prüfer bekommt die Endstelle im Ausschnitt', () async {
+    final aware = _EndAware();
+    setUpListener(v: aware, hits: {99});
+    await listener.start();
+    await feed(120);
+    // Treffer bei Frame 99 endet bei Sample 48000; Fenster 2 s davor.
+    expect(aware.ends, [32000]);
+    expect(aware.plain, 0);
+  });
+
+  test('endbewusst mit Nachlauf: Endstelle liegt vor dem Nachlauf', () async {
+    final aware = _EndAware();
+    setUpListener(
+      v: aware,
+      hits: {99},
+      tail: const Duration(milliseconds: 900),
+    );
+    await listener.start();
+    await feed(140);
+    // Clip = 32000 vor + 14400 nach dem Treffer; Ende bleibt bei 32000.
+    expect(aware.ends, [32000]);
+  });
+}
+
+final class _EndAware implements WakeEndAwareVerifier {
+  final ends = <int>[];
+  var plain = 0;
+
+  @override
+  String get kind => 'aware';
+
+  @override
+  Future<bool> confirm(Int16List pcm) async {
+    plain++;
+    return true;
+  }
+
+  @override
+  Future<bool> confirmAt(Int16List pcm, int endSample) async {
+    ends.add(endSample);
+    return true;
+  }
 }

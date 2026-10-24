@@ -31,6 +31,7 @@ WakeTemplates templates(
   double threshold = 0.9,
   String? center = wakeCenterId,
   int count = 2,
+  bool sequences = false,
 }) => WakeTemplates(
   speakerId: id,
   featureVersion: 'fake-1',
@@ -40,6 +41,10 @@ WakeTemplates templates(
     v([1, 0, 0, 0]),
     v([0.98, 0.2, 0, 0]),
     for (var i = 2; i < count; i++) v([0.97, 0.02 * i, 0, 0]),
+  ],
+  sequences: [
+    if (sequences)
+      WakeTemplateSequence(word: WakeTemplates.wordW, values: Float32List(288)),
   ],
 );
 
@@ -328,6 +333,18 @@ void main() {
       expect(find.textContaining('veraltet'), findsNWidgets(2));
     });
 
+    testWidgets('mit Folgen für Prüfer B: kein Hinweis zum Neu-Einlernen', (
+      tester,
+    ) async {
+      final env = wakeEnv();
+      final store = SecretWakeTemplateStore(env.secrets);
+      await store.save(templates('a', count: 9, sequences: true));
+      await store.saveSpeakers(const [WakeSpeaker(id: 'a', name: 'Anna')]);
+      await pumpWake(tester, env, const WakeWordScreen());
+      expect(find.text('9 Aufnahmen · Schwelle 0.90'), findsOneWidget);
+      expect(find.textContaining('Prüfer'), findsNothing);
+    });
+
     testWidgets('Sprecherverwaltung: listen, neu einlernen, einzeln löschen', (
       tester,
     ) async {
@@ -342,7 +359,11 @@ void main() {
       final c = await pumpWake(tester, env, const WakeWordScreen());
       expect(find.text('Anna'), findsOneWidget);
       expect(find.text('Person 2'), findsOneWidget);
-      expect(find.text('9 Aufnahmen · Schwelle 0.88'), findsOneWidget);
+      expect(
+        find.text('9 Aufnahmen · Schwelle 0.88\nNeu einlernen für den Prüfer.'),
+        findsOneWidget,
+        reason: 'ohne Folgen für Prüfer B (WP143)',
+      );
       expect(find.textContaining('Nur 2 brauchbare'), findsOneWidget);
       expect(find.text('Weitere Person einlernen'), findsOneWidget);
 

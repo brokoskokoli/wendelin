@@ -9,6 +9,7 @@ import '../models/wake_classifier_catalog.dart';
 import 'keyword_spec.dart';
 import 'pre_roll_buffer.dart';
 import 'wake_verifier.dart';
+import 'wake_verifier_b.dart';
 import 'wake_word_engine.dart';
 
 /// A confirmed wake word.
@@ -294,7 +295,12 @@ final class WakeWordListener {
     var ok = true;
     if (v != null && !hit.direct) {
       try {
-        ok = await v.confirm(lead).timeout(verifyTimeout);
+        final at = rel(end) - rel(end - durationToSamples(verifyWindow));
+        ok =
+            await (v is WakeEndAwareVerifier
+                    ? v.confirmAt(lead, at)
+                    : v.confirm(lead))
+                .timeout(verifyTimeout);
       } on Object {
         ok = false; // a failing or slow verifier must not trigger
       }

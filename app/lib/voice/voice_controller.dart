@@ -532,11 +532,8 @@ final class VoiceController extends Notifier<VoiceUiState> {
   }
 
   Future<void> _releaseIfIdle() async {
-    if (_foreground ||
-        state.active ||
-        ref.read(agentControllerProvider).running) {
-      return;
-    }
+    final busy = _foreground || state.active;
+    if (busy || ref.read(agentControllerProvider).running) return;
     await releaseModels(reason: 'idle');
   }
 
@@ -544,14 +541,15 @@ final class VoiceController extends Notifier<VoiceUiState> {
   /// background); the next request loads them again.
   ///
   /// With „Modell im Speicher halten“ only memory pressure frees them
-  /// ([mayReleaseModels], WP103).
+  /// ([mayReleaseModels], WP103); on overlay close the detector goes anyway.
   Future<void> releaseModels({String reason = 'release'}) async {
-    final keep = ref.read(voiceSettingsProvider).value?.keepModelLoaded;
-    if (!mayReleaseModels(reason, keepLoaded: keep ?? false)) {
+    final keep = ref.read(voiceSettingsProvider).value?.keepModelLoaded == true;
+    final components = ref.read(activeVoiceProvider).value;
+    if (!mayReleaseModels(reason, keepLoaded: keep)) {
       voiceLog('release-skipped', {'reason': reason});
+      if (reason == 'overlay-close') components?.releaseDetector?.call();
       return;
     }
-    final components = ref.read(activeVoiceProvider).value;
     final release = components?.release;
     if (release == null) return;
     voiceLog('release', {'reason': reason});

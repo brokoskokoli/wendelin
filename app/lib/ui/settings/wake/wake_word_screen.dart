@@ -254,6 +254,16 @@ Future<void> _deleteAll(BuildContext context, WidgetRef ref) async {
   await ref.read(wakeSpeakersProvider.notifier).removeAll();
 }
 
+/// WP143: templates without sequences leave verifier B inactive; say so
+/// (only once B is in use, i.e. its `mu` is no placeholder any more).
+String _withVerifierHint(
+  BuildContext context,
+  String detail,
+  WakeTemplates templates,
+) => wakeVerifierBMuIsPlaceholder || templates.hasSequences
+    ? detail
+    : '$detail\n${context.l10n.wakeWordRelearnForVerifier}';
+
 class _SpeakerRow extends ConsumerWidget {
   const _SpeakerRow({required this.speaker, required this.number});
 
@@ -272,9 +282,13 @@ class _SpeakerRow extends ConsumerWidget {
           ? context.l10n.wakeWordTemplatesOutdated
           : templates.embeddings.length < wakeEnrollMinimum
           ? context.l10n.wakeWordTemplatesFew(templates.embeddings.length)
-          : context.l10n.wakeWordRecordingsThreshold(
-              templates.embeddings.length,
-              templates.threshold.toStringAsFixed(2),
+          : _withVerifierHint(
+              context,
+              context.l10n.wakeWordRecordingsThreshold(
+                templates.embeddings.length,
+                templates.threshold.toStringAsFixed(2),
+              ),
+              templates,
             ),
       trailing: PopupMenuButton<String>(
         tooltip: context.l10n.wakeWordActionsFor(
