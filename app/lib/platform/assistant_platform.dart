@@ -128,6 +128,11 @@ class AssistantPlatform {
     );
   }
 
+  /// The overlay needs more time than the usual close window (a model is
+  /// still freed): Android waits longer for `finish` before it ends the
+  /// overlay itself (WP145).
+  Future<void> holdClose() async => _invoke<void>('holdClose');
+
   /// Closes the overlay activity.
   ///
   /// `false` if the station refused (device still locked) or the call failed; the overlay

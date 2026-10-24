@@ -52,4 +52,22 @@ void main() {
     }
     expect(platform.finished, 1);
   });
+
+  testWidgets('Schließen: Teardown des Containers vor finish (WP145)', (
+    tester,
+  ) async {
+    final platform = FakeAssistantPlatform();
+    final order = <String>[];
+    AssistantOverlayScreen.tearDownEngine = (_, _) async =>
+        order.add('teardown finished=${platform.finished}');
+    await pumpOverlay(
+      tester,
+      TestEnv(providerConfig: scripted(FakeLlmProvider(const []))),
+      platform,
+    );
+    await platform.closeHandler!();
+    await tester.pump();
+    expect(order, ['teardown finished=0']);
+    expect(platform.finished, 1);
+  });
 }

@@ -29,6 +29,7 @@
         },
         "hasWakeHandoff": {"args": [], "returns": "value"},
         "takeWakeHandoff": {"args": [], "returns": "map"},
+        "holdClose": {"args": [], "returns": "none"},
         "finish": {"args": [], "returns": "value"}
       },
       "toDart": {

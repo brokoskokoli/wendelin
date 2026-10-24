@@ -53,6 +53,8 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
         channel.invokeMethod("trigger", null)
     }
 
+    private var holdClose: (() -> Unit)? = null
+
     /**
      * The overlay is being left: Dart stops listening, speech output and the request, then
      * calls `finish`. [fallback] runs once with how it ended: `dart` (answered), `dart-error`,
@@ -61,13 +63,23 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
     fun requestClose(fallback: (how: String) -> Unit) {
         val main = Handler(Looper.getMainLooper())
         var done = false
+        lateinit var timeout: Runnable
         val finishOnce = { how: String ->
             if (!done) {
                 done = true
+                holdClose = null
+                main.removeCallbacks(timeout)
                 fallback(how)
             }
         }
-        main.postDelayed({ finishOnce("timeout") }, CLOSE_TIMEOUT_MS)
+        timeout = Runnable { finishOnce("timeout") }
+        main.postDelayed(timeout, CLOSE_TIMEOUT_MS)
+        // Dart still frees a model that was loading when the overlay closed (WP145): the engine
+        // must not end before, or the model would stay loaded in the process.
+        holdClose = {
+            main.removeCallbacks(timeout)
+            main.postDelayed(timeout, CLOSE_HOLD_MS)
+        }
         channel.invokeMethod("close", null, object : MethodChannel.Result {
             override fun success(result: Any?) = finishOnce("dart")
             override fun error(code: String, message: String?, details: Any?) =
@@ -78,6 +90,10 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            "holdClose" -> {
+                holdClose?.invoke()
+                result.success(null)
+            }
             "isDefaultAssistant" -> result.success(isDefaultAssistant())
             "openAssistantSettings" -> result.success(openAssistantSettings())
             "isLocked" -> result.success(keyguard().isKeyguardLocked)
@@ -185,5 +201,6 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
     companion object {
         const val CHANNEL = "app.wendelin/assistant"
         private const val CLOSE_TIMEOUT_MS = 1000L
+        private const val CLOSE_HOLD_MS = 14_000L
     }
 }

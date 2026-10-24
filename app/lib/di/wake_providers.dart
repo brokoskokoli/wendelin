@@ -18,6 +18,7 @@ import '../voice/wake/wake_storage.dart';
 import '../voice/wake/wake_template_audit.dart';
 import 'app_settings.dart';
 import 'core_providers.dart';
+import 'dispose_tracker.dart';
 import 'preferences.dart';
 import 'voice_providers.dart';
 
@@ -282,7 +283,7 @@ final wakeAudioProvider = Provider<AudioInput>(
 /// the calibration (replaced in tests).
 final wakePromptToneProvider = Provider<Future<void> Function()>((ref) {
   final playback = AudioplayersPlayback();
-  ref.onDispose(() => unawaited(playback.dispose()));
+  onDisposeTracked(ref, playback.dispose);
   final samples = Int16List(5600);
   for (var i = 0; i < samples.length; i++) {
     final fade = math.min(1.0, math.min(i, samples.length - i) / 800);
@@ -352,6 +353,6 @@ final wakeBargeInDetectorProvider = Provider<BargeInDetector?>((ref) {
       for (final s in await store.speakers()) ?await store.load(s.id),
     ],
   );
-  ref.onDispose(() => unawaited(detector.disposeWhenIdle()));
+  onDisposeTracked(ref, detector.disposeWhenIdle);
   return detector;
 });

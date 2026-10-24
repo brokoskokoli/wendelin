@@ -27,6 +27,7 @@ import '../screens/private_banner.dart';
 import '../voice/microphone_access.dart';
 import 'overlay_frame.dart';
 import 'overlay_sheet.dart';
+import 'overlay_teardown.dart';
 import 'unlock_window.dart';
 
 /// Root widget of the assistant overlay (Dart entrypoint `assistantMain`,
@@ -67,6 +68,12 @@ class AssistantOverlayScreen extends ConsumerStatefulWidget {
 
   /// Whether the first trigger fires when the overlay opens.
   final bool autoStart;
+
+  /// Frees the native rest of the engine when the overlay closes (WP145).
+  /// Tests keep their container alive and replace it.
+  @visibleForTesting
+  static Future<void> Function(ProviderContainer, AssistantPlatform)
+  tearDownEngine = (c, p) => tearDownOverlayEngine(c, hold: p.holdClose);
 
   /// How long „Abgebrochen.“ stays before the overlay closes.
   @visibleForTesting
@@ -321,6 +328,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
+    final container = ProviderScope.containerOf(context, listen: false);
+    final platform = _platform; // still reachable after the teardown (WP145)
     ref.read(lockedPendingProvider.notifier).clear();
     // An open GPU block is dropped with the overlay (WP82).
     unawaited(_agent.resolveGpuBlock(sendWithout: false));
@@ -336,7 +345,8 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     } on TimeoutException {
       // Finish anyway; the release continues in the background.
     }
-    await _platform.finish();
+    await AssistantOverlayScreen.tearDownEngine(container, platform);
+    await platform.finish();
   }
 
   void _toggleKeyboard() {

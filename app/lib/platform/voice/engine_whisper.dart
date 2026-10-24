@@ -129,16 +129,14 @@ final class EngineWhisper implements WhisperBackend {
     if (existing != null) return existing;
     final loading = () async {
       await _freed;
+      if (_released) throw _releasedWhileLoading();
       final watch = _stopwatch()..start();
       final backend = await load();
       if (_released) {
         // Released while it loaded: free it again right away.
         _freed = backend.dispose();
         voiceLog('model-free', {'model': modelId, 'reason': 'released'});
-        throw const VoiceException(
-          VoiceErrorKind.unavailable,
-          'Das Whisper-Modell wurde freigegeben.',
-        );
+        throw _releasedWhileLoading();
       }
       _own = backend;
       directory.publish(modelId, backend);
@@ -155,6 +153,11 @@ final class EngineWhisper implements WhisperBackend {
       if (identical(_loading, loading)) _loading = null;
     });
   }
+
+  static VoiceException _releasedWhileLoading() => const VoiceException(
+    VoiceErrorKind.unavailable,
+    'Das Whisper-Modell wurde freigegeben.',
+  );
 
   @override
   Future<WhisperResult> transcribe(
@@ -182,7 +185,21 @@ final class EngineWhisper implements WhisperBackend {
     _released = true;
     final own = _own;
     _own = null;
-    if (own == null) return;
+    if (own == null) {
+      // A model that is still loading is freed as soon as it is there (see
+      // [_loadOwn]); wait for that, so the caller knows when nothing is left
+      // (WP145: the overlay ends its engine, a model loaded after that would
+      // stay in the process).
+      final loading = _loading;
+      if (loading != null) {
+        try {
+          await loading;
+        } on Object {
+          // Released while loading is the expected end.
+        }
+      }
+      return;
+    }
     directory.withdraw(modelId, own);
     final watch = _stopwatch()..start();
     final freed = _freed = own.dispose();

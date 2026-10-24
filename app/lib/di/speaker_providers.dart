@@ -9,6 +9,7 @@ import '../voice/speaker/person_scope.dart';
 import '../voice/speaker/person_storage.dart';
 import '../voice/speaker/speaker_storage.dart';
 import 'core_providers.dart';
+import 'dispose_tracker.dart';
 import 'voice_providers.dart';
 
 // Wiring of the speaker recognition (WP92a). Without the switch, the model
@@ -35,7 +36,7 @@ final personScopeResolverProvider = Provider<PersonScopeResolver>(
 /// Embedding model; loads lazily on first use (tests replace it).
 final speakerEmbedderProvider = Provider<SpeakerEmbedder>((ref) {
   final embedder = _LazyEmbedder(ref);
-  ref.onDispose(() => unawaited(embedder.release()));
+  onDisposeTracked(ref, embedder.release);
   return embedder;
 });
 
