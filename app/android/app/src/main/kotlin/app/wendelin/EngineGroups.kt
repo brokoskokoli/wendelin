@@ -39,10 +39,15 @@ object EngineGroups {
         waitForRestoration: Boolean = false,
     ): FlutterEngine {
         val app = context.applicationContext
-        val dart = DartExecutor.DartEntrypoint(
-            FlutterInjector.instance().flutterLoader().findAppBundlePath(),
-            entrypoint,
-        )
+        // findAppBundlePath() reads the loader's application info, which only exists after
+        // startInitialization. FlutterEngineGroup does that in its constructor, but we need the
+        // path before the group exists; in release (R8) this was a NullPointerException.
+        val loader = FlutterInjector.instance().flutterLoader()
+        if (!loader.initialized()) {
+            loader.startInitialization(app)
+            loader.ensureInitializationComplete(app, null)
+        }
+        val dart = DartExecutor.DartEntrypoint(loader.findAppBundlePath(), entrypoint)
         val p = poolFor(app)
         val lease = p.obtain { g ->
             g.createAndRunEngine(
