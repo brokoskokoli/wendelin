@@ -123,7 +123,25 @@
   "wakeEnrollNoMic": "Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.",
   "wakeEnrollNoSpeech": "Nichts gehört. Noch einmal bitte.",
   "wakeEnrollNoRecognizer": "Spracherkennung fehlt: Ohne sie kann „Wendelin“ beim Einlernen nicht geprüft werden. Bitte lade unter Einstellungen → Sprache ein Erkennungsmodell.",
-  "wakeEnrollNotWord": "Nicht als „{word}“ erkannt. Bitte noch einmal.",
+  "wakeEnrollSetupHint": "Ruhiger Raum, normal laut sprechen, etwa 0,5–1 m vom Handy entfernt.",
+  "wakeEnrollQuietTip": "Mehrmals nichts oder zu leise gehört: Geh näher ans Handy (etwa 0,5–1 m), such einen ruhigeren Raum und sprich normal laut.",
+  "wakeEnrollMissingHey": "Bitte „{word}“ sagen, nicht nur den Namen.",
+  "@wakeEnrollMissingHey": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollSpokenWord": "Hey {name}",
+  "@wakeEnrollSpokenWord": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollNotWord": "Nicht erkannt. Bitte noch einmal mit „{word}“.",
   "@wakeEnrollNotWord": {
     "placeholders": {
       "word": {
@@ -162,7 +180,7 @@
     }
   },
   "wakeEnrollProgressLabel": "Fortschritt Einlernen",
-  "wakeEnrollPrompt0": "Sprich normal, das Handy nah vor dir.",
+  "wakeEnrollPrompt0": "Sprich normal, das Handy etwa 0,5–1 m vor dir.",
   "wakeEnrollPrompt1": "Jetzt aus ein bis zwei Metern Abstand.",
   "wakeEnrollPrompt2": "Jetzt leise, wie abends im Zimmer.",
   "wakeEnrollPrompt3": "Wie du es im Alltag sagst, gern aus einer anderen Ecke.",
@@ -192,7 +210,7 @@
       }
     }
   },
-  "wakeEnrollTooQuiet": "Zu leise. Bitte etwas lauter.",
+  "wakeEnrollTooQuiet": "Zu leise – bitte näher ans Handy.",
   "wakeExplainBatteryBody": "Das ständige Zuhören kostet Akku. Standard ist deshalb „Nur beim Laden“.",
   "wakeExplainBatteryExemptBody": "Damit Android den Dienst nicht beendet, sollte Wendelin von der Akku-Optimierung ausgenommen sein.",
   "wakeExplainBatteryExemptTitle": "Akku-Optimierung ausnehmen?",

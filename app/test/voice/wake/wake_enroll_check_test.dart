@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wendelin/voice/speaker/speaker_recording.dart';
 import 'package:wendelin/voice/voice_log.dart';
 import 'package:wendelin/voice/wake/utterance_capture.dart';
 import 'package:wendelin/voice/wake/wake_enroller.dart';
@@ -59,7 +60,7 @@ final class _Chain implements WakeFeatureExtractor {
 WakeEnroller make(
   List<List<Int16List>> clips, {
   WakeFeatureExtractor? features,
-  WakeVerifier? verifier,
+  WakeEnrollVerifier? verifier,
   int target = 3,
   Duration checkTimeout = wakeEnrollCheckTimeout,
 }) => WakeEnroller(
@@ -97,9 +98,9 @@ void main() {
         said(''),
         said('[Husten]'),
         said('Hallo zusammen'),
-        said('Wendelin'),
+        said('Hey Wendelin'),
         said('Hey Wendelin.'),
-        said('Wendlin'),
+        said('äh Wendlin'),
       ]);
       final e = make([
         clip(Noise.cough),
@@ -128,58 +129,125 @@ void main() {
     });
   });
 
-  group('Beweis: Klassifikator ODER Erkenner', () {
-    test('Klassifikator sicher: der Erkenner wird nicht gefragt', () async {
-      final v = FakeWakeVerifier(answer: (_) => false);
+  group('Beweis: nur der Erkenner mit „Hey“', () {
+    test('„Wendelin“ ohne „Hey“: eigenes Verdikt, nicht angenommen', () async {
       final e = make(
-        [recording()],
-        features: _Chain(scoreOf: (_) => 0.9),
-        verifier: v,
+        [recording(), recording()],
+        verifier: TranscriptWakeVerifier(
+          FakeSpeechToText([said('Wendelin.'), said('Hey Wendelin')]),
+        ),
         target: 1,
       );
+      final verdicts = <UtteranceVerdict?>[];
+      e.addListener(() => verdicts.add(e.lastVerdict));
       await e.run();
+      expect(verdicts, contains(UtteranceVerdict.missingHey));
+      expect(e.rejected, 1);
       expect(e.accepted, 1);
-      expect(v.calls, isEmpty);
+    });
+
+    test('anderes Wort oder Geräusch: notWord', () async {
+      final e = make(
+        [recording(), recording()],
+        verifier: TranscriptWakeVerifier(
+          FakeSpeechToText([said('Hey Octavia'), said('Hey Wendelin')]),
+        ),
+        target: 1,
+      );
+      final verdicts = <UtteranceVerdict?>[];
+      e.addListener(() => verdicts.add(e.lastVerdict));
+      await e.run();
+      expect(verdicts, contains(UtteranceVerdict.notWord));
+      expect(verdicts, isNot(contains(UtteranceVerdict.missingHey)));
     });
 
     test(
-      'Klassifikator unsicher, Erkenner hört das Wort: angenommen',
+      'Klassifikator sicher, Erkenner hört etwas anderes: angenommen',
       () async {
-        final v = FakeWakeVerifier();
+        final v = FakeWakeVerifier(answer: (_) => false);
         final e = make(
           [recording()],
-          features: _Chain(scoreOf: (_) => 0.1),
+          features: _Chain(scoreOf: (_) => 0.99),
           verifier: v,
           target: 1,
         );
         await e.run();
         expect(e.accepted, 1);
-        expect(v.calls, hasLength(1));
+        expect(v.calls, hasLength(1), reason: 'Erkenner wird immer gefragt');
       },
     );
 
-    test('beide dagegen: abgelehnt (Mutation: ODER → UND wird rot)', () async {
+    test(
+      'Klassifikator sicher plus klares „Wendelin“ allein: missingHey',
+      () async {
+        final e = make(
+          [recording(), recording()],
+          features: _Chain(scoreOf: (_) => 1.0),
+          verifier: TranscriptWakeVerifier(
+            FakeSpeechToText([said('Wendelin'), said('Hey Wendelin')]),
+          ),
+          target: 1,
+        );
+        final verdicts = <UtteranceVerdict?>[];
+        e.addListener(() => verdicts.add(e.lastVerdict));
+        await e.run();
+        expect(verdicts, contains(UtteranceVerdict.missingHey));
+        expect(e.rejected, 1);
+        expect(e.accepted, 1);
+      },
+    );
+
+    test('Grenze: 0,98 nimmt an, 0,97 lehnt ab', () async {
+      Future<int> acceptedAt(double score) async {
+        final e = make(
+          [recording()],
+          features: _Chain(scoreOf: (_) => score),
+          verifier: FakeWakeVerifier(answer: (_) => false),
+          target: 1,
+        );
+        await e.run();
+        return e.accepted;
+      }
+
+      expect(WakeEnrollRules.classifierMinScore, 0.98);
+      expect(await acceptedAt(0.98), 1);
+      expect(await acceptedAt(0.97), 0);
+    });
+
+    test('Klassifikator sicher, Erkenner fällt aus: angenommen', () async {
+      final v = FakeWakeVerifier()..error = StateError('Modell weg');
       final e = make(
-        [recording(), recording()],
-        features: _Chain(scoreOf: (n) => n == 0 ? 0.1 : 0.9),
-        verifier: FakeWakeVerifier(answer: (_) => false),
+        [recording()],
+        features: _Chain(scoreOf: (_) => 1.0),
+        verifier: v,
         target: 1,
       );
       await e.run();
-      expect(e.rejected, 1);
       expect(e.accepted, 1);
     });
 
-    test('Grenze: genau die Mindestsicherheit zählt', () async {
-      final e = make(
-        [recording()],
-        features: _Chain(scoreOf: (_) => WakeEnrollRules.classifierMinScore),
-        verifier: FakeWakeVerifier(answer: (_) => false),
-        target: 1,
-      );
-      await e.run();
-      expect(e.accepted, 1);
-    });
+    test(
+      'Klassifikator allein ohne Erkenner nimmt an, unsicher nicht',
+      () async {
+        final sure = make(
+          [recording()],
+          features: _Chain(scoreOf: (_) => 1.0),
+          target: 1,
+        );
+        await sure.run();
+        expect(sure.accepted, 1);
+        final unsure = make(
+          [recording(), recording()],
+          features: _Chain(scoreOf: (_) => 0.5),
+          target: 1,
+        );
+        final verdicts = <UtteranceVerdict?>[];
+        unsure.addListener(() => verdicts.add(unsure.lastVerdict));
+        await unsure.run();
+        expect(unsure.accepted, 0);
+        expect(verdicts, contains(UtteranceVerdict.notWord));
+      },
+    );
 
     test('weder Erkenner noch Klassifikator: nichts wird angenommen, '
         'klarer Hinweis statt stiller Dauerablehnung', () async {
@@ -254,6 +322,78 @@ void main() {
       expect(line, contains('source=stt'));
       expect(line, matches(RegExp(r'ms=\d+')));
       expect(line, isNot(contains('Geheimes')));
+    });
+  });
+
+  group('Mindestpegel nur beim Wake-Einlernen (WP142)', () {
+    test('Standardaufnahme nimmt 0,012 an, die Utterance-Vorgabe nicht', () {
+      // Spitze (RMS eines 20-ms-Blocks) etwa 0,012: zwischen 0,008 und 0,02.
+      final quiet = recording(amplitude: 400);
+      Utterance? run(UtteranceCapture c) {
+        Utterance? r;
+        for (final f in quiet) {
+          r = c.feed(f) ?? r;
+        }
+        return r;
+      }
+
+      expect(wakeEnrollMinPeak, 0.008);
+      expect(UtteranceCapture().minPeak, 0.02);
+      expect(run(UtteranceCapture())?.verdict, UtteranceVerdict.tooQuiet);
+      expect(
+        run(UtteranceCapture(minPeak: wakeEnrollMinPeak))?.verdict,
+        UtteranceVerdict.accepted,
+      );
+    });
+
+    test('der Einlerner nutzt 0,008, die Sprecher-Aufnahme 0,02', () async {
+      final e = make(
+        [recording(amplitude: 400)],
+        verifier: FakeWakeVerifier(),
+        target: 1,
+      );
+      await e.run();
+      expect(e.accepted, 1, reason: 'leise, aber über 0,008');
+      expect(newSentenceCapture().minPeak, 0.02);
+    });
+  });
+
+  group('Tipp nach zwei „zu leise“ in Folge (WP142)', () {
+    Future<List<bool>> tips(List<List<Int16List>> clips) async {
+      final e = make(clips, verifier: FakeWakeVerifier(), target: 1);
+      final seen = <bool>[];
+      e.addListener(() => seen.add(e.showQuietTip));
+      await e.run();
+      return seen;
+    }
+
+    test('erst die zweite leise Aufnahme in Folge zeigt den Tipp', () async {
+      final quiet = recording(amplitude: 200);
+      expect(await tips([quiet, recording()]), isNot(contains(true)));
+      expect(await tips([quiet, quiet, recording()]), contains(true));
+    });
+
+    test('eine andere Ablehnung dazwischen setzt zurück', () async {
+      final quiet = recording(amplitude: 200);
+      final early = recording(lead: 0);
+      expect(
+        await tips([quiet, early, quiet, recording()]),
+        isNot(contains(true)),
+      );
+    });
+
+    test('eine Annahme setzt zurück, der Tipp verschwindet', () async {
+      final quiet = recording(amplitude: 200);
+      final e = make(
+        [quiet, quiet, recording(), recording()],
+        verifier: FakeWakeVerifier(),
+        target: 2,
+      );
+      final seen = <bool>[];
+      e.addListener(() => seen.add(e.showQuietTip));
+      await e.run();
+      expect(seen, contains(true));
+      expect(e.showQuietTip, isFalse);
     });
   });
 

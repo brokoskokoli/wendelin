@@ -8463,6 +8463,12 @@ abstract class AppLocalizations {
   /// **'Mikrofon wird vorbereitet …'**
   String get wakeEnrollMicPreparing;
 
+  /// No description provided for @wakeEnrollMissingHey.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte „{word}“ sagen, nicht nur den Namen.'**
+  String wakeEnrollMissingHey(String word);
+
   /// No description provided for @wakeEnrollNoMic.
   ///
   /// In de, this message translates to:
@@ -8484,7 +8490,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeEnrollNotWord.
   ///
   /// In de, this message translates to:
-  /// **'Nicht als „{word}“ erkannt. Bitte noch einmal.'**
+  /// **'Nicht erkannt. Bitte noch einmal mit „{word}“.'**
   String wakeEnrollNotWord(String word);
 
   /// No description provided for @wakeEnrollProcessing.
@@ -8508,7 +8514,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeEnrollPrompt0.
   ///
   /// In de, this message translates to:
-  /// **'Sprich normal, das Handy nah vor dir.'**
+  /// **'Sprich normal, das Handy etwa 0,5–1 m vor dir.'**
   String get wakeEnrollPrompt0;
 
   /// No description provided for @wakeEnrollPrompt1.
@@ -8529,6 +8535,12 @@ abstract class AppLocalizations {
   /// **'Wie du es im Alltag sagst, gern aus einer anderen Ecke.'**
   String get wakeEnrollPrompt3;
 
+  /// No description provided for @wakeEnrollQuietTip.
+  ///
+  /// In de, this message translates to:
+  /// **'Mehrmals nichts oder zu leise gehört: Geh näher ans Handy (etwa 0,5–1 m), such einen ruhigeren Raum und sprich normal laut.'**
+  String get wakeEnrollQuietTip;
+
   /// No description provided for @wakeEnrollRejected.
   ///
   /// In de, this message translates to:
@@ -8546,6 +8558,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Sag jetzt: „{word}“'**
   String wakeEnrollSayNow(String word);
+
+  /// No description provided for @wakeEnrollSetupHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Ruhiger Raum, normal laut sprechen, etwa 0,5–1 m vom Handy entfernt.'**
+  String get wakeEnrollSetupHint;
+
+  /// No description provided for @wakeEnrollSpokenWord.
+  ///
+  /// In de, this message translates to:
+  /// **'Hey {name}'**
+  String wakeEnrollSpokenWord(String name);
 
   /// No description provided for @wakeEnrollTitle.
   ///
@@ -8568,7 +8592,7 @@ abstract class AppLocalizations {
   /// No description provided for @wakeEnrollTooQuiet.
   ///
   /// In de, this message translates to:
-  /// **'Zu leise. Bitte etwas lauter.'**
+  /// **'Zu leise – bitte näher ans Handy.'**
   String get wakeEnrollTooQuiet;
 
   /// No description provided for @wakeEnrollUnchecked.

@@ -19,8 +19,11 @@ enum UtteranceVerdict {
   tooLong,
 
   /// Set by the enroller, not by the capture (WP140): loud enough, but not
-  /// „Wendelin“ (click, knock, cough, another word).
+  /// „Hey Wendelin“ (click, knock, cough, another word).
   notWord,
+
+  /// Set by the enroller (WP142): „Wendelin“ was heard, but without „Hey“.
+  missingHey,
 
   /// Set by the enroller (WP140): a template that does not fit the others.
   inconsistent,
