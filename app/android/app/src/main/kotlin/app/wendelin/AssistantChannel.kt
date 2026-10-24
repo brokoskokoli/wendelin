@@ -53,12 +53,22 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
         channel.invokeMethod("trigger", null)
     }
 
-    private var holdClose: (() -> Unit)? = null
+    /**
+     * The overlay activity ends now, the engine lives on headless (see [AssistantActivity]);
+     * true if the host did that. Null on hosts that cannot (main app): Dart then calls `finish`.
+     */
+    var onReleaseHost: (() -> Boolean)? = null
+
+    /** Dart finished its teardown after `releaseHost`: the engine may be destroyed. */
+    var onTeardownDone: (() -> Unit)? = null
+
+    private var pendingClose: ((String) -> Unit)? = null
 
     /**
      * The overlay is being left: Dart stops listening, speech output and the request, then
-     * calls `finish`. [fallback] runs once with how it ended: `dart` (answered), `dart-error`,
-     * `not-implemented` or `timeout` (no answer within [CLOSE_TIMEOUT_MS]).
+     * calls `releaseHost` (`released`) and goes on freeing in the headless engine. [fallback] runs
+     * once with how it ended: `released`, `dart` (answered), `dart-error`, `not-implemented` or
+     * `timeout` (no answer within [CLOSE_TIMEOUT_MS]); it releases the host if Dart did not.
      */
     fun requestClose(fallback: (how: String) -> Unit) {
         val main = Handler(Looper.getMainLooper())
@@ -67,19 +77,14 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
         val finishOnce = { how: String ->
             if (!done) {
                 done = true
-                holdClose = null
+                pendingClose = null
                 main.removeCallbacks(timeout)
                 fallback(how)
             }
         }
         timeout = Runnable { finishOnce("timeout") }
         main.postDelayed(timeout, CLOSE_TIMEOUT_MS)
-        // Dart still frees a model that was loading when the overlay closed (WP145): the engine
-        // must not end before, or the model would stay loaded in the process.
-        holdClose = {
-            main.removeCallbacks(timeout)
-            main.postDelayed(timeout, CLOSE_HOLD_MS)
-        }
+        pendingClose = finishOnce
         channel.invokeMethod("close", null, object : MethodChannel.Result {
             override fun success(result: Any?) = finishOnce("dart")
             override fun error(code: String, message: String?, details: Any?) =
@@ -90,8 +95,13 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
-            "holdClose" -> {
-                holdClose?.invoke()
+            "releaseHost" -> {
+                val released = onReleaseHost?.invoke() == true
+                pendingClose?.invoke("released")
+                result.success(released)
+            }
+            "teardownDone" -> {
+                onTeardownDone?.invoke()
                 result.success(null)
             }
             "isDefaultAssistant" -> result.success(isDefaultAssistant())
@@ -201,6 +211,5 @@ class AssistantChannel(private val activity: Activity, messenger: BinaryMessenge
     companion object {
         const val CHANNEL = "app.wendelin/assistant"
         private const val CLOSE_TIMEOUT_MS = 1000L
-        private const val CLOSE_HOLD_MS = 14_000L
     }
 }

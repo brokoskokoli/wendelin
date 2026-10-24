@@ -73,7 +73,31 @@ class AssistantOverlayScreen extends ConsumerStatefulWidget {
   /// Tests keep their container alive and replace it.
   @visibleForTesting
   static Future<void> Function(ProviderContainer, AssistantPlatform)
-  tearDownEngine = (c, p) => tearDownOverlayEngine(c, hold: p.holdClose);
+  tearDownEngine = defaultTearDown;
+
+  /// The real teardown (the test setup replaces [tearDownEngine]).
+  @visibleForTesting
+  static Future<void> defaultTearDown(
+    ProviderContainer container,
+    AssistantPlatform platform,
+  ) => tearDownOverlayEngine(container);
+
+  // After the host is released: free an own Whisper model (B14), tear down,
+  // then the host may destroy the engine (`finish` if it cannot hold it).
+  static Future<void> _finishClose(
+    ProviderContainer container,
+    AssistantPlatform platform, {
+    required bool released,
+    required Future<void> models,
+  }) async {
+    try {
+      await models.timeout(const Duration(milliseconds: 600));
+    } on TimeoutException {
+      // The release continues; the teardown waits for it.
+    }
+    await tearDownEngine(container, platform);
+    await (released ? platform.teardownDone() : platform.finish());
+  }
 
   /// How long „Abgebrochen.“ stays before the overlay closes.
   @visibleForTesting
@@ -139,10 +163,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   // taken right before the microphone opens here (WP68), the service records
   // until then.
   Future<void> _fireFirst() async {
-    // Every invocation of the assistant starts a new conversation (WP67).
-    _agent.beginFreshConversation();
+    if (_closing) return;
+    _agent.beginFreshConversation(); // every invocation starts anew (WP67)
     final wake = await _platform.hasWakeHandoff();
-    if (mounted) _triggers.fire(wake: wake);
+    if (mounted && !_closing) _triggers.fire(wake: wake);
   }
 
   /// Takes the audio of the wake word hit and plays the tone (WP68).
@@ -159,6 +183,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   }
 
   void _onLifecycle(AppLifecycleState state) {
+    if (_closing) return;
     if (state == AppLifecycleState.resumed) _unlockWatch.resumed();
     if (_unlockWatch.window.active) return;
     if (state == AppLifecycleState.hidden ||
@@ -184,7 +209,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
 
   Future<bool> _checkLock() async {
     final locked = await _platform.isLocked();
-    if (mounted) {
+    if (mounted && !_closing) {
       setState(() {
         _locked = locked;
         _lockKnown = true;
@@ -206,7 +231,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   /// providers and the main app's warm-up does not reach it. A valid
   /// session is kept, the call is cheap then.
   void _warmUpAttestation() => scheduleMicrotask(() {
-    if (!mounted) return;
+    if (!mounted || _closing) return;
     unawaited(
       warmUpAttestation(
         config: ref.read(providerConfigProvider.future),
@@ -217,9 +242,10 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
   });
 
   Future<void> _onTrigger(TriggerEvent e) async {
+    if (_closing) return;
     _warmUpAttestation();
     final locked = await _checkLock();
-    if (!mounted) return;
+    if (!mounted || _closing) return;
     ref.read(lockedModeProvider.notifier).set(locked);
     _closeTimer?.cancel();
     setState(() {
@@ -228,6 +254,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     });
     final voice = ref.read(voiceControllerProvider);
     if (voice.active) await _voice.cancel();
+    if (_closing) return;
     if (ref.read(agentControllerProvider).running) {
       // Nobody takes the hit over: release the service microphone (WP68).
       if (e.source == TriggerKind.wakeWord) await _platform.takeWakeHandoff();
@@ -242,7 +269,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
           ref.read(wakeToneProvider).value ??
           await ref.read(wakeToneProvider.future);
     }
-    if (!mounted) return;
+    if (!mounted || _closing) return;
     var taken = false;
     final wake = e.source == TriggerKind.wakeWord;
     await _voice.start(
@@ -257,7 +284,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
       prepare: locked ? _microphoneGranted : _microphoneAccess,
     );
     // Not started (busy, refused): the service must not keep recording.
-    if (wake && !taken) await _platform.takeWakeHandoff();
+    if (wake && !taken && !_closing) await _platform.takeWakeHandoff();
   }
 
   Future<bool> _microphoneGranted() async =>
@@ -329,24 +356,21 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
     if (_closing) return;
     _closing = true;
     final container = ProviderScope.containerOf(context, listen: false);
-    final platform = _platform; // still reachable after the teardown (WP145)
+    final platform = _platform;
     ref.read(lockedPendingProvider.notifier).clear();
     // An open GPU block is dropped with the overlay (WP82).
     unawaited(_agent.resolveGpuBlock(sendWithout: false));
+    // Stop first (host channels), then release the host (WP145).
     await _voice.suspend();
     ref.read(lockedModeProvider.notifier).set(false);
     _agent.cancel();
-    // The engine ends with the overlay: free an own Whisper model now, so
-    // none stays behind in the process (B14).
-    try {
-      await _voice
-          .releaseModels(reason: 'overlay-close')
-          .timeout(const Duration(milliseconds: 600));
-    } on TimeoutException {
-      // Finish anyway; the release continues in the background.
-    }
-    await AssistantOverlayScreen.tearDownEngine(container, platform);
-    await platform.finish();
+    final released = await platform.releaseHost();
+    await AssistantOverlayScreen._finishClose(
+      container,
+      platform,
+      released: released,
+      models: _voice.releaseModels(reason: 'overlay-close'),
+    );
   }
 
   void _toggleKeyboard() {
@@ -451,6 +475,7 @@ class _AssistantOverlayState extends ConsumerState<AssistantOverlayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_closing) return const SizedBox.shrink();
     ref
       ..listen(voiceControllerProvider.select((v) => v.stopCount), (_, _) {
         _onStop();

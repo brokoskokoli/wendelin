@@ -8,11 +8,23 @@ package app.wendelin
  *
  * @param newGroup creates the group (called once, on the first [obtain]).
  * @param onWillDestroy registers a callback that fires when the engine is destroyed.
+ * @param destroy destroys an engine (which fires the [onWillDestroy] callback).
+ * @param schedule runs a block after a delay in ms and returns a way to cancel it.
  */
 class EnginePool<G, E>(
     private val newGroup: () -> G,
     private val onWillDestroy: (E, () -> Unit) -> Unit,
+    private val destroy: (E) -> Unit = {},
+    private val schedule: (Long, () -> Unit) -> Cancelable = { _, _ -> Cancelable {} },
 ) {
+    fun interface Cancelable {
+        fun cancel()
+    }
+
+    // Engines whose activity is gone but whose Dart side is still tearing down, with the timer
+    // that ends them if Dart never reports.
+    private val held = HashMap<E, Cancelable>()
+
     private var group: G? = null
 
     /** How often the group was created: 1 after the first [obtain], never more. */
@@ -47,5 +59,29 @@ class EnginePool<G, E>(
             }
         }
         return Lease(engine, siblings, existing == null)
+    }
+
+    /**
+     * Keeps [engine] alive without a host (its activity ended, Dart still frees native objects)
+     * until [release] or [timeoutMs]; then it is destroyed. A new [obtain] meanwhile spawns a
+     * new engine. False if it is held already.
+     */
+    fun hold(engine: E, timeoutMs: Long): Boolean {
+        if (held.containsKey(engine)) return false
+        held[engine] = schedule(timeoutMs) { release(engine) }
+        return true
+    }
+
+    /** Whether [engine] waits for its teardown. */
+    fun isHeld(engine: E): Boolean = held.containsKey(engine)
+
+    /** Number of engines waiting for their teardown. */
+    val holding: Int get() = held.size
+
+    /** Destroys a held engine (Dart reported or the timeout ran); once, later calls do nothing. */
+    fun release(engine: E) {
+        val timer = held.remove(engine) ?: return
+        timer.cancel()
+        destroy(engine)
     }
 }

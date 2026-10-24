@@ -53,13 +53,14 @@ void main() {
     expect(platform.finished, 1);
   });
 
-  testWidgets('Schließen: Teardown des Containers vor finish (WP145)', (
+  // Every way to close takes the same path (WP145): release the host first,
+  // then the teardown, then tell the host it may destroy the engine.
+  testWidgets('Schließen: Host frei, Teardown, dann teardownDone', (
     tester,
   ) async {
     final platform = FakeAssistantPlatform();
-    final order = <String>[];
     AssistantOverlayScreen.tearDownEngine = (_, _) async =>
-        order.add('teardown finished=${platform.finished}');
+        platform.calls.add('teardown');
     await pumpOverlay(
       tester,
       TestEnv(providerConfig: scripted(FakeLlmProvider(const []))),
@@ -67,7 +68,28 @@ void main() {
     );
     await platform.closeHandler!();
     await tester.pump();
-    expect(order, ['teardown finished=0']);
-    expect(platform.finished, 1);
+    expect(platform.calls, ['releaseHost', 'teardown', 'teardownDone']);
+  });
+
+  testWidgets('Stopp: derselbe Schließweg', (tester) async {
+    final platform = await _stop(tester);
+    AssistantOverlayScreen.tearDownEngine = (_, _) async =>
+        platform.calls.add('teardown');
+    for (var i = 0; i < 20 && !platform.calls.contains('teardownDone'); i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(platform.calls, ['releaseHost', 'teardown', 'teardownDone']);
+  });
+
+  testWidgets('Host kann nicht halten: Teardown, dann finish', (tester) async {
+    final platform = FakeAssistantPlatform()..canRelease = false;
+    await pumpOverlay(
+      tester,
+      TestEnv(providerConfig: scripted(FakeLlmProvider(const []))),
+      platform,
+    );
+    await platform.closeHandler!();
+    await tester.pump();
+    expect(platform.calls, ['releaseHost', 'finish']);
   });
 }

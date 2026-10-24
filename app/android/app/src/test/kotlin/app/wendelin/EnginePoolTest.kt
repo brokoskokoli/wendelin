@@ -11,11 +11,23 @@ class EnginePoolTest {
         fun destroy() = onDestroy?.invoke()
     }
 
+    private class Timer(val delayMs: Long, val block: () -> Unit) {
+        var cancelled = false
+        fun fire() = if (!cancelled) block() else Unit
+    }
+
+    private val timers = mutableListOf<Timer>()
     private var groups = 0
     private var engines = 0
     private val pool = EnginePool<String, Engine>(
         newGroup = { "group${++groups}" },
         onWillDestroy = { e, cb -> e.onDestroy = cb },
+        destroy = { it.destroy() },
+        schedule = { ms, block ->
+            val t = Timer(ms, block)
+            timers.add(t)
+            EnginePool.Cancelable { t.cancelled = true }
+        },
     )
     private val spawnedIn = mutableListOf<String>()
 
@@ -73,5 +85,74 @@ class EnginePoolTest {
         }
         assertEquals(0, pool.live)
         assertEquals(0, obtain().siblings)
+    }
+
+    // WP145: the overlay activity ends at once, the engine lives on without it.
+    @Test fun heldEngineStaysAliveHeadless() {
+        val a = obtain().engine
+        assertTrue(pool.hold(a, 14_000))
+        assertTrue(pool.isHeld(a))
+        assertEquals(1, pool.live)
+        assertEquals(14_000L, timers.single().delayMs)
+    }
+
+    @Test fun heldEngineIsDestroyedWhenDartReports() {
+        val a = obtain().engine
+        pool.hold(a, 14_000)
+        pool.release(a)
+        assertEquals(0, pool.live)
+        assertFalse(pool.isHeld(a))
+        assertTrue("timer stopped", timers.single().cancelled)
+    }
+
+    @Test fun heldEngineIsDestroyedByTheTimeout() {
+        val a = obtain().engine
+        pool.hold(a, 14_000)
+        timers.single().fire()
+        assertEquals(0, pool.live)
+        assertEquals(0, pool.holding)
+    }
+
+    @Test fun reportAndTimeoutDestroyOnce() {
+        var destroyed = 0
+        val p = EnginePool<String, Engine>(
+            newGroup = { "g" },
+            onWillDestroy = { e, cb -> e.onDestroy = cb },
+            destroy = { destroyed++; it.destroy() },
+            schedule = { ms, block -> timers.add(Timer(ms, block)); EnginePool.Cancelable {} },
+        )
+        val e = p.obtain { Engine(1) }.engine
+        p.hold(e, 1)
+        p.release(e)
+        timers.last().fire()
+        p.release(e)
+        assertEquals(1, destroyed)
+        assertEquals(0, p.live)
+    }
+
+    @Test fun newOverlayWhileHeldGetsANewEngineInTheSameGroup() {
+        val old = obtain()
+        pool.hold(old.engine, 14_000)
+        val fresh = obtain()
+        assertTrue(fresh.engine !== old.engine)
+        assertTrue("spawned from the living old one", fresh.fromSibling)
+        assertEquals(1, pool.groupsCreated)
+        assertEquals(2, pool.live)
+        pool.release(old.engine)
+        assertEquals(1, pool.live)
+        assertFalse(pool.isHeld(fresh.engine))
+    }
+
+    @Test fun holdTwiceKeepsOneTimer() {
+        val a = obtain().engine
+        assertTrue(pool.hold(a, 14_000))
+        assertFalse(pool.hold(a, 14_000))
+        assertEquals(1, timers.size)
+    }
+
+    @Test fun releaseOfAnEngineThatIsNotHeldDoesNothing() {
+        val a = obtain().engine
+        pool.release(a)
+        assertEquals(1, pool.live)
     }
 }

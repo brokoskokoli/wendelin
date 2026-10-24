@@ -1,6 +1,8 @@
 package app.wendelin
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import io.flutter.FlutterInjector
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -21,6 +23,13 @@ object EngineGroups {
 
     private fun poolFor(app: Context) = pool ?: EnginePool<FlutterEngineGroup, FlutterEngine>(
         newGroup = { FlutterEngineGroup(app) },
+        destroy = { it.destroy() },
+        schedule = { delayMs, block ->
+            val main = Handler(Looper.getMainLooper())
+            val r = Runnable(block)
+            main.postDelayed(r, delayMs)
+            EnginePool.Cancelable { main.removeCallbacks(r) }
+        },
         onWillDestroy = { engine, callback ->
             engine.addEngineLifecycleListener(object : FlutterEngine.EngineLifecycleListener {
                 override fun onPreEngineRestart() = Unit
@@ -65,7 +74,20 @@ object EngineGroups {
         return lease.engine
     }
 
-    /** The engine for an overlay activity; the activity destroys it with itself. */
+    /**
+     * The overlay's activity ends but Dart still frees native objects (WP145): keep [engine]
+     * headless until [release] or [HOLD_MS]. The caller must have left `shouldDestroyEngineWithHost`
+     * false by then, else the activity destroys it with itself.
+     */
+    fun hold(engine: FlutterEngine): Boolean = pool?.hold(engine, HOLD_MS) ?: false
+
+    /** Dart reported its teardown (or the timeout ran): destroys a held engine. */
+    fun release(engine: FlutterEngine) = pool?.release(engine) ?: Unit
+
+    /** How long a headless overlay engine may take for its teardown (Dart waits up to 12 s). */
+    const val HOLD_MS = 14_000L
+
+    /** The engine for an overlay activity; the activity destroys it with itself unless held. */
     fun forActivity(activity: FlutterActivity, entrypoint: String, tag: String): FlutterEngine =
         spawn(
             activity,

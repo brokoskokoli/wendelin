@@ -273,7 +273,7 @@ void main() {
   // Bug (also on main): the overlay closed while Whisper was still loading;
   // the load finished in an engine that was gone and the ~400 MB stayed.
   group('Schließen während Whisper noch lädt', () {
-    test('Teardown hält Android, wartet auf das Ladeende: genau ein Free, '
+    test('Teardown wartet auf das Ladeende: genau ein Free, '
         'nichts veröffentlicht', () async {
       final started = Completer<void>();
       final gate = Completer<void>();
@@ -303,16 +303,9 @@ void main() {
             .then<Object?>((_) => null, onError: (_) => null),
       );
       await started.future;
-      var held = 0;
-      await tearDownOverlayEngine(
-        c,
-        budget: const Duration(milliseconds: 20),
-        hold: () async {
-          held++;
-          gate.complete(); // the load ends while Android waits
-        },
-      );
-      expect(held, 1, reason: 'Android wurde gebeten zu warten');
+      // The load ends while the (headless) engine is still held.
+      unawaited(Future<void>(gate.complete));
+      await tearDownOverlayEngine(c);
       expect(counts.opened['whisper'], 1);
       expect(
         counts.freed['whisper'],

@@ -25,7 +25,7 @@ final assistantPlatformProvider = Provider<AssistantPlatform>((ref) {
 ///
 /// Calls from Kotlin to Dart: `trigger` (the assistant was invoked again
 /// while the overlay is open) and `close` (the overlay is being left: Dart
-/// stops listening, speaking and the request, then calls [finish]).
+/// stops listening, speaking and the request, then calls [releaseHost]).
 class AssistantPlatform {
   /// Creates the bridge; `channel` is injectable for tests.
   AssistantPlatform({
@@ -128,10 +128,17 @@ class AssistantPlatform {
     );
   }
 
-  /// The overlay needs more time than the usual close window (a model is
-  /// still freed): Android waits longer for `finish` before it ends the
-  /// overlay itself (WP145).
-  Future<void> holdClose() async => _invoke<void>('holdClose');
+  /// The overlay is closing (WP145): Android finishes the activity at once
+  /// (the wake word listens again, a new invocation opens a new overlay) and
+  /// keeps this engine alive without a window until [teardownDone] or a
+  /// timeout, so a native free that takes longer (a Whisper model still
+  /// loading) runs to its end. `false` if the host cannot do that; then the
+  /// caller ends with [finish].
+  Future<bool> releaseHost() async =>
+      await _invoke<bool>('releaseHost') ?? false;
+
+  /// The teardown after [releaseHost] is over: Android destroys the engine.
+  Future<void> teardownDone() async => _invoke<void>('teardownDone');
 
   /// Closes the overlay activity.
   ///
