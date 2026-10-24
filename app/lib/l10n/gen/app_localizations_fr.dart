@@ -4989,6 +4989,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get wakeEnrollMicPreparing => 'Préparation du microphone …';
 
   @override
+  String wakeEnrollMissingHey(String word) {
+    return 'Dites « $word », pas seulement le nom.';
+  }
+
+  @override
   String get wakeEnrollNoMic =>
       'Sans microphone, Wendelin ne peut pas apprendre votre voix.';
 
@@ -5002,7 +5007,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String wakeEnrollNotWord(String word) {
-    return 'Non reconnu comme « $word ». Encore une fois, s’il vous plaît.';
+    return 'Non reconnu. Encore une fois, avec « $word », s’il vous plaît.';
   }
 
   @override
@@ -5018,7 +5023,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get wakeEnrollPrompt0 =>
-      'Parlez normalement, le téléphone près de vous.';
+      'Parlez normalement, le téléphone à environ 0,5–1 m.';
 
   @override
   String get wakeEnrollPrompt1 => 'Maintenant à un ou deux mètres de distance.';
@@ -5030,6 +5035,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get wakeEnrollPrompt3 =>
       'Comme vous le dites au quotidien, par exemple depuis un autre coin.';
+
+  @override
+  String get wakeEnrollQuietTip =>
+      'Plusieurs fois rien ou trop bas : rapprochez-vous du téléphone (environ 0,5–1 m), choisissez une pièce plus calme et parlez à volume normal.';
 
   @override
   String wakeEnrollRejected(int count) {
@@ -5047,6 +5056,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get wakeEnrollSetupHint =>
+      'Pièce calme, volume normal, à environ 0,5–1 m du téléphone.';
+
+  @override
+  String wakeEnrollSpokenWord(String name) {
+    return 'Hey $name';
+  }
+
+  @override
   String get wakeEnrollTitle => 'Entraîner la voix';
 
   @override
@@ -5059,8 +5077,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get wakeEnrollTooQuiet =>
-      'Trop bas. Un peu plus fort, s’il vous plaît.';
+  String get wakeEnrollTooQuiet => 'Trop bas – rapprochez-vous du téléphone.';
 
   @override
   String get wakeEnrollUnchecked =>

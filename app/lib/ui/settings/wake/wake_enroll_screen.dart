@@ -30,8 +30,15 @@ String verdictText(AppLocalizations l, UtteranceVerdict v, {String? word}) =>
       UtteranceVerdict.noSpeech => l.wakeEnrollNoSpeech,
       UtteranceVerdict.tooQuiet => l.wakeEnrollTooQuiet,
       UtteranceVerdict.cutOff => l.wakeEnrollTooEarly,
-      UtteranceVerdict.tooLong => l.wakeEnrollTooLong(word ?? l.appName),
-      UtteranceVerdict.notWord => l.wakeEnrollNotWord(word ?? l.appName),
+      UtteranceVerdict.tooLong => l.wakeEnrollTooLong(
+        word ?? l.wakeEnrollSpokenWord(l.appName),
+      ),
+      UtteranceVerdict.notWord => l.wakeEnrollNotWord(
+        word ?? l.wakeEnrollSpokenWord(l.appName),
+      ),
+      UtteranceVerdict.missingHey => l.wakeEnrollMissingHey(
+        word ?? l.wakeEnrollSpokenWord(l.appName),
+      ),
       UtteranceVerdict.inconsistent => l.wakeEnrollInconsistent,
       UtteranceVerdict.unchecked => l.wakeEnrollUnchecked,
     };
@@ -97,7 +104,7 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
 
   /// The configured recognizer for the content check (`null`: not available,
   /// the enroller then rejects what the classifier does not vouch for).
-  Future<WakeVerifier?> _verifier() async {
+  Future<WakeEnrollVerifier?> _verifier() async {
     try {
       // Wait for the recognizer while it loads, but not for ever.
       return await ref
@@ -149,10 +156,31 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
     return ListenableBuilder(listenable: e, builder: (context, _) => _body(e));
   }
 
+  /// Setup hint before the first recording, tip after repeated quiet ones,
+  /// verdict on the latest recording and the count of rejected ones.
+  List<Widget> _hints(
+    WakeEnroller e, {
+    required bool done,
+    required bool failed,
+  }) {
+    final l = context.l10n;
+    final word = l.wakeEnrollSpokenWord(l.appName);
+    return [
+      if (!done && !failed && e.accepted == 0 && e.rejected == 0)
+        Text(l.wakeEnrollSetupHint, style: WText.caption),
+      if (!done && !failed && e.showQuietTip)
+        Text(l.wakeEnrollQuietTip, style: WText.caption),
+      if (e.lastVerdict != null && !done)
+        Text(verdictText(l, e.lastVerdict!, word: word), style: WText.caption),
+      if (e.rejected > 0)
+        Text(l.wakeEnrollRejected(e.rejected), style: WText.caption),
+    ];
+  }
+
   Widget _body(WakeEnroller e) {
     final done = e.phase == EnrollPhase.complete;
     final failed = e.error != null;
-    final word = context.l10n.appName;
+    final word = context.l10n.wakeEnrollSpokenWord(context.l10n.appName);
     return SettingsPage(
       title: context.l10n.wakeWordEnroll,
       intro: context.l10n.wakeEnrollIntro(word),
@@ -188,16 +216,7 @@ class _WakeEnrollScreenState extends ConsumerState<WakeEnrollScreen>
                       amplitudes: [for (var i = 0; i < 24; i++) _bar(e, i)],
                     ),
                   ],
-                  if (e.lastVerdict != null && !done)
-                    Text(
-                      verdictText(context.l10n, e.lastVerdict!, word: word),
-                      style: WText.caption,
-                    ),
-                  if (e.rejected > 0)
-                    Text(
-                      context.l10n.wakeEnrollRejected(e.rejected),
-                      style: WText.caption,
-                    ),
+                  ..._hints(e, done: done, failed: failed),
                   if (done)
                     Text(context.l10n.wakeEnrollAllThere, style: WText.label),
                   if (failed)

@@ -93,7 +93,7 @@ void main() {
   test('zentriert: Schwelle aus zentrierten Leave-one-out-Werten', () async {
     // Centered the templates are 0.45 apart (best of the others), raw they
     // are above 0.9. Without background events the centered quantile (0.45)
-    // decides: neither the cap (0.50) nor the lower bound (0.40) nor the raw
+    // decides: neither the cap (0.58) nor the lower bound (0.40) nor the raw
     // value. The background is centered-orthogonal to all templates.
     final cal = WakeCalibrator(
       audio: SilentAudio(12),

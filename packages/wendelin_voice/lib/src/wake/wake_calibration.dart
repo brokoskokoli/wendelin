@@ -51,7 +51,12 @@ const wakeMinThreshold = 0.40;
 /// 0.66..0.73 in a quiet room and cut "Wendelin" to 11..23 of 30 hits (fixed
 /// 0.50: 29 of 30). Unless background events force it, the threshold
 /// therefore never rises above this value (the lower bound [wakeMinThreshold] still holds).
-const wakeUnconstrainedMaxThreshold = 0.50;
+///
+/// 0.58 since WP142 (templates of "Hey Wendelin", only blocks 4..6, so no
+/// leak into the classifier training): 28 of 30 hits at 0.58 (30 of 30 at
+/// 0.50); real negative recordings peak at 0.52 at most, television at 0.53.
+/// Older "Wendelin" templates get the same cap (13 of 15 and 29 of 30 hits).
+const wakeUnconstrainedMaxThreshold = 0.58;
 
 /// Fewest templates (and thus leave-one-out scores) a calibration needs.
 const wakeMinTemplates = 2;

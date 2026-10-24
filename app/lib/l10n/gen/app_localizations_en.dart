@@ -4936,6 +4936,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wakeEnrollMicPreparing => 'Preparing the microphone …';
 
   @override
+  String wakeEnrollMissingHey(String word) {
+    return 'Please say “$word”, not just the name.';
+  }
+
+  @override
   String get wakeEnrollNoMic =>
       'Without a microphone Wendelin cannot learn your voice.';
 
@@ -4948,7 +4953,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String wakeEnrollNotWord(String word) {
-    return 'Not recognized as “$word”. Once more, please.';
+    return 'Not recognized. Once more, please, with “$word”.';
   }
 
   @override
@@ -4964,7 +4969,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wakeEnrollPrompt0 =>
-      'Speak normally, with the phone close to you.';
+      'Speak normally, with the phone about 0.5–1 m away.';
 
   @override
   String get wakeEnrollPrompt1 => 'Now from one to two meters away.';
@@ -4976,6 +4981,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wakeEnrollPrompt3 =>
       'The way you say it every day, maybe from another corner.';
+
+  @override
+  String get wakeEnrollQuietTip =>
+      'Nothing or too little heard several times: move closer to the phone (about 0.5–1 m), find a quieter room and speak at normal volume.';
 
   @override
   String wakeEnrollRejected(int count) {
@@ -4993,6 +5002,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get wakeEnrollSetupHint =>
+      'Quiet room, normal volume, about 0.5–1 m from the phone.';
+
+  @override
+  String wakeEnrollSpokenWord(String name) {
+    return 'Hey $name';
+  }
+
+  @override
   String get wakeEnrollTitle => 'Train voice';
 
   @override
@@ -5005,7 +5023,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get wakeEnrollTooQuiet => 'Too quiet. A bit louder, please.';
+  String get wakeEnrollTooQuiet =>
+      'Too quiet – please move closer to the phone.';
 
   @override
   String get wakeEnrollUnchecked =>

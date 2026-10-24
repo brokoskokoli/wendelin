@@ -25,6 +25,7 @@ Jedes M5-Arbeitspaket legt hier seine eigene Datei `<wp>.md` an (Überschrift `#
 - [WP136 – Parakeet lädt nach dem Download (Gerätetest)](wp136.md)
 - [WP140 – Einlernen prüft den Inhalt, unsichere Erkennung verworfen, Ja/Nein robuster (Gerätetest)](wp140.md)
 - [WP141 – Wake-Halten bis 0,8 s (Gerätetest)](wp141.md)
+- [WP142 – Einlernen: „Hey Wendelin“, weniger echte Rufe abgelehnt (Gerätetest)](wp142.md)
 - [WP76d Tinfoil (TEE)](wp76d.md)
 - [WP84 Spotify](wp84.md)
 - [WP85 Kontakte, SMS und Anrufe (`contacts`)](wp85.md)
