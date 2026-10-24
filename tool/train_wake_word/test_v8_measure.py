@@ -16,8 +16,21 @@ def labels():
     out = []
     for dev in ("huawei", "handy2"):
         for b in range(1, 7):
-            for w in ("Wendelin", "Hey Wendelin", "Alexa"):
-                out.append({"dev": dev, "block": b, "round": 1, "word": w, "start": 100.0 * b, "end": 100.0 * b + 1, "status": "ok"})
+            for i, w in enumerate(("Wendelin", "Hey Wendelin", "Alexa")):
+                off = 0.0 if dev == "huawei" else 1.7 * (i + 1) * b          # zweites Handy: eigene Sitzung (kein fester Versatz zu huawei)
+                out.append({"dev": dev, "block": b, "round": 1, "word": w, "start": 100.0 * b + off, "end": 100.0 * b + off + 1, "status": "ok"})
+    return out
+
+
+def paired_labels(offset=0.72, devs=("huawei", "handy2")):
+    """Eine Sitzung (Block 1 bis 6, 4 Runden, 3 Woerter), von mehreren Geraeten gleichzeitig aufgenommen: Start = Basis + Geraeteversatz."""
+    out = []
+    for k, dev in enumerate(devs):
+        for b in range(1, 7):
+            for rd in range(1, 5):
+                for i, w in enumerate(("Wendelin", "Hey Wendelin", "Alexa")):
+                    st = 100.0 * b + 10.0 * rd + 2.5 * i + offset * k
+                    out.append({"dev": dev, "block": b, "round": rd, "word": w, "start": st, "end": st + 1, "status": "ok"})
     return out
 
 
@@ -26,9 +39,34 @@ class Split(unittest.TestCase):
         sel = V.filter_labels(labels())
         self.assertFalse([lb for lb in sel if lb["dev"] == "huawei" and lb["block"] in R.TRAIN_BLOCKS])
         self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "huawei"}), [4, 5, 6])
-        self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "handy2"}), [1, 2, 3, 4, 5, 6])
+        self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "handy2"}), [1, 2, 3, 4, 5, 6])    # eigene Sitzung: bleibt
         self.assertEqual(len(sel), (3 + 6) * 2)                                  # nur die beiden Woerter
         self.assertEqual({lb["word"] for lb in sel}, {"Wendelin", "Hey Wendelin"})
+
+    def test_gleiche_sitzung_faellt_heraus(self):
+        """Zweites Geraet derselben Sitzung (fester Versatz) ist Datenleck in Block 1 bis 3; ein drittes Geraet ebenso."""
+        lab = paired_labels(devs=("huawei", "handy2"))
+        sel = V.filter_labels(lab)
+        self.assertEqual(sorted({(lb["dev"], lb["block"]) for lb in sel}), [(d, b) for d in ("handy2", "huawei") for b in (4, 5, 6)])
+        self.assertEqual(len(sel), 2 * 3 * 4 * 2)
+        old = [lb for lb in lab if lb["word"] in V.WORDS and lb["dev"] in V.DEVICES
+               and not (lb["dev"] == R.TRAIN_DEVICE and lb["block"] in R.TRAIN_BLOCKS)]      # alte eval_blocks-Logik: Mutationsbeleg
+        self.assertEqual((len(old), len(sel)), (72, 48))                                         # ohne Fix 24 Labels (handy2 Block 1 bis 3) zu viel
+        three = R.paired_sessions(paired_labels(devs=("huawei", "handy2", "handy3")))
+        self.assertEqual(sorted(three), [("handy2", b) for b in (1, 2, 3)] + [("handy3", b) for b in (1, 2, 3)])
+        self.assertEqual(set(three.values()), {"huawei"})
+
+    def test_eigene_sitzung_wird_nicht_gepaart(self):
+        self.assertEqual(R.paired_sessions(labels()), {})
+        self.assertEqual(R.paired_sessions([]), {})
+
+    def test_assert_bricht_bei_gepaartem_label_ab(self):
+        lab = paired_labels()
+        leak = [lb for lb in lab if lb["dev"] == "handy2" and lb["block"] == 2]
+        with self.assertRaises(SystemExit): V.assert_eval_only(leak, "eval", lab)
+        with self.assertRaises(SystemExit): V.assert_eval_only(leak + [lb for lb in lab if lb["dev"] == "huawei"], "eval")   # ohne ref: Paarung in den Labels selbst
+        V.assert_eval_only([lb for lb in lab if lb["block"] >= 4], "eval", lab)
+        V.assert_eval_only(leak, "all", lab)
 
     def test_pruefung_bricht_bei_trainingslabel_ab(self):
         with self.assertRaises(SystemExit):

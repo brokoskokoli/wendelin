@@ -63,6 +63,44 @@ def is_train_block(speakers, k, block):
     return tb is None or block in tb
 
 
+SESSION_TOL = 0.2                # s: Streuung des Geraeteversatzes zwischen zwei Aufnahmen derselben Sitzung
+SESSION_MIN = 3                  # mindestens so viele Rufe mit gemeinsamem Versatz
+
+
+def _call(r):
+    """(geraet, block, runde, wort, start) aus einer Zeile im Format von labels.csv (geraet/wort/runde) oder words_measure.read_labels (dev/word/round)."""
+    return (r["geraet"] if "geraet" in r else r["dev"], int(r["block"]), int(r["runde"] if "runde" in r else r["round"]),
+            r["wort"] if "wort" in r else r["word"], float(r["start"]))
+
+
+def paired_sessions(rows, speakers=None):
+    """Pruef-Aufnahmen (geraet, block), die dieselbe Sitzung wie eine Trainingsaufnahme sind: zwei Geraete haben dieselben gesprochenen Rufe
+    gleichzeitig aufgenommen (gleicher Block, Runde, Wort; Start bis auf einen festen Geraeteversatz gleich). Erkannt wird das nur ueber die Labels:
+    Die Aufnahme (geraet, block) zaehlt als gepaart, wenn mindestens SESSION_MIN Rufe und mehr als die Haelfte ihrer Labels zu Trainings-Rufen mit
+    EINEM gemeinsamen Versatz (Toleranz SESSION_TOL) passen. Ein weiteres Geraet derselben Sitzung wird so automatisch erfasst.
+    rows: alle Labels (beide Formate, auch Nicht-Trainings-Woerter). -> {(geraet, block): Trainings-Geraet}. Ganze Aufnahme, nicht nur einzelne Rufe (fail-closed)."""
+    sp = {TRAIN_DEVICE: TRAIN_BLOCKS} if speakers is None else speakers
+    calls = []
+    for r in rows:
+        try: calls.append(_call(r))
+        except (KeyError, ValueError, TypeError): continue          # unlesbare Zeile kann nichts paaren (Trainingsbloecke prueft assert_eval_only getrennt)
+    train = {}
+    groups = {}
+    for dev, b, rd, w, st in calls:
+        if is_train_block(sp, dev, b): train.setdefault((b, rd, w), []).append((dev, st))
+        else: groups.setdefault((dev, b), []).append((b, rd, w, st))
+    out = {}
+    for g, items in groups.items():
+        diffs = [[(st - ts, td) for td, ts in train.get((b, rd, w), [])] for b, rd, w, st in items]
+        best = (0, None)
+        for cand in sorted({round(d, 3) for ds in diffs for d, _ in ds}):
+            hit = [next((td for d, td in ds if abs(d - cand) <= SESSION_TOL), None) for ds in diffs]
+            n = sum(h is not None for h in hit)
+            if n > best[0]: best = (n, next(h for h in hit if h is not None))
+        if best[0] >= SESSION_MIN and 2 * best[0] > len(items): out[g] = best[1]
+    return out
+
+
 def speaker_source(speakers, k):
     """Audioquelle (relativ zu fix) eines Sprechers mit Trainingsbloecken; Pruef-Sprecher haben keinen Pfad."""
     if k == TRAIN_DEVICE: return source_for(k)

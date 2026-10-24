@@ -22,6 +22,7 @@ import argparse, csv, glob, json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import numpy as np
+import real_split as R
 
 SR = 16000
 CHUNK = 1280
@@ -127,6 +128,12 @@ def is_train_row(r):
                 and r["status"] in ("ok", "unsicher") and 0 < float(r["ende"]) - float(r["start"]) <= 2.0)
     except (KeyError, ValueError, TypeError):
         return False
+
+
+def pruef_rows(labels):
+    """Pruefclips: is_eval_row ohne Aufnahmen, die dieselbe Sitzung wie eine Trainingsaufnahme sind (real_split.paired_sessions, z. B. zweites Handy Block 1 bis 3)."""
+    pairs = R.paired_sessions(labels)
+    return [r for r in labels if is_eval_row(r) and (r["geraet"], int(r["block"])) not in pairs]
 
 
 def is_eval_row(r):
@@ -367,7 +374,7 @@ def grid_for(variant):
 def measure(chain, cache, srcs, x_huawei, labels, target, log):
     """Alle Varianten -> Liste von Ergebnis-Dictionaries."""
     train_rows = [r for r in labels if is_train_row(r)]
-    eval_rows = [r for r in labels if is_eval_row(r)]
+    eval_rows = pruef_rows(labels)
     assert not any(is_train_row(r) for r in eval_rows), "Einlern-Clip im Pruef-Split"
     assert all(r["geraet"] == TRAIN_DEVICE and int(r["block"]) in TRAIN_BLOCKS for r in train_rows)
     log(f"Vorlagen-Clips: {len(train_rows)}, Pruef-Labels: {len(eval_rows)}")

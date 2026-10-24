@@ -222,7 +222,7 @@ def load_texts(d):
 
 # ---------- Ausschnitte ----------
 def segment(x, te, pre=PRE, tail=TAIL):
-    """Ausschnitt [e - pre, e + tail] zur Entscheidungszeit te (Raster 10 ms wie seg_key), ausserhalb des Signals mit Nullen aufgefuellt (feste Laenge)."""
+    """Ausschnitt [e - pre, e + tail] um das Spitzenfenster der App-Regel te (Raster 10 ms wie seg_key), ausserhalb des Signals mit Nullen aufgefuellt (feste Laenge)."""
     e = int(round(te * SR / 160)) * 160
     a, b = e - int(round(pre * SR)), e + int(round(tail * SR))
     out = np.zeros(b - a, "float32")
