@@ -219,7 +219,7 @@ class Arbeitspunkt(unittest.TestCase):
     def test_zeilen_je_variante(self):
         hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 1.0, "fleurs": 1.0, "conf": 0.1}
         ev = {s: {i: W.score_events(t, v, 0.9) for i, (t, v) in d.items()} for s, d in self.curves.items()}
-        lab = [lb for lb in labels_huawei()] + [dict(lb, dev="handy2") for lb in labels_huawei()]
+        lab = [lb for lb in labels_huawei()] + [dict(lb, dev="handy2") for lb in labels_huawei()] + [dict(labels_huawei()[0], block=1)]   # paired_sessions braucht Trainingszeilen
         rows = A.variant_rows("m", "Wendelin", 0.9, "app", self.tx["s2"], ev, self.curves, hr, V.filter_labels(lab))
         h = next(r for r in rows if r["dev"] == "huawei")
         self.assertEqual((h["stage2"], h["n"], h["hit"]), ("app", 3, 1))        # nur Block 4 besteht Stufe 2
@@ -428,6 +428,30 @@ class SplitAll(unittest.TestCase):
         try: A.analyse({"m": "x"}, {"m": None}, self._labels(), [], 2.0, split)
         finally: V.cv_cell, V.events_at, A.load_tx, A.lost_calls, A.filtered_events = o
         return seen, folds
+
+    def _rows(self, blocks):
+        """Messzeilen (eine scharfe Konfiguration) mit Pruef-Labels nur in den angegebenen Bloecken, je Geraet."""
+        def row(dev, bl):
+            d = {"dev": dev, "word": "Wendelin", "prog": "m", "thr": "0.9", "stage2": "-", "ord": 0.9, "fa_real": 0, "h_real": 1.0}
+            for b in range(1, 7): d[f"hit_b{b}"] = 3 if b in bl else 0; d[f"n_b{b}"] = 5 if b in bl else 0
+            return d
+        return [row(dev, bl) for dev, bl in blocks.items()]
+
+    def test_analyse_folds_passen_zu_cv_cell_bei_gepaarter_sitzung(self):
+        """handy2 Block 1 bis 3 ohne Pruef-Labels (gepaarte Sitzung): lost_calls bekommt dieselben 3 Folds (Block 4 bis 6) wie cv_cell,
+        sonst paart zip die Schwellen von Block 4 bis 6 mit Block 1 bis 3."""
+        got = {}
+        o = (V.events_at, A.load_tx, A.lost_calls, A.filtered_events)
+        def lost(dev, w, thrs, fl, *a): got[dev] = (list(thrs), list(fl)); return 0, []
+        V.events_at, A.load_tx, A.lost_calls, A.filtered_events = (lambda c, t: {}), (lambda t: {}), lost, (lambda *a: {})
+        try: A.analyse({"m": "x"}, {"m": None}, [], self._rows({"huawei": (4, 5, 6), "handy2": (4, 5, 6)}), 2.0, "eval")
+        finally: V.events_at, A.load_tx, A.lost_calls, A.filtered_events = o
+        self.assertEqual([t for _, t in got["huawei"][1]], [(4,), (5,), (6,)]); self.assertEqual([t for _, t in got["handy2"][1]], [(4,), (5,), (6,)])
+        self.assertEqual(len(got["handy2"][0]), 3)
+
+    def test_lost_calls_bricht_bei_ungleicher_laenge_ab(self):
+        with self.assertRaises(ValueError):
+            A.lost_calls("huawei", "Wendelin", [0.9] * 3, [((5, 6), (4,))], {}, {}, [], {})
 
     def test_analyse_all_nutzt_sechs_folds(self):
         seen, folds = self._patched("all")

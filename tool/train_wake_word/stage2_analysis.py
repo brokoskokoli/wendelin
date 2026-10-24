@@ -328,6 +328,7 @@ def lost_calls(dev, word, thrs, folds, curves, tx, labels, evs):
     """Je Fold: Stufe-1-Treffer auf den Test-Bloecken und davon die von hw2 (App-Regel) verworfenen.
     -> (Zahl Stufe-1-Treffer, [{"block", "thr", "texts", "cat", "rec": {Variante: bool|None}}])
     Verworfen = Stufe 1 trifft im Labelfenster, aber kein Ereignis im Fenster besteht die App-Regel. Fehlt ein Text: KeyError."""
+    if len(thrs) != len(folds): raise ValueError(f"lost_calls: {len(thrs)} Schwellen, aber {len(folds)} Folds")
     n1, lost = 0, []
     src = f"pos_{dev}"
     key = lambda t: W.seg_key(src, src, t)
@@ -390,9 +391,11 @@ def analyse(models, curves, labels, rows, target, split="eval"):
                     c = V.cv_cell(rows, dev, w, tag, ("-", "app"), "real", target, split)
                 if c is None or c[2] is None: continue
                 thrs = op_thresholds(tag, c[2])
+                folds = V.cell_folds(rows, dev, w, tag, split)
+                if len(thrs) != len(folds): raise SystemExit(f"{tag}/{dev}/{w}: {len(thrs)} Schwellen, aber {len(folds)} Folds")
                 evs = {t: V.events_at(curves[tag], t) for t in set(thrs)}
                 try:
-                    n1, lost = lost_calls(dev, w, thrs, V.folds_for(dev, split), curves[tag], tw, labels, evs)
+                    n1, lost = lost_calls(dev, w, thrs, folds, curves[tag], tw, labels, evs)
                     filt = {t: filtered_events(dev, w, t, curves[tag], tw, evs) for t in sorted(set(thrs))}
                 except KeyError as e:
                     print(f"Stufe-2-Text fehlt fuer {tag}/{dev}/{w}: {e}", flush=True)

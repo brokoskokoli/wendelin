@@ -2,8 +2,8 @@
 """WP130: echte Positive (Wendelin / Hey Wendelin) fuer das Training, fest verdrahteter Split.
 
 Training: NUR Geraet huawei, Bloecke 1 bis 3, Woerter Wendelin und Hey Wendelin, Status ungleich fehler (unsichere nur bis
-MAX_S Sekunden). Pruefung (nie im Training): huawei Block 4 bis 6, das gesamte zweite Geraet, alle Negativ-Aufnahmen
-(raw-neg), alle anderen Woerter. Die Audioquelle ist fest die huawei-Aufnahme; fuer andere Geraete gibt es keinen Pfad.
+MAX_S Sekunden). Pruefung (nie im Training): huawei Block 4 bis 6, das zweite Geraet Block 4 bis 6 (Block 1 bis 3 sind dieselbe Sitzung wie das
+Training und fallen heraus, siehe paired_sessions), alle Negativ-Aufnahmen (raw-neg), alle anderen Woerter. Die Audioquelle ist fest die huawei-Aufnahme; fuer andere Geraete gibt es keinen Pfad.
 
   python real_split.py cut --fix <ordner-mit-labels/ und raw/> --work <arbeitsordner> --out <clip-ordner> [--speakers <speakers.csv>]
 
@@ -78,12 +78,16 @@ def paired_sessions(rows, speakers=None):
     gleichzeitig aufgenommen (gleicher Block, Runde, Wort; Start bis auf einen festen Geraeteversatz gleich). Erkannt wird das nur ueber die Labels:
     Die Aufnahme (geraet, block) zaehlt als gepaart, wenn mindestens SESSION_MIN Rufe und mehr als die Haelfte ihrer Labels zu Trainings-Rufen mit
     EINEM gemeinsamen Versatz (Toleranz SESSION_TOL) passen. Ein weiteres Geraet derselben Sitzung wird so automatisch erfasst.
-    rows: alle Labels (beide Formate, auch Nicht-Trainings-Woerter). -> {(geraet, block): Trainings-Geraet}. Ganze Aufnahme, nicht nur einzelne Rufe (fail-closed)."""
+    rows: ALLE Labels (beide Formate, auch Nicht-Trainings-Woerter und die Trainingszeilen). -> {(geraet, block): Trainings-Geraet}. Ganze Aufnahme, nicht
+    nur einzelne Rufe (fail-closed). Fail-closed auch bei unvollstaendiger Eingabe: Sind Labels da, aber keine einzige Trainingszeile, bricht die Funktion
+    mit SystemExit ab (die Regel koennte sonst nichts paaren und liesse still alles durch); die Labels werden nicht intern nachgeladen, damit die Funktion rein bleibt."""
     sp = {TRAIN_DEVICE: TRAIN_BLOCKS} if speakers is None else speakers
     calls = []
     for r in rows:
         try: calls.append(_call(r))
         except (KeyError, ValueError, TypeError): continue          # unlesbare Zeile kann nichts paaren (Trainingsbloecke prueft assert_eval_only getrennt)
+    if calls and not any(is_train_block(sp, c[0], c[1]) for c in calls):
+        raise SystemExit("paired_sessions: keine Trainings-Labels in der Eingabe (alle Labels uebergeben, nicht nur Pruef-Labels); Paarung nicht moeglich")
     train = {}
     groups = {}
     for dev, b, rd, w, st in calls:
