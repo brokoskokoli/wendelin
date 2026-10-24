@@ -46,7 +46,21 @@ class Export(unittest.TestCase):
         for h in ("W", "HW"): self.assertEqual(sorted(len(t) for t in f25["templates"][h]), sorted(set(len(t) for t in f25["templates"][h])))
         self.assertGreater(max(f25["expected"]["W"]), 0.3); self.assertGreater(max(f25["expected"]["HW"]), 0.3)     # Treffer erkennbar
         self.assertEqual(par["cases"][-1]["expected"]["W"], [-1.0, -1.0])                                          # keine brauchbare Vorlage
-        self.assertLess(os.path.getsize(PAR_PATH), 200_000)
+        self.assertLess(os.path.getsize(PAR_PATH), 300_000)
+
+    def test_top3_aus_mehr_als_3_vorlagen(self):
+        """Fall mit 6 (W) und 5 (HW) Vorlagen: Kopfwert = Mittel der 3 besten Vorlagenwerte, deutlich verschieden von den schlechtesten 3 und vom Mittel aller."""
+        par, mu = load(PAR_PATH), np.array(load(MU_PATH)["mu"], "float32")
+        c = {c["name"]: c for c in par["cases"]}["top3_aus_6_vorlagen"]
+        q = np.array(c["queries"], "float32")
+        self.assertEqual((len(c["templates"]["W"]), len(c["templates"]["HW"])), (6, 5))
+        for h, tl in c["templates"].items():
+            tm = E.prep_templates([np.array(x, "float32") for x in tl], mu)
+            per = np.array([float(E.b_score(q[:1], [t], mu, topk=1)[0]) for t in tm])          # Wert je Vorlage (Anfrage 0)
+            srt = np.sort(per)[::-1]
+            self.assertGreater(srt[2] - srt[3], 0.02); self.assertGreater(srt[0] - srt[5 if h == "W" else 4], 0.3)   # klar verschieden, Rang 3/4 trennt
+            self.assertAlmostEqual(c["expected"][h][0], float(srt[:3].mean()), delta=2e-6)
+            self.assertGreater(c["expected"][h][0] - float(srt[-3:].mean()), 0.1); self.assertGreater(c["expected"][h][0] - float(per.mean()), 0.02)
 
     def test_mu_json(self):
         j = load(MU_PATH)
@@ -119,6 +133,18 @@ class PcmZuschnitt(unittest.TestCase):
         self.assertGreater(n["normal"]["trim_lo"], 0); self.assertEqual(n["trim_greift_nicht"]["trim_lo"], 0)
         self.assertIsNone(n["zu_kurz"]["m"]); self.assertEqual(n["normal"]["peak_out"], 0.5)
 
+    def test_annahme_durch_cut_clips_getrennt_von_vorlage(self):
+        n = {c["name"]: c for c in self.pcm["template"]}
+        self.assertNotIn("accepted", n["normal"])
+        z = n["zu_kurz"]; self.assertEqual(z["clip_len"], 4800)
+        self.assertTrue(z["accepted_by_cut_clips"]); self.assertFalse(z["usable_as_template"])                 # cut_clips nimmt, Vorlage nicht
+        for name, ln, m, ok in (("grenze_13919", 13919, 1, False), ("grenze_13920", 13920, 2, True)):
+            c = n[name]
+            self.assertEqual((c["clip_len"], c["m"], c["usable_as_template"], c["accepted_by_cut_clips"]), (ln, m, ok, True))
+        self.assertTrue(n["normal"]["usable_as_template"]); self.assertTrue(all(c["accepted_by_cut_clips"] for c in n.values()))
+        self.assertEqual(X.MAX_TEMPLATE_SAMPLES, 35200)
+        self.assertTrue(all(c["clip_len"] <= X.MAX_TEMPLATE_SAMPLES for c in n.values()))
+
     def test_frames_formel(self):
         for r in self.pcm["oww_frames_checked"]: self.assertEqual(X.oww_frames(r["samples"]), r["F"])
         self.assertEqual(X.oww_frames(44000), 25); self.assertIsNone(X.oww_frames(12000))
@@ -157,6 +183,13 @@ class Kettenfall(unittest.TestCase):
             np.testing.assert_allclose(got["template_scores"], v["template_scores"], atol=2e-6)
             self.assertAlmostEqual(got["head_score"], v["head_score"], delta=2e-6)
         self.assertLess(j["heads"]["W"]["template_scores"][1], 0.9)       # nicht alle Vorlagen gleich gut: Fehler im Pfad faellt auf
+
+    def test_kettenfall_hat_mehr_als_3_vorlagen_und_top3(self):
+        w = self.j["heads"]["W"]; sc = w["template_scores"]
+        self.assertGreaterEqual(len(sc), 5); self.assertEqual(len(w["templates"]), len(sc))
+        top = sorted(sc)[::-1]
+        self.assertAlmostEqual(w["head_score"], sum(top[:3]) / 3, delta=2e-6)
+        self.assertGreater(w["head_score"] - sum(top[-3:]) / 3, 0.05); self.assertGreater(top[2] - top[3], 0.01)
 
     @unittest.skipUnless(HAVE_OWW, "lokale oww-Modelle fehlen")
     def test_datei_reproduziert_mit_echtem_oww(self):

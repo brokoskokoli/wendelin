@@ -71,6 +71,13 @@ class Vorlagen(unittest.TestCase):
         st = E.build_templates(clips, embed, np.zeros(96, "float32"))
         self.assertEqual({w for w, _, _ in st.items}, {"bare", "hey"})
 
+    def test_build_templates_verwirft_vorlagen_unter_2_frames(self):
+        embed = lambda x: np.ones((len(x) // 100, 96), "float32")                      # 1 Frame bei 100 Samples, 2 bei 200
+        clips = {"huawei_b1_r01_hey_000101.wav": np.ones(100, "float32"), "huawei_b1_r02_hey_000102.wav": np.ones(200, "float32"),
+                 "huawei_b2_r01_bare_000201.wav": np.ones(100, "float32"), "huawei_b2_r02_bare_000202.wav": np.ones(200, "float32")}
+        st = E.build_templates(clips, embed, np.zeros(96, "float32"))
+        self.assertEqual(sorted((w, len(e)) for w, _, e in st.items), [("bare", 2), ("hey", 2)])        # die Vorlagen mit 1 Frame fehlen
+
     def test_mu_nur_aus_negativen(self):
         ex = D.Examples.concat([D.Examples(**D.make_rows(np.full((2, 25, 96), 10.0), [0.99] * 2, K["pos_syn"], "hey", [0, 1])),
                                 D.Examples(**D.make_rows(np.full((2, 25, 96), 2.0), [0.99] * 2, K["conf"], None, [0, 1]))])

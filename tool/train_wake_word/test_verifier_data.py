@@ -268,12 +268,13 @@ class Ausschnitt(unittest.TestCase):
         t = 10 + 0.08 * np.arange(5)
         v = np.array([0.1, 0.985, 0.996, 0.5, 0.1], "float32")
         ev = D.stream_events(lambda x: (t, v), None, 0.98)
-        self.assertEqual([(round(a - 10, 2), round(p, 3)) for a, p in ev], [(0.24, 0.996)])      # Abfall-Fenster entscheidet mit Spitze (Obergrenze 0,999)
+        self.assertEqual([(round(a - 10, 2), round(p, 3)) for a, p in ev], [(0.16, 0.996)])      # WP141: Halten bis 0,8 s (Strom endet: flush), Zeit = Spitzenfenster (nicht das Entscheidungsfenster)
 
     @staticmethod
     def _rampe():
-        """Kurve, bei der die Untergrenze die Entscheidung aendert: mit 0,9 faellt sie bei (0,32 s; 0,96), mit 0,98 bei (0,72 s; 0,998)."""
-        v = np.array([0.1, 0.92, 0.93, 0.95, 0.96, 0.985, 0.99, 0.995, 0.997, 0.998, 0.1, 0.1], "float32")
+        """Kurve, bei der die Untergrenze die Entscheidung aendert (WP141, Halten 0,8 s ab dem ersten Fenster im Band): mit 0,9 faellt sie auf die
+        Spitze 0,96 (0,40 s), mit 0,98 auf die Spitze 0,998, weil das Halten erst bei 0,985 beginnt und die spaeten Fenster noch erfasst."""
+        v = np.array([0.1, 0.92, 0.93, 0.94, 0.95, 0.96, 0.95, 0.94, 0.93, 0.92, 0.93, 0.94, 0.985, 0.99, 0.998, 0.995, 0.1, 0.1], "float32")
         return 0.08 * np.arange(len(v)) + 10, v
 
     def test_training_und_pruefung_gleich_ausgerichtet(self):
@@ -291,8 +292,8 @@ class Ausschnitt(unittest.TestCase):
         ex = D.extra_events(lambda x: (t, v), None, 0.9)
         self.assertEqual([(round(a - 10, 2), round(p, 2)) for a, p in ex], [(0.4, 0.95)])                  # an der eigenen Ueberschreitung von 0,9 ausgerichtet
         self.assertEqual(D.stream_events(lambda x: (t, v), None), [])                                       # kein Bandereignis
-        t, v = self._rampe()
-        self.assertEqual(D.extra_events(lambda x: (t, v), None, 0.9), [])                                   # Spitze 0,985 liegt im Band: kein Zusatz-Negativ
+        v = np.array([0.1, 0.92, 0.93, 0.95, 0.96, 0.985, 0.99, 0.995, 0.997, 0.998, 0.1, 0.1], "float32"); t = 0.08 * np.arange(len(v)) + 10
+        self.assertEqual(D.extra_events(lambda x: (t, v), None, 0.9), [])                                   # Spitze liegt im Band (Halten ab 0,92 erfasst sie): kein Zusatz-Negativ
         v = np.array([0.1, 0.91, 0.92, 0.93, 0.94, 0.95, 0.1, 0.1], "float32"); t = 0.08 * np.arange(len(v)) + 10
         for off in (0, None, 0.98, 0.99): self.assertEqual(D.extra_events(lambda x: (t, v), None, off), [])    # abgeschaltet
         self.assertIn("extra", D.KIND); self.assertIn(D.KIND["extra"], D.NEG_KINDS)
@@ -392,7 +393,7 @@ class Erzeugen(unittest.TestCase):
         for i in range(6): wav(f"{c}/gen/neg_v8/n{i}.wav", n=3 * SR, v=0.1, seed=i)
         for r in ("train", "dev"):
             for i in range(3): wav(f"{c}/gen/real/{r}/f{i}.wav", n=3 * SR, seed=10 + i)
-        ramp = np.array([0.1, 0.91, 0.92, 0.93, 0.94, 0.95] + [0.1] * 5 + [0.99, 0.995, 0.997, 0.998, 0.998] + [0.1] * 40, "float32")    # erst Spitze 0,95, dann im Band
+        ramp = np.array([0.1, 0.91, 0.92, 0.93, 0.94, 0.95] + [0.1] * 10 + [0.99, 0.995, 0.997, 0.998, 0.998] + [0.1] * 40, "float32")    # erst Spitze 0,95, dann im Band
 
         class Fake:
             def curve(self, x):

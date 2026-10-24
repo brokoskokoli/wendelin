@@ -41,7 +41,7 @@ def _lst(a): return np.round(np.asarray(a, "float64"), DECIMALS).tolist()      #
 
 def parity(mu, meta, seed=SEED):
     """4 Ausschnitte (F=25) und 3 Vorlagen je Kopf (m=2..6), dazu ein kurzer Ausschnitt (F=4), bei dem lange Vorlagen ignoriert werden,
-    und ein Kopf nur mit zu langen Vorlagen (Wert -1). Alles synthetisch (Rauschen um mu, eine Vorlage eingebettet)."""
+    ein Fall mit 6 (W) bzw. 5 (HW) Vorlagen und klar verschiedenen Werten (Top-3-Auswahl) und ein Kopf nur mit zu langen Vorlagen (Wert -1). Alles synthetisch (Rauschen um mu, eine Vorlage eingebettet)."""
     rng = np.random.default_rng(seed)
     mu = np.asarray(mu, "float32")
     scale = 8.0
@@ -53,9 +53,17 @@ def parity(mu, meta, seed=SEED):
     q25[0, 6:10] = _r(heads["W"][1] + rng.standard_normal((4, DIMS)) * 1.0)      # Treffer W mit Versatz
     q25[1, 12:17] = _r(heads["HW"][1] + rng.standard_normal((5, DIMS)) * 1.0)    # Treffer HW
     q4 = rnd(2, 4, DIMS)
+    # Top-3 aus 6 Vorlagen mit deutlich unterschiedlichen Werten (neu gezogen nach den bisherigen Fallen, damit diese unveraendert bleiben):
+    # t0..t3 sind mit wachsendem Rauschen (1, 4, 8, 14) in Anfrage 0 eingebettet, t4 und t5 sind Zufall -> Wert je Vorlage faellt von t0 bis t5
+    t6 = [rnd(4, DIMS) for _ in range(6)]
+    q6 = rnd(2, 25, DIMS)
+    for k, (pos, noise) in enumerate(((2, 1.0), (8, 4.0), (14, 8.0), (20, 14.0))):
+        q6[0, pos:pos + 4] = _r(t6[k] + rng.standard_normal((4, DIMS)) * noise)
+    heads6 = {"W": t6, "HW": [t6[5], t6[3], t6[1], t6[0], t6[2]]}          # HW: 5 Vorlagen in anderer Reihenfolge (die Auswahl haengt nicht von der Reihenfolge ab)
     cases = [
         {"name": "f25", "queries": q25, "heads": heads},
         {"name": "f4_lange_vorlagen_ignoriert", "queries": q4, "heads": heads},
+        {"name": "top3_aus_6_vorlagen", "queries": q6, "heads": heads6},
         {"name": "nur_zu_lange_vorlagen", "queries": q4, "heads": {"W": [rnd(5, DIMS), rnd(6, DIMS)]}},
     ]
     out = []
@@ -77,6 +85,8 @@ def parity(mu, meta, seed=SEED):
 # ---------- PCM-Zuschnitt (ohne Embeddings): sample-genaue Grenzen und Frame-Anzahl ----------
 SR = D.SR
 HOP = 160                                   # 10 ms
+MIN_TEMPLATE_FRAMES = 2                     # verifier_eval.build_templates: len(e) >= 2
+MAX_TEMPLATE_SAMPLES = int(2.2 * 16000)     # 35200: phase_fit laedt die Vorlagen-Clips mit load_wavs(.., 2.2) und verwirft laengere vor pick_templates
 WIN_MEL, STRIDE_MEL, MEL_LAG = 76, 8, 3     # Embedding-Fenster in Melspec-Frames, Schritt, Melspec-Frames = n//160 - 3 (an oww gemessen)
 # an echtem oww (Melspec+Embedding, Python-Kette CM.embed) gemessene Paare (Samples -> F), Teil der Paritaet
 OWW_CHECKED = [(16000, 3), (16480, 4), (17760, 5), (19040, 6), (24000, 9), (32000, 16), (40000, 22), (44000, 25), (44160, 25)]
@@ -146,27 +156,30 @@ def template_cut(n, start, end, bg=0.001):
     c = ref[0][1] if ref else None
     res = {"signal": {"len": n, "sr": SR, "formula": "x[i] = ((i*37 % 2001) - 1000) / 2000 * (0.4 im Wort [int(start*SR), int(ende*SR)), sonst bg)", "bg": bg},
            "start_s": start, "end_s": end, "label_a": a, "label_b": b, "trim_lo": lo, "trim_hi": hi,
-           "clip_a": a + lo, "clip_b": a + hi, "clip_len": hi - lo, "accepted": c is not None and len(c) >= SR // 4}
+           "clip_a": a + lo, "clip_b": a + hi, "clip_len": hi - lo, "accepted_by_cut_clips": c is not None and len(c) >= SR // 4}
     if c is not None:
         assert len(c) == hi - lo
         res["peak_in"] = round(float(np.abs(c).max()), 6); res["peak_out"] = round(float(np.abs(D.normalize(c)).max()), 6)
         k = len(c) // HOP
         res["used_samples"] = k * HOP
         res["m"] = oww_frames(len(c))                      # None: Python wirft (< 76 Melspec-Frames); App lehnt die Vorlage ab; m < 2 wird verworfen
+    # Vorlage nur, wenn die oww-Kette mindestens MIN_TEMPLATE_FRAMES Frames liefert (verifier_eval.build_templates: len(e) >= 2); accepted_by_cut_clips allein reicht nicht
+    res["usable_as_template"] = res.get("m") is not None and res["m"] >= MIN_TEMPLATE_FRAMES
     return res
 
 
 def template_cases():
     out = []
     for name, start, end, bg in (("normal", 1.0, 1.9, 0.001), ("rundung_start", 1.13, 2.03, 0.001), ("rundung_ende", 0.23, 1.13, 0.001),
-                                 ("rand_anfang", 0.05, 0.95, 0.001), ("trim_greift_nicht", 1.0, 1.9, 0.4), ("zu_kurz", 1.0, 1.2, 0.001)):
+                                 ("rand_anfang", 0.05, 0.95, 0.001), ("trim_greift_nicht", 1.0, 1.9, 0.4), ("zu_kurz", 1.0, 1.2, 0.001),
+                                 ("grenze_13919", 1.13, 1.679875, 0.4), ("grenze_13920", 1.0, 1.55, 0.4)):
         out.append({"name": name, **template_cut(48000, start, end, bg)})
     return out
 
 
 def pcm_cases():
     return {"rule": {"segment": "e = pythonRound(end/160)*160 (Halbe -> gerade Zahl); a = e - 30400; b = e + 13600; Rand mit Nullen; Spitze auf 0,5 (nur wenn max > 1e-6)",
-                     "template": "a = trunc((start - 0.12)*16000), b = trunc((ende + 0.20)*16000) in double, begrenzt auf [0, len]; trim -40 dB (160er Frames, Rand 800); Annahme, wenn die oww-Kette mindestens 2 Embedding-Frames liefert (Clip ab 13920 Samples = 0,87 s; verifier_eval.build_templates len(e) >= 2; real_split.cut_clips selbst nimmt ab 4000 Samples, Vorlagen darunter kommen nie in den Pruefer)",
+                     "template": "a = trunc((start - 0.12)*16000), b = trunc((ende + 0.20)*16000) in double, begrenzt auf [0, len]; trim -40 dB (160er Frames, Rand 800); accepted_by_cut_clips = Clip >= 4000 Samples (nur real_split.cut_clips); usable_as_template = oww-Kette liefert mindestens 2 Embedding-Frames (Clip ab 13920 Samples = 0,87 s; verifier_eval.build_templates len(e) >= 2): nur das ist die Annahme als Vorlage; Hoechstlaenge 35200 Samples (2,2 s, phase_fit/load_wavs verwirft laengere vor der Auswahl); normalize rechnet float32 (x * f32(0.5/max)); float -> int16 vor der Melspec: trunc(x*32767), nicht gerundet",
                      "frames": "k = n//160; M = k - 3; F = (M - 76)//8 + 1; M < 76: ungueltig"},
             "oww_frames_checked": [{"samples": n, "F": f} for n, f in OWW_CHECKED],
             "live": live_cases(), "template": template_cases()}
@@ -174,15 +187,15 @@ def pcm_cases():
 
 # ---------- Kettenfall: Signal -> Zuschnitt -> normalize -> echte oww-Embeddings -> Kopfwerte ----------
 CHAIN_LIVE_N, CHAIN_LIVE_END = 64000, 40000                       # 4 s, Entscheidungsende 2,5 s -> Ausschnitt 44000 Samples, F = 25
-CHAIN_ENROLL_N = 96000                                             # Einlern-Signal 6 s
-CHAIN_WORDS = ((0.5, 1.4, 37), (2.2, 3.2, 53), (4.0, 4.9, 71))      # Start/Ende (s) und Schrittweite der 3 Vorlagen-Clips
+CHAIN_ENROLL_N = 144000                                            # Einlern-Signal 9 s
+CHAIN_WORDS = ((0.5, 1.4, 37), (2.2, 3.2, 53), (4.0, 4.9, 71), (5.5, 6.5, 89), (7.2, 8.2, 101))      # Start/Ende (s) und Schrittweite der 5 Vorlagen-Clips
 CHAIN_BG = 0.001
-CHAIN_HEADS = {"W": [0, 1, 2], "HW": [1, 2]}                       # Vorlagen je Kopf (Index in CHAIN_WORDS): getrennt, HW nutzt nur 2 Vorlagen (Top-k mit weniger als k)
+CHAIN_HEADS = {"W": [0, 1, 2, 3, 4], "HW": [1, 2]}                 # Vorlagen je Kopf (Index in CHAIN_WORDS): W 5 Vorlagen (Top-3 aus mehr als 3), HW nur 2 (Top-k mit weniger als k)
 CHAIN_TOL = {"embeddings": 1e-3, "scores": 1e-4}
 CHAIN_FORMULA = ("Live: x[i] = 0.4 * ((i*37 % 2001) - 1000) / 2000, i < 64000; Ausschnitt verifier_data.segment(x, 40000/16000), normalize (Spitze 0,5), "
-                 "Embeddings F x 96. Einlernen: y[i] = ((i*k % 2001) - 1000) / 2000 * (0.4 im Wort [int(start*16000), int(ende*16000)) mit Schritt k = 37, 53, 71 je Wort, sonst 0.001 mit k = 37), i < 96000; "
+                 "Embeddings F x 96. Einlernen: y[i] = ((i*k % 2001) - 1000) / 2000 * (0.4 im Wort [int(start*16000), int(ende*16000)) mit Schritt k = 37, 53, 71, 89, 101 je Wort, sonst 0.001 mit k = 37), i < 144000; "
                  "Clips real_split.cut_clips (a = int((start - 0.12)*16000), b = int((ende + 0.20)*16000), trim -40 dB), normalize, Embeddings m x 96. "
-                 "Embeddings: openWakeWord-Kette (Melspec + Embedding, Vielfache von 160 Samples, int16), Werte auf 6 Stellen")
+                 "Embeddings: openWakeWord-Kette (Melspec + Embedding, Vielfache von 160 Samples, int16 = trunc(x*32767) nach normalize, abgeschnitten nicht gerundet), Werte auf 6 Stellen")
 
 
 def chain_enroll_signal(n=CHAIN_ENROLL_N, words=CHAIN_WORDS, bg=CHAIN_BG):

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """WP137 Teil 2: Daten fuer den wortspezifischen Pruefer (Stufe 2 nach Stufe 1, nur im Band 0,98 bis 0,999).
 
-Ausschnitte (Training wie Pruefung) werden am Entscheidungsfenster der App (Halten, stage2_cut.app_events) um `pre` s vor und `tail` s nach
-dem Entscheidungszeitpunkt geschnitten, auf Spitze 0,5 normalisiert und mit denselben openWakeWord-Modellen wie Stufe 1 in Embeddings (F x 96) gewandelt.
+Ausschnitte (Training wie Pruefung) werden am Ereigniszeitpunkt der App-Logik (stage2_cut.app_events) um `pre` s vor und `tail` s nach
+diesem Zeitpunkt geschnitten, auf Spitze 0,5 normalisiert und mit denselben openWakeWord-Modellen wie Stufe 1 in Embeddings (F x 96) gewandelt.
 
 Phasen (jede mit --probe: wenig Daten, eigener Ordner <VER>/probe, Minuten; Cache sonst unter <VER> = $K/wp137/verifier, nie im Repo):
   gen       Piper-Clips mit Text-Sidecar (Positive mit Wortart, Verwechsler NUR aus Trainings-Texten, nur Stimmen des Stimmensets clean)
@@ -12,7 +12,12 @@ Phasen (jede mit --probe: wenig Daten, eigener Ordner <VER>/probe, Minuten; Cach
 Verwechsler-Texte: fester Hash-Split der conf_v8-Basistexte (sha1 des normalisierten Basistexts mod 10 < 7 = Training, sonst Test). Der Pruefer
 sieht nie Test-Texte; die Verwechsler-Zahl des Vergleichs kommt aus den Pruef-Verwechslern (macOS-say, v8_measure.conf_say) mit Test-Texten
 (und getrennt mit Trainings-Texten, zeigt Ueberanpassung). Die schon vorhandenen conf_v8-Clips haben keinen Text im Dateinamen; deshalb erzeugt `gen`
-eigene Clips mit Sidecar (verwendet werden nur diese). Selbsttest: test_verifier_data.py."""
+eigene Clips mit Sidecar (verwendet werden nur diese). Selbsttest: test_verifier_data.py.
+
+Stand der Messung (WP141): Die gemessenen Pruefer-Zahlen (Schwellen, Trainings-/Pruef-Split) stammen von der alten Regel: Entscheidungsfenster der App,
+Halten hoechstens 5 Fenster. Ab WP141 haelt app_events zeitbasiert bis 0,8 s und liefert als Zeit das Spitzenfenster; der Live-Ausschnitt liegt damit um das
+Spitzenfenster (nicht um das Entscheidungsfenster), die Ausrichtung weicht um Bruchteile einer Sekunde von der gemessenen ab (Betrag nicht gemessen). stream_events folgt absichtlich der
+neuen Regel (Training und Pruefung gleich ausgerichtet); neu gemessen ist damit nichts. Eine Versatzprobe von +-0,16 s zeigte bei Pruefer B kaum Wirkung."""
 import argparse, glob, hashlib, json, math, os, re, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
