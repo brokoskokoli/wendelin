@@ -91,6 +91,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP141 | Wake Word: nach dem ersten Treffer bis 0,8 s weiter beobachten | gemergt (d25ec9dd) | K110-Nachtrag; offen: Versatzprobe des WP137-Prüfers vor dem Einbau, Ausreißer-Check verwirft im E2E 1/15 Einlern-Aufnahmen (WP140-Folgepunkt), Gerätetest leiser gedehnter Ruf und Latenz |
 | WP142 | Einlernen: weniger echte Rufe ablehnen | gemergt (c858edbc) | K116; HW abgelehnt: Parakeet 13,3 %, Whisper small 18,3 %, ruhig 0 %, Störer 0/880; offen: trennendes HW-Modell (Nachtraining), Gerätetest am Handy, Soll aus Review 2 |
 | WP143 | Wake Word in der App: v8a (clean) + Prüfer B | in Arbeit | Ergebnis WP137, Go Maintainer 2026-10-24; Merge nach WP142 |
+| WP145 | Nativer Speicher wächst je Overlay | geplant | Befund WP143; Entscheidung Maintainer: nach rc3, gleiche Sitzung |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
 
