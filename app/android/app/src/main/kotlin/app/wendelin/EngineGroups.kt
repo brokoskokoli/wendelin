@@ -23,6 +23,7 @@ object EngineGroups {
 
     private fun poolFor(app: Context) = pool ?: EnginePool<FlutterEngineGroup, FlutterEngine>(
         newGroup = { FlutterEngineGroup(app) },
+        log = { VoiceLog.i(it) },
         destroy = { it.destroy() },
         schedule = { delayMs, block ->
             val main = Handler(Looper.getMainLooper())

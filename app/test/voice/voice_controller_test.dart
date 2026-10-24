@@ -93,6 +93,37 @@ void main() {
 
   VoiceController voice() => c.read(voiceControllerProvider.notifier);
 
+  group('Container während start() entsorgt (WP145)', () {
+    for (final (cancelled, ready) in [
+      (false, false),
+      (true, false),
+      (false, true),
+      (true, true),
+    ]) {
+      test('${ready ? 'Modelle bereit' : 'Modelle werden geprüft'}: Laden '
+          '${cancelled ? 'liefert nichts' : 'schlägt fehl'} nach dem Dispose, '
+          'keine Exception', () async {
+        final load = Completer<VoiceComponents?>();
+        env = TestEnv(
+          extraOverrides: [
+            if (ready) voiceReadyProvider.overrideWithValue(true),
+            activeVoiceProvider.overrideWith((ref) => load.future),
+          ],
+        );
+        c = env.container();
+        final started = voice().start(TriggerKind.pushToTalk);
+        await Future<void>.delayed(Duration.zero);
+        c.dispose();
+        if (cancelled) {
+          load.complete(null);
+        } else {
+          load.completeError(StateError('Laden unterbrochen'));
+        }
+        expect(await started, isFalse);
+      });
+    }
+  });
+
   test(
     'Push-to-talk: Audio → STT → Agent → TTS, mit Auslöser im Audit-Log',
     () async {

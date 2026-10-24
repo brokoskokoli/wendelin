@@ -120,6 +120,7 @@ class AssistantActivity : WendelinActivity() {
         wakeNotified = true
         // The wake-word service listens again once the overlay is gone (WP50).
         WakeWordService.onOverlayClosed()
+        VoiceLog.i("overlay-close-notified wake=onOverlayClosed")
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -130,6 +131,7 @@ class AssistantActivity : WendelinActivity() {
         MethodChannel(engine.dartExecutor.binaryMessenger, AssistantChannel.CHANNEL)
             .setMethodCallHandler { call, result ->
                 if (call.method == "teardownDone") {
+                    VoiceLog.i("overlay-teardown-done cleaned=true late=true")
                     EngineGroups.release(engine)
                     result.success(null)
                 } else {

@@ -16,6 +16,7 @@ class EnginePool<G, E>(
     private val onWillDestroy: (E, () -> Unit) -> Unit,
     private val destroy: (E) -> Unit = {},
     private val schedule: (Long, () -> Unit) -> Cancelable = { _, _ -> Cancelable {} },
+    private val log: (String) -> Unit = {},
 ) {
     fun interface Cancelable {
         fun cancel()
@@ -68,7 +69,7 @@ class EnginePool<G, E>(
      */
     fun hold(engine: E, timeoutMs: Long): Boolean {
         if (held.containsKey(engine)) return false
-        held[engine] = schedule(timeoutMs) { release(engine) }
+        held[engine] = schedule(timeoutMs) { release(engine, "timeout") }
         return true
     }
 
@@ -79,9 +80,10 @@ class EnginePool<G, E>(
     val holding: Int get() = held.size
 
     /** Destroys a held engine (Dart reported or the timeout ran); once, later calls do nothing. */
-    fun release(engine: E) {
+    fun release(engine: E, reason: String = "done") {
         val timer = held.remove(engine) ?: return
         timer.cancel()
         destroy(engine)
+        log("overlay-engine-destroy reason=$reason live=$live")
     }
 }
