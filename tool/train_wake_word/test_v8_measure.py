@@ -168,6 +168,7 @@ class Auswahl(unittest.TestCase):
 class Ausgabe(unittest.TestCase):
     def test_render_tabelle(self):
         pts = Auswahl().pts()
+        for p in pts: p.update({f"n_b{b}": 5 for b in (1, 2, 3)})        # split all: alle sechs Bloecke haben Labels (sonst bricht cv_pick ab)
         rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0, fa_syn=1, h_syn=2.0, fa_fleurs=0, h_fleurs=1.0,
                      conf_n=10, conf_hit=1, conf_ev=1, conf_h=0.01) for p in pts]
         hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 2.0, "fleurs": 1.0, "conf": 0.01}
@@ -238,6 +239,7 @@ class SplitAll(unittest.TestCase):
         self.assertTrue(V.out_names("all")[0].endswith("v8_grid_all.csv") and V.out_names("all")[1].endswith("v8_table_all.md"))
         self.assertTrue(V.out_names("eval")[0].endswith("v8_grid.csv") and V.out_names("eval")[1].endswith("v8_table.md"))
         pts = Auswahl().pts()
+        for p in pts: p.update({f"n_b{b}": 5 for b in (1, 2, 3)})        # split all: alle sechs Bloecke haben Labels (sonst bricht cv_pick ab)
         rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0, fa_syn=1, h_syn=2.0, fa_fleurs=0, h_fleurs=1.0,
                      conf_n=10, conf_hit=1, conf_ev=1, conf_h=0.01) for p in pts]
         hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 2.0, "fleurs": 1.0, "conf": 0.01}
@@ -245,7 +247,9 @@ class SplitAll(unittest.TestCase):
         self.assertIn("dem Prüf-Split", V.render(rows, {"m": "x"}, 2.0, hr))
 
     def test_cv_cell_all_nutzt_alle_bloecke(self):
-        rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0) for p in Auswahl().pts()]
+        pts = Auswahl().pts()
+        for p in pts: p.update({f"n_b{b}": 5 for b in (1, 2, 3)})
+        rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0) for p in pts]
         self.assertEqual(len(V.cv_cell(rows, "huawei", "Wendelin", "m", ("-",), "real", 2.0, "all")[2]), 6)
 
 

@@ -16,7 +16,6 @@ import argparse, csv, glob, json, os, re, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.dirname(HERE))
 import numpy as np
-import real_split as R
 import soundfile as sf
 import kws_measure as K
 import station_measure as S
@@ -164,15 +163,6 @@ def read_labels(path=None):
         rows.append({"dev": r["geraet"], "block": int(r["block"]), "round": int(r["runde"]), "word": r["wort"],
                      "start": float(r["start"]), "end": float(r["ende"]), "status": r["status"]})
     return rows
-
-
-def eval_labels(labels):
-    """Labels fuer die Auswertung (Pruefseite): Aufnahmen, die dieselbe Sitzung wie eine Trainingsaufnahme sind (real_split.paired_sessions,
-    z. B. handy2 Block 1 bis 3 = dieselben Rufe wie Huawei Block 1 bis 3), fallen heraus. Dieselbe Regel wie v8_measure.filter_labels, keine zweite
-    Implementierung. Huawei Block 1 bis 3 selbst bleiben: words_measure misst fremde Erkenner (kein eigenes Training) und nutzt die Bloecke 1 bis 3
-    in der Kreuz-Auswahl (FOLDS)."""
-    pairs = R.paired_sessions(labels)
-    return [lb for lb in labels if (lb["dev"], lb["block"]) not in pairs]
 
 
 def fa_limit(target_per_h, hours):
@@ -557,6 +547,8 @@ def cv_pick(pts, hours, target, folds=FOLDS):
     hit = n = 0
     cfgs = []
     for sel, test in folds:
+        if sum(pts[0][f"n_b{b}"] for b in test) == 0:       # leerer Test-Fold wuerde still 0/0 zaehlen und n verzerren: fail-closed
+            raise ValueError(f"cv_pick: Test-Fold {test} ohne Aufnahmen (n=0); Folds der Zelle vorher filtern")
         ptsx = [dict(p, hit=sum(p[f"hit_b{b}"] for b in sel)) for p in pts]
         best = pick_op(ptsx, hours, target)
         if best is None: return None, sum(pts[0][f"n_b{b}"] for _, t in folds for b in t), None
@@ -659,7 +651,7 @@ def det_png(rows):
 
 def cmd_control():
     """Stufe 1 an den echten Labels je Wort x Programm x Schwelle (nur Zahlen)."""
-    st, labels = Stage1(), eval_labels(read_labels())
+    st, labels = Stage1(), read_labels()
     for w in WORDS:
         for prog in (p for p in PROGRAMS if supported(p, w)):
             for thr in configs(prog):
@@ -694,7 +686,7 @@ def main():
     elif args.cmd == "kontrolle":
         cmd_control()
     else:
-        rows = grid_rows(Stage1(), eval_labels(read_labels()))
+        rows = grid_rows(Stage1(), read_labels())
         write_report(rows)
         print(f"{len(rows)} Zeilen -> {OUT}")
 

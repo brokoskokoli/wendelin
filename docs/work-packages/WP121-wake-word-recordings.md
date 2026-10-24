@@ -20,4 +20,4 @@
 ## Parallel-Hinweise
 - Läuft neben WP120 (App-Code). WP121 berührt nur `tool/train_wake_word/`, `tool/kws_measure.py`, `docs/notes/`. Kein Emulator. Platte knapp halten (`trash`), keine schweren Läufe parallel zum lokalen Gate.
 
-Hinweis (Stand 2026-10-24): Die Zahlen dieses Teils B sind mit Leck gemessen (enthalten handy2 B1–3, dieselben Rufe wie Huawei B1–3, also Doppelzählung der Trainingsseite der echten Positive; die Programme selbst haben nicht darauf trainiert). Nicht neu gerechnet; `words_measure.py` lässt die gepaarte Sitzung (`real_split.paired_sessions`) ab jetzt aus der Auswertung heraus.
+Hinweis: Kein Trainingsleck: Die hier gemessenen Erkenner wurden nicht auf diesen Aufnahmen trainiert. Huawei und handy2 sind aber dieselbe Sitzung (zwei Geräte gleichzeitig, Versatz 0,72 s): Die Werte je Gerät sind nicht unabhängig und dürfen nicht addiert werden. Stand 2026-10-24.
