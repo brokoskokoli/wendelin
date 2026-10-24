@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP137, WP143; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP143; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -85,7 +85,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP134 | Stopp-Wort ausbauen, Vorlagen-Vergleich für „Wendelin“ zentrieren | gemergt (2d3ceecc) | K107, K112; offen: Handtests wp134 (Stopp mittendrin unterbricht nicht, Neueinlernen), Mindest-Recall des Kalibrators bei starkem Hintergrund, Timeout für hängendes am instrument in e2e_android.sh |
 | WP135 | Smart Home schneller: Geräteliste, Synonyme, feste Bestätigung, Schnellweg ohne KI, Rollo ohne Rückfrage | gemergt (c5ffc7f2) | K108, K111; offen: Gerätetest am Handy (Latenz nachher, Geräte neu freigeben), Rollo ohne Rückfrage nur Unit-Test, WP122-Ausfall bei gemischten Runden |
 | WP136 | Parakeet (NeMo) lädt nach dem Download nicht | gemergt (dc113dc1) | Ursache: oberste Ordnerebene im Archiv; offen: Gerätetest Teil A am Handy (Fehlergerät ohne Neu-Download), Wiederaufnahme nach Download-Abbruch |
-| WP137 | Wake Word: v8c mit echten Aufnahmen, wortspezifischer Prüfer statt Parakeet, Aufnahme-Anleitung | in Arbeit | K110; Go Maintainer 2026-10-23 |
+| WP137 | Wake Word: v8c mit echten Aufnahmen, wortspezifischer Prüfer statt Parakeet, Aufnahme-Anleitung | gemergt (a4952c60) | Ergebnis: v8a (clean) + Prüfer B für die App (WP143); Prüf-Split nur B4–6 (30 unabhängige Rufe); offen: Python-Tests ohne CI-Job, HW-Kopf für K115 (nach App-Test), words_measure-Schutz für eigene Modelle |
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
 | WP140 | Einlernen mit Inhaltsprüfung, unsichere Erkennung verwerfen, Ja/Nein robuster | gemergt (b9b857a9) | K114; offen: „Hey Wendelin“-Ausschnitt endet nach 440 ms Pause, Moduswechsel bzw. letzte Stimme löschen bei laufendem Dienst → „an“ ohne Zuhören, Erwartung „Kandidat“ in wake_enroll_e2e (schon vorher rot), e2e_android.sh spielt Parakeet nicht ein, Gerätetest am Handy |
 | WP141 | Wake Word: nach dem ersten Treffer bis 0,8 s weiter beobachten | gemergt (d25ec9dd) | K110-Nachtrag; offen: Versatzprobe des WP137-Prüfers vor dem Einbau, Ausreißer-Check verwirft im E2E 1/15 Einlern-Aufnahmen (WP140-Folgepunkt), Gerätetest leiser gedehnter Ruf und Latenz |
