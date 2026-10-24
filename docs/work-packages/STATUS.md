@@ -6,7 +6,7 @@ Gleichzeitig laufen höchstens 2 Pakete (Rechnerlast, Maintainer 2026-10-18); be
 
 Status: `geplant` · `in Arbeit` · `Review` · `wartet` (Grund in „Offen“) · `gemergt` (Merge-Commit) · `verworfen`
 
-Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP137, WP142, WP143; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
+Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt für ~5 h ab 03:00); läuft: WP137, WP143; Test-APK 954e065 beim Maintainer; als Nächstes: WP100/WP101, WP92c nach Gerätetest wp92a/b, STT-Messung nach Aufnahmen (K99), Scorer-Fix Reasoning-Leck
 
 ## Meilensteine
 
@@ -89,7 +89,7 @@ Stand: 2026-10-22 (Standard 2 Sitzungen, mit Freigabe bis 4; Freigabe 4 gilt fü
 | WP138 | Kompakt-Modus: kleines Sprach-Overlay mit Kreis und Haken | geplant | Idee Maintainer 2026-10-23; nur nach Gespräch und Go |
 | WP140 | Einlernen mit Inhaltsprüfung, unsichere Erkennung verwerfen, Ja/Nein robuster | gemergt (b9b857a9) | K114; offen: „Hey Wendelin“-Ausschnitt endet nach 440 ms Pause, Moduswechsel bzw. letzte Stimme löschen bei laufendem Dienst → „an“ ohne Zuhören, Erwartung „Kandidat“ in wake_enroll_e2e (schon vorher rot), e2e_android.sh spielt Parakeet nicht ein, Gerätetest am Handy |
 | WP141 | Wake Word: nach dem ersten Treffer bis 0,8 s weiter beobachten | gemergt (d25ec9dd) | K110-Nachtrag; offen: Versatzprobe des WP137-Prüfers vor dem Einbau, Ausreißer-Check verwirft im E2E 1/15 Einlern-Aufnahmen (WP140-Folgepunkt), Gerätetest leiser gedehnter Ruf und Latenz |
-| WP142 | Einlernen: weniger echte Rufe ablehnen | in Arbeit | K114-Folgepunkt; Go Maintainer 2026-10-24 |
+| WP142 | Einlernen: weniger echte Rufe ablehnen | gemergt (c858edbc) | K116; HW abgelehnt: Parakeet 13,3 %, Whisper small 18,3 %, ruhig 0 %, Störer 0/880; offen: trennendes HW-Modell (Nachtraining), Gerätetest am Handy, Soll aus Review 2 |
 | WP143 | Wake Word in der App: v8a (clean) + Prüfer B | in Arbeit | Ergebnis WP137, Go Maintainer 2026-10-24; Merge nach WP142 |
 
 Empfehlung von Modellen: M6 (gemeinsam mit Maintainer besprechen).
