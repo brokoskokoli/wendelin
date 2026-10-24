@@ -123,6 +123,38 @@ final class WakeFeatureChain {
     );
   }
 
+  /// Embedding frames of a whole clip like openWakeWord's batch call
+  /// (verifier B, WP143): the clip is cut to a multiple of 160 samples (`k`
+  /// blocks), the mel spectrogram has `k - 3` frames (scaled `x / 10 + 2`),
+  /// one embedding per 76 frames with a stride of 8:
+  /// `F = (M - 76) ~/ 8 + 1`. `null` for `M < 76`. Flat `F` x 96.
+  static Float32List? batchSequence(WakeModelRunner runner, Int16List clip) {
+    final n = clip.length ~/ 160 * 160;
+    if (n ~/ 160 - 3 < melFrames) return null;
+    final samples = Float32List(n);
+    for (var i = 0; i < n; i++) {
+      samples[i] = clip[i].toDouble();
+    }
+    final raw = runner.mel(samples);
+    final m = raw.length ~/ melBins;
+    if (m < melFrames) return null;
+    final mel = Float32List(m * melBins);
+    for (var i = 0; i < mel.length; i++) {
+      mel[i] = raw[i] / 10 + 2;
+    }
+    final count = (m - melFrames) ~/ 8 + 1;
+    final out = Float32List(count * embeddingSize);
+    for (var f = 0; f < count; f++) {
+      final window = Float32List.sublistView(
+        mel,
+        f * 8 * melBins,
+        (f * 8 + melFrames) * melBins,
+      );
+      out.setAll(f * embeddingSize, runner.embed(window));
+    }
+    return out;
+  }
+
   /// Starts a new stream.
   void reset() {
     _pending.clear();
@@ -135,7 +167,7 @@ final class WakeFeatureChain {
 
 /// [WakeFeatureExtractor] on a [WakeFeatureChain]; [load] opens the models
 /// (the app: ONNX Runtime, tests: a fake).
-final class ChainWakeFeatureExtractor implements WakeFeatureExtractor {
+final class ChainWakeFeatureExtractor implements WakeSequenceExtractor {
   /// Creates the extractor; [load] runs in [open].
   ChainWakeFeatureExtractor(this.load);
 
@@ -179,6 +211,13 @@ final class ChainWakeFeatureExtractor implements WakeFeatureExtractor {
     final chain = _chain;
     if (chain == null) throw StateError('Merkmalskette nicht offen');
     return chain.accept(frame);
+  }
+
+  @override
+  Future<Float32List?> sequence(Int16List clip) async {
+    final chain = _chain;
+    if (chain == null) throw StateError('Merkmalskette nicht offen');
+    return WakeFeatureChain.batchSequence(chain.runner, clip);
   }
 
   @override

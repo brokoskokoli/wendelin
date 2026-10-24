@@ -229,7 +229,12 @@ final class DeviceWakeParts implements WakeParts {
     this.idleRelease = const Duration(seconds: 60),
     this.hotwordsDirectory,
     this.parakeetStart = IsolateWhisperBackend.start,
+    this.useVerifierB = !wakeVerifierBMuIsPlaceholder,
   });
+
+  /// Whether stage 2 of the classifier path asks verifier B first (WP143).
+  /// Off while `mu` is the placeholder (the thresholds mean nothing then).
+  final bool useVerifierB;
 
   /// Directory of the hotwords file of stage 2 (default: `wake-hotwords` in
   /// the support directory).
@@ -246,6 +251,7 @@ final class DeviceWakeParts implements WakeParts {
 
   RecognizerEngines? _engines;
   LazyParakeetVerifier? _parakeet;
+  VerifierBWakeVerifier? _verifierB;
 
   Future<NemoFiles?> _parakeetFiles() async => wakeParakeetFiles(
     service: await container.read(speechModelServiceProvider.future),
@@ -274,12 +280,7 @@ final class DeviceWakeParts implements WakeParts {
         silenceFloor: WakeClassifierRules.silenceFloor(),
       );
     }
-    final store = container.read(wakeStoreProvider);
-    final sets = <WakeTemplates>[];
-    for (final speaker in await store.speakers()) {
-      final t = await store.load(speaker.id);
-      if (t != null && t.embeddings.isNotEmpty) sets.add(t);
-    }
+    final sets = await _allTemplates();
     if (sets.isEmpty) return null;
     return CandidateWakeEngine(
       features: container.read(wakeFeaturesFactoryProvider)(),
@@ -289,6 +290,16 @@ final class DeviceWakeParts implements WakeParts {
       modelThreshold: null,
       silenceFloor: WakeClassifierRules.silenceFloor(),
     );
+  }
+
+  Future<List<WakeTemplates>> _allTemplates() async {
+    final store = container.read(wakeStoreProvider);
+    final sets = <WakeTemplates>[];
+    for (final speaker in await store.speakers()) {
+      final t = await store.load(speaker.id);
+      if (t != null && t.embeddings.isNotEmpty) sets.add(t);
+    }
+    return sets;
   }
 
   @override
@@ -307,15 +318,34 @@ final class DeviceWakeParts implements WakeParts {
       idleRelease: idleRelease,
       start: parakeetStart,
     );
-    return PreferredWakeVerifier(
+    final recognizer = PreferredWakeVerifier(
       preferred: parakeet,
       fallback: whisper,
       available: parakeet.isAvailable,
+    );
+    // WP143: with enrolled sequences verifier B decides and neither Parakeet
+    // nor Whisper is touched (they are only loaded inside [recognizer]);
+    // without them, or on an error of B, [recognizer] (hw2) decides as before.
+    if (!useVerifierB) return recognizer;
+    return _verifierB ??= VerifierBWakeVerifier(
+      templates: _allTemplates,
+      features: container.read(wakeFeaturesFactoryProvider),
+      fallback: recognizer,
+      onDecision: (verifier, score, threshold) => voiceLog('wake-decision', {
+        'verifier': verifier,
+        // -1 (no usable sequence) would not pass the log filter.
+        'score': score == null
+            ? null
+            : (score < 0 ? 'none' : score.toStringAsFixed(4)),
+        'thr': threshold?.toStringAsFixed(4),
+      }),
     );
   }
 
   @override
   Future<void> dispose() async {
+    await _verifierB?.close();
+    _verifierB = null;
     await _parakeet?.release();
     _parakeet = null;
     await _engines?.dispose();

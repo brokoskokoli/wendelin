@@ -22,6 +22,14 @@ void main() {
     expect(r.speechEnd, inInclusiveRange(16 * 900, r.pcm!.length));
   });
 
+  test('Sprachanfang und mindestens 200 ms Nachlauf (WP143)', () {
+    final r = run(UtteranceCapture(), recording())!;
+    // 200 ms Vorlauf vor der Sprache, Nachlauf 200 ms nach ihrem Ende.
+    expect(r.speechStart, 16 * 200);
+    expect(r.pcm!.length - r.speechEnd, 16 * 200);
+    expect(r.speechEnd - r.speechStart, inInclusiveRange(16 * 880, 16 * 940));
+  });
+
   test('zu leise: Pegel unter der Grenze', () {
     final r = run(UtteranceCapture(), recording(amplitude: 350))!;
     expect(r.verdict, UtteranceVerdict.tooQuiet);

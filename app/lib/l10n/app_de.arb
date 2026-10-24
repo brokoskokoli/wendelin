@@ -3109,6 +3109,7 @@
       }
     }
   },
+  "wakeWordRelearnForVerifier": "Neu einlernen für den Prüfer.",
   "wakeWordRetrain": "Neu einlernen",
   "wakeWordTemplatesFew": "Nur {count} brauchbare Aufnahmen übrig. Bitte neu einlernen.",
   "@wakeWordTemplatesFew": {

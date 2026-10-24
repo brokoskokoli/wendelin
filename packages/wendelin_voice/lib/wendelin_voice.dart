@@ -61,6 +61,7 @@ export 'src/wake/wake_math.dart';
 export 'src/wake/wake_score_band.dart';
 export 'src/wake/wake_templates.dart';
 export 'src/wake/wake_verifier.dart';
+export 'src/wake/wake_verifier_b.dart';
 export 'src/wake/wake_word_barge_in.dart';
 export 'src/wake/wake_word_engine.dart';
 export 'src/wake/wake_word_listener.dart';

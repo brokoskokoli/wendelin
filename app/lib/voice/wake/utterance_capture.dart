@@ -32,16 +32,26 @@ enum UtteranceVerdict {
 /// Outcome of one recording.
 final class Utterance {
   /// Creates an outcome.
-  const Utterance(this.verdict, [this.pcm, this.speechEnd = 0]);
+  const Utterance(
+    this.verdict, [
+    this.pcm,
+    this.speechEnd = 0,
+    this.speechStart = 0,
+  ]);
 
   /// Decision.
   final UtteranceVerdict verdict;
 
-  /// The speech with a little lead and tail (only when accepted).
+  /// The speech with a little lead and tail, 200 ms each (only when
+  /// accepted).
   final Int16List? pcm;
 
   /// Sample in [pcm] where the speech ends.
   final int speechEnd;
+
+  /// Sample in [pcm] where the speech starts (WP143: the cut of the
+  /// templates for verifier B is taken around it).
+  final int speechStart;
 }
 
 /// Cuts one spoken word out of a microphone stream by energy (WP60):
@@ -75,6 +85,7 @@ final class UtteranceCapture {
   static const _quiet = 22; // blocks = 440 ms
   static const _loud = 0.03; // RMS that is clearly speech, not noise
   static const _lead = 10; // blocks kept before the speech
+  static const _tail = 10; // blocks kept after the speech (200 ms, WP143)
 
   final _samples = <int>[];
   final _floors = <double>[];
@@ -148,11 +159,12 @@ final class UtteranceCapture {
     if (length < minSpeech) return const Utterance(UtteranceVerdict.noSpeech);
     if (_peak < minPeak) return const Utterance(UtteranceVerdict.tooQuiet);
     final from = math.max(0, (_first - _lead) * _block);
-    final to = math.min(_samples.length, (_last + 1 + 8) * _block);
+    final to = math.min(_samples.length, (_last + 1 + _tail) * _block);
     return Utterance(
       UtteranceVerdict.accepted,
       Int16List.fromList(_samples.sublist(from, to)),
       (_last + 1) * _block - from,
+      _first * _block - from,
     );
   }
 }

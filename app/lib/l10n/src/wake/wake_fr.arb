@@ -156,6 +156,7 @@
   "wakeWordNoVoiceHint": "Entraînez votre voix avec « Entraîner la voix ».",
   "wakeWordPerson": "Personne {number}",
   "wakeWordRecordingsThreshold": "{length} enregistrements · seuil {v}",
+  "wakeWordRelearnForVerifier": "Entraîner de nouveau pour le vérificateur.",
   "wakeWordRetrain": "Entraîner de nouveau",
   "wakeWordTemplatesMissing": "Modèles manquants. Veuillez entraîner de nouveau.",
   "wakeWordTemplatesOutdated": "Ces modèles sont périmés (la comparaison a été améliorée). Veuillez entraîner de nouveau.",

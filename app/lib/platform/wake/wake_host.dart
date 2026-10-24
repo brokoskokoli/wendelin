@@ -410,7 +410,7 @@ final class _LoggingEngine implements WakeWordEngine {
 
 /// Logs the verdict of stage 2 (`ok`, `no`, or `skip` if it could not
 /// decide, which counts as not confirmed).
-final class _LoggingVerifier implements WakeVerifier {
+final class _LoggingVerifier implements WakeEndAwareVerifier {
   _LoggingVerifier(this.inner);
 
   final WakeVerifier inner;
@@ -419,9 +419,17 @@ final class _LoggingVerifier implements WakeVerifier {
   String get kind => inner.kind;
 
   @override
-  Future<bool> confirm(Int16List pcm) async {
+  Future<bool> confirm(Int16List pcm) => confirmAt(pcm, -1);
+
+  /// [endSample] is the end of the decision window in [pcm] (`-1`: unknown,
+  /// then [inner.confirm] decides alone).
+  @override
+  Future<bool> confirmAt(Int16List pcm, int endSample) async {
     try {
-      final ok = await inner.confirm(pcm);
+      final i = inner;
+      final ok = endSample >= 0 && i is WakeEndAwareVerifier
+          ? await i.confirmAt(pcm, endSample)
+          : await i.confirm(pcm);
       voiceLog('wake-verify', {'result': ok ? 'ok' : 'no'});
       return ok;
     } on Object catch (e) {

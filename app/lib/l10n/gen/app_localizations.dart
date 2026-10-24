@@ -9057,6 +9057,12 @@ abstract class AppLocalizations {
   /// **'{length} Aufnahmen · Schwelle {v}'**
   String wakeWordRecordingsThreshold(int length, String v);
 
+  /// No description provided for @wakeWordRelearnForVerifier.
+  ///
+  /// In de, this message translates to:
+  /// **'Neu einlernen für den Prüfer.'**
+  String get wakeWordRelearnForVerifier;
+
   /// No description provided for @wakeWordRetrain.
   ///
   /// In de, this message translates to:
