@@ -266,9 +266,9 @@ class Ausschnitt(unittest.TestCase):
 
     def test_stream_events_haelt_bis_zur_direktannahme(self):
         t = 10 + 0.08 * np.arange(5)
-        v = np.array([0.1, 0.985, 0.996, 0.5, 0.1], "float32")
+        v = np.array([0.1, 0.985, 0.996, 0.998, 0.1], "float32")      # 0,998 liegt unter BAND[1]=0,999: Halten muss bis dorthin reichen
         ev = D.stream_events(lambda x: (t, v), None, 0.98)
-        self.assertEqual([(round(a - 10, 2), round(p, 3)) for a, p in ev], [(0.16, 0.996)])      # WP141: Halten bis 0,8 s (Strom endet: flush), Zeit = Spitzenfenster (nicht das Entscheidungsfenster)
+        self.assertEqual([(round(a - 10, 2), round(p, 3)) for a, p in ev], [(0.24, 0.998)])      # WP141: Halten bis 0,8 s (Strom endet: flush), Zeit = Spitzenfenster (nicht das Entscheidungsfenster)
 
     @staticmethod
     def _rampe():

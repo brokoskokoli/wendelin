@@ -244,8 +244,8 @@ def level_db(x):
 
 
 def stream_events(curve_fn, x, lower=BAND[0]):
-    """Ereignisse der App-Logik auf einem Stream: [(Entscheidungszeit, Spitzenwert)] (stage2_cut.app_events, Halten).
-    Training und Pruefung (verifier_eval.py: events_cut(.., 0.98, "app", 0.999)) verwenden dieselbe Untergrenze BAND[0]; Entscheidungszeit und Spitze
+    """Ereignisse der App-Logik auf einem Stream: [(Spitzenfenster-Zeit, Spitzenwert)] (stage2_cut.app_events, Halten).
+    Training und Pruefung (verifier_eval.py: events_cut(.., 0.98, "app", 0.999)) verwenden dieselbe Untergrenze BAND[0]; Spitzenfenster-Zeit und Spitze
     haengen von `lower` ab, deshalb darf das Training sie nicht mit einer anderen Untergrenze bilden."""
     import stage2_cut as C
     t, v = curve_fn(x)
