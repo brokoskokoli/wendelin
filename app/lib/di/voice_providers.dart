@@ -111,6 +111,23 @@ Future<SpeechModel> _installedModel(Ref ref, String id, String what) async {
   return model;
 }
 
+/// A native detector with its way to free it.
+typedef OpenedVad = ({VoiceActivityDetector vad, void Function() dispose});
+
+/// Opens the native Silero detector (tests replace it with a counting
+/// fake, so the real wiring of [voiceActivityDetectorProvider] runs).
+@visibleForTesting
+final sileroOpenerProvider =
+    Provider<OpenedVad Function(String path, double threshold)>(
+      (ref) => (path, threshold) {
+        final silero = SileroVoiceActivityDetector(
+          modelPath: path,
+          threshold: threshold,
+        );
+        return (vad: silero, dispose: silero.dispose);
+      },
+    );
+
 /// Silero VAD with the threshold from the settings.
 final voiceActivityDetectorProvider = FutureProvider<VoiceActivityDetector>((
   ref,
@@ -125,14 +142,15 @@ final voiceActivityDetectorProvider = FutureProvider<VoiceActivityDetector>((
   );
   final service = await ref.watch(speechModelServiceProvider.future);
   final path = '${service.directoryOf(model).path}/${model.files.single.name}';
+  final opener = ref.read(sileroOpenerProvider);
+  final disposers = Expando<void Function()>('vad-dispose');
   final vad = LazyVoiceActivityDetector(
     threshold: threshold,
     open: () {
       final watch = Stopwatch()..start();
-      final opened = SileroVoiceActivityDetector(
-        modelPath: path,
-        threshold: threshold,
-      );
+      final native = opener(path, threshold);
+      final opened = native.vad;
+      disposers[opened] = native.dispose;
       voiceLog('model-load', {
         'model': model.id,
         'kind': 'vad',
@@ -141,7 +159,7 @@ final voiceActivityDetectorProvider = FutureProvider<VoiceActivityDetector>((
       return opened;
     },
     close: (v) {
-      (v as SileroVoiceActivityDetector).dispose();
+      disposers[v]?.call();
       voiceLog('model-free', {'model': model.id, 'kind': 'vad'});
     },
   );
@@ -445,6 +463,7 @@ final class VoiceComponents {
     this.speaker,
     this.warmUp,
     this.release,
+    this.releaseDetector,
   });
 
   /// Microphone.
@@ -474,6 +493,10 @@ final class VoiceComponents {
   /// Frees the large models (Whisper, offline voice) until [warmUp] or the
   /// next use (B14: idle in the background).
   final Future<void> Function()? release;
+
+  /// Frees only the small detector (also with „Modell im Speicher halten“,
+  /// when the overlay engine ends; the next frame opens it again).
+  final void Function()? releaseDetector;
 }
 
 /// The voice building blocks; fails with `VoiceException(modelMissing)`
@@ -504,11 +527,14 @@ final voiceComponentsProvider = FutureProvider<VoiceComponents>((ref) async {
       if (vad is LazyVoiceActivityDetector) vad.warm();
       await whisper.warm();
     },
-    release: () async {
-      await whisper.release(reason: 'idle');
-      // The overlay engine ends without disposing providers: free the
-      // detector here, the next frame opens it again (WP143).
+    releaseDetector: () {
       if (vad is LazyVoiceActivityDetector) vad.release();
+    },
+    release: () async {
+      // First and synchronous: the overlay gives up after 600 ms and ends
+      // the engine, a slow Whisper must not keep the detector (WP143).
+      if (vad is LazyVoiceActivityDetector) vad.release();
+      await whisper.release(reason: 'idle');
       await sherpa.dispose();
       // Also with the switch off: the model may be loaded by an enrollment.
       await ref.read(speakerIdentifierProvider).release();
