@@ -82,6 +82,9 @@ object EngineGroups {
      */
     fun hold(engine: FlutterEngine): Boolean = pool?.hold(engine, HOLD_MS) ?: false
 
+    /** The activity detached [engine]; a timeout that ran before destroys it now. */
+    fun cleanedUp(engine: FlutterEngine) = pool?.cleanedUp(engine) ?: Unit
+
     /** Dart reported its teardown (or the timeout ran): destroys a held engine. */
     fun release(engine: FlutterEngine) = pool?.release(engine) ?: Unit
 

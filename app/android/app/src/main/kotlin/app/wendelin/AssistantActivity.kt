@@ -112,7 +112,7 @@ class AssistantActivity : WendelinActivity() {
         teardownReported = true
         VoiceLog.i("overlay-teardown-done cleaned=$engineCleaned")
         // Before the activity is detached the engine must stay; cleanUpFlutterEngine looks again.
-        if (engineCleaned) heldEngine?.let { EngineGroups.release(it) }
+        if (engineCleaned) heldEngine?.let { e -> handler.post { EngineGroups.release(e) } }
     }
 
     private fun notifyWakeService() {
@@ -132,14 +132,18 @@ class AssistantActivity : WendelinActivity() {
             .setMethodCallHandler { call, result ->
                 if (call.method == "teardownDone") {
                     VoiceLog.i("overlay-teardown-done cleaned=true late=true")
-                    EngineGroups.release(engine)
+                    // Reply first, destroy after: else "FlutterJNI was detached" in the log.
                     result.success(null)
+                    handler.post { EngineGroups.release(engine) }
                 } else {
                     result.notImplemented()
                 }
             }
         // The delegate still detaches the engine from the activity after this call: destroy later.
-        if (teardownReported) handler.post { EngineGroups.release(engine) }
+        // Also marks the engine detached for the 14 s timeout (EnginePool.cleanedUp).
+        handler.post {
+            if (teardownReported) EngineGroups.release(engine) else EngineGroups.cleanedUp(engine)
+        }
     }
 
     override fun onFlutterUiDisplayed() {

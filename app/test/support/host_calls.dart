@@ -13,8 +13,12 @@ mixin HostCallRecorder on AssistantPlatform {
   /// What [releaseHost] answers (`false`: a host that cannot hold the engine).
   bool canRelease = true;
 
+  /// Runs when [releaseHost] is called (to look at the state at that moment).
+  void Function()? onReleaseHost;
+
   @override
   Future<bool> releaseHost() async {
+    onReleaseHost?.call();
     calls.add('releaseHost');
     return canRelease;
   }

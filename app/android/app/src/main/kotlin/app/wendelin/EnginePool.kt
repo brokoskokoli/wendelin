@@ -24,7 +24,12 @@ class EnginePool<G, E>(
 
     // Engines whose activity is gone but whose Dart side is still tearing down, with the timer
     // that ends them if Dart never reports.
-    private val held = HashMap<E, Cancelable>()
+    private class Held(var timer: Cancelable) {
+        var cleaned = false
+        var timedOut = false
+    }
+
+    private val held = HashMap<E, Held>()
 
     private var group: G? = null
 
@@ -69,8 +74,31 @@ class EnginePool<G, E>(
      */
     fun hold(engine: E, timeoutMs: Long): Boolean {
         if (held.containsKey(engine)) return false
-        held[engine] = schedule(timeoutMs) { release(engine, "timeout") }
+        val h = Held(Cancelable {})
+        held[engine] = h
+        h.timer = schedule(timeoutMs) { onTimeout(engine, h) }
         return true
+    }
+
+    // The timeout destroys only after the host detached the engine (cleaned); before, a destroy
+    // would run the detach against a dead engine, so it waits for [cleanedUp].
+    private fun onTimeout(engine: E, h: Held) {
+        if (h.cleaned) {
+            release(engine, "timeout")
+        } else {
+            h.timedOut = true
+            log("overlay-engine-timeout-wait cleaned=false")
+        }
+    }
+
+    /**
+     * The host detached [engine] (call after its detach, e.g. posted from `cleanUpFlutterEngine`).
+     * If the timeout ran before, the engine is destroyed now.
+     */
+    fun cleanedUp(engine: E) {
+        val h = held[engine] ?: return
+        h.cleaned = true
+        if (h.timedOut) release(engine, "timeout")
     }
 
     /** Whether [engine] waits for its teardown. */
@@ -81,8 +109,8 @@ class EnginePool<G, E>(
 
     /** Destroys a held engine (Dart reported or the timeout ran); once, later calls do nothing. */
     fun release(engine: E, reason: String = "done") {
-        val timer = held.remove(engine) ?: return
-        timer.cancel()
+        val h = held.remove(engine) ?: return
+        h.timer.cancel()
         destroy(engine)
         log("overlay-engine-destroy reason=$reason live=$live")
     }

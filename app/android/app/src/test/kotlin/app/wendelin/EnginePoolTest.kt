@@ -108,9 +108,30 @@ class EnginePoolTest {
     @Test fun heldEngineIsDestroyedByTheTimeout() {
         val a = obtain().engine
         pool.hold(a, 14_000)
+        pool.cleanedUp(a)
         timers.single().fire()
         assertEquals(0, pool.live)
         assertEquals(0, pool.holding)
+    }
+
+    // The activity is not cleaned up yet: a destroy now would run the detach against a dead engine.
+    @Test fun timeoutBeforeCleanUpWaitsForTheDetach() {
+        val a = obtain().engine
+        pool.hold(a, 14_000)
+        timers.single().fire()
+        assertEquals("still alive", 1, pool.live)
+        assertTrue(pool.isHeld(a))
+        pool.cleanedUp(a)
+        assertEquals(0, pool.live)
+        assertFalse(pool.isHeld(a))
+    }
+
+    @Test fun cleanUpWithoutTimeoutKeepsTheEngine() {
+        val a = obtain().engine
+        pool.hold(a, 14_000)
+        pool.cleanedUp(a)
+        assertEquals(1, pool.live)
+        assertTrue(pool.isHeld(a))
     }
 
     @Test fun reportAndTimeoutDestroyOnce() {
