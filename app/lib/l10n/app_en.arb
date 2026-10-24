@@ -1593,10 +1593,18 @@
   "wakeEnrollInconsistent": "That recording did not match the others and was removed. Once more, please.",
   "wakeEnrollIntro": "Say “{word}” when it is your turn. Wendelin keeps only numeric values from each recording; the audio is discarded immediately.",
   "wakeEnrollMicPreparing": "Preparing the microphone …",
+  "wakeEnrollMissingHey": "Please say “{word}”, not just the name.",
+  "@wakeEnrollMissingHey": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
   "wakeEnrollNoMic": "Without a microphone Wendelin cannot learn your voice.",
   "wakeEnrollNoRecognizer": "Speech recognition is missing: without it “Wendelin” cannot be checked during enrollment. Please download a recognition model under Settings → Voice.",
   "wakeEnrollNoSpeech": "Heard nothing. Once more, please.",
-  "wakeEnrollNotWord": "Not recognized as “{word}”. Once more, please.",
+  "wakeEnrollNotWord": "Not recognized. Once more, please, with “{word}”.",
   "wakeEnrollProcessing": "Processing …",
   "wakeEnrollProgress": "{accepted} of {target}",
   "wakeEnrollProgressLabel": "Training progress",
@@ -1604,13 +1612,23 @@
   "wakeEnrollPrompt1": "Now from one to two meters away.",
   "wakeEnrollPrompt2": "Now quietly, like in the evening in your room.",
   "wakeEnrollPrompt3": "The way you say it every day, maybe from another corner.",
+  "wakeEnrollQuietTip": "Too quiet several times: move closer to the phone, find a quieter room and speak at normal volume.",
   "wakeEnrollRejected": "{count} rejected",
   "wakeEnrollSaveWith": "Save with {accepted} recordings",
   "wakeEnrollSayNow": "Say now: “{word}”",
+  "wakeEnrollSetupHint": "Quiet room, normal volume, about 0.5–1 m from the phone.",
+  "wakeEnrollSpokenWord": "Hey {name}",
+  "@wakeEnrollSpokenWord": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "wakeEnrollTitle": "Train voice",
   "wakeEnrollTooEarly": "Started too early. Wait a moment, then speak.",
   "wakeEnrollTooLong": "Too long. Only “{word}”, please.",
-  "wakeEnrollTooQuiet": "Too quiet. A bit louder, please.",
+  "wakeEnrollTooQuiet": "Too quiet – please move closer to the phone.",
   "wakeEnrollUnchecked": "The check is not possible right now (speech recognition not ready). Once more, please.",
   "wakeExplainBatteryBody": "Constant listening costs battery. The default is therefore “Only while charging”.",
   "wakeExplainBatteryExemptBody": "So that Android does not stop the service, Wendelin should be exempt from battery optimization.",

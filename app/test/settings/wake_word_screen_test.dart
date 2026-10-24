@@ -46,10 +46,10 @@ WakeTemplates templates(
 /// Env with the wake models "installed", scripted audio and fake chain.
 TestEnv wakeEnv({
   AudioInput? audio,
-  WakeVerifier? verifier,
+  WakeEnrollVerifier? verifier,
   Float32List Function(int)? vector,
   bool installed = true,
-  Future<WakeVerifier?>? enrollVerifier,
+  Future<WakeEnrollVerifier?>? enrollVerifier,
   List<Override> extra = const [],
 }) {
   final env = TestEnv(
@@ -375,7 +375,7 @@ void main() {
       final c = await pumpWake(tester, env, const WakeWordScreen());
       await startEnroll(tester);
       await until(tester, find.text('1 von 15'));
-      expect(find.text('Sag jetzt: „Wendelin“'), findsOneWidget);
+      expect(find.text('Sag jetzt: „Hey Wendelin“'), findsOneWidget);
       expect(find.text(enrollHint(AppLocalizationsDe(), 1)), findsOneWidget);
       await until(tester, find.text('Speichern'));
       expect(find.text('15 von 15'), findsOneWidget);
@@ -414,7 +414,7 @@ void main() {
       final env = wakeEnv(
         audio: audio,
         // Never ready: the wait runs into its limit, no recognizer.
-        enrollVerifier: Completer<WakeVerifier?>().future,
+        enrollVerifier: Completer<WakeEnrollVerifier?>().future,
         extra: [
           wakeEnrollVerifierWaitProvider.overrideWithValue(
             const Duration(milliseconds: 200),

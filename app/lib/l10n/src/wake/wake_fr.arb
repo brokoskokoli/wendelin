@@ -58,7 +58,25 @@
   "wakeEnrollNoMic": "Sans microphone, Wendelin ne peut pas apprendre votre voix.",
   "wakeEnrollNoSpeech": "Rien entendu. Encore une fois, s’il vous plaît.",
   "wakeEnrollNoRecognizer": "La reconnaissance vocale est absente : sans elle, « Wendelin » ne peut pas être vérifié pendant l’apprentissage. Télécharge un modèle de reconnaissance dans Réglages → Voix.",
-  "wakeEnrollNotWord": "Non reconnu comme « {word} ». Encore une fois, s’il vous plaît.",
+  "wakeEnrollSetupHint": "Pièce calme, volume normal, à environ 0,5–1 m du téléphone.",
+  "wakeEnrollQuietTip": "Trop bas plusieurs fois : rapprochez-vous du téléphone, choisissez une pièce plus calme et parlez à volume normal.",
+  "wakeEnrollMissingHey": "Dites « {word} », pas seulement le nom.",
+  "@wakeEnrollMissingHey": {
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollSpokenWord": "Hey {name}",
+  "@wakeEnrollSpokenWord": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wakeEnrollNotWord": "Non reconnu. Encore une fois, avec « {word} », s’il vous plaît.",
   "wakeEnrollInconsistent": "Cet enregistrement ne correspondait pas aux autres et a été supprimé. Encore une fois, s’il vous plaît.",
   "wakeEnrollUnchecked": "La vérification est impossible pour le moment (reconnaissance vocale pas prête). Encore une fois, s’il vous plaît.",
   "wakeEnrollRejected": "{count} refusés",
@@ -75,7 +93,7 @@
   "wakeEnrollTitle": "Entraîner la voix",
   "wakeEnrollTooEarly": "Commencé trop tôt. Attendez un instant, puis parlez.",
   "wakeEnrollTooLong": "Trop long. Seulement « {word} », s’il vous plaît.",
-  "wakeEnrollTooQuiet": "Trop bas. Un peu plus fort, s’il vous plaît.",
+  "wakeEnrollTooQuiet": "Trop bas – rapprochez-vous du téléphone.",
   "wakeExplainBatteryBody": "L’écoute permanente consomme de la batterie. Le réglage par défaut est donc « Seulement en charge ».",
   "wakeExplainBatteryExemptBody": "Pour qu’Android n’arrête pas le service, Wendelin devrait être exclu de l’optimisation de la batterie.",
   "wakeExplainBatteryExemptTitle": "Exclure de l’optimisation de la batterie ?",

@@ -254,7 +254,9 @@ final wakeEnrollFeaturesFactoryProvider =
 /// Content check of the enrollment (WP140): the configured recognizer
 /// (Whisper or Parakeet, as the pipeline), clip scaled to the verify peak
 /// like stage 2 with Parakeet. The check log carries only the category.
-final wakeEnrollVerifierProvider = FutureProvider<WakeVerifier?>((ref) async {
+final wakeEnrollVerifierProvider = FutureProvider<WakeEnrollVerifier?>((
+  ref,
+) async {
   final stt = await ref.watch(speechToTextProvider.future);
   return TranscriptWakeVerifier(
     stt,

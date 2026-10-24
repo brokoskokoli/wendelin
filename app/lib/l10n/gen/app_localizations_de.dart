@@ -4962,6 +4962,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wakeEnrollMicPreparing => 'Mikrofon wird vorbereitet …';
 
   @override
+  String wakeEnrollMissingHey(String word) {
+    return 'Bitte „$word“ sagen, nicht nur den Namen.';
+  }
+
+  @override
   String get wakeEnrollNoMic =>
       'Ohne Mikrofon kann Wendelin deine Stimme nicht lernen.';
 
@@ -4974,7 +4979,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String wakeEnrollNotWord(String word) {
-    return 'Nicht als „$word“ erkannt. Bitte noch einmal.';
+    return 'Nicht erkannt. Bitte noch einmal mit „$word“.';
   }
 
   @override
@@ -5002,6 +5007,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wie du es im Alltag sagst, gern aus einer anderen Ecke.';
 
   @override
+  String get wakeEnrollQuietTip =>
+      'Mehrmals zu leise: Geh näher ans Handy, such einen ruhigeren Raum und sprich normal laut.';
+
+  @override
   String wakeEnrollRejected(int count) {
     return '$count abgelehnt';
   }
@@ -5017,6 +5026,15 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get wakeEnrollSetupHint =>
+      'Ruhiger Raum, normal laut sprechen, etwa 0,5–1 m vom Handy entfernt.';
+
+  @override
+  String wakeEnrollSpokenWord(String name) {
+    return 'Hey $name';
+  }
+
+  @override
   String get wakeEnrollTitle => 'Stimme einlernen';
 
   @override
@@ -5029,7 +5047,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get wakeEnrollTooQuiet => 'Zu leise. Bitte etwas lauter.';
+  String get wakeEnrollTooQuiet => 'Zu leise – bitte näher ans Handy.';
 
   @override
   String get wakeEnrollUnchecked =>

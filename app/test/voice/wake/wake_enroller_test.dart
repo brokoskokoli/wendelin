@@ -19,7 +19,7 @@ WakeEnroller enroller(
   int target = 3,
   int minimum = 2,
   WakeFeatureExtractor? features,
-  WakeVerifier? verifier,
+  WakeEnrollVerifier? verifier,
 }) => WakeEnroller(
   audio: audio,
   features: features ?? fakeFeatures(),
