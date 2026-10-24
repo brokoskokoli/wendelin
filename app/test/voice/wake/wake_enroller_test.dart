@@ -55,6 +55,48 @@ void main() {
   });
 
   test(
+    'Ausreißer verliert auch seine B-Folge: Zuordnung bleibt (WP143)',
+    () async {
+      // Aufnahme k (0-basiert) trägt Vektor good(k) und Folge mit Kennung k+1;
+      // Aufnahme 5 weicht ab und wird verworfen. Die Folge folgt der Aufnahme.
+      List<double> good(int n) => [1, 0.02 * (n % 5), 0.3, 0.1 * (n % 3)];
+      var seqCalls = 0; // Folge k wird nach dem Vektor k berechnet
+      final features =
+          fakeFeatures(
+              vector: (_) => Float32List.fromList(
+                seqCalls == 5 ? [-1, 0.5, -0.4, 0.9] : good(seqCalls),
+              ),
+            )
+            ..sequenceFor = (clip) {
+              seqCalls++;
+              return Float32List(3 * 96)..[0] = seqCalls.toDouble();
+            };
+      final store = FakeWakeTemplateStore();
+      final e = enroller(
+        SequenceAudio([for (var i = 0; i < 7; i++) recording()]),
+        store,
+        target: 6,
+        features: features,
+      );
+      await e.run();
+      final t = await e.finish();
+      expect(e.rejected, 1, reason: 'genau ein Ausreißer entfernt');
+      const kept = [0, 1, 2, 3, 4, 6];
+      expect(t.embeddings, hasLength(kept.length));
+      expect(t.sequences, hasLength(kept.length));
+      expect(
+        [for (final s in t.sequences) s.values[0]],
+        [for (final k in kept) k + 1.0],
+        reason: 'Folge von Aufnahme 5 (Kennung 6) fehlt, Rest in Reihenfolge',
+      );
+      expect(
+        [for (final v in t.embeddings) v.toList()],
+        [for (final k in kept) Float32List.fromList(good(k)).toList()],
+      );
+    },
+  );
+
+  test(
     'Folgen für den Prüfer B werden je Aufnahme gespeichert (WP143)',
     () async {
       final store = FakeWakeTemplateStore();
