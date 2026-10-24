@@ -4,6 +4,7 @@
 Liest <models>/<tag>/b_templates.npz (nur mu) und verifier.json (Ausschnitt, TOPK, Schwellen) und schreibt
   <out>/wake_verifier_b_mu.json     mu (96) mit Feature-Version und Ausschnitt
   <out>/verifier_b_parity.json      SYNTHETISCHE Embeddings, Vorlagen und erwartete b_score je Kopf (aus verifier_eval.b_score)
+  <out>/verifier_b_chain_parity.json  Kettenfall: Signale -> Zuschnitt -> echte oww-Embeddings -> Kopfwerte (nur mit lokalen oww-Modellen)
 Aufruf: python verifier_export.py --models <ordner> --tag ca1 [--out tool/train_wake_word/testdata]
 Selbsttest: test_verifier_export.py."""
 import argparse, json, os, sys
@@ -32,7 +33,7 @@ def mu_json(mu, meta):
             "mu": [round(float(v), 7) for v in mu]}
 
 
-def _r(a): return np.round(np.asarray(a, "float32"), DECIMALS).astype("float32")
+def _r(a, dec=DECIMALS): return np.round(np.asarray(a, "float32"), dec).astype("float32")
 
 
 def _lst(a): return np.round(np.asarray(a, "float64"), DECIMALS).tolist()      # kurze Dezimalzahlen (float32.tolist() waere lang)
@@ -165,13 +166,68 @@ def template_cases():
 
 def pcm_cases():
     return {"rule": {"segment": "e = pythonRound(end/160)*160 (Halbe -> gerade Zahl); a = e - 30400; b = e + 13600; Rand mit Nullen; Spitze auf 0,5 (nur wenn max > 1e-6)",
-                     "template": "a = trunc((start - 0.12)*16000), b = trunc((ende + 0.20)*16000) in double, begrenzt auf [0, len]; trim -40 dB (160er Frames, Rand 800); Annahme nur bei Laenge >= 4000",
+                     "template": "a = trunc((start - 0.12)*16000), b = trunc((ende + 0.20)*16000) in double, begrenzt auf [0, len]; trim -40 dB (160er Frames, Rand 800); Annahme, wenn die oww-Kette mindestens 2 Embedding-Frames liefert (Clip ab 13920 Samples = 0,87 s; verifier_eval.build_templates len(e) >= 2; real_split.cut_clips selbst nimmt ab 4000 Samples, Vorlagen darunter kommen nie in den Pruefer)",
                      "frames": "k = n//160; M = k - 3; F = (M - 76)//8 + 1; M < 76: ungueltig"},
             "oww_frames_checked": [{"samples": n, "F": f} for n, f in OWW_CHECKED],
             "live": live_cases(), "template": template_cases()}
 
 
-def export(models, tag, out):
+# ---------- Kettenfall: Signal -> Zuschnitt -> normalize -> echte oww-Embeddings -> Kopfwerte ----------
+CHAIN_LIVE_N, CHAIN_LIVE_END = 64000, 40000                       # 4 s, Entscheidungsende 2,5 s -> Ausschnitt 44000 Samples, F = 25
+CHAIN_ENROLL_N = 96000                                             # Einlern-Signal 6 s
+CHAIN_WORDS = ((0.5, 1.4, 37), (2.2, 3.2, 53), (4.0, 4.9, 71))      # Start/Ende (s) und Schrittweite der 3 Vorlagen-Clips
+CHAIN_BG = 0.001
+CHAIN_HEADS = {"W": [0, 1, 2], "HW": [1, 2]}                       # Vorlagen je Kopf (Index in CHAIN_WORDS): getrennt, HW nutzt nur 2 Vorlagen (Top-k mit weniger als k)
+CHAIN_TOL = {"embeddings": 1e-3, "scores": 1e-4}
+CHAIN_FORMULA = ("Live: x[i] = 0.4 * ((i*37 % 2001) - 1000) / 2000, i < 64000; Ausschnitt verifier_data.segment(x, 40000/16000), normalize (Spitze 0,5), "
+                 "Embeddings F x 96. Einlernen: y[i] = ((i*k % 2001) - 1000) / 2000 * (0.4 im Wort [int(start*16000), int(ende*16000)) mit Schritt k = 37, 53, 71 je Wort, sonst 0.001 mit k = 37), i < 96000; "
+                 "Clips real_split.cut_clips (a = int((start - 0.12)*16000), b = int((ende + 0.20)*16000), trim -40 dB), normalize, Embeddings m x 96. "
+                 "Embeddings: openWakeWord-Kette (Melspec + Embedding, Vielfache von 160 Samples, int16), Werte auf 6 Stellen")
+
+
+def chain_enroll_signal(n=CHAIN_ENROLL_N, words=CHAIN_WORDS, bg=CHAIN_BG):
+    idx = np.arange(n)
+    x, amp = ((idx * 37) % 2001 - 1000) / 2000, np.full(n, bg)
+    for s, e, k in words:
+        m = (idx >= int(s * SR)) & (idx < int(e * SR)); x[m] = ((idx[m] * k) % 2001 - 1000) / 2000; amp[m] = 0.4
+    return (x * amp).astype("float32")
+
+
+def chain_parity(mu, meta, oww):
+    """Erwartete Embedding-Folgen aus der echten Messkette und Kopfwerte. mu: exportiertes (gerundetes) mu."""
+    import common as CM
+    af = CM.make_features(oww)
+    mu = np.asarray(mu, "float32")
+    live = live_signal(CHAIN_LIVE_N)
+    seg = D.normalize(D.segment(live, CHAIN_LIVE_END / SR))
+    q = _r(CM.embed(af, [seg])[0], 6)
+    enroll = chain_enroll_signal()
+    rows = [{"geraet": R.TRAIN_DEVICE, "block": "1", "runde": "1", "wort": "Wendelin", "status": "ok", "start": str(s), "ende": str(e)} for s, e, _ in CHAIN_WORDS]
+    clips = [R.cut_clips([r], enroll) for r in rows]
+    assert all(len(c) == 1 for c in clips), "Vorlagen-Clip abgelehnt"
+    clips = [c[0][1] for c in clips]
+    tmpl = [_r(CM.embed(af, [D.normalize(c)])[0], 6) for c in clips]
+    assert len(q) == oww_frames(len(seg)) and all(len(t) == oww_frames(len(c)) >= 2 for t, c in zip(tmpl, clips))
+    heads = {h: chain_scores(q, [tmpl[i] for i in idx], mu, int(meta["topk"])) for h, idx in CHAIN_HEADS.items()}
+    return {"name": "verifier_b_chain_parity", "feature_version": FEATURE_VERSION, "dims": DIMS, "synthetic": True,
+            "formula": CHAIN_FORMULA, "tolerance": CHAIN_TOL, "topk": int(meta["topk"]),
+            "live": {"signal_len": CHAIN_LIVE_N, "decision_end_sample": CHAIN_LIVE_END, "segment_len": len(seg), "frames_F": len(q), "embeddings": _lst6(q)},
+            "templates": [{"start_s": s, "end_s": e, "step": k, "clip_len": len(c), "frames_m": len(t), "embeddings": _lst6(t)}
+                          for (s, e, k), c, t in zip(CHAIN_WORDS, clips, tmpl)],
+            "heads": {h: {"templates": CHAIN_HEADS[h], **v} for h, v in heads.items()}}
+
+
+def chain_scores(q, tl, mu, topk):
+    """Score je Vorlage (E.b_score mit einer Vorlage, ohne Top-k-Mittel) und Kopfwert, gerechnet aus den gespeicherten (gerundeten) Embeddings."""
+    q = np.asarray(q, "float32")[None]
+    per = [round(float(E.b_score(q, E.prep_templates([np.asarray(t, "float32")], mu), mu, topk=1)[0]), 6) for t in tl]
+    return {"template_scores": per, "head_score": round(float(E.b_score(q, E.prep_templates([np.asarray(t, "float32") for t in tl], mu), mu, topk=topk)[0]), 6)}
+
+
+def _lst6(a): return np.round(np.asarray(a, "float64"), 6).tolist()
+
+
+def export(models, tag, out, oww=D.OWW_DIR):
     d = os.path.join(models, tag)
     meta = json.load(open(os.path.join(d, "verifier.json")))
     meta = {"pre": meta["pre"], "tail": meta["tail"], "topk": meta["topk"], "thresholds": meta["thresholds"]}
@@ -181,6 +237,11 @@ def export(models, tag, out):
     mu = np.array(mj["mu"], "float32")                               # die Paritaet rechnet mit dem exportierten (gerundeten) mu, wie die App
     for name, obj in (("wake_verifier_b_mu.json", mj), ("verifier_b_parity.json", parity(mu, meta))):
         with open(os.path.join(out, name), "w") as f: json.dump(obj, f, separators=(",", ":") if "parity" in name else None, indent=None if "parity" in name else 1); f.write("\n")
+    if oww and os.path.isfile(os.path.join(oww, "embedding_model.onnx")):
+        with open(os.path.join(out, "verifier_b_chain_parity.json"), "w") as f:
+            json.dump(chain_parity(mu, meta, oww), f, separators=(",", ":")); f.write("\n")
+    else:
+        print("oww-Modelle fehlen: verifier_b_chain_parity.json nicht erzeugt", file=sys.stderr)
 
 
 if __name__ == "__main__":

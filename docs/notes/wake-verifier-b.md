@@ -20,7 +20,7 @@ Stand WP137 (Stimmenset clean). Quelle: `tool/train_wake_word/verifier_eval.py` 
 Label `start`/`ende` in Sekunden (double). `a = max(0, trunc((start - 0.12) * 16000))`, `b = min(len, trunc((ende + 0.20) * 16000))`; **abgeschnitten (Richtung 0), nicht gerundet**, im double gerechnet
 (z. B. `(1.13 - 0.12) * 16000 = 16159,999...` gibt 16159). Danach `trim`: Frames zu 160 Samples, RMS je Frame, Frame zählt bei `20*log10(rms / (max_rms + 1e-9)) > -40`;
 `lo = max(0, erster * 160 - 800)`, `hi = min(len, (letzter + 1) * 160 + 800)`; zählt kein Frame: ganzer Clip. Bei lauter Umgebung greift der Trim nicht (ganzer Zuschnitt).
-Clip kürzer als 4000 Samples: verworfen. Live-Ausschnitt: `pyRound` rundet Halbe zur geraden Zahl (500,5 -> 500, 501,5 -> 502), Dart `round()` rundet weg von null und weicht dort ab.
+Mindestlänge: `cut_clips` selbst nimmt Clips ab 4000 Samples, in den Prüfer kommt eine Vorlage aber erst ab 2 Embedding-Frames (`verifier_eval.build_templates`: `len(e) >= 2`), also ab 13920 Samples (ca. 0,87 s, `M = 84`, `F = 2`); kürzere Clips verwirft die App. Der Trim -40 dB kürzt keine der 29 echten Messvorlagen. Live-Ausschnitt: `pyRound` rundet Halbe zur geraden Zahl (500,5 -> 500, 501,5 -> 502), Dart `round()` rundet weg von null und weicht dort ab.
 In der App gibt es keine Labels: Sprachgrenzen aus Pegel/VAD ersetzen Start/Ende; die Empfindlichkeit dafür ist nicht gemessen und offen.
 Paritätsfälle dazu: `pcm.live` und `pcm.template` (Grenzen, Spitze, F bzw. m, ohne Embedding-Werte); `pcm.oww_frames_checked` sind an echtem openWakeWord gemessene Paare.
 
@@ -32,7 +32,7 @@ Paritätsfälle dazu: `pcm.live` und `pcm.template` (Grenzen, Spitze, F bzw. m, 
 ## Bekannte Grenzen
 - B trennt „Wendelin“ nicht von „Hey Wendelin“ (Vorlagen beider Köpfe sind dem anderen Wort ähnlich).
 - Schwelle unsicher: Auf der Trainingsseite nimmt sie nur etwa 4 % der Positiven an, im Prüf-Split etwa 60 %.
-- Zu kurze Clips (unter 79 Frames Audio, ca. 0,79 s) wirft die Python-Kette; die App muss sie ablehnen.
+- Zu kurze Clips (unter 76 Melspec-Frames wirft die Python-Kette, unter 2 Embedding-Frames, also unter 13920 Samples bzw. ca. 0,87 s, nimmt der Prüfer keine Vorlage); die App muss sie ablehnen.
 
 ## Prüfung
-`python verifier_export.py --models <ordner> --tag ca1` erzeugt beide Dateien neu; `test_verifier_export.py` rechnet die Parität neu (auch gegen die echten Funktionen `segment`, `trim`, `cut_clips`).
+`python verifier_export.py --models <ordner> --tag ca1` erzeugt beide Dateien neu (mit lokalen oww-Modellen zusätzlich `verifier_b_chain_parity.json`: Kettenfall mit echten Embeddings, Formel in der Datei); `test_verifier_export.py` rechnet die Parität neu (auch gegen die echten Funktionen `segment`, `trim`, `cut_clips`).

@@ -76,7 +76,7 @@ class Export(unittest.TestCase):
             meta = {"pre": 1.9, "tail": 0.85, "topk": 3, "thresholds": {"B": {"W": 0.6, "HW": 0.7}}}
             json.dump(meta, open(os.path.join(m, "verifier.json"), "w"))
             np.savez(os.path.join(m, "b_templates.npz"), mu=np.arange(96, dtype="float32"), t0=np.ones((3, 96), "float32"))
-            X.export(os.path.join(d, "m"), "t", os.path.join(d, "o"))
+            X.export(os.path.join(d, "m"), "t", os.path.join(d, "o"), oww=None)
             self.assertEqual(sorted(os.listdir(os.path.join(d, "o"))), ["verifier_b_parity.json", "wake_verifier_b_mu.json"])
             self.assertNotIn("t0", open(os.path.join(d, "o", "wake_verifier_b_mu.json")).read())
             with self.assertRaises(SystemExit): X.mu_json(np.zeros(95), meta)
@@ -129,6 +129,44 @@ class PcmZuschnitt(unittest.TestCase):
         for n in (16000, 24000, 44000, 44160, 19040, 18880):
             e = CM.embed(af, [np.random.default_rng(0).standard_normal(n).astype("float32") * 0.1])[0]
             self.assertEqual(len(e), X.oww_frames(n), n)
+
+
+CHAIN_PATH = os.path.join(DATA, "verifier_b_chain_parity.json")
+HAVE_OWW = os.path.isfile(os.path.join(OWW, "embedding_model.onnx"))
+
+
+class Kettenfall(unittest.TestCase):
+    def setUp(self): self.j, self.mu = load(CHAIN_PATH), np.array(load(MU_PATH)["mu"], "float32")
+
+    def test_laengen_und_formel(self):
+        j = self.j
+        self.assertLess(os.path.getsize(CHAIN_PATH), 300_000)
+        self.assertEqual(j["live"]["segment_len"], 44000); self.assertEqual(j["live"]["frames_F"], X.oww_frames(44000))
+        self.assertEqual(len(j["live"]["embeddings"]), 25); self.assertEqual({len(v) for v in j["live"]["embeddings"]}, {96})
+        enroll = X.chain_enroll_signal()
+        for t, (s, e, _) in zip(j["templates"], X.CHAIN_WORDS):
+            c = R.cut_clips([{"geraet": R.TRAIN_DEVICE, "block": "1", "runde": "1", "wort": "Wendelin", "status": "ok", "start": str(s), "ende": str(e)}], enroll)[0][1]
+            self.assertEqual(len(c), t["clip_len"]); self.assertEqual(t["frames_m"], X.oww_frames(len(c))); self.assertGreaterEqual(t["frames_m"], 2)
+            self.assertEqual(len(t["embeddings"]), t["frames_m"])
+
+    def test_kopfwerte_aus_gespeicherten_embeddings(self):
+        j = self.j
+        q = np.array(j["live"]["embeddings"], "float32"); tm = [np.array(t["embeddings"], "float32") for t in j["templates"]]
+        for h, v in j["heads"].items():
+            got = X.chain_scores(q, [tm[i] for i in v["templates"]], self.mu, j["topk"])
+            np.testing.assert_allclose(got["template_scores"], v["template_scores"], atol=2e-6)
+            self.assertAlmostEqual(got["head_score"], v["head_score"], delta=2e-6)
+        self.assertLess(j["heads"]["W"]["template_scores"][1], 0.9)       # nicht alle Vorlagen gleich gut: Fehler im Pfad faellt auf
+
+    @unittest.skipUnless(HAVE_OWW, "lokale oww-Modelle fehlen")
+    def test_datei_reproduziert_mit_echtem_oww(self):
+        meta = {"topk": self.j["topk"]}
+        new = json.loads(json.dumps(X.chain_parity(self.mu, meta, OWW)))
+        np.testing.assert_allclose(new["live"]["embeddings"], self.j["live"]["embeddings"], atol=self.j["tolerance"]["embeddings"])
+        for a, b in zip(new["templates"], self.j["templates"]):
+            self.assertEqual((a["clip_len"], a["frames_m"]), (b["clip_len"], b["frames_m"]))
+            np.testing.assert_allclose(a["embeddings"], b["embeddings"], atol=self.j["tolerance"]["embeddings"])
+        self.assertEqual(new, self.j)
 
 
 if __name__ == "__main__":
