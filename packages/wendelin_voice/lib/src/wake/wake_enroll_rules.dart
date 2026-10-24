@@ -5,10 +5,20 @@ import 'wake_math.dart';
 
 /// Limits of the content check of the enrollment (WP140, WP142), measured on
 /// real calls (see `docs/testing/m5/wp140.md`, `wp142.md`); change them here
-/// only. The classifier no longer accepts a recording (WP142): v8a rates
-/// „Wendelin“ and „Hey Wendelin“ alike (9 of 60 „Wendelin“ alone got through
-/// at 0.98), so only the recognizer hearing „Hey Wendelin“ passes.
+/// only.
 abstract final class WakeEnrollRules {
+  /// A recording passes the content check by the classifier alone when its
+  /// highest window score (`WakeWindow.modelScore`) reaches this value; the
+  /// other way is the recognizer hearing „Hey Wendelin“ (OR). The
+  /// recognizer hearing „Wendelin“ without „Hey“ vetoes the classifier.
+  ///
+  /// Measured (WP142, „Hey Wendelin“, 30 utterances, 880 intruders): at 0.9,
+  /// 5 intruders got through; at 0.98, none (0 of 880) and 13.3 % of the
+  /// calls were rejected (36.7 % with the recognizer alone). v8a rates
+  /// „Wendelin“ alone like „Hey Wendelin“: 9 of 60 got through, which the
+  /// veto catches only when the recognizer hears the word.
+  static const classifierMinScore = 0.98;
+
   /// A template is an outlier when its deviation ([templateDeviation]) is
   /// below minus this value. Measured (WP142, „Hey Wendelin“, quiet
   /// sentences): at 0.2, 2.3 to 3.0 good templates per enrollment were

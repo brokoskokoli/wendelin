@@ -66,7 +66,7 @@ Future<Float32List?> embedUtterance(
 
 /// [embedUtterance] plus the highest classifier score of any window of the
 /// recording (`null` when the extractor has no classifier): the evidence of
-/// the log of the content check (WP140; since WP142 it no longer accepts).
+/// the content check (WP140, [WakeEnrollRules.classifierMinScore]).
 Future<({Float32List embedding, double? modelScore})?> embedUtteranceScored(
   WakeFeatureExtractor features,
   Int16List pcm,
@@ -120,6 +120,11 @@ final class EnrollCheckUnavailable implements Exception {
 /// Rejections in a row as too quiet or unheard after which the enrollment
 /// shows a tip (WP142).
 const wakeEnrollQuietTipAfter = 2;
+
+/// Lowest peak level of a wake enrollment recording (WP142): quiet „Hey
+/// Wendelin“ must not be cut off here. Only the wake enrollment uses it; the
+/// capture default and the speaker recording stay at 0.02.
+const wakeEnrollMinPeak = 0.008;
 
 /// Longest wait for the recognizer per check (it may still be loading).
 const wakeEnrollCheckTimeout = Duration(seconds: 45);
@@ -176,9 +181,11 @@ class WakeEnroller extends ChangeNotifier {
     this.threshold = wakeProvisionalThreshold,
     this.pause = const Duration(milliseconds: 900),
     this.verifier,
+    this.classifierMinScore = WakeEnrollRules.classifierMinScore,
     this.checkTimeout = wakeEnrollCheckTimeout,
     UtteranceCapture Function()? newCapture,
-  }) : _newCapture = newCapture ?? UtteranceCapture.new;
+  }) : _newCapture =
+           newCapture ?? (() => UtteranceCapture(minPeak: wakeEnrollMinPeak));
 
   /// Microphone.
   final AudioInput audio;
@@ -204,10 +211,16 @@ class WakeEnroller extends ChangeNotifier {
   /// Pause after each recording (time to read the result).
   final Duration pause;
 
-  /// Content check (WP140, WP142): the configured recognizer must hear
-  /// „Hey Wendelin“ ([matchesHeyWakeWord], lenient). `null`: no recognizer;
-  /// then nothing passes (fail closed).
+  /// Content check (WP140, WP142): the recognizer hears „Hey Wendelin“
+  /// ([matchesHeyWakeWord], lenient) or the classifier is sure
+  /// ([classifierMinScore]); the recognizer hearing „Wendelin“ without
+  /// „Hey“ vetoes the classifier. `null`: no recognizer; then only the
+  /// classifier can vouch for a recording.
   final WakeEnrollVerifier? verifier;
+
+  /// Classifier score from which a recording passes without „Hey Wendelin“
+  /// from the recognizer.
+  final double classifierMinScore;
 
   /// How long a check waits for the recognizer (still loading) before the
   /// recording counts as unchecked.
@@ -370,34 +383,45 @@ class WakeEnroller extends ChangeNotifier {
     }
   }
 
-  /// Whether the recording is „Hey Wendelin“: the recognizer must hear it
-  /// ([matchesHeyWakeWord], lenient). „Wendelin“ without „Hey“ gets its own
-  /// verdict. The classifier [score] is only logged. No recognizer or a
-  /// failing one is no pass (fail closed). Logs source, outcome and time,
-  /// never text.
+  /// Whether the recording is „Hey Wendelin“: the recognizer hears it
+  /// ([matchesHeyWakeWord], lenient) or the classifier is sure
+  /// ([classifierMinScore]). The recognizer hearing „Wendelin“ without „Hey“
+  /// gives [UtteranceVerdict.missingHey] whatever the classifier says. No
+  /// evidence at all (no classifier pass, recognizer missing or failing) is
+  /// no pass (fail closed). Logs source, outcome and time, never text.
   Future<UtteranceVerdict> _checkContent(Int16List pcm, double? score) async {
     final watch = Stopwatch()..start();
+    final sure = score != null && score >= classifierMinScore;
     var source = 'none';
     var verdict = UtteranceVerdict.unchecked;
+    HeardWake? heard;
     if (verifier != null) {
       try {
         // The recognizer may still be loading: wait, but not for ever.
-        final heard = await verifier!.hear(pcm).timeout(checkTimeout);
-        switch (heard) {
-          case HeardWake.heyWendelin:
-            source = 'stt';
-            verdict = UtteranceVerdict.accepted;
-          case HeardWake.wendelinOnly:
-            source = 'stt-no-hey';
-            verdict = UtteranceVerdict.missingHey;
-          case HeardWake.other:
-            source = 'stt-no';
-            verdict = UtteranceVerdict.notWord;
-        }
+        heard = await verifier!.hear(pcm).timeout(checkTimeout);
       } on Object catch (e) {
         source = 'stt-error';
         voiceLog('enroll-check-error', {'error': errorCode(e)});
       }
+    }
+    switch (heard) {
+      case HeardWake.heyWendelin:
+        source = 'stt';
+        verdict = UtteranceVerdict.accepted;
+      case HeardWake.wendelinOnly:
+        source = 'stt-no-hey';
+        verdict = UtteranceVerdict.missingHey;
+      case HeardWake.other || null:
+        if (sure) {
+          source = 'classifier';
+          verdict = UtteranceVerdict.accepted;
+        } else if (heard != null) {
+          source = 'stt-no';
+          verdict = UtteranceVerdict.notWord;
+        } else if (verifier == null && score != null) {
+          source = 'classifier-no';
+          verdict = UtteranceVerdict.notWord;
+        }
     }
     voiceLog('enroll-check', {
       'source': source,

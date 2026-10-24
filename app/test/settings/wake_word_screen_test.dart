@@ -393,7 +393,7 @@ void main() {
 
     testWidgets('zu leise: Hinweis, zählt nicht', (tester) async {
       final audio = SequenceAudio([
-        recording(amplitude: 350),
+        recording(amplitude: 200),
         for (var i = 0; i < 3; i++) recording(),
       ]);
       final env = wakeEnv(audio: audio);

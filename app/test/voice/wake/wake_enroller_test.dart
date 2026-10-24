@@ -56,7 +56,7 @@ void main() {
 
   test('ungültige Aufnahmen werden verworfen und gezählt', () async {
     final audio = SequenceAudio([
-      recording(amplitude: 350), // zu leise
+      recording(amplitude: 200), // zu leise
       recording(lead: 0), // abgeschnitten
       recording(speech: 4000), // zu lang
       recording(), // gut
