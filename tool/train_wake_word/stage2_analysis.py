@@ -328,6 +328,7 @@ def lost_calls(dev, word, thrs, folds, curves, tx, labels, evs):
     """Je Fold: Stufe-1-Treffer auf den Test-Bloecken und davon die von hw2 (App-Regel) verworfenen.
     -> (Zahl Stufe-1-Treffer, [{"block", "thr", "texts", "cat", "rec": {Variante: bool|None}}])
     Verworfen = Stufe 1 trifft im Labelfenster, aber kein Ereignis im Fenster besteht die App-Regel. Fehlt ein Text: KeyError."""
+    if len(thrs) != len(folds): raise ValueError(f"lost_calls: {len(thrs)} Schwellen, aber {len(folds)} Folds")
     n1, lost = 0, []
     src = f"pos_{dev}"
     key = lambda t: W.seg_key(src, src, t)
@@ -390,9 +391,11 @@ def analyse(models, curves, labels, rows, target, split="eval"):
                     c = V.cv_cell(rows, dev, w, tag, ("-", "app"), "real", target, split)
                 if c is None or c[2] is None: continue
                 thrs = op_thresholds(tag, c[2])
+                folds = V.cell_folds(rows, dev, w, tag, split)
+                if len(thrs) != len(folds): raise SystemExit(f"{tag}/{dev}/{w}: {len(thrs)} Schwellen, aber {len(folds)} Folds")
                 evs = {t: V.events_at(curves[tag], t) for t in set(thrs)}
                 try:
-                    n1, lost = lost_calls(dev, w, thrs, V.folds_for(dev, split), curves[tag], tw, labels, evs)
+                    n1, lost = lost_calls(dev, w, thrs, folds, curves[tag], tw, labels, evs)
                     filt = {t: filtered_events(dev, w, t, curves[tag], tw, evs) for t in sorted(set(thrs))}
                 except KeyError as e:
                     print(f"Stufe-2-Text fehlt fuer {tag}/{dev}/{w}: {e}", flush=True)
@@ -627,7 +630,8 @@ def main():
     ap.add_argument("--report-only", action="store_true", help="Ausschnitt nicht neu dekodieren")
     ap.add_argument("--target", type=float, default=2.0, help="FA/h")
     ap.add_argument("--threads", type=int, default=2)
-    ap.add_argument("--cut-only", action="store_true", help="nur Ausschnitt-Paritaet/Vor-/Nachlauf (stage2_cut.py, v8a), Ausgabe stage2_cut_table.md")
+    ap.add_argument("--cut-only", action="store_true", help="nur Ausschnitt-Paritaet/Vor-/Nachlauf (stage2_cut.py) fuer jedes --model; Ausgabe stage2_cut_table.md (v8a) bzw. stage2_cut_table_<name>.md")
+    ap.add_argument("--seed-group", action="append", default=[], help="nur mit --cut-only: name=tag1,tag2,... (Seed-Gruppe, Modelle muessen unter --model stehen); Ausgabe stage2_cut_table_seeds.md")
     ap.add_argument("--split", choices=V.SPLITS, default="eval",
                     help="eval = Prüf-Split (Standard); all = alle Blöcke 1–6, nur v7 und Modelle mit Sidecar real_pos=0 (Abschnitt 6 je Modell ohne v8a, Ausgabe *_all)")
     ap.add_argument("--fixed-thr", type=parse_thrs, default=[FIXED_THR], help="feste Stufe-1-Schwellen fuer Abschnitt 6, Komma-Liste (Standard 0.98)")
@@ -637,8 +641,21 @@ def main():
     V.check_split_models(a.split, models)
     if a.cut_only:
         import stage2_cut as C
-        if C.CUT_TAG not in models: sys.exit("--cut-only braucht --model v8a=<pfad>")
-        C.run_all(V.load_curves(C.CUT_TAG), V.filter_labels(W.read_labels()), {s: V.hours(s) for s in W.NEG_SRC + ["conf"]}, a.target, a.threads, a.report_only)
+        tags = [m.partition("=")[0] for m in a.model]
+        if not tags: sys.exit("--cut-only braucht mindestens ein --model name=<pfad> (z. B. v8a=..., v8c=...)")
+        try: groups = [C.parse_seed_group(g) for g in a.seed_group]
+        except ValueError as e: sys.exit(str(e))
+        for _, ts in groups:
+            for t in ts:
+                if t not in tags: sys.exit(f"--seed-group: Modell {t} fehlt unter --model")
+        labels, hr = V.filter_labels(W.read_labels()), {s: V.hours(s) for s in W.NEG_SRC + ["conf"]}
+        per_tag = {}
+        for t in dict.fromkeys(tags):
+            per_tag[t] = C.run_all(V.load_curves(t), labels, hr, a.target, a.threads, a.report_only, t, C.SEED_THRS if groups else ())
+        if groups:
+            p = f"{V.RES}/stage2_cut_table_seeds.md"
+            open(p, "w").write("# Seed-Zusammenfassung Ausschnitt (WP137)\n\n" + C.seed_summary(groups, per_tag, hr))
+            print(f"-> {p}", flush=True)
         return
     curves = {t: V.load_curves(t) for t in models}
     if not a.report_only: run_s2x(models, curves, a.threads); run_extra(models, curves, a.threads)

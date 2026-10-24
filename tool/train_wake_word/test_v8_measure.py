@@ -16,8 +16,21 @@ def labels():
     out = []
     for dev in ("huawei", "handy2"):
         for b in range(1, 7):
-            for w in ("Wendelin", "Hey Wendelin", "Alexa"):
-                out.append({"dev": dev, "block": b, "round": 1, "word": w, "start": 100.0 * b, "end": 100.0 * b + 1, "status": "ok"})
+            for i, w in enumerate(("Wendelin", "Hey Wendelin", "Alexa")):
+                off = 0.0 if dev == "huawei" else 1.7 * (i + 1) * b          # zweites Handy: eigene Sitzung (kein fester Versatz zu huawei)
+                out.append({"dev": dev, "block": b, "round": 1, "word": w, "start": 100.0 * b + off, "end": 100.0 * b + off + 1, "status": "ok"})
+    return out
+
+
+def paired_labels(offset=0.72, devs=("huawei", "handy2")):
+    """Eine Sitzung (Block 1 bis 6, 4 Runden, 3 Woerter), von mehreren Geraeten gleichzeitig aufgenommen: Start = Basis + Geraeteversatz."""
+    out = []
+    for k, dev in enumerate(devs):
+        for b in range(1, 7):
+            for rd in range(1, 5):
+                for i, w in enumerate(("Wendelin", "Hey Wendelin", "Alexa")):
+                    st = 100.0 * b + 10.0 * rd + 2.5 * i + offset * k
+                    out.append({"dev": dev, "block": b, "round": rd, "word": w, "start": st, "end": st + 1, "status": "ok"})
     return out
 
 
@@ -26,9 +39,75 @@ class Split(unittest.TestCase):
         sel = V.filter_labels(labels())
         self.assertFalse([lb for lb in sel if lb["dev"] == "huawei" and lb["block"] in R.TRAIN_BLOCKS])
         self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "huawei"}), [4, 5, 6])
-        self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "handy2"}), [1, 2, 3, 4, 5, 6])
+        self.assertEqual(sorted({lb["block"] for lb in sel if lb["dev"] == "handy2"}), [1, 2, 3, 4, 5, 6])    # eigene Sitzung: bleibt
         self.assertEqual(len(sel), (3 + 6) * 2)                                  # nur die beiden Woerter
         self.assertEqual({lb["word"] for lb in sel}, {"Wendelin", "Hey Wendelin"})
+
+    def test_gleiche_sitzung_faellt_heraus(self):
+        """Zweites Geraet derselben Sitzung (fester Versatz) ist Datenleck in Block 1 bis 3; ein drittes Geraet ebenso."""
+        lab = paired_labels(devs=("huawei", "handy2"))
+        sel = V.filter_labels(lab)
+        self.assertEqual(sorted({(lb["dev"], lb["block"]) for lb in sel}), [(d, b) for d in ("handy2", "huawei") for b in (4, 5, 6)])
+        self.assertEqual(len(sel), 2 * 3 * 4 * 2)
+        old = [lb for lb in lab if lb["word"] in V.WORDS and lb["dev"] in V.DEVICES
+               and not (lb["dev"] == R.TRAIN_DEVICE and lb["block"] in R.TRAIN_BLOCKS)]      # alte eval_blocks-Logik: Mutationsbeleg
+        self.assertEqual((len(old), len(sel)), (72, 48))                                         # ohne Fix 24 Labels (handy2 Block 1 bis 3) zu viel
+        three = R.paired_sessions(paired_labels(devs=("huawei", "handy2", "handy3")))
+        self.assertEqual(sorted(three), [("handy2", b) for b in (1, 2, 3)] + [("handy3", b) for b in (1, 2, 3)])
+        self.assertEqual(set(three.values()), {"huawei"})
+
+    def test_mehrheit_noetig(self):
+        """handy2 Block 1: 3 von 8 Labels passen zum Training (Versatz), die anderen 5 sind eigene Rufe -> keine Mehrheit, nicht gepaart."""
+        lab = [lb for lb in paired_labels() if lb["dev"] == "huawei"]
+        h1 = [lb for lb in lab if lb["block"] == 1 and lb["word"] == "Wendelin"]                    # 4 Runden
+        mine = [dict(lb, dev="handy2", start=lb["start"] + 0.72, end=lb["end"] + 0.72) for lb in h1[:3]]
+        fremd = [{"dev": "handy2", "block": 1, "round": 9, "word": "Wendelin", "start": 5000.0 + 7 * i, "end": 5001.0 + 7 * i, "status": "ok"} for i in range(5)]
+        self.assertEqual(R.paired_sessions(lab + mine + fremd), {})                                  # 3 von 8: keine Mehrheit
+        self.assertEqual(R.paired_sessions(lab + mine), {("handy2", 1): "huawei"})                   # 3 von 3: gepaart
+
+    def test_toleranz_gilt(self):
+        """Versatz streut je Ruf um bis 0,1 s: noch gepaart (Toleranz 0,2 s); ein Versatz von 0,5 s Unterschied nicht."""
+        lab = [lb for lb in paired_labels() if lb["dev"] == "huawei"]
+        h1 = [lb for lb in lab if lb["block"] == 1 and lb["word"] == "Wendelin"]
+        wob = lambda sh: [dict(lb, dev="handy2", start=lb["start"] + 0.72 + d, end=lb["end"] + 0.72 + d) for lb, d in zip(h1, sh)]
+        self.assertEqual(R.paired_sessions(lab + wob([0.0, 0.1, -0.1, 0.05])), {("handy2", 1): "huawei"})
+        self.assertEqual(R.paired_sessions(lab + wob([0.0, 0.5, -0.5, 1.0])), {})
+
+    def test_zu_wenige_rufe_nicht_gepaart(self):
+        lab = [lb for lb in paired_labels() if lb["dev"] == "huawei"]
+        h1 = [lb for lb in lab if lb["block"] == 1 and lb["word"] == "Wendelin"][:2]
+        self.assertEqual(R.paired_sessions(lab + [dict(lb, dev="handy2", start=lb["start"] + 0.72) for lb in h1]), {})
+
+    def test_ohne_trainingszeilen_bricht_ab(self):
+        """fail-closed: nur Pruef-Labels uebergeben -> Abbruch statt stillem Durchlassen; leere Eingabe bleibt leer."""
+        pruef = [lb for lb in paired_labels() if lb["block"] >= 4]
+        with self.assertRaises(SystemExit): R.paired_sessions(pruef)
+        with self.assertRaises(SystemExit): V.filter_labels(pruef)
+        self.assertEqual(R.paired_sessions([]), {})
+
+    def test_cv_cell_ohne_labels_im_block_ist_kein_fold(self):
+        """Test-Bloecke ohne Pruef-Labels (gepaarte Sitzung) zaehlen nicht als Fold: handy2 hat nur Block 4 bis 6."""
+        def row(bl):
+            d = {"dev": "handy2", "word": "Wendelin", "prog": "m", "thr": "0.9", "stage2": "-", "ord": 0.9, "fa_real": 0, "h_real": 1.0}
+            for b in range(1, 7): d[f"hit_b{b}"] = 3 if b in bl else 0; d[f"n_b{b}"] = 5 if b in bl else 0
+            return d
+        rows = [row((4, 5, 6))]
+        c = V.cv_cell(rows, "handy2", "Wendelin", "m", ("-",), "real", 2.0)
+        self.assertEqual((c[:2], len(c[2])), ((9, 15), 3))
+        self.assertEqual(V.cell_folds(rows, "handy2", "Wendelin", "m"), [(tuple(b for b in range(1, 7) if b != t), (t,)) for t in (4, 5, 6)])
+        self.assertEqual(len(V.cell_folds(rows, "handy2", "Wendelin", "m", "all")), 6)
+
+    def test_eigene_sitzung_wird_nicht_gepaart(self):
+        self.assertEqual(R.paired_sessions(labels()), {})
+        self.assertEqual(R.paired_sessions([]), {})
+
+    def test_assert_bricht_bei_gepaartem_label_ab(self):
+        lab = paired_labels()
+        leak = [lb for lb in lab if lb["dev"] == "handy2" and lb["block"] == 2]
+        with self.assertRaises(SystemExit): V.assert_eval_only(leak, "eval", lab)
+        with self.assertRaises(SystemExit): V.assert_eval_only(leak + [lb for lb in lab if lb["dev"] == "huawei"], "eval")   # ohne ref: Paarung in den Labels selbst
+        V.assert_eval_only([lb for lb in lab if lb["block"] >= 4], "eval", lab)
+        V.assert_eval_only(leak, "all", lab)
 
     def test_pruefung_bricht_bei_trainingslabel_ab(self):
         with self.assertRaises(SystemExit):
@@ -89,6 +168,7 @@ class Auswahl(unittest.TestCase):
 class Ausgabe(unittest.TestCase):
     def test_render_tabelle(self):
         pts = Auswahl().pts()
+        for p in pts: p.update({f"n_b{b}": 5 for b in (1, 2, 3)})        # split all: alle sechs Bloecke haben Labels (sonst bricht cv_pick ab)
         rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0, fa_syn=1, h_syn=2.0, fa_fleurs=0, h_fleurs=1.0,
                      conf_n=10, conf_hit=1, conf_ev=1, conf_h=0.01) for p in pts]
         hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 2.0, "fleurs": 1.0, "conf": 0.01}
@@ -159,6 +239,7 @@ class SplitAll(unittest.TestCase):
         self.assertTrue(V.out_names("all")[0].endswith("v8_grid_all.csv") and V.out_names("all")[1].endswith("v8_table_all.md"))
         self.assertTrue(V.out_names("eval")[0].endswith("v8_grid.csv") and V.out_names("eval")[1].endswith("v8_table.md"))
         pts = Auswahl().pts()
+        for p in pts: p.update({f"n_b{b}": 5 for b in (1, 2, 3)})        # split all: alle sechs Bloecke haben Labels (sonst bricht cv_pick ab)
         rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0, fa_syn=1, h_syn=2.0, fa_fleurs=0, h_fleurs=1.0,
                      conf_n=10, conf_hit=1, conf_ev=1, conf_h=0.01) for p in pts]
         hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 2.0, "fleurs": 1.0, "conf": 0.01}
@@ -166,7 +247,9 @@ class SplitAll(unittest.TestCase):
         self.assertIn("dem Prüf-Split", V.render(rows, {"m": "x"}, 2.0, hr))
 
     def test_cv_cell_all_nutzt_alle_bloecke(self):
-        rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0) for p in Auswahl().pts()]
+        pts = Auswahl().pts()
+        for p in pts: p.update({f"n_b{b}": 5 for b in (1, 2, 3)})
+        rows = [dict(p, dev="huawei", word="Wendelin", fa_real=p["fa"], h_real=1.0) for p in pts]
         self.assertEqual(len(V.cv_cell(rows, "huawei", "Wendelin", "m", ("-",), "real", 2.0, "all")[2]), 6)
 
 

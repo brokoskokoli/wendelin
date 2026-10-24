@@ -29,6 +29,11 @@ class Split(unittest.TestCase):
         self.assertFalse(any(M.is_train_row(r) for r in ev))
         self.assertFalse(any(r["geraet"] == "huawei" and int(r["block"]) <= 3 for r in ev))
 
+    def test_pruefung_ohne_gepaarte_sitzung(self):
+        rows = [row(dev=d, block=b, word=w, start=100.0 * b + 10 * i + (0.72 if d == "handy2" else 0)) for d in M.DEVICES for b in range(1, 7)
+                for i, w in enumerate(("Wendelin", "Hey Wendelin", "Alexa"))]
+        self.assertEqual(sorted({(r["geraet"], int(r["block"])) for r in M.pruef_rows(rows)}), [(d, b) for d in sorted(M.DEVICES) for b in (4, 5, 6)])
+
 
 class Mathe(unittest.TestCase):
     def test_zentrieren_und_kosinus(self):

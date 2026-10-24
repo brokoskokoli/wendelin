@@ -311,6 +311,12 @@ class Kreuz(unittest.TestCase):
         hit, n, cfgs = W.cv_pick([a], 1.0, 1)
         self.assertEqual((hit, cfgs), (None, None))
 
+    def test_leerer_test_fold_bricht_ab(self):
+        """Test-Fold ohne Aufnahmen (n=0) darf nicht still 0/0 zaehlen (Review: 3/15 statt 15/15)."""
+        a = self.pt("a", [5, 5, 5, 5, 5, 5], 0)
+        for b in (1, 2, 3): a[f"n_b{b}"] = 0
+        with self.assertRaises(ValueError): W.cv_pick([a], 1.0, 1)
+
     def test_gleichstand_frueherer_eintrag(self):
         a = self.pt("a", [1, 1, 1, 1, 1, 1], 0); b = self.pt("b", [1, 1, 1, 1, 1, 1], 0)
         self.assertEqual(W.cv_pick([a, b], 1.0, 1)[2], ["Ma+-", "Ma+-"])

@@ -547,6 +547,8 @@ def cv_pick(pts, hours, target, folds=FOLDS):
     hit = n = 0
     cfgs = []
     for sel, test in folds:
+        if sum(pts[0][f"n_b{b}"] for b in test) == 0:       # leerer Test-Fold wuerde still 0/0 zaehlen und n verzerren: fail-closed
+            raise ValueError(f"cv_pick: Test-Fold {test} ohne Aufnahmen (n=0); Folds der Zelle vorher filtern")
         ptsx = [dict(p, hit=sum(p[f"hit_b{b}"] for b in sel)) for p in pts]
         best = pick_op(ptsx, hours, target)
         if best is None: return None, sum(pts[0][f"n_b{b}"] for _, t in folds for b in t), None

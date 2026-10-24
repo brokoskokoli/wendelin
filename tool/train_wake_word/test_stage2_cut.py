@@ -255,5 +255,132 @@ class Auswertung(unittest.TestCase):
         self.assertIn("| erst | 2.0 / 0.9, hw2 | 0/1 | 0/0 |", md)
 
 
+class ModelleUndSeeds(unittest.TestCase):
+    """WP137 Teil 1: --cut-only fuer jedes Modell, eigener Cache je Modell, Seed-Zusammenfassung."""
+    def test_cache_je_modell_v8a_unveraendert(self):
+        keep = dict(V.CACHE_TAG)
+        try:
+            V.CACHE_TAG.update({"v8a": "v8a-11111111", "v8c": "v8c-22222222"})
+            a, c = C.cut_path("v8a", "Wendelin", 2.0, 0.9, False), C.cut_path("v8c", "Wendelin", 2.0, 0.9, False)
+            self.assertEqual(a, f"{V.RES}/s2p/v8a-11111111-p2.0-t0.9/hw2@wendelin.json")
+            self.assertEqual(c, f"{V.RES}/s2p/v8c-22222222-p2.0-t0.9/hw2@wendelin.json")
+        finally:
+            V.CACHE_TAG.clear(); V.CACHE_TAG.update(keep)
+
+    def test_standard_ist_v8a_und_tabellenname(self):
+        self.assertEqual(C.CUT_TAG, "v8a")
+        self.assertTrue(C.table_path().endswith("/stage2_cut_table.md"))
+        self.assertTrue(C.table_path("v8a").endswith("/stage2_cut_table.md"))
+        self.assertTrue(C.table_path("c-s2").endswith("/stage2_cut_table_c-s2.md"))
+
+    def test_load_cut_tx_je_modell(self):
+        import json, tempfile
+        keep = V.RES
+        with tempfile.TemporaryDirectory() as d:
+            try:
+                V.RES = d
+                p = C.cut_path("v8c", "Wendelin", 2.0, 0.9, False)
+                os.makedirs(os.path.dirname(p)); json.dump({"k": "Wendelin"}, open(p, "w"))
+                self.assertEqual(C.load_cut_tx("v8c")[(2.0, 0.9, False)]["Wendelin"], {"k": "Wendelin"})
+                self.assertIsNone(C.load_cut_tx("v8a")[(2.0, 0.9, False)]["Wendelin"])     # v8a-Cache bleibt getrennt
+                self.assertIsNone(C.load_cut_tx()[(2.0, 0.9, False)]["Wendelin"])          # Standard = v8a
+            finally:
+                V.RES = keep
+
+    def test_zeilen_und_titel_tragen_das_modell(self):
+        t, v = grid([0.981, 0.985, 0.99, 0.985, 0.1], t0=400.0)
+        cv = curves_mini({"pos_huawei": (t, v)})
+        labels = [{"dev": "huawei", "block": 4, "round": 1, "word": "Wendelin", "start": 399.0, "end": 399.5, "status": "ok"}]
+        hr = {s: 1.0 for s in W.NEG_SRC + ["conf"]}
+        tx = {c: {w: None for w in V.WORDS} for c in C.combos()}
+        rows, skipped = C.cut_rows(cv, labels, hr, tx, "v8c")
+        self.assertEqual({r["prog"] for r in rows["app"]}, {"v8c"})
+        md = C.render_cut(rows, C.cut_fixed(cv, labels, tx), skipped, 2.0, "v8c")
+        self.assertIn(": v8c, Prüfsplit", md)
+        self.assertNotIn("v8a", md)
+        self.assertIn(": v8a, Prüfsplit", C.render_cut(rows, C.cut_fixed(cv, labels, tx), skipped, 2.0))
+
+    def test_cut_fixed_filter_gleich_vollem_lauf(self):
+        t, v = grid([0.981, 0.985, 0.99, 0.985, 0.1], t0=400.0)
+        cv = curves_mini({"pos_huawei": (t, v)})
+        labels = [{"dev": "huawei", "block": 4, "round": 1, "word": "Wendelin", "start": 399.0, "end": 399.5, "status": "ok"}]
+        tx = {c: {w: None for w in V.WORDS} for c in C.combos()}
+        full = C.cut_fixed(cv, labels, tx, 0.95)
+        part = C.cut_fixed(cv, labels, tx, 0.95, refs=("app",), only=C.SEED_STAGES)
+        self.assertEqual(sorted(part), [("app", "-"), ("app", C.SEED_BAND)])
+        self.assertEqual(part[("app", "-")], full[("app", "-")])
+        self.assertEqual(part[("app", C.SEED_BAND)], full[("app", C.SEED_BAND)])
+        self.assertEqual(part[("app", "-")]["hits"][("huawei", "Wendelin")], (1, 1))
+
+    def test_run_all_schreibt_je_modell_und_liefert_seed_daten(self):
+        import tempfile
+        t, v = grid([0.981, 0.985, 0.99, 0.985, 0.1], t0=400.0)
+        cv = curves_mini({"pos_huawei": (t, v)})
+        labels = [{"dev": "huawei", "block": 4, "round": 1, "word": "Wendelin", "start": 399.0, "end": 399.5, "status": "ok"}]
+        hr = {s: 1.0 for s in W.NEG_SRC + ["conf"]}
+        keep = V.RES
+        with tempfile.TemporaryDirectory() as d:
+            try:
+                V.RES = d
+                self.assertEqual(C.run_all(cv, labels, hr, 2.0, 1, True), {})                       # Standard: wie bisher, keine Seed-Daten
+                sd = C.run_all(cv, labels, hr, 2.0, 1, True, "v8c", C.SEED_THRS)
+                self.assertEqual(sorted(os.listdir(d)), ["stage2_cut_table.md", "stage2_cut_table_v8c.md"])
+                self.assertEqual(sorted(sd), list(C.SEED_THRS))
+                self.assertEqual(sorted(sd[0.95]), [("app", "-"), ("app", C.SEED_BAND)])
+                self.assertIn(": v8c,", open(os.path.join(d, "stage2_cut_table_v8c.md"), encoding="utf-8").read())
+            finally:
+                V.RES = keep
+
+    @staticmethod
+    def fx(hits, conf, syn, nh, n2):
+        """cut_fixed-Ergebnis fuer eine Variante: hits = (Treffer, n) je Geraet fuer Wendelin; Hey Wendelin ohne Rufe."""
+        h = {(d, w): (0, 0) for d in V.DEVICES for w in V.WORDS}
+        h[("huawei", "Wendelin")], h[("handy2", "Wendelin")] = hits
+        z = dict.fromkeys(A.FIXED_SRC, 0)
+        p = {"Wendelin": dict(z, conf=conf, syn=syn, neg_huawei=nh, neg_handy2=n2), "Hey Wendelin": dict(z)}
+        return {"hits": h, "pass": p, "n": {}}
+
+    def test_seed_values(self):
+        hr = {"neg_huawei": 1.0, "neg_handy2": 3.0, "syn": 2.0, "fleurs": 1.0, "conf": 1.0}
+        o = C.seed_values(self.fx(((3, 4), (1, 4)), 5, 4, 2, 2), hr)
+        self.assertEqual(o["Treffer Wendelin [%]"], 50.0)
+        self.assertIsNone(o["Treffer Hey Wendelin [%]"])            # keine Rufe -> kein Wert statt 0 %
+        self.assertEqual((o["Verwechsler (Ereignisse)"], o["FA/h syn"], o["FA/h echt"]), (5, 2.0, 1.0))   # echt = (2+2)/(1+3)
+        bad = self.fx(((3, 4), (1, 4)), 5, 4, 2, 2); bad["pass"]["Wendelin"]["conf"] = None
+        self.assertIsNone(C.seed_values(bad, hr)["FA/h echt"])
+
+    def test_seed_summary_mittel_min_max_und_fehlende_werte(self):
+        hr = {"neg_huawei": 1.0, "neg_handy2": 1.0, "syn": 1.0, "fleurs": 1.0, "conf": 1.0}
+
+        def tag(hit, conf):
+            r = {("app", "-"): self.fx(((hit, 10), (hit, 10)), conf, 0, 0, 0), ("app", C.SEED_BAND): self.fx(((hit, 10), (hit, 10)), conf, 0, 0, 0)}
+            return {thr: r for thr in C.SEED_THRS}
+        for w in ("Hey Wendelin",):
+            pass
+        per = {"a": tag(4, 2), "b": tag(8, 6)}
+        for t in per.values():                                     # Hey Wendelin braucht Rufe, sonst „-“
+            for r in t.values():
+                for x in r.values(): x["hits"][("huawei", "Hey Wendelin")] = (1, 2); x["hits"][("handy2", "Hey Wendelin")] = (1, 2)
+        md = C.seed_summary([("g", ["a", "b"])], per, hr)
+        self.assertIn("| g | 2 | 0,98 | Stufe 1 | 60 [40–80] | 50 [50–50] | 4 [2–6] |", md)
+        self.assertEqual(md.count("| g | 2 |"), 6)
+        md2 = C.seed_summary([("g", ["a", "fehlt"])], per, hr)
+        self.assertIn("| g | 2 | 0,95 | Band 0,999 | - | - | - |", md2)      # ein Seed ohne Daten -> kein Mittel aus dem Rest
+
+    def test_parse_seed_group(self):
+        self.assertEqual(C.parse_seed_group("v8c=v8c,c-s2,c-s3"), ("v8c", ["v8c", "c-s2", "c-s3"]))
+        for bad in ("v8c", "=a", "g=", "g=a,a"):
+            with self.assertRaises(ValueError): C.parse_seed_group(bad)
+
+    def test_cli_cut_only_ohne_modell_und_mit_unbekannter_gruppe(self):
+        import subprocess, tempfile
+        py = [sys.executable, "-I", os.path.join(HERE, "stage2_analysis.py")]
+        p = subprocess.run(py + ["--cut-only", "--no-v7"], capture_output=True, text=True)
+        self.assertNotEqual(p.returncode, 0); self.assertIn("--model", p.stderr + p.stdout)
+        with tempfile.NamedTemporaryFile() as f:
+            p = subprocess.run(py + ["--cut-only", "--no-v7", "--model", f"v8c={f.name}", "--seed-group", "g=v8c,x"], capture_output=True, text=True)
+            self.assertNotEqual(p.returncode, 0); self.assertIn("Modell x fehlt", p.stderr + p.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
