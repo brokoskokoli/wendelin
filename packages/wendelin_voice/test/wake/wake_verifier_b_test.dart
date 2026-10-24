@@ -397,13 +397,16 @@ void main() {
       expect(await above.confirmAt(pcm, end), isFalse);
     });
 
-    test('Wort ohne Schwelle wird ignoriert; sonst Rückfall', () async {
-      final v = make(liveFeatures(axis(0)), [
-        templatesWith([row(0.9)], word: 'x'),
-      ]);
-      expect(await v.confirmAt(pcm, end), isTrue); // Fallback bestätigt
-      expect(fallback.calls, hasLength(1));
-    });
+    test(
+      'Folge mit anderem Wort als hw wird ignoriert; sonst Rückfall',
+      () async {
+        final v = make(liveFeatures(axis(0)), [
+          templatesWith([row(0.9)], word: 'x'),
+        ]);
+        expect(await v.confirmAt(pcm, end), isTrue); // Fallback bestätigt
+        expect(fallback.calls, hasLength(1));
+      },
+    );
 
     test('gespeicherte w-Folgen werden ignoriert (zählen als keine)', () async {
       final v = make(liveFeatures(axis(0)), [

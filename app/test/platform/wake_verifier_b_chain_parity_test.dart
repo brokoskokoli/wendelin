@@ -17,7 +17,7 @@
 // `trunc(x * 32767)`): prüft Mel, Embedding, Phase der Frames auf 1e-3.
 // (2) Clips der App (int16 der Quelle, Spitzenanpassung von B schneidet ab
 // wie Python, `verifierBScaleToPeak`): die Quantisierung der Quelle (nicht
-// die Anpassung; mit Abschneiden gemessen 3,9e-3 wie vorher mit Runden) verschiebt die Embeddings um bis zu etwa 0,004 (bei
+// die Anpassung; mit Abschneiden gemessen 3,9e-3 wie vorher mit Runden) verschiebt die Embeddings um bis zu etwa 0,004 im Live-Ausschnitt und 0,0072 in den Vorlagen (bei
 // Werten von ±5 bis ±30), die Kopfwerte um unter 6e-5; geprüft werden hier
 // die Kopfwerte auf 1e-4 und die Embeddings auf 0,01.
 import 'dart:convert';
